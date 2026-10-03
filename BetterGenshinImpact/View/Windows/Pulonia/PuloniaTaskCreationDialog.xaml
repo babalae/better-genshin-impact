@@ -22,6 +22,142 @@
                  d:DataContext="{d:DesignInstance Type=pulonia:PuloniaTaskCreationDialogViewModel}">
 
     <ui:FluentWindow.Resources>
+        <!--
+        原生 TreeViewItem 在深色主题下会回退到高饱和系统蓝色，并让图标继承错误前景色。
+        资源树沿用任务计划树的主题化交互：自绘展开箭头、柔和悬停/选中背景和左侧强调条。
+        -->
+        <Style x:Key="PathingResourceTreeViewItemStyle" TargetType="TreeViewItem">
+            <Setter Property="Margin" Value="0,1" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+            <Setter Property="ToolTip" Value="{Binding RelativePath}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TreeViewItem">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="22" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <ToggleButton x:Name="Expander"
+                                          Grid.Row="0"
+                                          Grid.Column="0"
+                                          Width="22"
+                                          Height="34"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          Background="Transparent"
+                                          BorderThickness="0"
+                                          Focusable="False"
+                                          IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Grid Background="Transparent">
+                                            <Path x:Name="Chevron"
+                                                  Width="5"
+                                                  Height="9"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  Data="M 0,0 L 4,4.5 L 0,9"
+                                                  RenderTransformOrigin="0.5,0.5"
+                                                  Stroke="{DynamicResource TextFillColorSecondaryBrush}"
+                                                  StrokeEndLineCap="Round"
+                                                  StrokeLineJoin="Round"
+                                                  StrokeStartLineCap="Round"
+                                                  StrokeThickness="1.4" />
+                                        </Grid>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Chevron"
+                                                        Property="Stroke"
+                                                        Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                                            </Trigger>
+                                            <Trigger Property="IsChecked" Value="True">
+                                                <Setter TargetName="Chevron" Property="RenderTransform">
+                                                    <Setter.Value>
+                                                        <RotateTransform Angle="90" />
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+
+                            <Border x:Name="HeaderBorder"
+                                    Grid.Row="0"
+                                    Grid.Column="1"
+                                    MinHeight="34"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="Transparent"
+                                    BorderThickness="1"
+                                    CornerRadius="5"
+                                    SnapsToDevicePixels="True">
+                                <Grid>
+                                    <Border x:Name="SelectionIndicator"
+                                            Width="3"
+                                            Height="20"
+                                            Margin="2,0,0,0"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center"
+                                            Background="{DynamicResource AccentFillColorDefaultBrush}"
+                                            CornerRadius="2"
+                                            Visibility="Collapsed" />
+                                    <ContentPresenter x:Name="PART_Header"
+                                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                      ContentSource="Header"
+                                                      RecognizesAccessKey="True"
+                                                      SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                                </Grid>
+                            </Border>
+
+                            <ItemsPresenter x:Name="ItemsHost"
+                                            Grid.Row="1"
+                                            Grid.Column="1"
+                                            HorizontalAlignment="Stretch" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="HasItems" Value="False">
+                                <Setter TargetName="Expander" Property="Visibility" Value="Hidden" />
+                            </Trigger>
+                            <Trigger Property="IsExpanded" Value="False">
+                                <Setter TargetName="ItemsHost" Property="Visibility" Value="Collapsed" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="HeaderBorder"
+                                        Property="Background"
+                                        Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="HeaderBorder"
+                                        Property="Background"
+                                        Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                                <Setter TargetName="HeaderBorder"
+                                        Property="BorderBrush"
+                                        Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+                                <Setter TargetName="SelectionIndicator" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="HeaderBorder" Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- 所有能力共用同一份 Schema 字段模板，避免创建弹窗和后续参数编辑出现两套语义。 -->
         <DataTemplate x:Key="ParameterFieldTemplate" DataType="{x:Type pulonia:PuloniaTaskParameterFieldViewModel}">
             <StackPanel Margin="0,0,0,14">
@@ -317,6 +453,8 @@
                             <TreeView Padding="0"
                                       Background="Transparent"
                                       BorderThickness="0"
+                                      Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                      ItemContainerStyle="{StaticResource PathingResourceTreeViewItemStyle}"
                                       ItemsSource="{Binding FilteredResourceTree}"
                                       ScrollViewer.CanContentScroll="True"
                                       ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -335,20 +473,22 @@
                                 <i:Interaction.Behaviors>
                                     <behavior:TreeViewSelectedItemBehavior SelectedItem="{Binding SelectedResourceTreeNode, Mode=TwoWay}" />
                                 </i:Interaction.Behaviors>
-                                <TreeView.ItemContainerStyle>
-                                    <Style TargetType="TreeViewItem">
-                                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
-                                        <Setter Property="ToolTip" Value="{Binding RelativePath}" />
-                                    </Style>
-                                </TreeView.ItemContainerStyle>
+                                <!-- TreeView 的 ItemContainerStyle 不会自动传给全部递归层级，补充隐式样式避免子目录回退系统模板。 -->
+                                <TreeView.Resources>
+                                    <Style BasedOn="{StaticResource PathingResourceTreeViewItemStyle}"
+                                           TargetType="TreeViewItem" />
+                                </TreeView.Resources>
                                 <TreeView.ItemTemplate>
                                     <HierarchicalDataTemplate ItemsSource="{Binding Children}">
-                                        <Grid MinHeight="30" Margin="2,1">
+                                        <Grid MinHeight="32" Margin="8,0,6,0">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="*" />
                                             </Grid.ColumnDefinitions>
-                                            <ui:SymbolIcon Margin="0,0,7,0" Symbol="Folder24">
+                                            <ui:SymbolIcon FontSize="16"
+                                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                           Margin="0,0,8,0"
+                                                           Symbol="Folder24">
                                                 <ui:SymbolIcon.Style>
                                                     <Style TargetType="ui:SymbolIcon">
                                                         <Setter Property="Visibility" Value="Collapsed" />
@@ -360,7 +500,10 @@
                                                     </Style>
                                                 </ui:SymbolIcon.Style>
                                             </ui:SymbolIcon>
-                                            <ui:SymbolIcon Margin="0,0,7,0" Symbol="Document24">
+                                            <ui:SymbolIcon FontSize="16"
+                                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                           Margin="0,0,8,0"
+                                                           Symbol="Document24">
                                                 <ui:SymbolIcon.Style>
                                                     <Style TargetType="ui:SymbolIcon">
                                                         <Setter Property="Visibility" Value="Visible" />
@@ -374,6 +517,7 @@
                                             </ui:SymbolIcon>
                                             <TextBlock Grid.Column="1"
                                                        VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                                        Text="{Binding DisplayName}"
                                                        TextTrimming="CharacterEllipsis" />
                                         </Grid>
