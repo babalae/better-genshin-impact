@@ -12,6 +12,13 @@
       "roi": "rect(cw / 3, ch / 2, cw / 3, ch / 2)",
       "draw": false
     },
+    "ControllerMainUiPaimon": {
+      "type": "TemplateMatch",
+      "template": "controller_main_ui_paimon.png",
+      "roi": "rect(cw * 55 / 1920, ch * 25 / 1080, cw * 130 / 1920, ch * 110 / 1080)",
+      "threshold": 0.85,
+      "draw": false
+    },
     "WelkinMoon": {
       "type": "TemplateMatch",
       "template": "welkin_moon_logo.png",
