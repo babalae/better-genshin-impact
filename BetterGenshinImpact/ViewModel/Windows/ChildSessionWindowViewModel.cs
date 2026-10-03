@@ -229,6 +229,24 @@ public partial class ChildSessionWindowViewModel : ViewModel
             }
         }
 
+        if (_childSessionService.ConnectedState != 1
+            && Execute(_childSessionService.RefreshEnvironmentCheck)
+            && _childSessionService.HasBlockingEnvironmentIssue)
+        {
+            // 默认按钮为「是」：这些条件只是风险提示，部分家庭版系统实测也能正常使用，
+            // 提示本身不应该挡住可以连上的用户。
+            var result = await ThemedMessageBox.WarningAsync(
+                _childSessionService.EnvironmentIssueSummary
+                + "\n\n检测到可能影响桌面分身的环境设置。是否仍要继续？",
+                "桌面分身环境检查",
+                MessageBoxButton.YesNo,
+                MessageBoxResult.Yes);
+            if (result != MessageBoxResult.Yes)
+            {
+                return;
+            }
+        }
+
         _startRequested = true;
         IsConnectionPromptVisible = false;
 
