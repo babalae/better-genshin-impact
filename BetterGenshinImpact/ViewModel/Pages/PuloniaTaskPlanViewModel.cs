@@ -159,7 +159,9 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
             if (SelectedDocument.IsDirty)
                 ScheduleAutoSave(SelectedDocument);
             await RefreshRunsAsync();
-            StatusMessage = $"已加载 {Documents.Count} 个计划和 {_presets.Count} 个共享预设。";
+            StatusMessage = _taskService.RecoveryNotice is null
+                ? $"已加载 {Documents.Count} 个计划和 {_presets.Count} 个共享预设。"
+                : _taskService.RecoveryNotice;
         }
         catch (Exception ex)
         {

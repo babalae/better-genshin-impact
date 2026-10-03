@@ -81,7 +81,7 @@ public sealed class PuloniaPathingTaskExecutor : IPuloniaTaskExecutor
             ["resource_version"] = task.ResourceVersion
         };
         return executor.SuccessEnd
-            ? PuloniaTaskOutcome.Success("地图追踪路线已完整执行。", data)
+            ? PuloniaTaskOutcome.ExecutedUnverified("地图追踪路线已完整执行，但没有逐点采集证据。", data)
             : PuloniaTaskOutcome.Failure("地图追踪路线未完整执行。", data);
     }
 }

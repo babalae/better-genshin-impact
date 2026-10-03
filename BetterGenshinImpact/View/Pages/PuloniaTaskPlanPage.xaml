@@ -561,6 +561,8 @@
                                     <ColumnDefinition Width="140" />
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Margin="0,0,8,0"
@@ -585,11 +587,21 @@
                                         Padding="14,6"
                                         Command="{Binding ViewModel.CancelRunCommand}"
                                         Content="取消选中运行" />
-                                <TextBlock Grid.Column="4"
+                                <Button Grid.Column="4"
+                                        Margin="8,0,0,0"
+                                        Padding="14,6"
+                                        Command="{Binding ViewModel.ResumeRunCommand}"
+                                        Content="继续上次" />
+                                <Button Grid.Column="5"
+                                        Margin="8,0,0,0"
+                                        Padding="14,6"
+                                        Command="{Binding ViewModel.ResumeFromNodeCommand}"
+                                        Content="从选中节点开始" />
+                                <TextBlock Grid.Column="6"
                                            Margin="12,0,0,0"
                                            VerticalAlignment="Center"
                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                           Text="本步骤的状态只保留在当前进程；持久化历史和节点续跑将在步骤 6 接入。"
+                                           Text="运行状态、证据与 CD 已持久化；待处理节点需核验后再明确续跑。"
                                            TextWrapping="Wrap" />
                             </Grid>
 
@@ -632,6 +644,14 @@
                                                                FontSize="11"
                                                                Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                                                                Text="{Binding SubmittedAtText}" />
+                                                    <TextBlock Margin="0,3,0,0"
+                                                               FontSize="11"
+                                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                               Text="{Binding ScopeText}" />
+                                                    <TextBlock Margin="0,3,0,0"
+                                                               FontSize="11"
+                                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                               Text="{Binding StorageText}" />
                                                 </StackPanel>
                                             </Border>
                                         </DataTemplate>
@@ -653,8 +673,11 @@
                                                        Text="{Binding ViewModel.SelectedRun.CurrentTaskAddress}"
                                                        TextWrapping="Wrap" />
                                             <TextBlock Margin="0,14,0,6" FontWeight="SemiBold" Text="节点尝试结果" />
-                                            <ItemsControl ItemsSource="{Binding ViewModel.SelectedRun.NodeResults}">
-                                                <ItemsControl.ItemTemplate>
+                                            <ListBox BorderThickness="0"
+                                                     Background="Transparent"
+                                                     ItemsSource="{Binding ViewModel.SelectedRun.NodeResults}"
+                                                     SelectedItem="{Binding ViewModel.SelectedRunNodeResult, Mode=TwoWay}">
+                                                <ListBox.ItemTemplate>
                                                     <DataTemplate>
                                                         <Border Margin="0,0,0,6"
                                                                 Padding="9"
@@ -671,8 +694,43 @@
                                                                 <TextBlock Margin="0,2,0,0"
                                                                            Text="{Binding Status, StringFormat=状态：{0}}" />
                                                                 <TextBlock Margin="0,2,0,0"
+                                                                           Text="{Binding OutcomeKind, StringFormat=完成程度：{0}}" />
+                                                                <TextBlock Margin="0,2,0,0"
+                                                                           Text="{Binding Evidence.Count, StringFormat=结构化证据：{0} 条}" />
+                                                                <TextBlock Margin="0,2,0,0"
                                                                            Text="{Binding Message}"
                                                                            TextWrapping="Wrap" />
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                            <TextBlock Margin="0,16,0,6"
+                                                       FontSize="16"
+                                                       FontWeight="SemiBold"
+                                                       Text="当前 CD 与额度" />
+                                            <ItemsControl ItemsSource="{Binding ViewModel.LedgerEntries}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Margin="0,0,0,6"
+                                                                Padding="9"
+                                                                Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                                                                CornerRadius="5">
+                                                            <StackPanel>
+                                                                <TextBlock FontFamily="Consolas"
+                                                                           FontWeight="SemiBold"
+                                                                           Text="{Binding EffectKey}" />
+                                                                <TextBlock Margin="0,2,0,0"
+                                                                           FontFamily="Consolas"
+                                                                           FontSize="11"
+                                                                           Text="{Binding ScopeKey}" />
+                                                                <TextBlock Margin="0,2,0,0"
+                                                                           Text="{Binding OccurredAtText, StringFormat=确认时间：{0}}" />
+                                                                <TextBlock Margin="0,2,0,0"
+                                                                           Text="{Binding EligibilityText}" />
+                                                                <TextBlock Margin="0,2,0,0"
+                                                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                                           Text="{Binding EvidenceText}" />
                                                             </StackPanel>
                                                         </Border>
                                                     </DataTemplate>

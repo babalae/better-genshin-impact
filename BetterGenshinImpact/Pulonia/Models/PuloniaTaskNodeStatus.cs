@@ -28,5 +28,10 @@ public enum PuloniaTaskNodeStatus
     /// <summary>
     /// 节点执行超过自身时限，并已完成资源清理。
     /// </summary>
-    TimedOut
+    TimedOut,
+
+    /// <summary>
+    /// 节点可能已产生副作用，但状态文件中没有确认事件。
+    /// </summary>
+    NeedsAttention
 }

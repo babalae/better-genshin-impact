@@ -35,6 +35,11 @@ public sealed class PuloniaCSharpTaskRegistry
     public PuloniaCSharpTaskRegistry()
     {
         Register("sample.sum", ExecuteSampleSumAsync);
+        Register("sample.ledger.daily", ExecuteSampleLedgerAsync);
+        Register("sample.ledger.weekly", ExecuteSampleLedgerAsync);
+        Register("sample.ledger.monthly", ExecuteSampleLedgerAsync);
+        Register("sample.ledger.rolling", ExecuteSampleLedgerAsync);
+        Register("sample.ledger.partial", ExecuteSampleLedgerAsync);
     }
 
     /// <summary>
@@ -90,5 +95,47 @@ public sealed class PuloniaCSharpTaskRegistry
             ["value_count"] = values.Count,
             ["run_id"] = context.RunId.ToString("D")
         });
+    }
+
+    /// <summary>
+    /// 提交一条受控结构化完成事件，用于验收重复事件、周期边界和作用域隔离。
+    /// </summary>
+    private static async Task<PuloniaTaskOutcome> ExecuteSampleLedgerAsync(
+        PuloniaTaskExecutionContext context, JObject parameters, CancellationToken ct)
+    {
+        var operation = parameters.Value<string>("operation")!;
+        var ruleId = operation["sample.ledger.".Length..];
+        var delayMilliseconds = parameters.Value<int?>("delay_milliseconds") ?? 0;
+        if (delayMilliseconds is < 0 or > 600000)
+            return PuloniaTaskOutcome.Failure("delay_milliseconds 必须在 0—600000 之间。");
+        if (delayMilliseconds > 0)
+            await Task.Delay(delayMilliseconds, ct).ConfigureAwait(false);
+        var occurredAt = parameters.Value<DateTimeOffset?>("occurred_at") ?? DateTimeOffset.UtcNow;
+        var evidence = new PuloniaTaskEvidence
+        {
+            Kind = "executor",
+            Source = operation,
+            OccurredAt = occurredAt,
+            Data = new JObject
+            {
+                ["sample"] = true,
+                ["task_address"] = context.TaskAddress
+            }
+        };
+        var completionEvent = new PuloniaTaskCompletionEvent
+        {
+            RuleId = ruleId,
+            EventKey = parameters.Value<string>("event_key"),
+            Units = parameters.Value<int?>("units") ?? 1,
+            OccurredAt = occurredAt,
+            Evidence = evidence
+        };
+        await context.ReportCompletionAsync(completionEvent, ct).ConfigureAwait(false);
+        if (parameters.Value<bool?>("report_twice") == true)
+            await context.ReportCompletionAsync(completionEvent, ct).ConfigureAwait(false);
+        if (operation == "sample.ledger.partial")
+            return PuloniaTaskOutcome.Partial("已确认并保存局部副作用，随后按受控样例返回部分成功。",
+                evidence: [evidence]);
+        return PuloniaTaskOutcome.Success($"受控账本事件 {ruleId} 已确认并持久化。", evidence: [evidence]);
     }
 }

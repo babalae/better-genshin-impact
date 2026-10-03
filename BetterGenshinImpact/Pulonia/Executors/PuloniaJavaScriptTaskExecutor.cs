@@ -77,7 +77,7 @@ public sealed class PuloniaJavaScriptTaskExecutor : IPuloniaTaskExecutor
         var project = new ScriptProject(relativeProjectPath);
         await project.ExecuteAsync(settings, partyConfig, ct).ConfigureAwait(false);
         ct.ThrowIfCancellationRequested();
-        return PuloniaTaskOutcome.Success("JS 项目已执行完成。",
+        return PuloniaTaskOutcome.ExecutedUnverified("JS 项目已执行完成，但旧脚本没有结构化副作用证据。",
             new JObject { ["resource_version"] = task.ResourceVersion });
     }
 }

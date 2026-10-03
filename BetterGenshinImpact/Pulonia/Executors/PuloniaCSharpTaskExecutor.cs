@@ -44,7 +44,59 @@ public sealed class PuloniaCSharpTaskExecutor : IPuloniaTaskExecutor
             ["required"] = new JArray("operation"),
             ["additionalProperties"] = true
         },
-        PublicParameters = ["operation", "values", "delay_milliseconds"]
+        PublicParameters = ["operation", "values", "delay_milliseconds", "event_key", "units", "occurred_at"],
+        AvailabilityRules =
+        [
+            new PuloniaTaskAvailabilityRule
+            {
+                RuleId = "daily",
+                EffectKey = "sample.ledger.daily",
+                Kind = PuloniaTaskAvailabilityKind.ResetQuota,
+                Scope = PuloniaTaskScopeKind.Account,
+                ResetPeriod = PuloniaTaskResetPeriod.Daily,
+                Quota = 1,
+                Operation = "sample.ledger.daily"
+            },
+            new PuloniaTaskAvailabilityRule
+            {
+                RuleId = "weekly",
+                EffectKey = "sample.ledger.weekly",
+                Kind = PuloniaTaskAvailabilityKind.ResetQuota,
+                Scope = PuloniaTaskScopeKind.World,
+                ResetPeriod = PuloniaTaskResetPeriod.Weekly,
+                Quota = 1,
+                Operation = "sample.ledger.weekly"
+            },
+            new PuloniaTaskAvailabilityRule
+            {
+                RuleId = "monthly",
+                EffectKey = "sample.ledger.monthly",
+                Kind = PuloniaTaskAvailabilityKind.ResetQuota,
+                Scope = PuloniaTaskScopeKind.Account,
+                ResetPeriod = PuloniaTaskResetPeriod.Monthly,
+                Quota = 1,
+                Operation = "sample.ledger.monthly"
+            },
+            new PuloniaTaskAvailabilityRule
+            {
+                RuleId = "rolling",
+                EffectKey = "sample.ledger.rolling",
+                Kind = PuloniaTaskAvailabilityKind.RollingCooldown,
+                Scope = PuloniaTaskScopeKind.World,
+                CooldownSeconds = 60,
+                Operation = "sample.ledger.rolling"
+            },
+            new PuloniaTaskAvailabilityRule
+            {
+                RuleId = "partial",
+                EffectKey = "sample.ledger.partial",
+                Kind = PuloniaTaskAvailabilityKind.ResetQuota,
+                Scope = PuloniaTaskScopeKind.Account,
+                ResetPeriod = PuloniaTaskResetPeriod.Daily,
+                Quota = 1,
+                Operation = "sample.ledger.partial"
+            }
+        ]
     }];
 
     /// <summary>

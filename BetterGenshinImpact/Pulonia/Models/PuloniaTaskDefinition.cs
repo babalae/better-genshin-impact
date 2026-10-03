@@ -57,4 +57,9 @@ public sealed class PuloniaTaskDefinition
     /// 允许由计划引用节点覆盖的公共参数名；其余参数只能在被引用计划内配置。
     /// </summary>
     public IReadOnlyList<string> PublicParameters { get; init; } = [];
+
+    /// <summary>
+    /// 此能力声明的 CD 与周期额度规则；只有结构化确认事件才会消费规则。
+    /// </summary>
+    public IReadOnlyList<PuloniaTaskAvailabilityRule> AvailabilityRules { get; init; } = [];
 }

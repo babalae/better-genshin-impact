@@ -69,7 +69,24 @@ public sealed class PuloniaTaskSnapshot
     }
 
     /// <summary>
-    /// 输出运行快照供查看和后续持久化；恢复绑定属于步骤 6。
+    /// 从持久化运行快照恢复不可变对象。
+    /// </summary>
+    [JsonConstructor]
+    internal PuloniaTaskSnapshot(string planId, long revision, DateTimeOffset preparedAt, string? accountId,
+        PuloniaTaskPreparedTask rootTask, IDictionary<string, string> planJsonById,
+        IDictionary<string, string> presetJsonById)
+    {
+        PlanId = planId;
+        Revision = revision;
+        PreparedAt = preparedAt;
+        AccountId = accountId;
+        RootTask = rootTask;
+        PlanJsonById = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(planJsonById));
+        PresetJsonById = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(presetJsonById));
+    }
+
+    /// <summary>
+    /// 输出运行快照供持久化和续跑。
     /// </summary>
     public string ToJson() => PuloniaTaskJson.Write(this);
 }

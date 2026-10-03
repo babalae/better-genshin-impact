@@ -44,7 +44,7 @@ public sealed class PuloniaKeyMouseTaskExecutor : IPuloniaTaskExecutor
         var json = await File.ReadAllTextAsync(task.Path, ct).ConfigureAwait(false);
         await KeyMouseMacroPlayer.PlayMacro(json, ct, task.Parameters.Value<bool>("with_delay")).ConfigureAwait(false);
         ct.ThrowIfCancellationRequested();
-        return PuloniaTaskOutcome.Success("键鼠宏已完整回放。",
+        return PuloniaTaskOutcome.ExecutedUnverified("键鼠宏已完整回放，但录制文件没有结构化副作用证据。",
             new JObject { ["resource_version"] = task.ResourceVersion });
     }
 }

@@ -109,7 +109,10 @@ public sealed class PuloniaBuiltinTaskExecutor : IPuloniaTaskExecutor
         }
 
         ct.ThrowIfCancellationRequested();
-        return PuloniaTaskOutcome.Success($"内置任务 {task.TaskType} 已执行完成。");
+        return task.TaskType == "builtin.return_main_ui"
+            ? PuloniaTaskOutcome.Success("已返回主界面。")
+            : PuloniaTaskOutcome.ExecutedUnverified(
+                $"内置任务 {task.TaskType} 已执行完成，但当前能力尚未返回独立领取证据。");
     }
 
     /// <summary>

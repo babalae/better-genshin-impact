@@ -35,9 +35,20 @@ public partial class PuloniaTaskPlanViewModel
     private PuloniaTaskRunItemViewModel? _selectedRun;
 
     /// <summary>
-    /// 当前进程内可查看的运行列表；步骤 6 才会持久化历史。
+    /// 运行详情中选中的节点尝试，用于明确指定续跑起点。
+    /// </summary>
+    [ObservableProperty]
+    private PuloniaTaskNodeResult? _selectedRunNodeResult;
+
+    /// <summary>
+    /// 当前队列、活动运行与已经落盘的不可变历史。
     /// </summary>
     public ObservableCollection<PuloniaTaskRunItemViewModel> Runs { get; } = [];
+
+    /// <summary>
+    /// 当前仍约束执行的 CD 与周期额度事实。
+    /// </summary>
+    public ObservableCollection<PuloniaTaskLedgerItemViewModel> LedgerEntries { get; } = [];
 
     /// <summary>
     /// 当前计划是否可以提交运行。
@@ -48,6 +59,16 @@ public partial class PuloniaTaskPlanViewModel
     /// 当前选中运行是否可以显式取消。
     /// </summary>
     public bool CanCancelRun => SelectedRun?.CanCancel == true;
+
+    /// <summary>
+    /// 当前选中历史是否可以继续剩余节点。
+    /// </summary>
+    public bool CanResumeRun => SelectedRun?.CanResume == true;
+
+    /// <summary>
+    /// 是否可以从选中的历史节点地址建立关联运行。
+    /// </summary>
+    public bool CanResumeFromNode => SelectedRun?.IsHistorical == true && SelectedRunNodeResult is not null;
 
     /// <summary>
     /// 保存当前计划后提交运行；提交时固定快照，随后编辑不会影响本次运行。
@@ -103,6 +124,70 @@ public partial class PuloniaTaskPlanViewModel
     }
 
     /// <summary>
+    /// 沿用选中历史的原快照，跳过已经确认成功的节点并继续剩余内容。
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanResumeRun))]
+    private async Task ResumeRunAsync()
+    {
+        var selected = SelectedRun;
+        if (selected is null)
+            return;
+        try
+        {
+            var requestId = await _taskService.ResumeAsync(selected.Run.RunId);
+            await RefreshRunsAsync(requestId);
+            StatusMessage = $"已沿用历史运行 {selected.Run.RunId:D} 的固定快照继续未完成节点。";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "继续历史运行失败：" + ex.Message;
+            await ThemedMessageBox.ErrorAsync(StatusMessage, "无法继续任务计划");
+        }
+    }
+
+    /// <summary>
+    /// 从用户选中的快照节点开始新运行；待处理运行需要用户明确承担重放选择。
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanResumeFromNode))]
+    private async Task ResumeFromNodeAsync()
+    {
+        var selected = SelectedRun;
+        var node = SelectedRunNodeResult;
+        if (selected is null || node is null)
+            return;
+        var allowUncertainReplay = selected.Run.HasUncertainOperation
+                                   || selected.Run.Status == PuloniaTaskRunStatus.NeedsAttention
+                                   || selected.Run.NodeResults
+                                       .GroupBy(item => item.TaskAddress, StringComparer.Ordinal)
+                                       .Select(group => group.Last())
+                                       .Any(item => item.OutcomeKind is PuloniaTaskOutcomeKind.ExecutedUnverified
+                                           or PuloniaTaskOutcomeKind.PartiallySucceeded
+                                           or PuloniaTaskOutcomeKind.NeedsAttention);
+        if (allowUncertainReplay)
+        {
+            var result = await ThemedMessageBox.ShowAsync(
+                "此历史包含未核验操作。请先核对游戏当前状态；继续将释放该未决占用并从所选节点重新执行，是否确认？",
+                "确认待处理续跑", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning,
+                MessageBoxResult.No);
+            if (result != MessageBoxResult.Yes)
+                return;
+        }
+
+        try
+        {
+            var requestId = await _taskService.ResumeAsync(selected.Run.RunId, node.TaskAddress,
+                allowUncertainReplay);
+            await RefreshRunsAsync(requestId);
+            StatusMessage = $"已沿用原快照，从节点 {node.TaskAddress} 开始关联运行。";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "从节点继续失败：" + ex.Message;
+            await ThemedMessageBox.ErrorAsync(StatusMessage, "无法从节点继续");
+        }
+    }
+
+    /// <summary>
     /// 从服务读取最新运行状态，并尽量保持原选中请求。
     /// </summary>
     [RelayCommand]
@@ -118,9 +203,13 @@ public partial class PuloniaTaskPlanViewModel
         {
             var selectedRequestId = preferredRequestId ?? SelectedRun?.RequestId;
             var runs = await _taskService.ListRunsAsync();
+            var ledger = await _taskService.ListLedgerAsync();
             Runs.Clear();
             foreach (var run in runs)
                 Runs.Add(new PuloniaTaskRunItemViewModel(run));
+            LedgerEntries.Clear();
+            foreach (var entry in ledger.OrderByDescending(item => item.OccurredAt))
+                LedgerEntries.Add(new PuloniaTaskLedgerItemViewModel(entry));
             SelectedRun = Runs.FirstOrDefault(item => item.RequestId == selectedRequestId) ?? Runs.FirstOrDefault();
         }
         catch (Exception ex)
@@ -152,7 +241,26 @@ public partial class PuloniaTaskPlanViewModel
     /// </summary>
     partial void OnSelectedRunChanged(PuloniaTaskRunItemViewModel? value)
     {
+        SelectedRunNodeResult = value?.NodeResults.LastOrDefault(item =>
+                                    item.Status is PuloniaTaskNodeStatus.Failed
+                                        or PuloniaTaskNodeStatus.TimedOut
+                                        or PuloniaTaskNodeStatus.Cancelled
+                                        or PuloniaTaskNodeStatus.NeedsAttention)
+                                ?? value?.NodeResults.LastOrDefault();
         OnPropertyChanged(nameof(CanCancelRun));
+        OnPropertyChanged(nameof(CanResumeRun));
+        OnPropertyChanged(nameof(CanResumeFromNode));
         CancelRunCommand.NotifyCanExecuteChanged();
+        ResumeRunCommand.NotifyCanExecuteChanged();
+        ResumeFromNodeCommand.NotifyCanExecuteChanged();
+    }
+
+    /// <summary>
+    /// 节点结果选择变化后刷新从节点续跑命令。
+    /// </summary>
+    partial void OnSelectedRunNodeResultChanged(PuloniaTaskNodeResult? value)
+    {
+        OnPropertyChanged(nameof(CanResumeFromNode));
+        ResumeFromNodeCommand.NotifyCanExecuteChanged();
     }
 }

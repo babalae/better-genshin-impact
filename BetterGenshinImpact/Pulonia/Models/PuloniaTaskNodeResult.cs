@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.Pulonia.Models;
@@ -54,11 +57,22 @@ public sealed class PuloniaTaskNodeResult
     public JObject Data { get; }
 
     /// <summary>
+    /// 执行器报告的业务完成程度。
+    /// </summary>
+    public PuloniaTaskOutcomeKind OutcomeKind { get; }
+
+    /// <summary>
+    /// 本次尝试保留的结构化证据。
+    /// </summary>
+    public IReadOnlyList<PuloniaTaskEvidence> Evidence { get; }
+
+    /// <summary>
     /// 建立不可变节点结果。
     /// </summary>
     public PuloniaTaskNodeResult(string taskAddress, string taskName, string taskType, int attempt,
         PuloniaTaskNodeStatus status, string message, DateTimeOffset startedAt, DateTimeOffset finishedAt,
-        JObject? data = null)
+        JObject? data = null, PuloniaTaskOutcomeKind? outcomeKind = null,
+        IEnumerable<PuloniaTaskEvidence>? evidence = null)
     {
         TaskAddress = taskAddress;
         TaskName = taskName;
@@ -69,5 +83,14 @@ public sealed class PuloniaTaskNodeResult
         StartedAt = startedAt;
         FinishedAt = finishedAt;
         Data = data is null ? new JObject() : (JObject)data.DeepClone();
+        OutcomeKind = outcomeKind ?? status switch
+        {
+            PuloniaTaskNodeStatus.Succeeded => PuloniaTaskOutcomeKind.Succeeded,
+            PuloniaTaskNodeStatus.Skipped => PuloniaTaskOutcomeKind.Skipped,
+            PuloniaTaskNodeStatus.Cancelled => PuloniaTaskOutcomeKind.Cancelled,
+            PuloniaTaskNodeStatus.NeedsAttention => PuloniaTaskOutcomeKind.NeedsAttention,
+            _ => PuloniaTaskOutcomeKind.Failed
+        };
+        Evidence = new ReadOnlyCollection<PuloniaTaskEvidence>((evidence ?? []).ToArray());
     }
 }

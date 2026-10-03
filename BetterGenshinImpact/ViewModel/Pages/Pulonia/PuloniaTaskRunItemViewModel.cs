@@ -36,6 +36,8 @@ public sealed class PuloniaTaskRunItemViewModel
         PuloniaTaskRunStatus.Failed => "已失败",
         PuloniaTaskRunStatus.Cancelled => "已取消",
         PuloniaTaskRunStatus.TimedOut => "已超时",
+        PuloniaTaskRunStatus.Interrupted => "已中断",
+        PuloniaTaskRunStatus.NeedsAttention => "待处理",
         _ => Run.Status.ToString()
     };
 
@@ -64,6 +66,26 @@ public sealed class PuloniaTaskRunItemViewModel
     /// </summary>
     public bool CanCancel => Run.Status is PuloniaTaskRunStatus.Queued
         or PuloniaTaskRunStatus.Running or PuloniaTaskRunStatus.Cancelling;
+
+    /// <summary>
+    /// 当前条目是否已经写入不可变历史。
+    /// </summary>
+    public bool IsHistorical => Run.IsHistorical;
+
+    /// <summary>
+    /// 当前历史是否可以沿用原快照继续。
+    /// </summary>
+    public bool CanResume => IsHistorical && Run.Status != PuloniaTaskRunStatus.Succeeded;
+
+    /// <summary>
+    /// 运行账号与世界作用域摘要。
+    /// </summary>
+    public string ScopeText => $"账号：{Run.AccountId ?? "默认"} · 世界：{Run.WorldOwnerAccountId ?? Run.AccountId ?? "默认"}";
+
+    /// <summary>
+    /// 条目来自当前状态还是不可变历史。
+    /// </summary>
+    public string StorageText => IsHistorical ? "历史" : "当前";
 
     /// <summary>
     /// 建立页面运行条目。

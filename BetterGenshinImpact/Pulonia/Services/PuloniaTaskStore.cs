@@ -216,6 +216,155 @@ public sealed class PuloniaTaskStore : IDisposable
     }
 
     /// <summary>
+    /// 读取唯一当前运行状态；正式文件损坏时仅允许从有效备份显式恢复。
+    /// </summary>
+    public async Task<PuloniaTaskStateLoadResult> LoadStateAsync(CancellationToken ct = default)
+    {
+        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            var path = Path.Combine(RootDirectory, "state.json");
+            var json = await ReadIfExistsAsync(path, ct).ConfigureAwait(false);
+            if (json is null)
+            {
+                var backupOnlyJson = await ReadIfExistsAsync(path + ".bak", ct).ConfigureAwait(false);
+                return backupOnlyJson is null
+                    ? new PuloniaTaskStateLoadResult(new PuloniaTaskState(), false)
+                    : new PuloniaTaskStateLoadResult(PuloniaTaskJson.ReadState(backupOnlyJson), true);
+            }
+
+            try
+            {
+                return new PuloniaTaskStateLoadResult(PuloniaTaskJson.ReadState(json), false);
+            }
+            catch (Exception primaryError) when (primaryError is Newtonsoft.Json.JsonException
+                                                  or PuloniaTaskValidationException)
+            {
+                var backupJson = await ReadIfExistsAsync(path + ".bak", ct).ConfigureAwait(false);
+                if (backupJson is null)
+                    throw new PuloniaTaskValidationException(path,
+                        "正式运行状态已损坏且没有可用备份，已停止自动运行。", primaryError);
+                try
+                {
+                    return new PuloniaTaskStateLoadResult(PuloniaTaskJson.ReadState(backupJson), true);
+                }
+                catch (Exception backupError) when (backupError is Newtonsoft.Json.JsonException
+                                                     or PuloniaTaskValidationException)
+                {
+                    throw new PuloniaTaskValidationException(path,
+                        $"正式运行状态和备份都无法读取，已停止自动运行。备份错误：{backupError.Message}",
+                        primaryError);
+                }
+            }
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    /// <summary>
+    /// 用刷新到底层存储的完整文件替换保存当前运行状态。
+    /// </summary>
+    public async Task SaveStateAsync(PuloniaTaskState state, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        var candidate = PuloniaTaskJson.ReadState(PuloniaTaskJson.WriteState(state));
+        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            using var writerLock = AcquireWriterLock();
+            var path = Path.Combine(RootDirectory, "state.json");
+            var replaceWithoutChangingBackup = false;
+            var currentJson = await ReadIfExistsAsync(path, ct).ConfigureAwait(false);
+            if (currentJson is not null)
+            {
+                try
+                {
+                    _ = PuloniaTaskJson.ReadState(currentJson);
+                }
+                catch (Exception ex) when (ex is Newtonsoft.Json.JsonException or PuloniaTaskValidationException)
+                {
+                    // 正式文件损坏且本次状态来自有效备份时，不能用损坏文件覆盖该备份。
+                    replaceWithoutChangingBackup = true;
+                }
+            }
+            await WriteAtomicallyAsync(path, PuloniaTaskJson.WriteState(candidate), ct,
+                replaceWithoutChangingBackup).ConfigureAwait(false);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    /// <summary>
+    /// 幂等写入一份运行历史；已经存在的同一运行不会被覆盖。
+    /// </summary>
+    public async Task ArchiveRunAsync(PuloniaTaskRunRecord record, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        PuloniaTaskValidator.ValidateId(record.Request.PlanId, "history/plan_id");
+        if (record.RunId == Guid.Empty || record.RequestId == Guid.Empty)
+            throw new PuloniaTaskValidationException("history", "运行或请求 ID 不能为空。");
+        var candidateJson = PuloniaTaskJson.WriteRunRecord(record);
+        var path = Path.Combine(RootDirectory, "history", record.Request.PlanId, record.RunId.ToString("N") + ".json");
+
+        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            using var writerLock = AcquireWriterLock();
+            var existingJson = await ReadIfExistsAsync(path, ct).ConfigureAwait(false);
+            if (existingJson is not null)
+            {
+                var existing = PuloniaTaskJson.ReadRunRecord(existingJson);
+                if (existing.RunId != record.RunId || existing.RequestId != record.RequestId)
+                    throw new PuloniaTaskValidationException(path, "历史文件身份与待归档运行不一致。");
+                if (!string.Equals(PuloniaTaskJson.WriteRunRecord(existing), candidateJson,
+                        StringComparison.Ordinal))
+                    throw new PuloniaTaskValidationException(path, "同一运行 ID 的历史内容不一致，拒绝静默覆盖。");
+                return;
+            }
+            await WriteAtomicallyAsync(path, candidateJson, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    /// <summary>
+    /// 列出全部不可变运行历史，损坏文件会明确阻止返回不完整列表。
+    /// </summary>
+    public async Task<IReadOnlyList<PuloniaTaskRunRecord>> ListHistoryAsync(CancellationToken ct = default)
+    {
+        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            var root = Path.Combine(RootDirectory, "history");
+            if (!Directory.Exists(root))
+                return Array.Empty<PuloniaTaskRunRecord>();
+            var records = new List<PuloniaTaskRunRecord>();
+            foreach (var path in Directory.EnumerateFiles(root, "*.json", SearchOption.AllDirectories))
+            {
+                ct.ThrowIfCancellationRequested();
+                var json = await ReadIfExistsAsync(path, ct).ConfigureAwait(false)
+                           ?? throw new IOException($"读取历史时文件消失：{path}");
+                var record = PuloniaTaskJson.ReadRunRecord(json);
+                if (!string.Equals(Path.GetFileNameWithoutExtension(path), record.RunId.ToString("N"),
+                        StringComparison.OrdinalIgnoreCase))
+                    throw new PuloniaTaskValidationException(path, "历史文件名与运行 ID 不一致。");
+                records.Add(record);
+            }
+            return records.OrderByDescending(item => item.SubmittedAt).ToArray();
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    /// <summary>
     /// 生成文件路径；名称不能参与路径计算。
     /// </summary>
     private string GetPath(string folder, string id)
@@ -344,7 +493,8 @@ public sealed class PuloniaTaskStore : IDisposable
     /// <summary>
     /// 写同目录临时文件、刷新到底层存储，再替换并保留上一版。
     /// </summary>
-    private static async Task WriteAtomicallyAsync(string path, string json, CancellationToken ct)
+    private static async Task WriteAtomicallyAsync(string path, string json, CancellationToken ct,
+        bool preserveExistingBackup = false)
     {
         var directory = Path.GetDirectoryName(path)!;
         Directory.CreateDirectory(directory);
@@ -361,7 +511,9 @@ public sealed class PuloniaTaskStore : IDisposable
             ct.ThrowIfCancellationRequested();
 
             // 替换是提交点；提交后即使令牌刚好取消，也应返回保存成功。
-            if (File.Exists(path))
+            if (File.Exists(path) && preserveExistingBackup)
+                File.Move(temporaryPath, path, overwrite: true);
+            else if (File.Exists(path))
                 File.Replace(temporaryPath, path, path + ".bak");
             else
                 File.Move(temporaryPath, path);

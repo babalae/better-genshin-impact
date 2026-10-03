@@ -16,7 +16,7 @@ public sealed class PuloniaTaskRunView
     public Guid RequestId { get; }
 
     /// <summary>
-    /// 本次运行 ID；步骤 6 的历史和续跑将使用此身份关联。
+    /// 本次运行 ID；历史和续跑使用此身份关联。
     /// </summary>
     public Guid RunId { get; }
 
@@ -76,12 +76,43 @@ public sealed class PuloniaTaskRunView
     public IReadOnlyList<PuloniaTaskNodeResult> NodeResults { get; }
 
     /// <summary>
+    /// 本次运行使用的账号资料 ID。
+    /// </summary>
+    public string? AccountId { get; }
+
+    /// <summary>
+    /// 本次运行使用的世界拥有者账号 ID。
+    /// </summary>
+    public string? WorldOwnerAccountId { get; }
+
+    /// <summary>
+    /// 来源历史运行 ID。
+    /// </summary>
+    public Guid? ResumedFromRunId { get; }
+
+    /// <summary>
+    /// 显式续跑起点。
+    /// </summary>
+    public string? ResumeFromTaskAddress { get; }
+
+    /// <summary>
+    /// 是否已经写入不可变历史。
+    /// </summary>
+    public bool IsHistorical { get; }
+
+    /// <summary>
+    /// 是否存在未结清的副作用操作意图。
+    /// </summary>
+    public bool HasUncertainOperation { get; }
+
+    /// <summary>
     /// 建立运行状态的防御性副本。
     /// </summary>
     internal PuloniaTaskRunView(Guid requestId, Guid runId, string planId, string planName, string source,
         PuloniaTaskRunStatus status, string? currentTaskAddress, string message, DateTimeOffset submittedAt,
         DateTimeOffset? startedAt, DateTimeOffset? finishedAt, string snapshotJson,
-        IEnumerable<PuloniaTaskNodeResult> nodeResults)
+        IEnumerable<PuloniaTaskNodeResult> nodeResults, string? accountId, string? worldOwnerAccountId,
+        Guid? resumedFromRunId, string? resumeFromTaskAddress, bool isHistorical, bool hasUncertainOperation)
     {
         RequestId = requestId;
         RunId = runId;
@@ -96,5 +127,11 @@ public sealed class PuloniaTaskRunView
         FinishedAt = finishedAt;
         SnapshotJson = snapshotJson;
         NodeResults = new ReadOnlyCollection<PuloniaTaskNodeResult>(nodeResults.ToArray());
+        AccountId = accountId;
+        WorldOwnerAccountId = worldOwnerAccountId;
+        ResumedFromRunId = resumedFromRunId;
+        ResumeFromTaskAddress = resumeFromTaskAddress;
+        IsHistorical = isHistorical;
+        HasUncertainOperation = hasUncertainOperation;
     }
 }

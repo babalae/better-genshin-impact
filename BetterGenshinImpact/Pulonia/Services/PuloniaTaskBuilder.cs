@@ -52,13 +52,16 @@ public sealed class PuloniaTaskBuilder
             var definitionKeys = new HashSet<(string, string?)>();
             foreach (var definition in fixedOptions.Definitions)
             {
-                if (definition is null || definition.ParameterSchema is null || definition.PublicParameters is null)
+                if (definition is null || definition.ParameterSchema is null || definition.PublicParameters is null
+                    || definition.AvailabilityRules is null)
                     throw new PuloniaTaskValidationException(plan.Id, "类型说明不能为空。");
                 PuloniaTaskValidator.ValidateDefinitionScope(definition.TaskType, definition.ResourceId,
                     definition.SchemaVersion, definition.DefaultParameters, "definition/" + definition.TaskType);
                 if (!definitionKeys.Add((definition.TaskType, definition.ResourceId)))
                     throw new PuloniaTaskValidationException(plan.Id, "类型和资源说明重复注册。");
                 PuloniaTaskValidator.ValidateParameterSchema(definition.ParameterSchema, "definition/" + definition.TaskType);
+                PuloniaTaskAvailability.ValidateRules(definition.AvailabilityRules,
+                    "definition/" + definition.TaskType + "/availability");
             }
             if (fixedOptions.AccountId is { } accountId)
             {

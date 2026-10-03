@@ -1,4 +1,7 @@
 using System.IO;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using BetterGenshinImpact.Pulonia.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -58,6 +61,113 @@ public static class PuloniaTaskJson
     /// 读取运行准备样例的显式选项，业务模型与选项使用相同 JSON 类型规则。
     /// </summary>
     public static PuloniaTaskBuildOptions ReadBuildOptions(string json) => Read<PuloniaTaskBuildOptions>(json);
+
+    /// <summary>
+    /// 从历史记录恢复提交时固定的不可变运行快照。
+    /// </summary>
+    public static PuloniaTaskSnapshot ReadSnapshot(string json) => Read<PuloniaTaskSnapshot>(json);
+
+    /// <summary>
+    /// 读取并校验当前运行状态文件。
+    /// </summary>
+    public static PuloniaTaskState ReadState(string json)
+    {
+        var state = Read<PuloniaTaskState>(json);
+        if (state.SchemaVersion != PuloniaTaskState.CurrentSchemaVersion)
+            throw new PuloniaTaskValidationException("state.json",
+                $"不支持运行状态格式版本 {state.SchemaVersion}。");
+        if (state.Sequence < 0 || state.PendingRequests is null || state.PendingArchives is null
+            || state.Ledger is null || state.UncertainOperations is null)
+            throw new PuloniaTaskValidationException("state.json", "运行状态内容不完整或序列无效。");
+        if (state.PendingRequests.Count > 10000 || state.PendingArchives.Count > 10000
+            || state.Ledger.Count > 100000 || state.UncertainOperations.Count > 10000)
+            throw new PuloniaTaskValidationException("state.json", "运行状态集合超过支持上限。");
+        var requestIds = new HashSet<Guid>();
+        var runIds = new HashSet<Guid>();
+        foreach (var record in state.PendingRequests)
+        {
+            ValidateRunRecord(record, "state.json/pending_requests");
+            if (record.Status != PuloniaTaskRunStatus.Queued)
+                throw new PuloniaTaskValidationException("state.json", "待执行请求必须处于排队状态。");
+            AddRunIdentity(record, requestIds, runIds, "state.json");
+        }
+        if (state.ActiveRun is { } active)
+        {
+            ValidateRunRecord(active, "state.json/active_run");
+            if (active.Status is not (PuloniaTaskRunStatus.Running or PuloniaTaskRunStatus.Cancelling))
+                throw new PuloniaTaskValidationException("state.json", "活动运行状态无效。");
+            AddRunIdentity(active, requestIds, runIds, "state.json");
+        }
+        foreach (var record in state.PendingArchives)
+        {
+            ValidateRunRecord(record, "state.json/pending_archives");
+            if (record.Status is PuloniaTaskRunStatus.Queued or PuloniaTaskRunStatus.Running
+                or PuloniaTaskRunStatus.Cancelling)
+                throw new PuloniaTaskValidationException("state.json", "待归档运行尚未结束。");
+            AddRunIdentity(record, requestIds, runIds, "state.json");
+        }
+        var eventKeys = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var entry in state.Ledger)
+        {
+            if (string.IsNullOrWhiteSpace(entry.EventKey) || !eventKeys.Add(entry.EventKey)
+                || string.IsNullOrWhiteSpace(entry.ScopeKey) || string.IsNullOrWhiteSpace(entry.EffectKey)
+                || string.IsNullOrWhiteSpace(entry.WindowKey) || entry.Units <= 0
+                || string.IsNullOrWhiteSpace(entry.TaskRunId) || entry.Evidence is null)
+                throw new PuloniaTaskValidationException("state.json/ledger", "账本项字段无效或事件键重复。");
+        }
+        foreach (var intent in state.UncertainOperations)
+        {
+            if (intent.RunId == Guid.Empty || string.IsNullOrWhiteSpace(intent.TaskAddress)
+                || intent.RuleIds is null || intent.Reservations is null || intent.RuleIds.Count == 0)
+                throw new PuloniaTaskValidationException("state.json/uncertain_operations", "未决操作字段无效。");
+        }
+        return state;
+    }
+
+    /// <summary>
+    /// 输出当前运行状态文件。
+    /// </summary>
+    public static string WriteState(PuloniaTaskState state) => Write(state);
+
+    /// <summary>
+    /// 读取不可变历史记录。
+    /// </summary>
+    public static PuloniaTaskRunRecord ReadRunRecord(string json)
+    {
+        var record = Read<PuloniaTaskRunRecord>(json);
+        ValidateRunRecord(record, "history");
+        return record;
+    }
+
+    /// <summary>
+    /// 输出不可变历史记录。
+    /// </summary>
+    public static string WriteRunRecord(PuloniaTaskRunRecord record) => Write(record);
+
+    /// <summary>
+    /// 校验状态和历史共用的运行记录必要字段。
+    /// </summary>
+    private static void ValidateRunRecord(PuloniaTaskRunRecord record, string path)
+    {
+        if (record.RequestId == Guid.Empty || record.RunId == Guid.Empty || record.Request is null
+            || string.IsNullOrWhiteSpace(record.PlanName) || string.IsNullOrWhiteSpace(record.SnapshotJson)
+            || string.IsNullOrWhiteSpace(record.Message) || record.NodeResults is null
+            || record.CompletedTaskAddresses is null)
+            throw new PuloniaTaskValidationException(path, "运行记录必要字段缺失。");
+        PuloniaTaskValidator.ValidateId(record.Request.PlanId, path + "/plan_id");
+        if (record.Request.ParameterOverrides is null)
+            throw new PuloniaTaskValidationException(path, "运行请求参数覆盖不能为空。");
+    }
+
+    /// <summary>
+    /// 校验当前状态内请求与运行身份不重复。
+    /// </summary>
+    private static void AddRunIdentity(PuloniaTaskRunRecord record, ISet<Guid> requestIds,
+        ISet<Guid> runIds, string path)
+    {
+        if (!requestIds.Add(record.RequestId) || !runIds.Add(record.RunId))
+            throw new PuloniaTaskValidationException(path, "请求 ID 或运行 ID 在当前状态中重复。");
+    }
 
     /// <summary>
     /// 复制子树供粘贴使用；每个节点生成新 ID，参数仍按同一格式读取。

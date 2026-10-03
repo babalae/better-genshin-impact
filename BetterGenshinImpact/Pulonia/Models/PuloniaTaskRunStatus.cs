@@ -38,5 +38,15 @@ public enum PuloniaTaskRunStatus
     /// <summary>
     /// 计划总运行时限耗尽，并已确认当前执行器退出。
     /// </summary>
-    TimedOut
+    TimedOut,
+
+    /// <summary>
+    /// 应用退出或崩溃时仍在执行，不能推断副作用是否发生。
+    /// </summary>
+    Interrupted,
+
+    /// <summary>
+    /// 存在未决副作用，需要人工或能力核验后才能安全继续。
+    /// </summary>
+    NeedsAttention
 }

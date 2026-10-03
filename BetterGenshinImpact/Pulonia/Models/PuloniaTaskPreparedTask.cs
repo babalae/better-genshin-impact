@@ -103,22 +103,24 @@ public sealed class PuloniaTaskPreparedTask
     /// <summary>
     /// 固定本次准备数据，所有可变对象均复制后保存。
     /// </summary>
-    internal PuloniaTaskPreparedTask(string planId, string taskId, string sourceTaskId, string address,
-        string name, string taskType, bool enabled, string? path, string? version, JObject parameters,
-        Dictionary<string, string> sources, PuloniaTaskPolicy policy, IEnumerable<PuloniaTaskPreparedTask> children)
+    [JsonConstructor]
+    internal PuloniaTaskPreparedTask(string planId, string taskId, string sourceTaskId, string taskAddress,
+        string name, string taskType, bool isEnabled, string? path, string? resourceVersion, JObject parameters,
+        IDictionary<string, string> parameterSources, PuloniaTaskPolicy policy,
+        IEnumerable<PuloniaTaskPreparedTask> children)
     {
         PlanId = planId;
         TaskId = taskId;
         SourceTaskId = sourceTaskId;
-        TaskAddress = address;
+        TaskAddress = taskAddress;
         Name = name;
         TaskType = taskType;
-        IsEnabled = enabled;
+        IsEnabled = isEnabled;
         Path = path;
-        ResourceVersion = version;
+        ResourceVersion = resourceVersion;
         _parametersJson = PuloniaTaskJson.Write(parameters);
         _policyJson = PuloniaTaskJson.Write(policy);
-        ParameterSources = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(sources));
+        ParameterSources = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(parameterSources));
         Children = System.Array.AsReadOnly(children.ToArray());
     }
 }
