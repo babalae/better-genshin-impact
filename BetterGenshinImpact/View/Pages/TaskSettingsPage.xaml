@@ -3691,6 +3691,7 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
@@ -3698,14 +3699,25 @@
                                   TextWrapping="Wrap">
                         LLM模型名
                     </ui:TextBlock>
-                    <ui:TextBox Grid.Row="1"
-                                Grid.RowSpan="2"
-                                Grid.Column="1"
-                                MinWidth="180"
-                                MaxWidth="400"
-                                Margin="0,0,36,0"
-                                Text="{Binding Config.AutoComboBuildConfig.ModelName, Mode=TwoWay}"
-                                TextWrapping="Wrap" Cursor="IBeam" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              MinWidth="180"
+                              MaxWidth="400"
+                              MinHeight="32"
+                              VerticalContentAlignment="Center"
+                              Margin="0,0,8,0"
+                              IsEditable="True"
+                              IsTextSearchEnabled="True"
+                              ItemsSource="{Binding AutoComboModelNameList}"
+                              Text="{Binding Config.AutoComboBuildConfig.ModelName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                              ToolTip="{Binding Config.AutoComboBuildConfig.ModelName}" />
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="2"
+                               Margin="0,0,36,0"
+                               Content="{i18n:T 拉取模型列表}"
+                               Command="{Binding FetchAutoComboModelListCommand}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>

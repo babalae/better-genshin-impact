@@ -39,13 +39,6 @@ public class AutoComboBuildTask : ISoloTask
     /// </summary>
     private const int AnthropicDefaultMaxOutputTokens = 8192;
 
-    /// <summary>
-    /// Anthropic 官方生产环境地址，服务地址留空时使用。
-    /// 这里不沿用 SDK 的 ANTHROPIC_BASE_URL 环境变量回退：否则用户机器上的环境变量会在界面上看不出来的情况下
-    /// 决定密钥发往哪个地址。
-    /// </summary>
-    private const string AnthropicDefaultBaseUrl = "https://api.anthropic.com";
-
     public async Task Start(CancellationToken ct)
     {
         // 展示行为树浮窗：建树过程（含 LLM 多轮 preview）实时可见；AutoDomain 等任意调用方均生效
@@ -280,7 +273,7 @@ public class AutoComboBuildTask : ISoloTask
         }
 
         // OpenAI 兼容端点必须由用户提供；Anthropic 允许留空，由 SDK 使用官方地址
-        var endpoint = ResolveEndpoint(config.PlanningLlmEndpoint, provider, out var isLoopback);
+        var endpoint = AutoComboLlmEndpoint.Resolve(config.PlanningLlmEndpoint, provider, out var isLoopback);
 
         // 密钥随每个请求发送，非 HTTPS 传输时会在网络中明文暴露；仅豁免本机回环地址（本地中转/本地模型）
         if (string.IsNullOrWhiteSpace(config.ApiKey) && !isLoopback)
@@ -320,43 +313,6 @@ public class AutoComboBuildTask : ISoloTask
     }
 
     /// <summary>
-    /// 解析并校验服务地址。
-    /// OpenAI 兼容端点必填；Anthropic 允许留空（返回 null，由 SDK 使用官方地址）。
-    /// 地址非 HTTPS 且不是本机回环时直接报错：密钥会随每个请求明文发出。
-    /// </summary>
-    private static Uri? ResolveEndpoint(string endpointText, string provider, out bool isLoopback)
-    {
-        isLoopback = false;
-        if (string.IsNullOrWhiteSpace(endpointText))
-        {
-            if (provider == AutoComboLlmProvider.OpenAiCompatible)
-            {
-                throw new Exception("请先在任务设置页的“自动连招”卡片中配置 LLM 服务地址");
-            }
-
-            return null;
-        }
-
-        Uri endpoint;
-        try
-        {
-            endpoint = new Uri(endpointText.Trim());
-        }
-        catch (UriFormatException e)
-        {
-            throw new Exception($"LLM 服务地址无效：{endpointText}", e);
-        }
-
-        isLoopback = endpoint.Host is "localhost" or "127.0.0.1" or "::1" || endpoint.Host.StartsWith("[::1]");
-        if (endpoint.Scheme != Uri.UriSchemeHttps && !isLoopback)
-        {
-            throw new Exception($"LLM 服务地址必须使用 HTTPS（否则密钥将明文传输），本机回环地址除外：{endpointText}");
-        }
-
-        return endpoint;
-    }
-
-    /// <summary>
     /// 创建 OpenAI 兼容端点的 IChatClient。
     /// </summary>
     private static IChatClient CreateOpenAiCompatibleChatClient(AutoComboBuildConfig config, Uri endpoint)
@@ -387,9 +343,7 @@ public class AutoComboBuildTask : ISoloTask
 
             // 地址留空时回落到官方地址；填写时去掉结尾斜杠，避免与 SDK 自行拼接的 /v1/messages 组成双斜杠
             // （此处应填服务根地址，不含 /v1）
-            BaseUrl = endpoint is null
-                ? AnthropicDefaultBaseUrl
-                : $"{endpoint.Scheme}://{endpoint.Authority}{endpoint.AbsolutePath.TrimEnd('/')}",
+            BaseUrl = AutoComboLlmEndpoint.ResolveAnthropicBaseUrl(endpoint),
         };
 
         return anthropicClient.AsIChatClient(config.ModelName, AnthropicDefaultMaxOutputTokens);
