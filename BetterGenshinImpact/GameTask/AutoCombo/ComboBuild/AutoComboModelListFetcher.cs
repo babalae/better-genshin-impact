@@ -22,7 +22,19 @@ public static class AutoComboModelListFetcher
     /// <summary>错误提示里回显的响应正文上限，避免把整段响应贴进 UI。</summary>
     private const int MaxEchoLength = 300;
 
-    private static readonly HttpClient HttpClient = new() { Timeout = TimeSpan.FromSeconds(20) };
+    /// <summary>
+    /// 拉取模型列表专用的 HttpClient：不跟随重定向。
+    ///
+    /// x-api-key 是自定义头，而 .NET 的自动重定向只会清理 Authorization、不会清理它，
+    /// 服务端一旦返回 3xx 指向其他地址，密钥就会被一并转发过去。
+    /// </summary>
+    private static readonly HttpClient HttpClient = new(new HttpClientHandler
+    {
+        AllowAutoRedirect = false,
+    })
+    {
+        Timeout = TimeSpan.FromSeconds(20),
+    };
 
     /// <summary>
     /// 按服务商拉取模型名列表。失败时抛出带可读原因的异常，由调用方展示。
@@ -44,6 +56,15 @@ public static class AutoComboModelListFetcher
 
         using var response = await HttpClient.SendAsync(request, ct);
         var body = await response.Content.ReadAsStringAsync(ct);
+
+        // 上面关掉了自动重定向，所以 3xx 会走到这里：给出可执行的提示，而不是让用户对着一个空的 302 发愣
+        if ((int)response.StatusCode is >= 300 and < 400)
+        {
+            throw new Exception(
+                $"服务返回了重定向（HTTP {(int)response.StatusCode} → {response.Headers.Location}）。" +
+                "为避免密钥被转发到其他地址，这里不会自动跟随；请把服务地址直接填写为重定向后的地址。");
+        }
+
         if (!response.IsSuccessStatusCode)
         {
             throw new Exception($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}：{Summarize(body)}");
@@ -78,6 +99,10 @@ public static class AutoComboModelListFetcher
         return request;
     }
 
+    /// <summary>
+    /// 解析 <c>{"data":[{"id":"..."}]}</c> 形式的响应，按出现顺序返回去重后的模型名。
+    /// 空列表或结构不符时抛错，交由调用方提示。
+    /// </summary>
     private static List<string> ParseModelIds(string body)
     {
         JToken? data;

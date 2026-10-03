@@ -767,6 +767,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
         }
     }
 
+    /// <summary>拉取期间禁用按钮，避免重复请求。</summary>
     private bool CanFetchAutoComboModelList() => !FetchingAutoComboModelList;
 
     /// <summary>
