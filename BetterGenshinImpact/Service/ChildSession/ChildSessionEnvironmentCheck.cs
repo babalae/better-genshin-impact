@@ -130,7 +130,9 @@ internal static class ChildSessionEnvironmentCheck
             + "桌面分身需要系统能够创建独立的 RDP 会话，官方要求非家庭版系统。"
             + "家庭版通常无法建立该会话，表现为登录界面反复提示凭据无效，或等待一段时间后连接超时。"
             + Environment.NewLine
-            + "建议升级到 Windows 专业版，或改用 RDP Wrapper 实现本地远程多用户。"));
+            + "不过也有部分家庭版系统可以正常使用，可以先继续尝试。"
+            + "如果确实无法连接，建议升级到 Windows 专业版，"
+            + "或改用 RDP Wrapper 实现本地远程多用户。"));
     }
 
     private static void CollectRdpHostIssue(List<Issue> issues)
