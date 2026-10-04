@@ -188,6 +188,169 @@ public sealed class PuloniaTaskHistoryTests : IDisposable
     }
 
     /// <summary>
+    /// 有历史记录的计划首次打开时允许不选记录，显式定位仍能查看指定运行。
+    /// </summary>
+    [Fact]
+    public async Task HistoryRefresh_WithExistingRunsDoesNotForceSelection()
+    {
+        using var store = new PuloniaTaskStore(_directory);
+        await using var service = CreateService(store);
+        var plan = await store.SavePlanAsync(CreatePlan("已有记录的计划", "sample.sum"));
+        var requestId = await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = plan.Id });
+        await service.WaitForCompletionAsync(requestId).WaitAsync(TimeSpan.FromSeconds(20));
+        var model = new PuloniaTaskHistoryViewModel(service, store) { PlanFilterId = plan.Id };
+
+        await model.RefreshAsync();
+        Assert.Single(model.Runs);
+        Assert.Null(model.SelectedRun);
+        Assert.Null(model.SelectedRunNodeResult);
+        Assert.False(model.HasSelectedRun);
+        Assert.False(model.ClearSelectionCommand.CanExecute(null));
+
+        await model.RevealRunAsync(requestId);
+        Assert.Equal(requestId, model.SelectedRun!.RequestId);
+        Assert.NotNull(model.SelectedRunNodeResult);
+        Assert.True(model.ClearSelectionCommand.CanExecute(null));
+    }
+
+    /// <summary>
+    /// 取消选择不删除或取消任务，刷新、新记录、筛选与切换计划均不能强制重新选择。
+    /// </summary>
+    [Fact]
+    public async Task ClearHistorySelection_SurvivesRefreshFiltersAndPlanChanges()
+    {
+        using var store = new PuloniaTaskStore(_directory);
+        await using var service = CreateService(store);
+        var plan = await store.SavePlanAsync(CreatePlan("计划甲", "sample.sum"));
+        var otherPlan = await store.SavePlanAsync(CreatePlan("计划乙", "sample.sum"));
+        var oldId = await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = plan.Id });
+        await service.WaitForCompletionAsync(oldId).WaitAsync(TimeSpan.FromSeconds(20));
+        var model = new PuloniaTaskHistoryViewModel(service, store) { PlanFilterId = plan.Id };
+        await model.RevealRunAsync(oldId);
+
+        model.ClearSelectionCommand.Execute(null);
+        Assert.Null(model.SelectedRun);
+        Assert.Null(model.SelectedRunNodeResult);
+        Assert.False(model.ClearSelectionCommand.CanExecute(null));
+        Assert.False(model.CancelRunCommand.CanExecute(null));
+        Assert.False(model.ResumeRunCommand.CanExecute(null));
+        Assert.False(model.ResumeFromNodeCommand.CanExecute(null));
+
+        var newId = await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = plan.Id });
+        var otherId = await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = otherPlan.Id });
+        await service.WaitForCompletionAsync(newId).WaitAsync(TimeSpan.FromSeconds(20));
+        await service.WaitForCompletionAsync(otherId).WaitAsync(TimeSpan.FromSeconds(20));
+        await model.RefreshAsync();
+        Assert.Equal(2, model.Runs.Count);
+        Assert.Null(model.SelectedRun);
+        model.SearchText = "计划甲";
+        model.SelectedStatusFilter = model.StatusFilters.Single(item => item.Value == "failed");
+        Assert.Empty(model.Runs);
+        model.ClearFiltersCommand.Execute(null);
+        Assert.Equal(2, model.Runs.Count);
+        Assert.Null(model.SelectedRun);
+        model.PlanFilterId = otherPlan.Id;
+        Assert.Single(model.Runs);
+        Assert.Null(model.SelectedRun);
+        model.PlanFilterId = plan.Id;
+        Assert.Null(model.SelectedRun);
+        Assert.Null(model.SelectedRunNodeResult);
+
+        // 明确查看某次运行时仍恢复选择，历史及节点详情没有被清除选择操作修改。
+        await model.RevealRunAsync(oldId);
+        Assert.Equal(oldId, model.SelectedRun!.RequestId);
+        Assert.NotNull(model.SelectedRunNodeResult);
+        Assert.Equal(PuloniaTaskRunStatus.Succeeded, (await service.GetRunAsync(oldId)).Status);
+        Assert.Equal(3, (await store.ListHistoryAsync()).Count);
+    }
+
+    /// <summary>
+    /// 选中记录被筛掉或指定请求不存在时，不能改为选择无关记录；清除筛选也不能抢回选择。
+    /// </summary>
+    [Fact]
+    public async Task HistoryFilters_DoNotReplaceSelectionWithUnrelatedRun()
+    {
+        using var store = new PuloniaTaskStore(_directory);
+        await using var service = CreateService(store);
+        var plan = await store.SavePlanAsync(CreatePlan("计划甲", "sample.sum"));
+        var otherPlan = await store.SavePlanAsync(CreatePlan("计划乙", "sample.sum"));
+        var firstId = await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = plan.Id });
+        var secondId = await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = otherPlan.Id });
+        await service.WaitForCompletionAsync(firstId).WaitAsync(TimeSpan.FromSeconds(20));
+        await service.WaitForCompletionAsync(secondId).WaitAsync(TimeSpan.FromSeconds(20));
+        var model = new PuloniaTaskHistoryViewModel(service, store);
+        await model.RevealRunAsync(firstId);
+
+        model.SearchText = "计划乙";
+        Assert.Equal(secondId, Assert.Single(model.Runs).RequestId);
+        Assert.Null(model.SelectedRun);
+        Assert.Null(model.SelectedRunNodeResult);
+        model.ClearFiltersCommand.Execute(null);
+        Assert.Equal(2, model.Runs.Count);
+        Assert.Null(model.SelectedRun);
+        await model.RefreshAsync(Guid.NewGuid());
+        Assert.Null(model.SelectedRun);
+    }
+
+    /// <summary>
+    /// 各页签中新执行计划都使用当前配置和完整任务树，是否选中历史不会把新执行变成续跑。
+    /// </summary>
+    [Theory]
+    [InlineData(false, 0)]
+    [InlineData(true, 0)]
+    [InlineData(false, 1)]
+    [InlineData(true, 1)]
+    [InlineData(false, 2)]
+    [InlineData(true, 2)]
+    public async Task RunPlan_WithExistingHistoryCreatesFreshFullRun(bool keepHistorySelected, int tabIndex)
+    {
+        using var store = new PuloniaTaskStore(_directory);
+        await using var service = CreateService(store);
+        var plan = CreatePlan("重新执行计划", "sample.sum");
+        plan.RootTask.Children.Add(new PuloniaTask
+        {
+            Name = "第二个计算节点", TaskType = "csharp",
+            Parameters = new JObject { ["operation"] = "sample.sum", ["values"] = new JArray(4) }
+        });
+        plan = await store.SavePlanAsync(plan);
+        var oldId = await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = plan.Id });
+        var oldRun = await service.WaitForCompletionAsync(oldId).WaitAsync(TimeSpan.FromSeconds(20));
+        var history = new PuloniaTaskHistoryViewModel(service, store);
+        await history.RevealRunAsync(oldId);
+
+        // 历史仍指向旧快照；当前计划更新后，新执行必须重新固定最新配置。
+        plan.RootTask.Children[0].Parameters["values"] = new JArray(99);
+        plan = await store.SavePlanAsync(plan);
+        var clipboard = new PuloniaTaskClipboardService();
+        var document = new PuloniaTaskPlanDocumentViewModel(plan, [], clipboard, isNew: false);
+        var page = new PuloniaTaskPlanViewModel(store, clipboard, service, new PuloniaTaskResourceCatalog(), history)
+        {
+            SelectedDocument = document,
+            SelectedPlanTabIndex = tabIndex
+        };
+        if (!keepHistorySelected)
+            history.ClearSelectionCommand.Execute(null);
+        Assert.Equal(keepHistorySelected, history.HasSelectedRun);
+        Assert.True(page.RunPlanCommand.CanExecute(null));
+
+        await page.RunPlanCommand.ExecuteAsync(null);
+        var newId = history.SelectedRun!.RequestId;
+        Assert.NotEqual(oldId, newId);
+        var newRun = await service.WaitForCompletionAsync(newId).WaitAsync(TimeSpan.FromSeconds(20));
+        Assert.Equal(PuloniaTaskRunStatus.Succeeded, newRun.Status);
+        Assert.Null(newRun.ResumedFromRunId);
+        Assert.Null(newRun.ResumeFromTaskAddress);
+        Assert.Null(newRun.TargetTaskId);
+        Assert.Equal("ui", newRun.Source);
+        Assert.Equal(2, newRun.NodeResults.Count);
+        Assert.Equal(99, newRun.NodeResults[0].Data.Value<int>("sum"));
+        Assert.Equal(4, newRun.NodeResults[1].Data.Value<int>("sum"));
+        Assert.Equal(6, oldRun.NodeResults[0].Data.Value<int>("sum"));
+        Assert.Equal(oldRun.SnapshotJson, (await service.GetRunAsync(oldId)).SnapshotJson);
+        Assert.Equal(2, (await store.ListHistoryAsync()).Count);
+    }
+
+    /// <summary>
     /// 停止运行环境应中断游戏等待，清理完成前保持停止中，之后刷新和重启均显示已停止（取消）的本地历史。
     /// </summary>
     [Theory]

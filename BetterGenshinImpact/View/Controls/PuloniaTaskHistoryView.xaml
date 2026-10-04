@@ -86,6 +86,8 @@
                 <Button Margin="0,0,8,6" Command="{Binding ClearFiltersCommand}" Content="清除筛选" />
             </WrapPanel>
             <WrapPanel>
+                <Button Margin="0,0,8,4" Command="{Binding ClearSelectionCommand}" Content="取消选择记录"
+                        ToolTip="只取消查看记录，不停止任务或删除历史；新执行计划不依赖记录选择。" />
                 <Button Margin="0,0,8,4" Command="{Binding CancelRunCommand}" Content="取消选中运行" />
                 <Button Margin="0,0,8,4" Command="{Binding ResumeRunCommand}" Content="继续未完成节点"
                         ToolTip="沿用原快照，跳过已确认成功的节点；不确定结果需要人工核对。" />
@@ -102,6 +104,7 @@
             </Grid.ColumnDefinitions>
             <Grid>
                 <ListBox ItemsSource="{Binding Runs}" SelectedItem="{Binding SelectedRun, Mode=TwoWay}"
+                         IsSynchronizedWithCurrentItem="False"
                          ItemContainerStyle="{StaticResource HistoryItem}"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
@@ -138,6 +141,20 @@
                 </TextBlock>
             </Grid>
             <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Center" Background="{DynamicResource CardStrokeColorDefaultBrush}" />
+            <TextBlock Grid.Column="2" Margin="12" HorizontalAlignment="Center" VerticalAlignment="Center"
+                       Text="未选中执行记录；点击左侧记录可查看详情。" TextWrapping="Wrap" TextAlignment="Center"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" IsHitTestVisible="False">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasSelectedRun}" Value="False">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
             <Grid Grid.Column="2" Visibility="{Binding HasSelectedRun, Converter={StaticResource BoolVisibility}}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />

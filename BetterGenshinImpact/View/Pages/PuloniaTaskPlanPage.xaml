@@ -424,6 +424,18 @@
             </GridSplitter>
 
             <Border Grid.Column="2" Padding="0" Style="{StaticResource EditorCardStyle}">
+                <DockPanel>
+                    <!-- 新运行入口常驻计划页，不依赖历史选中状态；续跑仍使用记录视图中的独立命令。 -->
+                    <WrapPanel DockPanel.Dock="Top" Margin="12,12,12,4">
+                        <Button Margin="0,0,12,6" Command="{Binding ViewModel.RunPlanCommand}" Content="新执行当前计划"
+                                ToolTip="保存当前配置并从计划开头建立新运行，不沿用选中历史的快照或续跑起点。" />
+                        <TextBlock Margin="0,0,8,6" VerticalAlignment="Center" Text="计划总时限（秒）" />
+                        <ui:NumberBox Width="140" Margin="0,0,0,6"
+                                      AcceptsExpression="False" LargeChange="60"
+                                      MaxDecimalPlaces="3" Maximum="604800" Minimum="0.001"
+                                      SmallChange="1" SpinButtonPlacementMode="Inline"
+                                      Value="{Binding ViewModel.RunTimeoutSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </WrapPanel>
                 <TabControl BorderThickness="0" SelectedIndex="{Binding ViewModel.SelectedPlanTabIndex}">
                     <TabItem Header="任务">
                         <Grid Margin="8">
@@ -558,27 +570,13 @@
                         </Grid>
                     </TabItem>
                     <TabItem Header="执行记录">
-                        <Grid Margin="12">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="*" />
-                            </Grid.RowDefinitions>
-                            <WrapPanel Margin="0,0,0,10">
-                                <TextBlock Margin="0,0,8,6" VerticalAlignment="Center" Text="计划总时限（秒）" />
-                                <ui:NumberBox Width="140" Margin="0,0,10,6"
-                                              AcceptsExpression="False" LargeChange="60"
-                                              MaxDecimalPlaces="3" Maximum="604800" Minimum="0.001"
-                                              SmallChange="1" SpinButtonPlacementMode="Inline"
-                                              Value="{Binding ViewModel.RunTimeoutSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                <Button Margin="0,0,0,6" Command="{Binding ViewModel.RunPlanCommand}" Content="运行当前计划" />
-                            </WrapPanel>
-                            <controls:PuloniaTaskHistoryView Grid.Row="1" DataContext="{Binding ViewModel.History}" />
-                        </Grid>
+                        <controls:PuloniaTaskHistoryView Margin="12" DataContext="{Binding ViewModel.History}" />
                     </TabItem>
                     <TabItem Header="触发方式">
                         <controls:PuloniaTaskTriggerView DataContext="{Binding ViewModel}" />
                     </TabItem>
                 </TabControl>
+                </DockPanel>
             </Border>
         </Grid>
 

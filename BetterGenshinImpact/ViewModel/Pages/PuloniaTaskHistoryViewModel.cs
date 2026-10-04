@@ -278,6 +278,16 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel
     }
 
     /// <summary>
+    /// 取消查看历史记录，不取消运行、不删除记录，也不影响计划页提交新的完整计划。
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(HasSelectedRun))]
+    private void ClearSelection()
+    {
+        SelectedRun = null;
+        SelectedRunNodeResult = null;
+    }
+
+    /// <summary>
     /// 用户主动提交或续跑时显示新请求，防止筛选条件把操作结果隐藏。
     /// </summary>
     public async Task RevealRunAsync(Guid requestId)
@@ -378,7 +388,11 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel
         }
         while (Runs.Count > filtered.Length)
             Runs.RemoveAt(Runs.Count - 1);
-        SelectedRun = Runs.FirstOrDefault(item => item.RequestId == selectedRequestId) ?? Runs.FirstOrDefault();
+        // 未选中也是有效状态；后台刷新和筛选不得强制选回第一条历史。
+        // 只有显式提交/续跑指定请求，或保留用户正在查看的请求时才恢复选择。
+        SelectedRun = selectedRequestId is { } requestId
+            ? Runs.FirstOrDefault(item => item.RequestId == requestId)
+            : null;
         if (SelectedRun is { } current && current.RequestId == selectedRequestId)
             SelectedRunNodeResult = current.NodeDetails.FirstOrDefault(item =>
                 item.TaskAddress == selectedAddress && item.Attempt == selectedAttempt) ?? SelectedRunNodeResult;
@@ -429,6 +443,7 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel
         OnPropertyChanged(nameof(CanCancelRun));
         OnPropertyChanged(nameof(CanResumeRun));
         OnPropertyChanged(nameof(CanResumeFromNode));
+        ClearSelectionCommand.NotifyCanExecuteChanged();
         CancelRunCommand.NotifyCanExecuteChanged();
         ResumeRunCommand.NotifyCanExecuteChanged();
         ResumeFromNodeCommand.NotifyCanExecuteChanged();
