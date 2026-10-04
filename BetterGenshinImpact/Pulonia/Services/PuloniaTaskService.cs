@@ -887,14 +887,17 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
                 return ExecutionSignal.StopPlan;
             }
             var succeeded = outcome?.IsSuccess == true;
+            // 配置明确禁用的 Shell 等节点记为跳过，不触发失败重试或停止后续任务。
+            var skipped = outcome?.Kind == PuloniaTaskOutcomeKind.Skipped;
             var message = outcome?.Message ?? failure?.Message ?? "执行器未返回结果。";
             var status = nodeTimedOut
                 ? PuloniaTaskNodeStatus.TimedOut
+                : skipped ? PuloniaTaskNodeStatus.Skipped
                 : succeeded ? PuloniaTaskNodeStatus.Succeeded : PuloniaTaskNodeStatus.Failed;
             await AddNodeResultAsync(state, new PuloniaTaskNodeResult(task.TaskAddress, task.Name, task.TaskType, attempt,
                 status, message, startedAt, finished, outcome?.Data, outcome?.Kind, outcome?.Evidence))
                 .ConfigureAwait(false);
-            if (succeeded)
+            if (succeeded || skipped)
                 return ExecutionSignal.Continue;
 
             if (attempt < maxAttempts)

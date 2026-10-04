@@ -4,7 +4,7 @@ using Newtonsoft.Json.Linq;
 namespace BetterGenshinImpact.Pulonia.Models;
 
 /// <summary>
-/// 分组公共参数的作用域，JS 必须同时匹配资源和参数版本。
+/// 分组公共参数的作用域，JS 自定义参数必须同时匹配资源和参数版本；宿主公共设置可以跨资源继承。
 /// </summary>
 public sealed class PuloniaTaskParameterOverride
 {
@@ -15,7 +15,7 @@ public sealed class PuloniaTaskParameterOverride
     public string TaskType { get; set; } = string.Empty;
 
     /// <summary>
-    /// 特定资源的稳定标识；JS 不允许省略。
+    /// 特定资源的稳定标识；包含 JS 自定义参数时不允许省略。
     /// </summary>
     [JsonProperty("resource_id")]
     public string? ResourceId { get; set; }

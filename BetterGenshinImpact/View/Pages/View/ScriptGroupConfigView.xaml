@@ -21,7 +21,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <ui:TitleBar Grid.Row="0" Title="{i18n:T 配置组设置}">
+        <ui:TitleBar Grid.Row="0" Title="{i18n:T 配置组设置}" Visibility="{Binding ShowTitleBar, Converter={StaticResource BooleanToVisibilityConverter}}">
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
             </ui:TitleBar.Icon>
@@ -35,7 +35,7 @@
 
             <ui:CardExpander Margin="0,0,0,12"
                              ContentPadding="0"
-                             Icon="{ui:SymbolIcon Map24}">
+                             Icon="{ui:SymbolIcon Map24}" Visibility="{Binding ShowPathingSettings, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <ui:CardExpander.Header>
                     <Grid>
                         <Grid.RowDefinitions>
@@ -320,7 +320,7 @@
                                   SelectedValue="{Binding PathingConfig.RecoverTiming}" />
 
                     </Grid>
-                    <Grid Margin="16">
+                    <Grid Margin="16" Visibility="{Binding ShowLegacySchedulingSettings, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
@@ -346,7 +346,7 @@
                                     Text="{Binding PathingConfig.SkipDuring, Mode=TwoWay}"
                                     TextWrapping="NoWrap" />
                     </Grid>
-                    <Grid Margin="16">
+                    <Grid Margin="16" Visibility="{Binding ShowLegacySchedulingSettings, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
@@ -720,7 +720,7 @@
                     </Grid>
 
                                        <!-- 执行周期配置 -->
-                    <Grid Margin="16,0">
+                    <Grid Margin="16,0" Visibility="{Binding ShowLegacySchedulingSettings, Converter={StaticResource BooleanToVisibilityConverter}}">
 
                         <ui:CardExpander Margin="0,0,36,0"
                                          ContentPadding="0"
@@ -892,7 +892,7 @@
                                        
                                        
                                        <!-- 跳过执行配置 -->
-                    <Grid Margin="16,0">
+                    <Grid Margin="16,0" Visibility="{Binding ShowLegacySchedulingSettings, Converter={StaticResource BooleanToVisibilityConverter}}">
 
                         <ui:CardExpander Margin="0,0,36,0"
                                          ContentPadding="0"
@@ -1063,7 +1063,7 @@
 
                     </Grid>        
                                        <!-- 优先执行其他配置组 -->
-                     <Grid Margin="16,0,16,8">
+                     <Grid Margin="16,0,16,8" Visibility="{Binding ShowLegacySchedulingSettings, Converter={StaticResource BooleanToVisibilityConverter}}">
 
                         <ui:CardExpander Margin="0,0,36,0"
                                          ContentPadding="0"
@@ -1157,7 +1157,7 @@
                 </StackPanel>
             </ui:CardExpander>
             <ui:CardExpander Margin="0,0,0,12"
-                             ContentPadding="0">
+                             ContentPadding="0" Visibility="{Binding ShowPathingSettings, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <ui:CardExpander.Icon>
                     <ui:FontIcon Glyph="&#xf71d;" Style="{StaticResource FaFontIconStyle}" />
                 </ui:CardExpander.Icon>
@@ -2177,7 +2177,7 @@
             </ui:CardExpander>
 
             <!-- 自动吃食物 -->
-            <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+            <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" Visibility="{Binding ShowPathingSettings, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <ui:CardExpander.Icon>
                     <ui:FontIcon Glyph="&#x1F35C;" Style="{StaticResource FaFontIconStyle}" />
                 </ui:CardExpander.Icon>
@@ -2294,7 +2294,7 @@
             </ui:CardExpander>
             <ui:CardExpander Margin="0,0,0,12"
                              ContentPadding="0"
-                             Icon="{ui:SymbolIcon FlashSettings24}">
+                             Icon="{ui:SymbolIcon FlashSettings24}" Visibility="{Binding ShowShellSettings, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <ui:CardExpander.Header>
                     <Grid>
                         <Grid.RowDefinitions>
@@ -2363,8 +2363,18 @@
                         <ui:TextBlock Grid.Row="1"
                                       Grid.Column="0"
                                       Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                      Text="{i18n:T 最长等待命令返回的时间，单位秒。如果时间小于等于0则不等待，直接返回。}"
-                                      TextWrapping="Wrap" />
+                                      TextWrapping="Wrap">
+                            <ui:TextBlock.Style>
+                                <Style TargetType="ui:TextBlock">
+                                    <Setter Property="Text" Value="{i18n:T 最长等待命令返回的时间，单位秒。如果时间小于等于0则不等待，直接返回。}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsPulonia}" Value="True">
+                                            <Setter Property="Text" Value="等待进程退出的最长秒数；超时会结束进程。小于等于 0 时不设额外时限，仍等待进程结束。节点执行策略的超时限制也会生效。" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ui:TextBlock.Style>
+                        </ui:TextBlock>
                         <ui:TextBox Grid.Row="0"
                                     Grid.RowSpan="2"
                                     Grid.Column="1"

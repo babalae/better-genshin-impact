@@ -148,15 +148,23 @@ public static class PuloniaTaskValidator
     }
 
     /// <summary>
-    /// 检查参数作用域，JS 参数必须绑定具体资源。
+    /// 检查参数作用域；JS 自定义参数必须绑定资源，宿主公共设置可以跨资源复用。
     /// </summary>
     public static void ValidateScope(string type, string? resourceId, int version, JObject? values, string location)
     {
         if (!IsLeafType(type) || version <= 0 || values is null)
             throw new PuloniaTaskValidationException(location, "参数作用域必须有具体能力类型、正整数版本和对象参数。");
         if (resourceId is not null && string.IsNullOrWhiteSpace(resourceId)
-            || type == "javascript" && string.IsNullOrWhiteSpace(resourceId))
-            throw new PuloniaTaskValidationException(location, "资源标识不能为空；JS 必须绑定具体资源。");
+            || type == "javascript" && resourceId is null
+                && (values.Count == 0 || values.Properties().Any(property => !PuloniaTaskCommonSettings.IsPathingParameter(property.Name))))
+            throw new PuloniaTaskValidationException(location, "资源标识不能为空；JS 自定义参数必须绑定具体资源。");
+        if (type == "javascript" && resourceId is null)
+            ValidateParameters(values, new JObject
+            {
+                ["type"] = "object",
+                ["properties"] = PuloniaTaskCommonSettings.CreateSchemaProperties("javascript"),
+                ["additionalProperties"] = false
+            }, location + "/values");
         ValidateJsonValue(values, location + "/values");
     }
 

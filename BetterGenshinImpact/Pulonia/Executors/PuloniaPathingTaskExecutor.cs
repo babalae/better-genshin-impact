@@ -1,11 +1,12 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.ViewModel.Pages;
 using Newtonsoft.Json.Linq;
 
@@ -24,28 +25,14 @@ public sealed class PuloniaPathingTaskExecutor : IPuloniaTaskExecutor
         Description = "选择本地路线文件，并配置队伍、自动拾取与自动战斗选项。",
         RequiresGameSession = true,
         ResourceBaseDirectory = MapPathingViewModel.PathJsonPath,
-        DefaultParameters = new JObject
-        {
-            ["party_name"] = "",
-            ["skip_party_switch"] = false,
-            ["auto_pick_enabled"] = true,
-            ["auto_fight_enabled"] = true,
-            ["auto_skip_enabled"] = true
-        },
+        DefaultParameters = PuloniaTaskCommonSettings.CreateDefaults("pathing"),
         ParameterSchema = new JObject
         {
             ["type"] = "object",
-            ["properties"] = new JObject
-            {
-                ["party_name"] = new JObject { ["type"] = "string" },
-                ["skip_party_switch"] = new JObject { ["type"] = "boolean" },
-                ["auto_pick_enabled"] = new JObject { ["type"] = "boolean" },
-                ["auto_fight_enabled"] = new JObject { ["type"] = "boolean" },
-                ["auto_skip_enabled"] = new JObject { ["type"] = "boolean" }
-            },
+            ["properties"] = PuloniaTaskCommonSettings.CreateSchemaProperties("pathing"),
             ["additionalProperties"] = false
         },
-        PublicParameters = ["party_name", "skip_party_switch", "auto_pick_enabled", "auto_fight_enabled", "auto_skip_enabled"]
+        PublicParameters = [.. PuloniaTaskCommonSettings.CreateDefaults("pathing").Properties().Select(property => property.Name)]
     }];
 
     /// <inheritdoc />
@@ -59,17 +46,12 @@ public sealed class PuloniaPathingTaskExecutor : IPuloniaTaskExecutor
             return PuloniaTaskOutcome.Failure("路线版本高于当前 BetterGI，已拒绝执行。");
 
         var parameters = task.Parameters;
-        var partyConfig = new PathingPartyConfig
-        {
-            Enabled = true,
-            PartyName = parameters.Value<string>("party_name") ?? string.Empty,
-            SkipPartySwitch = parameters.Value<bool>("skip_party_switch"),
-            AutoPickEnabled = parameters.Value<bool>("auto_pick_enabled"),
-            AutoFightEnabled = parameters.Value<bool>("auto_fight_enabled"),
-            AutoSkipEnabled = parameters.Value<bool>("auto_skip_enabled")
-        };
-        if (partyConfig.AutoPickEnabled)
-            TaskTriggerDispatcher.Instance().AddTrigger("AutoPick", null);
+        var partyConfig = PuloniaTaskCommonSettings.FromParameters("pathing", parameters).PathingConfig;
+        // 触发器租约仅属于当前节点，异常或取消时也会撤销。
+        using var autoPick = partyConfig.AutoPickEnabled
+            ? TaskTriggerDispatcher.Instance().AddTrigger("AutoPick", null) : null;
+        using var autoEat = partyConfig.AutoEatEnabled
+            ? TaskTriggerDispatcher.Instance().AddTrigger("AutoEat", null) : null;
 
         var executor = new PathExecutor(ct) { PartyConfig = partyConfig };
         await executor.Pathing(pathingTask).ConfigureAwait(false);

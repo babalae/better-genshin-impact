@@ -2,10 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Pulonia.Services;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.Pulonia.Executors;
@@ -26,7 +30,7 @@ public sealed class PuloniaShellTaskExecutor : IPuloniaTaskExecutor
         TaskType = "shell",
         DisplayName = "Shell",
         Description = "启动一个独立进程；命令、参数和工作目录会在创建前完成校验。",
-        DefaultParameters = new JObject
+        DefaultParameters = new(PuloniaTaskCommonSettings.CreateDefaults("shell"))
         {
             ["file_name"] = "cmd.exe",
             ["arguments"] = new JArray("/d", "/c", "echo Pulonia Shell sample")
@@ -34,7 +38,7 @@ public sealed class PuloniaShellTaskExecutor : IPuloniaTaskExecutor
         ParameterSchema = new JObject
         {
             ["type"] = "object",
-            ["properties"] = new JObject
+            ["properties"] = new JObject(PuloniaTaskCommonSettings.CreateSchemaProperties("shell"))
             {
                 ["file_name"] = new JObject { ["type"] = "string" },
                 ["arguments"] = new JObject
@@ -47,7 +51,8 @@ public sealed class PuloniaShellTaskExecutor : IPuloniaTaskExecutor
             ["required"] = new JArray("file_name", "arguments"),
             ["additionalProperties"] = false
         },
-        PublicParameters = ["file_name", "arguments", "working_directory"]
+        PublicParameters = ["file_name", "arguments", "working_directory",
+            .. PuloniaTaskCommonSettings.CreateDefaults("shell").Properties().Select(property => property.Name)]
     }];
 
     /// <inheritdoc />
@@ -55,6 +60,19 @@ public sealed class PuloniaShellTaskExecutor : IPuloniaTaskExecutor
         PuloniaTaskExecutionContext context, CancellationToken ct)
     {
         var parameters = task.Parameters;
+        var config = PuloniaTaskCommonSettings.FromParameters("shell", parameters);
+        var shellConfig = config.EnableShellConfig ? config.ShellConfig : null;
+        ct.ThrowIfCancellationRequested();
+        if (shellConfig?.Disable == true)
+            return new PuloniaTaskOutcome(PuloniaTaskOutcomeKind.Skipped, "Shell 任务已按执行设置跳过。");
+        if (shellConfig?.Timeout > int.MaxValue / 1000)
+            return PuloniaTaskOutcome.Failure("Shell 超时秒数过大。");
+
+        // 只在显式启用 Shell 配置时增加时限；外部取消与节点策略仍沿用同一进程清理路径。
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        if (shellConfig?.Timeout > 0)
+            timeout.CancelAfter(TimeSpan.FromSeconds(shellConfig.Timeout));
+        var executionToken = timeout.Token;
         var fileName = parameters.Value<string>("file_name");
         if (string.IsNullOrWhiteSpace(fileName))
             return PuloniaTaskOutcome.Failure("Shell file_name 不能为空。");
@@ -63,7 +81,7 @@ public sealed class PuloniaShellTaskExecutor : IPuloniaTaskExecutor
         {
             FileName = fileName,
             UseShellExecute = false,
-            CreateNoWindow = true,
+            CreateNoWindow = shellConfig?.NoWindow ?? true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             WorkingDirectory = ResolveWorkingDirectory(parameters.Value<string?>("working_directory"))
@@ -72,6 +90,7 @@ public sealed class PuloniaShellTaskExecutor : IPuloniaTaskExecutor
             startInfo.ArgumentList.Add(argument);
 
         using var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
+        executionToken.ThrowIfCancellationRequested();
         try
         {
             if (!process.Start())
@@ -87,9 +106,9 @@ public sealed class PuloniaShellTaskExecutor : IPuloniaTaskExecutor
         var standardErrorTask = DrainAsync(process.StandardError);
         try
         {
-            await process.WaitForExitAsync(ct).ConfigureAwait(false);
+            await process.WaitForExitAsync(executionToken).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        catch (OperationCanceledException) when (executionToken.IsCancellationRequested)
         {
             // 取消不等于进程退出；必须结束本次创建的整个进程树并确认退出后再把控制权交还协调器。
             var killError = TryKillProcessTree(process);
@@ -97,11 +116,17 @@ public sealed class PuloniaShellTaskExecutor : IPuloniaTaskExecutor
             await Task.WhenAll(standardOutputTask, standardErrorTask).ConfigureAwait(false);
             if (killError is not null)
                 throw new InvalidOperationException("结束 Shell 进程树失败，但已等待进程自行退出：" + killError.Message, killError);
+            ct.ThrowIfCancellationRequested();
+            if (shellConfig?.Timeout > 0)
+                return PuloniaTaskOutcome.Failure($"Shell 进程超过时限 {shellConfig.Timeout} 秒，已结束进程。");
             throw;
         }
 
         var output = await standardOutputTask.ConfigureAwait(false);
         var error = await standardErrorTask.ConfigureAwait(false);
+        // 输出开关控制实时日志；结构化执行记录仍保留诊断信息，管道始终排空。
+        if (shellConfig?.Output == true && process.ExitCode == 0 && !string.IsNullOrWhiteSpace(output.Text))
+            TaskControl.Logger.LogInformation("Shell 命令输出：{Output}", output.Text);
         var data = new JObject
         {
             ["exit_code"] = process.ExitCode,

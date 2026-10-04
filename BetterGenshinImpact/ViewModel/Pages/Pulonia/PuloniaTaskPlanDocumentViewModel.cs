@@ -690,6 +690,10 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
         OnPropertyChanged(nameof(CanEditPath));
         OnPropertyChanged(nameof(HasSource));
         OnPropertyChanged(nameof(ParameterEditorTitle));
+        OnPropertyChanged(nameof(CanEditPathingSettings));
+        OnPropertyChanged(nameof(CanEditJavaScriptSettings));
+        OnPropertyChanged(nameof(CanEditShellSettings));
+        OnPropertyChanged(nameof(CanEditCommonSettings));
     }
 
     /// <summary>

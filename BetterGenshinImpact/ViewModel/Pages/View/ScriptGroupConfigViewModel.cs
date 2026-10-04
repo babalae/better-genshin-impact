@@ -14,6 +14,36 @@ namespace BetterGenshinImpact.ViewModel.Pages.View;
 
 public partial class ScriptGroupConfigViewModel : ObservableObject, IViewModel
 {
+    /// <summary>
+    /// 是否展示行走、战斗与食物设置；Shell 节点只展示 Shell 配置。
+    /// </summary>
+    [ObservableProperty]
+    private bool _showPathingSettings = true;
+
+    /// <summary>
+    /// 是否展示 Shell 执行配置。
+    /// </summary>
+    [ObservableProperty]
+    private bool _showShellSettings = true;
+
+    /// <summary>
+    /// 是否展示旧调度器的时段、周期、历史跳过和优先执行设置。
+    /// </summary>
+    [ObservableProperty]
+    private bool _showLegacySchedulingSettings = true;
+
+    /// <summary>
+    /// 是否展示内嵌标题栏；嵌入带标题栏的 Pulonia 对话框时关闭。
+    /// </summary>
+    [ObservableProperty]
+    private bool _showTitleBar = true;
+
+    /// <summary>
+    /// 是否使用 Pulonia 的进程超时语义说明。
+    /// </summary>
+    [ObservableProperty]
+    private bool _isPulonia;
+
     [ObservableProperty]
     private AutoFightViewModel _autoFightViewModel;
 

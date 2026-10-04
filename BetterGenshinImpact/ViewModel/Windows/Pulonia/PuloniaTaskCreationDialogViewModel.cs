@@ -367,6 +367,11 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
                 // JS 的 settings 对象由所选项目自己的 settings_ui 表单生成，不显示通用 JSON 编辑框。
                 if (value.TaskType == "javascript" && property.Name == "settings")
                     continue;
+                // 创建时保留常用选项；完整行走、战斗、食物和 Shell 设置通过节点配置的专用表单编辑。
+                if (PuloniaTaskCommonSettings.IsCommonParameter(value.TaskType, property.Name)
+                    && property.Name is not ("party_name" or "skip_party_switch" or "auto_pick_enabled"
+                        or "auto_fight_enabled" or "auto_skip_enabled"))
+                    continue;
                 var defaultProperty = value.DefaultParameters.Property(property.Name);
                 ParameterFields.Add(new PuloniaTaskParameterFieldViewModel(property.Name, fieldSchema,
                     defaultProperty?.Value, defaultProperty is not null, required.Contains(property.Name)));

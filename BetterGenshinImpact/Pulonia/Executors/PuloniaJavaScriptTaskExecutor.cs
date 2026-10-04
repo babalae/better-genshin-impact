@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
@@ -9,6 +10,7 @@ using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Pulonia.Services;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.Pulonia.Executors;
@@ -26,26 +28,20 @@ public sealed class PuloniaJavaScriptTaskExecutor : IPuloniaTaskExecutor
         Description = "选择已经安装的 JS 项目，并配置脚本设置与队伍选项。",
         RequiresGameSession = true,
         ResourceBaseDirectory = Global.ScriptPath(),
-        DefaultParameters = new JObject
+        DefaultParameters = new(PuloniaTaskCommonSettings.CreateDefaults("javascript"))
         {
-            ["settings"] = new JObject(),
-            ["party_name"] = "",
-            ["auto_pick_enabled"] = true,
-            ["auto_fight_enabled"] = true
+            ["settings"] = new JObject()
         },
         ParameterSchema = new JObject
         {
             ["type"] = "object",
-            ["properties"] = new JObject
+            ["properties"] = new JObject(PuloniaTaskCommonSettings.CreateSchemaProperties("javascript"))
             {
-                ["settings"] = new JObject { ["type"] = "object", ["additionalProperties"] = true },
-                ["party_name"] = new JObject { ["type"] = "string" },
-                ["auto_pick_enabled"] = new JObject { ["type"] = "boolean" },
-                ["auto_fight_enabled"] = new JObject { ["type"] = "boolean" }
+                ["settings"] = new JObject { ["type"] = "object", ["additionalProperties"] = true }
             },
             ["additionalProperties"] = false
         },
-        PublicParameters = ["settings", "party_name", "auto_pick_enabled", "auto_fight_enabled"]
+        PublicParameters = ["settings", .. PuloniaTaskCommonSettings.CreateDefaults("javascript").Properties().Select(property => property.Name)]
     }];
 
     /// <inheritdoc />
@@ -64,15 +60,12 @@ public sealed class PuloniaJavaScriptTaskExecutor : IPuloniaTaskExecutor
 
         var parameters = task.Parameters;
         var settings = parameters["settings"]?.ToObject<ExpandoObject>() ?? new ExpandoObject();
-        var partyConfig = new PathingPartyConfig
-        {
-            Enabled = true,
-            PartyName = parameters.Value<string>("party_name") ?? string.Empty,
-            AutoPickEnabled = parameters.Value<bool>("auto_pick_enabled"),
-            AutoFightEnabled = parameters.Value<bool>("auto_fight_enabled")
-        };
-        if (partyConfig.AutoPickEnabled)
-            TaskTriggerDispatcher.Instance().AddTrigger("AutoPick", null);
+        var partyConfig = PuloniaTaskCommonSettings.FromParameters("javascript", parameters).PathingConfig;
+        // 脚本调用的路线和战斗使用同一份配置，辅助触发器在节点退出时统一撤销。
+        using var autoPick = partyConfig.AutoPickEnabled
+            ? TaskTriggerDispatcher.Instance().AddTrigger("AutoPick", null) : null;
+        using var autoEat = partyConfig.AutoEatEnabled
+            ? TaskTriggerDispatcher.Instance().AddTrigger("AutoEat", null) : null;
 
         var project = new ScriptProject(relativeProjectPath);
         await project.ExecuteAsync(settings, partyConfig, ct).ConfigureAwait(false);

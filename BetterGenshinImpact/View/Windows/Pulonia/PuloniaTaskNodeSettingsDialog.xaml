@@ -129,6 +129,39 @@
                         Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                         BorderThickness="1"
+                        CornerRadius="8"
+                        Visibility="{Binding SelectedDocument.CanEditCommonSettings, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel>
+                        <TextBlock FontWeight="SemiBold" Text="任务设置（原配置组设置）" />
+                        <TextBlock Margin="0,5,0,10"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="配置行走、战斗、回血、食物与 Shell。分组设置由同类子任务继承，任务可单独覆盖。"
+                                   TextWrapping="Wrap" />
+                        <WrapPanel>
+                            <ui:Button Margin="0,0,8,6"
+                                       Command="{Binding SelectedDocument.EditCommonSettingsCommand}"
+                                       CommandParameter="pathing"
+                                       Content="地图追踪设置"
+                                       Visibility="{Binding SelectedDocument.CanEditPathingSettings, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            <ui:Button Margin="0,0,8,6"
+                                       Command="{Binding SelectedDocument.EditCommonSettingsCommand}"
+                                       CommandParameter="javascript"
+                                       Content="JS 行走、战斗与食物设置"
+                                       Visibility="{Binding SelectedDocument.CanEditJavaScriptSettings, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            <ui:Button Margin="0,0,0,6"
+                                       Command="{Binding SelectedDocument.EditCommonSettingsCommand}"
+                                       CommandParameter="shell"
+                                       Content="Shell 执行设置"
+                                       Visibility="{Binding SelectedDocument.CanEditShellSettings, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Margin="0,12,0,0"
+                        Padding="14"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
                         CornerRadius="8">
                     <StackPanel>
                         <Grid Margin="0,0,0,3">
