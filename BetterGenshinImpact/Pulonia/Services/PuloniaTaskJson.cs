@@ -58,6 +58,32 @@ public static class PuloniaTaskJson
     public static PuloniaTaskPlan ClonePlan(PuloniaTaskPlan plan) => ReadPlan(WritePlan(plan));
 
     /// <summary>
+    /// 复制整份计划并重建身份及内部节点引用；副本触发器默认禁用，避免重复自动执行。
+    /// </summary>
+    public static PuloniaTaskPlan CopyPlan(PuloniaTaskPlan plan)
+    {
+        var copy = ClonePlan(plan);
+        copy.Id = Guid.NewGuid().ToString("N");
+        copy.Revision = 0;
+
+        // 节点身份改变后，账号预设选择和触发目标必须同步指向副本节点。
+        var taskIds = new Dictionary<string, string>(StringComparer.Ordinal);
+        AssignNewIds(copy.RootTask, taskIds);
+        foreach (var account in copy.Accounts)
+            account.PresetSelections = account.PresetSelections.ToDictionary(
+                item => taskIds[item.Key], item => item.Value, StringComparer.Ordinal);
+        foreach (var trigger in copy.Triggers)
+        {
+            trigger.Id = Guid.NewGuid().ToString("N");
+            trigger.Enabled = false;
+            if (trigger.TargetTaskId is { } targetId)
+                trigger.TargetTaskId = taskIds[targetId];
+        }
+        PuloniaTaskValidator.ValidatePlan(copy);
+        return copy;
+    }
+
+    /// <summary>
     /// 读取运行准备样例的显式选项，业务模型与选项使用相同 JSON 类型规则。
     /// </summary>
     public static PuloniaTaskBuildOptions ReadBuildOptions(string json) => Read<PuloniaTaskBuildOptions>(json);
@@ -240,11 +266,13 @@ public static class PuloniaTaskJson
     /// <summary>
     /// 递归更新副本身份，不改变原树。
     /// </summary>
-    private static void AssignNewIds(PuloniaTask task)
+    private static void AssignNewIds(PuloniaTask task, IDictionary<string, string>? taskIds = null)
     {
-        task.Id = System.Guid.NewGuid().ToString("N");
+        var originalId = task.Id;
+        task.Id = Guid.NewGuid().ToString("N");
+        taskIds?.Add(originalId, task.Id);
         foreach (var child in task.Children)
-            AssignNewIds(child);
+            AssignNewIds(child, taskIds);
     }
 
 }

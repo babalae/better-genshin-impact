@@ -176,6 +176,11 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     internal PuloniaTaskPlan Plan => _plan;
 
     /// <summary>
+    /// 计划已成功删除；尚未结束的异步编辑操作不能重新将其写入磁盘。
+    /// </summary>
+    internal bool IsDeleted { get; set; }
+
+    /// <summary>
     /// 计划稳定 ID。
     /// </summary>
     public string Id => _plan.Id;

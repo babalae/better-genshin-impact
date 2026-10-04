@@ -15,9 +15,9 @@ namespace BetterGenshinImpact.Pulonia.Services;
 /// </summary>
 public sealed class PuloniaTaskStore : IDisposable
 {
-    /// <summary>本进程成功保存计划的版本，用于让调度宿主及时刷新配置。</summary>
+    /// <summary>本进程成功保存或删除计划的版本，用于让调度宿主及时刷新配置。</summary>
     private long _planChangeVersion;
-    /// <summary>只读保存序号，不因读取或失败保存而递增。</summary>
+    /// <summary>只读配置变更序号，不因读取或失败的保存、删除而递增。</summary>
     public long PlanChangeVersion => Interlocked.Read(ref _planChangeVersion);
     /// <summary>
     /// UTF-8 无 BOM，遇到无效字节时明确报错。
@@ -109,6 +109,52 @@ public sealed class PuloniaTaskStore : IDisposable
             _gate.Release();
         }
     }
+
+    /// <summary>
+    /// 删除指定修订的计划和备份，拒绝破坏其他已保存计划的引用，保留运行状态与历史。
+    /// </summary>
+    public async Task DeletePlanAsync(string id, long expectedRevision, CancellationToken ct = default)
+    {
+        var path = GetPath("plans", id);
+        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            using var writerLock = AcquireWriterLock();
+            var current = await ReadPlanAsync(path, id, ct).ConfigureAwait(false);
+            CheckRevision(expectedRevision, current?.Revision, id);
+
+            // 检查和删除共用写锁，避免其他存储实例在检查后新增引用。
+            var directory = Path.GetDirectoryName(path)!;
+            if (Directory.Exists(directory))
+                foreach (var otherPath in Directory.EnumerateFiles(directory, "*.json"))
+                {
+                    var otherId = Path.GetFileNameWithoutExtension(otherPath);
+                    if (otherId == id)
+                        continue;
+                    var other = await ReadPlanAsync(otherPath, otherId, ct).ConfigureAwait(false);
+                    if (other is not null && ReferencesPlan(other.RootTask, id))
+                        throw new PuloniaTaskValidationException(id,
+                            $"计划“{other.Name}”仍引用此计划，请先移除引用后再删除。");
+                }
+
+            ct.ThrowIfCancellationRequested();
+            // 先清理备份；清理失败时正式计划仍在，界面可以保留原编辑会话。
+            File.Delete(path + ".bak");
+            File.Delete(path);
+            Interlocked.Increment(ref _planChangeVersion);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    /// <summary>
+    /// 检查全部节点的计划引用，包括禁用分组，防止之后启用时出现失效引用。
+    /// </summary>
+    private static bool ReferencesPlan(PuloniaTask task, string planId)
+        => task.Source is { Kind: "plan" } source && source.PlanId == planId
+           || task.Children.Any(child => ReferencesPlan(child, planId));
 
     /// <summary>
     /// 保存预设，使用相同的修订检查和完整文件替换。

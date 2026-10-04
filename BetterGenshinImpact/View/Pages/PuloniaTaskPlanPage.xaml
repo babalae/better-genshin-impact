@@ -393,6 +393,12 @@
                                 <MenuItem Header="重命名"
                                           Command="{Binding Data.ViewModel.RenamePlanCommand, Source={StaticResource PageBindingProxy}}"
                                           CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
+                                <MenuItem Header="复制"
+                                          Command="{Binding Data.ViewModel.CopyPlanCommand, Source={StaticResource PageBindingProxy}}"
+                                          CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
+                                <MenuItem Header="删除"
+                                          Command="{Binding Data.ViewModel.DeletePlanCommand, Source={StaticResource PageBindingProxy}}"
+                                          CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
                                 <Separator />
                                 <MenuItem Header="重新加载"
                                           Command="{Binding Data.ViewModel.ReloadCommand, Source={StaticResource PageBindingProxy}}" />

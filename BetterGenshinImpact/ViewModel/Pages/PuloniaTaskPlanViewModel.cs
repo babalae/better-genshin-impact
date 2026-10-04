@@ -64,6 +64,16 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     private readonly Dictionary<PuloniaTaskPlanDocumentViewModel, SemaphoreSlim> _saveGates = [];
 
     /// <summary>
+    /// 每个保存门的使用者数量，删除文档后等待所有使用者退出再释放同步资源。
+    /// </summary>
+    private readonly Dictionary<PuloniaTaskPlanDocumentViewModel, int> _saveGateUsers = [];
+
+    /// <summary>
+    /// 正在删除的计划，阻止等待中的保存或新编辑重新安排写盘。
+    /// </summary>
+    private readonly HashSet<PuloniaTaskPlanDocumentViewModel> _deletingDocuments = [];
+
+    /// <summary>
     /// 是否已经完成首次加载，避免导航缓存重复覆盖未保存草稿。
     /// </summary>
     private bool _isInitialized;
@@ -238,11 +248,16 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// </summary>
     private async Task<bool> SaveDocumentAsync(PuloniaTaskPlanDocumentViewModel document)
     {
+        if (document.IsDeleted || _deletingDocuments.Contains(document))
+            return false;
         CancelPendingAutoSave(document);
         var saveGate = GetSaveGate(document);
         await saveGate.WaitAsync();
         try
         {
+            // 删除可能在本次等待保存门期间开始，必须在实际写盘前再次检查。
+            if (document.IsDeleted || _deletingDocuments.Contains(document))
+                return false;
             if (!document.IsDirty)
                 return true;
 
@@ -262,7 +277,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         }
         finally
         {
-            saveGate.Release();
+            ReleaseSaveGate(document, saveGate);
             NotifyCommandStates();
         }
     }
@@ -274,7 +289,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     private async Task ReloadAsync()
     {
         var document = SelectedDocument;
-        if (document is null)
+        if (document is null || document.IsDeleted || _deletingDocuments.Contains(document))
             return;
         if (document.IsDirty)
         {
@@ -292,6 +307,8 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         await saveGate.WaitAsync();
         try
         {
+            if (document.IsDeleted || _deletingDocuments.Contains(document))
+                return;
             var diskPlan = await _store.LoadPlanAsync(document.Id);
             if (diskPlan is null)
             {
@@ -310,7 +327,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         }
         finally
         {
-            saveGate.Release();
+            ReleaseSaveGate(document, saveGate);
             IsBusy = false;
             NotifyCommandStates();
         }
@@ -701,7 +718,8 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// </summary>
     private void ScheduleAutoSave(PuloniaTaskPlanDocumentViewModel document)
     {
-        if (!Documents.Contains(document) || !document.IsDirty || document.LastSaveError is not null)
+        if (!Documents.Contains(document) || document.IsDeleted || _deletingDocuments.Contains(document)
+            || !document.IsDirty || document.LastSaveError is not null)
             return;
 
         CancelPendingAutoSave(document);
@@ -745,15 +763,37 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     }
 
     /// <summary>
-    /// 取得指定计划的串行保存门。
+    /// 取得指定计划的串行保存门，并登记本次使用，包含尚在排队的使用者。
     /// </summary>
     private SemaphoreSlim GetSaveGate(PuloniaTaskPlanDocumentViewModel document)
     {
+        _saveGateUsers.TryGetValue(document, out var users);
+        _saveGateUsers[document] = users + 1;
         if (_saveGates.TryGetValue(document, out var saveGate))
             return saveGate;
         saveGate = new SemaphoreSlim(1, 1);
         _saveGates.Add(document, saveGate);
         return saveGate;
+    }
+
+    /// <summary>
+    /// 退出保存门；已删除文档的最后一个使用者负责清理资源，避免释放仍有等待者的门。
+    /// </summary>
+    private void ReleaseSaveGate(PuloniaTaskPlanDocumentViewModel document, SemaphoreSlim saveGate)
+    {
+        saveGate.Release();
+        var users = _saveGateUsers[document] - 1;
+        if (users > 0)
+        {
+            _saveGateUsers[document] = users;
+            return;
+        }
+        _saveGateUsers.Remove(document);
+        if (document.IsDeleted)
+        {
+            _saveGates.Remove(document);
+            saveGate.Dispose();
+        }
     }
 
     /// <summary>
@@ -916,5 +956,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         AddPlanReferenceCommand.NotifyCanExecuteChanged();
         RunPlanCommand.NotifyCanExecuteChanged();
         ConfirmResourceUpdatesCommand.NotifyCanExecuteChanged();
+        CopyPlanCommand.NotifyCanExecuteChanged();
+        DeletePlanCommand.NotifyCanExecuteChanged();
     }
 }
