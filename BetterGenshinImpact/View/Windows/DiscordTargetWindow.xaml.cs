@@ -138,7 +138,7 @@ public partial class DiscordTargetWindow : FluentWindow
 
     private async void OnTreeItemExpanded(object sender, RoutedEventArgs e)
     {
-        if (e.OriginalSource is not TreeViewItem { DataContext: DiscordTargetNode node } || node.ChildrenLoaded)
+        if (e.OriginalSource is not System.Windows.Controls.TreeViewItem { DataContext: DiscordTargetNode node } || node.ChildrenLoaded)
         {
             return;
         }
