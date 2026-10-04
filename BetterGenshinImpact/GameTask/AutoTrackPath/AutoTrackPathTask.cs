@@ -1,6 +1,6 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Input;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoTrackPath.Model;
@@ -13,7 +13,6 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Service;
-using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -88,7 +87,7 @@ public class AutoTrackPathTask
         }
         finally
         {
-            VisionContext.Instance().DrawContent.ClearAll();
+            TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
             Logger.LogInformation("→ {Text}", "自动路线结束");
 
             if (hasLock)
@@ -193,7 +192,7 @@ public class AutoTrackPathTask
 
                 // var moveAngle = (int)(_targetAngle - angle);
                 // Debug.WriteLine($"旋转到目标角度：{_targetAngle}，鼠标平移{moveAngle}单位");
-                // Simulation.SendInput.Mouse.MoveMouseBy(moveAngle, 0);
+                // InputHub.Foreground.Mouse.MoveMouseBy(moveAngle, 0);
                 Sleep(60);
             }
         });
@@ -248,7 +247,7 @@ public class AutoTrackPathTask
                 var moveAngle = (int)(nextAngle - angle);
                 moveAngle = (int)(moveAngle * 1d / angleOffsetUnit * CharMovingUnit);
                 Debug.WriteLine($"旋转到目标角度：{nextAngle}，鼠标平移{moveAngle}单位");
-                Simulation.SendInput.Mouse.MoveMouseBy(moveAngle, 0);
+                InputHub.Foreground.Mouse.MoveMouseBy(moveAngle, 0);
                 Sleep(100);
 
                 miniMapMat = GetMiniMapMat(ra);
@@ -318,12 +317,12 @@ public class AutoTrackPathTask
     public int GetOffsetAngle()
     {
         var angle1 = GetCharacterOrientationAngle();
-        Simulation.SendInput.Mouse.MoveMouseBy(CharMovingUnit, 0);
+        InputHub.Foreground.Mouse.MoveMouseBy(CharMovingUnit, 0);
         Sleep(500);
-        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+        InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
         Sleep(100);
-        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-        // Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W).Sleep(100).KeyUp(User32.VK.VK_W);
+        InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+        // InputHub.Foreground.Keyboard.KeyDown(User32.VK.VK_W).Sleep(100).KeyUp(User32.VK.VK_W);
         Sleep(1000);
         var angle2 = GetCharacterOrientationAngle();
         var angleOffset = angle2 - angle1;

@@ -1,9 +1,9 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
 using BetterGenshinImpact.GameTask.Common;
@@ -482,7 +482,7 @@ public class CombatScenes : IDisposable
     public void AfterTask()
     {
         // 释放所有按键
-        Simulation.ReleaseAllKey();
+        InputHub.ReleaseAll();
 
         var mwk = SelectAvatar("玛薇卡");
         if (mwk != null)

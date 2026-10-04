@@ -1,7 +1,7 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.BgiVision;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.AutoDomain;
@@ -334,7 +334,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     private async Task<StateHandlerResult> HandleMainWorldState(BvPage page)
     {
         Logger.LogInformation($"{Name}：打开活动菜单");
-        Simulation.SendInput.SimulateAction(GIActions.OpenTheEventsMenu);
+        InputHub.Foreground.SimulateAction(GIActions.OpenTheEventsMenu);
         await Delay(500, _ct);
         return StateHandlerResult.Success; // 等待转换到 EventMenu 或 StygianOnslaughtPage
     }
@@ -355,7 +355,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
             // 1. 拖动滑动列表
             page.Click(listCenterX, listCenterY - 200);
             await Delay(100, _ct);
-            Simulation.SendInput.Mouse.LeftButtonDown();
+            InputHub.Foreground.Mouse.LeftButtonDown();
             await Delay(100, _ct);
 
             // 从上往下拖动（内容往上滚动）
@@ -365,7 +365,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
                 await Delay(30, _ct);
             }
 
-            Simulation.SendInput.Mouse.LeftButtonUp();
+            InputHub.Foreground.Mouse.LeftButtonUp();
             await Delay(500, _ct);
 
             // 2. 在列表区域内查找"幽境危战"并点击
@@ -396,7 +396,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
                 ocrResult.Any(o => o.Text.Contains("已结束")))
             {
                 Logger.LogInformation($"{Name}：检测到紊乱爆发期已结束，按 Esc 返回主界面");
-                Simulation.SendInput.Keyboard.KeyPress(Vanara.PInvoke.User32.VK.VK_ESCAPE);
+                InputHub.Foreground.Keyboard.KeyPress(Vanara.PInvoke.User32.VK.VK_ESCAPE);
                 await Delay(300, _ct);
                 return StateHandlerResult.SuccessTo(StygianState.MainWorld);
             }
@@ -437,7 +437,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     private async Task<StateHandlerResult> HandleDomainEntranceState(BvPage page)
     {
         Logger.LogInformation($"{Name}：交互秘境入口");
-        Simulation.SendInput.SimulateAction(GIActions.PickUpOrInteract);
+        InputHub.Foreground.SimulateAction(GIActions.PickUpOrInteract);
         await Delay(500, _ct);
         return StateHandlerResult.Success; // 等待转换到 DifficultySelect
     }
@@ -523,7 +523,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     private async Task<StateHandlerResult> HandleLeylineFlowerState(BvPage page)
     {
         Logger.LogInformation($"{Name}：交互地脉花");
-        Simulation.SendInput.SimulateAction(GIActions.PickUpOrInteract);
+        InputHub.Foreground.SimulateAction(GIActions.PickUpOrInteract);
         await Delay(300, _ct);
         return StateHandlerResult.Success; // 等待转换到 ResinSelect
     }
@@ -610,9 +610,9 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
             await HandleBattleResultWinState(page);
 
             // 防止在地脉花上
-            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+            InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
             await Delay(200, _ct);
-            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+            InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
             await Delay(2000, _ct);
 
             // 寻找地脉花
@@ -841,9 +841,9 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
         var combatCommands = FindCombatScriptAndSwitchAvatar(combatScenes);
         await Delay(1500, _ct);
 
-        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+        InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
         await Delay(1200, _ct);
-        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+        InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
 
         return combatCommands;
     }
@@ -869,7 +869,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
 
         await NewRetry.WaitForAction(() =>
         {
-            Simulation.SendInput.SimulateAction(GIActions.PickUpOrInteract);
+            InputHub.Foreground.SimulateAction(GIActions.PickUpOrInteract);
             Sleep(300, _ct);
 
             using var ra = CaptureToRectArea();
@@ -995,8 +995,8 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
             finally
             {
                 Logger.LogInformation("自动战斗线程结束");
-                Simulation.ReleaseAllKey();
-                Simulation.SendInput.Mouse.LeftButtonUp();
+                InputHub.ReleaseAll();
+                InputHub.Foreground.Mouse.LeftButtonUp();
                 AutoFightTask.FightStatusFlag = false;
             }
         }, cts.Token);
@@ -1131,7 +1131,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     {
         page.Click(936, 150);
         await Delay(100, _ct);
-        Simulation.SendInput.Mouse.LeftButtonDown();
+        InputHub.Foreground.Mouse.LeftButtonDown();
         await Delay(100, _ct);
         GameCaptureRegion.GameRegion1080PPosMove(936, 140);
         await Delay(100, _ct);
@@ -1148,7 +1148,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
                 var foundTeam = teamRegionList.FirstOrDefault();
                 if (foundTeam != null)
                 {
-                    Simulation.SendInput.Mouse.LeftButtonUp();
+                    InputHub.Foreground.Mouse.LeftButtonUp();
                     await Delay(200, _ct);
 
                     for (int j = 0; j < 5; j++)
@@ -1174,11 +1174,11 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
         }
         finally
         {
-            Simulation.SendInput.Mouse.LeftButtonUp();
+            InputHub.Foreground.Mouse.LeftButtonUp();
             await Delay(100, _ct);
         }
 
-        Simulation.SendInput.SimulateAction(GIActions.OpenPaimonMenu);
+        InputHub.Foreground.SimulateAction(GIActions.OpenPaimonMenu);
         await Delay(300, _ct);
     }
 
@@ -1192,7 +1192,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     {
         var found = await NewRetry.WaitForElementAppear(
             ElementRecognition.Get("BtnExitDoor"),
-            () => Simulation.SendInput.SimulateAction(GIActions.OpenPaimonMenu),
+            () => InputHub.Foreground.SimulateAction(GIActions.OpenPaimonMenu),
             _ct);
 
         if (found)

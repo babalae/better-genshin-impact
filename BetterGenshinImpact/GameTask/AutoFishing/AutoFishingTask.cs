@@ -1,12 +1,11 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
 using CsTrees;
 using CsTrees.Composites;
-using Fischless.WindowsInput;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
@@ -19,7 +18,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     public class AutoFishingTask : ISoloTask
     {
         private readonly ILogger _logger = App.GetLogger<AutoFishingTask>();
-        private readonly InputSimulator input = Simulation.SendInput;
+        private IInputChannel input => InputHub.Foreground;
         public string Name => "钓鱼独立任务";
 
         private CancellationToken _ct;

@@ -5,12 +5,16 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using BetterGenshinImpact.Core.Mask;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoSkip.Audio;
 using BetterGenshinImpact.GameTask.Music.Service;
+using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.Runtime.Win32;
+using BetterGenshinImpact.GameTask.Runtime.WebPage;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Win32;
@@ -22,6 +26,7 @@ using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notifier;
 using BetterGenshinImpact.View;
+using BetterGenshinImpact.View.Mask;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel;
@@ -70,8 +75,12 @@ public partial class App : Application
                 Directory.CreateDirectory(logFolder);
                 var logFile = Path.Combine(logFolder, "better-genshin-impact.log");
                 var instanceContext = InstanceBootstrap.Current.Context;
+                // 网页版实例带上实例名，例如 WebView(小号A):S1:P1234:T…
+                var instanceTypeLabel = instanceContext.InstanceName is { } instanceName
+                    ? $"{instanceContext.InstanceType}({instanceName})"
+                    : instanceContext.InstanceType.ToString();
                 var instanceIdentity =
-                    $"{instanceContext.InstanceType}:S{instanceContext.WindowsSessionId}:P{instanceContext.ProcessId}:T{instanceContext.StartedAt.ToUnixTimeMilliseconds()}";
+                    $"{instanceTypeLabel}:S{instanceContext.WindowsSessionId}:P{instanceContext.ProcessId}:T{instanceContext.StartedAt.ToUnixTimeMilliseconds()}";
 
                 var richTextBox = new RichTextBoxImpl();
                 services.AddSingleton<IRichTextBox>(richTextBox);
@@ -181,10 +190,32 @@ public partial class App : Application
                 services.AddSingleton<IRelativeMouseInputMonitorFactory, RelativeMouseInputMonitorFactory>();
                 services.AddSingleton<OverlayMetricsService>();
                 services.AddSingleton<CustomHtmlMaskService>();
+
+                // 遮罩窗口：业务侧只依赖 IMaskWindowDrawingBoard / IMaskWindowHost / IMaskWindowMapState
+                services.AddSingleton<MaskWindowDrawingBoard>();
+                services.AddSingleton<IMaskWindowDrawingBoard>(sp => sp.GetRequiredService<MaskWindowDrawingBoard>());
+                services.AddSingleton<IMaskWindowSnapshotSource<MaskWindowDrawingSnapshot>>(sp => sp.GetRequiredService<MaskWindowDrawingBoard>());
+                services.AddSingleton<MaskWindowMapState>();
+                services.AddSingleton<IMaskWindowMapState>(sp => sp.GetRequiredService<MaskWindowMapState>());
+                services.AddSingleton<IMaskWindowSnapshotSource<MaskWindowMapSnapshot>>(sp => sp.GetRequiredService<MaskWindowMapState>());
+                services.AddSingleton<MaskWindowViewModel>();
+                services.AddTransient<MaskWindow>();
+                services.AddSingleton<Func<MaskWindow>>(sp => () => sp.GetRequiredService<MaskWindow>());
+                services.AddSingleton<IMaskWindowHost, MaskWindowHost>();
                 services.AddSingleton<DialogueOptionVoiceDiagnosticState>();
                 services.AddSingleton<DialogueOptionVoiceDiagnosticService>();
                 services.AddHostedService(sp => sp.GetRequiredService<DialogueOptionVoiceDiagnosticService>());
                 services.AddSingleton<TaskTriggerDispatcher>();
+                // 游戏运行环境：按实例类型选定 Provider，见 Docs/design/game-runtime.md
+                services.AddSingleton<Win32RuntimeProvider>();
+                services.AddSingleton<IGameRuntimeProvider>(sp => sp.GetRequiredService<Win32RuntimeProvider>());
+                services.AddSingleton<IGameRuntimeProvider, WebPageRuntimeProvider>();
+                services.AddTransient<CloudWebHostWindow>();
+                services.AddSingleton<Func<CloudWebHostWindow>>(sp => () => sp.GetRequiredService<CloudWebHostWindow>());
+                services.AddSingleton<GameRuntimeService>();
+                // 云原神网页版实例：实例名存储与启动器（Primary 首页使用）
+                services.AddSingleton<WebViewInstanceStore>();
+                services.AddSingleton<WebViewInstanceLauncher>();
                 services.AddSingleton<RecognitionTemplateAssetService>();
                 services.AddSingleton<RecognitionTemplateEditorService>();
                 services.AddSingleton<NotificationService>();
@@ -321,6 +352,16 @@ public partial class App : Application
         base.OnExit(e);
 
         ConsoleHelper.WriteLine("BetterGI 应用程序正在关闭...");
+
+        // 写入防抖窗口内尚未落盘的配置改动
+        try
+        {
+            _host.Services.GetService<IConfigService>()?.Flush();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
 
         TempManager.CleanUp();
 

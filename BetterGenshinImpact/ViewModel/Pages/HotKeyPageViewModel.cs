@@ -27,6 +27,7 @@ using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.View;
@@ -56,6 +57,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
     private readonly ILogger<HotKeyPageViewModel> _logger;
     private readonly TaskSettingsPageViewModel _taskSettingsPageViewModel;
     private readonly RecognitionTemplateEditorService _recognitionTemplateEditorService;
+    private readonly TaskTriggerDispatcher _taskTriggerDispatcher;
     private readonly Dictionary<string, HotKey> _acceptedHotKeys = [];
     private readonly HashSet<string> _rollingBackHotKeyProperties = [];
     public AllConfig Config { get; set; }
@@ -63,15 +65,24 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
     [ObservableProperty]
     private ObservableCollection<HotKeySettingModel> _hotKeySettingModels = [];
 
+    /// <summary>
+    /// 网页版实例不响应任何热键（全局热键与键鼠监听都不注册）：
+    /// 同一 Windows Session 中全局热键只能被先启动的实例注册，键鼠监听也会与 Primary 重复响应。
+    /// 网页版实例没有主界面，一般不会创建本 ViewModel，这里是兜底
+    /// </summary>
+    public bool IsHotKeyEnabled { get; } = !InstanceBootstrap.Current.Context.IsWebView;
+
     public HotKeyPageViewModel(
         IConfigService configService,
         ILogger<HotKeyPageViewModel> logger,
         TaskSettingsPageViewModel taskSettingsPageViewModel,
-        RecognitionTemplateEditorService recognitionTemplateEditorService)
+        RecognitionTemplateEditorService recognitionTemplateEditorService,
+        TaskTriggerDispatcher taskTriggerDispatcher)
     {
         _logger = logger;
         _taskSettingsPageViewModel = taskSettingsPageViewModel;
         _recognitionTemplateEditorService = recognitionTemplateEditorService;
+        _taskTriggerDispatcher = taskTriggerDispatcher;
         // 获取配置
         Config = configService.Get();
 
@@ -82,7 +93,10 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         foreach (var hotKeyConfig in list)
         {
             _acceptedHotKeys[hotKeyConfig.ConfigPropertyName] = hotKeyConfig.HotKey;
-            hotKeyConfig.RegisterHotKey();
+            if (IsHotKeyEnabled)
+            {
+                hotKeyConfig.RegisterHotKey();
+            }
             hotKeyConfig.PropertyChanged += (sender, e) =>
             {
                 if (sender is HotKeySettingModel model)
@@ -121,7 +135,10 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
 
                     RemoveDuplicateHotKey(model);
                     model.UnRegisterHotKey();
-                    model.RegisterHotKey();
+                    if (IsHotKeyEnabled)
+                    {
+                        model.RegisterHotKey();
+                    }
                 }
             };
         }
@@ -401,7 +418,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             nameof(Config.HotKeyConfig.TakeScreenshotHotkey),
             Config.HotKeyConfig.TakeScreenshotHotkey,
             Config.HotKeyConfig.TakeScreenshotHotkeyType,
-            (_, _) => { TaskTriggerDispatcher.Instance().TakeScreenshot(); }
+            (_, _) => { _taskTriggerDispatcher.TakeScreenshot(); }
         );
         systemDirectory.Children.Add(takeScreenshotHotKeySettingModel);
 

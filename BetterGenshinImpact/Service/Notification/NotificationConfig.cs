@@ -352,6 +352,8 @@ public partial class NotificationConfig : ObservableObject
     /// </summary>
     [ObservableProperty] private string _qqGroupOpenId = string.Empty;
 
+    [ObservableProperty] private string _qqMessageFormat = "text";
+
     /// <summary>
     ///     微信 Clawbot 通知是否启用
     /// </summary>

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Suspend;
 using BetterGenshinImpact.GameTask.Common.Job;
@@ -16,6 +17,12 @@ namespace BetterGenshinImpact.GameTask;
 /// </summary>
 public class RunnerContext : Singleton<RunnerContext>
 {
+    /// <summary>
+    /// 当前正在执行的脚本项目，用于 JS 的 HTTP、通知等权限校验。
+    /// 由 ScriptService.ExecuteProject 写入；Clear / Reset 不会重置它，与迁出 TaskContext 前的行为一致
+    /// </summary>
+    public ScriptGroupProject? CurrentScriptProject { get; set; }
+
     /// <summary>
     /// 是否是连续执行配置组的场景
     /// </summary>
@@ -50,7 +57,8 @@ public class RunnerContext : Singleton<RunnerContext>
 
 
     /// <summary>
-    /// 自动拾取暂停计数，当大于0时暂停，等于0时不限制。
+    /// 实时触发器暂停计数（沿用"暂停自动拾取"的名称），大于0时全部实时触发器暂停，等于0时不限制。
+    /// 由 TaskTriggerDispatcher 在每帧开始时检查，暂停期间不调用任何触发器的 OnCapture，截图、遮罩跟随等照常。
     /// </summary>
     public int AutoPickTriggerStopCount { get; private set; } = 0;
 

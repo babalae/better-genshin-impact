@@ -112,7 +112,7 @@
                                                  EnableCommand="{Binding StartTriggerCommand}"
                                                  EnableContent="{i18n:T 启动}"
                                                  EnableIcon="{ui:SymbolIcon Play24}"
-                                                 IsChecked="{Binding TaskDispatcherEnabled, Mode=OneWay}" />
+                                                 IsChecked="{Binding IsTriggerButtonChecked, Mode=OneWay}" />
                         <!--  <ui:Button Command="{Binding StartTriggerCommand}"  -->
                         <!--  Content="启动"  -->
                         <!--  Icon="{ui:SymbolIcon Play24}"  -->
@@ -598,6 +598,50 @@
                        Command="{Binding OpenChildSessionWindowCommand}"
                        Content="{i18n:T 打开}"
                        Icon="{ui:SymbolIcon Open24}" />
+        </ui:CardControl>
+
+        <!--  云原神网页版：每个实例是一个独立的 BetterGI 进程，按实例名保存 WebView 数据（仅 Primary 显示）  -->
+        <ui:CardControl Margin="0,0,0,12"
+                        Icon="{ui:SymbolIcon Globe24}"
+                        Visibility="{Binding IsCloudWebEntryVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <ui:CardControl.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  FontTypography="Body"
+                                  Text="{i18n:T 云原神网页版}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 以独立实例运行云原神网页版，每个实例单独保存登录态，可同时运行多个。}"
+                                  TextWrapping="Wrap" />
+                </Grid>
+            </ui:CardControl.Header>
+            <StackPanel Margin="0,0,36,0" Orientation="Horizontal">
+                <ComboBox MinWidth="160"
+                          Margin="0,0,8,0"
+                          DisplayMemberPath="DisplayName"
+                          ItemsSource="{Binding CloudWebInstances, Mode=OneWay}"
+                          SelectedItem="{Binding SelectedCloudWebInstance, Mode=TwoWay}" />
+                <ui:Button Margin="0,0,8,0"
+                           Command="{Binding RefreshCloudWebInstancesCommand}"
+                           Icon="{ui:SymbolIcon ArrowClockwise24}"
+                           ToolTip="{i18n:T 刷新运行状态}" />
+                <ui:Button Margin="0,0,8,0"
+                           Command="{Binding LaunchCloudWebInstanceCommand}"
+                           Content="{i18n:T 启动}"
+                           Icon="{ui:SymbolIcon Play24}" />
+                <ui:Button Margin="0,0,8,0"
+                           Command="{Binding CreateCloudWebInstanceCommand}"
+                           Icon="{ui:SymbolIcon Add24}"
+                           ToolTip="{i18n:T 新建实例}" />
+                <ui:Button Command="{Binding DeleteCloudWebInstanceCommand}"
+                           Icon="{ui:SymbolIcon Delete24}"
+                           ToolTip="{i18n:T 删除实例}" />
+            </StackPanel>
         </ui:CardControl>
 
         <!--<ui:Button x:Name="Test" Margin="0,20,0,0" Content="测试" Command="{Binding TestCommand}" />-->

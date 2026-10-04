@@ -38,6 +38,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<!-- 云原神网页版输入 SDK，由 WebView2InputBridge.InstallAsync 读取并注入页面 -->
+		<None Remove="Resources\JavaScript\ys-input-inject.js" />
+		<EmbeddedResource Include="Resources\JavaScript\ys-input-inject.js" LogicalName="BetterGenshinImpact.Resources.JavaScript.ys-input-inject.js" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="AvalonEdit" Version="6.3.1.120" />
 
 		<PackageReference Include="BetterGI.VCRuntime" Version="14.44.35208" />
@@ -76,7 +82,6 @@
 		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2592.51" />
 		<PackageReference Include="MimeKit" Version="4.16.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-		<PackageReference Include="Ookii.Dialogs.Wpf" Version="5.0.1" />
 		<PackageReference Include="OpenccNetLib" Version="1.7.0" />
 		<PackageReference Include="OpenCvSharp4.WpfExtensions" Version="4.11.0.20250507" />
 		<PackageReference Include="OpenCvSharp4.Extensions" Version="4.11.0.20250507" />
@@ -102,7 +107,7 @@
 		<PackageReference Include="WPF-UI" Version="4.3.0" />
 		<PackageReference Include="WPF-UI.DependencyInjection" Version="4.3.0" />
 		<PackageReference Include="WPF-UI.Tray" Version="4.3.0" />
-		<PackageReference Include="WPF-UI.Violeta" Version="4.3.0.3" />
+		<PackageReference Include="WPF-UI.Violeta" Version="4.3.0.15" />
 		<PackageReference Include="gong-wpf-dragdrop" Version="3.2.1" />
 		<PackageReference Include="YamlDotNet" Version="16.3.0" />
 		<PackageReference Include="YoloSharp" Version="6.0.3" />
@@ -267,5 +272,17 @@
 	<ItemGroup>
 	  <_DeploymentManifestIconFile Remove="Resources\Images\logo.ico" />
 	</ItemGroup>
-	
+
+	<!--
+		Melanchall.DryWetMidi 的 build\Melanchall.DryWetMidi.targets 会无条件把 x86/x64/macOS
+		三份本地库都复制到输出目录（它没有使用 runtimes/{rid}/native 结构，不感知 RID）。
+		本项目只支持 win-x64，这里在 AssignTargetPaths 之前把多余的 Native32.dll（x86）
+		和 Native64.dylib（macOS）从 None 项中移除，避免它们被打进 Release 产物。
+	-->
+	<Target Name="RemoveDryWetMidiUnusedNativeLibs" BeforeTargets="AssignTargetPaths">
+		<ItemGroup>
+			<None Remove="@(None)" Condition="'%(Filename)' == 'Melanchall_DryWetMidi_Native32' Or ('%(Filename)' == 'Melanchall_DryWetMidi_Native64' And '%(Extension)' == '.dylib')" />
+		</ItemGroup>
+	</Target>
+
 </Project>

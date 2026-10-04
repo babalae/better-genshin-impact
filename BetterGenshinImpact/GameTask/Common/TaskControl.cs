@@ -1,8 +1,8 @@
+using BetterGenshinImpact.Core.Input;
 using System;
 using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Model.Area;
 using Fischless.GameCapture;
@@ -66,7 +66,7 @@ public class TaskControl
                     if (IsKeyPressed(key)) // 强制转换 VK 枚举为 int
                     {
                         Logger.LogWarning($"解除{key}的按下状态.");
-                        Simulation.SendInput.Keyboard.KeyUp(key);
+                        InputHub.Foreground.Keyboard.KeyUp(key);
                     }
                 }
 
@@ -96,6 +96,20 @@ public class TaskControl
 
     private static void CheckAndActivateGameWindow()
     {
+        var window = TaskContext.Instance().Runtime?.Window;
+        if (window is { RequiresForeground: false })
+        {
+            // 输入不依赖前台的运行环境（网页版）不检查焦点、不抢前台，
+            // 只保证窗口没有最小化：最小化后截图器拿不到新帧
+            if (window.IsMinimized)
+            {
+                Logger.LogInformation("游戏窗口已最小化，尝试还原");
+                window.Activate();
+            }
+
+            return;
+        }
+
         if (!TaskContext.Instance().Config.OtherConfig.RestoreFocusOnLostEnabled)
         {
             if (!SystemControl.IsGenshinImpactActiveByProcess())
@@ -195,12 +209,12 @@ public class TaskControl
     {
         try
         {
-            Simulation.SendInput.SimulateAction(action, KeyType.KeyDown);
+            InputHub.Foreground.SimulateAction(action, KeyType.KeyDown);
             await Delay(holdMs, ct);
         }
         finally
         {
-            Simulation.SendInput.SimulateAction(action, KeyType.KeyUp);        
+            InputHub.Foreground.SimulateAction(action, KeyType.KeyUp);        
         }
     }
 
@@ -221,7 +235,7 @@ public class TaskControl
     {
         if (releaseLeftMouseBefore)
         {
-            Simulation.SendInput.Mouse.LeftButtonUp();
+            InputHub.Foreground.Mouse.LeftButtonUp();
             await Delay(releaseLeftMouseDelayMs, ct);
         }
 
@@ -248,16 +262,16 @@ public class TaskControl
         {
             for (var i = 0; i < repeatCount; i++)
             {
-                Simulation.SendInput.Mouse.LeftButtonUp();
+                InputHub.Foreground.Mouse.LeftButtonUp();
                 await Delay(preUpDelayMs, ct);
-                Simulation.SendInput.Mouse.LeftButtonDown();
+                InputHub.Foreground.Mouse.LeftButtonDown();
                 try
                 {
                     await Delay(downHoldMs, ct);
                 }
                 finally
                 {
-                    Simulation.SendInput.Mouse.LeftButtonUp();
+                    InputHub.Foreground.Mouse.LeftButtonUp();
                 }
 
                 await Delay(postUpDelayMs, ct);
@@ -265,7 +279,7 @@ public class TaskControl
         }
         finally
         {
-            Simulation.SendInput.Mouse.LeftButtonUp();
+            InputHub.Foreground.Mouse.LeftButtonUp();
         }
     }
 
@@ -310,7 +324,9 @@ public class TaskControl
     /// <returns></returns>
     public static ImageRegion CaptureToRectArea(bool forceNew = false)
     {
-        var image = CaptureGameImage(TaskTriggerDispatcher.GlobalGameCapture);
+        var capture = TaskContext.Instance().Runtime?.Capture
+                      ?? throw new InvalidOperationException("截图器未初始化!");
+        var image = CaptureGameImage(capture);
         var content = new CaptureContent(image, 0, 0);
         return content.CaptureRectArea;
     }

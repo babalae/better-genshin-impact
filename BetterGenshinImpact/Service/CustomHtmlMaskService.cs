@@ -1,4 +1,5 @@
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Mask;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View;
@@ -18,11 +19,44 @@ public sealed class CustomHtmlMaskService
     private const string PreviewWindowId = "bettergi-custom-html-mask-preview";
 
     private readonly IConfigService _configService;
+    private readonly IMaskWindowHost _maskWindowHost;
+    private MaskWindowState _lastMaskWindowState;
 
-    public CustomHtmlMaskService(IConfigService configService)
+    public CustomHtmlMaskService(IConfigService configService, IMaskWindowHost maskWindowHost)
     {
         _configService = configService;
+        _maskWindowHost = maskWindowHost;
         _configService.Get().MaskWindowConfig.PropertyChanged += OnMaskWindowConfigChanged;
+        _maskWindowHost.StateChanged += OnMaskWindowStateChanged;
+    }
+
+    /// <summary>
+    /// HTML 遮罩跟随主遮罩窗口显隐和移动（在 UI 线程触发）
+    /// </summary>
+    private void OnMaskWindowStateChanged(object? sender, MaskWindowState state)
+    {
+        var previous = _lastMaskWindowState;
+        _lastMaskWindowState = state;
+
+        if (state.IsVisible != previous.IsVisible)
+        {
+            if (state.IsVisible)
+            {
+                ShowIfEnabled();
+                HtmlMaskWindow.ShowAll();
+            }
+            else
+            {
+                HtmlMaskWindow.HideAll();
+            }
+
+            return;
+        }
+
+        if (state.IsVisible && state.Bounds != previous.Bounds)
+        {
+            HtmlMaskWindow.UpdateAllPositions();
+        }
     }
 
     public string DirectoryPath => Global.Absolute(RelativeDirectory);
@@ -90,8 +124,7 @@ public sealed class CustomHtmlMaskService
             return;
         }
 
-        var maskWindow = MaskWindow.InstanceNullable();
-        if (TaskContext.Instance().GameHandle == IntPtr.Zero || maskWindow?.IsVisible != true)
+        if (TaskContext.Instance().GameHandle == IntPtr.Zero || !_maskWindowHost.State.IsVisible)
         {
             return;
         }

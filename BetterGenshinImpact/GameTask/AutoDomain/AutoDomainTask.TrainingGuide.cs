@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide;
@@ -131,7 +131,7 @@ public partial class AutoDomainTask
         using (var initial = CaptureToRectArea())
             BetterGenshinImpact.Core.Script.Dependence.GlobalMethod.MoveMouseTo((int)(initial.Width * .52), (int)(initial.Height * .45));
         // 这里只滚动秘境名称列表，不拖拽或点击冒险之证中的奖励材料。
-        for (var i = 0; i < 20; i++) { Simulation.SendInput.Mouse.VerticalScroll(1); await Delay(70, _ct); }
+        for (var i = 0; i < 20; i++) { InputHub.Foreground.Mouse.VerticalScroll(1); await Delay(70, _ct); }
         await Delay(500, _ct);
         var previous = new List<(string Name, int Y)>();
         using var previousListImage = new Mat();
@@ -216,7 +216,7 @@ public partial class AutoDomainTask
             var scrollSteps = page == 0 ? 3 : 8;
             for (var step = 0; step < scrollSteps; step++)
             {
-                Simulation.SendInput.Mouse.VerticalScroll(-1);
+                InputHub.Foreground.Mouse.VerticalScroll(-1);
                 await Delay(60, _ct);
             }
             await Delay(600, _ct);
@@ -271,7 +271,7 @@ public partial class AutoDomainTask
         {
             if ((allOpen && attempt == 0) || (!allOpen && attempt == 1))
             {
-                for (var i = 0; i < 37; i++) { Simulation.SendInput.Mouse.VerticalScroll(-1); await Delay(60, _ct); }
+                for (var i = 0; i < 37; i++) { InputHub.Foreground.Mouse.VerticalScroll(-1); await Delay(60, _ct); }
                 await Delay(600, _ct);
             }
             using var capture = CaptureToRectArea();
@@ -529,7 +529,7 @@ public partial class AutoDomainTask
                 var scrollCount = direction > 0 && layout.Group.Length > 1 ? 5 : 1;
                 for (var step = 0; step < scrollCount; step++)
                 {
-                    Simulation.SendInput.Mouse.VerticalScroll(direction);
+                    InputHub.Foreground.Mouse.VerticalScroll(direction);
                     await Delay(60, _ct);
                 }
                 afterUpwardScroll = direction > 0 && scrollCount > 1;

@@ -1,7 +1,7 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Input;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
@@ -13,7 +13,7 @@ using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Notification;
-using BetterGenshinImpact.View.Drawable;
+using BetterGenshinImpact.Core.Mask;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -206,6 +206,10 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         _guideNextAction = GuideNextAction.Continue;
 
         Init();
+
+        // 自动吃药只在本次秘境期间启用，返回（含异常）时撤销
+        using var autoEatLease = _config.AutoEat ? TaskTriggerDispatcher.Instance().AddTrigger("AutoEat") : null;
+
         Notify.Event(NotificationEvent.DomainStart).Success("自动秘境启动");
 
         // 自动连招：秘境外识别队伍后启动 LLM 后台建树，
@@ -369,10 +373,6 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
     private void Init()
     {
         LogScreenResolution();
-        if (_config.AutoEat)
-        {
-            TaskTriggerDispatcher.Instance().AddTrigger("AutoEat", null);
-        }
 
         if (_taskParam.SpecifyResinUse)
         {
@@ -463,27 +463,27 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             {
                 menuFound = await NewRetry.WaitForElementAppear(
                     pickAssets.PickRo,
-                    () => Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown),
+                    () => InputHub.Foreground.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown),
                     _ct,
                     20,
                     500
                 );
-                Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
+                InputHub.Foreground.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
             }
             else if ("无妄引咎密宫".Equals(domainName))
             {
-                Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+                InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
                 await Delay(500, _ct);
-                Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
 
                 menuFound = await NewRetry.WaitForElementAppear(
                     pickAssets.PickRo,
-                    () => Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown),
+                    () => InputHub.Foreground.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown),
                     _ct,
                     20,
                     500
                 );
-                Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
+                InputHub.Foreground.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
             }
             else if ("太山府".Equals(domainName))
             {
@@ -499,20 +499,20 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             {
                 menuFound = await NewRetry.WaitForElementAppear(
                     pickAssets.PickRo,
-                    () => Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown),
+                    () => InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown),
                     _ct,
                     20,
                     500
                 );
-                Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
             }
 
         }
         finally
         {
-            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-            Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
-            Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
+            InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+            InputHub.Foreground.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
+            InputHub.Foreground.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
         }
 
         if (!menuFound)
@@ -560,7 +560,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                 Logger.LogWarning("未能通过文本OCR选择秘境，直接F");
                 await NewRetry.WaitForElementDisappear(
                     pickAssets.PickRo,
-                    () => Simulation.SendInput.Keyboard.KeyPress(pickAssets.PickVk),
+                    () => InputHub.Foreground.Keyboard.KeyPress(pickAssets.PickVk),
                     _ct,
                     20,
                     500
@@ -580,7 +580,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         {
             await NewRetry.WaitForElementDisappear(
                 pickAssets.PickRo,
-                () => Simulation.SendInput.Keyboard.KeyPress(pickAssets.PickVk),
+                () => InputHub.Foreground.Keyboard.KeyPress(pickAssets.PickVk),
                 _ct,
                 20,
                 500
@@ -643,7 +643,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                         GlobalMethod.MoveMouseTo(abnormalscreenRa.Width / 4, abnormalscreenRa.Height / 2); //移到左侧
                         for (var i = 0; i < 100; i++)
                         {
-                            Simulation.SendInput.Mouse.VerticalScroll(-1);
+                            InputHub.Foreground.Mouse.VerticalScroll(-1);
                             await Delay(10, _ct);
                         }
 
@@ -829,12 +829,12 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
         await Task.Run((Action)(() =>
         {
-            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+            InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
             Sleep(30, _ct);
             // 组合键好像不能直接用 postmessage
             if (!_config.WalkToF)
             {
-                Simulation.SendInput.SimulateAction(GIActions.SprintKeyboard, KeyType.KeyDown);
+                InputHub.Foreground.SimulateAction(GIActions.SprintKeyboard, KeyType.KeyDown);
             }
 
             try
@@ -852,7 +852,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                     else
                     {
                         Logger.LogInformation("检测到交互键");
-                        Simulation.SendInput.Keyboard.KeyPress(pickAssets.PickVk);
+                        InputHub.Foreground.Keyboard.KeyPress(pickAssets.PickVk);
                         break;
                     }
 
@@ -866,11 +866,11 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             }
             finally
             {
-                Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                 Sleep(50);
                 if (!_config.WalkToF)
                 {
-                    Simulation.SendInput.SimulateAction(GIActions.SprintKeyboard, KeyType.KeyUp);
+                    InputHub.Foreground.SimulateAction(GIActions.SprintKeyboard, KeyType.KeyUp);
                 }
             }
         }), _ct);
@@ -908,7 +908,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             finally
             {
                 Logger.LogInformation("自动战斗线程结束");
-                Simulation.ReleaseAllKey();
+                InputHub.ReleaseAll();
                 AutoFightTask.FightStatusFlag = false;
             }
         }, cts.Token);
@@ -1103,7 +1103,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                     if (Bv.CurrentAvatarIsLowHp(capture))
                     {
                         // 模拟按键 "Z"
-                        Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
+                        InputHub.Foreground.SimulateAction(GIActions.QuickUseGadget);
                         Logger.LogInformation("检测到红血，按Z吃药");
                         // TODO 吃饱了会一直吃
                     }
@@ -1137,7 +1137,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         CancellationTokenSource treeCts = new();
         _ct.Register(treeCts.Cancel);
         // 中键回正视角
-        Simulation.SendInput.Mouse.MiddleButtonClick();
+        InputHub.Foreground.Mouse.MiddleButtonClick();
         Sleep(900, _ct);
 
         // 左右移动直到石化古树位于屏幕中心任务
@@ -1179,13 +1179,13 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                         if (rightKeyDown)
                         {
                             // 先松开D键
-                            Simulation.SendInput.Keyboard.KeyUp(moveRightKey);
+                            InputHub.Foreground.Keyboard.KeyUp(moveRightKey);
                             rightKeyDown = false;
                         }
 
                         if (!leftKeyDown)
                         {
-                            Simulation.SendInput.Keyboard.KeyDown(moveLeftKey);
+                            InputHub.Foreground.Keyboard.KeyDown(moveLeftKey);
                             leftKeyDown = true;
                         }
                     }
@@ -1197,13 +1197,13 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                         if (leftKeyDown)
                         {
                             // 先松开A键
-                            Simulation.SendInput.Keyboard.KeyUp(moveLeftKey);
+                            InputHub.Foreground.Keyboard.KeyUp(moveLeftKey);
                             leftKeyDown = false;
                         }
 
                         if (!rightKeyDown)
                         {
-                            Simulation.SendInput.Keyboard.KeyDown(moveRightKey);
+                            InputHub.Foreground.Keyboard.KeyDown(moveRightKey);
                             rightKeyDown = true;
                         }
                     }
@@ -1212,14 +1212,14 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                         // 树在中间 松开所有键
                         if (rightKeyDown)
                         {
-                            Simulation.SendInput.Keyboard.KeyUp(moveRightKey);
+                            InputHub.Foreground.Keyboard.KeyUp(moveRightKey);
                             prevKey = moveRightKey;
                             rightKeyDown = false;
                         }
 
                         if (leftKeyDown)
                         {
-                            Simulation.SendInput.Keyboard.KeyUp(moveLeftKey);
+                            InputHub.Foreground.Keyboard.KeyUp(moveLeftKey);
                             prevKey = moveLeftKey;
                             leftKeyDown = false;
                         }
@@ -1232,9 +1232,9 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                                 backwardsAndForwardsCount++;
                             }
 
-                            Simulation.SendInput.Keyboard.KeyDown(moveLeftKey);
+                            InputHub.Foreground.Keyboard.KeyDown(moveLeftKey);
                             Sleep(60);
-                            Simulation.SendInput.Keyboard.KeyUp(moveLeftKey);
+                            InputHub.Foreground.Keyboard.KeyUp(moveLeftKey);
                             prevKey = moveLeftKey;
                         }
                         else if (treeMiddleX > middleX)
@@ -1244,16 +1244,16 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                                 backwardsAndForwardsCount++;
                             }
 
-                            Simulation.SendInput.Keyboard.KeyDown(moveRightKey);
+                            InputHub.Foreground.Keyboard.KeyDown(moveRightKey);
                             Sleep(60);
-                            Simulation.SendInput.Keyboard.KeyUp(moveRightKey);
+                            InputHub.Foreground.Keyboard.KeyUp(moveRightKey);
                             prevKey = moveRightKey;
                         }
                         else
                         {
-                            Simulation.SendInput.Keyboard.KeyDown(moveForwardKey);
+                            InputHub.Foreground.Keyboard.KeyDown(moveForwardKey);
                             Sleep(60);
-                            Simulation.SendInput.Keyboard.KeyUp(moveForwardKey);
+                            InputHub.Foreground.Keyboard.KeyUp(moveForwardKey);
                             Sleep(500, _ct);
                             treeCts.Cancel();
                             break;
@@ -1269,13 +1269,13 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                     {
                         if (leftKeyDown)
                         {
-                            Simulation.SendInput.Keyboard.KeyUp(moveLeftKey);
+                            InputHub.Foreground.Keyboard.KeyUp(moveLeftKey);
                             leftKeyDown = false;
                         }
 
                         if (!rightKeyDown)
                         {
-                            Simulation.SendInput.Keyboard.KeyDown(moveRightKey);
+                            InputHub.Foreground.Keyboard.KeyDown(moveRightKey);
                             rightKeyDown = true;
                         }
                     }
@@ -1283,13 +1283,13 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                     {
                         if (rightKeyDown)
                         {
-                            Simulation.SendInput.Keyboard.KeyUp(moveRightKey);
+                            InputHub.Foreground.Keyboard.KeyUp(moveRightKey);
                             rightKeyDown = false;
                         }
 
                         if (!leftKeyDown)
                         {
-                            Simulation.SendInput.Keyboard.KeyDown(moveLeftKey);
+                            InputHub.Foreground.Keyboard.KeyDown(moveLeftKey);
                             leftKeyDown = true;
                         }
                     }
@@ -1298,9 +1298,9 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                 if (backwardsAndForwardsCount >= _config.LeftRightMoveTimes)
                 {
                     // 左右移动5次说明已经在树中心了
-                    Simulation.SendInput.Keyboard.KeyDown(moveForwardKey);
+                    InputHub.Foreground.Keyboard.KeyDown(moveForwardKey);
                     Sleep(60);
-                    Simulation.SendInput.Keyboard.KeyUp(moveForwardKey);
+                    InputHub.Foreground.Keyboard.KeyUp(moveForwardKey);
                     Sleep(500, _ct);
                     treeCts.Cancel();
                     break;
@@ -1309,21 +1309,21 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                 Sleep(60, _ct);
             }
 
-            VisionContext.Instance().DrawContent.ClearAll();
+            TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
         });
     }
 
     private Rect DetectTree(ImageRegion region)
     {
         var result = _predictor.Predictor.Detect(region.CacheImage);
-        var list = new List<RectDrawable>();
+        var list = new List<MaskWindowDrawingShape>();
         foreach (var box in result)
         {
             var rect = new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height);
-            list.Add(region.ToRectDrawable(rect, "tree"));
+            list.Add(region.ToMaskWindowDrawingRect(rect));
         }
 
-        VisionContext.Instance().DrawContent.PutOrRemoveRectList("TreeBox", list);
+        region.DrawingBoard.Set("TreeBox", list);
 
         if (list.Count > 0)
         {
@@ -1373,7 +1373,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                         moveAngle *= 2;
                     }
 
-                    Simulation.SendInput.Mouse.MoveMouseBy(-moveAngle, 0);
+                    InputHub.Foreground.Mouse.MoveMouseBy(-moveAngle, 0);
                 }
                 else if (angle is > 180 and < 360)
                 {
@@ -1384,14 +1384,14 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                         moveAngle *= 2;
                     }
 
-                    Simulation.SendInput.Mouse.MoveMouseBy(moveAngle, 0);
+                    InputHub.Foreground.Mouse.MoveMouseBy(moveAngle, 0);
                 }
 
                 Sleep(100, _ct);
             }
 
             Logger.LogInformation("锁定东方向视角线程结束");
-            VisionContext.Instance().DrawContent.ClearAll();
+            TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
         });
     }
 
@@ -1695,9 +1695,9 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
     private async Task ExitDomain()
     {
-        Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
+        InputHub.Foreground.Keyboard.KeyPress(VK.VK_ESCAPE);
         await Delay(500, _ct);
-        Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
+        InputHub.Foreground.Keyboard.KeyPress(VK.VK_ESCAPE);
         await Delay(800, _ct);
         using var capture = CaptureToRectArea();
         Bv.ClickBlackConfirmButton(capture);

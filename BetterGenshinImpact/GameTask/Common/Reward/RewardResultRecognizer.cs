@@ -1,7 +1,7 @@
-﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide;
+using BetterGenshinImpact.Core.Input;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -309,7 +309,7 @@ public class RewardResultRecognizer
         GameCaptureRegion.GameRegion1080PPosMove(startX, y);
         Thread.Sleep(100);
 
-        Simulation.SendInput.Mouse.LeftButtonDown();
+        InputHub.Foreground.Mouse.LeftButtonDown();
         Thread.Sleep(100);
 
         int steps = 20;
@@ -320,7 +320,7 @@ public class RewardResultRecognizer
             Thread.Sleep(30);
         }
 
-        Simulation.SendInput.Mouse.LeftButtonUp();
+        InputHub.Foreground.Mouse.LeftButtonUp();
 
         // 等待末页不足10个奖励时的回退动画完成。
         Thread.Sleep(1200);

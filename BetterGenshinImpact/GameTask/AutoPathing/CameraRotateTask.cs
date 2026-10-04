@@ -1,4 +1,4 @@
-using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.GameTask.Model.Area;
 using System;
@@ -45,7 +45,7 @@ public class CameraRotateTask(CancellationToken ct)
             controlRatio = 2;
         }
 
-        Simulation.SendInput.Mouse.MoveMouseBy((int)Math.Round(-controlRatio * diff * _dpi), 0);
+        InputHub.Foreground.Mouse.MoveMouseBy((int)Math.Round(-controlRatio * diff * _dpi), 0);
         return diff;
     }
 
