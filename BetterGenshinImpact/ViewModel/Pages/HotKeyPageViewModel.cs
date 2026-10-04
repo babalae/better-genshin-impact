@@ -659,6 +659,11 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         }
     }
 
+    /// <summary>
+    /// 展开配置列表，取出所有非分组的功能项
+    /// </summary>
+    /// <param name="modelList">待展开的配置列表</param>
+    /// <returns>所有非分组的功能项</returns>
     public static List<HotKeySettingModel> GetAllNonDirectoryHotkey(IEnumerable<HotKeySettingModel> modelList)
     {
         var list = new List<HotKeySettingModel>();
@@ -675,6 +680,11 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         return list;
     }
 
+    /// <summary>
+    /// 递归取出某个分组下所有非分组的功能项
+    /// </summary>
+    /// <param name="model">要展开的分组</param>
+    /// <returns>该分组下所有非分组的功能项</returns>
     public static List<HotKeySettingModel> GetAllNonDirectoryChildren(HotKeySettingModel model)
     {
         var result = new List<HotKeySettingModel>();

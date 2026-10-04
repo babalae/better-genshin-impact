@@ -89,6 +89,11 @@ public class HotKeyTextBox : TextBox
         Text = Hotkey.ToString();
     }
 
+    /// <summary>
+    /// 判断按键是否会输入字符（用于排除全局热键不支持的 Shift + 字符）
+    /// </summary>
+    /// <param name="key">待判断的按键</param>
+    /// <returns>会输入字符时返回 true</returns>
     private static bool HasKeyChar(Key key) =>
         key
             is

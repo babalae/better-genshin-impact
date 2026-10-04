@@ -114,12 +114,19 @@ public class KeyboardHook
         }
     }
 
+    /// <summary>
+    /// 注册为键鼠监听：绑定按键并加入全局按键分发表
+    /// </summary>
+    /// <param name="key">要监听的按键</param>
     public void RegisterHotKey(Keys key)
     {
         BindKey = key;
         AllKeyboardHooks.Add(key, this);
     }
 
+    /// <summary>
+    /// 注销键鼠监听，并复位长按状态
+    /// </summary>
     public void UnregisterHotKey()
     {
         IsPressed = false;
@@ -127,6 +134,9 @@ public class KeyboardHook
         AllKeyboardHooks.Remove(BindKey);
     }
 
+    /// <summary>
+    /// 释放该实例占用的按键注册
+    /// </summary>
     public void Dispose()
     {
         UnregisterHotKey();

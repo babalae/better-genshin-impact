@@ -116,12 +116,19 @@ public class MouseHook
         }
     }
 
+    /// <summary>
+    /// 注册为键鼠监听：绑定鼠标侧键并加入全局按键分发表
+    /// </summary>
+    /// <param name="mouseButton">要监听的鼠标按键</param>
     public void RegisterHotKey(MouseButtons mouseButton)
     {
         BindMouse = mouseButton;
         AllMouseHooks.Add(mouseButton, this);
     }
 
+    /// <summary>
+    /// 注销键鼠监听，并复位长按状态
+    /// </summary>
     public void UnregisterHotKey()
     {
         IsPressed = false;
@@ -129,6 +136,9 @@ public class MouseHook
         AllMouseHooks.Remove(BindMouse);
     }
 
+    /// <summary>
+    /// 释放该实例占用的鼠标按键注册
+    /// </summary>
     public void Dispose()
     {
         UnregisterHotKey();
