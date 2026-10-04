@@ -41,6 +41,12 @@ public sealed class PuloniaTaskBuilder
             throw new PuloniaTaskValidationException(plan.Id, "准备选项的集合或资源基础目录不能为空。");
         var fixedPlan = PuloniaTaskJson.ClonePlan(plan);
         var fixedOptions = PuloniaTaskJson.Read<PuloniaTaskBuildOptions>(PuloniaTaskJson.Write(options));
+        if (fixedOptions.TargetTaskId is { } targetId)
+        {
+            // 禁用范围外的兄弟节点，保留祖先策略、稳定地址和完整配置快照。
+            if (!RestrictToTarget(fixedPlan.RootTask, targetId))
+                throw new PuloniaTaskValidationException(targetId, "触发器的目标节点不存在。");
+        }
         if (fixedOptions.MaxDepth is <= 0 or > PuloniaTaskValidator.MaxTreeDepth
             || fixedOptions.MaxNodes is <= 0 or > PuloniaTaskValidator.MaxTreeNodes)
             throw new PuloniaTaskValidationException(plan.Id, "准备深度或数量限制超出支持范围。");
@@ -83,6 +89,21 @@ public sealed class PuloniaTaskBuilder
             ct.ThrowIfCancellationRequested();
             return new PuloniaTaskSnapshot(fixedPlan, fixedOptions.AccountId, root, context.PlanJson, context.PresetJson);
         }, ct);
+    }
+
+    /// <summary>只允许目标子树及其祖先参与准备；范围外节点保留但不会读取资源。</summary>
+    private static bool RestrictToTarget(PuloniaTask task, string targetId)
+    {
+        if (task.Id == targetId)
+            return true;
+        var found = false;
+        foreach (var child in task.Children)
+        {
+            var contains = RestrictToTarget(child, targetId);
+            if (!contains) child.IsEnabled = false;
+            found |= contains;
+        }
+        return found;
     }
 
     /// <summary>

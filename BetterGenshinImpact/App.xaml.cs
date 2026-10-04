@@ -242,6 +242,12 @@ public partial class App : Application
                 services.AddSingleton<PuloniaTaskResourceCatalog>();
                 services.AddSingleton<PuloniaTaskService>();
                 services.AddSingleton<IPuloniaTaskService>(sp => sp.GetRequiredService<PuloniaTaskService>());
+                services.AddSingleton(TimeProvider.System);
+                services.AddSingleton<PuloniaUserActivityMonitor>();
+                services.AddSingleton<IPuloniaUserActivityMonitor>(sp => sp.GetRequiredService<PuloniaUserActivityMonitor>());
+                services.AddSingleton<PuloniaWindowsTaskScheduler>();
+                services.AddSingleton<PuloniaTaskTriggerHost>();
+                services.AddHostedService(sp => sp.GetRequiredService<PuloniaTaskTriggerHost>());
                 services.AddSingleton<IMusicScoreParser, MusicScoreParser>();
                 services.AddSingleton<IMusicStateStore, MusicStateStore>();
                 services.AddSingleton<IInstrumentProfileService, InstrumentProfileService>();

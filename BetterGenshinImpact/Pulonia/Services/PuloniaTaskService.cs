@@ -15,7 +15,7 @@ namespace BetterGenshinImpact.Pulonia.Services;
 /// <summary>
 /// Pulonia 的单主协调器：提交时固定快照，随后串行执行、更新状态并协调取消。
 /// </summary>
-public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
+public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
 {
     /// <summary>
     /// 防止异常调用给协调器建立过长的总运行计时器。
@@ -126,12 +126,14 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
     /// </summary>
     public PuloniaTaskService(PuloniaTaskStore store, PuloniaTaskBuilder builder,
         IEnumerable<IPuloniaTaskExecutor> executors, PuloniaGameTaskCoordinator gameTaskCoordinator,
-        TaskStopService taskStopService)
+        TaskStopService taskStopService, IPuloniaUserActivityMonitor? activityMonitor = null, TimeProvider? timeProvider = null)
     {
         _store = store;
         _builder = builder;
         _gameTaskCoordinator = gameTaskCoordinator;
         _taskStopService = taskStopService;
+        _activityMonitor = activityMonitor;
+        _timeProvider = timeProvider ?? TimeProvider.System;
         var executorMap = new Dictionary<string, IPuloniaTaskExecutor>(StringComparer.Ordinal);
         var definitionMap = new Dictionary<string, PuloniaTaskDefinition>(StringComparer.Ordinal);
         foreach (var executor in executors)
@@ -154,7 +156,12 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
     }
 
     /// <inheritdoc />
-    public async Task<Guid> EnqueueAsync(PuloniaTaskRequest request, CancellationToken ct = default)
+    public Task<Guid> EnqueueAsync(PuloniaTaskRequest request, CancellationToken ct = default)
+        => EnqueueCoreAsync(request, null, ct);
+
+    /// <summary>准备完成后将请求与触发游标作为同一耐久状态提交。</summary>
+    private async Task<Guid> EnqueueCoreAsync(PuloniaTaskRequest request,
+        Action<PuloniaTaskState, Guid>? updateTrigger, CancellationToken ct)
     {
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposeStarted) != 0, this);
         await _initialization.WaitAsync(ct).ConfigureAwait(false);
@@ -169,15 +176,14 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
             Definitions = _definitions.Values.ToList(),
             BaseDirectory = AppContext.BaseDirectory,
             AccountId = fixedRequest.AccountId,
+            TargetTaskId = fixedRequest.TargetTaskId,
             ParameterOverrides = fixedRequest.ParameterOverrides
         }, ct).ConfigureAwait(false);
 
         var state = new RunState(Guid.NewGuid(), Guid.NewGuid(), fixedRequest, plan.Name, snapshot);
-        lock (_runsGate)
-            _runs.Add(state.RequestId, state);
         try
         {
-            await PersistCurrentStateAsync(ct).ConfigureAwait(false);
+            await PersistCurrentStateAsync(ct, candidate => updateTrigger?.Invoke(candidate, state.RequestId), state).ConfigureAwait(false);
         }
         catch
         {
@@ -186,6 +192,9 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
             state.Cancellation.Dispose();
             throw;
         }
+        if (fixedRequest.TriggerId is not null && fixedRequest.BusyPolicy == PuloniaTaskBusyPolicy.StopCurrent)
+            _taskStopService.StopAll(TaskStopReason.UserRequested);
+        state.QueueReady = true;
         if (!_queue.Writer.TryWrite(state))
         {
             lock (_runsGate)
@@ -309,7 +318,16 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
             }
         }
 
-        var state = new RunState(Guid.NewGuid(), Guid.NewGuid(), CloneAndValidateRequest(source.Request),
+        // 人工续跑是新授权，不能继承旧触发窗口、旧配置签名或“停止当前”策略。
+        var resumeRequest = CloneAndValidateRequest(new PuloniaTaskRequest
+        {
+            PlanId = source.Request.PlanId, TargetTaskId = source.Request.TargetTaskId,
+            AccountId = source.Request.AccountId, WorldOwnerAccountId = source.Request.WorldOwnerAccountId,
+            Server = source.Request.Server, ServerUtcOffsetMinutes = source.Request.ServerUtcOffsetMinutes,
+            TimeoutSeconds = source.Request.TimeoutSeconds, ParameterOverrides = source.Request.ParameterOverrides,
+            Source = "resume"
+        });
+        var state = new RunState(Guid.NewGuid(), Guid.NewGuid(), resumeRequest,
             source.PlanName, snapshot, completed, startTaskAddress, source.RunId);
         lock (_runsGate)
             _runs.Add(state.RequestId, state);
@@ -327,6 +345,7 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
             state.Cancellation.Dispose();
             throw;
         }
+        state.QueueReady = true;
         if (!_queue.Writer.TryWrite(state))
             throw new InvalidOperationException("Pulonia 执行队列已经关闭。");
         RaiseRunChanged(state.RequestId);
@@ -430,12 +449,16 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
     /// <summary>
     /// 根据当前运行集合生成一份候选状态，成功替换文件后才更新内存状态。
     /// </summary>
-    private async Task PersistCurrentStateAsync(CancellationToken ct)
+    private async Task PersistCurrentStateAsync(CancellationToken ct, Action<PuloniaTaskState>? update = null,
+        RunState? addition = null)
     {
         await _stateGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             var candidate = ClonePersistentState();
+            update?.Invoke(candidate);
+            if (addition is not null)
+                lock (_runsGate) _runs.Add(addition.RequestId, addition);
             candidate.PendingRequests.Clear();
             candidate.ActiveRun = null;
             RunState[] states;
@@ -444,6 +467,7 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
             foreach (var state in states)
             {
                 var record = state.ToRecord();
+                UpdateTriggerRunStatus(candidate, record);
                 if (record.Status == PuloniaTaskRunStatus.Queued)
                     candidate.PendingRequests.Add(record);
                 else if (record.Status is PuloniaTaskRunStatus.Running or PuloniaTaskRunStatus.Cancelling)
@@ -454,7 +478,15 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
                 }
             }
             candidate.Sequence = checked(candidate.Sequence + 1);
-            await _store.SaveStateAsync(candidate, ct).ConfigureAwait(false);
+            try { await _store.SaveStateAsync(candidate, ct).ConfigureAwait(false); }
+            catch (Exception ex)
+            {
+                // 新请求不能被另一次耐久写入复活；失败时在同一状态门内撤销暂存。
+                if (addition is not null) lock (_runsGate) _runs.Remove(addition.RequestId);
+                if (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+                    Volatile.Write(ref _persistenceFailure, ex);
+                throw;
+            }
             _persistentState = candidate;
         }
         finally
@@ -510,13 +542,27 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
         try
         {
             await _initialization.ConfigureAwait(false);
-            await foreach (var state in _queue.Reader.ReadAllAsync(_shutdown.Token).ConfigureAwait(false))
+            await foreach (var wake in _queue.Reader.ReadAllAsync(_shutdown.Token).ConfigureAwait(false))
             {
-                if (state.IsTerminal())
-                    continue;
-                await ExecuteRunAsync(state).ConfigureAwait(false);
-                if (Volatile.Read(ref _persistenceFailure) is not null)
-                    break;
+                // 通道只负责唤醒；从耐久队列挑选可准入的请求，不让等待空闲的任务挡住其他计划。
+                while (!_shutdown.IsCancellationRequested)
+                {
+                    RunState[] pending;
+                    lock (_runsGate) pending = _runs.Values.Where(item => item.QueueReady && item.GetStatus() == PuloniaTaskRunStatus.Queued)
+                        .OrderByDescending(item => item.Request.BusyPolicy == PuloniaTaskBusyPolicy.StopCurrent)
+                        .ThenBy(item => item.SubmittedAt).ToArray();
+                    if (pending.Length == 0) break;
+                    var executed = false;
+                    foreach (var state in pending)
+                    {
+                        if (!await AdmitQueuedRunAsync(state).ConfigureAwait(false)) continue;
+                        await ExecuteRunAsync(state).ConfigureAwait(false);
+                        executed = true;
+                        break;
+                    }
+                    if (Volatile.Read(ref _persistenceFailure) is not null) return;
+                    if (!executed) await Task.Delay(TimeSpan.FromSeconds(1), _timeProvider, _shutdown.Token).ConfigureAwait(false);
+                }
             }
         }
         catch (OperationCanceledException) when (_shutdown.IsCancellationRequested)
@@ -530,6 +576,8 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
     /// </summary>
     private async Task ExecuteRunAsync(RunState state)
     {
+        var activityVersion = _activityMonitor?.ActivityVersion;
+        state.InitialActivityVersion = activityVersion;
         lock (state.SyncRoot)
         {
             if (IsTerminal(state.Status))
@@ -562,23 +610,35 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
             state.Cancellation.Token, timeoutCancellation.Token, _shutdown.Token);
         try
         {
-            var signal = await ExecuteTaskAsync(state, state.Snapshot.RootTask, runCancellation.Token).ConfigureAwait(false);
-            lock (state.SyncRoot)
+            using var activityWatch = new CancellationTokenSource();
+            var watch = WatchActivityAsync(state, activityVersion, activityWatch.Token);
+            try
             {
-                state.CurrentTaskAddress = null;
-                state.Status = state.RequiresAttention
-                    ? PuloniaTaskRunStatus.NeedsAttention
-                    : signal == ExecutionSignal.StopPlan || state.HasFinalFailure
-                        ? PuloniaTaskRunStatus.Failed
-                        : PuloniaTaskRunStatus.Succeeded;
-                state.Message = state.Status == PuloniaTaskRunStatus.Succeeded
-                    ? "计划运行完成。"
-                    : state.Status == PuloniaTaskRunStatus.NeedsAttention
-                        ? "计划存在未核验副作用，已停止自动推进。"
-                    : state.Message == "正在串行执行运行快照。"
-                        ? "计划因节点失败而停止。"
-                        : state.Message;
-                state.FinishedAt = DateTimeOffset.UtcNow;
+                if (state.Request.StopOnUserActivity) CheckActivityForInput(state, runCancellation.Token);
+                var signal = await ExecuteTaskAsync(state, state.Snapshot.RootTask, runCancellation.Token).ConfigureAwait(false);
+                runCancellation.Token.ThrowIfCancellationRequested();
+                lock (state.SyncRoot)
+                {
+                    state.CurrentTaskAddress = null;
+                    state.Status = state.RequiresAttention
+                        ? PuloniaTaskRunStatus.NeedsAttention
+                        : signal == ExecutionSignal.StopPlan || state.HasFinalFailure
+                            ? PuloniaTaskRunStatus.Failed
+                            : PuloniaTaskRunStatus.Succeeded;
+                    state.Message = state.Status == PuloniaTaskRunStatus.Succeeded
+                        ? "计划运行完成。"
+                        : state.Status == PuloniaTaskRunStatus.NeedsAttention
+                            ? "计划存在未核验副作用，已停止自动推进。"
+                        : state.Message == "正在串行执行运行快照。"
+                            ? "计划因节点失败而停止。"
+                            : state.Message;
+                    state.FinishedAt = DateTimeOffset.UtcNow;
+                }
+            }
+            finally
+            {
+                await activityWatch.CancelAsync().ConfigureAwait(false);
+                await watch.ConfigureAwait(false);
             }
         }
         catch (OperationCanceledException) when (runCancellation.IsCancellationRequested)
@@ -596,7 +656,8 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
                 {
                     PuloniaTaskRunStatus.NeedsAttention => "取消或超时时仍有未确认操作，必须先核验副作用。",
                     PuloniaTaskRunStatus.TimedOut => $"计划超过总运行时限 {state.Request.TimeoutSeconds:0.###} 秒，当前执行器已退出。",
-                    _ => "计划已取消，当前执行器已退出并释放资源。"
+                    _ => state.UserReturned ? "检测到用户活动或桌面不可用，已停止新增输入；当前执行器已退出并释放资源。"
+                        : "计划已取消，当前执行器已退出并释放资源。"
                 };
                 state.FinishedAt = DateTimeOffset.UtcNow;
             }
@@ -633,10 +694,12 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
                 return;
 
             state.Status = PuloniaTaskRunStatus.Cancelling;
+            state.UserReturned |= reason == TaskStopReason.UserActivity;
             state.Message = reason switch
             {
                 TaskStopReason.ApplicationShutdown => "应用正在关闭，正在等待当前执行器退出并释放资源。",
                 TaskStopReason.RuntimeStopped => "游戏运行环境已停止，正在等待当前执行器退出并释放资源。",
+                TaskStopReason.UserActivity => "检测到用户活动或桌面不可用，停止新增输入并等待当前执行器清理。",
                 _ => "已请求取消，正在等待当前执行器退出并释放资源。"
             };
         }
@@ -757,7 +820,8 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
                     task.TaskAddress, (completionEvent, token) =>
                         ReportCompletionEventAsync(state, task, attempt, rules, completionEvent, token));
                 using var gameTaskLease = _definitions[task.TaskType].RequiresGameSession
-                    ? await _gameTaskCoordinator.AcquireAsync(nodeCancellation.Token).ConfigureAwait(false)
+                    ? await _gameTaskCoordinator.AcquireAsync(nodeCancellation.Token, state.Request.StopOnUserActivity
+                        ? () => CheckActivityForInput(state, nodeCancellation.Token) : null).ConfigureAwait(false)
                     : null;
                 outcome = await executor.ExecuteAsync(task, context, nodeCancellation.Token).ConfigureAwait(false);
                 // 兼容暂时未主动观察令牌的旧执行器：只有它真正返回后才确认取消或超时完成。
@@ -1123,6 +1187,7 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
                     : candidate.ActiveRun;
                 if (candidate.PendingArchives.All(item => item.RunId != record.RunId))
                     candidate.PendingArchives.Add(record);
+                UpdateTriggerRunStatus(candidate, record);
                 if (record.OperationIntent is not null
                     && candidate.UncertainOperations.All(item => item.RunId != record.RunId))
                     candidate.UncertainOperations.Add(record.OperationIntent);
@@ -1204,6 +1269,17 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
             PuloniaTaskValidator.ValidateId(request.AccountId, "request/account_id");
         if (request.WorldOwnerAccountId is not null)
             PuloniaTaskValidator.ValidateId(request.WorldOwnerAccountId, "request/world_owner_account_id");
+        if (request.TargetTaskId is not null)
+            PuloniaTaskValidator.ValidateId(request.TargetTaskId, "request/target_task_id");
+        if (!Enum.IsDefined(request.BusyPolicy) || request.IdleSeconds is < 1 or > 86400)
+            throw new PuloniaTaskValidationException("request", "忙碌策略或空闲阈值无效。");
+        if (request.TriggerId is not null)
+        {
+            PuloniaTaskValidator.ValidateId(request.TriggerId, "request/trigger_id");
+            if (string.IsNullOrWhiteSpace(request.TriggerSignature) || request.TriggerSignature.Length != 64
+                || request.OccurrenceUtc is null || request.DeadlineUtc is null || request.DeadlineUtc <= request.OccurrenceUtc)
+                throw new PuloniaTaskValidationException("request", "自动请求必须带有配置签名、发生时间和有效截止时间。");
+        }
         if (string.IsNullOrWhiteSpace(request.Server) || request.Server.Length > 32)
             throw new PuloniaTaskValidationException("request/server", "服务器标识必须是 1—32 个字符。");
         var server = request.Server.Trim().ToLowerInvariant();
@@ -1230,7 +1306,16 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
             ServerUtcOffsetMinutes = request.ServerUtcOffsetMinutes,
             TimeoutSeconds = request.TimeoutSeconds,
             ParameterOverrides = overrides,
-            Source = request.Source
+            Source = request.Source,
+            TargetTaskId = request.TargetTaskId,
+            TriggerId = request.TriggerId,
+            TriggerSignature = request.TriggerSignature,
+            OccurrenceUtc = request.OccurrenceUtc,
+            DeadlineUtc = request.DeadlineUtc,
+            RequireIdle = request.RequireIdle,
+            IdleSeconds = request.IdleSeconds,
+            StopOnUserActivity = request.StopOnUserActivity,
+            BusyPolicy = request.BusyPolicy
         };
     }
 
@@ -1240,7 +1325,7 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
     private static bool IsTerminal(PuloniaTaskRunStatus status)
         => status is PuloniaTaskRunStatus.Succeeded or PuloniaTaskRunStatus.Failed
             or PuloniaTaskRunStatus.Cancelled or PuloniaTaskRunStatus.TimedOut
-            or PuloniaTaskRunStatus.Interrupted or PuloniaTaskRunStatus.NeedsAttention;
+            or PuloniaTaskRunStatus.Interrupted or PuloniaTaskRunStatus.NeedsAttention or PuloniaTaskRunStatus.Expired;
 
     /// <summary>
     /// 在协调器线程之外通知订阅方，订阅方负责切换到自己的 UI 线程。
@@ -1323,6 +1408,12 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
     /// </summary>
     private sealed class RunState
     {
+        /// <summary>请求耐久写入并完成停止策略后才可被消费者挑选。</summary>
+        public volatile bool QueueReady;
+        /// <summary>取消是否由用户活动或桌面不可用引起，终态保留明确原因。</summary>
+        public bool UserReturned;
+        /// <summary>真正开始时捕获的用户活动版本，仅用于本次运行。</summary>
+        public long? InitialActivityVersion;
         /// <summary>
         /// 保护本运行的全部可变字段。
         /// </summary>
@@ -1481,7 +1572,8 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
                 FinishedAt = record.FinishedAt,
                 OperationIntent = record.OperationIntent,
                 RequiresAttention = record.Status == PuloniaTaskRunStatus.NeedsAttention,
-                IsHistorical = isHistorical
+                IsHistorical = isHistorical,
+                QueueReady = true
             };
             state.NodeResults.AddRange(record.NodeResults);
             state.ConfirmedEffects.AddRange(record.ConfirmedEffects);
@@ -1538,7 +1630,7 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
             => new(RequestId, RunId, Request.PlanId, PlanName, Request.Source, Status, CurrentTaskAddress,
                 Message, SubmittedAt, StartedAt, FinishedAt, SnapshotJson, NodeResults,
                 Request.AccountId, Request.WorldOwnerAccountId, ResumedFromRunId, ResumeFromTaskAddress,
-                IsHistorical, OperationIntent is not null, ConfirmedEffects);
+                IsHistorical, OperationIntent is not null, ConfirmedEffects, Request);
 
         /// <summary>
         /// 判断本运行是否已经进入最终状态。
@@ -1547,6 +1639,12 @@ public sealed class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
         {
             lock (SyncRoot)
                 return PuloniaTaskService.IsTerminal(Status);
+        }
+
+        /// <summary>仅读取状态，队列挑选不深复制结果与证据。</summary>
+        public PuloniaTaskRunStatus GetStatus()
+        {
+            lock (SyncRoot) return Status;
         }
     }
 }

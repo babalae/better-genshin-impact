@@ -77,12 +77,23 @@ public static class PuloniaTaskJson
             throw new PuloniaTaskValidationException("state.json",
                 $"不支持运行状态格式版本 {state.SchemaVersion}。");
         if (state.Sequence < 0 || state.PendingRequests is null || state.PendingArchives is null
-            || state.Ledger is null || state.UncertainOperations is null)
+            || state.Ledger is null || state.UncertainOperations is null || state.TriggerStates is null)
             throw new PuloniaTaskValidationException("state.json", "运行状态内容不完整或序列无效。");
         if (state.PendingRequests.Count > 10000 || state.PendingArchives.Count > 10000
-            || state.Ledger.Count > 100000 || state.UncertainOperations.Count > 10000)
+            || state.Ledger.Count > 100000 || state.UncertainOperations.Count > 10000 || state.TriggerStates.Count > 10000)
             throw new PuloniaTaskValidationException("state.json", "运行状态集合超过支持上限。");
         var requestIds = new HashSet<Guid>();
+        var triggerKeys = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var trigger in state.TriggerStates)
+        {
+            if (trigger is null || !triggerKeys.Add(trigger.PlanId + "/" + trigger.TriggerId))
+                throw new PuloniaTaskValidationException("state.json/trigger_states", "触发器状态为空或重复。");
+            PuloniaTaskValidator.ValidateId(trigger.PlanId, "trigger_state/plan_id");
+            PuloniaTaskValidator.ValidateId(trigger.TriggerId, "trigger_state/trigger_id");
+            if (trigger.Signature is null || trigger.Signature.Length != 64 || !trigger.Signature.All(Uri.IsHexDigit)
+                || trigger.LastRequestId == Guid.Empty || string.IsNullOrWhiteSpace(trigger.Status))
+                throw new PuloniaTaskValidationException("state.json/trigger_states", "触发器签名、请求 ID 或状态无效。");
+        }
         var runIds = new HashSet<Guid>();
         foreach (var record in state.PendingRequests)
         {

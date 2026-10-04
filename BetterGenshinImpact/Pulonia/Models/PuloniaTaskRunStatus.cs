@@ -48,5 +48,8 @@ public enum PuloniaTaskRunStatus
     /// <summary>
     /// 存在未决副作用，需要人工或能力核验后才能安全继续。
     /// </summary>
-    NeedsAttention
+    NeedsAttention,
+
+    /// <summary>自动请求超过最晚开始时间，没有启动执行器。</summary>
+    Expired
 }

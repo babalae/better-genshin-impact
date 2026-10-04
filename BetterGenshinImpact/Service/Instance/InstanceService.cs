@@ -563,6 +563,13 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
     {
         Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
         {
+            var commandLineOptions = CommandLineOptions.Parse(args);
+            if (commandLineOptions.IsPuloniaAction)
+            {
+                // 定时唤起转发到主实例，不激活主窗口，不与用户正在操作的桌面争抢焦点。
+                _ = App.GetService<Pulonia.Services.PuloniaTaskTriggerHost>()?.HandleActivationAsync(commandLineOptions);
+                return;
+            }
             var mainWindow = Application.Current.MainWindow;
             mainWindow?.Show();
             mainWindow?.Activate();
@@ -571,7 +578,6 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
                 SystemControl.RestoreWindow(new WindowInteropHelper(mainWindow).Handle);
             }
 
-            var commandLineOptions = CommandLineOptions.Parse(args);
             App.GetService<HomePageViewModel>()?.HandleActivation(commandLineOptions);
         }));
     }

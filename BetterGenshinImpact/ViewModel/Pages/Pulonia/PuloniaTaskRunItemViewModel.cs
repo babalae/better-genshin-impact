@@ -46,6 +46,7 @@ public sealed class PuloniaTaskRunItemViewModel : ObservableObject
         PuloniaTaskRunStatus.TimedOut => "已超时",
         PuloniaTaskRunStatus.Interrupted => "已中断",
         PuloniaTaskRunStatus.NeedsAttention => "待处理",
+        PuloniaTaskRunStatus.Expired => "已过期（未执行）",
         _ => Run.Status.ToString()
     };
 
@@ -83,6 +84,8 @@ public sealed class PuloniaTaskRunItemViewModel : ObservableObject
         new("运行 ID", Run.RunId.ToString("D")),
         new("请求 ID", RequestId.ToString("D")),
         new("来源 / 作用域", $"{Run.Source} · {ScopeText}"),
+        new("触发器 / 执行范围", $"{Run.TriggerId ?? "手动提交"} / {Run.TargetTaskId ?? "整个计划"}"),
+        new("触发 / 最晚开始", $"{PuloniaTaskHistoryText.Time(Run.OccurrenceUtc)} / {PuloniaTaskHistoryText.Time(Run.DeadlineUtc)}"),
         new("提交 / 开始 / 结束", $"{SubmittedAtText} / {PuloniaTaskHistoryText.Time(Run.StartedAt)} / {PuloniaTaskHistoryText.Time(Run.FinishedAt)}"),
         new("执行耗时", PuloniaTaskHistoryText.Duration(Run.StartedAt, Run.FinishedAt)),
         new("续跑关联", Run.ResumedFromRunId is { } from

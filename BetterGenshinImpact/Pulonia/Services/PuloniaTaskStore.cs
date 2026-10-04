@@ -15,6 +15,10 @@ namespace BetterGenshinImpact.Pulonia.Services;
 /// </summary>
 public sealed class PuloniaTaskStore : IDisposable
 {
+    /// <summary>本进程成功保存计划的版本，用于让调度宿主及时刷新配置。</summary>
+    private long _planChangeVersion;
+    /// <summary>只读保存序号，不因读取或失败保存而递增。</summary>
+    public long PlanChangeVersion => Interlocked.Read(ref _planChangeVersion);
     /// <summary>
     /// UTF-8 无 BOM，遇到无效字节时明确报错。
     /// </summary>
@@ -97,6 +101,7 @@ public sealed class PuloniaTaskStore : IDisposable
                 (id, token) => ReadPlanAsync(GetPath("plans", id), id, token), ct).ConfigureAwait(false);
             candidate.Revision = checked(candidate.Revision + 1);
             await WriteAtomicallyAsync(path, PuloniaTaskJson.WritePlan(candidate), ct).ConfigureAwait(false);
+            Interlocked.Increment(ref _planChangeVersion);
             return candidate;
         }
         finally

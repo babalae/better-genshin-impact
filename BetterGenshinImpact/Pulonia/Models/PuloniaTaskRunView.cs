@@ -35,6 +35,14 @@ public sealed class PuloniaTaskRunView
     /// 调用来源短文本。
     /// </summary>
     public string Source { get; }
+    /// <summary>触发器身份，人工请求为空。</summary>
+    public string? TriggerId { get; }
+    /// <summary>本次请求限定的子树。</summary>
+    public string? TargetTaskId { get; }
+    /// <summary>定时/热键实际发生时刻。</summary>
+    public DateTimeOffset? OccurrenceUtc { get; }
+    /// <summary>自动请求的最晚开始时间。</summary>
+    public DateTimeOffset? DeadlineUtc { get; }
 
     /// <summary>
     /// 当前运行状态。
@@ -119,13 +127,17 @@ public sealed class PuloniaTaskRunView
         DateTimeOffset? startedAt, DateTimeOffset? finishedAt, string snapshotJson,
         IEnumerable<PuloniaTaskNodeResult> nodeResults, string? accountId, string? worldOwnerAccountId,
         Guid? resumedFromRunId, string? resumeFromTaskAddress, bool isHistorical, bool hasUncertainOperation,
-        IEnumerable<PuloniaTaskConfirmedEffect>? confirmedEffects = null)
+        IEnumerable<PuloniaTaskConfirmedEffect>? confirmedEffects = null, PuloniaTaskRequest? request = null)
     {
         RequestId = requestId;
         RunId = runId;
         PlanId = planId;
         PlanName = planName;
         Source = source;
+        TriggerId = request?.TriggerId;
+        TargetTaskId = request?.TargetTaskId;
+        OccurrenceUtc = request?.OccurrenceUtc;
+        DeadlineUtc = request?.DeadlineUtc;
         Status = status;
         CurrentTaskAddress = currentTaskAddress;
         Message = message;

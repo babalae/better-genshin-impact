@@ -52,10 +52,10 @@ public sealed class PuloniaTaskPlan
     public PuloniaTask RootTask { get; set; } = new() { Name = "根分组" };
 
     /// <summary>
-    /// 触发配置的保真保留区；调度阶段再定义和校验具体合同。
+    /// 计划内定时与热键配置，运行状态和调度游标不写入此处。
     /// </summary>
     [JsonProperty("triggers", Required = Required.DisallowNull)]
-    public JArray Triggers { get; set; } = new();
+    public List<PuloniaTaskTrigger> Triggers { get; set; } = [];
 
     /// <summary>
     /// 账号绑定，列表顺序就是将来的账号执行顺序。

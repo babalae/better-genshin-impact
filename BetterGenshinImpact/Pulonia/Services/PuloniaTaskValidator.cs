@@ -53,7 +53,6 @@ public static class PuloniaTaskValidator
             throw new PuloniaTaskValidationException(location, "根节点必须是无来源引用、无重复配置的 group。");
         if (plan.Accounts is null || plan.Triggers is null)
             throw new PuloniaTaskValidationException(location, "账号绑定和触发配置不能为 null。");
-        ValidateJsonValue(plan.Triggers, location + "/triggers");
 
         // 同一对象不能挂在两个父节点下；相同 ID 也不能出现在不同位置。
         var ids = new HashSet<string>(StringComparer.Ordinal);
@@ -76,6 +75,17 @@ public static class PuloniaTaskValidator
                     throw new PuloniaTaskValidationException(location, $"账号预设不能配置在控制节点 {taskId}。");
                 ValidateId(presetId, location + "/accounts/preset_selections");
             }
+        }
+        var triggerIds = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var trigger in plan.Triggers)
+        {
+            if (trigger is null || !triggerIds.Add(trigger.Id))
+                throw new PuloniaTaskValidationException(location, "触发器不能为空或重复。");
+            try { PuloniaTaskSchedule.Validate(trigger); }
+            catch (Exception ex) { throw new PuloniaTaskValidationException(location + "/triggers", ex.Message); }
+            if (trigger.TargetTaskId is { } target && !ids.Contains(target)
+                || trigger.AccountId is { } accountId && !accounts.Contains(accountId))
+                throw new PuloniaTaskValidationException(location, "触发器指向不存在的节点或未绑定的账号。");
         }
     }
 

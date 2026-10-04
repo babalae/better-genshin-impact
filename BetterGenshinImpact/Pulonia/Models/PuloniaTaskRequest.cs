@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.Pulonia.Models;
@@ -47,4 +48,23 @@ public sealed class PuloniaTaskRequest
     /// 便于界面区分来源的短文本，不参与执行逻辑。
     /// </summary>
     public string Source { get; init; } = "csharp";
+
+    /// <summary>可选编辑树子任务/分组 ID。</summary>
+    public string? TargetTaskId { get; init; }
+    /// <summary>自动触发身份；手动运行为空。</summary>
+    public string? TriggerId { get; init; }
+    /// <summary>用于持久化去重的发生时刻。</summary>
+    public DateTimeOffset? OccurrenceUtc { get; init; }
+    /// <summary>最晚开始时间，不是运行总预算。</summary>
+    public DateTimeOffset? DeadlineUtc { get; init; }
+    /// <summary>自动触发配置签名，禁用/编辑后不能启动旧排队请求。</summary>
+    public string? TriggerSignature { get; init; }
+    /// <summary>开始前要求电脑空闲。</summary>
+    public bool RequireIdle { get; init; }
+    /// <summary>空闲阈值，秒。</summary>
+    public int IdleSeconds { get; init; } = 300;
+    /// <summary>执行中用户活动后取消并阻止新增输入。</summary>
+    public bool StopOnUserActivity { get; init; }
+    /// <summary>本次自动请求的繁忙策略。</summary>
+    public PuloniaTaskBusyPolicy BusyPolicy { get; init; }
 }

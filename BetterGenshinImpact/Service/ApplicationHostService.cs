@@ -89,6 +89,12 @@ public class ApplicationHostService(
             _navigationWindow!.ShowWindow();
 
             var cmdOptions = CommandLineOptions.Instance;
+            if (cmdOptions.IsPuloniaAction)
+            {
+                _ = _navigationWindow.Navigate(typeof(PuloniaTaskHistoryPage));
+                await serviceProvider.GetRequiredService<Pulonia.Services.PuloniaTaskTriggerHost>().HandleActivationAsync(cmdOptions);
+                return;
+            }
 
             if (cmdOptions.HasTaskArgs)
             {

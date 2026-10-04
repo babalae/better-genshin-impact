@@ -416,7 +416,7 @@
             </Border>
 
             <Border Grid.Column="2" Padding="0" Style="{StaticResource EditorCardStyle}">
-                <TabControl BorderThickness="0">
+                <TabControl BorderThickness="0" SelectedIndex="{Binding ViewModel.SelectedPlanTabIndex}">
                     <TabItem Header="任务">
                         <Grid Margin="8">
                             <Grid>
@@ -568,10 +568,7 @@
                         </Grid>
                     </TabItem>
                     <TabItem Header="触发方式">
-                        <TextBlock Margin="24"
-                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   Text="定时、热键和空闲准入将在步骤 7 接入；当前保留计划中的触发 JSON。"
-                                   TextWrapping="Wrap" />
+                        <controls:PuloniaTaskTriggerView DataContext="{Binding ViewModel}" />
                     </TabItem>
                 </TabControl>
             </Border>

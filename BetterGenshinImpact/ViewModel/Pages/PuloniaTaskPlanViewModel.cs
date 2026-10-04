@@ -116,13 +116,15 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// </summary>
     public PuloniaTaskPlanViewModel(PuloniaTaskStore store, PuloniaTaskClipboardService clipboard,
         IPuloniaTaskService taskService, PuloniaTaskResourceCatalog resourceCatalog,
-        PuloniaTaskHistoryViewModel history)
+        PuloniaTaskHistoryViewModel history, PuloniaTaskTriggerHost? triggerHost = null)
     {
         _store = store;
         _clipboard = clipboard;
         _taskService = taskService;
         _resourceCatalog = resourceCatalog;
         History = history;
+        _triggerHost = triggerHost;
+        if (_triggerHost is not null) _triggerHost.Changed += OnTriggerHostChanged;
         TaskTypes = taskService.Definitions
             .Select(definition => new PuloniaTaskTypeOption(definition.TaskType,
                 string.IsNullOrWhiteSpace(definition.DisplayName) ? definition.TaskType : definition.DisplayName))
@@ -647,6 +649,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         RefreshReferencePlans();
         History.PlanFilterId = newValue?.Id;
         NotifyCommandStates();
+        RefreshTriggers(force: true);
     }
 
     /// <summary>
@@ -684,6 +687,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// </summary>
     private void OnDocumentChanged(object? sender, EventArgs e)
     {
+        RefreshTriggers();
         OnPropertyChanged(nameof(CanPaste));
         NotifyCommandStates();
     }

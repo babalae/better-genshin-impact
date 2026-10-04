@@ -8,6 +8,8 @@ namespace BetterGenshinImpact.Pulonia.Models;
 /// </summary>
 public sealed class PuloniaTaskBuildOptions
 {
+    /// <summary>可选编辑树运行范围，裁剪只作用于准备副本并保留祖先配置。</summary>
+    public string? TargetTaskId { get; set; }
     /// <summary>
     /// 可用类型和资源说明；未注册类型在准备阶段报错。
     /// </summary>
