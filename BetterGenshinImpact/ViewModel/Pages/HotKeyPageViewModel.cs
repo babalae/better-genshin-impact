@@ -192,6 +192,20 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             return;
         }
 
+        // 替换事务的目标一定是非空快捷键，所以空快捷键只可能是中间状态：
+        // 类型切换会先清空 HotKey，恢复目标类型时也会经过一次清空。
+        // 若在这里提交，用户随后取消冲突提醒时就无法再恢复被替换掉的功能了。
+        if (newHotKey.IsEmpty)
+        {
+            if (!_isSwitchingHotKeyType)
+            {
+                // 类型切换之外的空值说明用户主动清空了快捷键，本次替换作废，把绑定还回去
+                RestoreReplacedBinding(model.ConfigPropertyName);
+            }
+
+            return;
+        }
+
         // 注册成功后才提醒原神键位冲突。需要弹窗时，替换事务要等用户答复后才结束，
         // 因此不能在这里提交，否则用户取消时已经无法恢复被替换掉的绑定。
         if (!ShowGameKeyBindingConflictWarning(model, newHotKey, previousBinding))
