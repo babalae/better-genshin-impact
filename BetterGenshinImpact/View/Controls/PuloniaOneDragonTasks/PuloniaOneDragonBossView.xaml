@@ -1,0 +1,145 @@
+<UserControl x:Class="BetterGenshinImpact.View.Controls.PuloniaOneDragonTasks.PuloniaOneDragonBossView"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+ xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta" xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+ xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers">
+ <UserControl.Resources>
+  <ResourceDictionary>
+   <ResourceDictionary.MergedDictionaries>
+    <ResourceDictionary Source="../PuloniaOneDragonResources.xaml"/>
+   </ResourceDictionary.MergedDictionaries>
+  </ResourceDictionary>
+ </UserControl.Resources>
+ <!-- 自动首领讨伐：沿用旧一条龙的配置卡片，字段绑定 builtin.auto_boss 参数；旧累计上限未迁入新系统。 -->
+ <StackPanel>
+  <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+   <ui:CardExpander.Header>
+    <Grid>
+     <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+     </Grid.RowDefinitions>
+     <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="*"/>
+     </Grid.ColumnDefinitions>
+     <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="自动首领讨伐配置" TextWrapping="Wrap"/>
+     <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="自动传送、战斗并领取奖励" TextWrapping="Wrap"/>
+    </Grid>
+   </ui:CardExpander.Header>
+   <StackPanel>
+    <Grid Margin="16">
+     <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+     </Grid.RowDefinitions>
+     <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+     </Grid.ColumnDefinitions>
+     <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="选择战斗策略" TextWrapping="Wrap"/>
+     <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="仅用于首领讨伐，不覆盖其他策略设置" TextWrapping="Wrap"/>
+     <ComboBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Width="200" Margin="0,0,36,0"
+               ItemsSource="{Binding StrategyChoices}" SelectedItem="{Binding StrategyName, Mode=TwoWay}"/>
+    </Grid>
+    <Grid Margin="16">
+     <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+     </Grid.RowDefinitions>
+     <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+     </Grid.ColumnDefinitions>
+     <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="选择首领" TextWrapping="Wrap"/>
+     <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="部分首领因机制问题未添加" TextWrapping="Wrap"/>
+     <vio:CascadingComboBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Width="200" Margin="0,0,36,0"
+               behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding BossName, Mode=TwoWay}"
+               behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
+               ItemsSource="{x:Static helpers:AutoBossCascadingItems.Items}"
+               SelectedCascadingItem="{Binding BossName, Mode=TwoWay, Converter={StaticResource AutoBossNameConverter}}"/>
+    </Grid>
+    <Grid Margin="16">
+     <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+     </Grid.RowDefinitions>
+     <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+     </Grid.ColumnDefinitions>
+     <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="切换队伍" TextWrapping="Wrap"/>
+     <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="留空则不更换队伍" TextWrapping="Wrap"/>
+     <ui:TextBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Width="200" Margin="0,0,36,0"
+                 Text="{Binding TeamName, Mode=TwoWay}" PlaceholderText="例如：首领队"/>
+    </Grid>
+    <Grid Margin="16">
+     <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+     </Grid.RowDefinitions>
+     <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+     </Grid.ColumnDefinitions>
+     <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="成功领奖次数限制" TextWrapping="Wrap"/>
+     <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="开启后，限制单次运行的成功领奖次数" TextWrapping="Wrap"/>
+     <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Margin="0,0,36,0"
+                      IsChecked="{Binding SpecifyRunCount, Mode=TwoWay}"/>
+    </Grid>
+    <Border Margin="16,8,16,16" BorderThickness="1" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+            Background="{DynamicResource ControlFillColorSecondaryBrush}" CornerRadius="8"
+            Visibility="{Binding SpecifyRunCount, Converter={StaticResource BooleanToVisibilityConverter}, Mode=OneWay}">
+     <StackPanel Margin="12">
+      <StackPanel Orientation="Horizontal" Margin="0,8,0,12">
+       <ui:TextBlock Text="单次运行上限：" VerticalAlignment="Center" Margin="0,0,8,0"/>
+       <ui:NumberBox Value="{Binding RunCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                     Minimum="1" MaxDecimalPlaces="0" SmallChange="1" LargeChange="5"
+                     SpinButtonPlacementMode="Hidden" AcceptsExpression="False" Width="120">
+        <b:Interaction.Behaviors>
+         <behavior:NumberBoxValueConstraintBehavior EmptyValue="1" MinimumValue="1"/>
+        </b:Interaction.Behaviors>
+       </ui:NumberBox>
+      </StackPanel>
+      <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+       <ui:TextBlock Text="原粹不足时使用须臾树脂补充：" VerticalAlignment="Center" Margin="0,0,8,0"/>
+       <ui:ToggleSwitch IsChecked="{Binding UseTransientResin, Mode=TwoWay}"/>
+      </StackPanel>
+      <StackPanel Orientation="Horizontal">
+       <ui:TextBlock Text="原粹不足时使用脆弱树脂补充：" VerticalAlignment="Center" Margin="0,0,8,0"/>
+       <ui:ToggleSwitch IsChecked="{Binding UseFragileResin, Mode=TwoWay}"/>
+      </StackPanel>
+     </StackPanel>
+    </Border>
+    <Grid Margin="16">
+     <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+     </Grid.RowDefinitions>
+     <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+     </Grid.ColumnDefinitions>
+     <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="每轮讨伐后返回七天神像" TextWrapping="Wrap"/>
+     <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="开启后每次领奖后先回血，再重新前往首领" TextWrapping="Wrap"/>
+     <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Margin="0,0,36,0"
+                      IsChecked="{Binding ReturnToStatueAfterEachRound, Mode=TwoWay}"/>
+    </Grid>
+    <Grid Margin="16">
+     <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+     </Grid.RowDefinitions>
+     <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+     </Grid.ColumnDefinitions>
+     <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="启用奖励识别" TextWrapping="Wrap"/>
+     <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="每轮领取后识别奖励名称与数量，任务结束打印汇总" TextWrapping="Wrap"/>
+     <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Margin="0,0,36,0"
+                      IsChecked="{Binding RewardRecognitionEnabled, Mode=TwoWay}"/>
+    </Grid>
+    <Grid Margin="16">
+     <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+     </Grid.RowDefinitions>
+     <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+     </Grid.ColumnDefinitions>
+     <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="角色死亡后重试次数" TextWrapping="Wrap"/>
+     <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="战斗中存在角色死亡时，复活后重新讨伐当前首领" TextWrapping="Wrap"/>
+     <ui:NumberBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Width="120" Margin="0,0,36,0"
+                   Minimum="0" MaxDecimalPlaces="0" SmallChange="1" LargeChange="3"
+                   SpinButtonPlacementMode="Hidden" AcceptsExpression="False"
+                   Value="{Binding ReviveRetryCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+    </Grid>
+   </StackPanel>
+  </ui:CardExpander>
+ </StackPanel>
+</UserControl>

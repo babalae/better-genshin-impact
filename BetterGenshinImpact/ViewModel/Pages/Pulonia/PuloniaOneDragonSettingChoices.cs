@@ -102,8 +102,8 @@ internal static class PuloniaOneDragonSettingChoices
         }
     };
 
-    /// <summary>读取策略名称，不创建旧自动战斗视图模型或读取其选择。</summary>
-    private static string[] GetStrategies(bool allowCombo)
+    /// <summary>读取策略名称，不创建旧自动战斗视图模型或读取其选择；固定任务专属视图也复用此列表。</summary>
+    internal static string[] GetStrategies(bool allowCombo)
     {
         var directory = Global.Absolute(@"User\AutoFight");
         var scripts = Directory.Exists(directory)

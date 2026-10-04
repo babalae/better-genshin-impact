@@ -1,7 +1,9 @@
 <UserControl x:Class="BetterGenshinImpact.View.Pages.PuloniaOneDragonPage"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
- xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior" xmlns:dd="urn:gong-wpf-dragdrop"
+   xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior" xmlns:dd="urn:gong-wpf-dragdrop"
+   xmlns:taskViews="clr-namespace:BetterGenshinImpact.View.Controls.PuloniaOneDragonTasks"
+   xmlns:taskVms="clr-namespace:BetterGenshinImpact.ViewModel.Pages.Pulonia.OneDragonTasks"
  FontFamily="{StaticResource TextThemeFontFamily}" Foreground="{DynamicResource TextFillColorPrimaryBrush}">
  <b:Interaction.Triggers>
   <b:EventTrigger EventName="Loaded"><b:InvokeCommandAction Command="{Binding ViewModel.OpenPageCommand}"/></b:EventTrigger>
@@ -104,10 +106,31 @@
        <ui:CardControl.Header><StackPanel><TextBlock Text="整组执行次数"/><TextBlock Text="引用计划和分组均作为清单中的一项执行。" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}"/></StackPanel></ui:CardControl.Header>
        <ui:NumberBox Width="120" Value="{Binding ViewModel.SelectedTask.RepeatCount, Mode=TwoWay}" Minimum="1" Maximum="10000"/>
       </ui:CardControl>
-      <ItemsControl ItemsSource="{Binding ViewModel.SettingsFields}" ItemTemplate="{StaticResource OneDragonParameterFieldTemplate}"/>
-      <ui:CardControl Margin="0,0,0,12"><ui:CardControl.Style><Style TargetType="ui:CardControl" BasedOn="{StaticResource {x:Type ui:CardControl}}"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding ViewModel.SettingsFields.Count}" Value="0"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></ui:CardControl.Style>
-       <ui:CardControl.Header><StackPanel><TextBlock Text="{Binding ViewModel.SelectedTask.TypeDisplayName}"/><TextBlock Text="{Binding ViewModel.SelectedTask.ConfigurationSummary}" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap"/></StackPanel></ui:CardControl.Header>
-      </ui:CardControl>
+      <!-- 固定任务显示专属设置视图，其余任务回退通用参数卡片。 -->
+      <ContentControl Content="{Binding ViewModel.FixedSettings}" Focusable="False">
+       <ContentControl.Style><Style TargetType="ContentControl">
+        <Setter Property="Visibility" Value="Collapsed"/>
+        <Style.Triggers><DataTrigger Binding="{Binding ViewModel.FixedSettings, Converter={StaticResource NotNullConverter}}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
+       </Style></ContentControl.Style>
+       <ContentControl.Resources>
+        <DataTemplate DataType="{x:Type taskVms:PuloniaOneDragonCraftSettingsViewModel}"><taskViews:PuloniaOneDragonCraftView/></DataTemplate>
+        <DataTemplate DataType="{x:Type taskVms:PuloniaOneDragonDomainSettingsViewModel}"><taskViews:PuloniaOneDragonDomainView/></DataTemplate>
+        <DataTemplate DataType="{x:Type taskVms:PuloniaOneDragonBossSettingsViewModel}"><taskViews:PuloniaOneDragonBossView/></DataTemplate>
+        <DataTemplate DataType="{x:Type taskVms:PuloniaOneDragonStygianSettingsViewModel}"><taskViews:PuloniaOneDragonStygianView/></DataTemplate>
+        <DataTemplate DataType="{x:Type taskVms:PuloniaOneDragonLeyLineSettingsViewModel}"><taskViews:PuloniaOneDragonLeyLineView/></DataTemplate>
+        <DataTemplate DataType="{x:Type taskVms:PuloniaOneDragonDailyRewardSettingsViewModel}"><taskViews:PuloniaOneDragonDailyRewardView/></DataTemplate>
+       </ContentControl.Resources>
+      </ContentControl>
+      <StackPanel>
+       <StackPanel.Style><Style TargetType="StackPanel">
+        <Setter Property="Visibility" Value="Visible"/>
+        <Style.Triggers><DataTrigger Binding="{Binding ViewModel.FixedSettings, Converter={StaticResource NotNullConverter}}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers>
+       </Style></StackPanel.Style>
+       <ItemsControl ItemsSource="{Binding ViewModel.SettingsFields}" ItemTemplate="{StaticResource OneDragonParameterFieldTemplate}"/>
+       <ui:CardControl Margin="0,0,0,12"><ui:CardControl.Style><Style TargetType="ui:CardControl" BasedOn="{StaticResource {x:Type ui:CardControl}}"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding ViewModel.SettingsFields.Count}" Value="0"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></ui:CardControl.Style>
+        <ui:CardControl.Header><StackPanel><TextBlock Text="{Binding ViewModel.SelectedTask.TypeDisplayName}"/><TextBlock Text="{Binding ViewModel.SelectedTask.ConfigurationSummary}" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap"/></StackPanel></ui:CardControl.Header>
+       </ui:CardControl>
+      </StackPanel>
       <WrapPanel HorizontalAlignment="Right" Margin="0,2,0,8">
        <ui:Button Content="重置草稿" Margin="0,0,8,0" Command="{Binding ViewModel.ResetSettingsDraftCommand}"/>
        <ui:Button Content="高级设置" Margin="0,0,8,0" Command="{Binding ViewModel.ConfigureNodeCommand}" CommandParameter="{Binding ViewModel.SelectedTask}"/>

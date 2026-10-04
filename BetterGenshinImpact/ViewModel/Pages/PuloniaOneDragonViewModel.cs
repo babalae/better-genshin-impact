@@ -13,6 +13,7 @@ using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.View.Windows.Pulonia;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
+using BetterGenshinImpact.ViewModel.Pages.Pulonia.OneDragonTasks;
 using BetterGenshinImpact.ViewModel.Windows.Pulonia;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -45,6 +46,8 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     private readonly ObservableCollection<PuloniaTaskNodeViewModel> _emptyTasks = [];
     /// <summary>按所属文档和节点身份隔离草稿；不同计划允许使用相同节点 ID。</summary>
     private readonly Dictionary<(PuloniaTaskPlanDocumentViewModel Document, string NodeId), IReadOnlyList<PuloniaOneDragonParameterFieldViewModel>> _drafts = [];
+    /// <summary>固定任务专属设置视图的草稿缓存，生命周期与通用草稿一致。</summary>
+    private readonly Dictionary<(PuloniaTaskPlanDocumentViewModel Document, string NodeId), PuloniaOneDragonFixedSettingsViewModel> _fixedSettingsCache = [];
     /// <summary>仅属于一条龙的配置列表。</summary>
     public ObservableCollection<PuloniaTaskPlanDocumentViewModel> Configurations => Editor.OneDragonDocuments;
     /// <summary>当前配置的平面根清单，引用和分组均作为一行。</summary>
@@ -55,6 +58,8 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     [ObservableProperty] private PuloniaTaskNodeViewModel? _selectedTask;
     /// <summary>右侧当前任务的老样式设置卡片。</summary>
     [ObservableProperty] private IReadOnlyList<PuloniaOneDragonParameterFieldViewModel> _settingsFields = [];
+    /// <summary>右侧当前任务的专属设置视图；为空时使用通用参数卡片。</summary>
+    [ObservableProperty] private PuloniaOneDragonFixedSettingsViewModel? _fixedSettings;
     /// <summary>当前配置应用结果。</summary>
     [ObservableProperty] private string _settingsMessage = "";
     /// <summary>上次导入报告路径。</summary>
@@ -136,12 +141,46 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
             SelectedTask = node is not null && TaskList.Contains(node) ? node : TaskList.FirstOrDefault();
         }
     }
-    /// <summary>选中行后显示其独立设置草稿。</summary>
+    /// <summary>选中行后显示其独立设置草稿；固定任务使用专属视图，其余走通用卡片。</summary>
     partial void OnSelectedTaskChanged(PuloniaTaskNodeViewModel? value)
     {
         if (SelectedConfiguration is { } document) document.SelectedNode = value;
-        SettingsFields = value is null ? [] : GetSettingsDraft(value);
+        if (value is null) { FixedSettings = null; SettingsFields = []; }
+        else RefreshSettingsSurfaces(value);
         SettingsMessage = "";
+    }
+    /// <summary>按任务类型刷新右侧设置区域：专属视图或通用参数卡片。</summary>
+    private void RefreshSettingsSurfaces(PuloniaTaskNodeViewModel node)
+    {
+        var fixedSettings = CreateFixedSettings(node);
+        if (fixedSettings is not null)
+        {
+            FixedSettings = fixedSettings;
+            SettingsFields = [];
+        }
+        else
+        {
+            FixedSettings = null;
+            SettingsFields = GetSettingsDraft(node);
+        }
+    }
+    /// <summary>按任务类型返回专属设置视图模型；未覆盖的类型返回 null 走通用卡片。</summary>
+    private PuloniaOneDragonFixedSettingsViewModel? CreateFixedSettings(PuloniaTaskNodeViewModel node)
+    {
+        var key = (node.Document, node.Id);
+        if (_fixedSettingsCache.TryGetValue(key, out var cached)) return cached;
+        PuloniaOneDragonFixedSettingsViewModel? settings = node.TaskType switch
+        {
+            "builtin.craft_condensed_resin" => new PuloniaOneDragonCraftSettingsViewModel(node),
+            "builtin.auto_domain" => new PuloniaOneDragonDomainSettingsViewModel(node),
+            "builtin.auto_boss" => new PuloniaOneDragonBossSettingsViewModel(node),
+            "builtin.auto_stygian" => new PuloniaOneDragonStygianSettingsViewModel(node),
+            "builtin.auto_ley_line" => new PuloniaOneDragonLeyLineSettingsViewModel(node),
+            "builtin.daily_rewards" => new PuloniaOneDragonDailyRewardSettingsViewModel(node),
+            _ => null
+        };
+        if (settings is not null) _fixedSettingsCache[key] = settings;
+        return settings;
     }
     /// <summary>按所属文档和稳定节点 ID 保留草稿，禁止开关或名称刷新重建输入。</summary>
     private IReadOnlyList<PuloniaOneDragonParameterFieldViewModel> GetSettingsDraft(PuloniaTaskNodeViewModel node)
@@ -165,6 +204,8 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     {
         foreach (var key in _drafts.Keys.Where(key => ReferenceEquals(key.Document, document)).ToArray())
             _drafts.Remove(key);
+        foreach (var key in _fixedSettingsCache.Keys.Where(key => ReferenceEquals(key.Document, document)).ToArray())
+            _fixedSettingsCache.Remove(key);
     }
     /// <summary>提交当前任务的变化字段，校验失败保留全部卡片输入。</summary>
     [RelayCommand]
@@ -176,6 +217,21 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
         if (SelectedTask is not { } node) return true;
         try
         {
+            // 专属视图走类型化草稿；通用卡片继续使用 schema 字段列表。
+            if (FixedSettings is not null && ReferenceEquals(FixedSettings.Node, node))
+            {
+                var fixedChanges = new JObject();
+                FixedSettings.CollectChanges(fixedChanges);
+                var fixedCurrent = node.Document.GetOneDragonParameters(node);
+                foreach (var field in fixedChanges.Properties())
+                    if (!JToken.DeepEquals(fixedCurrent[field.Name], FixedSettings.GetOriginalValue(field.Name)))
+                        throw new InvalidOperationException("此项设置的参数来源已改变，请重置草稿后重新设置。");
+                node.Document.ApplyOneDragonParameters(node, fixedChanges);
+                _fixedSettingsCache.Remove((node.Document, node.Id));
+                RefreshSettingsSurfaces(node);
+                SettingsMessage = "设置已应用，将自动保存。";
+                return true;
+            }
             var changes = new JObject();
             var current = node.Document.GetOneDragonParameters(node);
             foreach (var field in SettingsFields)
@@ -198,8 +254,9 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     private void ResetSettingsDraft()
     {
         if (SelectedTask is not { } node) return;
+        _fixedSettingsCache.Remove((node.Document, node.Id));
         _drafts.Remove((node.Document, node.Id));
-        SettingsFields = GetSettingsDraft(node);
+        RefreshSettingsSurfaces(node);
         SettingsMessage = "已重新读取当前任务设置。";
     }
     /// <summary>以配置为单位创建独立计划和默认八项任务。</summary>
@@ -265,6 +322,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     {
         if (SelectedTask is not { } node) return;
         node.Document.RemoveNode(node); _drafts.Remove((node.Document, node.Id));
+        _fixedSettingsCache.Remove((node.Document, node.Id));
         SelectedTask = TaskList.FirstOrDefault();
     }
     /// <summary>撤销已提交的最近编辑，重建时重新读取本配置设置，不先提交或校验未保存草稿。</summary>
@@ -281,7 +339,9 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
         var selection = SelectedTask;
         foreach (var node in TaskList.ToArray())
         {
-            if (!node.IsEffectivelyEnabled || !_drafts.ContainsKey((document, node.Id))) continue;
+            if (!node.IsEffectivelyEnabled) continue;
+            // 只应用有未提交草稿的任务，专属视图和通用卡片都会在提交前重新校验。
+            if (!_drafts.ContainsKey((document, node.Id)) && !_fixedSettingsCache.ContainsKey((document, node.Id))) continue;
             SelectedTask = node;
             if (!TryApplySettings()) return;
         }
@@ -325,7 +385,13 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
         SelectedTask = node;
         if (!TryApplySettings()) return;
         try { new PuloniaOneDragonSettingsDialog(this) { Owner = Application.Current.MainWindow }.ShowDialog(); }
-        finally { _drafts.Remove((node.Document, node.Id)); SettingsFields = GetSettingsDraft(node); }
+        finally
+        {
+            // 高级窗口可能直接改写参数 JSON；丢弃两类草稿缓存后按最新有效参数重建。
+            _drafts.Remove((node.Document, node.Id));
+            _fixedSettingsCache.Remove((node.Document, node.Id));
+            RefreshSettingsSurfaces(node);
+        }
     }
     /// <summary>公共设置仍按本节点覆盖提交，禁止写回旧全局任务配置。</summary>
     [RelayCommand]

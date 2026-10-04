@@ -1,0 +1,132 @@
+<UserControl x:Class="BetterGenshinImpact.View.Controls.PuloniaOneDragonTasks.PuloniaOneDragonStygianView"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+ xmlns:tasksVm="clr-namespace:BetterGenshinImpact.ViewModel.Pages.Pulonia.OneDragonTasks">
+ <UserControl.Resources>
+  <ResourceDictionary>
+   <ResourceDictionary.MergedDictionaries>
+    <ResourceDictionary Source="../PuloniaOneDragonResources.xaml"/>
+   </ResourceDictionary.MergedDictionaries>
+  </ResourceDictionary>
+ </UserControl.Resources>
+ <!-- 自动幽境危战：旧一条龙没有此卡片，按旧卡片的视觉风格为 builtin.auto_stygian 新设计。 -->
+ <StackPanel>
+  <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+   <ui:CardExpander.Header>
+    <Grid>
+     <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+     </Grid.RowDefinitions>
+     <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="*"/>
+     </Grid.ColumnDefinitions>
+     <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="自动幽境危战配置" TextWrapping="Wrap"/>
+     <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="自动传送、战斗并领取奖励" TextWrapping="Wrap"/>
+    </Grid>
+   </ui:CardExpander.Header>
+   <StackPanel>
+    <Grid Margin="16">
+     <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+     </Grid.RowDefinitions>
+     <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+     </Grid.ColumnDefinitions>
+     <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="选择战斗策略" TextWrapping="Wrap"/>
+     <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="仅用于幽境危战，不覆盖其他策略设置" TextWrapping="Wrap"/>
+     <ComboBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Width="200" Margin="0,0,36,0"
+               ItemsSource="{Binding StrategyChoices}" SelectedItem="{Binding StrategyName, Mode=TwoWay}"/>
+    </Grid>
+    <Grid Margin="16">
+     <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+     </Grid.RowDefinitions>
+     <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+     </Grid.ColumnDefinitions>
+     <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="选择首领序号" TextWrapping="Wrap"/>
+     <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="对应幽境危战中的三位首领" TextWrapping="Wrap"/>
+     <ComboBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Width="120" Margin="0,0,36,0"
+               HorizontalContentAlignment="Center"
+               ItemsSource="{x:Static tasksVm:PuloniaOneDragonStygianSettingsViewModel.BossNumChoices}"
+               SelectedItem="{Binding BossNum, Mode=TwoWay}"/>
+    </Grid>
+    <Grid Margin="16">
+     <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+     </Grid.RowDefinitions>
+     <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+     </Grid.ColumnDefinitions>
+     <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="指派战斗队伍" TextWrapping="Wrap"/>
+     <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="留空使用当前队伍" TextWrapping="Wrap"/>
+     <ui:TextBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Width="200" Margin="0,0,36,0"
+                 Text="{Binding FightTeamName, Mode=TwoWay}" PlaceholderText="例如：深渊队"/>
+    </Grid>
+    <Grid Margin="16">
+     <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+     </Grid.RowDefinitions>
+     <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+     </Grid.ColumnDefinitions>
+     <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="指定树脂使用次数" TextWrapping="Wrap"/>
+     <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="开启后按下方配置的数量使用树脂" TextWrapping="Wrap"/>
+     <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Margin="0,0,36,0"
+                      IsChecked="{Binding SpecifyResinUse, Mode=TwoWay}"/>
+    </Grid>
+    <Border Margin="16,8,16,16" BorderThickness="1" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+            Background="{DynamicResource ControlFillColorSecondaryBrush}" CornerRadius="8"
+            Visibility="{Binding SpecifyResinUse, Converter={StaticResource BooleanToVisibilityConverter}, Mode=OneWay}">
+     <StackPanel Margin="12">
+      <StackPanel Orientation="Horizontal" Margin="0,8,0,12">
+       <ui:TextBlock Text="原粹树脂挑战次数：" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,8,0"/>
+       <ui:NumberBox Value="{Binding OriginalResinUseCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                     Minimum="0" SmallChange="1" LargeChange="5" ClearButtonEnabled="False"
+                     SpinButtonPlacementMode="Inline" Width="120"/>
+      </StackPanel>
+      <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+       <ui:TextBlock Text="浓缩树脂挑战次数：" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,8,0"/>
+       <ui:NumberBox Value="{Binding CondensedResinUseCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                     Minimum="0" SmallChange="1" LargeChange="5" ClearButtonEnabled="False"
+                     SpinButtonPlacementMode="Inline" Width="120"/>
+      </StackPanel>
+      <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+       <ui:TextBlock Text="须臾树脂挑战次数：" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,8,0"/>
+       <ui:NumberBox Value="{Binding TransientResinUseCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                     Minimum="0" SmallChange="1" LargeChange="5" ClearButtonEnabled="False"
+                     SpinButtonPlacementMode="Inline" Width="120"/>
+      </StackPanel>
+      <StackPanel Orientation="Horizontal">
+       <ui:TextBlock Text="脆弱树脂挑战次数：" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,8,0"/>
+       <ui:NumberBox Value="{Binding FragileResinUseCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                     Minimum="0" SmallChange="1" LargeChange="5" ClearButtonEnabled="False"
+                     SpinButtonPlacementMode="Inline" Width="120"/>
+      </StackPanel>
+     </StackPanel>
+    </Border>
+   </StackPanel>
+  </ui:CardExpander>
+
+  <ui:CardControl Margin="0,0,0,12">
+   <ui:CardControl.Header>
+    <Grid>
+     <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+     </Grid.RowDefinitions>
+     <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+     </Grid.ColumnDefinitions>
+     <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="分解圣遗物" TextWrapping="Wrap"/>
+     <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="结束后分解不超过最高星级的圣遗物" TextWrapping="Wrap"/>
+     <StackPanel Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,36,0">
+      <ComboBox Width="60" Margin="0,0,10,0"
+                ItemsSource="{x:Static tasksVm:PuloniaOneDragonStygianSettingsViewModel.ArtifactStarChoices}"
+                SelectedItem="{Binding MaxArtifactStar, Mode=TwoWay}"/>
+      <ui:ToggleSwitch IsChecked="{Binding AutoArtifactSalvage, Mode=TwoWay}"/>
+     </StackPanel>
+    </Grid>
+   </ui:CardControl.Header>
+  </ui:CardControl>
+ </StackPanel>
+</UserControl>
