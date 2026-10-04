@@ -82,6 +82,35 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
     public bool CanUpdateResourceVersion => _model.TaskType is "pathing" or "javascript" or "keymouse"
                                             || _model is { TaskType: "group", Source.Kind: "directory" };
 
+    /// <summary>最近读取的磁盘资源版本，仅用于更新提示，不自动写回计划。</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasResourceUpdate), nameof(HasResourceNotice), nameof(ResourceUpdateText), nameof(ResourceUpdateToolTip))]
+    private string? _currentResourceVersion;
+
+    /// <summary>资源读取错误；读取失败不能被当成新版本供用户确认。</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasResourceNotice), nameof(ResourceUpdateText), nameof(ResourceUpdateToolTip))]
+    private string? _resourceCheckError;
+
+    /// <summary>计划引用中的资源更新数，引用节点也需要可见更新提示。</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasResourceUpdate), nameof(HasResourceNotice))]
+    private int _referencedResourceUpdateCount;
+
+    /// <summary>资源版本不同或尚未固定，等待用户确认。</summary>
+    public bool HasResourceUpdate => ReferencedResourceUpdateCount > 0 || (CanUpdateResourceVersion && CurrentResourceVersion is not null
+        && CurrentResourceVersion != (_model.Source?.Kind == "directory" ? _model.Source.Version : _model.ResourceVersion));
+
+    /// <summary>树名称后是否显示资源更新或读取错误标签。</summary>
+    public bool HasResourceNotice => HasResourceUpdate || ResourceCheckError is not null;
+
+    /// <summary>小标签的状态文本，不以颜色作为唯一提示。</summary>
+    public string ResourceUpdateText => ResourceCheckError is not null ? "资源不可用" : "有更新";
+
+    /// <summary>标签的具体原因，文件更新必须用户确认后才影响新运行。</summary>
+    public string ResourceUpdateToolTip => ResourceCheckError
+        ?? "磁盘资源与计划固定版本不同；可右键更新单个任务，或在计划卡片上确认全部更新。";
+
     /// <summary>
     /// 当前固定的资源版本摘要。
     /// </summary>
@@ -121,6 +150,9 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
         {
             if (_model.Path == value)
                 return;
+            // 路径修改后旧路径的检查结果不再有效，等待页面重新检查。
+            CurrentResourceVersion = null;
+            ResourceCheckError = null;
             _document.ApplyMutation(() => _model.Path = value, this);
             OnPropertyChanged();
             _document.RefreshSelectedEditor();
@@ -134,6 +166,8 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(ResourceVersionText));
         OnPropertyChanged(nameof(CanUpdateResourceVersion));
+        OnPropertyChanged(nameof(HasResourceUpdate));
+        OnPropertyChanged(nameof(HasResourceNotice));
     }
 
     /// <summary>
@@ -270,6 +304,11 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
     /// </summary>
     internal void NotifySourceChanged()
     {
+        // 来源类型或目录定位改变后，旧来源的版本和引用计数都不能继续显示。
+        CurrentResourceVersion = null;
+        ResourceCheckError = null;
+        ReferencedResourceUpdateCount = 0;
+        NotifyResourceVersionChanged();
         OnPropertyChanged(nameof(TypeDisplayName));
         OnPropertyChanged(nameof(CanAcceptChildren));
     }

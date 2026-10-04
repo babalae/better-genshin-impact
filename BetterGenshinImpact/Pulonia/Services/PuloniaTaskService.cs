@@ -602,7 +602,10 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
         RaiseRunChanged(state.RequestId);
 
         using var stopRegistration = _taskStopService.Register(reason => RequestCancellation(state, reason));
-        using var timeoutCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(state.Request.TimeoutSeconds));
+        // 未配置总时限时不创建定时取消信号；用户停止、游戏退出和宿主关闭仍正常取消。
+        using var timeoutCancellation = state.Request.TimeoutSeconds is { } runTimeout
+            ? new CancellationTokenSource(TimeSpan.FromSeconds(runTimeout))
+            : new CancellationTokenSource();
         using var runCancellation = CancellationTokenSource.CreateLinkedTokenSource(
             state.Cancellation.Token, timeoutCancellation.Token, _shutdown.Token);
         try
@@ -1062,10 +1065,15 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
             {
                 if (!Directory.Exists(task.Path))
                     throw new PuloniaTaskValidationException(task.TaskAddress, "续跑所需的旧 JS 资源目录已不存在。");
-                var files = Directory.EnumerateFiles(task.Path, "*", SearchOption.AllDirectories)
-                    .OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToArray();
-                actual = await PuloniaTaskResourceFingerprint.ComputeDirectoryVersionAsync(task.Path, files, ct)
+                // 续跑与创建、准备、更新确认使用同一静态资源算法，并保留重解析点和扫描数量限制。
+                var files = await new PuloniaTaskResourceCatalog().GetDirectoryFilesAsync(task.Path, "*", true, ct)
                     .ConfigureAwait(false);
+                actual = await PuloniaTaskResourceFingerprint.ComputeJavaScriptVersionAsync(task.Path, files, ct)
+                    .ConfigureAwait(false);
+                // 兼容旧历史的全目录指纹：只有原目录完整内容完全一致才允许续跑，不迁移或改写旧快照。
+                if (!string.Equals(actual, task.ResourceVersion, StringComparison.Ordinal))
+                    actual = await PuloniaTaskResourceFingerprint.ComputeDirectoryVersionAsync(task.Path, files, ct)
+                        .ConfigureAwait(false);
             }
             else
             {
@@ -1241,11 +1249,11 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
     {
         ArgumentNullException.ThrowIfNull(request);
         PuloniaTaskValidator.ValidateId(request.PlanId, "request/plan_id");
-        if (!double.IsFinite(request.TimeoutSeconds)
-            || request.TimeoutSeconds <= 0
-            || request.TimeoutSeconds > MaxRunTimeoutSeconds)
+        if (request.TimeoutSeconds is { } timeoutSeconds && (!double.IsFinite(timeoutSeconds)
+            || timeoutSeconds <= 0
+            || timeoutSeconds > MaxRunTimeoutSeconds))
             throw new PuloniaTaskValidationException("request/timeout_seconds",
-                $"计划总时限必须在 0—{MaxRunTimeoutSeconds} 秒之间。");
+                $"计划总时限未设置时不限时；显式设置必须大于 0 且不超过 {MaxRunTimeoutSeconds} 秒。");
         if (request.ParameterOverrides is null)
             throw new PuloniaTaskValidationException("request/parameter_overrides", "调用参数覆盖不能为空。");
         if (string.IsNullOrWhiteSpace(request.Source) || request.Source.Length > 64)

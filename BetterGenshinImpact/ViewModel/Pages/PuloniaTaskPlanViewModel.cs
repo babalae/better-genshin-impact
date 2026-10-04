@@ -122,6 +122,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         _clipboard = clipboard;
         _taskService = taskService;
         _resourceCatalog = resourceCatalog;
+        _resourceVersionService = new PuloniaTaskResourceVersionService(resourceCatalog);
         History = history;
         _triggerHost = triggerHost;
         if (_triggerHost is not null) _triggerHost.Changed += OnTriggerHostChanged;
@@ -136,9 +137,21 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// </summary>
     public override async Task OnNavigatedToAsync()
     {
-        await InitializeAsync();
-        History.PlanFilterId = SelectedDocument?.Id;
-        await History.RefreshAsync();
+        // 在首次异步加载前建立页面生命周期，避免加载期间离开后又启动后台监控。
+        StartResourceMonitor();
+        var ct = _resourceMonitorCancellation?.Token ?? CancellationToken.None;
+        try
+        {
+            await InitializeAsync();
+            ct.ThrowIfCancellationRequested();
+            History.PlanFilterId = SelectedDocument?.Id;
+            await History.RefreshAsync();
+            await RefreshResourceVersionsAsync(ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // 离开页面或关闭窗口时取消版本检查，不弹出错误也不重新创建监控。
+        }
     }
 
     /// <summary>
@@ -404,37 +417,11 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         try
         {
             var model = node.Model;
-            string newVersion;
-            string? oldVersion;
-            if (model is { TaskType: "group", Source: { Kind: "directory" } source })
-            {
-                if (string.IsNullOrWhiteSpace(source.Path) || source.Path.Contains('{') || source.Path.Contains('}'))
-                    throw new InvalidOperationException("当前目录引用使用未解析路径变量，不能在编辑器中直接更新版本。");
-                var directory = Path.GetFullPath(source.Path);
-                var files = await _resourceCatalog.GetDirectoryFilesAsync(directory, "*.json", source.Recursive);
-                if (files.Count == 0)
-                    throw new InvalidOperationException("引用目录中已经没有可运行的 JSON 资源，不能更新为空版本。");
-                newVersion = await PuloniaTaskResourceFingerprint.ComputeDirectoryVersionAsync(directory, files);
-                oldVersion = source.Version;
-            }
-            else
-            {
-                var definition = _taskService.Definitions.FirstOrDefault(item => item.TaskType == model.TaskType)
-                                 ?? throw new InvalidOperationException($"没有注册任务类型 {model.TaskType}。");
-                if (string.IsNullOrWhiteSpace(model.Path) || string.IsNullOrWhiteSpace(definition.ResourceBaseDirectory))
-                    throw new InvalidOperationException("当前节点没有可解析的资源路径。");
-                var path = Path.GetFullPath(model.Path, Path.GetFullPath(definition.ResourceBaseDirectory));
-                if (model.TaskType == "javascript")
-                {
-                    var files = await _resourceCatalog.GetDirectoryFilesAsync(path, "*", recursive: true);
-                    newVersion = await PuloniaTaskResourceFingerprint.ComputeDirectoryVersionAsync(path, files);
-                }
-                else
-                {
-                    newVersion = await PuloniaTaskResourceFingerprint.ComputeFileVersionAsync(path);
-                }
-                oldVersion = model.ResourceVersion;
-            }
+            var key = ResourceCheckKey(model);
+            var snapshot = PuloniaTaskJson.Read<PuloniaTask>(PuloniaTaskJson.Write(model));
+            var newVersion = await _resourceVersionService.ReadCurrentVersionAsync(snapshot, _taskService.Definitions)
+                             ?? throw new InvalidOperationException("当前节点没有可确认的资源。");
+            var oldVersion = model.Source?.Kind == "directory" ? model.Source.Version : model.ResourceVersion;
 
             if (oldVersion == newVersion)
             {
@@ -448,6 +435,10 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
             if (result != MessageBoxResult.Yes)
                 return;
 
+            if (newVersion != await _resourceVersionService.ReadCurrentVersionAsync(snapshot, _taskService.Definitions)
+                || key != ResourceCheckKey(model) || !node.Document.EnumerateNodes().Contains(node))
+                throw new InvalidOperationException("确认期间资源再次变化，请重新检查并确认。");
+
             node.Document.ApplyMutation(() =>
             {
                 if (model.Source?.Kind == "directory")
@@ -456,9 +447,11 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
                     model.ResourceVersion = newVersion;
             }, node);
             node.NotifyResourceVersionChanged();
+            if (!await SaveDocumentAsync(node.Document)) return;
+            await RefreshResourceVersionsAsync();
             StatusMessage = $"已更新“{node.Name}”的固定资源版本。";
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
         {
             StatusMessage = "更新资源版本失败：" + ex.Message;
             await ThemedMessageBox.ErrorAsync(StatusMessage, "无法更新资源版本");
@@ -696,6 +689,9 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// </summary>
     private void OnDocumentContentChanged(object? sender, EventArgs e)
     {
+        // 删除节点、修改路径或撤销后立即撤掉失效统计；磁盘版本由页面检查循环重新读取。
+        UpdateResourceSummaries(GetResourceDocuments());
+        ConfirmResourceUpdatesCommand.NotifyCanExecuteChanged();
         if (sender is PuloniaTaskPlanDocumentViewModel { IsDirty: true, LastSaveError: null } document)
             ScheduleAutoSave(document);
     }
@@ -919,5 +915,6 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         OnPropertyChanged(nameof(CanRunPlan));
         AddPlanReferenceCommand.NotifyCanExecuteChanged();
         RunPlanCommand.NotifyCanExecuteChanged();
+        ConfirmResourceUpdatesCommand.NotifyCanExecuteChanged();
     }
 }

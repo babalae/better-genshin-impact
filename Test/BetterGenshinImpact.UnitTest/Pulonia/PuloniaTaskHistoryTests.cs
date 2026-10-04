@@ -350,6 +350,33 @@ public sealed class PuloniaTaskHistoryTests : IDisposable
         Assert.Equal(2, (await store.ListHistoryAsync()).Count);
     }
 
+    /// <summary>卡片按钮使用传入的计划，不会执行仍在选中的其他计划或其历史。</summary>
+    [Fact]
+    public async Task PlanCardRun_UsesExplicitDocumentAndUnlimitedBudget()
+    {
+        using var store = new PuloniaTaskStore(_directory);
+        await using var service = CreateService(store);
+        var clipboard = new PuloniaTaskClipboardService();
+        var selected = await store.SavePlanAsync(CreatePlan("选中计划", "sample.sum"));
+        var card = CreatePlan("按钮所在计划", "sample.sum");
+        card.RootTask.Children[0].Parameters["values"] = new JArray(37);
+        card = await store.SavePlanAsync(card);
+        var selectedDocument = new PuloniaTaskPlanDocumentViewModel(selected, [], clipboard, isNew: false);
+        var cardDocument = new PuloniaTaskPlanDocumentViewModel(card, [], clipboard, isNew: false);
+        var history = new PuloniaTaskHistoryViewModel(service, store);
+        var page = new PuloniaTaskPlanViewModel(store, clipboard, service, new PuloniaTaskResourceCatalog(), history)
+        { SelectedDocument = selectedDocument, SelectedPlanTabIndex = 1 };
+        page.Documents.Add(selectedDocument);
+        page.Documents.Add(cardDocument);
+        Assert.True(page.RunPlanCommand.CanExecute(cardDocument));
+        await page.RunPlanCommand.ExecuteAsync(cardDocument);
+        var run = await service.WaitForCompletionAsync(history.SelectedRun!.RequestId).WaitAsync(TimeSpan.FromSeconds(20));
+        Assert.Equal(card.Id, run.PlanId);
+        Assert.Equal(37, Assert.Single(run.NodeResults).Data.Value<int>("sum"));
+        Assert.Null(run.ResumedFromRunId);
+        Assert.Null(Assert.Single(await store.ListHistoryAsync()).Request.TimeoutSeconds);
+    }
+
     /// <summary>
     /// 停止运行环境应中断游戏等待，清理完成前保持停止中，之后刷新和重启均显示已停止（取消）的本地历史。
     /// </summary>

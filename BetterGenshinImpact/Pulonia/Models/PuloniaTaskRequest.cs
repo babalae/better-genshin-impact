@@ -35,9 +35,9 @@ public sealed class PuloniaTaskRequest
     public int ServerUtcOffsetMinutes { get; init; } = 8 * 60;
 
     /// <summary>
-    /// 本次运行总时限，单位秒；必须有限且大于 0。
+    /// 本次运行总时限，单位秒；null 表示默认不限时，显式设置时必须有限且大于 0。
     /// </summary>
-    public double TimeoutSeconds { get; init; } = 600;
+    public double? TimeoutSeconds { get; init; }
 
     /// <summary>
     /// 以准备节点地址为键的本次调用参数覆盖，不回写计划。

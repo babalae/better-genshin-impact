@@ -41,8 +41,8 @@ public sealed class PuloniaTaskTrigger
     public bool CatchUp { get; set; } = true;
     /// <summary>同计划同账号繁忙时的行为。</summary>
     public PuloniaTaskBusyPolicy BusyPolicy { get; set; }
-    /// <summary>计划运行总预算，秒，与开始截止时间分别计算。</summary>
-    public double TimeoutSeconds { get; set; } = 3600;
+    /// <summary>计划运行总预算，秒；默认 null 表示不限时，与开始截止时间分别计算，兼容旧配置的显式预算。</summary>
+    public double? TimeoutSeconds { get; set; }
 }
 
 /// <summary>触发入口类型。</summary>

@@ -407,13 +407,15 @@ public sealed class PuloniaTaskBuilder
     }
 
     /// <summary>
-    /// 固定 JS 目录的全部文件指纹；不加载脚本引擎。
+    /// 固定 JS 目录的静态资源指纹；不加载脚本引擎，不把运行数据误当成脚本更新。
     /// </summary>
     private static async Task<string> HashDirectoryAsync(BuildContext context, string path, string address)
     {
         var manifest = new StringBuilder();
         foreach (var file in EnumerateFiles(context, path, "*", true, address))
         {
+            if (!PuloniaTaskResourceFingerprint.IsJavaScriptResourceFile(path, file))
+                continue;
             var hash = await HashFileAsync(context, file, address).ConfigureAwait(false);
             manifest.Append(NormalizeRelativePath(path, file)).Append('\0').Append(hash).Append('\n');
         }

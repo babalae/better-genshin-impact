@@ -53,6 +53,50 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     /// </summary>
     private bool _isRefreshingEditor;
 
+    /// <summary>当前计划（含计划引用）的待确认资源数，由页面检查结果更新，不持久化提示状态。</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasResourceUpdates), nameof(ResourceUpdateSummary))]
+    private int _resourceUpdateCount;
+
+    /// <summary>当前计划（含计划引用）的资源读取错误数，避免把缺失资源确认为新版本。</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasResourceUpdates), nameof(ResourceUpdateSummary))]
+    private int _resourceErrorCount;
+
+    /// <summary>计划卡片是否有可以确认的资源更新。</summary>
+    public bool HasResourceUpdates => ResourceUpdateCount > 0 && ResourceErrorCount == 0;
+
+    /// <summary>计划卡片的资源检查摘要与批量确认按钮说明。</summary>
+    public string ResourceUpdateSummary => ResourceErrorCount > 0 ? $"{ResourceErrorCount} 项资源不可用，请先检查"
+        : ResourceUpdateCount > 0 ? $"确认全部 {ResourceUpdateCount} 项资源更新" : "暂无待确认资源更新";
+
+    /// <summary>按稳定树顺序枚举节点，供资源检查和卡片批量确认使用。</summary>
+    public IEnumerable<PuloniaTaskNodeViewModel> EnumerateNodes() => Flatten(RootNode);
+
+    /// <summary>以一次可撤销编辑确认本计划全部指定资源；读取失败或过期的检查结果不能写入。</summary>
+    public void ApplyConfirmedResourceVersions(IReadOnlyDictionary<string, string> versions)
+    {
+        var nodes = EnumerateNodes().Where(node => versions.ContainsKey(node.Id)).ToArray();
+        if (nodes.Length != versions.Count || nodes.Any(node => !node.CanUpdateResourceVersion
+            || node.ResourceCheckError is not null || node.CurrentResourceVersion != versions[node.Id]))
+            throw new InvalidOperationException("资源检查结果已经变化，请重新检查并确认。");
+        if (nodes.Length == 0)
+            return;
+        // 全部校验通过后才一起更新模型，保留任务参数、开关、目录引用和原执行历史。
+        ApplyMutation(() =>
+        {
+            foreach (var node in nodes)
+            {
+                if (node.Model.Source?.Kind == "directory")
+                    node.Model.Source.Version = versions[node.Id];
+                else
+                    node.Model.ResourceVersion = versions[node.Id];
+            }
+        }, SelectedNode);
+        foreach (var node in nodes)
+            node.NotifyResourceVersionChanged();
+    }
+
     /// <summary>
     /// 当前树选中的节点。
     /// </summary>

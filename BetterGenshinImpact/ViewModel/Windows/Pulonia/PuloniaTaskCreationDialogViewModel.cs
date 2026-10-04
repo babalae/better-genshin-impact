@@ -880,12 +880,12 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     }
 
     /// <summary>
-    /// 计算目录型资源版本；JS 项目与目录引用使用同一稳定算法。
+    /// 计算 JS 目录型资源版本，保持与运行准备和资源更新检查一致的静态资源范围。
     /// </summary>
     private async Task<string> ComputeDirectoryVersionAsync(string directory, string pattern, bool recursive)
     {
         var files = await _resourceCatalog.GetDirectoryFilesAsync(directory, pattern, recursive);
-        return await PuloniaTaskResourceFingerprint.ComputeDirectoryVersionAsync(directory, files);
+        return await PuloniaTaskResourceFingerprint.ComputeJavaScriptVersionAsync(directory, files);
     }
 
     /// <summary>

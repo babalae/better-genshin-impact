@@ -20,6 +20,9 @@
         <b:EventTrigger EventName="Loaded">
             <b:InvokeCommandAction Command="{Binding ViewModel.OpenPageCommand}" />
         </b:EventTrigger>
+        <b:EventTrigger EventName="Unloaded">
+            <b:InvokeCommandAction Command="{Binding ViewModel.ClosePageCommand}" />
+        </b:EventTrigger>
     </b:Interaction.Triggers>
 
     <UserControl.Resources>
@@ -300,11 +303,20 @@
                         <ColumnDefinition Width="105" />
                         <ColumnDefinition Width="70" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0"
-                               VerticalAlignment="Center"
-                               Text="{Binding Name}"
-                               TextTrimming="CharacterEllipsis"
-                               ToolTip="{Binding Name}" />
+                    <Grid Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Center">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}" />
+                        <Border Grid.Column="1" Margin="8,0,0,0" Padding="5,1" CornerRadius="3"
+                                Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                                Visibility="{Binding HasResourceNotice, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                ToolTip="{Binding ResourceUpdateToolTip}">
+                            <TextBlock FontSize="11" Text="{Binding ResourceUpdateText}"
+                                       Foreground="{DynamicResource SystemFillColorCautionBrush}" />
+                        </Border>
+                    </Grid>
                     <TextBlock Grid.Column="1"
                                Margin="8,0"
                                VerticalAlignment="Center"
@@ -347,10 +359,13 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
-                    <TextBlock Margin="4,0,4,8"
-                               FontSize="16"
-                               FontWeight="SemiBold"
-                               Text="计划" />
+                    <DockPanel Margin="4,0,4,8">
+                        <ui:Button DockPanel.Dock="Right" Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="3"
+                                   Appearance="Transparent" Icon="{ui:SymbolIcon ArrowClockwise24}"
+                                   Command="{Binding ViewModel.RefreshResourceVersionsCommand}" ToolTip="重新检查全部计划的资源更新"
+                                   AutomationProperties.Name="刷新资源更新检查" />
+                        <TextBlock FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" Text="计划" />
+                    </DockPanel>
                     <ListBox x:Name="PlanList"
                              Grid.Row="1"
                               Padding="0"
@@ -366,12 +381,6 @@
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                               ScrollViewer.VerticalScrollBarVisibility="Auto"
                               SelectedItem="{Binding ViewModel.SelectedDocument, Mode=TwoWay}">
-                        <b:Interaction.Triggers>
-                            <b:EventTrigger EventName="MouseDoubleClick">
-                                <b:InvokeCommandAction Command="{Binding ViewModel.RenamePlanCommand}"
-                                                       CommandParameter="{Binding SelectedItem, ElementName=PlanList}" />
-                            </b:EventTrigger>
-                        </b:Interaction.Triggers>
                         <ListBox.InputBindings>
                             <KeyBinding Key="F2"
                                         Command="{Binding ViewModel.RenamePlanCommand}"
@@ -392,11 +401,38 @@
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Grid MinHeight="38">
-                                    <StackPanel VerticalAlignment="Center">
-                                        <TextBlock FontWeight="SemiBold" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                                        <TextBlock FontSize="11"
-                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                   Text="{Binding Revision, StringFormat=修订 {0}}" />
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <!-- 双击重命名只响应名称区域，不能把图标按钮的快速点击当成重命名。 -->
+                                    <ContentControl VerticalAlignment="Center" Margin="0,0,4,0" HorizontalContentAlignment="Stretch">
+                                        <b:Interaction.Triggers>
+                                            <b:EventTrigger EventName="MouseDoubleClick">
+                                                <b:InvokeCommandAction Command="{Binding Data.ViewModel.RenamePlanCommand, Source={StaticResource PageBindingProxy}}"
+                                                                       CommandParameter="{Binding}" />
+                                            </b:EventTrigger>
+                                        </b:Interaction.Triggers>
+                                        <StackPanel>
+                                            <TextBlock FontWeight="SemiBold" Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}" />
+                                            <TextBlock FontSize="11"
+                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                       Text="{Binding Revision, StringFormat=修订 {0}}" />
+                                        </StackPanel>
+                                    </ContentControl>
+                                    <!-- 新运行入口位于每张计划卡片，不依赖历史选中状态；续跑仍使用记录视图中的独立命令。 -->
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <ui:Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="3" Margin="0,0,2,0"
+                                                   Appearance="Transparent" Icon="{ui:SymbolIcon Checkmark24}"
+                                                   Command="{Binding Data.ViewModel.ConfirmResourceUpdatesCommand, Source={StaticResource PageBindingProxy}}"
+                                                   CommandParameter="{Binding}" ToolTip="{Binding ResourceUpdateSummary}"
+                                                   ToolTipService.ShowOnDisabled="True"
+                                                   AutomationProperties.Name="确认此计划全部资源更新" />
+                                        <ui:Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="3"
+                                                   Appearance="Transparent" Icon="{ui:SymbolIcon Play24}"
+                                                   Command="{Binding Data.ViewModel.RunPlanCommand, Source={StaticResource PageBindingProxy}}"
+                                                   CommandParameter="{Binding}" ToolTip="新执行此计划（默认不限时，不续跑历史）"
+                                                   AutomationProperties.Name="新执行此计划" />
                                     </StackPanel>
                                 </Grid>
                             </DataTemplate>
@@ -424,18 +460,6 @@
             </GridSplitter>
 
             <Border Grid.Column="2" Padding="0" Style="{StaticResource EditorCardStyle}">
-                <DockPanel>
-                    <!-- 新运行入口常驻计划页，不依赖历史选中状态；续跑仍使用记录视图中的独立命令。 -->
-                    <WrapPanel DockPanel.Dock="Top" Margin="12,12,12,4">
-                        <Button Margin="0,0,12,6" Command="{Binding ViewModel.RunPlanCommand}" Content="新执行当前计划"
-                                ToolTip="保存当前配置并从计划开头建立新运行，不沿用选中历史的快照或续跑起点。" />
-                        <TextBlock Margin="0,0,8,6" VerticalAlignment="Center" Text="计划总时限（秒）" />
-                        <ui:NumberBox Width="140" Margin="0,0,0,6"
-                                      AcceptsExpression="False" LargeChange="60"
-                                      MaxDecimalPlaces="3" Maximum="604800" Minimum="0.001"
-                                      SmallChange="1" SpinButtonPlacementMode="Inline"
-                                      Value="{Binding ViewModel.RunTimeoutSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    </WrapPanel>
                 <TabControl BorderThickness="0" SelectedIndex="{Binding ViewModel.SelectedPlanTabIndex}">
                     <TabItem Header="任务">
                         <Grid Margin="8">
@@ -576,7 +600,6 @@
                         <controls:PuloniaTaskTriggerView DataContext="{Binding ViewModel}" />
                     </TabItem>
                 </TabControl>
-                </DockPanel>
             </Border>
         </Grid>
 

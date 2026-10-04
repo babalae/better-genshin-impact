@@ -23,7 +23,7 @@ public static class PuloniaTaskSchedule
         if (string.IsNullOrWhiteSpace(trigger.Name) || trigger.Name.Length > 128
             || !Enum.IsDefined(trigger.Kind) || !Enum.IsDefined(trigger.ScheduleKind) || !Enum.IsDefined(trigger.BusyPolicy)
             || trigger.WindowMinutes is < 1 or > 10080
-            || !double.IsFinite(trigger.TimeoutSeconds) || trigger.TimeoutSeconds is <= 0 or > 604800
+            || trigger.TimeoutSeconds is { } timeout && (!double.IsFinite(timeout) || timeout is <= 0 or > 604800)
             || trigger.IntervalMinutes is < 1 or > 525600)
             throw new FormatException("触发器名称、类型、有效窗口或总预算无效。" );
         if (trigger.TargetTaskId is not null)

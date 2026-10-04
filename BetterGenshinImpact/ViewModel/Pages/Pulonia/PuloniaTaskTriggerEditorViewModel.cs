@@ -53,8 +53,8 @@ public partial class PuloniaTaskTriggerEditorViewModel : ObservableObject
     [ObservableProperty] private bool _catchUp = true;
     /// <summary>忙碌策略。</summary>
     [ObservableProperty] private PuloniaTaskBusyPolicy _busyPolicy;
-    /// <summary>总运行预算。</summary>
-    [ObservableProperty] private string _timeoutSeconds = "3600";
+    /// <summary>兼容原触发器的显式运行预算；空字符串表示不限时，不再提供总时限输入界面。</summary>
+    [ObservableProperty] private string _timeoutSeconds = "";
     /// <summary>计算结果或错误，不把非法表达式提交到存储。</summary>
     [ObservableProperty] private string _previewText = "";
     /// <summary>当前草稿是否通过全部校验。</summary>
@@ -112,7 +112,7 @@ public partial class PuloniaTaskTriggerEditorViewModel : ObservableObject
         Hotkey = HotKey.FromString(trigger.Hotkey); TargetTaskId = trigger.TargetTaskId ?? ""; AccountId = trigger.AccountId ?? "";
         IntervalMinutes = trigger.IntervalMinutes.ToString(CultureInfo.InvariantCulture);
         WindowMinutes = trigger.WindowMinutes.ToString(CultureInfo.InvariantCulture);
-        TimeoutSeconds = trigger.TimeoutSeconds.ToString(CultureInfo.InvariantCulture);
+        TimeoutSeconds = trigger.TimeoutSeconds?.ToString(CultureInfo.InvariantCulture) ?? "";
         CatchUp = trigger.CatchUp; BusyPolicy = trigger.BusyPolicy;
         if (trigger.ScheduleKind != PuloniaTaskScheduleKind.Cron)
         {
@@ -204,7 +204,7 @@ public partial class PuloniaTaskTriggerEditorViewModel : ObservableObject
         result.Hotkey = Hotkey.ToString(); result.TargetTaskId = string.IsNullOrEmpty(TargetTaskId) ? null : TargetTaskId;
         result.AccountId = string.IsNullOrEmpty(AccountId) ? null : AccountId;
         result.WindowMinutes = Number(WindowMinutes, "有效窗口（分钟）", 1, 10080);
-        result.TimeoutSeconds = Number(TimeoutSeconds, "总时限（秒）", 1, 604800);
+        result.TimeoutSeconds = string.IsNullOrWhiteSpace(TimeoutSeconds) ? null : Number(TimeoutSeconds, "总时限（秒）", 1, 604800);
         result.CatchUp = CatchUp; result.BusyPolicy = BusyPolicy;
         if (IsSchedule)
         {

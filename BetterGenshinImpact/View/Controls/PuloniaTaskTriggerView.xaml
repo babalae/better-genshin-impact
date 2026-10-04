@@ -96,8 +96,6 @@
                         <TextBlock Style="{StaticResource Label}" Text="有效开始窗口（分钟）" />
                         <ui:TextBox Text="{Binding WindowMinutes, UpdateSourceTrigger=PropertyChanged}" />
                         <CheckBox Margin="0,10,0,0" Content="离线 / 睡眠后，在有效窗口内只补最近一次" IsChecked="{Binding CatchUp}" />
-                        <TextBlock Style="{StaticResource Label}" Text="计划总运行时限（秒，实际开始后计时）" />
-                        <ui:TextBox Text="{Binding TimeoutSeconds, UpdateSourceTrigger=PropertyChanged}" />
                     </StackPanel>
                 </ScrollViewer>
                 <WrapPanel Grid.Row="1" Margin="0,12,0,0">
