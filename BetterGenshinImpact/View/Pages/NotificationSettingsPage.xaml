@@ -1932,7 +1932,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="{i18n:T Webhook 适合单个频道，机器人适合已在服务器中部署机器人的场景}"
+                                  Text="{i18n:T 机器人方式可发到多个频道与私信}"
                                   TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
@@ -2111,6 +2111,7 @@
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
+                               Width="160"
                                Margin="0,0,36,0"
                                HorizontalAlignment="Right"
                                Command="{Binding ManageDiscordTargetsCommand}"
@@ -2138,7 +2139,7 @@
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
                               Grid.Column="1"
-                              Width="100"
+                              Width="160"
                               Margin="0,0,36,0"
                               ItemsSource="{Binding DiscordImageEncoderNames}"
                               SelectedItem="{Binding Config.NotificationConfig.DiscordWebhookImageEncoder, Mode=TwoWay}" />
@@ -2165,6 +2166,7 @@
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
+                               Width="160"
                                Margin="0,0,36,0"
                                Command="{Binding TestDiscordNotificationCommand}"
                                Content="{i18n:T 发送}" />

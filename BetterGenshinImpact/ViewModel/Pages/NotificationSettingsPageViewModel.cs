@@ -574,6 +574,8 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
 
     /// <summary>
     ///     刷新 Discord Bot 推送目标摘要。
+    ///     只显示数量与类型分布：目标名称可能很长（频道名 + 服务器名），逐个列出来会把设置页撑乱，
+    ///     具体清单在「管理目标」对话框里查看。
     /// </summary>
     private void UpdateDiscordBotTargetSummary()
     {
@@ -584,16 +586,13 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
             return;
         }
 
-        var names = string.Join("、", targets
-            .Take(3)
-            .Select(target => string.IsNullOrWhiteSpace(target.DisplayName) ? target.Id : target.DisplayName));
-        var suffix = targets.Count > 3 ? "…" : string.Empty;
+        var directMessages = targets.Count(target => DiscordBotTargetTypes.IsDirectMessage(target.Type));
 
         DiscordBotTargetSummary = string.Format(
-            I18nService.Instance.Translate("共 {0} 个目标：{1}{2}"),
+            I18nService.Instance.Translate("共 {0} 个目标：{1} 个频道、{2} 个私信"),
             targets.Count,
-            names,
-            suffix);
+            targets.Count - directMessages,
+            directMessages);
     }
 
     [RelayCommand]
