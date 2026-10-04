@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Threading;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Pulonia.Models;
@@ -29,6 +30,10 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, PuloniaTaskSe
     private string _hotkeyError = "";
     /// <summary>应用启动或关闭命令取消信号。</summary>
     private CancellationToken _stopToken;
+    /// <summary>启动时捕获的所属 UI Dispatcher；关闭回调不能再访问可能已变成 null 的 Application.Current。</summary>
+    private readonly Dispatcher? _dispatcher = Application.Current?.Dispatcher;
+    /// <summary>UI 线程上的终止性热键清理标记，防止停止后晚到的刷新重新创建 NativeWindow。</summary>
+    private bool _hotkeysReleased;
     /// <summary>可供界面读取的最后一次状态，不暴露服务内部游标。</summary>
     public IReadOnlyList<PuloniaTaskTriggerState> States { get; private set; } = [];
     /// <summary>调度与平台入口的可见状态。</summary>
@@ -46,10 +51,19 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, PuloniaTaskSe
             Changed?.Invoke(this, EventArgs.Empty);
             return;
         }
-        try { await Application.Current.Dispatcher.InvokeAsync(() =>
+        var dispatcher = _dispatcher;
+        if (dispatcher is null || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
         {
-            Application.Current.Dispatcher.ShutdownStarted += OnDispatcherShutdown;
-        }); }
+            Status = "界面正在关闭，自动触发未启动。";
+            return;
+        }
+        try { await dispatcher.InvokeAsync(() =>
+        {
+            if (!dispatcher.HasShutdownStarted && !dispatcher.HasShutdownFinished)
+                dispatcher.ShutdownStarted += OnDispatcherShutdown;
+        }, DispatcherPriority.Normal, stoppingToken); }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested
+            || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished) { return; }
         catch (Exception ex) { logger.LogError(ex, "Pulonia 热键清理事件绑定失败"); }
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1), clock);
         IReadOnlyList<PuloniaTaskPlan> plans = [];
@@ -59,6 +73,9 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, PuloniaTaskSe
         {
             do
             {
+                // Dispatcher 已开始关闭时停止调度，不等待宿主取消信号再提交新请求。
+                if (dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+                    break;
                 try
                 {
                     var now = clock.GetUtcNow();
@@ -68,7 +85,7 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, PuloniaTaskSe
                         version = store.PlanChangeVersion;
                         plans = await store.ListPlansAsync(stoppingToken).ConfigureAwait(false);
                         lastLoad = now;
-                        await RefreshHotkeysAsync(plans).ConfigureAwait(false);
+                        await RefreshHotkeysAsync(plans, stoppingToken).ConfigureAwait(false);
                     }
                     await tasks.CheckTriggersAsync(plans, stoppingToken).ConfigureAwait(false);
                     States = await tasks.ListTriggerStatesAsync(stoppingToken).ConfigureAwait(false);
@@ -84,12 +101,19 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, PuloniaTaskSe
                 Changed?.Invoke(this, EventArgs.Empty);
             } while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false));
         }
-        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested
+            || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished) { }
         finally
         {
             // WPF 关闭时 ShutdownStarted 已在所属线程释放钩子，不向已退出的 Dispatcher 排队。
-            var dispatcher = Application.Current.Dispatcher;
-            if (!dispatcher.HasShutdownStarted) await dispatcher.InvokeAsync(ReleaseHotkeys);
+            if (!dispatcher.HasShutdownStarted && !dispatcher.HasShutdownFinished)
+            {
+                try { await dispatcher.InvokeAsync(ReleaseHotkeys); }
+                catch (OperationCanceledException) when (dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+                {
+                    // 排队后恰好关闭时，由所属线程的 ShutdownStarted 回调完成清理。
+                }
+            }
         }
     }
 
@@ -99,20 +123,33 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, PuloniaTaskSe
     /// <summary>在拥有窗口的 UI 线程释放全局热键注册。</summary>
     private void ReleaseHotkeys()
     {
-        Application.Current.Dispatcher.ShutdownStarted -= OnDispatcherShutdown;
-        foreach (var hook in _hotkeys) hook.Dispose();
+        if (_hotkeysReleased)
+            return;
+        _hotkeysReleased = true;
+        if (_dispatcher is { } dispatcher)
+            dispatcher.ShutdownStarted -= OnDispatcherShutdown;
+        foreach (var hook in _hotkeys)
+        {
+            try { hook.Dispose(); }
+            catch (Exception ex) { logger.LogError(ex, "Pulonia 关闭时释放热键失败"); }
+        }
         _hotkeys.Clear();
     }
 
     /// <summary>配置签名变化才重建注册；冲突可见，不偷偷替换应用已有快捷键。</summary>
-    private async Task RefreshHotkeysAsync(IReadOnlyList<PuloniaTaskPlan> plans)
+    private async Task RefreshHotkeysAsync(IReadOnlyList<PuloniaTaskPlan> plans, CancellationToken ct)
     {
+        var dispatcher = _dispatcher;
+        if (dispatcher is null || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+            return;
         var bindings = plans.SelectMany(plan => plan.Triggers.Where(item => item.Enabled
             && item.Kind == PuloniaTaskTriggerKind.Hotkey).Select(trigger => (plan, trigger))).ToArray();
         var signature = string.Join("|", bindings.Select(item => item.plan.Id + PuloniaTaskSchedule.Signature(item.trigger)));
         if (signature == _hotkeySignature) return;
-        await Application.Current.Dispatcher.InvokeAsync(() =>
+        await dispatcher.InvokeAsync(() =>
         {
+            if (_hotkeysReleased || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+                return;
             foreach (var hook in _hotkeys) hook.Dispose();
             _hotkeys.Clear();
             _hotkeyError = "";
@@ -134,7 +171,7 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, PuloniaTaskSe
                 }
             }
             _hotkeySignature = signature;
-        });
+        }, DispatcherPriority.Normal, ct);
     }
 
     /// <summary>观察热键异步异常，避免 async void 异常穿过系统消息循环。</summary>

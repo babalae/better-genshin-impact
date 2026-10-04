@@ -276,6 +276,11 @@ public partial class App : Application
         )
         .Build();
 
+    /// <summary>
+    /// 异常与退出阶段直接使用应用拥有的 Serilog，不向可能已释放的 DI 容器索取日志服务。
+    /// </summary>
+    private static readonly ExceptionLogWriter _exceptionLog = new(() => Log.ForContext<App>());
+
     public static IServiceProvider ServiceProvider => _host.Services;
 
     public static ILogger<T> GetLogger<T>()
@@ -391,12 +396,42 @@ public partial class App : Application
 
         TempManager.CleanUp();
 
-        await _host.StopAsync();
-        _host.Dispose();
-        Log.CloseAndFlush();
-
-        // 释放控制台窗口
-        ConsoleHelper.FreeConsoleWindow();
+        try
+        {
+            await _host.StopAsync();
+        }
+        catch (Exception ex)
+        {
+            _exceptionLog.Error(ex, "停止应用宿主时发生异常。");
+        }
+        finally
+        {
+            try
+            {
+                _host.Dispose();
+            }
+            catch (Exception ex)
+            {
+                // 服务释放异常发生时容器可能已经失效，不能再调用 GetLogger。
+                _exceptionLog.Error(ex, "释放应用宿主时发生异常。");
+            }
+            finally
+            {
+                try
+                {
+                    Log.CloseAndFlush();
+                }
+                catch (Exception ex)
+                {
+                    _exceptionLog.Error(ex, "关闭与刷新日志时发生异常。");
+                }
+                finally
+                {
+                    // 释放控制台窗口
+                    ConsoleHelper.FreeConsoleWindow();
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -428,7 +463,8 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            HandleException(ex);
+            _exceptionLog.Error(e.Exception, "原始未处理任务异常。");
+            _exceptionLog.Error(ex, "处理任务异常时再次发生异常。");
         }
         finally
         {
@@ -464,7 +500,9 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            HandleException(ex, isTerminating: e.IsTerminating);
+            if (e.ExceptionObject is Exception original)
+                _exceptionLog.Error(original, "原始未处理线程异常。");
+            _exceptionLog.Error(ex, "处理线程异常时再次发生异常。");
         }
         finally
         {
@@ -481,7 +519,8 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            HandleException(ex);
+            _exceptionLog.Error(e.Exception, "原始未处理 UI 异常。");
+            _exceptionLog.Error(ex, "处理 UI 异常时再次发生异常。");
         }
         finally
         {
@@ -495,23 +534,19 @@ public partial class App : Application
     /// </summary>
     private static bool HandleException(Exception e, bool isTerminating = false)
     {
-        if (e.InnerException != null)
-        {
-            e = e.InnerException;
-        }
-
         // 错误日志最先落盘并推送到日志遮罩（LogError ≥ Information 会进入遮罩 LogTextBox）。
         // 文件日志：Debug 级别也写盘；遮罩：仅 Information 以上可见。
         // 致命异常（IsTerminating）在日志末尾加 [FATAL] 标记，便于区分。
         var logMessage = isTerminating ? "UnHandle Exception [FATAL]" : "UnHandle Exception";
-        GetLogger<App>().LogError(e, logMessage);
+        // 保留外层堆栈和全部 InnerException，不让异常处理自己的生命周期错误覆盖原始错误。
+        _exceptionLog.Error(e, logMessage);
 
         // 可恢复异常（默认）：仅日志，不弹模态窗，避免阻塞 UI 线程。
         // 通过日志遮罩提示用户：非致命异常已记录。
         if (!isTerminating)
         {
             const string nonFatalMessage = "发生非致命异常，已记录日志，请查看日志详情。";
-            GetLogger<App>().LogWarning(nonFatalMessage);
+            _exceptionLog.Warning(nonFatalMessage);
             return false;
         }
 
@@ -528,7 +563,7 @@ public partial class App : Application
 
         // 确认 Dispatcher 可用后才记录"正在弹窗"，避免与实际行为不一致。
         const string popupShownMessage = "发生致命异常，正在弹窗提示，同时已记录日志。";
-        GetLogger<App>().LogWarning(popupShownMessage);
+        _exceptionLog.Warning(popupShownMessage);
 
         try
         {
@@ -560,7 +595,7 @@ public partial class App : Application
                 // 只为"UI 是否开始执行"设置超时：UI 线程被阻塞/死锁时避免无限等待。
                 if (!startedSignal.Wait(TimeSpan.FromSeconds(3)))
                 {
-                    GetLogger<App>().LogWarning("弹窗调度超时，异常已记录，进程即将退出。");
+                    _exceptionLog.Warning("弹窗调度超时，异常已记录，进程即将退出。");
                     return false;
                 }
 
