@@ -49,10 +49,16 @@ public partial class DiscordBotTarget : ObservableObject
     /// </summary>
     [ObservableProperty] private string _displayName = string.Empty;
 
+    /// <summary>
+    /// 供配置反序列化使用的无参构造函数。
+    /// </summary>
     public DiscordBotTarget()
     {
     }
 
+    /// <summary>
+    /// 按目标类型、ID 与显示名创建目标。
+    /// </summary>
     public DiscordBotTarget(string type, string id, string displayName)
     {
         _type = type;

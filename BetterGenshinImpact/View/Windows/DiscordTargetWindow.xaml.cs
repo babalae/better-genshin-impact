@@ -69,6 +69,9 @@ public partial class DiscordTargetWindow : FluentWindow
     /// </summary>
     public List<DiscordBotTarget> Result { get; private set; } = [];
 
+    /// <summary>
+    /// 创建目标挑选对话框。传入的清单会被复制一份用于编辑，取消时不影响原配置。
+    /// </summary>
     public DiscordTargetWindow(string botToken, IEnumerable<DiscordBotTarget>? targets)
     {
         InitializeComponent();
@@ -87,16 +90,25 @@ public partial class DiscordTargetWindow : FluentWindow
         SourceInitialized += (_, _) => WindowHelper.TryApplySystemBackdrop(this);
     }
 
+    /// <summary>
+    /// 窗口载入后立即拉取机器人所在的服务器列表。
+    /// </summary>
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         await LoadGuildsAsync();
     }
 
+    /// <summary>
+    /// 更新对话框底部的状态文本。
+    /// </summary>
     private void SetStatus(string message)
     {
         StatusText.Text = message;
     }
 
+    /// <summary>
+    /// 创建一个「加载中」占位子节点，使尚未加载的节点可以展开。
+    /// </summary>
     private static DiscordTargetNode CreatePlaceholder()
     {
         return new DiscordTargetNode { Title = I18nService.Instance.Translate("加载中…"), Kind = DiscordTargetNodeKind.Placeholder };
@@ -136,6 +148,9 @@ public partial class DiscordTargetWindow : FluentWindow
         }
     }
 
+    /// <summary>
+    /// 节点首次展开时才拉取子节点（惰性加载）。失败时复位加载标志并提示，便于用户重试。
+    /// </summary>
     private async void OnTreeItemExpanded(object sender, RoutedEventArgs e)
     {
         if (e.OriginalSource is not System.Windows.Controls.TreeViewItem { DataContext: DiscordTargetNode node } || node.ChildrenLoaded)
@@ -169,6 +184,9 @@ public partial class DiscordTargetWindow : FluentWindow
         }
     }
 
+    /// <summary>
+    /// 为服务器节点建立「频道」与「成员」两个分组。
+    /// </summary>
     private static void BuildGuildGroups(DiscordTargetNode guildNode)
     {
         guildNode.Children.Clear();
@@ -176,6 +194,9 @@ public partial class DiscordTargetWindow : FluentWindow
         AddGroup(guildNode, I18nService.Instance.Translate("成员（私信对象）"), DiscordTargetNodeKind.MemberGroup);
     }
 
+    /// <summary>
+    /// 向父节点追加一个分组节点，并为其挂上占位子节点。
+    /// </summary>
     private static void AddGroup(DiscordTargetNode parent, string title, DiscordTargetNodeKind kind)
     {
         var group = new DiscordTargetNode
@@ -255,6 +276,9 @@ public partial class DiscordTargetWindow : FluentWindow
         SetStatus(string.Empty);
     }
 
+    /// <summary>
+    /// 把频道信息转成可加入清单的叶子节点。
+    /// </summary>
     private static DiscordTargetNode CreateChannelNode(DiscordChannelInfo channel, DiscordTargetNode context)
     {
         return new DiscordTargetNode
@@ -308,11 +332,17 @@ public partial class DiscordTargetWindow : FluentWindow
         SetStatus(string.Format(I18nService.Instance.Translate("共 {0} 个成员"), members.Count));
     }
 
+    /// <summary>
+    /// 「刷新」按钮：重新拉取服务器列表。
+    /// </summary>
     private void OnRefreshClick(object sender, RoutedEventArgs e)
     {
         _ = LoadGuildsAsync();
     }
 
+    /// <summary>
+    /// 「加入」按钮：把左侧选中的频道或成员加入右侧清单，已存在时给出提示。
+    /// </summary>
     private void OnAddSelectedClick(object sender, RoutedEventArgs e)
     {
         if (TargetTree.SelectedItem is not DiscordTargetNode { Target: { } target })
@@ -331,6 +361,9 @@ public partial class DiscordTargetWindow : FluentWindow
         SetStatus(string.Empty);
     }
 
+    /// <summary>
+    /// 「移除」按钮：从右侧清单中移除选中项。
+    /// </summary>
     private void OnRemoveSelectedClick(object sender, RoutedEventArgs e)
     {
         if (TargetList.SelectedItem is DiscordBotTarget target)
@@ -339,11 +372,17 @@ public partial class DiscordTargetWindow : FluentWindow
         }
     }
 
+    /// <summary>
+    /// 「手动输入频道 ID」按钮，用于机器人不在该服务器等无法从列表挑选的场景。
+    /// </summary>
     private void OnManualChannelClick(object sender, RoutedEventArgs e)
     {
         AddManualTarget(DiscordBotTargetTypes.Channel, I18nService.Instance.Translate("频道 ID"));
     }
 
+    /// <summary>
+    /// 「手动输入用户 ID」按钮，用于无法从成员列表挑选的场景。
+    /// </summary>
     private void OnManualUserClick(object sender, RoutedEventArgs e)
     {
         AddManualTarget(DiscordBotTargetTypes.DirectMessage, I18nService.Instance.Translate("用户 ID"));
@@ -370,6 +409,9 @@ public partial class DiscordTargetWindow : FluentWindow
         SetStatus(string.Empty);
     }
 
+    /// <summary>
+    /// 「确定」按钮：把编辑中的清单写入 <see cref="Result"/> 并以成功关闭对话框。
+    /// </summary>
     private void OnOkClick(object sender, RoutedEventArgs e)
     {
         Result = EditingTargets.ToList();
@@ -377,6 +419,9 @@ public partial class DiscordTargetWindow : FluentWindow
         Close();
     }
 
+    /// <summary>
+    /// 「取消」按钮：直接关闭对话框，<see cref="Result"/> 保持为空。
+    /// </summary>
     private void OnCancelClick(object sender, RoutedEventArgs e)
     {
         Close();

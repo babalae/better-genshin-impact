@@ -35,6 +35,9 @@ public static class DiscordBotMessageFormats
     /// </summary>
     public const string Embed = "Embed";
 
+    /// <summary>
+    /// 判断配置值是否为嵌入卡片格式。配置可能来自旧版本或被手工修改，因此忽略大小写。
+    /// </summary>
     public static bool IsEmbed(string? format)
     {
         return string.Equals(format, Embed, StringComparison.OrdinalIgnoreCase);
@@ -100,6 +103,9 @@ public class DiscordBotNotifier : INotifier
     /// </summary>
     private sealed record TargetEntry(string Type, string Id, string DisplayName);
 
+    /// <summary>
+    /// 按配置创建通知器：过滤掉没有 ID 的目标，并按截图编码选项准备编码器。
+    /// </summary>
     public DiscordBotNotifier(
         HttpClient httpClient,
         string botToken,
@@ -245,6 +251,9 @@ public class DiscordBotNotifier : INotifier
         throw new NotifierException($"Discord 推送失败 ({(int)response.StatusCode})：{detail}");
     }
 
+    /// <summary>
+    /// 按配置的编码器把截图编码为字节数组。
+    /// </summary>
     private async Task<byte[]> EncodeScreenshotAsync(Image<Rgb24> screenshot)
     {
         using var ms = new MemoryStream();
@@ -252,6 +261,9 @@ public class DiscordBotNotifier : INotifier
         return ms.ToArray();
     }
 
+    /// <summary>
+    /// 日志里使用的目标名称：优先显示名，没有则退回 ID。
+    /// </summary>
     private static string DescribeTarget(TargetEntry target)
     {
         return string.IsNullOrWhiteSpace(target.DisplayName) ? target.Id : target.DisplayName;
@@ -274,6 +286,9 @@ public class DiscordBotNotifier : INotifier
         return payload;
     }
 
+    /// <summary>
+    /// 组装嵌入卡片。嵌入有独立的长度上限，正文与页脚各自截断。
+    /// </summary>
     private static Dictionary<string, object> BuildEmbedPayload(BaseNotificationData content, string? fileName)
     {
         var embed = new Dictionary<string, object>
@@ -309,6 +324,9 @@ public class DiscordBotNotifier : INotifier
             : message;
     }
 
+    /// <summary>
+    /// 组装页脚文本（事件 | 结果），超出上限时截断。
+    /// </summary>
     private static string BuildFooter(BaseNotificationData content)
     {
         var footer = $"{content.Event} | {content.Result}";

@@ -67,6 +67,9 @@ public sealed class DiscordBotApiClient
     private readonly HttpClient _httpClient;
     private readonly string _botToken;
 
+    /// <summary>
+    /// 使用共享的 HttpClient 与机器人 Token 创建客户端，Token 会去掉首尾空白。
+    /// </summary>
     public DiscordBotApiClient(HttpClient httpClient, string botToken)
     {
         _httpClient = httpClient;
@@ -235,6 +238,9 @@ public sealed class DiscordBotApiClient
         }
     }
 
+    /// <summary>
+    /// 读取 JSON 对象中的字符串属性。元素不是对象、属性不存在或类型不符时返回空字符串。
+    /// </summary>
     private static string GetString(JsonElement element, string propertyName)
     {
         if (element.ValueKind != JsonValueKind.Object)

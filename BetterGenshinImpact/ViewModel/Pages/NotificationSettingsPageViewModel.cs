@@ -199,6 +199,10 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
         UpdateNotificationEventSubscribeFromSelection();
     }
 
+    /// <summary>
+    /// 通知配置属性变更回调：Discord 通知方式或推送目标清单变化时刷新界面显示，
+    /// 其余属性只在通知事件订阅变化时重新应用勾选状态。
+    /// </summary>
     private void OnNotificationConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         // 切换 Discord 通知方式时，刷新两组配置项的显示状态
