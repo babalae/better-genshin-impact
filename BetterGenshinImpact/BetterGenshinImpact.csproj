@@ -272,5 +272,17 @@
 	<ItemGroup>
 	  <_DeploymentManifestIconFile Remove="Resources\Images\logo.ico" />
 	</ItemGroup>
-	
+
+	<!--
+		Melanchall.DryWetMidi 的 build\Melanchall.DryWetMidi.targets 会无条件把 x86/x64/macOS
+		三份本地库都复制到输出目录（它没有使用 runtimes/{rid}/native 结构，不感知 RID）。
+		本项目只支持 win-x64，这里在 AssignTargetPaths 之前把多余的 Native32.dll（x86）
+		和 Native64.dylib（macOS）从 None 项中移除，避免它们被打进 Release 产物。
+	-->
+	<Target Name="RemoveDryWetMidiUnusedNativeLibs" BeforeTargets="AssignTargetPaths">
+		<ItemGroup>
+			<None Remove="@(None)" Condition="'%(Filename)' == 'Melanchall_DryWetMidi_Native32' Or ('%(Filename)' == 'Melanchall_DryWetMidi_Native64' And '%(Extension)' == '.dylib')" />
+		</ItemGroup>
+	</Target>
+
 </Project>
