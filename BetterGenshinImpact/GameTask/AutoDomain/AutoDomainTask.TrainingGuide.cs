@@ -176,7 +176,7 @@ public partial class AutoDomainTask
             }
             finally { foreach (var row in rows) row.Dispose(); }
             // 只比较材料秘境；图标乱码、地区文字和周本名称不参与位置判断。
-            var tolerance = Math.Max(1, (int)Math.Round(capture.Height * 5d / 1080));
+            var tolerance = Math.Max(1, (int)Math.Round(capture.Height * 8d / 1080));
             var stable = current.Count > 0 && current.Count == previous.Count &&
                 current.Zip(previous, (a, b) => a.Name == b.Name && Math.Abs(a.Y - b.Y) <= tolerance).All(equal => equal);
             if (current.Count == 0 && previous.Count == 0 && !previousListImage.Empty())
@@ -694,8 +694,19 @@ public partial class AutoDomainTask
         var allocation = DescribeGuideResinAllocation(remaining);
         Logger.LogInformation("培养树脂规划 {Level}：当前进度 {Spent}/{Total}体；{Allocation}；合成预留 {Reserve}%",
             level, plan.KnownResinSpent, (long)plan.KnownResinSpent + remaining, allocation, GuideReservePercent);
-        UIDispatcherHelper.BeginInvoke(() => Toast.Information($"培养材料（{inventoryLabel}）\n{level}\n{materials}"));
-        UIDispatcherHelper.BeginInvoke(() => Toast.Information($"培养树脂规划\n当前进度 {plan.KnownResinSpent}/{(long)plan.KnownResinSpent + remaining}体；{allocation}；合成预留 {GuideReservePercent}%"));
+        var message = $"培养规划 · {level}\n" +
+            $"材料（{inventoryLabel}）：{materials}\n" +
+            $"树脂进度 {plan.KnownResinSpent}/{(long)plan.KnownResinSpent + remaining}体\n" +
+            allocation;
+        if (!_taskParam.TrainingGuideRewardRecognitionEnabled || plan.HasMissingRewards)
+        {
+            var reason = !_taskParam.TrainingGuideRewardRecognitionEnabled
+                ? "未启用培养奖励识别" : "奖励未能可靠识别";
+            message = $"{reason}，此材料按照初始预计体力刷取\n" +
+                $"树脂进度 {plan.KnownResinSpent}/{(long)plan.KnownResinSpent + remaining}体\n" +
+                allocation;
+        }
+        UIDispatcherHelper.BeginInvoke(() => Toast.Information(message));
     }
 
     private static int SelectGuideResinAmount(int remaining, int condensed, int original) =>
@@ -704,7 +715,7 @@ public partial class AutoDomainTask
 
     private string DescribeGuideResinAllocation(int remaining)
     {
-        if (remaining <= 0) return "当前入口计划执行完毕";
+        if (remaining <= 0) return "当前材料计划执行完毕";
         if (_taskParam.SpecifyResinUse)
         {
             if (_resinPriorityListWhenSpecifyUse.Any(r => r.Name == "原粹树脂" && r.RemainCount > 0))

@@ -1487,7 +1487,7 @@
 
                 <ui:CardExpander Margin="16,8,16,16" ContentPadding="0">
                     <ui:CardExpander.Icon>
-                        <ui:FontIcon Glyph="&#xf51e;" Style="{StaticResource FaFontIconStyle}" />
+                        <ui:FontIcon Glyph="&#xf3e0;" Style="{StaticResource FaFontIconStyle}" />
                     </ui:CardExpander.Icon>
                     <ui:CardExpander.Header>
                         <Grid>
@@ -1502,7 +1502,7 @@
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="{i18n:T 仅在选择“根据提升指南选择秘境”时启用}"
+                                          Text="{i18n:T 仅在选择“自动选择-提升指南”时启用}"
                                           TextWrapping="Wrap" />
                         </Grid>
                     </ui:CardExpander.Header>
@@ -1570,7 +1570,7 @@
                             <StackPanel>
                                 <ui:TextBlock FontTypography="Body" Text="{i18n:T 识别失败时按固定预算继续}" />
                                 <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="{i18n:T 默认关闭，奖励识别失败即结束任务。开启后，当前入口按原预规划树脂预算继续，不再动态估算；预算结束不代表材料需求已核实。下次任务生效。}"
+                                              Text="{i18n:T 默认关闭，奖励识别失败即结束任务。开启后，当前材料按原预规划树脂预算继续，不再动态估算；预算结束不代表材料需求已核实。下次任务生效。}"
                                               TextWrapping="Wrap" />
                             </StackPanel>
                             <ui:ToggleSwitch Grid.Column="1" Margin="16,0,20,0"

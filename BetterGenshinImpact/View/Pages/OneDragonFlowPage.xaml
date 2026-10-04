@@ -558,7 +558,7 @@
 
                     <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
                         <ui:CardExpander.Icon>
-                            <ui:FontIcon Glyph="&#xf51e;" Style="{StaticResource FaFontIconStyle}" />
+                            <ui:FontIcon Glyph="&#xf3e0;" Style="{StaticResource FaFontIconStyle}" />
                         </ui:CardExpander.Icon>
                         <ui:CardExpander.Header>
                             <Grid>
@@ -573,7 +573,7 @@
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="{i18n:T 仅在选择“根据提升指南选择秘境”时启用}"
+                                              Text="{i18n:T 仅在选择“自动选择-提升指南”时启用}"
                                               TextWrapping="Wrap" />
                             </Grid>
                         </ui:CardExpander.Header>
