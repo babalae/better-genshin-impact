@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -14,26 +13,34 @@ namespace BetterGenshinImpact.Pulonia.Services;
 /// </summary>
 public static class PuloniaTaskResourceFingerprint
 {
-    /// <summary>JS 项目根目录下的常见运行数据目录；assets 内同名目录仍属于静态资源。</summary>
-    private static readonly HashSet<string> _javaScriptRuntimeDirectories = new(StringComparer.OrdinalIgnoreCase)
-        { "records", "CDInfo", "logs", "cache", "temp", ".git" };
+    /// <summary>JS 版本只由根目录这两个文件决定；顺序固定为相对路径的稳定排序。</summary>
+    private static readonly string[] _javaScriptResourceFileNames = ["main.js", "manifest.json"];
 
-    /// <summary>计算 JS 静态资源指纹；排除常见运行记录，但任何位置的可执行脚本仍参与校验。</summary>
-    public static Task<string> ComputeJavaScriptVersionAsync(string directory,
-        IEnumerable<string> orderedFiles, CancellationToken ct = default)
-        => ComputeDirectoryVersionAsync(directory, orderedFiles.Where(file => IsJavaScriptResourceFile(directory, file)), ct);
+    /// <summary>只计算根目录 manifest.json 与 main.js 的内容指纹；不扫描或读取任何其他文件。</summary>
+    public static Task<string> ComputeJavaScriptVersionAsync(string directory, CancellationToken ct = default)
+        => Task.Run(() => ComputeDirectoryVersionAsync(directory, GetJavaScriptResourceFiles(directory, ct), ct), ct);
 
-    /// <summary>判断文件是否属于 JS 静态资源，避免采集记录和 CD 信息导致每次运行后误报更新。</summary>
-    public static bool IsJavaScriptResourceFile(string directory, string file)
+    /// <summary>定位 JS 唯一的两个版本文件，保留重解析点保护；缺失文件不能生成部分或空版本。</summary>
+    public static IReadOnlyList<string> GetJavaScriptResourceFiles(string directory, CancellationToken ct = default)
     {
-        var relative = NormalizeRelativePath(directory, file);
-        var extension = Path.GetExtension(relative);
-        if (extension.Equals(".js", StringComparison.OrdinalIgnoreCase)
-            || extension.Equals(".mjs", StringComparison.OrdinalIgnoreCase)
-            || extension.Equals(".cjs", StringComparison.OrdinalIgnoreCase))
-            return true;
-        var separator = relative.IndexOf('/');
-        return separator < 0 || !_javaScriptRuntimeDirectories.Contains(relative[..separator]);
+        ct.ThrowIfCancellationRequested();
+        var root = Path.GetFullPath(directory);
+        var attributes = File.GetAttributes(root);
+        if ((attributes & FileAttributes.Directory) == 0 || (attributes & FileAttributes.ReparsePoint) != 0)
+            throw new IOException("JS 项目必须是普通目录，不能直接指向文件或重解析点。");
+
+        // 直接读取必需文件，其他脚本、assets 和运行数据的变化或读取失败均不参与版本判定。
+        var files = new string[_javaScriptResourceFileNames.Length];
+        for (var index = 0; index < files.Length; index++)
+        {
+            ct.ThrowIfCancellationRequested();
+            var file = Path.Combine(root, _javaScriptResourceFileNames[index]);
+            var fileAttributes = File.GetAttributes(file);
+            if ((fileAttributes & (FileAttributes.Directory | FileAttributes.ReparsePoint)) != 0)
+                throw new IOException($"JS 版本文件 {_javaScriptResourceFileNames[index]} 必须是普通文件。");
+            files[index] = file;
+        }
+        return files;
     }
 
     /// <summary>

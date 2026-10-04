@@ -252,7 +252,7 @@ public sealed class PuloniaTaskBuilder
                 path = ResolvePath(context, task.Path!, address, definition.ResourceBaseDirectory);
                 try
                 {
-                    version = task.TaskType == "javascript" && Directory.Exists(path)
+                    version = task.TaskType == "javascript"
                         ? await HashDirectoryAsync(context, path, address).ConfigureAwait(false)
                         : await HashFileAsync(context, path, address).ConfigureAwait(false);
                 }
@@ -407,15 +407,13 @@ public sealed class PuloniaTaskBuilder
     }
 
     /// <summary>
-    /// 固定 JS 目录的静态资源指纹；不加载脚本引擎，不把运行数据误当成脚本更新。
+    /// 只固定 JS 根目录 manifest.json 和 main.js 的指纹；不加载脚本引擎，不扫描其他资源。
     /// </summary>
     private static async Task<string> HashDirectoryAsync(BuildContext context, string path, string address)
     {
         var manifest = new StringBuilder();
-        foreach (var file in EnumerateFiles(context, path, "*", true, address))
+        foreach (var file in PuloniaTaskResourceFingerprint.GetJavaScriptResourceFiles(path, context.Cancellation))
         {
-            if (!PuloniaTaskResourceFingerprint.IsJavaScriptResourceFile(path, file))
-                continue;
             var hash = await HashFileAsync(context, file, address).ConfigureAwait(false);
             manifest.Append(NormalizeRelativePath(path, file)).Append('\0').Append(hash).Append('\n');
         }

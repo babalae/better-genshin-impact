@@ -106,6 +106,7 @@ public sealed class PuloniaTaskCommonSettingsTests : IDisposable
         {
             resource = Path.Combine(_directory, "script");
             Directory.CreateDirectory(resource);
+            await File.WriteAllTextAsync(Path.Combine(resource, "manifest.json"), "{\"name\":\"测试资源\",\"version\":\"1.0\"}");
             await File.WriteAllTextAsync(Path.Combine(resource, "main.js"), "// 测试资源，不实际执行。");
         }
         var plan = new PuloniaTaskPlan();

@@ -18,7 +18,7 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 /// <summary>计划资源更新检查、树标签与卡片批量确认；磁盘变化不会自动改写固定版本。</summary>
 public partial class PuloniaTaskPlanViewModel
 {
-    /// <summary>统一资源版本读取服务，和创建、准备、续跑保持相同的 JS 静态资源范围。</summary>
+    /// <summary>统一资源版本读取服务，JS 在创建、准备与续跑中都只检查根目录 manifest.json 和 main.js。</summary>
     private readonly PuloniaTaskResourceVersionService _resourceVersionService;
     /// <summary>串行化异步检查与批量确认，避免过期结果覆盖用户刚确认的版本。</summary>
     private readonly SemaphoreSlim _resourceCheckGate = new(1, 1);

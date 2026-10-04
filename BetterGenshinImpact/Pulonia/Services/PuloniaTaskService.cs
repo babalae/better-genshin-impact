@@ -1065,15 +1065,10 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
             {
                 if (!Directory.Exists(task.Path))
                     throw new PuloniaTaskValidationException(task.TaskAddress, "续跑所需的旧 JS 资源目录已不存在。");
-                // 续跑与创建、准备、更新确认使用同一静态资源算法，并保留重解析点和扫描数量限制。
-                var files = await new PuloniaTaskResourceCatalog().GetDirectoryFilesAsync(task.Path, "*", true, ct)
+                // 续跑与创建、准备、更新确认都只检查根目录 manifest.json 和 main.js，保留重解析点保护。
+                actual = await PuloniaTaskResourceFingerprint.ComputeJavaScriptVersionAsync(task.Path, ct)
                     .ConfigureAwait(false);
-                actual = await PuloniaTaskResourceFingerprint.ComputeJavaScriptVersionAsync(task.Path, files, ct)
-                    .ConfigureAwait(false);
-                // 兼容旧历史的全目录指纹：只有原目录完整内容完全一致才允许续跑，不迁移或改写旧快照。
-                if (!string.Equals(actual, task.ResourceVersion, StringComparison.Ordinal))
-                    actual = await PuloniaTaskResourceFingerprint.ComputeDirectoryVersionAsync(task.Path, files, ct)
-                        .ConfigureAwait(false);
+                // 不回退到旧全目录算法，也不改写旧快照；旧范围指纹不匹配时需要确认后新执行。
             }
             else
             {

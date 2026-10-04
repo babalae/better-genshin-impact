@@ -37,8 +37,7 @@ public sealed class PuloniaTaskResourceVersionService
         var path = ResolvePath(task.Path, definition.ResourceBaseDirectory);
         if (task.TaskType == "javascript")
         {
-            var files = await _catalog.GetDirectoryFilesAsync(path, "*", true, ct).ConfigureAwait(false);
-            return await PuloniaTaskResourceFingerprint.ComputeJavaScriptVersionAsync(path, files, ct).ConfigureAwait(false);
+            return await PuloniaTaskResourceFingerprint.ComputeJavaScriptVersionAsync(path, ct).ConfigureAwait(false);
         }
         return await PuloniaTaskResourceFingerprint.ComputeFileVersionAsync(path, ct).ConfigureAwait(false);
     }

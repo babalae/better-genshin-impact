@@ -818,7 +818,7 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
         if (!IsDirectoryImport)
         {
             var version = resource.IsDirectory
-                ? await ComputeDirectoryVersionAsync(resource.FullPath, "*", recursive: true)
+                ? await ComputeDirectoryVersionAsync(resource.FullPath)
                 : await PuloniaTaskResourceFingerprint.ComputeFileVersionAsync(resource.FullPath);
             return new PuloniaTask
             {
@@ -880,12 +880,11 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     }
 
     /// <summary>
-    /// 计算 JS 目录型资源版本，保持与运行准备和资源更新检查一致的静态资源范围。
+    /// 只计算 JS 根目录 manifest.json 和 main.js，保持与运行准备和资源更新检查一致的范围。
     /// </summary>
-    private async Task<string> ComputeDirectoryVersionAsync(string directory, string pattern, bool recursive)
+    private Task<string> ComputeDirectoryVersionAsync(string directory)
     {
-        var files = await _resourceCatalog.GetDirectoryFilesAsync(directory, pattern, recursive);
-        return await PuloniaTaskResourceFingerprint.ComputeJavaScriptVersionAsync(directory, files);
+        return PuloniaTaskResourceFingerprint.ComputeJavaScriptVersionAsync(directory);
     }
 
     /// <summary>

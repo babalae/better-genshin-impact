@@ -15,7 +15,7 @@ public sealed class PuloniaTaskResourceUpdateTests : IDisposable
     /// <summary>每个测试独占的临时目录，不触碰真实 User 数据。</summary>
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-pulonia-resources-" + Guid.NewGuid().ToString("N"));
 
-    /// <summary>常见运行数据更新不改变 JS 静态版本，assets 内同名目录和可执行代码仍参与校验。</summary>
+    /// <summary>只有根目录两个版本文件的内容变化才算更新，其他脚本及子目录同名文件均不参与。</summary>
     [Theory]
     [InlineData("records/账户.txt", false)]
     [InlineData("CDInfo/账户.json", false)]
@@ -23,29 +23,65 @@ public sealed class PuloniaTaskResourceUpdateTests : IDisposable
     [InlineData("cache/result.json", false)]
     [InlineData("temp/output.txt", false)]
     [InlineData("main.js", true)]
-    [InlineData("assets/records/input.json", true)]
-    [InlineData("CDInfo/helper.js", true)]
-    [InlineData("records/module.mjs", true)]
-    public async Task JavaScriptFingerprint_SeparatesRuntimeDataFromResources(string relativePath, bool changesVersion)
+    [InlineData("manifest.json", true)]
+    [InlineData("README.md", false)]
+    [InlineData("command.json", false)]
+    [InlineData("helper.js", false)]
+    [InlineData("assets/records/input.json", false)]
+    [InlineData("assets/main.js", false)]
+    [InlineData("assets/manifest.json", false)]
+    [InlineData("CDInfo/helper.js", false)]
+    [InlineData("records/module.mjs", false)]
+    public async Task JavaScriptFingerprint_OnlyTracksManifestAndMain(string relativePath, bool changesVersion)
     {
         var root = Path.Combine(_directory, "script");
+        await CreateJavaScriptProjectAsync(root);
         var file = Path.Combine(root, relativePath);
         Directory.CreateDirectory(Path.GetDirectoryName(file)!);
         await File.WriteAllTextAsync(file, "原始内容");
-        var catalog = new PuloniaTaskResourceCatalog();
-        var original = await PuloniaTaskResourceFingerprint.ComputeJavaScriptVersionAsync(root,
-            await catalog.GetDirectoryFilesAsync(root, "*", true));
+        var original = await PuloniaTaskResourceFingerprint.ComputeJavaScriptVersionAsync(root);
         await File.WriteAllTextAsync(file, "更新内容");
-        var changed = await PuloniaTaskResourceFingerprint.ComputeJavaScriptVersionAsync(root,
-            await catalog.GetDirectoryFilesAsync(root, "*", true));
+        var changed = await PuloniaTaskResourceFingerprint.ComputeJavaScriptVersionAsync(root);
         Assert.Equal(changesVersion, original != changed);
+        if (!changesVersion)
+        {
+            // 新增与删除无关文件也不能影响版本，不能只排除“内容修改”这一种变化。
+            File.Delete(file);
+            Assert.Equal(original, await PuloniaTaskResourceFingerprint.ComputeJavaScriptVersionAsync(root));
+        }
+    }
+
+    /// <summary>必需文件缺失时标签应为资源不可用，不能接受剩余文件生成的部分版本。</summary>
+    [Theory]
+    [InlineData("manifest.json")]
+    [InlineData("main.js")]
+    public async Task MissingJavaScriptVersionFile_IsUnavailable(string fileName)
+    {
+        var root = Path.Combine(_directory, "script");
+        await CreateJavaScriptProjectAsync(root);
+        File.Delete(Path.Combine(root, fileName));
+        await Assert.ThrowsAnyAsync<IOException>(() => PuloniaTaskResourceFingerprint.ComputeJavaScriptVersionAsync(root));
+        using var store = new PuloniaTaskStore(Path.Combine(_directory, "store"));
+        await using var service = CreateService(store, new ResourceExecutor(_directory));
+        var clipboard = new PuloniaTaskClipboardService();
+        var document = new PuloniaTaskPlanDocumentViewModel(new PuloniaTaskPlan { Name = "缺失版本文件",
+            RootTask = new PuloniaTask { Name = "根", Children =
+            [new PuloniaTask { Name = "脚本", TaskType = "javascript", Path = "script" }] } }, [], clipboard, isNew: false);
+        var page = CreatePage(store, service, clipboard, document);
+        await page.RefreshResourceVersionsAsync();
+        var node = Assert.Single(document.RootNode.Children);
+        Assert.Null(node.CurrentResourceVersion);
+        Assert.False(node.HasResourceUpdate);
+        Assert.Equal("资源不可用", node.ResourceUpdateText);
+        Assert.Equal(1, document.ResourceErrorCount);
+        Assert.False(page.ConfirmResourceUpdatesCommand.CanExecute(document));
     }
 
     /// <summary>JS、路线、回放和目录更新分别标记，一次确认后落盘，旧执行历史保持不变。</summary>
     [Fact]
     public async Task BatchConfirmation_PersistsAllResourceKindsWithoutChangingHistory()
     {
-        Directory.CreateDirectory(Path.Combine(_directory, "script"));
+        await CreateJavaScriptProjectAsync(Path.Combine(_directory, "script"));
         Directory.CreateDirectory(Path.Combine(_directory, "routes"));
         await File.WriteAllTextAsync(Path.Combine(_directory, "script", "main.js"), "// 原脚本");
         await File.WriteAllTextAsync(Path.Combine(_directory, "route.json"), "{\"route\":1}");
@@ -174,13 +210,19 @@ public sealed class PuloniaTaskResourceUpdateTests : IDisposable
         Assert.False(available.HasResourceNotice);
     }
 
-    /// <summary>检查与执行准备使用同一 JS 指纹范围，运行数据不会破坏快照，源码变化仍拒绝旧版本。</summary>
-    [Fact]
-    public async Task JavaScriptRuntimeWrites_DoNotInvalidatePreparedOrResumedRun()
+    /// <summary>检查、准备与续跑都只关心两个文件，无关资源变化或被占用不破坏快照。</summary>
+    [Theory]
+    [InlineData("CDInfo/账户.json", "main.js")]
+    [InlineData("assets/helper.js", "manifest.json")]
+    [InlineData("command.json", "main.js")]
+    [InlineData("assets/main.js", "manifest.json")]
+    [InlineData("helpers/manifest.json", "main.js")]
+    public async Task JavaScriptOtherFiles_DoNotInvalidatePreparedOrResumedRun(string otherFile, string versionFile)
     {
-        Directory.CreateDirectory(Path.Combine(_directory, "script", "CDInfo"));
-        await File.WriteAllTextAsync(Path.Combine(_directory, "script", "main.js"), "// 脚本");
-        var runtimePath = Path.Combine(_directory, "script", "CDInfo", "账户.json");
+        var root = Path.Combine(_directory, "script");
+        await CreateJavaScriptProjectAsync(root);
+        var runtimePath = Path.Combine(root, otherFile);
+        Directory.CreateDirectory(Path.GetDirectoryName(runtimePath)!);
         await File.WriteAllTextAsync(runtimePath, "{\"cd\":1}");
         var executor = new ResourceExecutor(_directory);
         var task = new PuloniaTask { Name = "脚本", TaskType = "javascript", Path = "script" };
@@ -192,21 +234,31 @@ public sealed class PuloniaTaskResourceUpdateTests : IDisposable
         var id = await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = plan.Id });
         var original = await service.WaitForCompletionAsync(id).WaitAsync(TimeSpan.FromSeconds(20));
         await File.WriteAllTextAsync(runtimePath, "{\"cd\":2}");
+        using var exclusiveFile = new FileStream(runtimePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        var clipboard = new PuloniaTaskClipboardService();
+        var document = new PuloniaTaskPlanDocumentViewModel(plan, [], clipboard, isNew: false);
+        var page = CreatePage(store, service, clipboard, document);
+        await page.RefreshResourceVersionsAsync();
+        Assert.Equal(0, document.ResourceUpdateCount);
+        Assert.Equal(0, document.ResourceErrorCount);
         var resumedId = await service.ResumeAsync(original.RunId, original.NodeResults.Single().TaskAddress);
         var resumed = await service.WaitForCompletionAsync(resumedId).WaitAsync(TimeSpan.FromSeconds(20));
         Assert.Equal(PuloniaTaskRunStatus.Succeeded, resumed.Status);
         var freshId = await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = plan.Id });
         Assert.Equal(PuloniaTaskRunStatus.Succeeded, (await service.WaitForCompletionAsync(freshId).WaitAsync(TimeSpan.FromSeconds(20))).Status);
-        await File.WriteAllTextAsync(Path.Combine(_directory, "script", "main.js"), "// 新脚本");
+        await File.WriteAllTextAsync(Path.Combine(root, versionFile), "更新的版本文件内容");
+        await page.RefreshResourceVersionsAsync();
+        Assert.Equal(1, document.ResourceUpdateCount);
         await Assert.ThrowsAsync<PuloniaTaskValidationException>(() => service.EnqueueAsync(new PuloniaTaskRequest { PlanId = plan.Id }));
         await Assert.ThrowsAsync<PuloniaTaskValidationException>(() => service.ResumeAsync(original.RunId, original.NodeResults.Single().TaskAddress));
     }
 
-    /// <summary>旧全目录指纹仅在完整目录未变化时兼容续跑，不能把旧记录静默升级为新范围。</summary>
+    /// <summary>旧范围指纹不匹配时必须明确新执行，不恢复目录扫描也不改写旧历史。</summary>
     [Fact]
-    public async Task LegacyJavaScriptSnapshot_OnlyResumesWhenFullDirectoryIsUnchanged()
+    public async Task LegacyJavaScriptSnapshot_DoesNotFallBackToDirectoryFingerprint()
     {
         var root = Path.Combine(_directory, "script");
+        await CreateJavaScriptProjectAsync(root);
         Directory.CreateDirectory(Path.Combine(root, "records"));
         await File.WriteAllTextAsync(Path.Combine(root, "main.js"), "// 原脚本");
         var runtime = Path.Combine(root, "records", "账户.txt");
@@ -229,11 +281,38 @@ public sealed class PuloniaTaskResourceUpdateTests : IDisposable
             SubmittedAt = DateTimeOffset.UtcNow, FinishedAt = DateTimeOffset.UtcNow, Message = "旧运行" };
         await store.ArchiveRunAsync(record);
         await using var service = CreateService(store, executor);
-        var id = await service.ResumeAsync(record.RunId);
-        Assert.Equal(PuloniaTaskRunStatus.Succeeded, (await service.WaitForCompletionAsync(id).WaitAsync(TimeSpan.FromSeconds(20))).Status);
-        Assert.Equal(record.SnapshotJson, (await service.GetRunAsync(record.RequestId)).SnapshotJson);
-        await File.WriteAllTextAsync(runtime, "新记录");
+        using var exclusiveFile = new FileStream(runtime, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        // 即使旧指纹与整个目录完全一致，也不能为了兼容去读取其余被占用的文件。
         await Assert.ThrowsAsync<PuloniaTaskValidationException>(() => service.ResumeAsync(record.RunId));
+        Assert.Equal(record.SnapshotJson, (await service.GetRunAsync(record.RequestId)).SnapshotJson);
+    }
+
+    /// <summary>JS 准备不扫描无关目录，目录深度和无关文件数量不得消耗资源扫描额度。</summary>
+    [Fact]
+    public async Task JavaScriptPreparation_DoesNotScanUnrelatedDirectories()
+    {
+        var root = Path.Combine(_directory, "script");
+        await CreateJavaScriptProjectAsync(root);
+        var nested = Path.Combine(root, "assets", "a", "b", "c", "d");
+        Directory.CreateDirectory(nested);
+        for (var index = 0; index < 20; index++)
+            await File.WriteAllTextAsync(Path.Combine(nested, $"helper-{index}.js"), "// 无关文件");
+        using var store = new PuloniaTaskStore(Path.Combine(_directory, "store"));
+        var executor = new ResourceExecutor(_directory);
+        var task = new PuloniaTask { Name = "脚本", TaskType = "javascript", Path = "script",
+            ResourceVersion = await PuloniaTaskResourceFingerprint.ComputeJavaScriptVersionAsync(root) };
+        var snapshot = await new PuloniaTaskBuilder(store).BuildAsync(new PuloniaTaskPlan { Name = "无需扫描目录",
+            RootTask = new PuloniaTask { Name = "根", Children = [task] } }, new PuloniaTaskBuildOptions
+            { Definitions = executor.Definitions.ToList(), MaxDepth = 2, MaxNodes = 10 });
+        Assert.Equal(task.ResourceVersion, Assert.Single(snapshot.RootTask.Children).ResourceVersion);
+    }
+
+    /// <summary>建立必需文件齐全的测试 JS 项目，不依赖任何真实脚本。</summary>
+    private static async Task CreateJavaScriptProjectAsync(string directory)
+    {
+        Directory.CreateDirectory(directory);
+        await File.WriteAllTextAsync(Path.Combine(directory, "manifest.json"), "{\"name\":\"测试脚本\",\"version\":\"1.0\"}");
+        await File.WriteAllTextAsync(Path.Combine(directory, "main.js"), "// 测试脚本");
     }
 
     /// <summary>已禁用的资源有更新时仍展示标签，但卡片可运行其他已启用任务。</summary>
