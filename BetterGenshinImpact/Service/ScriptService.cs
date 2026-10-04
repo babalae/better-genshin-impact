@@ -207,6 +207,15 @@ public partial class ScriptService : IScriptService
                 int projectIndex = -1;
                 for (int x = 0; x < list.Count; x++)
                 {
+                    // 已发起停止请求：不再启动后面的脚本。
+                    // 内层循环的取消检查只跳出「本脚本的优先执行列表」，外层会继续把剩下的脚本一个个启动起来，
+                    // 每个脚本都至少会跑一小段（切队伍、传送等），看起来就是「停止后还在继续执行」。
+                    if (CancellationContext.Instance.Cts.IsCancellationRequested)
+                    {
+                        _logger.LogInformation("已发起停止请求，跳过剩余 {Count} 个脚本", list.Count - x);
+                        break;
+                    }
+
                     var project = list[x];
                     // 让进度跟着脚本走：这一步之前的脚本（含被跳过、被禁用的）立刻退出预计剩余时间
                     ScriptGroupProgressTracker.Instance.OnStepStarted(x);
@@ -363,6 +372,12 @@ public partial class ScriptService : IScriptService
 
                         for (var i = 0; i < exeProject.RunNum; i++)
                         {
+                            // 已发起停止请求：不再重跑同一个脚本
+                            if (CancellationContext.Instance.Cts.IsCancellationRequested)
+                            {
+                                break;
+                            }
+
                             try
                             {
                                 _triggers.ClearTriggers();

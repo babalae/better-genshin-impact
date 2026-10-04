@@ -127,6 +127,12 @@
 `RunMulti` 开头会 `CancellationContext.Set()` 重设取消状态，所以必须在循环里自己判断；
 且只在「本批已经跑过至少一个配置组」之后才看取消状态，避免上一次手动停止残留的 `IsManualStop` 把新批次误杀。
 
+**停止请求 → 不再启动后续脚本**：`RunMulti` 的外层脚本循环、`RunNum` 重跑循环各加了一处取消检查。
+原先只有内层（单个脚本的优先执行列表）检查，停止后外层会继续把剩下的脚本一个个启动起来，
+每个脚本都至少会跑一小段（切队伍、传送等），看起来就是「点了停止还在继续执行」。
+覆盖情况：组内后续脚本（`RunMulti` 外层 break）、同一脚本重跑（`RunNum` break）、
+后续配置组（`StartGroups` break）、一条龙后续任务（每轮末尾 `return`，本来就有）。
+
 ### 3.2 刷新用的定时器与节拍
 
 读数刷新走 `System.Threading.Timer`，回调只把一次刷新用 `Dispatcher.BeginInvoke` 排进 UI 队列。
