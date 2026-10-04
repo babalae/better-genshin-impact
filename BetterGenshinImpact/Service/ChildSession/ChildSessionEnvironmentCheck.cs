@@ -17,12 +17,21 @@ namespace BetterGenshinImpact.Service.ChildSession;
 /// </summary>
 internal static class ChildSessionEnvironmentCheck
 {
+    /// <summary>
+    /// 系统版本信息所在路径，用于读取 EditionID 判断是否为家庭版。
+    /// </summary>
     private const string CurrentVersionRegistryPath =
         @"SOFTWARE\Microsoft\Windows NT\CurrentVersion";
 
+    /// <summary>
+    /// 「仅允许 Windows Hello 登录」设置所在路径。
+    /// </summary>
     private const string PasswordLessRegistryPath =
         @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\PasswordLess\Device";
 
+    /// <summary>
+    /// 远程桌面主机的本机设置所在路径。
+    /// </summary>
     private const string TerminalServerRegistryPath =
         @"SYSTEM\CurrentControlSet\Control\Terminal Server";
 

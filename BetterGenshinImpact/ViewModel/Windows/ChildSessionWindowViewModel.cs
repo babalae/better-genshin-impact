@@ -210,6 +210,10 @@ public partial class ChildSessionWindowViewModel : ViewModel
         OnPropertyChanged(nameof(TopmostButtonToolTip));
     }
 
+    /// <summary>
+    /// 启动桌面分身的命令入口。启动前依次检查 RDP Wrapper 兼容性与环境预检结论，
+    /// 命中时先请用户确认；用户选择不继续则中止启动。
+    /// </summary>
     [RelayCommand]
     private async Task StartAsync()
     {

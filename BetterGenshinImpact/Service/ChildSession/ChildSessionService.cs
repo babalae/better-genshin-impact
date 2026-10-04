@@ -90,6 +90,9 @@ public sealed class ChildSessionService : IDisposable
         set => _config.SmallWindowPosition = value;
     }
 
+    /// <summary>
+    /// 系统是否已安装并启用 RDP Wrapper。它与桌面分身功能不兼容，界面会在启动前据此提示用户。
+    /// </summary>
     public bool IsRdpWrapperEnabled()
     {
         return ChildSessionNativeMethods.IsRdpWrapperEnabled();
@@ -138,6 +141,10 @@ public sealed class ChildSessionService : IDisposable
         RefreshState();
     }
 
+    /// <summary>
+    /// 启动桌面分身：先做一次环境预检，确保 Child Sessions 已启用，然后建立 RDP 连接并等待登录完成。
+    /// 已经处于已连接状态时直接返回。
+    /// </summary>
     public async Task StartAsync()
     {
         ThrowIfDisposed();
@@ -547,6 +554,9 @@ public sealed class ChildSessionService : IDisposable
         }
     }
 
+    /// <summary>
+    /// 取当前桌面分身会话 ID；没有可用会话时抛出 <see cref="InvalidOperationException"/>。
+    /// </summary>
     private uint GetRequiredChildSessionId()
     {
         var childSessionId = ChildSessionNativeMethods.TryGetChildSessionId();
@@ -810,6 +820,10 @@ public sealed class ChildSessionService : IDisposable
         }
     }
 
+    /// <summary>
+    /// 连接失败的统一收尾：「重试耗尽」与「连接超时」两条路径都经由这里附加诊断信息，
+    /// 再更新状态并通知订阅者。
+    /// </summary>
     private void CompleteConnectionFailure(ChildSessionConnectionFailedEventArgs e)
     {
         // 统一在这里补充诊断，让「重试耗尽」和「连接超时」两条失败路径给出同样的信息。
@@ -830,6 +844,9 @@ public sealed class ChildSessionService : IDisposable
         ConnectionFailed?.Invoke(this, diagnosed);
     }
 
+    /// <summary>
+    /// 构造连接超时的失败信息，并附上 RDP ActiveX 最后报告的失败原因（如果有）。
+    /// </summary>
     private ChildSessionConnectionFailedEventArgs CreateConnectionTimeoutFailure()
     {
         var timeoutMessage =
@@ -876,6 +893,9 @@ public sealed class ChildSessionService : IDisposable
         return builder.ToString();
     }
 
+    /// <summary>
+    /// 尝试断开 RDP 主机连接。ActiveX 正在自行断开时可能返回 COM 错误，忽略后仍继续注销 Child Session。
+    /// </summary>
     private void TryDisconnectRdpHost()
     {
         try
