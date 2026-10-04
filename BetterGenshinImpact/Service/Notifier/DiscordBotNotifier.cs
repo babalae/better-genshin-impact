@@ -21,10 +21,31 @@ using SixLabors.ImageSharp.PixelFormats;
 namespace BetterGenshinImpact.Service.Notifier;
 
 /// <summary>
+/// Discord 机器人消息格式。
+/// </summary>
+public static class DiscordBotMessageFormats
+{
+    /// <summary>
+    /// 纯文本消息
+    /// </summary>
+    public const string Plain = "Plain";
+
+    /// <summary>
+    /// 嵌入（embed）卡片
+    /// </summary>
+    public const string Embed = "Embed";
+
+    public static bool IsEmbed(string? format)
+    {
+        return string.Equals(format, Embed, StringComparison.OrdinalIgnoreCase);
+    }
+}
+
+/// <summary>
 /// Discord 机器人通知器：使用 Bot Token 调用 Discord REST API，把消息推送到多个目标。
-/// 目标可以是频道，也可以是使用者私讯，两者可以混用。
+/// 目标可以是频道，也可以是用户私信，两者可以混用。
 /// 与 <see cref="DiscordWebhookNotifier"/> 的区别是使用机器人身份，
-/// 可推送到机器人有权限的任意频道，且支援私讯。
+/// 可推送到机器人有权限的任意频道，且支持私信。
 /// ref: https://discord.com/developers/docs/resources/message#create-message
 /// </summary>
 public class DiscordBotNotifier : INotifier
@@ -38,6 +59,21 @@ public class DiscordBotNotifier : INotifier
     /// </summary>
     public const int MaxContentLength = 2000;
 
+    /// <summary>
+    /// Discord 嵌入描述长度上限（字符）。
+    /// </summary>
+    public const int MaxEmbedDescriptionLength = 4096;
+
+    /// <summary>
+    /// Discord 嵌入页脚长度上限（字符）。
+    /// </summary>
+    public const int MaxEmbedFooterLength = 2048;
+
+    /// <summary>
+    /// 嵌入卡片左侧色条颜色。
+    /// </summary>
+    private const int EmbedColor = 0x3B82F6;
+
     private const string TruncatedSuffix = "…";
 
     private readonly HttpClient _httpClient;
@@ -48,7 +84,12 @@ public class DiscordBotNotifier : INotifier
     private readonly DiscordBotApiClient _apiClient;
 
     /// <summary>
-    /// 使用者 ID → 私讯频道 ID 缓存。Discord 对同一使用者只会有一个私讯频道，可以长期复用。
+    /// 是否使用嵌入卡片发送。嵌入与纯文本用不同的字段，不能同时使用。
+    /// </summary>
+    private readonly bool _useEmbed;
+
+    /// <summary>
+    /// 用户 ID → 私信频道 ID 缓存。Discord 对同一用户只会有一个私信频道，可以长期复用。
     /// </summary>
     private readonly Dictionary<string, string> _directMessageChannels = new(StringComparer.Ordinal);
 
@@ -63,11 +104,13 @@ public class DiscordBotNotifier : INotifier
         HttpClient httpClient,
         string botToken,
         IEnumerable<DiscordBotTarget> targets,
+        string messageFormat,
         string imageFormat
     )
     {
         _httpClient = httpClient;
         _botToken = botToken?.Trim() ?? string.Empty;
+        _useEmbed = DiscordBotMessageFormats.IsEmbed(messageFormat);
         _targets = targets?
             .Where(target => !string.IsNullOrWhiteSpace(target?.Id))
             .Select(target => new TargetEntry(target.Type, target.Id.Trim(), target.DisplayName))
@@ -102,10 +145,10 @@ public class DiscordBotNotifier : INotifier
         if (_targets.Count == 0)
             throw new NotifierException("尚未设置 Discord 推送目标");
 
-        var contentJson = BuildContent(content);
-
         // 截图只编码一次，多个目标共用，避免重复压缩
+        var fileName = content.Screenshot == null ? null : $"screenshot.{_imageFormat}";
         var attachment = content.Screenshot == null ? null : await EncodeScreenshotAsync(content.Screenshot);
+        var payload = BuildPayload(content, fileName);
 
         var successCount = 0;
         var lastError = string.Empty;
@@ -117,7 +160,7 @@ public class DiscordBotNotifier : INotifier
                 var channelId = DiscordBotTargetTypes.IsDirectMessage(target.Type)
                     ? await ResolveDirectMessageChannelAsync(target.Id)
                     : target.Id;
-                await PostMessageAsync(channelId, contentJson, attachment);
+                await PostMessageAsync(channelId, payload, attachment, fileName);
                 successCount++;
             }
             catch (System.Exception ex)
@@ -132,7 +175,7 @@ public class DiscordBotNotifier : INotifier
     }
 
     /// <summary>
-    /// 解析使用者的私讯频道 ID，带缓存与并发保护（双重检查 + 信号量）。
+    /// 解析用户的私信频道 ID，带缓存与并发保护（双重检查 + 信号量）。
     /// </summary>
     private async Task<string> ResolveDirectMessageChannelAsync(string userId)
     {
@@ -152,7 +195,7 @@ public class DiscordBotNotifier : INotifier
             var channelId = await _apiClient.CreateDirectMessageChannelAsync(userId);
             if (string.IsNullOrEmpty(channelId))
             {
-                throw new NotifierException($"无法解析使用者 {userId} 的私讯频道");
+                throw new NotifierException($"无法解析用户 {userId} 的私信频道");
             }
 
             _directMessageChannels[userId] = channelId;
@@ -165,32 +208,24 @@ public class DiscordBotNotifier : INotifier
     }
 
     /// <summary>
-    /// 把消息发送到指定频道（频道 ID 或私讯频道 ID 都适用）。
+    /// 把消息发送到指定频道（频道 ID 或私信频道 ID 都适用）。
     /// </summary>
-    private async Task PostMessageAsync(string channelId, string contentJson, byte[]? attachment)
+    private async Task PostMessageAsync(string channelId, Dictionary<string, object> payload, byte[]? attachment, string? fileName)
     {
-        var payloadJson = new Dictionary<string, object>
-        {
-            ["content"] = contentJson,
-        };
-
         HttpContent requestContent;
 
-        if (attachment != null)
+        if (attachment != null && fileName != null)
         {
-            var fileName = $"screenshot.{_imageFormat}";
-            payloadJson["attachments"] = new List<object> { new { id = 0, filename = fileName } };
-
             var multipart = new MultipartFormDataContent("boundary");
             var imageContent = new ByteArrayContent(attachment);
             imageContent.Headers.ContentType = MediaTypeHeaderValue.Parse($"image/{_imageFormat}");
             multipart.Add(imageContent, "files[0]", fileName);
-            multipart.Add(JsonContent.Create(payloadJson), "payload_json");
+            multipart.Add(JsonContent.Create(payload), "payload_json");
             requestContent = multipart;
         }
         else
         {
-            requestContent = JsonContent.Create(payloadJson);
+            requestContent = JsonContent.Create(payload);
         }
 
         using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiBase}/channels/{channelId}/messages")
@@ -220,6 +255,64 @@ public class DiscordBotNotifier : INotifier
     private static string DescribeTarget(TargetEntry target)
     {
         return string.IsNullOrWhiteSpace(target.DisplayName) ? target.Id : target.DisplayName;
+    }
+
+    /// <summary>
+    /// 组装消息体。纯文本用 content 字段，嵌入用 embeds 字段，两者不能同时出现在同一条消息里。
+    /// </summary>
+    private Dictionary<string, object> BuildPayload(BaseNotificationData content, string? fileName)
+    {
+        var payload = _useEmbed
+            ? BuildEmbedPayload(content, fileName)
+            : new Dictionary<string, object> { ["content"] = BuildContent(content) };
+
+        if (fileName != null)
+        {
+            payload["attachments"] = new List<object> { new { id = 0, filename = fileName } };
+        }
+
+        return payload;
+    }
+
+    private static Dictionary<string, object> BuildEmbedPayload(BaseNotificationData content, string? fileName)
+    {
+        var embed = new Dictionary<string, object>
+        {
+            ["description"] = BuildEmbedDescription(content),
+            ["color"] = EmbedColor,
+            ["footer"] = new { text = BuildFooter(content) },
+            ["timestamp"] = content.Timestamp.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"),
+        };
+
+        // 嵌入的图片通过 attachment:// 引用同一条消息里的附件
+        if (fileName != null)
+        {
+            embed["image"] = new { url = $"attachment://{fileName}" };
+        }
+
+        return new Dictionary<string, object> { ["embeds"] = new List<object> { embed } };
+    }
+
+    /// <summary>
+    /// 嵌入正文。嵌入至少要有一个非空字段，正文为空时用事件/结果兜底，避免被 Discord 拒绝。
+    /// </summary>
+    private static string BuildEmbedDescription(BaseNotificationData content)
+    {
+        var message = content.Message?.Trim() ?? string.Empty;
+        if (string.IsNullOrEmpty(message))
+        {
+            return BuildFooter(content);
+        }
+
+        return message.Length > MaxEmbedDescriptionLength
+            ? message[..(MaxEmbedDescriptionLength - TruncatedSuffix.Length)] + TruncatedSuffix
+            : message;
+    }
+
+    private static string BuildFooter(BaseNotificationData content)
+    {
+        var footer = $"{content.Event} | {content.Result}";
+        return footer.Length > MaxEmbedFooterLength ? footer[..MaxEmbedFooterLength] : footer;
     }
 
     /// <summary>

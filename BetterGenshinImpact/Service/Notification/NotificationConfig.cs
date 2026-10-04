@@ -277,9 +277,14 @@ public partial class NotificationConfig : ObservableObject
 
     /// <summary>
     ///     Discord 机器人推送目标清单（Bot 方式）。
-    ///     频道与私讯可以混用，逐项推送；单项失败不影响其他项。
+    ///     频道与私信可以混用，逐项推送；单项失败不影响其他项。
     /// </summary>
     [ObservableProperty] private ObservableCollection<DiscordBotTarget> _discordBotTargets = [];
+
+    /// <summary>
+    ///     Discord 机器人消息格式：Plain（纯文本）或 Embed（嵌入卡片）
+    /// </summary>
+    [ObservableProperty] private string _discordBotMessageFormat = DiscordBotMessageFormats.Plain;
 
     /// <summary>
     ///     Discord Webhook地址

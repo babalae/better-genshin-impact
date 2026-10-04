@@ -299,7 +299,7 @@ public class NotificationService : IHostedService, IDisposable
     /// <summary>
     ///     初始化 Discord 通知器。
     ///     按配置的 Discord 通知方式二选一注册：Webhook 方式走频道 Webhook 地址，
-    ///     Bot 方式走机器人 Token + 频道 ID。两者互斥，避免同一条通知被推送两次。
+    ///     Bot 方式走机器人 Token + 推送目标清单。两者互斥，避免同一条通知被推送两次。
     /// </summary>
     private void InitializeDiscordNotifier()
     {
@@ -311,6 +311,7 @@ public class NotificationService : IHostedService, IDisposable
                 _notifyHttpClient,
                 _notificationConfig.DiscordBotToken,
                 _notificationConfig.DiscordBotTargets,
+                _notificationConfig.DiscordBotMessageFormat,
                 _notificationConfig.DiscordWebhookImageEncoder
             ));
             return;

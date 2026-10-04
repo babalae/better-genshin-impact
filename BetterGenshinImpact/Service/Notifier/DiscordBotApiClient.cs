@@ -47,7 +47,7 @@ public static class DiscordChannelTypes
 }
 
 /// <summary>
-/// Discord 机器人 REST API 客户端：用于列出服务器/频道/成员，以及解析私讯频道。
+/// Discord 机器人 REST API 客户端：用于列出服务器/频道/成员，以及解析私信频道。
 /// ref: https://discord.com/developers/docs/reference
 /// </summary>
 public sealed class DiscordBotApiClient
@@ -115,7 +115,7 @@ public sealed class DiscordBotApiClient
     }
 
     /// <summary>
-    /// 列出指定服务器的成员，用于挑选私讯对象。
+    /// 列出指定服务器的成员，用于挑选私信对象。
     /// 需要机器人开启 GUILD_MEMBERS 特权 intent，否则 Discord 会回 403。
     /// </summary>
     public async Task<List<DiscordMemberInfo>> GetGuildMembersAsync(string guildId, CancellationToken ct = default)
@@ -158,8 +158,8 @@ public sealed class DiscordBotApiClient
     }
 
     /// <summary>
-    /// 取得（或建立）与指定使用者的私讯频道，返回频道 ID。
-    /// Discord 对同一个使用者只会有一个私讯频道，因此结果可以长期缓存。
+    /// 取得（或建立）与指定用户的私信频道，返回频道 ID。
+    /// Discord 对同一个用户只会有一个私信频道，因此结果可以长期缓存。
     /// </summary>
     public async Task<string> CreateDirectMessageChannelAsync(string userId, CancellationToken ct = default)
     {
@@ -170,12 +170,12 @@ public sealed class DiscordBotApiClient
             "/users/@me/channels",
             content,
             ct,
-            "无法与该使用者建立私讯，请确认对方与机器人在同一个服务器");
+            "无法与该用户建立私信，请确认对方与机器人在同一个服务器");
         return GetString(root.RootElement, "id");
     }
 
     private const string MemberAccessHint =
-        "无法读取成员列表：请在 Discord 开发者后台 → Bot → Privileged Gateway Intents 开启 SERVER MEMBERS INTENT，或改用「手动输入使用者 ID」";
+        "无法读取成员列表：请在 Discord 开发者后台 → Bot → Privileged Gateway Intents 开启 SERVER MEMBERS INTENT，或改用「手动输入用户 ID」";
 
     /// <summary>
     /// 发送请求并解析 JSON 响应，失败时抛出带 Discord 错误信息的异常。
@@ -265,6 +265,6 @@ public sealed class DiscordBotApiClient
         }
 
         var username = GetString(user, "username");
-        return string.IsNullOrWhiteSpace(username) ? "未知使用者" : username;
+        return string.IsNullOrWhiteSpace(username) ? "未知用户" : username;
     }
 }

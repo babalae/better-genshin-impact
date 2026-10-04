@@ -2070,6 +2070,37 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
+                                  Text="{i18n:T 消息格式}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 机器人可选择纯文本或嵌入卡片}"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              Width="160"
+                              Margin="0,0,36,0"
+                              HorizontalAlignment="Right"
+                              SelectedValue="{Binding Config.NotificationConfig.DiscordBotMessageFormat, Mode=TwoWay}"
+                              SelectedValuePath="Tag">
+                        <ComboBoxItem Content="{i18n:T 普通消息}" Tag="Plain" />
+                        <ComboBoxItem Content="{i18n:T 嵌入}" Tag="Embed" />
+                    </ComboBox>
+                </Grid>
+                <Grid Margin="16" Visibility="{Binding IsDiscordBotMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="2*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
                                   Text="{i18n:T 推送目标}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"

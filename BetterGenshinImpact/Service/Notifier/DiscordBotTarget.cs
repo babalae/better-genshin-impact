@@ -14,12 +14,12 @@ public static class DiscordBotTargetTypes
     public const string Channel = "Channel";
 
     /// <summary>
-    /// 私讯推送给使用者
+    /// 私信推送给用户
     /// </summary>
     public const string DirectMessage = "DirectMessage";
 
     /// <summary>
-    /// 判断目标类型是否为私讯。配置可能来自旧版本或被手工修改，因此忽略大小写。
+    /// 判断目标类型是否为私信。配置可能来自旧版本或被手工修改，因此忽略大小写。
     /// </summary>
     public static bool IsDirectMessage(string? type)
     {
@@ -28,7 +28,7 @@ public static class DiscordBotTargetTypes
 }
 
 /// <summary>
-/// Discord 机器人推送目标：一个频道或一个私讯对象。
+/// Discord 机器人推送目标：一个频道或一个私信对象。
 /// 会作为配置项序列化进 config.json，因此属性保持简单可读。
 /// </summary>
 public partial class DiscordBotTarget : ObservableObject
@@ -39,12 +39,12 @@ public partial class DiscordBotTarget : ObservableObject
     [ObservableProperty] private string _type = DiscordBotTargetTypes.Channel;
 
     /// <summary>
-    /// 频道 ID（频道目标）或使用者 ID（私讯目标）
+    /// 频道 ID（频道目标）或用户 ID（私信目标）
     /// </summary>
     [ObservableProperty] private string _id = string.Empty;
 
     /// <summary>
-    /// 显示名称，例如「服务器名 / #频道名」或「服务器名 / @使用者」。
+    /// 显示名称，例如「服务器名 / #频道名」或「服务器名 / @用户」。
     /// 仅用于界面显示，推送时不使用。
     /// </summary>
     [ObservableProperty] private string _displayName = string.Empty;

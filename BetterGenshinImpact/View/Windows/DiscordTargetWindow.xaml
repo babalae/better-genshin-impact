@@ -35,12 +35,12 @@
         <StackPanel Grid.Row="1"
                     Margin="12,8,12,0"
                     Orientation="Horizontal">
-            <ui:Button Click="OnRefreshClick" Content="{i18n:T 重新整理}" />
+            <ui:Button Click="OnRefreshClick" Content="{i18n:T 刷新}" />
             <ui:TextBlock x:Name="StatusText"
                           Margin="12,0,0,0"
                           VerticalAlignment="Center"
                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                          Text="{i18n:T 展开服务器可载入频道与成员}"
+                          Text="{i18n:T 展开服务器可加载频道与成员}"
                           TextWrapping="Wrap" />
         </StackPanel>
 
@@ -92,7 +92,7 @@
                 <ui:Button Margin="0,0,8,0"
                            Click="OnManualChannelClick"
                            Content="{i18n:T 手动输入频道 ID}" />
-                <ui:Button Click="OnManualUserClick" Content="{i18n:T 手动输入使用者 ID}" />
+                <ui:Button Click="OnManualUserClick" Content="{i18n:T 手动输入用户 ID}" />
             </StackPanel>
 
             <StackPanel Grid.Column="1" Orientation="Horizontal">

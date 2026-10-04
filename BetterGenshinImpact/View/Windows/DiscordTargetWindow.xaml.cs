@@ -46,7 +46,7 @@ public sealed class DiscordTargetNode
     public string GuildName { get; init; } = string.Empty;
 
     /// <summary>
-    /// 子节点是否已载入过，用于 TreeView 惰性载入
+    /// 子节点是否已加载过，用于 TreeView 惰性加载
     /// </summary>
     public bool ChildrenLoaded { get; set; }
 }
@@ -99,16 +99,16 @@ public partial class DiscordTargetWindow : FluentWindow
 
     private static DiscordTargetNode CreatePlaceholder()
     {
-        return new DiscordTargetNode { Title = I18nService.Instance.Translate("载入中…"), Kind = DiscordTargetNodeKind.Placeholder };
+        return new DiscordTargetNode { Title = I18nService.Instance.Translate("加载中…"), Kind = DiscordTargetNodeKind.Placeholder };
     }
 
     /// <summary>
-    /// 载入机器人所在的服务器列表。频道与成员在展开时才拉取，避免一次打太多 API。
+    /// 加载机器人所在的服务器列表。频道与成员在展开时才拉取，避免一次打太多 API。
     /// </summary>
     private async Task LoadGuildsAsync()
     {
         RootNodes.Clear();
-        SetStatus(I18nService.Instance.Translate("正在载入服务器…"));
+        SetStatus(I18nService.Instance.Translate("正在加载服务器…"));
 
         try
         {
@@ -128,7 +128,7 @@ public partial class DiscordTargetWindow : FluentWindow
 
             SetStatus(guilds.Count == 0
                 ? I18nService.Instance.Translate("机器人尚未加入任何服务器，请先邀请机器人")
-                : string.Format(I18nService.Instance.Translate("共 {0} 个服务器，展开后可载入频道与成员"), guilds.Count));
+                : string.Format(I18nService.Instance.Translate("共 {0} 个服务器，展开后可加载频道与成员"), guilds.Count));
         }
         catch (Exception ex)
         {
@@ -171,7 +171,7 @@ public partial class DiscordTargetWindow : FluentWindow
     {
         guildNode.Children.Clear();
         AddGroup(guildNode, I18nService.Instance.Translate("频道"), DiscordTargetNodeKind.ChannelGroup);
-        AddGroup(guildNode, I18nService.Instance.Translate("成员（私讯对象）"), DiscordTargetNodeKind.MemberGroup);
+        AddGroup(guildNode, I18nService.Instance.Translate("成员（私信对象）"), DiscordTargetNodeKind.MemberGroup);
     }
 
     private static void AddGroup(DiscordTargetNode parent, string title, DiscordTargetNodeKind kind)
@@ -188,11 +188,11 @@ public partial class DiscordTargetWindow : FluentWindow
     }
 
     /// <summary>
-    /// 载入频道并按分类（Discord 的频道分组）做二级归类，没有分类的频道放在最后。
+    /// 加载频道并按分类（Discord 的频道分组）做二级归类，没有分类的频道放在最后。
     /// </summary>
     private async Task LoadChannelsAsync(DiscordTargetNode groupNode)
     {
-        SetStatus(I18nService.Instance.Translate("正在载入频道…"));
+        SetStatus(I18nService.Instance.Translate("正在加载频道…"));
         var channels = await _apiClient.GetGuildChannelsAsync(groupNode.GuildId);
 
         groupNode.Children.Clear();
@@ -269,11 +269,11 @@ public partial class DiscordTargetWindow : FluentWindow
     }
 
     /// <summary>
-    /// 载入服务器成员作为私讯对象。需要机器人开启 SERVER MEMBERS INTENT，否则会显示 Discord 返回的错误。
+    /// 加载服务器成员作为私信对象。需要机器人开启 SERVER MEMBERS INTENT，否则会显示 Discord 返回的错误。
     /// </summary>
     private async Task LoadMembersAsync(DiscordTargetNode groupNode)
     {
-        SetStatus(I18nService.Instance.Translate("正在载入成员…"));
+        SetStatus(I18nService.Instance.Translate("正在加载成员…"));
         var members = await _apiClient.GetGuildMembersAsync(groupNode.GuildId);
 
         groupNode.Children.Clear();
@@ -281,7 +281,7 @@ public partial class DiscordTargetWindow : FluentWindow
         {
             groupNode.Children.Add(new DiscordTargetNode
             {
-                Title = I18nService.Instance.Translate("没有可私讯的成员"),
+                Title = I18nService.Instance.Translate("没有可私信的成员"),
                 Kind = DiscordTargetNodeKind.Info,
             });
             SetStatus(string.Empty);
@@ -344,7 +344,7 @@ public partial class DiscordTargetWindow : FluentWindow
 
     private void OnManualUserClick(object sender, RoutedEventArgs e)
     {
-        AddManualTarget(DiscordBotTargetTypes.DirectMessage, I18nService.Instance.Translate("使用者 ID"));
+        AddManualTarget(DiscordBotTargetTypes.DirectMessage, I18nService.Instance.Translate("用户 ID"));
     }
 
     /// <summary>
