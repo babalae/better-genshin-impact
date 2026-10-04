@@ -4,21 +4,18 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Pulonia.Models;
-using BetterGenshinImpact.Service;
 
 namespace BetterGenshinImpact.Pulonia.Services;
 
 /// <summary>与执行队列共享 state.json 的触发准入与游标推进。</summary>
 public sealed partial class PuloniaTaskService
 {
-    /// <summary>单调空闲检测入口，缺失时自动任务保守等待。</summary>
-    private readonly IPuloniaUserActivityMonitor? _activityMonitor;
     /// <summary>可注入的 UTC 时钟，测试不依赖真实计时。</summary>
     private readonly TimeProvider _timeProvider;
     /// <summary>串行处理定时与热键事件，避免重复准备同一 occurrence。</summary>
     private readonly SemaphoreSlim _triggerGate = new(1, 1);
 
-    /// <summary>取得独立的调度状态副本，用于界面显示和系统下次唤起。</summary>
+    /// <summary>取得独立的调度状态副本，用于界面显示。</summary>
     public async Task<IReadOnlyList<PuloniaTaskTriggerState>> ListTriggerStatesAsync(CancellationToken ct = default)
     {
         await _initialization.WaitAsync(ct).ConfigureAwait(false);
@@ -63,7 +60,7 @@ public sealed partial class PuloniaTaskService
                 var alreadyObserved = cursor.PendingOccurrenceUtc == due;
                 cursor.PendingOccurrenceUtc = due;
                 cursor.NextOccurrenceUtc = PuloniaTaskSchedule.Next(trigger, due.Value);
-                // 不补离线遗漏，但到点已观察到的事件仍可以在窗口内正常等待空闲。
+                // 不补离线遗漏，但到点已观察到的事件仍可以在窗口内提交。
                 if (!trigger.CatchUp && !alreadyObserved && now - due.Value > TimeSpan.FromSeconds(5))
                 {
                     cursor.LastOccurrenceUtc = due;
@@ -152,21 +149,10 @@ public sealed partial class PuloniaTaskService
         cursor.Message = record.Message;
     }
 
-    /// <summary>检查空闲与忙碌，再把请求、去重键和游标一起提交。</summary>
+    /// <summary>检查忙碌策略，再把请求、去重键和游标一起提交。</summary>
     private async Task SubmitTriggerAsync(PuloniaTaskPlan plan, PuloniaTaskTrigger trigger,
         PuloniaTaskTriggerState cursor, DateTimeOffset occurrence, CancellationToken ct)
     {
-        if (!IsIdleAllowed(trigger.RequireIdle, trigger.IdleSeconds))
-        {
-            cursor.Status = "等待空闲";
-            cursor.Message = "在有效窗口内等待解锁及用户空闲；未占用游戏输入。";
-            // 热键不是周期事件，允许排队后等待；定时任务保留待触发游标。
-            if (trigger.Kind == PuloniaTaskTriggerKind.Schedule)
-            {
-                await SaveTriggerCursorAsync(cursor, ct).ConfigureAwait(false);
-                return;
-            }
-        }
         RunState[] busy;
         lock (_runsGate) busy = _runs.Values.Where(item => !item.IsTerminal()
             && item.Request.PlanId == plan.Id && item.Request.AccountId == trigger.AccountId).ToArray();
@@ -189,8 +175,7 @@ public sealed partial class PuloniaTaskService
                 Source = trigger.Kind == PuloniaTaskTriggerKind.Hotkey ? "hotkey" : "schedule",
                 TriggerId = trigger.Id, TriggerSignature = cursor.Signature, OccurrenceUtc = occurrence,
                 DeadlineUtc = occurrence.AddMinutes(trigger.WindowMinutes), TimeoutSeconds = trigger.TimeoutSeconds,
-                RequireIdle = trigger.RequireIdle, IdleSeconds = trigger.IdleSeconds,
-                StopOnUserActivity = trigger.StopOnUserActivity, BusyPolicy = trigger.BusyPolicy
+                BusyPolicy = trigger.BusyPolicy
             };
             await EnqueueCoreAsync(request, (state, id) =>
             {
@@ -224,12 +209,7 @@ public sealed partial class PuloniaTaskService
         }
     }
 
-    /// <summary>桌面不可确认时保守等待，手动请求不强制无人值守准入。</summary>
-    private bool IsIdleAllowed(bool requireIdle, int seconds)
-        => _activityMonitor is not null && _activityMonitor.DesktopAvailable
-            && (!requireIdle || _activityMonitor.IdleSeconds >= seconds);
-
-    /// <summary>真正开始时复核配置、截止时间和空闲；过期请求归档而不是执行。</summary>
+    /// <summary>真正开始时复核配置和截止时间；过期请求归档而不是执行。</summary>
     private async Task<bool> AdmitQueuedRunAsync(RunState state)
     {
         if (state.IsTerminal()) return false;
@@ -262,36 +242,7 @@ public sealed partial class PuloniaTaskService
             await CompleteStateAsync(state).ConfigureAwait(false);
             return false;
         }
-        return IsIdleAllowed(state.Request.RequireIdle, state.Request.IdleSeconds);
-    }
-
-    /// <summary>纯等待或非输入任务同样响应用户返回；输入通道另有每次调用的同步检查。</summary>
-    private async Task WatchActivityAsync(RunState state, long? version, CancellationToken ct)
-    {
-        if (!state.Request.StopOnUserActivity) return;
-        try
-        {
-            using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(100));
-            while (await timer.WaitForNextTickAsync(ct).ConfigureAwait(false))
-                if (_activityMonitor is null || !_activityMonitor.DesktopAvailable || _activityMonitor.ActivityVersion != version)
-                {
-                    RequestCancellation(state, TaskStopReason.UserActivity);
-                    return;
-                }
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
-    }
-
-    /// <summary>仅当前游戏租约调用的同步检查，用户返回后下一次输入立即拒绝。</summary>
-    private void CheckActivityForInput(RunState state, CancellationToken ct)
-    {
-        ct.ThrowIfCancellationRequested();
-        if (_activityMonitor is null || !_activityMonitor.DesktopAvailable
-            || _activityMonitor.ActivityVersion != state.InitialActivityVersion)
-        {
-            RequestCancellation(state, TaskStopReason.UserActivity);
-            throw new OperationCanceledException(ct);
-        }
+        return true;
     }
 
     /// <summary>准入复核遇到并发忙碌时的受控跳过，不表示存储故障。</summary>

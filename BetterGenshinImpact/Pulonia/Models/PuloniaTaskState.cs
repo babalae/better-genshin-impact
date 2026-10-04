@@ -55,6 +55,6 @@ public sealed class PuloniaTaskState
     [JsonProperty("uncertain_operations", Required = Required.DisallowNull)]
     public List<PuloniaTaskOperationIntent> UncertainOperations { get; set; } = [];
 
-    /// <summary>已处理日程与待空闲发生项，恢复、补触发和时钟回拨共用此游标。</summary>
+    /// <summary>已处理日程与待提交发生项，恢复、补触发和时钟回拨共用此游标。</summary>
     public List<PuloniaTaskTriggerState> TriggerStates { get; set; } = [];
 }

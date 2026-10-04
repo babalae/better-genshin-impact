@@ -147,7 +147,6 @@ public abstract class InputChannelBase : IInputChannel, IKeyboardInput, IMouseIn
 
     public IKeyboardInput KeyDown(User32.VK key)
     {
-        InputSafetyGate.Check();
         if (TryGetMouseButton(key, out var button))
         {
             ButtonDown(button);
@@ -174,7 +173,6 @@ public abstract class InputChannelBase : IInputChannel, IKeyboardInput, IMouseIn
 
     public IKeyboardInput KeyPress(User32.VK key)
     {
-        InputSafetyGate.Check();
         if (TryGetMouseButton(key, out var button))
         {
             ButtonClick(button);
@@ -198,14 +196,12 @@ public abstract class InputChannelBase : IInputChannel, IKeyboardInput, IMouseIn
 
     public IMouseInput MoveMouseBy(int dx, int dy)
     {
-        InputSafetyGate.Check();
         OnMoveBy(dx, dy);
         return this;
     }
 
     public IMouseInput MoveMouseTo(double absX, double absY)
     {
-        InputSafetyGate.Check();
         OnMoveTo(absX, absY);
         return this;
     }
@@ -236,7 +232,6 @@ public abstract class InputChannelBase : IInputChannel, IKeyboardInput, IMouseIn
 
     public IMouseInput VerticalScroll(int scrollAmountInClicks)
     {
-        InputSafetyGate.Check();
         OnScroll(scrollAmountInClicks);
         return this;
     }
@@ -334,7 +329,6 @@ public abstract class InputChannelBase : IInputChannel, IKeyboardInput, IMouseIn
 
     private InputChannelBase ButtonDown(InputMouseButton button)
     {
-        InputSafetyGate.Check();
         OnMouseButton(button, true);
         SetPressed(ToVirtualKey(button), true);
         return this;
@@ -349,7 +343,6 @@ public abstract class InputChannelBase : IInputChannel, IKeyboardInput, IMouseIn
 
     private InputChannelBase ButtonClick(InputMouseButton button)
     {
-        InputSafetyGate.Check();
         SetPressed(ToVirtualKey(button), false);
         OnMouseClick(button);
         return this;

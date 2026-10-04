@@ -1,7 +1,4 @@
 using System.Windows.Input;
-using System.Xml.Linq;
-using BetterGenshinImpact.Core.Input;
-using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
@@ -12,7 +9,7 @@ using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.UnitTest.Pulonia;
 
-/// <summary>日程、配置表单与耐久调度回归；不启动应用、游戏，也不注册真实系统任务。</summary>
+/// <summary>日程、配置表单与耐久调度回归；不启动应用或游戏。</summary>
 public sealed class PuloniaTaskTriggerTests : IDisposable
 {
     /// <summary>本测试独占临时目录。</summary>
@@ -103,23 +100,17 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
         Assert.Equal(trigger.AnchorUtc, editor.CreateTrigger().AnchorUtc);
     }
 
-    /// <summary>空闲不足不提交请求；之后补一次，重启及回拨都不会再次执行同一发生时间。</summary>
+    /// <summary>到点立即提交请求，重启及回拨都不会再次执行同一发生时间。</summary>
     [Fact]
-    public async Task Scheduler_WaitsForIdleAndDeduplicatesAcrossRestart()
+    public async Task Scheduler_RunsImmediatelyAndDeduplicatesAcrossRestart()
     {
         using var store = new PuloniaTaskStore(_directory);
         var clock = new TestClock();
-        var activity = new TestActivity { IdleSeconds = 0 };
         var plan = Plan(); plan.Triggers.Add(Trigger(clock));
-        plan.Triggers[0].RequireIdle = true;
         plan = await store.SavePlanAsync(plan);
         Guid id;
-        await using (var service = Service(store, activity, clock))
+        await using (var service = Service(store, clock))
         {
-            await service.CheckTriggersAsync([plan]);
-            Assert.Empty(await service.ListRunsAsync());
-            Assert.Equal("等待空闲", Assert.Single(await service.ListTriggerStatesAsync()).Status);
-            activity.IdleSeconds = 3600;
             await service.CheckTriggersAsync([plan]);
             id = Assert.Single(await service.ListRunsAsync()).RequestId;
             Assert.Equal(PuloniaTaskRunStatus.Succeeded, (await service.WaitForCompletionAsync(id).WaitAsync(TimeSpan.FromSeconds(15))).Status);
@@ -129,7 +120,7 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
             Assert.Equal(id, Assert.Single(persisted.State.TriggerStates).LastRequestId);
             Assert.Equal("已完成", Assert.Single(persisted.State.TriggerStates).Status);
         }
-        await using var restarted = Service(store, activity, clock);
+        await using var restarted = Service(store, clock);
         await restarted.CheckTriggersAsync([plan]);
         clock.Advance(TimeSpan.FromMinutes(-20));
         await restarted.CheckTriggersAsync([plan]);
@@ -147,7 +138,7 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
         var clock = new TestClock(); clock.Advance(TimeSpan.FromHours(2));
         var plan = Plan(); var trigger = Trigger(clock); trigger.ActivatedAtUtc = clock.GetUtcNow().AddDays(-20);
         trigger.CatchUp = catchUp; plan.Triggers.Add(trigger); plan = await store.SavePlanAsync(plan);
-        await using var service = Service(store, new TestActivity(), clock);
+        await using var service = Service(store, clock);
         await service.CheckTriggersAsync([plan]);
         var runs = await service.ListRunsAsync();
         Assert.Equal(expected, runs.Count);
@@ -168,7 +159,7 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
         registry.Register("test.block", async (_, _, ct) => { entered.SetResult(); await release.Task.WaitAsync(ct); return PuloniaTaskOutcome.Success("退出"); });
         var blocker = Plan("test.block"); blocker = await store.SavePlanAsync(blocker);
         var plan = Plan(); plan.Triggers.Add(Trigger(clock)); plan = await store.SavePlanAsync(plan);
-        await using var service = Service(store, new TestActivity(), clock, registry);
+        await using var service = Service(store, clock, registry);
         await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = blocker.Id });
         await entered.Task.WaitAsync(TimeSpan.FromSeconds(15));
         await service.CheckTriggersAsync([plan]);
@@ -199,36 +190,6 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
         Assert.EndsWith("/" + target.Id, snapshot.RootTask.Children[0].TaskAddress);
     }
 
-    /// <summary>用户活动后下一次新增输入同步拒绝；抬键收尾不会被拒绝。</summary>
-    [Fact]
-    public void InputGate_RejectsNewInputButAllowsKeyRelease()
-    {
-        var input = new TestInput();
-        using (InputSafetyGate.Enter(() => throw new OperationCanceledException()))
-        {
-            Assert.Throws<OperationCanceledException>(() => input.KeyDown(Vanara.PInvoke.User32.VK.VK_W));
-            Assert.Throws<OperationCanceledException>(() => input.MoveMouseBy(1, 0));
-            input.KeyUp(Vanara.PInvoke.User32.VK.VK_W);
-            Assert.Equal(1, input.Releases);
-        }
-        input.KeyDown(Vanara.PInvoke.User32.VK.VK_W);
-        Assert.Equal(1, input.Presses);
-    }
-
-    /// <summary>系统任务 XML 只使用交互用户和统一分发命令，路径按 XML 转义。</summary>
-    [Fact]
-    public void WindowsTask_UsesInteractiveDispatchAndEscapesPath()
-    {
-        var xml = XDocument.Parse(PuloniaWindowsTaskScheduler.BuildXml(@"C:\测试 & 路径\BetterGI.exe", "S-1-5-test",
-            DateTimeOffset.Parse("2026-10-05T04:00:00+08:00"), true));
-        XNamespace ns = "http://schemas.microsoft.com/windows/2004/02/mit/task";
-        Assert.Equal("--pulonia-dispatch", xml.Descendants(ns + "Arguments").Single().Value);
-        Assert.Equal("InteractiveToken", xml.Descendants(ns + "LogonType").Single().Value);
-        Assert.Equal("2026-10-04T20:00:00Z", xml.Descendants(ns + "StartBoundary").Single().Value);
-        Assert.Equal(@"C:\测试 & 路径\BetterGI.exe", xml.Descendants(ns + "Command").Single().Value);
-        Assert.Equal("true", xml.Descendants(ns + "WakeToRun").Single().Value);
-    }
-
     /// <summary>恢复已持久化的排队请求时必须可消费，不能再次提交同一 occurrence。</summary>
     [Fact]
     public async Task Restart_RestoresDurableQueueWithCursor()
@@ -252,7 +213,7 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
                 Signature = PuloniaTaskSchedule.Signature(trigger), LastOccurrenceUtc = occurrence, LastRequestId = id,
                 NextOccurrenceUtc = PuloniaTaskSchedule.Next(trigger, occurrence) }]
         });
-        await using var service = Service(store, new TestActivity(), clock);
+        await using var service = Service(store, clock);
         await service.CheckTriggersAsync([plan]);
         Assert.Equal(PuloniaTaskRunStatus.Succeeded, (await service.WaitForCompletionAsync(id).WaitAsync(TimeSpan.FromSeconds(15))).Status);
         Assert.Single(await service.ListRunsAsync());
@@ -274,7 +235,7 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
         trigger.BusyPolicy = policy; trigger.ScheduleKind = PuloniaTaskScheduleKind.Interval;
         trigger.AnchorUtc = clock.GetUtcNow().AddSeconds(-2); trigger.IntervalMinutes = 1;
         plan.Triggers.Add(trigger); plan = await store.SavePlanAsync(plan);
-        await using var service = Service(store, new TestActivity(), clock, registry);
+        await using var service = Service(store, clock, registry);
         await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = plan.Id });
         await entered.Task.WaitAsync(TimeSpan.FromSeconds(15));
         for (var i = 0; i < 3; i++) { await service.CheckTriggersAsync([plan]); clock.Advance(TimeSpan.FromMinutes(1)); }
@@ -300,35 +261,12 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
         var blocker = await store.SavePlanAsync(Plan("test.block"));
         var plan = Plan("test.after"); var trigger = Trigger(clock); trigger.BusyPolicy = PuloniaTaskBusyPolicy.StopCurrent;
         plan.Triggers.Add(trigger); plan = await store.SavePlanAsync(plan);
-        await using var service = Service(store, new TestActivity(), clock, registry);
+        await using var service = Service(store, clock, registry);
         var old = await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = blocker.Id });
         await entered.Task.WaitAsync(TimeSpan.FromSeconds(15)); await service.CheckTriggersAsync([plan]);
         var next = (await service.ListRunsAsync()).Single(item => item.PlanId == plan.Id).RequestId;
         Assert.Equal(PuloniaTaskRunStatus.Cancelled, (await service.WaitForCompletionAsync(old).WaitAsync(TimeSpan.FromSeconds(15))).Status);
         Assert.Equal(PuloniaTaskRunStatus.Succeeded, (await service.WaitForCompletionAsync(next).WaitAsync(TimeSpan.FromSeconds(15))).Status);
-    }
-
-    /// <summary>不产生输入的任务也必须检测用户返回并留下明确取消原因。</summary>
-    [Fact]
-    public async Task UserActivity_CancelsPureWaitingTask()
-    {
-        using var store = new PuloniaTaskStore(_directory);
-        var clock = new TestClock(); var activity = new TestActivity();
-        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var registry = new PuloniaCSharpTaskRegistry();
-        registry.Register("test.wait", async (_, _, ct) => { entered.SetResult(); await Task.Delay(Timeout.InfiniteTimeSpan, ct); return PuloniaTaskOutcome.Success("不会到达"); });
-        var plan = Plan("test.wait"); var trigger = Trigger(clock); trigger.StopOnUserActivity = true;
-        plan.Triggers.Add(trigger); plan = await store.SavePlanAsync(plan);
-        await using var service = Service(store, activity, clock, registry);
-        await service.CheckTriggersAsync([plan]); await entered.Task.WaitAsync(TimeSpan.FromSeconds(15));
-        var id = Assert.Single(await service.ListRunsAsync()).RequestId;
-        // 纯任务没有游戏输入所有权，不得安装全局安全门干扰独立游戏任务。
-        var unrelatedInput = new TestInput(); unrelatedInput.KeyDown(Vanara.PInvoke.User32.VK.VK_W);
-        Assert.Equal(1, unrelatedInput.Presses);
-        activity.ActivityVersion++;
-        var result = await service.WaitForCompletionAsync(id).WaitAsync(TimeSpan.FromSeconds(15));
-        Assert.Equal(PuloniaTaskRunStatus.Cancelled, result.Status);
-        Assert.Contains("用户活动", result.Message);
     }
 
     /// <summary>全局热键主动连按由防抖和同计划忙碌策略合并，不依赖真实热键注册。</summary>
@@ -338,22 +276,25 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
         using var store = new PuloniaTaskStore(_directory);
         var clock = new TestClock(); var plan = Plan(); var trigger = Trigger(clock);
         trigger.Kind = PuloniaTaskTriggerKind.Hotkey; plan.Triggers.Add(trigger); plan = await store.SavePlanAsync(plan);
-        await using var service = Service(store, new TestActivity(), clock);
+        await using var service = Service(store, clock);
         await service.FireHotkeyAsync(plan.Id, trigger.Id); await service.FireHotkeyAsync(plan.Id, trigger.Id);
         Assert.Single(await service.ListRunsAsync());
     }
 
-    /// <summary>关闭离线补触发不等于关闭到点后的空闲等待。</summary>
+    /// <summary>关闭离线补触发时，到点立即运行且不会在后续扫描重复提交。</summary>
     [Fact]
-    public async Task NoCatchUp_OnTimeOccurrenceCanWaitForIdle()
+    public async Task NoCatchUp_OnTimeOccurrenceRunsImmediately()
     {
         using var store = new PuloniaTaskStore(_directory);
-        var clock = new TestClock(); var activity = new TestActivity { IdleSeconds = 0 };
-        var plan = Plan(); var trigger = Trigger(clock); trigger.CatchUp = false; trigger.RequireIdle = true;
+        var clock = new TestClock();
+        var plan = Plan(); var trigger = Trigger(clock); trigger.CatchUp = false;
         plan.Triggers.Add(trigger); plan = await store.SavePlanAsync(plan);
-        await using var service = Service(store, activity, clock);
-        await service.CheckTriggersAsync([plan]); Assert.Empty(await service.ListRunsAsync());
-        clock.Advance(TimeSpan.FromMinutes(10)); activity.IdleSeconds = 3600;
+        await using var service = Service(store, clock);
+        await service.CheckTriggersAsync([plan]);
+        var id = Assert.Single(await service.ListRunsAsync()).RequestId;
+        Assert.Equal(PuloniaTaskRunStatus.Succeeded,
+            (await service.WaitForCompletionAsync(id).WaitAsync(TimeSpan.FromSeconds(15))).Status);
+        clock.Advance(TimeSpan.FromMinutes(10));
         await service.CheckTriggersAsync([plan]);
         Assert.Single(await service.ListRunsAsync());
     }
@@ -375,13 +316,13 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
 
     /// <summary>建立已启用且覆盖当前发生时刻的日程。</summary>
     private static PuloniaTaskTrigger Trigger(TestClock clock) => new()
-    { Enabled = true, ActivatedAtUtc = clock.GetUtcNow().AddHours(-1), RequireIdle = false, StopOnUserActivity = false };
+    { Enabled = true, ActivatedAtUtc = clock.GetUtcNow().AddHours(-1) };
 
     /// <summary>建立仅使用受控 C# 执行器的调度服务。</summary>
-    private static PuloniaTaskService Service(PuloniaTaskStore store, TestActivity activity, TestClock clock,
+    private static PuloniaTaskService Service(PuloniaTaskStore store, TestClock clock,
         PuloniaCSharpTaskRegistry? registry = null) => new(store, new PuloniaTaskBuilder(store),
         [new PuloniaCSharpTaskExecutor(registry ?? new PuloniaCSharpTaskRegistry())],
-        new PuloniaGameTaskCoordinator(null!), new TaskStopService(NullLogger<TaskStopService>.Instance), activity, clock);
+        new PuloniaGameTaskCoordinator(null!), new TaskStopService(NullLogger<TaskStopService>.Instance), clock);
 
     /// <summary>可回拨的 UTC 测试时钟，计时器仍使用真实有界等待。</summary>
     private sealed class TestClock : TimeProvider
@@ -394,35 +335,4 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
         public void Advance(TimeSpan duration) => Interlocked.Add(ref _ticks, duration.Ticks);
     }
 
-    /// <summary>不读取真实桌面的空闲检测替身。</summary>
-    private sealed class TestActivity : IPuloniaUserActivityMonitor
-    {
-        /// <summary>模拟桌面可用。</summary>
-        public bool DesktopAvailable { get; set; } = true;
-        /// <summary>模拟空闲秒数。</summary>
-        public double IdleSeconds { get; set; } = 3600;
-        /// <summary>用户活动版本。</summary>
-        public long ActivityVersion { get; set; }
-    }
-
-    /// <summary>不会向系统发送输入的通道替身。</summary>
-    private sealed class TestInput : InputChannelBase
-    {
-        /// <summary>按下次数。</summary>
-        public int Presses { get; private set; }
-        /// <summary>抬起次数。</summary>
-        public int Releases { get; private set; }
-        /// <summary>记录按下。</summary>
-        protected override void OnKeyDown(Vanara.PInvoke.User32.VK key) => Presses++;
-        /// <summary>记录抬起。</summary>
-        protected override void OnKeyUp(Vanara.PInvoke.User32.VK key) => Releases++;
-        /// <summary>不发送鼠标事件。</summary>
-        protected override void OnMouseButton(InputMouseButton button, bool down) { }
-        /// <summary>不发送相对移动。</summary>
-        protected override void OnMoveBy(int dx, int dy) { }
-        /// <summary>不发送绝对移动。</summary>
-        protected override void OnMoveTo(double x, double y) { }
-        /// <summary>不发送滚轮。</summary>
-        protected override void OnScroll(int clicks) { }
-    }
 }

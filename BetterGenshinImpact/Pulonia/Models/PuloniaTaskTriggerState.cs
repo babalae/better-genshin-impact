@@ -17,11 +17,11 @@ public sealed class PuloniaTaskTriggerState
     public DateTimeOffset? LastOccurrenceUtc { get; set; }
     /// <summary>下一个日程时刻，空值表示一次性日程已结束或热键入口。</summary>
     public DateTimeOffset? NextOccurrenceUtc { get; set; }
-    /// <summary>正在等待空闲或准入的发生时刻。</summary>
+    /// <summary>已观察到、正在等待提交的发生时刻。</summary>
     public DateTimeOffset? PendingOccurrenceUtc { get; set; }
     /// <summary>最近一次入队的请求。</summary>
     public Guid? LastRequestId { get; set; }
-    /// <summary>供 UI 显示的状态：等待、等待空闲、入队、过期、跳过、错误等。</summary>
+    /// <summary>供 UI 显示的状态：等待、入队、过期、跳过、错误等。</summary>
     public string Status { get; set; } = "等待";
     /// <summary>当前状态的具体原因。</summary>
     public string Message { get; set; } = string.Empty;

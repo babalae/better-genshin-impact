@@ -16,23 +16,17 @@ using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Pulonia.Services;
 
-/// <summary>主实例的唯一异步调度循环，负责热键与 Windows 启动入口适配。</summary>
+/// <summary>主实例的唯一异步调度循环，负责程序内定时、全局热键与手动命令行入口。</summary>
 public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, PuloniaTaskService tasks,
-    PuloniaUserActivityMonitor activity, InstanceService instances, PuloniaWindowsTaskScheduler windows,
+    InstanceService instances,
     ILogger<PuloniaTaskTriggerHost> logger, TimeProvider clock) : BackgroundService
 {
     /// <summary>UI 线程拥有的全局热键注册。</summary>
     private readonly List<HotkeyHook> _hotkeys = [];
     /// <summary>已注册热键的配置签名。</summary>
     private string _hotkeySignature = "";
-    /// <summary>已同步的系统任务签名，避免每秒写系统任务。</summary>
-    private string _windowsSignature = "";
-    /// <summary>下一次系统注册失败重试时间。</summary>
-    private DateTimeOffset _windowsRetry;
     /// <summary>热键冲突或注册错误。</summary>
     private string _hotkeyError = "";
-    /// <summary>系统任务同步错误。</summary>
-    private string _windowsError = "";
     /// <summary>应用启动或关闭命令取消信号。</summary>
     private CancellationToken _stopToken;
     /// <summary>可供界面读取的最后一次状态，不暴露服务内部游标。</summary>
@@ -55,9 +49,8 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, PuloniaTaskSe
         try { await Application.Current.Dispatcher.InvokeAsync(() =>
         {
             Application.Current.Dispatcher.ShutdownStarted += OnDispatcherShutdown;
-            activity.Start();
         }); }
-        catch (Exception ex) { logger.LogError(ex, "Pulonia 用户活动检测启动失败"); }
+        catch (Exception ex) { logger.LogError(ex, "Pulonia 热键清理事件绑定失败"); }
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1), clock);
         IReadOnlyList<PuloniaTaskPlan> plans = [];
         var version = -1L;
@@ -79,9 +72,7 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, PuloniaTaskSe
                     }
                     await tasks.CheckTriggersAsync(plans, stoppingToken).ConfigureAwait(false);
                     States = await tasks.ListTriggerStatesAsync(stoppingToken).ConfigureAwait(false);
-                    await SynchronizeWindowsAsync(plans, now).ConfigureAwait(false);
-                    Status = "主实例调度运行中。" + (!activity.DesktopAvailable ? "桌面不可用，自动任务等待解锁。" : "")
-                        + _hotkeyError + _windowsError;
+                    Status = "主实例调度运行中（仅在程序运行时生效）。" + _hotkeyError;
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
@@ -98,21 +89,19 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, PuloniaTaskSe
         {
             // WPF 关闭时 ShutdownStarted 已在所属线程释放钩子，不向已退出的 Dispatcher 排队。
             var dispatcher = Application.Current.Dispatcher;
-            if (!dispatcher.HasShutdownStarted) await dispatcher.InvokeAsync(ReleasePlatformHooks);
-            else activity.Dispose();
+            if (!dispatcher.HasShutdownStarted) await dispatcher.InvokeAsync(ReleaseHotkeys);
         }
     }
 
     /// <summary>在消息线程停止前释放 NativeWindow，避免宿主关闭等候已退出的 STA。</summary>
-    private void OnDispatcherShutdown(object? sender, EventArgs e) => ReleasePlatformHooks();
+    private void OnDispatcherShutdown(object? sender, EventArgs e) => ReleaseHotkeys();
 
-    /// <summary>在拥有窗口的 UI 线程释放注册和活动钩子。</summary>
-    private void ReleasePlatformHooks()
+    /// <summary>在拥有窗口的 UI 线程释放全局热键注册。</summary>
+    private void ReleaseHotkeys()
     {
         Application.Current.Dispatcher.ShutdownStarted -= OnDispatcherShutdown;
         foreach (var hook in _hotkeys) hook.Dispose();
         _hotkeys.Clear();
-        activity.Dispose();
     }
 
     /// <summary>配置签名变化才重建注册；冲突可见，不偷偷替换应用已有快捷键。</summary>
@@ -156,37 +145,13 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, PuloniaTaskSe
         catch (Exception ex) { logger.LogError(ex, "Pulonia 热键触发失败"); Status = "热键触发失败：" + ex.Message; }
     }
 
-    /// <summary>系统任务只唤起下一次检查；后续 Cron 和 CD 始终由内核按原时区计算。</summary>
-    private async Task SynchronizeWindowsAsync(IReadOnlyList<PuloniaTaskPlan> plans, DateTimeOffset now)
-    {
-        var entries = plans.SelectMany(plan => plan.Triggers.Where(item => item.Enabled && item.LaunchWithWindows)
-            .Select(trigger => (trigger, next: PuloniaTaskSchedule.Next(trigger, now)))).Where(item => item.next is not null)
-            .OrderBy(item => item.next).ToArray();
-        var next = entries.FirstOrDefault();
-        var signature = next.next?.ToString("O") + "/" + (next.trigger?.WakeDevice ?? false);
-        if (signature == _windowsSignature || now < _windowsRetry) return;
-        try
-        {
-            await Task.Run(() => windows.Synchronize(next.next, next.trigger?.WakeDevice ?? false)).ConfigureAwait(false);
-            _windowsSignature = signature;
-            _windowsError = "";
-        }
-        catch (Exception ex)
-        {
-            _windowsError = " Windows 唤起注册失败（程序内调度仍有效）：" + ex.Message;
-            _windowsRetry = now.AddMinutes(1);
-        }
-    }
-
     /// <summary>命令行和单实例 IPC 共用入口，不经旧任务页、不主动启动游戏截图器。</summary>
     public async Task HandleActivationAsync(CommandLineOptions options)
     {
         if (!instances.Context.IsRoot) return;
         try
         {
-            if (options.Action == CommandLineAction.PuloniaDispatch)
-                await tasks.CheckTriggersAsync(await store.ListPlansAsync(_stopToken).ConfigureAwait(false), _stopToken).ConfigureAwait(false);
-            else if (options.Action == CommandLineAction.PuloniaRun && options.PuloniaPlanId is { } planId)
+            if (options.Action == CommandLineAction.PuloniaRun && options.PuloniaPlanId is { } planId)
                 await tasks.EnqueueAsync(new PuloniaTaskRequest { PlanId = planId, Source = "cli" }, _stopToken).ConfigureAwait(false);
         }
         catch (Exception ex) { logger.LogError(ex, "Pulonia 启动入口失败"); Status = "启动请求失败：" + ex.Message; Changed?.Invoke(this, EventArgs.Empty); }

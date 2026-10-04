@@ -22,7 +22,7 @@ public class CommandLineOptions
     /// <summary>命令行指定运行的已保存计划 ID，不接受路径或任意 JSON。</summary>
     public string? PuloniaPlanId { get; }
     /// <summary>是否应交给 Pulonia 内核，避免旧启动流程触碰游戏。</summary>
-    public bool IsPuloniaAction => Action is CommandLineAction.PuloniaDispatch or CommandLineAction.PuloniaRun;
+    public bool IsPuloniaAction => Action is CommandLineAction.PuloniaRun;
 
     /// <summary>
     /// 当前 BetterGI 的实例类型。
@@ -64,7 +64,7 @@ public class CommandLineOptions
     /// （一条龙、配置组由各自流程中的 StartGameTask 启动游戏）
     /// </summary>
     public bool ShouldDeferGameStart => Action is CommandLineAction.StartOneDragon
-        or CommandLineAction.StartGroups or CommandLineAction.PuloniaDispatch or CommandLineAction.PuloniaRun;
+        or CommandLineAction.StartGroups or CommandLineAction.PuloniaRun;
 
     private CommandLineOptions(
         CommandLineAction action,
@@ -146,8 +146,6 @@ public class CommandLineOptions
 
         var arg1 = commandArgs[0];
         var extra = commandArgs.Skip(1).ToArray();
-        if (arg1.Equals("--pulonia-dispatch", StringComparison.OrdinalIgnoreCase))
-            return Create(CommandLineAction.PuloniaDispatch);
         if (arg1.Equals("--pulonia-run", StringComparison.OrdinalIgnoreCase))
         {
             if (extra.Length != 1)
@@ -219,8 +217,6 @@ public enum CommandLineAction
 
     /// <summary>--startGroups — 启动调度组</summary>
     StartGroups,
-    /// <summary>由系统任务唤起，只检查当前有效的自动触发。</summary>
-    PuloniaDispatch,
     /// <summary>通过计划 ID 手动提交新运行。</summary>
     PuloniaRun,
 

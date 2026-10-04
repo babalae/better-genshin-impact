@@ -25,7 +25,7 @@ public partial class PuloniaTaskPlanViewModel
     [ObservableProperty] private PuloniaTaskTriggerItemViewModel? _selectedTrigger;
     /// <summary>当前可修改的独立草稿。</summary>
     [ObservableProperty] private PuloniaTaskTriggerEditorViewModel? _triggerEditor;
-    /// <summary>平台注册、空闲检测和错误反馈。</summary>
+    /// <summary>程序内调度、热键注册和错误反馈。</summary>
     [ObservableProperty] private string _triggerStatus = "触发配置保存到本地；仅主实例负责自动执行。";
     /// <summary>计划页当前页签，触发器可直达其最近执行记录。</summary>
     [ObservableProperty] private int _selectedPlanTabIndex;
@@ -88,14 +88,14 @@ public partial class PuloniaTaskPlanViewModel
         TriggerEditor = new PuloniaTaskTriggerEditorViewModel(new PuloniaTaskTrigger(), SelectedDocument.Plan);
     }
 
-    /// <summary>热键属于主动操作，默认无需等待空闲，也不因按键释放而取消。</summary>
+    /// <summary>新增默认禁用的全局热键草稿，仅在程序运行时生效。</summary>
     [RelayCommand]
     private void AddHotkeyTrigger()
     {
         if (SelectedDocument is null) return;
         SelectedTrigger = null;
         TriggerEditor = new PuloniaTaskTriggerEditorViewModel(new PuloniaTaskTrigger
-        { Name = "快捷运行", Kind = PuloniaTaskTriggerKind.Hotkey, RequireIdle = false, StopOnUserActivity = false }, SelectedDocument.Plan);
+        { Name = "快捷运行", Kind = PuloniaTaskTriggerKind.Hotkey }, SelectedDocument.Plan);
     }
 
     /// <summary>校验草稿、纳入撤销并立即保存；只有耐久保存成功后宿主才读取新配置。</summary>

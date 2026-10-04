@@ -53,18 +53,8 @@ public partial class PuloniaTaskTriggerEditorViewModel : ObservableObject
     [ObservableProperty] private bool _catchUp = true;
     /// <summary>忙碌策略。</summary>
     [ObservableProperty] private PuloniaTaskBusyPolicy _busyPolicy;
-    /// <summary>开始前是否要求空闲。</summary>
-    [ObservableProperty] private bool _requireIdle = true;
-    /// <summary>空闲秒数。</summary>
-    [ObservableProperty] private string _idleSeconds = "300";
-    /// <summary>用户返回时取消运行。</summary>
-    [ObservableProperty] private bool _stopOnUserActivity = true;
     /// <summary>总运行预算。</summary>
     [ObservableProperty] private string _timeoutSeconds = "3600";
-    /// <summary>允许系统调度启动程序。</summary>
-    [ObservableProperty] private bool _launchWithWindows;
-    /// <summary>允许唤醒睡眠设备。</summary>
-    [ObservableProperty] private bool _wakeDevice;
     /// <summary>计算结果或错误，不把非法表达式提交到存储。</summary>
     [ObservableProperty] private string _previewText = "";
     /// <summary>当前草稿是否通过全部校验。</summary>
@@ -122,10 +112,8 @@ public partial class PuloniaTaskTriggerEditorViewModel : ObservableObject
         Hotkey = HotKey.FromString(trigger.Hotkey); TargetTaskId = trigger.TargetTaskId ?? ""; AccountId = trigger.AccountId ?? "";
         IntervalMinutes = trigger.IntervalMinutes.ToString(CultureInfo.InvariantCulture);
         WindowMinutes = trigger.WindowMinutes.ToString(CultureInfo.InvariantCulture);
-        IdleSeconds = trigger.IdleSeconds.ToString(CultureInfo.InvariantCulture);
         TimeoutSeconds = trigger.TimeoutSeconds.ToString(CultureInfo.InvariantCulture);
-        CatchUp = trigger.CatchUp; BusyPolicy = trigger.BusyPolicy; RequireIdle = trigger.RequireIdle;
-        StopOnUserActivity = trigger.StopOnUserActivity; LaunchWithWindows = trigger.LaunchWithWindows; WakeDevice = trigger.WakeDevice;
+        CatchUp = trigger.CatchUp; BusyPolicy = trigger.BusyPolicy;
         if (trigger.ScheduleKind != PuloniaTaskScheduleKind.Cron)
         {
             Mode = trigger.ScheduleKind == PuloniaTaskScheduleKind.Once ? "once" : "interval";
@@ -216,11 +204,8 @@ public partial class PuloniaTaskTriggerEditorViewModel : ObservableObject
         result.Hotkey = Hotkey.ToString(); result.TargetTaskId = string.IsNullOrEmpty(TargetTaskId) ? null : TargetTaskId;
         result.AccountId = string.IsNullOrEmpty(AccountId) ? null : AccountId;
         result.WindowMinutes = Number(WindowMinutes, "有效窗口（分钟）", 1, 10080);
-        result.IdleSeconds = Number(IdleSeconds, "空闲秒数", 1, 86400);
         result.TimeoutSeconds = Number(TimeoutSeconds, "总时限（秒）", 1, 604800);
-        result.CatchUp = CatchUp; result.BusyPolicy = BusyPolicy; result.RequireIdle = RequireIdle;
-        result.StopOnUserActivity = StopOnUserActivity; result.LaunchWithWindows = IsSchedule && LaunchWithWindows;
-        result.WakeDevice = result.LaunchWithWindows && WakeDevice;
+        result.CatchUp = CatchUp; result.BusyPolicy = BusyPolicy;
         if (IsSchedule)
         {
             result.ScheduleKind = Mode == "once" ? PuloniaTaskScheduleKind.Once : Mode == "interval" ? PuloniaTaskScheduleKind.Interval : PuloniaTaskScheduleKind.Cron;

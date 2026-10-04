@@ -8,7 +8,7 @@ using System.Windows.Input;
 namespace BetterGenshinImpact.Pulonia.Services;
 
 /// <summary>
-/// 日程计算、配置签名和校验的纯函数入口，不依赖页面、计时器或 Windows 任务计划。
+/// 日程计算、配置签名和校验的纯函数入口，不依赖页面或计时器。
 /// </summary>
 public static class PuloniaTaskSchedule
 {
@@ -22,10 +22,10 @@ public static class PuloniaTaskSchedule
         PuloniaTaskValidator.ValidateId(trigger.Id, "trigger/id");
         if (string.IsNullOrWhiteSpace(trigger.Name) || trigger.Name.Length > 128
             || !Enum.IsDefined(trigger.Kind) || !Enum.IsDefined(trigger.ScheduleKind) || !Enum.IsDefined(trigger.BusyPolicy)
-            || trigger.WindowMinutes is < 1 or > 10080 || trigger.IdleSeconds is < 1 or > 86400
+            || trigger.WindowMinutes is < 1 or > 10080
             || !double.IsFinite(trigger.TimeoutSeconds) || trigger.TimeoutSeconds is <= 0 or > 604800
-            || trigger.IntervalMinutes is < 1 or > 525600 || trigger.WakeDevice && !trigger.LaunchWithWindows)
-            throw new FormatException("触发器名称、类型、有效窗口、空闲阈值或总预算无效。" );
+            || trigger.IntervalMinutes is < 1 or > 525600)
+            throw new FormatException("触发器名称、类型、有效窗口或总预算无效。" );
         if (trigger.TargetTaskId is not null)
             PuloniaTaskValidator.ValidateId(trigger.TargetTaskId, "trigger/target_task_id");
         if (trigger.AccountId is not null)
@@ -38,8 +38,6 @@ public static class PuloniaTaskSchedule
                 || hotkey.Key is Key.None or Key.System or Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt
                     or Key.LeftShift or Key.RightShift or Key.LWin or Key.RWin || hotkey.Key == Key.F12)
                 throw new FormatException("请设置带 Ctrl/Alt/Shift/Win 的键盘组合键（F12 为系统保留，不能使用）。" );
-            if (trigger.LaunchWithWindows)
-                throw new FormatException("全局热键仅在程序运行时生效，不能配置 Windows 定时唤起。" );
         }
         else if (trigger.ScheduleKind == PuloniaTaskScheduleKind.Cron)
         {

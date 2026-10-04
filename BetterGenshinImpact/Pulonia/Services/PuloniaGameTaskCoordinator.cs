@@ -30,15 +30,11 @@ public sealed class PuloniaGameTaskCoordinator
     /// <summary>
     /// 等待全局任务锁，必要时启动游戏会话，并进入现有任务模式。
     /// </summary>
-    public async Task<PuloniaGameTaskLease> AcquireAsync(CancellationToken ct, Action? inputCheck = null)
+    public async Task<PuloniaGameTaskLease> AcquireAsync(CancellationToken ct)
     {
         await TaskControl.TaskSemaphore.WaitAsync(ct).ConfigureAwait(false);
-        IDisposable? safety = null;
         try
         {
-            // 取得游戏输入所有权后才安装安全门，排队或纯任务不能干扰已有独立任务输入。
-            safety = inputCheck is null ? null : InputSafetyGate.Enter(inputCheck);
-            inputCheck?.Invoke();
             var started = await _runtimeService.StartAsync(ct).ConfigureAwait(false);
             if (!started || !_runtimeService.IsRunning)
                 throw new InvalidOperationException("无法准备游戏运行环境。");
@@ -47,7 +43,7 @@ public sealed class PuloniaGameTaskCoordinator
             // Pulonia 节点始终沿调用链使用本次运行令牌，不创建独立任务执行作用域。
             BeginTaskState();
             RunnerContext.Instance.Clear();
-            return new PuloniaGameTaskLease(safety);
+            return new PuloniaGameTaskLease();
         }
         catch
         {
@@ -57,7 +53,6 @@ public sealed class PuloniaGameTaskCoordinator
             }
             finally
             {
-                safety?.Dispose();
                 TaskControl.TaskSemaphore.Release();
             }
             throw;
@@ -122,15 +117,12 @@ public sealed class PuloniaGameTaskLease : IDisposable
     /// 防止重复释放任务锁。
     /// </summary>
     private int _disposed;
-    /// <summary>与本次游戏输入所有权绑定的安全门，抬键结束后释放。</summary>
-    private readonly IDisposable? _inputSafety;
 
     /// <summary>
     /// 创建已经进入任务模式的游戏节点租约。
     /// </summary>
-    internal PuloniaGameTaskLease(IDisposable? inputSafety = null)
+    internal PuloniaGameTaskLease()
     {
-        _inputSafety = inputSafety;
     }
 
     /// <summary>
@@ -146,7 +138,6 @@ public sealed class PuloniaGameTaskLease : IDisposable
         }
         finally
         {
-            _inputSafety?.Dispose();
             TaskControl.TaskSemaphore.Release();
         }
     }

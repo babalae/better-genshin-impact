@@ -23,10 +23,7 @@ public enum TaskStopReason
     /// <summary>
     /// 应用程序正在关闭，尚未结束的任务必须退出。
     /// </summary>
-    ApplicationShutdown,
-
-    /// <summary>无人值守任务检测到用户返回或交互桌面不再可用。</summary>
-    UserActivity
+    ApplicationShutdown
 }
 
 /// <summary>

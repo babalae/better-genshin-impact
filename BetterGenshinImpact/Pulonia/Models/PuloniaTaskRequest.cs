@@ -59,12 +59,6 @@ public sealed class PuloniaTaskRequest
     public DateTimeOffset? DeadlineUtc { get; init; }
     /// <summary>自动触发配置签名，禁用/编辑后不能启动旧排队请求。</summary>
     public string? TriggerSignature { get; init; }
-    /// <summary>开始前要求电脑空闲。</summary>
-    public bool RequireIdle { get; init; }
-    /// <summary>空闲阈值，秒。</summary>
-    public int IdleSeconds { get; init; } = 300;
-    /// <summary>执行中用户活动后取消并阻止新增输入。</summary>
-    public bool StopOnUserActivity { get; init; }
     /// <summary>本次自动请求的繁忙策略。</summary>
     public PuloniaTaskBusyPolicy BusyPolicy { get; init; }
 }

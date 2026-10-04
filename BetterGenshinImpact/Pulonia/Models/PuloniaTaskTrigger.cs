@@ -41,18 +41,8 @@ public sealed class PuloniaTaskTrigger
     public bool CatchUp { get; set; } = true;
     /// <summary>同计划同账号繁忙时的行为。</summary>
     public PuloniaTaskBusyPolicy BusyPolicy { get; set; }
-    /// <summary>开始前要求电脑空闲。</summary>
-    public bool RequireIdle { get; set; } = true;
-    /// <summary>空闲阈值，秒。</summary>
-    public int IdleSeconds { get; set; } = 300;
-    /// <summary>执行中用户回来后阻止新增输入并取消当前节点。</summary>
-    public bool StopOnUserActivity { get; set; } = true;
     /// <summary>计划运行总预算，秒，与开始截止时间分别计算。</summary>
     public double TimeoutSeconds { get; set; } = 3600;
-    /// <summary>允许 Windows 任务计划在程序未启动时唤起检查。</summary>
-    public bool LaunchWithWindows { get; set; }
-    /// <summary>明确允许唤醒睡眠设备；不会开机或登录 Windows。</summary>
-    public bool WakeDevice { get; set; }
 }
 
 /// <summary>触发入口类型。</summary>
