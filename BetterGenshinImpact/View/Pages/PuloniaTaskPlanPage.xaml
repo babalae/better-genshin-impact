@@ -330,25 +330,15 @@
 
     <Grid Margin="16,12,16,16">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" Margin="0,0,0,12">
-            <StackPanel>
-                <TextBlock FontSize="26" FontWeight="SemiBold" Text="任务计划" />
-                <TextBlock Margin="0,4,0,0"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                           Text="编辑内容会自动保存；右键可添加任务，双击或按 F2 可编辑所选节点配置。" />
-            </StackPanel>
-        </Grid>
-
-        <Grid Grid.Row="1">
+        <Grid Grid.Row="0">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="220" />
-                <ColumnDefinition Width="12" />
-                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="220" MinWidth="160" />
+                <ColumnDefinition Width="6" />
+                <ColumnDefinition Width="*" MinWidth="360" />
             </Grid.ColumnDefinitions>
 
             <Border Grid.Column="0" Style="{StaticResource EditorCardStyle}">
@@ -414,6 +404,24 @@
                     </ListBox>
                 </Grid>
             </Border>
+
+            <!-- 计划面板与任务面板之间的拖拽分割条，平时与背景同色，悬停时显色提示可拖拽。 -->
+            <GridSplitter Grid.Column="1"
+                          Width="4"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Stretch"
+                          Focusable="False">
+                <GridSplitter.Style>
+                    <Style TargetType="GridSplitter">
+                        <Setter Property="Background" Value="Transparent" />
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </GridSplitter.Style>
+            </GridSplitter>
 
             <Border Grid.Column="2" Padding="0" Style="{StaticResource EditorCardStyle}">
                 <TabControl BorderThickness="0" SelectedIndex="{Binding ViewModel.SelectedPlanTabIndex}">
@@ -574,7 +582,7 @@
             </Border>
         </Grid>
 
-        <Grid Grid.Row="2" Margin="2,10,2,0">
+        <Grid Grid.Row="1" Margin="2,10,2,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
