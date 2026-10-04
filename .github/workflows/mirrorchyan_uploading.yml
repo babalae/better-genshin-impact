@@ -23,26 +23,15 @@ jobs:
           latest: true
           fileName: "kachina-builder.exe"
 
-      - name: Embed Dotnet and VCRedist
+      - name: Embed VCRedist
         shell: bash
         run: |
-          # dotnet
-          VERSION_URL="https://builds.dotnet.microsoft.com/dotnet/WindowsDesktop/8.0/latest.version"
-          VERSION=$(curl -fsSL "$VERSION_URL" | tr -d '\r\n')
-          if [ -z "$VERSION" ]; then
-              echo "Cannot get the latest version from $VERSION_URL"
-              exit 1
-          fi
-          INSTALLER_URL="https://builds.dotnet.microsoft.com/dotnet/WindowsDesktop/${VERSION}/windowsdesktop-runtime-${VERSION}-win-x64.exe"
-          OUTPUT="windowsdesktop-runtime-${VERSION}-win-x64.exe"
-          echo "Downloading Windows Desktop Runtime version $VERSION from $INSTALLER_URL"
-          curl -fSL -o "$OUTPUT" "$INSTALLER_URL"
           # vcredist
           echo "Downloading VCRedist"
           curl -fSL -o "vc_redist.x64.exe" "https://aka.ms/vs/17/release/vc_redist.x64.exe"
           # embed
-          echo "Embedding runtimes"
-          ./kachina-builder.exe append -o  ./BetterGI.Install.*.exe -f "$OUTPUT" -n "Microsoft.DotNet.DesktopRuntime.8" -f "vc_redist.x64.exe" -n "Microsoft.VCRedist.2015+.x64"
+          echo "Embedding VCRedist"
+          ./kachina-builder.exe append -o ./BetterGI.Install.*.exe -f "vc_redist.x64.exe" -n "Microsoft.VCRedist.2015+.x64"
           ./kachina-builder.exe extract -i ./BetterGI.Install.*.exe -f ./metadata.json -n "\0META"
       
       - name: Extract 7z and create zip

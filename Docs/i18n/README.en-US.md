@@ -86,7 +86,7 @@ Latest builds: [![](https://github.com/babalae/better-genshin-impact/actions/wor
 ## Usage
 **Requirements:**
 - Windows 10/11 (64-bit)
-- [.NET 8 Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) (auto-prompted if missing)
+- The release package includes the .NET 10 runtime; no separate runtime installation is required.
 
 **⚠️ Notes:**
 1. Restart the app after changing window size/resolution/monitor.

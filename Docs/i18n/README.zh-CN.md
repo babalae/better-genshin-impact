@@ -87,7 +87,7 @@ BetterGI · 更好的原神， 一个基于计算机视觉技术，意图让原�
 
 你的系统需要满足以下条件：
   * Windows 10 或更高版本的64位系统
-  * [.NET 8 运行时](https://dotnet.microsoft.com/zh-cn/download/dotnet/latest/runtime) （没有的话，启动程序，系统会提示下载安装）
+  * 发布包已自带 .NET 10 运行时，无需额外安装
 
 **⚠️注意：**
 1. 窗口大小变化、切换游戏分辨率、切换显示器的时候请重启本软件。

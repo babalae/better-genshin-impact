@@ -22,6 +22,8 @@ using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.ChildSession;
+using BetterGenshinImpact.Service.ExternalAccess;
+using BetterGenshinImpact.Service.ExternalAccess.Logging;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Interface;
@@ -84,6 +86,10 @@ public partial class App : Application
                 var instanceIdentity =
                     $"{instanceTypeLabel}:S{instanceContext.WindowsSessionId}:P{instanceContext.ProcessId}:T{instanceContext.StartedAt.ToUnixTimeMilliseconds()}";
 
+                // 外部日志分发器必须先于 Serilog 创建，确保启动阶段日志也能进入回放缓冲。
+                var externalLogHub = new ExternalLogHub();
+                services.AddSingleton(externalLogHub);
+
                 var richTextBox = new RichTextBoxImpl();
                 services.AddSingleton<IRichTextBox>(richTextBox);
 
@@ -102,6 +108,9 @@ public partial class App : Application
                     .MinimumLevel.Debug()
                     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
                     .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Warning);
+                loggerConfiguration.WriteTo.Sink(
+                    new ExternalLogSink(externalLogHub, instanceIdentity),
+                    LogEventLevel.Debug);
                 // 日志遮罩输出：仅当“遮罩启用且日志框可见”时才真正写入，隐藏时避免不必要的 UI 开销（#3161）。
                 // 条件改为运行时每次写入时动态判断，因此启动后通过快捷键切换 ShowLogBox 也能即时恢复日志（#3357）。
                 loggerConfiguration.WriteTo.Sink(
@@ -138,6 +147,13 @@ public partial class App : Application
                 services.AddSingleton(InstanceBootstrap.Current);
                 services.AddSingleton<InstanceService>();
                 services.AddHostedService(sp => sp.GetRequiredService<InstanceService>());
+                // 外部访问服务：协议适配层统一复用同一能力服务，仅 Primary 实例实际监听端口。
+                services.AddSingleton<ExternalAccessState>();
+                services.AddSingleton<ExternalAccessTokenService>();
+                services.AddSingleton<IBgiExternalCapabilityService, BgiExternalCapabilityService>();
+                services.AddSingleton<ExternalLogWebSocketHandler>();
+                services.AddSingleton<ExternalAccessHost>();
+                services.AddHostedService(sp => sp.GetRequiredService<ExternalAccessHost>());
                 // App Host
                 services.AddHostedService<ApplicationHostService>();
                 // Page resolver service
