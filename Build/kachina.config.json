@@ -58,7 +58,6 @@
   ],
   "uacStrategy": "prefer-admin",
   "runtimes": [
-    "Microsoft.DotNet.DesktopRuntime.8",
     "Microsoft.VCRedist.2015+.x64"
   ]
 }

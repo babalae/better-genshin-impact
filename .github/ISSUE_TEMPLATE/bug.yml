@@ -20,7 +20,7 @@ body:
     attributes:
       label: 系统环境
       description: System environment，例如操作系统版本、运行时版本、显卡驱动版本
-      placeholder: Windows 11 24H2 (26100.3775) / .NET Desktop Runtime 8.0.15 / NVIDIA 572.83
+      placeholder: Windows 11 24H2 (26100.3775) / NVIDIA 572.83
     validations:
       required: true
   - type: input

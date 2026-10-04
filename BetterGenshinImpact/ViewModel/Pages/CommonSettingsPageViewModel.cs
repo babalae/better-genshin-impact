@@ -26,6 +26,7 @@ using BetterGenshinImpact.Helpers.Http;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Platform.Wine;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.ExternalAccess;
 using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
@@ -54,6 +55,12 @@ public partial class CommonSettingsPageViewModel : ViewModel
     private readonly CustomHtmlMaskService _customHtmlMaskService;
     private readonly RecognitionTemplateEditorService _recognitionTemplateEditorService;
     private readonly I18nService _i18nService;
+
+    /// <summary>
+    /// 外部访问令牌生成与校验服务。
+    /// </summary>
+    private readonly ExternalAccessTokenService _externalAccessTokenService;
+
     private readonly TpConfig _tpConfig = TaskContext.Instance().Config.TpConfig;
 
     private string _selectedArea = string.Empty;
@@ -78,7 +85,8 @@ public partial class CommonSettingsPageViewModel : ViewModel
 
     public CommonSettingsPageViewModel(IConfigService configService, INavigationService navigationService,
         NotificationService notificationService, CustomHtmlMaskService customHtmlMaskService,
-        RecognitionTemplateEditorService recognitionTemplateEditorService, I18nService i18nService)
+        RecognitionTemplateEditorService recognitionTemplateEditorService, I18nService i18nService,
+        ExternalAccessState externalAccessState, ExternalAccessTokenService externalAccessTokenService)
     {
         Config = configService.Get();
         _configService = configService;
@@ -89,6 +97,15 @@ public partial class CommonSettingsPageViewModel : ViewModel
         _customHtmlMaskService = customHtmlMaskService;
         _recognitionTemplateEditorService = recognitionTemplateEditorService;
         _i18nService = i18nService;
+        ExternalAccessState = externalAccessState;
+        _externalAccessTokenService = externalAccessTokenService;
+        Config.ExternalAccessConfig.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(ExternalAccessConfig.AccessToken))
+            {
+                OnPropertyChanged(nameof(MaskedExternalAccessToken));
+            }
+        };
         // 设置页需要可绑定对象，避免把 Dictionary<string, bool> 直接暴露给 XAML 并丢失固定枚举顺序。
         OverlayMetricItems = new ObservableCollection<OverlayMetricSettingItem>(
             OverlayMetricItemDefaults.AllItems.Select(item => new OverlayMetricSettingItem(Config.MaskWindowConfig, item, OnRefreshMaskSettings)));
@@ -104,6 +121,30 @@ public partial class CommonSettingsPageViewModel : ViewModel
     public ObservableCollection<OverlayStyleSettingGroup> OverlayStyleSettingGroups { get; }
     public ObservableCollection<string> CountryList { get; } = new();
     public ObservableCollection<string> Areas { get; } = new();
+
+    /// <summary>
+    /// 外部访问服务的只读运行状态。
+    /// </summary>
+    public ExternalAccessState ExternalAccessState { get; }
+
+    /// <summary>
+    /// 设置页展示的脱敏访问令牌。
+    /// </summary>
+    public string MaskedExternalAccessToken
+    {
+        get
+        {
+            var token = Config.ExternalAccessConfig.AccessToken;
+            if (string.IsNullOrEmpty(token))
+            {
+                return "尚未生成";
+            }
+
+            return token.Length <= 8
+                ? "********"
+                : $"{token[..4]}…{token[^4..]}";
+        }
+    }
 
     public ObservableCollection<string> MapPathingTypes { get; } = ["SIFT", "TemplateMatch"];
 
@@ -155,6 +196,34 @@ public partial class CommonSettingsPageViewModel : ViewModel
         };
         cookieWin.NavigateToHtml(TravelsDiaryDetailManager.generHtmlMessage());
         cookieWin.Show();
+    }
+
+    /// <summary>
+    /// 将完整外部访问令牌复制到系统剪贴板。
+    /// </summary>
+    [RelayCommand]
+    private void CopyExternalAccessToken()
+    {
+        var token = Config.ExternalAccessConfig.AccessToken;
+        if (string.IsNullOrEmpty(token))
+        {
+            ThemedMessageBox.Warning("访问令牌尚未生成。请先启用 HTTP API 或 MCP 后重启，或者点击“重新生成”。");
+            return;
+        }
+
+        Clipboard.SetDataObject(token);
+        ThemedMessageBox.Information("访问令牌已复制到剪贴板。");
+    }
+
+    /// <summary>
+    /// 重新生成访问令牌并立即使 HTTP API 与 MCP 使用新令牌。
+    /// </summary>
+    [RelayCommand]
+    private void RegenerateExternalAccessToken()
+    {
+        _externalAccessTokenService.RegenerateToken();
+        OnPropertyChanged(nameof(MaskedExternalAccessToken));
+        ThemedMessageBox.Information("访问令牌已重新生成，旧令牌立即失效。");
     }
 
     private void InitializeMiyousheCookie()

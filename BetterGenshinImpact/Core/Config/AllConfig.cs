@@ -293,6 +293,11 @@ public partial class AllConfig : ObservableObject
     public ChildSessionConfig ChildSessionConfig { get; set; } = new();
 
     /// <summary>
+    /// 本机外部访问服务配置
+    /// </summary>
+    public ExternalAccessConfig ExternalAccessConfig { get; set; } = new();
+
+    /// <summary>
     /// 任意配置项变更后的回调（由 ConfigService 设置为防抖保存）
     /// </summary>
     [JsonIgnore]

@@ -107,6 +107,161 @@
             </ui:CardControl.Header>
         </ui:CardControl>
 
+        <ui:CardExpander Margin="0,0,0,12"
+                         ContentPadding="0"
+                         Icon="{ui:SymbolIcon Globe24}">
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  FontTypography="Body"
+                                  Text="本机外部访问服务"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="仅监听 loopback；功能开关和端口将在重启 BetterGI 后生效"
+                                  TextWrapping="Wrap" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" FontTypography="Body" Text="HTTP API" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="提供 /api/v1/health 与 /api/v1/version"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,24,0"
+                                     IsChecked="{Binding Config.ExternalAccessConfig.HttpApiEnabled, Mode=TwoWay}" />
+                </Grid>
+                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" FontTypography="Body" Text="WebSocket 实时日志" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="不鉴权并允许任意 Origin，启用后本机网页可读取日志，请注意敏感信息风险"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,24,0"
+                                     IsChecked="{Binding Config.ExternalAccessConfig.WebSocketEnabled, Mode=TwoWay}" />
+                </Grid>
+                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" FontTypography="Body" Text="MCP Streamable HTTP" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="在 /mcp 暴露与 HTTP API 相同的共享能力"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,24,0"
+                                     IsChecked="{Binding Config.ExternalAccessConfig.McpEnabled, Mode=TwoWay}" />
+                </Grid>
+                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <Grid Margin="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <ui:TextBlock FontTypography="Body" Text="监听端口" />
+                        <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="有效范围 1024～65535，HTTP、WebSocket 和 MCP 共用"
+                                      TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ui:TextBox Grid.Column="1"
+                                Width="120"
+                                Margin="16,0,24,0"
+                                VerticalAlignment="Center"
+                                Text="{Binding Config.ExternalAccessConfig.Port, Mode=TwoWay, ValidatesOnNotifyDataErrors=True}" />
+                </Grid>
+                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <Grid Margin="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <ui:TextBlock FontTypography="Body" Text="访问令牌" />
+                        <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="HTTP API 与 MCP 共用；令牌变更立即生效"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Margin="0,4,0,0"
+                                      FontFamily="Consolas"
+                                      Text="{Binding MaskedExternalAccessToken}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1"
+                                Margin="16,0,24,0"
+                                VerticalAlignment="Center"
+                                Orientation="Horizontal">
+                        <ui:Button Margin="0,0,8,0"
+                                   Command="{Binding CopyExternalAccessTokenCommand}"
+                                   Content="复制" />
+                        <ui:Button Command="{Binding RegenerateExternalAccessTokenCommand}"
+                                   Content="重新生成" />
+                    </StackPanel>
+                </Grid>
+                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,12,0" FontTypography="Body" Text="状态" />
+                    <ui:TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ExternalAccessState.StatusText}" />
+                    <ui:TextBlock Grid.Row="1" Grid.Column="1"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{Binding ExternalAccessState.Message}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="2" Grid.Column="0"
+                                  Margin="0,0,12,0"
+                                  FontTypography="Body"
+                                  Text="访问地址" />
+                    <ui:TextBlock Grid.Row="2" Grid.Column="1"
+                                  FontFamily="Consolas"
+                                  Text="{Binding ExternalAccessState.Address}"
+                                  TextWrapping="Wrap" />
+                </Grid>
+            </StackPanel>
+        </ui:CardExpander>
+
 
         <ui:CardExpander Margin="0,0,0,12"
                          ContentPadding="0"
