@@ -1,4 +1,5 @@
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Service.I18n;
 using System;
 using System.Windows;
 using System.Windows.Controls;
@@ -181,7 +182,7 @@ public class HotKeyTextBox : TextBox
         {
             if (!CanSwitchHotKeyType)
             {
-                ShowHint("此功能需要长按触发，只能使用键鼠监听的单键或鼠标侧键。");
+                ShowHint(I18nService.Instance.Translate("此功能需要长按触发，只能使用键鼠监听的单键或鼠标侧键。"));
                 return;
             }
 
@@ -193,15 +194,15 @@ public class HotKeyTextBox : TextBox
         if (targetType == HotKeyTypeEnum.GlobalRegister && HasKeyChar(key) && modifiers is ModifierKeys.None or ModifierKeys.Shift)
         {
             ShowHint(autoSwitched
-                ? "键鼠监听不支持组合键，而全局热键不支持 Shift + 字符，请改用 Ctrl / Alt / Win 组合键或功能键。"
-                : "全局热键不支持单字符按键，请使用组合键或功能键（如 F8）。");
+                ? I18nService.Instance.Translate("键鼠监听不支持组合键，而全局热键不支持 Shift + 字符，请改用 Ctrl / Alt / Win 组合键或功能键。")
+                : I18nService.Instance.Translate("全局热键不支持单字符按键，请使用组合键或功能键（如 F8）。"));
             return;
         }
 
         if (autoSwitched)
         {
             HotKeyType = HotKeyTypeEnum.GlobalRegister;
-            ShowHint("键鼠监听不支持组合键，已自动切换为全局热键。");
+            ShowHint(I18nService.Instance.Translate("键鼠监听不支持组合键，已自动切换为全局热键。"));
         }
 
         // Set value
@@ -220,7 +221,7 @@ public class HotKeyTextBox : TextBox
             if (HotKeyType == HotKeyTypeEnum.GlobalRegister)
             {
                 HotKeyType = HotKeyTypeEnum.KeyboardMonitor;
-                ShowHint("全局热键不支持鼠标侧键，已自动切换为键鼠监听。");
+                ShowHint(I18nService.Instance.Translate("全局热键不支持鼠标侧键，已自动切换为键鼠监听。"));
             }
 
             Hotkey = new Model.HotKey(Key.None, ModifierKeys.None, args.ChangedButton);

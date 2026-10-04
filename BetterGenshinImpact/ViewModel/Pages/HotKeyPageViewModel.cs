@@ -170,13 +170,17 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         var newHotKey = model.HotKey;
         var previousBinding = CurrentBinding(model);
 
+        // 自动切换类型（例如键鼠监听录入组合键）时，当前类型才是用户想要的目标类型；
+        // 回滚会把类型还原，因此必须单独记下来，否则确认替换后会按旧类型注册而失败
+        var targetType = model.HotKeyType;
+
         var duplicate = FindDuplicateHotKey(model, newHotKey);
         if (duplicate != null)
         {
             // 先回滚当前设置，避免两个功能同时占用同一个快捷键（那会导致注册失败），
             // 再询问用户是否替换已有绑定
             RestoreBinding(model, previousBinding);
-            ConfirmReplaceDuplicateHotKey(model, duplicate, newHotKey, previousBinding);
+            ConfirmReplaceDuplicateHotKey(model, duplicate, newHotKey, previousBinding, targetType);
             return;
         }
 
@@ -274,9 +278,9 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             message + "\n\n" + I18nService.Instance.Translate("已恢复为上一次的快捷键设置。"),
             () =>
             {
-                // 先恢复被替换掉的那个功能：它的备份只在这里消费
-                RestoreReplacedBinding(model.ConfigPropertyName);
+                // 先恢复当前功能以释放新热键，再让被替换掉的功能拿回原来的快捷键
                 RestoreBinding(model, previousBinding);
+                RestoreReplacedBinding(model.ConfigPropertyName);
             });
 
         return false;
@@ -398,7 +402,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
     /// <param name="duplicate">当前占用了该快捷键的功能</param>
     /// <param name="newHotKey">用户想要使用的快捷键</param>
     /// <param name="previousBinding">发起替换前该功能的绑定，用于确认期间没有被改过</param>
-    private void ConfirmReplaceDuplicateHotKey(HotKeySettingModel model, HotKeySettingModel duplicate, HotKey newHotKey, HotKeyBinding previousBinding)
+    /// <param name="targetType">用户录入新快捷键时的目标类型，确认后要按它注册</param>
+    private void ConfirmReplaceDuplicateHotKey(HotKeySettingModel model, HotKeySettingModel duplicate, HotKey newHotKey, HotKeyBinding previousBinding, HotKeyTypeEnum targetType)
     {
         var message = string.Format(
                           I18nService.Instance.Translate("快捷键 {0} 已被「{1}」使用。"),
@@ -410,7 +415,9 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         Application.Current.Dispatcher.BeginInvoke(() =>
         {
             // 弹窗期间用户可能已经改了别的设置，此时按旧状态处理会清掉更新的绑定
-            if (model.HotKey != previousBinding.HotKey || duplicate.HotKey != newHotKey)
+            if (model.HotKey != previousBinding.HotKey
+                || model.HotKeyType != previousBinding.Type
+                || duplicate.HotKey != newHotKey)
             {
                 return;
             }
@@ -433,6 +440,13 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
 
             // 清除旧绑定（会同步写回配置并注销）
             duplicate.HotKey = HotKey.None;
+
+            // 恢复用户录入时的目标类型：上面的回滚把类型还原成了旧值，
+            // 若直接设置快捷键，组合键会按「键鼠监听」注册而失败
+            if (model.HotKeyType != targetType)
+            {
+                model.HotKeyType = targetType;
+            }
 
             if (model.HotKey != newHotKey)
             {
@@ -511,9 +525,10 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 MessageBoxResult.Cancel);
             if (result == MessageBoxResult.Cancel && model.HotKey == newHotKey)
             {
-                // 整个编辑被撤销，因此被替换掉的功能也要拿回它原来的快捷键
-                RestoreReplacedBinding(model.ConfigPropertyName);
+                // 整个编辑被撤销，因此被替换掉的功能也要拿回它原来的快捷键。
+                // 必须先恢复当前功能以释放新热键，否则被替换的功能会因该键仍被占用而注册失败。
                 RestoreBinding(model, previousBinding);
+                RestoreReplacedBinding(model.ConfigPropertyName);
                 return;
             }
 
