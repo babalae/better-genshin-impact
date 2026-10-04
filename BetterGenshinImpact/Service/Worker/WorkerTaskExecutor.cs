@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
@@ -13,6 +15,7 @@ using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Service.Worker;
 
@@ -123,6 +126,41 @@ internal sealed class WorkerTaskExecutor
     /// <summary>
     /// 停止 Worker 自己的截图器。正在运行的任务会随运行环境解绑一起取消。
     /// </summary>
+    /// <summary>
+    /// 退出 Worker 侧的游戏：先让游戏窗口获得焦点，再映射一次 Alt+F4。
+    /// 游戏对键鼠的响应有延迟，按下和抬起之间留出间隔。
+    /// </summary>
+    public (bool Success, string? Error) TryExitGame()
+    {
+        try
+        {
+            if (TaskContext.Instance().Runtime is null)
+            {
+                return (false, "Worker 侧尚未启动截图器，无法退出游戏。");
+            }
+
+            // Alt+F4 只会送给前台窗口，先激活游戏窗口
+            SystemControl.ActivateWindow();
+            Thread.Sleep(300);
+
+            InputHub.Foreground.Keyboard
+                .KeyDown(User32.VK.VK_LMENU)
+                .Sleep(50)
+                .KeyDown(User32.VK.VK_F4)
+                .Sleep(50)
+                .KeyUp(User32.VK.VK_F4)
+                .KeyUp(User32.VK.VK_LMENU);
+
+            _logger.LogInformation("已向 Worker 侧游戏窗口映射 Alt+F4");
+            return (true, null);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Worker 退出游戏失败");
+            return (false, exception.GetBaseException().Message);
+        }
+    }
+
     public async Task<(bool Success, string? Error)> TryStopCaptureAsync()
     {
         string? failure = null;

@@ -740,6 +740,7 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     [NotifyCanExecuteChangedFor(nameof(StopWorkerTaskCommand))]
     [NotifyCanExecuteChangedFor(nameof(PauseWorkerTaskCommand))]
     [NotifyCanExecuteChangedFor(nameof(ResumeWorkerTaskCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ExitWorkerGameCommand))]
     private bool _isWorkerConnected;
 
     [ObservableProperty]
@@ -749,6 +750,7 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     [NotifyCanExecuteChangedFor(nameof(StopWorkerTaskCommand))]
     [NotifyCanExecuteChangedFor(nameof(PauseWorkerTaskCommand))]
     [NotifyCanExecuteChangedFor(nameof(ResumeWorkerTaskCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ExitWorkerGameCommand))]
     private bool _isWorkerBusy;
 
     /// <summary>
@@ -811,6 +813,14 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         await ExecuteWorkerActionAsync(
             () => _workerController.StopTaskAsync(),
             "停止 Worker 任务失败");
+    }
+
+    [RelayCommand(CanExecute = nameof(CanOperateWorker))]
+    private async Task ExitWorkerGameAsync()
+    {
+        await ExecuteWorkerActionAsync(
+            async () => ApplyWorkerStatus(await _workerController.ExitGameAsync()),
+            "退出 Worker 游戏失败");
     }
 
     [RelayCommand(CanExecute = nameof(CanOperateWorker))]

@@ -7,6 +7,7 @@ using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.Service.Instance.MessageHandlers;
 using Microsoft.Extensions.Hosting;
@@ -55,6 +56,8 @@ internal sealed class WorkerIpcService : IHostedService, IAsyncDisposable, IInst
             return Task.CompletedTask;
         }
 
+        // 无头 Worker 没有主窗口，进度面板由控制端显示，这里把状态变化推给已授权的 Controller
+        ScriptGroupProgressTracker.Instance.StateChanged += OnProgressStateChanged;
         _acceptLoopTask = AcceptLoopAsync(_lifetimeCancellationTokenSource.Token);
         _logger.LogInformation(
             "Worker IPC 已启动：管道 {PipeName}，Worker SID {WorkerSid}，Controller SID {ControllerSid}",
@@ -71,6 +74,7 @@ internal sealed class WorkerIpcService : IHostedService, IAsyncDisposable, IInst
             return;
         }
 
+        ScriptGroupProgressTracker.Instance.StateChanged -= OnProgressStateChanged;
         _lifetimeCancellationTokenSource.Cancel();
         foreach (var connection in _connections.Keys)
         {
@@ -96,6 +100,11 @@ internal sealed class WorkerIpcService : IHostedService, IAsyncDisposable, IInst
     {
         await StopAsync(CancellationToken.None).ConfigureAwait(false);
         _lifetimeCancellationTokenSource.Dispose();
+    }
+
+    private void OnProgressStateChanged(ScriptGroupProgressState state)
+    {
+        _noticeHub.PublishProgress(state);
     }
 
     private async Task AcceptLoopAsync(CancellationToken cancellationToken)
@@ -253,6 +262,10 @@ internal sealed class WorkerIpcService : IHostedService, IAsyncDisposable, IInst
                 RequireAuthorized(connection);
                 return HandleCaptureStopAsync(request);
 
+            case InstanceOperations.GameExit:
+                RequireAuthorized(connection);
+                return HandleGameExitAsync(request);
+
             case InstanceOperations.WorkerLogMode:
                 RequireAuthorized(connection);
                 return Task.FromResult<InstanceIpcEnvelope?>(HandleLogMode(request));
@@ -401,6 +414,20 @@ internal sealed class WorkerIpcService : IHostedService, IAsyncDisposable, IInst
         if (!success)
         {
             return InstanceIpcEnvelope.Failure(request, "capture_failed", error ?? "停止 Worker 截图器失败。");
+        }
+
+        return InstanceIpcEnvelope.Response(request, _executor.Snapshot());
+    }
+
+    /// <summary>
+    /// 退出 Worker 侧的游戏：映射 Alt+F4。激活窗口与送按键都需要等待，放到线程池执行，避免占用管道接收线程
+    /// </summary>
+    private async Task<InstanceIpcEnvelope?> HandleGameExitAsync(InstanceIpcEnvelope request)
+    {
+        var (success, error) = await Task.Run(_executor.TryExitGame).ConfigureAwait(false);
+        if (!success)
+        {
+            return InstanceIpcEnvelope.Failure(request, "game_exit_failed", error ?? "退出 Worker 游戏失败。");
         }
 
         return InstanceIpcEnvelope.Response(request, _executor.Snapshot());

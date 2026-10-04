@@ -714,6 +714,10 @@
                     <ui:Button Command="{Binding StopWorkerTaskCommand}"
                                Content="{i18n:T 停止}"
                                Icon="{ui:SymbolIcon Stop24}" />
+                    <ui:Button Margin="8,0,0,0"
+                               Command="{Binding ExitWorkerGameCommand}"
+                               Content="{i18n:T 退出游戏}"
+                               ToolTip="{i18n:T 在 Worker 侧映射 Alt+F4 退出游戏}" />
                 </StackPanel>
                 <StackPanel Margin="16,12,16,0" Orientation="Horizontal">
                     <ui:TextBlock VerticalAlignment="Center"

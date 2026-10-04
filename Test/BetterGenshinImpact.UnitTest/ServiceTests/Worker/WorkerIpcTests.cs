@@ -1,6 +1,7 @@
 using System.IO.Pipes;
 using System.Security.AccessControl;
 using System.Security.Principal;
+using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.Service.Instance.MessageHandlers;
@@ -81,6 +82,8 @@ public class WorkerIpcTests
     {
         Assert.Equal("capture.start", InstanceOperations.CaptureStart);
         Assert.Equal("capture.stop", InstanceOperations.CaptureStop);
+        Assert.Equal("game.exit", InstanceOperations.GameExit);
+        Assert.Equal("worker.progress", InstanceOperations.WorkerProgress);
 
         string[] rootOperations =
         [
@@ -105,7 +108,37 @@ public class WorkerIpcTests
 
         Assert.DoesNotContain(InstanceOperations.CaptureStart, rootOperations);
         Assert.DoesNotContain(InstanceOperations.CaptureStop, rootOperations);
+        Assert.DoesNotContain(InstanceOperations.GameExit, rootOperations);
         Assert.DoesNotContain(InstanceOperations.WorkerLog, rootOperations);
+        Assert.DoesNotContain(InstanceOperations.WorkerProgress, rootOperations);
+    }
+
+    /// <summary>
+    /// 配置组进度要能通过 worker.progress 原样回传，控制端才能显示与 Worker 相同的进度与预计剩余时间
+    /// </summary>
+    [Fact]
+    public void WorkerProgress_ShouldRoundTrip()
+    {
+        var state = new ScriptGroupProgressState
+        {
+            Running = true,
+            GroupName = "每日",
+            Progress = 42.5,
+            ElapsedText = "1:27",
+            RemainingText = "2:33",
+            HasTotalRemaining = true,
+            TotalRemainingText = "15:00"
+        };
+
+        var payload = JObject.FromObject(state, InstanceIpcProtocol.Serializer);
+        var restored = payload.ToObject<ScriptGroupProgressState>(InstanceIpcProtocol.Serializer);
+
+        Assert.Equal(state, restored);
+
+        // 结束状态只带 Running=false，控制端据此隐藏进度面板
+        var stopped = new ScriptGroupProgressState();
+        Assert.Equal(stopped, JObject.FromObject(stopped, InstanceIpcProtocol.Serializer)
+            .ToObject<ScriptGroupProgressState>(InstanceIpcProtocol.Serializer));
     }
 
     [Fact]

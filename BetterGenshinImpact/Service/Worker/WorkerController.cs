@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.Service.Instance.MessageHandlers;
 using Microsoft.Extensions.Logging;
@@ -276,6 +277,20 @@ public sealed class WorkerController : IAsyncDisposable
         return status;
     }
 
+    /// <summary>
+    /// 退出 Worker 侧的游戏（Worker 侧映射 Alt+F4），返回最新状态
+    /// </summary>
+    public async Task<WorkerStatusResponse> ExitGameAsync(CancellationToken cancellationToken = default)
+    {
+        var status = await SendAsync(
+            InstanceOperations.GameExit,
+            null,
+            ToStatusResponse,
+            cancellationToken).ConfigureAwait(false);
+        SetLastStatus(status);
+        return status;
+    }
+
     public Task<WorkerTaskStartResponse> StartTaskAsync(
         string? type,
         string? name,
@@ -455,6 +470,7 @@ public sealed class WorkerController : IAsyncDisposable
         }
 
         SetLastStatus(null);
+        ScriptGroupProgressTracker.Instance.ApplyRemote(new ScriptGroupProgressState());
 
         if (connection is not null)
         {
@@ -493,6 +509,22 @@ public sealed class WorkerController : IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// 收到 Worker 回传的配置组进度：直接刷到进度面板上。
+    /// 可能在管道接收线程触发，<see cref="ScriptGroupProgressTracker.ApplyRemote"/> 内部会切到 UI 线程。
+    /// </summary>
+    private void OnProgressReceived(ScriptGroupProgressState state)
+    {
+        try
+        {
+            ScriptGroupProgressTracker.Instance.ApplyRemote(state);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogDebug(exception, "处理 Worker 进度时出现异常，已忽略。");
+        }
+    }
+
     private void OnConnectionClosed(InstanceConnection connection)
     {
         var wasCurrent = false;
@@ -509,6 +541,7 @@ public sealed class WorkerController : IAsyncDisposable
         if (wasCurrent)
         {
             SetLastStatus(null);
+            ScriptGroupProgressTracker.Instance.ApplyRemote(new ScriptGroupProgressState());
             _logger.LogInformation("Worker 连接已断开");
             Disconnected?.Invoke(this, EventArgs.Empty);
         }
@@ -594,6 +627,14 @@ public sealed class WorkerController : IAsyncDisposable
                 if (batch is not null)
                 {
                     controller.OnLogReceived(batch);
+                }
+            }
+            else if (request.Operation == InstanceOperations.WorkerProgress)
+            {
+                var state = request.Data?.ToObject<ScriptGroupProgressState>(InstanceIpcProtocol.Serializer);
+                if (state is not null)
+                {
+                    controller.OnProgressReceived(state);
                 }
             }
 

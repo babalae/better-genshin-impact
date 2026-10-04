@@ -682,6 +682,13 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
 
         Notify.Event(NotificationEvent.DragonStart).Success("一条龙启动");
+
+        // 预置整条龙里启用的配置组：预计总剩余时间要覆盖全部配置组任务
+        var oneDragonGroups = ScriptGroupsdefault
+            .Where(group => taskListCopy.Any(task => task.IsEnabled && task.Name == group.Name))
+            .ToList();
+        using var progressBatch = ScriptGroupProgressTracker.Instance.BeginBatch(oneDragonGroups);
+
         foreach (var task in taskListCopy)
         {
             if (task is { IsEnabled: true, Action: not null })

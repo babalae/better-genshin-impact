@@ -46,6 +46,12 @@ public static class InstanceOperations
 
     /// <summary>Worker → Controller：按批次转发日志行（仅在显示位置为「本地独立窗口」时下发）</summary>
     public const string WorkerLog = "worker.log";
+
+    /// <summary>Worker → Controller：配置组执行进度与预计剩余时间（单向推送，无响应）</summary>
+    public const string WorkerProgress = "worker.progress";
+
+    /// <summary>退出 Worker 侧的游戏（Worker 映射 Alt+F4）</summary>
+    public const string GameExit = "game.exit";
 }
 
 public sealed class InstanceIpcEnvelope

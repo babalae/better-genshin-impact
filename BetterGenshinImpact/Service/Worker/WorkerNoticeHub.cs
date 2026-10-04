@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Service.Instance;
 using Microsoft.Extensions.Logging;
 
@@ -10,9 +11,10 @@ namespace BetterGenshinImpact.Service.Worker;
 /// <summary>
 /// Worker 侧出站消息出口：把无头 Worker 里产生的内容推送给所有已授权的 Controller。
 /// <para>
-/// 目前承载两类消息：无头 Worker 没有主窗口，Toast 既可能抛 <see cref="ArgumentNullException"/>，
+/// 目前承载三类消息：无头 Worker 没有主窗口，Toast 既可能抛 <see cref="ArgumentNullException"/>，
 /// 即使显示出来也只有 Worker 所在用户能看到，因此提示统一回传；日志行则在
-/// <see cref="WorkerLogDisplayMode.LocalWindow"/> 下按批次回传。
+/// <see cref="WorkerLogDisplayMode.LocalWindow"/> 下按批次回传；配置组执行进度每秒推送一次，
+/// 让控制端主窗口与 Worker 叠加层显示同一份进度。
 /// 没有 Controller 连接时静默丢弃，调用方负责写入本地日志。
 /// </para>
 /// </summary>
@@ -80,6 +82,19 @@ internal sealed class WorkerNoticeHub
         };
 
         await SendToControllersAsync(InstanceOperations.WorkerLog, batch).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// 发布一次配置组执行进度。任意线程可调用：不写管道、不抛异常，实际发送在后台完成
+    /// </summary>
+    public void PublishProgress(ScriptGroupProgressState state)
+    {
+        if (_controllers.IsEmpty)
+        {
+            return;
+        }
+
+        _ = Task.Run(() => SendToControllersAsync(InstanceOperations.WorkerProgress, state));
     }
 
     private async Task SendToControllersAsync(string operation, object payload)

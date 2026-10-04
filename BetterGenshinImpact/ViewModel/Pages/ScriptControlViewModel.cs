@@ -2533,8 +2533,21 @@ public partial class ScriptControlViewModel : ViewModel
 
             RunnerContext.Instance.taskProgress = taskProgress;
             var sg = GetNextScriptGroups(scriptGroups);
+            // 预置整批配置组：预计总剩余时间要覆盖本次连续执行的全部配置组
+            using var progressBatch = ScriptGroupProgressTracker.Instance.BeginBatch(sg);
+            // 只有本批已经跑过至少一个配置组后，取消状态才说明「这一批被停了」：
+            // 上一次手动停止留下的 IsManualStop 要等 RunMulti 里的 Set() 才复位，第一轮不能据此退出
+            var startedAnyGroup = false;
             foreach (var scriptGroup in sg)
             {
+                // 用户停止后不要再启动剩下的配置组：RunMulti 开头会重设取消上下文，
+                // 不在循环里判断的话会把剩余配置组逐个空转一遍（还会反复尝试启动游戏）
+                if (startedAnyGroup && CancellationContext.Instance.IsAborted)
+                {
+                    _logger.LogInformation("已停止，跳过剩余配置组");
+                    break;
+                }
+
                 if (taskProgress.Next != null)
                 {
                     if (scriptGroup.Name != taskProgress.Next.GroupName)
@@ -2544,7 +2557,15 @@ public partial class ScriptControlViewModel : ViewModel
                 }
                 taskProgress.CurrentScriptGroupName = scriptGroup.Name;
                 TaskProgressManager.SaveTaskProgress(taskProgress);
+                startedAnyGroup = true;
                 await _scriptService.RunMulti(GetNextProjects(scriptGroup), scriptGroup.Name, taskProgress);
+
+                if (CancellationContext.Instance.IsAborted)
+                {
+                    _logger.LogInformation("已停止，跳过剩余配置组");
+                    break;
+                }
+
                 await Task.Delay(2000);
             }
 

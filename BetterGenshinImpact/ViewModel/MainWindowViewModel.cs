@@ -2,6 +2,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.UseRedeemCode;
 using BetterGenshinImpact.Helpers;
@@ -76,6 +77,11 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     private bool HasPendingRedeemCodeUpdate => _redeemCodeCnUpdateNewVersion != null || _redeemCodeGlobalUpdateNewVersion != null;
 
     [ObservableProperty] private bool _isRedeemCodeInfoBarOpen;
+
+    /// <summary>
+    /// 当前正在执行的配置组进度，展示在主窗口内容区右上角
+    /// </summary>
+    public ScriptGroupProgressTracker ScriptGroupProgress => ScriptGroupProgressTracker.Instance;
 
     /// <summary>
     /// 主窗口自定义背景图源，null 表示未加载或加载失败

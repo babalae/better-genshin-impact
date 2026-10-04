@@ -32,6 +32,7 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using static BetterGenshinImpact.GameTask.SystemControl;
 using ActionEnum = BetterGenshinImpact.GameTask.AutoPathing.Model.Enum.ActionEnum;
 using BetterGenshinImpact.Core.Simulator.Extensions;
+using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
@@ -338,6 +339,8 @@ public partial class PathExecutor
             await Delay(4000, ct);
             // 血量肯定不满，直接去七天神像回血
             await TpStatueOfTheSeven();
+            // 还没进路线，不重置脚本计时，只补回血开销（含神像的等待时间）
+            ScriptGroupProgressTracker.Instance.NotifyHealTriggered(GetStatueHealExtraSeconds());
         }
 
         if (PartyConfig.SkipPartySwitch)
@@ -591,6 +594,7 @@ public partial class PathExecutor
                     await Delay(800, ct);
                     await SwitchAvatar(PartyConfig.MainAvatarIndex);
                     await Delay(4000, ct);
+                    ScriptGroupProgressTracker.Instance.NotifyHealTriggered();
                     return true;
                 }
 
@@ -603,6 +607,7 @@ public partial class PathExecutor
                     InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
                     await Delay(11000, ct);
                     await SwitchAvatar(PartyConfig.MainAvatarIndex);
+                    ScriptGroupProgressTracker.Instance.NotifyHealTriggered();
                     return true;
                 }
 
@@ -619,6 +624,7 @@ public partial class PathExecutor
                     //单人血只给行走位加血
                     await SwitchAvatar(PartyConfig.MainAvatarIndex);
                     await Delay(5000, ct);
+                    ScriptGroupProgressTracker.Instance.NotifyHealTriggered();
                     return true;
                 }
             }
@@ -627,7 +633,6 @@ public partial class PathExecutor
 
         return false;
     }
-
     private async Task RecoverWhenLowHp(WaypointForTrack waypoint)
     {
         var timing = PartyConfig.RecoverTiming;
@@ -646,6 +651,8 @@ public partial class PathExecutor
         {
             Logger.LogInformation("当前角色血量过低，去七天神像恢复");
             await TpStatueOfTheSeven();
+            // 回血后重试路线：当前脚本从头再来，进度里重置本脚本计时并补时
+            ScriptGroupProgressTracker.Instance.NotifyRouteReset(GetStatueHealExtraSeconds());
             throw new RetryException("回血完成后重试路线");
         }
         else if (Bv.ClickIfInReviveModal(region))
@@ -655,9 +662,19 @@ public partial class PathExecutor
             await Delay(4000, ct);
             // 血量肯定不满，直接去七天神像回血
             await TpStatueOfTheSeven();
+            // 回血后重试路线：当前脚本从头再来，进度里重置本脚本计时并补时
+            ScriptGroupProgressTracker.Instance.NotifyRouteReset(GetStatueHealExtraSeconds());
             throw new RetryException("回血完成后重试路线");
         }
     }
+
+    /// <summary>
+    /// 回七天神像回血给当前脚本补的秒数：基准 30 秒 + 设置里的「回血等待间隔」
+    /// （TpTask 传送到神像后会按该配置等待）
+    /// </summary>
+    private static double GetStatueHealExtraSeconds()
+        => ScriptGroupProgressTracker.GetStatueHealExtraSeconds(
+            TaskContext.Instance().Config.TpConfig.HpRestoreDuration);
 
     private async Task TpStatueOfTheSeven()
     {

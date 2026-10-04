@@ -199,64 +199,126 @@
 
             <ui:NavigationView.ContentOverlay>
                 <Grid>
-                    <!-- 兑换码更新通知卡片 -->
-                    <Border CornerRadius="8"
-                            MinWidth="240"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Top"
-                            Margin="0,8,12,0"
-                            Cursor="Hand"
-                            Visibility="{Binding IsRedeemCodeInfoBarOpen, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
-                        <b:Interaction.Triggers>
-                            <b:EventTrigger EventName="MouseLeftButtonDown">
-                                <b:InvokeCommandAction Command="{Binding OpenFeedCommand}" />
-                            </b:EventTrigger>
-                        </b:Interaction.Triggers>
-                        <Border.Effect>
-                            <DropShadowEffect Color="Black" Opacity="0.2" ShadowDepth="2" BlurRadius="16"/>
-                        </Border.Effect>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="4"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <Border Grid.Column="0"
-                                    Background="{DynamicResource SystemAccentColorPrimaryBrush}"
-                                    CornerRadius="4,0,0,4"/>
-                            <Border Grid.Column="1"
-                                    Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
-                                    CornerRadius="0"
-                                    Padding="14,12">
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock FontSize="13"
-                                               FontWeight="SemiBold"
-                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                               Text="{i18n:T 🎁 有新的兑换码可用}"/>
-                                    <TextBlock FontSize="12"
-                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                               Margin="0,4,0,0"
-                                               TextWrapping="Wrap"
-                                               Text="{i18n:T 点击查看详情}"/>
+                    <!-- 内容区右侧顶部：配置组进度出现时，下方的兑换码卡片会一起被顶下去 -->
+                    <StackPanel HorizontalAlignment="Right"
+                                VerticalAlignment="Top"
+                                Margin="0,8,12,0">
+                        <!-- 配置组执行进度 -->
+                        <Border MinWidth="240"
+                                MaxWidth="280"
+                                Margin="0,0,0,8"
+                                HorizontalAlignment="Right"
+                                Visibility="{Binding ScriptGroupProgress.IsRunning, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
+                            <Border.Effect>
+                                <DropShadowEffect Color="Black" Opacity="0.2" ShadowDepth="2" BlurRadius="16"/>
+                            </Border.Effect>
+                            <Border Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+                                    CornerRadius="8"
+                                    Padding="14,10">
+                                <StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0"
+                                                   FontSize="13"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                   Text="{i18n:T 正在执行：}"/>
+                                        <TextBlock Grid.Column="1"
+                                                   FontSize="13"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                   Text="{Binding ScriptGroupProgress.GroupName}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </Grid>
+                                    <ProgressBar Margin="0,8,0,0"
+                                                 Height="4"
+                                                 Maximum="100"
+                                                 Value="{Binding ScriptGroupProgress.Progress, Mode=OneWay}"/>
+                                    <StackPanel Margin="0,6,0,0"
+                                                HorizontalAlignment="Right"
+                                                Orientation="Horizontal">
+                                        <TextBlock FontSize="12"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   Text="{i18n:T 预计剩余时间：}"/>
+                                        <TextBlock FontSize="12"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   Text="{Binding ScriptGroupProgress.RemainingText}"/>
+                                    </StackPanel>
+                                    <StackPanel Margin="0,2,0,0"
+                                                HorizontalAlignment="Right"
+                                                Orientation="Horizontal"
+                                                Visibility="{Binding ScriptGroupProgress.HasTotalRemaining, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <TextBlock FontSize="12"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   Text="{i18n:T 预计总剩余时间：}"/>
+                                        <TextBlock FontSize="12"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   Text="{Binding ScriptGroupProgress.TotalRemainingText}"/>
+                                    </StackPanel>
                                 </StackPanel>
                             </Border>
-                            <!-- 右侧关闭按钮区域 -->
-                            <Border Grid.Column="2"
-                                    Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
-                                    CornerRadius="0,4,4,0"
-                                    Padding="6,0,8,0">
-                                <ui:Button Width="28" Height="28"
-                                           Padding="0"
-                                           VerticalAlignment="Center"
-                                           Background="Transparent"
-                                           BorderBrush="Transparent"
-                                           CornerRadius="4"
-                                           Icon="{ui:SymbolIcon Dismiss16}"
-                                           Command="{Binding DismissRedeemCodeCommand}"
-                                           ToolTip="{i18n:T 关闭}" />
-                            </Border>
-                        </Grid>
-                    </Border>
+                        </Border>
+
+                        <!-- 兑换码更新通知卡片 -->
+                        <Border CornerRadius="8"
+                                MinWidth="240"
+                                HorizontalAlignment="Right"
+                                Cursor="Hand"
+                                Visibility="{Binding IsRedeemCodeInfoBarOpen, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
+                            <b:Interaction.Triggers>
+                                <b:EventTrigger EventName="MouseLeftButtonDown">
+                                    <b:InvokeCommandAction Command="{Binding OpenFeedCommand}" />
+                                </b:EventTrigger>
+                            </b:Interaction.Triggers>
+                            <Border.Effect>
+                                <DropShadowEffect Color="Black" Opacity="0.2" ShadowDepth="2" BlurRadius="16"/>
+                            </Border.Effect>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="4"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0"
+                                        Background="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                        CornerRadius="4,0,0,4"/>
+                                <Border Grid.Column="1"
+                                        Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+                                        CornerRadius="0"
+                                        Padding="14,12">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock FontSize="13"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                   Text="{i18n:T 🎁 有新的兑换码可用}"/>
+                                        <TextBlock FontSize="12"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   Margin="0,4,0,0"
+                                                   TextWrapping="Wrap"
+                                                   Text="{i18n:T 点击查看详情}"/>
+                                    </StackPanel>
+                                </Border>
+                                <!-- 右侧关闭按钮区域 -->
+                                <Border Grid.Column="2"
+                                        Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+                                        CornerRadius="0,4,4,0"
+                                        Padding="6,0,8,0">
+                                    <ui:Button Width="28" Height="28"
+                                               Padding="0"
+                                               VerticalAlignment="Center"
+                                               Background="Transparent"
+                                               BorderBrush="Transparent"
+                                               CornerRadius="4"
+                                               Icon="{ui:SymbolIcon Dismiss16}"
+                                               Command="{Binding DismissRedeemCodeCommand}"
+                                               ToolTip="{i18n:T 关闭}" />
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
                     <ui:SnackbarPresenter x:Name="SnackbarPresenter" />
                 </Grid>
             </ui:NavigationView.ContentOverlay>

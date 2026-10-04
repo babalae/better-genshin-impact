@@ -160,6 +160,12 @@ public partial class ScriptService : IScriptService
         }
         
         
+        // 只有地图追踪脚本能估算耗时，其余脚本按 0 计；为 0 时不显示进度也不提预计时间
+        var steps = ScriptGroupProgressTracker.BuildSteps(groupName, list);
+        var groupEstimatedSeconds = steps.Sum(step => step.EstimatedSeconds);
+        // 连续执行 / 一条龙时这里拿到的是整批剩下的预估，单独执行时就是本组预估
+        var estimatedSeconds = ScriptGroupProgressTracker.Instance.GetGroupRemainingEstimate(groupEstimatedSeconds);
+
         if (!string.IsNullOrEmpty(groupName)&&!RunnerContext.Instance.IsPreExecution)
         {
             // if (hasTimer)
@@ -167,7 +173,15 @@ public partial class ScriptService : IScriptService
             //     _logger.LogInformation("配置组 {Name} 包含实时任务操作调用", groupName);
             // }
 
-            _logger.LogInformation("配置组 {Name} 加载完成，共{Cnt}个脚本，开始执行", groupName, list.Count);
+            if (estimatedSeconds > 0)
+            {
+                _logger.LogInformation("配置组 {Name} 加载完成，共{Cnt}个脚本，开始执行，预计剩余时间 {Remaining}",
+                    groupName, list.Count, ScriptGroupProgressTracker.FormatEstimatedDuration(estimatedSeconds));
+            }
+            else
+            {
+                _logger.LogInformation("配置组 {Name} 加载完成，共{Cnt}个脚本，开始执行", groupName, list.Count);
+            }
         }
 
         // var timerOperation = hasTimer ? DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty : DispatcherTimerOperationEnum.UseSelfCaptureImage;
@@ -183,6 +197,9 @@ public partial class ScriptService : IScriptService
         }
 
 
+        // 记录配置组进度与剩余时间，方法结束时自动隐藏
+        using var progressScope = ScriptGroupProgressTracker.Instance.BeginTracking(groupName, steps);
+
         await new TaskRunner()
             .RunThreadAsync(async () =>
             {
@@ -191,6 +208,8 @@ public partial class ScriptService : IScriptService
                 for (int x = 0; x < list.Count; x++)
                 {
                     var project = list[x];
+                    // 让进度跟着脚本走：这一步之前的脚本（含被跳过、被禁用的）立刻退出预计剩余时间
+                    ScriptGroupProgressTracker.Instance.OnStepStarted(x);
                     //正常情况下，只有一个真正执行的project，存在其他优先执行配置组情况下，会有多个任务。
                     List<ScriptGroupProject> exeProjects = [project];
                     RunnerContext.Instance.IsPreExecution = false;
@@ -311,7 +330,9 @@ public partial class ScriptService : IScriptService
                         if (fisrt )
                         {
                             fisrt = false;
-                            Notify.Event(NotificationEvent.GroupStart).Success($"配置组{groupName}启动");
+                            Notify.Event(NotificationEvent.GroupStart).Success(estimatedSeconds > 0
+                                ? $"配置组{groupName}启动，预计剩余时间{ScriptGroupProgressTracker.FormatEstimatedDuration(estimatedSeconds)}"
+                                : $"配置组{groupName}启动");
                         }
 
                         if (!RunnerContext.Instance.IsPreExecution &&taskProgress != null)
