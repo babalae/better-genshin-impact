@@ -185,11 +185,11 @@ public class RewardResultRecognizer
     /// <param name="screen">当前页全屏截图。</param>
     /// <param name="iconRecognizer">物品图标识别器。</param>
     /// <returns>本页奖励与卡片位置。</returns>
-    private RewardPageRecognitionResult RecognizeRewardPage(ImageRegion screen, IItemIconRecognizer iconRecognizer, bool trainingPolicy = false)
+    private RewardPageRecognitionResult RecognizeRewardPage(ImageRegion screen, IItemIconRecognizer iconRecognizer, bool requireReliableCounts = false)
     {
         using var bandMat = new Mat(screen.SrcMat, new Rect(220, 444, 1480, 220));
         var cardRects = DetectCardRects(bandMat);
-        var recognizedRewards = RecognizeRewards(bandMat, cardRects, iconRecognizer, trainingPolicy: trainingPolicy);
+        var recognizedRewards = RecognizeRewards(bandMat, cardRects, iconRecognizer, requireReliableCounts: requireReliableCounts);
         return new RewardPageRecognitionResult(recognizedRewards, cardRects);
     }
 
@@ -355,7 +355,7 @@ public class RewardResultRecognizer
     /// <param name="cardRects">已定位的卡片矩形。</param>
     /// <param name="iconRecognizer">物品图标识别器。</param>
     /// <param name="ocrService">OCR 服务，为空时使用 Paddle OCR。</param>
-    private List<RecognizedReward> RecognizeRewards(Mat bandMat, List<Rect> cardRects, IItemIconRecognizer iconRecognizer, IOcrService? ocrService = null, bool trainingPolicy = false)
+    private List<RecognizedReward> RecognizeRewards(Mat bandMat, List<Rect> cardRects, IItemIconRecognizer iconRecognizer, IOcrService? ocrService = null, bool requireReliableCounts = false)
     {
         ocrService ??= OcrFactory.Paddle;
 
@@ -376,7 +376,7 @@ public class RewardResultRecognizer
             using var cardMat = new Mat(bandMat, cardRect);
 
             // === 图标识别===
-            var iconName = RecognizeIcon(iconRecognizer, cardMat, cardIdx, trainingPolicy);
+            var iconName = RecognizeIcon(iconRecognizer, cardMat, cardIdx);
             if (iconName == null)
             {
                 _logger.LogWarning("奖励识别：存在未识别的奖励图标");
@@ -386,7 +386,7 @@ public class RewardResultRecognizer
             }
 
             // === 数量 OCR ===
-            var count = RecognizeCountByOcr(cardMat, ocrService, cardIdx, trainingPolicy);
+            var count = RecognizeCountByOcr(cardMat, ocrService, cardIdx, requireReliableCounts);
 
             results.Add(new RecognizedReward(iconName, count));
         }
@@ -401,18 +401,15 @@ public class RewardResultRecognizer
     /// <param name="cardMat">奖励卡片图像。</param>
     /// <param name="cardIdx">卡片序号。</param>
     /// <returns>奖励名称；未识别时返回 null。</returns>
-    private string? RecognizeIcon(IItemIconRecognizer iconRecognizer, Mat cardMat, int cardIdx, bool trainingPolicy = false)
+    private string? RecognizeIcon(IItemIconRecognizer iconRecognizer, Mat cardMat, int cardIdx)
     {
         try
         {
             using Mat icon = cardMat.GetGridIcon(); // 归一化为 125×125
-            if (trainingPolicy) return TrainingGuideRewardPolicy.Recognize(iconRecognizer, icon, cardIdx);
             return iconRecognizer.Recognize(icon);
         }
         catch (Exception ex)
         {
-            if (trainingPolicy)
-                TrainingGuideDiagnostics.Detail("培养领奖图标异常：位置={Index}；异常={Exception}", cardIdx + 1, ex);
             _logger.LogDebug(ex, "奖励识别：卡片 {CardIndex} 图标识别异常，已忽略", cardIdx);
             return null;
         }
@@ -424,15 +421,15 @@ public class RewardResultRecognizer
     /// <param name="cardMat">奖励卡片图像。</param>
     /// <param name="ocrService">OCR 服务。</param>
     /// <param name="cardIdx">卡片序号。</param>
-    /// <param name="trainingPolicy">培养模式使用独立诊断，不采用普通模式的数量兜底提示。</param>
+    /// <param name="requireReliableCounts">要求可靠数量时保留识别失败状态，供调用方拒绝更新库存。</param>
     /// <returns>识别到的数量；失败时返回 -1。</returns>
-    private int RecognizeCountByOcr(Mat cardMat, IOcrService ocrService, int cardIdx, bool trainingPolicy)
+    private int RecognizeCountByOcr(Mat cardMat, IOcrService ocrService, int cardIdx, bool requireReliableCounts)
     {
         try
         {
             using GridItemCountRecognitionResult result =
                 GridItemCountRecognizer.RecognizeCropped(cardMat, ocrService);
-            if (trainingPolicy)
+            if (requireReliableCounts)
                 TrainingGuideDiagnostics.Detail("培养领奖数量：位置={Index}；OCR原文={RawText}；数量={Count}；原因={Reason}；有效连通域={Components}",
                     cardIdx + 1, result.RawText, result.Count, result.Reason, result.ComponentCount);
             if (result.Count >= 0)
@@ -440,7 +437,7 @@ public class RewardResultRecognizer
                 return result.Count;
             }
 
-            if (trainingPolicy)
+            if (requireReliableCounts)
             {
                 _logger.LogWarning("培养领奖：卡片 {Index} 数量未确认；通用奖励数量忽略，材料数量失败则不更新本轮库存", cardIdx + 1);
                 return -1;
@@ -454,7 +451,7 @@ public class RewardResultRecognizer
         }
         catch (Exception ex)
         {
-            if (trainingPolicy)
+            if (requireReliableCounts)
             {
                 TrainingGuideDiagnostics.Detail("培养领奖数量异常：位置={Index}；异常={Exception}", cardIdx + 1, ex);
                 _logger.LogWarning("培养领奖：卡片 {Index} 数量识别异常；通用奖励数量忽略，材料数量失败则不更新本轮库存", cardIdx + 1);

@@ -608,23 +608,19 @@ public partial class AutoDomainTask
                         TrainingGuideDiagnostics.Save(normalized, "friendship-3", recognitionId);
                     continue;
                 }
-                var recognition = TrainingGuideIconMatch.Recognize(recognizer, normalized);
-                var name = recognition.RecognizedName;
+                var name = recognizer.Recognize(normalized);
                 var material = name == null ? null : TrainingGuideMaterialCatalog.Find(name);
                 if (TrainingGuideDiagnostics.Enabled)
                     TrainingGuideDiagnostics.Save(normalized, $"material-{index + 1}", recognitionId);
-                TrainingGuideDiagnostics.LogIconMatch(recognition.CandidateMatch, name,
+                TrainingGuideDiagnostics.LogIconMatch(name,
                     recognitionId, level, index + 1);
                 TrainingGuideDiagnostics.Detail("培养图标识别 {Level}，位置 {Index}：{Name}", level, index + 1, name ?? "未识别");
-                if (name == null)
-                    material = TrainingGuideTargetMarker.TryRecover(recognition.CandidateMatch, strip, rect,
-                        capture.Height / 1080d, Logger, recognitionId, level, index + 1);
                 if (material != null)
                 {
                     identified.Add((rect, material));
                     continue;
                 }
-                // 未识别和非培养奖励仅记录候选；遗漏培养材料由下方等级完整性校验拦截。
+                // 未识别和非培养奖励仅记录识别结果；遗漏培养材料由下方等级完整性校验拦截。
                 TrainingGuideDiagnostics.Detail("培养图标扫描 {Level}，位置 {Index}：未确认为培养材料，不计入需求，继续扫描", level, index + 1);
             }
         }

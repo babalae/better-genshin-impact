@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.GameTask.Common.Job;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
@@ -107,27 +106,13 @@ public static class TrainingGuideDiagnostics
             => session.Write(Category.Flow, formatter(state, exception));
     }
 
-    internal static void LogIconMatch((ItemIconCandidate Candidate, double Threshold)? match, string? recognizedName,
+    internal static void LogIconMatch(string? recognizedName,
         string captureId, string level, int index)
     {
         if (!Enabled) return;
         try
         {
-            string detail;
-            if (match != null)
-            {
-                // 记录本次识别的原始候选，不再次执行模型推理。
-                var (candidate, threshold) = match.Value;
-                detail = string.IsNullOrEmpty(candidate.Name)
-                    ? $"模型=ItemV2；无有效候选；阈值={threshold:F4}（余弦相似度 >= 阈值）"
-                    : $"模型=ItemV2；最高候选={candidate.Name}；分数={candidate.Score:F6}；阈值={threshold:F4}；规则=余弦相似度 >= 阈值；原阈值通过={candidate.Score >= threshold}";
-            }
-            else
-            {
-                // 旧模型使用距离而非余弦分数，不套用 ItemV2 的阈值。
-                detail = $"模型=Legacy；当前诊断仅支持 ItemV2，匹配分数及阈值未读取";
-            }
-            var message = $"[{captureId}] 入口={level}；位置={index}；{detail}；实际识别={recognizedName ?? "未识别"}";
+            var message = $"[{captureId}] 入口={level}；位置={index}；实际识别={recognizedName ?? "未识别"}";
             AppendText(Category.IconMatch, message);
         }
         catch (Exception e)
