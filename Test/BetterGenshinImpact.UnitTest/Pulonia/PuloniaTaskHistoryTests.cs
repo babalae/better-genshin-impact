@@ -13,7 +13,7 @@ using Newtonsoft.Json.Linq;
 namespace BetterGenshinImpact.UnitTest.Pulonia;
 
 /// <summary>
-/// 历史持久化、类型专属展示与筛选回归，不启动 WPF 应用、游戏或截图器。
+/// 历史持久化、类型专属展示与选择回归，不启动 WPF 应用、游戏或截图器。
 /// </summary>
 public sealed class PuloniaTaskHistoryTests : IDisposable
 {
@@ -178,13 +178,6 @@ public sealed class PuloniaTaskHistoryTests : IDisposable
         var input = selectedNode!.InputFields.Single(field => field.Label.StartsWith("计算输入")).Value;
         Assert.DoesNotContain("99", input);
         Assert.Contains("1", input);
-        model.SearchText = "进程内 C#";
-        Assert.Equal(2, model.Runs.Count);
-        model.SelectedStatusFilter = model.StatusFilters.Single(item => item.Value == "failed");
-        Assert.Empty(model.Runs);
-        Assert.Contains("没有匹配", model.EmptyText);
-        model.ClearFiltersCommand.Execute(null);
-        Assert.Equal(2, model.Runs.Count);
     }
 
     /// <summary>
@@ -205,19 +198,17 @@ public sealed class PuloniaTaskHistoryTests : IDisposable
         Assert.Null(model.SelectedRun);
         Assert.Null(model.SelectedRunNodeResult);
         Assert.False(model.HasSelectedRun);
-        Assert.False(model.ClearSelectionCommand.CanExecute(null));
 
         await model.RevealRunAsync(requestId);
         Assert.Equal(requestId, model.SelectedRun!.RequestId);
         Assert.NotNull(model.SelectedRunNodeResult);
-        Assert.True(model.ClearSelectionCommand.CanExecute(null));
     }
 
     /// <summary>
-    /// 取消选择不删除或取消任务，刷新、新记录、筛选与切换计划均不能强制重新选择。
+    /// 未选中记录是有效状态：刷新、新记录与切换计划均不能强制重新选择，也不影响历史数据。
     /// </summary>
     [Fact]
-    public async Task ClearHistorySelection_SurvivesRefreshFiltersAndPlanChanges()
+    public async Task PlanSwitchAndRefresh_DoNotForceSelection()
     {
         using var store = new PuloniaTaskStore(_directory);
         await using var service = CreateService(store);
@@ -228,10 +219,10 @@ public sealed class PuloniaTaskHistoryTests : IDisposable
         var model = new PuloniaTaskHistoryViewModel(service, store) { PlanFilterId = plan.Id };
         await model.RevealRunAsync(oldId);
 
-        model.ClearSelectionCommand.Execute(null);
+        // 列表取消选中即回到未选中状态，不停止任务、不删除记录。
+        model.SelectedRun = null;
+        model.SelectedRunNodeResult = null;
         Assert.Null(model.SelectedRun);
-        Assert.Null(model.SelectedRunNodeResult);
-        Assert.False(model.ClearSelectionCommand.CanExecute(null));
         Assert.False(model.CancelRunCommand.CanExecute(null));
         Assert.False(model.ResumeRunCommand.CanExecute(null));
         Assert.False(model.ResumeFromNodeCommand.CanExecute(null));
@@ -243,12 +234,6 @@ public sealed class PuloniaTaskHistoryTests : IDisposable
         await model.RefreshAsync();
         Assert.Equal(2, model.Runs.Count);
         Assert.Null(model.SelectedRun);
-        model.SearchText = "计划甲";
-        model.SelectedStatusFilter = model.StatusFilters.Single(item => item.Value == "failed");
-        Assert.Empty(model.Runs);
-        model.ClearFiltersCommand.Execute(null);
-        Assert.Equal(2, model.Runs.Count);
-        Assert.Null(model.SelectedRun);
         model.PlanFilterId = otherPlan.Id;
         Assert.Single(model.Runs);
         Assert.Null(model.SelectedRun);
@@ -256,7 +241,7 @@ public sealed class PuloniaTaskHistoryTests : IDisposable
         Assert.Null(model.SelectedRun);
         Assert.Null(model.SelectedRunNodeResult);
 
-        // 明确查看某次运行时仍恢复选择，历史及节点详情没有被清除选择操作修改。
+        // 明确查看某次运行时仍恢复选择，历史及节点详情不受未选中状态影响。
         await model.RevealRunAsync(oldId);
         Assert.Equal(oldId, model.SelectedRun!.RequestId);
         Assert.NotNull(model.SelectedRunNodeResult);
@@ -265,10 +250,10 @@ public sealed class PuloniaTaskHistoryTests : IDisposable
     }
 
     /// <summary>
-    /// 选中记录被筛掉或指定请求不存在时，不能改为选择无关记录；清除筛选也不能抢回选择。
+    /// 指定请求不存在时，刷新不能改为选择无关记录。
     /// </summary>
     [Fact]
-    public async Task HistoryFilters_DoNotReplaceSelectionWithUnrelatedRun()
+    public async Task Refresh_WithUnknownRequestDoesNotSelectUnrelatedRun()
     {
         using var store = new PuloniaTaskStore(_directory);
         await using var service = CreateService(store);
@@ -280,16 +265,11 @@ public sealed class PuloniaTaskHistoryTests : IDisposable
         await service.WaitForCompletionAsync(secondId).WaitAsync(TimeSpan.FromSeconds(20));
         var model = new PuloniaTaskHistoryViewModel(service, store);
         await model.RevealRunAsync(firstId);
+        Assert.Equal(firstId, model.SelectedRun!.RequestId);
 
-        model.SearchText = "计划乙";
-        Assert.Equal(secondId, Assert.Single(model.Runs).RequestId);
-        Assert.Null(model.SelectedRun);
-        Assert.Null(model.SelectedRunNodeResult);
-        model.ClearFiltersCommand.Execute(null);
-        Assert.Equal(2, model.Runs.Count);
-        Assert.Null(model.SelectedRun);
         await model.RefreshAsync(Guid.NewGuid());
         Assert.Null(model.SelectedRun);
+        Assert.Null(model.SelectedRunNodeResult);
     }
 
     /// <summary>
@@ -329,7 +309,10 @@ public sealed class PuloniaTaskHistoryTests : IDisposable
             SelectedPlanTabIndex = tabIndex
         };
         if (!keepHistorySelected)
-            history.ClearSelectionCommand.Execute(null);
+        {
+            history.SelectedRun = null;
+            history.SelectedRunNodeResult = null;
+        }
         Assert.Equal(keepHistorySelected, history.HasSelectedRun);
         Assert.True(page.RunPlanCommand.CanExecute(null));
 

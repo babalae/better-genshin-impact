@@ -76,22 +76,12 @@
         </Grid.RowDefinitions>
         <StackPanel Margin="0,0,0,10">
             <WrapPanel>
-                <ui:TextBox Width="235" Margin="0,0,8,6" PlaceholderText="搜索计划、节点、类型或运行 ID"
-                            Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                            AutomationProperties.Name="搜索执行记录" />
-                <ComboBox Width="160" Margin="0,0,8,6" ItemsSource="{Binding StatusFilters}"
-                          SelectedItem="{Binding SelectedStatusFilter, Mode=TwoWay}" DisplayMemberPath="Label"
-                          AutomationProperties.Name="执行状态筛选" />
                 <Button Margin="0,0,8,6" Command="{Binding RefreshRunsCommand}" Content="刷新" />
-                <Button Margin="0,0,8,6" Command="{Binding ClearFiltersCommand}" Content="清除筛选" />
-            </WrapPanel>
-            <WrapPanel>
-                <Button Margin="0,0,8,4" Command="{Binding ClearSelectionCommand}" Content="取消选择记录"
-                        ToolTip="只取消查看记录，不停止任务或删除历史；新执行计划不依赖记录选择。" />
-                <Button Margin="0,0,8,4" Command="{Binding CancelRunCommand}" Content="取消选中运行" />
-                <Button Margin="0,0,8,4" Command="{Binding ResumeRunCommand}" Content="继续未完成节点"
+                <Button Margin="0,0,8,6" Command="{Binding CancelRunCommand}" Content="停止当前选中"
+                        ToolTip="停止选中的运行，并等待当前执行器释放资源。" />
+                <Button Margin="0,0,8,6" Command="{Binding ResumeRunCommand}" Content="继续未完成节点"
                         ToolTip="沿用原快照，跳过已确认成功的节点；不确定结果需要人工核对。" />
-                <Button Margin="0,0,8,4" Command="{Binding ResumeFromNodeCommand}" Content="从选中节点开始"
+                <Button Margin="0,0,8,6" Command="{Binding ResumeFromNodeCommand}" Content="从选中节点开始"
                         ToolTip="建立关联的新运行，所选节点及之后的节点可能重新执行。" />
             </WrapPanel>
             <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding CountText}" />
@@ -141,8 +131,9 @@
                 </TextBlock>
             </Grid>
             <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Center" Background="{DynamicResource CardStrokeColorDefaultBrush}" />
+            <!-- 未选中记录时的唯一占位提示；选中详情与它互斥显示，避免两条提示文本重叠。 -->
             <TextBlock Grid.Column="2" Margin="12" HorizontalAlignment="Center" VerticalAlignment="Center"
-                       Text="未选中执行记录；点击左侧记录可查看详情。" TextWrapping="Wrap" TextAlignment="Center"
+                       Text="未选中执行记录；点击左侧记录可查看当次执行的节点、输入、结果与证据。" TextWrapping="Wrap" TextAlignment="Center"
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" IsHitTestVisible="False">
                 <TextBlock.Style>
                     <Style TargetType="TextBlock">
@@ -288,19 +279,6 @@
                     </TabItem>
                 </TabControl>
             </Grid>
-            <TextBlock Grid.Column="2" Margin="20" VerticalAlignment="Center" HorizontalAlignment="Center"
-                       Text="选择一条记录，查看当次执行的节点、输入、结果与证据。" TextWrapping="Wrap">
-                <TextBlock.Style>
-                    <Style TargetType="TextBlock">
-                        <Setter Property="Visibility" Value="Visible" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding HasSelectedRun}" Value="True">
-                                <Setter Property="Visibility" Value="Collapsed" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </TextBlock.Style>
-            </TextBlock>
         </Grid>
         <StackPanel Grid.Row="2" Margin="0,10,0,0">
             <ProgressBar Height="3" IsIndeterminate="True" Margin="0,0,0,6"

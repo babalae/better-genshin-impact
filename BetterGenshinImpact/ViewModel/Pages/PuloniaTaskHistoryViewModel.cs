@@ -15,7 +15,7 @@ using CommunityToolkit.Mvvm.Input;
 namespace BetterGenshinImpact.ViewModel.Pages;
 
 /// <summary>
-/// 全局执行记录和计划内历史共用的视图模型，维护筛选、详情选择与安全续跑。
+/// 全局执行记录和计划内历史共用的视图模型，维护记录列表、详情选择与安全续跑。
 /// </summary>
 public partial class PuloniaTaskHistoryViewModel : ViewModel
 {
@@ -25,7 +25,7 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel
     private readonly IPuloniaTaskService _taskService;
 
     /// <summary>
-    /// 当前加载的全部运行，不随筛选丢弃。
+    /// 当前加载的全部运行，不随计划过滤丢弃。
     /// </summary>
     private readonly List<PuloniaTaskRunItemViewModel> _allRuns = [];
 
@@ -67,18 +67,6 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel
     private PuloniaTaskNodeResultViewModel? _selectedRunNodeResult;
 
     /// <summary>
-    /// 按计划名称、运行 ID、节点名称和任务类型搜索。
-    /// </summary>
-    [ObservableProperty]
-    private string _searchText = string.Empty;
-
-    /// <summary>
-    /// 选中状态过滤项，使用中文显示但按固定 ID 筛选。
-    /// </summary>
-    [ObservableProperty]
-    private PuloniaTaskHistoryField _selectedStatusFilter = new("全部状态", "all");
-
-    /// <summary>
     /// 计划页固定过滤的当前计划 ID，全局页为空；为空时展示全部计划的记录。
     /// </summary>
     [ObservableProperty]
@@ -107,19 +95,12 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel
     public ObservableCollection<PuloniaTaskLedgerItemViewModel> LedgerEntries { get; } = [];
 
     /// <summary>
-    /// 可用的状态筛选项。
+    /// 列表为空时的解释，不把计划过滤无结果误显示为历史丢失。
     /// </summary>
-    public IReadOnlyList<PuloniaTaskHistoryField> StatusFilters { get; } =
-    [new("全部状态", "all"), new("活动 / 排队", "active"), new("已完成", "completed"),
-        new("失败 / 超时", "failed"), new("停止 / 中断", "stopped"), new("已过期（未执行）", "expired"), new("待核验 / 待处理", "attention")];
+    public string EmptyText => _allRuns.Count == 0 ? "暂无执行记录\n运行任务计划后，记录会自动保存在本地。" : "当前计划暂无执行记录。";
 
     /// <summary>
-    /// 列表为空时的解释，不把筛选无结果误显示为历史丢失。
-    /// </summary>
-    public string EmptyText => _allRuns.Count == 0 ? "暂无执行记录\n运行任务计划后，记录会自动保存在本地。" : "没有匹配的记录\n请调整搜索或筛选条件。";
-
-    /// <summary>
-    /// 当前筛选计数。
+    /// 当前显示的记录计数。
     /// </summary>
     public string CountText => $"显示 {Runs.Count} / {_allRuns.Count} 条记录（新到旧）";
 
@@ -161,7 +142,6 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel
         _taskService = taskService;
         StorageDirectory = store.RootDirectory;
         _typeNames = taskService.Definitions.ToDictionary(item => item.TaskType, item => item.DisplayName);
-        SelectedStatusFilter = StatusFilters[0];
         _taskService.RunChanged += OnRunChanged;
     }
 
@@ -268,31 +248,10 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel
     private Task RefreshRunsAsync() => RefreshAsync();
 
     /// <summary>
-    /// 清除搜索与状态过滤，保留当前计划范围。
-    /// </summary>
-    [RelayCommand]
-    private void ClearFilters()
-    {
-        SearchText = string.Empty;
-        SelectedStatusFilter = StatusFilters[0];
-    }
-
-    /// <summary>
-    /// 取消查看历史记录，不取消运行、不删除记录，也不影响计划页提交新的完整计划。
-    /// </summary>
-    [RelayCommand(CanExecute = nameof(HasSelectedRun))]
-    private void ClearSelection()
-    {
-        SelectedRun = null;
-        SelectedRunNodeResult = null;
-    }
-
-    /// <summary>
-    /// 用户主动提交或续跑时显示新请求，防止筛选条件把操作结果隐藏。
+    /// 用户主动提交或续跑时显示新请求，立即定位到该运行的最新状态。
     /// </summary>
     public async Task RevealRunAsync(Guid requestId)
     {
-        ClearFilters();
         await RefreshAsync(requestId);
     }
 
@@ -316,7 +275,7 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel
             LedgerEntries.Clear();
             foreach (var entry in ledger.OrderByDescending(item => item.OccurredAt))
                 LedgerEntries.Add(new PuloniaTaskLedgerItemViewModel(entry));
-            ApplyFilters(preferredRequestId);
+            ApplyPlanFilter(preferredRequestId);
             StatusMessage = _taskService.RecoveryNotice ?? "记录已更新；所有时间按本地时区显示。";
         }
         catch (Exception ex)
@@ -362,19 +321,14 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel
     }
 
     /// <summary>
-    /// 在 UI 线程筛选列表，并按请求、节点地址、尝试次数恢复选择。
+    /// 在 UI 线程按计划范围同步列表，并按请求、节点地址、尝试次数恢复选择。
     /// </summary>
-    private void ApplyFilters(Guid? preferredRequestId = null)
+    private void ApplyPlanFilter(Guid? preferredRequestId = null)
     {
         var selectedRequestId = preferredRequestId ?? SelectedRun?.RequestId;
         var selectedAddress = SelectedRunNodeResult?.TaskAddress;
         var selectedAttempt = SelectedRunNodeResult?.Attempt;
-        var search = SearchText?.Trim() ?? string.Empty;
-        var filtered = _allRuns.Where(item => (PlanFilterId is null || item.Run.PlanId == PlanFilterId)
-            && MatchesStatus(item) && (search.Length == 0 || Contains(item.PlanName, search)
-                || Contains(item.Run.RunId.ToString("D"), search) || Contains(item.RequestId.ToString("D"), search)
-                || item.NodeResults.Any(node => Contains(node.TaskName, search) || Contains(node.TaskType, search)
-                    || Contains(_typeNames.GetValueOrDefault(node.TaskType) ?? node.TaskType, search)))).ToArray();
+        var filtered = _allRuns.Where(item => PlanFilterId is null || item.Run.PlanId == PlanFilterId).ToArray();
         // 同步差异而非清空列表，保持选中历史条目和虚拟化列表的滚动位置。
         for (var index = 0; index < filtered.Length; index++)
         {
@@ -388,7 +342,7 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel
         }
         while (Runs.Count > filtered.Length)
             Runs.RemoveAt(Runs.Count - 1);
-        // 未选中也是有效状态；后台刷新和筛选不得强制选回第一条历史。
+        // 未选中也是有效状态；后台刷新和计划切换不得强制选回第一条历史。
         // 只有显式提交/续跑指定请求，或保留用户正在查看的请求时才恢复选择。
         SelectedRun = selectedRequestId is { } requestId
             ? Runs.FirstOrDefault(item => item.RequestId == requestId)
@@ -399,25 +353,6 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel
         OnPropertyChanged(nameof(CountText));
         OnPropertyChanged(nameof(EmptyText));
     }
-
-    /// <summary>
-    /// 按调度状态和业务核验程度共同筛选。
-    /// </summary>
-    private bool MatchesStatus(PuloniaTaskRunItemViewModel item) => SelectedStatusFilter.Value switch
-    {
-        "active" => item.CanCancel,
-        "completed" => item.Run.Status == PuloniaTaskRunStatus.Succeeded,
-        "failed" => item.Run.Status is PuloniaTaskRunStatus.Failed or PuloniaTaskRunStatus.TimedOut,
-        "expired" => item.Run.Status == PuloniaTaskRunStatus.Expired,
-        "stopped" => item.Run.Status is PuloniaTaskRunStatus.Cancelled or PuloniaTaskRunStatus.Interrupted,
-        "attention" => item.NeedsVerification || item.Run.Status == PuloniaTaskRunStatus.NeedsAttention,
-        _ => true
-    };
-
-    /// <summary>
-    /// 不区分大小写的搜索，ID 与中文名称都可以匹配。
-    /// </summary>
-    private static bool Contains(string value, string search) => value.Contains(search, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// 使用主题对话框报告操作失败，不影响后台任务执行。
@@ -443,7 +378,6 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel
         OnPropertyChanged(nameof(CanCancelRun));
         OnPropertyChanged(nameof(CanResumeRun));
         OnPropertyChanged(nameof(CanResumeFromNode));
-        ClearSelectionCommand.NotifyCanExecuteChanged();
         CancelRunCommand.NotifyCanExecuteChanged();
         ResumeRunCommand.NotifyCanExecuteChanged();
         ResumeFromNodeCommand.NotifyCanExecuteChanged();
@@ -460,21 +394,11 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel
     }
 
     /// <summary>
-    /// 搜索变化立即重新筛选，不触发磁盘读取。
-    /// </summary>
-    partial void OnSearchTextChanged(string value) => ApplyFilters();
-
-    /// <summary>
-    /// 状态选择变化立即重新筛选。
-    /// </summary>
-    partial void OnSelectedStatusFilterChanged(PuloniaTaskHistoryField value) => ApplyFilters();
-
-    /// <summary>
-    /// 计划范围变化立即重新筛选，并同步卡片标题的显隐。
+    /// 计划范围变化立即同步列表，并更新卡片标题的显隐。
     /// </summary>
     partial void OnPlanFilterIdChanged(string? value)
     {
         OnPropertyChanged(nameof(ShowPlanTitle));
-        ApplyFilters();
+        ApplyPlanFilter();
     }
 }
