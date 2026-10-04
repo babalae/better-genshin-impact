@@ -11,12 +11,15 @@ public class KeyMouseScript(string rootPath, CancellationToken ct)
 {
     public async Task Run(string json)
     {
+        // 登记本轮 JS 宿主操作；脚本停止后必须等待业务方法真正退出再释放游戏所有权。
+        using var scriptOperation = ScriptHostOperations.Enter();
         await KeyMouseMacroPlayer.PlayMacro(json, ct, false);
         ct.ThrowIfCancellationRequested();
     }
 
     public async Task RunFile(string path)
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         var json = await new LimitedFile(rootPath).ReadText(path);
         await Run(json);
     }

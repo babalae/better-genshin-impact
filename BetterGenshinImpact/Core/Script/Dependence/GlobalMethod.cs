@@ -25,6 +25,8 @@ public class GlobalMethod
     /// </summary>
     public static async Task Sleep(int millisecondsTimeout, CancellationToken ct)
     {
+        // 登记本轮 JS 宿主操作；脚本停止后必须等待业务方法真正退出再释放游戏所有权。
+        using var scriptOperation = ScriptHostOperations.Enter();
         await Task.Delay(millisecondsTimeout, ct);
     }
     

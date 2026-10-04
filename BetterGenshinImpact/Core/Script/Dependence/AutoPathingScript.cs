@@ -33,6 +33,8 @@ public class AutoPathingScript
 
     public async Task<bool> Run(string json)
     {
+        // 登记本轮 JS 宿主操作；脚本停止后必须等待业务方法真正退出再释放游戏所有权。
+        using var scriptOperation = ScriptHostOperations.Enter();
         var task = PathingTask.BuildFromJson(json);
         var pathExecutor = new PathExecutor(_ct);
         if (_config != null && _config is PathingPartyConfig patyConfig)
@@ -47,6 +49,7 @@ public class AutoPathingScript
 
     public async Task<bool> RunFile(string path)
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         var json = await new LimitedFile(_rootPath).ReadText(path);
         return await Run(json);
     }
@@ -57,6 +60,7 @@ public class AutoPathingScript
     /// <param name="path">在 `\User\AutoPathing` 目录下获取文件</param>
     public async Task<bool> RunFileFromUser(string path)
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         var json = await AutoPathingFile.ReadText(path);
         return await Run(json);
     }

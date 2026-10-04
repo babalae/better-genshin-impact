@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
@@ -6,6 +7,7 @@ using BetterGenshinImpact.Service;
 using BetterGenshinImpact.ViewModel.Pages;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.ClearScript.V8;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.UnitTest.Pulonia;
@@ -186,7 +188,7 @@ public sealed class PuloniaTaskHistoryTests : IDisposable
     }
 
     /// <summary>
-    /// 停止运行环境应中断游戏等待，清理完成前保持停止中，之后刷新和重启均显示已取消的本地历史。
+    /// 停止运行环境应中断游戏等待，清理完成前保持停止中，之后刷新和重启均显示已停止（取消）的本地历史。
     /// </summary>
     [Theory]
     [InlineData(true)]
@@ -269,7 +271,7 @@ public sealed class PuloniaTaskHistoryTests : IDisposable
 
                 await model.RefreshAsync();
                 Assert.Equal(requestId, model.SelectedRun!.RequestId);
-                Assert.Equal("已取消", model.SelectedRun.StatusText);
+                Assert.Equal("已停止", model.SelectedRun.StatusText);
                 Assert.True(model.SelectedRun.IsHistorical);
                 Assert.False(model.SelectedRun.CanCancel);
                 Assert.Equal(PuloniaTaskRunStatus.Cancelled,
@@ -287,7 +289,92 @@ public sealed class PuloniaTaskHistoryTests : IDisposable
         var restored = await restarted.GetRunAsync(requestId);
         Assert.Equal(PuloniaTaskRunStatus.Cancelled, restored.Status);
         Assert.True(restored.IsHistorical);
-        Assert.Equal("已取消", new PuloniaTaskRunItemViewModel(restored).StatusText);
+        Assert.Equal("已停止", new PuloniaTaskRunItemViewModel(restored).StatusText);
+    }
+
+    /// <summary>
+    /// 快捷键停止 JS 内等待的路线后，真实 V8 中断也必须完成取消归档，不能遗留停止中或提前启动下一节点。
+    /// </summary>
+    [Fact]
+    public async Task HotkeyStop_JavaScriptRouteFinishesAndPersistsStoppedHistory()
+    {
+        using var store = new PuloniaTaskStore(_directory);
+        var stopService = new TaskStopService(NullLogger<TaskStopService>.Instance);
+        var registry = new PuloniaCSharpTaskRegistry();
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cleanupEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var allowCleanup = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var cleaned = false;
+        registry.Register("test.js_route", async (_, _, ct) =>
+        {
+            // 使用真实脚本生命周期，仅把游戏路线换成可控宿主；不加载应用、截图或输入后端。
+            await ScriptExecution.ExecuteAsync(token =>
+            {
+                var engine = new V8ScriptEngine(V8ScriptEngineFlags.EnableTaskPromiseConversion);
+                engine.AddHostObject("route", new Func<Task>(async () =>
+                {
+                    using var operation = ScriptHostOperations.Enter();
+                    entered.TrySetResult();
+                    try
+                    {
+                        await Task.Delay(Timeout.InfiniteTimeSpan, token).ConfigureAwait(false);
+                    }
+                    finally
+                    {
+                        cleanupEntered.TrySetResult();
+                        await allowCleanup.Task.ConfigureAwait(false);
+                        cleaned = true;
+                    }
+                }));
+                return engine;
+            }, engine => engine.Evaluate("(async () => { try { await route(); } catch (error) {} })()"), ct);
+            return PuloniaTaskOutcome.Success("不应在停止后返回成功");
+        });
+        registry.Register("test.js_after", (_, _, _) =>
+        {
+            Assert.True(cleaned);
+            return Task.FromResult(PuloniaTaskOutcome.Success("JS 路线已收尾"));
+        });
+        var plan = await store.SavePlanAsync(CreatePlan("快捷键停止 JS 路线", "test.js_route"));
+        var nextPlan = await store.SavePlanAsync(CreatePlan("JS 清理后运行", "test.js_after"));
+        Guid requestId;
+        await using (var service = CreateService(store, registry, stopService))
+        {
+            try
+            {
+                requestId = await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = plan.Id });
+                await entered.Task.WaitAsync(TimeSpan.FromSeconds(15));
+                // 热键入口同样广播 UserRequested，不创建另一套停止或运行状态。
+                stopService.StopAll(TaskStopReason.UserRequested);
+                await cleanupEntered.Task.WaitAsync(TimeSpan.FromSeconds(15));
+                Assert.Equal(PuloniaTaskRunStatus.Cancelling, (await service.GetRunAsync(requestId)).Status);
+                var nextId = await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = nextPlan.Id });
+                Assert.Equal(PuloniaTaskRunStatus.Queued, (await service.GetRunAsync(nextId)).Status);
+                allowCleanup.TrySetResult();
+
+                var finished = await service.WaitForCompletionAsync(requestId).WaitAsync(TimeSpan.FromSeconds(15));
+                Assert.Equal(PuloniaTaskRunStatus.Cancelled, finished.Status);
+                Assert.True(finished.IsHistorical);
+                Assert.NotNull(finished.FinishedAt);
+                Assert.Equal(PuloniaTaskNodeStatus.Cancelled, Assert.Single(finished.NodeResults).Status);
+                Assert.Equal(PuloniaTaskRunStatus.Succeeded,
+                    (await service.WaitForCompletionAsync(nextId).WaitAsync(TimeSpan.FromSeconds(15))).Status);
+                var model = new PuloniaTaskHistoryViewModel(service, store);
+                await model.RefreshAsync(requestId);
+                Assert.Equal("已停止", model.SelectedRun!.StatusText);
+                Assert.False(model.SelectedRun.CanCancel);
+                Assert.Equal(PuloniaTaskRunStatus.Cancelled,
+                    (await store.ListHistoryAsync()).Single(item => item.RequestId == requestId).Status);
+            }
+            finally
+            {
+                allowCleanup.TrySetResult();
+            }
+        }
+        await using var restarted = CreateService(store);
+        var restored = await restarted.GetRunAsync(requestId);
+        Assert.True(restored.IsHistorical);
+        Assert.Equal("已停止", new PuloniaTaskRunItemViewModel(restored).StatusText);
     }
 
     /// <summary>

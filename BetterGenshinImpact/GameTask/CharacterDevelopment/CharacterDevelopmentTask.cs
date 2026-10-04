@@ -13,6 +13,7 @@ using BetterGenshinImpact.GameTask.Model.GameUI;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
+using BetterGenshinImpact.Core.Script;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -107,6 +108,8 @@ public sealed class CharacterDevelopmentTask
     /// <param name="categories">使用分号分隔的分类：属性、武器、天赋；null 表示全部。</param>
     public async Task<CharacterDevelopmentResult> GetCharacter(string characterName, string? categories = null)
     {
+        // 登记本轮 JS 宿主操作；脚本停止后必须等待业务方法真正退出再释放游戏所有权。
+        using var scriptOperation = ScriptHostOperations.Enter();
         var normalizedName = NormalizeCharacterName(characterName);
         var categoryFlags = ParseCategories(categories);
         var results = await new CharacterDevelopmentStateMachineTask([normalizedName], categoryFlags)
@@ -121,6 +124,7 @@ public sealed class CharacterDevelopmentTask
     /// <param name="categories">使用分号分隔的分类：属性、武器、天赋；null 表示全部。</param>
     public async Task<List<CharacterDevelopmentResult>> GetMultiCharacters(object characterNames, string? categories = null)
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         var names = ParseCharacterNames(characterNames);
         var categoryFlags = ParseCategories(categories);
         return await new CharacterDevelopmentStateMachineTask(names, categoryFlags)
@@ -319,6 +323,7 @@ internal sealed class CharacterDevelopmentStateMachineTask : StateMachineBase<Ch
 
     public async Task<List<CharacterDevelopmentResult>> Start(CancellationToken ct)
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         Initialize(ct, CharacterDevelopmentState.Unknown);
         using var recognizer = new AvatarGridIconRecognizer();
         _recognizer = recognizer;

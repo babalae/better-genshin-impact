@@ -110,6 +110,8 @@ public class Dispatcher
 
     public async Task RunTask(SoloTask soloTask, CancellationTokenSource customCts)
     {
+        // 登记本轮 JS 宿主操作；脚本停止后必须等待业务方法真正退出再释放游戏所有权。
+        using var scriptOperation = ScriptHostOperations.Enter();
         await RunTask(soloTask, customCts.Token);
     }
 
@@ -129,6 +131,7 @@ public class Dispatcher
     /// <exception cref="ArgumentException"></exception>
     public async Task<object?> RunTask(SoloTask soloTask, CancellationToken? customCt = null)
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         if (soloTask == null)
         {
             throw new ArgumentNullException(nameof(soloTask), "独立任务对象不能为空");
@@ -330,7 +333,8 @@ public class Dispatcher
     /// <param name="customCt">自定义取消令牌</param>  
     /// <returns></returns>  
     public async Task<Dictionary<string, int>> RunAutoDomainTask(AutoDomainParam param, CancellationToken? customCt = null)
-    {  
+    {
+        using var scriptOperation = ScriptHostOperations.Enter();
         if (param == null)  
         {  
             throw new ArgumentNullException(nameof(param), "秘境任务参数不能为空");  
@@ -349,6 +353,7 @@ public class Dispatcher
     /// <returns></returns>
     public async Task<Dictionary<string, int>> RunAutoBossTask(AutoBossParam param, CancellationToken? customCt = null)
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         if (param == null)
         {
             throw new ArgumentNullException(nameof(param), "自动首领讨伐任务参数不能为空");
@@ -366,7 +371,8 @@ public class Dispatcher
     /// <param name="customCt">自定义取消令牌</param>  
     /// <returns></returns>  
     public async Task RunAutoFightTask(AutoFightParam param, CancellationToken? customCt = null)  
-    {  
+    {
+        using var scriptOperation = ScriptHostOperations.Enter();
         if (param == null)  
         {  
             throw new ArgumentNullException(nameof(param), "战斗任务参数不能为空");  
@@ -388,6 +394,7 @@ public class Dispatcher
     /// <param name="customCt">自定义取消令牌</param>
     public async Task RunCombatScript(string script, string? avatarName = null, CancellationToken? customCt = null)
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         if (string.IsNullOrWhiteSpace(script))
         {
             throw new ArgumentException("策略字符串不能为空", nameof(script));
@@ -412,7 +419,8 @@ public class Dispatcher
     /// <param name="customCt">自定义取消令牌</param>  
     /// <returns></returns>  
     public async Task RunAutoLeyLineOutcropTask(AutoLeyLineOutcropParam param, CancellationToken? customCt = null)  
-    {  
+    {
+        using var scriptOperation = ScriptHostOperations.Enter();
         if (param == null)  
         {  
             throw new ArgumentNullException(nameof(param), "自动地脉花任务参数不能为空");  
@@ -432,6 +440,7 @@ public class Dispatcher
     /// <returns></returns>  
     public async Task RunAutoStygianOnslaughtTask(AutoStygianOnslaughtParam param, CancellationToken? customCt = null)
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         if (param == null)
         {
             throw new ArgumentNullException(nameof(param), "自动幽境危战任务参数不能为空");
@@ -450,6 +459,7 @@ public class Dispatcher
     /// <returns>返回名称到数量的脚本对象。</returns>
     public async Task<object?> RunCountInventoryItemTask(CountInventoryItemParam param, CancellationToken? customCt = null)
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         if (param == null)
         {
             throw new ArgumentNullException(nameof(param), "背包物品计数参数不能为空");

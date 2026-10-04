@@ -65,6 +65,8 @@ public class Genshin
     /// <returns>UID 数字，如果识别失败则返回 0</returns>
     public Task<int> Uid()
     {
+        // 登记本轮 JS 宿主操作；脚本停止后必须等待业务方法真正退出再释放游戏所有权。
+        using var scriptOperation = ScriptHostOperations.Enter();
         return Task.FromResult(Bv.Uid());
     }
     
@@ -83,16 +85,19 @@ public class Genshin
     /// <returns></returns>
     public async Task Tp(double x, double y)
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         await new TpTask(_ct).Tp(x, y);
     }
 
     public async Task Tp(double x, double y, string mapName, bool force)
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         await new TpTask(_ct).Tp(x, y, mapName, force);
     }
 
     public async Task Tp(double x, double y, bool force)
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         await new TpTask(_ct).Tp(x, y, MapTypes.Teyvat.ToString(), force);
     }
 
@@ -104,6 +109,7 @@ public class Genshin
     /// <returns></returns>
     public async Task Tp(string x, string y)
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         double.TryParse(x, out var dx);
         double.TryParse(y, out var dy);
         await Tp(dx, dy);
@@ -111,6 +117,7 @@ public class Genshin
 
     public async Task Tp(string x, string y, bool force)
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         double.TryParse(x, out var dx);
         double.TryParse(y, out var dy);
         await Tp(dx, dy, force);
@@ -131,6 +138,7 @@ public class Genshin
     /// <param name="forceCountry">强制指定移动大地图时先切换的国家，默认为null</param>
     public async Task MoveMapTo(double x, double y, string? forceCountry = null)
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         TpTask tpTask = new TpTask(_ct);
         await tpTask.CheckInBigMapUi();
         await tpTask.SwitchRecentlyCountryMap(x, y, forceCountry);
@@ -148,6 +156,7 @@ public class Genshin
     /// <param name="forceCountry">强制指定移动大地图时先切换的国家，默认为null。</param>
     public async Task ClickMapPoint(double x, double y, string? forceCountry = null)
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         TpTask tpTask = new TpTask(_ct);
         await tpTask.CheckInBigMapUi();
         await tpTask.SwitchRecentlyCountryMap(x, y, forceCountry);
@@ -166,6 +175,7 @@ public class Genshin
     /// <param name="mapName">指定要移动的大地图</param>
     public async Task MoveIndependentMapTo(int x, int y, string mapName, string? forceCountry = null)
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         TpTask tpTask = new TpTask(_ct);
         await tpTask.CheckInBigMapUi();
         // 切换地区
@@ -206,6 +216,7 @@ public class Genshin
     /// <param name="zoomLevel">目标缩放等级，范围 1.0-6.0</param>
     public async Task SetBigMapZoomLevel(double zoomLevel)
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         TpTask tpTask = new(_ct);
         double currentZoomLevel = GetBigMapZoomLevel();
         await tpTask.AdjustMapZoomLevel(currentZoomLevel, zoomLevel);
@@ -216,6 +227,7 @@ public class Genshin
     /// </summary>
     public async Task TpToStatueOfTheSeven()
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         TpTask tpTask = new TpTask(_ct);
         await tpTask.TpToStatueOfTheSeven();
     }
@@ -316,6 +328,7 @@ public class Genshin
     /// <returns></returns>
     public async Task<bool> SwitchParty(string partyName)
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         try
         {
             return await new SwitchPartyTask().Start(partyName, _ct);
@@ -348,6 +361,7 @@ public class Genshin
         string slot4 = "",
         bool usePhysicalSlots = true)
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         try
         {
             return await new SwitchCharacterStateMachineTask().Start(
@@ -380,6 +394,7 @@ public class Genshin
     /// <returns></returns>
     public async Task BlessingOfTheWelkinMoon()
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         await new BlessingOfTheWelkinMoonTask().Start(_ct);
     }
 
@@ -392,6 +407,7 @@ public class Genshin
     /// <returns></returns>
     public async Task ChooseTalkOption(string option, int skipTimes = 10, bool isOrange = false)
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         await new ChooseTalkOptionTask().SingleSelectText(option, _ct, skipTimes, isOrange);
     }
 
@@ -401,6 +417,7 @@ public class Genshin
     /// <returns></returns>
     public async Task ClaimBattlePassRewards()
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         await new ClaimBattlePassRewardsTask().DoOnce(_ct);
     }
 
@@ -410,6 +427,7 @@ public class Genshin
     /// <returns></returns>
     public async Task<bool> ClaimEncounterPointsRewards()
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         return await new ClaimEncounterPointsRewardsTask().DoOnce(_ct);
     }
 
@@ -418,6 +436,7 @@ public class Genshin
     /// </summary>
     public async Task ClaimMailRewards()
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         await new ClaimMailRewardsTask().DoOnce(_ct);
     }
 
@@ -426,6 +445,7 @@ public class Genshin
     /// </summary>
     public async Task<bool> ClaimSereniteaPotRewards()
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         return await new GoToSereniteaPotTask().DoOnce(_ct);
     }
 
@@ -436,6 +456,7 @@ public class Genshin
     /// <returns></returns>
     public async Task GoToAdventurersGuild(string country)
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         await new GoToAdventurersGuildTask().Start(country, _ct);
     }
 
@@ -446,6 +467,7 @@ public class Genshin
     /// <returns></returns>
     public async Task GoToCraftingBench(string country)
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         await new GoToCraftingBenchTask().GoToCraftingBench(country, _ct);
     }
 
@@ -456,6 +478,7 @@ public class Genshin
     /// <returns></returns>
     public async Task GoCraftResin(string country)
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         await new GoToCraftingBenchTask().GoCraftResin(country, _ct);
     }
 
@@ -468,6 +491,7 @@ public class Genshin
     /// <returns>合成执行结果。</returns>
     public async Task<CraftMaterialResult> CraftMaterial(string materialName, int quantity, string? materialType = null)
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         return await new CraftMaterialTask(materialName, quantity, materialType).Start(_ct);
     }
 
@@ -477,6 +501,7 @@ public class Genshin
     /// <returns></returns>
     public async Task ReturnMainUi()
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         await new ReturnMainUiTask().Start(_ct);
     }
 
@@ -486,6 +511,7 @@ public class Genshin
     /// <returns></returns>
     public async Task AutoFishing(int fishingTimePolicy = 0)
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         var taskSettingsPageViewModel = App.GetService<TaskSettingsPageViewModel>();
         if (taskSettingsPageViewModel == null)
         {
@@ -503,6 +529,7 @@ public class Genshin
     /// <returns></returns>
     public async Task Relogin()
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         await new ExitAndReloginJob().Start(_ct);
     }
     
@@ -512,6 +539,7 @@ public class Genshin
     /// <returns></returns>
     public async Task WonderlandCycle()
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         await new EnterAndExitWonderlandJob().Start(_ct);
     }
 
@@ -524,6 +552,7 @@ public class Genshin
     /// <returns></returns>
     public async Task SetTime(int hour, int minute, bool skip = false)
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         if ( hour < 0 || hour > 24)
             throw new ArgumentException($"无效的小时值: {hour}，必须是 0-24 之间的整数字符", nameof(hour));
         if (minute < 0 || minute > 59)
@@ -540,6 +569,7 @@ public class Genshin
     /// <returns></returns>
     public async Task SetTime(string hour, string minute, bool skip = false)
     {
+        using var scriptOperation = ScriptHostOperations.Enter();
         if (!int.TryParse(hour, out var h) || h < 0 || h > 24)
             throw new ArgumentException($"无效的小时值: {hour}，必须是 0-24 之间的整数字符", nameof(hour));
         if (!int.TryParse(minute, out var m) || m < 0 || m > 59)

@@ -42,7 +42,7 @@ public sealed class PuloniaTaskRunItemViewModel : ObservableObject
         PuloniaTaskRunStatus.Cancelling => "停止中",
         PuloniaTaskRunStatus.Succeeded => "已完成",
         PuloniaTaskRunStatus.Failed => "已失败",
-        PuloniaTaskRunStatus.Cancelled => "已取消",
+        PuloniaTaskRunStatus.Cancelled => "已停止",
         PuloniaTaskRunStatus.TimedOut => "已超时",
         PuloniaTaskRunStatus.Interrupted => "已中断",
         PuloniaTaskRunStatus.NeedsAttention => "待处理",

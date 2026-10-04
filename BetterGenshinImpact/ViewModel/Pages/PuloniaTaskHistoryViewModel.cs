@@ -117,7 +117,7 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel
     /// </summary>
     public IReadOnlyList<PuloniaTaskHistoryField> StatusFilters { get; } =
     [new("全部状态", "all"), new("活动 / 排队", "active"), new("已完成", "completed"),
-        new("失败 / 超时", "failed"), new("取消 / 中断", "stopped"), new("已过期（未执行）", "expired"), new("待核验 / 待处理", "attention")];
+        new("失败 / 超时", "failed"), new("停止 / 中断", "stopped"), new("已过期（未执行）", "expired"), new("待核验 / 待处理", "attention")];
 
     /// <summary>
     /// 列表为空时的解释，不把筛选无结果误显示为历史丢失。

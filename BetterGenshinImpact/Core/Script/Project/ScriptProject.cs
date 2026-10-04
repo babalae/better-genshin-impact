@@ -3,7 +3,6 @@ using Microsoft.ClearScript;
 using Microsoft.ClearScript.V8;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -11,10 +10,7 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using BetterGenshinImpact.Core.Script.Dependence;
-using BetterGenshinImpact.GameTask.Common;
-using BetterGenshinImpact.View;
 using Microsoft.ClearScript.JavaScript;
-using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Script.Project;
 
@@ -85,22 +81,30 @@ public class ScriptProject
     private V8ScriptEngine BuildScriptEngine(PathingPartyConfig? partyConfig, CancellationToken ct)
     {
         V8ScriptEngine engine = new V8ScriptEngine(V8ScriptEngineFlags.UseCaseInsensitiveMemberBinding | V8ScriptEngineFlags.EnableTaskPromiseConversion);
-
-        // packages 依赖和资源重载
-        var loader = new PackageDocumentLoader(ProjectPath);
-        engine.DocumentSettings.Loader = loader;
-
-        // 添加 packages 到搜索路径
-        var libraries = new HashSet<string>(Manifest.Library ?? Array.Empty<string>())
+        try
         {
-            ".",
-            "./packages"
-        };
+            // packages 依赖和资源重载
+            var loader = new PackageDocumentLoader(ProjectPath);
+            engine.DocumentSettings.Loader = loader;
 
-        var libraryList = libraries.ToList();
+            // 添加 packages 到搜索路径
+            var libraries = new HashSet<string>(Manifest.Library ?? Array.Empty<string>())
+            {
+                ".",
+                "./packages"
+            };
 
-        EngineExtend.InitHost(engine, ProjectPath, libraryList.ToArray(), partyConfig, ct);
-        return engine;
+            var libraryList = libraries.ToList();
+
+            EngineExtend.InitHost(engine, ProjectPath, libraryList.ToArray(), partyConfig, ct);
+            return engine;
+        }
+        catch
+        {
+            // 初始化宿主或包加载器失败时，也必须释放尚未交给执行入口的引擎。
+            engine.Dispose();
+            throw;
+        }
     }
 
     /// <summary>
@@ -113,10 +117,7 @@ public class ScriptProject
         GlobalMethod.SetGameMetrics(1920, 1080);
         // 加载代码
         var code = await LoadCode(ct);
-        using var engine = BuildScriptEngine(partyConfig, ct);
-        using var cancellationRegistration = ct.Register(() => TryInterrupt(engine));
-
-        try
+        await ScriptExecution.ExecuteAsync(token => BuildScriptEngine(partyConfig, token), engine =>
         {
             ct.ThrowIfCancellationRequested();
 
@@ -142,27 +143,13 @@ public class ScriptProject
                 string runtimeCode = loader.RewriteScriptCode(code, mainScriptPath);
                 
                 var documentInfo = new DocumentInfo(new Uri(mainScriptPath)) { Category = ModuleCategory.Standard };
-                var evaluation = engine.Evaluate(documentInfo, runtimeCode);
-                if (evaluation is Task task) await task;
+                return engine.Evaluate(documentInfo, runtimeCode);
             }
             else
             {
-                var evaluation = engine.Evaluate(code);
-                if (evaluation is Task task) await task;
+                return engine.Evaluate(code);
             }
-        }
-        catch (Exception e)
-        {
-            Debug.WriteLine(e);
-            if (ct.IsCancellationRequested)
-                throw new OperationCanceledException("JS 脚本已取消。", e, ct);
-            throw;
-        }
-        finally
-        {
-            // 终止代码执行
-            TryInterrupt(engine);
-        }
+        }, ct).ConfigureAwait(false);
     }
 
     public async Task<string> LoadCode(CancellationToken ct = default)
@@ -176,18 +163,4 @@ public class ScriptProject
         return code;
     }
 
-    /// <summary>
-    /// 尽力中断 V8 执行；引擎已经结束或释放时无需覆盖原始执行结果。
-    /// </summary>
-    private static void TryInterrupt(V8ScriptEngine engine)
-    {
-        try
-        {
-            engine.Interrupt();
-        }
-        catch (Exception e)
-        {
-            TaskControl.Logger.LogDebug(e, "中断脚本执行异常：{Message}", e.Message);
-        }
-    }
 }
