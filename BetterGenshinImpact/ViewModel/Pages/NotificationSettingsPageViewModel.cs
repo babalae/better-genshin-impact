@@ -149,6 +149,18 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
 
     public AllConfig Config { get; set; }
 
+    /// <summary>
+    ///     当前 Discord 通知方式是否为 Webhook，用于设置页切换两组配置项的显示。
+    /// </summary>
+    public bool IsDiscordWebhookMode =>
+        !DiscordNotificationModes.IsBot(Config.NotificationConfig.DiscordNotificationMode);
+
+    /// <summary>
+    ///     当前 Discord 通知方式是否为机器人（Bot API）。
+    /// </summary>
+    public bool IsDiscordBotMode =>
+        DiscordNotificationModes.IsBot(Config.NotificationConfig.DiscordNotificationMode);
+
     [RelayCommand]
     private void SelectAllNotificationEvents()
     {
@@ -181,6 +193,14 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
 
     private void OnNotificationConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        // 切换 Discord 通知方式时，刷新两组配置项的显示状态
+        if (e.PropertyName == nameof(NotificationConfig.DiscordNotificationMode))
+        {
+            OnPropertyChanged(nameof(IsDiscordWebhookMode));
+            OnPropertyChanged(nameof(IsDiscordBotMode));
+            return;
+        }
+
         if (e.PropertyName != nameof(NotificationConfig.NotificationEventSubscribe))
         {
             return;
@@ -485,13 +505,19 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
         IsLoading = false;
     }
 
+    /// <summary>
+    ///     测试 Discord 通知：按当前选择的通知方式测试对应的通知器。
+    ///     未启用时对应通知器不会注册，测试会返回未找到通知器的提示。
+    /// </summary>
     [RelayCommand]
-    private async Task OnTestDiscordWebhookNotification()
+    private async Task OnTestDiscordNotification()
     {
         IsLoading = true;
         DiscordStatus = string.Empty;
 
-        var res = await _notificationService.TestNotifierAsync<DiscordWebhookNotifier>();
+        var res = IsDiscordBotMode
+            ? await _notificationService.TestNotifierAsync<DiscordBotNotifier>()
+            : await _notificationService.TestNotifierAsync<DiscordWebhookNotifier>();
 
         DiscordStatus = res.Message;
 

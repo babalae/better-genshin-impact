@@ -1,4 +1,5 @@
 using System;
+using BetterGenshinImpact.Service.Notifier;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.Service.Notification;
@@ -257,9 +258,26 @@ public partial class NotificationConfig : ObservableObject
     [ObservableProperty] private bool _xxtuiNotificationEnabled;
 
     /// <summary>
-    ///     Discord Webhook推送通知是否启用
+    ///     Discord 推送通知是否启用。
+    ///     这是 Discord 通知的总开关，Webhook 与 Bot 两种方式共用；
+    ///     属性名保留历史命名，避免旧配置文件失效。
     /// </summary>
     [ObservableProperty] private bool _discordWebhookNotificationEnabled;
+
+    /// <summary>
+    ///     Discord 通知方式：Webhook（频道 Webhook）或 Bot（机器人 Token + 频道 ID）
+    /// </summary>
+    [ObservableProperty] private string _discordNotificationMode = DiscordNotificationModes.Webhook;
+
+    /// <summary>
+    ///     Discord 机器人 Token（Bot 方式）
+    /// </summary>
+    [ObservableProperty] private string _discordBotToken = string.Empty;
+
+    /// <summary>
+    ///     Discord 机器人推送目标频道 ID（Bot 方式）
+    /// </summary>
+    [ObservableProperty] private string _discordBotChannelId = string.Empty;
 
     /// <summary>
     ///     Discord Webhook地址
