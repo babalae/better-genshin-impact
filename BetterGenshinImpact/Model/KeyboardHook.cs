@@ -30,8 +30,8 @@ public class KeyboardHook
     /// <summary>
     /// 注意长按的时候会一直触发KeyDown
     /// </summary>
-    /// <param name="sender"></param>
-    /// <param name="e"></param>
+    /// <param name="sender">事件源</param>
+    /// <param name="e">按键事件参数</param>
     public void KeyDown(object? sender, KeyEventArgs e)
     {
         if (!SystemControl.IsGenshinImpactActive())
@@ -97,6 +97,11 @@ public class KeyboardHook
         }
     }
 
+    /// <summary>
+    /// 按键抬起：结束长按状态并触发一次抬起回调
+    /// </summary>
+    /// <param name="sender">事件源</param>
+    /// <param name="e">按键事件参数</param>
     public void KeyUp(object? sender, KeyEventArgs e)
     {
         if (e.KeyCode == BindKey)

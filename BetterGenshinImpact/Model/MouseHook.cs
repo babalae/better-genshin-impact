@@ -99,6 +99,11 @@ public class MouseHook
         }
     }
 
+    /// <summary>
+    /// 鼠标侧键抬起：结束长按状态并触发一次抬起回调
+    /// </summary>
+    /// <param name="sender">事件源</param>
+    /// <param name="e">鼠标事件参数</param>
     public void MouseUp(object? sender, MouseEventExtArgs e)
     {
         if (e.Button != MouseButtons.Left && e.Button != MouseButtons.None && e.Button == BindMouse)

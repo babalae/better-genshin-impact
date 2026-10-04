@@ -205,6 +205,11 @@ public partial class HotKeySettingModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 全局热键按下
+    /// </summary>
+    /// <param name="sender">事件源</param>
+    /// <param name="e">按键事件参数</param>
     private void OnKeyPressed(object? sender, KeyPressedEventArgs e)
     {
         if (ShouldBlockGlobalRegister())
@@ -215,6 +220,11 @@ public partial class HotKeySettingModel : ObservableObject
         OnKeyPressAction?.Invoke(sender, e);
     }
 
+    /// <summary>
+    /// 长按功能在按住期间的持续触发
+    /// </summary>
+    /// <param name="sender">事件源</param>
+    /// <param name="e">按键事件参数</param>
     private void OnKeyDown(object? sender, KeyPressedEventArgs e)
     {
         if (ShouldBlockGlobalRegister())
@@ -225,6 +235,11 @@ public partial class HotKeySettingModel : ObservableObject
         OnKeyDownAction?.Invoke(sender, e);
     }
 
+    /// <summary>
+    /// 长按功能松开时结束持续触发
+    /// </summary>
+    /// <param name="sender">事件源</param>
+    /// <param name="e">按键事件参数</param>
     private void OnKeyUp(object? sender, KeyPressedEventArgs e)
     {
         if (ShouldBlockGlobalRegister())
@@ -236,6 +251,10 @@ public partial class HotKeySettingModel : ObservableObject
         OnKeyUpAction?.Invoke(sender, e);
     }
 
+    /// <summary>
+    /// 聊天界面打开期间需要屏蔽全局热键，避免按键同时被游戏聊天框接收
+    /// </summary>
+    /// <returns>需要屏蔽时返回 true</returns>
     private bool ShouldBlockGlobalRegister()
     {
         return HotKeyType == HotKeyTypeEnum.GlobalRegister && ChatUiHotkeyGuard.ShouldBlockHotkey(ConfigPropertyName);
