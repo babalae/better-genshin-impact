@@ -51,6 +51,21 @@ public sealed class PuloniaTaskRunItemViewModel : ObservableObject
     };
 
     /// <summary>
+    /// 状态的语义分类，供列表与详情按类别着色：running=进行中、success=成功、failed=失败、attention=需关注，其余显示为中性灰。
+    /// </summary>
+    public string StatusKind => Run.Status switch
+    {
+        // 停止中仍属于未结束的活跃状态，与运行中一样延续强调色。
+        PuloniaTaskRunStatus.Running or PuloniaTaskRunStatus.Cancelling => "running",
+        PuloniaTaskRunStatus.Succeeded => "success",
+        // 超时按失败处理，与状态筛选的“失败 / 超时”分组保持一致。
+        PuloniaTaskRunStatus.Failed or PuloniaTaskRunStatus.TimedOut => "failed",
+        // 中断通常需要人工续跑或核对，与待处理一样使用警示色。
+        PuloniaTaskRunStatus.NeedsAttention or PuloniaTaskRunStatus.Interrupted => "attention",
+        _ => "neutral"
+    };
+
+    /// <summary>
     /// 按本地时区显示的提交时间。
     /// </summary>
     public string SubmittedAtText => Run.SubmittedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss");

@@ -79,16 +79,10 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel
     private PuloniaTaskHistoryField _selectedStatusFilter = new("全部状态", "all");
 
     /// <summary>
-    /// 计划页提供的当前计划 ID，全局页为空。
+    /// 计划页固定过滤的当前计划 ID，全局页为空；为空时展示全部计划的记录。
     /// </summary>
     [ObservableProperty]
     private string? _planFilterId;
-
-    /// <summary>
-    /// 是否只显示计划页当前选中的计划。
-    /// </summary>
-    [ObservableProperty]
-    private bool _onlyCurrentPlan;
 
     /// <summary>
     /// 最近一次刷新或操作的结果，包括读取失败。
@@ -130,9 +124,9 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel
     public string CountText => $"显示 {Runs.Count} / {_allRuns.Count} 条记录（新到旧）";
 
     /// <summary>
-    /// 是否显示计划范围切换。
+    /// 记录卡片是否展示计划名标题；计划页固定只看当前计划，标题与页面计划名重复，仅全局页跨计划展示时显示。
     /// </summary>
-    public bool HasPlanFilter => PlanFilterId is not null;
+    public bool ShowPlanTitle => PlanFilterId is null;
 
     /// <summary>
     /// 是否已选择运行。
@@ -177,7 +171,6 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel
     public override async Task OnNavigatedToAsync()
     {
         PlanFilterId = null;
-        OnlyCurrentPlan = false;
         await RefreshAsync();
     }
 
@@ -367,7 +360,7 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel
         var selectedAddress = SelectedRunNodeResult?.TaskAddress;
         var selectedAttempt = SelectedRunNodeResult?.Attempt;
         var search = SearchText?.Trim() ?? string.Empty;
-        var filtered = _allRuns.Where(item => (!OnlyCurrentPlan || PlanFilterId is null || item.Run.PlanId == PlanFilterId)
+        var filtered = _allRuns.Where(item => (PlanFilterId is null || item.Run.PlanId == PlanFilterId)
             && MatchesStatus(item) && (search.Length == 0 || Contains(item.PlanName, search)
                 || Contains(item.Run.RunId.ToString("D"), search) || Contains(item.RequestId.ToString("D"), search)
                 || item.NodeResults.Any(node => Contains(node.TaskName, search) || Contains(node.TaskType, search)
@@ -462,16 +455,11 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel
     partial void OnSelectedStatusFilterChanged(PuloniaTaskHistoryField value) => ApplyFilters();
 
     /// <summary>
-    /// 计划范围变化立即重新筛选。
-    /// </summary>
-    partial void OnOnlyCurrentPlanChanged(bool value) => ApplyFilters();
-
-    /// <summary>
-    /// 页面切换或计划切换时更新可用范围。
+    /// 计划范围变化立即重新筛选，并同步卡片标题的显隐。
     /// </summary>
     partial void OnPlanFilterIdChanged(string? value)
     {
-        OnPropertyChanged(nameof(HasPlanFilter));
+        OnPropertyChanged(nameof(ShowPlanTitle));
         ApplyFilters();
     }
 }

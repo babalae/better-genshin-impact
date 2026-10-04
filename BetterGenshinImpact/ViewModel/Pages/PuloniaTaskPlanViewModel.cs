@@ -138,7 +138,6 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     {
         await InitializeAsync();
         History.PlanFilterId = SelectedDocument?.Id;
-        History.OnlyCurrentPlan = true;
         await History.RefreshAsync();
     }
 

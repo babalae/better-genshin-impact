@@ -74,7 +74,6 @@ public partial class PuloniaTaskPlanViewModel
         var id = _triggerHost?.States.FirstOrDefault(item => item.PlanId == SelectedDocument?.Id
             && item.TriggerId == SelectedTrigger?.Trigger.Id)?.LastRequestId;
         History.PlanFilterId = SelectedDocument?.Id;
-        History.OnlyCurrentPlan = true;
         await History.RefreshAsync(id);
         SelectedPlanTabIndex = 1;
     }

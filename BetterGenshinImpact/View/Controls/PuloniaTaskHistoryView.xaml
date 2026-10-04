@@ -40,6 +40,24 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <!-- 运行状态按语义分类着色：进行中用强调色，成功/失败/需关注分别使用系统语义色，排队与中性结束显示为灰色。 -->
+        <Style x:Key="RunStatusText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding StatusKind}" Value="running">
+                    <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding StatusKind}" Value="success">
+                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding StatusKind}" Value="failed">
+                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding StatusKind}" Value="attention">
+                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
         <!-- 只读文本框保留选择/复制能力，多行日志独立滚动，不撑破整个详情布局。 -->
         <DataTemplate DataType="{x:Type pulonia:PuloniaTaskHistoryField}">
             <StackPanel Margin="0,0,0,12">
@@ -66,9 +84,6 @@
                           AutomationProperties.Name="执行状态筛选" />
                 <Button Margin="0,0,8,6" Command="{Binding RefreshRunsCommand}" Content="刷新" />
                 <Button Margin="0,0,8,6" Command="{Binding ClearFiltersCommand}" Content="清除筛选" />
-                <CheckBox Margin="0,0,8,6" VerticalAlignment="Center" Content="只看所选计划"
-                          IsChecked="{Binding OnlyCurrentPlan, Mode=TwoWay}"
-                          Visibility="{Binding HasPlanFilter, Converter={StaticResource BoolVisibility}}" />
             </WrapPanel>
             <WrapPanel>
                 <Button Margin="0,0,8,4" Command="{Binding CancelRunCommand}" Content="取消选中运行" />
@@ -94,8 +109,10 @@
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <StackPanel>
-                                <TextBlock FontWeight="SemiBold" Text="{Binding PlanName}" TextTrimming="CharacterEllipsis" ToolTip="{Binding PlanName}" />
-                                <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" Text="{Binding StatusText}" />
+                                <!-- 计划页按当前计划过滤时标题与页面计划名重复，仅在记录跨计划展示时显示。 -->
+                                <TextBlock FontWeight="SemiBold" Text="{Binding PlanName}" TextTrimming="CharacterEllipsis" ToolTip="{Binding PlanName}"
+                                           Visibility="{Binding DataContext.ShowPlanTitle, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BoolVisibility}}" />
+                                <TextBlock Margin="0,4,0,0" Text="{Binding StatusText}" Style="{StaticResource RunStatusText}" />
                                 <TextBlock FontSize="11" Text="{Binding SubmittedAtText}" />
                                 <TextBlock FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                            Text="{Binding StorageText}" />
@@ -132,7 +149,9 @@
                     <StackPanel>
                         <WrapPanel>
                             <TextBlock FontSize="16" FontWeight="SemiBold" Text="{Binding SelectedRun.PlanName}" TextWrapping="Wrap" />
-                            <TextBlock Margin="12,2,0,0" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" Text="{Binding SelectedRun.StatusText}" />
+                            <!-- DataContext 指向选中运行，供状态样式按 StatusKind 触发器着色。 -->
+                            <TextBlock Margin="12,2,0,0" DataContext="{Binding SelectedRun}" Text="{Binding StatusText}"
+                                       Style="{StaticResource RunStatusText}" />
                         </WrapPanel>
                         <TextBlock Margin="0,4,0,0" Text="{Binding SelectedRun.ResultSummary}" TextWrapping="Wrap" FontSize="11" />
                         <TextBlock Margin="0,4,0,0" Text="{Binding SelectedRun.Message}" TextWrapping="Wrap" MaxHeight="60" />
