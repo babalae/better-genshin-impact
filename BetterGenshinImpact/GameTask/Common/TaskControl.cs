@@ -20,22 +20,41 @@ public class TaskControl
     public static readonly SemaphoreSlim TaskSemaphore = new(1, 1);
 
 
+    /// <summary>
+    /// 检查暂停与游戏焦点后等待；运行环境停止时中断旧的无令牌调用。
+    /// </summary>
     public static void CheckAndSleep(int millisecondsTimeout)
     {
-        TrySuspend();
-        CheckAndActivateGameWindow();
+        var wait = CreateWait(CancellationToken.None);
+        TrySuspend(wait);
+        CheckAndActivateGameWindow(wait);
 
-        Thread.Sleep(millisecondsTimeout);
+        wait.Sleep(millisecondsTimeout);
     }
 
+    /// <summary>
+    /// 重试焦点检查后等待，并在等待期间检查原游戏运行环境是否已停止。
+    /// </summary>
     public static void Sleep(int millisecondsTimeout)
     {
+        var wait = CreateWait(CancellationToken.None);
         NewRetry.Do(() =>
         {
-            TrySuspend();
-            CheckAndActivateGameWindow();
+            TrySuspend(wait);
+            CheckAndActivateGameWindow(wait);
         }, TimeSpan.FromSeconds(1), 100);
-        Thread.Sleep(millisecondsTimeout);
+        wait.Sleep(millisecondsTimeout);
+    }
+
+    /// <summary>
+    /// 固定本次等待的运行环境，避免停止后使用遗留句柄，或误操作新绑定的另一环境。
+    /// </summary>
+    private static GameTaskWait CreateWait(CancellationToken ct)
+    {
+        var runtime = TaskContext.Instance().Runtime;
+        return new GameTaskWait(() => runtime is not null
+            && ReferenceEquals(TaskContext.Instance().Runtime, runtime)
+            && runtime.Window.IsAlive, ct);
     }
 
     private static bool IsKeyPressed(User32.VK key)
@@ -47,55 +66,82 @@ public class TaskControl
         return (state & 0x8000) != 0;
     }
 
-    public static void TrySuspend()
+    /// <summary>
+    /// 等待快捷键解除暂停，运行环境停止后不继续等待。
+    /// </summary>
+    public static void TrySuspend() => TrySuspend(CreateWait(CancellationToken.None));
+
+    /// <summary>
+    /// 在每轮暂停等待和恢复子任务前检查停止信号，取消时只归还本次暂停计数。
+    /// </summary>
+    private static void TrySuspend(GameTaskWait wait)
     {
-        
+        wait.ThrowIfStopped();
         var first = true;
+        var autoPickStopped = false;
         //此处为了记录最开始的暂停状态
         var isSuspend = RunnerContext.Instance.IsSuspend;
-        while (RunnerContext.Instance.IsSuspend)
+        try
         {
-            if (first)
+            while (RunnerContext.Instance.IsSuspend)
             {
-                RunnerContext.Instance.StopAutoPick();
-                //使快捷键本身释放
-                Thread.Sleep(300);
-                foreach (User32.VK key in Enum.GetValues(typeof(User32.VK)))
+                wait.ThrowIfStopped();
+                if (first)
                 {
-                    // 检查键是否被按下
-                    if (IsKeyPressed(key)) // 强制转换 VK 枚举为 int
+                    RunnerContext.Instance.StopAutoPick();
+                    autoPickStopped = true;
+                    //使快捷键本身释放
+                    wait.Sleep(300);
+                    foreach (User32.VK key in Enum.GetValues(typeof(User32.VK)))
                     {
-                        Logger.LogWarning($"解除{key}的按下状态.");
-                        InputHub.Foreground.Keyboard.KeyUp(key);
+                        wait.ThrowIfStopped();
+                        // 检查键是否被按下
+                        if (IsKeyPressed(key)) // 强制转换 VK 枚举为 int
+                        {
+                            Logger.LogWarning($"解除{key}的按下状态.");
+                            InputHub.Foreground.Keyboard.KeyUp(key);
+                        }
                     }
+
+                    Logger.LogWarning("快捷键触发暂停，等待解除");
+                    foreach (var item in RunnerContext.Instance.SuspendableDictionary)
+                    {
+                        wait.ThrowIfStopped();
+                        item.Value.Suspend();
+                    }
+
+                    first = false;
                 }
 
-                Logger.LogWarning("快捷键触发暂停，等待解除");
+                wait.Sleep(1000);
+            }
+
+            wait.ThrowIfStopped();
+            //从暂停中解除
+            if (isSuspend)
+            {
+                Logger.LogWarning("暂停已经解除");
                 foreach (var item in RunnerContext.Instance.SuspendableDictionary)
                 {
-                    item.Value.Suspend();
+                    wait.ThrowIfStopped();
+                    item.Value.Resume();
                 }
-
-                first = false;
             }
-
-            Thread.Sleep(1000);
         }
-
-        //从暂停中解除
-        if (isSuspend)
+        finally
         {
-            Logger.LogWarning("暂停已经解除");
-            RunnerContext.Instance.ResumeAutoPick();
-            foreach (var item in RunnerContext.Instance.SuspendableDictionary)
-            {
-                item.Value.Resume();
-            }
+            // 即使取消发生在暂停内部，也平衡本次拾取暂停计数；不会恢复已停止的子任务。
+            if (autoPickStopped)
+                RunnerContext.Instance.ResumeAutoPick();
         }
     }
 
-    private static void CheckAndActivateGameWindow()
+    /// <summary>
+    /// 等待并恢复游戏焦点；取消、解绑或游戏退出时终止循环，不再尝试激活旧窗口。
+    /// </summary>
+    private static void CheckAndActivateGameWindow(GameTaskWait wait)
     {
+        wait.ThrowIfStopped();
         var window = TaskContext.Instance().Runtime?.Window;
         if (window is { RequiresForeground: false })
         {
@@ -124,6 +170,7 @@ public class TaskControl
         //未激活则尝试恢复窗口
         while (!SystemControl.IsGenshinImpactActiveByProcess())
         {
+            wait.ThrowIfStopped();
             if (count >= 10 && count % 10 == 0)
             {
                 Logger.LogInformation("多次尝试未恢复，尝试最小化后激活窗口！");
@@ -137,10 +184,14 @@ public class TaskControl
             }
 
             count++;
-            Thread.Sleep(1000);
+            wait.Sleep(1000);
         }
+        wait.ThrowIfStopped();
     }
 
+    /// <summary>
+    /// 同步等待并把本轮取消令牌传入暂停、焦点恢复和延时内部。
+    /// </summary>
     public static void Sleep(int millisecondsTimeout, CancellationToken ct)
     {
         if (ct.IsCancellationRequested)
@@ -153,6 +204,7 @@ public class TaskControl
             return;
         }
 
+        var wait = CreateWait(ct);
         NewRetry.Do(() =>
         {
             if (ct.IsCancellationRequested)
@@ -160,16 +212,19 @@ public class TaskControl
                 throw new NormalEndException("取消自动任务");
             }
 
-            TrySuspend();
-            CheckAndActivateGameWindow();
+            TrySuspend(wait);
+            CheckAndActivateGameWindow(wait);
         }, TimeSpan.FromSeconds(1), 100);
-        Thread.Sleep(millisecondsTimeout);
+        wait.Sleep(millisecondsTimeout);
         if (ct.IsCancellationRequested)
         {
             throw new NormalEndException("取消自动任务");
         }
     }
 
+    /// <summary>
+    /// 异步等待前的同步暂停与焦点恢复同样使用本轮取消令牌，停止后不再阻塞任务收尾。
+    /// </summary>
     public static async Task Delay(int millisecondsTimeout, CancellationToken ct)
     {
         if (ct is { IsCancellationRequested: true })
@@ -182,6 +237,7 @@ public class TaskControl
             return;
         }
 
+        var wait = CreateWait(ct);
         NewRetry.Do(() =>
         {
             if (ct is { IsCancellationRequested: true })
@@ -189,10 +245,11 @@ public class TaskControl
                 throw new NormalEndException("取消自动任务");
             }
 
-            TrySuspend();
-            CheckAndActivateGameWindow();
+            TrySuspend(wait);
+            CheckAndActivateGameWindow(wait);
         }, TimeSpan.FromSeconds(1), 100);
         await Task.Delay(millisecondsTimeout, ct);
+        wait.ThrowIfStopped();
         if (ct is { IsCancellationRequested: true })
         {
             throw new NormalEndException("取消自动任务");
