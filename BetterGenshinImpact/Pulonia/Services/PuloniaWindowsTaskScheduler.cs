@@ -62,8 +62,7 @@ public sealed class PuloniaWindowsTaskScheduler
             dynamic root = folder!;
             if (nextUtc is null)
             {
-                try { root.DeleteTask(TaskName, 0); }
-                catch (COMException ex) when ((uint)ex.HResult == 0x80070002) { }
+                DeleteTaskIfPresent(() => root.DeleteTask(TaskName, 0));
                 return;
             }
             using var user = WindowsIdentity.GetCurrent();
@@ -77,6 +76,20 @@ public sealed class PuloniaWindowsTaskScheduler
         {
             foreach (var value in new[] { registered, folder, scheduler })
                 if (value is not null && Marshal.IsComObject(value)) Marshal.FinalReleaseComObject(value);
+        }
+    }
+
+    /// <summary>幂等撤销任务：只忽略删除时的任务不存在，其他失败保留给调用方报告。</summary>
+    internal static void DeleteTaskIfPresent(Action deleteTask)
+    {
+        try
+        {
+            deleteTask();
+        }
+        catch (Exception ex) when ((ex is COMException or FileNotFoundException) && (uint)ex.HResult == 0x80070002)
+        {
+            // 动态 COM 互操作可能将 ERROR_FILE_NOT_FOUND 映射为 FileNotFoundException。
+            // 初次启动、重复撤销或用户已手动删除时，无任务即已达到撤销目标。
         }
     }
 }

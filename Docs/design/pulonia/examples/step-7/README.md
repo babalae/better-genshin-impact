@@ -28,7 +28,7 @@
 3. 勾选 Windows 唤起并保存，系统任务名为本安装/当前用户独占的 `BetterGI-Pulonia-<摘要>`。仅管理该任务，不修改用户其他任务；保存最高可用权限登记失败时明确显示错误，程序内调度仍有效。
 4. 系统任务执行 `BetterGI.exe --pulonia-dispatch`；已有主实例时经现有 IPC 转发，不能激活主窗口抢用户焦点。未启动时在已登录交互会话启动并检查准入，不自动从旧主页启动截图器。
 5. `BetterGI.exe --pulonia-run <planId>` 只接受稳定计划 ID，以手动 CLI 来源提交并固定快照；无额外账号切换。游戏环境只由具体游戏节点按需准备。
-6. Windows 睡眠唤醒为单独可选项，效果还取决于设备和系统电源设置。关机、未登录、锁屏均不承诺游戏自动运行。关闭全部 Windows 唤起选项后撤销本安装拥有的系统任务。
+6. Windows 睡眠唤醒为单独可选项，效果还取决于设备和系统电源设置。关机、未登录、锁屏均不承诺游戏自动运行。关闭全部 Windows 唤起选项后撤销本安装拥有的系统任务。从未启用 Windows 唤起、重复撤销或用户已手动删除该任务时，不应显示唤起注册失败；权限不足等真正失败仍应报告。
 
 ## 自动检查
 
@@ -38,3 +38,5 @@ dotnet test Test/BetterGenshinImpact.UnitTest/BetterGenshinImpact.UnitTest.cspro
 ```
 
 `PuloniaTaskTriggerTests` 使用独占临时目录、受控 UTC 时钟和空闲检测替身，覆盖日周月 Cron、严格方言拒绝、DST 缺失/重复、间隔持久锚点、表单预览、重启/回拨去重、空闲等待、合并补触发、排队复核、子树准备、输入安全门及系统任务 XML。测试不启动真实应用/游戏、不调用真实任务计划注册；平台交互仍需上述人工验收。
+
+`PuloniaWindowsTaskSchedulerTests` 通过删除操作替身覆盖正常删除、`FileNotFoundException` / `COMException` 的任务不存在映射、重复撤销，以及权限/服务/路径故障与非预期 I/O 异常的继续上报，不修改真实 Windows 系统任务。
