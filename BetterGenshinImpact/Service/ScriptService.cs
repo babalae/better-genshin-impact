@@ -24,6 +24,7 @@ using BetterGenshinImpact.GameTask.TaskProgress;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
+using BetterGenshinImpact.Service.Worker;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 
@@ -612,6 +613,14 @@ public partial class ScriptService : IScriptService
 
     public static async Task StartGameTask(bool waitForMainUi = true)
     {
+        // 已连接跨用户 Worker：任务应由 Worker 执行。本机既不启动截图器，
+        // 也不再等待主界面（本机截图器永远不会就绪，等待会造成调用方卡死）
+        if (WorkerController.IsRemoteControlled)
+        {
+            TaskControl.Logger.LogWarning("已连接跨用户 Worker，本机不再启动截图器与执行任务");
+            return;
+        }
+
         // 没启动时候，启动截图器
         // 静态方法无法构造注入（调用方包括直接 new 出来的 TaskRunner），这里从容器取服务
         var gameRuntimeService = App.GetService<GameRuntimeService>()!;

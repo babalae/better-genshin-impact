@@ -26,6 +26,7 @@ using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.Service.Worker;
 using System.Collections.Specialized;
 using Wpf.Ui.Violeta.Controls;
 
@@ -569,9 +570,50 @@ public partial class OneDragonFlowViewModel : ViewModel
         }
     }
 
+    /// <summary>
+    /// 已连接跨用户 Worker：下发一条龙配置名，Worker 用自己 User\OneDragonFlow 下的配置单执行
+    /// </summary>
+    private async Task DispatchOneDragonToWorkerAsync()
+    {
+        var configName = SelectedConfig?.Name;
+        if (string.IsNullOrWhiteSpace(configName))
+        {
+            Toast.Warning("未设置任务!");
+            return;
+        }
+
+        var controller = App.GetService<WorkerController>();
+        if (controller is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var started = await controller.StartTaskAsync(new WorkerTaskStartRequest
+            {
+                Type = WorkerTaskTypes.OneDragon,
+                Name = configName
+            });
+            Toast.Success($"已下发到 Worker：一条龙「{configName}」（{started.State}）");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "下发一条龙到 Worker 失败");
+            Toast.Error($"下发 Worker 失败：{ex.Message}");
+        }
+    }
+
     [RelayCommand]
     public async Task OnOneKeyExecute()
     {
+        // 已连接跨用户 Worker：把一条龙配置名下发给 Worker，由 Worker 自己的配置单执行
+        if (WorkerController.IsRemoteControlled)
+        {
+            await DispatchOneDragonToWorkerAsync();
+            return;
+        }
+
         _logger.LogInformation($"启用一条龙配置：{SelectedConfig.Name}");
 
         // 启动等待之前先进行取消操作的初始化，便于在任务开始前终止任务.

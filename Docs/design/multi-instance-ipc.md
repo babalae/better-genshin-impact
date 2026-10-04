@@ -33,6 +33,49 @@ BetterGI.v2.user-<Windows用户SID>.root
 句柄调用 Windows API 获取客户端真实进程 ID，再由进程 ID取得真实 Windows Session；
 客户端提交的用途只用于区分 BetterGI 与 WebView，不能伪造进程或 Session 身份。
 
+### 跨用户 Worker（`--headless`）
+
+无界面 Worker 不参与本用户的根管道，而是单独开放机器级管道：
+
+```text
+BetterGI.v2.cross-user.<Worker用户SID>.worker
+```
+
+- 启动参数：`--headless`（不创建主界面）、`--controller-sid <允许的Controller用户SID>`；
+  未指定 `--controller-sid` 时只允许 Worker 自身用户连接；
+- Worker 创建管道时写入受保护 DACL，只显式允许 Worker 用户、`SYSTEM` 和配置的
+  Controller 用户，并继续显式拒绝 `Network` SID；
+- 连接的客户端身份同样由内核取得（`ImpersonateNamedPipeClient` → `TokenUser`），
+  `connection.open` 时校验真实 SID，不信任客户端自报的 SID；
+- 操作集合：`worker.status`、`task.start`、`task.stop`、`task.status`、
+  `task.pause`、`task.resume`、`capture.start`、`capture.stop`（均只在 Worker 管道上提供，
+  不进根管道）；另有一条 Worker → Controller 的单向操作 `worker.notice`：Worker 没有
+  窗口可承载 Toast，它的提示统一回传给已授权的 Controller 显示，没有 Controller 连接时
+  只写 Worker 日志，绝不会因为弹提示而抛异常中断任务；
+- 日志显示位置由 Controller 通过 `worker.logMode` 下发，Worker 侧生效：
+  `none` 不显示、`notification` 走通知渠道、`gameOverlay` 写 Worker 自己的遮罩日志框
+  （默认，与改动前完全一致）、`remoteWindow` 在 Worker 侧弹出「Worker 日志」独立窗口、
+  `localWindow` 回传后由控制侧的「Worker 日志（远程）」独立窗口显示；
+  日志内容与遮罩日志框**完全一致**（同一 `[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}`
+  格式、同样从 `Information` 起），因此只是「换了个地方显示」；
+- `worker.logMode` 的显示位置同时写入 `OtherConfig.WorkerLogDisplayMode`，Worker 启动时
+  也按该配置初始化，Controller 连接成功后立即补推一次，两边不会不一致；
+- 该配置只对 Worker（`--headless`）生效：普通实例、桌面分身、网页版的遮罩日志框行为
+  不受影响（`WorkerLogRouter.ShouldWriteToGameOverlay` 对非 Worker 恒为 `true`）；
+- 日志频率较高，两条路径都做了聚合：通知渠道按 `worker.logMode` 携带的间隔（默认 5 秒）
+  把期间日志合并成一条通知（超长时保留最新行并标注省略条数），回传控制端按 500 ms /
+  50 行一批，避免小批次高频写管道。走通知渠道需要在通知设置里勾选「Worker 日志」事件；
+- `task.start` 只传类型 + 标识，任务内容全部在 Worker 侧解析：
+  `scriptGroup`（配置组名）、`scriptGroups`（配置组名列表 + 循环）、`taskProgress`
+  （任务进度名）、`oneDragon`（一条龙配置名）、`solo`（内置独立任务标识）、
+  `scriptFolder`（JS 脚本文件夹名）、`pathingFile`（地图追踪文件名 + 相对目录）、
+  `startGame`。配置组、脚本、地图追踪按**同安装目录**直接读取，独立任务与一条龙由
+  Worker 用自己的配置构造，不需要把文件内容或参数过管道；
+- Controller 连接后本机不再启动截图器，也不在本机执行任务：启动/停止按钮、
+  调度器的配置组运行、一条龙、任务设置页的独立任务、脚本列表与地图追踪的「执行」
+  都改为下发到 Worker，由 Worker 自己的 `TaskRunner` / `GameRuntimeService` 执行；
+  尚未映射到 Worker 的本机入口由 `TaskRunner` 统一拒绝并提示，绝不会误在本机执行。
+
 ## 启动参数
 
 客户端用途仅使用：

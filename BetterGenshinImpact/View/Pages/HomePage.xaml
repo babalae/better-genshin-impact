@@ -644,6 +644,111 @@
             </StackPanel>
         </ui:CardControl>
 
+        <!--  跨用户 Worker：控制其他 Windows 用户下运行的 headless Worker（仅 Primary 显示）  -->
+        <ui:CardExpander Margin="0,0,0,12"
+                         Icon="{ui:SymbolIcon LinkSquare24}"
+                         Visibility="{Binding IsWorkerEntryVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  FontTypography="Body"
+                                  Text="{i18n:T 跨用户 Worker}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{Binding WorkerStatusText}"
+                                  TextWrapping="Wrap" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <ui:TextBlock Margin="16,12,16,0"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="{i18n:T 需先在目标 Windows 用户下以管理员身份启动 headless Worker，再填写该 Worker 用户的 SID 并连接。连接后本机不再启动截图器，也不在本机执行任务：启动/停止、调度器配置组、一条龙、独立任务、脚本与地图追踪的执行都会下发给 Worker，由 Worker 自己的进程与会话执行。}"
+                              TextWrapping="Wrap" />
+                <StackPanel Margin="16,12,16,0" Orientation="Horizontal">
+                    <ui:TextBlock VerticalAlignment="Center"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 本用户 SID：}"
+                                  ToolTip="{i18n:T 目标用户启动 Worker 时，作为 --controller-sid 的值传入}" />
+                    <TextBox MinWidth="360"
+                             Margin="4,0,8,0"
+                             IsReadOnly="True"
+                             Text="{Binding LocalUserSid, Mode=OneWay}"
+                             ToolTip="{i18n:T 目标用户启动 Worker 时，作为 --controller-sid 的值传入}" />
+                    <ui:Button Command="{Binding CopyLocalUserSidCommand}"
+                               Content="{i18n:T 复制}" />
+                </StackPanel>
+                <StackPanel Margin="16,12,16,0" Orientation="Horizontal">
+                    <TextBox MinWidth="320"
+                             Margin="0,0,8,0"
+                             Text="{Binding WorkerSidInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             ToolTip="{i18n:T 目标 Worker 用户的 SID，自动保存并在下次启动时回填}" />
+                    <ui:Button Margin="0,0,8,0"
+                               Command="{Binding ConnectWorkerCommand}"
+                               Content="{i18n:T 连接}"
+                               Icon="{ui:SymbolIcon LinkSquare24}" />
+                    <ui:Button Margin="0,0,8,0"
+                               Command="{Binding DisconnectWorkerCommand}"
+                               Content="{i18n:T 断开}"
+                               Icon="{ui:SymbolIcon Dismiss24}" />
+                    <ui:Button Command="{Binding RefreshWorkerStatusCommand}"
+                               Icon="{ui:SymbolIcon ArrowClockwise24}"
+                               ToolTip="{i18n:T 刷新状态}" />
+                </StackPanel>
+                <StackPanel Margin="16,12,16,0" Orientation="Horizontal">
+                    <ui:Button Margin="0,0,8,0"
+                               Command="{Binding StartWorkerGameCommand}"
+                               Content="{i18n:T 启动截图器}"
+                               Icon="{ui:SymbolIcon Play24}" />
+                    <ui:Button Margin="0,0,8,0"
+                               Command="{Binding PauseWorkerTaskCommand}"
+                               Content="{i18n:T 暂停}" />
+                    <ui:Button Margin="0,0,8,0"
+                               Command="{Binding ResumeWorkerTaskCommand}"
+                               Content="{i18n:T 继续}" />
+                    <ui:Button Command="{Binding StopWorkerTaskCommand}"
+                               Content="{i18n:T 停止}"
+                               Icon="{ui:SymbolIcon Stop24}" />
+                </StackPanel>
+                <StackPanel Margin="16,12,16,0" Orientation="Horizontal">
+                    <ui:TextBlock VerticalAlignment="Center"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 日志显示位置：}"
+                                  ToolTip="{i18n:T 控制 Worker 日志（原遮罩叠加层日志框的内容）显示在哪里。使用通知渠道需要在通知设置里勾选「Worker 日志」事件；远程独立窗口在 Worker 侧弹出，本地独立窗口在本机弹出。}" />
+                    <ComboBox MinWidth="240"
+                              Margin="4,0,0,0"
+                              SelectedIndex="{Binding WorkerLogDisplayModeIndex, Mode=TwoWay}"
+                              ToolTip="{i18n:T 控制 Worker 日志（原遮罩叠加层日志框的内容）显示在哪里。使用通知渠道需要在通知设置里勾选「Worker 日志」事件；远程独立窗口在 Worker 侧弹出，本地独立窗口在本机弹出。}">
+                        <!--  选项顺序必须与 WorkerLogDisplayMode 的取值顺序一致（由单元测试守护）  -->
+                        <ComboBoxItem Content="{i18n:T 不显示}" />
+                        <ComboBoxItem Content="{i18n:T 使用通知渠道}" />
+                        <ComboBoxItem Content="{i18n:T 游戏内叠加层}" />
+                        <ComboBoxItem Content="{i18n:T 远程独立窗口（Worker 侧）}" />
+                        <ComboBoxItem Content="{i18n:T 本地独立窗口（控制侧）}" />
+                    </ComboBox>
+                    <ui:TextBlock Margin="12,0,4,0"
+                                  VerticalAlignment="Center"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 通知聚合间隔（秒）：}"
+                                  ToolTip="{i18n:T 使用通知渠道时，这段时间内的日志合并成一条通知发出，避免逐条推送被渠道限流}" />
+                    <ui:NumberBox Width="110"
+                                  Maximum="3600"
+                                  Minimum="1"
+                                  SmallChange="1"
+                                  SpinButtonPlacementMode="Inline"
+                                  ValidationMode="InvalidInputOverwritten"
+                                  Value="{Binding WorkerLogNotificationIntervalSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  ToolTip="{i18n:T 使用通知渠道时，这段时间内的日志合并成一条通知发出，避免逐条推送被渠道限流}" />
+                </StackPanel>
+                <TextBlock Height="16" />
+            </StackPanel>
+        </ui:CardExpander>
+
         <!--<ui:Button x:Name="Test" Margin="0,20,0,0" Content="测试" Command="{Binding TestCommand}" />-->
 
 

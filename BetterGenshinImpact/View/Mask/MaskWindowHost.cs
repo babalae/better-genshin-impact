@@ -315,6 +315,13 @@ public sealed class MaskWindowHost : IMaskWindowHost
         }
 
         var window = _windowFactory();
+        // 无主界面实例（例如无头 Worker）里遮罩窗口就是唯一的界面：
+        // 设为 MainWindow，Toast、对话框等才能通过 Window.GetWindow 取到 Owner
+        if (Application.Current is { MainWindow: null } currentApp)
+        {
+            currentApp.MainWindow = window;
+        }
+
         window.Closed += (_, _) =>
         {
             if (ReferenceEquals(_window, window))

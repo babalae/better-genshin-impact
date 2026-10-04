@@ -8,7 +8,12 @@ public enum BetterGiInstanceType
 {
     Primary,
     ChildSession,
-    WebView
+    WebView,
+
+    /// <summary>
+    /// 无界面 Worker（--headless）：不参与本用户根管道，只托管跨用户 Worker 管道
+    /// </summary>
+    Headless
 }
 
 public sealed class InstanceContext
@@ -17,14 +22,24 @@ public sealed class InstanceContext
         BetterGiInstanceType instanceType,
         string rootPipeName,
         int? rootSessionId,
-        string? instanceName = null)
+        string? instanceName = null,
+        string? controllerUserSid = null)
     {
         InstanceType = instanceType;
         InstanceName = instanceType == BetterGiInstanceType.WebView ? instanceName : null;
         RootPipeName = rootPipeName;
         RootSessionId = rootSessionId;
+        ControllerUserSid = instanceType == BetterGiInstanceType.Headless
+            ? controllerUserSid
+            : null;
         ProcessId = Environment.ProcessId;
         WindowsSessionId = Process.GetCurrentProcess().SessionId;
+        using (var identity = WindowsIdentity.GetCurrent())
+        {
+            WindowsUserSid = identity.User?.Value
+                             ?? throw new InvalidOperationException("无法取得当前 Windows 用户 SID。");
+        }
+
         StartedAt = DateTimeOffset.UtcNow;
     }
 
@@ -36,6 +51,32 @@ public sealed class InstanceContext
     public string? InstanceName { get; }
 
     public bool IsWebView => InstanceType == BetterGiInstanceType.WebView;
+
+    /// <summary>
+    /// 无界面 Worker 模式（--headless）
+    /// </summary>
+    public bool IsHeadless => InstanceType == BetterGiInstanceType.Headless;
+
+    /// <summary>
+    /// 当前进程所属 Windows 用户 SID
+    /// </summary>
+    public string WindowsUserSid { get; }
+
+    /// <summary>
+    /// Worker 模式允许连接的 Controller Windows 用户 SID，其他实例为 null
+    /// </summary>
+    public string? ControllerUserSid { get; }
+
+    /// <summary>
+    /// 跨用户 Worker 管道名（仅 Worker 模式有意义）
+    /// </summary>
+    public string WorkerPipeName => InstancePipeNames.WorkerForUserSid(WindowsUserSid);
+
+    /// <summary>
+    /// 进程内唯一的实例标识，用于日志与 Worker 状态上报
+    /// </summary>
+    public string InstanceId =>
+        $"{InstanceType}:S{WindowsSessionId}:P{ProcessId}:T{StartedAt.ToUnixTimeMilliseconds()}";
 
     public string RootPipeName { get; }
 
@@ -86,6 +127,15 @@ public sealed class InstanceEndpoint
 internal static class InstancePipeNames
 {
     private const string Prefix = "BetterGI.v2.user-";
+    private const string WorkerPrefix = "BetterGI.v2.cross-user.";
+
+    /// <summary>
+    /// 跨用户 Worker 管道名。命名管道在整台计算机可见，因此 Controller 无需 Broker 即可连接。
+    /// </summary>
+    internal static string WorkerForUserSid(string userSid)
+    {
+        return $"{WorkerPrefix}{userSid}.worker";
+    }
 
     internal static string ForCurrentUser()
     {

@@ -1,7 +1,9 @@
 using System;
 using System.Threading.Tasks;
 using System.Windows;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Ui;
+using Microsoft.Extensions.Logging;
 using Wpf.Ui.Controls;
 using MessageBoxButton = System.Windows.MessageBoxButton;
 using MessageBoxResult = System.Windows.MessageBoxResult;
@@ -129,6 +131,11 @@ public partial class ThemedMessageBox : FluentWindow
         MessageBoxResult defaultResult = MessageBoxResult.None,
         Window? owner = null)
     {
+        if (SuppressForHeadless(content))
+        {
+            return defaultResult;
+        }
+
         var messageBox = new ThemedMessageBox
         {
             Title = title
@@ -181,8 +188,27 @@ public partial class ThemedMessageBox : FluentWindow
         MessageBoxResult defaultResult = MessageBoxResult.None,
         Window? owner = null)
     {
+        if (SuppressForHeadless(content))
+        {
+            return Task.FromResult(defaultResult);
+        }
+
         return Application.Current.Dispatcher.InvokeAsync(() =>
             Show(content, title, button, icon, defaultResult, owner)).Task;
+    }
+
+    /// <summary>
+    /// 无界面 Worker 没有用户可以应答对话框：记录日志并返回 true，调用方直接返回默认结果
+    /// </summary>
+    private static bool SuppressForHeadless(string content)
+    {
+        if (!CommandLineOptions.Instance.Headless)
+        {
+            return false;
+        }
+
+        App.GetLogger<ThemedMessageBox>().LogWarning("无界面 Worker 忽略消息框：{Content}", content);
+        return true;
     }
 
     /// <summary>

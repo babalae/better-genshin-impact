@@ -2,6 +2,7 @@ using System;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.Service.Worker;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.Core.Config;
@@ -128,5 +129,25 @@ public partial class OtherConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private string _uiCultureInfoName = "zh-Hans";
+
+    /// <summary>
+    /// 跨用户 Worker：上次连接/输入的 Worker 用户 SID，启动页自动回填
+    /// </summary>
+    [ObservableProperty]
+    private string _lastWorkerUserSid = "";
+
+    /// <summary>
+    /// 跨用户 Worker：Worker 日志（原本写入遮罩叠加层日志框的内容）显示在哪里。
+    /// 该值只对 Worker（--headless）生效，普通实例的遮罩日志框行为不受影响
+    /// </summary>
+    [ObservableProperty]
+    private WorkerLogDisplayMode _workerLogDisplayMode = WorkerLogDisplayMode.GameOverlay;
+
+    /// <summary>
+    /// 跨用户 Worker：日志走通知渠道时的聚合间隔（秒）。间隔内的日志合并成一条通知，
+    /// 避免逐条推送触发渠道限流
+    /// </summary>
+    [ObservableProperty]
+    private int _workerLogNotificationIntervalSeconds = 5;
 
 }

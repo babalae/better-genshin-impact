@@ -23,6 +23,29 @@ public static class InstanceOperations
     public const string WebViewList = "webview.list";
     public const string WebViewSend = "webview.send";
     public const string WebViewMessage = "webview.message";
+
+    // 跨用户 Worker 操作（--headless）
+    public const string WorkerStatus = "worker.status";
+    public const string TaskStart = "task.start";
+    public const string TaskStop = "task.stop";
+    public const string TaskStatus = "task.status";
+    public const string TaskPause = "task.pause";
+    public const string TaskResume = "task.resume";
+
+    /// <summary>启动 Worker 自己的截图器（运行环境 + 遮罩叠加层）</summary>
+    public const string CaptureStart = "capture.start";
+
+    /// <summary>停止 Worker 自己的截图器</summary>
+    public const string CaptureStop = "capture.stop";
+
+    /// <summary>Worker → Controller 单向回传用户提示（Worker 侧没有窗口可显示 Toast）</summary>
+    public const string WorkerNotice = "worker.notice";
+
+    /// <summary>Controller → Worker：设置 Worker 日志的显示位置</summary>
+    public const string WorkerLogMode = "worker.logMode";
+
+    /// <summary>Worker → Controller：按批次转发日志行（仅在显示位置为「本地独立窗口」时下发）</summary>
+    public const string WorkerLog = "worker.log";
 }
 
 public sealed class InstanceIpcEnvelope

@@ -3,6 +3,7 @@ using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.Service.Worker;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -127,7 +128,38 @@ public partial class JsListViewModel : ViewModel
             _logger.LogWarning("此脚本存在配置，可能无法直接从脚本界面运行，建议请添加至【调度器】，并右键修改配置后使用！");
         }
 
+        // 已连接跨用户 Worker：把脚本文件夹名下发，Worker 在同安装目录直接调用
+        if (WorkerController.IsRemoteControlled)
+        {
+            await DispatchScriptToWorkerAsync(item.FolderName, item.Manifest.Name);
+            return;
+        }
+
         await _scriptService.RunMulti([new ScriptGroupProject(item)]);
+    }
+
+    private async Task DispatchScriptToWorkerAsync(string folderName, string displayName)
+    {
+        var controller = App.GetService<WorkerController>();
+        if (controller is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var started = await controller.StartTaskAsync(new WorkerTaskStartRequest
+            {
+                Type = WorkerTaskTypes.ScriptFolder,
+                Name = folderName
+            });
+            Toast.Success($"已下发到 Worker：脚本「{displayName}」（{started.State}）");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "下发脚本到 Worker 失败：{Folder}", folderName);
+            Toast.Error($"下发 Worker 失败：{ex.Message}");
+        }
     }
 
     [RelayCommand]

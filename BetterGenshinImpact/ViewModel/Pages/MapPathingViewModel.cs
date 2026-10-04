@@ -9,6 +9,7 @@ using BetterGenshinImpact.Helpers.Ui;
 using WindowHelper = BetterGenshinImpact.Helpers.Ui.WindowHelper;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.Service.Worker;
 using BetterGenshinImpact.View.Controls.Drawer;
 using BetterGenshinImpact.View.Controls.Markdown;
 using BetterGenshinImpact.View.Controls.Webview;
@@ -149,8 +150,48 @@ public partial class MapPathingViewModel : ViewModel
         }
 
         var fileInfo = new FileInfo(item.FilePath);
+
+        // 已连接跨用户 Worker：把文件名 + 相对安装目录的目录下发，Worker 在同安装目录直接调用
+        if (WorkerController.IsRemoteControlled)
+        {
+            await DispatchPathingToWorkerAsync(fileInfo);
+            return;
+        }
+
         var project = ScriptGroupProject.BuildPathingProject(fileInfo.Name, fileInfo.DirectoryName!);
         await _scriptService.RunMulti([project]);
+    }
+
+    private async Task DispatchPathingToWorkerAsync(FileInfo fileInfo)
+    {
+        var controller = App.GetService<WorkerController>();
+        if (controller is null)
+        {
+            return;
+        }
+
+        var basePath = Path.GetFullPath(AppContext.BaseDirectory);
+        var directory = Path.GetFullPath(fileInfo.DirectoryName ?? basePath);
+        if (!directory.StartsWith(basePath, StringComparison.OrdinalIgnoreCase))
+        {
+            Toast.Warning("地图追踪文件不在 BetterGI 安装目录内，无法下发到 Worker");
+            return;
+        }
+
+        try
+        {
+            var started = await controller.StartTaskAsync(new WorkerTaskStartRequest
+            {
+                Type = WorkerTaskTypes.PathingFile,
+                Name = fileInfo.Name,
+                Directory = Path.GetRelativePath(basePath, directory)
+            });
+            Toast.Success($"已下发到 Worker：地图追踪「{fileInfo.Name}」（{started.State}）");
+        }
+        catch (Exception ex)
+        {
+            Toast.Error($"下发 Worker 失败：{ex.Message}");
+        }
     }
 
     [RelayCommand]
