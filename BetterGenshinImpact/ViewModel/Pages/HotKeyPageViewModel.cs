@@ -132,6 +132,11 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         }
     }
 
+    /// <summary>
+    /// 分发快捷键配置项的属性变化
+    /// </summary>
+    /// <param name="model">发生变化的配置项</param>
+    /// <param name="propertyName">发生变化的属性名</param>
     private void OnHotKeySettingChanged(HotKeySettingModel model, string? propertyName)
     {
         // 只有快捷键和快捷键类型的变化需要重新注册。
@@ -171,7 +176,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             // 先回滚当前设置，避免两个功能同时占用同一个快捷键（那会导致注册失败），
             // 再询问用户是否替换已有绑定
             RestoreBinding(model, previousBinding);
-            ConfirmReplaceDuplicateHotKey(model, duplicate, newHotKey);
+            ConfirmReplaceDuplicateHotKey(model, duplicate, newHotKey, previousBinding);
             return;
         }
 
@@ -239,15 +244,19 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             model.HotKey,
             model.LastRegisterError ?? I18nService.Instance.Translate("未知原因"));
 
+        var failedBinding = new HotKeyBinding(model.HotKey, model.HotKeyType);
+
         if (isRollback)
         {
             // 回滚后的快捷键依然无法注册，只提示，不再继续回滚
-            _acceptedBindings[model.ConfigPropertyName] = new HotKeyBinding(model.HotKey, model.HotKeyType);
-            ShowHotKeyRegisterError(message, null);
+            _acceptedBindings[model.ConfigPropertyName] = failedBinding;
+            ShowHotKeyRegisterError(model, failedBinding, message, null);
             return;
         }
 
         ShowHotKeyRegisterError(
+            model,
+            failedBinding,
             message + "\n\n" + I18nService.Instance.Translate("已恢复为上一次的快捷键设置。"),
             () =>
             {
@@ -256,7 +265,14 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             });
     }
 
-    private void ShowHotKeyRegisterError(string message, Action? rollback)
+    /// <summary>
+    /// 提示注册失败。对话框是延后弹出的，因此回滚前会先确认状态没有被再次修改。
+    /// </summary>
+    /// <param name="model">注册失败的功能</param>
+    /// <param name="failedBinding">注册失败时的绑定，用于确认期间没有被改过</param>
+    /// <param name="message">提示内容</param>
+    /// <param name="rollback">用户确认后执行的回滚动作；状态已变化时不会执行</param>
+    private void ShowHotKeyRegisterError(HotKeySettingModel model, HotKeyBinding failedBinding, string message, Action? rollback)
     {
         Application.Current.Dispatcher.BeginInvoke(() =>
         {
@@ -266,7 +282,18 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 MessageBoxButton.OK,
                 MessageBoxResult.OK);
 
-            rollback?.Invoke();
+            if (rollback == null)
+            {
+                return;
+            }
+
+            // 弹窗期间用户可能已经重新设置过，此时按旧状态回滚会覆盖更新的设置
+            if (model.HotKey != failedBinding.HotKey || model.HotKeyType != failedBinding.Type)
+            {
+                return;
+            }
+
+            rollback();
         });
     }
 
@@ -339,7 +366,11 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
     /// <summary>
     /// 询问用户是否用新快捷键替换已有的绑定
     /// </summary>
-    private void ConfirmReplaceDuplicateHotKey(HotKeySettingModel model, HotKeySettingModel duplicate, HotKey newHotKey)
+    /// <param name="model">发起替换的功能</param>
+    /// <param name="duplicate">当前占用了该快捷键的功能</param>
+    /// <param name="newHotKey">用户想要使用的快捷键</param>
+    /// <param name="previousBinding">发起替换前该功能的绑定，用于确认期间没有被改过</param>
+    private void ConfirmReplaceDuplicateHotKey(HotKeySettingModel model, HotKeySettingModel duplicate, HotKey newHotKey, HotKeyBinding previousBinding)
     {
         var message = string.Format(
                           I18nService.Instance.Translate("快捷键 {0} 已被「{1}」使用。"),
@@ -350,6 +381,12 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
 
         Application.Current.Dispatcher.BeginInvoke(() =>
         {
+            // 弹窗期间用户可能已经改了别的设置，此时按旧状态处理会清掉更新的绑定
+            if (model.HotKey != previousBinding.HotKey || duplicate.HotKey != newHotKey)
+            {
+                return;
+            }
+
             var result = ThemedMessageBox.Warning(
                 message,
                 I18nService.Instance.Translate("快捷键重复提醒"),
@@ -402,6 +439,12 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         }
     }
 
+    /// <summary>
+    /// 快捷键与原神键位冲突时提示用户，用户选择取消则回滚到上一次的绑定
+    /// </summary>
+    /// <param name="model">发生冲突的功能</param>
+    /// <param name="newHotKey">新设置的快捷键</param>
+    /// <param name="previousBinding">设置前的绑定，用户取消时回滚到它</param>
     private void ShowGameKeyBindingConflictWarning(HotKeySettingModel model, HotKey newHotKey, HotKeyBinding previousBinding)
     {
         if (!TryConvertToGameKeyId(model.HotKey, out var hotKeyId))

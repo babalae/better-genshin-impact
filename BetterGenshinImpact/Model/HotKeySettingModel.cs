@@ -249,6 +249,9 @@ public partial class HotKeySettingModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 注销当前已注册的快捷键并释放 hook
+    /// </summary>
     public void UnRegisterHotKey()
     {
         // 置空引用，避免后续误用已释放的对象
@@ -260,12 +263,19 @@ public partial class HotKeySettingModel : ObservableObject
         KeyboardMonitorHook = null;
     }
 
+    /// <summary>
+    /// 在「全局热键」与「键鼠监听」之间切换
+    /// </summary>
     [RelayCommand]
     public void OnSwitchHotKeyType()
     {
         HotKeyType = HotKeyType == HotKeyTypeEnum.GlobalRegister ? HotKeyTypeEnum.KeyboardMonitor : HotKeyTypeEnum.GlobalRegister;
     }
 
+    /// <summary>
+    /// 类型变化时同步展示用的类型名
+    /// </summary>
+    /// <param name="value">新的快捷键类型</param>
     partial void OnHotKeyTypeChanged(HotKeyTypeEnum value)
     {
         HotKeyTypeName = value.ToChineseName();

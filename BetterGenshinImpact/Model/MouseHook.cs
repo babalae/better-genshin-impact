@@ -28,6 +28,11 @@ public class MouseHook
 
     public string ConfigPropertyName { get; set; } = string.Empty;
 
+    /// <summary>
+    /// 鼠标侧键按下：长按功能启动持续触发循环，其余功能触发一次
+    /// </summary>
+    /// <param name="sender">事件源</param>
+    /// <param name="e">鼠标事件参数</param>
     public void MouseDown(object? sender, MouseEventExtArgs e)
     {
         if (!SystemControl.IsGenshinImpactActive())

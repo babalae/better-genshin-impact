@@ -123,6 +123,10 @@ public class HotKeyTextBox : TextBox
             or Key.Oem102
             or Key.Decimal;
 
+    /// <summary>
+    /// 按当前快捷键类型校验输入：不合法时给出提示并保留原值，必要时自动切换类型
+    /// </summary>
+    /// <param name="args">按键事件参数</param>
     protected override void OnPreviewKeyDown(KeyEventArgs args)
     {
         args.Handled = true;
@@ -242,6 +246,9 @@ public class HotKeyTextBox : TextBox
         _hintToolTip.IsOpen = true;
     }
 
+    /// <summary>
+    /// 创建用于自动关闭提示的计时器
+    /// </summary>
     private DispatcherTimer CreateHintTimer()
     {
         var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
