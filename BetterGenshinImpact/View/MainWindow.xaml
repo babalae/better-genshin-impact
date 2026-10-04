@@ -105,6 +105,15 @@
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
 
+                <!-- 新一条龙只是 Pulonia 任务计划的独立界面包装；验收前保留全部旧入口。 -->
+                <ui:NavigationViewItem Content="新一条龙"
+                                       NavigationCacheMode="Enabled"
+                                       TargetPageType="{x:Type pages:PuloniaOneDragonPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="AnimalTurtle24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+
                 <ui:NavigationViewItem Content="{i18n:T 执行记录}"
                                        NavigationCacheMode="Enabled"
                                        TargetPageType="{x:Type pages:PuloniaTaskHistoryPage}">

@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
@@ -18,7 +19,7 @@ public partial class PuloniaTaskPlanViewModel
     /// 列表操作始终以显式右键目标为准，忙碌或已移除的文档不可操作。
     /// </summary>
     private bool CanManagePlan(PuloniaTaskPlanDocumentViewModel? document)
-        => !IsBusy && document is not null && Documents.Contains(document)
+        => !IsBusy && document is not null && AllDocuments.Contains(document)
            && !document.IsDeleted && !_deletingDocuments.Contains(document);
 
     /// <summary>
@@ -32,11 +33,12 @@ public partial class PuloniaTaskPlanViewModel
         IsBusy = true;
         try
         {
+            var documents = document.Purpose == PuloniaTaskPlanPurpose.OneDragon ? OneDragonDocuments : Documents;
             var plan = PuloniaTaskJson.CopyPlan(document.Plan);
             var baseName = document.Name + " - 副本";
             var name = baseName;
             var suffix = 1;
-            while (Documents.Any(item => item.Name == name))
+            while (documents.Any(item => item.Name == name))
                 name = baseName + " " + ++suffix;
             if (plan.RootTask.Name == plan.Name)
                 plan.RootTask.Name = name;
@@ -45,8 +47,8 @@ public partial class PuloniaTaskPlanViewModel
             var copy = new PuloniaTaskPlanDocumentViewModel(plan, _presets, _clipboard, isNew: true);
             AddDocument(copy);
             // 副本紧邻来源计划，便于连续复制后比较编辑内容。
-            Documents.Move(Documents.IndexOf(copy), Documents.IndexOf(document) + 1);
-            SelectedDocument = copy;
+            documents.Move(documents.IndexOf(copy), documents.IndexOf(document) + 1);
+            if (copy.Purpose == PuloniaTaskPlanPurpose.General) SelectedDocument = copy;
             if (await SaveDocumentAsync(copy))
                 StatusMessage = $"已复制为“{name}”。副本的定时和热键触发器默认禁用，可在触发方式中启用。";
         }
@@ -85,7 +87,7 @@ public partial class PuloniaTaskPlanViewModel
         try
         {
             // 除磁盘检查外也检查未保存草稿，避免删除后其他文档的自动保存失败。
-            var reference = Documents.FirstOrDefault(other => !ReferenceEquals(other, document)
+            var reference = AllDocuments.FirstOrDefault(other => !ReferenceEquals(other, document)
                 && EnumeratePlanReferenceIds(other.Plan.RootTask).Contains(document.Id));
             if (reference is not null)
                 throw new InvalidOperationException($"计划“{reference.Name}”仍引用此计划，请先移除引用后再删除。");
@@ -96,10 +98,12 @@ public partial class PuloniaTaskPlanViewModel
             document.Changed -= OnDocumentChanged;
             document.ContentChanged -= OnDocumentContentChanged;
             var wasSelected = ReferenceEquals(SelectedDocument, document);
-            var index = Documents.IndexOf(document);
+            var documents = document.Purpose == PuloniaTaskPlanPurpose.OneDragon ? OneDragonDocuments : Documents;
+            var index = documents.IndexOf(document);
             Documents.Remove(document);
+            OneDragonDocuments.Remove(document);
             if (wasSelected)
-                SelectedDocument = Documents.Count == 0 ? null : Documents[Math.Min(index, Documents.Count - 1)];
+                SelectedDocument = documents.Count == 0 ? null : documents[Math.Clamp(index, 0, documents.Count - 1)];
             RefreshReferencePlans();
             UpdateResourceSummaries(GetResourceDocuments());
             StatusMessage = $"已删除任务计划“{document.Name}”，执行历史已保留。";

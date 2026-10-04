@@ -138,7 +138,7 @@ public partial class PuloniaTaskPlanViewModel
 
     /// <summary>包含当前独立编辑文档，便于卡片操作与进程内调用共享同一路径。</summary>
     private PuloniaTaskPlanDocumentViewModel[] GetResourceDocuments()
-        => Documents.Concat(SelectedDocument is { } selected ? [selected] : Array.Empty<PuloniaTaskPlanDocumentViewModel>()).Distinct().ToArray();
+        => AllDocuments.Concat(SelectedDocument is { } selected ? [selected] : Array.Empty<PuloniaTaskPlanDocumentViewModel>()).Distinct().ToArray();
 
     /// <summary>递归收集引用计划，按计划 ID 去重；无论重复引用还是循环草稿都不能无限扫描。</summary>
     private static IEnumerable<PuloniaTaskPlanDocumentViewModel> GetReferencedDocuments(

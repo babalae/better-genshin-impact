@@ -33,6 +33,9 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     /// </summary>
     private IReadOnlyList<PuloniaTaskPreset> _presets;
 
+    /// <summary>执行器的能力定义，用于与运行时一致的默认参数预览。</summary>
+    private IReadOnlyList<PuloniaTaskDefinition> _definitions = [];
+
     /// <summary>
     /// 当前可编辑的持久化计划模型。
     /// </summary>
@@ -175,6 +178,9 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     /// </summary>
     internal PuloniaTaskPlan Plan => _plan;
 
+    /// <summary>计划的菜单归属；不参与执行树构建或运行策略。</summary>
+    public PuloniaTaskPlanPurpose Purpose => _plan.Purpose;
+
     /// <summary>
     /// 计划已成功删除；尚未结束的异步编辑操作不能重新将其写入磁盘。
     /// </summary>
@@ -284,6 +290,7 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
         if (selection is not null)
             SelectedNode = selection;
         RefreshSelectedEditor();
+        RefreshConfigurationSummaries();
         Changed?.Invoke(this, EventArgs.Empty);
         ContentChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -494,7 +501,20 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     {
         _presets = presets;
         RefreshSelectedEditor();
+        RefreshConfigurationSummaries();
     }
+
+    /// <summary>更新能力定义并刷新有效设置，默认值不写入持久化草稿。</summary>
+    internal void SetDefinitions(IReadOnlyList<PuloniaTaskDefinition> definitions)
+    {
+        _definitions = definitions;
+        RefreshSelectedEditor();
+        RefreshConfigurationSummaries();
+    }
+
+    /// <summary>按资源优先、通用类型其次选择能力，与运行构建保持相同顺序。</summary>
+    private PuloniaTaskDefinition? GetDefinition(PuloniaTask task) => _definitions.FirstOrDefault(d => d.TaskType == task.TaskType && d.ResourceId == task.Path)
+        ?? _definitions.FirstOrDefault(d => d.TaskType == task.TaskType && d.ResourceId is null);
 
     /// <summary>
     /// 设置保存失败信息而不丢弃当前内存草稿。
@@ -536,7 +556,8 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
                 : JObject.FromObject(node.Model.Source).ToString(Formatting.Indented);
 
             PresetOptions.Add(new PuloniaTaskPresetOptionViewModel(null, "不使用共享预设"));
-            foreach (var preset in _presets.Where(preset => MatchesScope(preset.TaskType, preset.ResourceId, node.Model))
+            foreach (var preset in _presets.Where(preset => MatchesScope(preset.TaskType, preset.ResourceId, node.Model)
+                         && preset.SchemaVersion == (GetDefinition(node.Model)?.SchemaVersion ?? 1))
                          .OrderBy(preset => preset.Name, StringComparer.CurrentCulture))
                 PresetOptions.Add(new PuloniaTaskPresetOptionViewModel(preset.Id, $"{preset.Name} · r{preset.Revision}"));
             if (node.Model.PresetId is { } selectedPresetId
@@ -549,7 +570,7 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
                         : $"⚠ 预设与节点不匹配：{knownPreset.Name}"));
                 EditorMessage = knownPreset is null
                     ? "当前节点引用的共享预设不存在，保存草稿不会自动清除该引用。"
-                    : "当前共享预设的任务类型或资源与节点不匹配，请重新选择。";
+                    : "当前共享预设的任务类型、资源或参数版本与节点不匹配，请重新选择。";
             }
             SelectedPresetOption = PresetOptions.FirstOrDefault(option => option.Id == node.Model.PresetId)
                                    ?? PresetOptions[0];
@@ -753,11 +774,15 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     {
         var result = new JObject();
         sources = new Dictionary<string, string>(StringComparer.Ordinal);
+        var definition = GetDefinition(task);
+        if (definition is not null)
+            ApplyValues(result, sources, definition.DefaultParameters, "能力默认值");
         var selectedPreset = task.PresetId is null
             ? null
             : _presets.FirstOrDefault(preset => preset.Id == task.PresetId);
-        var schemaVersion = selectedPreset?.SchemaVersion ?? 1;
-        if (selectedPreset is not null && MatchesScope(selectedPreset.TaskType, selectedPreset.ResourceId, task))
+        var schemaVersion = definition?.SchemaVersion ?? 1;
+        if (selectedPreset is not null && selectedPreset.SchemaVersion == schemaVersion
+            && MatchesScope(selectedPreset.TaskType, selectedPreset.ResourceId, task))
             ApplyValues(result, sources, selectedPreset.Values, $"预设“{selectedPreset.Name}”");
 
         foreach (var ancestor in ancestors)

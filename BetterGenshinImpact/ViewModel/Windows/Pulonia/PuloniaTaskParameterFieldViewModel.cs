@@ -114,6 +114,9 @@ public partial class PuloniaTaskParameterFieldViewModel : ObservableObject
     /// </summary>
     private readonly JToken? _defaultValue;
 
+    /// <summary>枚举显示值对应的原始 JSON，避免整数枚举编辑后变成字符串。</summary>
+    private readonly IReadOnlyDictionary<string, JToken> _choiceValues;
+
     /// <summary>
     /// 文本、数值或 JSON 编辑内容。
     /// </summary>
@@ -150,9 +153,10 @@ public partial class PuloniaTaskParameterFieldViewModel : ObservableObject
             : [schema.Value<string>("type") ?? "string"];
         _isNullable = types.Contains("null", StringComparer.Ordinal);
         _valueType = types.FirstOrDefault(type => type != "null") ?? "string";
-        Choices = schema["enum"] is JArray choices
-            ? choices.Values<string>().Where(choice => choice is not null).Cast<string>().ToList()
-            : [];
+        _choiceValues = schema["enum"] is JArray choices
+            ? choices.ToDictionary(choice => choice.Type == JTokenType.String ? choice.Value<string>()! : choice.ToString(Formatting.None), choice => choice.DeepClone(), StringComparer.Ordinal)
+            : new Dictionary<string, JToken>();
+        Choices = _choiceValues.Keys.ToArray();
         EditorKind = Choices.Count > 0
             ? PuloniaTaskParameterEditorKind.Choice
             : _valueType switch
@@ -166,9 +170,7 @@ public partial class PuloniaTaskParameterFieldViewModel : ObservableObject
         if (EditorKind == PuloniaTaskParameterEditorKind.Boolean)
             BooleanValue = initialValue.Value<bool?>() ?? false;
         else if (EditorKind == PuloniaTaskParameterEditorKind.Choice)
-            SelectedChoice = initialValue.Type == JTokenType.Null
-                ? Choices.FirstOrDefault()
-                : initialValue.Value<string>();
+            SelectedChoice = initialValue.Type == JTokenType.String ? initialValue.Value<string>() : initialValue.ToString(Formatting.None);
         else if (EditorKind == PuloniaTaskParameterEditorKind.Json)
             TextValue = initialValue.Type == JTokenType.Null
                 ? (_valueType == "array" ? "[]" : "{}")
@@ -188,7 +190,8 @@ public partial class PuloniaTaskParameterFieldViewModel : ObservableObject
         {
             if (SelectedChoice is null)
                 throw new FormatException($"请选择“{DisplayName}”。");
-            return new JValue(SelectedChoice);
+            return _choiceValues.TryGetValue(SelectedChoice, out var choice)
+                ? choice.DeepClone() : throw new FormatException($"“{DisplayName}”不在允许的选项中。");
         }
         if (EditorKind == PuloniaTaskParameterEditorKind.Json)
         {
@@ -201,6 +204,10 @@ public partial class PuloniaTaskParameterFieldViewModel : ObservableObject
             {
                 throw new FormatException($"“{DisplayName}”不是有效 JSON：{ex.Message}", ex);
             }
+
+            // 可空集合的显式 null 与空数组、空对象不同，保留用户输入的 JSON 类型。
+            if (_isNullable && value.Type == JTokenType.Null)
+                return value;
 
             if (_valueType == "array" && value is not JArray || _valueType == "object" && value is not JObject)
                 throw new FormatException($"“{DisplayName}”必须是 JSON {_valueType}。");
@@ -251,8 +258,26 @@ public partial class PuloniaTaskParameterFieldViewModel : ObservableObject
     /// <summary>
     /// 返回当前已接入参数的中文名称；未知字段仍保留稳定字段名。
     /// </summary>
-    private static string GetDisplayName(string name) => name switch
+    internal static string GetDisplayName(string name) => name switch
     {
+        "domain_name" => "秘境", "boss_name" => "首领", "strategy_name" => "战斗策略",
+        "team_name" or "team" or "fight_team_name" => "队伍", "run_count" or "count" or "round_count" => "次数",
+        "specify_run_count" => "指定次数", "revive_retry_count" => "死亡重试次数", "timeout" => "战斗超时（秒）",
+        "boss_num" => "幽境首领序号", "weekday_overrides" => "每周安排（0 周日至 6 周六，服务器四点日切）",
+        "one_dragon_mode" => "地脉花一条龙模式", "specify_resin_use" => "指定树脂用量", "max_artifact_star" => "分解最大星级",
+        "auto_artifact_salvage" => "结束后分解圣遗物", "reward_recognition_enabled" => "识别奖励",
+        "use_transient_resin" => "使用须臾树脂", "use_fragile_resin" => "使用脆弱树脂",
+        "resin_priority_list" => "树脂优先级", "is_resin_exhaustion_mode" => "刷至树脂耗尽",
+        "sunday_selected_value" => "周日奖励序号", "ley_line_outcrop_type" => "地脉花类型",
+        "fight_config" => "战斗设置", "return_to_statue_after_each_round" => "每轮结束回神像",
+        "original_resin_use_count" => "原粹树脂次数", "original_resin20_use_count" => "20 树脂次数",
+        "original_resin40_use_count" => "40 树脂次数", "condensed_resin_use_count" => "浓缩树脂次数",
+        "transient_resin_use_count" => "须臾树脂次数", "fragile_resin_use_count" => "脆弱树脂次数",
+        "friendship_team" => "好感队伍", "open_mode_count_min" => "次数取较小值",
+        "is_go_to_synthesizer" => "前往合成台", "scan_drops_after_reward_enabled" => "领奖后扫描掉落物",
+        "scan_drops_after_reward_seconds" => "扫描掉落物时长（秒）", "fight_end_delay" => "战斗结束后等待（秒）",
+        "short_movement" => "短距离移动", "walk_to_f" => "走近交互", "left_right_move_times" => "左右移动次数",
+        "auto_eat" => "自动吃药",
         "settings" => "脚本设置",
         "party_name" => "队伍名称",
         "skip_party_switch" => "跳过队伍切换",

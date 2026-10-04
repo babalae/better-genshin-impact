@@ -322,11 +322,12 @@
                                VerticalAlignment="Center"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                Text="{Binding TypeDisplayName}" />
-                    <CheckBox Grid.Column="2"
-                              HorizontalAlignment="Center"
-                              VerticalAlignment="Center"
-                              IsChecked="{Binding IsEnabled, Mode=TwoWay}"
-                              ToolTip="关闭父组不会改写子任务的选择" />
+                    <!-- 启用开关使用 Fluent Switch 样式；父级关闭时子节点开关仍保留自身选择，仅整行弱化显示。 -->
+                    <ui:ToggleSwitch Grid.Column="2"
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="Center"
+                                     IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                     ToolTip="关闭父组不会改写子任务的选择" />
                 </Grid>
             </Border>
             <HierarchicalDataTemplate.Triggers>

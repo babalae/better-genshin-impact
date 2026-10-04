@@ -1223,7 +1223,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
             return;
         }
 
-        if (!int.TryParse(TaskContext.Instance().Config.AutoArtifactSalvageConfig.MaxArtifactStar, out var star))
+        if (!int.TryParse(_taskParam.MaxArtifactStar ?? TaskContext.Instance().Config.AutoArtifactSalvageConfig.MaxArtifactStar, out var star))
         {
             star = 4;
         }

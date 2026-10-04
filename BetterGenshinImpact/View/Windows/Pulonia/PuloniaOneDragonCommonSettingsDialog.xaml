@@ -1,0 +1,19 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.Pulonia.PuloniaOneDragonCommonSettingsDialog"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" Title="{Binding Title}" Width="850" Height="720" MinWidth="650" MinHeight="500"
+ WindowStartupLocation="CenterOwner" ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica" FontFamily="{StaticResource TextThemeFontFamily}"
+ Background="{DynamicResource ApplicationBackgroundBrush}" Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+ <ui:FluentWindow.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceDictionary Source="../../Controls/PuloniaOneDragonResources.xaml"/></ResourceDictionary.MergedDictionaries></ResourceDictionary></ui:FluentWindow.Resources>
+ <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+  <ui:TitleBar Title="{Binding Title}" ShowMinimize="False" ShowMaximize="False"/>
+  <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="20,12,20,20">
+   <ui:Card Style="{StaticResource DragonCard}"><TextBlock Text="显示当前有效配置。应用时只保存修改的字段；分组设置由同类子任务继承，子任务自身设置优先。" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/></ui:Card>
+   <ui:Card Style="{StaticResource DragonCard}"><ItemsControl ItemsSource="{Binding Fields}" ItemTemplate="{StaticResource ParameterFieldTemplate}"/></ui:Card>
+   <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Foreground="{DynamicResource SystemFillColorCautionBrush}"/>
+  </StackPanel></ScrollViewer>
+  <ui:Card Grid.Row="2" Padding="20,12"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+   <ui:Button Content="恢复继承" Command="{Binding RestoreCommand}" HorizontalAlignment="Left"/>
+   <StackPanel Grid.Column="1" Orientation="Horizontal"><ui:Button Content="应用" Appearance="Primary" Command="{Binding ConfirmCommand}" IsDefault="True" Margin="0,0,8,0"/><ui:Button Content="取消" Command="{Binding CancelCommand}" IsCancel="True"/></StackPanel>
+  </Grid></ui:Card>
+ </Grid>
+</ui:FluentWindow>

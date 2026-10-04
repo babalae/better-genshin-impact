@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Model;
 
@@ -10,6 +10,9 @@ public class AutoStygianOnslaughtParam:BaseTaskParam<AutoStygianOnslaughtTask>
     public int BossNum { get; set; }
     // 结束后是否自动分解圣遗物
     public bool AutoArtifactSalvage { get; set; }
+
+    /// <summary>Pulonia 快照中的分解最大星级；原调用为空时沿用旧全局设置。</summary>
+    public string? MaxArtifactStar { get; set; }
     
     // 指定树脂的使用次数
     public bool SpecifyResinUse{ get; set; }
@@ -52,6 +55,12 @@ public class AutoStygianOnslaughtParam:BaseTaskParam<AutoStygianOnslaughtTask>
     public AutoStygianOnslaughtParam() : base(null, null)
     {
         SetDefault();
+    }
+
+    /// <summary>使用本次计划的独立配置创建参数，不加载全局业务默认值。</summary>
+    internal AutoStygianOnslaughtParam(AutoStygianOnslaughtConfig config) : base(null, null)
+    {
+        SetAutoStygianOnslaughtConfig(config);
     }
     public AutoStygianOnslaughtParam(string combatScriptBagPath) : base(null, null)
     {

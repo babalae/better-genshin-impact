@@ -106,7 +106,7 @@ Builder 内还有私有 `BuildContext`，只保存本次准备的计划/预设/�
 
 采用 `BetterGenshinImpact.Pulonia` 命名空间，任务相关类型统一以 `PuloniaTask` 命名，区别旧的 `ScriptGroup`、`OneDragonFlow`、`TaskRunner`。
 
-`PuloniaTask` 直接表示任务树中的一个节点，通过 `TaskType` 区分分组、脚本、路线、内置功能等；计划引用是带计划来源的分组，不占用能力类型。不再另设同义的 `PuloniaTaskNode`。`PuloniaTaskPlan` 保存计划元信息和 `RootTask`。`PuloniaTaskDefinition` 仅是代码注册或资源清单提供的类型说明，不再作为每次执行必须引用的独立实体。
+`PuloniaTask` 直接表示任务树中的一个节点，通过 `TaskType` 区分分组、脚本、路线、内置功能等；计划引用是带计划来源的分组，不占用能力类型。不再另设同义的 `PuloniaTaskNode`。`PuloniaTaskPlan` 保存计划元信息和 `RootTask`；`Purpose`（General=0 / OneDragon=1）只标记界面归属，普通计划为 General、一条龙配置为 OneDragon，不改变计划结构、存储或执行语义。`PuloniaTaskDefinition` 仅是代码注册或资源清单提供的类型说明，不再作为每次执行必须引用的独立实体。
 
 运行记录对应区分为 `PuloniaTaskPlanRun`（一次计划运行）与 `PuloniaTaskRun`（树中某个任务的一次执行尝试）。账号、状态快照和培养目标使用 `Pulonia` 前缀，分别命名为 `PuloniaAccountProfile`、`PuloniaPlayerSnapshot`、`PuloniaDevelopmentGoal`。
 
@@ -116,7 +116,7 @@ Builder 内还有私有 `BuildContext`，只保存本次准备的计划/预设/�
 
 | 概念 / 命名 | 关键字段 | 职责与边界 |
 | --- | --- | --- |
-| 任务计划 `PuloniaTaskPlan` | `Id`、`SchemaVersion`、`Revision`、`Name`、`Description`、`RootTask`、`Triggers`、`Accounts` | 一个计划文件，包含任务树、触发配置和账号绑定；一条龙只是其简洁视图 |
+| 任务计划 `PuloniaTaskPlan` | `Id`、`SchemaVersion`、`Revision`、`Name`、`Description`、`Purpose`、`RootTask`、`Triggers`、`Accounts` | 一个计划文件，包含任务树、触发配置和账号绑定；`Purpose` 仅区分界面归属（General / OneDragon，旧 JSON 缺省按 General 解析），一条龙配置不是另一种计划类型或视图 |
 | 树节点 `PuloniaTask` | `Id`、`Name`、`TaskType`、`Path`、`IsEnabled`、`RepeatCount?`、`Parameters`、`ParameterOverrides`、`Children`、`PresetId?`、`Policy`、`Source?` | 沿用 d-v3 的持久化形状；分组可配置完整执行子项的次数；运行前固定快照，可集中构建只读执行节点，不把执行状态写回编辑模型 |
 | 类型说明 `PuloniaTaskDefinition` | `TaskType`、`ParameterSchema`、`Requirements`、`CompletionContract`、`AvailabilityRules` | 由内置注册或资源清单提供，不单独存储，不设管理服务；执行器注册字典按 `TaskType` 查找 |
 | 配置预设 `PuloniaTaskPreset` | `Id`、`TaskType`、`ResourceId?`、`SchemaVersion`、`Values` | 可选；脚本专用预设同时绑定资源和参数版本，避免不同 JS 的同名参数被混用 |
@@ -224,7 +224,7 @@ erDiagram
 - `Source` 是分组的可选外部来源值对象：目录保存定位与版本，计划引用保存目标 PlanId。目录引用和计划引用都仍以分组展示，不额外增加用户必须学习的任务类型。引用组保存来源、展开组保存 Children，不能同时维护两份可编辑的子任务。
 - 每个 `pathing` 节点直接指向路线，每个 JS 节点直接指向脚本资源，不强制先建一份“能力定义实体”再建节点。
 
-节点可附带启用状态、结构化条件、失败策略、超时。日历窗口、CD、树脂不足等返回可解释的跳过或等待原因，不能都记为失败。
+节点可附带启用状态、结构化条件、失败策略、超时。启用状态共用一个 `IsEnabled`：有效启用为祖先与本节点开关的逻辑与，父级关闭不覆盖子节点的本地开关，重新启用后保留原有选择；一条龙界面同样使用该语义，不引入专用开关或执行机制，运行前固定的快照不受编辑变化影响。日历窗口、CD、树脂不足等返回可解释的跳过或等待原因，不能都记为失败。
 
 内置条件只覆盖常见情况，例如星期、物品缺口、树脂阈值、剩余时长。复杂逻辑交给 JS/C# 能力；首版不设计图形化编程语言。条件读到未知状态时，可以先刷新，仍未知则跳过或待处理，不能当成 0。
 
@@ -273,7 +273,7 @@ erDiagram
 
 每个字段显示最终有效值及来源，例如“战斗队伍：采集队，来自素材采集分组”。支持“恢复继承”；缺省、显式空值、0、false 分开保存，集合默认整体替换。配置在开始运行时解析成强类型、不可变快照。
 
-独立任务、一条龙卡片和树节点详情复用同一参数编辑器。编辑动作明确区分“修改共享预设”和“只覆盖此节点”。计划引用默认沿用被引用计划的内部配置；引用节点仅允许覆盖声明的公共参数及执行策略，避免外部祖先悄悄改写整棵引用树。
+独立任务、一条龙选中任务配置和树节点详情是不同展示 UI，共用同一套有效参数解析与提交合同。编辑动作明确区分“修改共享预设”和“只覆盖此节点”。计划引用默认沿用被引用计划的内部配置；引用节点仅允许覆盖声明的公共参数及执行策略，避免外部祖先悄悄改写整棵引用树。
 
 UI 可为内置能力提供专用参数编辑器；JS 依据 Schema 生成表单。编辑器提供方放在 WPF 层，`PuloniaTaskDefinition` 不引用 `UserControl`。
 
@@ -295,12 +295,12 @@ UI 可为内置能力提供专用参数编辑器；JS 依据 Schema 生成表单
 
 ## 步骤 1 已验收的具体格式
 
-实现与可阅读样例见 [步骤 1 样例说明](examples/step-1/README.md)。以下表示已随步骤 1 验收固定为后续运行合同；新增能力仍须遵守同一身份、复制和快照语义。
+以下表示已随步骤 1 用户验收固定为后续运行合同；新增能力仍须遵守同一身份、复制和快照语义。后续验收由用户使用真实配置核对，开发自查数据不作为用户验收材料。
 
-- 新建计划/预设的 `revision` 为 0；保存成功返回修订递增的独立副本，保存旧修订明确报冲突。ID 实际生成为 GUID 的小写 N 格式；文件读取同时允许样例使用的小写可读 ID，长度最多 96，拒绝路径字符及 Windows 保留名称。
+- 新建计划/预设的 `revision` 为 0；保存成功返回修订递增的独立副本，保存旧修订明确报冲突。ID 实际生成为 GUID 的小写 N 格式；文件读取同时允许小写可读 ID，长度最多 96，拒绝路径字符及 Windows 保留名称。
 - `group.parameters` 保持空对象；叶子任务的 `parameters` 是本节点覆盖。分组的 `parameter_overrides` 保存 `{task_type, resource_id?, schema_version, values}` 列表，明确公共参数作用域。JS 必须绑定 `resource_id` 和参数版本；其他能力允许通用预设或资源专用预设。同层先应用通用覆盖，再应用资源专用覆盖；最近祖先始终更优先。
 - `Source` 只配置在 `group`：目录格式为 `{kind: "directory", path, task_type, recursive, version?}`，计划格式为 `{kind: "plan", plan_id}`。引用分组不保存可编辑 `children`。`plan` 不是合法任务类型。目录原型只展开 pathing/keymouse JSON 文件；超深、超量和访问失败明确报错，跳过重解析点。
 - 非根 `group.repeat_count` 可选，取值为 1—10000；缺省或 1 表示顺序执行一次，大于 1 时完整重复该分组的全部子项。固定展开的地址使用节点 ID、`@planId` 引用路径和 `#轮次`。`repeat` 不是合法任务类型。目录展开节点 ID 来自相对路径的 SHA-256，`source_task_id` 定位原引用分组。条件循环不是固定次数配置，若未来需要应建立独立、具备明确终止条件的执行语义。
 - `Policy` 按 `timeout_seconds`、`failure_behavior`、`max_retries`、`retry_delay_seconds` 字段继承。计划引用的内部树只接收引用节点显式配置的策略及公共参数，普通外部祖先配置不会隐式灌入。
 - `Triggers` 暂用 `JArray` 保留 JSON；账号绑定只定义身份引用及节点预设选择。调度、账号核验、运行状态和历史在对应步骤实现。
-- 原型采用 `PuloniaTaskPreparedTask` 和 `PuloniaTaskSnapshot` 两个只读运行表示。参数和策略通过防御性副本读取；快照保存原计划/预设 JSON、有效参数、来源和资源指纹，不含执行器实例。两种表示的比较与当前限制在样例中列出，待本步验收后固定选择。
+- 原型采用 `PuloniaTaskPreparedTask` 和 `PuloniaTaskSnapshot` 两个只读运行表示。参数和策略通过防御性副本读取；快照保存原计划/预设 JSON、有效参数、来源和资源指纹，不含执行器实例。该只读运行表示已随步骤 1 的用户验收固定。

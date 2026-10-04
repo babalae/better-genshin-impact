@@ -94,12 +94,13 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
     private List<ResinUseRecord> _resinPriorityListWhenSpecifyUse;
 
-    public AutoDomainTask(AutoDomainParam taskParam)
+    /// <summary>创建秘境任务；Pulonia 传入独立配置，原入口继续使用全局设置。</summary>
+    public AutoDomainTask(AutoDomainParam taskParam, AutoDomainConfig? config = null)
     {
         _taskParam = taskParam;
         _predictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiTree);
 
-        _config = TaskContext.Instance().Config.AutoDomainConfig;
+        _config = config ?? TaskContext.Instance().Config.AutoDomainConfig;
 
         if (AutoFightParam.ComboStrategyName.Equals(_taskParam.CombatStrategyPath))
         {
@@ -960,7 +961,8 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             return;
         }
 
-        var s = TaskContext.Instance().Config.AutoDomainConfig.FightEndDelay;
+        // 独立配置入口必须沿用本次运行的战后等待，不能重新读取其他页面的值。
+        var s = _config.FightEndDelay;
         if (s > 0)
         {
             Logger.LogInformation("战斗结束后等待 {Second} 秒", s);

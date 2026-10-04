@@ -69,6 +69,13 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
         SetDefault();
     }
 
+    /// <summary>为 Pulonia 创建不读取全局业务配置的参数，全部配置由运行快照填充。</summary>
+    internal AutoDomainParam(string path) : base(null, null)
+    {
+        DomainRoundNum = 9999;
+        CombatStrategyPath = path;
+    }
+
     public void SetDefault()
     {
         var config = TaskContext.Instance().Config.AutoDomainConfig;

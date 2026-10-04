@@ -89,6 +89,11 @@ public partial class PuloniaTaskPlanViewModel
             && item.TriggerId == SelectedTrigger?.Trigger.Id)?.LastRequestId;
         History.PlanFilterId = SelectedDocument?.Id;
         await History.RefreshAsync(id);
+        if (_showScopedTriggerHistory is not null)
+        {
+            await _showScopedTriggerHistory();
+            return;
+        }
         SelectedPlanTabIndex = 1;
     }
 

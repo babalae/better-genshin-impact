@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.GameTask.Model;
+using BetterGenshinImpact.GameTask.Model;
 
 namespace BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 
@@ -66,6 +66,12 @@ public class AutoLeyLineOutcropParam:BaseTaskParam<AutoLeyLineOutcropTask>
     public AutoLeyLineOutcropParam() : base(null, null)
     {
         SetDefault();
+    }
+
+    /// <summary>使用快照配置创建参数，避免构造期间读取独立任务页面的业务配置。</summary>
+    internal AutoLeyLineOutcropParam(AutoLeyLineOutcropConfig config) : base(null, null)
+    {
+        SetAutoLeyLineOutcropConfig(config);
     }
     
     public AutoLeyLineOutcropParam(int count, string country, string leyLineOutcropType) : base(null, null)

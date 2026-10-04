@@ -44,6 +44,8 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
 
     private readonly ILogger<AutoBossTask> _logger = App.GetLogger<AutoBossTask>();
     private readonly AutoBossParam _taskParam;
+    /// <summary>Pulonia 显式传入的战斗检测配置；原入口为空时保留原全局行为。</summary>
+    private readonly AutoFightConfig? _fightConfig;
     private readonly CombatScriptBag? _combatScriptBag;
     private readonly string? _jsonCombatStrategyPath;
     private readonly ReturnMainUiTask _returnMainUiTask = new();
@@ -73,9 +75,11 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     /// 创建自动首领讨伐任务，并根据任务参数预解析战斗策略。
     /// </summary>
     /// <param name="taskParam">自动首领讨伐参数，包含 Boss、队伍、战斗策略、讨伐次数和补充树脂开关。</param>
-    public AutoBossTask(AutoBossParam taskParam)
+    /// <param name="fightConfig">可选的本次运行战斗配置，避免 Pulonia 重新读取全局业务设置。</param>
+    public AutoBossTask(AutoBossParam taskParam, AutoFightConfig? fightConfig = null)
     {
         _taskParam = taskParam;
+        _fightConfig = fightConfig;
         if (string.IsNullOrWhiteSpace(_taskParam.CombatStrategyPath))
         {
             _taskParam.SetCombatStrategyPath(_taskParam.StrategyName);
@@ -906,7 +910,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     /// </summary>
     private AutoFightParam BuildAutoFightParamForBoss()
     {
-        var taskParam = new AutoFightParam(_taskParam.CombatStrategyPath, TaskContext.Instance().Config.AutoFightConfig)
+        var taskParam = new AutoFightParam(_taskParam.CombatStrategyPath, _fightConfig ?? TaskContext.Instance().Config.AutoFightConfig)
         {
             FightFinishDetectEnabled = true,
             PickDropsAfterFightEnabled = false,

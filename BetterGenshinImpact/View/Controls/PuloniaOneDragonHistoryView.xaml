@@ -1,0 +1,41 @@
+<UserControl x:Class="BetterGenshinImpact.View.Controls.PuloniaOneDragonHistoryView"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" xmlns:history="clr-namespace:BetterGenshinImpact.ViewModel.Pages.Pulonia">
+ <UserControl.Resources><ResourceDictionary>
+  <ResourceDictionary.MergedDictionaries><ResourceDictionary Source="PuloniaOneDragonResources.xaml"/></ResourceDictionary.MergedDictionaries>
+  <DataTemplate DataType="{x:Type history:PuloniaTaskHistoryField}"><ui:Card Style="{StaticResource DragonCard}"><StackPanel><TextBlock Text="{Binding Label}" FontWeight="SemiBold"/><TextBox Text="{Binding Value, Mode=OneWay}" Margin="0,6,0,0" MaxHeight="180" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Background="Transparent" BorderThickness="0"/></StackPanel></ui:Card></DataTemplate>
+ </ResourceDictionary></UserControl.Resources>
+ <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+  <WrapPanel Margin="0,0,0,10">
+   <ui:TextBox Width="200" PlaceholderText="搜索记录" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,6"/>
+   <ComboBox Width="150" ItemsSource="{Binding StatusFilters}" DisplayMemberPath="Label" SelectedItem="{Binding SelectedStatusFilter}" Margin="0,0,8,6"/>
+   <ui:Button Content="刷新" Command="{Binding RefreshRunsCommand}" Margin="0,0,8,6"/>
+   <ui:Button Content="停止" Command="{Binding CancelRunCommand}" Margin="0,0,8,6"/>
+   <ui:Button Content="继续未完成" Command="{Binding ResumeRunCommand}" Margin="0,0,8,6"/>
+   <ui:Button Content="从选中步骤开始" Command="{Binding ResumeFromNodeCommand}" Margin="0,0,8,6"/>
+  </WrapPanel>
+  <Grid Grid.Row="1"><Grid.ColumnDefinitions><ColumnDefinition Width="200" MinWidth="160"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+   <ListBox ItemsSource="{Binding Runs}" SelectedItem="{Binding SelectedRun}" ItemContainerStyle="{StaticResource DragonListItem}" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
+    <ListBox.ItemTemplate><DataTemplate><StackPanel><TextBlock Text="{Binding StatusText}" FontWeight="SemiBold"/><TextBlock Text="{Binding SubmittedAtText}" FontSize="11" Margin="0,6,0,0"/><TextBlock Text="{Binding ResultSummary}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/><TextBlock Text="{Binding ScopeText}" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/></StackPanel></DataTemplate></ListBox.ItemTemplate>
+   </ListBox>
+   <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Center" Background="Transparent"/>
+   <Grid Grid.Column="2"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="150"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+    <ui:Card Style="{StaticResource DragonCard}"><StackPanel><TextBlock Text="{Binding SelectedRun.StatusText}" FontSize="16" FontWeight="SemiBold"/><TextBlock Text="{Binding SelectedRun.Message}" TextWrapping="Wrap" Margin="0,6,0,0"/><TextBlock Text="{Binding SelectedRun.CurrentTaskAddress}" FontSize="11" TextTrimming="CharacterEllipsis"/></StackPanel></ui:Card>
+    <ListBox Grid.Row="1" ItemsSource="{Binding SelectedRun.NodeDetails}" SelectedItem="{Binding SelectedRunNodeResult}" ItemContainerStyle="{StaticResource DragonListItem}" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+     <ListBox.ItemTemplate><DataTemplate><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="{Binding TaskName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><TextBlock Grid.Column="1" Text="{Binding StatusText}" Margin="10,0,0,0" FontSize="12"/></Grid></DataTemplate></ListBox.ItemTemplate>
+    </ListBox>
+    <TabControl Grid.Row="2" Margin="0,10,0,0" BorderThickness="0">
+     <TabItem Header="结果与证据"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="0,10,8,0">
+      <ui:Card Style="{StaticResource DragonCard}"><StackPanel><TextBlock Text="{Binding SelectedRunNodeResult.TaskName}" FontWeight="SemiBold"/><TextBlock Text="{Binding SelectedRunNodeResult.TimingText}" FontSize="12"/><TextBlock Text="{Binding SelectedRunNodeResult.Message}" TextWrapping="Wrap" Margin="0,8,0,0"/><TextBlock Text="{Binding SelectedRunNodeResult.VerificationNote}" TextWrapping="Wrap" Margin="0,8,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/></StackPanel></ui:Card>
+      <ItemsControl ItemsSource="{Binding SelectedRunNodeResult.ResultFields}"/><ItemsControl ItemsSource="{Binding SelectedRunNodeResult.EvidenceFields}"/>
+     </StackPanel></ScrollViewer></TabItem>
+     <TabItem Header="当次输入"><ScrollViewer VerticalScrollBarVisibility="Auto"><ItemsControl ItemsSource="{Binding SelectedRunNodeResult.InputFields}" Margin="0,10,8,0"/></ScrollViewer></TabItem>
+     <TabItem Header="运行信息"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="0,10,8,0"><ItemsControl ItemsSource="{Binding SelectedRun.OverviewFields}"/><ItemsControl ItemsSource="{Binding SelectedRun.ConfirmedEffectFields}"/><Expander Header="完整快照"><TextBox Text="{Binding SelectedRun.Run.SnapshotJson, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="300" VerticalScrollBarVisibility="Auto"/></Expander></StackPanel></ScrollViewer></TabItem>
+     <TabItem Header="当前 CD"><ScrollViewer VerticalScrollBarVisibility="Auto"><ItemsControl ItemsSource="{Binding LedgerEntries}" Margin="0,10,8,0"><ItemsControl.ItemTemplate><DataTemplate><ui:Card Style="{StaticResource DragonCard}"><StackPanel><TextBlock Text="{Binding EffectKey}" FontWeight="SemiBold"/><TextBlock Text="{Binding ScopeKey}"/><TextBlock Text="{Binding EligibilityText}" TextWrapping="Wrap"/><TextBlock Text="{Binding EvidenceText}" TextWrapping="Wrap"/></StackPanel></ui:Card></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></ScrollViewer></TabItem>
+    </TabControl>
+    <TextBlock Grid.RowSpan="3" Text="选择一条运行记录查看步骤、结果和证据。" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" Background="{DynamicResource ApplicationBackgroundBrush}" Padding="20"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Visible"/><Style.Triggers><DataTrigger Binding="{Binding HasSelectedRun}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
+   </Grid>
+  </Grid>
+  <StackPanel Grid.Row="2" Margin="0,10,0,0"><TextBlock Text="{Binding CountText}" FontSize="11"/><TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/></StackPanel>
+ </Grid>
+</UserControl>

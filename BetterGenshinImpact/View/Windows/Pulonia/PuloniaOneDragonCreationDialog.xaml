@@ -1,0 +1,55 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.Pulonia.PuloniaOneDragonCreationDialog"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+ xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior" xmlns:markdown="clr-namespace:BetterGenshinImpact.View.Controls.Markdown"
+ Title="{Binding WindowTitle}" Width="1050" Height="760" MinWidth="850" MinHeight="550" WindowStartupLocation="CenterOwner" ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica" FontFamily="{StaticResource TextThemeFontFamily}"
+ Background="{DynamicResource ApplicationBackgroundBrush}" Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+ <ui:FluentWindow.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceDictionary Source="../../Controls/PuloniaOneDragonResources.xaml"/></ResourceDictionary.MergedDictionaries></ResourceDictionary></ui:FluentWindow.Resources>
+ <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+  <ui:TitleBar Title="{Binding WindowTitle}" ShowMaximize="False" ShowMinimize="False"/>
+  <ui:Card Grid.Row="1" Margin="20,10,20,12"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+   <StackPanel Margin="0,0,12,0"><TextBlock Text="任务名称" Margin="0,0,0,6"/><ui:TextBox Text="{Binding TaskName, UpdateSourceTrigger=PropertyChanged}"/></StackPanel>
+   <StackPanel Grid.Column="1"><TextBlock Text="任务能力" Margin="0,0,0,6"/><ComboBox ItemsSource="{Binding AvailableDefinitions}" DisplayMemberPath="DisplayName" SelectedItem="{Binding SelectedDefinition, Mode=TwoWay}"/></StackPanel>
+  </Grid></ui:Card>
+  <Grid Grid.Row="2" Margin="20,0,20,12"><Grid.ColumnDefinitions><ColumnDefinition Width="300"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+   <ui:Card Padding="12"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+    <TextBlock Text="{Binding DefinitionDescription}" TextWrapping="Wrap" Margin="0,0,0,12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+    <StackPanel Grid.Row="1" Visibility="{Binding RequiresResource, Converter={StaticResource DragonBoolVisibility}}">
+     <ui:TextBox PlaceholderText="{Binding ResourceSearchPlaceholder}" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"/>
+     <WrapPanel Margin="0,8,0,8"><ui:Button Content="刷新" Command="{Binding RefreshResourcesCommand}" Margin="0,0,6,0"/><ui:Button Content="获取更多资源" Command="{Binding OpenResourceRepositoryCommand}"/></WrapPanel>
+    </StackPanel>
+    <Grid Grid.Row="2" Visibility="{Binding RequiresResource, Converter={StaticResource DragonBoolVisibility}}">
+     <ListBox ItemsSource="{Binding FilteredResources}" SelectedItem="{Binding SelectedResource, Mode=TwoWay}" ItemContainerStyle="{StaticResource DragonListItem}" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
+      <ListBox.Style><Style TargetType="ListBox"><Style.Triggers><DataTrigger Binding="{Binding IsPathingResourceSelector}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></ListBox.Style>
+      <ListBox.ItemTemplate><DataTemplate><StackPanel><TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold"/><TextBlock Text="{Binding RelativePath}" TextTrimming="CharacterEllipsis" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/></StackPanel></DataTemplate></ListBox.ItemTemplate>
+     </ListBox>
+     <TreeView ItemsSource="{Binding FilteredResourceTree}" ItemContainerStyle="{StaticResource TaskTreeViewItemStyle}" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Visibility="{Binding IsPathingResourceSelector, Converter={StaticResource DragonBoolVisibility}}">
+      <TreeView.ItemTemplate><HierarchicalDataTemplate ItemsSource="{Binding Children}"><TextBlock Text="{Binding DisplayName}" ToolTip="{Binding RelativePath}" TextTrimming="CharacterEllipsis" Margin="4,6"/></HierarchicalDataTemplate></TreeView.ItemTemplate>
+      <b:Interaction.Behaviors><behavior:TreeViewSelectedItemBehavior SelectedItem="{Binding SelectedResourceTreeNode, Mode=TwoWay}"/></b:Interaction.Behaviors>
+     </TreeView>
+    </Grid>
+   </Grid></ui:Card>
+   <TabControl Grid.Column="2" BorderThickness="0">
+    <TabItem Header="配置"><ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="12">
+     <ui:Card Style="{StaticResource DragonCard}" Visibility="{Binding IsDirectoryImport, Converter={StaticResource DragonBoolVisibility}}"><StackPanel>
+      <TextBlock Text="目录添加方式" FontWeight="SemiBold"/><ComboBox Margin="0,8,0,8" ItemsSource="{Binding DirectoryImportModes}" DisplayMemberPath="DisplayName" SelectedItem="{Binding SelectedDirectoryImportMode, Mode=TwoWay}"/>
+      <TextBlock Text="{Binding DirectoryImportModeDescription}" TextWrapping="Wrap"/><CheckBox Content="包含子目录" IsChecked="{Binding IncludeSubdirectories}" Margin="0,8,0,0"/>
+     </StackPanel></ui:Card>
+     <ui:Card Style="{StaticResource DragonCard}"><StackPanel>
+      <ItemsControl ItemsSource="{Binding JavaScriptSettingFields}" ItemTemplate="{StaticResource JavaScriptSettingFieldTemplate}"/>
+      <TextBlock Text="{Binding JavaScriptSettingsMessage}" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Visibility="{Binding IsJavaScriptTask, Converter={StaticResource DragonBoolVisibility}}"/>
+      <ItemsControl ItemsSource="{Binding ParameterFields}" ItemTemplate="{StaticResource ParameterFieldTemplate}"/>
+     </StackPanel></ui:Card>
+    </StackPanel></ScrollViewer></TabItem>
+    <TabItem Header="说明与预览"><ui:Card Margin="12" Padding="12"><Grid>
+     <TextBox Text="{Binding ResourcePreview, Mode=OneWay}" TextWrapping="Wrap" IsReadOnly="True" VerticalScrollBarVisibility="Auto" Visibility="{Binding ShowTextResourcePreview, Converter={StaticResource DragonBoolVisibility}}"/>
+     <markdown:MarkdownView FilePath="{Binding ReadmeFilePath}" Visibility="{Binding ShowMarkdownPreview, Converter={StaticResource DragonBoolVisibility}}"/>
+    </Grid></ui:Card></TabItem>
+   </TabControl>
+  </Grid>
+  <ui:Card Grid.Row="3" Padding="20,12"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+   <StackPanel Margin="0,0,12,0"><TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap"/><ProgressBar Height="3" Margin="0,6,0,0" IsIndeterminate="True" Visibility="{Binding IsLoading, Converter={StaticResource DragonBoolVisibility}}"/></StackPanel>
+   <StackPanel Grid.Column="1" Orientation="Horizontal"><ui:Button Content="添加步骤" Appearance="Primary" Command="{Binding ConfirmCommand}" IsDefault="True" Margin="0,0,8,0"/><ui:Button Content="取消" Command="{Binding CancelCommand}" IsCancel="True"/></StackPanel>
+  </Grid></ui:Card>
+ </Grid>
+</ui:FluentWindow>

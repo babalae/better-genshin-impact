@@ -46,6 +46,12 @@ public sealed class PuloniaTaskPlan
     public string? Description { get; set; }
 
     /// <summary>
+    /// 计划用途标记，仅用于界面归属分组，不参与执行逻辑；旧文件缺省时按普通计划读取。
+    /// </summary>
+    [JsonProperty("purpose", Required = Required.DisallowNull)]
+    public PuloniaTaskPlanPurpose Purpose { get; set; } = PuloniaTaskPlanPurpose.General;
+
+    /// <summary>
     /// 唯一根节点，类型固定为 group。
     /// </summary>
     [JsonProperty("root_task", Required = Required.Always)]

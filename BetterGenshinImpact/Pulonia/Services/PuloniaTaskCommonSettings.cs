@@ -138,15 +138,18 @@ public static class PuloniaTaskCommonSettings
     /// <summary>
     /// 根据属性类型和可空声明生成校验约束，不把显式 null 转为缺省值。
     /// </summary>
-    private static JObject CreatePropertySchema(PropertyInfo property)
+    internal static JObject CreatePropertySchema(PropertyInfo property)
     {
         var type = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
         var nullable = new NullabilityInfoContext().Create(property).ReadState == NullabilityState.Nullable;
         var valueType = type == typeof(bool) ? "boolean"
             : type == typeof(string) ? "string"
+            : type.IsArray || typeof(System.Collections.IList).IsAssignableFrom(type) ? "array"
             : type == typeof(double) || type == typeof(float) || type == typeof(decimal) ? "number"
             : type.IsEnum || type.IsPrimitive ? "integer" : "object";
         var schema = new JObject { ["type"] = nullable ? new JArray(valueType, "null") : new JValue(valueType) };
+        if (valueType == "array")
+            schema["items"] = new JObject { ["type"] = "string" };
         if (type.IsEnum)
         {
             var choices = new JArray(Enum.GetValues(type).Cast<object>().Select(Convert.ToInt32));

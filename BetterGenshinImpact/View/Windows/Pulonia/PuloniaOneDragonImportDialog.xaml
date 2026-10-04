@@ -1,0 +1,13 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.Pulonia.PuloniaOneDragonImportDialog"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" Title="旧数据导入预览" Width="850" Height="700" MinWidth="650" MinHeight="450" WindowStartupLocation="CenterOwner" ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica" FontFamily="{StaticResource TextThemeFontFamily}"
+ Background="{DynamicResource ApplicationBackgroundBrush}" Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+ <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+  <ui:TitleBar Title="旧数据导入预览" ShowMinimize="False" ShowMaximize="False"/>
+  <ui:Card Grid.Row="1" Margin="20,12"><TextBox Text="{Binding Report, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" BorderThickness="0" Background="Transparent"/></ui:Card>
+  <ui:Card Grid.Row="2" Padding="20,12"><Grid><TextBlock Text="仅写新存储，原文件保留。" VerticalAlignment="Center"/><StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+   <ui:Button Content="确认导入" Appearance="Primary" Click="ConfirmClick" Margin="0,0,8,0"><ui:Button.Style><Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}"><Style.Triggers><DataTrigger Binding="{Binding Plans.Count}" Value="0"><Setter Property="IsEnabled" Value="False"/></DataTrigger></Style.Triggers></Style></ui:Button.Style></ui:Button>
+   <ui:Button Content="取消" IsCancel="True"/>
+  </StackPanel></Grid></ui:Card>
+ </Grid>
+</ui:FluentWindow>

@@ -78,6 +78,12 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// </summary>
     private bool _isInitialized;
 
+    /// <summary>两个菜单和 Loaded 共用首次加载门，后来的入口必须等待同一次初始化完成。</summary>
+    private readonly SemaphoreSlim _initializationGate = new(1, 1);
+
+    /// <summary>供独立入口判断加载是否成功，失败时不得创建并覆盖尚未加载的配置。</summary>
+    internal bool IsInitialized => _isInitialized;
+
     /// <summary>
     /// 当前选中的计划文档。
     /// </summary>
@@ -100,6 +106,12 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// 当前打开的计划编辑文档。
     /// </summary>
     public ObservableCollection<PuloniaTaskPlanDocumentViewModel> Documents { get; } = [];
+
+    /// <summary>完整编辑会话，用于保存、引用校验和资源检查，不直接绑定菜单。</summary>
+    internal IEnumerable<PuloniaTaskPlanDocumentViewModel> AllDocuments => Documents.Concat(OneDragonDocuments);
+
+    /// <summary>仅属于一条龙入口的配置，与普通任务计划列表分开。</summary>
+    public ObservableCollection<PuloniaTaskPlanDocumentViewModel> OneDragonDocuments { get; } = [];
 
     /// <summary>
     /// 当前计划可引用的其他计划。
@@ -176,6 +188,14 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     [RelayCommand]
     private async Task InitializeAsync()
     {
+        await _initializationGate.WaitAsync();
+        try { await InitializeCoreAsync(); }
+        finally { _initializationGate.Release(); }
+    }
+
+    /// <summary>在首次加载门内读取文档，其他入口不会把正在加载误判为已完成。</summary>
+    private async Task InitializeCoreAsync()
+    {
         if (_isInitialized || IsBusy)
             return;
         IsBusy = true;
@@ -184,6 +204,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
             _presets = await _store.ListPresetsAsync();
             var plans = await _store.ListPlansAsync();
             Documents.Clear();
+            OneDragonDocuments.Clear();
             foreach (var plan in plans)
                 AddDocument(new PuloniaTaskPlanDocumentViewModel(plan, _presets, _clipboard, isNew: false));
             if (Documents.Count == 0)
@@ -248,6 +269,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// </summary>
     private async Task<bool> SaveDocumentAsync(PuloniaTaskPlanDocumentViewModel document)
     {
+        if (_saveOwner is not null) return await _saveOwner.SaveDocumentAsync(document);
         if (document.IsDeleted || _deletingDocuments.Contains(document))
             return false;
         CancelPendingAutoSave(document);
@@ -572,7 +594,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         try
         {
             _presets = await _store.ListPresetsAsync();
-            foreach (var document in Documents)
+            foreach (var document in AllDocuments)
                 document.SetPresets(_presets);
             StatusMessage = $"已刷新 {_presets.Count} 个共享预设。";
         }
@@ -684,7 +706,9 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// </summary>
     private void AddDocument(PuloniaTaskPlanDocumentViewModel document)
     {
-        Documents.Add(document);
+        document.SetDefinitions(_taskService.Definitions);
+        if (document.Purpose == PuloniaTaskPlanPurpose.OneDragon) OneDragonDocuments.Add(document);
+        else Documents.Add(document);
         _saveGates.Add(document, new SemaphoreSlim(1, 1));
         document.Changed += OnDocumentChanged;
         document.ContentChanged += OnDocumentContentChanged;
@@ -718,7 +742,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// </summary>
     private void ScheduleAutoSave(PuloniaTaskPlanDocumentViewModel document)
     {
-        if (!Documents.Contains(document) || document.IsDeleted || _deletingDocuments.Contains(document)
+        if (!AllDocuments.Contains(document) || document.IsDeleted || _deletingDocuments.Contains(document)
             || !document.IsDirty || document.LastSaveError is not null)
             return;
 
@@ -737,7 +761,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         try
         {
             await Task.Delay(AutoSaveDelayMilliseconds, cancellation.Token);
-            if (Documents.Contains(document) && document.IsDirty)
+            if (AllDocuments.Contains(document) && document.IsDirty)
                 await SaveDocumentAsync(document);
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
@@ -889,7 +913,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
             {
                 if (referencedId == source.Id)
                     return true;
-                var referencedDocument = Documents.FirstOrDefault(document => document.Id == referencedId);
+                var referencedDocument = AllDocuments.FirstOrDefault(document => document.Id == referencedId);
                 if (referencedDocument is not null && ReachesSource(referencedDocument))
                     return true;
             }
@@ -936,7 +960,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     {
         try
         {
-            await _store.SavePlanOrderAsync(Documents.Select(document => document.Id).ToArray());
+            await _store.SavePlanOrderAsync(Documents.Concat(OneDragonDocuments).Select(document => document.Id).ToArray());
         }
         catch (Exception ex)
         {

@@ -169,6 +169,7 @@ public partial class App : Application
                 services.AddView<MapPathingPage, MapPathingViewModel>();
                 services.AddView<OneDragonFlowPage, OneDragonFlowViewModel>();
                 services.AddView<PuloniaTaskPlanPage, PuloniaTaskPlanViewModel>();
+                services.AddView<PuloniaOneDragonPage, PuloniaOneDragonViewModel>();
                 services.AddView<PuloniaTaskHistoryPage, PuloniaTaskHistoryViewModel>();
                 services.AddView<MusicPage, MusicPageViewModel>();
                 services.AddSingleton<PathingConfigViewModel>();
@@ -239,6 +240,7 @@ public partial class App : Application
                 services.AddSingleton<IPuloniaTaskExecutor, PuloniaJavaScriptTaskExecutor>();
                 services.AddSingleton<IPuloniaTaskExecutor, PuloniaKeyMouseTaskExecutor>();
                 services.AddSingleton<IPuloniaTaskExecutor, PuloniaBuiltinTaskExecutor>();
+                services.AddSingleton<IPuloniaTaskExecutor, PuloniaCombatTaskExecutor>();
                 services.AddSingleton<PuloniaTaskResourceCatalog>();
                 services.AddSingleton<PuloniaTaskService>();
                 services.AddSingleton<IPuloniaTaskService>(sp => sp.GetRequiredService<PuloniaTaskService>());

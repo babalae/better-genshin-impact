@@ -37,7 +37,7 @@ public partial class PuloniaTaskPlanViewModel
         document ??= SelectedDocument;
         if (document is null)
             return;
-        SelectedDocument = document;
+        if (document.Purpose == PuloniaTaskPlanPurpose.General) SelectedDocument = document;
         if (document.IsDirty && !await SaveDocumentAsync(document))
             return;
 
