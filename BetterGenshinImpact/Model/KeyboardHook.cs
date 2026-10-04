@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask;
 using Fischless.HotkeyCapture;
 using System;
 using System.Collections.Generic;
@@ -64,6 +64,12 @@ public class KeyboardHook
     }
 
     /// <summary>
+    /// 长按循环的最小间隔（毫秒）。动作本身耗时不足时补齐，
+    /// 避免动作快速返回时空转占满一个 CPU 核心。
+    /// </summary>
+    private const int MinActionIntervalMs = 10;
+
+    /// <summary>
     /// 长按持续执行
     /// </summary>
     /// <param name="e"></param>
@@ -79,7 +85,14 @@ public class KeyboardHook
                     continue;
                 }
 
+                var startTicks = Environment.TickCount64;
                 KeyPressedEvent?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, e.KeyCode));
+
+                var elapsed = Environment.TickCount64 - startTicks;
+                if (elapsed < MinActionIntervalMs)
+                {
+                    Thread.Sleep((int)(MinActionIntervalMs - elapsed));
+                }
             }
         }
     }

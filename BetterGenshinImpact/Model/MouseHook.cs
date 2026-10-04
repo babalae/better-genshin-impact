@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask;
 using Fischless.HotkeyCapture;
 using Gma.System.MouseKeyHook;
 using System;
@@ -46,7 +46,11 @@ public class MouseHook
             MouseDownEvent?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, Keys.None));
             if (IsHold)
             {
-                Task.Run(() => RunAction(e));
+                // 与 KeyboardHook 保持一致：没有持续触发的回调时不必启动循环
+                if (MousePressed != null)
+                {
+                    Task.Run(() => RunAction(e));
+                }
             }
             else
             {
@@ -57,6 +61,12 @@ public class MouseHook
     }
 
     /// <summary>
+    /// 长按循环的最小间隔（毫秒）。动作本身耗时不足时补齐，
+    /// 避免动作快速返回时空转占满一个 CPU 核心。
+    /// </summary>
+    private const int MinActionIntervalMs = 10;
+
+    /// <summary>
     /// 长按持续执行
     /// </summary>
     /// <param name="e"></param>
@@ -64,7 +74,7 @@ public class MouseHook
     {
         lock (this)
         {
-            while (IsPressed)
+            while (IsPressed && MousePressed != null)
             {
                 if (ChatUiHotkeyGuard.ShouldBlockHotkey(ConfigPropertyName))
                 {
@@ -72,7 +82,14 @@ public class MouseHook
                     continue;
                 }
 
+                var startTicks = Environment.TickCount64;
                 MousePressed?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, Keys.None));
+
+                var elapsed = Environment.TickCount64 - startTicks;
+                if (elapsed < MinActionIntervalMs)
+                {
+                    Thread.Sleep((int)(MinActionIntervalMs - elapsed));
+                }
             }
         }
     }

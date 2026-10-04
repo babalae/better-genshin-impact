@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="BetterGenshinImpact.View.Pages.HotKeyPage"
+<UserControl x:Class="BetterGenshinImpact.View.Pages.HotKeyPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
@@ -71,7 +71,8 @@
                                     <DataTemplate>
                                         <hotKey:HotKeyTextBox Padding="16,6,16,6"
                                                               VerticalAlignment="Center"
-                                                              HotKeyTypeName="{Binding HotKeyTypeName, Mode=OneWay}"
+                                                              CanSwitchHotKeyType="{Binding SwitchHotkeyTypeEnabled, Mode=OneWay}"
+                                                              HotKeyType="{Binding HotKeyType, Mode=TwoWay}"
                                                               Hotkey="{Binding HotKey}"
                                                               Style="{StaticResource DefaultTextBoxStyle}"
                                                               TextAlignment="Center"
