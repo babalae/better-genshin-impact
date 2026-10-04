@@ -2070,21 +2070,20 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="{i18n:T 频道 ID}"
+                                  Text="{i18n:T 推送目标}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="{i18n:T 目标频道的 ID，需先邀请机器人加入服务器并授予发送消息权限}"
+                                  Text="{Binding DiscordBotTargetSummary}"
                                   TextWrapping="Wrap" />
-                    <ui:TextBox Grid.Row="0"
-                                Grid.RowSpan="2"
-                                Grid.Column="1"
-                                MinWidth="180"
-                                MaxWidth="800"
-                                Margin="0,0,36,0"
-                                Text="{Binding Config.NotificationConfig.DiscordBotChannelId, Mode=TwoWay}"
-                                TextWrapping="NoWrap" />
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="1"
+                               Margin="0,0,36,0"
+                               HorizontalAlignment="Right"
+                               Command="{Binding ManageDiscordTargetsCommand}"
+                               Content="{i18n:T 管理目标}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>

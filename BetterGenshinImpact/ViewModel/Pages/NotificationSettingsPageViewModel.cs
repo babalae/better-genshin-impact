@@ -6,10 +6,12 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 using BetterGenshinImpact.Service.Notifier;
+using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -59,6 +61,11 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
     [ObservableProperty] private string _xxtuiStatus = string.Empty;
 
     [ObservableProperty] private string _discordStatus = string.Empty;
+
+    /// <summary>
+    ///     Discord Bot 推送目标摘要，显示在设置页
+    /// </summary>
+    [ObservableProperty] private string _discordBotTargetSummary = string.Empty;
 
     [ObservableProperty] private string[] _discordImageEncoderNames =
     [
@@ -133,6 +140,7 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
 
         Config.NotificationConfig.PropertyChanged += OnNotificationConfigPropertyChanged;
         ApplyNotificationEventSelectionFromConfig();
+        UpdateDiscordBotTargetSummary();
 
         // 订阅微信 Clawbot 推送会话过期事件：普通发送（非测试按钮）失败时，
         // 也能及时在设置页状态文本上提示用户如何重新激活推送端口。
@@ -198,6 +206,13 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
         {
             OnPropertyChanged(nameof(IsDiscordWebhookMode));
             OnPropertyChanged(nameof(IsDiscordBotMode));
+            return;
+        }
+
+        // 推送目标清单变化时刷新摘要文字
+        if (e.PropertyName == nameof(NotificationConfig.DiscordBotTargets))
+        {
+            UpdateDiscordBotTargetSummary();
             return;
         }
 
@@ -528,6 +543,57 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
             Toast.Error(res.Message);
 
         IsLoading = false;
+    }
+
+    /// <summary>
+    ///     打开 Discord 推送目标挑选对话框。
+    ///     确认后整体替换目标清单，让 NotificationConfig 触发属性变更、通知器按新目标重建。
+    /// </summary>
+    [RelayCommand]
+    private void OnManageDiscordTargets()
+    {
+        if (string.IsNullOrWhiteSpace(Config.NotificationConfig.DiscordBotToken))
+        {
+            Toast.Error(I18nService.Instance.Translate("请先填写机器人 Token"));
+            return;
+        }
+
+        var window = new DiscordTargetWindow(
+            Config.NotificationConfig.DiscordBotToken,
+            Config.NotificationConfig.DiscordBotTargets);
+
+        if (window.ShowDialog() != true)
+        {
+            return;
+        }
+
+        Config.NotificationConfig.DiscordBotTargets =
+            new ObservableCollection<DiscordBotTarget>(window.Result);
+        UpdateDiscordBotTargetSummary();
+    }
+
+    /// <summary>
+    ///     刷新 Discord Bot 推送目标摘要。
+    /// </summary>
+    private void UpdateDiscordBotTargetSummary()
+    {
+        var targets = Config.NotificationConfig.DiscordBotTargets;
+        if (targets == null || targets.Count == 0)
+        {
+            DiscordBotTargetSummary = I18nService.Instance.Translate("尚未设置推送目标，点击右侧按钮添加");
+            return;
+        }
+
+        var names = string.Join("、", targets
+            .Take(3)
+            .Select(target => string.IsNullOrWhiteSpace(target.DisplayName) ? target.Id : target.DisplayName));
+        var suffix = targets.Count > 3 ? "…" : string.Empty;
+
+        DiscordBotTargetSummary = string.Format(
+            I18nService.Instance.Translate("共 {0} 个目标：{1}{2}"),
+            targets.Count,
+            names,
+            suffix);
     }
 
     [RelayCommand]

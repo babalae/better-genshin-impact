@@ -310,7 +310,7 @@ public class NotificationService : IHostedService, IDisposable
             _notifierManager.RegisterNotifier(new DiscordBotNotifier(
                 _notifyHttpClient,
                 _notificationConfig.DiscordBotToken,
-                _notificationConfig.DiscordBotChannelId,
+                _notificationConfig.DiscordBotTargets,
                 _notificationConfig.DiscordWebhookImageEncoder
             ));
             return;

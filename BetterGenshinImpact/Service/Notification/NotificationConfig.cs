@@ -1,4 +1,5 @@
 using System;
+using System.Collections.ObjectModel;
 using BetterGenshinImpact.Service.Notifier;
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -275,9 +276,10 @@ public partial class NotificationConfig : ObservableObject
     [ObservableProperty] private string _discordBotToken = string.Empty;
 
     /// <summary>
-    ///     Discord 机器人推送目标频道 ID（Bot 方式）
+    ///     Discord 机器人推送目标清单（Bot 方式）。
+    ///     频道与私讯可以混用，逐项推送；单项失败不影响其他项。
     /// </summary>
-    [ObservableProperty] private string _discordBotChannelId = string.Empty;
+    [ObservableProperty] private ObservableCollection<DiscordBotTarget> _discordBotTargets = [];
 
     /// <summary>
     ///     Discord Webhook地址
