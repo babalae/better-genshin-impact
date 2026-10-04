@@ -76,6 +76,7 @@ public partial class PuloniaTaskCreationDialog : FluentWindow
     /// </summary>
     private void OnClosed(object? sender, EventArgs e)
     {
+        ViewModel.Close();
         ViewModel.RequestClose -= OnRequestClose;
         Loaded -= OnLoaded;
         Closed -= OnClosed;

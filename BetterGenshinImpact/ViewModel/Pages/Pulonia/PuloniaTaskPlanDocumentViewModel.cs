@@ -1,4 +1,5 @@
 using System;
+using BetterGenshinImpact.Core.Script.Repositories;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -70,14 +71,15 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     public bool HasResourceUpdates => ResourceUpdateCount > 0 && ResourceErrorCount == 0;
 
     /// <summary>计划卡片的资源检查摘要与批量确认按钮说明。</summary>
-    public string ResourceUpdateSummary => ResourceErrorCount > 0 ? $"{ResourceErrorCount} 项资源不可用，请先检查"
+    public string ResourceUpdateSummary => ResourceErrorCount > 0 ? $"{ResourceErrorCount} 项资源更新检查失败，请查看详情"
         : ResourceUpdateCount > 0 ? $"确认全部 {ResourceUpdateCount} 项资源更新" : "暂无待确认资源更新";
 
     /// <summary>按稳定树顺序枚举节点，供资源检查和卡片批量确认使用。</summary>
     public IEnumerable<PuloniaTaskNodeViewModel> EnumerateNodes() => Flatten(RootNode);
 
     /// <summary>以一次可撤销编辑确认本计划全部指定资源；读取失败或过期的检查结果不能写入。</summary>
-    public void ApplyConfirmedResourceVersions(IReadOnlyDictionary<string, string> versions)
+    public void ApplyConfirmedResourceVersions(IReadOnlyDictionary<string, string> versions,
+        IReadOnlyDictionary<string, ScriptResourceReference?>? references = null)
     {
         var nodes = EnumerateNodes().Where(node => versions.ContainsKey(node.Id)).ToArray();
         if (nodes.Length != versions.Count || nodes.Any(node => !node.CanUpdateResourceVersion
@@ -91,9 +93,15 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
             foreach (var node in nodes)
             {
                 if (node.Model.Source?.Kind == "directory")
+                {
                     node.Model.Source.Version = versions[node.Id];
+                    if (references?.TryGetValue(node.Id, out var reference) == true) node.Model.Source.Resource = reference;
+                }
                 else
+                {
                     node.Model.ResourceVersion = versions[node.Id];
+                    if (references?.TryGetValue(node.Id, out var reference) == true) node.Model.Resource = reference;
+                }
             }
         }, SelectedNode);
         foreach (var node in nodes)
@@ -249,7 +257,7 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     /// <summary>
     /// 当前节点是否允许编辑资源定位。
     /// </summary>
-    public bool CanEditPath => SelectedNode?.IsLeaf == true;
+    public bool CanEditPath => SelectedNode?.IsLeaf == true && SelectedNode.Model.Resource is null;
 
     /// <summary>
     /// 当前节点是否存在来源配置。
@@ -513,7 +521,7 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     }
 
     /// <summary>按资源优先、通用类型其次选择能力，与运行构建保持相同顺序。</summary>
-    private PuloniaTaskDefinition? GetDefinition(PuloniaTask task) => _definitions.FirstOrDefault(d => d.TaskType == task.TaskType && d.ResourceId == task.Path)
+    private PuloniaTaskDefinition? GetDefinition(PuloniaTask task) => _definitions.FirstOrDefault(d => d.TaskType == task.TaskType && d.ResourceId == task.ResourceKey)
         ?? _definitions.FirstOrDefault(d => d.TaskType == task.TaskType && d.ResourceId is null);
 
     /// <summary>
@@ -824,7 +832,7 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     /// 判断预设或公共覆盖是否与具体叶子的类型和资源一致。
     /// </summary>
     private static bool MatchesScope(string taskType, string? resourceId, PuloniaTask task)
-        => taskType == task.TaskType && (resourceId is null || resourceId == task.Path);
+        => taskType == task.TaskType && (resourceId is null || resourceId == task.ResourceKey);
 
     /// <summary>
     /// 判断模型节点是否是具体能力节点。

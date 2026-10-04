@@ -11,11 +11,14 @@ using System.Windows;
 using System.Windows.Controls;
 using BetterGenshinImpact.Core.Script.Dependence;
 using Microsoft.ClearScript.JavaScript;
+using BetterGenshinImpact.Core.Script.Repositories;
 
 namespace BetterGenshinImpact.Core.Script.Project;
 
 public class ScriptProject
 {
+    /// <summary>Pulonia 固定的来源资源上下文；传统脚本入口为空。</summary>
+    private readonly ScriptRepositoryResourceContext? _repositoryResources;
     public string ProjectPath { get; set; }
     public string ManifestFile { get; set; }
 
@@ -23,10 +26,17 @@ public class ScriptProject
 
     public string FolderName { get; set; }
 
-    public ScriptProject(string folderName)
+    /// <summary>使用原有 User/JsScript 根目录建立项目，保留旧调用入口。</summary>
+    public ScriptProject(string folderName) : this(folderName, Global.ScriptPath())
+    {
+    }
+
+    /// <summary>在调用方已经校验的资源或工作目录中建立项目，并继承固定来源上下文。</summary>
+    public ScriptProject(string folderName, string baseDirectory, ScriptRepositoryResourceContext? repositoryResources = null)
     {
         FolderName = folderName;
-        ProjectPath = Path.Combine(Global.ScriptPath(), folderName);
+        ProjectPath = Path.GetFullPath(Path.Combine(baseDirectory, folderName));
+        _repositoryResources = repositoryResources;
         if (!Directory.Exists(ProjectPath))
         {
             throw new DirectoryNotFoundException("脚本文件夹不存在:" + ProjectPath);
@@ -96,7 +106,7 @@ public class ScriptProject
 
             var libraryList = libraries.ToList();
 
-            EngineExtend.InitHost(engine, ProjectPath, libraryList.ToArray(), partyConfig, ct);
+            EngineExtend.InitHost(engine, ProjectPath, libraryList.ToArray(), partyConfig, ct, _repositoryResources);
             return engine;
         }
         catch

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.ObjectModel;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
@@ -87,6 +88,9 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasResourceUpdate), nameof(HasResourceNotice), nameof(ResourceUpdateText), nameof(ResourceUpdateToolTip))]
     private string? _currentResourceVersion;
 
+    /// <summary>最近审阅的来源提交，与资源指纹分开记录以防确认期间仅依赖发生变化。</summary>
+    public string? CurrentRepositoryRevision { get; set; }
+
     /// <summary>资源读取错误；读取失败不能被当成新版本供用户确认。</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasResourceNotice), nameof(ResourceUpdateText), nameof(ResourceUpdateToolTip))]
@@ -105,7 +109,9 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
     public bool HasResourceNotice => HasResourceUpdate || ResourceCheckError is not null;
 
     /// <summary>小标签的状态文本，不以颜色作为唯一提示。</summary>
-    public string ResourceUpdateText => ResourceCheckError is not null ? "资源不可用" : "有更新";
+    public string ResourceUpdateText => ResourceCheckError is not null
+        ? ResourceCheckError.StartsWith("来源中已移除：", StringComparison.Ordinal) ? "来源中已移除"
+        : _model.Resource is not null || _model.Source?.Resource is not null ? "检查失败" : "资源不可用" : "有更新";
 
     /// <summary>标签的具体原因，文件更新必须用户确认后才影响新运行。</summary>
     public string ResourceUpdateToolTip => ResourceCheckError
@@ -145,10 +151,10 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
     /// </summary>
     public string? Path
     {
-        get => _model.Path;
+        get => _model.Resource?.ScopeKey ?? _model.Path;
         set
         {
-            if (_model.Path == value)
+            if (_model.Resource is not null || _model.Path == value)
                 return;
             // 路径修改后旧路径的检查结果不再有效，等待页面重新检查。
             CurrentResourceVersion = null;

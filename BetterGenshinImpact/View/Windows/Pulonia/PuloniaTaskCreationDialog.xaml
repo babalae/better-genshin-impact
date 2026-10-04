@@ -420,8 +420,71 @@
                     <ColumnDefinition Width="12" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
 
-                <Border Grid.Column="0"
+                <!-- 仓库管理放在资源区顶部；列表只显示当前选择，不合并或展开其他来源。 -->
+                <Border Grid.Row="0" Grid.ColumnSpan="3"
+                        Margin="0,0,0,10"
+                        Padding="10"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SupportsRepositories}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Margin="0,0,10,0" VerticalAlignment="Center" Text="仓库" />
+                        <ComboBox Grid.Column="1"
+                                  MinWidth="170"
+                                  Margin="0,0,10,0"
+                                  ItemsSource="{Binding Repositories}"
+                                  SelectedItem="{Binding SelectedRepository, Mode=TwoWay}"
+                                  IsEnabled="{Binding CanManageRepositories}"
+                                  ToolTip="{Binding SelectedRepositoryDirectory}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock FontSize="11"
+                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                   Text="{Binding Directory}"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   ToolTip="{Binding Directory}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal">
+                            <ui:Button Margin="0,0,6,0"
+                                       Command="{Binding AddRemoteRepositoryCommand}"
+                                       Content="添加远程仓库" />
+                            <ui:Button Margin="0,0,6,0"
+                                       Command="{Binding AddLocalRepositoryCommand}"
+                                       Content="添加本地仓库" />
+                            <ui:Button Command="{Binding RemoveRepositoryCommand}"
+                                       Content="移除仓库"
+                                       ToolTip="从选择列表中移除，保留本地文件和已有任务使用的内容" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="1" Grid.Column="0"
                         Padding="10"
                         Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                         BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
@@ -557,9 +620,9 @@
                                                        Margin="0,3,0,0"
                                                        FontSize="11"
                                                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                       Text="{Binding RelativePath}"
+                                                       Text="{Binding Location}"
                                                        TextTrimming="CharacterEllipsis"
-                                                       ToolTip="{Binding RelativePath}" />
+                                                       ToolTip="{Binding Location}" />
                                         </Grid>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
@@ -568,7 +631,7 @@
                     </Grid>
                 </Border>
 
-                <Grid Grid.Column="2">
+                <Grid Grid.Row="1" Grid.Column="2">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="3*" />
                         <RowDefinition Height="12" />

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using BetterGenshinImpact.Core.Script.Repositories;
 
 namespace BetterGenshinImpact.Pulonia.Models;
 
@@ -33,6 +34,14 @@ public sealed class PuloniaTask
     /// </summary>
     [JsonProperty("path")]
     public string? Path { get; set; }
+
+    /// <summary>远程资源的明确来源与已确认仓库版本；旧 path 引用继续兼容读取。</summary>
+    [JsonProperty("resource", NullValueHandling = NullValueHandling.Ignore)]
+    public ScriptResourceReference? Resource { get; set; }
+
+    /// <summary>参数与预设匹配使用的资源身份，远程来源包含仓库 ID。</summary>
+    [JsonIgnore]
+    public string? ResourceKey => Resource?.ScopeKey ?? Path;
 
     /// <summary>
     /// 创建或显式更新时固定的资源内容指纹；资源发生变化时拒绝静默执行。

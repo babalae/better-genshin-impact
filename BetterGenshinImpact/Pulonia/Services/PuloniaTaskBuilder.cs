@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Script.Repositories;
 using BetterGenshinImpact.Pulonia.Models;
 using Newtonsoft.Json.Linq;
 
@@ -21,12 +22,16 @@ public sealed class PuloniaTaskBuilder
     /// </summary>
     private readonly PuloniaTaskStore _store;
 
+    /// <summary>固定资源版本的共享仓库存储。</summary>
+    private readonly ScriptRepositoryStore _repositories;
+
     /// <summary>
     /// 使用存储建立准备入口。
     /// </summary>
-    public PuloniaTaskBuilder(PuloniaTaskStore store)
+    public PuloniaTaskBuilder(PuloniaTaskStore store, ScriptRepositoryStore? repositories = null)
     {
         _store = store;
+        _repositories = repositories ?? ScriptRepositoryStore.Shared;
     }
 
     /// <summary>
@@ -161,7 +166,9 @@ public sealed class PuloniaTaskBuilder
             nestedOverrides.AddRange(task.ParameterOverrides.OrderBy(item => item.ResourceId is null ? 0 : 1));
             if (task.Source is { Kind: "directory" } directory)
             {
-                path = ResolvePath(context, directory.Path!, address);
+                path = directory.Resource is { } directoryResource
+                    ? await _repositories.MaterializeAsync(directoryResource, directory.TaskType!, context.Cancellation).ConfigureAwait(false)
+                    : ResolvePath(context, directory.Path!, address);
                 var files = EnumerateFiles(context, path, "*.json", directory.Recursive, address);
                 var manifest = new StringBuilder();
                 for (var iteration = 1; iteration <= repeatCount; iteration++)
@@ -177,7 +184,8 @@ public sealed class PuloniaTaskBuilder
                             Id = generatedId,
                             Name = System.IO.Path.GetFileNameWithoutExtension(file),
                             TaskType = directory.TaskType!,
-                            Path = file
+                            Path = directory.Resource is null ? file : null,
+                            Resource = directory.Resource?.WithPath(directory.Resource.RelativePath + "/" + relative)
                         };
                         var prepared = await BuildTaskAsync(context, plan, generatedTask, iterationAddress, true, policy,
                             nestedOverrides, referenceOverrides, planStack, depth + 1, task.Id).ConfigureAwait(false);
@@ -249,7 +257,9 @@ public sealed class PuloniaTaskBuilder
             PuloniaTaskValidator.ValidateParameters(parameters, definition.ParameterSchema, address + "/parameters");
             if (task.TaskType is "javascript" or "pathing" or "keymouse")
             {
-                path = ResolvePath(context, task.Path!, address, definition.ResourceBaseDirectory);
+                path = task.Resource is { } resource
+                    ? await _repositories.MaterializeAsync(resource, task.TaskType, context.Cancellation).ConfigureAwait(false)
+                    : ResolvePath(context, task.Path!, address, definition.ResourceBaseDirectory);
                 try
                 {
                     version = task.TaskType == "javascript"
@@ -267,7 +277,7 @@ public sealed class PuloniaTaskBuilder
         }
 
         return new PuloniaTaskPreparedTask(plan.Id, task.Id, sourceTaskId ?? task.Id, address, task.Name,
-            task.TaskType, enabled, path, version, parameters, sources, policy, children);
+            task.TaskType, enabled, path, version, parameters, sources, policy, children, task.Resource ?? task.Source?.Resource);
     }
 
     /// <summary>
@@ -281,7 +291,7 @@ public sealed class PuloniaTaskBuilder
     /// </summary>
     private static PuloniaTaskDefinition FindDefinition(BuildContext context, PuloniaTask task, string address)
     {
-        return context.Options.Definitions.FirstOrDefault(d => d.TaskType == task.TaskType && d.ResourceId == task.Path)
+        return context.Options.Definitions.FirstOrDefault(d => d.TaskType == task.TaskType && d.ResourceId == task.ResourceKey)
                ?? context.Options.Definitions.FirstOrDefault(d => d.TaskType == task.TaskType && d.ResourceId is null)
                ?? throw new PuloniaTaskValidationException(address, $"未注册能力或资源 {task.TaskType}/{task.Path}。");
     }
@@ -291,7 +301,7 @@ public sealed class PuloniaTaskBuilder
     /// </summary>
     private static bool MatchesScope(string type, string? resourceId, int schemaVersion, PuloniaTask task, PuloniaTaskDefinition definition)
         => type == task.TaskType && schemaVersion == definition.SchemaVersion
-           && (resourceId is null || resourceId == definition.ResourceId || resourceId == task.Path);
+           && (resourceId is null || resourceId == definition.ResourceId || resourceId == task.ResourceKey);
 
     /// <summary>
     /// 顶层字段整体替换；显式空值、布尔值和集合不会丢失。

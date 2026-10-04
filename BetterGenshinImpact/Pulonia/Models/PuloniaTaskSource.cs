@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using BetterGenshinImpact.Core.Script.Repositories;
 
 namespace BetterGenshinImpact.Pulonia.Models;
 
@@ -24,6 +25,10 @@ public sealed class PuloniaTaskSource
     /// </summary>
     [JsonProperty("path")]
     public string? Path { get; set; }
+
+    /// <summary>目录引用的已确认仓库定位，文件清单从该版本展开。</summary>
+    [JsonProperty("resource", NullValueHandling = NullValueHandling.Ignore)]
+    public ScriptResourceReference? Resource { get; set; }
 
     /// <summary>
     /// 目录中的资源类型；原型支持 pathing 和 keymouse JSON 文件。

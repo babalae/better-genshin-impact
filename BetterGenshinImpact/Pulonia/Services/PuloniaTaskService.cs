@@ -1060,21 +1060,25 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
         if (task.IsEnabled && task.Path is not null && task.ResourceVersion is not null
             && task.TaskType is "pathing" or "keymouse" or "javascript")
         {
+            // 仓库快照可以恢复缺失缓存，只能从原已确认版本恢复，不能改读当前来源。
+            var resourcePath = task.Resource is { } resource
+                ? await BetterGenshinImpact.Core.Script.Repositories.ScriptRepositoryStore.Shared
+                    .MaterializeAsync(resource, task.TaskType, ct).ConfigureAwait(false) : task.Path;
             string actual;
             if (task.TaskType == "javascript")
             {
-                if (!Directory.Exists(task.Path))
+                if (!Directory.Exists(resourcePath))
                     throw new PuloniaTaskValidationException(task.TaskAddress, "续跑所需的旧 JS 资源目录已不存在。");
                 // 续跑与创建、准备、更新确认都只检查根目录 manifest.json 和 main.js，保留重解析点保护。
-                actual = await PuloniaTaskResourceFingerprint.ComputeJavaScriptVersionAsync(task.Path, ct)
+                actual = await PuloniaTaskResourceFingerprint.ComputeJavaScriptVersionAsync(resourcePath, ct)
                     .ConfigureAwait(false);
                 // 不回退到旧全目录算法，也不改写旧快照；旧范围指纹不匹配时需要确认后新执行。
             }
             else
             {
-                if (!File.Exists(task.Path))
+                if (!File.Exists(resourcePath))
                     throw new PuloniaTaskValidationException(task.TaskAddress, "续跑所需的旧资源文件已不存在。");
-                actual = await PuloniaTaskResourceFingerprint.ComputeFileVersionAsync(task.Path, ct)
+                actual = await PuloniaTaskResourceFingerprint.ComputeFileVersionAsync(resourcePath, ct)
                     .ConfigureAwait(false);
             }
             if (!string.Equals(actual, task.ResourceVersion, StringComparison.Ordinal))

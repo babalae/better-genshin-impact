@@ -1,4 +1,5 @@
 using System;
+using BetterGenshinImpact.Core.Script.Repositories;
 
 namespace BetterGenshinImpact.Pulonia.Models;
 
@@ -21,6 +22,9 @@ public sealed class PuloniaTaskResourceDescriptor
     /// 仅用于读取预览和建立目录引用的完整本地路径。
     /// </summary>
     public string FullPath { get; }
+
+    /// <summary>仓库索引资源的固定来源；预览和创建时按需提取。</summary>
+    public ScriptResourceReference? Resource { get; }
 
     /// <summary>
     /// 列表中展示的目录或相对位置。
@@ -55,18 +59,19 @@ public sealed class PuloniaTaskResourceDescriptor
     /// <summary>
     /// 搜索使用的组合文本。
     /// </summary>
-    public string SearchText => DisplayName + "\n" + RelativePath;
+    public string SearchText => DisplayName + "\n" + RelativePath + "\n" + Location;
 
     /// <summary>
     /// 建立一项不可变资源描述。
     /// </summary>
     public PuloniaTaskResourceDescriptor(string displayName, string relativePath, string fullPath,
         string location, bool isDirectory, bool isRootDirectory, long size, DateTime lastWriteTime,
-        int childResourceCount)
+        int childResourceCount, ScriptResourceReference? resource = null)
     {
         DisplayName = displayName;
         RelativePath = relativePath;
         FullPath = fullPath;
+        Resource = resource;
         Location = location;
         IsDirectory = isDirectory;
         IsRootDirectory = isRootDirectory;
@@ -74,4 +79,8 @@ public sealed class PuloniaTaskResourceDescriptor
         LastWriteTime = lastWriteTime;
         ChildResourceCount = childResourceCount;
     }
+
+    /// <summary>保留资源身份，为已经提取的内容提供本地预览路径。</summary>
+    public PuloniaTaskResourceDescriptor WithFullPath(string path) => new(DisplayName, RelativePath, path,
+        Location, IsDirectory, IsRootDirectory, Size, LastWriteTime, ChildResourceCount, Resource);
 }

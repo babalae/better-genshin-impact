@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Script.Repositories;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Project;
@@ -25,7 +26,7 @@ public sealed class PuloniaJavaScriptTaskExecutor : IPuloniaTaskExecutor
     {
         TaskType = "javascript",
         DisplayName = "JS 脚本",
-        Description = "选择已经安装的 JS 项目，并配置脚本设置与队伍选项。",
+        Description = "从已拉取的脚本仓库选择 JS 项目，并配置脚本设置与队伍选项。",
         RequiresGameSession = true,
         ResourceBaseDirectory = Global.ScriptPath(),
         DefaultParameters = new(PuloniaTaskCommonSettings.CreateDefaults("javascript"))
@@ -51,8 +52,12 @@ public sealed class PuloniaJavaScriptTaskExecutor : IPuloniaTaskExecutor
         if (string.IsNullOrWhiteSpace(task.Path))
             return PuloniaTaskOutcome.Failure("JS 节点没有固定项目路径。");
 
-        var scriptRoot = Path.GetFullPath(Global.ScriptPath());
-        var projectPath = Path.GetFullPath(task.Path);
+        using var workspace = task.Resource is { } repositoryResource
+            ? await ScriptRepositoryStore.Shared.AcquireWorkspaceAsync(repositoryResource, ct).ConfigureAwait(false) : null;
+        using var repositoryResources = task.Resource is { } source
+            ? new ScriptRepositoryResourceContext(await ScriptRepositoryStore.Shared.OpenApprovedAsync(source, ct).ConfigureAwait(false)) : null;
+        var scriptRoot = workspace?.Path ?? Path.GetFullPath(Global.ScriptPath());
+        var projectPath = workspace?.Path ?? Path.GetFullPath(task.Path);
         var relativeProjectPath = Path.GetRelativePath(scriptRoot, projectPath);
         if (relativeProjectPath == ".." || relativeProjectPath.StartsWith(".." + Path.DirectorySeparatorChar,
                 StringComparison.Ordinal) || Path.IsPathRooted(relativeProjectPath))
@@ -67,7 +72,7 @@ public sealed class PuloniaJavaScriptTaskExecutor : IPuloniaTaskExecutor
         using var autoEat = partyConfig.AutoEatEnabled
             ? TaskTriggerDispatcher.Instance().AddTrigger("AutoEat", null) : null;
 
-        var project = new ScriptProject(relativeProjectPath);
+        var project = new ScriptProject(relativeProjectPath, scriptRoot, repositoryResources);
         await project.ExecuteAsync(settings, partyConfig, ct).ConfigureAwait(false);
         ct.ThrowIfCancellationRequested();
         return PuloniaTaskOutcome.ExecutedUnverified("JS 项目已执行完成，但旧脚本没有结构化副作用证据。",

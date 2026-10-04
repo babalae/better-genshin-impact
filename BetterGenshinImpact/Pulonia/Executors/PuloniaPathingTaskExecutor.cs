@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Script.Repositories;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
@@ -22,7 +23,7 @@ public sealed class PuloniaPathingTaskExecutor : IPuloniaTaskExecutor
     {
         TaskType = "pathing",
         DisplayName = "地图追踪",
-        Description = "选择本地路线文件，并配置队伍、自动拾取与自动战斗选项。",
+        Description = "从已拉取的脚本仓库选择路线，并配置队伍、自动拾取与自动战斗选项。",
         RequiresGameSession = true,
         ResourceBaseDirectory = MapPathingViewModel.PathJsonPath,
         DefaultParameters = PuloniaTaskCommonSettings.CreateDefaults("pathing"),
@@ -41,7 +42,9 @@ public sealed class PuloniaPathingTaskExecutor : IPuloniaTaskExecutor
     {
         if (string.IsNullOrWhiteSpace(task.Path))
             return PuloniaTaskOutcome.Failure("地图追踪节点没有固定资源路径。");
-        var pathingTask = PathingTask.BuildFromFilePath(task.Path);
+        var resourcePath = task.Resource is { } resource
+            ? await ScriptRepositoryStore.Shared.MaterializeAsync(resource, "pathing", ct).ConfigureAwait(false) : task.Path;
+        var pathingTask = PathingTask.BuildFromFilePath(resourcePath);
         if (pathingTask is null)
             return PuloniaTaskOutcome.Failure("路线版本高于当前 BetterGI，已拒绝执行。");
 

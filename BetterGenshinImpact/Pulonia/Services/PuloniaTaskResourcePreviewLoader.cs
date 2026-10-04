@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Core.Script.Repositories;
 
 namespace BetterGenshinImpact.Pulonia.Services;
 
@@ -19,12 +20,15 @@ public static class PuloniaTaskResourcePreviewLoader
     /// 加载一项资源的轻量详情；JS 只解析清单与设置定义，README 交给原生控件读取。
     /// </summary>
     public static async Task<PuloniaTaskResourcePreview> LoadAsync(PuloniaTaskResourceDescriptor resource,
-        string? taskType, CancellationToken ct = default)
+        string? taskType, CancellationToken ct = default, ScriptRepositoryStore? repositories = null)
     {
-        var header = $"相对路径：{resource.RelativePath}\n最后修改：{resource.LastWriteTime:yyyy-MM-dd HH:mm:ss}";
+        if (resource.Resource is { } reference && taskType == "javascript")
+            resource = resource.WithFullPath(await (repositories ?? ScriptRepositoryStore.Shared)
+                .PreparePreviewAsync(reference, ct).ConfigureAwait(false));
+        var header = $"相对路径：{resource.Resource?.RelativePath ?? resource.RelativePath}\n最后修改：{resource.LastWriteTime:yyyy-MM-dd HH:mm:ss}";
         if (resource.IsDirectory && taskType is "pathing" or "keymouse")
             header += $"\n包含资源：{resource.ChildResourceCount} 项";
-        else if (!resource.IsDirectory)
+        else if (!resource.IsDirectory && (resource.Resource is null || resource.Size > 0))
             header += $"\n文件大小：{FormatFileSize(resource.Size)}";
         if (taskType != "javascript")
             return new PuloniaTaskResourcePreview(header, null);

@@ -40,6 +40,11 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     private int _previewGeneration;
 
     /// <summary>
+    /// 取消已经失去选择的预览，及时释放来源读取锁，避免连续切换时排队。
+    /// </summary>
+    private CancellationTokenSource? _previewCancellationTokenSource;
+
+    /// <summary>
     /// 取消尚未执行的旧资源搜索，避免大索引在连续输入时反复刷新。
     /// </summary>
     private CancellationTokenSource? _filterCancellationTokenSource;
@@ -300,13 +305,30 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     /// </summary>
     public async Task InitializeAsync(bool forceRefresh = false)
     {
-        if (!RequiresResource || SelectedDefinition is null || IsBusy)
+        if (!RequiresResource || SelectedDefinition is null || IsBusy || _isClosed)
             return;
+        var definition = SelectedDefinition;
+        var cancellationTokenSource = new CancellationTokenSource();
+        _resourceLoadCancellationTokenSource = cancellationTokenSource;
+        var ct = cancellationTokenSource.Token;
         IsBusy = true;
-        StatusMessage = "正在读取本地资源清单…";
+        StatusMessage = "正在读取已拉取的资源清单…";
         try
         {
-            var index = await _resourceCatalog.GetIndexAsync(SelectedDefinition, forceRefresh);
+            if (SupportsRepositories)
+            {
+                await ReloadRepositoriesAsync(ct);
+                if (SelectedRepository is null)
+                {
+                    ClearResourceSelection();
+                    StatusMessage = "尚未添加仓库，请添加远程仓库或已拉取的本地仓库。";
+                    return;
+                }
+                await _resourceCatalog.Repositories.SelectRepositoryAsync(definition.TaskType, SelectedRepository.Id, ct);
+            }
+            var repositoryId = SupportsRepositories ? SelectedRepository?.Id : null;
+            var index = await _resourceCatalog.GetIndexAsync(definition, forceRefresh, ct, repositoryId);
+            ct.ThrowIfCancellationRequested();
             _allResources = index.Resources;
             ApplyResourceFilter();
             StatusMessage = index.IsTruncated
@@ -315,7 +337,12 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
             if (index.SkippedDirectoryCount > 0)
                 StatusMessage += $" 已跳过 {index.SkippedDirectoryCount} 个不可访问目录。";
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // 关闭弹窗后取消索引请求，不回写已经关闭页面的资源状态。
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException
+                                   or Newtonsoft.Json.JsonException or LibGit2Sharp.LibGit2SharpException)
         {
             _allResources = [];
             ApplyResourceFilter();
@@ -323,6 +350,9 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
         }
         finally
         {
+            if (ReferenceEquals(_resourceLoadCancellationTokenSource, cancellationTokenSource))
+                _resourceLoadCancellationTokenSource = null;
+            cancellationTokenSource.Dispose();
             IsBusy = false;
         }
     }
@@ -379,6 +409,8 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
             SetSuggestedName(value.DisplayName);
         }
         OnPropertyChanged(nameof(RequiresResource));
+        OnPropertyChanged(nameof(SupportsRepositories));
+        NotifyRepositoryCommands();
         OnPropertyChanged(nameof(HasParameters));
         OnPropertyChanged(nameof(IsPathingResourceSelector));
         OnPropertyChanged(nameof(IsJavaScriptTask));
@@ -417,6 +449,7 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     {
         OnPropertyChanged(nameof(IsDirectoryImport));
         var generation = ++_previewGeneration;
+        _previewCancellationTokenSource?.Cancel();
         ReadmeFilePath = null;
         JavaScriptSettingFields.Clear();
         _javaScriptSettingsLoadFailed = false;
@@ -433,7 +466,9 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
         }
 
         SetSuggestedName(value.DisplayName);
-        _ = LoadResourcePreviewAsync(value, generation);
+        var cancellationTokenSource = new CancellationTokenSource();
+        _previewCancellationTokenSource = cancellationTokenSource;
+        _ = LoadResourcePreviewAsync(value, generation, cancellationTokenSource);
     }
 
     /// <summary>
@@ -448,7 +483,11 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     /// <summary>
     /// 资源索引加载状态变化后刷新统一加载状态。
     /// </summary>
-    partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(IsLoading));
+    partial void OnIsBusyChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsLoading));
+        NotifyRepositoryCommands();
+    }
 
     /// <summary>
     /// 资源详情加载状态变化后刷新统一加载状态。
@@ -503,13 +542,14 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
             StatusMessage = "脚本设置文件解析失败，请修复脚本配置或选择其他脚本。";
             return;
         }
-        if (SelectedResource is { } resource
+        // 仓库资源尚未提取到本地目录，由固定版本读取和提取校验确认存在性；传统资源仍检查磁盘。
+        if (SelectedResource is { Resource: null } resource
             && resource.IsDirectory != Directory.Exists(resource.FullPath))
         {
             StatusMessage = "选中的资源已经不存在，请刷新后重新选择。";
             return;
         }
-        if (SelectedResource is { IsDirectory: false } fileResource && !File.Exists(fileResource.FullPath))
+        if (SelectedResource is { Resource: null, IsDirectory: false } fileResource && !File.Exists(fileResource.FullPath))
         {
             StatusMessage = "选中的资源已经不存在，请刷新后重新选择。";
             return;
@@ -542,13 +582,15 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
             IsBusy = true;
             StatusMessage = RequiresResource ? "正在固定资源版本…" : "正在创建任务…";
             var task = await BuildTaskAsync(name, SelectedDefinition, SelectedResource, overrides);
+            if (_isClosed) return;
             Result = new PuloniaTaskCreationResult(task);
             StatusMessage = string.Empty;
             IsBusy = false;
             RequestClose?.Invoke(this, true);
         }
         catch (Exception ex) when (ex is FormatException or PuloniaTaskValidationException or IOException
-                                   or UnauthorizedAccessException)
+                                   or UnauthorizedAccessException or InvalidOperationException or ArgumentException
+                                   or LibGit2Sharp.LibGit2SharpException or System.Text.Json.JsonException or Newtonsoft.Json.JsonException)
         {
             StatusMessage = ex.Message;
             IsBusy = false;
@@ -559,7 +601,12 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     /// 取消创建，不产生任何任务树变更。
     /// </summary>
     [RelayCommand]
-    private void Cancel() => RequestClose?.Invoke(this, false);
+    private void Cancel()
+    {
+        // 关闭弹窗后不再继续读取、刷新预览或执行尚未完成的搜索。
+        Close();
+        RequestClose?.Invoke(this, false);
+    }
 
     /// <summary>
     /// 使用推荐名称，但不覆盖用户已经输入的自定义名称。
@@ -632,14 +679,16 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     /// <summary>
     /// 加载当前选择的轻量详情；JS 只读取清单、设置定义和 README 路径。
     /// </summary>
-    private async Task LoadResourcePreviewAsync(PuloniaTaskResourceDescriptor resource, int generation)
+    private async Task LoadResourcePreviewAsync(PuloniaTaskResourceDescriptor resource, int generation,
+        CancellationTokenSource cancellationTokenSource)
     {
         IsResourceDetailsLoading = true;
         ResourcePreview = "正在读取资源详情…";
         var taskType = SelectedDefinition?.TaskType;
         try
         {
-            var preview = await PuloniaTaskResourcePreviewLoader.LoadAsync(resource, taskType);
+            var preview = await PuloniaTaskResourcePreviewLoader.LoadAsync(resource, taskType,
+                cancellationTokenSource.Token, _resourceCatalog.Repositories);
             if (generation != _previewGeneration)
                 return;
             ResourcePreview = preview.Text;
@@ -656,6 +705,10 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
             if (!string.IsNullOrWhiteSpace(preview.SuggestedName))
                 SetSuggestedName(preview.SuggestedName);
         }
+        catch (OperationCanceledException) when (cancellationTokenSource.IsCancellationRequested)
+        {
+            // 切换选择或关闭弹窗属于预期取消，不显示资源读取失败。
+        }
         catch (Exception ex)
         {
             if (generation == _previewGeneration)
@@ -669,6 +722,9 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
         {
             if (generation == _previewGeneration)
                 IsResourceDetailsLoading = false;
+            if (ReferenceEquals(_previewCancellationTokenSource, cancellationTokenSource))
+                _previewCancellationTokenSource = null;
+            cancellationTokenSource.Dispose();
         }
     }
 
@@ -815,6 +871,10 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
             };
         }
 
+        // 提取选中版本成功后才建立节点，计划不会保存未完成缓存的资源引用。
+        if (resource.Resource is { } repositoryResource)
+            resource = resource.WithFullPath(await _resourceCatalog.Repositories.MaterializeAsync(repositoryResource, definition.TaskType));
+
         if (!IsDirectoryImport)
         {
             var version = resource.IsDirectory
@@ -824,7 +884,8 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
             {
                 Name = name,
                 TaskType = definition.TaskType,
-                Path = resource.RelativePath,
+                Path = resource.Resource is null ? resource.RelativePath : null,
+                Resource = resource.Resource,
                 ResourceVersion = version,
                 Parameters = overrides
             };
@@ -846,7 +907,8 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
                 Source = new PuloniaTaskSource
                 {
                     Kind = "directory",
-                    Path = resource.FullPath,
+                    Path = resource.Resource is null ? resource.FullPath : null,
+                    Resource = resource.Resource,
                     TaskType = definition.TaskType,
                     Recursive = IncludeSubdirectories,
                     Version = version
@@ -866,7 +928,8 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
             {
                 Name = Path.GetFileNameWithoutExtension(file),
                 TaskType = definition.TaskType,
-                Path = Path.GetRelativePath(definition.ResourceBaseDirectory!, file),
+                Path = resource.Resource is null ? Path.GetRelativePath(definition.ResourceBaseDirectory!, file) : null,
+                Resource = resource.Resource?.WithPath(resource.Resource.RelativePath + "/" + Path.GetRelativePath(resource.FullPath, file).Replace('\\', '/')),
                 ResourceVersion = await PuloniaTaskResourceFingerprint.ComputeFileVersionAsync(file)
             };
             if (mode == "flat")

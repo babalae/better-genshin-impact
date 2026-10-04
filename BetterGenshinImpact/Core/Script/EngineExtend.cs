@@ -6,6 +6,7 @@ using BetterGenshinImpact.Core.Script.Dependence.Model;
 using Microsoft.ClearScript;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Script.Repositories;
 using BetterGenshinImpact.Core.BgiVision;
 using OpenCvSharp;
 using BetterGenshinImpact.Core.Recognition;
@@ -35,14 +36,15 @@ public class EngineExtend
     /// <param name="searchPaths"></param>
     /// <param name="config">当前脚本使用的可选配置。</param>
     /// <param name="ct">当前脚本执行的取消令牌。</param>
+    /// <param name="repositoryResources">Pulonia 已确认来源；为空时保留传统用户目录语义。</param>
     public static void InitHost(IScriptEngine engine, string workDir, string[]? searchPaths, object? config,
-        CancellationToken ct)
+        CancellationToken ct, ScriptRepositoryResourceContext? repositoryResources = null)
     {
         // engine.AddHostObject("xHost", new ExtendedHostFunctions());  // 有越权的安全风险
 
         // 添加我的自定义实例化对象
         engine.AddHostObject("keyMouseScript", new KeyMouseScript(workDir, ct));
-        engine.AddHostObject("pathingScript", new AutoPathingScript(workDir, config, ct));
+        engine.AddHostObject("pathingScript", new AutoPathingScript(workDir, config, ct, repositoryResources));
         engine.AddHostObject("genshin", new Dependence.Genshin(ct));
         engine.AddHostObject("characterDevelopmentTask", new CharacterDevelopmentTask(ct));
         engine.AddHostObject("log", new Log());

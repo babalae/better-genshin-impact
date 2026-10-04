@@ -47,7 +47,8 @@ public partial class PuloniaTaskPlanViewModel
             // 禁用资源仍显示更新标签，但不会阻止其他已启用任务执行。
             var pendingUpdates = GetReferencedDocuments(document, GetResourceDocuments(), enabledOnly: true)
                 .SelectMany(target => target.EnumerateNodes())
-                .Count(node => node.IsEffectivelyEnabled && node.CanUpdateResourceVersion && node.HasResourceUpdate);
+                .Count(node => node.IsEffectivelyEnabled && node.CanUpdateResourceVersion && node.HasResourceUpdate
+                    && node.Model.Resource is null && node.Model.Source?.Resource is null);
             if (pendingUpdates > 0)
                 throw new InvalidOperationException($"“{document.Name}”有 {pendingUpdates} 项启用中的资源更新，请先点击计划卡片的确认更新按钮。");
             var requestId = await _taskService.EnqueueAsync(new PuloniaTaskRequest

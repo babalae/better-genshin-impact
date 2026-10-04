@@ -4,6 +4,7 @@ using System.Linq;
 using BetterGenshinImpact.Pulonia.Services;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using BetterGenshinImpact.Core.Script.Repositories;
 
 namespace BetterGenshinImpact.Pulonia.Models;
 
@@ -70,6 +71,10 @@ public sealed class PuloniaTaskPreparedTask
     [JsonProperty("path")]
     public string? Path { get; }
 
+    /// <summary>本次固定的来源版本，JS 内部资源读取继承同一定位。</summary>
+    [JsonProperty("resource", NullValueHandling = NullValueHandling.Ignore)]
+    public ScriptResourceReference? Resource { get; }
+
     /// <summary>
     /// 资源内容 SHA-256 或目录清单指纹；不代表资源已经缓存。
     /// </summary>
@@ -107,7 +112,7 @@ public sealed class PuloniaTaskPreparedTask
     internal PuloniaTaskPreparedTask(string planId, string taskId, string sourceTaskId, string taskAddress,
         string name, string taskType, bool isEnabled, string? path, string? resourceVersion, JObject parameters,
         IDictionary<string, string> parameterSources, PuloniaTaskPolicy policy,
-        IEnumerable<PuloniaTaskPreparedTask> children)
+        IEnumerable<PuloniaTaskPreparedTask> children, ScriptResourceReference? resource = null)
     {
         PlanId = planId;
         TaskId = taskId;
@@ -117,6 +122,7 @@ public sealed class PuloniaTaskPreparedTask
         TaskType = taskType;
         IsEnabled = isEnabled;
         Path = path;
+        Resource = resource;
         ResourceVersion = resourceVersion;
         _parametersJson = PuloniaTaskJson.Write(parameters);
         _policyJson = PuloniaTaskJson.Write(policy);

@@ -25,7 +25,7 @@ public partial class PuloniaTaskPlanDocumentViewModel
             return node.Model.Source?.Kind switch
             {
                 "plan" => $"引用计划 · {node.Model.Source.PlanId} · 执行 {node.RepeatCount} 次",
-                "directory" => $"{node.Model.Source.TaskType} 目录 · {node.Model.Source.Path} · 执行 {node.RepeatCount} 次",
+                "directory" => $"{node.Model.Source.TaskType} 目录 · {node.Model.Source.Resource?.RelativePath ?? node.Model.Source.Path} · 执行 {node.RepeatCount} 次",
                 _ => $"{node.Children.Count} 个步骤 · 整组执行 {node.RepeatCount} 次"
             };
         var values = GetOneDragonParameters(node);

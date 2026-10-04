@@ -458,7 +458,8 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
             var model = node.Model;
             var key = ResourceCheckKey(model);
             var snapshot = PuloniaTaskJson.Read<PuloniaTask>(PuloniaTaskJson.Write(model));
-            var newVersion = await _resourceVersionService.ReadCurrentVersionAsync(snapshot, _taskService.Definitions)
+            var reviewed = await _resourceVersionService.ReadCurrentStateAsync(snapshot, _taskService.Definitions);
+            var newVersion = reviewed.Version
                              ?? throw new InvalidOperationException("当前节点没有可确认的资源。");
             var oldVersion = model.Source?.Kind == "directory" ? model.Source.Version : model.ResourceVersion;
 
@@ -478,19 +479,30 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
                 || key != ResourceCheckKey(model) || !node.Document.EnumerateNodes().Contains(node))
                 throw new InvalidOperationException("确认期间资源再次变化，请重新检查并确认。");
 
+            var updatedReference = await _resourceVersionService.PrepareUpdateAsync(snapshot, newVersion,
+                expectedRevision: reviewed.Revision);
+            if (key != ResourceCheckKey(model))
+                throw new InvalidOperationException("提取期间任务配置变化，请重新确认。");
             node.Document.ApplyMutation(() =>
             {
                 if (model.Source?.Kind == "directory")
+                {
                     model.Source.Version = newVersion;
+                    if (updatedReference is not null) model.Source.Resource = updatedReference;
+                }
                 else
+                {
                     model.ResourceVersion = newVersion;
+                    if (updatedReference is not null) model.Resource = updatedReference;
+                }
             }, node);
             node.NotifyResourceVersionChanged();
             if (!await SaveDocumentAsync(node.Document)) return;
             await RefreshResourceVersionsAsync();
             StatusMessage = $"已更新“{node.Name}”的固定资源版本。";
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException
+            or LibGit2Sharp.LibGit2SharpException or System.Text.Json.JsonException or Newtonsoft.Json.JsonException)
         {
             StatusMessage = "更新资源版本失败：" + ex.Message;
             await ThemedMessageBox.ErrorAsync(StatusMessage, "无法更新资源版本");

@@ -344,7 +344,7 @@ public static class PuloniaTaskValidator
 
         if (task.TaskType == "group")
         {
-            if (task.Parameters.Count != 0 || task.PresetId is not null || task.Path is not null
+            if (task.Parameters.Count != 0 || task.PresetId is not null || task.Path is not null || task.Resource is not null
                 || task.ResourceVersion is not null)
                 throw new PuloniaTaskValidationException(location,
                     "分组使用 parameter_overrides 提供公共参数，不使用叶子参数、预设、path 或资源版本。");
@@ -369,12 +369,12 @@ public static class PuloniaTaskValidator
             if (task.TaskType == "group" && source.Kind == "plan")
             {
                 ValidateId(source.PlanId, location + "/source/plan_id");
-                if (source.Path is not null || source.TaskType is not null || source.Version is not null)
+                if (source.Path is not null || source.Resource is not null || source.TaskType is not null || source.Version is not null)
                     throw new PuloniaTaskValidationException(location, "计划引用不能包含目录来源字段。");
             }
             else if (task.TaskType == "group" && source.Kind == "directory")
             {
-                if (string.IsNullOrWhiteSpace(source.Path) || source.TaskType is not ("pathing" or "keymouse") || source.PlanId is not null)
+                if ((string.IsNullOrWhiteSpace(source.Path) && source.Resource is null) || source.TaskType is not ("pathing" or "keymouse") || source.PlanId is not null)
                     throw new PuloniaTaskValidationException(location, "目录引用需指定 pathing/keymouse 类型和非空路径。");
                 if (source.Version is not null && !Regex.IsMatch(source.Version, "^[0-9a-f]{64}\\z"))
                     throw new PuloniaTaskValidationException(location, "目录引用版本必须是 64 位小写 SHA-256。");
@@ -393,11 +393,39 @@ public static class PuloniaTaskValidator
 
         if (IsLeafType(task.TaskType) && (task.Children.Count != 0 || task.Source is not null))
             throw new PuloniaTaskValidationException(location, "具体任务不能带子节点或引用来源。");
-        if (task.TaskType is "javascript" or "pathing" or "keymouse" && string.IsNullOrWhiteSpace(task.Path))
+        if (task.TaskType is "javascript" or "pathing" or "keymouse" && string.IsNullOrWhiteSpace(task.Path) && task.Resource is null)
             throw new PuloniaTaskValidationException(location, "资源任务必须填写 path。");
+
+        // 新引用必须明确仓库和版本；旧 path 模型保持兼容，但禁止两个定位同时生效。
+        if (task.Resource is { } resource)
+        {
+            if (task.Path is not null || task.TaskType is not ("javascript" or "pathing" or "keymouse"))
+                throw new PuloniaTaskValidationException(location, "仓库资源不能同时配置旧路径或绑定到非资源任务。");
+            ValidateRepositoryResourceType(resource, task.TaskType, false, location);
+        }
+        if (task.Source?.Resource is { } directoryResource)
+        {
+            if (task.Source.Path is not null)
+                throw new PuloniaTaskValidationException(location, "仓库目录引用不能同时配置旧路径。");
+            ValidateRepositoryResourceType(directoryResource, task.Source.TaskType!, true, location);
+        }
 
         foreach (var child in task.Children)
             ValidateTask(child, location, ids, objects, depth + 1);
+    }
+
+    /// <summary>校验仓库资源类型的根路径，防止把其他能力的文件误当作路线或 JS 项目。</summary>
+    private static void ValidateRepositoryResourceType(BetterGenshinImpact.Core.Script.Repositories.ScriptResourceReference resource,
+        string taskType, bool directory, string location)
+    {
+        try { resource.Validate(); }
+        catch (ArgumentException ex) { throw new PuloniaTaskValidationException(location, ex.Message, ex); }
+        var prefix = taskType == "javascript" ? "js" : taskType;
+        if (!(directory && resource.RelativePath == prefix)
+            && !resource.RelativePath.StartsWith(prefix + "/", StringComparison.Ordinal))
+            throw new PuloniaTaskValidationException(location, "资源位置与任务类型不匹配。");
+        if (!directory && taskType != "javascript" && !resource.RelativePath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            throw new PuloniaTaskValidationException(location, "路线和录制资源必须引用 JSON 文件。");
     }
 
     /// <summary>

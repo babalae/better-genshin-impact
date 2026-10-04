@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using BetterGenshinImpact.Core.Script.Repositories;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -30,6 +31,10 @@ public partial class PuloniaTaskPlanViewModel
     /// <summary>页面加载、手动刷新和运行提交前读取当前资源；错误作为树标签展示。</summary>
     [RelayCommand]
     public async Task RefreshResourceVersionsAsync(CancellationToken ct = default)
+        => await RefreshResourceVersionsCoreAsync(null, ct);
+
+    /// <summary>仓库事件只检查引用该来源的节点，完整刷新仍覆盖旧路径与其他来源。</summary>
+    private async Task RefreshResourceVersionsCoreAsync(string? repositoryId, CancellationToken ct)
     {
         await _resourceCheckGate.WaitAsync(ct);
         IsCheckingResources = true;
@@ -37,24 +42,30 @@ public partial class PuloniaTaskPlanViewModel
         {
             var documents = GetResourceDocuments();
             foreach (var document in documents)
-            foreach (var node in document.EnumerateNodes().Where(item => item.CanUpdateResourceVersion).ToArray())
+            foreach (var node in document.EnumerateNodes().Where(item => item.CanUpdateResourceVersion
+                && (repositoryId is null || (item.Model.Resource ?? item.Model.Source?.Resource)?.RepositoryId == repositoryId)).ToArray())
             {
                 ct.ThrowIfCancellationRequested();
                 var key = ResourceCheckKey(node.Model);
                 var snapshot = PuloniaTaskJson.Read<PuloniaTask>(PuloniaTaskJson.Write(node.Model));
                 try
                 {
-                    var version = await _resourceVersionService.ReadCurrentVersionAsync(snapshot, _taskService.Definitions, ct);
+                    var state = await _resourceVersionService.ReadCurrentStateAsync(snapshot, _taskService.Definitions, ct);
                     // IO 期间路径、目录来源或固定版本发生变化时，不能把旧检查结果贴到新节点上。
                     if (key != ResourceCheckKey(node.Model)) continue;
                     node.ResourceCheckError = null;
-                    node.CurrentResourceVersion = version;
+                    node.CurrentResourceVersion = state.Version;
+                    node.CurrentRepositoryRevision = state.Revision;
                 }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException
+                    or LibGit2Sharp.LibGit2SharpException)
                 {
                     if (key != ResourceCheckKey(node.Model)) continue;
                     node.CurrentResourceVersion = null;
-                    node.ResourceCheckError = ex.Message;
+                    node.CurrentRepositoryRevision = null;
+                    node.ResourceCheckError = snapshot.Resource is not null || snapshot.Source?.Resource is not null
+                        ? (ex is FileNotFoundException or DirectoryNotFoundException ? "来源中已移除：" : "检查失败：")
+                            + ex.Message + "；仍可使用已确认缓存。" : ex.Message;
                 }
             }
             UpdateResourceSummaries(documents);
@@ -94,7 +105,8 @@ public partial class PuloniaTaskPlanViewModel
         var targets = GetReferencedDocuments(document, GetResourceDocuments()).ToArray();
         var updates = targets.SelectMany(target => target.EnumerateNodes()
             .Where(node => node.CanUpdateResourceVersion && node.HasResourceUpdate)
-            .Select(node => (Document: target, Node: node, Version: node.CurrentResourceVersion!, Key: ResourceCheckKey(node.Model)))).ToArray();
+            .Select(node => (Document: target, Node: node, Version: node.CurrentResourceVersion!,
+                Revision: node.CurrentRepositoryRevision, Key: ResourceCheckKey(node.Model)))).ToArray();
         if (!document.HasResourceUpdates || updates.Length == 0) return;
         var result = await ThemedMessageBox.ShowAsync(
             $"确认“{document.Name}”的全部 {updates.Length} 项资源更新？\n"
@@ -118,11 +130,20 @@ public partial class PuloniaTaskPlanViewModel
             if (!targets.ToHashSet().SetEquals(currentTargets)
                 || !currentUpdates.SetEquals(updates.Select(item => item.Node))
                 || document.ResourceErrorCount > 0 || updates.Any(item => item.Node.CurrentResourceVersion != item.Version
+                || item.Node.CurrentRepositoryRevision != item.Revision
                 || item.Key != ResourceCheckKey(item.Node.Model)))
                 throw new InvalidOperationException("确认期间资源或任务配置再次变化，请重新检查并确认。");
+            // 所有资源完整提取后才更新任一计划，提取失败不能留下半批新引用。
+            var references = new Dictionary<PuloniaTaskNodeViewModel, ScriptResourceReference?>();
+            foreach (var update in updates)
+                references[update.Node] = await _resourceVersionService.PrepareUpdateAsync(update.Node.Model, update.Version,
+                    expectedRevision: update.Revision);
+            if (updates.Any(item => item.Key != ResourceCheckKey(item.Node.Model)))
+                throw new InvalidOperationException("提取期间计划变化，请重新检查并确认。");
             foreach (var group in updates.GroupBy(item => item.Document))
             {
-                group.Key.ApplyConfirmedResourceVersions(group.ToDictionary(item => item.Node.Id, item => item.Version));
+                group.Key.ApplyConfirmedResourceVersions(group.ToDictionary(item => item.Node.Id, item => item.Version),
+                    group.ToDictionary(item => item.Node.Id, item => references[item.Node]));
                 if (!await SaveDocumentAsync(group.Key)) return;
             }
             UpdateResourceSummaries(GetResourceDocuments());
@@ -182,13 +203,14 @@ public partial class PuloniaTaskPlanViewModel
 
     /// <summary>只捕获影响资源定位和比较的字段，参数或名称修改不会把无关 IO 结果误判为新版本。</summary>
     private static string ResourceCheckKey(PuloniaTask task)
-        => PuloniaTaskJson.Write(new { task.TaskType, task.Path, task.Source, task.ResourceVersion });
+        => PuloniaTaskJson.Write(new { task.TaskType, task.Path, task.Resource, task.Source, task.ResourceVersion });
 
     /// <summary>页面可见时定期检查外部编辑或脚本订阅更新，不在 UI 线程同步读取文件。</summary>
     private void StartResourceMonitor()
     {
         if (_resourceMonitorCancellation is not null || Application.Current?.Dispatcher is not { } dispatcher) return;
         _resourceMonitorCancellation = new CancellationTokenSource();
+        _resourceCatalog.Repositories.RepositoryChanged += OnRepositoryChanged;
         _ = MonitorResourceVersionsAsync(dispatcher, _resourceMonitorCancellation.Token);
     }
 
@@ -217,6 +239,7 @@ public partial class PuloniaTaskPlanViewModel
     public override Task OnNavigatedFromAsync()
     {
         _resourceMonitorCancellation?.Cancel();
+        _resourceCatalog.Repositories.RepositoryChanged -= OnRepositoryChanged;
         _resourceMonitorCancellation?.Dispose();
         _resourceMonitorCancellation = null;
         return base.OnNavigatedFromAsync();
@@ -225,6 +248,25 @@ public partial class PuloniaTaskPlanViewModel
     /// <summary>控件卸载同样释放检查循环，兼容导航缓存及窗口关闭。</summary>
     [RelayCommand]
     private Task ClosePageAsync() => OnNavigatedFromAsync();
+
+    /// <summary>仓库更新仅触发相关页面检查，不在更新线程访问编辑树或改写固定版本。</summary>
+    private void OnRepositoryChanged(object? sender, ScriptRepositoryChangedEventArgs args)
+    {
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.HasShutdownStarted || _resourceMonitorCancellation is null) return;
+        _ = dispatcher.InvokeAsync(async () =>
+        {
+            try
+            {
+                if (_resourceMonitorCancellation is not { } monitor) return;
+                if (GetResourceDocuments().SelectMany(document => document.EnumerateNodes()).Any(node =>
+                    (node.Model.Resource ?? node.Model.Source?.Resource)?.RepositoryId == args.RepositoryId))
+                    await RefreshResourceVersionsCoreAsync(args.RepositoryId, monitor.Token);
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex); }
+        });
+    }
 
     /// <summary>检查状态变化时同步卡片确认命令，不自动修改计划内容。</summary>
     partial void OnIsCheckingResourcesChanged(bool value) => ConfirmResourceUpdatesCommand.NotifyCanExecuteChanged();

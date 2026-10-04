@@ -25,6 +25,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.View.Windows;
 using LibGit2Sharp;
+using BetterGenshinImpact.Core.Script.Repositories;
 using LibGit2Sharp.Handlers;
 using Vanara.PInvoke;
 using Wpf.Ui.Violeta.Controls;
@@ -175,6 +176,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             await _repoWriteLock.WaitAsync();
             try
             {
+                // 与仓库版本保留共用跨进程锁，避免读取到更新过程中的混合来源。
+                using var resourceAccess = await ScriptRepositoryStore.Shared.EnterSourceAccessAsync();
                 var subscribedPaths = GetSubscribedPathsForCurrentRepo();
                 if (subscribedPaths.Count == 0)
                 {
@@ -227,6 +230,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             await _repoWriteLock.WaitAsync();
             try
             {
+                // 与仓库版本保留共用跨进程锁，避免读取到更新过程中的混合来源。
+                using var resourceAccess = await ScriptRepositoryStore.Shared.EnterSourceAccessAsync();
                 var (successCount, failCount) = await UpdateAllSubscribedScriptsCore(scriptConfig);
                 _logger.LogInformation("一键更新订阅脚本完成: 成功 {Success} 个, 失败 {Fail} 个", successCount, failCount);
                 UIDispatcherHelper.Invoke(() =>
@@ -738,6 +743,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         await _repoWriteLock.WaitAsync();
         try
         {
+            // 与仓库版本保留共用跨进程锁，避免读取到更新过程中的混合来源。
+            using var resourceAccess = await ScriptRepositoryStore.Shared.EnterSourceAccessAsync();
             var config = TaskContext.Instance().Config.ScriptConfig;
             var repoUrl = ResolveRepoUrl(config);
             var repoPath = CenterRepoPath;
@@ -764,6 +771,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         await _repoWriteLock.WaitAsync();
         try
         {
+            // 与仓库版本保留共用跨进程锁，避免读取到更新过程中的混合来源。
+            using var resourceAccess = await ScriptRepositoryStore.Shared.EnterSourceAccessAsync();
             return await UpdateCenterRepoByGitCore(repoUrl, onCheckoutProgress);
         }
         finally
@@ -1003,6 +1012,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             _logger.LogWarning(ex, "标记repo.json更新节点失败");
         }
 
+        if (updated) ScriptRepositoryStore.Shared.NotifyUpdated(repoPath);
         return (repoPath, updated);
     }
 
@@ -1867,6 +1877,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         await _repoWriteLock.WaitAsync();
         try
         {
+            // 与仓库版本保留共用跨进程锁，避免读取到更新过程中的混合来源。
+            using var resourceAccess = await ScriptRepositoryStore.Shared.EnterSourceAccessAsync();
             return await ImportLocalRepoZipCore(zipFilePath, onProgress);
         }
         finally
@@ -2045,6 +2057,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
         onProgress?.Invoke(100, "导入完成");
         _logger.LogInformation("Zip导入完成，目标文件夹: {Folder}", targetFolderName);
+        ScriptRepositoryStore.Shared.NotifyUpdated(Path.Combine(ReposPath, targetFolderName));
         return Path.Combine(ReposPath, targetFolderName);
     }
 
@@ -2053,6 +2066,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         await _repoWriteLock.WaitAsync();
         try
         {
+            // 与仓库版本保留共用跨进程锁，避免读取到更新过程中的混合来源。
+            using var resourceAccess = await ScriptRepositoryStore.Shared.EnterSourceAccessAsync();
             await DownloadRepoAndUnzipCore(url);
         }
         finally
@@ -2096,6 +2111,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
         // 使用 System.IO.Compression 解压
         ZipFile.ExtractToDirectory(zipPath, ReposPath, true);
+        ScriptRepositoryStore.Shared.NotifyUpdated(CenterRepoPath);
     }
 
     public async Task ImportScriptFromClipboard(string clipboardText)
@@ -2191,6 +2207,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         await _repoWriteLock.WaitAsync();
         try
         {
+            // 与仓库版本保留共用跨进程锁，避免读取到更新过程中的混合来源。
+            using var resourceAccess = await ScriptRepositoryStore.Shared.EnterSourceAccessAsync();
             await ImportScriptFromPathJsonCore(pathJson);
         }
         finally
