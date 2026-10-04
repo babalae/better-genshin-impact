@@ -161,6 +161,8 @@ public partial class DiscordTargetWindow : FluentWindow
         }
         catch (Exception ex)
         {
+            // 复位标志，否则用户再次展开该节点时会被直接返回，只能靠刷新整棵树重试
+            node.ChildrenLoaded = false;
             node.Children.Clear();
             node.Children.Add(new DiscordTargetNode { Title = ex.Message, Kind = DiscordTargetNodeKind.Info });
             SetStatus(string.Empty);
