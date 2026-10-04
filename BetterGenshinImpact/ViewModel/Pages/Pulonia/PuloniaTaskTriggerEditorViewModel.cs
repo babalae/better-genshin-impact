@@ -43,6 +43,8 @@ public partial class PuloniaTaskTriggerEditorViewModel : ObservableObject
     [ObservableProperty] private string _intervalMinutes = "1440";
     /// <summary>捕获控件使用的类型化热键。</summary>
     [ObservableProperty] private HotKey _hotkey;
+    /// <summary>复用软件现有的两种热键模式。</summary>
+    [ObservableProperty] private HotKeyTypeEnum _hotkeyType;
     /// <summary>运行范围，空字符串表示整个计划。</summary>
     [ObservableProperty] private string _targetTaskId = "";
     /// <summary>账号参数资料引用，不执行切号。</summary>
@@ -66,6 +68,14 @@ public partial class PuloniaTaskTriggerEditorViewModel : ObservableObject
     public bool IsHotkey => _original.Kind == PuloniaTaskTriggerKind.Hotkey;
     /// <summary>是否编辑日程配置。</summary>
     public bool IsSchedule => !IsHotkey;
+    /// <summary>捕获控件识别的类型名称，与快捷键设置页保持一致。</summary>
+    public string HotkeyTypeName => HotkeyType.ToChineseName();
+    /// <summary>界面展示的本地化类型名称。</summary>
+    public string LocalizedHotkeyTypeName => HotkeyType.ToLocalizedName();
+    /// <summary>当前热键类型支持的输入及生效条件。</summary>
+    public string HotkeyHelp => HotkeyType == HotKeyTypeEnum.GlobalRegister
+        ? "全局热键：支持组合键或功能键，BGI 运行时生效。普通键请搭配 Ctrl / Alt / Win；F12 为系统保留。"
+        : "键鼠监听：支持键盘单键或鼠标侧键，不支持组合键。与现有快捷键一致，启动功能、开启键鼠监听且游戏在前台时生效。";
     /// <summary>高级表达式区域是否可见。</summary>
     public bool IsAdvanced => Mode == "advanced";
     /// <summary>简易时分输入是否可见。</summary>
@@ -109,7 +119,8 @@ public partial class PuloniaTaskTriggerEditorViewModel : ObservableObject
     {
         _original = PuloniaTaskJson.Read<PuloniaTaskTrigger>(PuloniaTaskJson.Write(trigger));
         Name = trigger.Name; Enabled = trigger.Enabled; TimeZoneId = trigger.TimeZoneId; Cron = trigger.Cron;
-        Hotkey = HotKey.FromString(trigger.Hotkey); TargetTaskId = trigger.TargetTaskId ?? ""; AccountId = trigger.AccountId ?? "";
+        HotkeyType = trigger.HotkeyType; Hotkey = HotKey.FromString(trigger.Hotkey);
+        TargetTaskId = trigger.TargetTaskId ?? ""; AccountId = trigger.AccountId ?? "";
         IntervalMinutes = trigger.IntervalMinutes.ToString(CultureInfo.InvariantCulture);
         WindowMinutes = trigger.WindowMinutes.ToString(CultureInfo.InvariantCulture);
         TimeoutSeconds = trigger.TimeoutSeconds?.ToString(CultureInfo.InvariantCulture) ?? "";
@@ -188,6 +199,28 @@ public partial class PuloniaTaskTriggerEditorViewModel : ObservableObject
     [RelayCommand]
     private void SetTimeZone(string id) => TimeZoneId = id;
 
+    /// <summary>沿用快捷键页面的类型切换交互，清空不兼容的旧键值，等待用户重新捕获。</summary>
+    [RelayCommand]
+    private void SwitchHotkeyType()
+        => HotkeyType = HotkeyType == HotKeyTypeEnum.GlobalRegister ? HotKeyTypeEnum.KeyboardMonitor : HotKeyTypeEnum.GlobalRegister;
+
+    /// <summary>切换类型时同步输入规则、帮助和预览，不将组合键偷偷转换成监听单键。</summary>
+    partial void OnHotkeyTypeChanged(HotKeyTypeEnum value)
+    {
+        if (!_initializing) Hotkey = HotKey.None;
+        OnPropertyChanged(nameof(HotkeyTypeName));
+        OnPropertyChanged(nameof(LocalizedHotkeyTypeName));
+        OnPropertyChanged(nameof(HotkeyHelp));
+    }
+
+    /// <summary>卡片开关只同步已保存的启用状态与生效点，其他未保存字段继续保留为草稿。</summary>
+    public void SynchronizeEnabled(PuloniaTaskTrigger saved)
+    {
+        _original.Enabled = saved.Enabled;
+        _original.ActivatedAtUtc = saved.ActivatedAtUtc;
+        Enabled = saved.Enabled;
+    }
+
     /// <summary>解析整数输入，不允许浮点截断或静默修正。</summary>
     private static int Number(string value, string label, int min, int max)
     {
@@ -201,7 +234,8 @@ public partial class PuloniaTaskTriggerEditorViewModel : ObservableObject
     {
         var result = PuloniaTaskJson.Read<PuloniaTaskTrigger>(PuloniaTaskJson.Write(_original));
         result.Name = Name.Trim(); result.Enabled = Enabled; result.TimeZoneId = TimeZoneId;
-        result.Hotkey = Hotkey.ToString(); result.TargetTaskId = string.IsNullOrEmpty(TargetTaskId) ? null : TargetTaskId;
+        result.Hotkey = Hotkey.ToString(); result.HotkeyType = HotkeyType;
+        result.TargetTaskId = string.IsNullOrEmpty(TargetTaskId) ? null : TargetTaskId;
         result.AccountId = string.IsNullOrEmpty(AccountId) ? null : AccountId;
         result.WindowMinutes = Number(WindowMinutes, "有效窗口（分钟）", 1, 10080);
         result.TimeoutSeconds = string.IsNullOrWhiteSpace(TimeoutSeconds) ? null : Number(TimeoutSeconds, "总时限（秒）", 1, 604800);
@@ -250,7 +284,7 @@ public partial class PuloniaTaskTriggerEditorViewModel : ObservableObject
                 lines.Add(TimeZoneInfo.ConvertTime(next.Value, zone).ToString("yyyy-MM-dd ddd HH:mm zzz", CultureInfo.GetCultureInfo("zh-CN")));
                 after = next.Value;
             }
-            PreviewText = IsHotkey ? "保存并启用后全局生效；快捷键冲突会在下方显示。" : lines.Count > 0
+            PreviewText = IsHotkey ? "保存后在左侧卡片启用。" + HotkeyHelp + " 快捷键冲突会在下方显示。" : lines.Count > 0
                 ? "接下来执行（所选时区）：\n" + string.Join("\n", lines) : "没有未来执行时间（一次性时间可能已过去）。";
             IsValid = true;
         }

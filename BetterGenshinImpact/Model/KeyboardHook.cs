@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask;
 using Fischless.HotkeyCapture;
 using System;
 using System.Collections.Generic;
@@ -106,7 +106,9 @@ public class KeyboardHook
     {
         IsPressed = false;
         IsHold = false;
-        AllKeyboardHooks.Remove(BindKey);
+        // 重复键注册失败的对象并不拥有该键，不能在清理时移除原有功能的监听。
+        if (AllKeyboardHooks.TryGetValue(BindKey, out var owner) && ReferenceEquals(owner, this))
+            AllKeyboardHooks.Remove(BindKey);
     }
 
     public void Dispose()

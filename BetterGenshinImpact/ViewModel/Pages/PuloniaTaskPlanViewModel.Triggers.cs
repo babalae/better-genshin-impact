@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.View.Windows;
@@ -19,6 +20,8 @@ public partial class PuloniaTaskPlanViewModel
     private readonly PuloniaTaskTriggerHost? _triggerHost;
     /// <summary>列表最后显示的内容签名，树编辑不覆盖尚未保存的触发器草稿。</summary>
     private string _triggerListSignature = "";
+    /// <summary>卡片开关保存期间仅刷新列表，保留编辑器内其他尚未保存的字段。</summary>
+    private bool _preserveTriggerDraft;
     /// <summary>当前计划的触发器列表。</summary>
     public ObservableCollection<PuloniaTaskTriggerItemViewModel> Triggers { get; } = [];
     /// <summary>选中的已保存触发器，新增草稿没有对应列表项。</summary>
@@ -37,12 +40,19 @@ public partial class PuloniaTaskPlanViewModel
         if (!force && signature == _triggerListSignature) return;
         _triggerListSignature = signature;
         var id = force ? null : SelectedTrigger?.Trigger.Id;
+        var draft = !force && _preserveTriggerDraft ? TriggerEditor : null;
         SelectedTrigger = null;
         TriggerEditor = null;
         Triggers.Clear();
         if (SelectedDocument is not null)
             foreach (var trigger in SelectedDocument.Plan.Triggers) Triggers.Add(new PuloniaTaskTriggerItemViewModel(trigger));
-        SelectedTrigger = Triggers.FirstOrDefault(item => item.Trigger.Id == id) ?? Triggers.FirstOrDefault();
+        SelectedTrigger = Triggers.FirstOrDefault(item => item.Trigger.Id == id)
+            ?? (draft is not null ? null : Triggers.FirstOrDefault());
+        if (draft is not null)
+        {
+            if (SelectedTrigger is not null) draft.SynchronizeEnabled(SelectedTrigger.Trigger);
+            TriggerEditor = draft;
+        }
         UpdateTriggerStatus();
     }
 
@@ -56,7 +66,11 @@ public partial class PuloniaTaskPlanViewModel
     {
         TriggerStatus = _triggerHost?.Status ?? "调度宿主不可用。";
         foreach (var item in Triggers)
+        {
             item.Update(_triggerHost?.States.FirstOrDefault(state => state.PlanId == SelectedDocument?.Id && state.TriggerId == item.Trigger.Id));
+            if (SelectedDocument?.LastSaveError is { } error)
+                item.RuntimeText = "配置尚未保存，调度器仍使用上次保存的状态：" + error;
+        }
     }
 
     /// <summary>后台通知只安排 UI 工作，不从计时器线程修改可观察集合。</summary>
@@ -87,14 +101,61 @@ public partial class PuloniaTaskPlanViewModel
         TriggerEditor = new PuloniaTaskTriggerEditorViewModel(new PuloniaTaskTrigger(), SelectedDocument.Plan);
     }
 
-    /// <summary>新增默认禁用的全局热键草稿，仅在程序运行时生效。</summary>
+    /// <summary>新增默认禁用的快捷键草稿，默认采用软件推荐的键鼠监听模式。</summary>
     [RelayCommand]
     private void AddHotkeyTrigger()
     {
         if (SelectedDocument is null) return;
         SelectedTrigger = null;
         TriggerEditor = new PuloniaTaskTriggerEditorViewModel(new PuloniaTaskTrigger
-        { Name = "快捷运行", Kind = PuloniaTaskTriggerKind.Hotkey }, SelectedDocument.Plan);
+        { Name = "快捷运行", Kind = PuloniaTaskTriggerKind.Hotkey,
+            HotkeyType = HotKeyTypeEnum.KeyboardMonitor, Hotkey = "F8" }, SelectedDocument.Plan);
+    }
+
+    /// <summary>卡片开关独立修改启用状态并立即保存，不提交右侧尚未保存的配置字段。</summary>
+    [RelayCommand]
+    private async Task ToggleTriggerEnabledAsync(PuloniaTaskTriggerItemViewModel? item)
+    {
+        var document = SelectedDocument;
+        if (document is null || item is null || IsBusy || !Triggers.Contains(item))
+        {
+            item?.RefreshEnabledBinding();
+            return;
+        }
+        IsBusy = true;
+        try
+        {
+            var saved = document.Plan.Triggers.FirstOrDefault(trigger => trigger.Id == item.Trigger.Id);
+            if (saved is null) return;
+            var trigger = PuloniaTaskJson.Read<PuloniaTaskTrigger>(PuloniaTaskJson.Write(saved));
+            trigger.Enabled = !saved.Enabled;
+            trigger.ActivatedAtUtc = DateTimeOffset.UtcNow;
+            if (trigger.Enabled && trigger.BusyPolicy == PuloniaTaskBusyPolicy.StopCurrent)
+            {
+                var answer = await ThemedMessageBox.ShowAsync("该触发器会停止当前任务，并在清理完成后执行新请求。确认启用？",
+                    "停止当前任务策略", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning, MessageBoxResult.No);
+                if (answer != MessageBoxResult.Yes) return;
+            }
+            // 使用已保存字段构建候选；即使当前编辑草稿无效，也不会被开关操作带入计划。
+            var candidate = PuloniaTaskJson.ClonePlan(document.Plan);
+            candidate.Triggers[candidate.Triggers.FindIndex(value => value.Id == trigger.Id)] = trigger;
+            PuloniaTaskValidator.ValidatePlan(candidate);
+            _preserveTriggerDraft = true;
+            document.ApplyMutation(() =>
+                document.Plan.Triggers[document.Plan.Triggers.FindIndex(value => value.Id == trigger.Id)] = trigger,
+                document.SelectedNode);
+            if (await SaveDocumentAsync(document))
+                StatusMessage = $"触发器“{trigger.Name}”已{(trigger.Enabled ? "启用" : "停用")}并保存。其他配置草稿未提交。";
+            RefreshTriggers();
+            UpdateTriggerStatus();
+        }
+        catch (Exception ex) { await ThemedMessageBox.ErrorAsync(ex.Message, "无法切换触发器状态"); }
+        finally
+        {
+            _preserveTriggerDraft = false;
+            item.RefreshEnabledBinding();
+            IsBusy = false;
+        }
     }
 
     /// <summary>校验草稿、纳入撤销并立即保存；只有耐久保存成功后宿主才读取新配置。</summary>

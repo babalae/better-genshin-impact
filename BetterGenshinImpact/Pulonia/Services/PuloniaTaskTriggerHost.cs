@@ -4,26 +4,24 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Input;
 using System.Windows.Threading;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Service.Instance;
-using Fischless.HotkeyCapture;
+using BetterGenshinImpact.Service.Interface;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Pulonia.Services;
 
-/// <summary>主实例的唯一异步调度循环，负责程序内定时、全局热键与手动命令行入口。</summary>
+/// <summary>主实例的唯一异步调度循环，负责程序内定时、两种快捷键与手动命令行入口。</summary>
 public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, PuloniaTaskService tasks,
     InstanceService instances,
-    ILogger<PuloniaTaskTriggerHost> logger, TimeProvider clock) : BackgroundService
+    ILogger<PuloniaTaskTriggerHost> logger, TimeProvider clock, IConfigService? configService = null) : BackgroundService
 {
-    /// <summary>UI 线程拥有的全局热键注册。</summary>
-    private readonly List<HotkeyHook> _hotkeys = [];
+    /// <summary>UI 线程拥有的统一热键模型，复用应用的全局注册、键鼠监听与聊天屏蔽。</summary>
+    private readonly List<HotKeySettingModel> _hotkeys = [];
     /// <summary>已注册热键的配置签名。</summary>
     private string _hotkeySignature = "";
     /// <summary>热键冲突或注册错误。</summary>
@@ -33,7 +31,7 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, PuloniaTaskSe
     /// <summary>启动时捕获的所属 UI Dispatcher；关闭回调不能再访问可能已变成 null 的 Application.Current。</summary>
     private readonly Dispatcher? _dispatcher = Application.Current?.Dispatcher;
     /// <summary>UI 线程上的终止性热键清理标记，防止停止后晚到的刷新重新创建 NativeWindow。</summary>
-    private bool _hotkeysReleased;
+    private volatile bool _hotkeysReleased;
     /// <summary>可供界面读取的最后一次状态，不暴露服务内部游标。</summary>
     public IReadOnlyList<PuloniaTaskTriggerState> States { get; private set; } = [];
     /// <summary>调度与平台入口的可见状态。</summary>
@@ -120,7 +118,7 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, PuloniaTaskSe
     /// <summary>在消息线程停止前释放 NativeWindow，避免宿主关闭等候已退出的 STA。</summary>
     private void OnDispatcherShutdown(object? sender, EventArgs e) => ReleaseHotkeys();
 
-    /// <summary>在拥有窗口的 UI 线程释放全局热键注册。</summary>
+    /// <summary>在所属 UI 线程释放全局热键与共享键鼠监听注册。</summary>
     private void ReleaseHotkeys()
     {
         if (_hotkeysReleased)
@@ -130,7 +128,7 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, PuloniaTaskSe
             dispatcher.ShutdownStarted -= OnDispatcherShutdown;
         foreach (var hook in _hotkeys)
         {
-            try { hook.Dispose(); }
+            try { hook.UnRegisterHotKey(); }
             catch (Exception ex) { logger.LogError(ex, "Pulonia 关闭时释放热键失败"); }
         }
         _hotkeys.Clear();
@@ -145,33 +143,68 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, PuloniaTaskSe
         var bindings = plans.SelectMany(plan => plan.Triggers.Where(item => item.Enabled
             && item.Kind == PuloniaTaskTriggerKind.Hotkey).Select(trigger => (plan, trigger))).ToArray();
         var signature = string.Join("|", bindings.Select(item => item.plan.Id + PuloniaTaskSchedule.Signature(item.trigger)));
-        if (signature == _hotkeySignature) return;
+        // 注册冲突可能已由用户在快捷键页解除，定期读档时允许重试失败配置。
+        if (signature == _hotkeySignature && _hotkeyError.Length == 0) return;
         await dispatcher.InvokeAsync(() =>
         {
             if (_hotkeysReleased || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
                 return;
-            foreach (var hook in _hotkeys) hook.Dispose();
+            foreach (var hook in _hotkeys) hook.UnRegisterHotKey();
             _hotkeys.Clear();
             _hotkeyError = "";
             foreach (var (plan, trigger) in bindings)
             {
-                var hook = new HotkeyHook();
+                HotKeySettingModel? hotkeyModel = null;
                 try
                 {
-                    var hotkey = HotKey.FromString(trigger.Hotkey);
-                    hook.RegisterHotKey((User32.HotKeyModifiers)((int)hotkey.Modifiers | 0x4000),
-                        (System.Windows.Forms.Keys)KeyInterop.VirtualKeyFromKey(hotkey.Key));
-                    hook.KeyPressed += (_, _) => _ = FireHotkeySafelyAsync(plan.Id, trigger.Id);
-                    _hotkeys.Add(hook);
+                    PuloniaTaskSchedule.Validate(trigger);
+                    if (HasApplicationHotkeyConflict(trigger))
+                        throw new InvalidOperationException("与软件已有快捷键冲突，请选择其他键。");
+                    // 不自行安装新钩子；监听模式随现有 MouseKeyMonitor 的启停与游戏前台规则生效。
+                    hotkeyModel = new HotKeySettingModel(trigger.Name, "Pulonia/" + plan.Id + "/" + trigger.Id,
+                        trigger.Hotkey, trigger.HotkeyType.ToString(), (_, _) =>
+                        {
+                            if (!_stopToken.IsCancellationRequested && !_hotkeysReleased
+                                && !dispatcher.HasShutdownStarted && !dispatcher.HasShutdownFinished)
+                                _ = FireHotkeySafelyAsync(plan.Id, trigger.Id);
+                        }) { SuppressRepeat = true };
+                    hotkeyModel.RegisterHotKey();
+                    if (hotkeyModel.HotKey.IsEmpty)
+                        throw new InvalidOperationException(hotkeyModel.RegistrationError ?? "快捷键注册失败。");
+                    _hotkeys.Add(hotkeyModel);
                 }
                 catch (Exception ex)
                 {
-                    hook.Dispose();
+                    hotkeyModel?.UnRegisterHotKey();
                     _hotkeyError += $" 热键“{trigger.Name}”注册失败（可能冲突）：{ex.Message}";
                 }
             }
             _hotkeySignature = signature;
         }, DispatcherPriority.Normal, ct);
+    }
+
+    /// <summary>已有软件配置优先；即使快捷键页面尚未初始化，也不能让计划抢先占用停止键等功能。</summary>
+    private bool HasApplicationHotkeyConflict(PuloniaTaskTrigger trigger)
+    {
+        var config = configService?.Get().HotKeyConfig;
+        if (config is null) return false;
+        var key = HotKey.FromString(trigger.Hotkey);
+        foreach (var property in config.GetType().GetProperties().Where(property => property.PropertyType == typeof(string)
+            && property.Name.EndsWith("Hotkey", StringComparison.Ordinal)))
+        {
+            if (!Enum.TryParse<HotKeyTypeEnum>(config.GetType().GetProperty(property.Name + "Type")?.GetValue(config) as string, out var type))
+                continue;
+            try
+            {
+                if (HotKeySettingModel.AreConflicting(key, trigger.HotkeyType,
+                    HotKey.FromString(property.GetValue(config) as string ?? ""), type)) return true;
+            }
+            catch (ArgumentException)
+            {
+                // 原设置中的非法键值不是一个可注册热键，不因它阻断其他有效配置。
+            }
+        }
+        return false;
     }
 
     /// <summary>观察热键异步异常，避免 async void 异常穿过系统消息循环。</summary>

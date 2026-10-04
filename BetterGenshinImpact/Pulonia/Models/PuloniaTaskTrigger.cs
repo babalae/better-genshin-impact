@@ -1,10 +1,12 @@
 using System;
+using System.ComponentModel;
+using BetterGenshinImpact.Model;
 using Newtonsoft.Json;
 
 namespace BetterGenshinImpact.Pulonia.Models;
 
 /// <summary>
-/// 计划内的定时或全局热键触发配置；只描述准入，不直接驱动游戏。
+/// 计划内的定时或快捷键触发配置；只描述准入，不直接驱动游戏。
 /// </summary>
 public sealed class PuloniaTaskTrigger
 {
@@ -29,8 +31,12 @@ public sealed class PuloniaTaskTrigger
     public int IntervalMinutes { get; set; } = 24 * 60;
     /// <summary>本次启用/调整的起点，不补跑配置生效以前的日程。</summary>
     public DateTimeOffset ActivatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
-    /// <summary>全局热键，如 Ctrl + Alt + F8。</summary>
+    /// <summary>快捷键，复用现有热键文本格式，支持键盘键或鼠标侧键。</summary>
     public string Hotkey { get; set; } = "Ctrl + Alt + F8";
+    /// <summary>复用软件的全局注册 / 键鼠监听类型；旧配置缺省为全局注册，省略默认值以保持原配置签名。</summary>
+    [DefaultValue(HotKeyTypeEnum.GlobalRegister)]
+    [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
+    public HotKeyTypeEnum HotkeyType { get; set; } = HotKeyTypeEnum.GlobalRegister;
     /// <summary>可选编辑树节点 ID；为空运行整个计划，祖先配置仍生效。</summary>
     public string? TargetTaskId { get; set; }
     /// <summary>当前已登录账号资料引用；不执行账号切换。</summary>
@@ -50,7 +56,7 @@ public enum PuloniaTaskTriggerKind
 {
     /// <summary>定时日程。</summary>
     Schedule,
-    /// <summary>全局键盘热键。</summary>
+    /// <summary>全局热键或键鼠监听快捷键。</summary>
     Hotkey
 }
 

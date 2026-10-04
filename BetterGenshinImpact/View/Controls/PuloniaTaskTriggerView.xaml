@@ -1,29 +1,83 @@
 <UserControl x:Class="BetterGenshinImpact.View.Controls.PuloniaTaskTriggerView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-             xmlns:hotkey="clr-namespace:BetterGenshinImpact.View.Controls.HotKey">
+             xmlns:hotkey="clr-namespace:BetterGenshinImpact.View.Controls.HotKey"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <UserControl.Resources>
+        <behavior:BindingProxy x:Key="TriggerPageProxy" Data="{Binding}" />
         <BooleanToVisibilityConverter x:Key="BoolVisibility" />
         <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap" /></Style>
         <Style x:Key="Label" TargetType="TextBlock"><Setter Property="Margin" Value="0,14,0,6" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
         <Style TargetType="ui:TextBox" BasedOn="{StaticResource DefaultTextBoxStyle}"><Setter Property="MinWidth" Value="56" /><Setter Property="VerticalContentAlignment" Value="Center" /></Style>
-
+        <Style TargetType="ComboBox" BasedOn="{StaticResource DefaultComboBoxStyle}">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="MinWidth" Value="0" />
+        </Style>
+        <!-- 不使用系统 ListBox 高亮，保持深浅主题文字对比和卡片选中反馈。 -->
+        <Style x:Key="TriggerCardStyle" TargetType="ListBoxItem">
+            <Setter Property="Margin" Value="0,0,0,8" />
+            <Setter Property="Padding" Value="12" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Card" Padding="{TemplateBinding Padding}" CornerRadius="6" BorderThickness="1"
+                                Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}">
+                            <ContentPresenter HorizontalAlignment="Stretch" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Card" Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                                <Setter TargetName="Card" Property="Background">
+                                    <Setter.Value><SolidColorBrush Color="{DynamicResource AccentFillColorDefault}" Opacity="0.12" /></Setter.Value>
+                                </Setter>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
+    <UserControl.Style>
+        <Style TargetType="UserControl">
+            <Style.Triggers><DataTrigger Binding="{Binding IsBusy}" Value="True"><Setter Property="IsEnabled" Value="False" /></DataTrigger></Style.Triggers>
+        </Style>
+    </UserControl.Style>
     <Grid Margin="12">
         <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-        <WrapPanel Margin="0,0,0,10">
-            <Button Margin="0,0,8,4" Content="新增定时触发" Command="{Binding AddScheduleTriggerCommand}" />
-            <Button Margin="0,0,8,4" Content="新增全局热键" Command="{Binding AddHotkeyTriggerCommand}" />
-            <TextBlock Margin="0,4,0,4" Text="仅在 BGI 运行时生效；新触发器默认关闭，配置完成后勾选启用并保存。" />
-        </WrapPanel>
+        <StackPanel Margin="0,0,0,12">
+            <WrapPanel>
+                <Button Margin="0,0,8,6" Content="新增定时触发" Command="{Binding AddScheduleTriggerCommand}" />
+                <Button Margin="0,0,8,6" Content="新增快捷键触发" Command="{Binding AddHotkeyTriggerCommand}" />
+            </WrapPanel>
+            <TextBlock FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       Text="仅在 BGI 运行时生效。新触发器默认关闭：先保存配置，再使用列表卡片上的开关启用。开关会立即保存，不提交配置草稿。" />
+        </StackPanel>
         <Grid Grid.Row="1">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="220" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-            <ListBox ItemsSource="{Binding Triggers}" SelectedItem="{Binding SelectedTrigger}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="190" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+            <ListBox ItemsSource="{Binding Triggers}" SelectedItem="{Binding SelectedTrigger}" ItemContainerStyle="{StaticResource TriggerCardStyle}"
+                     Padding="0" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                 <ListBox.ItemTemplate><DataTemplate>
-                    <StackPanel Margin="4,8" MaxWidth="194">
-                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                        <TextBlock Margin="0,6,0,0" Text="{Binding Summary}" />
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <TextBlock Margin="0,0,8,0" Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <ui:ToggleSwitch Grid.Column="1" OnContent="" OffContent="" VerticalAlignment="Center"
+                                             IsChecked="{Binding Enabled, Mode=OneWay}"
+                                             Command="{Binding Data.ToggleTriggerEnabledCommand, Source={StaticResource TriggerPageProxy}}"
+                                             CommandParameter="{Binding}" ToolTip="启用 / 停用（立即保存）"
+                                             AutomationProperties.Name="{Binding Name, StringFormat=启用触发器：{0}}" />
+                        </Grid>
+                        <TextBlock Margin="0,8,0,0" FontSize="12" Text="{Binding Summary}" />
                         <TextBlock Margin="0,6,0,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding RuntimeText}" />
                     </StackPanel>
                 </DataTemplate></ListBox.ItemTemplate>
@@ -36,9 +90,8 @@
                 <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Margin="0,0,12,12" DataContext="{Binding TriggerEditor}">
-                        <TextBlock Text="名称" Style="{StaticResource Label}" />
+                        <TextBlock Text="名称" Margin="0,0,0,6" Style="{StaticResource Label}" />
                         <ui:TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
-                        <CheckBox Margin="0,10,0,0" Content="启用此触发器（保存后生效）" IsChecked="{Binding Enabled}" />
                         <StackPanel Visibility="{Binding IsSchedule, Converter={StaticResource BoolVisibility}}">
                             <TextBlock Style="{StaticResource Label}" Text="快捷配置" />
                             <WrapPanel>
@@ -81,9 +134,18 @@
                             <TextBlock Margin="0,8,0,0" Text="{Binding EffectiveCron, StringFormat=当前表达式：{0}}" FontFamily="Consolas" />
                         </StackPanel>
                         <StackPanel Visibility="{Binding IsHotkey, Converter={StaticResource BoolVisibility}}">
-                            <TextBlock Style="{StaticResource Label}" Text="全局热键（点击输入框后按下组合键）" />
-                            <hotkey:HotKeyTextBox HotKeyTypeName="Pulonia 触发器" Hotkey="{Binding Hotkey, Mode=TwoWay}" />
-                            <TextBlock Margin="0,6,0,0" FontSize="12" Text="需带 Ctrl / Alt / Shift / Win；程序运行时生效。请避免与现有任务、系统快捷键冲突。" />
+                            <TextBlock Style="{StaticResource Label}" Text="快捷键（点击类型按钮可切换模式）" />
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                <ui:Button Margin="0,0,8,0" MinHeight="36" Content="{Binding LocalizedHotkeyTypeName}"
+                                           Command="{Binding SwitchHotkeyTypeCommand}" ToolTip="切换全局热键 / 键鼠监听；切换后需重新设置键值" />
+                                <!-- 显式复用现有热键控件样式及类型名称，避免白底和错误捕获规则。 -->
+                                <hotkey:HotKeyTextBox Grid.Column="1" MinWidth="56" MinHeight="36" Padding="12,6"
+                                                      Style="{StaticResource DefaultTextBoxStyle}" TextAlignment="Center" VerticalContentAlignment="Center"
+                                                      HotKeyTypeName="{Binding HotkeyTypeName, Mode=OneWay}" Hotkey="{Binding Hotkey, Mode=TwoWay}"
+                                                      ToolTip="点击后按下快捷键；Delete / Backspace / Esc 清空。键鼠监听支持鼠标侧键。" />
+                            </Grid>
+                            <TextBlock Margin="0,8,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12" Text="{Binding HotkeyHelp}" />
                         </StackPanel>
                         <Border Margin="0,12,0,0" Padding="12" CornerRadius="6" Background="{DynamicResource SubtleFillColorSecondaryBrush}"><TextBlock Text="{Binding PreviewText}" /></Border>
                         <TextBlock Style="{StaticResource Label}" Text="运行范围" />
@@ -95,14 +157,21 @@
                         <TextBlock Margin="0,6,0,0" FontSize="12" Text="不同计划自动串行排队；不会并发抢占游戏输入。停止当前策略需保存时确认。" />
                         <TextBlock Style="{StaticResource Label}" Text="有效开始窗口（分钟）" />
                         <ui:TextBox Text="{Binding WindowMinutes, UpdateSourceTrigger=PropertyChanged}" />
-                        <CheckBox Margin="0,10,0,0" Content="离线 / 睡眠后，在有效窗口内只补最近一次" IsChecked="{Binding CatchUp}" />
+                        <CheckBox Margin="0,10,0,0" Content="离线 / 睡眠后，在有效窗口内只补最近一次" IsChecked="{Binding CatchUp}"
+                                  Visibility="{Binding IsSchedule, Converter={StaticResource BoolVisibility}}" />
                     </StackPanel>
                 </ScrollViewer>
                 <WrapPanel Grid.Row="1" Margin="0,12,0,0">
-                    <Button Margin="0,0,8,4" Content="保存触发器" Command="{Binding SaveTriggerCommand}" IsEnabled="{Binding TriggerEditor.IsValid}" />
+                    <ui:Button Margin="0,0,8,4" Appearance="Primary" Content="保存配置" Command="{Binding SaveTriggerCommand}" IsEnabled="{Binding TriggerEditor.IsValid}" />
                     <Button Margin="0,0,8,4" Content="放弃草稿" Command="{Binding CancelTriggerEditCommand}" />
-                    <Button Margin="0,0,8,4" Content="删除已保存触发器" Command="{Binding DeleteTriggerCommand}" />
-                    <Button Margin="0,0,8,4" Content="查看最近执行记录" Command="{Binding ViewTriggerHistoryCommand}" />
+                    <ui:Button Margin="0,0,8,4" Padding="8" Command="{Binding ViewTriggerHistoryCommand}" ToolTip="查看最近执行记录" AutomationProperties.Name="查看触发器执行记录">
+                        <ui:Button.Style><Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}"><Style.Triggers><DataTrigger Binding="{Binding SelectedTrigger}" Value="{x:Null}"><Setter Property="IsEnabled" Value="False" /></DataTrigger></Style.Triggers></Style></ui:Button.Style>
+                        <ui:SymbolIcon Symbol="History24" />
+                    </ui:Button>
+                    <ui:Button Margin="0,0,0,4" Padding="8" Command="{Binding DeleteTriggerCommand}" ToolTip="删除已保存触发器" AutomationProperties.Name="删除触发器">
+                        <ui:Button.Style><Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}"><Style.Triggers><DataTrigger Binding="{Binding SelectedTrigger}" Value="{x:Null}"><Setter Property="IsEnabled" Value="False" /></DataTrigger></Style.Triggers></Style></ui:Button.Style>
+                        <ui:SymbolIcon Symbol="Delete24" />
+                    </ui:Button>
                 </WrapPanel>
             </Grid>
         </Grid>

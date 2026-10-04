@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask;
 using Fischless.HotkeyCapture;
 using Gma.System.MouseKeyHook;
 using System;
@@ -99,7 +99,9 @@ public class MouseHook
     {
         IsPressed = false;
         IsHold = false;
-        AllMouseHooks.Remove(BindMouse);
+        // 只有实际登记的对象可以注销；失败的候选与重复清理不能误删原有侧键监听。
+        if (AllMouseHooks.TryGetValue(BindMouse, out var owner) && ReferenceEquals(owner, this))
+            AllMouseHooks.Remove(BindMouse);
     }
 
     public void Dispose()
