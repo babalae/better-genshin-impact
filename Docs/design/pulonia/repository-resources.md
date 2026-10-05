@@ -24,17 +24,19 @@
 
 ```text
 Repos/<原有仓库目录>/                         可更新的来源
-User/ScriptResources/repositories.json       稳定身份、名称、本地位置
-User/ScriptResources/selection.json          JS、地图追踪各自上次选择
-User/ScriptResources/Snapshots/<仓库ID>/Archives/<内容块ID>.zip
-User/ScriptResources/Snapshots/<仓库ID>/<版本>/scopes.json
-User/ScriptResources/Previews/<仓库ID>/<版本>/<资源键>/
-User/ScriptResources/Cache/<仓库ID>/<版本>/<资源键>/content/
-User/ScriptResources/Workspaces/<仓库ID>/<资源键>/
-User/ScriptResources/Locks/                  跨实例文件锁
-User/ScriptResources/SourceVersions/         文件来源的更新代次
+User/Pulonia/ScriptResources/repositories.json   稳定身份、名称、本地位置
+User/Pulonia/ScriptResources/selection.json      JS、地图追踪各自上次选择
+User/Pulonia/ScriptResources/Snapshots/<仓库ID>/Archives/<内容块ID>.zip
+User/Pulonia/ScriptResources/Snapshots/<仓库ID>/<版本>/scopes.json
+User/Pulonia/ScriptResources/Previews/<仓库ID>/<版本>/<资源键>/
+User/Pulonia/ScriptResources/Cache/<仓库ID>/<版本>/<资源键>/content/
+User/Pulonia/ScriptResources/Workspaces/<仓库ID>/<资源键>/
+User/Pulonia/ScriptResources/Locks/              跨实例文件锁
+User/Pulonia/ScriptResources/SourceVersions/     文件来源的更新代次
 User/Pulonia/                               原有计划、参数、运行记录
 ```
+
+资源数据归属 Pulonia，统一保存到 `User/Pulonia/ScriptResources`，便于和计划、参数及运行记录一起管理和备份。程序直接使用新目录，不迁移或回退读取旧 `User/ScriptResources`；旧数据由用户自行删除。原始拉取来源仍在 `Repos`，添加的本地来源保持自己的位置。
 
 仓库注册、版本会话和提取由共享的 `ScriptRepositoryStore` 提供。每次读取会话固定一个版本；索引、检查和提取不重复读取 HEAD 拼接内容。
 

@@ -40,8 +40,13 @@ github_actions_cache/
 
 *.zip
 
-# Rider
-.idea
+# Rider（仅跟踪解决方案图标，供其他设备显示；其余保持忽略）
+.idea/*
+!.idea/.idea.BetterGenshinImpact/
+.idea/.idea.BetterGenshinImpact/*
+!.idea/.idea.BetterGenshinImpact/.idea/
+.idea/.idea.BetterGenshinImpact/.idea/*
+!.idea/.idea.BetterGenshinImpact/.idea/icon.svg
 
 __pycache__/
 

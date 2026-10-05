@@ -85,7 +85,8 @@ User/Pulonia/
 ├─ accounts/<accountId>.json        # 账号资料；托管阶段含目标与最近状态快照
 ├─ state.json                      # 队列、调度游标、活动运行、CD/额度、待归档运行
 ├─ state.json.bak                  # 上一个有效状态版本
-└─ history/<planId>/<runId>.json    # 已结束运行的不可变快照及节点结果
+├─ history/<planId>/<runId>.json    # 已结束运行的不可变快照及节点结果
+└─ ScriptResources/               # 仓库注册、资源归档、缓存、预览与 JS 工作数据
 ```
 
 文件用稳定 ID 命名，名称只用于展示。计划重命名不改变引用和历史位置。`plan-order.json` 只保存计划稳定 ID 的显示顺序，未知或已删除 ID 在列出计划时忽略；拖拽排序不改写计划文件、不增加内容修订号。目录文件损坏时明确报错，不用随机文件枚举顺序静默替代。`PuloniaTaskStore` 返回模型，ViewModel 只负责编辑；新文件用 Newtonsoft.Json、UTF-8 无 BOM，既有文件仍按原格式导入。

@@ -16,8 +16,8 @@ namespace BetterGenshinImpact.Core.Script.Repositories;
 /// <summary>管理远程来源注册、按资源保留的版本归档和共享资源缓存；不依赖任务页面。</summary>
 public sealed partial class ScriptRepositoryStore
 {
-    /// <summary>应用共享实例，测试可使用独立目录建立自己的存储。</summary>
-    public static ScriptRepositoryStore Shared { get; } = new(Global.Absolute("User/ScriptResources"), Global.Absolute("Repos"));
+    /// <summary>Pulonia 共用的资源存储，归档、缓存和脚本工作数据随任务系统集中保存。</summary>
+    public static ScriptRepositoryStore Shared { get; } = new(Global.Absolute("User/Pulonia/ScriptResources"), Global.Absolute("Repos"));
     /// <summary>资源区根目录，与更新器能够重置的 Repos 目录分开。</summary>
     public string RootDirectory { get; }
     /// <summary>用于发现已经拉取的仓库，不执行下载或订阅。</summary>
