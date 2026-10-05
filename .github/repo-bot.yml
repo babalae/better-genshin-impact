@@ -29,6 +29,7 @@ issues:
             aliases:
               - 系统环境
               - System Environment
+              - 运行环境与关键配置
           - id: version
             aliases:
               - BetterGI 版本号
@@ -57,6 +58,7 @@ issues:
             aliases:
               - 功能请求
               - Feature Request
+              - 需求或建议
           - id: scenario
             aliases:
               - 使用场景
