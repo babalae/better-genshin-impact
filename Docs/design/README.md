@@ -6,6 +6,9 @@
 
 ## 文档列表
 
+- [配置组「只拾取圣遗物」](group-artifact-pickup.md)
+- [米游社扫码 / 手机号登录（独立模块）](miyoushe-passport-login.md)
+- [米游社 Cookie / Token 换发（续期）功能开发说明](miyoushe-cookie-refresh.md)
 - [Pulonia 任务系统设计总览与开发计划](automation-system.md)
 - [BetterGI 多实例命名管道协议](multi-instance-ipc.md)
 - [BetterGI 输入层 InputHub 设计](input-hub.md)
