@@ -15,7 +15,7 @@ public sealed class PuloniaTask
     /// 稳定节点 ID，重命名和移动节点时保持不变。
     /// </summary>
     [JsonProperty("id", Required = Required.Always)]
-    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    public string Id { get; set; } = PuloniaId.NewTaskId();
 
     /// <summary>
     /// 用户可见的任务名称。

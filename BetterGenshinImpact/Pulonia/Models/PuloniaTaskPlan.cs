@@ -19,7 +19,7 @@ public sealed class PuloniaTaskPlan
     /// 稳定计划 ID，同时作为存储文件名。
     /// </summary>
     [JsonProperty("id", Required = Required.Always)]
-    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    public string Id { get; set; } = PuloniaId.NewPlanId();
 
     /// <summary>
     /// 文件格式版本，未知版本不能自动降级读取。

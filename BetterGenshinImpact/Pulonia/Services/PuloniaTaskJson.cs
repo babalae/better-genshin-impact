@@ -63,7 +63,7 @@ public static class PuloniaTaskJson
     public static PuloniaTaskPlan CopyPlan(PuloniaTaskPlan plan)
     {
         var copy = ClonePlan(plan);
-        copy.Id = Guid.NewGuid().ToString("N");
+        copy.Id = PuloniaId.NewPlanId();
         copy.Revision = 0;
 
         // 节点身份改变后，账号预设选择和触发目标必须同步指向副本节点。
@@ -74,7 +74,7 @@ public static class PuloniaTaskJson
                 item => taskIds[item.Key], item => item.Value, StringComparer.Ordinal);
         foreach (var trigger in copy.Triggers)
         {
-            trigger.Id = Guid.NewGuid().ToString("N");
+            trigger.Id = PuloniaId.NewTriggerId();
             trigger.Enabled = false;
             if (trigger.TargetTaskId is { } targetId)
                 trigger.TargetTaskId = taskIds[targetId];
@@ -269,7 +269,7 @@ public static class PuloniaTaskJson
     private static void AssignNewIds(PuloniaTask task, IDictionary<string, string>? taskIds = null)
     {
         var originalId = task.Id;
-        task.Id = Guid.NewGuid().ToString("N");
+        task.Id = PuloniaId.NewTaskId();
         taskIds?.Add(originalId, task.Id);
         foreach (var child in task.Children)
             AssignNewIds(child, taskIds);

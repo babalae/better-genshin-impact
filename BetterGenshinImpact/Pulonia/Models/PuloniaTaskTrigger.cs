@@ -12,7 +12,7 @@ public sealed class PuloniaTaskTrigger
 {
     /// <summary>稳定触发器 ID，修改名称不改变去重身份。</summary>
     [JsonProperty("id", Required = Required.Always)]
-    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    public string Id { get; set; } = PuloniaId.NewTriggerId();
     /// <summary>用户可读名称。</summary>
     public string Name { get; set; } = "每日任务";
     /// <summary>是否启用；新建配置不会未经确认启动自动任务。</summary>

@@ -13,7 +13,7 @@ public sealed class PuloniaTaskPreset
     /// 稳定预设 ID。
     /// </summary>
     [JsonProperty("id", Required = Required.Always)]
-    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    public string Id { get; set; } = PuloniaId.NewPresetId();
 
     /// <summary>
     /// 预设显示名称。
