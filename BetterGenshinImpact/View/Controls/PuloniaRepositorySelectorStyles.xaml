@@ -1,0 +1,163 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+    <!-- 主行在选中区和下拉中共用，图标、名称和类型不依赖完整路径。 -->
+    <DataTemplate x:Key="PuloniaRepositoryPrimaryLine">
+        <Grid VerticalAlignment="Center">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="24" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <ui:SymbolIcon FontSize="16" Symbol="{Binding Icon}" VerticalAlignment="Center" HorizontalAlignment="Left">
+                <ui:SymbolIcon.Style>
+                    <Style TargetType="ui:SymbolIcon">
+                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsOfficial}" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ui:SymbolIcon.Style>
+            </ui:SymbolIcon>
+            <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="{Binding DisplayName}"
+                       TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
+            <Border Grid.Column="2" Margin="8,0,0,0" Padding="6,1" CornerRadius="4"
+                    Background="{DynamicResource ControlFillColorSecondaryBrush}" VerticalAlignment="Center">
+                <TextBlock FontSize="11" Text="{Binding TypeLabel}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </Border>
+        </Grid>
+    </DataTemplate>
+
+    <!-- 收起仅显示主行，展开项额外显示简短来源，两种模板明确分开避免布局状态误判。 -->
+    <DataTemplate x:Key="PuloniaRepositorySelectedTemplate">
+        <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource PuloniaRepositoryPrimaryLine}" />
+    </DataTemplate>
+    <DataTemplate x:Key="PuloniaRepositoryDropDownTemplate">
+        <Grid VerticalAlignment="Center">
+            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+            <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource PuloniaRepositoryPrimaryLine}" />
+            <TextBlock Grid.Row="1" Margin="24,4,0,0" FontSize="11"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding SourceDescription}"
+                       TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
+        </Grid>
+    </DataTemplate>
+
+    <!-- 使用主题资源绘制弱悬停/选中背景，键盘高亮与鼠标选择采用相同视觉。 -->
+    <Style x:Key="PuloniaRepositoryItemStyle" TargetType="ComboBoxItem">
+        <Setter Property="Height" Value="52" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="ToolTip" Value="{Binding Tooltip}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBoxItem">
+                    <Border x:Name="ItemBackground" Margin="4,1" Padding="8,5" CornerRadius="6" Background="Transparent">
+                        <Grid>
+                            <Border x:Name="SelectedIndicator" Width="3" Height="26" Margin="-6,0,0,0"
+                                    HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="2" Visibility="Collapsed"
+                                    Background="{DynamicResource AccentFillColorDefaultBrush}" />
+                            <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center" />
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="ItemBackground" Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="ItemBackground" Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                            <Setter TargetName="SelectedIndicator" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="ItemBackground" Property="Opacity" Value="0.5" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 独立样式显式固定 Popup 宽度，长名称或来源只能省略，不能撑宽窗口。 -->
+    <Style x:Key="PuloniaRepositorySelectorStyle" TargetType="ComboBox" BasedOn="{StaticResource DefaultComboBoxStyle}">
+        <Setter Property="Height" Value="36" />
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="MaxDropDownHeight" Value="320" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="ItemTemplate" Value="{StaticResource PuloniaRepositoryDropDownTemplate}" />
+        <Setter Property="ItemContainerStyle" Value="{StaticResource PuloniaRepositoryItemStyle}" />
+        <Setter Property="TextSearch.TextPath" Value="DisplayName" />
+        <Setter Property="SelectedValuePath" Value="Repository" />
+        <Setter Property="ToolTip" Value="{Binding SelectedItem.Tooltip, RelativeSource={RelativeSource Self}}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBox">
+                    <Grid>
+                        <!-- 点击区域铺满控件，不继承普通 ToggleButton 的对齐、边距和内容尺寸。 -->
+                        <ToggleButton x:Name="DropDownToggle" Focusable="False" ClickMode="Press" Style="{x:Null}"
+                                      HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="0" Padding="0"
+                                      IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <Border x:Name="SelectorBorder" CornerRadius="6" BorderThickness="1"
+                                            Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" />
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="SelectorBorder" Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                                        </Trigger>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="SelectorBorder" Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                        </ToggleButton>
+                        <ContentPresenter Margin="12,0,44,0" VerticalAlignment="Center" HorizontalAlignment="Stretch"
+                                          Content="{TemplateBinding SelectedItem}" IsHitTestVisible="False"
+                                          ContentTemplate="{StaticResource PuloniaRepositorySelectedTemplate}" />
+                        <!-- 独立箭头区域始终可见；图形本身不抢占点击，统一交由底层按钮打开。 -->
+                        <Border Width="34" Margin="0,1,1,1" HorizontalAlignment="Right" CornerRadius="0,5,5,0"
+                                IsHitTestVisible="False" Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                            <Path x:Name="DropDownArrow" Width="10" Height="5" Stretch="Fill" Data="M 0,0 L 5,5 L 10,0"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center" StrokeThickness="1.8"
+                                  Stroke="{DynamicResource TextFillColorPrimaryBrush}" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                  StrokeLineJoin="Round" RenderTransformOrigin="0.5,0.5" />
+                        </Border>
+                        <Border x:Name="FocusBorder" CornerRadius="6" BorderThickness="1" IsHitTestVisible="False" BorderBrush="Transparent" />
+                        <Popup x:Name="PART_Popup" AllowsTransparency="True" Focusable="False" Placement="Bottom"
+                               IsOpen="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                               Width="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
+                               PlacementTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
+                               StaysOpen="True" PopupAnimation="Fade">
+                            <!-- ComboBox 自己协调鼠标捕获和外部点击关闭，Popup 不另行抢占捕获。 -->
+                            <Border Margin="0,4,0,0" Padding="0,4" CornerRadius="8" BorderThickness="1"
+                                    Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+                                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+                                <ScrollViewer MaxHeight="{Binding MaxDropDownHeight, RelativeSource={RelativeSource TemplatedParent}}"
+                                              HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
+                                              CanContentScroll="True">
+                                    <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
+                                </ScrollViewer>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsDropDownOpen" Value="True">
+                            <Setter TargetName="DropDownArrow" Property="RenderTransform">
+                                <Setter.Value><RotateTransform Angle="180" /></Setter.Value>
+                            </Setter>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter TargetName="FocusBorder" Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.5" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>

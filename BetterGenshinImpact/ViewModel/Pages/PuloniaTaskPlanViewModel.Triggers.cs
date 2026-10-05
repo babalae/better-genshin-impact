@@ -201,17 +201,19 @@ public partial class PuloniaTaskPlanViewModel
         finally { IsBusy = false; }
     }
 
-    /// <summary>删除需明确确认；排队中的旧触发请求开始前会再次检查并取消。</summary>
+    /// <summary>删除需明确确认；右键菜单传入被点击项，底部按钮缺省使用当前选中触发器。</summary>
     [RelayCommand]
-    private async Task DeleteTriggerAsync()
+    private async Task DeleteTriggerAsync(PuloniaTaskTriggerItemViewModel? item = null)
     {
         var document = SelectedDocument;
-        var trigger = SelectedTrigger?.Trigger;
+        // 传入项必须仍在当前列表中，避免列表刷新后的过期引用误删其他触发器。
+        var target = item is null ? SelectedTrigger : Triggers.Contains(item) ? item : null;
+        var trigger = target?.Trigger;
         if (document is null || trigger is null || IsBusy) return;
         var answer = await ThemedMessageBox.ShowAsync($"删除触发器“{trigger.Name}”？已保存的执行历史不会删除。",
             "删除触发器", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning, MessageBoxResult.No);
         if (answer != MessageBoxResult.Yes) return;
-        document.ApplyMutation(() => document.Plan.Triggers.RemoveAll(item => item.Id == trigger.Id), document.SelectedNode);
+        document.ApplyMutation(() => document.Plan.Triggers.RemoveAll(saved => saved.Id == trigger.Id), document.SelectedNode);
         await SaveDocumentAsync(document);
         RefreshTriggers();
     }

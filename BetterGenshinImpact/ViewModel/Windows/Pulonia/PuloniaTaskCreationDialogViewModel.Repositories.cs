@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -8,7 +9,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.Repositories;
+using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -30,9 +33,20 @@ public partial class PuloniaTaskCreationDialogViewModel
     /// <summary>添加仓库完成后优先选择的稳定身份。</summary>
     private string? _repositoryToSelect;
 
+    /// <summary>官方渠道的共享配置，仅在资源选择器初始化后监听，关闭时解除订阅。</summary>
+    private ScriptConfig? _repositoryDisplayConfig;
+
+    /// <summary>管理窗口打开状态仅阻止父窗口操作，不表示正在读取或提取任务资源。</summary>
+    [ObservableProperty]
+    private bool _isRepositoryManagerOpen;
+
     /// <summary>顶部选择器的仓库列表，仅包含未移除的来源。</summary>
     [ObservableProperty]
     private ObservableCollection<ScriptRepositoryRegistration> _repositories = [];
+
+    /// <summary>包装原始注册对象的展示项，提供短来源与类型，不改变任务资源身份。</summary>
+    [ObservableProperty]
+    private ObservableCollection<PuloniaRepositoryChoiceViewModel> _repositoryChoices = [];
 
     /// <summary>当前浏览的仓库，不影响任何已有任务的来源。</summary>
     [ObservableProperty]
@@ -42,7 +56,14 @@ public partial class PuloniaTaskCreationDialogViewModel
     public bool SupportsRepositories => SelectedDefinition?.TaskType is "javascript" or "pathing";
 
     /// <summary>读取索引、添加来源或确认任务期间禁用仓库管理，避免混用选择。</summary>
-    public bool CanManageRepositories => SupportsRepositories && !IsBusy && !_isClosed;
+    public bool CanManageRepositories => SupportsRepositories && !IsBusy && !IsRepositoryManagerOpen && !_isClosed;
+
+    /// <summary>未下载、读取失败或没有资源时引导用户在独立窗口管理当前来源。</summary>
+    public bool ShowRepositoryGuidance => SupportsRepositories && !IsBusy && _allResources.Count == 0;
+
+    /// <summary>空状态对应的来源管理说明，预览不会自动触发下载。</summary>
+    public string RepositoryGuidance => SelectedRepository is { IsRemote: true } repository && !Directory.Exists(repository.Directory)
+        ? "当前仓库尚未下载，请打开仓库管理下载资源。" : "当前仓库没有可选资源，可打开仓库管理更新或添加来源。";
 
     /// <summary>显示当前本地位置，帮助区分同名仓库和开发目录。</summary>
     public string SelectedRepositoryDirectory => SelectedRepository?.Directory ?? "请选择或添加仓库";
@@ -58,6 +79,13 @@ public partial class PuloniaTaskCreationDialogViewModel
         try
         {
             Repositories = new ObservableCollection<ScriptRepositoryRegistration>(repositories);
+            if (_repositoryDisplayConfig is null)
+            {
+                _repositoryDisplayConfig = TaskContext.Instance().Config.ScriptConfig;
+                _repositoryDisplayConfig.PropertyChanged += OnRepositoryDisplayConfigChanged;
+            }
+            RepositoryChoices = new ObservableCollection<PuloniaRepositoryChoiceViewModel>(
+                PuloniaRepositoryChoiceViewModel.CreateChoices(repositories, _repositoryDisplayConfig.SelectedChannelName));
             SelectedRepository = Repositories.FirstOrDefault(r => r.Id == preferredId)
                 ?? Repositories.FirstOrDefault(r => string.Equals(r.Directory, ScriptRepoUpdater.CenterRepoPath,
                     StringComparison.OrdinalIgnoreCase))
@@ -65,6 +93,22 @@ public partial class PuloniaTaskCreationDialogViewModel
             _repositoryToSelect = null;
         }
         finally { _isUpdatingRepositories = false; }
+    }
+
+    /// <summary>官方渠道变化只刷新现有展示项，不重建列表、重新选中或读取仓库资源。</summary>
+    private void OnRepositoryDisplayConfigChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (_isClosed || args.PropertyName != nameof(ScriptConfig.SelectedChannelName)) return;
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.CheckAccess()) RefreshRepositoryDisplayChannel();
+        else dispatcher.BeginInvoke(RefreshRepositoryDisplayChannel);
+    }
+
+    /// <summary>通过 UI 线程传播官方渠道摘要，已关闭的窗口不再处理排队通知。</summary>
+    private void RefreshRepositoryDisplayChannel()
+    {
+        if (_isClosed) return;
+        foreach (var choice in RepositoryChoices) choice.UpdateOfficialChannel(_repositoryDisplayConfig?.SelectedChannelName);
     }
 
     /// <summary>切换来源时先清空旧树和预览，再只读取当前来源的索引。</summary>
@@ -92,87 +136,47 @@ public partial class PuloniaTaskCreationDialogViewModel
     private bool CanAddRepository() => CanManageRepositories;
 
     /// <summary>移除需要明确选中的仓库；加载和确认时不得变更来源。</summary>
-    private bool CanRemoveRepository() => CanManageRepositories && SelectedRepository is not null;
+    private bool CanRemoveRepository() => CanManageRepositories && SelectedRepository is { IsOfficial: false };
 
-    /// <summary>选择已有本地拉取目录，注册成功后直接切换到该来源。</summary>
+    /// <summary>选择已有本地来源的入口统一引导至独立仓库管理窗口。</summary>
     [RelayCommand(CanExecute = nameof(CanAddRepository))]
-    private async Task AddLocalRepositoryAsync()
-    {
-        var dialog = new Wpf.Ui.Violeta.Win32.OpenFolderDialog
-        {
-            Description = "选择已拉取的脚本仓库根目录（包含 repo.json 索引）",
-            UseDescriptionForTitle = true,
-            SelectedPath = Directory.Exists(SelectedRepository?.Directory) ? SelectedRepository!.Directory : string.Empty
-        };
-        var owner = GetRepositoryDialogOwner();
-        var accepted = owner is null ? dialog.ShowDialog() : dialog.ShowDialog(new WindowInteropHelper(owner).Handle);
-        if (accepted != true) return;
-        IsBusy = true;
-        try
-        {
-            var registration = await _resourceCatalog.Repositories.AddRepositoryAsync(dialog.SelectedPath);
-            _repositoryToSelect = registration.Id;
-        }
-        catch (Exception ex) when (IsRepositoryOperationError(ex))
-        {
-            await ThemedMessageBox.ErrorAsync("添加本地仓库失败：" + ex.Message);
-        }
-        finally { IsBusy = false; }
-        if (_repositoryToSelect is not null && !_isClosed) await InitializeAsync(forceRefresh: true);
-    }
+    private Task AddLocalRepositoryAsync() => OpenRepositoryManagerAsync();
 
-    /// <summary>复用现有 Git 拉取入口添加官方或第三方来源，不修改订阅渠道。</summary>
+    /// <summary>官方及第三方的远端配置和拉取统一在独立管理窗口进行。</summary>
     [RelayCommand(CanExecute = nameof(CanAddRepository))]
-    private async Task AddRemoteRepositoryAsync()
-    {
-        var dialog = new PromptDialog("输入脚本仓库 Git 地址，可以使用官方或第三方仓库。", "添加远程仓库",
-            new TextBox(), ScriptRepoUpdater.RepoChannels["CNB"])
-        { Owner = GetRepositoryDialogOwner() };
-        if (dialog.ShowDialog() != true) return;
-        var url = dialog.ResponseText.Trim();
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme is not ("https" or "http" or "ssh"))
-        {
-            await ThemedMessageBox.ErrorAsync("请输入有效的 Git 仓库地址。支持 HTTPS、HTTP 或 SSH 地址。");
-            return;
-        }
-        IsBusy = true;
-        StatusMessage = "正在拉取仓库，请稍候…";
-        try
-        {
-            // 拉取器协调自己的更新锁；拉取结束后才验证和注册，不重复持有来源锁。
-            var (directory, _) = await Task.Run(() => ScriptRepoUpdater.Instance.UpdateCenterRepoByGit(url, null));
-            var registration = await _resourceCatalog.Repositories.AddRepositoryAsync(directory);
-            _repositoryToSelect = registration.Id;
-        }
-        catch (Exception ex) when (IsRepositoryOperationError(ex))
-        {
-            StatusMessage = "添加远程仓库失败：" + ex.Message;
-            await ThemedMessageBox.ErrorAsync(StatusMessage);
-        }
-        finally { IsBusy = false; }
-        if (_repositoryToSelect is not null && !_isClosed) await InitializeAsync(forceRefresh: true);
-    }
+    private Task AddRemoteRepositoryAsync() => OpenRepositoryManagerAsync();
 
-    /// <summary>移除当前浏览来源；已有任务保留身份和内容，再次添加同目录会恢复该身份。</summary>
+    /// <summary>来源移除统一进入管理窗口；已有任务保留身份和确认内容。</summary>
     [RelayCommand(CanExecute = nameof(CanRemoveRepository))]
-    private async Task RemoveRepositoryAsync()
+    private Task RemoveRepositoryAsync() => OpenRepositoryManagerAsync();
+
+    /// <summary>打开当前选择的仓库管理，关闭后刷新列表并定位所选来源。</summary>
+    [RelayCommand(CanExecute = nameof(CanAddRepository))]
+    private async Task OpenRepositoryManagerAsync()
     {
-        var repository = SelectedRepository!;
-        IsBusy = true;
+        // 停止已失去焦点的预览，让管理窗口更新仓库时及时取得来源锁。
+        IsRepositoryManagerOpen = true;
+        _previewCancellationTokenSource?.Cancel();
+        ++_previewGeneration;
+        IsResourceDetailsLoading = false;
         try
         {
-            await _resourceCatalog.Repositories.RemoveRepositoryAsync(repository.Id);
-            _isUpdatingRepositories = true;
-            try { SelectedRepository = null; }
-            finally { _isUpdatingRepositories = false; }
-            ClearResourceSelection();
+            _repositoryToSelect = BetterGenshinImpact.View.Windows.Pulonia.PuloniaRepositoryManagerWindow.Show(
+                _resourceCatalog.Repositories, SelectedRepository?.Id, GetRepositoryDialogOwner());
         }
         catch (Exception ex) when (IsRepositoryOperationError(ex))
         {
-            await ThemedMessageBox.ErrorAsync("移除仓库失败：" + ex.Message);
+            await ThemedMessageBox.ErrorAsync("无法打开仓库管理：" + ex.Message);
         }
-        finally { IsBusy = false; }
-        if (!_isClosed) await InitializeAsync();
+        finally { IsRepositoryManagerOpen = false; }
+        if (!_isClosed) await InitializeAsync(forceRefresh: true);
+    }
+
+    /// <summary>管理窗口的模态状态独立于资源加载，刷新父窗口按钮与进度展示。</summary>
+    partial void OnIsRepositoryManagerOpenChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsLoading));
+        NotifyRepositoryCommands();
     }
 
     /// <summary>刷新仓库选择器与命令可执行状态。</summary>
@@ -182,6 +186,9 @@ public partial class PuloniaTaskCreationDialogViewModel
         AddLocalRepositoryCommand.NotifyCanExecuteChanged();
         AddRemoteRepositoryCommand.NotifyCanExecuteChanged();
         RemoveRepositoryCommand.NotifyCanExecuteChanged();
+        OpenRepositoryManagerCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(ShowRepositoryGuidance));
+        OnPropertyChanged(nameof(RepositoryGuidance));
     }
 
     /// <summary>收敛可以向用户报告的仓库输入、磁盘和拉取错误。</summary>
@@ -198,6 +205,8 @@ public partial class PuloniaTaskCreationDialogViewModel
     {
         if (_isClosed) return;
         _isClosed = true;
+        if (_repositoryDisplayConfig is not null)
+            _repositoryDisplayConfig.PropertyChanged -= OnRepositoryDisplayConfigChanged;
         ++_previewGeneration;
         _resourceLoadCancellationTokenSource?.Cancel();
         _previewCancellationTokenSource?.Cancel();

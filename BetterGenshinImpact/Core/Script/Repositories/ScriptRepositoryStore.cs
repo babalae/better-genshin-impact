@@ -20,7 +20,7 @@ public sealed partial class ScriptRepositoryStore
     public static ScriptRepositoryStore Shared { get; } = new(Global.Absolute("User/Pulonia/ScriptResources"), Global.Absolute("Repos"));
     /// <summary>资源区根目录，与更新器能够重置的 Repos 目录分开。</summary>
     public string RootDirectory { get; }
-    /// <summary>用于发现已经拉取的仓库，不执行下载或订阅。</summary>
+    /// <summary>托管 clone 目录根位置，仓库注册本身不执行下载或订阅。</summary>
     private readonly string _repositoriesDirectory;
     /// <summary>文件式来源的单文件哈希缓存；时间和大小变化后重新读取。</summary>
     private readonly ConcurrentDictionary<string, (long Size, long Ticks, string Hash, string Generation)> _fileHashes = new(StringComparer.OrdinalIgnoreCase);
@@ -88,11 +88,29 @@ public sealed partial class ScriptRepositoryStore
         var registrations = ReadRegistrations();
         var existing = registrations.FirstOrDefault(r => repositoryId is not null ? r.Id == repositoryId
             : string.Equals(r.Directory, directory, StringComparison.OrdinalIgnoreCase));
+        if (existing?.IsOfficial == true)
+        {
+            if (!string.Equals(directory, OfficialDirectory, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("官方仓库目录固定，不能重新定位。");
+            return existing;
+        }
+        if (existing?.Kind == "remote" && !string.Equals(existing.Directory, directory, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("远程仓库的 clone 目录固定，不能重新定位。");
+        if (string.Equals(directory, OfficialDirectory, StringComparison.OrdinalIgnoreCase))
+        {
+            var official = CreateOfficialRegistration();
+            registrations.RemoveAll(r => r.Id == OfficialRepositoryId);
+            registrations.Add(official);
+            WriteJson(Path.Combine(RootDirectory, "repositories.json"), registrations);
+            return official;
+        }
         var registration = new ScriptRepositoryRegistration
         {
             Id = existing?.Id ?? Guid.NewGuid().ToString("N"), Directory = directory,
             Name = name ?? existing?.Name ?? Path.GetFileName(directory),
-            IsEnabled = reactivate || existing?.IsEnabled != false
+            IsEnabled = reactivate || existing?.IsEnabled != false,
+            Kind = existing?.Kind ?? "local", Remotes = existing?.Remotes ?? [],
+            ActiveRemoteId = existing?.ActiveRemoteId, Branch = existing?.Branch ?? "release"
         };
         if (existing is not null && existing.Directory == registration.Directory && existing.Name == registration.Name
             && existing.IsEnabled == registration.IsEnabled)
@@ -136,24 +154,12 @@ public sealed partial class ScriptRepositoryStore
         return await RegisterAsync(directory, ct: ct).ConfigureAwait(false);
     }
 
-    /// <summary>发现本机的 Git 与离线仓库；不会读取已订阅的 User 脚本目录。</summary>
+    /// <summary>列出明确注册的仓库并补入内置官方来源；不会读取已订阅的 User 脚本目录。</summary>
     public async Task<IReadOnlyList<ScriptRepositoryRegistration>> GetRepositoriesAsync(CancellationToken ct = default)
     {
-        using (var sourceGate = await EnterSourceAccessAsync(ct).ConfigureAwait(false))
-        {
-            if (Directory.Exists(_repositoriesDirectory))
-            {
-                foreach (var directory in Directory.EnumerateDirectories(_repositoriesDirectory))
-                {
-                    ct.ThrowIfCancellationRequested();
-                    if ((File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0) continue;
-                    if (Directory.Exists(Path.Combine(directory, ".git")) || File.Exists(Path.Combine(directory, "repo.json")))
-                        await RegisterAsync(directory, ct: ct, reactivate: false).ConfigureAwait(false);
-                }
-            }
-        }
+        await EnsureOfficialRepositoryAsync(ct).ConfigureAwait(false);
         using var gate = await AcquireLockAsync("registry", ct).ConfigureAwait(false);
-        return ReadRegistrations().Where(r => r.IsEnabled).ToArray();
+        return ReadRegistrations().Where(r => r.IsEnabled).OrderByDescending(r => r.IsOfficial).ToArray();
     }
 
     /// <summary>从可选仓库移除来源，不删除本地文件、保留版本或旧任务使用的注册身份。</summary>
@@ -164,9 +170,12 @@ public sealed partial class ScriptRepositoryStore
         var index = registrations.FindIndex(r => r.Id == repositoryId);
         if (index < 0) throw new IOException("未注册的脚本仓库：" + repositoryId);
         var registration = registrations[index];
+        if (registration.IsOfficial) throw new InvalidOperationException("官方仓库不能移除或禁用。");
         registrations[index] = new ScriptRepositoryRegistration
         {
-            Id = registration.Id, Name = registration.Name, Directory = registration.Directory, IsEnabled = false
+            Id = registration.Id, Name = registration.Name, Directory = registration.Directory, IsEnabled = false,
+            Kind = registration.Kind, Remotes = registration.Remotes,
+            ActiveRemoteId = registration.ActiveRemoteId, Branch = registration.Branch
         };
         // 禁用标记持久化后自动发现不会重新加入；用户显式添加相同目录才恢复。
         WriteJson(Path.Combine(RootDirectory, "repositories.json"), registrations);

@@ -1,0 +1,111 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.Pulonia.PuloniaRepositoryManagerWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+                 xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+                 Title="Pulonia 仓库管理" Width="560" MinWidth="500" Height="640" MinHeight="480"
+                 WindowStartupLocation="CenterOwner" ExtendsContentIntoTitleBar="True"
+                 WindowBackdropType="Mica" Background="{DynamicResource ApplicationBackgroundBrush}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <ui:TitleBar Title="Pulonia 仓库管理" ShowMaximize="False" ShowMinimize="False"
+                     Icon="{ui:SymbolIcon BranchFork24}" />
+        <ScrollViewer Grid.Row="1" Margin="16,6,16,10" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <!-- 添加和引用管理集中到独立窗口；仓库选择不会解析脚本正文。 -->
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ComboBox Margin="0,0,8,0" ItemsSource="{Binding RepositoryChoices}"
+                              SelectedValue="{Binding SelectedRepository, Mode=TwoWay}" IsEnabled="{Binding CanEdit}"
+                              Style="{StaticResource PuloniaRepositorySelectorStyle}" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <ui:Button Margin="0,0,6,0" Content="添加远程" Command="{Binding AddRemoteCommand}" />
+                        <ui:Button Content="添加本地" Command="{Binding AddLocalCommand}" />
+                    </StackPanel>
+                </Grid>
+                <Border Padding="14" CornerRadius="8" BorderThickness="1"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
+                    <StackPanel>
+                        <TextBlock FontWeight="SemiBold" Text="{Binding RepositoryKindText}" />
+                        <TextBlock Margin="0,10,0,5" Text="仓库名称" />
+                        <TextBox Text="{Binding RepositoryName, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanEdit}">
+                            <TextBox.Style>
+                                <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                                    <Setter Property="IsReadOnly" Value="True" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsThirdParty}" Value="True">
+                                            <Setter Property="IsReadOnly" Value="False" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBox.Style>
+                        </TextBox>
+                        <!-- 官方保留 CNB、GitHub、自定义三种渠道，并复用旧窗口的配置。 -->
+                        <StackPanel Margin="0,12,0,0" Visibility="{Binding IsOfficial, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock Margin="0,0,0,5" Text="更新渠道" />
+                            <ComboBox ItemsSource="{Binding OfficialChannels}" SelectedItem="{Binding SelectedOfficialChannel, Mode=TwoWay}"
+                                      IsEnabled="{Binding CanEdit}" />
+                        </StackPanel>
+                        <StackPanel Margin="0,12,0,0" Visibility="{Binding IsRemote, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock Margin="0,0,0,5" Text="仓库地址" />
+                            <TextBox Text="{Binding RemoteUrl, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanEditRemoteUrl}" />
+                            <StackPanel Margin="0,12,0,0" Visibility="{Binding IsThirdParty, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <TextBlock Margin="0,0,0,5" Text="拉取分支" />
+                                <TextBox Text="{Binding Branch, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanEdit}" />
+                                <ui:Button Margin="0,8,0,0" HorizontalAlignment="Right" Content="保存配置" Command="{Binding SaveCommand}" />
+                            </StackPanel>
+                        </StackPanel>
+                        <TextBlock Margin="0,12,0,5" Text="本地目录" />
+                        <TextBlock Text="{Binding DirectoryText}" TextWrapping="Wrap" FontSize="12"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <WrapPanel Margin="0,10,0,0">
+                            <ui:Button Margin="0,0,6,4" Content="打开目录" Command="{Binding OpenDirectoryCommand}" />
+                            <ui:Button Margin="0,0,0,4" Content="移除引用" Command="{Binding RemoveCommand}"
+                                       ToolTip="只移除选择列表中的引用，保留本地文件和已确认任务内容"
+                                       Visibility="{Binding IsOfficial, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
+                <!-- 私有 Git 来源沿用 Windows 凭据管理器，不在仓库注册信息中保存令牌。 -->
+                <Expander Margin="0,10,0,0" Header="Git 认证（可选）"
+                          Visibility="{Binding IsRemote, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel Margin="12,8">
+                        <TextBlock Margin="0,0,0,5" Text="用户名称" />
+                        <TextBox Text="{Binding GitUsername, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanEdit}" />
+                        <TextBlock Margin="0,8,0,5" Text="访问令牌" />
+                        <PasswordBox IsEnabled="{Binding CanEdit}">
+                            <i:Interaction.Behaviors>
+                                <behavior:PasswordBoxBindingBehavior Password="{Binding GitToken, Mode=TwoWay}" />
+                            </i:Interaction.Behaviors>
+                        </PasswordBox>
+                        <ui:Button Margin="0,8,0,0" HorizontalAlignment="Right" Content="保存认证" Command="{Binding SaveCredentialsCommand}" />
+                    </StackPanel>
+                </Expander>
+                <StackPanel Margin="0,10,0,0" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ProgressBar Minimum="0" Maximum="100" Value="{Binding ProgressValue}" IsIndeterminate="{Binding IsProgressIndeterminate}" Height="4" />
+                    <TextBlock Margin="0,5,0,0" Text="{Binding ProgressText}" FontSize="12" TextWrapping="Wrap" />
+                </StackPanel>
+                <TextBlock Margin="0,10,0,0" Text="{Binding StatusMessage}" TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+        </ScrollViewer>
+        <Border Grid.Row="2" Padding="16,10" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
+            <DockPanel LastChildFill="False">
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal"
+                            Visibility="{Binding IsRemote, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ui:Button Margin="0,0,8,0" Appearance="Primary" Content="{Binding UpdateButtonText}" Command="{Binding UpdateCommand}" />
+                    <ui:Button Content="重置仓库" Command="{Binding ResetCommand}" />
+                </StackPanel>
+                <ui:Button DockPanel.Dock="Right" Content="关闭" IsCancel="True" MinWidth="76" />
+            </DockPanel>
+        </Border>
+    </Grid>
+</ui:FluentWindow>

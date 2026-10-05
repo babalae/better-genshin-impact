@@ -161,7 +161,7 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     /// <summary>
     /// 资源索引或当前选中资源详情是否仍在加载。
     /// </summary>
-    public bool IsLoading => IsBusy || IsResourceDetailsLoading;
+    public bool IsLoading => !IsRepositoryManagerOpen && (IsBusy || IsResourceDetailsLoading);
 
     /// <summary>
     /// 当前能力说明。
@@ -325,6 +325,12 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
                     return;
                 }
                 await _resourceCatalog.Repositories.SelectRepositoryAsync(definition.TaskType, SelectedRepository.Id, ct);
+                if (SelectedRepository.IsRemote && !Directory.Exists(SelectedRepository.Directory))
+                {
+                    ClearResourceSelection();
+                    StatusMessage = "所选仓库尚未下载，请打开仓库管理进行下载。";
+                    return;
+                }
             }
             var repositoryId = SupportsRepositories ? SelectedRepository?.Id : null;
             var index = await _resourceCatalog.GetIndexAsync(definition, forceRefresh, ct, repositoryId);
@@ -372,8 +378,12 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     [RelayCommand]
     private async Task OpenResourceRepositoryAsync()
     {
-        ScriptRepoUpdater.Instance.OpenScriptRepoWindow();
-        await InitializeAsync(forceRefresh: true);
+        if (SupportsRepositories) await OpenRepositoryManagerAsync();
+        else
+        {
+            ScriptRepoUpdater.Instance.OpenScriptRepoWindow();
+            await InitializeAsync(forceRefresh: true);
+        }
     }
 
     /// <summary>
@@ -516,6 +526,11 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     private async Task ConfirmAsync()
     {
         Result = null;
+        if (IsRepositoryManagerOpen)
+        {
+            StatusMessage = "请先关闭仓库管理窗口。";
+            return;
+        }
         if (IsLoading)
         {
             StatusMessage = "资源仍在加载，请稍候。";

@@ -258,6 +258,8 @@ public partial class App : Application
                 services.AddSingleton<IPuloniaTaskExecutor, PuloniaBuiltinTaskExecutor>();
                 services.AddSingleton<IPuloniaTaskExecutor, PuloniaCombatTaskExecutor>();
                 services.AddSingleton<PuloniaTaskResourceCatalog>();
+                services.AddSingleton(_ => BetterGenshinImpact.Core.Script.Repositories.ScriptRepositoryStore.Shared);
+                services.AddSingleton<PuloniaRepositoryManagementService>();
                 services.AddSingleton<PuloniaTaskService>();
                 services.AddSingleton<IPuloniaTaskService>(sp => sp.GetRequiredService<PuloniaTaskService>());
                 services.AddSingleton(TimeProvider.System);

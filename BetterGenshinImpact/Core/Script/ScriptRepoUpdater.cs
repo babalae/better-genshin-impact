@@ -32,7 +32,7 @@ using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.Core.Script;
 
-public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
+public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 {
     private readonly ILogger<ScriptRepoUpdater> _logger = App.GetLogger<ScriptRepoUpdater>();
 
@@ -80,24 +80,13 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     public static readonly string CenterRepoFolderName = "bettergi-scripts-list";
 
     /// <summary>
-    /// 当前活跃的中央仓库路径（根据用户配置的渠道动态解析）
+    /// 官方中央仓库的固定目录，切换更新渠道不会改变本地副本位置。
     /// </summary>
     public static string CenterRepoPath
     {
         get
         {
-            try
-            {
-                var config = TaskContext.Instance().Config.ScriptConfig;
-                var url = ResolveRepoUrl(config);
-                var folderName = GetRepoFolderName(url);
-                return Path.Combine(ReposPath, folderName);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[ScriptRepoUpdater] CenterRepoPath 解析失败，回退到默认路径: {ex.Message}");
-                return Path.Combine(ReposPath, CenterRepoFolderName);
-            }
+            return Path.Combine(ReposPath, CenterRepoFolderName);
         }
     }
 
@@ -748,6 +737,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             var config = TaskContext.Instance().Config.ScriptConfig;
             var repoUrl = ResolveRepoUrl(config);
             var repoPath = CenterRepoPath;
+            ValidateManagedRepositoryDirectory(repoPath);
 
             if (Directory.Exists(repoPath))
             {
@@ -781,7 +771,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
     }
 
-    private async Task<(string, bool)> UpdateCenterRepoByGitCore(string repoUrl, CheckoutProgressHandler? onCheckoutProgress)
+    /// <summary>保留原有 URL 映射实现和阶段注释；官方与 Pulonia 的更新改用明确固定目录的入口。</summary>
+    private async Task<(string, bool)> UpdateMappedRepositoryByGitCore(string repoUrl, CheckoutProgressHandler? onCheckoutProgress)
     {
         if (string.IsNullOrEmpty(repoUrl))
         {
@@ -1262,7 +1253,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// <param name="branchName"></param>
     /// <param name="onCheckoutProgress"></param>
     /// <exception cref="Exception"></exception>
-    private void CloneRepository(string repoUrl, string repoPath, string branchName, CheckoutProgressHandler? onCheckoutProgress)
+    private void CloneRepository(string repoUrl, string repoPath, string branchName, CheckoutProgressHandler? onCheckoutProgress,
+        CancellationToken ct = default)
     {
         DirectoryHelper.DeleteReadOnlyDirectory(repoPath);
         Directory.CreateDirectory(repoPath);
@@ -1272,6 +1264,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
         try
         {
+            ct.ThrowIfCancellationRequested();
             GitConfig(repo);
 
             // 添加远程源
@@ -1287,11 +1280,12 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 OnTransferProgress = progress =>
                 {
                     onCheckoutProgress?.Invoke($"拉取对象 {progress.ReceivedObjects}/{progress.TotalObjects}", progress.ReceivedObjects, progress.TotalObjects);
-                    return true;
+                    return !ct.IsCancellationRequested;
                 }
             };
             string refSpec = $"+refs/heads/{branchName}:refs/remotes/origin/{branchName}";
             Commands.Fetch(repo, remote.Name, new[] { refSpec }, fetchOptions, "初始化拉取");
+            ct.ThrowIfCancellationRequested();
 
             // 获取远程分支
             var remoteBranch = repo.Branches[$"origin/{branchName}"];

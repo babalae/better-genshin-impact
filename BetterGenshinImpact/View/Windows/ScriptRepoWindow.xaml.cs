@@ -199,6 +199,15 @@ public partial class ScriptRepoWindow
         {
             OnPropertyChanged(nameof(CurrentRepoUrl));
         }
+        if (e.PropertyName == nameof(ScriptConfig.SelectedChannelName))
+        {
+            // Pulonia 管理窗口使用同一配置，外部渠道变化同步回旧窗口的选择器。
+            Dispatcher.BeginInvoke(() =>
+            {
+                if (_subscriptionsDisposed) return;
+                SelectedRepoChannel = _repoChannels.FirstOrDefault(c => c.Name == Config.SelectedChannelName) ?? _repoChannels[0];
+            });
+        }
     }
 
     private void OnIsUpdatingChanged()

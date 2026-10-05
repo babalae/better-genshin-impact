@@ -356,52 +356,25 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <!-- 创建前先完成类型、名称和用途确认，取消时不会产生占位节点。 -->
-            <Border Grid.Row="0"
-                    Margin="0,0,0,12"
-                    Padding="14"
-                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1"
-                    CornerRadius="8">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="16" />
-                        <ColumnDefinition Width="280" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel>
-                        <TextBlock FontSize="15"
-                                   FontWeight="SemiBold"
-                                   Text="{Binding SelectedDefinition.DisplayName}" />
-                        <TextBlock Margin="0,5,0,0"
-                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   Text="{Binding DefinitionDescription}"
-                                   TextWrapping="Wrap" />
-                        <ComboBox Margin="0,10,0,0"
-                                  DisplayMemberPath="DisplayName"
-                                  ItemsSource="{Binding AvailableDefinitions}"
-                                  SelectedItem="{Binding SelectedDefinition, Mode=TwoWay}">
-                            <ComboBox.Style>
-                                <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsBuiltinPicker}" Value="True">
-                                            <Setter Property="Visibility" Value="Visible" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </ComboBox.Style>
-                        </ComboBox>
-                    </StackPanel>
-                    <StackPanel Grid.Column="2">
-                        <TextBlock Margin="0,0,0,5"
-                                   FontWeight="SemiBold"
-                                   Text="任务名称" />
-                        <TextBox Text="{Binding TaskName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    </StackPanel>
-                </Grid>
-            </Border>
+            <!-- 任务名称自动使用能力或资源的推荐名称，创建后可在计划树中重命名；仅内置入口需要选择能力。 -->
+            <ComboBox Grid.Row="0"
+                      MinWidth="200"
+                      Margin="0,0,0,12"
+                      HorizontalAlignment="Left"
+                      DisplayMemberPath="DisplayName"
+                      ItemsSource="{Binding AvailableDefinitions}"
+                      SelectedItem="{Binding SelectedDefinition, Mode=TwoWay}">
+                <ComboBox.Style>
+                    <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsBuiltinPicker}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ComboBox.Style>
+            </ComboBox>
 
             <!-- 资源型任务使用可搜索清单；只对当前选择按需读取详情。 -->
             <Grid Grid.Row="1">
@@ -453,33 +426,14 @@
                         <ComboBox Grid.Column="1"
                                   MinWidth="170"
                                   Margin="0,0,10,0"
-                                  ItemsSource="{Binding Repositories}"
-                                  SelectedItem="{Binding SelectedRepository, Mode=TwoWay}"
+                                  ItemsSource="{Binding RepositoryChoices}"
+                                  SelectedValue="{Binding SelectedRepository, Mode=TwoWay}"
                                   IsEnabled="{Binding CanManageRepositories}"
-                                  ToolTip="{Binding SelectedRepositoryDirectory}">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate>
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                                        <TextBlock FontSize="11"
-                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                   Text="{Binding Directory}"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   ToolTip="{Binding Directory}" />
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
+                                  Style="{StaticResource PuloniaRepositorySelectorStyle}" />
                         <StackPanel Grid.Column="2" Orientation="Horizontal">
-                            <ui:Button Margin="0,0,6,0"
-                                       Command="{Binding AddRemoteRepositoryCommand}"
-                                       Content="添加远程仓库" />
-                            <ui:Button Margin="0,0,6,0"
-                                       Command="{Binding AddLocalRepositoryCommand}"
-                                       Content="添加本地仓库" />
-                            <ui:Button Command="{Binding RemoveRepositoryCommand}"
-                                       Content="移除仓库"
-                                       ToolTip="从选择列表中移除，保留本地文件和已有任务使用的内容" />
+                            <ui:Button Command="{Binding OpenRepositoryManagerCommand}"
+                                       Content="管理仓库"
+                                       ToolTip="打开 Pulonia 仓库管理，添加、更新和管理来源引用" />
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -507,7 +461,18 @@
                                     Orientation="Horizontal">
                             <ui:Button Margin="0,0,6,0"
                                        Command="{Binding OpenResourceRepositoryCommand}"
-                                       Content="获取更多资源" />
+                                       Content="获取更多资源">
+                                <ui:Button.Style>
+                                    <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SupportsRepositories}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ui:Button.Style>
+                            </ui:Button>
                             <ui:Button Command="{Binding RefreshResourcesCommand}"
                                        Content="刷新" />
                         </StackPanel>
@@ -627,6 +592,14 @@
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
+                            <!-- 未下载和空资源状态引导至统一管理窗口，不自动拉取或订阅。 -->
+                            <StackPanel VerticalAlignment="Center" Margin="10"
+                                        Visibility="{Binding ShowRepositoryGuidance, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <TextBlock Text="{Binding RepositoryGuidance}" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                <ui:Button Margin="0,12,0,0" HorizontalAlignment="Left"
+                                           Content="打开仓库管理" Command="{Binding OpenRepositoryManagerCommand}" />
+                            </StackPanel>
                         </Grid>
                     </Grid>
                 </Border>
@@ -802,7 +775,7 @@
                         <ItemsControl ItemsSource="{Binding ParameterFields}"
                                       ItemTemplate="{StaticResource ParameterFieldTemplate}" />
                         <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   Text="此任务无需额外参数，确认名称后即可添加。">
+                                   Text="此任务无需额外参数，确认后即可添加。">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Visibility" Value="Collapsed" />

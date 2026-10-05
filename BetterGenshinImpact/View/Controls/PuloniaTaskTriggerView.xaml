@@ -65,7 +65,16 @@
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions><ColumnDefinition Width="190" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
             <ListBox ItemsSource="{Binding Triggers}" SelectedItem="{Binding SelectedTrigger}" ItemContainerStyle="{StaticResource TriggerCardStyle}"
+                     behavior:RightClickSelectBehavior.Enabled="True"
                      Padding="0" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.ContextMenu>
+                    <!-- ContextMenu 不在可视树内，从 PlacementTarget 取回触发器列表的数据上下文。 -->
+                    <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                        <MenuItem Header="删除"
+                                  Command="{Binding DeleteTriggerCommand}"
+                                  CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
+                    </ContextMenu>
+                </ListBox.ContextMenu>
                 <ListBox.ItemTemplate><DataTemplate>
                     <StackPanel>
                         <Grid>
