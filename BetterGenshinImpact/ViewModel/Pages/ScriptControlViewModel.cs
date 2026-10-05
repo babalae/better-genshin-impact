@@ -2215,13 +2215,25 @@ public partial class ScriptControlViewModel : ViewModel
 
         if (taskProgress != null)
         {
-            //await StartGroups(selectedGroups);
-            //taskProgress.Next
-            var sg = ScriptGroups.ToList().Where(sg => taskProgress.ScriptGroupNames.Contains(sg.Name)).ToList();
+            if (ScriptGroups.Count == 0)
+            {
+                ReadScriptGroup();
+            }
+
+            var sg = taskProgress.ScriptGroupNames.Count == 0
+                ? ScriptGroups.ToList()
+                : taskProgress.ScriptGroupNames
+                    .Select(name => ScriptGroups.FirstOrDefault(g => g.Name == name))
+                    .OfType<ScriptGroup>()
+                    .ToList();
             TaskProgressManager.GenerNextProjectInfo(taskProgress, sg);
             if (taskProgress.Next == null)
             {
-                _logger.LogWarning("无法定位到下一个要执行的项目：next为空（" + taskProgress.Name + ")");
+                _logger.LogWarning(
+                    "无法定位到下一个要执行的项目：next为空（{Name}，上次组={Group}，上次项目={Project}）",
+                    taskProgress.Name,
+                    taskProgress.LastScriptGroupName,
+                    taskProgress.LastSuccessScriptGroupProjectInfo?.Name);
             }
             else
             {
