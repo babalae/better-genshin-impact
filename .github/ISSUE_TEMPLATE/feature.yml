@@ -1,6 +1,7 @@
 name: I have feature requesting / 我有功能需求
 description: 提出新的功能想法 / Share a feature request
 title: "[feature] "
+type: Feature
 body:
   - type: checkboxes
     id: checks
