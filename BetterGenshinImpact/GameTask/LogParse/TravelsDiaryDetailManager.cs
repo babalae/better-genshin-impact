@@ -129,7 +129,30 @@ public class TravelsDiaryDetailManager
         months.Reverse();
 
         YsClient ys = new YsClient();
-        var apiResponse = await ys.GetGenshinGameRolesAsync(cookie);
+        ApiResponse<GameInfo> apiResponse;
+        try
+        {
+            apiResponse = await ys.GetGenshinGameRolesAsync(cookie);
+        }
+        catch (NoLoginException)
+        {
+            if (!skipToast)
+            {
+                Toast.Warning("cookie 未登录或已失效，请重新获取后重试");
+            }
+            else
+            {
+                TaskControl.Logger.LogError("cookie 未登录或已失效，请重新获取后重试");
+            }
+
+            throw;
+        }
+
+        if (apiResponse.Data?.List == null || apiResponse.Data.List.Count == 0)
+        {
+            throw new InvalidOperationException("cookie 可用，但未查询到绑定的原神角色");
+        }
+
         GameInfo gameInfo = apiResponse.Data.List[0];
         string tddPath = Global.Absolute(@$"{basePath}\{gameInfo.GameUid}\travelsdiarydetail");
 
@@ -157,11 +180,18 @@ public class TravelsDiaryDetailManager
                         string jsonString2 = File.ReadAllText(tddfile);
                         //文件内容
                         var _temp = JsonSerializer.Deserialize<ApiResponse<ActionItem>>(jsonString2);
-                        //增量
+                        ActionItem? lastItem = _temp?.Data?.List is { Count: > 0 } ? _temp.Data.List[0] : null;
                         var _temp2 = await ys.GetTravelsDiaryDetailAsync(gameInfo, cookie, month.month, 2, 100, default,
-                            _temp.Data.List[0]);
-                        var addList = _temp2.Data.List;
-                        _temp2.Data.List.AddRange(_temp.Data.List);
+                            lastItem);
+                        if (_temp2.Data?.List == null)
+                        {
+                            continue;
+                        }
+
+                        if (_temp?.Data?.List != null)
+                        {
+                            _temp2.Data.List.AddRange(_temp.Data.List);
+                        }
                         writeFile(tddfile, _temp2);
                     }
                 }

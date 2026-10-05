@@ -191,7 +191,7 @@ public static class FarmingStatsRecorder
                 }
                 catch (Exception e)
                 {
-                    TaskControl.Logger.LogError($"米游社数据更新失败，请检查cookie是否过期：{e.Message}");
+                    TaskControl.Logger.LogError(e, "米游社数据更新失败：{Msg}", e.Message);
                 }
             }
 

@@ -423,15 +423,16 @@ public partial class ScriptControlViewModel : ViewModel
                     gameInfo = await TravelsDiaryDetailManager.UpdateTravelsDiaryDetailManager(cookieValue);
                     Toast.Success($"米游社数据获取成功，开始进行解析，请耐心等待！");
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
+                    _logger.LogWarning(e, "日志分析获取米游社数据失败：{Msg}", e.Message);
                     if (realGameInfo != null)
                     {
-                        Toast.Warning("访问米游社接口异常，此次将锄地统计将不更新最新数据！");
+                        Toast.Warning($"访问米游社失败：{e.Message}，此次锄地统计不更新最新数据");
                     }
                     else
                     {
-                        Toast.Warning("访问米游社接口异常，此次将不启用锄地统计！");
+                        Toast.Warning($"访问米游社失败：{e.Message}，此次不启用锄地统计");
                     }
                 }
             }
