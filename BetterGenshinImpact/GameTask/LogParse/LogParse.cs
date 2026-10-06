@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.FarmingPlan;
+using BetterGenshinImpact.GameTask.InventoryMaterialStats;
 using Newtonsoft.Json;
 using Wpf.Ui.Violeta.Controls;
 using static BetterGenshinImpact.GameTask.LogParse.LogParse.ConfigGroupEntity;
@@ -643,6 +644,11 @@ namespace BetterGenshinImpact.GameTask.LogParse
             html.AppendLine("    </script>");
             html.AppendLine("</head>");
             html.AppendLine("<body>");
+            if (scriptGroupLogParseConfig.InventoryMaterialStatsSwitch)
+            {
+                NotifyHtmlGenerationStatus("正在生成背包材料统计对比...");
+                html.Append(InventoryMaterialStatsLogHtml.BuildSection());
+            }
             if (scriptGroupLogParseConfig.GenerateFarmingPlanData)
             {
                 DailyFarmingData dailyData =  FarmingStatsRecorder.ReadDailyFarmingData();

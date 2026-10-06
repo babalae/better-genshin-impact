@@ -1,5 +1,9 @@
-﻿document.addEventListener('DOMContentLoaded', function() {
+function initLogParseUi() {
     document.querySelectorAll('th').forEach(function(th) {
+        if (th.dataset.sortBound) {
+            return;
+        }
+        th.dataset.sortBound = '1';
         th.removeAttribute('onclick');
         th.addEventListener('click', function() {
             const table = this.closest('table');
@@ -8,7 +12,45 @@
             sortTable(table, columnIndex, sortType);
         });
     });
-});
+    document.querySelectorAll('.ims-compare-count').forEach(function(select) {
+        if (select.dataset.imsBound) {
+            return;
+        }
+        select.dataset.imsBound = '1';
+        select.addEventListener('change', function() {
+            applyImsCompareCount(select);
+        });
+        applyImsCompareCount(select);
+    });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initLogParseUi);
+} else {
+    initLogParseUi();
+}
+
+function applyImsCompareCount(select) {
+    const n = parseInt(select.value, 10) || 1;
+    const root = select.closest('.ims-copy') || document;
+    root.querySelectorAll('[data-ims-col]').forEach(function(el) {
+        const col = parseInt(el.getAttribute('data-ims-col'), 10);
+        el.style.display = col < n ? 'table-cell' : 'none';
+    });
+    root.querySelectorAll('table.ims-table tbody tr[data-ims-deltas]').forEach(function(tr) {
+        tr.style.display = imsRowVisibleForCount(tr, n) ? '' : 'none';
+    });
+}
+
+function imsRowVisibleForCount(tr, n) {
+    const parts = (tr.getAttribute('data-ims-deltas') || '').split(',');
+    for (var i = 0; i < parts.length && i < n; i++) {
+        if (parseInt(parts[i], 10)) {
+            return true;
+        }
+    }
+    return false;
+}
 
 function getCellValue(row, columnIndex, sortType) {
     try {

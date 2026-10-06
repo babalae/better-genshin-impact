@@ -1,4 +1,4 @@
-﻿body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 16px; background-color: #fbfaef;}
+body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 16px; background-color: #fbfaef;}
 table { border-collapse: separate; border-spacing: 0; width: 100%; margin-bottom: 20px; }
 th, td { border: 1.5px solid #cce3e5; padding: 8px; text-align: left; }
 th { background-color: #3f51b5; color: white; font-weight: 500; cursor: pointer; position: relative; text-align: center; vertical-align: middle; }
@@ -42,3 +42,12 @@ tbody tr:first-child td { border-top-color: transparent; }
 tbody tr:last-child td:first-child { border-bottom-left-radius: 8px; }
 tbody tr:last-child td:last-child { border-bottom-right-radius: 8px; }
 .table-container table { margin-bottom: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+.ims-icon { width: 48px; height: 48px; object-fit: contain; vertical-align: middle; }
+.ims-icon-cell { width: 56px; text-align: center; }
+.ims-gain { color: #1b7f3a; font-weight: 600; }
+.ims-lost { color: #c0392b; font-weight: 600; }
+.ims-zero, .ims-skip { color: #888; }
+.ims-gallery { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 24px; }
+.ims-gallery .ims-icon { width: 64px; height: 64px; background: #fff; border: 1px solid #cce3e5; border-radius: 6px; }
+.ims-toolbar { margin: 8px 0 12px; }
+.ims-toolbar select { padding: 4px 8px; font-size: 14px; }

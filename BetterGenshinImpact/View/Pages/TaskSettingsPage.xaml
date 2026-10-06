@@ -4143,6 +4143,92 @@
             </StackPanel>
         </ui:CardExpander>
 
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+            <ui:CardExpander.Icon>
+                <ui:FontIcon Glyph="&#x1F4E6;" Style="{StaticResource FaFontIconStyle}" />
+            </ui:CardExpander.Icon>
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="{i18n:T 背包材料统计}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                        <Run Text="{i18n:T 扫描背包材料并对比上一天获得。首次运行须先在脚本仓库订阅 JS「背包材料统计」。}" />
+                        <Run Text=" - " />
+                        <Hyperlink Command="{Binding GoToInventoryMaterialStatsFolderCommand}"
+                                   Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
+                            <Run Text="{i18n:T 打开目录}" />
+                        </Hyperlink>
+                    </ui:TextBlock>
+                    <controls:TwoStateButton Grid.Row="0"
+                                             Grid.RowSpan="2"
+                                             Grid.Column="1"
+                                             Margin="0,0,24,0"
+                                             DisableCommand="{Binding StopSoloTaskCommand}"
+                                             DisableContent="{i18n:T 停止}"
+                                             EnableCommand="{Binding SwitchInventoryMaterialStatsCommand}"
+                                             EnableContent="{i18n:T 启动}"
+                                             IsChecked="{Binding SwitchInventoryMaterialStatsEnabled}" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="{i18n:T 脚本拷贝}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 首次请先订阅「背包材料统计」，再用该拷贝 assets/images 下的材料图作为统计名单}"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              MinWidth="180"
+                              Margin="0,0,36,0"
+                              ItemsSource="{Binding InventoryMaterialStatsScriptFolders}"
+                              SelectedItem="{Binding Config.InventoryMaterialStatsConfig.ScriptFolderName, Mode=TwoWay}" />
+                </Grid>
+                <TextBlock Margin="16,8,16,0"
+                           Text="{i18n:T 扫描分类}"
+                           TextWrapping="Wrap" />
+                <WrapPanel Margin="16,4,16,16">
+                    <CheckBox Margin="0,0,16,8"
+                              Content="{i18n:T 养成道具}"
+                              IsChecked="{Binding Config.InventoryMaterialStatsConfig.ScanCharacterDevelopmentItems, Mode=TwoWay}" />
+                    <CheckBox Margin="0,0,16,8"
+                              Content="{i18n:T 食物}"
+                              IsChecked="{Binding Config.InventoryMaterialStatsConfig.ScanFood, Mode=TwoWay}" />
+                    <CheckBox Margin="0,0,16,8"
+                              Content="{i18n:T 材料}"
+                              IsChecked="{Binding Config.InventoryMaterialStatsConfig.ScanMaterials, Mode=TwoWay}" />
+                </WrapPanel>
+            </StackPanel>
+        </ui:CardExpander>
+
         <!-- 截取物品图标（开发者） -->
         <ui:CardExpander Margin="0,0,0,12" ContentPadding="0"
                          Visibility="{Binding Config.CommonConfig.ScreenshotEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
