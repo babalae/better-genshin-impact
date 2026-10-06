@@ -7,11 +7,15 @@ namespace BetterGenshinImpact.GameTask.InventoryMaterialStats;
 
 /// <summary>
 /// 将格子名称 OCR 对齐到模板文件名。
+/// NearCharMap / NameAliases 只用于 OCR 一侧的比较键，不改写模板或落盘用的原始名字。
 /// </summary>
 public static class InventoryMaterialStatsNameMatcher
 {
     private const double MinSimilarity = 0.85;
 
+    /// <summary>
+    /// OCR 形近 / 异体 → 游戏常用字形。只作用在 OCR 比较键上。
+    /// </summary>
     private static readonly Dictionary<char, char> NearCharMap = new()
     {
         ['监'] = '盐',
@@ -31,9 +35,11 @@ public static class InventoryMaterialStatsNameMatcher
         ['靑'] = '青',
     };
 
+    /// <summary>
+    /// 整词特例：OCR 误读对齐到白名单名。
+    /// </summary>
     private static readonly Dictionary<string, string> NameAliases = new(StringComparer.Ordinal)
     {
-        // 点开 OCR 常把「柽木」认成「怪木」，会当成第二种木头把同一格计两次。
         ["怪木"] = "柽木",
     };
 
@@ -60,11 +66,11 @@ public static class InventoryMaterialStatsNameMatcher
     }
 
     /// <summary>
-    /// 白名单文件名：纠形近字后再做整词别名。
+    /// OCR 比较键：去空白 / NFKC / 近形字 / 整词别名。不要用来改写模板文件名。
     /// </summary>
     public static string Canonical(string? text)
     {
-        var normalized = Normalize(text ?? string.Empty);
+        var normalized = NormalizeOcr(text ?? string.Empty);
         if (normalized.Length == 0)
         {
             return string.Empty;
@@ -73,7 +79,37 @@ public static class InventoryMaterialStatsNameMatcher
         return NameAliases.GetValueOrDefault(normalized, normalized);
     }
 
-    public static string Normalize(string text)
+    /// <summary>
+    /// 模板 / 白名单比较键：只去空白和 NFKC，不改字形。
+    /// </summary>
+    public static string CatalogKey(string? text)
+    {
+        return StripAndNfkc(text ?? string.Empty);
+    }
+
+    /// <summary>
+    /// 兼容旧调用：等同 <see cref="CatalogKey"/>（不对模板做近形替换）。
+    /// </summary>
+    public static string Normalize(string text) => CatalogKey(text);
+
+    private static string NormalizeOcr(string text)
+    {
+        var baseKey = StripAndNfkc(text);
+        if (baseKey.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        var sb = new StringBuilder(baseKey.Length);
+        foreach (var ch in baseKey)
+        {
+            sb.Append(NearCharMap.GetValueOrDefault(ch, ch));
+        }
+
+        return sb.ToString();
+    }
+
+    private static string StripAndNfkc(string text)
     {
         var stripped = StripWhiteSpace(text);
         if (stripped.Length == 0)
@@ -85,12 +121,10 @@ public static class InventoryMaterialStatsNameMatcher
         var sb = new StringBuilder(nfkc.Length);
         foreach (var ch in nfkc)
         {
-            if (char.IsWhiteSpace(ch) || ch == '\u3000')
+            if (!char.IsWhiteSpace(ch) && ch != '\u3000')
             {
-                continue;
+                sb.Append(ch);
             }
-
-            sb.Append(NearCharMap.GetValueOrDefault(ch, ch));
         }
 
         return sb.ToString();
@@ -98,6 +132,7 @@ public static class InventoryMaterialStatsNameMatcher
 
     /// <summary>
     /// 在候选中找唯一最高分且超过阈值的名称；打平或不够像则返回 null。
+    /// 命中时返回候选的原始字符串（不经 NearCharMap 改写）。
     /// OCR 多出后缀（如「枫木中」）时，再按最长前缀对齐到白名单（「枫木」）。
     /// 全称已在目录里时不要截短：苹果酿不能对成苹果。
     /// </summary>
@@ -110,17 +145,17 @@ public static class InventoryMaterialStatsNameMatcher
         var catalogList = catalog == null
             ? list
             : catalog as IList<string> ?? catalog.ToList();
-        var normalizedOcr = Canonical(ocrText);
-        if (normalizedOcr.Length == 0 || list.Count == 0)
+        var ocrKey = Canonical(ocrText);
+        if (ocrKey.Length == 0 || list.Count == 0)
         {
             return null;
         }
 
         foreach (var name in catalogList)
         {
-            if (string.Equals(Canonical(name), normalizedOcr, StringComparison.Ordinal))
+            if (string.Equals(CatalogKey(name), ocrKey, StringComparison.Ordinal))
             {
-                return Canonical(name);
+                return name;
             }
         }
 
@@ -129,7 +164,7 @@ public static class InventoryMaterialStatsNameMatcher
         var tied = false;
         foreach (var candidate in list)
         {
-            var score = Similarity(normalizedOcr, Canonical(candidate));
+            var score = Similarity(ocrKey, CatalogKey(candidate));
             if (score > bestScore + 1e-9)
             {
                 bestScore = score;
@@ -137,7 +172,7 @@ public static class InventoryMaterialStatsNameMatcher
                 tied = false;
             }
             else if (Math.Abs(score - bestScore) <= 1e-9 && bestName != null &&
-                     !string.Equals(Canonical(bestName), Canonical(candidate), StringComparison.Ordinal))
+                     !string.Equals(CatalogKey(bestName), CatalogKey(candidate), StringComparison.Ordinal))
             {
                 tied = true;
             }
@@ -145,19 +180,19 @@ public static class InventoryMaterialStatsNameMatcher
 
         if (!tied && bestName != null && bestScore >= MinSimilarity)
         {
-            return Canonical(bestName);
+            return bestName;
         }
 
-        var prefixed = MatchLongestPrefix(normalizedOcr, list, catalogList);
-        return prefixed == null ? null : Canonical(prefixed);
+        return MatchLongestPrefix(ocrKey, list, catalogList);
     }
 
     /// <summary>
     /// 目录里是否还有以该名为前缀的更长物品（苹果 vs 苹果酿）。
+    /// <paramref name="name"/> 应是模板原名或已 Canonical 的 OCR 结果。
     /// </summary>
     public static bool HasLongerName(string name, IEnumerable<string> names)
     {
-        var prefix = Canonical(name);
+        var prefix = CatalogKey(name);
         if (prefix.Length < 2)
         {
             return false;
@@ -165,9 +200,9 @@ public static class InventoryMaterialStatsNameMatcher
 
         return names.Any(n =>
         {
-            var canonical = Canonical(n);
-            return canonical.Length > prefix.Length &&
-                   canonical.StartsWith(prefix, StringComparison.Ordinal);
+            var key = CatalogKey(n);
+            return key.Length > prefix.Length &&
+                   key.StartsWith(prefix, StringComparison.Ordinal);
         });
     }
 
@@ -175,12 +210,11 @@ public static class InventoryMaterialStatsNameMatcher
     /// OCR 以某候选名为前缀且多了尾巴时，取最长且唯一的那个候选。
     /// </summary>
     private static string? MatchLongestPrefix(
-        string normalizedOcr,
+        string ocrKey,
         IList<string> candidates,
         IList<string> catalog)
     {
-        // 全称已是目录里的物品时，禁止截成短前缀。
-        if (catalog.Any(c => string.Equals(Canonical(c), normalizedOcr, StringComparison.Ordinal)))
+        if (catalog.Any(c => string.Equals(CatalogKey(c), ocrKey, StringComparison.Ordinal)))
         {
             return null;
         }
@@ -190,21 +224,21 @@ public static class InventoryMaterialStatsNameMatcher
         var tied = false;
         foreach (var candidate in candidates)
         {
-            var normalized = Canonical(candidate);
-            if (normalized.Length < 2 ||
-                !normalizedOcr.StartsWith(normalized, StringComparison.Ordinal))
+            var key = CatalogKey(candidate);
+            if (key.Length < 2 ||
+                !ocrKey.StartsWith(key, StringComparison.Ordinal))
             {
                 continue;
             }
 
-            if (normalized.Length > bestLen)
+            if (key.Length > bestLen)
             {
-                bestLen = normalized.Length;
+                bestLen = key.Length;
                 bestName = candidate;
                 tied = false;
             }
-            else if (normalized.Length == bestLen && bestName != null &&
-                     !string.Equals(Canonical(bestName), Canonical(candidate), StringComparison.Ordinal))
+            else if (key.Length == bestLen && bestName != null &&
+                     !string.Equals(CatalogKey(bestName), key, StringComparison.Ordinal))
             {
                 tied = true;
             }

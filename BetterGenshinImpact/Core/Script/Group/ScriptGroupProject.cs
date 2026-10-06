@@ -325,8 +325,21 @@ public partial class ScriptGroupProject : ObservableObject
             }
 
             var statsConfig = TaskContext.Instance().Config.InventoryMaterialStatsConfig;
+            var copies = InventoryMaterialStatsScriptLocator.FindInstalledCopies();
+            var resolved = copies.FirstOrDefault(c =>
+                string.Equals(c.FolderName, FolderName, StringComparison.OrdinalIgnoreCase));
+            if (resolved == null && !string.IsNullOrWhiteSpace(statsConfig.ScriptFolderName))
+            {
+                resolved = copies.FirstOrDefault(c =>
+                    string.Equals(c.FolderName, statsConfig.ScriptFolderName, StringComparison.OrdinalIgnoreCase));
+            }
+
+            var scriptFolder = resolved?.FolderName
+                ?? (string.IsNullOrWhiteSpace(statsConfig.ScriptFolderName)
+                    ? FolderName
+                    : statsConfig.ScriptFolderName);
             using var soloTask = new InventoryMaterialStatsTask(
-                FolderName,
+                scriptFolder,
                 statsConfig.GetEnabledCategories());
             await soloTask.Start(CancellationContext.Instance.Cts.Token);
         }

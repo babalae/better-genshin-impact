@@ -4166,7 +4166,7 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap">
-                        <Run Text="{i18n:T 扫描背包材料并对比上一天获得。首次运行须先在脚本仓库订阅 JS「背包材料统计」。}" />
+                        <Run Text="{i18n:T 扫描背包材料并对比上一次扫描的增减。首次运行须先在脚本仓库订阅 JS「背包材料统计」。}" />
                         <Run Text=" - " />
                         <Hyperlink Command="{Binding GoToInventoryMaterialStatsFolderCommand}"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">

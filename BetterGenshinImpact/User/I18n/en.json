@@ -1006,7 +1006,7 @@
   "独立任务设置": "Independent Task Settings",
   "添加独立任务": "Add Independent Task",
   "背包材料统计": "Inventory Material Stats",
-  "扫描背包材料并对比上一天获得。首次运行须先在脚本仓库订阅 JS「背包材料统计」。": "Scan inventory materials and compare gains with the previous day. First run: subscribe to the JS script 「背包材料统计」 in the script repository.",
+  "扫描背包材料并对比上一次扫描的增减。首次运行须先在脚本仓库订阅 JS「背包材料统计」。": "Scan inventory materials and compare increases/decreases with the previous scan. First run: subscribe to the JS script 「背包材料统计」 in the script repository.",
   "脚本拷贝": "Script copy",
   "首次请先订阅「背包材料统计」，再用该拷贝 assets/images 下的材料图作为统计名单": "Subscribe to 「背包材料统计」 first, then use material images under this copy's assets/images as the item list",
   "日志中打印数量减少": "Log quantity decreases",

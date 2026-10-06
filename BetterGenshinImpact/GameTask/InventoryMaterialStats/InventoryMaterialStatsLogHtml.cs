@@ -95,15 +95,10 @@ public static class InventoryMaterialStatsLogHtml
             }
 
             previous[0].Counts.TryGetValue(name, out var lastQty);
-            if (lastQty < 0)
-            {
-                lastQty = 0;
-            }
-
-            var lastDelta = current - lastQty;
+            var lastDelta = lastQty < 0 ? int.MinValue : current - lastQty;
             var qty = new int[previous.Count];
             var deltas = new int[previous.Count];
-            var hasAnyChange = lastDelta != 0;
+            var hasAnyChange = lastDelta != 0 && lastDelta != int.MinValue;
             for (var i = 0; i < previous.Count; i++)
             {
                 previous[i].Counts.TryGetValue(name, out var q);
@@ -181,13 +176,15 @@ public static class InventoryMaterialStatsLogHtml
             foreach (var (name, current, lastDelta, qty, deltas) in rows)
             {
                 var deltaParts = new int[previous.Count + 1];
-                deltaParts[0] = lastDelta;
+                deltaParts[0] = lastDelta == int.MinValue ? 0 : lastDelta;
                 for (var i = 0; i < previous.Count; i++)
                 {
                     deltaParts[i + 1] = deltas[i] == int.MinValue ? 0 : deltas[i];
                 }
 
-                var rowHidden = lastDelta == 0 ? " style=\"display:none\"" : "";
+                var rowHidden = lastDelta == 0 || lastDelta == int.MinValue
+                    ? " style=\"display:none\""
+                    : "";
                 html.AppendLine($"    <tr data-ims-deltas=\"{string.Join(",", deltaParts)}\"{rowHidden}>");
                 html.AppendLine($"        <td class=\"ims-icon-cell\">{RenderIcon(icons, name)}</td>");
                 html.AppendLine($"        <td>{WebUtility.HtmlEncode(name)}</td>");

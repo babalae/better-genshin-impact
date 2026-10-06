@@ -627,7 +627,8 @@ public sealed class InventoryMaterialStatsTask : ISoloTask, IDisposable
 
             foreach (var file in Directory.EnumerateFiles(dir, "*.png", SearchOption.TopDirectoryOnly))
             {
-                var name = InventoryMaterialStatsNameMatcher.Canonical(Path.GetFileNameWithoutExtension(file));
+                var name = InventoryMaterialStatsNameMatcher.StripWhiteSpace(
+                    Path.GetFileNameWithoutExtension(file));
                 if (string.IsNullOrWhiteSpace(name))
                 {
                     continue;
@@ -682,7 +683,7 @@ public sealed class InventoryMaterialStatsTask : ISoloTask, IDisposable
         var loaded = 0;
         foreach (var (page, rawName, file) in files)
         {
-            var name = InventoryMaterialStatsNameMatcher.Canonical(rawName);
+            var name = InventoryMaterialStatsNameMatcher.StripWhiteSpace(rawName);
             if (string.IsNullOrWhiteSpace(name) || !allowedPages.Contains(page))
             {
                 continue;
