@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Config;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -11,10 +12,14 @@ namespace BetterGenshinImpact.GameTask.InventoryMaterialStats;
 
 /// <summary>
 /// 日志分析页：两条扫描记录做差；时间用双下拉选择，食物默认隐藏。
+/// 图标以相对路径写入 JSON，由页面按需加载（不内嵌 base64）。
 /// </summary>
 public static class InventoryMaterialStatsLogHtml
 {
     public const int MaxRecordCount = 11;
+
+    /// <summary>与日志分析 HTML 同级的图标缓存目录名（位于 log/logparse 下）。</summary>
+    public const string IconCacheFolderName = "ims-icons";
 
     public static string BuildHelpHtml()
     {
@@ -74,7 +79,9 @@ public static class InventoryMaterialStatsLogHtml
 
         var copyDir = InventoryMaterialStatsRecordStore.GetCopyDirectory(folderName);
         var icons = IndexIcons(copyDir);
-        var payload = BuildPayload(folderName, slice, icons);
+        var usedNames = CollectNames(slice);
+        var iconRels = PublishIconsForWeb(folderName, icons, usedNames);
+        var payload = BuildPayload(folderName, slice, usedNames, icons, iconRels);
         var json = JsonConvert.SerializeObject(payload);
 
         html.AppendLine("<div class=\"ims-copy\">");
@@ -100,10 +107,7 @@ public static class InventoryMaterialStatsLogHtml
         html.AppendLine("<script>if (typeof initLogParseUi === 'function') initLogParseUi();</script>");
     }
 
-    private static object BuildPayload(
-        string folderName,
-        List<InventoryMaterialStatsRecord> records,
-        Dictionary<string, IconEntry> icons)
+    private static HashSet<string> CollectNames(List<InventoryMaterialStatsRecord> records)
     {
         var names = new HashSet<string>(StringComparer.Ordinal);
         foreach (var rec in records)
@@ -114,17 +118,27 @@ public static class InventoryMaterialStatsLogHtml
             }
         }
 
+        return names;
+    }
+
+    private static object BuildPayload(
+        string folderName,
+        List<InventoryMaterialStatsRecord> records,
+        HashSet<string> names,
+        Dictionary<string, IconEntry> icons,
+        Dictionary<string, string> iconRels)
+    {
         var items = names
             .Select(name =>
             {
                 icons.TryGetValue(name, out var entry);
+                iconRels.TryGetValue(name, out var iconRel);
                 var page = ResolvePage(name, entry);
-                var icon = entry == null ? null : ToDataUri(entry.Path);
                 return new
                 {
                     name,
                     page,
-                    icon
+                    icon = iconRel
                 };
             })
             .OrderBy(i => PageOrder(i.page))
@@ -211,26 +225,70 @@ public static class InventoryMaterialStatsLogHtml
         return map;
     }
 
-    private static string? ToDataUri(string path)
+    /// <summary>
+    /// 将本次用到的图标同步到 log/logparse/ims-icons，返回物品名 → 相对 HTML 的路径（仅路径，不内嵌图片）。
+    /// </summary>
+    private static Dictionary<string, string> PublishIconsForWeb(
+        string folderName,
+        Dictionary<string, IconEntry> icons,
+        HashSet<string> usedNames)
     {
-        try
+        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (icons.Count == 0 || usedNames.Count == 0)
         {
-            if (!File.Exists(path))
+            return result;
+        }
+
+        var safeFolder = SanitizePathSegment(folderName);
+        var destRoot = Path.Combine(Global.Absolute(@"log\logparse"), IconCacheFolderName, safeFolder);
+        Directory.CreateDirectory(destRoot);
+
+        foreach (var name in usedNames)
+        {
+            if (!icons.TryGetValue(name, out var entry))
             {
-                return null;
+                continue;
             }
 
-            var bytes = File.ReadAllBytes(path);
-            if (bytes.Length == 0)
+            try
             {
-                return null;
-            }
+                if (!File.Exists(entry.Path))
+                {
+                    continue;
+                }
 
-            return "data:image/png;base64," + Convert.ToBase64String(bytes);
+                var page = SanitizePathSegment(string.IsNullOrWhiteSpace(entry.Page) ? "其他" : entry.Page);
+                var fileName = Path.GetFileName(entry.Path);
+                if (string.IsNullOrEmpty(fileName))
+                {
+                    continue;
+                }
+
+                var destDir = Path.Combine(destRoot, page);
+                Directory.CreateDirectory(destDir);
+                var destPath = Path.Combine(destDir, fileName);
+                if (!File.Exists(destPath))
+                {
+                    File.Copy(entry.Path, destPath, overwrite: false);
+                }
+
+                // 相对 log/logparse 下 HTML 的路径；浏览器只会对实际渲染的 img 发起加载
+                result[name] = string.Join('/', IconCacheFolderName, safeFolder, page, fileName);
+            }
+            catch
+            {
+                // 单个图标失败不影响整体
+            }
         }
-        catch
-        {
-            return null;
-        }
+
+        return result;
+    }
+
+    private static string SanitizePathSegment(string value)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        var chars = value.Select(c => invalid.Contains(c) ? '_' : c).ToArray();
+        var name = new string(chars).Trim();
+        return string.IsNullOrEmpty(name) ? "default" : name;
     }
 }

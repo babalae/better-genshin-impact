@@ -561,11 +561,11 @@ namespace BetterGenshinImpact.GameTask.LogParse
                 col2Configs, actionItems,
                 msColConfigs,scriptGroupLogParseConfig);
 
-            // 检查HTML内容大小，如果超过阈值则保存为文件
+            // 超过阈值，或启用了背包材料统计（图标相对路径需与 HTML 同目录的 file://）时，落盘打开。
             const int maxHtmlSize = 1 * 1024 * 1024; // 1MB 阈值，可以根据实际情况调整
-            if (htmlContent.Length > maxHtmlSize)
+            if (htmlContent.Length > maxHtmlSize || scriptGroupLogParseConfig.InventoryMaterialStatsSwitch)
             {
-                NotifyHtmlGenerationStatus($"日志分析较大({htmlContent.Length / 1024}KB)，正在保存为文件...");
+                NotifyHtmlGenerationStatus($"正在保存日志分析文件({htmlContent.Length / 1024}KB)...");
                 return SaveHtmlToTempFile(htmlContent);
             }
             NotifyHtmlGenerationStatus("日志分析生成完成！");

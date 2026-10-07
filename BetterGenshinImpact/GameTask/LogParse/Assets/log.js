@@ -165,8 +165,9 @@ function imsCurrencyChip(name, newerVal, olderVal) {
 
 function imsMaterialChip(item, qty, delta) {
     var html = '<span class="ims-chip">';
+    // icon 为相对路径；仅渲染有增量的芯片时才会请求图片（按需加载）
     if (item.icon) {
-        html += '<img class="ims-icon" src="' + item.icon + '" alt="' + escapeHtml(item.name) + '">';
+        html += '<img class="ims-icon" src="' + escapeHtml(item.icon) + '" alt="' + escapeHtml(item.name) + '" loading="lazy">';
     }
     html += '<span class="ims-chip-text">' +
         '<span class="ims-item-name">' + escapeHtml(item.name) + '</span> ' +
