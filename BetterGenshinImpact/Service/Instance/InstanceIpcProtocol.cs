@@ -38,6 +38,9 @@ public static class InstanceOperations
     /// <summary>停止 Worker 自己的截图器</summary>
     public const string CaptureStop = "capture.stop";
 
+    /// <summary>获取 Worker 当前游戏画面截图</summary>
+    public const string CaptureScreenshot = "capture.screenshot";
+
     /// <summary>Worker → Controller 单向回传用户提示（Worker 侧没有窗口可显示 Toast）</summary>
     public const string WorkerNotice = "worker.notice";
 

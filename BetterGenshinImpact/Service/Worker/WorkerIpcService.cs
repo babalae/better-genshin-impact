@@ -262,6 +262,10 @@ internal sealed class WorkerIpcService : IHostedService, IAsyncDisposable, IInst
                 RequireAuthorized(connection);
                 return HandleCaptureStopAsync(request);
 
+            case InstanceOperations.CaptureScreenshot:
+                RequireAuthorized(connection);
+                return Task.FromResult<InstanceIpcEnvelope?>(HandleCaptureScreenshot(request));
+
             case InstanceOperations.GameExit:
                 RequireAuthorized(connection);
                 return HandleGameExitAsync(request);
@@ -417,6 +421,15 @@ internal sealed class WorkerIpcService : IHostedService, IAsyncDisposable, IInst
         }
 
         return InstanceIpcEnvelope.Response(request, _executor.Snapshot());
+    }
+
+    private InstanceIpcEnvelope HandleCaptureScreenshot(InstanceIpcEnvelope request)
+    {
+        var image = _executor.CaptureScreenshot();
+        return InstanceIpcEnvelope.Response(request, new WorkerScreenshotResponse
+        {
+            ScreenshotBase64 = image is null ? null : Convert.ToBase64String(image)
+        });
     }
 
     /// <summary>

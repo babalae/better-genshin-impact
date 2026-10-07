@@ -249,6 +249,20 @@ public sealed class WorkerController : IAsyncDisposable
         return status;
     }
 
+    /// <summary>获取 Worker 当前游戏画面截图。</summary>
+    public async Task<byte[]?> GetScreenshotAsync(CancellationToken cancellationToken = default)
+    {
+        var response = await SendAsync(
+            InstanceOperations.CaptureScreenshot,
+            null,
+            data => data?.ToObject<WorkerScreenshotResponse>(InstanceIpcProtocol.Serializer)
+                    ?? new WorkerScreenshotResponse(),
+            cancellationToken).ConfigureAwait(false);
+        return string.IsNullOrWhiteSpace(response.ScreenshotBase64)
+            ? null
+            : Convert.FromBase64String(response.ScreenshotBase64);
+    }
+
     /// <summary>
     /// 启动 Worker 自己的截图器（运行环境 + 遮罩叠加层），返回最新状态
     /// </summary>

@@ -239,6 +239,10 @@ public partial class App : Application
                 services.AddSingleton<RecognitionTemplateEditorService>();
                 services.AddSingleton<NotificationService>();
                 services.AddHostedService(sp => sp.GetRequiredService<NotificationService>());
+                services.AddSingleton<QqCommandService>();
+                services.AddHostedService(sp => sp.GetRequiredService<QqCommandService>());
+                services.AddSingleton<ExternalControlService>();
+                services.AddHostedService(sp => sp.GetRequiredService<ExternalControlService>());
                 services.AddSingleton<NotifierManager>();
                 services.AddSingleton<IScriptService, ScriptService>();
                 services.AddSingleton<IMusicScoreParser, MusicScoreParser>();

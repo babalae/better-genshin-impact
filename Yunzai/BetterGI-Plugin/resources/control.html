@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 24px; background: #10131a; color: #ecf1f8; font-family: "Microsoft YaHei", sans-serif; }
+    .card { width: 760px; overflow: hidden; border: 1px solid #2b3443; border-radius: 18px; background: #171c25; box-shadow: 0 16px 48px #0008; }
+    .head { padding: 20px 24px 12px; font-size: 22px; font-weight: 700; }
+    .logs { height: 220px; margin: 0 20px 18px; padding: 14px; overflow: hidden; border-radius: 12px; background: #0d1118; color: #a9d4bd; font: 13px/1.55 Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .line { min-height: 20px; }
+    .screenshot { display: block; width: 100%; max-height: 430px; object-fit: contain; background: #080a0e; }
+    .empty { height: 260px; display: grid; place-items: center; color: #8893a3; background: #080a0e; }
+    .status { padding: 14px 24px 4px; font-size: 15px; }
+    .foot { padding: 12px 24px 20px; color: #9ba7b8; font-size: 13px; display: flex; justify-content: space-between; }
+  </style>
+</head>
+<body>
+  <section class="card">
+    <div class="head">BetterGI 远程控制</div>
+    <div class="logs">{{@ logHtml}}</div>
+    {{@ imageHtml}}
+    <div class="status">{{message}}</div>
+    <footer class="foot">
+      <span>Yunzai {{yunzaiVersion}}</span>
+      <span>BetterGI-Plugin {{pluginVersion}}</span>
+    </footer>
+  </section>
+</body>
+</html>

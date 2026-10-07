@@ -16,6 +16,10 @@
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       mc:Ignorable="d">
 
+    <Page.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    </Page.Resources>
+
     <StackPanel Margin="{StaticResource PagePadding}">
         <ui:TextBlock Margin="0,0,0,8"
                       FontTypography="BodyStrong"
@@ -2483,6 +2487,123 @@
                     <ui:TextBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
                                 MinWidth="180" MaxWidth="800" Margin="0,0,36,0"
                                 Text="{Binding Config.NotificationConfig.QqGroupOpenId, Mode=TwoWay}"
+                                TextWrapping="NoWrap" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="允许外部控制" TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="启用后允许 Yunzai 插件通过 WebSocket 执行 QQ 远程命令；可选择由 BetterGI 监听或主动连接 Yunzai" TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                                     HorizontalAlignment="Right" Margin="0,0,24,0"
+                                     IsChecked="{Binding Config.NotificationConfig.ExternalControlEnabled, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16" Visibility="{Binding Config.NotificationConfig.ExternalControlEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="反向 WebSocket（Yunzai 作为服务器）" TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="启用后 BetterGI 主动连接 Yunzai；请在插件配置中设置 mode 为 server" TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" HorizontalAlignment="Right" Margin="0,0,24,0"
+                                     IsChecked="{Binding Config.NotificationConfig.ExternalControlReverse, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16" Visibility="{Binding Config.NotificationConfig.ExternalControlEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="2*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="WebSocket IP" TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="直连模式填写 BetterGI 监听地址；反向模式填写 Yunzai 服务端地址" TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" MinWidth="180" Margin="0,0,36,0"
+                                Text="{Binding Config.NotificationConfig.ExternalControlIp, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                Visibility="{Binding Config.NotificationConfig.ExternalControlReverse, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                    <ui:TextBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" MinWidth="180" Margin="0,0,36,0"
+                                Text="{Binding Config.NotificationConfig.ExternalControlRemoteIp, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                Visibility="{Binding Config.NotificationConfig.ExternalControlReverse, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                </Grid>
+                <Grid Margin="16" Visibility="{Binding Config.NotificationConfig.ExternalControlEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="2*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="WebSocket 端口" TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="需要与 Yunzai 插件配置中的端口一致" TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" MinWidth="180" Margin="0,0,36,0"
+                                Text="{Binding Config.NotificationConfig.ExternalControlPort, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </Grid>
+                <Grid Margin="16" Visibility="{Binding Config.NotificationConfig.ExternalControlEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="2*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="WebSocket 令牌" TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="与 Yunzai 插件中的 token 保持一致；控制请求仍按上方 OpenID 白名单校验" TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" MinWidth="180" Margin="0,0,36,0"
+                                Text="{Binding Config.NotificationConfig.ExternalControlToken, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="启用 QQ 机器人远程命令" TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="命令：#启动任务 配置组名称、#暂停任务、#继续任务、#停止任务、#一条龙；也支持截图器控制和退出游戏" TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                                     HorizontalAlignment="Right"
+                                     Margin="0,0,24,0"
+                                     IsChecked="{Binding Config.NotificationConfig.QqCommandEnabled, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="2*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="远程命令授权用户 OpenID" TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="多个用户用逗号分隔；留空时仅允许上方绑定的私聊用户，群聊用户需在此填写" TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                                MinWidth="180" MaxWidth="800" Margin="0,0,36,0"
+                                Text="{Binding Config.NotificationConfig.QqCommandUserOpenIds, Mode=TwoWay}"
                                 TextWrapping="NoWrap" />
                 </Grid>
                 <!-- 绑定 OpenID 按钮行：连接 QQ 网关，用户发送验证码后自动回填 OpenID -->

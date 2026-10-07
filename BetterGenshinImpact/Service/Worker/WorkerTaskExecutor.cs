@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Script;
@@ -15,6 +16,7 @@ using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
+using OpenCvSharp;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Service.Worker;
@@ -23,7 +25,7 @@ namespace BetterGenshinImpact.Service.Worker;
 /// Worker 的任务执行端口：复用现有 TaskRunner / CancellationContext / RunnerContext，
 /// 不重新实现任务系统，也不使用 Process.Kill / Environment.Exit / Thread.Abort。
 /// </summary>
-internal sealed class WorkerTaskExecutor
+public sealed class WorkerTaskExecutor
 {
     public const string ScriptGroupTaskType = WorkerTaskTypes.ScriptGroup;
     public const string StartGameTaskType = WorkerTaskTypes.StartGame;
@@ -177,6 +179,18 @@ internal sealed class WorkerTaskExecutor
         }
 
         return (failure is null, failure);
+    }
+
+    /// <summary>捕获当前游戏画面并编码为 JPEG，调用方负责传输 Base64。</summary>
+    public byte[]? CaptureScreenshot()
+    {
+        using var frame = TaskContext.Instance().Runtime?.Capture.Capture();
+        if (frame?.Frame is not { } mat) return null;
+        using var resized = new Mat();
+        var targetWidth = Math.Min(mat.Width, 900);
+        Cv2.Resize(mat, resized, new OpenCvSharp.Size(targetWidth, Math.Max(1, targetWidth * mat.Height / mat.Width)));
+        Cv2.ImEncode(".jpg", resized, out var bytes, [new ImageEncodingParam(ImwriteFlags.JpegQuality, 78)]);
+        return bytes;
     }
 
     /// <summary>
@@ -557,21 +571,21 @@ internal sealed class WorkerTaskExecutor
         try
         {
             var oneDragon = App.GetService<OneDragonFlowViewModel>() ?? new OneDragonFlowViewModel();
-            oneDragon.OnNavigatedTo();
-
-            if (!string.IsNullOrEmpty(configName))
+            await Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                var config = oneDragon.ConfigList.FirstOrDefault(c =>
-                    string.Equals(c.Name, configName, StringComparison.Ordinal));
-                if (config is null)
-                {
-                    CompleteExecution($"一条龙配置不存在：{configName}");
-                    return;
-                }
+                oneDragon.OnNavigatedTo();
 
-                oneDragon.SelectedConfig = config;
-                oneDragon.LoadDisplayTaskListFromConfig();
-            }
+                if (!string.IsNullOrEmpty(configName))
+                {
+                    var config = oneDragon.ConfigList.FirstOrDefault(c =>
+                        string.Equals(c.Name, configName, StringComparison.Ordinal));
+                    if (config is null)
+                        throw new FileNotFoundException($"一条龙配置不存在：{configName}");
+
+                    oneDragon.SelectedConfig = config;
+                    oneDragon.LoadDisplayTaskListFromConfig();
+                }
+            });
 
             await oneDragon.OnOneKeyExecute().ConfigureAwait(false);
         }

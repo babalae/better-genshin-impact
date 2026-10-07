@@ -232,6 +232,12 @@ public sealed class WorkerCommandResponse
     public WorkerState State { get; init; }
 }
 
+/// <summary>Worker 当前游戏画面截图（JPEG Base64）。</summary>
+public sealed class WorkerScreenshotResponse
+{
+    public string? ScreenshotBase64 { get; init; }
+}
+
 /// <summary>
 /// Controller 连接或请求 Worker 失败。
 /// </summary>
