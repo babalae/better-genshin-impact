@@ -18,14 +18,24 @@ set "setupFile=BetterGI_Setup_v%b%.exe"
 
 echo [build app using vs2022]
 cd /d %~dp0
-rd /s /q ..\BetterGenshinImpact\bin\x64\Release\net8.0-windows10.0.22621.0\publish\win-x64\
-cd ..\
-dotnet publish -c Release -p:PublishProfile=FolderProfile
+if exist "..\BetterGenshinImpact\bin\x64\Release\net8.0-windows10.0.22621.0\publish\win-x64" rd /s /q "..\BetterGenshinImpact\bin\x64\Release\net8.0-windows10.0.22621.0\publish\win-x64"
+dotnet publish "%~dp0..\BetterGenshinImpact\BetterGenshinImpact.csproj" -c Release -p:PublishProfile="%~dp0..\BetterGenshinImpact\Properties\PublishProfiles\FolderProfile.pubxml"
+if errorlevel 1 (
+    echo [ERROR] dotnet publish failed. Packaging was skipped.
+    exit /b 1
+)
+
+if not exist "..\BetterGenshinImpact\bin\x64\Release\net8.0-windows10.0.22621.0\publish\win-x64\BetterGI.exe" (
+    echo [ERROR] Published executable was not found. Packaging was skipped.
+    exit /b 1
+)
 
 echo [pack app using 7z]
 cd /d %~dp0
 cd /d ..\BetterGenshinImpact\bin\x64\Release\net8.0-windows10.0.22621.0\publish\win-x64\
+if errorlevel 1 exit /b 1
 xcopy * "%tmpfolder%" /E /C /I /Y
+if errorlevel 1 exit /b 1
 cd /d %~dp0
 del /f /q %tmpfolder%\*.lib
 del /f /q %tmpfolder%\*ffmpeg*.dll
@@ -36,9 +46,11 @@ if exist "E:\HuiTask\BetterGIBuild\BetterGI" (
 )
 :: 添加一些配置文件结束
 
+if exist "publish.7z" del /f /q "publish.7z"
 MicaSetup.Tools\7-Zip\7z a publish.7z %tmpfolder%\* -t7z -mx=5 -mf=BCJ2 -r -y
-if exist "%zipFile%" ( del /f /q "%zipfile%" )
-rename publish.7z %archiveFile%
+if errorlevel 1 exit /b 1
+move /y "publish.7z" "%archiveFile%"
+if errorlevel 1 exit /b 1
 
 rd /s /q dist\BetterGI
 
