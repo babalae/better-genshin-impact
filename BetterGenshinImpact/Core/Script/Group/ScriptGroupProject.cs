@@ -2,6 +2,7 @@
 using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoPick;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.Shell;
@@ -238,10 +239,7 @@ public partial class ScriptGroupProject : ObservableObject
             }
             var pathingTask = new PathExecutor(CancellationContext.Instance.Cts.Token);
             pathingTask.PartyConfig = GroupInfo?.Config.PathingConfig;
-            if (!pathingTask.PartyConfig.Enabled || pathingTask.PartyConfig.AutoPickEnabled)
-            {
-                TaskTriggerDispatcher.Instance().AddTrigger("AutoPick", null);
-            }
+            PathingGroupPickup.AddTrigger(pathingTask.PartyConfig);
             await pathingTask.Pathing(task);
 
             

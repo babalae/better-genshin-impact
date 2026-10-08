@@ -19,6 +19,7 @@ using System.Threading.Tasks;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.GameTask.Common.Job;
 using OpenCvSharp;
+using BetterGenshinImpact.GameTask.AutoPick;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
@@ -823,6 +824,12 @@ public class AutoFightJsonTask : ISoloTask
                         }
                     }
                 }
+            }
+
+            // 只拾取圣遗物时，万叶/琴吸怪后多等一会儿，等模板拾取滚完列表再切回原队
+            if (picker != null)
+            {
+                await PathingGroupPickup.DelayAfterKazuhaIfArtifactOnlyAsync(_ct);
             }
 
             if (switchPartyFlag && !string.IsNullOrEmpty(oldPartyName))
