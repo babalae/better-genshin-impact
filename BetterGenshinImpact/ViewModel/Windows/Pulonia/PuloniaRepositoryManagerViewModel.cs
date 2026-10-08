@@ -7,15 +7,14 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Interop;
 using BetterGenshinImpact.Core.Script.Repositories;
 using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.View.Windows.Pulonia;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Meziantou.Framework.Win32;
-using Microsoft.Win32;
 
 namespace BetterGenshinImpact.ViewModel.Windows.Pulonia;
 
@@ -41,8 +40,6 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
     [ObservableProperty] private ObservableCollection<PuloniaRepositoryChoiceViewModel> _repositoryChoices = [];
     /// <summary>当前查看或编辑的仓库。</summary>
     [ObservableProperty] private ScriptRepositoryRegistration? _selectedRepository;
-    /// <summary>当前在填写尚未保存的第三方配置。</summary>
-    [ObservableProperty] private bool _isAddingRemote;
     /// <summary>第三方仓库可编辑名称，官方与本地来源名称只读。</summary>
     [ObservableProperty] private string _repositoryName = string.Empty;
     /// <summary>当前远端地址；官方仅自定义渠道允许编辑。</summary>
@@ -68,20 +65,24 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
 
     /// <summary>官方界面保留现有三种渠道，第三方不展示多远端选择器。</summary>
     public string[] OfficialChannels { get; } = ["CNB", "GitHub", "自定义"];
-    /// <summary>官方身份与当前是否在新建第三方记录有关。</summary>
-    public bool IsOfficial => !IsAddingRemote && SelectedRepository?.IsOfficial == true;
-    /// <summary>第三方编辑区域在新建或选中远程来源时展示。</summary>
-    public bool IsThirdParty => IsAddingRemote || SelectedRepository is { Kind: "remote", IsOfficial: false };
+    /// <summary>官方身份只由当前真实注册决定，添加草稿在独立窗口中维护。</summary>
+    public bool IsOfficial => SelectedRepository?.IsOfficial == true;
+    /// <summary>第三方编辑区域只用于已选中的远程来源。</summary>
+    public bool IsThirdParty => SelectedRepository is { Kind: "remote", IsOfficial: false };
     /// <summary>本地仓库只展示目录操作，不展示 Git 功能。</summary>
-    public bool IsLocal => !IsAddingRemote && SelectedRepository is { IsRemote: false };
+    public bool IsLocal => SelectedRepository is { IsRemote: false };
     /// <summary>Git 区域仅面向托管来源。</summary>
-    public bool IsRemote => IsAddingRemote || SelectedRepository?.IsRemote == true;
+    public bool IsRemote => SelectedRepository?.IsRemote == true;
     /// <summary>拉取期间不能切换来源或编辑提交配置。</summary>
     public bool CanEdit => !IsBusy && !_closed;
     /// <summary>官方地址中只有自定义镜像可编辑。</summary>
     public bool CanEditRemoteUrl => CanEdit && (IsThirdParty || IsOfficial && SelectedOfficialChannel == "自定义");
     /// <summary>当前来源的固定位置。</summary>
-    public string DirectoryText => IsAddingRemote ? "保存后按仓库 ID 分配固定目录" : SelectedRepository?.Directory ?? string.Empty;
+    public string DirectoryText => SelectedRepository?.Directory ?? string.Empty;
+    /// <summary>操作区明确展示当前动作所针对的真实仓库名称。</summary>
+    public string SelectedRepositoryName => SelectedRepository?.Name ?? string.Empty;
+    /// <summary>只有非官方真实注册才展示移除仓库操作。</summary>
+    public bool CanShowRemove => SelectedRepository is { IsOfficial: false };
     /// <summary>远程来源展示本机仓库副本，本地来源展示用户维护目录。</summary>
     public string DirectoryLabel => IsRemote ? "本机仓库副本" : "本地仓库目录";
     /// <summary>用户看到的来源类型说明。</summary>
@@ -118,7 +119,6 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
         Repositories = new ObservableCollection<ScriptRepositoryRegistration>(repositories);
         RepositoryChoices = new ObservableCollection<PuloniaRepositoryChoiceViewModel>(
             PuloniaRepositoryChoiceViewModel.CreateChoices(repositories, _service.OfficialConfig.SelectedChannelName));
-        IsAddingRemote = false;
         SelectedRepository = Repositories.FirstOrDefault(r => r.Id == selectedId) ?? Repositories.FirstOrDefault(r => r.IsOfficial);
         FillRepository();
         if (!Directory.Exists(SelectedRepository?.Directory)) StatusMessage = "尚未同步，请点击同步仓库。";
@@ -127,7 +127,6 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
     /// <summary>切换来源时显示已保存的配置，第三方隐藏的其他远端不会被覆盖。</summary>
     partial void OnSelectedRepositoryChanged(ScriptRepositoryRegistration? value)
     {
-        IsAddingRemote = false;
         FillRepository();
     }
 
@@ -192,89 +191,55 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
 
     /// <summary>忙碌和来源类型改变后刷新绑定与命令可执行状态。</summary>
     partial void OnIsBusyChanged(bool value) => NotifyState();
-    /// <summary>新增表单改变后显示第三方地址和分支。</summary>
-    partial void OnIsAddingRemoteChanged(bool value) => NotifyState();
 
     /// <summary>公共编辑动作的可执行条件。</summary>
     private bool CanManage() => CanEdit;
     /// <summary>保存仅用于第三方配置。</summary>
     private bool CanSave() => CanEdit && IsThirdParty;
     /// <summary>同步只能操作已经保存的托管仓库。</summary>
-    private bool CanUpdate() => CanEdit && !IsAddingRemote && SelectedRepository?.IsRemote == true;
+    private bool CanUpdate() => CanEdit && SelectedRepository?.IsRemote == true;
     /// <summary>重置必须已经存在 clone 副本。</summary>
     private bool CanReset() => CanUpdate() && Directory.Exists(SelectedRepository!.Directory);
     /// <summary>刷新目录只用于已经存在的本地仓库。</summary>
     private bool CanRefreshLocal() => CanEdit && IsLocal && Directory.Exists(SelectedRepository!.Directory);
     /// <summary>官方移除按钮不可执行，服务层还会再次验证身份。</summary>
-    private bool CanRemove() => CanEdit && !IsAddingRemote && SelectedRepository is { IsOfficial: false };
+    private bool CanRemove() => CanEdit && CanShowRemove;
     /// <summary>打开目录只能定位已经存在的副本。</summary>
-    private bool CanOpenDirectory() => CanEdit && !IsAddingRemote && SelectedRepository is { } repository && Directory.Exists(repository.Directory);
+    private bool CanOpenDirectory() => CanEdit && SelectedRepository is { } repository && Directory.Exists(repository.Directory);
 
-    /// <summary>在同一个小窗口填写新远程来源，不立即开始网络下载。</summary>
+    /// <summary>在独立窗口填写尚未保存的第三方配置，确认后选中新注册，不立即下载。</summary>
     [RelayCommand(CanExecute = nameof(CanManage))]
-    private void AddRemote()
+    private async Task AddRemoteAsync()
     {
-        IsAddingRemote = true;
-        RepositoryName = "第三方脚本仓库";
-        RemoteUrl = string.Empty;
-        Branch = "release";
-        StatusMessage = "填写名称、地址和分支，保存后可同步。";
+        var owner = Application.Current.Windows.OfType<Window>().FirstOrDefault(window => window.IsActive);
+        var repository = PuloniaRemoteRepositoryDialog.Show(_service.Repositories, owner);
+        if (repository is null) return;
+        await RunAsync(async ct =>
+        {
+            await ReloadAsync(repository.Id, ct);
+            StatusMessage = "已添加远程仓库，请同步仓库以获取本机仓库副本。";
+        });
     }
 
-    /// <summary>选择本地根目录验证索引后建立引用，不加入程序更新目标。</summary>
+    /// <summary>独立窗口统一选择本地目录或 ZIP，校验并添加后刷新真实仓库列表。</summary>
     [RelayCommand(CanExecute = nameof(CanManage))]
     private async Task AddLocalAsync()
     {
-        var dialog = new Wpf.Ui.Violeta.Win32.OpenFolderDialog
-        { Description = "选择包含 repo.json 索引的本地仓库根目录", UseDescriptionForTitle = true };
-        var owner = Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive);
-        var accepted = owner is null ? dialog.ShowDialog() : dialog.ShowDialog(new WindowInteropHelper(owner).Handle);
-        if (accepted != true) return;
-        await RunAsync(async ct =>
-        {
-            var repository = await _service.Repositories.AddRepositoryAsync(dialog.SelectedPath, ct);
-            await ReloadAsync(repository.Id, ct);
-            StatusMessage = "已添加本地引用。";
-        });
-    }
-
-    /// <summary>选择离线 ZIP，校验 repo.json 后通过老导入器解压到共享 Repos 目录并注册。</summary>
-    [RelayCommand(CanExecute = nameof(CanManage))]
-    private async Task ImportLocalZipAsync()
-    {
-        var dialog = new OpenFileDialog
-        {
-            Title = "选择脚本仓库 ZIP 压缩包",
-            Filter = "ZIP 压缩包 (*.zip)|*.zip",
-            Multiselect = false,
-            CheckFileExists = true
-        };
         var owner = Application.Current.Windows.OfType<Window>().FirstOrDefault(window => window.IsActive);
-        if (dialog.ShowDialog(owner) != true) return;
+        var repository = PuloniaLocalRepositoryDialog.Show(_service, owner);
+        if (repository is null) return;
         await RunAsync(async ct =>
         {
-            StatusMessage = "正在校验 ZIP 中的 repo.json…";
-            IsProgressIndeterminate = false;
-            var progress = new Progress<(int Value, string Text)>(state =>
-            {
-                if (_closed) return;
-                ProgressValue = state.Value;
-                ProgressText = state.Text;
-            });
-            var repository = await _service.ImportLocalZipAsync(dialog.FileName,
-                (value, text) => ((IProgress<(int, string)>)progress).Report((value, text)), ct);
-            await ReloadAsync(repository.Id, CancellationToken.None);
-            StatusMessage = "ZIP 已导入共享 Repos 目录并通过 repo.json 校验。";
+            await ReloadAsync(repository.Id, ct);
+            StatusMessage = "已添加本地仓库；任务计划使用的资源版本未改变。";
         });
     }
 
-    /// <summary>保存第三方当前远端和分支，新增配置不会修改官方渠道。</summary>
+    /// <summary>保存已选第三方当前远端和分支，第三方配置不会修改官方渠道。</summary>
     [RelayCommand(CanExecute = nameof(CanSave))]
     private Task SaveAsync() => RunAsync(async ct =>
     {
-        var repository = IsAddingRemote
-            ? await _service.Repositories.AddRemoteRepositoryAsync(RepositoryName, RemoteUrl, Branch, ct)
-            : await _service.SaveRemoteAsync(SelectedRepository!.Id, RepositoryName, RemoteUrl, Branch, ct);
+        var repository = await _service.SaveRemoteAsync(SelectedRepository!.Id, RepositoryName, RemoteUrl, Branch, ct);
         await ReloadAsync(repository.Id, ct);
         StatusMessage = "配置已保存，可以同步仓库。";
     });
@@ -323,13 +288,13 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
         });
     }
 
-    /// <summary>移除引用而不删除来源文件，当前选择随后回到官方。</summary>
+    /// <summary>移除仓库注册而不删除来源文件，当前选择随后回到官方。</summary>
     [RelayCommand(CanExecute = nameof(CanRemove))]
     private Task RemoveAsync() => RunAsync(async ct =>
     {
         await _service.Repositories.RemoveRepositoryAsync(SelectedRepository!.Id, ct);
         await ReloadAsync(ScriptRepositoryStore.OfficialRepositoryId, ct);
-        StatusMessage = "已移除引用，本地文件与已确认任务内容仍保留。";
+        StatusMessage = "已移除仓库；只移除仓库注册，本地文件与任务使用版本仍保留。";
     });
 
     /// <summary>在系统文件管理器查看本地目录。</summary>
@@ -377,13 +342,14 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
         }
     }
 
-    /// <summary>派生展示属性和命令随选择、编辑模式、操作状态一起刷新。</summary>
+    /// <summary>派生展示属性和命令随真实仓库选择及操作状态一起刷新。</summary>
     private void NotifyState()
     {
         foreach (var property in new[] { nameof(IsOfficial), nameof(IsThirdParty), nameof(IsLocal), nameof(IsRemote), nameof(CanEdit),
-                     nameof(CanEditRemoteUrl), nameof(DirectoryText), nameof(DirectoryLabel), nameof(RepositoryKindText), nameof(UpdateButtonText) })
+                     nameof(CanEditRemoteUrl), nameof(DirectoryText), nameof(DirectoryLabel), nameof(RepositoryKindText), nameof(UpdateButtonText),
+                     nameof(SelectedRepositoryName), nameof(CanShowRemove) })
             OnPropertyChanged(property);
-        AddRemoteCommand.NotifyCanExecuteChanged(); AddLocalCommand.NotifyCanExecuteChanged(); ImportLocalZipCommand.NotifyCanExecuteChanged();
+        AddRemoteCommand.NotifyCanExecuteChanged(); AddLocalCommand.NotifyCanExecuteChanged();
         SaveCommand.NotifyCanExecuteChanged();
         UpdateCommand.NotifyCanExecuteChanged(); ResetCommand.NotifyCanExecuteChanged(); RemoveCommand.NotifyCanExecuteChanged();
         RefreshLocalCommand.NotifyCanExecuteChanged(); OpenDirectoryCommand.NotifyCanExecuteChanged(); SaveCredentialsCommand.NotifyCanExecuteChanged();

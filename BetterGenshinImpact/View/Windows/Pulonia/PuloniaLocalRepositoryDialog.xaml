@@ -1,0 +1,89 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.Pulonia.PuloniaLocalRepositoryDialog"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+                 xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+                 Title="添加本地仓库" Width="540" SizeToContent="Height" ResizeMode="NoResize"
+                 WindowStartupLocation="CenterOwner" ExtendsContentIntoTitleBar="True"
+                 WindowBackdropType="Mica" Background="{DynamicResource ApplicationBackgroundBrush}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <ui:TitleBar Title="添加本地仓库" ShowMaximize="False" ShowMinimize="False"
+                     Icon="{ui:SymbolIcon Folder24}" />
+        <StackPanel Grid.Row="1" Margin="20,8,20,20">
+            <TextBlock Text="拖入一个仓库目录或 ZIP 压缩包，通过校验后立即添加。"
+                       TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            <!-- 整个虚线区域均可拖放或点击；选择菜单仅决定系统选择器类型。 -->
+            <Grid Margin="0,16,0,12" Height="200" AllowDrop="True" IsEnabled="{Binding CanEdit}">
+                <i:Interaction.Behaviors>
+                    <behavior:FileSystemDropBehavior Command="{Binding AddSourceCommand}"
+                                                     RejectedCommand="{Binding RejectDropCommand}"
+                                                     IsDraggingOver="{Binding IsDraggingOver, Mode=OneWayToSource}" />
+                </i:Interaction.Behaviors>
+                <ui:DropDownButton HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                   HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                   BorderThickness="0" AutomationProperties.Name="选择仓库目录或 ZIP 压缩包">
+                    <ui:DropDownButton.Style>
+                        <Style TargetType="ui:DropDownButton" BasedOn="{StaticResource {x:Type ui:DropDownButton}}">
+                            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsDraggingOver}" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ui:DropDownButton.Style>
+                    <ui:DropDownButton.Content>
+                        <StackPanel HorizontalAlignment="Center">
+                            <ui:SymbolIcon Symbol="FolderAdd24" FontSize="36" HorizontalAlignment="Center"
+                                           Foreground="{DynamicResource AccentFillColorDefaultBrush}" />
+                            <TextBlock Margin="0,12,0,5" Text="拖拽目录或 ZIP 到此处" FontWeight="SemiBold"
+                                       FontSize="16" HorizontalAlignment="Center" />
+                            <TextBlock Text="或点击选择目录 / ZIP" HorizontalAlignment="Center"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                    </ui:DropDownButton.Content>
+                    <ui:DropDownButton.Flyout>
+                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                            <ui:MenuItem Header="选择目录" Icon="{ui:SymbolIcon Folder24}" Command="{Binding SelectDirectoryCommand}" />
+                            <ui:MenuItem Header="选择 ZIP" Icon="{ui:SymbolIcon Document24}" Command="{Binding SelectZipCommand}" />
+                        </ContextMenu>
+                    </ui:DropDownButton.Flyout>
+                </ui:DropDownButton>
+                <Rectangle Margin="1" RadiusX="8" RadiusY="8" StrokeThickness="1.5" StrokeDashArray="4,3"
+                           IsHitTestVisible="False">
+                    <Rectangle.Style>
+                        <Style TargetType="Rectangle">
+                            <Setter Property="Stroke" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsDraggingOver}" Value="True">
+                                    <Setter Property="Stroke" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Rectangle.Style>
+                </Rectangle>
+            </Grid>
+            <TextBlock Text="目录将直接引用原位置；ZIP 将导入与老配置组相同的 Repos 仓库目录。仓库必须包含有效的 repo.json 索引。"
+                       FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            <TextBlock Margin="0,8,0,0" Text="{Binding SourcePath}" TextWrapping="Wrap" FontSize="12"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            <StackPanel Margin="0,10,0,0" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <ProgressBar Minimum="0" Maximum="100" Height="4" Value="{Binding ProgressValue}"
+                             IsIndeterminate="{Binding IsProgressIndeterminate}" />
+                <TextBlock Margin="0,6,0,0" Text="{Binding ProgressText}" TextWrapping="Wrap" FontSize="12" />
+            </StackPanel>
+            <TextBlock Margin="0,8,0,0" Text="{Binding ErrorMessage}" TextWrapping="Wrap"
+                       Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
+        </StackPanel>
+        <Border Grid.Row="2" Padding="20,12" BorderThickness="0,1,0,0"
+                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
+            <ui:Button HorizontalAlignment="Right" Height="36" Content="取消" IsCancel="True" IsEnabled="{Binding CanEdit}" />
+        </Border>
+    </Grid>
+</ui:FluentWindow>

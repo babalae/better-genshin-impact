@@ -1,0 +1,41 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.Pulonia.PuloniaRemoteRepositoryDialog"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 Title="添加远程仓库" Width="500" SizeToContent="Height" ResizeMode="NoResize"
+                 WindowStartupLocation="CenterOwner" ExtendsContentIntoTitleBar="True"
+                 WindowBackdropType="Mica" Background="{DynamicResource ApplicationBackgroundBrush}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <ui:TitleBar Title="添加远程仓库" ShowMaximize="False" ShowMinimize="False"
+                     Icon="{ui:SymbolIcon BranchFork24}" />
+        <StackPanel Grid.Row="1" Margin="20,8,20,20">
+            <TextBlock Text="添加后可在仓库列表中选择，再点击“同步仓库”获取本机仓库副本。"
+                       TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            <TextBlock Margin="0,16,0,6" Text="仓库名称" />
+            <TextBox Text="{Binding RepositoryName, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanEdit}" />
+            <TextBlock Margin="0,12,0,6" Text="Git 地址" />
+            <TextBox Text="{Binding RemoteUrl, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanEdit}" />
+            <TextBlock Margin="0,12,0,6" Text="分支" />
+            <TextBox Text="{Binding Branch, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanEdit}" />
+            <TextBlock Margin="0,10,0,0" Text="{Binding ValidationMessage}" TextWrapping="Wrap"
+                       Foreground="{DynamicResource SystemFillColorCautionBrush}" />
+            <TextBlock Margin="0,4,0,0" Text="{Binding ErrorMessage}" TextWrapping="Wrap"
+                       Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
+            <ProgressBar Margin="0,8,0,0" Height="4" IsIndeterminate="True"
+                         Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
+        </StackPanel>
+        <Border Grid.Row="2" Padding="20,12" BorderThickness="0,1,0,0"
+                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <ui:Button Margin="0,0,8,0" Height="36" Content="取消" IsCancel="True" IsEnabled="{Binding CanEdit}" />
+                <ui:Button Height="36" Appearance="Primary" Content="添加远程仓库"
+                           Icon="{ui:SymbolIcon Add24}" Command="{Binding AddCommand}" IsDefault="True" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</ui:FluentWindow>

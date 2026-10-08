@@ -8,6 +8,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Repositories;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Pulonia.Models;
 using LibGit2Sharp.Handlers;
 
 namespace BetterGenshinImpact.Pulonia.Services;
@@ -76,10 +77,37 @@ public sealed class PuloniaRepositoryManagementService
     public Task RefreshLocalAsync(string id, CancellationToken ct = default)
         => Repositories.RefreshLocalRepositoryAsync(id, ct);
 
+    /// <summary>识别单个本地来源，拒绝快捷方式、链接、普通文件或不存在的路径。</summary>
+    public static PuloniaLocalRepositorySourceKind ClassifyLocalSource(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) throw new ArgumentException("请选择一个仓库目录或 ZIP 压缩包。");
+        path = Path.GetFullPath(path);
+        if (!Directory.Exists(path) && !File.Exists(path))
+            throw new IOException("选择的目录或 ZIP 文件不存在。");
+        if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
+            throw new IOException("请选择实际的仓库目录或 ZIP 文件，不支持链接。");
+        if (Directory.Exists(path)) return PuloniaLocalRepositorySourceKind.Directory;
+        if (string.Equals(Path.GetExtension(path), ".zip", StringComparison.OrdinalIgnoreCase))
+            return PuloniaLocalRepositorySourceKind.Zip;
+        throw new IOException("只支持仓库目录或 ZIP 压缩包，不支持普通文件和快捷方式。");
+    }
+
+    /// <summary>统一处理选择器和拖放来源，先识别类型，再沿用各自的索引校验与注册流程。</summary>
+    public Task<ScriptRepositoryRegistration> AddLocalSourceAsync(string path,
+        Action<int, string>? progress = null, CancellationToken ct = default)
+    {
+        var kind = ClassifyLocalSource(path);
+        path = Path.GetFullPath(path);
+        if (kind == PuloniaLocalRepositorySourceKind.Zip) return ImportLocalZipAsync(path, progress, ct);
+        progress?.Invoke(0, "正在校验目录中的 repo.json…");
+        return Repositories.AddRepositoryAsync(path, ct);
+    }
+
     /// <summary>先校验离线包，再复用老配置组导入器解压到共享 Repos 目录并注册给 Pulonia。</summary>
     public async Task<ScriptRepositoryRegistration> ImportLocalZipAsync(string zipFilePath,
         Action<int, string>? progress = null, CancellationToken ct = default)
     {
+        progress?.Invoke(0, "正在校验 ZIP 中的 repo.json…");
         await Repositories.ValidateRepositoryZipAsync(zipFilePath, ct).ConfigureAwait(false);
         ct.ThrowIfCancellationRequested();
         var directory = await ScriptRepoUpdater.Instance.ImportLocalRepoZip(zipFilePath, progress).ConfigureAwait(false);

@@ -63,7 +63,7 @@ public partial class PuloniaTaskCreationDialogViewModel
 
     /// <summary>空状态对应的来源管理说明，预览不会自动触发下载。</summary>
     public string RepositoryGuidance => SelectedRepository is { IsRemote: true } repository && !Directory.Exists(repository.Directory)
-        ? "当前仓库尚未下载，请打开仓库管理下载资源。" : "当前仓库没有可选资源，可打开仓库管理更新或添加来源。";
+        ? "当前仓库尚未同步，请打开仓库管理同步资源。" : "当前仓库没有可选资源，可打开仓库管理修改或添加来源。";
 
     /// <summary>显示当前本地位置，帮助区分同名仓库和开发目录。</summary>
     public string SelectedRepositoryDirectory => SelectedRepository?.Directory ?? "请选择或添加仓库";

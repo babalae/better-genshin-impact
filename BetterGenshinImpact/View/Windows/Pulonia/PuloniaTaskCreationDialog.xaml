@@ -158,6 +158,68 @@
             </Setter>
         </Style>
 
+        <!--
+        JS 脚本和录制资源列表使用独立容器模板，避免原生 ListBoxItem 在深色主题下
+        回退到系统选中色，同时让名称与路径占满左侧资源栏并正确省略过长文本。
+        -->
+        <Style x:Key="ResourceListBoxItemStyle" TargetType="ListBoxItem">
+            <Setter Property="Margin" Value="0,1" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="ItemBorder"
+                                MinHeight="52"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="Transparent"
+                                BorderThickness="1"
+                                CornerRadius="5"
+                                SnapsToDevicePixels="True">
+                            <Grid>
+                                <Border x:Name="SelectionIndicator"
+                                        Width="3"
+                                        Height="26"
+                                        Margin="2,0,0,0"
+                                        HorizontalAlignment="Left"
+                                        VerticalAlignment="Center"
+                                        Background="{DynamicResource AccentFillColorDefaultBrush}"
+                                        CornerRadius="2"
+                                        Visibility="Collapsed" />
+                                <ContentPresenter Margin="12,5,8,5"
+                                                  HorizontalAlignment="Stretch"
+                                                  VerticalAlignment="Center"
+                                                  SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ItemBorder"
+                                        Property="Background"
+                                        Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="ItemBorder"
+                                        Property="Background"
+                                        Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                                <Setter TargetName="ItemBorder"
+                                        Property="BorderBrush"
+                                        Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+                                <Setter TargetName="SelectionIndicator" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ItemBorder" Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- 所有能力共用同一份 Schema 字段模板，避免创建弹窗和后续参数编辑出现两套语义。 -->
         <DataTemplate x:Key="ParameterFieldTemplate" DataType="{x:Type pulonia:PuloniaTaskParameterFieldViewModel}">
             <StackPanel Margin="0,0,0,14">
@@ -561,6 +623,8 @@
                             <ListBox Padding="0"
                                      Background="Transparent"
                                      BorderThickness="0"
+                                     Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                     ItemContainerStyle="{StaticResource ResourceListBoxItemStyle}"
                                      ItemsSource="{Binding FilteredResources}"
                                      SelectedItem="{Binding SelectedResource, Mode=TwoWay}"
                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -578,7 +642,7 @@
                                 </ListBox.Style>
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
-                                        <Grid MinHeight="48" Margin="4">
+                                        <Grid MinHeight="40">
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="Auto" />
                                                 <RowDefinition Height="Auto" />

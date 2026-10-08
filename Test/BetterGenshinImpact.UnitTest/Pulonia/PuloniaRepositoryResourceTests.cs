@@ -3,6 +3,8 @@ using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.Core.Script.Repositories;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.View.Behavior;
+using BetterGenshinImpact.ViewModel.Windows.Pulonia;
 using LibGit2Sharp;
 using Newtonsoft.Json.Linq;
 using System.IO.Compression;
@@ -96,6 +98,64 @@ public sealed class PuloniaRepositoryResourceTests : IDisposable
         ZipFile.CreateFromDirectory(invalidSource, invalidZip);
         var error = await Assert.ThrowsAsync<IOException>(() => store.ValidateRepositoryZipAsync(invalidZip));
         Assert.Contains("indexes", error.Message);
+        // 导入入口也必须先校验，不能调用共享导入器或创建无效仓库注册。
+        var service = new PuloniaRepositoryManagementService(store);
+        await Assert.ThrowsAsync<IOException>(() => service.ImportLocalZipAsync(invalidZip));
+        Assert.Empty((await store.GetRepositoriesAsync()).Where(repository => !repository.IsOfficial));
+    }
+
+    /// <summary>目录与 ZIP 自动选择正确操作，普通文件、快捷方式、缺失路径及多项拖入被拒绝。</summary>
+    [Fact]
+    public void LocalSource_RecognizesDirectoryAndZip_AndRejectsOtherInputs()
+    {
+        var source = CreateSource("local-source", false);
+        var zip = Path.Combine(_root, "source.ZIP");
+        ZipFile.CreateFromDirectory(source, zip);
+        Assert.Equal(PuloniaLocalRepositorySourceKind.Directory,
+            PuloniaRepositoryManagementService.ClassifyLocalSource(FileSystemDropBehavior.GetSinglePath([source])));
+        Assert.Equal(PuloniaLocalRepositorySourceKind.Zip,
+            PuloniaRepositoryManagementService.ClassifyLocalSource(FileSystemDropBehavior.GetSinglePath([zip])));
+        Write(_root, "ordinary.txt", "not a repository");
+        Write(_root, "shortcut.lnk", "not an actual directory");
+        Assert.Throws<IOException>(() => PuloniaRepositoryManagementService.ClassifyLocalSource(Path.Combine(_root, "ordinary.txt")));
+        Assert.Throws<IOException>(() => PuloniaRepositoryManagementService.ClassifyLocalSource(Path.Combine(_root, "shortcut.lnk")));
+        Assert.Throws<IOException>(() => PuloniaRepositoryManagementService.ClassifyLocalSource(Path.Combine(_root, "missing.zip")));
+        Assert.Throws<ArgumentException>(() => FileSystemDropBehavior.GetSinglePath([source, zip]));
+    }
+
+    /// <summary>统一目录添加入口在索引验证成功前不产生注册，通过后返回真实来源身份。</summary>
+    [Fact]
+    public async Task LocalDirectory_InvalidIndexDoesNotRegister()
+    {
+        var store = CreateStore();
+        var service = new PuloniaRepositoryManagementService(store);
+        var source = CreateSource("local-invalid", false);
+        Write(source, "repo.json", "{}");
+        await Assert.ThrowsAsync<IOException>(() => service.AddLocalSourceAsync(source));
+        Assert.Empty((await store.GetRepositoriesAsync()).Where(repository => !repository.IsOfficial));
+        Write(source, "repo.json", "{\"indexes\":[]}");
+        var added = await service.AddLocalSourceAsync(source);
+        Assert.Equal(source, added.Directory);
+        Assert.Equal(added.Id, Assert.Single((await store.GetRepositoriesAsync()).Where(repository => !repository.IsOfficial)).Id);
+    }
+
+    /// <summary>填写或取消远程草稿不注册，确认后只创建来源身份，不访问远端或建立 clone。</summary>
+    [Fact]
+    public async Task RemoteDraft_OnlyConfirmationCreatesRegistration_WithoutSync()
+    {
+        var store = CreateStore();
+        var draft = new PuloniaRemoteRepositoryDialogViewModel(store)
+        { RepositoryName = "第三方测试仓库", RemoteUrl = "https://example.invalid/repository.git" };
+        Assert.True(draft.AddCommand.CanExecute(null));
+        Assert.Empty((await store.GetRepositoriesAsync()).Where(repository => !repository.IsOfficial));
+        Assert.Null(draft.AddedRepository);
+        draft.Branch = "invalid branch";
+        Assert.False(draft.AddCommand.CanExecute(null));
+        draft.Branch = "release";
+        await draft.AddCommand.ExecuteAsync(null);
+        var added = Assert.Single((await store.GetRepositoriesAsync()).Where(repository => !repository.IsOfficial));
+        Assert.Equal(added.Id, draft.AddedRepository!.Id);
+        Assert.False(Directory.Exists(added.Directory));
     }
 
     /// <summary>只有两个版本文件触发更新；其他来源文件改变后旧缓存仍保留原内容。</summary>

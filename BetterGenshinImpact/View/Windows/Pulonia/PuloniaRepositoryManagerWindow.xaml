@@ -7,6 +7,13 @@
                  Title="Pulonia 仓库管理" Width="560" MinWidth="500" Height="640" MinHeight="480"
                  WindowStartupLocation="CenterOwner" ExtendsContentIntoTitleBar="True"
                  WindowBackdropType="Mica" Background="{DynamicResource ApplicationBackgroundBrush}">
+    <ui:FluentWindow.Resources>
+        <!-- 仓库级操作共用尺寸，主题图标和文本始终同时可见。 -->
+        <Style x:Key="RepositoryOperationButton" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+            <Setter Property="Height" Value="36" />
+            <Setter Property="Padding" Value="10,0" />
+        </Style>
+    </ui:FluentWindow.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -17,25 +24,65 @@
                      Icon="{ui:SymbolIcon BranchFork24}" />
         <ScrollViewer Grid.Row="1" Margin="16,6,16,10" VerticalScrollBarVisibility="Auto">
             <StackPanel>
-                <!-- 添加和引用管理集中到独立窗口；仓库选择不会解析脚本正文。 -->
-                <Grid Margin="0,0,0,12">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <ComboBox ItemsSource="{Binding RepositoryChoices}"
-                              SelectedValue="{Binding SelectedRepository, Mode=TwoWay}" IsEnabled="{Binding CanEdit}"
-                              Style="{StaticResource PuloniaRepositorySelectorStyle}" />
-                    <StackPanel Grid.Row="1" Margin="0,8,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
-                        <ui:Button Margin="0,0,6,0" Content="添加远程" Command="{Binding AddRemoteCommand}" />
-                        <ui:Button Margin="0,0,6,0" Content="选择文件夹" Command="{Binding AddLocalCommand}" />
-                        <ui:Button Content="导入 ZIP" Command="{Binding ImportLocalZipCommand}"
-                                   ToolTip="校验 repo.json 后导入到与老配置组相同的 Repos 仓库目录" />
+                <!-- 添加和引用管理集中到独立窗口；仓库选择不会解析脚本正文，也不展示添加草稿。 -->
+                <ComboBox Margin="0,0,0,12" ItemsSource="{Binding RepositoryChoices}"
+                          SelectedValue="{Binding SelectedRepository, Mode=TwoWay}" IsEnabled="{Binding CanEdit}"
+                          Style="{StaticResource PuloniaRepositorySelectorStyle}" />
+                <!-- 同一操作卡片的第一行添加来源，第二行维护当前真实仓库。 -->
+                <Border Padding="14" CornerRadius="8" BorderThickness="1"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
+                    <StackPanel>
+                        <DockPanel LastChildFill="True">
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                <ui:Button Margin="0,0,8,0" Content="添加远程仓库" Icon="{ui:SymbolIcon Add24}"
+                                           Style="{StaticResource RepositoryOperationButton}" Command="{Binding AddRemoteCommand}" />
+                                <ui:Button Content="添加本地仓库" Icon="{ui:SymbolIcon FolderAdd24}"
+                                           Style="{StaticResource RepositoryOperationButton}" Command="{Binding AddLocalCommand}"
+                                           ToolTip="拖入或选择目录、ZIP，通过 repo.json 校验后立即添加" />
+                            </StackPanel>
+                            <TextBlock Text="仓库操作" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        </DockPanel>
+                        <Border Margin="0,12,0,0" Padding="0,12,0,0" BorderThickness="0,1,0,0"
+                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,10,0" VerticalAlignment="Center">
+                                    <TextBlock Text="当前仓库" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                    <TextBlock Text="{Binding SelectedRepositoryName}" TextTrimming="CharacterEllipsis"
+                                               ToolTip="{Binding SelectedRepositoryName}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <ui:Button Margin="0,0,8,0" Appearance="Primary" Content="{Binding UpdateButtonText}"
+                                               Icon="{ui:SymbolIcon ArrowSync24}" Style="{StaticResource RepositoryOperationButton}"
+                                               Command="{Binding UpdateCommand}"
+                                               Visibility="{Binding IsRemote, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    <ui:Button Margin="0,0,8,0" Appearance="Primary" Content="刷新目录"
+                                               Icon="{ui:SymbolIcon ArrowClockwise24}" Style="{StaticResource RepositoryOperationButton}"
+                                               Command="{Binding RefreshLocalCommand}"
+                                               Visibility="{Binding IsLocal, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    <ui:Button Margin="0,0,8,0" Content="重置仓库" Icon="{ui:SymbolIcon ArrowCounterclockwise24}"
+                                               Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                               Style="{StaticResource RepositoryOperationButton}" Command="{Binding ResetCommand}"
+                                               ToolTip="清理本机仓库副本，之后需要重新同步；保留任务使用版本"
+                                               Visibility="{Binding IsRemote, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    <ui:Button Content="移除仓库" Icon="{ui:SymbolIcon Delete24}"
+                                               Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                                               Style="{StaticResource RepositoryOperationButton}" Command="{Binding RemoveCommand}"
+                                               ToolTip="只移除仓库注册，保留本地文件和任务已固定的资源版本"
+                                               Visibility="{Binding CanShowRemove, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
                     </StackPanel>
-                </Grid>
+                </Border>
+                <!-- 所有仓库维护操作在同一位置显示进度及结果。 -->
+                <StackPanel Margin="0,10,0,0" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ProgressBar Minimum="0" Maximum="100" Value="{Binding ProgressValue}" IsIndeterminate="{Binding IsProgressIndeterminate}" Height="4" />
+                    <TextBlock Margin="0,5,0,0" Text="{Binding ProgressText}" FontSize="12" TextWrapping="Wrap" />
+                </StackPanel>
+                <TextBlock Margin="0,10,0,12" Text="{Binding StatusMessage}" TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                 <Border Padding="14" CornerRadius="8" BorderThickness="1"
                         BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                         Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
@@ -76,10 +123,7 @@
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    Text="同步或刷新只改变本机可浏览的仓库内容，不会修改任务计划使用的资源版本。" />
                         <WrapPanel Margin="0,10,0,0">
-                            <ui:Button Margin="0,0,6,4" Content="打开目录" Command="{Binding OpenDirectoryCommand}" />
-                            <ui:Button Margin="0,0,0,4" Content="移除引用" Command="{Binding RemoveCommand}"
-                                       ToolTip="只移除选择列表中的引用，保留本地文件和已确认任务内容"
-                                       Visibility="{Binding IsOfficial, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                            <ui:Button Content="打开目录" Icon="{ui:SymbolIcon FolderOpen24}" Command="{Binding OpenDirectoryCommand}" />
                         </WrapPanel>
                     </StackPanel>
                 </Border>
@@ -98,26 +142,10 @@
                         <ui:Button Margin="0,8,0,0" HorizontalAlignment="Right" Content="保存认证" Command="{Binding SaveCredentialsCommand}" />
                     </StackPanel>
                 </Expander>
-                <StackPanel Margin="0,10,0,0" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <ProgressBar Minimum="0" Maximum="100" Value="{Binding ProgressValue}" IsIndeterminate="{Binding IsProgressIndeterminate}" Height="4" />
-                    <TextBlock Margin="0,5,0,0" Text="{Binding ProgressText}" FontSize="12" TextWrapping="Wrap" />
-                </StackPanel>
-                <TextBlock Margin="0,10,0,0" Text="{Binding StatusMessage}" TextWrapping="Wrap"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
             </StackPanel>
         </ScrollViewer>
         <Border Grid.Row="2" Padding="16,10" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
-            <DockPanel LastChildFill="False">
-                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal"
-                            Visibility="{Binding IsRemote, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <ui:Button Margin="0,0,8,0" Appearance="Primary" Content="{Binding UpdateButtonText}" Command="{Binding UpdateCommand}" />
-                    <ui:Button Content="重置仓库" Command="{Binding ResetCommand}" />
-                </StackPanel>
-                <ui:Button DockPanel.Dock="Left" Appearance="Primary" Content="刷新目录"
-                           Command="{Binding RefreshLocalCommand}"
-                           Visibility="{Binding IsLocal, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                <ui:Button DockPanel.Dock="Right" Content="关闭" IsCancel="True" MinWidth="76" />
-            </DockPanel>
+            <ui:Button HorizontalAlignment="Right" Content="关闭" IsCancel="True" MinWidth="76" Height="36" />
         </Border>
     </Grid>
 </ui:FluentWindow>
