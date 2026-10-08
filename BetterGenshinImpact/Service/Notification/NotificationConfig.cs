@@ -377,6 +377,12 @@ public partial class NotificationConfig : ObservableObject
     /// </summary>
     [ObservableProperty] private string _qqGroupOpenId = string.Empty;
 
+    /// <summary>
+    /// 是否启用内置 QQ Bot 控制。启用后 BGI 会使用上方 AppID/AppSecret 直接连接 QQ Gateway，
+    /// 并仅接受已绑定的用户 OpenID 或群 OpenID 发来的中文控制指令。
+    /// </summary>
+    [ObservableProperty] private bool _qqBotControlEnabled;
+
     [ObservableProperty] private string _qqMessageFormat = "text";
 
     /// <summary>
