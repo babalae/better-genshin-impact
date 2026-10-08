@@ -16,7 +16,7 @@ namespace BetterGenshinImpact.GameTask.AutoDomain;
 
 public partial class AutoDomainTask
 {
-    public const string DevelopmentGuideOption = "根据提升指南选择秘境";
+    public const string TrainingGuideOption = "根据提升指南选择秘境";
     private string? _guideDomainName;
 
     private static string NormalizeGuideDomainName(string text)
@@ -54,14 +54,19 @@ public partial class AutoDomainTask
         throw new InvalidOperationException($"提升指南：未找到{text}，请检查游戏语言和界面");
     }
 
-    private async Task SelectDevelopmentGuideDestination()
+    private async Task OpenTrainingGuide()
     {
-        _guideDomainName = null;
         await new ReturnMainUiTask().Start(_ct);
         InputHub.Foreground.SimulateAction(GIActions.OpenAdventurerHandbook);
         await Delay(1000, _ct);
         await ClickGuideText("秘境", 0.1, 0.2, 0.1, 0.6);
         await ClickGuideText("提升指南", 0.2, 0.17, 0.18, 0.15);
+    }
+
+    private async Task SelectTrainingGuideDestination()
+    {
+        _guideDomainName = null;
+        await OpenTrainingGuide();
         var knownNames = MapLazyAssets.Get().DomainPositionMap.Keys.ToList();
         for (var attempt = 0; attempt < 6 && _guideDomainName == null; attempt++)
         {
@@ -95,7 +100,7 @@ public partial class AutoDomainTask
         await new ReturnMainUiTask().Start(_ct);
     }
 
-    private async Task SelectDevelopmentGuideLevel()
+    private async Task SelectTrainingGuideLevel()
     {
         using (var screen = CaptureToRectArea())
             GlobalMethod.MoveMouseTo(screen.Width / 4, screen.Height / 2);
