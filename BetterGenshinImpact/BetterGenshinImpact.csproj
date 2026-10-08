@@ -44,6 +44,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<!-- Anthropic 官方 SDK：自动连招在 OpenAI 兼容端点之外可选的原生 Messages API 提供方 -->
+		<PackageReference Include="Anthropic" Version="12.53.0" />
+
 		<PackageReference Include="AvalonEdit" Version="6.3.1.120" />
 
 		<PackageReference Include="BetterGI.VCRuntime" Version="14.44.35208" />
