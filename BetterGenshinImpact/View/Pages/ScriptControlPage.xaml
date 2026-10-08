@@ -231,6 +231,8 @@
                             <ContextMenu> 
                                 <MenuItem Header="{i18n:T JS脚本}" Command="{Binding AddJsScriptCommand}" />
                                 <MenuItem Header="{i18n:T 地图追踪任务}" Command="{Binding AddPathingCommand}" />
+                                <MenuItem Header="{i18n:T 快速添加角色材料路线}" Command="{Binding QuickAddCharacterAscensionRoutesCommand}" />
+                                <MenuItem Header="{i18n:T 快速添加武器材料路线}" Command="{Binding QuickAddWeaponAscensionRoutesCommand}" />
                                 <MenuItem Header="{i18n:T 键鼠脚本}" Command="{Binding AddKmScriptCommand}" />
                                 <MenuItem Header="Shell" Command="{Binding AddShellCommand}" />
                             </ContextMenu>
