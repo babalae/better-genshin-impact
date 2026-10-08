@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.DpiAwareness;
 using BetterGenshinImpact.View.Windows;
@@ -6,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Serilog.Sinks.RichTextBox.Abstraction;
 using System;
 using System.ComponentModel;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -13,6 +15,7 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.View;
@@ -49,11 +52,14 @@ public partial class MaskWindow : Window
         LogTextBox.TextChanged += LogTextBoxTextChanged;
         Loaded += OnLoaded;
         _viewModel.PropertyChanged += ViewModelOnPropertyChanged;
+        ScriptGroupProgressTracker.Instance.PropertyChanged += TrackerOnPropertyChanged;
+        ScriptGroupProgressPanel.SizeChanged += (_, _) => UpdateRightSideOverlayOffset();
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         _richTextBox.RichTextBox = LogTextBox;
+        UpdateRightSideOverlayOffset();
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -68,6 +74,7 @@ public partial class MaskWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         _viewModel.PropertyChanged -= ViewModelOnPropertyChanged;
+        ScriptGroupProgressTracker.Instance.PropertyChanged -= TrackerOnPropertyChanged;
         LogTextBox.TextChanged -= LogTextBoxTextChanged;
 
         _mapLabelCategorySelectCts?.Cancel();
@@ -93,6 +100,53 @@ public partial class MaskWindow : Window
             && _mapLabelSearchWindow != null)
         {
             _ = Dispatcher.InvokeAsync(() => _mapLabelSearchWindow?.Hide());
+        }
+    }
+
+    /// <summary>
+    /// 配置组进度显示/隐藏时，重新安排右侧叠加层元素的位置
+    /// </summary>
+    private void TrackerOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ScriptGroupProgressTracker.IsRunning))
+        {
+            UpdateRightSideOverlayOffset();
+        }
+    }
+
+    /// <summary>
+    /// 只处理位于右半屏且与面板垂直重叠的元素，避免把底部元素推出屏幕。
+    /// </summary>
+    private void UpdateRightSideOverlayOffset()
+    {
+        var panelHeight = ScriptGroupProgressPanel.ActualHeight;
+        var offset = ScriptGroupProgressTracker.Instance.IsRunning && panelHeight > 0
+            ? panelHeight + ScriptGroupProgressPanel.Margin.Top + ScriptGroupProgressPanel.Margin.Bottom
+            : 0;
+
+        var halfWidth = OverlayCanvas.ActualWidth / 2;
+        if (halfWidth <= 0)
+        {
+            return;
+        }
+
+        foreach (var child in OverlayCanvas.Children.OfType<FrameworkElement>())
+        {
+            var left = Canvas.GetLeft(child);
+            if (double.IsNaN(left) || left < halfWidth)
+            {
+                continue;
+            }
+
+            var top = Canvas.GetTop(child);
+            if (double.IsNaN(top))
+            {
+                continue;
+            }
+
+            child.RenderTransform = offset > 0 && top < offset
+                ? new TranslateTransform(0, offset)
+                : Transform.Identity;
         }
     }
 

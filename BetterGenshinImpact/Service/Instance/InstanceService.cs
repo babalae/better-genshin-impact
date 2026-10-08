@@ -27,6 +27,7 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
 
     private readonly InstanceBootstrap _bootstrap;
     private readonly ILogger<InstanceService> _logger;
+    private readonly IInstanceConnectionOwner _connectionOwner;
     private readonly InstanceMessageState _messageState = new();
     private readonly InstanceRequestHandler _requestHandler;
     private readonly RelativeMouseMessageHandler _relativeMouseMessageHandler;
@@ -50,6 +51,7 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
     {
         _bootstrap = bootstrap;
         _logger = logger;
+        _connectionOwner = new ConnectionOwner(this);
         _relativeMouseMessageHandler = new RelativeMouseMessageHandler(
             Context,
             serviceProvider,
@@ -84,6 +86,16 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
+        if (Context.IsHeadless)
+        {
+            // Worker 模式不参与本用户根管道：跨用户通信由 WorkerIpcService 独立托管
+            _logger.LogInformation(
+                "无界面 Worker 已启动，跳过根实例 IPC：进程 {ProcessId}，Session {SessionId}",
+                Context.ProcessId,
+                Context.WindowsSessionId);
+            return Task.CompletedTask;
+        }
+
         if (Context.InstanceType == BetterGiInstanceType.Primary)
         {
             var firstServer = _bootstrap.TakeFirstServer()
@@ -355,7 +367,7 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
                     break;
                 }
 
-                var connection = new InstanceConnection(server, this, _logger);
+                var connection = new InstanceConnection(server, _connectionOwner, _logger);
                 server = null;
                 connection.Start(cancellationToken);
                 _ = ObserveAcceptedConnectionAsync(connection);
@@ -398,7 +410,7 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
                     openResponse = pendingInitialConnection.Response;
                     connection = new InstanceConnection(
                         pendingInitialConnection.Client,
-                        this,
+                        _connectionOwner,
                         _logger);
                     pendingInitialConnection = null;
                 }
@@ -410,7 +422,7 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
                         PipeDirection.InOut,
                         PipeOptions.Asynchronous | PipeOptions.WriteThrough);
                     await client.ConnectAsync(cancellationToken).ConfigureAwait(false);
-                    connection = new InstanceConnection(client, this, _logger);
+                    connection = new InstanceConnection(client, _connectionOwner, _logger);
                     connection.Start(cancellationToken);
 
                     var openResult = await connection.SendRequestAsync(
@@ -624,6 +636,43 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
                                           or ObjectDisposedException)
         {
             // HostedService 停止期间的正常清理。
+        }
+    }
+
+    /// <summary>
+    /// 把 <see cref="InstanceService"/> 适配为连接处理方。
+    /// 用内部适配器而不是让服务类直接实现内部接口，避免公开类型暴露内部连接类型。
+    /// </summary>
+    private sealed class ConnectionOwner(InstanceService service) : IInstanceConnectionOwner
+    {
+        public bool IsGameMouseModeEnabled => service.IsGameMouseModeEnabled;
+
+        public Task<InstanceIpcEnvelope?> HandleRequestAsync(
+            InstanceConnection connection,
+            InstanceIpcEnvelope request,
+            CancellationToken cancellationToken)
+        {
+            return service.HandleRequestAsync(connection, request, cancellationToken);
+        }
+
+        public bool ReceiveRelativeMouseBatch(
+            InstanceConnection connection,
+            ulong firstSequence,
+            IReadOnlyList<RelativeMouseSample> samples)
+        {
+            return service.ReceiveRelativeMouseBatch(connection, firstSequence, samples);
+        }
+
+        public void ReceiveRelativeMouseResult(
+            InstanceConnection connection,
+            RelativeMouseResult result)
+        {
+            service.ReceiveRelativeMouseResult(connection, result);
+        }
+
+        public void ConnectionClosed(InstanceConnection connection)
+        {
+            service.ConnectionClosed(connection);
         }
     }
 }

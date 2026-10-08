@@ -24,6 +24,7 @@ using BetterGenshinImpact.GameTask.TaskProgress;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
+using BetterGenshinImpact.Service.Worker;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 
@@ -159,6 +160,12 @@ public partial class ScriptService : IScriptService
         }
         
         
+        // 只有地图追踪脚本能估算耗时，其余脚本按 0 计；为 0 时不显示进度也不提预计时间
+        var steps = ScriptGroupProgressTracker.BuildSteps(groupName, list);
+        var groupEstimatedSeconds = steps.Sum(step => step.EstimatedSeconds);
+        // 连续执行 / 一条龙时这里拿到的是整批剩下的预估，单独执行时就是本组预估
+        var estimatedSeconds = ScriptGroupProgressTracker.Instance.GetGroupRemainingEstimate(groupEstimatedSeconds);
+
         if (!string.IsNullOrEmpty(groupName)&&!RunnerContext.Instance.IsPreExecution)
         {
             // if (hasTimer)
@@ -166,7 +173,15 @@ public partial class ScriptService : IScriptService
             //     _logger.LogInformation("配置组 {Name} 包含实时任务操作调用", groupName);
             // }
 
-            _logger.LogInformation("配置组 {Name} 加载完成，共{Cnt}个脚本，开始执行", groupName, list.Count);
+            if (estimatedSeconds > 0)
+            {
+                _logger.LogInformation("配置组 {Name} 加载完成，共{Cnt}个脚本，开始执行，预计剩余时间 {Remaining}",
+                    groupName, list.Count, ScriptGroupProgressTracker.FormatEstimatedDuration(estimatedSeconds));
+            }
+            else
+            {
+                _logger.LogInformation("配置组 {Name} 加载完成，共{Cnt}个脚本，开始执行", groupName, list.Count);
+            }
         }
 
         // var timerOperation = hasTimer ? DispatcherTimerOperationEnum.UseCacheImageWithTriggerEmpty : DispatcherTimerOperationEnum.UseSelfCaptureImage;
@@ -182,6 +197,9 @@ public partial class ScriptService : IScriptService
         }
 
 
+        // 记录配置组进度与剩余时间，方法结束时自动隐藏
+        using var progressScope = ScriptGroupProgressTracker.Instance.BeginTracking(groupName, steps);
+
         await new TaskRunner()
             .RunThreadAsync(async () =>
             {
@@ -189,7 +207,18 @@ public partial class ScriptService : IScriptService
                 int projectIndex = -1;
                 for (int x = 0; x < list.Count; x++)
                 {
+                    // 已发起停止请求：不再启动后面的脚本。
+                    // 内层循环的取消检查只跳出「本脚本的优先执行列表」，外层会继续把剩下的脚本一个个启动起来，
+                    // 每个脚本都至少会跑一小段（切队伍、传送等），看起来就是「停止后还在继续执行」。
+                    if (CancellationContext.Instance.Cts.IsCancellationRequested)
+                    {
+                        _logger.LogInformation("已发起停止请求，跳过剩余 {Count} 个脚本", list.Count - x);
+                        break;
+                    }
+
                     var project = list[x];
+                    // 让进度跟着脚本走：这一步之前的脚本（含被跳过、被禁用的）立刻退出预计剩余时间
+                    ScriptGroupProgressTracker.Instance.OnStepStarted(x);
                     //正常情况下，只有一个真正执行的project，存在其他优先执行配置组情况下，会有多个任务。
                     List<ScriptGroupProject> exeProjects = [project];
                     RunnerContext.Instance.IsPreExecution = false;
@@ -310,7 +339,9 @@ public partial class ScriptService : IScriptService
                         if (fisrt )
                         {
                             fisrt = false;
-                            Notify.Event(NotificationEvent.GroupStart).Success($"配置组{groupName}启动");
+                            Notify.Event(NotificationEvent.GroupStart).Success(estimatedSeconds > 0
+                                ? $"配置组{groupName}启动，预计剩余时间{ScriptGroupProgressTracker.FormatEstimatedDuration(estimatedSeconds)}"
+                                : $"配置组{groupName}启动");
                         }
 
                         if (!RunnerContext.Instance.IsPreExecution &&taskProgress != null)
@@ -341,6 +372,12 @@ public partial class ScriptService : IScriptService
 
                         for (var i = 0; i < exeProject.RunNum; i++)
                         {
+                            // 已发起停止请求：不再重跑同一个脚本
+                            if (CancellationContext.Instance.Cts.IsCancellationRequested)
+                            {
+                                break;
+                            }
+
                             try
                             {
                                 _triggers.ClearTriggers();
@@ -612,6 +649,14 @@ public partial class ScriptService : IScriptService
 
     public static async Task StartGameTask(bool waitForMainUi = true)
     {
+        // 已连接跨用户 Worker：任务应由 Worker 执行。本机既不启动截图器，
+        // 也不再等待主界面（本机截图器永远不会就绪，等待会造成调用方卡死）
+        if (WorkerController.IsRemoteControlled)
+        {
+            TaskControl.Logger.LogWarning("已连接跨用户 Worker，本机不再启动截图器与执行任务");
+            return;
+        }
+
         // 没启动时候，启动截图器
         // 静态方法无法构造注入（调用方包括直接 new 出来的 TaskRunner），这里从容器取服务
         var gameRuntimeService = App.GetService<GameRuntimeService>()!;

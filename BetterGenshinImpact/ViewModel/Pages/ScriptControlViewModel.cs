@@ -10,6 +10,7 @@ using BetterGenshinImpact.GameTask.TaskProgress;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.Service.Worker;
 using BetterGenshinImpact.View.Controls.Webview;
 using BetterGenshinImpact.View.Pages.View;
 using BetterGenshinImpact.View.Windows;
@@ -54,6 +55,8 @@ public partial class ScriptControlViewModel : ViewModel
 
     private readonly IScriptService _scriptService;
 
+    private readonly WorkerController _workerController;
+
     /// <summary>
     /// 配置组配置
     /// </summary>
@@ -75,10 +78,11 @@ public partial class ScriptControlViewModel : ViewModel
         ReadScriptGroup();
     }
 
-    public ScriptControlViewModel(ISnackbarService snackbarService, IScriptService scriptService)
+    public ScriptControlViewModel(ISnackbarService snackbarService, IScriptService scriptService, WorkerController workerController)
     {
         _snackbarService = snackbarService;
         _scriptService = scriptService;
+        _workerController = workerController;
         ScriptGroups.CollectionChanged += ScriptGroupsCollectionChanged;
     }
 
@@ -1980,6 +1984,18 @@ public partial class ScriptControlViewModel : ViewModel
             return;
         }
 
+        // 已连接跨用户 Worker：把「当前配置组」下发到 Worker 执行（同名配置文件在 Worker 侧解析）
+        if (await TryDispatchToWorkerAsync(
+                new WorkerTaskStartRequest
+                {
+                    Type = WorkerTaskTypes.ScriptGroup,
+                    Name = SelectedScriptGroup.Name
+                },
+                $"配置组「{SelectedScriptGroup.Name}」"))
+        {
+            return;
+        }
+
         RunnerContext.Instance.Reset();
 
         TaskProgress taskProgress = new()
@@ -1990,6 +2006,50 @@ public partial class ScriptControlViewModel : ViewModel
         taskProgress.CurrentScriptGroupName = SelectedScriptGroup.Name;
         TaskProgressManager.SaveTaskProgress(taskProgress);
         await _scriptService.RunMulti(GetNextProjects(SelectedScriptGroup), SelectedScriptGroup.Name, taskProgress);
+    }
+
+    /// <summary>
+    /// 已连接跨用户 Worker 时把任务下发给 Worker，返回 true 表示已下发（本机不再执行）
+    /// </summary>
+    private async Task<bool> TryDispatchToWorkerAsync(WorkerTaskStartRequest request, string label)
+    {
+        if (!_workerController.IsConnected)
+        {
+            return false;
+        }
+
+        try
+        {
+            var started = await _workerController.StartTaskAsync(request);
+            _snackbarService.Show(
+                "已下发到 Worker",
+                $"{label}（{started.State}）",
+                ControlAppearance.Success,
+                null,
+                TimeSpan.FromSeconds(3));
+        }
+        catch (WorkerUnavailableException ex)
+        {
+            _logger.LogWarning(ex, "下发任务到 Worker 失败：{Code}", ex.ErrorCode);
+            _snackbarService.Show(
+                "下发 Worker 失败",
+                ex.Message,
+                ControlAppearance.Danger,
+                null,
+                TimeSpan.FromSeconds(5));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "下发任务到 Worker 异常");
+            _snackbarService.Show(
+                "下发 Worker 失败",
+                ex.Message,
+                ControlAppearance.Danger,
+                null,
+                TimeSpan.FromSeconds(5));
+        }
+
+        return true;
     }
 
     [RelayCommand]
@@ -2120,7 +2180,6 @@ public partial class ScriptControlViewModel : ViewModel
     [RelayCommand]
     public async Task OnContinueMultiScriptGroupAsync()
     {
-
         // 创建一个 StackPanel 来包含全选按钮和所有配置组的 CheckBox
         var stackPanel = new StackPanel();
 
@@ -2187,7 +2246,26 @@ public partial class ScriptControlViewModel : ViewModel
             {
                 return;
             }
-            await OnContinueTaskProgressAsync(Convert.ToString(val), taskProgresses);
+
+            var progressName = Convert.ToString(val);
+            if (progressName is null)
+            {
+                return;
+            }
+
+            // 已连接跨用户 Worker：把任务进度名下发，Worker 用自己的任务进度文件继续执行
+            if (await TryDispatchToWorkerAsync(
+                    new WorkerTaskStartRequest
+                    {
+                        Type = WorkerTaskTypes.TaskProgress,
+                        ProgressName = progressName
+                    },
+                    $"继续执行「{progressName}」"))
+            {
+                return;
+            }
+
+            await OnContinueTaskProgressAsync(progressName, taskProgresses);
 
         }
     }
@@ -2382,6 +2460,19 @@ public partial class ScriptControlViewModel : ViewModel
                 );
                 return;
             }
+            // 已连接跨用户 Worker：把配置组名列表（含循环标记）下发，Worker 按同安装目录的配置组执行
+            if (await TryDispatchToWorkerAsync(
+                    new WorkerTaskStartRequest
+                    {
+                        Type = WorkerTaskTypes.ScriptGroups,
+                        Names = selectedGroups.Select(group => group.Name).ToArray(),
+                        Loop = loopCheckBox.IsChecked ?? false
+                    },
+                    $"连续执行 {selectedGroups.Count} 个配置组"))
+            {
+                return;
+            }
+
             await StartGroups(selectedGroups, null, loopCheckBox.IsChecked ?? false);
         }
     }
@@ -2391,7 +2482,10 @@ public partial class ScriptControlViewModel : ViewModel
         throw new NotImplementedException();
     }
 
-    public async Task OnStartMultiScriptGroupWithNamesAsync(params string[] names)
+    /// <summary>
+    /// 按名称连续执行配置组。loop 只用于跨用户 Worker 下发与命令行，界面上的循环由调用方传入
+    /// </summary>
+    public async Task OnStartMultiScriptGroupWithNamesAsync(string[] names, bool loop = false)
     {
         if (ScriptGroups.Count == 0)
         {
@@ -2413,7 +2507,7 @@ public partial class ScriptControlViewModel : ViewModel
 
         if (scriptGroups.Count > 0)
         {
-            await StartGroups(scriptGroups);
+            await StartGroups(scriptGroups, null, loop);
         }
         else
         {
@@ -2439,8 +2533,21 @@ public partial class ScriptControlViewModel : ViewModel
 
             RunnerContext.Instance.taskProgress = taskProgress;
             var sg = GetNextScriptGroups(scriptGroups);
+            // 预置整批配置组：预计总剩余时间要覆盖本次连续执行的全部配置组
+            using var progressBatch = ScriptGroupProgressTracker.Instance.BeginBatch(sg);
+            // 只有本批已经跑过至少一个配置组后，取消状态才说明「这一批被停了」：
+            // 上一次手动停止留下的 IsManualStop 要等 RunMulti 里的 Set() 才复位，第一轮不能据此退出
+            var startedAnyGroup = false;
             foreach (var scriptGroup in sg)
             {
+                // 用户停止后不要再启动剩下的配置组：RunMulti 开头会重设取消上下文，
+                // 不在循环里判断的话会把剩余配置组逐个空转一遍（还会反复尝试启动游戏）
+                if (startedAnyGroup && CancellationContext.Instance.IsAborted)
+                {
+                    _logger.LogInformation("已停止，跳过剩余配置组");
+                    break;
+                }
+
                 if (taskProgress.Next != null)
                 {
                     if (scriptGroup.Name != taskProgress.Next.GroupName)
@@ -2450,7 +2557,15 @@ public partial class ScriptControlViewModel : ViewModel
                 }
                 taskProgress.CurrentScriptGroupName = scriptGroup.Name;
                 TaskProgressManager.SaveTaskProgress(taskProgress);
+                startedAnyGroup = true;
                 await _scriptService.RunMulti(GetNextProjects(scriptGroup), scriptGroup.Name, taskProgress);
+
+                if (CancellationContext.Instance.IsAborted)
+                {
+                    _logger.LogInformation("已停止，跳过剩余配置组");
+                    break;
+                }
+
                 await Task.Delay(2000);
             }
 

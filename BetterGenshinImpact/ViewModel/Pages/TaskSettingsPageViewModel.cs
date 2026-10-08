@@ -23,6 +23,8 @@ using BetterGenshinImpact.GameTask.UseRedeemCode;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.Service.Worker;
+using Microsoft.Extensions.Logging;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel.Pages.View;
@@ -53,6 +55,8 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
     private readonly INavigationService _navigationService;
     private readonly TaskTriggerDispatcher _taskDispatcher;
+    private readonly WorkerController _workerController;
+    private readonly ILogger<TaskSettingsPageViewModel> _logger = App.GetLogger<TaskSettingsPageViewModel>();
 
     private CancellationTokenSource? _cts;
     private static readonly object _locker = new();
@@ -257,11 +261,12 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [ObservableProperty]
     private string _switchAutoRedeemCodeButtonText = "启动";
 
-    public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher)
+    public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher, WorkerController workerController)
     {
         Config = configService.Get();
         _navigationService = navigationService;
         _taskDispatcher = taskTriggerDispatcher;
+        _workerController = workerController;
         NormalizeLeyLineOutcropType();
         _scanDropsAfterRewardEnabledUi = Config.AutoLeyLineOutcropConfig.ScanDropsAfterRewardEnabled;
 
@@ -272,6 +277,89 @@ public partial class TaskSettingsPageViewModel : ViewModel
         _domainNameList = ["", AutoDomainTask.DevelopmentGuideOption, .. MapLazyAssets.Get().DomainNameList];
         _autoFightViewModel = new AutoFightViewModel(Config);
         _oneDragonFlowViewModel = new OneDragonFlowViewModel();
+    }
+
+    /// <summary>
+    /// 跨用户 Worker 远程下发入口：任务标识 → 本页的独立任务启动方法（Worker 侧复用同一入口）。
+    /// Controller 只发标识，任务参数由 Worker 用自己的配置构造；返回 false 表示标识不支持。
+    /// </summary>
+    public async Task<bool> StartSoloTaskByKeyAsync(string key)
+    {
+        switch (key)
+        {
+            case WorkerSoloTaskKeys.AutoGeniusInvokation:
+                await OnSwitchAutoGeniusInvokation();
+                return true;
+            case WorkerSoloTaskKeys.AutoWood:
+                await OnSwitchAutoWood();
+                return true;
+            case WorkerSoloTaskKeys.AutoFight:
+                await OnSwitchAutoFight();
+                return true;
+            case WorkerSoloTaskKeys.AutoDomain:
+                await OnSwitchAutoDomain();
+                return true;
+            case WorkerSoloTaskKeys.AutoBoss:
+                await OnSwitchAutoBoss();
+                return true;
+            case WorkerSoloTaskKeys.AutoStygianOnslaught:
+                await OnSwitchAutoStygianOnslaught();
+                return true;
+            case WorkerSoloTaskKeys.AutoMusicGame:
+                await OnSwitchAutoMusicGame();
+                return true;
+            case WorkerSoloTaskKeys.AutoAlbum:
+                await OnSwitchAutoAlbum();
+                return true;
+            case WorkerSoloTaskKeys.AutoCook:
+                await OnSwitchAutoCook();
+                return true;
+            case WorkerSoloTaskKeys.AutoCombo:
+                await OnSwitchAutoCombo();
+                return true;
+            case WorkerSoloTaskKeys.AutoComboRun:
+                await OnSwitchAutoComboRun();
+                return true;
+            case WorkerSoloTaskKeys.AutoFishing:
+                await OnSwitchAutoFishing();
+                return true;
+            case WorkerSoloTaskKeys.AutoLeyLineOutcrop:
+                await OnSwitchAutoLeyLineOutcrop();
+                return true;
+            case WorkerSoloTaskKeys.ArtifactSalvage:
+                await OnSwitchArtifactSalvage();
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /// <summary>
+    /// 已连接跨用户 Worker 时把独立任务下发给 Worker；返回 true 表示已下发（本机不再执行）
+    /// </summary>
+    private async Task<bool> TryDispatchSoloTaskToWorkerAsync(string key, string label)
+    {
+        if (!_workerController.IsConnected)
+        {
+            return false;
+        }
+
+        try
+        {
+            var started = await _workerController.StartTaskAsync(new WorkerTaskStartRequest
+            {
+                Type = WorkerTaskTypes.Solo,
+                Name = key
+            });
+            Toast.Success($"已下发到 Worker：{label}（{started.State}）");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "下发独立任务到 Worker 失败：{Key}", key);
+            Toast.Error($"下发 Worker 失败：{ex.Message}");
+        }
+
+        return true;
     }
 
     partial void OnScanDropsAfterRewardEnabledUiChanged(bool value)
@@ -365,6 +453,23 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task OnStopSoloTask()
     {
+        // 已连接跨用户 Worker：停止 Worker 上正在执行的独立任务
+        if (_workerController.IsConnected)
+        {
+            try
+            {
+                await _workerController.StopTaskAsync();
+                Toast.Success("已请求停止 Worker 任务");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "停止 Worker 任务失败");
+                Toast.Error($"停止 Worker 任务失败：{ex.Message}");
+            }
+
+            return;
+        }
+
         CancellationContext.Instance.Cancel();
         SwitchAutoGeniusInvokationEnabled = false;
         SwitchAutoWoodEnabled = false;
@@ -402,6 +507,10 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     public async Task OnSwitchAutoGeniusInvokation()
     {
+        if (await TryDispatchSoloTaskToWorkerAsync(WorkerSoloTaskKeys.AutoGeniusInvokation, "自动七圣召唤"))
+        {
+            return;
+        }
         if (GetTcgStrategy(out var content))
         {
             return;
@@ -443,6 +552,10 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     public async Task OnSwitchAutoWood()
     {
+        if (await TryDispatchSoloTaskToWorkerAsync(WorkerSoloTaskKeys.AutoWood, "自动伐木"))
+        {
+            return;
+        }
         SwitchAutoWoodEnabled = true;
         await new TaskRunner()
             .RunSoloTaskAsync(new AutoWoodTask(new WoodTaskParam(AutoWoodRoundNum, AutoWoodDailyMaxCount)));
@@ -458,6 +571,10 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     public async Task OnSwitchAutoFight()
     {
+        if (await TryDispatchSoloTaskToWorkerAsync(WorkerSoloTaskKeys.AutoFight, "自动战斗"))
+        {
+            return;
+        }
         if (GetFightStrategy(out var path))
         {
             return;
@@ -487,6 +604,10 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     public async Task OnSwitchAutoDomain()
     {
+        if (await TryDispatchSoloTaskToWorkerAsync(WorkerSoloTaskKeys.AutoDomain, "自动秘境"))
+        {
+            return;
+        }
         if (GetFightStrategy(out var path))
         {
             return;
@@ -539,6 +660,10 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task OnSwitchAutoBoss()
     {
+        if (await TryDispatchSoloTaskToWorkerAsync(WorkerSoloTaskKeys.AutoBoss, "自动首领"))
+        {
+            return;
+        }
         if (GetFightStrategy(Config.AutoBossConfig.StrategyName, out var path))
         {
             return;
@@ -561,6 +686,10 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task OnSwitchAutoStygianOnslaught()
     {
+        if (await TryDispatchSoloTaskToWorkerAsync(WorkerSoloTaskKeys.AutoStygianOnslaught, "自动幽境危战"))
+        {
+            return;
+        }
         if (GetFightStrategy(Config.AutoStygianOnslaughtConfig.StrategyName, out var path))
         {
             return;
@@ -666,6 +795,10 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task OnSwitchAutoMusicGame()
     {
+        if (await TryDispatchSoloTaskToWorkerAsync(WorkerSoloTaskKeys.AutoMusicGame, "自动音游"))
+        {
+            return;
+        }
         SwitchAutoMusicGameEnabled = true;
         await new TaskRunner()
             .RunSoloTaskAsync(new AutoMusicGameTask(new AutoMusicGameParam()));
@@ -681,6 +814,10 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task OnSwitchAutoAlbum()
     {
+        if (await TryDispatchSoloTaskToWorkerAsync(WorkerSoloTaskKeys.AutoAlbum, "自动音游图鉴"))
+        {
+            return;
+        }
         SwitchAutoAlbumEnabled = true;
         await new TaskRunner()
             .RunSoloTaskAsync(new AutoAlbumTask(new AutoMusicGameParam()));
@@ -690,6 +827,10 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task OnSwitchAutoCook()
     {
+        if (await TryDispatchSoloTaskToWorkerAsync(WorkerSoloTaskKeys.AutoCook, "自动烹饪"))
+        {
+            return;
+        }
         SwitchAutoCookEnabled = true;
         await new TaskRunner()
             .RunSoloTaskAsync(new AutoCookTask());
@@ -711,6 +852,10 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task OnSwitchAutoCombo()
     {
+        if (await TryDispatchSoloTaskToWorkerAsync(WorkerSoloTaskKeys.AutoCombo, "自动连招建树"))
+        {
+            return;
+        }
         SwitchAutoComboEnabled = true;
         await new TaskRunner()
             .RunSoloTaskAsync(new AutoComboBuildTask());
@@ -720,6 +865,10 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task OnSwitchAutoComboRun()
     {
+        if (await TryDispatchSoloTaskToWorkerAsync(WorkerSoloTaskKeys.AutoComboRun, "自动连招测试运行"))
+        {
+            return;
+        }
         if (_autoComboRunRunning)
         {
             // 暂停：取消 Tick 循环，行为树节点状态保留，下次点击继续
@@ -760,6 +909,10 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task OnSwitchAutoFishing()
     {
+        if (await TryDispatchSoloTaskToWorkerAsync(WorkerSoloTaskKeys.AutoFishing, "自动钓鱼"))
+        {
+            return;
+        }
         SwitchAutoFishingEnabled = true;
         var param = AutoFishingTaskParam.BuildFromConfig(TaskContext.Instance().Config.AutoFishingConfig, SaveScreenshotOnKeyTick);
         await new TaskRunner()
@@ -770,6 +923,10 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task OnSwitchAutoLeyLineOutcrop()
     {
+        if (await TryDispatchSoloTaskToWorkerAsync(WorkerSoloTaskKeys.AutoLeyLineOutcrop, "自动地脉"))
+        {
+            return;
+        }
         SwitchAutoLeyLineOutcropEnabled = true;
         AutoLeyLineOutcropParam autoLeyLineOutcropParam = new AutoLeyLineOutcropParam();
         autoLeyLineOutcropParam.SetAutoLeyLineOutcropConfig(Config.AutoLeyLineOutcropConfig);
@@ -799,6 +956,10 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [RelayCommand]
     private async Task OnSwitchArtifactSalvage()
     {
+        if (await TryDispatchSoloTaskToWorkerAsync(WorkerSoloTaskKeys.ArtifactSalvage, "自动圣遗物分解"))
+        {
+            return;
+        }
         SwitchArtifactSalvageEnabled = true;
         await new TaskRunner()
             .RunSoloTaskAsync(new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(

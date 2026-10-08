@@ -173,6 +173,21 @@ XAML 里约有 44 处配置绑定使用了 `UpdateSourceTrigger=PropertyChanged`
 
 `Process.Kill` 和崩溃时，最多丢失最近约 500ms 内的改动。
 
+### 4.5 跨用户 Worker 相关配置
+
+跨用户 Worker 新增的配置项都是 `OtherConfig` 上的普通 `[ObservableProperty]`，因此自动走本文档
+描述的追踪与保存链路，不需要额外接线：
+
+| 配置 | 生效侧 | 说明 |
+| --- | --- | --- |
+| `LastWorkerUserSid` | Controller | 上次连接/输入的 Worker 用户 SID，启动页输入框变更即回写、防抖落盘、下次启动回填 |
+| `WorkerLogDisplayMode` | Worker | 日志显示位置，Worker 启动时读取 |
+| `WorkerLogNotificationIntervalSeconds` | Worker | 通知聚合间隔（秒），默认 5、最小 1 |
+
+需要注意的是**枚举的序列化稳定性**：`WorkerLogDisplayMode` 按整数写入 `config.json`（未使用
+`JsonStringEnumConverter`），因此新增选项只能追加在枚举末尾，否则会改变已有数值的含义；其取值
+顺序同时与启动页下拉框的选项顺序一一对应，由单元测试守护。
+
 ## 5. 行为变化
 
 | 场景 | 之前 | 之后 |

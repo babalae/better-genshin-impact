@@ -13,6 +13,8 @@ public class CommandLineOptions
     public const string InstanceArgument = "--instance";
     public const string InstanceNameArgument = "--instance-name";
     public const string RestartFromProcessIdArgument = "--restart-from-pid";
+    public const string HeadlessArgument = "--headless";
+    public const string ControllerSidArgument = "--controller-sid";
 
     private static CommandLineOptions? _instance;
 
@@ -39,6 +41,16 @@ public class CommandLineOptions
     /// 应用重启时被替换的旧进程 ID。
     /// </summary>
     public int? RestartFromProcessId { get; }
+
+    /// <summary>
+    /// 无界面 Worker 模式（--headless）：不创建主界面，只托管跨用户 Worker 管道。
+    /// </summary>
+    public bool Headless { get; }
+
+    /// <summary>
+    /// Worker 模式允许连接的 Controller Windows 用户 SID（--controller-sid），未指定时为 null。
+    /// </summary>
+    public string? ControllerUserSid { get; }
 
     /// <summary>
     /// startOneDragon 时可选的配置名称（第 3 个参数）
@@ -70,7 +82,9 @@ public class CommandLineOptions
         BetterGiInstanceType instanceType = BetterGiInstanceType.Primary,
         bool hasExplicitInstanceType = false,
         int? restartFromProcessId = null,
-        string? instanceName = null)
+        string? instanceName = null,
+        bool headless = false,
+        string? controllerUserSid = null)
     {
         Action = action;
         OneDragonConfigName = oneDragonConfigName;
@@ -79,6 +93,8 @@ public class CommandLineOptions
         HasExplicitInstanceType = hasExplicitInstanceType;
         RestartFromProcessId = restartFromProcessId;
         InstanceName = instanceName;
+        Headless = headless;
+        ControllerUserSid = controllerUserSid;
     }
 
     internal static CommandLineOptions Parse(string[] args)
@@ -88,6 +104,8 @@ public class CommandLineOptions
         var hasExplicitInstanceType = false;
         int? restartFromProcessId = null;
         string? instanceName = null;
+        var headless = false;
+        string? controllerUserSid = null;
         var commandArgs = new List<string>();
 
         for (var index = 0; index < launchArgs.Length; index++)
@@ -117,6 +135,22 @@ public class CommandLineOptions
                 if (TryReadNext(launchArgs, ref index, out var instanceNameValue))
                 {
                     instanceName = instanceNameValue;
+                }
+                continue;
+            }
+
+            if (argument.Equals(HeadlessArgument, StringComparison.OrdinalIgnoreCase))
+            {
+                headless = true;
+                continue;
+            }
+
+            if (argument.Equals(ControllerSidArgument, StringComparison.OrdinalIgnoreCase))
+            {
+                if (TryReadNext(launchArgs, ref index, out var controllerSidValue)
+                    && !string.IsNullOrWhiteSpace(controllerSidValue))
+                {
+                    controllerUserSid = controllerSidValue.Trim();
                 }
                 continue;
             }
@@ -183,7 +217,9 @@ public class CommandLineOptions
                 instanceType,
                 hasExplicitInstanceType,
                 restartFromProcessId,
-                instanceName);
+                instanceName,
+                headless,
+                controllerUserSid);
         }
     }
 

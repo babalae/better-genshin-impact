@@ -1,4 +1,5 @@
 using System;
+using System.Security.Cryptography;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.Service.Notification;
@@ -351,6 +352,36 @@ public partial class NotificationConfig : ObservableObject
     ///     群聊 OpenID（群聊场景）
     /// </summary>
     [ObservableProperty] private string _qqGroupOpenId = string.Empty;
+
+    /// <summary>允许发送远程命令的 QQ 用户 OpenID，多个值用逗号或分号分隔；为空时仅允许已绑定的私聊 OpenID。</summary>
+    [ObservableProperty] private string _qqCommandUserOpenIds = string.Empty;
+
+    /// <summary>是否启用 QQ 机器人远程命令。</summary>
+    [ObservableProperty] private bool _qqCommandEnabled;
+
+    /// <summary>允许本机 Yunzai 插件通过 WebSocket 远程控制。</summary>
+    [ObservableProperty] private bool _externalControlEnabled;
+
+    /// <summary>外部控制 WebSocket 监听端口。</summary>
+    [ObservableProperty] private int _externalControlPort = 17831;
+
+    /// <summary>外部控制 WebSocket 监听 IP；0.0.0.0 表示监听所有 IPv4 网卡。</summary>
+    [ObservableProperty] private string _externalControlIp = "0.0.0.0";
+
+    /// <summary>是否由 BetterGI 主动连接到 Yunzai WebSocket 服务端。</summary>
+    [ObservableProperty] private bool _externalControlReverse;
+
+    /// <summary>反向 WebSocket 模式下 Yunzai 服务端的 IPv4 地址。</summary>
+    [ObservableProperty] private string _externalControlRemoteIp = "127.0.0.1";
+
+    /// <summary>外部控制共享令牌。</summary>
+    [ObservableProperty] private string _externalControlToken = string.Empty;
+
+    partial void OnExternalControlEnabledChanged(bool value)
+    {
+        if (value && string.IsNullOrWhiteSpace(ExternalControlToken))
+            ExternalControlToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
+    }
 
     [ObservableProperty] private string _qqMessageFormat = "text";
 

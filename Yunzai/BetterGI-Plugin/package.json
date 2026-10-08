@@ -1,0 +1,8 @@
+{
+  "name": "yunzai-bettergi-plugin",
+  "version": "1.0.0",
+  "description": "通过 WebSocket 控制 BetterGI 的 Yunzai 插件",
+  "author": "BetterGI",
+  "type": "module",
+  "dependencies": {}
+}

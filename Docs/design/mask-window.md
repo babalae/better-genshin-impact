@@ -89,6 +89,7 @@
 | 准星 | `MaskWindowCrosshairLayer` | `MaskWindowConfig` | 新增，替代 `OnRender` |
 | 地图点位（大地图、小地图） | `PointsCanvas`、`MiniMapPointsCanvas` | `IMaskWindowMapState` + `IMaskMapPointService` | 视口改为绑定 |
 | 状态、日志、指标 | 现有 `AdjustableOverlayItem` | 配置、`IRichTextBox`、`OverlayMetricsService` | 不改 |
+| 配置组执行进度 | `ScriptGroupProgressPanel` | `ScriptGroupProgressTracker` | 新增，见[配置组执行进度与预计剩余时间](script-group-progress.md) |
 
 窗口本身的生命周期由 `IMaskWindowHost` 负责。
 
@@ -482,9 +483,13 @@ DI 容器
 - 系统信息与 MSI Afterburner 检查从遮罩窗口 `Loaded` 移到 `HomePageViewModel.OnRuntimeStarted`，每次启动截图器都会输出。
 - 截图器停止时清空所有绘制内容并重置地图点位状态。
 - HTML 遮罩改为只在主遮罩显隐或移动时同步，不再每帧 `ShowAll`。
+- 遮罩窗口创建时若 `Application.Current.MainWindow` 为空，则把遮罩窗口设为 `MainWindow`。无头 Worker（`--headless`）没有主窗口，而 Toast、对话框等都依赖 `Window.GetWindow(owner)` 找到一个可用窗口，否则会在 `null` 上抛异常；普通实例的 `MainWindow` 早已存在，行为不变。
+- 日志框的输出去向不再固定：无头 Worker 的日志显示位置由控制端下发（`WorkerLogRouter`），非「游戏内叠加层」时改由通知渠道 / 独立窗口 / 回传控制端接管。判断条件 `ShouldWriteToGameOverlay` 对非 Worker 恒为 `true`，因此普通实例、桌面分身、网页版的日志框行为完全不变。详见 [多实例命名管道协议](multi-instance-ipc.md#日志显示位置)。
+- 右上角新增配置组执行进度面板（进度条 + 预计剩余时间，多配置组时多一行预计总剩余时间），执行期间显示。位置固定、不参与布局编辑，也不受「在遮罩上显示识别结果」开关控制。详见[配置组执行进度与预计剩余时间](script-group-progress.md)。
 
 ### 11.3 验证情况
 
 - `dotnet build BetterGenshinImpact.sln -c Debug` 通过，没有新增警告。
 - 没有实际运行程序。以下行为需要手动验证：遮罩显隐与跟随、多显示器 / 非 100% DPI 下识别框和准星位置、布局编辑模式下的点击穿透、大地图点位与小地图、技能 CD 显示。
-- 单测依赖的资源子模块在新 worktree 中没有初始化，未运行单测。
+- 配置组进度面板需要手动验证：执行配置组时右上角面板是否出现、进度条与剩余时间是否随时间变化、执行结束后是否隐藏并让叠加层元素复位。
+- 单测依赖的资源子模块在新 worktree 中没有初始化，未运行单测。`PathingTimeEstimatorTests`（13 个用例）单独运行通过。

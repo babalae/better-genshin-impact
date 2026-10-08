@@ -22,6 +22,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.ViewModel.Pages;
 using BetterGenshinImpact.ViewModel.Windows;
+using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.Core.Recognition.ONNX;
@@ -254,6 +255,10 @@ public class Avatar
             // tp 到七天神像复活。保留等待取消能力，同时避免 Wait 将原异常包装为 AggregateException。
             new TpTask(ct).TpToStatueOfTheSeven().WaitAsync(ct).GetAwaiter().GetResult();
             Logger.LogInformation("血量恢复完成。【设置】-【七天神像设置】可以修改回血相关配置。");
+            // 回血后会重试当前任务，进度里给当前脚本补一段开销（回神像，含设置的等待间隔）
+            ScriptGroupProgressTracker.Instance.NotifyHealTriggered(
+                ScriptGroupProgressTracker.GetStatueHealExtraSeconds(
+                    TaskContext.Instance().Config.TpConfig.HpRestoreDuration));
         }
         catch (NormalEndException)
         {

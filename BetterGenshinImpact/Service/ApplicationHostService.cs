@@ -81,6 +81,14 @@ public class ApplicationHostService(
     /// </summary>
     private async Task HandleActivationAsync()
     {
+        if (instanceService.Context.IsHeadless)
+        {
+            // 无界面 Worker：不创建主窗口，也不创建任何页面 View/ViewModel；
+            // 但截图器与遮罩叠加层仍要启动，遮罩窗口是无头实例唯一的界面
+            serviceProvider.GetRequiredService<HomePageViewModel>().HandleActivation(CommandLineOptions.Instance);
+            return;
+        }
+
         if (instanceService.Context.IsWebView)
         {
             HandleWebViewActivation(CommandLineOptions.Instance);

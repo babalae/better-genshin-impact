@@ -117,7 +117,8 @@
                                          ShowRecognition="{Binding Config.MaskWindowConfig.DisplayRecognitionResultsOnMask}"
                                          DrawingStyle="{Binding DrawingStyle}" />
 
-            <Canvas Grid.Row="0"
+            <Canvas x:Name="OverlayCanvas"
+                    Grid.Row="0"
                     Grid.RowSpan="4"
                     Grid.Column="0"
                     Grid.ColumnSpan="6"
@@ -1419,6 +1420,72 @@
                     </Grid>
 
                 </Grid>
+            </Grid>
+
+            <Grid x:Name="ScriptGroupProgressPanel"
+                  Grid.Row="0"
+                  Grid.RowSpan="4"
+                  Grid.Column="0"
+                  Grid.ColumnSpan="6"
+                  HorizontalAlignment="Right"
+                  VerticalAlignment="Top"
+                  Margin="0,12,16,0"
+                  Visibility="{Binding ScriptGroupProgress.IsRunning, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Border MinWidth="200"
+                        MaxWidth="320"
+                        Padding="10,8"
+                        Background="#B31C1C1C"
+                        BorderBrush="#40FFFFFF"
+                        BorderThickness="1"
+                        CornerRadius="6">
+                    <StackPanel>
+                        <TextElement.FontSize>
+                            <MultiBinding Converter="{StaticResource OverlayScaledSizeConverter}">
+                                <Binding Path="DataContext.Config.MaskWindowConfig.StatusFontSize" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                <Binding Path="DataContext.Config.MaskWindowConfig.LogFontScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                <Binding Path="DataContext.ScaleTo1080PRatio" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                <Binding Path="DataContext.DisplayDpiScale" RelativeSource="{RelativeSource AncestorType=Window}" />
+                                <Binding Path="DataContext.Config.MaskWindowConfig.OverlayScalingEnabled" RelativeSource="{RelativeSource AncestorType=Window}" />
+                            </MultiBinding>
+                        </TextElement.FontSize>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       FontWeight="SemiBold"
+                                       Foreground="#FFFFFFFF"
+                                       Text="{i18n:T 正在执行：}"/>
+                            <TextBlock Grid.Column="1"
+                                       FontWeight="SemiBold"
+                                       Foreground="#FFFFFFFF"
+                                       Text="{Binding ScriptGroupProgress.GroupName}"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </Grid>
+                        <ProgressBar Margin="0,6,0,0"
+                                     Height="4"
+                                     Maximum="100"
+                                     Value="{Binding ScriptGroupProgress.Progress, Mode=OneWay}"/>
+                        <StackPanel Margin="0,4,0,0"
+                                    HorizontalAlignment="Right"
+                                    Orientation="Horizontal">
+                            <TextBlock Foreground="#DDFFFFFF"
+                                       Text="{i18n:T 预计剩余时间：}"/>
+                            <TextBlock Foreground="#DDFFFFFF"
+                                       Text="{Binding ScriptGroupProgress.RemainingText}"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,2,0,0"
+                                    HorizontalAlignment="Right"
+                                    Orientation="Horizontal"
+                                    Visibility="{Binding ScriptGroupProgress.HasTotalRemaining, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock Foreground="#DDFFFFFF"
+                                       Text="{i18n:T 预计总剩余时间：}"/>
+                            <TextBlock Foreground="#DDFFFFFF"
+                                       Text="{Binding ScriptGroupProgress.TotalRemainingText}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
             </Grid>
         </Grid>
     </AdornerDecorator>

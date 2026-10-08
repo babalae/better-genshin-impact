@@ -1,5 +1,6 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Mask;
+using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Ui;
@@ -58,6 +59,11 @@ namespace BetterGenshinImpact.ViewModel
         [ObservableProperty] private ObservableCollection<StatusItem> _statusList = [];
 
         public AllConfig Config { get; }
+
+        /// <summary>
+        /// 当前正在执行的配置组进度，展示在叠加层右上角
+        /// </summary>
+        public ScriptGroupProgressTracker ScriptGroupProgress => ScriptGroupProgressTracker.Instance;
 
         /// <summary>
         /// 绘制层的快照，由 <see cref="IMaskWindowDrawingBoard"/> 写入后合并刷新

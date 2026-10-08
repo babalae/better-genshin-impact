@@ -2911,6 +2911,21 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     public void OpenLocalRepoInWebView()
     {
         UpdateSubscribedScriptPaths();
+
+        // 脚本仓库的网页界面属于打包阶段才注入的大文件，源码仓库与 NuGet 资源包都不含它。
+        // 缺失时如果照常打开 WebView，用户只会看到一个没有任何提示的白屏，这里直接给出可操作的提示。
+        var webEntryPath = Global.Absolute(Path.Combine("Assets", "Web", "ScriptRepo", "index.html"));
+        if (!File.Exists(webEntryPath))
+        {
+            _logger.LogWarning("脚本仓库网页资源缺失：{Path}", webEntryPath);
+            ThemedMessageBox.Error(
+                $"未找到脚本仓库的网页资源：\n{webEntryPath}\n\n" +
+                @"该资源不随源码仓库分发（只在完整发行包里）：可以把它从发行包复制到程序目录，" +
+                @"或让构建自动补齐（把 BetterGiReleaseAssetsDir 指向完整发行包目录后重新构建）。",
+                "脚本仓库");
+            return;
+        }
+
         if (_webWindow is not { IsVisible: true })
         {
             var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
@@ -2979,7 +2994,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             // _webWindow.NavigateToFile(Global.Absolute(@"Assets\Web\ScriptRepo\index.html"));
             _webWindow.Panel!.OnWebViewInitializedAction = () =>
             {
-                var assetsPath = Global.Absolute(@"Assets\Web\ScriptRepo");
+                var assetsPath = Path.GetDirectoryName(webEntryPath)!;
                 _webWindow.Panel!.WebView.CoreWebView2.SetVirtualHostNameToFolderMapping(
                     "bettergi.local",
                     assetsPath,

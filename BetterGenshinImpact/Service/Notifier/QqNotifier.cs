@@ -41,12 +41,14 @@ public sealed class QqNotifier : INotifier
     private readonly string _openId;
     private readonly string _groupOpenId;
     private readonly string _messageFormat;
+    private readonly ExternalControlService? _yunzaiControlService;
 
     private string? _cachedToken;
     private DateTime _tokenExpiry = DateTime.MinValue;
     private readonly SemaphoreSlim _tokenSemaphore = new(1, 1);
 
-    public QqNotifier(HttpClient httpClient, string appId, string clientSecret, string openId, string groupOpenId, string messageFormat = "text")
+    public QqNotifier(HttpClient httpClient, string appId, string clientSecret, string openId, string groupOpenId,
+        string messageFormat = "text", ExternalControlService? yunzaiControlService = null)
     {
         _httpClient = httpClient;
         _appId = appId;
@@ -54,6 +56,7 @@ public sealed class QqNotifier : INotifier
         _openId = openId;
         _groupOpenId = groupOpenId;
         _messageFormat = messageFormat;
+        _yunzaiControlService = yunzaiControlService;
     }
 
     /// <summary>
@@ -63,6 +66,12 @@ public sealed class QqNotifier : INotifier
     /// </summary>
     public async Task SendAsync(BaseNotificationData content)
     {
+        if (_yunzaiControlService?.IsReverseConnected == true)
+        {
+            await _yunzaiControlService.SendNotificationAsync(content, _openId, _groupOpenId);
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(_appId))
             throw new NotifierException("QQ AppID 为空");
 
@@ -123,6 +132,23 @@ public sealed class QqNotifier : INotifier
         {
             throw new NotifierException($"发送 QQ 消息失败: {ex.Message}");
         }
+    }
+
+    /// <summary>向触发命令的 QQ 会话回复结果。</summary>
+    public async Task SendCommandReplyAsync(string? userOpenId, string? groupOpenId, string? messageId, string text)
+    {
+        var baseUrl = !string.IsNullOrWhiteSpace(groupOpenId)
+            ? GroupBase.Replace("{openid}", groupOpenId)
+            : !string.IsNullOrWhiteSpace(userOpenId)
+                ? C2CBase.Replace("{openid}", userOpenId)
+                : throw new NotifierException("QQ 命令回复缺少会话 OpenID");
+        var payload = string.IsNullOrWhiteSpace(messageId)
+            ? JsonSerializer.Serialize(new { msg_type = 0, content = text })
+            : JsonSerializer.Serialize(new { msg_type = 0, content = text, msg_id = messageId });
+        using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+        using var request = await BuildAuthedRequest(HttpMethod.Post, $"{baseUrl}/messages", content, CancellationToken.None);
+        using var response = await _httpClient.SendAsync(request);
+        await EnsureSuccessWithBodyAsync(response, CancellationToken.None);
     }
 
     /// <summary>

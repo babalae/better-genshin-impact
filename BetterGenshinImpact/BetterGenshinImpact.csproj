@@ -236,6 +236,41 @@
 		</None>
 	</ItemGroup>
 
+	<!--
+	  发行包专属资源补齐：脚本仓库网页界面（Assets\Web\ScriptRepo\index.html，约 7 MB）等“大文件”
+	  不随源码仓库分发，也没有进 NuGet 资源包，只在完整发行包里（Build\setup_build.cmd 的同名打包步骤）。
+	  本地构建时若缺少它，打开「脚本仓库 → 打开仓库」只会看到一个白屏。
+	  把 BetterGiReleaseAssetsDir 指向本机已有的完整发行包目录即可在构建/发布时自动补齐；
+	  该路径属于本机配置，写在未纳入版本控制的 BetterGenshinImpact.csproj.user 里。
+	-->
+	<ItemGroup Condition="'$(BetterGiReleaseAssetsDir)' != '' And Exists('$(BetterGiReleaseAssetsDir)\Assets\Web')">
+		<!-- 这些文件在项目目录之外，WPF 项目不会把 Content+Link 复制到输出，因此用显式 Copy 任务 -->
+		<_BetterGiReleaseAsset Include="$(BetterGiReleaseAssetsDir)\Assets\Web\**\*" />
+	</ItemGroup>
+
+	<Target Name="CopyBetterGiReleaseAssetsToOutput"
+	        AfterTargets="Build"
+	        Condition="'@(_BetterGiReleaseAsset)' != '' And !$(MSBuildProjectFile.EndsWith('_wpftmp.csproj'))">
+		<Copy SourceFiles="@(_BetterGiReleaseAsset)"
+		      DestinationFiles="@(_BetterGiReleaseAsset->'$(OutDir)Assets\Web\%(RecursiveDir)%(Filename)%(Extension)')"
+		      SkipUnchangedFiles="true" />
+	</Target>
+
+	<Target Name="CopyBetterGiReleaseAssetsToPublish"
+	        AfterTargets="Publish"
+	        Condition="'@(_BetterGiReleaseAsset)' != '' And !$(MSBuildProjectFile.EndsWith('_wpftmp.csproj'))">
+		<Copy SourceFiles="@(_BetterGiReleaseAsset)"
+		      DestinationFiles="@(_BetterGiReleaseAsset->'$(PublishDir)Assets\Web\%(RecursiveDir)%(Filename)%(Extension)')"
+		      SkipUnchangedFiles="true" />
+	</Target>
+
+	<Target Name="ReportBetterGiReleaseAssets"
+	        BeforeTargets="BeforeBuild"
+	        Condition="'$(BetterGiReleaseAssetsDir)' != '' And !Exists('$(BetterGiReleaseAssetsDir)\Assets\Web')">
+		<Message Importance="normal"
+		         Text="未在 &quot;$(BetterGiReleaseAssetsDir)&quot; 下找到 Assets\Web，发行包专属资源（脚本仓库网页界面等）本次不会复制到输出目录。" />
+	</Target>
+
 	<ItemGroup>
 	  <Folder Include="GameTask\OneDragon\" />
 	  <Folder Include="GameTask\UseRedeemCode\Assets\1920x1080\" />

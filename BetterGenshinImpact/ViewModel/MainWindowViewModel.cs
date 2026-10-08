@@ -2,6 +2,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.UseRedeemCode;
 using BetterGenshinImpact.Helpers;
@@ -36,6 +37,7 @@ using System.Windows.Media.Imaging;
 using BetterGenshinImpact.Helpers.Http;
 using BetterGenshinImpact.Service.ChildSession;
 using BetterGenshinImpact.Service.Instance;
+using BetterGenshinImpact.Service.Worker;
 using BetterGenshinImpact.ViewModel.Windows;
 using Newtonsoft.Json;
 using Wpf.Ui;
@@ -51,6 +53,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     private readonly IConfigService _configService;
     private readonly INavigationService _navigationService;
     private readonly ChildSessionService _childSessionService;
+    private readonly WorkerController _workerController;
     public string Title => $"BetterGI · 更好的原神 · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}";
     public bool IsChildSessionInstance =>
         InstanceBootstrap.Current.Context.InstanceType == BetterGiInstanceType.ChildSession;
@@ -74,6 +77,11 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     private bool HasPendingRedeemCodeUpdate => _redeemCodeCnUpdateNewVersion != null || _redeemCodeGlobalUpdateNewVersion != null;
 
     [ObservableProperty] private bool _isRedeemCodeInfoBarOpen;
+
+    /// <summary>
+    /// 当前正在执行的配置组进度，展示在主窗口内容区右上角
+    /// </summary>
+    public ScriptGroupProgressTracker ScriptGroupProgress => ScriptGroupProgressTracker.Instance;
 
     /// <summary>
     /// 主窗口自定义背景图源，null 表示未加载或加载失败
@@ -103,16 +111,46 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     public MainWindowViewModel(
         INavigationService navigationService,
         IConfigService configService,
-        ChildSessionService childSessionService)
+        ChildSessionService childSessionService,
+        WorkerController workerController)
     {
         _navigationService = navigationService;
         _configService = configService;
         _childSessionService = childSessionService;
+        _workerController = workerController;
         Config = _configService.Get();
         _logger = App.GetLogger<MainWindowViewModel>();
         // 订阅通用配置变更：设置页修改背景图路径或开关后，主窗口背景实时刷新
         Config.CommonConfig.PropertyChanged += OnCommonConfigPropertyChanged;
+        // Worker 侧没有窗口，它的提示由本窗口代为显示
+        _workerController.NoticeReceived += OnWorkerNoticeReceived;
         LoadMainBackground();
+    }
+
+    /// <summary>
+    /// 显示 Worker 回传的提示。事件来自命名管道接收线程，必须切回 UI 线程
+    /// </summary>
+    private void OnWorkerNoticeReceived(object? sender, WorkerNotice notice)
+    {
+        UIDispatcherHelper.BeginInvoke(() =>
+        {
+            var message = $"Worker：{notice.Message}";
+            switch (notice.Level)
+            {
+                case WorkerNoticeLevel.Success:
+                    Toast.Success(message);
+                    break;
+                case WorkerNoticeLevel.Warning:
+                    Toast.Warning(message);
+                    break;
+                case WorkerNoticeLevel.Error:
+                    Toast.Error(message);
+                    break;
+                default:
+                    Toast.Information(message);
+                    break;
+            }
+        });
     }
 
     private void OnCommonConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)

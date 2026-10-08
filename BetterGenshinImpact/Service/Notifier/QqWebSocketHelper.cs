@@ -26,6 +26,74 @@ public class QqWebSocketHelper
     private const int BindTimeoutSeconds = 60;
     private const int VerifyCodeLength = 4;
 
+    /// <summary>持续监听 QQ 命令消息，连接中断时由调用方负责重连。</summary>
+    public static async Task ListenForCommandsAsync(
+        string appId,
+        string clientSecret,
+        Func<string?, string?, string?, string?, Task> onMessage,
+        CancellationToken cancellationToken)
+    {
+        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        var accessToken = await GetAccessTokenAsync(httpClient, appId, clientSecret, cancellationToken);
+        var gatewayUrl = await GetGatewayUrlAsync(httpClient, accessToken, cancellationToken);
+        using var socket = new ClientWebSocket();
+        await socket.ConnectAsync(new Uri(gatewayUrl), cancellationToken);
+        var heartbeatInterval = await ReceiveHelloAsync(socket, cancellationToken);
+        await SendIdentifyAsync(socket, accessToken, cancellationToken);
+
+        var sequence = 0L;
+        Action<long> setSequence = value => Interlocked.Exchange(ref sequence, value);
+        await ReceiveReadyAsync(socket, setSequence, cancellationToken);
+        using var heartbeatCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var heartbeatTask = RunHeartbeatAsync(socket, heartbeatInterval, () => Interlocked.Read(ref sequence), heartbeatCts.Token);
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                var payload = await ReceiveMessageAsync(socket, cancellationToken);
+                using var doc = JsonDocument.Parse(payload);
+                var root = doc.RootElement;
+                if (!root.TryGetProperty("op", out var op) || op.GetInt32() != 0
+                    || !root.TryGetProperty("t", out var typeElement)
+                    || !root.TryGetProperty("d", out var data))
+                {
+                    continue;
+                }
+
+                if (root.TryGetProperty("s", out var seqElement) && seqElement.TryGetInt64(out var seq))
+                    setSequence(seq);
+
+                var type = typeElement.GetString();
+                string? userOpenId = null;
+                string? groupOpenId = null;
+                string? content = null;
+                string? messageId = null;
+                if (type == "C2C_MESSAGE_CREATE")
+                {
+                    userOpenId = ExtractOpenId(data, "author", "user_openid");
+                    content = ExtractString(data, "content");
+                    messageId = ExtractString(data, "id");
+                }
+                else if (type is "GROUP_AT_MESSAGE_CREATE" or "GROUP_MESSAGE_CREATE")
+                {
+                    groupOpenId = ExtractString(data, "group_openid");
+                    userOpenId = ExtractOpenId(data, "author", "member_openid");
+                    content = ExtractString(data, "content");
+                    messageId = ExtractString(data, "id");
+                }
+
+                if (!string.IsNullOrWhiteSpace(content) && !string.IsNullOrWhiteSpace(userOpenId))
+                    await onMessage(userOpenId, groupOpenId, content, messageId);
+            }
+        }
+        finally
+        {
+            heartbeatCts.Cancel();
+            try { await heartbeatTask; }
+            catch (OperationCanceledException) { }
+        }
+    }
+
     /// <summary>
     /// 连接 QQ 网关，等待用户私聊机器人发送验证码，自动获取 C2C OpenID。
     /// 成功返回 OpenID，失败抛出 <see cref="NotifierException"/>。

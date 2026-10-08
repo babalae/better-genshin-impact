@@ -44,6 +44,11 @@ public class NotificationEvent(string code, string msg)
     public static readonly NotificationEvent AutoEatEnd = new("autoeat.end", "自动吃药结束");
     public static readonly NotificationEvent AutoEatInfo = new("autoeat.info", "自动吃药信息");
 
+    /// <summary>
+    /// Worker 日志：跨用户 Worker 的日志走通知渠道时使用（见 WorkerLogDisplayMode.Notification）
+    /// </summary>
+    public static readonly NotificationEvent WorkerLog = new("worker.log", "Worker 日志");
+
     public static IReadOnlyList<NotificationEvent> GetAll()
     {
         return AllEvents.Value;

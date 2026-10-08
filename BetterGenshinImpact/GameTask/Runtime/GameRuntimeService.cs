@@ -4,6 +4,7 @@ using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask.Runtime.WebPage;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.Service.Worker;
 using BetterGenshinImpact.View.Windows;
 using Microsoft.Extensions.Logging;
 using System;
@@ -96,6 +97,14 @@ public sealed class GameRuntimeService
     /// </summary>
     public Task<bool> StartAsync(CancellationToken ct = default)
     {
+        // 已连接跨用户 Worker：任务与截图都由 Worker 承担，本机禁止启动截图器。
+        // 这是本机截图器的总闸，任务流程里的 StartGameTask 也会走到这里
+        if (IsRemoteControlled)
+        {
+            _logger.LogWarning("已连接跨用户 Worker，本机截图器不再启动");
+            return Task.FromResult(false);
+        }
+
         var stopVersion = Interlocked.Read(ref _stopVersion);
         var uiDispatcher = Application.Current.Dispatcher;
         return uiDispatcher.CheckAccess()
@@ -112,8 +121,14 @@ public sealed class GameRuntimeService
         ArgumentNullException.ThrowIfNull(runtime);
         Application.Current.Dispatcher.VerifyAccess();
 
-        if (IsRunning || !_stopTask.IsCompleted || _startLock.CurrentCount == 0 || !CheckTriggerInterval())
+        if (IsRunning || IsRemoteControlled
+                      || !_stopTask.IsCompleted || _startLock.CurrentCount == 0 || !CheckTriggerInterval())
         {
+            if (IsRemoteControlled)
+            {
+                _logger.LogWarning("已连接跨用户 Worker，忽略本机手动选窗启动截图器");
+            }
+
             runtime.Input.Dispose();
             runtime.Dispose();
             return false;
@@ -277,6 +292,8 @@ public sealed class GameRuntimeService
         _logger.LogDebug("游戏运行环境已绑定：{Kind}，窗口句柄 {Handle}", runtime.Kind, runtime.Window.Handle);
         Started?.Invoke(this, EventArgs.Empty);
     }
+
+    private static bool IsRemoteControlled => WorkerController.IsRemoteControlled;
 
     private void SetStarting(bool value)
     {

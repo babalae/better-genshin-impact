@@ -6,6 +6,7 @@
 Docs/
 ├─ architecture/       # 架构设计
 ├─ development/        # 开发者文档
+├─ guides/             # 面向使用者的操作指南
 ├─ technical/          # 具体技术实现
 ├─ api/                # API / SDK
 ├─ design/             # 设计文档 / ADR
@@ -19,6 +20,7 @@ Docs/
 | --- | --- |
 | [architecture](architecture/) | 整体架构、分层、模块边界与演进方案 |
 | [development](development/) | 编译、调试、贡献流程等开发者文档 |
+| [guides](guides/) | 面向使用者的配置与使用指南 |
 | [technical](technical/) | 具体功能或子系统的技术实现说明 |
 | [api](api/) | 对外或对内的 API / SDK 说明 |
 | [design](design/) | 设计文档与架构决策记录（ADR） |

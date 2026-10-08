@@ -40,6 +40,23 @@ public sealed class InstanceBootstrap : IDisposable
         }
 
         var options = CommandLineOptions.Instance;
+
+        if (options.Headless)
+        {
+            // 无界面 Worker：不竞争本用户根管道，只托管跨用户 Worker 管道。正常启动路径完全不受影响。
+            var controllerSid = NormalizeControllerUserSid(options.ControllerUserSid);
+            Current = new InstanceBootstrap(
+                new InstanceContext(
+                    BetterGiInstanceType.Headless,
+                    InstancePipeNames.ForCurrentUser(),
+                    rootSessionId: null,
+                    instanceName: null,
+                    controllerUserSid: controllerSid),
+                firstServer: null,
+                firstRootConnection: null);
+            return;
+        }
+
         var rootPipeName = InstancePipeNames.ForCurrentUser();
         var currentSessionId = Process.GetCurrentProcess().SessionId;
 
@@ -182,6 +199,36 @@ public sealed class InstanceBootstrap : IDisposable
 
         _webViewInstanceMutex = mutex;
         return name;
+    }
+
+    /// <summary>
+    /// 校验 --controller-sid。缺失时返回 null（Worker 只接受自身用户与 SYSTEM）；
+    /// 非法时直接终止进程，避免带着错误的授权配置继续运行。
+    /// </summary>
+    private static string? NormalizeControllerUserSid(string? controllerUserSid)
+    {
+        if (string.IsNullOrWhiteSpace(controllerUserSid))
+        {
+            Trace.TraceWarning(
+                "未指定 {Argument}，Worker 只接受自身 Windows 用户与 SYSTEM 连接。",
+                CommandLineOptions.ControllerSidArgument);
+            return null;
+        }
+
+        try
+        {
+            return new SecurityIdentifier(controllerUserSid).Value;
+        }
+        catch (Exception exception) when (exception is ArgumentException or SystemException)
+        {
+            Trace.TraceError(
+                "非法的 {Argument}：{Value}，原因：{Reason}",
+                CommandLineOptions.ControllerSidArgument,
+                controllerUserSid,
+                exception.Message);
+            Environment.Exit(0xFFFF);
+            throw;
+        }
     }
 
     private static void ShowStartupMessage(string message, System.Windows.Forms.MessageBoxIcon icon)
@@ -351,6 +398,21 @@ internal static class InstancePipeFactory
         using var identity = WindowsIdentity.GetCurrent();
         var ownerSid = identity.User
                        ?? throw new InvalidOperationException("无法取得当前 Windows 用户 SID。");
+        return CreateServer(pipeName, firstPipeInstance, ownerSid, [ownerSid]);
+    }
+
+    /// <summary>
+    /// 使用受保护 DACL 创建命名管道：仅显式列出的 SID 可访问，其余用户被隐式拒绝；
+    /// 同时显式拒绝 <c>Network</c> SID，避免管道被远程 SMB 访问。
+    /// </summary>
+    /// <summary>
+    /// 构建受保护 DACL：只允许显式列出的 SID，并显式拒绝 <c>Network</c> SID。
+    /// 未列出的用户（含 Everyone / Authenticated Users）被隐式拒绝。
+    /// </summary>
+    internal static PipeSecurity CreatePipeSecurity(
+        SecurityIdentifier ownerSid,
+        IReadOnlyCollection<SecurityIdentifier> allowedSids)
+    {
         var networkSid = new SecurityIdentifier(WellKnownSidType.NetworkSid, null);
         var security = new PipeSecurity();
         security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
@@ -359,10 +421,24 @@ internal static class InstancePipeFactory
             networkSid,
             PipeAccessRights.FullControl,
             AccessControlType.Deny));
-        security.AddAccessRule(new PipeAccessRule(
-            ownerSid,
-            PipeAccessRights.FullControl,
-            AccessControlType.Allow));
+        foreach (var allowedSid in allowedSids)
+        {
+            security.AddAccessRule(new PipeAccessRule(
+                allowedSid,
+                PipeAccessRights.FullControl,
+                AccessControlType.Allow));
+        }
+
+        return security;
+    }
+
+    internal static NamedPipeServerStream CreateServer(
+        string pipeName,
+        bool firstPipeInstance,
+        SecurityIdentifier ownerSid,
+        IReadOnlyCollection<SecurityIdentifier> allowedSids)
+    {
+        var security = CreatePipeSecurity(ownerSid, allowedSids);
         var options = PipeOptions.Asynchronous | PipeOptions.WriteThrough;
         if (firstPipeInstance)
         {

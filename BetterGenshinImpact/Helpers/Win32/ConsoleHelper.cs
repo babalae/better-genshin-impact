@@ -47,26 +47,55 @@ public static class ConsoleHelper
             return true;
         }
 
-        // 尝试附加到父进程的控制台（如果从命令行启动）
-        if (AttachConsole(ATTACH_PARENT_PROCESS))
+        // 尝试附加到父进程的控制台（如果从命令行启动）。
+        // 附加不到时不新建窗口，保持原有行为。
+        return TryAttachParentConsole();
+    }
+
+    /// <summary>
+    /// 分配一个可见的控制台窗口：优先复用父进程控制台，父进程没有控制台时新建一个控制台窗口。
+    /// 用于无界面 Worker（--headless）这类没有主窗口、必须直接观察输出的场景。
+    /// </summary>
+    /// <param name="title">新建控制台窗口的标题</param>
+    /// <returns>是否成功获得控制台</returns>
+    public static bool AllocateConsoleWindow(string title = "BetterGI Console")
+    {
+        if (_consoleAllocated)
         {
-            _consoleAllocated = true;
-            InitializeConsoleStreams();
-            Console.WriteLine("\n=== BetterGI 控制台输出 ===");
             return true;
         }
 
-        // 如果无法附加到父进程，则分配新的控制台
-        // if (AllocConsole())
-        // {
-        //     _consoleAllocated = true;
-        //     SetConsoleTitle(title);
-        //     InitializeConsoleStreams();
-        //     Console.WriteLine("=== BetterGI 控制台输出 ===");
-        //     return true;
-        // }
+        if (TryAttachParentConsole())
+        {
+            return true;
+        }
 
-        return false;
+        if (!AllocConsole())
+        {
+            return false;
+        }
+
+        _consoleAllocated = true;
+        SetConsoleTitle(title);
+        InitializeConsoleStreams();
+        Console.WriteLine($"\n=== BetterGI 控制台输出（{title}） ===");
+        return true;
+    }
+
+    /// <summary>
+    /// 附加到父进程控制台；成功时重定向控制台流并输出横幅。
+    /// </summary>
+    private static bool TryAttachParentConsole()
+    {
+        if (!AttachConsole(ATTACH_PARENT_PROCESS))
+        {
+            return false;
+        }
+
+        _consoleAllocated = true;
+        InitializeConsoleStreams();
+        Console.WriteLine("\n=== BetterGI 控制台输出 ===");
+        return true;
     }
 
     /// <summary>

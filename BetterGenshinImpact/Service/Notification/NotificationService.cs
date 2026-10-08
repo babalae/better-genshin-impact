@@ -29,6 +29,7 @@ public class NotificationService : IHostedService, IDisposable
 
     private readonly NotifierManager _notifierManager;
     private readonly GameRuntimeService _gameRuntimeService;
+    private readonly ExternalControlService _externalControlService;
     private readonly HttpClient _notifyHttpClient;
     private readonly CancellationTokenSource? _webSocketCts;
 
@@ -38,10 +39,12 @@ public class NotificationService : IHostedService, IDisposable
     /// <summary>
     ///     构造函数
     /// </summary>
-    public NotificationService(NotifierManager notifierManager, GameRuntimeService gameRuntimeService)
+    public NotificationService(NotifierManager notifierManager, GameRuntimeService gameRuntimeService,
+        ExternalControlService externalControlService)
     {
         _notifierManager = notifierManager ?? throw new ArgumentNullException(nameof(notifierManager));
         _gameRuntimeService = gameRuntimeService;
+        _externalControlService = externalControlService;
         _notifyHttpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
         _webSocketCts = new CancellationTokenSource();
 
@@ -367,7 +370,10 @@ public class NotificationService : IHostedService, IDisposable
             _notificationConfig.QqClientSecret,
             _notificationConfig.QqOpenId,
             _notificationConfig.QqGroupOpenId,
-            _notificationConfig.QqMessageFormat
+            _notificationConfig.QqMessageFormat,
+            _notificationConfig.ExternalControlEnabled && _notificationConfig.ExternalControlReverse
+                ? _externalControlService
+                : null
         ));
     }
 

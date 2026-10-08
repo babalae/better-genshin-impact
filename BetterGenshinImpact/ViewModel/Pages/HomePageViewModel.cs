@@ -16,6 +16,9 @@ using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.ChildSession;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.Service.Notification;
+using BetterGenshinImpact.Service.Notification.Model.Enum;
+using BetterGenshinImpact.Service.Worker;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Controls.Markdown;
 using BetterGenshinImpact.View.Controls.Webview;
@@ -48,6 +51,7 @@ using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using Windows.System;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Violeta.Controls;
@@ -72,9 +76,19 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     private bool _isRuntimeStarting;
 
     /// <summary>
-    /// 启动按钮显示为"停止"：运行中，或正在启动（此时点击提交停止请求，本次启动结束后不再绑定）
+    /// 已连接 Worker 时：Worker 的截图器或任务正在运行
     /// </summary>
-    public bool IsTriggerButtonChecked => TaskDispatcherEnabled || IsRuntimeStarting;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsTriggerButtonChecked))]
+    private bool _isWorkerTriggerRunning;
+
+    /// <summary>
+    /// 启动按钮显示为"停止"：本机运行中（或正在启动）；
+    /// 已连接 Worker 时改为跟随 Worker 侧状态（此时按钮点击提交的是 Worker 的启停请求）
+    /// </summary>
+    public bool IsTriggerButtonChecked => _workerController.IsConnected
+        ? IsWorkerTriggerRunning
+        : TaskDispatcherEnabled || IsRuntimeStarting;
 
     /// <summary>
     /// 「云原神网页版」卡片只在 Primary 显示
@@ -112,6 +126,13 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     private readonly ChildSessionService _childSessionService;
     private readonly WebViewInstanceStore _webViewInstanceStore;
     private readonly WebViewInstanceLauncher _webViewInstanceLauncher;
+    private readonly WorkerController _workerController;
+
+    /// <summary>
+    /// 已连接 Worker 时定时刷新 worker.status
+    /// </summary>
+    private readonly DispatcherTimer _workerStatusTimer = new() { Interval = TimeSpan.FromSeconds(2) };
+    private bool _workerStatusRefreshing;
 
     public HomePageViewModel(
         IConfigService configService,
@@ -122,7 +143,8 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         WebViewInstanceStore webViewInstanceStore,
         WebViewInstanceLauncher webViewInstanceLauncher,
         IMaskWindowHost maskWindowHost,
-        CustomHtmlMaskService customHtmlMaskService)
+        CustomHtmlMaskService customHtmlMaskService,
+        WorkerController workerController)
     {
         _gameRuntimeService = gameRuntimeService;
         _win32RuntimeProvider = win32RuntimeProvider;
@@ -133,16 +155,26 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         _gameRuntimeService.StartingChanged += OnRuntimeStartingChanged;
         _webViewInstanceStore = webViewInstanceStore;
         _webViewInstanceLauncher = webViewInstanceLauncher;
+        _workerController = workerController;
+        _workerController.Disconnected += OnWorkerDisconnected;
+        _workerController.StatusChanged += OnWorkerStatusChanged;
+        _workerStatusTimer.Tick += OnWorkerStatusTimerTick;
         _childSessionService = childSessionService;
         _bannerImageService = bannerImageService;
         Config = configService.Get();
+        // 上次使用的 Worker SID 自动回填，避免每次手动输入
+        WorkerSidInput = Config.OtherConfig.LastWorkerUserSid;
         // 本地原神的安装目录与网页版无关，网页版实例不去读注册表，也不写共享配置
         if (!InstanceBootstrap.Current.Context.IsWebView)
         {
             ReadGameInstallPath();
         }
 
-        InitializeBannerImage();
+        // 无界面 Worker 没有启动页，不加载背景图片
+        if (!InstanceBootstrap.Current.Context.IsHeadless)
+        {
+            InitializeBannerImage();
+        }
 
 
         // WindowsGraphicsCapture 只支持 Win10 18362 及以上的版本 (Windows 10 version 1903 or later)
@@ -203,6 +235,9 @@ public partial class HomePageViewModel : ViewModel, IDisposable
             RefreshCloudWebInstances();
         }
 
+        // WorkerController 是单例，页面重建后连接可能仍然存在，这里同步一次显示状态
+        SyncWorkerStateFromController();
+
         // 组件首次加载时运行一次。
         if (!_autoRun)
         {
@@ -218,8 +253,15 @@ public partial class HomePageViewModel : ViewModel, IDisposable
 
     public void HandleActivation(CommandLineOptions commandLineOptions)
     {
+        var context = InstanceBootstrap.Current.Context;
+
+        // 无界面 Worker 没有主界面，启动后总是启动截图器：遮罩窗口是它唯一的界面。
         // 网页版实例没有主界面，启动后总是打开宿主窗口并等待绑定（见 ApplicationHostService.HandleWebViewActivation）
-        if (commandLineOptions.Action == CommandLineAction.Start || InstanceBootstrap.Current.Context.IsWebView)
+        if (context.IsHeadless)
+        {
+            _ = StartHeadlessRuntimeAsync();
+        }
+        else if (commandLineOptions.Action == CommandLineAction.Start || context.IsWebView)
         {
             _ = OnStartTriggerAsync();
         }
@@ -228,10 +270,30 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         // 后续在此判断可用子实例，并由选择面板决定 task.* 请求的目标实例。
     }
 
+    /// <summary>
+    /// 无界面 Worker 启动截图器。没有界面可以提示，失败只记录日志，不影响 Worker 继续等待指令。
+    /// </summary>
+    private async Task StartHeadlessRuntimeAsync()
+    {
+        try
+        {
+            await _gameRuntimeService.StartAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "无界面 Worker 启动截图器失败");
+        }
+    }
+
     private void OnClosed()
     {
         CancelBannerDownload();
-        _ = OnStopTrigger();
+        // 已连接 Worker 时不动 Worker 侧：关闭启动页不代表要停掉远端任务
+        if (!_workerController.IsConnected)
+        {
+            _ = OnStopTrigger();
+        }
+
         // 等待任务结束
         _maskWindowHost.Close();
     }
@@ -245,9 +307,13 @@ public partial class HomePageViewModel : ViewModel, IDisposable
 
         _disposed = true;
         OnClosed();
+        _workerStatusTimer.Stop();
+        _workerStatusTimer.Tick -= OnWorkerStatusTimerTick;
         _gameRuntimeService.Started -= OnRuntimeStarted;
         _gameRuntimeService.Stopped -= OnRuntimeStopped;
         _gameRuntimeService.StartingChanged -= OnRuntimeStartingChanged;
+        _workerController.Disconnected -= OnWorkerDisconnected;
+        _workerController.StatusChanged -= OnWorkerStatusChanged;
         WeakReferenceMessenger.Default.UnregisterAll(this);
         _mouseKeyMonitor.Dispose();
         GC.SuppressFinalize(this);
@@ -323,11 +389,20 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     private bool CanStartTrigger() => StartButtonEnabled;
 
     /// <summary>
-    /// 启动截图器。找窗、关联启动、HDR 处理都由运行环境的 Provider 完成
+    /// 启动截图器。找窗、关联启动、HDR 处理都由运行环境的 Provider 完成。
+    /// 已连接跨用户 Worker 时改为启动 Worker 的截图器（本机截图器禁止启动）
     /// </summary>
     [RelayCommand(CanExecute = nameof(CanStartTrigger))]
     public async Task OnStartTriggerAsync()
     {
+        if (_workerController.IsConnected)
+        {
+            await ExecuteWorkerActionAsync(
+                async () => ApplyWorkerStatus(await _workerController.StartCaptureAsync()),
+                "启动 Worker 截图器失败");
+            return;
+        }
+
         await _gameRuntimeService.StartAsync();
     }
 
@@ -336,6 +411,14 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     [RelayCommand(CanExecute = nameof(CanStopTrigger))]
     private async Task OnStopTrigger()
     {
+        if (_workerController.IsConnected)
+        {
+            await ExecuteWorkerActionAsync(
+                async () => ApplyWorkerStatus(await _workerController.StopCaptureAsync()),
+                "停止 Worker 截图器失败");
+            return;
+        }
+
         await _gameRuntimeService.StopAsync();
     }
 
@@ -504,6 +587,408 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         }
 
         RefreshCloudWebInstances();
+    }
+
+    #endregion
+
+    #region 跨用户 Worker（Primary 首页）
+
+    /// <summary>
+    /// 跨用户 Worker 入口只在 Primary 显示
+    /// </summary>
+    public bool IsWorkerEntryVisible => InstanceBootstrap.Current.Context.IsRoot;
+
+    /// <summary>
+    /// 当前 Windows 用户 SID。目标用户启动 Worker 时作为 --controller-sid 的值
+    /// </summary>
+    public string LocalUserSid => InstanceBootstrap.Current.Context.WindowsUserSid;
+
+    [RelayCommand]
+    private void CopyLocalUserSid()
+    {
+        try
+        {
+            Clipboard.SetDataObject(LocalUserSid);
+            Toast.Success("已复制本用户 SID");
+        }
+        catch (Exception ex)
+        {
+            Toast.Error($"复制 SID 失败：{ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 目标 Worker 所在 Windows 用户的 SID
+    /// </summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ConnectWorkerCommand))]
+    private string _workerSidInput = string.Empty;
+
+    /// <summary>
+    /// 输入的 SID 写入配置（由 ConfigService 防抖落盘），下次启动自动回填
+    /// </summary>
+    partial void OnWorkerSidInputChanged(string value)
+    {
+        Config.OtherConfig.LastWorkerUserSid = value;
+    }
+
+    /// <summary>
+    /// Worker 日志（原本写入遮罩叠加层日志框的内容）的显示位置。
+    /// 数值与启动页下拉框的选项顺序一一对应，见 <see cref="WorkerLogDisplayMode"/>
+    /// </summary>
+    public int WorkerLogDisplayModeIndex
+    {
+        get => (int)Config.OtherConfig.WorkerLogDisplayMode;
+        set
+        {
+            if (value < (int)WorkerLogDisplayMode.None || value > (int)WorkerLogDisplayMode.LocalWindow)
+            {
+                return;
+            }
+
+            var mode = (WorkerLogDisplayMode)value;
+            if (Config.OtherConfig.WorkerLogDisplayMode == mode)
+            {
+                return;
+            }
+
+            Config.OtherConfig.WorkerLogDisplayMode = mode;
+            OnPropertyChanged();
+            WarnIfWorkerLogEventNotSubscribed(mode);
+            _ = PushWorkerLogDisplayModeAsync();
+        }
+    }
+
+    /// <summary>
+    /// 「使用通知渠道」依赖通知事件订阅：订阅列表非空但没有勾选「Worker 日志」时什么都收不到，
+    /// 这里提前给出提示，免得用户以为功能没生效
+    /// </summary>
+    private void WarnIfWorkerLogEventNotSubscribed(WorkerLogDisplayMode mode)
+    {
+        if (mode != WorkerLogDisplayMode.Notification)
+        {
+            return;
+        }
+
+        var subscribed = NotificationEventSubscriptionHelper.ParseEventCodes(
+            Config.NotificationConfig.NotificationEventSubscribe);
+        if (subscribed.Count == 0
+            || subscribed.Contains(NotificationEvent.WorkerLog.Code, StringComparer.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        Toast.Warning("通知设置里没有勾选「Worker 日志」事件，Worker 日志不会推送");
+    }
+
+    /// <summary>
+    /// 「使用通知渠道」时日志的聚合间隔（秒）。单位时间内的日志合并成一条通知，避免被渠道限流。
+    /// 用 double 承接 NumberBox 的 Value，避免 int↔double 的绑定转换问题
+    /// </summary>
+    public double WorkerLogNotificationIntervalSeconds
+    {
+        get => Config.OtherConfig.WorkerLogNotificationIntervalSeconds;
+        set
+        {
+            var normalized = value < 1 ? 1 : (int)Math.Round(value);
+            if (Config.OtherConfig.WorkerLogNotificationIntervalSeconds == normalized)
+            {
+                return;
+            }
+
+            Config.OtherConfig.WorkerLogNotificationIntervalSeconds = normalized;
+            OnPropertyChanged();
+            _ = PushWorkerLogDisplayModeAsync();
+        }
+    }
+
+    /// <summary>
+    /// 把显示位置下发给 Worker。未连接时只落盘，连接成功后由 <see cref="ConnectWorkerAsync"/> 补推
+    /// </summary>
+    private async Task PushWorkerLogDisplayModeAsync()
+    {
+        if (!_workerController.IsConnected)
+        {
+            return;
+        }
+
+        try
+        {
+            var response = await _workerController.SetLogDisplayModeAsync(
+                Config.OtherConfig.WorkerLogDisplayMode,
+                Config.OtherConfig.WorkerLogNotificationIntervalSeconds);
+            _logger.LogInformation("Worker 日志显示位置已下发：{Mode}", response.Mode);
+            // 「本地独立窗口」由本机显示：先开窗口，用户马上能看到效果（Worker 的日志随后到达）
+            App.GetService<WorkerLogWindowService>()?.HandleModeChanged(response.Mode);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "下发 Worker 日志显示位置失败");
+            Toast.Warning($"设置 Worker 日志显示位置失败：{ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 是否已连接 Worker。连接后本机截图器禁止启动，主按钮改为控制 Worker
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsTriggerButtonChecked))]
+    [NotifyCanExecuteChangedFor(nameof(ConnectWorkerCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DisconnectWorkerCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RefreshWorkerStatusCommand))]
+    [NotifyCanExecuteChangedFor(nameof(StartWorkerGameCommand))]
+    [NotifyCanExecuteChangedFor(nameof(StopWorkerTaskCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PauseWorkerTaskCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ResumeWorkerTaskCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ExitWorkerGameCommand))]
+    private bool _isWorkerConnected;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ConnectWorkerCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RefreshWorkerStatusCommand))]
+    [NotifyCanExecuteChangedFor(nameof(StartWorkerGameCommand))]
+    [NotifyCanExecuteChangedFor(nameof(StopWorkerTaskCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PauseWorkerTaskCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ResumeWorkerTaskCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ExitWorkerGameCommand))]
+    private bool _isWorkerBusy;
+
+    /// <summary>
+    /// Worker 侧状态文本（状态、进程、会话与当前任务）
+    /// </summary>
+    [ObservableProperty]
+    private string _workerStatusText = "未连接";
+
+    private bool CanConnectWorker() => !IsWorkerConnected && !IsWorkerBusy;
+
+    [RelayCommand(CanExecute = nameof(CanConnectWorker))]
+    private async Task ConnectWorkerAsync()
+    {
+        await ExecuteWorkerActionAsync(async () =>
+        {
+            ApplyWorkerStatus(await _workerController.ConnectAsync(WorkerSidInput));
+            IsWorkerConnected = true;
+            UpdateWorkerStatusTimer();
+            // 连接后立刻把当前的日志显示位置推给 Worker，否则 Worker 会按自己的配置继续跑
+            await PushWorkerLogDisplayModeAsync();
+        }, "连接 Worker 失败");
+    }
+
+    private bool CanDisconnectWorker() => IsWorkerConnected;
+
+    [RelayCommand(CanExecute = nameof(CanDisconnectWorker))]
+    private async Task DisconnectWorkerAsync()
+    {
+        await ExecuteWorkerActionAsync(async () =>
+        {
+            await _workerController.DisconnectAsync();
+            IsWorkerConnected = false;
+            IsWorkerTriggerRunning = false;
+            WorkerStatusText = "未连接";
+            UpdateWorkerStatusTimer();
+        }, "断开 Worker 失败");
+    }
+
+    private bool CanOperateWorker() => IsWorkerConnected && !IsWorkerBusy;
+
+    [RelayCommand(CanExecute = nameof(CanOperateWorker))]
+    private async Task RefreshWorkerStatusAsync()
+    {
+        await ExecuteWorkerActionAsync(
+            async () => ApplyWorkerStatus(await _workerController.GetStatusAsync()),
+            "刷新 Worker 状态失败");
+    }
+
+    [RelayCommand(CanExecute = nameof(CanOperateWorker))]
+    private async Task StartWorkerGameAsync()
+    {
+        await ExecuteWorkerActionAsync(
+            async () => ApplyWorkerStatus(await _workerController.StartCaptureAsync()),
+            "启动 Worker 截图器失败");
+    }
+
+    [RelayCommand(CanExecute = nameof(CanOperateWorker))]
+    private async Task StopWorkerTaskAsync()
+    {
+        await ExecuteWorkerActionAsync(
+            () => _workerController.StopTaskAsync(),
+            "停止 Worker 任务失败");
+    }
+
+    [RelayCommand(CanExecute = nameof(CanOperateWorker))]
+    private async Task ExitWorkerGameAsync()
+    {
+        await ExecuteWorkerActionAsync(
+            async () => ApplyWorkerStatus(await _workerController.ExitGameAsync()),
+            "退出 Worker 游戏失败");
+    }
+
+    [RelayCommand(CanExecute = nameof(CanOperateWorker))]
+    private async Task PauseWorkerTaskAsync()
+    {
+        await ExecuteWorkerActionAsync(
+            () => _workerController.PauseTaskAsync(),
+            "暂停 Worker 任务失败");
+    }
+
+    [RelayCommand(CanExecute = nameof(CanOperateWorker))]
+    private async Task ResumeWorkerTaskAsync()
+    {
+        await ExecuteWorkerActionAsync(
+            () => _workerController.ResumeTaskAsync(),
+            "继续 Worker 任务失败");
+    }
+
+    private void ApplyWorkerStatus(WorkerStatusResponse status)
+    {
+        // 主按钮（启动/停止）在已连接 Worker 时跟随 Worker 侧的截图器与任务状态
+        IsWorkerTriggerRunning = status.CaptureRunning
+                                 || status.State is WorkerState.Starting or WorkerState.RunningTask or WorkerState.Stopping;
+
+        var text = $"{status.State} ｜ 截图器{(status.CaptureRunning ? "运行中" : "未启动")}"
+                   + $" ｜ 进程 {status.ProcessId} ｜ 会话 {status.SessionId}";
+        if (!string.IsNullOrEmpty(status.CurrentTask))
+        {
+            text += $" ｜ 当前任务 {status.CurrentTask}";
+        }
+
+        if (!string.IsNullOrEmpty(status.ErrorMessage))
+        {
+            text += $" ｜ {status.ErrorMessage}";
+        }
+
+        WorkerStatusText = text;
+    }
+
+    /// <summary>
+    /// Worker 状态变化可能来自管道线程，切回 UI 线程更新
+    /// </summary>
+    private void OnWorkerStatusChanged(object? sender, WorkerStatusResponse status)
+    {
+        UIDispatcherHelper.BeginInvoke(() => ApplyWorkerStatus(status));
+    }
+
+    /// <summary>
+    /// 连接期间定时刷新 Worker 状态，让主按钮与状态文本跟随 Worker（Worker 不会主动推送）
+    /// </summary>
+    private void UpdateWorkerStatusTimer()
+    {
+        if (_workerController.IsConnected)
+        {
+            if (!_workerStatusTimer.IsEnabled)
+            {
+                _workerStatusTimer.Start();
+            }
+        }
+        else
+        {
+            _workerStatusTimer.Stop();
+        }
+    }
+
+    private void OnWorkerStatusTimerTick(object? sender, EventArgs e)
+    {
+        if (!_workerController.IsConnected)
+        {
+            _workerStatusTimer.Stop();
+            return;
+        }
+
+        if (_workerStatusRefreshing)
+        {
+            return;
+        }
+
+        _ = RefreshWorkerStatusQuietlyAsync();
+    }
+
+    private async Task RefreshWorkerStatusQuietlyAsync()
+    {
+        _workerStatusRefreshing = true;
+        try
+        {
+            ApplyWorkerStatus(await _workerController.GetStatusAsync());
+        }
+        catch (WorkerUnavailableException)
+        {
+            // 断开由 WorkerController.Disconnected 事件统一处理
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "刷新 Worker 状态失败");
+        }
+        finally
+        {
+            _workerStatusRefreshing = false;
+        }
+    }
+
+    /// <summary>
+    /// 统一处理 Worker 调用：期间禁用按钮，失败只提示不抛出
+    /// </summary>
+    private async Task ExecuteWorkerActionAsync(Func<Task> action, string failureTitle)
+    {
+        IsWorkerBusy = true;
+        try
+        {
+            await action();
+        }
+        catch (WorkerUnavailableException ex)
+        {
+            _logger.LogWarning(ex, "Worker 操作失败：{Code}", ex.ErrorCode);
+            WorkerStatusText = $"{ex.ErrorCode}：{ex.Message}";
+            ThemedMessageBox.Warning(ex.Message, failureTitle);
+            if (ex.ErrorCode == "worker_offline")
+            {
+                IsWorkerConnected = false;
+                IsWorkerTriggerRunning = false;
+                UpdateWorkerStatusTimer();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Worker 操作异常");
+            WorkerStatusText = ex.Message;
+            ThemedMessageBox.Warning(ex.Message, failureTitle);
+        }
+        finally
+        {
+            IsWorkerBusy = false;
+        }
+    }
+
+    private void SyncWorkerStateFromController()
+    {
+        IsWorkerConnected = _workerController.IsConnected;
+        if (_workerController.ConnectedWorkerSid is { } sid)
+        {
+            WorkerSidInput = sid;
+            WorkerStatusText = $"已连接（{sid}）";
+            if (_workerController.LastStatus is { } status)
+            {
+                ApplyWorkerStatus(status);
+            }
+        }
+        else
+        {
+            WorkerStatusText = "未连接";
+        }
+
+        UpdateWorkerStatusTimer();
+    }
+
+    /// <summary>
+    /// Worker 断开（含进程退出）在管道接收线程上触发，切回 UI 线程更新
+    /// </summary>
+    private void OnWorkerDisconnected(object? sender, EventArgs e)
+    {
+        UIDispatcherHelper.BeginInvoke(() =>
+        {
+            IsWorkerConnected = false;
+            IsWorkerTriggerRunning = false;
+            WorkerStatusText = "Worker 已断开";
+            UpdateWorkerStatusTimer();
+        });
     }
 
     #endregion

@@ -13,6 +13,7 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
+using BetterGenshinImpact.Service.Worker;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -45,6 +46,16 @@ public class TaskRunner
     /// <returns></returns>
     public async Task RunCurrentAsync(Func<Task> action, bool resetCancellationContext = true, bool clearCancellationContextOnLockFailure = false)
     {
+        // 已连接跨用户 Worker：任务必须由 Worker 执行。本机只负责下发，
+        // 尚未映射到 Worker 的入口在这里统一拒绝，避免误在本机跑任务
+        if (WorkerController.IsRemoteControlled)
+        {
+            _logger.LogWarning("已连接跨用户 Worker，本机不执行任务：{Text}", _name);
+            UIDispatcherHelper.BeginInvoke(() =>
+                Toast.Warning("已连接跨用户 Worker：本机不执行任务，该入口暂未支持远程下发"));
+            return;
+        }
+
         // 加锁
         var hasLock = await TaskSemaphore.WaitAsync(0);
         if (!hasLock)

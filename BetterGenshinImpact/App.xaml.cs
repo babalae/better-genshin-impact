@@ -25,6 +25,7 @@ using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notifier;
+using BetterGenshinImpact.Service.Worker;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Mask;
 using BetterGenshinImpact.View.Pages;
@@ -85,8 +86,7 @@ public partial class App : Application
                 var richTextBox = new RichTextBoxImpl();
                 services.AddSingleton<IRichTextBox>(richTextBox);
 
-                var loggerConfiguration = new LoggerConfiguration()
-                    .WriteTo.Logger(fileLoggerConfiguration => fileLoggerConfiguration
+                var loggerConfiguration = new LoggerConfiguration()                    .WriteTo.Logger(fileLoggerConfiguration => fileLoggerConfiguration
                         .Enrich.WithProperty("BgiInstance", instanceIdentity)
                         .WriteTo.File(logFile,
                             outputTemplate:
@@ -102,14 +102,21 @@ public partial class App : Application
                     .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Warning);
                 // 日志遮罩输出：仅当“遮罩启用且日志框可见”时才真正写入，隐藏时避免不必要的 UI 开销（#3161）。
                 // 条件改为运行时每次写入时动态判断，因此启动后通过快捷键切换 ShowLogBox 也能即时恢复日志（#3357）。
+                // Worker（--headless）的日志显示位置可在启动页选择；非「游戏内叠加层」时由 WorkerLogRouter 接管输出。
                 loggerConfiguration.WriteTo.Sink(
                     new ConditionalLogEventSink(
                         new LoggerConfiguration()
                             .WriteTo.RichTextBox(richTextBox, LogEventLevel.Information,
                                 "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
                             .CreateLogger(),
-                        () => all.MaskWindowConfig is { MaskEnabled: true, ShowLogBox: true }),
+                        () => all.MaskWindowConfig is { MaskEnabled: true, ShowLogBox: true }
+                              && WorkerLogRouter.ShouldWriteToGameOverlay),
                     LogEventLevel.Information);
+                // Worker 日志出口：按启动页选择的显示位置路由（非 Worker 实例不产生任何输出）
+                loggerConfiguration.WriteTo.Sink(WorkerLogRouter.Sink, LogEventLevel.Information);
+                WorkerLogRouter.Configure(
+                    all.OtherConfig.WorkerLogDisplayMode,
+                    all.OtherConfig.WorkerLogNotificationIntervalSeconds);
 
                 Log.Logger = loggerConfiguration.CreateLogger();
                 services.AddLogging(c => c.AddSerilog());
@@ -136,6 +143,18 @@ public partial class App : Application
                 services.AddSingleton(InstanceBootstrap.Current);
                 services.AddSingleton<InstanceService>();
                 services.AddHostedService(sp => sp.GetRequiredService<InstanceService>());
+
+                // 跨用户 Worker IPC：仅 --headless 时实际监听，普通/网页版/桌面分身行为不变
+                services.AddSingleton<WorkerNoticeHub>();
+                services.AddSingleton<WorkerTaskExecutor>();
+                services.AddSingleton<WorkerIpcService>();
+                services.AddHostedService(sp => sp.GetRequiredService<WorkerIpcService>());
+                services.AddSingleton<WorkerController>();
+                // Worker 日志独立窗口：Worker 侧（远程窗口）与控制侧（本地窗口）共用。
+                // 必须托管启动，否则控制侧不会构造该服务，Worker 回传的日志批次就没人接收
+                services.AddSingleton<WorkerLogWindowService>();
+                services.AddHostedService(sp => sp.GetRequiredService<WorkerLogWindowService>());
+
                 // App Host
                 services.AddHostedService<ApplicationHostService>();
                 // Page resolver service
@@ -220,6 +239,10 @@ public partial class App : Application
                 services.AddSingleton<RecognitionTemplateEditorService>();
                 services.AddSingleton<NotificationService>();
                 services.AddHostedService(sp => sp.GetRequiredService<NotificationService>());
+                services.AddSingleton<QqCommandService>();
+                services.AddHostedService(sp => sp.GetRequiredService<QqCommandService>());
+                services.AddSingleton<ExternalControlService>();
+                services.AddHostedService(sp => sp.GetRequiredService<ExternalControlService>());
                 services.AddSingleton<NotifierManager>();
                 services.AddSingleton<IScriptService, ScriptService>();
                 services.AddSingleton<IMusicScoreParser, MusicScoreParser>();
@@ -288,12 +311,32 @@ public partial class App : Application
         Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.Normal;
         // Wine 平台适配
         WinePlatformAddon.ApplyApplicationConfig();
+        // 此处必须先读取命令行，不能读 InstanceBootstrap.Current：
+        // App 是 beforefieldinit 类型，_host 的静态字段初始化器（才会触发 UseInstanceIpc →
+        // InstanceBootstrap.Initialize）要等首次触碰 App 静态成员时才执行，此时 Current 仍为 null。
+        if (CommandLineOptions.Instance.Headless)
+        {
+            // 无界面 Worker 永远不会有窗口，必须显式退出，否则 WPF 会在没有窗口时立即关闭进程
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+        }
+
         base.OnStartup(e);
 
         try
         {
             // 分配控制台窗口以支持控制台输出
-            ConsoleHelper.AllocateConsole("BetterGI Console");
+            if (CommandLineOptions.Instance.Headless)
+            {
+                // 无界面 Worker 没有主窗口：从资源管理器/VS 启动时父进程没有控制台，
+                // 必须新建一个可见的控制台窗口，否则看不到任何输出
+                ConsoleHelper.AllocateConsoleWindow("BetterGI Worker Console");
+                ConsoleHelper.WriteLine("已进入无界面 Worker 模式（--headless）");
+            }
+            else
+            {
+                ConsoleHelper.AllocateConsole("BetterGI Console");
+            }
+
             RegisterEvents();
             await _host.StartAsync();
             ServerTimeHelper.Initialize(_host.Services.GetRequiredService<IServerTimeProvider>());
@@ -491,6 +534,12 @@ public partial class App : Application
 
         // 终止性异常（如线程池未处理异常导致进程即将结束）：进程终止前同步弹窗兜底，
         // 确保用户能看到报告（阻塞无妨，进程反正要终止）。
+        // 无界面 Worker 没有用户可以关闭弹窗，弹窗会永久阻塞进程退出，只记录日志。
+        if (CommandLineOptions.Instance.Headless)
+        {
+            return false;
+        }
+
         var dispatcher = Application.Current?.Dispatcher;
         if (dispatcher is null
             || dispatcher.HasShutdownStarted
