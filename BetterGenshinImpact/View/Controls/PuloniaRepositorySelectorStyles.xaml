@@ -24,9 +24,29 @@
             <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold"
                        Foreground="{DynamicResource TextFillColorPrimaryBrush}" Text="{Binding DisplayName}"
                        TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
-            <Border Grid.Column="2" Margin="8,0,0,0" Padding="6,1" CornerRadius="4"
-                    Background="{DynamicResource ControlFillColorSecondaryBrush}" VerticalAlignment="Center">
-                <TextBlock FontSize="11" Text="{Binding TypeLabel}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Border Grid.Column="2" Margin="8,0,0,0" Padding="6,1" CornerRadius="4" VerticalAlignment="Center">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsOfficial}" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <TextBlock FontSize="11" Text="{Binding TypeLabel}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsOfficial}" Value="True">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
             </Border>
         </Grid>
     </DataTemplate>

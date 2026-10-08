@@ -80,6 +80,24 @@ public sealed class PuloniaRepositoryResourceTests : IDisposable
         };
     }
 
+    /// <summary>ZIP 导入前必须识别唯一仓库根，并拒绝缺少 indexes 清单的 repo.json。</summary>
+    [Fact]
+    public async Task RepositoryZipValidation_RequiresValidRepoJson()
+    {
+        var store = CreateStore();
+        var source = CreateSource("zip-valid", false);
+        var validZip = Path.Combine(_root, "valid.zip");
+        ZipFile.CreateFromDirectory(source, validZip);
+        await store.ValidateRepositoryZipAsync(validZip);
+
+        var invalidSource = CreateSource("zip-invalid", false);
+        Write(invalidSource, "repo.json", "{}");
+        var invalidZip = Path.Combine(_root, "invalid.zip");
+        ZipFile.CreateFromDirectory(invalidSource, invalidZip);
+        var error = await Assert.ThrowsAsync<IOException>(() => store.ValidateRepositoryZipAsync(invalidZip));
+        Assert.Contains("indexes", error.Message);
+    }
+
     /// <summary>只有两个版本文件触发更新；其他来源文件改变后旧缓存仍保留原内容。</summary>
     [Theory]
     [InlineData("repo/js/示例/main.js", true)]

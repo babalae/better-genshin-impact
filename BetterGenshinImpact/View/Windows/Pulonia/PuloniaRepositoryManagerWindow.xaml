@@ -19,15 +19,21 @@
             <StackPanel>
                 <!-- 添加和引用管理集中到独立窗口；仓库选择不会解析脚本正文。 -->
                 <Grid Margin="0,0,0,12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <ComboBox Margin="0,0,8,0" ItemsSource="{Binding RepositoryChoices}"
+                    <ComboBox ItemsSource="{Binding RepositoryChoices}"
                               SelectedValue="{Binding SelectedRepository, Mode=TwoWay}" IsEnabled="{Binding CanEdit}"
                               Style="{StaticResource PuloniaRepositorySelectorStyle}" />
-                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <StackPanel Grid.Row="1" Margin="0,8,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
                         <ui:Button Margin="0,0,6,0" Content="添加远程" Command="{Binding AddRemoteCommand}" />
-                        <ui:Button Content="添加本地" Command="{Binding AddLocalCommand}" />
+                        <ui:Button Margin="0,0,6,0" Content="选择文件夹" Command="{Binding AddLocalCommand}" />
+                        <ui:Button Content="导入 ZIP" Command="{Binding ImportLocalZipCommand}"
+                                   ToolTip="校验 repo.json 后导入到与老配置组相同的 Repos 仓库目录" />
                     </StackPanel>
                 </Grid>
                 <Border Padding="14" CornerRadius="8" BorderThickness="1"

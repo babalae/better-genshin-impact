@@ -15,6 +15,7 @@ using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Meziantou.Framework.Win32;
+using Microsoft.Win32;
 
 namespace BetterGenshinImpact.ViewModel.Windows.Pulonia;
 
@@ -198,7 +199,7 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
     private bool CanManage() => CanEdit;
     /// <summary>保存仅用于第三方配置。</summary>
     private bool CanSave() => CanEdit && IsThirdParty;
-    /// <summary>下载与更新只能操作已经保存的托管仓库。</summary>
+    /// <summary>同步只能操作已经保存的托管仓库。</summary>
     private bool CanUpdate() => CanEdit && !IsAddingRemote && SelectedRepository?.IsRemote == true;
     /// <summary>重置必须已经存在 clone 副本。</summary>
     private bool CanReset() => CanUpdate() && Directory.Exists(SelectedRepository!.Directory);
@@ -217,7 +218,7 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
         RepositoryName = "第三方脚本仓库";
         RemoteUrl = string.Empty;
         Branch = "release";
-        StatusMessage = "填写名称、地址和分支，保存后可下载。";
+        StatusMessage = "填写名称、地址和分支，保存后可同步。";
     }
 
     /// <summary>选择本地根目录验证索引后建立引用，不加入程序更新目标。</summary>
@@ -234,6 +235,36 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
             var repository = await _service.Repositories.AddRepositoryAsync(dialog.SelectedPath, ct);
             await ReloadAsync(repository.Id, ct);
             StatusMessage = "已添加本地引用。";
+        });
+    }
+
+    /// <summary>选择离线 ZIP，校验 repo.json 后通过老导入器解压到共享 Repos 目录并注册。</summary>
+    [RelayCommand(CanExecute = nameof(CanManage))]
+    private async Task ImportLocalZipAsync()
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "选择脚本仓库 ZIP 压缩包",
+            Filter = "ZIP 压缩包 (*.zip)|*.zip",
+            Multiselect = false,
+            CheckFileExists = true
+        };
+        var owner = Application.Current.Windows.OfType<Window>().FirstOrDefault(window => window.IsActive);
+        if (dialog.ShowDialog(owner) != true) return;
+        await RunAsync(async ct =>
+        {
+            StatusMessage = "正在校验 ZIP 中的 repo.json…";
+            IsProgressIndeterminate = false;
+            var progress = new Progress<(int Value, string Text)>(state =>
+            {
+                if (_closed) return;
+                ProgressValue = state.Value;
+                ProgressText = state.Text;
+            });
+            var repository = await _service.ImportLocalZipAsync(dialog.FileName,
+                (value, text) => ((IProgress<(int, string)>)progress).Report((value, text)), ct);
+            await ReloadAsync(repository.Id, CancellationToken.None);
+            StatusMessage = "ZIP 已导入共享 Repos 目录并通过 repo.json 校验。";
         });
     }
 
@@ -352,7 +383,8 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
         foreach (var property in new[] { nameof(IsOfficial), nameof(IsThirdParty), nameof(IsLocal), nameof(IsRemote), nameof(CanEdit),
                      nameof(CanEditRemoteUrl), nameof(DirectoryText), nameof(DirectoryLabel), nameof(RepositoryKindText), nameof(UpdateButtonText) })
             OnPropertyChanged(property);
-        AddRemoteCommand.NotifyCanExecuteChanged(); AddLocalCommand.NotifyCanExecuteChanged(); SaveCommand.NotifyCanExecuteChanged();
+        AddRemoteCommand.NotifyCanExecuteChanged(); AddLocalCommand.NotifyCanExecuteChanged(); ImportLocalZipCommand.NotifyCanExecuteChanged();
+        SaveCommand.NotifyCanExecuteChanged();
         UpdateCommand.NotifyCanExecuteChanged(); ResetCommand.NotifyCanExecuteChanged(); RemoveCommand.NotifyCanExecuteChanged();
         RefreshLocalCommand.NotifyCanExecuteChanged(); OpenDirectoryCommand.NotifyCanExecuteChanged(); SaveCredentialsCommand.NotifyCanExecuteChanged();
     }

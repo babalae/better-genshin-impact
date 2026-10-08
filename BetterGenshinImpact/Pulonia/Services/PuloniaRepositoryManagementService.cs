@@ -76,6 +76,19 @@ public sealed class PuloniaRepositoryManagementService
     public Task RefreshLocalAsync(string id, CancellationToken ct = default)
         => Repositories.RefreshLocalRepositoryAsync(id, ct);
 
+    /// <summary>先校验离线包，再复用老配置组导入器解压到共享 Repos 目录并注册给 Pulonia。</summary>
+    public async Task<ScriptRepositoryRegistration> ImportLocalZipAsync(string zipFilePath,
+        Action<int, string>? progress = null, CancellationToken ct = default)
+    {
+        await Repositories.ValidateRepositoryZipAsync(zipFilePath, ct).ConfigureAwait(false);
+        ct.ThrowIfCancellationRequested();
+        var directory = await ScriptRepoUpdater.Instance.ImportLocalRepoZip(zipFilePath, progress).ConfigureAwait(false);
+        // 老导入器开始写入后即完成注册，避免关闭窗口留下只有磁盘内容、没有 Pulonia 身份的半成品。
+        var registration = await Repositories.AddRepositoryAsync(directory, CancellationToken.None).ConfigureAwait(false);
+        Repositories.NotifyUpdated(directory);
+        return registration;
+    }
+
     /// <summary>防止使用本地或已经移除的来源执行托管目录操作。</summary>
     private void ValidateManagedSource(ScriptRepositoryRegistration repository)
     {

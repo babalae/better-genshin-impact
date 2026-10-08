@@ -1921,7 +1921,8 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     try
                     {
                         var dirName = Path.GetFileName(existingDir);
-                        if (dirName == "Temp") continue;
+                        // Pulonia 是多个独立托管仓库的容器，不能按其中任意一个 repo.json 的重合度整体覆盖。
+                        if (dirName is "Temp" or "Pulonia") continue;
 
                         // 尝试读取已有仓库的 repo.json 或 repo_updated.json
                         var existingRepoUpdated = Path.Combine(existingDir, "repo_updated.json");

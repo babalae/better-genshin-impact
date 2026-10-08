@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LibGit2Sharp;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.Core.Script.Repositories;
 
@@ -78,6 +81,58 @@ public sealed partial class ScriptRepositoryStore
             }
         }, ct).ConfigureAwait(false);
         NotifyUpdated(registration.Directory);
+    }
+
+    /// <summary>导入前校验 ZIP 中唯一的仓库根、repo 目录和 repo.json 索引协议，不写入任何仓库目录。</summary>
+    public async Task ValidateRepositoryZipAsync(string zipFilePath, CancellationToken ct = default)
+    {
+        zipFilePath = Path.GetFullPath(zipFilePath);
+        if (!File.Exists(zipFilePath))
+            throw new FileNotFoundException("选择的 ZIP 文件不存在。", zipFilePath);
+        await Task.Run(() =>
+        {
+            ct.ThrowIfCancellationRequested();
+            using var archive = ZipFile.OpenRead(zipFilePath);
+            if (archive.Entries.Count == 0)
+                throw new IOException("ZIP 压缩包为空，不是有效的脚本仓库。");
+            var entries = archive.Entries.Select(entry => (Entry: entry, Path: ValidateZipEntryPath(entry))).ToArray();
+            var indexes = entries.Where(item => item.Path.Equals("repo.json", StringComparison.OrdinalIgnoreCase)
+                                                || item.Path.EndsWith("/repo.json", StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (indexes.Length == 0)
+                throw new IOException("ZIP 中没有找到 repo.json，不是有效的脚本仓库。");
+            if (indexes.Length > 1)
+                throw new IOException("ZIP 中存在多个 repo.json，无法确定唯一的仓库根目录。");
+
+            var indexPath = indexes[0].Path;
+            var rootPrefix = indexPath[..^"repo.json".Length];
+            var repositoryPrefix = rootPrefix + "repo/";
+            if (!entries.Any(item => item.Path.Equals(repositoryPrefix, StringComparison.OrdinalIgnoreCase)
+                                     || item.Path.StartsWith(repositoryPrefix, StringComparison.OrdinalIgnoreCase)))
+                throw new IOException("repo.json 同级必须包含 repo 文件夹。");
+            try
+            {
+                using var reader = new StreamReader(indexes[0].Entry.Open(), detectEncodingFromByteOrderMarks: true);
+                if (JObject.Parse(reader.ReadToEnd())["indexes"] is not JArray)
+                    throw new IOException("repo.json 缺少 indexes 资源清单。");
+            }
+            catch (JsonException ex)
+            {
+                throw new IOException("repo.json 不是有效的 JSON 文件。", ex);
+            }
+        }, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>拒绝 ZIP 路径穿越与符号链接；后续老导入器只能处理普通相对文件。</summary>
+    private static string ValidateZipEntryPath(ZipArchiveEntry entry)
+    {
+        var path = entry.FullName.Replace('\\', '/');
+        var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var unixFileType = (entry.ExternalAttributes >> 16) & 0xF000;
+        if (string.IsNullOrWhiteSpace(path) || path.StartsWith('/') || path.Contains('\0')
+            || segments.Length == 0 || segments.Any(segment => segment is "." or ".." || segment.Contains(':'))
+            || unixFileType == 0xA000 || (entry.ExternalAttributes & (int)FileAttributes.ReparsePoint) != 0)
+            throw new IOException($"ZIP 包含不安全的路径或链接：{entry.FullName}");
+        return string.Join('/', segments) + (path.EndsWith('/') ? "/" : string.Empty);
     }
 
     /// <summary>新远程来源先保存配置，固定目录由仓库 ID 分配，不随名称或 URL 变化。</summary>

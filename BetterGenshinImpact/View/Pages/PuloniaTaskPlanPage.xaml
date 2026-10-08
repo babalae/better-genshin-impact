@@ -367,7 +367,7 @@
                                        Command="{Binding ViewModel.SyncAndUpdateResourcesCommand}" ToolTip="同步全部计划引用的仓库，并更新所有可用任务资源"
                                        AutomationProperties.Name="一键同步并更新" />
                             <ui:Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="3" Margin="0,0,2,0"
-                                       Appearance="Transparent" Icon="{ui:SymbolIcon Checkmark24}"
+                                       Appearance="Transparent" Icon="{ui:SymbolIcon ArrowDownload24}"
                                        Command="{Binding ViewModel.UpdateAllResourceVersionsCommand}" ToolTip="使用本机仓库内容更新所有任务计划"
                                        AutomationProperties.Name="更新所有任务计划" />
                             <ui:Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="3"
@@ -439,9 +439,9 @@
                                     </ContentControl>
                                     <!-- 新运行入口位于每张计划卡片，不依赖历史选中状态；续跑仍使用记录视图中的独立命令。 -->
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <!-- 资源已是最新或检查出错时没有可确认项，直接隐藏按钮而不是置灰。 -->
+                                        <!-- 资源已是最新或没有可更新项时，直接隐藏按钮而不是置灰。 -->
                                         <ui:Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="3" Margin="0,0,2,0"
-                                                   Appearance="Transparent" Icon="{ui:SymbolIcon Checkmark24}"
+                                                   Appearance="Transparent" Icon="{ui:SymbolIcon ArrowDownload24}"
                                                    Visibility="{Binding HasResourceUpdates, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                    Command="{Binding Data.ViewModel.ConfirmResourceUpdatesCommand, Source={StaticResource PageBindingProxy}}"
                                                    CommandParameter="{Binding}" ToolTip="{Binding ResourceUpdateSummary}"
