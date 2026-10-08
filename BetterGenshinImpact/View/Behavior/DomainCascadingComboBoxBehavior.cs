@@ -1,3 +1,5 @@
+using System;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -8,6 +10,9 @@ namespace BetterGenshinImpact.View.Behavior;
 
 public static class DomainCascadingComboBoxBehavior
 {
+    private static readonly DependencyPropertyDescriptor SelectedCascadingItemDescriptor =
+        DependencyPropertyDescriptor.FromProperty(CascadingComboBox.SelectedCascadingItemProperty, typeof(CascadingComboBox));
+
     private static readonly DependencyProperty LastCommittedItemProperty =
         DependencyProperty.RegisterAttached(
             "LastCommittedItem",
@@ -65,7 +70,10 @@ public static class DomainCascadingComboBoxBehavior
         comboBox.DropDownOpened -= OnDropDownOpened;
         comboBox.SelectionChanged -= OnSelectionChanged;
         comboBox.Loaded -= OnLoaded;
+        comboBox.Loaded -= OnLoadedForBindingSync;
+        comboBox.Unloaded -= OnUnloadedForBindingSync;
         comboBox.RemoveHandler(Button.ClickEvent, new RoutedEventHandler(OnButtonClick));
+        SyncSelectedCascadingItemListener(comboBox, attach: false);
 
         if (e.NewValue is true)
         {
@@ -74,8 +82,69 @@ public static class DomainCascadingComboBoxBehavior
             comboBox.SelectionChanged += OnSelectionChanged;
             comboBox.Loaded += OnLoaded;
             comboBox.AddHandler(Button.ClickEvent, new RoutedEventHandler(OnButtonClick), true);
+            // 程序化修改 SelectedCascadingItem（例如切换一条龙预设导致绑定值变化）不会触发交互事件，
+            // 这里额外监听依赖属性变化，使折叠态展示文案随绑定值同步刷新（#3235）。
+            // 订阅挂在 Loaded/Unloaded 生命周期上配对移除，避免 Descriptor 的强引用把已卸载元素钉死。
+            comboBox.Loaded += OnLoadedForBindingSync;
+            comboBox.Unloaded += OnUnloadedForBindingSync;
+            SyncSelectedCascadingItemListener(comboBox, attach: true);
             comboBox.Dispatcher.BeginInvoke(() => UpdateCommittedSelection(comboBox, restoreInvalidSelection: false));
         }
+    }
+
+    private static void OnLoadedForBindingSync(object sender, RoutedEventArgs e)
+    {
+        if (sender is CascadingComboBox comboBox)
+        {
+            SyncSelectedCascadingItemListener(comboBox, attach: true);
+        }
+    }
+
+    private static void OnUnloadedForBindingSync(object sender, RoutedEventArgs e)
+    {
+        if (sender is CascadingComboBox comboBox)
+        {
+            SyncSelectedCascadingItemListener(comboBox, attach: false);
+        }
+    }
+
+    /// <summary>
+    /// 幂等挂接/摘除 SelectedCascadingItem 的值变化监听（先移除再挂接，避免重复订阅）。
+    /// </summary>
+    private static void SyncSelectedCascadingItemListener(CascadingComboBox comboBox, bool attach)
+    {
+        SelectedCascadingItemDescriptor.RemoveValueChanged(comboBox, OnSelectedCascadingItemChanged);
+        if (attach)
+        {
+            SelectedCascadingItemDescriptor.AddValueChanged(comboBox, OnSelectedCascadingItemChanged);
+        }
+    }
+
+    private static void OnSelectedCascadingItemChanged(object? sender, EventArgs e)
+    {
+        if (sender is not CascadingComboBox comboBox)
+        {
+            return;
+        }
+
+        comboBox.Dispatcher.BeginInvoke(() =>
+        {
+            // 绑定/程序化驱动（如切换一条龙预设）的值变化：直接以当前绑定值为准提交。
+            // 值为空或无法解析时清空提交状态：既不残留上一预设的旧文案，
+            // 也防止 DropDownClosed 的恢复逻辑把上一预设的值回写进新预设（#3235 自审）。
+            var item = comboBox.SelectedCascadingItem;
+            if (IsSelectableDomain(item))
+            {
+                CommitSelectedItem(comboBox, item);
+            }
+            else
+            {
+                comboBox.SetValue(LastCommittedItemProperty, null);
+                comboBox.SetValue(LastCommittedTextProperty, comboBox.PlaceholderText);
+            }
+
+            ApplySelectedPreviewBinding(comboBox);
+        });
     }
 
     private static void OnButtonClick(object sender, RoutedEventArgs e)
