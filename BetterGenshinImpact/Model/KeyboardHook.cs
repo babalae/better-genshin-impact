@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask;
 using Fischless.HotkeyCapture;
 using System;
 using System.Collections.Generic;
@@ -30,8 +30,8 @@ public class KeyboardHook
     /// <summary>
     /// 注意长按的时候会一直触发KeyDown
     /// </summary>
-    /// <param name="sender"></param>
-    /// <param name="e"></param>
+    /// <param name="sender">事件源</param>
+    /// <param name="e">按键事件参数</param>
     public void KeyDown(object? sender, KeyEventArgs e)
     {
         if (!SystemControl.IsGenshinImpactActive())
@@ -64,6 +64,12 @@ public class KeyboardHook
     }
 
     /// <summary>
+    /// 长按循环的最小间隔（毫秒）。动作本身耗时不足时补齐，
+    /// 避免动作快速返回时空转占满一个 CPU 核心。
+    /// </summary>
+    private const int MinActionIntervalMs = 10;
+
+    /// <summary>
     /// 长按持续执行
     /// </summary>
     /// <param name="e"></param>
@@ -79,11 +85,23 @@ public class KeyboardHook
                     continue;
                 }
 
+                var startTicks = Environment.TickCount64;
                 KeyPressedEvent?.Invoke(this, new KeyPressedEventArgs(User32.HotKeyModifiers.MOD_NONE, e.KeyCode));
+
+                var elapsed = Environment.TickCount64 - startTicks;
+                if (elapsed < MinActionIntervalMs)
+                {
+                    Thread.Sleep((int)(MinActionIntervalMs - elapsed));
+                }
             }
         }
     }
 
+    /// <summary>
+    /// 按键抬起：结束长按状态并触发一次抬起回调
+    /// </summary>
+    /// <param name="sender">事件源</param>
+    /// <param name="e">按键事件参数</param>
     public void KeyUp(object? sender, KeyEventArgs e)
     {
         if (e.KeyCode == BindKey)
@@ -96,12 +114,19 @@ public class KeyboardHook
         }
     }
 
+    /// <summary>
+    /// 注册为键鼠监听：绑定按键并加入全局按键分发表
+    /// </summary>
+    /// <param name="key">要监听的按键</param>
     public void RegisterHotKey(Keys key)
     {
         BindKey = key;
         AllKeyboardHooks.Add(key, this);
     }
 
+    /// <summary>
+    /// 注销键鼠监听，并复位长按状态
+    /// </summary>
     public void UnregisterHotKey()
     {
         IsPressed = false;
@@ -109,6 +134,9 @@ public class KeyboardHook
         AllKeyboardHooks.Remove(BindKey);
     }
 
+    /// <summary>
+    /// 释放该实例占用的按键注册
+    /// </summary>
     public void Dispose()
     {
         UnregisterHotKey();

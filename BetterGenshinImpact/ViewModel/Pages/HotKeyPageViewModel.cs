@@ -58,9 +58,28 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
     private readonly TaskSettingsPageViewModel _taskSettingsPageViewModel;
     private readonly RecognitionTemplateEditorService _recognitionTemplateEditorService;
     private readonly TaskTriggerDispatcher _taskTriggerDispatcher;
-    private readonly Dictionary<string, HotKey> _acceptedHotKeys = [];
+    private readonly Dictionary<string, HotKeyBinding> _acceptedBindings = [];
     private readonly HashSet<string> _rollingBackHotKeyProperties = [];
+
+    /// <summary>
+    /// 因「替换重复快捷键」而被清除的绑定。若新快捷键随后注册失败，需要把它一并恢复。
+    /// key 为发起替换的功能的 ConfigPropertyName。
+    /// </summary>
+    private readonly Dictionary<string, (HotKeySettingModel Model, HotKeyBinding Binding)> _replacedBindings = [];
+
+    /// <summary>
+    /// 正在执行「切换快捷键类型」。该流程会临时清空 HotKey，
+    /// 属于中间状态，不能覆盖 _acceptedBindings 中记录的可用绑定。
+    /// </summary>
+    private bool _isSwitchingHotKeyType;
+
     public AllConfig Config { get; set; }
+
+    /// <summary>
+    /// 一次真正生效的绑定。注册失败时按它整体回滚，因此除了快捷键还要记住类型：
+    /// 类型切换后原快捷键会被清空，只回滚快捷键会得到「单键被当成全局热键」这类错误结果。
+    /// </summary>
+    private readonly record struct HotKeyBinding(HotKey HotKey, HotKeyTypeEnum Type);
 
     [ObservableProperty]
     private ObservableCollection<HotKeySettingModel> _hotKeySettingModels = [];
@@ -90,71 +109,410 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         BuildHotKeySettingModelList();
 
         var list = GetAllNonDirectoryHotkey(HotKeySettingModels);
+
+        // 配置文件中可能存在重复的快捷键（手工编辑、旧版本残留、导入他人配置等），
+        // 先做一次去重并写回配置，避免每次启动都变成「谁先注册谁生效」的不确定行为
+        DeduplicateHotKeyConfig(list);
+
         foreach (var hotKeyConfig in list)
         {
-            _acceptedHotKeys[hotKeyConfig.ConfigPropertyName] = hotKeyConfig.HotKey;
-            if (IsHotKeyEnabled)
+            _acceptedBindings[hotKeyConfig.ConfigPropertyName] = new HotKeyBinding(hotKeyConfig.HotKey, hotKeyConfig.HotKeyType);
+            if (IsHotKeyEnabled && !hotKeyConfig.RegisterHotKey())
             {
-                hotKeyConfig.RegisterHotKey();
+                _logger.LogWarning("快捷键 {Function}({HotKey}) 注册失败：{Reason}",
+                    hotKeyConfig.FunctionName, hotKeyConfig.HotKey, hotKeyConfig.LastRegisterError);
             }
             hotKeyConfig.PropertyChanged += (sender, e) =>
             {
                 if (sender is HotKeySettingModel model)
                 {
-                    // 反射更新配置
-
-                    // 更新快捷键
-                    if (e.PropertyName == "HotKey")
-                    {
-                        Debug.WriteLine($"{model.FunctionName} 快捷键变更为 {model.HotKey}");
-                        if (_rollingBackHotKeyProperties.Remove(model.ConfigPropertyName))
-                        {
-                            UpdateHotKeyConfig(model);
-                        }
-                        else
-                        {
-                            var newHotKey = model.HotKey;
-                            var previousHotKey = _acceptedHotKeys.GetValueOrDefault(model.ConfigPropertyName, HotKey.None);
-                            UpdateHotKeyConfig(model);
-                            _acceptedHotKeys[model.ConfigPropertyName] = newHotKey;
-                            ShowGameKeyBindingConflictWarning(model, newHotKey, previousHotKey);
-                        }
-                    }
-
-                    // 更新快捷键类型
-                    if (e.PropertyName == "HotKeyType")
-                    {
-                        Debug.WriteLine($"{model.FunctionName} 快捷键类型变更为 {model.HotKeyType.ToChineseName()}");
-                        model.HotKey = HotKey.None;
-                        var pi = Config.HotKeyConfig.GetType().GetProperty(model.ConfigPropertyName + "Type", BindingFlags.Public | BindingFlags.Instance);
-                        if (null != pi && pi.CanWrite)
-                        {
-                            pi.SetValue(Config.HotKeyConfig, model.HotKeyType.ToString(), null);
-                        }
-                    }
-
-                    RemoveDuplicateHotKey(model);
-                    model.UnRegisterHotKey();
-                    if (IsHotKeyEnabled)
-                    {
-                        model.RegisterHotKey();
-                    }
+                    OnHotKeySettingChanged(model, e.PropertyName);
                 }
             };
         }
     }
 
-    private void ShowGameKeyBindingConflictWarning(HotKeySettingModel model, HotKey newHotKey, HotKey previousHotKey)
+    /// <summary>
+    /// 分发快捷键配置项的属性变化
+    /// </summary>
+    /// <param name="model">发生变化的配置项</param>
+    /// <param name="propertyName">发生变化的属性名</param>
+    private void OnHotKeySettingChanged(HotKeySettingModel model, string? propertyName)
+    {
+        // 只有快捷键和快捷键类型的变化需要重新注册。
+        // 其它属性（如多语言刷新产生的 LocalizedFunctionName）不应触发注销/注册。
+        switch (propertyName)
+        {
+            case nameof(HotKeySettingModel.HotKey):
+                OnHotKeyChanged(model);
+                break;
+            case nameof(HotKeySettingModel.HotKeyType):
+                OnHotKeyTypeChanged(model);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// 快捷键变化：写回配置、处理重复、重新注册
+    /// </summary>
+    private void OnHotKeyChanged(HotKeySettingModel model)
+    {
+        Debug.WriteLine($"{model.FunctionName} 快捷键变更为 {model.HotKey}");
+
+        // 回滚流程：只写回配置并重新注册，不再触发冲突/重复检查，避免递归
+        if (_rollingBackHotKeyProperties.Remove(model.ConfigPropertyName))
+        {
+            UpdateHotKeyConfig(model);
+            ReRegisterHotKey(model, CurrentBinding(model), true);
+            return;
+        }
+
+        var newHotKey = model.HotKey;
+        var previousBinding = CurrentBinding(model);
+
+        // 自动切换类型（例如键鼠监听录入组合键）时，当前类型才是用户想要的目标类型；
+        // 回滚会把类型还原，因此必须单独记下来，否则确认替换后会按旧类型注册而失败
+        var targetType = model.HotKeyType;
+
+        var duplicate = FindDuplicateHotKey(model, newHotKey);
+        if (duplicate != null)
+        {
+            // 先回滚当前设置，避免两个功能同时占用同一个快捷键（那会导致注册失败），
+            // 再询问用户是否替换已有绑定
+            RestoreBinding(model, previousBinding);
+            ConfirmReplaceDuplicateHotKey(model, duplicate, newHotKey, previousBinding, targetType);
+            return;
+        }
+
+        UpdateHotKeyConfig(model);
+
+        if (!ReRegisterHotKey(model, previousBinding, false))
+        {
+            // 失败提示与回滚由 ReRegisterHotKey 处理，被替换掉的绑定会在那里一并恢复
+            return;
+        }
+
+        // 替换事务的目标一定是非空快捷键，所以空快捷键只可能是中间状态：
+        // 类型切换会先清空 HotKey，恢复目标类型时也会经过一次清空。
+        // 若在这里提交，用户随后取消冲突提醒时就无法再恢复被替换掉的功能了。
+        if (newHotKey.IsEmpty)
+        {
+            if (!_isSwitchingHotKeyType)
+            {
+                // 类型切换之外的空值说明用户主动清空了快捷键，本次替换作废，把绑定还回去
+                RestoreReplacedBinding(model.ConfigPropertyName);
+            }
+
+            return;
+        }
+
+        // 注册成功后才提醒原神键位冲突。需要弹窗时，替换事务要等用户答复后才结束，
+        // 因此不能在这里提交，否则用户取消时已经无法恢复被替换掉的绑定。
+        if (!ShowGameKeyBindingConflictWarning(model, newHotKey, previousBinding))
+        {
+            CommitReplacedBinding(model.ConfigPropertyName);
+        }
+    }
+
+    /// <summary>
+    /// 快捷键类型变化：原快捷键在新类型下不再适用，先清空再重新注册
+    /// </summary>
+    private void OnHotKeyTypeChanged(HotKeySettingModel model)
+    {
+        Debug.WriteLine($"{model.FunctionName} 快捷键类型变更为 {model.HotKeyType.ToChineseName()}");
+
+        var previousBinding = CurrentBinding(model);
+
+        _isSwitchingHotKeyType = true;
+        try
+        {
+            // 清空快捷键会再次触发 HotKey 变化，从而完成配置写回与注销
+            model.HotKey = HotKey.None;
+
+            var pi = Config.HotKeyConfig.GetType().GetProperty(model.ConfigPropertyName + "Type", BindingFlags.Public | BindingFlags.Instance);
+            if (null != pi && pi.CanWrite)
+            {
+                pi.SetValue(Config.HotKeyConfig, model.HotKeyType.ToString(), null);
+            }
+
+            ReRegisterHotKey(model, previousBinding, false);
+        }
+        finally
+        {
+            _isSwitchingHotKeyType = false;
+        }
+
+        // 类型切换只是中间步骤：紧接着控件会设置新的快捷键。
+        // 这里保留切换前的可用绑定，新快捷键注册失败时才能整体回滚回去。
+        _acceptedBindings[model.ConfigPropertyName] = previousBinding;
+    }
+
+    /// <summary>
+    /// 注销并重新注册快捷键。注册失败时提示用户，并回滚到上一次可用的绑定。
+    /// </summary>
+    /// <param name="model">要注册的功能</param>
+    /// <param name="previousBinding">注册前该功能可用的绑定，失败时回滚到它</param>
+    /// <param name="isRollback">本次注册是否已经是回滚动作；回滚再失败时不再继续回滚</param>
+    /// <returns>注册成功（或本实例不注册热键）返回 true</returns>
+    private bool ReRegisterHotKey(HotKeySettingModel model, HotKeyBinding previousBinding, bool isRollback)
+    {
+        model.UnRegisterHotKey();
+
+        if (!IsHotKeyEnabled || model.RegisterHotKey())
+        {
+            if (!_isSwitchingHotKeyType)
+            {
+                _acceptedBindings[model.ConfigPropertyName] = new HotKeyBinding(model.HotKey, model.HotKeyType);
+            }
+
+            return true;
+        }
+
+        _logger.LogWarning("快捷键 {Function}({HotKey}) 注册失败：{Reason}",
+            model.FunctionName, model.HotKey, model.LastRegisterError);
+
+        var message = string.Format(
+            I18nService.Instance.Translate("快捷键 {0} 注册失败：{1}"),
+            model.HotKey,
+            model.LastRegisterError ?? I18nService.Instance.Translate("未知原因"));
+
+        var failedBinding = new HotKeyBinding(model.HotKey, model.HotKeyType);
+
+        if (isRollback)
+        {
+            // 回滚后的快捷键依然无法注册，只提示，不再继续回滚
+            _acceptedBindings[model.ConfigPropertyName] = failedBinding;
+            ShowHotKeyRegisterError(model, failedBinding, message, null);
+            return false;
+        }
+
+        ShowHotKeyRegisterError(
+            model,
+            failedBinding,
+            message + "\n\n" + I18nService.Instance.Translate("已恢复为上一次的快捷键设置。"),
+            () =>
+            {
+                // 先恢复当前功能以释放新热键，再让被替换掉的功能拿回原来的快捷键
+                RestoreBinding(model, previousBinding);
+                RestoreReplacedBinding(model.ConfigPropertyName);
+            });
+
+        return false;
+    }
+
+    /// <summary>
+    /// 提示注册失败。对话框是延后弹出的，因此回滚前会先确认状态没有被再次修改。
+    /// </summary>
+    /// <param name="model">注册失败的功能</param>
+    /// <param name="failedBinding">注册失败时的绑定，用于确认期间没有被改过</param>
+    /// <param name="message">提示内容</param>
+    /// <param name="rollback">用户确认后执行的回滚动作；状态已变化时不会执行</param>
+    private void ShowHotKeyRegisterError(HotKeySettingModel model, HotKeyBinding failedBinding, string message, Action? rollback)
+    {
+        Application.Current.Dispatcher.BeginInvoke(() =>
+        {
+            ThemedMessageBox.Warning(
+                message,
+                I18nService.Instance.Translate("快捷键注册失败"),
+                MessageBoxButton.OK,
+                MessageBoxResult.OK);
+
+            if (rollback == null)
+            {
+                return;
+            }
+
+            // 弹窗期间用户可能已经重新设置过，此时按旧状态回滚会覆盖更新的设置
+            if (model.HotKey != failedBinding.HotKey || model.HotKeyType != failedBinding.Type)
+            {
+                return;
+            }
+
+            rollback();
+        });
+    }
+
+    /// <summary>
+    /// 该功能上一次真正生效的绑定
+    /// </summary>
+    private HotKeyBinding CurrentBinding(HotKeySettingModel model)
+    {
+        return _acceptedBindings.TryGetValue(model.ConfigPropertyName, out var binding)
+            ? binding
+            : new HotKeyBinding(model.HotKey, model.HotKeyType);
+    }
+
+    /// <summary>
+    /// 把功能恢复为指定的绑定（快捷键 + 类型）
+    /// </summary>
+    private void RestoreBinding(HotKeySettingModel model, HotKeyBinding binding)
+    {
+        _acceptedBindings[model.ConfigPropertyName] = binding;
+
+        // 恢复类型会清空 HotKey，因此必须在恢复 HotKey 之前执行
+        if (model.HotKeyType != binding.Type)
+        {
+            model.HotKeyType = binding.Type;
+        }
+
+        if (model.HotKey == binding.HotKey)
+        {
+            return;
+        }
+
+        _rollingBackHotKeyProperties.Add(model.ConfigPropertyName);
+        model.HotKey = binding.HotKey;
+    }
+
+    /// <summary>
+    /// 恢复因替换重复快捷键而被清除的那个绑定
+    /// </summary>
+    /// <param name="configPropertyName">发起替换的功能</param>
+    private void RestoreReplacedBinding(string configPropertyName)
+    {
+        if (!_replacedBindings.Remove(configPropertyName, out var replaced))
+        {
+            return;
+        }
+
+        RestoreBinding(replaced.Model, replaced.Binding);
+    }
+
+    /// <summary>
+    /// 结束替换事务：确认替换生效，丢弃被替换绑定的备份。
+    /// 只有到这里，被替换掉的那个功能才算真正失去它的快捷键。
+    /// </summary>
+    /// <param name="configPropertyName">发起替换的功能</param>
+    private void CommitReplacedBinding(string configPropertyName)
+    {
+        _replacedBindings.Remove(configPropertyName);
+    }
+
+    /// <summary>
+    /// 查找与该快捷键重复的其它功能
+    /// </summary>
+    private HotKeySettingModel? FindDuplicateHotKey(HotKeySettingModel current, HotKey hotKey)
+    {
+        if (hotKey.IsEmpty)
+        {
+            return null;
+        }
+
+        foreach (var hotKeySettingModel in GetAllNonDirectoryHotkey(HotKeySettingModels))
+        {
+            if (hotKeySettingModel.ConfigPropertyName != current.ConfigPropertyName && hotKeySettingModel.HotKey == hotKey)
+            {
+                return hotKeySettingModel;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// 询问用户是否用新快捷键替换已有的绑定
+    /// </summary>
+    /// <param name="model">发起替换的功能</param>
+    /// <param name="duplicate">当前占用了该快捷键的功能</param>
+    /// <param name="newHotKey">用户想要使用的快捷键</param>
+    /// <param name="previousBinding">发起替换前该功能的绑定，用于确认期间没有被改过</param>
+    /// <param name="targetType">用户录入新快捷键时的目标类型，确认后要按它注册</param>
+    private void ConfirmReplaceDuplicateHotKey(HotKeySettingModel model, HotKeySettingModel duplicate, HotKey newHotKey, HotKeyBinding previousBinding, HotKeyTypeEnum targetType)
+    {
+        var message = string.Format(
+                          I18nService.Instance.Translate("快捷键 {0} 已被「{1}」使用。"),
+                          newHotKey,
+                          duplicate.LocalizedFunctionName)
+                      + "\n\n"
+                      + I18nService.Instance.Translate("是否替换？替换后原功能将不再绑定该快捷键。");
+
+        Application.Current.Dispatcher.BeginInvoke(() =>
+        {
+            // 弹窗期间用户可能已经改了别的设置，此时按旧状态处理会清掉更新的绑定
+            if (model.HotKey != previousBinding.HotKey
+                || model.HotKeyType != previousBinding.Type
+                || duplicate.HotKey != newHotKey)
+            {
+                return;
+            }
+
+            var result = ThemedMessageBox.Warning(
+                message,
+                I18nService.Instance.Translate("快捷键重复提醒"),
+                MessageBoxButton.OKCancel,
+                MessageBoxResult.OK);
+
+            if (result != MessageBoxResult.OK)
+            {
+                // 当前设置已经回滚，无需额外处理
+                return;
+            }
+
+            // 记录被替换掉的绑定：若新快捷键随后注册失败，需要把它一并恢复
+            _replacedBindings[model.ConfigPropertyName] =
+                (duplicate, new HotKeyBinding(duplicate.HotKey, duplicate.HotKeyType));
+
+            // 清除旧绑定（会同步写回配置并注销）
+            duplicate.HotKey = HotKey.None;
+
+            // 恢复用户录入时的目标类型：上面的回滚把类型还原成了旧值，
+            // 若直接设置快捷键，组合键会按「键鼠监听」注册而失败
+            if (model.HotKeyType != targetType)
+            {
+                model.HotKeyType = targetType;
+            }
+
+            if (model.HotKey != newHotKey)
+            {
+                model.HotKey = newHotKey;
+            }
+        });
+    }
+
+    /// <summary>
+    /// 清除配置中重复的快捷键（保留列表中靠前的那个）并写回配置
+    /// </summary>
+    private void DeduplicateHotKeyConfig(List<HotKeySettingModel> list)
+    {
+        var used = new Dictionary<HotKey, HotKeySettingModel>();
+        foreach (var model in list)
+        {
+            if (model.HotKey.IsEmpty)
+            {
+                continue;
+            }
+
+            if (used.TryGetValue(model.HotKey, out var owner))
+            {
+                _logger.LogWarning("检测到重复的快捷键 {HotKey}：「{Owner}」与「{Duplicate}」，已清除后者",
+                    model.HotKey, owner.FunctionName, model.FunctionName);
+                model.HotKey = HotKey.None;
+                UpdateHotKeyConfig(model);
+                continue;
+            }
+
+            used[model.HotKey] = model;
+        }
+    }
+
+    /// <summary>
+    /// 快捷键与原神键位冲突时提示用户；用户取消则连同被替换掉的绑定一起回滚
+    /// </summary>
+    /// <param name="model">发生冲突的功能</param>
+    /// <param name="newHotKey">新设置的快捷键</param>
+    /// <param name="previousBinding">设置前的绑定，用户取消时回滚到它</param>
+    /// <returns>需要弹窗询问时返回 true，此时由弹窗回调决定事务是提交还是回滚</returns>
+    private bool ShowGameKeyBindingConflictWarning(HotKeySettingModel model, HotKey newHotKey, HotKeyBinding previousBinding)
     {
         if (!TryConvertToGameKeyId(model.HotKey, out var hotKeyId))
         {
-            return;
+            return false;
         }
 
         var conflictLines = GetGameKeyBindingConflictLines(hotKeyId);
         if (conflictLines.Count == 0)
         {
-            return;
+            return false;
         }
 
         var message = string.Format(
@@ -169,6 +527,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         {
             if (model.HotKey != newHotKey)
             {
+                // 状态已经变化，本次替换事务不再成立，直接提交（丢弃被替换绑定的备份）
+                CommitReplacedBinding(model.ConfigPropertyName);
                 return;
             }
 
@@ -179,13 +539,25 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 MessageBoxResult.Cancel);
             if (result == MessageBoxResult.Cancel && model.HotKey == newHotKey)
             {
-                _acceptedHotKeys[model.ConfigPropertyName] = previousHotKey;
-                _rollingBackHotKeyProperties.Add(model.ConfigPropertyName);
-                model.HotKey = previousHotKey;
+                // 整个编辑被撤销，因此被替换掉的功能也要拿回它原来的快捷键。
+                // 必须先恢复当前功能以释放新热键，否则被替换的功能会因该键仍被占用而注册失败。
+                RestoreBinding(model, previousBinding);
+                RestoreReplacedBinding(model.ConfigPropertyName);
+                return;
             }
+
+            CommitReplacedBinding(model.ConfigPropertyName);
         });
+
+        return true;
     }
 
+    /// <summary>
+    /// 把快捷键转换为原神键位枚举，仅支持无修饰键的单键与鼠标侧键
+    /// </summary>
+    /// <param name="hotKey">待转换的快捷键</param>
+    /// <param name="keyId">转换结果</param>
+    /// <returns>能够对应到原神键位时返回 true</returns>
     private static bool TryConvertToGameKeyId(HotKey hotKey, out KeyId keyId)
     {
         keyId = KeyId.Unknown;
@@ -210,6 +582,11 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         return keyId is not KeyId.Unknown and not KeyId.None;
     }
 
+    /// <summary>
+    /// 列出与原神键位冲突的功能
+    /// </summary>
+    /// <param name="hotKeyId">与 BetterGI 快捷键相同的原神键位</param>
+    /// <returns>冲突项的描述文本</returns>
     private List<string> GetGameKeyBindingConflictLines(KeyId hotKeyId)
     {
         var lines = new List<string>();
@@ -283,6 +660,10 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         };
     }
 
+    /// <summary>
+    /// 把界面上的快捷键写回配置对象
+    /// </summary>
+    /// <param name="model">发生变化的配置项</param>
     private void UpdateHotKeyConfig(HotKeySettingModel model)
     {
         var pi = Config.HotKeyConfig.GetType().GetProperty(model.ConfigPropertyName, BindingFlags.Public | BindingFlags.Instance);
@@ -293,31 +674,10 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
     }
 
     /// <summary>
-    /// 移除重复的快捷键配置
+    /// 展开配置列表，取出所有非分组的功能项
     /// </summary>
-    /// <param name="current"></param>
-    private void RemoveDuplicateHotKey(HotKeySettingModel current)
-    {
-        if (current.HotKey.IsEmpty)
-        {
-            return;
-        }
-
-        var list = GetAllNonDirectoryHotkey(HotKeySettingModels);
-        foreach (var hotKeySettingModel in list)
-        {
-            if (hotKeySettingModel.HotKey.IsEmpty)
-            {
-                continue;
-            }
-
-            if (hotKeySettingModel.ConfigPropertyName != current.ConfigPropertyName && hotKeySettingModel.HotKey == current.HotKey)
-            {
-                hotKeySettingModel.HotKey = HotKey.None;
-            }
-        }
-    }
-
+    /// <param name="modelList">待展开的配置列表</param>
+    /// <returns>所有非分组的功能项</returns>
     public static List<HotKeySettingModel> GetAllNonDirectoryHotkey(IEnumerable<HotKeySettingModel> modelList)
     {
         var list = new List<HotKeySettingModel>();
@@ -334,6 +694,11 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         return list;
     }
 
+    /// <summary>
+    /// 递归取出某个分组下所有非分组的功能项
+    /// </summary>
+    /// <param name="model">要展开的分组</param>
+    /// <returns>该分组下所有非分组的功能项</returns>
     public static List<HotKeySettingModel> GetAllNonDirectoryChildren(HotKeySettingModel model)
     {
         var result = new List<HotKeySettingModel>();
@@ -357,6 +722,9 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         return result;
     }
 
+    /// <summary>
+    /// 按功能分组构建快捷键配置列表
+    /// </summary>
     private void BuildHotKeySettingModelList()
     {
         // 一级目录/快捷键
