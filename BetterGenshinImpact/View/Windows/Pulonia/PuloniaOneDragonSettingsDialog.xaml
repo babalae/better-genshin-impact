@@ -16,7 +16,7 @@
      </StackPanel>
      <StackPanel Margin="0,10,0,0" Visibility="{Binding SelectedConfiguration.CanEditPath, Converter={StaticResource DragonBoolVisibility}}"><TextBlock Text="资源位置"/><ui:TextBox Margin="0,6,0,0" Text="{Binding SelectedConfiguration.SelectedNode.Path, Mode=TwoWay}"/></StackPanel>
      <WrapPanel Margin="0,10,0,0"><TextBlock Text="{Binding SelectedConfiguration.SelectedNode.ResourceVersionText}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-      <ui:Button Content="检查资源更新" Command="{Binding Editor.UpdateResourceVersionCommand}" CommandParameter="{Binding SelectedConfiguration.SelectedNode}" Visibility="{Binding SelectedConfiguration.SelectedNode.CanUpdateResourceVersion, Converter={StaticResource DragonBoolVisibility}}"/>
+      <ui:Button Content="更新此任务资源" Command="{Binding Editor.UpdateResourceVersionCommand}" CommandParameter="{Binding SelectedConfiguration.SelectedNode}" Visibility="{Binding SelectedConfiguration.SelectedNode.CanUpdateResourceVersion, Converter={StaticResource DragonBoolVisibility}}"/>
      </WrapPanel>
     </StackPanel></ui:Card>
     <ui:Card Style="{StaticResource DragonCard}" Visibility="{Binding SelectedConfiguration.CanSelectPreset, Converter={StaticResource DragonBoolVisibility}}"><StackPanel>

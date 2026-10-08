@@ -72,6 +72,10 @@ public sealed class PuloniaRepositoryManagementService
         await ScriptRepoUpdater.Instance.ResetRepositoryAsync(repository.Directory, ct).ConfigureAwait(false);
     }
 
+    /// <summary>刷新用户维护的本地仓库目录，不访问远端也不修改任务使用版本。</summary>
+    public Task RefreshLocalAsync(string id, CancellationToken ct = default)
+        => Repositories.RefreshLocalRepositoryAsync(id, ct);
+
     /// <summary>防止使用本地或已经移除的来源执行托管目录操作。</summary>
     private void ValidateManagedSource(ScriptRepositoryRegistration repository)
     {

@@ -78,7 +78,7 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
     };
 
     /// <summary>
-    /// 当前节点是否可以从磁盘重新确认并固定资源版本。
+    /// 当前节点是否可以从本机内容更新并固定任务使用版本。
     /// </summary>
     public bool CanUpdateResourceVersion => _model.TaskType is "pathing" or "javascript" or "keymouse"
                                             || _model is { TaskType: "group", Source.Kind: "directory" };
@@ -88,10 +88,20 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasResourceUpdate), nameof(HasResourceNotice), nameof(ResourceUpdateText), nameof(ResourceUpdateToolTip))]
     private string? _currentResourceVersion;
 
-    /// <summary>最近审阅的来源提交，与资源指纹分开记录以防确认期间仅依赖发生变化。</summary>
+    /// <summary>最近检查的来源提交，与资源指纹分开记录以防更新期间仅依赖发生变化。</summary>
     public string? CurrentRepositoryRevision { get; set; }
 
-    /// <summary>资源读取错误；读取失败不能被当成新版本供用户确认。</summary>
+    /// <summary>任务当前使用资源正文声明的版本号，仅用于界面展示。</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ResourceUpdateText), nameof(ResourceUpdateToolTip), nameof(ResourceVersionText))]
+    private string? _approvedDeclaredVersion;
+
+    /// <summary>本机仓库当前资源正文声明的版本号，仅用于界面展示。</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ResourceUpdateText), nameof(ResourceUpdateToolTip))]
+    private string? _currentDeclaredVersion;
+
+    /// <summary>资源读取错误；读取失败不能被当成新版本供用户更新。</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasResourceNotice), nameof(ResourceUpdateText), nameof(ResourceUpdateToolTip))]
     private string? _resourceCheckError;
@@ -101,7 +111,7 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasResourceUpdate), nameof(HasResourceNotice))]
     private int _referencedResourceUpdateCount;
 
-    /// <summary>资源版本不同或尚未固定，等待用户确认。</summary>
+    /// <summary>资源版本不同或尚未固定，等待用户更新任务资源。</summary>
     public bool HasResourceUpdate => ReferencedResourceUpdateCount > 0 || (CanUpdateResourceVersion && CurrentResourceVersion is not null
         && CurrentResourceVersion != (_model.Source?.Kind == "directory" ? _model.Source.Version : _model.ResourceVersion));
 
@@ -111,11 +121,28 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
     /// <summary>小标签的状态文本，不以颜色作为唯一提示。</summary>
     public string ResourceUpdateText => ResourceCheckError is not null
         ? ResourceCheckError.StartsWith("来源中已移除：", StringComparison.Ordinal) ? "来源中已移除"
-        : _model.Resource is not null || _model.Source?.Resource is not null ? "检查失败" : "资源不可用" : "有更新";
+        : _model.Resource is not null || _model.Source?.Resource is not null ? "检查失败" : "资源不可用"
+        : ReferencedResourceUpdateCount > 0 ? $"{ReferencedResourceUpdateCount} 项有更新"
+        : HasDeclaredVersionChange ? $"{FormatDeclaredVersion(ApprovedDeclaredVersion)} → {FormatDeclaredVersion(CurrentDeclaredVersion)}"
+        : "有更新";
 
     /// <summary>标签的具体原因，文件更新必须用户确认后才影响新运行。</summary>
     public string ResourceUpdateToolTip => ResourceCheckError
-        ?? "磁盘资源与计划固定版本不同；可右键更新单个任务，或在计划卡片上确认全部更新。";
+        ?? (ReferencedResourceUpdateCount > 0
+            ? $"引用计划中有 {ReferencedResourceUpdateCount} 项任务资源可更新。"
+            : HasDeclaredVersionChange
+                ? $"任务使用版本 {ApprovedDeclaredVersion}，本机仓库版本 {CurrentDeclaredVersion}。可右键更新此任务资源，或在计划卡片上更新整个计划。"
+                : "本机仓库内容与任务使用版本不同；可右键更新此任务资源，或在计划卡片上更新整个计划。");
+
+    /// <summary>声明版本仅在两端都有值且文字不同时显示箭头，不参与更新判断。</summary>
+    private bool HasDeclaredVersionChange => HasResourceUpdate
+        && !string.IsNullOrWhiteSpace(ApprovedDeclaredVersion)
+        && !string.IsNullOrWhiteSpace(CurrentDeclaredVersion)
+        && !string.Equals(ApprovedDeclaredVersion, CurrentDeclaredVersion, StringComparison.Ordinal);
+
+    /// <summary>把仓库声明版本限制为适合任务树标签的长度，完整值仍通过悬停展示。</summary>
+    private static string FormatDeclaredVersion(string? version)
+        => version is { Length: > 14 } ? version[..13] + "…" : version ?? string.Empty;
 
     /// <summary>
     /// 当前固定的资源版本摘要。
@@ -127,7 +154,8 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
             var version = _model.Source?.Kind == "directory"
                 ? _model.Source.Version
                 : _model.ResourceVersion;
-            return string.IsNullOrWhiteSpace(version) ? "未固定" : version;
+            if (!string.IsNullOrWhiteSpace(ApprovedDeclaredVersion)) return ApprovedDeclaredVersion;
+            return string.IsNullOrWhiteSpace(version) ? "未固定" : "已固定";
         }
     }
 
@@ -158,6 +186,8 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
                 return;
             // 路径修改后旧路径的检查结果不再有效，等待页面重新检查。
             CurrentResourceVersion = null;
+            ApprovedDeclaredVersion = null;
+            CurrentDeclaredVersion = null;
             ResourceCheckError = null;
             _document.ApplyMutation(() => _model.Path = value, this);
             OnPropertyChanged();
@@ -174,6 +204,8 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
         OnPropertyChanged(nameof(CanUpdateResourceVersion));
         OnPropertyChanged(nameof(HasResourceUpdate));
         OnPropertyChanged(nameof(HasResourceNotice));
+        OnPropertyChanged(nameof(ResourceUpdateText));
+        OnPropertyChanged(nameof(ResourceUpdateToolTip));
     }
 
     /// <summary>
@@ -312,6 +344,8 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
     {
         // 来源类型或目录定位改变后，旧来源的版本和引用计数都不能继续显示。
         CurrentResourceVersion = null;
+        ApprovedDeclaredVersion = null;
+        CurrentDeclaredVersion = null;
         ResourceCheckError = null;
         ReferencedResourceUpdateCount = 0;
         NotifyResourceVersionChanged();

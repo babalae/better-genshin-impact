@@ -100,8 +100,13 @@ public sealed class PuloniaRepositoryResourceTests : IDisposable
 
         Write(source, file, file.EndsWith("manifest.json") ? ScriptManifest.Replace("\"1\"", "\"2\"") : "// 新内容");
         Commit(source);
-        var currentVersion = await service.ReadCurrentVersionAsync(task, []);
-        Assert.Equal(notify, originalVersion != currentVersion);
+        var current = await service.ReadCurrentStateAsync(task, []);
+        Assert.Equal(notify, originalVersion != current.CurrentContentVersion);
+        if (file.EndsWith("manifest.json"))
+        {
+            Assert.Equal("1", current.ApprovedDeclaredVersion);
+            Assert.Equal("2", current.CurrentDeclaredVersion);
+        }
         Assert.Equal(cache, await store.MaterializeAsync(reference, "javascript"));
         Assert.Equal("// 旧模块", File.ReadAllText(Path.Combine(cache, "helper.js")));
         Assert.Equal("// 旧公共包", File.ReadAllText(Path.Combine(cache, "packages/shared.js")));
@@ -250,7 +255,7 @@ public sealed class PuloniaRepositoryResourceTests : IDisposable
         Write(source, file, "{invalid-json");
         Commit(source);
         var current = await service.ReadCurrentStateAsync(task, []);
-        await Assert.ThrowsAnyAsync<Exception>(() => service.PrepareUpdateAsync(task, current.Version!, expectedRevision: current.Revision));
+        await Assert.ThrowsAnyAsync<Exception>(() => service.PrepareUpdateAsync(task, current));
         Assert.Same(reference, task.Resource);
         Assert.Equal(oldCache, await store.MaterializeAsync(reference, type));
         Assert.Empty(Directory.GetDirectories(Path.Combine(store.RootDirectory, "Cache", reference.RepositoryId), "*.tmp", SearchOption.AllDirectories));
@@ -271,9 +276,9 @@ public sealed class PuloniaRepositoryResourceTests : IDisposable
         Write(source, "repo/js/示例/helper.js", "// 未审阅模块");
         Commit(source);
         var changed = await service.ReadCurrentStateAsync(task, []);
-        Assert.Equal(reviewed.Version, changed.Version);
-        Assert.NotEqual(reviewed.Revision, changed.Revision);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => service.PrepareUpdateAsync(task, reviewed.Version!, expectedRevision: reviewed.Revision));
+        Assert.Equal(reviewed.CurrentContentVersion, changed.CurrentContentVersion);
+        Assert.NotEqual(reviewed.CurrentRepositoryRevision, changed.CurrentRepositoryRevision);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.PrepareUpdateAsync(task, reviewed));
         Assert.Same(reference, task.Resource);
     }
 

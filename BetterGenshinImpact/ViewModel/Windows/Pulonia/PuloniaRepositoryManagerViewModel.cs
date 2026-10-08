@@ -71,7 +71,7 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
     public bool IsOfficial => !IsAddingRemote && SelectedRepository?.IsOfficial == true;
     /// <summary>第三方编辑区域在新建或选中远程来源时展示。</summary>
     public bool IsThirdParty => IsAddingRemote || SelectedRepository is { Kind: "remote", IsOfficial: false };
-    /// <summary>本地引用只展示目录操作，不展示 Git 功能。</summary>
+    /// <summary>本地仓库只展示目录操作，不展示 Git 功能。</summary>
     public bool IsLocal => !IsAddingRemote && SelectedRepository is { IsRemote: false };
     /// <summary>Git 区域仅面向托管来源。</summary>
     public bool IsRemote => IsAddingRemote || SelectedRepository?.IsRemote == true;
@@ -81,10 +81,12 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
     public bool CanEditRemoteUrl => CanEdit && (IsThirdParty || IsOfficial && SelectedOfficialChannel == "自定义");
     /// <summary>当前来源的固定位置。</summary>
     public string DirectoryText => IsAddingRemote ? "保存后按仓库 ID 分配固定目录" : SelectedRepository?.Directory ?? string.Empty;
+    /// <summary>远程来源展示本机仓库副本，本地来源展示用户维护目录。</summary>
+    public string DirectoryLabel => IsRemote ? "本机仓库副本" : "本地仓库目录";
     /// <summary>用户看到的来源类型说明。</summary>
-    public string RepositoryKindText => IsOfficial ? "官方仓库 · 不可移除" : IsLocal ? "本地引用 · 不会自动更新" : "第三方远程仓库";
-    /// <summary>区分首次下载与已有副本的更新动作。</summary>
-    public string UpdateButtonText => SelectedRepository is { } repository && Directory.Exists(repository.Directory) ? "更新仓库" : "下载仓库";
+    public string RepositoryKindText => IsOfficial ? "官方仓库 · 不可移除" : IsLocal ? "本地仓库 · 由用户维护" : "第三方远程仓库";
+    /// <summary>远程来源统一使用同步语义，首次操作也只是建立本机仓库副本。</summary>
+    public string UpdateButtonText => "同步仓库";
     /// <summary>关闭后返回稳定身份，让添加任务页面刷新和定位来源。</summary>
     public string? SelectedRepositoryId => SelectedRepository?.Id;
 
@@ -118,7 +120,7 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
         IsAddingRemote = false;
         SelectedRepository = Repositories.FirstOrDefault(r => r.Id == selectedId) ?? Repositories.FirstOrDefault(r => r.IsOfficial);
         FillRepository();
-        if (!Directory.Exists(SelectedRepository?.Directory)) StatusMessage = "尚未下载，请点击下载仓库。";
+        if (!Directory.Exists(SelectedRepository?.Directory)) StatusMessage = "尚未同步，请点击同步仓库。";
     }
 
     /// <summary>切换来源时显示已保存的配置，第三方隐藏的其他远端不会被覆盖。</summary>
@@ -140,8 +142,10 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
         }
         finally { _applyingConfig = false; }
         NotifyState();
-        if (!IsBusy) StatusMessage = SelectedRepository is { } current && !Directory.Exists(current.Directory)
-            ? "尚未下载，请点击下载仓库。" : string.Empty;
+        if (!IsBusy) StatusMessage = SelectedRepository is not { } current ? string.Empty
+            : !Directory.Exists(current.Directory) ? "尚未同步，请点击同步仓库。"
+            : current.IsRemote ? "本机仓库副本可用；同步仓库不会修改任务计划使用的版本。"
+            : "本地仓库可用；刷新目录不会修改任务计划使用的版本。";
     }
 
     /// <summary>接收旧官方窗口的渠道变化，始终在窗口所属 UI 线程处理绑定。</summary>
@@ -198,6 +202,8 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
     private bool CanUpdate() => CanEdit && !IsAddingRemote && SelectedRepository?.IsRemote == true;
     /// <summary>重置必须已经存在 clone 副本。</summary>
     private bool CanReset() => CanUpdate() && Directory.Exists(SelectedRepository!.Directory);
+    /// <summary>刷新目录只用于已经存在的本地仓库。</summary>
+    private bool CanRefreshLocal() => CanEdit && IsLocal && Directory.Exists(SelectedRepository!.Directory);
     /// <summary>官方移除按钮不可执行，服务层还会再次验证身份。</summary>
     private bool CanRemove() => CanEdit && !IsAddingRemote && SelectedRepository is { IsOfficial: false };
     /// <summary>打开目录只能定位已经存在的副本。</summary>
@@ -239,7 +245,7 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
             ? await _service.Repositories.AddRemoteRepositoryAsync(RepositoryName, RemoteUrl, Branch, ct)
             : await _service.SaveRemoteAsync(SelectedRepository!.Id, RepositoryName, RemoteUrl, Branch, ct);
         await ReloadAsync(repository.Id, ct);
-        StatusMessage = "配置已保存，可以下载或更新仓库。";
+        StatusMessage = "配置已保存，可以同步仓库。";
     });
 
     /// <summary>拉取前保存第三方编辑，并通过 UI 上下文展示 Git 阶段进度。</summary>
@@ -248,7 +254,7 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
     {
         var repository = SelectedRepository!;
         if (IsThirdParty) repository = await _service.SaveRemoteAsync(repository.Id, RepositoryName, RemoteUrl, Branch, ct);
-        StatusMessage = "正在拉取仓库…";
+        StatusMessage = "正在同步仓库；任务计划使用的版本不会改变…";
         var progress = new Progress<(string Text, int Done, int Total)>(state =>
         {
             if (_closed || ct.IsCancellationRequested) return;
@@ -259,7 +265,15 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
         var updated = await _service.UpdateAsync(repository.Id,
             (text, done, total) => ((IProgress<(string, int, int)>)progress).Report((text, done, total)), ct);
         await ReloadAsync(repository.Id, ct);
-        StatusMessage = updated ? "仓库更新成功，任务采用的版本仍由各计划确认。" : "仓库已经是最新版本。";
+        StatusMessage = updated ? "同步完成；需要在任务计划中更新任务资源后才会采用新内容。" : "已经是远端最新版本；任务使用版本未改变。";
+    });
+
+    /// <summary>重新读取本地仓库目录并通知任务检查，不访问远端。</summary>
+    [RelayCommand(CanExecute = nameof(CanRefreshLocal))]
+    private Task RefreshLocalAsync() => RunAsync(async ct =>
+    {
+        await _service.RefreshLocalAsync(SelectedRepository!.Id, ct);
+        StatusMessage = "本地仓库已刷新；需要在任务计划中更新任务资源后才会采用变化。";
     });
 
     /// <summary>确认后清理托管副本，注册和已经确认的内容保留。</summary>
@@ -267,14 +281,14 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
     private async Task ResetAsync()
     {
         var repository = SelectedRepository!;
-        var result = await ThemedMessageBox.QuestionAsync("重置将清理当前 clone 副本，之后需要重新下载。已确认的任务内容会保留。",
+        var result = await ThemedMessageBox.QuestionAsync("重置将清理当前本机仓库副本，之后需要重新同步。任务使用的旧内容会保留。",
             "重置仓库", MessageBoxButton.YesNo);
         if (result != MessageBoxResult.Yes || _closed) return;
         await RunAsync(async ct =>
         {
             await _service.ResetAsync(repository.Id, ct);
             await ReloadAsync(repository.Id, ct);
-            StatusMessage = "仓库已重置，请重新下载。";
+            StatusMessage = "仓库已重置，请重新同步。";
         });
     }
 
@@ -336,11 +350,11 @@ public partial class PuloniaRepositoryManagerViewModel : ViewModel
     private void NotifyState()
     {
         foreach (var property in new[] { nameof(IsOfficial), nameof(IsThirdParty), nameof(IsLocal), nameof(IsRemote), nameof(CanEdit),
-                     nameof(CanEditRemoteUrl), nameof(DirectoryText), nameof(RepositoryKindText), nameof(UpdateButtonText) })
+                     nameof(CanEditRemoteUrl), nameof(DirectoryText), nameof(DirectoryLabel), nameof(RepositoryKindText), nameof(UpdateButtonText) })
             OnPropertyChanged(property);
         AddRemoteCommand.NotifyCanExecuteChanged(); AddLocalCommand.NotifyCanExecuteChanged(); SaveCommand.NotifyCanExecuteChanged();
         UpdateCommand.NotifyCanExecuteChanged(); ResetCommand.NotifyCanExecuteChanged(); RemoveCommand.NotifyCanExecuteChanged();
-        OpenDirectoryCommand.NotifyCanExecuteChanged(); SaveCredentialsCommand.NotifyCanExecuteChanged();
+        RefreshLocalCommand.NotifyCanExecuteChanged(); OpenDirectoryCommand.NotifyCanExecuteChanged(); SaveCredentialsCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>关闭后停止进度和配置监听，等待中的原生拉取通过取消令牌结束。</summary>

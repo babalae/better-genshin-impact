@@ -48,6 +48,9 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// </summary>
     private readonly PuloniaTaskResourceCatalog _resourceCatalog;
 
+    /// <summary>任务计划页复用的仓库同步服务；老配置组的订阅与安装流程不经过此服务。</summary>
+    private readonly PuloniaRepositoryManagementService _repositoryManagementService;
+
     /// <summary>
     /// 当前从存储加载的共享预设。
     /// </summary>
@@ -144,6 +147,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         _clipboard = clipboard;
         _taskService = taskService;
         _resourceCatalog = resourceCatalog;
+        _repositoryManagementService = new PuloniaRepositoryManagementService(resourceCatalog.Repositories);
         _resourceVersionService = new PuloniaTaskResourceVersionService(resourceCatalog);
         History = history;
         _triggerHost = triggerHost;
@@ -446,7 +450,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     }
 
     /// <summary>
-    /// 重新读取资源并在用户确认后更新节点固定版本，资源变化不会静默影响运行。
+    /// 重新读取本机仓库并在用户确认后更新任务使用版本，资源变化不会静默影响运行。
     /// </summary>
     [RelayCommand]
     private async Task UpdateResourceVersionAsync(PuloniaTaskNodeViewModel? node)
@@ -459,8 +463,8 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
             var key = ResourceCheckKey(model);
             var snapshot = PuloniaTaskJson.Read<PuloniaTask>(PuloniaTaskJson.Write(model));
             var reviewed = await _resourceVersionService.ReadCurrentStateAsync(snapshot, _taskService.Definitions);
-            var newVersion = reviewed.Version
-                             ?? throw new InvalidOperationException("当前节点没有可确认的资源。");
+            var newVersion = reviewed.CurrentContentVersion
+                              ?? throw new InvalidOperationException("当前节点没有可确认的资源。");
             var oldVersion = model.Source?.Kind == "directory" ? model.Source.Version : model.ResourceVersion;
 
             if (oldVersion == newVersion)
@@ -469,8 +473,8 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
                 return;
             }
             var result = await ThemedMessageBox.ShowAsync(
-                $"资源“{node.Name}”已经变化。\n\n原版本：{AbbreviateVersion(oldVersion)}\n新版本：{AbbreviateVersion(newVersion)}\n\n确认后只更新后续运行使用的固定版本，历史运行快照不变。",
-                "确认资源版本更新", MessageBoxButton.YesNo,
+                $"资源“{node.Name}”已经变化。\n\n{FormatVersionChange(reviewed)}\n\n确认后只更新后续运行使用的任务版本，历史运行快照不变。",
+                "更新任务资源", MessageBoxButton.YesNo,
                 ThemedMessageBox.MessageBoxIcon.Question, MessageBoxResult.No);
             if (result != MessageBoxResult.Yes)
                 return;
@@ -479,8 +483,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
                 || key != ResourceCheckKey(model) || !node.Document.EnumerateNodes().Contains(node))
                 throw new InvalidOperationException("确认期间资源再次变化，请重新检查并确认。");
 
-            var updatedReference = await _resourceVersionService.PrepareUpdateAsync(snapshot, newVersion,
-                expectedRevision: reviewed.Revision);
+            var updatedReference = await _resourceVersionService.PrepareUpdateAsync(snapshot, reviewed);
             if (key != ResourceCheckKey(model))
                 throw new InvalidOperationException("提取期间任务配置变化，请重新确认。");
             node.Document.ApplyMutation(() =>
@@ -499,21 +502,25 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
             node.NotifyResourceVersionChanged();
             if (!await SaveDocumentAsync(node.Document)) return;
             await RefreshResourceVersionsAsync();
-            StatusMessage = $"已更新“{node.Name}”的固定资源版本。";
+            StatusMessage = $"已更新“{node.Name}”的任务使用版本。";
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException
             or LibGit2Sharp.LibGit2SharpException or System.Text.Json.JsonException or Newtonsoft.Json.JsonException)
         {
-            StatusMessage = "更新资源版本失败：" + ex.Message;
-            await ThemedMessageBox.ErrorAsync(StatusMessage, "无法更新资源版本");
+            StatusMessage = "更新任务资源失败：" + ex.Message;
+            await ThemedMessageBox.ErrorAsync(StatusMessage, "无法更新任务资源");
         }
     }
 
-    /// <summary>
-    /// 缩短资源版本用于确认提示，完整值仍保存在计划 JSON 中。
-    /// </summary>
-    private static string AbbreviateVersion(string? version)
-        => string.IsNullOrWhiteSpace(version) ? "未固定" : version[..Math.Min(12, version.Length)] + "…";
+    /// <summary>优先展示资源声明版本变化；缺少可读版本时只说明内容已经变化。</summary>
+    private static string FormatVersionChange(PuloniaTaskResourceVersionState state)
+    {
+        if (!string.IsNullOrWhiteSpace(state.ApprovedDeclaredVersion)
+            && !string.IsNullOrWhiteSpace(state.CurrentDeclaredVersion)
+            && state.ApprovedDeclaredVersion != state.CurrentDeclaredVersion)
+            return $"版本：{state.ApprovedDeclaredVersion} → {state.CurrentDeclaredVersion}";
+        return "内容已经变化，但资源没有可显示的版本号变化。";
+    }
 
     /// <summary>
     /// 新增对其他计划的引用节点，不复制目标计划内容。
@@ -745,6 +752,8 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         // 删除节点、修改路径或撤销后立即撤掉失效统计；磁盘版本由页面检查循环重新读取。
         UpdateResourceSummaries(GetResourceDocuments());
         ConfirmResourceUpdatesCommand.NotifyCanExecuteChanged();
+        UpdateAllResourceVersionsCommand.NotifyCanExecuteChanged();
+        SyncAndUpdateResourcesCommand.NotifyCanExecuteChanged();
         if (sender is PuloniaTaskPlanDocumentViewModel { IsDirty: true, LastSaveError: null } document)
             ScheduleAutoSave(document);
     }

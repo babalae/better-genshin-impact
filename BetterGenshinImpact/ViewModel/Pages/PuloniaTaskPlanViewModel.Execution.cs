@@ -50,7 +50,7 @@ public partial class PuloniaTaskPlanViewModel
                 .Count(node => node.IsEffectivelyEnabled && node.CanUpdateResourceVersion && node.HasResourceUpdate
                     && node.Model.Resource is null && node.Model.Source?.Resource is null);
             if (pendingUpdates > 0)
-                throw new InvalidOperationException($"“{document.Name}”有 {pendingUpdates} 项启用中的资源更新，请先点击计划卡片的确认更新按钮。");
+                throw new InvalidOperationException($"“{document.Name}”有 {pendingUpdates} 项启用中的资源更新，请先点击计划卡片的更新任务资源按钮。");
             var requestId = await _taskService.EnqueueAsync(new PuloniaTaskRequest
             {
                 PlanId = document.Id,

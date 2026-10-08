@@ -56,6 +56,30 @@ public sealed partial class ScriptRepositoryStore
     public Task<ScriptRepositoryRegistration> GetRepositoryAsync(string id, CancellationToken ct = default)
         => GetRegistrationAsync(id, ct);
 
+    /// <summary>重新读取用户维护的本地仓库并发布当前版本；不会访问远端或修改任何任务引用。</summary>
+    public async Task RefreshLocalRepositoryAsync(string id, CancellationToken ct = default)
+    {
+        var registration = await GetRegistrationAsync(id, ct).ConfigureAwait(false);
+        if (!registration.IsEnabled || registration.IsRemote)
+            throw new InvalidOperationException("只有已启用的本地仓库可以刷新目录。");
+        using var sourceAccess = await EnterSourceAccessAsync(ct).ConfigureAwait(false);
+        await Task.Run(() =>
+        {
+            ct.ThrowIfCancellationRequested();
+            if (Repository.IsValid(registration.Directory))
+            {
+                using var repository = new Repository(registration.Directory);
+                if (repository.Head.Tip?.Tree["repo.json"]?.Target is not Blob)
+                    throw new IOException("本地 Git 仓库的当前提交没有 repo.json 索引。");
+            }
+            else
+            {
+                _ = ReadFileSourceInventory(registration.Directory, ct);
+            }
+        }, ct).ConfigureAwait(false);
+        NotifyUpdated(registration.Directory);
+    }
+
     /// <summary>新远程来源先保存配置，固定目录由仓库 ID 分配，不随名称或 URL 变化。</summary>
     public async Task<ScriptRepositoryRegistration> AddRemoteRepositoryAsync(string name, string url,
         string branch = "release", CancellationToken ct = default)

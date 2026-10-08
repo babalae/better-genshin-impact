@@ -63,9 +63,12 @@
                                 <ui:Button Margin="0,8,0,0" HorizontalAlignment="Right" Content="保存配置" Command="{Binding SaveCommand}" />
                             </StackPanel>
                         </StackPanel>
-                        <TextBlock Margin="0,12,0,5" Text="本地目录" />
+                        <TextBlock Margin="0,12,0,5" Text="{Binding DirectoryLabel}" />
                         <TextBlock Text="{Binding DirectoryText}" TextWrapping="Wrap" FontSize="12"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Margin="0,8,0,0" FontSize="12" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="同步或刷新只改变本机可浏览的仓库内容，不会修改任务计划使用的资源版本。" />
                         <WrapPanel Margin="0,10,0,0">
                             <ui:Button Margin="0,0,6,4" Content="打开目录" Command="{Binding OpenDirectoryCommand}" />
                             <ui:Button Margin="0,0,0,4" Content="移除引用" Command="{Binding RemoveCommand}"
@@ -104,6 +107,9 @@
                     <ui:Button Margin="0,0,8,0" Appearance="Primary" Content="{Binding UpdateButtonText}" Command="{Binding UpdateCommand}" />
                     <ui:Button Content="重置仓库" Command="{Binding ResetCommand}" />
                 </StackPanel>
+                <ui:Button DockPanel.Dock="Left" Appearance="Primary" Content="刷新目录"
+                           Command="{Binding RefreshLocalCommand}"
+                           Visibility="{Binding IsLocal, Converter={StaticResource BooleanToVisibilityConverter}}" />
                 <ui:Button DockPanel.Dock="Right" Content="关闭" IsCancel="True" MinWidth="76" />
             </DockPanel>
         </Border>

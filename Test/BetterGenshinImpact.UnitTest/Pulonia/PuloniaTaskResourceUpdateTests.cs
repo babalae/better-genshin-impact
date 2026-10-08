@@ -74,7 +74,7 @@ public sealed class PuloniaTaskResourceUpdateTests : IDisposable
         Assert.False(node.HasResourceUpdate);
         Assert.Equal("资源不可用", node.ResourceUpdateText);
         Assert.Equal(1, document.ResourceErrorCount);
-        Assert.False(page.ConfirmResourceUpdatesCommand.CanExecute(document));
+        Assert.True(page.ConfirmResourceUpdatesCommand.CanExecute(document));
     }
 
     /// <summary>JS、路线、回放和目录更新分别标记，一次确认后落盘，旧执行历史保持不变。</summary>

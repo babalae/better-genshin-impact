@@ -291,7 +291,7 @@
                         <MenuItem Header="启用全部子任务"
                                   Command="{Binding EnableAllChildrenCommand}"
                                   IsEnabled="{Binding HasChildren}" />
-                        <MenuItem Header="确认并更新资源版本…"
+                        <MenuItem Header="更新此任务资源…"
                                   Command="{Binding Data.ViewModel.UpdateResourceVersionCommand, Source={StaticResource PageBindingProxy}}"
                                   CommandParameter="{Binding}"
                                   IsEnabled="{Binding CanUpdateResourceVersion}" />
@@ -361,10 +361,20 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
                     <DockPanel Margin="4,0,4,8">
-                        <ui:Button DockPanel.Dock="Right" Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="3"
-                                   Appearance="Transparent" Icon="{ui:SymbolIcon ArrowClockwise24}"
-                                   Command="{Binding ViewModel.RefreshResourceVersionsCommand}" ToolTip="重新检查全部计划的资源更新"
-                                   AutomationProperties.Name="刷新资源更新检查" />
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <ui:Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="3" Margin="0,0,2,0"
+                                       Appearance="Transparent" Icon="{ui:SymbolIcon ArrowSync24}"
+                                       Command="{Binding ViewModel.SyncAndUpdateResourcesCommand}" ToolTip="同步全部计划引用的仓库，并更新所有可用任务资源"
+                                       AutomationProperties.Name="一键同步并更新" />
+                            <ui:Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="3" Margin="0,0,2,0"
+                                       Appearance="Transparent" Icon="{ui:SymbolIcon Checkmark24}"
+                                       Command="{Binding ViewModel.UpdateAllResourceVersionsCommand}" ToolTip="使用本机仓库内容更新所有任务计划"
+                                       AutomationProperties.Name="更新所有任务计划" />
+                            <ui:Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="3"
+                                       Appearance="Transparent" Icon="{ui:SymbolIcon ArrowClockwise24}"
+                                       Command="{Binding ViewModel.RefreshResourceVersionsCommand}" ToolTip="只检查本机仓库与任务使用版本，不访问远端"
+                                       AutomationProperties.Name="检查任务资源更新" />
+                        </StackPanel>
                         <TextBlock FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" Text="计划" />
                     </DockPanel>
                     <ListBox x:Name="PlanList"
@@ -436,7 +446,7 @@
                                                    Command="{Binding Data.ViewModel.ConfirmResourceUpdatesCommand, Source={StaticResource PageBindingProxy}}"
                                                    CommandParameter="{Binding}" ToolTip="{Binding ResourceUpdateSummary}"
                                                    ToolTipService.ShowOnDisabled="True"
-                                                   AutomationProperties.Name="确认此计划全部资源更新" />
+                                                   AutomationProperties.Name="更新此计划任务资源" />
                                         <ui:Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="3"
                                                    Appearance="Transparent" Icon="{ui:SymbolIcon Play24}"
                                                    Command="{Binding Data.ViewModel.RunPlanCommand, Source={StaticResource PageBindingProxy}}"

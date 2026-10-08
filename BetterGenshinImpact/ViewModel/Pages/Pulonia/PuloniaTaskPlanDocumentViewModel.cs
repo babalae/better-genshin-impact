@@ -57,7 +57,7 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     /// </summary>
     private bool _isRefreshingEditor;
 
-    /// <summary>当前计划（含计划引用）的待确认资源数，由页面检查结果更新，不持久化提示状态。</summary>
+    /// <summary>当前计划（含计划引用）的待更新资源数，由页面检查结果更新，不持久化提示状态。</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasResourceUpdates), nameof(ResourceUpdateSummary))]
     private int _resourceUpdateCount;
@@ -67,18 +67,21 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasResourceUpdates), nameof(ResourceUpdateSummary))]
     private int _resourceErrorCount;
 
-    /// <summary>计划卡片是否有可以确认的资源更新。</summary>
-    public bool HasResourceUpdates => ResourceUpdateCount > 0 && ResourceErrorCount == 0;
+    /// <summary>计划卡片是否有可以更新的资源；其他资源检查失败不隐藏可用项。</summary>
+    public bool HasResourceUpdates => ResourceUpdateCount > 0;
 
-    /// <summary>计划卡片的资源检查摘要与批量确认按钮说明。</summary>
-    public string ResourceUpdateSummary => ResourceErrorCount > 0 ? $"{ResourceErrorCount} 项资源更新检查失败，请查看详情"
-        : ResourceUpdateCount > 0 ? $"确认全部 {ResourceUpdateCount} 项资源更新" : "暂无待确认资源更新";
+    /// <summary>计划卡片的资源检查摘要与批量更新按钮说明。</summary>
+    public string ResourceUpdateSummary => ResourceUpdateCount > 0 && ResourceErrorCount > 0
+        ? $"更新此计划的 {ResourceUpdateCount} 项资源；另有 {ResourceErrorCount} 项检查失败"
+        : ResourceUpdateCount > 0 ? $"更新此计划的 {ResourceUpdateCount} 项任务资源"
+        : ResourceErrorCount > 0 ? $"{ResourceErrorCount} 项资源检查失败，请查看详情"
+        : "任务资源已是本机仓库当前版本";
 
     /// <summary>按稳定树顺序枚举节点，供资源检查和卡片批量确认使用。</summary>
     public IEnumerable<PuloniaTaskNodeViewModel> EnumerateNodes() => Flatten(RootNode);
 
-    /// <summary>以一次可撤销编辑确认本计划全部指定资源；读取失败或过期的检查结果不能写入。</summary>
-    public void ApplyConfirmedResourceVersions(IReadOnlyDictionary<string, string> versions,
+    /// <summary>以一次可撤销编辑更新本计划全部指定资源，并返回仅供保存失败时使用的回滚操作。</summary>
+    public Action ApplyConfirmedResourceVersions(IReadOnlyDictionary<string, string> versions,
         IReadOnlyDictionary<string, ScriptResourceReference?>? references = null)
     {
         var nodes = EnumerateNodes().Where(node => versions.ContainsKey(node.Id)).ToArray();
@@ -86,7 +89,8 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
             || node.ResourceCheckError is not null || node.CurrentResourceVersion != versions[node.Id]))
             throw new InvalidOperationException("资源检查结果已经变化，请重新检查并确认。");
         if (nodes.Length == 0)
-            return;
+            return static () => { };
+        var rollbackSnapshot = SerializeForHistory(_plan);
         // 全部校验通过后才一起更新模型，保留任务参数、开关、目录引用和原执行历史。
         ApplyMutation(() =>
         {
@@ -106,6 +110,26 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
         }, SelectedNode);
         foreach (var node in nodes)
             node.NotifyResourceVersionChanged();
+        var appliedSnapshot = SerializeForHistory(_plan);
+        return () =>
+        {
+            // 批量保存期间页面处于忙碌状态；仍校验完整快照，避免覆盖意外插入的新编辑。
+            if (SerializeForHistory(_plan) != appliedSnapshot)
+                throw new InvalidOperationException("保存失败后任务配置又发生变化，无法自动恢复旧资源引用。");
+            var currentRevision = _plan.Revision;
+            var saveError = LastSaveError;
+            _plan = DeserializeHistory(rollbackSnapshot);
+            _plan.Revision = currentRevision;
+            if (_undoSnapshots.Count > 0 && _undoSnapshots[^1] == rollbackSnapshot)
+                _undoSnapshots.RemoveAt(_undoSnapshots.Count - 1);
+            RebuildTree(SelectedNode?.Id);
+            LastSaveError = saveError;
+            UpdateDirtyState();
+            OnPropertyChanged(nameof(Revision));
+            UndoCommand.NotifyCanExecuteChanged();
+            Changed?.Invoke(this, EventArgs.Empty);
+            ContentChanged?.Invoke(this, EventArgs.Empty);
+        };
     }
 
     /// <summary>

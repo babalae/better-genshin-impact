@@ -416,26 +416,31 @@
                             </Style.Triggers>
                         </Style>
                     </Border.Style>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Margin="0,0,10,0" VerticalAlignment="Center" Text="仓库" />
-                        <ComboBox Grid.Column="1"
-                                  MinWidth="170"
-                                  Margin="0,0,10,0"
-                                  ItemsSource="{Binding RepositoryChoices}"
-                                  SelectedValue="{Binding SelectedRepository, Mode=TwoWay}"
-                                  IsEnabled="{Binding CanManageRepositories}"
-                                  Style="{StaticResource PuloniaRepositorySelectorStyle}" />
-                        <StackPanel Grid.Column="2" Orientation="Horizontal">
-                            <ui:Button Command="{Binding OpenRepositoryManagerCommand}"
-                                       Content="管理仓库"
-                                       ToolTip="打开 Pulonia 仓库管理，添加、更新和管理来源引用" />
-                        </StackPanel>
-                    </Grid>
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Margin="0,0,10,0" VerticalAlignment="Center" Text="仓库" />
+                            <ComboBox Grid.Column="1"
+                                      MinWidth="170"
+                                      Margin="0,0,10,0"
+                                      ItemsSource="{Binding RepositoryChoices}"
+                                      SelectedValue="{Binding SelectedRepository, Mode=TwoWay}"
+                                      IsEnabled="{Binding CanManageRepositories}"
+                                      Style="{StaticResource PuloniaRepositorySelectorStyle}" />
+                            <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                <ui:Button Command="{Binding OpenRepositoryManagerCommand}"
+                                           Content="管理仓库"
+                                           ToolTip="打开 Pulonia 仓库管理，添加、同步和管理来源" />
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Margin="0,7,0,0" FontSize="11" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="当前列表读取本机仓库副本或本地仓库；添加任务不会访问远端。如需远端最新内容，请先同步仓库。" />
+                    </StackPanel>
                 </Border>
 
                 <Border Grid.Row="1" Grid.Column="0"
