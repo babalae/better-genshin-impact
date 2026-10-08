@@ -971,12 +971,12 @@ internal sealed class CharacterDevelopmentStateMachineTask : StateMachineBase<Ch
                                  ?? throw new InvalidOperationException("角色养成识别：当前角色武器类型尚未初始化。");
                 var match = WeaponNameMatcher.Match(lastOcrText, weaponType);
                 lastMatchedName = match.Name;
+                _logger.LogDebug(
+                    "角色养成识别：武器名称 OCR 第 {Attempt}/{MaxAttempts} 次原文={OcrText}，候选={MatchedName}，编辑距离={Distance}，可信={IsReliable}",
+                    attempt, MaxOcrAttempts, lastOcrText, match.Name, match.Distance, match.IsReliable);
                 if (!match.IsReliable)
                 {
                     stableNames.Reset();
-                    _logger.LogDebug(
-                        "角色养成识别：武器名称 OCR 第 {Attempt}/{MaxAttempts} 次匹配不可信，原文={OcrText}，候选={MatchedName}，编辑距离={Distance}",
-                        attempt, MaxOcrAttempts, lastOcrText, match.Name, match.Distance);
                 }
                 else
                 {
