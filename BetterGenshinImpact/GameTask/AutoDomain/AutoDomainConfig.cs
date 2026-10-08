@@ -105,34 +105,34 @@ public partial class AutoDomainConfig : ObservableObject
     /// 这是培养计划扫描、动态调整和备选秘境逻辑的总开关。
     /// </summary>
     [ObservableProperty]
-    private bool _developmentGuideCalculateRunsEnabled = true;
+    private bool _trainingGuideCalculateRunsEnabled = true;
 
     /// <summary>
     /// 培养计划刷取偏好。0：预留合成天赋收益；1：不依赖合成天赋收益。
     /// </summary>
     [ObservableProperty]
-    private int _developmentGuideRunPreference;
+    private int _trainingGuideRunPreference;
 
     /// <summary>
     /// 预留的合成天赋收益百分比，取值范围 0～20。
     /// </summary>
     [ObservableProperty]
-    private int _developmentGuideCraftingBonusReservePercent = 7;
+    private int _trainingGuideCraftingBonusReservePercent = 7;
 
-    partial void OnDevelopmentGuideRunPreferenceChanged(int value)
+    partial void OnTrainingGuideRunPreferenceChanged(int value)
     {
         if (value is not (0 or 1))
         {
-            DevelopmentGuideRunPreference = 0;
+            TrainingGuideRunPreference = 0;
         }
     }
 
-    partial void OnDevelopmentGuideCraftingBonusReservePercentChanged(int value)
+    partial void OnTrainingGuideCraftingBonusReservePercentChanged(int value)
     {
         var normalized = Math.Clamp(value, 0, TrainingGuideRunCalculator.MaxCraftingBonusReservePercent);
         if (value != normalized)
         {
-            DevelopmentGuideCraftingBonusReservePercent = normalized;
+            TrainingGuideCraftingBonusReservePercent = normalized;
         }
     }
 
@@ -141,7 +141,7 @@ public partial class AutoDomainConfig : ObservableObject
     /// 即使常规自动秘境奖励识别关闭，本选项开启时培养计划刷取仍会识别奖励。
     /// </summary>
     [ObservableProperty]
-    private bool _developmentGuideRewardRecognitionEnabled = true;
+    private bool _trainingGuideRewardRecognitionEnabled = true;
 
     /// <summary>奖励识别失败后允许当前入口按原预算继续；默认关闭，失败即结束任务。</summary>
     [ObservableProperty]
@@ -153,10 +153,10 @@ public partial class AutoDomainConfig : ObservableObject
 
     // 培养计划完成或当天没有可刷取目标时使用的备选秘境
     [ObservableProperty]
-    private string _developmentGuideFallbackDomainName = string.Empty;
+    private string _trainingGuideFallbackDomainName = string.Empty;
 
     // 备选秘境在周日或限时活动中的奖励选择序号
     [ObservableProperty]
-    private string _developmentGuideFallbackSundaySelectedValue = string.Empty;
+    private string _trainingGuideFallbackSundaySelectedValue = string.Empty;
 
 }

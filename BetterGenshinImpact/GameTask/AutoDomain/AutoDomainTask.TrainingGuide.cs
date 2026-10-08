@@ -45,6 +45,22 @@ public partial class AutoDomainTask
     private int GuideReservePercent => TrainingGuideRunCalculator.ResolveCraftingBonusReservePercent(
         _taskParam.TrainingGuideRunPreference, _taskParam.TrainingGuideCraftingBonusReservePercent);
 
+    private void ResetTrainingGuideState()
+    {
+        _guideRounds = 0;
+        _guideResinStatus = null;
+        _guideDomainsWithObservedDemand.Clear();
+        _guideDomainName = null;
+        _guideActivePlan = null;
+        _guideProcessedLevels.Clear();
+        _guideProcessedDomains.Clear();
+        _guideUnavailableFamilies.Clear();
+        _guideDomainCandidates = null;
+        _guidePlans.Clear();
+        ClearGuideEntryQueue();
+        _guideNextAction = GuideNextAction.Continue;
+    }
+
     private async Task RunTrainingGuidePlan()
     {
         while (_guideRounds < _taskParam.DomainRoundNum)

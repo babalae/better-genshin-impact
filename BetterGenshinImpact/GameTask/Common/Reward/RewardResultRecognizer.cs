@@ -52,13 +52,19 @@ public class RewardResultRecognizer
     /// 识别多页奖励卡片。
     /// </summary>
     /// <param name="maxPages">最大识别页数。</param>
+    /// <param name="requireReliableCounts">是否要求奖励数量可靠。</param>
+    /// <param name="allowUnreliableCount">严格模式下允许忽略数量失败的奖励；默认无例外。识别成功的数量仍计入汇总。</param>
     /// <returns>奖励名称到总数量的映射。</returns>
-    public Dictionary<string, int> RecognizeMultiPage(int maxPages = 3, bool requireReliableCounts = false)
+    public Dictionary<string, int> RecognizeMultiPage(int maxPages = 3, bool requireReliableCounts = false,
+        Func<string, bool>? allowUnreliableCount = null)
     {
         if (!IsSupportedRewardResolution())
         {
             return new Dictionary<string, int>();
         }
+
+        bool CanIgnoreCount(string? name) =>
+            !string.IsNullOrEmpty(name) && allowUnreliableCount?.Invoke(name) == true;
 
         // 本轮累计识别到的新奖励。
         List<RewardItem> allRewards = [];
@@ -84,10 +90,10 @@ public class RewardResultRecognizer
             // 培养严格模式失败时先保留证据，再按原有逻辑返回或抛异常。
             if (requireReliableCounts && TrainingGuideDiagnostics.Enabled && (pageResult.Rewards.Count == 0 ||
                 pageResult.Rewards.Any(r => string.IsNullOrEmpty(r.Name) ||
-                    (!TrainingGuideRewardPolicy.IsCommonReward(r.Name) && r.Count <= 0))))
+                    (!CanIgnoreCount(r.Name) && r.Count <= 0))))
                 BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide.TrainingGuideRewardDiagnostics.Record(
                     screen.SrcMat, pageResult.CardRects,
-                    pageResult.Rewards.Select(r => (r.Name, r.Count)).ToArray(), currentPage, _logger);
+                    pageResult.Rewards.Select(r => (r.Name, r.Count)).ToArray(), currentPage, _logger, allowUnreliableCount);
 
             if (pageResult.Rewards.Count == 0)
             {
@@ -97,15 +103,15 @@ public class RewardResultRecognizer
 
             // 培养规划不能使用识别失败后猜测的数量，也不能忽略未识别名称的材料。
             if (requireReliableCounts && pageResult.Rewards.Any(r => string.IsNullOrEmpty(r.Name) ||
-                (!TrainingGuideRewardPolicy.IsCommonReward(r.Name) && r.Count <= 0)))
+                (!CanIgnoreCount(r.Name) && r.Count <= 0)))
                 throw new InvalidOperationException("奖励数量或名称未可靠识别，本轮不更新培养库存");
             var currentPageRewards = ToRewardItems(pageResult.Rewards);
             // 同排同序名称表示翻页未移动。即使OCR数量波动，也不得当新奖励累加。
             if (previousPageRewards != null && currentPageRewards.Select(r => r.Name)
                     .SequenceEqual(previousPageRewards.Select(r => r.Name)))
             {
-                if (requireReliableCounts && !currentPageRewards.Where(r => !TrainingGuideRewardPolicy.IsCommonReward(r.Name)).Select(r => r.Quantity)
-                        .SequenceEqual(previousPageRewards.Where(r => !TrainingGuideRewardPolicy.IsCommonReward(r.Name)).Select(r => r.Quantity)))
+                if (requireReliableCounts && !currentPageRewards.Where(r => !CanIgnoreCount(r.Name)).Select(r => r.Quantity)
+                        .SequenceEqual(previousPageRewards.Where(r => !CanIgnoreCount(r.Name)).Select(r => r.Quantity)))
                 {
                     TrainingGuideRewardDiagnostics.RecordComparison(screen.SrcMat, currentPage,
                         previousPageRewards.Select(r => (r.Name, r.Quantity)).ToArray(),
@@ -119,7 +125,7 @@ public class RewardResultRecognizer
                 : 0;
             if (requireReliableCounts && duplicateCount > 0 && previousPageRewards != null)
                 for (var i = 0; i < duplicateCount; i++)
-                    if (!TrainingGuideRewardPolicy.IsCommonReward(currentPageRewards[i].Name) &&
+                    if (!CanIgnoreCount(currentPageRewards[i].Name) &&
                         currentPageRewards[i].Quantity != previousPageRewards[previousPageRewards.Count - duplicateCount + i].Quantity)
                     {
                         TrainingGuideRewardDiagnostics.RecordComparison(screen.SrcMat, currentPage,
@@ -135,7 +141,7 @@ public class RewardResultRecognizer
             if (newRewards.Count > 0)
             {
                 allRewards.AddRange(requireReliableCounts
-                    ? newRewards.Where(r => !TrainingGuideRewardPolicy.IsCommonReward(r.Name) ||
+                    ? newRewards.Where(r => !CanIgnoreCount(r.Name) ||
                         pageResult.Rewards.Any(p => p.Name == r.Name && p.Count > 0))
                     : newRewards);
             }

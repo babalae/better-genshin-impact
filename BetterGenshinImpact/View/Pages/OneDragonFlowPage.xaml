@@ -601,7 +601,7 @@
                                                  Grid.RowSpan="2"
                                                  Grid.Column="1"
                                                  Margin="16,0,20,0"
-                                                 IsChecked="{Binding Config.AutoDomainConfig.DevelopmentGuideCalculateRunsEnabled, Mode=TwoWay}" />
+                                                 IsChecked="{Binding Config.AutoDomainConfig.TrainingGuideCalculateRunsEnabled, Mode=TwoWay}" />
                             </Grid>
 
                             <Separator Margin="16,0" BorderThickness="0,1,0,0" />
@@ -612,7 +612,7 @@
                                               TextWrapping="Wrap" />
                                 <ComboBox Margin="0,8,20,0"
                                           HorizontalAlignment="Stretch"
-                                          SelectedIndex="{Binding Config.AutoDomainConfig.DevelopmentGuideRunPreference, Mode=TwoWay}">
+                                          SelectedIndex="{Binding Config.AutoDomainConfig.TrainingGuideRunPreference, Mode=TwoWay}">
                                     <ComboBoxItem Content="{i18n:T 适量刷取，依靠合成天赋收益补足材料}" />
                                     <ComboBoxItem Content="{i18n:T 充分刷取，直到满足培养计划需求}" />
                                 </ComboBox>
@@ -636,10 +636,10 @@
                                     <vio:CascadingComboBox Grid.Column="0"
                                                            MinWidth="180"
                                                            HorizontalAlignment="Stretch"
-                                                           behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding Config.AutoDomainConfig.DevelopmentGuideFallbackDomainName, Mode=TwoWay}"
+                                                           behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding Config.AutoDomainConfig.TrainingGuideFallbackDomainName, Mode=TwoWay}"
                                                            behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                                            ItemsSource="{x:Static training:TrainingGuideDomainOptions.Items}"
-                                                           SelectedCascadingItem="{Binding Config.AutoDomainConfig.DevelopmentGuideFallbackDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
+                                                           SelectedCascadingItem="{Binding Config.AutoDomainConfig.TrainingGuideFallbackDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
                                     <StackPanel Grid.Column="1" Margin="16,0,12,0">
                                         <ui:TextBlock FontTypography="Body"
                                                       Text="{i18n:T 周日或限时}"
@@ -652,7 +652,7 @@
                                               Width="72"
                                               HorizontalContentAlignment="Center"
                                               ItemsSource="{x:Static training:TrainingGuideDomainOptions.RewardSelectionIndices}"
-                                              SelectedItem="{Binding Config.AutoDomainConfig.DevelopmentGuideFallbackSundaySelectedValue, Mode=TwoWay}" />
+                                              SelectedItem="{Binding Config.AutoDomainConfig.TrainingGuideFallbackSundaySelectedValue, Mode=TwoWay}" />
                                 </Grid>
                             </StackPanel>
                         </StackPanel>

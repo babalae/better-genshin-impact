@@ -192,18 +192,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             Logger.LogInformation("培养计划详细判断保存至 {Path}，按日期统一记录", TrainingGuideDiagnostics.DirectoryPath);
             TrainingGuideDiagnostics.Detail("培养任务开始：{StartedAt:O}", DateTime.Now);
         }
-        _guideRounds = 0;
-        _guideResinStatus = null;
-        _guideDomainsWithObservedDemand.Clear();
-        _guideDomainName = null;
-        _guideActivePlan = null;
-        _guideProcessedLevels.Clear();
-        _guideProcessedDomains.Clear();
-        _guideUnavailableFamilies.Clear();
-        _guideDomainCandidates = null;
-        _guidePlans.Clear();
-        ClearGuideEntryQueue();
-        _guideNextAction = GuideNextAction.Continue;
+        ResetTrainingGuideState();
 
         Init();
 
@@ -1656,7 +1645,8 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             Logger.LogInformation("自动秘境：开始奖励识别");
             var useRewardsForPlanning = _guidePlanning && _taskParam.TrainingGuideRewardRecognitionEnabled;
             var rewards = RewardResultRecognizer.Instance.RecognizeMultiPage(
-                requireReliableCounts: useRewardsForPlanning);
+                requireReliableCounts: useRewardsForPlanning,
+                allowUnreliableCount: useRewardsForPlanning ? TrainingGuideRewardPolicy.IsCommonReward : null);
             if (useRewardsForPlanning)
                 _guideRoundRewards = new Dictionary<string, int>(rewards);
 

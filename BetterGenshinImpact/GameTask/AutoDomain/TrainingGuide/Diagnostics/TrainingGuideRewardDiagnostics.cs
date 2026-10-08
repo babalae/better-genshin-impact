@@ -23,7 +23,8 @@ internal static class TrainingGuideRewardDiagnostics
     }
 
     public static void Record(Mat screen, IReadOnlyList<Rect> rects,
-        IReadOnlyList<(string? Name, int Count)> results, int page, ILogger logger)
+        IReadOnlyList<(string? Name, int Count)> results, int page, ILogger logger,
+        Func<string, bool>? allowUnreliableCount = null)
     {
         if (!TrainingGuideDiagnostics.Enabled) return;
         var id = $"reward-{DateTime.Now:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid():N}-page-{page}";
@@ -39,9 +40,9 @@ internal static class TrainingGuideRewardDiagnostics
                 {
                     var result = i < results.Count ? results[i] : (Name: (string?)null, Count: -1);
                     TrainingGuideDiagnostics.LogReward(id,
-                        $"位置={i + 1}；区域={rects[i]}（相对奖励条）；实际名称={result.Name ?? "未识别"}；实际数量={result.Count}；严格校验通过={!string.IsNullOrEmpty(result.Name) && (TrainingGuideRewardPolicy.IsCommonReward(result.Name) || result.Count > 0)}");
+                        $"位置={i + 1}；区域={rects[i]}（相对奖励条）；实际名称={result.Name ?? "未识别"}；实际数量={result.Count}；严格校验通过={!string.IsNullOrEmpty(result.Name) && ((result.Name != null && allowUnreliableCount?.Invoke(result.Name) == true) || result.Count > 0)}");
                     if (string.IsNullOrEmpty(result.Name) ||
-                        (!TrainingGuideRewardPolicy.IsCommonReward(result.Name) && result.Count <= 0))
+                        (!(result.Name != null && allowUnreliableCount?.Invoke(result.Name) == true) && result.Count <= 0))
                     {
                         using var card = new Mat(band, rects[i]);
                         TrainingGuideDiagnostics.Save(card, $"card-{i + 1}", id);

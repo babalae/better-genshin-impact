@@ -133,14 +133,14 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
         OriginalResin20UseCount = config.OriginalResin20UseCount;
         OriginalResin40UseCount = config.OriginalResin40UseCount;
         RewardRecognitionEnabled = config.RewardRecognitionEnabled;
-        TrainingGuideCalculateRunsEnabled = config.DevelopmentGuideCalculateRunsEnabled;
-        TrainingGuideRunPreference = config.DevelopmentGuideRunPreference;
-        TrainingGuideCraftingBonusReservePercent = config.DevelopmentGuideCraftingBonusReservePercent;
-        TrainingGuideRewardRecognitionEnabled = config.DevelopmentGuideRewardRecognitionEnabled;
+        TrainingGuideCalculateRunsEnabled = config.TrainingGuideCalculateRunsEnabled;
+        TrainingGuideRunPreference = config.TrainingGuideRunPreference;
+        TrainingGuideCraftingBonusReservePercent = config.TrainingGuideCraftingBonusReservePercent;
+        TrainingGuideRewardRecognitionEnabled = config.TrainingGuideRewardRecognitionEnabled;
         TrainingGuideRewardFailureBudgetEnabled = config.TrainingGuideRewardFailureBudgetEnabled;
         TrainingGuideDiagnosticsEnabled = config.TrainingGuideDiagnosticsEnabled;
-        TrainingGuideFallbackDomainName = config.DevelopmentGuideFallbackDomainName;
-        TrainingGuideFallbackSundaySelectedValue = config.DevelopmentGuideFallbackSundaySelectedValue;
+        TrainingGuideFallbackDomainName = config.TrainingGuideFallbackDomainName;
+        TrainingGuideFallbackSundaySelectedValue = config.TrainingGuideFallbackSundaySelectedValue;
     }
 
     public AutoDomainParam(int domainRoundNum = 0) : base(null, null)
