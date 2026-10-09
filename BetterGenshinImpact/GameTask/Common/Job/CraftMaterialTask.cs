@@ -89,11 +89,20 @@ public class CraftMaterialTask
     private static readonly Regex FractionRegex = new(@"(\d+)\s*/\s*(\d+)", RegexOptions.Compiled);
     private static readonly Lazy<Dictionary<string, string>> MaterialTypes = new(LoadMaterialTypes);
 
+    private const string BonusMaterialReturn = "概率返还素材";
+    private const string BonusDoubleOutput = "概率额外产出";
+
+    /// <summary>
+    /// 存在合成加成角色的材料筛选类型。
+    /// </summary>
+    private static readonly string[] BonusMaterialTypes = ["角色与武器培养素材", "武器突破素材", "角色天赋素材", "药剂"];
+
     private readonly ILogger<CraftMaterialTask> _logger = App.GetLogger<CraftMaterialTask>();
     private IInputChannel _input => InputHub.Foreground;
     private readonly string _materialName;
     private readonly int _targetQuantity;
     private readonly string? _materialType;
+    private readonly string? _bonusType;
     private BvPage? _page;
     private CancellationToken _ct;
 
@@ -109,11 +118,13 @@ public class CraftMaterialTask
     /// <param name="materialName">目标材料名。</param>
     /// <param name="targetQuantity">目标合成个数。</param>
     /// <param name="materialType">材料筛选类型；为空时从物品 CSV 读取。</param>
-    public CraftMaterialTask(string materialName, int targetQuantity, string? materialType = null)
+    /// <param name="bonusType">合成加成角色类型；为空时不切换加成。</param>
+    public CraftMaterialTask(string materialName, int targetQuantity, string? materialType = null, string? bonusType = null)
     {
         _materialName = materialName?.Trim() ?? string.Empty;
         _targetQuantity = targetQuantity;
         _materialType = string.IsNullOrWhiteSpace(materialType) ? null : materialType.Trim();
+        _bonusType = string.IsNullOrWhiteSpace(bonusType) ? null : bonusType.Trim();
     }
 
     /// <summary>
@@ -121,7 +132,7 @@ public class CraftMaterialTask
     /// </summary>
     /// <param name="ct">取消令牌。</param>
     /// <returns>合成执行结果。</returns>
-    /// <exception cref="ArgumentException">材料名为空时抛出。</exception>
+    /// <exception cref="ArgumentException">材料名为空或合成加成类型非法时抛出。</exception>
     /// <exception cref="ArgumentOutOfRangeException">合成个数小于等于 0 时抛出。</exception>
     /// <exception cref="InvalidOperationException">合成界面、材料筛选、材料搜索或数量设置失败时抛出。</exception>
     public async Task<CraftMaterialResult> Start(CancellationToken ct)
@@ -131,12 +142,30 @@ public class CraftMaterialTask
         ValidateArguments();
 
         var materialType = ResolveMaterialType();
-        EnsureInCraftingUi();
+        await EnsureInCraftingUi();
 
         _logger.LogInformation("开始合成材料：{MaterialName}，目标个数：{Quantity}，筛选类型：{MaterialType}", _materialName, _targetQuantity, materialType);
 
-        await SelectMaterialType(materialType);
-        await FindAndSelectMaterial();
+        var filterSelection = await SelectMaterialType(materialType);
+        await Delay(300, _ct);
+
+        if (ConfirmSelectedMaterial())
+        {
+            _logger.LogInformation("详情区已选中目标材料 {MaterialName}，跳过列表搜索。", _materialName);
+        }
+        else
+        {
+            //切换筛选会自动回到列表顶部，如果不需要切换筛选，手动拉到顶部
+            if (filterSelection == FilterSelection.AlreadySelected)
+            {
+                await ResetMaterialListScroll();
+            }
+            
+            await FindAndSelectMaterial();
+        }
+
+        await TrySwitchCraftBonus(materialType, _bonusType);
+
         var adjustedQuantity = await SetCraftQuantity(_targetQuantity);
 
         var rewards = await SubmitCraftAndClaimResult(adjustedQuantity);
@@ -151,7 +180,7 @@ public class CraftMaterialTask
     /// <summary>
     /// 校验任务构造参数。
     /// </summary>
-    /// <exception cref="ArgumentException">材料名为空时抛出。</exception>
+    /// <exception cref="ArgumentException">材料名为空或合成加成类型非法时抛出。</exception>
     /// <exception cref="ArgumentOutOfRangeException">合成个数小于等于 0 时抛出。</exception>
     private void ValidateArguments()
     {
@@ -163,6 +192,11 @@ public class CraftMaterialTask
         if (_targetQuantity <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(_targetQuantity), _targetQuantity, "合成个数必须大于 0。");
+        }
+
+        if (_bonusType is not null && _bonusType != BonusMaterialReturn && _bonusType != BonusDoubleOutput)
+        {
+            throw new ArgumentException($"合成加成类型只能是“{BonusMaterialReturn}”或“{BonusDoubleOutput}”。", nameof(_bonusType));
         }
     }
 
@@ -243,15 +277,17 @@ public class CraftMaterialTask
     }
 
     /// <summary>
-    /// 确认当前界面是合成界面。
+    /// 确认当前界面是合成界面，最多重试 5 次、间隔 0.3 秒。
     /// </summary>
     /// <exception cref="InvalidOperationException">当前不在合成界面时抛出。</exception>
-    private void EnsureInCraftingUi()
+    private async Task EnsureInCraftingUi()
     {
-        if (!IsInCraftingUi())
+        if (await NewRetry.WaitForAction(IsInCraftingUi, _ct, 5, 500))
         {
-            throw new InvalidOperationException("请先打开合成界面。");
+            return;
         }
+
+        throw new InvalidOperationException("请先打开合成界面。");
     }
 
     /// <summary>
@@ -265,42 +301,88 @@ public class CraftMaterialTask
     }
 
     /// <summary>
+    /// 材料筛选类型的选择结果。
+    /// </summary>
+    private enum FilterSelection
+    {
+        /// <summary>
+        /// 目标类型已处于选中状态，界面未切换筛选。
+        /// </summary>
+        AlreadySelected,
+
+        /// <summary>
+        /// 本次点击切换了筛选类型。
+        /// </summary>
+        Switched,
+
+        /// <summary>
+        /// 未能选择目标筛选类型。
+        /// </summary>
+        Failed
+    }
+
+    /// <summary>
     /// 选择材料筛选类型，失败时抛出异常。
     /// </summary>
     /// <param name="materialType">材料筛选类型。</param>
-    /// <returns>异步任务。</returns>
+    /// <returns>筛选类型的选择结果。</returns>
     /// <exception cref="InvalidOperationException">未找到或无法点击筛选类型时抛出。</exception>
-    private async Task SelectMaterialType(string materialType)
+    private async Task<FilterSelection> SelectMaterialType(string materialType)
     {
-        if (!await TrySelectMaterialType(materialType))
+        var selection = await TrySelectMaterialType(materialType);
+        if (selection == FilterSelection.Failed)
         {
             throw new InvalidOperationException($"未能选择材料筛选类型：{materialType}");
         }
+
+        return selection;
     }
 
     /// <summary>
     /// 在筛选弹窗中选择指定材料类型。
     /// </summary>
     /// <param name="materialType">材料筛选类型。</param>
-    /// <returns>选择成功时返回 true。</returns>
-    private async Task<bool> TrySelectMaterialType(string materialType)
+    /// <returns>筛选类型的选择结果。</returns>
+    private async Task<FilterSelection> TrySelectMaterialType(string materialType)
     {
         try
         {
             var confirmation = await Page.GetByText(materialType, Rect1080(165, 1000, 279, 34)).TryWaitFor(300);
             if (confirmation.Count > 0)
             {
-                return true;
+                return FilterSelection.AlreadySelected;
             }
             await Page.GetByText("筛选", Rect1080(90, 1000, 60, 33)).Click(3000);
             await Page.GetByText(materialType, Rect1080(35, 124, 243, 615)).Click(5000);
-            return true;
+            return FilterSelection.Switched;
         }
         catch (TimeoutException e)
         {
             _logger.LogWarning("选择材料筛选类型 {MaterialType} 超时：{Message}", materialType, e.Message);
-            return false;
+            return FilterSelection.Failed;
         }
+    }
+
+    /// <summary>
+    /// 长按列表区域后向上滚动，把材料列表复位到顶部。
+    /// </summary>
+    /// <returns>异步任务。</returns>
+    private async Task ResetMaterialListScroll()
+    {
+        GameCaptureRegion.GameRegion1080PPosMove(763, 195);
+        await Delay(80, _ct);
+        _input.Mouse.LeftButtonDown();
+        await Delay(1000, _ct);
+        _input.Mouse.LeftButtonUp();
+
+        var deadline = DateTime.Now.AddMilliseconds(500);
+        while (DateTime.Now < deadline) 
+        {
+            _input.Mouse.VerticalScroll(2);
+            await Delay(40, _ct);
+        }
+
+        await Delay(300, _ct);
     }
 
     /// <summary>
@@ -344,7 +426,7 @@ public class CraftMaterialTask
 
                 if (!ConfirmSelectedMaterial())
                 {
-                    _logger.LogWarning("模型识别到 {Name}，但详情区未确认同名材料，继续搜索。", _materialName);
+                    _logger.LogWarning("模型识别到 {Name}，但详情区图标未确认同名材料，继续搜索。", _materialName);
                     continue;
                 }
 
@@ -360,12 +442,74 @@ public class CraftMaterialTask
     }
 
     /// <summary>
-    /// 通过右侧详情区 OCR 确认当前选中材料是否为目标材料。
+    /// 通过右侧详情区图标确认当前选中材料是否为目标材料。
     /// </summary>
-    /// <returns>详情区包含目标材料名时返回 true。</returns>
+    /// <returns>详情区图标识别为目标材料名时返回 true。</returns>
     private bool ConfirmSelectedMaterial()
     {
-        return ContainsText(Rect1080(1139, 112, 401, 39), _materialName);
+        using IItemIconRecognizer itemRecognizer = ItemIconRecognizerFactory.CreateConfigured();
+        using ImageRegion ra = Page.Screenshot();
+        using ImageRegion iconRegion = ra.DeriveCrop(Rect1080(1275, 320, 138, 138));//1080P下右侧目标材料的图标位置，其他分辨率没测
+        using Mat icon = iconRegion.SrcMat.Resize(new Size(125, 125));
+        return itemRecognizer.Recognize(icon) == _materialName;
+    }
+
+    /// <summary>
+    /// 按目标加成类型切换合成加成角色，筛选类型不适用或未拥有对应角色时只记日志。
+    /// </summary>
+    /// <param name="materialType">当前材料筛选类型。</param>
+    /// <param name="bonusType">目标合成加成类型；为空时不切换。</param>
+    /// <returns>异步任务。</returns>
+    /// <exception cref="InvalidOperationException">进入角色选择界面失败或加成未能应用时抛出。</exception>
+    private async Task TrySwitchCraftBonus(string materialType, string? bonusType)
+    {
+        if (bonusType is null)
+        {
+            return;
+        }
+
+        if (!BonusMaterialTypes.Contains(materialType))
+        {
+            _logger.LogInformation("筛选类型 {MaterialType} 没有合成加成角色，跳过加成切换。", materialType);
+            return;
+        }
+
+        var bonusRect = Rect1080(1710, 744, 151, 41);
+        if (ContainsText(bonusRect, bonusType))
+        {
+            _logger.LogInformation("当前合成加成已经是 {BonusType}，无需切换。", bonusType);
+            return;
+        }
+
+        _logger.LogInformation("切换合成加成角色为 {BonusType}。", bonusType);
+        await Page.Flow()
+            .WithDefaultTimeout(5000)
+            .WithDefaultRetryInterval(500)
+            .Click(1600, 860)
+            .UntilText("角色选择", Rect1080(0, 0, 300, 100))
+            .Run();
+        await Delay(300, _ct);
+
+        var effectText = bonusType == BonusDoubleOutput ? "获得2倍产出" : "返还部分合成材料";
+        var target = Page.Ocr(Rect1080(0, 0, 960, 1080))
+            .FirstOrDefault(region => StringUtils.RemoveAllSpace(region.Text).Contains(effectText));
+
+        if (target is null)
+        {
+            _logger.LogWarning("未拥有提供 {BonusType} 加成的角色，退出角色选择界面。", bonusType);
+            await Page.Flow()
+                .Do((Action)(() => Page.Keyboard.KeyPress(Vanara.PInvoke.User32.VK.VK_ESCAPE)))
+                .UntilText("合成", Rect1080(0, 0, 300, 100))
+                .Run();
+            return;
+        }
+
+        target.Click();
+        await Page.Flow()
+            .WithDefaultTimeout(5000)
+            .WithDefaultRetryInterval(500)
+            .WaitUntilText(bonusType, bonusRect)
+            .Run();
     }
 
     /// <summary>
