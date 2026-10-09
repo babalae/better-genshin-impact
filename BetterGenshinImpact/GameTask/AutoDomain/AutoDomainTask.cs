@@ -12,6 +12,7 @@ using BetterGenshinImpact.GameTask.Common.Map;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Notification;
+using BetterGenshinImpact.Service.Notification.Model;
 using BetterGenshinImpact.Core.Mask;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -243,7 +244,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             await Delay(2000, ct);
 
             await ArtifactSalvage();
-            Notify.Event(NotificationEvent.DomainEnd).Success("自动秘境结束");
+            DomainNotificationData.CreateSuccess(NotificationEvent.DomainEnd, "自动秘境结束", _rewardSummary).Send();
             return new Dictionary<string, int>(_rewardSummary);
         }
         finally
@@ -1492,10 +1493,9 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             // 继续向下执行
         }
         
-        Notify.Event(NotificationEvent.DomainReward).Success("自动秘境奖励领取");
-
         Sleep(1000, _ct);
-        await TryRecognizeRewardResult();
+        var rewards = await TryRecognizeRewardResult();
+        DomainNotificationData.CreateSuccess(NotificationEvent.DomainReward, "自动秘境奖励领取", rewards).Send();
 
         for (var i = 0; i < 30; i++)
         {
@@ -1553,11 +1553,15 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         throw new NormalEndException("未检测到秘境结束，可能是背包物品已满。");
     }
 
-    private async Task TryRecognizeRewardResult()
+    /// <summary>
+    /// 识别本轮奖励并计入累计汇总。未启用识别、结果页未就绪或识别失败时返回 null，取消和正常结束异常继续向上抛出。
+    /// </summary>
+    /// <returns>本轮奖励；识别结果可能为空字典，未完成识别时为 null。</returns>
+    private async Task<Dictionary<string, int>?> TryRecognizeRewardResult()
     {
         if (!_taskParam.RewardRecognitionEnabled)
         {
-            return;
+            return null;
         }
 
         try
@@ -1565,7 +1569,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             if (!await WaitForRewardResultReady())
             {
                 Logger.LogWarning("自动秘境：奖励结果页未检测到退出按钮，已跳过本轮奖励识别");
-                return;
+                return null;
             }
 
             // 使用多页识别（自动检测是否需要翻页）
@@ -1583,11 +1587,15 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             {
                 Logger.LogWarning("自动秘境：本轮奖励识别结果为空");
             }
+
+            return rewards;
         }
         catch (Exception e) when (e is not OperationCanceledException and not NormalEndException)
         {
             Logger.LogWarning(e, "自动秘境：奖励识别失败，已跳过本轮奖励汇总");
         }
+
+        return null;
     }
 
     private async Task<bool> WaitForRewardResultReady()
