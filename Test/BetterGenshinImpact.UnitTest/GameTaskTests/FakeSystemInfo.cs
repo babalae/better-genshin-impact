@@ -19,12 +19,13 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests
 
             GameScreenSize = gameScreenSize;
             // 0.28 改动，素材缩放比例不可以超过 1，也就是图像识别时分辨率大于 1920x1080 的情况下直接进行缩放
-            if (GameScreenSize.Width < 1920)
+            // 取宽高相对于 1920x1080 的缩放比中的较小值，和 SystemInfo 保持一致
+            ScaleTo1080PRatio = Math.Min(GameScreenSize.Width / 1920d, GameScreenSize.Height / 1080d); // 1080P 为标准
+            if (ScaleTo1080PRatio < 1)
             {
-                ZoomOutMax1080PRatio = GameScreenSize.Width / 1920d;
+                ZoomOutMax1080PRatio = ScaleTo1080PRatio;
                 AssetScale = ZoomOutMax1080PRatio;
             }
-            ScaleTo1080PRatio = GameScreenSize.Width / 1920d; // 1080P 为标准
         }
 
         public System.Drawing.Size DisplaySize => throw new NotImplementedException();

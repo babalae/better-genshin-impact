@@ -66,18 +66,19 @@ namespace BetterGenshinImpact.GameTask.Model
             }
 
             // 0.28 改动，素材缩放比例不可以超过 1，也就是图像识别时分辨率大于 1920x1080 的情况下直接进行缩放
-            if (GameScreenSize.Width < 1920)
+            // 取宽高相对于 1920x1080 的缩放比中的较小值，保持非 16:9 分辨率下的宽高比不失真
+            ScaleTo1080PRatio = Math.Min(GameScreenSize.Width / 1920d, GameScreenSize.Height / 1080d); // 1080P 为标准
+            if (ScaleTo1080PRatio < 1)
             {
-                ZoomOutMax1080PRatio = GameScreenSize.Width / 1920d;
+                ZoomOutMax1080PRatio = ScaleTo1080PRatio;
                 AssetScale = ZoomOutMax1080PRatio;
             }
-            ScaleTo1080PRatio = GameScreenSize.Width / 1920d; // 1080P 为标准
 
             CaptureAreaRect = viewport.ScreenRect;
-            if (CaptureAreaRect.Width > 1920)
+            if (CaptureAreaRect.Width > 1920 || CaptureAreaRect.Height > 1080)
             {
-                var scale = CaptureAreaRect.Width / 1920d;
-                ScaleMax1080PCaptureRect = new Rect(CaptureAreaRect.X, CaptureAreaRect.Y, 1920, (int)(CaptureAreaRect.Height / scale));
+                var scale = Math.Min(CaptureAreaRect.Width / 1920d, CaptureAreaRect.Height / 1080d);
+                ScaleMax1080PCaptureRect = new Rect(CaptureAreaRect.X, CaptureAreaRect.Y, (int)(CaptureAreaRect.Width / scale), (int)(CaptureAreaRect.Height / scale));
             }
             else
             {

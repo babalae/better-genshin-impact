@@ -6,10 +6,12 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 using BetterGenshinImpact.Service.Notifier;
+using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -59,6 +61,11 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
     [ObservableProperty] private string _xxtuiStatus = string.Empty;
 
     [ObservableProperty] private string _discordStatus = string.Empty;
+
+    /// <summary>
+    ///     Discord Bot 推送目标摘要，显示在设置页
+    /// </summary>
+    [ObservableProperty] private string _discordBotTargetSummary = string.Empty;
 
     [ObservableProperty] private string[] _discordImageEncoderNames =
     [
@@ -133,6 +140,7 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
 
         Config.NotificationConfig.PropertyChanged += OnNotificationConfigPropertyChanged;
         ApplyNotificationEventSelectionFromConfig();
+        UpdateDiscordBotTargetSummary();
 
         // 订阅微信 Clawbot 推送会话过期事件：普通发送（非测试按钮）失败时，
         // 也能及时在设置页状态文本上提示用户如何重新激活推送端口。
@@ -148,6 +156,18 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
     }
 
     public AllConfig Config { get; set; }
+
+    /// <summary>
+    ///     当前 Discord 通知方式是否为 Webhook，用于设置页切换两组配置项的显示。
+    /// </summary>
+    public bool IsDiscordWebhookMode =>
+        !DiscordNotificationModes.IsBot(Config.NotificationConfig.DiscordNotificationMode);
+
+    /// <summary>
+    ///     当前 Discord 通知方式是否为机器人（Bot API）。
+    /// </summary>
+    public bool IsDiscordBotMode =>
+        DiscordNotificationModes.IsBot(Config.NotificationConfig.DiscordNotificationMode);
 
     [RelayCommand]
     private void SelectAllNotificationEvents()
@@ -179,8 +199,27 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
         UpdateNotificationEventSubscribeFromSelection();
     }
 
+    /// <summary>
+    /// 通知配置属性变更回调：Discord 通知方式或推送目标清单变化时刷新界面显示，
+    /// 其余属性只在通知事件订阅变化时重新应用勾选状态。
+    /// </summary>
     private void OnNotificationConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        // 切换 Discord 通知方式时，刷新两组配置项的显示状态
+        if (e.PropertyName == nameof(NotificationConfig.DiscordNotificationMode))
+        {
+            OnPropertyChanged(nameof(IsDiscordWebhookMode));
+            OnPropertyChanged(nameof(IsDiscordBotMode));
+            return;
+        }
+
+        // 推送目标清单变化时刷新摘要文字
+        if (e.PropertyName == nameof(NotificationConfig.DiscordBotTargets))
+        {
+            UpdateDiscordBotTargetSummary();
+            return;
+        }
+
         if (e.PropertyName != nameof(NotificationConfig.NotificationEventSubscribe))
         {
             return;
@@ -485,13 +524,19 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
         IsLoading = false;
     }
 
+    /// <summary>
+    ///     测试 Discord 通知：按当前选择的通知方式测试对应的通知器。
+    ///     未启用时对应通知器不会注册，测试会返回未找到通知器的提示。
+    /// </summary>
     [RelayCommand]
-    private async Task OnTestDiscordWebhookNotification()
+    private async Task OnTestDiscordNotification()
     {
         IsLoading = true;
         DiscordStatus = string.Empty;
 
-        var res = await _notificationService.TestNotifierAsync<DiscordWebhookNotifier>();
+        var res = IsDiscordBotMode
+            ? await _notificationService.TestNotifierAsync<DiscordBotNotifier>()
+            : await _notificationService.TestNotifierAsync<DiscordWebhookNotifier>();
 
         DiscordStatus = res.Message;
 
@@ -502,6 +547,56 @@ public partial class NotificationSettingsPageViewModel : ObservableObject, IView
             Toast.Error(res.Message);
 
         IsLoading = false;
+    }
+
+    /// <summary>
+    ///     打开 Discord 推送目标挑选对话框。
+    ///     确认后整体替换目标清单，让 NotificationConfig 触发属性变更、通知器按新目标重建。
+    /// </summary>
+    [RelayCommand]
+    private void OnManageDiscordTargets()
+    {
+        if (string.IsNullOrWhiteSpace(Config.NotificationConfig.DiscordBotToken))
+        {
+            Toast.Error(I18nService.Instance.Translate("请先填写机器人 Token"));
+            return;
+        }
+
+        var window = new DiscordTargetWindow(
+            Config.NotificationConfig.DiscordBotToken,
+            Config.NotificationConfig.DiscordBotTargets);
+
+        if (window.ShowDialog() != true)
+        {
+            return;
+        }
+
+        Config.NotificationConfig.DiscordBotTargets =
+            new ObservableCollection<DiscordBotTarget>(window.Result);
+        UpdateDiscordBotTargetSummary();
+    }
+
+    /// <summary>
+    ///     刷新 Discord Bot 推送目标摘要。
+    ///     只显示数量与类型分布：目标名称可能很长（频道名 + 服务器名），逐个列出来会把设置页撑乱，
+    ///     具体清单在「管理目标」对话框里查看。
+    /// </summary>
+    private void UpdateDiscordBotTargetSummary()
+    {
+        var targets = Config.NotificationConfig.DiscordBotTargets;
+        if (targets == null || targets.Count == 0)
+        {
+            DiscordBotTargetSummary = I18nService.Instance.Translate("尚未设置推送目标，点击右侧按钮添加");
+            return;
+        }
+
+        var directMessages = targets.Count(target => DiscordBotTargetTypes.IsDirectMessage(target.Type));
+
+        DiscordBotTargetSummary = string.Format(
+            I18nService.Instance.Translate("共 {0} 个目标：{1} 个频道、{2} 个私信"),
+            targets.Count,
+            targets.Count - directMessages,
+            directMessages);
     }
 
     [RelayCommand]

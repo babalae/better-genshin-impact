@@ -64,7 +64,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
     /// <summary>策略为自动连招（LLM 行为树）时为 true：进本前调用 LLM 建树，循环战斗中 Tick 该树</summary>
     private readonly bool _useComboStrategy;
 
-    /// <summary>后台建树任务：队伍识别后启动，与传送进本并行，战斗启动前等待其完成</summary>
+    /// <summary>建树任务：未配置 PartyName 时进本前启动、与传送进本并行；配置了 PartyName 时为 null，进本后切队再启动</summary>
     private Task<ComboTreeSession>? _comboBuildTask;
 
     /// <summary>后台建树的取消源：链接主令牌，秘境流程结束时取消，避免宿主异常退出后建树白跑</summary>
@@ -195,12 +195,15 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         // 建树令牌链接主令牌，秘境流程结束（含异常退出）时在 finally 中取消
         if (_useComboStrategy)
         {
-            var avatars = await AutoComboBuildTask.EnsureMainUiAndRecognizeTeamAsync(Logger, ct);
-            Logger.LogInformation("自动秘境：识别队伍：{Avatars}，后台启动 LLM 建树", string.Join("、", avatars.Select(a => a.Name)));
+            if (string.IsNullOrEmpty(_taskParam.PartyName))
+            {
+                var avatars = await AutoComboBuildTask.EnsureMainUiAndRecognizeTeamAsync(Logger, ct);
+                Logger.LogInformation("自动秘境：识别队伍：{Avatars}，后台启动 LLM 建树", string.Join("、", avatars.Select(a => a.Name)));
 
-            var config = TaskContext.Instance().Config.AutoComboBuildConfig;
-            _comboBuildCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            _comboBuildTask = AutoComboBuildTask.BuildComboTreeAsync(avatars, config, Logger, _comboBuildCts.Token);
+                var config = TaskContext.Instance().Config.AutoComboBuildConfig;
+                _comboBuildCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                _comboBuildTask = AutoComboBuildTask.BuildComboTreeAsync(avatars, config, Logger, _comboBuildCts.Token);
+            }
         }
 
         try
@@ -278,11 +281,23 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                 ESkillCdTracker.Clear();
                 // 自动连招策略：战斗引擎内部初始化队伍，无需TXTSpecific步骤
 
-                if (!_comboBuildTask!.IsCompleted)
+                // PartyName 非空：切队发生在 EnterDomain 的秘境挑战页，
+                // 此时再根据切换后的实际战斗队伍进行构建
+                if (_comboBuildTask == null)
                 {
-                    Logger.LogInformation("自动秘境：{Text}", "0. 等待后台 LLM 建树完成");
+                    var avatars = await AutoComboBuildTask.EnsureMainUiAndRecognizeTeamAsync(Logger, _ct);
+                    Logger.LogInformation("自动秘境：识别队伍：{Avatars}，启动 LLM 建树", string.Join("、", avatars.Select(a => a.Name)));
+
+                    var config = TaskContext.Instance().Config.AutoComboBuildConfig;
+                    _comboBuildCts = CancellationTokenSource.CreateLinkedTokenSource(_ct);
+                    _comboBuildTask = AutoComboBuildTask.BuildComboTreeAsync(avatars, config, Logger, _comboBuildCts!.Token);
                 }
-                await _comboBuildTask!; // 建树失败在此抛出快速结束任务，结果由 StartComboFight 内再次 await 获取
+
+                if (!_comboBuildTask.IsCompleted)
+                {
+                    Logger.LogInformation("自动秘境：{Text}", "0. 等待 LLM 建树完成");
+                }
+                await _comboBuildTask; // 建树失败在此抛出快速结束任务，结果由 StartComboFight 内再次 await 获取
 
                 // 1. 走到钥匙处启动
                 Logger.LogInformation("自动秘境：{Text}", "1. 走到钥匙处启动");
