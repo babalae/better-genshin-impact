@@ -99,10 +99,9 @@ public sealed class ChildSessionService : IDisposable
     }
 
     /// <summary>
-    /// 最近一次启动前环境预检中，是否存在已知会阻止会话建立的问题。
+    /// 最近一次启动前环境预检是否发现了可能影响桌面分身的环境设置。
     /// </summary>
-    public bool HasBlockingEnvironmentIssue =>
-        ChildSessionEnvironmentCheck.HasBlockingIssue(_environmentIssues);
+    public bool HasEnvironmentIssue => _environmentIssues.Count > 0;
 
     /// <summary>
     /// 最近一次启动前环境预检的结论文本，供界面提示与问题排查使用。
@@ -579,15 +578,10 @@ public sealed class ChildSessionService : IDisposable
 
         foreach (var issue in _environmentIssues)
         {
-            var message = $"桌面分身环境预检：{issue.Title}。{issue.Message}";
-            if (issue.Severity == ChildSessionEnvironmentCheck.Severity.Blocking)
-            {
-                _logger.LogWarning("{Message}", message);
-            }
-            else
-            {
-                _logger.LogInformation("{Message}", message);
-            }
+            _logger.LogWarning(
+                "桌面分身环境预检：{IssueTitle}。{IssueMessage}",
+                issue.Title,
+                issue.Message);
         }
     }
 
