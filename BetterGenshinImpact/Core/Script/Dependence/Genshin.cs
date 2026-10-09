@@ -435,10 +435,11 @@ public class Genshin
     /// <param name="materialName">目标成品材料名。</param>
     /// <param name="quantity">目标合成个数，必须大于 0。</param>
     /// <param name="materialType">材料筛选类型；为空时从物品模型 CSV 中读取。</param>
+    /// <param name="bonusType">合成加成角色类型，可为“概率返还素材”或“概率额外产出”；为空时不切换加成。</param>
     /// <returns>合成执行结果。</returns>
-    public async Task<CraftMaterialResult> CraftMaterial(string materialName, int quantity, string? materialType = null)
+    public async Task<CraftMaterialResult> CraftMaterial(string materialName, int quantity, string? materialType = null, string? bonusType = null)
     {
-        return await new CraftMaterialTask(materialName, quantity, materialType).Start(CancellationContext.Instance.Cts.Token);
+        return await new CraftMaterialTask(materialName, quantity, materialType, bonusType).Start(CancellationContext.Instance.Cts.Token);
     }
 
     /// <summary>
