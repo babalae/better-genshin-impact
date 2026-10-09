@@ -123,7 +123,7 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
         ? ResourceCheckError.StartsWith("来源中已移除：", StringComparison.Ordinal) ? "来源中已移除"
         : _model.Resource is not null || _model.Source?.Resource is not null ? "检查失败" : "资源不可用"
         : ReferencedResourceUpdateCount > 0 ? $"{ReferencedResourceUpdateCount} 项有更新"
-        : HasDeclaredVersionChange ? $"{FormatDeclaredVersion(ApprovedDeclaredVersion)} → {FormatDeclaredVersion(CurrentDeclaredVersion)}"
+        : HasDeclaredVersionChange ? $"有更新 {FormatDeclaredVersion(ApprovedDeclaredVersion)} → {FormatDeclaredVersion(CurrentDeclaredVersion)}"
         : "有更新";
 
     /// <summary>标签的具体原因，文件更新必须用户确认后才影响新运行。</summary>

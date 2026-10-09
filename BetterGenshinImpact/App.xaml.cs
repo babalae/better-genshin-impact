@@ -345,8 +345,10 @@ public partial class App : Application
             RegisterEvents();
             await _host.StartAsync();
             ServerTimeHelper.Initialize(_host.Services.GetRequiredService<IServerTimeProvider>());
-            if (InstanceBootstrap.Current.Context.IsRoot)
+            if (InstanceBootstrap.Current?.Context.IsRoot == true)
             {
+                // 宿主启动完成后实例上下文已初始化；主实例尽力清理遗留锁，失败也不影响启动。
+                TryCleanupPuloniaLockFiles();
                 await UrlProtocolHelper.RegisterAsync();
             }
         }
@@ -389,6 +391,31 @@ public partial class App : Application
 
             // 启动失败 = 无可用的主界面，直接退出，避免留下无窗口的残留进程。
             Shutdown();
+        }
+    }
+
+    /// <summary>尽力清理 Pulonia 遗留锁；失败时只记录日志，不影响 BetterGI 启动。</summary>
+    private static void TryCleanupPuloniaLockFiles()
+    {
+        try
+        {
+            // 主实例清理空闲锁，其他实例正在持有的活跃锁会因无法独占打开而保留。
+            var removedLockCount = BetterGenshinImpact.Core.Script.Repositories.ScriptRepositoryStore.Shared
+                .CleanupStaleLockFiles();
+            if (removedLockCount > 0)
+                Log.Information("已清理 {LockFileCount} 个 Pulonia 遗留锁文件。", removedLockCount);
+        }
+        catch (Exception ex)
+        {
+            try
+            {
+                Debug.WriteLine(ex);
+                Log.Warning(ex, "清理 Pulonia 遗留锁文件失败，已跳过且不影响程序启动。");
+            }
+            catch
+            {
+                // 启动早期日志组件也可能不可用，锁清理失败必须保持完全无害。
+            }
         }
     }
 

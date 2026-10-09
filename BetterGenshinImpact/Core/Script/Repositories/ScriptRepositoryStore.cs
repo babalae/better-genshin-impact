@@ -38,6 +38,48 @@ public sealed partial class ScriptRepositoryStore
             throw new ArgumentException("资源版本区与可重置仓库目录不能相互包含。");
     }
 
+    /// <summary>清理启动前遗留且当前未被其他实例持有的跨进程锁文件。</summary>
+    public int CleanupStaleLockFiles()
+    {
+        var directory = Path.Combine(RootDirectory, "Locks");
+        string[] paths;
+        try
+        {
+            if (!Directory.Exists(directory)) return 0;
+            paths = Directory.GetFiles(directory, "*.lock", SearchOption.TopDirectoryOnly);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // 锁目录不可访问不应阻止 BetterGI 启动，后续取得锁时仍会报告真实错误。
+            return 0;
+        }
+
+        var removed = 0;
+        foreach (var path in paths)
+        {
+            if (!IsOwnedLockFile(path)) continue;
+            try
+            {
+                // 独占打开并在关闭句柄时原子删除；其他实例持有或等待同名锁时不会形成两个锁文件。
+                using (new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None, 1,
+                           FileOptions.DeleteOnClose)) { }
+                removed++;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // 活跃锁或瞬时文件竞争必须保留，不能影响其他 BetterGI 实例。
+            }
+        }
+        return removed;
+    }
+
+    /// <summary>检查文件是否符合本存储生成的 SHA-256 锁文件命名格式。</summary>
+    private static bool IsOwnedLockFile(string path)
+    {
+        var name = Path.GetFileNameWithoutExtension(path);
+        return name.Length == 64 && name.All(character => character is >= '0' and <= '9' or >= 'a' and <= 'f');
+    }
+
     /// <summary>取得跨进程来源锁；更新器与读取服务使用相同的短期临界区。</summary>
     public Task<FileStream> EnterSourceAccessAsync(CancellationToken ct = default) => AcquireLockAsync("sources", ct);
 

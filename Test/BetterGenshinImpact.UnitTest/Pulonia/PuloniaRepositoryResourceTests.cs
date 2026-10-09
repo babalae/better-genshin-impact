@@ -82,6 +82,27 @@ public sealed class PuloniaRepositoryResourceTests : IDisposable
         };
     }
 
+    /// <summary>启动清理只删除空闲的程序锁，保留活跃锁和不属于资源存储的文件。</summary>
+    [Fact]
+    public void LockCleanup_RemovesOnlyInactiveOwnedFiles()
+    {
+        var store = CreateStore();
+        var directory = Path.Combine(store.RootDirectory, "Locks");
+        Directory.CreateDirectory(directory);
+        var stale = Path.Combine(directory, new string('a', 64) + ".lock");
+        var active = Path.Combine(directory, new string('b', 64) + ".lock");
+        var foreign = Path.Combine(directory, "readme.lock");
+        File.WriteAllBytes(stale, []);
+        File.WriteAllBytes(active, []);
+        File.WriteAllBytes(foreign, []);
+
+        using var activeGate = new FileStream(active, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        Assert.Equal(1, store.CleanupStaleLockFiles());
+        Assert.False(File.Exists(stale));
+        Assert.True(File.Exists(active));
+        Assert.True(File.Exists(foreign));
+    }
+
     /// <summary>ZIP 导入前必须识别唯一仓库根，并拒绝缺少 indexes 清单的 repo.json。</summary>
     [Fact]
     public async Task RepositoryZipValidation_RequiresValidRepoJson()

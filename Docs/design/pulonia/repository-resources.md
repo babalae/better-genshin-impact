@@ -53,6 +53,8 @@ User/Pulonia/                               原有计划、参数、运行记录
 
 资源数据归属 Pulonia，统一保存到 `User/Pulonia/ScriptResources`，便于和计划、参数及运行记录一起管理和备份。程序直接使用新目录，不迁移或回退读取旧 `User/ScriptResources`；旧数据由用户自行删除。原始拉取来源仍在 `Repos`，添加的本地来源保持自己的位置。
 
+`Locks` 中的 SHA-256 命名空文件只作为跨实例独占句柄，不保存业务数据。BetterGI 宿主启动完成、实例上下文已初始化后，仅主实例尽力清理当前没有被任何实例持有的锁文件；活跃锁因无法独占打开而保留，异常退出产生的残留文件不需要等到正常关闭才能回收。清理与日志记录失败均不得中断程序启动。
+
 `repositories.json` 保存仓库身份、名称、类型、本地目录、远端集合、当前远端和分支；`selection.json` 保存 JS 与地图追踪各自上次选择的仓库。官方渠道与自定义地址继续保存在 `User/config.json` 的 `ScriptConfig` 配置中，保证两个官方更新入口同步。Git 用户名与令牌保存在 Windows 凭据管理器的 `BetterGenshinImpact.GitCredentials` 项中。
 
 仓库注册、版本会话和提取由共享的 `ScriptRepositoryStore` 提供。每次读取会话固定一个版本；索引、检查和提取不重复读取 HEAD 拼接内容。
