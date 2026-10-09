@@ -210,6 +210,10 @@ public partial class ChildSessionWindowViewModel : ViewModel
         OnPropertyChanged(nameof(TopmostButtonToolTip));
     }
 
+    /// <summary>
+    /// 启动桌面分身的命令入口。启动前依次检查 RDP Wrapper 兼容性与环境预检结论，
+    /// 命中时先请用户确认；用户选择不继续则中止启动。
+    /// </summary>
     [RelayCommand]
     private async Task StartAsync()
     {
@@ -223,6 +227,23 @@ public partial class ChildSessionWindowViewModel : ViewModel
                 "RDP Wrapper 兼容性提醒",
                 MessageBoxButton.YesNo,
                 MessageBoxResult.No);
+            if (result != MessageBoxResult.Yes)
+            {
+                return;
+            }
+        }
+
+        if (_childSessionService.ConnectedState != 1
+            && Execute(_childSessionService.RefreshEnvironmentCheck)
+            && _childSessionService.HasEnvironmentIssue)
+        {
+            // 默认按钮为「是」：这些条件只是风险提示，不应该挡住本来可以连上的用户。
+            var result = await ThemedMessageBox.WarningAsync(
+                _childSessionService.EnvironmentIssueSummary
+                + "\n\n检测到可能影响桌面分身的环境设置。是否仍要继续？",
+                "桌面分身环境检查",
+                MessageBoxButton.YesNo,
+                MessageBoxResult.Yes);
             if (result != MessageBoxResult.Yes)
             {
                 return;
