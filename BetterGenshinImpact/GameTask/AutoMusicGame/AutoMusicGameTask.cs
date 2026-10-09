@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Simulator;
+﻿using BetterGenshinImpact.Core.Input;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -90,7 +90,7 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
         }
         finally
         {
-            Simulation.ReleaseAllKey();
+            InputHub.ReleaseAll();
             Logger.LogInformation("结束自动演奏");
         }
     }
@@ -295,12 +295,12 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
 
     private void KeyUp(User32.VK key)
     {
-        Simulation.SendInput.Keyboard.KeyUp(key);
+        InputHub.Foreground.Keyboard.KeyUp(key);
     }
 
     private void KeyDown(User32.VK key)
     {
-        Simulation.SendInput.Keyboard.KeyDown(key);
+        InputHub.Foreground.Keyboard.KeyDown(key);
     }
 
     public static void Init()

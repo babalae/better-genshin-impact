@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -19,6 +19,7 @@ using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.FarmingPlan;
 using BetterGenshinImpact.GameTask.LogParse;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.GameTask.TaskProgress;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
@@ -32,6 +33,13 @@ public partial class ScriptService : IScriptService
 {
     private readonly ILogger<ScriptService> _logger = App.GetLogger<ScriptService>();
     private readonly BlessingOfTheWelkinMoonTask _blessingOfTheWelkinMoonTask = new();
+    private readonly TaskTriggerDispatcher _triggers;
+
+    public ScriptService(TaskTriggerDispatcher triggers)
+    {
+        _triggers = triggers;
+    }
+
     private static bool IsCurrentHourEqual(string input)
     {
         // 尝试将输入字符串转换为整数
@@ -335,7 +343,7 @@ public partial class ScriptService : IScriptService
                         {
                             try
                             {
-                                TaskTriggerDispatcher.Instance().ClearTriggers();
+                                _triggers.ClearTriggers();
 
 
                                 _logger.LogInformation("------------------------------");
@@ -515,7 +523,7 @@ public partial class ScriptService : IScriptService
 
     private async Task ExecuteProject(ScriptGroupProject project)
     {
-        TaskContext.Instance().CurrentScriptProject = project;
+        RunnerContext.Instance.CurrentScriptProject = project;
         if (project.Type == "Javascript")
         {
             if (project.Project == null)
@@ -605,10 +613,11 @@ public partial class ScriptService : IScriptService
     public static async Task StartGameTask(bool waitForMainUi = true)
     {
         // 没启动时候，启动截图器
-        var homePageViewModel = App.GetService<HomePageViewModel>();
-        if (!homePageViewModel!.TaskDispatcherEnabled)
+        // 静态方法无法构造注入（调用方包括直接 new 出来的 TaskRunner），这里从容器取服务
+        var gameRuntimeService = App.GetService<GameRuntimeService>()!;
+        if (!gameRuntimeService.IsRunning)
         {
-            await homePageViewModel.OnStartTriggerAsync();
+            await gameRuntimeService.StartAsync();
 
             if (waitForMainUi)
             {
@@ -626,7 +635,7 @@ public partial class ScriptService : IScriptService
                             return;
                         }
 
-                        if (!homePageViewModel.TaskDispatcherEnabled || !TaskContext.Instance().IsInitialized)
+                        if (!gameRuntimeService.IsRunning || !TaskContext.Instance().IsInitialized)
                         {
                             await Task.Delay(500);
                             continue;

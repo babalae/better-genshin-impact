@@ -1,238 +1,78 @@
-using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Core.Recognition.OpenCv;
-using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.Genshin.Settings;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.DpiAwareness;
-using BetterGenshinImpact.Helpers.Ui;
-using BetterGenshinImpact.View.Drawable;
+using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.ViewModel;
 using Microsoft.Extensions.Logging;
 using Serilog.Sinks.RichTextBox.Abstraction;
 using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Globalization;
-using System.IO;
-using System.Linq;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
-using System.Windows.Interop;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Threading;
-using BetterGenshinImpact.Genshin.Settings2;
-using BetterGenshinImpact.Model.MaskMap;
-using BetterGenshinImpact.ViewModel;
-using BetterGenshinImpact.View.Windows;
+using System.Windows.Interop;
 using Vanara.PInvoke;
-using FontFamily = System.Windows.Media.FontFamily;
 
 namespace BetterGenshinImpact.View;
 
 /// <summary>
-/// 一个用于覆盖在游戏窗口上的窗口，用于显示识别结果、显示日志、设置区域位置等
-/// 请使用 Instance 方法获取单例
+/// 覆盖在游戏窗口上的遮罩窗口，用于显示识别结果、日志、状态、指标、地图点位等。
+/// 只能由 IMaskWindowHost 通过 DI 创建；View 层以外的代码不应引用本类型。
 /// </summary>
 public partial class MaskWindow : Window
 {
-    private static MaskWindow? _maskWindow;
+    private readonly MaskWindowViewModel _viewModel;
+    private readonly IRichTextBox _richTextBox;
+    private readonly ILogger<MaskWindow> _logger;
 
-    private static readonly Typeface _typeface;
-    private static readonly Typeface _fgiTypeface;
-
-    private MaskWindowViewModel? _viewModel;
-
-    private IRichTextBox? _richTextBox;
-
-    private readonly ILogger<MaskWindow> _logger = App.GetLogger<MaskWindow>();
-
-    private MaskWindowConfig? _maskWindowConfig;
-    private BitmapSource? _crosshairImage;
     private MapLabelSearchWindow? _mapLabelSearchWindow;
     private CancellationTokenSource? _mapLabelCategorySelectCts;
+
     static MaskWindow()
     {
-        if (Application.Current.TryFindResource("TextThemeFontFamily") is FontFamily fontFamily)
-        {
-            _typeface = fontFamily.GetTypefaces().First();
-        }
-        else
-        {
-            _typeface = new FontFamily("Microsoft Yahei UI").GetTypefaces().First();
-        }
-
-        try
-        {
-            _fgiTypeface = new FontFamily(new Uri("pack://application:,,,/"), "./Resources/Fonts/Fgi-Regular.ttf#Fgi-Regular").GetTypefaces().First();
-        }
-        catch
-        {
-            _fgiTypeface = _typeface;
-        }
-
         DefaultStyleKeyProperty.OverrideMetadata(typeof(MaskWindow), new FrameworkPropertyMetadata(typeof(MaskWindow)));
     }
 
-    public static MaskWindow Instance()
+    public MaskWindow(MaskWindowViewModel viewModel, IRichTextBox richTextBox, ILogger<MaskWindow> logger)
     {
-        if (_maskWindow == null)
-        {
-            throw new Exception("MaskWindow 未初始化");
-        }
-
-        return _maskWindow;
-    }
-    
-    public static MaskWindow? InstanceNullable()
-    {
-        return _maskWindow;
-    }
-
-    public bool IsExist()
-    {
-        return _maskWindow != null && PresentationSource.FromVisual(_maskWindow) != null;
-    }
-
-    public void BringToTop()
-    {
-        User32.BringWindowToTop(new WindowInteropHelper(this).Handle);
-    }
-
-    public void RefreshPosition()
-    {
-        RefreshPositionForNormal();
-    }
-
-    public void RefreshPositionForNormal()
-    {
-        var currentRect = SystemControl.GetCaptureRect(TaskContext.Instance().GameHandle);
-
-        Invoke(() =>
-        {
-            double dpiScale = DpiHelper.ScaleY;
-
-            Left = currentRect.Left / dpiScale;
-            Top = currentRect.Top / dpiScale;
-            Width = currentRect.Width / dpiScale;
-            Height = currentRect.Height / dpiScale;
-            BringToTop();
-        });
-    }
-
-    public MaskWindow()
-    {
-        _maskWindow = this;
+        _viewModel = viewModel;
+        _richTextBox = richTextBox;
+        _logger = logger;
+        DataContext = viewModel;
 
         this.SetResourceReference(StyleProperty, typeof(MaskWindow));
         InitializeComponent();
-        this.DpiChanged += OnWindowDpiChanged;
         this.InitializeDpiAwareness();
 
         LogTextBox.TextChanged += LogTextBoxTextChanged;
-        //AddAreaSettingsControl("测试识别窗口");
         Loaded += OnLoaded;
-        IsVisibleChanged += MaskWindowOnIsVisibleChanged;
-        StateChanged += MaskWindowOnStateChanged;
-    }
-
-    private void MaskWindowOnIsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
-    {
-        if (IsVisible)
-        {
-            return;
-        }
-
-        if (DataContext is MaskWindowViewModel vm)
-        {
-            vm.PointInfoPopup.CloseCommand.Execute(null);
-            vm.IsMapPointPickerOpen = false;
-        }
-
-        if (_mapLabelSearchWindow != null)
-        {
-            _mapLabelSearchWindow.Hide();
-        }
-    }
-
-    private void MaskWindowOnStateChanged(object? sender, EventArgs e)
-    {
-        if (WindowState != WindowState.Minimized)
-        {
-            return;
-        }
-
-        if (DataContext is MaskWindowViewModel vm)
-        {
-            vm.PointInfoPopup.CloseCommand.Execute(null);
-            vm.IsMapPointPickerOpen = false;
-        }
-    }
-
-    private void OnWindowDpiChanged(object? sender, DpiChangedEventArgs e)
-    {
-        if (DataContext is MaskWindowViewModel vm)
-        {
-            vm.OnDpiChanged(e.NewDpi.DpiScaleY);
-        }
+        _viewModel.PropertyChanged += ViewModelOnPropertyChanged;
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        _richTextBox = App.GetService<IRichTextBox>();
-        if (_richTextBox != null)
-        {
-            _richTextBox.RichTextBox = LogTextBox;
-        }
-
-        _maskWindowConfig = TaskContext.Instance().Config.MaskWindowConfig;
-        _maskWindowConfig.PropertyChanged += MaskWindowConfigOnPropertyChanged;
-        LoadCrosshairImage();
-
-        _viewModel = DataContext as MaskWindowViewModel;
-        if (_viewModel != null)
-        {
-            _viewModel.PropertyChanged += ViewModelOnPropertyChanged;
-        }
-
-        UpdateClickThroughState();
-
-        RefreshPosition();
-        PrintSystemInfo();
-
-        PointsCanvasControl.ViewportChanged += PointsCanvasControlOnViewportChanged;
+        _richTextBox.RichTextBox = LogTextBox;
     }
 
-    private void PointsCanvasControlOnViewportChanged(object? sender, EventArgs e)
+    protected override void OnSourceInitialized(EventArgs e)
     {
-        if (_viewModel != null)
-        {
-            _viewModel.PointInfoPopup.CloseCommand.Execute(null);
-            _viewModel.IsMapPointPickerOpen = false;
-        }
+        // 先设置窗口样式，再触发 SourceInitialized，保证 WindowClickThroughBehavior 最后应用点击穿透状态
+        this.SetLayeredWindow();
+        this.SetChildWindow();
+        this.HideFromAltTab();
+        base.OnSourceInitialized(e);
     }
 
     protected override void OnClosed(EventArgs e)
     {
-        this.DpiChanged -= OnWindowDpiChanged;
-        PointsCanvasControl.ViewportChanged -= PointsCanvasControlOnViewportChanged;
-        IsVisibleChanged -= MaskWindowOnIsVisibleChanged;
-        StateChanged -= MaskWindowOnStateChanged;
+        _viewModel.PropertyChanged -= ViewModelOnPropertyChanged;
+        LogTextBox.TextChanged -= LogTextBoxTextChanged;
 
-        if (_maskWindowConfig != null)
-        {
-            _maskWindowConfig.PropertyChanged -= MaskWindowConfigOnPropertyChanged;
-        }
-
-        if (_viewModel != null)
-        {
-            _viewModel.PropertyChanged -= ViewModelOnPropertyChanged;
-        }
+        _mapLabelCategorySelectCts?.Cancel();
+        _mapLabelCategorySelectCts?.Dispose();
+        _mapLabelCategorySelectCts = null;
 
         if (_mapLabelSearchWindow != null)
         {
@@ -243,117 +83,17 @@ public partial class MaskWindow : Window
         base.OnClosed(e);
     }
 
-    private void MaskWindowConfigOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(MaskWindowConfig.OverlayLayoutEditEnabled))
-        {
-            Dispatcher.Invoke(UpdateClickThroughState);
-        }
-        if (e.PropertyName == nameof(MaskWindowConfig.CrosshairImagePath))
-        {
-            LoadCrosshairImage();
-        }
-        Dispatcher.Invoke(InvalidateVisual);
-    }
-
+    /// <summary>
+    /// 点位选择器关闭时，同步隐藏它弹出的搜索窗口（搜索窗口是本视图自己持有的子窗口）
+    /// </summary>
     private void ViewModelOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(MaskWindowViewModel.IsInBigMapUi) ||
-            e.PropertyName == nameof(MaskWindowViewModel.IsMapPointPickerOpen))
+        if (e.PropertyName == nameof(MaskWindowViewModel.IsMapPointPickerOpen)
+            && !_viewModel.IsMapPointPickerOpen
+            && _mapLabelSearchWindow != null)
         {
-            Dispatcher.Invoke(UpdateClickThroughState);
-            // 地图状态变化后重绘，立即移除/恢复准星，避免关闭穿透时旧准星画面残留拦截点击
-            Dispatcher.Invoke(InvalidateVisual);
+            _ = Dispatcher.InvokeAsync(() => _mapLabelSearchWindow?.Hide());
         }
-
-        if (e.PropertyName == nameof(MaskWindowViewModel.IsMapPointPickerOpen))
-        {
-            if (_viewModel?.IsMapPointPickerOpen != true && _mapLabelSearchWindow != null)
-            {
-                Dispatcher.Invoke(() => _mapLabelSearchWindow.Hide());
-            }
-        }
-
-    }
-
-    private void UpdateClickThroughState()
-    {
-        try
-        {
-            var editEnabled = TaskContext.Instance().Config.MaskWindowConfig.OverlayLayoutEditEnabled;
-            var inBigMapUi = _viewModel?.IsInBigMapUi == true;
-        
-            if (editEnabled)
-            {
-                this.SetClickThrough(false);
-                return;
-            }
-        
-            this.SetClickThrough(!inBigMapUi);
-        }
-        catch
-        {
-            this.SetClickThrough(true);
-        }
-    }
-
-    private void PrintSystemInfo()
-    {
-        _logger.LogInformation("更好的原神 {Version}", Global.Version);
-        var systemInfo = TaskContext.Instance().SystemInfo;
-        var width = systemInfo.GameScreenSize.Width;
-        var height = systemInfo.GameScreenSize.Height;
-        var dpiScale = TaskContext.Instance().DpiScale;
-        _logger.LogInformation("遮罩窗口已启动，游戏大小{Width}x{Height}，素材缩放{Scale}，DPI缩放{Dpi}",
-            width, height, systemInfo.AssetScale.ToString("F"), dpiScale);
-
-        if (width * 9 != height * 16)
-        {
-            _logger.LogError("当前游戏分辨率不是16:9，一条龙、配队识别、地图传送、地图追踪等所有独立任务与全自动任务相关功能，都将会无法正常使用！");
-        }
-
-        AfterburnerWarning();
-
-        // 读取游戏注册表配置
-        GameSettingsChecker.LoadGameSettingsAndCheck();
-    }
-
-    /**
-     * MSIAfterburner.exe 在左上角会导致识别失败
-     */
-    private void AfterburnerWarning()
-    {
-        if (Process.GetProcessesByName("MSIAfterburner").Length > 0)
-        {
-            _logger.LogWarning("检测到 MSI Afterburner 正在运行，如果信息位于特定UI上遮盖图像识别要素可能导致识别失败，请关闭MSI Afterburner 或者调整信息位置后重试！");
-        }
-    }
-
-    // private void ReadGameSettings()
-    // {
-    //     try
-    //     {
-    //         SettingsContainer settings = new();
-    //         TaskContext.Instance().GameSettings = settings;
-    //         var lang = settings.Language?.TextLang;
-    //         if (lang != null && lang != TextLanguage.SimplifiedChinese)
-    //         {
-    //             _logger.LogWarning("当前游戏语言{Lang}不是简体中文，部分功能可能无法正常使用。The game language is not Simplified Chinese, some functions may not work properly", lang);
-    //         }
-    //     }
-    //     catch (Exception e)
-    //     {
-    //         _logger.LogWarning("游戏注册表配置信息读取失败：" + e.Source + "\r\n--" + Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
-    //     }
-    // }
-
-    protected override void OnSourceInitialized(EventArgs e)
-    {
-        base.OnSourceInitialized(e);
-        this.SetLayeredWindow();
-        this.SetChildWindow();
-        this.HideFromAltTab();
-        UpdateClickThroughState();
     }
 
     private void LogTextBoxTextChanged(object sender, TextChangedEventArgs e)
@@ -374,15 +114,10 @@ public partial class MaskWindow : Window
 
     private void MapLabelSearchTextBox_OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (DataContext is not MaskWindowViewModel vm)
-        {
-            return;
-        }
-
         if (_mapLabelSearchWindow == null)
         {
             _mapLabelSearchWindow = new MapLabelSearchWindow();
-            _mapLabelSearchWindow.AttachViewModel(vm);
+            _mapLabelSearchWindow.AttachViewModel(_viewModel);
         }
 
         var textbox = (FrameworkElement)sender;
@@ -424,350 +159,21 @@ public partial class MaskWindow : Window
 
         MapLabelCategoriesListView.SelectedItem = item;
 
-        if (DataContext is MaskWindowViewModel vm)
-        {
-            _mapLabelCategorySelectCts?.Cancel();
-            _mapLabelCategorySelectCts?.Dispose();
-            _mapLabelCategorySelectCts = new CancellationTokenSource();
-            _ = SelectMapLabelCategoryAsync(vm, item, _mapLabelCategorySelectCts.Token);
-        }
+        _mapLabelCategorySelectCts?.Cancel();
+        _mapLabelCategorySelectCts?.Dispose();
+        _mapLabelCategorySelectCts = new CancellationTokenSource();
+        _ = SelectMapLabelCategoryAsync(item, _mapLabelCategorySelectCts.Token);
     }
 
-    private async Task SelectMapLabelCategoryAsync(MaskWindowViewModel vm, MapLabelCategoryVm item, CancellationToken ct)
+    private async Task SelectMapLabelCategoryAsync(MapLabelCategoryVm item, CancellationToken ct)
     {
         try
         {
-            await vm.SelectMapLabelCategoryCommand.ExecuteAsync(item);
+            await _viewModel.SelectMapLabelCategoryCommand.ExecuteAsync(item);
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)
         {
             _logger.LogWarning(ex, "切换地图标点分类时发生异常");
-        }
-    }
-
-    public void Refresh()
-    {
-        Dispatcher.Invoke(InvalidateVisual);
-    }
-
-    public void Invoke(Action action)
-    {
-        try
-        {
-            Dispatcher.Invoke(action);
-        }
-        catch (TaskCanceledException)
-        {
-        }
-        catch (OperationCanceledException)
-        {
-        }
-    }
-    
-    public void BeginInvoke(Action action)
-    {
-        try
-        {
-            Dispatcher.BeginInvoke(action);
-        }
-        catch (TaskCanceledException)
-        {
-        }
-        catch (OperationCanceledException)
-        {
-        }
-    }
-
-    public void HideSelf()
-    {
-        if (TaskContext.Instance().Config.MaskWindowConfig.OverlayLayoutEditEnabled)
-        {
-            return;
-        }
-
-        this.Hide();
-    }
-
-    protected override void OnRender(DrawingContext drawingContext)
-    {
-        try
-        {
-            // 准星渲染（先绘制，低于其他所有遮罩内容）
-            DrawCrosshair(drawingContext);
-
-            var cnt = VisionContext.Instance().DrawContent.RectList.Count + VisionContext.Instance().DrawContent.LineList.Count + VisionContext.Instance().DrawContent.TextList.Count;
-            if (cnt == 0)
-            {
-                return;
-            }
-
-            var maskConfig = TaskContext.Instance().Config.MaskWindowConfig;
-            if (!maskConfig.DisplayRecognitionResultsOnMask)
-            {
-                return;
-            }
-
-            if (maskConfig.DisplayRecognitionResultsOnMask)
-            {
-                foreach (var kv in VisionContext.Instance().DrawContent.RectList)
-                {
-                    foreach (var drawable in kv.Value)
-                    {
-                        if (!drawable.IsEmpty)
-                        {
-                            var pen = maskConfig.RecognitionUseDrawableStyle
-                                ? new Pen(OverlayStyleHelper.CreateBrush(maskConfig.RecognitionRectStrokeColor, Colors.Red), Math.Max(0, maskConfig.RecognitionRectStrokeThickness))
-                                : new Pen(new SolidColorBrush(drawable.Pen.Color.ToWindowsColor()), drawable.Pen.Width);
-
-                            drawingContext.DrawRectangle(
-                                Brushes.Transparent,
-                                pen,
-                                drawable.Rect);
-                        }
-                    }
-                }
-
-                foreach (var kv in VisionContext.Instance().DrawContent.LineList)
-                {
-                    foreach (var drawable in kv.Value)
-                    {
-                        var pen = maskConfig.RecognitionUseDrawableStyle
-                            ? new Pen(OverlayStyleHelper.CreateBrush(maskConfig.RecognitionLineStrokeColor, Colors.Red), Math.Max(0, maskConfig.RecognitionLineStrokeThickness))
-                            : new Pen(new SolidColorBrush(drawable.Pen.Color.ToWindowsColor()), drawable.Pen.Width);
-
-                        drawingContext.DrawLine(pen, drawable.P1, drawable.P2);
-                    }
-                }
-
-                foreach (var kv in VisionContext.Instance().DrawContent.TextList)
-                {
-                    bool isSkillCd = kv.Key == "SkillCdText";
-                    var systemInfo = TaskContext.Instance().SystemInfo;
-                    var scaleTo1080 = systemInfo.ScaleTo1080PRatio;
-
-                    foreach (var drawable in kv.Value)
-                    {
-                        if (!drawable.IsEmpty)
-                        {
-                            var pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
-                            var renderPoint = new Point(drawable.Point.X / pixelsPerDip, drawable.Point.Y / pixelsPerDip);
-
-                            if (isSkillCd)
-                            {
-                                var skillConfigScale = TaskContext.Instance().Config.SkillCdConfig.Scale;
-                                double scaledFontSize = (26 * scaleTo1080 * skillConfigScale) / pixelsPerDip;
-                                var mediumTypeface = new Typeface(_fgiTypeface.FontFamily, _fgiTypeface.Style, FontWeights.Medium, _fgiTypeface.Stretch);
-                                bool isZeroCd =
-                                    double.TryParse(drawable.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var cdValue)
-                                    && Math.Abs(cdValue) < 0.8;
-
-                                var skillConfig = TaskContext.Instance().Config.SkillCdConfig;
-                                string textColorStr = isZeroCd ? skillConfig.TextReadyColor : skillConfig.TextNormalColor;
-                                string bgColorStr = isZeroCd ? skillConfig.BackgroundReadyColor : skillConfig.BackgroundNormalColor;
-
-                                Color textColor = ParseColor(textColorStr) ?? (isZeroCd ? Color.FromRgb(93, 204, 23) : Color.FromRgb(218, 74, 35));
-                                Color bgColor = ParseColor(bgColorStr) ?? Colors.White;
-
-                                Brush textBrush = new SolidColorBrush(textColor);
-                                Brush bgBrush = new SolidColorBrush(bgColor);
-
-                                var formattedText = new FormattedText(
-                                    drawable.Text,
-                                    CultureInfo.GetCultureInfo("zh-cn"),
-                                    FlowDirection.LeftToRight,
-                                    mediumTypeface,
-                                    scaledFontSize,
-                                    textBrush,
-                                    pixelsPerDip);
-
-                                double px = (6 * scaleTo1080 * skillConfigScale) / pixelsPerDip;
-                                double py = (2 * scaleTo1080 * skillConfigScale) / pixelsPerDip;
-                                double radius = (5 * scaleTo1080 * skillConfigScale) / pixelsPerDip;
-                                var bgRect = new Rect(renderPoint.X - px, renderPoint.Y - py, formattedText.Width + px * 2, formattedText.Height + py * 2);
-                                drawingContext.DrawRoundedRectangle(bgBrush, null, bgRect, radius, radius);
-                                drawingContext.DrawText(formattedText, renderPoint);
-                            }
-                            else
-                            {
-                                double defaultFontSize = (Math.Max(1, maskConfig.RecognitionTextFontSize) * scaleTo1080) / pixelsPerDip;
-                                var textBrush = drawable.Color.HasValue
-                                    ? new SolidColorBrush(drawable.Color.Value)
-                                    : OverlayStyleHelper.CreateBrush(maskConfig.RecognitionTextColor, Colors.Black);
-                                drawingContext.DrawText(new FormattedText(drawable.Text,
-                                    CultureInfo.GetCultureInfo("zh-cn"),
-                                    FlowDirection.LeftToRight,
-                                    _typeface,
-                                    defaultFontSize,
-                                    textBrush,
-                                    pixelsPerDip), renderPoint);
-                            }
-                        }
-                    }
-                }
-            }
-
-        }
-        catch (Exception e)
-        {
-            Debug.WriteLine(e);
-        }
-
-        base.OnRender(drawingContext);
-    }
-
-    public RichTextBox LogBox => LogTextBox;
-
-    /// <summary>
-    /// 解析颜色字符串（支持RGB和RGBA的16进制表示）
-    /// </summary>
-    /// <param name="colorStr">颜色字符串，如 #RRGGBB 或 #RRGGBBAA</param>
-    /// <returns>解析后的Color，失败返回null</returns>
-    private static Color? ParseColor(string colorStr)
-    {
-        if (string.IsNullOrWhiteSpace(colorStr))
-        {
-            return null;
-        }
-
-        try
-        {
-            string hex = colorStr.Trim().TrimStart('#');
-
-            // 支持 #RRGGBB 或 #RRGGBBAA 格式
-            if (hex.Length == 6)
-            {
-                // RGB格式
-                byte r = byte.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
-                byte g = byte.Parse(hex.Substring(2, 2), System.Globalization.NumberStyles.HexNumber);
-                byte b = byte.Parse(hex.Substring(4, 2), System.Globalization.NumberStyles.HexNumber);
-                return Color.FromArgb(255, r, g, b); // Alpha = 255 (完全不透明)
-            }
-            else if (hex.Length == 8)
-            {
-                // RGBA格式
-                byte r = byte.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber);
-                byte g = byte.Parse(hex.Substring(2, 2), System.Globalization.NumberStyles.HexNumber);
-                byte b = byte.Parse(hex.Substring(4, 2), System.Globalization.NumberStyles.HexNumber);
-                byte a = byte.Parse(hex.Substring(6, 2), System.Globalization.NumberStyles.HexNumber);
-                return Color.FromArgb(a, r, g, b);
-            }
-        }
-        catch (Exception)
-        {
-            // 解析失败，返回null
-        }
-
-        return null;
-    }
-
-    private void DrawCrosshair(DrawingContext dc)
-    {
-        var config = _maskWindowConfig;
-        if (config == null || !config.CrosshairEnabled) return;
-
-        // 窗口关闭点击穿透时（地图界面/遮罩布局编辑），WPF 分层窗口按像素 alpha 做命中测试，
-        // 准星非透明像素会拦截鼠标点击，故此时跳过准星绘制
-        var editEnabled = TaskContext.Instance().Config.MaskWindowConfig.OverlayLayoutEditEnabled;
-        if (editEnabled || _viewModel?.IsInBigMapUi == true) return;
-
-        var centerX = ActualWidth / 2;
-        var centerY = ActualHeight / 2;
-        var color = ParseColor(config.CrosshairColor) ?? Colors.White;
-        var brush = new SolidColorBrush(color);
-
-        switch (config.CrosshairType)
-        {
-            case CrosshairType.Crosshair:
-            {
-                var half = config.CrosshairSize / 2.0;
-                var pen = new Pen(brush, config.CrosshairLineWidth);
-                dc.DrawLine(pen, new Point(centerX - half, centerY), new Point(centerX + half, centerY));
-                dc.DrawLine(pen, new Point(centerX, centerY - half), new Point(centerX, centerY + half));
-                break;
-            }
-            case CrosshairType.Diagonal:
-            {
-                var half = config.CrosshairSize / 2.0;
-                var pen = new Pen(brush, config.CrosshairLineWidth);
-                var d = half * 0.7071; // cos(45°) = sin(45°) ≈ 0.7071
-                // Southeast direction (down-right)
-                dc.DrawLine(pen, new Point(centerX, centerY), new Point(centerX + d, centerY + d));
-                // Southwest direction (down-left)
-                dc.DrawLine(pen, new Point(centerX, centerY), new Point(centerX - d, centerY + d));
-                // Fill center gap from diagonal line cap intersection
-                var dotRadius = Math.Max(config.CrosshairLineWidth / 2.0, 2.0);
-                dc.DrawEllipse(brush, null, new Point(centerX, centerY), dotRadius, dotRadius);
-                break;
-            }
-            case CrosshairType.Dot:
-            {
-                var pen = new Pen(brush, config.CrosshairLineWidth);
-                var radius = config.CrosshairSize / 2.0;
-                dc.DrawEllipse(null, pen, new Point(centerX, centerY), radius, radius);
-                var dotRadius = Math.Max(config.CrosshairLineWidth / 2.0, 2.0);
-                dc.DrawEllipse(brush, null, new Point(centerX, centerY), dotRadius, dotRadius);
-                break;
-            }
-            case CrosshairType.DotCrosshair:
-            {
-                var halfLine = config.CrosshairSize / 2.0;
-                var gap = config.CrosshairGap;
-                var outer = gap + halfLine;
-                var pen = new Pen(brush, config.CrosshairLineWidth);
-                // Center dot
-                var dotRadius = Math.Max(config.CrosshairLineWidth / 2.0, 2.0);
-                dc.DrawEllipse(brush, null, new Point(centerX, centerY), dotRadius, dotRadius);
-                // Crosshair lines with gap
-                dc.DrawLine(pen, new Point(centerX - outer, centerY), new Point(centerX - gap, centerY));
-                dc.DrawLine(pen, new Point(centerX + gap, centerY), new Point(centerX + outer, centerY));
-                dc.DrawLine(pen, new Point(centerX, centerY - outer), new Point(centerX, centerY - gap));
-                dc.DrawLine(pen, new Point(centerX, centerY + gap), new Point(centerX, centerY + outer));
-                break;
-            }
-            case CrosshairType.Custom:
-            {
-                var image = _crosshairImage;
-                if (image == null) return;
-                if (config.CrosshairScaleMode == CrosshairScaleMode.Fit)
-                {
-                    var scale = Math.Min(ActualWidth / image.Width, ActualHeight / image.Height);
-                    var width = image.Width * scale;
-                    var height = image.Height * scale;
-                    var left = (ActualWidth - width) / 2;
-                    var top = (ActualHeight - height) / 2;
-                    dc.DrawImage(image, new Rect(left, top, width, height));
-                }
-                else
-                {
-                    var left = centerX - image.Width / 2;
-                    var top = centerY - image.Height / 2;
-                    dc.DrawImage(image, new Rect(left, top, image.Width, image.Height));
-                }
-                break;
-            }
-        }
-    }
-
-    private void LoadCrosshairImage()
-    {
-        try
-        {
-            if (_maskWindowConfig != null && !string.IsNullOrEmpty(_maskWindowConfig.CrosshairImagePath)
-                && System.IO.File.Exists(_maskWindowConfig.CrosshairImagePath))
-            {
-                using var stream = File.OpenRead(_maskWindowConfig.CrosshairImagePath);
-                var image = BitmapFrame.Create(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
-                image.Freeze();
-                _crosshairImage = image;
-            }
-            else
-            {
-                _crosshairImage = null;
-            }
-        }
-        catch
-        {
-            _crosshairImage = null;
         }
     }
 }
@@ -776,54 +182,25 @@ file static class MaskWindowExtension
 {
     public static void HideFromAltTab(this Window window)
     {
-        HideFromAltTab(new WindowInteropHelper(window).Handle);
-    }
-
-    public static void HideFromAltTab(nint hWnd)
-    {
+        var hWnd = new WindowInteropHelper(window).Handle;
         int style = User32.GetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE);
-
         style |= (int)User32.WindowStylesEx.WS_EX_TOOLWINDOW;
         User32.SetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE, style);
     }
 
-    public static void SetLayeredWindow(this Window window, bool isLayered = true)
+    public static void SetLayeredWindow(this Window window)
     {
-        SetLayeredWindow(new WindowInteropHelper(window).Handle, isLayered);
-    }
-
-    private static void SetLayeredWindow(nint hWnd, bool isLayered = true)
-    {
+        var hWnd = new WindowInteropHelper(window).Handle;
         int style = User32.GetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE);
-
-        if (isLayered)
-        {
-            style |= (int)User32.WindowStylesEx.WS_EX_TRANSPARENT;
-            style |= (int)User32.WindowStylesEx.WS_EX_LAYERED;
-        }
-        else
-        {
-            style &= ~(int)User32.WindowStylesEx.WS_EX_TRANSPARENT;
-            style &= ~(int)User32.WindowStylesEx.WS_EX_LAYERED;
-        }
-
+        style |= (int)User32.WindowStylesEx.WS_EX_TRANSPARENT;
+        style |= (int)User32.WindowStylesEx.WS_EX_LAYERED;
         _ = User32.SetWindowLong(hWnd, User32.WindowLongFlags.GWL_EXSTYLE, style);
     }
 
-    public static void SetClickThrough(this Window window, bool isClickThrough)
-    {
-        SetLayeredWindow(new WindowInteropHelper(window).Handle, isClickThrough);
-    }
-    
     public static void SetChildWindow(this Window window)
     {
-        SetChildWindow(new WindowInteropHelper(window).Handle);
-    }
-
-    private static void SetChildWindow(nint hWnd)
-    {
+        var hWnd = new WindowInteropHelper(window).Handle;
         int style = User32.GetWindowLong(hWnd, User32.WindowLongFlags.GWL_STYLE);
-
         style |= (int)User32.WindowStyles.WS_CHILD;
         _ = User32.SetWindowLong(hWnd, User32.WindowLongFlags.GWL_STYLE, style);
     }

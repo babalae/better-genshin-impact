@@ -1,6 +1,9 @@
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Mask;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.Ui;
+using System.ComponentModel;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Controls.Overlay;
@@ -34,13 +37,57 @@ namespace BetterGenshinImpact.ViewModel
 {
     public partial class MaskWindowViewModel : ObservableRecipient
     {
-        private readonly ILogger<MaskWindowViewModel> _logger = App.GetLogger<MaskWindowViewModel>();
+        /// <summary>
+        /// 绘制层重绘上限约 30 fps
+        /// </summary>
+        private static readonly TimeSpan DrawingRefreshInterval = TimeSpan.FromMilliseconds(33);
+
+        private readonly ILogger<MaskWindowViewModel> _logger;
+        private readonly OverlayMetricsService _overlayMetricsService;
+        private readonly IMaskMapPointService _maskMapPointService;
+        private readonly IMaskWindowSnapshotSource<MaskWindowDrawingSnapshot> _drawingSource;
+        private readonly IMaskWindowSnapshotSource<MaskWindowMapSnapshot> _mapSource;
+        private readonly UiCoalescer _drawingCoalescer;
+        private readonly UiCoalescer _mapCoalescer;
+        private readonly UiCoalescer _metricsCoalescer;
+        private OverlayMetricsSnapshot? _pendingMetricsSnapshot;
+        private string? _pendingFps;
 
         [ObservableProperty] private Rect _windowRect;
 
         [ObservableProperty] private ObservableCollection<StatusItem> _statusList = [];
 
-        public AllConfig? Config { get; set; }
+        public AllConfig Config { get; }
+
+        /// <summary>
+        /// 绘制层的快照，由 <see cref="IMaskWindowDrawingBoard"/> 写入后合并刷新
+        /// </summary>
+        [ObservableProperty] private MaskWindowDrawingSnapshot _drawing = MaskWindowDrawingSnapshot.Empty;
+
+        /// <summary>
+        /// 绘制层的全局样式，只在 Recognition* 配置或分辨率缩放变化时更新
+        /// </summary>
+        [ObservableProperty] private MaskWindowDrawingStyle _drawingStyle = MaskWindowDrawingStyle.Default;
+
+        /// <summary>
+        /// 大地图点位视口（2048 级地图坐标）
+        /// </summary>
+        [ObservableProperty] private Rect _bigMapViewport;
+
+        /// <summary>
+        /// 小地图点位视口
+        /// </summary>
+        [ObservableProperty] private Rect _miniMapViewport;
+
+        /// <summary>
+        /// 布局编辑模式或大地图界面需要交互，其余时候鼠标穿透到游戏
+        /// </summary>
+        public bool IsClickThrough => !(Config.MaskWindowConfig.OverlayLayoutEditEnabled || IsInBigMapUi);
+
+        /// <summary>
+        /// 关闭点击穿透时分层窗口按像素命中测试，准星像素会拦截点击，所以此时隐藏准星
+        /// </summary>
+        public bool IsCrosshairVisible => Config.MaskWindowConfig.CrosshairEnabled && IsClickThrough;
 
         [ObservableProperty] private string _fps = "0";
 
@@ -146,13 +193,33 @@ namespace BetterGenshinImpact.ViewModel
         private int _mapPointsLoadVersion;
         private readonly HashSet<string> _hiddenMapPointIds = new(StringComparer.Ordinal);
         private readonly SemaphoreSlim _iconLoadSemaphore = new(10, 10);
-        private readonly OverlayMetricsService? _overlayMetricsService = App.GetService<OverlayMetricsService>();
         private bool _isRestoringMapMaskState;
         private bool _metricsSubscribed;
         private bool _fpsStarted;
 
-        public MaskWindowViewModel()
+        public MaskWindowViewModel(
+            IConfigService configService,
+            OverlayMetricsService overlayMetricsService,
+            IMaskMapPointService maskMapPointService,
+            IMaskWindowSnapshotSource<MaskWindowDrawingSnapshot> drawingSource,
+            IMaskWindowSnapshotSource<MaskWindowMapSnapshot> mapSource,
+            ILogger<MaskWindowViewModel> logger)
         {
+            Config = configService.Get();
+            _overlayMetricsService = overlayMetricsService;
+            _maskMapPointService = maskMapPointService;
+            _drawingSource = drawingSource;
+            _mapSource = mapSource;
+            _logger = logger;
+
+            _drawingCoalescer = new UiCoalescer(() => Drawing = _drawingSource.Current, DrawingRefreshInterval);
+            _mapCoalescer = new UiCoalescer(ApplyMapSnapshot);
+            _metricsCoalescer = new UiCoalescer(ApplyPendingMetrics, priority: DispatcherPriority.Background);
+            _drawingSource.Changed += _drawingCoalescer.Request;
+            _mapSource.Changed += _mapCoalescer.Request;
+            Config.MaskWindowConfig.PropertyChanged += OnMaskWindowConfigPropertyChanged;
+            DrawingStyle = CreateDrawingStyle();
+
             PointInfoPopup.ToggleHiddenRequested += (_, point) => ToggleMapPointHidden(point);
 
             WeakReferenceMessenger.Default.Register<PropertyChangedMessage<object>>(this, (sender, msg) =>
@@ -162,11 +229,77 @@ namespace BetterGenshinImpact.ViewModel
                     UIDispatcherHelper.Invoke(RefreshSettings);
                 }
             });
+
+            // VM 创建前可能已经有写入，先同步一次
+            _drawingCoalescer.Request();
+            _mapCoalescer.Request();
+        }
+
+        private void ApplyMapSnapshot()
+        {
+            var snapshot = _mapSource.Current;
+            IsInBigMapUi = snapshot.IsInBigMap;
+            BigMapViewport = snapshot.BigMapViewport;
+            MiniMapViewport = snapshot.MiniMapViewport;
+        }
+
+        private void OnMaskWindowConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            switch (e.PropertyName)
+            {
+                case nameof(MaskWindowConfig.OverlayLayoutEditEnabled):
+                    OnPropertyChanged(nameof(IsClickThrough));
+                    OnPropertyChanged(nameof(IsCrosshairVisible));
+                    break;
+                case nameof(MaskWindowConfig.CrosshairEnabled):
+                    OnPropertyChanged(nameof(IsCrosshairVisible));
+                    break;
+                case nameof(MaskWindowConfig.RecognitionUseDrawableStyle):
+                case nameof(MaskWindowConfig.RecognitionRectStrokeColor):
+                case nameof(MaskWindowConfig.RecognitionRectStrokeThickness):
+                case nameof(MaskWindowConfig.RecognitionLineStrokeColor):
+                case nameof(MaskWindowConfig.RecognitionLineStrokeThickness):
+                case nameof(MaskWindowConfig.RecognitionTextColor):
+                case nameof(MaskWindowConfig.RecognitionTextFontSize):
+                    DrawingStyle = CreateDrawingStyle();
+                    break;
+            }
+        }
+
+        private MaskWindowDrawingStyle CreateDrawingStyle()
+        {
+            var config = Config.MaskWindowConfig;
+            return new MaskWindowDrawingStyle(
+                config.RecognitionUseDrawableStyle,
+                new MaskWindowDrawingStroke(
+                    OverlayStyleHelper.ParseColorOrDefault(config.RecognitionRectStrokeColor, Colors.Red),
+                    Math.Max(0, config.RecognitionRectStrokeThickness)),
+                new MaskWindowDrawingStroke(
+                    OverlayStyleHelper.ParseColorOrDefault(config.RecognitionLineStrokeColor, Colors.Red),
+                    Math.Max(0, config.RecognitionLineStrokeThickness)),
+                OverlayStyleHelper.ParseColorOrDefault(config.RecognitionTextColor, Colors.Black),
+                Math.Max(1, config.RecognitionTextFontSize) * ScaleTo1080PRatio);
+        }
+
+        partial void OnScaleTo1080PRatioChanged(double value)
+        {
+            DrawingStyle = CreateDrawingStyle();
+        }
+
+        /// <summary>
+        /// 遮罩隐藏、最小化或地图视口变化时，关闭点位信息弹窗和点位选择器
+        /// </summary>
+        [RelayCommand]
+        private void CloseTransientPopups()
+        {
+            PointInfoPopup.CloseCommand.Execute(null);
+            IsMapPointPickerOpen = false;
         }
 
         private void InitializeStatusList()
         {
-            if (Config != null)
+            // VM 是单例，窗口重建后 Loaded 会再次触发，避免重复添加
+            if (StatusList.Count == 0)
             {
                 StatusList.Add(new StatusItem("\uf256 拾取", Config.AutoPickConfig));
                 StatusList.Add(new StatusItem("\uf075 剧情", Config.AutoSkipConfig));
@@ -245,16 +378,13 @@ namespace BetterGenshinImpact.ViewModel
 
         private void RefreshSettings()
         {
-            InitConfig();
-            if (Config != null)
-            {
-                Config.MaskWindowConfig.EnsureOverlayMetricItems();
-                Config.MaskWindowConfig.MigrateLegacyOverlayMetricsLayout();
-                RecalculateScaleTo1080PRatio();
-                RefreshDisplayDpiScale();
-                OnPropertyChanged(nameof(Config));
-                OnPropertyChanged(nameof(IsOverlayMetricsVisible));
-            }
+            Config.MaskWindowConfig.EnsureOverlayMetricItems();
+            Config.MaskWindowConfig.MigrateLegacyOverlayMetricsLayout();
+            RecalculateScaleTo1080PRatio();
+            RefreshDisplayDpiScale();
+            OnPropertyChanged(nameof(Config));
+            OnPropertyChanged(nameof(IsOverlayMetricsVisible));
+            DrawingStyle = CreateDrawingStyle();
 
             SyncSelectedMapPointApiProviderFromConfig();
             SyncSelectedHoYoLabLanguageFromConfig();
@@ -265,7 +395,8 @@ namespace BetterGenshinImpact.ViewModel
         /// <summary>
         /// 当显示器 DPI 发生变化时调用，刷新遮罩 UI 的运行时缩放比例。
         /// </summary>
-        public void OnDpiChanged(double dpiScale)
+        [RelayCommand]
+        private void OnDpiChanged(double dpiScale)
         {
             DisplayDpiScale = double.IsFinite(dpiScale) && dpiScale > 0 ? dpiScale : 1.0;
         }
@@ -289,30 +420,16 @@ namespace BetterGenshinImpact.ViewModel
         private void RecalculateScaleTo1080PRatio()
         {
             var gameScreenRect = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
-            if (gameScreenRect.Width > 0)
+            if (gameScreenRect.Width > 0 && gameScreenRect.Height > 0)
             {
-                ScaleTo1080PRatio = gameScreenRect.Width / 1920d;
-            }
-        }
-
-        /// <summary>
-        /// 这个窗口比较特殊，无法直接使用构造函数依赖注入
-        /// </summary>
-        private void InitConfig()
-        {
-            if (Config == null)
-            {
-                var configService = App.GetService<IConfigService>();
-                if (configService != null)
-                {
-                    Config = configService.Get();
-                }
+                // 取宽高缩放比中的较小值，与 SystemInfo.ScaleTo1080PRatio / GameCaptureRegion.DeriveTo1080P 保持一致
+                ScaleTo1080PRatio = Math.Min(gameScreenRect.Width / 1920d, gameScreenRect.Height / 1080d);
             }
         }
 
         private void SyncSelectedMapPointApiProviderFromConfig()
         {
-            var provider = TaskContext.Instance().Config.MapMaskConfig.MapPointApiProvider;
+            var provider = Config.MapMaskConfig.MapPointApiProvider;
             SelectedMapPointApiProviderOption = MapPointApiProviderOptions.FirstOrDefault(x => x.Provider == provider)
                                                 ?? MapPointApiProviderOptions.FirstOrDefault();
         }
@@ -340,7 +457,7 @@ namespace BetterGenshinImpact.ViewModel
 
         private void SyncSelectedHoYoLabLanguageFromConfig()
         {
-            var lang = HoYoLabMapApiService.NormalizeLanguage(TaskContext.Instance().Config.MapMaskConfig.HoYoLabLanguage);
+            var lang = HoYoLabMapApiService.NormalizeLanguage(Config.MapMaskConfig.HoYoLabLanguage);
             SelectedHoYoLabLanguageOption = HoYoLabLanguageOptions.FirstOrDefault(x => x.Code == lang)
                                          ?? HoYoLabLanguageOptions.FirstOrDefault();
         }
@@ -350,7 +467,7 @@ namespace BetterGenshinImpact.ViewModel
             try
             {
                 var normalized = HoYoLabMapApiService.NormalizeLanguage(language);
-                var mapMaskConfig = TaskContext.Instance().Config.MapMaskConfig;
+                var mapMaskConfig = Config.MapMaskConfig;
                 if (mapMaskConfig.HoYoLabLanguage == normalized)
                 {
                     return;
@@ -377,7 +494,7 @@ namespace BetterGenshinImpact.ViewModel
         {
             try
             {
-                var mapMaskConfig = TaskContext.Instance().Config.MapMaskConfig;
+                var mapMaskConfig = Config.MapMaskConfig;
                 if (mapMaskConfig.MapPointApiProvider == provider)
                 {
                     return;
@@ -425,7 +542,7 @@ namespace BetterGenshinImpact.ViewModel
 
         private void InitMetrics()
         {
-            if (_overlayMetricsService != null && !_metricsSubscribed)
+            if (!_metricsSubscribed)
             {
                 _overlayMetricsService.MetricsUpdated += OverlayMetricsServiceOnMetricsUpdated;
                 _metricsSubscribed = true;
@@ -445,23 +562,38 @@ namespace BetterGenshinImpact.ViewModel
                 {
                     await FpsInspector.StartForeverAsync(new FpsRequest(pid), result =>
                     {
-                        Fps = $"{result.Fps:0}";
-                        _overlayMetricsService?.UpdateGameFps(result.Fps);
+                        // PresentMon 回调在后台线程，只记录最新值，合并后在 UI 线程更新
+                        Volatile.Write(ref _pendingFps, $"{result.Fps:0}");
+                        _metricsCoalescer.Request();
+                        _overlayMetricsService.UpdateGameFps(result.Fps);
                     });
                 });
             }
 
-            _overlayMetricsService?.Refresh();
+            _overlayMetricsService.Refresh();
         }
 
         private void OverlayMetricsServiceOnMetricsUpdated(object? sender, OverlayMetricsSnapshot snapshot)
         {
-            // OverlayMetricsService 可能在计时器线程发布事件，绑定集合必须切回 UI 线程更新。
-            UIDispatcherHelper.Invoke(() =>
+            // OverlayMetricsService 可能在计时器线程发布事件：只记录最新快照，不阻塞发布方
+            Volatile.Write(ref _pendingMetricsSnapshot, snapshot);
+            _metricsCoalescer.Request();
+        }
+
+        private void ApplyPendingMetrics()
+        {
+            var snapshot = Interlocked.Exchange(ref _pendingMetricsSnapshot, null);
+            if (snapshot != null)
             {
                 OverlayMetricDisplayItems = snapshot.Items;
                 OverlayMetricsText = snapshot.CombinedText;
-            });
+            }
+
+            var fps = Interlocked.Exchange(ref _pendingFps, null);
+            if (fps != null)
+            {
+                Fps = fps;
+            }
         }
 
         [RelayCommand]
@@ -511,10 +643,10 @@ namespace BetterGenshinImpact.ViewModel
         }
 
         [RelayCommand]
-        private void OnWindowSizeChanged(SizeChangedEventArgs args)
+        private void OnWindowSizeChanged(Size size)
         {
-            MaskWindowWidth = args.NewSize.Width;
-            MaskWindowHeight = args.NewSize.Height;
+            MaskWindowWidth = size.Width;
+            MaskWindowHeight = size.Height;
 
             // 游戏分辨率变化时，重新计算 ScaleTo1080PRatio
             // 使日志字号实时适配新的游戏分辨率
@@ -562,6 +694,9 @@ namespace BetterGenshinImpact.ViewModel
 
         partial void OnIsInBigMapUiChanged(bool value)
         {
+            OnPropertyChanged(nameof(IsClickThrough));
+            OnPropertyChanged(nameof(IsCrosshairVisible));
+
             if (!value)
             {
                 IsMapPointPickerOpen = false;
@@ -591,7 +726,7 @@ namespace BetterGenshinImpact.ViewModel
             IsMapLabelTreeLoading = true;
             try
             {
-                var service = App.GetService<IMaskMapPointService>();
+                var service = _maskMapPointService;
                 if (service == null)
                 {
                     MapLabelCategories = [];
@@ -748,7 +883,7 @@ namespace BetterGenshinImpact.ViewModel
                     return;
                 }
 
-                var service = App.GetService<IMaskMapPointService>();
+                var service = _maskMapPointService;
                 if (service == null)
                 {
                     return;

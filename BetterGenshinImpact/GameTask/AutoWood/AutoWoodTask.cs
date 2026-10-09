@@ -1,13 +1,12 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoWood.Utils;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Genshin.Settings;
-using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -119,7 +118,7 @@ public partial class AutoWoodTask : ISoloTask
                 }
 
                 await Felling(_taskParam, i + 1 == _taskParam.WoodRoundNum);
-                VisionContext.Instance().DrawContent.ClearAll();
+                TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
                 Sleep(500, _ct);
             }
 
@@ -445,14 +444,14 @@ public partial class AutoWoodTask : ISoloTask
                 throw new NormalEndException("请先装备小道具「王树瑞佑」！如果已经装备仍旧出现此提示，请重新仔细阅读文档中的《快速上手》！");
 #else
                 System.Threading.Thread.Sleep(2000);
-                Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
+                InputHub.Foreground.SimulateAction(GIActions.QuickUseGadget);
                 Debug.WriteLine("[AutoWood] Z");
                 _first = false;
 #endif
             }
             else
             {
-                Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
+                InputHub.Foreground.SimulateAction(GIActions.QuickUseGadget);
                 Debug.WriteLine("[AutoWood] Z");
                 _first = false;
             }
@@ -473,7 +472,7 @@ public partial class AutoWoodTask : ISoloTask
 #endif
                 }
 
-                Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
+                InputHub.Foreground.SimulateAction(GIActions.QuickUseGadget);
                 Debug.WriteLine("[AutoWood] Z");
                 Sleep(500, _ct);
             }, TimeSpan.FromSeconds(1), 120);
@@ -486,11 +485,11 @@ public partial class AutoWoodTask : ISoloTask
     private void PressEsc(WoodTaskParam taskParam)
     {
         SystemControl.FocusWindow(TaskContext.Instance().GameHandle);
-        Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
+        InputHub.Foreground.Keyboard.KeyPress(VK.VK_ESCAPE);
         // if (TaskContext.Instance().Config.AutoWoodConfig.PressTwoEscEnabled)
         // {
         //     Sleep(1500, _cts);
-        //     Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
+        //     InputHub.Foreground.Keyboard.KeyPress(VK.VK_ESCAPE);
         // }
         Debug.WriteLine("[AutoWood] Esc");
         Sleep(800, _ct);
@@ -504,7 +503,7 @@ public partial class AutoWoodTask : ISoloTask
                 using var ra = contentRegion.Find(GetRecognitionObject("MenuBag", contentRegion));
                 if (ra.IsEmpty())
                 {
-                    Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
+                    InputHub.Foreground.Keyboard.KeyPress(VK.VK_ESCAPE);
                     throw new RetryException("未检测到弹出菜单");
                 }
             }, TimeSpan.FromSeconds(1.2), 5);

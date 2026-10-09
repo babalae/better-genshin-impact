@@ -2,6 +2,6 @@
 
 namespace BetterGenshinImpact.GameTask.LogParse;
 
-public class NoLoginException : Exception
+public class NoLoginException(string message = "未登录") : Exception(message)
 {
 }

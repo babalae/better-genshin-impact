@@ -1,5 +1,4 @@
 ﻿using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.GameTask;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -22,6 +21,5 @@ public class AutoPickBlackListViewModel : FormViewModel<string>
     {
         var blackListJson = JsonSerializer.Serialize(List.ToList());
         Global.WriteAllText(@"User\pick_black_lists.json", blackListJson);
-        GameTaskManager.RefreshTriggerConfigs();
     }
 }

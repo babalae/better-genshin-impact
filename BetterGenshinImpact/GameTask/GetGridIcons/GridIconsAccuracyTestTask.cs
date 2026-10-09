@@ -1,13 +1,11 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.Helpers.Extensions;
-using BetterGenshinImpact.View.Drawable;
-using Fischless.WindowsInput;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
@@ -28,7 +26,7 @@ namespace BetterGenshinImpact.GameTask.GetGridIcons;
 public class GridIconsAccuracyTestTask : ISoloTask
 {
     private readonly ILogger logger = App.GetLogger<GetGridIconsTask>();
-    private readonly InputSimulator input = Simulation.SendInput;
+    private IInputChannel input => InputHub.Foreground;
 
     private CancellationToken ct;
 
@@ -110,7 +108,7 @@ public class GridIconsAccuracyTestTask : ISoloTask
 
         GridScreen gridScreen = new GridScreen(GridParams.Templates[this.gridScreenName], this.logger, this.ct);
         gridScreen.OnAfterTurnToNewPage += GridScreen.DrawItemsAfterTurnToNewPage;
-        gridScreen.OnBeforeScroll += () => VisionContext.Instance().DrawContent.ClearAll();
+        gridScreen.OnBeforeScroll += () => TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
         try
         {
             await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
@@ -166,7 +164,7 @@ public class GridIconsAccuracyTestTask : ISoloTask
         }
         finally
         {
-            VisionContext.Instance().DrawContent.ClearAll();
+            TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
         }
     }
 

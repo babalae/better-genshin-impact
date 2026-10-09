@@ -1,8 +1,8 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Script;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoSkip.Model;
@@ -13,7 +13,6 @@ using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.Helpers;
-using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -70,7 +69,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
         }
         finally
         {
-            VisionContext.Instance().DrawContent.ClearAll();
+            TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
             Logger.LogInformation("→ {Text}", "自动追踪结束");
 
             if (hasLock)
@@ -92,7 +91,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
         }
 
         // 任务文字有动效，等待2s重新截图
-        Simulation.SendInput.Mouse.MoveMouseBy(0, 7000);
+        InputHub.Foreground.Mouse.MoveMouseBy(0, 7000);
         Sleep(2000, _ct);
 
         // OCR 任务文字 在小地图下方
@@ -111,7 +110,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
         {
             // 距离大于150米，先传送到最近的传送点
             // J 打开任务 切换追踪打开地图 中心点就是任务点
-            Simulation.SendInput.SimulateAction(GIActions.OpenQuestMenu);
+            InputHub.Foreground.SimulateAction(GIActions.OpenQuestMenu);
             Sleep(800, _ct);
             // TODO 识别是否在任务界面
             // 切换追踪
@@ -179,7 +178,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
     private void StartTrackPoint()
     {
         // V键直接追踪
-        Simulation.SendInput.SimulateAction(GIActions.QuestNavigation);
+        InputHub.Foreground.SimulateAction(GIActions.QuestNavigation);
         Sleep(3000, _ct);
 
         using var ra = CaptureToRectArea();
@@ -213,10 +212,10 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
                 var centerY = blueTrackPointRa.Y + blueTrackPointRa.Height / 2;
                 if (centerY > CaptureRect.Height / 2)
                 {
-                    Simulation.SendInput.Mouse.MoveMouseBy(-50, 0);
+                    InputHub.Foreground.Mouse.MoveMouseBy(-50, 0);
                     if (wDown)
                     {
-                        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                        InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                         wDown = false;
                     }
                     Debug.WriteLine("使追踪点位于俯视角上方");
@@ -234,7 +233,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
                 };
                 if (moveX != 0)
                 {
-                    Simulation.SendInput.Mouse.MoveMouseBy(moveX, 0);
+                    InputHub.Foreground.Mouse.MoveMouseBy(moveX, 0);
                     Debug.WriteLine("调整方向:" + moveX);
                 }
 
@@ -242,7 +241,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
                 {
                     if (!wDown)
                     {
-                        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+                        InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
                         wDown = true;
                     }
                 }
@@ -251,7 +250,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
                 {
                     if (wDown)
                     {
-                        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                        InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                         wDown = false;
                     }
                     // 识别距离
@@ -274,7 +273,7 @@ public class AutoTrackTask(AutoTrackParam param) : BaseIndependentTask
                 Logger.LogInformation("未找到追踪点");
             }
 
-            Simulation.SendInput.Mouse.MoveMouseBy(0, 500); // 保证俯视角
+            InputHub.Foreground.Mouse.MoveMouseBy(0, 500); // 保证俯视角
             Sleep(100);
         }
         // });

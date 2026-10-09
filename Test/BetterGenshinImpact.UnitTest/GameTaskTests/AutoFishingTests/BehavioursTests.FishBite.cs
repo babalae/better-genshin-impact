@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Mask;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.Area.Converter;
@@ -21,7 +22,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         {
             //
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
-            var imageRegion = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
+            var imageRegion = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(), converter: new ScaleConverter(1d), drawingBoard: NullMaskWindowDrawingBoard.Instance);
 
             CsTrees.Blackboard.Blackboard blackboard = new CsTrees.Blackboard.Blackboard();
 
@@ -30,7 +31,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                 .WithBlackboard(blackboard)
                     .Sequence("用例", false)
                         .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion], bb!))
-                        .CheckFishBite("-", new FakeLogger(), OcrService, drawContent: new FakeDrawContent())
+                        .CheckFishBite("-", new FakeLogger(), OcrService)
                     .End()
                 .End()
                 .Build();
@@ -50,15 +51,15 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         {
             //
             Mat mat1 = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080pCheckThrowRod}");
-            var imageRegion1 = new GameCaptureRegion(mat1, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
+            var imageRegion1 = new GameCaptureRegion(mat1, 0, 0, new DesktopRegion(), converter: new ScaleConverter(1d), drawingBoard: NullMaskWindowDrawingBoard.Instance);
             Mat mat2 = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080pFishBite}");
-            var imageRegion2 = new GameCaptureRegion(mat2, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
+            var imageRegion2 = new GameCaptureRegion(mat2, 0, 0, new DesktopRegion(), converter: new ScaleConverter(1d), drawingBoard: NullMaskWindowDrawingBoard.Instance);
 
             CsTrees.Blackboard.Blackboard blackboard = new CsTrees.Blackboard.Blackboard();
 
             FakeTimeProvider fakeTimeProvider = new FakeTimeProvider();
             FakeLogger logger = new FakeLogger();
-            FakeInputSimulator input = new FakeInputSimulator();
+            FakeInputChannel input = new FakeInputChannel();
 
             //
             FishBiteTimeout fishBiteTimeoutBehaviour = new FishBiteTimeout("-", 15, logger, input, blackboard, fakeTimeProvider);
@@ -67,7 +68,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                     .Sequence("用例", false)
                         .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion1, imageRegion1, imageRegion2], bb!))
                         .Parallel("-", new ParallelPolicy.SuccessOnOne())
-                            .CheckFishBite("-", logger, OcrService, drawContent: new FakeDrawContent())
+                            .CheckFishBite("-", logger, OcrService)
                             .Leaf(() => fishBiteTimeoutBehaviour)
                         .End()
                     .End()
@@ -109,7 +110,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         {
             //
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
-            var imageRegion = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d), drawContent: new FakeDrawContent());
+            var imageRegion = new GameCaptureRegion(mat, 0, 0, new DesktopRegion(), converter: new ScaleConverter(1d), drawingBoard: NullMaskWindowDrawingBoard.Instance);
 
             CsTrees.Blackboard.Blackboard blackboard = new CsTrees.Blackboard.Blackboard();
 
@@ -118,7 +119,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                 .WithBlackboard(blackboard)
                     .Sequence("用例", false)
                         .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion], bb!))
-                        .CheckFishBite("-", new FakeLogger(), OcrService, drawContent: new FakeDrawContent(), new System.Globalization.CultureInfo(cultureName), stringLocalizer)
+                        .CheckFishBite("-", new FakeLogger(), OcrService, new System.Globalization.CultureInfo(cultureName), stringLocalizer)
                     .End()
                 .End()
                 .Build();

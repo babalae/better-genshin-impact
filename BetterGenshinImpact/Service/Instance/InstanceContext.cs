@@ -16,9 +16,11 @@ public sealed class InstanceContext
     internal InstanceContext(
         BetterGiInstanceType instanceType,
         string rootPipeName,
-        int? rootSessionId)
+        int? rootSessionId,
+        string? instanceName = null)
     {
         InstanceType = instanceType;
+        InstanceName = instanceType == BetterGiInstanceType.WebView ? instanceName : null;
         RootPipeName = rootPipeName;
         RootSessionId = rootSessionId;
         ProcessId = Environment.ProcessId;
@@ -27,6 +29,13 @@ public sealed class InstanceContext
     }
 
     public BetterGiInstanceType InstanceType { get; }
+
+    /// <summary>
+    /// 网页版实例的实例名（已校验、已去除首尾空白），其他实例为 null
+    /// </summary>
+    public string? InstanceName { get; }
+
+    public bool IsWebView => InstanceType == BetterGiInstanceType.WebView;
 
     public string RootPipeName { get; }
 
@@ -52,7 +61,8 @@ public sealed class InstanceContext
             InstanceType = InstanceType,
             ProcessId = ProcessId,
             WindowsSessionId = WindowsSessionId,
-            StartedAt = StartedAt
+            StartedAt = StartedAt,
+            InstanceName = InstanceName
         };
     }
 }
@@ -66,6 +76,11 @@ public sealed class InstanceEndpoint
     public int WindowsSessionId { get; init; }
 
     public DateTimeOffset StartedAt { get; init; }
+
+    /// <summary>
+    /// 网页版实例的实例名，其他实例为 null。只用于识别和展示，同名互斥由实例名互斥体保证
+    /// </summary>
+    public string? InstanceName { get; init; }
 }
 
 internal static class InstancePipeNames

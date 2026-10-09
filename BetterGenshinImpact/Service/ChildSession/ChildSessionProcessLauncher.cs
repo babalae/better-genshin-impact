@@ -7,6 +7,7 @@ using System.Security.Principal;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Instance;
+using BetterGenshinImpact.Service.Interface;
 
 namespace BetterGenshinImpact.Service.ChildSession;
 
@@ -21,6 +22,9 @@ internal static class ChildSessionProcessLauncher
     internal static Task LaunchBetterGiAsync(
         uint childSessionId)
     {
+        // 分身实例共用同一个 config.json，启动前先写入防抖窗口内尚未落盘的配置改动
+        App.GetService<IConfigService>()?.Flush();
+
         var startInfo = CreateBetterGiStartInfo();
         return LaunchElevatedAsync(
             childSessionId,

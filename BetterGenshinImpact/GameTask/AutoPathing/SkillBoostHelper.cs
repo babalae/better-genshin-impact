@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Input;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,7 +7,6 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
@@ -221,11 +221,11 @@ public partial class PathExecutor
                     if ((DateTime.UtcNow - _lastMavikaBoardTime).TotalSeconds >= 2 && boardIconState is 1 or 2)
                     {
                         _lastMavikaBoardTime = DateTime.UtcNow;
-                        Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                        InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
                         await Delay(200, ct);
-                        Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                        InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
                         await Delay(300, ct);
-                        Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                        InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
                         await Delay(300, ct);
 
                         // E技能CD跟踪：仅续技能（状态1）触发更新，上车（状态2）不触发
@@ -267,17 +267,17 @@ public partial class PathExecutor
                     if (_mavikaSprintJumpCount < PartyConfig.MwkJumpFlySprintCount
                         && distance > PartyConfig.MwkJumpFlyDistance * 1.3)
                     {
-                        Simulation.SendInput.SimulateAction(GIActions.SprintMouse);
+                        InputHub.Foreground.SimulateAction(GIActions.SprintMouse);
                         await Delay(100, ct);
                         _mavikaSprintJumpCount++;
                     }
-                    Simulation.SendInput.SimulateAction(GIActions.Jump);
+                    InputHub.Foreground.SimulateAction(GIActions.Jump);
                     await Delay(150, ct);
-                    Simulation.SendInput.SimulateAction(GIActions.Jump);
+                    InputHub.Foreground.SimulateAction(GIActions.Jump);
                     await Delay(100, ct);
-                    Simulation.SendInput.SimulateAction(GIActions.Jump);
+                    InputHub.Foreground.SimulateAction(GIActions.Jump);
                     await Delay(10, ct);
-                    Simulation.SendInput.SimulateAction(GIActions.Jump);
+                    InputHub.Foreground.SimulateAction(GIActions.Jump);
                     await Delay(150, ct);
                     _lastJumpFlyTime = DateTime.UtcNow;
                     _jumpFlySafetyPending = true;
@@ -285,14 +285,14 @@ public partial class PathExecutor
                     using var jumpCheckRegion = CaptureToRectArea();
                     if (Bv.GetMotionStatus(jumpCheckRegion) == MotionStatus.Fly)
                     {
-                        Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                        InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
                         await Delay(300, ct);
                         for (int i = 0; i < 5; i++)
                         {
                             using var retryRegion = CaptureToRectArea();
                             if (Bv.GetMotionStatus(retryRegion) == MotionStatus.Fly)
                             {
-                                Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                                InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
                                 await Delay(300, ct);
                             }
                             else break;
@@ -302,7 +302,7 @@ public partial class PathExecutor
 
                     if (SpaceAtSecondPlaceExist(state))
                     {
-                        Simulation.SendInput.SimulateAction(GIActions.Jump);
+                        InputHub.Foreground.SimulateAction(GIActions.Jump);
                     }
 
                     return true;
@@ -321,11 +321,11 @@ public partial class PathExecutor
                     && ((DateTime.UtcNow - _lastJumpFlyTime).TotalSeconds > interval
                         || (mwkShouldApproach && state.PendingApproach)))
                 {
-                    Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                    InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
                     Logger.LogInformation("自动赶路：玛薇卡安全降落 距离下个节点距离 {d}", Math.Round(distance));
                     // 普攻后点按一次空格打断后摇
                     await Delay(50, ct);
-                    Simulation.SendInput.SimulateAction(GIActions.Jump);
+                    InputHub.Foreground.SimulateAction(GIActions.Jump);
                     _jumpFlySafetyPending = false;
                 }
 
@@ -334,7 +334,7 @@ public partial class PathExecutor
                     if (PartyConfig.SwitchToWalkEnabled)
                     {
                         // 切人下车：无需检测图标，直接切换步行角色
-                        Simulation.ReleaseAllKey();
+                        InputHub.ReleaseAll();
                         var nextIdx = GetSwitchToWalkIndex();
                         Logger.LogInformation("自动赶路：玛薇卡接近节点，切人步行 {t}", nextIdx);
                         var nextAvatar = await SwitchAvatar(nextIdx);
@@ -351,11 +351,11 @@ public partial class PathExecutor
                         var approachIconState = GetMavikaESkillIconState(screen2);
                         if (approachIconState == 3 && Bv.GetMotionStatus(screen2) != MotionStatus.Fly)
                         {
-                            Simulation.ReleaseAllKey();
+                            InputHub.ReleaseAll();
                             Logger.LogInformation("自动赶路：玛薇卡接近节点，下车步行");
-                            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                            InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
                             await Delay(100, ct);
-                            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                            InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
                             await Delay(50, ct);
                         }
                         // 检测到图标1/2（续技能/上车）即认为下车成功
@@ -374,9 +374,9 @@ public partial class PathExecutor
                 {
                     if (Bv.GetMotionStatus(screen2) == MotionStatus.Climb)
                     {
-                        Simulation.SendInput.SimulateAction(GIActions.Drop);
+                        InputHub.Foreground.SimulateAction(GIActions.Drop);
                         await Delay(500, ct);
-                        Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                        InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
                     }
 
                     var pos = screen2.SrcMat.At<Vec3b>(1012, 1574);
@@ -400,7 +400,7 @@ public partial class PathExecutor
                             if (state.MavikaSlopeCount > 5 && avatar.IsActive(screen2))
                             {
                                 if (nextWaypoint?.MoveMode != MoveModeEnum.Fly.Code)
-                                    Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                                    InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
                                 state.MavikaSlopeCount = 0;
                                 Logger.LogInformation("自动赶路：靠近节点切换 {t}...-h {t2}", "", waypoint?.MoveMode);
                             }
@@ -414,7 +414,7 @@ public partial class PathExecutor
                     && (justBoarded || GetMavikaIconState() == 3))
                 {
                     // 通用移动逻辑可能已在此前（Run 路段）将冲刺键置为 KeyDown，这里松开一次防止上车后持续冲刺消耗夜魂值
-                    Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
+                    InputHub.Foreground.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
                     return true;
                 }
 
@@ -427,7 +427,7 @@ public partial class PathExecutor
             //
             //         if (shouldApproach)
             //         {
-            //             Simulation.ReleaseAllKey();
+            //             InputHub.ReleaseAll();
             //             state.PendingApproach = false;
             //             if (PartyConfig.SwitchToWalkEnabled)
             //             {
@@ -442,7 +442,7 @@ public partial class PathExecutor
             //             {
             //                 if (await AutoFightSkill.AvatarSkillAsync(Logger, avatar, false, 2, ct))
             //                 {
-            //                     Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+            //                     InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
             //                     await Delay(300, ct);
             //                 }
             //
@@ -467,13 +467,13 @@ public partial class PathExecutor
             //                             using var region3 = CaptureToRectArea();
             //                             if (avatar.IsActive(region3))
             //                             {
-            //                                 Simulation.SendInput.SimulateAction(GIActions.Jump);
+            //                                 InputHub.Foreground.SimulateAction(GIActions.Jump);
             //                                 await Delay(100, ct);
             //                                 using var region4 = CaptureToRectArea();
             //                                 var isFlying = Bv.GetMotionStatus(region4) == MotionStatus.Fly;
             //                                 if (isFlying)
             //                                 {
-            //                                     Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+            //                                     InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
             //                                     Logger.LogInformation("自动赶路：{t} 下落攻击...", "瓦蕾莎");
             //                                 }
             //                             }
@@ -495,9 +495,9 @@ public partial class PathExecutor
             //         await Delay(300, ct);
             //         if (!await AutoFightSkill.AvatarSkillAsync(Logger, avatar, false, 2, ct))
             //         {
-            //             Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
+            //             InputHub.Foreground.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
             //             await Delay(300, ct);
-            //             Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
+            //             InputHub.Foreground.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
             //             await Delay(200, ct);
             //             avatar.LastSkillTime = DateTime.UtcNow;
             //
@@ -507,13 +507,13 @@ public partial class PathExecutor
             //                 {
             //                     if (waypoint.MoveMode == MoveModeEnum.Dash.Code)
             //                     {
-            //                         Simulation.SendInput.SimulateAction(GIActions.SprintMouse);
+            //                         InputHub.Foreground.SimulateAction(GIActions.SprintMouse);
             //                     }
             //                     else if (waypoint.MoveMode == MoveModeEnum.Run.Code)
             //                     {
             //                         if (state.RunCount < 2)
             //                         {
-            //                             Simulation.SendInput.SimulateAction(GIActions.SprintMouse);
+            //                             InputHub.Foreground.SimulateAction(GIActions.SprintMouse);
             //                         }
             //                     }
             //                 }
@@ -535,13 +535,13 @@ public partial class PathExecutor
             //                     {
             //                         if (waypoint.MoveMode == MoveModeEnum.Dash.Code)
             //                         {
-            //                             Simulation.SendInput.SimulateAction(GIActions.SprintMouse);
+            //                             InputHub.Foreground.SimulateAction(GIActions.SprintMouse);
             //                         }
             //                         else if (waypoint.MoveMode == MoveModeEnum.Run.Code)
             //                         {
             //                             if (state.RunCount < 2)
             //                             {
-            //                                 Simulation.SendInput.SimulateAction(GIActions.SprintMouse);
+            //                                 InputHub.Foreground.SimulateAction(GIActions.SprintMouse);
             //                             }
             //                         }
             //                     }
@@ -560,7 +560,7 @@ public partial class PathExecutor
 
                     if (shouldApproach)
                     {
-                        Simulation.ReleaseAllKey();
+                        InputHub.ReleaseAll();
                         // Logger.LogInformation("[赶路调试] 希诺宁 触发接近: dist={d}, spaceExist={s}",
                         //     Math.Round(distance, 1), SpaceAtSecondPlaceExist(state));
                         state.PendingApproach = false;
@@ -579,7 +579,7 @@ public partial class PathExecutor
                             var retries = 0;
                             while (SpaceAtSecondPlaceExist(state) && retries < 10)
                             {
-                                Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                                InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
                                 await Delay(100, ct);
                                 retries++;
                             }
@@ -603,7 +603,7 @@ public partial class PathExecutor
                         if (cd <= 0)
                         {
                             // Logger.LogInformation("[赶路调试] 希诺宁 启动E技能: spaceExist=false, cd={cd}", cd);
-                            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                            InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
                             await Delay(200, ct);
                             avatar.LastSkillTime = DateTime.UtcNow;
                         }
@@ -626,7 +626,7 @@ public partial class PathExecutor
                     if (state.RotationStableCount >= 1
                         && (DateTime.UtcNow - _lastJumpFlyTime).TotalSeconds >= interval / 2.0)
                     {
-                        Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                        InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
                         _lastJumpFlyTime = DateTime.UtcNow;
                         return false;
                     }
@@ -661,12 +661,12 @@ public partial class PathExecutor
                         var shouldApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
                         if (shouldApproach)
                         {
-                            Simulation.ReleaseAllKey();
+                            InputHub.ReleaseAll();
                             state.FlyingState = false;
                             var retries = 0;
                             while (DashAtSecondPlaceExist() && retries < 10)
                             {
-                                Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                                InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
                                 await Delay(50, ct);
                                 retries++;
                             }
@@ -691,7 +691,7 @@ public partial class PathExecutor
                                 var sandroneCd = await ReadEskillCdAsync("桑多涅");
                                 if (sandroneCd <= 0)
                                 {
-                                    Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                                    InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
                                     await Delay(150, ct);
                                     if (DashAtSecondPlaceExist())
                                     {
@@ -749,7 +749,7 @@ public partial class PathExecutor
 
                         if (shouldApproach)
                         {
-                            Simulation.ReleaseAllKey();
+                            InputHub.ReleaseAll();
                             // Logger.LogInformation("[赶路调试] {name} 触发接近: dist={d}, flying={f}, spaceExist={s}",
                             //     avatar.Name, Math.Round(distance, 1), state.FlyingState, SpaceAtSecondPlaceExist(state));
                             state.PendingApproach = false;
@@ -759,7 +759,7 @@ public partial class PathExecutor
                                 if (SpaceAtSecondPlaceExist(state))
                                 {
                                     Logger.LogInformation($"自动赶路：{avatar.Name}接近节点，关闭飞行状态");
-                                    Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
+                                    InputHub.Foreground.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
                                     for (var retries = 0; retries < 20; retries++)
                                     {
                                         await Delay(100, ct);
@@ -769,7 +769,7 @@ public partial class PathExecutor
                                             break;
                                         }
                                     }
-                                    Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
+                                    InputHub.Foreground.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
                                 }
                                 state.FlyingState = false;
                             }
@@ -813,11 +813,11 @@ public partial class PathExecutor
                             {
                                 // Logger.LogInformation("[赶路调试] {name} 启动飞行: dist={d}, rotStable={rs}, cd={cd}",
                                 //     avatar.Name, Math.Round(distance, 1), state.RotationStableCount, cd);
-                                Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
+                                InputHub.Foreground.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
                                 await Delay(50, ct);
-                                Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                                InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
                                 await Delay(100, ct);
-                                Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
+                                InputHub.Foreground.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
 
                                 avatar.LastSkillTime = DateTime.UtcNow;
                                 state.FlyingState = true;
@@ -845,7 +845,7 @@ public partial class PathExecutor
 
                     if (shouldApproach)
                     {
-                        Simulation.ReleaseAllKey();
+                        InputHub.ReleaseAll();
                         // Logger.LogInformation("[赶路调试] 流浪者 触发接近: dist={d}, flying={f}, spaceExist={s}",
                         //     Math.Round(distance, 1), state.FlyingState, SpaceAtSecondPlaceExist(state));
                         state.PendingApproach = false;
@@ -855,7 +855,7 @@ public partial class PathExecutor
                             if (SpaceAtSecondPlaceExist(state))
                             {
                                 Logger.LogInformation("自动赶路：流浪者接近节点，关闭飞行状态");
-                                Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                                InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
                                 await SafeLanding(ct);
                             }
                             state.FlyingState = false;
@@ -878,10 +878,10 @@ public partial class PathExecutor
                         await SafeLanding(ct);
                         return false;
                     }
-                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+                    InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
                     state.WandererFlightCheckCount++;
                     if (state.WandererFlightCheckCount % 3 == 0)
-                        Simulation.SendInput.Mouse.MiddleButtonClick();
+                        InputHub.Foreground.Mouse.MiddleButtonClick();
                     return true;
                 }
 
@@ -904,14 +904,14 @@ public partial class PathExecutor
                         {
                             // Logger.LogInformation("[赶路调试] 流浪者 启动飞行: dist={d}, rotStable={rs}, cd={cd}",
                             //     Math.Round(distance, 1), state.RotationStableCount, cd);
-                            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-                            Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
+                            InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                            InputHub.Foreground.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
                             await Delay(50, ct);
-                            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+                            InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
                             await Delay(100, ct);
-                            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+                            InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
                             await Delay(50, ct);
-                            Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
+                            InputHub.Foreground.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
 
                             avatar.LastSkillTime = DateTime.UtcNow;
                             state.FlyingState = true;
@@ -978,14 +978,14 @@ public partial class PathExecutor
 
                         if (shouldApproach)
                         {
-                            Simulation.ReleaseAllKey();
+                            InputHub.ReleaseAll();
                             state.PendingApproach = false;
                             if (state.FlyingState)
                             {
                                 state.FlyingState = false;
                                 _lastLandingTime = DateTime.UtcNow;
                                 Logger.LogInformation("自动赶路：夜兰接近节点，退出赶路");
-                                Simulation.SendInput.SimulateAction(GIActions.Jump); // 第1种：点按跳跃
+                                InputHub.Foreground.SimulateAction(GIActions.Jump); // 第1种：点按跳跃
                             }
                             return false;
                         }
@@ -1019,7 +1019,7 @@ public partial class PathExecutor
                             state.FlyingState = false;
                             _lastLandingTime = DateTime.UtcNow;
                             Logger.LogInformation("自动赶路：夜兰超时，退出赶路");
-                            Simulation.SendInput.SimulateAction(GIActions.Jump); // 第3种：点按跳跃
+                            InputHub.Foreground.SimulateAction(GIActions.Jump); // 第3种：点按跳跃
                             return false;
                         }
 
@@ -1039,7 +1039,7 @@ public partial class PathExecutor
                             state.FlyingState = false;
                             _lastLandingTime = DateTime.UtcNow;
                             Logger.LogInformation("自动赶路：夜兰卡顿，退出赶路");
-                            Simulation.SendInput.SimulateAction(GIActions.Jump); // 第4种：点按跳跃
+                            InputHub.Foreground.SimulateAction(GIActions.Jump); // 第4种：点按跳跃
                             return false;
                         }
 
@@ -1099,7 +1099,7 @@ public partial class PathExecutor
             if (isClimb && state.ClimbLogo < 2 && waypoint.MoveMode != MoveModeEnum.Climb.Code)
             {
                 await Delay(1000, ct);
-                Simulation.SendInput.SimulateAction(GIActions.Drop);
+                InputHub.Foreground.SimulateAction(GIActions.Drop);
                 await Delay(500, ct);
                 state.ClimbLogo++;
             }
@@ -1487,7 +1487,7 @@ public partial class PathExecutor
     private async Task SafeLanding(CancellationToken ct)
     {
         await Delay(250, ct);
-        Simulation.SendInput.SimulateAction(GIActions.Jump);
+        InputHub.Foreground.SimulateAction(GIActions.Jump);
         await Delay(150, ct);
 
         using var screen = CaptureToRectArea();
@@ -1496,14 +1496,14 @@ public partial class PathExecutor
             || stamina == 0
             || stamina == 240)
         {
-            Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+            InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
             await Delay(300, ct);
             for (int i = 0; i < 5; i++)
             {
                 using var retryRegion = CaptureToRectArea();
                 if (Bv.GetMotionStatus(retryRegion) == MotionStatus.Fly)
                 {
-                    Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+                    InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
                     await Delay(300, ct);
                 }
                 else break;

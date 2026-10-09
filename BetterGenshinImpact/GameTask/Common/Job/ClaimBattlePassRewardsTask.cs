@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BetterGenshinImpact.Core.Input;
+using System;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -54,7 +55,7 @@ public class ClaimBattlePassRewardsTask
         await _returnMainUiTask.Start(ct);
 
         await Delay(200, ct);
-        TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.OpenBattlePassScreen); // F4 开纪行
+        InputHub.Background.SimulateAction(GIActions.OpenBattlePassScreen); // F4 开纪行
 
         // 先领取纪行点数，避免一进入纪行就因可选奖励弹窗阻塞后续流程
         await Delay(1000, ct);
@@ -70,7 +71,7 @@ public class ClaimBattlePassRewardsTask
             using var primogem = ra.Find(ElementRecognition.Get("Primogem", ra));
             if (primogem.IsExist())
             {
-                TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_ESCAPE);
+                InputHub.Background.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
             }
         }
         GameCaptureRegion.GameRegion1080PPosClick(858, 45);
@@ -104,7 +105,7 @@ public class ClaimBattlePassRewardsTask
 
             if (ra2.Find(ElementRecognition.Get("Primogem", ra2)).IsExist())
             {
-                TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_ESCAPE);
+                InputHub.Background.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
             }
 
             return true;

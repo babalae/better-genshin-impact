@@ -43,7 +43,10 @@ BetterGI.v2.user-<Windows用户SID>.root
 
 - `--instance childSession` 表示该进程只能作为桌面分身客户端，根暂时不存在时也不会
   自行成为根；
-- `--instance webview` 表示该进程只能作为 WebView 客户端；
+- `--instance webview` 表示该进程只能作为 WebView 客户端，必须同时用
+  `--instance-name <实例名>` 指定实例名（云原神网页版，见 [GameRuntime 设计](game-runtime.md) 7.1）。
+  实例名随 `connection.open` 提交，根把它写入该 WebView 的端点（`InstanceEndpoint.InstanceName`），
+  只用于识别和展示；同名互斥由实例名互斥体保证，根不判重；
 - 不带 `--instance` 的 BetterGI 会先竞争固定根管道。竞争成功即成为根；竞争失败则
   连接已有根，由根根据真实 Session 决定是转发重复启动还是注册为桌面分身。
 
@@ -146,7 +149,7 @@ JSON 信封的主要字段：
 | `input.relativeMouse.subscribe` | 桌面分身请求根开始转发相对鼠标 |
 | `input.relativeMouse.unsubscribe` | 桌面分身停止转发相对鼠标 |
 | `input.relativeMouse.state` | 预留的相对鼠标状态通知名称 |
-| `webview.list` | 查询当前调用方可见的 WebView |
+| `webview.list` | 查询当前调用方可见的 WebView，按实例名排序 |
 | `webview.send` | 根按目标进程 ID 向 WebView 单播 |
 | `webview.message` | 根向目标 WebView 下发消息 |
 

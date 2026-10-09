@@ -1,6 +1,6 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
@@ -8,8 +8,6 @@ using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.Helpers.Extensions;
-using BetterGenshinImpact.View.Drawable;
-using Fischless.WindowsInput;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
@@ -29,7 +27,7 @@ namespace BetterGenshinImpact.GameTask.GetGridIcons;
 public class GetGridIconsTask : ISoloTask
 {
     private readonly ILogger logger = App.GetLogger<GetGridIconsTask>();
-    private readonly InputSimulator input = Simulation.SendInput;
+    private IInputChannel input => InputHub.Foreground;
 
     private CancellationToken ct;
 
@@ -86,7 +84,7 @@ public class GetGridIconsTask : ISoloTask
     {
         GridScreen gridScreen = new GridScreen(GridParams.Templates[this.gridScreenName], this.logger, this.ct);
         gridScreen.OnAfterTurnToNewPage += GridScreen.DrawItemsAfterTurnToNewPage;
-        gridScreen.OnBeforeScroll += () => VisionContext.Instance().DrawContent.ClearAll();
+        gridScreen.OnBeforeScroll += () => TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
         HashSet<string> fileNames = new HashSet<string>();
         try
         {
@@ -128,7 +126,7 @@ public class GetGridIconsTask : ISoloTask
         }
         finally
         {
-            VisionContext.Instance().DrawContent.ClearAll();
+            TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
         }
     }
 

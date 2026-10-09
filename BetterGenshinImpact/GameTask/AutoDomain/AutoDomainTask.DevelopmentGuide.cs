@@ -1,10 +1,10 @@
+using BetterGenshinImpact.Core.Input;
 using System;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Script.Dependence;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
@@ -58,7 +58,7 @@ public partial class AutoDomainTask
     {
         _guideDomainName = null;
         await new ReturnMainUiTask().Start(_ct);
-        Simulation.SendInput.SimulateAction(GIActions.OpenAdventurerHandbook);
+        InputHub.Foreground.SimulateAction(GIActions.OpenAdventurerHandbook);
         await Delay(1000, _ct);
         await ClickGuideText("秘境", 0.1, 0.2, 0.1, 0.6);
         await ClickGuideText("提升指南", 0.2, 0.17, 0.18, 0.15);
@@ -101,7 +101,7 @@ public partial class AutoDomainTask
             GlobalMethod.MoveMouseTo(screen.Width / 4, screen.Height / 2);
         for (var i = 0; i < 80; i++)
         {
-            Simulation.SendInput.Mouse.VerticalScroll(-1);
+            InputHub.Foreground.Mouse.VerticalScroll(-1);
             await Delay(20, _ct);
         }
         await Delay(600, _ct);
