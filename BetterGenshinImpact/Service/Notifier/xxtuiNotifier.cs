@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Service.Notification.Model;
+using BetterGenshinImpact.Helpers.Http;
 using BetterGenshinImpact.Service.Notifier.Interface;
 
 namespace BetterGenshinImpact.Service.Notifier;
@@ -37,7 +38,7 @@ public enum XxtuiChannel
 /// <summary>
 ///     使用xxtui.com API的推送通知实现
 /// </summary>
-public class XxtuiNotifier : INotifier
+public class XxtuiNotifier : INotifier, IDisposable
 {
     private readonly string _apiKey;
     private readonly string _baseUrl;
@@ -54,7 +55,7 @@ public class XxtuiNotifier : INotifier
         string from = "Better原神",
         params XxtuiChannel[] channels)
     {
-        _httpClient = new HttpClient();
+        _httpClient = HttpClientFactory.CreateClient();
         _apiKey = apiKey;
         _baseUrl = "https://www.xxtui.com/xxtui/" + _apiKey;
         From = from.Length > 20 ? from.Substring(0, 20) : from;
@@ -75,6 +76,8 @@ public class XxtuiNotifier : INotifier
     ///     通知名称
     /// </summary>
     public string Name => "信息推送";
+
+    public void Dispose() => _httpClient.Dispose();
 
     /// <summary>
     ///     发送通知
@@ -109,10 +112,10 @@ public class XxtuiNotifier : INotifier
             }
 
             // 准备POST请求内容
-            var content = new FormUrlEncodedContent(parameters);
+            using var content = new FormUrlEncodedContent(parameters);
 
             // 发送POST请求
-            var response = await _httpClient.PostAsync(_baseUrl, content);
+            using var response = await _httpClient.PostAsync(_baseUrl, content);
 
             // 确保请求成功
             response.EnsureSuccessStatusCode();

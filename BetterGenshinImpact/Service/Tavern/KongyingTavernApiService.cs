@@ -58,7 +58,7 @@ public class KongyingTavernApiService : IKongyingTavernApiService
         _memoryFileCache = memoryFileCache;
         _httpClient = HttpClientFactory.GetClient(
             "KongyingTavern",
-            () => new HttpClient { Timeout = TimeSpan.FromSeconds(30) });
+            () => HttpClientFactory.CreateClient(TimeSpan.FromSeconds(30)));
     }
 
     private static MemoryFileCache CreateDefaultMemoryFileCache()

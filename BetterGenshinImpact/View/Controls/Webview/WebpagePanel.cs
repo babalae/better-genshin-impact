@@ -12,6 +12,7 @@ using System.Windows;
 using System.Windows.Controls;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.Http;
 
 namespace BetterGenshinImpact.View.Controls.Webview;
 
@@ -43,6 +44,7 @@ public class WebpagePanel : UserControl
                 CreationProperties = new CoreWebView2CreationProperties
                 {
                     UserDataFolder = Path.Combine(new FileInfo(Environment.ProcessPath!).DirectoryName!, @"WebView2Data\\"),
+                    AdditionalBrowserArguments = ProxyService.Instance.GetWebViewBrowserArguments(),
 
                     // TODO: change the theme from `md2html.html` to fit it firstly.
                     // AdditionalBrowserArguments = "--enable-features=WebContentsForceDark"

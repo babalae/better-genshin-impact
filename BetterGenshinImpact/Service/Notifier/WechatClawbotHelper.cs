@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers.Http;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
@@ -47,7 +48,7 @@ public static class WechatClawbotHelper
         Action<string> onQrCodeUrl,
         CancellationToken cancellationToken)
     {
-        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
+        using var httpClient = HttpClientFactory.CreateClient(TimeSpan.FromSeconds(60));
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCts.CancelAfter(TimeSpan.FromSeconds(LoginTimeoutSeconds));
         var ct = timeoutCts.Token;
@@ -151,7 +152,7 @@ public static class WechatClawbotHelper
 
         var normalizeBaseUrl = NormalizeBaseUrl(baseUrl);
         var verifyCode = GenerateVerifyCode();
-        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
+        using var httpClient = HttpClientFactory.CreateClient(TimeSpan.FromSeconds(60));
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCts.CancelAfter(TimeSpan.FromSeconds(BindTimeoutSeconds));
         var ct = timeoutCts.Token;

@@ -189,6 +189,7 @@ public class ConfigService : IConfigService
             }
 
             config.AutoPickConfig.MigrateLegacyConfig();
+            config.NetworkConfig ??= new NetworkConfig();
             Config = config;
             return config;
         }

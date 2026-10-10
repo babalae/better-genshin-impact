@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -84,7 +84,10 @@ public class TelegramNotifier : INotifier, IDisposable
         }
         else
         {
-            var handler = new HttpClientHandler();
+            var handler = new HttpClientHandler
+            {
+                Proxy = BetterGenshinImpact.Helpers.Http.ProxyService.Instance.OriginalProxy
+            };
             if (proxyEnabled && !string.IsNullOrEmpty(proxyUrl))
                 try
                 {

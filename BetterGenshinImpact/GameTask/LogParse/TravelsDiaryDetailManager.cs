@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -128,7 +128,7 @@ public class TravelsDiaryDetailManager
         List<(int year, int month)> months = GetCurrentAndPreviousTwoMonths();
         months.Reverse();
 
-        YsClient ys = new YsClient();
+        using YsClient ys = new YsClient();
         ApiResponse<GameInfo> apiResponse;
         try
         {

@@ -2,10 +2,12 @@
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+      xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:emoji="clr-namespace:Emoji.Wpf;assembly=Emoji.Wpf"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
+      xmlns:vm="clr-namespace:BetterGenshinImpact.ViewModel.Pages.View"
       xmlns:config="clr-namespace:BetterGenshinImpact.Core.Config"
       xmlns:media="clr-namespace:System.Windows.Media;assembly=PresentationCore"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -1196,6 +1198,211 @@
             </ui:CardControl.Header>
             <ui:ToggleSwitch Margin="0,0,36,0" IsChecked="{Binding Config.CommonConfig.ExitToTray, Mode=TwoWay}" />
         </ui:CardControl>
+
+        <!--  网络代理  -->
+        <ui:CardExpander Margin="0,0,0,12"
+                         ContentPadding="0"
+                         Icon="{ui:SymbolIcon Globe24}">
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="{i18n:T 网络代理}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 为软件更新、脚本仓库同步和内嵌网页配置自定义代理}"
+                                  TextWrapping="Wrap" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <!--  启用开关  -->
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="{i18n:T 启用自定义代理}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 开启后通过该代理发送网络请求。}"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Network.Enabled, Mode=TwoWay}" />
+                </Grid>
+                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <!--  代理地址  -->
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="{i18n:T 代理地址}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 支持 HTTP、HTTPS 和 SOCKS5，需填写完整端口。}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="180"
+                                MaxWidth="800"
+                                Margin="0,0,36,0"
+                                PlaceholderText="http://127.0.0.1:7890"
+                                Text="{Binding Network.ProxyUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                        <ui:TextBox.InputBindings>
+                            <KeyBinding Key="Enter" Command="{Binding Network.SaveAddressCommand}" />
+                        </ui:TextBox.InputBindings>
+                        <b:Interaction.Behaviors>
+                            <behavior:CommitTextOnFocusLostBehavior Command="{Binding Network.SaveAddressCommand}"
+                                                                    PreviewControls="{Binding ElementName=NetworkTestControls}" />
+                        </b:Interaction.Behaviors>
+                    </ui:TextBox>
+                    <ui:TextBlock Grid.Row="2"
+                                  Grid.Column="0"
+                                  Grid.ColumnSpan="2"
+                                  Margin="0,8,36,0"
+                                  Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                                  Text="{Binding Network.ValidationError}"
+                                  TextWrapping="Wrap"
+                                  Visibility="{Binding Network.ValidationError, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                </Grid>
+                <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                <!--  连接测试  -->
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="{i18n:T 测试连接}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 测试上方地址与 GitHub、CNB 的连通性。}"
+                                  TextWrapping="Wrap" />
+                    <StackPanel x:Name="NetworkTestControls"
+                                Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                Margin="0,0,36,0"
+                                VerticalAlignment="Center"
+                                Orientation="Horizontal">
+                        <ui:ProgressRing Width="18"
+                                         Height="18"
+                                         Margin="0,0,10,0"
+                                         VerticalAlignment="Center"
+                                         IsIndeterminate="True"
+                                         Visibility="{Binding Network.IsTestRunning, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        <ui:Button Margin="0,0,8,0"
+                                   Command="{Binding Network.TestConnectionCommand}"
+                                   Content="{i18n:T 测试连接}" />
+                        <ui:Button Command="{Binding Network.TestConnectionCancelCommand}"
+                                   Content="{i18n:T 取消测试}" />
+                    </StackPanel>
+                </Grid>
+                <!--  测试结果  -->
+                <Grid Margin="16,0,36,16"
+                      Visibility="{Binding Network.HasTestResult, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  Margin="0,0,12,0"
+                                  FontTypography="Body"
+                                  Text="GitHub" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Margin="0,6,12,0"
+                                  FontTypography="Body"
+                                  Text="CNB" />
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="1"
+                                  FontTypography="Body"
+                                  Text="{Binding Network.GithubTestResult}"
+                                  TextWrapping="Wrap">
+                        <ui:TextBlock.Style>
+                            <Style TargetType="{x:Type ui:TextBlock}">
+                                <Setter Property="Foreground" Value="{ui:ThemeResource TextFillColorTertiaryBrush}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Network.GithubTestState}" Value="{x:Static vm:ProxyConnectionTestState.Succeeded}">
+                                        <Setter Property="Foreground" Value="{ui:ThemeResource SystemFillColorSuccessBrush}" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Network.GithubTestState}" Value="{x:Static vm:ProxyConnectionTestState.Failed}">
+                                        <Setter Property="Foreground" Value="{ui:ThemeResource SystemFillColorCriticalBrush}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ui:TextBlock.Style>
+                    </ui:TextBlock>
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="1"
+                                  Margin="0,6,0,0"
+                                  FontTypography="Body"
+                                  Text="{Binding Network.CnbTestResult}"
+                                  TextWrapping="Wrap">
+                        <ui:TextBlock.Style>
+                            <Style TargetType="{x:Type ui:TextBlock}">
+                                <Setter Property="Foreground" Value="{ui:ThemeResource TextFillColorTertiaryBrush}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Network.CnbTestState}" Value="{x:Static vm:ProxyConnectionTestState.Succeeded}">
+                                        <Setter Property="Foreground" Value="{ui:ThemeResource SystemFillColorSuccessBrush}" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Network.CnbTestState}" Value="{x:Static vm:ProxyConnectionTestState.Failed}">
+                                        <Setter Property="Foreground" Value="{ui:ThemeResource SystemFillColorCriticalBrush}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ui:TextBlock.Style>
+                    </ui:TextBlock>
+                </Grid>
+            </StackPanel>
+        </ui:CardExpander>
 
 
         <ui:TextBlock Margin="0,0,0,8"

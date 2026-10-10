@@ -1,4 +1,5 @@
 using SixLabors.ImageSharp.PixelFormats;
+using BetterGenshinImpact.Helpers.Http;
 using System;
 using System.Collections.Concurrent;
 using System.IO;
@@ -28,7 +29,7 @@ public sealed class MarkdownImageLoader : IMarkdownImageLoader
     private const int MaxDownloadBytes = 20 * 1024 * 1024;
     private const long MaxPixelCount = 40_000_000;
 
-    private static readonly HttpClient HttpClient = CreateHttpClient();
+    private static readonly HttpClient HttpClient = HttpClientFactory.GetClient("markdown-image", CreateHttpClient);
     private readonly ConcurrentDictionary<string, WeakReference<MarkdownImageResult>> _cache = new(StringComparer.OrdinalIgnoreCase);
 
     public static MarkdownImageLoader Default { get; } = new();
@@ -126,16 +127,12 @@ public sealed class MarkdownImageLoader : IMarkdownImageLoader
 
     private static HttpClient CreateHttpClient()
     {
-        var client = new HttpClient(new HttpClientHandler
+        var client = HttpClientFactory.CreateClient(TimeSpan.FromSeconds(15), handler =>
         {
-            AllowAutoRedirect = true,
-            MaxAutomaticRedirections = 5,
-            UseCookies = false,
-            UseDefaultCredentials = false
-        })
-        {
-            Timeout = TimeSpan.FromSeconds(15)
-        };
+            handler.AllowAutoRedirect = true;
+            handler.MaxAutomaticRedirections = 5;
+            handler.UseCookies = false;
+        });
         client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("BetterGI-Markdown", "1.0"));
         return client;
     }

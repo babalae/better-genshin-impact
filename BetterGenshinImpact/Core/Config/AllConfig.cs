@@ -126,6 +126,8 @@ public partial class AllConfig : ObservableObject
     /// </summary>
     public CommonConfig CommonConfig { get; set; } = new();
 
+    public NetworkConfig NetworkConfig { get; set; } = new();
+
     /// <summary>
     ///     原神启动配置
     /// </summary>

@@ -2,6 +2,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.Http;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Helpers.Win32;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -322,7 +323,7 @@ public partial class ScriptRepoWindow
         }
         catch (Exception ex)
         {
-            await ThemedMessageBox.ErrorAsync($"更新失败，可尝试重置仓库后重新更新。失败原因：{ex.Message}");
+            await ThemedMessageBox.ErrorAsync($"更新失败，已保留本地仓库。请先检查网络或代理设置后重试。失败原因：{ex.Message}");
         }
         finally
         {
@@ -458,7 +459,7 @@ public partial class ScriptRepoWindow
             UpdateProgressValue = 0;
             UpdateProgressText = "正在下载脚本仓库...";
 
-            using var httpClient = new HttpClient();
+            using var httpClient = HttpClientFactory.CreateClient();
             httpClient.Timeout = TimeSpan.FromMinutes(10);
 
             // 下载文件

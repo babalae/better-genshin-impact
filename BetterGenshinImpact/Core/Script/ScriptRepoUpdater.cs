@@ -35,7 +35,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 {
     private readonly ILogger<ScriptRepoUpdater> _logger = App.GetLogger<ScriptRepoUpdater>();
 
-    private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(30) };
+    private static readonly HttpClient _httpClient = HttpClientFactory.GetClient(
+        "script-repo", () => HttpClientFactory.CreateClient(TimeSpan.FromSeconds(30)));
 
     /// <summary>
     /// 全局互斥锁，串行化所有对仓库目录和用户脚本目录的写操作，
@@ -781,6 +782,12 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
         var repoPath = Path.Combine(ReposPath, GetRepoFolderName(repoUrl));
         var updated = false;
+        var proxySettings = ProxyService.Instance.Current;
+        proxySettings.ValidateGitRemote(repoUrl);
+        if (proxySettings.GitProxyUnsupported)
+        {
+            _logger.LogWarning("Git 同步不使用该代理，将直连；需要代理同步时请使用 HTTP 端口。");
+        }
 
         // 备份相关变量
         string? oldRepoJsonContent = null;
@@ -796,7 +803,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     // 如果仓库不存在，执行浅克隆操作
                     _logger.LogInformation($"浅克隆仓库: {repoUrl} 到 {repoPath}");
 
-                    CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress);
+                    CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress, proxySettings);
                     SaveFolderMapping(repoUrl.TrimEnd('/'), Path.GetFileName(repoPath));
                     updated = true;
                 }
@@ -821,7 +828,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     {
                         Toast.Error($"不是有效的Git仓库，将重新克隆");
                         UIDispatcherHelper.Invoke(() => Toast.Error("不是有效的Git仓库，将重新克隆"));
-                        CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress);
+                        CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress, proxySettings);
                         updated = true;
                         return;
                     }
@@ -830,10 +837,10 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
                     // 检查远程URL是否需要更新
                     var origin = repo.Network.Remotes["origin"];
-                    if (origin.Url != repoUrl)
+                    if (origin == null || origin.Url != repoUrl)
                     {
                         // 远程URL已更改，克隆到临时文件夹后基于目录结构重合度决定存放位置
-                        _logger.LogInformation($"远程URL已更改: 从 {origin.Url} 到 {repoUrl}");
+                        _logger.LogInformation($"远程URL已更改: 从 {origin?.Url} 到 {repoUrl}");
                         repo?.Dispose();
                         repo = null;
 
@@ -842,7 +849,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                         bool cloneSucceeded = false;
                         try
                         {
-                            CloneRepository(repoUrl, tempPath, "release", onCheckoutProgress);
+                            CloneRepository(repoUrl, tempPath, "release", onCheckoutProgress, proxySettings);
                             cloneSucceeded = true;
                         }
                         catch (Exception cloneEx)
@@ -850,6 +857,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                             _logger.LogError(cloneEx, "克隆到临时文件夹失败，保留原仓库");
                             if (Directory.Exists(tempPath))
                                 DirectoryHelper.DeleteReadOnlyDirectory(tempPath);
+                            throw;
                         }
 
                         // Step 2: 基于目录结构重合度决定存放位置
@@ -870,8 +878,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                                 {
                                     // 目录结构重合度高 → 同一仓库的不同镜像，替换原文件夹
                                     _logger.LogInformation("目录结构重合度 {Ratio:P0}，判定为同一仓库镜像，替换原文件夹", overlapRatio);
-                                    DirectoryHelper.DeleteReadOnlyDirectory(repoPath);
-                                    Directory.Move(tempPath, repoPath);
+                                    RepositoryDirectoryTransaction.Promote(tempPath, repoPath);
                                     SaveFolderMapping(repoUrl.TrimEnd('/'), Path.GetFileName(repoPath));
                                 }
                                 else
@@ -891,7 +898,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                                 _logger.LogError(moveEx, "处理临时文件夹失败，清理临时目录，保留原仓库");
                                 if (Directory.Exists(tempPath))
                                     DirectoryHelper.DeleteReadOnlyDirectory(tempPath);
-                                cloneSucceeded = false; // move 失败，视为未更新
+                                throw;
                             }
                         }
 
@@ -900,7 +907,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     }
 
                     // 直接获取远程分支的 Commit SHA
-                    var remoteReferences = repo.Network.ListReferences(repoUrl, CreateCredentialsHandler());
+                    // LibGit2Sharp 0.31 的 Network.ListReferences 重载会丢弃代理参数，使用静态 API。
+                    var remoteReferences = Repository.ListRemoteReferences(repoUrl, CreateCredentialsHandler(), proxySettings.CreateGitProxyOptions());
                     var remoteBranch = remoteReferences.FirstOrDefault(r => r.CanonicalName == "refs/heads/release");
 
                     if (remoteBranch == null)
@@ -922,7 +930,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                         _logger.LogInformation($"检测到远程更新: 本地 {currentCommitSha?[..7] ?? "无"} -> 远程 {remoteCommitSha[..7]}");
                         repo?.Dispose();
                         repo = null;
-                        CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress);
+                        CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress, proxySettings);
                         updated = true;
                     }
                 }
@@ -930,11 +938,8 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Git仓库更新失败");
-                UIDispatcherHelper.Invoke(() => Toast.Error("脚本仓库更新异常，直接删除后重新克隆\n原因：" + ex.Message));
-                repo?.Dispose();
-                repo = null;
-                CloneRepository(repoUrl, repoPath, "release", onCheckoutProgress);
-                updated = true;
+                UIDispatcherHelper.Invoke(() => Toast.Error("脚本仓库更新失败，已保留本地仓库\n原因：" + ex.Message));
+                throw;
             }
             finally
             {
@@ -1220,8 +1225,9 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     }
 
     private static void SimpleCloneRepository(string repoUrl, string repoPath,
-        CheckoutProgressHandler? onCheckoutProgress)
+        CheckoutProgressHandler? onCheckoutProgress, ProxySettingsSnapshot proxySettings)
     {
+        proxySettings.ValidateGitRemote(repoUrl);
         var options = new CloneOptions
         {
             BranchName = "release", // 指定分支
@@ -1233,28 +1239,65 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         // options.FetchOptions.Depth = 1; // 浅克隆，只获取最新的提交
         // 设置凭据处理器
         options.FetchOptions.CredentialsProvider = Instance.CreateCredentialsHandler();
+        var proxyOptions = proxySettings.CreateGitProxyOptions();
+        options.FetchOptions.ProxyOptions.ProxyType = proxyOptions.ProxyType;
+        options.FetchOptions.ProxyOptions.Url = proxyOptions.Url;
         options.FetchOptions.OnTransferProgress = progress =>
         {
             onCheckoutProgress?.Invoke($"拉取对象 {progress.ReceivedObjects}/{progress.TotalObjects}", progress.ReceivedObjects, progress.TotalObjects);
             return true;
         };
         // 克隆仓库
-        Repository.Clone(repoUrl, repoPath, options);
+        RepositoryDirectoryTransaction.Replace(repoPath,
+            staged => Repository.Clone(repoUrl, staged, options), ValidateClonedRepository);
     }
 
     /// <summary>
     /// 克隆Git仓库（只检出repo.json）
     /// 相当于 Repository.Clone(repoUrl, repoPath, options);
-    /// 用这个方法可以无视本地代理
+    /// 先在同级临时目录完成下载与校验，连接失败不会破坏本地仓库。
     /// </summary>
     /// <param name="repoUrl"></param>
     /// <param name="repoPath"></param>
     /// <param name="branchName"></param>
     /// <param name="onCheckoutProgress"></param>
     /// <exception cref="Exception"></exception>
-    private void CloneRepository(string repoUrl, string repoPath, string branchName, CheckoutProgressHandler? onCheckoutProgress)
+    private void CloneRepository(string repoUrl, string repoPath, string branchName,
+        CheckoutProgressHandler? onCheckoutProgress, ProxySettingsSnapshot proxySettings)
     {
-        DirectoryHelper.DeleteReadOnlyDirectory(repoPath);
+        proxySettings.ValidateGitRemote(repoUrl);
+        RepositoryDirectoryTransaction.Replace(repoPath,
+            staged => CloneRepositoryCore(repoUrl, staged, branchName, onCheckoutProgress, proxySettings),
+            ValidateClonedRepository);
+    }
+
+    private static void ValidateClonedRepository(string repoPath)
+    {
+        using var repo = new Repository(repoPath);
+        if (repo.Head.Tip == null || !File.Exists(Path.Combine(repoPath, "repo.json"))
+            || repo.Head.Tip.Tree["repo"]?.TargetType != TreeEntryTargetType.Tree)
+        {
+            throw new InvalidDataException("下载的仓库缺少有效提交、repo.json 或 repo/ 目录，已保留原仓库。");
+        }
+
+        JObject.Parse(File.ReadAllText(Path.Combine(repoPath, "repo.json")));
+    }
+
+    private static void ValidateFileRepository(string repoPath)
+    {
+        var repoJsonPath = Path.Combine(repoPath, "repo.json");
+        var repoDirectoryPath = Path.Combine(repoPath, "repo");
+        if (!File.Exists(repoJsonPath) || !Directory.Exists(repoDirectoryPath))
+        {
+            throw new InvalidDataException("下载的仓库缺少有效的 repo.json 或 repo/ 目录，已保留原仓库。");
+        }
+
+        JObject.Parse(File.ReadAllText(repoJsonPath));
+    }
+
+    private void CloneRepositoryCore(string repoUrl, string repoPath, string branchName,
+        CheckoutProgressHandler? onCheckoutProgress, ProxySettingsSnapshot proxySettings)
+    {
         Directory.CreateDirectory(repoPath);
         Repository.Init(repoPath);
 
@@ -1268,10 +1311,15 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             Remote remote = repo.Network.Remotes.Add("origin", repoUrl);
 
             // 只拉取指定分支
+            var proxyOptions = proxySettings.CreateGitProxyOptions();
             var fetchOptions = new FetchOptions
             {
                 TagFetchMode = TagFetchMode.None,
-                ProxyOptions = { ProxyType = ProxyType.None },
+                ProxyOptions =
+                {
+                    ProxyType = proxyOptions.ProxyType,
+                    Url = proxyOptions.Url
+                },
                 Depth = 1, // 浅拉取，只获取最新的提交
                 CredentialsProvider = CreateCredentialsHandler(), // 添加凭据处理器
                 OnTransferProgress = progress =>
@@ -1709,10 +1757,6 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
         // 2. 添加 safe.directory *
         repo.Config.Set("safe.directory", "*");
-
-        // 3. 移除 http.proxy 和 https.proxy 配置
-        repo.Config.Unset("http.proxy");
-        repo.Config.Unset("https.proxy");
     }
 
     /// <summary>
@@ -1877,14 +1921,14 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
     private async Task<string> ImportLocalRepoZipCore(string zipFilePath, Action<int, string>? onProgress = null)
     {
-        var tempUnzipDir = Path.Combine(ReposTempPath, "importZipFile");
+        var workDir = Path.Combine(ReposTempPath, "importZipFile-" + Guid.NewGuid().ToString("N"));
+        var tempUnzipDir = Path.Combine(workDir, "extracted");
         string targetFolderName = CenterRepoFolderName;
 
         try
         {
             // 阶段1: 准备 (0-10%)
             onProgress?.Invoke(0, "正在准备导入环境...");
-            DirectoryHelper.DeleteReadOnlyDirectory(ReposTempPath);
             Directory.CreateDirectory(tempUnzipDir);
             onProgress?.Invoke(10, "准备完成，开始解压文件...");
 
@@ -1901,6 +1945,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
             var repoDir = Path.GetDirectoryName(repoJsonPath)!;
             var newRepoJsonContent = await File.ReadAllTextAsync(repoJsonPath);
+            JObject.Parse(newRepoJsonContent);
             onProgress?.Invoke(55, "仓库结构验证通过，正在分析仓库内容...");
 
             // 阶段4: 基于目录结构重合度决定目标文件夹 (55-70%)
@@ -1965,8 +2010,6 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     if (oldRepoJson != null)
                         oldRepoContent = await File.ReadAllTextAsync(oldRepoJson);
                 }
-
-                DirectoryHelper.DeleteReadOnlyDirectory(targetPath);
             }
             else if (bestOverlap < 0.5 && bestMatchFolder != null)
             {
@@ -1994,53 +2037,54 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     var oldUpdatedPath = Path.Combine(targetPath, "repo_updated.json");
                     if (File.Exists(oldUpdatedPath))
                         oldRepoContent = await File.ReadAllTextAsync(oldUpdatedPath);
-
-                    DirectoryHelper.DeleteReadOnlyDirectory(targetPath);
                 }
             }
 
             onProgress?.Invoke(70, "正在复制仓库文件...");
 
-            // 阶段5: 拷贝仓库到目标位置 (70-90%)
-            DirectoryHelper.CopyDirectory(repoDir, targetPath);
-            onProgress?.Invoke(90, "仓库复制完成，正在生成更新标记...");
-
-            // 阶段6: 生成 repo_updated.json (90-95%)
-            try
+            // 阶段5: 拷贝仓库到同级临时目录，校验成功后再替换旧仓库 (70-90%)
+            RepositoryDirectoryTransaction.Replace(targetPath, stagedPath =>
             {
-                var updatedJsonPath = Path.Combine(targetPath, "repo_updated.json");
-                if (!string.IsNullOrEmpty(oldRepoContent))
+                DirectoryHelper.CopyDirectory(repoDir, stagedPath);
+
+                // 阶段6: 生成 repo_updated.json (90-95%)
+                try
                 {
-                    var overlapWithOld = CalculateRepoOverlapRatio(oldRepoContent, newRepoJsonContent);
-                    if (overlapWithOld >= 0.5)
+                    var updatedJsonPath = Path.Combine(stagedPath, "repo_updated.json");
+                    if (!string.IsNullOrEmpty(oldRepoContent))
                     {
-                        var updatedContent = AddUpdateMarkersToNewRepo(oldRepoContent, newRepoJsonContent);
-                        await File.WriteAllTextAsync(updatedJsonPath, updatedContent);
-                        _logger.LogInformation("Zip导入：已生成更新标记 repo_updated.json");
+                        var overlapWithOld = CalculateRepoOverlapRatio(oldRepoContent, newRepoJsonContent);
+                        if (overlapWithOld >= 0.5)
+                        {
+                            var updatedContent = AddUpdateMarkersToNewRepo(oldRepoContent, newRepoJsonContent);
+                            File.WriteAllText(updatedJsonPath, updatedContent);
+                            _logger.LogInformation("Zip导入：已生成更新标记 repo_updated.json");
+                        }
+                        else
+                        {
+                            // 目录结构差异太大，直接使用新内容
+                            File.WriteAllText(updatedJsonPath, newRepoJsonContent);
+                        }
                     }
                     else
                     {
-                        // 目录结构差异太大，直接使用新内容
-                        await File.WriteAllTextAsync(updatedJsonPath, newRepoJsonContent);
+                        // 全新导入，直接使用新内容
+                        File.WriteAllText(updatedJsonPath, newRepoJsonContent);
                     }
                 }
-                else
+                catch (Exception ex)
                 {
-                    // 全新导入，直接使用新内容
-                    await File.WriteAllTextAsync(updatedJsonPath, newRepoJsonContent);
+                    _logger.LogWarning(ex, "Zip导入：生成 repo_updated.json 失败");
                 }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Zip导入：生成 repo_updated.json 失败");
-            }
+            }, ValidateFileRepository);
+            onProgress?.Invoke(90, "仓库复制完成，正在生成更新标记...");
 
             onProgress?.Invoke(95, "正在清理临时文件...");
         }
         finally
         {
             // 阶段7: 清理 (95-100%)
-            DirectoryHelper.DeleteReadOnlyDirectory(ReposTempPath);
+            DirectoryHelper.DeleteReadOnlyDirectory(workDir);
         }
 
         onProgress?.Invoke(100, "导入完成");
@@ -2064,7 +2108,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     private async Task DownloadRepoAndUnzipCore(string url)
     {
         // 下载
-        var res = await _httpClient.GetAsync(url);
+        using var res = await _httpClient.GetAsync(url);
         if (!res.IsSuccessStatusCode)
         {
             throw new Exception("下载失败");
@@ -2072,30 +2116,29 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
         var bytes = await res.Content.ReadAsByteArrayAsync();
 
-        // 获取文件名
-        var contentDisposition = res.Content.Headers.ContentDisposition;
-        var fileName = contentDisposition is { FileName: not null }
-            ? contentDisposition.FileName.Trim('"')
-            : "temp.zip";
-
-        // 创建临时目录
-        if (!Directory.Exists(ReposTempPath))
+        // 使用固定的临时文件名，避免 Content-Disposition 中的路径影响本地文件位置。
+        Directory.CreateDirectory(ReposTempPath);
+        var zipPath = Path.Combine(ReposTempPath, "download-" + Guid.NewGuid().ToString("N") + ".zip");
+        try
         {
-            Directory.CreateDirectory(ReposTempPath);
+            await File.WriteAllBytesAsync(zipPath, bytes);
+            await ImportLocalRepoZipCore(zipPath);
         }
-
-        // 保存下载的文件
-        var zipPath = Path.Combine(ReposTempPath, fileName);
-        await File.WriteAllBytesAsync(zipPath, bytes);
-
-        // 删除旧文件夹
-        if (Directory.Exists(CenterRepoPath))
+        finally
         {
-            DirectoryHelper.DeleteReadOnlyDirectory(CenterRepoPath);
+            try
+            {
+                File.Delete(zipPath);
+            }
+            catch (IOException)
+            {
+                // 临时文件清理失败不应掩盖下载或导入结果。
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // 临时文件清理失败不应掩盖下载或导入结果。
+            }
         }
-
-        // 使用 System.IO.Compression 解压
-        ZipFile.ExtractToDirectory(zipPath, ReposPath, true);
     }
 
     public async Task ImportScriptFromClipboard(string clipboardText)

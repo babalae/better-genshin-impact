@@ -1,4 +1,5 @@
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Helpers.Http;
 using LazyCache;
 using LazyCache.Providers;
 using Microsoft.Extensions.Caching.Memory;
@@ -17,7 +18,7 @@ namespace BetterGenshinImpact.ViewModel;
 internal static class MapIconImageCache
 {
     private const string CacheType = "map-icon-image";
-    private static readonly HttpClient _http = new();
+    private static readonly HttpClient _http = HttpClientFactory.GetClient("map-icon-image", () => HttpClientFactory.CreateClient());
     private static readonly TimeSpan _ttl = TimeSpan.FromDays(20);
     private static readonly ConcurrentDictionary<string, CacheEntry> _decodedCache = new(StringComparer.Ordinal);
     private static readonly ConcurrentDictionary<string, Task<ImageSource?>> _inflight = new(StringComparer.Ordinal);

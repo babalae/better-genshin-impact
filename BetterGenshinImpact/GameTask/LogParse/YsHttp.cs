@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Helpers.Http;
 
 namespace BetterGenshinImpact.GameTask.LogParse
 {
@@ -72,7 +73,7 @@ namespace BetterGenshinImpact.GameTask.LogParse
         [JsonPropertyName("is_official")] public bool IsOfficial { get; set; }
     }
 
-    public class YsClient
+    public class YsClient : IDisposable
     {
         protected const string Accept = "Accept";
         protected const string Cookie = "Cookie";
@@ -117,7 +118,9 @@ namespace BetterGenshinImpact.GameTask.LogParse
             return result;
         }
 
-        protected readonly HttpClient _httpClient = new HttpClient();
+        protected readonly HttpClient _httpClient = HttpClientFactory.CreateClient();
+
+        public void Dispose() => _httpClient.Dispose();
 
         protected virtual async Task<ApiResponse<T>> CommonSendAsync<T>(HttpRequestMessage request,
             CancellationToken cancellationToken = default)
@@ -125,7 +128,7 @@ namespace BetterGenshinImpact.GameTask.LogParse
             request.Version = HttpVersion.Version20;
             request.Headers.Add(Accept, Application_Json);
             request.Headers.Add(UserAgent, UAContent);
-            var response = await _httpClient.SendAsync(request, cancellationToken);
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
             response.EnsureSuccessStatusCode();
 
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -186,7 +189,7 @@ namespace BetterGenshinImpact.GameTask.LogParse
             }
 
             var url = "https://api-takumi.mihoyo.com/binding/api/getUserGameRolesByCookie?game_biz=hk4e_cn";
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
             request.Headers.Add(Cookie, cookie);
             request.Headers.Add(DS, CreateSecret2(url));
             request.Headers.Add(X_Request_With, com_mihoyo_hyperion);
@@ -210,7 +213,7 @@ namespace BetterGenshinImpact.GameTask.LogParse
         {
             var url =
                 $"https://hk4e-api.mihoyo.com/event/ys_ledger/monthInfo?month={month}&bind_uid={role.GameUid}&bind_region={role.Region}&bbs_presentation_style=fullscreen&bbs_auth_required=true&utm_source=bbs&utm_medium=mys&utm_campaign=icon";
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
             request.Headers.Add(Cookie, cookie);
             request.Headers.Add(Referer, "https://webstatic.mihoyo.com/");
             request.Headers.Add(X_Request_With, com_mihoyo_hyperion);
@@ -232,7 +235,7 @@ namespace BetterGenshinImpact.GameTask.LogParse
         {
             var url =
                 $"https://hk4e-api.mihoyo.com/event/ys_ledger/monthDetail?page={page}&month={month}&limit={limit}&type={type}&bind_uid={role.GameUid}&bind_region={role.Region}&bbs_presentation_style=fullscreen&bbs_auth_required=true&utm_source=bbs&utm_medium=mys&utm_campaign=icon";
-            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
             request.Headers.Add(Cookie, cookie);
             request.Headers.Add(Referer, "https://webstatic.mihoyo.com/");
             request.Headers.Add(X_Request_With, com_mihoyo_hyperion);

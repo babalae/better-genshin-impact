@@ -1,5 +1,6 @@
 using BetterGenshinImpact.Core.Input.Backends.WebSdk;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.Http;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.Service.Interface;
 using Microsoft.Extensions.Logging;
@@ -248,7 +249,7 @@ public partial class CloudWebHostWindow : Window
     {
         try
         {
-            var options = new CoreWebView2EnvironmentOptions(BrowserArguments);
+            var options = new CoreWebView2EnvironmentOptions(ProxyService.Instance.GetWebViewBrowserArguments(BrowserArguments));
             var environment = await CoreWebView2Environment.CreateAsync(
                 null, WebViewInstanceStore.GetDataFolder(_instanceName), options);
             if (_isClosed) return;

@@ -182,16 +182,12 @@ public sealed class BannerImageService : IBannerImageService
 
     private static HttpClient CreateHttpClient()
     {
-        var client = new HttpClient(new HttpClientHandler
+        var client = HttpClientFactory.CreateClient(Timeout.InfiniteTimeSpan, handler =>
         {
-            AllowAutoRedirect = true,
-            MaxAutomaticRedirections = 5,
-            UseCookies = false,
-            UseDefaultCredentials = false
-        })
-        {
-            Timeout = Timeout.InfiniteTimeSpan
-        };
+            handler.AllowAutoRedirect = true;
+            handler.MaxAutomaticRedirections = 5;
+            handler.UseCookies = false;
+        });
         client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("BetterGI-Banner", "1.0"));
         return client;
     }

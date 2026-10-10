@@ -3,6 +3,7 @@ using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.ViewModel.Windows;
+using BetterGenshinImpact.Helpers.Http;
 using CsTrees.Blackboard;
 using CsTrees.Composites;
 using CsTrees.MEAI;
@@ -11,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using OpenAI;
 using System;
 using System.ClientModel;
+using System.ClientModel.Primitives;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -295,6 +297,9 @@ public class AutoComboBuildTask : ISoloTask
         {
             Endpoint = endpoint,
             NetworkTimeout = TimeSpan.FromMinutes(10),
+            // LLM 保持原系统代理行为，不跟随网络设置中的自定义代理。
+            Transport = new HttpClientPipelineTransport(HttpClientFactory.GetClient("llm-system-proxy",
+                () => HttpClientFactory.CreateClient(Timeout.InfiniteTimeSpan, useSystemProxy: true))),
         };
 
         // 密钥为空时传占位符：OpenAI 客户端拒绝空密钥，而本地服务不校验该头的值
