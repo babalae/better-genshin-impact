@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
 using BetterGenshinImpact.Service.Notification.Model;
+using BetterGenshinImpact.Helpers.Http;
 using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
 
@@ -102,7 +103,7 @@ namespace BetterGenshinImpact.Service.Notifier
         public string Action { get; set; }
     }
 
-    public class BarkNotifier : INotifier
+    public class BarkNotifier : INotifier, IDisposable
     {
         public string Name { get; set; } = "Bark";
 
@@ -152,9 +153,10 @@ namespace BetterGenshinImpact.Service.Notifier
             _defaultOptions.Icon = icon;
 
             // 使用HttpClient进行API调用
-            _httpClient = new HttpClient();
-            _httpClient.Timeout = TimeSpan.FromSeconds(10); // 设置合理的超时时间
+            _httpClient = HttpClientFactory.CreateClient(TimeSpan.FromSeconds(10));
         }
+
+        public void Dispose() => _httpClient.Dispose();
 
         /// <summary>
         /// 异步发送通知（使用默认选项）
@@ -229,7 +231,7 @@ namespace BetterGenshinImpact.Service.Notifier
 
                 // 序列化通知数据
                 var jsonPayload = JsonSerializer.Serialize(payload);
-                var httpContent = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+                using var httpContent = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
                 // 为每个设备发送单独的请求
                 var tasks = new List<Task>();
@@ -271,7 +273,7 @@ namespace BetterGenshinImpact.Service.Notifier
                 Console.WriteLine($"请求内容: {jsonPayload}");
                 
                 // 发送到API端点
-                var response = await _httpClient.PostAsync(requestUrl, httpContent);
+                using var response = await _httpClient.PostAsync(requestUrl, httpContent);
                 
                 // 读取响应内容
                 var responseContent = await response.Content.ReadAsStringAsync();

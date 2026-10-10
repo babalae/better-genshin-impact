@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Helpers.Http;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Runtime;
@@ -42,7 +43,7 @@ public class NotificationService : IHostedService, IDisposable
     {
         _notifierManager = notifierManager ?? throw new ArgumentNullException(nameof(notifierManager));
         _gameRuntimeService = gameRuntimeService;
-        _notifyHttpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        _notifyHttpClient = HttpClientFactory.CreateClient(TimeSpan.FromSeconds(30));
         _webSocketCts = new CancellationTokenSource();
 
         lock (InstanceLock)

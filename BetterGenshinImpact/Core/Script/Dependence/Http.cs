@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Helpers.Http;
 using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
@@ -93,7 +94,7 @@ public class Http
         }
 
         // 使用HttpClient发送请求
-        using var httpClient = new HttpClient();
+        using var httpClient = HttpClientFactory.CreateClient();
         httpClient.DefaultRequestHeaders.Clear();
         foreach (var header in dictHeaders)
         {
@@ -101,7 +102,8 @@ public class Http
         }
 
         var content = body == null ? null : new StringContent(body, Encoding.UTF8, contentType);
-        var response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(method), url) { Content = content });
+        using var request = new HttpRequestMessage(new HttpMethod(method), url) { Content = content };
+        using var response = await httpClient.SendAsync(request);
 
         var responseCode = (int)response.StatusCode;
         var responseHeaders = response.Headers.ToDictionary(h => h.Key, h => h.Value.First()); // 只取第一个值

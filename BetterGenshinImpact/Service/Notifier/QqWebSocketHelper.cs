@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers.Http;
 using System;
 using System.Net.Http;
 using System.Net.WebSockets;
@@ -48,7 +49,7 @@ public class QqWebSocketHelper
 
         var verifyCode = GenerateVerifyCode();
 
-        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        using var httpClient = HttpClientFactory.CreateClient(TimeSpan.FromSeconds(30));
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCts.CancelAfter(TimeSpan.FromSeconds(BindTimeoutSeconds));
         var ct = timeoutCts.Token;
@@ -123,7 +124,7 @@ public class QqWebSocketHelper
 
         var verifyCode = GenerateVerifyCode();
 
-        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        using var httpClient = HttpClientFactory.CreateClient(TimeSpan.FromSeconds(30));
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCts.CancelAfter(TimeSpan.FromSeconds(BindTimeoutSeconds));
         var ct = timeoutCts.Token;

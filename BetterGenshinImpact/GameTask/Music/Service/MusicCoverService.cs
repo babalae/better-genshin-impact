@@ -31,7 +31,7 @@ public sealed class MusicCoverService : IMusicCoverService
         _fileCache = fileCache;
         _httpClient = HttpClientFactory.GetClient(
             "iTunesSearch",
-            () => new HttpClient { Timeout = TimeSpan.FromSeconds(20) });
+            () => HttpClientFactory.CreateClient(TimeSpan.FromSeconds(20)));
     }
 
     public async Task<ImageSource?> GetCoverAsync(string songName, CancellationToken cancellationToken)

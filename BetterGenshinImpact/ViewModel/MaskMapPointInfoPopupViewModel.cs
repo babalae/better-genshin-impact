@@ -9,6 +9,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using BetterGenshinImpact.Model.MaskMap;
+using BetterGenshinImpact.Helpers.Http;
 using BetterGenshinImpact.Service.Interface;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -20,7 +21,7 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
 {
     private readonly ILogger<MaskMapPointInfoPopupViewModel> _logger = App.GetLogger<MaskMapPointInfoPopupViewModel>();
     private CancellationTokenSource? _cts;
-    private static readonly HttpClient _http = new();
+    private static readonly HttpClient _http = HttpClientFactory.GetClient("map-point-image", () => HttpClientFactory.CreateClient());
     private MemoryStream? _imageStream;
 
     public event EventHandler<MaskMapPoint?>? ToggleHiddenRequested;

@@ -17,6 +17,7 @@ using BetterGenshinImpact.GameTask.Runtime.Win32;
 using BetterGenshinImpact.GameTask.Runtime.WebPage;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
+using BetterGenshinImpact.Helpers.Http;
 using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.ChildSession;
@@ -70,6 +71,10 @@ public partial class App : Application
                 var configService = new ConfigService();
                 services.AddSingleton<IConfigService>(sp => configService);
                 var all = configService.Get();
+                var proxyService = ProxyService.Instance;
+                proxyService.Initialize(all.NetworkConfig);
+                proxyService.UseAsDefaultProxy();
+                services.AddSingleton(proxyService);
 
                 var logFolder = Path.Combine(AppContext.BaseDirectory, "log");
                 Directory.CreateDirectory(logFolder);
@@ -162,6 +167,8 @@ public partial class App : Application
                 services.AddView<TaskSettingsPage, TaskSettingsPageViewModel>();
                 services.AddView<HotKeyPage, HotKeyPageViewModel>();
                 services.AddView<NotificationSettingsPage, NotificationSettingsPageViewModel>();
+                // 网络代理设置作为设置页中的一个分组，不需要独立的导航页面
+                services.AddSingleton<NetworkSettingsViewModel>();
                 services.AddView<KeyMouseRecordPage, KeyMouseRecordPageViewModel>();
                 services.AddView<JsListPage, JsListViewModel>();
                 services.AddView<MapPathingPage, MapPathingViewModel>();

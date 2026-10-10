@@ -15,6 +15,7 @@ using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Web.WebView2.Core;
 
@@ -323,7 +324,8 @@ public partial class HtmlMaskWindow : Window
     {
         try
         {
-            var environment = await CoreWebView2Environment.CreateAsync(null, _webView2DataPath);
+            var options = new CoreWebView2EnvironmentOptions(ProxyService.Instance.GetWebViewBrowserArguments());
+            var environment = await CoreWebView2Environment.CreateAsync(null, _webView2DataPath, options);
             if (_isClosing) return;
 
             var controllerOptions = environment.CreateCoreWebView2ControllerOptions();

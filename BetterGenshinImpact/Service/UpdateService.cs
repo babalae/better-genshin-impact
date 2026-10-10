@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Http;
 using BetterGenshinImpact.Model;
@@ -193,10 +193,10 @@ public class UpdateService : IUpdateService
                 { "channel", "alpha" }
             };
 
-            using var httpClient = new HttpClient();
+            using var httpClient = HttpClientFactory.CreateClient();
 
             var finalUrl = $"{url}?{string.Join("&", queryParams.Select(x => $"{x.Key}={x.Value}"))}";
-            var response = await httpClient.GetAsync(finalUrl);
+            using var response = await httpClient.GetAsync(finalUrl);
             LatestResponse? result = null;
             if (response.StatusCode == HttpStatusCode.OK)
             {
@@ -270,7 +270,7 @@ public class UpdateService : IUpdateService
     {
         try
         {
-            using HttpClient httpClient = new();
+            using var httpClient = HttpClientFactory.CreateClient();
             Notice? notice = await httpClient.GetFromJsonAsync<Notice>(NoticeUrl);
             string deviceId = DeviceIdHelper.DeviceId;
 
@@ -297,7 +297,7 @@ public class UpdateService : IUpdateService
     {
         try
         {
-            using HttpClient httpClient = new();
+            using var httpClient = HttpClientFactory.CreateClient();
             httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
             string jsonString =
                 await httpClient.GetStringAsync(
