@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain.Model;
@@ -57,9 +58,28 @@ public class ResinUseRecord
             {
                 throw new Exception("你选择了指定树脂刷取次数，请至少配置一种树脂的刷取次数！");
             }
+
+            list = OrderByPriority(list, taskParam.ResinPriorityList);
         }
 
         return list;
+    }
+
+    /// <summary>
+    /// 按配置的优先级重排默认加入顺序。优先级里没写的树脂排在后面并保持原相对顺序，
+    /// </summary>
+    private static List<ResinUseRecord> OrderByPriority(List<ResinUseRecord> list, List<string>? priorityOrder)
+    {
+        if (priorityOrder is not { Count: > 0 })
+        {
+            return list;
+        }
+
+        return [.. list.OrderBy(o =>
+        {
+            var index = priorityOrder.IndexOf(o.Name);
+            return index < 0 ? int.MaxValue : index;
+        })];
     }
     
     public static List<ResinUseRecord> BuildFromDomainParam(AutoStygianOnslaughtParam taskParam)
