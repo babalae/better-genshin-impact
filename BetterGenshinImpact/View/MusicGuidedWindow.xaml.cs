@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -111,6 +112,18 @@ public partial class MusicGuidedWindow : Window, IMusicGuidedOverlay
     private bool _isClosing;
     private bool _isPumping;
     private MusicGuidedSession? _session;
+
+    /// <summary>游戏是否在前台的查询间隔（毫秒）</summary>
+    private const int GameActiveCheckInterval = 250;
+
+    /// <summary>
+    /// 「游戏是否在前台」的缓存时刻：覆盖层每 16ms 刷一帧，而查一次进程名要毫秒级，
+    /// 每帧都查不值当，所以 <see cref="IsGameActive"/> 把结果缓存 <see cref="GameActiveCheckInterval"/> 毫秒。
+    /// </summary>
+    private long _gameActiveCheckedAt;
+
+    /// <inheritdoc cref="_gameActiveCheckedAt" />
+    private bool _gameActiveCached;
 
     public MusicGuidedWindow()
     {
@@ -626,6 +639,25 @@ public partial class MusicGuidedWindow : Window, IMusicGuidedOverlay
     }
 
     /// <summary>
+    /// 游戏是否在前台（结果缓存 <see cref="GameActiveCheckInterval"/> 毫秒，避免每帧查一次进程名）。
+    ///
+    /// 覆盖层是置顶且点击穿透的，玩家随时可能切到别的程序；这时按下的 Esc / Ctrl 组合键都不该
+    /// 作用到引导会话上，否则在别处关个对话框就把整个跟弹会话退掉了。
+    /// </summary>
+    private bool IsGameActive()
+    {
+        var now = Environment.TickCount64;
+        if (now - _gameActiveCheckedAt < GameActiveCheckInterval)
+        {
+            return _gameActiveCached;
+        }
+
+        _gameActiveCheckedAt = now;
+        _gameActiveCached = SystemControl.IsGenshinImpactActiveByProcess();
+        return _gameActiveCached;
+    }
+
+    /// <summary>
     /// 每帧刷新：让每个待按的键上的锚圈呼吸、涟漪往外扩散淡出。
     /// </summary>
     private void RenderFrame()
@@ -636,7 +668,9 @@ public partial class MusicGuidedWindow : Window, IMusicGuidedOverlay
         }
 
         // 窗口是点击穿透的、拿不到键盘焦点，所以用异步键状态检测来支持 Esc 退出与现场微调。
-        if (IsKeyDown((int)User32.VK.VK_ESCAPE))
+        // 只在游戏处于前台时才认这些热键：切到别的程序后按 Esc / Ctrl 不该影响引导会话。
+        var gameActive = IsGameActive();
+        if (gameActive && IsKeyDown((int)User32.VK.VK_ESCAPE))
         {
             if (!_escapeHeld)
             {
@@ -649,7 +683,7 @@ public partial class MusicGuidedWindow : Window, IMusicGuidedOverlay
             _escapeHeld = false;
         }
 
-        PollCalibration();
+        PollCalibration(gameActive);
 
         // 游戏窗口在会话进行中被移动 / 缩放时，让会话把键位重新算一遍。
         PumpSession();
@@ -692,18 +726,19 @@ public partial class MusicGuidedWindow : Window, IMusicGuidedOverlay
 
     /// <summary>
     /// 现场微调引导圈位置：按住 Ctrl 再按方向键 / [ ] / , . / PgUp PgDn。
-    /// 只有按住 Ctrl 才响应，避免正常弹奏时误触把键位改跑。
+    /// 只有「游戏在前台 + 按住 Ctrl」才响应，避免正常弹奏或切到别的程序时误触把键位改跑。
     /// </summary>
-    private void PollCalibration()
+    private void PollCalibration(bool gameActive)
     {
         if (KeyLayout == null || _isClosing || _session == null)
         {
             return;
         }
 
-        if (!IsKeyDown(VkControl))
+        if (!gameActive || !IsKeyDown(VkControl))
         {
-            // Ctrl 一松开就清掉按键记录，避免下次按下被当成「还按着」而漏掉一次微调
+            // 不在游戏前台、或者 Ctrl 一松开就清掉按键记录，
+            // 避免下次按下被当成「还按着」而漏掉一次微调
             if (_downKeys.Count > 0)
             {
                 _downKeys.Clear();
@@ -806,8 +841,11 @@ public partial class MusicGuidedWindow : Window, IMusicGuidedOverlay
     /// <summary>
     /// 重新识别键位：会话会先把覆盖层从屏幕上撤下来（免得把引导圈自己截进去），
     /// 抓一帧游戏画面重新量，量到就写回键位参数并立刻重画。
+    ///
+    /// 抓帧与识别在会话里被放到后台线程（见 <see cref="MusicGuidedSession.RedetectKeysAsync"/>）：
+    /// 这里是键盘钩子回调所在的 UI 线程，同步等着识别完成会把按键回调堵住，也会把覆盖层的定时器卡住。
     /// </summary>
-    private void RedetectKeys()
+    private async void RedetectKeys()
     {
         if (_isPumping || _session == null)
         {
@@ -817,12 +855,16 @@ public partial class MusicGuidedWindow : Window, IMusicGuidedOverlay
         _isPumping = true;
         try
         {
-            if (!_session.RedetectKeys())
+            if (!await _session.RedetectKeysAsync())
             {
                 HintText.Foreground = HintBrush;
                 HintText.Text = "没能从画面里认出琴键，仍按当前参数画圈";
                 ScheduleHintRestore();
             }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"重新识别键位失败：{ex}");
         }
         finally
         {

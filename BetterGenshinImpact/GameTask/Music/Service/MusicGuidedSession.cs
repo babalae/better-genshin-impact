@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Music.Model;
@@ -109,6 +110,12 @@ public sealed class MusicGuidedSession : IDisposable
     /// <summary>自动识别键位的结果说明（显示在覆盖层的诊断行上，失败时也会写明原因）</summary>
     private string _detectionText = string.Empty;
 
+    /// <summary>
+    /// 正在重新识别键位。识别期间玩家按下的键一律忽略：那会儿覆盖层已经撤下去、键位参数也还没定，
+    /// 判定没有意义，反而会把当前这一段的进度记成按错。
+    /// </summary>
+    private bool _redetecting;
+
     /// <summary>自动识别次数与间隔：第一次就失败时再给两次机会，避开游戏界面正在切换的那一瞬间</summary>
     private const int DetectAttempts = 3;
 
@@ -215,9 +222,13 @@ public sealed class MusicGuidedSession : IDisposable
 
     /// <summary>
     /// 重新识别键位（覆盖层上按 Ctrl+R 调用）：先让覆盖层躲开截图，量完再贴回来并按新位置重画当前段。
+    ///
+    /// 抓帧与识别放在后台线程里跑：低级键盘钩子的回调就在安装钩子的线程（UI 线程）上执行，
+    /// 在这里同步抓帧 + 识别会把回调堵住，轻则按键迟滞，重则超过系统的 LowLevelHooksTimeout
+    /// 被摘掉钩子、之后再也收不到按键。所以本方法必须在 UI 线程调用：await 之后要回到 UI 线程操作覆盖层。
     /// </summary>
     /// <returns>是否识别成功</returns>
-    public bool RedetectKeys()
+    public async Task<bool> RedetectKeysAsync()
     {
         if (IsFinished || _disposed)
         {
@@ -227,23 +238,38 @@ public sealed class MusicGuidedSession : IDisposable
         var overlay = _options.Overlay;
         var wasAttached = overlay is { IsAttached: true };
 
-        if (wasAttached)
+        lock (_sync)
         {
-            overlay!.UpdateDetach();
-            System.Threading.Thread.Sleep(DetectRetryDelayMilliseconds);
+            if (_redetecting)
+            {
+                return false;
+            }
+
+            _redetecting = true;
         }
 
         MusicDetectedKeyGrid? grid;
         try
         {
+            if (wasAttached)
+            {
+                overlay!.UpdateDetach();
+                await Task.Delay(DetectRetryDelayMilliseconds);
+            }
+
             // 这是用户主动要求的重新识别，不受「自动识别」开关影响。
-            grid = TryDetectKeys();
+            grid = await Task.Run(TryDetectKeys);
         }
         finally
         {
             if (wasAttached)
             {
                 overlay!.Attach(ResolveGameHandle());
+            }
+
+            lock (_sync)
+            {
+                _redetecting = false;
             }
         }
 
@@ -658,6 +684,13 @@ public sealed class MusicGuidedSession : IDisposable
 
     private void OnKeyPressed(Keys key)
     {
+        // Ctrl / Alt 组合键是覆盖层自己的功能键（Ctrl+R 重新识别、Ctrl+方向键现场微调），
+        // 带着它们按下的字母不是琴键，不能拿去判定。
+        if ((Control.ModifierKeys & (Keys.Control | Keys.Alt)) != 0)
+        {
+            return;
+        }
+
         var pianoKey = ToPianoKey(key);
         if (pianoKey == null)
         {
@@ -668,7 +701,7 @@ public sealed class MusicGuidedSession : IDisposable
         var advance = false;
         lock (_sync)
         {
-            if (IsFinished || _options.IsGameActive?.Invoke() == false)
+            if (IsFinished || _redetecting || _options.IsGameActive?.Invoke() == false)
             {
                 return;
             }
@@ -691,6 +724,12 @@ public sealed class MusicGuidedSession : IDisposable
 
     private void OnKeyReleased(Keys key)
     {
+        // 与 OnKeyPressed 同理：Ctrl / Alt 组合键属于覆盖层的功能键。
+        if ((Control.ModifierKeys & (Keys.Control | Keys.Alt)) != 0)
+        {
+            return;
+        }
+
         var pianoKey = ToPianoKey(key);
         if (pianoKey == null)
         {
@@ -700,7 +739,7 @@ public sealed class MusicGuidedSession : IDisposable
         var value = pianoKey.Value;
         lock (_sync)
         {
-            if (IsFinished || !_heldKeys.Remove(value))
+            if (IsFinished || _redetecting || !_heldKeys.Remove(value))
             {
                 return;
             }
