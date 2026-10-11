@@ -35,6 +35,10 @@ public sealed class PuloniaTaskSnapshot
     [JsonProperty("account_id")]
     public string? AccountId { get; }
 
+    /// <summary>提交时固定的原神账号准备资料 JSON；为空表示普通计划未启用账号准备。</summary>
+    [JsonProperty("genshin_account_json")]
+    public string? GenshinAccountJson { get; }
+
     /// <summary>
     /// 固定后的只读执行树。
     /// </summary>
@@ -74,12 +78,13 @@ public sealed class PuloniaTaskSnapshot
     [JsonConstructor]
     internal PuloniaTaskSnapshot(string planId, long revision, DateTimeOffset preparedAt, string? accountId,
         PuloniaTaskPreparedTask rootTask, IDictionary<string, string> planJsonById,
-        IDictionary<string, string> presetJsonById)
+        IDictionary<string, string> presetJsonById, string? genshinAccountJson = null)
     {
         PlanId = planId;
         Revision = revision;
         PreparedAt = preparedAt;
         AccountId = accountId;
+        GenshinAccountJson = genshinAccountJson;
         RootTask = rootTask;
         PlanJsonById = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(planJsonById));
         PresetJsonById = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(presetJsonById));
@@ -89,4 +94,10 @@ public sealed class PuloniaTaskSnapshot
     /// 输出运行快照供持久化和续跑。
     /// </summary>
     public string ToJson() => PuloniaTaskJson.Write(this);
+
+    /// <summary>用独立的不可变 JSON 固定账号资料，不暴露可被编辑的模型对象。</summary>
+    internal PuloniaTaskSnapshot WithGenshinAccount(PuloniaGenshinAccountProfile account)
+        => new(PlanId, Revision, PreparedAt, AccountId, RootTask,
+            new Dictionary<string, string>(PlanJsonById), new Dictionary<string, string>(PresetJsonById),
+            PuloniaTaskJson.Write(account));
 }

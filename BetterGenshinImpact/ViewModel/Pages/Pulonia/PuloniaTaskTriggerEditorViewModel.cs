@@ -114,10 +114,19 @@ public partial class PuloniaTaskTriggerEditorViewModel : ObservableObject
     /// <summary>当前计划绑定的账号参数资料。</summary>
     public IReadOnlyDictionary<string, string> Accounts { get; }
 
+    /// <summary>一条龙始终使用自身账号绑定，不能由触发器建立第二套选择。</summary>
+    public bool UsesPlanAccountBinding { get; }
+    /// <summary>普通计划仍允许选择原有账号参数资料。</summary>
+    public bool CanSelectAccount => !UsesPlanAccountBinding;
+    /// <summary>当前入口的账号选择语义。</summary>
+    public string AccountSelectionDescription => UsesPlanAccountBinding
+        ? "按一条龙配置的账号绑定执行，并在任务前核验 UID" : "账号参数资料（普通计划不自动切换账号）";
+
     /// <summary>从计划和触发器建立独立草稿，识别常见 Cron 后还原简易配置。</summary>
     public PuloniaTaskTriggerEditorViewModel(PuloniaTaskTrigger trigger, PuloniaTaskPlan plan)
     {
         _original = PuloniaTaskJson.Read<PuloniaTaskTrigger>(PuloniaTaskJson.Write(trigger));
+        UsesPlanAccountBinding = plan.Purpose == PuloniaTaskPlanPurpose.OneDragon;
         Name = trigger.Name; Enabled = trigger.Enabled; TimeZoneId = trigger.TimeZoneId; Cron = trigger.Cron;
         HotkeyType = trigger.HotkeyType; Hotkey = HotKey.FromString(trigger.Hotkey);
         TargetTaskId = trigger.TargetTaskId ?? ""; AccountId = trigger.AccountId ?? "";
@@ -146,9 +155,13 @@ public partial class PuloniaTaskTriggerEditorViewModel : ObservableObject
         var targets = new Dictionary<string, string> { [""] = "整个计划" };
         AddTargets(plan.RootTask, targets, 0);
         Targets = targets;
-        var accounts = new Dictionary<string, string> { [""] = "不指定资料（当前登录账号）" };
+        var accounts = new Dictionary<string, string>
+        {
+            [""] = UsesPlanAccountBinding ? "使用本配置绑定的账号" : "不指定资料（当前登录账号）"
+        };
         foreach (var account in plan.Accounts.Where(item => item.Enabled)) accounts[account.AccountId] = account.AccountId;
         Accounts = accounts;
+        if (UsesPlanAccountBinding) AccountId = "";
         _initializing = false;
         RefreshPreview();
     }
@@ -236,7 +249,7 @@ public partial class PuloniaTaskTriggerEditorViewModel : ObservableObject
         result.Name = Name.Trim(); result.Enabled = Enabled; result.TimeZoneId = TimeZoneId;
         result.Hotkey = Hotkey.ToString(); result.HotkeyType = HotkeyType;
         result.TargetTaskId = string.IsNullOrEmpty(TargetTaskId) ? null : TargetTaskId;
-        result.AccountId = string.IsNullOrEmpty(AccountId) ? null : AccountId;
+        result.AccountId = UsesPlanAccountBinding || string.IsNullOrEmpty(AccountId) ? null : AccountId;
         result.WindowMinutes = Number(WindowMinutes, "有效窗口（分钟）", 1, 10080);
         result.TimeoutSeconds = string.IsNullOrWhiteSpace(TimeoutSeconds) ? null : Number(TimeoutSeconds, "总时限（秒）", 1, 604800);
         result.CatchUp = CatchUp; result.BusyPolicy = BusyPolicy;

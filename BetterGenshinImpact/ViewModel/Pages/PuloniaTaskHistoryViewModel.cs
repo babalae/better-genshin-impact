@@ -132,7 +132,8 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel
     /// <summary>
     /// 是否可以从选中的历史节点地址建立关联运行。
     /// </summary>
-    public bool CanResumeFromNode => SelectedRun?.IsHistorical == true && SelectedRunNodeResult is not null;
+    public bool CanResumeFromNode => SelectedRun?.IsHistorical == true && SelectedRunNodeResult is not null
+        && SelectedRunNodeResult.Result.TaskType != "genshin.account.prepare";
 
     /// <summary>
     /// 注入统一运行服务；只订阅一次，页面与嵌入组件共享此单例。

@@ -13,7 +13,7 @@ namespace BetterGenshinImpact.Pulonia.Services;
 /// <summary>
 /// 计划与预设的最小文件存储；不引用页面，不负责执行或运行状态。
 /// </summary>
-public sealed class PuloniaTaskStore : IDisposable
+public sealed partial class PuloniaTaskStore : IDisposable
 {
     /// <summary>本进程成功保存或删除计划的版本，用于让调度宿主及时刷新配置。</summary>
     private long _planChangeVersion;

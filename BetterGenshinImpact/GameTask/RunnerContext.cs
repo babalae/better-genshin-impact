@@ -34,10 +34,6 @@ public class RunnerContext : Singleton<RunnerContext>
     public bool IsSuspend { get; set; }
 
     /// <summary>
-    /// 优先执行配置组
-    /// </summary>
-    public bool IsPreExecution { get; set; } = false;
-    /// <summary>
     /// 暂停实现
     /// </summary>
     public Dictionary<string, ISuspendable> SuspendableDictionary = new();
@@ -144,7 +140,6 @@ public class RunnerContext : Singleton<RunnerContext>
         isAutoFetchDispatch = false;
         SuspendableDictionary.Clear();
         AutoPickTriggerStopCount = 0;
-        IsPreExecution = false;
     }
 
     /// <summary>

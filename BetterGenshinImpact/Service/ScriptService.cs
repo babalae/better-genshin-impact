@@ -13,12 +13,9 @@ using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
-using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Job;
-using BetterGenshinImpact.GameTask.FarmingPlan;
-using BetterGenshinImpact.GameTask.LogParse;
 using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
@@ -86,43 +83,11 @@ public partial class ScriptService : IScriptService
             
         }
 
-        if (TaskContext.Instance().Config.OtherConfig.FarmingPlanConfig.Enabled)
-        {
-            try
-            {
-                var task = PathingTask.BuildFromFilePath(Path.Combine(MapPathingViewModel.PathJsonPath, project.FolderName, project.Name));
-                if (task is null)
-                {
-                    return true;
-                }
-                string message;
-                if (FarmingStatsRecorder.IsDailyFarmingLimitReached(task.FarmingInfo,out message))
-                {
-                    _logger.LogInformation($"{project.Name}:{message},跳过此任务！");
-                    return true;
-                }
-            }
-            catch (Exception e)
-            {
-                TaskControl.Logger.LogError($"锄地规划统计异常：{e.Message}");
-            }
-
-            
-        }
-        string skipMessage;
-        if (ExecutionRecordStorage.IsSkipTask(project,out skipMessage))
-        {
-            TaskControl.Logger.LogInformation($"{project.Name}:{skipMessage},跳过此任务！");
-            return true;
-        }
         return false; // 不跳过
     }
     
     
     
-    
-    //优先执行的配置组，统计每个project执行次数
-    private readonly Dictionary<string, int> _projectExecutionCount = new();
     
     /// <summary>
     /// 使用调用方提供的取消令牌顺序执行配置组项目。
@@ -153,7 +118,7 @@ public partial class ScriptService : IScriptService
         //     hasTimer = HasTimerOperation(codeList);
         // }
 
-        if (!string.IsNullOrEmpty(groupName)&&!RunnerContext.Instance.IsPreExecution)
+        if (!string.IsNullOrEmpty(groupName))
         {
             // if (hasTimer)
             // {
@@ -167,200 +132,89 @@ public partial class ScriptService : IScriptService
 
         
         bool fisrt = true;
-        
-        
-        //非优先执行配置下，清空执行计数
-        if (!RunnerContext.Instance.IsPreExecution)
-        {
-            _projectExecutionCount.Clear();
-        }
-
-
         var stopwatch = new Stopwatch();
-                foreach (var project in list)
+
+        // 按配置组顺序执行任务，仍检查临时跳过标志、禁用状态、时段与周期规则。
+        foreach (var project in list)
+        {
+            if (project is { SkipFlag: true } || ShouldSkipTask(project))
+            {
+                continue;
+            }
+
+            //月卡检测
+            await _blessingOfTheWelkinMoonTask.Start(ct);
+            if (project.Status != "Enabled")
+            {
+                _logger.LogInformation("脚本 {Name} 状态为禁用，跳过执行", project.Name);
+                continue;
+            }
+
+            ct.ThrowIfCancellationRequested();
+
+            if (fisrt)
+            {
+                fisrt = false;
+                Notify.Event(NotificationEvent.GroupStart).Success($"配置组{groupName}启动");
+            }
+
+            for (var i = 0; i < project.RunNum; i++)
+            {
+                try
                 {
-                    //正常情况下，只有一个真正执行的project，存在其他优先执行配置组情况下，会有多个任务。
-                    List<ScriptGroupProject> exeProjects = [project];
-                    RunnerContext.Instance.IsPreExecution = false;
-                    //优先执行配置组逻辑
-                    if (!RunnerContext.Instance.IsPreExecution &&
-                        (project.GroupInfo?.Config.PathingConfig.Enabled ?? false) &&
-                        project.GroupInfo.Config.PathingConfig.PreExecutionPriorityConfig.Enabled)
+                    _triggers.ClearTriggers();
+                    _logger.LogInformation("------------------------------");
+                    stopwatch.Reset();
+                    stopwatch.Start();
+
+                    await ExecuteProject(project, ct);
+
+                    //多次执行时及时中断
+                    if (project.RunNum > 1 && ShouldSkipTask(project))
                     {
-                        var preConfig = project.GroupInfo.Config.PathingConfig.PreExecutionPriorityConfig;
-                        var groupNames = preConfig.GroupNames;
-
-                        if (!string.IsNullOrWhiteSpace(groupNames))
-                        {
-                            // 解析组名集合
-                            var groupNameSet = groupNames
-                                .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                                .Select(name => name.Trim())
-                                .Where(name => !string.IsNullOrWhiteSpace(name));
-
-                            // 获取匹配的脚本组
-                            var scriptGroups = App.GetService<ScriptControlViewModel>().ScriptGroups
-                                .Where(g => groupNameSet.Contains(g.Name, StringComparer.OrdinalIgnoreCase))
-                                .ToList();
-
-                            // 收集需要执行的项目
-                            var preExecutionProjects = new List<ScriptGroupProject>();
-                            foreach (var group in scriptGroups)
-                            {
-                                var skipConfig = group.Config.PathingConfig.TaskCompletionSkipRuleConfig;
-                                var records = ExecutionRecordStorage.GetRecentExecutionRecordsByConfig(skipConfig);
-
-                                foreach (var p in group.Projects)
-                                {
-                                    // 检查是否应该跳过任务
-                                    if (ExecutionRecordStorage.IsSkipTask(p, out _, records))
-                                        continue;
-
-                                    // 生成项目唯一标识
-                                    var projectKey = $"{p.Name}|{p.FolderName}|{p.GroupInfo?.Name}";
-
-                                    // 检查执行次数
-                                    if (!_projectExecutionCount.TryGetValue(projectKey, out var count))
-                                    {
-                                        count = 0;
-                                    }
-
-                                    // 检查是否超过最大重试次数
-                                    if (count > preConfig.MaxRetryCount)
-                                        continue;
-
-                                    //增加执行计数
-                                    //_projectExecutionCount[projectKey] = count + 1;
-                                    preExecutionProjects.Add(p);
-                                }
-                            }
-
-                            // 存在优先执行的项目，则优先执行
-                            if (preExecutionProjects.Count > 0)
-                            {
-   
-                                _logger.LogInformation($"存在{preExecutionProjects.Count}个需优先执行的任务！");
-                                // 设置执行状态，进入优先执行任务
-                                RunnerContext.Instance.IsPreExecution = true;
-                                //重新构造需要执行的配置组
-                                exeProjects = preExecutionProjects.Concat(new[] { project }).ToList();
-                            }
-                        }
-                    }
-
-                    for (int y = 0; y < exeProjects.Count; y++)
-                    {
-                        var exeProject = exeProjects[y];
-                        //最后一个执行的project，恢复正常执行状态
-                        if (y == exeProjects.Count - 1)
-                        {
-                            RunnerContext.Instance.IsPreExecution = false;
-                        }
-                        if (exeProject is { SkipFlag: true })
-                        {
-                            continue;
-                        }
-
-                        if (ShouldSkipTask(exeProject))
-                        {
-                            continue;
-                        }
-
-                        //月卡检测
-                        await _blessingOfTheWelkinMoonTask.Start(ct);
-                        if (exeProject.Status != "Enabled")
-                        {
-                            _logger.LogInformation("脚本 {Name} 状态为禁用，跳过执行", exeProject.Name);
-                            continue;
-                        }
-
-                        ct.ThrowIfCancellationRequested();
-
-                        if (fisrt )
-                        {
-                            fisrt = false;
-                            Notify.Event(NotificationEvent.GroupStart).Success($"配置组{groupName}启动");
-                        }
-
-                        //优先执行的任务，需要计数
-                        if (RunnerContext.Instance.IsPreExecution)
-                        {
-                            // 生成项目唯一标识
-                            var projectKey = $"{exeProject.Name}|{exeProject.FolderName}|{exeProject.GroupInfo?.Name}";
-                            // 检查执行次数
-                            if (!_projectExecutionCount.TryGetValue(projectKey, out var preExecutionCount))
-                            {
-                                preExecutionCount = 0;
-                            }
-
-                            _projectExecutionCount[projectKey] = preExecutionCount + 1;
-                        }
-
-
-                        for (var i = 0; i < exeProject.RunNum; i++)
-                        {
-                            try
-                            {
-                                _triggers.ClearTriggers();
-
-
-                                _logger.LogInformation("------------------------------");
-
-                                stopwatch.Reset();
-                                stopwatch.Start();
-
-                                await ExecuteProject(exeProject, ct);
-
-                                //多次执行时及时中断
-                                if (exeProject.RunNum > 1 && ShouldSkipTask(exeProject))
-                                {
-                                    continue;
-                                }
-                            }
-                            catch (NormalEndException e)
-                            {
-                                throw;
-                            }
-                            catch (OperationCanceledException e)
-                            {
-                                _logger.LogInformation("取消执行配置组: {Msg}", e.Message);
-                                throw;
-                            }
-                            catch (Exception e)
-                            {
-                                _logger.LogDebug(e, "执行脚本时发生异常");
-                                _logger.LogError("执行脚本时发生异常: {Msg}", e.Message);
-                            }
-                            finally
-                            {
-                                stopwatch.Stop();
-                                var elapsedTime = TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds);
-                                // _logger.LogDebug("→ 脚本执行结束: {Name}, 耗时: {ElapsedMilliseconds} 毫秒", project.Name, stopwatch.ElapsedMilliseconds);
-                                _logger.LogInformation("→ 脚本执行结束: {Name}, 耗时: {Minutes}分{Seconds:0.000}秒", exeProject.Name,
-                                    elapsedTime.Hours * 60 + elapsedTime.Minutes, elapsedTime.TotalSeconds % 60);
-                                _logger.LogInformation("------------------------------");
-                            }
-
-                            await Task.Delay(1000, ct);
-                        }
-
+                        continue;
                     }
                 }
-        
+                catch (NormalEndException)
+                {
+                    throw;
+                }
+                catch (OperationCanceledException e)
+                {
+                    _logger.LogInformation("取消执行配置组: {Msg}", e.Message);
+                    throw;
+                }
+                catch (Exception e)
+                {
+                    _logger.LogDebug(e, "执行脚本时发生异常");
+                    _logger.LogError("执行脚本时发生异常: {Msg}", e.Message);
+                }
+                finally
+                {
+                    stopwatch.Stop();
+                    var elapsedTime = TimeSpan.FromMilliseconds(stopwatch.ElapsedMilliseconds);
+                    // _logger.LogDebug("→ 脚本执行结束: {Name}, 耗时: {ElapsedMilliseconds} 毫秒", project.Name, stopwatch.ElapsedMilliseconds);
+                    _logger.LogInformation("→ 脚本执行结束: {Name}, 耗时: {Minutes}分{Seconds:0.000}秒", project.Name,
+                        elapsedTime.Hours * 60 + elapsedTime.Minutes, elapsedTime.TotalSeconds % 60);
+                    _logger.LogInformation("------------------------------");
+                }
+
+                await Task.Delay(1000, ct);
+            }
+        }
 
         // 还原定时器
         // TaskTriggerDispatcher.Instance().SetTriggers(GameTaskManager.LoadInitialTriggers());
-        
-        if (!string.IsNullOrEmpty(groupName)&&!RunnerContext.Instance.IsPreExecution)
+
+        if (!string.IsNullOrEmpty(groupName))
         {
             _logger.LogInformation("配置组 {Name} 执行结束", groupName);
         }
 
-        if (!fisrt&&!RunnerContext.Instance.IsPreExecution && !ct.IsCancellationRequested)
+        if (!fisrt && !ct.IsCancellationRequested)
         {
             Notify.Event(NotificationEvent.GroupEnd).Success($"配置组{groupName}结束");
         }
-
     }
 
     private List<ScriptGroupProject> ReloadScriptProjects(IEnumerable<ScriptGroupProject> projectList)
@@ -439,7 +293,6 @@ public partial class ScriptService : IScriptService
             }
 
             _logger.LogInformation("→ 开始执行JS脚本: {Name}", project.Name);
-            if (RunnerContext.Instance.IsPreExecution) _logger.LogInformation("此任务为优先执行任务！");
             var hasSettingsBeforeRun = project.JsScriptSettingsObject != null;
             try
             {
@@ -453,19 +306,16 @@ public partial class ScriptService : IScriptService
         else if (project.Type == "KeyMouse")
         {
             _logger.LogInformation("→ 开始执行键鼠脚本: {Name}", project.Name);
-            if (RunnerContext.Instance.IsPreExecution) _logger.LogInformation("此任务为优先执行任务！");
             await project.Run(ct);
         }
         else if (project.Type == "Pathing")
         {
             _logger.LogInformation("→ 开始执行地图追踪任务: {Name}", project.Name);
-            if (RunnerContext.Instance.IsPreExecution) _logger.LogInformation("此任务为优先执行任务！");
             await project.Run(ct);
         }
         else if (project.Type == "Shell")
         {
             _logger.LogInformation("→ 开始执行shell: {Name}", project.Name);
-            if (RunnerContext.Instance.IsPreExecution) _logger.LogInformation("此任务为优先执行任务！");
             await project.Run(ct);
         }
     }

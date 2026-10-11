@@ -17,6 +17,7 @@
 | [实体、任务树与配置](pulonia/task-model.md) | 当前类型职责、层级、必要性与关系图，完整 ER、树 JSON、配置优先级、可执行树取舍和收口建议 |
 | [执行、恢复与 API](pulonia/execution.md) | 串行执行、资源生命周期、取消、异常恢复、续跑和 C#/JS 接口 |
 | [触发、托管与多账号](pulonia/scheduling-and-managed.md) | 程序内定时/热键、目标规划、账号切换 |
+| [体力计划设计](pulonia/resin-plan.md) | 术语、已确认需求与玩家调研、方案绑定与无状态规划、ER 图与类图、UI / UX 及预计算展示 |
 | [结果、CD 与文件存储](pulonia/results-and-storage.md) | 成功证据、周期额度、去重、JSON 状态与故障恢复、依赖选择 |
 | [界面与新增任务](pulonia/user-interface.md) | 新菜单、树表、一条龙左右布局、配置编辑、资源搜索和整目录添加 |
 | [重构与迁移](pulonia/migration.md) | 旧代码解耦、d-v3 复用、数据导入、旧入口替代边界 |
@@ -25,7 +26,7 @@
 ## 核心决策
 
 1. 使用 `BetterGenshinImpact.Pulonia` 命名空间和 `PuloniaTask` 相关实体；保留 d-v3 的 `root_task / children` 树格式。
-2. 一条龙配置与普通计划同为 `PuloniaTaskPlan`，以 `purpose`（General / OneDragon）区分界面归属；一条龙页面沿用旧 OneDragonFlowPage 左右布局，不是任务计划 UI 换皮。托管生成计划，树编辑器手工编辑计划，所有入口复用同一存储、模型与执行语义，执行器不区分用途。
+2. 一条龙配置与普通计划同为 `PuloniaTaskPlan`，以 `purpose`（General / OneDragon）区分界面归属；一条龙页面沿用旧 OneDragonFlowPage 左右布局，不是任务计划 UI 换皮。当前体力计划设计为绑定已有任务计划，只计算明确选择跟随的字段，不新增、启用或重排任务；自动生成任务计划属于后续能力，详见[体力计划设计](pulonia/resin-plan.md)。所有入口复用同一存储、模型与执行语义，执行器不区分用途。
 3. 主链保持“入口 → 任务服务 → 类型执行器”，文件存储旁路提供支持。允许集中构建只读执行树；具体形式在模型阶段结合用户真实配置验收，不再禁止第二种运行时表示，也不照搬层层转发的转换/调度链。
 4. 触发、请求有效性与资源 CD 分开；开始执行前固定版本、解析有效配置，运行状态与编辑模型分开。定时与热键仅在程序运行时生效。
 5. 游戏会话与截图按需获取，Shell 和纯计算任务不强制启动截图器；首版串行执行，共同管理输入所有权。

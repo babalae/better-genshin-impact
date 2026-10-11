@@ -21,8 +21,7 @@ public static class PuloniaTaskCommonSettings
     private static readonly HashSet<string> LegacySchedulingProperties =
     [
         nameof(PathingPartyConfig.SkipDuring), nameof(PathingPartyConfig.HideOnRepeat),
-        nameof(PathingPartyConfig.TaskCycleConfig), nameof(PathingPartyConfig.TaskCompletionSkipRuleConfig),
-        nameof(PathingPartyConfig.PreExecutionPriorityConfig), nameof(PathingPartyConfig.OnlyInTeleportRecover)
+        nameof(PathingPartyConfig.TaskCycleConfig), nameof(PathingPartyConfig.OnlyInTeleportRecover)
     ];
 
     /// <summary>
@@ -57,7 +56,13 @@ public static class PuloniaTaskCommonSettings
     /// <summary>
     /// 创建能力默认值；返回独立对象，避免定义、编辑器与执行实例共享可变配置。
     /// </summary>
-    public static JObject CreateDefaults(string taskType) => ToParameters(taskType, new ScriptGroupConfig());
+    public static JObject CreateDefaults(string taskType)
+    {
+        var defaults = ToParameters(taskType, new ScriptGroupConfig());
+        // 采集 CD 只属于 Pulonia 地图追踪，不传给旧配置或 JS 的行走设置。
+        if (taskType == "pathing") defaults[PuloniaCollectionCooldown.ParameterName] = PuloniaCollectionCooldown.CreateDefaults();
+        return defaults;
+    }
 
     /// <summary>
     /// 将强类型设置转为顶层字段，以便现有参数合并、来源展示及撤销直接复用。

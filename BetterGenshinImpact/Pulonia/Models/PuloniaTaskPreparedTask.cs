@@ -81,6 +81,10 @@ public sealed class PuloniaTaskPreparedTask
     [JsonProperty("resource_version")]
     public string? ResourceVersion { get; }
 
+    /// <summary>准备时固定的文件级采集规则；旧快照缺省时由原始资源定位恢复。</summary>
+    [JsonProperty("collection_cooldown", NullValueHandling = NullValueHandling.Ignore)]
+    public PuloniaCollectionCooldownPolicy? CollectionCooldown { get; }
+
     /// <summary>
     /// 有效参数的防御性副本；修改返回值不影响运行树。
     /// </summary>
@@ -112,7 +116,8 @@ public sealed class PuloniaTaskPreparedTask
     internal PuloniaTaskPreparedTask(string planId, string taskId, string sourceTaskId, string taskAddress,
         string name, string taskType, bool isEnabled, string? path, string? resourceVersion, JObject parameters,
         IDictionary<string, string> parameterSources, PuloniaTaskPolicy policy,
-        IEnumerable<PuloniaTaskPreparedTask> children, ScriptResourceReference? resource = null)
+        IEnumerable<PuloniaTaskPreparedTask> children, ScriptResourceReference? resource = null,
+        PuloniaCollectionCooldownPolicy? collectionCooldown = null)
     {
         PlanId = planId;
         TaskId = taskId;
@@ -124,6 +129,7 @@ public sealed class PuloniaTaskPreparedTask
         Path = path;
         Resource = resource;
         ResourceVersion = resourceVersion;
+        CollectionCooldown = collectionCooldown;
         _parametersJson = PuloniaTaskJson.Write(parameters);
         _policyJson = PuloniaTaskJson.Write(policy);
         ParameterSources = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(parameterSources));

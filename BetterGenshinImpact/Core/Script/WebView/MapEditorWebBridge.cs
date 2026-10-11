@@ -30,7 +30,8 @@ public class MapEditorWebBridge
             var task = PathingTask.BuildFromJson(json);
             var pathExecutor = new PathExecutor(ct);
             pathExecutor.PartyConfig = new PathingPartyConfig { AutoFightEnabled = false };
-            await pathExecutor.Pathing(task);
+            // 编辑器试跑只等待本次寻路结果，保留原有预览行为。
+            _ = await pathExecutor.Pathing(task);
         });
     }
 }

@@ -245,7 +245,8 @@ public class GoToCraftingBenchTask
             },
             EndAction = region => Bv.FindFAndPress(region, text: this.craftLocalizedString)
         };
-        await pathingTask.Pathing(task);
+        // 找到合成台时允许 EndAction 提前结束路线，随后仍核验合成台交互界面。
+        _ = await pathingTask.Pathing(task);
 
         await Delay(700, ct);
         

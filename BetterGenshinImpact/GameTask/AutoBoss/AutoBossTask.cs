@@ -1076,7 +1076,8 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         {
             PartyConfig = BuildPathingPartyConfig()
         };
-        await executor.Pathing(task);
+        // 首领流程保留原有后续识别和战斗判定，本次寻路结果不替代业务判断。
+        _ = await executor.Pathing(task);
     }
 
     /// <summary>

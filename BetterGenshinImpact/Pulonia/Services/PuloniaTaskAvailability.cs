@@ -14,11 +14,11 @@ internal static class PuloniaTaskAvailability
     /// <summary>
     /// 建立不依赖计划名和节点 ID 的稳定作用域键。
     /// </summary>
-    public static string BuildScopeKey(PuloniaTaskRequest request, PuloniaTaskScopeKind scope)
+    public static string BuildScopeKey(PuloniaTaskRequest request, PuloniaTaskScopeKind scope, string? verifiedUid = null)
     {
         var identity = scope == PuloniaTaskScopeKind.World
-            ? request.WorldOwnerAccountId ?? request.AccountId ?? "default"
-            : request.AccountId ?? "default";
+            ? request.WorldOwnerAccountId ?? verifiedUid ?? request.AccountId ?? "default"
+            : verifiedUid ?? request.AccountId ?? "default";
         return $"{request.Server.Trim().ToLowerInvariant()}/{scope.ToString().ToLowerInvariant()}/{identity}";
     }
 
@@ -34,13 +34,13 @@ internal static class PuloniaTaskAvailability
     /// </summary>
     public static PuloniaTaskAvailabilityDecision Evaluate(PuloniaTaskRequest request,
         IReadOnlyList<PuloniaTaskAvailabilityRule> rules, IReadOnlyList<PuloniaTaskLedgerEntry> ledger,
-        IReadOnlyList<PuloniaTaskOperationIntent> uncertainOperations, DateTimeOffset now)
+        IReadOnlyList<PuloniaTaskOperationIntent> uncertainOperations, DateTimeOffset now, string? verifiedUid = null)
     {
         foreach (var rule in rules)
         {
             if (rule.Kind == PuloniaTaskAvailabilityKind.Unrestricted)
                 continue;
-            var scopeKey = BuildScopeKey(request, rule.Scope);
+            var scopeKey = BuildScopeKey(request, rule.Scope, verifiedUid);
             var uncertain = uncertainOperations.FirstOrDefault(intent => intent.Reservations.Any(reservation =>
                 reservation.ScopeKey == scopeKey && reservation.EffectKey == rule.EffectKey));
             if (uncertain is not null)
@@ -73,7 +73,7 @@ internal static class PuloniaTaskAvailability
     /// </summary>
     public static PuloniaTaskLedgerEntry CreateLedgerEntry(PuloniaTaskRequest request,
         PuloniaTaskAvailabilityRule rule, PuloniaTaskCompletionEvent completionEvent, string eventKey,
-        Guid runId, string taskAddress)
+        Guid runId, string taskAddress, string? verifiedUid = null)
     {
         var window = rule.Kind == PuloniaTaskAvailabilityKind.ResetQuota
             ? GetWindow(rule, request.ServerUtcOffsetMinutes, completionEvent.OccurredAt).Key
@@ -84,7 +84,7 @@ internal static class PuloniaTaskAvailability
         return new PuloniaTaskLedgerEntry
         {
             EventKey = eventKey,
-            ScopeKey = BuildScopeKey(request, rule.Scope),
+            ScopeKey = BuildScopeKey(request, rule.Scope, verifiedUid),
             EffectKey = rule.EffectKey,
             WindowKey = window,
             Units = completionEvent.Units,
@@ -99,12 +99,12 @@ internal static class PuloniaTaskAvailability
     /// 为执行前操作意图固定本次规则作用域。
     /// </summary>
     public static List<PuloniaTaskRuleReservation> CreateReservations(PuloniaTaskRequest request,
-        IEnumerable<PuloniaTaskAvailabilityRule> rules)
+        IEnumerable<PuloniaTaskAvailabilityRule> rules, string? verifiedUid = null)
         => rules.Where(rule => rule.Kind != PuloniaTaskAvailabilityKind.Unrestricted)
             .Select(rule => new PuloniaTaskRuleReservation
             {
                 RuleId = rule.RuleId,
-                ScopeKey = BuildScopeKey(request, rule.Scope),
+                ScopeKey = BuildScopeKey(request, rule.Scope, verifiedUid),
                 EffectKey = rule.EffectKey
             }).ToList();
 

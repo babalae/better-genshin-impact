@@ -5,3 +5,4 @@
 ## 文档列表
 
 - [Recognition.json 编写说明](recognition-json.md)
+- [原神采集物素材刷新（CD）清单](genshin-collectable-respawn.md)

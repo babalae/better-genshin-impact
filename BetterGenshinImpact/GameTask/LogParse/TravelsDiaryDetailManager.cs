@@ -1,13 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Helpers;
-using Microsoft.Extensions.Logging;
 using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.GameTask.LogParse;
@@ -66,64 +64,11 @@ public class TravelsDiaryDetailManager
 
         return actionItems.OrderBy(m => DateTime.Parse(m.Time)).ToList();
     }
-    private static List<(int year, int month)> GetMonthPairs()
-    {
-        DateTimeOffset now = ServerTimeHelper.GetServerTimeNow();
-
-        List<(int year, int month)> result = new List<(int, int)>();
-
-        if (now.Day == 1 && now.Hour < 4)
-        {
-            // 上个月
-            DateTimeOffset lastMonth = now.AddMonths(-1);
-            result.Add((lastMonth.Year, lastMonth.Month));
-        }
-
-        // 当前月
-        result.Add((now.Year, now.Month));
-
-        return result;
-    }
-    
-    
-    //取今天的札记数据
-    public static List<ActionItem> loadNowDayActionItems(GameInfo gameInfo)
-    {
-        //正序的
-        var sortedList = loadAllActionItems(gameInfo, GetMonthPairs());
-        DateTimeOffset now = ServerTimeHelper.GetServerTimeNow();
-        DateTimeOffset today4am = new DateTimeOffset(now.Year, now.Month, now.Day, 4, 0, 0, now.Offset);
-
-        DateTimeOffset startTime, endTime;
-
-        if (now < today4am)
-        {
-            // 现在是今天凌晨4点前，区间是昨天4点 ~ 今天4点前
-            startTime = today4am.AddDays(-1);
-            endTime = today4am;
-        }
-        else
-        {
-            // 现在是今天4点后，区间是今天4点 ~ 明天4点
-            startTime = today4am;
-            endTime = today4am.AddDays(1);
-        }
-
-        // 取出符合时间段的数据
-        var dayItems = sortedList
-            .Where(m =>
-            {
-                var time = DateTime.Parse(m.Time);
-                return time >= startTime && time < endTime;
-            })
-            .ToList();
-        return dayItems;
-    }
 
     /*
      * 增量更新，米游社札记摩拉记录
      */
-    public static async Task<GameInfo> UpdateTravelsDiaryDetailManager(string cookie,bool skipToast = false)
+    public static async Task<GameInfo> UpdateTravelsDiaryDetailManager(string cookie)
     {
         List<(int year, int month)> months = GetCurrentAndPreviousTwoMonths();
         months.Reverse();
@@ -136,14 +81,7 @@ public class TravelsDiaryDetailManager
         }
         catch (NoLoginException)
         {
-            if (!skipToast)
-            {
-                Toast.Warning("cookie 未登录或已失效，请重新获取后重试");
-            }
-            else
-            {
-                TaskControl.Logger.LogError("cookie 未登录或已失效，请重新获取后重试");
-            }
+            Toast.Warning("cookie 未登录或已失效，请重新获取后重试");
 
             throw;
         }
@@ -201,15 +139,7 @@ public class TravelsDiaryDetailManager
                 {
                     var _temp2 = await ys.GetTravelsDiaryDetailAsync(gameInfo, cookie, month.month, 2);
                     writeFile(tddfile, _temp2);
-                    if (!skipToast)
-                    {
-                        Toast.Information($"{month.year}_{month.month}数据获取成功！");
-                    }
-                    else
-                    {
-                        TaskControl.Logger.LogError($"米游社札记数据:{month.year}_{month.month}获取成功！");
-
-                    }
+                    Toast.Information($"{month.year}_{month.month}数据获取成功！");
 
                 }
                 /*else
@@ -221,14 +151,7 @@ public class TravelsDiaryDetailManager
         }
         catch (NoLoginException e)
         {
-            if (!skipToast)
-            {
-                Toast.Warning("token未登录，请重新登录获取，此次将不新最新数据！");
-            }
-            else
-            {
-                TaskControl.Logger.LogError($"token未登录，请重新登录获取，此次将不新最新数据！");
-            }
+            Toast.Warning("token未登录，请重新登录获取，此次将不新最新数据！");
 
 
         }

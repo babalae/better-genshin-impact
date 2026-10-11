@@ -797,6 +797,19 @@
                                                FontWeight="SemiBold"
                                                Text="通用运行选项" />
                                 </StackPanel>
+                                <controls:PuloniaCollectionCooldownView DataContext="{Binding CollectionCooldown}"
+                                                                       Margin="0,0,0,16">
+                                    <controls:PuloniaCollectionCooldownView.Style>
+                                        <Style TargetType="controls:PuloniaCollectionCooldownView">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding DataContext.IsPathingResourceSelector, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </controls:PuloniaCollectionCooldownView.Style>
+                                </controls:PuloniaCollectionCooldownView>
                                 <ItemsControl ItemsSource="{Binding ParameterFields}"
                                               ItemTemplate="{StaticResource ParameterFieldTemplate}" />
                                 <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"

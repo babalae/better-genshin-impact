@@ -30,11 +30,19 @@ public sealed class PuloniaPathingTaskExecutor : IPuloniaTaskExecutor
         ParameterSchema = new JObject
         {
             ["type"] = "object",
-            ["properties"] = PuloniaTaskCommonSettings.CreateSchemaProperties("pathing"),
+            ["properties"] = CreateParameterProperties(),
             ["additionalProperties"] = false
         },
         PublicParameters = [.. PuloniaTaskCommonSettings.CreateDefaults("pathing").Properties().Select(property => property.Name)]
     }];
+
+    /// <summary>把文件级 CD 加入地图追踪 Schema，旧公共行走设置表单仍只处理自己的字段。</summary>
+    private static JObject CreateParameterProperties()
+    {
+        var properties = PuloniaTaskCommonSettings.CreateSchemaProperties("pathing");
+        properties[PuloniaCollectionCooldown.ParameterName] = PuloniaCollectionCooldown.CreateSchema();
+        return properties;
+    }
 
     /// <inheritdoc />
     public async Task<PuloniaTaskOutcome> ExecuteAsync(PuloniaTaskPreparedTask task,
@@ -57,16 +65,18 @@ public sealed class PuloniaPathingTaskExecutor : IPuloniaTaskExecutor
             ? TaskTriggerDispatcher.Instance().AddTrigger("AutoEat", null) : null;
 
         var executor = new PathExecutor(ct) { PartyConfig = partyConfig };
-        await executor.Pathing(pathingTask).ConfigureAwait(false);
+        var result = await executor.Pathing(pathingTask).ConfigureAwait(false);
         ct.ThrowIfCancellationRequested();
-        var data = new JObject
-        {
-            ["success_end"] = executor.SuccessEnd,
-            ["success_fight"] = executor.SuccessFight,
-            ["resource_version"] = task.ResourceVersion
-        };
-        return executor.SuccessEnd
-            ? PuloniaTaskOutcome.ExecutedUnverified("地图追踪路线已完整执行，但没有逐点采集证据。", data)
-            : PuloniaTaskOutcome.Failure("地图追踪路线未完整执行。", data);
+        return CreateOutcome(result, task.ResourceVersion);
+    }
+
+    /// <summary>把本次路线结果对象转换为任务结果；成功状态只读取 IsSuccess，其他字段随结果完整保存。</summary>
+    internal static PuloniaTaskOutcome CreateOutcome(PathingResult result, string? resourceVersion)
+    {
+        var data = JObject.FromObject(result);
+        data["resource_version"] = resourceVersion;
+        return result.IsSuccess
+            ? PuloniaTaskOutcome.Success("地图追踪文件完整执行成功，按整份文件执行成功估算采集完成。", data)
+            : PuloniaTaskOutcome.Failure(result.ErrorMessage ?? "地图追踪路线未完整执行。", data);
     }
 }

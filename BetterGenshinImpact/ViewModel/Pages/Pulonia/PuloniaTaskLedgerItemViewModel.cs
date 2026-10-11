@@ -33,7 +33,9 @@ public sealed class PuloniaTaskLedgerItemViewModel : ObservableObject
     /// </summary>
     public string EligibilityText => Entry.NextEligibleAt is { } next
         ? "下次可执行：" + next.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
-        : $"周期：{Entry.WindowKey} · 已用 {Entry.Units}";
+        : Entry.WindowKey == "file_success"
+            ? "记录时规则：" + (Entry.Evidence.Data.Value<string>("collection_rule") ?? "未设置 CD")
+            : $"周期：{Entry.WindowKey} · 已用 {Entry.Units}";
 
     /// <summary>
     /// 证据来源。

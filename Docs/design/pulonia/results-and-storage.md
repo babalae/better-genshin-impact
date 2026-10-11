@@ -39,6 +39,8 @@ WindowKey = 规则对应周期起点，滚动资源则使用其活动状态
 
 精度分级：有点位 ID 和确认事件时按点位记；旧路线只能按稳定路线 ID 估算，并明确显示“路线级估计”。两条不同路线可能采同一批点位，没有覆盖关系元数据就无法准确去重。首版保留这个限制，后续给精选路线补 `ResourceCoverage`，不能宣称路线级 CD 已完全解决重叠。
 
+2026-10-10 地图追踪节点按用户确认采用 [文件级采集 CD](collection-cooldown.md)：完整执行一个 JSON 即估算该文件采集完成，以结束时间记录；失败或提前结束不记部分成功。记录按来源文件共享，与内容版本无关。这个明确的执行器估算合同适用于 Pulonia 地图追踪节点；其他能力仍按各自的完成证据合同处理。
+
 ### 完成合同
 
 `PuloniaTaskOutcome` 区分 `Succeeded`、`ExecutedUnverified`、`PartiallySucceeded`、`Failed`、`Cancelled`、`Skipped`、`NeedsAttention`，并附机器可读原因、证据、产出和已确认副作用。

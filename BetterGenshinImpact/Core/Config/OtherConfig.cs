@@ -25,10 +25,6 @@ public partial class OtherConfig : ObservableObject
     //物品图标识别模型
     [ObservableProperty]
     private ItemIconRecognitionMode _itemIconRecognitionMode = ItemIconRecognitionMode.Item;
-    //锄地规划
-    [ObservableProperty]
-    private FarmingPlan _farmingPlanConfig = new();
-    
     [ObservableProperty]
     private Miyoushe _miyousheConfig = new();
     //OCR配置
@@ -48,39 +44,6 @@ public partial class OtherConfig : ObservableObject
         private bool _logSyncCookie = true;
         
     }
-    public partial class MiyousheDataSupport : ObservableObject
-    {
-        [ObservableProperty]
-        private bool _enabled = false;
-        
-        //日精英上限
-        [ObservableProperty]
-        private int _dailyEliteCap = 400;
-        
-        //日小怪上限
-        [ObservableProperty]
-        private int _dailyMobCap = 2000;
-    }
-    public partial class FarmingPlan : ObservableObject
-    {
-
-
-        [ObservableProperty]
-        private MiyousheDataSupport _miyousheDataConfig = new();
-
-        [ObservableProperty]
-        private bool _enabled = false;
-        
-        //日精英上限
-        [ObservableProperty]
-        private int _dailyEliteCap = 400;
-        
-        //日小怪上限
-        [ObservableProperty]
-        private int _dailyMobCap = 2000;
-        
-    }
-    
     public partial class Ocr : ObservableObject
     {
         /// <summary>

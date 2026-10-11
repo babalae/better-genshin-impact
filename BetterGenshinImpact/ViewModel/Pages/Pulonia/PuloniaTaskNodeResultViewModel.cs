@@ -93,7 +93,7 @@ public sealed class PuloniaTaskNodeResultViewModel : ObservableObject
         TypeText = typeText;
         VerificationNote = result.TaskType switch
         {
-            "pathing" => "路线结束和战斗标记来自路线执行器，不代表逐点采集数量或实际收益。",
+            "pathing" => "文件级 CD 按整份文件执行成功估算采集完成，不记录部分成功；不代表逐点采集数量或实际收益，旧记录不回填采集时间。",
             "javascript" => "旧 JS 脚本正常返回不等于游戏副作用已核验；仅展示执行器实际返回的数据与证据。",
             "keymouse" => "宏回放结束不等于游戏目标完成；录制文件本身没有结构化收益证据。",
             "shell" => "退出码表示进程结果；标准输出/错误每路最多保留 65536 字符，截断会明确标记。",
@@ -143,8 +143,29 @@ public sealed class PuloniaTaskNodeResultViewModel : ObservableObject
                 AddResultField(fields, handled, result.Data, "standard_error_truncated", "标准错误已截断");
                 break;
             case "pathing":
-                AddResultField(fields, handled, result.Data, "success_end", "路线完整执行");
-                AddResultField(fields, handled, result.Data, "success_fight", "战斗成功标记");
+                if (result.Data.ContainsKey("is_success"))
+                {
+                    AddResultField(fields, handled, result.Data, "is_success", "路线完整执行");
+                    AddResultField(fields, handled, result.Data, "success_fight_count", "成功战斗次数");
+                    handled.Add("error_message");
+                    fields.Add(new PuloniaTaskHistoryField("失败原因", result.Data["error_message"] is { Type: not JTokenType.Null } error
+                        ? FormatValue(error) : result.Data.Value<bool>("is_success") ? "无" : "未提供"));
+                    handled.Add("revive_count");
+                    handled.Add("collected_items");
+                    fields.Add(new PuloniaTaskHistoryField("复活次数", result.Data["revive_count"] is { Type: not JTokenType.Null } revive ? FormatValue(revive) : "未统计"));
+                    fields.Add(new PuloniaTaskHistoryField("拾取物品", result.Data["collected_items"] is JObject items
+                        ? items.Count == 0 ? "已统计，未拾取物品" : string.Join("\n", items.Properties().Select(item => $"{item.Name} × {FormatValue(item.Value)}"))
+                        : "未统计"));
+                }
+                else
+                {
+                    // 旧历史保留原始展示字段，不回填成功或采集事实。
+                    AddResultField(fields, handled, result.Data, "success_end", "路线完整执行");
+                    AddResultField(fields, handled, result.Data, "success_fight", "战斗成功标记");
+                    if (result.Data.ContainsKey("fully_executed")) AddResultField(fields, handled, result.Data, "fully_executed", "文件完整执行成功");
+                }
+                foreach (var key in new[] { "collection_material", "collection_rule", "collection_rule_source", "collection_last_success_at", "collection_next_eligible_at", "collection_basis" })
+                    if (result.Data.ContainsKey(key)) AddResultField(fields, handled, result.Data, key, ParameterLabel(key));
                 break;
             case "csharp":
                 if (result.Data.ContainsKey("sum"))
@@ -207,7 +228,11 @@ public sealed class PuloniaTaskNodeResultViewModel : ObservableObject
         "auto_fight_enabled" => "自动战斗", "auto_skip_enabled" => "自动跳过", "with_delay" => "按录制延时回放",
         "country" => "国家", "resource_version" => "执行资源版本", "run_id" => "运行 ID",
         "delay_milliseconds" => "延时（毫秒）", "units" => "额度单位", "event_key" => "事件键",
-        "occurred_at" => "事件发生时间", "report_twice" => "重复报告事件（验收用）", _ => key
+        "occurred_at" => "事件发生时间", "report_twice" => "重复报告事件（验收用）",
+        "collection_cd" => "采集 CD 配置", "collection_material" => "采集物",
+        "collection_rule" => "本次 CD 规则", "collection_rule_source" => "规则依据",
+        "collection_last_success_at" => "最后成功时间（UTC）", "collection_next_eligible_at" => "下次可执行时间（UTC）",
+        "collection_basis" => "采集完成依据", _ => key
     };
 
     /// <summary>

@@ -1,0 +1,33 @@
+<UserControl x:Class="BetterGenshinImpact.View.Controls.PuloniaCollectionCooldownView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="CdVisibility" />
+    </UserControl.Resources>
+    <StackPanel>
+        <TextBlock Text="采集 CD" FontWeight="SemiBold" Margin="0,0,0,8" />
+        <TextBlock Text="{Binding ConfigurationSource, StringFormat=配置来源：{0}}" Margin="0,0,0,8" />
+        <ComboBox ItemsSource="{Binding Modes}" DisplayMemberPath="Value" SelectedValuePath="Key"
+                  SelectedValue="{Binding Mode}" HorizontalAlignment="Stretch" />
+        <StackPanel Margin="0,8,0,0" Visibility="{Binding ShowHours, Converter={StaticResource CdVisibility}}">
+            <TextBlock Text="成功后等待（小时）" />
+            <ui:TextBox Text="{Binding Hours, UpdateSourceTrigger=PropertyChanged}" />
+        </StackPanel>
+        <StackPanel Margin="0,8,0,0" Visibility="{Binding ShowDays, Converter={StaticResource CdVisibility}}">
+            <TextBlock Text="成功日期后第几天的服务器 00:00" />
+            <ui:TextBox Text="{Binding Days, UpdateSourceTrigger=PropertyChanged}" />
+        </StackPanel>
+        <StackPanel Margin="0,8,0,0" Visibility="{Binding ShowResetHour, Converter={StaticResource CdVisibility}}">
+            <TextBlock Text="服务器重置小时" />
+            <ComboBox ItemsSource="{Binding ResetHours}" SelectedItem="{Binding ResetHour}" />
+        </StackPanel>
+        <StackPanel Margin="0,8,0,0" Visibility="{Binding ShowWeekday, Converter={StaticResource CdVisibility}}">
+            <TextBlock Text="重置星期" />
+            <ComboBox ItemsSource="{Binding Weekdays}" DisplayMemberPath="Value" SelectedValuePath="Key"
+                      SelectedValue="{Binding ResetWeekday}" />
+        </StackPanel>
+        <TextBlock Text="{Binding Preview}" TextWrapping="Wrap" Margin="0,12,0,0"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+    </StackPanel>
+</UserControl>

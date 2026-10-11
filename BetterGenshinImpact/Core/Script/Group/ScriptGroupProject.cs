@@ -16,11 +16,7 @@ using System.Linq;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.Common;
-using BetterGenshinImpact.GameTask.FarmingPlan;
-using BetterGenshinImpact.GameTask.LogParse;
-using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Script.Group;
@@ -199,20 +195,6 @@ public partial class ScriptGroupProject : ObservableObject
     /// <param name="ct">所属顶层任务的取消令牌。</param>
     public async Task Run(CancellationToken ct)
     {
-        //执行记录
-        ExecutionRecord executionRecord = new ExecutionRecord()
-        {
-            ServerStartTime =
-                GroupInfo?.Config.PathingConfig.TaskCompletionSkipRuleConfig.IsBoundaryTimeBasedOnServerTime ?? false
-                    ? ServerTimeHelper.GetServerTimeNow()
-                    : DateTimeOffset.Now,
-            StartTime = DateTime.Now,
-            GroupName = GroupInfo?.Name ?? "",
-            FolderName = FolderName,
-            ProjectName = Name,
-            Type = Type
-        };
-        ExecutionRecordStorage.SaveExecutionRecord(executionRecord);
         if (Type == "Javascript")
         {
             if (Project == null)
@@ -248,47 +230,13 @@ public partial class ScriptGroupProject : ObservableObject
             {
                 TaskTriggerDispatcher.Instance().AddTrigger("AutoPick", null);
             }
-            await pathingTask.Pathing(task);
+            // 使用本次路线结果判断是否成功，避免读取执行器遗留状态。
+            var pathingResult = await pathingTask.Pathing(task);
 
-            
-            executionRecord.IsSuccessful = pathingTask.SuccessEnd;
-            if (!pathingTask.SuccessEnd)
+            if (!pathingResult.IsSuccess)
             {
                 TaskControl.Logger.LogWarning($"此追踪脚本未正常走完！");
             }
-
-            if (task.FarmingInfo.AllowFarmingCount)
-            {
-                var successFight = pathingTask.SuccessEnd;
-                var fightCount = 0;
-               
-                //未走完完整路径下，才校验打架次数
-                if (!successFight)
-                {
-                    fightCount = task.Positions.Count(pos => pos.Action == ActionEnum.Fight.Code);
-                    successFight = pathingTask.SuccessFight >= fightCount;
-                }
-
-                if (successFight)
-                {
-                    //每日锄地记录
-                    FarmingStatsRecorder.RecordFarmingSession(task.FarmingInfo, new FarmingRouteInfo
-                    {
-                        GroupName = GroupInfo?.Name ?? "",
-                        FolderName = FolderName,
-                        ProjectName = Name
-                    });
-                }
-                else
-                {
-                    TaskControl.Logger.LogWarning($"实际战斗次数({pathingTask.SuccessFight})<预期战斗次数（{fightCount}），判定失败，此次不纳入成功锄地规划的统计上限！");
-                }
-
-            }
-            
-
-            
-
         }
         else if (Type == "Shell")
         {
@@ -301,18 +249,6 @@ public partial class ScriptGroupProject : ObservableObject
             var task = new ShellTask(ShellTaskParam.BuildFromConfig(Name, shellConfig ?? new ShellConfig()));
             await task.Start(ct);
         }
-
-        if (Type != "Pathing")
-        {
-            executionRecord.IsSuccessful = true;
-        }
-
-        executionRecord.ServerEndTime =
-            GroupInfo?.Config.PathingConfig.TaskCompletionSkipRuleConfig.IsBoundaryTimeBasedOnServerTime ?? false
-                ? ServerTimeHelper.GetServerTimeNow()
-                : DateTimeOffset.Now;
-        executionRecord.EndTime = DateTime.Now;
-        ExecutionRecordStorage.SaveExecutionRecord(executionRecord);
     }
 
     partial void OnTypeChanged(string value)

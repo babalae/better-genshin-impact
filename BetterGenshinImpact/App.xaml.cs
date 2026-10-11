@@ -250,6 +250,7 @@ public partial class App : Application
                 services.AddSingleton<PuloniaTaskClipboardService>();
                 services.AddSingleton<PuloniaCSharpTaskRegistry>();
                 services.AddSingleton<PuloniaGameTaskCoordinator>();
+                services.AddSingleton<IPuloniaGenshinAccountSwitcher, PuloniaGenshinAccountSwitcher>();
                 services.AddSingleton<IPuloniaTaskExecutor, PuloniaCSharpTaskExecutor>();
                 services.AddSingleton<IPuloniaTaskExecutor, PuloniaShellTaskExecutor>();
                 services.AddSingleton<IPuloniaTaskExecutor, PuloniaPathingTaskExecutor>();

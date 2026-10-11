@@ -84,6 +84,9 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     /// </summary>
     public ObservableCollection<PuloniaTaskParameterFieldViewModel> ParameterFields { get; } = [];
 
+    /// <summary>地图追踪采集 CD 的独立创建草稿，不修改全局或旧配置组设置。</summary>
+    public PuloniaCollectionCooldownViewModel CollectionCooldown { get; } = new();
+
     /// <summary>
     /// 当前 JS 项目从 manifest.settings_ui 解析出的自定义设置字段。
     /// </summary>
@@ -404,6 +407,8 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
             {
                 if (property.Value is not JObject fieldSchema)
                     continue;
+                if (value.TaskType == "pathing" && property.Name == PuloniaCollectionCooldown.ParameterName)
+                    continue;
                 // JS 的 settings 对象由所选项目自己的 settings_ui 表单生成，不显示通用 JSON 编辑框。
                 if (value.TaskType == "javascript" && property.Name == "settings")
                     continue;
@@ -457,6 +462,7 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     /// </summary>
     partial void OnSelectedResourceChanged(PuloniaTaskResourceDescriptor? value)
     {
+        CollectionCooldown.SetResource(value?.FullPath, value?.Resource, value?.IsDirectory == true);
         OnPropertyChanged(nameof(IsDirectoryImport));
         var generation = ++_previewGeneration;
         _previewCancellationTokenSource?.Cancel();
@@ -585,6 +591,12 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
                 var scriptSettings = BuildJavaScriptSettings();
                 if (scriptSettings.Count > 0)
                     overrides["settings"] = scriptSettings;
+            }
+            if (SelectedDefinition.TaskType == "pathing")
+            {
+                var cooldown = CollectionCooldown.BuildValue();
+                if (!JToken.DeepEquals(cooldown, PuloniaCollectionCooldown.CreateDefaults()))
+                    overrides[PuloniaCollectionCooldown.ParameterName] = cooldown;
             }
 
             var effectiveParameters = (JObject)SelectedDefinition.DefaultParameters.DeepClone();

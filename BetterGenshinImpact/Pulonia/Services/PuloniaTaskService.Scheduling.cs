@@ -153,9 +153,12 @@ public sealed partial class PuloniaTaskService
     private async Task SubmitTriggerAsync(PuloniaTaskPlan plan, PuloniaTaskTrigger trigger,
         PuloniaTaskTriggerState cursor, DateTimeOffset occurrence, CancellationToken ct)
     {
+        // 一条龙的触发器遵循配置绑定，避免手动运行与定时使用不同账号。
+        var triggerAccountId = plan.Purpose == PuloniaTaskPlanPurpose.OneDragon && _accountSwitcher is not null
+            ? plan.Accounts.FirstOrDefault(account => account.Enabled)?.AccountId : trigger.AccountId;
         RunState[] busy;
         lock (_runsGate) busy = _runs.Values.Where(item => !item.IsTerminal()
-            && item.Request.PlanId == plan.Id && item.Request.AccountId == trigger.AccountId).ToArray();
+            && item.Request.PlanId == plan.Id && item.Request.AccountId == triggerAccountId).ToArray();
         if (busy.Length > 0 && (trigger.BusyPolicy == PuloniaTaskBusyPolicy.Skip
             || trigger.BusyPolicy != PuloniaTaskBusyPolicy.Skip
             && busy.Any(item => item.GetStatus() == PuloniaTaskRunStatus.Queued)))
@@ -171,7 +174,7 @@ public sealed partial class PuloniaTaskService
         {
             var request = new PuloniaTaskRequest
             {
-                PlanId = plan.Id, TargetTaskId = trigger.TargetTaskId, AccountId = trigger.AccountId,
+                PlanId = plan.Id, TargetTaskId = trigger.TargetTaskId, AccountId = triggerAccountId,
                 Source = trigger.Kind == PuloniaTaskTriggerKind.Hotkey ? "hotkey" : "schedule",
                 TriggerId = trigger.Id, TriggerSignature = cursor.Signature, OccurrenceUtc = occurrence,
                 DeadlineUtc = occurrence.AddMinutes(trigger.WindowMinutes), TimeoutSeconds = trigger.TimeoutSeconds,
@@ -186,7 +189,7 @@ public sealed partial class PuloniaTaskService
                 // 准备快照可能让出线程：在同一状态门内再复核并发提交的手动/续跑请求。
                 RunState[] existing;
                 lock (_runsGate) existing = _runs.Values.Where(item => !item.IsTerminal()
-                    && item.Request.PlanId == plan.Id && item.Request.AccountId == trigger.AccountId).ToArray();
+                    && item.Request.PlanId == plan.Id && item.Request.AccountId == triggerAccountId).ToArray();
                 if (existing.Length > 0 && (trigger.BusyPolicy == PuloniaTaskBusyPolicy.Skip
                     || existing.Any(item => item.GetStatus() == PuloniaTaskRunStatus.Queued)))
                     throw new TriggerBusyException();
@@ -230,6 +233,12 @@ public sealed partial class PuloniaTaskService
         }
         var trigger = plan?.Triggers.FirstOrDefault(item => item.Id == state.Request.TriggerId && item.Enabled);
         var invalid = trigger is null || PuloniaTaskSchedule.Signature(trigger) != state.Request.TriggerSignature;
+        if (plan?.Purpose == PuloniaTaskPlanPurpose.OneDragon && _accountSwitcher is not null)
+        {
+            var bindings = plan.Accounts.Where(account => account.Enabled).ToArray();
+            invalid |= bindings.Length > 1 || (bindings.FirstOrDefault()?.AccountId ?? PuloniaGenshinAccountProfile.DefaultId)
+                != (state.Request.AccountId ?? PuloniaGenshinAccountProfile.DefaultId);
+        }
         if (invalid || state.Request.DeadlineUtc <= now)
         {
             lock (state.SyncRoot)

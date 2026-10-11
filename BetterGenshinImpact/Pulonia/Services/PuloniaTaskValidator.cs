@@ -166,6 +166,7 @@ public static class PuloniaTaskValidator
                 ["additionalProperties"] = false
             }, location + "/values");
         ValidateJsonValue(values, location + "/values");
+        if (type == "pathing") PuloniaCollectionCooldown.ValidateSettings(values[PuloniaCollectionCooldown.ParameterName], location + "/values/collection_cd");
     }
 
     /// <summary>
@@ -333,6 +334,7 @@ public static class PuloniaTaskValidator
         if (task.Parameters is null || task.Children is null || task.ParameterOverrides is null)
             throw new PuloniaTaskValidationException(location, "参数、子节点和公共参数不能为 null。");
         ValidateJsonValue(task.Parameters, location + "/parameters");
+        if (task.TaskType == "pathing") PuloniaCollectionCooldown.ValidateSettings(task.Parameters[PuloniaCollectionCooldown.ParameterName], location + "/parameters/collection_cd");
         ValidatePolicy(task.Policy, location);
         if (task.PresetId is not null)
             ValidateId(task.PresetId, location + "/preset_id");

@@ -19,15 +19,6 @@
       "AutoPick": true
     }
   },
-  "farming_info": {
-    "allow_farming_count": false,
-    "normal_mob_count": 0,
-    "elite_mob_count": 0,
-    "primary_target": "",
-    "duration_seconds": 0,
-    "elite_details": "",
-    "total_mora": 0
-  },
   "positions": [
     {
       "id": 1,

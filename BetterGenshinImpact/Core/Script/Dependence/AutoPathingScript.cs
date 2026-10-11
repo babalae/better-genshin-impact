@@ -48,9 +48,10 @@ public class AutoPathingScript
             pathExecutor.PartyConfig = patyConfig;
         }
 
-        await pathExecutor.Pathing(task);
+        // JS 对外仍返回 bool，成功语义统一读取本次路线结果，不读取执行器成员状态。
+        var result = await pathExecutor.Pathing(task);
         _ct.ThrowIfCancellationRequested();
-        return pathExecutor.SuccessEnd;
+        return result.IsSuccess;
     }
 
     public async Task<bool> RunFile(string path)

@@ -126,12 +126,14 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
     /// </summary>
     public PuloniaTaskService(PuloniaTaskStore store, PuloniaTaskBuilder builder,
         IEnumerable<IPuloniaTaskExecutor> executors, PuloniaGameTaskCoordinator gameTaskCoordinator,
-        TaskStopService taskStopService, TimeProvider? timeProvider = null)
+        TaskStopService taskStopService, TimeProvider? timeProvider = null,
+        IPuloniaGenshinAccountSwitcher? accountSwitcher = null)
     {
         _store = store;
         _builder = builder;
         _gameTaskCoordinator = gameTaskCoordinator;
         _taskStopService = taskStopService;
+        _accountSwitcher = accountSwitcher;
         _timeProvider = timeProvider ?? TimeProvider.System;
         var executorMap = new Dictionary<string, IPuloniaTaskExecutor>(StringComparer.Ordinal);
         var definitionMap = new Dictionary<string, PuloniaTaskDefinition>(StringComparer.Ordinal);
@@ -169,6 +171,20 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
         var plan = await _store.LoadPlanAsync(fixedRequest.PlanId, ct).ConfigureAwait(false)
                    ?? throw new PuloniaTaskValidationException(fixedRequest.PlanId, "要运行的计划不存在。");
 
+        PuloniaGenshinAccountProfile? accountPreparation = null;
+        if (plan.Purpose == PuloniaTaskPlanPurpose.OneDragon && _accountSwitcher is not null)
+        {
+            var accountId = ResolveOneDragonAccountId(plan);
+            if (fixedRequest.AccountId is { } requested && requested != accountId)
+                throw new InvalidOperationException("运行账号必须与一条龙配置绑定一致，请修改配置绑定。");
+            var accounts = await _store.LoadAccountSettingsAsync(ct).ConfigureAwait(false);
+            var account = accounts.Accounts.SingleOrDefault(item => item.Id == accountId)
+                ?? throw new InvalidOperationException("绑定的账号资料不存在，请重新选择账号。");
+            accountPreparation = _store.FreezeAccount(account);
+            if (plan.Accounts.Any(binding => binding.Enabled))
+                fixedRequest = CloneAndValidateRequest(fixedRequest, accountId);
+        }
+
         // 快照在进入队列前固定；后续编辑计划、预设或调用参数都不会改变已排队运行。
         var snapshot = await _builder.BuildAsync(plan, new PuloniaTaskBuildOptions
         {
@@ -178,6 +194,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
             TargetTaskId = fixedRequest.TargetTaskId,
             ParameterOverrides = fixedRequest.ParameterOverrides
         }, ct).ConfigureAwait(false);
+        if (accountPreparation is not null) snapshot = snapshot.WithGenshinAccount(accountPreparation);
 
         var state = new RunState(Guid.NewGuid(), Guid.NewGuid(), fixedRequest, plan.Name, snapshot);
         try
@@ -327,7 +344,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
             Source = "resume"
         });
         var state = new RunState(Guid.NewGuid(), Guid.NewGuid(), resumeRequest,
-            source.PlanName, snapshot, completed, startTaskAddress, source.RunId);
+            source.PlanName, snapshot, completed, startTaskAddress, source.RunId) { VerifiedUid = source.VerifiedUid };
         lock (_runsGate)
             _runs.Add(state.RequestId, state);
         try
@@ -610,6 +627,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
             state.Cancellation.Token, timeoutCancellation.Token, _shutdown.Token);
         try
         {
+            await PrepareGenshinAccountAsync(state, runCancellation.Token).ConfigureAwait(false);
             var signal = await ExecuteTaskAsync(state, state.Snapshot.RootTask, runCancellation.Token).ConfigureAwait(false);
             runCancellation.Token.ThrowIfCancellationRequested();
             lock (state.SyncRoot)
@@ -650,17 +668,29 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
                 state.FinishedAt = DateTimeOffset.UtcNow;
             }
         }
+        catch (PuloniaGenshinAccountException ex)
+        {
+            lock (state.SyncRoot)
+            {
+                state.CurrentTaskAddress = null;
+                state.Status = PuloniaTaskRunStatus.NeedsAttention;
+                state.RequiresAttention = true;
+                state.Message = "账号准备或核验失败，未继续执行：" + ex.Message;
+                state.FinishedAt = DateTimeOffset.UtcNow;
+            }
+        }
         catch (Exception ex)
         {
             lock (state.SyncRoot)
             {
                 state.CurrentTaskAddress = null;
-                state.Status = state.OperationIntent is null
-                    ? PuloniaTaskRunStatus.Failed
-                    : PuloniaTaskRunStatus.NeedsAttention;
+                state.Status = state.OperationIntent is not null || state.RequiresAttention || Volatile.Read(ref _persistenceFailure) is not null
+                    ? PuloniaTaskRunStatus.NeedsAttention
+                    : PuloniaTaskRunStatus.Failed;
                 state.RequiresAttention = state.Status == PuloniaTaskRunStatus.NeedsAttention;
                 state.Message = state.RequiresAttention
-                    ? "执行异常且存在未确认操作，必须先核验副作用：" + ex.Message
+                    ? state.OperationIntent is not null ? "执行异常且存在未确认操作，必须先核验副作用：" + ex.Message
+                        : "执行状态持久化失败，已停止自动运行：" + ex.Message
                     : "执行基础设施失败：" + ex.Message;
                 state.FinishedAt = DateTimeOffset.UtcNow;
             }
@@ -758,7 +788,18 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
 
 
         var rules = PuloniaTaskAvailability.GetApplicableRules(_definitions[task.TaskType], task);
-        var availability = await EvaluateAvailabilityAsync(state.Request, rules, runToken).ConfigureAwait(false);
+        var collectionPolicy = task.TaskType == "pathing"
+            ? task.CollectionCooldown ?? PuloniaCollectionCooldown.Resolve(task.Path, task.Resource, task.Parameters) : null;
+        JObject? collectionData = null;
+        // 已准备账号的游戏节点必须先取得输入并重新核验，再读取该 UID 的 CD。
+        using var accountLease = state.VerifiedUid is not null && _definitions[task.TaskType].RequiresGameSession
+            ? await _gameTaskCoordinator.AcquireAsync(runToken).ConfigureAwait(false) : null;
+        if (accountLease is not null) await VerifyGenshinAccountAsync(state, runToken).ConfigureAwait(false);
+        var availability = await EvaluateAvailabilityAsync(state.Request, rules, runToken, state.VerifiedUid).ConfigureAwait(false);
+        if (collectionPolicy is not null && availability.IsAllowed)
+        {
+            (availability, collectionData) = await EvaluateCollectionCooldownAsync(state, collectionPolicy, runToken).ConfigureAwait(false);
+        }
         if (!availability.IsAllowed)
         {
             var now = DateTimeOffset.UtcNow;
@@ -766,7 +807,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
                 ? PuloniaTaskNodeStatus.NeedsAttention
                 : PuloniaTaskNodeStatus.Skipped;
             await AddNodeResultAsync(state, new PuloniaTaskNodeResult(task.TaskAddress, task.Name, task.TaskType, 0,
-                nodeStatus, availability.Message, now, now,
+                nodeStatus, availability.Message, now, now, collectionData,
                 outcomeKind: availability.NeedsAttention
                     ? PuloniaTaskOutcomeKind.NeedsAttention
                     : PuloniaTaskOutcomeKind.Skipped)).ConfigureAwait(false);
@@ -792,6 +833,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
             PuloniaTaskOutcome? outcome = null;
             Exception? failure = null;
             var nodeTimedOut = false;
+            DateTimeOffset? executorFinishedAt = null;
 
             using var nodeTimeout = policy.TimeoutSeconds is { } timeoutSeconds
                 ? new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds))
@@ -801,14 +843,17 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
                 : CancellationTokenSource.CreateLinkedTokenSource(runToken, nodeTimeout.Token);
             try
             {
-                await PersistOperationIntentAsync(state, task, rules, nodeCancellation.Token).ConfigureAwait(false);
+                // 文件级采集只在完整成功后结算，不为失败或中断留下待核验占用。
+                if (collectionPolicy is null)
+                    await PersistOperationIntentAsync(state, task, rules, nodeCancellation.Token).ConfigureAwait(false);
                 var context = new PuloniaTaskExecutionContext(state.RequestId, state.RunId, state.Snapshot, attempt,
                     task.TaskAddress, (completionEvent, token) =>
                         ReportCompletionEventAsync(state, task, attempt, rules, completionEvent, token));
-                using var gameTaskLease = _definitions[task.TaskType].RequiresGameSession
+                using var gameTaskLease = accountLease is null && _definitions[task.TaskType].RequiresGameSession
                     ? await _gameTaskCoordinator.AcquireAsync(nodeCancellation.Token).ConfigureAwait(false)
                     : null;
                 outcome = await executor.ExecuteAsync(task, context, nodeCancellation.Token).ConfigureAwait(false);
+                executorFinishedAt = DateTimeOffset.UtcNow;
                 // 兼容暂时未主动观察令牌的旧执行器：只有它真正返回后才确认取消或超时完成。
                 nodeCancellation.Token.ThrowIfCancellationRequested();
                 await ClearOperationIntentAsync(state, nodeCancellation.Token).ConfigureAwait(false);
@@ -857,7 +902,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
                 }
             }
 
-            var finished = DateTimeOffset.UtcNow;
+            var finished = executorFinishedAt ?? DateTimeOffset.UtcNow;
             if (state.OperationIntent is not null)
             {
                 lock (state.SyncRoot)
@@ -871,7 +916,10 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
                     outcomeKind: PuloniaTaskOutcomeKind.NeedsAttention)).ConfigureAwait(false);
                 return ExecutionSignal.StopPlan;
             }
-            var succeeded = outcome?.IsSuccess == true;
+            var succeeded = failure is null && !nodeTimedOut && outcome?.IsSuccess == true;
+            if (collectionPolicy is not null)
+                // 地图追踪执行器已将本次返回值映射到完成状态，不通过用于展示的 JSON 字段再次判定。
+                succeeded &= outcome?.Kind == PuloniaTaskOutcomeKind.Succeeded;
             // 配置明确禁用的 Shell 等节点记为跳过，不触发失败重试或停止后续任务。
             var skipped = outcome?.Kind == PuloniaTaskOutcomeKind.Skipped;
             var message = outcome?.Message ?? failure?.Message ?? "执行器未返回结果。";
@@ -879,9 +927,24 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
                 ? PuloniaTaskNodeStatus.TimedOut
                 : skipped ? PuloniaTaskNodeStatus.Skipped
                 : succeeded ? PuloniaTaskNodeStatus.Succeeded : PuloniaTaskNodeStatus.Failed;
-            await AddNodeResultAsync(state, new PuloniaTaskNodeResult(task.TaskAddress, task.Name, task.TaskType, attempt,
-                status, message, startedAt, finished, outcome?.Data, outcome?.Kind, outcome?.Evidence))
-                .ConfigureAwait(false);
+            var resultData = outcome is null ? new JObject() : (JObject)outcome.Data.DeepClone();
+            if (collectionData is not null)
+                foreach (var property in collectionData.Properties()) resultData[property.Name] = property.Value.DeepClone();
+            if (succeeded && collectionPolicy is not null)
+            {
+                var next = PuloniaCollectionCooldown.GetNextEligibleAt(collectionPolicy, finished, state.Request.ServerUtcOffsetMinutes);
+                foreach (var property in PuloniaCollectionCooldown.Describe(collectionPolicy, finished, next).Properties())
+                    resultData[property.Name] = property.Value.DeepClone();
+            }
+            if (collectionPolicy is not null && !succeeded && !skipped && failure is null)
+                message = "地图追踪文件未完整执行成功，不记录采集 CD。";
+            var result = new PuloniaTaskNodeResult(task.TaskAddress, task.Name, task.TaskType, attempt,
+                status, message, startedAt, finished, resultData,
+                collectionPolicy is not null && !succeeded && !skipped ? PuloniaTaskOutcomeKind.Failed : outcome?.Kind, outcome?.Evidence);
+            if (succeeded && collectionPolicy is not null)
+                await CommitCollectionSuccessAsync(state, task, collectionPolicy, result, nodeCancellation.Token).ConfigureAwait(false);
+            else
+                await AddNodeResultAsync(state, result).ConfigureAwait(false);
             if (succeeded || skipped)
                 return ExecutionSignal.Continue;
 
@@ -902,13 +965,13 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
     /// 从最近一次耐久状态读取账本和未决操作并检查节点可用性。
     /// </summary>
     private async Task<PuloniaTaskAvailabilityDecision> EvaluateAvailabilityAsync(PuloniaTaskRequest request,
-        IReadOnlyList<PuloniaTaskAvailabilityRule> rules, CancellationToken ct)
+        IReadOnlyList<PuloniaTaskAvailabilityRule> rules, CancellationToken ct, string? verifiedUid = null)
     {
         await _stateGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             return PuloniaTaskAvailability.Evaluate(request, rules, _persistentState.Ledger,
-                _persistentState.UncertainOperations, DateTimeOffset.UtcNow);
+                _persistentState.UncertainOperations, DateTimeOffset.UtcNow, verifiedUid);
         }
         finally
         {
@@ -922,7 +985,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
     private async Task PersistOperationIntentAsync(RunState state, PuloniaTaskPreparedTask task,
         IReadOnlyList<PuloniaTaskAvailabilityRule> rules, CancellationToken ct)
     {
-        var reservations = PuloniaTaskAvailability.CreateReservations(state.Request, rules);
+        var reservations = PuloniaTaskAvailability.CreateReservations(state.Request, rules, state.VerifiedUid);
         if (reservations.Count == 0)
             return;
         var intent = new PuloniaTaskOperationIntent
@@ -967,7 +1030,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
         // 执行器仍持有证据对象；提交前固定副本，防止后续修改污染已经确认的事实。
         var entry = PuloniaTaskJson.Read<PuloniaTaskLedgerEntry>(PuloniaTaskJson.Write(
             PuloniaTaskAvailability.CreateLedgerEntry(state.Request, rule, completionEvent,
-                eventKey, state.RunId, task.TaskAddress)));
+                eventKey, state.RunId, task.TaskAddress, state.VerifiedUid)));
 
         using var cleanup = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         await _stateGate.WaitAsync(cleanup.Token).ConfigureAwait(false);
@@ -1244,7 +1307,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
     /// <summary>
     /// 深复制并校验调用方可填写的请求字段。
     /// </summary>
-    private static PuloniaTaskRequest CloneAndValidateRequest(PuloniaTaskRequest request)
+    private static PuloniaTaskRequest CloneAndValidateRequest(PuloniaTaskRequest request, string? accountId = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         PuloniaTaskValidator.ValidateId(request.PlanId, "request/plan_id");
@@ -1292,7 +1355,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
         return new PuloniaTaskRequest
         {
             PlanId = request.PlanId,
-            AccountId = request.AccountId,
+            AccountId = accountId ?? request.AccountId,
             WorldOwnerAccountId = request.WorldOwnerAccountId,
             Server = server,
             ServerUtcOffsetMinutes = request.ServerUtcOffsetMinutes,
@@ -1520,6 +1583,9 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
         /// </summary>
         public bool HasFinalFailure { get; set; }
 
+        /// <summary>当前运行已耐久保存的实际 UID，编辑资料不能改写此身份。</summary>
+        public string? VerifiedUid { get; set; }
+
         /// <summary>
         /// 建立排队状态并固定快照 JSON。
         /// </summary>
@@ -1558,7 +1624,8 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
                 OperationIntent = record.OperationIntent,
                 RequiresAttention = record.Status == PuloniaTaskRunStatus.NeedsAttention,
                 IsHistorical = isHistorical,
-                QueueReady = true
+                QueueReady = true,
+                VerifiedUid = record.VerifiedUid
             };
             state.NodeResults.AddRange(record.NodeResults);
             state.ConfirmedEffects.AddRange(record.ConfirmedEffects);
@@ -1579,6 +1646,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
                 return new PuloniaTaskRunRecord
                 {
                     RequestId = RequestId,
+                    VerifiedUid = VerifiedUid,
                     RunId = RunId,
                     Request = CloneAndValidateRequest(Request),
                     PlanName = PlanName,
@@ -1615,7 +1683,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
             => new(RequestId, RunId, Request.PlanId, PlanName, Request.Source, Status, CurrentTaskAddress,
                 Message, SubmittedAt, StartedAt, FinishedAt, SnapshotJson, NodeResults,
                 Request.AccountId, Request.WorldOwnerAccountId, ResumedFromRunId, ResumeFromTaskAddress,
-                IsHistorical, OperationIntent is not null, ConfirmedEffects, Request);
+                IsHistorical, OperationIntent is not null, ConfirmedEffects, Request, VerifiedUid);
 
         /// <summary>
         /// 判断本运行是否已经进入最终状态。

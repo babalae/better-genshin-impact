@@ -1,0 +1,491 @@
+using BetterGenshinImpact.Core.Script.Repositories;
+using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.Pulonia.Executors;
+using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service;
+using BetterGenshinImpact.ViewModel.Pages.Pulonia;
+using BetterGenshinImpact.ViewModel.Windows.Pulonia;
+using Microsoft.Extensions.Logging.Abstractions;
+using Newtonsoft.Json.Linq;
+
+namespace BetterGenshinImpact.UnitTest.Pulonia;
+
+/// <summary>不启动游戏的文件级 CD 时间、资源身份、失败结算及重启回归。</summary>
+public sealed class PuloniaCollectionCooldownTests : IDisposable
+{
+    /// <summary>本测试独占的临时资源和状态目录。</summary>
+    private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-collection-cd-" + Guid.NewGuid().ToString("N"));
+
+    /// <summary>材料目录和别名使用明确的规则，不把矿物外形误当作日期刷新。</summary>
+    [Theory]
+    [InlineData("落落莓", "rolling", 46, 0)]
+    [InlineData("蒲公英", "rolling", 46, 0)]
+    [InlineData("帕蒂莎兰", "rolling", 46, 0)]
+    [InlineData("清水玉", "rolling", 46, 0)]
+    [InlineData("甜甜花", "rolling", 12, 0)]
+    [InlineData("蘑菇", "rolling", 24, 0)]
+    [InlineData("晶核", "daily", 0, 0)]
+    [InlineData("铁块", "calendar_days", 0, 1)]
+    [InlineData("白铁块", "calendar_days", 0, 2)]
+    [InlineData("水晶块", "calendar_days", 0, 3)]
+    [InlineData("宝箱", "once", 0, 0)]
+    [InlineData("圣遗物", "disabled", 0, 0)]
+    [InlineData("未知材料", "disabled", 0, 0)]
+    public void DirectoryRules_AreExplicit(string material, string mode, double hours, int days)
+    {
+        var policy = Resolve(material);
+        Assert.Equal(mode, policy.Mode);
+        Assert.Equal(hours, policy.Hours);
+        Assert.Equal(days, policy.Days);
+    }
+
+    /// <summary>仓库材料从原始路径识别，版本变化和不同缓存位置不改变文件身份。</summary>
+    [Fact]
+    public void RepositoryIdentity_UsesOriginalPathAndIgnoresRevision()
+    {
+        var reference = new ScriptResourceReference { RepositoryId = new string('a', 32), RelativePath = "pathing/落落莓/蒙德/A.json", ApprovedRevision = new string('1', 40) };
+        var first = PuloniaCollectionCooldown.Resolve(Path.Combine(_directory, "cache", "A.json"), reference, new JObject());
+        var second = PuloniaCollectionCooldown.Resolve(Path.Combine(_directory, "other", "A.json"), reference.WithRevision(new string('2', 40)), new JObject());
+        Assert.Equal("落落莓", first.MaterialName);
+        Assert.Equal(first.FileIdentity, second.FileIdentity);
+        Assert.Equal(PuloniaCollectionCooldown.GetEffectKey(first), PuloniaCollectionCooldown.GetEffectKey(second));
+        var other = PuloniaCollectionCooldown.Resolve(null, new ScriptResourceReference { RepositoryId = new string('b', 32), RelativePath = reference.RelativePath }, new JObject());
+        Assert.NotEqual(PuloniaCollectionCooldown.GetEffectKey(first), PuloniaCollectionCooldown.GetEffectKey(other));
+    }
+
+    /// <summary>以最近匹配的目录为准；非精确材料名不进行包含匹配。</summary>
+    [Fact]
+    public void NearestDirectory_WinsWithoutFuzzyMatching()
+    {
+        var policy = PuloniaCollectionCooldown.Resolve(Path.Combine(_directory, "落落莓", "薄荷", "A.json"), null, new JObject());
+        Assert.Equal("薄荷", policy.MaterialName);
+        Assert.Equal(12, policy.Hours);
+        Assert.Null(Resolve("落落莓备份").MaterialName);
+    }
+
+    /// <summary>服务器四点、午夜保守估算及周一边界按 UTC 转换，边界本身属于新周期。</summary>
+    [Fact]
+    public void CalendarRules_RespectServerBoundaries()
+    {
+        var success = new DateTimeOffset(2026, 10, 10, 18, 0, 0, TimeSpan.FromHours(8));
+        Assert.Equal(success.AddHours(46).ToUniversalTime(), PuloniaCollectionCooldown.GetNextEligibleAt(Resolve("落落莓"), success, 480));
+        Assert.Equal(new DateTimeOffset(2026, 10, 13, 0, 0, 0, TimeSpan.FromHours(8)).ToUniversalTime(),
+            PuloniaCollectionCooldown.GetNextEligibleAt(Resolve("水晶块"), success, 480));
+        var beforeReset = new DateTimeOffset(2026, 10, 10, 3, 59, 59, TimeSpan.FromHours(8));
+        var boundary = beforeReset.AddSeconds(1);
+        Assert.Equal(boundary.ToUniversalTime(), PuloniaCollectionCooldown.GetNextEligibleAt(Resolve("晶核"), beforeReset, 480));
+        Assert.Equal(boundary.AddDays(1).ToUniversalTime(), PuloniaCollectionCooldown.GetNextEligibleAt(Resolve("晶核"), boundary, 480));
+        var weekly = Resolve("未知", new JObject { ["mode"] = "weekly", ["reset_weekday"] = 1, ["reset_hour"] = 4 });
+        var monday = new DateTimeOffset(2026, 10, 12, 4, 0, 0, TimeSpan.FromHours(-5));
+        Assert.Equal(monday.AddDays(7).ToUniversalTime(), PuloniaCollectionCooldown.GetNextEligibleAt(weekly, monday, -300));
+    }
+
+    /// <summary>时间范围、缺失相对时长及不合法重置选项在准备前被拒绝。</summary>
+    [Theory]
+    [InlineData("{\"mode\":\"rolling\",\"hours\":0}")]
+    [InlineData("{\"mode\":\"rolling\"}")]
+    [InlineData("{\"mode\":\"calendar_days\",\"days\":0}")]
+    [InlineData("{\"mode\":\"daily\",\"reset_hour\":24}")]
+    [InlineData("{\"mode\":\"weekly\",\"reset_weekday\":0}")]
+    public void InvalidSettings_AreRejected(string json)
+        => Assert.Throws<PuloniaTaskValidationException>(() => PuloniaCollectionCooldown.ValidateSettings(JObject.Parse(json), "测试"));
+
+    /// <summary>规则变化只重算执行资格，不改写历史估计；恰好到期允许执行。</summary>
+    [Fact]
+    public void Eligibility_RecalculatesRuleAndAllowsExactBoundary()
+    {
+        var request = new PuloniaTaskRequest();
+        var success = new DateTimeOffset(2026, 10, 10, 0, 0, 0, TimeSpan.Zero);
+        var original = Resolve("落落莓");
+        var storedNext = success.AddHours(46);
+        var entry = new PuloniaTaskLedgerEntry { EffectKey = PuloniaCollectionCooldown.GetEffectKey(original),
+            ScopeKey = PuloniaTaskAvailability.BuildScopeKey(request, PuloniaTaskScopeKind.World), OccurredAt = success, NextEligibleAt = storedNext };
+        var shortened = Resolve("落落莓", new JObject { ["mode"] = "rolling", ["hours"] = 12 });
+        var decision = PuloniaCollectionCooldown.Evaluate(shortened, request, [entry], success.AddHours(12), out var data);
+        Assert.True(decision.IsAllowed);
+        Assert.Equal(success.AddHours(12).ToString("O"), data.Value<string>("collection_next_eligible_at"));
+        Assert.Equal(storedNext, entry.NextEligibleAt);
+        Assert.False(PuloniaCollectionCooldown.Evaluate(original, request, [entry], success.AddHours(12), out _).IsAllowed);
+        var once = Resolve("落落莓", new JObject { ["mode"] = "once" });
+        Assert.False(PuloniaCollectionCooldown.Evaluate(once, request, [entry], success.AddYears(10), out _).IsAllowed);
+    }
+
+    /// <summary>不同文件独立，同文件跨计划和重复节点共享成功记录，重启后仍跳过。</summary>
+    [Fact]
+    public async Task Success_IsSharedAcrossPlansAndSurvivesRestart()
+    {
+        using var store = new PuloniaTaskStore(Path.Combine(_directory, "state"));
+        var executor = new FileExecutor();
+        var a = CreateTask("落落莓", "A.json");
+        var b = CreateTask("落落莓", "B.json");
+        var plan = await store.SavePlanAsync(Plan(a, new PuloniaTask { Name = "重复 A", TaskType = "pathing", Path = a.Path }, b));
+        var other = await store.SavePlanAsync(Plan(new PuloniaTask { Name = "跨计划 A", TaskType = "pathing", Path = a.Path }));
+        await using (var service = Service(store, executor))
+        {
+            var run = await Run(service, plan);
+            Assert.Equal(new[] { PuloniaTaskNodeStatus.Succeeded, PuloniaTaskNodeStatus.Skipped, PuloniaTaskNodeStatus.Succeeded }, run.NodeResults.Select(result => result.Status));
+            Assert.Equal(2, executor.Executions);
+            Assert.Equal(2, (await service.ListLedgerAsync()).Count);
+            var snapshot = PuloniaTaskJson.ReadSnapshot(run.SnapshotJson);
+            Assert.Equal("rolling", snapshot.RootTask.Children[0].CollectionCooldown!.Mode);
+            Assert.Equal(46, snapshot.RootTask.Children[0].CollectionCooldown!.Hours);
+        }
+        await using (var restarted = Service(store, executor))
+        {
+            var run = await Run(restarted, other);
+            Assert.Equal(PuloniaTaskNodeStatus.Skipped, Assert.Single(run.NodeResults).Status);
+            Assert.Contains("CD", run.NodeResults[0].Message);
+            Assert.Equal(2, executor.Executions);
+        }
+    }
+
+    /// <summary>失败、提前放弃及旧结束标记不生成 CD，后续完整成功仍可重新执行。</summary>
+    [Theory]
+    [InlineData(PuloniaTaskOutcomeKind.Failed)]
+    [InlineData(PuloniaTaskOutcomeKind.ExecutedUnverified)]
+    public async Task IncompleteFile_DoesNotWriteCooldown(PuloniaTaskOutcomeKind kind)
+    {
+        using var store = new PuloniaTaskStore(Path.Combine(_directory, "state"));
+        var executor = new FileExecutor { Execute = (_, _) => Task.FromResult(new PuloniaTaskOutcome(kind, "提前放弃")) };
+        var plan = await store.SavePlanAsync(Plan(CreateTask("落落莓", "A.json")));
+        await using var service = Service(store, executor);
+        Assert.Equal(PuloniaTaskRunStatus.Failed, (await Run(service, plan)).Status);
+        Assert.Empty(await service.ListLedgerAsync());
+        executor.Execute = null;
+        Assert.Equal(PuloniaTaskRunStatus.Succeeded, (await Run(service, plan)).Status);
+        Assert.Single(await service.ListLedgerAsync());
+    }
+
+    /// <summary>本次结果对象的成功字段决定完成状态，统计与失败信息完整传递到运行记录。</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void PathingReturnValue_DeterminesOutcome(bool completed)
+    {
+        var result = new PathingResult(completed, 3, completed ? null : "重试耗尽", 2,
+            new Dictionary<string, int> { ["薄荷"] = 5 });
+        var outcome = PuloniaPathingTaskExecutor.CreateOutcome(result, "resource-version");
+        Assert.Equal(completed ? PuloniaTaskOutcomeKind.Succeeded : PuloniaTaskOutcomeKind.Failed, outcome.Kind);
+        Assert.Equal(completed, outcome.Data.Value<bool>("is_success"));
+        Assert.Equal(3, outcome.Data.Value<int>("success_fight_count"));
+        Assert.Equal(2, outcome.Data.Value<int>("revive_count"));
+        Assert.Equal(5, outcome.Data["collected_items"]!.Value<int>("薄荷"));
+        Assert.Equal(completed ? null : "重试耗尽", outcome.Data.Value<string>("error_message"));
+        if (!completed) Assert.Equal("重试耗尽", outcome.Message);
+        Assert.Equal("resource-version", outcome.Data.Value<string>("resource_version"));
+    }
+
+    /// <summary>提前结束的失败对象不能写 CD；后续成功对象仍可正常结算。</summary>
+    [Fact]
+    public async Task IncompleteReturn_DoesNotWriteCooldown()
+    {
+        using var store = new PuloniaTaskStore(Path.Combine(_directory, "state"));
+        var executor = new FileExecutor { Execute = (_, _) => Task.FromResult(PuloniaPathingTaskExecutor.CreateOutcome(new PathingResult(false, errorMessage: "提前放弃"), null)) };
+        var plan = await store.SavePlanAsync(Plan(CreateTask("落落莓", "A.json")));
+        await using var service = Service(store, executor);
+        var failedRun = await Run(service, plan);
+        Assert.Equal(PuloniaTaskRunStatus.Failed, failedRun.Status);
+        Assert.Equal("提前放弃", failedRun.NodeResults[0].Data.Value<string>("error_message"));
+        Assert.Empty(await service.ListLedgerAsync());
+        executor.Execute = null;
+        Assert.Equal(PuloniaTaskRunStatus.Succeeded, (await Run(service, plan)).Status);
+        Assert.Single(await service.ListLedgerAsync());
+    }
+
+    /// <summary>宿主通过类型化完成状态结算，不读取旧的独立成功标记。</summary>
+    [Fact]
+    public async Task SuccessfulOutcome_WritesCooldownWithoutDiagnosticFlags()
+    {
+        using var store = new PuloniaTaskStore(Path.Combine(_directory, "state"));
+        var plan = await store.SavePlanAsync(Plan(CreateTask("落落莓", "A.json")));
+        await using var service = Service(store, new FileExecutor());
+        var run = await Run(service, plan);
+        Assert.Equal(PuloniaTaskRunStatus.Succeeded, run.Status);
+        Assert.False(run.NodeResults[0].Data.ContainsKey("fully_executed"));
+        Assert.False(run.NodeResults[0].Data.ContainsKey("success_end"));
+        Assert.Single(await service.ListLedgerAsync());
+    }
+
+    /// <summary>关闭限制仍保存成功时间，恢复规则或改变时长时从该事实重算。</summary>
+    [Fact]
+    public async Task RuleChanges_RecalculateExistingSuccess()
+    {
+        using var store = new PuloniaTaskStore(Path.Combine(_directory, "state"));
+        var executor = new FileExecutor();
+        var task = CreateTask("未知材料", "A.json", new JObject { ["mode"] = "disabled" });
+        var plan = await store.SavePlanAsync(Plan(task));
+        await using var service = Service(store, executor);
+        await Run(service, plan);
+        Assert.Null(Assert.Single(await service.ListLedgerAsync()).NextEligibleAt);
+        plan.RootTask.Children[0].Parameters[PuloniaCollectionCooldown.ParameterName] = new JObject { ["mode"] = "rolling", ["hours"] = 24 };
+        plan = await store.SavePlanAsync(plan);
+        Assert.Equal(PuloniaTaskNodeStatus.Skipped, Assert.Single((await Run(service, plan)).NodeResults).Status);
+        plan.RootTask.Children[0].Parameters[PuloniaCollectionCooldown.ParameterName] = new JObject { ["mode"] = "disabled" };
+        plan = await store.SavePlanAsync(plan);
+        Assert.Equal(PuloniaTaskNodeStatus.Succeeded, Assert.Single((await Run(service, plan)).NodeResults).Status);
+        Assert.Equal(2, executor.Executions);
+    }
+
+    /// <summary>未知目录不限制运行，但成功时间会为后续手动规则保留。</summary>
+    [Fact]
+    public async Task UnknownMaterial_RecordsSuccessWithoutLimitingExecution()
+    {
+        using var store = new PuloniaTaskStore(Path.Combine(_directory, "state"));
+        var executor = new FileExecutor();
+        var plan = await store.SavePlanAsync(Plan(CreateTask("未知材料", "A.json")));
+        await using var service = Service(store, executor);
+        await Run(service, plan);
+        var second = await Run(service, plan);
+        Assert.Equal(2, executor.Executions);
+        Assert.Contains("未自动设置 CD", second.NodeResults[0].Data.Value<string>("collection_rule"));
+        Assert.All(await service.ListLedgerAsync(), entry => Assert.Null(entry.NextEligibleAt));
+    }
+
+    /// <summary>整个文件一次性规则持久保存，重复执行被跳过。</summary>
+    [Fact]
+    public async Task OneTimeFile_IsSkippedAfterSuccess()
+    {
+        using var store = new PuloniaTaskStore(Path.Combine(_directory, "state"));
+        var executor = new FileExecutor();
+        var plan = await store.SavePlanAsync(Plan(CreateTask("宝箱", "A.json")));
+        await using var service = Service(store, executor);
+        await Run(service, plan);
+        var second = await Run(service, plan);
+        Assert.Equal(1, executor.Executions);
+        Assert.Equal(PuloniaTaskNodeStatus.Skipped, second.NodeResults[0].Status);
+        Assert.Contains("一次性", second.NodeResults[0].Message);
+    }
+
+    /// <summary>成功结果与账本在下一节点执行前已一起落盘，后续取消不会撤销成功文件。</summary>
+    [Fact]
+    public async Task SuccessAndLedger_ArePersistedBeforeAdvancing()
+    {
+        using var store = new PuloniaTaskStore(Path.Combine(_directory, "state"));
+        var enteredSecond = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var executor = new FileExecutor { Execute = async (task, ct) =>
+        {
+            if (Path.GetFileName(task.Path) == "B.json")
+            {
+                enteredSecond.SetResult();
+                await Task.Delay(Timeout.Infinite, ct);
+            }
+            return Completed();
+        } };
+        var plan = await store.SavePlanAsync(Plan(CreateTask("落落莓", "A.json"), CreateTask("落落莓", "B.json")));
+        await using var service = Service(store, executor);
+        var id = await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = plan.Id });
+        await enteredSecond.Task.WaitAsync(TimeSpan.FromSeconds(20));
+        var state = (await store.LoadStateAsync()).State;
+        var result = Assert.Single(state.ActiveRun!.NodeResults);
+        var entry = Assert.Single(state.Ledger);
+        Assert.Equal(PuloniaTaskNodeStatus.Succeeded, result.Status);
+        Assert.Equal(result.FinishedAt, entry.OccurredAt);
+        Assert.Single(state.ActiveRun.ConfirmedEffects);
+        await service.CancelAsync(id);
+        await service.WaitForCompletionAsync(id);
+        Assert.Single(await service.ListLedgerAsync());
+    }
+
+    /// <summary>提交后修改计划不会改变已固定的采集规则，未成功的排队文件也没有提前占用。</summary>
+    [Fact]
+    public async Task QueuedSnapshot_KeepsOriginalRule()
+    {
+        using var store = new PuloniaTaskStore(Path.Combine(_directory, "state"));
+        var blocking = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var executor = new FileExecutor { Execute = async (task, ct) =>
+        {
+            if (Path.GetFileName(task.Path) == "block.json") { blocking.SetResult(); await release.Task.WaitAsync(ct); }
+            return Completed();
+        } };
+        var first = await store.SavePlanAsync(Plan(CreateTask("落落莓", "block.json")));
+        var second = await store.SavePlanAsync(Plan(CreateTask("落落莓", "A.json", new JObject { ["mode"] = "rolling", ["hours"] = 5 })));
+        await using var service = Service(store, executor);
+        var firstId = await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = first.Id });
+        await blocking.Task.WaitAsync(TimeSpan.FromSeconds(20));
+        var secondId = await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = second.Id });
+        Assert.Empty(await service.ListLedgerAsync());
+        second.RootTask.Children[0].Parameters[PuloniaCollectionCooldown.ParameterName] = new JObject { ["mode"] = "disabled" };
+        await store.SavePlanAsync(second);
+        release.SetResult();
+        await service.WaitForCompletionAsync(firstId);
+        var run = await service.WaitForCompletionAsync(secondId);
+        var fact = Assert.Single(run.ConfirmedEffects).Entry;
+        Assert.Equal(TimeSpan.FromHours(5), fact.NextEligibleAt - fact.OccurredAt);
+    }
+
+    /// <summary>相同文件在不同世界拥有者下分别记录。</summary>
+    [Fact]
+    public async Task WorldScopes_DoNotShareCooldown()
+    {
+        using var store = new PuloniaTaskStore(Path.Combine(_directory, "state"));
+        var executor = new FileExecutor();
+        var plan = await store.SavePlanAsync(Plan(CreateTask("落落莓", "A.json")));
+        await using var service = Service(store, executor);
+        foreach (var world in new[] { "world-one", "world-two", "world-one" })
+        {
+            var id = await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = plan.Id, WorldOwnerAccountId = world });
+            await service.WaitForCompletionAsync(id).WaitAsync(TimeSpan.FromSeconds(20));
+        }
+        Assert.Equal(2, executor.Executions);
+        Assert.Equal(2, (await service.ListLedgerAsync()).Count);
+    }
+
+    /// <summary>超时后，即使旧执行器返回完整成功也不能写入 CD 或成功结果。</summary>
+    [Fact]
+    public async Task Timeout_RejectsLateSuccessWithoutUncertainOperations()
+    {
+        using var store = new PuloniaTaskStore(Path.Combine(_directory, "state"));
+        var executor = new FileExecutor { Execute = async (_, ct) => { await Task.Delay(Timeout.Infinite, ct).ContinueWith(_ => { }); return Completed(); } };
+        var task = CreateTask("落落莓", "A.json");
+        task.Policy.TimeoutSeconds = 0.1;
+        var plan = await store.SavePlanAsync(Plan(task));
+        await using var service = Service(store, executor);
+        var run = await Run(service, plan);
+        Assert.Equal(PuloniaTaskNodeStatus.TimedOut, Assert.Single(run.NodeResults).Status);
+        Assert.Empty(await service.ListLedgerAsync());
+        Assert.Empty((await store.LoadStateAsync()).State.UncertainOperations);
+    }
+
+    /// <summary>取消不会留下采集占用；整份文件下次可从头重新运行。</summary>
+    [Fact]
+    public async Task Cancellation_DoesNotReserveFile()
+    {
+        using var store = new PuloniaTaskStore(Path.Combine(_directory, "state"));
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var executor = new FileExecutor { Execute = async (_, ct) => { started.SetResult(); await Task.Delay(Timeout.Infinite, ct); return Completed(); } };
+        var plan = await store.SavePlanAsync(Plan(CreateTask("落落莓", "A.json")));
+        await using var service = Service(store, executor);
+        var id = await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = plan.Id });
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(20));
+        await service.CancelAsync(id);
+        Assert.Equal(PuloniaTaskRunStatus.Cancelled, (await service.WaitForCompletionAsync(id)).Status);
+        Assert.Empty(await service.ListLedgerAsync());
+        executor.Execute = null;
+        Assert.Equal(PuloniaTaskRunStatus.Succeeded, (await Run(service, plan)).Status);
+    }
+
+    /// <summary>目录展开逐文件结算；分组规则整体覆盖，恢复继承和撤销保留其他参数。</summary>
+    [Fact]
+    public async Task DirectoryAndEditor_InheritWholePolicy()
+    {
+        var a = CreateTask("落落莓", "A.json");
+        CreateTask("落落莓", "B.json");
+        using var store = new PuloniaTaskStore(Path.Combine(_directory, "state"));
+        var group = new PuloniaTask { Name = "目录", Source = new PuloniaTaskSource { Kind = "directory", TaskType = "pathing", Path = Path.GetDirectoryName(a.Path) } };
+        group.ParameterOverrides.Add(new PuloniaTaskParameterOverride { TaskType = "pathing", Values = new JObject { [PuloniaCollectionCooldown.ParameterName] = new JObject { ["mode"] = "rolling", ["hours"] = 5 } } });
+        var plan = await store.SavePlanAsync(Plan(group));
+        var executor = new FileExecutor();
+        await using var service = Service(store, executor);
+        var run = await Run(service, plan);
+        Assert.Equal(2, run.NodeResults.Count);
+        Assert.All(await service.ListLedgerAsync(), entry => Assert.Equal(TimeSpan.FromHours(5), entry.NextEligibleAt - entry.OccurredAt));
+
+        var leaf = CreateTask("落落莓", "C.json");
+        var editorPlan = Plan(leaf);
+        editorPlan.RootTask.ParameterOverrides = group.ParameterOverrides;
+        var document = new PuloniaTaskPlanDocumentViewModel(editorPlan, [], new PuloniaTaskClipboardService(), false);
+        document.SetDefinitions(executor.Definitions);
+        var node = document.RootNode.Children[0];
+        var draft = document.CreateCollectionCooldownDraft(node);
+        Assert.Equal("5", draft.Hours);
+        var original = draft.BuildValue();
+        document.ApplyCollectionCooldown(node, original, new JObject { ["mode"] = "disabled" }, false);
+        Assert.Equal("disabled", document.CreateCollectionCooldownDraft(node).Mode);
+        document.ApplyCollectionCooldown(node, new JObject { ["mode"] = "disabled" }, null, true);
+        Assert.Equal("5", document.CreateCollectionCooldownDraft(node).Hours);
+        document.UndoCommand.Execute(null);
+        Assert.Equal("disabled", document.CreateCollectionCooldownDraft(document.RootNode.Children[0]).Mode);
+    }
+
+    /// <summary>模拟本测试状态文件写入失败，成功不能被当作可重试的普通节点失败。</summary>
+    [Fact]
+    public async Task CommitFailure_DoesNotRetryOrExposeInMemorySuccess()
+    {
+        var stateDirectory = Path.Combine(_directory, "state");
+        using var store = new PuloniaTaskStore(stateDirectory);
+        var stateFile = Path.Combine(stateDirectory, "state.json");
+        var executor = new FileExecutor { Execute = (_, _) =>
+        {
+            File.Move(stateFile, stateFile + ".saved");
+            Directory.CreateDirectory(stateFile);
+            return Task.FromResult(Completed());
+        } };
+        var task = CreateTask("落落莓", "A.json");
+        task.Policy.MaxRetries = 2;
+        var plan = await store.SavePlanAsync(Plan(task));
+        await using var service = Service(store, executor);
+        try
+        {
+            var run = await Run(service, plan);
+            Assert.Equal(PuloniaTaskRunStatus.NeedsAttention, run.Status);
+            Assert.Equal(1, executor.Executions);
+            Assert.Empty(await service.ListLedgerAsync());
+            Assert.DoesNotContain(run.NodeResults, result => result.Status == PuloniaTaskNodeStatus.Succeeded);
+            await Assert.ThrowsAsync<InvalidOperationException>(() => service.EnqueueAsync(new PuloniaTaskRequest { PlanId = plan.Id }));
+        }
+        finally
+        {
+            Directory.Delete(stateFile);
+            File.Move(stateFile + ".saved", stateFile);
+        }
+    }
+
+    /// <summary>生成本测试独占文件，不运行真实地图追踪。</summary>
+    private PuloniaTask CreateTask(string material, string file, JObject? config = null)
+    {
+        var path = Path.Combine(_directory, "routes", material, file);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, "{}");
+        return new PuloniaTask { Name = file, TaskType = "pathing", Path = path,
+            Parameters = config is null ? new JObject() : new JObject { [PuloniaCollectionCooldown.ParameterName] = config } };
+    }
+
+    /// <summary>建立材料目录解析输入。</summary>
+    private PuloniaCollectionCooldownPolicy Resolve(string material, JObject? settings = null)
+        => PuloniaCollectionCooldown.Resolve(Path.Combine(_directory, material, "A.json"), null,
+            settings is null ? new JObject() : new JObject { [PuloniaCollectionCooldown.ParameterName] = settings });
+
+    /// <summary>建立无账号准备、无游戏会话的串行服务。</summary>
+    private static PuloniaTaskService Service(PuloniaTaskStore store, FileExecutor executor) => new(store,
+        new PuloniaTaskBuilder(store), [executor], new PuloniaGameTaskCoordinator(null!), new TaskStopService(NullLogger<TaskStopService>.Instance));
+
+    /// <summary>把真实资源引用节点放入标准根分组。</summary>
+    private static PuloniaTaskPlan Plan(params PuloniaTask[] tasks) => new() { Name = "采集 CD 测试", RootTask = new PuloniaTask { Children = tasks.ToList() } };
+
+    /// <summary>等待一次受控运行完成，避免无限等待。</summary>
+    private static async Task<PuloniaTaskRunView> Run(PuloniaTaskService service, PuloniaTaskPlan plan)
+    {
+        var id = await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = plan.Id });
+        return await service.WaitForCompletionAsync(id).WaitAsync(TimeSpan.FromSeconds(20));
+    }
+
+    /// <summary>使用与实际执行器相同的结果对象转换，成功字段和统计均来自本次返回值。</summary>
+    private static PuloniaTaskOutcome Completed() => PuloniaPathingTaskExecutor.CreateOutcome(new PathingResult(true), null);
+
+    /// <summary>仅清理本测试生成的临时目录。</summary>
+    public void Dispose()
+    {
+        if (Directory.Exists(_directory)) Directory.Delete(_directory, true);
+    }
+
+    /// <summary>受控文件执行器，复用真实构建和结算路径，不访问游戏。</summary>
+    private sealed class FileExecutor : IPuloniaTaskExecutor
+    {
+        /// <summary>实际执行次数，跳过任务不增加。</summary>
+        public int Executions { get; private set; }
+        /// <summary>可替换的失败、取消或写盘异常模拟。</summary>
+        public Func<PuloniaTaskPreparedTask, CancellationToken, Task<PuloniaTaskOutcome>>? Execute { get; set; }
+        /// <inheritdoc />
+        public IReadOnlyList<PuloniaTaskDefinition> Definitions { get; } = [new() { TaskType = "pathing",
+            DefaultParameters = new JObject { [PuloniaCollectionCooldown.ParameterName] = PuloniaCollectionCooldown.CreateDefaults() },
+            ParameterSchema = new JObject { ["type"] = "object", ["additionalProperties"] = true } }];
+        /// <inheritdoc />
+        public Task<PuloniaTaskOutcome> ExecuteAsync(PuloniaTaskPreparedTask task, PuloniaTaskExecutionContext context, CancellationToken ct)
+        {
+            Executions++;
+            return Execute?.Invoke(task, ct) ?? Task.FromResult(Completed());
+        }
+    }
+}

@@ -9,6 +9,9 @@ namespace BetterGenshinImpact.Pulonia.Models;
 /// </summary>
 public sealed class PuloniaTaskRunRecord
 {
+    /// <summary>执行前完整核验的实际 UID，续跑与账本使用此身份。</summary>
+    [JsonProperty("verified_uid")]
+    public string? VerifiedUid { get; set; }
     /// <summary>
     /// 请求 ID。
     /// </summary>

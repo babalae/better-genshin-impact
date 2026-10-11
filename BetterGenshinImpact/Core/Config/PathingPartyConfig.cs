@@ -148,13 +148,6 @@ public partial class PathingPartyConfig : ObservableObject
     [ObservableProperty]
     private PathingPartyTaskCycleConfig _taskCycleConfig = new();
     
-    //任务完成跳过执行配置
-    [ObservableProperty]
-    private TaskCompletionSkipRuleConfig _taskCompletionSkipRuleConfig = new();
-    //优先执行其他配置组
-    [ObservableProperty]
-    private PreExecutionPriorityConfig _preExecutionPriorityConfig = new();
-
     //启用自动战斗配置
     [ObservableProperty]
     private bool _autoFightEnabled = true;

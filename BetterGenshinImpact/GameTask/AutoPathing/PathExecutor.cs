@@ -47,9 +47,9 @@ public partial class PathExecutor
     private readonly TrapEscaper _trapEscaper;
     private readonly BlessingOfTheWelkinMoonTask _blessingOfTheWelkinMoonTask = new();
     private AutoSkipTrigger? _autoSkipTrigger;
-    public int SuccessFight = 0;
-    //路径追踪完全走完所有路径结束的标识
-    public bool SuccessEnd = false;
+    /// <summary>当前一次路线已确认成功的战斗次数，开始执行时清零并复制到返回结果。</summary>
+    private int _successFightCount;
+    //路径追踪完全走完所有路径结束的标识通过本次 PathingResult.IsSuccess 返回。
     private PathingPartyConfig? _partyConfig;
     private CancellationToken ct;
     private PathExecutorSuspend pathExecutorSuspend;
@@ -133,8 +133,14 @@ public partial class PathExecutor
         RecordWaypoint = CurWaypoint;
     }
 
-    public async Task Pathing(PathingTask task)
+    /// <summary>执行路线并返回本次成功状态、统计及已知失败信息；提前放弃和异常结束不算成功。</summary>
+    /// <returns>本次路线的独立结果对象；任一路径段未完成时 IsSuccess 为 false。未处理异常仍向调用方传播。</returns>
+    public async Task<PathingResult> Pathing(PathingTask task)
     {
+        // 本次执行独立累计完成状态和统计，失败信息只保留首个未完成路径段的原因。
+        _successFightCount = 0;
+        var allSegmentsCompleted = true;
+        string? firstFailure = null;
         // SuspendableDictionary;
         const string sdKey = "PathExecutor";
         var sd = RunnerContext.Instance.SuspendableDictionary;
@@ -145,20 +151,20 @@ public partial class PathExecutor
         if (!task.Positions.Any())
         {
             Logger.LogWarning("没有路径点，寻路结束");
-            return;
+            return new PathingResult(false, _successFightCount, "路线没有路径点，未执行。");
         }
 
 
         // 切换队伍
         if (!await SwitchPartyBefore(task))
         {
-            return;
+            return new PathingResult(false, _successFightCount, "切换队伍失败，无法执行路线。");
         }
 
         // 校验路径是否可以执行
         if (!await ValidateGameWithTask(task))
         {
-            return;
+            return new PathingResult(false, _successFightCount, "游戏环境或路线所需队伍校验失败。");
         }
 
         InitializePathing(task);
@@ -170,6 +176,8 @@ public partial class PathExecutor
 
         foreach (var waypoints in waypointsList) // 按传送点分割的路径
         {
+            var segmentCompleted = false;
+            string? segmentError = null;
             CurWaypoints = (waypointsList.FindIndex(wps => wps == waypoints), waypoints);
             for (var i = 0; i < RetryTimes; i++)
             {
@@ -244,19 +252,17 @@ public partial class PathExecutor
                         }
                     }
 
-                    if (waypoints == waypointsList.Last())
-                    {
-                        SuccessEnd = true;
-                    }
+                    segmentCompleted = true;
                     break;
                 }
                 catch (HandledException handledException)
                 {
-                    SuccessEnd = true;
+                    segmentError = handledException.Message;
                     break;
                 }
                 catch (NormalEndException normalEndException)
                 {
+                    segmentError = normalEndException.Message;
                     if (!ct.IsCancellationRequested)
                     {
                         Logger.LogInformation(normalEndException.Message);
@@ -273,6 +279,7 @@ public partial class PathExecutor
                 }
                 catch (OperationCanceledException)
                 {
+                    segmentError = "地图追踪被取消。";
                     if (!RunnerContext.Instance.isAutoFetchDispatch && RunnerContext.Instance.IsContinuousRunGroup)
                     {
                         throw;
@@ -284,6 +291,7 @@ public partial class PathExecutor
                 }
                 catch (RetryException retryException)
                 {
+                    segmentError = retryException.Message;
                     StartSkipOtherOperations();
                     Logger.LogWarning(retryException.Message);
                 }
@@ -291,6 +299,7 @@ public partial class PathExecutor
                 {
                     //特殊情况下，重试不消耗次数
                     i--;
+                    segmentError = retryException.Message;
                     StartSkipOtherOperations();
                     Logger.LogWarning(retryException.Message);
                 }
@@ -303,7 +312,14 @@ public partial class PathExecutor
                 }
             }
 
+            // 某个路径段被放弃或耗尽重试后，后续段即使走完也不能把整份文件记为成功。
+            allSegmentsCompleted &= segmentCompleted;
+            if (!segmentCompleted)
+                firstFailure ??= segmentError ?? "重试耗尽，当前路径段未完整执行。";
         }
+        var isSuccess = allSegmentsCompleted && waypointsList.Count > 0 && !ct.IsCancellationRequested;
+        return new PathingResult(isSuccess, _successFightCount, isSuccess ? null
+            : firstFailure ?? (ct.IsCancellationRequested ? "地图追踪被取消。" : "地图追踪路线未完整执行。"));
     }
 
     private bool IsTargetPoint(WaypointForTrack waypoint)
@@ -623,7 +639,6 @@ public partial class PathExecutor
                 }
             }
         }
-
 
         return false;
     }
@@ -1173,7 +1188,7 @@ public partial class PathExecutor
             //统计结束战斗的次数
             if (waypoint.Action == ActionEnum.Fight.Code)
             {
-                SuccessFight++;
+                _successFightCount++;
             }
             await Delay(1000, ct);
         }

@@ -277,7 +277,9 @@ public sealed class PuloniaTaskBuilder
         }
 
         return new PuloniaTaskPreparedTask(plan.Id, task.Id, sourceTaskId ?? task.Id, address, task.Name,
-            task.TaskType, enabled, path, version, parameters, sources, policy, children, task.Resource ?? task.Source?.Resource);
+            task.TaskType, enabled, path, version, parameters, sources, policy, children, task.Resource ?? task.Source?.Resource,
+            task.TaskType == "pathing" && enabled
+                ? PuloniaCollectionCooldown.Resolve(path, task.Resource, parameters) : null);
     }
 
     /// <summary>

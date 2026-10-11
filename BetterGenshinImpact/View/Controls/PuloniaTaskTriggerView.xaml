@@ -159,8 +159,8 @@
                         <Border Margin="0,12,0,0" Padding="12" CornerRadius="6" Background="{DynamicResource SubtleFillColorSecondaryBrush}"><TextBlock Text="{Binding PreviewText}" /></Border>
                         <TextBlock Style="{StaticResource Label}" Text="运行范围" />
                         <ComboBox ItemsSource="{Binding Targets}" DisplayMemberPath="Value" SelectedValuePath="Key" SelectedValue="{Binding TargetTaskId}" />
-                        <TextBlock Style="{StaticResource Label}" Text="账号参数资料（不会自动切换账号）" />
-                        <ComboBox ItemsSource="{Binding Accounts}" DisplayMemberPath="Value" SelectedValuePath="Key" SelectedValue="{Binding AccountId}" />
+                        <TextBlock Style="{StaticResource Label}" Text="{Binding AccountSelectionDescription}" />
+                        <ComboBox ItemsSource="{Binding Accounts}" DisplayMemberPath="Value" SelectedValuePath="Key" SelectedValue="{Binding AccountId}" IsEnabled="{Binding CanSelectAccount}" />
                         <TextBlock Style="{StaticResource Label}" Text="同一计划 / 账号已忙碌时" />
                         <ComboBox ItemsSource="{Binding BusyPolicies}" DisplayMemberPath="Value" SelectedValuePath="Key" SelectedValue="{Binding BusyPolicy}" />
                         <TextBlock Margin="0,6,0,0" FontSize="12" Text="不同计划自动串行排队；不会并发抢占游戏输入。停止当前策略需保存时确认。" />

@@ -50,7 +50,7 @@
 | 一条龙由 ViewModel 编排；任务项按名字选择实现、读取其他 ViewModel | `ViewModel/Pages/OneDragonFlowViewModel.cs:573`、`Model/OneDragonTaskItem.cs:57` | 执行业务从页面抽出，用稳定能力 Key 注册 |
 | JS 内部任务调用会获取 `TaskSettingsPageViewModel` | `Core/Script/Dependence/Dispatcher.cs:132` | 开发者 API 必须依赖参数与服务，不能依赖页面初始化 |
 | 路线成功使用 `SuccessEnd`，其他类型正常返回后统一设为成功 | `Core/Script/Group/ScriptGroupProject.cs:195`、`:248`、`:317` | 引入统一结果，并区分执行结束与目标确认 |
-| 执行记录保存为每日 JSON；包含组名、文件名，没有账号字段 | `GameTask/LogParse/ExecutionRecord.cs`、`ExecutionRecordStorage.cs` | 新账本按账号、游戏资源和周期组织，与当前进度在同一运行状态文件中保存 |
+| 旧配置组的执行记录与锄地规划已移除 | `Core/Script/Group/ScriptGroupProject.cs`、`Service/ScriptService.cs` | 新账本按账号、游戏资源和周期组织，与当前进度在同一运行状态文件中保存 |
 | 添加路线会递归建立完整 UI 树，逐项调度到 UI 线程 | `ViewModel/Pages/ScriptControlViewModel.cs:911`、`:985` | 建立资源索引、按需加载、虚拟化；这是代码层面的瓶颈判断，尚未做性能测量 |
 | 已有运行环境服务及 Provider | `GameTask/Runtime/GameRuntimeService.cs:25` | 在其上增加资源租约与会话准备，保留已有 Win32/WebPage 分支 |
 | 已有角色练度、背包物品计数、树脂及 UID 识别 | `GameTask/CharacterDevelopment/CharacterDevelopmentTask.cs:88`、`GameTask/Common/Job/CountInventoryItem.cs:50`、`GameTask/Common/ResinRecognition.cs:31`、`Core/Script/Dependence/Genshin.cs` | 可以逐步接入托管，但不代表已有完整账号资产扫描 |

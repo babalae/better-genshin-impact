@@ -11,6 +11,8 @@ namespace BetterGenshinImpact.Pulonia.Models;
 /// </summary>
 public sealed class PuloniaTaskRunView
 {
+    /// <summary>执行前核验的实际 UID，未准备账号或纯计算运行时为空。</summary>
+    public string? VerifiedUid { get; }
     /// <summary>
     /// 提交操作生成的请求 ID。
     /// </summary>
@@ -127,9 +129,11 @@ public sealed class PuloniaTaskRunView
         DateTimeOffset? startedAt, DateTimeOffset? finishedAt, string snapshotJson,
         IEnumerable<PuloniaTaskNodeResult> nodeResults, string? accountId, string? worldOwnerAccountId,
         Guid? resumedFromRunId, string? resumeFromTaskAddress, bool isHistorical, bool hasUncertainOperation,
-        IEnumerable<PuloniaTaskConfirmedEffect>? confirmedEffects = null, PuloniaTaskRequest? request = null)
+        IEnumerable<PuloniaTaskConfirmedEffect>? confirmedEffects = null, PuloniaTaskRequest? request = null,
+        string? verifiedUid = null)
     {
         RequestId = requestId;
+        VerifiedUid = verifiedUid;
         RunId = runId;
         PlanId = planId;
         PlanName = planName;

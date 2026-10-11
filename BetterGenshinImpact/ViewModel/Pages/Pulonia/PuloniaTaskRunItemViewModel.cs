@@ -98,6 +98,7 @@ public sealed class PuloniaTaskRunItemViewModel : ObservableObject
         new("运行摘要", Message),
         new("运行 ID", Run.RunId.ToString("D")),
         new("请求 ID", RequestId.ToString("D")),
+        new("实际核验 UID", Run.VerifiedUid ?? "尚未核验 / 无游戏任务"),
         new("来源 / 作用域", $"{Run.Source} · {ScopeText}"),
         new("触发器 / 执行范围", $"{Run.TriggerId ?? "手动提交"} / {Run.TargetTaskId ?? "整个计划"}"),
         new("触发 / 最晚开始", $"{PuloniaTaskHistoryText.Time(Run.OccurrenceUtc)} / {PuloniaTaskHistoryText.Time(Run.DeadlineUtc)}"),
@@ -180,7 +181,8 @@ public sealed class PuloniaTaskRunItemViewModel : ObservableObject
         }
         return NodeResults.Select(result => new PuloniaTaskNodeResultViewModel(result,
             tasks.GetValueOrDefault(result.TaskAddress),
-            typeNames?.GetValueOrDefault(result.TaskType) ?? result.TaskType, Run.ConfirmedEffects)).ToArray();
+            result.TaskType == "genshin.account.prepare" ? "切换账号" : typeNames?.GetValueOrDefault(result.TaskType) ?? result.TaskType,
+            Run.ConfirmedEffects)).ToArray();
     }
 
     /// <summary>

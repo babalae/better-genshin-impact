@@ -96,6 +96,8 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
             if (!_isListening || !Editor.IsInitialized) return;
             if (Configurations.Count == 0) NewConfiguration();
             SelectedConfiguration ??= Configurations.FirstOrDefault();
+            try { await RefreshGenshinAccountsAsync(); }
+            catch (Exception ex) { AccountMessage = "账号目录读取失败，运行前请修复：" + ex.Message; }
             IsReady = true;
             await RefreshExecutionStatusAsync();
         }
@@ -118,6 +120,8 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
         if (oldValue is not null) oldValue.PropertyChanged -= OnConfigurationPropertyChanged;
         if (value is not null) value.PropertyChanged += OnConfigurationPropertyChanged;
         OnPropertyChanged(nameof(TaskList));
+        IsAccountPreparationSelected = false;
+        OnPropertyChanged(nameof(SelectedGenshinAccountId));
         SelectedTask = value?.SelectedNode is { IsRoot: false } node && ReferenceEquals(node.Parent, value.RootNode)
             ? node : TaskList.FirstOrDefault();
         // 切换时立即撤销旧请求的停止目标，异步查询返回前不能停止上一份配置。
@@ -133,6 +137,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
         {
             if (sender is PuloniaTaskPlanDocumentViewModel document) RemoveSettingsDrafts(document);
             OnPropertyChanged(nameof(TaskList));
+            OnPropertyChanged(nameof(SelectedGenshinAccountId));
             QueueStatusRefresh();
         }
         else if (e.PropertyName == nameof(PuloniaTaskPlanDocumentViewModel.SelectedNode))
@@ -144,6 +149,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     /// <summary>选中行后显示其独立设置草稿；固定任务使用专属视图，其余走通用卡片。</summary>
     partial void OnSelectedTaskChanged(PuloniaTaskNodeViewModel? value)
     {
+        if (value is not null) IsAccountPreparationSelected = false;
         if (SelectedConfiguration is { } document) document.SelectedNode = value;
         if (value is null) { FixedSettings = null; SettingsFields = []; }
         else RefreshSettingsSurfaces(value);

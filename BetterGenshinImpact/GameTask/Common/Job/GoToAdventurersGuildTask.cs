@@ -169,7 +169,8 @@ public class GoToAdventurersGuildTask
             },
             EndAction = region => Bv.FindFAndPress(region, text: this.catherineLocalizedString)
         };
-        await pathingTask.Pathing(task);
+        // 找到凯瑟琳时允许 EndAction 提前结束路线，随后仍核验对话界面。
+        _ = await pathingTask.Pathing(task);
 
         await Delay(600, ct);
 
