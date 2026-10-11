@@ -62,6 +62,12 @@ public class BgiOnnxModel
         Register("BgiQClassify", @"Assets\Model\Common\q_classify_sim.onnx");
 
     /// <summary>
+    /// E技能就绪分类模型
+    /// </summary>
+    public static readonly BgiOnnxModel BgiEClassify =
+        Register("BgiEClassify", @"Assets\Model\Common\e_classify_sim.onnx");
+
+    /// <summary>
     /// 队伍配置角色头像识别模型
     /// </summary>
     public static readonly BgiOnnxModel AvatarGridIcon =

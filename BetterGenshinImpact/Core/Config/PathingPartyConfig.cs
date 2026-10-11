@@ -263,10 +263,12 @@ public partial class PathingPartyConfig : ObservableObject
 
     public static PathingPartyConfig BuildDefault()
     {
-        // 即便是不启用的情况下也设置默认值，减少后续使用的判断
+        // 运行时回退配置保持禁用标记，确保继续使用地图追踪条件和独立战斗配置
         var pathingConditionConfig = TaskContext.Instance().Config.PathingConditionConfig;
         return new PathingPartyConfig
         {
+            Enabled = false,
+            AutoFightEnabled = false,
             OnlyInTeleportRecover = pathingConditionConfig.OnlyInTeleportRecover,
             RecoverTiming = pathingConditionConfig.RecoverTiming,
             UseGadgetIntervalMs = pathingConditionConfig.UseGadgetIntervalMs,

@@ -29,6 +29,12 @@ public sealed class WechatClawbotNotifier : INotifier, IDisposable
 {
     private static readonly ILogger<WechatClawbotNotifier> Logger = App.GetLogger<WechatClawbotNotifier>();
 
+    /// <summary>
+    /// 推送会话过期事件（静态）。sendmessage 检测到 ret=-2 prepare failed 时触发，
+    /// 供 UI（通知设置页）订阅以展示过期激活提示。
+    /// </summary>
+    public static event Action<string>? SessionExpired;
+
     public string Name { get; } = "微信 Clawbot";
 
     private const int MaxRetry = 3;
@@ -229,6 +235,27 @@ public sealed class WechatClawbotNotifier : INotifier, IDisposable
         if (ret != 0 || errcode != 0)
         {
             var errmsg = root.TryGetProperty("errmsg", out var errElement) ? errElement.GetString() : null;
+
+            // 微信 Clawbot 平台限制：超过 12~24 小时未在微信中给 Clawbot 私聊，推送会话过期（ret=-2 prepare failed）。
+            // 这是微信 ClawBot 协议的服务端推送权限限制，并非客户端 token 过期；
+            // 需提示用户在微信侧给 Clawbot 私聊任意内容以激活推送端口。
+            if (ret == -2 && errmsg != null && errmsg.Contains("prepare", StringComparison.OrdinalIgnoreCase))
+            {
+                const string hint = "微信 Clawbot 推送权限已过期，请在微信侧给 Clawbot 私聊任意内容以激活推送端口";
+                Logger.LogWarning("{Hint}", hint);
+                try
+                {
+                    // 隔离事件订阅者异常（如应用关闭期间 Dispatcher 不可用），
+                    // 确保订阅者抛出的异常不会吞掉下方要抛出的专门领域异常。
+                    SessionExpired?.Invoke(hint);
+                }
+                catch (System.Exception eventEx)
+                {
+                    Logger.LogWarning("微信 Clawbot 会话过期事件通知订阅者异常: {Ex}", eventEx.Message);
+                }
+                throw new WechatClawbotSessionExpiredException(hint);
+            }
+
             throw new NotifierException($"sendmessage 返回错误 ret={ret} errcode={errcode} errmsg={errmsg}");
         }
     }

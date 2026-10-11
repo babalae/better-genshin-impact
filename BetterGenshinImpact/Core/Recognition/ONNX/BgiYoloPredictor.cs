@@ -1,11 +1,10 @@
-﻿using System;
+using System;
 using BetterGenshinImpact.GameTask.Model.Area;
 using OpenCvSharp;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.Json;
-using BetterGenshinImpact.View.Drawable;
 using Compunet.YoloSharp;
 using Microsoft.ML.OnnxRuntime;
 
@@ -63,9 +62,9 @@ public class BgiYoloPredictor : IDisposable
 
         var list = result
             .Select(box => new Rect(box.Bounds.X, box.Bounds.Y, box.Bounds.Width, box.Bounds.Height))
-            .Select(rect => region.ToRectDrawable(rect, _model.Name)).ToList();
+            .Select(rect => region.ToMaskWindowDrawingRect(rect)).ToList();
 
-        VisionContext.Instance().DrawContent.PutOrRemoveRectList(_model.Name, list);
+        region.DrawingBoard.Set(_model.Name, list);
 
         return dict;
     }

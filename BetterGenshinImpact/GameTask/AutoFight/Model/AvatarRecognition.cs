@@ -1,10 +1,10 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Model.Area;
-using BetterGenshinImpact.View.Drawable;
+using BetterGenshinImpact.Core.Mask;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
@@ -411,6 +411,8 @@ public static class AvatarRecognition
         var drawResults = visConfig.DrawRecognitionResults;
         var lockLostWaitTime = visConfig.LockLostWaitTime;
         DateTime? lastSeenTargetTime = null;  // 最后找到目标的时间（null = 从未找到）
+        // 取自截图区域，收尾清理时截图已释放，所以单独保存
+        IMaskWindowDrawingBoard drawingBoard = NullMaskWindowDrawingBoard.Instance;
 
         try
         {
@@ -425,11 +427,12 @@ public static class AvatarRecognition
 
                 using (var capture = CaptureToRectArea())
                 {
+                    drawingBoard = capture.DrawingBoard;
                     int preAimX = (int)(capture.Width * 0.5);
                     int preAimY = (int)(capture.Height * (480.0 / 1080.0));
 
-                    // 不在主界面时跳过本轮（避免菜单/地图/对话等界面下误操作）
-                    if (!Bv.IsInMainUi(capture))
+                    // 不在主界面时跳过本轮（避免菜单/地图/对话等界面下误操作；秘境中左上角没有派蒙图标不算主界面）
+                    if (!Bv.IsInMainUi(capture) && !Bv.IsInDomain(capture))
                     {
                         await Task.Delay(frameIntervalMs, ct);
                         continue;
@@ -439,7 +442,7 @@ public static class AvatarRecognition
                     var bars = FindBloodBars(capture);
                     var valid = bars.Where(b => b.x > (int)(200 * AssetScale)).ToList();
 
-                    var drawList = new List<RectDrawable>();
+                    var drawList = new List<MaskWindowDrawingShape>();
 
                     bool hasLegendaryBar = valid.Any(b => IsLegendaryBar(b.x, b.y));
 
@@ -455,7 +458,7 @@ public static class AvatarRecognition
                         lock (_seekLock)
                         {
                             if (_skipSeekCount > 0) continue;
-                            Simulation.SendInput.Mouse.MoveMouseBy(
+                            InputHub.Foreground.Mouse.MoveMouseBy(
                                 (int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
                         }
 
@@ -467,8 +470,7 @@ public static class AvatarRecognition
                                 var rect = new OpenCvSharp.Rect(b.x, b.y, b.width, b.height);
                                 bool isTarget = b.x == nearest.x && b.y == nearest.y &&
                                                 b.width == nearest.width && b.height == nearest.height;
-                                drawList.Add(capture.ToRectDrawable(rect,
-                                    isTarget ? "target" : "blood",
+                                drawList.Add(capture.ToMaskWindowDrawingRect(rect,
                                     isTarget
                                         ? _targetPen
                                         : null));
@@ -488,16 +490,15 @@ public static class AvatarRecognition
                             lock (_seekLock)
                             {
                                 if (_skipSeekCount > 0) continue;
-                                Simulation.SendInput.Mouse.MoveMouseBy(
+                                InputHub.Foreground.Mouse.MoveMouseBy(
                                     (int)(offsetX * 0.35 * dpi), (int)(offsetY * 0.25 * dpi));
                             }
 
                             // 叠加层：伤害数字区域绿色框
                             if (drawResults)
                             {
-                                drawList.Add(capture.ToRectDrawable(
+                                drawList.Add(capture.ToMaskWindowDrawingRect(
                                     new OpenCvSharp.Rect(dx, dy, dw, dh),
-                                    "damage_target",
                                     _targetPen));
                             }
                         }
@@ -512,14 +513,14 @@ public static class AvatarRecognition
                                 lock (_seekLock)
                                 {
                                     if (_skipSeekCount > 0) continue;
-                                    Simulation.SendInput.Mouse.MoveMouseBy((int)(250 * dpi), 0);
+                                    InputHub.Foreground.Mouse.MoveMouseBy((int)(250 * dpi), 0);
                                 }
                             }
                         }
                     }
 
                     // 提交叠加层
-                    VisionContext.Instance().DrawContent.PutOrRemoveRectList("ContinuousTargeting", drawList);
+                    drawingBoard.Set("ContinuousTargeting", drawList);
                 }
 
                 // 按配置的索敌识别间隔等待
@@ -532,10 +533,10 @@ public static class AvatarRecognition
             // 退出时释放所有按键、点按中键回正视角、清除叠加层
             // 注意：清理阶段使用 CancellationToken.None，因为 ct 可能在到此之前已被取消，
             // 若使用已取消的 token 会导致 Task.Delay 抛出异常，跳过中键复位和叠加层清理。
-            Simulation.ReleaseAllKey();
+            InputHub.ReleaseAll();
             await Task.Delay(50, CancellationToken.None);
-            Simulation.SendInput.Mouse.MiddleButtonClick();
-            VisionContext.Instance().DrawContent.RemoveRect("ContinuousTargeting");
+            InputHub.Foreground.Mouse.MiddleButtonClick();
+            drawingBoard.Clear("ContinuousTargeting");
         }
     }
 }

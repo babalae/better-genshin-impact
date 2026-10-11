@@ -2,6 +2,7 @@ using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.ViewModel.Pages;
@@ -44,10 +45,10 @@ public partial class ArtifactOcrDialog
     public async Task<bool> CaptureAsync()
     {
         // 没启动时候，启动截图器
-        var homePageViewModel = App.GetService<HomePageViewModel>();
-        if (!homePageViewModel!.TaskDispatcherEnabled)
+        var gameRuntimeService = App.GetService<GameRuntimeService>()!;
+        if (!gameRuntimeService.IsRunning)
         {
-            _ = homePageViewModel.OnStartTriggerAsync();
+            _ = gameRuntimeService.StartAsync();
             return false;
         }
 

@@ -1,13 +1,11 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.BgiVision;
 using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Common.Reward;
 using BetterGenshinImpact.GameTask.GetGridIcons;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.Helpers;
-using BetterGenshinImpact.View.Drawable;
-using Fischless.WindowsInput;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualBasic.FileIO;
 using OpenCvSharp;
@@ -92,7 +90,7 @@ public class CraftMaterialTask
     private static readonly Lazy<Dictionary<string, string>> MaterialTypes = new(LoadMaterialTypes);
 
     private readonly ILogger<CraftMaterialTask> _logger = App.GetLogger<CraftMaterialTask>();
-    private readonly InputSimulator _input = Simulation.SendInput;
+    private IInputChannel _input => InputHub.Foreground;
     private readonly string _materialName;
     private readonly int _targetQuantity;
     private readonly string? _materialType;
@@ -185,7 +183,7 @@ public class CraftMaterialTask
             return materialType;
         }
 
-        throw new InvalidOperationException($"未找到材料 {_materialName} 的材料类型，请传入 materialType 或检查 item.csv。");
+        throw new InvalidOperationException($"未找到材料 {_materialName} 的材料类型，请传入 materialType 或检查物品数据。");
     }
 
     /// <summary>
@@ -324,10 +322,10 @@ public class CraftMaterialTask
     /// <returns>找到并选中目标材料时返回 true。</returns>
     private async Task<bool> TryFindAndSelectMaterial()
     {
-        using ItemRecognizer itemRecognizer = new();
+        using IItemIconRecognizer itemRecognizer = ItemIconRecognizerFactory.CreateConfigured();
         GridScreen gridScreen = new(GridParams.Templates[GridScreenName.Crafting], _logger, _ct);
         gridScreen.OnAfterTurnToNewPage += GridScreen.DrawItemsAfterTurnToNewPage;
-        gridScreen.OnBeforeScroll += () => VisionContext.Instance().DrawContent.ClearAll();
+        gridScreen.OnBeforeScroll += () => TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
 
         try
         {
@@ -335,8 +333,8 @@ public class CraftMaterialTask
             {
                 using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
                 using Mat icon = itemRegion.SrcMat.GetGridIcon();
-                var candidate = itemRecognizer.Match(icon);
-                if (candidate.Score < 0.75 || candidate.Name != _materialName)
+                string? recognizedName = itemRecognizer.Recognize(icon);
+                if (recognizedName != _materialName)
                 {
                     continue;
                 }
@@ -355,7 +353,7 @@ public class CraftMaterialTask
         }
         finally
         {
-            VisionContext.Instance().DrawContent.ClearAll();
+            TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
         }
 
         return false;

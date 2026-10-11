@@ -45,22 +45,42 @@ internal sealed class DialogueOptionVoiceDetector : IDisposable
         _capture.DiscardAvailableSamples();
     }
 
-    public float Update()
+    public VoiceDetectionResult? Update(List<float>? processedSamples = null)
     {
         _capture.ReadAvailableSamples(_pendingSamples);
 
-        var probabilityMax = 0f;
+        float? probabilityMax = null;
+        double squareSum = 0d;
+        var peak = 0f;
+        var processedSampleCount = 0;
         while (_pendingSamples.Count - _pendingSampleOffset >= SileroVadDetector.FrameSampleCount)
         {
             var frame = new float[SileroVadDetector.FrameSampleCount];
             _pendingSamples.CopyTo(_pendingSampleOffset, frame, 0, frame.Length);
             _pendingSampleOffset += frame.Length;
-            probabilityMax = Math.Max(probabilityMax, _vad.Predict(frame));
+            probabilityMax = Math.Max(probabilityMax ?? 0f, _vad.Predict(frame));
+            processedSamples?.AddRange(frame);
+
+            foreach (var sample in frame)
+            {
+                squareSum += sample * sample;
+                peak = Math.Max(peak, Math.Abs(sample));
+            }
+
+            processedSampleCount += frame.Length;
         }
 
         CompactPendingSamples();
-        return probabilityMax;
+        if (probabilityMax == null)
+        {
+            return null;
+        }
+
+        var rms = (float)Math.Sqrt(squareSum / processedSampleCount);
+        return new VoiceDetectionResult(probabilityMax.Value, rms, peak);
     }
+
+    public readonly record struct VoiceDetectionResult(float Probability, float Rms, float Peak);
 
     private void CompactPendingSamples()
     {

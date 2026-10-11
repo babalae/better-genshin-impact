@@ -1,6 +1,6 @@
 # BetterGenshinImpact.I18nSync
 
-`BetterGenshinImpact.I18nSync` 用于扫描主项目 XAML 中的 `{i18n:T 中文原文}`，并自动同步 `BetterGenshinImpact/User/I18n/*.json` 中的多语言 Key。
+`BetterGenshinImpact.I18nSync` 用于扫描主项目 XAML 中的 `{i18n:T 中文原文}` 以及少量明确标记的 C# UI 文案，并自动同步 `BetterGenshinImpact/User/I18n/*.json` 中的多语言 Key。
 
 中文原文同时作为 i18n Key 和默认文案，因此 XAML 设计器可以直接显示中文；当目标语言没有对应翻译，或翻译值为空时，程序运行时也会回退显示这个中文 Key。
 
@@ -55,7 +55,7 @@
 | `-Check` / `--check` | 按默认模式检查 | 按默认模式检查 | 否 |
 | `-AddOnly -Check` / `--add-only --check` | 是 | 否 | 否 |
 
-“废弃 Key”是指语言 JSON 中存在、但当前项目 XAML 已经不再引用的 Key。默认模式会删除它们；如果正在重构界面、暂时不希望清理旧 Key，请使用 `-AddOnly`。
+“废弃 Key”是指语言 JSON 中存在、但当前项目 XAML 或明确标记的 C# UI 文案已经不再引用的 Key。默认模式会删除它们；如果正在重构界面、暂时不希望清理旧 Key，请使用 `-AddOnly`。
 
 `Check` 模式不仅检查缺失或废弃 Key，也会检查文件的排序、缩进、换行等是否符合工具的规范化输出。发现任何需要同步的内容时，工具不会修改文件，但会返回退出码 `1`。
 
@@ -111,11 +111,13 @@ ru-RU.json
 
 ## Key 提取规则
 
-工具会递归扫描项目中的 `*.xaml` 文件，并遵循以下规则：
+工具会递归扫描项目中的 `*.xaml` 和 `*.cs` 文件，并遵循以下规则：
 
 - 提取 XML 属性值中的 `{i18n:T ...}`。
+- 提取 `I18nService.Instance.Translate("...")` 和 `new HotKeySettingModel("...")` / `new StatusItem("...")` 中明确作为 UI 文案 Key 的字符串，并还原 C# 字符串转义。
 - 忽略 `bin` 和 `obj` 目录。
 - XAML 注释中的文本不会被提取。
+- C# 的行注释和块注释中的文本不会被提取。
 - 相同 Key 只保留一份。
 - JSON 格式错误、重复 Key 或非字符串翻译值都会使同步失败，避免覆盖异常数据。
 - 先验证并生成全部文件的同步计划，确认无错误后才开始写入，避免只更新一部分语言文件。

@@ -87,6 +87,12 @@ internal class AutoFightHandler : IActionHandler
             return Global.Absolute(@"User\AutoFight\");
         }
 
+        // 固定策略：不对应策略文件，跳过存在性检查，由 ComboCombatTaskFactory 路由
+        if (AutoFightParam.ComboStrategyName.Equals(config.StrategyName))
+        {
+            return config.StrategyName;
+        }
+
         var (path, _) = AutoFightParam.ResolveStrategyPath(config.StrategyName);
         if (!File.Exists(path))
         {

@@ -510,7 +510,7 @@
         "nameEn": "qiqi",
         "type": "character",
         "name": "七七",
-        "hp": 10,
+        "hp": 12,
         "energy": 3,
         "element": "冰元素",
         "weapon": "单手剑",
@@ -2297,6 +2297,83 @@
             {
                 "nameEn": "modular_efficiency_protocol",
                 "name": "模块式高效运作",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
+        "id": 1217,
+        "nameEn": "columbina",
+        "type": "character",
+        "name": "哥伦比娅",
+        "hp": 10,
+        "energy": 3,
+        "element": "水元素",
+        "weapon": "法器",
+        "skills": [
+            {
+                "nameEn": "moondew_cascade",
+                "name": "月露泼降",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "eternal_tides",
+                "name": "万古潮汐",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "moonlit_melancholy",
+                "name": "她的乡愁",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1102,
+                        "nameEn": "hydro",
+                        "type": "水元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "moonsign_benediction_moonlight_lent_unto_you",
+                "name": "月兆祝赐·借汝月光",
                 "skillTag": [
                     "被动技能"
                 ],
@@ -6743,6 +6820,83 @@
         ]
     },
     {
+        "id": 1612,
+        "nameEn": "illuga",
+        "type": "character",
+        "name": "叶洛亚",
+        "hp": 10,
+        "energy": 2,
+        "element": "岩元素",
+        "weapon": "长柄武器",
+        "skills": [
+            {
+                "nameEn": "oathkeepers_spear",
+                "name": "守誓枪术",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1106,
+                        "nameEn": "geo",
+                        "type": "岩元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "dawnbearing_songbird",
+                "name": "衔莺破晓",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1106,
+                        "nameEn": "geo",
+                        "type": "岩元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "shadowless_reflection",
+                "name": "鉴照无影",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1106,
+                        "nameEn": "geo",
+                        "type": "岩元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "moonsign_benediction_unwithering_in_winter",
+                "name": "月兆祝赐·凌冬不凋",
+                "skillTag": [
+                    "被动技能"
+                ],
+                "cost": []
+            }
+        ]
+    },
+    {
         "id": 1701,
         "nameEn": "collei",
         "type": "character",
@@ -9563,9 +9717,9 @@
                 ],
                 "cost": [
                     {
-                        "id": 1101,
-                        "nameEn": "cryo",
-                        "type": "冰元素",
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
                         "count": 3
                     }
                 ]

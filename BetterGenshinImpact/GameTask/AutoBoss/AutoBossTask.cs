@@ -1,9 +1,9 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.BgiVision;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recorder;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
@@ -50,6 +50,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     private readonly Dictionary<string, int> _rewardSummary = new();
     private SwitchPartyTask? _switchPartyTask;
     private CancellationToken _ct;
+    private int _successfulRewardCount;
 
     private static readonly TimeSpan OriginalResinRecoveryInterval = TimeSpan.FromMinutes(8);
     private const int MaxQuickUseQuantity = 20;
@@ -101,6 +102,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     {
         _ct = ct;
         _rewardSummary.Clear();
+        _successfulRewardCount = 0;
         Validate();
         LogScreenResolution();
 
@@ -130,8 +132,8 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         }
         finally
         {
-            Simulation.ReleaseAllKey();
-            Simulation.SendInput.Mouse.LeftButtonUp();
+            InputHub.ReleaseAll();
+            InputHub.Foreground.Mouse.LeftButtonUp();
             Notify.Event("AutoBoss").Success($"{Name}结束");
         }
 
@@ -146,13 +148,12 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         // 1.切换队伍
         await Prepare();
         
-        var rewardCount = 0;
         var shouldNavigateToBoss = true;
         //2.根据剩余次数判断是否继续
-        while (ShouldContinueBeforeRound(rewardCount))
+        while (ShouldContinueBeforeRound())
         {
             _ct.ThrowIfCancellationRequested();
-            _logger.LogInformation("{Name}：开始第 {Round} 次讨伐 {Boss}", Name, rewardCount + 1, _taskParam.BossName);
+            _logger.LogInformation("{Name}：开始第 {Round} 次讨伐 {Boss}", Name, _successfulRewardCount + 1, _taskParam.BossName);
             
             //3.树脂不足则退出
             if (!await EnsureResinBeforeRound())
@@ -181,8 +182,9 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
                 break;
             }
 
-            rewardCount++;
-            if (!ShouldContinueBeforeRound(rewardCount))
+            _successfulRewardCount++;
+            _taskParam.RewardClaimedCallback?.Invoke();
+            if (!ShouldContinueBeforeRound())
             {
                 break;
             }
@@ -206,11 +208,10 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     /// <summary>
     /// 判断本轮开始前是否还有继续讨伐的次数。
     /// </summary>
-    /// <param name="rewardCount">本次任务已成功领取奖励的次数。</param>
     /// <returns>树脂耗尽模式始终返回 true；指定次数模式下未达到目标次数时返回 true。</returns>
-    private bool ShouldContinueBeforeRound(int rewardCount)
+    private bool ShouldContinueBeforeRound()
     {
-        return !_taskParam.SpecifyRunCount || rewardCount < _taskParam.RunCount;
+        return !_taskParam.SpecifyRunCount || _successfulRewardCount < _taskParam.RunCount;
     }
 
     /// <summary>
@@ -221,7 +222,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     {
         try
         {
-            await OpenBigMapForResinCheck();
+            await _returnMainUiTask.Start(_ct);
 
             OriginalResinInfo originalResin;
             try
@@ -266,72 +267,46 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     }
 
     /// <summary>
-    /// 使用用户配置的打开地图按键进入大地图，识别右上角原粹树脂数量，并在结束后回到主界面。
+    /// 打开大地图并通过树脂详情中的全部恢复时间反推当前原粹树脂。
     /// </summary>
-    /// <returns>识别到的原粹树脂数量；识别失败时返回 null。</returns>
-    private async Task<int?> TryRecognizeOriginalResinCountInBigMap()
-    {
-        try
-        {
-            await OpenBigMapForResinCheck();
-            try
-            {
-                var originalResin = await RecognizeOriginalResinInfoFromBigMap();
-                return originalResin.Count;
-            }
-            catch (Exception e) when (e is not OperationCanceledException)
-            {
-                _logger.LogWarning("{Name}：战前原粹树脂预检失败，将继续通过领奖界面兜底，原因：{Reason}", Name, e.Message);
-                return null;
-            }
-        }
-        finally
-        {
-            await _returnMainUiTask.Start(_ct);
-        }
-    }
-
-    /// <summary>
-    /// 释放输入并打开大地图界面，用于在右上角读取原粹树脂数量。
-    /// </summary>
-    private async Task OpenBigMapForResinCheck()
-    {
-        await new TpTask(_ct).OpenBigMapUi();
-    }
-
-    /// <summary>
-    /// AutoBoss 专用大地图原粹树脂识别：点击右上角树脂图标后，通过全部恢复时间反推剩余树脂。
-    /// </summary>
-    /// <returns>当前剩余原粹树脂。</returns>
     private async Task<OriginalResinInfo> RecognizeOriginalResinInfoFromBigMap()
     {
-        using var capture = CaptureToRectArea();
-        using var resinIconSearchRegion = capture.DeriveCrop(ScaleRect(1200, 25, 580, 50));
-        var resinIconRegion = resinIconSearchRegion.Find(LoadRecognitionObject("OriginalResinTopIcon"));
-        if (resinIconRegion.IsEmpty())
-        {
-            throw new InvalidOperationException("未找到原粹树脂图标");
-        }
+        var page = new BvPage(_ct);
+        //树脂图标
+        var resinIconLocator = page
+            .Locator(LoadRecognitionObject("OriginalResinTopIcon"))
+            .WithRoi(ScaleRect(1200, 25, 580, 50));
+        
+        await page.Flow()
+            //按B打开地图直到识别到树脂图标
+            .Do((Action)(() =>
+            {
+                if (!resinIconLocator.IsExist())
+                {
+                    InputHub.Foreground.SimulateAction(GIActions.OpenMap);
+                }
+            })).Until(resinIconLocator)
+            //点击树脂图标直到识别到目标文本
+            .Click().UntilAnyText(new[] { "全部恢复", "原粹树脂已完全恢复" }, ScaleRect(1180, 75, 620, 200))
+            .Run();
 
-        var iconLeft = resinIconSearchRegion.X + resinIconRegion.Left;
-        var iconRight = resinIconSearchRegion.X + resinIconRegion.Right;
-        var iconBottom = resinIconSearchRegion.Y + resinIconRegion.Bottom;
-
-        resinIconRegion.Click();
-        await Delay(500, _ct);
-
+        //根据树脂图标位置偏移，计算出体力恢复时间的弹窗位置
+        var resinIconRegion = (await resinIconLocator.WaitFor()).First();
+        var detailRect = new Rect(resinIconRegion.Left - 13, resinIconRegion.Bottom + 29, 220, 150);
+        
+        //根据弹窗位置 OCR 出当前树脂上限和全部恢复时间，反推当前原粹树脂
         using var clickedCapture = CaptureToRectArea();
-        var resinLimit = RecognizeOriginalResinLimit(clickedCapture, iconRight);
-        var fullRecoveryTime = RecognizeFullRecoveryTime(clickedCapture, iconLeft, iconBottom);
+        var resinLimit = RecognizeOriginalResinLimit(clickedCapture, resinIconRegion.Right);
+        var fullRecoveryTime = RecognizeFullRecoveryTime(clickedCapture, detailRect);
         var missingResin = (int)Math.Ceiling(fullRecoveryTime.TotalSeconds / OriginalResinRecoveryInterval.TotalSeconds);
         if (missingResin > resinLimit)
         {
             throw new InvalidOperationException($"计算缺失树脂 {missingResin} 超过树脂上限 {resinLimit}");
         }
 
-        var originalResin = resinLimit - missingResin;
-        _logger.LogInformation("{Name}：剩余树脂 {Count}", Name, originalResin);
-        return new OriginalResinInfo(originalResin, resinLimit);
+        var originalResin = new OriginalResinInfo(resinLimit - missingResin, resinLimit);
+        _logger.LogInformation("{Name}：剩余树脂 {Count}", Name, originalResin.Count);
+        return originalResin;
     }
 
     /// <summary>
@@ -361,14 +336,8 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     /// <summary>
     /// 读取树脂详情弹窗中的全部恢复时间；已完全恢复时返回零时长。
     /// </summary>
-    private TimeSpan RecognizeFullRecoveryTime(ImageRegion capture, int resinIconLeft, int resinIconBottom)
+    private TimeSpan RecognizeFullRecoveryTime(ImageRegion capture, Rect detailRect)
     {
-        // 该偏移来自截图实际像素，不随 AssetScale 缩放。
-        var detailRect = new Rect(
-            resinIconLeft - 13,
-            resinIconBottom + 29,
-            220,
-            150);
         using var detailRegion = capture.DeriveCrop(detailRect);
         var result = OcrFactory.Paddle.OcrResult(detailRegion.SrcMat);
         var text = string.Concat(result.Regions
@@ -846,32 +815,6 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     }
 
     /// <summary>
-    /// 多次尝试识别当前队伍角色并初始化战斗场景。
-    /// </summary>
-    /// <returns>已成功识别队伍的战斗场景。</returns>
-    /// <exception cref="Exception">连续多次识别队伍失败时抛出。</exception>
-    private CombatScenes GetCombatScenesWithRetry()
-    {
-        const int maxRetries = 5;
-        for (var attempt = 1; attempt <= maxRetries; attempt++)
-        {
-            _ct.ThrowIfCancellationRequested();
-            var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
-            if (combatScenes.CheckTeamInitialized())
-            {
-                return combatScenes;
-            }
-
-            if (attempt < maxRetries)
-            {
-                Sleep(1000, _ct);
-            }
-        }
-
-        throw new Exception("识别队伍角色失败（已重试 5 次）");
-    }
-
-    /// <summary>
     /// 根据当前队伍匹配战斗脚本，并切换到脚本中的首个角色。
     /// </summary>
     /// <param name="combatScenes">已初始化的战斗场景。</param>
@@ -904,7 +847,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         }
         else
         {
-            var combatScenes = GetCombatScenesWithRetry();
+            var combatScenes = CombatScenes.GetCombatScenesWithRetry();
             FindCombatScriptAndSwitchAvatar(combatScenes);
 
             var taskParam = BuildAutoFightParamForBoss();
@@ -1221,9 +1164,9 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
                 // The main loop observes task failures; shutdown also cancels background tasks.
             }
 
-            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-            Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
-            Simulation.SendInput.SimulateAction(GIActions.MoveRight, KeyType.KeyUp);
+            InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+            InputHub.Foreground.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
+            InputHub.Foreground.SimulateAction(GIActions.MoveRight, KeyType.KeyUp);
         }
     }
 
@@ -1259,7 +1202,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             {
                 if (DateTime.UtcNow - lastInteractAt >= TimeSpan.FromMilliseconds(300))
                 {
-                    Simulation.SendInput.SimulateAction(GIActions.PickUpOrInteract);
+                    InputHub.Foreground.SimulateAction(GIActions.PickUpOrInteract);
                     lastInteractAt = DateTime.UtcNow;
                 }
             }
@@ -1285,7 +1228,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             if (boxRegions.Count < 1)
             {
                 _logger.LogWarning("{Name}：未找到征讨之花图标，调整视角重试", Name);
-                Simulation.SendInput.Mouse.MoveMouseBy(ScaleX(200), 0);
+                InputHub.Foreground.Mouse.MoveMouseBy(ScaleX(200), 0);
                 await Delay(250, ct);
                 continue;
             }
@@ -1294,16 +1237,16 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
 
             if (icon.Y > halfHeight)
             {
-                Simulation.SendInput.Mouse.MoveMouseBy(0, (int)Math.Round(halfHeight));
+                InputHub.Foreground.Mouse.MoveMouseBy(0, (int)Math.Round(halfHeight));
                 await Delay(125, ct);
-                Simulation.SendInput.Mouse.MoveMouseBy((int)Math.Round(centerX), 0);
+                InputHub.Foreground.Mouse.MoveMouseBy((int)Math.Round(centerX), 0);
                 await Delay(125, ct);
                 continue;
             }
 
             if (icon.X < minTargetX || icon.X > maxTargetX)
             {
-                Simulation.SendInput.Mouse.MoveMouseBy((int)Math.Round(icon.X - centerX), 0);
+                InputHub.Foreground.Mouse.MoveMouseBy((int)Math.Round(icon.X - centerX), 0);
             }
 
             await Delay(250, ct);
@@ -1326,22 +1269,22 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
                 {
                     if (isMovingForward)
                     {
-                        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                        InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                         isMovingForward = false;
                     }
 
                     _logger.LogInformation("{Name}：检测到攀爬状态，尝试脱离", Name);
-                    Simulation.SendInput.SimulateAction(GIActions.Drop);
+                    InputHub.Foreground.SimulateAction(GIActions.Drop);
                     await Delay(1000, ct);
-                    Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown);
+                    InputHub.Foreground.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown);
                     await Delay(800, ct);
-                    Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
+                    InputHub.Foreground.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
                     continue;
                 }
 
                 if (!isMovingForward)
                 {
-                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+                    InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
                     isMovingForward = true;
                 }
 
@@ -1349,19 +1292,19 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
                 jumpCount++;
                 if (jumpCount % 2 == 0)
                 {
-                    Simulation.SendInput.SimulateAction(GIActions.Jump);
+                    InputHub.Foreground.SimulateAction(GIActions.Jump);
                     await Delay(100, ct);
                 }
 
-                Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                 isMovingForward = false;
                 await Delay(200, ct);
             }
         }
         finally
         {
-            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-            Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
+            InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+            InputHub.Foreground.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
         }
     }
 
@@ -1553,6 +1496,13 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         {
             _logger.LogInformation("{Name}：重新执行特殊路线靠近首领", Name);
             await NavigateToBoss();
+            return;
+        }
+
+        if (AutoBossData.ShouldRerunRoute(_taskParam.BossName))
+        {
+            _logger.LogInformation("{Name}：重新执行完整路线靠近首领", Name);
+            await RunPathingFile($"{_taskParam.BossName}前往.json");
             return;
         }
 

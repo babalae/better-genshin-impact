@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace BetterGenshinImpact.Genshin.Settings;
 
@@ -18,4 +18,13 @@ public sealed class MainJson
 
     [JsonPropertyName("_overrideControllerMapValueList")]
     public string[]? OverrideControllerMapValueList { get; set; }
+
+    [JsonPropertyName("overrideInputKeyMapKeyList")]
+    public int[]? OverrideInputKeyMapKeyList { get; set; }
+
+    [JsonPropertyName("overrideInputKeyMapValueList")]
+    public string[]? OverrideInputKeyMapValueList { get; set; }
+
+    [JsonPropertyName("pcTpsAimControlType")]
+    public TpsAimControlType? PcTpsAimControlType { get; set; }
 }

@@ -1,9 +1,8 @@
+using BetterGenshinImpact.Core.Input;
 using System;
 using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
-using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using Wpf.Ui.Violeta.Controls;
 
@@ -38,13 +37,13 @@ public class QuickBuyTask
                 // 选中左边点 
                 GameCaptureRegion.GameRegion1080PPosMove(1450, 690);
                 TaskControl.CheckAndSleep(100);
-                Simulation.SendInput.Mouse.LeftButtonDown();
+                InputHub.Foreground.Mouse.LeftButtonDown();
                 TaskControl.CheckAndSleep(50);
 
                 // 向右滑动
-                Simulation.SendInput.Mouse.MoveMouseBy(1000, 0);
+                InputHub.Foreground.Mouse.MoveMouseBy(1000, 0);
                 TaskControl.CheckAndSleep(200);
-                Simulation.SendInput.Mouse.LeftButtonUp();
+                InputHub.Foreground.Mouse.LeftButtonUp();
                 TaskControl.CheckAndSleep(200);
 
                 GameCaptureRegion.GameRegion1080PPosClick(1600, 1020);
@@ -61,13 +60,13 @@ public class QuickBuyTask
             // 选中左边点 742x601
             GameCaptureRegion.GameRegion1080PPosMove(742, 601);
             TaskControl.CheckAndSleep(100);
-            Simulation.SendInput.Mouse.LeftButtonDown();
+            InputHub.Foreground.Mouse.LeftButtonDown();
             TaskControl.CheckAndSleep(50);
 
             // 向右滑动
-            Simulation.SendInput.Mouse.MoveMouseBy(1000, 0);
+            InputHub.Foreground.Mouse.MoveMouseBy(1000, 0);
             TaskControl.CheckAndSleep(200);
-            Simulation.SendInput.Mouse.LeftButtonUp();
+            InputHub.Foreground.Mouse.LeftButtonUp();
             TaskControl.CheckAndSleep(100);
 
             // 点击弹出页的购买/兑换 1100x780
@@ -82,7 +81,7 @@ public class QuickBuyTask
         }
         finally
         {
-            VisionContext.Instance().DrawContent.ClearAll();
+            TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
         }
     }
 }

@@ -845,56 +845,6 @@
                                             MinWidth="120"
                                             Text="{Binding Config.AutoFightConfig.FinishDetectConfig.BeforeDetectDelay}" />
                             </Grid>
-                            <!--<Grid Margin="16">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <ui:TextBlock Grid.Row="0"
-                                              Grid.Column="0"
-                                              FontTypography="Body"
-                                              Text="战斗结束基准色"
-                                              TextWrapping="Wrap" />
-                                <ui:TextBlock Grid.Row="1"
-                                              Grid.Column="0"
-                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="判断战斗结束读条颜色，默认为95,235,255，一般无需修改"
-                                              TextWrapping="Wrap" />
-                                <ui:TextBox Grid.Row="0"
-                                            Grid.RowSpan="2"
-                                            Grid.Column="1"
-                                            MinWidth="120"
-                                            Text="{Binding Config.AutoFightConfig.FinishDetectConfig.BattleEndProgressBarColor}" />
-                            </Grid>
-                            <Grid Margin="16">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <ui:TextBlock Grid.Row="0"
-                                              Grid.Column="0"
-                                              FontTypography="Body"
-                                              Text="战斗结束基准色偏差值"
-                                              TextWrapping="Wrap" />
-                                <ui:TextBlock Grid.Row="1"
-                                              Grid.Column="0"
-                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="对于战斗结束基准色的偏差值，即±某个值（默认为6），例如 6或6,6,6，前者表示所有偏差值都一样，后者则可以分别设置"
-                                              TextWrapping="Wrap" />
-                                <ui:TextBox Grid.Row="0"
-                                            Grid.RowSpan="2"
-                                            Grid.Column="1"
-                                            MinWidth="120"
-                                            Text="{Binding Config.AutoFightConfig.FinishDetectConfig.BattleEndProgressBarColorTolerance}" />
-                            </Grid>-->
 
                         </StackPanel>
                     </ui:CardExpander>
@@ -1939,7 +1889,7 @@
                               Grid.Column="1"
                               Width="200"
                               Margin="0,0,36,0"
-                              ItemsSource="{Binding AutoFightViewModel.CombatStrategyList}"
+                              ItemsSource="{Binding AutoFightViewModel.CombatStrategyListWithoutCombo}"
                               SelectedItem="{Binding Config.AutoBossConfig.StrategyName, Mode=TwoWay}">
                         <b:Interaction.Triggers>
                             <b:EventTrigger EventName="DropDownOpened">
@@ -2274,7 +2224,7 @@
                               Grid.Column="3"
                               Width="180"
                               Margin="0,0,36,0"
-                              ItemsSource="{Binding AutoFightViewModel.CombatStrategyList}"
+                              ItemsSource="{Binding AutoFightViewModel.CombatStrategyListWithoutCombo}"
                               SelectedItem="{Binding Config.AutoStygianOnslaughtConfig.StrategyName, Mode=TwoWay}">
                         <b:Interaction.Triggers>
                             <b:EventTrigger EventName="DropDownOpened">
@@ -2904,7 +2854,7 @@
                               Grid.Column="3"
                               Width="180"
                               Margin="0,0,36,0"
-                              ItemsSource="{Binding AutoFightViewModel.CombatStrategyList}"
+                              ItemsSource="{Binding AutoFightViewModel.CombatStrategyListWithoutCombo}"
                               SelectedItem="{Binding Config.AutoLeyLineOutcropConfig.FightConfig.StrategyName, Mode=TwoWay}">
                         <b:Interaction.Triggers>
                             <b:EventTrigger EventName="DropDownOpened">
@@ -3347,54 +3297,6 @@
                                   ValidationMode="InvalidInputOverwritten"
                                   Value="{Binding Config.AutoLeyLineOutcropConfig.FightConfig.Timeout, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                 </Grid>
-                <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="{i18n:T 不使用冒险之证寻路}"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  TextWrapping="Wrap" Text="{i18n:T 勾选后改用内置路线，不通过冒险之证定位地脉花。}" />
-                    <ui:ToggleSwitch Grid.Row="0"
-                                     Grid.RowSpan="2"
-                                     Grid.Column="1"
-                                     Margin="0,0,36,0"
-                                     IsChecked="{Binding Config.AutoLeyLineOutcropConfig.UseAdventurerHandbook, Mode=TwoWay}" />
-                </Grid>
-                <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="{i18n:T 发送通知}"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  TextWrapping="Wrap" Text="{i18n:T 任务完成或失败时通过通知系统发送提醒。}" />
-                    <ui:ToggleSwitch Grid.Row="0"
-                                     Grid.RowSpan="2"
-                                     Grid.Column="1"
-                                     Margin="0,0,36,0"
-                                     IsChecked="{Binding Config.AutoLeyLineOutcropConfig.IsNotification, Mode=TwoWay}" />
-                </Grid>
             </StackPanel>
         </ui:CardExpander>
         
@@ -3551,6 +3453,31 @@
                               SelectedItem="{Binding Config.AutoMusicGameConfig.MusicLevel, Mode=TwoWay}"
                               SelectedIndex="0" />
                 </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="{i18n:T 音符检测使用截图管线}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 开启后音符检测走全局截图器（推荐WGCV2）}"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.AutoMusicGameConfig.UseCapturePipeline, Mode=TwoWay}" />
+                </Grid>
             </StackPanel>
         </ui:CardExpander>
         
@@ -3647,6 +3574,289 @@
             </StackPanel>
         </ui:CardExpander>
         
+        <!-- 自动连招 -->
+        <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+            <ui:CardExpander.Icon>
+                <ui:FontIcon Glyph="&#xf085;" Style="{StaticResource FaFontIconStyle}" />
+            </ui:CardExpander.Icon>
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="自动连招（实验）"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap">
+                        启动本任务后识别队伍，构建连招行为树
+                    </ui:TextBlock>
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="1"
+                               Margin="0,0,12,0"
+                               Content="{Binding SwitchAutoComboRunButtonText}"
+                               Command="{Binding SwitchAutoComboRunCommand}"
+                               Icon="{ui:SymbolIcon Play24}" />
+                    <controls:TwoStateButton Grid.Row="0"
+                                             Grid.RowSpan="2"
+                                             Grid.Column="2"
+                                             Margin="0,0,24,0"
+                                             DisableCommand="{Binding StopSoloTaskCommand}"
+                                             DisableContent="停止"
+                                             EnableCommand="{Binding SwitchAutoComboCommand}"
+                                             EnableContent="{Binding SwitchAutoComboButtonText}"
+                                             IsChecked="{Binding SwitchAutoComboEnabled}" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  TextWrapping="Wrap">
+                        决策LLM服务地址
+                    </ui:TextBlock>
+                    <ui:TextBlock Grid.Row="2"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="必须使用 HTTPS 地址，否则密钥会明文传输；本机地址（localhost/127.0.0.1）除外"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="3"
+                                Grid.Column="1"
+                                MinWidth="300"
+                                MaxWidth="400"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.AutoComboBuildConfig.PlanningLlmEndpoint, Mode=TwoWay}"
+                                TextWrapping="Wrap" Cursor="IBeam" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  TextWrapping="Wrap">
+                        LLM模型名
+                    </ui:TextBlock>
+                    <ui:TextBox Grid.Row="1"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="180"
+                                MaxWidth="400"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.AutoComboBuildConfig.ModelName, Mode=TwoWay}"
+                                TextWrapping="Wrap" Cursor="IBeam" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  TextWrapping="Wrap">
+                        LLM服务密钥
+                    </ui:TextBlock>
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="注意保护好密钥"
+                                  TextWrapping="Wrap" />
+                    <ui:PasswordBox Grid.Row="1"
+                                    Grid.RowSpan="2"
+                                    Grid.Column="1"
+                                    MinWidth="300"
+                                    MaxWidth="400"
+                                    Margin="0,0,36,0"
+                                    Password="{Binding Config.AutoComboBuildConfig.ApiKey, Mode=TwoWay}" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  TextWrapping="Wrap">
+                        额外提示词
+                    </ui:TextBlock>
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="追加给 LLM 的自定义要求，如“使用芭芭拉重击来输出”；留空则不注入"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="300"
+                                MaxWidth="400"
+                                Height="80"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.AutoComboBuildConfig.ExtraPrompt, Mode=TwoWay}"
+                                TextWrapping="Wrap"
+                                AcceptsReturn="True"
+                                VerticalContentAlignment="Top"
+                                VerticalScrollBarVisibility="Auto" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  TextWrapping="Wrap">
+                        主建树提示词
+                    </ui:TextBlock>
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="“当前队伍”“元素反应”等小节由程序自动追加，无需填写；留空使用默认正文"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="300"
+                                MaxWidth="400"
+                                Height="160"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.AutoComboBuildConfig.MainPrompt, Mode=TwoWay}"
+                                TextWrapping="Wrap"
+                                AcceptsReturn="True"
+                                VerticalContentAlignment="Top"
+                                VerticalScrollBarVisibility="Auto" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  TextWrapping="Wrap">
+                        兜底建树提示词
+                    </ui:TextBlock>
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="“当前队伍”小节由程序自动追加，无需填写；留空使用默认正文"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="300"
+                                MaxWidth="400"
+                                Height="120"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.AutoComboBuildConfig.FallbackPrompt, Mode=TwoWay}"
+                                TextWrapping="Wrap"
+                                AcceptsReturn="True"
+                                VerticalContentAlignment="Top"
+                                VerticalScrollBarVisibility="Auto" />
+                </Grid>
+                <Grid Margin="16,0,16,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <ui:TextBlock FontTypography="Body"
+                                      TextWrapping="Wrap">
+                            角色提示词覆盖
+                        </ui:TextBlock>
+                        <ui:TextBlock Margin="0,4,0,0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="自定义角色的战术描述，未覆盖的角色使用内置描述；删除行即恢复内置描述；如重复只取第一个"
+                                      TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ui:Button Grid.Column="1"
+                               Margin="12,0,36,0"
+                               VerticalAlignment="Center"
+                               Command="{Binding AddAvatarDescriptionOverrideCommand}"
+                               Content="添加角色" />
+                </Grid>
+                <ItemsControl Margin="16,0,36,16"
+                              ItemsSource="{Binding Config.AutoComboBuildConfig.AvatarDescriptionOverrides}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="130" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ComboBox Grid.Column="0"
+                                          VerticalAlignment="Center"
+                                          ItemsSource="{x:Static pages:TaskSettingsPageViewModel.CombatAvatarNameList}"
+                                          SelectedItem="{Binding Name, Mode=TwoWay}" />
+                                <TextBox Grid.Column="1"
+                                         Height="44"
+                                         Margin="8,0,0,0"
+                                         VerticalContentAlignment="Top"
+                                         AcceptsReturn="True"
+                                         Text="{Binding Description, Mode=TwoWay}"
+                                         TextWrapping="Wrap"
+                                         VerticalScrollBarVisibility="Auto" />
+                                <ui:Button Grid.Column="2"
+                                           Margin="8,0,0,0"
+                                           VerticalAlignment="Center"
+                                           Command="{Binding DataContext.RemoveAvatarDescriptionOverrideCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                           CommandParameter="{Binding}"
+                                           Content="删除" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ui:CardExpander>
+
          <!-- 自动分解圣遗物 -->
         <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
             <ui:CardExpander.Icon>

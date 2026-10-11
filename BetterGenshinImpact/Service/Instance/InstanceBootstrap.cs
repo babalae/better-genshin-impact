@@ -45,9 +45,14 @@ public sealed class InstanceBootstrap : IDisposable
 
         if (options.HasExplicitInstanceType)
         {
+            var instanceName = options.InstanceType == BetterGiInstanceType.WebView
+                ? AcquireWebViewInstanceName(options)
+                : null;
+
             var initialConnection = TryOpenRootConnectionAsync(
                     rootPipeName,
                     options.InstanceType,
+                    instanceName,
                     options.RestartFromProcessId,
                     Environment.GetCommandLineArgs(),
                     [TimeSpan.Zero],
@@ -67,7 +72,8 @@ public sealed class InstanceBootstrap : IDisposable
                 new InstanceContext(
                     initialConnection?.Response.AssignedType ?? options.InstanceType,
                     rootPipeName,
-                    initialConnection?.Response.RootSessionId),
+                    initialConnection?.Response.RootSessionId,
+                    instanceName),
                 firstServer: null,
                 initialConnection);
             return;
@@ -93,6 +99,7 @@ public sealed class InstanceBootstrap : IDisposable
             var initialConnection = TryOpenRootConnectionAsync(
                     rootPipeName,
                     BetterGiInstanceType.Primary,
+                    instanceName: null,
                     options.RestartFromProcessId,
                     Environment.GetCommandLineArgs(),
                     [
@@ -128,6 +135,64 @@ public sealed class InstanceBootstrap : IDisposable
                     initialConnection.Response.RootSessionId),
                 firstServer: null,
                 initialConnection);
+        }
+    }
+
+    /// <summary>
+    /// 网页版实例的实例名互斥体，进程存活期间一直持有，进程退出时由系统释放。
+    /// 静态字段防止被 GC 回收；由启动线程（UI 线程）获取，线程一直存活
+    /// </summary>
+    private static Mutex? _webViewInstanceMutex;
+
+    /// <summary>
+    /// 校验网页版实例名并获取实例名互斥体。名称缺失或不合法、同名实例已在运行时提示并退出进程。
+    /// 此时 WPF 尚未启动，提示使用 WinForms MessageBox（与 App 启动失败的兜底方式一致）
+    /// </summary>
+    private static string AcquireWebViewInstanceName(CommandLineOptions options)
+    {
+        if (!WebViewInstanceStore.TryNormalizeName(options.InstanceName, out var name, out var error))
+        {
+            ShowStartupMessage(
+                $"网页版实例需要通过 {CommandLineOptions.InstanceNameArgument} 指定合法的实例名：{error}",
+                System.Windows.Forms.MessageBoxIcon.Error);
+            Environment.Exit(0xFFFF);
+            throw new InvalidOperationException(error);
+        }
+
+        var mutex = new Mutex(initiallyOwned: false, WebViewInstanceStore.MutexName(name));
+        bool acquired;
+        try
+        {
+            // 应用内重启时旧进程还没退出，最多等它 15 秒（与 WaitForRestartSource 一致）
+            acquired = mutex.WaitOne(options.RestartFromProcessId is null ? 0 : 15_000);
+        }
+        catch (AbandonedMutexException)
+        {
+            // 旧进程未释放就退出了，互斥体已归当前线程所有
+            acquired = true;
+        }
+
+        if (!acquired)
+        {
+            mutex.Dispose();
+            ShowStartupMessage($"网页版实例「{name}」已在运行。", System.Windows.Forms.MessageBoxIcon.Information);
+            Environment.Exit(0);
+            throw new InvalidOperationException($"网页版实例「{name}」已在运行。");
+        }
+
+        _webViewInstanceMutex = mutex;
+        return name;
+    }
+
+    private static void ShowStartupMessage(string message, System.Windows.Forms.MessageBoxIcon icon)
+    {
+        try
+        {
+            System.Windows.Forms.MessageBox.Show(message, "BetterGI", System.Windows.Forms.MessageBoxButtons.OK, icon);
+        }
+        catch (Exception exception)
+        {
+            Trace.TraceError("显示启动提示失败：{0}，原提示：{1}", exception.Message, message);
         }
     }
 
@@ -172,6 +237,7 @@ public sealed class InstanceBootstrap : IDisposable
     private static async Task<InitialRootConnection?> TryOpenRootConnectionAsync(
         string pipeName,
         BetterGiInstanceType requestedType,
+        string? instanceName,
         int? restartFromProcessId,
         string[] args,
         IReadOnlyList<TimeSpan> retryDelays,
@@ -183,6 +249,7 @@ public sealed class InstanceBootstrap : IDisposable
             new ConnectionOpenRequest
             {
                 RequestedType = requestedType,
+                InstanceName = instanceName,
                 RestartFromProcessId = restartFromProcessId,
                 Arguments = args
             });

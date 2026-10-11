@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoPick;
 using BetterGenshinImpact.GameTask.AutoSkip.Assets;
+using BetterGenshinImpact.GameTask.AutoSkip.Audio;
 using BetterGenshinImpact.GameTask.AutoSkip.Model;
 using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.Service.Interface;
@@ -43,13 +44,19 @@ public partial class TriggerSettingsPageViewModel : ViewModel
 
     public AllConfig Config { get; set; }
 
+    public DialogueOptionVoiceDiagnosticState VoiceDiagnosticState { get; }
+
     private readonly INavigationService _navigationService;
 
     [ObservableProperty] private List<string> _hangoutBranches;
 
-    public TriggerSettingsPageViewModel(IConfigService configService, INavigationService navigationService)
+    public TriggerSettingsPageViewModel(
+        IConfigService configService,
+        INavigationService navigationService,
+        DialogueOptionVoiceDiagnosticState voiceDiagnosticState)
     {
         Config = configService.Get();
+        VoiceDiagnosticState = voiceDiagnosticState;
         _navigationService = navigationService;
         _hangoutBranches = HangoutConfig.Instance.HangoutOptionsTitleList;
         UpdateAutoPickModeVisibility();
@@ -87,9 +94,9 @@ public partial class TriggerSettingsPageViewModel : ViewModel
     [RelayCommand]
     private void OnAutoPickModeChanged(AutoPickMode mode)
     {
+        // 拾取模式是名单缓存键的一部分，自动拾取下一次拾取时按新模式重读名单
         Config.AutoPickConfig.Mode = mode;
         UpdateAutoPickModeVisibility();
-        GameTaskManager.RefreshTriggerConfigs();
     }
 
     private void UpdateAutoPickModeVisibility()
@@ -130,11 +137,17 @@ public partial class TriggerSettingsPageViewModel : ViewModel
         
         window.Closed += (s, e) => 
         {
+            // 技能 CD 每次都实时读取 CustomCdList，不需要刷新触发器
             Config.SkillCdConfig.CustomCdList = window.GetValidRules();
-            GameTaskManager.RefreshTriggerConfigs();
         };
 
         window.ShowDialog();
+    }
+
+    [RelayCommand]
+    private void ToggleVoiceDiagnosticRecording()
+    {
+        VoiceDiagnosticState.ToggleRecording();
     }
 
     [RelayCommand]

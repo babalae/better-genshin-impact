@@ -1,5 +1,5 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition.OCR;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
@@ -10,8 +10,6 @@ using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.Helpers;
-using BetterGenshinImpact.View.Drawable;
-using Fischless.WindowsInput;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
 using OpenCvSharp;
@@ -34,7 +32,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
     private readonly AutoEatParam _taskParam;
     private readonly AutoEatConfig _config;
     private readonly ILogger _logger = App.GetLogger<AutoEatTask>();
-    private readonly InputSimulator _input = Simulation.SendInput;
+    private IInputChannel _input => InputHub.Foreground;
     private CancellationToken _ct;
 
     public AutoEatTask(AutoEatParam taskParam)
@@ -85,11 +83,11 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
             await new ReturnMainUiTask().Start(ct);
             await AutoArtifactSalvageTask.OpenInventory(GridScreenName.Food, _input, _logger, _ct);
 
-            using InferenceSession session = GridIconsAccuracyTestTask.LoadModel(out Dictionary<string, float[]> prototypes);
+            using IItemIconRecognizer iconRecognizer = ItemIconRecognizerFactory.CreateConfigured();
 
             GridScreen gridScreen = new GridScreen(GridParams.Templates[GridScreenName.Food], _logger, _ct);
             gridScreen.OnAfterTurnToNewPage += GridScreen.DrawItemsAfterTurnToNewPage;
-            gridScreen.OnBeforeScroll += () => VisionContext.Instance().DrawContent.ClearAll();
+            gridScreen.OnBeforeScroll += () => TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
             int? count = null;
             try
             {
@@ -97,8 +95,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
                 {
                     using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
                     using Mat icon = itemRegion.SrcMat.GetGridIcon();
-                    var result = GridIconsAccuracyTestTask.Infer(icon, session, prototypes);
-                    string predName = result.Item1;
+                    string? predName = iconRecognizer.Recognize(icon);
                     if (predName == _taskParam.FoodName)
                     {
                         // 点击item
@@ -133,7 +130,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
             }
             finally
             {
-                VisionContext.Instance().DrawContent.ClearAll();
+                TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
             }
             if (count == null)
             {
@@ -172,7 +169,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
                     if ((now - lastEatTime).TotalMilliseconds >= _config.EatInterval)
                     {
                         // 模拟按键 "Z" 使用便携营养袋
-                        Simulation.SendInput.SimulateAction(GIActions.QuickUseGadget);
+                        InputHub.Foreground.SimulateAction(GIActions.QuickUseGadget);
                         lastEatTime = now;
 
                         _logger.LogInformation("检测到红血，自动吃药");

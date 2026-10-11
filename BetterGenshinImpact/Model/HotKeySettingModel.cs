@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Fischless.HotkeyCapture;
 using System;
+using System.ComponentModel;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Windows.Forms;
@@ -27,14 +28,14 @@ public partial class HotKeySettingModel : ObservableObject
 
     [ObservableProperty] private string _hotKeyTypeName = string.Empty;
 
+    public string LocalizedHotKeyTypeName => HotKeyType.ToLocalizedName();
+
     [ObservableProperty]
     private ObservableCollection<HotKeySettingModel> _children = [];
 
     public string FunctionName { get; set; }
 
-    public string DisplayFunctionName => I18nService.Instance.Translate(FunctionName);
-
-    public string DisplayHotKeyTypeName => I18nService.Instance.Translate(HotKeyTypeName);
+    public string LocalizedFunctionName => I18nService.Instance.Translate(FunctionName);
 
     public bool IsExpanded => true;
 
@@ -73,6 +74,7 @@ public partial class HotKeySettingModel : ObservableObject
     {
         FunctionName = functionName;
         IsDirectory = true;
+        PropertyChangedEventManager.AddHandler(I18nService.Instance, OnI18nPropertyChanged, nameof(I18nService.Revision));
     }
 
     public HotKeySettingModel(string functionName, string configPropertyName, string hotkey, string hotKeyTypeCode, Action<object?, KeyPressedEventArgs>? onKeyPressAction, bool isHold = false)
@@ -85,17 +87,7 @@ public partial class HotKeySettingModel : ObservableObject
         OnKeyPressAction = onKeyPressAction;
         IsHold = isHold;
         SwitchHotkeyTypeEnabled = !isHold;
-    }
-
-    partial void OnHotKeyTypeNameChanged(string value)
-    {
-        OnPropertyChanged(nameof(DisplayHotKeyTypeName));
-    }
-
-    public void RefreshDisplayNames()
-    {
-        OnPropertyChanged(nameof(DisplayFunctionName));
-        OnPropertyChanged(nameof(DisplayHotKeyTypeName));
+        PropertyChangedEventManager.AddHandler(I18nService.Instance, OnI18nPropertyChanged, nameof(I18nService.Revision));
     }
 
     public void RegisterHotKey()
@@ -244,5 +236,17 @@ public partial class HotKeySettingModel : ObservableObject
     {
         HotKeyType = HotKeyType == HotKeyTypeEnum.GlobalRegister ? HotKeyTypeEnum.KeyboardMonitor : HotKeyTypeEnum.GlobalRegister;
         HotKeyTypeName = HotKeyType.ToChineseName();
+        OnPropertyChanged(nameof(LocalizedHotKeyTypeName));
+    }
+
+    private void OnI18nPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(I18nService.Revision))
+        {
+            return;
+        }
+
+        OnPropertyChanged(nameof(LocalizedFunctionName));
+        OnPropertyChanged(nameof(LocalizedHotKeyTypeName));
     }
 }

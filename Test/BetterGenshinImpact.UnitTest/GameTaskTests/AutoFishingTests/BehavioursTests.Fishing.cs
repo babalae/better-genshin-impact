@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Mask;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.Model.Area;
 using CsTrees;
@@ -24,11 +25,11 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         public async Task Fishing_ShouldBeRunning(string screenshot1080pGetFishBoxArea, string screenshot1080p)
         {
             //
-            FakeDrawContent fakeDrawContent = new FakeDrawContent();
+            IMaskWindowDrawingBoard drawingBoard = NullMaskWindowDrawingBoard.Instance;
             Mat mat1 = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080pGetFishBoxArea}");
-            var imageRegion1 = new GameCaptureRegion(mat1, 0, 0, drawContent: fakeDrawContent);
+            var imageRegion1 = new GameCaptureRegion(mat1, 0, 0, drawingBoard: drawingBoard);
             var mat2 = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
-            var imageRegion2 = new GameCaptureRegion(mat2, 0, 0, drawContent: fakeDrawContent);
+            var imageRegion2 = new GameCaptureRegion(mat2, 0, 0, drawingBoard: drawingBoard);
             FakeTimeProvider fakeTimeProvider = new FakeTimeProvider();
             FakeLogger logger = new FakeLogger();
 
@@ -40,7 +41,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                         .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion1, imageRegion2, imageRegion2], bb!))
                         .Sequence("-", true)
                             .GetFishBoxArea("-", logger, false)
-                            .Fishing("-", logger, false, new FakeInputSimulator(), fakeTimeProvider, drawContent: fakeDrawContent)
+                            .Fishing("-", logger, false, new FakeInputChannel(), fakeTimeProvider)
                         .End()
                     .End()
                 .End()
@@ -71,11 +72,11 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         public async Task Fishing_ShouldSuccess(string screenshot1080pGetFishBoxArea, string screenshot1080p)
         {
             //
-            FakeDrawContent fakeDrawContent = new FakeDrawContent();
+            IMaskWindowDrawingBoard drawingBoard = NullMaskWindowDrawingBoard.Instance;
             Mat mat1 = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080pGetFishBoxArea}");
-            var imageRegion1 = new GameCaptureRegion(mat1, 0, 0, drawContent: fakeDrawContent);
+            var imageRegion1 = new GameCaptureRegion(mat1, 0, 0, drawingBoard: drawingBoard);
             var mat2 = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
-            var imageRegion2 = new GameCaptureRegion(mat2, 0, 0, drawContent: fakeDrawContent);
+            var imageRegion2 = new GameCaptureRegion(mat2, 0, 0, drawingBoard: drawingBoard);
             FakeTimeProvider fakeTimeProvider = new FakeTimeProvider();
             FakeLogger logger = new FakeLogger();
 
@@ -87,7 +88,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                         .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion1, imageRegion2, imageRegion2], bb!))
                         .Sequence("-", true)
                             .GetFishBoxArea("-", logger, false)
-                            .Fishing("-", logger, false, new FakeInputSimulator(), fakeTimeProvider, drawContent: fakeDrawContent)
+                            .Fishing("-", logger, false, new FakeInputChannel(), fakeTimeProvider)
                         .End()
                     .End()
                 .End()

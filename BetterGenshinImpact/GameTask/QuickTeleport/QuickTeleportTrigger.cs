@@ -18,7 +18,7 @@ namespace BetterGenshinImpact.GameTask.QuickTeleport;
 internal class QuickTeleportTrigger : ITaskTrigger
 {
     public string Name => "快速传送";
-    public bool IsEnabled { get; set; }
+    public bool IsEnabledByConfig => _config.Enabled;
     public int Priority => 21;
     public bool IsExclusive { get; set; }
 
@@ -40,9 +40,8 @@ internal class QuickTeleportTrigger : ITaskTrigger
         _hotkeyConfig = TaskContext.Instance().Config.HotKeyConfig;
     }
 
-    public void Init()
+    public void OnDisabled()
     {
-        IsEnabled = _config.Enabled;
         IsExclusive = false;
     }
 

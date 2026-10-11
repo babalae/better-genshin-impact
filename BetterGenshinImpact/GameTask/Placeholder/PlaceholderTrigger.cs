@@ -15,7 +15,12 @@ namespace BetterGenshinImpact.GameTask.Placeholder;
 public class TestTrigger : ITaskTrigger
 {
     public string Name => "自定义占位触发器";
-    public bool IsEnabled { get; set; }
+
+    /// <summary>
+    /// 开发测试用，默认不启用
+    /// </summary>
+    public bool IsEnabledByConfig => false;
+
     public int Priority => 9999;
     public bool IsExclusive { get; private set; }
 
@@ -31,9 +36,8 @@ public class TestTrigger : ITaskTrigger
         //_autoGeniusInvokationAssets = new AutoGeniusInvokationAssets();
     }
 
-    public void Init()
+    public void OnDisabled()
     {
-        IsEnabled = false;
         IsExclusive = false;
     }
 

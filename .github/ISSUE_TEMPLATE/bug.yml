@@ -1,8 +1,7 @@
 name: Bug report / 错误报告
 description: 提交可复现的问题，帮助我们定位错误 / Report a reproducible problem
 title: "[bug] "
-labels:
-  - BUG
+type: Bug
 body:
   - type: checkboxes
     id: checks

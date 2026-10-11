@@ -84,7 +84,7 @@
                         <TextBlock Grid.Row="2"
                                    Grid.Column="0"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            <Run Text="{i18n:T 当前加载：}" /><Run Text="{Binding ProviderTypesText}" />
+                            <Run Text="{i18n:T 当前加载：}" /><Run Text="{Binding ProviderTypesText, Mode=OneWay}" />
                         </TextBlock>
                     </Grid>
                     <!--  缓存管理  -->
@@ -137,7 +137,7 @@
                         <TextBlock Grid.Row="2"
                                    Grid.Column="0"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            <Run Text="{i18n:T 当前状态：}" /><Run Text="{Binding Status.CpuOcr}" />
+                            <Run Text="{i18n:T 当前状态：}" /><Run Text="{Binding Status.CpuOcr, Mode=OneWay}" />
                         </TextBlock>
                     </Grid>
                     <!--  GPU Device  -->
@@ -167,7 +167,7 @@
                         <TextBlock Grid.Row="2"
                                    Grid.Column="0"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            <Run Text="{i18n:T 当前DML设备：}" /><Run Text="{Binding Status.DmlDeviceId}" />
+                            <Run Text="{i18n:T 当前DML设备：}" /><Run Text="{Binding Status.DmlDeviceId, Mode=OneWay}" />
                         </TextBlock>
                     </Grid>
                     <!--  _optimizedModel  -->
@@ -196,7 +196,7 @@
                         <TextBlock Grid.Row="2"
                                    Grid.Column="0"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            <Run Text="{i18n:T 当前状态：}" /><Run Text="{Binding Status.OptimizedModel}" />
+                            <Run Text="{i18n:T 当前状态：}" /><Run Text="{Binding Status.OptimizedModel, Mode=OneWay}" />
                         </TextBlock>
                     </Grid>
 
@@ -255,7 +255,7 @@
                         <TextBlock Grid.Row="2"
                                    Grid.Column="0"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            <Run Text="{i18n:T 当前CUDA设备：}" /><Run Text="{Binding Status.CudaDeviceId}" />
+                            <Run Text="{i18n:T 当前CUDA设备：}" /><Run Text="{Binding Status.CudaDeviceId, Mode=OneWay}" />
                         </TextBlock>
                     </Grid>
                     <!--  Auto Append CUDA Path  -->
@@ -366,7 +366,7 @@
                         <TextBlock Grid.Row="2"
                                    Grid.Column="0"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            <Run Text="{i18n:T 缓存状态：}" /><Run Text="{Binding Status.EnableCache}" />
+                            <Run Text="{i18n:T 缓存状态：}" /><Run Text="{Binding Status.EnableCache, Mode=OneWay}" />
                         </TextBlock>
                     </Grid>
 
@@ -396,7 +396,7 @@
                         <TextBlock Grid.Row="2"
                                    Grid.Column="0"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            <Run Text="{i18n:T 嵌入模式：}" /><Run Text="{Binding Status.TrtUseEmbedMode}" />
+                            <Run Text="{i18n:T 嵌入模式：}" /><Run Text="{Binding Status.TrtUseEmbedMode, Mode=OneWay}" />
                         </TextBlock>
                     </Grid>
                 </StackPanel>
@@ -462,7 +462,7 @@
                         <TextBlock Grid.Row="3"
                                    Grid.Column="0"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            <Run Text="{i18n:T 当前参数：}" /><Run Text="{Binding Status.OpenVinoDevice}" />
+                            <Run Text="{i18n:T 当前参数：}" /><Run Text="{Binding Status.OpenVinoDevice, Mode=OneWay}" />
                         </TextBlock>
                     </Grid>
                     <!--  _enableOpenVinoCache  -->
@@ -491,7 +491,7 @@
                         <TextBlock Grid.Row="2"
                                    Grid.Column="0"
                                    Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}">
-                            <Run Text="{i18n:T 当前状态：}" /><Run Text="{Binding Status.OpenVinoCache}" />
+                            <Run Text="{i18n:T 当前状态：}" /><Run Text="{Binding Status.OpenVinoCache, Mode=OneWay}" />
                         </TextBlock>
                     </Grid>
                 </StackPanel>

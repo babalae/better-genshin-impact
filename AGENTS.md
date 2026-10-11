@@ -85,6 +85,12 @@
 dotnet build BetterGenshinImpact.sln -c Debug
 ```
 
+## 识别与模拟操作
+
+在进行键鼠操作后再识图的时候，必须添加适当的延时！因为游戏内对键鼠的响应是有 30~60ms 的延迟的，截图的来源图也是有延迟的。
+
+键鼠操作本身也不宜过快，在 30 fps 的游戏中，过快的操作可能会丢失。
+
 ## Code Review Rules
 
 ### Output language

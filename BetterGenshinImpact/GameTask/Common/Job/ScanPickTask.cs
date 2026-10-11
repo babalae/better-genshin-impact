@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Input;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -5,10 +6,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition.ONNX;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.Model.Area;
-using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -41,7 +40,7 @@ public class ScanPickTask
         }
         finally
         {
-            VisionContext.Instance().DrawContent.ClearAll();
+            TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
         }
     }
 
@@ -51,7 +50,7 @@ public class ScanPickTask
         Stopwatch timeoutStopwatch = Stopwatch.StartNew();
         TimeSpan finishTime = TimeSpan.FromSeconds(sec);
 
-        Simulation.SendInput.SimulateAction(GIActions.Drop);
+        InputHub.Foreground.SimulateAction(GIActions.Drop);
         await ResetCamera(ct);
 
         while (!ct.IsCancellationRequested && timeoutStopwatch.Elapsed < finishTime)
@@ -60,14 +59,14 @@ public class ScanPickTask
             // Logger.LogInformation("存在可拾取物品: {0}", hasItems);
             if (!hasItems)
             {
-                Simulation.ReleaseAllKey();
+                InputHub.ReleaseAll();
                 await ResetCamera(ct);
                 for (var i = 0; i < 10 && timeoutStopwatch.Elapsed < finishTime; i++)
                 {
-                    Simulation.SendInput.Mouse.MoveMouseBy(400, 0);
+                    InputHub.Foreground.Mouse.MoveMouseBy(400, 0);
                     if (i > 5) //前期不考虑移动扫描
                         await WalkByDirection(ct, GIActions.MoveForward, 100);
-                    Simulation.SendInput.SimulateAction(GIActions.Drop);
+                    InputHub.Foreground.SimulateAction(GIActions.Drop);
                     await Delay(300, ct);
                     (hasItems, pickItems) = DetectPickableItems();
                     if (hasItems) break;
@@ -94,11 +93,11 @@ public class ScanPickTask
             MoveTowardsItem(toPickItem);
 
             await Delay(200, ct);
-            Simulation.SendInput.SimulateAction(GIActions.Drop);
+            InputHub.Foreground.SimulateAction(GIActions.Drop);
         }
         Logger.LogInformation("超时或视野内没有可拾取物品，结束扫描");
-        Simulation.ReleaseAllKey();
-        Simulation.SendInput.SimulateAction(GIActions.Drop);
+        InputHub.ReleaseAll();
+        InputHub.Foreground.SimulateAction(GIActions.Drop);
     }
 
     /// <summary>
@@ -113,34 +112,34 @@ public class ScanPickTask
         var itemCenterX = toPickItem.X + toPickItem.Width / 2.0;
         if (itemCenterX < 880)
         {
-            Simulation.SendInput.SimulateAction(GIActions.MoveRight, KeyType.KeyUp);
-            Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown);
+            InputHub.Foreground.SimulateAction(GIActions.MoveRight, KeyType.KeyUp);
+            InputHub.Foreground.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown);
         }
         else if (itemCenterX > 1040)
         {
-            Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
-            Simulation.SendInput.SimulateAction(GIActions.MoveRight, KeyType.KeyDown);
+            InputHub.Foreground.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
+            InputHub.Foreground.SimulateAction(GIActions.MoveRight, KeyType.KeyDown);
         }
         else
         {
-            Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
-            Simulation.SendInput.SimulateAction(GIActions.MoveRight, KeyType.KeyUp);
+            InputHub.Foreground.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
+            InputHub.Foreground.SimulateAction(GIActions.MoveRight, KeyType.KeyUp);
         }
 
         if (toPickItem.Bottom < 770)
         {
-            Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
-            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+            InputHub.Foreground.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
+            InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
         }
         else if (toPickItem.Bottom > 900)
         {
-            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-            Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown);
+            InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+            InputHub.Foreground.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown);
         }
         else
         {
-            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-            Simulation.SendInput.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
+            InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+            InputHub.Foreground.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
         }
     }
 
@@ -160,17 +159,17 @@ public class ScanPickTask
 
     private static async Task WalkByDirection(CancellationToken ct, GIActions act, int ms = 1000)
     {
-        Simulation.SendInput.SimulateAction(act, KeyType.KeyDown);
+        InputHub.Foreground.SimulateAction(act, KeyType.KeyDown);
         await Delay(ms, ct);
-        Simulation.SendInput.SimulateAction(act, KeyType.KeyUp);
+        InputHub.Foreground.SimulateAction(act, KeyType.KeyUp);
     }
 
     // 回正 并下移视角
     private async Task ResetCamera(CancellationToken ct)
     {
-        Simulation.SendInput.Keyboard.Mouse.MiddleButtonClick();
+        InputHub.Foreground.Mouse.MiddleButtonClick();
         await Delay(500, ct);
-        Simulation.SendInput.Keyboard.Mouse.MoveMouseBy(0, (int)(500 * _dpi));
+        InputHub.Foreground.Mouse.MoveMouseBy(0, (int)(500 * _dpi));
         await Delay(100, ct);
     }
 }

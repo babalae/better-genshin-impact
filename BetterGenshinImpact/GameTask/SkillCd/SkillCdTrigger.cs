@@ -5,7 +5,7 @@ using BetterGenshinImpact.GameTask.AutoFight.Config;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
-using BetterGenshinImpact.View.Drawable;
+using BetterGenshinImpact.Core.Mask;
 using BetterGenshinImpact.GameTask.Model.Area;
 using OpenCvSharp;
 using System;
@@ -15,7 +15,6 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
-using Point = System.Windows.Point;
 using Rect = OpenCvSharp.Rect;
 
 namespace BetterGenshinImpact.GameTask.SkillCd;
@@ -25,12 +24,13 @@ namespace BetterGenshinImpact.GameTask.SkillCd;
 /// </summary>
 public class SkillCdTrigger : ITaskTrigger
 {
+    /// <summary>
+    /// 技能 CD 遮罩文字的分组名，AutoCombo 接管显示时共用
+    /// </summary>
+    public const string OverlayKey = "SkillCdText";
+
     public string Name => "SkillCd";
-    public bool IsEnabled
-    {
-        get => TaskContext.Instance().Config.SkillCdConfig.Enabled;
-        set => TaskContext.Instance().Config.SkillCdConfig.Enabled = value;
-    }
+    public bool IsEnabledByConfig => TaskContext.Instance().Config.SkillCdConfig.Enabled;
 
     public int Priority => 10;
     public bool IsExclusive => false;
@@ -71,6 +71,30 @@ public class SkillCdTrigger : ITaskTrigger
 
     private volatile bool _isSyncingTeam = false;
 
+    /// <summary>
+    /// 外部任务挂起开关：任务运行期间接管 CD 显示时挂起本触发器（不渲染、不计时、不做识别），
+    /// 任务收尾后恢复。由调用方保证 Suspend/Resume 成对调用（配合 try/finally）
+    /// </summary>
+    private static volatile bool _suspended = false;
+
+    /// <summary>
+    /// 挂起本触发器：外部任务（如 AutoCombo）接管 CD 遮罩显示期间调用，
+    /// 同时清掉自己的遮罩文字，避免两套显示叠加
+    /// </summary>
+    public static void Suspend(IMaskWindowDrawingBoard drawingBoard)
+    {
+        _suspended = true;
+        drawingBoard.Clear(OverlayKey);
+    }
+
+    /// <summary>
+    /// 恢复本触发器：接管方任务收尾时调用（务必在 finally 中，防止异常路径漏调）
+    /// </summary>
+    public static void Resume()
+    {
+        _suspended = false;
+    }
+
     private DateTime _lastSyncTime = DateTime.MinValue;
 
     private ImageRegion? _lastImage = null; // 上一帧
@@ -80,41 +104,52 @@ public class SkillCdTrigger : ITaskTrigger
     private readonly AvatarActiveCheckContext _activeCheckContext = new();
 
     /// <summary>
-    /// 初始化
+    /// 启用时清空帧缓存和全部 CD 状态，从零开始计时
     /// </summary>
-    public void Init()
+    public void OnEnabled(object? options)
     {
-        // 清空帧缓存
+        DisposeFrameCache();
+        lock (_stateLock)
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                _cds[i] = 0;
+                _prevKeys[i] = false;
+                _teamAvatarNames[i] = string.Empty;
+                _teamIndexRects[i] = default;
+                _lastSetTime[i] = DateTime.MinValue;
+                _lastTeamAvatarNames[i] = string.Empty;
+            }
+
+            _prevEKey = false;
+            _lastEKeyPress = DateTime.MinValue;
+            _wasInContext = false;
+            _contextEnterTime = DateTime.MinValue;
+            _contextLeaveTime = DateTime.MinValue;
+            _lastTickTime = DateTime.Now;
+            _lastActiveIndex = -1;
+            _lastSwitchFromSlot = -1;
+            _lastSwitchTime = DateTime.MinValue;
+            _lastPressIndexTime = DateTime.MinValue;
+            _lastSyncTime = DateTime.MinValue;
+        }
+    }
+
+    /// <summary>
+    /// 停用时清除遮罩上的 CD 文字，释放帧缓存
+    /// </summary>
+    public void OnDisabled()
+    {
+        TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.Clear(OverlayKey);
+        DisposeFrameCache();
+    }
+
+    private void DisposeFrameCache()
+    {
         _lastImage?.Dispose();
         _lastImage = null;
         _penultimateImage?.Dispose();
         _penultimateImage = null;
-        for (int i = 0; i < 4; i++)
-        {
-            _cds[i] = 0;
-            _prevKeys[i] = false;
-            _teamAvatarNames[i] = string.Empty;
-            _teamIndexRects[i] = default;
-            _lastSetTime[i] = DateTime.MinValue;
-            _lastTeamAvatarNames[i] = string.Empty;
-        }
-
-        _prevEKey = false;
-        _lastEKeyPress = DateTime.MinValue;
-        _wasInContext = false;
-        _contextEnterTime = DateTime.MinValue;
-        _contextLeaveTime = DateTime.MinValue;
-        _lastTickTime = DateTime.Now;
-        _lastActiveIndex = -1;
-        _lastSwitchFromSlot = -1;
-        _lastSwitchTime = DateTime.MinValue;
-        _lastPressIndexTime = DateTime.MinValue;
-        _lastSyncTime = DateTime.MinValue;
-
-        if (!IsEnabled)
-        {
-            VisionContext.Instance().DrawContent.PutOrRemoveTextList("SkillCdText", null);
-        }
     }
 
     /// <summary>
@@ -122,9 +157,10 @@ public class SkillCdTrigger : ITaskTrigger
     /// </summary>
     public void OnCapture(CaptureContent content)
     {
-        if (!IsEnabled)
+        var drawingBoard = content.CaptureRectArea.DrawingBoard;
+        // 被外部任务挂起：整体跳过（不渲染、不计时、不做识别），数据由接管方维护
+        if (_suspended)
         {
-            VisionContext.Instance().DrawContent.PutOrRemoveTextList("SkillCdText", null);
             return;
         }
 
@@ -155,8 +191,8 @@ public class SkillCdTrigger : ITaskTrigger
             var multiGameStatus = PartyAvatarSideIndexHelper.DetectedMultiGameStatus(content.CaptureRectArea);
             if (multiGameStatus.IsInMultiGame)
             {
-                // 检测到联机状态，自动关闭SkillCd
-                IsEnabled = false;
+                // 检测到联机状态，自动关闭SkillCd：写回用户配置，下一帧由调度器停用并调用 OnDisabled
+                TaskContext.Instance().Config.SkillCdConfig.Enabled = false;
                 _logger.LogWarning("检测到联机状态，自动关闭冷却提示");
                 return;
             }
@@ -180,7 +216,7 @@ public class SkillCdTrigger : ITaskTrigger
         {
             if (_wasInContext)
             {
-                VisionContext.Instance().DrawContent.PutOrRemoveTextList("SkillCdText", null);
+                drawingBoard.Clear(OverlayKey);
                 _wasInContext = false;
                 _contextEnterTime = DateTime.MinValue;
                 _lastActiveIndex = -1;
@@ -360,7 +396,7 @@ public class SkillCdTrigger : ITaskTrigger
             content.CaptureRectArea.Y
         );
 
-        UpdateOverlay();
+        UpdateOverlay(drawingBoard);
     }
 
     /// <summary>
@@ -590,71 +626,34 @@ public class SkillCdTrigger : ITaskTrigger
     /// <summary>
     /// 更新 UI 层渲染
     /// </summary>
-    private void UpdateOverlay()
+    private void UpdateOverlay(IMaskWindowDrawingBoard drawingBoard)
     {
-        var drawContent = VisionContext.Instance().DrawContent;
-        var systemInfo = TaskContext.Instance().SystemInfo;
-        var captureRect = systemInfo.ScaleMax1080PCaptureRect;
-        var sideRects = AutoFightAssets.Get(captureRect.Width, captureRect.Height).AvatarSideIconRectList;
-        var config = TaskContext.Instance().Config.SkillCdConfig;
-        
-        if (sideRects == null || sideRects.Count < 4)
-        {
-            drawContent.PutOrRemoveTextList("SkillCdText", null);
-            return;
-        }
-
-        double factor = (double)systemInfo.GameScreenSize.Width / systemInfo.ScaleMax1080PCaptureRect.Width;
-        
-        // 使用配置中的坐标（保留一位小数）
-        double userPX = Math.Round(config.PX, 1);
-        double userPY = Math.Round(config.PY, 1);
-        double userGap = Math.Round(config.Gap, 1);
-
-        double basePx = userPX * factor;
-        double basePy = userPY * factor;
-        double intervalY = userGap * factor;
-
-        var textList = new List<TextDrawable>();
-        
         if (_isSyncingTeam)
         {
-            drawContent.PutOrRemoveTextList("SkillCdText", null);
+            drawingBoard.Clear(OverlayKey);
             return;
         }
 
         // 检查是否有足够的角色信息（必须恰好4人）
         int validAvatarCount = _teamAvatarNames.Count(n => !string.IsNullOrEmpty(n));
         // _logger.LogDebug("[SkillCD] UpdateOverlay: 有效角色数量={Count}, Names={Names}", validAvatarCount, string.Join(",", _teamAvatarNames));
-        
+
         if (validAvatarCount != 4)
         {
-            // 不是4人，确保清空
-            if (drawContent.TextList.ContainsKey("SkillCdText"))
-            {
-               drawContent.PutOrRemoveTextList("SkillCdText", null);
-            }
+            // 不是4人，确保清空（分组不存在时 Clear 不会触发重绘）
+            drawingBoard.Clear(OverlayKey);
             return;
         }
-        
+
+        var slotCds = new double?[4];
         for (int i = 0; i < 4; i++)
         {
             if (!string.IsNullOrEmpty(_teamAvatarNames[i]))
             {
-                // 如果启用了"冷却为0时隐藏"，且CD为0，则跳过
-                if (config.HideWhenZero && _cds[i] <= 0)
-                {
-                    continue;
-                }
-
-                var px = basePx;
-                var py = basePy + intervalY * i;
-
-                textList.Add(new TextDrawable(_cds[i].ToString("F1"), new Point(px, py)));
+                slotCds[i] = _cds[i];
             }
         }
 
-        if (textList.Count == 0) drawContent.PutOrRemoveTextList("SkillCdText", null);
-        else drawContent.PutOrRemoveTextList("SkillCdText", textList);
+        SkillCdOverlayRenderer.Update(drawingBoard, OverlayKey, slotCds);
     }
 }

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.ObjectModel;
+using BetterGenshinImpact.Service.Notifier;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.Service.Notification;
@@ -106,6 +108,11 @@ public partial class NotificationConfig : ObservableObject
     ///     钉钉Webhook地址
     /// </summary>
     [ObservableProperty] private string _dingdingWebhookUrl = string.Empty;
+
+    /// <summary>
+    ///     一条龙结束后发送汇总通知（体力+委托奖励，附拼接截图）
+    /// </summary>
+    [ObservableProperty] private bool _dragonEndSummaryEnabled = false;
 
     // Email 通知配置
     [ObservableProperty] private bool _emailNotificationEnabled;
@@ -252,9 +259,32 @@ public partial class NotificationConfig : ObservableObject
     [ObservableProperty] private bool _xxtuiNotificationEnabled;
 
     /// <summary>
-    ///     Discord Webhook推送通知是否启用
+    ///     Discord 推送通知是否启用。
+    ///     这是 Discord 通知的总开关，Webhook 与 Bot 两种方式共用；
+    ///     属性名保留历史命名，避免旧配置文件失效。
     /// </summary>
     [ObservableProperty] private bool _discordWebhookNotificationEnabled;
+
+    /// <summary>
+    ///     Discord 通知方式：Webhook（频道 Webhook）或 Bot（机器人 Token + 频道 ID）
+    /// </summary>
+    [ObservableProperty] private string _discordNotificationMode = DiscordNotificationModes.Webhook;
+
+    /// <summary>
+    ///     Discord 机器人 Token（Bot 方式）
+    /// </summary>
+    [ObservableProperty] private string _discordBotToken = string.Empty;
+
+    /// <summary>
+    ///     Discord 机器人推送目标清单（Bot 方式）。
+    ///     频道与私信可以混用，逐项推送；单项失败不影响其他项。
+    /// </summary>
+    [ObservableProperty] private ObservableCollection<DiscordBotTarget> _discordBotTargets = [];
+
+    /// <summary>
+    ///     Discord 机器人消息格式：Plain（纯文本）或 Embed（嵌入卡片）
+    /// </summary>
+    [ObservableProperty] private string _discordBotMessageFormat = DiscordBotMessageFormats.Plain;
 
     /// <summary>
     ///     Discord Webhook地址
@@ -341,6 +371,13 @@ public partial class NotificationConfig : ObservableObject
     ///     用户的 C2C OpenID（单聊场景）
     /// </summary>
     [ObservableProperty] private string _qqOpenId = string.Empty;
+
+    /// <summary>
+    ///     群聊 OpenID（群聊场景）
+    /// </summary>
+    [ObservableProperty] private string _qqGroupOpenId = string.Empty;
+
+    [ObservableProperty] private string _qqMessageFormat = "text";
 
     /// <summary>
     ///     微信 Clawbot 通知是否启用

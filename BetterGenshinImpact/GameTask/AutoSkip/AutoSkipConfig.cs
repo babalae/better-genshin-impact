@@ -49,6 +49,12 @@ public partial class AutoSkipConfig : ObservableObject
     private int _dialogueOptionVoiceMaxWaitSeconds = 30;
 
     /// <summary>
+    /// 持续检测游戏进程音频并在设置页显示 Silero VAD 诊断数据
+    /// </summary>
+    [ObservableProperty]
+    private bool _dialogueOptionVoiceVadDiagnosticEnabled = false;
+
+    /// <summary>
     /// 点击对话框前的延迟（毫秒）
     /// </summary>
     [ObservableProperty]

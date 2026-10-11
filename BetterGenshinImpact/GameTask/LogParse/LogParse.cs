@@ -62,8 +62,11 @@ namespace BetterGenshinImpact.GameTask.LogParse
                     if (headerMatch.Success)
                     {
                         var instanceGroup = headerMatch.Groups["Instance"];
-                        // 兼容实例标识引入前的旧日志；旧格式的所有行统一归入默认分组。
-                        currentInstance = instanceGroup.Success ? instanceGroup.Value : string.Empty;
+                        // 空 Instance 视为旧格式日志/伪造行（无 [BgiInstance] 字段），延续上一实例，不重置 currentInstance
+                        if (instanceGroup.Success)
+                        {
+                            currentInstance = instanceGroup.Value;
+                        }
                     }
 
                     if (!instanceLogLines.TryGetValue(currentInstance, out var logLines))

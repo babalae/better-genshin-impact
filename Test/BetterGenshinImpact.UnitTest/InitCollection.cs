@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace BetterGenshinImpact.UnitTest
 {
     [CollectionDefinition("Init Collection")]
-    public class InitCollection : ICollectionFixture<PaddleFixture>, ICollectionFixture<TorchFixture>, ICollectionFixture<LocalizationFixture>, ICollectionFixture<GridIconModelFixture>
+    public class InitCollection : ICollectionFixture<PaddleFixture>, ICollectionFixture<TorchFixture>, ICollectionFixture<LocalizationFixture>, ICollectionFixture<GridIconModelFixture>, ICollectionFixture<MainProjectConfigFixture>
     {
     }
 }

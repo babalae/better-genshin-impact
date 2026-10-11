@@ -1,0 +1,18 @@
+<!--
+    云原神网页版宿主窗口，也是网页版实例唯一的界面。约束（见 Docs/design/game-runtime.md 7.2）：
+    - 使用系统标题栏的普通 Window：自绘标题栏属于客户区，会被截进游戏画面并使坐标偏移
+    - 不放任何 WPF 内容：WebView2 由代码后置直接托管（CoreWebView2Controller），铺满客户区，截图区域 = 客户区 = 游戏画面
+    - 客户区固定 1920x1080 物理像素，不可调整大小、不可最大化（尺寸在代码后置中按物理像素设置）
+    - 页面固定按 100% 渲染，不跟随系统缩放（见代码后置 ConfigureController）
+    - 不设 Topmost：现有 WGC 对 Topmost 窗口不做客户区裁剪
+-->
+<Window x:Class="BetterGenshinImpact.View.Windows.CloudWebHostWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="云原神"
+        Width="1296"
+        Height="759"
+        Background="Black"
+        ResizeMode="CanMinimize"
+        ShowInTaskbar="True"
+        WindowStartupLocation="Manual" />

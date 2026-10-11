@@ -27,8 +27,6 @@ public partial class AutoLeyLineOutcropFightConfig : ObservableObject
     [Serializable]
     public partial class FightFinishDetectConfig : ObservableObject
     {
-        [ObservableProperty] private string _battleEndProgressBarColor = "";
-        [ObservableProperty] private string _battleEndProgressBarColorTolerance = "";
         [ObservableProperty] private bool _fastCheckEnabled = false;
         [ObservableProperty] private bool _rotateFindEnemyEnabled = false;
         [ObservableProperty] private string _fastCheckParams = "";
@@ -72,8 +70,6 @@ public partial class AutoLeyLineOutcropFightConfig : ObservableObject
         QinDoublePickUp = source.QinDoublePickUp;
         Timeout = source.Timeout;
 
-        FinishDetectConfig.BattleEndProgressBarColor = source.FinishDetectConfig.BattleEndProgressBarColor;
-        FinishDetectConfig.BattleEndProgressBarColorTolerance = source.FinishDetectConfig.BattleEndProgressBarColorTolerance;
         FinishDetectConfig.FastCheckEnabled = source.FinishDetectConfig.FastCheckEnabled;
         FinishDetectConfig.RotateFindEnemyEnabled = source.FinishDetectConfig.RotateFindEnemyEnabled;
         FinishDetectConfig.FastCheckParams = source.FinishDetectConfig.FastCheckParams;
@@ -116,8 +112,6 @@ public partial class AutoLeyLineOutcropFightConfig : ObservableObject
 
         config.FinishDetectConfig = new AutoFightConfig.FightFinishDetectConfig
         {
-            BattleEndProgressBarColor = FinishDetectConfig.BattleEndProgressBarColor,
-            BattleEndProgressBarColorTolerance = FinishDetectConfig.BattleEndProgressBarColorTolerance,
             FastCheckEnabled = FinishDetectConfig.FastCheckEnabled,
             RotateFindEnemyEnabled = FinishDetectConfig.RotateFindEnemyEnabled,
             FastCheckParams = FinishDetectConfig.FastCheckParams,

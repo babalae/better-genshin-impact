@@ -19,6 +19,7 @@ using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.LogParse;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Http;
@@ -67,6 +68,13 @@ public partial class CommonSettingsPageViewModel : ViewModel
         Tuple.Create(TimeSpan.FromHours(1), "欧服 UTC+01"),
         Tuple.Create(TimeSpan.FromHours(-5), "美服 UTC-05")
     ];
+
+    public IReadOnlyDictionary<ItemIconRecognitionMode, string> ItemIconRecognitionModes { get; } =
+        new Dictionary<ItemIconRecognitionMode, string>
+        {
+            [ItemIconRecognitionMode.Item] = "ItemV2",
+            [ItemIconRecognitionMode.GridIcon] = "GridIcon"
+        };
 
     public CommonSettingsPageViewModel(IConfigService configService, INavigationService navigationService,
         NotificationService notificationService, CustomHtmlMaskService customHtmlMaskService,
@@ -229,7 +237,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
 
     private void OnOverlayStyleChanged()
     {
-        MaskWindow.InstanceNullable()?.Refresh();
+        // 绘制层样式由 MaskWindowViewModel 监听配置变化后自动重绘，这里只需刷新布局相关设置
         OnRefreshMaskSettings();
     }
 

@@ -1,5 +1,6 @@
 using BetterGenshinImpact.Core.Config;
 using Newtonsoft.Json;
+using OpenccNetLib;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -12,14 +13,18 @@ using System.Text;
 namespace BetterGenshinImpact.Service.I18n;
 
 /// <summary>
-/// 界面多语言服务。中文原文同时作为资源键和缺省文案，因此不需要 zh-Hans.json。
+/// 界面多语言服务。简体中文原文同时作为资源键和缺省文案，因此不需要 zh-Hans.json；
+/// 繁体中文在运行时通过 OpenCC 动态转换，因此也不需要 zh-Hant.json。
 /// </summary>
 public sealed class I18nService : INotifyPropertyChanged
 {
     public const string DefaultLanguage = "zh-Hans";
+    private const string TraditionalLanguage = "zh-Hant";
 
+    private static readonly Opencc TraditionalChineseConverter = new(OpenccConfig.S2Twp);
     private readonly string _i18nDirectory = Global.Absolute(Path.Combine("User", "I18n"));
     private IReadOnlyDictionary<string, string> _translations = new Dictionary<string, string>();
+    private bool _useTraditionalChinese;
     private long _revision;
 
     private I18nService()
@@ -38,7 +43,10 @@ public sealed class I18nService : INotifyPropertyChanged
     public void ChangeLanguage(string? language)
     {
         language = string.IsNullOrWhiteSpace(language) ? DefaultLanguage : language;
-        _translations = LoadTranslations(language);
+        _useTraditionalChinese = string.Equals(language, TraditionalLanguage, StringComparison.OrdinalIgnoreCase);
+        _translations = _useTraditionalChinese
+            ? new Dictionary<string, string>()
+            : LoadTranslations(language);
 
         try
         {
@@ -57,6 +65,11 @@ public sealed class I18nService : INotifyPropertyChanged
 
     public string Translate(string key)
     {
+        if (_useTraditionalChinese)
+        {
+            return TraditionalChineseConverter.Convert(key);
+        }
+
         return _translations.TryGetValue(key, out var translation) && !string.IsNullOrWhiteSpace(translation)
             ? translation
             : key;

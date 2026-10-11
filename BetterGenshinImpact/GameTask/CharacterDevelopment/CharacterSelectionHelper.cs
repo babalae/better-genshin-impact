@@ -1,7 +1,7 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.BgiVision;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -36,9 +36,18 @@ internal sealed record CharacterSelectionTarget(
     public bool Matches(string? characterName) =>
         characterName != null && CandidateNames.Contains(characterName, StringComparer.Ordinal);
 
-    public bool MatchesDisplayText(string? text) =>
-        !string.IsNullOrWhiteSpace(text)
-        && CandidateNames.Any(candidate => text.Contains(candidate, StringComparison.Ordinal));
+    public bool MatchesDisplayText(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        var normalizedText = text.Trim();
+        return CandidateNames.Any(candidate =>
+            1 - WeaponNameMatcher.LevenshteinDistance(normalizedText, candidate)
+            / (double)Math.Max(normalizedText.Length, candidate.Length) >= 0.5);
+    }
 }
 
 /// <summary>
@@ -217,7 +226,7 @@ internal static class CharacterSelectionHelper
         CancellationToken ct)
     {
         var gridParams = new GridParams(GridRoi1080, 5, 3, 40, 32, 0.024);
-        var scroller = new GridScroller(gridParams, logger, Simulation.SendInput, ct);
+        var scroller = new GridScroller(gridParams, logger, InputHub.Foreground, ct);
         var gridRoi = Rect1080(assetScale, GridRoi1080.X, GridRoi1080.Y, GridRoi1080.Width, GridRoi1080.Height);
 
         while (true)

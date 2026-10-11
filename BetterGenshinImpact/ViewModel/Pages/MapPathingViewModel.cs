@@ -6,6 +6,7 @@ using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Ui;
+using WindowHelper = BetterGenshinImpact.Helpers.Ui.WindowHelper;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Controls.Drawer;

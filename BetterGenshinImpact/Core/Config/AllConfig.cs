@@ -1,6 +1,7 @@
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoBoss;
+using BetterGenshinImpact.GameTask.AutoCombo.ComboBuild;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
@@ -59,6 +60,20 @@ public partial class AllConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private int _triggerInterval = 50;
+
+    /// <summary>
+    ///     WGC V2 帧率上限（毫秒，即最小更新间隔，限制 DWM 推帧频率以降低 GPU 占用）
+    ///     0 = 不启用限流（默认）；仅 Windows 11 24H2 及以上系统生效
+    /// </summary>
+    [ObservableProperty]
+    private int _wgcMinUpdateIntervalMs;
+
+    /// <summary>
+    ///     WGC V2 使用 CPU 颜色转换（BGRA→BGR 由 CPU CvtColor 完成）
+    ///     默认关闭 = GPU compute shader 打包 BGR24（回读量更小、CPU 零转换）；重启捕获后生效
+    /// </summary>
+    [ObservableProperty]
+    private bool _wgcV2UseCpuConvert;
 
     // /// <summary>
     // ///     WGC使用位图缓存
@@ -130,6 +145,11 @@ public partial class AllConfig : ObservableObject
     ///     自动钓鱼配置
     /// </summary>
     public AutoFishingConfig AutoFishingConfig { get; set; } = new();
+
+    /// <summary>
+    ///     自动连招配置
+    /// </summary>
+    public AutoComboBuildConfig AutoComboBuildConfig { get; set; } = new();
 
     /// <summary>
     ///     快速传送配置
@@ -272,49 +292,38 @@ public partial class AllConfig : ObservableObject
     /// </summary>
     public ChildSessionConfig ChildSessionConfig { get; set; } = new();
 
+    /// <summary>
+    /// 任意配置项变更后的回调（由 ConfigService 设置为防抖保存）
+    /// </summary>
     [JsonIgnore]
     public Action? OnAnyChangedAction { get; set; }
 
+    private ConfigChangeTracker? _changeTracker;
+
+    /// <summary>
+    /// 开始追踪整个配置对象图的变更（含嵌套对象与集合），重复调用无副作用
+    /// </summary>
     public void InitEvent()
     {
-        PropertyChanged += OnAnyPropertyChanged;
-        MaskWindowConfig.PropertyChanged += OnAnyPropertyChanged;
-        CommonConfig.PropertyChanged += OnAnyPropertyChanged;
-        GenshinStartConfig.PropertyChanged += OnAnyPropertyChanged;
-        NotificationConfig.PropertyChanged += OnAnyPropertyChanged;
+        if (_changeTracker != null)
+        {
+            return;
+        }
+
         NotificationConfig.PropertyChanged += OnNotificationPropertyChanged;
-        KeyBindingsConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoPickConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoSkipConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoFishingConfig.PropertyChanged += OnAnyPropertyChanged;
-        QuickTeleportConfig.PropertyChanged += OnAnyPropertyChanged;
-        MacroConfig.PropertyChanged += OnAnyPropertyChanged;
-        HotKeyConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoWoodConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoFightConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoDomainConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoBossConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoStygianOnslaughtConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoArtifactSalvageConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoRedeemCodeConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoEatConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoLeyLineOutcropConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoCookConfig.PropertyChanged += OnAnyPropertyChanged;
-        MapMaskConfig.PropertyChanged += OnAnyPropertyChanged;
-        AutoMusicGameConfig.PropertyChanged += OnAnyPropertyChanged;
-        TpConfig.PropertyChanged += OnAnyPropertyChanged;
-        MusicConfig.PropertyChanged += OnAnyPropertyChanged;
-        ScriptConfig.PropertyChanged += OnAnyPropertyChanged;
-        PathingConditionConfig.PropertyChanged += OnAnyPropertyChanged;
-        DevConfig.PropertyChanged += OnAnyPropertyChanged;
-        HardwareAccelerationConfig.PropertyChanged += OnAnyPropertyChanged;
-        ChildSessionConfig.PropertyChanged += OnAnyPropertyChanged;
-        SkillCdConfig.PropertyChanged += OnAnyPropertyChanged;
+        _changeTracker = new ConfigChangeTracker(OnConfigChanged);
+        _changeTracker.Track(this);
     }
 
-    public void OnAnyPropertyChanged(object? sender, EventArgs args)
+    /// <param name="sender">触发变更的对象（某个子配置、嵌套对象或集合）</param>
+    private void OnConfigChanged(object sender)
     {
-        GameTaskManager.RefreshTriggerConfigs();
+        // 实时触发器每帧读取配置，不需要在这里通知；只有切换遮罩显示相关的开关时清掉旧的识别结果
+        if (sender is MaskWindowConfig)
+        {
+            TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
+        }
+
         OnAnyChangedAction?.Invoke();
     }
 

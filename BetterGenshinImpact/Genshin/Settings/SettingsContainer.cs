@@ -17,6 +17,8 @@ public class SettingsContainer
     public ResolutionSettings? Resolution;
     public InputDataSettings? InputData;
     public OverrideControllerSettings? OverrideController;
+    public InputKeyMapSettings InputKeyMap = InputKeyMapSettings.Empty;
+    public TpsAimControlType? PcTpsAimControlType;
 
     public SettingsContainer(GenshinRegistryType registryType = GenshinRegistryType.Auto, string? gameExecutablePath = null)
     {
@@ -78,6 +80,8 @@ public class SettingsContainer
             Resolution = new ResolutionSettings(_registryType, _gameExecutablePath);
             InputData = new InputDataSettings(data);
             OverrideController = new OverrideControllerSettings(data);
+            InputKeyMap = InputKeyMapSettings.Parse(data.OverrideInputKeyMapKeyList, data.OverrideInputKeyMapValueList);
+            PcTpsAimControlType = data.PcTpsAimControlType;
         }
         catch (Exception e)
         {

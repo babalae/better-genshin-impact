@@ -1,11 +1,10 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Exceptions;
 using BetterGenshinImpact.GameTask.Model.Area;
-using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -53,7 +52,7 @@ public class SwitchPartyTask
             bool isOpened = false;
             for (int attempt = 1; attempt <= maxAttempts; attempt++)
             {
-                Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
+                InputHub.Foreground.SimulateAction(GIActions.OpenPartySetupScreen);
 
                 // 考虑加载时间 2s，共检查 4.2s，如果失败则抛出异常
 
@@ -114,7 +113,7 @@ public class SwitchPartyTask
             Logger.LogInformation("当前队伍[{Name}]即为目标队伍，无需切换", currTeamName);
             if (isInPartyViewUi)
             {
-                Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
+                InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
                 await Delay(500, ct);
                 await _returnMainUiTask.Start(ct);
             }
@@ -155,9 +154,9 @@ public class SwitchPartyTask
         await Task.Delay(50, ct);
         GameCaptureRegion.GameRegion1080PPosClick(700, 125);
         await Task.Delay(50, ct);
-        Simulation.SendInput.Mouse.LeftButtonDown();
+        InputHub.Foreground.Mouse.LeftButtonDown();
         await Task.Delay(450, ct);
-        Simulation.SendInput.Mouse.LeftButtonUp();
+        InputHub.Foreground.Mouse.LeftButtonUp();
         await Task.Delay(100, ct);
 
         Rect regionOfInterest = new Rect(0, (int)(80 * _assetScale), partyDeleteBtn.Right, partyDeleteBtn.Top - (int)(80 * _assetScale));
@@ -189,7 +188,7 @@ public class SwitchPartyTask
                 {
                     if (Regex.IsMatch(textRegion.Text, partyName))
                     {
-                        page.ClickTo(textRegion.Right + textRegion.Width, textRegion.Bottom);
+                        page.ClickTo(textRegion.Right + 100 * _assetScale, textRegion.Bottom);
                         await Delay(200, ct);
                         Logger.LogInformation("切换队伍成功: {Text}", textRegion.Text);
                         await ConfirmParty(page, ct, isInPartyViewUi);
@@ -199,8 +198,13 @@ public class SwitchPartyTask
                     }
                 }
 
-                Region lowest = partySwitchNameRaList.Where(r => r.X > 35 * _assetScale && r.X < 100 * _assetScale).OrderBy(r => r.Y).Last();
-                lowest.DrawSelf("底部的队伍");
+                Region? lowest = partySwitchNameRaList.Where(r => r.X > 35 * _assetScale && r.X < 100 * _assetScale).OrderBy(r => r.Y).LastOrDefault();
+                lowest?.DrawSelf("底部的队伍");
+                if (lowest == null)
+                {
+                    Logger.LogWarning("管理队伍界面无法识别到底部队伍文字，当前识别结果：{Text}", string.Join(" | ", partySwitchNameRaList.Select(r => r.Text)));
+                    break;
+                }
 
                 if (lowest.Y < 777 * _assetScale)   // 如果最底下是空队伍则不会有队伍名，以此判断是否已遍历完成
                 {
@@ -222,7 +226,7 @@ public class SwitchPartyTask
         }
         finally
         {
-            VisionContext.Instance().DrawContent.ClearAll();
+            TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
         }
 
         // 未找到

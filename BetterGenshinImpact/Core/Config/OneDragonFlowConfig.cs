@@ -69,6 +69,12 @@ public partial class OneDragonFlowConfig : ObservableObject
     private int _autoBossRunCount = 1;
 
     [ObservableProperty]
+    private int _autoBossTotalRunCountLimit = 0;
+
+    [ObservableProperty]
+    private int _autoBossCompletedRunCount = 0;
+
+    [ObservableProperty]
     private bool _autoBossUseTransientResin = false;
 
     [ObservableProperty]
@@ -101,6 +107,22 @@ public partial class OneDragonFlowConfig : ObservableObject
         if (value < 1)
         {
             AutoBossRunCount = 1;
+        }
+    }
+
+    partial void OnAutoBossTotalRunCountLimitChanged(int value)
+    {
+        if (value < 0)
+        {
+            AutoBossTotalRunCountLimit = 0;
+        }
+    }
+
+    partial void OnAutoBossCompletedRunCountChanged(int value)
+    {
+        if (value < 0)
+        {
+            AutoBossCompletedRunCount = 0;
         }
     }
 

@@ -42,19 +42,6 @@ public partial class AutoFightConfig : ObservableObject
     public partial class FightFinishDetectConfig : ObservableObject
     {
         /// <summary>
-        /// 判断战斗结束读条颜色，不同帧率可能下会有些不同，默认为95,235,255
-        /// </summary>
-        [ObservableProperty]
-        private string _battleEndProgressBarColor = "";
-
-        /// <summary>
-        /// 对于上方颜色地偏差值，即±某个值，例如 6或6,6,6，前者表示所有偏差值都一样，后者则可以分别设置
-        /// </summary>
-        [ObservableProperty]
-        private string _battleEndProgressBarColorTolerance = "";
-        
-        
-        /// <summary>
         /// 快速检查战斗结束（默认关闭）：完成一轮动作后，如果满足条件，则触发一次战斗结束检查。
         /// </summary>
         [ObservableProperty]
@@ -187,9 +174,6 @@ public partial class AutoFightConfig : ObservableObject
     
     [ObservableProperty]
     private bool _guardianCombatSkip = false;
-    
-    [ObservableProperty]
-    private bool _skipModel = false;
     
     [ObservableProperty]
     private bool _guardianAvatarHold = false;

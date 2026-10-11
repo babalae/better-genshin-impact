@@ -8,7 +8,7 @@ using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
-using Ookii.Dialogs.Wpf;
+using Microsoft.Win32;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
@@ -17,6 +17,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows;
+using System.Windows.Interop;
 using System.Windows.Media.Imaging;
 using CvRect = OpenCvSharp.Rect;
 
@@ -297,7 +298,7 @@ public partial class RecognitionTemplateEditorViewModel : ViewModel, IDisposable
     [RelayCommand]
     private void BrowseRecognitionJson()
     {
-        var dialog = new VistaSaveFileDialog
+        var dialog = new SaveFileDialog
         {
             Title = "选择或创建 Recognition.json",
             Filter = "Recognition JSON (*.json)|*.json|所有文件 (*.*)|*.*",
@@ -325,13 +326,17 @@ public partial class RecognitionTemplateEditorViewModel : ViewModel, IDisposable
     [RelayCommand]
     private void BrowseAssetsRoot()
     {
-        var dialog = new VistaFolderBrowserDialog
+        var dialog = new Wpf.Ui.Violeta.Win32.OpenFolderDialog
         {
             Description = "选择输出文件夹（Recognition.json 写入此目录，图片写入 1920x1080 子目录）",
             UseDescriptionForTitle = true,
             SelectedPath = Directory.Exists(AssetsRootPath) ? AssetsRootPath : ""
         };
-        if (dialog.ShowDialog(GetActiveWindow()) != true)
+        var owner = GetActiveWindow();
+        var accepted = owner is null
+            ? dialog.ShowDialog()
+            : dialog.ShowDialog(new WindowInteropHelper(owner).Handle);
+        if (accepted != true)
         {
             return;
         }
@@ -781,7 +786,7 @@ public partial class RecognitionTemplateEditorViewModel : ViewModel, IDisposable
                ?? Application.Current?.MainWindow;
     }
 
-    private static void TrySetDialogInitialPath(VistaSaveFileDialog dialog, string path)
+    private static void TrySetDialogInitialPath(SaveFileDialog dialog, string path)
     {
         if (string.IsNullOrWhiteSpace(path))
         {

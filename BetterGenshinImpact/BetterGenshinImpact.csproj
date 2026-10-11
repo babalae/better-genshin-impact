@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<AssemblyName>BetterGI</AssemblyName>
-		<Version>0.64.1-alpha.1</Version>
+		<Version>0.66.2-alpha.2</Version>
 		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
@@ -38,16 +38,23 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<!-- 云原神网页版输入 SDK，由 WebView2InputBridge.InstallAsync 读取并注入页面 -->
+		<None Remove="Resources\JavaScript\ys-input-inject.js" />
+		<EmbeddedResource Include="Resources\JavaScript\ys-input-inject.js" LogicalName="BetterGenshinImpact.Resources.JavaScript.ys-input-inject.js" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="AvalonEdit" Version="6.3.1.120" />
-		<PackageReference Include="CsTrees" Version="1.0.4" />
 
 		<PackageReference Include="BetterGI.VCRuntime" Version="14.44.35208" />
-		<PackageReference Include="BetterGI.Assets.Map" Version="1.0.21" />
-        <PackageReference Include="BetterGI.Assets.Model" Version="1.0.33" />
-		<PackageReference Include="BetterGI.Assets.Other" Version="1.0.25" />
+		<PackageReference Include="BetterGI.Assets.Map" Version="1.0.24" />
+        <PackageReference Include="BetterGI.Assets.Model" Version="1.0.36" />
+		<PackageReference Include="BetterGI.Assets.Other" Version="1.0.27" />
 
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
 		<PackageReference Include="Clipper2" Version="2.0.0" />
+		<PackageReference Include="CsTrees" Version="1.0.5" />
+		<PackageReference Include="CsTrees.MEAI" Version="1.0.2" />
 		<PackageReference Include="DeviceId" Version="6.9.0" />
 		<PackageReference Include="DeviceId.Windows" Version="6.9.0" />
 		<PackageReference Include="DeviceId.Windows.Wmi" Version="6.9.0" />
@@ -60,6 +67,8 @@
 		<PackageReference Include="Markdig" Version="1.3.2" />
 		<PackageReference Include="Melanchall.DryWetMidi" Version="8.0.3" />
 		<PackageReference Include="Meziantou.Framework.Win32.CredentialManager" Version="1.7.4" />
+		<PackageReference Include="Microsoft.Extensions.AI" Version="10.6.0" />
+		<PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.6.0" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.4" />
 		<PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.4" />
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.4" />
@@ -73,7 +82,7 @@
 		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2592.51" />
 		<PackageReference Include="MimeKit" Version="4.16.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-		<PackageReference Include="Ookii.Dialogs.Wpf" Version="5.0.1" />
+		<PackageReference Include="OpenccNetLib" Version="1.7.0" />
 		<PackageReference Include="OpenCvSharp4.WpfExtensions" Version="4.11.0.20250507" />
 		<PackageReference Include="OpenCvSharp4.Extensions" Version="4.11.0.20250507" />
 		<PackageReference Include="OpenCvSharp4.Windows" Version="4.11.0.20250507" />
@@ -83,7 +92,6 @@
 		<PackageReference Include="MouseKeyHook" Version="5.7.1" />
 		<PackageReference Include="NCalc" Version="6.2.0" />
 		<PackageReference Include="PresentMonFps" Version="2.0.5" />
-		<PackageReference Include="Sdl.MultiSelectComboBox" Version="1.0.103" />
 		<PackageReference Include="Semver" Version="3.0.0" />
 		<PackageReference Include="Serilog.Extensions.Logging" Version="9.0.1" />
 		<PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
@@ -99,7 +107,7 @@
 		<PackageReference Include="WPF-UI" Version="4.3.0" />
 		<PackageReference Include="WPF-UI.DependencyInjection" Version="4.3.0" />
 		<PackageReference Include="WPF-UI.Tray" Version="4.3.0" />
-		<PackageReference Include="WPF-UI.Violeta" Version="4.3.0.3" />
+		<PackageReference Include="WPF-UI.Violeta" Version="4.3.0.15" />
 		<PackageReference Include="gong-wpf-dragdrop" Version="3.2.1" />
 		<PackageReference Include="YamlDotNet" Version="16.3.0" />
 		<PackageReference Include="YoloSharp" Version="6.0.3" />
@@ -264,5 +272,17 @@
 	<ItemGroup>
 	  <_DeploymentManifestIconFile Remove="Resources\Images\logo.ico" />
 	</ItemGroup>
-	
+
+	<!--
+		Melanchall.DryWetMidi 的 build\Melanchall.DryWetMidi.targets 会无条件把 x86/x64/macOS
+		三份本地库都复制到输出目录（它没有使用 runtimes/{rid}/native 结构，不感知 RID）。
+		本项目只支持 win-x64，这里在 AssignTargetPaths 之前把多余的 Native32.dll（x86）
+		和 Native64.dylib（macOS）从 None 项中移除，避免它们被打进 Release 产物。
+	-->
+	<Target Name="RemoveDryWetMidiUnusedNativeLibs" BeforeTargets="AssignTargetPaths">
+		<ItemGroup>
+			<None Remove="@(None)" Condition="'%(Filename)' == 'Melanchall_DryWetMidi_Native32' Or ('%(Filename)' == 'Melanchall_DryWetMidi_Native64' And '%(Extension)' == '.dylib')" />
+		</ItemGroup>
+	</Target>
+
 </Project>

@@ -1,5 +1,5 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition.ONNX;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
@@ -87,17 +87,16 @@ public class AutoFightTask : ISoloTask
         public double BlockCheckBeforeBattleSeconds = 0;
         public bool PaimonEndCheckEnabled = true;
         public int PaimonEndCheckDelayMs = 75;
+        public int RotaryFactor = 6;
 
+        // 保留仅传入结束检测配置的构造方式，兼容不持有完整 AutoFightParam 的调用方。
+        // 此路径沿用 RotaryFactor 的默认值；持有完整参数时由下方构造函数覆盖为用户配置值。
         public TaskFightFinishDetectConfig(AutoFightParam.FightFinishDetectConfig finishDetectConfig)
         {
             FastCheckEnabled = finishDetectConfig.FastCheckEnabled;
             CheckAfterSwitchAvatar = finishDetectConfig.CheckAfterSwitchAvatar;
             ParseCheckTimeString(finishDetectConfig.FastCheckParams, out CheckTime, CheckNames);
             ParseFastCheckEndDelayString(finishDetectConfig.CheckEndDelay, out DelayTime, DelayTimes);
-            BattleEndProgressBarColor =
-                ParseStringToTuple(finishDetectConfig.BattleEndProgressBarColor, (95, 235, 255));
-            BattleEndProgressBarColorTolerance =
-                ParseSingleOrCommaSeparated(finishDetectConfig.BattleEndProgressBarColorTolerance, (6, 6, 6));
             DetectDelayTime =
                 (int)((double.TryParse(finishDetectConfig.BeforeDetectDelay, out var result) ? result : 0.45) * 1000);
             RotateFindEnemyEnabled = finishDetectConfig.RotateFindEnemyEnabled;
@@ -109,8 +108,11 @@ public class AutoFightTask : ISoloTask
             PaimonEndCheckDelayMs = (int)(Math.Clamp(finishDetectConfig.PaimonEndCheckDelay, 0.05, 0.4) * 1000);
         }
 
-        public (int, int, int) BattleEndProgressBarColor { get; }
-        public (int, int, int) BattleEndProgressBarColorTolerance { get; }
+        public TaskFightFinishDetectConfig(AutoFightParam taskParam)
+            : this(taskParam.FinishDetectConfig)
+        {
+            RotaryFactor = Math.Clamp(taskParam.RotaryFactor, 1, 13);
+        }
 
         public static void ParseCheckTimeString(
             string input,
@@ -188,39 +190,6 @@ public class AutoFightTask : ISoloTask
                 // 其他格式，跳过不处理
             }
         }
-
-
-        static bool IsSingleNumber(string input, out int result)
-        {
-            return int.TryParse(input, out result);
-        }
-
-        static (int, int, int) ParseSingleOrCommaSeparated(string input, (int, int, int) defaultValue)
-        {
-            // 如果是单个数字
-            if (IsSingleNumber(input, out var singleNumber))
-            {
-                return (singleNumber, singleNumber, singleNumber);
-            }
-
-            return ParseStringToTuple(input, defaultValue);
-        }
-
-        static (int, int, int) ParseStringToTuple(string input, (int, int, int) defaultValue)
-        {
-            // 尝试按逗号分割字符串
-            var parts = input.Split(',');
-            if (parts.Length == 3 &&
-                int.TryParse(parts[0], out var num1) &&
-                int.TryParse(parts[1], out var num2) &&
-                int.TryParse(parts[2], out var num3))
-            {
-                return (num1, num2, num3);
-            }
-
-            // 如果解析失败，返回默认值
-            return defaultValue;
-        }
     }
 
     private TaskFightFinishDetectConfig _finishDetectConfig;
@@ -235,27 +204,7 @@ public class AutoFightTask : ISoloTask
             _predictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiWorld);
         }
 
-        _finishDetectConfig = new TaskFightFinishDetectConfig(_taskParam.FinishDetectConfig);
-    }
-    public CombatScenes GetCombatScenesWithRetry()
-    {
-        const int maxRetries = 5;
-        var retryDelayMs = 1000; // 可选：重试间隔，单位毫秒
-
-        for (int attempt = 1; attempt <= maxRetries; attempt++)
-        {
-            var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
-            if (combatScenes.CheckTeamInitialized())
-            {
-                return combatScenes;
-            }
-        
-            if (attempt < maxRetries)
-            {
-                Thread.Sleep(retryDelayMs); // 可选：延迟再试
-            }
-        }
-        throw new Exception("识别队伍角色失败（已重试 5 次）");
+        _finishDetectConfig = new TaskFightFinishDetectConfig(_taskParam);
     }
     // 方法1：判断是否是单个数字
 
@@ -273,7 +222,7 @@ public class AutoFightTask : ISoloTask
         try
         {
             LogScreenResolution();
-        var combatScenes = GetCombatScenesWithRetry();
+        var combatScenes = CombatScenes.GetCombatScenesWithRetry();
         /*var combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
         if (!combatScenes.CheckTeamInitialized())
         {
@@ -399,7 +348,7 @@ public class AutoFightTask : ISoloTask
                         {
                             using (AvatarRecognition.BeginExclusiveOperation())
                             {
-                                await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, ct, true, _taskParam.RotaryFactor);
+                                await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, ct, true, _finishDetectConfig.RotaryFactor);
                             }
                         }
                         
@@ -535,7 +484,7 @@ public class AutoFightTask : ISoloTask
             }
             finally
             {
-                Simulation.ReleaseAllKey();
+                InputHub.ReleaseAll();
                 FightStatusFlag = false;
             }
         }, cts2.Token);
@@ -646,7 +595,7 @@ public class AutoFightTask : ISoloTask
 
                 for (int attempt = 0; attempt < 6; attempt++)
                 {
-                    Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
+                    InputHub.Foreground.SimulateAction(GIActions.OpenPartySetupScreen);
                     var enterGameAppear = await NewRetry.WaitForElementAppear(
                         ElementRecognition.Get("PartyBtnChooseView"),
                         () => { },
@@ -744,7 +693,7 @@ public class AutoFightTask : ISoloTask
             
             if (picker != null)
             {
-                Simulation.ReleaseAllKey();
+                InputHub.ReleaseAll();
 
                 if (picker.Name == "枫原万叶")
                 {
@@ -849,7 +798,7 @@ public class AutoFightTask : ISoloTask
                                 }
                             }
                             
-                            Simulation.ReleaseAllKey();
+                            InputHub.ReleaseAll();
                         }
                     }
                 }
@@ -894,14 +843,6 @@ public class AutoFightTask : ISoloTask
     private void LogScreenResolution()
     {
         AssertUtils.CheckGameResolution("自动战斗");
-    }
-
-    static bool AreDifferencesWithinBounds((int, int, int) a, (int, int, int) b, (int, int, int) c)
-    {
-        // 计算每个位置的差值绝对值并进行比较
-        return Math.Abs(a.Item1 - b.Item1) < c.Item1 &&
-               Math.Abs(a.Item2 - b.Item2) < c.Item2 &&
-               Math.Abs(a.Item3 - b.Item3) < c.Item3;
     }
 
     public async Task<bool> CheckFightFinish(int delayTime = 1500, int detectDelayTime = 450)
@@ -958,7 +899,8 @@ public class AutoFightTask : ISoloTask
                 bool? result = null;
                 try
                 {
-                    result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, ct);
+                    result = await AutoFightSeek.SeekAndFightAsync(Logger, detectDelayTime, delayTime, ct,
+                        rotaryFactor: finishDetectConfig.RotaryFactor);
                 }
                 catch (Exception ex)
                 {
@@ -980,7 +922,7 @@ public class AutoFightTask : ISoloTask
             // Logger.LogInformation("打开编队界面检查战斗是否结束，延时{detectDelayTime}毫秒检查", detectDelayTime);
             Logger.LogInformation("打开编队界面检查战斗是否结束");
             // 最终方案确认战斗结束
-            Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
+            InputHub.Foreground.SimulateAction(GIActions.OpenPartySetupScreen);
 
             if (finishDetectConfig.PaimonEndCheckEnabled)
             {
@@ -995,7 +937,7 @@ public class AutoFightTask : ISoloTask
                     // 派蒙头像可见 → 编队界面未打开（按L未生效），战斗未结束，按X取消后提前跳出战斗结束检查
                     Logger.LogInformation("派蒙头像可见，提前跳出战斗结束检查");
                     // 按X取消编队界面（走统一按键配置，默认X，支持用户改键）
-                    Simulation.SendInput.SimulateAction(GIActions.Drop);
+                    InputHub.Foreground.SimulateAction(GIActions.Drop);
                     return false;
                 }
 
@@ -1013,15 +955,13 @@ public class AutoFightTask : ISoloTask
             
             var b3 = ra.SrcMat.At<Vec3b>(50, 790); //进度条颜色
             var whiteTile = ra.SrcMat.At<Vec3b>(50, 768); //白块
-            Simulation.SendInput.SimulateAction(GIActions.Drop);
+            InputHub.Foreground.SimulateAction(GIActions.Drop);
             if (IsWhite(whiteTile.Item2, whiteTile.Item1, whiteTile.Item0) &&
-                IsYellow(b3.Item2, b3.Item1,
-                    b3.Item0) /* AreDifferencesWithinBounds(_finishDetectConfig.BattleEndProgressBarColor, (b3.Item0, b3.Item1, b3.Item2), _finishDetectConfig.BattleEndProgressBarColorTolerance)*/
-               )
+                IsYellow(b3.Item2, b3.Item1, b3.Item0))
             {
                 Logger.LogInformation("识别到战斗结束");
                 //取消正在进行的换队
-                Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
+                InputHub.Foreground.SimulateAction(GIActions.OpenPartySetupScreen);
                 return true;
             }
 

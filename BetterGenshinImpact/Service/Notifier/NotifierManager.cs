@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
 using Microsoft.Extensions.Logging;
 using System;
@@ -103,7 +104,7 @@ public class NotifierManager
             }
             catch (System.Exception ex)
             {
-                Logger.LogWarning("{name} 通知发送失败: {ex}", notifier.Name, ex.Message);
+                LogNotifierFailure(notifier, ex);
             }
         }
         finally
@@ -112,6 +113,9 @@ public class NotifierManager
         }
     }
 
+    /// <summary>
+    /// 以租约方式向指定类型的通知器发送通知（在途计数，供普通通知路径使用）。
+    /// </summary>
     public async Task SendNotificationAsync<T>(BaseNotificationData content) where T : INotifier
     {
         INotifier? notifier;
@@ -133,7 +137,7 @@ public class NotifierManager
             }
             catch (System.Exception ex)
             {
-                Logger.LogWarning("{name} 通知发送失败: {ex}", notifier.Name, ex.Message);
+                LogNotifierFailure(notifier, ex);
             }
         }
         finally
@@ -219,6 +223,22 @@ public class NotifierManager
             await notifier.SendAsync(content);
         }
         catch (System.Exception ex)
+        {
+            Logger.LogWarning("{name} 通知发送失败: {ex}", notifier.Name, ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// 记录通知器发送失败的日志。对微信 Clawbot 推送会话过期（ret=-2 prepare failed）给出
+    /// 明确的解决提示，引导用户在微信侧给 Clawbot 私聊任意内容以激活推送端口。
+    /// </summary>
+    private static void LogNotifierFailure(INotifier notifier, System.Exception ex)
+    {
+        if (ex is WechatClawbotSessionExpiredException)
+        {
+            Logger.LogWarning("微信 Clawbot 推送权限已过期，请在微信侧给 Clawbot 私聊任意内容以激活推送端口");
+        }
+        else
         {
             Logger.LogWarning("{name} 通知发送失败: {ex}", notifier.Name, ex.Message);
         }

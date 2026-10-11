@@ -1,9 +1,12 @@
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Mask;
 using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoFishing;
+using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.Runtime.Win32;
 using BetterGenshinImpact.Genshin.Paths;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
@@ -29,6 +32,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 using System;
 using System.Collections.Frozen;
+using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -57,7 +61,25 @@ public partial class HomePageViewModel : ViewModel, IDisposable
 
     [ObservableProperty] private string? _selectedMode = CaptureModes.BitBlt.ToString();
 
-    [ObservableProperty] private bool _taskDispatcherEnabled = false;
+    [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsTriggerButtonChecked))]
+    private bool _taskDispatcherEnabled = false;
+
+    /// <summary>
+    /// 正在获取运行环境（找窗、关联启动游戏）
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsTriggerButtonChecked))]
+    private bool _isRuntimeStarting;
+
+    /// <summary>
+    /// 启动按钮显示为"停止"：运行中，或正在启动（此时点击提交停止请求，本次启动结束后不再绑定）
+    /// </summary>
+    public bool IsTriggerButtonChecked => TaskDispatcherEnabled || IsRuntimeStarting;
+
+    /// <summary>
+    /// 「云原神网页版」卡片只在 Primary 显示
+    /// </summary>
+    public bool IsCloudWebEntryVisible => InstanceBootstrap.Current.Context.IsRoot;
 
     [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(StartTriggerCommand))]
     private bool _startButtonEnabled = true;
@@ -69,16 +91,15 @@ public partial class HomePageViewModel : ViewModel, IDisposable
 
     public bool IsChildSessionEntryVisible => InstanceBootstrap.Current.Context.IsRoot;
 
-    private MaskWindow? _maskWindow;
+    private readonly IMaskWindowHost _maskWindowHost;
+    private readonly CustomHtmlMaskService _customHtmlMaskService;
     private readonly ILogger<HomePageViewModel> _logger = App.GetLogger<HomePageViewModel>();
 
-    private readonly TaskTriggerDispatcher _taskDispatcher;
+    private readonly GameRuntimeService _gameRuntimeService;
+    private readonly Win32RuntimeProvider _win32RuntimeProvider;
     private readonly MouseKeyMonitor _mouseKeyMonitor = new();
     private readonly IBannerImageService _bannerImageService;
     private CancellationTokenSource? _bannerDownloadCancellationTokenSource;
-
-    // 记录上次使用原神的句柄
-    private IntPtr _hWnd;
 
     [ObservableProperty] private InferenceDeviceType[] _inferenceDeviceTypes = Enum.GetValues<InferenceDeviceType>();
 
@@ -89,18 +110,38 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     [ObservableProperty]
     private bool _isCustomNetworkBanner = false;
     private readonly ChildSessionService _childSessionService;
+    private readonly WebViewInstanceStore _webViewInstanceStore;
+    private readonly WebViewInstanceLauncher _webViewInstanceLauncher;
 
     public HomePageViewModel(
         IConfigService configService,
-        TaskTriggerDispatcher taskTriggerDispatcher,
+        GameRuntimeService gameRuntimeService,
+        Win32RuntimeProvider win32RuntimeProvider,
         ChildSessionService childSessionService,
-        IBannerImageService bannerImageService)
+        IBannerImageService bannerImageService,
+        WebViewInstanceStore webViewInstanceStore,
+        WebViewInstanceLauncher webViewInstanceLauncher,
+        IMaskWindowHost maskWindowHost,
+        CustomHtmlMaskService customHtmlMaskService)
     {
-        _taskDispatcher = taskTriggerDispatcher;
+        _gameRuntimeService = gameRuntimeService;
+        _win32RuntimeProvider = win32RuntimeProvider;
+        _maskWindowHost = maskWindowHost;
+        _customHtmlMaskService = customHtmlMaskService;
+        _gameRuntimeService.Started += OnRuntimeStarted;
+        _gameRuntimeService.Stopped += OnRuntimeStopped;
+        _gameRuntimeService.StartingChanged += OnRuntimeStartingChanged;
+        _webViewInstanceStore = webViewInstanceStore;
+        _webViewInstanceLauncher = webViewInstanceLauncher;
         _childSessionService = childSessionService;
         _bannerImageService = bannerImageService;
         Config = configService.Get();
-        ReadGameInstallPath();
+        // 本地原神的安装目录与网页版无关，网页版实例不去读注册表，也不写共享配置
+        if (!InstanceBootstrap.Current.Context.IsWebView)
+        {
+            ReadGameInstallPath();
+        }
+
         InitializeBannerImage();
 
 
@@ -108,8 +149,12 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         // https://github.com/babalae/better-genshin-impact/issues/394
         if (!OsVersionHelper.IsWindows10_1903_OrGreater)
         {
-            // 删除 _modeNames 中的 CaptureModes.WindowsGraphicsCapture
-            _modeNames = _modeNames.Where(x => x.EnumName != CaptureModes.WindowsGraphicsCapture.ToString()).ToList();
+            // 删除 _modeNames 中的 CaptureModes.WindowsGraphicsCapture / WindowsGraphicsCaptureV2
+            // （V2 帧池用 CreateFreeThreaded，同样要求 1903+）
+            _modeNames = _modeNames
+                .Where(x => x.EnumName != CaptureModes.WindowsGraphicsCapture.ToString()
+                         && x.EnumName != CaptureModes.WindowsGraphicsCaptureV2.ToString())
+                .ToList();
 
             // DirectML 是在 Windows 10 版本 1903 和 Windows SDK 的相应版本中引入的。
             // https://learn.microsoft.com/zh-cn/windows/ai/directml/dml
@@ -126,9 +171,10 @@ public partial class HomePageViewModel : ViewModel, IDisposable
             }
             else if (msg.PropertyName == "SwitchTriggerStatus")
             {
-                if (_taskDispatcherEnabled)
+                // 启动中也按"停止"处理：本次启动结束后不再绑定
+                if (IsTriggerButtonChecked)
                 {
-                    OnStopTrigger();
+                    _ = OnStopTrigger();
                 }
                 else
                 {
@@ -151,6 +197,12 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     {
         // OnTest();
 
+        // 每次进入首页都刷新网页版实例的运行状态
+        if (IsCloudWebEntryVisible)
+        {
+            RefreshCloudWebInstances();
+        }
+
         // 组件首次加载时运行一次。
         if (!_autoRun)
         {
@@ -166,7 +218,8 @@ public partial class HomePageViewModel : ViewModel, IDisposable
 
     public void HandleActivation(CommandLineOptions commandLineOptions)
     {
-        if (commandLineOptions.Action == CommandLineAction.Start)
+        // 网页版实例没有主界面，启动后总是打开宿主窗口并等待绑定（见 ApplicationHostService.HandleWebViewActivation）
+        if (commandLineOptions.Action == CommandLineAction.Start || InstanceBootstrap.Current.Context.IsWebView)
         {
             _ = OnStartTriggerAsync();
         }
@@ -178,9 +231,9 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     private void OnClosed()
     {
         CancelBannerDownload();
-        OnStopTrigger();
+        _ = OnStopTrigger();
         // 等待任务结束
-        _maskWindow?.Close();
+        _maskWindowHost.Close();
     }
 
     public void Dispose()
@@ -192,8 +245,9 @@ public partial class HomePageViewModel : ViewModel, IDisposable
 
         _disposed = true;
         OnClosed();
-        _taskDispatcher.UiTaskStopTickEvent -= OnUiTaskStopTick;
-        _taskDispatcher.UiTaskStartTickEvent -= OnUiTaskStartTick;
+        _gameRuntimeService.Started -= OnRuntimeStarted;
+        _gameRuntimeService.Stopped -= OnRuntimeStopped;
+        _gameRuntimeService.StartingChanged -= OnRuntimeStartingChanged;
         WeakReferenceMessenger.Default.UnregisterAll(this);
         _mouseKeyMonitor.Dispose();
         GC.SuppressFinalize(this);
@@ -206,7 +260,7 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         if (TaskDispatcherEnabled)
         {
             _logger.LogInformation("► 切换捕获模式至[{Mode}]，截图器自动重启...", Config.CaptureMode);
-            OnStopTrigger();
+            await OnStopTrigger();
             await OnStartTriggerAsync();
         }
     }
@@ -244,8 +298,11 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         {
             if (hWnd != IntPtr.Zero)
             {
-                _hWnd = hWnd;
-                Start(hWnd);
+                // 已在运行时与改造前一致：不做任何事
+                if (!_gameRuntimeService.IsRunning)
+                {
+                    _gameRuntimeService.Start(_win32RuntimeProvider.AttachTo(hWnd));
+                }
             }
             else
             {
@@ -265,145 +322,191 @@ public partial class HomePageViewModel : ViewModel, IDisposable
 
     private bool CanStartTrigger() => StartButtonEnabled;
 
+    /// <summary>
+    /// 启动截图器。找窗、关联启动、HDR 处理都由运行环境的 Provider 完成
+    /// </summary>
     [RelayCommand(CanExecute = nameof(CanStartTrigger))]
     public async Task OnStartTriggerAsync()
     {
-        await DisableGenshinHdrIfNeededAsync();
-
-        var hWnd = SystemControl.FindGenshinImpactHandle();
-        if (hWnd == IntPtr.Zero)
-        {
-            if (Config.GenshinStartConfig.LinkedStartEnabled)
-            {
-                if (string.IsNullOrEmpty(Config.GenshinStartConfig.InstallPath))
-                {
-                    await ThemedMessageBox.ErrorAsync("没有找到原神的安装路径");
-                    return;
-                }
-
-                hWnd = await SystemControl.StartFromLocalAsync(Config.GenshinStartConfig.InstallPath);
-                if (hWnd != IntPtr.Zero)
-                {
-                    TaskContext.Instance().LinkedStartGenshinTime = DateTime.Now; // 标识关联启动原神的时间
-                }
-                else
-                {
-                    return;
-                }
-            }
-
-            if (hWnd == IntPtr.Zero)
-            {
-                await ThemedMessageBox.ErrorAsync("未找到原神窗口，请先启动原神！");
-                return;
-            }
-        }
-
-        Start(hWnd);
-    }
-
-    private Task DisableGenshinHdrIfNeededAsync()
-    {
-        if (!Config.GenshinStartConfig.AutoDisableGenshinHdrEnabled)
-        {
-            return Task.CompletedTask;
-        }
-
-        if (!GenshinHdrRegistryHelper.TryDisableHdr(out _))
-        {
-            return Task.CompletedTask;
-        }
-
-        // 这行日志可能看不到
-        _logger.LogWarning(
-            "检测到原神 HDR 已开启并已自动关闭。如游戏已在运行，请重启游戏后生效。");
-        return Task.CompletedTask;
-    }
-
-    private void Start(IntPtr hWnd)
-    {
-        Debug.WriteLine($"原神启动句柄{hWnd}");
-        lock (this)
-        {
-            if (Config.TriggerInterval <= 0)
-            {
-                ThemedMessageBox.Error("触发器触发频率必须大于0");
-                return;
-            }
-
-            if (!TaskDispatcherEnabled)
-            {
-                _hWnd = hWnd;
-                _taskDispatcher.Start(hWnd, GetCaptureMode(), Config.TriggerInterval);
-                _taskDispatcher.UiTaskStopTickEvent -= OnUiTaskStopTick;
-                _taskDispatcher.UiTaskStartTickEvent -= OnUiTaskStartTick;
-                _taskDispatcher.UiTaskStopTickEvent += OnUiTaskStopTick;
-                _taskDispatcher.UiTaskStartTickEvent += OnUiTaskStartTick;
-                _maskWindow ??= new MaskWindow();
-                _maskWindow.Show();
-                MaskWindow.Instance().RefreshPosition();
-                App.GetService<CustomHtmlMaskService>()?.ShowIfEnabled();
-                _mouseKeyMonitor.Subscribe(hWnd);
-                TaskDispatcherEnabled = true;
-            }
-        }
-    }
-
-    private CaptureModes GetCaptureMode()
-    {
-        try
-        {
-            return Config.CaptureMode.ToCaptureMode();
-        }
-        catch (Exception e)
-        {
-            TaskContext.Instance().Config.CaptureMode = CaptureModes.BitBlt.ToString();
-            return CaptureModes.BitBlt;
-        }
+        await _gameRuntimeService.StartAsync();
     }
 
     private bool CanStopTrigger() => StopButtonEnabled;
 
     [RelayCommand(CanExecute = nameof(CanStopTrigger))]
-    private void OnStopTrigger()
+    private async Task OnStopTrigger()
     {
-        Stop();
+        await _gameRuntimeService.StopAsync();
     }
 
-    private void Stop()
+    /// <summary>
+    /// 运行环境绑定完成（UI 线程）：显示遮罩；仅 Win32 实例订阅键鼠监听
+    /// </summary>
+    private void OnRuntimeStarted(object? sender, EventArgs e)
     {
-        lock (this)
+        var handle = _gameRuntimeService.Current!.Window.Handle;
+        _maskWindowHost.Attach(handle);
+        _customHtmlMaskService.ShowIfEnabled();
+        if (_gameRuntimeService.Kind != GameRuntimeKind.WebPage)
         {
-            if (TaskDispatcherEnabled)
-            {
-                CancellationContext.Instance.Cancel(); // 取消独立任务的运行
-                _taskDispatcher.Stop();
-                if (_maskWindow != null && _maskWindow.IsExist())
-                {
-                    _maskWindow?.Hide();
-                }
-                else
-                {
-                    _maskWindow?.Close();
-                    _maskWindow = null;
-                }
+            _mouseKeyMonitor.Subscribe(handle);
+        }
+        TaskDispatcherEnabled = true;
+        PrintSystemInfo();
+    }
 
-                TaskDispatcherEnabled = false;
-                _mouseKeyMonitor.Unsubscribe();
-                TaskContext.Instance().IsInitialized = false;
-            }
+    /// <summary>
+    /// 截图器启动后输出运行环境信息，并检查常见的识别干扰项
+    /// </summary>
+    private void PrintSystemInfo()
+    {
+        _logger.LogInformation("更好的原神 {Version}", Global.Version);
+        var systemInfo = TaskContext.Instance().SystemInfo;
+        var width = systemInfo.GameScreenSize.Width;
+        var height = systemInfo.GameScreenSize.Height;
+        var dpiScale = TaskContext.Instance().DpiScale;
+        _logger.LogInformation("遮罩窗口已启动，游戏大小{Width}x{Height}，素材缩放{Scale}，DPI缩放{Dpi}",
+            width, height, systemInfo.AssetScale.ToString("F"), dpiScale);
+
+        if (width * 9 != height * 16)
+        {
+            _logger.LogError("当前游戏分辨率不是16:9，一条龙、配队识别、地图传送、地图追踪等所有独立任务与全自动任务相关功能，都将会无法正常使用！");
+        }
+
+        // MSIAfterburner.exe 在左上角会导致识别失败
+        if (Process.GetProcessesByName("MSIAfterburner").Length > 0)
+        {
+            _logger.LogWarning("检测到 MSI Afterburner 正在运行，如果信息位于特定UI上遮盖图像识别要素可能导致识别失败，请关闭MSI Afterburner 或者调整信息位置后重试！");
+        }
+
+        // 读取游戏注册表配置。网页版的游戏设置保存在云端，本机注册表里的是本地原神的设置，检查结果会误导用户
+        if (_gameRuntimeService.Kind != GameRuntimeKind.WebPage)
+        {
+            Genshin.Settings2.GameSettingsChecker.LoadGameSettingsAndCheck();
         }
     }
 
-    private void OnUiTaskStopTick(object? sender, EventArgs e)
+    /// <summary>
+    /// 运行环境解绑完成（UI 线程）：隐藏遮罩、取消键鼠监听
+    /// </summary>
+    private void OnRuntimeStopped(object? sender, EventArgs e)
     {
-        UIDispatcherHelper.Invoke(Stop);
+        _maskWindowHost.Detach();
+
+        TaskDispatcherEnabled = false;
+        _mouseKeyMonitor.Unsubscribe();
     }
 
-    private void OnUiTaskStartTick(object? sender, EventArgs e)
+    private void OnRuntimeStartingChanged(object? sender, EventArgs e)
     {
-        UIDispatcherHelper.Invoke(() => Start(_hWnd));
+        IsRuntimeStarting = _gameRuntimeService.IsStarting;
     }
+
+    #region 云原神网页版实例（Primary 首页）
+
+    [ObservableProperty]
+    private ObservableCollection<CloudWebInstanceItem> _cloudWebInstances = [];
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(LaunchCloudWebInstanceCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DeleteCloudWebInstanceCommand))]
+    private CloudWebInstanceItem? _selectedCloudWebInstance;
+
+    /// <summary>
+    /// 重新读取实例列表与运行状态，尽量保持当前选中项
+    /// </summary>
+    [RelayCommand]
+    private void RefreshCloudWebInstances()
+    {
+        var selectedName = SelectedCloudWebInstance?.Name;
+        var items = _webViewInstanceStore.List()
+            .Select(name => new CloudWebInstanceItem(name, WebViewInstanceStore.IsRunning(name)))
+            .ToList();
+        CloudWebInstances = new ObservableCollection<CloudWebInstanceItem>(items);
+        SelectedCloudWebInstance = items.FirstOrDefault(i => string.Equals(i.Name, selectedName, StringComparison.OrdinalIgnoreCase))
+                                   ?? items.FirstOrDefault();
+    }
+
+    [RelayCommand]
+    private void CreateCloudWebInstance()
+    {
+        var name = PromptDialog.Prompt(
+            $"实例名用于区分不同账号，同时作为该实例 WebView 数据（登录态等）的目录名。\n最多 {WebViewInstanceStore.MaxNameLength} 个字符，不能包含 \\ / : * ? \" < > |",
+            "新建云原神网页版实例");
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return;
+        }
+
+        try
+        {
+            var created = _webViewInstanceStore.Create(name);
+            RefreshCloudWebInstances();
+            SelectedCloudWebInstance = CloudWebInstances.FirstOrDefault(i => i.Name == created);
+        }
+        catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
+        {
+            ThemedMessageBox.Warning(ex.Message, "新建实例失败");
+        }
+    }
+
+    private bool CanOperateCloudWebInstance() => SelectedCloudWebInstance is { IsRunning: false };
+
+    [RelayCommand(CanExecute = nameof(CanOperateCloudWebInstance))]
+    private async Task LaunchCloudWebInstanceAsync()
+    {
+        var item = SelectedCloudWebInstance;
+        if (item == null)
+        {
+            return;
+        }
+
+        try
+        {
+            _webViewInstanceLauncher.Launch(item.Name);
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or Win32Exception)
+        {
+            ThemedMessageBox.Warning(ex.Message, "启动实例失败");
+            RefreshCloudWebInstances();
+            return;
+        }
+
+        // 新进程获取实例名互斥体需要一点时间，稍后再刷新运行状态
+        await Task.Delay(3000);
+        RefreshCloudWebInstances();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanOperateCloudWebInstance))]
+    private async Task DeleteCloudWebInstanceAsync()
+    {
+        var item = SelectedCloudWebInstance;
+        if (item == null)
+        {
+            return;
+        }
+
+        var result = await ThemedMessageBox.QuestionAsync(
+            $"确定删除实例「{item.Name}」吗？\n该实例的登录态等 WebView 数据会一并删除，且无法恢复。",
+            "删除云原神网页版实例");
+        if (result != System.Windows.MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        try
+        {
+            _webViewInstanceStore.Delete(item.Name);
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or IOException or UnauthorizedAccessException)
+        {
+            ThemedMessageBox.Warning(ex.Message, "删除实例失败");
+        }
+
+        RefreshCloudWebInstances();
+    }
+
+    #endregion
 
     [RelayCommand]
     public void OnGoToWikiUrl()
@@ -449,26 +552,24 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     }
 
     [RelayCommand]
-    public async Task SelectInstallPathAsync()
+    public void SelectInstallPath()
     {
-        await Task.Run(() =>
+        var dialog = new OpenFileDialog
         {
-            // 弹出选择文件夹对话框
-            var dialog = new Ookii.Dialogs.Wpf.VistaOpenFileDialog
-            {
-                Filter = "原神|YuanShen.exe;GenshinImpact.exe|可执行文件|*.exe|所有文件|*.*"
-            };
-            if (dialog.ShowDialog() == true)
-            {
-                var path = dialog.FileName;
-                if (string.IsNullOrEmpty(path))
-                {
-                    return;
-                }
+            Filter = "原神|YuanShen.exe;GenshinImpact.exe|可执行文件|*.exe|所有文件|*.*"
+        };
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
 
-                Config.GenshinStartConfig.InstallPath = path;
-            }
-        });
+        var path = dialog.FileName;
+        if (string.IsNullOrEmpty(path))
+        {
+            return;
+        }
+
+        Config.GenshinStartConfig.InstallPath = path;
     }
 
     private void ReadGameInstallPath()
@@ -537,7 +638,7 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }); // 内容行
 
         // 创建 TitleBar
-        var titleBar = new TitleBar
+        var titleBar = new Wpf.Ui.Controls.TitleBar
         {
             Title = "启动参数说明",
             Icon = new ImageIcon

@@ -1,6 +1,6 @@
+using BetterGenshinImpact.Core.Input;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -20,7 +20,7 @@ public class EnterAndExitWonderlandJob
         // 等待千星奇域界面出现
         await NewRetry.WaitForElementAppear(
             ElementRecognition.Get("WonderlandClose"),
-            () => Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_F6),
+            () => InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_F6),
             ct,
             10,
             1000
@@ -102,7 +102,7 @@ public class EnterAndExitWonderlandJob
         // 等待菜单界面出现
         await NewRetry.WaitForElementAppear(
             ElementRecognition.Get("BtnBackTeyvat"),
-            () => Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE),
+            () => InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE),
             ct,
             20,
             800

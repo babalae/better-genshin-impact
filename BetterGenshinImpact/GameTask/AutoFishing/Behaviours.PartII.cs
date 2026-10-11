@@ -1,18 +1,17 @@
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.ONNX;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoFishing.Model;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
-using BetterGenshinImpact.GameTask.GetGridIcons;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
-using BetterGenshinImpact.View.Drawable;
+using BetterGenshinImpact.Core.Mask;
 using Compunet.YoloSharp;
 using CsTrees;
 using CsTrees.Blackboard;
-using Fischless.WindowsInput;
+using BetterGenshinImpact.Core.Input;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
@@ -117,7 +116,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     public partial class TurnAround : Behaviour, IScreenshotBehaviour
     {
         private readonly ILogger _logger;
-        private readonly IInputSimulator _input;
+        private readonly IInputChannel _input;
         private readonly BgiYoloPredictor _bgiYoloPredictor;
 
         [BlackboardKey(Access = Access.Read)]
@@ -126,7 +125,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<Action<int>> Sleep { get; private set; } = null!;
 
-        private TurnAround(string name, ILogger logger, IInputSimulator input, BgiYoloPredictor bgiYoloPredictor) : base(name)
+        private TurnAround(string name, ILogger logger, IInputChannel input, BgiYoloPredictor bgiYoloPredictor) : base(name)
         {
             _logger = logger;
             _input = input;
@@ -150,19 +149,19 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 }
 
                 sleep(1000);
-                VisionContext.Instance().DrawContent.ClearAll();
+                imageRegion.DrawingBoard.ClearAll();
 
                 var oneFourthX = imageRegion.CacheImage.Width / 4;
                 var threeFourthX = imageRegion.CacheImage.Width * 3 / 4;
                 if (fishpond.FishpondRect.Left > threeFourthX)
                 {
-                    Simulation.SendInput.Mouse.MoveMouseBy(100, 0);
+                    InputHub.Foreground.Mouse.MoveMouseBy(100, 0);
                     sleep(100);
                     return Status.Running;
                 }
                 else if (fishpond.FishpondRect.Right < oneFourthX)
                 {
-                    Simulation.SendInput.Mouse.MoveMouseBy(-100, 0);
+                    InputHub.Foreground.Mouse.MoveMouseBy(-100, 0);
                     sleep(100);
                     return Status.Running;
                 }
@@ -172,13 +171,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 // 加入昼夜切换后，使用KeyPress按S键被莫名吞掉了
                 // 并且发现如果原地空格跳跃后紧跟按一下S键，角色会向侧后方走去
                 // 于是使用"按一段时间"来代替KeyPress的"按一瞬间"，以求稳定的表现
-                Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_S);
+                InputHub.Foreground.Keyboard.KeyDown(User32.VK.VK_S);
                 sleep(100);
-                Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_S);
+                InputHub.Foreground.Keyboard.KeyUp(User32.VK.VK_S);
                 sleep(400);
-                Simulation.SendInput.Keyboard.KeyDown(User32.VK.VK_W);
+                InputHub.Foreground.Keyboard.KeyDown(User32.VK.VK_W);
                 sleep(100);
-                Simulation.SendInput.Keyboard.KeyUp(User32.VK.VK_W);
+                InputHub.Foreground.Keyboard.KeyUp(User32.VK.VK_W);
                 sleep(700);
 
                 #endregion
@@ -200,9 +199,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     public partial class EnterFishingMode : Behaviour, IScreenshotBehaviour
     {
         private readonly ILogger _logger;
-        private readonly IInputSimulator _input;
-        private readonly InferenceSession _session;
-        private readonly Dictionary<string, float[]> _prototypes;
+        private readonly IInputChannel _input;
+        private readonly IItemIconRecognizer _itemRecognizer;
         private readonly TimeProvider _timeProvider;
         private DateTimeOffset? _pressFWaitEndTime;
         private DateTimeOffset? _clickWhiteConfirmButtonWaitEndTime;
@@ -225,12 +223,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.Write)]
         public BehaviourKeyAccess<bool> PitchReset { get; private set; } = null!;
 
-        private EnterFishingMode(string name, ILogger logger, IInputSimulator input, InferenceSession session, Dictionary<string, float[]> prototypes, TimeProvider? timeProvider = null, CultureInfo? cultureInfo = null, IStringLocalizer? stringLocalizer = null) : base(name)
+        private EnterFishingMode(string name, ILogger logger, IInputChannel input, IItemIconRecognizer itemRecognizer, TimeProvider? timeProvider = null, CultureInfo? cultureInfo = null, IStringLocalizer? stringLocalizer = null) : base(name)
         {
             _logger = logger;
             _input = input;
-            _session = session;
-            _prototypes = prototypes;
+            _itemRecognizer = itemRecognizer;
             _timeProvider = timeProvider ?? TimeProvider.System;
             _fishingLocalizedString = stringLocalizer == null ? "钓鱼" : stringLocalizer.WithCultureGet(cultureInfo, "钓鱼");
         }
@@ -261,7 +258,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 // 经验算在 16:9 常见分辨率（720p/1080p/1440p）下 Y+H 不会超出图像高度，暂不加钳位
                 using Mat subMat = imageRegion.SrcMat.SubMat(new Rect((int)(0.824 * imageRegion.Width), (int)(0.669 * imageRegion.Height), (int)(0.065 * imageRegion.Width), (int)(0.065 * imageRegion.Width)));
                 using Mat resized = subMat.Resize(new Size(125, 125));
-                (string? predName, _) = GridIconsAccuracyTestTask.Infer(resized, _session, _prototypes);
+                string? predName = _itemRecognizer.Recognize(resized);
                 if (predName!.TryGetEnumValueFromDescription(out BaitType? parsedBait))
                 {
                     SelectedBait.Set(parsedBait);
@@ -306,8 +303,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     public partial class QuitFishingMode : Behaviour, IScreenshotBehaviour
     {
         private readonly ILogger _logger;
-        private readonly IInputSimulator _input;
-        private readonly string _fishingLocalizedString;
+        private readonly IInputChannel _input;
 
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<ImageRegion> Screenshot { get; private set; } = null!;
@@ -318,11 +314,10 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<int> HandoffTimeSeconds { get; private set; } = null!;
 
-        private QuitFishingMode(string name, ILogger logger, IInputSimulator input, CultureInfo? cultureInfo = null, IStringLocalizer? stringLocalizer = null) : base(name)
+        private QuitFishingMode(string name, ILogger logger, IInputChannel input) : base(name)
         {
             _logger = logger;
             _input = input;
-            _fishingLocalizedString = stringLocalizer == null ? "钓鱼" : stringLocalizer.WithCultureGet(cultureInfo, "钓鱼");
         }
 
         protected async override Task<Status> Update()
@@ -339,9 +334,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 return Status.Running;
             }
 
-            if (Bv.FindF(imageRegion, _fishingLocalizedString))
+            if (Bv.IsInMainUi(imageRegion))
             {
-                _logger.LogInformation("退出完成");
+                _logger.LogInformation("已在主界面，退出完成");
                 return Status.Success;
             }
 
@@ -445,9 +440,16 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         protected async override Task<Status> Update()
         {
             _bitmap?.Dispose();
-            _bitmap = TaskControl.CaptureGameImageNoRetry(TaskTriggerDispatcher.Instance().GameCapture);
+            var gameCapture = TaskContext.Instance().Runtime?.Capture;
+            _bitmap = TaskControl.CaptureGameImageNoRetry(gameCapture);
             if (_bitmap == null)
             {
+                if (gameCapture == null || !gameCapture.IsCapturing)
+                {
+                    // 截图器被停止后（如启动停止 BetterGI），按取消处理
+                    throw new OperationCanceledException("截图器已停止");
+                }
+
                 _logger.LogWarning("截图失败");
                 return Status.Failure;
             }

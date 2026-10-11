@@ -1,8 +1,7 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
-using BetterGenshinImpact.View.Drawable;
 using Microsoft.Extensions.Logging;
 using System;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -48,7 +47,7 @@ public class OneKeyExpeditionTask
 
                     // 3.退出派遣页面 ESC
                     Sleep(500);
-                    Simulation.SendInput.Keyboard.KeyPress(VK.VK_ESCAPE);
+                    InputHub.Foreground.Keyboard.KeyPress(VK.VK_ESCAPE);
                     Logger.LogInformation("探索派遣：{Text}", "完成");
                     break;
                 }
@@ -70,7 +69,7 @@ public class OneKeyExpeditionTask
         }
         finally
         {
-            VisionContext.Instance().DrawContent.ClearAll();
+            TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
         }
     }
 }

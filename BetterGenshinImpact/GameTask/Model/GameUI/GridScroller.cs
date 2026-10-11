@@ -1,7 +1,6 @@
-using BetterGenshinImpact.Core.Simulator;
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
-using Fischless.WindowsInput;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -21,14 +20,14 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
         private readonly Rect roi;
         private readonly CancellationToken ct;
         private readonly ILogger logger;
-        private readonly InputSimulator input = Simulation.SendInput;
+        private readonly IInputChannel input;
         private readonly int columns;
         private readonly int s1Round;
         private readonly int roundMilliseconds;
         private readonly int s2Round;
         private readonly double s3Scale;
 
-        internal GridScroller(GridParams @params, ILogger logger, InputSimulator input, CancellationToken ct)
+        internal GridScroller(GridParams @params, ILogger logger, IInputChannel input, CancellationToken ct)
         {
             this.roi = @params.Roi;
             this.ct = ct;

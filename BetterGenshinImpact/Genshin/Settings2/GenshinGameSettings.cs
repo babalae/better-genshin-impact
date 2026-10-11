@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -172,6 +172,18 @@ public class GenshinGameSettings
     [JsonProperty("_overrideControllerMapValueList")]
     public List<string> OverrideControllerMapValueList { get; set; } // 覆盖控制器映射值列表
 
+    [JsonProperty("overrideInputKeyMapKeyList")]
+    public List<int>? OverrideInputKeyMapKeyList { get; set; } // 新版键鼠映射配置键列表
+
+    [JsonProperty("overrideInputKeyMapValueList")]
+    public List<string>? OverrideInputKeyMapValueList { get; set; } // 新版键鼠映射配置值列表
+
+    [JsonProperty("pcTpsAimControlType")]
+    public TpsAimControlType? PcTpsAimControlType { get; set; } // 至冬第三人称射击操作预设，0:预设方案二 1:预设方案一
+
+    [Newtonsoft.Json.JsonIgnore]
+    public InputKeyMapSettings InputKeyMap { get; private set; } = InputKeyMapSettings.Empty;
+
     [JsonProperty("rewiredMapMigrateRecord")]
     public List<string> RewiredMapMigrateRecord { get; set; } // 重布线映射迁移记录
 
@@ -332,7 +344,15 @@ public class GenshinGameSettings
 
     public static GenshinGameSettings? Parse(string json)
     {
-        return JsonConvert.DeserializeObject<GenshinGameSettings>(json);
+        GenshinGameSettings? settings = JsonConvert.DeserializeObject<GenshinGameSettings>(json);
+        if (settings is not null)
+        {
+            settings.InputKeyMap = InputKeyMapSettings.Parse(
+                settings.OverrideInputKeyMapKeyList,
+                settings.OverrideInputKeyMapValueList);
+        }
+
+        return settings;
     }
 
 

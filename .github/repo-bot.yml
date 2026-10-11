@@ -6,7 +6,7 @@ providers:
   openAiCompatible:
     enabled: true
     baseUrl: https://api.openai.com/v1
-    model: gpt-5.4
+    model: gpt-5.6-luna
     apiStyle: responses
     timeoutMs: 30000
 
@@ -19,6 +19,7 @@ issues:
     commentAnchor: issue-bot:validation
     templates:
       - key: bug
+        issueType: Bug
         detect:
           markers:
             - bug
@@ -29,6 +30,7 @@ issues:
             aliases:
               - 系统环境
               - System Environment
+              - 运行环境与关键配置
           - id: version
             aliases:
               - BetterGI 版本号
@@ -42,11 +44,11 @@ issues:
               - 复现步骤
               - Reproduction steps
         labels:
-          whenValid:
-            - BUG
+          whenValid: []
           whenInvalid:
             - 需要更多信息
       - key: feature
+        issueType: Feature
         detect:
           markers:
             - feature
@@ -57,16 +59,17 @@ issues:
             aliases:
               - 功能请求
               - Feature Request
+              - 需求或建议
           - id: scenario
             aliases:
               - 使用场景
               - Use Case
         labels:
-          whenValid:
-            - 功能建议
+          whenValid: []
           whenInvalid:
             - 需要更多信息
       - key: suggestion
+        issueType: Suggestions
         detect:
           markers:
             - suggestion
@@ -82,11 +85,11 @@ issues:
               - 预期收益
               - Expected Benefit
         labels:
-          whenValid:
-            - 功能建议
+          whenValid: []
           whenInvalid:
             - 需要更多信息
       - key: question
+        issueType: Question
         detect:
           markers:
             - question
@@ -102,8 +105,7 @@ issues:
               - 已尝试内容
               - What I Tried
         labels:
-          whenValid:
-            - 问题咨询
+          whenValid: []
           whenInvalid:
             - 需要更多信息
       - key: normal
@@ -143,9 +145,6 @@ issues:
     enabled: true
     autoCreateMissing: true
     managed:
-      - BUG
-      - 功能建议
-      - 问题咨询
       - 需要更多信息
       - 重复
     definitions:

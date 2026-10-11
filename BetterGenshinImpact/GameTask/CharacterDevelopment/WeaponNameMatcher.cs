@@ -154,18 +154,20 @@ internal static class WeaponNameMatcher
         var builder = new StringBuilder(text.Length);
         foreach (var character in text)
         {
-            //因为对比的前提条件是相同武器类型，武器名称长度相同
-            //所以这几个映射足够覆盖当前版本所有武器
+            //对比的前提条件是相同武器类型，武器名称长度相同
             builder.Append(character switch
             {
+                // 预防性映射
                 '鉄' or '鐵' => '铁',
                 '黒' => '黑',
                 '劍' or '剣' => '剑',
                 '蝕' => '蚀',
                 '鍾' or '鐘' => '钟',
                 '銀' => '银',
-                '彈' or '弾' => '弹',
                 '獵' or '猟' => '猎',
+                // 实际会出现
+                '彈' or '弾' => '弹', // 弾弓 -> 弹弓
+                '釘' => '釭',         // 银釘 -> 银釭
                 _ => character
             });
         }

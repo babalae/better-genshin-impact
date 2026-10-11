@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Input;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,7 +7,6 @@ using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -534,23 +534,23 @@ internal sealed class BvFlowServices
             Delay = async milliseconds => await page.Wait(milliseconds),
             GetTimestamp = System.Diagnostics.Stopwatch.GetTimestamp,
             GetElapsedMilliseconds = startedAt => System.Diagnostics.Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds,
-            KeyPress = key => Simulation.SendInput.Keyboard.KeyPress(key),
+            KeyPress = key => InputHub.Foreground.Keyboard.KeyPress(key),
             LeftClick = GameCaptureRegion.GameRegion1080PPosClick,
             RightClick = (x, y) =>
             {
                 GameCaptureRegion.GameRegion1080PPosMove(x, y);
-                Simulation.SendInput.Mouse.RightButtonClick();
+                InputHub.Foreground.Mouse.RightButtonClick();
             },
             MiddleClick = (x, y) =>
             {
                 GameCaptureRegion.GameRegion1080PPosMove(x, y);
-                Simulation.SendInput.Mouse.MiddleButtonClick();
+                InputHub.Foreground.Mouse.MiddleButtonClick();
             },
             MoveTo = GameCaptureRegion.GameRegion1080PPosMove,
             Drag = async (fromX, fromY, toX, toY, duration) =>
             {
                 GameCaptureRegion.GameRegion1080PPosMove(fromX, fromY);
-                Simulation.SendInput.Mouse.LeftButtonDown();
+                InputHub.Foreground.Mouse.LeftButtonDown();
                 try
                 {
                     var firstDelay = duration / 2;
@@ -560,7 +560,7 @@ internal sealed class BvFlowServices
                 }
                 finally
                 {
-                    Simulation.SendInput.Mouse.LeftButtonUp();
+                    InputHub.Foreground.Mouse.LeftButtonUp();
                 }
             }
         };

@@ -1,94 +1,94 @@
 {
   "info": {
-    "name": "无相之草前往",
-    "type": "collect",
     "authors": [
       {
-        "name": "Tool_tingsu",
-        "links": ""
+        "links": "https://github.com/1004452714",
+        "name": "DarkFlameMaster"
       }
     ],
-    "version": "1.0",
+    "bgi_version": "0.45.0",
     "description": "",
-    "map_name": "Teyvat",
-    "bgi_version": "0.52.0",
+    "enable_monster_loot_split": false,
+    "last_modified_time": 1788835720032,
     "map_match_method": "TemplateMatch",
+    "map_name": "Teyvat",
+    "name": "无相之草前往",
     "tags": [],
-    "last_modified_time": 1753788793031,
-    "enable_monster_loot_split": false
+    "type": "collect",
+    "version": "1.0"
   },
   "positions": [
     {
+      "action": "",
+      "action_params": "",
       "id": 1,
-      "x": 4036.58203125,
-      "y": -2464.6328125,
+      "move_mode": "walk",
       "type": "teleport",
-      "move_mode": "walk",
-      "action": "",
-      "action_params": ""
+      "x": 4036.583,
+      "y": -2464.6309
     },
     {
+      "action": "log_output",
+      "action_params": "洞口会小概率坐标识别错，为追求稳定，不使用四叶印",
       "id": 2,
-      "x": 4032.9716796875,
-      "y": -2476.08203125,
-      "type": "path",
       "move_mode": "walk",
-      "action": "",
-      "action_params": ""
+      "type": "path",
+      "x": 4026.0117,
+      "y": -2474.8037
     },
     {
+      "action": "stop_flying",
+      "action_params": "1000",
       "id": 3,
-      "x": 4020.458984375,
-      "y": -2489.951171875,
-      "type": "path",
       "move_mode": "fly",
-      "action": "stop_flying",
-      "action_params": "1000"
+      "type": "path",
+      "x": 4015.2695,
+      "y": -2483.1543
     },
     {
+      "action": "combat_script",
+      "action_params": "wait(1)",
       "id": 4,
-      "x": 4004.5302734375,
-      "y": -2468.169921875,
-      "type": "path",
       "move_mode": "walk",
-      "action": "up_down_grab_leaf",
-      "action_params": ""
+      "type": "path",
+      "x": 4011.8594,
+      "y": -2472.1455
     },
     {
+      "action": "",
+      "action_params": "",
       "id": 5,
-      "x": 4003.3828125,
-      "y": -2441.16796875,
+      "move_mode": "run",
       "type": "path",
-      "move_mode": "walk",
-      "action": "up_down_grab_leaf",
-      "action_params": ""
+      "x": 3999.5293,
+      "y": -2436.6504
     },
     {
+      "action": "",
+      "action_params": "",
       "id": 6,
-      "x": 3986.103515625,
-      "y": -2428.77734375,
+      "move_mode": "run",
       "type": "path",
-      "move_mode": "walk",
-      "action": "up_down_grab_leaf",
-      "action_params": ""
+      "x": 3977.2295,
+      "y": -2414.6641
     },
     {
-      "id": 7,
-      "x": 3975.9375,
-      "y": -2412.4384765625,
-      "type": "path",
-      "move_mode": "walk",
-      "action": "up_down_grab_leaf",
-      "action_params": ""
-    },
-    {
-      "id": 8,
-      "x": 3902.85546875,
-      "y": -2437.8798828125,
-      "type": "path",
-      "move_mode": "fly",
       "action": "stop_flying",
-      "action_params": ""
+      "action_params": "",
+      "id": 7,
+      "move_mode": "fly",
+      "type": "path",
+      "x": 3923.5967,
+      "y": -2431.9766
+    },
+    {
+      "action": "",
+      "action_params": "",
+      "id": 8,
+      "move_mode": "run",
+      "type": "path",
+      "x": 3902.0371,
+      "y": -2438.2422
     }
   ]
 }

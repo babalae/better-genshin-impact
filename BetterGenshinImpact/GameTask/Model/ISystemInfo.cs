@@ -1,6 +1,5 @@
 ﻿using BetterGenshinImpact.GameTask.Model.Area;
 using OpenCvSharp;
-using System.Diagnostics;
 using Vanara.PInvoke;
 using Size = System.Drawing.Size;
 
@@ -45,12 +44,6 @@ namespace BetterGenshinImpact.GameTask.Model
         /// 捕获窗口区域 大于1080P则为1920x1080
         /// </summary>
         public Rect ScaleMax1080PCaptureRect { get; set; }
-
-        public Process GameProcess { get; }
-
-        public string GameProcessName { get; }
-
-        public int GameProcessId { get; }
 
         public DesktopRegion DesktopRectArea { get; }
     }

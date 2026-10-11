@@ -1,7 +1,7 @@
+using BetterGenshinImpact.Core.Input;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoWood.Utils;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
@@ -29,7 +29,7 @@ public class ExitAndReloginJob
         // 等待菜单界面出现
         await NewRetry.WaitForElementAppear(
             GetAutoWoodRecognitionObject("MenuBag"),
-            () => Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE),
+            () => InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE),
             ct,
             10,
             1200
