@@ -262,7 +262,9 @@ public sealed class MusicGuidedSession : IDisposable
         }
         finally
         {
-            if (wasAttached)
+            // 识别期间会话可能已经被停掉 / 释放（玩家按 Esc 退出、切歌、离开页面都会走 Stop）：
+            // 这时不能再把覆盖层贴回去。_redetecting 无论如何都要清掉。
+            if (wasAttached && !IsFinished && !_disposed)
             {
                 overlay!.Attach(ResolveGameHandle());
             }
@@ -271,6 +273,12 @@ public sealed class MusicGuidedSession : IDisposable
             {
                 _redetecting = false;
             }
+        }
+
+        // 同理：会话已经结束就不要再写回键位参数了，那会覆盖掉后来那次会话的共享 KeyLayout。
+        if (IsFinished || _disposed)
+        {
+            return false;
         }
 
         if (grid == null)
@@ -724,12 +732,6 @@ public sealed class MusicGuidedSession : IDisposable
 
     private void OnKeyReleased(Keys key)
     {
-        // 与 OnKeyPressed 同理：Ctrl / Alt 组合键属于覆盖层的功能键。
-        if ((Control.ModifierKeys & (Keys.Control | Keys.Alt)) != 0)
-        {
-            return;
-        }
-
         var pianoKey = ToPianoKey(key);
         if (pianoKey == null)
         {
@@ -739,7 +741,11 @@ public sealed class MusicGuidedSession : IDisposable
         var value = pianoKey.Value;
         lock (_sync)
         {
-            if (IsFinished || _redetecting || !_heldKeys.Remove(value))
+            // 释放必须清掉「已按下」状态：就算此刻按着 Ctrl / Alt（组合键是覆盖层自己的功能键），
+            // 或者正在重新识别，也不能把已经松开的键留在 _heldKeys 里，否则覆盖层会一直显示它被按住。
+            // 没记过的键（比如 Ctrl+R 里的 R）自然删不掉，直接返回即可。
+            var removed = _heldKeys.Remove(value);
+            if (IsFinished || _redetecting || !removed)
             {
                 return;
             }
