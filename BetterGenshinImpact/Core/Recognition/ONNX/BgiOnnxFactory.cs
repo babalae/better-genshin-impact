@@ -303,12 +303,18 @@ public class BgiOnnxFactory
     public BgiYoloPredictor CreateYoloPredictor(BgiOnnxModel model)
     {
         // logger.LogDebug("[Yolo]创建yolo预测器，模型: {ModelName}", model.Name);
-        if (!EnableCache) return new BgiYoloPredictor(model, model.ModalPath, CreateSessionOptions(model, false));
-
-        var cached = GetCached(model);
-        return cached == null
-            ? new BgiYoloPredictor(model, model.ModalPath, CreateSessionOptions(model, true))
-            : new BgiYoloPredictor(model, cached, CreateSessionOptions(model, false));
+        var cached = EnableCache ? GetCached(model) : null;
+        var options = CreateSessionOptions(model, EnableCache && cached == null);
+        try
+        {
+            // 延迟创建会话，配置的所有权转交给预测器。
+            return new BgiYoloPredictor(model, cached ?? model.ModalPath, options);
+        }
+        catch
+        {
+            options.Dispose();
+            throw;
+        }
     }
 
     /// <summary>
@@ -323,13 +329,9 @@ public class BgiOnnxFactory
         ProviderType[]? providerTypes = null;
         if (CpuOcr && ocr) providerTypes = [ProviderType.Cpu];
 
-        if (!EnableCache)
-            return new InferenceSession(model.ModalPath, CreateSessionOptions(model, false, providerTypes));
-
-        var cached = GetCached(model, providerTypes);
-        return cached == null
-            ? new InferenceSession(model.ModalPath, CreateSessionOptions(model, true, providerTypes))
-            : new InferenceSession(cached, CreateSessionOptions(model, false, providerTypes));
+        var cached = EnableCache ? GetCached(model, providerTypes) : null;
+        using var options = CreateSessionOptions(model, EnableCache && cached == null, providerTypes);
+        return new InferenceSession(cached ?? model.ModalPath, options);
     }
 
     /// <summary>
@@ -447,12 +449,20 @@ public class BgiOnnxFactory
                     e.Message);
             }
 
-        if (!OptimizedModel) return sessionOptions;
-        if (!genCache) return sessionOptions;
-        var optPath = Path.Combine(model.CachePath, "optimized");
-        if (!Directory.Exists(optPath)) Directory.CreateDirectory(optPath);
-        sessionOptions.OptimizedModelFilePath = Path.Combine(optPath, Path.GetFileName(model.ModalPath));
-        return sessionOptions;
+        try
+        {
+            if (!OptimizedModel) return sessionOptions;
+            if (!genCache) return sessionOptions;
+            var optPath = Path.Combine(model.CachePath, "optimized");
+            if (!Directory.Exists(optPath)) Directory.CreateDirectory(optPath);
+            sessionOptions.OptimizedModelFilePath = Path.Combine(optPath, Path.GetFileName(model.ModalPath));
+            return sessionOptions;
+        }
+        catch
+        {
+            sessionOptions.Dispose();
+            throw;
+        }
     }
 
 
