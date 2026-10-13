@@ -169,20 +169,20 @@
                                 <ui:MenuItem Header="{i18n:T 启动}"
                                              Command="{Binding StartCommand}"
                                              Icon="{ui:SymbolIcon Play24}"
-                                             Visibility="{Binding ElementName=StartButton, Path=IsVisible, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                                             Visibility="{Binding Source={x:Reference StartButton}, Path=IsVisible, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
                                 <ui:MenuItem Header="{i18n:T 隐藏}"
                                              Command="{Binding HideCommand}"
                                              Icon="{ui:SymbolIcon EyeOff24}"
-                                             Visibility="{Binding ElementName=HideButton, Path=IsVisible, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                                             Visibility="{Binding Source={x:Reference HideButton}, Path=IsVisible, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
                                 <ui:MenuItem Header="{i18n:T 切换窗口}"
                                              Command="{Binding SwitchWindowCommand}"
                                              Icon="{ui:SymbolIcon ArrowSwap24}"
-                                             Visibility="{Binding ElementName=SwitchWindowButton, Path=IsVisible, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                                             Visibility="{Binding Source={x:Reference SwitchWindowButton}, Path=IsVisible, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
                                 <ui:MenuItem Header="{Binding GameMouseModeButtonText}"
                                              Command="{Binding ToggleGameMouseModeCommand}"
                                              Icon="{ui:SymbolIcon Cursor24}"
                                              ToolTip="{Binding GameMouseModeButtonToolTip}"
-                                             Visibility="{Binding ElementName=GameMouseButton, Path=IsVisible, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                                             Visibility="{Binding Source={x:Reference GameMouseButton}, Path=IsVisible, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
                             </ContextMenu>
                         </ui:DropDownButton.Flyout>
                     </ui:DropDownButton>
