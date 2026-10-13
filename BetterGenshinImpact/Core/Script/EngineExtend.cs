@@ -44,15 +44,16 @@ public class EngineExtend
         engine.AddHostObject("characterDevelopmentTask", new CharacterDevelopmentTask());
         engine.AddHostObject("log", new Log());
         engine.AddHostObject("file", new LimitedFile(workDir)); // 限制文件访问
-        engine.AddHostObject("http", new Http()); // 限制文件访问
+        engine.AddHostObject("http", new Http()); // 限制网络访问
+        engine.AddHostObject("yolo", new YoloDetection(workDir)); // YOLO ONNX 检测
         engine.AddHostObject("notification", new Notification());
-        
+
         // 任务调度器
         engine.AddHostObject("dispatcher", new Dispatcher(config));
         engine.AddHostType("RealtimeTimer", typeof(RealtimeTimer));
         engine.AddHostType("SoloTask", typeof(SoloTask));
         engine.AddHostType("AutoSkipConfig", typeof(AutoSkipConfig));
-        
+
         // 添加取消令牌相关类型
         engine.AddHostType("CancellationTokenSource", typeof(CancellationTokenSource));
         engine.AddHostType("CancellationToken", typeof(CancellationToken));
@@ -71,32 +72,32 @@ public class EngineExtend
         engine.AddHostType("GameCaptureRegion", typeof(GameCaptureRegion));
         engine.AddHostType("ImageRegion", typeof(ImageRegion));
         engine.AddHostType("Region", typeof(Region));
-        
+
         engine.AddHostType("Pen", typeof(Pen));
         engine.AddHostType("Color", typeof(Color));
-        
+
         engine.AddHostType("CombatScenes", typeof(CombatScenes));
         engine.AddHostType("Avatar", typeof(Avatar));
-        
-        
+
+
         engine.AddHostObject("OpenCvSharp", new HostTypeCollection("OpenCvSharp"));
 
         engine.AddHostType("ServerTime", typeof(ServerTime));
-        
-        engine.AddHostType("AutoDomainParam", typeof(AutoDomainParam));  
+
+        engine.AddHostType("AutoDomainParam", typeof(AutoDomainParam));
         engine.AddHostType("AutoBossParam", typeof(AutoBossParam));
         engine.AddHostType("CountInventoryItemParam", typeof(CountInventoryItemParam));
         engine.AddHostType("GridScreenName", typeof(GridScreenName));
         engine.AddHostType("ItemIconRecognitionMode", typeof(ItemIconRecognitionMode));
-        engine.AddHostType("AutoFightParam", typeof(AutoFightParam)); 
+        engine.AddHostType("AutoFightParam", typeof(AutoFightParam));
         engine.AddHostType("AutoLeyLineOutcropParam", typeof(AutoLeyLineOutcropParam));
         engine.AddHostType("AutoStygianOnslaughtParam", typeof(AutoStygianOnslaughtParam));
         engine.AddHostObject("strategyFile", new StrategyFile());
         //鼠标回调
-        engine.AddHostType("KeyMouseHook", typeof(KeyMouseHook)); 
+        engine.AddHostType("KeyMouseHook", typeof(KeyMouseHook));
         // 添加C#的类型
         engine.AddHostType(typeof(Task));
-        
+
         // 新的BvPage类
         engine.AddHostType("BvPage", typeof(BvPage));
         engine.AddHostType("BvLocator", typeof(BvLocator));
