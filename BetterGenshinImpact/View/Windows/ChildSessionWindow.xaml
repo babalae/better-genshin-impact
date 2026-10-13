@@ -130,6 +130,9 @@
                                 <ui:MenuItem Header="{Binding WindowSizeModeMenuHeader}"
                                              Command="{Binding ToggleSmallWindowModeCommand}"
                                              ToolTip="{Binding WindowSizeModeMenuToolTip}" />
+                                <ui:MenuItem Header="{Binding WatchModeMenuHeader}"
+                                             Command="{Binding ToggleWatchModeCommand}"
+                                             ToolTip="{Binding WatchModeMenuToolTip}" />
                                 <Separator />
                                 <ui:MenuItem Header="{i18n:T 桌面分辨率}">
                                     <ui:MenuItem Header="1920 × 1080"

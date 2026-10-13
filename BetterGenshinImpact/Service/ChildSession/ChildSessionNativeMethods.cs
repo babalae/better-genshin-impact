@@ -70,6 +70,12 @@ internal static class ChildSessionNativeMethods
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool IsChild(IntPtr parentWindow, IntPtr window);
 
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool EnableWindow(
+        IntPtr window,
+        [MarshalAs(UnmanagedType.Bool)] bool enabled);
+
     internal static void EnableChildSessions()
     {
         if (!WTSEnableChildSessions(true))
@@ -188,6 +194,19 @@ internal static class ChildSessionNativeMethods
     {
         var inputWindow = FindRdpInputWindow(rdpHostWindow);
         return inputWindow != IntPtr.Zero && GetFocus() == inputWindow;
+    }
+
+    /// <summary>
+    /// 禁用或恢复 RDP 的输入窗口。禁用后本机鼠标与键盘都不会进入桌面分身，
+    /// 画面渲染不受影响。输入窗口尚未创建时不做任何处理。
+    /// </summary>
+    internal static void SetRdpInputWindowEnabled(IntPtr rdpHostWindow, bool enabled)
+    {
+        var inputWindow = FindRdpInputWindow(rdpHostWindow);
+        if (inputWindow != IntPtr.Zero)
+        {
+            _ = EnableWindow(inputWindow, enabled);
+        }
     }
 
     internal static void ClearRdpInputWindowCache(IntPtr rdpHostWindow)

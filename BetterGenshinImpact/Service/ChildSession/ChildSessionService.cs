@@ -75,6 +75,8 @@ public sealed class ChildSessionService : IDisposable
 
     public bool AudioMuted => _config.AudioMuted;
 
+    public bool WatchModeEnabled => _config.WatchModeEnabled;
+
     public WindowPositionConfig? NormalWindowPosition
     {
         get => _config.NormalWindowPosition;
@@ -279,6 +281,16 @@ public sealed class ChildSessionService : IDisposable
         RefreshState(enabled
             ? "已切换为游戏鼠标模式"
             : "已切换为普通鼠标模式");
+    }
+
+    public void SetWatchModeEnabled(bool enabled)
+    {
+        ThrowIfDisposed();
+        _config.WatchModeEnabled = enabled;
+        _desktopWindow?.RdpHost.SetInputBlocked(enabled);
+        RefreshState(enabled
+            ? "已进入观看模式，本机鼠标和键盘不会进入桌面分身"
+            : "已退出观看模式，可以操作桌面分身");
     }
 
     public Task LaunchBetterGiAsync()
@@ -596,6 +608,9 @@ public sealed class ChildSessionService : IDisposable
         _initialConnectionRetriesRemaining = 0;
         _connectionRetryInProgress = false;
         _connectionAttemptCompletionSource?.TrySetResult(true);
+
+        // 输入窗口每次连接都会新建，观看模式需要重新施加到新窗口上。
+        _desktopWindow?.RdpHost.SetInputBlocked(WatchModeEnabled);
 
         var completedSettingChanges = _pendingRdpSettingChanges;
         if (completedSettingChanges != RdpSettingChange.None)
