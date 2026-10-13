@@ -42,20 +42,21 @@ public class TaskRunner
     /// 加锁并独立运行任务
     /// </summary>
     /// <param name="action"></param>
-    /// <param name="resetCancellationContext">任务开始时是否重建 CancellationContext。</param>
-    /// <param name="clearCancellationContextOnLockFailure">获取信号量锁失败时是否清理 CancellationContext。</param>
     /// <returns></returns>
-    public async Task RunCurrentAsync(Func<Task> action, bool resetCancellationContext = true, bool clearCancellationContextOnLockFailure = false)
+    public async Task RunCurrentAsync(Func<Task> action)
     {
+        using var cancellationScope = CancellationContext.Instance.TryJoinOrBeginScope();
+        if (cancellationScope == null)
+        {
+            _logger.LogWarning("当前存在正在执行的任务，请勿重复启动");
+            return;
+        }
+
         // 加锁
         var hasLock = await TaskSemaphore.WaitAsync(0);
         if (!hasLock)
         {
             _logger.LogError("任务启动失败：当前存在正在运行中的独立任务，请不要重复执行任务！");
-            if (clearCancellationContextOnLockFailure)
-            {
-                CancellationContext.Instance.Clear();
-            }
             return;
         }
         try
@@ -64,10 +65,6 @@ public class TaskRunner
 
             // 初始化
             Init();
-            if (resetCancellationContext)
-            {
-                CancellationContext.Instance.Set();
-            }
             RunnerContext.Instance.Clear();
 
             await action();
@@ -103,7 +100,6 @@ public class TaskRunner
             End();
             _logger.LogInformation("→ {Text}", _name + "任务结束");
 
-            CancellationContext.Instance.Clear();
             RunnerContext.Instance.Clear();
 
             // 释放锁
@@ -116,7 +112,17 @@ public class TaskRunner
 
     public void FireAndForget(Func<Task> action)
     {
-        Task.Run(() => RunCurrentAsync(action));
+        Task.Run(async () =>
+        {
+            using var cancellationScope = CancellationContext.Instance.TryBeginScope();
+            if (cancellationScope == null)
+            {
+                _logger.LogWarning("当前存在正在执行的任务，请勿重复启动");
+                return;
+            }
+
+            await RunCurrentAsync(action);
+        });
     }
 
     public async Task RunThreadAsync(Func<Task> action)
@@ -126,8 +132,13 @@ public class TaskRunner
 
     public async Task RunSoloTaskAsync(ISoloTask soloTask)
     {
-        // 启动等待之前先进行取消操作的初始化，便于在任务开始前终止任务.
-        CancellationContext.Instance.Set();
+        // 启动等待也属于本次执行，不能借用其他入口的取消源。
+        using var cancellationScope = CancellationContext.Instance.TryBeginScope();
+        if (cancellationScope == null)
+        {
+            _logger.LogWarning("当前存在正在执行的任务，请勿重复启动");
+            return;
+        }
 
         // 没启动的时候先启动
         bool waitForMainUi = soloTask.Name != "自动七圣召唤" && !soloTask.Name.Contains("自动音游") &&
@@ -136,14 +147,11 @@ public class TaskRunner
         if (CancellationContext.Instance.IsCancellationRequested)
         {
             _logger.LogInformation("独立任务在启动阶段被取消: {Name}", soloTask.Name);
-            CancellationContext.Instance.Clear();
             return;
         }
         
         await Task.Run(() => RunCurrentAsync(
-            async () => await soloTask.Start(CancellationContext.Instance.Cts.Token),
-            resetCancellationContext: false,
-            clearCancellationContextOnLockFailure: true));
+            async () => await soloTask.Start(cancellationScope.Token)));
     }
 
     public void Init()

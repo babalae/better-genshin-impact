@@ -1980,6 +1980,13 @@ public partial class ScriptControlViewModel : ViewModel
             return;
         }
 
+        using var cancellationScope = CancellationContext.Instance.TryBeginScope();
+        if (cancellationScope == null)
+        {
+            _logger.LogWarning("当前存在正在执行的任务，请勿重复启动");
+            return;
+        }
+
         RunnerContext.Instance.Reset();
 
         TaskProgress taskProgress = new()
@@ -2431,7 +2438,7 @@ public partial class ScriptControlViewModel : ViewModel
         using var cancellationScope = CancellationContext.Instance.TryBeginScope();
         if (cancellationScope == null)
         {
-            _logger.LogWarning("当前正在连续执行配置组，请勿重复启动");
+            _logger.LogWarning("当前存在正在执行的任务，请勿重复启动");
             return;
         }
 

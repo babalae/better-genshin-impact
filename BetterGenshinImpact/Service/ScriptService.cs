@@ -121,8 +121,13 @@ public partial class ScriptService : IScriptService
     {
         groupName ??= "默认";
 
-        // 启动等待之前先进行取消操作的初始化，便于在任务开始前终止任务.
-        CancellationContext.Instance.Set();
+        // 连续执行的子组可以加入父作用域，其他入口必须独占执行。
+        using var cancellationScope = CancellationContext.Instance.TryJoinOrBeginScope();
+        if (cancellationScope == null)
+        {
+            _logger.LogWarning("当前存在正在执行的任务，请勿重复启动");
+            return;
+        }
 
         var list = ReloadScriptProjects(projectList);
         
