@@ -1006,7 +1006,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="{i18n:T 同时出现『每日委托』与『探索派遣』选项时，同一次对话内完成领取并进入派遣；关闭后每次对话只处理一个选项}"
+                                  Text="{i18n:T 会同时使用鼠标点击『探索派遣』和按交互键（F）领取每日委托，需要游戏窗口在前台；后台模式下退回每次对话只处理一个选项}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"

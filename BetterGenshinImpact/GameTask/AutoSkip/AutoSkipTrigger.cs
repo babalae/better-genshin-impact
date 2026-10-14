@@ -807,25 +807,20 @@ public partial class AutoSkipTrigger : ITaskTrigger
                     }
 
                     var handledOrange = false;
-                    if (dailyOption != null && expeditionOption != null && _config.CombineDailyAndExpeditionEnabled)
+                    // 同帧"鼠标点击 + 交互键"必须作用在前台窗口上,后台模式下无法保证两个输入落在同一帧,
+                    // 因此后台(或游戏不在前台)时退回每次对话只处理一个橙色选项。
+                    if (dailyOption != null
+                        && expeditionOption != null
+                        && _config.CombineDailyAndExpeditionEnabled
+                        && SystemControl.IsGenshinImpactActive())
                     {
                         handledOrange = true;
 
                         // 每日委托与探索派遣同在:同一帧内"点探索派遣 + 按交互键F领每日"。
                         // 实测两者必须同帧发出,否则后一个会因界面已切换而丢失。
-                        RefreshOperationMode();
-                        if (UseBackgroundOperation || !SystemControl.IsGenshinImpactActive())
-                        {
-                            expeditionOption.Move();
-                            InputHub.Background.SimulateAction(GIActions.PickUpOrInteract);
-                            expeditionOption.BackgroundClick();
-                        }
-                        else
-                        {
-                            expeditionOption.Move();
-                            InputHub.Foreground.SimulateAction(GIActions.PickUpOrInteract);
-                            InputHub.Foreground.Mouse.LeftButtonClick();
-                        }
+                        expeditionOption.Move();
+                        InputHub.Foreground.SimulateAction(GIActions.PickUpOrInteract);
+                        InputHub.Foreground.Mouse.LeftButtonClick();
 
                         _logger.LogInformation("对话交互键：{Text}", "同一帧点击探索派遣 + 按交互键领取每日委托");
                         _prevGetDailyRewardsTime = DateTime.Now; // 记录领取时间
