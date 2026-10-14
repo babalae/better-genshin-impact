@@ -14,6 +14,8 @@ public class BgiOnnxFactory
     private readonly ILogger<BgiOnnxFactory> _logger;
     private readonly ProviderType[] _providerTypes;
     private readonly string? _profilingDirectory;
+    private readonly InferenceRuntimeService? _runtime;
+    private readonly InferenceRuntimeSnapshot? _snapshot;
 
     /// <summary>
     ///     缓存模型路径对应的目录；会话始终加载原始模型，不再使用嵌入缓存文件。
@@ -27,42 +29,46 @@ public class BgiOnnxFactory
     /// 请勿直接实例化此类
     /// </summary>
     /// <param name="logger"></param>
-    /// <remarks>主程序传入经过启动验证的快照；未指定快照的工厂用于 CPU 单元测试。</remarks>
+    /// <remarks>主程序从运行时读取生效配置，每个新会话单独冻结快照；未指定快照的工厂用于 CPU 单元测试。</remarks>
     public BgiOnnxFactory(ILogger<BgiOnnxFactory> logger)
         : this(logger, InferenceRuntimeSnapshot.CpuDefault())
     {
-        // 未经启动验证的临时工厂使用 CPU；主程序 DI 显式传入已冻结的生效快照。
+        // 未指定设置的临时工厂使用 CPU；主程序 DI 注入运行时，每次创建会话冻结当时的生效快照。
+    }
+
+    public BgiOnnxFactory(ILogger<BgiOnnxFactory> logger, InferenceRuntimeService runtime)
+    {
+        _logger = logger;
+        _runtime = runtime;
+        _providerTypes = [];
     }
 
     public BgiOnnxFactory(ILogger<BgiOnnxFactory> logger, InferenceRuntimeSnapshot snapshot, string? profilingDirectory = null)
     {
         _logger = logger;
         _profilingDirectory = profilingDirectory;
-        Snapshot = snapshot;
-        CudaDeviceId = snapshot.Device.Index;
-        DmlDeviceId = snapshot.Device.Index;
-        EnableCache = snapshot.EnableModelCache;
-        CpuOcr = snapshot.CpuOcr;
-        OpenVinoDevice = snapshot.Device.ProviderDevice;
-        OpenVinoCache = snapshot.EnableModelCache;
+        _snapshot = snapshot;
         _providerTypes = GetProviderType(snapshot.Engine);
         _logger.LogInformation("[ONNX]当前引擎 {Engine}，设备 {Device}，OCR 强制 CPU：{CpuOcr}",
             snapshot.Engine, snapshot.Device.Name, snapshot.CpuOcr);
     }
 
-    public InferenceRuntimeSnapshot Snapshot { get; }
+    public InferenceRuntimeSnapshot Snapshot => _runtime?.Current ?? _snapshot!;
+
+    /// <summary>一次模型操作固定使用同一个快照，等待或延后回退不能改变它的参数。</summary>
+    public BgiOnnxFactory CaptureSnapshot() => _runtime == null ? this : new(_logger, Snapshot);
 
     // OCR 验证使用独立工厂与会话，必须实际执行所选 provider；不改变业务 OCR 的 CPU 设置。
     internal BgiOnnxFactory ForOcrValidation(string profilingDirectory)
         => new(_logger, Snapshot with { CpuOcr = false }, profilingDirectory);
 
-    public ProviderType[] ProviderTypes => (ProviderType[])_providerTypes.Clone();
-    public int DmlDeviceId { get; }
-    public int CudaDeviceId { get; }
-    public string OpenVinoDevice { get; }
-    public bool EnableCache { get; }
-    public bool CpuOcr { get; }
-    public bool OpenVinoCache { get; }
+    public ProviderType[] ProviderTypes => _runtime == null ? (ProviderType[])_providerTypes.Clone() : GetProviderType(Snapshot.Engine);
+    public int DmlDeviceId => Snapshot.Device.Index;
+    public int CudaDeviceId => Snapshot.Device.Index;
+    public string OpenVinoDevice => Snapshot.Device.ProviderDevice;
+    public bool EnableCache => Snapshot.EnableModelCache;
+    public bool CpuOcr => Snapshot.CpuOcr;
+    public bool OpenVinoCache => Snapshot.EnableModelCache;
 
 
     /// <summary>
@@ -107,14 +113,15 @@ public class BgiOnnxFactory
     /// <returns>BgiYoloPredictor</returns>
     public BgiYoloPredictor CreateYoloPredictor(BgiOnnxModel model, string? profilingPrefix = null)
     {
+        // 延后验证只影响后续新建会话，不修改或释放已经运行中的会话。
+        if (_runtime != null) return new BgiOnnxFactory(_logger, Snapshot).CreateYoloPredictor(model, profilingPrefix);
         // logger.LogDebug("[Yolo]创建yolo预测器，模型: {ModelName}", model.Name);
         var options = CreateSessionOptions(model, EnableCache);
         try
         {
             if (profilingPrefix != null)
             {
-                options.EnableProfiling = true;
-                options.ProfileOutputPathPrefix = profilingPrefix;
+                ConfigureProfiling(options, profilingPrefix);
             }
             // 延迟创建会话，配置的所有权转交给预测器。
             return new BgiYoloPredictor(model, model.ModalPath, options);
@@ -134,6 +141,7 @@ public class BgiOnnxFactory
     /// <returns>InferenceSession</returns>
     public InferenceSession CreateInferenceSession(BgiOnnxModel model, bool ocr = false)
     {
+        if (_runtime != null) return new BgiOnnxFactory(_logger, Snapshot).CreateInferenceSession(model, ocr);
         _logger.LogDebug("[ONNX]创建推理会话，模型: {ModelName}", model.Name);
         ProviderType[]? providerTypes = null;
         if (CpuOcr && ocr) providerTypes = [ProviderType.Cpu];
@@ -141,10 +149,17 @@ public class BgiOnnxFactory
         using var options = CreateSessionOptions(model, EnableCache, providerTypes);
         if (_profilingDirectory != null)
         {
-            options.EnableProfiling = true;
-            options.ProfileOutputPathPrefix = Path.Combine(_profilingDirectory, model.Name);
+            ConfigureProfiling(options, Path.Combine(_profilingDirectory, model.Name));
         }
         return new InferenceSession(model.ModalPath, options);
+    }
+
+    /// <summary>启用 ONNX Runtime 性能记录，并将文件写入指定前缀。</summary>
+    internal static void ConfigureProfiling(SessionOptions options, string profileOutputPathPrefix)
+    {
+        // EnableProfiling 的 setter 会立即把当时的 ProfileOutputPathPrefix 传给原生 ORT，顺序不能交换。
+        options.ProfileOutputPathPrefix = profileOutputPathPrefix;
+        options.EnableProfiling = true;
     }
 
     /// <summary>

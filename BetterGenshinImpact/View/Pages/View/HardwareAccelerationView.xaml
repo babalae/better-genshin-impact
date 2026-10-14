@@ -39,29 +39,11 @@
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-        <ui:TitleBar Title="AI 推理设置">
+        <ui:TitleBar Title="推理引擎设置">
             <ui:TitleBar.Icon><ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" /></ui:TitleBar.Icon>
         </ui:TitleBar>
         <StackPanel Grid.Row="1" Margin="24,12,24,0">
-            <Border CornerRadius="10" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
-                <Grid>
-                    <Grid.ColumnDefinitions><ColumnDefinition Width="5" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                    <Border Background="{DynamicResource SystemFillColorSuccessBrush}" CornerRadius="10,0,0,10" />
-                    <Grid Grid.Column="1" Margin="20,16">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                        <StackPanel>
-                            <TextBlock Text="正在使用 · 当前进程" Foreground="{DynamicResource SystemFillColorSuccessBrush}" FontWeight="SemiBold" FontSize="12" />
-                            <TextBlock Text="{Binding CurrentEngineName}" FontSize="26" FontWeight="SemiBold" Margin="0,4,0,0" />
-                            <TextBlock Text="{Binding CurrentDeviceText}" TextWrapping="Wrap" Margin="0,3,0,0" />
-                        </StackPanel>
-                        <StackPanel Grid.Column="1" Margin="24,0,0,0" MaxWidth="350" VerticalAlignment="Center">
-                            <TextBlock Text="OCR 执行方式" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                            <TextBlock Text="{Binding CurrentOcrText}" TextWrapping="Wrap" Margin="0,5,0,0" />
-                        </StackPanel>
-                    </Grid>
-                </Grid>
-            </Border>
-            <Border Margin="0,10,0,0" Padding="16,12" CornerRadius="8" BorderThickness="1" BorderBrush="{DynamicResource SystemFillColorCautionBrush}"
+            <Border Margin="0,12,0,0" Padding="16,12" CornerRadius="8" BorderThickness="1" BorderBrush="{DynamicResource SystemFillColorCautionBrush}"
                     Visibility="{Binding HasPendingChanges, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <DockPanel>
                     <ui:Button DockPanel.Dock="Right" Content="立即重启" Command="{Binding RestartCommand}" IsEnabled="{Binding CanInteract}" Margin="16,0,0,0" VerticalAlignment="Center" />
@@ -125,6 +107,9 @@
                                     <TextBlock Text="{Binding Name}" FontSize="20" FontWeight="SemiBold" />
                                 </DockPanel>
                                 <WrapPanel Height="28" Margin="0,8,0,0">
+                                    <Border CornerRadius="4" BorderThickness="1" BorderBrush="{DynamicResource SystemAccentColorPrimaryBrush}" Padding="6,2" Margin="0,0,6,0" Visibility="{Binding IsRecommended, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <TextBlock Text="推荐" FontSize="11" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                                    </Border>
                                     <Border CornerRadius="4" BorderThickness="1" BorderBrush="{DynamicResource SystemFillColorSuccessBrush}" Padding="6,2" Margin="0,0,6,0" Visibility="{Binding IsCurrent, Converter={StaticResource BooleanToVisibilityConverter}}">
                                         <TextBlock Text="正在使用" FontSize="11" Foreground="{DynamicResource SystemFillColorSuccessBrush}" />
                                     </Border>
@@ -237,7 +222,8 @@
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="16,0,0,0" VerticalAlignment="Center">
                         <ui:Button Content="取消" Command="{Binding CancelCommand}" Margin="0,0,8,0" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                        <ui:Button Content="恢复 CPU" Command="{Binding UseCpuCommand}" IsEnabled="{Binding CanInteract}" Margin="0,0,8,0" />
+                        <ui:Button Content="恢复默认设置" Command="{Binding UseCpuCommand}" IsEnabled="{Binding CanInteract}" Margin="0,0,8,0"
+                                   ToolTip="将推理引擎、强制 OCR 与推理线程数恢复为默认设置（CPU 推理）" />
                         <ui:Button Content="{Binding ApplyButtonText}" Appearance="Primary" Command="{Binding ApplyCommand}" IsEnabled="{Binding CanApply}" MinWidth="128" />
                     </StackPanel>
                     <StackPanel>

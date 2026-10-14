@@ -18,6 +18,7 @@ public interface IOnnxRuntimeSelection
     InferenceDeviceType InferenceDevice { get; }
     string RuntimeDirectory { get; }
     string StatusText { get; }
+    string FailureReason { get; }
 }
 
 public sealed class OnnxRuntimeLoader : IOnnxRuntimeSelection
@@ -29,6 +30,7 @@ public sealed class OnnxRuntimeLoader : IOnnxRuntimeSelection
     public string RuntimeDirectory { get; private set; }
     public InferenceDeviceType InferenceDevice { get; private set; }
     public string StatusText { get; private set; } = "内置 DirectML / CPU";
+    public string FailureReason { get; private set; } = "";
 
     public OnnxRuntimeLoader(HardwareAccelerationConfig config, string baseDirectory)
     {
@@ -56,7 +58,15 @@ public sealed class OnnxRuntimeLoader : IOnnxRuntimeSelection
         string version;
         try
         {
-            if (!File.Exists(libraryPath)) throw new FileNotFoundException("运行库目录中缺少 onnxruntime.dll。", libraryPath);
+            var missingRuntimeFiles = OnnxRuntimePackageCatalog.ProviderFiles(InferenceDevice)
+                .Where(file => !File.Exists(Path.Combine(directory, file)))
+                .ToArray();
+            if (missingRuntimeFiles.Length > 0)
+            {
+                FailureReason = $"{directoryName} 运行库不完整，缺少 {string.Join("、", missingRuntimeFiles)}。请在硬件加速设置中重新下载运行库。";
+                throw new FileNotFoundException($"运行库目录中缺少 {string.Join("、", missingRuntimeFiles)}。",
+                    Path.Combine(directory, missingRuntimeFiles[0]));
+            }
 
             // 只加入选中运行库的目录，不扫描加载其他目录中的 DLL。PATH 仅修改当前进程，
             // 也供 ONNX 原生代码随后加载 provider 的间接依赖使用。
@@ -80,6 +90,14 @@ public sealed class OnnxRuntimeLoader : IOnnxRuntimeSelection
             if (version != RequiredVersion)
                 throw new InvalidDataException($"原生运行库版本为 {version}，必须为 {RequiredVersion}。");
 
+            var missingDependencies = OnnxRuntimePackageCatalog.MissingDependencyFiles(InferenceDevice, directory);
+            if (missingDependencies.Length > 0)
+            {
+                FailureReason = OnnxRuntimePackageCatalog.DescribeMissingDependencies(InferenceDevice, missingDependencies);
+                throw new FileNotFoundException($"依赖不完整：缺少 {string.Join("、", missingDependencies)}。",
+                    Path.Combine(directory, missingDependencies[0]));
+            }
+
             NativeLibrary.SetDllImportResolver(typeof(InferenceSession).Assembly,
                 (name, _, _) => name == "onnxruntime" ? _libraryHandle : IntPtr.Zero);
         }
@@ -92,6 +110,8 @@ public sealed class OnnxRuntimeLoader : IOnnxRuntimeSelection
             }
 
             Environment.SetEnvironmentVariable("PATH", previousPath, EnvironmentVariableTarget.Process);
+            if (string.IsNullOrWhiteSpace(FailureReason))
+                FailureReason = $"{directoryName} 运行库无法加载，请在硬件加速设置中重新检测或重新下载。";
             InferenceDevice = InferenceDeviceType.Cpu;
             StatusText = $"内置运行库（CPU）；{directoryName} 加载失败：{e.Message}";
             Log.Warning(e, "[ONNX]运行库 {Library} 加载失败，回退到 CPU", libraryPath);

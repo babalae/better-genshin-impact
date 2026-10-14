@@ -20,6 +20,7 @@ public sealed class HardwareAccelerationConfigJsonConverter : JsonConverter<Hard
                 FormatVersion = data.FormatVersion, InferenceDevice = data.InferenceDevice, CpuOcr = data.CpuOcr,
                 Cpu = data.Cpu!, DirectML = data.DirectML!, OpenVINO = data.OpenVINO!, Cuda = data.Cuda!, TensorRT = data.TensorRT!,
                 ValidationState = data.ValidationState, VerifiedSignature = data.VerifiedSignature ?? "",
+                ValidatedEngines = data.ValidatedEngines ?? [],
                 LastFailedEngine = data.LastFailedEngine, LastValidationError = data.LastValidationError ?? ""
             };
         }
@@ -32,6 +33,7 @@ public sealed class HardwareAccelerationConfigJsonConverter : JsonConverter<Hard
             FormatVersion = value.FormatVersion, InferenceDevice = value.InferenceDevice, CpuOcr = value.CpuOcr,
             Cpu = value.Cpu, DirectML = value.DirectML, OpenVINO = value.OpenVINO, Cuda = value.Cuda, TensorRT = value.TensorRT,
             ValidationState = value.ValidationState, VerifiedSignature = value.VerifiedSignature,
+            ValidatedEngines = value.ValidatedEngines,
             LastFailedEngine = value.LastFailedEngine, LastValidationError = value.LastValidationError
         }, options);
 
@@ -48,6 +50,7 @@ public sealed class HardwareAccelerationConfigJsonConverter : JsonConverter<Hard
         public InferenceEngineSettings? TensorRT { get; set; }
         public InferenceValidationState ValidationState { get; set; }
         public string? VerifiedSignature { get; set; }
+        public InferenceDeviceType[]? ValidatedEngines { get; set; }
         public InferenceDeviceType? LastFailedEngine { get; set; }
         public string? LastValidationError { get; set; }
     }

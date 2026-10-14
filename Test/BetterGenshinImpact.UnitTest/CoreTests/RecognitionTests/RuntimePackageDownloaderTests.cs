@@ -26,21 +26,54 @@ public sealed class RuntimePackageDownloaderTests : IDisposable
     }
 
     [Fact]
-    public async Task TensorRtPlan_DoesNotInstallCudaProviderOrMathLibraries()
+    public async Task TensorRtPlan_InstallsCudaBridgeButDoesNotAppendCudaProvider()
     {
-        using var client = new HttpClient(new Handler(_ => new(HttpStatusCode.OK)
+        using var client = new HttpClient(new Handler(request => new(HttpStatusCode.OK)
         {
-            Content = new StringContent("""
-                {"cuda_cudart":{"version":"12.8.57","windows-x86_64":{"relative_path":"cuda_cudart/windows-x86_64/test.zip","sha256":"0000000000000000000000000000000000000000000000000000000000000000","size":"32"}}}
-                """)
+            Content = new StringContent(request.RequestUri!.AbsoluteUri.Contains("cudnn", StringComparison.OrdinalIgnoreCase)
+                ? """{"cudnn":{"version":"9.8.0","windows-x86_64":{"cuda12":{"relative_path":"cudnn/windows-x86_64/test.zip","sha256":"0000000000000000000000000000000000000000000000000000000000000000","size":"32"}}}}"""
+                : """{"cuda_cudart":{"version":"12.8.57","windows-x86_64":{"relative_path":"cuda_cudart/windows-x86_64/test.zip","sha256":"0000000000000000000000000000000000000000000000000000000000000000","size":"32"}},"libcublas":{"version":"12.8.3.14","windows-x86_64":{"relative_path":"libcublas/windows-x86_64/test.zip","sha256":"0000000000000000000000000000000000000000000000000000000000000000","size":"32"}},"cuda_nvrtc":{"version":"12.8.61","windows-x86_64":{"relative_path":"cuda_nvrtc/windows-x86_64/test.zip","sha256":"0000000000000000000000000000000000000000000000000000000000000000","size":"32"}},"libcufft":{"version":"11.3.3.41","windows-x86_64":{"relative_path":"libcufft/windows-x86_64/test.zip","sha256":"0000000000000000000000000000000000000000000000000000000000000000","size":"32"}},"libcurand":{"version":"10.3.9.55","windows-x86_64":{"relative_path":"libcurand/windows-x86_64/test.zip","sha256":"0000000000000000000000000000000000000000000000000000000000000000","size":"32"}}}""")
         }));
         using var installer = new OnnxRuntimeInstaller(_root, client);
         var plan = await installer.GetDownloadPlanAsync(InferenceDeviceType.TensorRT, true, CancellationToken.None);
-        Assert.Equal(2, plan.Count);
+        Assert.Equal(7, plan.Count);
         Assert.Contains(plan, package => package.Name.StartsWith("cuda_cudart"));
+        Assert.Contains(plan, package => package.Name.StartsWith("libcublas"));
+        Assert.Contains(plan, package => package.Name.StartsWith("cuda_nvrtc"));
+        Assert.Contains(plan, package => package.Name.StartsWith("libcufft"));
+        Assert.Contains(plan, package => package.Name.StartsWith("libcurand"));
+        Assert.Contains(plan, package => package.Name.StartsWith("cuDNN"));
         Assert.Contains(plan, package => package.Name.StartsWith("TensorRT"));
-        Assert.DoesNotContain("onnxruntime_providers_cuda.dll", OnnxRuntimePackageCatalog.ProviderFiles(InferenceDeviceType.TensorRT));
-        Assert.DoesNotContain(OnnxRuntimePackageCatalog.DependencyFiles(InferenceDeviceType.TensorRT), file => file.StartsWith("cublas") || file.StartsWith("cudnn") || file.StartsWith("nvrtc"));
+        Assert.Contains("onnxruntime_providers_cuda.dll", OnnxRuntimePackageCatalog.ProviderFiles(InferenceDeviceType.TensorRT));
+        Assert.Contains("cublas64_12.dll", OnnxRuntimePackageCatalog.DependencyFiles(InferenceDeviceType.TensorRT));
+        Assert.Contains("cudnn64_9.dll", OnnxRuntimePackageCatalog.DependencyFiles(InferenceDeviceType.TensorRT));
+        Assert.Contains("nvrtc64_120_0.dll", OnnxRuntimePackageCatalog.DependencyFiles(InferenceDeviceType.TensorRT));
+        Assert.Contains("cufft64_11.dll", OnnxRuntimePackageCatalog.DependencyFiles(InferenceDeviceType.TensorRT));
+        Assert.Contains("curand64_10.dll", OnnxRuntimePackageCatalog.DependencyFiles(InferenceDeviceType.TensorRT));
+
+        var snapshot = new InferenceRuntimeSnapshot(InferenceDeviceType.TensorRT,
+            new InferenceDeviceInfo("nvidia:0", "NVIDIA GPU", 0, "0"), false, 0, true, "");
+        var factory = new BgiOnnxFactory(
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<BgiOnnxFactory>.Instance, snapshot);
+        Assert.Equal([ProviderType.TensorRt, ProviderType.Cpu], factory.ProviderTypes);
+        Assert.DoesNotContain(ProviderType.Cuda, factory.ProviderTypes);
+    }
+
+    [Fact]
+    public void TensorRtInstallation_ReportsProviderImportedLibrariesAsMissing()
+    {
+        var directory = Directory.CreateDirectory(Path.Combine(_root, "Plugins", "OnnxRuntime", "TensorRT")).FullName;
+        foreach (var file in OnnxRuntimePackageCatalog.ProviderFiles(InferenceDeviceType.TensorRT))
+            File.WriteAllText(Path.Combine(directory, file), "provider");
+        foreach (var file in new[] { "cudart64_12.dll", "nvinfer_10.dll", "nvinfer_plugin_10.dll", "nvonnxparser_10.dll", "nvinfer_builder_resource_10.dll" })
+            File.WriteAllText(Path.Combine(directory, file), "dependency");
+
+        using var installer = new OnnxRuntimeInstaller(_root);
+        var installation = installer.Inspect(InferenceDeviceType.TensorRT);
+
+        Assert.Equal(InferenceInstallationState.MissingDependencies, installation.State);
+        Assert.Contains("cublas64_12.dll", installation.Description);
+        Assert.Contains("cudnn64_9.dll", installation.Description);
     }
 
     [Fact]
@@ -141,6 +174,53 @@ public sealed class RuntimePackageDownloaderTests : IDisposable
         Assert.Equal("trt", await File.ReadAllTextAsync(Path.Combine(tensor, "onnxruntime.dll")));
         Assert.Equal(InferenceInstallationState.MissingDependencies, installed.State);
         Assert.False(Directory.Exists(Path.Combine(plugins, ".downloads")));
+    }
+
+    [Fact]
+    public async Task Install_DeletesSupersededRevisionAndKeepsOnlyCurrentVersion()
+    {
+        var entries = OnnxRuntimePackageCatalog.ProviderFiles(InferenceDeviceType.CUDA)
+            .Select(file => ($"runtimes/win-x64/native/{file}", "runtime"))
+            .ToArray();
+        var archive = CreateZip(entries);
+        var bytes = await File.ReadAllBytesAsync(archive);
+        using var client = new HttpClient(new Handler(_ =>
+            new(HttpStatusCode.OK) { Content = new ByteArrayContent(bytes) }));
+        using var installer = new OnnxRuntimeInstaller(_root, client);
+        var package = Package(bytes) with { NugetId = "Microsoft.ML.OnnxRuntime.Gpu.Windows" };
+
+        await installer.InstallAsync(InferenceDeviceType.CUDA, [package], null, CancellationToken.None);
+        var first = installer.Inspect(InferenceDeviceType.CUDA).Directory;
+        await installer.InstallAsync(InferenceDeviceType.CUDA, [package], null, CancellationToken.None);
+        var current = installer.Inspect(InferenceDeviceType.CUDA).Directory;
+        var versions = Path.Combine(installer.PluginsDirectory, "CUDA", "versions");
+
+        Assert.NotEqual(first, current);
+        Assert.False(Directory.Exists(first));
+        Assert.Equal(current, Assert.Single(Directory.EnumerateDirectories(versions)));
+    }
+
+    [Fact]
+    public async Task Cleanup_PreservesCurrentAndLoadedRevisionUntilNextProcess()
+    {
+        var root = Directory.CreateDirectory(Path.Combine(_root, "Plugins", "OnnxRuntime", "TensorRT")).FullName;
+        var versions = Directory.CreateDirectory(Path.Combine(root, "versions")).FullName;
+        var current = Directory.CreateDirectory(Path.Combine(versions, Guid.NewGuid().ToString("N"))).FullName;
+        var loaded = Directory.CreateDirectory(Path.Combine(versions, Guid.NewGuid().ToString("N"))).FullName;
+        var obsolete = Directory.CreateDirectory(Path.Combine(versions, Guid.NewGuid().ToString("N"))).FullName;
+        await File.WriteAllTextAsync(Path.Combine(root, "current.txt"), Path.GetFileName(current));
+
+        using (var installer = new OnnxRuntimeInstaller(_root, protectedRuntimeDirectory: loaded))
+            await installer.CleanupInstalledDownloadsAsync(CancellationToken.None);
+
+        Assert.True(Directory.Exists(current));
+        Assert.True(Directory.Exists(loaded));
+        Assert.False(Directory.Exists(obsolete));
+
+        using (var nextProcessInstaller = new OnnxRuntimeInstaller(_root, protectedRuntimeDirectory: current))
+            await nextProcessInstaller.CleanupInstalledDownloadsAsync(CancellationToken.None);
+
+        Assert.Equal(current, Assert.Single(Directory.EnumerateDirectories(versions)));
     }
 
     [Fact]

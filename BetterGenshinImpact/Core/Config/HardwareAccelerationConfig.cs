@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Text.Json.Serialization;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -18,6 +19,8 @@ public partial class HardwareAccelerationConfig : ObservableObject
     [ObservableProperty] private InferenceEngineSettings _tensorRT = new();
     [ObservableProperty] private InferenceValidationState _validationState;
     [ObservableProperty] private string _verifiedSignature = "";
+    // 历史成功记录仅用于设置页展示，不能代替当前设备和参数的验证签名。
+    [ObservableProperty] private InferenceDeviceType[] _validatedEngines = [];
     [ObservableProperty] private InferenceDeviceType? _lastFailedEngine;
     [ObservableProperty] private string _lastValidationError = "";
 
@@ -30,6 +33,12 @@ public partial class HardwareAccelerationConfig : ObservableObject
         InferenceDeviceType.TensorRT => TensorRT,
         _ => throw new ArgumentOutOfRangeException(nameof(engine))
     };
+
+    public void RecordValidatedEngine(InferenceDeviceType engine)
+    {
+        if (engine != InferenceDeviceType.Cpu && !ValidatedEngines.Contains(engine))
+            ValidatedEngines = [.. ValidatedEngines, engine];
+    }
 
     [JsonIgnore]
     public bool IsExpectedConfiguration => FormatVersion == 1 && Enum.IsDefined(InferenceDevice)

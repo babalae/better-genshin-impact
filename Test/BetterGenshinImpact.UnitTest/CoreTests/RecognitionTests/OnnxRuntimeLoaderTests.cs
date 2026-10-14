@@ -53,8 +53,9 @@ public sealed class OnnxRuntimeLoaderTests : IDisposable
         string directoryName)
     {
         var directory = Directory.CreateDirectory(Path.Combine(_directory, "Plugins", "OnnxRuntime", directoryName)).FullName;
-        // 文件内容并非原生库：必须尝试加载 DLL，而不是依赖描述文件才能发现它。
-        File.WriteAllText(Path.Combine(directory, "onnxruntime.dll"), "仅用于失败加载测试");
+        // 文件内容并非原生库：完整文件清单存在时，必须尝试加载 DLL，而不是依赖描述文件才能发现它。
+        foreach (var file in OnnxRuntimePackageCatalog.ProviderFiles(device))
+            File.WriteAllText(Path.Combine(directory, file), "仅用于失败加载测试");
         var previousPath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Process);
 
         var loader = new OnnxRuntimeLoader(new HardwareAccelerationConfig { InferenceDevice = device }, _directory);
@@ -63,6 +64,25 @@ public sealed class OnnxRuntimeLoaderTests : IDisposable
         Assert.Contains("无法加载", loader.StatusText);
         Assert.Contains(directoryName, loader.StatusText);
         Assert.Equal(previousPath, Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Process));
+    }
+
+    [Fact]
+    public void TensorRtWithoutCudaBridge_FallsBackBeforeNativeLoadAndReportsMissingFile()
+    {
+        var directory = Directory.CreateDirectory(Path.Combine(_directory, "Plugins", "OnnxRuntime", "TensorRT")).FullName;
+        foreach (var file in OnnxRuntimePackageCatalog.ProviderFiles(InferenceDeviceType.TensorRT)
+                     .Where(file => !file.Equals("onnxruntime_providers_cuda.dll", StringComparison.OrdinalIgnoreCase)))
+            File.WriteAllText(Path.Combine(directory, file), "仅用于文件完整性测试");
+        foreach (var file in OnnxRuntimePackageCatalog.DependencyFiles(InferenceDeviceType.TensorRT))
+            File.WriteAllText(Path.Combine(directory, file), "仅用于文件完整性测试");
+
+        var loader = new OnnxRuntimeLoader(
+            new HardwareAccelerationConfig { InferenceDevice = InferenceDeviceType.TensorRT }, _directory);
+
+        Assert.Equal(InferenceDeviceType.Cpu, loader.InferenceDevice);
+        Assert.Contains("onnxruntime_providers_cuda.dll", loader.StatusText);
+        Assert.Contains("onnxruntime_providers_cuda.dll", loader.FailureReason);
+        Assert.Contains("重新下载运行库", loader.FailureReason);
     }
 
     [Theory]

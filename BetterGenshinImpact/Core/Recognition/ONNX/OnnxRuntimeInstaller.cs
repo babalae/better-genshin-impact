@@ -25,14 +25,19 @@ public sealed class OnnxRuntimeInstaller : IOnnxRuntimeInstaller, IDisposable
 {
     private readonly HttpClient _client;
     private readonly bool _ownsClient;
+    private readonly string? _protectedRuntimeDirectory;
     private readonly SemaphoreSlim _installationLock = new(1, 1);
     private readonly CancellationTokenSource _lifetime = new();
     public string BaseDirectory { get; }
     public string PluginsDirectory => Path.Combine(BaseDirectory, "Plugins", "OnnxRuntime");
 
-    public OnnxRuntimeInstaller(string baseDirectory, HttpClient? client = null)
+    public OnnxRuntimeInstaller(string baseDirectory, HttpClient? client = null,
+        string? protectedRuntimeDirectory = null)
     {
         BaseDirectory = Path.GetFullPath(baseDirectory);
+        _protectedRuntimeDirectory = string.IsNullOrWhiteSpace(protectedRuntimeDirectory)
+            ? null
+            : Path.GetFullPath(protectedRuntimeDirectory);
         _ownsClient = client == null;
         _client = client ?? new HttpClient(new HttpClientHandler { AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate }) { Timeout = Timeout.InfiniteTimeSpan };
     }
@@ -67,7 +72,7 @@ public sealed class OnnxRuntimeInstaller : IOnnxRuntimeInstaller, IDisposable
             var entry = cuda[component]!;
             result.Add(GetNvidiaPackage("cuda", component, entry.Value<string>("version")!, entry["windows-x86_64"]!));
         }
-        if (engine == InferenceDeviceType.CUDA && Missing("cudnn"))
+        if (Missing("cudnn"))
         {
             var cudnn = await ReadJsonAsync("https://developer.download.nvidia.com/compute/cudnn/redist/redistrib_9.8.0.json", token);
             var entry = cudnn["cudnn"]!;
@@ -128,6 +133,8 @@ public sealed class OnnxRuntimeInstaller : IOnnxRuntimeInstaller, IDisposable
             var pointer = Path.Combine(root, ".current-" + revision);
             await File.WriteAllTextAsync(pointer, revision, new System.Text.UTF8Encoding(false), token);
             File.Move(pointer, Path.Combine(root, "current.txt"), true);
+            // 原子切换后只保留当前 revision。若旧 revision 正被本进程加载，则留到重启后的清理再删除。
+            CleanupObsoleteVersions(engine, token);
             // 安装原子提交后再清理完整包；取消或失败时保留缓存供重试、续传。
             foreach (var archive in completedArchives) TryDeleteDownload(archive);
             TryRemoveEmptyDownloadDirectory();
@@ -151,25 +158,55 @@ public sealed class OnnxRuntimeInstaller : IOnnxRuntimeInstaller, IDisposable
         await _installationLock.WaitAsync(linked.Token);
         try
         {
+            foreach (var engine in Enum.GetValues<InferenceDeviceType>().Where(engine => engine != InferenceDeviceType.Cpu))
+                CleanupObsoleteVersions(engine, linked.Token);
+
             var cache = Path.Combine(PluginsDirectory, ".downloads");
-            if (!Directory.Exists(cache)) return;
-            foreach (var path in Directory.EnumerateFiles(cache, "*.zip"))
+            if (Directory.Exists(cache))
             {
-                linked.Token.ThrowIfCancellationRequested();
-                // 兼容之前留下的已安装下载包，只清理与当前安装内容完全一致的包。
-                var key = Path.GetFileNameWithoutExtension(path);
-                if (key.Length != 64 || !key.All(Uri.IsHexDigit)) continue;
-                try
+                foreach (var path in Directory.EnumerateFiles(cache, "*.zip"))
                 {
-                    if (await MatchesInstalledFilesAsync(path, linked.Token)) TryDeleteDownload(path);
+                    linked.Token.ThrowIfCancellationRequested();
+                    // 兼容之前留下的已安装下载包，只清理与当前安装内容完全一致的包。
+                    var key = Path.GetFileNameWithoutExtension(path);
+                    if (key.Length != 64 || !key.All(Uri.IsHexDigit)) continue;
+                    try
+                    {
+                        if (await MatchesInstalledFilesAsync(path, linked.Token)) TryDeleteDownload(path);
+                    }
+                    catch (InvalidDataException) { /* 无法识别的包交由下载校验处理。 */ }
+                    catch (IOException) { /* 文件被占用时保留，下次刷新再清理。 */ }
+                    catch (UnauthorizedAccessException) { /* 缓存清理不能阻止设备识别。 */ }
                 }
-                catch (InvalidDataException) { /* 无法识别的包交由下载校验处理。 */ }
-                catch (IOException) { /* 文件被占用时保留，下次刷新再清理。 */ }
-                catch (UnauthorizedAccessException) { /* 缓存清理不能阻止设备识别。 */ }
             }
             TryRemoveEmptyDownloadDirectory();
         }
         finally { _installationLock.Release(); }
+    }
+
+    private void CleanupObsoleteVersions(InferenceDeviceType engine, CancellationToken token)
+    {
+        var root = Path.GetFullPath(OnnxRuntimePackageCatalog.EngineDirectory(PluginsDirectory, engine));
+        var versions = Path.GetFullPath(Path.Combine(root, "versions"));
+        if (!Directory.Exists(versions)) return;
+
+        var current = Path.GetFullPath(OnnxRuntimePackageCatalog.RuntimeDirectory(PluginsDirectory, engine));
+        // current.txt 缺失或损坏时不猜测应保留哪一份，避免误删可恢复的安装。
+        if (!string.Equals(Path.GetDirectoryName(current), versions, StringComparison.OrdinalIgnoreCase)) return;
+
+        foreach (var directory in Directory.EnumerateDirectories(versions))
+        {
+            token.ThrowIfCancellationRequested();
+            var candidate = Path.GetFullPath(directory);
+            if (!string.Equals(Path.GetDirectoryName(candidate), versions, StringComparison.OrdinalIgnoreCase)
+                || !Guid.TryParseExact(Path.GetFileName(candidate), "N", out _)
+                || string.Equals(candidate, current, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(candidate, _protectedRuntimeDirectory, StringComparison.OrdinalIgnoreCase))
+                continue;
+            try { Directory.Delete(candidate, true); }
+            catch (IOException) { /* 旧运行库仍被其他实例占用时留到下次清理。 */ }
+            catch (UnauthorizedAccessException) { /* 清理失败不能影响当前安装。 */ }
+        }
     }
 
     private async Task<bool> MatchesInstalledFilesAsync(string path, CancellationToken token)

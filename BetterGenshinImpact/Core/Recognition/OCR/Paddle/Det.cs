@@ -11,7 +11,9 @@ namespace BetterGenshinImpact.Core.Recognition.OCR.Paddle;
 public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxFactory bgiOnnxFactory)
     : IDisposable
 {
+    private readonly object _sessionLock = new();
     private readonly InferenceSession _session = bgiOnnxFactory.CreateInferenceSession(model, true);
+    private bool _disposed;
 
     /// <summary>Gets or sets the detection side length limit used by the Python det preprocess.</summary>
     public int LimitSideLen { get; set; } = 960;
@@ -40,21 +42,14 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxFactory bgi
     /// <summary>Gets or sets the ratio for enlarging text boxes during post-processing.</summary>
     public float UnclipRatio { get; set; } = 1.5f;
 
-    ~Det()
-    {
-        lock (_session)
-        {
-            _session.Dispose();
-        }
-    }
-
     public void Dispose()
     {
-        lock (_session)
+        lock (_sessionLock)
         {
+            if (_disposed) return;
+            _disposed = true;
             _session.Dispose();
         }
-        GC.SuppressFinalize(this);
     }
 
     public RotatedRect[] Run(Mat src)
@@ -98,8 +93,9 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxFactory bgi
                 config.NormalizeImage.Mean, config.NormalizeImage.Std, out var owner);
             using (owner)
             {
-                lock (_session)
+                lock (_sessionLock)
                 {
+                    ObjectDisposedException.ThrowIf(_disposed, this);
                     using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = _session.Run([
                         NamedOnnxValue.CreateFromTensor(_session.InputNames[0], inputTensor)
                     ]);

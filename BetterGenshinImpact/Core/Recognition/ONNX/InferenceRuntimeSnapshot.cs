@@ -12,7 +12,7 @@ public enum InferenceBenchmarkScene { Ocr, DomainTree }
 
 public sealed record InferenceDeviceInfo(string Id, string Name, int Index, string ProviderDevice);
 
-/// <summary>启动时冻结。设置页的草稿及待重启配置不能改变现有推理会话。</summary>
+/// <summary>每个会话创建时冻结。设置页草稿及延后验证不能改变现有推理会话的参数。</summary>
 public sealed record InferenceRuntimeSnapshot(
     InferenceDeviceType Engine, InferenceDeviceInfo Device, bool CpuOcr,
     int CpuThreads, bool EnableModelCache, string RuntimeDirectory)
@@ -50,8 +50,8 @@ public sealed record InferenceRuntimeSnapshot(
 
 public static class InferenceTestImages
 {
-    // 古树图片等待用户提供，不能以其他截图或生成图片代替。
-    public const string DomainTreeRelativePath = @"Assets\Model\Domain\test_bgi_tree.png";
+    // 使用秘境中的石化古树实机截图，供运行库验证与设置页测速共用。
+    public const string DomainTreeRelativePath = @"Assets\Model\Domain\test_petrified_trees.jpg";
     public static string DomainTreePath => Global.Absolute(DomainTreeRelativePath);
     public static bool HasDomainTreeImage => File.Exists(DomainTreePath);
 }

@@ -1,9 +1,63 @@
 using BetterGenshinImpact.Core.Recognition.ONNX;
+using Microsoft.ML.OnnxRuntime;
 
 namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests;
 
 public sealed class InferenceBenchmarkTests
 {
+    [Fact]
+    public void Profiling_WritesFileToConfiguredDirectory()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "bettergi-profile-test-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var prefix = Path.Combine(directory, "tree");
+            using (var options = new SessionOptions())
+            {
+                BgiOnnxFactory.ConfigureProfiling(options, prefix);
+                using var session = new InferenceSession(BgiOnnxModel.BgiTree.ModalPath, options);
+            }
+
+            var profile = Assert.Single(Directory.EnumerateFiles(directory, "tree*.json"));
+            Assert.StartsWith(prefix, profile, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
+    }
+
+    [Fact]
+    public void TensorRtLoadFailure_ReportsMissingComponentsAndKeepsInnerException()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "bettergi-trt-failure-test-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            foreach (var file in OnnxRuntimePackageCatalog.DependencyFiles(InferenceDeviceType.TensorRT)
+                         .Where(file => !file.StartsWith("cublas", StringComparison.OrdinalIgnoreCase)
+                                        && !file.StartsWith("cudnn", StringComparison.OrdinalIgnoreCase)))
+                File.WriteAllText(Path.Combine(directory, file), "installed");
+            var snapshot = new InferenceRuntimeSnapshot(InferenceDeviceType.TensorRT,
+                new("GPU-test", "测试显卡", 0, "0"), true, 0, true, directory);
+            var original = new DllNotFoundException("LoadLibrary failed with error 126");
+
+            var result = InferenceModelDiagnostics.CreateRuntimeFailure("古树检测", snapshot, original);
+
+            Assert.Contains("cuBLAS", result.UserReason);
+            Assert.Contains("cuDNN", result.UserReason);
+            Assert.Contains("补齐依赖", result.UserReason);
+            Assert.Contains("cublas64_12.dll", result.Message);
+            Assert.Contains("cudnn64_9.dll", result.Message);
+            Assert.Same(original, result.InnerException);
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
+    }
+
     [Fact]
     public void CudaVisibility_MapsRuntimeOrdinalsBeforeHardwareFiltering()
     {
@@ -27,6 +81,35 @@ public sealed class InferenceBenchmarkTests
             Assert.True(InferenceModelDiagnostics.ProfileUsesProvider(file, "CUDAExecutionProvider"));
         }
         finally { File.Delete(file); }
+    }
+
+    [Fact]
+    public void ProviderFallback_SeparatesValidationConclusionFromRuntimeException()
+    {
+        var snapshot = new InferenceRuntimeSnapshot(InferenceDeviceType.OpenVINO,
+            new("NPU-test", "NPU · Intel(R) AI Boost", 0, "NPU"), true, 0, true, "runtime");
+        var result = InferenceModelDiagnostics.CreateProviderValidationResult("古树检测", snapshot,
+            "OpenVINOExecutionProvider", ["CPUExecutionProvider"]);
+
+        Assert.Equal(InferenceValidationOutcome.NotAccelerated, result.Outcome);
+        Assert.Contains("NPU · Intel(R) AI Boost", result.UserReason);
+        Assert.Contains("实际全部由 CPU 完成", result.UserReason);
+        Assert.DoesNotContain("ExecutionProvider", result.UserReason);
+        Assert.Contains("OpenVINOExecutionProvider", result.TechnicalDetails);
+        Assert.Contains("没有底层异常堆栈", result.TechnicalDetails);
+    }
+
+    [Fact]
+    public void MissingProviderEvidence_DoesNotClaimThatAccelerationWasUnused()
+    {
+        var snapshot = new InferenceRuntimeSnapshot(InferenceDeviceType.DirectML,
+            new("GPU-test", "NVIDIA GeForce RTX 5070 Ti", 0, "0"), true, 0, false, "runtime");
+        var result = InferenceModelDiagnostics.CreateProviderValidationResult("古树检测", snapshot,
+            "DmlExecutionProvider", []);
+
+        Assert.Equal(InferenceValidationOutcome.EvidenceUnavailable, result.Outcome);
+        Assert.Contains("完整模型测试已成功", result.UserReason);
+        Assert.Contains("不能据此判断", result.TechnicalDetails);
     }
 
     [Fact]

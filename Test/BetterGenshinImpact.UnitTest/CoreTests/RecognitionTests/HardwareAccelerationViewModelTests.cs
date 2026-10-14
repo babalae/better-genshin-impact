@@ -3,6 +3,7 @@ using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.ViewModel.Pages.View;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Text.Json;
 
 namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests;
 
@@ -13,7 +14,7 @@ public sealed class HardwareAccelerationViewModelTests
     {
         using var rig = await Rig.CreateAsync();
         await rig.ViewModel.RefreshCommand.ExecuteAsync(null);
-        var card = rig.Card(InferenceDeviceType.TensorRT);
+        var card = rig.Card(InferenceDeviceType.CUDA);
         Assert.False(card.IsInstalled);
         var otherProbeCalls = rig.Devices.OpenVinoCalls;
         await rig.ViewModel.DownloadRuntimeCommand.ExecuteAsync(card);
@@ -25,9 +26,31 @@ public sealed class HardwareAccelerationViewModelTests
         Assert.False(rig.ViewModel.IsBusy);
         await rig.ViewModel.ApplyCommand.ExecuteAsync(null);
         Assert.Equal(1, rig.Interaction.Restarts);
-        Assert.Equal(InferenceDeviceType.TensorRT, rig.Config.HardwareAccelerationConfig.InferenceDevice);
+        Assert.Equal(InferenceDeviceType.CUDA, rig.Config.HardwareAccelerationConfig.InferenceDevice);
         Assert.Equal(InferenceValidationState.PendingRestart, rig.Config.HardwareAccelerationConfig.ValidationState);
         Assert.Equal(InferenceDeviceType.Cpu, rig.Runtime.Current.Engine);
+    }
+
+    [Fact]
+    public async Task Engines_DoNotOfferRetiredTensorRt()
+    {
+        using var rig = await Rig.CreateAsync();
+
+        Assert.DoesNotContain(rig.ViewModel.Engines, card => card.Engine == InferenceDeviceType.TensorRT);
+        Assert.Equal(InferenceDeviceType.Cpu, rig.ViewModel.SelectedEngine!.Engine);
+    }
+
+    [Fact]
+    public async Task RetiredEngineInSavedConfiguration_OpensSettingsOnCpuCard()
+    {
+        // 启动准备之后不会再出现 TensorRT；设置页在历史配置上仍需稳健打开并允许一键回到 CPU。
+        using var rig = await Rig.CreateAsync(InferenceDeviceType.TensorRT);
+        await rig.ViewModel.RefreshCommand.ExecuteAsync(null);
+
+        Assert.Equal(InferenceDeviceType.TensorRT, rig.Config.HardwareAccelerationConfig.InferenceDevice);
+        Assert.Equal(InferenceDeviceType.Cpu, rig.ViewModel.SelectedEngine!.Engine);
+        Assert.StartsWith("CPU", rig.ViewModel.SelectionText);
+        Assert.True(rig.ViewModel.CanApply);
     }
 
     [Fact]
@@ -36,7 +59,7 @@ public sealed class HardwareAccelerationViewModelTests
         using var rig = await Rig.CreateAsync();
         rig.Installer.State = InferenceInstallationState.MissingDependencies;
         await rig.ViewModel.RefreshCommand.ExecuteAsync(null);
-        var card = rig.Card(InferenceDeviceType.TensorRT);
+        var card = rig.Card(InferenceDeviceType.CUDA);
         rig.ViewModel.SelectedEngine = card;
         Assert.False(rig.ViewModel.CanApply);
         Assert.True(card.CanCompleteDependencies);
@@ -49,7 +72,7 @@ public sealed class HardwareAccelerationViewModelTests
     [Fact]
     public async Task UpdatedLibraryWithUnchangedEngineAndDevice_CanApplyAndRestart()
     {
-        using var rig = await Rig.CreateAsync(InferenceDeviceType.TensorRT);
+        using var rig = await Rig.CreateAsync(InferenceDeviceType.CUDA);
         rig.Installer.State = InferenceInstallationState.Installed;
         await rig.ViewModel.RefreshCommand.ExecuteAsync(null);
         Assert.False(rig.ViewModel.CanApply);
@@ -67,7 +90,7 @@ public sealed class HardwareAccelerationViewModelTests
         using var rig = await Rig.CreateAsync();
         rig.Installer.State = InferenceInstallationState.Installed;
         await rig.ViewModel.RefreshCommand.ExecuteAsync(null);
-        var card = rig.Card(InferenceDeviceType.TensorRT);
+        var card = rig.Card(InferenceDeviceType.CUDA);
         rig.ViewModel.SelectedEngine = card;
         card.SelectedDevice = card.Devices.Single(device => device.Id == "GPU-2");
         card.PropertyChanged += (_, e) =>
@@ -86,14 +109,50 @@ public sealed class HardwareAccelerationViewModelTests
     {
         using var rig = await Rig.CreateAsync();
         rig.Installer.State = InferenceInstallationState.Installed;
-        rig.Devices.FailTensorRt = true;
+        rig.Devices.FailCuda = true;
         await rig.ViewModel.RefreshCommand.ExecuteAsync(null);
-        rig.ViewModel.SelectedEngine = rig.Card(InferenceDeviceType.TensorRT);
+        rig.ViewModel.SelectedEngine = rig.Card(InferenceDeviceType.CUDA);
         Assert.False(rig.ViewModel.CanApply);
         Assert.Contains("设备探测失败", rig.ViewModel.ApplyHint);
-        rig.Devices.FailTensorRt = false;
+        rig.Devices.FailCuda = false;
         await rig.ViewModel.RefreshCommand.ExecuteAsync(null);
         Assert.True(rig.ViewModel.CanApply);
+    }
+
+    [Fact]
+    public async Task ValidatedEngine_AfterSwitchingAndReloadingShowsHistoricalSuccess()
+    {
+        using var validated = await Rig.CreateAsync(InferenceDeviceType.CUDA);
+        await validated.Runtime.ValidatePendingAsync();
+        validated.Runtime.Apply(InferenceDeviceType.Cpu, new() { DeviceId = "CPU" }, true, 0);
+        var saved = JsonSerializer.Deserialize<HardwareAccelerationConfig>(
+            JsonSerializer.Serialize(validated.Config.HardwareAccelerationConfig))!;
+
+        using var restarted = await Rig.CreateAsync(savedHardware: saved);
+        restarted.Installer.State = InferenceInstallationState.Installed;
+        await restarted.ViewModel.RefreshCommand.ExecuteAsync(null);
+
+        Assert.Equal("此前验证通过", restarted.Card(InferenceDeviceType.CUDA).StatusText);
+        Assert.Equal("已安装 · 尚未验证", restarted.Card(InferenceDeviceType.DirectML).StatusText);
+        Assert.Equal("内置 · 无需安装", restarted.Card(InferenceDeviceType.Cpu).StatusText);
+    }
+
+    [Fact]
+    public async Task HistoricalSuccess_DoesNotHideLaterFailureOrMissingDependencies()
+    {
+        using var rig = await Rig.CreateAsync();
+        var hardware = rig.Config.HardwareAccelerationConfig;
+        hardware.RecordValidatedEngine(InferenceDeviceType.CUDA);
+        rig.Installer.State = InferenceInstallationState.MissingDependencies;
+        await rig.ViewModel.RefreshCommand.ExecuteAsync(null);
+        Assert.Equal("配套依赖不完整", rig.Card(InferenceDeviceType.CUDA).StatusText);
+
+        rig.Installer.State = InferenceInstallationState.Installed;
+        hardware.LastFailedEngine = InferenceDeviceType.CUDA;
+        hardware.LastValidationError = "最近一次模型验证失败";
+        await rig.ViewModel.RefreshCommand.ExecuteAsync(null);
+        Assert.Equal("上次验证未通过", rig.Card(InferenceDeviceType.CUDA).StatusText);
+        Assert.Contains(hardware.LastValidationError, rig.Card(InferenceDeviceType.CUDA).Details);
     }
 
     [Fact]
@@ -122,9 +181,11 @@ public sealed class HardwareAccelerationViewModelTests
         private readonly SemaphoreSlim _semaphore = new(1, 1);
         public InferenceEngineCardViewModel Card(InferenceDeviceType type) => ViewModel.Engines.Single(card => card.Engine == type);
 
-        public static async Task<Rig> CreateAsync(InferenceDeviceType engine = InferenceDeviceType.Cpu)
+        public static async Task<Rig> CreateAsync(InferenceDeviceType engine = InferenceDeviceType.Cpu,
+            HardwareAccelerationConfig? savedHardware = null)
         {
             var rig = new Rig();
+            if (savedHardware != null) rig.Config.HardwareAccelerationConfig = savedHardware;
             var hardware = rig.Config.HardwareAccelerationConfig;
             hardware.FormatVersion = 1;
             hardware.InferenceDevice = engine;
@@ -164,12 +225,12 @@ public sealed class HardwareAccelerationViewModelTests
 
     private sealed class Devices : IInferenceDeviceDiscovery
     {
-        public bool FailTensorRt { get; set; }
+        public bool FailCuda { get; set; }
         public int OpenVinoCalls { get; private set; }
         public IReadOnlyList<InferenceDeviceInfo> GetDevices(InferenceDeviceType engine, string directory)
         {
             if (engine == InferenceDeviceType.OpenVINO) OpenVinoCalls++;
-            if (engine == InferenceDeviceType.TensorRT && FailTensorRt) throw new InvalidOperationException("test probe failure");
+            if (engine == InferenceDeviceType.CUDA && FailCuda) throw new InvalidOperationException("test probe failure");
             return engine == InferenceDeviceType.Cpu ? [InferenceRuntimeSnapshot.CpuDefault().Device]
                 : [new("GPU-1", "GPU 1", 0, "0"), new("GPU-2", "GPU 2", 1, "1")];
         }
@@ -178,8 +239,10 @@ public sealed class HardwareAccelerationViewModelTests
     private sealed class Diagnostics : IInferenceModelDiagnostics
     {
         public bool HasDomainTreeImage => false;
-        public Task ValidateTreeAsync(BgiOnnxFactory factory, CancellationToken token) => Task.CompletedTask;
-        public Task ValidateOcrAsync(BgiOnnxFactory factory, CancellationToken token) => Task.CompletedTask;
+        public Task<InferenceValidationResult> ValidateTreeAsync(BgiOnnxFactory factory, CancellationToken token)
+            => Task.FromResult(InferenceValidationResult.Passed("古树检测"));
+        public Task<InferenceValidationResult> ValidateOcrAsync(BgiOnnxFactory factory, CancellationToken token)
+            => Task.FromResult(InferenceValidationResult.Passed("OCR"));
         public Task PreheatOcrAsync() => Task.CompletedTask;
         public Task<InferenceBenchmarkResult> BenchmarkAsync(InferenceBenchmarkScene scene, BgiOnnxFactory factory,
             IProgress<InferenceBenchmarkProgress>? progress, CancellationToken token) => throw new NotSupportedException();
@@ -198,6 +261,7 @@ public sealed class HardwareAccelerationViewModelTests
         public InferenceDeviceType InferenceDevice => engine;
         public string RuntimeDirectory => "runtime-v1";
         public string StatusText => "test";
+        public string FailureReason => "";
     }
 
     private sealed class Configuration(AllConfig config) : IConfigService

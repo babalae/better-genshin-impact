@@ -101,7 +101,7 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     private readonly IBannerImageService _bannerImageService;
     private CancellationTokenSource? _bannerDownloadCancellationTokenSource;
 
-    [ObservableProperty] private InferenceDeviceType[] _inferenceDeviceTypes = Enum.GetValues<InferenceDeviceType>();
+    [ObservableProperty] private InferenceDeviceType[] _inferenceDeviceTypes = InferenceDeviceTypeExtensions.Selectable.ToArray();
 
 
     [ObservableProperty] private ImageSource _bannerImageSource;
@@ -684,11 +684,12 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         var viewModel = _hardwareAccelerationFactory.Create();
         var dialogWindow = new FluentWindow
         {
-            Title = "硬件加速设置",
+            Title = "推理引擎设置",
             Content = new HardwareAccelerationView(viewModel),
-            Width = 1040,
+            // 引擎卡片一行两张（卡片 300 + 间距 12），窗口宽度只需容纳两列卡片、左右 24 边距与滚动条。
+            Width = 720,
             Height = 800,
-            MinWidth = 800,
+            MinWidth = 720,
             MinHeight = 650,
             Owner = Application.Current.MainWindow,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
@@ -715,7 +716,7 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         get
         {
             var text = _inferenceRuntime.IsReady ? _inferenceRuntime.Current.Description : "推理初始化中";
-            return Config.HardwareAccelerationConfig.ValidationState == InferenceValidationState.PendingRestart
+            return _inferenceRuntime.HasPendingRestart
                 ? text + "（设置已保存，待重启验证）" : text;
         }
     }

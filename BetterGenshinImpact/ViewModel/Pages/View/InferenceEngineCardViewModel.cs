@@ -22,6 +22,7 @@ public partial class InferenceEngineCardViewModel(InferenceDeviceType engine, In
     [ObservableProperty] private ObservableCollection<InferenceDeviceInfo> _devices = [];
     public bool SupportsCache => Engine is InferenceDeviceType.OpenVINO or InferenceDeviceType.TensorRT;
     public bool IsCpu => Engine == InferenceDeviceType.Cpu;
+    public bool IsRecommended => Engine == InferenceDeviceType.OpenVINO;
     [ObservableProperty] private InferenceDeviceInfo? _selectedDevice;
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private bool _isCurrent;

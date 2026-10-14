@@ -78,9 +78,20 @@ public sealed class InferenceDeviceTypeConfigTests
     [Fact]
     public void DeviceList_UsesRequestedOrderWithoutAutomaticGpu()
     {
-        // 首页和硬件加速页都使用 Enum.GetValues，顺序也是它们的用户界面约定。
+        // 枚举顺序与编号是历史配置的兼容约定；界面可选范围见 SelectableEngines_ExcludeRetiredTensorRt。
         Assert.Equal(new[] { "Cpu", "DirectML", "OpenVINO", "CUDA", "TensorRT" },
             Enum.GetNames<InferenceDeviceType>());
+    }
+
+    [Fact]
+    public void SelectableEngines_ExcludeRetiredTensorRt()
+    {
+        // 设置页与首页只展示 Selectable 中的引擎；TensorRT 因推理速度过慢下线，枚举与运行库代码仍然保留。
+        Assert.Equal(
+            new[] { InferenceDeviceType.Cpu, InferenceDeviceType.DirectML, InferenceDeviceType.OpenVINO, InferenceDeviceType.CUDA },
+            InferenceDeviceTypeExtensions.Selectable);
+        Assert.False(InferenceDeviceType.TensorRT.IsSelectable());
+        Assert.True(InferenceDeviceType.CUDA.IsSelectable());
     }
 
     private static HardwareAccelerationConfig ReadConfig(string jsonValue)

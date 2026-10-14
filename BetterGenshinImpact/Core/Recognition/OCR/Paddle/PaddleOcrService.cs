@@ -253,6 +253,7 @@ public class PaddleOcrService : IOcrService, IDisposable
 
     public PaddleOcrService(BgiOnnxFactory bgiOnnxFactory, PaddleOcrModelType modelType)
     {
+        bgiOnnxFactory = bgiOnnxFactory.CaptureSnapshot();
         var (modelsDet, modelsRec) = modelType.Build(bgiOnnxFactory);
         _localDetModel = modelsDet;
         _localRecModel = modelsRec;

@@ -43,13 +43,13 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
     public string CurrentDeviceText => _runtime.Current.Device.Name;
     public string CurrentOcrText => _runtime.Current.OcrDescription;
     private HardwareAccelerationConfig Config => _configService.Get().HardwareAccelerationConfig;
-    public bool HasPendingChanges => Config.ValidationState == InferenceValidationState.PendingRestart;
+    public bool HasPendingChanges => _runtime.HasPendingRestart;
     public string PendingText
     {
         get
         {
             if (!HasPendingChanges) return "";
-            var card = Engines.First(c => c.Engine == Config.InferenceDevice);
+            var card = Engines.FirstOrDefault(c => c.Engine == Config.InferenceDevice) ?? Engines.First(c => c.IsCpu);
             var savedId = Config.GetEngineSettings(Config.InferenceDevice).DeviceId;
             var device = card.Devices.FirstOrDefault(d => d.Id == savedId)?.Name ?? savedId;
             return $"{card.Name} · {device}";
@@ -124,17 +124,19 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         _cpuThreads = Config.Cpu.CpuThreads;
         CpuThreadChoices = Enumerable.Range(0, Environment.ProcessorCount + 1)
             .Select(i => new InferenceThreadChoice(i, i == 0 ? "自动（推荐）" : i.ToString())).ToArray();
-        foreach (var engine in Enum.GetValues<InferenceDeviceType>())
+        foreach (var engine in Enum.GetValues<InferenceDeviceType>().Where(engine => engine.IsSelectable()))
         {
             var card = new InferenceEngineCardViewModel(engine, Config.GetEngineSettings(engine));
             card.PropertyChanged += CardChanged;
             card.Settings.PropertyChanged += CardSettingsChanged;
             Engines.Add(card);
         }
-        SelectedEngine = Engines.First(e => e.Engine == Config.InferenceDevice);
-        _runtime.SettingsChanged += RuntimeSettingsChanged;
+        // TensorRT 已下线：历史配置可能在启动准备之前仍是 TRT，这里回退到 CPU 卡片而不是直接抛异常。
+        SelectedEngine = Engines.FirstOrDefault(card => card.Engine == Config.InferenceDevice)
+            ?? Engines.First(card => card.IsCpu);
         _taskStatusTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(500), DispatcherPriority.Background,
             (_, _) => RefreshAvailability(), Dispatcher.CurrentDispatcher);
+        _runtime.SettingsChanged += RuntimeSettingsChanged;
     }
 
     private void CardChanged(object? sender, PropertyChangedEventArgs e)
@@ -155,8 +157,34 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
     partial void OnCpuThreadsChanged(int value) => RefreshAvailability();
     private void RuntimeSettingsChanged(object? sender, EventArgs e)
     {
+        if (!_taskStatusTimer.Dispatcher.CheckAccess())
+        {
+            _taskStatusTimer.Dispatcher.BeginInvoke(() => RuntimeSettingsChanged(sender, e));
+            return;
+        }
+        if (_disposed) return;
+        OnPropertyChanged(nameof(CurrentRuntimeText)); OnPropertyChanged(nameof(CurrentEngineName));
+        OnPropertyChanged(nameof(CurrentDeviceText)); OnPropertyChanged(nameof(CurrentOcrText));
         OnPropertyChanged(nameof(HasPendingChanges)); OnPropertyChanged(nameof(PendingText));
-        foreach (var card in Engines) card.IsPending = HasPendingChanges && card.Engine == Config.InferenceDevice;
+        foreach (var card in Engines)
+        {
+            card.IsPending = HasPendingChanges && card.Engine == Config.InferenceDevice;
+            card.IsCurrent = card.Engine == _runtime.Current.Engine;
+            card.HasFailure = Config.LastFailedEngine == card.Engine && !string.IsNullOrWhiteSpace(Config.LastValidationError)
+                && !(card.IsCurrent && _runtime.IsCurrentValidated);
+            if (card.IsCurrent && card.IsInstalled)
+            {
+                card.StatusText = card.IsCpu ? "内置 · 无需安装" : (_runtime.IsCurrentValidated ? "模型验证通过" : "已生效 · 未验证");
+                if (!card.HasFailure) card.Details = "运行库已就绪。\n\n运行库目录：\n" + card.RuntimeDirectory;
+            }
+            else if (card.HasFailure)
+            {
+                card.StatusText = "上次验证未通过";
+                card.Details = Config.LastValidationError + "\n\n运行库目录：\n" + card.RuntimeDirectory;
+            }
+            else if (card.IsInstalled && string.IsNullOrWhiteSpace(card.ApplyBlockReason))
+                card.StatusText = Config.ValidatedEngines.Contains(card.Engine) ? "此前验证通过" : "已安装 · 尚未验证";
+        }
         RefreshAvailability();
     }
     partial void OnSelectedEngineChanged(InferenceEngineCardViewModel? value)
@@ -207,17 +235,19 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
             card.CanCompleteDependencies = installation.State == InferenceInstallationState.MissingDependencies;
             card.IsCurrent = card.Engine == _runtime.Current.Engine;
             card.IsPending = HasPendingChanges && card.Engine == Config.InferenceDevice;
-            card.HasFailure = Config.LastFailedEngine == card.Engine && Config.LastValidationError.Length > 0;
+            card.HasFailure = Config.LastFailedEngine == card.Engine && Config.LastValidationError.Length > 0
+                && !(card.IsCurrent && _runtime.IsCurrentValidated);
             card.Details = installation.Description + "\n\n运行库目录：\n" + installation.Directory;
             card.StatusText = installation.State == InferenceInstallationState.Missing ? "DLL 未安装" : "配套依赖不完整";
             if (card.HasFailure)
             {
-                card.StatusText = "验证失败，已回退 CPU";
-                card.Details += "\n\n验证错误：\n" + Config.LastValidationError;
+                card.StatusText = "上次验证未通过";
+                card.Details += "\n\n上次验证结果（历史记录）：\n" + Config.LastValidationError;
             }
             else if (card.IsCurrent && card.IsInstalled)
-                card.StatusText = card.IsCpu ? "内置 · 无需安装" : "模型验证通过";
-            else if (card.IsInstalled) card.StatusText = "已安装 · 等待验证";
+                card.StatusText = card.IsCpu ? "内置 · 无需安装" : (_runtime.IsCurrentValidated ? "模型验证通过" : "已生效 · 未验证");
+            else if (card.IsInstalled)
+                card.StatusText = Config.ValidatedEngines.Contains(card.Engine) ? "此前验证通过" : "已安装 · 尚未验证";
             var preferred = card.SelectedDevice?.Id ?? card.Settings.DeviceId;
             try
             {
