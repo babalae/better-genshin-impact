@@ -1,6 +1,7 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.UseRedeemCode;
@@ -51,6 +52,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     private readonly IConfigService _configService;
     private readonly INavigationService _navigationService;
     private readonly ChildSessionService _childSessionService;
+    private readonly IInferenceModelDiagnostics _inferenceDiagnostics;
     public string Title => $"BetterGI · 更好的原神 · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}";
     public bool IsChildSessionInstance =>
         InstanceBootstrap.Current.Context.InstanceType == BetterGiInstanceType.ChildSession;
@@ -103,8 +105,10 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     public MainWindowViewModel(
         INavigationService navigationService,
         IConfigService configService,
-        ChildSessionService childSessionService)
+        ChildSessionService childSessionService,
+        IInferenceModelDiagnostics inferenceDiagnostics)
     {
+        _inferenceDiagnostics = inferenceDiagnostics;
         _navigationService = navigationService;
         _configService = configService;
         _childSessionService = childSessionService;
@@ -563,8 +567,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
                     // 现在OCR创建的时候会自己读设置了
                     // string gameCultureInfoName = TaskContext.Instance().Config.OtherConfig.GameCultureInfoName;
                     // await OcrFactory.ChangeCulture(gameCultureInfoName);
-                    var s = OcrFactory.Paddle.Ocr(new Mat(Global.Absolute(@"Assets\Model\PaddleOCR\test_pp_ocr.png")));
-                    Debug.WriteLine("PaddleOcr预热结果:" + s);
+                    await _inferenceDiagnostics.PreheatOcrAsync();
                 }
                 catch (Exception e)
                 {

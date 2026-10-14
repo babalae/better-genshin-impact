@@ -288,4 +288,8 @@
 		</ItemGroup>
 	</Target>
 
+	<!-- 古树测试样例由用户提供；文件加入后自动随构建与发布复制，当前不创建替代图片。 -->
+	<ItemGroup>
+		<None Update="Assets\Model\Domain\test_bgi_tree.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+	</ItemGroup>
 </Project>

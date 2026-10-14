@@ -1,0 +1,57 @@
+using System;
+using System.IO;
+using System.Security.Cryptography;
+using System.Text;
+using BetterGenshinImpact.Core.Config;
+
+namespace BetterGenshinImpact.Core.Recognition.ONNX;
+
+public enum InferenceValidationState { None, PendingRestart, Validating }
+public enum InferenceInstallationState { Missing, MissingDependencies, Installed }
+public enum InferenceBenchmarkScene { Ocr, DomainTree }
+
+public sealed record InferenceDeviceInfo(string Id, string Name, int Index, string ProviderDevice);
+
+/// <summary>启动时冻结。设置页的草稿及待重启配置不能改变现有推理会话。</summary>
+public sealed record InferenceRuntimeSnapshot(
+    InferenceDeviceType Engine, InferenceDeviceInfo Device, bool CpuOcr,
+    int CpuThreads, bool EnableModelCache, string RuntimeDirectory)
+{
+    public static string ModelCacheDirectory => Global.Absolute(Path.Combine("Cache", "Inference"));
+    public string Description => $"{(Engine == InferenceDeviceType.Cpu ? "CPU" : Engine.ToString())} · {Device.Name}";
+    public string OcrDescription => CpuOcr ? "CPU（强制 OCR 使用 CPU）" : Description;
+    public string Signature => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
+        $"{Engine}|{Device.Id}|{CpuOcr}|{CpuThreads}|{EnableModelCache}|{OnnxRuntimeLoader.RequiredVersion}")));
+    private string CacheSignature => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
+        $"engine-cache-v1|{Engine}|{Device.Id}|{OnnxRuntimeLoader.RequiredVersion}|CUDA12.8|cuDNN9.8|TensorRT10.8")));
+
+    public string GetCachePath(BgiOnnxModel model)
+        => GetCachePathForModel(model.ModalPath, ModelCacheDirectory);
+
+    public string GetCachePathForModel(string modelPath, string cacheDirectory)
+    {
+        // 普通 engine/timing 缓存不再引用 _ctx.onnx；模型变化或设备变化不能复用旧缓存。
+        using var stream = File.OpenRead(modelPath);
+        var modelHash = Convert.ToHexString(SHA256.HashData(stream));
+        // 合并并缩短目录指纹，避免 Windows 下引擎自身的长文件名叠加超长路径。
+        var key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(CacheSignature + modelHash)))[..16];
+        return Path.Combine(cacheDirectory, Engine.ToString(), key);
+    }
+
+    public static InferenceRuntimeSnapshot Create(HardwareAccelerationConfig config,
+        InferenceDeviceInfo device, string runtimeDirectory) => new(config.InferenceDevice, device,
+        config.CpuOcr, config.Cpu.CpuThreads, config.InferenceDevice is InferenceDeviceType.OpenVINO or InferenceDeviceType.TensorRT
+            && config.GetEngineSettings(config.InferenceDevice).EnableModelCache,
+        runtimeDirectory);
+
+    public static InferenceRuntimeSnapshot CpuDefault(int threads = 0) => new(InferenceDeviceType.Cpu,
+        new InferenceDeviceInfo("CPU", "处理器", 0, "CPU"), true, threads, false, "");
+}
+
+public static class InferenceTestImages
+{
+    // 古树图片等待用户提供，不能以其他截图或生成图片代替。
+    public const string DomainTreeRelativePath = @"Assets\Model\Domain\test_bgi_tree.png";
+    public static string DomainTreePath => Global.Absolute(DomainTreeRelativePath);
+    public static bool HasDomainTreeImage => File.Exists(DomainTreePath);
+}

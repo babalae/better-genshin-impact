@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
@@ -113,6 +114,25 @@ public partial class App : Application
 
                 Log.Logger = loggerConfiguration.CreateLogger();
                 services.AddLogging(c => c.AddSerilog());
+
+                // 配置和日志已经就绪，在任何推理服务或会话初始化前选定原生运行库。
+                all.HardwareAccelerationConfig ??= new();
+                InferenceRuntimeService.PrepareStartup(all.HardwareAccelerationConfig);
+                // 验证中的状态必须先落盘，原生调用异常中断后下一次启动才能安全回退。
+                configService.Save();
+                services.AddSingleton(new OnnxRuntimeLoader(all.HardwareAccelerationConfig, AppContext.BaseDirectory));
+                services.AddSingleton<IOnnxRuntimeSelection>(sp => sp.GetRequiredService<OnnxRuntimeLoader>());
+                services.AddSingleton(new OnnxRuntimeInstaller(AppContext.BaseDirectory));
+                services.AddSingleton<IOnnxRuntimeInstaller>(sp => sp.GetRequiredService<OnnxRuntimeInstaller>());
+                services.AddSingleton<IInferenceDeviceDiscovery, InferenceDeviceDiscovery>();
+                services.AddSingleton<IInferenceBenchmarkLeaseProvider>(sp => new InferenceBenchmarkCoordinator(
+                    BetterGenshinImpact.GameTask.Common.TaskControl.TaskSemaphore,
+                    () => sp.GetRequiredService<TaskTriggerDispatcher>().PauseForInference()));
+                services.AddSingleton<InferenceModelDiagnostics>();
+                services.AddSingleton<IInferenceModelDiagnostics>(sp => sp.GetRequiredService<InferenceModelDiagnostics>());
+                services.AddSingleton<InferenceRuntimeService>();
+                services.AddSingleton<HardwareAccelerationViewModelFactory>();
+                services.AddSingleton<IInferenceSettingsInteraction, InferenceSettingsInteraction>();
 
                 services.AddLocalization();
                 var i18nService = I18nService.Instance;
@@ -232,7 +252,8 @@ public partial class App : Application
                 services.AddSingleton<IKeyInputTransport, PostMessageKeyInputTransport>();
                 services.AddSingleton<IKeyInputTransport, SendInputKeyInputTransport>();
                 services.AddSingleton<IMusicPlaybackService, MusicPlaybackService>();
-                services.AddSingleton<BgiOnnxFactory>();
+                services.AddSingleton<BgiOnnxFactory>(sp => new BgiOnnxFactory(
+                    sp.GetRequiredService<ILogger<BgiOnnxFactory>>(), sp.GetRequiredService<InferenceRuntimeService>().Current));
                 services.AddSingleton<OcrFactory>();
                 services.AddMemoryCache();
                 services.AddSingleton<IAppCache, CachingService>();
@@ -290,17 +311,57 @@ public partial class App : Application
         WinePlatformAddon.ApplyApplicationConfig();
         base.OnStartup(e);
 
+        using var validationCancellation = new CancellationTokenSource();
+        Wpf.Ui.Controls.FluentWindow? validationWindow = null;
+        var allowValidationWindowClose = false;
+        var originalShutdownMode = ShutdownMode;
         try
         {
             // 分配控制台窗口以支持控制台输出
             ConsoleHelper.AllocateConsole("BetterGI Console");
             RegisterEvents();
+            var inferenceRuntime = _host.Services.GetRequiredService<InferenceRuntimeService>();
+            var hardware = _host.Services.GetRequiredService<IConfigService>().Get().HardwareAccelerationConfig;
+            if (hardware.ValidationState == InferenceValidationState.Validating && hardware.InferenceDevice != InferenceDeviceType.Cpu)
+            {
+                // 仅在用户应用新设置后显示验证进度，日常启动不执行古树预热或速度检查。
+                var message = new System.Windows.Controls.TextBlock
+                {
+                    Text = $"正在用{(InferenceTestImages.HasDomainTreeImage ? "古树检测" : "OCR 模型")}验证 {hardware.InferenceDevice}，验证失败将使用 CPU。\n首次模型构建可能需要几分钟。关闭此窗口可取消，需等待当前推理结束。",
+                    TextWrapping = TextWrapping.Wrap, Margin = new Thickness(24), FontSize = 16
+                };
+                validationWindow = new Wpf.Ui.Controls.FluentWindow
+                {
+                    Title = "推理引擎验证", Width = 520, Height = 220, ResizeMode = ResizeMode.NoResize,
+                    WindowStartupLocation = WindowStartupLocation.CenterScreen, Content = message
+                };
+                ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                validationWindow.Closing += (_, args) =>
+                {
+                    if (allowValidationWindowClose) return;
+                    args.Cancel = true;
+                    message.Text = "正在取消验证，等待当前推理安全结束后关闭软件…";
+                    validationCancellation.Cancel();
+                };
+                validationWindow.Show();
+            }
+            await inferenceRuntime.InitializeAsync(validationCancellation.Token);
+            allowValidationWindowClose = true;
+            if (MainWindow == validationWindow) MainWindow = null;
+            validationWindow?.Close();
+            validationWindow = null;
             await _host.StartAsync();
+            if (!string.IsNullOrWhiteSpace(inferenceRuntime.StartupMessage))
+                await ThemedMessageBox.WarningAsync(inferenceRuntime.StartupMessage);
             ServerTimeHelper.Initialize(_host.Services.GetRequiredService<IServerTimeProvider>());
             if (InstanceBootstrap.Current.Context.IsRoot)
             {
                 await UrlProtocolHelper.RegisterAsync();
             }
+        }
+        catch (OperationCanceledException) when (validationCancellation.IsCancellationRequested)
+        {
+            Shutdown();
         }
         catch (Exception ex)
         {
@@ -342,6 +403,13 @@ public partial class App : Application
             // 启动失败 = 无可用的主界面，直接退出，避免留下无窗口的残留进程。
             Shutdown();
         }
+        finally
+        {
+            allowValidationWindowClose = true;
+            if (MainWindow == validationWindow) MainWindow = null;
+            validationWindow?.Close();
+            ShutdownMode = originalShutdownMode;
+        }
     }
 
     /// <summary>
@@ -365,6 +433,8 @@ public partial class App : Application
 
         TempManager.CleanUp();
 
+        await _host.Services.GetRequiredService<OnnxRuntimeInstaller>().StopAsync();
+        await _host.Services.GetRequiredService<InferenceModelDiagnostics>().StopAsync();
         await _host.StopAsync();
         _host.Dispose();
         Log.CloseAndFlush();
