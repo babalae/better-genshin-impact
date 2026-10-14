@@ -14,6 +14,18 @@ public static class PictureInPictureService
 
     public static bool IsManuallyClosed => _manualClosed;
 
+    private static volatile bool _requestedByTask;
+
+    /// <summary>
+    /// 独立任务（如后台烹饪）请求在游戏不在前台时显示画中画，不受“没有任务运行”的限制
+    /// </summary>
+    public static bool IsRequestedByTask => _requestedByTask;
+
+    public static void SetRequestedByTask(bool requested)
+    {
+        _requestedByTask = requested;
+    }
+
     public static void Update(Mat frame)
     {
         if (_manualClosed)

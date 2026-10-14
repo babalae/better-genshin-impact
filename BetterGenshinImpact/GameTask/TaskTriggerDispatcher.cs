@@ -341,10 +341,11 @@ namespace BetterGenshinImpact.GameTask
                 // 检查游戏是否在前台
                 var hasBackgroundTriggerToRun = false;
                 var autoSkipConfig = TaskContext.Instance().Config.AutoSkipConfig;
-                var shouldShowPictureInPicture = autoSkipConfig.Enabled
-                                                 && autoSkipConfig.PictureInPictureEnabled
-                                                 && !PictureInPictureService.IsManuallyClosed
-                                                 && TaskControl.TaskSemaphore.CurrentCount == 1; // 没有任务持有锁（也就是没有任务正在运行）
+                var shouldShowPictureInPicture = !PictureInPictureService.IsManuallyClosed
+                                                 && (PictureInPictureService.IsRequestedByTask // 独立任务后台运行时主动请求画中画（如后台烹饪）
+                                                     || (autoSkipConfig.Enabled
+                                                         && autoSkipConfig.PictureInPictureEnabled
+                                                         && TaskControl.TaskSemaphore.CurrentCount == 1)); // 没有任务持有锁（也就是没有任务正在运行）
                 var active = window.IsForeground;
                 if (!active)
                 {
@@ -404,7 +405,8 @@ namespace BetterGenshinImpact.GameTask
                 }
 
                 var hasEnabledTriggers = runnableTriggers.Count > 0;
-                if (!hasEnabledTriggers && !active)
+                // 任务中没有启用的触发器时，仍需截图更新任务请求的画中画
+                if (!hasEnabledTriggers && !active && !shouldShowPictureInPicture)
                 {
                     // Debug.WriteLine("没有可用的触发器且不处于仅截屏状态, 不再进行截屏");
                     return;
