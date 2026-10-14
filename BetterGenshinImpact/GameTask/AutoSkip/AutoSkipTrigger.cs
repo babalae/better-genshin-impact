@@ -866,12 +866,13 @@ public partial class AutoSkipTrigger : ITaskTrigger
                         TaskControl.Sleep(800);
 
                         // 6.2 每日提示确认
-                        var ra1 = TaskControl.CaptureToRectArea();
-                        if (Bv.ClickBlackConfirmButton(ra1))
+                        using (var ra1 = TaskControl.CaptureToRectArea())
                         {
-                            _logger.LogInformation("存在提示并确认");
+                            if (Bv.ClickBlackConfirmButton(ra1))
+                            {
+                                _logger.LogInformation("存在提示并确认");
+                            }
                         }
-                        ra1.Dispose();
 
                         _prevGetDailyRewardsTime = DateTime.Now; // 记录领取时间
                     }

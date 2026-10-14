@@ -33,11 +33,12 @@ public class OneKeyExpeditionTask
                 Sleep(300);
             }
 
+            var claimed = false;
             for (int i = 0; i < 3; i++)
             {
                 // 1.全部领取
-                var region = CaptureToRectArea(true);
-                var ra = region.Find(RecognitionAssets.Get("AutoSkip", "Collect", region.Width, region.Height));
+                using var region = CaptureToRectArea(true);
+                using var ra = region.Find(RecognitionAssets.Get("AutoSkip", "Collect", region.Width, region.Height));
                 if (ra.IsEmpty())
                 {
                     Logger.LogInformation("探索派遣：{Text}", "未找到领取按钮");
@@ -63,8 +64,8 @@ public class OneKeyExpeditionTask
                 NewRetry.Do(() =>
                 {
                     Sleep(1);
-                    region = CaptureToRectArea(true);
-                    var ra2 = region.Find(RecognitionAssets.Get("AutoSkip", "Re", region.Width, region.Height));
+                    using var reRegion = CaptureToRectArea(true);
+                    using var ra2 = reRegion.Find(RecognitionAssets.Get("AutoSkip", "Re", reRegion.Width, reRegion.Height));
                     if (ra2.IsEmpty())
                     {
                         throw new RetryException("未检测到弹出菜单");
@@ -81,13 +82,23 @@ public class OneKeyExpeditionTask
 
                 // 退出后可能再弹一次"是否使用历练点"提示框,点掉"确认"
                 Sleep(800);
-                using var finalRa = CaptureToRectArea(true);
-                if (Bv.ClickBlackConfirmButton(finalRa))
+                using (var finalRa = CaptureToRectArea(true))
                 {
-                    Logger.LogInformation("探索派遣：{Text}", "确认使用历练点领取每日委托");
+                    if (Bv.ClickBlackConfirmButton(finalRa))
+                    {
+                        Logger.LogInformation("探索派遣：{Text}", "确认使用历练点领取每日委托");
+                    }
                 }
 
+                claimed = true;
                 break;
+            }
+
+            if (!claimed)
+            {
+                // 没有可领取/可再次派遣的内容时,同样退出派遣页面,避免停留在派遣界面
+                InputHub.Foreground.Keyboard.KeyPress(VK.VK_ESCAPE);
+                Logger.LogInformation("探索派遣：{Text}", "无可领取内容，退出派遣页面");
             }
         }
         catch (Exception e)
