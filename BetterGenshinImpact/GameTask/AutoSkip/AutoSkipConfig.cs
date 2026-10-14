@@ -73,6 +73,13 @@ public partial class AutoSkipConfig : ObservableObject
     private bool _autoReExploreEnabled = true;
 
     /// <summary>
+    /// 凯瑟琳对话中"每日委托"与"探索派遣"同时出现时,同一帧内领取每日委托并进入探索派遣。
+    /// 关闭后每次对话只处理一个橙色选项(优先每日委托)。
+    /// </summary>
+    [ObservableProperty]
+    private bool _combineDailyAndExpeditionEnabled = true;
+
+    /// <summary>
     /// 自动重新派遣使用角色配置，逗号分割
     /// </summary>
     [Obsolete]

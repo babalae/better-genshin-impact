@@ -807,45 +807,31 @@ public partial class AutoSkipTrigger : ITaskTrigger
                     }
 
                     var handledOrange = false;
-                    if (expeditionOption != null)
+                    if (dailyOption != null && expeditionOption != null && _config.CombineDailyAndExpeditionEnabled)
                     {
                         handledOrange = true;
 
-                        if (dailyOption != null)
+                        // 每日委托与探索派遣同在:同一帧内"点探索派遣 + 按交互键F领每日"。
+                        // 实测两者必须同帧发出,否则后一个会因界面已切换而丢失。
+                        RefreshOperationMode();
+                        if (UseBackgroundOperation || !SystemControl.IsGenshinImpactActive())
                         {
-                            // 每日委托与探索派遣同在:同一帧内"点探索派遣 + 按交互键F领每日"。
-                            // 实测两者必须同帧发出,否则后一个会因界面已切换而丢失。
-                            RefreshOperationMode();
-                            if (UseBackgroundOperation || !SystemControl.IsGenshinImpactActive())
-                            {
-                                expeditionOption.Move();
-                                InputHub.Background.SimulateAction(GIActions.PickUpOrInteract);
-                                expeditionOption.BackgroundClick();
-                            }
-                            else
-                            {
-                                expeditionOption.Move();
-                                InputHub.Foreground.SimulateAction(GIActions.PickUpOrInteract);
-                                InputHub.Foreground.Mouse.LeftButtonClick();
-                            }
-
-                            _logger.LogInformation("对话交互键：{Text}", "同一帧点击探索派遣 + 按交互键领取每日委托");
-                            _prevGetDailyRewardsTime = DateTime.Now; // 记录领取时间
-
-                            Thread.Sleep(1500); // 等待探索派遣界面打开
-                            new OneKeyExpeditionTask().Run(true);
+                            expeditionOption.Move();
+                            InputHub.Background.SimulateAction(GIActions.PickUpOrInteract);
+                            expeditionOption.BackgroundClick();
                         }
                         else
                         {
-                            // 只有"探索派遣":直接点击进入派遣界面
-                            if (!ClickOcrRegion(expeditionOption, "探索派遣"))
-                            {
-                                return true;
-                            }
-
-                            Thread.Sleep(800); // 等待探索派遣界面打开
-                            new OneKeyExpeditionTask().Run(false);
+                            expeditionOption.Move();
+                            InputHub.Foreground.SimulateAction(GIActions.PickUpOrInteract);
+                            InputHub.Foreground.Mouse.LeftButtonClick();
                         }
+
+                        _logger.LogInformation("对话交互键：{Text}", "同一帧点击探索派遣 + 按交互键领取每日委托");
+                        _prevGetDailyRewardsTime = DateTime.Now; // 记录领取时间
+
+                        Thread.Sleep(1500); // 等待探索派遣界面打开
+                        new OneKeyExpeditionTask().Run(true);
                     }
                     else if (dailyOption != null)
                     {
@@ -876,6 +862,19 @@ public partial class AutoSkipTrigger : ITaskTrigger
                         }
 
                         _prevGetDailyRewardsTime = DateTime.Now; // 记录领取时间
+                    }
+                    else if (expeditionOption != null)
+                    {
+                        handledOrange = true;
+
+                        // 只有"探索派遣":直接点击进入派遣界面
+                        if (!ClickOcrRegion(expeditionOption, "探索派遣"))
+                        {
+                            return true;
+                        }
+
+                        Thread.Sleep(800); // 等待探索派遣界面打开
+                        new OneKeyExpeditionTask().Run(false);
                     }
 
                     if (handledOrange)
