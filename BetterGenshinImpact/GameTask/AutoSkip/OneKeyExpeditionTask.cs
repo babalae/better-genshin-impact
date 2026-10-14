@@ -12,25 +12,32 @@ namespace BetterGenshinImpact.GameTask.AutoSkip;
 
 public class OneKeyExpeditionTask
 {
-    public void Run()
+    /// <param name="dailyClaimed">
+    /// 本次是否已在凯瑟琳对话中同帧领取了每日委托。只有领了每日委托才会弹"是否使用历练点领取每日委托"的确认框,
+    /// 因此只有该值为 true 时才需要轮询/点击确认框,避免纯探索派遣流程白等。
+    /// </param>
+    public void Run(bool dailyClaimed = false)
     {
         try
         {
             SystemControl.ActivateWindow();
 
-            // 进入派遣页面后可能先弹出"是否使用历练点领取每日委托"的提示框,
-            // 且每日委托需先领,故最多等约 2 秒点掉"确认"。
-            for (var i = 0; i < 4; i++)
+            if (dailyClaimed)
             {
-                using var confirmRa = CaptureToRectArea(true);
-                if (Bv.ClickBlackConfirmButton(confirmRa))
+                // 进入派遣页面后可能先弹出"是否使用历练点领取每日委托"的提示框,
+                // 且每日委托需先领,故最多等约 2 秒点掉"确认"。
+                for (var i = 0; i < 4; i++)
                 {
-                    Logger.LogInformation("探索派遣：{Text}", "确认使用历练点领取每日委托");
-                    Sleep(1000);
-                    break;
-                }
+                    using var confirmRa = CaptureToRectArea(true);
+                    if (Bv.ClickBlackConfirmButton(confirmRa))
+                    {
+                        Logger.LogInformation("探索派遣：{Text}", "确认使用历练点领取每日委托");
+                        Sleep(1000);
+                        break;
+                    }
 
-                Sleep(300);
+                    Sleep(300);
+                }
             }
 
             var claimed = false;
@@ -50,13 +57,16 @@ public class OneKeyExpeditionTask
                 Logger.LogInformation("探索派遣：{Text}", "全部领取");
                 Sleep(1100);
 
-                // 领取后可能再弹"是否使用历练点"提示框(会挡住"再次派遣"),先点掉"确认"
-                using (var confirmRa = CaptureToRectArea(true))
+                if (dailyClaimed)
                 {
-                    if (Bv.ClickBlackConfirmButton(confirmRa))
+                    // 领取后可能再弹"是否使用历练点"提示框(会挡住"再次派遣"),先点掉"确认"
+                    using (var confirmRa = CaptureToRectArea(true))
                     {
-                        Logger.LogInformation("探索派遣：{Text}", "确认使用历练点领取每日委托");
-                        Sleep(800);
+                        if (Bv.ClickBlackConfirmButton(confirmRa))
+                        {
+                            Logger.LogInformation("探索派遣：{Text}", "确认使用历练点领取每日委托");
+                            Sleep(800);
+                        }
                     }
                 }
 
@@ -80,13 +90,16 @@ public class OneKeyExpeditionTask
                 InputHub.Foreground.Keyboard.KeyPress(VK.VK_ESCAPE);
                 Logger.LogInformation("探索派遣：{Text}", "完成");
 
-                // 退出后可能再弹一次"是否使用历练点"提示框,点掉"确认"
-                Sleep(800);
-                using (var finalRa = CaptureToRectArea(true))
+                if (dailyClaimed)
                 {
-                    if (Bv.ClickBlackConfirmButton(finalRa))
+                    // 退出后可能再弹一次"是否使用历练点"提示框,点掉"确认"
+                    Sleep(800);
+                    using (var finalRa = CaptureToRectArea(true))
                     {
-                        Logger.LogInformation("探索派遣：{Text}", "确认使用历练点领取每日委托");
+                        if (Bv.ClickBlackConfirmButton(finalRa))
+                        {
+                            Logger.LogInformation("探索派遣：{Text}", "确认使用历练点领取每日委托");
+                        }
                     }
                 }
 
