@@ -815,9 +815,6 @@ public partial class AutoSkipTrigger : ITaskTrigger
                         {
                             // 每日委托与探索派遣同在:同一帧内"点探索派遣 + 按交互键F领每日"。
                             // 实测两者必须同帧发出,否则后一个会因界面已切换而丢失。
-                            var fKey = AutoPickAssets.Get(expeditionOption,
-                                TaskContext.Instance().Config.AutoPickConfig.PickKey).PickVk;
-
                             RefreshOperationMode();
                             if (UseBackgroundOperation || !SystemControl.IsGenshinImpactActive())
                             {
@@ -828,7 +825,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
                             else
                             {
                                 expeditionOption.Move();
-                                InputHub.Foreground.Keyboard.KeyPress(fKey);
+                                InputHub.Foreground.SimulateAction(GIActions.PickUpOrInteract);
                                 InputHub.Foreground.Mouse.LeftButtonClick();
                             }
 
