@@ -25,6 +25,9 @@ issues:
             - bug
           titlePrefixes:
             - "[bug]"
+          formSignatures:
+            - 我已经搜索过现有 issue，确认这不是重复
+            - I have searched existing issues and confirmed this is not
         requiredSections:
           - id: environment
             aliases:
@@ -54,6 +57,9 @@ issues:
             - feature
           titlePrefixes:
             - "[feature]"
+          formSignatures:
+            - 我已经搜索过现有 issue，确认这不是重复
+            - I have searched existing issues and confirmed this is not
         requiredSections:
           - id: request
             aliases:
@@ -75,6 +81,9 @@ issues:
             - suggestion
           titlePrefixes:
             - "[suggestion]"
+          formSignatures:
+            - 我已经搜索过现有 issue，确认这不是重复
+            - I have searched existing issues and confirmed this is not
         requiredSections:
           - id: suggestion
             aliases:
@@ -95,6 +104,9 @@ issues:
             - question
           titlePrefixes:
             - "[question]"
+          formSignatures:
+            - 我已经搜索过现有 issue，确认这不是重复
+            - I have searched existing issues and confirmed this is not
         requiredSections:
           - id: question
             aliases:
@@ -115,6 +127,9 @@ issues:
           titlePrefixes:
             - "[feedback]"
             - "[normal]"
+          formSignatures:
+            - 我已经搜索过现有 issue，确认这不是重复
+            - I have searched existing issues and confirmed this is not
         requiredSections:
           - id: description
             aliases:
