@@ -2,6 +2,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
+using BetterGenshinImpact.Core.Script.Settings;
 using BetterGenshinImpact.Core.Script.Utils;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
@@ -1678,6 +1679,39 @@ public partial class ScriptControlViewModel : ViewModel
         else
         {
             Toast.Warning("只有JS脚本才有自定义配置");
+        }
+    }
+
+    [RelayCommand]
+    public void OnOpenJsScriptHtmlSettings(ScriptGroupProject? item)
+    {
+        if (item == null || SelectedScriptGroup == null)
+        {
+            return;
+        }
+
+        if (item.Type != "Javascript")
+        {
+            Toast.Warning("只有JS脚本才有HTML配置");
+            return;
+        }
+
+        try
+        {
+            item.BuildScriptProjectRelation();
+            if (item.Project?.Manifest.SettingsWebUi == null)
+            {
+                Toast.Warning("此脚本未注册HTML配置");
+                return;
+            }
+
+            item.JsScriptSettingsObject ??= new ExpandoObject();
+            SettingsWebSessionCoordinator.Open(item, ScriptGroupPath);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "打开JS脚本HTML配置失败");
+            Toast.Warning(e.Message);
         }
     }
 

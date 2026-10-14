@@ -23,6 +23,7 @@ public class Manifest
     public List<Author> Authors { get; set; } = [];
     public string Main { get; set; } = string.Empty;
     public string SettingsUi { get; set; } = string.Empty;
+    public SettingsWebUi? SettingsWebUi { get; set; }
     public string[] Scripts { get; set; } = [];
     public string[] Library { get; set; } = [];
     public string[] SavedFiles { get; set; } = [];
@@ -79,6 +80,16 @@ public class Manifest
         }
 
         return settingItems;
+    }
+
+    public (string HtmlPath, string ScriptPath) ValidateSettingsWebUi(string path)
+    {
+        if (SettingsWebUi == null)
+        {
+            throw new Exception("manifest.json: settings_web_ui is required.");
+        }
+
+        return SettingsWebUi.Resolve(path);
     }
 
     [JsonIgnore]

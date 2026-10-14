@@ -1,0 +1,11 @@
+<Window x:Class="BetterGenshinImpact.View.SettingsWebWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        Title="JS脚本HTML配置"
+        Width="960"
+        Height="720"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="True">
+    <wv2:WebView2 x:Name="WebView"/>
+</Window>

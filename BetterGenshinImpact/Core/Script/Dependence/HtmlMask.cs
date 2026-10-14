@@ -37,25 +37,7 @@ public class HtmlMask : IDisposable
         public string? RequestId { get; set; }
     }
 
-    /// <summary>
-    /// 脚本到HTML的待推送队列
-    /// </summary>
-    private static readonly ConcurrentDictionary<string, ConcurrentQueue<Message>> _toHtmlQueues = new();
-
-    /// <summary>
-    /// HTML到脚本的消息队列
-    /// </summary>
-    private static readonly ConcurrentDictionary<string, ConcurrentQueue<Message>> _fromHtmlQueues = new();
-
-    /// <summary>
-    /// JS到HTML请求的等待句柄，用于request-response匹配
-    /// </summary>
-    private static readonly ConcurrentDictionary<string, TaskCompletionSource<string>> _jsPendingRequests = new();
-
-    /// <summary>
-    /// requestId到windowId的映射，用于窗口关闭时取消对应的pending请求
-    /// </summary>
-    private static readonly ConcurrentDictionary<string, string> _requestWindowMap = new();
+    private static readonly HtmlMessageChannel Channel = new();
 
     private readonly string _workDir;
     private readonly List<string> _openedWindows = [];
@@ -93,9 +75,7 @@ public class HtmlMask : IDisposable
             }
 
             string windowId = HtmlMaskWindow.Show(finalUrl, id, _workDir);
-
-            _toHtmlQueues[windowId] = new ConcurrentQueue<Message>();
-            _fromHtmlQueues[windowId] = new ConcurrentQueue<Message>();
+            Channel.Register(windowId, HtmlMaskWindow.NotifyFlush);
             lock (_openedWindowsLock) { _openedWindows.Add(windowId); }
 
             return windowId;
@@ -113,7 +93,7 @@ public class HtmlMask : IDisposable
     public bool Close(string id)
     {
         lock (_openedWindowsLock) { _openedWindows.Remove(id); }
-        CleanupQueues(id);
+        Channel.Unregister(id);
         return HtmlMaskWindow.Close(id);
     }
 
@@ -130,7 +110,7 @@ public class HtmlMask : IDisposable
         }
         foreach (var windowId in windows)
         {
-            CleanupQueues(windowId);
+            Channel.Unregister(windowId);
             HtmlMaskWindow.Close(windowId);
         }
     }
@@ -183,16 +163,7 @@ public class HtmlMask : IDisposable
     /// </summary>
     public void Send(string windowId, string url, string jsonData)
     {
-        if (!HtmlMaskWindow.Exists(windowId) || !_toHtmlQueues.TryGetValue(windowId, out var queue))
-            throw new InvalidOperationException($"HTML遮罩窗口不存在或已关闭: {windowId}");
-
-        queue.Enqueue(new Message
-        {
-            Url = url,
-            Data = ParseData(jsonData)
-        });
-
-        HtmlMaskWindow.NotifyFlush(windowId);
+        Channel.Send(windowId, url, jsonData);
     }
 
     /// <summary>
@@ -203,20 +174,7 @@ public class HtmlMask : IDisposable
     /// <param name="jsonData">响应数据，必须是合法 JSON 字符串。</param>
     public void Respond(string windowId, string requestId, string jsonData)
     {
-        if (string.IsNullOrWhiteSpace(requestId))
-            throw new ArgumentException("requestId cannot be empty", nameof(requestId));
-
-        if (!HtmlMaskWindow.Exists(windowId) || !_toHtmlQueues.TryGetValue(windowId, out var queue))
-            throw new InvalidOperationException($"HTML遮罩窗口不存在或已关闭: {windowId}");
-
-        queue.Enqueue(new Message
-        {
-            Url = "/__response__",
-            Data = ParseData(jsonData),
-            RequestId = requestId
-        });
-
-        HtmlMaskWindow.NotifyFlush(windowId);
+        Channel.Respond(windowId, requestId, jsonData);
     }
     
     /// <summary>
@@ -226,49 +184,9 @@ public class HtmlMask : IDisposable
     /// <param name="url">接口路径</param>
     /// <param name="jsonData">JSON数据</param>
     /// <param name="timeoutMs">超时毫秒，0表示无限等待</param>
-    public async Task<string?> Request(string windowId, string url, string jsonData, int timeoutMs = 0)
+    public Task<string?> Request(string windowId, string url, string jsonData, int timeoutMs = 0)
     {
-        var requestId = Guid.NewGuid().ToString("N");
-        var tcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _jsPendingRequests[requestId] = tcs;
-        _requestWindowMap[requestId] = windowId;
-
-        try
-        {
-            if (!HtmlMaskWindow.Exists(windowId) || !_toHtmlQueues.TryGetValue(windowId, out var queue))
-                throw new InvalidOperationException($"HTML遮罩窗口不存在或已关闭: {windowId}");
-
-            queue.Enqueue(new Message
-            {
-                Url = url,
-                Data = ParseData(jsonData),
-                RequestId = requestId
-            });
-
-            HtmlMaskWindow.NotifyFlush(windowId);
-
-            if (timeoutMs > 0)
-            {
-                using var cts = new System.Threading.CancellationTokenSource(timeoutMs);
-                await using var registration = cts.Token.Register(() =>
-                {
-                    if (_jsPendingRequests.TryRemove(requestId, out var pending))
-                        pending.TrySetResult(null!);
-                });
-                return await tcs.Task;
-            }
-
-            return await tcs.Task;
-        }
-        catch (OperationCanceledException)
-        {
-            return null;
-        }
-        finally
-        {
-            _jsPendingRequests.TryRemove(requestId, out _);
-            _requestWindowMap.TryRemove(requestId, out _);
-        }
+        return Channel.Request(windowId, url, jsonData, timeoutMs);
     }
 
     /// <summary>
@@ -276,25 +194,9 @@ public class HtmlMask : IDisposable
     /// </summary>
     /// <param name="windowId">窗口ID</param>
     /// <param name="timeoutMs">超时毫秒，0表示无限等待</param>
-    public async Task<string?> Receive(string windowId, int timeoutMs = 0)
+    public Task<string?> Receive(string windowId, int timeoutMs = 0)
     {
-        if (!_fromHtmlQueues.TryGetValue(windowId, out var queue))
-            return null;
-
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-        while (true)
-        {
-            if (queue.TryDequeue(out var message))
-                return JsonSerializer.Serialize(message, _jsonOptions);
-
-            if (_disposed || !_fromHtmlQueues.ContainsKey(windowId) || !HtmlMaskWindow.Exists(windowId))
-                return null;
-
-            if (timeoutMs > 0 && sw.ElapsedMilliseconds > timeoutMs)
-                return null;
-
-            await Task.Delay(50);
-        }
+        return Channel.Receive(windowId, timeoutMs);
     }
 
     /// <summary>
@@ -302,12 +204,7 @@ public class HtmlMask : IDisposable
     /// </summary>
     public string? Poll(string windowId)
     {
-        if (_fromHtmlQueues.TryGetValue(windowId, out var queue) &&
-            queue.TryDequeue(out var message))
-        {
-            return JsonSerializer.Serialize(message, _jsonOptions);
-        }
-        return null;
+        return Channel.Poll(windowId);
     }
 
     /// <summary>
@@ -315,88 +212,21 @@ public class HtmlMask : IDisposable
     /// </summary>
     public string PollAll(string windowId)
     {
-        var messages = new List<Message>();
-        if (_fromHtmlQueues.TryGetValue(windowId, out var queue))
-        {
-            while (queue.TryDequeue(out var message))
-            {
-                messages.Add(message);
-            }
-        }
-        return JsonSerializer.Serialize(messages, _jsonOptions);
+        return Channel.PollAll(windowId);
     }
 
     #endregion
 
     #region 内部方法
 
-    /// <summary>
-    /// 将待推送队列中的消息通过回调逐一发出
-    /// </summary>
     internal static void FlushPendingMessages(string windowId, Action<string> postAction)
     {
-        if (_toHtmlQueues.TryGetValue(windowId, out var queue))
-        {
-            while (queue.TryDequeue(out var msg))
-            {
-                postAction(JsonSerializer.Serialize(msg, _jsonOptions));
-            }
-        }
+        Channel.Flush(windowId, postAction);
     }
 
-    /// <summary>
-    /// HTML端发来的消息入队，如果是JS请求的响应则直接resolve
-    /// </summary>
     internal static void SendFromHtml(string windowId, string url, string data, string? requestId = null)
     {
-        // 匹配JS端pending的request
-        if (requestId != null && _jsPendingRequests.TryRemove(requestId, out var tcs))
-        {
-            var parsed = ParseData(data);
-            tcs.TrySetResult(parsed != null ? parsed.Value.GetRawText() : "null");
-            return;
-        }
-
-        // 普通消息入队
-        if (_fromHtmlQueues.TryGetValue(windowId, out var queue))
-        {
-            queue.Enqueue(new Message
-            {
-                Url = url,
-                Data = ParseData(data),
-                RequestId = requestId
-            });
-        }
-    }
-
-    private static JsonElement? ParseData(string? json)
-    {
-        if (string.IsNullOrWhiteSpace(json)) return null;
-        try
-        {
-            using var doc = JsonDocument.Parse(json);
-            return doc.RootElement.Clone();
-        }
-        catch
-        {
-            // 不是合法JSON，作为纯文本包装
-            return JsonSerializer.SerializeToElement(json, _jsonOptions);
-        }
-    }
-
-    private static void CleanupQueues(string windowId)
-    {
-        _toHtmlQueues.TryRemove(windowId, out _);
-        _fromHtmlQueues.TryRemove(windowId, out _);
-
-        // 取消该窗口关联的待响应请求
-        foreach (var kvp in _requestWindowMap)
-        {
-            if (kvp.Value == windowId && _jsPendingRequests.TryRemove(kvp.Key, out var tcs))
-            {
-                tcs.TrySetCanceled();
-            }
-        }
+        Channel.SendFromHtml(windowId, url, data, requestId);
     }
 
     #endregion
