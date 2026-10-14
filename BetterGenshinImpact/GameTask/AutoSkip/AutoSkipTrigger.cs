@@ -849,7 +849,8 @@ public partial class AutoSkipTrigger : ITaskTrigger
                     }
                     else if (dailyOption != null)
                     {
-                        // 只有"每日委托":按交互键领取
+                        // 只有"每日委托":按交互键领取。
+                        // 这里的交互键是游戏内"领取每日委托"的快捷键,不是选项确认键,因此不需要先点击选项区域。
                         RefreshOperationMode();
                         if (UseBackgroundOperation || !SystemControl.IsGenshinImpactActive())
                         {

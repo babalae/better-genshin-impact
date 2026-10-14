@@ -112,6 +112,17 @@ public class OneKeyExpeditionTask
                 // 没有可领取/可再次派遣的内容时,同样退出派遣页面,避免停留在派遣界面
                 InputHub.Foreground.Keyboard.KeyPress(VK.VK_ESCAPE);
                 Logger.LogInformation("探索派遣：{Text}", "无可领取内容，退出派遣页面");
+
+                if (dailyClaimed)
+                {
+                    // 退出后同样可能弹出"是否使用历练点"提示框,点掉"确认"避免每日奖励漏领
+                    Sleep(800);
+                    using var finalRa = CaptureToRectArea(true);
+                    if (Bv.ClickBlackConfirmButton(finalRa))
+                    {
+                        Logger.LogInformation("探索派遣：{Text}", "确认使用历练点领取每日委托");
+                    }
+                }
             }
         }
         catch (Exception e)
