@@ -59,17 +59,6 @@ public sealed class InferenceBenchmarkTests
     }
 
     [Fact]
-    public void CudaVisibility_MapsRuntimeOrdinalsBeforeHardwareFiltering()
-    {
-        var devices = new InferenceDeviceInfo[] { new("GPU-old", "旧显卡", 0, "0"), new("GPU-new", "新显卡", 1, "1") };
-        var visible = InferenceDeviceDiscovery.MapCudaVisibility(devices, "0,1");
-        Assert.Equal(1, visible.Single(d => d.Id == "GPU-new").Index);
-        var reordered = InferenceDeviceDiscovery.MapCudaVisibility(devices, "1,0");
-        Assert.Equal(0, reordered.Single(d => d.Id == "GPU-new").Index);
-        Assert.Empty(InferenceDeviceDiscovery.MapCudaVisibility(devices, "-1"));
-    }
-
-    [Fact]
     public void ProviderProfile_DoesNotMistakeCpuFallbackForCuda()
     {
         var file = Path.Combine(Path.GetTempPath(), "bettergi-profile-" + Guid.NewGuid().ToString("N") + ".json");

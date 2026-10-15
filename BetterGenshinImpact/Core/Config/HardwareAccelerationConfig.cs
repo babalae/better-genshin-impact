@@ -13,6 +13,7 @@ public partial class HardwareAccelerationConfig : ObservableObject
     // 缺少新结构标识时不迁移旧参数，由启动准备流程使用 CPU 默认设置。
     [ObservableProperty] private int _formatVersion;
     [ObservableProperty] private InferenceEngineSettings _cpu = new() { DeviceId = "CPU" };
+    [ObservableProperty] private PaddleOcrCpuConfig _paddleOcrCpu = new();
     [ObservableProperty] private InferenceEngineSettings _directML = new();
     [ObservableProperty] private InferenceEngineSettings _openVINO = new();
     [ObservableProperty] private InferenceEngineSettings _cuda = new();
@@ -51,6 +52,7 @@ public partial class HardwareAccelerationConfig : ObservableObject
     {
         FormatVersion = 1;
         Cpu = new() { DeviceId = "CPU" };
+        PaddleOcrCpu = new();
         DirectML = new(); OpenVINO = new(); Cuda = new(); TensorRT = new();
         InferenceDevice = InferenceDeviceType.Cpu;
         CpuOcr = true;

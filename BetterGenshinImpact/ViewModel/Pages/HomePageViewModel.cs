@@ -721,7 +721,11 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         }
     }
 
-    private void OnInferenceSettingsChanged(object? sender, EventArgs e) => OnPropertyChanged(nameof(InferenceRuntimeStatusText));
+    private void OnInferenceSettingsChanged(object? sender, EventArgs e)
+        => UIDispatcherHelper.BeginInvoke(() =>
+        {
+            if (!_disposed) OnPropertyChanged(nameof(InferenceRuntimeStatusText));
+        });
 
     #region 背景图片管理
 

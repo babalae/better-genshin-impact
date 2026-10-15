@@ -194,6 +194,26 @@ public sealed class InferenceRuntimeServiceTests
     }
 
     [Fact]
+    public async Task SecondaryInstance_RuntimeLoadFailure_UsesLocalCpuWithoutChangingSharedConfiguration()
+    {
+        var config = Configuration();
+        config.ValidationState = InferenceValidationState.PendingRestart;
+        var status = InferenceRuntimeService.PrepareStartup(config, isMainInstance: false);
+        var store = new ConfigurationService(config);
+        using var service = new InferenceRuntimeService(store, new Runtime(InferenceDeviceType.Cpu), new Devices(),
+            new Diagnostics(), NullLogger<BgiOnnxFactory>.Instance, status);
+
+        await service.InitializeAsync();
+
+        Assert.Equal(InferenceDeviceType.Cpu, service.Current.Engine);
+        Assert.Equal(InferenceDeviceType.CUDA, config.InferenceDevice);
+        Assert.Equal(InferenceValidationState.PendingRestart, config.ValidationState);
+        Assert.Null(config.LastFailedEngine);
+        Assert.Empty(config.LastValidationError);
+        Assert.Equal(0, store.SaveCount);
+    }
+
+    [Fact]
     public async Task LateFailure_UpdatesFutureFactoriesAndPreservesCapturedSnapshot()
     {
         var config = Configuration();
@@ -572,9 +592,14 @@ public sealed class InferenceRuntimeServiceTests
     {
         private readonly AllConfig _all = new() { HardwareAccelerationConfig = config };
         public string SavedHardwareJson { get; private set; } = "";
+        public int SaveCount { get; private set; }
         public AllConfig Get() => _all;
         public AllConfig Read() => _all;
-        public void Save() => SavedHardwareJson = JsonSerializer.Serialize(_all.HardwareAccelerationConfig);
+        public void Save()
+        {
+            SaveCount++;
+            SavedHardwareJson = JsonSerializer.Serialize(_all.HardwareAccelerationConfig);
+        }
         public void Flush() { }
         public void Write(AllConfig config) { }
     }

@@ -17,11 +17,13 @@ public sealed record InferenceRuntimeSnapshot(
     InferenceDeviceType Engine, InferenceDeviceInfo Device, bool CpuOcr,
     int CpuThreads, bool EnableModelCache, string RuntimeDirectory)
 {
+    public PaddleOcrCpuOptions PaddleOcrCpu { get; init; } = new();
     public static string ModelCacheDirectory => Global.Absolute(Path.Combine("Cache", "Inference"));
     public string Description => $"{(Engine == InferenceDeviceType.Cpu ? "CPU" : Engine.ToString())} · {Device.Name}";
-    public string OcrDescription => CpuOcr ? "CPU（强制 OCR 使用 CPU）" : Description;
+    public string OcrDescription => (CpuOcr ? "CPU（强制 OCR 使用 CPU）" : Description)
+        + (CpuOcr || Engine == InferenceDeviceType.Cpu ? " · " + PaddleOcrCpu.Describe(CpuThreads) : "");
     public string Signature => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
-        $"{Engine}|{Device.Id}|{CpuOcr}|{CpuThreads}|{EnableModelCache}|{OnnxRuntimeLoader.RequiredVersion}")));
+        $"{Engine}|{Device.Id}|{CpuOcr}|{CpuThreads}|{EnableModelCache}|{OnnxRuntimeLoader.RequiredVersion}{PaddleOcrCpu.SignatureSuffix}")));
     private string CacheSignature => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
         $"engine-cache-v1|{Engine}|{Device.Id}|{OnnxRuntimeLoader.RequiredVersion}|CUDA12.8|cuDNN9.8|TensorRT10.8")));
 
@@ -42,7 +44,7 @@ public sealed record InferenceRuntimeSnapshot(
         InferenceDeviceInfo device, string runtimeDirectory) => new(config.InferenceDevice, device,
         config.CpuOcr, config.Cpu.CpuThreads, config.InferenceDevice is InferenceDeviceType.OpenVINO or InferenceDeviceType.TensorRT
             && config.GetEngineSettings(config.InferenceDevice).EnableModelCache,
-        runtimeDirectory);
+        runtimeDirectory) { PaddleOcrCpu = config.PaddleOcrCpu.ToOptions() };
 
     public static InferenceRuntimeSnapshot CpuDefault(int threads = 0) => new(InferenceDeviceType.Cpu,
         new InferenceDeviceInfo("CPU", "处理器", 0, "CPU"), true, threads, false, "");

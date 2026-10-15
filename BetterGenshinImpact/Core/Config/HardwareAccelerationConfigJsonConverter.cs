@@ -19,6 +19,7 @@ public sealed class HardwareAccelerationConfigJsonConverter : JsonConverter<Hard
             {
                 FormatVersion = data.FormatVersion, InferenceDevice = data.InferenceDevice, CpuOcr = data.CpuOcr,
                 Cpu = data.Cpu!, DirectML = data.DirectML!, OpenVINO = data.OpenVINO!, Cuda = data.Cuda!, TensorRT = data.TensorRT!,
+                PaddleOcrCpu = data.PaddleOcrCpu ?? new(),
                 ValidationState = data.ValidationState, VerifiedSignature = data.VerifiedSignature ?? "",
                 ValidatedEngines = data.ValidatedEngines ?? [],
                 LastFailedEngine = data.LastFailedEngine, LastValidationError = data.LastValidationError ?? ""
@@ -32,6 +33,7 @@ public sealed class HardwareAccelerationConfigJsonConverter : JsonConverter<Hard
         {
             FormatVersion = value.FormatVersion, InferenceDevice = value.InferenceDevice, CpuOcr = value.CpuOcr,
             Cpu = value.Cpu, DirectML = value.DirectML, OpenVINO = value.OpenVINO, Cuda = value.Cuda, TensorRT = value.TensorRT,
+            PaddleOcrCpu = value.PaddleOcrCpu,
             ValidationState = value.ValidationState, VerifiedSignature = value.VerifiedSignature,
             ValidatedEngines = value.ValidatedEngines,
             LastFailedEngine = value.LastFailedEngine, LastValidationError = value.LastValidationError
@@ -44,6 +46,7 @@ public sealed class HardwareAccelerationConfigJsonConverter : JsonConverter<Hard
         public InferenceDeviceType InferenceDevice { get; set; }
         public bool CpuOcr { get; set; } = true;
         public InferenceEngineSettings? Cpu { get; set; }
+        public PaddleOcrCpuConfig? PaddleOcrCpu { get; set; }
         public InferenceEngineSettings? DirectML { get; set; }
         public InferenceEngineSettings? OpenVINO { get; set; }
         public InferenceEngineSettings? Cuda { get; set; }

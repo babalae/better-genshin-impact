@@ -18,6 +18,8 @@ using CommunityToolkit.Mvvm.Input;
 namespace BetterGenshinImpact.ViewModel.Pages.View;
 
 public sealed record InferenceThreadChoice(int Count, string Name);
+public sealed record PaddleOcrCpuModeChoice(PaddleOcrCpuMode Mode, string Name);
+public sealed record PaddleOcrCpuRatioChoice(int DetectionPercent, int RecognitionPercent, string Name);
 
 public partial class HardwareAccelerationViewModel : ObservableObject, IViewModel, IDisposable
 {
@@ -38,6 +40,38 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
     public ObservableCollection<InferenceEngineCardViewModel> Engines { get; } = [];
     public ObservableCollection<InferenceBenchmarkResult> Results { get; } = [];
     public InferenceThreadChoice[] CpuThreadChoices { get; }
+    public InferenceThreadChoice[] OcrThreadPercentChoices { get; } = Enumerable.Range(1, 100)
+        .Select(i => new InferenceThreadChoice(i, $"{i}%")).ToArray();
+    public PaddleOcrCpuModeChoice[] OcrCpuModeChoices { get; } =
+    [
+        new(PaddleOcrCpuMode.Inherit, "沿用通用 CPU 线程（默认）"),
+        new(PaddleOcrCpuMode.RuntimeDefault, "完全不配置（ONNX Runtime 默认）"),
+        new(PaddleOcrCpuMode.Auto, "自动配置（PR #3722）"),
+        new(PaddleOcrCpuMode.Ratio, "按逻辑处理器数比例配置"),
+        new(PaddleOcrCpuMode.Manual, "详细配置")
+    ];
+    public PaddleOcrCpuRatioChoice[] OcrCpuRatioChoices { get; } =
+    [
+        new(25, 12, "低占用 · 25% / 12%"),
+        new(50, 25, "均衡 · 50% / 25%"),
+        new(75, 50, "较多线程 · 75% / 50%")
+    ];
+    public PaddleOcrCpuConfig PaddleOcrCpu { get; }
+    public bool IsOcrCpuRatio => PaddleOcrCpu.Mode == PaddleOcrCpuMode.Ratio;
+    public bool IsOcrCpuManual => PaddleOcrCpu.Mode == PaddleOcrCpuMode.Manual;
+    public bool IsOcrCpuConfigured => PaddleOcrCpu.Mode is PaddleOcrCpuMode.Auto or PaddleOcrCpuMode.Ratio or PaddleOcrCpuMode.Manual;
+    public string OcrCpuPreview => PaddleOcrCpu.ToOptions().Describe(CpuThreads);
+    public string OcrCpuApplicability => ForceCpuOcr || SelectedEngine?.IsCpu == true
+        ? "应用并重启后用于 PPOCR 的 CPU 检测和识别会话。"
+        : "当前选择让 OCR 跟随其他引擎；以下参数会保存，在 PPOCR 使用纯 CPU 时生效。";
+    public string OcrCpuModeHint => $"当前可用逻辑处理器数：{Environment.ProcessorCount}。" + (PaddleOcrCpu.Mode switch
+    {
+        PaddleOcrCpuMode.Auto => "检测线程 = 逻辑处理器数 / 2，至少 2；识别线程 = 逻辑处理器数 / 4，限制在 2~4。向下取整，均不超过可用处理器数；算子间顺序执行。",
+        PaddleOcrCpuMode.Ratio => "检测与识别分别按所选比例计算线程数，向下取整，至少 1；算子间顺序执行。比例表示线程数分配，不是 CPU 使用率上限。",
+        PaddleOcrCpuMode.Manual => "分别配置检测（Det）与识别（Rec）的算子内线程数。0 表示 ONNX Runtime 自动选择；算子间线程数仅在开启并行执行时生效。",
+        PaddleOcrCpuMode.RuntimeDefault => "不为 PPOCR 写入线程数、执行模式或线程自旋参数，完全使用 ONNX Runtime 的会话默认值；通用 CPU 线程数也不会用于 PPOCR。",
+        _ => "PPOCR 与其他模型使用相同的通用 CPU 线程数；通用线程数为 0 时由 ONNX Runtime 自动选择。"
+    });
     public string CurrentRuntimeText => _runtime.Current.Description;
     public string CurrentEngineName => _runtime.Current.Engine == InferenceDeviceType.Cpu ? "CPU" : _runtime.Current.Engine.ToString();
     public string CurrentDeviceText => _runtime.Current.Device.Name;
@@ -84,11 +118,13 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
                 var saved = Config.GetEngineSettings(Config.InferenceDevice);
                 return SelectedEngine.Engine != Config.InferenceDevice || SelectedEngine.SelectedDevice.Id != saved.DeviceId
                     || ForceCpuOcr != Config.CpuOcr || CpuThreads != Config.Cpu.CpuThreads
+                    || PaddleOcrCpu.ToOptions() != Config.PaddleOcrCpu.ToOptions()
                     || (SelectedEngine.SupportsCache && SelectedEngine.Settings.EnableModelCache != saved.EnableModelCache);
             }
             var current = _runtime.Current;
             return SelectedEngine.Engine != current.Engine || SelectedEngine.SelectedDevice.Id != current.Device.Id
                 || ForceCpuOcr != current.CpuOcr || CpuThreads != current.CpuThreads
+                || PaddleOcrCpu.ToOptions() != current.PaddleOcrCpu
                 || (SelectedEngine.SupportsCache && SelectedEngine.Settings.EnableModelCache != current.EnableModelCache)
                 || (!SelectedEngine.IsCpu && !string.Equals(SelectedEngine.RuntimeDirectory, current.RuntimeDirectory, StringComparison.OrdinalIgnoreCase));
         }
@@ -122,8 +158,10 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         _interaction = interaction;
         _forceCpuOcr = Config.CpuOcr;
         _cpuThreads = Config.Cpu.CpuThreads;
+        PaddleOcrCpu = PaddleOcrCpuConfig.FromOptions(Config.PaddleOcrCpu.ToOptions());
+        PaddleOcrCpu.PropertyChanged += OcrCpuSettingsChanged;
         CpuThreadChoices = Enumerable.Range(0, Environment.ProcessorCount + 1)
-            .Select(i => new InferenceThreadChoice(i, i == 0 ? "自动（推荐）" : i.ToString())).ToArray();
+            .Select(i => new InferenceThreadChoice(i, i == 0 ? "自动（ORT 默认）" : i.ToString())).ToArray();
         foreach (var engine in Enum.GetValues<InferenceDeviceType>().Where(engine => engine.IsSelectable()))
         {
             var card = new InferenceEngineCardViewModel(engine, Config.GetEngineSettings(engine));
@@ -155,6 +193,21 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
     }
     partial void OnForceCpuOcrChanged(bool value) => RefreshAvailability();
     partial void OnCpuThreadsChanged(int value) => RefreshAvailability();
+    private void OcrCpuSettingsChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(IsOcrCpuRatio)); OnPropertyChanged(nameof(IsOcrCpuManual));
+        OnPropertyChanged(nameof(IsOcrCpuConfigured)); OnPropertyChanged(nameof(OcrCpuModeHint));
+        RefreshAvailability();
+    }
+
+    [RelayCommand]
+    private void UseOcrCpuRatio(PaddleOcrCpuRatioChoice choice)
+    {
+        if (IsBusy) return;
+        PaddleOcrCpu.Mode = PaddleOcrCpuMode.Ratio;
+        PaddleOcrCpu.DetectionThreadPercent = choice.DetectionPercent;
+        PaddleOcrCpu.RecognitionThreadPercent = choice.RecognitionPercent;
+    }
     private void RuntimeSettingsChanged(object? sender, EventArgs e)
     {
         if (!_taskStatusTimer.Dispatcher.CheckAccess())
@@ -201,6 +254,7 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         OnPropertyChanged(nameof(CanApply)); OnPropertyChanged(nameof(CanBenchmark)); OnPropertyChanged(nameof(CanBenchmarkTree));
         OnPropertyChanged(nameof(ApplyHint)); OnPropertyChanged(nameof(ApplyButtonText)); OnPropertyChanged(nameof(SelectionText));
         OnPropertyChanged(nameof(BenchmarkHint));
+        OnPropertyChanged(nameof(OcrCpuPreview)); OnPropertyChanged(nameof(OcrCpuApplicability));
     }
 
     [RelayCommand]
@@ -281,7 +335,7 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         await RunAsync(async token =>
         {
             ProgressText = "正在保存推理设置…";
-            if (HasDraftChanges) _runtime.Apply(SelectedEngine.Engine, SelectedEngine.Settings, ForceCpuOcr, CpuThreads);
+            if (HasDraftChanges) _runtime.Apply(SelectedEngine.Engine, SelectedEngine.Settings, ForceCpuOcr, CpuThreads, PaddleOcrCpu.ToOptions());
             ProgressText = "设置已保存，等待重启生效。";
             await OfferRestartAsync();
         });
@@ -293,6 +347,15 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         if (IsBusy) return;
         SelectedEngine = Engines.First(card => card.IsCpu);
         ForceCpuOcr = true; CpuThreads = 0;
+        var defaults = new PaddleOcrCpuOptions().Normalize();
+        PaddleOcrCpu.Mode = defaults.Mode;
+        PaddleOcrCpu.DetectionThreadPercent = defaults.DetectionThreadPercent;
+        PaddleOcrCpu.RecognitionThreadPercent = defaults.RecognitionThreadPercent;
+        PaddleOcrCpu.DetectionThreads = defaults.DetectionThreads;
+        PaddleOcrCpu.RecognitionThreads = defaults.RecognitionThreads;
+        PaddleOcrCpu.InterOpThreads = defaults.InterOpThreads;
+        PaddleOcrCpu.ParallelExecution = defaults.ParallelExecution;
+        PaddleOcrCpu.AllowSpinning = defaults.AllowSpinning;
         await ApplyAsync();
     }
 
@@ -401,6 +464,7 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         if (_disposed) return;
         _disposed = true; _lifetime.Cancel(); _taskStatusTimer.Stop();
         _runtime.SettingsChanged -= RuntimeSettingsChanged;
+        PaddleOcrCpu.PropertyChanged -= OcrCpuSettingsChanged;
         foreach (var card in Engines)
         {
             card.PropertyChanged -= CardChanged;

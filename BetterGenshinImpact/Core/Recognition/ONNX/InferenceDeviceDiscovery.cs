@@ -114,25 +114,10 @@ public sealed class InferenceDeviceDiscovery : IInferenceDeviceDiscovery
                 if ((engine != InferenceDeviceType.TensorRT && major >= 5) || (engine == InferenceDeviceType.TensorRT && major * 10 + minor >= 75))
                     compatible.Add(key);
             }
-            // CUDA_VISIBLE_DEVICES 会重排 CUDA 序号，不能拿 DXGI 或物理显卡序号直接传给 ORT。
-            return MapCudaVisibility(devices, Environment.GetEnvironmentVariable("CUDA_VISIBLE_DEVICES"))
-                .Where(device => compatible.Contains(device.Id)).ToArray();
+            // cuInit 已按 CUDA_VISIBLE_DEVICES 过滤并重排设备，ordinal 就是 ORT 需要的 device_id，不能再次映射。
+            return devices.Where(device => compatible.Contains(device.Id)).ToArray();
         }
         finally { NativeLibrary.Free(library); }
-    }
-
-    public static IReadOnlyList<InferenceDeviceInfo> MapCudaVisibility(IReadOnlyList<InferenceDeviceInfo> devices, string? visible)
-    {
-        if (visible == null) return devices;
-        var filtered = new List<InferenceDeviceInfo>();
-        foreach (var key in visible.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
-        {
-            var match = devices.FirstOrDefault(d => d.Index.ToString() == key || d.Id.StartsWith(key, StringComparison.OrdinalIgnoreCase));
-            // CUDA 在第一个非法设备标识处停止可见列表，不继续猜测后面的序号。
-            if (match == null || filtered.Any(d => d.Id == match.Id)) break;
-            filtered.Add(match with { Index = filtered.Count, ProviderDevice = filtered.Count.ToString() });
-        }
-        return filtered;
     }
 
     private static IReadOnlyList<InferenceDeviceInfo> GetOpenVinoDevices(string directory)

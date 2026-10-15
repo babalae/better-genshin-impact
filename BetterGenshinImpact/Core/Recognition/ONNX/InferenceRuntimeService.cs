@@ -42,6 +42,8 @@ public sealed class InferenceRuntimeService(
         config.LastValidationError ??= "";
         config.VerifiedSignature ??= "";
         config.ValidatedEngines ??= [];
+        // 新增 OCR 参数单独修正，避免无效比例或换用核心数较少的处理器时丢失其他引擎设置。
+        config.PaddleOcrCpu = PaddleOcrCpuConfig.FromOptions((config.PaddleOcrCpu ?? new()).ToOptions().Normalize());
         if (config.IsExpectedConfiguration && !string.IsNullOrWhiteSpace(config.VerifiedSignature))
         {
             // 兼容已有的单份验证签名：只恢复能与保存参数匹配的历史成功记录。
@@ -51,7 +53,8 @@ public sealed class InferenceRuntimeService(
                 if (string.IsNullOrWhiteSpace(settings.DeviceId)) continue;
                 var snapshot = new InferenceRuntimeSnapshot(engine, new(settings.DeviceId, "", 0, ""),
                     config.CpuOcr, config.Cpu.CpuThreads,
-                    engine is InferenceDeviceType.OpenVINO or InferenceDeviceType.TensorRT && settings.EnableModelCache, "");
+                    engine is InferenceDeviceType.OpenVINO or InferenceDeviceType.TensorRT && settings.EnableModelCache, "")
+                    { PaddleOcrCpu = config.PaddleOcrCpu.ToOptions() };
                 if (snapshot.Signature == config.VerifiedSignature) config.RecordValidatedEngine(engine);
             }
         }
@@ -226,30 +229,37 @@ public sealed class InferenceRuntimeService(
     {
         lock (_settingsLock)
         {
-            // 验证期间用户可能已保存新的设置，旧验证结果不能覆盖下一次启动的选择。
-            if (validationRevision == null || _settingsRevision == validationRevision)
+            // 非主实例只能回退本进程的运行时快照，不能改写主实例共享的持久化设置。
+            if (IsMainInstance)
             {
-                Config.ResetToCpu();
-                HasPendingRestart = false;
+                // 验证期间用户可能已保存新的设置，旧验证结果不能覆盖下一次启动的选择。
+                if (validationRevision == null || _settingsRevision == validationRevision)
+                {
+                    Config.ResetToCpu();
+                    HasPendingRestart = false;
+                }
+                Config.LastFailedEngine = engine;
             }
-            Config.LastFailedEngine = engine;
             var isRuntimeFailure = result == "加速验证失败";
             var stageLabel = isRuntimeFailure ? "失败环节" : "测试场景";
             var reasonLabel = isRuntimeFailure ? "失败原因" : "测试结论";
-            Config.LastValidationError = $"{stageLabel}：{stage}\r\n{reasonLabel}：{userReason}\r\n\r\n技术详情：{technicalDetails}";
+            if (IsMainInstance)
+                Config.LastValidationError = $"{stageLabel}：{stage}\r\n{reasonLabel}：{userReason}\r\n\r\n技术详情：{technicalDetails}";
             StartupMessage = $"{engine} {result}，已自动切换为 CPU。\r\n\r\n" +
                              $"{stageLabel}：{stage}\r\n{reasonLabel}：{userReason}\r\n\r\n" +
                              "软件仍可正常使用。你可以继续使用 CPU，或在首页的“硬件加速设置”中选择其他设备后重试。";
             _isCurrentValidated = true;
             Volatile.Write(ref _current, InferenceRuntimeSnapshot.CpuDefault());
         }
-        configService.Save();
+        if (IsMainInstance) configService.Save();
     }
 
-    public void Apply(InferenceDeviceType engine, InferenceEngineSettings settings, bool cpuOcr, int cpuThreads)
+    public void Apply(InferenceDeviceType engine, InferenceEngineSettings settings, bool cpuOcr, int cpuThreads,
+        PaddleOcrCpuOptions? paddleOcrCpu = null)
     {
         if (!Enum.IsDefined(engine) || string.IsNullOrWhiteSpace(settings.DeviceId) || cpuThreads < 0 || cpuThreads > Environment.ProcessorCount)
             throw new ArgumentException("推理设置不符合预期。");
+        if (paddleOcrCpu is { IsValid: false }) throw new ArgumentException("PPOCR CPU 参数不符合预期。");
         // TensorRT 已下线：任何调用方都不能再把生效引擎切回该引擎。
         if (!engine.IsSelectable()) throw new ArgumentException($"{engine} 推理引擎已停止提供，请选择其他引擎。");
         lock (_settingsLock)
@@ -260,6 +270,7 @@ public sealed class InferenceRuntimeService(
             target.DeviceId = settings.DeviceId;
             target.EnableModelCache = settings.EnableModelCache;
             config.Cpu.CpuThreads = cpuThreads;
+            if (paddleOcrCpu != null) config.PaddleOcrCpu = PaddleOcrCpuConfig.FromOptions(paddleOcrCpu);
             config.CpuOcr = cpuOcr;
             config.InferenceDevice = engine;
             config.FormatVersion = 1;
