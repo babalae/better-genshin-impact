@@ -2,7 +2,13 @@ using System;
 
 namespace BetterGenshinImpact.Core.Recognition.ONNX;
 
-public enum PaddleOcrCpuMode { Inherit, Auto, Ratio, Manual, RuntimeDefault }
+public enum PaddleOcrCpuMode
+{
+    FollowGlobal = 0,
+    RuntimeAuto = 1,
+    GameplayPriority = 2,
+    Custom = 3
+}
 
 public sealed record PaddleOcrCpuThreadOptions(int IntraOpThreads, int InterOpThreads, bool ParallelExecution, bool AllowSpinning);
 
@@ -10,8 +16,6 @@ public sealed record PaddleOcrCpuThreadOptions(int IntraOpThreads, int InterOpTh
 public sealed record PaddleOcrCpuOptions
 {
     public PaddleOcrCpuMode Mode { get; init; }
-    public int DetectionThreadPercent { get; init; } = 50;
-    public int RecognitionThreadPercent { get; init; } = 25;
     public int DetectionThreads { get; init; } = Math.Min(2, Environment.ProcessorCount);
     public int RecognitionThreads { get; init; } = Math.Min(2, Environment.ProcessorCount);
     public int InterOpThreads { get; init; } = 1;
@@ -19,16 +23,13 @@ public sealed record PaddleOcrCpuOptions
     public bool AllowSpinning { get; init; } = true;
 
     public bool IsValid => Enum.IsDefined(Mode)
-        && DetectionThreadPercent is >= 1 and <= 100 && RecognitionThreadPercent is >= 1 and <= 100
         && DetectionThreads >= 0 && DetectionThreads <= Environment.ProcessorCount
         && RecognitionThreads >= 0 && RecognitionThreads <= Environment.ProcessorCount
         && InterOpThreads >= 0 && InterOpThreads <= Environment.ProcessorCount;
 
     public PaddleOcrCpuOptions Normalize() => this with
     {
-        Mode = Enum.IsDefined(Mode) ? Mode : PaddleOcrCpuMode.Inherit,
-        DetectionThreadPercent = Math.Clamp(DetectionThreadPercent, 1, 100),
-        RecognitionThreadPercent = Math.Clamp(RecognitionThreadPercent, 1, 100),
+        Mode = Enum.IsDefined(Mode) ? Mode : PaddleOcrCpuMode.FollowGlobal,
         DetectionThreads = Math.Clamp(DetectionThreads, 0, Environment.ProcessorCount),
         RecognitionThreads = Math.Clamp(RecognitionThreads, 0, Environment.ProcessorCount),
         InterOpThreads = Math.Clamp(InterOpThreads, 0, Environment.ProcessorCount)
@@ -41,32 +42,35 @@ public sealed record PaddleOcrCpuOptions
         {
             // PR #3722：Det 用一半线程，Rec 用四分之一并限制在 2~4。
             // 小于两个可用逻辑处理器时，不能为了满足下限而超额创建线程。
-            PaddleOcrCpuMode.Auto => detection ? Math.Clamp(count / 2, Math.Min(2, count), count)
+            PaddleOcrCpuMode.GameplayPriority => detection ? Math.Clamp(count / 2, Math.Min(2, count), count)
                 : Math.Clamp(count / 4, Math.Min(2, count), Math.Min(4, count)),
-            // 向下取整，最低为 1；比例是线程数比例，并非 CPU 使用率上限。
-            PaddleOcrCpuMode.Ratio => (int)Math.Clamp((long)count * Math.Clamp(detection ? DetectionThreadPercent : RecognitionThreadPercent, 1, 100) / 100, 1, count),
-            PaddleOcrCpuMode.Manual => Math.Clamp(detection ? DetectionThreads : RecognitionThreads, 0, count),
+            PaddleOcrCpuMode.Custom => Math.Clamp(detection ? DetectionThreads : RecognitionThreads, 0, count),
             _ => -1
         };
         if (intraOp < 0) return null;
-        var parallel = Mode == PaddleOcrCpuMode.Manual && ParallelExecution;
+        var parallel = Mode == PaddleOcrCpuMode.Custom && ParallelExecution;
         return new(intraOp, parallel ? Math.Clamp(InterOpThreads, 0, count) : 1, parallel, AllowSpinning);
     }
 
     public string Describe(int inheritedThreads)
     {
         static string Threads(int count) => count == 0 ? "自动（ORT 默认）" : count.ToString();
-        if (Mode == PaddleOcrCpuMode.RuntimeDefault) return "PPOCR 不配置线程参数（ONNX Runtime 默认）";
+        if (Mode == PaddleOcrCpuMode.RuntimeAuto) return "OCR 使用 ONNX Runtime 自动调度";
         var det = Resolve(true);
         var rec = Resolve(false);
-        if (det == null || rec == null) return $"PPOCR 沿用通用线程：{Threads(inheritedThreads)}";
-        var mode = Mode switch { PaddleOcrCpuMode.Auto => "PR 自动", PaddleOcrCpuMode.Ratio => "自定义比例", _ => "详细配置" };
-        return $"PPOCR {mode} · Det {Threads(det.IntraOpThreads)} / Rec {Threads(rec.IntraOpThreads)} · "
-            + (det.ParallelExecution ? $"并行，算子间 {Threads(det.InterOpThreads)}" : "顺序，算子间 1")
+        if (det == null || rec == null) return $"OCR 跟随全局线程设置：{Threads(inheritedThreads)}";
+        var mode = Mode == PaddleOcrCpuMode.GameplayPriority ? "游戏流畅优先" : "自定义设置";
+        return $"OCR {mode} · 文本检测 {Threads(det.IntraOpThreads)} / 文字识别 {Threads(rec.IntraOpThreads)} · "
+            + (det.ParallelExecution ? $"节点并行 {Threads(det.InterOpThreads)}" : "节点顺序执行")
             + $" · 自旋{(det.AllowSpinning ? "开启" : "关闭")}";
     }
 
-    // 沿用模式保留旧签名，避免新增默认参数使已有设备验证失效。
-    internal string SignatureSuffix => Mode == PaddleOcrCpuMode.Inherit ? ""
-        : $"|PPOCR-CPU-v1|{(int)Mode}|{DetectionThreadPercent}|{RecognitionThreadPercent}|{DetectionThreads}|{RecognitionThreads}|{InterOpThreads}|{ParallelExecution}|{AllowSpinning}";
+    // 跟随全局设置时保留旧签名，避免新增默认参数使已有设备验证失效。
+    internal string SignatureSuffix => Mode switch
+    {
+        PaddleOcrCpuMode.FollowGlobal => "",
+        PaddleOcrCpuMode.RuntimeAuto => $"|PPOCR-CPU-v1|{(int)Mode}",
+        PaddleOcrCpuMode.GameplayPriority => $"|PPOCR-CPU-v1|{(int)Mode}|{AllowSpinning}",
+        _ => $"|PPOCR-CPU-v1|{(int)Mode}|{DetectionThreads}|{RecognitionThreads}|{InterOpThreads}|{ParallelExecution}|{AllowSpinning}"
+    };
 }

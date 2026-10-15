@@ -259,7 +259,7 @@ public sealed class InferenceRuntimeService(
     {
         if (!Enum.IsDefined(engine) || string.IsNullOrWhiteSpace(settings.DeviceId) || cpuThreads < 0 || cpuThreads > Environment.ProcessorCount)
             throw new ArgumentException("推理设置不符合预期。");
-        if (paddleOcrCpu is { IsValid: false }) throw new ArgumentException("PPOCR CPU 参数不符合预期。");
+        if (paddleOcrCpu is { IsValid: false }) throw new ArgumentException("OCR CPU 线程策略参数不符合预期。");
         // TensorRT 已下线：任何调用方都不能再把生效引擎切回该引擎。
         if (!engine.IsSelectable()) throw new ArgumentException($"{engine} 推理引擎已停止提供，请选择其他引擎。");
         lock (_settingsLock)

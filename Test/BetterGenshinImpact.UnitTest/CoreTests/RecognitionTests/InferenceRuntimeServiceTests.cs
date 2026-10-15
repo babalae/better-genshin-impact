@@ -214,6 +214,31 @@ public sealed class InferenceRuntimeServiceTests
     }
 
     [Fact]
+    public async Task RuntimeVersionMismatch_ReportsDeletionAndRestoresDefaultCpuConfiguration()
+    {
+        var config = Configuration();
+        config.Cpu.CpuThreads = 4;
+        config.CpuOcr = false;
+        var store = new ConfigurationService(config);
+        const string reason = "CUDA 运行库版本与当前程序不一致，已自动删除该插件。";
+        using var service = new InferenceRuntimeService(store,
+            new Runtime(InferenceDeviceType.Cpu, reason), new Devices(), new Diagnostics(),
+            NullLogger<BgiOnnxFactory>.Instance);
+
+        await service.InitializeAsync();
+
+        Assert.Equal(InferenceDeviceType.Cpu, service.Current.Engine);
+        Assert.Equal(InferenceDeviceType.Cpu, config.InferenceDevice);
+        Assert.Equal("CPU", config.Cpu.DeviceId);
+        Assert.Equal(0, config.Cpu.CpuThreads);
+        Assert.True(config.CpuOcr);
+        Assert.Equal(InferenceValidationState.None, config.ValidationState);
+        Assert.Equal(InferenceDeviceType.CUDA, config.LastFailedEngine);
+        Assert.Contains(reason, service.StartupMessage);
+        Assert.Equal(1, store.SaveCount);
+    }
+
+    [Fact]
     public async Task LateFailure_UpdatesFutureFactoriesAndPreservesCapturedSnapshot()
     {
         var config = Configuration();
@@ -556,12 +581,12 @@ public sealed class InferenceRuntimeServiceTests
         InferenceDeviceType engine = InferenceDeviceType.CUDA, InferenceStartupStatus? startupStatus = null) => new(new ConfigurationService(config),
         new Runtime(engine), new Devices(), diagnostic, NullLogger<BgiOnnxFactory>.Instance, startupStatus);
 
-    private sealed class Runtime(InferenceDeviceType engine) : IOnnxRuntimeSelection
+    private sealed class Runtime(InferenceDeviceType engine, string failureReason = "") : IOnnxRuntimeSelection
     {
         public InferenceDeviceType InferenceDevice => engine;
         public string RuntimeDirectory => "test-runtime";
         public string StatusText => "test";
-        public string FailureReason => "";
+        public string FailureReason => failureReason;
     }
     private sealed class Devices : IInferenceDeviceDiscovery
     {

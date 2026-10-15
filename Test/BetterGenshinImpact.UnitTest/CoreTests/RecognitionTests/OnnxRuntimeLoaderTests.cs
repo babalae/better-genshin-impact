@@ -1,5 +1,6 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.ONNX;
+using Microsoft.ML.OnnxRuntime;
 
 namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests;
 
@@ -67,6 +68,33 @@ public sealed class OnnxRuntimeLoaderTests : IDisposable
     }
 
     [Fact]
+    public void RequiredVersion_ComesFromManagedOnnxRuntimeAssembly()
+    {
+        var managedVersion = typeof(InferenceSession).Assembly.GetName().Version!;
+
+        Assert.Equal(managedVersion.ToString(3), OnnxRuntimeLoader.RequiredVersion);
+    }
+
+    [Fact]
+    public void VersionMismatch_DeletesFixedPluginAndFallsBackToCpu()
+    {
+        var directory = Directory.CreateDirectory(Path.Combine(_directory, "Plugins", "OnnxRuntime", "CUDA")).FullName;
+        foreach (var file in OnnxRuntimePackageCatalog.ProviderFiles(InferenceDeviceType.CUDA))
+            File.WriteAllText(Path.Combine(directory, file), "仅用于版本不匹配测试");
+        var freed = false;
+
+        var loader = new OnnxRuntimeLoader(
+            new HardwareAccelerationConfig { InferenceDevice = InferenceDeviceType.CUDA }, _directory,
+            _ => new IntPtr(1), _ => "0.0.0", _ => freed = true);
+
+        Assert.True(freed);
+        Assert.Equal(InferenceDeviceType.Cpu, loader.InferenceDevice);
+        Assert.False(Directory.Exists(directory));
+        Assert.Contains("已自动删除", loader.FailureReason);
+        Assert.Contains(OnnxRuntimeLoader.RequiredVersion, loader.FailureReason);
+    }
+
+    [Fact]
     public void TensorRtWithoutCudaBridge_FallsBackBeforeNativeLoadAndReportsMissingFile()
     {
         var directory = Directory.CreateDirectory(Path.Combine(_directory, "Plugins", "OnnxRuntime", "TensorRT")).FullName;
@@ -83,6 +111,7 @@ public sealed class OnnxRuntimeLoaderTests : IDisposable
         Assert.Contains("onnxruntime_providers_cuda.dll", loader.StatusText);
         Assert.Contains("onnxruntime_providers_cuda.dll", loader.FailureReason);
         Assert.Contains("重新下载运行库", loader.FailureReason);
+        Assert.False(Directory.Exists(directory));
     }
 
     [Theory]

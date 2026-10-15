@@ -23,8 +23,12 @@ public interface IOnnxRuntimeSelection
 
 public sealed class OnnxRuntimeLoader : IOnnxRuntimeSelection
 {
-    public const string RequiredVersion = "1.21.0";
+    // 原生库必须与编译时引用的托管 ONNX Runtime 主次修订版一致，不再另外维护版本号。
+    public static string RequiredVersion { get; } = GetRequiredVersion();
     private IntPtr _libraryHandle;
+    private readonly Func<string, IntPtr> _loadLibrary;
+    private readonly Func<IntPtr, string> _readRuntimeVersion;
+    private readonly Action<IntPtr> _freeLibrary;
 
     public string PluginsDirectory { get; }
     public string RuntimeDirectory { get; private set; }
@@ -33,7 +37,18 @@ public sealed class OnnxRuntimeLoader : IOnnxRuntimeSelection
     public string FailureReason { get; private set; } = "";
 
     public OnnxRuntimeLoader(HardwareAccelerationConfig config, string baseDirectory)
+        : this(config, baseDirectory,
+            path => LoadLibraryEx(path, IntPtr.Zero, 0x00000008), // LOAD_WITH_ALTERED_SEARCH_PATH
+            ReadRuntimeVersion, NativeLibrary.Free)
     {
+    }
+
+    internal OnnxRuntimeLoader(HardwareAccelerationConfig config, string baseDirectory,
+        Func<string, IntPtr> loadLibrary, Func<IntPtr, string> readRuntimeVersion, Action<IntPtr> freeLibrary)
+    {
+        _loadLibrary = loadLibrary;
+        _readRuntimeVersion = readRuntimeVersion;
+        _freeLibrary = freeLibrary;
         PluginsDirectory = Path.Combine(Path.GetFullPath(baseDirectory), "Plugins", "OnnxRuntime");
         RuntimeDirectory = Path.GetFullPath(baseDirectory);
         InferenceDevice = config.InferenceDevice;
@@ -55,7 +70,9 @@ public sealed class OnnxRuntimeLoader : IOnnxRuntimeSelection
         if (InferenceDevice == InferenceDeviceType.DirectML && !File.Exists(libraryPath)) return;
 
         var previousPath = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Process);
-        string version;
+        string version = "";
+        var versionMismatch = false;
+        var deleteInvalidPlugin = false;
         try
         {
             var missingRuntimeFiles = OnnxRuntimePackageCatalog.ProviderFiles(InferenceDevice)
@@ -63,6 +80,7 @@ public sealed class OnnxRuntimeLoader : IOnnxRuntimeSelection
                 .ToArray();
             if (missingRuntimeFiles.Length > 0)
             {
+                deleteInvalidPlugin = Directory.Exists(directory);
                 FailureReason = $"{directoryName} 运行库不完整，缺少 {string.Join("、", missingRuntimeFiles)}。请在硬件加速设置中重新下载运行库。";
                 throw new FileNotFoundException($"运行库目录中缺少 {string.Join("、", missingRuntimeFiles)}。",
                     Path.Combine(directory, missingRuntimeFiles[0]));
@@ -79,16 +97,20 @@ public sealed class OnnxRuntimeLoader : IOnnxRuntimeSelection
             Environment.SetEnvironmentVariable("PATH", string.Join(Path.PathSeparator, searchPaths),
                 EnvironmentVariableTarget.Process);
 
-            // 与 ORT 1.21 的 Windows provider 加载方式保持一致，使主 DLL 的同目录依赖优先加载。
-            _libraryHandle = LoadLibraryEx(libraryPath, IntPtr.Zero, 0x00000008); // LOAD_WITH_ALTERED_SEARCH_PATH
+            // 与 ONNX Runtime 的 Windows provider 加载方式保持一致，使主 DLL 的同目录依赖优先加载。
+            deleteInvalidPlugin = true;
+            _libraryHandle = _loadLibrary(libraryPath);
             if (_libraryHandle == IntPtr.Zero)
                 throw new Win32Exception(Marshal.GetLastWin32Error(), $"无法加载 {libraryPath}，请检查架构及配套依赖。");
 
             // 先直接读取稳定的 OrtApiBase 版本接口，不触发托管 NativeMethods 的静态初始化；
             // 版本不符时仍能释放失败的模块并回退到内置运行库。
-            version = ReadRuntimeVersion(_libraryHandle);
+            version = _readRuntimeVersion(_libraryHandle);
             if (version != RequiredVersion)
+            {
+                versionMismatch = true;
                 throw new InvalidDataException($"原生运行库版本为 {version}，必须为 {RequiredVersion}。");
+            }
 
             var missingDependencies = OnnxRuntimePackageCatalog.MissingDependencyFiles(InferenceDevice, directory);
             if (missingDependencies.Length > 0)
@@ -105,13 +127,28 @@ public sealed class OnnxRuntimeLoader : IOnnxRuntimeSelection
         {
             if (_libraryHandle != IntPtr.Zero)
             {
-                NativeLibrary.Free(_libraryHandle);
+                _freeLibrary(_libraryHandle);
                 _libraryHandle = IntPtr.Zero;
             }
 
             Environment.SetEnvironmentVariable("PATH", previousPath, EnvironmentVariableTarget.Process);
-            if (string.IsNullOrWhiteSpace(FailureReason))
-                FailureReason = $"{directoryName} 运行库无法加载，请在硬件加速设置中重新检测或重新下载。";
+            if (versionMismatch)
+            {
+                var deleted = TryDeletePlugin(directory);
+                FailureReason = $"{directoryName} 运行库版本为 {version}，与当前程序编译使用的 ONNX Runtime {RequiredVersion} 不一致。" +
+                                (deleted
+                                    ? "已自动删除该插件并恢复默认 CPU 设置，如需继续使用请重新下载。"
+                                    : "插件可能正被其他进程占用，无法自动删除；已恢复默认 CPU 设置，请关闭其他实例后手动删除。");
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(FailureReason))
+                    FailureReason = $"{directoryName} 运行库无法加载，请在硬件加速设置中重新下载。";
+                if (deleteInvalidPlugin)
+                    FailureReason += TryDeletePlugin(directory)
+                        ? "已自动删除不完整或无法使用的插件，并恢复默认 CPU 设置。"
+                        : "插件可能正被其他进程占用，无法自动删除；已恢复默认 CPU 设置。";
+            }
             InferenceDevice = InferenceDeviceType.Cpu;
             StatusText = $"内置运行库（CPU）；{directoryName} 加载失败：{e.Message}";
             Log.Warning(e, "[ONNX]运行库 {Library} 加载失败，回退到 CPU", libraryPath);
@@ -136,6 +173,26 @@ public sealed class OnnxRuntimeLoader : IOnnxRuntimeSelection
         // OrtApiBase 依次包含 GetApi 和 GetVersionString 两个函数指针。
         var getVersion = Marshal.GetDelegateForFunctionPointer<OrtGetVersionString>(Marshal.ReadIntPtr(apiBase, IntPtr.Size));
         return Marshal.PtrToStringUTF8(getVersion()) ?? throw new InvalidDataException("无法读取原生运行库版本。");
+    }
+
+    private static string GetRequiredVersion()
+    {
+        var version = typeof(InferenceSession).Assembly.GetName().Version
+                      ?? throw new InvalidOperationException("无法读取编译时 ONNX Runtime 版本。");
+        return version.ToString(3);
+    }
+
+    private bool TryDeletePlugin(string directory)
+    {
+        var expected = Path.GetFullPath(OnnxRuntimePackageCatalog.EngineDirectory(PluginsDirectory, InferenceDevice));
+        if (!string.Equals(Path.GetFullPath(directory), expected, StringComparison.OrdinalIgnoreCase)) return false;
+        try
+        {
+            Directory.Delete(expected, true);
+            return !Directory.Exists(expected);
+        }
+        catch (IOException) { return false; }
+        catch (UnauthorizedAccessException) { return false; }
     }
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi)]

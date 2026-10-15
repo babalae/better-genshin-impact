@@ -154,7 +154,7 @@ public sealed class RuntimePackageDownloaderTests : IDisposable
     }
 
     [Fact]
-    public async Task Install_KeepsEnginesIndependentAndLeavesLoadedFilesUntouched()
+    public async Task Install_OverwritesFixedDirectoryAndKeepsEnginesIndependent()
     {
         var plugins = Path.Combine(_root, "Plugins", "OnnxRuntime");
         var cuda = Directory.CreateDirectory(Path.Combine(plugins, "CUDA")).FullName;
@@ -168,16 +168,15 @@ public sealed class RuntimePackageDownloaderTests : IDisposable
         using var installer = new OnnxRuntimeInstaller(_root, client);
         await installer.InstallAsync(InferenceDeviceType.CUDA, [Package(bytes) with { NugetId = "Microsoft.ML.OnnxRuntime.Gpu.Windows" }], null, CancellationToken.None);
         var installed = installer.Inspect(InferenceDeviceType.CUDA);
-        Assert.NotEqual(cuda, installed.Directory);
+        Assert.Equal(cuda, installed.Directory);
         Assert.Equal("new-cuda", await File.ReadAllTextAsync(Path.Combine(installed.Directory, "onnxruntime.dll")));
-        Assert.Equal("old-cuda", await File.ReadAllTextAsync(Path.Combine(cuda, "onnxruntime.dll")));
         Assert.Equal("trt", await File.ReadAllTextAsync(Path.Combine(tensor, "onnxruntime.dll")));
         Assert.Equal(InferenceInstallationState.MissingDependencies, installed.State);
         Assert.False(Directory.Exists(Path.Combine(plugins, ".downloads")));
     }
 
     [Fact]
-    public async Task Install_DeletesSupersededRevisionAndKeepsOnlyCurrentVersion()
+    public async Task Install_RepeatedDownloadOverwritesSameFixedDirectoryWithoutVersionDirectories()
     {
         var entries = OnnxRuntimePackageCatalog.ProviderFiles(InferenceDeviceType.CUDA)
             .Select(file => ($"runtimes/win-x64/native/{file}", "runtime"))
@@ -193,34 +192,23 @@ public sealed class RuntimePackageDownloaderTests : IDisposable
         var first = installer.Inspect(InferenceDeviceType.CUDA).Directory;
         await installer.InstallAsync(InferenceDeviceType.CUDA, [package], null, CancellationToken.None);
         var current = installer.Inspect(InferenceDeviceType.CUDA).Directory;
-        var versions = Path.Combine(installer.PluginsDirectory, "CUDA", "versions");
 
-        Assert.NotEqual(first, current);
-        Assert.False(Directory.Exists(first));
-        Assert.Equal(current, Assert.Single(Directory.EnumerateDirectories(versions)));
+        Assert.Equal(first, current);
+        Assert.Equal(Path.Combine(installer.PluginsDirectory, "CUDA"), current);
+        Assert.False(File.Exists(Path.Combine(current, "current.txt")));
+        Assert.False(Directory.Exists(Path.Combine(current, "versions")));
     }
 
     [Fact]
-    public async Task Cleanup_PreservesCurrentAndLoadedRevisionUntilNextProcess()
+    public async Task Cleanup_RemovesAbandonedStagingDirectory()
     {
-        var root = Directory.CreateDirectory(Path.Combine(_root, "Plugins", "OnnxRuntime", "TensorRT")).FullName;
-        var versions = Directory.CreateDirectory(Path.Combine(root, "versions")).FullName;
-        var current = Directory.CreateDirectory(Path.Combine(versions, Guid.NewGuid().ToString("N"))).FullName;
-        var loaded = Directory.CreateDirectory(Path.Combine(versions, Guid.NewGuid().ToString("N"))).FullName;
-        var obsolete = Directory.CreateDirectory(Path.Combine(versions, Guid.NewGuid().ToString("N"))).FullName;
-        await File.WriteAllTextAsync(Path.Combine(root, "current.txt"), Path.GetFileName(current));
+        var staging = Directory.CreateDirectory(Path.Combine(_root, "Plugins", "OnnxRuntime", ".TensorRT.staging-" + Guid.NewGuid().ToString("N"))).FullName;
+        await File.WriteAllTextAsync(Path.Combine(staging, "partial.dll"), "partial");
 
-        using (var installer = new OnnxRuntimeInstaller(_root, protectedRuntimeDirectory: loaded))
-            await installer.CleanupInstalledDownloadsAsync(CancellationToken.None);
+        using var installer = new OnnxRuntimeInstaller(_root);
+        await installer.CleanupInstalledDownloadsAsync(CancellationToken.None);
 
-        Assert.True(Directory.Exists(current));
-        Assert.True(Directory.Exists(loaded));
-        Assert.False(Directory.Exists(obsolete));
-
-        using (var nextProcessInstaller = new OnnxRuntimeInstaller(_root, protectedRuntimeDirectory: current))
-            await nextProcessInstaller.CleanupInstalledDownloadsAsync(CancellationToken.None);
-
-        Assert.Equal(current, Assert.Single(Directory.EnumerateDirectories(versions)));
+        Assert.False(Directory.Exists(staging));
     }
 
     [Fact]
@@ -247,7 +235,7 @@ public sealed class RuntimePackageDownloaderTests : IDisposable
     }
 
     [Fact]
-    public async Task FailedInstall_PreservesCompleteArchiveForRetry()
+    public async Task FailedInstall_DeletesPackageWithIncompleteFileList()
     {
         var archive = CreateZip(("runtimes/win-x64/native/onnxruntime.dll", "incomplete-package"));
         var bytes = await File.ReadAllBytesAsync(archive);
@@ -255,7 +243,8 @@ public sealed class RuntimePackageDownloaderTests : IDisposable
         using var installer = new OnnxRuntimeInstaller(_root, client);
         await Assert.ThrowsAsync<InvalidDataException>(() => installer.InstallAsync(InferenceDeviceType.CUDA,
             [Package(bytes) with { NugetId = "Microsoft.ML.OnnxRuntime.Gpu.Windows" }], null, CancellationToken.None));
-        Assert.Single(Directory.EnumerateFiles(Path.Combine(installer.PluginsDirectory, ".downloads"), "*.zip"));
+        Assert.False(Directory.Exists(Path.Combine(installer.PluginsDirectory, ".downloads")));
+        Assert.False(Directory.Exists(Path.Combine(installer.PluginsDirectory, "CUDA")));
     }
 
     private static byte[] ToZip64(byte[] original)

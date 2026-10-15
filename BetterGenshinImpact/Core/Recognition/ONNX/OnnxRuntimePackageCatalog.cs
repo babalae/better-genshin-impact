@@ -13,24 +13,16 @@ public sealed record RuntimeDownloadProgress(string Message, long Received, long
     public double Percentage => Total > 0 ? Math.Clamp(100d * Received / Total, 0, 100) : 0;
 }
 
-/// <summary>固定的运行库版本与依赖清单，CUDA/TRT 目录、安装状态和搜索路径完全独立。</summary>
+/// <summary>固定的运行库依赖清单，CUDA/TRT 目录、安装状态和搜索路径完全独立。</summary>
 public static class OnnxRuntimePackageCatalog
 {
     public const string TensorRtUrl = "https://developer.download.nvidia.com/compute/machine-learning/tensorrt/10.8.0/zip/TensorRT-10.8.0.43.Windows.win10.cuda-12.8.zip";
 
     public static string EngineDirectory(string pluginsDirectory, InferenceDeviceType engine) => Path.Combine(pluginsDirectory, engine.ToString());
 
+    // 每个引擎只使用一个固定目录，用户手工复制 DLL 后即可直接被识别。
     public static string RuntimeDirectory(string pluginsDirectory, InferenceDeviceType engine)
-    {
-        var root = EngineDirectory(pluginsDirectory, engine);
-        var pointer = Path.Combine(root, "current.txt");
-        if (File.Exists(pointer) && Guid.TryParseExact(File.ReadAllText(pointer).Trim(), "N", out var revision))
-        {
-            var directory = Path.Combine(root, "versions", revision.ToString("N"));
-            if (Directory.Exists(directory)) return directory;
-        }
-        return root;
-    }
+        => EngineDirectory(pluginsDirectory, engine);
 
     public static string[] ProviderFiles(InferenceDeviceType engine) => engine switch
     {

@@ -169,69 +169,112 @@
                         </StackPanel>
                     </DockPanel>
                 </Border>
-                <Border Padding="16" CornerRadius="8" BorderThickness="1" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" Margin="0,12,0,0">
+                <ui:CardExpander Margin="0,12,0,0" ContentPadding="0" Icon="{ui:SymbolIcon Settings24}" IsExpanded="True">
+                    <ui:CardExpander.Header>
+                        <StackPanel>
+                            <TextBlock Text="OCR CPU 线程策略" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding OcrCpuPreview}" TextWrapping="Wrap" Margin="0,3,24,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                    </ui:CardExpander.Header>
                     <StackPanel IsEnabled="{Binding CanInteract}">
-                        <TextBlock Text="PPOCR CPU 参数" FontWeight="SemiBold" />
-                        <TextBlock Text="分别控制文字检测与文字识别的线程数，便于测试 OCR 耗时和游戏帧率。" TextWrapping="Wrap" Margin="0,4,0,12" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                        <ComboBox ItemsSource="{Binding OcrCpuModeChoices}" DisplayMemberPath="Name" SelectedValuePath="Mode"
-                                  SelectedValue="{Binding PaddleOcrCpu.Mode, Mode=TwoWay}" HorizontalAlignment="Left" MinWidth="280" AutomationProperties.Name="PPOCR CPU 配置方案" />
-                        <TextBlock Text="{Binding OcrCpuModeHint}" TextWrapping="Wrap" Margin="0,8,0,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                        <StackPanel Margin="0,12,0,0" Visibility="{Binding IsOcrCpuRatio, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <TextBlock Text="比例预设（检测 / 识别）" FontSize="12" />
-                            <ItemsControl ItemsSource="{Binding OcrCpuRatioChoices}" Margin="0,6,0,10">
-                                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
+                        <Separator BorderThickness="0,1,0,0" />
+                        <StackPanel Margin="16">
+                            <TextBlock Text="选择配置方案" FontWeight="SemiBold" />
+                            <TextBlock Text="参数只会在应用并重启后生效；保存、切换方案和重启均不会自动执行性能测试。" TextWrapping="Wrap" Margin="0,4,0,12" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            <ListBox ItemsSource="{Binding OcrCpuModeChoices}" SelectedValuePath="Mode"
+                                     SelectedValue="{Binding PaddleOcrCpu.Mode, Mode=TwoWay}" Background="Transparent" BorderThickness="0" Padding="0"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                                     AutomationProperties.Name="OCR CPU 线程策略">
+                                <ListBox.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ListBox.ItemsPanel>
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="Width" Value="220" />
+                                        <Setter Property="MinHeight" Value="82" />
+                                        <Setter Property="Margin" Value="0,0,8,8" />
+                                        <Setter Property="Padding" Value="0" />
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                                        <Setter Property="AutomationProperties.Name" Value="{Binding Name}" />
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="ListBoxItem">
+                                                    <Border x:Name="ModeCard" Padding="12" CornerRadius="8" BorderThickness="1"
+                                                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                                            Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
+                                                        <ContentPresenter />
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ModeCard" Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" /></Trigger>
+                                                        <Trigger Property="IsSelected" Value="True">
+                                                            <Setter TargetName="ModeCard" Property="BorderThickness" Value="2" />
+                                                            <Setter TargetName="ModeCard" Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                                                            <Setter TargetName="ModeCard" Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                                <ListBox.ItemTemplate>
                                     <DataTemplate>
-                                        <ui:Button Content="{Binding Name}" Margin="0,0,8,6"
-                                                   Command="{Binding DataContext.UseOcrCpuRatioCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                            <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Margin="0,4,0,0" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                        </StackPanel>
                                     </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                            <WrapPanel>
-                                <StackPanel Margin="0,0,24,0" MinWidth="160">
-                                    <TextBlock Text="检测线程比例（Det）" FontSize="12" Margin="0,0,0,6" />
-                                    <ComboBox ItemsSource="{Binding OcrThreadPercentChoices}" DisplayMemberPath="Name" SelectedValuePath="Count"
-                                              SelectedValue="{Binding PaddleOcrCpu.DetectionThreadPercent, Mode=TwoWay}" AutomationProperties.Name="检测线程比例" />
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <Border Margin="0,4,0,0" Padding="12" CornerRadius="8" Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}">
+                                <StackPanel>
+                                    <TextBlock Text="方案说明" FontWeight="SemiBold" FontSize="12" />
+                                    <TextBlock Text="{Binding OcrCpuModeHint}" TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                 </StackPanel>
-                                <StackPanel MinWidth="160">
-                                    <TextBlock Text="识别线程比例（Rec）" FontSize="12" Margin="0,0,0,6" />
-                                    <ComboBox ItemsSource="{Binding OcrThreadPercentChoices}" DisplayMemberPath="Name" SelectedValuePath="Count"
-                                              SelectedValue="{Binding PaddleOcrCpu.RecognitionThreadPercent, Mode=TwoWay}" AutomationProperties.Name="识别线程比例" />
+                            </Border>
+
+                            <StackPanel Margin="0,16,0,0" Visibility="{Binding IsOcrCpuCustom, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <TextBlock Text="自定义线程设置" FontWeight="SemiBold" />
+                                <UniformGrid Columns="2" Margin="0,8,0,0">
+                                    <StackPanel Margin="0,0,12,0">
+                                        <TextBlock Text="文本检测线程数" FontSize="12" Margin="0,0,0,6" />
+                                        <ui:NumberBox Value="{Binding PaddleOcrCpu.DetectionThreads, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                      Minimum="0" Maximum="{Binding MaxCpuThreads}" SmallChange="1" ClearButtonEnabled="False" SpinButtonPlacementMode="Inline"
+                                                      AutomationProperties.Name="文本检测线程数"
+                                                      ToolTip="检测模型的 IntraOpNumThreads，包含调用线程。0 表示由 ONNX Runtime 自动选择。" />
+                                    </StackPanel>
+                                    <StackPanel Margin="12,0,0,0">
+                                        <TextBlock Text="文字识别线程数" FontSize="12" Margin="0,0,0,6" />
+                                        <ui:NumberBox Value="{Binding PaddleOcrCpu.RecognitionThreads, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                      Minimum="0" Maximum="{Binding MaxCpuThreads}" SmallChange="1" ClearButtonEnabled="False" SpinButtonPlacementMode="Inline"
+                                                      AutomationProperties.Name="文字识别线程数"
+                                                      ToolTip="识别模型的 IntraOpNumThreads。识别输入较小，通常使用较少线程即可。0 表示自动选择。" />
+                                    </StackPanel>
+                                </UniformGrid>
+                                <ui:ToggleSwitch Content="启用模型节点并行" IsChecked="{Binding PaddleOcrCpu.ParallelExecution, Mode=TwoWay}" Margin="0,12,0,0"
+                                                 ToolTip="ExecutionMode：关闭时顺序执行模型节点，开启时允许并行执行。实际收益取决于模型结构。" />
+                                <StackPanel Margin="0,8,0,0" MaxWidth="360" HorizontalAlignment="Left" IsEnabled="{Binding PaddleOcrCpu.ParallelExecution}">
+                                    <TextBlock Text="模型节点并行线程数" FontSize="12" Margin="0,0,0,6" />
+                                    <ui:NumberBox Value="{Binding PaddleOcrCpu.InterOpThreads, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                  Minimum="0" Maximum="{Binding MaxCpuThreads}" SmallChange="1" ClearButtonEnabled="False" SpinButtonPlacementMode="Inline"
+                                                  AutomationProperties.Name="模型节点并行线程数"
+                                                  ToolTip="InterOpNumThreads：仅在启用节点并行时生效。0 表示由 ONNX Runtime 自动选择。" />
                                 </StackPanel>
-                            </WrapPanel>
-                        </StackPanel>
-                        <StackPanel Margin="0,12,0,0" Visibility="{Binding IsOcrCpuManual, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <WrapPanel>
-                                <StackPanel Margin="0,0,24,0" MinWidth="180">
-                                    <TextBlock Text="检测算子内线程（Det）" FontSize="12" Margin="0,0,0,6" />
-                                    <ComboBox ItemsSource="{Binding CpuThreadChoices}" DisplayMemberPath="Name" SelectedValuePath="Count"
-                                              SelectedValue="{Binding PaddleOcrCpu.DetectionThreads, Mode=TwoWay}" AutomationProperties.Name="检测算子内线程数"
-                                              ToolTip="IntraOpNumThreads：一个算子内部参与计算的线程数，包含调用线程。0 由 ONNX Runtime 自动选择。" />
-                                </StackPanel>
-                                <StackPanel MinWidth="180">
-                                    <TextBlock Text="识别算子内线程（Rec）" FontSize="12" Margin="0,0,0,6" />
-                                    <ComboBox ItemsSource="{Binding CpuThreadChoices}" DisplayMemberPath="Name" SelectedValuePath="Count"
-                                              SelectedValue="{Binding PaddleOcrCpu.RecognitionThreads, Mode=TwoWay}" AutomationProperties.Name="识别算子内线程数"
-                                              ToolTip="IntraOpNumThreads：识别模型通常处理较小输入，可以测试较少线程的效果。" />
-                                </StackPanel>
-                            </WrapPanel>
-                            <ui:ToggleSwitch Content="算子间并行执行" IsChecked="{Binding PaddleOcrCpu.ParallelExecution, Mode=TwoWay}" Margin="0,12,0,0"
-                                             ToolTip="ExecutionMode：关闭时使用 ORT_SEQUENTIAL；开启时使用 ORT_PARALLEL。并行效果取决于模型结构，请通过测速对比。" />
-                            <StackPanel Margin="0,8,0,0" HorizontalAlignment="Left" MinWidth="180" IsEnabled="{Binding PaddleOcrCpu.ParallelExecution}">
-                                <TextBlock Text="算子间线程数（Det / Rec）" FontSize="12" Margin="0,0,0,6" />
-                                <ComboBox ItemsSource="{Binding CpuThreadChoices}" DisplayMemberPath="Name" SelectedValuePath="Count"
-                                          SelectedValue="{Binding PaddleOcrCpu.InterOpThreads, Mode=TwoWay}" AutomationProperties.Name="算子间线程数"
-                                          ToolTip="InterOpNumThreads：仅在并行模式下生效。0 由 ONNX Runtime 自动选择；顺序模式固定为 1。" />
                             </StackPanel>
+
+                            <ui:ToggleSwitch Content="启用低延迟线程等待" IsChecked="{Binding PaddleOcrCpu.AllowSpinning, Mode=TwoWay}" Margin="0,16,0,0"
+                                             Visibility="{Binding IsOcrCpuConfigured, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                             ToolTip="对应 ONNX Runtime 线程自旋。开启可降低任务到来时的响应延迟，但等待期间会占用更多 CPU。" />
+                            <Border Margin="0,16,0,0" Padding="12" CornerRadius="8" BorderThickness="1" BorderBrush="{DynamicResource SystemAccentColorPrimaryBrush}">
+                                <StackPanel>
+                                    <TextBlock Text="预计生效参数" FontWeight="SemiBold" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                                    <TextBlock Text="{Binding OcrCpuPreview}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                    <TextBlock Text="{Binding OcrCpuApplicability}" TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
-                        <ui:ToggleSwitch Content="允许线程自旋等待" IsChecked="{Binding PaddleOcrCpu.AllowSpinning, Mode=TwoWay}" Margin="0,12,0,0"
-                                         Visibility="{Binding IsOcrCpuConfigured, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                         ToolTip="ONNX Runtime 默认开启。关闭可减少工作线程等待任务时的 CPU 消耗，也可能增加识别延迟，可在相同线程方案下分别测试。" />
-                        <TextBlock Text="{Binding OcrCpuPreview}" TextWrapping="Wrap" Margin="0,12,0,0" FontWeight="SemiBold" />
-                        <TextBlock Text="{Binding OcrCpuApplicability}" TextWrapping="Wrap" Margin="0,6,0,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                        <TextBlock Text="建议先比较默认与 PR 自动方案，再测试低占用、均衡或较多线程的比例预设。每次应用并重启后，在下方开始 OCR 测速，并在相同游戏场景观察帧率；记录方案、平均/最慢耗时及掉帧情况。" TextWrapping="Wrap" Margin="0,8,0,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
-                </Border>
+                </ui:CardExpander>
                 <TextBlock Text="{Binding ValidationHint}" FontSize="12" TextWrapping="Wrap" Margin="0,10,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                 <Border Margin="0,28,0,0" Padding="20" CornerRadius="12" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
                     <StackPanel>
@@ -240,7 +283,7 @@
                             <TextBlock Text="性能测试" FontSize="20" FontWeight="SemiBold" />
                         </DockPanel>
                         <TextBlock Text="{Binding CurrentRuntimeText, StringFormat='测试引擎：{0}'}" TextWrapping="Wrap" Margin="0,10,0,0" FontWeight="SemiBold" />
-                        <TextBlock Text="切换卡片或修改 PPOCR 参数后，应用并重启才能测试新设置。" FontSize="12" TextWrapping="Wrap" Margin="0,5,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="切换引擎或修改 OCR CPU 线程策略后，应用并重启才能测试新设置。" FontSize="12" TextWrapping="Wrap" Margin="0,5,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                         <TextBlock Text="{Binding BenchmarkHint}" TextWrapping="Wrap" FontSize="12" Margin="0,5,0,16" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                         <Grid>
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="16" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
@@ -286,7 +329,7 @@
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="16,0,0,0" VerticalAlignment="Center">
                         <ui:Button Content="取消" Command="{Binding CancelCommand}" Margin="0,0,8,0" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
                         <ui:Button Content="恢复默认设置" Command="{Binding UseCpuCommand}" IsEnabled="{Binding CanInteract}" Margin="0,0,8,0"
-                                   ToolTip="将推理引擎、强制 OCR、通用线程数与 PPOCR CPU 参数恢复为默认设置（CPU 推理）" />
+                                   ToolTip="将推理引擎、强制 OCR、全局线程数与 OCR CPU 线程策略恢复为默认设置（CPU 推理）" />
                         <ui:Button Content="{Binding ApplyButtonText}" Appearance="Primary" Command="{Binding ApplyCommand}" IsEnabled="{Binding CanApply}" MinWidth="128" />
                     </StackPanel>
                     <StackPanel>

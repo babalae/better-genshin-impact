@@ -18,8 +18,7 @@ using CommunityToolkit.Mvvm.Input;
 namespace BetterGenshinImpact.ViewModel.Pages.View;
 
 public sealed record InferenceThreadChoice(int Count, string Name);
-public sealed record PaddleOcrCpuModeChoice(PaddleOcrCpuMode Mode, string Name);
-public sealed record PaddleOcrCpuRatioChoice(int DetectionPercent, int RecognitionPercent, string Name);
+public sealed record PaddleOcrCpuModeChoice(PaddleOcrCpuMode Mode, string Name, string Description);
 
 public partial class HardwareAccelerationViewModel : ObservableObject, IViewModel, IDisposable
 {
@@ -40,37 +39,27 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
     public ObservableCollection<InferenceEngineCardViewModel> Engines { get; } = [];
     public ObservableCollection<InferenceBenchmarkResult> Results { get; } = [];
     public InferenceThreadChoice[] CpuThreadChoices { get; }
-    public InferenceThreadChoice[] OcrThreadPercentChoices { get; } = Enumerable.Range(1, 100)
-        .Select(i => new InferenceThreadChoice(i, $"{i}%")).ToArray();
+    public int MaxCpuThreads => Environment.ProcessorCount;
     public PaddleOcrCpuModeChoice[] OcrCpuModeChoices { get; } =
     [
-        new(PaddleOcrCpuMode.Inherit, "沿用通用 CPU 线程（默认）"),
-        new(PaddleOcrCpuMode.RuntimeDefault, "完全不配置（ONNX Runtime 默认）"),
-        new(PaddleOcrCpuMode.Auto, "自动配置（PR #3722）"),
-        new(PaddleOcrCpuMode.Ratio, "按逻辑处理器数比例配置"),
-        new(PaddleOcrCpuMode.Manual, "详细配置")
-    ];
-    public PaddleOcrCpuRatioChoice[] OcrCpuRatioChoices { get; } =
-    [
-        new(25, 12, "低占用 · 25% / 12%"),
-        new(50, 25, "均衡 · 50% / 25%"),
-        new(75, 50, "较多线程 · 75% / 50%")
+        new(PaddleOcrCpuMode.FollowGlobal, "跟随全局设置", "使用 CPU 卡片中的全局线程数。"),
+        new(PaddleOcrCpuMode.RuntimeAuto, "运行库自动调度", "不指定线程参数，由 ONNX Runtime 决定。"),
+        new(PaddleOcrCpuMode.GameplayPriority, "游戏流畅优先", "限制 OCR 的并行线程，减少游戏掉帧。"),
+        new(PaddleOcrCpuMode.Custom, "自定义设置", "分别指定文本检测、文字识别和模型节点的线程数。")
     ];
     public PaddleOcrCpuConfig PaddleOcrCpu { get; }
-    public bool IsOcrCpuRatio => PaddleOcrCpu.Mode == PaddleOcrCpuMode.Ratio;
-    public bool IsOcrCpuManual => PaddleOcrCpu.Mode == PaddleOcrCpuMode.Manual;
-    public bool IsOcrCpuConfigured => PaddleOcrCpu.Mode is PaddleOcrCpuMode.Auto or PaddleOcrCpuMode.Ratio or PaddleOcrCpuMode.Manual;
+    public bool IsOcrCpuCustom => PaddleOcrCpu.Mode == PaddleOcrCpuMode.Custom;
+    public bool IsOcrCpuConfigured => PaddleOcrCpu.Mode is PaddleOcrCpuMode.GameplayPriority or PaddleOcrCpuMode.Custom;
     public string OcrCpuPreview => PaddleOcrCpu.ToOptions().Describe(CpuThreads);
     public string OcrCpuApplicability => ForceCpuOcr || SelectedEngine?.IsCpu == true
         ? "应用并重启后用于 PPOCR 的 CPU 检测和识别会话。"
         : "当前选择让 OCR 跟随其他引擎；以下参数会保存，在 PPOCR 使用纯 CPU 时生效。";
     public string OcrCpuModeHint => $"当前可用逻辑处理器数：{Environment.ProcessorCount}。" + (PaddleOcrCpu.Mode switch
     {
-        PaddleOcrCpuMode.Auto => "检测线程 = 逻辑处理器数 / 2，至少 2；识别线程 = 逻辑处理器数 / 4，限制在 2~4。向下取整，均不超过可用处理器数；算子间顺序执行。",
-        PaddleOcrCpuMode.Ratio => "检测与识别分别按所选比例计算线程数，向下取整，至少 1；算子间顺序执行。比例表示线程数分配，不是 CPU 使用率上限。",
-        PaddleOcrCpuMode.Manual => "分别配置检测（Det）与识别（Rec）的算子内线程数。0 表示 ONNX Runtime 自动选择；算子间线程数仅在开启并行执行时生效。",
-        PaddleOcrCpuMode.RuntimeDefault => "不为 PPOCR 写入线程数、执行模式或线程自旋参数，完全使用 ONNX Runtime 的会话默认值；通用 CPU 线程数也不会用于 PPOCR。",
-        _ => "PPOCR 与其他模型使用相同的通用 CPU 线程数；通用线程数为 0 时由 ONNX Runtime 自动选择。"
+        PaddleOcrCpuMode.GameplayPriority => "文本检测使用逻辑处理器数的一半；文字识别使用四分之一并限制在 2～4 个线程。两个模型均顺序执行节点，在降低 OCR CPU 峰值的同时保留必要性能。",
+        PaddleOcrCpuMode.Custom => "可分别配置文本检测和文字识别的计算线程。0 表示由 ONNX Runtime 自动选择；模型节点线程数仅在开启节点并行时生效。",
+        PaddleOcrCpuMode.RuntimeAuto => "不指定 OCR 的线程数、执行方式和线程等待策略，完全交给 ONNX Runtime 调度；CPU 卡片中的全局线程数不会用于 OCR。",
+        _ => "OCR 与其他 CPU 模型使用相同的全局线程数；全局线程数为 0 时由 ONNX Runtime 自动选择。"
     });
     public string CurrentRuntimeText => _runtime.Current.Description;
     public string CurrentEngineName => _runtime.Current.Engine == InferenceDeviceType.Cpu ? "CPU" : _runtime.Current.Engine.ToString();
@@ -103,7 +92,8 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         : HasDraftChanges ? "尚未应用 · 保存后可立即重启或稍后重启"
         : HasPendingChanges ? "设置已保存 · 等待重启生效"
         : "与当前生效设置相同";
-    public string BenchmarkHint => !_leases.IsAvailable ? "任务运行中，结束任务后可测速。" : "使用当前生效配置；每个场景预热 1 次，连续测量 10 次。";
+    public string BenchmarkHint => !_leases.IsAvailable ? "性能测试不会自动执行；任务运行中，结束任务后可手动测速。"
+        : "性能测试不会自动执行；点击按钮后使用当前生效配置，预热 1 次并连续测量 10 次。";
     public InferenceBenchmarkResult? OcrResult => Results.FirstOrDefault(r => r.Scene == "OCR");
     public InferenceBenchmarkResult? TreeResult => Results.FirstOrDefault(r => r.Scene == "古树检测");
     public bool HasOcrResult => OcrResult != null;
@@ -195,18 +185,9 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
     partial void OnCpuThreadsChanged(int value) => RefreshAvailability();
     private void OcrCpuSettingsChanged(object? sender, PropertyChangedEventArgs e)
     {
-        OnPropertyChanged(nameof(IsOcrCpuRatio)); OnPropertyChanged(nameof(IsOcrCpuManual));
+        OnPropertyChanged(nameof(IsOcrCpuCustom));
         OnPropertyChanged(nameof(IsOcrCpuConfigured)); OnPropertyChanged(nameof(OcrCpuModeHint));
         RefreshAvailability();
-    }
-
-    [RelayCommand]
-    private void UseOcrCpuRatio(PaddleOcrCpuRatioChoice choice)
-    {
-        if (IsBusy) return;
-        PaddleOcrCpu.Mode = PaddleOcrCpuMode.Ratio;
-        PaddleOcrCpu.DetectionThreadPercent = choice.DetectionPercent;
-        PaddleOcrCpu.RecognitionThreadPercent = choice.RecognitionPercent;
     }
     private void RuntimeSettingsChanged(object? sender, EventArgs e)
     {
@@ -349,8 +330,6 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         ForceCpuOcr = true; CpuThreads = 0;
         var defaults = new PaddleOcrCpuOptions().Normalize();
         PaddleOcrCpu.Mode = defaults.Mode;
-        PaddleOcrCpu.DetectionThreadPercent = defaults.DetectionThreadPercent;
-        PaddleOcrCpu.RecognitionThreadPercent = defaults.RecognitionThreadPercent;
         PaddleOcrCpu.DetectionThreads = defaults.DetectionThreads;
         PaddleOcrCpu.RecognitionThreads = defaults.RecognitionThreads;
         PaddleOcrCpu.InterOpThreads = defaults.InterOpThreads;

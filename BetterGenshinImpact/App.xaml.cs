@@ -124,8 +124,7 @@ public partial class App : Application
                 var onnxRuntimeLoader = new OnnxRuntimeLoader(all.HardwareAccelerationConfig, AppContext.BaseDirectory);
                 services.AddSingleton(onnxRuntimeLoader);
                 services.AddSingleton<IOnnxRuntimeSelection>(onnxRuntimeLoader);
-                var onnxRuntimeInstaller = new OnnxRuntimeInstaller(AppContext.BaseDirectory,
-                    protectedRuntimeDirectory: onnxRuntimeLoader.RuntimeDirectory);
+                var onnxRuntimeInstaller = new OnnxRuntimeInstaller(AppContext.BaseDirectory);
                 services.AddSingleton(onnxRuntimeInstaller);
                 services.AddSingleton<IOnnxRuntimeInstaller>(onnxRuntimeInstaller);
                 services.AddSingleton<IInferenceDeviceDiscovery, InferenceDeviceDiscovery>();

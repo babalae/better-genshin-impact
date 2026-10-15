@@ -16,30 +16,13 @@ public sealed class PaddleOcrCpuOptionsTests
     [InlineData(12, 6, 3)]
     [InlineData(16, 8, 4)]
     [InlineData(32, 16, 4)]
-    public void Auto_UsesPrFormulaWithoutExceedingAvailableProcessors(int processors, int det, int rec)
+    public void GameplayPriority_UsesBalancedFormulaWithoutExceedingAvailableProcessors(int processors, int det, int rec)
     {
-        var options = new PaddleOcrCpuOptions { Mode = PaddleOcrCpuMode.Auto };
+        var options = new PaddleOcrCpuOptions { Mode = PaddleOcrCpuMode.GameplayPriority };
         Assert.Equal(det, options.Resolve(true, processors)!.IntraOpThreads);
         Assert.Equal(rec, options.Resolve(false, processors)!.IntraOpThreads);
         Assert.False(options.Resolve(true, processors)!.ParallelExecution);
         Assert.Equal(1, options.Resolve(false, processors)!.InterOpThreads);
-    }
-
-    [Theory]
-    [InlineData(1, 25, 12, 1, 1)]
-    [InlineData(16, 25, 12, 4, 1)]
-    [InlineData(16, 50, 25, 8, 4)]
-    [InlineData(16, 75, 50, 12, 8)]
-    [InlineData(7, 50, 25, 3, 1)]
-    [InlineData(7, 100, 100, 7, 7)]
-    public void Ratio_RoundsDownAndKeepsAtLeastOneThread(int processors, int detPercent, int recPercent, int det, int rec)
-    {
-        var options = new PaddleOcrCpuOptions
-        {
-            Mode = PaddleOcrCpuMode.Ratio, DetectionThreadPercent = detPercent, RecognitionThreadPercent = recPercent
-        };
-        Assert.Equal(det, options.Resolve(true, processors)!.IntraOpThreads);
-        Assert.Equal(rec, options.Resolve(false, processors)!.IntraOpThreads);
     }
 
     [Fact]
@@ -50,11 +33,12 @@ public sealed class PaddleOcrCpuOptionsTests
         var inherited = InferenceRuntimeSnapshot.Create(config, baseline.Device, "");
         Assert.Equal(baseline.Signature, inherited.Signature);
 
-        config.PaddleOcrCpu.Mode = PaddleOcrCpuMode.Ratio;
+        config.PaddleOcrCpu.Mode = PaddleOcrCpuMode.Custom;
+        config.PaddleOcrCpu.DetectionThreads = 0;
         var frozen = InferenceRuntimeSnapshot.Create(config, baseline.Device, "");
         var signature = frozen.Signature;
-        config.PaddleOcrCpu.DetectionThreadPercent = 75;
-        Assert.Equal(50, frozen.PaddleOcrCpu.DetectionThreadPercent);
+        config.PaddleOcrCpu.DetectionThreads = 1;
+        Assert.Equal(0, frozen.PaddleOcrCpu.DetectionThreads);
         Assert.Equal(signature, frozen.Signature);
         Assert.NotEqual(signature, InferenceRuntimeSnapshot.Create(config, baseline.Device, "").Signature);
     }
@@ -67,7 +51,7 @@ public sealed class PaddleOcrCpuOptionsTests
         {
             FormatVersion = 1, InferenceDevice = InferenceDeviceType.CUDA,
             Cuda = new() { DeviceId = "saved-gpu" },
-            PaddleOcrCpu = new() { Mode = PaddleOcrCpuMode.Manual, DetectionThreads = 1, RecognitionThreads = 0,
+            PaddleOcrCpu = new() { Mode = PaddleOcrCpuMode.Custom, DetectionThreads = 1, RecognitionThreads = 0,
                 InterOpThreads = 1, ParallelExecution = true, AllowSpinning = false }
         };
         var json = JsonSerializer.Serialize(config, options);
@@ -80,7 +64,7 @@ public sealed class PaddleOcrCpuOptionsTests
         InferenceRuntimeService.PrepareStartup(oldConfig);
         Assert.Equal(InferenceDeviceType.CUDA, oldConfig.InferenceDevice);
         Assert.Equal("saved-gpu", oldConfig.Cuda.DeviceId);
-        Assert.Equal(PaddleOcrCpuMode.Inherit, oldConfig.PaddleOcrCpu.Mode);
+        Assert.Equal(PaddleOcrCpuMode.FollowGlobal, oldConfig.PaddleOcrCpu.Mode);
     }
 
     [Fact]
@@ -89,24 +73,24 @@ public sealed class PaddleOcrCpuOptionsTests
         var config = new HardwareAccelerationConfig
         {
             FormatVersion = 1, InferenceDevice = InferenceDeviceType.CUDA, Cuda = new() { DeviceId = "saved-gpu" },
-            PaddleOcrCpu = new() { Mode = (PaddleOcrCpuMode)99, DetectionThreadPercent = 0, RecognitionThreadPercent = 200,
-                DetectionThreads = int.MaxValue, RecognitionThreads = -2, InterOpThreads = -1 }
+            PaddleOcrCpu = new() { Mode = (PaddleOcrCpuMode)99, DetectionThreads = int.MaxValue,
+                RecognitionThreads = -2, InterOpThreads = -1 }
         };
         InferenceRuntimeService.PrepareStartup(config);
         Assert.True(config.PaddleOcrCpu.ToOptions().IsValid);
         Assert.Equal(InferenceDeviceType.CUDA, config.InferenceDevice);
         Assert.Equal("saved-gpu", config.Cuda.DeviceId);
-        Assert.Equal(PaddleOcrCpuMode.Inherit, config.PaddleOcrCpu.Mode);
+        Assert.Equal(PaddleOcrCpuMode.FollowGlobal, config.PaddleOcrCpu.Mode);
     }
 
     [Theory]
     [InlineData(false, ExecutionMode.ORT_SEQUENTIAL, 1)]
     [InlineData(true, ExecutionMode.ORT_PARALLEL, 0)]
-    public void Factory_ManualOptionsReachNativeSessionOptions(bool parallel, ExecutionMode mode, int interOp)
+    public void Factory_CustomOptionsReachNativeSessionOptions(bool parallel, ExecutionMode mode, int interOp)
     {
         var factory = new BgiOnnxFactory(NullLogger<BgiOnnxFactory>.Instance, InferenceRuntimeSnapshot.CpuDefault() with
         {
-            PaddleOcrCpu = new() { Mode = PaddleOcrCpuMode.Manual, DetectionThreads = 1,
+            PaddleOcrCpu = new() { Mode = PaddleOcrCpuMode.Custom, DetectionThreads = 1,
                 RecognitionThreads = 0, InterOpThreads = 0, ParallelExecution = parallel, AllowSpinning = false }
         });
         // 所有已注册 PPOCR 版本及语言变体都应使用同一套 CPU 参数。
@@ -129,7 +113,7 @@ public sealed class PaddleOcrCpuOptionsTests
         var snapshot = InferenceRuntimeSnapshot.CpuDefault() with
         {
             Engine = engine,
-            PaddleOcrCpu = new() { Mode = PaddleOcrCpuMode.Manual, DetectionThreads = 1,
+            PaddleOcrCpu = new() { Mode = PaddleOcrCpuMode.Custom, DetectionThreads = 1,
                 RecognitionThreads = 1, InterOpThreads = 1, ParallelExecution = true, AllowSpinning = false }
         };
         var factory = new BgiOnnxFactory(NullLogger<BgiOnnxFactory>.Instance, snapshot);
@@ -143,7 +127,7 @@ public sealed class PaddleOcrCpuOptionsTests
     public void Factory_InheritedGpuAndNonPaddleModelsKeepExistingOptions()
     {
         var baseline = InferenceRuntimeSnapshot.CpuDefault();
-        var configured = baseline with { PaddleOcrCpu = new() { Mode = PaddleOcrCpuMode.Auto } };
+        var configured = baseline with { PaddleOcrCpu = new() { Mode = PaddleOcrCpuMode.GameplayPriority } };
         var cases = new[]
         {
             (baseline, BgiOnnxModel.PaddleOcrDetV4, true),
@@ -162,11 +146,11 @@ public sealed class PaddleOcrCpuOptionsTests
     }
 
     [Fact]
-    public void Factory_RuntimeDefaultOverridesGeneralCpuThreadsAndKeepsOrtDefaults()
+    public void Factory_RuntimeAutoOverridesGeneralCpuThreadsAndKeepsOrtDefaults()
     {
         var factory = new BgiOnnxFactory(NullLogger<BgiOnnxFactory>.Instance, InferenceRuntimeSnapshot.CpuDefault(6) with
         {
-            PaddleOcrCpu = new() { Mode = PaddleOcrCpuMode.RuntimeDefault }
+            PaddleOcrCpu = new() { Mode = PaddleOcrCpuMode.RuntimeAuto }
         });
         using var options = new SessionOptions();
 

@@ -25,19 +25,14 @@ public sealed class OnnxRuntimeInstaller : IOnnxRuntimeInstaller, IDisposable
 {
     private readonly HttpClient _client;
     private readonly bool _ownsClient;
-    private readonly string? _protectedRuntimeDirectory;
     private readonly SemaphoreSlim _installationLock = new(1, 1);
     private readonly CancellationTokenSource _lifetime = new();
     public string BaseDirectory { get; }
     public string PluginsDirectory => Path.Combine(BaseDirectory, "Plugins", "OnnxRuntime");
 
-    public OnnxRuntimeInstaller(string baseDirectory, HttpClient? client = null,
-        string? protectedRuntimeDirectory = null)
+    public OnnxRuntimeInstaller(string baseDirectory, HttpClient? client = null)
     {
         BaseDirectory = Path.GetFullPath(baseDirectory);
-        _protectedRuntimeDirectory = string.IsNullOrWhiteSpace(protectedRuntimeDirectory)
-            ? null
-            : Path.GetFullPath(protectedRuntimeDirectory);
         _ownsClient = client == null;
         _client = client ?? new HttpClient(new HttpClientHandler { AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate }) { Timeout = Timeout.InfiniteTimeSpan };
     }
@@ -56,7 +51,7 @@ public sealed class OnnxRuntimeInstaller : IOnnxRuntimeInstaller, IDisposable
                 InferenceDeviceType.OpenVINO => "Intel.ML.OnnxRuntime.OpenVino",
                 _ => "Microsoft.ML.OnnxRuntime.Gpu.Windows"
             };
-            var packages = new List<RuntimeDownloadPackage> { await GetNugetPackageAsync(id, "1.21.0", token) };
+            var packages = new List<RuntimeDownloadPackage> { await GetNugetPackageAsync(id, OnnxRuntimeLoader.RequiredVersion, token) };
             if (engine == InferenceDeviceType.DirectML) packages.Add(await GetNugetPackageAsync("Microsoft.AI.DirectML", "1.15.4", token));
             return packages;
         }
@@ -91,12 +86,14 @@ public sealed class OnnxRuntimeInstaller : IOnnxRuntimeInstaller, IDisposable
         token = linked.Token;
         await _installationLock.WaitAsync(token);
         var root = OnnxRuntimePackageCatalog.EngineDirectory(PluginsDirectory, engine);
-        var revision = Guid.NewGuid().ToString("N");
-        var staging = Path.Combine(root, ".staging-" + revision);
+        // 临时目录只用于保证下载和解压完整，安装后仍只有引擎的固定目录。
+        var staging = Path.Combine(PluginsDirectory, $".{engine}.staging-{Guid.NewGuid():N}");
         var completedArchives = new List<string>();
+        var commitStarted = false;
+        var commitCompleted = false;
         try
         {
-            Directory.CreateDirectory(root);
+            Directory.CreateDirectory(PluginsDirectory);
             var required = packages.Sum(p => p.DownloadBytes + p.InstalledBytes);
             var disk = new DriveInfo(Path.GetPathRoot(root)!);
             if (disk.AvailableFreeSpace < required) throw new IOException($"磁盘空间不足，预计需要 {required / 1073741824d:F1} GB。");
@@ -126,27 +123,37 @@ public sealed class OnnxRuntimeInstaller : IOnnxRuntimeInstaller, IDisposable
             foreach (var file in OnnxRuntimePackageCatalog.ProviderFiles(engine))
                 if (!File.Exists(Path.Combine(staging, file))) throw new InvalidDataException($"安装包缺少 {file}。");
             token.ThrowIfCancellationRequested();
-            var versions = Path.Combine(root, "versions");
-            Directory.CreateDirectory(versions);
-            // 已加载的 DLL 保持原路径；只有下一次启动会读取新安装，避免覆盖映射中的文件。
-            Directory.Move(staging, Path.Combine(versions, revision));
-            var pointer = Path.Combine(root, ".current-" + revision);
-            await File.WriteAllTextAsync(pointer, revision, new System.Text.UTF8Encoding(false), token);
-            File.Move(pointer, Path.Combine(root, "current.txt"), true);
-            // 原子切换后只保留当前 revision。若旧 revision 正被本进程加载，则留到重启后的清理再删除。
-            CleanupObsoleteVersions(engine, token);
-            // 安装原子提交后再清理完整包；取消或失败时保留缓存供重试、续传。
+
+            // 固定目录内不保留历史版本。完整校验后直接清理并覆盖；若文件被当前进程加载，由 IO 异常提示用户重启后重试。
+            commitStarted = true;
+            DeleteRuntimeDirectory(root);
+            Directory.Move(staging, root);
+            commitCompleted = true;
+            // 完整安装后再清理完整包；取消或失败时保留缓存供重试、续传。
             foreach (var archive in completedArchives) TryDeleteDownload(archive);
             TryRemoveEmptyDownloadDirectory();
             progress?.Report(new("下载完成，已重新识别运行库；应用设置后重启验证。", 1, 1));
         }
+        catch (InvalidDataException)
+        {
+            // 包内容损坏或文件清单不完整时不保留缓存，避免下次继续复用错误包。
+            foreach (var archive in completedArchives) TryDeleteDownload(archive);
+            TryRemoveEmptyDownloadDirectory();
+            throw;
+        }
         finally
         {
-            // 只删除本次安装的暂存子目录，绝不清理其他安装或正在使用的运行库。
+            // 只删除本次安装的暂存目录；已开始覆盖但失败时，同时尽量删除可能不完整的固定目录。
             try
             {
-                if (Directory.Exists(staging) && Path.GetFullPath(staging).StartsWith(Path.GetFullPath(root) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                if (Directory.Exists(staging) && IsDirectChildOf(staging, PluginsDirectory))
                     Directory.Delete(staging, true);
+                if (commitStarted && !commitCompleted)
+                {
+                    try { DeleteRuntimeDirectory(root); }
+                    catch (IOException) { /* 占用中的旧 DLL 无法强制删除，保留原始安装异常。 */ }
+                    catch (UnauthorizedAccessException) { /* 保留原始安装异常。 */ }
+                }
             }
             finally { _installationLock.Release(); }
         }
@@ -159,7 +166,10 @@ public sealed class OnnxRuntimeInstaller : IOnnxRuntimeInstaller, IDisposable
         try
         {
             foreach (var engine in Enum.GetValues<InferenceDeviceType>().Where(engine => engine != InferenceDeviceType.Cpu))
-                CleanupObsoleteVersions(engine, linked.Token);
+            {
+                linked.Token.ThrowIfCancellationRequested();
+                CleanupAbandonedStagingDirectories(engine);
+            }
 
             var cache = Path.Combine(PluginsDirectory, ".downloads");
             if (Directory.Exists(cache))
@@ -184,30 +194,25 @@ public sealed class OnnxRuntimeInstaller : IOnnxRuntimeInstaller, IDisposable
         finally { _installationLock.Release(); }
     }
 
-    private void CleanupObsoleteVersions(InferenceDeviceType engine, CancellationToken token)
+    private void CleanupAbandonedStagingDirectories(InferenceDeviceType engine)
     {
-        var root = Path.GetFullPath(OnnxRuntimePackageCatalog.EngineDirectory(PluginsDirectory, engine));
-        var versions = Path.GetFullPath(Path.Combine(root, "versions"));
-        if (!Directory.Exists(versions)) return;
-
-        var current = Path.GetFullPath(OnnxRuntimePackageCatalog.RuntimeDirectory(PluginsDirectory, engine));
-        // current.txt 缺失或损坏时不猜测应保留哪一份，避免误删可恢复的安装。
-        if (!string.Equals(Path.GetDirectoryName(current), versions, StringComparison.OrdinalIgnoreCase)) return;
-
-        foreach (var directory in Directory.EnumerateDirectories(versions))
+        if (!Directory.Exists(PluginsDirectory)) return;
+        foreach (var directory in Directory.EnumerateDirectories(PluginsDirectory, $".{engine}.staging-*"))
         {
-            token.ThrowIfCancellationRequested();
-            var candidate = Path.GetFullPath(directory);
-            if (!string.Equals(Path.GetDirectoryName(candidate), versions, StringComparison.OrdinalIgnoreCase)
-                || !Guid.TryParseExact(Path.GetFileName(candidate), "N", out _)
-                || string.Equals(candidate, current, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(candidate, _protectedRuntimeDirectory, StringComparison.OrdinalIgnoreCase))
-                continue;
-            try { Directory.Delete(candidate, true); }
-            catch (IOException) { /* 旧运行库仍被其他实例占用时留到下次清理。 */ }
+            try { if (IsDirectChildOf(directory, PluginsDirectory)) Directory.Delete(directory, true); }
+            catch (IOException) { /* 清理失败不能影响当前安装。 */ }
             catch (UnauthorizedAccessException) { /* 清理失败不能影响当前安装。 */ }
         }
     }
+
+    private static void DeleteRuntimeDirectory(string directory)
+    {
+        if (Directory.Exists(directory)) Directory.Delete(directory, true);
+    }
+
+    private static bool IsDirectChildOf(string path, string parent)
+        => string.Equals(Path.GetDirectoryName(Path.GetFullPath(path)), Path.GetFullPath(parent),
+            StringComparison.OrdinalIgnoreCase);
 
     private async Task<bool> MatchesInstalledFilesAsync(string path, CancellationToken token)
     {

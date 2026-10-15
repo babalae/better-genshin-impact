@@ -10,28 +10,25 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests;
 public sealed class HardwareAccelerationViewModelTests
 {
     [Fact]
-    public async Task OcrCpuDraft_AppliesWithoutChangingCurrentSessionsAndSurvivesReload()
+    public async Task GameplayPriorityDraft_AppliesWithoutChangingCurrentSessionsAndSurvivesReload()
     {
         using var rig = await Rig.CreateAsync();
         await rig.ViewModel.RefreshCommand.ExecuteAsync(null);
         Assert.False(rig.ViewModel.CanApply);
-        var choice = rig.ViewModel.OcrCpuRatioChoices.Single(choice => choice.DetectionPercent == 25);
-        rig.ViewModel.UseOcrCpuRatioCommand.Execute(choice);
+        rig.ViewModel.PaddleOcrCpu.Mode = PaddleOcrCpuMode.GameplayPriority;
         Assert.True(rig.ViewModel.CanApply);
-        Assert.Equal(PaddleOcrCpuMode.Inherit, rig.Config.HardwareAccelerationConfig.PaddleOcrCpu.Mode);
-        Assert.Equal(PaddleOcrCpuMode.Inherit, rig.Runtime.Current.PaddleOcrCpu.Mode);
+        Assert.Equal(PaddleOcrCpuMode.FollowGlobal, rig.Config.HardwareAccelerationConfig.PaddleOcrCpu.Mode);
+        Assert.Equal(PaddleOcrCpuMode.FollowGlobal, rig.Runtime.Current.PaddleOcrCpu.Mode);
         await rig.ViewModel.ApplyCommand.ExecuteAsync(null);
-        Assert.Equal(PaddleOcrCpuMode.Ratio, rig.Config.HardwareAccelerationConfig.PaddleOcrCpu.Mode);
-        Assert.Equal(25, rig.Config.HardwareAccelerationConfig.PaddleOcrCpu.DetectionThreadPercent);
-        Assert.Equal(12, rig.Config.HardwareAccelerationConfig.PaddleOcrCpu.RecognitionThreadPercent);
-        Assert.Equal(PaddleOcrCpuMode.Inherit, rig.Runtime.Current.PaddleOcrCpu.Mode);
+        Assert.Equal(PaddleOcrCpuMode.GameplayPriority, rig.Config.HardwareAccelerationConfig.PaddleOcrCpu.Mode);
+        Assert.Equal(PaddleOcrCpuMode.FollowGlobal, rig.Runtime.Current.PaddleOcrCpu.Mode);
         Assert.True(rig.Runtime.HasPendingRestart);
 
         var saved = JsonSerializer.Deserialize<HardwareAccelerationConfig>(JsonSerializer.Serialize(rig.Config.HardwareAccelerationConfig))!;
         using var restarted = await Rig.CreateAsync(savedHardware: saved);
         await restarted.ViewModel.RefreshCommand.ExecuteAsync(null);
-        Assert.Equal(PaddleOcrCpuMode.Ratio, restarted.ViewModel.PaddleOcrCpu.Mode);
-        Assert.Equal(PaddleOcrCpuMode.Ratio, restarted.Runtime.Current.PaddleOcrCpu.Mode);
+        Assert.Equal(PaddleOcrCpuMode.GameplayPriority, restarted.ViewModel.PaddleOcrCpu.Mode);
+        Assert.Equal(PaddleOcrCpuMode.GameplayPriority, restarted.Runtime.Current.PaddleOcrCpu.Mode);
         Assert.False(restarted.ViewModel.CanApply);
     }
 
@@ -40,7 +37,7 @@ public sealed class HardwareAccelerationViewModelTests
     {
         using var rig = await Rig.CreateAsync();
         await rig.ViewModel.RefreshCommand.ExecuteAsync(null);
-        rig.ViewModel.PaddleOcrCpu.Mode = PaddleOcrCpuMode.Manual;
+        rig.ViewModel.PaddleOcrCpu.Mode = PaddleOcrCpuMode.Custom;
         rig.ViewModel.PaddleOcrCpu.DetectionThreads = 1;
         rig.ViewModel.PaddleOcrCpu.ParallelExecution = true;
         rig.ViewModel.PaddleOcrCpu.AllowSpinning = false;

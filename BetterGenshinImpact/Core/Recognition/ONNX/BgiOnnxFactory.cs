@@ -248,21 +248,21 @@ public class BgiOnnxFactory
     {
         var isPaddleOcr = model.Name.StartsWith("PpOcrDet", StringComparison.Ordinal)
                           || model.Name.StartsWith("PpOcrRec", StringComparison.Ordinal);
-        // “完全不配置”需要跳过通用 CPU 线程数；新建 SessionOptions 的 0 即 ORT 原生默认值。
-        if (!cpuOnly || !isPaddleOcr || Snapshot.PaddleOcrCpu.Mode != PaddleOcrCpuMode.RuntimeDefault)
+        // “ONNX Runtime 自动调度”需要跳过通用 CPU 线程数；新建 SessionOptions 的 0 即 ORT 原生默认值。
+        if (!cpuOnly || !isPaddleOcr || Snapshot.PaddleOcrCpu.Mode != PaddleOcrCpuMode.RuntimeAuto)
             sessionOptions.IntraOpNumThreads = Snapshot.CpuThreads;
         ConfigurePaddleOcrCpu(sessionOptions, model, cpuOnly);
     }
 
-    /// <summary>只覆盖 PPOCR 纯 CPU 会话；GPU 会话的 CPU 兜底与其他模型仍沿用通用设置。</summary>
+    /// <summary>只覆盖 PPOCR 纯 CPU 会话；GPU 会话的 CPU 兜底与其他模型仍使用全局设置。</summary>
     internal void ConfigurePaddleOcrCpu(SessionOptions sessionOptions, BgiOnnxModel model, bool cpuOnly)
     {
         if (!cpuOnly) return;
         var detection = model.Name.StartsWith("PpOcrDet", StringComparison.Ordinal);
         if (!detection && !model.Name.StartsWith("PpOcrRec", StringComparison.Ordinal)) return;
-        if (Snapshot.PaddleOcrCpu.Mode == PaddleOcrCpuMode.RuntimeDefault)
+        if (Snapshot.PaddleOcrCpu.Mode == PaddleOcrCpuMode.RuntimeAuto)
         {
-            _logger.LogInformation("[ONNX]PPOCR CPU 参数，模型 {Model}，使用 ONNX Runtime 默认设置", model.Name);
+            _logger.LogInformation("[ONNX]OCR CPU 线程策略，模型 {Model}，使用 ONNX Runtime 自动调度", model.Name);
             return;
         }
         var options = Snapshot.PaddleOcrCpu.Resolve(detection);
@@ -272,7 +272,7 @@ public class BgiOnnxFactory
         sessionOptions.ExecutionMode = options.ParallelExecution ? ExecutionMode.ORT_PARALLEL : ExecutionMode.ORT_SEQUENTIAL;
         sessionOptions.AddSessionConfigEntry("session.intra_op.allow_spinning", options.AllowSpinning ? "1" : "0");
         sessionOptions.AddSessionConfigEntry("session.inter_op.allow_spinning", options.AllowSpinning ? "1" : "0");
-        _logger.LogInformation("[ONNX]PPOCR CPU 参数，模型 {Model}，算子内线程 {IntraOp}，算子间线程 {InterOp}，并行 {Parallel}，自旋 {Spinning}",
+        _logger.LogInformation("[ONNX]OCR CPU 线程策略，模型 {Model}，算子内线程 {IntraOp}，算子间线程 {InterOp}，并行 {Parallel}，自旋 {Spinning}",
             model.Name, options.IntraOpThreads, options.InterOpThreads, options.ParallelExecution, options.AllowSpinning);
     }
 
