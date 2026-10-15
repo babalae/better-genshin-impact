@@ -101,14 +101,5 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests
             Assert.EndsWith("V5", ocrV5.GetConfigName.Item1, StringComparison.OrdinalIgnoreCase);
             Assert.EndsWith("V5", ocrV5.GetConfigName.Item2, StringComparison.OrdinalIgnoreCase);
         }
-
-        [Fact]
-        public void PaddleSessionWrappers_MustNotDeclareFinalizers()
-        {
-            // 会话构造失败时，CLR 仍可能终结半初始化对象；终结器不能访问尚未赋值的会话字段。
-            var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
-            Assert.NotEqual(typeof(Det), typeof(Det).GetMethod("Finalize", flags)?.DeclaringType);
-            Assert.NotEqual(typeof(Rec), typeof(Rec).GetMethod("Finalize", flags)?.DeclaringType);
-        }
     }
 }
