@@ -31,9 +31,20 @@ public partial class PathingPartyConfig : ObservableObject
     [ObservableProperty]
     private bool _enabled = true;
     
-    // 是否启用自动拾取
+    // 是否启用自动拾取（旧字段；与 PickupMode 同步，便于旧 JSON）
     [ObservableProperty]
     private bool _autoPickEnabled = true;
+
+    /// <summary>
+    /// 配置组地图追踪拾取策略。缺省为原版 AutoPick。
+    /// </summary>
+    [ObservableProperty]
+    private PathingPickupMode _pickupMode = PathingPickupMode.AutoPick;
+
+    partial void OnPickupModeChanged(PathingPickupMode value)
+    {
+        AutoPickEnabled = value != PathingPickupMode.Disabled;
+    }
     // 切换到队伍的名称
     [ObservableProperty]
     private string _partyName = string.Empty;
