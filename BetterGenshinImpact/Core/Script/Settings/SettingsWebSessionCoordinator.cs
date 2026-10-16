@@ -85,6 +85,7 @@ public static class SettingsWebSessionCoordinator
         {
             App.GetLogger<ScriptProject>().LogError(e, "JS HTML配置后端退出");
             SettingsWebWindow.ShowError(windowId, e.Message);
+            SettingsWebWindow.Close(windowId);
             return;
         }
         finally

@@ -37,7 +37,7 @@ function settingText(value) {
 }
 
 const processPath = settingText(settings.process_path);
-relativePath = processPath.replace(/^process[\\/]/, "");
+const relativePath = processPath.replace(/^process[\\/]/, "");
 ```
 
 布尔开关可以直接做条件判断，例如 `if (!settings.noSkip)`。不要用 `String(settings.process_path)` 把动态对象交给后续的字符串方法；它不一定得到配置里的文本。

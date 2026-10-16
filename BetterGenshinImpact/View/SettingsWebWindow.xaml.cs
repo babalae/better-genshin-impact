@@ -118,6 +118,7 @@ public partial class SettingsWebWindow : Window
                 _navigationCompleted = false;
                 if (!IsOwnedNavigation(args.Uri)) args.Cancel = true;
             };
+            WebView.CoreWebView2.NewWindowRequested += (_, args) => args.Handled = true;
             WebView.CoreWebView2.NavigationCompleted += (_, _) =>
             {
                 _navigationCompleted = true;
@@ -179,7 +180,19 @@ public partial class SettingsWebWindow : Window
         => uri.Scheme == Uri.UriSchemeHttps && uri.Host.Equals(_virtualHostName, StringComparison.OrdinalIgnoreCase);
 
     private bool IsAllowed(string uri)
-        => _httpAllowedUrls.Any(allowed => Regex.IsMatch(uri, "^" + Regex.Escape(allowed).Replace("\\*", ".*") + "$", RegexOptions.IgnoreCase));
+        => Uri.TryCreate(uri, UriKind.Absolute, out var target) && _httpAllowedUrls.Any(allowed => IsAllowed(target, allowed));
+
+    private static bool IsAllowed(Uri target, string allowed)
+    {
+        var marker = allowed.IndexOf("://", StringComparison.Ordinal);
+        var path = marker < 0 ? -1 : allowed.IndexOf('/', marker + 3);
+        var origin = path < 0 ? allowed : allowed[..path];
+        var remainder = path < 0 ? "/" : allowed[path..];
+        if (!Uri.TryCreate(origin.Replace("*", "placeholder") + "/", UriKind.Absolute, out var pattern)) return false;
+        return target.Scheme.Equals(pattern.Scheme, StringComparison.OrdinalIgnoreCase) &&
+               Regex.IsMatch(target.Authority, "^" + Regex.Escape(pattern.Authority.Replace("placeholder", "*")).Replace("\\*", ".*") + "$", RegexOptions.IgnoreCase) &&
+               Regex.IsMatch(target.PathAndQuery, "^" + Regex.Escape(remainder).Replace("\\*", ".*") + "$");
+    }
 
     private static string CreateScriptKey(string scriptName)
         => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(scriptName.ToUpperInvariant())).AsSpan(0, 4)).ToLowerInvariant();

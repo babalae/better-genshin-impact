@@ -184,9 +184,16 @@ public class HtmlMask : IDisposable
     /// <param name="url">接口路径</param>
     /// <param name="jsonData">JSON数据</param>
     /// <param name="timeoutMs">超时毫秒，0表示无限等待</param>
-    public Task<string?> Request(string windowId, string url, string jsonData, int timeoutMs = 0)
+    public async Task<string?> Request(string windowId, string url, string jsonData, int timeoutMs = 0)
     {
-        return Channel.Request(windowId, url, jsonData, timeoutMs);
+        try
+        {
+            return await Channel.Request(windowId, url, jsonData, timeoutMs);
+        }
+        catch (TimeoutException)
+        {
+            return null;
+        }
     }
 
     /// <summary>

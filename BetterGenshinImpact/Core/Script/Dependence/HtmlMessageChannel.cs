@@ -60,12 +60,19 @@ public sealed class HtmlMessageChannel
         var completion = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         _pendingRequests[requestId] = completion;
         _requestWindows[requestId] = windowId;
-        Enqueue(windowId, url, jsonData, requestId);
-
-        if (timeoutMs <= 0) return await completion.Task;
-        var completed = await Task.WhenAny(completion.Task, Task.Delay(timeoutMs));
-        if (completed != completion.Task) throw new TimeoutException($"HTML请求超时: {url}");
-        return await completion.Task;
+        try
+        {
+            Enqueue(windowId, url, jsonData, requestId);
+            if (timeoutMs <= 0) return await completion.Task;
+            var completed = await Task.WhenAny(completion.Task, Task.Delay(timeoutMs));
+            if (completed != completion.Task) throw new TimeoutException($"HTML请求超时: {url}");
+            return await completion.Task;
+        }
+        finally
+        {
+            _pendingRequests.TryRemove(requestId, out _);
+            _requestWindows.TryRemove(requestId, out _);
+        }
     }
 
     public async Task<string?> Receive(string windowId, int timeoutMs)
