@@ -2199,7 +2199,29 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
     }
 
-    private async Task ImportScriptFromPathJsonCore(string pathJson)
+    /// <summary>
+    /// Imports paths from a specific local script repository checkout and stores
+    /// subscriptions under that repository's folder name.
+    /// </summary>
+    public async Task ImportScriptFromRepoPathJson(string pathJson, string repoPath)
+    {
+        await _repoWriteLock.WaitAsync();
+        try
+        {
+            var checkoutPath = Path.GetFullPath(repoPath);
+            var contentPath = Directory.Exists(Path.Combine(checkoutPath, "repo"))
+                ? Path.Combine(checkoutPath, "repo")
+                : checkoutPath;
+            await ImportScriptFromPathJsonCore(pathJson, contentPath, Path.GetFileName(checkoutPath));
+        }
+        finally
+        {
+            _repoWriteLock.Release();
+        }
+    }
+
+    /// <summary>Imports the paths in a subscription payload, optionally using a specific repository checkout.</summary>
+    private async Task ImportScriptFromPathJsonCore(string pathJson, string? repoPathOverride = null, string? repoFolderNameOverride = null)
     {
         var paths = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(pathJson);
         if (paths is null || paths.Count == 0)
@@ -2208,20 +2230,30 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             return;
         }
 
-        // 保存订阅信息（按当前仓库存储到文件）
-        AddSubscribedPathsForCurrentRepo(paths);
+        // 保存订阅信息（按导入仓库存储到文件）
+        var repoFolderName = repoFolderNameOverride;
+        if (!string.IsNullOrWhiteSpace(repoPathOverride) && !Directory.Exists(repoPathOverride))
+            throw new DirectoryNotFoundException($"脚本仓库目录不存在：{repoPathOverride}");
+        AddSubscribedPathsForCurrentRepo(paths, repoFolderName);
 
         Toast.Information("获取最新仓库信息中...");
 
         string repoPath;
-        try
+        if (!string.IsNullOrWhiteSpace(repoPathOverride))
         {
-            repoPath = FindCenterRepoPath();
+            repoPath = Path.GetFullPath(repoPathOverride);
         }
-        catch
+        else
         {
-            await ThemedMessageBox.ErrorAsync("本地无仓库信息，请至少成功更新一次脚本仓库信息！");
-            return;
+            try
+            {
+                repoPath = FindCenterRepoPath();
+            }
+            catch
+            {
+                await ThemedMessageBox.ErrorAsync("本地无仓库信息，请至少成功更新一次脚本仓库信息！");
+                return;
+            }
         }
 
 
@@ -2381,11 +2413,14 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// 向当前仓库的已订阅路径中追加新路径（自动去重）。
     /// 注意：内部的读-合并-写不是原子操作，调用方应持有 _repoWriteLock 以避免并发丢失更新。
     /// </summary>
-    private static void AddSubscribedPathsForCurrentRepo(List<string> paths)
+    /// <summary>Adds paths to the subscription list for the selected script repository.</summary>
+    private static void AddSubscribedPathsForCurrentRepo(List<string> paths, string? repoFolderName = null)
     {
-        var existing = GetSubscribedPathsForCurrentRepo();
+        repoFolderName ??= GetCurrentRepoFolderName();
+        var subscriptionFilePath = GetSubscriptionFilePath(repoFolderName);
+        var existing = ReadSubscriptionFile(subscriptionFilePath);
         var merged = existing.Union(paths).ToList();
-        SetSubscribedPathsForCurrentRepo(merged);
+        WriteSubscriptionFile(subscriptionFilePath, merged);
     }
 
     /// <summary>
