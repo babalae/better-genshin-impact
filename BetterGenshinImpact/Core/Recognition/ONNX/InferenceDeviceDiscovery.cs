@@ -18,7 +18,7 @@ public sealed class InferenceDeviceDiscovery : IInferenceDeviceDiscovery
 {
     public IReadOnlyList<InferenceDeviceInfo> GetDevices(InferenceDeviceType engine, string runtimeDirectory) => engine switch
     {
-        InferenceDeviceType.Cpu => [InferenceRuntimeSnapshot.CpuDefault().Device],
+        InferenceDeviceType.Cpu => [ResolvedInferenceRuntime.CpuDevice],
         InferenceDeviceType.DirectML => GetDirectMlDevices(),
         InferenceDeviceType.CUDA or InferenceDeviceType.TensorRT => GetNvidiaDevices(engine),
         InferenceDeviceType.OpenVINO => GetOpenVinoDevices(runtimeDirectory),

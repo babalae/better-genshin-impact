@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using Newtonsoft.Json.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition.OCR;
@@ -25,13 +24,6 @@ public sealed record InferenceBenchmarkResult(string Scene, string Execution, IR
     public string SamplesText => "每次耗时（ms）：" + string.Join(" / ", Milliseconds.Select(t => t.ToString("F1")));
 }
 
-public enum InferenceValidationOutcome { Passed, EvidenceUnavailable, NotAccelerated }
-public sealed record InferenceValidationResult(
-    string Scene, InferenceValidationOutcome Outcome, string UserReason = "", string TechnicalDetails = "")
-{
-    public static InferenceValidationResult Passed(string scene) => new(scene, InferenceValidationOutcome.Passed);
-}
-
 /// <summary>将面向用户的失败原因与供日志排查的原始技术信息分开。</summary>
 internal sealed class InferenceValidationException(
     string scene, string userReason, string technicalDetails, Exception? innerException = null)
@@ -44,10 +36,10 @@ internal sealed class InferenceValidationException(
 public interface IInferenceModelDiagnostics
 {
     bool HasDomainTreeImage { get; }
-    Task<InferenceValidationResult> ValidateTreeAsync(BgiOnnxFactory factory, CancellationToken token);
-    Task<InferenceValidationResult> ValidateOcrAsync(BgiOnnxFactory factory, CancellationToken token);
+    Task ValidateTreeAsync(BgiOnnxSessionFactory factory, CancellationToken token);
+    Task ValidateOcrAsync(BgiOnnxSessionFactory factory, CancellationToken token);
     Task PreheatOcrAsync();
-    Task<InferenceBenchmarkResult> BenchmarkAsync(InferenceBenchmarkScene scene, BgiOnnxFactory factory,
+    Task<InferenceBenchmarkResult> BenchmarkAsync(InferenceBenchmarkScene scene, BgiOnnxSessionFactory factory,
         IProgress<InferenceBenchmarkProgress>? progress, CancellationToken token);
 }
 
@@ -79,131 +71,68 @@ public sealed class InferenceModelDiagnostics(
             }, _lifetime.Token);
     }
 
-    public async Task<InferenceValidationResult> ValidateTreeAsync(BgiOnnxFactory factory, CancellationToken token)
+    public async Task ValidateTreeAsync(BgiOnnxSessionFactory factory, CancellationToken token)
     {
         if (!HasDomainTreeImage) throw new FileNotFoundException("古树测试图片待提供。", InferenceTestImages.DomainTreePath);
-        return await ValidateWithProfileAsync(factory, "古树检测", (directory, validationToken) =>
+        await ValidateAsync(factory, "古树检测", validationToken =>
         {
             using var image = Image.Load<Rgb24>(InferenceTestImages.DomainTreePath);
-            using var predictor = factory.CreateYoloPredictor(BgiOnnxModel.BgiTree, Path.Combine(directory, "tree"));
+            using var predictor = factory.CreateYoloPredictor(BgiOnnxModel.BgiTree);
             _ = predictor.Predictor.Detect(image);
             logger.LogInformation("[ONNX]古树检测完整推理已执行");
         }, token);
     }
 
-    public Task<InferenceValidationResult> ValidateOcrAsync(BgiOnnxFactory factory, CancellationToken token)
-        => ValidateWithProfileAsync(factory, "OCR", (directory, validationToken) =>
+    public Task ValidateOcrAsync(BgiOnnxSessionFactory factory, CancellationToken token)
+        => ValidateAsync(factory, "OCR", validationToken =>
         {
             var model = ocr.ActiveModelType;
             using var image = new Mat(model.PreHeatImagePath);
             if (image.Empty()) throw new InvalidDataException("OCR 验证图片无法读取。");
-            using var service = new PaddleOcrService(factory.ForOcrValidation(directory), model);
+            using var service = new PaddleOcrService(factory.ForOcrValidation(), model);
             validationToken.ThrowIfCancellationRequested();
             _ = service.Ocr(image);
             logger.LogInformation("[ONNX]OCR 验证完整推理已执行");
         }, token);
 
-    private async Task<InferenceValidationResult> ValidateWithProfileAsync(BgiOnnxFactory factory, string scene,
-        Action<string, CancellationToken> inference, CancellationToken token)
+    /// <summary>验证所选 provider 能创建会话并完成一次真实推理；不再解析性能记录判断单个算子的执行位置。</summary>
+    private async Task ValidateAsync(BgiOnnxSessionFactory factory, string scene,
+        Action<CancellationToken> inference, CancellationToken token)
     {
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, _lifetime.Token);
         await _gate.WaitAsync(linked.Token);
         try
         {
-            return await Task.Run(() =>
+            await Task.Run(() =>
             {
                 linked.Token.ThrowIfCancellationRequested();
-                var profileDirectory = Path.Combine(Path.GetTempPath(), "bettergi-inference-" + Guid.NewGuid().ToString("N"));
-                Directory.CreateDirectory(profileDirectory);
                 try
                 {
-                    inference(profileDirectory, linked.Token);
+                    inference(linked.Token);
                     linked.Token.ThrowIfCancellationRequested();
-                    if (factory.Snapshot.Engine == InferenceDeviceType.Cpu) return InferenceValidationResult.Passed(scene);
-                    var expected = factory.Snapshot.Engine switch
-                    {
-                        InferenceDeviceType.DirectML => "DmlExecutionProvider",
-                        InferenceDeviceType.OpenVINO => "OpenVINOExecutionProvider",
-                        InferenceDeviceType.CUDA => "CUDAExecutionProvider",
-                        InferenceDeviceType.TensorRT => "TensorrtExecutionProvider",
-                        _ => throw new InvalidOperationException("未知执行提供程序")
-                    };
-                    var providers = Directory.EnumerateFiles(profileDirectory, "*.json")
-                        .SelectMany(ReadProfileProviders)
-                        .Distinct(StringComparer.OrdinalIgnoreCase)
-                        .ToArray();
-                    return CreateProviderValidationResult(scene, factory.Snapshot, expected, providers);
                 }
                 catch (OperationCanceledException) { throw; }
                 catch (InferenceValidationException) { throw; }
                 catch (Exception e)
                 {
-                    throw CreateRuntimeFailure(scene, factory.Snapshot, e);
-                }
-                finally
-                {
-                    // 只清理本次诊断创建的临时目录，会话已释放，原生运行库由进程持有。
-                    try
-                    {
-                        if (Directory.Exists(profileDirectory)) Directory.Delete(profileDirectory, true);
-                    }
-                    catch (Exception cleanupError)
-                    {
-                        // 临时诊断文件清理失败不能被误判为推理引擎不可用。
-                        Debug.WriteLine("清理推理诊断目录失败：" + cleanupError);
-                    }
+                    throw CreateRuntimeFailure(scene, factory.Runtime, e);
                 }
             }, linked.Token);
         }
         finally { _gate.Release(); }
     }
 
-    public static bool ProfileUsesProvider(string path, string provider)
-        => ReadProfileProviders(path).Contains(provider, StringComparer.OrdinalIgnoreCase);
-
-    internal static IReadOnlyCollection<string> ReadProfileProviders(string path)
-    {
-        var profile = JArray.Parse(File.ReadAllText(path));
-        return profile.OfType<JObject>()
-            .Select(item => item["args"] is JObject args ? args.Value<string>("provider") : null)
-            .Where(provider => !string.IsNullOrWhiteSpace(provider))
-            .Select(provider => provider!)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-    }
-
-    internal static InferenceValidationResult CreateProviderValidationResult(string scene,
-        InferenceRuntimeSnapshot snapshot, string expectedProvider, IReadOnlyCollection<string> actualProviders)
-    {
-        if (actualProviders.Contains(expectedProvider, StringComparer.OrdinalIgnoreCase))
-            return InferenceValidationResult.Passed(scene);
-
-        if (actualProviders.Count == 0)
-            return new(scene, InferenceValidationOutcome.EvidenceUnavailable,
-                "完整模型测试已成功，但没有生成可用于判断计算设备的性能记录。",
-                $"{scene}推理成功；未读取到任何执行设备记录，不能据此判断 {expectedProvider} 未参与计算。");
-
-        var actual = actualProviders.Count == 0 ? "无执行记录" : string.Join(", ", actualProviders);
-        var cpuOnly = actualProviders.Count > 0
-                      && actualProviders.All(provider => string.Equals(provider, "CPUExecutionProvider", StringComparison.OrdinalIgnoreCase));
-        var userReason = cpuOnly
-            ? $"性能记录显示{scene}模型实际全部由 CPU 完成，{snapshot.Engine} 没有在“{snapshot.Device.Name}”上参与计算。"
-            : $"性能记录显示{snapshot.Engine} 没有在“{snapshot.Device.Name}”上参与{scene}模型的计算。";
-        return new(scene, InferenceValidationOutcome.NotAccelerated, userReason,
-            $"{scene}未使用 {expectedProvider} 执行；实际执行记录：{actual}。这是一项验证结论，不是运行库异常，因此没有底层异常堆栈。");
-    }
-
-    internal static InferenceValidationException CreateRuntimeFailure(string scene, InferenceRuntimeSnapshot snapshot,
+    internal static InferenceValidationException CreateRuntimeFailure(string scene, ResolvedInferenceRuntime runtime,
         Exception exception)
     {
         var cause = exception.GetBaseException();
         var message = cause.Message;
-        var missingDependencies = OnnxRuntimePackageCatalog.MissingDependencyFiles(snapshot.Engine, snapshot.RuntimeDirectory);
+        var missingDependencies = OnnxRuntimePackageCatalog.MissingDependencyFiles(runtime.Engine, runtime.RuntimeDirectory);
         string reason;
         if (missingDependencies.Length > 0 &&
             (cause is DllNotFoundException || message.Contains("LoadLibrary", StringComparison.OrdinalIgnoreCase)
                                                 || message.Contains("找不到指定的模块", StringComparison.OrdinalIgnoreCase)))
-            reason = OnnxRuntimePackageCatalog.DescribeMissingDependencies(snapshot.Engine, missingDependencies);
+            reason = OnnxRuntimePackageCatalog.DescribeMissingDependencies(runtime.Engine, missingDependencies);
         else if (cause is DllNotFoundException || message.Contains("LoadLibrary", StringComparison.OrdinalIgnoreCase)
                                                     || message.Contains("找不到指定的模块", StringComparison.OrdinalIgnoreCase))
             reason = "运行库或配套依赖无法加载，请在硬件加速设置中重新检测并补齐依赖。";
@@ -222,18 +151,16 @@ public sealed class InferenceModelDiagnostics(
 
         var technicalDetails = $"{scene}验证异常：{message}";
         if (missingDependencies.Length > 0)
-            technicalDetails += $"\r\n运行库目录：{snapshot.RuntimeDirectory}\r\n缺少依赖：{string.Join("、", missingDependencies)}";
+            technicalDetails += $"\r\n运行库目录：{runtime.RuntimeDirectory}\r\n缺少依赖：{string.Join("、", missingDependencies)}";
         return new InferenceValidationException(scene, reason, technicalDetails, exception);
     }
 
-    public async Task<InferenceBenchmarkResult> BenchmarkAsync(InferenceBenchmarkScene scene, BgiOnnxFactory factory,
+    public async Task<InferenceBenchmarkResult> BenchmarkAsync(InferenceBenchmarkScene scene, BgiOnnxSessionFactory factory,
         IProgress<InferenceBenchmarkProgress>? progress, CancellationToken token)
     {
-        factory = factory.CaptureSnapshot();
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, _lifetime.Token);
         if (scene == InferenceBenchmarkScene.DomainTree && !HasDomainTreeImage) throw new FileNotFoundException("古树测试图片待提供。");
         using var lease = await Task.Run(leases.Acquire, linked.Token);
-        if (scene == InferenceBenchmarkScene.Ocr) await PreheatOcrAsync();
         await _gate.WaitAsync(linked.Token);
         try
         {
@@ -242,16 +169,16 @@ public sealed class InferenceModelDiagnostics(
             {
                 if (scene == InferenceBenchmarkScene.Ocr)
                 {
-                    var service = ocr.PaddleOcr;
+                    var type = ocr.ActiveModelType;
+                    using var service = new PaddleOcrService(factory, type);
                     using var image = new Mat(ocr.ActiveModelType.PreHeatImagePath);
                     if (image.Empty()) throw new InvalidDataException("OCR 测试图片无法读取。");
-                    var type = ocr.ActiveModelType;
-                    return Measure("OCR", $"{factory.Snapshot.OcrDescription} · {type.DetectionModel.Name}/{type.RecognitionModel.Name}",
+                    return Measure("OCR", $"{factory.Runtime.OcrDescription} · {type.DetectionModel.Name}/{type.RecognitionModel.Name}",
                         () => _ = service.Ocr(image), progress, linked.Token);
                 }
                 using var treeImage = Image.Load<Rgb24>(InferenceTestImages.DomainTreePath);
                 using var predictor = factory.CreateYoloPredictor(BgiOnnxModel.BgiTree);
-                return Measure("古树检测", factory.Snapshot.Description,
+                return Measure("古树检测", factory.Runtime.Description,
                     () => _ = predictor.Predictor.Detect(treeImage), progress, linked.Token);
             }, linked.Token);
         }

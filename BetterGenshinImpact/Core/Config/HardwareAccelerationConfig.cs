@@ -48,7 +48,8 @@ public partial class HardwareAccelerationConfig : ObservableObject
         && Cpu.CpuThreads <= Environment.ProcessorCount
         && !string.IsNullOrWhiteSpace(GetEngineSettings(InferenceDevice).DeviceId);
 
-    public void ResetToCpu()
+    /// <summary>配置结构损坏时恢复完整默认值。运行时回退不得调用此方法。</summary>
+    public void ResetToDefaults()
     {
         FormatVersion = 1;
         Cpu = new() { DeviceId = "CPU" };
@@ -56,6 +57,16 @@ public partial class HardwareAccelerationConfig : ObservableObject
         DirectML = new(); OpenVINO = new(); Cuda = new(); TensorRT = new();
         InferenceDevice = InferenceDeviceType.Cpu;
         CpuOcr = true;
+        ValidationState = InferenceValidationState.None;
+        VerifiedSignature = "";
+    }
+
+    /// <summary>只把当前生效选择切换为 CPU，保留其他引擎、OCR 和线程设置。</summary>
+    public void SwitchToCpu()
+    {
+        FormatVersion = 1;
+        InferenceDevice = InferenceDeviceType.Cpu;
+        Cpu.DeviceId = "CPU";
         ValidationState = InferenceValidationState.None;
         VerifiedSignature = "";
     }

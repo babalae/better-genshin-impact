@@ -35,8 +35,7 @@ internal sealed class SileroVadDetector : IDisposable
             throw new FileNotFoundException("Silero VAD 模型文件不存在", modelPath);
         }
 
-        using var options = CreateSessionOptions();
-        _session = new InferenceSession(modelPath, options);
+        _session = BgiOnnxFactory.CreateCpuOnlyInferenceSession(BgiOnnxModel.SileroVad, ConfigureSessionOptions);
     }
 
     public void Reset()
@@ -88,14 +87,11 @@ internal sealed class SileroVadDetector : IDisposable
         _session.Dispose();
     }
 
-    private static SessionOptions CreateSessionOptions()
+    private static void ConfigureSessionOptions(SessionOptions options)
     {
-        return new SessionOptions
-        {
-            ExecutionMode = ExecutionMode.ORT_SEQUENTIAL,
-            GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_BASIC,
-            InterOpNumThreads = 1,
-            IntraOpNumThreads = 1
-        };
+        options.ExecutionMode = ExecutionMode.ORT_SEQUENTIAL;
+        options.GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_BASIC;
+        options.InterOpNumThreads = 1;
+        options.IntraOpNumThreads = 1;
     }
 }

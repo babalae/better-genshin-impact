@@ -21,7 +21,7 @@ public class EClassifyTests(ITestOutputHelper output)
 #pragma warning restore CS8618
 
     private static BgiYoloPredictor Predictor => LazyInitializer.EnsureInitialized(ref predictor,
-        () => new BgiOnnxFactory(new FakeLogger<BgiOnnxFactory>())
+        () => new BgiOnnxSessionFactory(new FakeLogger<BgiOnnxFactory>(), ResolvedInferenceRuntime.Cpu())
             .CreateYoloPredictor(BgiOnnxModel.BgiEClassify));
 
     /// <summary>

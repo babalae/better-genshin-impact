@@ -16,8 +16,9 @@ public sealed class InferenceRuntimeService(
     IConfigService configService, IOnnxRuntimeSelection loader, IInferenceDeviceDiscovery devices,
     IInferenceModelDiagnostics diagnostics, ILogger<BgiOnnxFactory> logger, InferenceStartupStatus? startupStatus = null) : IDisposable
 {
-    private InferenceRuntimeSnapshot? _current;
-    private InferenceRuntimeSnapshot? _validationCandidate;
+    private sealed record PublishedRuntime(ResolvedInferenceRuntime Runtime, bool IsValidated);
+
+    private PublishedRuntime? _published;
     private readonly object _initializationLock = new();
     private readonly object _settingsLock = new();
     private readonly CancellationTokenSource _lifetime = new();
@@ -25,12 +26,13 @@ public sealed class InferenceRuntimeService(
     private Task? _validationTask;
     private long _settingsRevision;
     private long _startupRevision;
-    private volatile bool _isCurrentValidated;
-    public InferenceRuntimeSnapshot Current => Volatile.Read(ref _current) ?? throw new InvalidOperationException("推理初始化尚未完成。");
-    public bool IsReady => Volatile.Read(ref _current) != null;
+    private PublishedRuntime Published => Volatile.Read(ref _published)
+        ?? throw new InvalidOperationException("推理初始化尚未完成。");
+    public ResolvedInferenceRuntime Current => Published.Runtime;
+    public bool IsReady => Volatile.Read(ref _published) != null;
     public bool IsStopping => _lifetime.IsCancellationRequested;
-    public bool IsCurrentValidated => _isCurrentValidated;
-    public bool HasPendingRestart { get; private set; }
+    public bool IsCurrentValidated => Volatile.Read(ref _published)?.IsValidated ?? false;
+    public bool HasPendingRestart => Interlocked.Read(ref _settingsRevision) != Interlocked.Read(ref _startupRevision);
     public string StartupMessage { get; private set; } = startupStatus?.FallbackMessage ?? "";
     public event EventHandler? SettingsChanged;
     private bool IsMainInstance => startupStatus?.IsMainInstance ?? true;
@@ -51,16 +53,13 @@ public sealed class InferenceRuntimeService(
             {
                 var settings = config.GetEngineSettings(engine);
                 if (string.IsNullOrWhiteSpace(settings.DeviceId)) continue;
-                var snapshot = new InferenceRuntimeSnapshot(engine, new(settings.DeviceId, "", 0, ""),
-                    config.CpuOcr, config.Cpu.CpuThreads,
-                    engine is InferenceDeviceType.OpenVINO or InferenceDeviceType.TensorRT && settings.EnableModelCache, "")
-                    { PaddleOcrCpu = config.PaddleOcrCpu.ToOptions() };
-                if (snapshot.Signature == config.VerifiedSignature) config.RecordValidatedEngine(engine);
+                if (InferenceRuntimeFingerprint.Compute(config, engine) == config.VerifiedSignature)
+                    config.RecordValidatedEngine(engine);
             }
         }
         if (!config.IsExpectedConfiguration)
         {
-            config.ResetToCpu();
+            config.ResetToDefaults();
             config.LastFailedEngine = null;
             config.LastValidationError = "";
         }
@@ -68,10 +67,7 @@ public sealed class InferenceRuntimeService(
         {
             // TensorRT 已下线：只把生效引擎改回 CPU，其他引擎已保存的设备参数保持不变。
             var retiredEngine = config.InferenceDevice;
-            config.InferenceDevice = InferenceDeviceType.Cpu;
-            config.Cpu.DeviceId = "CPU";
-            config.ValidationState = InferenceValidationState.None;
-            config.VerifiedSignature = "";
+            config.SwitchToCpu();
             config.LastFailedEngine = null;
             config.LastValidationError = "";
             fallbackMessage = $"{retiredEngine} 推理引擎已停止提供（首次构建引擎耗时过长），本次已使用 CPU。\r\n\r\n" +
@@ -80,7 +76,7 @@ public sealed class InferenceRuntimeService(
         else if (isMainInstance && config.ValidationState == InferenceValidationState.Validating)
         {
             var failedEngine = config.InferenceDevice;
-            config.ResetToCpu();
+            config.SwitchToCpu();
             config.LastFailedEngine = failedEngine;
             config.LastValidationError = "上一次推理验证未正常完成，已回退 CPU。";
             fallbackMessage = $"{failedEngine} 上一次推理验证未正常完成，本次已使用 CPU。";
@@ -115,12 +111,11 @@ public sealed class InferenceRuntimeService(
             var found = await Task.Run(() => devices.GetDevices(config.InferenceDevice, loader.RuntimeDirectory), token);
             var device = found.FirstOrDefault(d => d.Id == selected.DeviceId)
                 ?? throw new InvalidOperationException("保存的推理设备不可用，请重新选择设备。");
-            var snapshot = InferenceRuntimeSnapshot.Create(config, device, loader.RuntimeDirectory);
-            _isCurrentValidated = snapshot.Engine == InferenceDeviceType.Cpu
-                || (config.ValidationState == InferenceValidationState.None && config.VerifiedSignature == snapshot.Signature);
-            if (!_isCurrentValidated) _validationCandidate = snapshot;
+            var runtime = ResolvedInferenceRuntime.Resolve(config, device, loader.RuntimeDirectory);
+            var isValidated = runtime.Engine == InferenceDeviceType.Cpu
+                || (config.ValidationState == InferenceValidationState.None && config.VerifiedSignature == runtime.Fingerprint);
             _startupRevision = Interlocked.Read(ref _settingsRevision);
-            Volatile.Write(ref _current, snapshot);
+            Volatile.Write(ref _published, new(runtime, isValidated));
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception e)
@@ -144,8 +139,8 @@ public sealed class InferenceRuntimeService(
     {
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, _lifetime.Token);
         await InitializeAsync(linked.Token);
-        var snapshot = _validationCandidate;
-        if (snapshot == null)
+        var published = Published;
+        if (published.IsValidated)
         {
             if (!HasPendingRestart && Config.ValidationState == InferenceValidationState.PendingRestart)
             {
@@ -155,6 +150,7 @@ public sealed class InferenceRuntimeService(
             }
             return;
         }
+        var runtime = published.Runtime;
         bool ownsSavedSettings;
         lock (_settingsLock)
         {
@@ -166,34 +162,21 @@ public sealed class InferenceRuntimeService(
         try
         {
             // 缺图不是引擎故障：古树场景仍待接入，先通过独立 OCR 会话验证引擎。
-            var factory = new BgiOnnxFactory(logger, snapshot);
-            var validation = diagnostics.HasDomainTreeImage
-                ? await diagnostics.ValidateTreeAsync(factory, linked.Token).ConfigureAwait(false)
-                : await diagnostics.ValidateOcrAsync(factory, linked.Token).ConfigureAwait(false);
+            var factory = new BgiOnnxSessionFactory(logger, runtime);
+            if (diagnostics.HasDomainTreeImage)
+                await diagnostics.ValidateTreeAsync(factory, linked.Token).ConfigureAwait(false);
+            else
+                await diagnostics.ValidateOcrAsync(factory, linked.Token).ConfigureAwait(false);
             linked.Token.ThrowIfCancellationRequested();
-            if (validation.Outcome == InferenceValidationOutcome.NotAccelerated)
-            {
-                logger.LogWarning("[ONNX]{Scene}完成，但目标引擎未参与计算：{Details}",
-                    validation.Scene, validation.TechnicalDetails);
-                FallBack(snapshot.Engine, validation.Scene, validation.UserReason, validation.TechnicalDetails,
-                    _startupRevision, "加速未生效");
-                return;
-            }
-            if (validation.Outcome == InferenceValidationOutcome.EvidenceUnavailable)
-            {
-                // 推理已经完整成功；性能记录缺失不能反向证明目标引擎没有参与，更不能伪造成运行库异常。
-                logger.LogWarning("[ONNX]{Scene}完成，但无法读取执行设备记录，本次按验证通过处理：{Details}",
-                    validation.Scene, validation.TechnicalDetails);
-            }
             lock (_settingsLock)
             {
-                _isCurrentValidated = true;
+                Volatile.Write(ref _published, published with { IsValidated = true });
                 ownsSavedSettings = _settingsRevision == _startupRevision;
                 // 即使验证期间保存了其他引擎，也保留本次成功记录；不覆盖新的待重启设置。
-                Config.RecordValidatedEngine(snapshot.Engine);
+                Config.RecordValidatedEngine(runtime.Engine);
                 if (ownsSavedSettings)
                 {
-                    Config.VerifiedSignature = snapshot.Signature;
+                    Config.VerifiedSignature = runtime.Fingerprint;
                     Config.ValidationState = InferenceValidationState.None;
                     Config.LastFailedEngine = null;
                     Config.LastValidationError = "";
@@ -215,7 +198,7 @@ public sealed class InferenceRuntimeService(
         {
             logger.LogWarning(e, "[ONNX]主窗口推理验证失败，回退 CPU");
             var validationError = e as InferenceValidationException;
-            FallBack(snapshot.Engine,
+            FallBack(runtime.Engine,
                 validationError?.Scene ?? "模型验证",
                 validationError?.UserReason ?? "加载或运行验证模型时发生错误，详细错误已记录到硬件加速设置和日志中。",
                 e.ToString(),
@@ -225,7 +208,7 @@ public sealed class InferenceRuntimeService(
     }
 
     private void FallBack(InferenceDeviceType engine, string stage, string userReason, string technicalDetails,
-        long? validationRevision = null, string result = "加速验证失败")
+        long? validationRevision = null)
     {
         lock (_settingsLock)
         {
@@ -235,21 +218,18 @@ public sealed class InferenceRuntimeService(
                 // 验证期间用户可能已保存新的设置，旧验证结果不能覆盖下一次启动的选择。
                 if (validationRevision == null || _settingsRevision == validationRevision)
                 {
-                    Config.ResetToCpu();
-                    HasPendingRestart = false;
+                    Config.SwitchToCpu();
                 }
                 Config.LastFailedEngine = engine;
             }
-            var isRuntimeFailure = result == "加速验证失败";
-            var stageLabel = isRuntimeFailure ? "失败环节" : "测试场景";
-            var reasonLabel = isRuntimeFailure ? "失败原因" : "测试结论";
             if (IsMainInstance)
-                Config.LastValidationError = $"{stageLabel}：{stage}\r\n{reasonLabel}：{userReason}\r\n\r\n技术详情：{technicalDetails}";
-            StartupMessage = $"{engine} {result}，已自动切换为 CPU。\r\n\r\n" +
-                             $"{stageLabel}：{stage}\r\n{reasonLabel}：{userReason}\r\n\r\n" +
+                Config.LastValidationError = $"失败环节：{stage}\r\n失败原因：{userReason}\r\n\r\n技术详情：{technicalDetails}";
+            StartupMessage = $"{engine} 加速验证失败，已自动切换为 CPU。\r\n\r\n" +
+                             $"失败环节：{stage}\r\n失败原因：{userReason}\r\n\r\n" +
                              "软件仍可正常使用。你可以继续使用 CPU，或在首页的“硬件加速设置”中选择其他设备后重试。";
-            _isCurrentValidated = true;
-            Volatile.Write(ref _current, InferenceRuntimeSnapshot.CpuDefault());
+            var cpu = ResolvedInferenceRuntime.Cpu(Config.Cpu.CpuThreads, Config.PaddleOcrCpu.ToOptions(),
+                loader.RuntimeDirectory);
+            Volatile.Write(ref _published, new(cpu, true));
         }
         if (IsMainInstance) configService.Save();
     }
@@ -275,7 +255,6 @@ public sealed class InferenceRuntimeService(
             config.InferenceDevice = engine;
             config.FormatVersion = 1;
             config.ValidationState = InferenceValidationState.PendingRestart;
-            HasPendingRestart = true;
         }
         configService.Save();
         SettingsChanged?.Invoke(this, EventArgs.Empty);

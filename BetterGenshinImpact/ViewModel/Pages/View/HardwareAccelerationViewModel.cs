@@ -392,7 +392,7 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
                 ProgressValue = 100d * p.Completed / p.Total;
                 IsProgressIndeterminate = false;
             });
-            var result = await _diagnostics.BenchmarkAsync(scene, _factory, progress, token);
+            var result = await _diagnostics.BenchmarkAsync(scene, _factory.ForCurrentRuntime(), progress, token);
             foreach (var previous in Results.Where(r => r.Scene == result.Scene).ToArray()) Results.Remove(previous);
             Results.Add(result);
             OnPropertyChanged(nameof(OcrResult)); OnPropertyChanged(nameof(TreeResult));
@@ -433,8 +433,8 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
     [RelayCommand]
     public void OnOpenCacheFolder()
     {
-        Directory.CreateDirectory(InferenceRuntimeSnapshot.ModelCacheDirectory);
-        using var process = Process.Start("explorer.exe", InferenceRuntimeSnapshot.ModelCacheDirectory);
+        Directory.CreateDirectory(ResolvedInferenceRuntime.ModelCacheDirectory);
+        using var process = Process.Start("explorer.exe", ResolvedInferenceRuntime.ModelCacheDirectory);
     }
 
     public async Task StopAsync() { _lifetime.Cancel(); await _operation; }

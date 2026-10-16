@@ -9,13 +9,36 @@ using Microsoft.ML.OnnxRuntime;
 
 namespace BetterGenshinImpact.Core.Recognition.ONNX;
 
-public class BgiOnnxFactory
+/// <summary>从当前已解析运行时创建会话。每次调用只读取一次 Current，已有会话不会受后续回退影响。</summary>
+public sealed class BgiOnnxFactory(ILogger<BgiOnnxFactory> logger, InferenceRuntimeService runtime)
+{
+    internal BgiOnnxSessionFactory ForCurrentRuntime() => new(logger, runtime.Current);
+
+    internal BgiOnnxSessionFactory ForRuntime(ResolvedInferenceRuntime resolvedRuntime) => new(logger, resolvedRuntime);
+
+    public BgiYoloPredictor CreateYoloPredictor(BgiOnnxModel model)
+        => ForCurrentRuntime().CreateYoloPredictor(model);
+
+    public InferenceSession CreateInferenceSession(BgiOnnxModel model, bool ocr = false)
+        => ForCurrentRuntime().CreateInferenceSession(model, ocr);
+
+    /// <summary>为明确不参与硬件加速选择的模型创建纯 CPU 会话。</summary>
+    public static InferenceSession CreateCpuOnlyInferenceSession(BgiOnnxModel model,
+        Action<SessionOptions>? configure = null)
+    {
+        using var options = new SessionOptions();
+        configure?.Invoke(options);
+        options.AppendExecutionProvider_CPU();
+        return new InferenceSession(model.ModalPath, options);
+    }
+}
+
+/// <summary>绑定单个已解析运行时的会话工厂。</summary>
+public sealed class BgiOnnxSessionFactory
 {
     private readonly ILogger<BgiOnnxFactory> _logger;
     private readonly ProviderType[] _providerTypes;
-    private readonly string? _profilingDirectory;
-    private readonly InferenceRuntimeService? _runtime;
-    private readonly InferenceRuntimeSnapshot? _snapshot;
+    private readonly ResolvedInferenceRuntime _runtime;
 
     /// <summary>
     ///     缓存模型路径对应的目录；会话始终加载原始模型，不再使用嵌入缓存文件。
@@ -25,50 +48,28 @@ public class BgiOnnxFactory
     private readonly ConcurrentDictionary<BgiOnnxModel, string?> _cachedModelPaths = new();
 
 
-    /// <summary>
-    /// 请勿直接实例化此类
-    /// </summary>
-    /// <param name="logger"></param>
-    /// <remarks>主程序从运行时读取生效配置，每个新会话单独冻结快照；未指定快照的工厂用于 CPU 单元测试。</remarks>
-    public BgiOnnxFactory(ILogger<BgiOnnxFactory> logger)
-        : this(logger, InferenceRuntimeSnapshot.CpuDefault())
-    {
-        // 未指定设置的临时工厂使用 CPU；主程序 DI 注入运行时，每次创建会话冻结当时的生效快照。
-    }
-
-    public BgiOnnxFactory(ILogger<BgiOnnxFactory> logger, InferenceRuntimeService runtime)
+    internal BgiOnnxSessionFactory(ILogger<BgiOnnxFactory> logger, ResolvedInferenceRuntime runtime)
     {
         _logger = logger;
         _runtime = runtime;
-        _providerTypes = [];
-    }
-
-    public BgiOnnxFactory(ILogger<BgiOnnxFactory> logger, InferenceRuntimeSnapshot snapshot, string? profilingDirectory = null)
-    {
-        _logger = logger;
-        _profilingDirectory = profilingDirectory;
-        _snapshot = snapshot;
-        _providerTypes = GetProviderType(snapshot.Engine);
+        _providerTypes = GetProviderType(runtime.Engine);
         _logger.LogInformation("[ONNX]当前引擎 {Engine}，设备 {Device}，OCR 强制 CPU：{CpuOcr}",
-            snapshot.Engine, snapshot.Device.Name, snapshot.CpuOcr);
+            runtime.Engine, runtime.Device.Name, runtime.CpuOcr);
     }
 
-    public InferenceRuntimeSnapshot Snapshot => _runtime?.Current ?? _snapshot!;
+    public ResolvedInferenceRuntime Runtime => _runtime;
 
-    /// <summary>一次模型操作固定使用同一个快照，等待或延后回退不能改变它的参数。</summary>
-    public BgiOnnxFactory CaptureSnapshot() => _runtime == null ? this : new(_logger, Snapshot);
+    // OCR 验证使用独立会话，必须实际加载所选 provider；不改变业务 OCR 的 CPU 设置。
+    internal BgiOnnxSessionFactory ForOcrValidation()
+        => new(_logger, Runtime with { CpuOcr = false });
 
-    // OCR 验证使用独立工厂与会话，必须实际执行所选 provider；不改变业务 OCR 的 CPU 设置。
-    internal BgiOnnxFactory ForOcrValidation(string profilingDirectory)
-        => new(_logger, Snapshot with { CpuOcr = false }, profilingDirectory);
-
-    public ProviderType[] ProviderTypes => _runtime == null ? (ProviderType[])_providerTypes.Clone() : GetProviderType(Snapshot.Engine);
-    public int DmlDeviceId => Snapshot.Device.Index;
-    public int CudaDeviceId => Snapshot.Device.Index;
-    public string OpenVinoDevice => Snapshot.Device.ProviderDevice;
-    public bool EnableCache => Snapshot.EnableModelCache;
-    public bool CpuOcr => Snapshot.CpuOcr;
-    public bool OpenVinoCache => Snapshot.EnableModelCache;
+    public ProviderType[] ProviderTypes => (ProviderType[])_providerTypes.Clone();
+    public int DmlDeviceId => Runtime.Device.Index;
+    public int CudaDeviceId => Runtime.Device.Index;
+    public string OpenVinoDevice => Runtime.Device.ProviderDevice;
+    public bool EnableCache => Runtime.EnableModelCache;
+    public bool CpuOcr => Runtime.CpuOcr;
+    public bool OpenVinoCache => Runtime.EnableModelCache;
 
 
     /// <summary>
@@ -111,18 +112,13 @@ public class BgiOnnxFactory
     /// </summary>
     /// <param name="model">模型</param>
     /// <returns>BgiYoloPredictor</returns>
-    public BgiYoloPredictor CreateYoloPredictor(BgiOnnxModel model, string? profilingPrefix = null)
+    public BgiYoloPredictor CreateYoloPredictor(BgiOnnxModel model)
     {
         // 延后验证只影响后续新建会话，不修改或释放已经运行中的会话。
-        if (_runtime != null) return new BgiOnnxFactory(_logger, Snapshot).CreateYoloPredictor(model, profilingPrefix);
         // logger.LogDebug("[Yolo]创建yolo预测器，模型: {ModelName}", model.Name);
         var options = CreateSessionOptions(model, EnableCache);
         try
         {
-            if (profilingPrefix != null)
-            {
-                ConfigureProfiling(options, profilingPrefix);
-            }
             // 延迟创建会话，配置的所有权转交给预测器。
             return new BgiYoloPredictor(model, model.ModalPath, options);
         }
@@ -141,25 +137,12 @@ public class BgiOnnxFactory
     /// <returns>InferenceSession</returns>
     public InferenceSession CreateInferenceSession(BgiOnnxModel model, bool ocr = false)
     {
-        if (_runtime != null) return new BgiOnnxFactory(_logger, Snapshot).CreateInferenceSession(model, ocr);
         _logger.LogDebug("[ONNX]创建推理会话，模型: {ModelName}", model.Name);
         ProviderType[]? providerTypes = null;
         if (CpuOcr && ocr) providerTypes = [ProviderType.Cpu];
 
         using var options = CreateSessionOptions(model, EnableCache, providerTypes);
-        if (_profilingDirectory != null)
-        {
-            ConfigureProfiling(options, Path.Combine(_profilingDirectory, model.Name));
-        }
         return new InferenceSession(model.ModalPath, options);
-    }
-
-    /// <summary>启用 ONNX Runtime 性能记录，并将文件写入指定前缀。</summary>
-    internal static void ConfigureProfiling(SessionOptions options, string profileOutputPathPrefix)
-    {
-        // EnableProfiling 的 setter 会立即把当时的 ProfileOutputPathPrefix 传给原生 ORT，顺序不能交换。
-        options.ProfileOutputPathPrefix = profileOutputPathPrefix;
-        options.EnableProfiling = true;
     }
 
     /// <summary>
@@ -173,7 +156,7 @@ public class BgiOnnxFactory
         var providers = forcedProvider ?? ProviderTypes;
         if (!providers.Contains(ProviderType.TensorRt) && !providers.Contains(ProviderType.OpenVino)) return null;
         // 判断文件是否存在：这里只缓存目录，原始模型始终保持不变，不加载旧 _ctx.onnx。
-        return _cachedModelPaths.GetOrAdd(model, _ => Snapshot.GetCachePath(model));
+        return _cachedModelPaths.GetOrAdd(model, _ => Runtime.GetCachePath(model));
     }
 
     /// <summary>
@@ -249,8 +232,8 @@ public class BgiOnnxFactory
         var isPaddleOcr = model.Name.StartsWith("PpOcrDet", StringComparison.Ordinal)
                           || model.Name.StartsWith("PpOcrRec", StringComparison.Ordinal);
         // “ONNX Runtime 自动调度”需要跳过通用 CPU 线程数；新建 SessionOptions 的 0 即 ORT 原生默认值。
-        if (!cpuOnly || !isPaddleOcr || Snapshot.PaddleOcrCpu.Mode != PaddleOcrCpuMode.RuntimeAuto)
-            sessionOptions.IntraOpNumThreads = Snapshot.CpuThreads;
+        if (!cpuOnly || !isPaddleOcr || Runtime.PaddleOcrCpu.Mode != PaddleOcrCpuMode.RuntimeAuto)
+            sessionOptions.IntraOpNumThreads = Runtime.CpuThreads;
         ConfigurePaddleOcrCpu(sessionOptions, model, cpuOnly);
     }
 
@@ -260,12 +243,12 @@ public class BgiOnnxFactory
         if (!cpuOnly) return;
         var detection = model.Name.StartsWith("PpOcrDet", StringComparison.Ordinal);
         if (!detection && !model.Name.StartsWith("PpOcrRec", StringComparison.Ordinal)) return;
-        if (Snapshot.PaddleOcrCpu.Mode == PaddleOcrCpuMode.RuntimeAuto)
+        if (Runtime.PaddleOcrCpu.Mode == PaddleOcrCpuMode.RuntimeAuto)
         {
             _logger.LogInformation("[ONNX]OCR CPU 线程策略，模型 {Model}，使用 ONNX Runtime 自动调度", model.Name);
             return;
         }
-        var options = Snapshot.PaddleOcrCpu.Resolve(detection);
+        var options = Runtime.PaddleOcrCpu.Resolve(detection);
         if (options == null) return;
         sessionOptions.IntraOpNumThreads = options.IntraOpThreads;
         sessionOptions.InterOpNumThreads = options.InterOpThreads;

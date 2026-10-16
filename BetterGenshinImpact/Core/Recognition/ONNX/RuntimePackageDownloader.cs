@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.Core.Recognition.ONNX;
 
-/// <summary>可恢复的下载与解压。所有文件先校验、写入暂存目录，调用方负责原子提交安装。</summary>
+/// <summary>可恢复的下载与解压。所有文件先校验、写入暂存目录，调用方负责可回滚地提交安装。</summary>
 public sealed class RuntimePackageDownloader(HttpClient client)
 {
     public async Task<string> DownloadAsync(RuntimeDownloadPackage package, string cacheDirectory,

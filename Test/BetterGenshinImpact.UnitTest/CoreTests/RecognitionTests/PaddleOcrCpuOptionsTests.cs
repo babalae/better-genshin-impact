@@ -12,8 +12,8 @@ public sealed class PaddleOcrCpuOptionsTests
     [InlineData(true, ExecutionMode.ORT_PARALLEL, 0)]
     public void CustomOptions_AreAppliedToAllPaddleModels(bool parallel, ExecutionMode mode, int interOp)
     {
-        var factory = new BgiOnnxFactory(NullLogger<BgiOnnxFactory>.Instance,
-            InferenceRuntimeSnapshot.CpuDefault() with
+        var factory = new BgiOnnxSessionFactory(NullLogger<BgiOnnxFactory>.Instance,
+            ResolvedInferenceRuntime.Cpu() with
             {
                 PaddleOcrCpu = new()
                 {

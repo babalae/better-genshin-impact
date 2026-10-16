@@ -122,7 +122,7 @@ public sealed class InferenceRuntimeServiceTests
     {
         public IReadOnlyList<InferenceDeviceInfo> GetDevices(InferenceDeviceType engine, string directory) =>
             engine == InferenceDeviceType.Cpu
-                ? [InferenceRuntimeSnapshot.CpuDefault().Device]
+                ? [ResolvedInferenceRuntime.CpuDevice]
                 : [new("GPU-test", "测试显卡", 0, "0")];
     }
 
@@ -130,23 +130,21 @@ public sealed class InferenceRuntimeServiceTests
     {
         public bool HasDomainTreeImage => true;
         public int Calls { get; private set; }
-        public Func<BgiOnnxFactory, CancellationToken, Task> Validation { get; set; } = (_, _) => Task.CompletedTask;
+        public Func<BgiOnnxSessionFactory, CancellationToken, Task> Validation { get; set; } = (_, _) => Task.CompletedTask;
         public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public async Task<InferenceValidationResult> ValidateTreeAsync(BgiOnnxFactory factory, CancellationToken token)
+        public async Task ValidateTreeAsync(BgiOnnxSessionFactory factory, CancellationToken token)
         {
             Calls++;
             Started.TrySetResult();
             await Validation(factory, token);
-            return InferenceValidationResult.Passed("古树检测");
         }
 
-        public Task<InferenceValidationResult> ValidateOcrAsync(BgiOnnxFactory factory, CancellationToken token) =>
-            Task.FromResult(InferenceValidationResult.Passed("OCR"));
+        public Task ValidateOcrAsync(BgiOnnxSessionFactory factory, CancellationToken token) => Task.CompletedTask;
 
         public Task PreheatOcrAsync() => Task.CompletedTask;
 
-        public Task<InferenceBenchmarkResult> BenchmarkAsync(InferenceBenchmarkScene scene, BgiOnnxFactory factory,
+        public Task<InferenceBenchmarkResult> BenchmarkAsync(InferenceBenchmarkScene scene, BgiOnnxSessionFactory factory,
             IProgress<InferenceBenchmarkProgress>? progress, CancellationToken token) => throw new NotSupportedException();
     }
 

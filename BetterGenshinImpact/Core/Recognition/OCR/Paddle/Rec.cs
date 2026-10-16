@@ -16,7 +16,7 @@ public class Rec(
     BgiOnnxModel model,
     IReadOnlyList<string> labels,
     OcrVersionConfig config,
-    BgiOnnxFactory bgiOnnxFactory)
+    BgiOnnxSessionFactory bgiOnnxFactory)
     : IDisposable
 {
     private readonly object _sessionLock = new();

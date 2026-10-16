@@ -88,9 +88,8 @@ public sealed class OnnxRuntimeInstaller : IOnnxRuntimeInstaller, IDisposable
         var root = OnnxRuntimePackageCatalog.EngineDirectory(PluginsDirectory, engine);
         // 临时目录只用于保证下载和解压完整，安装后仍只有引擎的固定目录。
         var staging = Path.Combine(PluginsDirectory, $".{engine}.staging-{Guid.NewGuid():N}");
+        var backup = Path.Combine(PluginsDirectory, $".{engine}.backup-{Guid.NewGuid():N}");
         var completedArchives = new List<string>();
-        var commitStarted = false;
-        var commitCompleted = false;
         try
         {
             Directory.CreateDirectory(PluginsDirectory);
@@ -124,11 +123,9 @@ public sealed class OnnxRuntimeInstaller : IOnnxRuntimeInstaller, IDisposable
                 if (!File.Exists(Path.Combine(staging, file))) throw new InvalidDataException($"安装包缺少 {file}。");
             token.ThrowIfCancellationRequested();
 
-            // 固定目录内不保留历史版本。完整校验后直接清理并覆盖；若文件被当前进程加载，由 IO 异常提示用户重启后重试。
-            commitStarted = true;
-            DeleteRuntimeDirectory(root);
-            Directory.Move(staging, root);
-            commitCompleted = true;
+            // 最终目录名保持不变。先把旧目录改名为备份，再提交暂存目录；提交失败时恢复旧目录。
+            // 若文件被当前进程加载，由 IO 异常提示用户重启后重试。
+            CommitRuntimeDirectory(staging, root, backup);
             // 完整安装后再清理完整包；取消或失败时保留缓存供重试、续传。
             foreach (var archive in completedArchives) TryDeleteDownload(archive);
             TryRemoveEmptyDownloadDirectory();
@@ -143,17 +140,11 @@ public sealed class OnnxRuntimeInstaller : IOnnxRuntimeInstaller, IDisposable
         }
         finally
         {
-            // 只删除本次安装的暂存目录；已开始覆盖但失败时，同时尽量删除可能不完整的固定目录。
+            // 只删除本次安装的暂存目录。回滚失败时保留备份目录，避免再次破坏可恢复内容。
             try
             {
                 if (Directory.Exists(staging) && IsDirectChildOf(staging, PluginsDirectory))
                     Directory.Delete(staging, true);
-                if (commitStarted && !commitCompleted)
-                {
-                    try { DeleteRuntimeDirectory(root); }
-                    catch (IOException) { /* 占用中的旧 DLL 无法强制删除，保留原始安装异常。 */ }
-                    catch (UnauthorizedAccessException) { /* 保留原始安装异常。 */ }
-                }
             }
             finally { _installationLock.Release(); }
         }
@@ -168,7 +159,7 @@ public sealed class OnnxRuntimeInstaller : IOnnxRuntimeInstaller, IDisposable
             foreach (var engine in Enum.GetValues<InferenceDeviceType>().Where(engine => engine != InferenceDeviceType.Cpu))
             {
                 linked.Token.ThrowIfCancellationRequested();
-                CleanupAbandonedStagingDirectories(engine);
+                CleanupAbandonedInstallationDirectories(engine);
             }
 
             var cache = Path.Combine(PluginsDirectory, ".downloads");
@@ -194,7 +185,7 @@ public sealed class OnnxRuntimeInstaller : IOnnxRuntimeInstaller, IDisposable
         finally { _installationLock.Release(); }
     }
 
-    private void CleanupAbandonedStagingDirectories(InferenceDeviceType engine)
+    private void CleanupAbandonedInstallationDirectories(InferenceDeviceType engine)
     {
         if (!Directory.Exists(PluginsDirectory)) return;
         foreach (var directory in Directory.EnumerateDirectories(PluginsDirectory, $".{engine}.staging-*"))
@@ -203,11 +194,49 @@ public sealed class OnnxRuntimeInstaller : IOnnxRuntimeInstaller, IDisposable
             catch (IOException) { /* 清理失败不能影响当前安装。 */ }
             catch (UnauthorizedAccessException) { /* 清理失败不能影响当前安装。 */ }
         }
+        // 固定目录存在时，备份已经不再承担回滚职责；无法删除则留待下次刷新。
+        var root = OnnxRuntimePackageCatalog.EngineDirectory(PluginsDirectory, engine);
+        if (!Directory.Exists(root)) return;
+        foreach (var directory in Directory.EnumerateDirectories(PluginsDirectory, $".{engine}.backup-*"))
+        {
+            try { if (IsDirectChildOf(directory, PluginsDirectory)) Directory.Delete(directory, true); }
+            catch (IOException) { /* 清理失败不能影响当前安装。 */ }
+            catch (UnauthorizedAccessException) { /* 清理失败不能影响当前安装。 */ }
+        }
     }
 
-    private static void DeleteRuntimeDirectory(string directory)
+    private static void CommitRuntimeDirectory(string staging, string root, string backup)
     {
-        if (Directory.Exists(directory)) Directory.Delete(directory, true);
+        var originalMoved = false;
+        try
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Move(root, backup);
+                originalMoved = true;
+            }
+            Directory.Move(staging, root);
+        }
+        catch (Exception commitError) when (commitError is IOException or UnauthorizedAccessException)
+        {
+            if (!originalMoved) throw;
+            try
+            {
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+                if (Directory.Exists(backup)) Directory.Move(backup, root);
+            }
+            catch (Exception rollbackError) when (rollbackError is IOException or UnauthorizedAccessException)
+            {
+                throw new IOException($"运行库提交和回滚均失败，旧运行库备份保留在：{backup}",
+                    new AggregateException(commitError, rollbackError));
+            }
+            throw;
+        }
+
+        if (!originalMoved) return;
+        try { Directory.Delete(backup, true); }
+        catch (IOException) { /* 旧运行库可能仍被其他进程占用，留待下次刷新清理。 */ }
+        catch (UnauthorizedAccessException) { /* 新目录已经提交，备份留待下次刷新清理。 */ }
     }
 
     private static bool IsDirectChildOf(string path, string parent)
