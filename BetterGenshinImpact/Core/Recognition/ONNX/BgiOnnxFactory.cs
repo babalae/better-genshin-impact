@@ -4,93 +4,72 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
-using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.GameTask;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
-using Microsoft.Win32;
-using Vanara;
 
 namespace BetterGenshinImpact.Core.Recognition.ONNX;
 
-public class BgiOnnxFactory
+/// <summary>从当前已解析运行时创建会话。每次调用只读取一次 Current，已有会话不会受后续回退影响。</summary>
+public sealed class BgiOnnxFactory(ILogger<BgiOnnxFactory> logger, InferenceRuntimeService runtime)
 {
-    private readonly ILogger _logger;
+    internal BgiOnnxSessionFactory ForCurrentRuntime() => new(logger, runtime.Current);
+
+    internal BgiOnnxSessionFactory ForRuntime(ResolvedInferenceRuntime resolvedRuntime) => new(logger, resolvedRuntime);
+
+    public BgiYoloPredictor CreateYoloPredictor(BgiOnnxModel model)
+        => ForCurrentRuntime().CreateYoloPredictor(model);
+
+    public InferenceSession CreateInferenceSession(BgiOnnxModel model, bool ocr = false)
+        => ForCurrentRuntime().CreateInferenceSession(model, ocr);
+
+    /// <summary>为明确不参与硬件加速选择的模型创建纯 CPU 会话。</summary>
+    public static InferenceSession CreateCpuOnlyInferenceSession(BgiOnnxModel model,
+        Action<SessionOptions>? configure = null)
+    {
+        using var options = new SessionOptions();
+        configure?.Invoke(options);
+        options.AppendExecutionProvider_CPU();
+        return new InferenceSession(model.ModalPath, options);
+    }
+}
+
+/// <summary>绑定单个已解析运行时的会话工厂。</summary>
+public sealed class BgiOnnxSessionFactory
+{
+    private readonly ILogger<BgiOnnxFactory> _logger;
+    private readonly ProviderType[] _providerTypes;
+    private readonly ResolvedInferenceRuntime _runtime;
 
     /// <summary>
-    ///     缓存模型路径。如果一开始使用缓存就一直使用缓存文件，如果没有使用缓存就一直使用原始模型路径。
+    ///     缓存模型路径对应的目录；会话始终加载原始模型，不再使用嵌入缓存文件。
     ///     <br />
-    ///     这样能避免并发加载模型问题。比如使用了未完全构建好的缓存文件，导致模型加载失败。
+    ///     这样能避免并发加载模型问题。普通缓存目录按模型内容、设备与设置隔离。
     /// </summary>
     private readonly ConcurrentDictionary<BgiOnnxModel, string?> _cachedModelPaths = new();
 
 
-    /// <summary>
-    /// 请勿直接实例化此类
-    /// </summary>
-    /// <param name="logger"></param>
-    public BgiOnnxFactory(ILogger<BgiOnnxFactory> logger)
+    internal BgiOnnxSessionFactory(ILogger<BgiOnnxFactory> logger, ResolvedInferenceRuntime runtime)
     {
         _logger = logger;
-
-        var config = GetConfig();
-        if (config.AutoAppendCudaPath) AppendCudaPath();
-
-        if (string.IsNullOrWhiteSpace(config.AdditionalPath))
-            AppendPath(config.AdditionalPath.Split(Path.PathSeparator));
-
-
-        OptimizedModel = config.OptimizedModel;
-        CudaDeviceId = config.CudaDevice;
-        DmlDeviceId = config.GpuDevice;
-        TrtUseEmbedMode = config.EmbedTensorRtCache;
-        EnableCache = config.EnableTensorRtCache;
-        CpuOcr = config.CpuOcr;
-        OpenVinoDevice = config.OpenVinoDevice;
-        OpenVinoCache = config.EnableOpenVinoCache;
-        ProviderTypes = GetProviderType(config.InferenceDevice);
-        _logger.LogDebug(
-            "[ONNX]启用的provider:{Device},初始化参数: InferenceDevice={InferenceDevice}, OptimizedModel={OptimizedModel}, CudaDeviceId={CudaDeviceId}, DmlDeviceId={DmlDeviceId}, EmbedTensorRtCache={EmbedTensorRtCache}, EnableTensorRtCache={EnableTensorRtCache}, CpuOcr={CpuOcr}",
-            string.Join(",", ProviderTypes.Select<ProviderType, string>(Enum.GetName!)),
-            config.InferenceDevice,
-            OptimizedModel,
-            CudaDeviceId,
-            DmlDeviceId,
-            TrtUseEmbedMode,
-            EnableCache,
-            CpuOcr);
+        _runtime = runtime;
+        _providerTypes = GetProviderType(runtime.Engine);
+        _logger.LogInformation("[ONNX]当前引擎 {Engine}，设备 {Device}，OCR 强制 CPU：{CpuOcr}",
+            runtime.Engine, runtime.Device.Name, runtime.CpuOcr);
     }
 
-    /// <summary>
-    /// 获取 硬件加速配置
-    /// 为了单元测试
-    /// </summary>
-    /// <returns></returns>
-    private HardwareAccelerationConfig GetConfig()
-    {
-        try
-        {
-            // 直接使用配置
-            return TaskContext.Instance().Config.HardwareAccelerationConfig;
-        }
-        catch (Exception e)
-        {
-            // 如果配置获取失败，使用默认配置
-            _logger.LogWarning(e, "获取硬件加速配置失败，使用默认配置");
-            return new HardwareAccelerationConfig();
-        }
-    }
+    public ResolvedInferenceRuntime Runtime => _runtime;
 
-    public ProviderType[] ProviderTypes { get; }
-    public int DmlDeviceId { get; }
-    public int CudaDeviceId { get; }
-    public bool OptimizedModel { get; }
-    public bool TrtUseEmbedMode { get; }
-    public string OpenVinoDevice { get; }
-    public bool EnableCache { get; }
-    public bool CpuOcr { get; }
-    public bool OpenVinoCache { get; }
+    // OCR 验证使用独立会话，必须实际加载所选 provider；不改变业务 OCR 的 CPU 设置。
+    internal BgiOnnxSessionFactory ForOcrValidation()
+        => new(_logger, Runtime with { CpuOcr = false });
+
+    public ProviderType[] ProviderTypes => (ProviderType[])_providerTypes.Clone();
+    public int DmlDeviceId => Runtime.Device.Index;
+    public int CudaDeviceId => Runtime.Device.Index;
+    public string OpenVinoDevice => Runtime.Device.ProviderDevice;
+    public bool EnableCache => Runtime.EnableModelCache;
+    public bool CpuOcr => Runtime.CpuOcr;
+    public bool OpenVinoCache => Runtime.EnableModelCache;
 
 
     /// <summary>
@@ -98,201 +77,34 @@ public class BgiOnnxFactory
     /// </summary>
     /// <param name="inferenceDeviceType">InferenceDeviceType</param>
     /// <returns></returns>
-    /// <exception cref="InvalidEnumArgumentException"></exception>
+    /// <remarks>历史上的自动 GPU 选项已移除，无法识别的设置回退到 CPU。</remarks>
     private ProviderType[] GetProviderType(InferenceDeviceType inferenceDeviceType)
     {
+        // 无论如何都要加入 CPU，一些计算在纯 GPU 上不被支持或性能很差。
         switch (inferenceDeviceType)
         {
             case InferenceDeviceType.Cpu:
                 return [ProviderType.Cpu];
-            case InferenceDeviceType.GpuDirectMl:
+            case InferenceDeviceType.DirectML:
                 //只用dml不加cpu的话在很多场景下性能很差。
+                // DirectML 的性能和稳定性取决于模型与设备，现在由用户独立选择，不与 TensorRT、CUDA 自动比较。
                 return [ProviderType.Dml, ProviderType.Cpu];
-            case InferenceDeviceType.Gpu:
-            {
-                List<ProviderType> list = [];
-                SessionOptions? testSession = null;
-                var hasGpu = false;
-                if (!hasGpu && CudaDeviceId >= 0)
-                    // tensorrt本身包含cuda，设备id也是cuda的id，且比纯cuda效果好很多。
-                    try
-                    {
-                        testSession = SessionOptions.MakeSessionOptionWithTensorrtProvider(CudaDeviceId);
-                        list.Add(ProviderType.TensorRt);
-                        hasGpu = true;
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogDebug("[init]无法加载TensorRt。可能不支持，跳过。({Err})", e.Message);
-                    }
-                    finally
-                    {
-                        testSession?.Dispose();
-                    }
-
-                if (!hasGpu && DmlDeviceId >= 0)
-                    // dml效果不如tensorrt，但是比纯cuda稳定性强
-                    try
-                    {
-                        testSession = new SessionOptions();
-                        testSession.AppendExecutionProvider_DML(DmlDeviceId);
-                        list.Add(ProviderType.Dml);
-                        hasGpu = true;
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogDebug("[init]无法加载DML。可能不支持，跳过。({Err})", e.Message);
-                    }
-                    finally
-                    {
-                        testSession?.Dispose();
-                    }
-
-                if (!hasGpu && CudaDeviceId >= 0)
-                    // cuda优先级比较低，因为跑起来并不太理想。
-                    try
-                    {
-                        testSession = SessionOptions.MakeSessionOptionWithCudaProvider(CudaDeviceId);
-                        list.Add(ProviderType.Cuda);
-                        hasGpu = true;
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogDebug("[init]无法加载Cuda。可能不支持，跳过。({Err})", e.Message);
-                    }
-                    finally
-                    {
-                        testSession?.Dispose();
-                    }
-
-                if (!hasGpu) _logger.LogWarning("[init]GPU自动选择失败，回退到CPU处理");
-
-                //无论如何都要加入cpu，一些计算在纯gpu上不被支持或性能很烂
-                list.Add(ProviderType.Cpu);
-                return list.ToArray();
-            }
-
-            case InferenceDeviceType.OpenVino:
-            {
-                List<ProviderType> list = [];
-                SessionOptions? testSession = null;
+            case InferenceDeviceType.OpenVINO:
                 // OpenVino是英特尔的OpenVINO执行提供程序
                 // 目前来看比Dml强
-                try
-                {
-                    testSession = new SessionOptions();
-                    testSession.AppendExecutionProvider("OpenVINO", GetOpenVinoProviderConfig(null));
-                    testSession.GraphOptimizationLevel = GraphOptimizationLevel.ORT_DISABLE_ALL;
-                    list.Add(ProviderType.OpenVino);
-                }
-                catch (Exception e)
-                {
-                    _logger.LogDebug("[init]无法加载OpenVino。可能不支持，跳过。({Err})", e.Message);
-                }
-                finally
-                {
-                    testSession?.Dispose();
-                }
-
-                list.Add(ProviderType.Cpu);
-                return list.ToArray();
-            }
+                // provider 注册统一在 CreateSessionOptions 中完成，避免重复创建原生选项探测。
+                return [ProviderType.OpenVino, ProviderType.Cpu];
+            case InferenceDeviceType.CUDA:
+                // CUDA 的效果依赖具体模型，不再受旧自动选择策略中的低优先级限制。
+                return [ProviderType.Cuda, ProviderType.Cpu];
+            case InferenceDeviceType.TensorRT:
+                // TensorRT 使用配置的设备编号，性能收益需要按模型和设备判断。
+                // TensorRT 独立注册，未接管的算子由 CPU 兜底。
+                return [ProviderType.TensorRt, ProviderType.Cpu];
             default:
-                throw new InvalidEnumArgumentException("无效的推理设备");
+                _logger.LogWarning("[ONNX]无法识别推理设备设置 {Device}，回退到 CPU", inferenceDeviceType);
+                return [ProviderType.Cpu];
         }
-    }
-
-    /// <summary>
-    ///     自动嗅探并修改path以加载cuda
-    /// </summary>
-    private void AppendCudaPath()
-    {
-        var cudaVersion =
-            Registry.GetValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\GPU Computing Toolkit\CUDA",
-                "FirstVersionInstalled", null)?.ToString() ?? "v12.8";
-        string[] filePrefix = ["cudnn", "nvrtc", "cudart", "nvinfer", "cublas", "onnx"];
-        string[] environmentVariableNames = ["PATH", "CUDA_PATH", "CUDNN_PATH", "LD_LIBRARY_PATH"];
-
-        // 例如: CUDNN\v9.8\lib\12.8\x64
-        var validPaths = environmentVariableNames.SelectMany(s => Environment
-                // 获取所有可能包含CUDA/cuDNN路径的环境变量
-                .GetEnvironmentVariable(s, EnvironmentVariableTarget.Process)?
-                .Split(Path.PathSeparator) ?? []).Distinct()
-            // 环境变量下层文件夹
-            .SelectMany<string, string>(s =>
-                // lib路径
-                [s, Path.Combine(s, cudaVersion), Path.Combine(s, "bin"), Path.Combine(s, "lib")])
-            .SelectMany<string, string>(
-                // cuda的版本
-                s => cudaVersion.StartsWith("v", StringComparison.InvariantCultureIgnoreCase)
-                    ? [s, Path.Combine(s, cudaVersion), Path.Combine(s, cudaVersion[1..])]
-                    : [s, Path.Combine(s, cudaVersion)])
-            .SelectMany<string, string>(s =>
-            {
-                // 体系架构 
-                var architecture = Enum.GetName(RuntimeInformation.ProcessArchitecture);
-                if (architecture is null) return [s];
-
-                return
-                [
-                    s, Path.Combine(s, architecture), Path.Combine(s, architecture.ToLowerInvariant()),
-                    Path.Combine(s, architecture.ToUpperInvariant())
-                ];
-            })
-            .Where(basePath => !string.IsNullOrWhiteSpace(basePath))
-            //构建完了需要搜索的路径，去重。
-            .Distinct()
-
-            //确定路径是否真的存在
-            .Where(d =>
-            {
-                try
-                {
-                    return Directory.Exists(d);
-                }
-                catch (Exception)
-                {
-                    return false;
-                }
-            })
-            .SelectMany(s =>
-                //确定需要的文件是否存在
-                filePrefix.SelectMany(se =>
-                {
-                    try
-                    {
-                        return Directory.GetFiles(s, $"{se}*.dll").Select(Path.GetDirectoryName).WhereNotNull();
-                    }
-                    catch (Exception)
-                    {
-                        return [];
-                    }
-                }))
-            //去重
-            .Distinct();
-        AppendPath(validPaths.ToArray());
-    }
-
-    /// <summary>
-    ///     将附加的path应用进来
-    /// </summary>
-    /// <param name="extraPath">附加的path字符串</param>
-    private void AppendPath(string[] extraPath)
-    {
-        if (extraPath.Length <= 0) return;
-
-        var pathVariables = Environment.GetEnvironmentVariable("PATH", EnvironmentVariableTarget.Process)
-            ?.Split(Path.PathSeparator).ToList() ?? new List<string>();
-        pathVariables.AddRange(extraPath);
-        if (pathVariables.Count <= 0)
-        {
-            _logger.LogWarning("[GpuAuto]SetCudaPath:No valid paths found.");
-            return;
-        }
-
-        var updatedPath = string.Join(Path.PathSeparator, pathVariables.Distinct());
-        _logger.LogDebug("[GpuAuto]修改进程PATH为:{UpdatedPath}", updatedPath);
-        Environment.SetEnvironmentVariable("PATH", updatedPath, EnvironmentVariableTarget.Process);
     }
 
     /// <summary>
@@ -302,13 +114,13 @@ public class BgiOnnxFactory
     /// <returns>BgiYoloPredictor</returns>
     public BgiYoloPredictor CreateYoloPredictor(BgiOnnxModel model)
     {
+        // 延后验证只影响后续新建会话，不修改或释放已经运行中的会话。
         // logger.LogDebug("[Yolo]创建yolo预测器，模型: {ModelName}", model.Name);
-        var cached = EnableCache ? GetCached(model) : null;
-        var options = CreateSessionOptions(model, EnableCache && cached == null);
+        var options = CreateSessionOptions(model, EnableCache);
         try
         {
             // 延迟创建会话，配置的所有权转交给预测器。
-            return new BgiYoloPredictor(model, cached ?? model.ModalPath, options);
+            return new BgiYoloPredictor(model, model.ModalPath, options);
         }
         catch
         {
@@ -329,65 +141,30 @@ public class BgiOnnxFactory
         ProviderType[]? providerTypes = null;
         if (CpuOcr && ocr) providerTypes = [ProviderType.Cpu];
 
-        var cached = EnableCache ? GetCached(model, providerTypes) : null;
-        using var options = CreateSessionOptions(model, EnableCache && cached == null, providerTypes);
-        return new InferenceSession(cached ?? model.ModalPath, options);
+        using var options = CreateSessionOptions(model, EnableCache, providerTypes);
+        return new InferenceSession(model.ModalPath, options);
     }
 
     /// <summary>
-    ///     获取带有缓存的模型(目前只支持TensorRT)
+    ///     获取普通缓存目录（TensorRT / OpenVINO）
     /// </summary>
     /// <param name="model">模型</param>
     /// <param name="forcedProvider">强制使用的 providerTypes</param>
-    /// <returns>带有缓存的模型绝对路径，null表示尚未创建缓存</returns>
+    /// <returns>缓存目录绝对路径，null 表示当前 provider 不需要缓存</returns>
     private string? GetCached(BgiOnnxModel model, ProviderType[]? forcedProvider = null)
     {
-        var providerTypes = forcedProvider ?? ProviderTypes;
-        // 目前只支持TensorRT
-        if (!providerTypes.Contains(ProviderType.TensorRt)) return null;
-        var result = _cachedModelPaths.GetOrAdd(model, _GetCached);
-        if (result is null) return result;
-
-        // 判断文件是否存在
-        if (File.Exists(result)) return result;
-
-        _logger.LogWarning("[ONNX]模型 {Model} 的缓存文件可能已被删除，使用原始模型文件。", model.Name);
-        return null;
+        var providers = forcedProvider ?? ProviderTypes;
+        if (!providers.Contains(ProviderType.TensorRt) && !providers.Contains(ProviderType.OpenVino)) return null;
+        // 判断文件是否存在：这里只缓存目录，原始模型始终保持不变，不加载旧 _ctx.onnx。
+        return _cachedModelPaths.GetOrAdd(model, _ => Runtime.GetCachePath(model));
     }
-
-    private string? _GetCached(BgiOnnxModel model)
-    {
-        if (model.ModelRelativePath.StartsWith(BgiOnnxModel.ModelCacheRelativePath) &&
-            model.ModelRelativePath.EndsWith("_ctx.onnx"))
-            // 这已经是带有缓存的文件路径了
-            return model.ModalPath;
-
-        var ctxA = Path.Combine(model.CachePath, "trt", "_ctx.onnx");
-        if (File.Exists(ctxA))
-        {
-            _logger.LogDebug("[ONNX]模型 {Model} 命中TRT匿名缓存文件: {Path}", model.Name, ctxA);
-            return ctxA;
-        }
-
-        var ctxB = Path.Combine(model.CachePath, "trt",
-            Path.GetFileNameWithoutExtension(model.ModalPath) + "_ctx.onnx");
-        if (File.Exists(ctxB))
-        {
-            _logger.LogDebug("[ONNX]模型 {Model} 命中TRT命名缓存文件: {Path}", model.Name, ctxB);
-            return ctxB;
-        }
-
-        _logger.LogDebug("[ONNX]没有找到模型 {Model} 的模型缓存文件。", model.Name);
-        return null;
-    }
-
 
     /// <summary>
     ///     通过模型路径生成SessionOptions <br />
-    ///     如果加载的模型文件已经是带有缓存的模型，请将cacheFolder设为null避免重复生成。
+    ///     会话始终加载原始模型，缓存只用于加速原生 provider 的初始化。
     /// </summary>
     /// <param name="model">模型路径</param>
-    /// <param name="genCache">是否生成缓存。有几种情况下不生成缓存:1为用户主动关闭，即enableCache为false。2为即将加载的模型文件已经是带有缓存的模型文件。</param>
+    /// <param name="genCache">是否启用当前引擎的普通缓存。</param>
     /// <param name="forcedProvider">强制使用的Provider,为空或null则不强制</param>
     /// <returns></returns>
     /// <exception cref="InvalidEnumArgumentException"></exception>
@@ -395,76 +172,92 @@ public class BgiOnnxFactory
         ProviderType[]? forcedProvider = null)
     {
         var sessionOptions = new SessionOptions();
-        foreach (var type in
-                 forcedProvider is null || forcedProvider.Length == 0 ? ProviderTypes : forcedProvider)
-            try
+        try
+        {
+            var cache = genCache ? GetCached(model, forcedProvider) : null;
+            var providers = forcedProvider is { Length: > 0 } ? forcedProvider : ProviderTypes;
+            foreach (var type in providers)
             {
                 switch (type)
                 {
                     case ProviderType.Dml:
                         // DirectML 执行提供程序不支持在 onnxruntime 中使用内存模式优化或并行执行。在创建 InferenceSession 期间提供会话选项时，必须禁用这些选项，否则将返回错误。
-                        sessionOptions.AppendExecutionProvider_DML(DmlDeviceId);
                         sessionOptions.EnableMemoryPattern = false;
                         sessionOptions.ExecutionMode = ExecutionMode.ORT_SEQUENTIAL;
+                        sessionOptions.AppendExecutionProvider_DML(DmlDeviceId);
                         break;
                     case ProviderType.Cpu:
+                        ConfigureCpuSessionOptions(sessionOptions, model, providers.Length == 1);
                         sessionOptions.AppendExecutionProvider_CPU();
                         // if (model.Name.Contains("PpOcr") || model.Name.Contains("Yap"))
                         // {
                         //     sessionOptions.IntraOpNumThreads = 2;  // 限制算子内部并行线程数
-                        //     sessionOptions.InterOpNumThreads = 1;  // 限制算子间并行线程数（顺序执行）  
+                        //     sessionOptions.InterOpNumThreads = 1;  // 限制算子间并行线程数（顺序执行）
                         // }
                         break;
-                    case ProviderType.Dnnl:
-                        sessionOptions.AppendExecutionProvider_Dnnl();
-                        break;
                     case ProviderType.OpenVino:
-                        sessionOptions.AppendExecutionProvider("OpenVINO",
-                            GetOpenVinoProviderConfig(OpenVinoCache ? model.CachePath : null));
+                        sessionOptions.AppendExecutionProvider("OpenVINO", GetOpenVinoProviderConfig(cache));
                         sessionOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_DISABLE_ALL;
                         break;
                     case ProviderType.TensorRt:
                         using (var options = new OrtTensorRTProviderOptions())
                         {
-                            options.UpdateOptions(GetTrtProviderConfig(genCache ? model.CachePath : null));
+                            options.UpdateOptions(GetTrtProviderConfig(cache));
                             sessionOptions.AppendExecutionProvider_Tensorrt(options);
                         }
-
                         break;
                     case ProviderType.Cuda:
                         using (var options = new OrtCUDAProviderOptions())
                         {
                             options.UpdateOptions(GetCudaProviderConfig());
-                            sessionOptions.AppendExecutionProvider_CUDA();
+                            sessionOptions.AppendExecutionProvider_CUDA(options);
                         }
-
                         break;
                     default:
                         throw new InvalidEnumArgumentException("无效的推理设备");
                 }
             }
-            catch (Exception e)
-            {
-                _logger.LogError("无法加载指定的 ONNX provider {Provider}，跳过。请检查推理设备配置是否正确。({Err})", Enum.GetName(type),
-                    e.Message);
-            }
-
-        try
-        {
-            if (!OptimizedModel) return sessionOptions;
-            if (!genCache) return sessionOptions;
-            var optPath = Path.Combine(model.CachePath, "optimized");
-            if (!Directory.Exists(optPath)) Directory.CreateDirectory(optPath);
-            sessionOptions.OptimizedModelFilePath = Path.Combine(optPath, Path.GetFileName(model.ModalPath));
             return sessionOptions;
         }
         catch
         {
+            // 目标 provider 初始化失败必须向上报告，不能跳过后用 CPU 假装验证成功。
             sessionOptions.Dispose();
             throw;
         }
     }
 
+    internal void ConfigureCpuSessionOptions(SessionOptions sessionOptions, BgiOnnxModel model, bool cpuOnly)
+    {
+        var isPaddleOcr = model.Name.StartsWith("PpOcrDet", StringComparison.Ordinal)
+                          || model.Name.StartsWith("PpOcrRec", StringComparison.Ordinal);
+        // “ONNX Runtime 自动调度”需要跳过通用 CPU 线程数；新建 SessionOptions 的 0 即 ORT 原生默认值。
+        if (!cpuOnly || !isPaddleOcr || Runtime.PaddleOcrCpu.Mode != PaddleOcrCpuMode.RuntimeAuto)
+            sessionOptions.IntraOpNumThreads = Runtime.CpuThreads;
+        ConfigurePaddleOcrCpu(sessionOptions, model, cpuOnly);
+    }
+
+    /// <summary>只覆盖 PPOCR 纯 CPU 会话；GPU 会话的 CPU 兜底与其他模型仍使用全局设置。</summary>
+    internal void ConfigurePaddleOcrCpu(SessionOptions sessionOptions, BgiOnnxModel model, bool cpuOnly)
+    {
+        if (!cpuOnly) return;
+        var detection = model.Name.StartsWith("PpOcrDet", StringComparison.Ordinal);
+        if (!detection && !model.Name.StartsWith("PpOcrRec", StringComparison.Ordinal)) return;
+        if (Runtime.PaddleOcrCpu.Mode == PaddleOcrCpuMode.RuntimeAuto)
+        {
+            _logger.LogInformation("[ONNX]OCR CPU 线程策略，模型 {Model}，使用 ONNX Runtime 自动调度", model.Name);
+            return;
+        }
+        var options = Runtime.PaddleOcrCpu.Resolve(detection);
+        if (options == null) return;
+        sessionOptions.IntraOpNumThreads = options.IntraOpThreads;
+        sessionOptions.InterOpNumThreads = options.InterOpThreads;
+        sessionOptions.ExecutionMode = options.ParallelExecution ? ExecutionMode.ORT_PARALLEL : ExecutionMode.ORT_SEQUENTIAL;
+        sessionOptions.AddSessionConfigEntry("session.intra_op.allow_spinning", options.AllowSpinning ? "1" : "0");
+        sessionOptions.AddSessionConfigEntry("session.inter_op.allow_spinning", options.AllowSpinning ? "1" : "0");
+        _logger.LogInformation("[ONNX]OCR CPU 线程策略，模型 {Model}，算子内线程 {IntraOp}，算子间线程 {InterOp}，并行 {Parallel}，自旋 {Spinning}",
+            model.Name, options.IntraOpThreads, options.InterOpThreads, options.ParallelExecution, options.AllowSpinning);
+    }
 
     /// <summary>
     ///     获取TensorRT的配置
@@ -473,73 +266,22 @@ public class BgiOnnxFactory
     /// <returns>trt配置</returns>
     private Dictionary<string, string> GetTrtProviderConfig(string? cacheFolder)
     {
+        var result = new Dictionary<string, string> { ["device_id"] = CudaDeviceId.ToString() };
         if (cacheFolder is null)
         {
             // 不使用缓存目录
-            var r = new Dictionary<string, string>
-            {
-                ["device_id"] = CudaDeviceId.ToString()
-            };
-            return r;
+            return result;
         }
-
-        var result = new Dictionary<string, string>
-        {
-            ["trt_engine_cache_enable"] = "1",
-            ["trt_dump_ep_context_model"] = "1",
-            ["trt_ep_context_file_path"] = Path.Combine(cacheFolder, "trt"),
-            // ["trt_ep_context_embed_mode"] = "1", // 因为yoloSharp是把模型转为嵌入式运行，不这样会爆炸
-            // ["trt_engine_cache_path"] = ".\\" // 没必要了
-            ["trt_timing_cache_enable"] = "1",
-            ["trt_timing_cache_path"] =
-                Global.Absolute(Path.Combine(BgiOnnxModel.ModelCacheRelativePath, "trt_timing")),
-            // ["trt_force_timing_cache"] = "1",
-            ["device_id"] = CudaDeviceId.ToString()
-        };
-        if (TrtUseEmbedMode)
-        {
-            result["trt_ep_context_embed_mode"] = "1";
-        }
-        else
-        {
-            result["trt_ep_context_embed_mode"] = "0";
-            result["trt_engine_cache_path"] = ".\\";
-        }
-
-        if (!Directory.Exists(result["trt_ep_context_file_path"]))
-        {
-            // 如果不存在就创建目录
-            _logger.LogDebug("[ONNX]TensorRT上下文文件路径不存在，创建目录: {Path}", result["trt_ep_context_file_path"]);
-            try
-            {
-                Directory.CreateDirectory(result["trt_ep_context_file_path"]);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError("无法创建TensorRT上下文文件路径: {Path}，请检查权限。({Err})",
-                    result["trt_ep_context_file_path"], e.Message);
-                // 如果无法创建目录，就不使用缓存
-                result.Remove("trt_ep_context_file_path");
-            }
-        }
-
-        if (!Directory.Exists(result["trt_timing_cache_path"]))
-        {
-            // 如果不存在就创建目录
-            _logger.LogDebug("[ONNX]TensorRT计时缓存路径不存在，创建目录: {Path}", result["trt_timing_cache_path"]);
-            try
-            {
-                Directory.CreateDirectory(result["trt_timing_cache_path"]);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError("无法创建TensorRT计时缓存路径: {Path}，请检查权限。({Err})",
-                    result["trt_timing_cache_path"], e.Message);
-                // 如果无法创建目录，就不使用缓存
-                result.Remove("trt_timing_cache_path");
-            }
-        }
-
+        // 如果不存在就创建目录。使用普通 engine/timing 缓存，不导出或嵌入优化模型。
+        var engine = Path.Combine(cacheFolder, "trt");
+        var timing = Path.Combine(cacheFolder, "trt_timing");
+        Directory.CreateDirectory(engine);
+        Directory.CreateDirectory(timing);
+        result["trt_engine_cache_enable"] = "1";
+        result["trt_engine_cache_path"] = engine;
+        result["trt_timing_cache_enable"] = "1";
+        result["trt_timing_cache_path"] = timing;
+        // ["trt_force_timing_cache"] = "1", // 不跨设备强制复用 timing cache。
         return result;
     }
 
@@ -566,7 +308,7 @@ public class BgiOnnxFactory
         var result = new Dictionary<string, string>();
         if (!string.IsNullOrWhiteSpace(OpenVinoDevice))
         {
-            result["deice_type"] = OpenVinoDevice;
+            result["device_type"] = OpenVinoDevice;
         }
 
         if (!string.IsNullOrWhiteSpace(cacheFolder))
@@ -589,7 +331,26 @@ public class BgiOnnxFactory
             }
         }
 
-        result["enable_opencl_throttling"] = "true";
         return result;
     }
+
+    #region 历史路径探测说明（仅保留注释，依赖由独立安装目录管理）
+    // 获取 硬件加速配置
+    // 为了单元测试
+    // 直接使用配置
+    // 如果配置获取失败，使用默认配置
+    //     自动嗅探并修改path以加载cuda
+    // 例如: CUDNN\v9.8\lib\12.8\x64
+    // 获取所有可能包含CUDA/cuDNN路径的环境变量
+    // 环境变量下层文件夹
+    // lib路径
+    // cuda的版本
+    // 体系架构
+    //构建完了需要搜索的路径，去重。
+    //确定路径是否真的存在
+    //确定需要的文件是否存在
+    //去重
+    //     将附加的path应用进来
+    // <param name="extraPath">附加的path字符串</param>
+    #endregion
 }

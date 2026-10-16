@@ -34,6 +34,24 @@ namespace BetterGenshinImpact.GameTask
         private readonly IMaskWindowHost _maskWindowHost;
 
         private readonly System.Timers.Timer _timer = new();
+        private int _inferencePauseCount;
+
+        public IDisposable PauseForInference()
+        {
+            // Tick 持有此锁执行识别，获取锁后可确保上一帧已结束。
+            lock (_locker) _inferencePauseCount++;
+            return new InferencePauseLease(this);
+        }
+
+        private sealed class InferencePauseLease(TaskTriggerDispatcher owner) : IDisposable
+        {
+            private int _disposed;
+            public void Dispose()
+            {
+                if (Interlocked.Exchange(ref _disposed, 1) == 0)
+                    lock (_locker) owner._inferencePauseCount--;
+            }
+        }
 
         /// <summary>
         /// 脚本可以通过 AddTrigger 启用的触发器
@@ -289,6 +307,7 @@ namespace BetterGenshinImpact.GameTask
                     // 正在执行时跳过
                     return;
                 }
+                if (_inferencePauseCount > 0) return;
 
                 var runtime = _runtime;
                 if (runtime == null)

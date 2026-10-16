@@ -74,6 +74,18 @@ public class BgiOnnxModel
         Register("AvatarGridIcon", @"Assets\Model\AvatarGridIcon\avatar.onnx");
 
     /// <summary>
+    /// 物品网格图标识别模型，固定使用 CPU。
+    /// </summary>
+    public static readonly BgiOnnxModel GridIcon =
+        Register("GridIcon", @"Assets\Model\Item\gridIcon.onnx");
+
+    /// <summary>
+    /// 物品图标识别模型，固定使用 CPU。
+    /// </summary>
+    public static readonly BgiOnnxModel ItemIcon =
+        Register("ItemIcon", @"Assets\Model\ItemV2\item.onnx");
+
+    /// <summary>
     /// Silero 人声检测模型
     /// </summary>
     public static readonly BgiOnnxModel SileroVad =
