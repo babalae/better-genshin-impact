@@ -88,97 +88,169 @@ public static void GenerNextProjectInfo(
     TaskProgress taskProgress,
     List<ScriptGroup> scriptGroups)
 {
+    if (scriptGroups.Count == 0)
+    {
+        Logger.LogWarning("无法计算下一个任务：配置组列表为空");
+        return;
+    }
+
+    var orderedGroups = OrderGroupsByProgress(taskProgress, scriptGroups);
     var currentGroupIndex = 0;
-    var currentProjectIndex = -1;
-    /*if (taskProgress.LastSuccessScriptGroupProjectInfo == null)
-        return ;*/
 
-    if (taskProgress.LastScriptGroupName!=null)
+    if (!string.IsNullOrEmpty(taskProgress.LastScriptGroupName))
     {
-        currentGroupIndex = scriptGroups.FindIndex(g => g.Name == taskProgress.LastScriptGroupName);
+        currentGroupIndex = orderedGroups.FindIndex(g => g.Name == taskProgress.LastScriptGroupName);
         if (currentGroupIndex == -1)
-            return ;
-    }
-    
-    var currentGroup = scriptGroups[currentGroupIndex];
-    var isLastInGroup = false;
-    if (taskProgress.LastSuccessScriptGroupProjectInfo!=null)
-    {
-        
-        var currentProjectInfo = taskProgress.LastSuccessScriptGroupProjectInfo;
-
-        currentProjectIndex = currentGroup.Projects.ToList().FindIndex(p =>
-            p.Name == currentProjectInfo.Name &&
-            p.FolderName == currentProjectInfo.FolderName);
-
-        if (currentProjectIndex == -1)
-            return ;
-
-        isLastInGroup = currentProjectIndex == currentGroup.Projects.Count - 1;
-    }
-
-    //bool isIncomplete = currentProjectInfo.EndTime == null;
-
-    if (isLastInGroup)
-    {
-        // 向后查找下一个非空组
-        for (int i = currentGroupIndex + 1; i < scriptGroups.Count; i++)
         {
-            var group = scriptGroups[i];
-            if (group.Projects != null && group.Projects.Any())
+            Logger.LogWarning("无法计算下一个任务：找不到上次成功的配置组 {Group}", taskProgress.LastScriptGroupName);
+            currentGroupIndex = orderedGroups.FindIndex(g => g.Name == taskProgress.CurrentScriptGroupName);
+            if (currentGroupIndex == -1)
             {
-                var project = group.Projects.First();
-
-                taskProgress.Next=new TaskProgress.Progress
-                {
-                    GroupName = group.Name,
-                    Index = 0,
-                    ProjectName = project.Name,
-                    FolderName = project.FolderName
-                };
                 return;
             }
-        }
 
-        // 循环从开头查找直到当前组之前
-        if (taskProgress.Loop)
-        {
-            for (int i = 0; i < currentGroupIndex; i++)
-            {
-                var group = scriptGroups[i];
-                if (group.Projects != null && group.Projects.Any())
-                {
-                    var project = group.Projects.First();
-                    taskProgress.Next = new TaskProgress.Progress
-                    {
-                        GroupName = group.Name,
-                        Index = 0,
-                        ProjectName = project.Name,
-                        FolderName = project.FolderName
-                    };
-                    return;
-                }
-            }
+            TrySetNextProject(taskProgress, orderedGroups[currentGroupIndex], 0);
+            return;
         }
-
-        return ;
     }
-    else
+
+    var currentGroup = orderedGroups[currentGroupIndex];
+    var currentProjectIndex = -1;
+    if (taskProgress.LastSuccessScriptGroupProjectInfo != null)
     {
-        //取成功执行的下一个任务
-        currentProjectIndex++;
+        currentProjectIndex = FindProjectIndex(currentGroup, taskProgress.LastSuccessScriptGroupProjectInfo);
+        if (currentProjectIndex == -1)
+        {
+            Logger.LogWarning(
+                "配置组 {Group} 中找不到上次成功项目 {Name}（{Folder}，index={Index}），改从该组后续或下一组继续",
+                currentGroup.Name,
+                taskProgress.LastSuccessScriptGroupProjectInfo.Name,
+                taskProgress.LastSuccessScriptGroupProjectInfo.FolderName,
+                taskProgress.LastSuccessScriptGroupProjectInfo.Index);
+
+            var savedIndex = taskProgress.LastSuccessScriptGroupProjectInfo.Index;
+            currentProjectIndex = savedIndex >= 0 && savedIndex < currentGroup.Projects.Count
+                ? savedIndex
+                : currentGroup.Projects.Count - 1;
+        }
     }
 
+    if (currentProjectIndex >= currentGroup.Projects.Count - 1)
+    {
+        if (!TrySetNextFromFollowingGroup(taskProgress, orderedGroups, currentGroupIndex))
+        {
+            Logger.LogWarning("无法计算下一个任务：{Group} 已是最后一项且没有后续配置组", currentGroup.Name);
+        }
 
+        return;
+    }
 
-    // 返回当前项目
-    var currentProject = currentGroup.Projects[currentProjectIndex];
+    TrySetNextProject(taskProgress, currentGroup, currentProjectIndex + 1);
+}
+
+private static List<ScriptGroup> OrderGroupsByProgress(TaskProgress taskProgress, List<ScriptGroup> scriptGroups)
+{
+    if (taskProgress.ScriptGroupNames.Count == 0)
+    {
+        return scriptGroups;
+    }
+
+    var byName = scriptGroups
+        .Where(g => taskProgress.ScriptGroupNames.Contains(g.Name))
+        .ToDictionary(g => g.Name, StringComparer.Ordinal);
+    var ordered = new List<ScriptGroup>();
+    foreach (var name in taskProgress.ScriptGroupNames)
+    {
+        if (byName.TryGetValue(name, out var group))
+        {
+            ordered.Add(group);
+        }
+    }
+
+    return ordered.Count > 0 ? ordered : scriptGroups;
+}
+
+private static int FindProjectIndex(ScriptGroup group, TaskProgress.ScriptGroupProjectInfo projectInfo)
+{
+    var projects = group.Projects.ToList();
+    var exact = projects.FindIndex(p =>
+        p.Name == projectInfo.Name &&
+        p.FolderName == projectInfo.FolderName);
+    if (exact >= 0)
+    {
+        return exact;
+    }
+
+    var folderMatches = projects
+        .Select((p, i) => (p, i))
+        .Where(x => x.p.FolderName == projectInfo.FolderName)
+        .ToList();
+    if (folderMatches.Count == 1)
+    {
+        return folderMatches[0].i;
+    }
+
+    if (folderMatches.Count > 1)
+    {
+        var nameInFolder = folderMatches.FindIndex(x => x.p.Name == projectInfo.Name);
+        if (nameInFolder >= 0)
+        {
+            return folderMatches[nameInFolder].i;
+        }
+    }
+
+    if (projectInfo.Index >= 0 && projectInfo.Index < projects.Count)
+    {
+        return projectInfo.Index;
+    }
+
+    return -1;
+}
+
+private static bool TrySetNextFromFollowingGroup(
+    TaskProgress taskProgress,
+    List<ScriptGroup> scriptGroups,
+    int currentGroupIndex)
+{
+    for (var i = currentGroupIndex + 1; i < scriptGroups.Count; i++)
+    {
+        if (TrySetNextProject(taskProgress, scriptGroups[i], 0))
+        {
+            return true;
+        }
+    }
+
+    if (!taskProgress.Loop)
+    {
+        return false;
+    }
+
+    for (var i = 0; i < currentGroupIndex; i++)
+    {
+        if (TrySetNextProject(taskProgress, scriptGroups[i], 0))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+private static bool TrySetNextProject(TaskProgress taskProgress, ScriptGroup group, int projectIndex)
+{
+    if (group.Projects == null || projectIndex < 0 || projectIndex >= group.Projects.Count)
+    {
+        return false;
+    }
+
+    var project = group.Projects[projectIndex];
     taskProgress.Next = new TaskProgress.Progress
     {
-        GroupName = currentGroup.Name,
-        Index = currentProjectIndex,
-        ProjectName = currentProject.Name,
-        FolderName = currentProject.FolderName
+        GroupName = group.Name,
+        Index = projectIndex,
+        ProjectName = project.Name,
+        FolderName = project.FolderName
     };
+    return true;
 }
 }

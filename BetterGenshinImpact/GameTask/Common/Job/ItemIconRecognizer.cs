@@ -106,7 +106,15 @@ internal sealed class ItemRecognizer : IItemIconRecognizer
     public ItemRecognizer()
     {
         _session = new InferenceSession(Global.Absolute(@"Assets\Model\ItemV2\item.onnx"));
-        _prototypes = LoadIconPrototypes();
+        try
+        {
+            _prototypes = LoadIconPrototypes();
+        }
+        catch
+        {
+            _session.Dispose();
+            throw;
+        }
     }
 
     /// <summary>

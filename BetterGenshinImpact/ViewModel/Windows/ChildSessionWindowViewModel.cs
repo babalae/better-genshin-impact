@@ -91,6 +91,11 @@ public partial class ChildSessionWindowViewModel : ViewModel
     private bool _isGameMouseModeEnabled;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(WatchModeMenuHeader))]
+    [NotifyPropertyChangedFor(nameof(WatchModeMenuToolTip))]
+    private bool _isWatchModeEnabled;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(AudioButtonToolTip))]
     private bool _isAudioMuted;
 
@@ -134,6 +139,12 @@ public partial class ChildSessionWindowViewModel : ViewModel
     public string WindowSizeModeMenuToolTip => IsSmallWindowMode
         ? "将桌面分身窗口还原至默认大小"
         : "将桌面分身窗口缩放至宽 750，并按 16:9 比例同步缩小高度";
+
+    public string WatchModeMenuHeader => IsWatchModeEnabled ? "控制模式" : "观看模式";
+
+    public string WatchModeMenuToolTip => IsWatchModeEnabled
+        ? "退出观看模式"
+        : "桌面分身画面仅可观看，键鼠不会生效";
 
     public double WindowResizeTargetWidth => IsSmallWindowMode
         ? SmallWindowWidth
@@ -369,6 +380,25 @@ public partial class ChildSessionWindowViewModel : ViewModel
             enabled ? InfoBarSeverity.Informational : InfoBarSeverity.Success);
     }
 
+    [RelayCommand]
+    private void ToggleWatchMode()
+    {
+        var enabled = !IsWatchModeEnabled;
+        if (!Execute(() => _childSessionService.SetWatchModeEnabled(enabled)))
+        {
+            IsWatchModeEnabled = _childSessionService.WatchModeEnabled;
+            return;
+        }
+
+        IsWatchModeEnabled = _childSessionService.WatchModeEnabled;
+        ShowNotification(
+            enabled ? "观看模式已开启" : "观看模式已关闭",
+            enabled
+                ? "本机键鼠不会对分身生效，但控制中心的组合键仍然生效。"
+                : "本机键鼠恢复操作桌面分身。",
+            enabled ? InfoBarSeverity.Informational : InfoBarSeverity.Success);
+    }
+
     [RelayCommand(CanExecute = nameof(CanToggleAudioMuted))]
     private void ToggleAudioMuted()
     {
@@ -590,6 +620,7 @@ public partial class ChildSessionWindowViewModel : ViewModel
         KeepAspectRatio = _childSessionService.KeepAspectRatio;
         SendSystemShortcutsToRemote = _childSessionService.SendSystemShortcutsToRemote;
         IsGameMouseModeEnabled = _childSessionService.IsGameMouseModeEnabled;
+        IsWatchModeEnabled = _childSessionService.WatchModeEnabled;
         IsAudioMuted = _childSessionService.AudioMuted;
         IsRdpConnected = connectedState == 1;
         IsConnectionPromptVisible = IsSessionClosing || connectedState == 0 && !_startRequested;

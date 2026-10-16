@@ -972,6 +972,7 @@
     "name": "夜兰",
     "nameEn": "Yelan",
     "skillCD": 10,
+    "skillHoldCD": 10,
     "weapon": "12"
   },
   {

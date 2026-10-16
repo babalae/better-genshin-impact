@@ -113,7 +113,7 @@ public class NotificationService : IHostedService, IDisposable
         InitializeDingDingNotifier();
         InitializeTelegramNotifier();
         InitializeXxtuiNotifier();
-        InitializeDiscordWebhookNotifier();
+        InitializeDiscordNotifier();
         InitializeServerChanNotifier();
         InitializeMeowNotifier();
         InitializeGotifyNotifier();
@@ -297,11 +297,25 @@ public class NotificationService : IHostedService, IDisposable
     }
 
     /// <summary>
-    ///     初始化 Discord 通知器
+    ///     初始化 Discord 通知器。
+    ///     按配置的 Discord 通知方式二选一注册：Webhook 方式走频道 Webhook 地址，
+    ///     Bot 方式走机器人 Token + 推送目标清单。两者互斥，避免同一条通知被推送两次。
     /// </summary>
-    private void InitializeDiscordWebhookNotifier()
+    private void InitializeDiscordNotifier()
     {
         if (_notificationConfig?.DiscordWebhookNotificationEnabled != true) return;
+
+        if (DiscordNotificationModes.IsBot(_notificationConfig.DiscordNotificationMode))
+        {
+            _notifierManager.RegisterNotifier(new DiscordBotNotifier(
+                _notifyHttpClient,
+                _notificationConfig.DiscordBotToken,
+                _notificationConfig.DiscordBotTargets,
+                _notificationConfig.DiscordBotMessageFormat,
+                _notificationConfig.DiscordWebhookImageEncoder
+            ));
+            return;
+        }
 
         _notifierManager.RegisterNotifier(new DiscordWebhookNotifier(
             _notifyHttpClient,
