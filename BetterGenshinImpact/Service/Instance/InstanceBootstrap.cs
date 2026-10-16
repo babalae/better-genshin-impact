@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Instance.MessageHandlers;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Service.Instance;
 
@@ -40,6 +41,18 @@ public sealed class InstanceBootstrap : IDisposable
         }
 
         var options = CommandLineOptions.Instance;
+        if (options.InstanceType == BetterGiInstanceType.WebView)
+        {
+            // 网页版没有 MainWindow，不能等 DpiAwarenessController 在遮罩创建时才启用 DPI 感知。
+            // 必须在任何窗口和显示器尺寸缓存创建前设置，否则宿主尺寸会使用 DPI 虚拟化坐标。
+            SHCore.GetProcessDpiAwareness(default, out var awareness).ThrowIfFailed();
+            if (awareness != SHCore.PROCESS_DPI_AWARENESS.PROCESS_PER_MONITOR_DPI_AWARE)
+            {
+                SHCore.SetProcessDpiAwareness(SHCore.PROCESS_DPI_AWARENESS.PROCESS_PER_MONITOR_DPI_AWARE)
+                    .ThrowIfFailed();
+            }
+        }
+
         var rootPipeName = InstancePipeNames.ForCurrentUser();
         var currentSessionId = Process.GetCurrentProcess().SessionId;
 
