@@ -143,7 +143,6 @@ public partial class CloudWebHostWindow : Window
     private void OnSourceInitialized(object? sender, EventArgs e)
     {
         Handle = new WindowInteropHelper(this).Handle;
-        ApplyClientSize(center: true);
     }
 
     /// <summary>
@@ -152,19 +151,24 @@ public partial class CloudWebHostWindow : Window
     protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
     {
         base.OnDpiChanged(oldDpi, newDpi);
-        Dispatcher.BeginInvoke(DispatcherPriority.Background, () => ApplyClientSize(center: false));
+        Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
+        {
+            if (_isClosed) return;
+            ApplyClientSize(center: false);
+            UpdateControllerBounds();
+        });
     }
 
     /// <summary>
     /// 按物理像素把客户区设为 1920x1080：外框尺寸 = 当前边框 + 目标客户区，直接用 SetWindowPos 设置，避免 DIP 换算的舍入误差
     /// </summary>
-    private void ApplyClientSize(bool center)
+    private bool ApplyClientSize(bool center)
     {
         if (Handle == 0 || WindowState != WindowState.Normal
                         || !User32.GetWindowRect(Handle, out var windowRect)
                         || !User32.GetClientRect(Handle, out var clientRect))
         {
-            return;
+            return false;
         }
 
         var width = windowRect.Width - clientRect.Width + ClientWidth;
@@ -188,13 +192,27 @@ public partial class CloudWebHostWindow : Window
         {
             if (clientRect.Width == ClientWidth && clientRect.Height == ClientHeight)
             {
-                return;
+                return true;
             }
 
             flags |= User32.SetWindowPosFlags.SWP_NOMOVE;
         }
 
-        _ = User32.SetWindowPos(Handle, HWND.NULL, x, y, width, height, flags);
+        if (!User32.SetWindowPos(Handle, HWND.NULL, x, y, width, height, flags)
+            || !User32.GetClientRect(Handle, out var actualClientRect))
+        {
+            _logger.LogError("设置云原神窗口客户区尺寸失败，目标 {Width}x{Height}", ClientWidth, ClientHeight);
+            return false;
+        }
+
+        if (actualClientRect.Width != ClientWidth || actualClientRect.Height != ClientHeight)
+        {
+            _logger.LogError("云原神窗口客户区尺寸不符合要求：实际 {Width}x{Height}，目标 {TargetWidth}x{TargetHeight}",
+                actualClientRect.Width, actualClientRect.Height, ClientWidth, ClientHeight);
+            return false;
+        }
+
+        return true;
     }
 
     /// <summary>
@@ -248,6 +266,13 @@ public partial class CloudWebHostWindow : Window
     {
         try
         {
+            // 等 WPF 完成初始布局后再设置物理尺寸，校验成功后才创建页面和绑定运行环境。
+            if (!ApplyClientSize(center: true))
+            {
+                throw new InvalidOperationException($"无法将游戏画面设为 {ClientWidth}x{ClientHeight}，请检查窗口尺寸日志。");
+            }
+
+            _logger.LogInformation("云原神窗口客户区已校准为 {Width}x{Height} 物理像素", ClientWidth, ClientHeight);
             var options = new CoreWebView2EnvironmentOptions(BrowserArguments);
             var environment = await CoreWebView2Environment.CreateAsync(
                 null, WebViewInstanceStore.GetDataFolder(_instanceName), options);
