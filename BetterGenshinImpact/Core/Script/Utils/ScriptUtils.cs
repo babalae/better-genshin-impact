@@ -29,8 +29,11 @@ public class ScriptUtils
         // 组合并获取绝对路径
         var fullPath = Path.GetFullPath(Path.Combine(root, path));
 
-        // 防止越界访问
-        if (!fullPath.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+        // 防止越界访问。目录边界必须带分隔符，避免同名前缀的兄弟目录被误判为目录内路径。
+        var rootBoundary = Path.GetFullPath(root);
+        if (!rootBoundary.EndsWith(Path.DirectorySeparatorChar)) rootBoundary += Path.DirectorySeparatorChar;
+        if (!fullPath.StartsWith(rootBoundary, StringComparison.OrdinalIgnoreCase) &&
+            !fullPath.Equals(rootBoundary.TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase))
         {
             throw new ArgumentException($"文件路径 '{path}' 越界访问!");
         }

@@ -16,15 +16,27 @@ namespace BetterGenshinImpact.Core.Script.Dependence;
 public class Http
 {
     private readonly ILogger<Http> _logger = App.GetLogger<Http>();
+    private readonly Func<bool>? _allowHttp;
+    private readonly Func<string[]>? _allowedUrls;
+
+    public Http()
+    {
+    }
+
+    public Http(bool allowHttp, string[] allowedUrls)
+    {
+        _allowHttp = () => allowHttp;
+        _allowedUrls = () => allowedUrls;
+    }
 
     private void CheckHttpPermission(string url)
     {
-        var currentProject = RunnerContext.Instance.CurrentScriptProject;
-        if (!currentProject?.AllowJsHTTP ?? false)
+        var allowed = _allowHttp?.Invoke() ?? RunnerContext.Instance.CurrentScriptProject?.AllowJsHTTP ?? false;
+        if (!allowed)
         {
             throw new UnauthorizedAccessException("当前JS脚本不允许使用HTTP请求，请在调度器通用设置中启用“JS HTTP权限”");
         }
-        var allowedUrls = currentProject?.Project?.Manifest.HttpAllowedUrls ?? [];
+        var allowedUrls = _allowedUrls?.Invoke() ?? RunnerContext.Instance.CurrentScriptProject?.Project?.Manifest.HttpAllowedUrls ?? [];
         if (allowedUrls.Length == 0)
         {
             throw new UnauthorizedAccessException("当前JS脚本没有配置允许请求的URL，请在脚本的manifest.json中配置http_allowed_urls");
