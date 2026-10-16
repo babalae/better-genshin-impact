@@ -185,12 +185,15 @@ public partial class SettingsWebWindow : Window
     private static bool IsAllowed(Uri target, string allowed)
     {
         var marker = allowed.IndexOf("://", StringComparison.Ordinal);
-        var path = marker < 0 ? -1 : allowed.IndexOf('/', marker + 3);
-        var origin = path < 0 ? allowed : allowed[..path];
-        var remainder = path < 0 ? "/" : allowed[path..];
-        if (!Uri.TryCreate(origin.Replace("*", "placeholder") + "/", UriKind.Absolute, out var pattern)) return false;
+        var slash = marker < 0 ? -1 : allowed.IndexOf('/', marker + 3);
+        var query = marker < 0 ? -1 : allowed.IndexOf('?', marker + 3);
+        var split = slash < 0 ? query : query < 0 ? slash : Math.Min(slash, query);
+        var origin = split < 0 ? allowed : allowed[..split];
+        var remainder = split < 0 ? "/" : allowed[split..];
+        var token = "\uE000";
+        if (!Uri.TryCreate(origin.Replace("*", token) + "/", UriKind.Absolute, out var pattern)) return false;
         return target.Scheme.Equals(pattern.Scheme, StringComparison.OrdinalIgnoreCase) &&
-               Regex.IsMatch(target.Authority, "^" + Regex.Escape(pattern.Authority.Replace("placeholder", "*")).Replace("\\*", ".*") + "$", RegexOptions.IgnoreCase) &&
+               Regex.IsMatch(target.Authority, "^" + Regex.Escape(pattern.Authority).Replace(Regex.Escape(token), ".*") + "$", RegexOptions.IgnoreCase) &&
                Regex.IsMatch(target.PathAndQuery, "^" + Regex.Escape(remainder).Replace("\\*", ".*") + "$");
     }
 
