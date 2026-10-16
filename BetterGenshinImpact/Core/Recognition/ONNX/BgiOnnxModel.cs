@@ -141,7 +141,7 @@ public class BgiOnnxModel
 
     #endregion
 
-    private BgiOnnxModel(string name, string modelRelativePath, string cacheRelativePath)
+    public BgiOnnxModel(string name, string modelRelativePath, string cacheRelativePath)
     {
         Name = name;
         ModelRelativePath = modelRelativePath;
