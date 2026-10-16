@@ -1,6 +1,7 @@
 using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -51,30 +52,37 @@ public class GridIconsAccuracyTestTask : ISoloTask
     public static InferenceSession LoadModel(out Dictionary<string, float[]> prototypes)
     {
         #region 加载model
-        var session = new InferenceSession(Global.Absolute(@"Assets\Model\Item\gridIcon.onnx"));
-
-        var metadata = session.ModelMetadata;
-
-        if (!metadata.CustomMetadataMap.TryGetValue("prefix_list", out string? prefixListJson))
+        var session = BgiOnnxFactory.CreateCpuOnlyInferenceSession(BgiOnnxModel.GridIcon);
+        try
         {
-            throw new Exception("模型文件缺少prefix_list");
+            var metadata = session.ModelMetadata;
+
+            if (!metadata.CustomMetadataMap.TryGetValue("prefix_list", out string? prefixListJson))
+            {
+                throw new Exception("模型文件缺少prefix_list");
+            }
+            List<string> prefixList = System.Text.Json.JsonSerializer.Deserialize<List<string>>(prefixListJson) ?? throw new Exception();   // 不预测前缀
+            #endregion
+            #region 加载原型向量
+            var allLines = File.ReadLines(Global.Absolute(@"Assets\Model\Item\items.csv")).Skip(1);    // 跳过首行列名
+            prototypes = new Dictionary<string, float[]>();
+            foreach (string line in allLines)
+            {
+                var columns = line.Split(",").ToArray();
+                var bytes = Convert.FromBase64String(columns[1]);
+                int totalFloats = bytes.Length / sizeof(float);
+                float[] flatData = new float[totalFloats];
+                Buffer.BlockCopy(bytes, 0, flatData, 0, bytes.Length);
+                prototypes.Add(columns[0], flatData);
+            }
+            #endregion
+            return session;
         }
-        List<string> prefixList = System.Text.Json.JsonSerializer.Deserialize<List<string>>(prefixListJson) ?? throw new Exception();   // 不预测前缀
-        #endregion
-        #region 加载原型向量
-        var allLines = File.ReadLines(Global.Absolute(@"Assets\Model\Item\items.csv")).Skip(1);    // 跳过首行列名
-        prototypes = new Dictionary<string, float[]>();
-        foreach (string line in allLines)
+        catch
         {
-            var columns = line.Split(",").ToArray();
-            var bytes = Convert.FromBase64String(columns[1]);
-            int totalFloats = bytes.Length / sizeof(float);
-            float[] flatData = new float[totalFloats];
-            Buffer.BlockCopy(bytes, 0, flatData, 0, bytes.Length);
-            prototypes.Add(columns[0], flatData);
+            session.Dispose();
+            throw;
         }
-        #endregion
-        return session;
     }
 
     public async Task Start(CancellationToken ct)

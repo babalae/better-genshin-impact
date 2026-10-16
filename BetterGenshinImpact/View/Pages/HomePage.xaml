@@ -234,24 +234,15 @@
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Text="{i18n:T 修改后需要重启程序生效}"
                                   TextWrapping="Wrap" />
-                    <ComboBox Grid.Row="0"
-                              Grid.RowSpan="2"
-                              Grid.Column="1"
-                              Margin="0,0,10,0"
-                              ItemsSource="{Binding InferenceDeviceTypes}"
-                              SelectedItem="{Binding Config.HardwareAccelerationConfig.InferenceDevice, Mode=TwoWay}">
-                        <!-- <b:Interaction.Triggers> -->
-                        <!--     <b:EventTrigger EventName="SelectionChanged"> -->
-                        <!--         <b:InvokeCommandAction Command="{Binding InferenceDeviceTypeDropDownChangedCommand}" CommandParameter="{Binding Config.InferenceDevice}" /> -->
-                        <!--     </b:EventTrigger> -->
-                        <!-- </b:Interaction.Triggers> -->
-                    </ComboBox>
+                    <TextBlock Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Margin="0,0,10,0"
+                               VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="340"
+                               Text="{Binding InferenceRuntimeStatusText}" />
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="2"
                                Margin="0,0,36,0"
                                Command="{Binding OpenHardwareAccelerationSettingsCommand}"
-                               Content="{i18n:T 更多...}" />
+                               Content="{i18n:T 设置}" />
                 </Grid>
                 <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
                 <Grid Margin="16">

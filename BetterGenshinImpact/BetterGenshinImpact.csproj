@@ -44,11 +44,14 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<!-- Anthropic 官方 SDK：自动连招在 OpenAI 兼容端点之外可选的原生 Messages API 提供方 -->
+		<PackageReference Include="Anthropic" Version="12.53.0" />
+
 		<PackageReference Include="AvalonEdit" Version="6.3.1.120" />
 
 		<PackageReference Include="BetterGI.VCRuntime" Version="14.44.35208" />
 		<PackageReference Include="BetterGI.Assets.Map" Version="1.0.24" />
-        <PackageReference Include="BetterGI.Assets.Model" Version="1.0.36" />
+        <PackageReference Include="BetterGI.Assets.Model" Version="1.0.38" />
 		<PackageReference Include="BetterGI.Assets.Other" Version="1.0.27" />
 
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
@@ -294,4 +297,8 @@
 		</ItemGroup>
 	</Target>
 
+	<!-- 古树测试样例用于推理运行库验证与设置页测速。 -->
+	<ItemGroup>
+		<None Update="Assets\Model\Domain\test_petrified_trees.jpg" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+	</ItemGroup>
 </Project>

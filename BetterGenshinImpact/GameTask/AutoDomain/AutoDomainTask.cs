@@ -54,7 +54,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
     private readonly AutoDomainParam _taskParam;
 
-    private readonly BgiYoloPredictor _predictor;
+    private BgiYoloPredictor _predictor = null!;
 
     private readonly AutoDomainConfig _config;
 
@@ -98,7 +98,6 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
     public AutoDomainTask(AutoDomainParam taskParam, AutoDomainConfig? config = null)
     {
         _taskParam = taskParam;
-        _predictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiTree);
 
         _config = config ?? TaskContext.Instance().Config.AutoDomainConfig;
 
@@ -180,6 +179,8 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
     public async Task<Dictionary<string, int>> Start(CancellationToken ct)
     {
+        using var predictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiTree);
+        _predictor = predictor;
         _ct = ct;
         _rewardSummary.Clear();
 
