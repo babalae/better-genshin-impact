@@ -114,14 +114,16 @@ public sealed class ScriptYoloPredictor : IDisposable
     /// 分类模型会返回全部类别；<see cref="YoloConfiguration.Confidence"/> 和
     /// <see cref="YoloConfiguration.IoU"/> 不会对分类结果进行筛选。
     /// </remarks>
-    public List<Classification> Classify(ScriptObject? options = null)
+    public List<YoloClassification> Classify(ScriptObject? options = null)
     {
         var configuration = options is null
             ? _configuration
             : YoloPredictorFactory.MergeConfiguration(_configuration, options);
 
         using var ra = TaskControl.CaptureToRectArea();
-        return GetInnerPredictor(YoloTask.Classify).Classify(ra.CacheImage, configuration).ToList();
+        return GetInnerPredictor(YoloTask.Classify).Classify(ra.CacheImage, configuration)
+            .Select(classification => new YoloClassification(classification))
+            .ToList();
     }
 
     private YoloPredictor GetInnerPredictor(YoloTask expectedTask)
@@ -181,5 +183,18 @@ public sealed class ScriptYoloPredictor : IDisposable
 public class YoloRegion(int x, int y, int width, int height, YoloPrediction detection, Region owner)
     : Region(x, y, width, height, owner, new TranslationConverter(x, y), owner.DrawingBoard)
 {
-    public YoloPrediction Detection { get; } = detection;
+    public int Id { get; } = detection.Name.Id;
+
+    public string Name { get; } = detection.Name.Name;
+
+    public float Confidence { get; } = detection.Confidence;
+}
+
+public sealed class YoloClassification(Classification classification)
+{
+    public int Id { get; } = classification.Name.Id;
+
+    public string Name { get; } = classification.Name.Name;
+
+    public float Confidence { get; } = classification.Confidence;
 }
