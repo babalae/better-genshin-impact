@@ -18,15 +18,15 @@ using System.Text;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
-public sealed class YoloDetection(string rootPath)
+public sealed class YoloPredictorFactory(string rootPath)
 {
     /// <summary>
-    /// 创建基于 ONNX 模型的 YOLO 检测器
+    /// 创建基于 ONNX 模型的 YOLO 预测器
     /// </summary>
     /// <param name="modelPath">相对于脚本工程根目录的模型路径</param>
-    /// <param name="options">可选检测配置；未指定的属性使用 <see cref="YoloConfiguration"/> 默认值</param>
+    /// <param name="options">可选推理配置；未指定的属性使用 <see cref="YoloConfiguration"/> 默认值</param>
     /// <remarks>
-    /// <paramref name="options"/> 使用 <see cref="YoloConfiguration"/> 的属性名，作为检测器的基准配置
+    /// <paramref name="options"/> 使用 <see cref="YoloConfiguration"/> 的属性名，作为预测器的基准配置
     /// 支持以下常用项：
     /// <list type="bullet">
     ///   <item><description><c>confidence</c>：置信度阈值（默认 0.3）</description></item>
@@ -36,7 +36,7 @@ public sealed class YoloDetection(string rootPath)
     ///   <item><description><c>suppressParallelInference</c>：是否等待并发推理（默认 false）</description></item>
     /// </list>
     /// </remarks>
-    public YoloDetector CreatePredictor(string modelPath, ScriptObject? options = null)
+    public ScriptYoloPredictor CreatePredictor(string modelPath, ScriptObject? options = null)
     {
         modelPath = ScriptUtils.NormalizePath(rootPath, modelPath);
         if (!modelPath.EndsWith(".onnx", StringComparison.OrdinalIgnoreCase))
@@ -45,7 +45,7 @@ public sealed class YoloDetection(string rootPath)
         }
 
         var configuration = MergeConfiguration(YoloConfiguration.Default, options);
-        return new YoloDetector(modelPath, configuration);
+        return new ScriptYoloPredictor(modelPath, configuration);
     }
 
     internal static YoloConfiguration MergeConfiguration(YoloConfiguration baseConfiguration, ScriptObject? options)
@@ -74,15 +74,15 @@ public sealed class YoloDetection(string rootPath)
     }
 }
 
-public sealed class YoloDetector : IDisposable
+public sealed class ScriptYoloPredictor : IDisposable
 {
     private readonly object _gate = new();
     private readonly YoloConfiguration _configuration;
     private readonly string _modelPath;
-    private BgiYoloPredictor? _predictor;
+    private BgiYoloPredictor? _bgiPredictor;
     private bool _disposed;
 
-    internal YoloDetector(string modelPath, YoloConfiguration configuration)
+    internal ScriptYoloPredictor(string modelPath, YoloConfiguration configuration)
     {
         _modelPath = modelPath;
         _configuration = configuration;
@@ -93,29 +93,53 @@ public sealed class YoloDetector : IDisposable
     /// </summary>
     public List<YoloRegion> Detect(ScriptObject? options = null)
     {
-        return Run(options is null ? _configuration : YoloDetection.MergeConfiguration(_configuration, options));
+        return RunDetection(options is null ? _configuration : YoloPredictorFactory.MergeConfiguration(_configuration, options));
     }
 
-    private List<YoloRegion> Run(YoloConfiguration configuration)
+    private List<YoloRegion> RunDetection(YoloConfiguration configuration)
     {
         using var ra = TaskControl.CaptureToRectArea();
-        return GetPredictor().Detect(ra.CacheImage, configuration).Select(box =>
+        return GetInnerPredictor(YoloTask.Detect).Detect(ra.CacheImage, configuration).Select(box =>
         {
             var bounds = box.Bounds;
             return new YoloRegion(bounds.X, bounds.Y, bounds.Width, bounds.Height, box, ra);
         }).ToList();
     }
 
-    private YoloPredictor GetPredictor()
+    /// <summary>
+    /// 对当前游戏画面做分类（可选择使用自定义推理参数）
+    /// </summary>
+    /// <returns>按置信度从高到低排列的分类结果，第一项为最可能的类别</returns>
+    /// <remarks>
+    /// 分类模型会返回全部类别；<see cref="YoloConfiguration.Confidence"/> 和
+    /// <see cref="YoloConfiguration.IoU"/> 不会对分类结果进行筛选。
+    /// </remarks>
+    public List<Classification> Classify(ScriptObject? options = null)
+    {
+        var configuration = options is null
+            ? _configuration
+            : YoloPredictorFactory.MergeConfiguration(_configuration, options);
+
+        using var ra = TaskControl.CaptureToRectArea();
+        return GetInnerPredictor(YoloTask.Classify).Classify(ra.CacheImage, configuration).ToList();
+    }
+
+    private YoloPredictor GetInnerPredictor(YoloTask expectedTask)
     {
         lock (_gate)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
-            return (_predictor ??= CreatePredictor()).Predictor;
+            var predictor = (_bgiPredictor ??= CreateBgiPredictor()).Predictor;
+            if (predictor.Metadata.Task != expectedTask)
+            {
+                throw new InvalidOperationException($"当前模型的任务类型为 {predictor.Metadata.Task}，不能执行 {expectedTask} 推理");
+            }
+
+            return predictor;
         }
     }
 
-    private BgiYoloPredictor CreatePredictor()
+    private BgiYoloPredictor CreateBgiPredictor()
     {
         var cacheRelativePath = Path.Combine(BgiOnnxModel.ModelCacheRelativePath, "js",
             Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(_modelPath))));
@@ -124,9 +148,9 @@ public sealed class YoloDetector : IDisposable
         try
         {
             var yolo = predictor.Predictor;
-            if (yolo.Metadata.Task != YoloTask.Detect || yolo.Metadata.Names.Length == 0)
+            if (yolo.Metadata.Task is not (YoloTask.Detect or YoloTask.Classify) || yolo.Metadata.Names.Length == 0)
             {
-                throw new InvalidOperationException("模型必须是类别名非空的检测模型");
+                throw new InvalidOperationException("模型必须是类别名非空的检测或分类模型");
             }
 
             return predictor;
@@ -148,8 +172,8 @@ public sealed class YoloDetector : IDisposable
             }
 
             _disposed = true;
-            _predictor?.Dispose();
-            _predictor = null;
+            _bgiPredictor?.Dispose();
+            _bgiPredictor = null;
         }
     }
 }
