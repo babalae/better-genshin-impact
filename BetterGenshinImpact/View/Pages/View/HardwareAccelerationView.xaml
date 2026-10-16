@@ -2,6 +2,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:onnx="clr-namespace:BetterGenshinImpact.Core.Recognition.ONNX"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
     <UserControl.Resources>
         <DataTemplate x:Key="TimingResultTemplate">
@@ -42,26 +43,13 @@
         <ui:TitleBar Title="推理引擎设置">
             <ui:TitleBar.Icon><ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" /></ui:TitleBar.Icon>
         </ui:TitleBar>
-        <StackPanel Grid.Row="1" Margin="24,12,24,0">
-            <Border Margin="0,12,0,0" Padding="16,12" CornerRadius="8" BorderThickness="1" BorderBrush="{DynamicResource SystemFillColorCautionBrush}"
-                    Visibility="{Binding HasPendingChanges, Converter={StaticResource BooleanToVisibilityConverter}}">
-                <DockPanel>
-                    <ui:Button DockPanel.Dock="Right" Content="立即重启" Command="{Binding RestartCommand}" IsEnabled="{Binding CanInteract}" Margin="16,0,0,0" VerticalAlignment="Center" />
-                    <StackPanel>
-                        <TextBlock Text="已保存 · 等待重启" FontWeight="SemiBold" Foreground="{DynamicResource SystemFillColorCautionBrush}" />
-                        <TextBlock Text="{Binding PendingText}" TextWrapping="Wrap" Margin="0,4,0,0" />
-                        <TextBlock Text="当前进程继续使用上方引擎。" FontSize="12" Margin="0,4,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                    </StackPanel>
-                </DockPanel>
-            </Border>
-        </StackPanel>
         <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Margin="24,12,24,24">
                 <DockPanel Margin="0,12,0,4">
                     <ui:Button DockPanel.Dock="Right" Content="重新检测" Appearance="Transparent" Command="{Binding RefreshCommand}" IsEnabled="{Binding CanInteract}" />
                     <TextBlock Text="选择推理引擎" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
                 </DockPanel>
-                <TextBlock Text="点击卡片选择，再调整设备和设置。高亮边框与圆点表示你的选择，应用并重启后生效。" TextWrapping="Wrap" Margin="0,0,0,14" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <TextBlock Text="点击卡片选择，再直接调整该引擎的设备和设置。应用并重启后生效。" TextWrapping="Wrap" Margin="0,0,0,14" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                 <ListBox ItemsSource="{Binding Engines}" SelectedItem="{Binding SelectedEngine, Mode=TwoWay}" IsEnabled="{Binding CanInteract}"
                          Background="Transparent" BorderThickness="0" Padding="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="False" AutomationProperties.Name="推理引擎选择">
@@ -104,17 +92,30 @@
                                         <Ellipse Stroke="{DynamicResource ControlStrokeColorDefaultBrush}" StrokeThickness="1.5" />
                                         <Ellipse Fill="{DynamicResource SystemAccentColorPrimaryBrush}" Margin="5" Visibility="{Binding IsSelected, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                     </Grid>
-                                    <TextBlock Text="{Binding Name}" FontSize="20" FontWeight="SemiBold" />
+                                    <ui:FontIcon FontSize="24" Margin="0,0,10,0" VerticalAlignment="Center">
+                                        <ui:FontIcon.Style>
+                                            <Style TargetType="ui:FontIcon" BasedOn="{StaticResource FaFontIconStyleForOneDragon}">
+                                                <Setter Property="Glyph" Value="&#xf2db;" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Engine}" Value="{x:Static onnx:InferenceDeviceType.DirectML}"><Setter Property="Glyph" Value="&#xe1ec;" /></DataTrigger>
+                                                    <DataTrigger Binding="{Binding Engine}" Value="{x:Static onnx:InferenceDeviceType.OpenVINO}"><Setter Property="Glyph" Value="&#xe1ec;" /></DataTrigger>
+                                                    <DataTrigger Binding="{Binding Engine}" Value="{x:Static onnx:InferenceDeviceType.CUDA}"><Setter Property="Glyph" Value="&#xe1ec;" /></DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ui:FontIcon.Style>
+                                    </ui:FontIcon>
+                                    <TextBlock Text="{Binding Name}" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
                                 </DockPanel>
                                 <WrapPanel Height="28" Margin="0,8,0,0">
-                                    <Border CornerRadius="4" BorderThickness="1" BorderBrush="{DynamicResource SystemAccentColorPrimaryBrush}" Padding="6,2" Margin="0,0,6,0" Visibility="{Binding IsRecommended, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <TextBlock Text="推荐" FontSize="11" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                                    <Border CornerRadius="10" BorderThickness="1" BorderBrush="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                            Background="{DynamicResource ControlFillColorSecondaryBrush}" Padding="8,2" Margin="0,0,6,0"
+                                            Visibility="{Binding IsRecommended, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <TextBlock Text="Intel 设备推荐" FontSize="11" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" />
                                     </Border>
-                                    <Border CornerRadius="4" BorderThickness="1" BorderBrush="{DynamicResource SystemFillColorSuccessBrush}" Padding="6,2" Margin="0,0,6,0" Visibility="{Binding IsCurrent, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <TextBlock Text="正在使用" FontSize="11" Foreground="{DynamicResource SystemFillColorSuccessBrush}" />
-                                    </Border>
-                                    <Border CornerRadius="4" BorderThickness="1" BorderBrush="{DynamicResource SystemFillColorCautionBrush}" Padding="6,2" Visibility="{Binding IsPending, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <TextBlock Text="待重启" FontSize="11" Foreground="{DynamicResource SystemFillColorCautionBrush}" />
+                                    <Border CornerRadius="10" BorderThickness="1" BorderBrush="{DynamicResource SystemFillColorSuccessBrush}"
+                                            Background="{DynamicResource ControlFillColorSecondaryBrush}" Padding="8,2"
+                                            Visibility="{Binding IsCurrent, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <TextBlock Text="当前使用" FontSize="11" Foreground="{DynamicResource SystemFillColorSuccessBrush}" />
                                     </Border>
                                 </WrapPanel>
                                 <TextBlock Text="{Binding Description}" TextWrapping="Wrap" MinHeight="40" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
@@ -141,13 +142,8 @@
                                         <ComboBox ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}" DisplayMemberPath="Name" HorizontalAlignment="Stretch"
                                                   IsEnabled="{Binding IsInstalled}" ToolTip="{Binding SelectedDevice.Name}" AutomationProperties.Name="执行设备" />
                                         <TextBlock Text="{Binding DeviceMessage}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" MaxHeight="34" ToolTip="{Binding DeviceMessage}" />
-                                        <StackPanel Margin="0,12,0,0" Visibility="{Binding IsCpu, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                            <TextBlock Text="通用 CPU 推理线程数" FontSize="12" Margin="0,0,0,6" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                            <ComboBox ItemsSource="{Binding DataContext.CpuThreadChoices, RelativeSource={RelativeSource AncestorType=UserControl}}" DisplayMemberPath="Name" SelectedValuePath="Count"
-                                                      SelectedValue="{Binding DataContext.CpuThreads, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=TwoWay}" />
-                                        </StackPanel>
-                                        <ui:ToggleSwitch Margin="0,12,0,0" Content="模型缓存" IsChecked="{Binding Settings.EnableModelCache, Mode=TwoWay}" IsEnabled="{Binding IsInstalled}"
-                                                         ToolTip="推荐开启，缩短后续模型加载时间。缓存位置由程序管理。" Visibility="{Binding SupportsCache, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                        <ui:ToggleSwitch Margin="0,12,0,0" Content="启用模型缓存" IsChecked="{Binding Settings.EnableModelCache, Mode=TwoWay}" IsEnabled="{Binding IsInstalled}"
+                                                         ToolTip="缩短后续模型加载时间，缓存位置由程序管理。" Visibility="{Binding SupportsCache, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                     </StackPanel>
                                 </Border>
                                 <ui:Button Content="下载运行库" HorizontalAlignment="Stretch" Margin="0,14,0,0"
@@ -160,19 +156,39 @@
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
-                <Border Padding="16" CornerRadius="8" BorderThickness="1" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" Margin="0,4,0,0">
-                    <DockPanel>
-                        <ui:ToggleSwitch DockPanel.Dock="Right" IsChecked="{Binding ForceCpuOcr, Mode=TwoWay}" IsEnabled="{Binding CanInteract}" Margin="16,0,0,0" VerticalAlignment="Center" AutomationProperties.Name="强制 OCR 使用 CPU" />
-                        <StackPanel>
-                            <TextBlock Text="强制 OCR 使用 CPU" FontWeight="SemiBold" />
-                            <TextBlock Text="推荐开启。关闭后 OCR 跟随所选引擎，重启生效。" TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                        </StackPanel>
-                    </DockPanel>
+                <Border Padding="16" CornerRadius="10" BorderThickness="1" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" Margin="0,12,0,0">
+                    <StackPanel>
+                        <DockPanel>
+                            <ui:ToggleSwitch DockPanel.Dock="Right" IsChecked="{Binding ForceCpuOcr, Mode=TwoWay}" IsEnabled="{Binding CanInteract}"
+                                             Margin="16,0,0,0" VerticalAlignment="Center" AutomationProperties.Name="强制 OCR 使用 CPU" />
+                            <StackPanel>
+                                <TextBlock Text="OCR 使用 CPU" FontWeight="SemiBold" />
+                                <TextBlock Text="推荐开启。关闭后 OCR 跟随所选推理引擎，应用并重启后生效。" TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                        </DockPanel>
+                        <Separator Margin="0,14,0,12" BorderThickness="0,1,0,0" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="220" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="通用 CPU 推理线程数" FontWeight="SemiBold" />
+                                <TextBlock Text="供 CPU 模型和“跟随全局设置”的 OCR 使用；0 表示交给 ONNX Runtime 自动选择。"
+                                           TextWrapping="Wrap" Margin="0,4,20,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                            <ComboBox Grid.Column="1" ItemsSource="{Binding CpuThreadChoices}" DisplayMemberPath="Name" SelectedValuePath="Count"
+                                      SelectedValue="{Binding CpuThreads, Mode=TwoWay}" IsEnabled="{Binding CanInteract}" VerticalAlignment="Center"
+                                      AutomationProperties.Name="通用 CPU 推理线程数" />
+                        </Grid>
+                    </StackPanel>
                 </Border>
-                <ui:CardExpander Margin="0,12,0,0" ContentPadding="0" Icon="{ui:SymbolIcon Settings24}" IsExpanded="True">
+                <ui:CardExpander Margin="0,12,0,0" ContentPadding="0"
+                                 IsExpanded="{Binding IsOcrAdvancedExpanded, Mode=TwoWay}">
                     <ui:CardExpander.Header>
                         <StackPanel>
-                            <TextBlock Text="OCR CPU 线程策略" FontWeight="SemiBold" />
+                            <TextBlock Text="高级 OCR CPU 线程策略" FontWeight="SemiBold" />
                             <TextBlock Text="{Binding OcrCpuPreview}" TextWrapping="Wrap" Margin="0,3,24,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                         </StackPanel>
                     </ui:CardExpander.Header>
@@ -275,47 +291,61 @@
                         </StackPanel>
                     </StackPanel>
                 </ui:CardExpander>
-                <TextBlock Text="{Binding ValidationHint}" FontSize="12" TextWrapping="Wrap" Margin="0,10,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                <Border Margin="0,28,0,0" Padding="20" CornerRadius="12" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
-                    <StackPanel>
-                        <DockPanel>
-                            <ui:SymbolIcon DockPanel.Dock="Left" Symbol="Timer24" FontSize="24" Margin="0,0,10,0" VerticalAlignment="Center" />
-                            <TextBlock Text="性能测试" FontSize="20" FontWeight="SemiBold" />
-                        </DockPanel>
-                        <TextBlock Text="{Binding CurrentRuntimeText, StringFormat='测试引擎：{0}'}" TextWrapping="Wrap" Margin="0,10,0,0" FontWeight="SemiBold" />
-                        <TextBlock Text="切换引擎或修改 OCR CPU 线程策略后，应用并重启才能测试新设置。" FontSize="12" TextWrapping="Wrap" Margin="0,5,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                        <TextBlock Text="{Binding BenchmarkHint}" TextWrapping="Wrap" FontSize="12" Margin="0,5,0,16" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                        <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="16" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                            <Border BorderThickness="1" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" CornerRadius="8" Padding="16">
-                                <StackPanel>
-                                    <TextBlock Text="OCR 文本识别" FontSize="16" FontWeight="SemiBold" />
-                                    <TextBlock Text="{Binding CurrentOcrText}" FontSize="12" TextWrapping="Wrap" Margin="0,6,0,12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                    <ui:Button Content="开始 OCR 测速" Command="{Binding BenchmarkOcrCommand}" IsEnabled="{Binding CanBenchmark}" HorizontalAlignment="Left" />
-                                    <TextBlock Text="还没有测速结果" FontSize="12" Margin="0,16,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
-                                        <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><DataTrigger Binding="{Binding HasOcrResult}" Value="True"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers></Style></TextBlock.Style>
-                                    </TextBlock>
-                                    <ContentControl Content="{Binding OcrResult}" ContentTemplate="{StaticResource TimingResultTemplate}" Visibility="{Binding HasOcrResult, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                </StackPanel>
-                            </Border>
-                            <Border Grid.Column="2" BorderThickness="1" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" CornerRadius="8" Padding="16">
-                                <StackPanel>
-                                    <TextBlock Text="古树检测" FontSize="16" FontWeight="SemiBold" />
-                                    <TextBlock Text="{Binding TreeImageText}" TextWrapping="Wrap" FontSize="12" Margin="0,6,0,12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                    <ui:Button Content="开始古树测速" Command="{Binding BenchmarkTreeCommand}" IsEnabled="{Binding CanBenchmarkTree}" HorizontalAlignment="Left" />
-                                    <TextBlock Text="{Binding TreeBenchmarkEmptyText}" TextWrapping="Wrap" FontSize="12" Margin="0,16,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
-                                        <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><DataTrigger Binding="{Binding HasTreeResult}" Value="True"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers></Style></TextBlock.Style>
-                                    </TextBlock>
-                                    <ContentControl Content="{Binding TreeResult}" ContentTemplate="{StaticResource TimingResultTemplate}" Visibility="{Binding HasTreeResult, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                </StackPanel>
-                            </Border>
-                        </Grid>
-                    </StackPanel>
+                <Border Margin="0,10,0,0" Padding="12" CornerRadius="8" Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}">
+                    <DockPanel>
+                        <ui:SymbolIcon Symbol="Info24" FontSize="18" Margin="0,0,8,0" VerticalAlignment="Top" />
+                        <TextBlock Text="{Binding ValidationHint}" FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </DockPanel>
                 </Border>
-                <WrapPanel Margin="0,12,0,0">
-                    <ui:Button Content="运行库目录" Appearance="Transparent" Command="{Binding OpenRuntimeFolderCommand}" Margin="0,0,8,0" />
-                    <ui:Button Content="模型缓存目录" Appearance="Transparent" Command="{Binding OpenCacheFolderCommand}" />
-                </WrapPanel>
+                <ui:CardExpander Margin="0,20,0,0" ContentPadding="0" Icon="{ui:SymbolIcon Timer24}" IsExpanded="True">
+                    <ui:CardExpander.Header>
+                        <StackPanel>
+                            <TextBlock Text="性能测试" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding CurrentRuntimeText, StringFormat='当前测试引擎：{0}'}" TextWrapping="Wrap" Margin="0,3,24,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                    </ui:CardExpander.Header>
+                    <StackPanel>
+                        <Separator BorderThickness="0,1,0,0" />
+                        <StackPanel Margin="20">
+                            <TextBlock Text="切换引擎或修改 OCR CPU 线程策略后，应用并重启才能测试新设置。" FontSize="12" TextWrapping="Wrap" Margin="0,5,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            <TextBlock Text="{Binding BenchmarkHint}" TextWrapping="Wrap" FontSize="12" Margin="0,5,0,16" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="16" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                <Border BorderThickness="1" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" CornerRadius="8" Padding="16">
+                                    <StackPanel>
+                                        <TextBlock Text="OCR 文本识别" FontSize="16" FontWeight="SemiBold" />
+                                        <TextBlock Text="{Binding CurrentOcrText}" FontSize="12" TextWrapping="Wrap" Margin="0,6,0,12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                        <ui:Button Content="开始 OCR 测速" Command="{Binding BenchmarkOcrCommand}" IsEnabled="{Binding CanBenchmark}" HorizontalAlignment="Left" />
+                                        <TextBlock Text="还没有测速结果" FontSize="12" Margin="0,16,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                            <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><DataTrigger Binding="{Binding HasOcrResult}" Value="True"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+                                        </TextBlock>
+                                        <ContentControl Content="{Binding OcrResult}" ContentTemplate="{StaticResource TimingResultTemplate}" Visibility="{Binding HasOcrResult, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Column="2" BorderThickness="1" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" CornerRadius="8" Padding="16">
+                                    <StackPanel>
+                                        <TextBlock Text="古树检测" FontSize="16" FontWeight="SemiBold" />
+                                        <TextBlock Text="{Binding TreeImageText}" TextWrapping="Wrap" FontSize="12" Margin="0,6,0,12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                        <ui:Button Content="开始古树测速" Command="{Binding BenchmarkTreeCommand}" IsEnabled="{Binding CanBenchmarkTree}" HorizontalAlignment="Left" />
+                                        <TextBlock Text="{Binding TreeBenchmarkEmptyText}" TextWrapping="Wrap" FontSize="12" Margin="0,16,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                                            <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><DataTrigger Binding="{Binding HasTreeResult}" Value="True"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+                                        </TextBlock>
+                                        <ContentControl Content="{Binding TreeResult}" ContentTemplate="{StaticResource TimingResultTemplate}" Visibility="{Binding HasTreeResult, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </StackPanel>
+                    </StackPanel>
+                </ui:CardExpander>
+                <ui:DropDownButton Content="更多" Appearance="Transparent" HorizontalAlignment="Left" Margin="0,10,0,0"
+                                   Icon="{ui:SymbolIcon MoreHorizontal24}">
+                    <ui:DropDownButton.Flyout>
+                        <ContextMenu>
+                            <ui:MenuItem Header="打开运行库目录" Command="{Binding OpenRuntimeFolderCommand}" Icon="{ui:SymbolIcon FolderOpen24}" />
+                            <ui:MenuItem Header="打开模型缓存目录" Command="{Binding OpenCacheFolderCommand}" Icon="{ui:SymbolIcon FolderOpen24}" />
+                        </ContextMenu>
+                    </ui:DropDownButton.Flyout>
+                </ui:DropDownButton>
             </StackPanel>
         </ScrollViewer>
         <Border Grid.Row="3" Padding="24,14" Background="{DynamicResource ApplicationBackgroundBrush}" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
@@ -328,7 +358,7 @@
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="16,0,0,0" VerticalAlignment="Center">
                         <ui:Button Content="取消" Command="{Binding CancelCommand}" Margin="0,0,8,0" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                        <ui:Button Content="恢复默认设置" Command="{Binding UseCpuCommand}" IsEnabled="{Binding CanInteract}" Margin="0,0,8,0"
+                        <ui:Button Content="恢复默认并保存" Command="{Binding UseCpuCommand}" IsEnabled="{Binding CanInteract}" Margin="0,0,8,0"
                                    ToolTip="将推理引擎、强制 OCR、全局线程数与 OCR CPU 线程策略恢复为默认设置（CPU 推理）" />
                         <ui:Button Content="{Binding ApplyButtonText}" Appearance="Primary" Command="{Binding ApplyCommand}" IsEnabled="{Binding CanApply}" MinWidth="128" />
                     </StackPanel>

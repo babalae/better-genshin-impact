@@ -26,7 +26,6 @@ public partial class InferenceEngineCardViewModel(InferenceDeviceType engine, In
     [ObservableProperty] private InferenceDeviceInfo? _selectedDevice;
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private bool _isCurrent;
-    [ObservableProperty] private bool _isPending;
     [ObservableProperty] private bool _hasFailure;
     [ObservableProperty] private string _statusText = "正在检查…";
     [ObservableProperty, NotifyPropertyChangedFor(nameof(HasDetails))] private string _details = "";

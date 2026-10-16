@@ -686,10 +686,10 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         {
             Title = "推理引擎设置",
             Content = new HardwareAccelerationView(viewModel),
-            // 引擎卡片一行两张（卡片 300 + 间距 12），窗口宽度只需容纳两列卡片、左右 24 边距与滚动条。
-            Width = 720,
+            // 引擎卡片一行两张（卡片 300 + 间距 12），额外留出一些横向空间，避免卡片内容显得拥挤。
+            Width = 1000,
             Height = 800,
-            MinWidth = 720,
+            MinWidth = 760,
             MinHeight = 650,
             Owner = Application.Current.MainWindow,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,

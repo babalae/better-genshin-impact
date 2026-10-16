@@ -63,8 +63,10 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
     });
     public string CurrentRuntimeText => _runtime.Current.Description;
     public string CurrentEngineName => _runtime.Current.Engine == InferenceDeviceType.Cpu ? "CPU" : _runtime.Current.Engine.ToString();
-    public string CurrentDeviceText => _runtime.Current.Device.Name;
     public string CurrentOcrText => _runtime.Current.OcrDescription;
+    public string CurrentValidationText => _runtime.Current.Engine == InferenceDeviceType.Cpu
+        ? "内置 CPU · 无需额外验证"
+        : _runtime.IsCurrentValidated ? "模型兼容性检查通过" : "已生效 · 尚未完成模型兼容性检查";
     private HardwareAccelerationConfig Config => _configService.Get().HardwareAccelerationConfig;
     public bool HasPendingChanges => _runtime.HasPendingRestart;
     public string PendingText
@@ -81,7 +83,9 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
     public bool HasTreeImage => _diagnostics.HasDomainTreeImage;
     public string TreeImageText => HasTreeImage ? "完整古树 Detect · 预热 1 次，测量 10 次" : "测试图片待提供";
     public string TreeBenchmarkEmptyText => HasTreeImage ? "还没有测速结果" : "接入测试图片后可测量完整 Detect 耗时。";
-    public string ValidationHint => HasTreeImage ? "重启后通过古树检测验证；失败将自动使用 CPU。" : "重启后通过 OCR 模型验证引擎；古树验证等待测试图片。";
+    public string ValidationHint => HasTreeImage
+        ? "重启后将运行一次古树检测，确认所选运行库和设备能够完成真实推理；失败时自动回退 CPU。此检查不判断每个算子的实际执行设备。"
+        : "重启后将运行一次 OCR 模型，确认所选运行库和设备能够完成真实推理；失败时自动回退 CPU。此检查不判断每个算子的实际执行设备。";
     public bool CanApply => !IsBusy && SelectedEngine is { SelectedDevice: not null, IsInstalled: true }
         && (HasDraftChanges || HasPendingChanges);
     public string ApplyButtonText => HasPendingChanges && !HasDraftChanges ? "立即重启" : "应用并重启";
@@ -126,6 +130,7 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
     [ObservableProperty] private InferenceEngineCardViewModel? _selectedEngine;
     [ObservableProperty] private bool _forceCpuOcr;
     [ObservableProperty] private int _cpuThreads;
+    [ObservableProperty] private bool _isOcrAdvancedExpanded;
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty, NotifyPropertyChangedFor(nameof(HasOperationMessage))] private string _progressText = "";
     [ObservableProperty] private double _progressValue;
@@ -149,6 +154,7 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         _forceCpuOcr = Config.CpuOcr;
         _cpuThreads = Config.Cpu.CpuThreads;
         PaddleOcrCpu = PaddleOcrCpuConfig.FromOptions(Config.PaddleOcrCpu.ToOptions());
+        _isOcrAdvancedExpanded = false;
         PaddleOcrCpu.PropertyChanged += OcrCpuSettingsChanged;
         CpuThreadChoices = Enumerable.Range(0, Environment.ProcessorCount + 1)
             .Select(i => new InferenceThreadChoice(i, i == 0 ? "自动（ORT 默认）" : i.ToString())).ToArray();
@@ -185,6 +191,8 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
     partial void OnCpuThreadsChanged(int value) => RefreshAvailability();
     private void OcrCpuSettingsChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(PaddleOcrCpuConfig.Mode) && PaddleOcrCpu.Mode == PaddleOcrCpuMode.Custom)
+            IsOcrAdvancedExpanded = true;
         OnPropertyChanged(nameof(IsOcrCpuCustom));
         OnPropertyChanged(nameof(IsOcrCpuConfigured)); OnPropertyChanged(nameof(OcrCpuModeHint));
         RefreshAvailability();
@@ -198,11 +206,11 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         }
         if (_disposed) return;
         OnPropertyChanged(nameof(CurrentRuntimeText)); OnPropertyChanged(nameof(CurrentEngineName));
-        OnPropertyChanged(nameof(CurrentDeviceText)); OnPropertyChanged(nameof(CurrentOcrText));
+        OnPropertyChanged(nameof(CurrentOcrText));
+        OnPropertyChanged(nameof(CurrentValidationText));
         OnPropertyChanged(nameof(HasPendingChanges)); OnPropertyChanged(nameof(PendingText));
         foreach (var card in Engines)
         {
-            card.IsPending = HasPendingChanges && card.Engine == Config.InferenceDevice;
             card.IsCurrent = card.Engine == _runtime.Current.Engine;
             card.HasFailure = Config.LastFailedEngine == card.Engine && !string.IsNullOrWhiteSpace(Config.LastValidationError)
                 && !(card.IsCurrent && _runtime.IsCurrentValidated);
@@ -269,7 +277,6 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
             card.CanDownload = installation.State == InferenceInstallationState.Missing && !card.IsCpu;
             card.CanCompleteDependencies = installation.State == InferenceInstallationState.MissingDependencies;
             card.IsCurrent = card.Engine == _runtime.Current.Engine;
-            card.IsPending = HasPendingChanges && card.Engine == Config.InferenceDevice;
             card.HasFailure = Config.LastFailedEngine == card.Engine && Config.LastValidationError.Length > 0
                 && !(card.IsCurrent && _runtime.IsCurrentValidated);
             card.Details = installation.Description + "\n\n运行库目录：\n" + installation.Directory;
