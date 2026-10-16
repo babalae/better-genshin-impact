@@ -220,6 +220,8 @@ public partial class App : Application
                 services.AddSingleton<RecognitionTemplateEditorService>();
                 services.AddSingleton<NotificationService>();
                 services.AddHostedService(sp => sp.GetRequiredService<NotificationService>());
+                services.AddSingleton<QqBotService>();
+                services.AddHostedService(sp => sp.GetRequiredService<QqBotService>());
                 services.AddSingleton<NotifierManager>();
                 services.AddSingleton<IScriptService, ScriptService>();
                 services.AddSingleton<IMusicScoreParser, MusicScoreParser>();
