@@ -40,6 +40,7 @@ using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
@@ -99,7 +100,9 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             }
             hotKeyConfig.PropertyChanged += (sender, e) =>
             {
-                if (sender is HotKeySettingModel model)
+                if (sender is HotKeySettingModel model
+                    && (e.PropertyName == nameof(HotKeySettingModel.HotKey)
+                        || e.PropertyName == nameof(HotKeySettingModel.HotKeyType)))
                 {
                     // 反射更新配置
 
