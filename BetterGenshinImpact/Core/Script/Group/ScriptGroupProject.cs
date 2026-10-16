@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
@@ -18,6 +18,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.FarmingPlan;
+using BetterGenshinImpact.GameTask.InventoryMaterialStats;
 using BetterGenshinImpact.GameTask.LogParse;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
@@ -47,7 +48,7 @@ public partial class ScriptGroupProject : ObservableObject
     private string _type = string.Empty;
 
     [JsonIgnore]
-    public string TypeDesc => ScriptGroupProjectExtensions.TypeDescriptions[Type];
+    public string TypeDesc => ScriptGroupProjectExtensions.TypeDescriptions.GetValueOrDefault(Type, Type);
 
     [ObservableProperty]
     private string _status = string.Empty;
@@ -165,6 +166,11 @@ public partial class ScriptGroupProject : ObservableObject
     public static ScriptGroupProject BuildPathingProject(string name, string folder)
     {
         return new ScriptGroupProject(name, folder, "Pathing");
+    }
+
+    public static ScriptGroupProject BuildSoloTask(string folderName, string displayName)
+    {
+        return new ScriptGroupProject(displayName, folderName, "SoloTask");
     }
 
     /// <summary>
@@ -311,6 +317,32 @@ public partial class ScriptGroupProject : ObservableObject
             var task = new ShellTask(ShellTaskParam.BuildFromConfig(Name, shellConfig ?? new ShellConfig()));
             await task.Start(CancellationContext.Instance.Cts.Token);
         }
+        else if (Type == "SoloTask")
+        {
+            if (string.IsNullOrEmpty(FolderName))
+            {
+                throw new Exception("独立任务 FolderName 为空");
+            }
+
+            var statsConfig = TaskContext.Instance().Config.InventoryMaterialStatsConfig;
+            var copies = InventoryMaterialStatsScriptLocator.FindInstalledCopies();
+            var resolved = copies.FirstOrDefault(c =>
+                string.Equals(c.FolderName, FolderName, StringComparison.OrdinalIgnoreCase));
+            if (resolved == null && !string.IsNullOrWhiteSpace(statsConfig.ScriptFolderName))
+            {
+                resolved = copies.FirstOrDefault(c =>
+                    string.Equals(c.FolderName, statsConfig.ScriptFolderName, StringComparison.OrdinalIgnoreCase));
+            }
+
+            var scriptFolder = resolved?.FolderName
+                ?? (string.IsNullOrWhiteSpace(statsConfig.ScriptFolderName)
+                    ? FolderName
+                    : statsConfig.ScriptFolderName);
+            using var soloTask = new InventoryMaterialStatsTask(
+                scriptFolder,
+                statsConfig.GetEnabledCategories());
+            await soloTask.Start(CancellationContext.Instance.Cts.Token);
+        }
 
         if (Type != "Pathing")
         {
@@ -409,7 +441,8 @@ public class ScriptGroupProjectExtensions
         { "Javascript", "JS脚本" },
         { "KeyMouse", "键鼠脚本" },
         { "Pathing", "地图追踪" },
-        { "Shell", "Shell" }
+        { "Shell", "Shell" },
+        { "SoloTask", "独立任务" }
     };
 
     public static readonly Dictionary<string, string> StatusDescriptions = new()
