@@ -385,7 +385,7 @@ public partial class AutoPickTrigger : ITaskTrigger
             // 处理OCR识别结果，清理无效字符并确保引号配对
             text = ProcessOcrText(text);
 
-            if (DoNotPick(text))
+            if (ShouldNotPick(text))
             {
                 return;
             }
@@ -444,8 +444,14 @@ public partial class AutoPickTrigger : ITaskTrigger
         speedTimer.DebugPrint();
     }
 
-    private bool DoNotPick(string text)
+    internal static bool ShouldNotPick(string text)
     {
+        // 场景交互提示（如“导航视界”“枪械视界”）不是可拾取物，避免黑名单模式误按交互键。
+        if (text.Contains("视界") || text.Contains("視界"))
+        {
+            return true;
+        }
+
         // 唯一一个动态拾取项，特殊处理，不拾取
         if (text.Contains("长时间"))
         {
