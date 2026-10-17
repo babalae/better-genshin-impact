@@ -129,6 +129,7 @@ public partial class ScriptService : IScriptService
             return;
         }
 
+        var cancellationToken = cancellationScope.Token;
         var list = ReloadScriptProjects(projectList);
         
         //恢复临时的跳过标志
@@ -336,7 +337,7 @@ public partial class ScriptService : IScriptService
                         }
 
 
-                        for (var i = 0; i < exeProject.RunNum; i++)
+                        await RunRepeatedlyAsync(exeProject.RunNum, async () =>
                         {
                             try
                             {
@@ -349,11 +350,12 @@ public partial class ScriptService : IScriptService
                                 stopwatch.Start();
 
                                 await ExecuteProject(exeProject);
+                                cancellationToken.ThrowIfCancellationRequested();
 
                                 //多次执行时及时中断
                                 if (exeProject.RunNum > 1 && ShouldSkipTask(exeProject))
                                 {
-                                    continue;
+                                    return false;
                                 }
                             }
                             catch (NormalEndException e)
@@ -384,8 +386,8 @@ public partial class ScriptService : IScriptService
                                 _logger.LogInformation("------------------------------");
                             }
 
-                            await Task.Delay(1000);
-                        }
+                            return true;
+                        }, cancellationToken);
 
                         if (!RunnerContext.Instance.IsPreExecution && taskProgress != null)
                         {
@@ -454,6 +456,25 @@ public partial class ScriptService : IScriptService
             taskProgress.Next = null;
         }
 
+    }
+
+    /// <summary>
+    /// 按配置次数重复执行。每轮返回是否需要等待间隔，保留跳过规则不等待的行为。
+    /// </summary>
+    internal static async Task RunRepeatedlyAsync(int runCount, Func<Task<bool>> executeIteration,
+        CancellationToken cancellationToken, TimeProvider? timeProvider = null)
+    {
+        for (var i = 0; i < runCount; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var shouldDelay = await executeIteration();
+            // 脚本可能吞掉取消异常并正常返回，仍须停止后续重复和完成处理。
+            cancellationToken.ThrowIfCancellationRequested();
+            if (shouldDelay)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(1), timeProvider ?? TimeProvider.System, cancellationToken);
+            }
+        }
     }
 
     private List<ScriptGroupProject> ReloadScriptProjects(IEnumerable<ScriptGroupProject> projectList)
