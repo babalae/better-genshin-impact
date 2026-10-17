@@ -989,6 +989,31 @@
                                      Margin="0,0,8,0"
                                      IsChecked="{Binding Config.AutoSkipConfig.AutoReExploreEnabled, Mode=TwoWay}" />
                 </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="{i18n:T 凯瑟琳 - 同帧领取每日委托并进入探索派遣}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 会同时使用鼠标点击『探索派遣』和按交互键（F）领取每日委托，需要游戏窗口在前台；后台模式下退回每次对话只处理一个选项}"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,8,0"
+                                     IsChecked="{Binding Config.AutoSkipConfig.CombineDailyAndExpeditionEnabled, Mode=TwoWay}" />
+                </Grid>
             </StackPanel>
         </ui:CardExpander>
 

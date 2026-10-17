@@ -772,53 +772,119 @@ public partial class AutoSkipTrigger : ITaskTrigger
                     }
 
                     // 橙色选项
+                    // 凯瑟琳对话中"每日委托"与"探索派遣"两个橙色选项同屏存在,先分别识别再触发:
+                    // 两个都在 → 同一帧"点探索派遣 + 按F领每日";只有其一 → 单独处理。
+                    Region? dailyOption = null;
+                    Region? expeditionOption = null;
+                    Region? otherOrangeOption = null;
                     foreach (var item in rs)
                     {
                         var textMat = item.ToImageRegion().SrcMat;
-                        if (IsOrangeOption(textMat))
+                        if (!IsOrangeOption(textMat))
                         {
-                            if (_config.AutoGetDailyRewardsEnabled && (item.Text.Contains("每日") || item.Text.Contains("委托")))
-                            {
-                                if (!ClickOcrRegion(item, "每日委托"))
-                                {
-                                    return true;
-                                }
+                            continue;
+                        }
 
-                                TaskControl.Sleep(800);
-                                
-                                // 6.2 每日提示确认
-                                var ra1 = TaskControl.CaptureToRectArea();
-                                if (Bv.ClickBlackConfirmButton(ra1))
-                                {
-                                    _logger.LogInformation("存在提示并确认");
-                                }
-                                ra1.Dispose();
-                                
-                                _prevGetDailyRewardsTime = DateTime.Now; // 记录领取时间
-                            }
-                            else if (_config.AutoReExploreEnabled && (item.Text.Contains("探索") || item.Text.Contains("派遣")))
-                            {
-                                if (!ClickOcrRegion(item, "探索派遣"))
-                                {
-                                    return true;
-                                }
+                        if (_config.AutoGetDailyRewardsEnabled
+                            && dailyOption == null
+                            && (item.Text.Contains("每日") || item.Text.Contains("委托")))
+                        {
+                            dailyOption = item;
+                        }
+                        else if (_config.AutoReExploreEnabled
+                                 && expeditionOption == null
+                                 && (item.Text.Contains("探索") || item.Text.Contains("派遣")))
+                        {
+                            expeditionOption = item;
+                        }
+                        else if (!item.Text.Contains("每日")
+                            && !item.Text.Contains("委托")
+                            && !item.Text.Contains("探索")
+                            && !item.Text.Contains("派遣"))
+                        {
+                            otherOrangeOption = item;
+                        }
+                    }
 
-                                Thread.Sleep(800); // 等待探索派遣界面打开
-                                new OneKeyExpeditionTask().Run();
-                            }
-                            else if (!item.Text.Contains("每日")
-                                && !item.Text.Contains("委托")
-                                && !item.Text.Contains("探索")
-                                && !item.Text.Contains("派遣"))
-                            {
-                                if (!ClickOcrRegion(item))
-                                {
-                                    return true;
-                                }
-                            }
+                    var handledOrange = false;
+                    // 同帧"鼠标点击 + 交互键"必须作用在前台窗口上,后台模式下无法保证两个输入落在同一帧,
+                    // 因此后台(或游戏不在前台)时退回每次对话只处理一个橙色选项。
+                    if (dailyOption != null
+                        && expeditionOption != null
+                        && _config.CombineDailyAndExpeditionEnabled
+                        && SystemControl.IsGenshinImpactActive())
+                    {
+                        handledOrange = true;
 
+                        // 每日委托与探索派遣同在:同一帧内"点探索派遣 + 按交互键F领每日"。
+                        // 实测两者必须同帧发出,否则后一个会因界面已切换而丢失。
+                        expeditionOption.Move();
+                        InputHub.Foreground.SimulateAction(GIActions.PickUpOrInteract);
+                        InputHub.Foreground.Mouse.LeftButtonClick();
+
+                        _logger.LogInformation("对话交互键：{Text}", "同一帧点击探索派遣 + 按交互键领取每日委托");
+                        _prevGetDailyRewardsTime = DateTime.Now; // 记录领取时间
+
+                        Thread.Sleep(1500); // 等待探索派遣界面打开
+                        new OneKeyExpeditionTask().Run(true);
+                    }
+                    else if (dailyOption != null)
+                    {
+                        // 只有"每日委托":按交互键领取。
+                        // 这里的交互键是游戏内"领取每日委托"的快捷键,不是选项确认键,因此不需要先点击选项区域。
+                        RefreshOperationMode();
+                        if (UseBackgroundOperation || !SystemControl.IsGenshinImpactActive())
+                        {
+                            InputHub.Background.SimulateAction(GIActions.PickUpOrInteract);
+                        }
+                        else
+                        {
+                            InputHub.Foreground.SimulateAction(GIActions.PickUpOrInteract);
+                        }
+
+                        _logger.LogInformation("对话交互键：{Text}", "按交互键领取『每日委托』奖励");
+                        handledOrange = true;
+
+                        TaskControl.Sleep(800);
+
+                        // 6.2 每日提示确认
+                        using (var ra1 = TaskControl.CaptureToRectArea())
+                        {
+                            if (Bv.ClickBlackConfirmButton(ra1))
+                            {
+                                _logger.LogInformation("存在提示并确认");
+                            }
+                        }
+
+                        _prevGetDailyRewardsTime = DateTime.Now; // 记录领取时间
+                    }
+                    else if (expeditionOption != null)
+                    {
+                        handledOrange = true;
+
+                        // 只有"探索派遣":直接点击进入派遣界面
+                        if (!ClickOcrRegion(expeditionOption, "探索派遣"))
+                        {
                             return true;
                         }
+
+                        Thread.Sleep(800); // 等待探索派遣界面打开
+                        new OneKeyExpeditionTask().Run(false);
+                    }
+
+                    if (handledOrange)
+                    {
+                        return true;
+                    }
+
+                    if (otherOrangeOption != null)
+                    {
+                        if (!ClickOcrRegion(otherOrangeOption))
+                        {
+                            return true;
+                        }
+
+                        return true;
                     }
 
                     // 默认不选择关键词
