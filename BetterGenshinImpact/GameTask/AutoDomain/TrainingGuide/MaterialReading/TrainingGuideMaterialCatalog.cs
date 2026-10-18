@@ -7,7 +7,7 @@ namespace BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide;
 
 public sealed record TrainingGuideMaterial(string Name, string Family, int Tier, bool IsWeapon);
 
-// 从现有 ItemV2/item.csv 提取名称、分类、星级；不依赖安装目录或识别模型的运行时状态。
+/// <summary>培养材料的内置目录，按名称关联材料家族、等级和类型；数据来源为 ItemV2/item.csv。</summary>
 public static class TrainingGuideMaterialCatalog
 {
     public static IReadOnlyList<TrainingGuideMaterial> Materials { get; } = Array.AsReadOnly<TrainingGuideMaterial>([

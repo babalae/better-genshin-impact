@@ -232,7 +232,7 @@ public partial class AutoDomainTask
         throw new InvalidOperationException($"未找到 {entry.Entry} 难度 {difficulty}，停止以避免选择其他材料家族");
     }
 
-    /// <summary>从底部 IV 组建立行号；仅用名称、行距及连续的小幅位移跟踪列表。</summary>
+    /// <summary>从底部 IV 组建立行号；普通开放按小幅位移跟踪，全开时按入口名称周期对齐。</summary>
     private sealed class TrainingGuideEntryLayout
     {
         internal sealed record Row(TrainingGuideEntry Entry, double Y);

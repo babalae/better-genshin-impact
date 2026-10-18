@@ -73,7 +73,7 @@ public static class TrainingGuideEntryMaterialIconLocator
 
         // 轮廓可能只覆盖通用奖励。无论候选数量是否合格，都读取竖边核对整排完整性。
         var verticalIcons = FindByVerticalEdges(strip, scale, diagnostic, saveDiagnostic, out var boundaries);
-        // 两项固定奖励、可能出现的冒险阅历，加当前难度展示的1～4级材料，共3～7项。
+        // 通用奖励与当前难度的材料图标合计按 3～7 项校验。
         foreach (var anchor in candidates.OrderBy(r => r.Y))
         {
             var row = candidates.Where(r => Math.Abs(CenterY(r) - CenterY(anchor)) < 15 * scale &&

@@ -1679,9 +1679,9 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <StackPanel>
-                                <ui:TextBlock FontTypography="Body" Text="低世界等级适配" />
+                                <ui:TextBlock FontTypography="Body" Text="{i18n:T 低世界等级适配}" />
                                 <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="默认关闭，适用于秘境难度未解锁时自动选择可用难度"
+                                              Text="{i18n:T 默认关闭，适用于秘境难度未解锁时自动选择可用难度}"
                                               TextWrapping="Wrap" />
                             </StackPanel>
                             <ui:ToggleSwitch Grid.Column="1" Margin="16,0,20,0"
@@ -1690,7 +1690,7 @@
                         <Separator Margin="16,0" BorderThickness="0,1,0,0" />
                         <ui:CardExpander Margin="16" ContentPadding="0" IsExpanded="False">
                             <ui:CardExpander.Header>
-                                <ui:TextBlock Text="开发者工具" FontTypography="Body" />
+                                <ui:TextBlock Text="{i18n:T 开发者工具}" FontTypography="Body" />
                             </ui:CardExpander.Header>
                             <StackPanel>
                                 <Grid Margin="16">

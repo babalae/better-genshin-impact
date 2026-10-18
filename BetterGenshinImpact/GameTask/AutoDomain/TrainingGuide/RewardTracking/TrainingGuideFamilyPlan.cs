@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide;
 
-/// <summary>单关卡的任务内库存快照。入口重扫覆盖库存，领奖增量只应用一次。</summary>
+/// <summary>记录指定入口和难度的材料库存、树脂消耗与掉落样本，用于估算剩余预算。</summary>
 public sealed class TrainingGuideFamilyPlan
 {
     public List<TrainingGuideMaterialReading> Materials { get; private set; }
@@ -47,7 +47,7 @@ public sealed class TrainingGuideFamilyPlan
         RecordResinSpent(resin);
         if (rewards == null || rewards.Count == 0 || rewards.Any(r => r.Value <= 0)) return false;
         var family = Materials[0].Material.Family;
-        // 未知名称或其他家族的材料不能混入当前家族；调用方切换预算模式。
+        // 未知名称或其他家族的材料使校验失败，由调用方按配置停止任务或切换固定预算。
         foreach (var name in rewards.Keys)
         {
             var material = TrainingGuideMaterialCatalog.Find(name);
