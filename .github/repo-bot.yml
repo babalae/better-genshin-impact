@@ -244,3 +244,9 @@ pullRequests:
     enabled: false
   summary:
     enabled: false
+  issueLink:
+    enabled: true
+    commentAnchor: pull-bot:issue-link
+    appendCloseKeyword: true
+    closeKeywordTemplate: "close #{number}"
+    requireSameRepository: true
