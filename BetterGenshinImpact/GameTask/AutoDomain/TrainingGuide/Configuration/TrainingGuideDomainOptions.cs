@@ -5,7 +5,7 @@ using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide;
 
-/// <summary>备选秘境直接派生自正式选项，不维护第二份秘境列表。</summary>
+/// <summary>从秘境选项中筛选可用的备选秘境。</summary>
 public static class TrainingGuideDomainOptions
 {
     private static IReadOnlyList<ICascadingItem>? _items;

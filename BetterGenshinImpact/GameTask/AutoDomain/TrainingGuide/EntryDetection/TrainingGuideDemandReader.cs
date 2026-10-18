@@ -7,7 +7,7 @@ using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide;
 
-/// <summary>在调用方持有的奖励截图上执行一次需求 OCR，不重新采集或修改截图。</summary>
+/// <summary>识别奖励区域中的“需求角色”标记。</summary>
 internal static class TrainingGuideDemandReader
 {
     public static async Task<bool> ReadAsync(string entry, Mat frame, Rect band, CancellationToken ct)

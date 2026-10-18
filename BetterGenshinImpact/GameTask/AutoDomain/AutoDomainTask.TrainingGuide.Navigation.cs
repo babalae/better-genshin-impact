@@ -10,6 +10,7 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
+// 冒险之证培养指南的页面导航与秘境名称规范化。
 public partial class AutoDomainTask
 {
     public const string TrainingGuideOption = "根据提升指南选择秘境";

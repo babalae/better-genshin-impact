@@ -17,6 +17,7 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
+// 培养指南的秘境扫描、入口选择、库存读取与树脂规划。
 public partial class AutoDomainTask
 {
     private bool _guidePlanning;
@@ -94,7 +95,7 @@ public partial class AutoDomainTask
                 await new ReturnMainUiTask().Start(_ct);
                 continue;
             }
-            // 树脂不足、次数用尽等原有退出原因不得触发下一秘境或备选秘境。
+            // 树脂不足、次数用尽时结束任务，不切换下一秘境或备选秘境。
             if (_guideNextAction is GuideNextAction.Continue or GuideNextAction.Stop) return;
             if (!await BetterGenshinImpact.GameTask.Common.BgiVision.Bv.WaitForMainUi(_ct, 30))
                 throw new InvalidOperationException("退出秘境后未确认回到主界面，停止重新进入");
@@ -287,7 +288,7 @@ public partial class AutoDomainTask
         }
     }
 
-    // 两种培养模式共用入口选择，只有计算模式继续读取库存、建立计划。
+    // 选择有培养需求的入口；启用次数计算时读取库存并建立刷取计划。
     private async Task SelectTrainingGuideLevel(bool allOpen)
     {
         var candidates = _taskParam.TrainingGuideLowARAdaptationEnabled
@@ -380,7 +381,7 @@ public partial class AutoDomainTask
             }
             await Delay(400, _ct);
         }
-        // 只读取一次名称用于关联材料家族；点击采用固定位置，不验证高亮、行距或解锁。
+        // 入口名称用于关联材料家族，点击位置由开放模式确定。
         TrainingGuideEntry[] candidates;
         using (var capture = CaptureToRectArea())
         {
@@ -430,7 +431,7 @@ public partial class AutoDomainTask
             var top = label.Y + label.Height + (int)(capture.Height * .006);
             if (top < 0 || top >= capture.Height)
                 throw new InvalidOperationException("奖励标题下方没有有效截图区域，停止本入口扫描");
-            // 在原奖励图标区域下方增加 12px（1080P），覆盖需求角色横条。
+            // 奖励区域包含图标及下方的需求角色横条；额外高度按 1080P 下 12px 缩放。
             var height = Math.Min((int)(capture.Height * .145) +
                 (int)Math.Ceiling(capture.Height * (12d / 1080)), capture.Height - top);
             band = new Rect((int)(capture.Width * .475), top, (int)(capture.Width * .48), height);
@@ -730,7 +731,7 @@ public partial class AutoDomainTask
             throw new InvalidOperationException("培养计划：本轮树脂消耗未确认，无法可靠扣减预算，停止任务");
         if (!useRewards || _guideActivePlan.HasMissingRewards)
         {
-            // 预算模式只记消耗；奖励仍由主流程汇总，不再维护不完整的计划库存和掉落样本。
+            // 预算模式按实际消耗扣减预算，奖励由主流程汇总。
             _guideActivePlan.RecordResinSpent(_guideRoundResin);
         }
         else if (!_guideActivePlan.ApplyRewards(_guideRoundRewards, _guideRoundResin))

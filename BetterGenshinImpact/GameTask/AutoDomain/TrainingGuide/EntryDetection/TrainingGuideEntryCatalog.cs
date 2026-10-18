@@ -10,7 +10,7 @@ public sealed record TrainingGuideEntry(string Domain, string Entry, string Fami
 /// <summary>入口名称决定家族；最高难度的材料图标从高等级到低等级排列。</summary>
 public static class TrainingGuideEntryCatalog
 {
-    // 2026-09-28 核对：BWIKI 武器天赋素材（各材料的秘境来源）。
+    // 材料与秘境的对应关系参考 BWIKI 武器天赋素材。
     // https://wiki.biligame.com/ys/武器天赋素材
     // 每个秘境按一四、二五、三六顺序列出，仅供维护阅读，不按数组位置推断入口。
     public static IReadOnlyList<TrainingGuideEntry> Entries { get; } = Array.AsReadOnly<TrainingGuideEntry>([
@@ -72,8 +72,7 @@ public static class TrainingGuideEntryCatalog
         return Regex.Replace(normalized, @"[IVXⅠⅡⅢⅣⅤⅥ]+$", "", RegexOptions.IgnoreCase);
     }
 
-    // 仅收录实际日志出现的完整入口别名，并限定秘境；不做单字替换或子串匹配。
-    // 2026-09-28 两次遍历均记录这些名称，并成功读取对应家族材料。
+    // 入口别名按完整名称匹配，并限定所属秘境。
     private static readonly IReadOnlyDictionary<(string Domain, string Entry), string> OcrCorrections =
         new Dictionary<(string Domain, string Entry), string>
         {

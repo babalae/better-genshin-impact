@@ -5,7 +5,7 @@ using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide;
 
-/// <summary>入口的蓝色背景不能用饱和度分割，改用图标边框及同排等间距约束。</summary>
+/// <summary>通过图标边框和同排间距定位奖励图标，避免蓝色背景干扰。</summary>
 public static class TrainingGuideEntryMaterialIconLocator
 {
     public static IReadOnlyList<Rect> FindIcons(Mat strip, double scale,

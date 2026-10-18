@@ -6,7 +6,7 @@ using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide;
 
-/// <summary>保存领奖页已有结果及异常卡片，不重复推理或改变库存。</summary>
+/// <summary>保存领奖页的识别结果与异常奖励卡片，供诊断使用。</summary>
 internal static class TrainingGuideRewardDiagnostics
 {
     public static void RecordComparison(Mat screen, int page,

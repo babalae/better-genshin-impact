@@ -1571,7 +1571,7 @@
                             <StackPanel>
                                 <ui:TextBlock FontTypography="Body" Text="{i18n:T 识别失败时按固定预算继续}" />
                                 <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="{i18n:T 默认关闭，奖励识别失败即结束任务。开启后，当前材料按原预规划树脂预算继续，不再动态估算。下次任务生效。}"
+                                              Text="{i18n:T 默认关闭，奖励识别失败即结束任务。开启后，当前材料按原预规划树脂预算继续，不再动态估算}"
                                               TextWrapping="Wrap" />
                             </StackPanel>
                             <ui:ToggleSwitch Grid.Column="1" Margin="16,0,20,0"

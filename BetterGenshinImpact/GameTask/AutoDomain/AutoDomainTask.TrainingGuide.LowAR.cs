@@ -12,12 +12,13 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
+// 低世界等级适配：识别入口布局、校验选中与解锁状态，并选择可用难度。
 public partial class AutoDomainTask
 {
     private TrainingGuideEntryLayout? _guideEntryLayout;
     private readonly Dictionary<bool, int> _guideDifficultyCaps = new();
 
-    // 仅准备布局与选择已解锁难度，需求和材料读取仍由主流程负责。
+    // 识别入口布局，为按材料家族选择可用难度提供行号。
     private async Task<TrainingGuideEntry[]> PrepareGuideEntriesForLowAR(bool allOpen)
     {
         using (var screen = CaptureToRectArea())
