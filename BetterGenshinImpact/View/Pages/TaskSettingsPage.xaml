@@ -1571,7 +1571,7 @@
                             <StackPanel>
                                 <ui:TextBlock FontTypography="Body" Text="{i18n:T 识别失败时按固定预算继续}" />
                                 <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="{i18n:T 默认关闭，奖励识别失败即结束任务。开启后，当前材料按原预规划树脂预算继续，不再动态估算；预算结束不代表材料需求已核实。下次任务生效。}"
+                                              Text="{i18n:T 默认关闭，奖励识别失败即结束任务。开启后，当前材料按原预规划树脂预算继续，不再动态估算。下次任务生效。}"
                                               TextWrapping="Wrap" />
                             </StackPanel>
                             <ui:ToggleSwitch Grid.Column="1" Margin="16,0,20,0"
@@ -1673,6 +1673,21 @@
                             </Grid>
                         </StackPanel>
                         <Separator Margin="16,0" BorderThickness="0,1,0,0" />
+                        <Grid Margin="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <ui:TextBlock FontTypography="Body" Text="低世界等级适配" />
+                                <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="默认关闭，适用于秘境难度未解锁时自动选择可用难度"
+                                              TextWrapping="Wrap" />
+                            </StackPanel>
+                            <ui:ToggleSwitch Grid.Column="1" Margin="16,0,20,0"
+                                             IsChecked="{Binding Config.AutoDomainConfig.TrainingGuideLowARAdaptationEnabled, Mode=TwoWay}" />
+                        </Grid>
+                        <Separator Margin="16,0" BorderThickness="0,1,0,0" />
                         <ui:CardExpander Margin="16" ContentPadding="0" IsExpanded="False">
                             <ui:CardExpander.Header>
                                 <ui:TextBlock Text="开发者工具" FontTypography="Body" />
@@ -1686,7 +1701,7 @@
                                     <StackPanel>
                                         <ui:TextBlock FontTypography="Body" Text="{i18n:T 培养计划详细诊断}" />
                                         <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                      Text="{i18n:T 排查问题时开启，下次任务生效。保存 OCR 原文、匹配分数、判断过程及诊断截图至 Diagnostics，不在界面刷屏。}"
+                                                      Text="{i18n:T 排查问题时开启，下次任务生效。保存 OCR 原文、匹配分数、判断过程及诊断截图至 User/Diagnostics}"
                                                       TextWrapping="Wrap" />
                                     </StackPanel>
                                     <ui:ToggleSwitch Grid.Column="1" Margin="16,0,20,0"

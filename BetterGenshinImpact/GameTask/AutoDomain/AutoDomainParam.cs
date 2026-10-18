@@ -93,6 +93,8 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
 
     public bool TrainingGuideDiagnosticsEnabled { get; set; }
 
+    public bool TrainingGuideLowARAdaptationEnabled { get; set; }
+
     /// <summary>Fallback domain after training targets are complete. Empty disables fallback.</summary>
     public string TrainingGuideFallbackDomainName { get; set; } = string.Empty;
 
@@ -139,6 +141,7 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
         TrainingGuideRewardRecognitionEnabled = config.TrainingGuideRewardRecognitionEnabled;
         TrainingGuideRewardFailureBudgetEnabled = config.TrainingGuideRewardFailureBudgetEnabled;
         TrainingGuideDiagnosticsEnabled = config.TrainingGuideDiagnosticsEnabled;
+        TrainingGuideLowARAdaptationEnabled = config.TrainingGuideLowARAdaptationEnabled;
         TrainingGuideFallbackDomainName = config.TrainingGuideFallbackDomainName;
         TrainingGuideFallbackSundaySelectedValue = config.TrainingGuideFallbackSundaySelectedValue;
     }

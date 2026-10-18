@@ -151,6 +151,10 @@ public partial class AutoDomainConfig : ObservableObject
     [ObservableProperty]
     private bool _trainingGuideDiagnosticsEnabled;
 
+    /// <summary>仅培养指南启用入口选中、解锁检查和难度降级；默认关闭。</summary>
+    [ObservableProperty]
+    private bool _trainingGuideLowARAdaptationEnabled;
+
     // 培养计划完成或当天没有可刷取目标时使用的备选秘境
     [ObservableProperty]
     private string _trainingGuideFallbackDomainName = string.Empty;

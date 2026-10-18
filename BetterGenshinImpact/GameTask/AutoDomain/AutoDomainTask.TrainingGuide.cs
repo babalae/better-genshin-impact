@@ -20,8 +20,7 @@ namespace BetterGenshinImpact.GameTask.AutoDomain;
 public partial class AutoDomainTask
 {
     private bool _guidePlanning;
-    private TrainingGuideEntryLayout? _guideEntryLayout;
-    private readonly Dictionary<bool, int> _guideDifficultyCaps = new();
+    private readonly Dictionary<TrainingGuideEntry, double> _guideEntryPositions = new();
     private enum GuideNextAction { Continue, Stop, AdvancePlan }
     private GuideNextAction _guideNextAction;
     private string? _guideScannedDomain;
@@ -48,6 +47,8 @@ public partial class AutoDomainTask
     private void ResetTrainingGuideState()
     {
         _guideRounds = 0;
+        _guideDifficultyCaps.Clear();
+        _guideEntryLayout = null;
         _guideResinStatus = null;
         _guideDomainsWithObservedDemand.Clear();
         _guideDomainName = null;
@@ -141,7 +142,7 @@ public partial class AutoDomainTask
         return next;
     }
 
-    private async Task<List<string>> ScanGuideDomains()
+    private async Task<List<string>> ScanGuideDomains(bool firstOnly = false)
     {
         await OpenTrainingGuide();
         using (var initial = CaptureToRectArea())
@@ -186,11 +187,21 @@ public partial class AutoDomainTask
                     recognizedDomain = true;
                     if (match.Value.Supported) current.Add((match.Value.Name, row.Y));
                     if (!seen.Add(match.Value.Name)) continue;
-                    if (match.Value.Supported) domains.Add(match.Value.Name);
+                    if (match.Value.Supported)
+                    {
+                        domains.Add(match.Value.Name);
+                        if (firstOnly) break;
+                    }
                     else Logger.LogInformation("培养计划：忽略不支持材料规划的目标 {Domain}", match.Value.Name);
                 }
             }
             finally { foreach (var row in rows) row.Dispose(); }
+            if (firstOnly && domains.Count > 0)
+            {
+                await new ReturnMainUiTask().Start(_ct);
+                Logger.LogInformation("提升指南：选择首个材料秘境 {Domain}，不继续扫描", domains[0]);
+                return domains;
+            }
             // 只比较材料秘境；图标乱码、地区文字和周本名称不参与位置判断。
             var tolerance = Math.Max(1, (int)Math.Round(capture.Height * 8d / 1080));
             var stable = current.Count > 0 && current.Count == previous.Count &&
@@ -276,74 +287,20 @@ public partial class AutoDomainTask
         }
     }
 
-    private async Task SelectPlannedGuideLevel(bool allOpen)
+    // 两种培养模式共用入口选择，只有计算模式继续读取库存、建立计划。
+    private async Task SelectTrainingGuideLevel(bool allOpen)
     {
-        using (var screen = CaptureToRectArea())
-            BetterGenshinImpact.Core.Script.Dependence.GlobalMethod.MoveMouseTo((int)(screen.Width * .25), (int)(screen.Height * .5));
-        await Delay(100, _ct);
-        TrainingGuideEntry[] candidates = Array.Empty<TrainingGuideEntry>();
-        _guideEntryLayout = null;
-        for (var attempt = 0; attempt < 3; attempt++)
+        var candidates = _taskParam.TrainingGuideLowARAdaptationEnabled
+            ? await PrepareGuideEntriesForLowAR(allOpen)
+            : await PrepareGuideEntries(allOpen);
+        if (!_guidePlanning)
         {
-            if ((allOpen && attempt == 0) || (!allOpen && attempt == 1))
+            foreach (var entry in candidates)
             {
-                for (var i = 0; i < 37; i++) { InputHub.Foreground.Mouse.VerticalScroll(-1); await Delay(60, _ct); }
-                await Delay(600, _ct);
+                await SelectGuideEntry(entry, 4);
+                if (await HasGuideEntryDemand(entry)) return;
             }
-            using var capture = CaptureToRectArea();
-            var rows = capture.FindMulti(RecognitionObject.Ocr(0, capture.Height * .12, capture.Width * .47, capture.Height * .84));
-            var groupingId = $"entry-group-{DateTime.Now:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid():N}";
-            try
-            {
-                var scale = capture.Height / 1080d;
-                var rawRows = rows.Select(r => new { Region = r, Entry = TrainingGuideEntryCatalog.Find(_guideDomainName!, r.Text),
-                    CenterY = r.Y + r.Height / 2d }).OrderBy(r => r.CenterY).ToArray();
-                TrainingGuideDiagnostics.LogEntryVerification(groupingId,
-                    $"分组初始化；轮次={attempt + 1}/3；限时全开={allOpen}；画面={capture.Width}x{capture.Height}；原始OCR=" +
-                    string.Join(" | ", rawRows.Select(r => $"[{r.Region.Text}]，区域=({r.Region.X},{r.Region.Y},{r.Region.Width},{r.Region.Height})，中心Y={r.CenterY:F1}，匹配={r.Entry?.Entry ?? "未确认"}")));
-                // 先保留物理标题行，不能先删除名称匹配失败的行再从上方补足三行。
-                var titleRows = rawRows.Where(r => r.Entry != null || r.Region.Text.Contains("秘境")).ToArray();
-                // 同一标题的重复OCR只算一行；冲突或未识别结果交由下方校验拒绝。
-                var physicalRows = titleRows.Where((r, i) => i == 0 ||
-                    r.CenterY - titleRows[i - 1].CenterY > 20 * scale).ToArray();
-                var count = allOpen ? 3 : 4;
-                var bottomRows = physicalRows.TakeLast(count).ToArray();
-                TrainingGuideDiagnostics.LogEntryVerification(groupingId,
-                    $"标题OCR数={titleRows.Length}；去重后物理行数={physicalRows.Length}；待核验底部行=" +
-                    string.Join(" | ", bottomRows.Select(r => $"[{r.Region.Text}]@{r.CenterY:F1}=>{r.Entry?.Entry ?? "未确认"}")));
-                if (bottomRows.Length != count || bottomRows.Any(r => r.Entry == null) ||
-                    bottomRows.Zip(bottomRows.Skip(1), (a, b) => b.CenterY - a.CenterY)
-                        .Any(gap => gap < 90 * scale || gap > 130 * scale))
-                    throw new InvalidOperationException("底部连续入口缺行、行距异常或名称未确认，不能用上方入口补位");
-                // 即使整条标题漏读，也不能将其上方一组误当成列表末尾。
-                if (rawRows.Any(r => r.Region.Text.Contains("推荐") && r.Region.Text.Contains("等级") &&
-                    r.CenterY > bottomRows[^1].CenterY + 90 * scale))
-                    throw new InvalidOperationException("最后标题下方仍存在其他入口说明，疑似末行标题漏读");
-                var namedRows = physicalRows.Where(r => r.Entry != null).ToArray();
-                // 普通开放仅四行，必须完整识别，避免将漏读末行后的 III 当成 IV。
-                if (!allOpen && (namedRows.Length != 4 || namedRows.Select(r => r.Entry).Distinct().Count() != 1 ||
-                    namedRows.Any(r => r.Region.Y <= capture.Height * .12 ||
-                        r.Region.Y + r.Region.Height >= capture.Height * .96)))
-                    throw new InvalidOperationException("普通开放未确认完整的四个同名入口");
-                _guideEntryLayout = new TrainingGuideEntryLayout(namedRows.Select(r =>
-                    new TrainingGuideEntryLayout.Row(r.Entry!, r.Region.Y + r.Region.Height / 2d)).ToArray(),
-                    allOpen ? 3 : 1, capture.Height / 1080d);
-                candidates = _guideEntryLayout.Group;
-                TrainingGuideDiagnostics.Detail("培养入口分组：每组 {Count} 行，底部为 IV，行距 {Pitch:F1}；名称顺序 {Names}；罗马数字不参与定位",
-                    candidates.Length, _guideEntryLayout.Pitch, string.Join("、", candidates.Select(e => e.Entry)));
-                if (!allOpen && attempt == 0)
-                    TrainingGuideDiagnostics.Detail("培养入口：普通开放四行完整可见，跳过滚动，直接按位置选择难度");
-                break;
-            }
-            catch (InvalidOperationException e)
-            {
-                TrainingGuideDiagnostics.Save(capture.SrcMat, "failed-screen", groupingId);
-                TrainingGuideDiagnostics.LogEntryVerification(groupingId,
-                    $"分组失败；原因={e.Message}；后续={(attempt == 2 ? "停止" : !allOpen && attempt == 0 ? "滚到底后复查" : "原地等待后复查")}");
-                if (attempt == 2) throw;
-            }
-            finally { foreach (var row in rows) row.Dispose(); }
-            await Delay(600, _ct);
+            throw new InvalidOperationException("提升指南：所有入口均未识别到需求角色，停止挑战");
         }
         // 已完成整座秘境的首次扫描时，直接选择剩余计划，不重复检查无需求入口。
         if (_guideScannedDomain == _guideDomainName)
@@ -360,22 +317,13 @@ public partial class AutoDomainTask
         foreach (var entry in candidates)
         {
             if (_guideCustomTargets != null && !_guideCustomTargets.Keys.Any(m => m.Family == entry.Family && m.IsWeapon == entry.IsWeapon)) continue;
-            var difficulty = _guideDifficultyCaps.GetValueOrDefault(entry.IsWeapon, 4);
+            var difficulty = _taskParam.TrainingGuideLowARAdaptationEnabled
+                ? _guideDifficultyCaps.GetValueOrDefault(entry.IsWeapon, 4) : 4;
             var key = $"{entry.Domain}:{entry.Family}:{difficulty}";
             if (_guideProcessedLevels.Contains(key)) continue;
-            difficulty = await SelectUnlockedGuideEntry(entry, difficulty);
+            difficulty = await SelectGuideEntry(entry, difficulty);
             key = $"{entry.Domain}:{entry.Family}:{difficulty}";
             if (_guideProcessedLevels.Contains(key)) continue;
-            if (_guideCustomTargets == null)
-            {
-                // SelectUnlockedGuideEntry 已完成点击等待及选中验证，此后两帧之间不操作界面。
-                if (!await TrainingGuideDemandReader.ReadAsync(entry.Entry, Logger, _ct))
-                {
-                    Logger.LogInformation("培养计划：{Level} 难度 {Difficulty} 连续两帧未识别到需求角色，跳过本入口", entry.Entry, difficulty);
-                    continue;
-                }
-                _guideDomainsWithObservedDemand.Add(_guideDomainName!);
-            }
             var materials = await ReadEntryMaterials(entry, difficulty);
             if (materials.Count == 0) continue;
             if (!_guidePlans.TryGetValue(key, out var plan)) _guidePlans[key] = plan = new(materials, difficulty);
@@ -409,158 +357,69 @@ public partial class AutoDomainTask
 
     private async Task ActivateGuideEntry((TrainingGuideEntry Entry, int Difficulty, string Key) selected)
     {
-        var selectedDifficulty = await SelectUnlockedGuideEntry(selected.Entry, selected.Difficulty);
-        if (selectedDifficulty != selected.Difficulty)
-            throw new InvalidOperationException("开始挑战前入口难度发生变化，停止使用旧的树脂预算");
+        var actualDifficulty = await SelectGuideEntry(selected.Entry, selected.Difficulty);
+        if (actualDifficulty != selected.Difficulty)
+            throw new InvalidOperationException("开始挑战前可用难度发生变化，停止使用旧的树脂预算");
         _guideLevelKey = selected.Key;
         _guideActivePlan = _guidePlans[selected.Key];
     }
 
-    private sealed record GuideEntryClick(string Text, double CenterY, int Width, int Height, int Index);
-
-    // 列表到底后按同一家族逐级查找；不能把相邻的其他家族入口当作低一级。
-    private async Task<int> SelectUnlockedGuideEntry(TrainingGuideEntry entry, int difficulty)
+    private async Task<TrainingGuideEntry[]> PrepareGuideEntries(bool allOpen)
     {
-        for (; difficulty >= 1; difficulty--)
+        _guideEntryPositions.Clear();
+        if (allOpen)
         {
-            var clicked = await ClickGuideEntry(entry, difficulty);
-            var verificationStarted = System.Diagnostics.Stopwatch.GetTimestamp();
-            bool? unlocked = null;
-            for (var attempt = 0; attempt < 3; attempt++)
+            using (var screen = CaptureToRectArea())
+                BetterGenshinImpact.Core.Script.Dependence.GlobalMethod.MoveMouseTo(
+                    (int)(screen.Width * .25), (int)(screen.Height * .5));
+            await Delay(100, _ct);
+            for (var i = 0; i < 37; i++)
             {
-                var captureStartedAt = DateTime.Now;
-                var elapsedBeforeCapture = System.Diagnostics.Stopwatch.GetElapsedTime(verificationStarted).TotalMilliseconds;
-                using var screen = CaptureToRectArea();
-                var titles = screen.FindMulti(RecognitionObject.Ocr(0, screen.Height * .12, screen.Width * .47, screen.Height * .84));
-                bool selectionConfirmed;
-                bool layoutStable;
-                var stableAnchors = 0;
-                var titleDetails = string.Empty;
-                try
-                {
-                    var entryRows = titles.Where(r => r.Text.Contains("秘境")).Select(r => new
-                    {
-                        Row = r,
-                        NameMatches = TrainingGuideEntryCatalog.Find(entry.Domain, r.Text) == entry,
-                        Difficulty = TrainingGuideDropExpectations.ReadDifficulty(r.Text),
-                        HighlightRatio = TrainingGuideEntrySelection.HighlightRatio(screen.SrcMat, r.Y, r.Height)
-                    }).ToArray();
-                    var selectedRows = entryRows.Where(r => r.HighlightRatio >= TrainingGuideEntrySelection.MinimumHighlightRatio).ToArray();
-                    var layout = _guideEntryLayout!;
-                    var namedRows = entryRows.Select(r => new { Value = r,
-                        Entry = TrainingGuideEntryCatalog.Find(entry.Domain, r.Row.Text) })
-                        .Where(r => r.Entry != null).Select(r => new TrainingGuideEntryLayout.Row(
-                            r.Entry!, r.Value.Row.Y + r.Value.Row.Height / 2d)).ToArray();
-                    layoutStable = screen.Width == clicked.Width && screen.Height == clicked.Height &&
-                        layout.TryUpdate(namedRows);
-                    stableAnchors = layoutStable ? layout.MatchedRows : 0;
-                    selectionConfirmed = selectedRows.Length == 1 && selectedRows[0].NameMatches && layoutStable &&
-                        layout.IsTarget(new TrainingGuideEntryLayout.Row(entry,
-                            selectedRows[0].Row.Y + selectedRows[0].Row.Height / 2d), clicked.Index);
-                    titleDetails = string.Join(" | ", entryRows.Select(r =>
-                            $"原文=[{r.Row.Text}]，位置=({r.Row.X},{r.Row.Y},{r.Row.Width},{r.Row.Height})，名称匹配={r.NameMatches}，解析难度={r.Difficulty}，高亮比例={r.HighlightRatio:F4}"));
-                }
-                finally { foreach (var title in titles) title.Dispose(); }
-                using var button = screen.Find(RecognitionObject.Ocr(screen.Width * .48, screen.Height * .80, screen.Width * .5, screen.Height * .18));
-                var text = TrainingGuideMaterialCatalog.Normalize(button.Text);
-                if (selectionConfirmed)
-                {
-                    if (text.Contains("冒险等阶") && text.Contains("解锁")) unlocked = false;
-                    else if (text.Contains(singlePlayerChallengeString)) unlocked = true;
-                }
-                if (TrainingGuideDiagnostics.Enabled)
-                {
-                    var captureId = $"entry-check-{captureStartedAt:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid():N}";
-                    var message = $"目标={entry.Domain}/{entry.Entry}；目标难度={difficulty}；验证轮次={attempt + 1}/3；截图开始={captureStartedAt:O}；点击方法返回后耗时={elapsedBeforeCapture:F0}ms（方法内已等待700ms）；画面={screen.Width}x{screen.Height}；左侧OCR区域=(0%,12%,47%,84%)；入口行=[{titleDetails}]；点击前原文=[{clicked.Text}]；点击前中心Y={clicked.CenterY:F1}；匹配行数={stableAnchors}；整体位移={_guideEntryLayout!.LastShift:F1}；底部起行号={clicked.Index}；列表位置稳定={layoutStable}；确认难度依据=底部IV分组及行序；高亮阈值={TrainingGuideEntrySelection.MinimumHighlightRatio:F2}；目标行选中确认={selectionConfirmed}；按钮OCR区域=(48%,80%,50%,18%)；按钮原文=[{button.Text}]；按钮标准化=[{text}]；包含冒险等阶={text.Contains("冒险等阶")}；包含解锁={text.Contains("解锁")}；挑战匹配词=[{singlePlayerChallengeString}]；包含挑战={text.Contains(singlePlayerChallengeString)}；结果={(unlocked == true ? "已解锁" : unlocked == false ? "未解锁" : "未确认")}";
-                    TrainingGuideDiagnostics.LogEntryVerification(captureId, message);
-                    TrainingGuideDiagnostics.Save(screen.SrcMat, "screen", captureId);
-                }
-                if (unlocked != null) break;
-                if (!layoutStable && attempt < 2)
-                    Logger.LogWarning("培养入口排列暂未确认：{Entry} 难度 {Difficulty}，等待稳定后复查，不降级或重复点击",
-                        entry.Entry, difficulty);
-                await Delay(400, _ct);
+                InputHub.Foreground.Mouse.VerticalScroll(-1);
+                await Delay(60, _ct);
             }
-            if (unlocked == true) return difficulty;
-            if (unlocked == null) throw new InvalidOperationException($"{entry.Entry}：未确认选中难度或挑战按钮，不能将识别失败当作未解锁");
-            _guideDifficultyCaps[entry.IsWeapon] = difficulty - 1;
-            Logger.LogInformation("培养计划：{Entry} 难度 {Difficulty} 未解锁，同类材料后续从低一级检查", entry.Entry, difficulty);
+            await Delay(400, _ct);
         }
-        throw new InvalidOperationException($"{entry.Entry}：所有难度均未解锁，停止培养规划");
-    }
-
-    private async Task<GuideEntryClick> ClickGuideEntry(TrainingGuideEntry entry, int difficulty)
-    {
-        var layout = _guideEntryLayout ?? throw new InvalidOperationException("尚未建立入口分组");
-        var targetIndex = layout.Index(entry, difficulty);
-        var failedFrames = 0;
-        var missingTargetFrames = 0;
-        var afterUpwardScroll = false;
-        for (var page = 0; page < 80; page++)
+        // 只读取一次名称用于关联材料家族；点击采用固定位置，不验证高亮、行距或解锁。
+        TrainingGuideEntry[] candidates;
+        using (var capture = CaptureToRectArea())
         {
-            using var screen = CaptureToRectArea();
-            var rows = screen.FindMulti(RecognitionObject.Ocr(0, screen.Height * .12, screen.Width * .47, screen.Height * .84));
-            var direction = 0;
+            var rows = capture.FindMulti(RecognitionObject.Ocr(0, capture.Height * .12,
+                capture.Width * .47, capture.Height * .84));
             try
             {
-                var namedRows = rows.Select(r => new { Region = r, Entry = TrainingGuideEntryCatalog.Find(entry.Domain, r.Text) })
-                    .Where(r => r.Entry != null).ToArray();
-                if (!layout.TryUpdate(namedRows.Select(r => new TrainingGuideEntryLayout.Row(
-                        r.Entry!, r.Region.Y + r.Region.Height / 2d)).ToArray(), afterUpwardScroll))
-                {
-                    if (++failedFrames >= 3)
-                        throw new InvalidOperationException("入口排列或位移不明确，停止以避免误选难度");
-                }
-                else
-                {
-                    failedFrames = 0;
-                    afterUpwardScroll = false;
-                    var target = namedRows.FirstOrDefault(r => layout.IsTarget(
-                        new TrainingGuideEntryLayout.Row(r.Entry!, r.Region.Y + r.Region.Height / 2d), targetIndex));
-                    if (target != null && target.Region.Y >= screen.Height * .14 &&
-                        target.Region.Y + target.Region.Height < screen.Height * .95)
-                    {
-                        var clicked = new GuideEntryClick(target.Region.Text,
-                            target.Region.Y + target.Region.Height / 2d, screen.Width, screen.Height, targetIndex);
-                        TrainingGuideDiagnostics.Detail("培养入口顺序定位：{Entry} 难度 {Difficulty}，底部起行号 {Index}，中心Y {Y:F1}，整体位移 {Shift:F1}",
-                            entry.Entry, difficulty, targetIndex, clicked.CenterY, layout.LastShift);
-                        target.Region.Click();
-                        await Delay(700, _ct);
-                        return clicked;
-                    }
-                    var y = layout.Y(targetIndex);
-                    // 可见范围内漏读时原地重试，不能通过滚动猜测难度。
-                    if (y < screen.Height * .17) direction = 1;
-                    else if (y > screen.Height * .92) direction = -1;
-                    else if (++missingTargetFrames >= 3)
-                        throw new InvalidOperationException($"{entry.Entry} 难度 {difficulty}：目标位置可见，但原地复查三次仍未确认可点击入口，停止查找");
-                }
+                candidates = rows.OrderBy(r => r.Y)
+                    .Select(r => TrainingGuideEntryCatalog.Find(_guideDomainName!, r.Text))
+                    .Where(e => e != null).Select(e => e!).TakeLast(allOpen ? 3 : 1).ToArray();
             }
             finally { foreach (var row in rows) row.Dispose(); }
-            if (direction != 0)
-            {
-                missingTargetFrames = 0;
-                BetterGenshinImpact.Core.Script.Dependence.GlobalMethod.MoveMouseTo((int)(screen.Width * .25), (int)(screen.Height * .5));
-                // 普通开放的入口同名，每次只滚一格，保持小幅位移跟踪；全开模式可按名称周期对齐。
-                var scrollCount = direction > 0 && layout.Group.Length > 1 ? 5 : 1;
-                for (var step = 0; step < scrollCount; step++)
-                {
-                    InputHub.Foreground.Mouse.VerticalScroll(direction);
-                    await Delay(60, _ct);
-                }
-                afterUpwardScroll = direction > 0 && scrollCount > 1;
-                TrainingGuideDiagnostics.Detail("培养入口查找：滚动方向 {Direction}，本次 {Count} 格，等待后重新确认入口排列",
-                    direction > 0 ? "向上" : "向下", scrollCount);
-            }
-            await Delay(500, _ct);
         }
-        throw new InvalidOperationException($"未找到 {entry.Entry} 难度 {difficulty}，停止以避免选择其他材料家族");
+        if (candidates.Length != (allOpen ? 3 : 1) || candidates.Distinct().Count() != candidates.Length)
+            throw new InvalidOperationException("提升指南：未识别到当前秘境的材料入口名称");
+        for (var i = 0; i < candidates.Length; i++)
+            _guideEntryPositions[candidates[i]] = allOpen ? .70 + i * .10 : 520d / 1080;
+        return candidates;
     }
 
-    private async Task<List<TrainingGuideMaterialReading>> ReadEntryMaterials(TrainingGuideEntry entry, int difficulty)
+    private async Task<int> SelectGuideEntry(TrainingGuideEntry entry, int difficulty)
     {
-        var level = entry.Entry;
-        using var capture = CaptureToRectArea();
+        if (_taskParam.TrainingGuideLowARAdaptationEnabled)
+            return await SelectGuideEntryForLowAR(entry, difficulty);
+        await ClickGuideEntry(entry);
+        return 4;
+    }
+
+    private async Task ClickGuideEntry(TrainingGuideEntry entry)
+    {
+        using var screen = CaptureToRectArea();
+        var y = _guideEntryPositions[entry];
+        screen.ClickTo(screen.Width * .25, screen.Height * y);
+        TrainingGuideDiagnostics.Detail("培养入口固定位置选择：{Entry}，X=25%，Y={Y:P1}", entry.Entry, y);
+        await Delay(700, _ct);
+    }
+
+    private static Rect FindGuideRewardBand(BetterGenshinImpact.GameTask.Model.Area.ImageRegion capture)
+    {
         var texts = capture.FindMulti(RecognitionObject.Ocr(capture.Width * .48, capture.Height * .35, capture.Width * .5, capture.Height * .4));
         Rect band;
         try
@@ -569,13 +428,42 @@ public partial class AutoDomainTask
             if (label == null) throw new InvalidOperationException("秘境入口未识别到可能获得奖励区域");
             // 从标题底部开始，保留图标边框，避免固定偏移切掉顶部或底部轮廓。
             var top = label.Y + label.Height + (int)(capture.Height * .006);
-            var height = Math.Min((int)(capture.Height * .145), capture.Height - top);
+            if (top < 0 || top >= capture.Height)
+                throw new InvalidOperationException("奖励标题下方没有有效截图区域，停止本入口扫描");
+            // 在原奖励图标区域下方增加 12px（1080P），覆盖需求角色横条。
+            var height = Math.Min((int)(capture.Height * .145) +
+                (int)Math.Ceiling(capture.Height * (12d / 1080)), capture.Height - top);
             band = new Rect((int)(capture.Width * .475), top, (int)(capture.Width * .48), height);
             TrainingGuideDiagnostics.Detail("秘境材料图标区域定位：画面 {Width}x{Height}，标题 ({X},{Y},{W},{H})，裁剪 {Band}",
                 capture.Width, capture.Height, label.X, label.Y, label.Width, label.Height, band);
         }
         finally { foreach (var text in texts) text.Dispose(); }
+        return band;
+    }
+
+    private async Task<bool> HasGuideEntryDemand(TrainingGuideEntry entry)
+    {
+        using var capture = CaptureToRectArea();
+        var band = FindGuideRewardBand(capture);
         using var strip = new Mat(capture.SrcMat, band);
+        return await TrainingGuideDemandReader.ReadAsync(entry.Entry, strip, band, _ct);
+    }
+
+    private async Task<List<TrainingGuideMaterialReading>> ReadEntryMaterials(TrainingGuideEntry entry, int difficulty)
+    {
+        var level = entry.Entry;
+        using var capture = CaptureToRectArea();
+        var band = FindGuideRewardBand(capture);
+        using var strip = new Mat(capture.SrcMat, band);
+        if (_guideCustomTargets == null)
+        {
+            if (!await TrainingGuideDemandReader.ReadAsync(entry.Entry, strip, band, _ct))
+            {
+                Logger.LogInformation("培养计划：{Level} 单帧未识别到需求角色，跳过本入口", entry.Entry);
+                return new List<TrainingGuideMaterialReading>();
+            }
+            _guideDomainsWithObservedDemand.Add(_guideDomainName!);
+        }
         var recognitionId = $"icons-{DateTime.Now:yyyyMMdd-HHmmss-fff}-{Guid.NewGuid():N}";
         var locationDetails = new System.Text.StringBuilder();
         Action<string>? logLocation = !TrainingGuideDiagnostics.Enabled ? null : message => locationDetails.AppendLine(message);

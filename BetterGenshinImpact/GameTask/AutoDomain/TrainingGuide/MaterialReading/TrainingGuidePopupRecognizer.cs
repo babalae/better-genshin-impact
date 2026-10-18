@@ -31,10 +31,12 @@ public sealed class TrainingGuidePopupRecognizer(ILogger logger, CancellationTok
             var mode = attempt / 2;
             var debugPrefix = debugId == null ? null : $"{debugId}-attempt-{attempt + 1}-mode-{mode}";
             SaveDebugImage(capture.SrcMat, debugPrefix, "capture");
-            // 底部从46%覆盖至98%，给较高浮窗的库存/培养需求条保留空间。
-            var footerTop = (int)(capture.Height * .46);
-            var footerRect = new Rect((int)(capture.Width * .365), footerTop, (int)(capture.Width * .27),
-                (int)(capture.Height * .98) - footerTop);
+            // 1080P 下 Y=830～1028，数量栏上下各预留约一行文字。
+            var footerTop = (int)Math.Floor(capture.Height * (830d / 1080));
+            var footerRect = new Rect(
+                (int)(capture.Width * .365), footerTop,
+                (int)(capture.Width * .27),
+                (int)Math.Ceiling(capture.Height * (1028d / 1080)) - footerTop);
             var footer = ReadLines(capture, footerRect, mode, debugPrefix, "footer");
             var current = TrainingGuidePopupParser.ParseQuantities(expectedMaterial, string.Join("\n", footer));
             diagnostic = $"图标材料：{expectedMaterial.Name}；底部：{string.Join(" | ", footer)}";

@@ -420,10 +420,12 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
     private async Task TpDomain()
     {
         // 初次进入及切换目标共用传送路径，不复用上一轮画面坐标。
-        if (_guidePlanning) _guideEntryLayout = null;
+        _guideEntryPositions.Clear();
         if (_taskParam.DomainName == TrainingGuideOption && !_guidePlanning)
         {
-            await SelectTrainingGuideDestination();
+            _guideDomainName = null;
+            _guideDomainName = (await ScanGuideDomains(firstOnly: true)).FirstOrDefault()
+                ?? throw new InvalidOperationException("提升指南：没有可用的材料秘境，停止任务");
         }
         // 传送到秘境
         if (!string.IsNullOrEmpty(_guideDomainName ?? _taskParam.DomainName))
@@ -590,10 +592,10 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                 500
             );
         }
-        // 培养规划先确认菜单，再滚到底检查解锁状态；默认选中的入口可能尚未解锁。
+        // 培养指南只等待入口菜单，不在选择前检查挑战按钮或解锁状态。
         using var menuScreen = CaptureToRectArea();
         var menuFound = await NewRetry.WaitForElementAppear(
-            _guidePlanning
+            (_guidePlanning || _taskParam.DomainName == TrainingGuideOption)
                 ? RecognitionObject.OcrMatch(0, 0, menuScreen.Width * .47, menuScreen.Height * .12, "秘境入口")
                 : GetConfirmRa(singlePlayerChallengeString),
             null,//只等待,不执行操作
@@ -603,7 +605,8 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         );
         if (!menuFound)
         {
-            if (_guidePlanning) throw new InvalidOperationException("未确认秘境入口菜单，停止培养规划");
+            if (_guidePlanning || _taskParam.DomainName == TrainingGuideOption)
+                throw new InvalidOperationException("未确认秘境入口菜单，停止培养任务");
             Logger.LogWarning("单人挑战 按键未出现，请检查是否已进入秘境页面");
         }
 
@@ -621,16 +624,12 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         foreach (var region in limitedFullyStringRaocrList) region.Dispose();
 
         var serverTime = ServerTimeHelper.GetServerTimeNow();
-        if (_guidePlanning)
+        if (_guidePlanning || _taskParam.DomainName == TrainingGuideOption)
         {
             var allOpen = serverTime is { DayOfWeek: DayOfWeek.Sunday, Hour: >= 4 }
                 || serverTime is { DayOfWeek: DayOfWeek.Monday, Hour: < 4 }
                 || limitedFullyStringRaocrListdone != null;
-            await SelectPlannedGuideLevel(allOpen);
-        }
-        else if (_taskParam.DomainName == TrainingGuideOption)
-        {
-            await SelectTrainingGuideLevel();
+            await SelectTrainingGuideLevel(allOpen);
         }
         else if (serverTime is { DayOfWeek: DayOfWeek.Sunday, Hour: >= 4 } || serverTime is { DayOfWeek: DayOfWeek.Monday, Hour: < 4 } || limitedFullyStringRaocrListdone != null)
         {
