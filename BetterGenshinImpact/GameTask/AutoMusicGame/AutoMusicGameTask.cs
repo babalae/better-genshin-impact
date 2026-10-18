@@ -1,4 +1,5 @@
-﻿using BetterGenshinImpact.Core.Input;
+﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Input;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -6,15 +7,46 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoMusicGame;
 
-public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
+public class AutoMusicGameTask : ISoloTask
 {
     public string Name => "自动音游";
+
+    /// <summary>
+    /// 本次运行使用的运行环境：截图、窗口句柄与画面信息都只使用它
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 配置根，由创建方传入
+    /// </summary>
+    private readonly AllConfig _config;
+
+    /// <summary>
+    /// 任务参数
+    /// </summary>
+    private readonly AutoMusicGameParam _taskParam;
+
+    /// <summary>
+    /// 创建自动音游任务
+    /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    /// <param name="config">配置根</param>
+    /// <param name="taskParam">任务参数</param>
+    public AutoMusicGameTask(GameRuntime runtime, AllConfig config, AutoMusicGameParam taskParam)
+    {
+        _runtime = runtime;
+        _config = config;
+        _taskParam = taskParam;
+        _hWnd = runtime.Window.Handle;
+    }
 
 
     // private readonly ConcurrentDictionary<User32.VK, int> _keyX = new()
@@ -42,11 +74,14 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
 
     private readonly int _keyY = 921;
 
-    private readonly IntPtr _hWnd = TaskContext.Instance().GameHandle;
+    /// <summary>
+    /// 游戏窗口句柄，取自本次运行环境，用于 GDI 取色
+    /// </summary>
+    private readonly IntPtr _hWnd;
 
     public async Task Start(CancellationToken ct)
     {
-        Init();
+        Init(_runtime);
         await StartWithOutInit(ct);
     }
 
@@ -55,14 +90,14 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
         try
         {
             Logger.LogInformation("开始自动演奏");
-            var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+            var assetScale = _runtime.SystemInfo.AssetScale;
             // var taskFactory = new TaskFactory();
             var taskList = new List<Task>();
 
             // 计算按键位置
-            using var gameCaptureRegion = CaptureToRectArea();
+            using var gameCaptureRegion = _runtime.CaptureToRectArea();
 
-            if (TaskContext.Instance().Config.AutoMusicGameConfig.UseCapturePipeline)
+            if (_config.AutoMusicGameConfig.UseCapturePipeline)
             {
                 // 截图管线模式：单采集循环驱动全部键位（替代每键独立 GDI 轮询）
                 // 注意：CaptureToRectArea 返回的 SrcMat 在采集宽度大于 1920 时已归一化为 1920x1080，
@@ -168,7 +203,7 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
         {
             await Task.Delay(5, ct);
 
-            using var cap = CaptureToRectArea();
+            using var cap = _runtime.CaptureToRectArea();
             if (cap == null || cap.SrcMat == null || cap.SrcMat.Empty()) continue;
 
             for (var i = 0; i < keys.Count; i++)
@@ -303,14 +338,22 @@ public class AutoMusicGameTask(AutoMusicGameParam taskParam) : ISoloTask
         InputHub.Foreground.Keyboard.KeyDown(key);
     }
 
-    public static void Init()
+    /// <summary>
+    /// 开始演奏前检查分辨率并输出提示
+    /// </summary>
+    /// <param name="runtime">要检查的运行环境</param>
+    public static void Init(GameRuntime runtime)
     {
-        LogScreenResolution();
+        LogScreenResolution(runtime);
     }
 
-    public static void LogScreenResolution()
+    /// <summary>
+    /// 检查游戏分辨率并输出自动音游的使用提示
+    /// </summary>
+    /// <param name="runtime">要检查的运行环境</param>
+    public static void LogScreenResolution(GameRuntime runtime)
     {
-        AssertUtils.CheckGameResolution("自动音游");
+        AssertUtils.CheckGameResolution(runtime, "自动音游");
 
         Logger.LogInformation("{Name}：回到游戏主界面时记得关闭自动音游任务！", "千音雅集");
         Logger.LogWarning("{Name}：默认的样式“轻漾涟漪”是{No}的！需要手动完成几首曲目获得{Money}千音币后兑换并使用胡桃样式“{Hutao}”！", "千音雅集", "不可用", 600, "疏影引蝶映梅红");

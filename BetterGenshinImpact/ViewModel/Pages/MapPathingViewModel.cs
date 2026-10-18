@@ -151,7 +151,7 @@ public partial class MapPathingViewModel : ViewModel
 
         var fileInfo = new FileInfo(item.FilePath);
         var project = ScriptGroupProject.BuildPathingProject(fileInfo.Name, fileInfo.DirectoryName!);
-        await new TaskRunner().RunThreadAsync(ct => _scriptService.RunMulti([project], null, ct));
+        await new TaskRunner().RunThreadAsync((runtime, ct) => _scriptService.RunMulti(runtime, [project], null, ct));
     }
 
     [RelayCommand]

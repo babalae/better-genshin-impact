@@ -7,6 +7,7 @@ using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.Core.Mask;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
@@ -30,7 +31,7 @@ public class SkillCdTrigger : ITaskTrigger
     public const string OverlayKey = "SkillCdText";
 
     public string Name => "SkillCd";
-    public bool IsEnabledByConfig => TaskContext.Instance().Config.SkillCdConfig.Enabled;
+    public bool IsEnabledByConfig => _config.SkillCdConfig.Enabled;
 
     public int Priority => 10;
     public bool IsExclusive => false;
@@ -104,6 +105,27 @@ public class SkillCdTrigger : ITaskTrigger
     private readonly AvatarActiveCheckContext _activeCheckContext = new();
 
     /// <summary>
+    /// 本触发器所属的运行环境：识别队伍时截图用；停用时只清理它借用的遮罩绘制入口
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 配置根：读取冷却提示、按键绑定等设置，检测到联机时写回关闭开关
+    /// </summary>
+    private readonly AllConfig _config;
+
+    /// <summary>
+    /// 创建技能 CD 提示触发器
+    /// </summary>
+    /// <param name="runtime">本触发器所属的运行环境</param>
+    /// <param name="config">配置根</param>
+    public SkillCdTrigger(GameRuntime runtime, AllConfig config)
+    {
+        _runtime = runtime;
+        _config = config;
+    }
+
+    /// <summary>
     /// 启用时清空帧缓存和全部 CD 状态，从零开始计时
     /// </summary>
     public void OnEnabled(object? options)
@@ -140,7 +162,7 @@ public class SkillCdTrigger : ITaskTrigger
     /// </summary>
     public void OnDisabled()
     {
-        TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.Clear(OverlayKey);
+        _runtime.MaskWindowDrawingBoard.Clear(OverlayKey);
         DisposeFrameCache();
     }
 
@@ -192,7 +214,7 @@ public class SkillCdTrigger : ITaskTrigger
             if (multiGameStatus.IsInMultiGame)
             {
                 // 检测到联机状态，自动关闭SkillCd：写回用户配置，下一帧由调度器停用并调用 OnDisabled
-                TaskContext.Instance().Config.SkillCdConfig.Enabled = false;
+                _config.SkillCdConfig.Enabled = false;
                 _logger.LogWarning("检测到联机状态，自动关闭冷却提示");
                 return;
             }
@@ -251,7 +273,7 @@ public class SkillCdTrigger : ITaskTrigger
                 CombatScenes? scenes = null;
                 try 
                 {
-                    scenes = RunnerContext.Instance.TrySyncCombatScenesSilent();
+                    scenes = RunnerContext.Instance.TrySyncCombatScenesSilent(_runtime, _config);
                     if (scenes != null && scenes.CheckTeamInitialized())
                     {
                         var avatars = scenes.GetAvatars();
@@ -345,8 +367,8 @@ public class SkillCdTrigger : ITaskTrigger
         }
 
         // 监听元素战技 (E) 键物理输入
-        var elementalSkillKey = (int)TaskContext.Instance()
-            .Config.KeyBindingsConfig.ElementalSkill.ToVK();
+        var elementalSkillKey = (int)_config
+            .KeyBindingsConfig.ElementalSkill.ToVK();
 
         short eKeyState = User32.GetAsyncKeyState(elementalSkillKey);
         bool isEDown = (eKeyState & 0x8000) != 0;
@@ -375,7 +397,7 @@ public class SkillCdTrigger : ITaskTrigger
                 }
             }
 
-            if (_prevEKey && TaskContext.Instance().Config.SkillCdConfig.TriggerOnSkillUse)
+            if (_prevEKey && _config.SkillCdConfig.TriggerOnSkillUse)
             {
                 ImageRegion frameToUse = _penultimateImage ?? _lastImage;
                 if (frameToUse != null)
@@ -569,7 +591,7 @@ public class SkillCdTrigger : ITaskTrigger
     private Dictionary<string, double?> ParseCustomCdConfig()
     {
         var result = new Dictionary<string, double?>();
-        var list = TaskContext.Instance().Config.SkillCdConfig.CustomCdList;
+        var list = _config.SkillCdConfig.CustomCdList;
         
         if (list == null) return result;
 
@@ -609,7 +631,7 @@ public class SkillCdTrigger : ITaskTrigger
             if (match.Success && double.TryParse(match.Value, out var val))
             {
                 // 减去两帧的时间作为补偿
-                int intervalMs = TaskContext.Instance().Config.TriggerInterval;
+                int intervalMs = _config.TriggerInterval;
                 double compensation = (intervalMs * 2) / 1000.0;
                 val -= compensation;
 
@@ -654,6 +676,6 @@ public class SkillCdTrigger : ITaskTrigger
             }
         }
 
-        SkillCdOverlayRenderer.Update(drawingBoard, OverlayKey, slotCds);
+        SkillCdOverlayRenderer.Update(_runtime, drawingBoard, OverlayKey, slotCds);
     }
 }

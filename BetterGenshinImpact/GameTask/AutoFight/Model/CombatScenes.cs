@@ -9,7 +9,9 @@ using BetterGenshinImpact.GameTask.AutoFight.Config;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Service;
 using Compunet.YoloSharp;
 using Compunet.YoloSharp.Data;
 using Microsoft.Extensions.DependencyInjection;
@@ -62,10 +64,38 @@ public class CombatScenes : IDisposable
 
     private readonly ILogger _logger;
 
+    /// <summary>
+    /// 识别队伍、截图、切换角色所用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 配置根，未显式传入自动战斗配置时从这里取
+    /// </summary>
+    private readonly AllConfig _config;
+
+    /// <summary>
+    /// 运行环境的画面信息（即 <see cref="GameRuntime.SystemInfo"/>）
+    /// </summary>
     private readonly ISystemInfo _systemInfo;
 
-    public CombatScenes(BgiYoloPredictor? predictor = null, AutoFightAssets? autoFightAssets = null, ILogger? logger = null, ISystemInfo? systemInfo = null)
+    /// <summary>
+    /// 本战斗场景所在的运行环境，供持有场景的条件求值、战斗指令等取用同一个运行环境
+    /// </summary>
+    public GameRuntime Runtime => _runtime;
+
+    /// <summary>
+    /// 创建战斗场景
+    /// </summary>
+    /// <param name="runtime">识别队伍、截图、切换角色所用的运行环境</param>
+    /// <param name="config">配置根</param>
+    /// <param name="predictor">角色侧面头像分类器，不传时内部创建并负责释放</param>
+    /// <param name="autoFightAssets">自动战斗素材，不传时按运行环境的画面尺寸获取</param>
+    /// <param name="logger">日志，不传时使用任务公共日志</param>
+    public CombatScenes(GameRuntime runtime, AllConfig config, BgiYoloPredictor? predictor = null, AutoFightAssets? autoFightAssets = null, ILogger? logger = null)
     {
+        _runtime = runtime;
+        _config = config;
         if (predictor == null)
         {
             _predictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiAvatarSide);
@@ -76,7 +106,7 @@ public class CombatScenes : IDisposable
             _predictor = predictor;
             _ownsPredictor = false;
         }
-        _systemInfo = systemInfo ?? TaskContext.Instance().SystemInfo;
+        _systemInfo = runtime.SystemInfo;
         var captureRect = _systemInfo.ScaleMax1080PCaptureRect;
         _autoFightAssets = autoFightAssets ?? AutoFightAssets.Get(captureRect.Width, captureRect.Height);    // todo BaseAssets重构后直接由systemInfo构建，省去传入？
         if (logger == null)
@@ -109,10 +139,10 @@ public class CombatScenes : IDisposable
     {
         if (autoFightConfig == null)
         {
-            autoFightConfig = TaskContext.Instance().Config.AutoFightConfig;
+            autoFightConfig = _config.AutoFightConfig;
         }
 
-        AssertUtils.CheckGameResolution();
+        AssertUtils.CheckGameResolution(_runtime);
         // 优先取配置
         if (!string.IsNullOrEmpty(autoFightConfig.TeamNames))
         {
@@ -198,7 +228,7 @@ public class CombatScenes : IDisposable
         {
             if (autoFightConfig == null)
             {
-                autoFightConfig = TaskContext.Instance().Config.AutoFightConfig;
+                autoFightConfig = _config.AutoFightConfig;
             }
 
             // 优先取配置
@@ -362,7 +392,7 @@ public class CombatScenes : IDisposable
     {
         if (autoFightConfig == null)
         {
-            autoFightConfig = TaskContext.Instance().Config.AutoFightConfig;
+            autoFightConfig = _config.AutoFightConfig;
         }
         var cdConfig = autoFightConfig.ActionSchedulerByCd;
         if (avatarIndexRectList == null && ExpectedTeamAvatarNum == 4)
@@ -382,7 +412,7 @@ public class CombatScenes : IDisposable
             var nameRect = nameRects?[i] ?? default;
             // 根据手动写的出招表来优化CD
             var cd = Avatar.ParseActionSchedulerByCd(names[i], cdConfig);
-            avatars[i] = new Avatar(this, names[i], i + 1, nameRect, cd ?? -1)
+            avatars[i] = new Avatar(_runtime, _config, this, names[i], i + 1, nameRect, cd ?? -1)
             {
                 IndexRect = avatarIndexRectList[i]
             };
@@ -413,12 +443,15 @@ public class CombatScenes : IDisposable
     /// <summary>
     /// 以给定的队伍成员实例化战斗场景，供跨任务携带 Avatar 实例时接管复用（如自动连招建树会话）
     /// 会先重新识别当前游戏内队伍并校验与给定成员一致（与顺序无关），不一致或识别失败抛异常；
-    /// 校验通过后用给定成员替换识别结果中的队伍（修正其 CombatScenes 反向引用），并同步编号框位置
+    /// 校验通过后用给定成员替换识别结果中的队伍（修正其 CombatScenes 反向引用与运行环境），并同步编号框位置
     /// </summary>
-    public static CombatScenes FromAvatars(Avatar[] avatars)
+    /// <param name="runtime">本次运行使用的运行环境，接管的成员改为绑定到它</param>
+    /// <param name="config">配置根</param>
+    /// <param name="avatars">要接管的队伍成员</param>
+    public static CombatScenes FromAvatars(GameRuntime runtime, AllConfig config, Avatar[] avatars)
     {
         // 复用识别重试逻辑获取当前队伍场景，识别出的成员被替换丢弃，场景本身作为接管载体
-        var scenes = GetCombatScenesWithRetry();
+        var scenes = GetCombatScenesWithRetry(runtime, config);
         var currentNames = scenes.GetAvatars().Select(a => a.Name).ToList();
         var takenNames = avatars.Select(a => a.Name).ToList();
         var missing = takenNames.Except(currentNames).ToList();
@@ -435,8 +468,9 @@ public class CombatScenes : IDisposable
         scenes.Avatars = avatars;
         foreach (var avatar in avatars)
         {
-            // 修正 Avatar 持有的场景反向引用，避免运行期间访问到已丢弃的建树场景
-            avatar.CombatScenes = scenes;
+            // 修正 Avatar 持有的场景反向引用，避免运行期间访问到已丢弃的建树场景；
+            // 运行环境同时改为本次运行的，建树会话的成员可能是在另一个运行环境里识别的
+            avatar.AttachTo(scenes, runtime);
             avatar.IndexRect = indexRects[avatar.Name];
             // 复位跨 run 残留的就绪缓存（Avatar 实例随会话携带，旧缓存对新战斗不再可信）
             avatar.IsBurstReady = false;
@@ -448,15 +482,18 @@ public class CombatScenes : IDisposable
     /// <summary>
     /// 截屏识别队伍角色并初始化战斗场景，失败重试（最多 5 次，间隔 1 秒），全部失败抛异常
     /// </summary>
-    public static CombatScenes GetCombatScenesWithRetry()
+    /// <param name="runtime">截图与识别所用的运行环境</param>
+    /// <param name="config">配置根</param>
+    public static CombatScenes GetCombatScenesWithRetry(GameRuntime runtime, AllConfig config)
     {
         const int maxRetries = 5;
         const int retryDelayMs = 1000;
+        var allConfig = config;
 
         for (var attempt = 1; attempt <= maxRetries; attempt++)
         {
-            using var imageRegion = CaptureToRectArea();
-            var combatScenes = new CombatScenes().InitializeTeam(imageRegion);
+            using var imageRegion = runtime.CaptureToRectArea();
+            var combatScenes = new CombatScenes(runtime, allConfig).InitializeTeam(imageRegion);
             if (combatScenes.CheckTeamInitialized())
             {
                 return combatScenes;
@@ -535,7 +572,7 @@ public class CombatScenes : IDisposable
             return Avatars[LastActiveAvatarIndex - 1].Name;
         }
 
-        using var imageRegion = region ?? TaskControl.CaptureToRectArea();
+        using var imageRegion = region ?? _runtime.CaptureToRectArea();
 
         var rectArray = Avatars.Select(t => t.IndexRect).ToArray();
         int index = PartyAvatarSideIndexHelper.GetAvatarIndexIsActiveWithContext(imageRegion, rectArray, new AvatarActiveCheckContext());
@@ -601,9 +638,9 @@ public class CombatScenes : IDisposable
     public CombatScenes InitializeTeamOldOcr(CaptureContent content)
     {
         // 优先取配置
-        if (!string.IsNullOrEmpty(TaskContext.Instance().Config.AutoFightConfig.TeamNames))
+        if (!string.IsNullOrEmpty(_config.AutoFightConfig.TeamNames))
         {
-            InitializeTeamFromConfig(TaskContext.Instance().Config.AutoFightConfig.TeamNames, TaskContext.Instance().Config.AutoFightConfig);
+            InitializeTeamFromConfig(_config.AutoFightConfig.TeamNames, _config.AutoFightConfig);
             return this;
         }
 

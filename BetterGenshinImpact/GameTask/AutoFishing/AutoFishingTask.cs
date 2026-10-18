@@ -1,9 +1,12 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.Service;
 using CsTrees;
 using CsTrees.Composites;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,9 +28,34 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         private readonly AutoFishingTaskParam param;
 
-        public AutoFishingTask(AutoFishingTaskParam param)
+        /// <summary>
+        /// 本次运行使用的运行环境：截图、等待、前台判断都只使用它
+        /// </summary>
+        private readonly GameRuntime _runtime;
+
+        /// <summary>
+        /// 配置根，由创建方传入
+        /// </summary>
+        private readonly AllConfig _config;
+
+        /// <summary>
+        /// 截图保存服务，只在 <see cref="AutoFishingTaskParam.SaveScreenshotOnKeyTick"/> 为 true 时使用；可以为 null
+        /// </summary>
+        private readonly GameScreenshotService? _screenshots;
+
+        /// <summary>
+        /// 创建钓鱼独立任务
+        /// </summary>
+        /// <param name="runtime">本次运行使用的运行环境</param>
+        /// <param name="config">配置根</param>
+        /// <param name="param">任务参数</param>
+        /// <param name="screenshots">关键帧与出错截图的保存服务；只有开启 SaveScreenshotOnKeyTick 时需要，未提供时跳过保存</param>
+        public AutoFishingTask(GameRuntime runtime, AllConfig config, AutoFishingTaskParam param, GameScreenshotService? screenshots = null)
         {
+            _runtime = runtime;
+            _config = config;
             this.param = param;
+            _screenshots = screenshots;
         }
 
         public async Task Start(CancellationToken ct)
@@ -37,6 +65,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
             IOcrService ocrService = OcrFactory.Paddle;
             using IItemIconRecognizer itemRecognizer = ItemIconRecognizerFactory.CreateConfigured();
+
+            // 出错截图只在开启关键帧截图且创建方提供了截图服务时保存
+            var screenshots = param.SaveScreenshotOnKeyTick ? _screenshots : null;
+            if (param.SaveScreenshotOnKeyTick && screenshots == null)
+            {
+                _logger.LogWarning("未提供截图服务，本次钓鱼不保存关键帧截图");
+            }
 
             CsTrees.Blackboard.Blackboard blackboard = new CsTrees.Blackboard.Blackboard();
 
@@ -48,7 +83,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                             .SetSleep("设置sleep方法", Sleep)
                         .End()
                         .Always("总是截图")
-                            .TakeScreenshot("截图", _logger)
+                            .TakeScreenshot("截图", _runtime, _logger)
                         .Then()
                             .Parallel("在整体超时时间内钓鱼", policy: new ParallelPolicy.SuccessOnOne())
                                 .Sequence("调整视角并钓鱼", memory: true)
@@ -77,7 +112,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                                                 .End()
                                                                 .FindFishTimeout("确认初始状态和找到鱼", 10, _logger)
                                                             .End()
-                                                            .ChooseBait("选择鱼饵", _logger, TaskContext.Instance().SystemInfo, input, itemRecognizer)
+                                                            .ChooseBait("选择鱼饵", _logger, _runtime.SystemInfo, input, itemRecognizer)
                                                             .Try("抛竿等待上钩提竿")
                                                                 .Sequence("抛竿等待上钩", memory: true)
                                                                     .Parallel("抛竿直到成功或出错", policy: new ParallelPolicy.SuccessOnOne())
@@ -110,8 +145,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                                             .Parallel("拉条中", policy: new ParallelPolicy.SuccessOnOne())
                                                                 .CheckRaiseHook("检查提竿结果", _logger)
                                                                 .Sequence("拉条序列", memory: true)
-                                                                    .GetFishBoxArea("等待拉条出现", _logger, param.SaveScreenshotOnKeyTick)
-                                                                    .Fishing("钓鱼拉条", _logger, param.SaveScreenshotOnKeyTick, input)
+                                                                    .GetFishBoxArea("等待拉条出现", _logger, param.SaveScreenshotOnKeyTick, null, screenshots)
+                                                                    .Fishing("钓鱼拉条", _logger, param.SaveScreenshotOnKeyTick, input, null, screenshots)
                                                                 .End()
                                                             .End()
                                                         .End()
@@ -131,7 +166,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 .End();
             // @formatter:on
 
-            var behaviourTree = SetUpTree(builder);
+            var behaviourTree = SetUpTree(builder, screenshots);
 
             /*
             Blackboard blackboard = new Blackboard(_predictor, this.Sleep);
@@ -201,20 +236,20 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             _logger.LogWarning("请不要携带任何{Msg}，极有可能会误识别导致拖慢速度！", "跟宠");
             _logger.LogInformation(
                 $"当前参数：{param.WholeProcessTimeoutSeconds}，{param.ThrowRodTimeOutTimeoutSeconds}，{param.FishingTimePolicy}, {param.SaveScreenshotOnKeyTick}, {param.GameCultureInfo}");
-            TaskContext.Instance().Config.AutoFishingConfig.Enabled = false;
+            _config.AutoFishingConfig.Enabled = false;
             _logger.LogInformation("全自动运行时，自动切换实时任务中的半自动钓鱼功能为关闭状态");
 
             async Task tickARound()
             {
                 blackboard.Clear();
-                behaviourTree = SetUpTree(builder);
+                behaviourTree = SetUpTree(builder, screenshots);
 
                 try
                 {
                     var prevManualGc = DateTime.MinValue;
                     while (!ct.IsCancellationRequested)
                     {
-                        if (!SystemControl.IsGenshinImpactActiveByProcess())
+                        if (!_runtime.IsOperable())
                         {
                             var name = SystemControl.GetActiveByProcess();
                             _logger.LogWarning($"当前获取焦点的窗口为: {name}，不是原神，停止执行");
@@ -247,7 +282,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                         var handoffTimeSecondsWriteAccess = blackboard.GrantExclusiveWrite<int>(null!, "HandoffTimeSeconds");
                         handoffTimeSecondsWriteAccess.Set(1);   // 暂时只考虑手动停止，那人类接管就在下一秒。未来应使用入参
                         var sleepWriteAccess = blackboard.GrantWrite<Action<int>>(null!, "Sleep");
-                        sleepWriteAccess.Set(TaskControl.Sleep);
+                        // 收尾不受任务取消影响，但运行环境停止时仍会中断
+                        sleepWriteAccess.Set(ms => _runtime.Sleep(ms));
 
                         while (behaviourTree.Root.Status == Status.Running)
                         {
@@ -258,7 +294,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 }
             }
 
-            using var ra = TaskControl.CaptureToRectArea(forceNew: true);
+            using var ra = _runtime.CaptureToRectArea();
             if (ra.FindMulti(RecognitionAssets.Get("AutoFight", "P", ra)).Count != 0)
             {
                 _logger.LogInformation("当前处于联机状态，不使用昼夜设置");
@@ -270,7 +306,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
             else
             {
-                SetTimeTask setTimeTask = new SetTimeTask();
+                SetTimeTask setTimeTask = new SetTimeTask(_runtime);
                 foreach (int hour in param.FishingTimePolicy == FishingTimePolicy.Daytime
                              ? [7]
                              : (param.FishingTimePolicy == FishingTimePolicy.Nighttime ? [19] : new int[] { 7, 19 }))
@@ -287,15 +323,20 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         public void Sleep(int millisecondsTimeout)
         {
-            TaskControl.Sleep(millisecondsTimeout, _ct);
+            _runtime.Sleep(millisecondsTimeout, _ct);
         }
 
-        private BehaviourTree SetUpTree(AutoFishingBuilder builder)
+        /// <summary>
+        /// 构建行为树；提供了截图服务时挂上关键帧截图访问器
+        /// </summary>
+        /// <param name="builder">钓鱼行为树构建器</param>
+        /// <param name="screenshots">截图保存服务，为 null 时不保存关键帧截图</param>
+        private BehaviourTree SetUpTree(AutoFishingBuilder builder, GameScreenshotService? screenshots)
         {
             var behaviourTree = new BehaviourTree(builder.Build());
-            if (param.SaveScreenshotOnKeyTick)
+            if (screenshots != null)
             {
-                behaviourTree.AddVisitor(new ScreenshotVisitor(_logger));
+                behaviourTree.AddVisitor(new ScreenshotVisitor(screenshots, _logger));
             }
             return behaviourTree;
         }

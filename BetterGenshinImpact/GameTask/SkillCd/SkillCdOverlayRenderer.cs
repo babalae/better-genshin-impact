@@ -1,6 +1,9 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Mask;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers.Ui;
+using BetterGenshinImpact.Service;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -37,18 +40,24 @@ public static class SkillCdOverlayRenderer
     }
 
     /// <summary>
+    /// 配置根。静态渲染器没有创建方可以传配置，暂时读配置根（见 task-context-removal.md 第 5 节）
+    /// </summary>
+    private static AllConfig Config => ConfigService.Config!;
+
+    /// <summary>
     /// 渲染/清理 CD 遮罩文字
     /// </summary>
+    /// <param name="runtime">提供画面尺寸与缩放比例的运行环境</param>
     /// <param name="drawingBoard">遮罩窗口绘制入口</param>
     /// <param name="drawKey">遮罩文字分组名，调用方各自持有并负责清理</param>
     /// <param name="slotCds">固定 4 槽的 CD 秒数：null 不绘制；NaN 表示未知，显示"?"；其余显示 F1 格式</param>
-    public static void Update(IMaskWindowDrawingBoard drawingBoard, string drawKey, double?[] slotCds)
+    public static void Update(GameRuntime runtime, IMaskWindowDrawingBoard drawingBoard, string drawKey, double?[] slotCds)
     {
         var group = CreateGroup(drawKey);
-        var systemInfo = TaskContext.Instance().SystemInfo;
+        var systemInfo = runtime.SystemInfo;
         var captureRect = systemInfo.ScaleMax1080PCaptureRect;
         var sideRects = AutoFightAssets.Get(captureRect.Width, captureRect.Height).AvatarSideIconRectList;
-        var config = TaskContext.Instance().Config.SkillCdConfig;
+        var config = Config.SkillCdConfig;
 
         if (sideRects == null || sideRects.Count < 4)
         {

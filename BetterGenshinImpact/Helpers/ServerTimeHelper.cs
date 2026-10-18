@@ -1,5 +1,5 @@
 ﻿using System;
-using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Core.Config;
 
 namespace BetterGenshinImpact.Helpers;
 
@@ -31,12 +31,19 @@ public class ServerTimeProvider : IServerTimeProvider
     private readonly TimeProvider _timeProvider;
 
     /// <summary>
+    /// 注入的配置根，用于读取服务器时区偏移量
+    /// </summary>
+    private readonly AllConfig _config;
+
+    /// <summary>
     /// 初始化 <see cref="ServerTimeProvider"/> 类的新实例
     /// </summary>
     /// <param name="timeProvider">用于获取基准UTC时间的 <see cref="TimeProvider"/></param>
-    public ServerTimeProvider(TimeProvider timeProvider)
+    /// <param name="config">注入的配置根</param>
+    public ServerTimeProvider(TimeProvider timeProvider, AllConfig config)
     {
         _timeProvider = timeProvider;
+        _config = config;
     }
 
     /// <inheritdoc/>
@@ -50,9 +57,9 @@ public class ServerTimeProvider : IServerTimeProvider
     {
         try
         {
-            return TaskContext.Instance().Config.OtherConfig.ServerTimeZoneOffset;
+            return _config.OtherConfig.ServerTimeZoneOffset;
         }
-        // throw new Exception("Config未初始化"); in TaskContext.cs
+        // 读取配置失败时回退
         catch (Exception)
         {
             // 如果配置未加载，假定为北京时间用于核心开发者测试

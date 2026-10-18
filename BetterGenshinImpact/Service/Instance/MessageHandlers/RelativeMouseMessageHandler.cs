@@ -8,6 +8,8 @@ using System.Windows.Threading;
 using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.ChildSession;
 using Microsoft.Extensions.DependencyInjection;
@@ -79,7 +81,7 @@ internal sealed class RelativeMouseMessageHandler
             samples.Count);
         if (_context.InstanceType != BetterGiInstanceType.ChildSession
             || !_isParentConnection(connection)
-            || !SystemControl.IsGenshinImpactActiveByProcess())
+            || !IsGameOperable())
         {
             return false;
         }
@@ -527,6 +529,16 @@ internal sealed class RelativeMouseMessageHandler
     private static bool IsKeyPressed(User32.VK key)
     {
         return (User32.GetAsyncKeyState((int)key) & 0x8000) != 0;
+    }
+
+    /// <summary>
+    /// 游戏现在能否接收输入：有运行环境时按运行环境判断，截图器未启动时按前台窗口的进程名判断。
+    /// 与 ChildSessionService 相同，按需从容器取 GameRuntimeService，不在构造时形成依赖
+    /// </summary>
+    private bool IsGameOperable()
+    {
+        var runtime = _serviceProvider.GetService<GameRuntimeService>()?.Current;
+        return runtime?.IsOperable() ?? SystemControl.IsGameForeground(null);
     }
 
     private RelativeMouseSample? TakeAccumulatedSample()

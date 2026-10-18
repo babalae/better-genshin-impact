@@ -1,8 +1,10 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recorder.Model;
 using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Map;
+using BetterGenshinImpact.GameTask.Runtime;
 using Gma.System.MouseKeyHook;
 using System;
 using System.Collections.Generic;
@@ -14,6 +16,27 @@ namespace BetterGenshinImpact.Core.Recorder;
 
 public class KeyMouseRecorder
 {
+    /// <summary>
+    /// 录制所作用的运行环境，用于记录截图区域、DPI 与视角截图
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 配置根，用于读取录制配置
+    /// </summary>
+    private readonly AllConfig _config;
+
+    /// <summary>
+    /// 创建绑定到指定运行环境的键鼠录制器
+    /// </summary>
+    /// <param name="runtime">录制所作用的运行环境</param>
+    /// <param name="config">配置根</param>
+    public KeyMouseRecorder(GameRuntime runtime, AllConfig config)
+    {
+        _runtime = runtime;
+        _config = config;
+    }
+
     public List<MacroEvent> MacroEvents { get; } = [];
 
     public DateTime StartTime { get; set; } = DateTime.UtcNow;
@@ -39,7 +62,7 @@ public class KeyMouseRecorder
         // 删除为负数的时间
         MacroEvents.RemoveAll(m => m.Time < 0);
         
-        var rect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+        var rect = _runtime.SystemInfo.CaptureAreaRect;
         // 合并鼠标移动事件
         var mergedMacroEvents = new List<MacroEvent>();
         MacroEvent? currentMerge = null;
@@ -107,7 +130,7 @@ public class KeyMouseRecorder
                 Y = rect.Y,
                 Width = rect.Width,
                 Height = rect.Height,
-                RecordDpi = TaskContext.Instance().DpiScale
+                RecordDpi = _runtime.SystemInfo.DpiScale
             }
         };
         return JsonSerializer.Serialize(keyMouseScript, JsonOptions);
@@ -182,13 +205,13 @@ public class KeyMouseRecorder
     {
         
         int? cao = null;
-        if (TaskContext.Instance().Config.RecordConfig.IsRecordCameraOrientation)
+        if (_config.RecordConfig.IsRecordCameraOrientation)
         {
             var now = DateTime.UtcNow;
             if ((now - LastOrientationDetection).TotalMilliseconds > 100.0)
             {
                 LastOrientationDetection = now;
-                using var capture = TaskControl.CaptureToRectArea();
+                using var capture = _runtime.CaptureToRectArea();
                 cao = (int)Math.Round(CameraOrientation.Compute(capture.SrcMat));
             }
         }

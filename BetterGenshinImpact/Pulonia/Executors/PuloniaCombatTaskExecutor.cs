@@ -20,6 +20,16 @@ namespace BetterGenshinImpact.Pulonia.Executors;
 /// <summary>将老一条龙的四类战斗任务接入统一服务，配置来自快照而非页面。</summary>
 public sealed class PuloniaCombatTaskExecutor : IPuloniaTaskExecutor
 {
+    /// <summary>注入的配置根，传给战斗任务；任务的业务参数仍来自快照。</summary>
+    private readonly AllConfig _config;
+
+    /// <summary>使用配置根建立执行器。</summary>
+    /// <param name="config">注入的配置根</param>
+    public PuloniaCombatTaskExecutor(AllConfig config)
+    {
+        _config = config;
+    }
+
     /// <inheritdoc />
     public IReadOnlyList<PuloniaTaskDefinition> Definitions { get; } =
     [
@@ -48,6 +58,9 @@ public sealed class PuloniaCombatTaskExecutor : IPuloniaTaskExecutor
             var definition = Definitions.First(item => item.TaskType == task.TaskType);
             PuloniaTaskValidator.ValidateParameters(values, definition.ParameterSchema, task.TaskType);
         }
+        // 任务只使用本节点租约记录的运行环境；它已停止时当前节点失败
+        if (!context.TryGetRuntime(out var runtime, out var runtimeError))
+            return PuloniaTaskOutcome.Failure(runtimeError);
         switch (task.TaskType)
         {
             case "builtin.auto_domain":
@@ -65,7 +78,7 @@ public sealed class PuloniaCombatTaskExecutor : IPuloniaTaskExecutor
                     CondensedResinUseCount = domain.CondensedResinUseCount, TransientResinUseCount = domain.TransientResinUseCount,
                     FragileResinUseCount = domain.FragileResinUseCount, RewardRecognitionEnabled = domain.RewardRecognitionEnabled
                 };
-                await new AutoDomainTask(param, domain).Start(ct).ConfigureAwait(false);
+                await new AutoDomainTask(runtime, _config, param, domain).Start(ct).ConfigureAwait(false);
                 break;
             case "builtin.auto_boss":
                 var boss = PuloniaCombatTaskSettings.FromParameters<AutoBossConfig>(values);
@@ -74,19 +87,19 @@ public sealed class PuloniaCombatTaskExecutor : IPuloniaTaskExecutor
                 var bossParam = AutoBossParam.CreateWithoutDefaultConfig(StrategyPath(boss.StrategyName));
                 bossParam.SetAutoBossConfig(boss);
                 var bossFight = PuloniaCombatTaskSettings.FromParameters<AutoFightConfig>((JObject)values["fight_config"]!);
-                await new AutoBossTask(bossParam, bossFight).Start(ct).ConfigureAwait(false);
+                await new AutoBossTask(runtime, _config, bossParam, bossFight).Start(ct).ConfigureAwait(false);
                 break;
             case "builtin.auto_stygian":
                 var stygian = PuloniaCombatTaskSettings.FromParameters<AutoStygianOnslaughtConfig>(values);
                 if (stygian.BossNum is < 1 or > 3) return PuloniaTaskOutcome.Failure("幽境首领序号必须为 1—3。");
                 var strategy = StrategyPath(stygian.StrategyName);
                 var stygianParam = new AutoStygianOnslaughtParam(stygian) { CombatScriptBagPath = strategy, MaxArtifactStar = values.Value<string>("max_artifact_star") };
-                await new AutoStygianOnslaughtTask(stygianParam, strategy).Start(ct).ConfigureAwait(false);
+                await new AutoStygianOnslaughtTask(runtime, _config, stygianParam, strategy).Start(ct).ConfigureAwait(false);
                 break;
             case "builtin.auto_ley_line":
                 var ley = PuloniaCombatTaskSettings.FromParameters<AutoLeyLineOutcropConfig>(values);
                 if (ley.Count < 1 || ley.Timeout < 1) return PuloniaTaskOutcome.Failure("地脉花次数和超时必须为正数。");
-                await new AutoLeyLineOutcropTask(new AutoLeyLineOutcropParam(ley), values.Value<bool>("one_dragon_mode")).Start(ct).ConfigureAwait(false);
+                await new AutoLeyLineOutcropTask(runtime, _config, new AutoLeyLineOutcropParam(ley), values.Value<bool>("one_dragon_mode")).Start(ct).ConfigureAwait(false);
                 break;
             default: return PuloniaTaskOutcome.Failure("未知战斗任务：" + task.TaskType);
         }

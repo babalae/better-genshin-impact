@@ -5,7 +5,9 @@ using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -23,11 +25,6 @@ namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 /// </summary>
 public static class AvatarSpecialAction
 {
-    /// <summary>
-    /// 资源缩放比例
-    /// </summary>
-    private static double AssetScale => TaskContext.Instance().SystemInfo.AssetScale;
-
     /// <summary>
     /// 木偶（桑多涅）红温状态评分阈值（固定 0.5）。
     /// </summary>
@@ -141,11 +138,13 @@ public static class AvatarSpecialAction
     /// 如果当前角色有对应的特化实现，则执行该特化逻辑并返回 true（调用方应跳过通用逻辑）；
     /// 否则返回 false，由调用方执行通用逻辑。
     /// </summary>
+    /// <param name="runtime">执行特化动作所用的运行环境</param>
+    /// <param name="avatar">执行动作的角色</param>
     /// <param name="action">动作名（如 "UseSkill"、"Charge"）</param>
     /// <param name="character">角色名（如 "纳西妲"）</param>
     /// <param name="args">动作参数对象（如 UseSkillArgs、ChargeArgs）</param>
     /// <returns>true 表示已由特化逻辑处理，false 表示无特化逻辑</returns>
-    public static bool ExecuteSpecializedAction(Avatar avatar, string action, string character, object args)
+    public static bool ExecuteSpecializedAction(GameRuntime runtime, Avatar avatar, string action, string character, object args)
     {
         // 不在特化规则中 → 提前退出
         if (!SpecializedRules.TryGetValue((action, character), out var condition)) return false;
@@ -156,9 +155,9 @@ public static class AvatarSpecialAction
         switch (action)
         {
             case "UseSkill":
-                return ExecuteUseSkillSpecialized(avatar, character);
+                return ExecuteUseSkillSpecialized(runtime, avatar, character);
             case "Charge":
-                return ExecuteChargeSpecialized(avatar, character, ((ActionArgs)args).Ms);
+                return ExecuteChargeSpecialized(runtime, avatar, character, ((ActionArgs)args).Ms);
             default:
                 return false;
         }
@@ -167,7 +166,7 @@ public static class AvatarSpecialAction
     /// <summary>
     /// UseSkill 特化分派
     /// </summary>
-    private static bool ExecuteUseSkillSpecialized(Avatar avatar, string character)
+    private static bool ExecuteUseSkillSpecialized(GameRuntime runtime, Avatar avatar, string character)
     {
         switch (character)
         {
@@ -177,14 +176,14 @@ public static class AvatarSpecialAction
                 using (AvatarRecognition.BeginExclusiveOperation())
                 {
                     InputHub.Foreground.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
-                    Sleep(300, avatar.Ct);
+                    runtime.Sleep(300, avatar.Ct);
                     for (int j = 0; j < 10; j++)
                     {
                         InputHub.Foreground.Mouse.MoveMouseBy(1000, 0);
-                        Sleep(50);
+                        runtime.Sleep(50);
                     }
 
-                    Sleep(300);
+                    runtime.Sleep(300);
                     InputHub.Foreground.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
                     return true;
                 }
@@ -205,7 +204,7 @@ public static class AvatarSpecialAction
     /// <summary>
     /// Charge 重击特化分派
     /// </summary>
-    private static bool ExecuteChargeSpecialized(Avatar avatar, string character, int ms)
+    private static bool ExecuteChargeSpecialized(GameRuntime runtime, Avatar avatar, string character, int ms)
     {
         switch (character)
         {
@@ -214,7 +213,7 @@ public static class AvatarSpecialAction
             {
                 using (AvatarRecognition.BeginExclusiveOperation())
                 {
-                    var dpi = TaskContext.Instance().DpiScale;
+                    var dpi = runtime.SystemInfo.DpiScale;
                     InputHub.Foreground.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
                     try
                     {
@@ -227,7 +226,7 @@ public static class AvatarSpecialAction
 
                             InputHub.Foreground.Mouse.MoveMouseBy((int)(1000 * dpi), 0);
                             ms -= 50;
-                            Sleep(50);
+                            runtime.Sleep(50);
                         }
                     }
                     finally
@@ -242,7 +241,7 @@ public static class AvatarSpecialAction
             {
                 using (AvatarRecognition.BeginExclusiveOperation())
                 {
-                    var dpi = TaskContext.Instance().DpiScale;
+                    var dpi = runtime.SystemInfo.DpiScale;
                     InputHub.Foreground.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
                     try
                     {
@@ -289,7 +288,7 @@ public static class AvatarSpecialAction
 
                             InputHub.Foreground.Mouse.MoveMouseBy((int)(rateX * 50 * dpi), (int)(rateY * 50 * dpi));
                             tick = (tick + 1) % 100;
-                            Sleep(25);
+                            runtime.Sleep(25);
                             ms -= 25;
                         }
 
@@ -306,7 +305,9 @@ public static class AvatarSpecialAction
             {
                 using (AvatarRecognition.BeginExclusiveOperation())
                 {
-                    var dpi = TaskContext.Instance().DpiScale;
+                    var dpi = runtime.SystemInfo.DpiScale;
+                    // 资源缩放比例
+                    var assetScale = runtime.SystemInfo.AssetScale;
                     var visConfig = AvatarRecognition.GetVisualRecognitionConfig();
                     var frameIntervalMs = visConfig.TargetingDetectionInterval;
                     var drawResults = visConfig.DrawRecognitionResults;
@@ -325,7 +326,7 @@ public static class AvatarSpecialAction
                     {
                         while (!avatar.Ct.IsCancellationRequested && (DateTime.UtcNow - startTime).TotalMilliseconds < maxDurationMs)
                         {
-                            using (var capture = CaptureToRectArea())
+                            using (var capture = runtime.CaptureToRectArea())
                             {
                                 drawingBoard = capture.DrawingBoard;
                                 // 距重击开始超过 3 秒后开始检测红温，连续命中 3 次（1/3 → 2/3 → 3/3）才提前退出
@@ -351,12 +352,12 @@ public static class AvatarSpecialAction
                                 int preAimX = (int)(capture.Width * 0.5);
                                 int preAimY = (int)(capture.Height * (480.0 / 1080.0));
 
-                                var bars = AvatarRecognition.FindBloodBars(capture);
-                                var valid = bars.Where(b => b.x > (int)(200 * AssetScale)).ToList();
+                                var bars = AvatarRecognition.FindBloodBars(runtime, capture);
+                                var valid = bars.Where(b => b.x > (int)(200 * assetScale)).ToList();
 
                                 var drawList = new System.Collections.Generic.List<MaskWindowDrawingShape>();
 
-                                bool hasLegendaryBar = valid.Any(b => AvatarRecognition.IsLegendaryBar(b.x, b.y));
+                                bool hasLegendaryBar = valid.Any(b => AvatarRecognition.IsLegendaryBar(b.x, b.y, assetScale));
 
                                 if (valid.Count > 0 && !hasLegendaryBar)
                                 {
@@ -381,7 +382,7 @@ public static class AvatarSpecialAction
                                 }
                                 else
                                 {
-                                    var damageResult = AvatarRecognition.FindDamageNumber(capture);
+                                    var damageResult = AvatarRecognition.FindDamageNumber(runtime, capture);
                                     if (damageResult.HasValue)
                                     {
                                         var (dcx, dcy, _, dx, dy, dw, dh) = damageResult.Value;
@@ -417,7 +418,7 @@ public static class AvatarSpecialAction
                                 drawingBoard.Set("SandroneBloodBars", drawList);
                             }
 
-                            Sleep(frameIntervalMs);
+                            runtime.Sleep(frameIntervalMs);
                         }
                     }
                     catch (OperationCanceledException)

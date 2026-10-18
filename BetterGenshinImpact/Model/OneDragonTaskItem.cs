@@ -13,6 +13,7 @@ using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 
@@ -33,9 +34,10 @@ public partial class OneDragonTaskItem : ObservableObject
     [ObservableProperty] private OneDragonBaseViewModel? _viewModel;
 
     /// <summary>
-    /// 使用一条龙顶层任务令牌执行当前项目。
+    /// 使用一条龙顶层任务的运行环境与令牌执行当前项目。
+    /// 任务在拿到运行环境之后才在委托内部构造
     /// </summary>
-    public Func<CancellationToken, Task>? Action { get; private set; }
+    public Func<GameRuntime, CancellationToken, Task>? Action { get; private set; }
 
     public OneDragonTaskItem(string name)
     {
@@ -58,7 +60,12 @@ public partial class OneDragonTaskItem : ObservableObject
     //     Action = action;
     // }
 
-    public void InitAction(OneDragonFlowConfig config)
+    /// <summary>
+    /// 按任务名生成执行委托
+    /// </summary>
+    /// <param name="allConfig">配置根，由创建方（一条龙页面）传入，交给委托内构造的任务</param>
+    /// <param name="config">当前一条龙配置</param>
+    public void InitAction(AllConfig allConfig, OneDragonFlowConfig config)
     {
         if (config.TaskEnabledList.ContainsKey(Id))
         {
@@ -73,17 +80,17 @@ public partial class OneDragonTaskItem : ObservableObject
         switch (Name)
         {
             case "领取邮件":
-                Action = async ct =>
+                Action = async (runtime, ct) =>
                 {
-                    await new ClaimMailRewardsTask().Start(ct);
+                    await new ClaimMailRewardsTask(runtime).Start(ct);
                 };
                 break;
             case "合成树脂":
-                Action = async ct =>
+                Action = async (runtime, ct) =>
                 {
                     try
                     {
-                        await new GoToCraftingBenchTask().GoCraftResin(config.CraftingBenchCountry,
+                        await new GoToCraftingBenchTask(runtime, allConfig).GoCraftResin(config.CraftingBenchCountry,
                             ct);
                     }
                     catch (Exception e)
@@ -93,11 +100,11 @@ public partial class OneDragonTaskItem : ObservableObject
                 };
                 break;
             case "自动秘境":
-                Action = async ct =>
+                Action = async (runtime, ct) =>
                 {
-                    if (string.IsNullOrEmpty(TaskContext.Instance().Config.AutoFightConfig.StrategyName))
+                    if (string.IsNullOrEmpty(allConfig.AutoFightConfig.StrategyName))
                     {
-                        TaskContext.Instance().Config.AutoFightConfig.StrategyName = "根据队伍自动选择";
+                        allConfig.AutoFightConfig.StrategyName = "根据队伍自动选择";
                     }
 
                     var taskSettingsPageViewModel = App.GetService<TaskSettingsPageViewModel>();
@@ -124,11 +131,11 @@ public partial class OneDragonTaskItem : ObservableObject
                         DomainName = domainName,
                         SundaySelectedValue = sundaySelectedValue
                     };
-                    await new AutoDomainTask(autoDomainParam).Start(ct);
+                    await new AutoDomainTask(runtime, allConfig, autoDomainParam).Start(ct);
                 };
                 break;
             case "自动首领讨伐":
-                Action = async ct =>
+                Action = async (runtime, ct) =>
                 {
                     var totalRunCountLimited = config.AutoBossSpecifyRunCount && config.AutoBossTotalRunCountLimit > 0;
                     var remainingTotalRunCount = config.AutoBossTotalRunCountLimit - config.AutoBossCompletedRunCount;
@@ -179,45 +186,45 @@ public partial class OneDragonTaskItem : ObservableObject
                     {
                         param.RewardClaimedCallback = () => config.AutoBossCompletedRunCount++;
                     }
-                    await new AutoBossTask(param).Start(ct);
+                    await new AutoBossTask(runtime, allConfig, param).Start(ct);
                 };
                 break;
             case "自动幽境危战":
-                Action = async ct =>
+                Action = async (runtime, ct) =>
                 {
-                    if (string.IsNullOrEmpty(TaskContext.Instance().Config.AutoStygianOnslaughtConfig.StrategyName))
+                    if (string.IsNullOrEmpty(allConfig.AutoStygianOnslaughtConfig.StrategyName))
                     {
-                        TaskContext.Instance().Config.AutoStygianOnslaughtConfig.StrategyName = "根据队伍自动选择";
+                        allConfig.AutoStygianOnslaughtConfig.StrategyName = "根据队伍自动选择";
                     }
 
                     var taskSettingsPageViewModel = App.GetService<TaskSettingsPageViewModel>();
-                    if (taskSettingsPageViewModel!.GetFightStrategy(TaskContext.Instance().Config.AutoStygianOnslaughtConfig.StrategyName, out var path))
+                    if (taskSettingsPageViewModel!.GetFightStrategy(allConfig.AutoStygianOnslaughtConfig.StrategyName, out var path))
                     {
                         TaskControl.Logger.LogError("自动幽境危战战斗策略{Msg}，跳过", "未配置");
                         return;
                     }
 
                     AutoStygianOnslaughtParam param = new AutoStygianOnslaughtParam();
-                    param.SetAutoStygianOnslaughtConfig(TaskContext.Instance().Config.AutoStygianOnslaughtConfig);
-                    await new AutoStygianOnslaughtTask(param, path).Start(ct);
+                    param.SetAutoStygianOnslaughtConfig(allConfig.AutoStygianOnslaughtConfig);
+                    await new AutoStygianOnslaughtTask(runtime, allConfig, param, path).Start(ct);
                 };
                 break;
             case "领取每日奖励":
-                Action = async ct =>
+                Action = async (runtime, ct) =>
                 {
-                    await new GoToAdventurersGuildTask().Start(config.AdventurersGuildCountry,
+                    await new GoToAdventurersGuildTask(runtime, allConfig).Start(config.AdventurersGuildCountry,
                         ct, config.DailyRewardPartyName);
-                    await new ClaimBattlePassRewardsTask().Start(ct);
+                    await new ClaimBattlePassRewardsTask(runtime, allConfig).Start(ct);
                 };
                 break;
             case "领取尘歌壶奖励":
-                Action = async ct =>
+                Action = async (runtime, ct) =>
                 {
-                    await new GoToSereniteaPotTask().Start(ct);
+                    await new GoToSereniteaPotTask(runtime, allConfig).Start(ct);
                 };
                 break;
             case "自动地脉花":
-                Action = async ct =>
+                Action = async (runtime, ct) =>
                 {
                     if (!config.ShouldRunLeyLineToday())
                     {
@@ -225,7 +232,7 @@ public partial class OneDragonTaskItem : ObservableObject
                         return;
                     }
 
-                    var taskConfig = TaskContext.Instance().Config.AutoLeyLineOutcropConfig;
+                    var taskConfig = allConfig.AutoLeyLineOutcropConfig;
                     var originalType = taskConfig.LeyLineOutcropType;
                     var originalCountry = taskConfig.Country;
                     var originalCount = taskConfig.Count;
@@ -246,7 +253,7 @@ public partial class OneDragonTaskItem : ObservableObject
 
                         AutoLeyLineOutcropParam param = new AutoLeyLineOutcropParam();
                         param.SetAutoLeyLineOutcropConfig(taskConfig);
-                        await new AutoLeyLineOutcropTask(param, config.LeyLineOneDragonMode)
+                        await new AutoLeyLineOutcropTask(runtime, allConfig, param, config.LeyLineOneDragonMode)
                             .Start(ct);
                     }
                     finally
@@ -260,7 +267,7 @@ public partial class OneDragonTaskItem : ObservableObject
                 };
                 break;
             default:
-                Action = _ => Task.CompletedTask;
+                Action = (_, _) => Task.CompletedTask;
                 break;
         }
     }

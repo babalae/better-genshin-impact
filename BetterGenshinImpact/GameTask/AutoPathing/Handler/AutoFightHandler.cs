@@ -7,12 +7,28 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.Runtime;
 using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 
-internal class AutoFightHandler : IActionHandler
+/// <summary>
+/// 自动战斗
+/// </summary>
+/// <param name="runtime">本次运行使用的运行环境（创建战斗任务需要）</param>
+/// <param name="config">配置根</param>
+internal class AutoFightHandler(GameRuntime runtime, AllConfig config) : IActionHandler
 {
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime = runtime;
+
+    /// <summary>
+    /// 配置根
+    /// </summary>
+    private readonly AllConfig _config = config;
+
     private readonly ILogger<AutoFightHandler> _logger = App.GetLogger<AutoFightHandler>();
     public async Task RunAsyncByScript(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
@@ -37,7 +53,7 @@ internal class AutoFightHandler : IActionHandler
         }
         else
         {
-            taskParams = new AutoFightParam(GetFightStrategy(), TaskContext.Instance().Config.AutoFightConfig);
+            taskParams = new AutoFightParam(GetFightStrategy(), _config.AutoFightConfig);
         }
 
         //根据怪物标签，调整拾取配置
@@ -59,7 +75,7 @@ internal class AutoFightHandler : IActionHandler
                    {
                        var factory = CombatTaskFactoryProvider.GetFactory(taskParams.CombatStrategyPath);
                        await RunnerContext.Instance.StopAutoPickRunTask(
-                           async () => await factory.CreateTask(taskParams).Start(ct),
+                           async () => await factory.CreateTask(_runtime, _config, taskParams).Start(ct),
                            5);
                        return;
                    }
@@ -70,7 +86,7 @@ internal class AutoFightHandler : IActionHandler
         }
         
         var factory2 = CombatTaskFactoryProvider.GetFactory(taskParams.CombatStrategyPath);
-        var fightSoloTask = factory2.CreateTask(taskParams);
+        var fightSoloTask = factory2.CreateTask(_runtime, _config, taskParams);
         await fightSoloTask.Start(ct);
     }
 
@@ -104,6 +120,6 @@ internal class AutoFightHandler : IActionHandler
 
     private string GetFightStrategy()
     {
-        return GetFightStrategy(TaskContext.Instance().Config.AutoFightConfig);
+        return GetFightStrategy(_config.AutoFightConfig);
     }
 }

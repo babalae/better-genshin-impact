@@ -7,6 +7,7 @@ using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers.Extensions;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -26,6 +27,11 @@ namespace BetterGenshinImpact.GameTask.GetGridIcons;
 /// </summary>
 public class GetGridIconsTask : ISoloTask
 {
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
     private readonly ILogger logger = App.GetLogger<GetGridIconsTask>();
     private IInputChannel input => InputHub.Foreground;
 
@@ -39,8 +45,16 @@ public class GetGridIconsTask : ISoloTask
 
     private readonly bool starAsSuffix;
 
-    public GetGridIconsTask(GridScreenName gridScreenName, bool starAsSuffix, int? maxNumToGet = null)
+    /// <summary>
+    /// 创建获取 Grid 界面物品图标任务
+    /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    /// <param name="gridScreenName">目标 Grid 界面</param>
+    /// <param name="starAsSuffix">是否把星级作为文件名后缀</param>
+    /// <param name="maxNumToGet">最多获取的数量，为空表示不限</param>
+    public GetGridIconsTask(GameRuntime runtime, GridScreenName gridScreenName, bool starAsSuffix, int? maxNumToGet = null)
     {
+        _runtime = runtime;
         this.gridScreenName = gridScreenName;
         this.starAsSuffix = starAsSuffix;
         this.maxNumToGet = maxNumToGet;
@@ -65,8 +79,8 @@ public class GetGridIconsTask : ISoloTask
             case GridScreenName.Quest:
             case GridScreenName.PreciousItems:
             case GridScreenName.Furnishings:
-                await new ReturnMainUiTask().Start(ct);
-                await AutoArtifactSalvageTask.OpenInventory(this.gridScreenName, this.input, this.logger, this.ct);
+                await new ReturnMainUiTask(_runtime).Start(ct);
+                await AutoArtifactSalvageTask.OpenInventory(_runtime, this.gridScreenName, this.input, this.logger, this.ct);
                 break;
             case GridScreenName.ArtifactSetFilter:
                 logger.LogInformation("{name}暂不支持自动打开，请提前手动打开界面", gridScreenName.GetDescription());
@@ -82,9 +96,9 @@ public class GetGridIconsTask : ISoloTask
 
     private async Task GetInventoryGridIcons(int count, string directory)
     {
-        GridScreen gridScreen = new GridScreen(GridParams.Templates[this.gridScreenName], this.logger, this.ct);
+        GridScreen gridScreen = new GridScreen(_runtime, GridParams.Templates[this.gridScreenName], this.logger, this.ct);
         gridScreen.OnAfterTurnToNewPage += GridScreen.DrawItemsAfterTurnToNewPage;
-        gridScreen.OnBeforeScroll += () => TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
+        gridScreen.OnBeforeScroll += () => _runtime.MaskWindowDrawingBoard.ClearAll();
         HashSet<string> fileNames = new HashSet<string>();
         try
         {
@@ -92,9 +106,9 @@ public class GetGridIconsTask : ISoloTask
             {
                 using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
                 itemRegion.Click();
-                await Delay(300, ct);
+                await _runtime.Delay(300, ct);
 
-                using var ra1 = CaptureToRectArea();
+                using var ra1 = _runtime.CaptureToRectArea();
                 using ImageRegion nameRegion = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.682), (int)(ra1.Width * 0.0625), (int)(ra1.Width * 0.256), (int)(ra1.Width * 0.03125)));
                 var ocrResult = OcrFactory.Paddle.OcrResult(nameRegion.SrcMat);
                 string itemName = ocrResult.Text;
@@ -126,23 +140,23 @@ public class GetGridIconsTask : ISoloTask
         }
         finally
         {
-            TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
+            _runtime.MaskWindowDrawingBoard.ClearAll();
         }
     }
 
     private async Task GetArtifactSetFilterGridIcons(int count, string directory)
     {
-        ArtifactSetFilterScreen gridScreen = new ArtifactSetFilterScreen(new GridParams(new Rect(40, 100, 1300, 852), 2, 3, 40, 40, 0.024), this.logger, this.ct);
+        ArtifactSetFilterScreen gridScreen = new ArtifactSetFilterScreen(_runtime, new GridParams(new Rect(40, 100, 1300, 852), 2, 3, 40, 40, 0.024), this.logger, this.ct);
         HashSet<string> fileNames = new HashSet<string>();
         await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
         {
             using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
             itemRegion.Click();
-            await Delay(300, ct);
+            await _runtime.Delay(300, ct);
 
-            static bool tryGetFlower(out string flowerName)
+            static bool tryGetFlower(GameRuntime runtime, out string flowerName)
             {
-                using var ra1 = CaptureToRectArea();
+                using var ra1 = runtime.CaptureToRectArea();
                 using ImageRegion nameRegion = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.714), (int)(ra1.Width * 0.284), (int)(ra1.Width * 0.256), (int)(ra1.Width * 0.208)));
                 var ocrResult = OcrFactory.Paddle.OcrResult(nameRegion.SrcMat);
 
@@ -168,16 +182,16 @@ public class GetGridIconsTask : ISoloTask
                 return true;
             }
 
-            if (!tryGetFlower(out string flowerName))
+            if (!tryGetFlower(_runtime, out string flowerName))
             {
-                await TaskControl.Delay(100, this.ct);
+                await _runtime.Delay(100, this.ct);
                 for (int i = 0; i < 5; i++)
                 {
                     this.input.Mouse.VerticalScroll(-2);
-                    await TaskControl.Delay(40, this.ct);
+                    await _runtime.Delay(40, this.ct);
                 }
-                await TaskControl.Delay(300, this.ct);
-                if (!tryGetFlower(out flowerName))
+                await _runtime.Delay(300, this.ct);
+                if (!tryGetFlower(_runtime, out flowerName))
                 {
                     throw new Exception("尝试获取生之花失败");
                     //flowerName = $"识别失败{nameRegion.GetHashCode()}";
@@ -188,7 +202,7 @@ public class GetGridIconsTask : ISoloTask
             if (fileNames.Add(fileName))
             {
                 string filePath = Path.Combine(directory, $"{fileName}.png");
-                using Mat img125 = CropResizeArtifactSetFilterGridIcon(itemRegion);
+                using Mat img125 = CropResizeArtifactSetFilterGridIcon(itemRegion, _runtime.SystemInfo);
                 SaveGridIconAsync(filePath, fileName, img125);
             }
             else
@@ -233,9 +247,14 @@ public class GetGridIconsTask : ISoloTask
         saveThread.Start();
     }
 
-    internal static Mat CropResizeArtifactSetFilterGridIcon(ImageRegion itemRegion, ISystemInfo? systemInfo = null)
+    /// <summary>
+    /// 从套装筛选界面的格子中裁出生之花图标并缩放为 125x125
+    /// </summary>
+    /// <param name="itemRegion">格子区域</param>
+    /// <param name="systemInfo">运行环境的画面信息，用于换算素材缩放比例</param>
+    internal static Mat CropResizeArtifactSetFilterGridIcon(ImageRegion itemRegion, ISystemInfo systemInfo)
     {
-        double scale = (systemInfo ?? TaskContext.Instance().SystemInfo).AssetScale;
+        double scale = systemInfo.AssetScale;
         double width = 60;
         double height = 60; // 宽高缩放似乎不一致，似乎在2.05:2.15之间，但不知道怎么测定
         // 低分辨率下 237 * scale 的偏移量可能大于 itemRegion 中心位置，导致 X 为负，加保护

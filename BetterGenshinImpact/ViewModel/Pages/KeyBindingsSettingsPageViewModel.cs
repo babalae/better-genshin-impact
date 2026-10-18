@@ -573,7 +573,8 @@ public partial class KeyBindingsSettingsPageViewModel : ViewModel
     /// <returns></returns>
     public static VK MappingKey(VK source)
     {
-        if (TaskContext.Instance().Config.KeyBindingsConfig.GlobalKeyMappingEnabled)
+        // 静态方法没有创建方可以传配置，暂时读配置根（见 task-context-removal.md 第 5 节）
+        if (BetterGenshinImpact.Service.ConfigService.Config!.KeyBindingsConfig.GlobalKeyMappingEnabled)
         {
             // NOTE: 普攻、鼠标的冲刺、元素视野、视角居中和派蒙菜单不支持改键，此处不会进行映射
             return source switch

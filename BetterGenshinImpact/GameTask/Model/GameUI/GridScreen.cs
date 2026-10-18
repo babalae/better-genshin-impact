@@ -2,6 +2,7 @@ using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -16,6 +17,10 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
 {
     public class GridScreen : IAsyncEnumerable<Tuple<ImageRegion, Rect>>
     {
+        /// <summary>
+        /// 所属运行环境，遍历时的截图、等待与滚动都只使用它
+        /// </summary>
+        private readonly GameRuntime _runtime;
         private readonly GridParams @params;
         private readonly CancellationToken ct;
         private readonly ILogger logger;
@@ -42,11 +47,13 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
         /// 每次的截图是上次滚动后的，如果实时性要求高，应每次迭代自行截图
         /// 在末页可能重复返回GridItem，须自行处理
         /// </summary>
+        /// <param name="runtime">运行环境</param>
         /// <param name="@params"></param>
         /// <param name="logger"></param>
         /// <param name="ct"></param>
-        public GridScreen(GridParams @params, ILogger logger, CancellationToken ct)
+        public GridScreen(GameRuntime runtime, GridParams @params, ILogger logger, CancellationToken ct)
         {
+            this._runtime = runtime;
             this.ct = ct;
             this.logger = logger;
             if (@params.Columns < 3)
@@ -58,11 +65,15 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
 
         public IAsyncEnumerator<Tuple<ImageRegion, Rect>> GetAsyncEnumerator(CancellationToken cancellationToken = default)
         {
-            return new GridEnumerator(this, @params.Roi, @params.Columns, new GridScroller(@params, logger, input, ct), ct);
+            return new GridEnumerator(_runtime, this, @params.GetRoi(_runtime.SystemInfo.AssetScale), @params.Columns, new GridScroller(_runtime, @params, logger, input, ct), ct);
         }
 
         public class GridEnumerator : IAsyncEnumerator<Tuple<ImageRegion, Rect>>
         {
+            /// <summary>
+            /// 所属运行环境，翻页前后的截图与等待都只使用它
+            /// </summary>
+            private readonly GameRuntime _runtime;
             private readonly GridScreen owner;
             private readonly Rect roi;
             private readonly CancellationToken ct;
@@ -81,6 +92,7 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
             /// <summary>
             /// 滚动操作枚举器
             /// </summary>
+            /// <param name="runtime">运行环境</param>
             /// <param name="roi"></param>
             /// <param name="columns">有几列</param>
             /// <param name="s1Round">测试是否能滚动时发出的滚动命令次数</param>
@@ -89,8 +101,9 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
             /// <param name="s3Scale">微调滚动时控制首行距离上边界的参数</param>
             /// <param name="logger"></param>
             /// <param name="ct"></param>
-            internal GridEnumerator(GridScreen owner, Rect roi, int columns, GridScroller gridScroller, CancellationToken ct)
+            internal GridEnumerator(GameRuntime runtime, GridScreen owner, Rect roi, int columns, GridScroller gridScroller, CancellationToken ct)
             {
+                this._runtime = runtime;
                 this.owner = owner;
                 this.roi = roi;
                 this.ct = ct;
@@ -495,9 +508,9 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
                     {
                         if (this.currentPage != null)   // 当前页遍历完了就向下滚动
                         {
-                            using var ra4 = TaskControl.CaptureToRectArea();
+                            using var ra4 = this._runtime.CaptureToRectArea();
                             ra4.MoveTo(this.roi.X + this.roi.Width / 2, this.roi.Y + this.roi.Height / 2);
-                            await TaskControl.Delay(300, ct);
+                            await this._runtime.Delay(300, ct);
 
                             owner.OnBeforeScroll?.Invoke();
                             if (!await this.gridScroller.TryVerticalScollDown((src, columns) => GetGridItems(src, columns)))
@@ -505,12 +518,12 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
                                 return false;
                             }
 
-                            using ImageRegion ra = TaskControl.CaptureToRectArea();
+                            using ImageRegion ra = this._runtime.CaptureToRectArea();
                             imageRegion = ra.DeriveCrop(this.roi);
                         }
                         else
                         {
-                            using ImageRegion ra = TaskControl.CaptureToRectArea();
+                            using ImageRegion ra = this._runtime.CaptureToRectArea();
                             imageRegion = ra.DeriveCrop(this.roi);
                         }
 

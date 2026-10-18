@@ -353,7 +353,8 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     /// </summary>
     private void OnRuntimeStarted(object? sender, EventArgs e)
     {
-        var handle = _gameRuntimeService.Current!.Window.Handle;
+        var runtime = _gameRuntimeService.Current!;
+        var handle = runtime.Window.Handle;
         _maskWindowHost.Attach(handle);
         _customHtmlMaskService.ShowIfEnabled();
         if (_gameRuntimeService.Kind != GameRuntimeKind.WebPage)
@@ -361,19 +362,20 @@ public partial class HomePageViewModel : ViewModel, IDisposable
             _mouseKeyMonitor.Subscribe(handle);
         }
         TaskDispatcherEnabled = true;
-        PrintSystemInfo();
+        PrintSystemInfo(runtime);
     }
 
     /// <summary>
     /// 截图器启动后输出运行环境信息，并检查常见的识别干扰项
     /// </summary>
-    private void PrintSystemInfo()
+    /// <param name="runtime">刚绑定的运行环境</param>
+    private void PrintSystemInfo(GameRuntime runtime)
     {
         _logger.LogInformation("更好的原神 {Version}", Global.Version);
-        var systemInfo = TaskContext.Instance().SystemInfo;
+        var systemInfo = runtime.SystemInfo;
         var width = systemInfo.GameScreenSize.Width;
         var height = systemInfo.GameScreenSize.Height;
-        var dpiScale = TaskContext.Instance().DpiScale;
+        var dpiScale = systemInfo.DpiScale;
         _logger.LogInformation("遮罩窗口已启动，游戏大小{Width}x{Height}，素材缩放{Scale}，DPI缩放{Dpi}",
             width, height, systemInfo.AssetScale.ToString("F"), dpiScale);
 

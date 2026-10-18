@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Helpers;
 using OpenCvSharp;
@@ -511,8 +512,15 @@ internal sealed class BvFlowServices
     public required Action<double, double> MoveTo { get; set; }
     public required Func<double, double, double, double, int, Task> Drag { get; set; }
 
+    /// <summary>
+    /// 基于页面对象创建流程依赖，坐标操作都作用在页面绑定的运行环境上
+    /// </summary>
+    /// <param name="page">流程所属页面</param>
+    /// <returns>流程依赖集合</returns>
     public static BvFlowServices Create(BvPage page)
     {
+        // 页面绑定的运行环境，1080P 坐标换算与点击都基于它
+        var runtime = page.Runtime;
         return new BvFlowServices
         {
             ThrowIfCancellationRequested = page.ThrowIfCancellationRequested,
@@ -524,7 +532,7 @@ internal sealed class BvFlowServices
             GetMatchRect = region =>
             {
                 var rect = region.ConvertPositionToGameCaptureRegion(0, 0, region.Width, region.Height);
-                var scale = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
+                var scale = region.GetScaleTo1080PRatio();
                 return new Rect(
                     (int)Math.Round(rect.X / scale),
                     (int)Math.Round(rect.Y / scale),
@@ -535,27 +543,27 @@ internal sealed class BvFlowServices
             GetTimestamp = System.Diagnostics.Stopwatch.GetTimestamp,
             GetElapsedMilliseconds = startedAt => System.Diagnostics.Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds,
             KeyPress = key => InputHub.Foreground.Keyboard.KeyPress(key),
-            LeftClick = GameCaptureRegion.GameRegion1080PPosClick,
+            LeftClick = (x, y) => runtime.GameRegion1080PPosClick(x, y),
             RightClick = (x, y) =>
             {
-                GameCaptureRegion.GameRegion1080PPosMove(x, y);
+                runtime.GameRegion1080PPosMove(x, y);
                 InputHub.Foreground.Mouse.RightButtonClick();
             },
             MiddleClick = (x, y) =>
             {
-                GameCaptureRegion.GameRegion1080PPosMove(x, y);
+                runtime.GameRegion1080PPosMove(x, y);
                 InputHub.Foreground.Mouse.MiddleButtonClick();
             },
-            MoveTo = GameCaptureRegion.GameRegion1080PPosMove,
+            MoveTo = (x, y) => runtime.GameRegion1080PPosMove(x, y),
             Drag = async (fromX, fromY, toX, toY, duration) =>
             {
-                GameCaptureRegion.GameRegion1080PPosMove(fromX, fromY);
+                runtime.GameRegion1080PPosMove(fromX, fromY);
                 InputHub.Foreground.Mouse.LeftButtonDown();
                 try
                 {
                     var firstDelay = duration / 2;
                     await page.Wait(firstDelay);
-                    GameCaptureRegion.GameRegion1080PPosMove(toX, toY);
+                    runtime.GameRegion1080PPosMove(toX, toY);
                     await page.Wait(duration - firstDelay);
                 }
                 finally

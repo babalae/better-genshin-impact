@@ -1,9 +1,13 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Core.Mask;
 using OpenCvSharp;
 using System;
@@ -106,9 +110,9 @@ public static class AvatarRecognition
     }
 
     /// <summary>
-    /// 资源缩放比例
+    /// 配置根。静态工具类没有创建方可以传配置，暂时读配置根（见 task-context-removal.md 第 5 节）
     /// </summary>
-    private static double AssetScale => TaskContext.Instance().SystemInfo.AssetScale;
+    private static AllConfig Config => ConfigService.Config!;
 
     /// <summary>
     /// 传奇血条动态追踪字典：(xBin, yBin) → 连续出现计数。
@@ -160,15 +164,18 @@ public static class AvatarRecognition
     /// 判断指定 (x, y) 坐标的血条是否为传奇血条。
     /// y &lt; 100 连续 2 帧判传奇；y 100-200 连续 4 帧判传奇；y ≥ 200 连续 10 帧判传奇。
     /// </summary>
-    public static bool IsLegendaryBar(int x, int y)
+    /// <param name="x">血条左侧坐标</param>
+    /// <param name="y">血条顶部坐标</param>
+    /// <param name="assetScale">血条所在截图的素材缩放比例</param>
+    public static bool IsLegendaryBar(int x, int y, double assetScale)
     {
         lock (_legendaryBarLock)
         {
             if (!_legendaryBarTracker.TryGetValue((x / 5 * 5, y / 2 * 2), out var cnt))
                 return false;
 
-            int threshold = y < (int)(100 * AssetScale) ? 2
-                          : y < (int)(200 * AssetScale) ? 4
+            int threshold = y < (int)(100 * assetScale) ? 2
+                          : y < (int)(200 * assetScale) ? 4
                           : 10;
             return cnt >= threshold;
         }
@@ -177,17 +184,21 @@ public static class AvatarRecognition
     /// <summary>
     /// 检测屏幕中的红色血条（连通域分析）
     /// </summary>
-    public static List<(int x, int y, int width, int height)> FindBloodBars(ImageRegion? existingCapture = null)
+    /// <param name="runtime">未传入截图时用于截图的运行环境，同时提供素材缩放比例</param>
+    /// <param name="existingCapture">已有截图，由调用方负责释放</param>
+    public static List<(int x, int y, int width, int height)> FindBloodBars(GameRuntime runtime, ImageRegion? existingCapture = null)
     {
         var results = new List<(int x, int y, int width, int height)>();
+        // 资源缩放比例
+        var assetScale = runtime.SystemInfo.AssetScale;
 
-        var selfCapture = existingCapture == null ? CaptureToRectArea() : null;
+        var selfCapture = existingCapture == null ? runtime.CaptureToRectArea() : null;
         using (selfCapture)
         {
             var image = existingCapture ?? selfCapture!;
             var bloodLower = new Scalar(255, 90, 90); // BGR 红色
 
-            using var cropped = image.DeriveCrop(0, 0, (int)(1500 * AssetScale), (int)(900 * AssetScale));
+            using var cropped = image.DeriveCrop(0, 0, (int)(1500 * assetScale), (int)(900 * assetScale));
             using Mat mask = OpenCvCommonHelper.Threshold(
                 cropped.SrcMat, bloodLower);
 
@@ -210,7 +221,7 @@ public static class AvatarRecognition
             }
 
             // 自动更新传奇血条动态追踪（排除左侧 UI 区域 x<=200，避免队伍头像等红色元素被误计为传奇血条）
-            UpdateLegendaryBarTracker(results.Where(r => r.x > (int)(200 * AssetScale)).Select(r => (r.x, r.y)));
+            UpdateLegendaryBarTracker(results.Where(r => r.x > (int)(200 * assetScale)).Select(r => (r.x, r.y)));
 
             return results;
         }
@@ -232,7 +243,7 @@ public static class AvatarRecognition
                 param.DamageNumberRecognitionMode);
         }
 
-        var config = TaskContext.Instance().Config.AutoFightConfig;
+        var config = Config.AutoFightConfig;
         return new VisualRecognitionConfig(
             Math.Clamp(config.TargetingDetectionInterval, 1, 200),
             config.DrawRecognitionResults,
@@ -247,7 +258,9 @@ public static class AvatarRecognition
     ///   - Color：使用颜色分析识别
     /// 配置来源：<see cref="GetVisualRecognitionConfig"/>
     /// </summary>
-    public static (int centerX, int centerY, string text, int x, int y, int width, int height)? FindDamageNumber(ImageRegion? existingCapture = null)
+    /// <param name="runtime">未传入截图时用于截图的运行环境，同时提供素材缩放比例</param>
+    /// <param name="existingCapture">已有截图，由调用方负责释放</param>
+    public static (int centerX, int centerY, string text, int x, int y, int width, int height)? FindDamageNumber(GameRuntime runtime, ImageRegion? existingCapture = null)
     {
         var mode = GetVisualRecognitionConfig().DamageNumberRecognitionMode;
         switch (mode)
@@ -255,10 +268,10 @@ public static class AvatarRecognition
             case DamageNumberRecognitionMode.Disabled:
                 return null;
             case DamageNumberRecognitionMode.Color:
-                return FindDamageNumberByColor(existingCapture);
+                return FindDamageNumberByColor(runtime, existingCapture);
             case DamageNumberRecognitionMode.Ocr:
             default:
-                return FindDamageNumberByOcr(existingCapture);
+                return FindDamageNumberByOcr(runtime, existingCapture);
         }
     }
 
@@ -269,13 +282,15 @@ public static class AvatarRecognition
     ///   - 有效项2：文本包含反应关键词（免疫/蒸发/感电/结晶/扩散/绽放/冻结/超载/融化/燃烧/超导/激化），跳过数字过滤
     /// 按 h²×文本字数 加权得到中心坐标，返回离加权中心最近的有效项。
     /// </summary>
-    private static (int centerX, int centerY, string text, int x, int y, int width, int height)? FindDamageNumberByOcr(ImageRegion? existingCapture = null)
+    private static (int centerX, int centerY, string text, int x, int y, int width, int height)? FindDamageNumberByOcr(GameRuntime runtime, ImageRegion? existingCapture = null)
     {
-        var selfCapture = existingCapture == null ? CaptureToRectArea() : null;
+        // 资源缩放比例
+        var assetScale = runtime.SystemInfo.AssetScale;
+        var selfCapture = existingCapture == null ? runtime.CaptureToRectArea() : null;
         using (selfCapture)
         {
             var ra = existingCapture ?? selfCapture!;
-            var ocrResults = ra.FindMulti(RecognitionObject.Ocr((int)(450 * AssetScale), (int)(240 * AssetScale), (int)(1150 * AssetScale), (int)(660 * AssetScale)));
+            var ocrResults = ra.FindMulti(RecognitionObject.Ocr((int)(450 * assetScale), (int)(240 * assetScale), (int)(1150 * assetScale), (int)(660 * assetScale)));
 
             string[] reactionKeywords = ["免疫", "蒸发", "感电", "结晶", "扩散", "绽放", "冻结", "超载", "融化", "燃烧", "超导", "激化"];
             var validItems = new List<(int cx, int cy, int area, string text, int x, int y, int w, int h)>();
@@ -321,9 +336,11 @@ public static class AvatarRecognition
     /// 颜色分析模式：在 450,240-1600,900 区域内查找固定颜色的像素，
     /// 经连通域分析后舍弃高度小于20的区域，返回加权中心。
     /// </summary>
-    private static (int centerX, int centerY, string text, int x, int y, int width, int height)? FindDamageNumberByColor(ImageRegion? existingCapture = null)
+    private static (int centerX, int centerY, string text, int x, int y, int width, int height)? FindDamageNumberByColor(GameRuntime runtime, ImageRegion? existingCapture = null)
     {
-        var selfCapture = existingCapture == null ? CaptureToRectArea() : null;
+        // 资源缩放比例
+        var assetScale = runtime.SystemInfo.AssetScale;
+        var selfCapture = existingCapture == null ? runtime.CaptureToRectArea() : null;
         using (selfCapture)
         {
             var ra = existingCapture ?? selfCapture!;
@@ -340,10 +357,10 @@ public static class AvatarRecognition
                 new(255, 204, 102), // 岩 #FFCC66
             ];
 
-            int roiX = (int)(450 * AssetScale);
-            int roiY = (int)(240 * AssetScale);
-            int roiW = (int)(1150 * AssetScale);
-            int roiH = (int)(660 * AssetScale);
+            int roiX = (int)(450 * assetScale);
+            int roiY = (int)(240 * assetScale);
+            int roiW = (int)(1150 * assetScale);
+            int roiH = (int)(660 * assetScale);
 
             using var cropped = ra.DeriveCrop(roiX, roiY, roiW, roiH);
             using var rgbMat = new Mat();
@@ -374,7 +391,7 @@ public static class AvatarRecognition
                 int width = stats.At<int>(i, (int)ConnectedComponentsTypes.Width);
                 int height = stats.At<int>(i, (int)ConnectedComponentsTypes.Height);
 
-                if (height < (int)(20 * AssetScale)) continue;
+                if (height < (int)(20 * assetScale)) continue;
 
                 int area = stats.At<int>(i, (int)ConnectedComponentsTypes.Area);
                 validItems.Add((x + width / 2 + roiX, y + height / 2 + roiY, area, x + roiX, y + roiY, width, height));
@@ -399,13 +416,17 @@ public static class AvatarRecognition
     /// 受 EnableCombatTargeting 配置项控制总开关。
     /// 当 SkipSeek 为 true 时（如部分角色重击索敌期间）跳过本帧。
     /// </summary>
+    /// <param name="runtime">截图与输入所用的运行环境</param>
     /// <param name="ct">取消令牌</param>
     /// <param name="isFightEnd">战斗是否已结束（外部标志，为 true 时退出循环）</param>
     public static async Task ContinuousTargetingLoopAsync(
+        GameRuntime runtime,
         CancellationToken ct,
         Func<bool>? isFightEnd = null)
     {
-        var dpi = TaskContext.Instance().DpiScale;
+        var dpi = runtime.SystemInfo.DpiScale;
+        // 资源缩放比例
+        var assetScale = runtime.SystemInfo.AssetScale;
         var visConfig = GetVisualRecognitionConfig();
         var frameIntervalMs = visConfig.TargetingDetectionInterval;
         var drawResults = visConfig.DrawRecognitionResults;
@@ -425,7 +446,7 @@ public static class AvatarRecognition
                     continue;
                 }
 
-                using (var capture = CaptureToRectArea())
+                using (var capture = runtime.CaptureToRectArea())
                 {
                     drawingBoard = capture.DrawingBoard;
                     int preAimX = (int)(capture.Width * 0.5);
@@ -439,12 +460,12 @@ public static class AvatarRecognition
                     }
 
                     // 1. 血条识别：检测红色血条并过滤左侧 UI 区域 (x > 200)
-                    var bars = FindBloodBars(capture);
-                    var valid = bars.Where(b => b.x > (int)(200 * AssetScale)).ToList();
+                    var bars = FindBloodBars(runtime, capture);
+                    var valid = bars.Where(b => b.x > (int)(200 * assetScale)).ToList();
 
                     var drawList = new List<MaskWindowDrawingShape>();
 
-                    bool hasLegendaryBar = valid.Any(b => IsLegendaryBar(b.x, b.y));
+                    bool hasLegendaryBar = valid.Any(b => IsLegendaryBar(b.x, b.y, assetScale));
 
                     // 2. 血条追踪：存在有效普通血条且无传奇时，朝最近血条方向移动鼠标
                     if (valid.Count > 0 && !hasLegendaryBar)
@@ -480,7 +501,7 @@ public static class AvatarRecognition
                     else
                     {
                         // 3. 伤害数字追踪：血条无效时尝试通过伤害数字/反应文字定位
-                        var damageResult = FindDamageNumber(capture);
+                        var damageResult = FindDamageNumber(runtime, capture);
                         if (damageResult.HasValue)
                         {
                             var (dcx, dcy, _, dx, dy, dw, dh) = damageResult.Value;

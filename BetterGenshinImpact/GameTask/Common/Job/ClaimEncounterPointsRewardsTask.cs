@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Input;
 using System;
 using System.Globalization;
@@ -9,6 +10,7 @@ using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -22,14 +24,35 @@ namespace BetterGenshinImpact.GameTask.Common.Job;
 /// </summary>
 public class ClaimEncounterPointsRewardsTask
 {
-    private readonly ReturnMainUiTask _returnMainUiTask = new();
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 配置根
+    /// </summary>
+    private readonly AllConfig _config;
+
+    /// <summary>
+    /// 返回主界面子任务
+    /// </summary>
+    private readonly ReturnMainUiTask _returnMainUiTask;
 
     private readonly string commissionsLocalizedString;
 
-    public ClaimEncounterPointsRewardsTask()
+    /// <summary>
+    /// 创建领取长效历练点奖励任务
+    /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    /// <param name="config">配置根</param>
+    public ClaimEncounterPointsRewardsTask(GameRuntime runtime, AllConfig config)
     {
+        _runtime = runtime;
+        _config = config;
+        _returnMainUiTask = new ReturnMainUiTask(runtime);
         IStringLocalizer<ClaimEncounterPointsRewardsTask> stringLocalizer = App.GetService<IStringLocalizer<ClaimEncounterPointsRewardsTask>>() ?? throw new NullReferenceException();
-        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
+        CultureInfo cultureInfo = new CultureInfo(config.OtherConfig.GameCultureInfoName);
         this.commissionsLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "委托");
     }
 
@@ -53,19 +76,19 @@ public class ClaimEncounterPointsRewardsTask
     {
         await _returnMainUiTask.Start(ct);
 
-        await Delay(200, ct);
+        await _runtime.Delay(200, ct);
 
         InputHub.Background.SimulateAction(GIActions.OpenAdventurerHandbook); // F1 开书
 
-        await Delay(1000, ct);
+        await _runtime.Delay(1000, ct);
 
-        var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+        var assetScale = _runtime.SystemInfo.AssetScale;
 
         var earlyClaim = false; // 无需点击委托直接领取
         // 找委托按钮
-        var f1Success = await NewRetry.WaitForAction(() =>
+        var f1Success = await NewRetry.WaitForAction(_runtime, () =>
         {
-            using var ra = CaptureToRectArea();
+            using var ra = _runtime.CaptureToRectArea();
 
             var ocrList = ra.FindMulti(RecognitionObject.Ocr(0, 0, 380 * assetScale, ra.Height));
 
@@ -73,7 +96,7 @@ public class ClaimEncounterPointsRewardsTask
 
             if (wt != null)
             {
-                using var claimCapture = CaptureToRectArea();
+                using var claimCapture = _runtime.CaptureToRectArea();
                 if (ClickClaimBtn(claimCapture))
                 {
                     earlyClaim = true;
@@ -96,19 +119,19 @@ public class ClaimEncounterPointsRewardsTask
         if (earlyClaim)
         {
             // 已经领取过
-            await Delay(1000, ct);
+            await _runtime.Delay(1000, ct);
 
             // TODO 截图并通知
             return true;
         }
 
-        await Delay(1000, ct);
+        await _runtime.Delay(1000, ct);
 
         // 领取
-        using var claimCapture = CaptureToRectArea();
+        using var claimCapture = _runtime.CaptureToRectArea();
         if (ClickClaimBtn(claimCapture))
         {
-            await Delay(1000, ct);
+            await _runtime.Delay(1000, ct);
 
             // TODO 截图并通知
         }

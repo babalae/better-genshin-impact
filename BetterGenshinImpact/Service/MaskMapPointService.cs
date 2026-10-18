@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
@@ -48,18 +49,25 @@ public sealed class MaskMapPointService : IMaskMapPointService
     private readonly IMihoyoMapApiService _mihoyoMapApi;
     private readonly IKongyingTavernApiService _kongyingTavernApi;
 
+    /// <summary>
+    /// 注入的配置根，用于读取点位接口来源、接口语言与地图匹配方式
+    /// </summary>
+    private readonly AllConfig _config;
+
     public MaskMapPointService(
         ILogger<MaskMapPointService> logger,
         IAppCache cache,
         IHoYoLabMapApiService hoyolabMapApi,
         IMihoyoMapApiService mihoyoMapApi,
-        IKongyingTavernApiService kongyingTavernApi)
+        IKongyingTavernApiService kongyingTavernApi,
+        AllConfig config)
     {
         _logger = logger;
         _cache = cache;
         _hoyolabMapApi = hoyolabMapApi;
         _mihoyoMapApi = mihoyoMapApi;
         _kongyingTavernApi = kongyingTavernApi;
+        _config = config;
     }
 
     public Task<IReadOnlyList<MaskMapPointLabel>> GetLabelCategoriesAsync(CancellationToken ct = default)
@@ -89,9 +97,9 @@ public sealed class MaskMapPointService : IMaskMapPointService
         };
     }
 
-    private static MapPointApiProvider GetProvider()
+    private MapPointApiProvider GetProvider()
     {
-        return TaskContext.Instance().Config.MapMaskConfig.MapPointApiProvider;
+        return _config.MapMaskConfig.MapPointApiProvider;
     }
 
     private IMihoyoMapApiService GetMihoyoCompatibleApi()
@@ -208,7 +216,7 @@ public sealed class MaskMapPointService : IMaskMapPointService
             return new MaskMapPointsResult { Labels = labels, Points = Array.Empty<MaskMapPoint>() };
         }
 
-        var map = MapManager.GetMap(MapTypes.Teyvat, TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod);
+        var map = MapManager.GetMap(MapTypes.Teyvat, _config.PathingConditionConfig.MapMatchingMethod);
         var points = resp.Data.PointList
             .Where(x => selectedSecondLevelIds.Contains(x.LabelId.ToString(CultureInfo.InvariantCulture)))
             .Select(x =>
@@ -241,7 +249,7 @@ public sealed class MaskMapPointService : IMaskMapPointService
         var provider = GetProvider();
         var providerKey = provider == MapPointApiProvider.HoYoLab ? "hoyolab" : "mihoyo-map";
         var langSegment = provider == MapPointApiProvider.HoYoLab
-            ? $":lang:{HoYoLabMapApiService.NormalizeLanguage(TaskContext.Instance().Config.MapMaskConfig.HoYoLabLanguage)}"
+            ? $":lang:{HoYoLabMapApiService.NormalizeLanguage(_config.MapMaskConfig.HoYoLabLanguage)}"
             : string.Empty;
         var key = $"{providerKey}:point-list:2:ys_obc{langSegment}:{string.Join(",", labelIds)}";
         var request = new PointListRequest
@@ -473,7 +481,7 @@ public sealed class MaskMapPointService : IMaskMapPointService
         }
 
         var markersByItemId = await GetKongyingMarkersByItemIdCachedAsync(ct);
-        var map = MapManager.GetMap(MapTypes.Teyvat, TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod);
+        var map = MapManager.GetMap(MapTypes.Teyvat, _config.PathingConditionConfig.MapMatchingMethod);
 
         var markerById = new Dictionary<long, (MarkerVo Marker, long LabelItemId)>();
         foreach (var selectedItemId in selectedItemIdsInOrder)

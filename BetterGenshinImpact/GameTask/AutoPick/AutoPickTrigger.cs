@@ -19,6 +19,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 
 namespace BetterGenshinImpact.GameTask.AutoPick;
 
@@ -27,9 +28,19 @@ public partial class AutoPickTrigger : ITaskTrigger
     private readonly ILogger<AutoPickTrigger> _logger = App.GetLogger<AutoPickTrigger>();
 
     public string Name => "自动拾取";
-    public bool IsEnabledByConfig => TaskContext.Instance().Config.AutoPickConfig.Enabled;
+    public bool IsEnabledByConfig => _config.AutoPickConfig.Enabled;
     public int Priority => 30;
     public bool IsExclusive => false;
+
+    /// <summary>
+    /// 本次截图会话绑定的运行环境，素材缩放比例取自它的画面信息
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 配置根，由创建方传入
+    /// </summary>
+    private readonly AllConfig _config;
 
     private AutoPickAssets _autoPickAssets = null!;
 
@@ -69,6 +80,17 @@ public partial class AutoPickTrigger : ITaskTrigger
     /// 当前名单对应的缓存键，键不变就不重读文件
     /// </summary>
     private (AutoPickMode Mode, bool BlacklistModePickEnabled, bool WhitelistModeDoNotPickEnabled, int Version)? _loadedListKey;
+
+    /// <summary>
+    /// 创建自动拾取触发器
+    /// </summary>
+    /// <param name="runtime">本次截图会话绑定的运行环境</param>
+    /// <param name="config">配置根</param>
+    public AutoPickTrigger(GameRuntime runtime, AllConfig config)
+    {
+        _runtime = runtime;
+        _config = config;
+    }
 
     /// <summary>
     /// 名单文件被界面修改后调用，下一次拾取时重读
@@ -223,7 +245,7 @@ public partial class AutoPickTrigger : ITaskTrigger
 
     public void OnCapture(CaptureContent content)
     {
-        _autoPickAssets = AutoPickAssets.Get(content.CaptureRectArea, TaskContext.Instance().Config.AutoPickConfig.PickKey);
+        _autoPickAssets = AutoPickAssets.Get(content.CaptureRectArea, _config.AutoPickConfig.PickKey);
         _pickRo = _autoPickAssets.PickRo;
 
         var speedTimer = new SpeedTimer();
@@ -252,8 +274,8 @@ public partial class AutoPickTrigger : ITaskTrigger
             return;
         }
 
-        var scale = TaskContext.Instance().SystemInfo.AssetScale;
-        var config = TaskContext.Instance().Config.AutoPickConfig;
+        var scale = _runtime.SystemInfo.AssetScale;
+        var config = _config.AutoPickConfig;
         EnsureLists(config);
 
         // 存在 L 键位是千星奇遇，无需拾取

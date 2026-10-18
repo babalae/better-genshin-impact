@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Runtime;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using Microsoft.Extensions.Localization;
@@ -24,16 +25,37 @@ public class GoToAdventurersGuildTask
 
     private readonly int _retryTimes = 1;
 
-    private readonly ChooseTalkOptionTask _chooseTalkOptionTask = new();
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 配置根
+    /// </summary>
+    private readonly AllConfig _config;
+
+    /// <summary>
+    /// 持续对话并选择选项子任务
+    /// </summary>
+    private readonly ChooseTalkOptionTask _chooseTalkOptionTask;
 
     private readonly string dailyLocalizedString;
     private readonly string catherineLocalizedString;
     private readonly string expeditionLocalizedString;
 
-    public GoToAdventurersGuildTask()
+    /// <summary>
+    /// 创建前往冒险家协会领取奖励任务
+    /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    /// <param name="config">配置根</param>
+    public GoToAdventurersGuildTask(GameRuntime runtime, AllConfig config)
     {
+        _runtime = runtime;
+        _config = config;
+        _chooseTalkOptionTask = new ChooseTalkOptionTask(runtime);
         IStringLocalizer<GoToAdventurersGuildTask> stringLocalizer = App.GetService<IStringLocalizer<GoToAdventurersGuildTask>>() ?? throw new NullReferenceException();
-        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
+        CultureInfo cultureInfo = new CultureInfo(config.OtherConfig.GameCultureInfoName);
         this.dailyLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "每日");
         this.catherineLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "凯瑟琳");
         this.expeditionLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "探索");
@@ -49,13 +71,13 @@ public class GoToAdventurersGuildTask
                 // 如果有好感队伍名称，先切换到好感队伍
                 if (!string.IsNullOrEmpty(dailyRewardPartyName))
                 {
-                    await new SwitchPartyTask().Start(dailyRewardPartyName, ct);
+                    await new SwitchPartyTask(_runtime).Start(dailyRewardPartyName, ct);
                 }
 
                 if (!onlyDoOnce)
                 {
                     // F1领取奖励
-                    await new ClaimEncounterPointsRewardsTask().Start(ct);
+                    await new ClaimEncounterPointsRewardsTask(_runtime, _config).Start(ct);
                 }
 
                 await DoOnce(country, ct);
@@ -71,7 +93,7 @@ public class GoToAdventurersGuildTask
                 }
                 else
                 {
-                    await Delay(1000, ct);
+                    await _runtime.Delay(1000, ct);
                     Logger.LogInformation("重试前往冒险家协会领取奖励");
                 }
             }
@@ -90,24 +112,24 @@ public class GoToAdventurersGuildTask
         if (res == TalkOptionRes.FoundAndClick)
         {
             Logger.LogInformation("▶ {Text}", "领取『每日委托』奖励！");
-            await Delay(800, ct);
+            await _runtime.Delay(800, ct);
             
             // 6.2 每日提示确认
-            using var ra1 = CaptureToRectArea();
+            using var ra1 = _runtime.CaptureToRectArea();
             if (Bv.ClickBlackConfirmButton(ra1))
             {
                 Logger.LogInformation("存在提示并确认");
             }
             
             await _chooseTalkOptionTask.SelectLastOptionUntilEnd(ct, null, 3); // 点几下
-            await Bv.WaitUntilFound(ElementRecognition.Get("PaimonMenu"), ct);
-            await Delay(500, ct);
+            await Bv.WaitUntilFound(_runtime, ElementRecognition.Get("PaimonMenu", _runtime.SystemInfo), ct);
+            await _runtime.Delay(500, ct);
             InputHub.Background.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-            await new ReturnMainUiTask().Start(ct);
+            await new ReturnMainUiTask(_runtime).Start(ct);
 
             // 结束后重新打开
-            await Delay(1200, ct);
-            using var ra = CaptureToRectArea();
+            await _runtime.Delay(1200, ct);
+            using var ra = _runtime.CaptureToRectArea();
             if (!Bv.FindFAndPress(ra, text: this.catherineLocalizedString))
             {
                 throw new Exception("未找与凯瑟琳对话交互按钮");
@@ -126,8 +148,8 @@ public class GoToAdventurersGuildTask
         res = await _chooseTalkOptionTask.SingleSelectText(this.expeditionLocalizedString, ct, 10, true);
         if (res == TalkOptionRes.FoundAndClick)
         {
-            await Delay(500, ct);
-            new OneKeyExpeditionTask().Run();
+            await _runtime.Delay(500, ct);
+            new OneKeyExpeditionTask(_runtime).Run();
         }
         else if (res == TalkOptionRes.FoundButNotOrange)
         {
@@ -139,7 +161,7 @@ public class GoToAdventurersGuildTask
         }
 
         // 如果最后还在对话界面，选择最后一个选项退出
-        using var talkUiCapture = CaptureToRectArea();
+        using var talkUiCapture = _runtime.CaptureToRectArea();
         if (Bv.IsInTalkUi(talkUiCapture))
         {
             await _chooseTalkOptionTask.SelectLastOptionUntilEnd(ct);
@@ -160,7 +182,7 @@ public class GoToAdventurersGuildTask
         {
             throw new Exception("地图追踪文件加载失败");
         }
-        var pathingTask = new PathExecutor(ct)
+        var pathingTask = new PathExecutor(_runtime, _config, ct)
         {
             PartyConfig = new PathingPartyConfig
             {
@@ -172,16 +194,16 @@ public class GoToAdventurersGuildTask
         // 找到凯瑟琳时允许 EndAction 提前结束路线，随后仍核验对话界面。
         _ = await pathingTask.Pathing(task);
 
-        await Delay(600, ct);
+        await _runtime.Delay(600, ct);
 
         const int retryTalkTimes = 3;
         for (int i = 0; i < retryTalkTimes; i++)
         {
-            using var ra = CaptureToRectArea();
+            using var ra = _runtime.CaptureToRectArea();
             if (!Bv.IsInTalkUi(ra))
             {
-                InputHub.Foreground.Keyboard.KeyPress(AutoPickAssets.Get(ra, TaskContext.Instance().Config.AutoPickConfig.PickKey).PickVk);
-                await Delay(500, ct);
+                InputHub.Foreground.Keyboard.KeyPress(AutoPickAssets.Get(ra, _config.AutoPickConfig.PickKey).PickVk);
+                await _runtime.Delay(500, ct);
 
                 if (i == retryTalkTimes - 1)
                 {

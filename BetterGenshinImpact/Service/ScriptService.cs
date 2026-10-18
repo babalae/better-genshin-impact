@@ -21,14 +21,15 @@ using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 using BetterGenshinImpact.ViewModel.Pages;
+using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
+using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.Service;
 
 public partial class ScriptService : IScriptService
 {
     private readonly ILogger<ScriptService> _logger = App.GetLogger<ScriptService>();
-    private readonly BlessingOfTheWelkinMoonTask _blessingOfTheWelkinMoonTask = new();
     private readonly TaskTriggerDispatcher _triggers;
 
     public ScriptService(TaskTriggerDispatcher triggers)
@@ -94,8 +95,9 @@ public partial class ScriptService : IScriptService
     /// </summary>
     /// <param name="projectList">需要执行的配置组项目。</param>
     /// <param name="groupName">配置组名称。</param>
+    /// <param name="runtime">所属顶层任务使用的运行环境。</param>
     /// <param name="ct">所属顶层任务的取消令牌。</param>
-    public async Task RunMulti(IEnumerable<ScriptGroupProject> projectList, string? groupName, CancellationToken ct)
+    public async Task RunMulti(GameRuntime runtime, IEnumerable<ScriptGroupProject> projectList, string? groupName, CancellationToken ct)
     {
         groupName ??= "默认";
         ct.ThrowIfCancellationRequested();
@@ -133,6 +135,8 @@ public partial class ScriptService : IScriptService
         
         bool fisrt = true;
         var stopwatch = new Stopwatch();
+        // 月卡检测绑定本轮运行环境
+        var blessingOfTheWelkinMoonTask = new BlessingOfTheWelkinMoonTask(runtime);
 
         // 按配置组顺序执行任务，仍检查临时跳过标志、禁用状态、时段与周期规则。
         foreach (var project in list)
@@ -143,7 +147,7 @@ public partial class ScriptService : IScriptService
             }
 
             //月卡检测
-            await _blessingOfTheWelkinMoonTask.Start(ct);
+            await blessingOfTheWelkinMoonTask.Start(ct);
             if (project.Status != "Enabled")
             {
                 _logger.LogInformation("脚本 {Name} 状态为禁用，跳过执行", project.Name);
@@ -167,7 +171,7 @@ public partial class ScriptService : IScriptService
                     stopwatch.Reset();
                     stopwatch.Start();
 
-                    await ExecuteProject(project, ct);
+                    await ExecuteProject(runtime, project, ct);
 
                     //多次执行时及时中断
                     if (project.RunNum > 1 && ShouldSkipTask(project))
@@ -282,7 +286,7 @@ public partial class ScriptService : IScriptService
     /// <summary>
     /// 使用配置组所属顶层任务的令牌执行一个项目。
     /// </summary>
-    private async Task ExecuteProject(ScriptGroupProject project, CancellationToken ct)
+    private async Task ExecuteProject(GameRuntime runtime, ScriptGroupProject project, CancellationToken ct)
     {
         RunnerContext.Instance.CurrentScriptProject = project;
         if (project.Type == "Javascript")
@@ -296,7 +300,7 @@ public partial class ScriptService : IScriptService
             var hasSettingsBeforeRun = project.JsScriptSettingsObject != null;
             try
             {
-                await project.Run(ct);
+                await project.Run(runtime, ct);
             }
             finally
             {
@@ -306,17 +310,17 @@ public partial class ScriptService : IScriptService
         else if (project.Type == "KeyMouse")
         {
             _logger.LogInformation("→ 开始执行键鼠脚本: {Name}", project.Name);
-            await project.Run(ct);
+            await project.Run(runtime, ct);
         }
         else if (project.Type == "Pathing")
         {
             _logger.LogInformation("→ 开始执行地图追踪任务: {Name}", project.Name);
-            await project.Run(ct);
+            await project.Run(runtime, ct);
         }
         else if (project.Type == "Shell")
         {
             _logger.LogInformation("→ 开始执行shell: {Name}", project.Name);
-            await project.Run(ct);
+            await project.Run(runtime, ct);
         }
     }
 
@@ -372,18 +376,28 @@ public partial class ScriptService : IScriptService
     /// </summary>
     /// <param name="ct">当前任务的取消令牌。</param>
     /// <param name="waitForMainUi">是否等待进入主界面、可关闭界面或秘境界面。</param>
-    public static async Task StartGameTask(CancellationToken ct, bool waitForMainUi = true)
+    /// <returns>本轮任务使用的运行环境</returns>
+    /// <exception cref="NormalEndException">截图器无法启动</exception>
+    public static async Task<GameRuntime> StartGameTask(CancellationToken ct, bool waitForMainUi = true)
     {
         // 没启动时候，启动截图器
         // 静态方法无法构造注入（调用方包括直接 new 出来的 TaskRunner），这里从容器取服务
         var gameRuntimeService = App.GetService<GameRuntimeService>()!;
-        if (!gameRuntimeService.IsRunning)
+        var runtime = gameRuntimeService.Current;
+        if (runtime is null)
         {
-            await gameRuntimeService.StartAsync(ct);
+            runtime = await gameRuntimeService.StartAsync(ct);
             ct.ThrowIfCancellationRequested();
+            if (runtime is null)
+            {
+                // 未找到窗口、用户取消等原因已由启动流程提示，这里直接结束任务，不再空等
+                UIDispatcherHelper.Invoke(() => { Toast.Warning("请先在启动页，启动截图器再使用本功能"); });
+                throw new NormalEndException("截图器未启动");
+            }
 
             if (waitForMainUi)
             {
+                var startedRuntime = runtime;
                 await Task.Run(async () =>
                 {
                     await Task.Delay(200, ct);
@@ -393,14 +407,10 @@ public partial class ScriptService : IScriptService
                     while (true)
                     {
                         ct.ThrowIfCancellationRequested();
+                        // 等待期间截图器被停止：本轮任务随之结束
+                        startedRuntime.ThrowIfStopping();
 
-                        if (!gameRuntimeService.IsRunning || !TaskContext.Instance().IsInitialized)
-                        {
-                            await Task.Delay(500, ct);
-                            continue;
-                        }
-
-                        using var content = TaskControl.CaptureToRectArea();
+                        using var content = startedRuntime.CaptureToRectArea();
                         if (Bv.IsInMainUi(content) || Bv.IsInAnyClosableUi(content) || Bv.IsInDomain(content))
                         {
                             return;
@@ -417,20 +427,20 @@ public partial class ScriptService : IScriptService
                         if (sw.Elapsed.TotalSeconds >= 30)
                         {
                             //防止自启动游戏后因为一些原因失焦，导致一直卡住
-                            if (!SystemControl.IsGenshinImpactActiveByProcess())
+                            if (!startedRuntime.IsOperable())
                             {
                                 loseFocusCount++;
                                 if (loseFocusCount>50 && loseFocusCount<100)
                                 {
-                                    SystemControl.MinimizeAndActivateWindow(TaskContext.Instance().GameHandle);
+                                    SystemControl.MinimizeAndActivateWindow(startedRuntime.Window.Handle);
                                 }
-                                SystemControl.ActivateWindow();
+                                startedRuntime.Window.Activate();
                             }
 
                             //自启动游戏，如果鼠标在游戏外面，将无法自动开门，这里尝试移动到游戏界面
                             if (sw.Elapsed.TotalSeconds < 200)
                             {
-                                GlobalMethod.MoveMouseTo(300, 300);
+                                startedRuntime.GameRegion1080PPosMove(300, 300);
                             }
 
                         }
@@ -446,5 +456,7 @@ public partial class ScriptService : IScriptService
             await pendingUpdate.WaitAsync(ct);
             ScriptRepoUpdater.Instance.CommandLineAutoUpdateTask = null;
         }
+
+        return runtime;
     }
 }

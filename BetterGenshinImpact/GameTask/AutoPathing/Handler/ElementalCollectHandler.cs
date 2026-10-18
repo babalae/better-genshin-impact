@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.Runtime;
 using Microsoft.Extensions.Logging;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -13,11 +15,24 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 /// <summary>
 /// 元素采集
 /// </summary>
-public class ElementalCollectHandler(ElementalType elementalType) : IActionHandler
+/// <param name="runtime">本次运行使用的运行环境</param>
+/// <param name="config">配置根</param>
+/// <param name="elementalType">采集使用的元素类型</param>
+public class ElementalCollectHandler(GameRuntime runtime, AllConfig config, ElementalType elementalType) : IActionHandler
 {
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime = runtime;
+
+    /// <summary>
+    /// 配置根
+    /// </summary>
+    private readonly AllConfig _config = config;
+
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
-        var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);
+        var combatScenes = await RunnerContext.Instance.GetCombatScenes(_runtime, _config, ct);
         if (combatScenes == null)
         {
             Logger.LogError("队伍识别未初始化成功！");

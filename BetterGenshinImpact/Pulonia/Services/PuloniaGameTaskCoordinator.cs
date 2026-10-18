@@ -29,27 +29,29 @@ public sealed class PuloniaGameTaskCoordinator
 
     /// <summary>
     /// 等待全局任务锁，必要时启动游戏会话，并进入现有任务模式。
+    /// 租约记录本次启动返回的运行环境，节点内的任务只使用它。
     /// </summary>
     public async Task<PuloniaGameTaskLease> AcquireAsync(CancellationToken ct)
     {
         await TaskControl.TaskSemaphore.WaitAsync(ct).ConfigureAwait(false);
+        GameRuntime? runtime = null;
         try
         {
-            var started = await _runtimeService.StartAsync(ct).ConfigureAwait(false);
-            if (!started || !_runtimeService.IsRunning)
+            runtime = await _runtimeService.StartAsync(ct).ConfigureAwait(false);
+            if (runtime is null || runtime.IsStopping)
                 throw new InvalidOperationException("无法准备游戏运行环境。");
             ct.ThrowIfCancellationRequested();
 
             // Pulonia 节点始终沿调用链使用本次运行令牌，不创建独立任务执行作用域。
-            BeginTaskState();
+            BeginTaskState(runtime);
             RunnerContext.Instance.Clear();
-            return new PuloniaGameTaskLease();
+            return new PuloniaGameTaskLease(runtime);
         }
         catch
         {
             try
             {
-                CleanupTaskState();
+                CleanupTaskState(runtime);
             }
             finally
             {
@@ -62,19 +64,20 @@ public sealed class PuloniaGameTaskCoordinator
     /// <summary>
     /// 为 Pulonia 游戏节点进入现有任务模式，但不创建另一个任务执行入口。
     /// </summary>
-    private static void BeginTaskState()
+    /// <param name="runtime">本次租约记录的运行环境</param>
+    private static void BeginTaskState(GameRuntime runtime)
     {
         TaskTriggerDispatcher.Instance().BeginTask();
-        var runtime = TaskContext.Instance().Runtime;
-        runtime?.MaskWindowMapState.Reset();
-        runtime?.MaskWindowDrawingBoard.ClearAll();
-        SystemControl.ActivateWindow();
+        runtime.MaskWindowMapState.Reset();
+        runtime.MaskWindowDrawingBoard.ClearAll();
+        runtime.Window.Activate();
     }
 
     /// <summary>
     /// 即使任务模式清理失败，也继续尝试释放输入并清空临时运行上下文。
     /// </summary>
-    internal static void CleanupTaskState()
+    /// <param name="runtime">租约记录的运行环境；启动失败时为 null，此时跳过清理遮罩画板</param>
+    internal static void CleanupTaskState(GameRuntime? runtime)
     {
         try
         {
@@ -90,7 +93,7 @@ public sealed class PuloniaGameTaskCoordinator
             {
                 try
                 {
-                    TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
+                    runtime?.MaskWindowDrawingBoard.ClearAll();
                 }
                 finally
                 {
@@ -119,10 +122,17 @@ public sealed class PuloniaGameTaskLease : IDisposable
     private int _disposed;
 
     /// <summary>
+    /// 获取租约时绑定的运行环境。节点内的任务只使用它；它停止后本租约下的节点失败，不切换到新的运行环境。
+    /// </summary>
+    public GameRuntime Runtime { get; }
+
+    /// <summary>
     /// 创建已经进入任务模式的游戏节点租约。
     /// </summary>
-    internal PuloniaGameTaskLease()
+    /// <param name="runtime">本次启动返回的运行环境</param>
+    internal PuloniaGameTaskLease(GameRuntime runtime)
     {
+        Runtime = runtime;
     }
 
     /// <summary>
@@ -134,7 +144,7 @@ public sealed class PuloniaGameTaskLease : IDisposable
             return;
         try
         {
-            PuloniaGameTaskCoordinator.CleanupTaskState();
+            PuloniaGameTaskCoordinator.CleanupTaskState(Runtime);
         }
         finally
         {

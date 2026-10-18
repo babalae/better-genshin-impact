@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition;
@@ -6,6 +7,7 @@ using BetterGenshinImpact.GameTask.AutoWood.Utils;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Genshin.Settings;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -32,6 +34,16 @@ public partial class AutoWoodTask : ISoloTask
 {
     public string Name => "自动伐木";
 
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 配置根
+    /// </summary>
+    private readonly AllConfig _config;
+
     private bool _first = true;
 
     private WoodStatisticsPrinter _printer;
@@ -46,10 +58,18 @@ public partial class AutoWoodTask : ISoloTask
 
     private EnterAndExitWonderlandJob _enterAndExitWonderlandJob;
 
-    public AutoWoodTask(WoodTaskParam taskParam)
+    /// <summary>
+    /// 创建自动伐木任务
+    /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    /// <param name="config">配置根</param>
+    /// <param name="taskParam">伐木参数</param>
+    public AutoWoodTask(GameRuntime runtime, AllConfig config, WoodTaskParam taskParam)
     {
+        _runtime = runtime;
+        _config = config;
         this._taskParam = taskParam;
-        _login3rdParty = new();
+        _login3rdParty = new(runtime);
     }
 
     private static RecognitionObject GetRecognitionObject(string objectName, Region region)
@@ -59,8 +79,8 @@ public partial class AutoWoodTask : ISoloTask
 
     public async Task Start(CancellationToken ct)
     {
-        _printer = new WoodStatisticsPrinter();
-        _enterAndExitWonderlandJob = new EnterAndExitWonderlandJob();
+        _printer = new WoodStatisticsPrinter(_runtime, _config);
+        _enterAndExitWonderlandJob = new EnterAndExitWonderlandJob(_runtime);
         var runTimeWatch = new Stopwatch();
         _ct = ct;
         _printer.Ct = _ct;
@@ -91,12 +111,12 @@ public partial class AutoWoodTask : ISoloTask
             //     }
             // }
 
-            SystemControl.ActivateWindow();
+            _runtime.Window.Activate();
             // 伐木开始计时
             runTimeWatch.Start();
             for (var i = 0; i < _taskParam.WoodRoundNum; i++)
             {
-                if (TaskContext.Instance().Config.AutoWoodConfig.WoodCountOcrEnabled)
+                if (_config.AutoWoodConfig.WoodCountOcrEnabled)
                 {
                     if (_printer.WoodStatisticsAlwaysEmpty())
                     {
@@ -118,8 +138,8 @@ public partial class AutoWoodTask : ISoloTask
                 }
 
                 await Felling(_taskParam, i + 1 == _taskParam.WoodRoundNum);
-                TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
-                Sleep(500, _ct);
+                _runtime.MaskWindowDrawingBoard.ClearAll();
+                _runtime.Sleep(500, _ct);
             }
 
             return;
@@ -134,8 +154,23 @@ public partial class AutoWoodTask : ISoloTask
         }
     }
 
-    private partial class WoodStatisticsPrinter
+    /// <summary>
+    /// 伐木统计（OCR 识别获得的木材数量并累计）
+    /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    /// <param name="config">配置根</param>
+    private partial class WoodStatisticsPrinter(GameRuntime runtime, AllConfig config)
     {
+        /// <summary>
+        /// 本次运行使用的运行环境
+        /// </summary>
+        private readonly GameRuntime _runtime = runtime;
+
+        /// <summary>
+        /// 配置根
+        /// </summary>
+        private readonly AllConfig _config = config;
+
         public bool ReachedWoodMaxCount;
         public int NothingCount;
         public readonly ConcurrentDictionary<string, int> WoodTotalDict = new();
@@ -172,7 +207,7 @@ public partial class AutoWoodTask : ISoloTask
                 Logger.LogWarning("未能识别到伐木的统计数据");
                 if (_woodMetricsDict.Count == 0)
                 {
-                    TaskContext.Instance().Config.AutoWoodConfig.WoodCountOcrEnabled = false;
+                    _config.AutoWoodConfig.WoodCountOcrEnabled = false;
                     throw new NormalEndException("首次伐木就未识别到木材数据，已经自动关闭【OCR识别并累计木材数】的功能，请重新启动【自动伐木】功能！");
                 }
 
@@ -226,13 +261,13 @@ public partial class AutoWoodTask : ISoloTask
 
         private void SleepDurationBetweenOcrs(WoodTaskParam taskParam)
         {
-            Sleep(_firstWoodOcr ? 300 : 100, Ct);
+            _runtime.Sleep(_firstWoodOcr ? 300 : 100, Ct);
         }
 
         private string WoodTextAreaOcr()
         {
             // OCR识别文本区域
-            using var gameCaptureRegion = CaptureToRectArea();
+            using var gameCaptureRegion = _runtime.CaptureToRectArea();
             var assetScale = Math.Min(gameCaptureRegion.Width / 1920d, 1d);
             var woodCountRect = new Rect(
                 (int)(100 * assetScale),
@@ -405,13 +440,13 @@ public partial class AutoWoodTask : ISoloTask
         }
 
         // 打印伐木的统计数据（可选）
-        if (TaskContext.Instance().Config.AutoWoodConfig.WoodCountOcrEnabled)
+        if (_config.AutoWoodConfig.WoodCountOcrEnabled)
         {
             _printer.PrintWoodStatistics(taskParam);
             if (_printer.WoodStatisticsAlwaysEmpty() || _printer.ReachedWoodMaxCount) return;
         }
 
-        if (TaskContext.Instance().Config.AutoWoodConfig.UseWonderlandRefresh)
+        if (_config.AutoWoodConfig.UseWonderlandRefresh)
         {
             // 使用进出千星奇域刷新CD
             await _enterAndExitWonderlandJob.Start(_ct);
@@ -432,11 +467,11 @@ public partial class AutoWoodTask : ISoloTask
     private void PressZ(WoodTaskParam taskParam)
     {
         // IMPORTANT: MUST try focus before press Z
-        SystemControl.FocusWindow(TaskContext.Instance().GameHandle);
+        SystemControl.FocusWindow(_runtime.Window.Handle);
 
         if (_first)
         {
-            using var contentRegion = CaptureToRectArea();
+            using var contentRegion = _runtime.CaptureToRectArea();
             using var ra = contentRegion.Find(GetRecognitionObject("TheBoonOfTheElderTree", contentRegion));
             if (ra.IsEmpty())
             {
@@ -460,8 +495,8 @@ public partial class AutoWoodTask : ISoloTask
         {
             NewRetry.Do(() =>
             {
-                Sleep(1, _ct);
-                using var contentRegion = CaptureToRectArea();
+                _runtime.Sleep(1, _ct);
+                using var contentRegion = _runtime.CaptureToRectArea();
                 using var ra = contentRegion.Find(GetRecognitionObject("TheBoonOfTheElderTree", contentRegion));
                 if (ra.IsEmpty())
                 {
@@ -474,32 +509,32 @@ public partial class AutoWoodTask : ISoloTask
 
                 InputHub.Foreground.SimulateAction(GIActions.QuickUseGadget);
                 Debug.WriteLine("[AutoWood] Z");
-                Sleep(500, _ct);
+                _runtime.Sleep(500, _ct);
             }, TimeSpan.FromSeconds(1), 120);
         }
 
-        Sleep(300, _ct);
-        Sleep(TaskContext.Instance().Config.AutoWoodConfig.AfterZSleepDelay, _ct);
+        _runtime.Sleep(300, _ct);
+        _runtime.Sleep(_config.AutoWoodConfig.AfterZSleepDelay, _ct);
     }
 
     private void PressEsc(WoodTaskParam taskParam)
     {
-        SystemControl.FocusWindow(TaskContext.Instance().GameHandle);
+        SystemControl.FocusWindow(_runtime.Window.Handle);
         InputHub.Foreground.Keyboard.KeyPress(VK.VK_ESCAPE);
-        // if (TaskContext.Instance().Config.AutoWoodConfig.PressTwoEscEnabled)
+        // if (_config.AutoWoodConfig.PressTwoEscEnabled)
         // {
         //     Sleep(1500, _cts);
         //     InputHub.Foreground.Keyboard.KeyPress(VK.VK_ESCAPE);
         // }
         Debug.WriteLine("[AutoWood] Esc");
-        Sleep(800, _ct);
+        _runtime.Sleep(800, _ct);
         // 确认在菜单界面
         try
         {
             NewRetry.Do(() =>
             {
-                Sleep(1, _ct);
-                using var contentRegion = CaptureToRectArea();
+                _runtime.Sleep(1, _ct);
+                using var contentRegion = _runtime.CaptureToRectArea();
                 using var ra = contentRegion.Find(GetRecognitionObject("MenuBag", contentRegion));
                 if (ra.IsEmpty())
                 {
@@ -515,14 +550,14 @@ public partial class AutoWoodTask : ISoloTask
         }
 
         // 点击退出
-        GameCaptureRegion.GameRegionClick((size, scale) => (50 * scale, size.Height - 50 * scale));
+        _runtime.GameRegionClick((size, scale) => (50 * scale, size.Height - 50 * scale));
 
         Debug.WriteLine("[AutoWood] Click exit button");
 
-        Sleep(500, _ct);
+        _runtime.Sleep(500, _ct);
 
         // 点击退出到主界面确认
-        using var contentRegion = CaptureToRectArea();
+        using var contentRegion = _runtime.CaptureToRectArea();
         contentRegion.Find(GetRecognitionObject("Confirm", contentRegion), ra =>
         {
             ra.Click();
@@ -535,33 +570,33 @@ public partial class AutoWoodTask : ISoloTask
     {
         if (_login3rdParty.IsAvailabled)
         {
-            Sleep(1, _ct);
+            _runtime.Sleep(1, _ct);
             _login3rdParty.Login(_ct);
         }
 
         var clickCnt = 0;
         for (var i = 0; i < 50; i++)
         {
-            Sleep(1, _ct);
+            _runtime.Sleep(1, _ct);
 
-            using var contentRegion = CaptureToRectArea();
+            using var contentRegion = _runtime.CaptureToRectArea();
             using var ra = contentRegion.Find(GetRecognitionObject("EnterGame", contentRegion));
             if (!ra.IsEmpty())
             {
                 clickCnt++;
-                GameCaptureRegion.GameRegion1080PPosClick(960, 630);
+                _runtime.GameRegion1080PPosClick(960, 630);
                 Debug.WriteLine("[AutoWood] Click entry");
             }
             else
             {
                 if (clickCnt > 2)
                 {
-                    Sleep(5000, _ct);
+                    _runtime.Sleep(5000, _ct);
                     break;
                 }
             }
 
-            Sleep(1000, _ct);
+            _runtime.Sleep(1000, _ct);
         }
 
         if (clickCnt == 0)

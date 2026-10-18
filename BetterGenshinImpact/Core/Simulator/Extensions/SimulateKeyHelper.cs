@@ -1,5 +1,5 @@
 ﻿using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Service;
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
@@ -10,7 +10,10 @@ namespace BetterGenshinImpact.Core.Simulator.Extensions;
 public static class SimulateKeyHelper
 {
 
-    private static KeyBindingsConfig KeyConfig => TaskContext.Instance().Config.KeyBindingsConfig;
+    /// <summary>
+    /// 键位配置。经 SimulateAction 有大量间接调用点，暂时读配置根，随 InputHub 一起收敛（见 task-context-removal.md 第 5 节）
+    /// </summary>
+    private static KeyBindingsConfig KeyConfig => ConfigService.Config!.KeyBindingsConfig;
 
     public static KeyId ToActionKey(this GIActions action)
     {

@@ -6,6 +6,7 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
+using BetterGenshinImpact.GameTask.Runtime;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.Common.Job;
@@ -13,8 +14,14 @@ namespace BetterGenshinImpact.GameTask.Common.Job;
 /// <summary>
 /// 跳过月卡
 /// </summary>
-public class BlessingOfTheWelkinMoonTask
+/// <param name="runtime">本次运行使用的运行环境</param>
+public class BlessingOfTheWelkinMoonTask(GameRuntime runtime)
 {
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime = runtime;
+
     public string Name => "自动点击空月祝福";
 
     public async Task Start(CancellationToken ct)
@@ -24,22 +31,22 @@ public class BlessingOfTheWelkinMoonTask
             var t = ServerTimeHelper.GetServerTimeNow().AddMinutes(5);
             if (t.Hour == 4 && t.Minute < 10)
             {
-                using var ra = CaptureToRectArea();
+                using var ra = _runtime.CaptureToRectArea();
                 if (Bv.IsInBlessingOfTheWelkinMoon(ra) || ra.Find(ElementRecognition.Get("Primogem", ra)).IsExist())
                 {
                     Logger.LogInformation("检测到空月祝福界面，自动点击");
-                    GameCaptureRegion.GameRegion1080PPosMove(100, 100);
+                    _runtime.GameRegion1080PPosMove(100, 100);
                     for (int i = 0, j = 0; i < 20 && j < 3; ++i)
                     {
                         if (j == 0)
                         {
                             // 双击快速跳过
-                            GameCaptureRegion.GameRegion1080PPosClick(100, 100);
+                            _runtime.GameRegion1080PPosClick(100, 100);
                             await Task.Delay(100, ct);
-                            GameCaptureRegion.GameRegion1080PPosClick(100, 100);
+                            _runtime.GameRegion1080PPosClick(100, 100);
                         }
-                        await Delay(500, ct);
-                        using var ra2 = CaptureToRectArea();
+                        await _runtime.Delay(500, ct);
+                        using var ra2 = _runtime.CaptureToRectArea();
                         if (Bv.IsInBlessingOfTheWelkinMoon(ra2))
                         {
                             // 仍在空月祝福界面

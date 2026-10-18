@@ -81,7 +81,8 @@ public partial class PuloniaTaskCreationDialogViewModel
             Repositories = new ObservableCollection<ScriptRepositoryRegistration>(repositories);
             if (_repositoryDisplayConfig is null)
             {
-                _repositoryDisplayConfig = TaskContext.Instance().Config.ScriptConfig;
+                // 对话框 ViewModel 由窗口直接 new，没有注入入口，暂时读配置根（见 task-context-removal.md 第 5 节）
+                _repositoryDisplayConfig = BetterGenshinImpact.Service.ConfigService.Config!.ScriptConfig;
                 _repositoryDisplayConfig.PropertyChanged += OnRepositoryDisplayConfigChanged;
             }
             RepositoryChoices = new ObservableCollection<PuloniaRepositoryChoiceViewModel>(

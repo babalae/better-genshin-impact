@@ -8,6 +8,7 @@ using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using Microsoft.Extensions.Logging;
 using System.IO;
 using System.Linq;
@@ -35,7 +36,15 @@ public class GameLoadingTrigger : ITaskTrigger
 
     public bool IsBackgroundRunning => true;
 
-    private readonly GenshinStartConfig _config = TaskContext.Instance().Config.GenshinStartConfig;
+    /// <summary>
+    /// 本次截图会话绑定的运行环境，点击与 DPI 都只使用它
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 启动配置，取自创建方传入的配置根
+    /// </summary>
+    private readonly GenshinStartConfig _config;
     private static ILogger<GameLoadingTrigger> _logger = App.GetLogger<GameLoadingTrigger>();
 
 
@@ -61,8 +70,15 @@ public class GameLoadingTrigger : ITaskTrigger
     private bool _agePromptTextMatched = false;
     private List<Region> _latestLoadingOcrRegions = [];
 
-    public GameLoadingTrigger()
+    /// <summary>
+    /// 创建自动开门触发器
+    /// </summary>
+    /// <param name="runtime">本次截图会话绑定的运行环境</param>
+    /// <param name="config">配置根</param>
+    public GameLoadingTrigger(GameRuntime runtime, AllConfig config)
     {
+        _runtime = runtime;
+        _config = config.GenshinStartConfig;
     }
 
     public void OnCapture(CaptureContent content)
@@ -169,16 +185,16 @@ public class GameLoadingTrigger : ITaskTrigger
 
             if (process != null && loginWindow != IntPtr.Zero)
             {
-                var dpiScale = TaskContext.Instance().DpiScale;
+                var dpiScale = _runtime.SystemInfo.DpiScale;
                 if (windowType.Contains("协议"))
                 {
-                    GameCaptureRegion.GameRegion1080PPosClick(960 + 70 * dpiScale, 540 + 75 * dpiScale);
+                    _runtime.GameRegion1080PPosClick(960 + 70 * dpiScale, 540 + 75 * dpiScale);
                 }
 
                 if (windowType.Contains("登录"))
                 {
                     Thread.Sleep(2000);
-                    GameCaptureRegion.GameRegion1080PPosClick(960, 540 + 90 * dpiScale);
+                    _runtime.GameRegion1080PPosClick(960, 540 + 90 * dpiScale);
                     Thread.Sleep(2000);
 
                     // 检查窗口是否还存在
@@ -198,7 +214,7 @@ public class GameLoadingTrigger : ITaskTrigger
 
         if (Bv.IsInBlessingOfTheWelkinMoon(content.CaptureRectArea))
         {
-            GameCaptureRegion.GameRegion1080PPosMove(100, 100);
+            _runtime.GameRegion1080PPosMove(100, 100);
             InputHub.Background.Mouse.LeftButtonClick();
             Debug.WriteLine("[GameLoading] Click blessing of the welkin moon");
             // TaskControl.Logger.LogInformation("自动点击月卡");
@@ -209,7 +225,7 @@ public class GameLoadingTrigger : ITaskTrigger
         var ysRa = content.CaptureRectArea.Find(ElementRecognition.Get("Primogem", content.CaptureRectArea));
         if (!ysRa.IsEmpty())
         {
-            GameCaptureRegion.GameRegion1080PPosMove(100, 100);
+            _runtime.GameRegion1080PPosMove(100, 100);
             InputHub.Background.Mouse.LeftButtonClick();
             Debug.WriteLine("[GameLoading] 跳过原石");
             return;

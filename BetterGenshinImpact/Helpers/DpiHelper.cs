@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Interop;
-using BetterGenshinImpact.GameTask;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Helpers;
@@ -10,24 +9,17 @@ namespace BetterGenshinImpact.Helpers;
 public class DpiHelper
 {
     /// <summary>
-    /// 只能主线程调用
+    /// 所在显示器的纵向缩放比例。只能主线程调用
     /// </summary>
-    public static float ScaleY => GetScaleY();
-
-    private static float GetScaleY()
+    /// <param name="gameWindowHandle">当前运行环境的游戏窗口句柄；为 0（截图器未启动）时按主窗口所在显示器计算</param>
+    public static float GetScaleY(nint gameWindowHandle)
     {
         if (Environment.OSVersion.Version >= new Version(6, 3)
          && UIDispatcherHelper.MainWindow != null)
         {
-            HWND hWnd = HWND.NULL;
-            if (TaskContext.Instance().IsInitialized)
-            {
-                hWnd = TaskContext.Instance().GameHandle;
-            }
-            else
-            {
-                hWnd = new WindowInteropHelper(Application.Current?.MainWindow).Handle;
-            }
+            HWND hWnd = gameWindowHandle != 0
+                ? gameWindowHandle
+                : new WindowInteropHelper(Application.Current?.MainWindow).Handle;
 
             HMONITOR hMonitor = User32.MonitorFromWindow(hWnd, User32.MonitorFlags.MONITOR_DEFAULTTONEAREST);
             SHCore.GetDpiForMonitor(hMonitor, SHCore.MONITOR_DPI_TYPE.MDT_EFFECTIVE_DPI, out _, out uint dpiY);

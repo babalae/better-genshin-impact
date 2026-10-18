@@ -1,4 +1,5 @@
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel.Windows;
@@ -23,17 +24,25 @@ public sealed class RecognitionTemplateEditorService
     private readonly RecognitionTemplateAssetService _assetService;
     private readonly IConfigService _configService;
     private readonly ILogger<RecognitionTemplateEditorService> _logger;
+
+    /// <summary>
+    /// 游戏运行环境服务，截取当前画面时读取 <see cref="GameRuntimeService.Current"/>
+    /// </summary>
+    private readonly GameRuntimeService _runtimeService;
+
     private RecognitionTemplateEditorWindow? _window;
     private int _isOpening;
 
     public RecognitionTemplateEditorService(
         RecognitionTemplateAssetService assetService,
         IConfigService configService,
-        ILogger<RecognitionTemplateEditorService> logger)
+        ILogger<RecognitionTemplateEditorService> logger,
+        GameRuntimeService runtimeService)
     {
         _assetService = assetService;
         _configService = configService;
         _logger = logger;
+        _runtimeService = runtimeService;
     }
 
     public Task OpenAsync()
@@ -189,9 +198,14 @@ public sealed class RecognitionTemplateEditorService
         return image;
     }
 
-    private static Mat CaptureRecognitionCanvas()
+    /// <summary>
+    /// 截取当前运行环境的画面作为模板制作画布
+    /// </summary>
+    /// <exception cref="InvalidOperationException">截图器未启动</exception>
+    private Mat CaptureRecognitionCanvas()
     {
-        using var captureRegion = TaskControl.CaptureToRectArea();
+        var runtime = _runtimeService.Current ?? throw new InvalidOperationException("截图器未启动");
+        using var captureRegion = runtime.CaptureToRectArea();
         if (captureRegion.SrcMat.Empty())
         {
             throw new InvalidOperationException("未获取到有效的游戏截图。");

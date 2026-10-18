@@ -16,12 +16,19 @@ using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.Service;
 using Microsoft.Web.WebView2.Core;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
 public class PathRecorder : Singleton<PathRecorder>
 {
+    /// <summary>
+    /// 配置根。单例没有创建方可以传参，暂时读配置根（见 task-context-removal.md 第 5 节）
+    /// </summary>
+    private static AllConfig Config => ConfigService.Config!;
+
     private WebpageWindow? _webWindow;
 
     public static readonly JsonSerializerOptions JsonOptions = new()
@@ -39,7 +46,7 @@ public class PathRecorder : Singleton<PathRecorder>
 
     private string GetMapName()
     {
-        var mapName = TaskContext.Instance().Config.DevConfig.RecordMapName;
+        var mapName = Config.DevConfig.RecordMapName;
         if (string.IsNullOrEmpty(mapName))
         {
             mapName = nameof(MapTypes.Teyvat);
@@ -48,9 +55,13 @@ public class PathRecorder : Singleton<PathRecorder>
         return mapName;
     }
 
-    public void Start()
+    /// <summary>
+    /// 开始记录路径点，以当前位置作为初始传送点
+    /// </summary>
+    /// <param name="runtime">截图所用的运行环境</param>
+    public void Start(GameRuntime runtime)
     {
-        var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+        var matchingMethod = Config.PathingConditionConfig.MapMatchingMethod;
         Navigation.WarmUp(matchingMethod);
         _pathingTask = new PathingTask();
         TaskControl.Logger.LogInformation("开始路径点记录");
@@ -60,7 +71,7 @@ public class PathRecorder : Singleton<PathRecorder>
         }
 
         var waypoint = new Waypoint();
-        using var screen = TaskControl.CaptureToRectArea();
+        using var screen = runtime.CaptureToRectArea();
         var position = Navigation.GetPositionStable(screen, GetMapName(), matchingMethod);
         var nullablePosition = MapManager.GetMap(GetMapName(), matchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(position);
         if (nullablePosition == null)
@@ -88,11 +99,16 @@ public class PathRecorder : Singleton<PathRecorder>
         }
     }
 
-    public void AddWaypoint(string waypointType = "")
+    /// <summary>
+    /// 以当前位置添加一个路径点
+    /// </summary>
+    /// <param name="runtime">截图所用的运行环境</param>
+    /// <param name="waypointType">路径点类型，为空时为途经点</param>
+    public void AddWaypoint(GameRuntime runtime, string waypointType = "")
     {
         Waypoint waypoint = new();
-        using var screen = TaskControl.CaptureToRectArea();
-        var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+        using var screen = runtime.CaptureToRectArea();
+        var matchingMethod = Config.PathingConditionConfig.MapMatchingMethod;
         var position = Navigation.GetPositionStable(screen, GetMapName(), matchingMethod);
         var nullablePosition = MapManager.GetMap(GetMapName(), matchingMethod).ConvertImageCoordinatesToGenshinMapCoordinates(position);
         if (nullablePosition == null)
@@ -117,7 +133,7 @@ public class PathRecorder : Singleton<PathRecorder>
     {
         if (_webWindow == null)
         {
-            var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+            var matchingMethod = Config.PathingConditionConfig.MapMatchingMethod;
             _pathingTask.Info = new PathingTaskInfo
             {
                 Name = "未命名路线",
@@ -169,7 +185,8 @@ public class PathRecorder : Singleton<PathRecorder>
             _webWindow.NavigateToFile(uri.ToString());
             _webWindow.Panel!.OnWebViewInitializedAction = () =>
             {
-                _webWindow.Panel!.WebView.CoreWebView2.AddHostObjectToScript("mapEditorWebBridge", new MapEditorWebBridge());
+                // 编辑器窗口的生命周期独立于运行环境（未启动截图器也能打开），桥接对象只接收配置
+                _webWindow.Panel!.WebView.CoreWebView2.AddHostObjectToScript("mapEditorWebBridge", new MapEditorWebBridge(Config));
                 _webWindow.Panel!.WebView.CoreWebView2.AddHostObjectToScript("fileAccessBridge", new FileAccessBridge(Global.Absolute("User/AutoPathing")));
             };
             _webWindow.Show();

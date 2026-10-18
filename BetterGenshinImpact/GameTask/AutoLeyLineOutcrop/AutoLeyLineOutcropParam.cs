@@ -1,9 +1,15 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Model;
+using BetterGenshinImpact.Service;
 
 namespace BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 
 public class AutoLeyLineOutcropParam:BaseTaskParam<AutoLeyLineOutcropTask>
 {
+    /// <summary>
+    /// 配置根。参数类由脚本和界面直接 new，没有创建方可以传入配置，暂时读配置根（见 task-context-removal.md 第 5 节）
+    /// </summary>
+    private static AllConfig Config => ConfigService.Config!;
 
     // 刷取次数
     public int Count { get; set; }
@@ -41,7 +47,7 @@ public class AutoLeyLineOutcropParam:BaseTaskParam<AutoLeyLineOutcropTask>
     
     public void SetDefault()
     {
-        var config = TaskContext.Instance().Config.AutoLeyLineOutcropConfig;
+        var config = Config.AutoLeyLineOutcropConfig;
         SetAutoLeyLineOutcropConfig(config);
     }
 

@@ -323,12 +323,8 @@ public partial class AllConfig : ObservableObject
     /// <param name="sender">触发变更的对象（某个子配置、嵌套对象或集合）</param>
     private void OnConfigChanged(object sender)
     {
-        // 实时触发器每帧读取配置，不需要在这里通知；只有切换遮罩显示相关的开关时清掉旧的识别结果
-        if (sender is MaskWindowConfig)
-        {
-            TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
-        }
-
+        // 实时触发器每帧读取配置，不需要在这里通知。
+        // 切换遮罩显示相关的开关时清掉旧识别结果，由 MaskWindowViewModel 订阅 MaskWindowConfig 完成：配置对象不访问运行环境
         OnAnyChangedAction?.Invoke();
     }
 

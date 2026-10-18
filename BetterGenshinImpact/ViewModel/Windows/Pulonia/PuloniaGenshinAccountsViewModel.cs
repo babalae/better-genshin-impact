@@ -164,7 +164,7 @@ public partial class PuloniaGenshinAccountsViewModel : ObservableObject, IDispos
         try
         {
             using var lease = await _coordinator.AcquireAsync(_closed.Token);
-            var result = await _switcher.CaptureCurrentAccountAsync(_closed.Token);
+            var result = await _switcher.CaptureCurrentAccountAsync(lease.Runtime, _closed.Token);
             Uid = result.Uid; ImagePath = result.ImagePath;
             Message = "采集完成，已返回游戏。保存账号目录后生效。";
         }

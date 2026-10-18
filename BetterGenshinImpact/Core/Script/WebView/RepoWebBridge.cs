@@ -9,6 +9,7 @@ using BetterGenshinImpact.ViewModel.Message;
 using CommunityToolkit.Mvvm.Messaging;
 using Newtonsoft.Json.Linq;
 using System.Net;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Service.Interface;
 
@@ -33,6 +34,20 @@ public sealed class RepoWebBridge
     {
         ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".ico"
     };
+
+    /// <summary>
+    /// 配置根，用于读写脚本仓库相关配置（新手引导标志位等）
+    /// </summary>
+    private readonly AllConfig _config;
+
+    /// <summary>
+    /// 创建仓库页面的桥接对象
+    /// </summary>
+    /// <param name="config">配置根</param>
+    public RepoWebBridge(AllConfig config)
+    {
+        _config = config;
+    }
     
     public async Task<string> GetRepoJson()
     {
@@ -227,7 +242,7 @@ public sealed class RepoWebBridge
     {
         try
         {
-            var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
+            var scriptConfig = _config.ScriptConfig;
             scriptConfig.GuideStatus = status;
             return true;
         }
@@ -243,7 +258,7 @@ public sealed class RepoWebBridge
     {
         try
         {
-            return TaskContext.Instance().Config.ScriptConfig.GuideStatus;
+            return _config.ScriptConfig.GuideStatus;
         }
         catch (Exception e)
         {

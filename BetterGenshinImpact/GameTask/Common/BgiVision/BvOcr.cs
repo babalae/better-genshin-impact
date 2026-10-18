@@ -17,13 +17,13 @@ public static partial class Bv
 {
     public static string FindFKeyText(ImageRegion region)
     {
-        using var foundRectArea = region.Find(AutoPickAssets.Get(region, TaskContext.Instance().Config.AutoPickConfig.PickKey).PickRo);
+        using var foundRectArea = region.Find(AutoPickAssets.Get(region, Config.AutoPickConfig.PickKey).PickRo);
         if (foundRectArea.IsEmpty())
         {
             return string.Empty;
         }
 
-        var scale = TaskContext.Instance().SystemInfo.AssetScale;
+        var scale = region.GetAssetScale();
         var textRect = new Rect(foundRectArea.X + (int)(115 * scale), foundRectArea.Y,
             (int)((400 - 115) * scale), foundRectArea.Height);
         if (textRect.X + textRect.Width > region.SrcMat.Width

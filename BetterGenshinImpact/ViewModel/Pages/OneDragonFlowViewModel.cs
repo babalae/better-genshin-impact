@@ -112,7 +112,7 @@ public partial class OneDragonFlowViewModel : ViewModel
                     var json = File.ReadAllText(file);
                     var group = ScriptGroup.FromJson(json);
 
-                    var nst = TaskContext.Instance().Config.NextScheduledTask.Find(item => item.Item1 == group.Name);
+                    var nst = Config.NextScheduledTask.Find(item => item.Item1 == group.Name);
                     foreach (var item in group.Projects)
                     {
                         item.NextFlag = false;
@@ -235,10 +235,15 @@ public partial class OneDragonFlowViewModel : ViewModel
 
     [ObservableProperty] private AutoFightViewModel? _autoFightViewModel;
     
-    public AllConfig Config { get; set; } = TaskContext.Instance().Config;
+    public AllConfig Config { get; set; }
 
-    public OneDragonFlowViewModel()
+    /// <summary>
+    /// 创建一条龙页面 ViewModel
+    /// </summary>
+    /// <param name="config">配置根：DI 创建时注入，TaskSettingsPageViewModel 直接 new 时传入它持有的配置</param>
+    public OneDragonFlowViewModel(AllConfig config)
     {
+        Config = config;
         AutoFightViewModel = new AutoFightViewModel(Config);
 
         ConfigList.CollectionChanged += (sender, e) =>
@@ -304,7 +309,7 @@ public partial class OneDragonFlowViewModel : ViewModel
             if (config != null)
             {
                 configs.Add(config);
-                if (config.Name == TaskContext.Instance().Config.SelectedOneDragonFlowConfigName)
+                if (config.Name == Config.SelectedOneDragonFlowConfigName)
                 {
                     selected = config;
                 }
@@ -466,7 +471,7 @@ public partial class OneDragonFlowViewModel : ViewModel
     {
         if (SelectedConfig != null)
         {
-            TaskContext.Instance().Config.SelectedOneDragonFlowConfigName = SelectedConfig.Name;
+            Config.SelectedOneDragonFlowConfigName = SelectedConfig.Name;
             foreach (var task in TaskList)
             {
                 if (SelectedConfig.TaskEnabledList.TryGetValue(task.Id, out var value))
@@ -595,7 +600,7 @@ public partial class OneDragonFlowViewModel : ViewModel
 
         foreach (var task in taskListCopy)
         {
-            task.InitAction(SelectedConfig);
+            task.InitAction(Config, SelectedConfig);
         }
 
         int finishOneTaskcount = 1;
@@ -619,7 +624,7 @@ public partial class OneDragonFlowViewModel : ViewModel
         int enabledoneTaskCount = taskListCopy.Count(t => t.IsEnabled);
         _logger.LogInformation($"启用一条龙任务的数量: {enabledoneTaskCount}");
 
-        await new TaskRunner().RunThreadAsync(async ct =>
+        await new TaskRunner().RunThreadAsync(async (runtime, ct) =>
         {
             SaveConfig();
             int enabledTaskCount = taskListCopy.Count(t =>
@@ -643,7 +648,7 @@ public partial class OneDragonFlowViewModel : ViewModel
                 if (ScriptGroupsdefault.Any(defaultSg => defaultSg.Name == task.Name))
                 {
                     _logger.LogInformation($"一条龙任务执行: {finishOneTaskcount++}/{enabledoneTaskCount}");
-                    await task.Action(ct);
+                    await task.Action(runtime, ct);
                     await Task.Delay(1000, ct);
                 }
                 else
@@ -665,7 +670,7 @@ public partial class OneDragonFlowViewModel : ViewModel
                             string filePath = Path.Combine(_basePath, _scriptGroupPath, $"{task.Name}.json");
                             var group = ScriptGroup.FromJson(await File.ReadAllTextAsync(filePath, ct));
                             IScriptService? scriptService = App.GetService<IScriptService>();
-                            await scriptService!.RunMulti(
+                            await scriptService!.RunMulti(runtime,
                                 ScriptControlViewModel.GetNextProjects(group), group.Name, ct);
                             await Task.Delay(1000, ct);
                         }
@@ -683,7 +688,7 @@ public partial class OneDragonFlowViewModel : ViewModel
             }
 
             // 检查和最终结束的任务
-            await new CheckRewardsTask().Start(ct);
+            await new CheckRewardsTask(runtime, Config).Start(ct);
             await Task.Delay(500, ct);
             Notify.Event(NotificationEvent.DragonEnd).Success("一条龙和配置组任务结束");
             _logger.LogInformation("一条龙和配置组任务结束");
@@ -913,7 +918,7 @@ public partial class OneDragonFlowViewModel : ViewModel
             }
 
             // 更新全局配置名称
-            TaskContext.Instance().Config.SelectedOneDragonFlowConfigName = SelectedConfig.Name;
+            Config.SelectedOneDragonFlowConfigName = SelectedConfig.Name;
             
             // 刷新任务列表
             LoadDisplayTaskListFromConfig();
@@ -977,7 +982,7 @@ public partial class OneDragonFlowViewModel : ViewModel
             }
 
             // 更新全局配置名称
-            TaskContext.Instance().Config.SelectedOneDragonFlowConfigName = newName;
+            Config.SelectedOneDragonFlowConfigName = newName;
 
             Toast.Success("配置重命名成功");
         }

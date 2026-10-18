@@ -18,7 +18,7 @@ public sealed class WebSdkInputBackend : InputChannelBase, IInputBackend
 {
     // TODO(云原神网页版)：鼠标相对移动的偏差值尚未实测，暂按 1:1 透传。
     // dx/dy 原样作为 ClientCore.mouseMove 的 rel 参数发送，与桌面端 SendInput 的相对位移是否等价尚未验证。
-    // 调用方传入前通常已乘过 TaskContext.DpiScale，标定时需要一并考虑。
+    // 调用方传入前通常已乘过运行环境的 SystemInfo.DpiScale，标定时需要一并考虑。
     // 实测后只调整这两个系数，不要在业务代码里补偿。
     private const double RelativeMoveScaleX = 1.0;
     private const double RelativeMoveScaleY = 1.0;

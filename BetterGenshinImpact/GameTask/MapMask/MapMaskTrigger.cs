@@ -9,7 +9,9 @@ using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Layer;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Mask;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -25,14 +27,28 @@ public class MapMaskTrigger : ITaskTrigger
     private readonly ILogger<MapMaskTrigger> _logger = App.GetLogger<MapMaskTrigger>();
 
     public string Name => "地图遮罩";
-    public bool IsEnabledByConfig => _config.Enabled;
+    public bool IsEnabledByConfig => _maskConfig.Enabled;
     public int Priority => 1; // 低优先级
     public bool IsExclusive => false;
 
     public GameUiCategory SupportedGameUiCategory => GameUiCategory.Unknown;
 
-    private readonly MapMaskConfig _config = TaskContext.Instance().Config.MapMaskConfig;
-    private readonly string _mapMatchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+    /// <summary>
+    /// 本触发器所属的运行环境。只借用其中的遮罩单例（MaskWindowMapState），并据 IsStopping 判断后台结果是否作废
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 配置根
+    /// </summary>
+    private readonly AllConfig _config;
+
+    /// <summary>
+    /// 地图遮罩配置
+    /// </summary>
+    private readonly MapMaskConfig _maskConfig;
+
+    private readonly string _mapMatchingMethod;
 
     private readonly TemplateMatchStabilityDetector _detector = new();
 
@@ -48,6 +64,19 @@ public class MapMaskTrigger : ITaskTrigger
     private const int RectDebounceThreshold = 3;
 
     private readonly NavigationInstance _navigationInstance = new();
+
+    /// <summary>
+    /// 创建地图遮罩触发器
+    /// </summary>
+    /// <param name="runtime">本触发器所属的运行环境</param>
+    /// <param name="config">配置根</param>
+    public MapMaskTrigger(GameRuntime runtime, AllConfig config)
+    {
+        _runtime = runtime;
+        _config = config;
+        _maskConfig = config.MapMaskConfig;
+        _mapMatchingMethod = config.PathingConditionConfig.MapMatchingMethod;
+    }
 
 
     private sealed class ComputeWorkItem : IDisposable
@@ -89,8 +118,9 @@ public class MapMaskTrigger : ITaskTrigger
         var pendingMiniMapCompute = Interlocked.Exchange(ref _pendingMiniMapCompute, null);
         pendingMiniMapCompute?.Dispose();
 
-        // 地图状态属于当前运行环境；未启动时解绑已重置过
-        TaskContext.Instance().Runtime?.MaskWindowMapState.Reset();
+        // 退役的触发器可能在下一会话的第一帧才收到停用回调，这里只清理借用的地图状态单例，
+        // 不使用截图器、输入或窗口；解绑时 GameRuntimeService 也会重置一次
+        _runtime.MaskWindowMapState.Reset();
     }
 
     /// <summary>
@@ -110,7 +140,7 @@ public class MapMaskTrigger : ITaskTrigger
         {
             var region = content.CaptureRectArea;
             var inBigMapUi = content.CurrentGameUiCategory == GameUiCategory.BigMap || Bv.IsInBigMapUi(region);
-            var mapMatchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+            var mapMatchingMethod = _config.PathingConditionConfig.MapMatchingMethod;
             Rect? miniMapViewport = null;
 
             if (inBigMapUi)
@@ -141,7 +171,7 @@ public class MapMaskTrigger : ITaskTrigger
             else
             {
                 // 主界面上展示小地图
-                if (_config.MiniMapMaskEnabled)
+                if (_maskConfig.MiniMapMaskEnabled)
                 {
                     if (Bv.IsInMainUi(region))
                     {
@@ -153,7 +183,7 @@ public class MapMaskTrigger : ITaskTrigger
                         });
 
                         // 自动记录路径
-                        if (_config.PathAutoRecordEnabled)
+                        if (_maskConfig.PathAutoRecordEnabled)
                         {
                             // ...
                         }
@@ -353,12 +383,13 @@ public class MapMaskTrigger : ITaskTrigger
     /// </summary>
     private void PublishMapState(bool? isInBigMap = null, Rect? bigMapViewport = null, Rect? miniMapViewport = null)
     {
-        // 后台定位线程可能在截图器停止后才算完，此时没有运行环境，结果直接丢弃
-        var mapState = TaskContext.Instance().Runtime?.MaskWindowMapState;
-        if (mapState is null)
+        // 后台定位线程可能在本运行环境停止后才算完，此时结果已作废，直接丢弃（解绑时状态已由 GameRuntimeService 重置）
+        if (_runtime.IsStopping)
         {
             return;
         }
+
+        var mapState = _runtime.MaskWindowMapState;
 
         if (!_active)
         {

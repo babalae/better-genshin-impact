@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.Runtime;
 using Gma.System.MouseKeyHook;
 using Microsoft.ClearScript;
 using Microsoft.Extensions.Logging;
@@ -78,14 +79,14 @@ public class KeyMouseHook: IDisposable
     {
         try
         {
-            // 检查TaskContext是否已初始化
-            if (!TaskContext.Instance().IsInitialized)
+            // 检查创建钩子时绑定的运行环境是否已停止（停止后窗口信息不再可靠）
+            if (_runtime.IsStopping)
             {
-                _logger.LogError("TaskContext未初始化，无法获取游戏窗口信息");
+                _logger.LogError("运行环境已停止，无法获取游戏窗口信息");
                 return (-1, -1); 
             }
             
-            var gameHandle = TaskContext.Instance().GameHandle;
+            var gameHandle = _runtime.Window.Handle;
             if (gameHandle == IntPtr.Zero)
             {
                 _logger.LogError("游戏窗口句柄无效，无法获取游戏窗口位置");
@@ -125,8 +126,20 @@ public class KeyMouseHook: IDisposable
             });
     private readonly CancellationTokenSource _cts = new();
 
-    public KeyMouseHook()
+    /// <summary>
+    /// 钩子绑定的运行环境，用于把全局鼠标坐标换算到游戏窗口局部坐标
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 创建绑定到指定运行环境的键鼠钩子。
+    /// 脚本侧仍然写 <c>new KeyMouseHook()</c>，由 EngineExtend 注册的同名 JS 构造函数经工厂补上 runtime
+    /// </summary>
+    /// <param name="runtime">本次脚本运行使用的运行环境</param>
+    public KeyMouseHook(GameRuntime runtime)
     {
+        _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+
         // 启动后台事件处理器，确保不阻塞钩子线程
         _ = Task.Run(async () =>
         {

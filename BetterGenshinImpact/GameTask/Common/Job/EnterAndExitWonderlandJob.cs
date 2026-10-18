@@ -4,22 +4,33 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.Common.Job;
 
-public class EnterAndExitWonderlandJob
+/// <summary>
+/// 进入千星奇域大厅后返回提瓦特
+/// </summary>
+/// <param name="runtime">本次运行使用的运行环境</param>
+public class EnterAndExitWonderlandJob(GameRuntime runtime)
 {
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime = runtime;
+
     public async Task Start(CancellationToken ct)
     {
         Logger.LogInformation("进入千星奇域");
-        SystemControl.FocusWindow(TaskContext.Instance().GameHandle);
+        SystemControl.FocusWindow(_runtime.Window.Handle);
 
         // 等待千星奇域界面出现
         await NewRetry.WaitForElementAppear(
-            ElementRecognition.Get("WonderlandClose"),
+            _runtime,
+            ElementRecognition.Get("WonderlandClose", _runtime.SystemInfo),
             () => InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_F6),
             ct,
             10,
@@ -28,8 +39,9 @@ public class EnterAndExitWonderlandJob
 
         // 点击一个奇域并等待大厅按钮出现
         await NewRetry.WaitForElementAppear(
-            ElementRecognition.Get("BtnBlackConfirm"),
-            () => GameCaptureRegion.GameRegion1080PPosClick(680, 310),
+            _runtime,
+            ElementRecognition.Get("BtnBlackConfirm", _runtime.SystemInfo),
+            () => _runtime.GameRegion1080PPosClick(680, 310),
             ct,
             5,
             800
@@ -63,7 +75,8 @@ public class EnterAndExitWonderlandJob
         
         // 点击前往大厅并等待弹窗消失
         await NewRetry.WaitForElementDisappear(
-            ElementRecognition.Get("BtnBlackConfirm"),
+            _runtime,
+            ElementRecognition.Get("BtnBlackConfirm", _runtime.SystemInfo),
             screen =>
             {
                 // 接收当前截图作为参数
@@ -77,11 +90,12 @@ public class EnterAndExitWonderlandJob
             5,
             1000
         );
-        await Delay(1000, ct);
+        await _runtime.Delay(1000, ct);
 
         // 等待主界面出现
         var mainUiFound1 = await NewRetry.WaitForElementAppear(
-            ElementRecognition.Get("PaimonMenu"),
+            _runtime,
+            ElementRecognition.Get("PaimonMenu", _runtime.SystemInfo),
             () => { },
             ct,
             120,
@@ -97,11 +111,12 @@ public class EnterAndExitWonderlandJob
             Logger.LogWarning("未检测到主界面，可能未处于千星奇域");
         }
 
-        await Delay(500, ct);
+        await _runtime.Delay(500, ct);
         
         // 等待菜单界面出现
         await NewRetry.WaitForElementAppear(
-            ElementRecognition.Get("BtnBackTeyvat"),
+            _runtime,
+            ElementRecognition.Get("BtnBackTeyvat", _runtime.SystemInfo),
             () => InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE),
             ct,
             20,
@@ -110,10 +125,11 @@ public class EnterAndExitWonderlandJob
         
         // 点击返回提瓦特按钮并等待确认弹窗出现
         await NewRetry.WaitForElementAppear(
-            ElementRecognition.Get("BtnBlackConfirm"),
+            _runtime,
+            ElementRecognition.Get("BtnBlackConfirm", _runtime.SystemInfo),
             () => 
             {
-                using var ra = CaptureToRectArea();
+                using var ra = _runtime.CaptureToRectArea();
                 Bv.FindAndClick(ra, ElementRecognition.Get("BtnBackTeyvat", ra));
             },
             ct,
@@ -123,7 +139,8 @@ public class EnterAndExitWonderlandJob
         
         // 点击确认并等待确认弹窗消失
         await NewRetry.WaitForElementDisappear(
-            ElementRecognition.Get("BtnBlackConfirm"),
+            _runtime,
+            ElementRecognition.Get("BtnBlackConfirm", _runtime.SystemInfo),
             screen =>
             {
                 // 接收当前截图作为参数
@@ -137,11 +154,12 @@ public class EnterAndExitWonderlandJob
             5,
             1000
         );
-        await Delay(1000, ct);
+        await _runtime.Delay(1000, ct);
         
         // 等待主界面出现
         var mainUiFound2 = await NewRetry.WaitForElementAppear(
-            ElementRecognition.Get("PaimonMenu"),
+            _runtime,
+            ElementRecognition.Get("PaimonMenu", _runtime.SystemInfo),
             () => { },
             ct,
             120,
@@ -157,6 +175,6 @@ public class EnterAndExitWonderlandJob
             Logger.LogWarning("未检测到主界面，可能未处于提瓦特");
         }
 
-        await Delay(500, ct);
+        await _runtime.Delay(500, ct);
     }
 }

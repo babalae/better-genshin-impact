@@ -3,10 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 using Microsoft.Extensions.Logging;
@@ -17,17 +20,40 @@ namespace BetterGenshinImpact.GameTask.AutoMusicGame;
 /// <summary>
 /// 自动音乐专辑
 /// </summary>
-public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
+public class AutoAlbumTask : ISoloTask
 {
     public string Name => "自动音游专辑";
 
-    private AutoMusicGameTask _autoMusicGameTask = new AutoMusicGameTask(taskParam);
+    /// <summary>
+    /// 本次运行使用的运行环境：截图、等待与点击都只使用它
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 配置根，由创建方传入
+    /// </summary>
+    private readonly AllConfig _config;
+
+    private AutoMusicGameTask _autoMusicGameTask;
+
+    /// <summary>
+    /// 创建自动音游专辑任务
+    /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    /// <param name="config">配置根</param>
+    /// <param name="taskParam">任务参数</param>
+    public AutoAlbumTask(GameRuntime runtime, AllConfig config, AutoMusicGameParam taskParam)
+    {
+        _runtime = runtime;
+        _config = config;
+        _autoMusicGameTask = new AutoMusicGameTask(runtime, config, taskParam);
+    }
 
     public async Task Start(CancellationToken ct)
     {
         try
         {
-            AutoMusicGameTask.Init();
+            AutoMusicGameTask.Init(_runtime);
             Notify.Event(NotificationEvent.AlbumStart).Success("自动音游专辑启动");
             Logger.LogInformation("开始自动演奏整个专辑未完成的音乐");
             await StartOneAlbum(ct);
@@ -47,7 +73,7 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
 
     public async Task StartOneAlbum(CancellationToken ct)
     {
-        using var ra1 = CaptureToRectArea();
+        using var ra1 = _runtime.CaptureToRectArea();
         using var iconRa = ra1.Find(RecognitionAssets.Get("AutoMusicGame", "UiLeftTopAlbumIcon", ra1));
         if (!iconRa.IsExist())
         {
@@ -64,7 +90,7 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
             }
         }
 
-        var musicLevel = TaskContext.Instance().Config.AutoMusicGameConfig.MusicLevel;
+        var musicLevel = _config.AutoMusicGameConfig.MusicLevel;
         if (string.IsNullOrEmpty(musicLevel))
         {
             musicLevel = "传说";
@@ -94,15 +120,15 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
             // 每个难度12首曲子
             for (int i = 0; i < 13; i++)
             {
-                if (TaskContext.Instance().Config.AutoMusicGameConfig.MustCanorusLevel)
+                if (_config.AutoMusicGameConfig.MustCanorusLevel)
                 {
-                    using var canoraArea = CaptureToRectArea();
+                    using var canoraArea = _runtime.CaptureToRectArea();
                     using var canoraRa = canoraArea.Find(canorusAsset);
                     if (canoraRa.IsExist())
                     {
                         Logger.LogInformation("乐曲{Num} - {Difficulty}级别：已完成【大音天籁】，切换下一首", i + 1, difficultyName);
-                        GameCaptureRegion.GameRegion1080PPosClick(310, 220);
-                        await Delay(800, ct);
+                        _runtime.GameRegion1080PPosClick(310, 220);
+                        await _runtime.Delay(800, ct);
                         continue;
                     }
 
@@ -110,13 +136,13 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
                 }
                 else
                 {
-                    using var doneArea = CaptureToRectArea();
+                    using var doneArea = _runtime.CaptureToRectArea();
                     using var doneRa = doneArea.Find(RecognitionAssets.Get("AutoMusicGame", "AlbumMusicComplate", doneArea));
                     if (doneRa.IsExist())
                     {
                         Logger.LogInformation("当前乐曲{Num}所有奖励已领取，切换下一首", i + 1);
-                        GameCaptureRegion.GameRegion1080PPosClick(310, 220);
-                        await Delay(800, ct);
+                        _runtime.GameRegion1080PPosClick(310, 220);
+                        await _runtime.Delay(800, ct);
                         continue;
                     }
 
@@ -125,22 +151,22 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
 
 
                 // 点击确认按钮
-                using (var confirmArea = CaptureToRectArea())
+                using (var confirmArea = _runtime.CaptureToRectArea())
                 {
                     Bv.ClickWhiteConfirmButton(confirmArea);
                 }
-                await Delay(800, ct);
+                await _runtime.Delay(800, ct);
 
                 // 选择难度
-                GameCaptureRegion.GameRegion1080PPosClick(xPos, yPos);
-                await Delay(200, ct);
+                _runtime.GameRegion1080PPosClick(xPos, yPos);
+                await _runtime.Delay(200, ct);
 
                 // 开始演奏
-                using (var startArea = CaptureToRectArea())
+                using (var startArea = _runtime.CaptureToRectArea())
                 {
                     Bv.ClickWhiteConfirmButton(startArea);
                 }
-                await Delay(500, ct);
+                await _runtime.Delay(500, ct);
 
                 using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
 
@@ -149,8 +175,8 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
                 {
                     while (!cts.Token.IsCancellationRequested)
                     {
-                        await Delay(5000, cts.Token); // 每5秒检查一次
-                        using var listArea = CaptureToRectArea();
+                        await _runtime.Delay(5000, cts.Token); // 每5秒检查一次
+                        using var listArea = _runtime.CaptureToRectArea();
                         using var listRa = listArea.Find(RecognitionAssets.Get("AutoMusicGame", "BtnList", listArea));
                         if (listRa.IsExist())
                         {
@@ -183,12 +209,12 @@ public class AutoAlbumTask(AutoMusicGameParam taskParam) : ISoloTask
                 }
 
                 Logger.LogInformation("第{Num}首{Difficulty}难度乐曲演奏完成", i + 1, difficultyName);
-                await Delay(2000, ct);
+                await _runtime.Delay(2000, ct);
 
-                await Bv.WaitUntilFound(RecognitionAssets.Get("AutoMusicGame", "UiLeftTopAlbumIcon", TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect.Width, TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect.Height), ct);
+                await Bv.WaitUntilFound(_runtime, RecognitionAssets.Get("AutoMusicGame", "UiLeftTopAlbumIcon", _runtime.SystemInfo), ct);
                 Logger.LogDebug("切换到下一首乐曲");
-                GameCaptureRegion.GameRegion1080PPosClick(310, 220);
-                await Delay(800, ct);
+                _runtime.GameRegion1080PPosClick(310, 220);
+                await _runtime.Delay(800, ct);
             }
 
             Logger.LogInformation("完成{Difficulty}难度所有乐曲的演奏", difficultyName);

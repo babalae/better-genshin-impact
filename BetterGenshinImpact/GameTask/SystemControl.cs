@@ -1,6 +1,9 @@
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.GameTask.Runtime.Win32;
+using BetterGenshinImpact.GameTask.Runtime.WebPage;
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.Service.Interface;
@@ -30,11 +33,17 @@ public class SystemControl
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     /// <summary>
-    /// 游戏进程名列表：已绑定 Win32 游戏窗口时只返回该窗口的进程名，否则返回候选进程名（含安装路径中的自定义 exe 名）
+    /// 配置根。SystemControl 是静态的 Win32 函数集合，没有创建方可以传参，暂时读静态入口（见 task-context-removal.md 第 5 节）
     /// </summary>
-    public static List<string> GetGenshinGameProcessNameList()
+    private static AllConfig Config => ConfigService.Config!;
+
+    /// <summary>
+    /// 游戏进程名列表：传入已绑定的 Win32 游戏窗口时只返回该窗口的进程名，否则返回候选进程名（含安装路径中的自定义 exe 名）
+    /// </summary>
+    /// <param name="boundWindow">已绑定的游戏窗口；还没有运行环境（例如找窗）时传 null</param>
+    public static List<string> GetGenshinGameProcessNameList(IGameWindow? boundWindow)
     {
-        if (TaskContext.Instance().Runtime is { Kind: GameRuntimeKind.Win32Window, Window: Win32GameWindow window })
+        if (boundWindow is Win32GameWindow window && boundWindow is not WebPageGameWindow)
         {
             return [window.ProcessName];
         }
@@ -42,7 +51,7 @@ public class SystemControl
         List<string> list = ["YuanShen", "GenshinImpact", "Genshin Impact Cloud Game", "Genshin Impact Cloud"];
         try
         {
-            var installPath = TaskContext.Instance().Config.GenshinStartConfig.InstallPath;
+            var installPath = Config.GenshinStartConfig.InstallPath;
             if (!string.IsNullOrEmpty(installPath))
             {
                 var customName = Path.GetFileNameWithoutExtension(installPath);
@@ -62,11 +71,12 @@ public class SystemControl
 
     public static nint FindGenshinImpactHandle()
     {
-        var processNames = GetGenshinGameProcessNameList();
+        // 找窗时还没有运行环境，按候选进程名查找
+        var processNames = GetGenshinGameProcessNameList(null);
 
         // 其他设置：窗口类名优先检测（默认关闭，关闭时走原始进程名+MainWindowHandle 路径）
         // 开启后：①按窗口类名枚举 → ②按进程枚举最大可见窗口 → ③原版方式（均未命中才回退）
-        if (TaskContext.Instance().Config.OtherConfig.WindowClassDetectPreferred)
+        if (Config.OtherConfig.WindowClassDetectPreferred)
         {
             // ①优先：按窗口类名 EnumWindows 枚举（不看标题，规避标题变化），同会话优先
             var handle = FindWindowByUnityWndClass(processNames);
@@ -240,7 +250,7 @@ public class SystemControl
             return IntPtr.Zero;
         }
 
-        var cfg = TaskContext.Instance().Config.GenshinStartConfig;
+        var cfg = Config.GenshinStartConfig;
         var workdir = Path.GetDirectoryName(path) ?? "";
         var arg = BuildGenshinStartArguments(
             cfg.GenshinStartArgs,
@@ -298,41 +308,27 @@ public class SystemControl
             : $"{arguments} {ChildSessionGenshinStartArgs}";
     }
 
-    /// <summary>
-    /// 调用方实际是在问"现在能不能操作游戏"：
-    /// 输入不依赖前台的运行环境（网页版）恒为 true，否则判断前台窗口是否属于游戏进程
-    /// </summary>
-    public static bool IsGenshinImpactActiveByProcess()
-    {
-        if (TaskContext.Instance().Runtime?.Window is { RequiresForeground: false })
-        {
-            return true;
-        }
-
-        var name = GetActiveProcessName();
-        if (string.IsNullOrEmpty(name))
-        {
-            return false;
-        }
-
-        var processNames = GetGenshinGameProcessNameList();
-        return processNames.Any(p => string.Equals(p, name, StringComparison.OrdinalIgnoreCase));
-    }
     
     public static string GetActiveByProcess()
     {
         return GetActiveProcessName() ?? "Unknown";
     }
 
-    public static bool IsGenshinImpactActive()
+    /// <summary>
+    /// 游戏是否在前台，用于键鼠钩子类热键的门控。
+    /// 有运行环境时看它的窗口；没有时按前台窗口的进程名判断
+    /// </summary>
+    /// <param name="window">当前运行环境的游戏窗口，截图器未启动时为 null</param>
+    public static bool IsGameForeground(IGameWindow? window)
     {
-        var hWnd = User32.GetForegroundWindow();
-        return hWnd == TaskContext.Instance().GameHandle;
-    }
+        if (window is not null)
+        {
+            return window.IsForeground;
+        }
 
-    public static bool IsGenshinImpactMinimized()
-    {
-        return User32.IsIconic(TaskContext.Instance().GameHandle);
+        var name = GetActiveProcessName();
+        return !string.IsNullOrEmpty(name)
+               && GetGenshinGameProcessNameList(null).Any(p => string.Equals(p, name, StringComparison.OrdinalIgnoreCase));
     }
 
     public static nint GetForegroundWindowHandle()
@@ -464,14 +460,6 @@ public class SystemControl
         User32.SetForegroundWindow(hWnd);
     }
 
-    /// <summary>
-    /// 让当前游戏窗口进入可操作状态，具体行为由运行环境决定（网页版只从最小化还原，不抢前台）
-    /// </summary>
-    public static void ActivateWindow()
-    {
-        var runtime = TaskContext.Instance().Runtime ?? throw new Exception("请先启动BetterGI");
-        runtime.Window.Activate();
-    }
     public static void RestartApplication(string[] newArgs, bool graceful = false)
     {
         // 获取当前程序路径
@@ -611,19 +599,20 @@ public class SystemControl
         }
         else
         {
-            CloseGameProcesses();
+            CloseGameProcesses(null);
         }
     }
 
     /// <summary>
     /// 结束同一 Windows Session 中的原神进程，由 Win32RuntimeProvider 调用
     /// </summary>
-    public static void CloseGameProcesses()
+    /// <param name="boundWindow">当前绑定的游戏窗口：有值时只结束该窗口的进程名，否则按候选进程名</param>
+    public static void CloseGameProcesses(IGameWindow? boundWindow)
     {
         try
         {
             var currentSessionId = Process.GetCurrentProcess().SessionId;
-            var processNames = GetGenshinGameProcessNameList();
+            var processNames = GetGenshinGameProcessNameList(boundWindow);
             var processes = new List<Process>();
             foreach (var name in processNames)
             {

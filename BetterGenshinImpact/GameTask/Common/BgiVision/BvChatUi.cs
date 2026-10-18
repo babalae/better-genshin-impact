@@ -34,7 +34,7 @@ public static partial class Bv
 {
     public static ChatUiDetectionResult DetectChatUi(ImageRegion region)
     {
-        using var backButton = region.Find(ElementRecognition.GetChatBackButton());
+        using var backButton = region.Find(ElementRecognition.GetChatBackButton(region));
         var hasBackButton = backButton.IsExist();
         var hasMoreButton = HasChatMoreButton(region);
         var hasAddConversationButton = HasChatAddConversationButton(region);

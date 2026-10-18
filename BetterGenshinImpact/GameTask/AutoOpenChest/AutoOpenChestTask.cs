@@ -1,7 +1,9 @@
 using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator.Extensions;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -16,11 +18,25 @@ namespace BetterGenshinImpact.GameTask.AutoOpenChest;
 /// </summary>
 public class AutoOpenChestTask : ISoloTask
 {
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 创建开宝箱任务
+    /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    public AutoOpenChestTask(GameRuntime runtime)
+    {
+        _runtime = runtime;
+    }
+
     public string Name => "识别并开启宝箱";
 
     public async Task Start(CancellationToken ct)
     {
-        using var initialCapture = CaptureToRectArea();
+        using var initialCapture = _runtime.CaptureToRectArea();
 
         if (initialCapture.Find(RecognitionAssets.Get("AutoOpenChest", "ChestFIcon", initialCapture)).IsExist())
         {
@@ -35,7 +51,7 @@ public class AutoOpenChestTask : ISoloTask
             {
                 while (!_ct.IsCancellationRequested)
                 {
-                    using var ra = CaptureToRectArea();
+                    using var ra = _runtime.CaptureToRectArea();
                     Region chestIcon = ra.Find(RecognitionAssets.Get("AutoOpenChest", "ChestIcon", ra));
                     int limit = chestIcon.Width;
                     if (!chestIcon.IsExist())
@@ -63,7 +79,7 @@ public class AutoOpenChestTask : ISoloTask
                     {
                         // 若宝箱图标在下方就表示宝箱在后面。
                         InputHub.Foreground.SimulateAction(GIActions.MoveBackward);
-                        await Delay(30, _ct.Token);
+                        await _runtime.Delay(30, _ct.Token);
                         InputHub.Foreground.Mouse.MiddleButtonClick();
                     }
                     else
@@ -73,7 +89,7 @@ public class AutoOpenChestTask : ISoloTask
                         InputHub.Foreground.Mouse.MoveMouseBy(gap / rate, 0);
                     }
 
-                    await Delay(500, _ct.Token);
+                    await _runtime.Delay(500, _ct.Token);
                 }
             }
             finally

@@ -9,11 +9,27 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Runtime;
 
 namespace BetterGenshinImpact.GameTask.AutoWood.Utils;
 
 internal sealed class Login3rdParty
 {
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 创建第三方渠道登录辅助
+    /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    public Login3rdParty(GameRuntime runtime)
+    {
+        _runtime = runtime;
+    }
+
     public enum The3rdPartyType
     {
         None,
@@ -92,7 +108,7 @@ internal sealed class Login3rdParty
             }
 
             Debug.WriteLine($"[AutoWood] Fail to check login button {failCount} time(s).");
-            Sleep(500, ct);
+            _runtime.Sleep(500, ct);
         }
 
         Debug.WriteLine("[AutoWood] Exit while check login button.");
@@ -108,10 +124,10 @@ internal sealed class Login3rdParty
                 var (loginWindow, windowType) = GetBiliLoginWindow(process);
                 if (loginWindow != IntPtr.Zero)
                 {
-                    var dpiScale = TaskContext.Instance().DpiScale;
+                    var dpiScale = _runtime.SystemInfo.DpiScale;
                     if (windowType.Contains("协议"))
                     {
-                        GameCaptureRegion.GameRegion1080PPosClick(960 + 70 * dpiScale, 540 + 75 * dpiScale);
+                        _runtime.GameRegion1080PPosClick(960 + 70 * dpiScale, 540 + 75 * dpiScale);
 
                         // 检查窗口是否还存在
                         var (remainingWindow, remainingType) = GetBiliLoginWindow(process);
@@ -126,7 +142,7 @@ internal sealed class Login3rdParty
                     if (windowType.Contains("登录"))
                     {
                         Thread.Sleep(2000);
-                        GameCaptureRegion.GameRegion1080PPosClick(960, 540 + 90 * dpiScale);
+                        _runtime.GameRegion1080PPosClick(960, 540 + 90 * dpiScale);
                         Thread.Sleep(2000);
 
                         // 检查窗口是否还存在

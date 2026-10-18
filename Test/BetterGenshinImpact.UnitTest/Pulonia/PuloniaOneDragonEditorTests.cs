@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
@@ -189,7 +190,7 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
     [Fact]
     public void ApplyOneDragonParameters_PersistsOnlyChangedFieldsAndIsolatesDuplicates()
     {
-        var definition = new PuloniaCombatTaskExecutor().Definitions
+        var definition = new PuloniaCombatTaskExecutor(new AllConfig()).Definitions
             .First(item => item.TaskType == "builtin.auto_boss");
         var preset = new PuloniaTaskPreset
         {
@@ -209,7 +210,7 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
                 ]
             }
         }, [preset], new PuloniaTaskClipboardService(), false);
-        document.SetDefinitions(new PuloniaCombatTaskExecutor().Definitions);
+        document.SetDefinitions(new PuloniaCombatTaskExecutor(new AllConfig()).Definitions);
         var nodeA = document.RootNode.Children[0];
         var nodeB = document.RootNode.Children[1];
 

@@ -5,6 +5,7 @@ using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Exceptions;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -19,18 +20,40 @@ namespace BetterGenshinImpact.GameTask.Common.Job;
 
 public class SwitchPartyTask
 {
-    private readonly double _assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 构造时的素材缩放比例快照
+    /// </summary>
+    private readonly double _assetScale;
 
     public string Name => "切换队伍";
 
-    private readonly ReturnMainUiTask _returnMainUiTask = new();
+    /// <summary>
+    /// 返回主界面子任务
+    /// </summary>
+    private readonly ReturnMainUiTask _returnMainUiTask;
+
+    /// <summary>
+    /// 创建切换队伍任务
+    /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    public SwitchPartyTask(GameRuntime runtime)
+    {
+        _runtime = runtime;
+        _assetScale = runtime.SystemInfo.AssetScale;
+        _returnMainUiTask = new ReturnMainUiTask(runtime);
+    }
 
     public async Task<bool> Start(string partyName, CancellationToken ct)
     {
         bool isInPartyViewUi = false;
 
         Logger.LogInformation("尝试切换至队伍: {Name}", partyName);
-        using var ra1 = CaptureToRectArea();
+        using var ra1 = _runtime.CaptureToRectArea();
 
         if (!Bv.IsInPartyViewUi(ra1))
         {
@@ -39,8 +62,8 @@ public class SwitchPartyTask
             if (!Bv.IsInMainUi(ra1))
             {
                 await _returnMainUiTask.Start(ct);
-                await Delay(200, ct);
-                using var raAfterMain = CaptureToRectArea();
+                await _runtime.Delay(200, ct);
+                using var raAfterMain = _runtime.CaptureToRectArea();
                 if (!Bv.IsInMainUi(raAfterMain))
                 {
                     throw new InvalidOperationException("未能返回主界面");
@@ -58,8 +81,8 @@ public class SwitchPartyTask
 
                 for (int i = 0; i < 7; i++) // 检查 7 次
                 {
-                    await Delay(600, ct);
-                    using var raCheck = CaptureToRectArea();
+                    await _runtime.Delay(600, ct);
+                    using var raCheck = _runtime.CaptureToRectArea();
                     if (Bv.IsInPartyViewUi(raCheck))
                     {
                         isOpened = true;
@@ -79,9 +102,9 @@ public class SwitchPartyTask
             }
         }
 
-        await Delay(500, ct);
+        await _runtime.Delay(500, ct);
 
-        using var ra = CaptureToRectArea();
+        using var ra = _runtime.CaptureToRectArea();
         var partyViewBtn = ra.Find(ElementRecognition.Get("PartyBtnChooseView", ra));
 
         // OCR 当前队伍名称（无法单字，中间禁止空格）
@@ -114,7 +137,7 @@ public class SwitchPartyTask
             if (isInPartyViewUi)
             {
                 InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-                await Delay(500, ct);
+                await _runtime.Delay(500, ct);
                 await _returnMainUiTask.Start(ct);
             }
 
@@ -122,7 +145,8 @@ public class SwitchPartyTask
         }
 
         var menu = await NewRetry.WaitForElementAppear(
-            ElementRecognition.Get("PartyBtnDelete"),
+            _runtime,
+            ElementRecognition.Get("PartyBtnDelete", ra),
             () => partyViewBtn.Click(),// 点击队伍选择按钮
             ct,
             4,
@@ -135,9 +159,9 @@ public class SwitchPartyTask
 
         ImageRegion? switchRa = null;
         Region? partyDeleteBtn = null;
-        using (var ocrRa = CaptureToRectArea())
+        using (var ocrRa = _runtime.CaptureToRectArea())
         {
-            var openPartyChooseSuccess = await NewRetry.WaitForAction(() =>
+            var openPartyChooseSuccess = await NewRetry.WaitForAction(_runtime, () =>
             {
                 switchRa = ocrRa;
                 partyDeleteBtn = switchRa.Find(ElementRecognition.Get("PartyBtnDelete", switchRa));
@@ -152,7 +176,7 @@ public class SwitchPartyTask
 
         // 点击到最上方
         await Task.Delay(50, ct);
-        GameCaptureRegion.GameRegion1080PPosClick(700, 125);
+        _runtime.GameRegion1080PPosClick(700, 125);
         await Task.Delay(50, ct);
         InputHub.Foreground.Mouse.LeftButtonDown();
         await Task.Delay(450, ct);
@@ -173,7 +197,7 @@ public class SwitchPartyTask
         {
             for (var i = 0; i < 16; i++)    // 6.0版本最多20个队伍
             {
-                using var page = CaptureToRectArea();
+                using var page = _runtime.CaptureToRectArea();
 
                 var partySwitchNameRaList = page.FindMulti(recognitionObject);
 
@@ -189,7 +213,7 @@ public class SwitchPartyTask
                     if (Regex.IsMatch(textRegion.Text, partyName))
                     {
                         page.ClickTo(textRegion.Right + 100 * _assetScale, textRegion.Bottom);
-                        await Delay(200, ct);
+                        await _runtime.Delay(200, ct);
                         Logger.LogInformation("切换队伍成功: {Text}", textRegion.Text);
                         await ConfirmParty(page, ct, isInPartyViewUi);
 
@@ -221,12 +245,12 @@ public class SwitchPartyTask
                 }
 
                 page.ClickTo(regionOfInterest.X + regionOfInterest.Width / 2, lowest.Bottom); // 点击最下方队伍下移
-                await Delay(400, ct);
+                await _runtime.Delay(400, ct);
             }
         }
         finally
         {
-            TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
+            _runtime.MaskWindowDrawingBoard.ClearAll();
         }
 
         // 未找到
@@ -239,19 +263,19 @@ public class SwitchPartyTask
     private async Task ConfirmParty(ImageRegion page, CancellationToken ct, bool isInPartyViewUi = false)
     {
         var r1 = Bv.ClickWhiteConfirmButton(page, new Rect(0, page.Height / 4, page.Width / 4, page.Height - page.Height / 4));
-        var partyChooseUiClosed = await NewRetry.WaitForAction(() =>
+        var partyChooseUiClosed = await NewRetry.WaitForAction(_runtime, () =>
         {
-            using var ra2 = CaptureToRectArea();
+            using var ra2 = _runtime.CaptureToRectArea();
             return ra2.Find(ElementRecognition.Get("PartyBtnDelete", ra2)).IsEmpty();
         }, ct, 10);
         if (!partyChooseUiClosed)
         {
             throw new PartySetupFailedException("选择队伍失败，等待队伍切换超时！");
         }
-        await Delay(200, ct);
-        using var ra = CaptureToRectArea();
+        await _runtime.Delay(200, ct);
+        using var ra = _runtime.CaptureToRectArea();
         var r2 = Bv.ClickWhiteConfirmButton(ra, new Rect(page.Width - page.Width / 4, page.Height / 4, page.Width / 4, page.Height - page.Height / 4));
-        await Delay(500, ct);
+        await _runtime.Delay(500, ct);
         if (isInPartyViewUi) await _returnMainUiTask.Start(ct);
     }
 }

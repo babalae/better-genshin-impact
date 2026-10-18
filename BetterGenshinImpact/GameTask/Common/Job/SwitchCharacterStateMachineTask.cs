@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.BgiVision;
 using BetterGenshinImpact.Core.Recognition;
@@ -10,6 +11,7 @@ using BetterGenshinImpact.GameTask.Common.Exceptions;
 using BetterGenshinImpact.GameTask.Common.StateMachine;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
+using BetterGenshinImpact.GameTask.Runtime;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -64,8 +66,26 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     private static readonly Rect SortOptionsRoi1080 = new(111, 80, 241, 372);
 
     private readonly ILogger<SwitchCharacterStateMachineTask> _logger = App.GetLogger<SwitchCharacterStateMachineTask>();
-    private readonly ReturnMainUiTask _returnMainUiTask = new();
-    private readonly double _assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 配置根
+    /// </summary>
+    private readonly AllConfig _config;
+
+    /// <summary>
+    /// 返回主界面子任务
+    /// </summary>
+    private readonly ReturnMainUiTask _returnMainUiTask;
+
+    /// <summary>
+    /// 构造时的素材缩放比例快照
+    /// </summary>
+    private readonly double _assetScale;
 
     private SwitchCharacterState _workflowState;
     private AvatarGridIconRecognizer? _recognizer;
@@ -129,8 +149,14 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     /// <summary>
     /// 初始化状态机版本的角色切换任务。
     /// </summary>
-    public SwitchCharacterStateMachineTask()
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    /// <param name="config">配置根</param>
+    public SwitchCharacterStateMachineTask(GameRuntime runtime, AllConfig config) : base(runtime)
     {
+        _runtime = runtime;
+        _config = config;
+        _returnMainUiTask = new ReturnMainUiTask(runtime);
+        _assetScale = runtime.SystemInfo.AssetScale;
         RegisterStateMethodsByAttribute();
         RegisterStateTransitions(
             (SwitchCharacterState.Unknown, [
@@ -217,7 +243,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         CancellationToken ct)
     {
         Initialize(ct, SwitchCharacterState.Unknown);
-        var page = new BvPage(ct);
+        var page = new BvPage(_runtime, ct);
         string[] slots = [slot1, slot2, slot3, slot4];
 
         var roles = ParseRoles(slots);
@@ -516,7 +542,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     private async Task<StateHandlerResult> HandlePartyConfigUnavailablePrompt(BvPage page)
     {
         _logger.LogWarning("切换角色：当前状态不可进行队伍配置，传送到七天神像后重试");
-        await new TpTask(_ct).TpToStatueOfTheSeven();
+        await new TpTask(_runtime, _config, _ct).TpToStatueOfTheSeven();
         return StateHandlerResult.Success;
     }
 
@@ -614,7 +640,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             if (_isRebuildClearing && _currentTeamSlots.Count > minimumRetainedCount)
             {
                 ClickFixedTeamSlot(rebuildStartSlot);
-                await Delay(500, _ct);
+                await _runtime.Delay(500, _ct);
                 if (!TryClickText(page, "换下", Rect1080(382, 994, 87, 51)))
                 {
                     throw new PartySetupFailedException($"切换角色：未找到 {rebuildStartSlot} 号位的换下按钮");
@@ -695,7 +721,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             }
 
             ClickFixedTeamSlot(misplaced.Slot);
-            await Delay(500, _ct);
+            await _runtime.Delay(500, _ct);
             if (!TryClickText(page, "换下", Rect1080(382, 994, 87, 51)))
             {
                 throw new PartySetupFailedException($"切换角色：未找到 {misplaced.Slot} 号位的换下按钮");
@@ -723,7 +749,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     [StateHandler(SwitchCharacterState.OpenFilterPanel, RetryTimeout = 9000, RetryInterval = 300, TransitionTimeout = 4000)]
     private Task<StateHandlerResult> HandleOpenFilterPanel(BvPage page)
     {
-        GameCaptureRegion.GameRegion1080PPosClick(66, 46);
+        _runtime.GameRegion1080PPosClick(66, 46);
         return Task.FromResult(StateHandlerResult.Success);
     }
 
@@ -765,7 +791,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             // 点击滚动条使筛选界面滚动到最上方，解决用户拖动过筛选界面后，程序识别不到筛选控件的问题
             if (CurrentStateRetryCount == 0)
             { 
-                GameCaptureRegion.GameRegion1080PPosClick(796, 125);
+                _runtime.GameRegion1080PPosClick(796, 125);
             }
             _logger.LogWarning("切换角色：未找到元素筛选项 {Text}", _pendingFilterElementType);
             return Task.FromResult(StateHandlerResult.Retry);
@@ -794,7 +820,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             // 点击滚动条使筛选界面滚动到最上方，解决用户拖动过筛选界面后，程序识别不到筛选控件的问题
             if (CurrentStateRetryCount == 0)
             { 
-                GameCaptureRegion.GameRegion1080PPosClick(796, 125);
+                _runtime.GameRegion1080PPosClick(796, 125);
             }
             _logger.LogWarning("切换角色：未找到武器筛选项 {Text}", _pendingFilterWeaponType);
             return Task.FromResult(StateHandlerResult.Retry);
@@ -1138,7 +1164,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     {
         await DetectPlayerIndex(ct);
         InputHub.Foreground.SimulateAction(GIActions.OpenPartySetupScreen);
-        await Delay(2000, ct);
+        await _runtime.Delay(2000, ct);
     }
 
     /// <summary>
@@ -1155,7 +1181,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         do
         {
             ct.ThrowIfCancellationRequested();
-            using var capture = CaptureToRectArea(true);
+            using var capture = _runtime.CaptureToRectArea();
             using var standAloneIcon = capture.Find(RecognitionAssets.Get(@"Common\Job\SwitchCharacter", "StandAloneIcon", capture));
             if (standAloneIcon.IsExist())
             {
@@ -1176,7 +1202,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             {
                 lastResult = ex.Message;
                 _logger.LogDebug(ex, "切换角色：联机人数尚未稳定识别，继续等待");
-                await Delay(retryIntervalMilliseconds, ct);
+                await _runtime.Delay(retryIntervalMilliseconds, ct);
                 continue;
             }
 
@@ -1199,7 +1225,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
                     break;
                 }
 
-                await Delay((int)Math.Min(retryIntervalMilliseconds, singlePlayerRemainingMilliseconds), ct);
+                await _runtime.Delay((int)Math.Min(retryIntervalMilliseconds, singlePlayerRemainingMilliseconds), ct);
                 continue;
             }
 
@@ -1241,7 +1267,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
                 break;
             }
 
-            await Delay((int)Math.Min(retryIntervalMilliseconds, remainingMilliseconds), ct);
+            await _runtime.Delay((int)Math.Min(retryIntervalMilliseconds, remainingMilliseconds), ct);
         } while (Environment.TickCount64 < deadline);
 
         throw new PartySetupFailedException(
@@ -1330,7 +1356,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         var xs = new[] { 470, 800, 1130, 1460 };
         var physicalSlot = _logicalToPhysicalSlot[logicalSlot];
         _logger.LogDebug("切换角色：点击逻辑槽位 {LogicalSlot} 对应的物理槽位 {PhysicalSlot}", logicalSlot, physicalSlot);
-        GameCaptureRegion.GameRegion1080PPosClick(xs[physicalSlot - 1], 550);
+        _runtime.GameRegion1080PPosClick(xs[physicalSlot - 1], 550);
     }
 
     /// <summary>
@@ -1343,7 +1369,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         while (Environment.TickCount64 < deadline)
         {
             ct.ThrowIfCancellationRequested();
-            using var capture = CaptureToRectArea();
+            using var capture = _runtime.CaptureToRectArea();
             if (IsPartyConfigPage(capture) &&
                 !ContainsText(capture, "换下", Rect1080(382, 994, 87, 51)))
             {
@@ -1359,7 +1385,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
                 consecutiveMissingCount = 0;
             }
 
-            await Delay(150, ct);
+            await _runtime.Delay(150, ct);
         }
 
         throw new PartySetupFailedException(
@@ -1372,9 +1398,9 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         CancellationToken ct)
     {
         ClickFixedTeamSlot(1);
-        var listOpened = await NewRetry.WaitForAction(() =>
+        var listOpened = await NewRetry.WaitForAction(_runtime, () =>
         {
-            using var capture = CaptureToRectArea();
+            using var capture = _runtime.CaptureToRectArea();
             return IsCharacterList(capture);
         }, ct, 10, 300);
         if (!listOpened)
@@ -1393,7 +1419,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
                 CharacterGridRoi1080.Height);
             for (var attempt = 1; attempt <= EmptyCardDetectionRetryCount; attempt++)
             {
-                using var capture = CaptureToRectArea(true);
+                using var capture = _runtime.CaptureToRectArea();
                 using var gridRegion = capture.DeriveCrop(gridRoi);
                 var cards = DetectCharacterCards(
                     gridRegion.SrcMat, out var rejectedCount, out var connectedComponentCount);
@@ -1403,7 +1429,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
                 {
                     if (attempt < EmptyCardDetectionRetryCount)
                     {
-                        await Delay(200, ct);
+                        await _runtime.Delay(200, ct);
                         continue;
                     }
 
@@ -1439,9 +1465,9 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             InputHub.Foreground.Keyboard.KeyPress(Vanara.PInvoke.User32.VK.VK_ESCAPE);
         }
 
-        var returned = await NewRetry.WaitForAction(() =>
+        var returned = await NewRetry.WaitForAction(_runtime, () =>
         {
-            using var capture = CaptureToRectArea();
+            using var capture = _runtime.CaptureToRectArea();
             return IsPartyConfigPage(capture);
         }, ct, 10, 300);
         if (!returned)
@@ -1498,7 +1524,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             SortTypeRoi1080.Y,
             SortTypeRoi1080.Width,
             SortTypeRoi1080.Height);
-        using (var capture = CaptureToRectArea())
+        using (var capture = _runtime.CaptureToRectArea())
         {
             if (ContainsText(capture, "好感", sortTypeRoi))
             {
@@ -1535,7 +1561,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     /// </summary>
     private void ClickSortDirectionButton()
     {
-        using var capture = CaptureToRectArea();
+        using var capture = _runtime.CaptureToRectArea();
         using var sortButton = capture.Find(
             RecognitionAssets.Get(@"Common\Job\SwitchCharacter", "SortButton", capture));
         if (sortButton.IsExist())
@@ -1562,7 +1588,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         ct.ThrowIfCancellationRequested();
         for (var attempt = 1; attempt <= EmptyCardDetectionRetryCount; attempt++)
         {
-            using var capture = CaptureToRectArea(true);
+            using var capture = _runtime.CaptureToRectArea();
             using var gridRegion = capture.DeriveCrop(gridRoi);
             var cards = DetectCharacterCards(
                 gridRegion.SrcMat, out var rejectedCount, out var connectedComponentCount);
@@ -1571,7 +1597,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
             {
                 if (attempt < EmptyCardDetectionRetryCount)
                 {
-                    await Delay(200, ct);
+                    await _runtime.Delay(200, ct);
                     continue;
                 }
 
@@ -1594,7 +1620,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
                 {
                     using var cardRegion = gridRegion.DeriveCrop(card.CardRect);
                     cardRegion.Click();
-                    await Delay(300, ct);
+                    await _runtime.Delay(300, ct);
                     return true;
                 }
             }

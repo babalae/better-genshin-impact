@@ -1,5 +1,9 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.Service;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
@@ -12,8 +16,14 @@ namespace BetterGenshinImpact.GameTask.AutoFight.Script;
 public static class CombatScriptExecutor
 {
     /// <summary>
+    /// 配置根。静态方法没有创建方可以传配置，暂时读配置根（见 task-context-removal.md 第 5 节）
+    /// </summary>
+    private static AllConfig Config => ConfigService.Config!;
+
+    /// <summary>
     /// 执行简易战斗策略脚本。
     /// </summary>
+    /// <param name="runtime">截图识别队伍所用的运行环境（未传入 combatScenes 时）</param>
     /// <param name="combatScript">已解析的策略</param>
     /// <param name="ct">取消令牌</param>
     /// <param name="logger">日志</param>
@@ -22,6 +32,7 @@ public static class CombatScriptExecutor
     /// 不传则在内部通过截图自动创建并管理生命周期。
     /// </param>
     public static async Task ExecuteAsync(
+        GameRuntime runtime,
         CombatScript combatScript,
         CancellationToken ct,
         ILogger logger,
@@ -32,8 +43,8 @@ public static class CombatScriptExecutor
         {
             if (combatScenes == null)
             {
-                using var capture = CaptureToRectArea();
-                combatScenes = new CombatScenes();
+                using var capture = runtime.CaptureToRectArea();
+                combatScenes = new CombatScenes(runtime, Config);
                 ownsScenes = true;
                 combatScenes.InitializeTeam(capture);
                 if (!combatScenes.CheckTeamInitialized())

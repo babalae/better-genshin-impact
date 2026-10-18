@@ -3,6 +3,7 @@ using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -20,6 +21,11 @@ namespace BetterGenshinImpact.GameTask.Common.Job
         public string Name => "背包数物品";
 
         private readonly ILogger logger = App.GetLogger<CountInventoryItem>();
+
+        /// <summary>
+        /// 本次运行使用的运行环境
+        /// </summary>
+        private readonly GameRuntime _runtime;
         private IInputChannel input => InputHub.Foreground;
         private CancellationToken ct;
         private readonly GridScreenName? gridScreenName;
@@ -27,8 +33,14 @@ namespace BetterGenshinImpact.GameTask.Common.Job
         private readonly ItemIconRecognitionMode iconRecognitionMode;
         private readonly bool stopByItemSort;
 
-        public CountInventoryItem(CountInventoryItemParam param)
+        /// <summary>
+        /// 创建背包数物品任务
+        /// </summary>
+        /// <param name="runtime">本次运行使用的运行环境</param>
+        /// <param name="param">任务参数</param>
+        public CountInventoryItem(GameRuntime runtime, CountInventoryItemParam param)
         {
+            _runtime = runtime;
             if (param == null)
             {
                 throw new ArgumentNullException(nameof(param));
@@ -55,7 +67,7 @@ namespace BetterGenshinImpact.GameTask.Common.Job
             List<(GridScreenName Page, List<string> PageItemNames)> pageBatches = BuildPageBatches();
             using IItemIconRecognizer iconRecognizer = ItemIconRecognizerFactory.Create(this.iconRecognitionMode);
             Dictionary<string, int> results = new();
-            await new ReturnMainUiTask().Start(ct);
+            await new ReturnMainUiTask(_runtime).Start(ct);
 
             //逐页扫描
             for (int i = 0; i < pageBatches.Count; i++)
@@ -66,11 +78,11 @@ namespace BetterGenshinImpact.GameTask.Common.Job
 
                 if (i == 0)
                 {
-                    await AutoArtifactSalvageTask.OpenInventory(page, input, logger, this.ct);
+                    await AutoArtifactSalvageTask.OpenInventory(_runtime, page, input, logger, this.ct);
                 }
                 else
                 {
-                    await AutoArtifactSalvageTask.SwitchInventoryTab(page, input, logger, this.ct);
+                    await AutoArtifactSalvageTask.SwitchInventoryTab(_runtime, page, input, logger, this.ct);
                 }
 
                 await ScanPageForTargets(iconRecognizer, page, pageItemNames, results);
@@ -83,7 +95,7 @@ namespace BetterGenshinImpact.GameTask.Common.Job
 
             }
 
-            await new ReturnMainUiTask().Start(ct);
+            await new ReturnMainUiTask(_runtime).Start(ct);
             return results;
         }
 
@@ -150,9 +162,9 @@ namespace BetterGenshinImpact.GameTask.Common.Job
         /// <param name="results">累积结果字典。</param>
         private async Task ScanPageForTargets(IItemIconRecognizer iconRecognizer, GridScreenName page, List<string> pageItemNames, Dictionary<string, int> results)
         {
-            GridScreen gridScreen = new GridScreen(CreateGridParams(page), logger, ct);
+            GridScreen gridScreen = new GridScreen(_runtime, CreateGridParams(page), logger, ct);
             gridScreen.OnAfterTurnToNewPage += GridScreen.DrawItemsAfterTurnToNewPage;
-            gridScreen.OnBeforeScroll += () => TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
+            gridScreen.OnBeforeScroll += () => _runtime.MaskWindowDrawingBoard.ClearAll();
 
             // 本页尚未找到的目标物品
             List<string> notFound = pageItemNames.Where(name => !results.ContainsKey(name)).ToList();
@@ -201,7 +213,7 @@ namespace BetterGenshinImpact.GameTask.Common.Job
             }
             finally
             {
-                TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
+                _runtime.MaskWindowDrawingBoard.ClearAll();
             }
         }
 
@@ -236,20 +248,20 @@ namespace BetterGenshinImpact.GameTask.Common.Job
         private async Task PreScrollToBottomForWeaponOre()
         {
             // 长按滑动栏底部，快速翻页到底部后，再继续滚动确保在最后一页
-            GameCaptureRegion.GameRegion1080PPosMove(1289, 936);
+            _runtime.GameRegion1080PPosMove(1289, 936);
             try
             {
                 GlobalMethod.LeftButtonDown();
-                await TaskControl.Delay(2000, ct);
+                await _runtime.Delay(2000, ct);
             }
             finally
             {
                 GlobalMethod.LeftButtonUp();
             }
-            var gridScroller = new GridScroller(GridParams.Templates[GridScreenName.Weapons], logger, input, ct);
+            var gridScroller = new GridScroller(_runtime, GridParams.Templates[GridScreenName.Weapons], logger, input, ct);
             while (await gridScroller.TryVerticalScollDown((src, columns) => GridScreen.GridEnumerator.GetGridItems(src, columns)))
             {
-                await TaskControl.Delay(300, ct);
+                await _runtime.Delay(300, ct);
             }
         }
 

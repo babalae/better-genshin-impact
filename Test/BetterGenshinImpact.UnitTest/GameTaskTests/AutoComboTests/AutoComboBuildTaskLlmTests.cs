@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoCombo.ComboBuild;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using CsTrees.Display;
@@ -49,7 +50,10 @@ public class AutoComboBuildTaskLlmTests
         _output.WriteLine("使用配置：{0}（{1}）", config.PlanningLlmEndpoint, config.ModelName);
         _output.WriteLine("测试队伍：{0}", string.Join("、", team));
 
-        var avatars = team.Select((name, i) => new Avatar(null!, name, i + 1, default)).ToArray();
+        // 建树不截图，运行环境只是满足构造参数：不连真实游戏，画面信息按 1080P
+        var runtime = TestGameRuntime.Create(new FakeSystemInfo(new Vanara.PInvoke.RECT(0, 0, 1920, 1080), 1));
+        var allConfig = new AllConfig();
+        var avatars = team.Select((name, i) => new Avatar(runtime, allConfig, null!, name, i + 1, default)).ToArray();
 
         var logger = new TestOutputLogger(_output);
         var session = await AutoComboBuildTask.BuildComboTreeAsync(avatars, config, logger, CancellationToken.None);

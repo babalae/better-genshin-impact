@@ -10,6 +10,7 @@ using BetterGenshinImpact.GameTask.AutoSkip.Model;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Windows;
@@ -41,7 +42,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
     /// <summary>
     /// 用户开关，始终读全局配置。脚本启用时不看这个值（与原来"强制启用"一致）
     /// </summary>
-    public bool IsEnabledByConfig => TaskContext.Instance().Config.AutoSkipConfig.Enabled;
+    public bool IsEnabledByConfig => _allConfig.AutoSkipConfig.Enabled;
 
     public int Priority => 20;
     public bool IsExclusive => false;
@@ -61,7 +62,17 @@ public partial class AutoSkipTrigger : ITaskTrigger
     private const int PageCloseRecognitionDelayMilliseconds = 200;
 
     /// <summary>
-    /// 构造时指定的配置：无参构造为全局配置，内部调用方可以传入自定义配置
+    /// 本触发器绑定的运行环境：前后台判断、窗口激活、截图与点击都只使用它
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 配置根，由创建方传入。用户开关与拾取键位读这里；本次生效的自动剧情配置见 <see cref="_config"/>
+    /// </summary>
+    private readonly AllConfig _allConfig;
+
+    /// <summary>
+    /// 构造时指定的配置：不传自定义配置时为全局配置，内部调用方可以传入自定义配置
     /// </summary>
     private readonly AutoSkipConfig _defaultConfig;
 
@@ -72,7 +83,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
     /// </summary>
     private AutoSkipConfig _config;
 
-    private readonly DialogueOptionAudioWaiter _dialogueOptionAudioWaiter = new();
+    private readonly DialogueOptionAudioWaiter _dialogueOptionAudioWaiter;
 
     internal DialogueOptionAudioWaiter VoiceWaiter => _dialogueOptionAudioWaiter;
 
@@ -96,21 +107,34 @@ public partial class AutoSkipTrigger : ITaskTrigger
         return RecognitionAssets.Get("AutoSkip", objectName, region.Width, region.Height);
     }
 
-    public AutoSkipTrigger()
+    /// <summary>
+    /// 由调度器创建，使用全局自动剧情配置
+    /// </summary>
+    /// <param name="runtime">本次截图会话绑定的运行环境</param>
+    /// <param name="config">配置根</param>
+    public AutoSkipTrigger(GameRuntime runtime, AllConfig config)
     {
-        _defaultConfig = TaskContext.Instance().Config.AutoSkipConfig;
+        _runtime = runtime;
+        _allConfig = config;
+        _dialogueOptionAudioWaiter = new DialogueOptionAudioWaiter(runtime);
+        _defaultConfig = config.AutoSkipConfig;
         _config = _defaultConfig;
     }
     
     /// <summary>
     /// 用于内部的其他方法调用，调用方需自行调用 OnEnabled(null) 后再调用 OnCapture
     /// </summary>
-    /// <param name="config"></param>
-    public AutoSkipTrigger(AutoSkipConfig config)
+    /// <param name="runtime">调用方所属的运行环境</param>
+    /// <param name="config">配置根</param>
+    /// <param name="autoSkipConfig">自定义的自动剧情配置</param>
+    public AutoSkipTrigger(GameRuntime runtime, AllConfig config, AutoSkipConfig autoSkipConfig)
     {
-        _defaultConfig = config;
+        _runtime = runtime;
+        _allConfig = config;
+        _dialogueOptionAudioWaiter = new DialogueOptionAudioWaiter(runtime);
+        _defaultConfig = autoSkipConfig;
         _isDefaultCustomConfiguration = true;
-        _config = config;
+        _config = autoSkipConfig;
     }
 
     /// <summary>
@@ -353,7 +377,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             return;
         }
 
-        if (SystemControl.IsGenshinImpactActive())
+        if (_runtime.Window.IsForeground)
         {
             _pendingBringToFront = false;
             return;
@@ -366,7 +390,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
         }
 
         _prevBringToFrontTime = DateTime.Now;
-        SystemControl.ActivateWindow();
+        _runtime.Window.Activate();
         _pendingBringToFront = false;
         _logger.LogInformation("自动剧情：后台对话结束，已自动切回游戏前台");
     }
@@ -413,8 +437,8 @@ public partial class AutoSkipTrigger : ITaskTrigger
         {
             List<HangoutOption> hangoutOptionList =
             [
-                .. selectedRects.Select(selectedRect => new HangoutOption(selectedRect, true)),
-                .. unselectedRects.Select(unselectedRect => new HangoutOption(unselectedRect, false)),
+                .. selectedRects.Select(selectedRect => new HangoutOption(_runtime, selectedRect, true)),
+                .. unselectedRects.Select(unselectedRect => new HangoutOption(_runtime, unselectedRect, false)),
             ];
             var allHangoutOptions = hangoutOptionList;
             try
@@ -482,7 +506,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 using var skipRa = captureRegion.Find(GetRecognitionObject("HangoutSkip", captureRegion));
                 if (skipRa.IsExist())
                 {
-                    if (UseBackgroundOperation && !SystemControl.IsGenshinImpactActive())
+                    if (UseBackgroundOperation && !_runtime.Window.IsForeground)
                     {
                         skipRa.BackgroundClick();
                     }
@@ -574,7 +598,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
         content.CaptureRectArea.Find(GetRecognitionObject("Primogem", content.CaptureRectArea), primogemRa =>
         {
             Thread.Sleep(100);
-            GameCaptureRegion.GameRegion1080PPosMove(960, 900);
+            _runtime.GameRegion1080PPosMove(960, 900);
             InputHub.Background.Mouse.LeftButtonClick();
             _prevGetDailyRewardsTime = DateTime.MinValue;
             primogemRa.Dispose();
@@ -601,7 +625,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
         isInChat = chatOptionResult.IsExist();
         if (!isInChat)
         {
-            using var pickRa = region.Find(AutoPickAssets.Get(region, TaskContext.Instance().Config.AutoPickConfig.PickKey).ChatPickRo);
+            using var pickRa = region.Find(AutoPickAssets.Get(region, _allConfig.AutoPickConfig.PickKey).ChatPickRo);
             isInChat = pickRa.IsExist();
         }
 
@@ -612,7 +636,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 return true;
             }
 
-            var fKey = AutoPickAssets.Get(region, TaskContext.Instance().Config.AutoPickConfig.PickKey).PickVk;
+            var fKey = AutoPickAssets.Get(region, _allConfig.AutoPickConfig.PickKey).PickVk;
             if (_config.IsClickFirstChatOption())
             {
                 InputHub.Background.Keyboard.KeyPress(fKey);
@@ -653,7 +677,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
     /// </summary>
     private bool ChatOptionChoose(ImageRegion region)
     {
-        var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+        var assetScale = _runtime.SystemInfo.AssetScale;
         if (!_config.IsClickNoneChatOption())
         {
             // 感叹号识别 遇到直接点击
@@ -784,10 +808,10 @@ public partial class AutoSkipTrigger : ITaskTrigger
                                     return true;
                                 }
 
-                                TaskControl.Sleep(800);
+                                _runtime.Sleep(800);
                                 
                                 // 6.2 每日提示确认
-                                var ra1 = TaskControl.CaptureToRectArea();
+                                var ra1 = _runtime.CaptureToRectArea();
                                 if (Bv.ClickBlackConfirmButton(ra1))
                                 {
                                     _logger.LogInformation("存在提示并确认");
@@ -804,7 +828,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
                                 }
 
                                 Thread.Sleep(800); // 等待探索派遣界面打开
-                                new OneKeyExpeditionTask().Run();
+                                new OneKeyExpeditionTask(_runtime).Run();
                             }
                             else if (!item.Text.Contains("每日")
                                 && !item.Text.Contains("委托")
@@ -872,7 +896,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
         else
         {
             // 没有气泡的时候识别 F 选项
-            var pickAssets = AutoPickAssets.Get(region, TaskContext.Instance().Config.AutoPickConfig.PickKey);
+            var pickAssets = AutoPickAssets.Get(region, _allConfig.AutoPickConfig.PickKey);
             using var pickRa = region.Find(pickAssets.ChatPickRo);
             if (pickRa.IsExist())
             {
@@ -895,7 +919,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
         }
 
         RefreshOperationMode();
-        if (UseBackgroundOperation && !SystemControl.IsGenshinImpactActive())
+        if (UseBackgroundOperation && !_runtime.Window.IsForeground)
         {
             region.BackgroundClick();
         }
@@ -1004,7 +1028,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             return true;
         }
 
-        using var pickRa = region.Find(AutoPickAssets.Get(region, TaskContext.Instance().Config.AutoPickConfig.PickKey).ChatPickRo);
+        using var pickRa = region.Find(AutoPickAssets.Get(region, _allConfig.AutoPickConfig.PickKey).ChatPickRo);
         if (pickRa.IsExist())
         {
             return true;
@@ -1031,7 +1055,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
 
     private void RefreshOperationMode()
     {
-        UseBackgroundOperation = IsBackgroundRunning && !SystemControl.IsGenshinImpactActive();
+        UseBackgroundOperation = IsBackgroundRunning && !_runtime.Window.IsForeground;
     }
 
     private void HangoutOptionClick(HangoutOption option)
@@ -1041,7 +1065,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             Thread.Sleep(_config.AutoHangoutChooseOptionSleepDelay);
         }
 
-        if (UseBackgroundOperation && !SystemControl.IsGenshinImpactActive())
+        if (UseBackgroundOperation && !_runtime.Window.IsForeground)
         {
             option.BackgroundClick();
         }
@@ -1152,7 +1176,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             }
 
             using var triangleRegion = croppedRegion.Derive(triangleRect);
-            if (UseBackgroundOperation && !SystemControl.IsGenshinImpactActive())
+            if (UseBackgroundOperation && !_runtime.Window.IsForeground)
             {
                 triangleRegion.BackgroundClick();
             }
@@ -1170,7 +1194,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
     private bool TryHandleBottomTriangle(ImageRegion captureRegion, Action<ImageRegion, Rect, double> onFound)
     {
         // 屏幕底部中间，实心三角的位置
-        var scale = TaskContext.Instance().SystemInfo.AssetScale;
+        var scale = _runtime.SystemInfo.AssetScale;
         //不同场景的三角高度不同,几乎不能再小了
         using var croppedRegion = captureRegion.DeriveCrop(945 * scale, 980 * scale, 30 * scale, 80 * scale);
 
@@ -1207,7 +1231,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
     private void CloseCharacterPopup(CaptureContent content)
     {
         using var srcMat = content.CaptureRectArea.SrcMat.Clone();
-        var scale = TaskContext.Instance().SystemInfo.AssetScale;
+        var scale = _runtime.SystemInfo.AssetScale;
         // 把被角色头像遮挡的矩形闭合（假设矩形存在）
         Cv2.Rectangle(srcMat, new Rect((int)(240 * scale), (int)(395 * scale), (int)(300 * scale), (int)(50 * scale)), new Scalar(229, 241, 245), -1);
         Cv2.Rectangle(srcMat, new Rect((int)(290 * scale), (int)(660 * scale), (int)(210 * scale), (int)(40 * scale)), new Scalar(101, 82, 74), -1);
@@ -1260,7 +1284,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
             var darkCount = Cv2.CountNonZero(new Mat(maskDark, bbox));
             if (lightCount <= 0 || darkCount <= 0) continue;
 
-            if (UseBackgroundOperation && !SystemControl.IsGenshinImpactActive())
+            if (UseBackgroundOperation && !_runtime.Window.IsForeground)
             {
                 content.CaptureRectArea.Derive(bbox).BackgroundClick();
             }
@@ -1300,21 +1324,21 @@ public partial class AutoSkipTrigger : ITaskTrigger
             {
                 content.CaptureRectArea.Derive(rects[i]).Click();
                 _logger.LogInformation("提交物品：{Text}", "1. 选择物品" + i);
-                TaskControl.Sleep(800);
+                _runtime.Sleep(800);
 
-                using var ra1 = TaskControl.CaptureToRectArea(forceNew: true);
+                using var ra1 = _runtime.CaptureToRectArea();
                 var btnBlackConfirmRa = ra1.Find(ElementRecognition.Get("BtnBlackConfirm", ra1));
                 if (!btnBlackConfirmRa.IsEmpty())
                 {
                     btnBlackConfirmRa.Click();
                     _logger.LogInformation("提交物品：{Text}", "2. 放入" + i);
-                    TaskControl.Sleep(200);
+                    _runtime.Sleep(200);
                 }
             }
 
-            TaskControl.Sleep(500);
+            _runtime.Sleep(500);
 
-            using var ra2 = TaskControl.CaptureToRectArea(forceNew: true);
+            using var ra2 = _runtime.CaptureToRectArea();
             using var btnWhiteConfirmRa = ra2.Find(ElementRecognition.Get("BtnWhiteConfirm", ra2));
             if (!btnWhiteConfirmRa.IsEmpty())
             {

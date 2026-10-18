@@ -9,7 +9,9 @@ using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.GetGridIcons;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.GameUI;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Core.Mask;
@@ -38,6 +40,11 @@ namespace BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 /// </summary>
 public class AutoArtifactSalvageTask : ISoloTask
 {
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
     private readonly ILogger logger;
     private IInputChannel input => InputHub.Foreground;
 
@@ -65,8 +72,15 @@ public class AutoArtifactSalvageTask : ISoloTask
 
     private readonly FrozenDictionary<ArtifactAffixType, string> artifactAffixStrDic;
 
-    public AutoArtifactSalvageTask(AutoArtifactSalvageTaskParam param, ILogger? logger = null)
+    /// <summary>
+    /// 创建圣遗物分解任务
+    /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    /// <param name="param">任务参数</param>
+    /// <param name="logger">日志记录器，为空时使用默认日志</param>
+    public AutoArtifactSalvageTask(GameRuntime runtime, AutoArtifactSalvageTaskParam param, ILogger? logger = null)
     {
+        _runtime = runtime;
         this.star = param.Star;
         this.javaScript = param.JavaScript;
         this.artifactSetFilter = param.ArtifactSetFilter;
@@ -87,24 +101,32 @@ public class AutoArtifactSalvageTask : ISoloTask
         artifactAffixStrDic = ArtifactAffix.DefaultStrDic.Select(kvp => new KeyValuePair<ArtifactAffixType, string>(kvp.Key, stringLocalizer.WithCultureGet(cultureInfo, kvp.Value))).ToFrozenDictionary();
     }
 
-    public static async Task OpenInventory(GridScreenName gridScreenName, IInputChannel input, ILogger logger, CancellationToken ct)
+    /// <summary>
+    /// 按 B 键打开背包并切换到目标分类
+    /// </summary>
+    /// <param name="runtime">运行环境</param>
+    /// <param name="gridScreenName">目标背包分类。</param>
+    /// <param name="input">输入模拟器。</param>
+    /// <param name="logger">日志记录器。</param>
+    /// <param name="ct">取消令牌。</param>
+    public static async Task OpenInventory(GameRuntime runtime, GridScreenName gridScreenName, IInputChannel input, ILogger logger, CancellationToken ct)
     {
-        var (recognitionObjectChecked, recognitionObjectUnchecked) = GetTabRecognitionObjects(gridScreenName);
+        var (recognitionObjectChecked, recognitionObjectUnchecked) = GetTabRecognitionObjects(gridScreenName, runtime.SystemInfo);
 
         // B键打开背包
         input.SimulateAction(GIActions.OpenInventory);
-        await Delay(1200, ct);
+        await runtime.Delay(1200, ct);
 
-        var openBagSuccess = await NewRetry.WaitForAction(() =>
+        var openBagSuccess = await NewRetry.WaitForAction(runtime, () =>
         {
-            using var ra = CaptureToRectArea();
+            using var ra = runtime.CaptureToRectArea();
 
             // 判断是否在提示对话框（物品过期提示）
             if (Bv.IsInPromptDialog(ra))
             {
                 // 如果存在物品过期提示，则点击确认按钮
                 Bv.ClickWhiteConfirmButton(ra, new Rect(0, 0, ra.Width, (int)Math.Round(ra.Height - ra.Height * 0.2)));
-                Sleep(300, ct);
+                runtime.Sleep(300, ct);
                 return false;
             }
 
@@ -140,28 +162,29 @@ public class AutoArtifactSalvageTask : ISoloTask
         }
 
 
-        await Delay(800, ct);
+        await runtime.Delay(800, ct);
     }
 
     /// <summary>
     /// 取背包分类 tab 的选中/未选中元素识别对象。
     /// </summary>
     /// <param name="gridScreenName">目标背包分类。</param>
+    /// <param name="systemInfo">运行环境的画面信息，用于按画面尺寸缩放素材。</param>
     /// <returns>(选中元素, 未选中元素)。</returns>
     /// <exception cref="NotSupportedException">不支持分类时抛出。</exception>
-    private static (RecognitionObject Checked, RecognitionObject Unchecked) GetTabRecognitionObjects(GridScreenName gridScreenName)
+    private static (RecognitionObject Checked, RecognitionObject Unchecked) GetTabRecognitionObjects(GridScreenName gridScreenName, ISystemInfo systemInfo)
     {
         return gridScreenName switch
         {
-            GridScreenName.Weapons => (ElementRecognition.Get("BagWeaponChecked"), ElementRecognition.Get("BagWeaponUnchecked")),
-            GridScreenName.Artifacts => (ElementRecognition.Get("BagArtifactChecked"), ElementRecognition.Get("BagArtifactUnchecked")),
-            GridScreenName.CharacterDevelopmentItems => (ElementRecognition.Get("BagCharacterDevelopmentItemChecked"), ElementRecognition.Get("BagCharacterDevelopmentItemUnchecked")),
-            GridScreenName.Food => (ElementRecognition.Get("BagFoodChecked"), ElementRecognition.Get("BagFoodUnchecked")),
-            GridScreenName.Materials => (ElementRecognition.Get("BagMaterialChecked"), ElementRecognition.Get("BagMaterialUnchecked")),
-            GridScreenName.Gadget => (ElementRecognition.Get("BagGadgetChecked"), ElementRecognition.Get("BagGadgetUnchecked")),
-            GridScreenName.Quest => (ElementRecognition.Get("BagQuestChecked"), ElementRecognition.Get("BagQuestUnchecked")),
-            GridScreenName.PreciousItems => (ElementRecognition.Get("BagPreciousItemChecked"), ElementRecognition.Get("BagPreciousItemUnchecked")),
-            GridScreenName.Furnishings => (ElementRecognition.Get("BagFurnishingChecked"), ElementRecognition.Get("BagFurnishingUnchecked")),
+            GridScreenName.Weapons => (ElementRecognition.Get("BagWeaponChecked", systemInfo), ElementRecognition.Get("BagWeaponUnchecked", systemInfo)),
+            GridScreenName.Artifacts => (ElementRecognition.Get("BagArtifactChecked", systemInfo), ElementRecognition.Get("BagArtifactUnchecked", systemInfo)),
+            GridScreenName.CharacterDevelopmentItems => (ElementRecognition.Get("BagCharacterDevelopmentItemChecked", systemInfo), ElementRecognition.Get("BagCharacterDevelopmentItemUnchecked", systemInfo)),
+            GridScreenName.Food => (ElementRecognition.Get("BagFoodChecked", systemInfo), ElementRecognition.Get("BagFoodUnchecked", systemInfo)),
+            GridScreenName.Materials => (ElementRecognition.Get("BagMaterialChecked", systemInfo), ElementRecognition.Get("BagMaterialUnchecked", systemInfo)),
+            GridScreenName.Gadget => (ElementRecognition.Get("BagGadgetChecked", systemInfo), ElementRecognition.Get("BagGadgetUnchecked", systemInfo)),
+            GridScreenName.Quest => (ElementRecognition.Get("BagQuestChecked", systemInfo), ElementRecognition.Get("BagQuestUnchecked", systemInfo)),
+            GridScreenName.PreciousItems => (ElementRecognition.Get("BagPreciousItemChecked", systemInfo), ElementRecognition.Get("BagPreciousItemUnchecked", systemInfo)),
+            GridScreenName.Furnishings => (ElementRecognition.Get("BagFurnishingChecked", systemInfo), ElementRecognition.Get("BagFurnishingUnchecked", systemInfo)),
             _ => throw new NotSupportedException($"背包不支持的界面：{gridScreenName.GetDescription()}")
         };
     }
@@ -170,16 +193,17 @@ public class AutoArtifactSalvageTask : ISoloTask
     /// 在已打开的背包界面内，切换到目标分类 tab（不返回主界面）。
     /// 已在目标 tab 则直接返回；否则点击未选中按钮并等待切换完成。
     /// </summary>
+    /// <param name="runtime">运行环境</param>
     /// <param name="targetTab">目标背包分类。</param>
     /// <param name="input">输入模拟器。</param>
     /// <param name="logger">日志记录器。</param>
     /// <param name="ct">取消令牌。</param>
-    public static async Task SwitchInventoryTab(GridScreenName targetTab, IInputChannel input, ILogger logger, CancellationToken ct)
+    public static async Task SwitchInventoryTab(GameRuntime runtime, GridScreenName targetTab, IInputChannel input, ILogger logger, CancellationToken ct)
     {
-        var (checkedObj, uncheckedObj) = GetTabRecognitionObjects(targetTab);
+        var (checkedObj, uncheckedObj) = GetTabRecognitionObjects(targetTab, runtime.SystemInfo);
 
         // 已在目标 tab 则直接返回
-        using (var ra0 = CaptureToRectArea())
+        using (var ra0 = runtime.CaptureToRectArea())
         using (var checkedBtn0 = ra0.Find(checkedObj))
         {
             if (checkedBtn0.IsExist())
@@ -192,7 +216,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         bool clicked = false;
         for (int attempt = 0; attempt < 5; attempt++)
         {
-            using var ra = CaptureToRectArea();
+            using var ra = runtime.CaptureToRectArea();
             using var uncheckedBtn = ra.Find(uncheckedObj);
             if (uncheckedBtn.IsExist())
             {
@@ -200,7 +224,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                 clicked = true;
                 break;
             }
-            await Delay(300, ct);
+            await runtime.Delay(300, ct);
         }
 
         if (!clicked)
@@ -210,12 +234,12 @@ public class AutoArtifactSalvageTask : ISoloTask
         }
 
         // 等待目标 tab 变为选中状态
-        var switched = await NewRetry.WaitForElementAppear(checkedObj, retryAction: null, ct, maxAttemptCount: 5, retryInterval: 500);
+        var switched = await NewRetry.WaitForElementAppear(runtime, checkedObj, retryAction: null, ct, maxAttemptCount: 5, retryInterval: 500);
         if (!switched)
         {
             logger.LogWarning("切换到{name}后未能确认已选中,继续尝试扫描", targetTab.GetDescription());
         }
-        await Delay(800, ct);
+        await runtime.Delay(800, ct);
     }
 
     public async Task Start(CancellationToken ct)
@@ -223,18 +247,18 @@ public class AutoArtifactSalvageTask : ISoloTask
         this.ct = ct;
         if (returnToMainUi)
         {
-            await new ReturnMainUiTask().Start(ct);
+            await new ReturnMainUiTask(_runtime).Start(ct);
         }
 
-        await OpenInventory(GridScreenName.Artifacts, this.input, this.logger, this.ct);
+        await OpenInventory(_runtime, GridScreenName.Artifacts, this.input, this.logger, this.ct);
 
         // 点击分解按钮打开分解界面
-        using var ra2 = CaptureToRectArea();
+        using var ra2 = _runtime.CaptureToRectArea();
         using var salvageBtn = ra2.Find(ElementRecognition.Get("BtnArtifactSalvage", ra2));
         if (salvageBtn.IsExist())
         {
             salvageBtn.Click();
-            await Delay(1000, ct);
+            await _runtime.Delay(1000, ct);
         }
         else
         {
@@ -243,7 +267,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         }
 
         // 快速选择
-        using var ra3 = CaptureToRectArea();
+        using var ra3 = _runtime.CaptureToRectArea();
         var ocrList = ra3.FindMulti(RecognitionObject.Ocr(ra3.ToRect().CutLeftBottom(0.25, 0.1)));
         bool quickSelectBtnFound = false;
         foreach (var ocr in ocrList)
@@ -252,7 +276,7 @@ public class AutoArtifactSalvageTask : ISoloTask
             {
                 quickSelectBtnFound = true;
                 ocr.Click();
-                await Delay(500, ct);
+                await _runtime.Delay(500, ct);
                 break;
             }
         }
@@ -264,7 +288,7 @@ public class AutoArtifactSalvageTask : ISoloTask
 
         // 确认选择
         // 5.5 变成反选
-        using var ra4 = CaptureToRectArea();
+        using var ra4 = _runtime.CaptureToRectArea();
         if (star < 4)
         {
             List<Region> ocrList2 = ra4.FindMulti(RecognitionObject.Ocr(ra4.ToRect().CutLeft(0.20)));
@@ -277,7 +301,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                     {
                         numOfStarFound = true;
                         ocr.Click();
-                        await Delay(500, ct);
+                        await _runtime.Delay(500, ct);
                         break;
                     }
                 }
@@ -294,26 +318,26 @@ public class AutoArtifactSalvageTask : ISoloTask
         {
             quickSelectConfirmBtn.Click();
         }
-        await Delay(1500, ct);
+        await _runtime.Delay(1500, ct);
 
 
         // 点击分解
-        using var ra5 = CaptureToRectArea();
+        using var ra5 = _runtime.CaptureToRectArea();
         var salvageBtnConfirm = ra5.Find(ElementRecognition.Get("BtnArtifactSalvageConfirm", ra5));
         if (salvageBtnConfirm.IsExist())
         {
             salvageBtnConfirm.Click();
-            await Delay(1000, ct);
+            await _runtime.Delay(1000, ct);
             // 点击确认
-            using var ra6 = CaptureToRectArea();
+            using var ra6 = _runtime.CaptureToRectArea();
             if (Bv.ClickBlackConfirmButton(ra6))
             {
                 logger.LogInformation("完成{Star}星圣遗物快速分解", star);
-                await Delay(400, ct);
+                await _runtime.Delay(400, ct);
                 if (javaScript != null)
                 {
                     input.Mouse.LeftButtonClick();
-                    await Delay(1000, ct);
+                    await _runtime.Delay(1000, ct);
                 }
             }
             else
@@ -333,22 +357,22 @@ public class AutoArtifactSalvageTask : ISoloTask
             {
                 // 其实是点击筛选按钮……快速选择确认的这个按钮正好和筛选按钮位置重合，摆烂直接用了
                 quickSelectConfirmBtn.Click();
-                await Delay(400, ct);
+                await _runtime.Delay(400, ct);
                 // 点击所属套装
                 ra5.ClickTo(315, 190);
-                await Delay(1000, ct);
+                await _runtime.Delay(1000, ct);
                 // 遍历套装Grid勾选套装
                 using IItemIconRecognizer iconRecognizer = ItemIconRecognizerFactory.CreateConfigured();
-                ArtifactSetFilterScreen gridScreen = new ArtifactSetFilterScreen(new GridParams(new Rect(40, 100, 1300, 852), 2, 3, 40, 40, 0.024), this.logger, this.ct);
+                ArtifactSetFilterScreen gridScreen = new ArtifactSetFilterScreen(_runtime, new GridParams(new Rect(40, 100, 1300, 852), 2, 3, 40, 40, 0.024), this.logger, this.ct);
                 string drawKey = "ArtifactSetFilter";
                 var drawShapes = new List<MaskWindowDrawingShape>();
-                gridScreen.OnBeforeScroll += () => { TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.Clear(drawKey); drawShapes.Clear(); };
+                gridScreen.OnBeforeScroll += () => { _runtime.MaskWindowDrawingBoard.Clear(drawKey); drawShapes.Clear(); };
                 try
                 {
                     await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
                     {
                         using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
-                        using Mat img125 = GetGridIconsTask.CropResizeArtifactSetFilterGridIcon(itemRegion);
+                        using Mat img125 = GetGridIconsTask.CropResizeArtifactSetFilterGridIcon(itemRegion, _runtime.SystemInfo);
                         string? predName = iconRecognizer.Recognize(img125);
                         if (predName == null)
                         {
@@ -366,23 +390,23 @@ public class AutoArtifactSalvageTask : ISoloTask
                             if (this.artifactSetFilter.Contains(predName))
                             {
                                 itemRegion.Click();
-                                await Delay(100, ct);
+                                await _runtime.Delay(100, ct);
                             }
                         }
                     }
                 }
                 finally
                 {
-                    TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
+                    _runtime.MaskWindowDrawingBoard.ClearAll();
                 }
                 // 点击确认筛选
-                using var confirmFilterBtnRegion = CaptureToRectArea();
+                using var confirmFilterBtnRegion = _runtime.CaptureToRectArea();
                 Bv.ClickWhiteConfirmButton(confirmFilterBtnRegion);
-                await Delay(1500, ct);
+                await _runtime.Delay(1500, ct);
                 // 点击确认
-                using var confirmBtnRegion = CaptureToRectArea();
+                using var confirmBtnRegion = _runtime.CaptureToRectArea();
                 Bv.ClickWhiteConfirmButton(confirmBtnRegion);
-                await Delay(600, ct);
+                await _runtime.Delay(600, ct);
             }
 
             // 逐一点选查看面板筛选
@@ -395,7 +419,7 @@ public class AutoArtifactSalvageTask : ISoloTask
 
             if (returnToMainUi)
             {
-                await new ReturnMainUiTask().Start(ct);
+                await new ReturnMainUiTask(_runtime).Start(ct);
             }
         }
     }
@@ -407,9 +431,11 @@ public class AutoArtifactSalvageTask : ISoloTask
         RecognitionFailurePolicy recognitionFailurePolicy = this.recognitionFailurePolicy ?? throw new ArgumentException($"{nameof(this.recognitionFailurePolicy)}不能为空");
 
         GridParams gridParams = GridParams.Templates[GridScreenName.ArtifactSalvage];
-        GridScreen gridScreen = new GridScreen(gridParams, this.logger, this.ct); // 圣遗物分解Grid有4行9列
+        GridScreen gridScreen = new GridScreen(_runtime, gridParams, this.logger, this.ct); // 圣遗物分解Grid有4行9列
         gridScreen.OnAfterTurnToNewPage += GridScreen.DrawItemsAfterTurnToNewPage;
-        gridScreen.OnBeforeScroll += () => TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
+        gridScreen.OnBeforeScroll += () => _runtime.MaskWindowDrawingBoard.ClearAll();
+        // 网格区域按运行环境的素材缩放比例换算
+        Rect gridRoi = gridParams.GetRoi(_runtime.SystemInfo.AssetScale);
         try
         {
             await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
@@ -419,10 +445,10 @@ public class AutoArtifactSalvageTask : ISoloTask
                 if (GetArtifactStatus(itemRegion.SrcMat) == ArtifactStatus.None)
                 {
                     itemRegion.Click();
-                    await Delay(300, ct);
+                    await _runtime.Delay(300, ct);
 
-                    using var ra1 = CaptureToRectArea();
-                    using ImageRegion itemRegion1 = ra1.DeriveCrop(gridRect + new Point(gridParams.Roi.X, gridParams.Roi.Y));
+                    using var ra1 = _runtime.CaptureToRectArea();
+                    using ImageRegion itemRegion1 = ra1.DeriveCrop(gridRect + new Point(gridRoi.X, gridRoi.Y));
                     if (GetArtifactStatus(itemRegion1.SrcMat) == ArtifactStatus.Selected)
                     {
                         using ImageRegion card = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.70), (int)(ra1.Height * 0.112), (int)(ra1.Width * 0.275), (int)(ra1.Height * 0.50)));
@@ -439,7 +465,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                                 logger.LogError("识别失败，跳过当前圣遗物：{msg}", e.Message);
 
                                 itemRegion.Click(); // 反选取消
-                                await Delay(100, ct);
+                                await _runtime.Delay(100, ct);
                                 continue;
                             }
                             else
@@ -455,7 +481,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                         else
                         {
                             itemRegion.Click(); // 反选取消
-                            await Delay(100, ct);
+                            await _runtime.Delay(100, ct);
                         }
                     }
 
@@ -470,7 +496,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         }
         finally
         {
-            TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
+            _runtime.MaskWindowDrawingBoard.ClearAll();
         }
     }
 

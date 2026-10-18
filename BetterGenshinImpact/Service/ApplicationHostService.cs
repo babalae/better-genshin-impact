@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.GameTask;
@@ -20,10 +21,12 @@ namespace BetterGenshinImpact.Service;
 /// <summary>
 /// Managed host of the application.
 /// </summary>
+/// <param name="config">注入的配置根，命令行启动时读取脚本订阅的自动更新开关</param>
 public class ApplicationHostService(
     IServiceProvider serviceProvider,
     InstanceService instanceService,
-    IInferenceModelDiagnostics inferenceDiagnostics) : IHostedService
+    IInferenceModelDiagnostics inferenceDiagnostics,
+    AllConfig config) : IHostedService
 {
     private INavigationWindow? _navigationWindow;
 
@@ -114,7 +117,7 @@ public class ApplicationHostService(
 
                 // 命令行启动时，并行更新订阅脚本（不阻塞游戏启动和导航）
                 // StartGameTask 会在游戏进入主界面后等待此 Task 完成，再开始执行任务
-                var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
+                var scriptConfig = config.ScriptConfig;
                 if (instanceService.Context.IsRoot && scriptConfig.AutoUpdateBeforeCommandLineRun)
                 {
                     ScriptRepoUpdater.Instance.CommandLineAutoUpdateTask =

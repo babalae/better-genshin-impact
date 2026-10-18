@@ -3,6 +3,7 @@ using System;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.Common.Map.Maps;
+using BetterGenshinImpact.Service;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Model;
 
@@ -51,7 +52,8 @@ public class WaypointForTrack : Waypoint
         GameY = waypoint.Y;
         MapName = mapName;
         // 坐标系转换
-        mapMatchMethod ??= TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+        // 数据类没有创建方传入配置，暂时读配置根（见 task-context-removal.md 第 5 节）
+        mapMatchMethod ??= ConfigService.Config!.PathingConditionConfig.MapMatchingMethod;
         MapMatchMethod = mapMatchMethod;
         var MatP = MapManager.GetMap(mapName, MapMatchMethod).ConvertGenshinMapCoordinatesToImageCoordinates(new OpenCvSharp.Point2f((float)waypoint.X, (float)waypoint.Y));
         MatX = MatP.X;

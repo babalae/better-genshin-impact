@@ -1,7 +1,11 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoCombo.ComboRun;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.Service;
 using BetterGenshinImpact.ViewModel.Windows;
 using Anthropic;
 using CsTrees.Blackboard;
@@ -39,17 +43,38 @@ public class AutoComboBuildTask : ISoloTask
     /// </summary>
     private const int AnthropicDefaultMaxOutputTokens = 8192;
 
+    /// <summary>
+    /// 识别队伍所用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 配置根
+    /// </summary>
+    private readonly AllConfig _config;
+
+    /// <summary>
+    /// 创建自动连招建树任务
+    /// </summary>
+    /// <param name="runtime">识别队伍所用的运行环境</param>
+    /// <param name="config">配置根</param>
+    public AutoComboBuildTask(GameRuntime runtime, AllConfig config)
+    {
+        _runtime = runtime;
+        _config = config;
+    }
+
     public async Task Start(CancellationToken ct)
     {
         try
         {
             Logger.LogInformation("{Name}任务启动", Name);
 
-            var avatars = await EnsureMainUiAndRecognizeTeamAsync(Logger, ct);
+            var avatars = await EnsureMainUiAndRecognizeTeamAsync(_runtime, _config, Logger, ct);
             var avatarNames = avatars.Select(a => a.Name).ToList();
             Logger.LogInformation("识别队伍：{Avatars}", string.Join("、", avatarNames));
 
-            var config = TaskContext.Instance().Config.AutoComboBuildConfig;
+            var config = _config.AutoComboBuildConfig;
 
             // 只暂存建树会话；CombatScenes 的绑定与生命周期由消费方（测试按钮/后续 AutoFight）负责
             AutoComboRuntime.Session = await BuildComboTreeAsync(avatars, config, Logger, ct);
@@ -69,10 +94,14 @@ public class AutoComboBuildTask : ISoloTask
     /// 确保处于主界面或秘境中后识别队伍角色并返回识别出的队伍成员
     /// 秘境中左上角没有派蒙图标不算主界面，且按 ESC 打开的是秘境菜单，跳过返回主界面
     /// </summary>
-    public static async Task<Avatar[]> EnsureMainUiAndRecognizeTeamAsync(ILogger logger, CancellationToken ct)
+    /// <param name="runtime">截图与识别所用的运行环境，识别出的成员绑定到它</param>
+    /// <param name="config">配置根</param>
+    /// <param name="logger">日志</param>
+    /// <param name="ct">取消令牌</param>
+    public static async Task<Avatar[]> EnsureMainUiAndRecognizeTeamAsync(GameRuntime runtime, AllConfig config, ILogger logger, CancellationToken ct)
     {
         // 秘境中按 ESC 打开的是秘境菜单而非关闭界面，不能走返回主界面流程
-        using (var initialCapture = CaptureToRectArea())
+        using (var initialCapture = runtime.CaptureToRectArea())
         {
             if (Bv.IsInDomain(initialCapture))
             {
@@ -80,17 +109,17 @@ public class AutoComboBuildTask : ISoloTask
             }
             else
             {
-                await new ReturnMainUiTask().Start(ct);
+                await new ReturnMainUiTask(runtime).Start(ct);
             }
         }
 
-        using var capture = CaptureToRectArea();
+        using var capture = runtime.CaptureToRectArea();
         if (!Bv.IsInMainUi(capture) && !Bv.IsInDomain(capture))
         {
             throw new InvalidOperationException("未能返回主界面或识别到秘境界面，无法识别队伍角色");
         }
 
-        var combatScenes = CombatScenes.GetCombatScenesWithRetry();
+        var combatScenes = CombatScenes.GetCombatScenesWithRetry(runtime, config);
         var avatars = combatScenes.GetAvatars().ToArray();
         // 启用 E 技能 ONNX 分类识别
         foreach (var avatar in avatars)

@@ -14,6 +14,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Pulonia.Models;
 using OpenCvSharp;
@@ -33,17 +34,17 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
     private const int ResponseDelayMilliseconds = 500;
 
     /// <inheritdoc />
-    public async Task<string> PrepareAsync(PuloniaGenshinAccountProfile account, CancellationToken ct)
+    public async Task<string> PrepareAsync(GameRuntime runtime, PuloniaGenshinAccountProfile account, CancellationToken ct)
     {
         if (!account.IsDefault && !Regex.IsMatch(account.Uid ?? "", "^[0-9]{9,10}$"))
             throw new InvalidOperationException("指定账号需要填写完整 UID，不能按未指定目标切换。");
-        if (!account.IsDefault) EnsureSupportedRuntime();
+        if (!account.IsDefault) EnsureSupportedRuntime(runtime);
         using var budget = CancellationTokenSource.CreateLinkedTokenSource(ct);
         budget.CancelAfter(PreparationBudget);
         try
         {
             using var recognition = new PuloniaGenshinAccountRecognition();
-            var current = await ReadStableUidAsync(null, budget.Token).ConfigureAwait(false);
+            var current = await ReadStableUidAsync(runtime, null, budget.Token).ConfigureAwait(false);
             if (current is not null && (account.IsDefault || current == account.Uid)) return current;
             if (!account.IsDefault)
             {
@@ -62,11 +63,11 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
             {
                 if (!account.IsDefault)
                 {
-                    await GoToAccountSelectionAsync(recognition, budget.Token).ConfigureAwait(false);
-                    await SelectAccountAsync(account, recognition, budget.Token).ConfigureAwait(false);
+                    await GoToAccountSelectionAsync(runtime, recognition, budget.Token).ConfigureAwait(false);
+                    await SelectAccountAsync(runtime, account, recognition, budget.Token).ConfigureAwait(false);
                 }
-                await EnterMainUiAsync(recognition, budget.Token).ConfigureAwait(false);
-                current = await ReadStableUidAsync(account.Uid, budget.Token).ConfigureAwait(false);
+                await EnterMainUiAsync(runtime, recognition, budget.Token).ConfigureAwait(false);
+                current = await ReadStableUidAsync(runtime, account.Uid, budget.Token).ConfigureAwait(false);
                 if (current is not null) return current;
             }
             throw new InvalidOperationException("切号后无法完整核验目标 UID，未执行任何业务任务。");
@@ -78,18 +79,19 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
     }
 
     /// <inheritdoc />
-    public async Task VerifyAsync(string expectedUid, CancellationToken ct)
+    public async Task VerifyAsync(GameRuntime runtime, string expectedUid, CancellationToken ct)
     {
-        if (await ReadStableUidAsync(expectedUid, ct).ConfigureAwait(false) is null)
+        if (await ReadStableUidAsync(runtime, expectedUid, ct).ConfigureAwait(false) is null)
             throw new InvalidOperationException("当前 UID 与本次已核验的账号不一致，已停止后续游戏任务。");
     }
 
     /// <summary>要求当前租约绑定 PC 官服本机窗口，避免把官服模板用于其他登录渠道。</summary>
-    private static void EnsureSupportedRuntime()
+    /// <param name="runtime">调用方租约持有的运行环境</param>
+    private static void EnsureSupportedRuntime(GameRuntime runtime)
     {
         if (InputHub.Backend is not Win32InputBackend)
             throw new InvalidOperationException("自动切号首版仅支持 PC 官服的键鼠输入。");
-        User32.GetWindowThreadProcessId(TaskContext.Instance().GameHandle, out var processId);
+        User32.GetWindowThreadProcessId(runtime.Window.Handle, out var processId);
         using var process = Process.GetProcessById((int)processId);
         if (!string.Equals(process.ProcessName, "YuanShen", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("自动切号首版仅支持本机 PC 官服。");
@@ -101,13 +103,13 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
     }
 
     /// <summary>在独立的新截图中连续读取两次完整 UID，识别失败不当作 UID 为零。</summary>
-    private static async Task<string?> ReadStableUidAsync(string? expected, CancellationToken ct)
+    private static async Task<string?> ReadStableUidAsync(GameRuntime runtime, string? expected, CancellationToken ct)
     {
         string? previous = null;
         for (var i = 0; i < 6; i++)
         {
             ct.ThrowIfCancellationRequested();
-            using (var frame = TaskControl.CaptureToRectArea())
+            using (var frame = runtime.CaptureToRectArea())
             {
                 if (Bv.IsInMainUi(frame))
                 {
@@ -142,13 +144,13 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
     }
 
     /// <summary>进入账号选择登录页；状态判断使用 JS 状态机的模板和明确的转移。</summary>
-    private static async Task GoToAccountSelectionAsync(PuloniaGenshinAccountRecognition recognition, CancellationToken ct)
+    private static async Task GoToAccountSelectionAsync(GameRuntime runtime, PuloniaGenshinAccountRecognition recognition, CancellationToken ct)
     {
         var timer = Stopwatch.StartNew();
         while (timer.Elapsed < TimeSpan.FromSeconds(60))
         {
             ct.ThrowIfCancellationRequested();
-            using (var frame = TaskControl.CaptureToRectArea())
+            using (var frame = runtime.CaptureToRectArea())
             {
                 CheckLoginFailure(frame, recognition);
                 switch (DetectState(frame, recognition))
@@ -171,32 +173,32 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
     }
 
     /// <summary>按配置选择账号；只有目标未找到时才使用可选的密码备用。</summary>
-    private async Task SelectAccountAsync(PuloniaGenshinAccountProfile account,
+    private async Task SelectAccountAsync(GameRuntime runtime, PuloniaGenshinAccountProfile account,
         PuloniaGenshinAccountRecognition recognition, CancellationToken ct)
     {
         if (account.LoginMode != PuloniaGenshinAccountLoginMode.Password
             && (account.ImagePath is not null || !string.IsNullOrWhiteSpace(account.ListText)))
         {
             // 已停留在密码表单时，图片或列表模式先退出表单回到登录选择。
-            using (var frame = TaskControl.CaptureToRectArea())
+            using (var frame = runtime.CaptureToRectArea())
                 if (Exists(frame, recognition, "EnterAccountAndPassword")) ClickReference(frame, 1260, 259);
             await Task.Delay(ResponseDelayMilliseconds, ct).ConfigureAwait(false);
-            using (var frame = TaskControl.CaptureToRectArea())
+            using (var frame = runtime.CaptureToRectArea())
                 if (Exists(frame, recognition, "EnterGame") && !Exists(frame, recognition, "SelectAccount")) ClickReference(frame, 974, 496);
             await Task.Delay(ResponseDelayMilliseconds, ct).ConfigureAwait(false);
             if (account.LoginMode is PuloniaGenshinAccountLoginMode.Automatic or PuloniaGenshinAccountLoginMode.Image
-                && account.ImagePath is not null && await SelectByImageAsync(account, ct).ConfigureAwait(false)) return;
+                && account.ImagePath is not null && await SelectByImageAsync(runtime, account, ct).ConfigureAwait(false)) return;
             if (account.LoginMode is PuloniaGenshinAccountLoginMode.Automatic or PuloniaGenshinAccountLoginMode.ListText
-                && !string.IsNullOrWhiteSpace(account.ListText) && await SelectByTextAsync(account.ListText, ct).ConfigureAwait(false)) return;
+                && !string.IsNullOrWhiteSpace(account.ListText) && await SelectByTextAsync(runtime, account.ListText, ct).ConfigureAwait(false)) return;
         }
         if (account.LoginMode is not (PuloniaGenshinAccountLoginMode.Automatic or PuloniaGenshinAccountLoginMode.Password)
             || account.CredentialReference is null)
             throw new InvalidOperationException("未找到目标账号，请更新账号图片或登录列表文字。");
-        await LoginWithPasswordAsync(account, recognition, ct).ConfigureAwait(false);
+        await LoginWithPasswordAsync(runtime, account, recognition, ct).ConfigureAwait(false);
     }
 
     /// <summary>匹配固定版本账号图片；使用唯一结果，不能点击多个相同标识。</summary>
-    private async Task<bool> SelectByImageAsync(PuloniaGenshinAccountProfile account, CancellationToken ct)
+    private async Task<bool> SelectByImageAsync(GameRuntime runtime, PuloniaGenshinAccountProfile account, CancellationToken ct)
     {
         var bytes = await File.ReadAllBytesAsync(store.GetAccountImagePath(account.ImagePath!), ct).ConfigureAwait(false);
         if (account.ImageVersion is { } version && Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant() != version)
@@ -204,7 +206,7 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
         using var original = Cv2.ImDecode(bytes, ImreadModes.Color);
         for (var i = 0; i < 6; i++)
         {
-            using var frame = TaskControl.CaptureToRectArea();
+            using var frame = runtime.CaptureToRectArea();
             using var scaled = new Mat();
             Cv2.Resize(original, scaled, new Size(Math.Max(1, (int)Math.Round(original.Width * frame.Width / 1920d)),
                 Math.Max(1, (int)Math.Round(original.Height * frame.Width / 1920d))));
@@ -242,11 +244,11 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
     }
 
     /// <summary>只在账号列表范围识别文字，匹配多个账号时直接停止。</summary>
-    private static async Task<bool> SelectByTextAsync(string target, CancellationToken ct)
+    private static async Task<bool> SelectByTextAsync(GameRuntime runtime, string target, CancellationToken ct)
     {
         for (var i = 0; i < 6; i++)
         {
-            using var frame = TaskControl.CaptureToRectArea();
+            using var frame = runtime.CaptureToRectArea();
             var ocr = RecognitionObject.Ocr(PuloniaGenshinAccountRecognition.Scale(frame, new Rect(640, 440, 650, 580)));
             using var pen = ocr.DrawOnWindowPen;
             var results = frame.FindMulti(ocr);
@@ -268,38 +270,38 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
     }
 
     /// <summary>使用 Windows 凭据填充已识别的登录表单，密码不进入快照和日志。</summary>
-    private static async Task LoginWithPasswordAsync(PuloniaGenshinAccountProfile account,
+    private static async Task LoginWithPasswordAsync(GameRuntime runtime, PuloniaGenshinAccountProfile account,
         PuloniaGenshinAccountRecognition recognition, CancellationToken ct)
     {
         var credential = CredentialManagerHelper.ReadCredential(account.CredentialReference!)
                          ?? throw new InvalidOperationException("登录凭据不存在，请在账号管理中重新保存。");
         var alreadyInForm = false;
-        using (var frame = TaskControl.CaptureToRectArea())
+        using (var frame = runtime.CaptureToRectArea())
         {
             alreadyInForm = Exists(frame, recognition, "EnterAccountAndPassword");
             if (Exists(frame, recognition, "SelectAccount")) ClickReference(frame, 957, 404);
         }
         await Task.Delay(ResponseDelayMilliseconds, ct).ConfigureAwait(false);
-        if (!alreadyInForm) await WaitAndClickAsync(recognition, "LoginOther", ct).ConfigureAwait(false);
+        if (!alreadyInForm) await WaitAndClickAsync(runtime, recognition, "LoginOther", ct).ConfigureAwait(false);
         // 登录表单只输入一次；错误或验证界面由后续状态识别明确停止。
-        await WaitAndClickAsync(recognition, "EnterAccount", ct).ConfigureAwait(false);
+        await WaitAndClickAsync(runtime, recognition, "EnterAccount", ct).ConfigureAwait(false);
         GlobalMethod.InputText(credential.UserName);
         await Task.Delay(ResponseDelayMilliseconds, ct).ConfigureAwait(false);
-        await WaitAndClickAsync(recognition, "EnterPassword", ct).ConfigureAwait(false);
+        await WaitAndClickAsync(runtime, recognition, "EnterPassword", ct).ConfigureAwait(false);
         GlobalMethod.InputText(credential.Password);
         await Task.Delay(ResponseDelayMilliseconds, ct).ConfigureAwait(false);
-        using (var frame = TaskControl.CaptureToRectArea()) ClickTemplate(frame, recognition, "Agree");
+        using (var frame = runtime.CaptureToRectArea()) ClickTemplate(frame, recognition, "Agree");
         await Task.Delay(ResponseDelayMilliseconds, ct).ConfigureAwait(false);
-        await WaitAndClickAsync(recognition, "EnterGame2", ct).ConfigureAwait(false);
+        await WaitAndClickAsync(runtime, recognition, "EnterGame2", ct).ConfigureAwait(false);
     }
 
     /// <summary>从明确登录状态进入主界面；只处理已识别的按钮和月卡提示。</summary>
-    private static async Task EnterMainUiAsync(PuloniaGenshinAccountRecognition recognition, CancellationToken ct)
+    private static async Task EnterMainUiAsync(GameRuntime runtime, PuloniaGenshinAccountRecognition recognition, CancellationToken ct)
     {
         while (true)
         {
             ct.ThrowIfCancellationRequested();
-            using (var frame = TaskControl.CaptureToRectArea())
+            using (var frame = runtime.CaptureToRectArea())
             {
                 if (Bv.IsInMainUi(frame)) return;
                 CheckLoginFailure(frame, recognition);
@@ -319,12 +321,12 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
     }
 
     /// <summary>在同一取消预算内等待按钮，识别不到时不能猜测点击位置。</summary>
-    private static async Task WaitAndClickAsync(PuloniaGenshinAccountRecognition recognition, string name, CancellationToken ct)
+    private static async Task WaitAndClickAsync(GameRuntime runtime, PuloniaGenshinAccountRecognition recognition, string name, CancellationToken ct)
     {
         for (var i = 0; i < 60; i++)
         {
             ct.ThrowIfCancellationRequested();
-            using (var frame = TaskControl.CaptureToRectArea())
+            using (var frame = runtime.CaptureToRectArea())
             {
                 CheckLoginFailure(frame, recognition);
                 if (ClickTemplate(frame, recognition, name))
@@ -377,19 +379,19 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
     }
 
     /// <inheritdoc />
-    public async Task<(string Uid, string ImagePath)> CaptureCurrentAccountAsync(CancellationToken ct)
+    public async Task<(string Uid, string ImagePath)> CaptureCurrentAccountAsync(GameRuntime runtime, CancellationToken ct)
     {
-        EnsureSupportedRuntime();
+        EnsureSupportedRuntime(runtime);
         using var budget = CancellationTokenSource.CreateLinkedTokenSource(ct);
         budget.CancelAfter(PreparationBudget);
         using var recognition = new PuloniaGenshinAccountRecognition();
-        var uid = await ReadStableUidAsync(null, budget.Token).ConfigureAwait(false)
+        var uid = await ReadStableUidAsync(runtime, null, budget.Token).ConfigureAwait(false)
                   ?? throw new InvalidOperationException("请先登录待采集的账号并返回主界面。");
-        await GoToAccountSelectionAsync(recognition, budget.Token).ConfigureAwait(false);
-        using (var frame = TaskControl.CaptureToRectArea())
+        await GoToAccountSelectionAsync(runtime, recognition, budget.Token).ConfigureAwait(false);
+        using (var frame = runtime.CaptureToRectArea())
             if (Exists(frame, recognition, "SelectAccount")) ClickReference(frame, 957, 404);
         await Task.Delay(ResponseDelayMilliseconds, budget.Token).ConfigureAwait(false);
-        using (var frame = TaskControl.CaptureToRectArea())
+        using (var frame = runtime.CaptureToRectArea())
         {
             if (!Exists(frame, recognition, "EnterGame") || !Exists(frame, recognition, "LoginOther"))
                 throw new InvalidOperationException("账号标识采集需要收起账号列表并显示进入游戏按钮，请返回主界面后重试。");
@@ -398,15 +400,15 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
         var relative = Path.Combine("account-images", Guid.NewGuid().ToString("N") + ".png");
         var path = store.GetAccountImagePath(relative);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        using (var frame = TaskControl.CaptureToRectArea())
+        using (var frame = runtime.CaptureToRectArea())
         using (var crop = frame.DeriveCrop(PuloniaGenshinAccountRecognition.Scale(frame, new Rect(780, 481, 150, 27))))
         using (var normalized = new Mat())
         {
             Cv2.Resize(crop.SrcMat, normalized, new Size(150, 27));
             await File.WriteAllBytesAsync(path, normalized.ImEncode(".png"), budget.Token).ConfigureAwait(false);
         }
-        await EnterMainUiAsync(recognition, budget.Token).ConfigureAwait(false);
-        await VerifyAsync(uid, budget.Token).ConfigureAwait(false);
+        await EnterMainUiAsync(runtime, recognition, budget.Token).ConfigureAwait(false);
+        await VerifyAsync(runtime, uid, budget.Token).ConfigureAwait(false);
         return (uid, relative);
     }
 }

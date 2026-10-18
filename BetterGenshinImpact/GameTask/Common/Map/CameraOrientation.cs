@@ -45,7 +45,7 @@ public class CameraOrientation
     public static void DrawDirection(ImageRegion region, double angle, string name = "camera", Pen? pen = null)
     {
         // 绘图
-        var scale = TaskContext.Instance().SystemInfo.AssetScale;
+        var scale = region.GetAssetScale();
         const int r = 100;
         var center = new Point(168 * scale, 125 * scale); // 地图中心点 后续建议调整
         var x1 = center.X + r * Math.Cos(angle * Math.PI / 180);

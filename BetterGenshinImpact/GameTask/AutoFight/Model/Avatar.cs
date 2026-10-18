@@ -15,7 +15,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.Service;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Core.Config;
@@ -100,6 +103,21 @@ public class Avatar
     public CombatScenes CombatScenes { get; set; }
 
     /// <summary>
+    /// 角色所在的运行环境。建树会话携带的角色实例在 <see cref="CombatScenes.FromAvatars"/> 接管时通过 <see cref="AttachTo"/> 重新绑定，所以不是 readonly
+    /// </summary>
+    private GameRuntime _runtime;
+
+    /// <summary>
+    /// 配置根
+    /// </summary>
+    private readonly AllConfig _config;
+
+    /// <summary>
+    /// 角色所在的运行环境，供持有角色的行为树节点、战斗指令等取用同一个运行环境
+    /// </summary>
+    public GameRuntime Runtime => _runtime;
+
+    /// <summary>
     /// 脱困方向数组（前/后/左/右）
     /// </summary>
     private static readonly GIActions[] UnstuckDirections =
@@ -121,8 +139,20 @@ public class Avatar
     // E 技能分类模型由所有角色共享，串行执行推理，避免并发调用同一会话。
     private static readonly object ESkillClassifierLock = new();
 
-    public Avatar(CombatScenes combatScenes, string name, int index, Rect nameRect, double manualSkillCd = -1)
+    /// <summary>
+    /// 创建队伍内的角色
+    /// </summary>
+    /// <param name="runtime">角色所在的运行环境</param>
+    /// <param name="config">配置根</param>
+    /// <param name="combatScenes">所属战斗场景</param>
+    /// <param name="name">角色中文名</param>
+    /// <param name="index">队伍内序号，从 1 开始</param>
+    /// <param name="nameRect">名字所在矩形位置</param>
+    /// <param name="manualSkillCd">手动配置的技能 CD，小于 0 为自动</param>
+    public Avatar(GameRuntime runtime, AllConfig config, CombatScenes combatScenes, string name, int index, Rect nameRect, double manualSkillCd = -1)
     {
+        _runtime = runtime;
+        _config = config;
         CombatScenes = combatScenes;
         Name = name;
         Index = index;
@@ -132,31 +162,44 @@ public class Avatar
         AutoFightTask.FightStatusFlag = false;
     }
 
+    /// <summary>
+    /// 接管到新的战斗场景：更新场景反向引用和运行环境
+    /// </summary>
+    /// <param name="combatScenes">接管本角色的战斗场景</param>
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    internal void AttachTo(CombatScenes combatScenes, GameRuntime runtime)
+    {
+        CombatScenes = combatScenes;
+        _runtime = runtime;
+    }
+
 
     /// <summary>
     /// 是否存在角色被击败
     /// 通过判断确认按钮
     /// </summary>
+    /// <param name="runtime">截图、等待、传送所用的运行环境</param>
+    /// <param name="config">配置根</param>
     /// <param name="region"></param>
     /// <param name="ct"></param>
     /// <returns></returns>
-    public static void ThrowWhenDefeated(ImageRegion region, CancellationToken ct)
+    public static void ThrowWhenDefeated(GameRuntime runtime, AllConfig config, ImageRegion region, CancellationToken ct)
     {
         if (Bv.IsInRevivePrompt(region))
         {
             Logger.LogWarning("检测到复苏界面，存在角色被击败，前往七天神像复活");
             // 先打开地图
             InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE); // NOTE: 此处按下Esc是为了关闭复苏界面，无需改键
-            Sleep(600, ct);
-            TpForRecover(ct, new RetryException("检测到复苏界面，存在角色被击败，前往七天神像复活"));
+            runtime.Sleep(600, ct);
+            TpForRecover(runtime, config, ct, new RetryException("检测到复苏界面，存在角色被击败，前往七天神像复活"));
         }
         else if (AutoFightParam.SwimmingEnabled && AutoFightTask.FightStatusFlag && SwimmingConfirm(region))
         {
             if (AutoFightTask.FightWaypoint is not null)
             {
                 // 二次确认：延迟 800ms 后重新截屏，避免同帧误判
-                Sleep(800, ct);
-                using var ra = CaptureToRectArea();
+                runtime.Sleep(800, ct);
+                using var ra = runtime.CaptureToRectArea();
                 if (!SwimmingConfirm(ra))
                 {
                     return;
@@ -173,7 +216,7 @@ public class Avatar
 
                     try
                     {
-                        var pathExecutor = new PathExecutor(cts.Token);
+                        var pathExecutor = new PathExecutor(runtime, config, cts.Token);
 
                         // FaceTo 朝向战斗点，超时 2 秒
                         cts.CancelAfter(2000);
@@ -210,7 +253,7 @@ public class Avatar
                     }
                 }
 
-                using var bitmap2 = CaptureToRectArea();
+                using var bitmap2 = runtime.CaptureToRectArea();
                 if (!SwimmingConfirm(bitmap2))
                 {
                     Logger.LogInformation("游泳检测：游泳脱困成功");
@@ -221,7 +264,7 @@ public class Avatar
             }
 
             Logger.LogWarning("战斗过程检测到游泳，前往七天神像重试");
-            TpForRecover(ct, new RetryException("战斗过程检测到游泳，前往七天神像重试"));
+            TpForRecover(runtime, config, ct, new RetryException("战斗过程检测到游泳，前往七天神像重试"));
         }
     }
 
@@ -247,15 +290,17 @@ public class Avatar
     /// <summary>
     /// tp 到七天神像恢复
     /// </summary>
+    /// <param name="runtime">传送所用的运行环境</param>
+    /// <param name="config">配置根</param>
     /// <param name="ct"></param>
     /// <param name="retryException"></param>
     /// <exception cref="RetryException"></exception>
-    public static void TpForRecover(CancellationToken ct, RetryException retryException)
+    public static void TpForRecover(GameRuntime runtime, AllConfig config, CancellationToken ct, RetryException retryException)
     {
         try
         {
             // tp 到七天神像复活。保留等待取消能力，同时避免 Wait 将原异常包装为 AggregateException。
-            new TpTask(ct).TpToStatueOfTheSeven().WaitAsync(ct).GetAwaiter().GetResult();
+            new TpTask(runtime, config, ct).TpToStatueOfTheSeven().WaitAsync(ct).GetAwaiter().GetResult();
             Logger.LogInformation("血量恢复完成。【设置】-【七天神像设置】可以修改回血相关配置。");
         }
         catch (NormalEndException)
@@ -289,8 +334,8 @@ public class Avatar
                 return;
             }
 
-            using var region = CaptureToRectArea();
-            ThrowWhenDefeated(region, Ct);
+            using var region = _runtime.CaptureToRectArea();
+            ThrowWhenDefeated(_runtime, _config, region, Ct);
 
             // 切换成功
             if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
@@ -312,7 +357,7 @@ public class Avatar
                 PerformUnstuckAction(Ct);
             }
 
-            Sleep(250, Ct);
+            _runtime.Sleep(250, Ct);
         }
     }
 
@@ -333,8 +378,8 @@ public class Avatar
                 return false;
             }
 
-            using var region = CaptureToRectArea();
-            ThrowWhenDefeated(region, Ct);
+            using var region = _runtime.CaptureToRectArea();
+            ThrowWhenDefeated(_runtime, _config, region, Ct);
 
             if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
             {
@@ -364,7 +409,7 @@ public class Avatar
             SimulateSwitchAction(Index);
             shouldResendSwitchAction = false;
 
-            Sleep(250, Ct);
+            _runtime.Sleep(250, Ct);
         }
 
         Logger.LogWarning("切换角色失败:{Name}", Name);
@@ -406,10 +451,10 @@ public class Avatar
         Logger.LogWarning("切换角色卡住，执行脱困（方向：{Dir}）", direction);
 
         InputHub.Foreground.SimulateAction(GIActions.Jump);
-        Sleep(200, ct);
+        _runtime.Sleep(200, ct);
         InputHub.Foreground.SimulateAction(direction, KeyType.KeyDown);
         SimulateSwitchAction(Index);
-        Sleep(1000, ct);
+        _runtime.Sleep(1000, ct);
         InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
         InputHub.ReleaseAll();
     }
@@ -423,8 +468,8 @@ public class Avatar
         var context = new AvatarActiveCheckContext();
         for (var i = 0; i < 10; i++)
         {
-            using var region = CaptureToRectArea();
-            ThrowWhenDefeated(region, Ct);
+            using var region = _runtime.CaptureToRectArea();
+            ThrowWhenDefeated(_runtime, _config, region, Ct);
 
             if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
             {
@@ -433,7 +478,7 @@ public class Avatar
 
             SimulateSwitchAction(Index);
 
-            Sleep(250);
+            _runtime.Sleep(250);
         }
     }
 
@@ -478,7 +523,7 @@ public class Avatar
         // 通过寻找右侧人物编号来判断是否出战
         if (IndexRect == default)
         {
-            var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+            var assetScale = _runtime.SystemInfo.AssetScale;
             // 剪裁出队伍区域
             var teamRa = region.DeriveCrop(AutoFightAssets.Get(region).TeamRect);
             var blockX = NameRect.X + NameRect.Width * 2 - 10;
@@ -536,7 +581,7 @@ public class Avatar
 
             InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
             ms -= 200;
-            Sleep(200, Ct);
+            _runtime.Sleep(200, Ct);
         }
     }
 
@@ -545,7 +590,7 @@ public class Avatar
     /// </summary>
     public void UseSkill(bool hold = false)
     {
-        if (AvatarSpecialAction.ExecuteSpecializedAction(this, "UseSkill", Name, new ActionArgs(Hold: hold))) return;
+        if (AvatarSpecialAction.ExecuteSpecializedAction(_runtime, this, "UseSkill", Name, new ActionArgs(Hold: hold))) return;
 
         if (Ct is { IsCancellationRequested: true })
         {
@@ -566,9 +611,9 @@ public class Avatar
         var deadline = DateTime.UtcNow.AddMilliseconds(200);
         while (recordedCd <= 0 && DateTime.UtcNow < deadline)
         {
-            Sleep(35, Ct);
+            _runtime.Sleep(35, Ct);
 
-            using (var region = CaptureToRectArea())
+            using (var region = _runtime.CaptureToRectArea())
             {
                 var cd = AfterUseSkill(region);
                 recordedCd = ESkillCdTracker.Record(Name, cd);
@@ -578,7 +623,7 @@ public class Avatar
         // 慢速设备兜底：轮询中的检测可能跨过截止时间（如开始于0.035s、结束时已0.25s），CD 数字恰好在其后才出现，超时后再补检一次
         if (recordedCd <= 0)
         {
-            using (var region = CaptureToRectArea())
+            using (var region = _runtime.CaptureToRectArea())
             {
                 var cd = AfterUseSkill(region);
                 recordedCd = ESkillCdTracker.Record(Name, cd);
@@ -617,7 +662,7 @@ public class Avatar
             return ReadSkillCdFromScreenshot(givenRegion).Cd ?? 0;
         }
 
-        using var region = CaptureToRectArea();
+        using var region = _runtime.CaptureToRectArea();
         return ReadSkillCdFromScreenshot(region).Cd ?? 0;
     }
 
@@ -701,7 +746,7 @@ public class Avatar
         using (AvatarRecognition.BeginExclusiveOperation())
         {
             // CD 中立即返回，其余场景尝试释放
-            using var region1 = CaptureToRectArea();
+            using var region1 = _runtime.CaptureToRectArea();
             if (IsBurstReadyByClassify(region1) != BurstReadyState.Ready)
             {
                 // Logger.LogInformation("Q在CD，跳过");
@@ -717,15 +762,15 @@ public class Avatar
 
                 // Logger.LogInformation("释放Q");
                 InputHub.Foreground.SimulateAction(GIActions.ElementalBurst);
-                Sleep(200, Ct);
+                _runtime.Sleep(200, Ct);
 
-                using var region = CaptureToRectArea();
-                ThrowWhenDefeated(region, Ct);
+                using var region = _runtime.CaptureToRectArea();
+                ThrowWhenDefeated(_runtime, _config, region, Ct);
 
                 if (!PartyAvatarSideIndexHelper.HasAnyIndexRect(region))
                 {
                     // 找不到角色编号块意味者技能释放成功
-                    Sleep(1500, Ct);
+                    _runtime.Sleep(1500, Ct);
                     return;
                 }
                 else
@@ -734,7 +779,7 @@ public class Avatar
                     if (IsBurstReadyByClassify(region) != BurstReadyState.Ready)
                     {
                         // Logger.LogInformation("释放Q后检查到CD");
-                        Sleep(1500, Ct);
+                        _runtime.Sleep(1500, Ct);
                         return;
                     }
                 }
@@ -843,7 +888,7 @@ public class Avatar
         }
 
         // 识别结果写入 VM，由需要显示的模块（如 AutoComboRunTask）订阅 INPC 变更后绘制（数据与显示解耦）
-        var domainToCaptureFactor = (double)TaskContext.Instance().SystemInfo.CaptureAreaRect.Width / imageRegion.Width;
+        var domainToCaptureFactor = (double)_runtime.SystemInfo.CaptureAreaRect.Width / imageRegion.Width;
         var eRectCapture = new Rect((int)(eRect1080.X * domainToCaptureFactor), (int)(eRect1080.Y * domainToCaptureFactor),
             (int)(eRect1080.Width * domainToCaptureFactor), (int)(eRect1080.Height * domainToCaptureFactor));
         ESkillClassifyViewModel.Instance.Result = new ESkillClassifyResult
@@ -885,7 +930,7 @@ public class Avatar
         }
 
         InputHub.Foreground.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
-        Sleep(ms); // 冲刺不能被cts取消
+        _runtime.Sleep(ms); // 冲刺不能被cts取消
         InputHub.Foreground.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
     }
 
@@ -920,7 +965,7 @@ public class Avatar
         }
 
         InputHub.Foreground.Keyboard.KeyDown(vk);
-        Sleep(ms); // 行走不能被cts取消
+        _runtime.Sleep(ms); // 行走不能被cts取消
         InputHub.Foreground.Keyboard.KeyUp(vk);
     }
 
@@ -940,7 +985,7 @@ public class Avatar
     /// <param name="ms"></param>
     public void Wait(int ms)
     {
-        Sleep(ms); // 由于存在宏操作，等待不应被cts取消
+        _runtime.Sleep(ms); // 由于存在宏操作，等待不应被cts取消
     }
 
     /// <summary>
@@ -948,7 +993,7 @@ public class Avatar
     /// </summary>
     public void Ready()
     {
-        Sleep(10, Ct);
+        _runtime.Sleep(10, Ct);
 
         for (int i = 0; i < 20; i++)
         {
@@ -957,7 +1002,7 @@ public class Avatar
                 return;
             }
 
-            using var region = CaptureToRectArea();
+            using var region = _runtime.CaptureToRectArea();
             // 等待角色编号块出现
             if (PartyAvatarSideIndexHelper.HasAnyIndexRect(region))
             {
@@ -965,7 +1010,7 @@ public class Avatar
                 return;
             }
 
-            Sleep(150, Ct);
+            _runtime.Sleep(150, Ct);
         }
     }
 
@@ -1028,7 +1073,7 @@ public class Avatar
         }
 
         // 场上角色走视觉判定优先：用 ONNX 分类器判 E 技能状态，置信度足够时优先返回
-        using (var region = CaptureToRectArea())
+        using (var region = _runtime.CaptureToRectArea())
         {
             var context = new AvatarActiveCheckContext();
             if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
@@ -1134,7 +1179,7 @@ public class Avatar
 
         var s = GetSkillCdSeconds() + 0.2;
         Logger.LogInformation("{Name}的E技能CD未结束，等待{Seconds}秒", Name, Math.Round(s, 2));
-        await Delay((int)Math.Ceiling(s * 1000), ct);
+        await _runtime.Delay((int)Math.Ceiling(s * 1000), ct);
     }
 
     /// <summary>
@@ -1156,10 +1201,10 @@ public class Avatar
             ms = 1000;
         }
 
-        if (AvatarSpecialAction.ExecuteSpecializedAction(this, "Charge", Name, new ActionArgs(Ms: ms))) return;
+        if (AvatarSpecialAction.ExecuteSpecializedAction(_runtime, this, "Charge", Name, new ActionArgs(Ms: ms))) return;
 
         InputHub.Foreground.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
-        Sleep(ms);
+        _runtime.Sleep(ms);
         InputHub.Foreground.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
     }
 
@@ -1218,7 +1263,10 @@ public class Avatar
     {
         using (AvatarRecognition.BeginExclusiveOperation())
         {
-            GlobalMethod.MoveMouseBy(x, y);
+            // 按本运行环境的 DPI 缩放位移（与 GlobalMethod.MoveMouseBy 在默认脚本 DPI 为 1 时的结果一致），
+            // 不再经过脚本全局方法，避免依赖脚本宿主的静态状态
+            var dpi = _runtime.SystemInfo.DpiScale;
+            InputHub.Foreground.Mouse.MoveMouseBy((int)(x * dpi), (int)(y * dpi));
         }
     }
 

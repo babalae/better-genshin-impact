@@ -67,10 +67,10 @@
 //
 //     private void Init()
 //     {
-//         SystemControl.ActivateWindow();
+//         _runtime.Window.Activate();
 //         Logger.LogInformation("→ {Text}", "视角校准，启动！");
 //         TaskTriggerDispatcher.Instance().SetCacheCaptureMode(DispatcherCaptureModeEnum.OnlyCacheCapture);
-//         Sleep(TaskContext.Instance().Config.TriggerInterval * 5); // 等待缓存图像
+//         _runtime.Sleep(_config.TriggerInterval * 5); // 等待缓存图像
 //     }
 //
 //     public int GetOffsetAngle()

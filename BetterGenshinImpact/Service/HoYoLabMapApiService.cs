@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Helpers.Http;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.MapMask;
@@ -22,8 +23,18 @@ public class HoYoLabMapApiService : IHoYoLabMapApiService
     private const string InfoEndpoint = "https://sg-public-api-static.hoyolab.com/common/map_user/ys_obc/v1/map/point/info";
     private const string DefaultLang = MapMaskConfig.HoYoLabLanguageEnUs;
 
-    public HoYoLabMapApiService()
+    /// <summary>
+    /// 注入的配置根，用于读取 HoYoLAB 地图接口语言
+    /// </summary>
+    private readonly AllConfig _config;
+
+    /// <summary>
+    /// 创建 HoYoLAB 地图接口服务
+    /// </summary>
+    /// <param name="config">注入的配置根</param>
+    public HoYoLabMapApiService(AllConfig config)
     {
+        _config = config;
         _httpClient = HttpClientFactory.GetCommonSendClient();
     }
 
@@ -59,9 +70,9 @@ public class HoYoLabMapApiService : IHoYoLabMapApiService
         };
     }
 
-    private static string GetCurrentLanguage()
+    private string GetCurrentLanguage()
     {
-        var lang = TaskContext.Instance().Config.MapMaskConfig.HoYoLabLanguage;
+        var lang = _config.MapMaskConfig.HoYoLabLanguage;
         return NormalizeLanguage(lang);
     }
 

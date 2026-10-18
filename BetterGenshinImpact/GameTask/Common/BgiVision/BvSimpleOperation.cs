@@ -1,8 +1,10 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.Service;
 using OpenCvSharp;
 using System;
 using System.Text.RegularExpressions;
@@ -18,6 +20,11 @@ namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 /// </summary>
 public static partial class Bv
 {
+    /// <summary>
+    /// 配置根。Bv 是静态识别方法集合，没有创建方可以传参，暂时读静态入口（见 task-context-removal.md 第 5 节）
+    /// </summary>
+    private static AllConfig Config => ConfigService.Config!;
+
     /// <summary>
     /// 通用方法：查找识别对象，如果存在则点击
     /// </summary>
@@ -46,7 +53,8 @@ public static partial class Bv
     private static bool FindElementAndClick(ImageRegion captureRa, string objectName, Rect? searchRect = null)
     {
         // ------- 这段后续要注释掉 ------------
-        var expectedCaptureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
+        // 整帧尺寸由区域树推导，与绑定时的 ScaleMax1080PCaptureRect 一致
+        var expectedCaptureRect = captureRa.GetScaleMax1080PFrameSize();
         if (captureRa.Width != expectedCaptureRect.Width || captureRa.Height != expectedCaptureRect.Height)
         {
             throw new ArgumentException(
@@ -178,7 +186,7 @@ public static partial class Bv
     /// <returns></returns>
     public static bool FindF(ImageRegion captureRa, params string[] text)
     {
-        using var ra = captureRa.Find(AutoPickAssets.Get(captureRa, TaskContext.Instance().Config.AutoPickConfig.PickKey).PickRo);
+        using var ra = captureRa.Find(AutoPickAssets.Get(captureRa, Config.AutoPickConfig.PickKey).PickRo);
         if (ra.IsExist())
         {
             if (text.Length == 0)
@@ -186,8 +194,8 @@ public static partial class Bv
                 return true;
             }
 
-            var scale = TaskContext.Instance().SystemInfo.AssetScale;
-            var config = TaskContext.Instance().Config.AutoPickConfig;
+            var scale = captureRa.GetAssetScale();
+            var config = Config.AutoPickConfig;
             var textRect = new Rect(ra.X + (int)(config.ItemTextLeftOffset * scale), ra.Y,
                 (int)((config.ItemTextRightOffset - config.ItemTextLeftOffset) * scale), ra.Height);
 
@@ -222,7 +230,7 @@ public static partial class Bv
     {
         if (FindF(captureRa, text))
         {
-            InputHub.Foreground.Keyboard.KeyPress(AutoPickAssets.Get(captureRa, TaskContext.Instance().Config.AutoPickConfig.PickKey).PickVk);
+            InputHub.Foreground.Keyboard.KeyPress(AutoPickAssets.Get(captureRa, Config.AutoPickConfig.PickKey).PickVk);
             return true;
         }
 
@@ -233,7 +241,7 @@ public static partial class Bv
     {
         if (FindF(captureRa, text))
         {
-            keyboard.KeyPress(AutoPickAssets.Get(captureRa, TaskContext.Instance().Config.AutoPickConfig.PickKey).PickVk);
+            keyboard.KeyPress(AutoPickAssets.Get(captureRa, Config.AutoPickConfig.PickKey).PickVk);
             return true;
         }
 

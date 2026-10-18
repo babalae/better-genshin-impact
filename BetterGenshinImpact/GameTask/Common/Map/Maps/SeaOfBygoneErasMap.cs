@@ -3,6 +3,7 @@ using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using OpenCvSharp;
 using Microsoft.Extensions.Logging;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System;
@@ -28,19 +29,33 @@ public class SeaOfBygoneErasMap : SceneBaseMap
 
     static readonly int SeaOfBygoneErasMapImageBlockWidth = 1024;
 
-    private static Mat TeleportTemplate;
-    private static Mat TeleportTemplateMask;
+    /// <summary>
+    /// 传送点模板及其透明度掩码，按截图帧的尺寸缓存：素材缩放比例取决于帧尺寸，不能在类型初始化时固化
+    /// </summary>
+    private static readonly ConcurrentDictionary<(int Width, int Height), (Mat Template, Mat Mask)> TeleportTemplates = new();
+
     private List<Point> MapTeleports;
 
-    static SeaOfBygoneErasMap()
+    /// <summary>
+    /// 取与截图帧尺寸匹配的传送点模板
+    /// </summary>
+    /// <param name="greyBigMapMat">大地图整帧灰度图（已归一到 1080P）</param>
+    private static (Mat Template, Mat Mask) GetTeleportTemplate(Mat greyBigMapMat)
     {
-        Mat img = GameTaskManager.LoadAssetImage("QuickTeleport", "TeleportTransparentBackground.png", ImreadModes.Unchanged);
+        return TeleportTemplates.GetOrAdd((greyBigMapMat.Width, greyBigMapMat.Height), static size =>
+        {
+            using var img = GameTaskManager.LoadAssetImage("QuickTeleport", "TeleportTransparentBackground.png", size.Width, size.Height, ImreadModes.Unchanged);
+            var template = new Mat();
+            Cv2.CvtColor(img, template, ColorConversionCodes.BGRA2GRAY);
 
-        TeleportTemplate = new Mat();
-        Cv2.CvtColor(img, TeleportTemplate, ColorConversionCodes.BGRA2GRAY);
+            var channels = Cv2.Split(img);
+            for (var i = 0; i < 3; i++)
+            {
+                channels[i].Dispose();
+            }
 
-        Mat[] channels = Cv2.Split(img);
-        TeleportTemplateMask = channels[3];
+            return (template, channels[3]);
+        });
     }
 
     public SeaOfBygoneErasMap() : base(type: MapTypes.SeaOfBygoneEras,
@@ -88,7 +103,8 @@ public class SeaOfBygoneErasMap : SceneBaseMap
         // It's fine to miss some, but definitely no false positive results.
         const double threshold = 0.99;
         using Mat result = new Mat();
-        Cv2.MatchTemplate(greyBigMapMat, TeleportTemplate, result, TemplateMatchModes.CCorrNormed, TeleportTemplateMask);
+        var (teleportTemplate, teleportTemplateMask) = GetTeleportTemplate(greyBigMapMat);
+        Cv2.MatchTemplate(greyBigMapMat, teleportTemplate, result, TemplateMatchModes.CCorrNormed, teleportTemplateMask);
 
         var teleportPoints = new List<Point>();
 

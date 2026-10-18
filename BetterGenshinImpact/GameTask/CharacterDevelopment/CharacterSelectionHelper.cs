@@ -3,9 +3,11 @@ using BetterGenshinImpact.Core.BgiVision;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
+using BetterGenshinImpact.GameTask.Runtime;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -218,7 +220,9 @@ internal static class CharacterSelectionHelper
     /// <summary>
     /// 在角色列表中检测卡片、运行头像模型并点击目标角色；当前页未命中时继续向下滚动。
     /// </summary>
+    /// <param name="runtime">运行环境，截图、等待与滚动都只使用它</param>
     public static async Task<AvatarGridIconCandidate?> FindAndClickAvatar(
+        GameRuntime runtime,
         CharacterSelectionTarget target,
         AvatarGridIconRecognizer recognizer,
         double assetScale,
@@ -226,7 +230,7 @@ internal static class CharacterSelectionHelper
         CancellationToken ct)
     {
         var gridParams = new GridParams(GridRoi1080, 5, 3, 40, 32, 0.024);
-        var scroller = new GridScroller(gridParams, logger, InputHub.Foreground, ct);
+        var scroller = new GridScroller(runtime, gridParams, logger, InputHub.Foreground, ct);
         var gridRoi = Rect1080(assetScale, GridRoi1080.X, GridRoi1080.Y, GridRoi1080.Width, GridRoi1080.Height);
 
         while (true)
@@ -234,7 +238,7 @@ internal static class CharacterSelectionHelper
             ct.ThrowIfCancellationRequested();
             for (var attempt = 1; attempt <= EmptyDetectionRetryCount; attempt++)
             {
-                using var capture = CaptureToRectArea();
+                using var capture = runtime.CaptureToRectArea();
                 using var gridRegion = capture.DeriveCrop(gridRoi);
                 var cards = DetectCharacterCards(
                     gridRegion.SrcMat, assetScale, out var rejectedCount, out var connectedComponentCount);
@@ -246,7 +250,7 @@ internal static class CharacterSelectionHelper
                 {
                     if (attempt < EmptyDetectionRetryCount)
                     {
-                        await Delay(200, ct);
+                        await runtime.Delay(200, ct);
                         continue;
                     }
 
@@ -264,7 +268,7 @@ internal static class CharacterSelectionHelper
                     if (target.Matches(candidate.CharacterName) && candidate.Score >= MatchThreshold)
                     {
                         cardRegion.Click();
-                        await Delay(300, ct);
+                        await runtime.Delay(300, ct);
                         return candidate;
                     }
                 }

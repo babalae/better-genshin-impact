@@ -14,6 +14,7 @@ using static Vanara.PInvoke.User32;
 using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Web.WebView2.Core;
@@ -552,13 +553,20 @@ public partial class HtmlMaskWindow : Window
     }
 
     /// <summary>
+    /// 当前运行环境的游戏窗口句柄，截图器未启动时为 0。
+    /// 本窗口由脚本经静态入口 <see cref="Show"/> 创建，不经过 DI，因此从容器取进程级的 GameRuntimeService；每次读取，不缓存
+    /// </summary>
+    private static nint CurrentGameHandle => App.GetService<GameRuntimeService>()?.Current?.Window.Handle ?? 0;
+
+    /// <summary>
     /// 更新窗口位置
     /// </summary>
     public void UpdatePosition()
     {
         try
         {
-            var gameHandle = TaskContext.Instance().GameHandle;
+            // 截图器未启动时没有游戏窗口，跳过定位（不沿用上一次的句柄）
+            var gameHandle = CurrentGameHandle;
             if (gameHandle == IntPtr.Zero) return;
 
             var currentRect = SystemControl.GetCaptureRect(gameHandle);
@@ -622,7 +630,7 @@ public partial class HtmlMaskWindow : Window
             // 开启穿透：将焦点还给游戏窗口
             try
             {
-                var gameHandle = TaskContext.Instance().GameHandle;
+                var gameHandle = CurrentGameHandle;
                 if (gameHandle != IntPtr.Zero)
                 {
                     SystemControl.FocusWindow(gameHandle);

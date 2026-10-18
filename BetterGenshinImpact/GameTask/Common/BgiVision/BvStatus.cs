@@ -3,6 +3,7 @@ using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Localization;
 using OpenCvSharp;
@@ -27,9 +28,13 @@ public enum GameUiCategory
 
 public static partial class Bv
 {
-    public static GameUiCategory WhichGameUi()
+    /// <summary>
+    /// 截取一帧并判断当前处于哪类游戏界面
+    /// </summary>
+    /// <param name="runtime">运行环境</param>
+    public static GameUiCategory WhichGameUi(GameRuntime runtime)
     {
-        using var region = TaskControl.CaptureToRectArea();
+        using var region = runtime.CaptureToRectArea();
         return WhichGameUi(region);
     }
 
@@ -83,15 +88,16 @@ public static partial class Bv
     /// <summary>
     /// 等待主界面加载完成
     /// </summary>
+    /// <param name="runtime">运行环境</param>
     /// <param name="ct"></param>
     /// <param name="retryTimes"></param>
     /// <returns></returns>
-    public static async Task<bool> WaitForMainUi(CancellationToken ct, int retryTimes = 10)
+    public static async Task<bool> WaitForMainUi(GameRuntime runtime, CancellationToken ct, int retryTimes = 10)
     {
         for (var i = 0; i < retryTimes; i++)
         {
-            await TaskControl.Delay(1000, ct);
-            using var ra3 = TaskControl.CaptureToRectArea();
+            await runtime.Delay(1000, ct);
+            using var ra3 = runtime.CaptureToRectArea();
             if (IsInMainUi(ra3))
             {
                 return true;
@@ -165,14 +171,15 @@ public static partial class Bv
     /// <summary>
     /// 等待队伍选择界面加载完成
     /// </summary>
+    /// <param name="runtime">运行环境</param>
     /// <param name="ct"></param>
     /// <param name="retryTimes"></param>
     /// <returns></returns>
-    public static async Task<bool> WaitForPartyViewUi(CancellationToken ct, int retryTimes = 5)
+    public static async Task<bool> WaitForPartyViewUi(GameRuntime runtime, CancellationToken ct, int retryTimes = 5)
     {
-        return await NewRetry.WaitForAction(() =>
+        return await NewRetry.WaitForAction(runtime, () =>
         {
-            using var ra = TaskControl.CaptureToRectArea();
+            using var ra = runtime.CaptureToRectArea();
             return IsInPartyViewUi(ra);
         }, ct, retryTimes);
     }
@@ -215,9 +222,10 @@ public static partial class Bv
         }
 
         // 原先这里的起止区间和config里写死的值差1
-        var start = TaskContext.Instance().Config.TpConfig.ZoomStartY;
-        var end = TaskContext.Instance().Config.TpConfig.ZoomEndY;
-        var cur = (scaleRa.Y + scaleRa.Height / 2.0) * TaskContext.Instance().SystemInfo.ZoomOutMax1080PRatio; // 转换到1080p坐标系,主要是小于1080p的情况
+        var start = Config.TpConfig.ZoomStartY;
+        var end = Config.TpConfig.ZoomEndY;
+        // 缩放比例取自截图帧本身（ZoomOutMax1080PRatio 与 AssetScale 相等）
+        var cur = (scaleRa.Y + scaleRa.Height / 2.0) * region.GetAssetScale(); // 转换到1080p坐标系,主要是小于1080p的情况
 
         return (end * 1.0 - cur) / (end - start);
     }
@@ -254,7 +262,7 @@ public static partial class Bv
                 RegionOfInterest = new Rect(0, 0, region.Width, region.Height / 2)
             });
 
-            CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
+            CultureInfo cultureInfo = new CultureInfo(Config.OtherConfig.GameCultureInfoName);
             IStringLocalizer stringLocalizer = App.GetService<IStringLocalizer<BvResxHelper>>() ?? throw new Exception();
             string revival = stringLocalizer.WithCultureGet(cultureInfo, "复苏");
             if (list.Any(r => r.Text.Contains(revival)))
@@ -295,7 +303,7 @@ public static partial class Bv
     /// <returns></returns>
     public static bool CurrentAvatarIsLowHp(ImageRegion captureRa)
     {
-        var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+        var assetScale = captureRa.GetAssetScale();
 
         // 获取 (808, 1010) 位置的像素颜色
         var pixelColor = captureRa.SrcMat.At<Vec3b>((int)(1010 * assetScale), (int)(808 * assetScale));
@@ -337,14 +345,15 @@ public static partial class Bv
     /// <summary>
     /// 等到对话界面加载完成
     /// </summary>
+    /// <param name="runtime">运行环境</param>
     /// <param name="ct"></param>
     /// <param name="retryTimes"></param>
     /// <returns></returns>
-    public static async Task<bool> WaitAndSkipForTalkUi(CancellationToken ct, int retryTimes = 5)
+    public static async Task<bool> WaitAndSkipForTalkUi(GameRuntime runtime, CancellationToken ct, int retryTimes = 5)
     {
-        return await NewRetry.WaitForAction(() =>
+        return await NewRetry.WaitForAction(runtime, () =>
         {
-            using var ra = TaskControl.CaptureToRectArea();
+            using var ra = runtime.CaptureToRectArea();
             return IsInTalkUi(ra);
         }, ct, retryTimes, 500);
     }
@@ -366,8 +375,9 @@ public static partial class Bv
     /// <summary>
     /// 通过 OCR 识别当前角色的 UID
     /// </summary>
+    /// <param name="runtime">运行环境</param>
     /// <returns>UID 数字，如果识别失败则返回 0</returns>
-    public static int Uid()
+    public static int Uid(GameRuntime runtime)
     {
         try
         {
@@ -375,14 +385,14 @@ public static partial class Bv
             var y = 1051;
             var width = 234;
             var height = 28;
-            var scale = TaskContext.Instance().SystemInfo.AssetScale;
+            var scale = runtime.SystemInfo.AssetScale;
             
             x = (int)Math.Round(x * scale);
             y = (int)Math.Round(y * scale);
             width = (int)Math.Round(width * scale);
             height = (int)Math.Round(height * scale);
             
-            using var region = TaskControl.CaptureToRectArea();
+            using var region = runtime.CaptureToRectArea();
             var recognitionObjectOcr = RecognitionObject.Ocr(x, y, width, height);
             var res = region.Find(recognitionObjectOcr);
             if (res?.Text == null) return 0;

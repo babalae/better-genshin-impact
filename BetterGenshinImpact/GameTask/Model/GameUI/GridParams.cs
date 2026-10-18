@@ -9,7 +9,10 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
 {
     public class GridParams
     {
-        internal Rect Roi { get; private set; }
+        /// <summary>
+        /// 1080P 下的网格区域。实际使用时按截图帧的素材缩放比例换算，见 <see cref="GetRoi"/>
+        /// </summary>
+        private Rect Roi1080P { get; }
         internal int Columns { get; private set; }
         internal int S1Round { get; private set; }
         internal int RoundMilliseconds { get; private set; }
@@ -18,13 +21,19 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
 
         public GridParams(Rect roi1080p, int columns, int s1Round, int roundMilliseconds, int s2Round, double s3Scale)
         {
-            Roi = roi1080p.Multiply(TaskContext.Instance().SystemInfo.AssetScale);
+            Roi1080P = roi1080p;
             Columns = columns;
             S1Round = s1Round;
             RoundMilliseconds = roundMilliseconds;
             S2Round = s2Round;
             S3Scale = s3Scale;
         }
+
+        /// <summary>
+        /// 按素材缩放比例换算后的网格区域，坐标为截图帧（归一到 1080P 后）的像素
+        /// </summary>
+        /// <param name="assetScale">素材缩放比例，取运行环境的 SystemInfo.AssetScale 或截图区域的 GetAssetScale()</param>
+        internal Rect GetRoi(double assetScale) => Roi1080P.Multiply(assetScale);
 
         private static readonly GridParams weapons = new GridParams(new Rect(106, 110, 1171, 845), 8, 3, 40, 32, 0.024);
 

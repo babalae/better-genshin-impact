@@ -5,6 +5,7 @@ using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Ui;
+using BetterGenshinImpact.Service;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -24,7 +25,12 @@ public partial class ArtifactOcrDialog
     private readonly double widthRatio;
     private readonly double heightRatio;
     private readonly string? javaScript;
-    private readonly AutoArtifactSalvageTask autoArtifactSalvageTask;
+
+    /// <summary>
+    /// 识别用的圣遗物分解任务参数。任务需要运行环境，在截图时才用当前运行环境创建
+    /// </summary>
+    private readonly AutoArtifactSalvageTaskParam salvageTaskParam;
+
     public static ILogger Logger { get; } = App.GetLogger<ArtifactOcrDialog>();
 
     public ArtifactOcrDialog(double xRatio, double yRatio, double widthRatio, double heightRatio, string title, string? javaScript = null)
@@ -34,7 +40,8 @@ public partial class ArtifactOcrDialog
         this.widthRatio = widthRatio;
         this.heightRatio = heightRatio;
         this.javaScript = javaScript;
-        this.autoArtifactSalvageTask = new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(5, null, null, null, null, new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName)));
+        // 对话框由调用方直接 new，没有注入入口，暂时读配置根（见 task-context-removal.md 第 5 节）
+        this.salvageTaskParam = new AutoArtifactSalvageTaskParam(5, null, null, null, null, new CultureInfo(ConfigService.Config!.OtherConfig.GameCultureInfoName));
 
         InitializeComponent();
         SourceInitialized += (s, e) => WindowHelper.TryApplySystemBackdrop(this);
@@ -46,13 +53,15 @@ public partial class ArtifactOcrDialog
     {
         // 没启动时候，启动截图器
         var gameRuntimeService = App.GetService<GameRuntimeService>()!;
-        if (!gameRuntimeService.IsRunning)
+        if (gameRuntimeService.Current is not { } runtime)
         {
             _ = gameRuntimeService.StartAsync();
             return false;
         }
 
-        using var ra = TaskControl.CaptureToRectArea();
+        // 本次截图与识别使用同一个运行环境
+        var autoArtifactSalvageTask = new AutoArtifactSalvageTask(runtime, salvageTaskParam);
+        using var ra = runtime.CaptureToRectArea();
         using var card = ra.DeriveCrop(new OpenCvSharp.Rect((int)(ra.Width * xRatio), (int)(ra.Height * yRatio), (int)(ra.Width * widthRatio), (int)(ra.Height * heightRatio)));
         var bitmapImage = card.SrcMat.ToWriteableBitmap();
 
@@ -65,7 +74,7 @@ public partial class ArtifactOcrDialog
             // 将CPU密集的OCR操作放到后台线程执行
             var (artifact, allText) = await Task.Run(() =>
             {
-                ArtifactStat art = this.autoArtifactSalvageTask.GetArtifactStat(card.SrcMat, OcrFactory.Paddle, out string text);
+                ArtifactStat art = autoArtifactSalvageTask.GetArtifactStat(card.SrcMat, OcrFactory.Paddle, out string text);
                 return (art, text);
             });
 

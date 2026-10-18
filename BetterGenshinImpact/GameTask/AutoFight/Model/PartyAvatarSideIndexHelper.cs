@@ -100,10 +100,11 @@ public class PartyAvatarSideIndexHelper
     /// <param name="knownIndex">已知编号</param>
     /// <param name="knownRect">已知编号矩形</param>
     /// <param name="targetIndex">目标编号</param>
+    /// <param name="systemInfo">截图所属运行环境的画面信息，用于取素材缩放比例</param>
     /// <returns>目标编号矩形</returns>
-    public static Rect GetIndexRectFromKnownIndexRect(int knownIndex, Rect knownRect, int targetIndex)
+    public static Rect GetIndexRectFromKnownIndexRect(int knownIndex, Rect knownRect, int targetIndex, ISystemInfo systemInfo)
     {
-        var s = TaskContext.Instance().SystemInfo.AssetScale;
+        var s = systemInfo.AssetScale;
 
         //  y_k + (n - k) * d
         int y = knownRect.Y + (targetIndex - knownIndex) * (int)(IndexRectDistanceY * s);
@@ -111,9 +112,14 @@ public class PartyAvatarSideIndexHelper
         return new Rect(knownRect.X, y, knownRect.Width, knownRect.Height);
     }
 
-    public static Rect GetIndexRectFromKnownCurrentAvatarFlag(Rect currRect)
+    /// <summary>
+    /// 根据出战角色标识位置反推角色编号位置
+    /// </summary>
+    /// <param name="currRect">出战角色标识矩形</param>
+    /// <param name="systemInfo">截图所属运行环境的画面信息，用于取素材缩放比例</param>
+    public static Rect GetIndexRectFromKnownCurrentAvatarFlag(Rect currRect, ISystemInfo systemInfo)
     {
-        var s = TaskContext.Instance().SystemInfo.AssetScale;
+        var s = systemInfo.AssetScale;
         return new Rect(currRect.X + (int)(126 * s), currRect.Y - (int)(194 * s), (int)(16 * s), (int)(17 * s));
     }
 
@@ -198,7 +204,7 @@ public class PartyAvatarSideIndexHelper
                 {
                     // 没有已知的编号位置，这种情况下可能是单人队
                     // 直接用出战角色标识来反推
-                    var oneIndexRect = GetIndexRectFromKnownCurrentAvatarFlag(curr.ToRect());
+                    var oneIndexRect = GetIndexRectFromKnownCurrentAvatarFlag(curr.ToRect(), systemInfo);
                     logger.LogInformation("当前编队中可能只存在一个角色（且角色编号未正确识别）");
                     return ([oneIndexRect], [GetAvatarSideIconRectFromIndexRect(oneIndexRect, systemInfo)]);
                 }
@@ -209,7 +215,7 @@ public class PartyAvatarSideIndexHelper
                     {
                         if (indexRectList[i] == default)
                         {
-                            var rect = GetIndexRectFromKnownIndexRect(knownIndex, knownRect, i + 1);
+                            var rect = GetIndexRectFromKnownIndexRect(knownIndex, knownRect, i + 1, systemInfo);
                             if (IsIntersecting(curr.Y, curr.Height, rect.Y, rect.Height))
                             {
                                 // 如果和当前出战角色标识相交，说明这个位置是正确的

@@ -26,6 +26,8 @@ using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.Service;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -33,7 +35,7 @@ public class Dispatcher
 {
     private readonly ILogger<Dispatcher> _logger = App.GetLogger<Dispatcher>();
 
-    private readonly object _config;
+    private readonly object? _config;
 
     /// <summary>
     /// 当前脚本执行的取消令牌。
@@ -41,12 +43,36 @@ public class Dispatcher
     private readonly CancellationToken _ct;
 
     /// <summary>
+    /// 本次脚本运行使用的运行环境，创建的独立任务都绑定到它
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 配置根，创建独立任务时传入（与脚本传入的队伍配置 _config 不同）
+    /// </summary>
+    private readonly AllConfig _allConfig;
+
+    /// <summary>
+    /// 截图保存服务，只有自动钓鱼开启关键帧截图时需要；未提供时钓鱼任务跳过保存
+    /// </summary>
+    private readonly GameScreenshotService? _screenshots;
+
+    /// <summary>
     /// 创建脚本任务调度宿主。
     /// </summary>
-    public Dispatcher(object config, CancellationToken ct)
+    /// <param name="runtime">本次脚本运行使用的运行环境</param>
+    /// <param name="allConfig">配置根</param>
+    /// <param name="config">脚本使用的队伍配置（PathingPartyConfig），可为空</param>
+    /// <param name="ct">当前脚本执行的取消令牌</param>
+    /// <param name="screenshots">截图保存服务（进程级，由 InitHost 传入），可为空</param>
+    public Dispatcher(GameRuntime runtime, AllConfig allConfig, object? config, CancellationToken ct,
+        GameScreenshotService? screenshots = null)
     {
+        _runtime = runtime;
+        _allConfig = allConfig;
         _config = config;
         _ct = ct;
+        _screenshots = screenshots;
     }
 
     public void RunTask()
@@ -175,16 +201,16 @@ public class Dispatcher
                     }
                 }
 
-                await new AutoGeniusInvokationTask(new GeniusInvokationTaskParam(content)).Start(cancellationToken);
+                await new AutoGeniusInvokationTask(_runtime, _allConfig, new GeniusInvokationTaskParam(content)).Start(cancellationToken);
                 return null;
 
             case "AutoWood":
-                await new AutoWoodTask(new WoodTaskParam(taskSettingsPageViewModel.AutoWoodRoundNum,
+                await new AutoWoodTask(_runtime, _allConfig, new WoodTaskParam(taskSettingsPageViewModel.AutoWoodRoundNum,
                     taskSettingsPageViewModel.AutoWoodDailyMaxCount)).Start(cancellationToken);
                 return null;
 
             case "AutoFight":
-                await new AutoFightHandler().RunAsyncByScript(cancellationToken, null, _config);
+                await new AutoFightHandler(_runtime, _allConfig).RunAsyncByScript(cancellationToken, null, _config);
                 return null;
 
             case "AutoDomain":
@@ -193,23 +219,23 @@ public class Dispatcher
                     return null;
                 }
 
-                return await new AutoDomainTask(new AutoDomainParam(0, path)).Start(cancellationToken);
+                return await new AutoDomainTask(_runtime, _allConfig, new AutoDomainParam(0, path)).Start(cancellationToken);
 
             case "AutoBoss":
-                var autoBossConfig = TaskContext.Instance().Config.AutoBossConfig;
+                var autoBossConfig = _allConfig.AutoBossConfig;
                 if (taskSettingsPageViewModel.GetFightStrategy(autoBossConfig.StrategyName, out var autoBossPath))
                 {
                     return null;
                 }
 
-                return await new AutoBossTask(new AutoBossParam(autoBossPath)).Start(cancellationToken);
+                return await new AutoBossTask(_runtime, _allConfig, new AutoBossParam(autoBossPath)).Start(cancellationToken);
 
             case "AutoFishing":
-                await new AutoFishingTask(AutoFishingTaskParam.BuildFromSoloTaskConfig(soloTask.Config)).Start(
-                    cancellationToken);
+                await new AutoFishingTask(_runtime, _allConfig, AutoFishingTaskParam.BuildFromSoloTaskConfig(soloTask.Config),
+                    _screenshots).Start(cancellationToken);
                 return null;
             case "AutoCook":
-                await new AutoCookTask().Start(cancellationToken);
+                await new AutoCookTask(_runtime, _allConfig).Start(cancellationToken);
                 return null;
             case "AutoEat":
                 {
@@ -265,8 +291,8 @@ public class Dispatcher
                         }
                     }
 
-                    var autoEatConfig = TaskContext.Instance().Config.AutoEatConfig;
-                    return await new AutoEatTask(new AutoEatParam()
+                    var autoEatConfig = _allConfig.AutoEatConfig;
+                    return await new AutoEatTask(_runtime, _allConfig, new AutoEatParam()
                     {
                         CheckInterval = autoEatConfig.CheckInterval,
                         EatInterval = autoEatConfig.EatInterval,
@@ -290,7 +316,7 @@ public class Dispatcher
                         ItemNames = itemNames?.ToList() ?? []
                     };
 
-                    var result = await new CountInventoryItem(param).Start(cancellationToken);
+                    var result = await new CountInventoryItem(_runtime, param).Start(cancellationToken);
                     dynamic expando = new ExpandoObject();
                     var expandoDict = (IDictionary<string, object>)expando;
                     foreach (var kvp in (Dictionary<string, int>)result)
@@ -342,7 +368,7 @@ public class Dispatcher
   
         using var linkedCts = CreateLinkedCancellationTokenSource(customCt);
         CancellationToken cancellationToken = linkedCts?.Token ?? _ct;
-        return await new AutoDomainTask(param).Start(cancellationToken);
+        return await new AutoDomainTask(_runtime, _allConfig, param).Start(cancellationToken);
     }  
 
     /// <summary>
@@ -361,7 +387,7 @@ public class Dispatcher
 
         using var linkedCts = CreateLinkedCancellationTokenSource(customCt);
         CancellationToken cancellationToken = linkedCts?.Token ?? _ct;
-        return await new AutoBossTask(param).Start(cancellationToken);
+        return await new AutoBossTask(_runtime, _allConfig, param).Start(cancellationToken);
     }
 
     /// <summary>  
@@ -381,7 +407,7 @@ public class Dispatcher
         using var linkedCts = CreateLinkedCancellationTokenSource(customCt);
         CancellationToken cancellationToken = linkedCts?.Token ?? _ct;
         var factory = GameTask.AutoFight.Factory.CombatTaskFactoryProvider.GetFactory(param.CombatStrategyPath);
-        var fightTask = factory.CreateTask(param);
+        var fightTask = factory.CreateTask(_runtime, _allConfig, param);
         await fightTask.Start(cancellationToken);  
     }
     
@@ -409,7 +435,7 @@ public class Dispatcher
 
         _logger.LogInformation("执行 {Text}", "简易策略脚本");
 
-        await CombatScriptExecutor.ExecuteAsync(combatScript, cancellationToken, _logger);
+        await CombatScriptExecutor.ExecuteAsync(_runtime, combatScript, cancellationToken, _logger);
     }
     
     /// <summary>  
@@ -428,7 +454,7 @@ public class Dispatcher
   
         using var linkedCts = CreateLinkedCancellationTokenSource(customCt);
         CancellationToken cancellationToken = linkedCts?.Token ?? _ct;
-        await new AutoLeyLineOutcropTask(param).Start(cancellationToken);  
+        await new AutoLeyLineOutcropTask(_runtime, _allConfig, param).Start(cancellationToken);  
     }
 
 
@@ -448,7 +474,7 @@ public class Dispatcher
 
         using var linkedCts = CreateLinkedCancellationTokenSource(customCt);
         CancellationToken cancellationToken = linkedCts?.Token ?? _ct;
-        await new AutoStygianOnslaughtTask(param).Start(cancellationToken);
+        await new AutoStygianOnslaughtTask(_runtime, _allConfig, param).Start(cancellationToken);
     }
     
     /// <summary>
@@ -467,7 +493,7 @@ public class Dispatcher
 
         using var linkedCts = CreateLinkedCancellationTokenSource(customCt);
         CancellationToken cancellationToken = linkedCts?.Token ?? _ct;
-        object result = await new CountInventoryItem(param).Start(cancellationToken);
+        object result = await new CountInventoryItem(_runtime, param).Start(cancellationToken);
 
         dynamic expando = new ExpandoObject();
         var expandoDict = (IDictionary<string, object>)expando;

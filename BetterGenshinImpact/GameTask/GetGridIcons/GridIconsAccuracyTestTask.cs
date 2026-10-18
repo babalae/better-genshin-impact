@@ -3,9 +3,11 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
@@ -26,6 +28,11 @@ namespace BetterGenshinImpact.GameTask.GetGridIcons;
 /// </summary>
 public class GridIconsAccuracyTestTask : ISoloTask
 {
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
     private readonly ILogger logger = App.GetLogger<GetGridIconsTask>();
     private IInputChannel input => InputHub.Foreground;
 
@@ -37,8 +44,15 @@ public class GridIconsAccuracyTestTask : ISoloTask
 
     private readonly GridScreenName gridScreenName;
 
-    public GridIconsAccuracyTestTask(GridScreenName gridScreenName, int? maxNumToTest = null)
+    /// <summary>
+    /// 创建 Grid 图标识别准确率测试任务
+    /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    /// <param name="gridScreenName">目标 Grid 界面</param>
+    /// <param name="maxNumToTest">最多测试的数量，为空表示不限</param>
+    public GridIconsAccuracyTestTask(GameRuntime runtime, GridScreenName gridScreenName, int? maxNumToTest = null)
     {
+        _runtime = runtime;
         this.gridScreenName = gridScreenName;
         this.maxNumToTest = maxNumToTest;
     }
@@ -100,8 +114,8 @@ public class GridIconsAccuracyTestTask : ISoloTask
             case GridScreenName.Quest:
             case GridScreenName.PreciousItems:
             case GridScreenName.Furnishings:
-                await new ReturnMainUiTask().Start(ct);
-                await AutoArtifactSalvageTask.OpenInventory(this.gridScreenName, this.input, this.logger, this.ct);
+                await new ReturnMainUiTask(_runtime).Start(ct);
+                await AutoArtifactSalvageTask.OpenInventory(_runtime, this.gridScreenName, this.input, this.logger, this.ct);
                 break;
             default:
                 logger.LogInformation("{name}暂不支持自动打开，请提前手动打开界面", gridScreenName.GetDescription());
@@ -114,16 +128,16 @@ public class GridIconsAccuracyTestTask : ISoloTask
         double total_acc = 0.0;
         double total_count = 0;
 
-        GridScreen gridScreen = new GridScreen(GridParams.Templates[this.gridScreenName], this.logger, this.ct);
+        GridScreen gridScreen = new GridScreen(_runtime, GridParams.Templates[this.gridScreenName], this.logger, this.ct);
         gridScreen.OnAfterTurnToNewPage += GridScreen.DrawItemsAfterTurnToNewPage;
-        gridScreen.OnBeforeScroll += () => TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
+        gridScreen.OnBeforeScroll += () => _runtime.MaskWindowDrawingBoard.ClearAll();
         try
         {
             await foreach ((ImageRegion pageRegion, Rect itemRect) in gridScreen)
             {
                 using ImageRegion itemRegion = pageRegion.DeriveCrop(itemRect);
                 itemRegion.Click();
-                Task task1 = Delay(300, ct);
+                Task task1 = _runtime.Delay(300, ct);
 
                 // 用模型推理得到的结果
                 Task<(string?, int)> task2 = Task.Run(() =>
@@ -138,7 +152,7 @@ public class GridIconsAccuracyTestTask : ISoloTask
                 int predStarNum = result.Item2;
 
                 // 用CV方法得到的结果
-                using var ra1 = CaptureToRectArea();
+                using var ra1 = _runtime.CaptureToRectArea();
                 using ImageRegion nameRegion = ra1.DeriveCrop(new Rect((int)(ra1.Width * 0.682), (int)(ra1.Width * 0.0625), (int)(ra1.Width * 0.256), (int)(ra1.Width * 0.03125)));
                 var ocrResult = OcrFactory.Paddle.OcrResult(nameRegion.SrcMat);
                 string itemName = ocrResult.Text;
@@ -172,7 +186,7 @@ public class GridIconsAccuracyTestTask : ISoloTask
         }
         finally
         {
-            TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
+            _runtime.MaskWindowDrawingBoard.ClearAll();
         }
     }
 

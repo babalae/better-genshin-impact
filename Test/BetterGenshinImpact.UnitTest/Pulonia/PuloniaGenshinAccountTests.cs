@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
@@ -133,13 +134,13 @@ public sealed class PuloniaGenshinAccountTests : IDisposable
         /// <summary>检测游戏调用次数。</summary>
         public int Calls { get; private set; }
         /// <inheritdoc />
-        public Task<string> PrepareAsync(PuloniaGenshinAccountProfile account, CancellationToken ct)
+        public Task<string> PrepareAsync(GameRuntime runtime, PuloniaGenshinAccountProfile account, CancellationToken ct)
         { Calls++; throw new InvalidOperationException("纯任务不能准备游戏"); }
         /// <inheritdoc />
-        public Task VerifyAsync(string expectedUid, CancellationToken ct)
+        public Task VerifyAsync(GameRuntime runtime, string expectedUid, CancellationToken ct)
         { Calls++; throw new InvalidOperationException("纯任务不能核验游戏"); }
         /// <inheritdoc />
-        public Task<(string Uid, string ImagePath)> CaptureCurrentAccountAsync(CancellationToken ct)
+        public Task<(string Uid, string ImagePath)> CaptureCurrentAccountAsync(GameRuntime runtime, CancellationToken ct)
         { Calls++; throw new InvalidOperationException("纯任务不能采集账号"); }
     }
 

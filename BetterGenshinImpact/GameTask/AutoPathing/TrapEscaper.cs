@@ -9,12 +9,24 @@ using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Core.Simulator.Extensions;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Runtime;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
-public class TrapEscaper(CancellationToken ct)
+/// <summary>
+/// 卡死脱困
+/// </summary>
+/// <param name="runtime">本次运行使用的运行环境</param>
+/// <param name="ct">取消令牌</param>
+public class TrapEscaper(GameRuntime runtime, CancellationToken ct)
 {
-    private readonly CameraRotateTask _rotateTask = new(ct);
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime = runtime;
+
+    private readonly CameraRotateTask _rotateTask = new(runtime, ct);
     private static readonly Random _random = new Random();
     private int _lastActionIndex = 0;
     public static DateTime LastActionTime = DateTime.UtcNow;
@@ -35,7 +47,7 @@ public class TrapEscaper(CancellationToken ct)
         var startTime = DateTime.UtcNow;
         bool left = false;
         OpenCvSharp.Point2f position;
-        using (var initialScreen = CaptureToRectArea())
+        using (var initialScreen = _runtime.CaptureToRectArea())
         {
             position = Navigation.GetPosition(initialScreen, waypoint.MapName, waypoint.MapMatchMethod);
         }
@@ -58,7 +70,7 @@ public class TrapEscaper(CancellationToken ct)
                 break;
             }
 
-            using var screen = CaptureToRectArea();
+            using var screen = _runtime.CaptureToRectArea();
             position = Navigation.GetPosition(screen, waypoint.MapName, waypoint.MapMatchMethod);
 
             // 旋转视角
@@ -97,9 +109,9 @@ public class TrapEscaper(CancellationToken ct)
                 {
                     InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                     InputHub.Foreground.SimulateAction(GIActions.Drop);
-                    Sleep(75);
+                    _runtime.Sleep(75);
                     InputHub.Foreground.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown);
-                    Sleep(700);
+                    _runtime.Sleep(700);
                     InputHub.Foreground.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
 
                     LastActionTime = DateTime.UtcNow;
@@ -117,7 +129,7 @@ public class TrapEscaper(CancellationToken ct)
                     continue;
                 }
 
-            await Delay(100, ct);
+            await _runtime.Delay(100, ct);
         }
 
         // 抬起w键
@@ -130,9 +142,9 @@ public class TrapEscaper(CancellationToken ct)
         // 脱离攀爬状态
         InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
         InputHub.Foreground.SimulateAction(GIActions.Drop);
-        await Delay(75, ct);
+        await _runtime.Delay(75, ct);
         InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
-        await Delay(500, ct);
+        await _runtime.Delay(500, ct);
 
         TimeSpan timeSinceLastAction = DateTime.UtcNow - LastActionTime;
 
@@ -171,18 +183,18 @@ public class TrapEscaper(CancellationToken ct)
     private void MoveBackward(int delay)
     {
         InputHub.Foreground.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown);
-        Sleep(500);
+        _runtime.Sleep(500);
         InputHub.Foreground.SimulateAction(GIActions.Jump);
-        Sleep(delay);
+        _runtime.Sleep(delay);
         InputHub.Foreground.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
     }
 
     private void MoveLeft(int delay)
     {
         InputHub.Foreground.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown);
-        Sleep(300);
+        _runtime.Sleep(300);
         InputHub.Foreground.SimulateAction(GIActions.Jump);
-        Sleep(delay);
+        _runtime.Sleep(delay);
         InputHub.Foreground.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
         InputHub.Foreground.SimulateAction(GIActions.Drop);
     }
@@ -190,9 +202,9 @@ public class TrapEscaper(CancellationToken ct)
     private void MoveRight(int delay)
     {
         InputHub.Foreground.SimulateAction(GIActions.MoveRight, KeyType.KeyDown);
-        Sleep(300);
+        _runtime.Sleep(300);
         InputHub.Foreground.SimulateAction(GIActions.Jump);
-        Sleep(delay);
+        _runtime.Sleep(delay);
         InputHub.Foreground.SimulateAction(GIActions.MoveRight, KeyType.KeyUp);
         InputHub.Foreground.SimulateAction(GIActions.Drop);
     }

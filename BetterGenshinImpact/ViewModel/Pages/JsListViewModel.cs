@@ -128,8 +128,8 @@ public partial class JsListViewModel : ViewModel
             _logger.LogWarning("此脚本存在配置，可能无法直接从脚本界面运行，建议请添加至【调度器】，并右键修改配置后使用！");
         }
 
-        await new TaskRunner().RunThreadAsync(ct =>
-            _scriptService.RunMulti([new ScriptGroupProject(item)], null, ct));
+        await new TaskRunner().RunThreadAsync((runtime, ct) =>
+            _scriptService.RunMulti(runtime, [new ScriptGroupProject(item)], null, ct));
     }
 
     [RelayCommand]

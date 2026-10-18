@@ -269,7 +269,7 @@ public partial class UseBurstIfReadyThenDoActionsByDuration : UseEQThenDoActions
     protected override bool CastUseEQ()
     {
         // 未就绪直接 Failure，不切人、不产生无效按键
-        if (!BehaviourHelper.CheckBurstReady(_avatar, out _))
+        if (!BehaviourHelper.CheckBurstReady(_avatar.Runtime, _avatar, out _))
         {
             return false;
         }
@@ -302,7 +302,7 @@ public partial class UseBurstIfReadyThenDoActionsByCount : UseEQThenDoActions
     protected override bool CastUseEQ()
     {
         // 未就绪直接 Failure，不切人、不产生无效按键
-        if (!BehaviourHelper.CheckBurstReady(_avatar, out _))
+        if (!BehaviourHelper.CheckBurstReady(_avatar.Runtime, _avatar, out _))
         {
             return false;
         }

@@ -1,12 +1,8 @@
 using System;
-using System.IO;
-using System.Threading.Tasks;
 using CsTrees;
 using CsTrees.Visitors;
 using Microsoft.Extensions.Logging;
-using OpenCvSharp;
-using BetterGenshinImpact.GameTask.Model.Area;
-using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Service;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing;
 
@@ -18,8 +14,19 @@ public class ScreenshotVisitor : VisitorBase
 {
     private readonly ILogger _logger;
 
-    public ScreenshotVisitor(ILogger logger) : base(full: false)
+    /// <summary>
+    /// 截图保存服务：负责 UID 遮挡与后台写盘，由钓鱼任务的创建方提供
+    /// </summary>
+    private readonly GameScreenshotService _screenshots;
+
+    /// <summary>
+    /// 创建关键帧截图访问器
+    /// </summary>
+    /// <param name="screenshots">截图保存服务</param>
+    /// <param name="logger">日志</param>
+    public ScreenshotVisitor(GameScreenshotService screenshots, ILogger logger) : base(full: false)
     {
+        _screenshots = screenshots;
         _logger = logger;
     }
 
@@ -37,45 +44,8 @@ public class ScreenshotVisitor : VisitorBase
             var fileName = $"{DateTime.Now:yyyyMMddHHmmssfff}_{behaviour.GetType().Name}_{behaviour.Status}.png";
             _logger.LogInformation("保存截图: {Name}", fileName);
 
-            SaveScreenshot(currentFrame, fileName);
-        }
-    }
-
-    public static void SaveScreenshot(ImageRegion imageRegion, string name)
-    {
-        var path = Global.Absolute($@"log\screenshot\");
-        if (!Directory.Exists(path))
-        {
-            Directory.CreateDirectory(path);
-        }
-
-        if (String.IsNullOrWhiteSpace(name))
-        {
-            name = $@"{DateTime.Now:yyyyMMddHHmmssffff}.png";
-        }
-        var savePath = Global.Absolute($@"log\screenshot\{name}");
-
-        var mat = imageRegion.SrcMat;
-        if (TaskContext.Instance().Config.CommonConfig.ScreenshotUidCoverEnabled)
-        {
-            new Task(() =>
-            {
-                using var mat2 = mat.Clone();
-                var assetScale = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
-                var rect = new Rect((int)(mat2.Width - MaskWindowConfig.UidCoverRightBottomRect.X * assetScale),
-                    (int)(mat2.Height - MaskWindowConfig.UidCoverRightBottomRect.Y * assetScale),
-                    (int)(MaskWindowConfig.UidCoverRightBottomRect.Width * assetScale),
-                    (int)(MaskWindowConfig.UidCoverRightBottomRect.Height * assetScale));
-                mat2.Rectangle(rect, Scalar.White, -1);
-                Cv2.ImWrite(savePath, mat2);
-            }).Start();
-        }
-        else
-        {
-            new Task(() =>
-            {
-                Cv2.ImWrite(savePath, mat);
-            }).Start();
+            // 服务在调用线程上复制画面后再后台写盘，下一轮截图释放这一帧不会影响保存
+            _screenshots.Save(currentFrame.SrcMat, fileName);
         }
     }
 }

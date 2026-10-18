@@ -1,4 +1,6 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoCombo.ComboRun;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using System;
 using Wpf.Ui.Violeta.Controls;
@@ -12,7 +14,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight.Factory;
 /// </summary>
 public class ComboCombatTaskFactory : ICombatTaskFactory
 {
-    public ISoloTask CreateTask(AutoFightParam param)
+    public ISoloTask CreateTask(GameRuntime runtime, AllConfig config, AutoFightParam param)
     {
         var session = AutoComboRuntime.Session;
         if (session == null)
@@ -24,7 +26,7 @@ public class ComboCombatTaskFactory : ICombatTaskFactory
             });
             throw new Exception("尚未构建行为树，请先运行一次自动连招任务完成建树");
         }
-        return new AutoComboRunTask(param, session);
+        return new AutoComboRunTask(runtime, config, param, session);
     }
 
     public bool CanHandle(string strategyPath)

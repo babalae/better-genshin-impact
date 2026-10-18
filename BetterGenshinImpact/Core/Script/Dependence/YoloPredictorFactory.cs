@@ -3,6 +3,7 @@ using BetterGenshinImpact.Core.Script.Utils;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.Area.Converter;
+using BetterGenshinImpact.GameTask.Runtime;
 using Compunet.YoloSharp;
 using Compunet.YoloSharp.Data;
 using Compunet.YoloSharp.Metadata;
@@ -18,7 +19,12 @@ using System.Text;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
-public sealed class YoloPredictorFactory(string rootPath)
+/// <summary>
+/// 向 JS 暴露的 YOLO 预测器工厂，创建的预测器都对本次脚本的运行环境截图推理
+/// </summary>
+/// <param name="runtime">本次脚本运行使用的运行环境</param>
+/// <param name="rootPath">脚本工程根目录</param>
+public sealed class YoloPredictorFactory(GameRuntime runtime, string rootPath)
 {
     /// <summary>
     /// 创建基于 ONNX 模型的 YOLO 预测器
@@ -45,7 +51,7 @@ public sealed class YoloPredictorFactory(string rootPath)
         }
 
         var configuration = MergeConfiguration(YoloConfiguration.Default, options);
-        return new ScriptYoloPredictor(modelPath, configuration);
+        return new ScriptYoloPredictor(runtime, modelPath, configuration);
     }
 
     internal static YoloConfiguration MergeConfiguration(YoloConfiguration baseConfiguration, ScriptObject? options)
@@ -82,8 +88,20 @@ public sealed class ScriptYoloPredictor : IDisposable
     private BgiYoloPredictor? _bgiPredictor;
     private bool _disposed;
 
-    internal ScriptYoloPredictor(string modelPath, YoloConfiguration configuration)
+    /// <summary>
+    /// 预测器绑定的运行环境，检测与分类都对它的当前画面截图
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 创建绑定到指定运行环境的脚本 YOLO 预测器
+    /// </summary>
+    /// <param name="runtime">本次脚本运行使用的运行环境</param>
+    /// <param name="modelPath">模型绝对路径</param>
+    /// <param name="configuration">基准推理配置</param>
+    internal ScriptYoloPredictor(GameRuntime runtime, string modelPath, YoloConfiguration configuration)
     {
+        _runtime = runtime;
         _modelPath = modelPath;
         _configuration = configuration;
     }
@@ -98,7 +116,7 @@ public sealed class ScriptYoloPredictor : IDisposable
 
     private List<YoloRegion> RunDetection(YoloConfiguration configuration)
     {
-        using var ra = TaskControl.CaptureToRectArea();
+        using var ra = _runtime.CaptureToRectArea();
         return GetInnerPredictor(YoloTask.Detect).Detect(ra.CacheImage, configuration).Select(box =>
         {
             var bounds = box.Bounds;
@@ -120,7 +138,7 @@ public sealed class ScriptYoloPredictor : IDisposable
             ? _configuration
             : YoloPredictorFactory.MergeConfiguration(_configuration, options);
 
-        using var ra = TaskControl.CaptureToRectArea();
+        using var ra = _runtime.CaptureToRectArea();
         return GetInnerPredictor(YoloTask.Classify).Classify(ra.CacheImage, configuration)
             .Select(classification => new YoloClassification(classification))
             .ToList();

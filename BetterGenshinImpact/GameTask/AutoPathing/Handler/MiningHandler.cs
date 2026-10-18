@@ -4,8 +4,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.Runtime;
 using Microsoft.Extensions.Logging;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -16,6 +19,16 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 /// </summary>
 public class MiningHandler : IActionHandler
 {
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 配置根
+    /// </summary>
+    private readonly AllConfig _config;
+
     private readonly string[] _miningActions =
     [
         "莉奈娅 moveby(0,2000),wait(0.5),charge(0.6),wait(0.5),click(middle),wait(0.1)",
@@ -43,11 +56,23 @@ public class MiningHandler : IActionHandler
     ];
     
 
-    private readonly ScanPickTask _scanPickTask = new();
+    private readonly ScanPickTask _scanPickTask;
+
+    /// <summary>
+    /// 创建挖矿处理器
+    /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    /// <param name="config">配置根</param>
+    public MiningHandler(GameRuntime runtime, AllConfig config)
+    {
+        _runtime = runtime;
+        _config = config;
+        _scanPickTask = new ScanPickTask(runtime, config);
+    }
 
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
-        var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);
+        var combatScenes = await RunnerContext.Instance.GetCombatScenes(_runtime, _config, ct);
         if (combatScenes == null)
         {
             Logger.LogError("队伍识别未初始化成功！");
@@ -62,7 +87,7 @@ public class MiningHandler : IActionHandler
             && waypointForTrack.ActionParams.Contains("disablePickupAround",
                 StringComparison.InvariantCultureIgnoreCase))
         {
-            await Delay(1000, ct);
+            await _runtime.Delay(1000, ct);
 
             // 拾取
             await _scanPickTask.Start(ct);

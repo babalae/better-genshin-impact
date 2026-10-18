@@ -8,6 +8,7 @@ using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Controls.Overlay;
 using BetterGenshinImpact.GameTask.MapMask;
+using BetterGenshinImpact.GameTask.Runtime;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -195,7 +196,31 @@ namespace BetterGenshinImpact.ViewModel
         private readonly SemaphoreSlim _iconLoadSemaphore = new(10, 10);
         private bool _isRestoringMapMaskState;
         private bool _metricsSubscribed;
+
+        /// <summary>
+        /// 用户是否已开启游戏帧率采样（勾选后保持开启，随截图器启停切换进程）
+        /// </summary>
         private bool _fpsStarted;
+
+        /// <summary>
+        /// 当前 FPS 采样会话的取消源；截图器停止或重新绑定时取消。只在 UI 线程上读写
+        /// </summary>
+        private CancellationTokenSource? _fpsCts;
+
+        /// <summary>
+        /// 当前 FPS 采样会话的任务。重新开始前等待它结束，避免同名 ETW 会话冲突
+        /// </summary>
+        private Task _fpsTask = Task.CompletedTask;
+
+        /// <summary>
+        /// 游戏运行环境服务。读取当前游戏窗口时取 <see cref="GameRuntimeService.Current"/>，不缓存
+        /// </summary>
+        private readonly GameRuntimeService _runtimeService;
+
+        /// <summary>
+        /// 遮罩绘制层，遮罩配置变化时清空旧的识别结果
+        /// </summary>
+        private readonly IMaskWindowDrawingBoard _drawingBoard;
 
         public MaskWindowViewModel(
             IConfigService configService,
@@ -203,7 +228,9 @@ namespace BetterGenshinImpact.ViewModel
             IMaskMapPointService maskMapPointService,
             IMaskWindowSnapshotSource<MaskWindowDrawingSnapshot> drawingSource,
             IMaskWindowSnapshotSource<MaskWindowMapSnapshot> mapSource,
-            ILogger<MaskWindowViewModel> logger)
+            ILogger<MaskWindowViewModel> logger,
+            GameRuntimeService runtimeService,
+            IMaskWindowDrawingBoard drawingBoard)
         {
             Config = configService.Get();
             _overlayMetricsService = overlayMetricsService;
@@ -211,6 +238,11 @@ namespace BetterGenshinImpact.ViewModel
             _drawingSource = drawingSource;
             _mapSource = mapSource;
             _logger = logger;
+            _runtimeService = runtimeService;
+            _drawingBoard = drawingBoard;
+            // 遮罩缩放、DPI 与 FPS 进程号跟随绑定变化（Started / Stopped 在 UI 线程上触发）
+            _runtimeService.Started += OnRuntimeStarted;
+            _runtimeService.Stopped += OnRuntimeStopped;
 
             _drawingCoalescer = new UiCoalescer(() => Drawing = _drawingSource.Current, DrawingRefreshInterval);
             _mapCoalescer = new UiCoalescer(ApplyMapSnapshot);
@@ -245,6 +277,9 @@ namespace BetterGenshinImpact.ViewModel
 
         private void OnMaskWindowConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
+            // 遮罩配置任一属性变化时清掉旧的识别结果（原逻辑在 AllConfig.OnConfigChanged，见 task-context-removal.md 第 6.2 节）
+            _drawingBoard.ClearAll();
+
             switch (e.PropertyName)
             {
                 case nameof(MaskWindowConfig.OverlayLayoutEditEnabled):
@@ -405,7 +440,7 @@ namespace BetterGenshinImpact.ViewModel
         {
             try
             {
-                OnDpiChanged(DpiHelper.ScaleY);
+                OnDpiChanged(DpiHelper.GetScaleY(_runtimeService.Current?.Window.Handle ?? 0));
             }
             catch
             {
@@ -419,7 +454,8 @@ namespace BetterGenshinImpact.ViewModel
         /// </summary>
         private void RecalculateScaleTo1080PRatio()
         {
-            var gameScreenRect = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
+            // 截图器未启动时句柄为 0，取不到客户区，保留上次的值
+            var gameScreenRect = SystemControl.GetGameScreenRect(_runtimeService.Current?.Window.Handle ?? 0);
             if (gameScreenRect.Width > 0 && gameScreenRect.Height > 0)
             {
                 // 取宽高缩放比中的较小值，与 SystemInfo.ScaleTo1080PRatio / GameCaptureRegion.DeriveTo1080P 保持一致
@@ -554,23 +590,91 @@ namespace BetterGenshinImpact.ViewModel
                 && Config.MaskWindowConfig.IsOverlayMetricEnabled(OverlayMetricItem.GameFps) == true
                 && !_fpsStarted)
             {
-                // FPS 由 PresentMon 长任务持续采样，只有用户勾选游戏帧率时才启动一次，避免无意义后台采样。
+                // FPS 由 PresentMon 长任务持续采样，只有用户勾选游戏帧率时才启动，避免无意义后台采样。
+                // 之后随截图器的启动 / 停止切换采样的游戏进程
                 _fpsStarted = true;
-                nint targetHWnd = TaskContext.Instance().GameHandle;
-                _ = User32.GetWindowThreadProcessId(targetHWnd, out var pid);
-                Task.Run(async () =>
+                RestartFpsSampling();
+            }
+
+            _overlayMetricsService.Refresh();
+        }
+
+        /// <summary>
+        /// 截图器启动后：按新绑定的游戏窗口刷新缩放与 DPI，并切换 FPS 采样的进程。
+        /// 遮罩窗口可能在绑定完成前就已加载，这里补一次
+        /// </summary>
+        private void OnRuntimeStarted(object? sender, EventArgs e)
+        {
+            RecalculateScaleTo1080PRatio();
+            RefreshDisplayDpiScale();
+            RestartFpsSampling();
+        }
+
+        /// <summary>
+        /// 截图器停止后：结束 FPS 采样。未绑定就等于没有游戏，不再沿用旧进程
+        /// </summary>
+        private void OnRuntimeStopped(object? sender, EventArgs e)
+        {
+            StopFpsSampling();
+        }
+
+        /// <summary>
+        /// 按当前运行环境的游戏进程重新开始 FPS 采样。用户未开启游戏帧率或截图器未启动时只停止旧会话。
+        /// 只在 UI 线程上调用
+        /// </summary>
+        private void RestartFpsSampling()
+        {
+            StopFpsSampling();
+            var pid = _runtimeService.Current?.Window.ProcessId ?? 0;
+            if (!_fpsStarted || pid <= 0)
+            {
+                return;
+            }
+
+            var cts = new CancellationTokenSource();
+            _fpsCts = cts;
+            var token = cts.Token;
+            var previous = _fpsTask;
+            _fpsTask = Task.Run(async () =>
+            {
+                try
                 {
-                    await FpsInspector.StartForeverAsync(new FpsRequest(pid), result =>
+                    // PresentMon 的 ETW 会话名固定，等上一轮会话完全退出后再开始
+                    await previous;
+                    if (token.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
+                    await FpsInspector.StartForeverAsync(new FpsRequest((uint)pid), result =>
                     {
                         // PresentMon 回调在后台线程，只记录最新值，合并后在 UI 线程更新
                         Volatile.Write(ref _pendingFps, $"{result.Fps:0}");
                         _metricsCoalescer.Request();
                         _overlayMetricsService.UpdateGameFps(result.Fps);
-                    });
-                });
+                    }, token);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "游戏帧率采样结束");
+                }
+            });
+        }
+
+        /// <summary>
+        /// 停止当前 FPS 采样会话。会话任务只读取取消令牌，取消源在这里直接释放
+        /// </summary>
+        private void StopFpsSampling()
+        {
+            var cts = _fpsCts;
+            _fpsCts = null;
+            if (cts == null)
+            {
+                return;
             }
 
-            _overlayMetricsService.Refresh();
+            cts.Cancel();
+            cts.Dispose();
         }
 
         private void OverlayMetricsServiceOnMetricsUpdated(object? sender, OverlayMetricsSnapshot snapshot)
@@ -662,7 +766,7 @@ namespace BetterGenshinImpact.ViewModel
             }
 
             Config.MaskWindowConfig.OverlayLayoutEditEnabled = false;
-            SystemControl.ActivateWindow();
+            _runtimeService.Current?.Window.Activate();
         }
 
         private static double ToRatio(double value, double baseSize)
@@ -1177,9 +1281,9 @@ namespace BetterGenshinImpact.ViewModel
             return _hiddenMapPointIds.Contains(GetMapPointKey(point));
         }
 
-        private static string GetMapPointKey(MaskMapPoint point)
+        private string GetMapPointKey(MaskMapPoint point)
         {
-            var mapMaskConfig = TaskContext.Instance().Config.MapMaskConfig;
+            var mapMaskConfig = Config.MapMaskConfig;
             var provider = mapMaskConfig.MapPointApiProvider.ToString();
             if (mapMaskConfig.MapPointApiProvider != MapPointApiProvider.HoYoLab)
             {
@@ -1190,9 +1294,9 @@ namespace BetterGenshinImpact.ViewModel
             return $"{provider}:{language}:{point.Id}";
         }
 
-        private static string GetMapMaskDataSourceKey()
+        private string GetMapMaskDataSourceKey()
         {
-            var mapMaskConfig = TaskContext.Instance().Config.MapMaskConfig;
+            var mapMaskConfig = Config.MapMaskConfig;
             var provider = mapMaskConfig.MapPointApiProvider.ToString();
             if (mapMaskConfig.MapPointApiProvider != MapPointApiProvider.HoYoLab)
             {

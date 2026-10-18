@@ -189,7 +189,6 @@ public class ConfigService : IConfigService
             }
 
             config.AutoPickConfig.MigrateLegacyConfig();
-            Config = config;
             return config;
         }
         catch (Exception e)

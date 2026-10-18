@@ -12,6 +12,7 @@ using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Core.Mask;
+using BetterGenshinImpact.Service;
 using Compunet.YoloSharp;
 using CsTrees;
 using CsTrees.Blackboard;
@@ -1069,6 +1070,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private DateTimeOffset? waitFishBoxAppearEndTime;
         private readonly bool saveScreenshotOnError;
 
+        /// <summary>
+        /// 出错截图的保存服务。为 null 时即使开启了出错截图也不保存
+        /// </summary>
+        private readonly GameScreenshotService? screenshots;
+
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<ImageRegion> Screenshot { get; private set; } = null!;
 
@@ -1078,11 +1084,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.Write)]
         public BehaviourKeyAccess<Rect> FishBoxRect { get; private set; } = null!;
 
-        private GetFishBoxArea(string name, ILogger logger, bool saveScreenshotOnError, TimeProvider? timeProvider = null) : base(name)
+        private GetFishBoxArea(string name, ILogger logger, bool saveScreenshotOnError, TimeProvider? timeProvider = null, GameScreenshotService? screenshots = null) : base(name)
         {
             this.logger = logger;
             this.saveScreenshotOnError = saveScreenshotOnError;
             this.timeProvider = timeProvider ?? TimeProvider.System;
+            this.screenshots = screenshots;
         }
 
         protected override void Initialize()
@@ -1111,7 +1118,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 {
                     if (saveScreenshotOnError)
                     {
-                        ScreenshotVisitor.SaveScreenshot(imageRegion, $"{DateTime.Now:yyyyMMddHHmmssfff}_{this.GetType().Name}_Error.png");
+                        screenshots?.Save(imageRegion.SrcMat, $"{DateTime.Now:yyyyMMddHHmmssfff}_{this.GetType().Name}_Error.png");
                     }
                     logger.LogError("两个矩形高度差距过大，未识别到钓鱼框");
                     return Status.Running;
@@ -1168,6 +1175,11 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private DateTimeOffset? noDetectionDuringTime;
         private readonly bool saveScreenshotOnError;
 
+        /// <summary>
+        /// 出错截图的保存服务。为 null 时即使开启了出错截图也不保存
+        /// </summary>
+        private readonly GameScreenshotService? screenshots;
+
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<ImageRegion> Screenshot { get; private set; } = null!;
 
@@ -1177,12 +1189,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         [BlackboardKey(Access = Access.Read)]
         public BehaviourKeyAccess<Rect> FishBoxRect { get; private set; } = null!;
 
-        private Fishing(string name, ILogger logger, bool saveScreenshotOnError, IInputChannel input, TimeProvider? timeProvider = null) : base(name)
+        private Fishing(string name, ILogger logger, bool saveScreenshotOnError, IInputChannel input, TimeProvider? timeProvider = null, GameScreenshotService? screenshots = null) : base(name)
         {
             this.logger = logger;
             this.saveScreenshotOnError = saveScreenshotOnError;
             this.input = input;
             this.timeProvider = timeProvider ?? TimeProvider.System;
+            this.screenshots = screenshots;
         }
 
         protected override void Initialize()
@@ -1205,7 +1218,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                 {
                     if (saveScreenshotOnError)
                     {
-                        ScreenshotVisitor.SaveScreenshot(imageRegion, $"{DateTime.Now:yyyyMMddHHmmssfff}_{this.GetType().Name}_Error.png");
+                        screenshots?.Save(imageRegion.SrcMat, $"{DateTime.Now:yyyyMMddHHmmssfff}_{this.GetType().Name}_Error.png");
                     }
                     logger.LogError("识别到超过3个矩形，取前三");
                     rects.Sort((a, b) => b.Height.CompareTo(a.Height));

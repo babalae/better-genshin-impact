@@ -1,4 +1,6 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
+using BetterGenshinImpact.GameTask.Runtime;
 using CsTrees.FluentBuilder;
 
 namespace BetterGenshinImpact.GameTask.AutoCombo.ComboRun;
@@ -13,8 +15,14 @@ public partial class AutoComboRunBuilder : TreeBuilder<AutoComboRunBuilder>
 
     private readonly AutoComboRunCatalog autoComboRunCatalog;
 
-    public AutoComboRunBuilder(Avatar[] avatars)
+    /// <summary>
+    /// 创建构建器
+    /// </summary>
+    /// <param name="runtime">本次运行所在的运行环境</param>
+    /// <param name="config">配置根</param>
+    /// <param name="avatars">队伍成员</param>
+    public AutoComboRunBuilder(GameRuntime runtime, AllConfig config, Avatar[] avatars)
     {
-        autoComboRunCatalog = new AutoComboRunCatalog(avatars);
+        autoComboRunCatalog = new AutoComboRunCatalog(runtime, config, avatars);
     }
 }

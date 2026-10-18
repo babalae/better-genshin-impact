@@ -1,6 +1,8 @@
-﻿using BetterGenshinImpact.GameTask.AutoFight.Config;
+﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.AutoFight.Config;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Config;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.View.Windows;
 using Microsoft.Extensions.Logging;
@@ -15,7 +17,14 @@ public class ScriptParser
 {
     private static readonly ILogger<ScriptParser> MyLogger = App.GetLogger<ScriptParser>();
 
-    public static Duel Parse(string script)
+    /// <summary>
+    /// 解析策略文本，生成绑定到本次运行的对局
+    /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    /// <param name="config">配置根</param>
+    /// <param name="control">本次运行的游戏操控对象</param>
+    /// <param name="script">策略文本</param>
+    public static Duel Parse(GameRuntime runtime, AllConfig config, GeniusInvokationControl control, string script)
     {
         var lines = script.Split(["\r\n", "\r", "\n"], StringSplitOptions.None);
         var result = new List<string>();
@@ -25,12 +34,19 @@ public class ScriptParser
             result.Add(l);
         }
 
-        return Parse(result);
+        return Parse(runtime, config, control, result);
     }
 
-    public static Duel Parse(List<string> lines)
+    /// <summary>
+    /// 解析已按行拆分的策略文本，生成绑定到本次运行的对局
+    /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    /// <param name="config">配置根</param>
+    /// <param name="control">本次运行的游戏操控对象</param>
+    /// <param name="lines">策略文本的各行</param>
+    public static Duel Parse(GameRuntime runtime, AllConfig config, GeniusInvokationControl control, List<string> lines)
     {
-        Duel duel = new();
+        Duel duel = new(runtime, config, control);
         string stage = "";
 
         int i = 0;

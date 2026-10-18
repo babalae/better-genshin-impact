@@ -4,7 +4,9 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Helpers.Security;
+using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Windows;
 using TextBox = Wpf.Ui.Controls.TextBox;
 
@@ -12,6 +14,11 @@ namespace BetterGenshinImpact.GameTask.UseRedeemCode;
 
 public class RedeemCodeManager
 {
+    /// <summary>
+    /// 配置根。静态方法没有创建方可以传参，暂时读配置根（见 task-context-removal.md 第 5 节）
+    /// </summary>
+    private static AllConfig Config => ConfigService.Config!;
+
     public static HashSet<string> CancelClipboardHash { get; } = [];
 
     private static readonly Regex UrlStripRegex =
@@ -25,7 +32,7 @@ public class RedeemCodeManager
     
     public static async Task ImportFromClipboard(string clipboardText)
     {
-        if (!TaskContext.Instance().Config.AutoRedeemCodeConfig.ClipboardListenerEnabled)
+        if (!Config.AutoRedeemCodeConfig.ClipboardListenerEnabled)
         {
             return;
         }
@@ -69,7 +76,8 @@ public class RedeemCodeManager
         }
 
         Clipboard.Clear();
-        await new TaskRunner().RunSoloTaskAsync(new UseRedemptionCodeTask(codes));
+        // 任务在拿到本轮运行环境之后才构造
+        await new TaskRunner().RunSoloTaskAsync(rt => new UseRedemptionCodeTask(rt, codes));
     }
 
     public static List<string> ExtractAllCodes(string clipboardText)

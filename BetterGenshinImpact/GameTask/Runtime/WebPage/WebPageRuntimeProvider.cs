@@ -1,5 +1,6 @@
 using BetterGenshinImpact.Core.Input.Backends.WebSdk;
 using BetterGenshinImpact.Core.Mask;
+using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Windows;
 using Fischless.GameCapture;
@@ -58,6 +59,9 @@ public sealed class WebPageRuntimeProvider(
             // 最小化时 WGC 拿不到帧，画面尺寸也不合规
             window.Activate();
 
+            // 先按画面区域构建 SystemInfo：分辨率不合规时在启动截图器之前失败
+            var systemInfo = new SystemInfo(window.Viewport, maskWindowDrawingBoard);
+
             // 固定使用 WGC（GraphicsCapture），不读截图模式配置：config.json 由所有实例共享，网页版改了会影响 Primary。
             // 与 Win32 路径一样在 UI 线程上创建（帧池用 Direct3D11CaptureFramePool.Create）
             capture = new GraphicsCapture();
@@ -65,7 +69,7 @@ public sealed class WebPageRuntimeProvider(
 
             // 输入坐标与截图使用同一块画面区域
             var input = new WebSdkInputBackend(host.Bridge!, () => window.Viewport.ScreenRect);
-            return new GameRuntime(Kind, window, capture, input, maskWindowDrawingBoard, maskWindowMapState);
+            return new GameRuntime(Kind, window, capture, input, systemInfo, maskWindowDrawingBoard, maskWindowMapState);
         }
         catch
         {
@@ -78,7 +82,7 @@ public sealed class WebPageRuntimeProvider(
     /// <summary>
     /// 关闭宿主窗口，即退出网页版实例（见 <see cref="OnHostClosed"/>）
     /// </summary>
-    public void CloseGame()
+    public void CloseGame(GameRuntime? current)
     {
         var dispatcher = Application.Current.Dispatcher;
         if (dispatcher.CheckAccess())

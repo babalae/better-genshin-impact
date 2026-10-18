@@ -9,6 +9,7 @@ using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using OpenCvSharp;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -23,6 +24,20 @@ public partial class ChooseTalkOptionTask
 {
     private readonly ILogger<ChooseTalkOptionTask> _logger = App.GetLogger<ChooseTalkOptionTask>();
 
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 创建持续对话并选择选项任务
+    /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    public ChooseTalkOptionTask(GameRuntime runtime)
+    {
+        _runtime = runtime;
+    }
+
     private static RecognitionObject GetOptionIconRecognitionObject(ImageRegion region)
     {
         return RecognitionAssets.Get("AutoSkip", "OptionIcon", region.Width, region.Height);
@@ -35,8 +50,6 @@ public partial class ChooseTalkOptionTask
 
     public string Name => "持续对话并选择目标选项";
 
-    // private readonly AutoSkipConfig _config = TaskContext.Instance().Config.AutoSkipConfig;
-
     /// <summary>
     /// 单个界面单个选项选择
     /// </summary>
@@ -47,7 +60,7 @@ public partial class ChooseTalkOptionTask
     /// <returns></returns>
     public async Task<TalkOptionRes> SingleSelectText(string option, CancellationToken ct, int skipTimes = 10, bool isOrange = false)
     {
-        if (!await Bv.WaitAndSkipForTalkUi(ct, 10))
+        if (!await Bv.WaitAndSkipForTalkUi(_runtime, ct, 10))
         {
             Logger.LogError("选项选择：{Text}", "当前界面不在对话选项界面");
             return TalkOptionRes.NotFound;
@@ -58,12 +71,12 @@ public partial class ChooseTalkOptionTask
         bool firstOcrOption = true;
         for (var i = 0; i < skipTimes; i++) // 重试N次
         {
-            using var region = CaptureToRectArea();
+            using var region = _runtime.CaptureToRectArea();
             var optionRegions = RecognizeOption(region, ct);
             if (optionRegions == null)
             {
                 InputHub.Background.Keyboard.KeyPress(User32.VK.VK_SPACE);
-                await Delay(500, ct);
+                await _runtime.Delay(500, ct);
                 continue; // retry
             }
             else
@@ -71,7 +84,7 @@ public partial class ChooseTalkOptionTask
                 // 首次识别到文字，延迟1s重新识别一次，保证文字已经完全展示
                 if (firstOcrOption)
                 {
-                    await Delay(1000, ct);
+                    await _runtime.Delay(1000, ct);
                     firstOcrOption = false;
                     continue; // 下一轮重新截图并识别
                 }
@@ -102,7 +115,7 @@ public partial class ChooseTalkOptionTask
 
     public async Task SelectLastOptionOnce(CancellationToken ct)
     {
-        using var region = CaptureToRectArea();
+        using var region = _runtime.CaptureToRectArea();
         if (Bv.IsInTalkUi(region))
         {
             var chatOptionResultList = region.FindMulti(GetOptionIconRecognitionObject(region));
@@ -125,7 +138,7 @@ public partial class ChooseTalkOptionTask
     {
         for (var i = 0; i < retryTimes; i++)
         {
-            using var region = CaptureToRectArea();
+            using var region = _runtime.CaptureToRectArea();
             if (Bv.IsInMainUi(region))
             {
                 return true;
@@ -136,17 +149,17 @@ public partial class ChooseTalkOptionTask
             {
                 chatExit.Click();
                 _logger.LogInformation("点击退出对话按钮");
-                await Delay(200, ct);
+                await _runtime.Delay(200, ct);
             }
             else if (Bv.IsInTalkUi(region))
             {
                 InputHub.Background.Keyboard.KeyPress(User32.VK.VK_SPACE);
             }
 
-            await Delay(500, ct);
+            await _runtime.Delay(500, ct);
         }
 
-        using var finalRegion = CaptureToRectArea();
+        using var finalRegion = _runtime.CaptureToRectArea();
         return Bv.IsInMainUi(finalRegion);
     }
 
@@ -154,7 +167,7 @@ public partial class ChooseTalkOptionTask
     {
         for (var i = 0; i < retry; i++)
         {
-            using var region = CaptureToRectArea();
+            using var region = _runtime.CaptureToRectArea();
             if (Bv.IsInTalkUi(region))
             {
                 var chatOptionResultList = region.FindMulti(GetOptionIconRecognitionObject(region));
@@ -191,7 +204,7 @@ public partial class ChooseTalkOptionTask
     /// <returns></returns>
     public List<Region>? RecognizeOption(ImageRegion region, CancellationToken ct)
     {
-        var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+        var assetScale = _runtime.SystemInfo.AssetScale;
 
         // 气泡识别
         var chatOptionResultList = region.FindMulti(GetOptionIconRecognitionObject(region));

@@ -4,8 +4,8 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.Core.Script.Dependence;
 using BetterGenshinImpact.Core.Simulator.Extensions;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.Helpers;
@@ -32,7 +32,7 @@ public partial class AutoDomainTask
         for (var attempt = 0; attempt < 12; attempt++)
         {
             _ct.ThrowIfCancellationRequested();
-            using var screen = CaptureToRectArea();
+            using var screen = _runtime.CaptureToRectArea();
             var matches = screen.FindMulti(RecognitionObject.Ocr(
                 screen.Width * x, screen.Height * y, screen.Width * w, screen.Height * h));
             try
@@ -41,7 +41,7 @@ public partial class AutoDomainTask
                 if (match != null)
                 {
                     match.Click();
-                    await Delay(700, _ct);
+                    await _runtime.Delay(700, _ct);
                     return;
                 }
             }
@@ -49,7 +49,7 @@ public partial class AutoDomainTask
             {
                 foreach (var match in matches) match.Dispose();
             }
-            await Delay(300, _ct);
+            await _runtime.Delay(300, _ct);
         }
         throw new InvalidOperationException($"提升指南：未找到{text}，请检查游戏语言和界面");
     }
@@ -57,15 +57,15 @@ public partial class AutoDomainTask
     private async Task SelectDevelopmentGuideDestination()
     {
         _guideDomainName = null;
-        await new ReturnMainUiTask().Start(_ct);
+        await new ReturnMainUiTask(_runtime).Start(_ct);
         InputHub.Foreground.SimulateAction(GIActions.OpenAdventurerHandbook);
-        await Delay(1000, _ct);
+        await _runtime.Delay(1000, _ct);
         await ClickGuideText("秘境", 0.1, 0.2, 0.1, 0.6);
         await ClickGuideText("提升指南", 0.2, 0.17, 0.18, 0.15);
         var knownNames = MapLazyAssets.Get().DomainPositionMap.Keys.ToList();
         for (var attempt = 0; attempt < 6 && _guideDomainName == null; attempt++)
         {
-            using var screen = CaptureToRectArea();
+            using var screen = _runtime.CaptureToRectArea();
             var rows = screen.FindMulti(RecognitionObject.Ocr(
                 screen.Width * 0.39, screen.Height * 0.28, screen.Width * 0.18, screen.Height * 0.46));
             try
@@ -87,25 +87,27 @@ public partial class AutoDomainTask
             {
                 foreach (var row in rows) row.Dispose();
             }
-            if (_guideDomainName == null) await Delay(500, _ct);
+            if (_guideDomainName == null) await _runtime.Delay(500, _ct);
         }
         if (_guideDomainName == null)
             throw new InvalidOperationException("提升指南秘境名称识别或地图匹配失败，请查看前面的OCR日志；这不代表没有培养目标");
         Logger.LogInformation("提升指南选择秘境：{Name}", _guideDomainName);
-        await new ReturnMainUiTask().Start(_ct);
+        await new ReturnMainUiTask(_runtime).Start(_ct);
     }
 
     private async Task SelectDevelopmentGuideLevel()
     {
-        using (var screen = CaptureToRectArea())
-            GlobalMethod.MoveMouseTo(screen.Width / 4, screen.Height / 2);
+        // 鼠标移到左侧关卡列表再滚动。与原 GlobalMethod.MoveMouseTo 在默认 1920x1080 脚本尺寸下的换算一致，
+        // 但直接使用本运行环境，不依赖脚本宿主 GlobalMethod 的静态分辨率设置
+        using (var screen = _runtime.CaptureToRectArea())
+            _runtime.GameRegion1080PPosMove(screen.Width / 4, screen.Height / 2);
         for (var i = 0; i < 80; i++)
         {
             InputHub.Foreground.Mouse.VerticalScroll(-1);
-            await Delay(20, _ct);
+            await _runtime.Delay(20, _ct);
         }
-        await Delay(600, _ct);
-        using var capture = CaptureToRectArea();
+        await _runtime.Delay(600, _ct);
+        using var capture = _runtime.CaptureToRectArea();
         var rows = capture.FindMulti(RecognitionObject.Ocr(0, capture.Height * 0.14,
             capture.Width * 0.47, capture.Height * 0.84));
         try
@@ -120,8 +122,8 @@ public partial class AutoDomainTask
             foreach (var level in levels.Where(r => r.Tier == highestTier).OrderBy(r => r.Region.Y))
             {
                 level.Region.Click();
-                await Delay(700, _ct);
-                using var detail = CaptureToRectArea();
+                await _runtime.Delay(700, _ct);
+                using var detail = _runtime.CaptureToRectArea();
                 using var text = detail.Find(RecognitionObject.Ocr(detail.Width * 0.48,
                     detail.Height * 0.55, detail.Width * 0.5, detail.Height * 0.28));
                 if (text.Text.Contains("需求角色"))

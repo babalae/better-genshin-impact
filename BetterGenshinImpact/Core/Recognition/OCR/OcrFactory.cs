@@ -37,15 +37,23 @@ public class OcrFactory : IDisposable
 
     private IOcrService? _paddleOcrService;
     private readonly ILogger<BgiOnnxFactory> _logger;
+
+    /// <summary>
+    /// 注入的配置根，用于读取 OCR 配置与游戏文化信息
+    /// </summary>
+    private readonly AllConfig _allConfig;
+
     private readonly OtherConfig.Ocr _config;
 
     /// <summary>
     ///  OCR 工厂,不可以直接实例化,请使用 App.ServiceProvider获取实例
     /// </summary>
     /// <param name="logger"></param>
-    public OcrFactory(ILogger<BgiOnnxFactory> logger)
+    /// <param name="allConfig">注入的配置根</param>
+    public OcrFactory(ILogger<BgiOnnxFactory> logger, AllConfig allConfig)
     {
         _logger = logger;
+        _allConfig = allConfig;
         _config = GetConfig();
     }
 
@@ -73,7 +81,7 @@ public class OcrFactory : IDisposable
         try
         {
             // 直接使用配置
-            return TaskContext.Instance().Config.OtherConfig.OcrConfig;
+            return _allConfig.OtherConfig.OcrConfig;
         }
         catch (Exception e)
         {
@@ -92,7 +100,7 @@ public class OcrFactory : IDisposable
     {
         try
         {
-            return new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
+            return new CultureInfo(_allConfig.OtherConfig.GameCultureInfoName);
         }
         catch (Exception e)
         {

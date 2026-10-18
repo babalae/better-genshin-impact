@@ -2,11 +2,17 @@ using System.Collections.Generic;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Service;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
 public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
 {
+    /// <summary>
+    /// 配置根。参数类由脚本和界面直接 new，没有创建方可以传入配置，暂时读配置根（见 task-context-removal.md 第 5 节）
+    /// </summary>
+    private static AllConfig Config => ConfigService.Config!;
+
     public int DomainRoundNum { get; set; }
 
     public string CombatStrategyPath { get; set; }
@@ -78,12 +84,12 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
 
     public void SetDefault()
     {
-        var config = TaskContext.Instance().Config.AutoDomainConfig;
+        var config = Config.AutoDomainConfig;
         PartyName = config.PartyName;
         DomainName = config.DomainName;
         SundaySelectedValue = config.SundaySelectedValue;
         AutoArtifactSalvage = config.AutoArtifactSalvage;
-        MaxArtifactStar = TaskContext.Instance().Config.AutoArtifactSalvageConfig.MaxArtifactStar;
+        MaxArtifactStar = Config.AutoArtifactSalvageConfig.MaxArtifactStar;
         ResinPriorityList = config.ResinPriorityList;
         OriginalResinUseCount = config.OriginalResinUseCount;
         CondensedResinUseCount = config.CondensedResinUseCount;
@@ -115,7 +121,7 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
     {
         if (string.IsNullOrEmpty(strategyName))
         {
-            strategyName = TaskContext.Instance().Config.AutoFightConfig.StrategyName;
+            strategyName = Config.AutoFightConfig.StrategyName;
         }
 
         if ("根据队伍自动选择".Equals(strategyName))

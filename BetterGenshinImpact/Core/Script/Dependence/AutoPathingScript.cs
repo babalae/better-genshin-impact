@@ -5,6 +5,7 @@ using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Runtime;
 using Microsoft.Extensions.Logging;
 using BetterGenshinImpact.Core.Script.Repositories;
 
@@ -25,11 +26,29 @@ public class AutoPathingScript
     private readonly CancellationToken _ct;
 
     /// <summary>
+    /// 本次脚本运行使用的运行环境，执行路线时交给 PathExecutor
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 配置根，执行路线时交给 PathExecutor（与脚本传入的队伍配置 _config 不同）
+    /// </summary>
+    private readonly AllConfig _allConfig;
+
+    /// <summary>
     /// 创建自动寻路脚本宿主。
     /// </summary>
-    public AutoPathingScript(string rootPath, object? config, CancellationToken ct,
+    /// <param name="runtime">本次脚本运行使用的运行环境</param>
+    /// <param name="allConfig">配置根</param>
+    /// <param name="rootPath">脚本工作目录</param>
+    /// <param name="config">脚本使用的队伍配置（PathingPartyConfig），可为空</param>
+    /// <param name="ct">当前脚本执行的取消令牌</param>
+    /// <param name="repositoryResources">Pulonia 已确认来源；为空时使用原用户目录</param>
+    public AutoPathingScript(GameRuntime runtime, AllConfig allConfig, string rootPath, object? config, CancellationToken ct,
         ScriptRepositoryResourceContext? repositoryResources = null)
     {
+        _runtime = runtime;
+        _allConfig = allConfig;
         _config = config;
         _rootPath = rootPath;
         _ct = ct;
@@ -42,7 +61,7 @@ public class AutoPathingScript
         // 登记本轮 JS 宿主操作；脚本停止后必须等待业务方法真正退出再释放游戏所有权。
         using var scriptOperation = ScriptHostOperations.Enter();
         var task = PathingTask.BuildFromJson(json);
-        var pathExecutor = new PathExecutor(_ct);
+        var pathExecutor = new PathExecutor(_runtime, _allConfig, _ct);
         if (_config != null && _config is PathingPartyConfig patyConfig)
         {
             pathExecutor.PartyConfig = patyConfig;

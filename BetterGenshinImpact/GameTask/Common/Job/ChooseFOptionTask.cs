@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Input;
 using System;
 using System.Collections.Generic;
@@ -10,6 +11,7 @@ using BetterGenshinImpact.GameTask.AutoPick;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.Assets;
+using BetterGenshinImpact.GameTask.Runtime;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -27,7 +29,28 @@ public class ChooseFOptionTask
     private static readonly SemaphoreSlim SelectionLock = new(1, 1);
     private readonly ILogger<ChooseFOptionTask> _logger = App.GetLogger<ChooseFOptionTask>();
 
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 配置根
+    /// </summary>
+    private readonly AllConfig _config;
+
     public string Name => "选择指定 F 交互选项";
+
+    /// <summary>
+    /// 创建 F 交互选项选择任务
+    /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    /// <param name="config">配置根</param>
+    public ChooseFOptionTask(GameRuntime runtime, AllConfig config)
+    {
+        _runtime = runtime;
+        _config = config;
+    }
 
     /// <summary>
     /// 识别 F 周围的可见候选项，按 Y 坐标从上到下返回。
@@ -37,7 +60,7 @@ public class ChooseFOptionTask
     {
         ArgumentNullException.ThrowIfNull(region);
         ct.ThrowIfCancellationRequested();
-        var assets = AutoPickAssets.Get(region, TaskContext.Instance().Config.AutoPickConfig.PickKey);
+        var assets = AutoPickAssets.Get(region, _config.AutoPickConfig.PickKey);
         using var pick = region.Find(assets.PickRo);
         if (pick.IsEmpty())
         {
@@ -65,19 +88,19 @@ public class ChooseFOptionTask
             try
             {
                 _logger.LogInformation("F选项选择：目标为 {Text}", option);
-                await Delay(100, ct);
+                await _runtime.Delay(100, ct);
                 int clicks;
-                var taskContext = TaskContext.Instance();
-                var dpiScale = float.IsFinite(taskContext.DpiScale) && taskContext.DpiScale > 0
-                    ? taskContext.DpiScale
+                var runtimeDpiScale = _runtime.SystemInfo.DpiScale;
+                var dpiScale = float.IsFinite(runtimeDpiScale) && runtimeDpiScale > 0
+                    ? runtimeDpiScale
                     : 1f;
                 // MoveMouseBy 使用物理移动量，这里的 400 是逻辑距离，需要按当前 DPI 缩放。
                 var retryMouseMoveDistance = Math.Max(1, (int)Math.Round(RetryMouseMoveDistance * dpiScale));
                 for (var completedRetryCount = 0;; completedRetryCount++)
                 {
-                    using (var region = CaptureToRectArea())
+                    using (var region = _runtime.CaptureToRectArea())
                     {
-                        var assets = AutoPickAssets.Get(region, taskContext.Config.AutoPickConfig.PickKey);
+                        var assets = AutoPickAssets.Get(region, _config.AutoPickConfig.PickKey);
                         using var pick = region.Find(assets.PickRo);
                         if (pick.IsEmpty())
                         {
@@ -90,17 +113,17 @@ public class ChooseFOptionTask
                         if (current == expected)
                         {
                             ct.ThrowIfCancellationRequested();
-                            await Delay(60, ct);
+                            await _runtime.Delay(60, ct);
                             InputHub.Foreground.Keyboard.KeyDown(assets.PickVk);
                             try
                             {
-                                await Delay(60, ct);
+                                await _runtime.Delay(60, ct);
                             }
                             finally
                             {
                                 InputHub.Foreground.Keyboard.KeyUp(assets.PickVk);
                             }
-                            await Delay(60, ct);
+                            await _runtime.Delay(60, ct);
                             _logger.LogInformation("F选项选择：已确认并按下 {Key}，选项 {Text}", assets.PickVk, current);
                             return true;
                         }
@@ -127,11 +150,11 @@ public class ChooseFOptionTask
                     }
 
                     ct.ThrowIfCancellationRequested();
-                    await Delay(60, ct);
+                    await _runtime.Delay(60, ct);
                     InputHub.Foreground.Mouse.MoveMouseBy(retryMouseMoveDistance, 0);
-                    await Delay(60, ct);
+                    await _runtime.Delay(60, ct);
                     // 游戏处理输入和截图源刷新都存在延迟，等待稳定后再进行下一次识别。
-                    await Delay(200, ct);
+                    await _runtime.Delay(200, ct);
                 }
 
                 _logger.LogInformation("F选项选择：向{Direction}滚动 {Count} 格，目标 {Text}",
@@ -140,14 +163,14 @@ public class ChooseFOptionTask
                 {
                     ct.ThrowIfCancellationRequested();
                     // 每一次滚轮输入都保留前后间隔，避免低帧率下连续输入丢失。
-                    await Delay(60, ct);
+                    await _runtime.Delay(60, ct);
                     InputHub.Foreground.Mouse.VerticalScroll(Math.Sign(clicks));
-                    await Delay(60, ct);
+                    await _runtime.Delay(60, ct);
                 }
 
-                await Delay(200, ct);
-                using var confirmation = CaptureToRectArea();
-                var confirmationAssets = AutoPickAssets.Get(confirmation, TaskContext.Instance().Config.AutoPickConfig.PickKey);
+                await _runtime.Delay(200, ct);
+                using var confirmation = _runtime.CaptureToRectArea();
+                var confirmationAssets = AutoPickAssets.Get(confirmation, _config.AutoPickConfig.PickKey);
                 using var confirmationPick = confirmation.Find(confirmationAssets.PickRo);
                 if (confirmationPick.IsEmpty())
                 {
@@ -164,17 +187,17 @@ public class ChooseFOptionTask
                 }
 
                 ct.ThrowIfCancellationRequested();
-                await Delay(60, ct);
+                await _runtime.Delay(60, ct);
                 InputHub.Foreground.Keyboard.KeyDown(confirmationAssets.PickVk);
                 try
                 {
-                    await Delay(60, ct);
+                    await _runtime.Delay(60, ct);
                 }
                 finally
                 {
                     InputHub.Foreground.Keyboard.KeyUp(confirmationAssets.PickVk);
                 }
-                await Delay(60, ct);
+                await _runtime.Delay(60, ct);
                 _logger.LogInformation("F选项选择：复核通过，已按下 {Key}，选项 {Text}", confirmationAssets.PickVk, confirmedText);
                 return true;
             }
@@ -192,7 +215,7 @@ public class ChooseFOptionTask
     private List<Region> RecognizeOption(ImageRegion region, Region pick, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        var config = TaskContext.Instance().Config.AutoPickConfig;
+        var config = _config.AutoPickConfig;
         var rect = GetCandidateRect(CaptureSize.From(region), pick.ToRect(),
             config.ItemTextLeftOffset, config.ItemTextRightOffset);
         if (rect.Width <= 0 || rect.Height <= 0)
@@ -222,7 +245,7 @@ public class ChooseFOptionTask
     private string RecognizeCurrentOption(ImageRegion region, Region pick, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        var config = TaskContext.Instance().Config.AutoPickConfig;
+        var config = _config.AutoPickConfig;
         var scale = CaptureSize.From(region).AssetScale;
         var rect = new Rect(pick.X + (int)(config.ItemTextLeftOffset * scale), pick.Y,
             (int)((config.ItemTextRightOffset - config.ItemTextLeftOffset) * scale), pick.Height);

@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
@@ -5,6 +6,7 @@ using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using System;
@@ -37,9 +39,27 @@ public class AutoFightJsonTask : ISoloTask
     private DateTime _lastFightFlagTime = DateTime.Now;
     private int _skipCheckCounter;
 
-    private readonly ReturnMainUiTask _returnMainUiTask = new();
-    private readonly double _assetScale = TaskContext.Instance().SystemInfo.AssetScale;
-    private readonly double _dpi = TaskContext.Instance().DpiScale;
+    /// <summary>
+    /// 本次战斗所在的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 配置根
+    /// </summary>
+    private readonly AllConfig _config;
+
+    private readonly ReturnMainUiTask _returnMainUiTask;
+
+    /// <summary>
+    /// 构造时取的素材缩放比例快照，运行环境生命周期内不变
+    /// </summary>
+    private readonly double _assetScale;
+
+    /// <summary>
+    /// 构造时取的 DPI 快照，运行环境生命周期内不变
+    /// </summary>
+    private readonly double _dpi;
 
     private static readonly object PickLock = new object();
 
@@ -73,8 +93,19 @@ public class AutoFightJsonTask : ISoloTask
 
     private AutoFightTask.TaskFightFinishDetectConfig _finishDetectConfig;
 
-    public AutoFightJsonTask(AutoFightParam taskParam)
+    /// <summary>
+    /// 创建自动战斗任务（JSON 策略）
+    /// </summary>
+    /// <param name="runtime">本次战斗所在的运行环境</param>
+    /// <param name="config">配置根</param>
+    /// <param name="taskParam">战斗参数</param>
+    public AutoFightJsonTask(GameRuntime runtime, AllConfig config, AutoFightParam taskParam)
     {
+        _runtime = runtime;
+        _config = config;
+        _returnMainUiTask = new ReturnMainUiTask(runtime);
+        _assetScale = runtime.SystemInfo.AssetScale;
+        _dpi = runtime.SystemInfo.DpiScale;
         _taskParam = taskParam;
         _strategy = JsonCombatStrategyParser.ParseFile(_taskParam.CombatStrategyPath);
 
@@ -113,7 +144,7 @@ public class AutoFightJsonTask : ISoloTask
         try
         {
             LogScreenResolution();
-            var combatScenes = CombatScenes.GetCombatScenesWithRetry();
+            var combatScenes = CombatScenes.GetCombatScenesWithRetry(_runtime, _config);
     
             // 收集当前队伍角色名
             foreach (var avatar in combatScenes.GetAvatars())
@@ -182,15 +213,15 @@ public class AutoFightJsonTask : ISoloTask
             string lastFightName = "";
     
             // 初始化条件求值器（传入策略动作名，供条件词法按名称合并连字符）
-            var evaluator = new ConditionEvaluator(combatScenes, () => CaptureToRectArea(),
+            var evaluator = new ConditionEvaluator(combatScenes, () => _runtime.CaptureToRectArea(),
                 _strategy.Actions.Where(a => !string.IsNullOrEmpty(a.Name)).Select(a => a.Name));
     
             // 基于经验值的战后拾取检测
             if (_taskParam.KazuhaPickupEnabled && _taskParam.ExpBasedPickupEnabled)
             {
-                using var gameCaptureRegion = CaptureToRectArea();
+                using var gameCaptureRegion = _runtime.CaptureToRectArea();
                 var expRos = AutoFightAssets.Get(gameCaptureRegion).ExperienceRecognitionObjects;
-                expDetector = new ExperienceDetector(expRos, cts2.Token);
+                expDetector = new ExperienceDetector(_runtime, expRos, cts2.Token);
                 expDetector.Start();
             }
 
@@ -239,7 +270,7 @@ public class AutoFightJsonTask : ISoloTask
                                 delayTime = characterDelayTime;
                             }
 
-                            var endFlag = await AutoFightTask.CheckFightFinish(_finishDetectConfig, _ct,
+                            var endFlag = await AutoFightTask.CheckFightFinish(_runtime, _finishDetectConfig, _ct,
                                 delayTime, _finishDetectConfig.DetectDelayTime);
                             if (endFlag)
                             {
@@ -261,7 +292,7 @@ public class AutoFightJsonTask : ISoloTask
                         }
     
                         // 每次循环开始：截图一次，供所有条件求值复用
-                        using var capture = CaptureToRectArea();
+                        using var capture = _runtime.CaptureToRectArea();
                         evaluator.SetCachedCapture(capture);
 
                         var anyExecuted = false;
@@ -332,22 +363,22 @@ public class AutoFightJsonTask : ISoloTask
                                     var avatar = combatScenes.SelectAvatar(characterName);
                                     if (avatar != null)
                                     {
-                                        var imageAfterAction = CaptureToRectArea();
+                                        var imageAfterAction = _runtime.CaptureToRectArea();
                                         try
                                         {
                                             var retry = 5;
-                                            while (!(await AutoFightSkill.AvatarSkillAsync(Logger, avatar, false, 1, _ct, imageAfterAction)) && retry > 0)
+                                            while (!(await AutoFightSkill.AvatarSkillAsync(_runtime, Logger, avatar, false, 1, _ct, imageAfterAction)) && retry > 0)
                                             {
                                                 Logger.LogWarning("{Name} 未检测到技能冷却，重新执行", action.Name);
                                                 // 防止在纳塔飞天或爬墙
                                                 InputHub.ReleaseAll();
                                                 InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
                                                 InputHub.Foreground.SimulateAction(GIActions.Drop);
-                                                await Delay(200, _ct);
+                                                await _runtime.Delay(200, _ct);
                                                 // 重新执行整个动作
                                                 await ExecuteAction(combatScenes, action);
                                                 var previousImage = imageAfterAction;
-                                                imageAfterAction = CaptureToRectArea();
+                                                imageAfterAction = _runtime.CaptureToRectArea();
                                                 previousImage.Dispose();
                                                 await Task.Delay(30, _ct);
                                                 retry--;
@@ -375,7 +406,7 @@ public class AutoFightJsonTask : ISoloTask
     
                         if (!anyExecuted)
                         {
-                            await Delay(200, _ct);
+                            await _runtime.Delay(200, _ct);
                         }
                     }
                 }
@@ -405,7 +436,7 @@ public class AutoFightJsonTask : ISoloTask
                 {
                     try
                     {
-                        await AvatarRecognition.ContinuousTargetingLoopAsync(targetingCts.Token, () => !AutoFightTask.FightStatusFlag);
+                        await AvatarRecognition.ContinuousTargetingLoopAsync(_runtime, targetingCts.Token, () => !AutoFightTask.FightStatusFlag);
                     }
                     catch (OperationCanceledException) { }
                     catch (Exception e)
@@ -442,7 +473,7 @@ public class AutoFightJsonTask : ISoloTask
                         var waitMs = 1100;
                         while (!expDetector.HasDetectedExperience && waitMs > 0)
                         {
-                            await Delay(100, _ct);
+                            await _runtime.Delay(100, _ct);
                             waitMs -= 100;
                         }
                     }
@@ -454,7 +485,7 @@ public class AutoFightJsonTask : ISoloTask
                     {
                         if (_taskParam is { PickDropsAfterFightEnabled: true })
                         {
-                            await new ScanPickTask().Start(_ct, _taskParam.PickDropsAfterFightSeconds);
+                            await new ScanPickTask(_runtime, _config).Start(_ct, _taskParam.PickDropsAfterFightSeconds);
                         }
                         return;
                     }
@@ -526,7 +557,7 @@ public class AutoFightJsonTask : ISoloTask
                 // 仅由 check 指令触发战斗结束检测
                 if (cmd.Method == Method.Check && _taskParam.FightFinishDetectEnabled)
                 {
-                    _fightEndFlag = await AutoFightTask.CheckFightFinish(_finishDetectConfig, _ct,
+                    _fightEndFlag = await AutoFightTask.CheckFightFinish(_runtime, _finishDetectConfig, _ct,
                         _finishDetectConfig.DelayTime, _finishDetectConfig.DetectDelayTime);
                     if (_fightEndFlag)
                     {
@@ -573,7 +604,7 @@ public class AutoFightJsonTask : ISoloTask
             return;
 
         Logger.LogInformation("JSON 策略：执行战斗前动作");
-        using var capture = CaptureToRectArea();
+        using var capture = _runtime.CaptureToRectArea();
         evaluator.SetCachedCapture(capture);
 
         foreach (var preAction in _strategy.Info.PreActions)
@@ -594,7 +625,7 @@ public class AutoFightJsonTask : ISoloTask
 
             try
             {
-                await CombatScriptExecutor.ExecuteAsync(combatScript, _ct, Logger, combatScenes);
+                await CombatScriptExecutor.ExecuteAsync(_runtime, combatScript, _ct, Logger, combatScenes);
             }
             catch (RetryException e)
             {
@@ -602,7 +633,7 @@ public class AutoFightJsonTask : ISoloTask
                 throw;
             }
             Logger.LogInformation("战斗前动作：{Action}", preAction);
-            await Delay(300, _ct);
+            await _runtime.Delay(300, _ct);
         }
     }
 
@@ -621,14 +652,15 @@ public class AutoFightJsonTask : ISoloTask
             else if (picker is null && !string.IsNullOrEmpty(_taskParam.KazuhaPartyName))
             {
                 Logger.LogWarning("换队拾取：当前队伍名称为空，尝试读取！");
-                await Delay(1000, _ct);
+                await _runtime.Delay(1000, _ct);
                 await _returnMainUiTask.Start(_ct);
 
                 for (int attempt = 0; attempt < 6; attempt++)
                 {
                     InputHub.Foreground.SimulateAction(GIActions.OpenPartySetupScreen);
                     var enterGameAppear = await NewRetry.WaitForElementAppear(
-                        ElementRecognition.Get("PartyBtnChooseView"),
+                        _runtime,
+                        ElementRecognition.Get("PartyBtnChooseView", _runtime.SystemInfo),
                         () => { },
                         _ct,
                         15,
@@ -644,13 +676,13 @@ public class AutoFightJsonTask : ISoloTask
 
             if (!string.IsNullOrEmpty(_taskParam.KazuhaPartyName))
             {
-                await Delay(1000, _ct);
+                await _runtime.Delay(1000, _ct);
 
                 var timeWaitStart = 0;
                 while (timeWaitStart < 6000)
                 {
-                    using var ra = CaptureToRectArea();
-                    var partyViewBtn = ra.Find(ElementRecognition.Get("PartyBtnChooseView"));
+                    using var ra = _runtime.CaptureToRectArea();
+                    var partyViewBtn = ra.Find(ElementRecognition.Get("PartyBtnChooseView", ra));
                     if (partyViewBtn.IsExist())
                     {
                         var rawPartyName = ra.Find(new RecognitionObject
@@ -685,7 +717,7 @@ public class AutoFightJsonTask : ISoloTask
                         RunnerContext.Instance.PartyName = oldPartyName;
                         break;
                     }
-                    await Delay(200, _ct);
+                    await _runtime.Delay(200, _ct);
                     timeWaitStart += 200;
                 }
             }
@@ -696,14 +728,14 @@ public class AutoFightJsonTask : ISoloTask
                 try
                 {
                     Logger.LogInformation($"切换为拾取队伍：{_taskParam.KazuhaPartyName}");
-                    var success = await new SwitchPartyTask().Start(_taskParam.KazuhaPartyName, _ct);
+                    var success = await new SwitchPartyTask(_runtime).Start(_taskParam.KazuhaPartyName, _ct);
                     if (success)
                     {
                         Logger.LogInformation($"成功切换队伍为{_taskParam.KazuhaPartyName}");
                         switchPartyFlag = true;
                         RunnerContext.Instance.PartyName = _taskParam.KazuhaPartyName;
                         RunnerContext.Instance.ClearCombatScenes();
-                        var cs = await RunnerContext.Instance.GetCombatScenes(_ct);
+                        var cs = await RunnerContext.Instance.GetCombatScenes(_runtime, _config, _ct);
                         picker = cs.SelectAvatar("枫原万叶") ?? cs.SelectAvatar("琴");
                     }
                 }
@@ -729,11 +761,11 @@ public class AutoFightJsonTask : ISoloTask
                         Logger.LogInformation("使用 枫原万叶-长E 拾取掉落物");
                         if (picker.TrySwitch(10))
                         {
-                            await Delay(100, _ct);
+                            await _runtime.Delay(100, _ct);
                             await picker.WaitSkillCd(_ct);
-                            await SimulateHoldElementalSkillAsync(800, _ct);
-                            await SimulateMouseLeftClickLoopAsync(6, _ct);
-                            await Delay(1500, _ct);
+                            await _runtime.SimulateHoldElementalSkillAsync(800, _ct);
+                            await _runtime.SimulateMouseLeftClickLoopAsync(6, _ct);
+                            await _runtime.Delay(1500, _ct);
                             picker.AfterUseSkill();
                         }
                     }
@@ -754,7 +786,7 @@ public class AutoFightJsonTask : ISoloTask
                     var find = _taskParam.QinDoublePickUp;
                     if (picker.TrySwitch(10))
                     {
-                        await Delay(100, _ct);
+                        await _runtime.Delay(100, _ct);
                         foreach (var miningActionStr in actionsToUse)
                         {
                             var pickUpAction = CombatScriptParser.ParseContext(miningActionStr);
@@ -773,9 +805,9 @@ public class AutoFightJsonTask : ISoloTask
                                             {
                                                 if (find)
                                                 {
-                                                    using (var imagePick = CaptureToRectArea())
+                                                    using (var imagePick = _runtime.CaptureToRectArea())
                                                     {
-                                                        if (imagePick.Find(AutoPickAssets.Get(imagePick, TaskContext.Instance().Config.AutoPickConfig.PickKey).PickRo).IsExist())
+                                                        if (imagePick.Find(AutoPickAssets.Get(imagePick, _config.AutoPickConfig.PickKey).PickRo).IsExist())
                                                         {
                                                             find = false;
                                                         }
@@ -817,14 +849,14 @@ public class AutoFightJsonTask : ISoloTask
                 try
                 {
                     Logger.LogInformation($"切换为原队伍：{oldPartyName}");
-                    var success = await new SwitchPartyTask().Start(oldPartyName, _ct);
+                    var success = await new SwitchPartyTask(_runtime).Start(oldPartyName, _ct);
                     if (success)
                     {
                         Logger.LogInformation($"切换为原队伍{oldPartyName}");
                         switchPartyFlag = true;
                         RunnerContext.Instance.PartyName = oldPartyName;
                         RunnerContext.Instance.ClearCombatScenes();
-                        await RunnerContext.Instance.GetCombatScenes(_ct);
+                        await RunnerContext.Instance.GetCombatScenes(_runtime, _config, _ct);
                     }
                 }
                 catch (Exception e)
@@ -836,7 +868,7 @@ public class AutoFightJsonTask : ISoloTask
 
         if (_taskParam is { PickDropsAfterFightEnabled: true })
         {
-            await new ScanPickTask().Start(_ct, _taskParam.PickDropsAfterFightSeconds);
+            await new ScanPickTask(_runtime, _config).Start(_ct, _taskParam.PickDropsAfterFightSeconds);
         }
     }
 
@@ -845,6 +877,6 @@ public class AutoFightJsonTask : ISoloTask
     /// </summary>
     private void LogScreenResolution()
     {
-        AssertUtils.CheckGameResolution("自动战斗");
+        AssertUtils.CheckGameResolution(_runtime, "自动战斗");
     }
 }

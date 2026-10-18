@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Runtime;
 using Vanara.PInvoke;
 using static Vanara.PInvoke.User32;
 using BetterGenshinImpact.ViewModel.Pages;
@@ -18,8 +19,50 @@ using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
+/// <summary>
+/// 注册给 JS 的全局方法。
+/// 与运行环境、游戏尺寸无关的方法（纯输入、版本号、文字输入等）保持静态，C# 代码也可以直接调用；
+/// 依赖运行环境或脚本设置的游戏尺寸的方法是实例方法，每个脚本引擎一个实例（由 EngineExtend.InitHost 创建），
+/// 因此 setGameMetrics 设置的尺寸只作用于当前脚本，不再在多个脚本之间共享。
+/// </summary>
 public class GlobalMethod
 {
+    /// <summary>
+    /// 本次脚本运行使用的运行环境，坐标换算、截图都作用在它上面
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 配置根，创建队伍识别对象时使用
+    /// </summary>
+    private readonly AllConfig _config;
+
+    /// <summary>
+    /// 脚本声明的游戏宽度（脚本坐标系），默认 1920
+    /// </summary>
+    private int _gameWidth = 1920;
+
+    /// <summary>
+    /// 脚本声明的游戏高度（脚本坐标系），默认 1080
+    /// </summary>
+    private int _gameHeight = 1080;
+
+    /// <summary>
+    /// 脚本声明的 DPI 缩放（脚本坐标系），默认 1
+    /// </summary>
+    private double _dpi = 1;
+
+    /// <summary>
+    /// 创建绑定到指定运行环境的全局方法实例
+    /// </summary>
+    /// <param name="runtime">本次脚本运行使用的运行环境</param>
+    /// <param name="config">配置根</param>
+    public GlobalMethod(GameRuntime runtime, AllConfig config)
+    {
+        _runtime = runtime;
+        _config = config;
+    }
+
     /// <summary>
     /// 使用当前脚本执行令牌异步等待指定时间。
     /// </summary>
@@ -70,11 +113,7 @@ public class GlobalMethod
 
     #region 鼠标操作
 
-    private static int _gameWidth = 1920;
-    private static int _gameHeight = 1080;
-    private static double _dpi = 1;
-
-    public static void SetGameMetrics(int width, int height, double dpi = 1)
+    public void SetGameMetrics(int width, int height, double dpi = 1)
     {
         // 必须16:9 的分辨率
         if (width * 9 != height * 16)
@@ -87,34 +126,35 @@ public class GlobalMethod
         _dpi = dpi;
     }
 
-    public static double[] GetGameMetrics()
+    public double[] GetGameMetrics()
     {
         return [_gameWidth, _gameHeight, _dpi];
     }
 
-    public static void MoveMouseBy(int x, int y)
+    public void MoveMouseBy(int x, int y)
     {
-        var realDpi = TaskContext.Instance().DpiScale;
+        // 按本运行环境的 DPI 与脚本声明的 DPI 之比换算位移
+        var realDpi = _runtime.SystemInfo.DpiScale;
         x = (int)(x * realDpi / _dpi);
         y = (int)(y * realDpi / _dpi);
         InputHub.Foreground.Mouse.MoveMouseBy(x, y);
     }
 
-    public static void MoveMouseTo(int x, int y)
+    public void MoveMouseTo(int x, int y)
     {
         if (x < 0 || x > _gameWidth || y < 0 || y > _gameHeight)
         {
             throw new ArgumentException("鼠标坐标超出游戏窗口范围");
         }
 
-        GameCaptureRegion.GameRegionMove((size, s2) =>
+        _runtime.GameRegionMove((size, s2) =>
         {
             var scale = 1920.0 / _gameWidth;
             return (x * scale * s2, y * scale * s2);
         });
     }
 
-    public static void Click(int x, int y)
+    public void Click(int x, int y)
     {
         MoveMouseTo(x, y);
         LeftButtonClick();
@@ -174,14 +214,14 @@ public class GlobalMethod
 
     #region 识图操作
 
-    public static ImageRegion CaptureGameRegion()
+    public ImageRegion CaptureGameRegion()
     {
-        return TaskControl.CaptureToRectArea();
+        return _runtime.CaptureToRectArea();
     }
 
-    public static string[] GetAvatars()
+    public string[] GetAvatars()
     {
-        var combatScenes = new CombatScenes().InitializeTeam(CaptureGameRegion());
+        var combatScenes = new CombatScenes(_runtime, _config).InitializeTeam(CaptureGameRegion());
         ReadOnlyCollection<Avatar> avatars = combatScenes.GetAvatars();
         return avatars.Count > 0
             ? avatars.Select(avatar => avatar.Name).ToArray()

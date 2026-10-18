@@ -23,6 +23,7 @@ using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 using BetterGenshinImpact.Core.Mask;
@@ -47,10 +48,21 @@ namespace BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 public class AutoLeyLineOutcropTask : ISoloTask
 {
     private readonly ILogger<AutoLeyLineOutcropTask> _logger = App.GetLogger<AutoLeyLineOutcropTask>();
+
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 配置根，由创建方传入
+    /// </summary>
+    private readonly AllConfig _config;
+
     private readonly AutoLeyLineOutcropParam _taskParam; 
     private readonly bool _oneDragonMode;
     private TpTask _tpTask = null!;
-    private readonly ReturnMainUiTask _returnMainUiTask = new();
+    private readonly ReturnMainUiTask _returnMainUiTask;
     private SwitchPartyTask? _switchPartyTask;
     private ISystemInfo _systemInfo = null!;
 
@@ -102,8 +114,18 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     public string Name => "自动地脉花";
 
-    public AutoLeyLineOutcropTask(AutoLeyLineOutcropParam taskParam, bool oneDragonMode = false)
+    /// <summary>
+    /// 创建自动地脉花任务
+    /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    /// <param name="config">配置根</param>
+    /// <param name="taskParam">任务参数</param>
+    /// <param name="oneDragonMode">是否为一条龙模式（不先传送到七天神像）</param>
+    public AutoLeyLineOutcropTask(GameRuntime runtime, AllConfig config, AutoLeyLineOutcropParam taskParam, bool oneDragonMode = false)
     {
+        _runtime = runtime;
+        _config = config;
+        _returnMainUiTask = new ReturnMainUiTask(runtime);
         _taskParam = taskParam;
         _oneDragonMode = oneDragonMode;
     }
@@ -169,8 +191,8 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private void Initialize()
     {
-        _systemInfo = TaskContext.Instance().SystemInfo;
-        _tpTask = new TpTask(_ct);
+        _systemInfo = _runtime.SystemInfo;
+        _tpTask = new TpTask(_runtime, _config, _ct);
         ValidateSettings();
         LoadConfigData();
         LoadRecognitionObjects();
@@ -718,7 +740,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         var fullPath = Path.Combine(workDir, localPath);
 
         var task = PathingTask.BuildFromFilePath(fullPath) ?? throw new Exception("路径文件解析失败");
-        var executor = new PathExecutor(_ct);
+        var executor = new PathExecutor(_runtime, _config, _ct);
         executor.PartyConfig = BuildLeyLinePathingPartyConfig();
         // 地脉流程保留原有后续花朵识别，本次寻路结果不替代业务判断。
         _ = await executor.Pathing(task);
@@ -806,9 +828,9 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private async Task<bool> LocateLeyLineOutcrop(string type)
     {
-        await Delay(500, _ct);
+        await _runtime.Delay(500, _ct);
         double currentZoom;
-        using (var zoomCapture = CaptureToRectArea())
+        using (var zoomCapture = _runtime.CaptureToRectArea())
         {
             currentZoom = _tpTask.GetBigMapZoomLevel(zoomCapture);
         }
@@ -818,7 +840,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             ? "Assets/icon/Blossom_of_Revelation.png"
             : "Assets/icon/Blossom_of_Wealth.png";
 
-        using var ra = CaptureToRectArea();
+        using var ra = _runtime.CaptureToRectArea();
         var iconRo = BuildTemplate(iconPath);
         var list = ra.FindMulti(iconRo);
         if (list.Count == 0)
@@ -829,11 +851,11 @@ public class AutoLeyLineOutcropTask : ISoloTask
         var flower = list[0];
         var center = _tpTask.GetBigMapCenterPoint(MapTypes.Teyvat.ToString());
         double mapZoomLevel;
-        using (var zoomCapture = CaptureToRectArea())
+        using (var zoomCapture = _runtime.CaptureToRectArea())
         {
             mapZoomLevel = _tpTask.GetBigMapZoomLevel(zoomCapture);
         }
-        var mapScaleFactor = TaskContext.Instance().Config.TpConfig.MapScaleFactor;
+        var mapScaleFactor = _config.TpConfig.MapScaleFactor;
         _leyLineX = (960 - flower.X - 25) * mapZoomLevel / mapScaleFactor + center.X;
         _leyLineY = (540 - flower.Y - 25) * mapZoomLevel / mapScaleFactor + center.Y;
         return true;
@@ -854,9 +876,9 @@ public class AutoLeyLineOutcropTask : ISoloTask
             throw new Exception("开启地脉花失败，已达最大重试次数");
         }
 
-        await Delay(500, _ct);
+        await _runtime.Delay(500, _ct);
         _logger.LogDebug("检测地脉花交互状态，重试次数: {Retries}/{MaxRetries}", retries + 1, maxRetries);
-        using var capture = CaptureToRectArea();
+        using var capture = _runtime.CaptureToRectArea();
         using var ocrOverlayScope = DrawOcrOverlayScope(capture, OcrFlowOverlayKey, _ocrRo2!.RegionOfInterest, _ocrRo3!.RegionOfInterest);
         await WaitOcrOverlayRenderTick();
         string result1Text;
@@ -878,9 +900,9 @@ public class AutoLeyLineOutcropTask : ISoloTask
         {
             _logger.LogDebug("识别到地脉之花入口，尝试接触");
             InputHub.Foreground.SimulateAction(GIActions.PickUpOrInteract);
-            await Delay(800, _ct);
+            await _runtime.Delay(800, _ct);
 
-            using var postInteractCapture = CaptureToRectArea();
+            using var postInteractCapture = _runtime.CaptureToRectArea();
             result1 = FindSafe(postInteractCapture, _ocrRo2!);
             result2 = FindSafe(postInteractCapture, _ocrRo3!);
             result1Text = result1.Text;
@@ -899,9 +921,9 @@ public class AutoLeyLineOutcropTask : ISoloTask
         {
             _logger.LogDebug("识别到溢口提示，尝试交互");
             InputHub.Foreground.SimulateAction(GIActions.PickUpOrInteract);
-            await Delay(300, _ct);
+            await _runtime.Delay(300, _ct);
             InputHub.Foreground.SimulateAction(GIActions.PickUpOrInteract);
-            await Delay(500, _ct);
+            await _runtime.Delay(500, _ct);
         }
         else if (!ContainsFightText(result1Text))
         {
@@ -948,7 +970,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
         try
         {
-            var combatScenes = await RunnerContext.Instance.GetCombatScenes(_ct);
+            var combatScenes = await RunnerContext.Instance.GetCombatScenes(_runtime, _config, _ct);
             if (combatScenes == null)
             {
                 _logger.LogWarning("战后聚集拾取：队伍识别失败，跳过");
@@ -1001,7 +1023,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         try
         {
             _logger.LogInformation("领取奖励后开始扫描掉落物光柱，时长 {Seconds} 秒", scanSeconds);
-            await new ScanPickTask().Start(_ct, scanSeconds);
+            await new ScanPickTask(_runtime, _config).Start(_ct, scanSeconds);
         }
         catch (Exception ex) when (ex is OperationCanceledException or TaskCanceledException)
         {
@@ -1020,7 +1042,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private async Task TryKazuhaCollect(Avatar kazuha)
     {
         _logger.LogInformation("战后聚集拾取：开始使用枫原万叶执行长E拾取");
-        await Delay(200, _ct);
+        await _runtime.Delay(200, _ct);
         if (!kazuha.TrySwitch(10))
         {
             _logger.LogWarning("战后聚集拾取：切换到万叶失败，跳过");
@@ -1029,11 +1051,11 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
         _logger.LogInformation("战后聚集拾取：万叶已切换，等待元素战技CD");
         await kazuha.WaitSkillCd(_ct);
-        await SimulateHoldElementalSkillAsync(1000, _ct);
-        await Delay(200, _ct);
+        await _runtime.SimulateHoldElementalSkillAsync(1000, _ct);
+        await _runtime.Delay(200, _ct);
 
         // 获取游戏画面，进行 OCR 及视觉状态双重验证，以确认长E技能是否真正释放成功
-        using (var region = CaptureToRectArea())
+        using (var region = _runtime.CaptureToRectArea())
         {
             // 裁剪技能 CD 区域并做 HSV 颜色过滤，分离出白色的 CD 数字
             using var eRa = region.DeriveCrop(AutoFightAssets.Get(region).ECooldownRect);
@@ -1055,10 +1077,10 @@ public class AutoLeyLineOutcropTask : ISoloTask
             // 更新技能冷却记录，防止干扰后续冷却判断
             kazuha.AfterUseSkill(region);
         }
-        await SimulateMouseLeftClickLoopAsync(6, _ct);
-        await Delay(1500, _ct);
+        await _runtime.SimulateMouseLeftClickLoopAsync(6, _ct);
+        await _runtime.Delay(1500, _ct);
         _logger.LogInformation("战后聚集拾取：万叶长E动作完成，等待拾取动作结束");
-        await Delay(KazuhaPickupPostSkillWaitMs, _ct);
+        await _runtime.Delay(KazuhaPickupPostSkillWaitMs, _ct);
         _logger.LogInformation("战后聚集拾取：万叶长E聚集动作执行完成");
     }
 
@@ -1066,7 +1088,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
     {
         _logger.LogInformation("战后聚集拾取：使用琴-长E拾取掉落物");
         var find = _taskParam.FightConfig.QinDoublePickUp;
-        await Delay(150, _ct);
+        await _runtime.Delay(150, _ct);
         if (qin.TrySwitch(10))
         {
             var actionsToUse = PickUpCollectHandler.PickUpActions
@@ -1090,8 +1112,8 @@ public class AutoLeyLineOutcropTask : ISoloTask
                                 {
                                     if (find)
                                     {
-                                        using var imagePick = CaptureToRectArea();
-                                        if (imagePick.Find(AutoPickAssets.Get(imagePick, TaskContext.Instance().Config.AutoPickConfig.PickKey).PickRo).IsExist())
+                                        using var imagePick = _runtime.CaptureToRectArea();
+                                        if (imagePick.Find(AutoPickAssets.Get(imagePick, _config.AutoPickConfig.PickKey).PickRo).IsExist())
                                         {
                                             find = false;
                                         }
@@ -1200,7 +1222,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
                 PickDropsAfterFightEnabled = false,
                 Timeout = autoFightConfig.Timeout > 0 ? autoFightConfig.Timeout : 600,
             };
-            var jsonTask = new AutoFightJsonTask(jsonParam);
+            var jsonTask = new AutoFightJsonTask(_runtime, _config, jsonParam);
             return jsonTask.Start(ct);
         }
         else
@@ -1216,13 +1238,13 @@ public class AutoLeyLineOutcropTask : ISoloTask
             taskParam.KazuhaPickupEnabled = false;
             taskParam.QinDoublePickUp = false;
             taskParam.OnlyPickEliteDropsMode = "DisableAutoPickupForNonElite";
-            return new AutoFightTask(taskParam).Start(ct);
+            return new AutoFightTask(_runtime, _config, taskParam).Start(ct);
         }
     }
 
     private IDisposable UseLeyLineAutoFightConfigScope()
     {
-        var allConfig = TaskContext.Instance().Config;
+        var allConfig = _config;
         var original = allConfig.AutoFightConfig;
         allConfig.AutoFightConfig = BuildLeyLineAutoFightConfig();
         return new AutoFightConfigScope(allConfig, original);
@@ -1230,7 +1252,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private AutoFightConfig BuildLeyLineAutoFightConfig()
     {
-        var globalAutoFightConfig = TaskContext.Instance().Config.AutoFightConfig;
+        var globalAutoFightConfig = _config.AutoFightConfig;
         var fightConfig = _taskParam.FightConfig;
         if (string.IsNullOrWhiteSpace(fightConfig.StrategyName))
         {
@@ -1273,7 +1295,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         {
             string text;
             bool foundText;
-            using (var capture = CaptureToRectArea())
+            using (var capture = _runtime.CaptureToRectArea())
             using (var ocrOverlayScope = DrawOcrOverlayScope(capture, OcrFightOverlayKey, _ocrRo1!.RegionOfInterest, _ocrRo2!.RegionOfInterest))
             {
                 await WaitOcrOverlayRenderTick();
@@ -1318,7 +1340,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
                 }
             }
 
-            await Delay(1000, _ct);
+            await _runtime.Delay(1000, _ct);
         }
 
         return false;
@@ -1349,7 +1371,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         try
         {
             // isEndCheck=true prevents AutoFightSeek from falling back to any party-screen finish check.
-            await AutoFightSeek.SeekAndFightAsync(_logger, 0, 0, _ct, true, rotaryFactor);
+            await AutoFightSeek.SeekAndFightAsync(_runtime, _logger, 0, 0, _ct, true, rotaryFactor);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -1389,7 +1411,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             // Reset camera and move in short bursts to re-acquire the chest icon.
             _logger.LogInformation("开始导航到地脉花奖励，尝试 {Retry}/{Max}", retry + 1, maxRetry);
             InputHub.Foreground.Mouse.MiddleButtonClick();
-            await Delay(300, _ct);
+            await _runtime.Delay(300, _ct);
 
             if (await NavigateTowardReward(60000))
             {
@@ -1399,11 +1421,11 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
             InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
             InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_X);
-            await Delay(500, _ct);
+            await _runtime.Delay(500, _ct);
             InputHub.Foreground.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown);
-            await Delay(1000, _ct);
+            await _runtime.Delay(1000, _ct);
             InputHub.Foreground.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
-            await Delay(500, _ct);
+            await _runtime.Delay(500, _ct);
         }
 
         throw new Exception("导航到地脉花失败：超时未检测到奖励或交互文字");
@@ -1423,7 +1445,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
                     return true;
                 }
 
-                using var capture = CaptureToRectArea();
+                using var capture = _runtime.CaptureToRectArea();
                 if (_paimonMenuRo != null && capture.Find(_paimonMenuRo).IsEmpty())
                 {
                     LogRewardNav("误入其他界面，尝试返回主界面");
@@ -1435,13 +1457,13 @@ public class AutoLeyLineOutcropTask : ISoloTask
                     // Wait for the icon to re-enter view before moving forward.
                     LogRewardNav("未对正地脉花图标，等待重新定位");
                     InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-                    await Delay(1000, _ct);
+                    await _runtime.Delay(1000, _ct);
                     continue;
                 }
 
                 LogRewardNav("地脉花图标已对正，开始前进");
                 InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-                await Delay(200, _ct);
+                await _runtime.Delay(200, _ct);
             }
         }
         finally
@@ -1500,7 +1522,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private async Task<bool> DetectRewardPage()
     {
-        using var capture = CaptureToRectArea();
+        using var capture = _runtime.CaptureToRectArea();
         // Bv.FindF is faster for common keywords and avoids OCR misses.
         if (Bv.FindF(capture, "接触") || Bv.FindF(capture, "地脉") || Bv.FindF(capture, "之花"))
         {
@@ -1548,14 +1570,14 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private async Task<bool> ProcessResurrect()
     {
-        using var capture = CaptureToRectArea();
+        using var capture = _runtime.CaptureToRectArea();
         var list = capture.FindMulti(_ocrRoThis);
         foreach (var res in list)
         {
             if (res.Text.Contains("复苏", StringComparison.Ordinal))
             {
                 res.Click();
-                await Delay(2000, _ct);
+                await _runtime.Delay(2000, _ct);
                 return true;
             }
         }
@@ -1606,7 +1628,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             return false;
         }
 
-        _switchPartyTask ??= new SwitchPartyTask();
+        _switchPartyTask ??= new SwitchPartyTask(_runtime);
         var success = await _switchPartyTask.Start(partyName, _ct);
         if (success)
         {
@@ -1625,7 +1647,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         }
 
         InputHub.Foreground.SimulateAction(GIActions.PickUpOrInteract);
-        await Delay(800, _ct);
+        await _runtime.Delay(800, _ct);
 
         if (!await VerifyRewardPage())
         {
@@ -1649,14 +1671,14 @@ public class AutoLeyLineOutcropTask : ISoloTask
             _logger.LogDebug("本次未成功切换到好感队，跳过切回战斗队");
         }
 
-        await Delay(1200, _ct);
+        await _runtime.Delay(1200, _ct);
         await EnsureExitRewardPage();
         return true;
     }
 
     private async Task<bool> VerifyRewardPage()
     {
-        using var capture = CaptureToRectArea();
+        using var capture = _runtime.CaptureToRectArea();
         return HasRewardPrompt(capture);
     }
 
@@ -1684,10 +1706,15 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private void ClearOcrOverlayKeys()
     {
-        // 任务结束时截图区域已释放，从当前运行环境取；截图器已停止时解绑已清空，这里不做任何事
-        var drawingBoard = TaskContext.Instance().Runtime?.MaskWindowDrawingBoard;
-        drawingBoard?.Clear(OcrFlowOverlayKey);
-        drawingBoard?.Clear(OcrFightOverlayKey);
+        // 任务结束时截图区域已释放，从本次运行环境取；运行环境已停止时解绑流程已清空遮罩，这里不做任何事
+        if (_runtime.IsStopping)
+        {
+            return;
+        }
+
+        var drawingBoard = _runtime.MaskWindowDrawingBoard;
+        drawingBoard.Clear(OcrFlowOverlayKey);
+        drawingBoard.Clear(OcrFightOverlayKey);
     }
 
     private async Task WaitOcrOverlayRenderTick()
@@ -1702,7 +1729,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         {
             if (await TryUseRewardResinOnce())
             {
-                await Delay(1000, _ct);
+                await _runtime.Delay(1000, _ct);
                 if (!await VerifyRewardPage())
                 {
                     return true;
@@ -1715,7 +1742,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
                 _logger.LogDebug("奖励页面未成功选择树脂，第{Attempt}次后准备重试", attempt + 1);
             }
 
-            await Delay(300, _ct);
+            await _runtime.Delay(300, _ct);
         }
 
         return false;
@@ -1749,7 +1776,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         {
             if (await TrySwitch20To40Resin())
             {
-                await Delay(300, _ct);
+                await _runtime.Delay(300, _ct);
                 promptRegions = CaptureRewardPromptRegions();
                 if (promptRegions.Count == 0)
                 {
@@ -1829,13 +1856,13 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private async Task ActivateRewardPrompt()
     {
-        using var capture = CaptureToRectArea();
+        using var capture = _runtime.CaptureToRectArea();
         var titleRoi = GetRewardPromptTitleRoi(capture);
         var titleRegion = CaptureRewardPromptTitleRegion(capture, titleRoi);
 
         // 对齐自动秘境的处理，先点一次标题区域激活弹窗，再点树脂使用按钮。
         InputHub.Foreground.Mouse.LeftButtonUp();
-        await Delay(60, _ct);
+        await _runtime.Delay(60, _ct);
 
         if (titleRegion != null)
         {
@@ -1848,7 +1875,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             _logger.LogDebug("奖励页面标题 OCR 被拆分，回退点击标题区域中心激活弹窗");
         }
 
-        await Delay(800, _ct);
+        await _runtime.Delay(800, _ct);
     }
 
     private Region? CaptureRewardPromptTitleRegion(ImageRegion capture, Rect titleRoi)
@@ -1868,7 +1895,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private List<Region> CaptureRewardPromptRegions()
     {
-        using var capture = CaptureToRectArea();
+        using var capture = _runtime.CaptureToRectArea();
         return capture.FindMulti(RecognitionObject.Ocr(GetRewardPromptContentRoi(capture)));
     }
 
@@ -1876,9 +1903,9 @@ public class AutoLeyLineOutcropTask : ISoloTask
     {
         // 某些链路会残留左键按下状态，先显式抬起一次再点使用按钮。
         InputHub.Foreground.Mouse.LeftButtonUp();
-        await Delay(60, _ct);
+        await _runtime.Delay(60, _ct);
 
-        var (success, _) = AutoDomainTask.PressUseResin(promptRegions, resinName, Name);
+        var (success, _) = AutoDomainTask.PressUseResin(_runtime, promptRegions, resinName, Name);
         if (success)
         {
             _logger.LogDebug("奖励页面已尝试使用树脂：{ResinName}", resinName);
@@ -1890,7 +1917,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private async Task<bool> TrySwitch20To40Resin()
     {
         var switchRo = BuildTemplate("Assets/icon/switch_button.png", null, 0.7);
-        using var capture = CaptureToRectArea();
+        using var capture = _runtime.CaptureToRectArea();
         var res = capture.Find(switchRo);
         if (res.IsEmpty())
         {
@@ -1898,9 +1925,9 @@ public class AutoLeyLineOutcropTask : ISoloTask
         }
 
         res.Click();
-        await Delay(800, _ct);
+        await _runtime.Delay(800, _ct);
 
-        using var check = CaptureToRectArea();
+        using var check = _runtime.CaptureToRectArea();
         var lineTexts = BuildPromptTextLines(check.FindMulti(_ocrRoThis));
         return lineTexts.Any(text => text.Contains("40", StringComparison.Ordinal) && text.Contains("原粹", StringComparison.Ordinal));
     }
@@ -2041,7 +2068,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             }
 
             InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-            await Delay(800, _ct);
+            await _runtime.Delay(800, _ct);
         }
     }
 
@@ -2077,30 +2104,30 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private async Task OpenLeyLineOutcropCountryInHandbook(string country, string type)
     {
         await _returnMainUiTask.Start(_ct);
-        await Delay(1000, _ct);
+        await _runtime.Delay(1000, _ct);
 
         InputHub.Foreground.SimulateAction(GIActions.OpenAdventurerHandbook);
-        await Delay(2500, _ct);
+        await _runtime.Delay(2500, _ct);
 
-        GameCaptureRegion.GameRegion1080PPosClick(300, 550);
-        await Delay(1000, _ct);
-        GameCaptureRegion.GameRegion1080PPosClick(500, 200);
-        await Delay(1000, _ct);
-        GameCaptureRegion.GameRegion1080PPosClick(500, 500);
-        await Delay(1000, _ct);
+        _runtime.GameRegion1080PPosClick(300, 550);
+        await _runtime.Delay(1000, _ct);
+        _runtime.GameRegion1080PPosClick(500, 200);
+        await _runtime.Delay(1000, _ct);
+        _runtime.GameRegion1080PPosClick(500, 500);
+        await _runtime.Delay(1000, _ct);
 
         if (type == "启示之花")
         {
-            GameCaptureRegion.GameRegion1080PPosClick(700, 350);
+            _runtime.GameRegion1080PPosClick(700, 350);
         }
         else
         {
-            GameCaptureRegion.GameRegion1080PPosClick(500, 350);
+            _runtime.GameRegion1080PPosClick(500, 350);
         }
 
-        await Delay(1000, _ct);
-        GameCaptureRegion.GameRegion1080PPosClick(1300, 800);
-        await Delay(1000, _ct);
+        await _runtime.Delay(1000, _ct);
+        _runtime.GameRegion1080PPosClick(1300, 800);
+        await _runtime.Delay(1000, _ct);
 
         await FindAndClickCountry(country);
     }
@@ -2112,7 +2139,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             return false;
         }
 
-        using var capture = CaptureToRectArea();
+        using var capture = _runtime.CaptureToRectArea();
         return capture.Find(_mapSettingButtonRo).IsExist();
     }
 
@@ -2122,7 +2149,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
         for (var attempt = 0; attempt <= MaxCountryScrollAttempts; attempt++)
         {
-            using var capture = CaptureToRectArea();
+            using var capture = _runtime.CaptureToRectArea();
             var list = capture.FindMulti(_ocrRoThis);
             var matchingTargets = list.Where(r => r.Text.Contains(match, StringComparison.Ordinal)).ToList();
             var target = matchingTargets.FirstOrDefault(r => IsCountryOptionFullyVisible(r, capture));
@@ -2142,9 +2169,9 @@ public class AutoLeyLineOutcropTask : ISoloTask
                 break;
             }
 
-            GameCaptureRegion.GameRegion1080PPosMove(1500, 600);
+            _runtime.GameRegion1080PPosMove(1500, 600);
             InputHub.Foreground.Mouse.VerticalScroll(-1);
-            await Delay(CountryScrollDelayMs, _ct);
+            await _runtime.Delay(CountryScrollDelayMs, _ct);
         }
 
         _logger.LogWarning("冒险之证向下滚动{ScrollAttempts}次后仍未找到国家: {Country}", MaxCountryScrollAttempts, country);
@@ -2171,16 +2198,16 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
             button.Click();
             _logger.LogDebug("通过图标识别点击冒险之证底部操作按钮，第{Attempt}次", attempt + 1);
-            await Delay(1500, _ct);
+            await _runtime.Delay(1500, _ct);
             if (await CheckBigMapOpened())
             {
                 return true;
             }
         }
 
-        GameCaptureRegion.GameRegion1080PPosClick(1500, 850);
+        _runtime.GameRegion1080PPosClick(1500, 850);
         _logger.LogDebug("图标未命中或点击后未打开大地图，回退固定坐标点击");
-        await Delay(2500, _ct);
+        await _runtime.Delay(2500, _ct);
         return await CheckBigMapOpened();
     }
 
@@ -2191,7 +2218,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             return null;
         }
 
-        using var capture = CaptureToRectArea();
+        using var capture = _runtime.CaptureToRectArea();
         var button = capture.Find(_handbookTrackActionRo);
         if (!button.IsExist())
         {
@@ -2203,10 +2230,10 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private async Task CancelTrackingInMap()
     {
-        GameCaptureRegion.GameRegion1080PPosClick(960, 540);
-        await Delay(1000, _ct);
+        _runtime.GameRegion1080PPosClick(960, 540);
+        await _runtime.Delay(1000, _ct);
 
-        using var capture = CaptureToRectArea();
+        using var capture = _runtime.CaptureToRectArea();
         var list = capture.FindMulti(_ocrRoThis);
         var stop = list.FirstOrDefault(r => r.Text.Contains("停止", StringComparison.Ordinal));
         if (stop != null)
@@ -2219,9 +2246,9 @@ public class AutoLeyLineOutcropTask : ISoloTask
         if (leyLine != null)
         {
             leyLine.Click();
-            await Delay(1000, _ct);
-            GameCaptureRegion.GameRegion1080PPosClick(1700, 1010);
-            await Delay(1000, _ct);
+            await _runtime.Delay(1000, _ct);
+            _runtime.GameRegion1080PPosClick(1700, 1010);
+            await _runtime.Delay(1000, _ct);
         }
     }
 
@@ -2286,10 +2313,10 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private async Task<ResinCounts> CountAllResin()
     {
         await _returnMainUiTask.Start(_ct);
-        await Delay(1500, _ct);
+        await _runtime.Delay(1500, _ct);
 
         InputHub.Foreground.SimulateAction(GIActions.OpenMap);
-        await Delay(1500, _ct);
+        await _runtime.Delay(1500, _ct);
 
         var result = new ResinCounts
         {
@@ -2300,7 +2327,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         if (_taskParam.UseTransientResin || _taskParam.UseFragileResin)
         {
             await OpenReplenishResinUi();
-            await Delay(1500, _ct);
+            await _runtime.Delay(1500, _ct);
             result.TransientResinCount = await CountTransientResin();
             result.FragileResinCount = await CountFragileResin();
         }
@@ -2312,7 +2339,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private async Task<int> CountOriginalResin()
     {
         var icon = BuildTemplate("Assets/1920x1080/original_resin.png");
-        using var capture = CaptureToRectArea();
+        using var capture = _runtime.CaptureToRectArea();
         var res = capture.Find(icon);
         if (res.IsEmpty())
         {
@@ -2334,7 +2361,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private async Task<int> CountCondensedResin()
     {
         var icon = BuildTemplate("Assets/1920x1080/condensed_resin.png");
-        using var capture = CaptureToRectArea();
+        using var capture = _runtime.CaptureToRectArea();
         var res = capture.Find(icon);
         if (res.IsEmpty())
         {
@@ -2355,7 +2382,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private async Task<int> CountTransientResin()
     {
         var icon = BuildTemplate("Assets/1920x1080/transient_resin.png");
-        using var capture = CaptureToRectArea();
+        using var capture = _runtime.CaptureToRectArea();
         var res = capture.Find(icon);
         if (res.IsEmpty())
         {
@@ -2370,7 +2397,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private async Task<int> CountFragileResin()
     {
         var icon = BuildTemplate("Assets/1920x1080/fragile_resin.png");
-        using var capture = CaptureToRectArea();
+        using var capture = _runtime.CaptureToRectArea();
         var res = capture.Find(icon);
         if (res.IsEmpty())
         {
@@ -2434,7 +2461,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private async Task OpenReplenishResinUi()
     {
         var ro = BuildTemplate("Assets/icon/replenish_resin_button.png");
-        using var capture = CaptureToRectArea();
+        using var capture = _runtime.CaptureToRectArea();
         var res = capture.Find(ro);
         if (res.IsExist())
         {

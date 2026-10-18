@@ -1,4 +1,5 @@
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Service.Interface;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -21,6 +22,11 @@ internal sealed class DialogueOptionVoiceDiagnosticService : BackgroundService
     private readonly DialogueOptionVoiceDiagnosticState _state;
     private readonly ILogger<DialogueOptionVoiceDiagnosticService> _logger;
     private readonly TaskTriggerDispatcher _triggers;
+
+    /// <summary>
+    /// 游戏运行环境服务。进程级服务不持有运行环境，每次查找游戏进程时读取 Current
+    /// </summary>
+    private readonly GameRuntimeService _runtimeService;
     private DialogueOptionVoiceDetector? _detector;
     private PcmWaveRecorder? _recorder;
     private int? _unavailableProcessId;
@@ -30,12 +36,14 @@ internal sealed class DialogueOptionVoiceDiagnosticService : BackgroundService
         IConfigService configService,
         DialogueOptionVoiceDiagnosticState state,
         ILogger<DialogueOptionVoiceDiagnosticService> logger,
-        TaskTriggerDispatcher triggers)
+        TaskTriggerDispatcher triggers,
+        GameRuntimeService runtimeService)
     {
         _config = configService.Get().AutoSkipConfig;
         _state = state;
         _logger = logger;
         _triggers = triggers;
+        _runtimeService = runtimeService;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -218,9 +226,12 @@ internal sealed class DialogueOptionVoiceDiagnosticService : BackgroundService
             : $"等待选项 · 未起播 · 静音 {progress.QuietMilliseconds / 1000d:F1}s / {progress.RequiredQuietMilliseconds / 1000d:F1}s";
     }
 
-    private static Process? FindGameProcess()
+    /// <summary>
+    /// 优先取当前运行环境的游戏窗口所在进程；截图器未启动时按进程名查找游戏窗口
+    /// </summary>
+    private Process? FindGameProcess()
     {
-        var configuredHandle = TaskContext.Instance().GameHandle;
+        var configuredHandle = _runtimeService.Current?.Window.Handle ?? IntPtr.Zero;
         if (configuredHandle != IntPtr.Zero)
         {
             var configuredProcess = SystemControl.GetProcessByHandle(configuredHandle);

@@ -21,6 +21,7 @@ namespace BetterGenshinImpact.Pulonia.Executors;
 /// </summary>
 public sealed class PuloniaJavaScriptTaskExecutor : IPuloniaTaskExecutor
 {
+
     /// <inheritdoc />
     public IReadOnlyList<PuloniaTaskDefinition> Definitions { get; } = [new()
     {
@@ -51,6 +52,9 @@ public sealed class PuloniaJavaScriptTaskExecutor : IPuloniaTaskExecutor
     {
         if (string.IsNullOrWhiteSpace(task.Path))
             return PuloniaTaskOutcome.Failure("JS 节点没有固定项目路径。");
+        // 脚本只使用本节点租约记录的运行环境；它已停止时当前节点失败
+        if (!context.TryGetRuntime(out var runtime, out var runtimeError))
+            return PuloniaTaskOutcome.Failure(runtimeError);
 
         using var workspace = task.Resource is { } repositoryResource
             ? await ScriptRepositoryStore.Shared.AcquireWorkspaceAsync(repositoryResource, ct).ConfigureAwait(false) : null;
@@ -73,7 +77,7 @@ public sealed class PuloniaJavaScriptTaskExecutor : IPuloniaTaskExecutor
             ? TaskTriggerDispatcher.Instance().AddTrigger("AutoEat", null) : null;
 
         var project = new ScriptProject(relativeProjectPath, scriptRoot, repositoryResources);
-        await project.ExecuteAsync(settings, partyConfig, ct).ConfigureAwait(false);
+        await project.ExecuteAsync(runtime, settings, partyConfig, ct).ConfigureAwait(false);
         ct.ThrowIfCancellationRequested();
         return PuloniaTaskOutcome.ExecutedUnverified("JS 项目已执行完成，但旧脚本没有结构化副作用证据。",
             new JObject { ["resource_version"] = task.ResourceVersion });

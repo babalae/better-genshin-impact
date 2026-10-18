@@ -39,12 +39,12 @@ public static class ResinRecognition
     /// <returns>树脂识别结果；原粹树脂识别失败时返回 null</returns>
     public static ResinRecognitionResult? RecognizeInBigMapTopBar(ImageRegion capture)
     {
-        var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+        var assetScale = capture.GetAssetScale();
 
         using var iconSearchRegion = capture.DeriveCrop(new Rect(
             (int)(1200 * assetScale), (int)(25 * assetScale),
             (int)(580 * assetScale), (int)(50 * assetScale)));
-        var captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
+        var captureRect = capture.GetScaleMax1080PFrameSize();
         var iconRa = iconSearchRegion.Find(RecognitionAssets.Get("AutoBoss", "OriginalResinTopIcon", captureRect.Width, captureRect.Height));
         if (iconRa.IsEmpty())
         {
@@ -114,7 +114,7 @@ public static class ResinRecognition
         using var searchRegion = capture.DeriveCrop(new Rect(
             searchLeft, searchTop, searchRight - searchLeft, searchBottom - searchTop));
 
-        var captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
+        var captureRect = capture.GetScaleMax1080PFrameSize();
         var iconRa = searchRegion.Find(RecognitionAssets.Get(
             "AutoFight", "CondensedResinTopIcon", captureRect.Width, captureRect.Height));
         if (iconRa.IsEmpty())

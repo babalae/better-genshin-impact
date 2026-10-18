@@ -1,4 +1,5 @@
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Runtime;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
@@ -7,8 +8,18 @@ using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.GameTask.Shell;
 
-public class ShellTask(ShellTaskParam param) : ISoloTask
+/// <summary>
+/// 执行 Shell 命令的任务
+/// </summary>
+/// <param name="runtime">本次运行使用的运行环境，命令执行完毕后激活其游戏窗口</param>
+/// <param name="param">任务参数</param>
+public class ShellTask(GameRuntime runtime, ShellTaskParam param) : ISoloTask
 {
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime = runtime;
+
     public string Name => "Shell";
 
     public Task Start(CancellationToken ct = default)
@@ -79,7 +90,7 @@ public class ShellTask(ShellTaskParam param) : ISoloTask
             TaskControl.Logger.LogInformation("shell {End} 运行结束", param.Command);
         }
 
-        SystemControl.ActivateWindow();
+        _runtime.Window.Activate();
     }
 
     /// <summary>

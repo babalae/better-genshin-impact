@@ -9,14 +9,29 @@ using BetterGenshinImpact.GameTask.AutoFight.Script;
 using System.Linq;
 using System.Collections.Generic;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Runtime;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 
     /// <summary>
 /// 使用万叶或琴团通过战技吸取拾取物品，优先万叶，如果没有万叶则使用琴团
 /// </summary>
-public class PickUpCollectHandler : IActionHandler
+/// <param name="runtime">本次运行使用的运行环境</param>
+/// <param name="config">配置根</param>
+public class PickUpCollectHandler(GameRuntime runtime, AllConfig config) : IActionHandler
 {
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime = runtime;
+
+    /// <summary>
+    /// 配置根
+    /// </summary>
+    private readonly AllConfig _config = config;
+
     /// <summary>
     /// 新增命令时，以角色名称开头(必填)，“-”后定义动作(必填，用于预解析，不能单写角色名称)，空格后定义参数(必填)
     /// 1、"action": "pick_up_collect","action_params":为空或不填，在队伍中寻找CharacterNames中第一个找到的角色，找到就会执行PickUpActions第一个找到的相关角色命令。
@@ -51,7 +66,7 @@ public class PickUpCollectHandler : IActionHandler
     {
         Logger.LogInformation("简易策略：执行 {Nhd} 动作","聚集材料");
 
-        var combatScenes = await RunnerContext.Instance.GetCombatScenes(ct);
+        var combatScenes = await RunnerContext.Instance.GetCombatScenes(_runtime, _config, ct);
         if (combatScenes == null)
         {
             Logger.LogError("队伍识别未初始化成功！");
@@ -197,7 +212,7 @@ public class PickUpCollectHandler : IActionHandler
                     var selectedAvatar = combatScenes.SelectAvatar(characterName);
                     if (selectedAvatar is not null)
                     { 
-                        Sleep(200);//等待CD显示
+                        _runtime.Sleep(200);//等待CD显示
                         selectedAvatar.AfterUseSkill();
                     }
                     break;

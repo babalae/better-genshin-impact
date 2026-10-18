@@ -10,14 +10,21 @@ using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Simulator.Extensions;
+using BetterGenshinImpact.GameTask.Runtime;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 
 /// <summary>
 /// 采集任务到达点位后执行拾取操作
 /// </summary>
-public class PickAroundHandler() : IActionHandler
+/// <param name="runtime">本次运行使用的运行环境</param>
+public class PickAroundHandler(GameRuntime runtime) : IActionHandler
 {
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime = runtime;
+
     private CancellationToken _ct;
 
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
@@ -49,29 +56,29 @@ public class PickAroundHandler() : IActionHandler
     public async Task MoveCircle(double edgeT, int n)
     {
         InputHub.Foreground.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown);
-        await Delay(30, _ct);
+        await _runtime.Delay(30, _ct);
         while (n-- > 0)
         {
             InputHub.Foreground.Mouse.MiddleButtonClick();
-            await Delay((int)Math.Round(edgeT), _ct);
+            await _runtime.Delay((int)Math.Round(edgeT), _ct);
         }
 
         InputHub.Foreground.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
-        await Delay(200, _ct);
+        await _runtime.Delay(200, _ct);
     }
 
     public async Task MoveAfterTurn(User32.VK vk, int ms = 0)
     {
         InputHub.Foreground.Keyboard.KeyPress(vk);
-        await Delay(200, _ct);
+        await _runtime.Delay(200, _ct);
         InputHub.Foreground.Mouse.MiddleButtonClick();
-        await Delay(500, _ct);
+        await _runtime.Delay(500, _ct);
         if (ms > 0)
         {
             InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-            await Delay(ms, _ct);
+            await _runtime.Delay(ms, _ct);
             InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-            await Delay(200, _ct);
+            await _runtime.Delay(200, _ct);
         }
     }
 
@@ -80,7 +87,7 @@ public class PickAroundHandler() : IActionHandler
         double x = newRadius - oldRadius * Math.Cos(angle);
         double y = oldRadius * Math.Sin(angle);
         InputHub.Foreground.Mouse.MiddleButtonClick();
-        await Delay(500, _ct);
+        await _runtime.Delay(500, _ct);
         await MoveAfterTurn(GIActions.MoveBackward.ToActionKey().ToVK(), (int)Math.Round(y) + 200);
         await MoveAfterTurn(GIActions.MoveLeft.ToActionKey().ToVK(), (int)Math.Round(x));
     }

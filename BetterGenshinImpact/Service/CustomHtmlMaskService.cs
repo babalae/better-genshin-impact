@@ -1,6 +1,7 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Mask;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View;
 using System;
@@ -20,12 +21,20 @@ public sealed class CustomHtmlMaskService
 
     private readonly IConfigService _configService;
     private readonly IMaskWindowHost _maskWindowHost;
+
+    /// <summary>
+    /// 游戏运行环境服务；每次使用时读取 Current，没有运行环境即视为没有游戏窗口
+    /// </summary>
+    private readonly GameRuntimeService _gameRuntimeService;
+
     private MaskWindowState _lastMaskWindowState;
 
-    public CustomHtmlMaskService(IConfigService configService, IMaskWindowHost maskWindowHost)
+    public CustomHtmlMaskService(IConfigService configService, IMaskWindowHost maskWindowHost,
+        GameRuntimeService gameRuntimeService)
     {
         _configService = configService;
         _maskWindowHost = maskWindowHost;
+        _gameRuntimeService = gameRuntimeService;
         _configService.Get().MaskWindowConfig.PropertyChanged += OnMaskWindowConfigChanged;
         _maskWindowHost.StateChanged += OnMaskWindowStateChanged;
     }
@@ -124,7 +133,8 @@ public sealed class CustomHtmlMaskService
             return;
         }
 
-        if (TaskContext.Instance().GameHandle == IntPtr.Zero || !_maskWindowHost.State.IsVisible)
+        // 只看当前运行环境，不再沿用上一次绑定留下的句柄
+        if ((_gameRuntimeService.Current?.Window.Handle ?? IntPtr.Zero) == IntPtr.Zero || !_maskWindowHost.State.IsVisible)
         {
             return;
         }

@@ -593,7 +593,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
                 try
                 {
                     // 现在OCR创建的时候会自己读设置了
-                    // string gameCultureInfoName = TaskContext.Instance().Config.OtherConfig.GameCultureInfoName;
+                    // string gameCultureInfoName = Config.OtherConfig.GameCultureInfoName;
                     // await OcrFactory.ChangeCulture(gameCultureInfoName);
                     await _inferenceDiagnostics.PreheatOcrAsync();
                 }

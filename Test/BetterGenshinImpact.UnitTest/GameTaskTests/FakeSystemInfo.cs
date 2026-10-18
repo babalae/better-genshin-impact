@@ -42,5 +42,10 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests
         public Rect ScaleMax1080PCaptureRect { get; set; } = new Rect(0, 0, 1920, 1080);
 
         public DesktopRegion DesktopRectArea { get; set; }
+
+        /// <summary>
+        /// 测试中固定为 1
+        /// </summary>
+        public float DpiScale { get; } = 1;
     }
 }

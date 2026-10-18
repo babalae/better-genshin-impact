@@ -11,7 +11,20 @@ namespace BetterGenshinImpact.Core.Script.Dependence;
 
 public class Notification
 {
-  private readonly AllConfig _config = TaskContext.Instance().Config; 
+  /// <summary>
+  /// 配置根，用于读取 JS 通知开关
+  /// </summary>
+  private readonly AllConfig _config;
+
+  /// <summary>
+  /// 创建脚本通知宿主
+  /// </summary>
+  /// <param name="config">配置根（由 EngineExtend.InitHost 传入）</param>
+  public Notification(AllConfig config)
+  {
+      _config = config;
+  }
+
     private readonly ILogger<Notification> _logger = App.GetLogger<Notification>();
     private readonly TimeSpan _timeWindow = TimeSpan.FromMinutes(1);
     private readonly int _maxNotifications = 5;

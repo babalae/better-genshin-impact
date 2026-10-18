@@ -588,7 +588,7 @@ public class ConditionEvaluator
                     using var clone = new ImageRegion(clonedMat, 0, 0);
 
                     // ① 侧边栏检测：检测所有 4 个角色侧边栏 Q 图标（主要捕获后台角色）
-                    var sidePanelReady = AutoFightSkill.AvatarQSkillAsync(clone).Result;
+                    var sidePanelReady = AutoFightSkill.AvatarQSkillAsync(_combatScenes.Runtime, clone).Result;
 
                     // ② 场上角色中央检测：仅检测当前场上角色的中央 Q 图标
                     var centerReady = new List<int>();
@@ -596,7 +596,7 @@ public class ConditionEvaluator
                     if (currentOnFieldIndex > 0)
                     {
                         // 仅对场上角色单独检测中央 Q 区域
-                        centerReady = AutoFightSkill.AvatarQSkillAsync(clone,
+                        centerReady = AutoFightSkill.AvatarQSkillAsync(_combatScenes.Runtime, clone,
                             new List<int> { currentOnFieldIndex }, currentOnFieldIndex).Result;
                     }
 

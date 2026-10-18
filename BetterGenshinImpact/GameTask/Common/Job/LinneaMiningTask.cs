@@ -14,6 +14,7 @@ using Compunet.YoloSharp;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using OpenCvSharp;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.Core.Simulator.Extensions.SimulateKeyHelper;
@@ -58,9 +59,26 @@ public class LinneaMiningTask
     #endregion
 
     private BgiYoloPredictor _predictor = null!;
-    private readonly double _dpi = TaskContext.Instance().DpiScale;
-    private readonly double _widthScale = TaskContext.Instance().SystemInfo.CaptureAreaRect.Width / 1920.0;
-    private readonly double _heightScale = TaskContext.Instance().SystemInfo.CaptureAreaRect.Height / 1080.0;
+
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 构造时的输入坐标缩放比例快照
+    /// </summary>
+    private readonly double _dpi;
+
+    /// <summary>
+    /// 构造时捕获区域宽度相对 1920 的比例快照
+    /// </summary>
+    private readonly double _widthScale;
+
+    /// <summary>
+    /// 构造时捕获区域高度相对 1080 的比例快照
+    /// </summary>
+    private readonly double _heightScale;
     private readonly double ClusterDistanceThreshold;
     private readonly double EdgeIgnore;
     private readonly double AlignmentExpansion;
@@ -70,8 +88,18 @@ public class LinneaMiningTask
     private readonly bool _preferRight;
     private int _debugIndex;
 
-    public LinneaMiningTask(int scanRounds = DefaultScanRounds, int mineCount = DefaultMineCount)
+    /// <summary>
+    /// 创建莉奈娅挖矿任务
+    /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    /// <param name="scanRounds">大循环次数</param>
+    /// <param name="mineCount">射箭次数</param>
+    public LinneaMiningTask(GameRuntime runtime, int scanRounds = DefaultScanRounds, int mineCount = DefaultMineCount)
     {
+        _runtime = runtime;
+        _dpi = runtime.SystemInfo.DpiScale;
+        _widthScale = runtime.SystemInfo.CaptureAreaRect.Width / 1920.0;
+        _heightScale = runtime.SystemInfo.CaptureAreaRect.Height / 1080.0;
         _scanRounds = scanRounds;
         _mineCount = mineCount;
         _preferRight = scanRounds > 1;
@@ -92,14 +120,14 @@ public class LinneaMiningTask
 
             InputHub.Foreground.Keyboard.KeyPress(GIActions.SwitchAimingMode.ToActionKey().ToVK());
             aimingModeEntered = true;
-            await Delay(400, ct);
+            await _runtime.Delay(400, ct);
 
             var minedCount = 0;
 
             for (var round = 0; round < _scanRounds && !ct.IsCancellationRequested; round++)
             {
                 InputHub.Foreground.Mouse.MiddleButtonDown();
-                await Delay(1500, ct);
+                await _runtime.Delay(1500, ct);
                 _lastRefreshTime = Environment.TickCount64;
 
                 var (cluster, centerX, centerY) = FindNearestMineralCluster();
@@ -115,35 +143,35 @@ public class LinneaMiningTask
                     }
 
                     InputHub.Foreground.Mouse.MiddleButtonUp();
-                    await Delay(300, ct);
+                    await _runtime.Delay(300, ct);
 
                     if (compensateDx != 0 || compensateDy != 0)
                     {
                         InputHub.Foreground.Mouse.MiddleButtonDown();
-                        await Delay(1500, ct);
+                        await _runtime.Delay(1500, ct);
                         _lastRefreshTime = Environment.TickCount64;
                         InputHub.Foreground.Mouse.MoveMouseBy(-compensateDx, -compensateDy);
-                        await Delay(800, ct);
+                        await _runtime.Delay(800, ct);
                         InputHub.Foreground.Mouse.MiddleButtonUp();
-                        await Delay(300, ct);
+                        await _runtime.Delay(300, ct);
                     }
 
                     if (round < _scanRounds - 1)
                     {
                         InputHub.Foreground.Mouse.MoveMouseBy((int)(LeftTurnStep * _dpi * _widthScale), 0);
-                        await Delay(800, ct);
+                        await _runtime.Delay(800, ct);
                     }
                     continue;
                 }
 
                 InputHub.Foreground.Mouse.MiddleButtonUp();
-                await Delay(300, ct);
+                await _runtime.Delay(300, ct);
 
                 if (round < _scanRounds - 1)
                 {
                     InputHub.Foreground.Mouse.MoveMouseBy((int)(LeftTurnStep * _dpi * _widthScale), 0);
                 }
-                await Delay(800, ct);
+                await _runtime.Delay(800, ct);
             }
 
             InputHub.Foreground.Keyboard.KeyPress(GIActions.SwitchAimingMode.ToActionKey().ToVK());
@@ -165,7 +193,7 @@ public class LinneaMiningTask
             }
 
             InputHub.Foreground.Mouse.MiddleButtonUp();
-            TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
+            _runtime.MaskWindowDrawingBoard.ClearAll();
         }
     }
 
@@ -183,9 +211,9 @@ public class LinneaMiningTask
             if (Environment.TickCount64 - _lastRefreshTime >= ElementSightRefreshMs)
             {
                 InputHub.Foreground.Mouse.MiddleButtonUp();
-                await Delay(100, ct);
+                await _runtime.Delay(100, ct);
                 InputHub.Foreground.Mouse.MiddleButtonDown();
-                await Delay(1500, ct);
+                await _runtime.Delay(1500, ct);
                 _lastRefreshTime = Environment.TickCount64;
             }
 
@@ -199,7 +227,7 @@ public class LinneaMiningTask
             if (isAligned || (isLast && hadResult))
             {
                 InputHub.Foreground.Mouse.MiddleButtonUp();
-                await Delay(300, ct);
+                await _runtime.Delay(300, ct);
                 Logger.LogInformation("开始挖矿");
                 await Mine(ct, totalDy < 0);
                 return (true, isAligned, 0, 0);
@@ -210,7 +238,7 @@ public class LinneaMiningTask
             InputHub.Foreground.Mouse.MoveMouseBy(mouseDx, mouseDy);
             totalDx += mouseDx;
             totalDy += mouseDy;
-            await Delay(150, ct);
+            await _runtime.Delay(150, ct);
 
             (cluster, centerX, centerY) = FindNearestMineralCluster();
             if (cluster == null)
@@ -226,15 +254,15 @@ public class LinneaMiningTask
     /// <summary>
     /// 执行挖矿操作
     /// </summary>
-    private static async Task Mine(CancellationToken ct, bool compensateUp)
+    private async Task Mine(CancellationToken ct, bool compensateUp)
     {
         if (compensateUp)
         {
             InputHub.Foreground.Mouse.MoveMouseBy(0, -25);
-            await Delay(10, ct);
+            await _runtime.Delay(10, ct);
         }
         InputHub.Foreground.Mouse.LeftButtonClick();
-        await Delay(2000, ct);
+        await _runtime.Delay(2000, ct);
     }
 
     private void SaveDebugImage(Mat mat)
@@ -261,9 +289,8 @@ public class LinneaMiningTask
     /// </summary>
     private (MineralCluster? cluster, double centerX, double centerY) FindNearestMineralCluster()
     {
-        var systemInfo = TaskContext.Instance().SystemInfo;
-        var capture = TaskContext.Instance().Runtime?.Capture
-                      ?? throw new InvalidOperationException("截图器未初始化!");
+        var systemInfo = _runtime.SystemInfo;
+        var capture = _runtime.Capture;
         var image = CaptureGameImage(capture);
         var ra = systemInfo.DesktopRectArea.Derive(image, systemInfo.CaptureAreaRect.X, systemInfo.CaptureAreaRect.Y);
 

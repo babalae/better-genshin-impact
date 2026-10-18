@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.Runtime;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
@@ -11,11 +12,25 @@ internal sealed class DialogueOptionAudioWaiter
     internal const int NoSpeechQuietDurationMilliseconds = 1200;
     private const int DetectorRetryDelayMilliseconds = 5000;
 
+    /// <summary>
+    /// 所属运行环境，采样的游戏进程取自它的窗口
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
     private readonly object _detectorLock = new();
     private DialogueOptionVoiceDetector? _detector;
     private int? _unavailableProcessId;
     private DateTime _detectorRetryAfter = DateTime.MinValue;
     private WaitState? _waitState;
+
+    /// <summary>
+    /// 创建对话选项人声等待器
+    /// </summary>
+    /// <param name="runtime">所属运行环境</param>
+    public DialogueOptionAudioWaiter(GameRuntime runtime)
+    {
+        _runtime = runtime;
+    }
 
     public bool IsWaiting
     {
@@ -239,10 +254,17 @@ internal sealed class DialogueOptionAudioWaiter
         }
     }
 
-    private static int? GetGameProcessId()
+    /// <summary>
+    /// 所属运行环境的游戏窗口所在进程；运行环境已停止时返回 null
+    /// </summary>
+    private int? GetGameProcessId()
     {
-        using var process = SystemControl.GetProcessByHandle(TaskContext.Instance().GameHandle);
-        return process?.Id;
+        if (_runtime.IsStopping)
+        {
+            return null;
+        }
+
+        return _runtime.Window.ProcessId;
     }
 
     private bool StartFallbackWait(int milliseconds)

@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
@@ -17,6 +18,7 @@ using BetterGenshinImpact.GameTask.Common.Map.Maps;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using Fischless.GameCapture;
@@ -40,12 +42,22 @@ namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 /// </summary>
 public class TpTask
 {
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 配置根
+    /// </summary>
+    private readonly AllConfig _config;
+
     private readonly QuickTeleportAssets _assets;
-    private readonly Rect _captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
-    private readonly double _zoomOutMax1080PRatio = TaskContext.Instance().SystemInfo.ZoomOutMax1080PRatio;
-    private readonly TpConfig _tpConfig = TaskContext.Instance().Config.TpConfig;
-    private readonly string _mapMatchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
-    private readonly BlessingOfTheWelkinMoonTask _blessingOfTheWelkinMoonTask = new();
+    private readonly Rect _captureRect;
+    private readonly double _zoomOutMax1080PRatio;
+    private readonly TpConfig _tpConfig;
+    private readonly string _mapMatchingMethod;
+    private readonly BlessingOfTheWelkinMoonTask _blessingOfTheWelkinMoonTask;
 
     private readonly CancellationToken ct;
     private readonly CultureInfo cultureInfo;
@@ -249,8 +261,22 @@ public class TpTask
         }
     }
 
-    public TpTask(CancellationToken ct)
+    /// <summary>
+    /// 创建传送任务
+    /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    /// <param name="config">配置根</param>
+    /// <param name="ct">取消令牌</param>
+    public TpTask(GameRuntime runtime, AllConfig config, CancellationToken ct)
     {
+        _runtime = runtime;
+        _config = config;
+        // 构造期快照：实例生命周期在运行环境之内，快照不会过期
+        _captureRect = runtime.SystemInfo.ScaleMax1080PCaptureRect;
+        _zoomOutMax1080PRatio = runtime.SystemInfo.ZoomOutMax1080PRatio;
+        _tpConfig = config.TpConfig;
+        _mapMatchingMethod = config.PathingConditionConfig.MapMatchingMethod;
+        _blessingOfTheWelkinMoonTask = new BlessingOfTheWelkinMoonTask(runtime);
         this.ct = ct;
         _assets = QuickTeleportAssets.Get(_captureRect.Width, _captureRect.Height);
         TpTaskParam param = new TpTaskParam();
@@ -258,9 +284,9 @@ public class TpTask
         this.stringLocalizer = param.StringLocalizer;
     }
 
-    private static RecognitionObject GetQuickTeleportRecognitionObject(string objectName)
+    private RecognitionObject GetQuickTeleportRecognitionObject(string objectName)
     {
-        return RecognitionAssets.Get("QuickTeleport", objectName);
+        return RecognitionAssets.Get("QuickTeleport", objectName, _runtime.SystemInfo);
     }
 
     private static RecognitionObject GetQuickTeleportRecognitionObject(string objectName, Region region)
@@ -304,11 +330,11 @@ public class TpTask
                 MoveMode = MoveModeEnum.Walk.Code
             };
             var waypointForTrack = new WaypointForTrack(waypoint, nameof(MapTypes.Teyvat), _mapMatchingMethod);
-            await new PathExecutor(ct).MoveTo(waypointForTrack);
+            await new PathExecutor(_runtime, _config, ct).MoveTo(waypointForTrack);
             InputHub.Foreground.SimulateAction(GIActions.Drop);
         }
 
-        await Delay((int)(_tpConfig.HpRestoreDuration * 1000), ct);
+        await _runtime.Delay((int)(_tpConfig.HpRestoreDuration * 1000), ct);
     }
 
     /// <summary>
@@ -374,7 +400,7 @@ public class TpTask
             {
                 // 打开地图前释放所有按键
                 InputHub.ReleaseAll();
-                await Delay(GetTeleportOperationDelay(20), ct);
+                await _runtime.Delay(GetTeleportOperationDelay(20), ct);
                 await CheckInBigMapUi(mapName);
                 return;
             }
@@ -580,7 +606,7 @@ public class TpTask
                 if (!IsTeleportClickViewSafeAfterZoom(evaluation.View, targetFinalZoomLevel))
                 {
                     await MoveTeleportTargetTowardZoomCenter(evaluation.View);
-                    await Delay(TeleportClickableAreaRetryDelayMs, ct);
+                    await _runtime.Delay(TeleportClickableAreaRetryDelayMs, ct);
                     continue;
                 }
 
@@ -626,7 +652,7 @@ public class TpTask
             }
 
             await MoveMapToTeleportClickArea(targetX, targetY, mapName, evaluation.RequiredVisibleRadius);
-            await Delay(TeleportClickableAreaRetryDelayMs, ct);
+            await _runtime.Delay(TeleportClickableAreaRetryDelayMs, ct);
         }
 
         throw new Exception("目标传送点位于不可点击区域，传送失败");
@@ -863,7 +889,7 @@ public class TpTask
         TeleportClickView clickView)
     {
 
-        using var clickCapture = CaptureToRectArea();
+        using var clickCapture = _runtime.CaptureToRectArea();
         if (TryGetAbsoluteTeleportClickPosition(
                 clickCapture,
                 target,
@@ -917,7 +943,7 @@ public class TpTask
 
     private double GetCurrentBigMapZoomLevel()
     {
-        using var capture = CaptureToRectArea();
+        using var capture = _runtime.CaptureToRectArea();
         return GetBigMapZoomLevel(capture);
     }
 
@@ -952,7 +978,7 @@ public class TpTask
         var initialDelayMs = GetTeleportPanelInitialDelayMilliseconds();
         if (initialDelayMs > 0)
         {
-            await Delay(initialDelayMs, ct);
+            await _runtime.Delay(initialDelayMs, ct);
         }
 
         var stopwatch = Stopwatch.StartNew();
@@ -960,10 +986,10 @@ public class TpTask
         {
             if (i > 0)
             {
-                await Delay(UiRecognitionPollIntervalMs, ct);
+                await _runtime.Delay(UiRecognitionPollIntervalMs, ct);
             }
 
-            using var teleportCapture = CaptureToRectArea();
+            using var teleportCapture = _runtime.CaptureToRectArea();
             var result = await HandleTeleportPanel(teleportCapture, targetTp);
             switch (result)
             {
@@ -983,7 +1009,7 @@ public class TpTask
 
     private void ClickAbsoluteMapCandidate(AbsoluteMapClickCandidate candidate)
     {
-        using var clickCapture = CaptureToRectArea();
+        using var clickCapture = _runtime.CaptureToRectArea();
         clickCapture.ClickTo(candidate.ClickX, candidate.ClickY);
     }
 
@@ -1014,9 +1040,9 @@ public class TpTask
         return GetDistance(targetClickX, targetClickY, nearClickX, nearClickY);
     }
 
-    private static int GetTeleportPanelTimeoutMilliseconds()
+    private int GetTeleportPanelTimeoutMilliseconds()
     {
-        var delay = TaskContext.Instance().Config.QuickTeleportConfig.WaitTeleportPanelDelay;
+        var delay = _config.QuickTeleportConfig.WaitTeleportPanelDelay;
         var configuredWait = Math.Clamp(delay <= 0 ? 50 : delay, 50, 300);
         return Math.Max(TeleportPanelMinimumTimeoutMs, configuredWait * 18);
     }
@@ -1024,9 +1050,9 @@ public class TpTask
     /// <summary>
     /// 地图点选后，先给右侧传送面板一点弹出时间，再开始检查传送按钮 / 候选列表。
     /// </summary>
-    private static int GetTeleportPanelInitialDelayMilliseconds()
+    private int GetTeleportPanelInitialDelayMilliseconds()
     {
-        var configuredDelay = TaskContext.Instance().Config.QuickTeleportConfig.WaitTeleportPanelDelay;
+        var configuredDelay = _config.QuickTeleportConfig.WaitTeleportPanelDelay;
         return Math.Max(TeleportPanelInitialDelayMs, Math.Clamp(configuredDelay, 0, 500));
     }
 
@@ -1044,7 +1070,7 @@ public class TpTask
         {
             ct.ThrowIfCancellationRequested();
 
-            var capture = CaptureToRectArea();
+            var capture = _runtime.CaptureToRectArea();
             using var ownedCapture = capture;
             var isInMainUi = Bv.IsInMainUi(capture);
 
@@ -1072,7 +1098,7 @@ public class TpTask
                     observedLoadingState = consecutiveNonUiChecks >= TeleportLoadingStableNonUiChecks;
                 }
             }
-            await Delay(TeleportLoadingPollIntervalMs, ct);
+            await _runtime.Delay(TeleportLoadingPollIntervalMs, ct);
 
             // 打开大地图期间推送的月卡会在传送之后直接显示，导致检测不到传送完成。
             if (observedLoadingState && !isInMainUi && stopwatch.ElapsedMilliseconds >= nextBlessingCheckAt)
@@ -1178,8 +1204,8 @@ public class TpTask
         // 尝试打开地图失败后，先回到主界面后再次尝试打开地图
         if (!await TryToOpenBigMapUi(mapName))
         {
-            await new ReturnMainUiTask().Start(ct);
-            await Delay(500, ct);
+            await new ReturnMainUiTask(_runtime).Start(ct);
+            await _runtime.Delay(500, ct);
             if (!await TryToOpenBigMapUi(mapName))
             {
                 throw new RetryException("打开大地图失败，请检查按键绑定中「打开地图」按键设置是否和原神游戏中一致！");
@@ -1198,14 +1224,14 @@ public class TpTask
         }
 
         InputHub.Foreground.SimulateAction(GIActions.OpenMap);
-        await Delay(100, ct);
+        await _runtime.Delay(100, ct);
         var opened = await WaitForBigMapUiAppear(GetBigMapOpenTimeoutMilliseconds(mapName));
         return opened;
     }
 
     private bool IsInBigMapUi()
     {
-        using var capture = CaptureToRectArea();
+        using var capture = _runtime.CaptureToRectArea();
         return Bv.IsInBigMapUi(capture);
     }
 
@@ -1219,7 +1245,7 @@ public class TpTask
                 return true;
             }
 
-            await Delay(BigMapOpenCheckIntervalMs, ct);
+            await _runtime.Delay(BigMapOpenCheckIntervalMs, ct);
         }
 
         return false;
@@ -1232,7 +1258,7 @@ public class TpTask
         timeoutCts.CancelAfter(TeleportTimeoutMs);
         try
         {
-            return await new TpTask(timeoutCts.Token).TpWithRetries(tpX, tpY, mapName, force);
+            return await new TpTask(_runtime, _config, timeoutCts.Token).TpWithRetries(tpX, tpY, mapName, force);
         }
         catch (OperationCanceledException e) when (!ct.IsCancellationRequested && timeoutCts.IsCancellationRequested)
         {
@@ -1254,7 +1280,7 @@ public class TpTask
                 
                 // 抛出异常按下 ESC 退出大地图，避免影响后续路径追踪任务
                 InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-                await Delay(300, ct);
+                await _runtime.Delay(300, ct);
                 
                 throw;
             }
@@ -1263,7 +1289,7 @@ public class TpTask
                 // 未激活点位的详情面板会遮挡后续地图操作，重试前先关闭。
                 // 最后一次失败也需要执行清理，避免影响脚本组中的下一个任务。
                 InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-                await Delay(300, ct);
+                await _runtime.Delay(300, ct);
                 // throw; // 不抛出异常，继续重试
                 Logger.LogWarning(e.Message + "  重试");
             }
@@ -1275,7 +1301,7 @@ public class TpTask
             {
                 Logger.LogDebug(e, e.Message);
                 Logger.LogWarning("传送异常" + e.Message);
-                await Delay(300, ct);
+                await _runtime.Delay(300, ct);
             }
         }
 
@@ -1313,7 +1339,7 @@ public class TpTask
             throw new Exception($"目标点未移动到可点击区域：map={mapName}, target=({x:0.##},{y:0.##})");
         }
 
-        using var clickCapture = CaptureToRectArea();
+        using var clickCapture = _runtime.CaptureToRectArea();
         clickCapture.ClickTo(clickX, clickY);
     }
 
@@ -1419,7 +1445,7 @@ public class TpTask
             int effectiveMoveMouseY = GetDisplayScaleAdjustedMouseDelta(moveMouseY);
 
             var mouseMoveResult = await MouseMoveMap(effectiveMoveMouseX, effectiveMoveMouseY);
-            await Delay(30, ct);
+            await _runtime.Delay(30, ct);
 
             // 推算理论上的移动后坐标 (惯性预测)
             Point2f predictedPoint = moveState.CenterPoint + new Point2f(
@@ -1654,16 +1680,16 @@ public class TpTask
     public async Task MouseClickAndMove(int x1, int y1, int x2, int y2)
     {
         // GlobalMethod.MoveMouseTo(x1, y1);
-        GameCaptureRegion.GameRegionMove((rect, scale) => (x1 * scale, y1 * scale));
-        await Delay(GetTeleportOperationDelay(50), ct);
+        _runtime.GameRegionMove((rect, scale) => (x1 * scale, y1 * scale));
+        await _runtime.Delay(GetTeleportOperationDelay(50), ct);
         GlobalMethod.LeftButtonDown();
-        await Delay(GetTeleportOperationDelay(50), ct);
+        await _runtime.Delay(GetTeleportOperationDelay(50), ct);
         // GlobalMethod.MoveMouseTo(x2, y2);
-        GameCaptureRegion.GameRegionMove((rect, scale) => (x2 * scale, y2 * scale));
-        await Delay(GetTeleportOperationDelay(50), ct);
+        _runtime.GameRegionMove((rect, scale) => (x2 * scale, y2 * scale));
+        await _runtime.Delay(GetTeleportOperationDelay(50), ct);
         GlobalMethod.LeftButtonUp();
-        await Delay(GetTeleportOperationDelay(50), ct);
-        GameCaptureRegion.GameRegionMove((rect, scale) => (rect.Width / 2d, rect.Height / 2d));
+        await _runtime.Delay(GetTeleportOperationDelay(50), ct);
+        _runtime.GameRegionMove((rect, scale) => (rect.Width / 2d, rect.Height / 2d));
     }
 
     /// <summary>
@@ -1734,19 +1760,19 @@ public class TpTask
 
     private async Task<double> ScrollMapZoomAndMeasure(int wheelNotches)
     {
-        GameCaptureRegion.GameRegionMove((rect, scale) => (rect.Width / 2d, rect.Height / 2d));
-        await Delay(GetTeleportOperationDelay(20), ct);
+        _runtime.GameRegionMove((rect, scale) => (rect.Width / 2d, rect.Height / 2d));
+        await _runtime.Delay(GetTeleportOperationDelay(20), ct);
         var singleWheelNotch = Math.Sign(wheelNotches);
         for (var i = 0; i < Math.Abs(wheelNotches); i++)
         {
             InputHub.Foreground.Mouse.VerticalScroll(singleWheelNotch);
             if (i + 1 < Math.Abs(wheelNotches))
             {
-                await Delay(GetTeleportOperationDelay(MapZoomWheelBurstIntervalMs), ct);
+                await _runtime.Delay(GetTeleportOperationDelay(MapZoomWheelBurstIntervalMs), ct);
             }
         }
 
-        await Delay(GetMapZoomWheelDelay(wheelNotches), ct);
+        await _runtime.Delay(GetMapZoomWheelDelay(wheelNotches), ct);
         var afterZoomLevel = GetCurrentBigMapZoomLevel();
         return afterZoomLevel;
     }
@@ -1789,16 +1815,16 @@ public class TpTask
         return Math.Clamp(zoomLevel, 1d, 6d);
     }
 
-    private static int GetDisplayScaleAdjustedMouseDelta(int pixelDelta)
+    private int GetDisplayScaleAdjustedMouseDelta(int pixelDelta)
     {
-        double displayScale = TaskContext.Instance().DpiScale;
+        double displayScale = _runtime.SystemInfo.DpiScale;
         return (int)(pixelDelta / displayScale);
     }
 
-    private static (double X, double Y) GetCursorPositionInCapture()
+    private (double X, double Y) GetCursorPositionInCapture()
     {
         User32.GetCursorPos(out var cursor);
-        var captureRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+        var captureRect = _runtime.SystemInfo.CaptureAreaRect;
         return (cursor.X - captureRect.X, cursor.Y - captureRect.Y);
     }
 
@@ -1898,7 +1924,7 @@ public class TpTask
         double endY = 0;
         int sentDeltaX = 0;
         int sentDeltaY = 0;
-        GameCaptureRegion.GameRegionMove((rect, scale) =>
+        _runtime.GameRegionMove((rect, scale) =>
         {
             double expectedDeltaX = pixelDeltaX * scale;
             double expectedDeltaY = pixelDeltaY * scale;
@@ -1983,20 +2009,20 @@ public class TpTask
         for (var i = 0; i < steps; i++)
         {
             var i1 = i;
-            await Delay(GetTeleportOperationDelay(TpConfig.DefaultTeleportOperationDelayMilliseconds), ct);
+            await _runtime.Delay(GetTeleportOperationDelay(TpConfig.DefaultTeleportOperationDelayMilliseconds), ct);
             movedX += stepX[i1];
             movedY += stepY[i1];
             if (_tpConfig.MapDragUseRelativeMove)
             {
-                GameCaptureRegion.GameRegionMoveBy((_, scale) => (stepX[i1] * scale, stepY[i1] * scale));
+                _runtime.GameRegionMoveBy((_, scale) => (stepX[i1] * scale, stepY[i1] * scale));
             }
             else
             {
-                GameCaptureRegion.GameRegionMove((_, scale) => (startX + movedX * scale, startY + movedY * scale));
+                _runtime.GameRegionMove((_, scale) => (startX + movedX * scale, startY + movedY * scale));
             }
         }
 
-        await Delay(60, ct);
+        await _runtime.Delay(60, ct);
         InputHub.Foreground.Mouse.LeftButtonUp();
         var endCursor = GetCursorPositionInCapture();
         return (sentDeltaX, sentDeltaY, steps, startX, startY, endX, endY, endCursor.X - startCursor.X, endCursor.Y - startCursor.Y);
@@ -2139,7 +2165,7 @@ public class TpTask
         NewRetry.Do(() =>
         {
             // 判断是否在地图界面
-            using var ra = CaptureToRectArea();
+            using var ra = _runtime.CaptureToRectArea();
             using var mapScaleButtonRa = ra.Find(GetQuickTeleportRecognitionObject("MapScaleButton", ra));
             if (mapScaleButtonRa.IsExist())
             {
@@ -2182,7 +2208,7 @@ public class TpTask
     private Point2f GetBigMapCenterPoint(string mapName, Point2f? expectedCenterPoint)
     {
         // 判断是否在地图界面
-        using var ra = CaptureToRectArea();
+        using var ra = _runtime.CaptureToRectArea();
         using var mapScaleButtonRa = ra.Find(GetQuickTeleportRecognitionObject("MapScaleButton", ra));
         if (mapScaleButtonRa.IsExist())
         {
@@ -2450,15 +2476,15 @@ public class TpTask
 
     private async Task<bool> TrySwitchArea(string areaName)
     {
-        GameCaptureRegion.GameRegionClick((rect, scale) => (rect.Width - 160 * scale, rect.Height - 60 * scale));
-        await Delay(50, ct);
+        _runtime.GameRegionClick((rect, scale) => (rect.Width - 160 * scale, rect.Height - 60 * scale));
+        await _runtime.Delay(50, ct);
         var minCountryLocalized = this.stringLocalizer.WithCultureGet(this.cultureInfo, areaName);
         var candidatesText = "";
         var stopwatch = Stopwatch.StartNew();
         while (stopwatch.ElapsedMilliseconds < SwitchAreaCandidateTimeoutMs)
         {
             ct.ThrowIfCancellationRequested();
-            using var ra = CaptureToRectArea();
+            using var ra = _runtime.CaptureToRectArea();
             var list = FindSwitchAreaCandidates(ra);
             candidatesText = FormatSwitchAreaCandidateTexts(list);
             var matchRect = list
@@ -2468,14 +2494,14 @@ public class TpTask
             {
                 var clickedCandidateRect = new Rect(matchRect.X, matchRect.Y, matchRect.Width, matchRect.Height);
                 matchRect.Click();
-                await Delay(50, ct);
+                await _runtime.Delay(50, ct);
                 await WaitForAreaSelectionApplied(areaName, minCountryLocalized, clickedCandidateRect);
                 RememberAreaSwitchCenterPoint(areaName);
                 Logger.LogInformation("切换到区域：{Country}", areaName);
                 return true;
             }
 
-            await Delay(UiRecognitionPollIntervalMs, ct);
+            await _runtime.Delay(UiRecognitionPollIntervalMs, ct);
         }
 
         Logger.LogWarning(
@@ -2495,7 +2521,7 @@ public class TpTask
         while (stopwatch.ElapsedMilliseconds < SwitchAreaSelectionTimeoutMs)
         {
             ct.ThrowIfCancellationRequested();
-            using var capture = CaptureToRectArea();
+            using var capture = _runtime.CaptureToRectArea();
             var clickedCandidateStillVisible = FindSwitchAreaCandidates(capture).Any(candidate =>
                 IsSwitchAreaCandidateMatch(candidate.Text, localizedAreaName, areaName) &&
                 IsSameSwitchAreaCandidatePosition(clickedCandidateRect, candidate));
@@ -2514,7 +2540,7 @@ public class TpTask
                 consecutiveMissingChecks = 0;
             }
 
-            await Delay(UiRecognitionPollIntervalMs, ct);
+            await _runtime.Delay(UiRecognitionPollIntervalMs, ct);
         }
 
         Logger.LogDebug("区域选择动画等待达到上限：{Country}", areaName);
@@ -2588,7 +2614,7 @@ public class TpTask
         var stopwatch = Stopwatch.StartNew();
         while (stopwatch.ElapsedMilliseconds < MapGroundLayerSwitchTimeoutMs)
         {
-            using var capture = CaptureToRectArea();
+            using var capture = _runtime.CaptureToRectArea();
             using var groundButton = capture.Find(
                 GetQuickTeleportRecognitionObject("MapUndergroundToGroundButton", capture));
             if (!groundLayerClicked && groundButton.IsExist())
@@ -2596,7 +2622,7 @@ public class TpTask
                 groundButton.Click();
                 capture.MoveTo(capture.Width / 2, capture.Height / 2);
                 groundLayerClicked = true;
-                await Delay(retryInterval, ct);
+                await _runtime.Delay(retryInterval, ct);
                 continue;
             }
 
@@ -2611,7 +2637,7 @@ public class TpTask
                     return;
                 }
 
-                await Delay(retryInterval, ct);
+                await _runtime.Delay(retryInterval, ct);
                 continue;
             }
 
@@ -2622,7 +2648,7 @@ public class TpTask
                     return;
                 }
 
-                await Delay(retryInterval, ct);
+                await _runtime.Delay(retryInterval, ct);
                 continue;
             }
 
@@ -2631,11 +2657,11 @@ public class TpTask
                 undergroundButton.Click();
                 capture.MoveTo(capture.Width / 2, capture.Height / 2);
                 layerSwitchClicked = true;
-                await Delay(retryInterval, ct);
+                await _runtime.Delay(retryInterval, ct);
                 continue;
             }
 
-            await Delay(retryInterval, ct);
+            await _runtime.Delay(retryInterval, ct);
         }
 
         Logger.LogWarning("切换到地表地图后校验超时");
@@ -2690,7 +2716,7 @@ public class TpTask
                 return TeleportPanelResult.RetryPoint;
             }
 
-            using var retryCapture = CaptureToRectArea();
+            using var retryCapture = _runtime.CaptureToRectArea();
             candidate = await TryClickMapChooseCandidate(retryCapture, targetTp);
             if (candidate == null)
             {
@@ -2709,9 +2735,9 @@ public class TpTask
         long nextCandidateVerificationAt = MapChooseCandidateClickVerificationDelayMs;
         for (var i = 0; i == 0 || stopwatch.ElapsedMilliseconds < TeleportConfirmTimeoutMs; i++)
         {
-            await Delay(UiRecognitionPollIntervalMs, ct);
+            await _runtime.Delay(UiRecognitionPollIntervalMs, ct);
 
-            var screen = CaptureToRectArea();
+            var screen = _runtime.CaptureToRectArea();
             using var ownedScreen = screen;
             var isInBigMapUi = Bv.IsInBigMapUi(screen);
 
@@ -2748,7 +2774,7 @@ public class TpTask
     private async Task PressTeleportConfirmKey()
     {
         InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_F);
-        await Delay(30, ct);
+        await _runtime.Delay(30, ct);
     }
 
     private List<NearbyMapIcon> GetMapIconsInRect(
@@ -3338,7 +3364,7 @@ public class TpTask
     private List<MapChooseCandidate> GetMapChooseCandidates(ImageRegion imageRegion)
     {
         var candidates = new List<MapChooseCandidate>();
-        var isHdrCapture = TaskContext.Instance().Config.CaptureMode == nameof(CaptureModes.WindowsGraphicsCaptureHdr);
+        var isHdrCapture = _config.CaptureMode == nameof(CaptureModes.WindowsGraphicsCaptureHdr);
         var threshold = isHdrCapture ? 0.7 : 0.8;
 
         // 在 MapChooseIconRoi 内全匹配一遍图标。
@@ -3507,11 +3533,11 @@ public class TpTask
     private async Task ClickMapChooseCandidate(ImageRegion imageRegion, MapChooseCandidate candidate)
     {
         // 候选列表有个动画，识别到以后一定要再等一会点击
-        var time = TaskContext.Instance().Config.QuickTeleportConfig.TeleportListClickDelay;
-        await Delay(time < 200 ? 200 : time, ct);
+        var time = _config.QuickTeleportConfig.TeleportListClickDelay;
+        await _runtime.Delay(time < 200 ? 200 : time, ct);
         Logger.LogInformation("点击候选列表：{Text}", candidate.Text);
         imageRegion.ClickTo(candidate.ClickRect.X, candidate.ClickRect.Y, candidate.ClickRect.Width, candidate.ClickRect.Height);
-        await Delay(150, ct);
+        await _runtime.Delay(150, ct);
     }
 
     private static double GetDistance(double x1, double y1, double x2, double y2)

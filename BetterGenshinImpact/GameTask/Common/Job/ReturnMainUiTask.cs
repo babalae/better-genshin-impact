@@ -4,18 +4,28 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.BgiVision;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Runtime;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.Common.Job;
 
-public class ReturnMainUiTask
+/// <summary>
+/// 返回主界面
+/// </summary>
+/// <param name="runtime">本次运行使用的运行环境</param>
+public class ReturnMainUiTask(GameRuntime runtime)
 {
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime = runtime;
+
     public string Name => "返回主界面";
 
     public async Task Start(CancellationToken ct)
     {
-        using var initialCapture = CaptureToRectArea();
+        using var initialCapture = _runtime.CaptureToRectArea();
         if (Bv.IsInMainUi(initialCapture))
         {
             return;
@@ -24,9 +34,9 @@ public class ReturnMainUiTask
         for (var i = 0; i < 8; i++)
         {
             InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-            await Delay(900, ct);
+            await _runtime.Delay(900, ct);
 
-            var region = CaptureToRectArea();
+            var region = _runtime.CaptureToRectArea();
 
             try
             {
@@ -34,9 +44,9 @@ public class ReturnMainUiTask
                 if (exitDoor.IsExist())
                 {
                     exitDoor.Click();
-                    await Delay(5000, ct);
+                    await _runtime.Delay(5000, ct);
                     region.Dispose();
-                    region = CaptureToRectArea();
+                    region = _runtime.CaptureToRectArea();
                 }
 
                 if (Bv.IsInMainUi(region))
@@ -49,9 +59,9 @@ public class ReturnMainUiTask
                 region.Dispose();
             }
         }
-        await Delay(500, ct);
+        await _runtime.Delay(500, ct);
         InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_RETURN);
-        await Delay(500, ct);
+        await _runtime.Delay(500, ct);
         InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
     }
 }

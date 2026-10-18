@@ -1,7 +1,9 @@
 using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using CsTrees;
 using CsTrees.Blackboard;
@@ -20,9 +22,12 @@ internal static class BehaviourHelper
     /// 检测指定角色Q爆发是否就绪（IsBurstReady 与 UseBurstIfReady 共用判定）
     /// cached 输出本次结果是否来自缓存
     /// </summary>
-    public static bool CheckBurstReady(Avatar avatar, out bool cached)
+    /// <param name="runtime">截图所用的运行环境，节点传入目标角色所在的运行环境（<see cref="Avatar.Runtime"/>）</param>
+    /// <param name="avatar">目标角色</param>
+    /// <param name="cached">本次结果是否来自缓存</param>
+    public static bool CheckBurstReady(GameRuntime runtime, Avatar avatar, out bool cached)
     {
-        using var frame = CaptureToRectArea();
+        using var frame = runtime.CaptureToRectArea();
 
         // 场上角色不读缓存，每次都重新检测，避免切人后命中过期状态；检测结果无论在场与否都写入缓存
         // （就绪状态在释放前单调，在场检测到就绪后切回后台可直接命中）
@@ -152,7 +157,7 @@ public partial class IsBurstReady : Behaviour
 
     protected async override Task<Status> Update()
     {
-        return BehaviourHelper.CheckBurstReady(_avatar, out _)
+        return BehaviourHelper.CheckBurstReady(_avatar.Runtime, _avatar, out _)
             ? Status.Success
             : Status.Failure;
     }
@@ -175,7 +180,7 @@ public partial class UseBurstIfReady : Behaviour
     protected async override Task<Status> Update()
     {
         // 未就绪直接 Failure，上层 Selector 自然落到下位替代；不切人、不产生无效按键
-        if (!BehaviourHelper.CheckBurstReady(_avatar, out _))
+        if (!BehaviourHelper.CheckBurstReady(_avatar.Runtime, _avatar, out _))
         {
             return Status.Failure;
         }

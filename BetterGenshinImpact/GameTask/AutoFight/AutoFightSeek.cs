@@ -12,24 +12,42 @@ using System;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using System.Linq;
 using System.Collections.Generic;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using  OpenCvSharp;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 
 namespace BetterGenshinImpact.GameTask.AutoFight
 {
     public static  class MoveForwardTask
     {
 
-        public static async Task ExecuteAsync(Scalar scalarLower, Scalar scalarHigher, ILogger logger, CancellationToken ct)
+        /// <summary>
+        /// 按画面中第一个血条的位置向敌人移动
+        /// </summary>
+        /// <param name="runtime">截图所用的运行环境</param>
+        /// <param name="scalarLower">血条颜色下限</param>
+        /// <param name="scalarHigher">血条颜色上限</param>
+        /// <param name="logger">日志</param>
+        /// <param name="ct">取消令牌</param>
+        public static async Task ExecuteAsync(GameRuntime runtime, Scalar scalarLower, Scalar scalarHigher, ILogger logger, CancellationToken ct)
         {
-            await MoveForwardAsync(scalarLower, scalarHigher, logger, ct);
+            await MoveForwardAsync(runtime, scalarLower, scalarHigher, logger, ct);
         }
 
-        public static Task<bool?> MoveForwardAsync(Scalar scalarLower, Scalar scalarHigher, ILogger logger, CancellationToken ct)
+        /// <summary>
+        /// 按画面中第一个血条的位置向敌人移动
+        /// </summary>
+        /// <param name="runtime">截图所用的运行环境</param>
+        /// <param name="scalarLower">血条颜色下限</param>
+        /// <param name="scalarHigher">血条颜色上限</param>
+        /// <param name="logger">日志</param>
+        /// <param name="ct">取消令牌</param>
+        public static Task<bool?> MoveForwardAsync(GameRuntime runtime, Scalar scalarLower, Scalar scalarHigher, ILogger logger, CancellationToken ct)
         {
-            using var image2 = CaptureToRectArea();
+            using var image2 = runtime.CaptureToRectArea();
             using var imageCrop = image2.DeriveCrop(0, 0, image2.Width * 1570 / 1920, image2.Height * 970 / 1080);
             using Mat mask2 = OpenCvCommonHelper.Threshold(
                 imageCrop.SrcMat,
@@ -231,7 +249,18 @@ namespace BetterGenshinImpact.GameTask.AutoFight
             { 7, 30 }, { 8, 15 }, { 9, 6 }, { 10, 1 }, { 11,-10 }, { 12,-50 }, { 13, -60 }
         };
         
-        public static async Task<bool?> SeekAndFightAsync(ILogger logger, int detectDelayTime,int delayTime,CancellationToken ct,bool isEndCheck = false,int rotaryFactor = 6)
+        /// <summary>
+        /// 旋转视角寻找敌人，必要时打开编队界面确认战斗是否结束
+        /// </summary>
+        /// <param name="runtime">截图与等待所用的运行环境</param>
+        /// <param name="logger">日志</param>
+        /// <param name="detectDelayTime">打开编队界面后到检测之间的延时（毫秒）</param>
+        /// <param name="delayTime">打开编队界面前的延时（毫秒）</param>
+        /// <param name="ct">取消令牌</param>
+        /// <param name="isEndCheck">是否为战斗结束检查（为 true 时不回退到编队界面检查）</param>
+        /// <param name="rotaryFactor">旋转因子（1-13）</param>
+        /// <returns>true 战斗结束；false 找到敌人；null 未找到敌人</returns>
+        public static async Task<bool?> SeekAndFightAsync(GameRuntime runtime, ILogger logger, int detectDelayTime,int delayTime,CancellationToken ct,bool isEndCheck = false,int rotaryFactor = 6)
         {
             Scalar bloodLower = new Scalar(255, 90, 90);
             
@@ -246,7 +275,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
             {
                 int imageWidth;
                 int imageHeight;
-                using (var image = CaptureToRectArea())
+                using (var image = runtime.CaptureToRectArea())
                 using (var imageCrop = image.DeriveCrop(0, 0, 1500, 900))
                 using (var mask = OpenCvCommonHelper.Threshold(imageCrop.SrcMat, bloodLower))
                 using (var labels = new Mat())
@@ -289,7 +318,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                             if (height > 2 && height < 7)
                             {
                                 // logger.LogInformation("画面内有找到敌人，尝试移动...");
-                                Task.Run(() => { MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, logger, ct); }, ct);
+                                Task.Run(() => { MoveForwardTask.MoveForwardAsync(runtime, bloodLower, bloodLower, logger, ct); }, ct);
                                 return false;
                             }
 
@@ -318,12 +347,12 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                 
                 if (retryCount == 0)
                 {
-                    await Delay(delayTime,ct);
+                    await runtime.Delay(delayTime,ct);
                     // Logger.LogInformation("打开编队界面检查战斗是否结束，延时{detectDelayTime}毫秒检查", detectDelayTime);
                     Logger.LogInformation("打开编队界面检查战斗是否结束");
                     InputHub.Foreground.SimulateAction(GIActions.OpenPartySetupScreen);
-                    await Delay(detectDelayTime, ct);
-                    using var ra3 = CaptureToRectArea();
+                    await runtime.Delay(detectDelayTime, ct);
+                    using var ra3 = runtime.CaptureToRectArea();
                     var b33 = ra3.SrcMat.At<Vec3b>(50, 790); // 进度条颜色
                     var whiteTile3 = ra3.SrcMat.At<Vec3b>(50, 768); // 白块
                     InputHub.Foreground.SimulateAction(GIActions.Drop);
@@ -362,7 +391,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
 
                 await Task.Delay(50+(int)(adjustedX/adjustedDivisor),ct);
 
-                using (var image = CaptureToRectArea())
+                using (var image = runtime.CaptureToRectArea())
                 using (var secondImageCrop = image.DeriveCrop(0, 0, 1500, 900))
                 using (var mask = OpenCvCommonHelper.Threshold(secondImageCrop.SrcMat, bloodLower))
                 using (var labels = new Mat())
@@ -392,7 +421,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                             if (height2 > 2 && height2 < 7)
                             {
                                 // logger.LogInformation("画面内有找到敌人，尝试移动...");
-                                Task.Run(() => { MoveForwardTask.MoveForwardAsync(bloodLower, bloodLower, logger, ct); }, ct);
+                                Task.Run(() => { MoveForwardTask.MoveForwardAsync(runtime, bloodLower, bloodLower, logger, ct); }, ct);
                                 return false;
                             }
 
@@ -438,7 +467,11 @@ namespace BetterGenshinImpact.GameTask.AutoFight
 
     public class AutoFightSkill
     {
-        public static async Task EnsureGuardianSkill(Avatar guardianAvatar, CombatCommand command, string lastFightName,
+        /// <summary>
+        /// 盾奶位技能优先：在切换到其他角色前确保盾奶位角色的战技（或爆发）已释放
+        /// </summary>
+        /// <param name="runtime">截图与等待所用的运行环境</param>
+        public static async Task EnsureGuardianSkill(GameRuntime runtime, Avatar guardianAvatar, CombatCommand command, string lastFightName,
             string guardianAvatarName, bool guardianAvatarHold, int retryCount, CancellationToken ct,bool guardianCombatSkip = false,
             bool burstEnabled = false)
         {
@@ -451,7 +484,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                     if (guardianAvatar.TrySwitch(10))
                     {
                         guardianAvatar.ManualSkillCd = -1;
-                        if (await AvatarSkillAsync(Logger, guardianAvatar, false, 1, ct))
+                        if (await AvatarSkillAsync(runtime, Logger, guardianAvatar, false, 1, ct))
                         {
                             var cd1 = guardianAvatar.AfterUseSkill();
                             if (cd1 > 0)
@@ -464,11 +497,11 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                         }
             
                         guardianAvatar.UseSkill(guardianAvatarHold);
-                        var imageAfterUseSkill = CaptureToRectArea();
+                        var imageAfterUseSkill = runtime.CaptureToRectArea();
                         var retry = 50;
                         try
                         {
-                            while (!(await AvatarSkillAsync(Logger, guardianAvatar, false, 1, ct,imageAfterUseSkill)) && retry > 0)
+                            while (!(await AvatarSkillAsync(runtime, Logger, guardianAvatar, false, 1, ct,imageAfterUseSkill)) && retry > 0)
                             {
                                 InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
                                 //防止在纳塔飞天或爬墙
@@ -479,7 +512,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                                     InputHub.Foreground.SimulateAction(GIActions.Drop);
                                 }
                                 var previousImage = imageAfterUseSkill;
-                                imageAfterUseSkill = CaptureToRectArea();
+                                imageAfterUseSkill = runtime.CaptureToRectArea();
                                 previousImage.Dispose();
                                 await Task.Delay(30, ct);
                                 // Logger.LogInformation("优先第333 {t}", retry);
@@ -513,7 +546,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
             }
             else if (burstEnabled)
             {
-                using var image = CaptureToRectArea();
+                using var image = runtime.CaptureToRectArea();
                 if (!guardianAvatar.IsActive(image))
                 {
                     var skillArea = AutoFightAssets.Get(image).AvatarQRectListMap[guardianAvatar.Index - 1];//Q技能区域
@@ -547,21 +580,21 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                         if (guardianAvatar.TrySwitch(8))
                         {
                             InputHub.Foreground.SimulateAction(GIActions.ElementalBurst);
-                            Sleep(500, ct);
+                            runtime.Sleep(500, ct);
                             InputHub.ReleaseAll();
                         
                             //普攻一下，防止在纳塔飞天
                             InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
-                            using (var imageAfterBurst = CaptureToRectArea())
+                            using (var imageAfterBurst = runtime.CaptureToRectArea())
                             {
-                                if (AvatarSkillAsync(Logger, guardianAvatar, true, 1, ct).Result 
+                                if (AvatarSkillAsync(runtime, Logger, guardianAvatar, true, 1, ct).Result 
                                     || !Bv.IsInMainUi(imageAfterBurst)) //Q技能CD（冷却检测）或者不在主界面（大招动画播放中）
                                 {
                                     guardianAvatar.IsBurstReady = false;
                                 }
                                 else
                                 {
-                                    Sleep(500, ct);
+                                    runtime.Sleep(500, ct);
                                     InputHub.Foreground.SimulateAction(GIActions.NormalAttack);//普攻一下，防止在纳塔飞天
                                     InputHub.Foreground.SimulateAction(GIActions.ElementalBurst);//尝试再放一次,不检查
                                     guardianAvatar.IsBurstReady = true;
@@ -580,6 +613,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
         /// <summary>
         /// 检测角色技能冷却状态
         /// </summary>
+        /// <param name="runtime">未传入图像时用于截图的运行环境</param>
         /// <param name="logger">日志记录器</param>
         /// <param name="guardianAvatar">角色对象</param>
         /// <param name="skills">技能类型，false为E技能，true为Q技能</param>
@@ -589,7 +623,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
         /// <param name="needLog">是否需要日志输出</param>
         /// <param name="isResetCd">是否重置技能冷却状态</param>
         /// <returns>技能是否就绪</returns>
-        public static async Task<bool> AvatarSkillAsync(ILogger logger, Avatar guardianAvatar, bool skills , int retryCount, 
+        public static async Task<bool> AvatarSkillAsync(GameRuntime runtime, ILogger logger, Avatar guardianAvatar, bool skills , int retryCount, 
             CancellationToken ct,ImageRegion? image = null,bool needLog = false, bool isResetCd = false)
         {
             if (guardianAvatar.TrySwitch())
@@ -598,7 +632,7 @@ namespace BetterGenshinImpact.GameTask.AutoFight
                 int attempt = 0;
                 while (attempt < retryCount)
                 {
-                    using var ownedImage = image == null ? CaptureToRectArea() : null;
+                    using var ownedImage = image == null ? runtime.CaptureToRectArea() : null;
                     var image2 = image ?? ownedImage!;
 
                     // var image2 = CaptureToRectArea();
@@ -673,15 +707,16 @@ namespace BetterGenshinImpact.GameTask.AutoFight
         /// 全队Q检测函数，备用，后续可用于自动EQ开发
         /// 不再推荐使用原因，可以参考使用 BetterGenshinImpact.GameTask.AutoFight.Model.Avatar.IsBurstReadyByClassify 方法，识别速度更快，效果更好
         /// </summary>
+        /// <param name="runtime">未传入图像时用于截图的运行环境</param>
         /// <param name="image"></param>
         /// <param name="useEqList"></param>
         /// <param name="avatarCurrent"></param>
         /// <returns></returns>
         [Obsolete]
-        public static Task<List<int>> AvatarQSkillAsync(ImageRegion? image = null, List<int>? useEqList = null,int? avatarCurrent = null)
+        public static Task<List<int>> AvatarQSkillAsync(GameRuntime runtime, ImageRegion? image = null, List<int>? useEqList = null,int? avatarCurrent = null)
         {
             var ownImage = image == null;
-            image ??= CaptureToRectArea();
+            image ??= runtime.CaptureToRectArea();
             try
             {
                 image.SrcMat.ConvertTo(image.SrcMat, MatType.CV_8UC3, alpha: 2, beta: -200); // 增加亮度和对比度

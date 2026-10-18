@@ -760,8 +760,9 @@ public partial class MusicPageViewModel : ViewModel
         };
 
         _activePlaybackQueue = queue;
+        // 演奏服务是进程级服务，自行读取当前运行环境，这里只需要本轮取消令牌
         _sessionTask = new TaskRunner().RunThreadAsync(
-            ct => _playbackService.RunPlaylistAsync(
+            (_, ct) => _playbackService.RunPlaylistAsync(
                 queue,
                 startIndex,
                 options,

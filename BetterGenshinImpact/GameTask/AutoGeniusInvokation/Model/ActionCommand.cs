@@ -81,14 +81,23 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
             }
         }
 
-        public bool SwitchLater()
+        /// <summary>
+        /// 切换到指令中的角色
+        /// </summary>
+        /// <param name="control">本次对局的游戏操控对象</param>
+        public bool SwitchLater(GeniusInvokationControl control)
         {
-            return Character.SwitchLater();
+            return Character.SwitchLater(control);
         }
 
-        public bool UseSkill(Duel duel)
+        /// <summary>
+        /// 使用指令中的技能
+        /// </summary>
+        /// <param name="control">本次对局的游戏操控对象</param>
+        /// <param name="duel">对局对象</param>
+        public bool UseSkill(GeniusInvokationControl control, Duel duel)
         {
-            return Character.UseSkill(TargetIndex, duel);
+            return Character.UseSkill(control, TargetIndex, duel);
         }
     }
 }

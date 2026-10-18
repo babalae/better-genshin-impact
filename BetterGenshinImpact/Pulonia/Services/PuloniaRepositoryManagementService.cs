@@ -9,6 +9,7 @@ using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Repositories;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Service;
 using LibGit2Sharp.Handlers;
 
 namespace BetterGenshinImpact.Pulonia.Services;
@@ -19,8 +20,11 @@ public sealed class PuloniaRepositoryManagementService
     /// <summary>仓库注册与已经确认的资源存储。</summary>
     public ScriptRepositoryStore Repositories { get; }
 
-    /// <summary>与现有官方弹窗共用的渠道配置，避免保存第二份官方选择。</summary>
-    public ScriptConfig OfficialConfig => TaskContext.Instance().Config.ScriptConfig;
+    /// <summary>
+    /// 与现有官方弹窗共用的渠道配置，避免保存第二份官方选择。
+    /// 本服务也由窗口和页面直接 new（构造只接收仓库存储），没有注入入口，暂时读配置根（见 task-context-removal.md 第 5 节）
+    /// </summary>
+    public ScriptConfig OfficialConfig => ConfigService.Config!.ScriptConfig;
 
     /// <summary>复用调用方的存储，所有 Git 操作仍经过统一更新器的互斥。</summary>
     public PuloniaRepositoryManagementService(ScriptRepositoryStore repositories) => Repositories = repositories;

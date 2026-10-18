@@ -1,7 +1,11 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.Service;
 using Vanara.PInvoke;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.ViewModel.Pages;
@@ -23,7 +27,7 @@ namespace BetterGenshinImpact.Core.Script.Dependence;
 
 public class Genshin
 {
-    private RECT captureAreaRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+    private RECT captureAreaRect;
     private readonly ILogger<Genshin> _logger = App.GetLogger<Genshin>();
 
     /// <summary>
@@ -32,11 +36,42 @@ public class Genshin
     private readonly CancellationToken _ct;
 
     /// <summary>
+    /// 本次脚本运行使用的运行环境，所有截图与子任务都作用在它上面
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 配置根，创建子任务时传入
+    /// </summary>
+    private readonly AllConfig _config;
+
+    /// <summary>
+    /// 截图保存服务，只有自动钓鱼开启关键帧截图时需要；未提供时钓鱼任务跳过保存
+    /// </summary>
+    private readonly GameScreenshotService? _screenshots;
+
+    /// <summary>
     /// 创建原神脚本能力宿主。
     /// </summary>
-    public Genshin(CancellationToken ct)
+    /// <param name="runtime">本次脚本运行使用的运行环境</param>
+    /// <param name="config">配置根</param>
+    /// <param name="ct">当前脚本执行的取消令牌</param>
+    /// <param name="screenshots">截图保存服务（进程级，由 InitHost 等创建方传入），可为空</param>
+    public Genshin(GameRuntime runtime, AllConfig config, CancellationToken ct, GameScreenshotService? screenshots = null)
     {
+        _runtime = runtime;
+        _config = config;
         _ct = ct;
+        _screenshots = screenshots;
+        // 构造期快照：创建宿主时记录本次运行环境的尺寸信息（与原来字段初始化器的取值时机一致）
+        captureAreaRect = runtime.SystemInfo.CaptureAreaRect;
+        ScaleTo1080PRatio = runtime.SystemInfo.ScaleTo1080PRatio;
+        LazyNavigationInstance = new Lazy<NavigationInstance>(() =>
+        {
+            var matchingMethod = _config.PathingConditionConfig.MapMatchingMethod;
+            Navigation.WarmUp(matchingMethod);
+            return new NavigationInstance();
+        });
     }
 
     /// <summary>
@@ -52,12 +87,12 @@ public class Genshin
     /// <summary>
     /// 游戏窗口大小相比1080P的缩放比例
     /// </summary>
-    public double ScaleTo1080PRatio { get; } = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
+    public double ScaleTo1080PRatio { get; }
 
     /// <summary>
     /// 系统屏幕的DPI缩放比例
     /// </summary>
-    public double ScreenDpiScale => TaskContext.Instance().DpiScale;
+    public double ScreenDpiScale => _runtime.SystemInfo.DpiScale;
     
     /// <summary>
     /// 通过 OCR 识别当前角色的 UID
@@ -67,15 +102,10 @@ public class Genshin
     {
         // 登记本轮 JS 宿主操作；脚本停止后必须等待业务方法真正退出再释放游戏所有权。
         using var scriptOperation = ScriptHostOperations.Enter();
-        return Task.FromResult(Bv.Uid());
+        return Task.FromResult(Bv.Uid(_runtime));
     }
     
-    public Lazy<NavigationInstance> LazyNavigationInstance { get; } = new(() =>
-    {
-        var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
-        Navigation.WarmUp(matchingMethod);
-        return new NavigationInstance();
-    });
+    public Lazy<NavigationInstance> LazyNavigationInstance { get; }
 
     /// <summary>
     /// 传送到指定位置
@@ -86,19 +116,19 @@ public class Genshin
     public async Task Tp(double x, double y)
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        await new TpTask(_ct).Tp(x, y);
+        await new TpTask(_runtime, _config, _ct).Tp(x, y);
     }
 
     public async Task Tp(double x, double y, string mapName, bool force)
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        await new TpTask(_ct).Tp(x, y, mapName, force);
+        await new TpTask(_runtime, _config, _ct).Tp(x, y, mapName, force);
     }
 
     public async Task Tp(double x, double y, bool force)
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        await new TpTask(_ct).Tp(x, y, MapTypes.Teyvat.ToString(), force);
+        await new TpTask(_runtime, _config, _ct).Tp(x, y, MapTypes.Teyvat.ToString(), force);
     }
 
     /// <summary>
@@ -139,7 +169,7 @@ public class Genshin
     public async Task MoveMapTo(double x, double y, string? forceCountry = null)
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        TpTask tpTask = new TpTask(_ct);
+        TpTask tpTask = new TpTask(_runtime, _config, _ct);
         await tpTask.CheckInBigMapUi();
         await tpTask.SwitchRecentlyCountryMap(x, y, forceCountry);
         await tpTask.MoveMapTo(x, y, MapTypes.Teyvat.ToString());
@@ -157,7 +187,7 @@ public class Genshin
     public async Task ClickMapPoint(double x, double y, string? forceCountry = null)
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        TpTask tpTask = new TpTask(_ct);
+        TpTask tpTask = new TpTask(_runtime, _config, _ct);
         await tpTask.CheckInBigMapUi();
         await tpTask.SwitchRecentlyCountryMap(x, y, forceCountry);
         await tpTask.ClickMapPoint(x, y, MapTypes.Teyvat.ToString());
@@ -176,7 +206,7 @@ public class Genshin
     public async Task MoveIndependentMapTo(int x, int y, string mapName, string? forceCountry = null)
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        TpTask tpTask = new TpTask(_ct);
+        TpTask tpTask = new TpTask(_runtime, _config, _ct);
         await tpTask.CheckInBigMapUi();
         // 切换地区
         if (mapName == MapTypes.Teyvat.ToString())
@@ -198,8 +228,8 @@ public class Genshin
     /// <returns>当前大地图缩放等级，范围1.0-6.0</returns>
     public double GetBigMapZoomLevel()
     {
-        TpTask tpTask = new(_ct);
-        using var capture = CaptureToRectArea();
+        TpTask tpTask = new(_runtime, _config, _ct);
+        using var capture = _runtime.CaptureToRectArea();
         return tpTask.GetBigMapZoomLevel(capture);
     }
 
@@ -217,7 +247,7 @@ public class Genshin
     public async Task SetBigMapZoomLevel(double zoomLevel)
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        TpTask tpTask = new(_ct);
+        TpTask tpTask = new(_runtime, _config, _ct);
         double currentZoomLevel = GetBigMapZoomLevel();
         await tpTask.AdjustMapZoomLevel(currentZoomLevel, zoomLevel);
     }
@@ -228,7 +258,7 @@ public class Genshin
     public async Task TpToStatueOfTheSeven()
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        TpTask tpTask = new TpTask(_ct);
+        TpTask tpTask = new TpTask(_runtime, _config, _ct);
         await tpTask.TpToStatueOfTheSeven();
     }
 
@@ -238,7 +268,7 @@ public class Genshin
     /// <returns>包含X和Y坐标的Point2f结构体</returns>
     public Point2f? GetPositionFromBigMap()
     {
-        TpTask tpTask = new TpTask(_ct);
+        TpTask tpTask = new TpTask(_runtime, _config, _ct);
         return tpTask.GetPositionFromBigMap(MapTypes.Teyvat.ToString());
     }
 
@@ -249,7 +279,7 @@ public class Genshin
     /// <returns>包含X和Y坐标的Point2f结构体</returns>
     public Point2f? GetPositionFromBigMap(string mapName)
     {
-        TpTask tpTask = new TpTask(_ct);
+        TpTask tpTask = new TpTask(_runtime, _config, _ct);
         return tpTask.GetPositionFromBigMap(mapName);
     }
 
@@ -269,7 +299,7 @@ public class Genshin
 
     public float GetCameraOrientation()
     {
-        using var imageRegion = CaptureToRectArea();
+        using var imageRegion = _runtime.CaptureToRectArea();
         return CameraOrientation.Compute(imageRegion.SrcMat);
     }
 
@@ -281,13 +311,13 @@ public class Genshin
     /// <returns>包含X和Y坐标的Point2f结构体</returns>
     public Point2f? GetPositionFromMap(string mapName, int cacheTimeMs = 900)
     {
-        var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+        var matchingMethod = _config.PathingConditionConfig.MapMatchingMethod;
         return GetPositionFromMapWithMatchingMethod(mapName,matchingMethod, cacheTimeMs);
     }
     
     public Point2f? GetPositionFromMapWithMatchingMethod(string mapName, string matchingMethod, int cacheTimeMs = 900)
     {
-        using var imageRegion = CaptureToRectArea();
+        using var imageRegion = _runtime.CaptureToRectArea();
         if (!Bv.IsInMainUi(imageRegion))
         {
             throw new InvalidOperationException("不在主界面，无法识别小地图坐标");
@@ -306,12 +336,12 @@ public class Genshin
     /// <returns>包含X和Y坐标的Point2f结构体</returns>
     public Point2f? GetPositionFromMap(string mapName, float x, float y)
     {
-        using var imageRegion = CaptureToRectArea();
+        using var imageRegion = _runtime.CaptureToRectArea();
         if (!Bv.IsInMainUi(imageRegion))
         {
             throw new InvalidOperationException("不在主界面，无法识别小地图坐标");
         }
-        var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+        var matchingMethod = _config.PathingConditionConfig.MapMatchingMethod;
         var sceneMap = MapManager.GetMap(mapName, matchingMethod);
         var navigationInstance = LazyNavigationInstance.Value;
         var pos = sceneMap.ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f(x, y));
@@ -331,7 +361,7 @@ public class Genshin
         using var scriptOperation = ScriptHostOperations.Enter();
         try
         {
-            return await new SwitchPartyTask().Start(partyName, _ct);
+            return await new SwitchPartyTask(_runtime).Start(partyName, _ct);
         }
         catch (PartySetupFailedException)
         {
@@ -364,7 +394,7 @@ public class Genshin
         using var scriptOperation = ScriptHostOperations.Enter();
         try
         {
-            return await new SwitchCharacterStateMachineTask().Start(
+            return await new SwitchCharacterStateMachineTask(_runtime, _config).Start(
                 slot1,
                 slot2,
                 slot3,
@@ -395,7 +425,7 @@ public class Genshin
     public async Task BlessingOfTheWelkinMoon()
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        await new BlessingOfTheWelkinMoonTask().Start(_ct);
+        await new BlessingOfTheWelkinMoonTask(_runtime).Start(_ct);
     }
 
     /// <summary>
@@ -408,7 +438,7 @@ public class Genshin
     public async Task ChooseTalkOption(string option, int skipTimes = 10, bool isOrange = false)
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        await new ChooseTalkOptionTask().SingleSelectText(option, _ct, skipTimes, isOrange);
+        await new ChooseTalkOptionTask(_runtime).SingleSelectText(option, _ct, skipTimes, isOrange);
     }
 
     /// <summary>
@@ -418,7 +448,7 @@ public class Genshin
     public async Task ClaimBattlePassRewards()
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        await new ClaimBattlePassRewardsTask().DoOnce(_ct);
+        await new ClaimBattlePassRewardsTask(_runtime, _config).DoOnce(_ct);
     }
 
     /// <summary>
@@ -428,7 +458,7 @@ public class Genshin
     public async Task<bool> ClaimEncounterPointsRewards()
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        return await new ClaimEncounterPointsRewardsTask().DoOnce(_ct);
+        return await new ClaimEncounterPointsRewardsTask(_runtime, _config).DoOnce(_ct);
     }
 
     /// <summary>
@@ -437,7 +467,7 @@ public class Genshin
     public async Task ClaimMailRewards()
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        await new ClaimMailRewardsTask().DoOnce(_ct);
+        await new ClaimMailRewardsTask(_runtime).DoOnce(_ct);
     }
 
     /// <summary>
@@ -446,7 +476,7 @@ public class Genshin
     public async Task<bool> ClaimSereniteaPotRewards()
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        return await new GoToSereniteaPotTask().DoOnce(_ct);
+        return await new GoToSereniteaPotTask(_runtime, _config).DoOnce(_ct);
     }
 
     /// <summary>
@@ -457,7 +487,7 @@ public class Genshin
     public async Task GoToAdventurersGuild(string country)
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        await new GoToAdventurersGuildTask().Start(country, _ct);
+        await new GoToAdventurersGuildTask(_runtime, _config).Start(country, _ct);
     }
 
     /// <summary>
@@ -468,7 +498,7 @@ public class Genshin
     public async Task GoToCraftingBench(string country)
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        await new GoToCraftingBenchTask().GoToCraftingBench(country, _ct);
+        await new GoToCraftingBenchTask(_runtime, _config).GoToCraftingBench(country, _ct);
     }
 
     /// <summary>
@@ -479,7 +509,7 @@ public class Genshin
     public async Task GoCraftResin(string country)
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        await new GoToCraftingBenchTask().GoCraftResin(country, _ct);
+        await new GoToCraftingBenchTask(_runtime, _config).GoCraftResin(country, _ct);
     }
 
     /// <summary>
@@ -493,7 +523,7 @@ public class Genshin
     public async Task<CraftMaterialResult> CraftMaterial(string materialName, int quantity, string? materialType = null, string? bonusType = null)
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        return await new CraftMaterialTask(materialName, quantity, materialType, bonusType).Start(_ct);
+        return await new CraftMaterialTask(_runtime, materialName, quantity, materialType, bonusType).Start(_ct);
     }
 
     /// <summary>
@@ -503,7 +533,7 @@ public class Genshin
     public async Task ReturnMainUi()
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        await new ReturnMainUiTask().Start(_ct);
+        await new ReturnMainUiTask(_runtime).Start(_ct);
     }
 
     /// <summary>
@@ -519,9 +549,9 @@ public class Genshin
             throw new ArgumentNullException(nameof(taskSettingsPageViewModel), "内部视图模型对象为空");
         }
 
-        var param = AutoFishingTaskParam.BuildFromConfig(TaskContext.Instance().Config.AutoFishingConfig, taskSettingsPageViewModel.SaveScreenshotOnKeyTick);
+        var param = AutoFishingTaskParam.BuildFromConfig(_config.AutoFishingConfig, taskSettingsPageViewModel.SaveScreenshotOnKeyTick);
         param.FishingTimePolicy = (FishingTimePolicy)fishingTimePolicy;
-        await new AutoFishingTask(param).Start(_ct);
+        await new AutoFishingTask(_runtime, _config, param, _screenshots).Start(_ct);
     }
 
     /// <summary>
@@ -531,7 +561,7 @@ public class Genshin
     public async Task Relogin()
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        await new ExitAndReloginJob().Start(_ct);
+        await new ExitAndReloginJob(_runtime).Start(_ct);
     }
     
     /// <summary>
@@ -541,7 +571,7 @@ public class Genshin
     public async Task WonderlandCycle()
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        await new EnterAndExitWonderlandJob().Start(_ct);
+        await new EnterAndExitWonderlandJob(_runtime).Start(_ct);
     }
 
     /// <summary>
@@ -558,7 +588,7 @@ public class Genshin
             throw new ArgumentException($"无效的小时值: {hour}，必须是 0-24 之间的整数字符", nameof(hour));
         if (minute < 0 || minute > 59)
             throw new ArgumentException($"无效的分钟值: {minute}，必须是 0-59 之间的整数字符", nameof(minute));
-        await new SetTimeTask().Start(hour, minute, _ct, skip);
+        await new SetTimeTask(_runtime).Start(hour, minute, _ct, skip);
     }
     
     /// <summary>
@@ -575,7 +605,7 @@ public class Genshin
             throw new ArgumentException($"无效的小时值: {hour}，必须是 0-24 之间的整数字符", nameof(hour));
         if (!int.TryParse(minute, out var m) || m < 0 || m > 59)
             throw new ArgumentException($"无效的分钟值: {minute}，必须是 0-59 之间的整数字符", nameof(minute));
-        await new SetTimeTask().Start(h, m, _ct, skip);
+        await new SetTimeTask(_runtime).Start(h, m, _ct, skip);
     }
 
     // /// <summary>

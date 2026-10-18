@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Pulonia.Services;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.Pulonia.Executors;
@@ -14,6 +15,7 @@ namespace BetterGenshinImpact.Pulonia.Executors;
 /// </summary>
 public sealed class PuloniaKeyMouseTaskExecutor : IPuloniaTaskExecutor
 {
+
     /// <inheritdoc />
     public IReadOnlyList<PuloniaTaskDefinition> Definitions { get; } = [new()
     {
@@ -41,8 +43,11 @@ public sealed class PuloniaKeyMouseTaskExecutor : IPuloniaTaskExecutor
     {
         if (string.IsNullOrWhiteSpace(task.Path))
             return PuloniaTaskOutcome.Failure("录制回放节点没有固定资源路径。");
+        // 回放只使用本节点租约记录的运行环境；它已停止时当前节点失败
+        if (!context.TryGetRuntime(out var runtime, out var runtimeError))
+            return PuloniaTaskOutcome.Failure(runtimeError);
         var json = await File.ReadAllTextAsync(task.Path, ct).ConfigureAwait(false);
-        await KeyMouseMacroPlayer.PlayMacro(json, ct, task.Parameters.Value<bool>("with_delay")).ConfigureAwait(false);
+        await KeyMouseMacroPlayer.PlayMacro(runtime, json, ct, task.Parameters.Value<bool>("with_delay")).ConfigureAwait(false);
         ct.ThrowIfCancellationRequested();
         return PuloniaTaskOutcome.ExecutedUnverified("键鼠宏已完整回放，但录制文件没有结构化副作用证据。",
             new JObject { ["resource_version"] = task.ResourceVersion });

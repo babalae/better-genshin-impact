@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Windows.Media;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Service;
 using Wpf.Ui.Controls;
 using BetterGenshinImpact.Platform.Wine;
 
@@ -15,7 +16,8 @@ public class WindowHelper
 
     public static void TryApplySystemBackdrop(System.Windows.Window window)
     {
-        var themeType = TaskContext.Instance().Config.CommonConfig.CurrentThemeType;
+        // 静态方法没有创建方可以传参，暂时读配置根（见 task-context-removal.md 第 5 节）
+        var themeType = ConfigService.Config!.CommonConfig.CurrentThemeType;
 
         // Wine 平台适配
         if (WinePlatformAddon.IsRunningOnWine)

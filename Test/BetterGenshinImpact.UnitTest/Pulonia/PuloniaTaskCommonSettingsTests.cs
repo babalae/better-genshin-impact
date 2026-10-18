@@ -27,7 +27,7 @@ public sealed class PuloniaTaskCommonSettingsTests : IDisposable
     public void ExecutorDefaults_MatchSchemasAndKeepLegacyNames()
     {
         IPuloniaTaskExecutor[] executors =
-            [new PuloniaPathingTaskExecutor(), new PuloniaJavaScriptTaskExecutor(), new PuloniaShellTaskExecutor()];
+            [new PuloniaPathingTaskExecutor(new AllConfig()), new PuloniaJavaScriptTaskExecutor(), new PuloniaShellTaskExecutor()];
         foreach (var definition in executors.SelectMany(executor => executor.Definitions))
         {
             PuloniaTaskValidator.ValidateParameterSchema(definition.ParameterSchema, definition.TaskType);
@@ -59,7 +59,7 @@ public sealed class PuloniaTaskCommonSettingsTests : IDisposable
         config.PathingConfig.AutoFightConfig.BattleThresholdForLoot = null;
         config.PathingConfig.AutoEatConfig.DefaultAtkBoostingDishName = null;
         var parameters = PuloniaTaskCommonSettings.ToParameters("pathing", config);
-        var definition = new PuloniaPathingTaskExecutor().Definitions[0];
+        var definition = new PuloniaPathingTaskExecutor(new AllConfig()).Definitions[0];
         PuloniaTaskValidator.ValidateParameters(parameters, definition.ParameterSchema, "pathing");
 
         var restored = PuloniaTaskCommonSettings.FromParameters("pathing", parameters).PathingConfig;
@@ -126,7 +126,7 @@ public sealed class PuloniaTaskCommonSettingsTests : IDisposable
         var loaded = await store.LoadPlanAsync(saved.Id);
         var snapshot = await new PuloniaTaskBuilder(store).BuildAsync(loaded!, new PuloniaTaskBuildOptions
         {
-            Definitions = [.. new PuloniaPathingTaskExecutor().Definitions, .. new PuloniaJavaScriptTaskExecutor().Definitions]
+            Definitions = [.. new PuloniaPathingTaskExecutor(new AllConfig()).Definitions, .. new PuloniaJavaScriptTaskExecutor().Definitions]
         });
         var inherited = PuloniaTaskCommonSettings.FromParameters(taskType, snapshot.RootTask.Children[0].Parameters).PathingConfig;
         var overridden = PuloniaTaskCommonSettings.FromParameters(taskType, snapshot.RootTask.Children[1].Parameters).PathingConfig;

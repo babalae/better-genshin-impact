@@ -19,14 +19,17 @@ public partial class MapPathingDevViewModel: ObservableObject
     private MapViewer? _mapViewer;
     
     // [ObservableProperty]
-    // private string _selectedMapType = TaskContext.Instance().Config.DevConfig.RecordMapName;
+    // private string _selectedMapType = DevConfig.RecordMapName;
 
-    public DevConfig DevConfig { get; set; } = TaskContext.Instance().Config.DevConfig;
+    /// <summary>
+    /// 开发者配置。本 ViewModel 由窗口直接 new，没有注入入口，暂时读配置根（见 task-context-removal.md 第 5 节）
+    /// </summary>
+    public DevConfig DevConfig { get; set; } = BetterGenshinImpact.Service.ConfigService.Config!.DevConfig;
     
     [RelayCommand]
     private void DropDownChanged()
     {
-        // TaskContext.Instance().Config.DevConfig.RecordMapName = SelectedMapType;
+        // DevConfig.RecordMapName = SelectedMapType;
     }
     
     [RelayCommand]

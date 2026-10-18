@@ -33,6 +33,11 @@ namespace BetterGenshinImpact.GameTask
         private readonly OverlayMetricsService _metricsService;
         private readonly IMaskWindowHost _maskWindowHost;
 
+        /// <summary>
+        /// 配置根，触发器创建时一并传入
+        /// </summary>
+        private readonly AllConfig _config;
+
         private readonly System.Timers.Timer _timer = new();
         private int _inferencePauseCount;
 
@@ -93,11 +98,6 @@ namespace BetterGenshinImpact.GameTask
         /// </summary>
         private volatile GameRuntime? _runtime;
 
-        /// <summary>
-        /// 仅供本类保存截图使用；当前运行环境的截图器，未启动时为 null
-        /// </summary>
-        private IGameCapture? GameCapture => _runtime?.Capture;
-
         private static readonly object _locker = new();
         private int _frameIndex = 0;
 
@@ -118,11 +118,13 @@ namespace BetterGenshinImpact.GameTask
         public TaskTriggerDispatcher(
             ILogger<TaskTriggerDispatcher> logger,
             OverlayMetricsService metricsService,
-            IMaskWindowHost maskWindowHost)
+            IMaskWindowHost maskWindowHost,
+            AllConfig config)
         {
             _logger = logger;
             _metricsService = metricsService;
             _maskWindowHost = maskWindowHost;
+            _config = config;
             _timer.Elapsed += Tick;
             //_timer.Tick += Tick;
         }
@@ -221,7 +223,7 @@ namespace BetterGenshinImpact.GameTask
         }
 
         /// <summary>
-        /// 开始调度。运行环境的截图器、输入和 TaskContext 已由 GameRuntimeService 准备好
+        /// 开始调度。运行环境的截图器和输入已由 GameRuntimeService 准备好
         /// </summary>
         public void Start(GameRuntime runtime, int interval = 50)
         {
@@ -229,10 +231,11 @@ namespace BetterGenshinImpact.GameTask
             ChatUiHotkeyGuard.Reset();
             _runtime = runtime;
 
-            // 创建本次截图会话的触发器(一定要在任务上下文初始化完毕后使用)。初始全部为停用，第一帧按规则启用。
+            // 创建本次截图会话的触发器，它们在整个会话内只使用这个运行环境。初始全部为停用，第一帧按规则启用。
             // 上一次会话中仍处于启用状态的触发器交给下一帧调用 OnDisabled，清理它们留在遮罩上的内容
+            // （退役触发器持有的是旧运行环境，OnDisabled 只能清理借用的遮罩单例）
             var previousSlots = _slots;
-            _slots = GameTaskManager.CreateTriggers().Select(t => new TriggerSlot(t)).ToList();
+            _slots = GameTaskManager.CreateTriggers(runtime, _config).Select(t => new TriggerSlot(t)).ToList();
             lock (_leaseLock)
             {
                 _retiredSlots.AddRange(previousSlots);
@@ -240,6 +243,9 @@ namespace BetterGenshinImpact.GameTask
 
             // 窗口移动、缩放时同步遮罩位置（Tick 中也会轮询）
             runtime.Window.ViewportChanged += OnViewportChanged;
+
+            // 遮罩指标按游戏进程采样，由调度器上报窗口（OverlayMetricsService 不能反向依赖 GameRuntimeService）
+            _metricsService.SetGameWindow(runtime.Window);
 
             // 启动定时器
             _frameIndex = 0;
@@ -263,6 +269,8 @@ namespace BetterGenshinImpact.GameTask
                 runtime.Window.ViewportChanged -= OnViewportChanged;
                 _runtime = null;
             }
+
+            _metricsService.SetGameWindow(null);
 
             _gameRect = RECT.Empty;
             _prevGameActive = false;
@@ -359,7 +367,7 @@ namespace BetterGenshinImpact.GameTask
 
                 // 检查游戏是否在前台
                 var hasBackgroundTriggerToRun = false;
-                var autoSkipConfig = TaskContext.Instance().Config.AutoSkipConfig;
+                var autoSkipConfig = _config.AutoSkipConfig;
                 var shouldShowPictureInPicture = autoSkipConfig.Enabled
                                                  && autoSkipConfig.PictureInPictureEnabled
                                                  && !PictureInPictureService.IsManuallyClosed
@@ -461,7 +469,7 @@ namespace BetterGenshinImpact.GameTask
                 }
 
                 // 循环执行所有触发器 有独占状态的触发器的时候只执行独占触发器
-                using var content = new CaptureContent(bitmap, _frameIndex, _timer.Interval);
+                using var content = new CaptureContent(bitmap, _frameIndex, _timer.Interval, runtime.SystemInfo);
                 ChatUiHotkeyGuard.UpdateVisualState(Bv.DetectChatUi(content.CaptureRectArea));
 
                 if (!hasEnabledTriggers)
@@ -712,7 +720,7 @@ namespace BetterGenshinImpact.GameTask
                 }
 
                 _gameRect = new RECT(currentRect);
-                TaskContext.Instance().SystemInfo.CaptureAreaRect = currentRect;
+                runtime.SystemInfo.CaptureAreaRect = currentRect;
                 // 遮罩和 HTML 遮罩的位置由遮罩宿主统一跟随
                 var window = runtime.Window;
                 var active = window.IsForeground;
@@ -755,55 +763,6 @@ namespace BetterGenshinImpact.GameTask
 
             _ = User32.GetWindowThreadProcessId(foreground, out var pid);
             return pid == 0 || pid == (uint)Environment.ProcessId || pid == (uint)window.ProcessId;
-        }
-
-        public void TakeScreenshot()
-        {
-            try
-            {
-                var path = Global.Absolute($@"log\screenshot\");
-                if (!Directory.Exists(path))
-                {
-                    Directory.CreateDirectory(path);
-                }
-
-                Mat mat;
-                try
-                {
-                    mat = TaskControl.CaptureGameImage(GameCapture);
-                }
-                catch (Exception)
-                {
-                    _logger.LogInformation("截图失败，未获取到图像");
-                    return;
-                }
-
-                var name = $@"{DateTime.Now:yyyyMMddHHmmssffff}.png";
-                var savePath = Global.Absolute($@"log\screenshot\{name}");
-                if (TaskContext.Instance().Config.CommonConfig.ScreenshotUidCoverEnabled)
-                {
-                    var assetScale = TaskContext.Instance().SystemInfo.ScaleTo1080PRatio;
-                    var rect = new Rect((int)(mat.Width - MaskWindowConfig.UidCoverRightBottomRect.X * assetScale),
-                        (int)(mat.Height - MaskWindowConfig.UidCoverRightBottomRect.Y * assetScale),
-                        (int)(MaskWindowConfig.UidCoverRightBottomRect.Width * assetScale),
-                        (int)(MaskWindowConfig.UidCoverRightBottomRect.Height * assetScale));
-                    mat.Rectangle(rect, Scalar.White, -1);
-                    Cv2.ImWrite(savePath, mat);
-                }
-                else
-                {
-                    Cv2.ImWrite(savePath, mat);
-                }
-
-                mat.Dispose();
-
-                _logger.LogInformation("截图已保存: {Name}", name);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError("截图保存失败: {Message}", e.Message);
-                _logger.LogDebug("截图保存失败: {StackTrace}", e.StackTrace);
-            }
         }
     }
 }

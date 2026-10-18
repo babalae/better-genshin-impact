@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.Common.BgiVision;
@@ -21,33 +22,35 @@ public static partial class Bv
     /// <summary>
     /// 等待图像被找到
     /// </summary>
+    /// <param name="runtime">运行环境</param>
     /// <param name="ro">识别对象</param>
     /// <param name="ct">任务取消令牌</param>
     /// <param name="retryTimes">重试次数</param>
     /// <param name="delayMs">重试间隔</param>
     /// <returns></returns>
-    public static async Task<bool> WaitUntilFound(RecognitionObject ro, CancellationToken ct, int retryTimes = 5, int delayMs = 1000)
+    public static async Task<bool> WaitUntilFound(GameRuntime runtime, RecognitionObject ro, CancellationToken ct, int retryTimes = 5, int delayMs = 1000)
     {
-        return await NewRetry.WaitForAction(() =>
+        return await NewRetry.WaitForAction(runtime, () =>
         {
-            using var region = TaskControl.CaptureToRectArea();
+            using var region = runtime.CaptureToRectArea();
             return region.Find(ro).IsExist();
         }, ct, retryTimes, delayMs);
     }
 
     /// <summary>
-    /// 
+    /// 重复截图直到找到图像，找到后点击它
     /// </summary>
+    /// <param name="runtime">运行环境</param>
     /// <param name="ro"></param>
     /// <param name="ct"></param>
     /// <param name="retryTimes"></param>
     /// <param name="delayMs"></param>
     /// <returns></returns>
-    public static async Task<bool> ClickUntilFound(RecognitionObject ro, CancellationToken ct, int retryTimes = 5, int delayMs = 1000)
+    public static async Task<bool> ClickUntilFound(GameRuntime runtime, RecognitionObject ro, CancellationToken ct, int retryTimes = 5, int delayMs = 1000)
     {
-        return await NewRetry.WaitForAction(() =>
+        return await NewRetry.WaitForAction(runtime, () =>
         {
-            using var region = TaskControl.CaptureToRectArea();
+            using var region = runtime.CaptureToRectArea();
             var foundRa = region.Find(ro);
             if (foundRa.IsExist())
             {

@@ -1,9 +1,11 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using CsTrees;
 using CsTrees.Blackboard;
 using CsTrees.Composites;
@@ -27,8 +29,29 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private IInputChannel input => InputHub.Foreground;
 
         public string Name => "自动钓鱼";
-        public bool IsEnabledByConfig => TaskContext.Instance().Config.AutoFishingConfig.Enabled;
+        public bool IsEnabledByConfig => _config.AutoFishingConfig.Enabled;
         public int Priority => 15;
+
+        /// <summary>
+        /// 本次截图会话绑定的运行环境，行为树的截图与等待只使用它
+        /// </summary>
+        private readonly GameRuntime _runtime;
+
+        /// <summary>
+        /// 配置根，由创建方传入
+        /// </summary>
+        private readonly AllConfig _config;
+
+        /// <summary>
+        /// 创建半自动钓鱼触发器
+        /// </summary>
+        /// <param name="runtime">本次截图会话绑定的运行环境</param>
+        /// <param name="config">配置根</param>
+        public AutoFishingTrigger(GameRuntime runtime, AllConfig config)
+        {
+            _runtime = runtime;
+            _config = config;
+        }
 
         /// <summary>
         /// 钓鱼是要独占模式的
@@ -62,7 +85,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         private void BuildBehaviourTree()
         {
             AutoFishingTaskParam autoFishingTaskParam =
-                AutoFishingTaskParam.BuildFromConfig(TaskContext.Instance().Config.AutoFishingConfig);
+                AutoFishingTaskParam.BuildFromConfig(_config.AutoFishingConfig);
             IOcrService ocrService = OcrFactory.Paddle;
 
             this.blackboard = new CsTrees.Blackboard.Blackboard();
@@ -70,7 +93,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             BehaviourTreeLaTiao = new AutoFishingBuilder()
                 .WithBlackboard(blackboard)
                     .Sequence("出现退出钓鱼按钮就开始钓鱼", memory: false)
-                        .TakeScreenshot("截图", _logger)
+                        .TakeScreenshot("截图", _runtime, _logger)
                         .Parallel("root", policy: new ParallelPolicy.SuccessOnOne())
                             .LeafWithBlackboard(bb => new CheckFishingUserInterfaceBehaviour("检查是否在钓鱼界面", this, bb!))
                             .FailureIsSuccess("拉条循环")
@@ -305,7 +328,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         public void Sleep(int millisecondsTimeout)
         {
-            TaskControl.Sleep(millisecondsTimeout);
+            _runtime.Sleep(millisecondsTimeout);
         }
 
         /// <summary>

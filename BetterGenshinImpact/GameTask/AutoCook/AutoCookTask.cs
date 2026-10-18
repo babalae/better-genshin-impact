@@ -1,6 +1,9 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Input;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -23,12 +26,33 @@ public class AutoCookTask : ISoloTask
     private static readonly Rect CookColorRect1080P = new(600, 660, 730, 190);
     private static readonly Scalar TargetCookColor = new(255, 192, 64);
 
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 配置根，由创建方传入
+    /// </summary>
+    private readonly AllConfig _config;
+
+    /// <summary>
+    /// 创建自动烹饪任务
+    /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    /// <param name="config">配置根</param>
+    public AutoCookTask(GameRuntime runtime, AllConfig config)
+    {
+        _runtime = runtime;
+        _config = config;
+    }
+
     public string Name => "自动烹饪";
 
     public async Task Start(CancellationToken ct)
     {
-        var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
-        var autoCookConfig = TaskContext.Instance().Config.AutoCookConfig;
+        var assetScale = _runtime.SystemInfo.AssetScale;
+        var autoCookConfig = _config.AutoCookConfig;
         var checkIntervalMs = Math.Max(1, autoCookConfig.CheckIntervalMs);
         var stopTaskWhenRecoverButtonDetected = autoCookConfig.StopTaskWhenRecoverButtonDetected;
         var peakMinCount = (int)(PeakMinCount * assetScale);
@@ -43,7 +67,7 @@ public class AutoCookTask : ISoloTask
 
         while (!ct.IsCancellationRequested)
         {
-            using var captureRegion = CaptureToRectArea();
+            using var captureRegion = _runtime.CaptureToRectArea();
             var now = DateTime.UtcNow;
             if (!inCookUi || (now - lastUiCheckTime).TotalMilliseconds >= UiCheckIntervalMs)
             {
@@ -98,7 +122,7 @@ public class AutoCookTask : ISoloTask
                 }
             }
 
-            await Delay(checkIntervalMs, ct);
+            await _runtime.Delay(checkIntervalMs, ct);
         }
     }
 

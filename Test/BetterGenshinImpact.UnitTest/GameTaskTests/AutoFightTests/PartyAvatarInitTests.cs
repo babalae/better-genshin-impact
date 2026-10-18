@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
@@ -55,7 +56,9 @@ public class PartyAvatarInitTests
         FakeLogger logger = new FakeLogger();
 
         //
-        var combatScenes = new CombatScenes(Predictor, GameTask.AutoFight.Assets.AutoFightAssets.Get(imageRegion), logger, systemInfo).InitializeTeam(imageRegion, autoFightConfig);
+        // 不连真实游戏的运行环境，画面信息取自截图尺寸
+        var runtime = TestGameRuntime.Create(systemInfo);
+        var combatScenes = new CombatScenes(runtime, new AllConfig(), Predictor, GameTask.AutoFight.Assets.AutoFightAssets.Get(imageRegion), logger).InitializeTeam(imageRegion, autoFightConfig);
 
         //
         Assert.True(combatScenes.CheckTeamInitialized());
@@ -77,16 +80,16 @@ public class PartyAvatarInitTests
     // public void WhatAvatarIsActive_New_AvatarShouldBeRight(string screenshot1080P)
     // {
     //     //
-    //     TaskContext.Instance().InitFakeForTest();
     //     Mat mat = new Mat(@$"..\..\..\Assets\{screenshot1080P}");
-    //     var systemInfo = TaskContext.Instance().SystemInfo;
+    //     var systemInfo = new FakeSystemInfo(new Vanara.PInvoke.RECT(0, 0, mat.Width, mat.Height), 1);
+    //     var runtime = TestGameRuntime.Create(systemInfo);
     //     // 桌面 -> 游戏捕获区域 -> 1080P区域
     //     var gameCaptureRegion = systemInfo.DesktopRectArea.Derive(mat, systemInfo.CaptureAreaRect.X, systemInfo.CaptureAreaRect.Y);
     //     var imageRegion = gameCaptureRegion.DeriveTo1080P();
     //
     //
     //     //
-    //     var combatScenes = new CombatScenes().InitializeTeam(imageRegion);
+    //     var combatScenes = new CombatScenes(runtime, new AllConfig()).InitializeTeam(imageRegion);
     //
     //     //
     //     Assert.True(combatScenes.CheckTeamInitialized());

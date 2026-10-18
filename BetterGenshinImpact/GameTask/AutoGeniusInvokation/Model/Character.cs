@@ -75,46 +75,61 @@ namespace BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model
             return sb.ToString();
         }
 
-        public void ChooseFirst()
+        /// <summary>
+        /// 选择该角色作为首个出战角色
+        /// </summary>
+        /// <param name="control">本次对局的游戏操控对象</param>
+        public void ChooseFirst(GeniusInvokationControl control)
         {
-            ClickExtension.Move(GeniusInvokationControl.GetInstance().MakeOffset(Area.GetCenterPoint()))
+            ClickExtension.Move(control.MakeOffset(Area.GetCenterPoint()))
                 .LeftButtonClick()
                 .Sleep(200)
                 .LeftButtonClick();
         }
 
-        public bool SwitchLater()
+        /// <summary>
+        /// 切换到该角色
+        /// </summary>
+        /// <param name="control">本次对局的游戏操控对象</param>
+        public bool SwitchLater(GeniusInvokationControl control)
         {
-            GeniusInvokationControl.GetInstance().ClickGameWindowCenter();
-            GeniusInvokationControl.GetInstance().Sleep(800);
-            var p = GeniusInvokationControl.GetInstance().MakeOffset(Area.GetCenterPoint());
+            control.ClickGameWindowCenter();
+            control.Sleep(800);
+            var p = control.MakeOffset(Area.GetCenterPoint());
             // 选择角色
             p.Click();
 
             // 点击切人按钮
-            GeniusInvokationControl.GetInstance().ActionPhasePressSwitchButton();
+            control.ActionPhasePressSwitchButton();
             return true;
         }
 
         /// <summary>
         /// 角色被打败的时候双击角色牌重新出战
         /// </summary>
+        /// <param name="control">本次对局的游戏操控对象</param>
         /// <returns></returns>
-        public void SwitchWhenTakenOut()
+        public void SwitchWhenTakenOut(GeniusInvokationControl control)
         {
             _logger.LogInformation("有角色被打败,当前选择{Name}出战", Name);
-            var p = GeniusInvokationControl.GetInstance().MakeOffset(Area.GetCenterPoint());
+            var p = control.MakeOffset(Area.GetCenterPoint());
             // 选择角色
             p.Click();
             // 双击切人
-            GeniusInvokationControl.GetInstance().Sleep(500);
+            control.Sleep(500);
             p.Click();
-            GeniusInvokationControl.GetInstance().Sleep(300);
+            control.Sleep(300);
         }
 
-        public bool UseSkill(int skillIndex, Duel duel)
+        /// <summary>
+        /// 使用技能，元素骰子不足时自动烧牌
+        /// </summary>
+        /// <param name="control">本次对局的游戏操控对象</param>
+        /// <param name="skillIndex">技能编号</param>
+        /// <param name="duel">对局对象</param>
+        public bool UseSkill(GeniusInvokationControl control, int skillIndex, Duel duel)
         {
-            var res = GeniusInvokationControl.GetInstance().ActionPhaseAutoUseSkill(skillIndex, Skills[skillIndex].SpecificElementCost, Skills[skillIndex].Type, duel);
+            var res = control.ActionPhaseAutoUseSkill(skillIndex, Skills[skillIndex].SpecificElementCost, Skills[skillIndex].Type, duel);
             if (res)
             {
                 return true;

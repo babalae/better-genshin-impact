@@ -22,6 +22,7 @@ using BetterGenshinImpact.GameTask.QuickBuy;
 using BetterGenshinImpact.GameTask.QuickClaimReward;
 using BetterGenshinImpact.GameTask.QuickSereniteaPot;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.GameTask.UseRedeemCode;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
@@ -41,6 +42,7 @@ using OpenCvSharp;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Reflection;
 using System.Threading;
@@ -49,6 +51,7 @@ using System.Windows;
 using System.Windows.Input;
 using Vanara.PInvoke;
 using HotKeySettingModel = BetterGenshinImpact.Model.HotKeySettingModel;
+using Toast = Wpf.Ui.Violeta.Controls.Toast;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -57,7 +60,27 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
     private readonly ILogger<HotKeyPageViewModel> _logger;
     private readonly TaskSettingsPageViewModel _taskSettingsPageViewModel;
     private readonly RecognitionTemplateEditorService _recognitionTemplateEditorService;
-    private readonly TaskTriggerDispatcher _taskTriggerDispatcher;
+
+    /// <summary>
+    /// 游戏运行环境服务。热键触发时读取 <see cref="GameRuntimeService.Current"/>，不缓存
+    /// </summary>
+    private readonly GameRuntimeService _runtimeService;
+
+    /// <summary>
+    /// 游戏截图保存服务，截图热键使用
+    /// </summary>
+    private readonly GameScreenshotService _screenshots;
+
+    /// <summary>
+    /// "截图器未启动"提示的最小间隔（毫秒），长按类热键会反复回调
+    /// </summary>
+    private const long NoRuntimeToastIntervalMs = 2000;
+
+    /// <summary>
+    /// 上一次提示"截图器未启动"的时间（<see cref="Environment.TickCount64"/>），初始值保证首次立即提示
+    /// </summary>
+    private long _lastNoRuntimeToastTick = -NoRuntimeToastIntervalMs;
+
     /// <summary>
     /// 把热键产生的外部停止信号转发给当前运行。
     /// </summary>
@@ -81,13 +104,15 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         ILogger<HotKeyPageViewModel> logger,
         TaskSettingsPageViewModel taskSettingsPageViewModel,
         RecognitionTemplateEditorService recognitionTemplateEditorService,
-        TaskTriggerDispatcher taskTriggerDispatcher,
+        GameRuntimeService runtimeService,
+        GameScreenshotService screenshots,
         TaskStopService taskStopService)
     {
         _logger = logger;
         _taskSettingsPageViewModel = taskSettingsPageViewModel;
         _recognitionTemplateEditorService = recognitionTemplateEditorService;
-        _taskTriggerDispatcher = taskTriggerDispatcher;
+        _runtimeService = runtimeService;
+        _screenshots = screenshots;
         _taskStopService = taskStopService;
         // 获取配置
         Config = configService.Get();
@@ -424,7 +449,18 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             nameof(Config.HotKeyConfig.TakeScreenshotHotkey),
             Config.HotKeyConfig.TakeScreenshotHotkey,
             Config.HotKeyConfig.TakeScreenshotHotkeyType,
-            (_, _) => { _taskTriggerDispatcher.TakeScreenshot(); }
+            (_, _) =>
+            {
+                if (_runtimeService.Current is { } runtime)
+                {
+                    _screenshots.SaveCurrentFrame(runtime);
+                }
+                else
+                {
+                    // 截图器未启动时没有可截取的画面，沿用原来的提示
+                    _logger.LogInformation("截图失败，未获取到图像");
+                }
+            }
         );
         systemDirectory.Children.Add(takeScreenshotHotKeySettingModel);
 
@@ -435,9 +471,9 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.LogBoxDisplayHotkeyType,
             (_, _) =>
             {
-                TaskContext.Instance().Config.MaskWindowConfig.ShowLogBox = !TaskContext.Instance().Config.MaskWindowConfig.ShowLogBox;
+                Config.MaskWindowConfig.ShowLogBox = !Config.MaskWindowConfig.ShowLogBox;
                 // 与状态窗口同步
-                TaskContext.Instance().Config.MaskWindowConfig.ShowStatus = TaskContext.Instance().Config.MaskWindowConfig.ShowLogBox;
+                Config.MaskWindowConfig.ShowStatus = Config.MaskWindowConfig.ShowLogBox;
             }
         ));
 
@@ -448,7 +484,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.OverlayMetricsDisplayHotkeyType,
             (_, _) =>
             {
-                TaskContext.Instance().Config.MaskWindowConfig.ShowOverlayMetrics = !TaskContext.Instance().Config.MaskWindowConfig.ShowOverlayMetrics;
+                Config.MaskWindowConfig.ShowOverlayMetrics = !Config.MaskWindowConfig.ShowOverlayMetrics;
             }
         ));
 
@@ -459,8 +495,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.AutoPickEnabledHotkeyType,
             (_, _) =>
             {
-                TaskContext.Instance().Config.AutoPickConfig.Enabled = !TaskContext.Instance().Config.AutoPickConfig.Enabled;
-                _logger.LogInformation("切换{Name}状态为[{Enabled}]", "自动拾取", ToChinese(TaskContext.Instance().Config.AutoPickConfig.Enabled));
+                Config.AutoPickConfig.Enabled = !Config.AutoPickConfig.Enabled;
+                _logger.LogInformation("切换{Name}状态为[{Enabled}]", "自动拾取", ToChinese(Config.AutoPickConfig.Enabled));
             }
         );
         timerDirectory.Children.Add(autoPickEnabledHotKeySettingModel);
@@ -472,8 +508,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.AutoSkipEnabledHotkeyType,
             (_, _) =>
             {
-                TaskContext.Instance().Config.AutoSkipConfig.Enabled = !TaskContext.Instance().Config.AutoSkipConfig.Enabled;
-                _logger.LogInformation("切换{Name}状态为[{Enabled}]", "自动剧情", ToChinese(TaskContext.Instance().Config.AutoSkipConfig.Enabled));
+                Config.AutoSkipConfig.Enabled = !Config.AutoSkipConfig.Enabled;
+                _logger.LogInformation("切换{Name}状态为[{Enabled}]", "自动剧情", ToChinese(Config.AutoSkipConfig.Enabled));
             }
         );
         timerDirectory.Children.Add(autoSkipEnabledHotKeySettingModel);
@@ -485,8 +521,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.AutoSkipHangoutEnabledHotkeyType,
             (_, _) =>
             {
-                TaskContext.Instance().Config.AutoSkipConfig.AutoHangoutEventEnabled = !TaskContext.Instance().Config.AutoSkipConfig.AutoHangoutEventEnabled;
-                _logger.LogInformation("切换{Name}状态为[{Enabled}]", "自动邀约", ToChinese(TaskContext.Instance().Config.AutoSkipConfig.AutoHangoutEventEnabled));
+                Config.AutoSkipConfig.AutoHangoutEventEnabled = !Config.AutoSkipConfig.AutoHangoutEventEnabled;
+                _logger.LogInformation("切换{Name}状态为[{Enabled}]", "自动邀约", ToChinese(Config.AutoSkipConfig.AutoHangoutEventEnabled));
             }
         ));
 
@@ -497,8 +533,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.AutoFishingEnabledHotkeyType,
             (_, _) =>
             {
-                TaskContext.Instance().Config.AutoFishingConfig.Enabled = !TaskContext.Instance().Config.AutoFishingConfig.Enabled;
-                _logger.LogInformation("切换{Name}状态为[{Enabled}]", "自动钓鱼", ToChinese(TaskContext.Instance().Config.AutoFishingConfig.Enabled));
+                Config.AutoFishingConfig.Enabled = !Config.AutoFishingConfig.Enabled;
+                _logger.LogInformation("切换{Name}状态为[{Enabled}]", "自动钓鱼", ToChinese(Config.AutoFishingConfig.Enabled));
             }
         );
         timerDirectory.Children.Add(autoFishingEnabledHotKeySettingModel);
@@ -510,8 +546,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.QuickTeleportEnabledHotkeyType,
             (_, _) =>
             {
-                TaskContext.Instance().Config.QuickTeleportConfig.Enabled = !TaskContext.Instance().Config.QuickTeleportConfig.Enabled;
-                _logger.LogInformation("切换{Name}状态为[{Enabled}]", "快速传送", ToChinese(TaskContext.Instance().Config.QuickTeleportConfig.Enabled));
+                Config.QuickTeleportConfig.Enabled = !Config.QuickTeleportConfig.Enabled;
+                _logger.LogInformation("切换{Name}状态为[{Enabled}]", "快速传送", ToChinese(Config.QuickTeleportConfig.Enabled));
             }
         );
         timerDirectory.Children.Add(quickTeleportEnabledHotKeySettingModel);
@@ -523,8 +559,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.SkillCdEnabledHotkeyType,
             (_, _) =>
             {
-                TaskContext.Instance().Config.SkillCdConfig.Enabled = !TaskContext.Instance().Config.SkillCdConfig.Enabled;
-                _logger.LogInformation("切换{Name}状态为[{Enabled}]", "冷却提示", ToChinese(TaskContext.Instance().Config.SkillCdConfig.Enabled));
+                Config.SkillCdConfig.Enabled = !Config.SkillCdConfig.Enabled;
+                _logger.LogInformation("切换{Name}状态为[{Enabled}]", "冷却提示", ToChinese(Config.SkillCdConfig.Enabled));
             }
         );
         timerDirectory.Children.Add(skillCdEnabledHotKeySettingModel);
@@ -546,8 +582,8 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.MapMaskEnabledHotkeyType,
             (_, _) =>
             {
-                TaskContext.Instance().Config.MapMaskConfig.Enabled = !TaskContext.Instance().Config.MapMaskConfig.Enabled;
-                _logger.LogInformation("切换{Name}状态为[{Enabled}]", "地图遮罩", ToChinese(TaskContext.Instance().Config.MapMaskConfig.Enabled));
+                Config.MapMaskConfig.Enabled = !Config.MapMaskConfig.Enabled;
+                _logger.LogInformation("切换{Name}状态为[{Enabled}]", "地图遮罩", ToChinese(Config.MapMaskConfig.Enabled));
             }
         );
         timerDirectory.Children.Add(mapMaskEnabledHotKeySettingModel);
@@ -567,7 +603,13 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             nameof(Config.HotKeyConfig.EnhanceArtifactHotkey),
             Config.HotKeyConfig.EnhanceArtifactHotkey,
             Config.HotKeyConfig.EnhanceArtifactHotkeyType,
-            (_, _) => { QuickEnhanceArtifactMacro.Done(); },
+            (_, _) =>
+            {
+                if (TryGetRuntime(out var runtime))
+                {
+                    QuickEnhanceArtifactMacro.Done(runtime);
+                }
+            },
             true
         );
         macroDirectory.Children.Add(enhanceArtifactHotKeySettingModel);
@@ -577,7 +619,13 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             nameof(Config.HotKeyConfig.QuickBuyHotkey),
             Config.HotKeyConfig.QuickBuyHotkey,
             Config.HotKeyConfig.QuickBuyHotkeyType,
-            (_, _) => { QuickBuyTask.Done(); },
+            (_, _) =>
+            {
+                if (TryGetRuntime(out var runtime))
+                {
+                    QuickBuyTask.Done(runtime);
+                }
+            },
             true
         ));
 
@@ -589,7 +637,13 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             null,
             true)
         {
-            OnKeyDownAction = (_, _) => { OneKeyClaimRewardTask.Instance.KeyDown(); },
+            OnKeyDownAction = (_, _) =>
+            {
+                if (TryGetRuntime(out var runtime))
+                {
+                    OneKeyClaimRewardTask.Instance.KeyDown(runtime);
+                }
+            },
             OnKeyUpAction = (_, _) => { OneKeyClaimRewardTask.Instance.KeyUp(); }
         });
 
@@ -598,7 +652,13 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             nameof(Config.HotKeyConfig.QuickSereniteaPotHotkey),
             Config.HotKeyConfig.QuickSereniteaPotHotkey,
             Config.HotKeyConfig.QuickSereniteaPotHotkeyType,
-            (_, _) => { QuickSereniteaPotTask.Done(); }
+            (_, _) =>
+            {
+                if (TryGetRuntime(out var runtime))
+                {
+                    QuickSereniteaPotTask.Done(runtime);
+                }
+            }
         ));
 
         soloTaskDirectory.Children.Add(new HotKeySettingModel(
@@ -669,7 +729,12 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.ClickGenshinConfirmButtonHotkeyType,
             (_, _) =>
             {
-                using var capture = TaskControl.CaptureToRectArea();
+                if (!TryGetRuntime(out var runtime))
+                {
+                    return;
+                }
+
+                using var capture = runtime.CaptureToRectArea();
                 if (Bv.ClickConfirmButton(capture))
                 {
                     TaskControl.Logger.LogInformation("触发快捷点击原神内{Btn}按钮：成功", "确认");
@@ -689,7 +754,12 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.ClickGenshinCancelButtonHotkeyType,
             (_, _) =>
             {
-                using var capture = TaskControl.CaptureToRectArea();
+                if (!TryGetRuntime(out var runtime))
+                {
+                    return;
+                }
+
+                using var capture = runtime.CaptureToRectArea();
                 if (Bv.ClickCancelButton(capture))
                 {
                     TaskControl.Logger.LogInformation("触发快捷点击原神内{Btn}按钮：成功", "取消");
@@ -710,7 +780,14 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             null,
             true)
         {
-            OnKeyDownAction = (_, _) => { OneKeyFightTask.Instance.KeyDown(); },
+            OnKeyDownAction = (_, _) =>
+            {
+                // 一键宏未启用时保持原来的静默返回，只有启用时才提示截图器未启动
+                if (OneKeyFightTask.IsEnabled() && TryGetRuntime(out var runtime))
+                {
+                    OneKeyFightTask.Instance.KeyDown(runtime);
+                }
+            },
             OnKeyUpAction = (_, _) => { OneKeyFightTask.Instance.KeyUp(); }
         });
 
@@ -754,9 +831,14 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.RecBigMapPosHotkeyType,
             (_, _) =>
             {
+                if (!TryGetRuntime(out var runtime))
+                {
+                    return;
+                }
+
                 try
                 {
-                    var p = new TpTask(CancellationToken.None).GetPositionFromBigMap(MapTypes.Teyvat.ToString());
+                    var p = new TpTask(runtime, Config, runtime.Stopping).GetPositionFromBigMap(MapTypes.Teyvat.ToString());
                     _logger.LogInformation("大地图位置：{Position}", p);
                 }
                 catch (Exception e)
@@ -782,7 +864,12 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 }
                 else
                 {
-                    Task.Run(() => { pathRecorder.Start(); });
+                    if (!TryGetRuntime(out var runtime))
+                    {
+                        return;
+                    }
+
+                    Task.Run(() => { pathRecorder.Start(runtime); });
                 }
 
                 pathRecording = !pathRecording;
@@ -796,9 +883,9 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.AddWaypointHotkeyType,
             (_, _) =>
             {
-                if (pathRecording)
+                if (pathRecording && TryGetRuntime(out var runtime))
                 {
-                    Task.Run(() => { pathRecorder.AddWaypoint(); });
+                    Task.Run(() => { pathRecorder.AddWaypoint(runtime); });
 
                 }
             }
@@ -849,11 +936,16 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.Test1HotkeyType,
                 (_, _) =>
                 {
+                    if (!TryGetRuntime(out var runtime))
+                    {
+                        return;
+                    }
+
                     Task.Run(async () =>
                     {
                         try
                         {
-                            await new TpTask(CancellationToken.None).Tp(7001.6416, -569.6846, nameof(MapTypes.Teyvat));
+                            await new TpTask(runtime, Config, runtime.Stopping).Tp(7001.6416, -569.6846, nameof(MapTypes.Teyvat));
                         }
                         catch (Exception e)
                         {
@@ -870,8 +962,13 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 Config.HotKeyConfig.Test2HotkeyType,
                 (_, _) =>
                 {
-                    var myTask = new ChooseFOptionTask();
-                    Task.Run(async () => { await myTask.SingleSelectText("荒坠的圣迹", CancellationToken.None); });
+                    if (!TryGetRuntime(out var runtime))
+                    {
+                        return;
+                    }
+
+                    var myTask = new ChooseFOptionTask(runtime, Config);
+                    Task.Run(async () => { await myTask.SingleSelectText("荒坠的圣迹", runtime.Stopping); });
 
                     // var pName = SystemControl.GetActiveProcessName();
                     // Debug.WriteLine($"当前处于前台的程序：{pName}，原神是否位于前台：{SystemControl.IsGenshinImpactActive()}");
@@ -894,6 +991,32 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 }
             ));
         }
+    }
+
+    /// <summary>
+    /// 读取当前运行环境。截图器未启动时提示用户并返回 false，热键直接放弃本次执行。
+    /// 运行环境只在本次热键回调内使用，不缓存
+    /// </summary>
+    /// <param name="runtime">当前运行环境；返回 false 时为 null</param>
+    /// <returns>存在运行环境时返回 true</returns>
+    private bool TryGetRuntime([NotNullWhen(true)] out GameRuntime? runtime)
+    {
+        runtime = _runtimeService.Current;
+        if (runtime is not null)
+        {
+            return true;
+        }
+
+        // 长按类热键会在循环里反复回调，限制提示频率，避免刷屏
+        var now = Environment.TickCount64;
+        if (now - Interlocked.Read(ref _lastNoRuntimeToastTick) >= NoRuntimeToastIntervalMs)
+        {
+            Interlocked.Exchange(ref _lastNoRuntimeToastTick, now);
+            // 长按类热键在后台线程回调，提示统一切回 UI 线程
+            UIDispatcherHelper.BeginInvoke(() => Toast.Warning("请先启动"));
+        }
+
+        return false;
     }
 
     private void SwitchSoloTask(IAsyncRelayCommand asyncRelayCommand)

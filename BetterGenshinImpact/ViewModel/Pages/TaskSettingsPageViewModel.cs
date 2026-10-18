@@ -60,6 +60,11 @@ public partial class TaskSettingsPageViewModel : ViewModel
     /// </summary>
     private readonly TaskStopService _taskStopService;
 
+    /// <summary>
+    /// 游戏截图保存服务，自动钓鱼开启关键帧截图时交给任务
+    /// </summary>
+    private readonly GameScreenshotService _screenshots;
+
     private CancellationTokenSource? _cts;
     private static readonly object _locker = new();
 
@@ -273,12 +278,13 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private string _switchAutoRedeemCodeButtonText = "启动";
 
     public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService,
-        TaskTriggerDispatcher taskTriggerDispatcher, TaskStopService taskStopService)
+        TaskTriggerDispatcher taskTriggerDispatcher, TaskStopService taskStopService, GameScreenshotService screenshots)
     {
         Config = configService.Get();
         _navigationService = navigationService;
         _taskDispatcher = taskTriggerDispatcher;
         _taskStopService = taskStopService;
+        _screenshots = screenshots;
         NormalizeLeyLineOutcropType();
         _scanDropsAfterRewardEnabledUi = Config.AutoLeyLineOutcropConfig.ScanDropsAfterRewardEnabled;
 
@@ -288,7 +294,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
         _domainNameList = ["", AutoDomainTask.DevelopmentGuideOption, .. MapLazyAssets.Get().DomainNameList];
         _autoFightViewModel = new AutoFightViewModel(Config);
-        _oneDragonFlowViewModel = new OneDragonFlowViewModel();
+        _oneDragonFlowViewModel = new OneDragonFlowViewModel(Config);
     }
 
     partial void OnScanDropsAfterRewardEnabledUiChanged(bool value)
@@ -426,7 +432,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
         SwitchAutoGeniusInvokationEnabled = true;
         await new TaskRunner()
-            .RunSoloTaskAsync(new AutoGeniusInvokationTask(new GeniusInvokationTaskParam(content)));
+            .RunSoloTaskAsync(rt => new AutoGeniusInvokationTask(rt, Config, new GeniusInvokationTaskParam(content)), waitForMainUi: false);
         SwitchAutoGeniusInvokationEnabled = false;
     }
 
@@ -461,8 +467,10 @@ public partial class TaskSettingsPageViewModel : ViewModel
     public async Task OnSwitchAutoWood()
     {
         SwitchAutoWoodEnabled = true;
+        // 参数在点击时生成，任务在运行环境就绪后构造
+        var woodParam = new WoodTaskParam(AutoWoodRoundNum, AutoWoodDailyMaxCount);
         await new TaskRunner()
-            .RunSoloTaskAsync(new AutoWoodTask(new WoodTaskParam(AutoWoodRoundNum, AutoWoodDailyMaxCount)));
+            .RunSoloTaskAsync(rt => new AutoWoodTask(rt, Config, woodParam));
         SwitchAutoWoodEnabled = false;
     }
 
@@ -487,7 +495,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
         {
             var factory = CombatTaskFactoryProvider.GetFactory(path);
             await new TaskRunner()
-                .RunSoloTaskAsync(factory.CreateTask(param));
+                .RunSoloTaskAsync(rt => factory.CreateTask(rt, Config, param));
         }
         finally
         {
@@ -510,8 +518,10 @@ public partial class TaskSettingsPageViewModel : ViewModel
         }
 
         SwitchAutoDomainEnabled = true;
+        // 参数在点击时生成，任务在运行环境就绪后构造
+        var domainParam = new AutoDomainParam(AutoDomainRoundNum, path);
         await new TaskRunner()
-            .RunSoloTaskAsync(new AutoDomainTask(new AutoDomainParam(AutoDomainRoundNum, path)));
+            .RunSoloTaskAsync(rt => new AutoDomainTask(rt, Config, domainParam));
         SwitchAutoDomainEnabled = false;
     }
 
@@ -565,7 +575,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
         AutoBossParam param = new AutoBossParam(path);
         param.SetAutoBossConfig(Config.AutoBossConfig);
         await new TaskRunner()
-            .RunSoloTaskAsync(new AutoBossTask(param));
+            .RunSoloTaskAsync(rt => new AutoBossTask(rt, Config, param));
         SwitchAutoBossEnabled = false;
     }
 
@@ -587,7 +597,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
         AutoStygianOnslaughtParam param = new AutoStygianOnslaughtParam();
         param.SetAutoStygianOnslaughtConfig(Config.AutoStygianOnslaughtConfig);
         await new TaskRunner()
-            .RunSoloTaskAsync(new AutoStygianOnslaughtTask(param, path));
+            .RunSoloTaskAsync(rt => new AutoStygianOnslaughtTask(rt, Config, param, path), waitForMainUi: false);
         SwitchAutoStygianOnslaughtEnabled = false;
     }
 
@@ -685,7 +695,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     {
         SwitchAutoMusicGameEnabled = true;
         await new TaskRunner()
-            .RunSoloTaskAsync(new AutoMusicGameTask(new AutoMusicGameParam()));
+            .RunSoloTaskAsync(rt => new AutoMusicGameTask(rt, Config, new AutoMusicGameParam()), waitForMainUi: false);
         SwitchAutoMusicGameEnabled = false;
     }
 
@@ -700,7 +710,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     {
         SwitchAutoAlbumEnabled = true;
         await new TaskRunner()
-            .RunSoloTaskAsync(new AutoAlbumTask(new AutoMusicGameParam()));
+            .RunSoloTaskAsync(rt => new AutoAlbumTask(rt, Config, new AutoMusicGameParam()), waitForMainUi: false);
         SwitchAutoAlbumEnabled = false;
     }
 
@@ -709,7 +719,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     {
         SwitchAutoCookEnabled = true;
         await new TaskRunner()
-            .RunSoloTaskAsync(new AutoCookTask());
+            .RunSoloTaskAsync(rt => new AutoCookTask(rt, Config));
         SwitchAutoCookEnabled = false;
     }
 
@@ -730,7 +740,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     {
         SwitchAutoComboEnabled = true;
         await new TaskRunner()
-            .RunSoloTaskAsync(new AutoComboBuildTask());
+            .RunSoloTaskAsync(rt => new AutoComboBuildTask(rt, Config));
         SwitchAutoComboEnabled = false;
     }
 
@@ -762,7 +772,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
             // 消费最近一次建树任务暂存的会话；独立运行需显式开启自带战斗结束检测（AutoFightParam 默认关闭）
             var session = AutoComboRuntime.Session!;
             await new TaskRunner()
-                .RunSoloTaskAsync(new AutoComboRunTask(new AutoFightParam { FightFinishDetectEnabled = true }, session));
+                .RunSoloTaskAsync(rt => new AutoComboRunTask(rt, Config, new AutoFightParam { FightFinishDetectEnabled = true }, session));
         }
         finally
         {
@@ -805,9 +815,11 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private async Task OnSwitchAutoFishing()
     {
         SwitchAutoFishingEnabled = true;
-        var param = AutoFishingTaskParam.BuildFromConfig(TaskContext.Instance().Config.AutoFishingConfig, SaveScreenshotOnKeyTick);
+        var param = AutoFishingTaskParam.BuildFromConfig(Config.AutoFishingConfig, SaveScreenshotOnKeyTick);
+        // 截图服务只在关键帧截图开启时需要
+        var screenshots = param.SaveScreenshotOnKeyTick ? _screenshots : null;
         await new TaskRunner()
-            .RunSoloTaskAsync(new AutoFishingTask(param));
+            .RunSoloTaskAsync(rt => new AutoFishingTask(rt, Config, param, screenshots));
         SwitchAutoFishingEnabled = false;
     }
 
@@ -818,7 +830,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
         AutoLeyLineOutcropParam autoLeyLineOutcropParam = new AutoLeyLineOutcropParam();
         autoLeyLineOutcropParam.SetAutoLeyLineOutcropConfig(Config.AutoLeyLineOutcropConfig);
         await new TaskRunner()
-            .RunSoloTaskAsync(new AutoLeyLineOutcropTask(autoLeyLineOutcropParam));
+            .RunSoloTaskAsync(rt => new AutoLeyLineOutcropTask(rt, Config, autoLeyLineOutcropParam));
         SwitchAutoLeyLineOutcropEnabled = false;
     }
 
@@ -844,14 +856,16 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private async Task OnSwitchArtifactSalvage()
     {
         SwitchArtifactSalvageEnabled = true;
+        // 参数在点击时生成，任务在运行环境就绪后构造
+        var param = new AutoArtifactSalvageTaskParam(
+            int.Parse(Config.AutoArtifactSalvageConfig.MaxArtifactStar),
+            Config.AutoArtifactSalvageConfig.JavaScript,
+            Config.AutoArtifactSalvageConfig.ArtifactSetFilter,
+            Config.AutoArtifactSalvageConfig.MaxNumToCheck,
+            Config.AutoArtifactSalvageConfig.RecognitionFailurePolicy
+        );
         await new TaskRunner()
-            .RunSoloTaskAsync(new AutoArtifactSalvageTask(new AutoArtifactSalvageTaskParam(
-                int.Parse(Config.AutoArtifactSalvageConfig.MaxArtifactStar),
-                Config.AutoArtifactSalvageConfig.JavaScript,
-                Config.AutoArtifactSalvageConfig.ArtifactSetFilter,
-                Config.AutoArtifactSalvageConfig.MaxNumToCheck,
-                Config.AutoArtifactSalvageConfig.RecognitionFailurePolicy
-                )));
+            .RunSoloTaskAsync(rt => new AutoArtifactSalvageTask(rt, param));
         SwitchArtifactSalvageEnabled = false;
     }
 
@@ -920,7 +934,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
         try
         {
             SwitchGetGridIconsEnabled = true;
-            await new TaskRunner().RunSoloTaskAsync(new GetGridIconsTask(Config.GetGridIconsConfig.GridName, Config.GetGridIconsConfig.StarAsSuffix, Config.GetGridIconsConfig.MaxNumToGet));
+            await new TaskRunner().RunSoloTaskAsync(rt => new GetGridIconsTask(rt, Config.GetGridIconsConfig.GridName, Config.GetGridIconsConfig.StarAsSuffix, Config.GetGridIconsConfig.MaxNumToGet));
         }
         finally
         {
@@ -952,7 +966,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
         try
         {
             SwitchGetGridIconsEnabled = true;
-            await new TaskRunner().RunSoloTaskAsync(new GridIconsAccuracyTestTask(Config.GetGridIconsConfig.GridName, Config.GetGridIconsConfig.MaxNumToGet));
+            await new TaskRunner().RunSoloTaskAsync(rt => new GridIconsAccuracyTestTask(rt, Config.GetGridIconsConfig.GridName, Config.GetGridIconsConfig.MaxNumToGet));
         }
         finally
         {
@@ -967,7 +981,9 @@ public partial class TaskSettingsPageViewModel : ViewModel
         try
         {
             SwitchGetGridIconsEnabled = true;
-            await new TaskRunner().RunSoloTaskAsync(new InventoryCountComparisonTask(InventoryCountComparisonTarget));
+            // 在 UI 线程上取出当前选择，任务构造发生在运行环境就绪之后
+            var target = InventoryCountComparisonTarget;
+            await new TaskRunner().RunSoloTaskAsync(rt => new InventoryCountComparisonTask(rt, target));
         }
         finally
         {
@@ -1023,7 +1039,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
             SwitchAutoRedeemCodeEnabled = true;
             await new TaskRunner()
-                .RunSoloTaskAsync(new UseRedemptionCodeTask(codes));
+                .RunSoloTaskAsync(rt => new UseRedemptionCodeTask(rt, codes));
             SwitchAutoRedeemCodeEnabled = false;
         }
     }

@@ -7,6 +7,7 @@ using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -25,6 +26,11 @@ public class BvLocator
     private int? _timeout;
     private int? _retryInterval;
 
+    /// <summary>
+    /// 定位器绑定的运行环境（由创建它的 BvPage 传入），截图、等待与 ROI 换算都基于它
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
     public RecognitionObject RecognitionObject { get; }
 
     public Func<List<Region>, Task>? RetryAction { get; set; }
@@ -33,16 +39,31 @@ public class BvLocator
 
     public static int DefaultRetryInterval { get; set; } = 250;
 
-    public BvLocator(RecognitionObject recognitionObject, CancellationToken cancellationToken)
-        : this(recognitionObject, cancellationToken, [])
+    /// <summary>
+    /// 创建绑定到指定运行环境的定位器
+    /// </summary>
+    /// <param name="runtime">运行环境</param>
+    /// <param name="recognitionObject">识别对象</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    public BvLocator(GameRuntime runtime, RecognitionObject recognitionObject, CancellationToken cancellationToken)
+        : this(runtime, recognitionObject, cancellationToken, [])
     {
     }
 
+    /// <summary>
+    /// 创建绑定到指定运行环境、带候选文本的定位器
+    /// </summary>
+    /// <param name="runtime">运行环境</param>
+    /// <param name="recognitionObject">识别对象</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    /// <param name="anyTexts">OCR 候选文本，命中任意一个即视为找到</param>
     internal BvLocator(
+        GameRuntime runtime,
         RecognitionObject recognitionObject,
         CancellationToken cancellationToken,
         IReadOnlyList<string> anyTexts)
     {
+        _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
         RecognitionObject = recognitionObject.Clone();
         _cancellationToken = cancellationToken;
         _anyTexts = anyTexts.ToArray();
@@ -52,7 +73,7 @@ public class BvLocator
 
     internal BvLocator Clone()
     {
-        return new BvLocator(RecognitionObject, _cancellationToken, _anyTexts);
+        return new BvLocator(_runtime, RecognitionObject, _cancellationToken, _anyTexts);
     }
 
     /// <summary>
@@ -63,7 +84,7 @@ public class BvLocator
     /// <exception cref="NotSupportedException"></exception>
     public List<Region> FindAll()
     {
-        using var screen = CaptureToRectArea();
+        using var screen = _runtime.CaptureToRectArea();
         return FindAll(screen);
     }
 
@@ -137,7 +158,7 @@ public class BvLocator
         var retryCount = Math.Max(1, actualTimeout / actualRetryInterval);
 
         List<Region> results = [];
-        var retryRes = await NewRetry.WaitForAction(async () =>
+        var retryRes = await NewRetry.WaitForAction(_runtime, async () =>
         {
             results = FindAll();
             var b = results.Count > 0;
@@ -198,7 +219,7 @@ public class BvLocator
         var actualRetryInterval = _retryInterval ?? DefaultRetryInterval;
         var retryCount = Math.Max(1, actualTimeout / actualRetryInterval);
 
-        var retryRes = await NewRetry.WaitForAction(async () =>
+        var retryRes = await NewRetry.WaitForAction(_runtime, async () =>
         {
             var results = FindAll();
             var b = results.Count == 0;
@@ -242,7 +263,8 @@ public class BvLocator
 
     public BvLocator WithRoi(Func<Rect, Rect> deltaFunc)
     {
-        var captureAreaRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
+        // 使用创建方 BvPage 传入的运行环境的 SystemInfo 换算 1080P 下的截图区域
+        var captureAreaRect = _runtime.SystemInfo.ScaleMax1080PCaptureRect;
         var rect = deltaFunc(captureAreaRect);
         RecognitionObject.RegionOfInterest = rect;
         return this;

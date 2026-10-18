@@ -42,6 +42,11 @@ public partial class MapViewerViewModel : ObservableObject, IDisposable
 
     private bool _disposed;
 
+    /// <summary>
+    /// 配置根。本 ViewModel 由窗口直接 new，没有注入入口，暂时读配置根（见 task-context-removal.md 第 5 节）
+    /// </summary>
+    private static AllConfig Config => BetterGenshinImpact.Service.ConfigService.Config!;
+
     public MapViewerViewModel(string mapName)
     {
         if (string.IsNullOrEmpty(mapName))
@@ -51,7 +56,7 @@ public partial class MapViewerViewModel : ObservableObject, IDisposable
 
         _mapName = mapName;
         Init(mapName);
-        var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+        var matchingMethod = Config.PathingConditionConfig.MapMatchingMethod;
         var center = MapManager.GetMap(_mapName, matchingMethod).ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f(512, 512));
         using (var initialClip = ClipMat(new Point2f(center.X, center.Y)))
         {
@@ -237,7 +242,7 @@ public partial class MapViewerViewModel : ObservableObject, IDisposable
 
     private Point ConvertToMapPoint(Waypoint point)
     {
-        var matchingMethod = TaskContext.Instance().Config.PathingConditionConfig.MapMatchingMethod;
+        var matchingMethod = Config.PathingConditionConfig.MapMatchingMethod;
         var (x, y) = MapManager.GetMap(_mapName, matchingMethod).ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f((float)point.X, (float)point.Y));
         return new Point(x, y);
     }

@@ -5,6 +5,7 @@ using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.LogParse;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
@@ -74,10 +75,21 @@ public partial class ScriptControlViewModel : ViewModel
         ReadScriptGroup();
     }
 
-    public ScriptControlViewModel(ISnackbarService snackbarService, IScriptService scriptService)
+    /// <summary>
+    /// 配置根（DI 注入），实例方法使用
+    /// </summary>
+    private readonly AllConfig _config;
+
+    /// <summary>
+    /// 静态方法没有创建方可以传配置时使用的配置根（见 task-context-removal.md 第 5 节）
+    /// </summary>
+    private static AllConfig RootConfig => BetterGenshinImpact.Service.ConfigService.Config!;
+
+    public ScriptControlViewModel(ISnackbarService snackbarService, IScriptService scriptService, AllConfig config)
     {
         _snackbarService = snackbarService;
         _scriptService = scriptService;
+        _config = config;
         ScriptGroups.CollectionChanged += ScriptGroupsCollectionChanged;
     }
 
@@ -145,7 +157,7 @@ public partial class ScriptControlViewModel : ViewModel
         GameInfo? gameInfo = null;
         var config = LogParse.LoadConfig();
 
-        OtherConfig.Miyoushe mcfg = TaskContext.Instance().Config.OtherConfig.MiyousheConfig;
+        OtherConfig.Miyoushe mcfg = _config.OtherConfig.MiyousheConfig;
         if (mcfg.LogSyncCookie && !string.IsNullOrEmpty(mcfg.Cookie))
         {
             config.Cookie = mcfg.Cookie;
@@ -489,7 +501,7 @@ public partial class ScriptControlViewModel : ViewModel
     [RelayCommand]
     public void OnOpenLocalScriptRepo()
     {
-        TaskContext.Instance().Config.ScriptConfig.ScriptRepoHintDotVisible = false;
+        _config.ScriptConfig.ScriptRepoHintDotVisible = false;
         ScriptRepoUpdater.Instance.OpenScriptRepoWindow();
     }
 
@@ -561,7 +573,7 @@ public partial class ScriptControlViewModel : ViewModel
         if (item != null)
         {
             item.NextFlag = true;
-            TaskContext.Instance().Config.NextScriptGroupName = item.Name;
+            _config.NextScriptGroupName = item.Name;
         }
     }
 
@@ -649,7 +661,7 @@ public partial class ScriptControlViewModel : ViewModel
                 item.Name = str;
                 if (item.NextFlag)
                 {
-                    TaskContext.Instance().Config.NextScriptGroupName = item.Name;
+                    _config.NextScriptGroupName = item.Name;
                 }
                 WriteScriptGroup(item);
             }
@@ -1555,7 +1567,7 @@ public partial class ScriptControlViewModel : ViewModel
             return;
         }
 
-        List<ValueTuple<string, int, string, string>> nextScheduledTask = TaskContext.Instance().Config.NextScheduledTask;
+        List<ValueTuple<string, int, string, string>> nextScheduledTask = _config.NextScheduledTask;
         var nst = nextScheduledTask.Find(item2 => item2.Item1 == SelectedScriptGroup?.Name);
         if (nst != default)
         {
@@ -1823,9 +1835,9 @@ public partial class ScriptControlViewModel : ViewModel
         }
     }
 
-    private static void SetTaskContextNextFlag(ScriptGroup group)
+    private static void SetProjectNextFlagFromSchedule(ScriptGroup group)
     {
-        var nst = TaskContext.Instance().Config.NextScheduledTask.Find(item => item.Item1 == group.Name);
+        var nst = RootConfig.NextScheduledTask.Find(item => item.Item1 == group.Name);
         foreach (var item in group.Projects)
         {
             item.NextFlag = false;
@@ -1857,8 +1869,8 @@ public partial class ScriptControlViewModel : ViewModel
                 {
                     var json = File.ReadAllText(file);
                     var group = ScriptGroup.FromJson(json);
-                    SetTaskContextNextFlag(group);
-                    if (group.Name == TaskContext.Instance().Config.NextScriptGroupName)
+                    SetProjectNextFlagFromSchedule(group);
+                    if (group.Name == _config.NextScriptGroupName)
                     {
                         group.NextFlag = true;
                     }
@@ -1944,8 +1956,8 @@ public partial class ScriptControlViewModel : ViewModel
         }
 
         RunnerContext.Instance.Reset();
-        await new TaskRunner().RunThreadAsync(ct =>
-            _scriptService.RunMulti(GetNextProjects(SelectedScriptGroup), SelectedScriptGroup.Name, ct));
+        await new TaskRunner().RunThreadAsync((runtime, ct) =>
+            _scriptService.RunMulti(runtime, GetNextProjects(SelectedScriptGroup), SelectedScriptGroup.Name, ct));
     }
 
     [RelayCommand]
@@ -1967,7 +1979,7 @@ public partial class ScriptControlViewModel : ViewModel
         var dialogWindow = new FluentWindow
         {
             Title = "配置组设置",
-            Content = new ScriptGroupConfigView(new ScriptGroupConfigViewModel(TaskContext.Instance().Config, SelectedScriptGroup.Config)),
+            Content = new ScriptGroupConfigView(new ScriptGroupConfigViewModel(_config, SelectedScriptGroup.Config)),
             Width = 800,
             Height = 600,
             MinWidth = 800,
@@ -2007,7 +2019,7 @@ public partial class ScriptControlViewModel : ViewModel
                 {
                     start = true;
                     group.NextFlag = false;
-                    TaskContext.Instance().Config.NextScriptGroupName = String.Empty;
+                    RootConfig.NextScriptGroupName = String.Empty;
                 }
 
                 if (start)
@@ -2024,7 +2036,7 @@ public partial class ScriptControlViewModel : ViewModel
 
     public static List<ScriptGroupProject> GetNextProjects(ScriptGroup group)
     {
-        SetTaskContextNextFlag(group);
+        SetProjectNextFlagFromSchedule(group);
         List<ScriptGroupProject> ls = new List<ScriptGroupProject>();
         if (group.Projects.Where(g => g.NextFlag ?? false).Count() > 0)
         {
@@ -2051,7 +2063,7 @@ public partial class ScriptControlViewModel : ViewModel
             //拿出来后清空，和置状态
             if (start)
             {
-                List<ValueTuple<string, int, string, string>> nextScheduledTask = TaskContext.Instance().Config.NextScheduledTask;
+                List<ValueTuple<string, int, string, string>> nextScheduledTask = RootConfig.NextScheduledTask;
                 foreach (var item in nextScheduledTask)
                 {
                     if (item.Item1 == group.Name)
@@ -2245,12 +2257,12 @@ public partial class ScriptControlViewModel : ViewModel
     public async Task StartGroups(List<ScriptGroup> scriptGroups, bool loop = false)
     {
         _logger.LogInformation("开始连续执行选中配置组:{Names}", string.Join(",", scriptGroups.Select(x => x.Name)));
-        await new TaskRunner().RunThreadAsync(async ct =>
+        await new TaskRunner().RunThreadAsync(async (runtime, ct) =>
         {
             RunnerContext.Instance.IsContinuousRunGroup = true;
             try
             {
-                await StartGroupsCore(scriptGroups, loop, ct);
+                await StartGroupsCore(runtime, scriptGroups, loop, ct);
             }
             finally
             {
@@ -2260,9 +2272,13 @@ public partial class ScriptControlViewModel : ViewModel
     }
 
     /// <summary>
-    /// 复用同一个顶层取消令牌执行一次或多次配置组循环。
+    /// 复用同一个顶层运行环境与取消令牌执行一次或多次配置组循环。
     /// </summary>
-    private async Task StartGroupsCore(List<ScriptGroup> scriptGroups, bool loop, CancellationToken ct)
+    /// <param name="runtime">所属顶层任务的运行环境</param>
+    /// <param name="scriptGroups">要执行的配置组</param>
+    /// <param name="loop">是否循环执行</param>
+    /// <param name="ct">所属顶层任务的取消令牌</param>
+    private async Task StartGroupsCore(GameRuntime runtime, List<ScriptGroup> scriptGroups, bool loop, CancellationToken ct)
     {
         while (true)
         {
@@ -2271,7 +2287,7 @@ public partial class ScriptControlViewModel : ViewModel
             foreach (var scriptGroup in sg)
             {
                 ct.ThrowIfCancellationRequested();
-                await _scriptService.RunMulti(GetNextProjects(scriptGroup), scriptGroup.Name, ct);
+                await _scriptService.RunMulti(runtime, GetNextProjects(scriptGroup), scriptGroup.Name, ct);
                 await Task.Delay(2000, ct);
             }
 

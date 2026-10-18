@@ -6,6 +6,7 @@ using BetterGenshinImpact.GameTask.AutoSkip.Assets;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -18,7 +19,25 @@ public class SetTimeTask
     private const double CenterX = 1441;
     private const double CenterY = 501.6;
 
-    private readonly ReturnMainUiTask _returnMainUiTask = new();
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 返回主界面子任务
+    /// </summary>
+    private readonly ReturnMainUiTask _returnMainUiTask;
+
+    /// <summary>
+    /// 创建设置时间任务
+    /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    public SetTimeTask(GameRuntime runtime)
+    {
+        _runtime = runtime;
+        _returnMainUiTask = new ReturnMainUiTask(runtime);
+    }
 
     public async Task Start(int hour, int minute, CancellationToken ct, bool skipTimeAdjustmentAnimation = false)
     {
@@ -34,7 +53,7 @@ public class SetTimeTask
         }
         finally
         {
-            TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
+            _runtime.MaskWindowDrawingBoard.ClearAll();
         }
     }
 
@@ -50,39 +69,39 @@ public class SetTimeTask
         h = ((h % 24) + 24) % 24;
         Logger.LogInformation($"设置时间到 {h} 点 {m} 分");
         InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-        await Delay(800, ct);
-        GameCaptureRegion.GameRegion1080PPosClick(50, 700);
-        await Delay(900, ct);
+        await _runtime.Delay(800, ct);
+        _runtime.GameRegion1080PPosClick(50, 700);
+        await _runtime.Delay(900, ct);
         await SetTime(h, m, r1, r2, r3, stepDuration, ct);
-        await Delay(100, ct);
-        GameCaptureRegion.GameRegion1080PPosMove(1500, 1000);
-        await Delay(300, ct);
+        await _runtime.Delay(100, ct);
+        _runtime.GameRegion1080PPosMove(1500, 1000);
+        await _runtime.Delay(300, ct);
         InputHub.Foreground.Mouse.LeftButtonClick();
-        await Delay(7, ct);
+        await _runtime.Delay(7, ct);
         
         if (skipTimeAdjustmentAnimation)
         {
             // 跳过调整动画
-            await Delay(10, ct);
+            await _runtime.Delay(10, ct);
             await CancelAnimation(ct);
-            await Delay(1010, ct);
-            GameCaptureRegion.GameRegion1080PPosClick(45, 715);
-            await Delay(100, ct);
-            GameCaptureRegion.GameRegion1080PPosClick(45, 715);
-            await Delay(200, ct);
+            await _runtime.Delay(1010, ct);
+            _runtime.GameRegion1080PPosClick(45, 715);
+            await _runtime.Delay(100, ct);
+            _runtime.GameRegion1080PPosClick(45, 715);
+            await _runtime.Delay(200, ct);
             await _returnMainUiTask.Start(ct);
             // 跳过动画不总能成功
-            using var capture = CaptureToRectArea();
+            using var capture = _runtime.CaptureToRectArea();
             if (Bv.IsInMainUi(capture))
             {
                 return;
             }
         }
-        await Delay(3000, ct);
+        await _runtime.Delay(3000, ct);
         // 出现X的时候代表时间切换成功
-        await NewRetry.WaitForAction(() =>
+        await NewRetry.WaitForAction(_runtime, () =>
         {
-            using var ra = CaptureToRectArea();
+            using var ra = _runtime.CaptureToRectArea();
             using var closeButton = ra.Find(ElementRecognition.Get("PageCloseWhite", ra));
             return closeButton.IsExist();
         }, ct, 25);
@@ -92,9 +111,9 @@ public class SetTimeTask
     // 取消动画函数
     private async Task CancelAnimation(CancellationToken ct)
     {
-        GameCaptureRegion.GameRegion1080PPosMove(200, 200);
+        _runtime.GameRegion1080PPosMove(200, 200);
         InputHub.Foreground.Mouse.LeftButtonDown();
-        await Delay(10, ct);
+        await _runtime.Delay(10, ct);
         InputHub.Foreground.Mouse.LeftButtonUp();
     }
 
@@ -106,24 +125,24 @@ public class SetTimeTask
 
     async Task MouseClick(double x, double y, int stepDuration, CancellationToken ct)
     {
-        GameCaptureRegion.GameRegion1080PPosMove(x, y);
-        await Delay(50, ct);
+        _runtime.GameRegion1080PPosMove(x, y);
+        await _runtime.Delay(50, ct);
         InputHub.Foreground.Mouse.LeftButtonDown();
-        await Delay(50, ct);
+        await _runtime.Delay(50, ct);
         InputHub.Foreground.Mouse.LeftButtonUp();
-        await Delay(stepDuration, ct);
+        await _runtime.Delay(stepDuration, ct);
     }
 
     async Task MouseClickAndMove(double x1, double y1, double x2, double y2, int stepDuration, CancellationToken ct)
     {
-        GameCaptureRegion.GameRegion1080PPosMove(x1, y1);
-        await Delay(50, ct);
+        _runtime.GameRegion1080PPosMove(x1, y1);
+        await _runtime.Delay(50, ct);
         InputHub.Foreground.Mouse.LeftButtonDown();
-        await Delay(50, ct);
-        GameCaptureRegion.GameRegion1080PPosMove(x2, y2);
-        await Delay(50, ct);
+        await _runtime.Delay(50, ct);
+        _runtime.GameRegion1080PPosMove(x2, y2);
+        await _runtime.Delay(50, ct);
         InputHub.Foreground.Mouse.LeftButtonUp();
-        await Delay(stepDuration, ct);
+        await _runtime.Delay(stepDuration, ct);
     }
 
     async Task SetTime(int hour, int minute, int r1, int r2, int r3, int stepDuration, CancellationToken ct)

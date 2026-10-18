@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.Repositories;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing;
@@ -18,6 +19,20 @@ namespace BetterGenshinImpact.Pulonia.Executors;
 /// </summary>
 public sealed class PuloniaPathingTaskExecutor : IPuloniaTaskExecutor
 {
+    /// <summary>
+    /// 注入的配置根，传给路线执行器。
+    /// </summary>
+    private readonly AllConfig _config;
+
+    /// <summary>
+    /// 使用配置根建立执行器。
+    /// </summary>
+    /// <param name="config">注入的配置根</param>
+    public PuloniaPathingTaskExecutor(AllConfig config)
+    {
+        _config = config;
+    }
+
     /// <inheritdoc />
     public IReadOnlyList<PuloniaTaskDefinition> Definitions { get; } = [new()
     {
@@ -50,6 +65,9 @@ public sealed class PuloniaPathingTaskExecutor : IPuloniaTaskExecutor
     {
         if (string.IsNullOrWhiteSpace(task.Path))
             return PuloniaTaskOutcome.Failure("地图追踪节点没有固定资源路径。");
+        // 路线只使用本节点租约记录的运行环境；它已停止时当前节点失败
+        if (!context.TryGetRuntime(out var runtime, out var runtimeError))
+            return PuloniaTaskOutcome.Failure(runtimeError);
         var resourcePath = task.Resource is { } resource
             ? await ScriptRepositoryStore.Shared.MaterializeAsync(resource, "pathing", ct).ConfigureAwait(false) : task.Path;
         var pathingTask = PathingTask.BuildFromFilePath(resourcePath);
@@ -64,7 +82,7 @@ public sealed class PuloniaPathingTaskExecutor : IPuloniaTaskExecutor
         using var autoEat = partyConfig.AutoEatEnabled
             ? TaskTriggerDispatcher.Instance().AddTrigger("AutoEat", null) : null;
 
-        var executor = new PathExecutor(ct) { PartyConfig = partyConfig };
+        var executor = new PathExecutor(runtime, _config, ct) { PartyConfig = partyConfig };
         var result = await executor.Pathing(pathingTask).ConfigureAwait(false);
         ct.ThrowIfCancellationRequested();
         return CreateOutcome(result, task.ResourceVersion);

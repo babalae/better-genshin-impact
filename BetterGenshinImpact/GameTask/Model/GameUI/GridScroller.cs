@@ -1,6 +1,7 @@
 using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -17,6 +18,10 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
     /// </summary>
     public class GridScroller
     {
+        /// <summary>
+        /// 所属运行环境，滚动前后的截图与等待都只使用它
+        /// </summary>
+        private readonly GameRuntime _runtime;
         private readonly Rect roi;
         private readonly CancellationToken ct;
         private readonly ILogger logger;
@@ -27,9 +32,10 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
         private readonly int s2Round;
         private readonly double s3Scale;
 
-        internal GridScroller(GridParams @params, ILogger logger, IInputChannel input, CancellationToken ct)
+        internal GridScroller(GameRuntime runtime, GridParams @params, ILogger logger, IInputChannel input, CancellationToken ct)
         {
-            this.roi = @params.Roi;
+            this._runtime = runtime;
+            this.roi = @params.GetRoi(runtime.SystemInfo.AssetScale);
             this.ct = ct;
             this.logger = logger;
             this.input = input;
@@ -42,16 +48,16 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
 
         internal async Task<bool> TryVerticalScollDown(Func<Mat, int, IEnumerable<Rect>> GetGridItems)
         {
-            using var ra = TaskControl.CaptureToRectArea();
+            using var ra = this._runtime.CaptureToRectArea();
             using ImageRegion prevGrid = ra.DeriveCrop(roi);
 
             for (int i = 0; i < this.s1Round; i++)
             {
                 this.input.Mouse.VerticalScroll(-2);
-                await TaskControl.Delay(this.roundMilliseconds, this.ct);
+                await this._runtime.Delay(this.roundMilliseconds, this.ct);
             }
-            await TaskControl.Delay(300, this.ct);
-            using var ra2 = TaskControl.CaptureToRectArea();
+            await this._runtime.Delay(300, this.ct);
+            using var ra2 = this._runtime.CaptureToRectArea();
             using ImageRegion scrolledGrid = ra2.DeriveCrop(this.roi);
 
             bool isScrolling = IsScrolling(prevGrid.CacheGreyMat, scrolledGrid.CacheGreyMat, out Point2d shift, logger: this.logger);
@@ -61,14 +67,14 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
                 for (int i = 0; i < this.s2Round; i++)    // 再滚动差不多（最多行数-1）行
                 {
                     input.Mouse.VerticalScroll(-2);
-                    await TaskControl.Delay(this.roundMilliseconds, ct);
+                    await this._runtime.Delay(this.roundMilliseconds, ct);
                 }
 
                 DateTimeOffset rollingEndTime = DateTime.Now.AddSeconds(2);
                 while (DateTime.Now < rollingEndTime)
                 {
-                    await TaskControl.Delay(60, ct);
-                    using var ra4 = TaskControl.CaptureToRectArea();
+                    await this._runtime.Delay(60, ct);
+                    using var ra4 = this._runtime.CaptureToRectArea();
                     using ImageRegion grid2 = ra4.DeriveCrop(this.roi);
                     var gridItems2 = GetGridItems(grid2.SrcMat, this.columns).ToList();
                     if (gridItems2.Count == 0)
@@ -86,15 +92,15 @@ namespace BetterGenshinImpact.GameTask.Model.GameUI
                         break;
                     }
                 }
-                using var ra3 = TaskControl.CaptureToRectArea();
+                using var ra3 = this._runtime.CaptureToRectArea();
                 using ImageRegion grid3 = ra3.DeriveCrop(this.roi);
                 grid3.MoveTo(grid3.Width, grid3.Height);
-                await TaskControl.Delay(300, ct);
+                await this._runtime.Delay(300, ct);
                 return true;
             }
             else
             {
-                await TaskControl.Delay(300, ct);
+                await this._runtime.Delay(300, ct);
                 this.logger.LogInformation("滚动到底部了");
                 return false;
             }

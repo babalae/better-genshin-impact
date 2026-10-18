@@ -19,5 +19,6 @@ public interface IGameRuntimeProvider
     /// <summary>
     /// 关闭游戏。Win32：结束游戏进程；网页版：关闭宿主窗口
     /// </summary>
-    void CloseGame();
+    /// <param name="current">当前绑定的运行环境，截图器未启动时为 null</param>
+    void CloseGame(GameRuntime? current);
 }

@@ -37,8 +37,12 @@ public class MyTask : StateMachineBase<MyState, BvPage>, ISoloTask
 {
     protected override ILogger Logger => TaskControl.Logger;
 
-    public MyTask()
+    private readonly GameRuntime _runtime;
+
+    // 状态机基类需要运行环境：状态检测截图与循环等待都只使用它
+    public MyTask(GameRuntime runtime) : base(runtime)
     {
+        _runtime = runtime;
         RegisterAllStateHandlers();
     }
 
@@ -55,7 +59,7 @@ public class MyTask : StateMachineBase<MyState, BvPage>, ISoloTask
     public async Task Start(CancellationToken ct)
     {
         Initialize(ct, MyState.Unknown);
-        var page = new BvPage(ct);
+        var page = new BvPage(_runtime, ct);
 
         await RunStateMachineUntil(page, MyState.TargetPage);
     }
@@ -94,7 +98,7 @@ Handler 只负责“在当前状态做一步动作”，动作结果用 `StateHa
 private async Task<StateHandlerResult> HandleMainWorld(BvPage page)
 {
     Simulation.SendInput.SimulateAction(GIActions.OpenTheEventsMenu);
-    await Delay(500, _ct);
+    await _runtime.Delay(500, _ct);
     return StateHandlerResult.Success;
 }
 
@@ -108,7 +112,7 @@ private async Task<StateHandlerResult> HandleEventMenu(BvPage page)
     }
 
     target.Click();
-    await Delay(300, _ct);
+    await _runtime.Delay(300, _ct);
     return StateHandlerResult.Success;
 }
 
@@ -146,7 +150,7 @@ private async Task<StateHandlerResult> HandleTargetPage(BvPage page)
 [UnknownStateHandler]
 private async Task<StateHandlerResult> HandleUnknownState(BvPage page)
 {
-    await new ReturnMainUiTask().Start(_ct);
+    await new ReturnMainUiTask(_runtime).Start(_ct);
     return StateHandlerResult.Wait;
 }
 ```

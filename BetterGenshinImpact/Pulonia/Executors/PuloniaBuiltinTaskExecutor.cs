@@ -2,8 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Pulonia.Services;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.Pulonia.Executors;
@@ -13,6 +16,20 @@ namespace BetterGenshinImpact.Pulonia.Executors;
 /// </summary>
 public sealed class PuloniaBuiltinTaskExecutor : IPuloniaTaskExecutor
 {
+    /// <summary>
+    /// 注入的配置根，传给内置任务。
+    /// </summary>
+    private readonly AllConfig _config;
+
+    /// <summary>
+    /// 使用配置根建立执行器。
+    /// </summary>
+    /// <param name="config">注入的配置根</param>
+    public PuloniaBuiltinTaskExecutor(AllConfig config)
+    {
+        _config = config;
+    }
+
     /// <inheritdoc />
     public IReadOnlyList<PuloniaTaskDefinition> Definitions { get; } =
     [
@@ -78,30 +95,34 @@ public sealed class PuloniaBuiltinTaskExecutor : IPuloniaTaskExecutor
     public async Task<PuloniaTaskOutcome> ExecuteAsync(PuloniaTaskPreparedTask task,
         PuloniaTaskExecutionContext context, CancellationToken ct)
     {
+        // 任务只使用本节点租约记录的运行环境；它已停止时当前节点失败
+        if (!context.TryGetRuntime(out var runtime, out var runtimeError))
+            return PuloniaTaskOutcome.Failure(runtimeError);
+
         switch (task.TaskType)
         {
             case "builtin.return_main_ui":
-                await new ReturnMainUiTask().Start(ct).ConfigureAwait(false);
+                await new ReturnMainUiTask(runtime).Start(ct).ConfigureAwait(false);
                 break;
             case "builtin.claim_mail":
-                await new ClaimMailRewardsTask().DoOnce(ct).ConfigureAwait(false);
+                await new ClaimMailRewardsTask(runtime).DoOnce(ct).ConfigureAwait(false);
                 break;
             case "builtin.claim_battle_pass":
-                await new ClaimBattlePassRewardsTask().DoOnce(ct).ConfigureAwait(false);
+                await new ClaimBattlePassRewardsTask(runtime, _config).DoOnce(ct).ConfigureAwait(false);
                 break;
             case "builtin.claim_encounter_points":
-                if (!await new ClaimEncounterPointsRewardsTask().DoOnce(ct).ConfigureAwait(false))
+                if (!await new ClaimEncounterPointsRewardsTask(runtime, _config).DoOnce(ct).ConfigureAwait(false))
                     return PuloniaTaskOutcome.Failure("未能进入或处理历练点领取页面。");
                 break;
             case "builtin.daily_rewards":
-                await ExecuteDailyRewardsAsync(task.Parameters, ct).ConfigureAwait(false);
+                await ExecuteDailyRewardsAsync(runtime, _config, task.Parameters, ct).ConfigureAwait(false);
                 break;
             case "builtin.craft_condensed_resin":
-                await new GoToCraftingBenchTask().GoCraftResin(
+                await new GoToCraftingBenchTask(runtime, _config).GoCraftResin(
                     task.Parameters.Value<string>("country")!, ct).ConfigureAwait(false);
                 break;
             case "builtin.serenitea_pot_rewards":
-                if (!await new GoToSereniteaPotTask().DoOnce(ct).ConfigureAwait(false))
+                if (!await new GoToSereniteaPotTask(runtime, _config).DoOnce(ct).ConfigureAwait(false))
                     return PuloniaTaskOutcome.Failure("尘歌壶奖励流程未到达领取与收尾阶段。");
                 break;
             default:
@@ -118,13 +139,18 @@ public sealed class PuloniaBuiltinTaskExecutor : IPuloniaTaskExecutor
     /// <summary>
     /// 执行每日奖励完整链路，任何子步骤异常都返回给 Pulonia 协调器。
     /// </summary>
-    private static async Task ExecuteDailyRewardsAsync(JObject parameters, CancellationToken ct)
+    /// <param name="runtime">本节点租约记录的运行环境</param>
+    /// <param name="config">配置根</param>
+    /// <param name="parameters">节点参数</param>
+    /// <param name="ct">节点取消令牌</param>
+    private static async Task ExecuteDailyRewardsAsync(GameRuntime runtime, AllConfig config, JObject parameters,
+        CancellationToken ct)
     {
-        if (!await new ClaimEncounterPointsRewardsTask().DoOnce(ct).ConfigureAwait(false))
+        if (!await new ClaimEncounterPointsRewardsTask(runtime, config).DoOnce(ct).ConfigureAwait(false))
             throw new InvalidOperationException("未能进入或处理历练点领取页面。");
-        await new GoToAdventurersGuildTask().Start(parameters.Value<string>("country")!, ct,
+        await new GoToAdventurersGuildTask(runtime, config).Start(parameters.Value<string>("country")!, ct,
             parameters.Value<string?>("party_name"), onlyDoOnce: true).ConfigureAwait(false);
-        await new ClaimBattlePassRewardsTask().DoOnce(ct).ConfigureAwait(false);
+        await new ClaimBattlePassRewardsTask(runtime, config).DoOnce(ct).ConfigureAwait(false);
     }
 
     /// <summary>

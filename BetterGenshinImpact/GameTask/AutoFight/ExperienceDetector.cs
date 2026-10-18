@@ -1,6 +1,8 @@
 using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -46,10 +48,23 @@ public sealed class ExperienceDetector : IDisposable
     public bool HasDetectedExperience =>
         _resultTcs.Task.IsCompletedSuccessfully && _resultTcs.Task.Result;
 
+    /// <summary>
+    /// 检测循环截图所用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 创建经验值检测器
+    /// </summary>
+    /// <param name="runtime">检测循环截图所用的运行环境</param>
+    /// <param name="experienceRos">经验值模板识别对象列表</param>
+    /// <param name="externalToken">外部取消令牌</param>
     public ExperienceDetector(
+        GameRuntime runtime,
         IReadOnlyList<RecognitionObject> experienceRos,
         CancellationToken externalToken)
     {
+        _runtime = runtime;
         _experienceRos = experienceRos ?? throw new ArgumentNullException(nameof(experienceRos));
         _linkedCts = CancellationTokenSource.CreateLinkedTokenSource(externalToken);
         _resultTcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -101,7 +116,7 @@ public sealed class ExperienceDetector : IDisposable
         {
             try
             {
-                using var capture = TaskControl.CaptureToRectArea();
+                using var capture = _runtime.CaptureToRectArea();
 
                 foreach (var ro in _experienceRos)
                 {
@@ -125,6 +140,11 @@ public sealed class ExperienceDetector : IDisposable
             }
             catch (OperationCanceledException)
             {
+                break;
+            }
+            catch (NormalEndException)
+            {
+                // 运行环境已停止，截图不会再成功，结束检测而不是反复重试
                 break;
             }
             catch (Exception ex)

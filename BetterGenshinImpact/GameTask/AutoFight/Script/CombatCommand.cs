@@ -321,6 +321,8 @@ public class CombatCommand
             return;
         }
 
+        // 指令是解析出的数据，不持有运行环境；截图使用执行指令的角色所在的运行环境
+        var runtime = avatar.Runtime;
         ESkillCdTracker.TriggerECheck(() =>
         {
             try
@@ -328,7 +330,7 @@ public class CombatCommand
                 double cd = 0;
                 for (var attempt = 0; attempt < 4; attempt++)
                 {
-                    using var region = TaskControl.CaptureToRectArea();
+                    using var region = runtime.CaptureToRectArea();
                     cd = avatar.AfterUseSkill(region);
                     if (cd > 0) break;
                     if (attempt < 3) Thread.Sleep(100);

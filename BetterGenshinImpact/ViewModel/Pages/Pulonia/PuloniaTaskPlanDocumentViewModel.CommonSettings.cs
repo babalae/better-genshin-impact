@@ -57,7 +57,8 @@ public partial class PuloniaTaskPlanDocumentViewModel
                 "javascript" => "JS 行走、战斗与食物设置",
                 _ => "Shell 执行设置"
             };
-            var viewModel = new ScriptGroupConfigViewModel(TaskContext.Instance().Config, config)
+            // 文档 ViewModel 由页面和测试直接 new，没有注入入口，暂时读配置根（见 task-context-removal.md 第 5 节）
+            var viewModel = new ScriptGroupConfigViewModel(BetterGenshinImpact.Service.ConfigService.Config!, config)
             {
                 ShowPathingSettings = taskType != "shell",
                 ShowShellSettings = taskType == "shell",

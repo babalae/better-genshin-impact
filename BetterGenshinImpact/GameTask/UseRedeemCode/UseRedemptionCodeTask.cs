@@ -8,6 +8,7 @@ using BetterGenshinImpact.Core.BgiVision;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.GameTask.UseRedeemCode.Model;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
@@ -21,16 +22,32 @@ public class UseRedemptionCodeTask : ISoloTask
 {
     private static readonly ILogger _logger = App.GetLogger<UseRedemptionCodeTask>();
 
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime;
 
     private readonly List<RedeemCode> _list;
 
-    public UseRedemptionCodeTask(List<RedeemCode> list)
+    /// <summary>
+    /// 用兑换码列表创建任务
+    /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    /// <param name="list">兑换码列表</param>
+    public UseRedemptionCodeTask(GameRuntime runtime, List<RedeemCode> list)
     {
+        _runtime = runtime;
         this._list = list;
     }
     
-    public UseRedemptionCodeTask(List<string> strList)
+    /// <summary>
+    /// 用兑换码文本列表创建任务，忽略空白项
+    /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    /// <param name="strList">兑换码文本列表</param>
+    public UseRedemptionCodeTask(GameRuntime runtime, List<string> strList)
     {
+        _runtime = runtime;
         _list = strList
             .Where(code => !string.IsNullOrWhiteSpace(code))
             .Select(code => new RedeemCode(code, null))
@@ -45,17 +62,17 @@ public class UseRedemptionCodeTask : ISoloTask
 
         try
         {
-            Rect captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
+            Rect captureRect = _runtime.SystemInfo.ScaleMax1080PCaptureRect;
 
-            await new ReturnMainUiTask().Start(ct);
+            await new ReturnMainUiTask(_runtime).Start(ct);
 
-            var page = new BvPage(ct);
+            var page = new BvPage(_runtime, ct);
 
             _logger.LogInformation("使用兑换码: {Msg}", "打开设置");
             // 按ESC键打开菜单
             page.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
             // 等待ESC后菜单出现
-            await page.Locator(new BvImage("UseRedeemCode:esc_return_button.png")).WaitFor();
+            await page.Locator(new BvImage(_runtime, "UseRedeemCode:esc_return_button.png")).WaitFor();
             // 点击设置按钮
             page.Click(45, 825);
             await page.Wait(1000);
@@ -92,14 +109,14 @@ public class UseRedemptionCodeTask : ISoloTask
             // 清空剪贴板
             UIDispatcherHelper.Invoke(Clipboard.Clear);
             // 返回主界面
-            await new ReturnMainUiTask().Start(ct);
+            await new ReturnMainUiTask(_runtime).Start(ct);
             
         }
     }
 
     private async Task UseRedeemCode(RedeemCode redeemCode, BvPage page)
     {
-        Rect captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
+        Rect captureRect = _runtime.SystemInfo.ScaleMax1080PCaptureRect;
         
         _logger.LogInformation("输入兑换码: {Code}", redeemCode.Code);
         // 将要输入的文本复制到剪贴板
@@ -107,7 +124,7 @@ public class UseRedemptionCodeTask : ISoloTask
         // 粘贴兑换码
         await page.GetByText("粘贴").WithRoi(captureRect.CutRight(0.5)).Click();
         // 点击兑换
-        await page.Locator(ElementRecognition.Get("BtnWhiteConfirm")).Click();
+        await page.Locator(ElementRecognition.Get("BtnWhiteConfirm", _runtime.SystemInfo)).Click();
 
         // 兑换成功
         var list = await page.GetByText("兑换成功").TryWaitFor(1000);
@@ -115,7 +132,7 @@ public class UseRedemptionCodeTask : ISoloTask
         {
             _logger.LogInformation("兑换码 {Code} 兑换成功", redeemCode.Code);
             // 点击确认
-            await page.Locator(ElementRecognition.Get("BtnBlackConfirm")).Click();
+            await page.Locator(ElementRecognition.Get("BtnBlackConfirm", _runtime.SystemInfo)).Click();
             await page.Wait(5100);
         }
         else

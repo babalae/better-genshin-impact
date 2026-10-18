@@ -1,3 +1,5 @@
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.Runtime;
 using System.IO;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Factory;
@@ -7,9 +9,9 @@ namespace BetterGenshinImpact.GameTask.AutoFight.Factory;
 /// </summary>
 public class JsonCombatTaskFactory : ICombatTaskFactory
 {
-    public ISoloTask CreateTask(AutoFightParam param)
+    public ISoloTask CreateTask(GameRuntime runtime, AllConfig config, AutoFightParam param)
     {
-        return new AutoFightJsonTask(param);
+        return new AutoFightJsonTask(runtime, config, param);
     }
 
     public bool CanHandle(string strategyPath)

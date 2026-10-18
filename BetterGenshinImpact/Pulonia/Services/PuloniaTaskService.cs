@@ -794,7 +794,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
         // 已准备账号的游戏节点必须先取得输入并重新核验，再读取该 UID 的 CD。
         using var accountLease = state.VerifiedUid is not null && _definitions[task.TaskType].RequiresGameSession
             ? await _gameTaskCoordinator.AcquireAsync(runToken).ConfigureAwait(false) : null;
-        if (accountLease is not null) await VerifyGenshinAccountAsync(state, runToken).ConfigureAwait(false);
+        if (accountLease is not null) await VerifyGenshinAccountAsync(state, accountLease.Runtime, runToken).ConfigureAwait(false);
         var availability = await EvaluateAvailabilityAsync(state.Request, rules, runToken, state.VerifiedUid).ConfigureAwait(false);
         if (collectionPolicy is not null && availability.IsAllowed)
         {
@@ -846,12 +846,13 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
                 // 文件级采集只在完整成功后结算，不为失败或中断留下待核验占用。
                 if (collectionPolicy is null)
                     await PersistOperationIntentAsync(state, task, rules, nodeCancellation.Token).ConfigureAwait(false);
-                var context = new PuloniaTaskExecutionContext(state.RequestId, state.RunId, state.Snapshot, attempt,
-                    task.TaskAddress, (completionEvent, token) =>
-                        ReportCompletionEventAsync(state, task, attempt, rules, completionEvent, token));
                 using var gameTaskLease = accountLease is null && _definitions[task.TaskType].RequiresGameSession
                     ? await _gameTaskCoordinator.AcquireAsync(nodeCancellation.Token).ConfigureAwait(false)
                     : null;
+                // 游戏节点把租约记录的运行环境交给执行器，节点内的任务只使用它
+                var context = new PuloniaTaskExecutionContext(state.RequestId, state.RunId, state.Snapshot, attempt,
+                    task.TaskAddress, (gameTaskLease ?? accountLease)?.Runtime, (completionEvent, token) =>
+                        ReportCompletionEventAsync(state, task, attempt, rules, completionEvent, token));
                 outcome = await executor.ExecuteAsync(task, context, nodeCancellation.Token).ConfigureAwait(false);
                 executorFinishedAt = DateTimeOffset.UtcNow;
                 // 兼容暂时未主动观察令牌的旧执行器：只有它真正返回后才确认取消或超时完成。

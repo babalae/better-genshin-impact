@@ -117,7 +117,8 @@ public class Region : IDisposable
     {
         // 相对自己是 0, 0 坐标
         ClickTo(0, 0, Width, Height);
-        TaskControl.Sleep(60);
+        // Region 不持有运行环境，两次点击之间只做固定间隔
+        Thread.Sleep(60);
         ClickTo(0, 0, Width, Height);
         return this;
     }
@@ -286,6 +287,54 @@ public class Region : IDisposable
     public Rect ToRect()
     {
         return new Rect(X, Y, Width, Height);
+    }
+
+    /// <summary>
+    /// 所在截图帧（游戏捕获区域）到 1080P 的缩放比例，可能大于 1。
+    /// 由区域树推导，与绑定时的 ISystemInfo.ScaleTo1080PRatio 一致；不在截图区域树下时按树根的尺寸计算
+    /// </summary>
+    public double GetScaleTo1080PRatio()
+    {
+        var root = GetCaptureFrame();
+        return Math.Min(root.Width / 1920d, root.Height / 1080d);
+    }
+
+    /// <summary>
+    /// 所在截图帧以 1080P 为标准的素材缩放比例，不会大于 1。与绑定时的 ISystemInfo.AssetScale 一致
+    /// </summary>
+    public double GetAssetScale()
+    {
+        return Math.Min(1d, GetScaleTo1080PRatio());
+    }
+
+    /// <summary>
+    /// 所在截图帧归一到 1080P 后的尺寸（大于 1080P 时等比缩小），即任务实际处理的整帧大小。
+    /// 与绑定时 ISystemInfo.ScaleMax1080PCaptureRect 的宽高一致
+    /// </summary>
+    public OpenCvSharp.Size GetScaleMax1080PFrameSize()
+    {
+        var root = GetCaptureFrame();
+        if (root.Width > 1920 || root.Height > 1080)
+        {
+            var scale = Math.Min(root.Width / 1920d, root.Height / 1080d);
+            return new OpenCvSharp.Size((int)(root.Width / scale), (int)(root.Height / scale));
+        }
+
+        return new OpenCvSharp.Size(root.Width, root.Height);
+    }
+
+    /// <summary>
+    /// 沿区域树向上找到游戏捕获区域（原始截图帧）；找不到时返回树根
+    /// </summary>
+    private Region GetCaptureFrame()
+    {
+        var current = this;
+        while (current is not GameCaptureRegion && current.Prev is { } prev)
+        {
+            current = prev;
+        }
+
+        return current;
     }
 
     /// <summary>

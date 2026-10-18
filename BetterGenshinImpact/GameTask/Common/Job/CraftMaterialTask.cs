@@ -5,6 +5,7 @@ using BetterGenshinImpact.GameTask.Common.Reward;
 using BetterGenshinImpact.GameTask.GetGridIcons;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualBasic.FileIO;
@@ -98,6 +99,11 @@ public class CraftMaterialTask
     private static readonly string[] BonusMaterialTypes = ["角色与武器培养素材", "武器突破素材", "角色天赋素材", "药剂"];
 
     private readonly ILogger<CraftMaterialTask> _logger = App.GetLogger<CraftMaterialTask>();
+
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime;
     private IInputChannel _input => InputHub.Foreground;
     private readonly string _materialName;
     private readonly int _targetQuantity;
@@ -115,12 +121,14 @@ public class CraftMaterialTask
     /// <summary>
     /// 创建当前合成界面自动合成任务。
     /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境。</param>
     /// <param name="materialName">目标材料名。</param>
     /// <param name="targetQuantity">目标合成个数。</param>
     /// <param name="materialType">材料筛选类型；为空时从物品 CSV 读取。</param>
     /// <param name="bonusType">合成加成角色类型；为空时不切换加成。</param>
-    public CraftMaterialTask(string materialName, int targetQuantity, string? materialType = null, string? bonusType = null)
+    public CraftMaterialTask(GameRuntime runtime, string materialName, int targetQuantity, string? materialType = null, string? bonusType = null)
     {
+        _runtime = runtime;
         _materialName = materialName?.Trim() ?? string.Empty;
         _targetQuantity = targetQuantity;
         _materialType = string.IsNullOrWhiteSpace(materialType) ? null : materialType.Trim();
@@ -138,7 +146,7 @@ public class CraftMaterialTask
     public async Task<CraftMaterialResult> Start(CancellationToken ct)
     {
         _ct = ct;
-        _page = new BvPage(ct);
+        _page = new BvPage(_runtime, ct);
         ValidateArguments();
 
         var materialType = ResolveMaterialType();
@@ -147,7 +155,7 @@ public class CraftMaterialTask
         _logger.LogInformation("开始合成材料：{MaterialName}，目标个数：{Quantity}，筛选类型：{MaterialType}", _materialName, _targetQuantity, materialType);
 
         var filterSelection = await SelectMaterialType(materialType);
-        await Delay(300, _ct);
+        await _runtime.Delay(300, _ct);
 
         if (ConfirmSelectedMaterial())
         {
@@ -282,7 +290,7 @@ public class CraftMaterialTask
     /// <exception cref="InvalidOperationException">当前不在合成界面时抛出。</exception>
     private async Task EnsureInCraftingUi()
     {
-        if (await NewRetry.WaitForAction(IsInCraftingUi, _ct, 5, 500))
+        if (await NewRetry.WaitForAction(_runtime, IsInCraftingUi, _ct, 5, 500))
         {
             return;
         }
@@ -369,20 +377,20 @@ public class CraftMaterialTask
     /// <returns>异步任务。</returns>
     private async Task ResetMaterialListScroll()
     {
-        GameCaptureRegion.GameRegion1080PPosMove(763, 195);
-        await Delay(80, _ct);
+        _runtime.GameRegion1080PPosMove(763, 195);
+        await _runtime.Delay(80, _ct);
         _input.Mouse.LeftButtonDown();
-        await Delay(1000, _ct);
+        await _runtime.Delay(1000, _ct);
         _input.Mouse.LeftButtonUp();
 
         var deadline = DateTime.Now.AddMilliseconds(500);
         while (DateTime.Now < deadline) 
         {
             _input.Mouse.VerticalScroll(2);
-            await Delay(40, _ct);
+            await _runtime.Delay(40, _ct);
         }
 
-        await Delay(300, _ct);
+        await _runtime.Delay(300, _ct);
     }
 
     /// <summary>
@@ -405,9 +413,9 @@ public class CraftMaterialTask
     private async Task<bool> TryFindAndSelectMaterial()
     {
         using IItemIconRecognizer itemRecognizer = ItemIconRecognizerFactory.CreateConfigured();
-        GridScreen gridScreen = new(GridParams.Templates[GridScreenName.Crafting], _logger, _ct);
+        GridScreen gridScreen = new(_runtime, GridParams.Templates[GridScreenName.Crafting], _logger, _ct);
         gridScreen.OnAfterTurnToNewPage += GridScreen.DrawItemsAfterTurnToNewPage;
-        gridScreen.OnBeforeScroll += () => TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
+        gridScreen.OnBeforeScroll += () => _runtime.MaskWindowDrawingBoard.ClearAll();
 
         try
         {
@@ -422,7 +430,7 @@ public class CraftMaterialTask
                 }
 
                 itemRegion.Click();
-                await Delay(500, _ct);
+                await _runtime.Delay(500, _ct);
 
                 if (!ConfirmSelectedMaterial())
                 {
@@ -435,7 +443,7 @@ public class CraftMaterialTask
         }
         finally
         {
-            TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
+            _runtime.MaskWindowDrawingBoard.ClearAll();
         }
 
         return false;
@@ -488,7 +496,7 @@ public class CraftMaterialTask
             .Click(1600, 860)
             .UntilText("角色选择", Rect1080(0, 0, 300, 100))
             .Run();
-        await Delay(300, _ct);
+        await _runtime.Delay(300, _ct);
 
         var effectText = bonusType == BonusDoubleOutput ? "获得2倍产出" : "返还部分合成材料";
         var target = Page.Ocr(Rect1080(0, 0, 960, 1080))
@@ -540,11 +548,11 @@ public class CraftMaterialTask
         }
 
         await DragSliderToRatio(0);
-        await Delay(250, _ct);
+        await _runtime.Delay(250, _ct);
 
         var ratio = Math.Clamp((targetQuantity - 1d) / (maxQuantity - 1d), 0d, 1d);
         await DragSliderToRatio(ratio);
-        await Delay(350, _ct);
+        await _runtime.Delay(350, _ct);
 
         var actualQuantity = ReadCurrentCraftQuantity();
         if (actualQuantity <= 0)
@@ -555,7 +563,7 @@ public class CraftMaterialTask
         if (Math.Abs(actualQuantity - targetQuantity) > 30)
         {
             await DragSliderToRatio(ratio);
-            await Delay(350, _ct);
+            await _runtime.Delay(350, _ct);
             actualQuantity = ReadCurrentCraftQuantity();
             if (actualQuantity <= 0 || Math.Abs(actualQuantity - targetQuantity) > 30)
             {
@@ -565,19 +573,19 @@ public class CraftMaterialTask
 
         while (actualQuantity < targetQuantity)
         {
-            GameCaptureRegion.GameRegion1080PPosClick(addButton.X, addButton.Y);
-            await Delay(60, _ct);
+            _runtime.GameRegion1080PPosClick(addButton.X, addButton.Y);
+            await _runtime.Delay(60, _ct);
             actualQuantity++;
         }
 
         while (actualQuantity > targetQuantity)
         {
-            GameCaptureRegion.GameRegion1080PPosClick(reduceButton.X, reduceButton.Y);
-            await Delay(60, _ct);
+            _runtime.GameRegion1080PPosClick(reduceButton.X, reduceButton.Y);
+            await _runtime.Delay(60, _ct);
             actualQuantity--;
         }
 
-        await Delay(200, _ct);
+        await _runtime.Delay(200, _ct);
         var verifiedQuantity = ReadCurrentCraftQuantity();
         if (verifiedQuantity <= 0)
         {
@@ -656,8 +664,8 @@ public class CraftMaterialTask
         const int sliderY = 672;
 
         var x = sliderStartX + (sliderEndX - sliderStartX) * Math.Clamp(ratio, 0d, 1d);
-        GameCaptureRegion.GameRegion1080PPosMove(sliderStartX, sliderY);
-        await Delay(80, _ct);
+        _runtime.GameRegion1080PPosMove(sliderStartX, sliderY);
+        await _runtime.Delay(80, _ct);
         _input.Mouse.LeftButtonDown();
         try
         {
@@ -665,8 +673,8 @@ public class CraftMaterialTask
             for (int step = 0; step <= steps; step++)
             {
                 var currentX = sliderStartX + (x - sliderStartX) * step / steps;
-                GameCaptureRegion.GameRegion1080PPosMove(currentX, sliderY);
-                await Delay(25, _ct);
+                _runtime.GameRegion1080PPosMove(currentX, sliderY);
+                await _runtime.Delay(25, _ct);
             }
         }
         finally
@@ -712,7 +720,7 @@ public class CraftMaterialTask
     {
         try
         {
-            var rewardSummary = RewardResultRecognizer.Instance.RecognizeMultiPage(1);
+            var rewardSummary = RewardResultRecognizer.Instance.RecognizeMultiPage(_runtime, 1);
             var rewards = rewardSummary
                 .Where(pair => pair.Value > 0)
                 .Select((pair, index) => new RewardItem(pair.Key, -1, pair.Value, index))
@@ -786,9 +794,9 @@ public class CraftMaterialTask
     /// <param name="width">1080P 基准宽度。</param>
     /// <param name="height">1080P 基准高度。</param>
     /// <returns>当前截图尺寸下的矩形。</returns>
-    private static Rect Rect1080(int x, int y, int width, int height)
+    private Rect Rect1080(int x, int y, int width, int height)
     {
-        var scale = TaskContext.Instance().SystemInfo.AssetScale;
+        var scale = _runtime.SystemInfo.AssetScale;
         return new Rect(
             (int)Math.Round(x * scale),
             (int)Math.Round(y * scale),

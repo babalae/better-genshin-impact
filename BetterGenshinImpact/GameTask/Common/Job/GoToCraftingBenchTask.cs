@@ -4,6 +4,7 @@ using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Runtime;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
@@ -31,17 +32,38 @@ public class GoToCraftingBenchTask
 
     private readonly int _retryTimes = 2;
 
-    private readonly ChooseTalkOptionTask _chooseTalkOptionTask = new();
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 配置根
+    /// </summary>
+    private readonly AllConfig _config;
+
+    /// <summary>
+    /// 持续对话并选择选项子任务
+    /// </summary>
+    private readonly ChooseTalkOptionTask _chooseTalkOptionTask;
     
     private  OneDragonFlowConfig? SelectedConfig;
     private ObservableCollection<OneDragonFlowConfig> ConfigList = [];
     
     private readonly string craftLocalizedString;
 
-    public GoToCraftingBenchTask()
+    /// <summary>
+    /// 创建前往合成台任务
+    /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    /// <param name="config">配置根</param>
+    public GoToCraftingBenchTask(GameRuntime runtime, AllConfig config)
     {
+        _runtime = runtime;
+        _config = config;
+        _chooseTalkOptionTask = new ChooseTalkOptionTask(runtime);
         IStringLocalizer<GoToCraftingBenchTask> stringLocalizer = App.GetService<IStringLocalizer<GoToCraftingBenchTask>>() ?? throw new NullReferenceException();
-        CultureInfo cultureInfo = new CultureInfo(TaskContext.Instance().Config.OtherConfig.GameCultureInfoName);
+        CultureInfo cultureInfo = new CultureInfo(config.OtherConfig.GameCultureInfoName);
         this.craftLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "合成");
     }
     
@@ -65,7 +87,7 @@ public class GoToCraftingBenchTask
                 }
                 else
                 {
-                    await Delay(1000, ct);
+                    await _runtime.Delay(1000, ct);
                     Logger.LogInformation("重试前往合成台领取奖励");
                 }
             }
@@ -81,7 +103,7 @@ public class GoToCraftingBenchTask
 
         // 判断浓缩树脂是否存在
         // TODO 满的情况是怎么样子的
-        using var ra = CaptureToRectArea();
+        using var ra = _runtime.CaptureToRectArea();
         var resin = ra.Find(ElementRecognition.Get("CraftCondensedResin", ra));
         
         if (resin.IsExist())
@@ -109,7 +131,7 @@ public class GoToCraftingBenchTask
                 }
                 
                 //浓缩纠缠重试
-                var condensed =await NewRetry.WaitForAction(() =>
+                var condensed =await NewRetry.WaitForAction(_runtime, () =>
                 {
                     var condensedResinCountRa = ra.Find(ElementRecognition.Get("CondensedResinCount", ra));
                     if (!condensedResinCountRa.IsEmpty())
@@ -125,7 +147,7 @@ public class GoToCraftingBenchTask
                 if (!condensed)
                 {
                     InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
-                    await new ReturnMainUiTask().Start(ct);
+                    await new ReturnMainUiTask(_runtime).Start(ct);
                     throw new Exception($"识别浓缩树脂数量失败: {condensedResinCount}");
                 }
                 
@@ -153,20 +175,20 @@ public class GoToCraftingBenchTask
                     for (int i = 0; i < 5; i++)
                     {
                         Bv.ClickReduceButton(ra);
-                        await Delay(150, ct);
+                        await _runtime.Delay(150, ct);
                     }
-                    await Delay(300, ct);
+                    await _runtime.Delay(300, ct);
                     for (int i = 0; i < craftsNeeded-1; i++)
                     {
                         Bv.ClickAddButton(ra);
-                        await Delay(150, ct);
+                        await _runtime.Delay(150, ct);
                     }
-                    await Delay(200, ct);
+                    await _runtime.Delay(200, ct);
                     //await Delay(100000, ct);//调试延时=========
                     Bv.ClickWhiteConfirmButton(ra);
                     Logger.LogInformation("合成{Text}", "浓缩树脂");
-                    await Delay(300, ct);
-                    using var confirmCapture = CaptureToRectArea();
+                    await _runtime.Delay(300, ct);
+                    using var confirmCapture = _runtime.CaptureToRectArea();
                     Bv.ClickBlackConfirmButton(confirmCapture);
                 }
                 else
@@ -179,11 +201,11 @@ public class GoToCraftingBenchTask
                 //await Delay(100000, ct);//调试延时=========
                 Bv.ClickWhiteConfirmButton(ra);
                 Logger.LogInformation("合成{Text}", "浓缩树脂");
-                await Delay(300, ct);
-                using var confirmCapture = CaptureToRectArea();
+                await _runtime.Delay(300, ct);
+                using var confirmCapture = _runtime.CaptureToRectArea();
                 Bv.ClickBlackConfirmButton(confirmCapture);
             }
-            await Delay(1300, ct);
+            await _runtime.Delay(1300, ct);
             // 直接ESC退出即可
             InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE);
         }
@@ -192,7 +214,7 @@ public class GoToCraftingBenchTask
             Logger.LogInformation("无需合成浓缩树脂");
         }
 
-        await new ReturnMainUiTask().Start(ct);
+        await new ReturnMainUiTask(_runtime).Start(ct);
     }
 
     /// <summary>
@@ -219,7 +241,7 @@ public class GoToCraftingBenchTask
                     throw;
                 }
 
-                await Delay(1000, ct);
+                await _runtime.Delay(1000, ct);
                 Logger.LogInformation("重试前往合成台");
             }
         }
@@ -235,7 +257,7 @@ public class GoToCraftingBenchTask
             throw new Exception("地图追踪文件加载失败");
         }
 
-        var pathingTask = new PathExecutor(ct)
+        var pathingTask = new PathExecutor(_runtime, _config, ct)
         {
             PartyConfig = new PathingPartyConfig
             {
@@ -248,7 +270,7 @@ public class GoToCraftingBenchTask
         // 找到合成台时允许 EndAction 提前结束路线，随后仍核验合成台交互界面。
         _ = await pathingTask.Pathing(task);
 
-        await Delay(700, ct);
+        await _runtime.Delay(700, ct);
         
         // 多种尝试 责任链
         if (!IsInCraftingTalkUi())
@@ -260,7 +282,7 @@ public class GoToCraftingBenchTask
             {
                 // 往回走一步重试
                 InputHub.Foreground.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown);
-                await Delay(200, ct);
+                await _runtime.Delay(200, ct);
                 InputHub.Foreground.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
                 
                 await TryPressCrafting(ct);
@@ -278,23 +300,23 @@ public class GoToCraftingBenchTask
         await _chooseTalkOptionTask.SelectLastOptionUntilEnd(ct,
             region => region.Find(ElementRecognition.Get("BtnWhiteConfirm", region)).IsExist()
         );
-        await Delay(800, ct);
+        await _runtime.Delay(800, ct);
     }
 
 
     private bool IsInCraftingTalkUi()
     {
-        using var ra = CaptureToRectArea();
+        using var ra = _runtime.CaptureToRectArea();
         return Bv.IsInTalkUi(ra);
     }
     
     private async Task<bool> TryPressCrafting( CancellationToken ct)
     {
-        using var ra1 = CaptureToRectArea();
+        using var ra1 = _runtime.CaptureToRectArea();
         var res = Bv.FindFAndPress(ra1, text: this.craftLocalizedString);
         if (res)
         {
-            await Delay(1000, ct);
+            await _runtime.Delay(1000, ct);
         }
         return res;
     }
@@ -314,7 +336,7 @@ public class GoToCraftingBenchTask
             if (config != null)
             {
                 configs.Add(config);
-                if (config.Name == TaskContext.Instance().Config.SelectedOneDragonFlowConfigName)
+                if (config.Name == _config.SelectedOneDragonFlowConfigName)
                 {
                     selected = config;
                 }

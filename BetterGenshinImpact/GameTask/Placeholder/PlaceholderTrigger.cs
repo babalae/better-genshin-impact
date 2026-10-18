@@ -1,4 +1,5 @@
-﻿using OpenCvSharp;
+﻿using BetterGenshinImpact.GameTask.Runtime;
+using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -30,9 +31,19 @@ public class TestTrigger : ITaskTrigger
 
     // private readonly YoloV8 _predictor = new(Global.Absolute("Assets\\Model\\Domain\\bgi_tree.onnx"));
 
-    public TestTrigger()
+    /// <summary>
+    /// 本次截图会话绑定的运行环境。开发测试时从这里取画面信息，不查询"当前运行环境"
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 创建开发测试用的占位触发器
+    /// </summary>
+    /// <param name="runtime">本次截图会话绑定的运行环境</param>
+    public TestTrigger(GameRuntime runtime)
     {
-        var info = TaskContext.Instance().SystemInfo;
+        _runtime = runtime;
+        var info = _runtime.SystemInfo;
         //_autoGeniusInvokationAssets = new AutoGeniusInvokationAssets();
     }
 

@@ -1,4 +1,4 @@
-using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.DpiAwareness;
 using BetterGenshinImpact.ViewModel.Windows;
@@ -48,12 +48,13 @@ public partial class AutoComboTreeWindow : Window
 
     private void PositionToLogBox()
     {
-        if (!TaskContext.Instance().IsInitialized)
+        // 本窗口由 AutoComboTreeWindowService 直接 new，不经过 DI，因此从容器取进程级的 GameRuntimeService；每次读取，不缓存
+        if (App.GetService<GameRuntimeService>()?.Current is not { } runtime)
         {
             return;
         }
 
-        PositionNearGame(TaskContext.Instance().SystemInfo.CaptureAreaRect);
+        PositionNearGame(runtime.SystemInfo.CaptureAreaRect, runtime.Window.Handle);
         // 定位成功后淡入显示，保证窗口从可见那一刻起就在正确位置
         BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(120)));
     }
@@ -63,9 +64,11 @@ public partial class AutoComboTreeWindow : Window
     /// 捕获矩形（物理像素）按游戏所在显示器 DPI 缩放为 WPF DIP，再加左、上两个内边距（按 1080p 基准等比缩放）；
     /// 同时给根容器套 LayoutTransform，让窗口内容按 1080p 基准随游戏分辨率等比缩放（2K/4K 下浮窗相对游戏大小不变）
     /// </summary>
-    private void PositionNearGame(RECT captureRect)
+    /// <param name="captureRect">游戏画面区域（物理像素）</param>
+    /// <param name="gameHandle">游戏窗口句柄，用于取所在显示器的 DPI</param>
+    private void PositionNearGame(RECT captureRect, nint gameHandle)
     {
-        var dpi = DpiHelper.ScaleY;
+        var dpi = DpiHelper.GetScaleY(gameHandle);
         // 以 1080p 为基准的缩放系数：游戏窗口越宽，浮窗整体越大
         var scale = captureRect.Width / dpi / 1920.0;
 

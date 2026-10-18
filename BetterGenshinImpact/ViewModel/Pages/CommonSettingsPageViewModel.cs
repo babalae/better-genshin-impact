@@ -61,7 +61,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
     /// </summary>
     private readonly ExternalAccessTokenService _externalAccessTokenService;
 
-    private readonly TpConfig _tpConfig = TaskContext.Instance().Config.TpConfig;
+    private readonly TpConfig _tpConfig;
 
     private string _selectedArea = string.Empty;
 
@@ -90,6 +90,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
     {
         Config = configService.Get();
         _configService = configService;
+        _tpConfig = Config.TpConfig;
         Config.MaskWindowConfig.EnsureOverlayMetricItems();
         Config.MaskWindowConfig.MigrateLegacyOverlayMetricsLayout();
         _navigationService = navigationService;
@@ -228,7 +229,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
 
     private void InitializeMiyousheCookie()
     {
-        OtherConfig.Miyoushe mcfg = TaskContext.Instance().Config.OtherConfig.MiyousheConfig;
+        OtherConfig.Miyoushe mcfg = Config.OtherConfig.MiyousheConfig;
         if (mcfg.Cookie == string.Empty &&
             mcfg.LogSyncCookie)
         {

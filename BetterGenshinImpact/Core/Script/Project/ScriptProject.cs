@@ -12,6 +12,8 @@ using System.Windows.Controls;
 using BetterGenshinImpact.Core.Script.Dependence;
 using Microsoft.ClearScript.JavaScript;
 using BetterGenshinImpact.Core.Script.Repositories;
+using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.Service;
 
 namespace BetterGenshinImpact.Core.Script.Project;
 
@@ -84,11 +86,17 @@ public class ScriptProject
     }
 
     /// <summary>
+    /// 配置根。ScriptProject 由界面和 Pulonia 直接 new，没有创建方可以传入配置，暂时读配置根（见 task-context-removal.md 第 5 节）
+    /// </summary>
+    private static AllConfig Config => ConfigService.Config!;
+
+    /// <summary>
     /// 为本次脚本执行创建并初始化独立的 V8 引擎。
     /// </summary>
+    /// <param name="runtime">本次脚本运行使用的运行环境。</param>
     /// <param name="partyConfig">脚本使用的队伍配置。</param>
     /// <param name="ct">本次脚本执行的取消令牌。</param>
-    private V8ScriptEngine BuildScriptEngine(PathingPartyConfig? partyConfig, CancellationToken ct)
+    private V8ScriptEngine BuildScriptEngine(GameRuntime runtime, PathingPartyConfig? partyConfig, CancellationToken ct)
     {
         V8ScriptEngine engine = new V8ScriptEngine(V8ScriptEngineFlags.UseCaseInsensitiveMemberBinding | V8ScriptEngineFlags.EnableTaskPromiseConversion);
         try
@@ -106,7 +114,7 @@ public class ScriptProject
 
             var libraryList = libraries.ToList();
 
-            EngineExtend.InitHost(engine, ProjectPath, libraryList.ToArray(), partyConfig, ct, _repositoryResources);
+            EngineExtend.InitHost(engine, runtime, Config, ProjectPath, libraryList.ToArray(), partyConfig, ct, _repositoryResources);
             return engine;
         }
         catch
@@ -118,16 +126,19 @@ public class ScriptProject
     }
 
     /// <summary>
-    /// 使用调用方提供的取消令牌执行当前 JS 项目。
+    /// 使用调用方提供的运行环境与取消令牌执行当前 JS 项目。
     /// </summary>
-    public async Task ExecuteAsync(dynamic? context, PathingPartyConfig? partyConfig, CancellationToken ct)
+    /// <param name="runtime">本次脚本运行使用的运行环境，所有宿主对象都绑定到它。</param>
+    /// <param name="context">脚本设置对象，作为 settings 暴露给脚本。</param>
+    /// <param name="partyConfig">脚本使用的队伍配置。</param>
+    /// <param name="ct">本次脚本执行的取消令牌。</param>
+    public async Task ExecuteAsync(GameRuntime runtime, dynamic? context, PathingPartyConfig? partyConfig, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        // 默认值
-        GlobalMethod.SetGameMetrics(1920, 1080);
+        // 游戏尺寸默认值（1920x1080）由每个引擎新建的 GlobalMethod 实例自带，不再需要重置共享的静态状态
         // 加载代码
         var code = await LoadCode(ct);
-        await ScriptExecution.ExecuteAsync(token => BuildScriptEngine(partyConfig, token), engine =>
+        await ScriptExecution.ExecuteAsync(token => BuildScriptEngine(runtime, partyConfig, token), engine =>
         {
             ct.ThrowIfCancellationRequested();
 

@@ -1,4 +1,6 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers.DpiAwareness;
 using BetterGenshinImpact.Helpers.Extensions;
 using Mat = OpenCvSharp.Mat;
@@ -34,6 +36,17 @@ public partial class PictureInPictureWindow : Window
 
     public event Action? ClosedByUser;
 
+    /// <summary>
+    /// 当前运行环境，截图器未启动时为 null。
+    /// 本窗口由静态的 PictureInPictureService 直接 new，不经过 DI，因此从容器取进程级的 GameRuntimeService；每次读取，不缓存
+    /// </summary>
+    private static GameRuntime? CurrentRuntime => App.GetService<GameRuntimeService>()?.Current;
+
+    /// <summary>
+    /// 配置根。本窗口没有创建方可以传参，暂时读配置根（见 task-context-removal.md 第 5 节）
+    /// </summary>
+    private static AllConfig Config => ConfigService.Config!;
+
     public PictureInPictureWindow()
     {
         InitializeComponent();
@@ -52,12 +65,14 @@ public partial class PictureInPictureWindow : Window
 
     private void Loop(object? sender, EventArgs e)
     {
-        if (_closed || PictureInPictureService.IsManuallyClosed || !IsVisible || TaskContext.Instance().Config.AutoSkipConfig.PictureInPictureSourceType != nameof(PictureSourceType.CaptureLoop))
+        if (_closed || PictureInPictureService.IsManuallyClosed || !IsVisible || Config.AutoSkipConfig.PictureInPictureSourceType != nameof(PictureSourceType.CaptureLoop))
         {
             return;
         }
 
-        using var captureFrame = TaskContext.Instance().Runtime?.Capture.Capture();
+        // 本帧内截图与定位使用同一个运行环境
+        var runtime = CurrentRuntime;
+        using var captureFrame = runtime?.Capture.Capture();
         var mat = captureFrame?.Frame;
         if (mat != null)
         {
@@ -65,9 +80,9 @@ public partial class PictureInPictureWindow : Window
             {
                 PreviewImage.Source = mat.ToWriteableBitmap();
                 _cacheSize = mat.Size();
-                if (!_initializedPosition)
+                if (!_initializedPosition && runtime != null)
                 {
-                    PositionNearGame(TaskContext.Instance().SystemInfo.CaptureAreaRect);
+                    PositionNearGame(runtime.SystemInfo.CaptureAreaRect, runtime.Window.Handle);
                     _initializedPosition = true;
                 }
             }
@@ -89,7 +104,7 @@ public partial class PictureInPictureWindow : Window
             return;
         }
 
-        if (_closed || TaskContext.Instance().Config.AutoSkipConfig.PictureInPictureSourceType != nameof(PictureSourceType.TriggerDispatcher))
+        if (_closed || Config.AutoSkipConfig.PictureInPictureSourceType != nameof(PictureSourceType.TriggerDispatcher))
         {
             frame.Dispose();
             return;
@@ -112,9 +127,10 @@ public partial class PictureInPictureWindow : Window
                 _cacheSize = size;
                 UpdateSizeFromFrame(frame.Width, frame.Height);
                 UpdateClip();
-                if (!_initializedPosition)
+                // 截图器已停止时没有游戏区域可参考，留到下次有运行环境时再定位
+                if (!_initializedPosition && CurrentRuntime is { } runtime)
                 {
-                    PositionNearGame(TaskContext.Instance().SystemInfo.CaptureAreaRect);
+                    PositionNearGame(runtime.SystemInfo.CaptureAreaRect, runtime.Window.Handle);
                     _initializedPosition = true;
                 }
             }
@@ -145,9 +161,14 @@ public partial class PictureInPictureWindow : Window
         }
     }
 
-    private void PositionNearGame(RECT captureRect)
+    /// <summary>
+    /// 把画中画窗口放到游戏画面的右上角
+    /// </summary>
+    /// <param name="captureRect">游戏画面区域（物理像素）</param>
+    /// <param name="gameHandle">游戏窗口句柄，用于取所在显示器的 DPI</param>
+    private void PositionNearGame(RECT captureRect, nint gameHandle)
     {
-        var dpi = DpiHelper.ScaleY;
+        var dpi = DpiHelper.GetScaleY(gameHandle);
         var targetLeft = captureRect.Left / dpi + captureRect.Width / dpi - Width - MarginSize;
         var targetTop = captureRect.Top / dpi + MarginSize;
 
@@ -174,7 +195,8 @@ public partial class PictureInPictureWindow : Window
     {
         if (!_dragging)
         {
-            SystemControl.ActivateWindow();
+            // 点击画中画切回游戏；截图器未启动时没有可激活的窗口
+            CurrentRuntime?.Window.Activate();
         }
 
         _pointerDown = false;

@@ -19,7 +19,7 @@ public sealed class PuloniaOneDragonImportTests : IDisposable
     [Fact]
     public void CombatDefinitions_ValidateAndKeepExplicitConfiguration()
     {
-        foreach (var definition in new PuloniaCombatTaskExecutor().Definitions)
+        foreach (var definition in new PuloniaCombatTaskExecutor(new AllConfig()).Definitions)
         {
             PuloniaTaskValidator.ValidateParameterSchema(definition.ParameterSchema, definition.TaskType);
             PuloniaTaskValidator.ValidateParameters(definition.DefaultParameters, definition.ParameterSchema, definition.TaskType);
@@ -118,7 +118,7 @@ public sealed class PuloniaOneDragonImportTests : IDisposable
         var task = new PuloniaTask { Name = "首领", TaskType = "builtin.auto_boss" };
         var document = new PuloniaTaskPlanDocumentViewModel(new PuloniaTaskPlan
             { Name = "参数表单", RootTask = new PuloniaTask { Children = [task] } }, [], new PuloniaTaskClipboardService(), false);
-        document.SetDefinitions(new PuloniaCombatTaskExecutor().Definitions);
+        document.SetDefinitions(new PuloniaCombatTaskExecutor(new AllConfig()).Definitions);
         document.SelectedNode = Assert.Single(document.RootNode.Children);
         var node = document.SelectedNode!;
         Assert.Equal("", document.GetOneDragonParameters(node).Value<string>("team_name"));
@@ -140,7 +140,7 @@ public sealed class PuloniaOneDragonImportTests : IDisposable
         var task = new PuloniaTask { Name = "首领", TaskType = "builtin.auto_boss", PresetId = preset.Id };
         var document = new PuloniaTaskPlanDocumentViewModel(new PuloniaTaskPlan
             { Name = "预设格式", RootTask = new PuloniaTask { Children = [task] } }, [preset], new PuloniaTaskClipboardService(), false);
-        document.SetDefinitions(new PuloniaCombatTaskExecutor().Definitions);
+        document.SetDefinitions(new PuloniaCombatTaskExecutor(new AllConfig()).Definitions);
         document.SelectedNode = Assert.Single(document.RootNode.Children);
         Assert.Contains("参数版本", document.EditorMessage);
         Assert.Equal("", document.GetOneDragonParameters(document.SelectedNode!).Value<string>("team_name"));
@@ -148,8 +148,8 @@ public sealed class PuloniaOneDragonImportTests : IDisposable
 
     /// <summary>使用真实能力定义转换，资源失败路径也经过正式指纹服务。</summary>
     private static PuloniaTaskLegacyImporter Importer() => new(
-        [.. new PuloniaBuiltinTaskExecutor().Definitions, .. new PuloniaCombatTaskExecutor().Definitions,
-            .. new PuloniaJavaScriptTaskExecutor().Definitions, .. new PuloniaPathingTaskExecutor().Definitions,
+        [.. new PuloniaBuiltinTaskExecutor(new AllConfig()).Definitions, .. new PuloniaCombatTaskExecutor(new AllConfig()).Definitions,
+            .. new PuloniaJavaScriptTaskExecutor().Definitions, .. new PuloniaPathingTaskExecutor(new AllConfig()).Definitions,
             .. new PuloniaKeyMouseTaskExecutor().Definitions, .. new PuloniaShellTaskExecutor().Definitions], new PuloniaTaskResourceCatalog());
 
     /// <summary>只写本测试的独占源文件。</summary>

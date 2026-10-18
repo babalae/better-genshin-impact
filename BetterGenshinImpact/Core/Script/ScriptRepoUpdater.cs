@@ -34,6 +34,11 @@ namespace BetterGenshinImpact.Core.Script;
 
 public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 {
+    /// <summary>
+    /// 配置根。单例没有创建方可以传参，暂时读配置根（见 task-context-removal.md 第 5 节）
+    /// </summary>
+    private static AllConfig Config => ConfigService.Config!;
+
     private readonly ILogger<ScriptRepoUpdater> _logger = App.GetLogger<ScriptRepoUpdater>();
 
     private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(30) };
@@ -105,7 +110,7 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     // [Obsolete]
     // public void AutoUpdate()
     // {
-    //     var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
+    //     var scriptConfig = Config.ScriptConfig;
     //
     //     if (!Directory.Exists(ReposPath))
     //     {
@@ -150,7 +155,7 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
         try
         {
-            var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
+            var scriptConfig = Config.ScriptConfig;
 
             // 检查是否启用自动更新
             if (!scriptConfig.AutoUpdateSubscribedScripts)
@@ -206,7 +211,7 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     {
         try
         {
-            var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
+            var scriptConfig = Config.ScriptConfig;
 
             var subscribedPaths = GetSubscribedPathsForCurrentRepo();
             if (subscribedPaths.Count == 0)
@@ -734,7 +739,7 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         {
             // 与仓库版本保留共用跨进程锁，避免读取到更新过程中的混合来源。
             using var resourceAccess = await ScriptRepositoryStore.Shared.EnterSourceAccessAsync();
-            var config = TaskContext.Instance().Config.ScriptConfig;
+            var config = Config.ScriptConfig;
             var repoUrl = ResolveRepoUrl(config);
             var repoPath = CenterRepoPath;
             ValidateManagedRepositoryDirectory(repoPath);
@@ -2479,7 +2484,7 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             if (Directory.Exists(SubscriptionsPath) && Directory.GetFiles(SubscriptionsPath, "*.json").Length > 0)
                 return;
 
-            var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
+            var scriptConfig = Config.ScriptConfig;
             var oldPaths = scriptConfig.SubscribedScriptPaths;
             if (oldPaths.Count == 0)
                 return;
@@ -2926,7 +2931,7 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         UpdateSubscribedScriptPaths();
         if (_webWindow is not { IsVisible: true })
         {
-            var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
+            var scriptConfig = Config.ScriptConfig;
 
             // 计算宽高（默认0.7屏幕宽高）
             double width = scriptConfig.WebviewWidth == 0
@@ -3001,7 +3006,7 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
                 // _webWindow.Panel!.WebView.CoreWebView2.Navigate("https://bettergi.local/index.html");
 
-                _webWindow.Panel!.WebView.CoreWebView2.AddHostObjectToScript("repoWebBridge", new RepoWebBridge());
+                _webWindow.Panel!.WebView.CoreWebView2.AddHostObjectToScript("repoWebBridge", new RepoWebBridge(Config));
 
                 // 允许内部外链使用默认浏览器打开
                 _webWindow.Panel!.WebView.CoreWebView2.NewWindowRequested += (sender, e) =>

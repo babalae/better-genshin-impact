@@ -2,7 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.Group;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Suspend;
 using BetterGenshinImpact.GameTask.Common.Job;
@@ -63,17 +66,34 @@ public class RunnerContext : Singleton<RunnerContext>
     /// </summary>
     private CombatScenes? _combatScenes;
 
-    public async Task<CombatScenes?> GetCombatScenes(CancellationToken ct)
+    /// <summary>
+    /// 识别 <see cref="_combatScenes"/> 时所用的运行环境。换了运行环境时缓存作废
+    /// </summary>
+    private GameRuntime? _combatScenesRuntime;
+
+    /// <summary>
+    /// 获取当前队伍角色信息，没有缓存时回到主界面识别一次
+    /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    /// <param name="config">配置根</param>
+    /// <param name="ct">取消令牌</param>
+    public async Task<CombatScenes?> GetCombatScenes(GameRuntime runtime, AllConfig config, CancellationToken ct)
     {
+        if (!ReferenceEquals(_combatScenesRuntime, runtime))
+        {
+            _combatScenes = null;
+        }
+
         if (_combatScenes == null)
         {
             // 返回主界面再识别
-            var returnMainUiTask = new ReturnMainUiTask();
+            var returnMainUiTask = new ReturnMainUiTask(runtime);
             await returnMainUiTask.Start(ct);
 
-            await Delay(200, ct);
+            await runtime.Delay(200, ct);
 
-            _combatScenes = new CombatScenes().InitializeTeam(CaptureToRectArea());
+            _combatScenes = new CombatScenes(runtime, config).InitializeTeam(runtime.CaptureToRectArea());
+            _combatScenesRuntime = runtime;
             if (!_combatScenes.CheckTeamInitialized())
             {
                 Logger.LogError("队伍角色识别失败");
@@ -87,12 +107,14 @@ public class RunnerContext : Singleton<RunnerContext>
     /// <summary>
     /// 尝试静默识别当前队伍信息（无副作用，不出错）
     /// </summary>
-    public CombatScenes? TrySyncCombatScenesSilent()
+    /// <param name="runtime">截图所用的运行环境</param>
+    /// <param name="config">配置根</param>
+    public CombatScenes? TrySyncCombatScenesSilent(GameRuntime runtime, AllConfig config)
     {
         try
         {
-            using var region = CaptureToRectArea();
-            var scenes = new CombatScenes(logger: Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance).InitializeTeamSilent(region);
+            using var region = runtime.CaptureToRectArea();
+            var scenes = new CombatScenes(runtime, config, logger: Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance).InitializeTeamSilent(region);
             if (scenes.CheckTeamInitialized())
             {
                 return scenes;
@@ -109,6 +131,7 @@ public class RunnerContext : Singleton<RunnerContext>
     public void ClearCombatScenes()
     {
         _combatScenes = null;
+        _combatScenesRuntime = null;
     }
 
     /// <summary>

@@ -11,7 +11,7 @@ namespace BetterGenshinImpact.GameTask.Runtime;
 public interface IGameWindow : IDisposable
 {
     /// <summary>
-    /// 顶层窗口句柄。用于截图、遮罩定位，兼容 TaskContext.GameHandle
+    /// 顶层窗口句柄。用于截图、遮罩定位与焦点恢复
     /// </summary>
     nint Handle { get; }
 

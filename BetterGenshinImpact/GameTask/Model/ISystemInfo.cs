@@ -46,5 +46,10 @@ namespace BetterGenshinImpact.GameTask.Model
         public Rect ScaleMax1080PCaptureRect { get; set; }
 
         public DesktopRegion DesktopRectArea { get; }
+
+        /// <summary>
+        /// 输入坐标缩放比例（绑定时的显示器缩放快照）。Win32 为显示器缩放，网页版固定为 1
+        /// </summary>
+        public float DpiScale { get; }
     }
 }

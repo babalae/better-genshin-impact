@@ -11,7 +11,16 @@ namespace BetterGenshinImpact.ViewModel.Pages.View;
 
 public partial class PathingConfigViewModel : ObservableObject, IViewModel
 {
-    public AllConfig Config { get; } = TaskContext.Instance().Config;
+    public AllConfig Config { get; }
+
+    /// <summary>
+    /// 创建地图追踪设置 ViewModel（DI 单例）
+    /// </summary>
+    /// <param name="config">配置根（DI 注入）</param>
+    public PathingConfigViewModel(AllConfig config)
+    {
+        Config = config;
+    }
 
     [ObservableProperty]
     private ObservableCollection<KeyValuePair<RecoverTiming, string>> _recoverTimingSource = new()
@@ -57,6 +66,6 @@ public partial class PathingConfigViewModel : ObservableObject, IViewModel
     [RelayCommand]
     private void OnClosing(CancelEventArgs e)
     {
-        TaskContext.Instance().Config.OnAnyChangedAction?.Invoke();
+        Config.OnAnyChangedAction?.Invoke();
     }
 }

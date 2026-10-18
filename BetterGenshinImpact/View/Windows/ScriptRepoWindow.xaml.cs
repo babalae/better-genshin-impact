@@ -4,6 +4,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Helpers.Win32;
+using BetterGenshinImpact.Service;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Meziantou.Framework.Win32;
@@ -58,7 +59,8 @@ public partial class ScriptRepoWindow
     [ObservableProperty] private bool _isProgressIndeterminate;
     [ObservableProperty] private int _updateProgressValue;
     [ObservableProperty] private string _updateProgressText = "准备更新，请耐心等待...";
-    [ObservableProperty] private ScriptConfig _config = TaskContext.Instance().Config.ScriptConfig;
+    // 窗口由调用方直接 new，没有注入入口，暂时读配置根（见 task-context-removal.md 第 5 节）
+    [ObservableProperty] private ScriptConfig _config = ConfigService.Config!.ScriptConfig;
 
     // Git 凭据相关属性
     private const string GitCredentialAppName = "BetterGenshinImpact.GitCredentials";
@@ -348,7 +350,7 @@ public partial class ScriptRepoWindow
         var shouldContinue = await CheckAndPromptRepoUpdate();
         if (shouldContinue)
         {
-            TaskContext.Instance().Config.ScriptConfig.ScriptRepoHintDotVisible = false;
+            Config.ScriptRepoHintDotVisible = false;
             ScriptRepoUpdater.Instance.OpenLocalRepoInWebView();
             Close();
         }

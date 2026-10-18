@@ -484,7 +484,8 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
         try
         {
             // 冻结当前业务配置，以免后台导入期间其他页面修改配置导致不同节点取值不一致。
-            var config = System.Text.Json.JsonSerializer.Deserialize<AllConfig>(System.Text.Json.JsonSerializer.Serialize(TaskContext.Instance().Config, ConfigService.JsonOptions), ConfigService.JsonOptions)!;
+            // 构造函数由测试直接调用，不增加配置参数，暂时读配置根（见 task-context-removal.md 第 5 节）
+            var config = System.Text.Json.JsonSerializer.Deserialize<AllConfig>(System.Text.Json.JsonSerializer.Serialize(ConfigService.Config!, ConfigService.JsonOptions), ConfigService.JsonOptions)!;
             result = await Task.Run(() => new PuloniaTaskLegacyImporter(_service.Definitions, _catalog).PrepareAsync(picker.FileNames, config));
             var preview = new PuloniaOneDragonImportDialog(result) { Owner = Application.Current.MainWindow };
             if (preview.ShowDialog() != true || result.Plans.Count == 0) return;

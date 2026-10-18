@@ -22,7 +22,8 @@ public static class PictureInPictureService
         }
 
         Mat? copy = null;
-        if (TaskContext.Instance().Config.AutoSkipConfig.PictureInPictureSourceType == nameof(PictureSourceType.TriggerDispatcher))
+        // 静态服务没有创建方可以传参，暂时读配置根（见 task-context-removal.md 第 5 节）
+        if (ConfigService.Config!.AutoSkipConfig.PictureInPictureSourceType == nameof(PictureSourceType.TriggerDispatcher))
         {
             copy = frame.Clone();
         }

@@ -14,14 +14,6 @@ public partial class AutoFightViewModel : ObservableObject, IViewModel
 {
     public AllConfig Config { get; set; }
 
-    public AutoFightViewModel()
-    {
-        Config = TaskContext.Instance().Config;
-        _strategyList = LoadCustomScript(Global.Absolute(@"User\AutoGeniusInvokation"));
-        _combatStrategyList = BuildCombatStrategyList();
-        _combatStrategyListWithoutCombo = BuildCombatStrategyListWithoutCombo();
-    }
-
     public AutoFightViewModel(AllConfig config)
     {
         Config = config;

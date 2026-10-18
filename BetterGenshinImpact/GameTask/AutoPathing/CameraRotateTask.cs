@@ -4,14 +4,26 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Runtime;
 using Microsoft.Extensions.Logging;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoPathing;
 
-public class CameraRotateTask(CancellationToken ct)
+/// <summary>
+/// 转动视角到目标角度
+/// </summary>
+/// <param name="runtime">本次运行使用的运行环境</param>
+/// <param name="ct">取消令牌</param>
+public class CameraRotateTask(GameRuntime runtime, CancellationToken ct)
 {
-    private readonly double _dpi = TaskContext.Instance().DpiScale;
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime = runtime;
+
+    private readonly double _dpi = runtime.SystemInfo.DpiScale;
 
     /// <summary>
     /// 向目标角度旋转
@@ -62,7 +74,7 @@ public class CameraRotateTask(CancellationToken ct)
         int count = 0;
         while (!ct.IsCancellationRequested)
         {
-            using var screen = CaptureToRectArea();
+            using var screen = _runtime.CaptureToRectArea();
             if (Math.Abs(RotateToApproach(targetOrientation, screen)) < maxDiff)
             {
                 isSuccessful = true;
@@ -75,7 +87,7 @@ public class CameraRotateTask(CancellationToken ct)
                 break;
             }
 
-            await Delay(50, ct);
+            await _runtime.Delay(50, ct);
             count++;
         }
         return isSuccessful;

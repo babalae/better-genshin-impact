@@ -1,7 +1,9 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Job;
@@ -9,6 +11,7 @@ using BetterGenshinImpact.GameTask.GetGridIcons;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
@@ -29,16 +32,28 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
 {
     public string Name => "自动吃药";
 
+    /// <summary>
+    /// 本次运行使用的运行环境，截图、等待与遮罩清理都只使用它
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
     private readonly AutoEatParam _taskParam;
     private readonly AutoEatConfig _config;
     private readonly ILogger _logger = App.GetLogger<AutoEatTask>();
     private IInputChannel _input => InputHub.Foreground;
     private CancellationToken _ct;
 
-    public AutoEatTask(AutoEatParam taskParam)
+    /// <summary>
+    /// 创建自动吃药任务
+    /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    /// <param name="config">配置根</param>
+    /// <param name="taskParam">任务参数</param>
+    public AutoEatTask(GameRuntime runtime, AllConfig config, AutoEatParam taskParam) : base(runtime.SystemInfo)
     {
+        _runtime = runtime;
         _taskParam = taskParam;
-        _config = TaskContext.Instance().Config.AutoEatConfig;
+        _config = config.AutoEatConfig;
     }
 
     async Task ISoloTask.Start(CancellationToken ct)
@@ -80,14 +95,14 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
         else
         {
             _logger.LogInformation("打开背包寻找{name}……", _taskParam.FoodName);
-            await new ReturnMainUiTask().Start(ct);
-            await AutoArtifactSalvageTask.OpenInventory(GridScreenName.Food, _input, _logger, _ct);
+            await new ReturnMainUiTask(_runtime).Start(ct);
+            await AutoArtifactSalvageTask.OpenInventory(_runtime, GridScreenName.Food, _input, _logger, _ct);
 
             using IItemIconRecognizer iconRecognizer = ItemIconRecognizerFactory.CreateConfigured();
 
-            GridScreen gridScreen = new GridScreen(GridParams.Templates[GridScreenName.Food], _logger, _ct);
+            GridScreen gridScreen = new GridScreen(_runtime, GridParams.Templates[GridScreenName.Food], _logger, _ct);
             gridScreen.OnAfterTurnToNewPage += GridScreen.DrawItemsAfterTurnToNewPage;
-            gridScreen.OnBeforeScroll += () => TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
+            gridScreen.OnBeforeScroll += () => _runtime.MaskWindowDrawingBoard.ClearAll();
             int? count = null;
             try
             {
@@ -115,9 +130,9 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
                         }
                         #endregion
 
-                        await Delay(300, ct);
+                        await _runtime.Delay(300, ct);
                         // 点击确定
-                        using var ra0 = CaptureToRectArea();
+                        using var ra0 = _runtime.CaptureToRectArea();
                         using var ra = ra0.Find(ElementRecognition.Get("BtnWhiteConfirm", ra0));
                         if (ra.IsExist())
                         {
@@ -130,14 +145,14 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
             }
             finally
             {
-                TaskContext.Instance().Runtime?.MaskWindowDrawingBoard.ClearAll();
+                _runtime.MaskWindowDrawingBoard.ClearAll();
             }
             if (count == null)
             {
                 count = -1;
                 _logger.LogInformation("没有找到{name}", _taskParam.FoodName);
             }
-            await new ReturnMainUiTask().Start(ct);
+            await new ReturnMainUiTask(_runtime).Start(ct);
 
             return count;
         }
@@ -161,7 +176,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
             try
             {
                 // 检测当前角色是否红血
-                using var capture = CaptureToRectArea();
+                using var capture = _runtime.CaptureToRectArea();
                 if (Bv.CurrentAvatarIsLowHp(capture))
                 {
                     var now = DateTime.Now;
@@ -176,7 +191,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
                     }
                 }
 
-                await Delay(_config.CheckInterval, _ct);
+                await _runtime.Delay(_config.CheckInterval, _ct);
             }
             catch (OperationCanceledException)
             {
@@ -186,7 +201,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
             catch (Exception e)
             {
                 _logger.LogDebug(e, "自动吃药检测时发生异常");
-                await Delay(1000, _ct); // 异常时稍作等待
+                await _runtime.Delay(1000, _ct); // 异常时稍作等待
             }
         }
     }
@@ -199,9 +214,9 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
         try
         {
             // 获取图像
-            using var ra = CaptureToRectArea();
+            using var ra = _runtime.CaptureToRectArea();
             // 识别道具图标下是否是数字
-            var s = TaskContext.Instance().SystemInfo.AssetScale;
+            var s = AssetScale;
             var countArea = ra.DeriveCrop(1800 * s, 845 * s, 40 * s, 20 * s);
             var count = OcrFactory.Paddle.OcrWithoutDetector(countArea.CacheGreyMat);
             return int.TryParse(count, out _);

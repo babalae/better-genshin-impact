@@ -1,6 +1,8 @@
 ﻿using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service;
 using Microsoft.Extensions.Logging;
@@ -32,12 +34,27 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
     private DateTime _lastUpdateTime = DateTime.MinValue;
 
     private CombatScenes? _currentCombatScenes;
+
+    /// <summary>
+    /// 识别 <see cref="_currentCombatScenes"/> 时所用的运行环境。换了运行环境时上次的识别结果作废
+    /// </summary>
+    private GameRuntime? _currentCombatScenesRuntime;
+
     private Avatar? _lastMacroAvatar;
+
+    /// <summary>
+    /// 配置根。热键单例没有创建方可以传配置，暂时读配置根（见 task-context-removal.md 第 5 节）
+    /// </summary>
+    private static AllConfig Config => ConfigService.Config!;
     private readonly object _pressedKeysLock = new();
     private readonly HashSet<string> _pressedKeys = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _pressedMouseKeys = new(StringComparer.OrdinalIgnoreCase);
 
-    public void KeyDown()
+    /// <summary>
+    /// 热键按下：按配置的触发模式启动或停止一键宏
+    /// </summary>
+    /// <param name="runtime">热键触发时的运行环境，宏的截图与按键都在这个运行环境里执行</param>
+    public void KeyDown(GameRuntime runtime)
     {
         if (_isKeyDown || !IsEnabled())
         {
@@ -45,10 +62,10 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         }
 
         _isKeyDown = true;
-        if (_activeMacroPriority != TaskContext.Instance().Config.MacroConfig.CombatMacroPriority ||
+        if (_activeMacroPriority != Config.MacroConfig.CombatMacroPriority ||
             IsAvatarMacrosEdited())
         {
-            _activeMacroPriority = TaskContext.Instance().Config.MacroConfig.CombatMacroPriority;
+            _activeMacroPriority = Config.MacroConfig.CombatMacroPriority;
             _avatarMacros = LoadAvatarMacros();
             Logger.LogInformation("加载一键宏配置完成");
         }
@@ -57,8 +74,8 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         {
             if (_cts == null || _cts.Token.IsCancellationRequested)
             {
-                _cts = new CancellationTokenSource();
-                _fightTask = FightTask(_cts.Token, IsHoldOnMode());
+                _cts = CreateMacroCts(runtime);
+                _fightTask = FightTask(runtime, _cts.Token, IsHoldOnMode());
                 if (!_fightTask.IsCompleted)
                 {
                     _fightTask.Start();
@@ -69,8 +86,8 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         {
             if (_cts == null || _cts.Token.IsCancellationRequested)
             {
-                _cts = new CancellationTokenSource();
-                _fightTask = FightTask(_cts.Token, false);
+                _cts = CreateMacroCts(runtime);
+                _fightTask = FightTask(runtime, _cts.Token, false);
                 if (!_fightTask.IsCompleted)
                 {
                     _fightTask.Start();
@@ -134,12 +151,33 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
     // }
 
     /// <summary>
+    /// 为一次宏执行创建取消源：松开热键时手动取消，运行环境停止时自动取消。
+    /// 上一个取消源此时已经取消，释放它以注销在运行环境停止令牌上的回调
+    /// </summary>
+    /// <param name="runtime">本次宏所在的运行环境</param>
+    private CancellationTokenSource CreateMacroCts(GameRuntime runtime)
+    {
+        _cts?.Dispose();
+        return CancellationTokenSource.CreateLinkedTokenSource(runtime.Stopping);
+    }
+
+    /// <summary>
     /// 循环执行战斗宏
     /// </summary>
-    private Task FightTask(CancellationToken ct, bool releasePressedKeysOnStop)
+    /// <param name="runtime">截图与识别所用的运行环境</param>
+    /// <param name="ct">取消令牌</param>
+    /// <param name="releasePressedKeysOnStop">停止时是否释放宏内按下的键</param>
+    private Task FightTask(GameRuntime runtime, CancellationToken ct, bool releasePressedKeysOnStop)
     {
-        var imageRegion = CaptureToRectArea();
-        var combatScenes = new CombatScenes().InitializeTeam(imageRegion);
+        if (!ReferenceEquals(_currentCombatScenesRuntime, runtime))
+        {
+            // 上次的识别结果属于另一个运行环境，不能沿用
+            _currentCombatScenes = null;
+            _currentCombatScenesRuntime = null;
+        }
+
+        var imageRegion = runtime.CaptureToRectArea();
+        var combatScenes = new CombatScenes(runtime, Config).InitializeTeam(imageRegion);
         if (!combatScenes.CheckTeamInitialized())
         {
             if (_currentCombatScenes == null)
@@ -155,6 +193,7 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
         else
         {
             _currentCombatScenes = combatScenes;
+            _currentCombatScenesRuntime = runtime;
         }
 
         // 找到出战角色
@@ -305,22 +344,22 @@ public class OneKeyFightTask : Singleton<OneKeyFightTask>
 
     public static bool IsEnabled()
     {
-        return TaskContext.Instance().Config.MacroConfig.CombatMacroEnabled;
+        return Config.MacroConfig.CombatMacroEnabled;
     }
 
     public static bool IsHoldOnMode()
     {
-        return TaskContext.Instance().Config.MacroConfig.CombatMacroHotkeyMode == HoldOnMode;
+        return Config.MacroConfig.CombatMacroHotkeyMode == HoldOnMode;
     }
 
     public static bool IsHoldFinishMode()
     {
-        return TaskContext.Instance().Config.MacroConfig.CombatMacroHotkeyMode == HoldFinishMode;
+        return Config.MacroConfig.CombatMacroHotkeyMode == HoldFinishMode;
     }
 
     public static bool IsTickMode()
     {
-        return TaskContext.Instance().Config.MacroConfig.CombatMacroHotkeyMode == TickMode;
+        return Config.MacroConfig.CombatMacroHotkeyMode == TickMode;
     }
 
     /// 新一键宏执行指令时记录按下状态，便于停止时释放未抬起的键。

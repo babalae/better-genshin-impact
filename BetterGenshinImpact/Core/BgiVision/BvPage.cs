@@ -9,6 +9,7 @@ using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 
@@ -18,6 +19,16 @@ public class BvPage
 {
     private static readonly ILogger Logger = App.GetLogger<BvPage>();
     private readonly CancellationToken _cancellationToken;
+
+    /// <summary>
+    /// 本页面绑定的运行环境，截图、等待与点击都作用在它上面
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 本页面绑定的运行环境（供 BvFlow 等同目录组件使用）
+    /// </summary>
+    internal GameRuntime Runtime => _runtime;
 
     public IKeyboardInput Keyboard => InputHub.Foreground.Keyboard;
 
@@ -33,8 +44,14 @@ public class BvPage
     /// </summary>
     public int DefaultRetryInterval { get; set; } = 1000;
 
-    public BvPage(CancellationToken cancellationToken = default)
+    /// <summary>
+    /// 创建绑定到指定运行环境的页面对象
+    /// </summary>
+    /// <param name="runtime">运行环境</param>
+    /// <param name="cancellationToken">取消令牌</param>
+    public BvPage(GameRuntime runtime, CancellationToken cancellationToken = default)
     {
+        _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
         _cancellationToken = cancellationToken;
     }
 
@@ -49,7 +66,7 @@ public class BvPage
     /// <returns></returns>
     public ImageRegion Screenshot()
     {
-        return TaskControl.CaptureToRectArea();
+        return _runtime.CaptureToRectArea();
     }
 
     /// <summary>
@@ -59,7 +76,7 @@ public class BvPage
     /// <returns></returns>
     public async Task<BvPage> Wait(int milliseconds)
     {
-        await TaskControl.Delay(milliseconds, _cancellationToken);
+        await _runtime.Delay(milliseconds, _cancellationToken);
         return this;
     }
 
@@ -78,7 +95,7 @@ public class BvPage
     /// <returns></returns>
     public BvLocator Locator(BvImage image)
     {
-        return new BvLocator(image.ToRecognitionObject(), _cancellationToken);
+        return new BvLocator(_runtime, image.ToRecognitionObject(), _cancellationToken);
     }
 
     /// <summary>
@@ -105,7 +122,7 @@ public class BvPage
     /// <returns></returns>
     public BvLocator Locator(RecognitionObject ro)
     {
-        return new BvLocator(ro, _cancellationToken);
+        return new BvLocator(_runtime, ro, _cancellationToken);
     }
 
     public BvLocator GetByText(string text = "", Rect rect = default)
@@ -122,7 +139,7 @@ public class BvPage
         }
 
         matchTexts = matchTexts.Distinct(StringComparer.Ordinal).ToList();
-        return new BvLocator(new RecognitionObject
+        return new BvLocator(_runtime, new RecognitionObject
         {
             RecognitionType = RecognitionTypes.Ocr,
             RegionOfInterest = rect
@@ -148,7 +165,7 @@ public class BvPage
     /// <param name="y"></param>
     public void Click(double x, double y)
     {
-        GameCaptureRegion.GameRegion1080PPosClick(x, y);
+        _runtime.GameRegion1080PPosClick(x, y);
     }
 
     internal static List<T> ParseCollection<T>(object values, string paramName)

@@ -1,10 +1,17 @@
-﻿using BetterGenshinImpact.GameTask.AutoFight.Script;
+﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.AutoFight.Script;
+using BetterGenshinImpact.Service;
 using System.Collections.Generic;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Model;
 
 public class AvatarMacro
 {
+    /// <summary>
+    /// 配置根。本类由 avatar_macro.json 反序列化得到，没有创建方可以传配置，暂时读配置根（见 task-context-removal.md 第 5 节）
+    /// </summary>
+    private static AllConfig Config => ConfigService.Config!;
+
     public string Name { get; set; } = string.Empty;
     public string ScriptContent1 { get; set; } = string.Empty;
     public string ScriptContent2 { get; set; } = string.Empty;
@@ -49,7 +56,7 @@ public class AvatarMacro
 
         // 如果角色设置了自己的宏优先级，使用角色的；否则使用全局配置
         var priority = MacroPriority > 0 ? MacroPriority :
-                      TaskContext.Instance().Config.MacroConfig.CombatMacroPriority;
+                      Config.MacroConfig.CombatMacroPriority;
 
         // 确保最终优先级在有效范围内
         if (priority < 1 || priority > 5)

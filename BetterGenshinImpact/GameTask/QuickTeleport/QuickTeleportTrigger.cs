@@ -12,13 +12,14 @@ using System;
 using System.Linq;
 using System.Windows.Forms;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Runtime;
 
 namespace BetterGenshinImpact.GameTask.QuickTeleport;
 
 internal class QuickTeleportTrigger : ITaskTrigger
 {
     public string Name => "快速传送";
-    public bool IsEnabledByConfig => _config.Enabled;
+    public bool IsEnabledByConfig => _teleportConfig.Enabled;
     public int Priority => 21;
     public bool IsExclusive { get; set; }
 
@@ -31,13 +32,33 @@ internal class QuickTeleportTrigger : ITaskTrigger
     // private DateTime _prevClickTeleportButtonTime = DateTime.MinValue;
     private DateTime _prevExecute = DateTime.MinValue;
 
-    private readonly QuickTeleportConfig _config;
+    /// <summary>
+    /// 本触发器所属的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 配置根
+    /// </summary>
+    private readonly AllConfig _config;
+
+    /// <summary>
+    /// 快速传送配置
+    /// </summary>
+    private readonly QuickTeleportConfig _teleportConfig;
     private readonly HotKeyConfig _hotkeyConfig;
 
-    public QuickTeleportTrigger()
+    /// <summary>
+    /// 创建快速传送触发器
+    /// </summary>
+    /// <param name="runtime">本触发器所属的运行环境</param>
+    /// <param name="config">配置根</param>
+    public QuickTeleportTrigger(GameRuntime runtime, AllConfig config)
     {
-        _config = TaskContext.Instance().Config.QuickTeleportConfig;
-        _hotkeyConfig = TaskContext.Instance().Config.HotKeyConfig;
+        _runtime = runtime;
+        _config = config;
+        _teleportConfig = config.QuickTeleportConfig;
+        _hotkeyConfig = config.HotKeyConfig;
     }
 
     public void OnDisabled()
@@ -61,7 +82,7 @@ internal class QuickTeleportTrigger : ITaskTrigger
         IsExclusive = false;
 
         // 快捷键传送配置启用的情况下，且快捷键按下的时候激活
-        if (_config.HotkeyTpEnabled && !string.IsNullOrEmpty(_hotkeyConfig.QuickTeleportTickHotkey))
+        if (_teleportConfig.HotkeyTpEnabled && !string.IsNullOrEmpty(_hotkeyConfig.QuickTeleportTickHotkey))
         {
             if (!IsHotkeyPressed())
             {
@@ -98,8 +119,9 @@ internal class QuickTeleportTrigger : ITaskTrigger
                 var hasMapChooseIcon = CheckMapChooseIcon(content);
                 if (hasMapChooseIcon)
                 {
-                    TaskControl.Sleep(_config.WaitTeleportPanelDelay);
-                    CheckTeleportButton(TaskControl.CaptureToRectArea(forceNew: true));
+                    _runtime.Sleep(_teleportConfig.WaitTeleportPanelDelay);
+                    using var teleportPanelRegion = _runtime.CaptureToRectArea();
+                    CheckTeleportButton(teleportPanelRegion);
                 }
             }
         }
@@ -130,7 +152,7 @@ internal class QuickTeleportTrigger : ITaskTrigger
     private bool CheckMapChooseIcon(CaptureContent content)
     {
         var hasMapChooseIcon = false;
-        var isHdrCapture = TaskContext.Instance().Config.CaptureMode == nameof(CaptureModes.WindowsGraphicsCaptureHdr);
+        var isHdrCapture = _config.CaptureMode == nameof(CaptureModes.WindowsGraphicsCaptureHdr);
 
         // 全匹配一遍
         var assets = _assets ?? QuickTeleportAssets.Get(content.CaptureRectArea);
@@ -165,7 +187,7 @@ internal class QuickTeleportTrigger : ITaskTrigger
                 }
 
                 _prevClickOptionButtonTime = DateTime.Now;
-                TaskControl.Sleep(_config.TeleportListClickDelay);
+                _runtime.Sleep(_teleportConfig.TeleportListClickDelay);
                 ra.Click();
                 hasMapChooseIcon = true;
                 break;

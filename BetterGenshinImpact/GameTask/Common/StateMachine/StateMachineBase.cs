@@ -1,4 +1,5 @@
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -175,7 +176,21 @@ public abstract class StateMachineBase<TState, TContext> where TState : struct, 
     /// </summary>
     protected abstract ILogger Logger { get; }
 
+    /// <summary>
+    /// 状态机所属的运行环境，状态检测截图与循环等待都只使用它
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
     protected CancellationToken _ct;
+
+    /// <summary>
+    /// 创建绑定到指定运行环境的状态机
+    /// </summary>
+    /// <param name="runtime">运行环境</param>
+    protected StateMachineBase(GameRuntime runtime)
+    {
+        _runtime = runtime;
+    }
 
     /// <summary>
     /// 当前状态
@@ -776,7 +791,7 @@ public abstract class StateMachineBase<TState, TContext> where TState : struct, 
                 Logger.LogWarning("状态 {State} 无注册处理器，跳过", CurrentState);
             }
 
-            await Delay(nextLoopInterval, _ct);
+            await _runtime.Delay(nextLoopInterval, _ct);
         }
 
         Logger.LogError("状态机达到最大迭代次数 {Max}，目标状态：{Targets}，当前状态：{State}",
@@ -831,7 +846,7 @@ public abstract class StateMachineBase<TState, TContext> where TState : struct, 
     /// <returns>检测到的状态，如果都不匹配返回 default</returns>
     protected TState DetectCurrentState()
     {
-        using var ra = CaptureToRectArea();
+        using var ra = _runtime.CaptureToRectArea();
         foreach (var (state, detector) in _stateDetectors)
         {
             if (detector(ra))
@@ -851,7 +866,7 @@ public abstract class StateMachineBase<TState, TContext> where TState : struct, 
     /// <returns>检测到的状态，如果不在候选列表中则返回 default</returns>
     protected TState DetectStateAmong(TState[] candidateStates)
     {
-        using var ra = CaptureToRectArea();
+        using var ra = _runtime.CaptureToRectArea();
         foreach (var state in candidateStates)
         {
             if (_stateDetectors.TryGetValue(state, out var detector) && detector(ra))
@@ -936,7 +951,7 @@ public abstract class StateMachineBase<TState, TContext> where TState : struct, 
                 sourceVisibleStopwatch.Restart();
             }
 
-            await Delay(DefaultDetectionInterval, _ct);
+            await _runtime.Delay(DefaultDetectionInterval, _ct);
         }
 
         if (sourceVisibleStopwatch.ElapsedMilliseconds >= timeout)

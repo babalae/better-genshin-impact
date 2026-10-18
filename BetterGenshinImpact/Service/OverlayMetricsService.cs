@@ -1,5 +1,5 @@
 using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Platform.Wine;
 using BetterGenshinImpact.Service.Interface;
 using LibreHardwareMonitor.Hardware;
@@ -47,6 +47,11 @@ public sealed class OverlayMetricsService : IDisposable
     private double? _bgiCpuPercent;
     private TimeSpan _lastBgiCpuTime;
     private DateTime _lastBgiCpuSampleTime = DateTime.MinValue;
+
+    /// <summary>
+    /// 当前运行环境的游戏窗口，由调度器上报；截图器未启动时为 null
+    /// </summary>
+    private IGameWindow? _gameWindow;
 
     private long _skippedTicks;
     private long _lastPublishedSkippedTicks;
@@ -403,11 +408,21 @@ public sealed class OverlayMetricsService : IDisposable
         }
     }
 
-    private static int? TryGetGameProcessId()
+    /// <summary>
+    /// 上报当前运行环境的游戏窗口，由调度器在开始与停止调度时调用；截图器停止时传 null。
+    /// 本服务不能注入 GameRuntimeService：它是调度器的构造参数，反向依赖会形成 DI 环
+    /// </summary>
+    /// <param name="window">游戏窗口，截图器停止时为 null</param>
+    public void SetGameWindow(IGameWindow? window)
+    {
+        Volatile.Write(ref _gameWindow, window);
+    }
+
+    private int? TryGetGameProcessId()
     {
         try
         {
-            var window = TaskContext.Instance().Runtime?.Window;
+            var window = Volatile.Read(ref _gameWindow);
             if (window is not { IsAlive: true })
             {
                 return null;

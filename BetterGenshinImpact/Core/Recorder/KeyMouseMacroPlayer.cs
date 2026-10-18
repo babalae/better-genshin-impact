@@ -3,6 +3,7 @@ using BetterGenshinImpact.Core.Recorder.Model;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Map;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using System;
@@ -19,17 +20,19 @@ namespace BetterGenshinImpact.Core.Recorder;
 
 public class KeyMouseMacroPlayer
 {
-    public static async Task PlayMacro(string macro, CancellationToken ct, bool withDelay = true)
+    /// <summary>
+    /// 反序列化并重放键鼠宏。是否已经启动截图器由调用方检查（拿到 runtime 即表示已绑定）
+    /// </summary>
+    /// <param name="runtime">重放所作用的运行环境，用于分辨率适配、激活窗口与视角校正截图</param>
+    /// <param name="macro">键鼠宏 JSON</param>
+    /// <param name="ct">取消令牌</param>
+    /// <param name="withDelay">是否在开始前倒计时 3 秒</param>
+    public static async Task PlayMacro(GameRuntime runtime, string macro, CancellationToken ct, bool withDelay = true)
     {
-        if (!TaskContext.Instance().IsInitialized)
-        {
-            Toast.Warning("请先在启动页，启动截图器再使用本功能");
-            return;
-        }
-
         var script = JsonSerializer.Deserialize<KeyMouseScript>(macro, KeyMouseRecorder.JsonOptions) ?? throw new Exception("Failed to deserialize macro");
-        script.Adapt(TaskContext.Instance().SystemInfo.CaptureAreaRect, TaskContext.Instance().DpiScale);
-        SystemControl.ActivateWindow();
+        // 按本运行环境的截图区域与 DPI 适配录制时的坐标
+        script.Adapt(runtime.SystemInfo.CaptureAreaRect, runtime.SystemInfo.DpiScale);
+        runtime.Window.Activate();
 
         if (withDelay)
         {
@@ -42,10 +45,16 @@ public class KeyMouseMacroPlayer
             TaskControl.Logger.LogInformation("开始重放");
         }
 
-        await PlayMacro(script.MacroEvents, ct);
+        await PlayMacro(runtime, script.MacroEvents, ct);
     }
 
-    public static async Task PlayMacro(List<MacroEvent> macroEvents, CancellationToken ct)
+    /// <summary>
+    /// 按时间轴重放已适配分辨率的键鼠事件
+    /// </summary>
+    /// <param name="runtime">重放所作用的运行环境，视角校正时从它截图</param>
+    /// <param name="macroEvents">键鼠事件列表</param>
+    /// <param name="ct">取消令牌</param>
+    public static async Task PlayMacro(GameRuntime runtime, List<MacroEvent> macroEvents, CancellationToken ct)
     {
         WorkingArea = PrimaryScreen.WorkingArea;
         var startTime = DateTime.UtcNow;
@@ -162,7 +171,7 @@ public class KeyMouseMacroPlayer
                 case MacroEventType.MouseMoveBy:
                     if (e.CameraOrientation != null)
                     {
-                        using var capture = TaskControl.CaptureToRectArea();
+                        using var capture = runtime.CaptureToRectArea();
                         var cao = CameraOrientation.Compute(capture.SrcMat);
                         var diff = ((int)Math.Round(cao) - (int)e.CameraOrientation + 180) % 360 - 180;
                         diff += diff < -180 ? 360 : 0;

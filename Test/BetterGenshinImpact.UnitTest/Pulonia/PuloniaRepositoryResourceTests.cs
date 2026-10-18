@@ -1,5 +1,8 @@
 using System.Text;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.Dependence;
+using BetterGenshinImpact.UnitTest.GameTaskTests;
+using Vanara.PInvoke;
 using BetterGenshinImpact.Core.Script.Repositories;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
@@ -224,7 +227,8 @@ public sealed class PuloniaRepositoryResourceTests : IDisposable
         var restored = await store.MaterializeAsync(reference, "javascript");
         Assert.Equal("// 初始版本", File.ReadAllText(Path.Combine(restored, "main.js")));
         using var context = new ScriptRepositoryResourceContext(await store.OpenApprovedAsync(reference));
-        var host = new AutoPathingScript(restored, null, CancellationToken.None, context);
+        var host = new AutoPathingScript(TestGameRuntime.Create(new FakeSystemInfo(new RECT(0, 0, 1920, 1080), 1)), new AllConfig(),
+            restored, null, CancellationToken.None, context);
         Assert.Equal("{\"route\":1}", host.ReadTextSync("路线.json"));
         Assert.True(host.IsFile("路线.json"));
         Assert.True(host.IsFolder("子目录"));

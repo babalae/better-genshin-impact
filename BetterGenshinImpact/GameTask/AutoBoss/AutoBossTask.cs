@@ -17,6 +17,7 @@ using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Common.Reward;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Notification;
 using Microsoft.Extensions.Logging;
@@ -43,12 +44,23 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     public string Name => "自动首领讨伐";
 
     private readonly ILogger<AutoBossTask> _logger = App.GetLogger<AutoBossTask>();
+
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 配置根，由创建方传入
+    /// </summary>
+    private readonly AllConfig _config;
+
     private readonly AutoBossParam _taskParam;
     /// <summary>Pulonia 显式传入的战斗检测配置；原入口为空时保留原全局行为。</summary>
     private readonly AutoFightConfig? _fightConfig;
     private readonly CombatScriptBag? _combatScriptBag;
     private readonly string? _jsonCombatStrategyPath;
-    private readonly ReturnMainUiTask _returnMainUiTask = new();
+    private readonly ReturnMainUiTask _returnMainUiTask;
     private readonly Dictionary<string, int> _rewardSummary = new();
     private SwitchPartyTask? _switchPartyTask;
     private CancellationToken _ct;
@@ -59,20 +71,36 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
 
     private string PathingAssetFolder => Global.Absolute(@"GameTask\AutoBoss\Assets\Pathing");
 
-    private double AssetScale => TaskContext.Instance().SystemInfo.AssetScale;
+    /// <summary>
+    /// 本运行环境的素材缩放比例
+    /// </summary>
+    private double AssetScale => _runtime.SystemInfo.AssetScale;
 
-    private static RecognitionObject LoadRecognitionObject(string objectName)
+    /// <summary>
+    /// 按本运行环境的画面尺寸加载 AutoBoss 素材
+    /// </summary>
+    /// <param name="objectName">素材名称</param>
+    private RecognitionObject LoadRecognitionObject(string objectName)
     {
         return LoadRecognitionObject("AutoBoss", objectName);
     }
 
-    private static RecognitionObject LoadRecognitionObject(string taskName, string objectName)
+    /// <summary>
+    /// 按本运行环境的画面尺寸加载指定功能的素材
+    /// </summary>
+    /// <param name="taskName">素材所属功能</param>
+    /// <param name="objectName">素材名称</param>
+    private RecognitionObject LoadRecognitionObject(string taskName, string objectName)
     {
-        var captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
+        var captureRect = _runtime.SystemInfo.ScaleMax1080PCaptureRect;
         return RecognitionAssets.Get(taskName, objectName, captureRect.Width, captureRect.Height);
     }
 
-    private static BvLocator[] BuildBigMapLocators(BvPage page)
+    /// <summary>
+    /// 构建判断已打开大地图的定位器
+    /// </summary>
+    /// <param name="page">当前视觉定位页面</param>
+    private BvLocator[] BuildBigMapLocators(BvPage page)
     {
         return
         [
@@ -88,10 +116,15 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     /// <summary>
     /// 创建自动首领讨伐任务，并根据任务参数预解析战斗策略。
     /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境。</param>
+    /// <param name="config">配置根。</param>
     /// <param name="taskParam">自动首领讨伐参数，包含 Boss、队伍、战斗策略、讨伐次数和补充树脂开关。</param>
     /// <param name="fightConfig">可选的本次运行战斗配置，避免 Pulonia 重新读取全局业务设置。</param>
-    public AutoBossTask(AutoBossParam taskParam, AutoFightConfig? fightConfig = null)
+    public AutoBossTask(GameRuntime runtime, AllConfig config, AutoBossParam taskParam, AutoFightConfig? fightConfig = null)
     {
+        _runtime = runtime;
+        _config = config;
+        _returnMainUiTask = new ReturnMainUiTask(runtime);
         _taskParam = taskParam;
         _fightConfig = fightConfig;
         if (string.IsNullOrWhiteSpace(_taskParam.CombatStrategyPath))
@@ -139,7 +172,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
                 {
                     retryCount++;
                     _logger.LogWarning("{Name}：第 {Retry}/{MaxRetry} 次重试当前首领讨伐，原因：{Reason}", Name, retryCount, _taskParam.ReviveRetryCount, e.Message);
-                    await Delay(2000, _ct);
+                    await _runtime.Delay(2000, _ct);
                 }
                 catch (RetryException e)
                 {
@@ -210,8 +243,8 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             if (_taskParam.ReturnToStatueAfterEachRound)
             {
                 _logger.LogInformation("{Name}：返回七天神像", Name);
-                await new TpTask(_ct).TpToStatueOfTheSeven();
-                await Delay(3000, _ct);
+                await new TpTask(_runtime, _config, _ct).TpToStatueOfTheSeven();
+                await _runtime.Delay(3000, _ct);
                 shouldNavigateToBoss = true;
             }
             else
@@ -289,7 +322,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     /// </summary>
     private async Task<OriginalResinInfo> RecognizeOriginalResinInfoFromBigMap()
     {
-        var page = new BvPage(_ct);
+        var page = new BvPage(_runtime, _ct);
         //树脂图标
         var resinIconLocator = page
             .Locator(LoadRecognitionObject("OriginalResinTopIcon"))
@@ -298,7 +331,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         await page.Flow()
             .Do((Action)(() =>
             {
-                using var capture = CaptureToRectArea();
+                using var capture = _runtime.CaptureToRectArea();
                 if (!Bv.IsInBigMapUi(capture))
                 {
                     InputHub.Foreground.SimulateAction(GIActions.OpenMap);
@@ -314,7 +347,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         var detailRect = new Rect(resinIconRegion.Left - 13, resinIconRegion.Bottom + 29, 220, 150);
         
         //根据弹窗位置 OCR 出当前树脂上限和全部恢复时间，反推当前原粹树脂
-        using var clickedCapture = CaptureToRectArea();
+        using var clickedCapture = _runtime.CaptureToRectArea();
         var resinLimit = RecognizeOriginalResinLimit(clickedCapture, resinIconRegion.Right);
         var fullRecoveryTime = RecognizeFullRecoveryTime(clickedCapture, detailRect);
         var missingResin = (int)Math.Ceiling(fullRecoveryTime.TotalSeconds / OriginalResinRecoveryInterval.TotalSeconds);
@@ -430,7 +463,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     /// </summary>
     private async Task<bool> TryUseSupplementalResinBeforeRound(OriginalResinInfo originalResin)
     {
-        var page = new BvPage(_ct);
+        var page = new BvPage(_runtime, _ct);
         var currentResin = originalResin;
         var unavailableResins = new HashSet<string>(StringComparer.Ordinal);
 
@@ -470,7 +503,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
 
                 usedAnyResin = true;
                 _logger.LogInformation("{Name}：已使用 {Quantity} 个{ResinName}补充原粹树脂", Name, usedQuantity, resin.Name);
-                await Delay(800, _ct);
+                await _runtime.Delay(800, _ct);
 
                 try
                 {
@@ -604,7 +637,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             return 0;
         }
 
-        await Delay(500, _ct);
+        await _runtime.Delay(500, _ct);
         var quickUseRegions = await page.Locator("快捷使用", ScaleRect(875, 269, 184, 63)).TryWaitFor(1500);
         if (quickUseRegions.Count > 0)
         {
@@ -695,7 +728,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         var lastQuantity = -1;
         var unchangedTimes = 0;
         var retryTimes = Math.Max(6, targetQuantity * 3);
-        var completed = await NewRetry.WaitForAction(() =>
+        var completed = await NewRetry.WaitForAction(_runtime, () =>
         {
             var quantity = TryRecognizeQuickUseQuantity();
             if (quantity == null)
@@ -778,7 +811,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         {
             var obtainRegion = (await page.Locator("获得", ScaleRect(924, 279, 74, 38)).WaitFor(5000)).First();
             obtainRegion.Click();
-            await Delay(800, _ct);
+            await _runtime.Delay(800, _ct);
             return true;
         }
         catch (TimeoutException e)
@@ -804,14 +837,14 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
 
     private string RecognizeTextWithoutDetector(Rect rect)
     {
-        using var capture = CaptureToRectArea();
+        using var capture = _runtime.CaptureToRectArea();
         using var region = capture.DeriveCrop(rect);
         return OcrFactory.Paddle.OcrWithoutDetector(region.SrcMat);
     }
 
     private string RecognizeSortedOcrText(Rect rect)
     {
-        using var capture = CaptureToRectArea();
+        using var capture = _runtime.CaptureToRectArea();
         using var region = capture.DeriveCrop(rect);
         var result = OcrFactory.Paddle.OcrResult(region.SrcMat);
         return string.Concat(result.Regions
@@ -849,7 +882,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
 
         var avatar = combatScenes.SelectAvatar(combatCommands[0].Name);
         avatar?.SwitchWithoutCts();
-        Sleep(200, _ct);
+        _runtime.Sleep(200, _ct);
         return combatCommands;
     }
 
@@ -866,13 +899,13 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         }
         else
         {
-            var combatScenes = CombatScenes.GetCombatScenesWithRetry();
+            var combatScenes = CombatScenes.GetCombatScenesWithRetry(_runtime, _config);
             FindCombatScriptAndSwitchAvatar(combatScenes);
 
             var taskParam = BuildAutoFightParamForBoss();
             try
             {
-                await new AutoFightTask(taskParam).Start(_ct);
+                await new AutoFightTask(_runtime, _config, taskParam).Start(_ct);
             }
             catch (NormalEndException e)
             {
@@ -904,7 +937,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             Timeout = _taskParam.Timeout,
         };
 
-        var jsonTask = new AutoFightJsonTask(jsonParam);
+        var jsonTask = new AutoFightJsonTask(_runtime, _config, jsonParam);
 
         try
         {
@@ -925,7 +958,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     /// </summary>
     private AutoFightParam BuildAutoFightParamForBoss()
     {
-        var taskParam = new AutoFightParam(_taskParam.CombatStrategyPath, _fightConfig ?? TaskContext.Instance().Config.AutoFightConfig)
+        var taskParam = new AutoFightParam(_taskParam.CombatStrategyPath, _fightConfig ?? _config.AutoFightConfig)
         {
             FightFinishDetectEnabled = true,
             PickDropsAfterFightEnabled = false,
@@ -1019,7 +1052,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     /// <exception cref="Exception">游戏窗口不是 16:9 时抛出。</exception>
     private void LogScreenResolution()
     {
-        var gameScreenSize = SystemControl.GetGameScreenRect(TaskContext.Instance().GameHandle);
+        var gameScreenSize = SystemControl.GetGameScreenRect(_runtime.Window.Handle);
         if (gameScreenSize.Width * 9 != gameScreenSize.Height * 16)
         {
             _logger.LogError("游戏窗口分辨率不是 16:9 ！当前分辨率为 {Width}x{Height}", gameScreenSize.Width, gameScreenSize.Height);
@@ -1046,7 +1079,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         }
 
         _logger.LogInformation("{Name}：切换队伍 {TeamName}", Name, _taskParam.TeamName);
-        _switchPartyTask ??= new SwitchPartyTask();
+        _switchPartyTask ??= new SwitchPartyTask(_runtime);
         var success = await _switchPartyTask.Start(_taskParam.TeamName, _ct);
         if (!success)
         {
@@ -1087,7 +1120,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     /// <param name="task">已经解析好的寻路任务。</param>
     private async Task RunPathingTask(PathingTask task)
     {
-        var executor = new PathExecutor(_ct)
+        var executor = new PathExecutor(_runtime, _config, _ct)
         {
             PartyConfig = BuildPathingPartyConfig()
         };
@@ -1115,7 +1148,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     {
         await _returnMainUiTask.Start(_ct);
         var json = await File.ReadAllTextAsync(BuildPathingAssetPath(fileName), _ct);
-        await KeyMouseMacroPlayer.PlayMacro(json, _ct, false);
+        await KeyMouseMacroPlayer.PlayMacro(_runtime, json, _ct, false);
     }
 
     /// <summary>
@@ -1135,7 +1168,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     private async Task NavigateToReward()
     {
         using var navigationCts = CancellationTokenSource.CreateLinkedTokenSource(_ct);
-        var page = new BvPage(navigationCts.Token);
+        var page = new BvPage(_runtime, navigationCts.Token);
 
         _logger.LogInformation("{Name}：开始寻找征讨之花", Name);
 
@@ -1227,14 +1260,14 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
                 }
             }
 
-            await Delay(300, ct);
+            await _runtime.Delay(300, ct);
         }
     }
 
     private async Task AdjustRewardCameraTask(BvPage page, CancellationTokenSource navigationCts)
     {
         var ct = navigationCts.Token;
-        var captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
+        var captureRect = _runtime.SystemInfo.ScaleMax1080PCaptureRect;
         //将图标控制在屏幕中间，大约截图宽度的45%-55%之间
         var minTargetX = captureRect.Width * 0.45;
         var maxTargetX = captureRect.Width * 0.55;
@@ -1249,7 +1282,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             {
                 _logger.LogWarning("{Name}：未找到征讨之花图标，调整视角重试", Name);
                 InputHub.Foreground.Mouse.MoveMouseBy(ScaleX(200), 0);
-                await Delay(250, ct);
+                await _runtime.Delay(250, ct);
                 continue;
             }
 
@@ -1258,9 +1291,9 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             if (icon.Y > halfHeight)
             {
                 InputHub.Foreground.Mouse.MoveMouseBy(0, (int)Math.Round(halfHeight));
-                await Delay(125, ct);
+                await _runtime.Delay(125, ct);
                 InputHub.Foreground.Mouse.MoveMouseBy((int)Math.Round(centerX), 0);
-                await Delay(125, ct);
+                await _runtime.Delay(125, ct);
                 continue;
             }
 
@@ -1269,7 +1302,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
                 InputHub.Foreground.Mouse.MoveMouseBy((int)Math.Round(icon.X - centerX), 0);
             }
 
-            await Delay(250, ct);
+            await _runtime.Delay(250, ct);
         }
     }
 
@@ -1295,9 +1328,9 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
 
                     _logger.LogInformation("{Name}：检测到攀爬状态，尝试脱离", Name);
                     InputHub.Foreground.SimulateAction(GIActions.Drop);
-                    await Delay(1000, ct);
+                    await _runtime.Delay(1000, ct);
                     InputHub.Foreground.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown);
-                    await Delay(800, ct);
+                    await _runtime.Delay(800, ct);
                     InputHub.Foreground.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
                     continue;
                 }
@@ -1308,17 +1341,17 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
                     isMovingForward = true;
                 }
 
-                await Delay(1000, ct);
+                await _runtime.Delay(1000, ct);
                 jumpCount++;
                 if (jumpCount % 2 == 0)
                 {
                     InputHub.Foreground.SimulateAction(GIActions.Jump);
-                    await Delay(100, ct);
+                    await _runtime.Delay(100, ct);
                 }
 
                 InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                 isMovingForward = false;
-                await Delay(200, ct);
+                await _runtime.Delay(200, ct);
             }
         }
         finally
@@ -1334,7 +1367,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     /// <returns>成功领取奖励并回到主界面时返回 true；原粹树脂不足或无法领取时返回 false。</returns>
     private async Task<bool> TakeReward()
     {
-        var page = new BvPage(_ct);
+        var page = new BvPage(_runtime, _ct);
 
         if (!await TryUseOriginalResinOnRewardPrompt(page))
         {
@@ -1366,7 +1399,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
 
             // 使用多页识别（自动检测是否需要翻页）
             _logger.LogInformation("{Name}：开始奖励识别", Name);
-            var rewards = RewardResultRecognizer.Instance.RecognizeMultiPage();
+            var rewards = RewardResultRecognizer.Instance.RecognizeMultiPage(_runtime);
 
             RewardResultRecognizer.MergeIntoSummary(_rewardSummary, rewards);
 
@@ -1399,7 +1432,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
                 return true;
             }
 
-            await Delay(300, _ct);
+            await _runtime.Delay(300, _ct);
         }
 
         return false;
@@ -1417,7 +1450,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         try
         {
             await page.Locator("使用原粹树脂", useRect).ClickUntilDisappears(3000);
-            await Delay(1000, _ct);
+            await _runtime.Delay(1000, _ct);
             return true;
         }
         catch (TimeoutException e)
@@ -1468,12 +1501,12 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     /// <exception cref="Exception">多次尝试后仍未回到主界面时抛出。</exception>
     private async Task CloseRewardResult()
     {
-        var page = new BvPage(_ct);
+        var page = new BvPage(_runtime, _ct);
         var closeRect = ScaleRect(850, 960, 220, 35);
 
         for (var i = 0; i < 20; i++)
         {
-            using var capture = CaptureToRectArea();
+            using var capture = _runtime.CaptureToRectArea();
             if (Bv.IsInMainUi(capture))
             {
                 return;
@@ -1490,10 +1523,10 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
                 page.Click(960, 540);
             }
 
-            await Delay(300, _ct);
+            await _runtime.Delay(300, _ct);
         }
 
-        using var finalCapture = CaptureToRectArea();
+        using var finalCapture = _runtime.CaptureToRectArea();
         if (!Bv.IsInMainUi(finalCapture))
         {
             throw new Exception("领取奖励后未成功回到主界面");
@@ -1538,7 +1571,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         };
 
         await RunPathingTask(repositionTask);
-        await Delay(4000, _ct);
+        await _runtime.Delay(4000, _ct);
     }
 
     /// <summary>

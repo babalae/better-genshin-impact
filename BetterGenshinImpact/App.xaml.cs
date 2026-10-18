@@ -75,6 +75,8 @@ public partial class App : Application
                 var configService = new ConfigService();
                 services.AddSingleton<IConfigService>(sp => configService);
                 var all = configService.Get();
+                // 只读的配置根，与 IConfigService.Get() 是同一个实例；需要保存的继续使用 IConfigService
+                services.AddSingleton(all);
 
                 var logFolder = Path.Combine(AppContext.BaseDirectory, "log");
                 Directory.CreateDirectory(logFolder);
@@ -250,6 +252,7 @@ public partial class App : Application
                 services.AddSingleton<DialogueOptionVoiceDiagnosticService>();
                 services.AddHostedService(sp => sp.GetRequiredService<DialogueOptionVoiceDiagnosticService>());
                 services.AddSingleton<TaskTriggerDispatcher>();
+                services.AddSingleton<GameScreenshotService>();
                 services.AddSingleton<TaskStopService>();
                 // 游戏运行环境：按实例类型选定 Provider，见 Docs/design/game-runtime.md
                 services.AddSingleton<Win32RuntimeProvider>();

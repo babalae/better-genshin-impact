@@ -1,9 +1,11 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 using Microsoft.Extensions.Logging;
@@ -33,9 +35,14 @@ public class AutoEatTrigger : ITaskTrigger
     
     private DateTime _prevExecute = DateTime.MinValue;
 
-    public AutoEatTrigger()
+    /// <summary>
+    /// 创建自动吃药触发器
+    /// </summary>
+    /// <param name="runtime">本次截图会话绑定的运行环境。与其他触发器统一签名；自动吃药只读取截图帧、经 InputHub 发送按键，不直接使用它</param>
+    /// <param name="config">配置根</param>
+    public AutoEatTrigger(GameRuntime runtime, AllConfig config)
     {
-        _config = TaskContext.Instance().Config.AutoEatConfig;
+        _config = config.AutoEatConfig;
     }
 
     public void OnEnabled(object? options)

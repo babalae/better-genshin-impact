@@ -2,7 +2,9 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Service;
 using Gma.System.MouseKeyHook;
 using System;
 using System.Diagnostics;
@@ -19,6 +21,11 @@ public partial class MouseKeyMonitor : IDisposable
 {
     private bool _isSubscribed;
     private bool _disposed;
+
+    /// <summary>
+    ///     配置根。由页面直接 new，没有注入入口，暂时读配置根（见 task-context-removal.md 第 5 节）
+    /// </summary>
+    private static AllConfig Config => ConfigService.Config!;
 
     /// <summary>
     ///     长按F变F连发
@@ -75,22 +82,22 @@ public partial class MouseKeyMonitor : IDisposable
     public void Subscribe(nint gameHandle)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        // 按键经 InputHub.Background 发往 TaskContext.Init 绑定的游戏窗口，gameHandle 与其相同
+        // 按键经 InputHub.Background 发往当前运行环境绑定的游戏窗口，gameHandle 与其相同
 
-        _pickUpKey = TaskContext.Instance().Config.KeyBindingsConfig.PickUpOrInteract.ToWinFormKeys();
-        _pickUpKeyCode = TaskContext.Instance().Config.KeyBindingsConfig.PickUpOrInteract.ToVK();
-        _releaseControlKey = TaskContext.Instance().Config.KeyBindingsConfig.Jump.ToWinFormKeys();
-        _releaseControlKeyCode = TaskContext.Instance().Config.KeyBindingsConfig.Jump.ToVK();
+        _pickUpKey = Config.KeyBindingsConfig.PickUpOrInteract.ToWinFormKeys();
+        _pickUpKeyCode = Config.KeyBindingsConfig.PickUpOrInteract.ToVK();
+        _releaseControlKey = Config.KeyBindingsConfig.Jump.ToWinFormKeys();
+        _releaseControlKeyCode = Config.KeyBindingsConfig.Jump.ToVK();
 
         _firstSpaceKeyDownTime = DateTime.MaxValue;
-        var si = TaskContext.Instance().Config.MacroConfig.SpaceFireInterval;
+        var si = Config.MacroConfig.SpaceFireInterval;
         _spaceTimer.Interval = si;
 
-        var fi = TaskContext.Instance().Config.MacroConfig.FFireInterval;
+        var fi = Config.MacroConfig.FFireInterval;
         _fTimer.Interval = fi;
 
         // 开关禁用时不装键鼠监听
-        if (TaskContext.Instance().Config.DisableInputMonitor)
+        if (Config.DisableInputMonitor)
         {
             if (_isSubscribed) Unsubscribe();
             return;
@@ -131,7 +138,9 @@ public partial class MouseKeyMonitor : IDisposable
         // Debug.WriteLine("KeyDown: \t{0}", e.KeyCode);
         GlobalKeyMouseRecord.Instance.GlobalHookKeyDown(e, DateTime.UtcNow);
 
-        if (SystemControl.IsGenshinImpactActive())
+        // 由页面直接 new，没有注入入口，只能在钩子回调里取 GameRuntimeService；
+        // 每次按键时读取 Current（不缓存），没有运行环境时按前台进程名判断
+        if (SystemControl.IsGameForeground(App.GetService<GameRuntimeService>()?.Current?.Window))
         {
             ChatUiHotkeyGuard.PrimeFromChatKey(e.KeyCode);
         }
@@ -148,7 +157,7 @@ public partial class MouseKeyMonitor : IDisposable
             else
             {
                 var timeSpan = DateTime.Now - _firstSpaceKeyDownTime;
-                if (timeSpan.TotalMilliseconds > 300 && TaskContext.Instance().Config.MacroConfig.SpacePressHoldToContinuationEnabled)
+                if (timeSpan.TotalMilliseconds > 300 && Config.MacroConfig.SpacePressHoldToContinuationEnabled)
                     if (!_spaceTimer.Enabled)
                         _spaceTimer.Start();
             }
@@ -162,7 +171,7 @@ public partial class MouseKeyMonitor : IDisposable
             else
             {
                 var timeSpan = DateTime.Now - _firstFKeyDownTime;
-                if (timeSpan.TotalMilliseconds > 200 && TaskContext.Instance().Config.MacroConfig.FPressHoldToContinuationEnabled)
+                if (timeSpan.TotalMilliseconds > 200 && Config.MacroConfig.FPressHoldToContinuationEnabled)
                     if (!_fTimer.Enabled)
                         _fTimer.Start();
             }

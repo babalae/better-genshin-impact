@@ -1,6 +1,8 @@
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.GameTask.AutoSkip.Model;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Runtime;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -24,10 +26,31 @@ public class ExpeditionTask
 
     private int _expeditionCount = 0;
 
+    /// <summary>
+    /// 本次运行使用的运行环境，截图、等待与画面尺寸都只使用它
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
+    /// <summary>
+    /// 配置根，由创建方传入
+    /// </summary>
+    private readonly AllConfig _config;
+
+    /// <summary>
+    /// 创建重新探索派遣任务
+    /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境</param>
+    /// <param name="config">配置根</param>
+    public ExpeditionTask(GameRuntime runtime, AllConfig config)
+    {
+        _runtime = runtime;
+        _config = config;
+    }
+
     public void Run(CaptureContent content)
     {
         InitConfig();
-        var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+        var assetScale = _runtime.SystemInfo.AssetScale;
         ReExplorationGameArea(content);
         for (var i = 0; i <= 4; i++)
         {
@@ -42,7 +65,7 @@ public class ExpeditionTask
                     .Derive(new Rect((int)(110 * assetScale), (int)((145 + 70 * i) * assetScale),
                         (int)(60 * assetScale), (int)(33 * assetScale)))
                     .Click();
-                TaskControl.Sleep(500);
+                _runtime.Sleep(500);
                 ReExplorationGameArea(content);
             }
         }
@@ -53,21 +76,21 @@ public class ExpeditionTask
 
     private void InitConfig()
     {
-        var str = TaskContext.Instance().Config.AutoSkipConfig.AutoReExploreCharacter;
+        var str = _config.AutoSkipConfig.AutoReExploreCharacter;
         if (!string.IsNullOrEmpty(str))
         {
             ExpeditionCharacterList.Clear();
             str = str.Replace("，", ",");
             str.Split(',').ToList().ForEach(x => ExpeditionCharacterList.Add(x.Trim()));
-            TaskContext.Instance().Config.AutoSkipConfig.AutoReExploreCharacter =
+            _config.AutoSkipConfig.AutoReExploreCharacter =
                 string.Join(",", ExpeditionCharacterList);
         }
     }
 
     private void ReExplorationGameArea(CaptureContent content)
     {
-        var captureRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
-        var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+        var captureRect = _runtime.SystemInfo.CaptureAreaRect;
+        var assetScale = _runtime.SystemInfo.AssetScale;
 
         for (var i = 0; i < 5; i++)
         {
@@ -81,7 +104,7 @@ public class ExpeditionTask
                 content.CaptureRectArea
                     .Derive(new Rect(rect.X, rect.Y + (int)(50 * assetScale), rect.Width, (int)(80 * assetScale)))
                     .Click();
-                TaskControl.Sleep(100);
+                _runtime.Sleep(100);
                 // 重新截图 找领取
                 result = CaptureAndOcr(content);
                 rect = result.FindRectByText("领取");
@@ -90,10 +113,10 @@ public class ExpeditionTask
                     using var ra = content.CaptureRectArea.Derive(rect);
                     ra.Click();
                     //TaskControl.Logger.LogInformation("探索派遣：点击{Text}", "领取");
-                    TaskControl.Sleep(200);
+                    _runtime.Sleep(200);
                     // 点击空白区域继续
                     ra.Click();
-                    TaskControl.Sleep(250);
+                    _runtime.Sleep(250);
 
                     // 选择角色
                     result = CaptureAndOcr(content);
@@ -101,7 +124,7 @@ public class ExpeditionTask
                     if (rect != default)
                     {
                         content.CaptureRectArea.Derive(rect).Click();
-                        TaskControl.Sleep(400); // 等待动画
+                        _runtime.Sleep(400); // 等待动画
                         var success = SelectCharacter(content);
                         if (success)
                         {
@@ -123,7 +146,7 @@ public class ExpeditionTask
 
     private bool SelectCharacter(CaptureContent content)
     {
-        var captureRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
+        var captureRect = _runtime.SystemInfo.CaptureAreaRect;
         var result = CaptureAndOcr(content, new Rect(0, 0, captureRect.Width / 2, captureRect.Height));
         if (result.RegionHasText("角色选择"))
         {
@@ -137,7 +160,7 @@ public class ExpeditionTask
                 using var ra = content.CaptureRectArea.Derive(rect);
                 ra.Click();
                 TaskControl.Logger.LogInformation("探索派遣：派遣 {Name}", card.Name);
-                TaskControl.Sleep(500);
+                _runtime.Sleep(500);
                 return true;
             }
         }
@@ -152,8 +175,8 @@ public class ExpeditionTask
     /// <returns></returns>
     private List<ExpeditionCharacterCard> GetCharacterCards(OcrResult result)
     {
-        var captureRect = TaskContext.Instance().SystemInfo.CaptureAreaRect;
-        var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+        var captureRect = _runtime.SystemInfo.CaptureAreaRect;
+        var assetScale = _runtime.SystemInfo.AssetScale;
 
         var ocrResultRects = result.Regions
             .Select(x => x.ToOcrResultRect())
@@ -215,7 +238,7 @@ public class ExpeditionTask
 
     private OcrResult CaptureAndOcr(CaptureContent content)
     {
-        using var ra = TaskControl.CaptureToRectArea();
+        using var ra = _runtime.CaptureToRectArea();
         var result = OcrFactory.Paddle.OcrResult(ra.CacheGreyMat);
         //VisionContext.Instance().DrawContent.PutOrRemoveRectList("OcrResultRects", result.ToRectDrawableList(_pen));
         return result;
@@ -223,7 +246,7 @@ public class ExpeditionTask
 
     private OcrResult CaptureAndOcr(CaptureContent content, Rect rect)
     {
-        using var ra = TaskControl.CaptureToRectArea();
+        using var ra = _runtime.CaptureToRectArea();
         var result = OcrFactory.Paddle.OcrResult(ra.CacheGreyMat);
         //VisionContext.Instance().DrawContent.PutOrRemoveRectList("OcrResultRects", result.ToRectDrawableList(_pen));
         return result;

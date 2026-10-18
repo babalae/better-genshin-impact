@@ -2,6 +2,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Windows;
@@ -34,11 +35,17 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
 
     private readonly ISnackbarService _snackbarService;
 
+    /// <summary>
+    /// 游戏运行环境服务。开始录制时读取 <see cref="GameRuntimeService.Current"/>，不缓存
+    /// </summary>
+    private readonly GameRuntimeService _runtimeService;
+
     public AllConfig Config { get; set; }
 
-    public KeyMouseRecordPageViewModel(ISnackbarService snackbarService, IConfigService configService)
+    public KeyMouseRecordPageViewModel(ISnackbarService snackbarService, IConfigService configService, GameRuntimeService runtimeService)
     {
         _snackbarService = snackbarService;
+        _runtimeService = runtimeService;
         Config = configService.Get();
     }
 
@@ -81,7 +88,7 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
     [RelayCommand]
     public async Task OnStartRecord()
     {
-        if (!TaskContext.Instance().IsInitialized)
+        if (_runtimeService.Current is not { } runtime)
         {
             Toast.Warning("请先在启动页，启动截图器再使用本功能");
             return;
@@ -89,7 +96,7 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
         if (!IsRecording)
         {
             IsRecording = true;
-            IsRecording = await GlobalKeyMouseRecord.Instance.StartRecord();
+            IsRecording = await GlobalKeyMouseRecord.Instance.StartRecord(runtime);
         }
     }
 
@@ -123,10 +130,10 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
         try
         {
             await new TaskRunner()
-                .RunThreadAsync(async ct =>
+                .RunThreadAsync(async (runtime, ct) =>
                 {
                     var script = await File.ReadAllTextAsync(path, ct);
-                    await KeyMouseMacroPlayer.PlayMacro(script, ct);
+                    await KeyMouseMacroPlayer.PlayMacro(runtime, script, ct);
                 });
         }
         catch (Exception e)

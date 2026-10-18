@@ -1,5 +1,6 @@
 ﻿using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -16,7 +17,13 @@ public class HangoutOption : IDisposable
 
     public string OptionTextSrc { get; set; } = "";
 
-    public HangoutOption(Region iconRect, bool selected)
+    /// <summary>
+    /// 根据选项图标位置初始化邀约选项及其文字区域
+    /// </summary>
+    /// <param name="runtime">识别所在的运行环境，提供捕获区域大小与素材缩放比例</param>
+    /// <param name="iconRect">选项图标区域</param>
+    /// <param name="selected">选项是否已被选择过</param>
+    public HangoutOption(GameRuntime runtime, Region iconRect, bool selected)
     {
         IconRect = iconRect;
         IsSelected = selected;
@@ -24,8 +31,8 @@ public class HangoutOption : IDisposable
         // 选项文字所在区域初始化
         // 选项图标往上下区域扩展 2/3
         Rect r = default;
-        var captureArea = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
-        var assetScale = TaskContext.Instance().SystemInfo.AssetScale;
+        var captureArea = runtime.SystemInfo.ScaleMax1080PCaptureRect;
+        var assetScale = runtime.SystemInfo.AssetScale;
         if (IconRect.Left > captureArea.Width / 2)
         {
             // 右边的选项

@@ -15,6 +15,7 @@ using System.IO;
 using System.Linq;
 using BetterGenshinImpact.GameTask.MapMask;
 using BetterGenshinImpact.GameTask.SkillCd;
+using BetterGenshinImpact.GameTask.Runtime;
 using System;
 
 namespace BetterGenshinImpact.GameTask;
@@ -22,39 +23,26 @@ namespace BetterGenshinImpact.GameTask;
 internal class GameTaskManager
 {
     /// <summary>
-    /// 创建一次截图会话用的全部触发器，按优先级从高到低排列。
-    /// 由 TaskTriggerDispatcher.Start 调用，一定要在任务上下文初始化完毕后使用
+    /// 创建一次截图会话用的全部触发器，按优先级从高到低排列。由 TaskTriggerDispatcher.Start 调用
     /// </summary>
-    public static List<ITaskTrigger> CreateTriggers()
+    /// <param name="runtime">本次截图会话绑定的运行环境，触发器在整个会话内只使用它</param>
+    /// <param name="config">配置根</param>
+    public static List<ITaskTrigger> CreateTriggers(GameRuntime runtime, AllConfig config)
     {
         List<ITaskTrigger> triggers =
         [
-            new TestTrigger(),
-            new GameLoadingTrigger(),
-            new AutoPick.AutoPickTrigger(),
-            new QuickTeleport.QuickTeleportTrigger(),
-            new AutoSkip.AutoSkipTrigger(),
-            new AutoFishing.AutoFishingTrigger(),
-            new AutoEat.AutoEatTrigger(),
-            new MapMaskTrigger(),
-            new SkillCdTrigger(),
+            new TestTrigger(runtime),
+            new GameLoadingTrigger(runtime, config),
+            new AutoPick.AutoPickTrigger(runtime, config),
+            new QuickTeleport.QuickTeleportTrigger(runtime, config),
+            new AutoSkip.AutoSkipTrigger(runtime, config),
+            new AutoFishing.AutoFishingTrigger(runtime, config),
+            new AutoEat.AutoEatTrigger(runtime, config),
+            new MapMaskTrigger(runtime, config),
+            new SkillCdTrigger(runtime, config),
         ];
 
         return [.. triggers.OrderByDescending(t => t.Priority)];
-    }
-
-    /// <summary>
-    /// 获取素材图片并缩放
-    /// todo 支持多语言
-    /// </summary>
-    /// <param name="featName">任务名称</param>
-    /// <param name="assertName">素材文件名</param>
-    /// <param name="flags"></param>
-    /// <returns></returns>
-    /// <exception cref="FileNotFoundException"></exception>
-    public static Mat LoadAssetImage(string featName, string assertName, ImreadModes flags = ImreadModes.Color)
-    {
-        return LoadAssetImage(featName, assertName, TaskContext.Instance().SystemInfo, flags);
     }
 
     /// <summary>

@@ -5,7 +5,9 @@ using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Service;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -48,13 +50,19 @@ public class RewardResultRecognizer
     }
 
     /// <summary>
+    /// 配置根。单例没有创建方可以传参，暂时读配置根（见 task-context-removal.md 第 5 节）
+    /// </summary>
+    private static AllConfig Config => ConfigService.Config!;
+
+    /// <summary>
     /// 识别多页奖励卡片。
     /// </summary>
+    /// <param name="runtime">本次识别使用的运行环境，截图与鼠标移动都只使用它。</param>
     /// <param name="maxPages">最大识别页数。</param>
     /// <returns>奖励名称到总数量的映射。</returns>
-    public Dictionary<string, int> RecognizeMultiPage(int maxPages = 3)
+    public Dictionary<string, int> RecognizeMultiPage(GameRuntime runtime, int maxPages = 3)
     {
-        if (!IsSupportedRewardResolution())
+        if (!IsSupportedRewardResolution(runtime))
         {
             return new Dictionary<string, int>();
         }
@@ -71,10 +79,10 @@ public class RewardResultRecognizer
         {
             if (currentPage > 1)
             {
-                PerformDragToNextPage();
+                PerformDragToNextPage(runtime);
             }
 
-            using var screen = CaptureRewardPageScreen();
+            using var screen = CaptureRewardPageScreen(runtime);
             var pageResult = RecognizeRewardPage(screen, iconRecognizer);
             SaveRewardDebugImage(currentPage, screen.SrcMat, pageResult.CardRects);
 
@@ -112,21 +120,23 @@ public class RewardResultRecognizer
     /// <summary>
     /// 移开鼠标并截取当前游戏画面。
     /// </summary>
+    /// <param name="runtime">运行环境。</param>
     /// <returns>当前游戏画面截图。</returns>
-    private static ImageRegion CaptureRewardPageScreen()
+    private static ImageRegion CaptureRewardPageScreen(GameRuntime runtime)
     {
-        GameCaptureRegion.GameRegion1080PPosMove(960, 720);
+        runtime.GameRegion1080PPosMove(960, 720);
         Thread.Sleep(100);
-        return TaskControl.CaptureToRectArea();
+        return runtime.CaptureToRectArea();
     }
 
     /// <summary>
     /// 截取一张画面并检查奖励识别支持的分辨率。
     /// </summary>
+    /// <param name="runtime">运行环境。</param>
     /// <returns>支持时返回 true。</returns>
-    private bool IsSupportedRewardResolution()
+    private bool IsSupportedRewardResolution(GameRuntime runtime)
     {
-        using var screen = CaptureRewardPageScreen();
+        using var screen = CaptureRewardPageScreen(runtime);
         if (screen.SrcMat.Width == 1920 && screen.SrcMat.Height == 1080)
         {
             return true;
@@ -187,7 +197,7 @@ public class RewardResultRecognizer
     /// <param name="cardRects">奖励卡片矩形。</param>
     private void SaveRewardDebugImage(int page, Mat screenMat, List<Rect> cardRects)
     {
-        var commonConfig = TaskContext.Instance().Config.CommonConfig;
+        var commonConfig = Config.CommonConfig;
         if (!commonConfig.ScreenshotEnabled || !commonConfig.RewardRecognitionScreenshotEnabled)
         {
             return;
@@ -268,13 +278,14 @@ public class RewardResultRecognizer
     /// <summary>
     /// 拖动奖励列表到下一页。
     /// </summary>
-    private void PerformDragToNextPage()
+    /// <param name="runtime">运行环境。</param>
+    private void PerformDragToNextPage(GameRuntime runtime)
     {
         const int startX = 1650;
         const int endX = 250;
         const int y = 540;
 
-        GameCaptureRegion.GameRegion1080PPosMove(startX, y);
+        runtime.GameRegion1080PPosMove(startX, y);
         Thread.Sleep(100);
 
         InputHub.Foreground.Mouse.LeftButtonDown();
@@ -284,7 +295,7 @@ public class RewardResultRecognizer
         for (int step = 0; step <= steps; step++)
         {
             double currentX = startX + (endX - startX) * step / (double)steps;
-            GameCaptureRegion.GameRegion1080PPosMove(currentX, y);
+            runtime.GameRegion1080PPosMove(currentX, y);
             Thread.Sleep(30);
         }
 

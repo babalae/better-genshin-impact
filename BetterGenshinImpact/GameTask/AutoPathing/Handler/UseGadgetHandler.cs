@@ -9,7 +9,9 @@ using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using OpenCvSharp;
 
@@ -18,8 +20,14 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 /// <summary>
 /// 触发使用小道具
 /// </summary>
-public class UseGadgetHandler : IActionHandler
+/// <param name="runtime">本次运行使用的运行环境</param>
+public class UseGadgetHandler(GameRuntime runtime) : IActionHandler
 {
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime = runtime;
+
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
         Logger.LogInformation("执行 {Text}", "使用小道具");
@@ -42,7 +50,7 @@ public class UseGadgetHandler : IActionHandler
                 double.TryParse(waypointForTrack.ActionParams, out maxWaitSeconds); // 最大等待时间，单位秒
             }
 
-            using var screen = CaptureToRectArea();
+            using var screen = _runtime.CaptureToRectArea();
             var cd = GetCurrentCd(screen);
             if (cd > 100)
             {
@@ -64,7 +72,7 @@ public class UseGadgetHandler : IActionHandler
                     waitTime = (int)(cd * 1000) + 100; // 等待CD结束后再继续
                 }
 
-                await Delay(waitTime, ct);
+                await _runtime.Delay(waitTime, ct);
                 InputHub.Foreground.SimulateAction(GIActions.QuickUseGadget);
             }
             else
@@ -74,7 +82,7 @@ public class UseGadgetHandler : IActionHandler
         }
 
         Logger.LogInformation("使用小道具");
-        await Delay(300, ct);
+        await _runtime.Delay(300, ct);
     }
 
     /// <summary>

@@ -17,6 +17,8 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.Service;
 using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Script.Group;
@@ -190,10 +192,16 @@ public partial class ScriptGroupProject : ObservableObject
     }
 
     /// <summary>
-    /// 使用所属顶层任务的取消令牌执行当前脚本项目。
+    /// 配置根。ScriptGroupProject 是 JSON 反序列化的数据类，没有创建方可以传入配置，暂时读配置根（见 task-context-removal.md 第 5 节）
     /// </summary>
+    private static AllConfig Config => ConfigService.Config!;
+
+    /// <summary>
+    /// 使用所属顶层任务的运行环境与取消令牌执行当前脚本项目。
+    /// </summary>
+    /// <param name="runtime">所属顶层任务的运行环境，脚本、键鼠宏、寻路、Shell 都作用在它上面。</param>
     /// <param name="ct">所属顶层任务的取消令牌。</param>
-    public async Task Run(CancellationToken ct)
+    public async Task Run(GameRuntime runtime, CancellationToken ct)
     {
         if (Type == "Javascript")
         {
@@ -207,13 +215,13 @@ public partial class ScriptGroupProject : ObservableObject
             CleanInvalidSettingsValues();
 
             var pathingPartyConfig = GroupInfo?.Config.PathingConfig;
-            await Project.ExecuteAsync(JsScriptSettingsObject, pathingPartyConfig, ct);
+            await Project.ExecuteAsync(runtime, JsScriptSettingsObject, pathingPartyConfig, ct);
         }
         else if (Type == "KeyMouse")
         {
             // 加载并执行
             var json = await File.ReadAllTextAsync(Global.Absolute(@$"User\KeyMouseScript\{Name}"), ct);
-            await KeyMouseMacroPlayer.PlayMacro(json, ct, false);
+            await KeyMouseMacroPlayer.PlayMacro(runtime, json, ct, false);
         }
         else if (Type == "Pathing")
         {
@@ -224,7 +232,7 @@ public partial class ScriptGroupProject : ObservableObject
             {
                 return;
             }
-            var pathingTask = new PathExecutor(ct);
+            var pathingTask = new PathExecutor(runtime, Config, ct);
             pathingTask.PartyConfig = GroupInfo?.Config.PathingConfig;
             if (!pathingTask.PartyConfig.Enabled || pathingTask.PartyConfig.AutoPickEnabled)
             {
@@ -246,7 +254,7 @@ public partial class ScriptGroupProject : ObservableObject
                 shellConfig = GroupInfo?.Config.ShellConfig;
             }
 
-            var task = new ShellTask(ShellTaskParam.BuildFromConfig(Name, shellConfig ?? new ShellConfig()));
+            var task = new ShellTask(runtime, ShellTaskParam.BuildFromConfig(Name, shellConfig ?? new ShellConfig()));
             await task.Start(ct);
         }
     }

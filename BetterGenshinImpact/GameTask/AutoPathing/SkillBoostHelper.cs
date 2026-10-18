@@ -222,11 +222,11 @@ public partial class PathExecutor
                     {
                         _lastMavikaBoardTime = DateTime.UtcNow;
                         InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
-                        await Delay(200, ct);
+                        await _runtime.Delay(200, ct);
                         InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
-                        await Delay(300, ct);
+                        await _runtime.Delay(300, ct);
                         InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
-                        await Delay(300, ct);
+                        await _runtime.Delay(300, ct);
 
                         // E技能CD跟踪：仅续技能（状态1）触发更新，上车（状态2）不触发
                         // 冲刺跳飞计数同样仅续技能（状态1）时重置，上车（状态2）不重置
@@ -268,32 +268,32 @@ public partial class PathExecutor
                         && distance > PartyConfig.MwkJumpFlyDistance * 1.3)
                     {
                         InputHub.Foreground.SimulateAction(GIActions.SprintMouse);
-                        await Delay(100, ct);
+                        await _runtime.Delay(100, ct);
                         _mavikaSprintJumpCount++;
                     }
                     InputHub.Foreground.SimulateAction(GIActions.Jump);
-                    await Delay(150, ct);
+                    await _runtime.Delay(150, ct);
                     InputHub.Foreground.SimulateAction(GIActions.Jump);
-                    await Delay(100, ct);
+                    await _runtime.Delay(100, ct);
                     InputHub.Foreground.SimulateAction(GIActions.Jump);
-                    await Delay(10, ct);
+                    await _runtime.Delay(10, ct);
                     InputHub.Foreground.SimulateAction(GIActions.Jump);
-                    await Delay(150, ct);
+                    await _runtime.Delay(150, ct);
                     _lastJumpFlyTime = DateTime.UtcNow;
                     _jumpFlySafetyPending = true;
 
-                    using var jumpCheckRegion = CaptureToRectArea();
+                    using var jumpCheckRegion = _runtime.CaptureToRectArea();
                     if (Bv.GetMotionStatus(jumpCheckRegion) == MotionStatus.Fly)
                     {
                         InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
-                        await Delay(300, ct);
+                        await _runtime.Delay(300, ct);
                         for (int i = 0; i < 5; i++)
                         {
-                            using var retryRegion = CaptureToRectArea();
+                            using var retryRegion = _runtime.CaptureToRectArea();
                             if (Bv.GetMotionStatus(retryRegion) == MotionStatus.Fly)
                             {
                                 InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
-                                await Delay(300, ct);
+                                await _runtime.Delay(300, ct);
                             }
                             else break;
                         }
@@ -324,7 +324,7 @@ public partial class PathExecutor
                     InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
                     Logger.LogInformation("自动赶路：玛薇卡安全降落 距离下个节点距离 {d}", Math.Round(distance));
                     // 普攻后点按一次空格打断后摇
-                    await Delay(50, ct);
+                    await _runtime.Delay(50, ct);
                     InputHub.Foreground.SimulateAction(GIActions.Jump);
                     _jumpFlySafetyPending = false;
                 }
@@ -354,9 +354,9 @@ public partial class PathExecutor
                             InputHub.ReleaseAll();
                             Logger.LogInformation("自动赶路：玛薇卡接近节点，下车步行");
                             InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
-                            await Delay(100, ct);
+                            await _runtime.Delay(100, ct);
                             InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
-                            await Delay(50, ct);
+                            await _runtime.Delay(50, ct);
                         }
                         // 检测到图标1/2（续技能/上车）即认为下车成功
                         if (approachIconState is 1 or 2)
@@ -375,7 +375,7 @@ public partial class PathExecutor
                     if (Bv.GetMotionStatus(screen2) == MotionStatus.Climb)
                     {
                         InputHub.Foreground.SimulateAction(GIActions.Drop);
-                        await Delay(500, ct);
+                        await _runtime.Delay(500, ct);
                         InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
                     }
 
@@ -580,7 +580,7 @@ public partial class PathExecutor
                             while (SpaceAtSecondPlaceExist(state) && retries < 10)
                             {
                                 InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
-                                await Delay(100, ct);
+                                await _runtime.Delay(100, ct);
                                 retries++;
                             }
                         }
@@ -604,7 +604,7 @@ public partial class PathExecutor
                         {
                             // Logger.LogInformation("[赶路调试] 希诺宁 启动E技能: spaceExist=false, cd={cd}", cd);
                             InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
-                            await Delay(200, ct);
+                            await _runtime.Delay(200, ct);
                             avatar.LastSkillTime = DateTime.UtcNow;
                         }
                     }
@@ -667,10 +667,10 @@ public partial class PathExecutor
                             while (DashAtSecondPlaceExist() && retries < 10)
                             {
                                 InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
-                                await Delay(50, ct);
+                                await _runtime.Delay(50, ct);
                                 retries++;
                             }
-                            await Delay(150, ct);
+                            await _runtime.Delay(150, ct);
                             await SafeLanding(ct);
                             Logger.LogInformation("自动赶路：桑多涅接近节点");
                             return false;
@@ -692,7 +692,7 @@ public partial class PathExecutor
                                 if (sandroneCd <= 0)
                                 {
                                     InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
-                                    await Delay(150, ct);
+                                    await _runtime.Delay(150, ct);
                                     if (DashAtSecondPlaceExist())
                                     {
                                         _lastSandroneSkillTime = DateTime.UtcNow;
@@ -762,7 +762,7 @@ public partial class PathExecutor
                                     InputHub.Foreground.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
                                     for (var retries = 0; retries < 20; retries++)
                                     {
-                                        await Delay(100, ct);
+                                        await _runtime.Delay(100, ct);
                                         var cd = await ReadEskillCdAsync(avatar.Name);
                                         if (cd > 0)
                                         {
@@ -814,9 +814,9 @@ public partial class PathExecutor
                                 // Logger.LogInformation("[赶路调试] {name} 启动飞行: dist={d}, rotStable={rs}, cd={cd}",
                                 //     avatar.Name, Math.Round(distance, 1), state.RotationStableCount, cd);
                                 InputHub.Foreground.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
-                                await Delay(50, ct);
+                                await _runtime.Delay(50, ct);
                                 InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
-                                await Delay(100, ct);
+                                await _runtime.Delay(100, ct);
                                 InputHub.Foreground.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
 
                                 avatar.LastSkillTime = DateTime.UtcNow;
@@ -906,11 +906,11 @@ public partial class PathExecutor
                             //     Math.Round(distance, 1), state.RotationStableCount, cd);
                             InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                             InputHub.Foreground.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
-                            await Delay(50, ct);
+                            await _runtime.Delay(50, ct);
                             InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-                            await Delay(100, ct);
+                            await _runtime.Delay(100, ct);
                             InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
-                            await Delay(50, ct);
+                            await _runtime.Delay(50, ct);
                             InputHub.Foreground.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
 
                             avatar.LastSkillTime = DateTime.UtcNow;
@@ -956,7 +956,7 @@ public partial class PathExecutor
                     if (cd <= 0 && state.RotationStableCount >= 2)
                     {
                         Logger.LogInformation("雷霆大跳！");
-                        await TaskControl.SimulateHoldActionAsync(GIActions.ElementalSkill, 500, ct);
+                        await _runtime.SimulateHoldActionAsync(GIActions.ElementalSkill, 500, ct);
                         ESkillCdTracker.Record("法尔伽", 8);
                         _falgaNextCheckTime = DateTime.UtcNow.AddSeconds(2);
                         return false;
@@ -1069,7 +1069,7 @@ public partial class PathExecutor
                             && (DateTime.UtcNow - _lastLandingTime).TotalSeconds >= 2)
                         {
                             Logger.LogInformation("自动赶路：夜兰启动赶路");
-                            await TaskControl.SimulateHoldActionAsync(GIActions.ElementalSkill, 300, ct);
+                            await _runtime.SimulateHoldActionAsync(GIActions.ElementalSkill, 300, ct);
                             state.FlyingState = true;
                             _lastFlyStartTime = DateTime.UtcNow;
                             _lastFlyDistance = distance;
@@ -1098,9 +1098,9 @@ public partial class PathExecutor
             var isClimb = Bv.GetMotionStatus(screen2) == MotionStatus.Climb;
             if (isClimb && state.ClimbLogo < 2 && waypoint.MoveMode != MoveModeEnum.Climb.Code)
             {
-                await Delay(1000, ct);
+                await _runtime.Delay(1000, ct);
                 InputHub.Foreground.SimulateAction(GIActions.Drop);
-                await Delay(500, ct);
+                await _runtime.Delay(500, ct);
                 state.ClimbLogo++;
             }
         }
@@ -1353,7 +1353,7 @@ public partial class PathExecutor
             }
         }
 
-        var ownedCapture = existingCapture == null ? CaptureToRectArea() : null;
+        var ownedCapture = existingCapture == null ? _runtime.CaptureToRectArea() : null;
         try
         {
             var ra = ownedCapture ?? existingCapture!;
@@ -1447,7 +1447,7 @@ public partial class PathExecutor
 
     private bool DashAtSecondPlaceExist()
     {
-        using var capture = CaptureToRectArea();
+        using var capture = _runtime.CaptureToRectArea();
         using var region = capture.DeriveCrop(1595, 1028, 9, 7);
         using var mask = OpenCvCommonHelper.Threshold(region.SrcMat,
             new Scalar(242, 223, 39), new Scalar(255, 233, 44));
@@ -1463,7 +1463,7 @@ public partial class PathExecutor
 
     private bool SpaceAtSecondPlaceExist(HurryOnState state)
     {
-        using var region = CaptureToRectArea();
+        using var region = _runtime.CaptureToRectArea();
         var pixel = region.SrcMat.At<Vec3b>(1028, 1584);
         return pixel.Item0 >= 250 && pixel.Item1 >= 250 && pixel.Item2 >= 250;
     }
@@ -1473,7 +1473,7 @@ public partial class PathExecutor
     /// </summary>
     private bool secondESkillAvailable()
     {
-        using var region = CaptureToRectArea();
+        using var region = _runtime.CaptureToRectArea();
         // 参考 AutoFightAssets：以 1920 宽为基准，按实际捕获宽度缩放坐标（不超过1）
         var scale = Math.Min(region.Width / 1920d, 1d);
         // 技能槽位中心 (1691,953) → 11×11 区域左上角 (1686,948)
@@ -1486,25 +1486,25 @@ public partial class PathExecutor
 
     private async Task SafeLanding(CancellationToken ct)
     {
-        await Delay(250, ct);
+        await _runtime.Delay(250, ct);
         InputHub.Foreground.SimulateAction(GIActions.Jump);
-        await Delay(150, ct);
+        await _runtime.Delay(150, ct);
 
-        using var screen = CaptureToRectArea();
+        using var screen = _runtime.CaptureToRectArea();
         var stamina = DetectStamina(screen);
         if (Bv.GetMotionStatus(screen) == MotionStatus.Fly
             || stamina == 0
             || stamina == 240)
         {
             InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
-            await Delay(300, ct);
+            await _runtime.Delay(300, ct);
             for (int i = 0; i < 5; i++)
             {
-                using var retryRegion = CaptureToRectArea();
+                using var retryRegion = _runtime.CaptureToRectArea();
                 if (Bv.GetMotionStatus(retryRegion) == MotionStatus.Fly)
                 {
                     InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
-                    await Delay(300, ct);
+                    await _runtime.Delay(300, ct);
                 }
                 else break;
             }
@@ -1588,7 +1588,7 @@ public partial class PathExecutor
     /// </summary>
     private async Task<double> ReadEskillCdAsync(string avatarName, bool updateTracking = true)
     {
-        using var cdRegion = CaptureToRectArea();
+        using var cdRegion = _runtime.CaptureToRectArea();
         var eRa = cdRegion.DeriveCrop(AutoFightAssets.Get(cdRegion).ECooldownRect);
         using var eRaWhite = OpenCvCommonHelper.InRangeHsv(eRa.SrcMat, new Scalar(0, 0, 235), new Scalar(0, 25, 255));
         var text = OcrFactory.Paddle.OcrWithoutDetector(eRaWhite);

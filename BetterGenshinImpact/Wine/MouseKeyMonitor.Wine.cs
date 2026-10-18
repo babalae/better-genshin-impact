@@ -44,7 +44,7 @@ namespace BetterGenshinImpact.Core.Monitor
                     var timeSpan = DateTime.Now - _firstFKeyDownTime;
                     if (
                         timeSpan.TotalMilliseconds > 200
-                        && TaskContext.Instance().Config.MacroConfig.FPressHoldToContinuationEnabled
+                        && Config.MacroConfig.FPressHoldToContinuationEnabled
                         && !_fTimer.Enabled
                     )
                     {
@@ -75,9 +75,7 @@ namespace BetterGenshinImpact.Core.Monitor
                     var timeSpan = DateTime.Now - _firstSpaceKeyDownTime;
                     if (
                         timeSpan.TotalMilliseconds > 300
-                        && TaskContext
-                            .Instance()
-                            .Config.MacroConfig.SpacePressHoldToContinuationEnabled
+                        && Config.MacroConfig.SpacePressHoldToContinuationEnabled
                         && !_spaceTimer.Enabled
                     )
                     {

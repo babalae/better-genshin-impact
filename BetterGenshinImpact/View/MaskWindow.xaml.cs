@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.DpiAwareness;
 using BetterGenshinImpact.View.Windows;
@@ -27,6 +28,12 @@ public partial class MaskWindow : Window
     private readonly IRichTextBox _richTextBox;
     private readonly ILogger<MaskWindow> _logger;
 
+    /// <summary>
+    /// 游戏运行环境服务。计算 DPI 时读取 <see cref="GameRuntimeService.Current"/> 的窗口句柄，不缓存。
+    /// 本窗口经 Func&lt;MaskWindow&gt; 延迟创建，注入它不会与调度器形成 DI 环
+    /// </summary>
+    private readonly GameRuntimeService _runtimeService;
+
     private MapLabelSearchWindow? _mapLabelSearchWindow;
     private CancellationTokenSource? _mapLabelCategorySelectCts;
 
@@ -35,11 +42,12 @@ public partial class MaskWindow : Window
         DefaultStyleKeyProperty.OverrideMetadata(typeof(MaskWindow), new FrameworkPropertyMetadata(typeof(MaskWindow)));
     }
 
-    public MaskWindow(MaskWindowViewModel viewModel, IRichTextBox richTextBox, ILogger<MaskWindow> logger)
+    public MaskWindow(MaskWindowViewModel viewModel, IRichTextBox richTextBox, ILogger<MaskWindow> logger, GameRuntimeService runtimeService)
     {
         _viewModel = viewModel;
         _richTextBox = richTextBox;
         _logger = logger;
+        _runtimeService = runtimeService;
         DataContext = viewModel;
 
         this.SetResourceReference(StyleProperty, typeof(MaskWindow));
@@ -124,8 +132,9 @@ public partial class MaskWindow : Window
         var point = textbox.PointToScreen(new Point(0, 0));
         var popupHeight = _mapLabelSearchWindow.ActualHeight > 0 ? _mapLabelSearchWindow.ActualHeight : _mapLabelSearchWindow.Height;
 
-        _mapLabelSearchWindow.Left = point.X / DpiHelper.ScaleY;
-        _mapLabelSearchWindow.Top = (point.Y - 4) / DpiHelper.ScaleY - popupHeight;
+        var scaleY = DpiHelper.GetScaleY(_runtimeService.Current?.Window.Handle ?? 0);
+        _mapLabelSearchWindow.Left = point.X / scaleY;
+        _mapLabelSearchWindow.Top = (point.Y - 4) / scaleY - popupHeight;
 
         if (!_mapLabelSearchWindow.IsVisible)
         {

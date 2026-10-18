@@ -1,6 +1,6 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
-using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using OpenCvSharp;
 using System;
@@ -19,9 +19,13 @@ public static class RecognitionAssets
         return Get(taskName, objectName, region.Width, region.Height);
     }
 
-    public static RecognitionObject Get(string taskName, string objectName)
+    /// <summary>
+    /// 按运行环境的画面尺寸（归一到 1080P 后的整帧大小）获取识别对象
+    /// </summary>
+    public static RecognitionObject Get(string taskName, string objectName, ISystemInfo systemInfo)
     {
-        var captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
+        ArgumentNullException.ThrowIfNull(systemInfo);
+        var captureRect = systemInfo.ScaleMax1080PCaptureRect;
         return Get(taskName, objectName, captureRect.Width, captureRect.Height);
     }
 

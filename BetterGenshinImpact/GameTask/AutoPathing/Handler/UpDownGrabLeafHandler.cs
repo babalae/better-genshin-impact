@@ -6,6 +6,8 @@ using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using Microsoft.Extensions.Logging;
+using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Runtime;
 using OpenCvSharp;
 using static BetterGenshinImpact.Core.Recognition.OpenCv.OpenCvCommonHelper;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -15,8 +17,14 @@ namespace BetterGenshinImpact.GameTask.AutoPathing.Handler;
 /// <summary>
 /// 须弥四叶印
 /// </summary>
-public class UpDownGrabLeafHandler : IActionHandler
+/// <param name="runtime">本次运行使用的运行环境</param>
+public class UpDownGrabLeafHandler(GameRuntime runtime) : IActionHandler
 {
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime = runtime;
+
     private const int InitialVerticalMovement = 1000;
     private const int MovementDirectionChangeInterval = 10;
     private const int TotalCycles = 40;
@@ -54,25 +62,25 @@ public class UpDownGrabLeafHandler : IActionHandler
                     return;
                 }
                 
-                await Delay(DetectionDelayMs, ct);
+                await _runtime.Delay(DetectionDelayMs, ct);
             }
             else
             {
                 consecutiveDetections = 0;
                 InputHub.Foreground.Mouse.MoveMouseBy(0, verticalMovement);
-                await Delay(DelayBetweenCycles, ct);
+                await _runtime.Delay(DelayBetweenCycles, ct);
                 remainingCycles--;
             }
         }
         // 失败后视角回正
         InputHub.Foreground.Mouse.MiddleButtonClick();
-        await Delay(300, ct);
+        await _runtime.Delay(300, ct);
         Logger.LogError("没有找到四叶印");
     }
     
     private bool DetectLeaf()
     {
-        using var captureRegion = CaptureToRectArea();
+        using var captureRegion = _runtime.CaptureToRectArea();
         if (captureRegion.SrcMat.Empty())
             return false;
             
@@ -94,18 +102,18 @@ public class UpDownGrabLeafHandler : IActionHandler
     {
         Logger.LogInformation("连续检测到 {syy}，开始交互", "四叶印");
         InputHub.Foreground.SimulateAction(GIActions.InteractionInSomeMode);
-        await Delay(200, ct);
+        await _runtime.Delay(200, ct);
         InputHub.Foreground.Mouse.MiddleButtonClick();
         
         for (int i = 0; i < 20; i++)
         {
-            using var screen = CaptureToRectArea();
+            using var screen = _runtime.CaptureToRectArea();
             var isFlying = Bv.GetMotionStatus(screen) == MotionStatus.Fly;
             if (!isFlying)
             {
                 // 能按空格起飞说明到终点了
                 InputHub.Foreground.SimulateAction(GIActions.Jump);
-                await Delay(500, ct);
+                await _runtime.Delay(500, ct);
             }
             else
             {
@@ -113,7 +121,7 @@ public class UpDownGrabLeafHandler : IActionHandler
             }
         }
 
-        await Delay(200, ct);
+        await _runtime.Delay(200, ct);
     }
     
 }

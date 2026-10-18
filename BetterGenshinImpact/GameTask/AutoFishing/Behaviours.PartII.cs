@@ -5,6 +5,7 @@ using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Core.Mask;
@@ -426,11 +427,17 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     {
         private readonly ILogger _logger;
 
+        /// <summary>
+        /// 截图来源的运行环境，只从它的截图器取帧
+        /// </summary>
+        private readonly GameRuntime _runtime;
+
         [BlackboardKey(Access = Access.ExclusiveWrite)]
         public BehaviourKeyAccess<ImageRegion> Screenshot { get; private set; } = null!;
 
-        private TakeScreenshot(string name, ILogger logger) : base(name)
+        private TakeScreenshot(string name, GameRuntime runtime, ILogger logger) : base(name)
         {
+            _runtime = runtime;
             _logger = logger;
         }
 
@@ -440,11 +447,27 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         protected async override Task<Status> Update()
         {
             _bitmap?.Dispose();
-            var gameCapture = TaskContext.Instance().Runtime?.Capture;
-            _bitmap = TaskControl.CaptureGameImageNoRetry(gameCapture);
+            _bitmap = null;
+            if (_runtime.IsStopping)
+            {
+                // 运行环境已解绑（如停止截图器），按取消处理
+                throw new OperationCanceledException("截图器已停止");
+            }
+
+            var gameCapture = _runtime.Capture;
+            try
+            {
+                _bitmap = TaskControl.CaptureGameImageNoRetry(gameCapture);
+            }
+            catch (Exception) when (_runtime.IsStopping)
+            {
+                // 截图期间运行环境被停止并释放截图器：与上面的检查一致，按取消处理
+                throw new OperationCanceledException("截图器已停止");
+            }
+
             if (_bitmap == null)
             {
-                if (gameCapture == null || !gameCapture.IsCapturing)
+                if (_runtime.IsStopping || !gameCapture.IsCapturing)
                 {
                     // 截图器被停止后（如启动停止 BetterGI），按取消处理
                     throw new OperationCanceledException("截图器已停止");
@@ -455,7 +478,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
 
             _content?.Dispose();
-            _content = new CaptureContent(_bitmap, 0, 0);
+            _content = new CaptureContent(_bitmap, 0, 0, _runtime.SystemInfo);
 
             Screenshot.Set(_content.CaptureRectArea);
 

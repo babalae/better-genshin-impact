@@ -69,10 +69,23 @@ public sealed class GameRuntimeService
     public GameRuntimeKind Kind => _provider.Kind;
 
     /// <summary>
-    /// 当前运行环境。截图器未启动时为 null
+    /// 当前运行环境的存储字段。任务线程和截图调度线程都会读取，只在 UI 线程上写入
     /// </summary>
-    public GameRuntime? Current { get; private set; }
+    private volatile GameRuntime? _current;
 
+    /// <summary>
+    /// 当前运行环境。截图器未启动时为 null。
+    /// 进程级对象每次使用时读取，不要缓存；运行期对象使用构造时拿到的运行环境，不读取这里
+    /// </summary>
+    public GameRuntime? Current
+    {
+        get => _current;
+        private set => _current = value;
+    }
+
+    /// <summary>
+    /// 截图器是否已经启动（存在当前运行环境）
+    /// </summary>
     public bool IsRunning => Current is not null;
 
     /// <summary>
@@ -96,11 +109,11 @@ public sealed class GameRuntimeService
     public event EventHandler? Stopped;
 
     /// <summary>
-    /// 获取运行环境并启动截图器。已在运行时直接返回 true；停止请求会等待本次启动完成后再解绑，
-    /// 获取期间收到停止请求时，获取完成后不再绑定（网页版可关闭宿主窗口来结束等待）。
+    /// 获取运行环境并启动截图器，返回绑定的运行环境；不能启动时返回 null。已在运行时直接返回当前运行环境。
+    /// 停止请求会等待本次启动完成后再解绑，获取期间收到停止请求时，获取完成后不再绑定（网页版可关闭宿主窗口来结束等待）。
     /// 绑定过程中抛出的异常（例如分辨率不合规）会在回滚后继续向上抛出，与改造前一致
     /// </summary>
-    public Task<bool> StartAsync(CancellationToken ct = default)
+    public Task<GameRuntime?> StartAsync(CancellationToken ct = default)
     {
         var stopVersion = Interlocked.Read(ref _stopVersion);
         var uiDispatcher = Application.Current.Dispatcher;
@@ -174,6 +187,8 @@ public sealed class GameRuntimeService
         }
 
         Current = null;
+        // 先通知持有这个运行环境的对象：之后的截图和等待按正常中断处理
+        runtime.SignalStopping();
         _taskStopService.StopAll(TaskStopReason.RuntimeStopped); // 取消依赖当前运行环境的任务
         _dispatcher.Stop();
         ReleaseInputBeforeDetach();
@@ -181,7 +196,6 @@ public sealed class GameRuntimeService
         // 绘制内容和地图点位状态都以这次运行环境为坐标，解绑后不再有意义
         runtime.MaskWindowDrawingBoard.ClearAll();
         runtime.MaskWindowMapState.Reset();
-        TaskContext.Instance().Bind(null);
         runtime.Dispose();
         Stopped?.Invoke(this, EventArgs.Empty);
     }
@@ -189,9 +203,9 @@ public sealed class GameRuntimeService
     /// <summary>
     /// 关闭游戏。截图器会在下一次调度时发现游戏已退出并自动停止
     /// </summary>
-    public void CloseGame() => _provider.CloseGame();
+    public void CloseGame() => _provider.CloseGame(Current);
 
-    private async Task<bool> StartCoreAsync(CancellationToken ct, long stopVersion)
+    private async Task<GameRuntime?> StartCoreAsync(CancellationToken ct, long stopVersion)
     {
         await _stopTask.WaitAsync(ct);
         await _startLock.WaitAsync(ct);
@@ -200,17 +214,17 @@ public sealed class GameRuntimeService
             // 停止请求之前排队的启动不能在解绑后重新启动截图器。
             if (stopVersion != Interlocked.Read(ref _stopVersion))
             {
-                return false;
+                return null;
             }
 
-            if (IsRunning)
+            if (Current is { } current)
             {
-                return true;
+                return current;
             }
 
             if (!CheckTriggerInterval())
             {
-                return false;
+                return null;
             }
 
             GameRuntime? runtime;
@@ -222,7 +236,7 @@ public sealed class GameRuntimeService
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
                 _logger.LogInformation("已取消启动截图器");
-                return false;
+                return null;
             }
             finally
             {
@@ -231,7 +245,7 @@ public sealed class GameRuntimeService
 
             if (runtime is null)
             {
-                return false;
+                return null;
             }
 
             // 获取期间收到了停止请求：不再绑定，等价于"绑定后立即解绑"，但不会闪一下遮罩、也不会加载触发器
@@ -239,11 +253,11 @@ public sealed class GameRuntimeService
             {
                 runtime.Input.Dispose();
                 runtime.Dispose();
-                return false;
+                return null;
             }
 
             Bind(runtime);
-            return true;
+            return runtime;
         }
         finally
         {
@@ -256,7 +270,6 @@ public sealed class GameRuntimeService
         var inputAttached = false;
         try
         {
-            TaskContext.Instance().Bind(runtime);
             InputHub.Attach(runtime.Input);
             inputAttached = true;
             _dispatcher.Start(runtime, _configService.Get().TriggerInterval);
@@ -274,7 +287,6 @@ public sealed class GameRuntimeService
                 runtime.Input.Dispose();
             }
 
-            TaskContext.Instance().Bind(null);
             runtime.Dispose();
             throw;
         }

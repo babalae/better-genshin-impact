@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -29,6 +30,12 @@ public class NotificationService : IHostedService, IDisposable
 
     private readonly NotifierManager _notifierManager;
     private readonly GameRuntimeService _gameRuntimeService;
+
+    /// <summary>
+    ///     注入的配置根，通知配置从这里读取
+    /// </summary>
+    private readonly AllConfig _config;
+
     private readonly HttpClient _notifyHttpClient;
     private readonly CancellationTokenSource? _webSocketCts;
 
@@ -38,10 +45,11 @@ public class NotificationService : IHostedService, IDisposable
     /// <summary>
     ///     构造函数
     /// </summary>
-    public NotificationService(NotifierManager notifierManager, GameRuntimeService gameRuntimeService)
+    public NotificationService(NotifierManager notifierManager, GameRuntimeService gameRuntimeService, AllConfig config)
     {
         _notifierManager = notifierManager ?? throw new ArgumentNullException(nameof(notifierManager));
         _gameRuntimeService = gameRuntimeService;
+        _config = config;
         _notifyHttpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
         _webSocketCts = new CancellationTokenSource();
 
@@ -69,7 +77,7 @@ public class NotificationService : IHostedService, IDisposable
     /// </summary>
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _notificationConfig = TaskContext.Instance().Config.NotificationConfig;
+        _notificationConfig = _config.NotificationConfig;
         InitializeNotifiers();
         return Task.CompletedTask;
     }
@@ -99,7 +107,7 @@ public class NotificationService : IHostedService, IDisposable
     /// </summary>
     private void InitializeNotifiers()
     {
-        if (_notificationConfig == null) _notificationConfig = TaskContext.Instance().Config.NotificationConfig;
+        if (_notificationConfig == null) _notificationConfig = _config.NotificationConfig;
 
         // 初始化各类通知器
         InitializeWebhookNotifier();
@@ -452,7 +460,7 @@ public class NotificationService : IHostedService, IDisposable
             return;
         }
 
-        _notificationConfig = TaskContext.Instance().Config.NotificationConfig;
+        _notificationConfig = _config.NotificationConfig;
         _notifierManager.RemoveAllNotifiers();
         InitializeNotifiers();
     }
@@ -519,7 +527,7 @@ public class NotificationService : IHostedService, IDisposable
     /// <summary>
     ///     创建测试用的通知数据
     /// </summary>
-    private static BaseNotificationData CreateTestNotificationData()
+    private BaseNotificationData CreateTestNotificationData()
     {
         var testData = new BaseNotificationData
         {
@@ -528,11 +536,12 @@ public class NotificationService : IHostedService, IDisposable
             Message = "这是一条测试通知信息"
         };
 
-        if (TaskContext.Instance().IsInitialized)
+        // 只在截图器已启动时附带截图；运行环境只在这里读取一次，不缓存
+        if (_gameRuntimeService.Current is { } runtime)
         {
             try
             {
-                using var capture = TaskControl.CaptureToRectArea();
+                using var capture = runtime.CaptureToRectArea();
                 testData.Screenshot = capture.CacheImage.Clone();
             }
             catch (Exception ex)

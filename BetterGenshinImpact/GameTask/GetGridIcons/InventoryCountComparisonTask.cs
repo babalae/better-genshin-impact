@@ -5,6 +5,7 @@ using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
+using BetterGenshinImpact.GameTask.Runtime;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
@@ -51,6 +52,12 @@ public enum InventoryCountComparisonTarget
 internal sealed class InventoryCountComparisonTask : ISoloTask
 {
     private const int MaxPages = 100;
+
+    /// <summary>
+    /// 本次运行使用的运行环境
+    /// </summary>
+    private readonly GameRuntime _runtime;
+
     private readonly InventoryCountComparisonTarget target;
     private readonly ILogger logger = App.GetLogger<InventoryCountComparisonTask>();
     private IInputChannel input => InputHub.Foreground;
@@ -58,10 +65,12 @@ internal sealed class InventoryCountComparisonTask : ISoloTask
     /// <summary>
     /// 创建指定目标的数量 OCR 对比任务。
     /// </summary>
+    /// <param name="runtime">本次运行使用的运行环境。</param>
     /// <param name="target">要打开并扫描的分类，或表示不导航的当前一页。</param>
     /// <exception cref="ArgumentOutOfRangeException">目标枚举值未定义时抛出。</exception>
-    public InventoryCountComparisonTask(InventoryCountComparisonTarget target)
+    public InventoryCountComparisonTask(GameRuntime runtime, InventoryCountComparisonTarget target)
     {
+        _runtime = runtime;
         if (!Enum.IsDefined(target))
         {
             throw new ArgumentOutOfRangeException(nameof(target), target, "不支持的识别目标");
@@ -105,11 +114,11 @@ internal sealed class InventoryCountComparisonTask : ISoloTask
         try
         {
             // 分类目标才打开背包；GridScreen 后续每次翻页事件只保存一张对比截图。
-            await new ReturnMainUiTask().Start(ct);
-            await AutoArtifactSalvageTask.OpenInventory(category, input, logger, ct);
+            await new ReturnMainUiTask(_runtime).Start(ct);
+            await AutoArtifactSalvageTask.OpenInventory(_runtime, category, input, logger, ct);
 
             int pageNumber = 0;
-            GridScreen gridScreen = new(GridParams.Templates[category], logger, ct);
+            GridScreen gridScreen = new(_runtime, GridParams.Templates[category], logger, ct);
             gridScreen.OnAfterTurnToNewPage += data =>
             {
                 pageNumber++;
@@ -130,7 +139,7 @@ internal sealed class InventoryCountComparisonTask : ISoloTask
         }
         finally
         {
-            await new ReturnMainUiTask().Start(ct);
+            await new ReturnMainUiTask(_runtime).Start(ct);
         }
     }
 
@@ -139,12 +148,14 @@ internal sealed class InventoryCountComparisonTask : ISoloTask
         ct.ThrowIfCancellationRequested();
         // 三个目标分类共用养成道具模板的 ROI；当前页面不依赖分类名称即可定位网格。
         GridParams gridParams = GridParams.Templates[GridScreenName.CharacterDevelopmentItems];
-        using ImageRegion capture = TaskControl.CaptureToRectArea();
-        using ImageRegion page = capture.DeriveCrop(gridParams.Roi);
+        // 网格区域按运行环境的素材缩放比例换算
+        Rect gridRoi = gridParams.GetRoi(_runtime.SystemInfo.AssetScale);
+        using ImageRegion capture = _runtime.CaptureToRectArea();
+        using ImageRegion page = capture.DeriveCrop(gridRoi);
         // 复用 GridScreen 的轮廓提取和幻影格子后处理，但不创建枚举器，避免触发滚动。
         IEnumerable<Rect> rects = GridScreen.GridEnumerator.GetGridItems(page.SrcMat, gridParams.Columns);
         GridCell[] cells = GridScreen.GridEnumerator
-            .PostProcess(page.SrcMat, rects, (int)(0.025 * gridParams.Roi.Height))
+            .PostProcess(page.SrcMat, rects, (int)(0.025 * gridRoi.Height))
             .OrderBy(cell => cell.RowNum)
             .ThenBy(cell => cell.ColNum)
             .ToArray();

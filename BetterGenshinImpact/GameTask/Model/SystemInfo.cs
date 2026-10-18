@@ -51,12 +51,18 @@ namespace BetterGenshinImpact.GameTask.Model
 
         public DesktopRegion DesktopRectArea { get; }
 
+        /// <summary>
+        /// 输入坐标缩放比例，绑定时由画面区域记录的快照
+        /// </summary>
+        public float DpiScale { get; }
+
         /// <param name="viewport">游戏画面区域，由运行环境提供。最小化检查已在附着窗口时完成</param>
         /// <param name="drawingBoard">运行环境借用的遮罩窗口绘制入口，截图区域树从根开始继承；为空时区域上的绘制不生效</param>
         public SystemInfo(GameViewport viewport, IMaskWindowDrawingBoard? drawingBoard = null)
         {
             DisplaySize = PrimaryScreen.WorkingArea;
             DesktopRectArea = new DesktopRegion(drawingBoard);
+            DpiScale = viewport.DpiScale;
 
             // 注意截图区域要和游戏窗口实际区域一致
             GameScreenSize = new RECT(0, 0, viewport.Width, viewport.Height);

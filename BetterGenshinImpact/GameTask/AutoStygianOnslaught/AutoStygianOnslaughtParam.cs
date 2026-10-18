@@ -1,11 +1,16 @@
 using System.Collections.Generic;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Model;
+using BetterGenshinImpact.Service;
 
 namespace BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 
 public class AutoStygianOnslaughtParam:BaseTaskParam<AutoStygianOnslaughtTask>
 {
+    /// <summary>
+    /// 配置根。参数类由脚本和界面直接 new，没有创建方可以传入配置，暂时读配置根（见 task-context-removal.md 第 5 节）
+    /// </summary>
+    private static AllConfig Config => ConfigService.Config!;
    
     public int BossNum { get; set; }
     // 结束后是否自动分解圣遗物
@@ -36,7 +41,7 @@ public class AutoStygianOnslaughtParam:BaseTaskParam<AutoStygianOnslaughtTask>
     public string CombatScriptBagPath { get; set; }
     public void SetDefault()
     {
-        var config = TaskContext.Instance().Config.AutoStygianOnslaughtConfig;
+        var config = Config.AutoStygianOnslaughtConfig;
         SetAutoStygianOnslaughtConfig(config);
     }
     public void SetAutoStygianOnslaughtConfig(AutoStygianOnslaughtConfig config)
@@ -82,7 +87,7 @@ public class AutoStygianOnslaughtParam:BaseTaskParam<AutoStygianOnslaughtTask>
     {
         if (string.IsNullOrEmpty(strategyName))
         {
-            strategyName = TaskContext.Instance().Config.AutoFightConfig.StrategyName;
+            strategyName = Config.AutoFightConfig.StrategyName;
         }
 
         if (string.IsNullOrWhiteSpace(strategyName) ||"根据队伍自动选择".Equals(strategyName))
