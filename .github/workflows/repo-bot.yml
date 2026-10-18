@@ -1,4 +1,5 @@
 name: Repo Bot
+run-name: "Repo Bot #${{ github.event.issue.number || github.event.pull_request.number }} - ${{ github.event_name }}/${{ github.event.action }} - @${{ github.actor }}"
 
 on:
   issues:
@@ -11,45 +12,43 @@ on:
     types:
       - created
       - edited
+  # pull_request_target (not pull_request) is required so that pull requests opened from
+  # forks can be labelled/commented. Never check out or execute the pull request head here.
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+      - ready_for_review
 
 jobs:
   repo-bot:
-    runs-on: ubuntu-latest
+    if: >-
+      github.event.sender.type != 'Bot' &&
+      (
+        github.event_name != 'issue_comment' ||
+        contains(github.event.comment.body, '/fix') ||
+        contains(github.event.comment.body, '/refresh')
+      )
+    uses: ddaodan/bettergi-github-bot/.github/workflows/repo-bot.yml@v1
     permissions:
       issues: write
+      pull-requests: write
       contents: read
-    steps:
-      - name: Detect GitHub App configuration
-        id: auth-mode
-        shell: bash
-        env:
-          REPO_BOT_GITHUB_APP_ID: ${{ vars.REPO_BOT_GITHUB_APP_ID }}
-          REPO_BOT_GITHUB_APP_PRIVATE_KEY: ${{ secrets.REPO_BOT_GITHUB_APP_PRIVATE_KEY }}
-        run: |
-          if [ -n "$REPO_BOT_GITHUB_APP_ID" ] && [ -n "$REPO_BOT_GITHUB_APP_PRIVATE_KEY" ]; then
-            echo "use_app=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "use_app=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Create GitHub App token
-        if: ${{ steps.auth-mode.outputs.use_app == 'true' }}
-        id: app-token
-        uses: actions/create-github-app-token@v3
-        with:
-          app-id: ${{ vars.REPO_BOT_GITHUB_APP_ID }}
-          private-key: ${{ secrets.REPO_BOT_GITHUB_APP_PRIVATE_KEY }}
-
-      - name: Run Repo Bot
-        uses: ddaodan/bettergi-github-bot@v1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          REPO_BOT_GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
-          REPO_BOT_AI_API_KEY: ${{ secrets.REPO_BOT_AI_API_KEY }}
-          REPO_BOT_AI_BASE_URL: ${{ vars.REPO_BOT_AI_BASE_URL }}
-        with:
-          config-path: .github/repo-bot.yml
-          config-overrides-json: ${{ vars.REPO_BOT_CONFIG_OVERRIDES_JSON }}
+    secrets:
+      REPO_BOT_AI_API_KEY: ${{ secrets.REPO_BOT_AI_API_KEY }}
+      REPO_BOT_GITHUB_APP_PRIVATE_KEY: ${{ secrets.REPO_BOT_GITHUB_APP_PRIVATE_KEY }}
+    with:
+      config-path: .github/repo-bot.yml
+      # pull_request_target: only fetch the configuration from the base branch.
+      # Never check out the pull request head (it would execute untrusted code).
+      checkout-mode: config-only
+      config-overrides-json: ${{ vars.REPO_BOT_CONFIG_OVERRIDES_JSON }}
+      ai-enabled: ${{ vars.REPO_BOT_AI_ENABLED }}
+      ai-base-url: ${{ vars.REPO_BOT_AI_BASE_URL }}
+      ai-model: ${{ vars.REPO_BOT_AI_MODEL }}
+      ai-api-style: ${{ vars.REPO_BOT_AI_API_STYLE }}
+      ai-timeout-ms: ${{ vars.REPO_BOT_AI_TIMEOUT_MS }}
+      action-ref: v1
+      github-app-id: ${{ vars.REPO_BOT_GITHUB_APP_ID }}

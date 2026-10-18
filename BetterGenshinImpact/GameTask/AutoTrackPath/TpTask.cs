@@ -27,7 +27,6 @@ using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
@@ -65,10 +64,6 @@ public class TpTask
 
     private const double DefaultDisplayTpPointZoomLevel = 4.4; // 传送点显示时的默认地图比例
     private const double MoonCanonDisplayTpPointZoomLevel = 3.0;
-    private const int DefaultBigMapOpenTimeoutMs = 5000;
-    private const int MoonCanonBigMapOpenTimeoutMs = 8000;
-    private const int UiRecognitionPollIntervalMs = 80;
-    private const int BigMapOpenCheckIntervalMs = UiRecognitionPollIntervalMs;
     private const double TeleportMaxZoomLevel = 6.0;
     private const double TeleportFinalZoomDistanceFactor = 36d;
     private const double MinTeleportZoomLevel = 1.0;
@@ -97,27 +92,11 @@ public class TpTask
     private const double AbsoluteMapClickNeighborErrorRatio = 0.25d;
     private const double NearbyMapIconTemplateThreshold = 0.65d;
     private const int MapChooseCandidateClickRetryCount = 2;
-    private const int MapChooseCandidateClickVerificationDelayMs = 600;
-    private const int MapChooseCandidateClickVerificationIntervalMs = 100;
     private const double TeleportFinalZoomMinNeighborScreenDistance = 96d;
     private const int TeleportClickableAreaRetryCount = 5;
     private const int TeleportClickableAreaRetryDelayMs = 80;
     private const int BigMapRectRetryIntervalMs = 150;
-    private const int MapLayerVerificationPollIntervalMs = UiRecognitionPollIntervalMs;
-    private const int MapGroundLayerSwitchTimeoutMs = 3000;
-    private const int TeleportPanelMinimumTimeoutMs = 900;
-    private const int TeleportPanelInitialDelayMs = 200;
-    private const int TeleportConfirmTimeoutMs = 5000;
-    private const int SwitchAreaCandidateTimeoutMs = 1500;
-    private const int SwitchAreaSelectionTimeoutMs = 600;
-    private const int SwitchAreaSelectionMinimumWaitMs = 120;
-    private const int SwitchAreaSelectionStableChecks = 2;
     private const int TeleportTimeoutMs = 60_000;
-    private const int TeleportLoadingPollIntervalMs = 100;
-    private const int TeleportMinimumCompletionMs = 1000;
-    private const int TeleportLoadingStableNonUiChecks = 1;
-    private const int TeleportCompletionStableMainUiChecks = 1;
-    private const int BlessingCheckIntervalMs = 1000;
     private const double MapPositionRecognitionRecoveryZoomStep = 1.0;
     private static string? s_lastSuccessfulTeleportMapName;
     private double _mapZoomLevelPerWheelNotch = DefaultMapZoomLevelPerWheelNotch;
@@ -974,21 +953,19 @@ public class TpTask
 
     private async Task<bool> WaitForTeleportPanelAndConfirm(GiTpPosition? targetTp)
     {
-        var timeoutMilliseconds = GetTeleportPanelTimeoutMilliseconds();
-        var initialDelayMs = GetTeleportPanelInitialDelayMilliseconds();
+        var configuredDelay = _config.QuickTeleportConfig.WaitTeleportPanelDelay;
+        var configuredWait = Math.Clamp(configuredDelay <= 0 ? 50 : configuredDelay, 50, 300);
+        var maxAttemptCount = (int)Math.Ceiling(Math.Max(900, configuredWait * 18) / 80d);
+
+        // 地图点选后，先给右侧传送面板一点弹出时间，再开始检查传送按钮 / 候选列表。
+        var initialDelayMs = Math.Max(200, Math.Clamp(configuredDelay, 0, 500));
         if (initialDelayMs > 0)
         {
             await _runtime.Delay(initialDelayMs, ct);
         }
 
-        var stopwatch = Stopwatch.StartNew();
-        for (var i = 0; i == 0 || stopwatch.ElapsedMilliseconds < timeoutMilliseconds; i++)
+        for (var attempt = 0; attempt < maxAttemptCount; attempt++)
         {
-            if (i > 0)
-            {
-                await _runtime.Delay(UiRecognitionPollIntervalMs, ct);
-            }
-
             using var teleportCapture = _runtime.CaptureToRectArea();
             var result = await HandleTeleportPanel(teleportCapture, targetTp);
             switch (result)
@@ -1001,6 +978,11 @@ public class TpTask
                 case TeleportPanelResult.Waiting:
                     // 本帧既没有传送按钮也没有有效候选，继续轮询。
                     break;
+            }
+
+            if (attempt + 1 < maxAttemptCount)
+            {
+                await _runtime.Delay(80, ct);
             }
         }
 
@@ -1040,33 +1022,16 @@ public class TpTask
         return GetDistance(targetClickX, targetClickY, nearClickX, nearClickY);
     }
 
-    private int GetTeleportPanelTimeoutMilliseconds()
-    {
-        var delay = _config.QuickTeleportConfig.WaitTeleportPanelDelay;
-        var configuredWait = Math.Clamp(delay <= 0 ? 50 : delay, 50, 300);
-        return Math.Max(TeleportPanelMinimumTimeoutMs, configuredWait * 18);
-    }
-
-    /// <summary>
-    /// 地图点选后，先给右侧传送面板一点弹出时间，再开始检查传送按钮 / 候选列表。
-    /// </summary>
-    private int GetTeleportPanelInitialDelayMilliseconds()
-    {
-        var configuredDelay = _config.QuickTeleportConfig.WaitTeleportPanelDelay;
-        return Math.Max(TeleportPanelInitialDelayMs, Math.Clamp(configuredDelay, 0, 500));
-    }
-
     /// <summary>
     ///     检查传送是否完成，未完成则等待
     /// </summary>
     private async Task WaitForTeleportCompletion()
     {
-        var stopwatch = Stopwatch.StartNew();
         var observedLoadingState = false;
         var consecutiveNonUiChecks = 0;
         var consecutiveMainUiChecks = 0;
-        long nextBlessingCheckAt = BlessingCheckIntervalMs;
-        while (stopwatch.ElapsedMilliseconds < TeleportTimeoutMs)
+        var blessingCheckCountdown = 10;
+        for (var attempt = 0; attempt < 600; attempt++)
         {
             ct.ThrowIfCancellationRequested();
 
@@ -1078,8 +1043,8 @@ public class TpTask
             {
                 consecutiveNonUiChecks = 0;
                 if (observedLoadingState &&
-                    stopwatch.ElapsedMilliseconds >= TeleportMinimumCompletionMs &&
-                    ++consecutiveMainUiChecks >= TeleportCompletionStableMainUiChecks)
+                    attempt >= 10 &&
+                    ++consecutiveMainUiChecks >= 1)
                 {
                     Logger.LogInformation("传送完成");
                     return;
@@ -1095,17 +1060,26 @@ public class TpTask
                     // 地图关闭后出现的黑屏、白屏或加载界面均不属于大地图和主界面。
                     // 必须先观察到这个中间态，避免把传送尚未开始时短暂出现的主界面误判为完成。
                     consecutiveNonUiChecks = isInBigMapUi ? 0 : consecutiveNonUiChecks + 1;
-                    observedLoadingState = consecutiveNonUiChecks >= TeleportLoadingStableNonUiChecks;
+                    observedLoadingState = consecutiveNonUiChecks >= 1;
                 }
             }
-            await _runtime.Delay(TeleportLoadingPollIntervalMs, ct);
+            if (attempt + 1 >= 600)
+            {
+                break;
+            }
+
+            await _runtime.Delay(100, ct);
+            if (blessingCheckCountdown > 0)
+            {
+                blessingCheckCountdown--;
+            }
 
             // 打开大地图期间推送的月卡会在传送之后直接显示，导致检测不到传送完成。
-            if (observedLoadingState && !isInMainUi && stopwatch.ElapsedMilliseconds >= nextBlessingCheckAt)
+            if (observedLoadingState && !isInMainUi && blessingCheckCountdown == 0)
             {
                 await _blessingOfTheWelkinMoonTask.Start(ct);
                 ct.ThrowIfCancellationRequested();
-                nextBlessingCheckAt = stopwatch.ElapsedMilliseconds + BlessingCheckIntervalMs;
+                blessingCheckCountdown = 10;
             }
         }
 
@@ -1225,7 +1199,8 @@ public class TpTask
 
         InputHub.Foreground.SimulateAction(GIActions.OpenMap);
         await _runtime.Delay(100, ct);
-        var opened = await WaitForBigMapUiAppear(GetBigMapOpenTimeoutMilliseconds(mapName));
+        var opened = await WaitForBigMapUiAppear(
+            string.Equals(mapName, MapTypes.MoonCanon.ToString(), StringComparison.Ordinal) ? 100 : 63);
         return opened;
     }
 
@@ -1235,17 +1210,19 @@ public class TpTask
         return Bv.IsInBigMapUi(capture);
     }
 
-    private async Task<bool> WaitForBigMapUiAppear(int timeoutMilliseconds)
+    private async Task<bool> WaitForBigMapUiAppear(int maxAttemptCount)
     {
-        var stopwatch = Stopwatch.StartNew();
-        for (var i = 0; i == 0 || stopwatch.ElapsedMilliseconds < timeoutMilliseconds; i++)
+        for (var attempt = 0; attempt < maxAttemptCount; attempt++)
         {
             if (IsInBigMapUi())
             {
                 return true;
             }
 
-            await _runtime.Delay(BigMapOpenCheckIntervalMs, ct);
+            if (attempt + 1 < maxAttemptCount)
+            {
+                await _runtime.Delay(80, ct);
+            }
         }
 
         return false;
@@ -1661,13 +1638,6 @@ public class TpTask
         return string.Equals(mapName, MapTypes.MoonCanon.ToString(), StringComparison.Ordinal)
             ? MoonCanonDisplayTpPointZoomLevel
             : DefaultDisplayTpPointZoomLevel;
-    }
-
-    private static int GetBigMapOpenTimeoutMilliseconds(string? mapName)
-    {
-        return string.Equals(mapName, MapTypes.MoonCanon.ToString(), StringComparison.Ordinal)
-            ? MoonCanonBigMapOpenTimeoutMs
-            : DefaultBigMapOpenTimeoutMs;
     }
 
     /// <summary>
@@ -2480,8 +2450,7 @@ public class TpTask
         await _runtime.Delay(50, ct);
         var minCountryLocalized = this.stringLocalizer.WithCultureGet(this.cultureInfo, areaName);
         var candidatesText = "";
-        var stopwatch = Stopwatch.StartNew();
-        while (stopwatch.ElapsedMilliseconds < SwitchAreaCandidateTimeoutMs)
+        for (var attempt = 0; attempt < 19; attempt++)
         {
             ct.ThrowIfCancellationRequested();
             using var ra = _runtime.CaptureToRectArea();
@@ -2501,7 +2470,10 @@ public class TpTask
                 return true;
             }
 
-            await _runtime.Delay(UiRecognitionPollIntervalMs, ct);
+            if (attempt + 1 < 19)
+            {
+                await _runtime.Delay(80, ct);
+            }
         }
 
         Logger.LogWarning(
@@ -2516,9 +2488,8 @@ public class TpTask
         string localizedAreaName,
         Rect clickedCandidateRect)
     {
-        var stopwatch = Stopwatch.StartNew();
         var consecutiveMissingChecks = 0;
-        while (stopwatch.ElapsedMilliseconds < SwitchAreaSelectionTimeoutMs)
+        for (var attempt = 0; attempt < 8; attempt++)
         {
             ct.ThrowIfCancellationRequested();
             using var capture = _runtime.CaptureToRectArea();
@@ -2527,10 +2498,10 @@ public class TpTask
                 IsSameSwitchAreaCandidatePosition(clickedCandidateRect, candidate));
 
             if (!clickedCandidateStillVisible &&
-                stopwatch.ElapsedMilliseconds >= SwitchAreaSelectionMinimumWaitMs)
+                attempt >= 2)
             {
                 consecutiveMissingChecks++;
-                if (consecutiveMissingChecks >= SwitchAreaSelectionStableChecks)
+                if (consecutiveMissingChecks >= 2)
                 {
                     return;
                 }
@@ -2540,7 +2511,10 @@ public class TpTask
                 consecutiveMissingChecks = 0;
             }
 
-            await _runtime.Delay(UiRecognitionPollIntervalMs, ct);
+            if (attempt + 1 < 8)
+            {
+                await _runtime.Delay(80, ct);
+            }
         }
 
         Logger.LogDebug("区域选择动画等待达到上限：{Country}", areaName);
@@ -2610,9 +2584,7 @@ public class TpTask
         var layerSwitchClicked = false;
         var groundLayerClicked = false;
         // 图层按钮的出现、展开和选中都有固定时长的界面动画，不能随传送操作速度缩短。
-        var retryInterval = MapLayerVerificationPollIntervalMs;
-        var stopwatch = Stopwatch.StartNew();
-        while (stopwatch.ElapsedMilliseconds < MapGroundLayerSwitchTimeoutMs)
+        for (var attempt = 0; attempt < 38; attempt++)
         {
             using var capture = _runtime.CaptureToRectArea();
             using var groundButton = capture.Find(
@@ -2622,46 +2594,39 @@ public class TpTask
                 groundButton.Click();
                 capture.MoveTo(capture.Width / 2, capture.Height / 2);
                 groundLayerClicked = true;
-                await _runtime.Delay(retryInterval, ct);
-                continue;
             }
-
-            using var undergroundButton = capture.Find(
-                GetQuickTeleportRecognitionObject("MapUndergroundSwitchButton", capture));
-            var isUnderground = undergroundButton.IsExist();
-
-            if (groundLayerClicked)
+            else
             {
-                if (!isUnderground)
+                using var undergroundButton = capture.Find(
+                    GetQuickTeleportRecognitionObject("MapUndergroundSwitchButton", capture));
+                var isUnderground = undergroundButton.IsExist();
+
+                if (groundLayerClicked)
                 {
-                    return;
+                    if (!isUnderground)
+                    {
+                        return;
+                    }
                 }
-
-                await _runtime.Delay(retryInterval, ct);
-                continue;
-            }
-
-            if (!isUnderground)
-            {
-                if (!layerSwitchClicked && stopwatch.ElapsedMilliseconds >= MapLayerVerificationPollIntervalMs * 2)
+                else if (!isUnderground)
                 {
-                    return;
+                    if (!layerSwitchClicked && attempt >= 2)
+                    {
+                        return;
+                    }
                 }
-
-                await _runtime.Delay(retryInterval, ct);
-                continue;
+                else if (!layerSwitchClicked)
+                {
+                    undergroundButton.Click();
+                    capture.MoveTo(capture.Width / 2, capture.Height / 2);
+                    layerSwitchClicked = true;
+                }
             }
 
-            if (!layerSwitchClicked)
+            if (attempt + 1 < 38)
             {
-                undergroundButton.Click();
-                capture.MoveTo(capture.Width / 2, capture.Height / 2);
-                layerSwitchClicked = true;
-                await _runtime.Delay(retryInterval, ct);
-                continue;
+                await _runtime.Delay(80, ct);
             }
-
-            await _runtime.Delay(retryInterval, ct);
         }
 
         Logger.LogWarning("切换到地表地图后校验超时");
@@ -2731,11 +2696,10 @@ public class TpTask
 
     private async Task<TeleportPanelResult> WaitAndPressTeleportConfirm(GiTpPosition? targetTp)
     {
-        var stopwatch = Stopwatch.StartNew();
-        long nextCandidateVerificationAt = MapChooseCandidateClickVerificationDelayMs;
-        for (var i = 0; i == 0 || stopwatch.ElapsedMilliseconds < TeleportConfirmTimeoutMs; i++)
+        var candidateVerificationCountdown = 8;
+        for (var attempt = 0; attempt < 63; attempt++)
         {
-            await _runtime.Delay(UiRecognitionPollIntervalMs, ct);
+            await _runtime.Delay(80, ct);
 
             var screen = _runtime.CaptureToRectArea();
             using var ownedScreen = screen;
@@ -2755,7 +2719,8 @@ public class TpTask
                 return TeleportPanelResult.Confirmed;
             }
 
-            if (stopwatch.ElapsedMilliseconds >= nextCandidateVerificationAt)
+            candidateVerificationCountdown--;
+            if (candidateVerificationCountdown == 0)
             {
                 // 同一截图识别一次即可；列表仍在则点击未生效（点了未激活项或点空）。
                 if (GetPreferredMapChooseCandidate(screen, targetTp) != null)
@@ -2763,8 +2728,7 @@ public class TpTask
                     return TeleportPanelResult.RetryPoint;
                 }
 
-                nextCandidateVerificationAt = stopwatch.ElapsedMilliseconds +
-                                              MapChooseCandidateClickVerificationIntervalMs;
+                candidateVerificationCountdown = 2;
             }
         }
 
