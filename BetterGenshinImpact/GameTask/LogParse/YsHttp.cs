@@ -133,12 +133,42 @@ namespace BetterGenshinImpact.GameTask.LogParse
             {
                 PropertyNameCaseInsensitive = true
             });
-            if (apiResponse.Message == "未登录")
+            if (apiResponse is null)
             {
-                throw new NoLoginException();
+                throw new InvalidOperationException("米游社接口返回无法解析");
+            }
+
+            if (IsLoginFailure(apiResponse.Retcode, apiResponse.Message))
+            {
+                throw new NoLoginException(string.IsNullOrWhiteSpace(apiResponse.Message) ? "未登录" : apiResponse.Message);
+            }
+
+            if (apiResponse.Retcode != 0)
+            {
+                throw new InvalidOperationException($"米游社接口错误 retcode={apiResponse.Retcode}：{apiResponse.Message}");
+            }
+
+            if (apiResponse.Data is null)
+            {
+                throw new InvalidOperationException($"米游社接口返回 data 为空：{apiResponse.Message}");
             }
 
             return apiResponse;
+        }
+
+        private static bool IsLoginFailure(int retcode, string? message)
+        {
+            if (retcode is -100 or -107)
+            {
+                return true;
+            }
+
+            if (string.IsNullOrEmpty(message))
+            {
+                return false;
+            }
+
+            return message.Contains("未登录") || message.Contains("登录失效") || message.Contains("登录已失效");
         }
 
         /// <summary>
@@ -228,9 +258,15 @@ namespace BetterGenshinImpact.GameTask.LogParse
             int type, int limit = 100, CancellationToken cancellationToken = default, ActionItem lastActionItem = null)
         {
             var data = await GetTravelsDiaryDetailByPageAsync(role, cookie, month, type, 1, limit, cancellationToken);
+            if (data.Data?.List == null || data.Data.List.Count == 0)
+            {
+                return data;
+            }
+
             if (lastActionItem != null)
             {
-                if (DateTime.Parse(data.Data.List.FindLast(item => true).Time) <= DateTime.Parse(lastActionItem.Time))
+                var lastTime = DateTime.Parse(data.Data.List[^1].Time);
+                if (lastTime <= DateTime.Parse(lastActionItem.Time))
                 {
                     data.Data.List = data.Data.List
                         .Where(item => DateTime.Parse(item.Time) > DateTime.Parse(lastActionItem.Time)).ToList();
@@ -247,12 +283,16 @@ namespace BetterGenshinImpact.GameTask.LogParse
             {
                 var addData =
                     await GetTravelsDiaryDetailByPageAsync(role, cookie, month, type, i, limit, cancellationToken);
+                if (addData.Data?.List == null || addData.Data.List.Count == 0)
+                {
+                    break;
+                }
 
                 data.Data.List.AddRange(addData.Data.List);
                 if (lastActionItem != null)
                 {
-                    if (DateTime.Parse(data.Data.List.FindLast(item => true).Time) <=
-                        DateTime.Parse(lastActionItem.Time))
+                    var lastTime = DateTime.Parse(data.Data.List[^1].Time);
+                    if (lastTime <= DateTime.Parse(lastActionItem.Time))
                     {
                         data.Data.List = data.Data.List
                             .Where(item => DateTime.Parse(item.Time) > DateTime.Parse(lastActionItem.Time)).ToList();

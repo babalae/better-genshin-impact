@@ -88,6 +88,9 @@ public class ElementalCollectAvatarConfigs
         new ElementalCollectAvatar("坎蒂斯", ElementalType.Hydro, false, true),
         new ElementalCollectAvatar("行秋", ElementalType.Hydro, false, true),
         new ElementalCollectAvatar("神里绫人", ElementalType.Hydro, false, true),
+        new ElementalCollectAvatar("哥伦比娅", ElementalType.Hydro, true, true),
+        new ElementalCollectAvatar("沃雅妮莎", ElementalType.Hydro, true, true),
+        new ElementalCollectAvatar("爱诺", ElementalType.Hydro, false, true),
         // 雷
         new ElementalCollectAvatar("丽莎", ElementalType.Electro, true, true),
         new ElementalCollectAvatar("八重神子", ElementalType.Electro, true, false),
@@ -97,6 +100,7 @@ public class ElementalCollectAvatarConfigs
         new ElementalCollectAvatar("北斗", ElementalType.Electro, false, true),
         new ElementalCollectAvatar("菲谢尔", ElementalType.Electro, false, true),
         new ElementalCollectAvatar("雷泽", ElementalType.Electro, false, true),
+        new ElementalCollectAvatar("伊涅芙", ElementalType.Electro, false, true),
         // 风
         new ElementalCollectAvatar("砂糖", ElementalType.Anemo, true, true),
         new ElementalCollectAvatar("鹿野院平藏", ElementalType.Anemo, true, true),
@@ -109,6 +113,8 @@ public class ElementalCollectAvatarConfigs
         new ElementalCollectAvatar("温迪", ElementalType.Anemo, false, true),
         new ElementalCollectAvatar("琴", ElementalType.Anemo, false, true),
         new ElementalCollectAvatar("早柚", ElementalType.Anemo, false, true),
+        new ElementalCollectAvatar("伊法", ElementalType.Anemo, true, false),
+        new ElementalCollectAvatar("梦见月瑞希", ElementalType.Anemo, true, false),
         // 火
         new ElementalCollectAvatar("烟绯", ElementalType.Pyro, true, true),
         new ElementalCollectAvatar("迪卢克", ElementalType.Pyro, false,true),
@@ -122,6 +128,7 @@ public class ElementalCollectAvatarConfigs
         new ElementalCollectAvatar("辛焱", ElementalType.Pyro, false, true),
         new ElementalCollectAvatar("林尼", ElementalType.Pyro, false, true),
         new ElementalCollectAvatar("宵宫", ElementalType.Pyro, false, true),
+        new ElementalCollectAvatar("尼可", ElementalType.Pyro, true, true),
     ];
 
     public static ElementalCollectAvatar? Get(string name, ElementalType type) => Lists.FirstOrDefault(x => x.Name == name && x.ElementalType == type);

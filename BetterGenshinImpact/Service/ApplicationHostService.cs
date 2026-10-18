@@ -8,9 +8,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Instance;
+using Microsoft.Extensions.DependencyInjection;
 using Wpf.Ui;
 
 namespace BetterGenshinImpact.Service;
@@ -20,7 +22,8 @@ namespace BetterGenshinImpact.Service;
 /// </summary>
 public class ApplicationHostService(
     IServiceProvider serviceProvider,
-    InstanceService instanceService) : IHostedService
+    InstanceService instanceService,
+    IInferenceModelDiagnostics inferenceDiagnostics) : IHostedService
 {
     private INavigationWindow? _navigationWindow;
 
@@ -44,13 +47,60 @@ public class ApplicationHostService(
     }
 
     /// <summary>
+    /// 网页版实例不创建主界面，云原神宿主窗口就是唯一的界面（由 WebPageRuntimeProvider 在启动截图器时打开）。
+    /// 页面的 Loaded / 导航不会发生，命令行任务直接交给对应的 ViewModel
+    /// </summary>
+    private void HandleWebViewActivation(CommandLineOptions cmdOptions)
+    {
+        // 总是先启动截图器：打开宿主并等待进入游戏，HomePageViewModel 同时负责遮罩窗口与键鼠监听。
+        // 宿主在 StartAsync 的同步部分就已创建并设为主窗口，后面的命令行任务弹出的提示因此有 Owner；
+        // 任务自身调用 StartGameTask 时会等这次启动完成
+        serviceProvider.GetRequiredService<HomePageViewModel>().HandleActivation(cmdOptions);
+
+        switch (cmdOptions.Action)
+        {
+            case CommandLineAction.StartOneDragon:
+                // 没有页面：模拟一条龙页面的导航（加载配置列表）与首次加载（按命令行选配置并执行）
+                var oneDragon = serviceProvider.GetRequiredService<OneDragonFlowViewModel>();
+                oneDragon.OnNavigatedTo();
+                oneDragon.LoadedCommand.Execute(null);
+                break;
+
+            case CommandLineAction.StartGroups when cmdOptions.GroupNames.Length > 0:
+                _ = serviceProvider.GetRequiredService<ScriptControlViewModel>()
+                    .OnStartMultiScriptGroupWithNamesAsync(cmdOptions.GroupNames);
+                break;
+
+            case CommandLineAction.TaskProgress when cmdOptions.GroupNames.Length > 0:
+                _ = serviceProvider.GetRequiredService<ScriptControlViewModel>()
+                    .OnStartMultiScriptTaskProgressAsync(cmdOptions.GroupNames);
+                break;
+        }
+    }
+
+    /// <summary>
     /// Creates main window during activation.
     /// </summary>
     private async Task HandleActivationAsync()
     {
+        if (instanceService.Context.IsWebView)
+        {
+            try
+            {
+                await inferenceDiagnostics.PreheatOcrAsync();
+            }
+            catch (Exception e)
+            {
+                await BetterGenshinImpact.View.Windows.ThemedMessageBox.WarningAsync($"OCR 预热失败：{e.Message}");
+            }
+            HandleWebViewActivation(CommandLineOptions.Instance);
+            return;
+        }
+
         if (!Application.Current.Windows.OfType<MainWindow>().Any())
         {
             _navigationWindow = (serviceProvider.GetService(typeof(INavigationWindow)) as INavigationWindow)!;
+            if (_navigationWindow is Window window) Application.Current.MainWindow = window;
             _navigationWindow!.ShowWindow();
 
             var cmdOptions = CommandLineOptions.Instance;
@@ -63,7 +113,7 @@ public class ApplicationHostService(
                 // 命令行启动时，并行更新订阅脚本（不阻塞游戏启动和导航）
                 // StartGameTask 会在游戏进入主界面后等待此 Task 完成，再开始执行任务
                 var scriptConfig = TaskContext.Instance().Config.ScriptConfig;
-                if (scriptConfig.AutoUpdateBeforeCommandLineRun)
+                if (instanceService.Context.IsRoot && scriptConfig.AutoUpdateBeforeCommandLineRun)
                 {
                     ScriptRepoUpdater.Instance.CommandLineAutoUpdateTask =
                         Task.Run(() => ScriptRepoUpdater.Instance.AutoUpdateSubscribedScripts());

@@ -2,15 +2,20 @@ using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using BetterGenshinImpact.Core.Mask;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoSkip.Audio;
 using BetterGenshinImpact.GameTask.Music.Service;
+using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.Runtime.Win32;
+using BetterGenshinImpact.GameTask.Runtime.WebPage;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Win32;
@@ -22,6 +27,7 @@ using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notifier;
 using BetterGenshinImpact.View;
+using BetterGenshinImpact.View.Mask;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel;
@@ -70,8 +76,12 @@ public partial class App : Application
                 Directory.CreateDirectory(logFolder);
                 var logFile = Path.Combine(logFolder, "better-genshin-impact.log");
                 var instanceContext = InstanceBootstrap.Current.Context;
+                // 网页版实例带上实例名，例如 WebView(小号A):S1:P1234:T…
+                var instanceTypeLabel = instanceContext.InstanceName is { } instanceName
+                    ? $"{instanceContext.InstanceType}({instanceName})"
+                    : instanceContext.InstanceType.ToString();
                 var instanceIdentity =
-                    $"{instanceContext.InstanceType}:S{instanceContext.WindowsSessionId}:P{instanceContext.ProcessId}:T{instanceContext.StartedAt.ToUnixTimeMilliseconds()}";
+                    $"{instanceTypeLabel}:S{instanceContext.WindowsSessionId}:P{instanceContext.ProcessId}:T{instanceContext.StartedAt.ToUnixTimeMilliseconds()}";
 
                 var richTextBox = new RichTextBoxImpl();
                 services.AddSingleton<IRichTextBox>(richTextBox);
@@ -104,6 +114,28 @@ public partial class App : Application
 
                 Log.Logger = loggerConfiguration.CreateLogger();
                 services.AddLogging(c => c.AddSerilog());
+
+                // 配置和日志已经就绪，在任何推理服务或会话初始化前选定原生运行库。
+                all.HardwareAccelerationConfig ??= new();
+                var inferenceStartupStatus = InferenceRuntimeService.PrepareStartup(all.HardwareAccelerationConfig, InstanceBootstrap.Current.Context.IsRoot);
+                // 只规范配置并绑定运行库；待验证状态在主窗口实际开始验证时才落盘。
+                configService.Save();
+                services.AddSingleton(inferenceStartupStatus);
+                var onnxRuntimeLoader = new OnnxRuntimeLoader(all.HardwareAccelerationConfig, AppContext.BaseDirectory);
+                services.AddSingleton(onnxRuntimeLoader);
+                services.AddSingleton<IOnnxRuntimeSelection>(onnxRuntimeLoader);
+                var onnxRuntimeInstaller = new OnnxRuntimeInstaller(AppContext.BaseDirectory);
+                services.AddSingleton(onnxRuntimeInstaller);
+                services.AddSingleton<IOnnxRuntimeInstaller>(onnxRuntimeInstaller);
+                services.AddSingleton<IInferenceDeviceDiscovery, InferenceDeviceDiscovery>();
+                services.AddSingleton<IInferenceBenchmarkLeaseProvider>(sp => new InferenceBenchmarkCoordinator(
+                    BetterGenshinImpact.GameTask.Common.TaskControl.TaskSemaphore,
+                    () => sp.GetRequiredService<TaskTriggerDispatcher>().PauseForInference()));
+                services.AddSingleton<InferenceModelDiagnostics>();
+                services.AddSingleton<IInferenceModelDiagnostics>(sp => sp.GetRequiredService<InferenceModelDiagnostics>());
+                services.AddSingleton<InferenceRuntimeService>();
+                services.AddSingleton<HardwareAccelerationViewModelFactory>();
+                services.AddSingleton<IInferenceSettingsInteraction, InferenceSettingsInteraction>();
 
                 services.AddLocalization();
                 var i18nService = I18nService.Instance;
@@ -181,10 +213,32 @@ public partial class App : Application
                 services.AddSingleton<IRelativeMouseInputMonitorFactory, RelativeMouseInputMonitorFactory>();
                 services.AddSingleton<OverlayMetricsService>();
                 services.AddSingleton<CustomHtmlMaskService>();
+
+                // 遮罩窗口：业务侧只依赖 IMaskWindowDrawingBoard / IMaskWindowHost / IMaskWindowMapState
+                services.AddSingleton<MaskWindowDrawingBoard>();
+                services.AddSingleton<IMaskWindowDrawingBoard>(sp => sp.GetRequiredService<MaskWindowDrawingBoard>());
+                services.AddSingleton<IMaskWindowSnapshotSource<MaskWindowDrawingSnapshot>>(sp => sp.GetRequiredService<MaskWindowDrawingBoard>());
+                services.AddSingleton<MaskWindowMapState>();
+                services.AddSingleton<IMaskWindowMapState>(sp => sp.GetRequiredService<MaskWindowMapState>());
+                services.AddSingleton<IMaskWindowSnapshotSource<MaskWindowMapSnapshot>>(sp => sp.GetRequiredService<MaskWindowMapState>());
+                services.AddSingleton<MaskWindowViewModel>();
+                services.AddTransient<MaskWindow>();
+                services.AddSingleton<Func<MaskWindow>>(sp => () => sp.GetRequiredService<MaskWindow>());
+                services.AddSingleton<IMaskWindowHost, MaskWindowHost>();
                 services.AddSingleton<DialogueOptionVoiceDiagnosticState>();
                 services.AddSingleton<DialogueOptionVoiceDiagnosticService>();
                 services.AddHostedService(sp => sp.GetRequiredService<DialogueOptionVoiceDiagnosticService>());
                 services.AddSingleton<TaskTriggerDispatcher>();
+                // 游戏运行环境：按实例类型选定 Provider，见 Docs/design/game-runtime.md
+                services.AddSingleton<Win32RuntimeProvider>();
+                services.AddSingleton<IGameRuntimeProvider>(sp => sp.GetRequiredService<Win32RuntimeProvider>());
+                services.AddSingleton<IGameRuntimeProvider, WebPageRuntimeProvider>();
+                services.AddTransient<CloudWebHostWindow>();
+                services.AddSingleton<Func<CloudWebHostWindow>>(sp => () => sp.GetRequiredService<CloudWebHostWindow>());
+                services.AddSingleton<GameRuntimeService>();
+                // 云原神网页版实例：实例名存储与启动器（Primary 首页使用）
+                services.AddSingleton<WebViewInstanceStore>();
+                services.AddSingleton<WebViewInstanceLauncher>();
                 services.AddSingleton<RecognitionTemplateAssetService>();
                 services.AddSingleton<RecognitionTemplateEditorService>();
                 services.AddSingleton<NotificationService>();
@@ -264,9 +318,15 @@ public partial class App : Application
             // 分配控制台窗口以支持控制台输出
             ConsoleHelper.AllocateConsole("BetterGI Console");
             RegisterEvents();
+            var inferenceRuntime = _host.Services.GetRequiredService<InferenceRuntimeService>();
+            // 此处只准备设备配置；模型验证和提示由主实例的 MainWindowViewModel.OnLoaded 执行。
+            await inferenceRuntime.InitializeAsync();
             await _host.StartAsync();
             ServerTimeHelper.Initialize(_host.Services.GetRequiredService<IServerTimeProvider>());
-            await UrlProtocolHelper.RegisterAsync();
+            if (InstanceBootstrap.Current.Context.IsRoot)
+            {
+                await UrlProtocolHelper.RegisterAsync();
+            }
         }
         catch (Exception ex)
         {
@@ -308,6 +368,7 @@ public partial class App : Application
             // 启动失败 = 无可用的主界面，直接退出，避免留下无窗口的残留进程。
             Shutdown();
         }
+
     }
 
     /// <summary>
@@ -319,8 +380,21 @@ public partial class App : Application
 
         ConsoleHelper.WriteLine("BetterGI 应用程序正在关闭...");
 
+        // 写入防抖窗口内尚未落盘的配置改动
+        try
+        {
+            _host.Services.GetService<IConfigService>()?.Flush();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
+
         TempManager.CleanUp();
 
+        await _host.Services.GetRequiredService<InferenceRuntimeService>().StopAsync();
+        await _host.Services.GetRequiredService<OnnxRuntimeInstaller>().StopAsync();
+        await _host.Services.GetRequiredService<InferenceModelDiagnostics>().StopAsync();
         await _host.StopAsync();
         _host.Dispose();
         Log.CloseAndFlush();

@@ -28,6 +28,16 @@ public sealed class MiniMapPointsCanvas : FrameworkElement
             typeof(MiniMapPointsCanvas),
             new PropertyMetadata(null, OnLabelsSourceChanged));
 
+    /// <summary>
+    /// 可视区域，由 VM 绑定
+    /// </summary>
+    public static readonly DependencyProperty ViewportProperty =
+        DependencyProperty.Register(
+            nameof(Viewport),
+            typeof(Rect),
+            typeof(MiniMapPointsCanvas),
+            new PropertyMetadata(Rect.Empty, OnViewportChanged));
+
     private readonly VisualCollection _children;
     private readonly DrawingVisual _drawingVisual;
     private readonly Dictionary<string, Brush> _colorBrushCache;
@@ -48,6 +58,18 @@ public sealed class MiniMapPointsCanvas : FrameworkElement
     {
         get => (IEnumerable<MaskMapPointLabel>?)GetValue(LabelsSourceProperty);
         set => SetValue(LabelsSourceProperty, value);
+    }
+
+    public Rect Viewport
+    {
+        get => (Rect)GetValue(ViewportProperty);
+        set => SetValue(ViewportProperty, value);
+    }
+
+    private static void OnViewportChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        var rect = (Rect)e.NewValue;
+        ((MiniMapPointsCanvas)d).UpdateViewport(rect.X, rect.Y, rect.Width, rect.Height);
     }
 
     public MiniMapPointsCanvas()
@@ -346,7 +368,7 @@ public sealed class MiniMapPointsCanvas : FrameworkElement
         Refresh();
     }
 
-    public void UpdateViewport(double x, double y, double width, double height)
+    private void UpdateViewport(double x, double y, double width, double height)
     {
         var newRect = new Rect(x, y, width, height);
         if (newRect.Equals(_viewportRect))

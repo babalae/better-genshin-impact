@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Mask;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.Area.Converter;
@@ -63,7 +64,7 @@ public class ImageRegionReferenceSearchTests
         Rect expected)
     {
         using var screen = new Mat(imageHeight, imageWidth, MatType.CV_8UC3, Scalar.Black);
-        using var region = new GameCaptureRegion(screen.Clone(), 0, 0, drawContent: new FakeDrawContent());
+        using var region = new GameCaptureRegion(screen.Clone(), 0, 0, drawingBoard: NullMaskWindowDrawingBoard.Instance);
         var ro = new RecognitionObject
         {
             RecognitionType = RecognitionTypes.Ocr,
@@ -106,7 +107,7 @@ public class ImageRegionReferenceSearchTests
         Rect expected)
     {
         using var screen = new Mat(imageHeight, imageWidth, MatType.CV_8UC3, Scalar.Black);
-        using var region = new GameCaptureRegion(screen.Clone(), 0, 0, drawContent: new FakeDrawContent());
+        using var region = new GameCaptureRegion(screen.Clone(), 0, 0, drawingBoard: NullMaskWindowDrawingBoard.Instance);
         var ro = new RecognitionObject
         {
             RecognitionType = RecognitionTypes.Ocr,
@@ -137,7 +138,7 @@ public class ImageRegionReferenceSearchTests
         PutTemplate(screen, template, new Rect(267, 200, 43, 43));
         var ro = CreateRecognitionObject(template);
 
-        using var region = new GameCaptureRegion(screen.Clone(), 0, 0, drawContent: new FakeDrawContent());
+        using var region = new GameCaptureRegion(screen.Clone(), 0, 0, drawingBoard: NullMaskWindowDrawingBoard.Instance);
 
         using var result = region.Find(ro);
 
@@ -152,9 +153,9 @@ public class ImageRegionReferenceSearchTests
         using var screen = new Mat(1200, 1920, MatType.CV_8UC3, Scalar.Black);
         PutTemplate(screen, template, new Rect(200, 150, 32, 32));
         var ro = CreateRecognitionObject(template);
-        var drawContent = new FakeDrawContent();
-        using var parent = new GameCaptureRegion(new Mat(1600, 2560, MatType.CV_8UC3, Scalar.Black), 0, 0, drawContent: drawContent);
-        using var region = new ImageRegion(screen.Clone(), 0, 0, parent, new ScaleConverter(2560 / 1920d), drawContent);
+        IMaskWindowDrawingBoard drawingBoard = NullMaskWindowDrawingBoard.Instance;
+        using var parent = new GameCaptureRegion(new Mat(1600, 2560, MatType.CV_8UC3, Scalar.Black), 0, 0, drawingBoard: drawingBoard);
+        using var region = new ImageRegion(screen.Clone(), 0, 0, parent, new ScaleConverter(2560 / 1920d), drawingBoard);
 
         using var result = region.Find(ro);
 
@@ -172,7 +173,7 @@ public class ImageRegionReferenceSearchTests
         ro.SearchOptions!.ReferenceSearchBox = new Rect(600, 250, 160, 120);
         ro.SearchOptions.ExpandPercent = new SearchExpandRatio(0, 0, 0, 0);
 
-        using var region = new GameCaptureRegion(screen.Clone(), 0, 0, drawContent: new FakeDrawContent());
+        using var region = new GameCaptureRegion(screen.Clone(), 0, 0, drawingBoard: NullMaskWindowDrawingBoard.Instance);
         using var result = region.Find(ro);
 
         Assert.True(result.IsExist());
@@ -189,7 +190,7 @@ public class ImageRegionReferenceSearchTests
         ro.SearchOptions!.ExpandSize = new CvSize(0, 0);
         ro.SearchOptions.ExpandPercent = new SearchExpandRatio(0, 0, 0.05, 0.05);
 
-        using var region = new GameCaptureRegion(screen.Clone(), 0, 0, drawContent: new FakeDrawContent());
+        using var region = new GameCaptureRegion(screen.Clone(), 0, 0, drawingBoard: NullMaskWindowDrawingBoard.Instance);
         using var result = region.Find(ro);
 
         Assert.True(result.IsExist());
@@ -200,7 +201,7 @@ public class ImageRegionReferenceSearchTests
     public void TryGetReferenceSearchRegion_PercentExpand_UsesFourScreenshotEdges()
     {
         using var screen = new Mat(200, 300, MatType.CV_8UC3, Scalar.Black);
-        using var region = new GameCaptureRegion(screen.Clone(), 0, 0, drawContent: new FakeDrawContent());
+        using var region = new GameCaptureRegion(screen.Clone(), 0, 0, drawingBoard: NullMaskWindowDrawingBoard.Instance);
         var ro = new RecognitionObject
         {
             RecognitionType = RecognitionTypes.Ocr,
@@ -229,7 +230,7 @@ public class ImageRegionReferenceSearchTests
     public void TryGetReferenceSearchRegion_OutOfBoundsSearchBox_IsClamped()
     {
         using var screen = new Mat(100, 200, MatType.CV_8UC3, Scalar.Black);
-        using var region = new GameCaptureRegion(screen.Clone(), 0, 0, drawContent: new FakeDrawContent());
+        using var region = new GameCaptureRegion(screen.Clone(), 0, 0, drawingBoard: NullMaskWindowDrawingBoard.Instance);
         var ro = new RecognitionObject
         {
             RecognitionType = RecognitionTypes.Ocr,
@@ -257,7 +258,7 @@ public class ImageRegionReferenceSearchTests
     public void TryGetReferenceSearchRegion_ScaledSearchBoxTooSmallForTemplate_ReturnsFalse()
     {
         using var screen = new Mat(200, 200, MatType.CV_8UC3, Scalar.Black);
-        using var region = new GameCaptureRegion(screen.Clone(), 0, 0, drawContent: new FakeDrawContent());
+        using var region = new GameCaptureRegion(screen.Clone(), 0, 0, drawingBoard: NullMaskWindowDrawingBoard.Instance);
         var ro = new RecognitionObject
         {
             RecognitionType = RecognitionTypes.TemplateMatch,
@@ -291,7 +292,7 @@ public class ImageRegionReferenceSearchTests
         ro.SearchOptions!.ExpandSize = new CvSize(100, 100);
         ro.SearchOptions.ExpandPercent = new SearchExpandRatio(0, 0, 0, 0);
 
-        using var region = new GameCaptureRegion(screen.Clone(), 0, 0, drawContent: new FakeDrawContent());
+        using var region = new GameCaptureRegion(screen.Clone(), 0, 0, drawingBoard: NullMaskWindowDrawingBoard.Instance);
         using var result = region.Find(ro);
 
         Assert.True(result.IsEmpty());
@@ -305,7 +306,7 @@ public class ImageRegionReferenceSearchTests
         PutTemplate(screen, template, new Rect(267, 200, 43, 43));
         var ro = CreateRecognitionObject(template);
 
-        using var region = new GameCaptureRegion(screen.Clone(), 0, 0, drawContent: new FakeDrawContent());
+        using var region = new GameCaptureRegion(screen.Clone(), 0, 0, drawingBoard: NullMaskWindowDrawingBoard.Instance);
         using var cropped = region.DeriveCrop(0, 0, 400, 400);
 
         using var result = cropped.Find(ro);
@@ -325,7 +326,7 @@ public class ImageRegionReferenceSearchTests
             ReferenceBoundingBox = new Rect(200, 150, 32, 32)
         };
 
-        using var region = new GameCaptureRegion(screen.Clone(), 0, 0, drawContent: new FakeDrawContent());
+        using var region = new GameCaptureRegion(screen.Clone(), 0, 0, drawingBoard: NullMaskWindowDrawingBoard.Instance);
         using var cropped = region.DeriveCrop(0, 0, 400, 400);
 
         using var result = cropped.Find(ro);

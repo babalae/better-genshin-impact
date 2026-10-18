@@ -11,6 +11,7 @@ namespace BetterGenshinImpact.Helpers;
 public class CommandLineOptions
 {
     public const string InstanceArgument = "--instance";
+    public const string InstanceNameArgument = "--instance-name";
     public const string RestartFromProcessIdArgument = "--restart-from-pid";
 
     private static CommandLineOptions? _instance;
@@ -28,6 +29,11 @@ public class CommandLineOptions
     /// 是否通过命令行明确指定了只能作为客户端运行的实例类型。
     /// </summary>
     public bool HasExplicitInstanceType { get; }
+
+    /// <summary>
+    /// 实例名（--instance-name），只对网页版实例有意义，未校验。
+    /// </summary>
+    public string? InstanceName { get; }
 
     /// <summary>
     /// 应用重启时被替换的旧进程 ID。
@@ -63,7 +69,8 @@ public class CommandLineOptions
         string[]? groupNames = null,
         BetterGiInstanceType instanceType = BetterGiInstanceType.Primary,
         bool hasExplicitInstanceType = false,
-        int? restartFromProcessId = null)
+        int? restartFromProcessId = null,
+        string? instanceName = null)
     {
         Action = action;
         OneDragonConfigName = oneDragonConfigName;
@@ -71,6 +78,7 @@ public class CommandLineOptions
         InstanceType = instanceType;
         HasExplicitInstanceType = hasExplicitInstanceType;
         RestartFromProcessId = restartFromProcessId;
+        InstanceName = instanceName;
     }
 
     internal static CommandLineOptions Parse(string[] args)
@@ -79,6 +87,7 @@ public class CommandLineOptions
         var instanceType = BetterGiInstanceType.Primary;
         var hasExplicitInstanceType = false;
         int? restartFromProcessId = null;
+        string? instanceName = null;
         var commandArgs = new List<string>();
 
         for (var index = 0; index < launchArgs.Length; index++)
@@ -99,6 +108,15 @@ public class CommandLineOptions
                         instanceType = parsedType.Value;
                         hasExplicitInstanceType = true;
                     }
+                }
+                continue;
+            }
+
+            if (argument.Equals(InstanceNameArgument, StringComparison.OrdinalIgnoreCase))
+            {
+                if (TryReadNext(launchArgs, ref index, out var instanceNameValue))
+                {
+                    instanceName = instanceNameValue;
                 }
                 continue;
             }
@@ -164,7 +182,8 @@ public class CommandLineOptions
                 groupNames,
                 instanceType,
                 hasExplicitInstanceType,
-                restartFromProcessId);
+                restartFromProcessId,
+                instanceName);
         }
     }
 

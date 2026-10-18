@@ -1,6 +1,6 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.BgiVision;
 using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
@@ -1137,7 +1137,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     private async Task DetectPlayerIndexAndOpenPartyConfig(CancellationToken ct)
     {
         await DetectPlayerIndex(ct);
-        Simulation.SendInput.SimulateAction(GIActions.OpenPartySetupScreen);
+        InputHub.Foreground.SimulateAction(GIActions.OpenPartySetupScreen);
         await Delay(2000, ct);
     }
 
@@ -1436,7 +1436,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
         }
         finally
         {
-            Simulation.SendInput.Keyboard.KeyPress(Vanara.PInvoke.User32.VK.VK_ESCAPE);
+            InputHub.Foreground.Keyboard.KeyPress(Vanara.PInvoke.User32.VK.VK_ESCAPE);
         }
 
         var returned = await NewRetry.WaitForAction(() =>

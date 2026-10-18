@@ -25,12 +25,12 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         {
             //
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\202509141339218213_ChooseBait.png");
-            var imageRegion = new ImageRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d));
+            var imageRegion = new ImageRegion(mat, 0, 0, new DesktopRegion(), converter: new ScaleConverter(1d));
 
             FakeSystemInfo systemInfo = new FakeSystemInfo(new Vanara.PInvoke.RECT(0, 0, mat.Width, mat.Height), 1);
 
             //
-            ChooseBait sut = new ChooseBait("-", new FakeLogger(), systemInfo, new FakeInputSimulator(), itemRecognizer, new Blackboard());
+            ChooseBait sut = new ChooseBait("-", new FakeLogger(), systemInfo, new FakeInputChannel(), itemRecognizer, new Blackboard());
             var result = sut.FindBait(imageRegion).OrderBy(r => r.Item1.X).ToArray();
 
             //
@@ -53,7 +53,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         {
             //
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
-            var imageRegion = new ImageRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d));
+            var imageRegion = new ImageRegion(mat, 0, 0, new DesktopRegion(), converter: new ScaleConverter(1d));
 
             FakeSystemInfo systemInfo = new FakeSystemInfo(new Vanara.PInvoke.RECT(0, 0, mat.Width, mat.Height), 1);
 
@@ -67,7 +67,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                     .Sequence("用例", false)
                         .SetSleep("设置sleep方法", _ => { })
                         .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion, imageRegion], bb!))
-                        .ChooseBait("-", new FakeLogger(), systemInfo, new FakeInputSimulator(), itemRecognizer)
+                        .ChooseBait("-", new FakeLogger(), systemInfo, new FakeInputChannel(), itemRecognizer)
                     .End()
                 .End()
                 .Build();
@@ -94,7 +94,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         {
             //
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
-            var imageRegion = new ImageRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d));
+            var imageRegion = new ImageRegion(mat, 0, 0, new DesktopRegion(), converter: new ScaleConverter(1d));
 
             FakeSystemInfo systemInfo = new FakeSystemInfo(new Vanara.PInvoke.RECT(0, 0, mat.Width, mat.Height), 1);
 
@@ -113,7 +113,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                     .Sequence("用例", false)
                         .SetSleep("设置sleep方法", _ => { })
                         .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion, imageRegion, imageRegion], bb!))
-                        .ChooseBait("-", new FakeLogger(), systemInfo, new FakeInputSimulator(), itemRecognizer, fakeTimeProvider)
+                        .ChooseBait("-", new FakeLogger(), systemInfo, new FakeInputChannel(), itemRecognizer, fakeTimeProvider)
                     .End()
                 .End()
                 .Build();
@@ -157,7 +157,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         {
             //
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\20250226161354285_ChooseBait_Succeeded.png");
-            var imageRegion = new ImageRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d));
+            var imageRegion = new ImageRegion(mat, 0, 0, new DesktopRegion(), converter: new ScaleConverter(1d));
 
             FakeSystemInfo systemInfo = new FakeSystemInfo(new Vanara.PInvoke.RECT(0, 0, mat.Width, mat.Height), 1);
 
@@ -179,7 +179,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                     .Sequence("用例", false)
                         .SetSleep("设置sleep方法", _ => { })
                         .LeafWithBlackboard(bb => new ScreenshotQueue("用例", Enumerable.Repeat(imageRegion, 10), bb!))
-                        .ChooseBait("-", new FakeLogger(), systemInfo, new FakeInputSimulator(), itemRecognizer, fakeTimeProvider)
+                        .ChooseBait("-", new FakeLogger(), systemInfo, new FakeInputChannel(), itemRecognizer, fakeTimeProvider)
                     .End()
                 .End()
                 .Build();
@@ -277,7 +277,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         {
             //
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\20250226161354285_ChooseBait_Succeeded.png");
-            var imageRegion = new ImageRegion(mat, 0, 0, new DesktopRegion(new FakeMouseSimulator()), converter: new ScaleConverter(1d));
+            var imageRegion = new ImageRegion(mat, 0, 0, new DesktopRegion(), converter: new ScaleConverter(1d));
 
             FakeSystemInfo systemInfo = new FakeSystemInfo(new Vanara.PInvoke.RECT(0, 0, mat.Width, mat.Height), 1);
 
@@ -299,7 +299,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                     .Sequence("用例", false)
                         .SetSleep("设置sleep方法", _ => { })
                         .LeafWithBlackboard(bb => new ScreenshotQueue("用例", Enumerable.Repeat(imageRegion, 8), bb!))
-                        .ChooseBait("-", new FakeLogger(), systemInfo, new FakeInputSimulator(), itemRecognizer, fakeTimeProvider)
+                        .ChooseBait("-", new FakeLogger(), systemInfo, new FakeInputChannel(), itemRecognizer, fakeTimeProvider)
                     .End()
                 .End()
                 .Build();

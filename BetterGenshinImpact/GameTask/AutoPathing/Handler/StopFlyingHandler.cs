@@ -1,6 +1,6 @@
+using BetterGenshinImpact.Core.Input;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
@@ -18,15 +18,15 @@ public class StopFlyingHandler : IActionHandler
             && !string.IsNullOrEmpty(waypointForTrack.ActionParams)
             && int.TryParse(waypointForTrack.ActionParams, out var stopFlyingWaitTime))
         {
-            Simulation.SendInput.SimulateAction(GIActions.Jump);
+            InputHub.Foreground.SimulateAction(GIActions.Jump);
             await Delay(stopFlyingWaitTime, ct);
-            Simulation.SendInput.SimulateAction(GIActions.Jump);
+            InputHub.Foreground.SimulateAction(GIActions.Jump);
             await Delay(300, ct);
         }
 
         // 下落攻击接近目的地
         Logger.LogInformation("动作：下落攻击");
-        Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+        InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
         int i;
         for (i = 0; i < 50; i++)
         {

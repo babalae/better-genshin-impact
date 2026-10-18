@@ -1,8 +1,7 @@
-using BetterGenshinImpact.Core.Recognition;
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Script.Dependence;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight.Config;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
@@ -11,7 +10,6 @@ using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,12 +21,10 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.ViewModel.Pages;
-using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
+using BetterGenshinImpact.ViewModel.Windows;
 using BetterGenshinImpact.GameTask.AutoPathing;
-using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.Core.Recognition.ONNX;
-using BetterGenshinImpact.GameTask.Common;
 using Compunet.YoloSharp;
 using Compunet.YoloSharp.Data;
 using Microsoft.Extensions.DependencyInjection;
@@ -57,6 +53,7 @@ public class Avatar
 
     /// <summary>
     /// 最近一次OCR识别出的CD到期时间
+    /// 是原始 E 技能（编号 "01"）的 CD 记录，
     /// </summary>
     private DateTime OcrSkillCd { get; set; }
 
@@ -64,6 +61,13 @@ public class Avatar
     /// 手动配置的技能CD，有它就不使用OCR,小于0为自动
     /// </summary>
     public double ManualSkillCd { get; set; }
+
+    /// <summary>
+    /// 是否启用 E 技能 ONNX 分类识别（<see cref="IsESkillReadyByClassify"/>）。
+    /// YoloSharp 分类器不支持并发调用，仅 AutoCombo 等串行调用方启用；
+    /// 默认 false，<see cref="ReadSkillCdFromScreenshot"/> 回退为纯 OCR。
+    /// </summary>
+    public bool EnableESkillClassify { get; set; }
 
     /// <summary>
     /// 最近一次使用元素战技的时间
@@ -111,6 +115,11 @@ public class Avatar
     private static readonly Lazy<BgiYoloPredictor> QBurstClassifierLazy = new(() =>
         App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiQClassify));
 
+    private static readonly Lazy<BgiYoloPredictor> ESkillClassifierLazy = new(() =>
+        App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiEClassify));
+
+    // E 技能分类模型由所有角色共享，串行执行推理，避免并发调用同一会话。
+    private static readonly object ESkillClassifierLock = new();
 
     public Avatar(CombatScenes combatScenes, string name, int index, Rect nameRect, double manualSkillCd = -1)
     {
@@ -137,7 +146,7 @@ public class Avatar
         {
             Logger.LogWarning("检测到复苏界面，存在角色被击败，前往七天神像复活");
             // 先打开地图
-            Simulation.SendInput.Keyboard.KeyPress(User32.VK.VK_ESCAPE); // NOTE: 此处按下Esc是为了关闭复苏界面，无需改键
+            InputHub.Foreground.Keyboard.KeyPress(User32.VK.VK_ESCAPE); // NOTE: 此处按下Esc是为了关闭复苏界面，无需改键
             Sleep(600, ct);
             TpForRecover(ct, new RetryException("检测到复苏界面，存在角色被击败，前往七天神像复活"));
         }
@@ -174,7 +183,7 @@ public class Avatar
                         cts.CancelAfter(15000);
                         // 使用 Climb 模式：MoveTo 内部对 Climb 模式跳过卡死脱困检测，避免水中 TrapEscaper 死循环
                         AutoFightTask.FightWaypoint.MoveMode = MoveModeEnum.Climb.Code;
-                        Simulation.SendInput.Mouse.RightButtonDown();
+                        InputHub.Foreground.Mouse.RightButtonDown();
                         pathExecutor.MoveTo(AutoFightTask.FightWaypoint).GetAwaiter().GetResult();
                         Logger.LogInformation("游泳检测：移动结束");
                     }
@@ -196,8 +205,8 @@ public class Avatar
                         cts.Cancel(); // 终止 PathExecutor 内部截屏循环
                         AutoFightTask.FightWaypoint.MoveMode = originalMoveMode;
                         AutoFightTask.FightWaypoint = null;
-                        Simulation.SendInput.Mouse.RightButtonUp();
-                        Simulation.ReleaseAllKey();
+                        InputHub.Foreground.Mouse.RightButtonUp();
+                        InputHub.ReleaseAll();
                     }
                 }
 
@@ -286,6 +295,10 @@ public class Avatar
             // 切换成功
             if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
             {
+                if (EnableESkillClassify)
+                {
+                    ESkillClassifyViewModel.Instance.Result = null;
+                }
                 return;
             }
 
@@ -361,23 +374,23 @@ public class Avatar
 
     private void SimulateSwitchAction(int index)
     {
-        Simulation.SendInput.SimulateAction(GIActions.Drop); //反正会重试就不等落地了
+        InputHub.Foreground.SimulateAction(GIActions.Drop); //反正会重试就不等落地了
         switch (index)
         {
             case 1:
-                Simulation.SendInput.SimulateAction(GIActions.SwitchMember1);
+                InputHub.Foreground.SimulateAction(GIActions.SwitchMember1);
                 break;
             case 2:
-                Simulation.SendInput.SimulateAction(GIActions.SwitchMember2);
+                InputHub.Foreground.SimulateAction(GIActions.SwitchMember2);
                 break;
             case 3:
-                Simulation.SendInput.SimulateAction(GIActions.SwitchMember3);
+                InputHub.Foreground.SimulateAction(GIActions.SwitchMember3);
                 break;
             case 4:
-                Simulation.SendInput.SimulateAction(GIActions.SwitchMember4);
+                InputHub.Foreground.SimulateAction(GIActions.SwitchMember4);
                 break;
             case 5:
-                Simulation.SendInput.SimulateAction(GIActions.SwitchMember5);
+                InputHub.Foreground.SimulateAction(GIActions.SwitchMember5);
                 break;
             default:
                 break;
@@ -392,13 +405,13 @@ public class Avatar
         var direction = UnstuckDirections[UnstuckRandom.Next(4)];
         Logger.LogWarning("切换角色卡住，执行脱困（方向：{Dir}）", direction);
 
-        Simulation.SendInput.SimulateAction(GIActions.Jump);
+        InputHub.Foreground.SimulateAction(GIActions.Jump);
         Sleep(200, ct);
-        Simulation.SendInput.SimulateAction(direction, KeyType.KeyDown);
+        InputHub.Foreground.SimulateAction(direction, KeyType.KeyDown);
         SimulateSwitchAction(Index);
         Sleep(1000, ct);
-        Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
-        Simulation.ReleaseAllKey();
+        InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
+        InputHub.ReleaseAll();
     }
 
     /// <summary>
@@ -521,7 +534,7 @@ public class Avatar
                 return;
             }
 
-            Simulation.SendInput.SimulateAction(GIActions.NormalAttack);
+            InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
             ms -= 200;
             Sleep(200, Ct);
         }
@@ -541,14 +554,14 @@ public class Avatar
 
         if (hold)
         {
-            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill, KeyType.Hold);
+            InputHub.Foreground.SimulateAction(GIActions.ElementalSkill, KeyType.Hold);
         }
         else
         {
-            Simulation.SendInput.SimulateAction(GIActions.ElementalSkill);
+            InputHub.Foreground.SimulateAction(GIActions.ElementalSkill);
         }
 
-        // 0.2 秒内循环 OCR，直到识别到 CD 或超时
+        // 0.2 秒内循环检测（分类器优先、确认冷却后才 OCR），直到识别到 CD 或超时
         var recordedCd = 0d;
         var deadline = DateTime.UtcNow.AddMilliseconds(200);
         while (recordedCd <= 0 && DateTime.UtcNow < deadline)
@@ -598,32 +611,84 @@ public class Avatar
         }
 
         // 调用方传入的截图由调用方负责释放，方法只释放自己创建的
+        // 公开契约：0 表示未记录到 CD（就绪或未读到数字），供调用方重试/兜底
         if (givenRegion != null)
         {
-            return GetSkillCurrentCd(givenRegion);
+            return ReadSkillCdFromScreenshot(givenRegion).Cd ?? 0;
         }
 
         using var region = CaptureToRectArea();
-        return GetSkillCurrentCd(region);
+        return ReadSkillCdFromScreenshot(region).Cd ?? 0;
     }
 
     /// <summary>
-    /// 元素战技是否正在CD中
+    /// 从截图中判定 E 技能状态并读取剩余 CD：<see cref="EnableESkillClassify"/> 启用时
+    /// 先用 <see cref="IsESkillReadyByClassify"/> 分类判定，
+    /// 仅在明确判定 Cooldown 时才 OCR 读取具体剩余秒数；就绪返回 0；
+    /// 未启用时 State 恒为 Unknown，仅 OCR 提取 CD 数值；
+    /// 未知（置信度不足/角色不匹配）时不 OCR，避免在不确定截图归属时误读并污染记录。
+    /// 注意 Cooldown 状态下 OCR 可能读不到数字（<see cref="Cd"/> 为 <c>null</c>），调用方须以 State 为准。
+    /// </summary>
+    private (SkillCdState State, double? Cd) ReadSkillCdFromScreenshot(ImageRegion imageRegion, bool onlyCode01Ready = true)
+    {
+        // 未启用分类识别（默认）：不做状态分类，State 恒为 Unknown，仅 OCR 提取 CD 数
+        if (!EnableESkillClassify)
+        {
+            var ocrCd = ReadSkillCdByOcr(imageRegion);
+            if (ocrCd > 0)
+            {
+                ESkillCdTracker.Record(Name, ocrCd.Value);
+            }
+            return (SkillCdState.Unknown, ocrCd);
+        }
+
+        var (State, Code) = IsESkillReadyByClassify(imageRegion, onlyCode01Ready);
+        if (State == SkillCdState.Ready)
+        {
+            // 只有原始 E（编号 "01"）的 Ready 才清零 OcrSkillCd
+            // 特殊状态技能（02/03...）的 Ready 不清零
+            if (string.Equals(Code, "01", StringComparison.OrdinalIgnoreCase))
+            {
+                OcrSkillCd = DateTime.UtcNow;
+            }
+            return (SkillCdState.Ready, 0);
+        }
+
+        // 仅在分类器明确判定 Cooldown 时才 OCR 读具体秒数
+        // Unknown（置信度不足/角色不匹配）时截图归属存疑，不 OCR 避免误读污染记录
+        if (State == SkillCdState.Cooldown)
+        {
+            var cd = ReadSkillCdByOcr(imageRegion);
+            if (cd > 0)
+            {
+                ESkillCdTracker.Record(Name, cd.Value);
+            }
+            return (State, cd);
+        }
+
+        // Unknown
+        return (State, null);
+    }
+
+    /// <summary>
+    /// 根据Ocr识别元素战技是否正在CD中
     /// 右下 267x132
     /// 77x77
     /// </summary>
-    private double GetSkillCurrentCd(ImageRegion imageRegion)
+    /// <returns>识别到的剩余 CD 秒数；未读到数字时为 <c>null</c>（读到有效 CD 时会记入 <see cref="OcrSkillCd"/>）</returns>
+    private double? ReadSkillCdByOcr(ImageRegion imageRegion)
     {
         using var eRa = imageRegion.DeriveCrop(AutoFightAssets.Get(imageRegion).ECooldownRect);
         using var eRaWhite = OpenCvCommonHelper.InRangeHsv(eRa.SrcMat, new Scalar(0, 0, 235), new Scalar(0, 25, 255));
         var text = OcrFactory.Paddle.OcrWithoutDetector(eRaWhite);
         var cd = StringUtils.TryParseDouble(text);
-        if (cd > 0 && cd <= CombatAvatar.SkillCd)
+        if (cd is > 0 && cd <= CombatAvatar.SkillCd)
         {
             OcrSkillCd = DateTime.UtcNow.AddSeconds(cd);
+            return cd;
         }
 
-        return cd;
+        return null;
     }
 
 
@@ -651,7 +716,7 @@ public class Avatar
                 }
 
                 // Logger.LogInformation("释放Q");
-                Simulation.SendInput.SimulateAction(GIActions.ElementalBurst);
+                InputHub.Foreground.SimulateAction(GIActions.ElementalBurst);
                 Sleep(200, Ct);
 
                 using var region = CaptureToRectArea();
@@ -708,6 +773,90 @@ public class Avatar
         return BurstReadyState.Unknown;
     }
 
+    /// <summary>
+    /// 通过 ONNX 分类器判断当前场上角色的E技能（元素战技）是否就绪（仅对场上角色有效）
+    /// </summary>
+    /// <param name="onlyCode01Ready">
+    /// 编号段（第 3 段）策略：
+    /// <list type="bullet">
+    /// <item><c>true</c>（默认）：仅 "01" 才视为就绪，其他编号（E 技能开启后的特殊状态图标）保守视为冷却中。</item>
+    /// <item><c>false</c>：任意编号都参与就绪判定，不因编号挡掉 Ready。</item>
+    /// </list>
+    /// </param>
+    public (SkillCdState State, string? Code) IsESkillReadyByClassify(ImageRegion imageRegion, bool onlyCode01Ready = true)
+    {
+        var eRect1080 = AutoFightAssets.Get(imageRegion).ERectForClassify;
+        using var eRa = imageRegion.DeriveCrop(eRect1080);
+        YoloResult<Classification> result;
+        lock (ESkillClassifierLock)
+        {
+            result = ESkillClassifierLazy.Value.Predictor.Classify(eRa.CacheImage);
+        }
+        var topClass = result.GetTopClass();
+        var topClassName = topClass.Name.Name;
+        // Logger.LogInformation("E技能就绪分类：{ClassName}，置信度：{Confidence:F2}", topClassName, topClass.Confidence);
+
+        (SkillCdState State, string? Code) classifyResult;
+
+        // 置信度不足时，直接返回未知，避免误判导致漏放/乱放
+        if (topClass.Confidence <= 0.7)
+        {
+            // Logger.LogInformation("E技能就绪分类置信度不足：{Confidence:F2}，类别：{ClassName}", topClass.Confidence, topClassName);
+            classifyResult = (SkillCdState.Unknown, null);
+        }
+        else
+        {
+            // e_classify_sim 模型实际输出类别名格式: "<前缀> <角色名> <编号> <状态>"，
+            // 实测样本: "S Arlecchino 01 nocd" (confidence 1.0) 表示无冷却/就绪。
+            // 第 2 段为角色英文名，与当前 Avatar 的 CombatAvatar.NameEn 做不区分大小写比对；
+            // 不匹配说明分类结果不属于本角色（模型未覆盖该角色或截图与当前 Avatar 错位），返回未知避免误判。
+            var parts = topClassName.Split(' ');
+            if (parts.Length < 4 ||
+                !string.Equals(parts[1], CombatAvatar.NameEn, StringComparison.OrdinalIgnoreCase))
+            {
+                classifyResult = (SkillCdState.Unknown, null);
+            }
+            else
+            {
+                // 编号段（第 3 段）必须为 "01" 才视为就绪；其他编号对应 E 技能开启后的特殊状态图标，
+                // 保守视为冷却中，避免在该状态下误判为就绪而错放技能。
+                if (onlyCode01Ready &&
+                    !string.Equals(parts[2], "01", StringComparison.OrdinalIgnoreCase))
+                {
+                    classifyResult = (SkillCdState.Cooldown, parts[2]);
+                }
+                else if (topClassName.Contains("nocd", StringComparison.OrdinalIgnoreCase))
+                {
+                    classifyResult = (SkillCdState.Ready, parts[2]);
+                }
+                // 冷却状态实测样本: "S Arlecchino 01 cd"
+                // 顺序重要：nocd 含 cd 子串，必须先判断 nocd 再判断 cd。
+                else if (topClassName.Contains("cd", StringComparison.OrdinalIgnoreCase))
+                {
+                    classifyResult = (SkillCdState.Cooldown, parts[2]);
+                }
+                else
+                {
+                    classifyResult = (SkillCdState.Unknown, parts[2]);
+                }
+            }
+        }
+
+        // 识别结果写入 VM，由需要显示的模块（如 AutoComboRunTask）订阅 INPC 变更后绘制（数据与显示解耦）
+        var domainToCaptureFactor = (double)TaskContext.Instance().SystemInfo.CaptureAreaRect.Width / imageRegion.Width;
+        var eRectCapture = new Rect((int)(eRect1080.X * domainToCaptureFactor), (int)(eRect1080.Y * domainToCaptureFactor),
+            (int)(eRect1080.Width * domainToCaptureFactor), (int)(eRect1080.Height * domainToCaptureFactor));
+        ESkillClassifyViewModel.Instance.Result = new ESkillClassifyResult
+        {
+            State = classifyResult.State,
+            Code = classifyResult.Code,
+            AvatarName = CombatAvatar.Name,
+            ClassifyRect = eRectCapture.ToWindowsRectangle(),
+            TextPosition = new System.Windows.Point(eRectCapture.X, eRectCapture.Y - 24 * domainToCaptureFactor),
+        };
+        return classifyResult;
+    }
+
     // /// <summary>
     // /// 元素爆发是否正在CD中
     // /// 右下 157x165
@@ -735,9 +884,9 @@ public class Avatar
             ms = 200;
         }
 
-        Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
+        InputHub.Foreground.SimulateAction(GIActions.SprintMouse, KeyType.KeyDown);
         Sleep(ms); // 冲刺不能被cts取消
-        Simulation.SendInput.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
+        InputHub.Foreground.SimulateAction(GIActions.SprintMouse, KeyType.KeyUp);
     }
 
     public void Walk(string key, int ms)
@@ -770,9 +919,9 @@ public class Avatar
             return;
         }
 
-        Simulation.SendInput.Keyboard.KeyDown(vk);
+        InputHub.Foreground.Keyboard.KeyDown(vk);
         Sleep(ms); // 行走不能被cts取消
-        Simulation.SendInput.Keyboard.KeyUp(vk);
+        InputHub.Foreground.Keyboard.KeyUp(vk);
     }
 
     /// <summary>
@@ -782,7 +931,7 @@ public class Avatar
     /// <param name="pixelDeltaY"></param>
     public void MoveCamera(int pixelDeltaX, int pixelDeltaY)
     {
-        Simulation.SendInput.Mouse.MoveMouseBy(pixelDeltaX, pixelDeltaY);
+        InputHub.Foreground.Mouse.MoveMouseBy(pixelDeltaX, pixelDeltaY);
     }
 
     /// <summary>
@@ -847,7 +996,7 @@ public class Avatar
     /// 纯 OCR 视角的 E 技能三态：只依据 OCR 记录（<see cref="OcrSkillCd"/>）与最近一次使用时间
     /// （<see cref="LastSkillTime"/>）的相对新旧判断记录可信度。
     /// </summary>
-    private SkillCdState GetOcrSkillCdState()
+    private SkillCdState GetSkillCdStateFromRecord()
     {
         // OCR 记录晚于最近一次使用 → 记录可信
         if (OcrSkillCd > LastSkillTime)
@@ -861,9 +1010,15 @@ public class Avatar
 
     /// <summary>
     /// 获取 E 技能的综合三态冷却状态（就绪 / 冷却中 / 未知）。
-    /// 优先级：<see cref="ManualSkillCd"/> 手动配置 → <see cref="GetOcrSkillCdState"/> OCR 视角。
+    /// 优先级：<see cref="ManualSkillCd"/> 手动配置 → 场上角色走视觉判定（<see cref="IsESkillReadyByClassify"/>）→ 复用截图跑 OCR 读 CD → <see cref="GetSkillCdStateFromRecord"/> OCR 视角推算。
+    /// 视觉判定仅对场上角色有效；后台角色或视觉返回 Unknown 时降级到 OCR 推算。
     /// </summary>
-    public SkillCdState GetSkillCdState()
+    /// <param name="onlyCode01Ready">
+    /// 透传给 <see cref="IsESkillReadyByClassify"/>：
+    /// <c>true</c>（默认）仅原始 E（编号 "01"）就绪才返回 Ready，特殊状态技能（02/03...）视为 Cooldown；
+    /// <c>false</c> 时特殊状态技能就绪也返回 Ready，但清零 <see cref="OcrSkillCd"/> 仍只对编号 "01" 生效（特殊状态技能 Ready 不污染原始 E 的 OCR 视角记录）。
+    /// </param>
+    public SkillCdState GetSkillCdState(bool onlyCode01Ready = true)
     {
         // 手动配置：直接按上次释放时间 + 手动 CD 判断
         if (ManualSkillCd > 0)
@@ -872,20 +1027,33 @@ public class Avatar
             return ManualSkillCd > dif.TotalSeconds ? SkillCdState.Cooldown : SkillCdState.Ready;
         }
 
-        var ocrState = GetOcrSkillCdState();
-        return ocrState;
+        // 场上角色走视觉判定优先：用 ONNX 分类器判 E 技能状态，置信度足够时优先返回
+        using (var region = CaptureToRectArea())
+        {
+            var context = new AvatarActiveCheckContext();
+            if (CombatScenes.GetActiveAvatarIndex(region, context) == Index)
+            {
+                var (state, _) = ReadSkillCdFromScreenshot(region, onlyCode01Ready);
+                if (state != SkillCdState.Unknown)
+                {
+                    return state;
+                }
+
+                // state == Unknown → 落到 OCR 记录推算
+            }
+            // 后台角色 → 走 OCR 记录推算
+        }
+
+        return GetSkillCdStateFromRecord();
     }
 
     /// <summary>
-    /// 再识别一次 E 技能冷却并更新 OCR 记录（<see cref="OcrSkillCd"/>）
+    /// 复位 E 技能的使用记录（<see cref="OcrSkillCd"/> 与 <see cref="LastSkillTime"/>）
     /// </summary>
-    /// <returns>识别到的剩余 CD 秒数，&lt;= 0 表示未识别到</returns>
-    public double RefreshSkillCd()
+    public void ResetSkillCdRecord()
     {
-        using var region = CaptureToRectArea();
-        var cd = GetSkillCurrentCd(region);
-        ESkillCdTracker.Record(Name, cd);
-        return cd;
+        OcrSkillCd = default;
+        LastSkillTime = default;
     }
 
     /// <summary>
@@ -974,7 +1142,7 @@ public class Avatar
     /// </summary>
     public void Jump()
     {
-        Simulation.SendInput.SimulateAction(GIActions.Jump);
+        InputHub.Foreground.SimulateAction(GIActions.Jump);
     }
 
     /// <summary>
@@ -990,9 +1158,9 @@ public class Avatar
 
         if (AvatarSpecialAction.ExecuteSpecializedAction(this, "Charge", Name, new ActionArgs(Ms: ms))) return;
 
-        Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
+        InputHub.Foreground.SimulateAction(GIActions.NormalAttack, KeyType.KeyDown);
         Sleep(ms);
-        Simulation.SendInput.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
+        InputHub.Foreground.SimulateAction(GIActions.NormalAttack, KeyType.KeyUp);
     }
 
     public void MouseDown(string key = "left")
@@ -1000,15 +1168,15 @@ public class Avatar
         key = key.ToLower();
         if (key == "left")
         {
-            Simulation.SendInput.Mouse.LeftButtonDown();
+            InputHub.Foreground.Mouse.LeftButtonDown();
         }
         else if (key == "right")
         {
-            Simulation.SendInput.Mouse.RightButtonDown();
+            InputHub.Foreground.Mouse.RightButtonDown();
         }
         else if (key == "middle")
         {
-            Simulation.SendInput.Mouse.MiddleButtonDown();
+            InputHub.Foreground.Mouse.MiddleButtonDown();
         }
     }
 
@@ -1017,15 +1185,15 @@ public class Avatar
         key = key.ToLower();
         if (key == "left")
         {
-            Simulation.SendInput.Mouse.LeftButtonUp();
+            InputHub.Foreground.Mouse.LeftButtonUp();
         }
         else if (key == "right")
         {
-            Simulation.SendInput.Mouse.RightButtonUp();
+            InputHub.Foreground.Mouse.RightButtonUp();
         }
         else if (key == "middle")
         {
-            Simulation.SendInput.Mouse.MiddleButtonUp();
+            InputHub.Foreground.Mouse.MiddleButtonUp();
         }
     }
 
@@ -1034,15 +1202,15 @@ public class Avatar
         key = key.ToLower();
         if (key == "left")
         {
-            Simulation.SendInput.Mouse.LeftButtonClick();
+            InputHub.Foreground.Mouse.LeftButtonClick();
         }
         else if (key == "right")
         {
-            Simulation.SendInput.Mouse.RightButtonClick();
+            InputHub.Foreground.Mouse.RightButtonClick();
         }
         else if (key == "middle")
         {
-            Simulation.SendInput.Mouse.MiddleButtonClick();
+            InputHub.Foreground.Mouse.MiddleButtonClick();
         }
     }
 
@@ -1056,85 +1224,23 @@ public class Avatar
 
     public void Scroll(int scrollAmountInClicks)
     {
-        Simulation.SendInput.Mouse.VerticalScroll(scrollAmountInClicks);
+        InputHub.Foreground.Mouse.VerticalScroll(scrollAmountInClicks);
     }
 
+    // 鼠标键（VK_LBUTTON、VK_RBUTTON、VK_MBUTTON、VK_XBUTTON1、VK_XBUTTON2）由输入通道转成对应的鼠标键
     public void KeyDown(string key)
     {
-        var vk = KeyBindingsSettingsPageViewModel.MappingKey(User32Helper.ToVk(key));
-        switch (key)
-        {
-            case "VK_LBUTTON":
-                Simulation.SendInput.Mouse.LeftButtonDown();
-                break;
-            case "VK_RBUTTON":
-                Simulation.SendInput.Mouse.RightButtonDown();
-                break;
-            case "VK_MBUTTON":
-                Simulation.SendInput.Mouse.MiddleButtonDown();
-                break;
-            case "VK_XBUTTON1":
-                Simulation.SendInput.Mouse.XButtonDown(0x0001);
-                break;
-            case "VK_XBUTTON2":
-                Simulation.SendInput.Mouse.XButtonDown(0x0001);
-                break;
-            default:
-                Simulation.SendInput.Keyboard.KeyDown(vk);
-                break;
-        }
+        InputHub.Foreground.Keyboard.KeyDown(KeyBindingsSettingsPageViewModel.MappingKey(User32Helper.ToVk(key)));
     }
 
     public void KeyUp(string key)
     {
-        var vk = KeyBindingsSettingsPageViewModel.MappingKey(User32Helper.ToVk(key));
-        switch (key)
-        {
-            case "VK_LBUTTON":
-                Simulation.SendInput.Mouse.LeftButtonUp();
-                break;
-            case "VK_RBUTTON":
-                Simulation.SendInput.Mouse.RightButtonUp();
-                break;
-            case "VK_MBUTTON":
-                Simulation.SendInput.Mouse.MiddleButtonUp();
-                break;
-            case "VK_XBUTTON1":
-                Simulation.SendInput.Mouse.XButtonUp(0x0001);
-                break;
-            case "VK_XBUTTON2":
-                Simulation.SendInput.Mouse.XButtonUp(0x0001);
-                break;
-            default:
-                Simulation.SendInput.Keyboard.KeyUp(vk);
-                break;
-        }
+        InputHub.Foreground.Keyboard.KeyUp(KeyBindingsSettingsPageViewModel.MappingKey(User32Helper.ToVk(key)));
     }
 
     public void KeyPress(string key)
     {
-        var vk = KeyBindingsSettingsPageViewModel.MappingKey(User32Helper.ToVk(key));
-        switch (key)
-        {
-            case "VK_LBUTTON":
-                Simulation.SendInput.Mouse.LeftButtonClick();
-                break;
-            case "VK_RBUTTON":
-                Simulation.SendInput.Mouse.RightButtonClick();
-                break;
-            case "VK_MBUTTON":
-                Simulation.SendInput.Mouse.MiddleButtonClick();
-                break;
-            case "VK_XBUTTON1":
-                Simulation.SendInput.Mouse.XButtonClick(0x0001);
-                break;
-            case "VK_XBUTTON2":
-                Simulation.SendInput.Mouse.XButtonClick(0x0001);
-                break;
-            default:
-                Simulation.SendInput.Keyboard.KeyPress(vk);
-                break;
-        }
+        InputHub.Foreground.Keyboard.KeyPress(KeyBindingsSettingsPageViewModel.MappingKey(User32Helper.ToVk(key)));
     }
 
     /// <summary>

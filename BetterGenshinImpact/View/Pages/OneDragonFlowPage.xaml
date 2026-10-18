@@ -1280,12 +1280,12 @@
                                 <ui:TextBlock Grid.Row="0"
                                               Grid.Column="0"
                                               FontTypography="Body"
-                                              Text="{i18n:T 指定讨伐次数}"
+                                              Text="{i18n:T 成功领奖次数限制}"
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="{i18n:T 关闭时刷取至原粹树脂耗尽，开启后按成功领取奖励次数停止}"
+                                              Text="{i18n:T 开启后，可分别限制单次运行和跨运行累计的成功领奖次数}"
                                               TextWrapping="Wrap" />
                                 <ui:ToggleSwitch Grid.Row="0"
                                                  Grid.RowSpan="2"
@@ -1303,7 +1303,7 @@
                                 <StackPanel Margin="12">
                                     <StackPanel Orientation="Horizontal"
                                                 Margin="0,8,0,12">
-                                        <ui:TextBlock Text="{i18n:T 讨伐次数：}"
+                                        <ui:TextBlock Text="{i18n:T 单次运行上限：}"
                                                       VerticalAlignment="Center"
                                                       Margin="0,0,8,0" />
                                         <ui:NumberBox Value="{Binding SelectedConfig.AutoBossRunCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -1313,7 +1313,11 @@
                                                       LargeChange="5"
                                                       SpinButtonPlacementMode="Hidden"
                                                       AcceptsExpression="False"
-                                                      Width="120" />
+                                                      Width="120">
+                                            <b:Interaction.Behaviors>
+                                                <behavior:NumberBoxValueConstraintBehavior EmptyValue="1" MinimumValue="1" />
+                                            </b:Interaction.Behaviors>
+                                        </ui:NumberBox>
                                     </StackPanel>
 
                                     <StackPanel Orientation="Horizontal"
@@ -1330,6 +1334,46 @@
                                                       Margin="0,0,8,0" />
                                         <ui:ToggleSwitch IsChecked="{Binding SelectedConfig.AutoBossUseFragileResin, Mode=TwoWay}" />
                                     </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal"
+                                                Margin="0,12,0,0">
+                                        <ui:TextBlock Text="{i18n:T 累计运行上限：}"
+                                                      VerticalAlignment="Center"
+                                                      Margin="0,0,8,0" />
+                                        <ui:NumberBox Width="120"
+                                                      Minimum="0"
+                                                      MaxDecimalPlaces="0"
+                                                      SmallChange="1"
+                                                      LargeChange="5"
+                                                      SpinButtonPlacementMode="Hidden"
+                                                      AcceptsExpression="False"
+                                                      Value="{Binding SelectedConfig.AutoBossTotalRunCountLimit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                                            <b:Interaction.Behaviors>
+                                                <behavior:NumberBoxValueConstraintBehavior EmptyValue="0" MinimumValue="0" />
+                                            </b:Interaction.Behaviors>
+                                        </ui:NumberBox>
+                                    </StackPanel>
+
+                                    <Grid Margin="0,4,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ui:TextBlock Grid.Column="0"
+                                                      VerticalAlignment="Center"
+                                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      TextWrapping="Wrap">
+                                            <Run Text="{i18n:T 当前已累计成功领奖 }" />
+                                            <Run Text="{Binding SelectedConfig.AutoBossCompletedRunCount, Mode=OneWay}" />
+                                            <Run Text="{i18n:T  次；累计上限为 0 时不限制}" />
+                                        </ui:TextBlock>
+                                        <ui:Button Grid.Column="1"
+                                                   Margin="12,0,0,0"
+                                                   VerticalAlignment="Center"
+                                                   Appearance="Secondary"
+                                                   Command="{Binding ResetAutoBossCompletedRunCountCommand}"
+                                                   Content="{i18n:T 清空累计}" />
+                                    </Grid>
                                 </StackPanel>
                             </Border>
 

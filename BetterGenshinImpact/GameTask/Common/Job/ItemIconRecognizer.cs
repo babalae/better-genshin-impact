@@ -1,4 +1,5 @@
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.GameTask.GetGridIcons;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
@@ -105,8 +106,16 @@ internal sealed class ItemRecognizer : IItemIconRecognizer
     /// </summary>
     public ItemRecognizer()
     {
-        _session = new InferenceSession(Global.Absolute(@"Assets\Model\ItemV2\item.onnx"));
-        _prototypes = LoadIconPrototypes();
+        _session = BgiOnnxFactory.CreateCpuOnlyInferenceSession(BgiOnnxModel.ItemIcon);
+        try
+        {
+            _prototypes = LoadIconPrototypes();
+        }
+        catch
+        {
+            _session.Dispose();
+            throw;
+        }
     }
 
     /// <summary>

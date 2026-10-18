@@ -1883,7 +1883,7 @@
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
-        <!--  Discord Webhook  -->
+        <!--  Discord 通知（Webhook / 机器人）  -->
         <ui:CardExpander Margin="0,0,0,12"
                          ContentPadding="0"
                          Icon="{ui:SymbolIcon Bot24}">
@@ -1900,12 +1900,12 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="{i18n:T 启用 Discord Webhook 通知}"
+                                  Text="{i18n:T 启用 Discord 通知}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="{i18n:T Discord Webhook 通知相关设置}"
+                                  Text="{i18n:T 可选择 Webhook 或机器人两种推送方式}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
@@ -1916,6 +1916,37 @@
             </ui:CardExpander.Header>
             <StackPanel>
                 <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="2*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="{i18n:T 通知方式}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 机器人方式可发到多个频道与私信}"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              Width="160"
+                              Margin="0,0,36,0"
+                              HorizontalAlignment="Right"
+                              SelectedValue="{Binding Config.NotificationConfig.DiscordNotificationMode, Mode=TwoWay}"
+                              SelectedValuePath="Tag">
+                        <ComboBoxItem Content="Webhook" Tag="Webhook" />
+                        <ComboBoxItem Content="{i18n:T 机器人（Bot）}" Tag="Bot" />
+                    </ComboBox>
+                </Grid>
+                <Grid Margin="16" Visibility="{Binding IsDiscordWebhookMode, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -1943,7 +1974,7 @@
                                 Text="{Binding Config.NotificationConfig.DiscordWebhookUrl, Mode=TwoWay}"
                                 TextWrapping="NoWrap" />
                 </Grid>
-                <Grid Margin="16">
+                <Grid Margin="16" Visibility="{Binding IsDiscordWebhookMode, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -1971,7 +2002,7 @@
                                 Text="{Binding Config.NotificationConfig.DiscordWebhookUsername, Mode=TwoWay}"
                                 TextWrapping="NoWrap" />
                 </Grid>
-                <Grid Margin="16">
+                <Grid Margin="16" Visibility="{Binding IsDiscordWebhookMode, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -1999,6 +2030,93 @@
                                 Text="{Binding Config.NotificationConfig.DiscordWebhookAvatarUrl, Mode=TwoWay}"
                                 TextWrapping="NoWrap" />
                 </Grid>
+                <Grid Margin="16" Visibility="{Binding IsDiscordBotMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="2*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="{i18n:T 机器人 Token}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 在 Discord 开发者后台的 Bot 页面复制 Token}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                MinWidth="180"
+                                MaxWidth="800"
+                                Margin="0,0,36,0"
+                                Text="{Binding Config.NotificationConfig.DiscordBotToken, Mode=TwoWay}"
+                                TextWrapping="NoWrap" />
+                </Grid>
+                <Grid Margin="16" Visibility="{Binding IsDiscordBotMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="2*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="{i18n:T 消息格式}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 机器人可选择纯文本或嵌入卡片}"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              Width="160"
+                              Margin="0,0,36,0"
+                              HorizontalAlignment="Right"
+                              SelectedValue="{Binding Config.NotificationConfig.DiscordBotMessageFormat, Mode=TwoWay}"
+                              SelectedValuePath="Tag">
+                        <ComboBoxItem Content="{i18n:T 普通消息}" Tag="Plain" />
+                        <ComboBoxItem Content="{i18n:T 嵌入}" Tag="Embed" />
+                    </ComboBox>
+                </Grid>
+                <Grid Margin="16" Visibility="{Binding IsDiscordBotMode, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="2*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="{i18n:T 推送目标}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{Binding DiscordBotTargetSummary}"
+                                  TextWrapping="Wrap" />
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="1"
+                               Width="160"
+                               Margin="0,0,36,0"
+                               HorizontalAlignment="Right"
+                               Command="{Binding ManageDiscordTargetsCommand}"
+                               Content="{i18n:T 管理目标}" />
+                </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -2021,7 +2139,7 @@
                     <ComboBox Grid.Row="0"
                               Grid.RowSpan="2"
                               Grid.Column="1"
-                              Width="100"
+                              Width="160"
                               Margin="0,0,36,0"
                               ItemsSource="{Binding DiscordImageEncoderNames}"
                               SelectedItem="{Binding Config.NotificationConfig.DiscordWebhookImageEncoder, Mode=TwoWay}" />
@@ -2038,7 +2156,7 @@
                     <ui:TextBlock Grid.Row="0"
                                   Grid.Column="0"
                                   FontTypography="Body"
-                                  Text="{i18n:T 测试 Discord Webhook 通知}"
+                                  Text="{i18n:T 测试 Discord 通知}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
@@ -2048,9 +2166,9 @@
                     <ui:Button Grid.Row="0"
                                Grid.RowSpan="2"
                                Grid.Column="1"
+                               Width="160"
                                Margin="0,0,36,0"
-                               Command="{Binding TestDiscordWebhookNotificationCommand}"
-                               CommandParameter="DiscordWebhook"
+                               Command="{Binding TestDiscordNotificationCommand}"
                                Content="{i18n:T 发送}" />
                 </Grid>
             </StackPanel>
@@ -2548,6 +2666,33 @@
                             </Style>
                         </ui:Button.Style>
                     </ui:Button>
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="3*" />
+                        <ColumnDefinition Width="2*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0" Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="{i18n:T 消息格式}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1" Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 选择文字消息的发送格式，不影响图片发送}"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                              Width="120"
+                              Margin="0,0,36,0"
+                              HorizontalAlignment="Right"
+                              SelectedValue="{Binding Config.NotificationConfig.QqMessageFormat, Mode=TwoWay}"
+                              SelectedValuePath="Tag">
+                        <ComboBoxItem Content="{i18n:T 普通消息}" Tag="text" />
+                        <ComboBoxItem Content="Markdown" Tag="markdown" />
+                    </ComboBox>
                 </Grid>
                 <ui:TextBlock Margin="16,0,16,0"
                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"

@@ -1,25 +1,23 @@
 using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Model;
-using BetterGenshinImpact.Genshin.Settings;
-using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Service;
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Threading;
-using BetterGenshinImpact.Core.Script.Group;
 
 namespace BetterGenshinImpact.GameTask
 {
     /// <summary>
-    /// 任务上下文
+    /// 任务上下文：当前游戏运行环境的只读视图，以及配置入口。
+    /// <para>
+    /// 运行环境由 <see cref="GameRuntimeService"/> 绑定和解绑，其他代码只读。
+    /// 新代码请直接使用 <see cref="Runtime"/>，或注入 <see cref="GameRuntimeService"/>。
+    /// </para>
     /// </summary>
     public class TaskContext
     {
         private static TaskContext? _uniqueInstance;
         private static object? InstanceLocker;
-        public ScriptGroupProject? CurrentScriptProject { get; set; }
 
 #pragma warning disable CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑声明为可以为 null。
 
@@ -34,28 +32,32 @@ namespace BetterGenshinImpact.GameTask
             return LazyInitializer.EnsureInitialized(ref _uniqueInstance, ref InstanceLocker, () => new TaskContext());
         }
 
-        public void Init(IntPtr hWnd)
-        {
-            GameHandle = hWnd;
-            PostMessageSimulator = Simulation.PostMessage(GameHandle);
-            SystemInfo = new SystemInfo(hWnd);
-            DpiScale = DpiHelper.ScaleY;
-            //MaskWindowHandle = new WindowInteropHelper(MaskWindow.Instance()).Handle;
-            IsInitialized = true;
-        }
+        /// <summary>
+        /// 当前运行环境。截图器未启动时为 null
+        /// </summary>
+        public GameRuntime? Runtime { get; private set; }
 
-        public bool IsInitialized { get; set; }
+        public bool IsInitialized => Runtime is not null;
 
-        public IntPtr GameHandle { get; set; }
+        /// <summary>
+        /// 最近一次绑定的游戏窗口句柄。解绑后保留最后一次的值，与改造前一致。
+        /// 兼容旧调用点，新代码请使用 Runtime.Window
+        /// </summary>
+        public IntPtr GameHandle { get; private set; }
 
-        public PostMessageSimulator PostMessageSimulator { get; private set; }
+        /// <summary>
+        /// 绑定时记录的 DPI 快照。解绑后保留最后一次的值
+        /// </summary>
+        public float DpiScale { get; private set; }
 
-        //public IntPtr MaskWindowHandle { get; set; }
+        /// <summary>
+        /// 绑定时由画面区域构建。解绑后保留最后一次的值
+        /// </summary>
+        public ISystemInfo SystemInfo { get; private set; }
 
-        public float DpiScale { get; set; }
-
-        public ISystemInfo SystemInfo { get; set; }
-
+        /// <summary>
+        /// 只是转发 ConfigService.Config，与运行环境无关。新代码请注入 IConfigService
+        /// </summary>
         public AllConfig Config
         {
             get
@@ -69,43 +71,21 @@ namespace BetterGenshinImpact.GameTask
             }
         }
 
-        // public SettingsContainer? GameSettings { get; set; }
-
         /// <summary>
-        /// 关联启动原神的时间
-        /// 注意 IsInitialized = false 时，这个值就会被设置
+        /// 绑定或解绑运行环境，只由 <see cref="GameRuntimeService"/> 调用。
+        /// 画面分辨率不合规时抛出异常，此时状态保持不变
         /// </summary>
-        public DateTime LinkedStartGenshinTime { get; set; } = DateTime.MinValue;
-
-        public List<string> GetGenshinGameProcessNameList()
+        internal void Bind(GameRuntime? runtime)
         {
-            if (IsInitialized)
+            if (runtime is not null)
             {
-                return [SystemInfo.GameProcessName];
+                var viewport = runtime.Window.Viewport;
+                SystemInfo = new SystemInfo(viewport, runtime.MaskWindowDrawingBoard);
+                DpiScale = viewport.DpiScale;
+                GameHandle = runtime.Window.Handle;
             }
-            else
-            {
-                List<string> list = ["YuanShen", "GenshinImpact", "Genshin Impact Cloud Game", "Genshin Impact Cloud"];
-                try
-                {
-                    var installPath = Config.GenshinStartConfig.InstallPath;
-                    if (!string.IsNullOrEmpty(installPath))
-                    {
-                        var customName = Path.GetFileNameWithoutExtension(installPath);
-                        if (!string.IsNullOrEmpty(customName) && !list.Contains(customName))
-                        {
-                            // list.Insert(0, customName); // 将用户自定义的进程名放在列表前面，优先匹配
-                            list.Add(customName);
-                        }
-                    }
-                }
-                catch
-                {
-                    /* ignore */
-                }
 
-                return list;
-            }
+            Runtime = runtime;
         }
     }
 }

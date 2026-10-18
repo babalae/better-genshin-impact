@@ -11,6 +11,7 @@
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       xmlns:autofight="clr-namespace:BetterGenshinImpact.GameTask.AutoFight"
+      xmlns:combobuild="clr-namespace:BetterGenshinImpact.GameTask.AutoCombo.ComboBuild"
       xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta"
       xmlns:emoji="clr-namespace:Emoji.Wpf;assembly=Emoji.Wpf"
       xmlns:sys="clr-namespace:System;assembly=mscorlib"
@@ -3453,6 +3454,31 @@
                               SelectedItem="{Binding Config.AutoMusicGameConfig.MusicLevel, Mode=TwoWay}"
                               SelectedIndex="0" />
                 </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="{i18n:T 音符检测使用截图管线}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 开启后音符检测走全局截图器（推荐WGCV2）}"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsChecked="{Binding Config.AutoMusicGameConfig.UseCapturePipeline, Mode=TwoWay}" />
+                </Grid>
             </StackPanel>
         </ui:CardExpander>
         
@@ -3595,6 +3621,41 @@
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
+                <!-- 值控件统一固定宽度 300。用 MinWidth/MaxWidth 时宽度会随内容浮动（密钥框被撑到 400、其余停在 300），各行右缘就对不齐了。
+                     这里不用 Style：对 ui: 控件套显式 Style 会跳过隐式样式，本页其余位置也都是直接写 Width。 -->
+                <Grid Margin="16,16,16,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  TextWrapping="Wrap"
+                                  Text="{i18n:T LLM服务商}" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  TextWrapping="Wrap"
+                                  Text="{i18n:T OpenAI 兼容可填任意兼容服务或本机模型；Anthropic 使用官方 Messages API 且服务地址可留空}" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              Width="300"
+                              VerticalAlignment="Top"
+                              Margin="0,0,36,0"
+                              SelectedValue="{Binding Config.AutoComboBuildConfig.Provider, Mode=TwoWay}"
+                              SelectedValuePath="Tag">
+                        <ComboBoxItem Tag="{x:Static combobuild:AutoComboLlmProvider.OpenAiCompatible}"
+                                      Content="{i18n:T OpenAI 兼容}" />
+                        <ComboBoxItem Tag="{x:Static combobuild:AutoComboLlmProvider.Anthropic}"
+                                      Content="Anthropic" />
+                    </ComboBox>
+                </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -3614,13 +3675,13 @@
                     <ui:TextBlock Grid.Row="2"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="必须使用 HTTPS 地址，否则密钥会明文传输；本机地址（localhost/127.0.0.1）除外"
+                                  Text="必须使用 HTTPS 地址，否则密钥会明文传输；本机地址（localhost/127.0.0.1）除外；Anthropic 可留空使用官方地址，填写时不要带 /v1"
                                   TextWrapping="Wrap" />
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="3"
                                 Grid.Column="1"
-                                MinWidth="300"
-                                MaxWidth="400"
+                                Width="300"
+                                VerticalAlignment="Top"
                                 Margin="0,0,36,0"
                                 Text="{Binding Config.AutoComboBuildConfig.PlanningLlmEndpoint, Mode=TwoWay}"
                                 TextWrapping="Wrap" Cursor="IBeam" />
@@ -3640,14 +3701,31 @@
                                   TextWrapping="Wrap">
                         LLM模型名
                     </ui:TextBlock>
-                    <ui:TextBox Grid.Row="1"
-                                Grid.RowSpan="2"
-                                Grid.Column="1"
-                                MinWidth="180"
-                                MaxWidth="400"
-                                Margin="0,0,36,0"
-                                Text="{Binding Config.AutoComboBuildConfig.ModelName, Mode=TwoWay}"
-                                TextWrapping="Wrap" Cursor="IBeam" />
+                    <!-- 下拉与按钮放在同一个固定宽度的容器里：容器与其余各行的值控件对齐，
+                         内部用 * 吸收按钮宽度的变化，避免按钮文字长度反过来把下拉挤扁。 -->
+                    <Grid Grid.Row="0"
+                          Grid.RowSpan="2"
+                          Grid.Column="1"
+                          Width="300"
+                          VerticalAlignment="Top"
+                          Margin="0,0,36,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ComboBox Grid.Column="0"
+                                  MinHeight="32"
+                                  Margin="0,0,8,0"
+                                  VerticalContentAlignment="Center"
+                                  IsEditable="True"
+                                  IsTextSearchEnabled="True"
+                                  ItemsSource="{Binding AutoComboModelNameList}"
+                                  Text="{Binding Config.AutoComboBuildConfig.ModelName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  ToolTip="{Binding Config.AutoComboBuildConfig.ModelName}" />
+                        <ui:Button Grid.Column="1"
+                                   Content="{i18n:T 拉取模型列表}"
+                                   Command="{Binding FetchAutoComboModelListCommand}" />
+                    </Grid>
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -3669,11 +3747,11 @@
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Text="注意保护好密钥"
                                   TextWrapping="Wrap" />
-                    <ui:PasswordBox Grid.Row="1"
+                    <ui:PasswordBox Grid.Row="0"
                                     Grid.RowSpan="2"
                                     Grid.Column="1"
-                                    MinWidth="300"
-                                    MaxWidth="400"
+                                    Width="300"
+                                    VerticalAlignment="Top"
                                     Margin="0,0,36,0"
                                     Password="{Binding Config.AutoComboBuildConfig.ApiKey, Mode=TwoWay}" />
                 </Grid>
@@ -3700,16 +3778,135 @@
                     <ui:TextBox Grid.Row="0"
                                 Grid.RowSpan="2"
                                 Grid.Column="1"
-                                MinWidth="300"
-                                MaxWidth="400"
-                                Height="80"
+                                Width="300"
+                                VerticalAlignment="Top"
                                 Margin="0,0,36,0"
+                                Height="80"
                                 Text="{Binding Config.AutoComboBuildConfig.ExtraPrompt, Mode=TwoWay}"
                                 TextWrapping="Wrap"
                                 AcceptsReturn="True"
                                 VerticalContentAlignment="Top"
                                 VerticalScrollBarVisibility="Auto" />
                 </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  TextWrapping="Wrap">
+                        主建树提示词
+                    </ui:TextBlock>
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="“当前队伍”“元素反应”等小节由程序自动追加，无需填写；留空使用默认正文"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                Width="300"
+                                VerticalAlignment="Top"
+                                Margin="0,0,36,0"
+                                Height="160"
+                                Text="{Binding Config.AutoComboBuildConfig.MainPrompt, Mode=TwoWay}"
+                                TextWrapping="Wrap"
+                                AcceptsReturn="True"
+                                VerticalContentAlignment="Top"
+                                VerticalScrollBarVisibility="Auto" />
+                </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  TextWrapping="Wrap">
+                        兜底建树提示词
+                    </ui:TextBlock>
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="“当前队伍”小节由程序自动追加，无需填写；留空使用默认正文"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBox Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                Width="300"
+                                VerticalAlignment="Top"
+                                Margin="0,0,36,0"
+                                Height="120"
+                                Text="{Binding Config.AutoComboBuildConfig.FallbackPrompt, Mode=TwoWay}"
+                                TextWrapping="Wrap"
+                                AcceptsReturn="True"
+                                VerticalContentAlignment="Top"
+                                VerticalScrollBarVisibility="Auto" />
+                </Grid>
+                <Grid Margin="16,0,16,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <ui:TextBlock FontTypography="Body"
+                                      TextWrapping="Wrap">
+                            角色提示词覆盖
+                        </ui:TextBlock>
+                        <ui:TextBlock Margin="0,4,0,0"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="自定义角色的战术描述，未覆盖的角色使用内置描述；删除行即恢复内置描述；如重复只取第一个"
+                                      TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ui:Button Grid.Column="1"
+                               Margin="12,0,36,0"
+                               VerticalAlignment="Center"
+                               Command="{Binding AddAvatarDescriptionOverrideCommand}"
+                               Content="添加角色" />
+                </Grid>
+                <ItemsControl Margin="16,0,36,16"
+                              ItemsSource="{Binding Config.AutoComboBuildConfig.AvatarDescriptionOverrides}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="130" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ComboBox Grid.Column="0"
+                                          VerticalAlignment="Center"
+                                          ItemsSource="{x:Static pages:TaskSettingsPageViewModel.CombatAvatarNameList}"
+                                          SelectedItem="{Binding Name, Mode=TwoWay}" />
+                                <TextBox Grid.Column="1"
+                                         Height="44"
+                                         Margin="8,0,0,0"
+                                         VerticalContentAlignment="Top"
+                                         AcceptsReturn="True"
+                                         Text="{Binding Description, Mode=TwoWay}"
+                                         TextWrapping="Wrap"
+                                         VerticalScrollBarVisibility="Auto" />
+                                <ui:Button Grid.Column="2"
+                                           Margin="8,0,0,0"
+                                           VerticalAlignment="Center"
+                                           Command="{Binding DataContext.RemoveAvatarDescriptionOverrideCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                           CommandParameter="{Binding}"
+                                           Content="删除" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
             </StackPanel>
         </ui:CardExpander>
 

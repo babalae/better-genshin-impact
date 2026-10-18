@@ -51,7 +51,7 @@ public partial class OneDragonFlowPage
             ShowAddTaskGroupPopup();
         }
     }
-    
+
     private void ShowAddTaskGroupPopup()
     {
         try

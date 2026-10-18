@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Mask;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.AutoFishing.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -20,7 +21,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         {
             //
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
-            var imageRegion = new GameCaptureRegion(mat, 0, 0, drawContent: new FakeDrawContent());
+            var imageRegion = new GameCaptureRegion(mat, 0, 0, drawingBoard: NullMaskWindowDrawingBoard.Instance);
 
             CsTrees.Blackboard.Blackboard blackboard = new CsTrees.Blackboard.Blackboard();
             var access = blackboard.GrantRead<Fishpond>(null!, "Fishpond");
@@ -30,7 +31,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                     .Sequence("用例", false)
                         .SetSleep("设置sleep方法", _ => { })
                         .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion, imageRegion], bb!))
-                        .GetFishpond("-", new FakeLogger(), BehavioursTests.Predictor, new FakeTimeProvider(), drawContent: new FakeDrawContent())
+                        .GetFishpond("-", new FakeLogger(), BehavioursTests.Predictor, new FakeTimeProvider())
                     .End()
                 .End()
                 .Build();
@@ -56,7 +57,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         {
             //
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
-            var imageRegion = new GameCaptureRegion(mat, 0, 0, drawContent: new FakeDrawContent());
+            var imageRegion = new GameCaptureRegion(mat, 0, 0, drawingBoard: NullMaskWindowDrawingBoard.Instance);
 
             CsTrees.Blackboard.Blackboard blackboard = new CsTrees.Blackboard.Blackboard();
             var chooseBaitFailuresAccess = blackboard.GrantWrite<List<BaitType>>(null!, "ChooseBaitFailures");
@@ -70,7 +71,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                     .Sequence("用例", false)
                         .SetSleep("设置sleep方法", _ => { })
                         .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion], bb!))
-                        .GetFishpond("-", new FakeLogger(), BehavioursTests.Predictor, new FakeTimeProvider(), drawContent: new FakeDrawContent())
+                        .GetFishpond("-", new FakeLogger(), BehavioursTests.Predictor, new FakeTimeProvider())
                     .End()
                 .End()
                 .Build();
@@ -101,7 +102,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         {
             //
             Mat mat = new Mat(@$"..\..\..\Assets\AutoFishing\{screenshot1080p}");
-            var imageRegion = new GameCaptureRegion(mat, 0, 0, drawContent: new FakeDrawContent());
+            var imageRegion = new GameCaptureRegion(mat, 0, 0, drawingBoard: NullMaskWindowDrawingBoard.Instance);
 
             CsTrees.Blackboard.Blackboard blackboard = new CsTrees.Blackboard.Blackboard();
             var fishpondAccess = blackboard.GrantRead<Fishpond>(null!, "Fishpond");
@@ -111,7 +112,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                     .Sequence("用例", false)
                         .SetSleep("设置sleep方法", _ => { })
                         .LeafWithBlackboard(bb => new ScreenshotQueue("用例", [imageRegion], bb!))
-                        .GetFishpond("-", new FakeLogger(), BehavioursTests.Predictor, new FakeTimeProvider(), drawContent: new FakeDrawContent())
+                        .GetFishpond("-", new FakeLogger(), BehavioursTests.Predictor, new FakeTimeProvider())
                     .End()
                 .End()
                 .Build();

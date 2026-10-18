@@ -20,6 +20,7 @@ internal sealed class DialogueOptionVoiceDiagnosticService : BackgroundService
     private readonly AutoSkipConfig _config;
     private readonly DialogueOptionVoiceDiagnosticState _state;
     private readonly ILogger<DialogueOptionVoiceDiagnosticService> _logger;
+    private readonly TaskTriggerDispatcher _triggers;
     private DialogueOptionVoiceDetector? _detector;
     private PcmWaveRecorder? _recorder;
     private int? _unavailableProcessId;
@@ -28,11 +29,13 @@ internal sealed class DialogueOptionVoiceDiagnosticService : BackgroundService
     public DialogueOptionVoiceDiagnosticService(
         IConfigService configService,
         DialogueOptionVoiceDiagnosticState state,
-        ILogger<DialogueOptionVoiceDiagnosticService> logger)
+        ILogger<DialogueOptionVoiceDiagnosticService> logger,
+        TaskTriggerDispatcher triggers)
     {
         _config = configService.Get().AutoSkipConfig;
         _state = state;
         _logger = logger;
+        _triggers = triggers;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -192,9 +195,9 @@ internal sealed class DialogueOptionVoiceDiagnosticService : BackgroundService
         _state.SetRecordingStopped(filePath);
     }
 
-    private static string BuildDecisionText()
+    private string BuildDecisionText()
     {
-        var trigger = GameTaskManager.TriggerDictionary?.GetValueOrDefault("AutoSkip") as AutoSkipTrigger;
+        var trigger = _triggers.GetTrigger<AutoSkipTrigger>();
         if (trigger == null || !trigger.VoiceWaiter.TryGetProgress(out var progress))
         {
             return "未在等待选项";

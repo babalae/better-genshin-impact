@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.AutoFight.Model;
 using CsTrees.FluentBuilder;
 
 namespace BetterGenshinImpact.GameTask.AutoCombo.ComboRun;
@@ -9,5 +10,11 @@ namespace BetterGenshinImpact.GameTask.AutoCombo.ComboRun;
 public partial class AutoComboRunBuilder : TreeBuilder<AutoComboRunBuilder>
 {
     private static readonly CompositesCatalog compositesCatalog = new();
-    private static readonly AutoComboRunCatalog autoComboRunCatalog = new();
+
+    private readonly AutoComboRunCatalog autoComboRunCatalog;
+
+    public AutoComboRunBuilder(Avatar[] avatars)
+    {
+        autoComboRunCatalog = new AutoComboRunCatalog(avatars);
+    }
 }

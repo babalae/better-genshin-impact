@@ -19,16 +19,22 @@ issues:
     commentAnchor: issue-bot:validation
     templates:
       - key: bug
+        issueType: Bug
         detect:
           markers:
             - bug
           titlePrefixes:
             - "[bug]"
+          formSignatures:
+            - 我已经搜索过现有 issue，确认这不是重复问题
+            - 确认文档的内容无法解决我的问题
+            - 我愿意为了解决这个问题尽自己所能
         requiredSections:
           - id: environment
             aliases:
               - 系统环境
               - System Environment
+              - 运行环境与关键配置
           - id: version
             aliases:
               - BetterGI 版本号
@@ -42,36 +48,45 @@ issues:
               - 复现步骤
               - Reproduction steps
         labels:
-          whenValid:
-            - BUG
+          whenValid: []
           whenInvalid:
             - 需要更多信息
       - key: feature
+        issueType: Feature
         detect:
           markers:
             - feature
           titlePrefixes:
             - "[feature]"
+          formSignatures:
+            - 我已经搜索过现有 issue，确认这不是重复建议
+            - 我已确认当前版本中尚未提供该功能，或至少没有等价实现
+            - 我认为这个需求能为更多用户带来明确收益，而不仅仅是个人偏好
+            - 我理解这个需求可能因实现成本、维护成本或项目方向而暂不采纳
         requiredSections:
           - id: request
             aliases:
               - 功能请求
               - Feature Request
+              - 需求或建议
           - id: scenario
             aliases:
               - 使用场景
               - Use Case
         labels:
-          whenValid:
-            - 功能建议
+          whenValid: []
           whenInvalid:
             - 需要更多信息
       - key: suggestion
+        issueType: Suggestions
         detect:
           markers:
             - suggestion
           titlePrefixes:
             - "[suggestion]"
+          formSignatures:
+            - 我已经搜索过现有 issue，确认这不是重复建议
+            - 确认文档的内容无法解决我的问题或覆盖我的建议
         requiredSections:
           - id: suggestion
             aliases:
@@ -82,16 +97,19 @@ issues:
               - 预期收益
               - Expected Benefit
         labels:
-          whenValid:
-            - 功能建议
+          whenValid: []
           whenInvalid:
             - 需要更多信息
       - key: question
+        issueType: Question
         detect:
           markers:
             - question
           titlePrefixes:
             - "[question]"
+          formSignatures:
+            - 我已经搜索过现有 issue，确认这不是重复问题
+            - 确认文档的内容无法解决我的问题
         requiredSections:
           - id: question
             aliases:
@@ -102,8 +120,7 @@ issues:
               - 已尝试内容
               - What I Tried
         labels:
-          whenValid:
-            - 问题咨询
+          whenValid: []
           whenInvalid:
             - 需要更多信息
       - key: normal
@@ -113,6 +130,9 @@ issues:
           titlePrefixes:
             - "[feedback]"
             - "[normal]"
+          formSignatures:
+            - 我已经搜索过现有 issue，确认这不是重复反馈
+            - 确认文档的内容无法解决我的问题或覆盖我的反馈
         requiredSections:
           - id: description
             aliases:
@@ -143,9 +163,6 @@ issues:
     enabled: true
     autoCreateMissing: true
     managed:
-      - BUG
-      - 功能建议
-      - 问题咨询
       - 需要更多信息
       - 重复
     definitions:

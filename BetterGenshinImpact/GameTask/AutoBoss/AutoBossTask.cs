@@ -1,9 +1,9 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.BgiVision;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recorder;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
@@ -50,6 +50,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     private readonly Dictionary<string, int> _rewardSummary = new();
     private SwitchPartyTask? _switchPartyTask;
     private CancellationToken _ct;
+    private int _successfulRewardCount;
 
     private static readonly TimeSpan OriginalResinRecoveryInterval = TimeSpan.FromMinutes(8);
     private const int MaxQuickUseQuantity = 20;
@@ -60,8 +61,22 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
 
     private static RecognitionObject LoadRecognitionObject(string objectName)
     {
+        return LoadRecognitionObject("AutoBoss", objectName);
+    }
+
+    private static RecognitionObject LoadRecognitionObject(string taskName, string objectName)
+    {
         var captureRect = TaskContext.Instance().SystemInfo.ScaleMax1080PCaptureRect;
-        return RecognitionAssets.Get("AutoBoss", objectName, captureRect.Width, captureRect.Height);
+        return RecognitionAssets.Get(taskName, objectName, captureRect.Width, captureRect.Height);
+    }
+
+    private static BvLocator[] BuildBigMapLocators(BvPage page)
+    {
+        return
+        [
+            page.Locator(LoadRecognitionObject("QuickTeleport", "MapScaleButton")),
+            page.Locator(LoadRecognitionObject("QuickTeleport", "MapSettingsButton"))
+        ];
     }
 
     private sealed record OriginalResinInfo(int Count, int Limit);
@@ -101,6 +116,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     {
         _ct = ct;
         _rewardSummary.Clear();
+        _successfulRewardCount = 0;
         Validate();
         LogScreenResolution();
 
@@ -130,8 +146,8 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         }
         finally
         {
-            Simulation.ReleaseAllKey();
-            Simulation.SendInput.Mouse.LeftButtonUp();
+            InputHub.ReleaseAll();
+            InputHub.Foreground.Mouse.LeftButtonUp();
             Notify.Event("AutoBoss").Success($"{Name}结束");
         }
 
@@ -146,13 +162,12 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         // 1.切换队伍
         await Prepare();
         
-        var rewardCount = 0;
         var shouldNavigateToBoss = true;
         //2.根据剩余次数判断是否继续
-        while (ShouldContinueBeforeRound(rewardCount))
+        while (ShouldContinueBeforeRound())
         {
             _ct.ThrowIfCancellationRequested();
-            _logger.LogInformation("{Name}：开始第 {Round} 次讨伐 {Boss}", Name, rewardCount + 1, _taskParam.BossName);
+            _logger.LogInformation("{Name}：开始第 {Round} 次讨伐 {Boss}", Name, _successfulRewardCount + 1, _taskParam.BossName);
             
             //3.树脂不足则退出
             if (!await EnsureResinBeforeRound())
@@ -181,8 +196,9 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
                 break;
             }
 
-            rewardCount++;
-            if (!ShouldContinueBeforeRound(rewardCount))
+            _successfulRewardCount++;
+            _taskParam.RewardClaimedCallback?.Invoke();
+            if (!ShouldContinueBeforeRound())
             {
                 break;
             }
@@ -206,11 +222,10 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     /// <summary>
     /// 判断本轮开始前是否还有继续讨伐的次数。
     /// </summary>
-    /// <param name="rewardCount">本次任务已成功领取奖励的次数。</param>
     /// <returns>树脂耗尽模式始终返回 true；指定次数模式下未达到目标次数时返回 true。</returns>
-    private bool ShouldContinueBeforeRound(int rewardCount)
+    private bool ShouldContinueBeforeRound()
     {
-        return !_taskParam.SpecifyRunCount || rewardCount < _taskParam.RunCount;
+        return !_taskParam.SpecifyRunCount || _successfulRewardCount < _taskParam.RunCount;
     }
 
     /// <summary>
@@ -277,15 +292,16 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             .WithRoi(ScaleRect(1200, 25, 580, 50));
         
         await page.Flow()
-            //按B打开地图直到识别到树脂图标
             .Do((Action)(() =>
             {
-                if (!resinIconLocator.IsExist())
+                using var capture = CaptureToRectArea();
+                if (!Bv.IsInBigMapUi(capture))
                 {
-                    Simulation.SendInput.SimulateAction(GIActions.OpenMap);
+                    InputHub.Foreground.SimulateAction(GIActions.OpenMap);
                 }
-            })).Until(resinIconLocator)
-            //点击树脂图标直到识别到目标文本
+            }))
+            .UntilAny(BuildBigMapLocators(page))
+            .WaitUntil(resinIconLocator)
             .Click().UntilAnyText(new[] { "全部恢复", "原粹树脂已完全恢复" }, ScaleRect(1180, 75, 620, 200))
             .Run();
 
@@ -1163,9 +1179,9 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
                 // The main loop observes task failures; shutdown also cancels background tasks.
             }
 
-            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-            Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
-            Simulation.SendInput.SimulateAction(GIActions.MoveRight, KeyType.KeyUp);
+            InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+            InputHub.Foreground.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
+            InputHub.Foreground.SimulateAction(GIActions.MoveRight, KeyType.KeyUp);
         }
     }
 
@@ -1201,7 +1217,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             {
                 if (DateTime.UtcNow - lastInteractAt >= TimeSpan.FromMilliseconds(300))
                 {
-                    Simulation.SendInput.SimulateAction(GIActions.PickUpOrInteract);
+                    InputHub.Foreground.SimulateAction(GIActions.PickUpOrInteract);
                     lastInteractAt = DateTime.UtcNow;
                 }
             }
@@ -1227,7 +1243,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             if (boxRegions.Count < 1)
             {
                 _logger.LogWarning("{Name}：未找到征讨之花图标，调整视角重试", Name);
-                Simulation.SendInput.Mouse.MoveMouseBy(ScaleX(200), 0);
+                InputHub.Foreground.Mouse.MoveMouseBy(ScaleX(200), 0);
                 await Delay(250, ct);
                 continue;
             }
@@ -1236,16 +1252,16 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
 
             if (icon.Y > halfHeight)
             {
-                Simulation.SendInput.Mouse.MoveMouseBy(0, (int)Math.Round(halfHeight));
+                InputHub.Foreground.Mouse.MoveMouseBy(0, (int)Math.Round(halfHeight));
                 await Delay(125, ct);
-                Simulation.SendInput.Mouse.MoveMouseBy((int)Math.Round(centerX), 0);
+                InputHub.Foreground.Mouse.MoveMouseBy((int)Math.Round(centerX), 0);
                 await Delay(125, ct);
                 continue;
             }
 
             if (icon.X < minTargetX || icon.X > maxTargetX)
             {
-                Simulation.SendInput.Mouse.MoveMouseBy((int)Math.Round(icon.X - centerX), 0);
+                InputHub.Foreground.Mouse.MoveMouseBy((int)Math.Round(icon.X - centerX), 0);
             }
 
             await Delay(250, ct);
@@ -1268,22 +1284,22 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
                 {
                     if (isMovingForward)
                     {
-                        Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                        InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                         isMovingForward = false;
                     }
 
                     _logger.LogInformation("{Name}：检测到攀爬状态，尝试脱离", Name);
-                    Simulation.SendInput.SimulateAction(GIActions.Drop);
+                    InputHub.Foreground.SimulateAction(GIActions.Drop);
                     await Delay(1000, ct);
-                    Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown);
+                    InputHub.Foreground.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown);
                     await Delay(800, ct);
-                    Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
+                    InputHub.Foreground.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
                     continue;
                 }
 
                 if (!isMovingForward)
                 {
-                    Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+                    InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
                     isMovingForward = true;
                 }
 
@@ -1291,19 +1307,19 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
                 jumpCount++;
                 if (jumpCount % 2 == 0)
                 {
-                    Simulation.SendInput.SimulateAction(GIActions.Jump);
+                    InputHub.Foreground.SimulateAction(GIActions.Jump);
                     await Delay(100, ct);
                 }
 
-                Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                 isMovingForward = false;
                 await Delay(200, ct);
             }
         }
         finally
         {
-            Simulation.SendInput.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-            Simulation.SendInput.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
+            InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+            InputHub.Foreground.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
         }
     }
 

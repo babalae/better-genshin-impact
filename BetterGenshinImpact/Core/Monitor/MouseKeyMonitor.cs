@@ -1,6 +1,6 @@
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recorder;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Model;
 using Gma.System.MouseKeyHook;
@@ -66,8 +66,6 @@ public partial class MouseKeyMonitor : IDisposable
             return _globalHook;
         }
     }
-    private nint _hWnd;
-
     public MouseKeyMonitor()
     {
         _spaceTimer.Elapsed += OnSpaceTimerElapsed;
@@ -77,7 +75,7 @@ public partial class MouseKeyMonitor : IDisposable
     public void Subscribe(nint gameHandle)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        _hWnd = gameHandle;
+        // 按键经 InputHub.Background 发往 TaskContext.Init 绑定的游戏窗口，gameHandle 与其相同
 
         _pickUpKey = TaskContext.Instance().Config.KeyBindingsConfig.PickUpOrInteract.ToWinFormKeys();
         _pickUpKeyCode = TaskContext.Instance().Config.KeyBindingsConfig.PickUpOrInteract.ToVK();
@@ -120,12 +118,12 @@ public partial class MouseKeyMonitor : IDisposable
 
     private void OnSpaceTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
     {
-        Simulation.PostMessage(_hWnd).KeyPress(_releaseControlKeyCode);
+        InputHub.Background.Keyboard.KeyPress(_releaseControlKeyCode);
     }
 
     private void OnFTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
     {
-        Simulation.PostMessage(_hWnd).KeyPress(_pickUpKeyCode);
+        InputHub.Background.Keyboard.KeyPress(_pickUpKeyCode);
     }
 
     private void GlobalHookKeyDown(object? sender, KeyEventArgs e)

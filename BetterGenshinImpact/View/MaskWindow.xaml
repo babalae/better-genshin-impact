@@ -13,6 +13,8 @@
         xmlns:gif="https://github.com/XamlAnimatedGif/XamlAnimatedGif"
         xmlns:sys="clr-namespace:System;assembly=System.Runtime"
         xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
+        xmlns:mask="clr-namespace:BetterGenshinImpact.View.Mask"
+        xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
         Title="MaskWindow"
         Width="500"
         Height="800"
@@ -24,10 +26,8 @@
         ShowInTaskbar="False"
         Topmost="True"
         WindowStyle="None"
+        d:DataContext="{d:DesignInstance Type=viewModel:MaskWindowViewModel}"
         mc:Ignorable="d">
-    <Window.DataContext>
-        <viewModel:MaskWindowViewModel />
-    </Window.DataContext>
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -51,9 +51,17 @@
             <b:InvokeCommandAction Command="{Binding LoadedCommand}" CommandParameter="{Binding}" />
         </b:EventTrigger>
         <b:EventTrigger EventName="SizeChanged">
-            <b:InvokeCommandAction Command="{Binding WindowSizeChangedCommand}" PassEventArgsToCommand="True" />
+            <b:InvokeCommandAction Command="{Binding WindowSizeChangedCommand}" EventArgsParameterPath="NewSize" />
+        </b:EventTrigger>
+        <b:EventTrigger EventName="DpiChanged">
+            <b:InvokeCommandAction Command="{Binding DpiChangedCommand}" EventArgsParameterPath="NewDpi.DpiScaleY" />
         </b:EventTrigger>
     </b:Interaction.Triggers>
+
+    <b:Interaction.Behaviors>
+        <behavior:WindowClickThroughBehavior IsClickThrough="{Binding IsClickThrough}" />
+        <behavior:WindowHiddenCommandBehavior Command="{Binding CloseTransientPopupsCommand}" />
+    </b:Interaction.Behaviors>
 
     <Window.Background>
         <SolidColorBrush Color="{Binding Config.MaskWindowConfig.OverlayWindowBackgroundColor, Converter={StaticResource ColorStringToColorConverter}, ConverterParameter=#01000000}" />
@@ -87,15 +95,37 @@
                 <RowDefinition Height="5*" />
             </Grid.RowDefinitions>
 
+            <!-- 准星与绘制层位于最底层；各自只在绑定值变化时重绘本层 -->
+            <mask:MaskWindowCrosshairLayer Grid.Row="0"
+                                           Grid.RowSpan="4"
+                                           Grid.Column="0"
+                                           Grid.ColumnSpan="6"
+                                           Visibility="{Binding IsCrosshairVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                           CrosshairType="{Binding Config.MaskWindowConfig.CrosshairType}"
+                                           CrosshairColor="{Binding Config.MaskWindowConfig.CrosshairColor}"
+                                           LineWidth="{Binding Config.MaskWindowConfig.CrosshairLineWidth}"
+                                           CrosshairSize="{Binding Config.MaskWindowConfig.CrosshairSize}"
+                                           Gap="{Binding Config.MaskWindowConfig.CrosshairGap}"
+                                           ImagePath="{Binding Config.MaskWindowConfig.CrosshairImagePath}"
+                                           ScaleMode="{Binding Config.MaskWindowConfig.CrosshairScaleMode}" />
+
+            <mask:MaskWindowDrawingLayer Grid.Row="0"
+                                         Grid.RowSpan="4"
+                                         Grid.Column="0"
+                                         Grid.ColumnSpan="6"
+                                         Snapshot="{Binding Drawing}"
+                                         ShowRecognition="{Binding Config.MaskWindowConfig.DisplayRecognitionResultsOnMask}"
+                                         DrawingStyle="{Binding DrawingStyle}" />
+
             <Canvas Grid.Row="0"
                     Grid.RowSpan="4"
                     Grid.Column="0"
                     Grid.ColumnSpan="6"
                     ClipToBounds="True">
-                <controls:MiniMapPointsCanvas x:Name="MiniMapPointsCanvasControl"
-                                              Visibility="{Binding Config.MapMaskConfig.MiniMapMaskEnabled, Converter={StaticResource BooleanToVisibilityConverter}}"
+                <controls:MiniMapPointsCanvas Visibility="{Binding Config.MapMaskConfig.MiniMapMaskEnabled, Converter={StaticResource BooleanToVisibilityConverter}}"
                                               PointsSource="{Binding MapPoints}"
                                               LabelsSource="{Binding MapPointLabels}"
+                                              Viewport="{Binding MiniMapViewport}"
                                               IsHitTestVisible="False">
                     <Canvas.Left>
                         <MultiBinding Converter="{StaticResource OverlayRelativeOrAbsoluteConverter}">
@@ -674,13 +704,21 @@
 
             <controls:PointsCanvas Grid.Row="0" Grid.Column="0" Grid.RowSpan="4" Grid.ColumnSpan="6"
                                    x:Name="PointsCanvasControl"
+                                   x:FieldModifier="private"
                                    Visibility="{Binding IsInBigMapUi, Converter={StaticResource BooleanToVisibilityConverter}}"
                                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                                    PointsSource="{Binding MapPoints}"
                                    LabelsSource="{Binding MapPointLabels}"
+                                   Viewport="{Binding BigMapViewport}"
                                    PointClickCommand="{Binding PointClickCommand}"
                                    PointRightClickCommand="{Binding PointRightClickCommand}"
-                                   PointHoverCommand="{Binding PointHoverCommand}" />
+                                   PointHoverCommand="{Binding PointHoverCommand}">
+                <b:Interaction.Triggers>
+                    <b:EventTrigger EventName="ViewportChanged">
+                        <b:InvokeCommandAction Command="{Binding CloseTransientPopupsCommand}" />
+                    </b:EventTrigger>
+                </b:Interaction.Triggers>
+            </controls:PointsCanvas>
 
             <Grid Grid.Row="0"
                   Grid.Column="0"

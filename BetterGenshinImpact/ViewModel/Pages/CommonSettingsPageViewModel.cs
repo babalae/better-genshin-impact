@@ -233,7 +233,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
 
     private void OnOverlayStyleChanged()
     {
-        MaskWindow.InstanceNullable()?.Refresh();
+        // 绘制层样式由 MaskWindowViewModel 监听配置变化后自动重绘，这里只需刷新布局相关设置
         OnRefreshMaskSettings();
     }
 

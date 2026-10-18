@@ -1,12 +1,11 @@
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
 using CsTrees;
 using CsTrees.Composites;
-using Fischless.WindowsInput;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
@@ -19,15 +18,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
     public class AutoFishingTask : ISoloTask
     {
         private readonly ILogger _logger = App.GetLogger<AutoFishingTask>();
-        private readonly InputSimulator input = Simulation.SendInput;
+        private IInputChannel input => InputHub.Foreground;
         public string Name => "钓鱼独立任务";
 
         private CancellationToken _ct;
 
         private readonly AutoFishingTaskParam param;
-
-        private readonly BgiYoloPredictor _predictor =
-            App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiFish);
 
         public AutoFishingTask(AutoFishingTaskParam param)
         {
@@ -36,6 +32,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         public async Task Start(CancellationToken ct)
         {
+            using var predictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiFish);
             this._ct = ct;
 
             IOcrService ocrService = OcrFactory.Paddle;
@@ -59,7 +56,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                         .Sequence("找鱼", memory: true)
                                             .MoveViewpointDown("调整视角至俯视", _logger, input)
                                             .Parallel("找鱼20秒", policy: new ParallelPolicy.SuccessOnOne())
-                                                .TurnAround("转圈圈调整视角", _logger, input, _predictor)
+                                                .TurnAround("转圈圈调整视角", _logger, input, predictor)
                                                 .FindFishTimeout("找到鱼", 20, _logger)
                                             .End()
                                         .End()
@@ -76,7 +73,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                                             .Parallel("找鱼10秒", policy: new ParallelPolicy.SuccessOnOne())
                                                                 .Sequence("-", memory: true)
                                                                     .CheckInitalState("初始状态确认", _logger, input)
-                                                                    .GetFishpond("检测鱼群", _logger, _predictor)
+                                                                    .GetFishpond("检测鱼群", _logger, predictor)
                                                                 .End()
                                                                 .FindFishTimeout("确认初始状态和找到鱼", 10, _logger)
                                                             .End()
@@ -89,7 +86,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                                                                                 .Try("举起鱼竿瞄准并抛竿")
                                                                                     .Sequence("-", memory: true)
                                                                                         .MoveViewpointDown("调整视角至俯视", _logger, input)
-                                                                                        .LiftRod("举起鱼竿瞄准", _logger, input, _predictor)
+                                                                                        .LiftRod("举起鱼竿瞄准", _logger, input, predictor)
                                                                                     .End()
                                                                                 .Finally()
                                                                                     .Cast("抛竿", _logger, input)

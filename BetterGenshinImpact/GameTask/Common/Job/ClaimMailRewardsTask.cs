@@ -1,9 +1,9 @@
-﻿using System;
+﻿using BetterGenshinImpact.Core.Input;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using Microsoft.Extensions.Logging;
@@ -38,7 +38,7 @@ public class ClaimMailRewardsTask
 
         await Delay(200, ct);
 
-        TaskContext.Instance().PostMessageSimulator.SimulateAction(GIActions.OpenPaimonMenu); // ESC 
+        InputHub.Background.SimulateAction(GIActions.OpenPaimonMenu); // ESC 
 
         await Delay(1300, ct);
 
@@ -59,7 +59,7 @@ public class ClaimMailRewardsTask
                     await Delay(200, ct);
                     // TODO 截图
 
-                    TaskContext.Instance().PostMessageSimulator.KeyPress(User32.VK.VK_ESCAPE); // ESC 
+                    InputHub.Background.Keyboard.KeyPress(User32.VK.VK_ESCAPE); // ESC 
                 }
             }
             else

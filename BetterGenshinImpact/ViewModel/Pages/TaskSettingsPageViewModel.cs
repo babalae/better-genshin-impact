@@ -31,6 +31,7 @@ using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.Frozen;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -148,6 +149,15 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
     private bool _autoComboRunPaused;
 
+    /// <summary>“拉取模型列表”得到的候选模型名；不写入配置，重启后需要重新拉取</summary>
+    [ObservableProperty]
+    private ObservableCollection<string> _autoComboModelNameList = [];
+
+    /// <summary>正在拉取模型列表，用于禁用按钮避免重复请求</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(FetchAutoComboModelListCommand))]
+    private bool _fetchingAutoComboModelList;
+
     [ObservableProperty]
     private List<string> _domainNameList;
 
@@ -158,6 +168,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     public static List<string> AutoBossNameList = [.. AutoBossData.SupportedBossNames];
 
     public static List<string> AvatarIndexList = ["", "1", "2", "3", "4"];
+    public static List<string> CombatAvatarNameList = [.. AvatarProfiles.GetProfileNames()];
     public static List<string> LeyLineOutcropTypeList = ["启示之花", "藏金之花"];
     public static List<string> LeyLineOutcropCountryList = ["蒙德", "璃月", "稻妻", "须弥", "枫丹", "纳塔", "挪德卡莱", "至冬"];
     public static List<string> LeyLineOutcropTypeListWithEmpty = ["", .. LeyLineOutcropTypeList];
@@ -696,6 +707,18 @@ public partial class TaskSettingsPageViewModel : ViewModel
     }
 
     [RelayCommand]
+    private void OnAddAvatarDescriptionOverride()
+    {
+        Config.AutoComboBuildConfig.AvatarDescriptionOverrides.Add(new AvatarProfile("", "", []));
+    }
+
+    [RelayCommand]
+    private void OnRemoveAvatarDescriptionOverride(AvatarProfile item)
+    {
+        Config.AutoComboBuildConfig.AvatarDescriptionOverrides.Remove(item);
+    }
+
+    [RelayCommand]
     private async Task OnSwitchAutoCombo()
     {
         SwitchAutoComboEnabled = true;
@@ -741,6 +764,33 @@ public partial class TaskSettingsPageViewModel : ViewModel
             {
                 SwitchAutoComboRunButtonText = "测试运行";
             }
+        }
+    }
+
+    /// <summary>拉取期间禁用按钮，避免重复请求。</summary>
+    private bool CanFetchAutoComboModelList() => !FetchingAutoComboModelList;
+
+    /// <summary>
+    /// 拉取当前服务商的模型列表填充下拉。只读查询，除候选列表外不改动任何配置。
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanFetchAutoComboModelList))]
+    private async Task OnFetchAutoComboModelList()
+    {
+        FetchingAutoComboModelList = true;
+        try
+        {
+            var config = Config.AutoComboBuildConfig;
+            var models = await AutoComboModelListFetcher.FetchAsync(config.Provider, config.PlanningLlmEndpoint, config.ApiKey, CancellationToken.None);
+            AutoComboModelNameList = new ObservableCollection<string>(models);
+            UIDispatcherHelper.Invoke(() => Toast.Success($"已拉取 {models.Count} 个模型，可在“LLM模型名”下拉选择"));
+        }
+        catch (Exception e)
+        {
+            UIDispatcherHelper.Invoke(() => Toast.Error($"拉取模型列表失败：{e.Message}"));
+        }
+        finally
+        {
+            FetchingAutoComboModelList = false;
         }
     }
 

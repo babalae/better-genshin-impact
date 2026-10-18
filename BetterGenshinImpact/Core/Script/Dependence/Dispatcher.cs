@@ -66,7 +66,7 @@ public class Dispatcher
     }
 
     /// <summary>
-    /// 清理所有实时任务
+    /// 清理所有实时任务（清空任务期间的启用名单，不销毁触发器实例）
     /// </summary>
     public void ClearAllTriggers()
     {
@@ -92,7 +92,8 @@ public class Dispatcher
             throw new ArgumentNullException(nameof(realtimeTimer.Name), "实时任务名称不能为空");
         }
 
-        if (!TaskTriggerDispatcher.Instance().AddTrigger(realtimeTimer.Name, realtimeTimer.Config))
+        // 加入任务期间的启用名单。脚本不需要中途撤销，名单在下一次 clearAllTriggers、项目切换或任务结束时整体清空
+        if (TaskTriggerDispatcher.Instance().AddTrigger(realtimeTimer.Name, realtimeTimer.Config) is null)
         {
             throw new ArgumentException($"添加实时任务失败: {realtimeTimer.Name}", nameof(realtimeTimer.Name));
         }

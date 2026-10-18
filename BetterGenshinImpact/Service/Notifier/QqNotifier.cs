@@ -40,18 +40,20 @@ public sealed class QqNotifier : INotifier
     private readonly string _clientSecret;
     private readonly string _openId;
     private readonly string _groupOpenId;
+    private readonly string _messageFormat;
 
     private string? _cachedToken;
     private DateTime _tokenExpiry = DateTime.MinValue;
     private readonly SemaphoreSlim _tokenSemaphore = new(1, 1);
 
-    public QqNotifier(HttpClient httpClient, string appId, string clientSecret, string openId, string groupOpenId)
+    public QqNotifier(HttpClient httpClient, string appId, string clientSecret, string openId, string groupOpenId, string messageFormat = "text")
     {
         _httpClient = httpClient;
         _appId = appId;
         _clientSecret = clientSecret;
         _openId = openId;
         _groupOpenId = groupOpenId;
+        _messageFormat = messageFormat;
     }
 
     /// <summary>
@@ -219,12 +221,14 @@ public sealed class QqNotifier : INotifier
     }
 
     /// <summary>
-    /// 发送纯文本消息（msg_type=0）到指定目标 baseUrl（C2C 或群）。
+    /// 发送文字消息到指定目标 baseUrl（C2C 或群）。
     /// 注意：此请求非幂等，不重试，避免重复消息。
     /// </summary>
     private async Task SendTextAsync(string baseUrl, string text, CancellationToken ct)
     {
-        var body = JsonSerializer.Serialize(new { msg_type = 0, content = text });
+        var body = _messageFormat == "markdown"
+            ? JsonSerializer.Serialize(new { msg_type = 2, markdown = new { content = text } })
+            : JsonSerializer.Serialize(new { msg_type = 0, content = text });
         using var jsonContent = new StringContent(body, Encoding.UTF8, "application/json");
         using var request = await BuildAuthedRequest(HttpMethod.Post, $"{baseUrl}/messages", jsonContent, ct);
         using var response = await _httpClient.SendAsync(request, ct);

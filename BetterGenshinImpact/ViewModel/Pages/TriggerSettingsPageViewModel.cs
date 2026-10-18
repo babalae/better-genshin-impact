@@ -94,9 +94,9 @@ public partial class TriggerSettingsPageViewModel : ViewModel
     [RelayCommand]
     private void OnAutoPickModeChanged(AutoPickMode mode)
     {
+        // 拾取模式是名单缓存键的一部分，自动拾取下一次拾取时按新模式重读名单
         Config.AutoPickConfig.Mode = mode;
         UpdateAutoPickModeVisibility();
-        GameTaskManager.RefreshTriggerConfigs();
     }
 
     private void UpdateAutoPickModeVisibility()
@@ -137,8 +137,8 @@ public partial class TriggerSettingsPageViewModel : ViewModel
         
         window.Closed += (s, e) => 
         {
+            // 技能 CD 每次都实时读取 CustomCdList，不需要刷新触发器
             Config.SkillCdConfig.CustomCdList = window.GetValidRules();
-            GameTaskManager.RefreshTriggerConfigs();
         };
 
         window.ShowDialog();

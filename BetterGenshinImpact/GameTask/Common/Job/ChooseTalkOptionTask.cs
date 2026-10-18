@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Input;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -5,7 +6,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoSkip;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -62,7 +62,7 @@ public partial class ChooseTalkOptionTask
             var optionRegions = RecognizeOption(region, ct);
             if (optionRegions == null)
             {
-                TaskContext.Instance().PostMessageSimulator.KeyPressBackground(User32.VK.VK_SPACE);
+                InputHub.Background.Keyboard.KeyPress(User32.VK.VK_SPACE);
                 await Delay(500, ct);
                 continue; // retry
             }
@@ -140,7 +140,7 @@ public partial class ChooseTalkOptionTask
             }
             else if (Bv.IsInTalkUi(region))
             {
-                TaskContext.Instance().PostMessageSimulator.KeyPressBackground(User32.VK.VK_SPACE);
+                InputHub.Background.Keyboard.KeyPress(User32.VK.VK_SPACE);
             }
 
             await Delay(500, ct);
@@ -165,7 +165,7 @@ public partial class ChooseTalkOptionTask
                 }
                 else
                 {
-                    TaskContext.Instance().PostMessageSimulator.KeyPressBackground(User32.VK.VK_SPACE);
+                    InputHub.Background.Keyboard.KeyPress(User32.VK.VK_SPACE);
                 }
             }
             else if (Bv.IsInMainUi(region))

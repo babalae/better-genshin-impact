@@ -1,33 +1,36 @@
-﻿using BetterGenshinImpact.Core.Simulator;
+﻿using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Helpers;
 using System;
-using BetterGenshinImpact.GameTask;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.Core.Script.Dependence.Simulator;
 
+/// <summary>
+/// JS 脚本中的 new PostMessage()，走后台通道。
+/// 每次调用时从 InputHub 取通道，后端切换后自动生效；网页版下与前台通道相同
+/// </summary>
 public class PostMessage
 {
-    private readonly PostMessageSimulator _postMessageSimulator = TaskContext.Instance().PostMessageSimulator;
+    private static IInputChannel Channel => InputHub.Background;
 
     public void KeyDown(string key)
     {
-        _postMessageSimulator.KeyDownBackground(ToVk(key));
+        Channel.Keyboard.KeyDown(ToVk(key));
     }
 
     public void KeyUp(string key)
     {
-        _postMessageSimulator.KeyUpBackground(ToVk(key));
+        Channel.Keyboard.KeyUp(ToVk(key));
     }
 
     public void KeyPress(string key)
     {
-        _postMessageSimulator.KeyPressBackground(ToVk(key));
+        Channel.Keyboard.KeyPress(ToVk(key));
     }
 
     public void Click()
     {
-        _postMessageSimulator.LeftButtonClick();
+        Channel.Mouse.LeftButtonClick();
     }
 
     private static User32.VK ToVk(string key)

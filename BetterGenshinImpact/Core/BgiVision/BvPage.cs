@@ -4,12 +4,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition;
-using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
-using Fischless.WindowsInput;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 
@@ -20,9 +19,9 @@ public class BvPage
     private static readonly ILogger Logger = App.GetLogger<BvPage>();
     private readonly CancellationToken _cancellationToken;
 
-    public IKeyboardSimulator Keyboard => Simulation.SendInput.Keyboard;
+    public IKeyboardInput Keyboard => InputHub.Foreground.Keyboard;
 
-    public IMouseSimulator Mouse => Simulation.SendInput.Mouse;
+    public IMouseInput Mouse => InputHub.Foreground.Mouse;
 
     /// <summary>
     /// Default timeout for operations in milliseconds
