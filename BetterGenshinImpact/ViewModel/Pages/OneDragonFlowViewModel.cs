@@ -240,7 +240,7 @@ public partial class OneDragonFlowViewModel : ViewModel
     /// <summary>
     /// 创建一条龙页面 ViewModel
     /// </summary>
-    /// <param name="config">配置根：DI 创建时注入，TaskSettingsPageViewModel 直接 new 时传入它持有的配置</param>
+    /// <param name="config">配置根：由 DI 容器注入单例</param>
     public OneDragonFlowViewModel(AllConfig config)
     {
         Config = config;

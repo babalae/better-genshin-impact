@@ -1,11 +1,11 @@
 # 移除 TaskContext：按生命周期显式传递 GameRuntime
 
-> 状态：P0~P4 已实施，解决方案编译通过，尚未手动回归（见第 15 节） · 2026-10-18 · 关联：[GameRuntime 设计](game-runtime.md)、[TaskTriggerDispatcher DI 改造](task-trigger-dispatcher-di.md)、[InputHub 设计](input-hub.md)、[实时触发器生命周期](realtime-trigger.md)
+> 状态：P0~P4 已实施；第 14 节的第 1、2 项及第 4 项的实例一致性问题已完成，第 3 项决定保留现状。通知配置订阅的后续方案见 14.8。解决方案编译通过，尚未手动回归（见第 15 节） · 2026-10-18 · 关联：[GameRuntime 设计](game-runtime.md)、[TaskTriggerDispatcher DI 改造](task-trigger-dispatcher-di.md)、[InputHub 设计](input-hub.md)、[实时触发器生命周期](realtime-trigger.md)
 
 第 2 版变更：
 
 - 新增第 7 节：把调度器中的保存截图拆为 `GameScreenshotService`，并合并 AutoFishing 中重复的一份实现。
-- 新增第 14 节：整套 DI 的改进讨论，只作讨论，不纳入本次实施。
+- 新增第 14 节：整套 DI 的改进讨论，不纳入 P0~P4；后续实施进度和审查结果在该节更新。
 - 原第 7~12 节顺延为第 8~13 节。
 
 ## 1. 结论
@@ -38,7 +38,7 @@
 - 依赖 TaskControl 运行期静态方法的有 116 个文件。两者合计约 213 个文件。
 - 类型变化：新增 2 个（`GameRuntimeExtensions`、`GameScreenshotService`），删除 2 个（`TaskContext`，以及没有子类的 `BaseAssets<T>`）。
 
-第 14 节另外梳理了整套 DI 的改进点，只作讨论，不在本次实施范围内。
+第 14 节另外梳理了整套 DI 的改进点，不在 P0~P4 范围内；后续已完成容器校验、导航服务去重，以及一条龙 ViewModel 和通知服务的实例来源收敛。
 
 ## 2. 分层结构
 
@@ -475,7 +475,7 @@ public sealed class GameScreenshotService(AllConfig config, ILogger<GameScreensh
 - **`RunnerContext` 单例**：包括暂停状态、拾取计数、`CombatScenes` 缓存。
 - **DI 化**：`TaskRunner` / `TaskSemaphore` 进入 DI，以及配置静态根 `ConfigService.Config` 的最终下线。
 - **停止协调**：停止时等待在途任务和 Tick 退出后再释放资源。
-- **第 14 节的 DI 改进项**：只作讨论，不排入 P0~P4。
+- **第 14 节的 DI 改进项**：不排入 P0~P4；后续独立实施，进度见第 14 节。
 
 ## 13. 决策记录
 
@@ -494,26 +494,26 @@ public sealed class GameScreenshotService(AllConfig config, ILogger<GameScreensh
 | UID 遮挡比例怎么算 | 按帧自身尺寸计算 | 原始帧和 1080P 归一帧都适用，不依赖 `SystemInfo`；顺带修正 AutoFishing 在高分辨率下的偏移 |
 | 每帧采集是否一并拆出 | 不拆，留在调度器 | 这是调度器的本职工作；拆出去只会多一层转发 |
 
-## 14. DI 体系改进讨论（不纳入本次实施）
+## 14. DI 体系改进与实施进度（P0~P4 之外）
 
-这一节记录梳理整套 DI 时发现的问题，只作讨论和后续排期参考，不排入 P0~P4。编号在各小节之间连续。
+这一节记录梳理整套 DI 时发现的问题，以及 P0~P4 之后的独立改造进度。编号在各小节之间连续。2026-10-18 已完成第 1、2 项，以及第 4 项的实例一致性改造；第 3 项按决定保留现状。`I18nService` 原本就只有一个实例，允许在启动阶段创建后把同一个对象注册进 DI，不再要求迁移创建入口。通知服务对配置的订阅方向仍属于第 11 项，后续方案见 14.8。
 
 ### 14.1 容器配置
 
-| # | 问题 | 现状 | 建议 |
-| --- | --- | --- | --- |
-| 1 | 构建时不做校验 | `Host.CreateDefaultBuilder()` 只在 Development 环境下开启 `ValidateOnBuild` / `ValidateScopes`。仓库没有设置 `DOTNET_ENVIRONMENT`，所以默认是 Production，循环依赖和缺失的注册要到第一次解析时才暴露（例如 4.6 的 `OverlayMetricsService` 环） | Debug 构建中调用 `UseDefaultServiceProvider(o => { o.ValidateOnBuild = true; o.ValidateScopes = true; })`。只能覆盖构造函数注入的部分，lambda 工厂内部的解析仍要靠运行时发现 |
-| 2 | 重复注册 | `INavigationService` 在 App.xaml.cs 中注册了两次，后一次覆盖前一次 | 删掉其中一处 |
-| 3 | 注册阶段带有副作用 | `ConfigureServices` 里会读写配置、准备推理运行库、切换界面语言，而 `_host` 是静态字段，类型初始化时就会执行这些操作 | 把注册和启动工作分开：注册阶段只登记服务，启动工作放到构建 Host 之前的引导步骤里。注意日志配置依赖配置文件，顺序约束要保留 |
-| 4 | 同一类型存在两个实例来源 | `OneDragonFlowViewModel` 由 `AddView` 注册为单例，`TaskSettingsPageViewModel` 又 new 了一份，两份状态互不相通。`NotificationService` 在构造函数里写静态 `_instance`，与调度器已删除的 `_instance` 是同一种写法。`I18nService.Instance` 是静态单例，同时又注册进了 DI | 每个类型只由容器提供实例；保留的静态入口只负责转发 |
+| # | 问题 | 状态 | 当前实现 | 后续建议 |
+| --- | --- | --- | --- | --- |
+| 1 | 构建时不做校验 | 已完成 | `App` 调用 `UseDefaultServiceProvider`，在 `#if DEBUG` 中开启 `ValidateOnBuild` / `ValidateScopes`，不再依赖环境名是否为 Development | 校验只检查容器可见的构造函数依赖，不执行服务构造函数，也不进入 lambda 工厂或 `App.GetService` 调用。非 Debug 构建中的回调为空，不开启这两个选项 |
+| 2 | 重复注册导航服务 | 已完成 | `INavigationService` 只保留一处 `AddSingleton<INavigationService, NavigationService>()` | 此项已关闭 |
+| 3 | 注册阶段带有副作用 | 保留现状，不排期 | `ConfigureServices` 里会读写配置、准备推理运行库、切换界面语言，而 `_host` 是静态字段，类型初始化时就会执行这些操作 | 保留当前初始化位置和顺序；其他 DI 改造不以拆分这一阶段为前提 |
+| 4 | 同一类型的实例不一致 | 已完成 | `TaskSettingsPageViewModel` 改为构造注入 `OneDragonFlowViewModel`，与一条龙页面共享 `AddView` 注册的单例；`NotificationService` 删除静态缓存和构造函数赋值，`Instance()` 只转发到容器，托管服务注册也复用该单例。`I18nService` 的私有构造函数和静态 `Instance` 保证唯一创建，`AddSingleton(i18nService)` 注册的就是这个对象 | 以实例一致、所有权明确为准，不要求所有对象都必须由容器构造。`NotificationService` 由容器创建和管理；`I18nService` 保留为启动阶段创建的进程单例，容器提供同一实例。具体边界见 14.8 |
 
 ### 14.2 服务定位
 
-`App.GetService` 共 49 处，分布在 37 个文件。
+当前 `App.GetService` 调用共 58 处，分布在 45 个 C# 文件中（2026-10-18，统计 `BetterGenshinImpact` 目录，排除整行注释，包含本次新增的通知服务静态转发入口）。
 
 | # | 问题 | 现状 | 建议 |
 | --- | --- | --- | --- |
-| 5 | 业务代码向 ViewModel 取数据 | JS `Dispatcher`、`Genshin`、`FishingHandler`、`OneDragonTaskItem` 共 6 处通过 `App.GetService<TaskSettingsPageViewModel>()` 调用 `GetFightStrategy` 等业务判断，其中 `FishingHandler` 取到后只做了判空。另外，`InstanceService` 会调用 `HomePageViewModel.HandleActivation`，`ApplicationHostService` 会调用 `ScriptControlViewModel`，都是服务反向依赖 ViewModel | 把这些业务逻辑抽成服务（例如战斗策略解析、命令行激活），ViewModel 和业务代码都依赖这个服务，依赖方向回到 View → ViewModel → Service。ViewModel 之间互相获取（3 处）属于同一层内部，优先级低 |
+| 5 | 业务代码向 ViewModel 取数据 | JS `Dispatcher`、`Genshin`、`OneDragonTaskItem` 共 5 处通过 `App.GetService<TaskSettingsPageViewModel>()` 调用 `GetFightStrategy` 等业务判断；`FishingHandler` 原有的无效判空已随 TaskContext 迁移移除。另外，`InstanceService` 会调用 `HomePageViewModel.HandleActivation`，`ApplicationHostService` 会调用 `ScriptControlViewModel`，都是服务反向依赖 ViewModel | 把这些业务逻辑抽成服务（例如战斗策略解析、命令行激活），ViewModel 和业务代码都依赖这个服务，依赖方向回到 View → ViewModel → Service。ViewModel 之间互相获取属于同一层内部，优先级低；第 4 项的一条龙实例收敛没有消除这些业务依赖 |
 | 6 | 为了延迟解析而注入 `IServiceProvider` | `ChildSessionService` 用它获取 transient 的 `ChildSessionWindow`；`RelativeMouseMessageHandler` 用它获取 `ChildSessionService` | 分别改为 `Func<ChildSessionWindow>`（与 `MaskWindow`、`CloudWebHostWindow` 的做法一致）和 `Lazy<ChildSessionService>`，依赖关系在构造函数上一目了然 |
 | 7 | 打破循环依赖的方式不统一 | 目前有四种：可写的委托属性（`WebPageRuntimeProvider.StopCaptureBeforeCloseAsync = StopAsync`）、事件（`UiTaskStopTickEvent`）、lambda 延迟解析（`InferenceBenchmarkCoordinator`）、注入 `IServiceProvider` | 统一为"下层发事件，上层订阅"。例如 Provider 暴露宿主关闭事件，由 `GameRuntimeService` 订阅，做法与 `UiTaskStopTickEvent` 一致，同时去掉可写的委托属性 |
 
@@ -523,7 +523,7 @@ public sealed class GameScreenshotService(AllConfig config, ILogger<GameScreensh
 
 | 类别 | 例子（引用数） | 建议 |
 | --- | --- | --- |
-| 环境性横切：没有业务状态，调用方不关心具体实例 | `App.GetLogger`（84）、`Notify.Event`（33）、获取 `IStringLocalizer`、`WeakReferenceMessenger` | 可以继续作为静态入口。DI 创建的类改为构造注入，new 出来的类继续用静态入口 |
+| 环境性横切：没有业务状态，调用方不关心具体实例 | `App.GetLogger`（84）、`Notify.Event`（33）、`I18nService.Instance`、获取 `IStringLocalizer`、`WeakReferenceMessenger` | 可以继续作为静态入口。DI 创建的类改为构造注入，new 出来的类继续用静态入口；I18n 的唯一实例由启动阶段创建并注册，见 14.8 |
 | 重资源单例：状态是模型或缓存，与某一次运行无关 | `OcrFactory.Paddle` 等（67）、`YoloManager`、`ScriptRepoUpdater` | 静态入口可以保留；新代码注入接口，方便测试时替换 |
 | 生命周期敏感：状态属于某一次绑定或某一次运行 | `InputHub`（642）、`RunnerContext`（66）、`TaskControl.TaskSemaphore`、`ChatUiHotkeyGuard`、`HtmlMaskWindow.CloseAll`、`PictureInPictureService`、`TaskTriggerDispatcher.Instance()` | 需要收敛：要么随 runtime 或运行显式传递，要么收进 DI 单例、由编排层驱动 |
 
@@ -543,15 +543,48 @@ public sealed class GameScreenshotService(AllConfig config, ILogger<GameScreensh
 
 | # | 问题 | 现状 | 建议 |
 | --- | --- | --- | --- |
-| 11 | 配置对象反过来调用服务 | `AllConfig.OnNotificationPropertyChanged` 调用 `NotificationService.Instance().RefreshNotifiers()`；`OnConfigChanged` 会清空遮罩（后者本设计已经处理，见 6.2） | 由服务订阅自己关心的配置段，`AllConfig` 只负责"有变更就保存" |
+| 11 | 配置对象反过来调用服务 | `AllConfig.OnNotificationPropertyChanged` 仍调用 `NotificationService.Instance().RefreshNotifiers()`；第 4 项只是把静态入口改为容器转发，没有移除配置对服务的反向调用。`OnConfigChanged` 清空遮罩的逻辑已移出（见 6.2） | 由服务订阅自己关心的配置段，`AllConfig` 只负责"有变更就保存"；订阅放在服务启动阶段，停止或释放时解除 |
 | 12 | 多账号拆分配置的前提 | 所有实例共用一份 `User/config.json`（game-runtime.md 第 15 节） | 等所有配置读取都改为通过 DI 获取 `AllConfig` 后，按实例拆分配置只需要改注册的地方。这也是第 5 节第三行（静态代码读取配置）值得继续收敛的原因 |
 
 ### 14.6 建议顺序
 
-- 第 1、2 项成本最低，随时可以做；第 1 项还能在本设计实施期间提前发现 DI 环。
+- 第 1、2 项已完成；Debug Host 构建时会校验容器可见的依赖图。
+- 第 3 项保留现状，不再排期；第 4 项的实例一致性已完成，`I18nService` 保留唯一静态实例并注册同一对象。
 - 第 7、11 项和本设计的边界相邻，适合在 P4 之后接着做。
 - 第 8、9、10 项是下一轮"运行对象"建模的主体，三者最好一起设计。
-- 第 3、4、5、6 项需要先梳理启动顺序，或者 ViewModel 中的业务逻辑，再单独评估。
+- 第 5、6 项继续单独评估，分别梳理 ViewModel 中的业务逻辑和延迟解析的依赖关系。
+
+### 14.7 本轮代码审查与验证（2026-10-18）
+
+- **范围**：`App.xaml.cs`、`NotificationService.cs`、`OneDragonFlowViewModel.cs`、`TaskSettingsPageViewModel.cs` 的本轮未提交改动，重点核对注册、实例复用和初始化时序。未发现本轮改动引入的需修复问题。
+- **实例复用**：`AddView` 将一条龙页面和 ViewModel 注册为单例；任务设置页改为注入后，共享同一份配置选择和任务列表。`NotificationService` 的具体类型注册与 `IHostedService` 工厂注册指向同一实例，静态入口不再保存另一份实例引用。
+- **编译**：`dotnet build BetterGenshinImpact.sln -c Debug` 通过，0 错误；仍有现有的包与代码分析警告。
+- **依赖图校验**：在仓库外的临时校验程序中复用当前服务注册，预先创建的实例用不执行的工厂占位，开启 `ValidateOnBuild` / `ValidateScopes` 后构建 Host 通过。没有启动 Host、BetterGI 或游戏，也没有执行应用服务构造函数。此验证不覆盖注册阶段的副作用、工厂内部解析和运行时服务定位。
+- **后续项**：配置订阅方向（第 11 项）仍未实施；一条龙页面与热键共享状态的实际交互尚未手动回归。I18n 原先被列为必须迁移创建入口，现按 14.8 的实例一致性原则修正为保留现状。
+
+### 14.8 NotificationService 与 I18nService 的收口方案
+
+约束：保留第 3 项的注册阶段初始化，不重排配置、日志、推理运行库和语言初始化。这不妨碍明确下面两个服务的实例来源和生命周期。通知服务的以下调整仍是后续方案，尚未修改实现。
+
+**NotificationService：容器拥有实例，服务自己管理配置订阅。**
+
+1. 保留当前 `AddSingleton<NotificationService>()`，以及通过 `GetRequiredService<NotificationService>()` 复用实例的托管服务注册。DI 创建的调用方直接注入；`Instance()` 可以继续作为兼容转发入口，不恢复静态缓存。`Notify.Event(...)` 也可以保留，不要求为消除静态调用而改写所有任务。
+2. 从 `AllConfig.InitEvent()` 移出通知配置的事件订阅，移除 `OnNotificationPropertyChanged` 对通知服务的调用。`AllConfig` 继续让 `ConfigChangeTracker` 追踪通知配置并请求保存；通知器刷新由服务独立订阅 `NotificationConfig.PropertyChanged` 驱动，配置对象不再引用通知服务。
+3. `StartAsync` 负责建立一次订阅，并应用当时最新的配置。将通知服务的托管服务注册放在 `ApplicationHostService` 之前，使通知器先就绪，再激活页面或命令行任务；其依赖的普通服务仍可在后面登记，无需提前构造。这样也能让正常的逆序停止流程先停止任务入口，再停止通知服务。
+4. 配置事件只登记刷新请求，刷新过程串行执行并合并连续变更，避免在配置 setter 或 UI 线程中同步等待旧通知器的发送租约。保留 `SuppressRefreshNotifiers()` 的批量更新语义，最外层结束后统一刷新；微信 Clawbot 即使凭证未变也需要强制刷新，不能只依赖属性事件判断。
+5. 停止时先解除订阅、拒绝新刷新和新发送，再取消服务拥有的令牌，等待已接收的刷新与发送收尾，最后释放通知器、`HttpClient` 和 CTS。清理需要幂等，直接 `Dispose`、启动中途失败和正常停止都要覆盖；清理期间不能再次注册通知器。发送仍复用 `NotifierManager` 的租约保护，刷新、停止与在途发送的协调应一起验证。
+6. 当前 `AllConfig.NotificationConfig` 是无变更通知的自动属性，方案沿用运行期间修改同一个配置段的约定。以后若支持整体替换或热重载，必须增加可观察的替换入口，并让服务退订旧配置、订阅新配置，不能假定订阅根对象就能捕获替换。
+
+完成第 2~6 步后，第 11 项才算关闭。验证应覆盖启动前改配置、启动后修改、批量提交、停止后修改，以及刷新与发送并发时的资源释放。
+
+**I18nService：保留现有唯一实例，DI 注册同一个对象。**
+
+- 当前 `private I18nService()` 加 `Instance { get; } = new()` 已保证唯一创建；`App` 取得该对象、调用 `ChangeLanguage`，再执行 `services.AddSingleton(i18nService)`。静态调用和构造注入拿到的是同一对象，这部分不存在状态分裂，也不需要为了 DI 再创建一个实例。
+- 保留这条初始化链，明确它是进程级基础设施。它不依赖其他 DI 服务，也没有需要容器释放的实例资源；注册已创建的实例符合当前生命周期。
+- DI 创建的 ViewModel 优先注入 `I18nService`，如现有 `CommonSettingsPageViewModel`。`TExtension`、枚举转换和直接创建的展示模型可以继续使用 `Instance`；绑定 `Revision` 和执行 `Translate` 必须来自同一个实例，切换语言继续在 UI 线程执行。
+- 不把 `Instance` 改成 `App.GetService<I18nService>()`：目前 `ConfigureServices` 在 `_host` 构建完成前就使用它，这样改会反过来读取尚未赋值的 `_host`。这里通过显式登记同一对象解决实例一致性，不需要引入第二个静态缓存、临时容器或初始化回调。
+
+第 4 项的验收依据是页面、静态兼容入口和容器解析使用同一个实例；I18n 当前已满足。第 11 项则以配置对象不再反向调用通知服务为准，两者分别跟踪。
 
 ## 15. 实施说明
 

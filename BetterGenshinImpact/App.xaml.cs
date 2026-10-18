@@ -68,6 +68,13 @@ public partial class App : Application
         .CheckIntegration()
         .UseElevated()
         .UseInstanceIpc()
+        .UseDefaultServiceProvider((context, options) =>
+        {
+#if DEBUG
+            options.ValidateOnBuild = true;
+            options.ValidateScopes = true;
+#endif
+        })
         .ConfigureLogging(builder => { builder.ClearProviders(); })
         .ConfigureServices((context, services) =>
             {
@@ -184,9 +191,6 @@ public partial class App : Application
                 // Page resolver service
                 services.AddSingleton<INavigationService, NavigationService>();
                 services.AddSingleton<IUpdateService, UpdateService>();
-
-                // Service containing navigation, same as INavigationWindow... but without window
-                services.AddSingleton<INavigationService, NavigationService>();
                 services.AddSingleton<ISnackbarService, SnackbarService>();
 
                 // Main window with navigation

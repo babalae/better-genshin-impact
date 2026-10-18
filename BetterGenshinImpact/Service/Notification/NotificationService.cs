@@ -25,9 +25,6 @@ namespace BetterGenshinImpact.Service.Notification;
 /// </summary>
 public class NotificationService : IHostedService, IDisposable
 {
-    private static readonly object InstanceLock = new();
-    private static NotificationService? _instance;
-
     private readonly NotifierManager _notifierManager;
     private readonly GameRuntimeService _gameRuntimeService;
 
@@ -52,11 +49,6 @@ public class NotificationService : IHostedService, IDisposable
         _config = config;
         _notifyHttpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
         _webSocketCts = new CancellationTokenSource();
-
-        lock (InstanceLock)
-        {
-            _instance = this;
-        }
     }
 
     /// <summary>
@@ -92,13 +84,12 @@ public class NotificationService : IHostedService, IDisposable
     }
 
     /// <summary>
-    ///     获取NotificationService单例实例
+    ///     获取 NotificationService 单例实例（通过 DI 容器解析，保留为静态转发入口）
     /// </summary>
     public static NotificationService Instance()
     {
-        if (_instance == null) throw new InvalidOperationException("NotificationService 未初始化");
-
-        return _instance;
+        return App.GetService<NotificationService>()
+               ?? throw new InvalidOperationException("NotificationService 未在容器中初始化");
     }
 
     /// <summary>

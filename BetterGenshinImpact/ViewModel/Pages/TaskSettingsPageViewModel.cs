@@ -277,8 +277,18 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [ObservableProperty]
     private string _switchAutoRedeemCodeButtonText = "启动";
 
+    /// <summary>
+    /// 任务设置页面 ViewModel
+    /// </summary>
+    /// <param name="configService">配置服务</param>
+    /// <param name="navigationService">导航服务</param>
+    /// <param name="taskTriggerDispatcher">任务触发调度器</param>
+    /// <param name="taskStopService">任务停止服务</param>
+    /// <param name="screenshots">游戏截图服务</param>
+    /// <param name="oneDragonFlowViewModel">一条龙页面 ViewModel（DI 单例注入，避免独立 new 导致状态分裂）</param>
     public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService,
-        TaskTriggerDispatcher taskTriggerDispatcher, TaskStopService taskStopService, GameScreenshotService screenshots)
+        TaskTriggerDispatcher taskTriggerDispatcher, TaskStopService taskStopService, GameScreenshotService screenshots,
+        OneDragonFlowViewModel oneDragonFlowViewModel)
     {
         Config = configService.Get();
         _navigationService = navigationService;
@@ -294,7 +304,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
         _domainNameList = ["", AutoDomainTask.DevelopmentGuideOption, .. MapLazyAssets.Get().DomainNameList];
         _autoFightViewModel = new AutoFightViewModel(Config);
-        _oneDragonFlowViewModel = new OneDragonFlowViewModel(Config);
+        _oneDragonFlowViewModel = oneDragonFlowViewModel;
     }
 
     partial void OnScanDropsAfterRewardEnabledUiChanged(bool value)
