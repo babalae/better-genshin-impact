@@ -1,5 +1,6 @@
 using BetterGenshinImpact.Core.Input.Backends.WebSdk;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Helpers.DpiAwareness;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.Service.Interface;
 using Microsoft.Extensions.Logging;
@@ -84,6 +85,9 @@ public partial class CloudWebHostWindow : Window
         _logger = logger;
 
         InitializeComponent();
+        // 网页版实例不会创建 MainWindow，必须由宿主窗口主动启用 Per-Monitor DPI 感知，
+        // 否则 Windows 会把后续的客户区尺寸和坐标虚拟化，1920x1080 会随系统缩放变化。
+        this.InitializeDpiAwareness();
         Title = $"云原神 · {_instanceName}";
 
         _statusTimer.Tick += OnStatusTimerTick;
