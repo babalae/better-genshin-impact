@@ -660,7 +660,7 @@ public partial class AutoDomainTask
         if (remaining == 0)
         {
             var family = FormatGuideFamily(plan.Materials[0].Material.Family);
-            message = !GuideRewardRecognitionEnabled || plan.HasMissingRewards
+            message = plan.KnownResinSpent > 0 && (!GuideRewardRecognitionEnabled || plan.HasMissingRewards)
                 ? $"培养计划：{family}已按预算刷取 {plan.KnownResinSpent} 体，请手动核实库存"
                 : $"培养计划：{family}已满足需求（含可合成），库存/目标（高→低）：{DescribeGuideInventory(plan)}";
         }
