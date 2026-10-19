@@ -337,22 +337,40 @@ public sealed class ChildSessionService : IDisposable
         }
     }
 
-    public async Task LogoffAndHideAsync()
+    /// <summary>
+    /// 断开 RDP、注销桌面分身会话并隐藏桌面分身窗口。
+    /// </summary>
+    /// <param name="expectedSessionId">需要注销的预期会话标识；为空时注销当前桌面分身会话。</param>
+    public async Task LogoffAndHideAsync(uint? expectedSessionId = null)
     {
         ThrowIfDisposed();
-        _autoLaunchBetterGiPending = false;
-        _initialConnectionRetriesRemaining = 0;
-        _pendingRdpSettingChanges = RdpSettingChange.None;
-        _rdpSettingsReconnectRetriesRemaining = 0;
-        _connectionAttemptCompletionSource?.TrySetResult(false);
 
         await _launchSemaphore.WaitAsync();
         try
         {
+            var activeSessionId = ChildSessionNativeMethods.TryGetChildSessionId();
+            if (expectedSessionId is { } expected
+                && activeSessionId is { } active
+                && active != expected)
+            {
+                throw new InvalidOperationException(
+                    $"桌面分身会话已从 {expected} 变更为 {active}，已取消注销操作。");
+            }
+
+            // 完成目标会话校验后再取消连接和重试状态，避免旧菜单项影响刚创建的新会话。
+            _autoLaunchBetterGiPending = false;
+            _initialConnectionRetriesRemaining = 0;
+            _pendingRdpSettingChanges = RdpSettingChange.None;
+            _rdpSettingsReconnectRetriesRemaining = 0;
+            _connectionAttemptCompletionSource?.TrySetResult(false);
+
             TryDisconnectRdpHost();
             RefreshState("正在断开 RDP 并注销 BetterGI 桌面分身");
 
-            var terminatedSessionId = await Task.Run(ChildSessionNativeMethods.TerminateChildSession);
+            var terminatedSessionId = await Task.Run(() =>
+                expectedSessionId is { } targetSessionId
+                    ? ChildSessionNativeMethods.TerminateChildSession(targetSessionId)
+                    : ChildSessionNativeMethods.TerminateChildSession());
             _desktopWindow?.Hide();
             RefreshState(terminatedSessionId is null
                 ? "当前没有桌面分身会话，桌面分身窗口已隐藏"

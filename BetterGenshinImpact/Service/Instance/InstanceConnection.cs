@@ -236,6 +236,12 @@ internal sealed class InstanceConnection : IAsyncDisposable
                 if (response is not null)
                 {
                     await WriteJsonAsync(response, linkedCancellationTokenSource.Token).ConfigureAwait(false);
+                    if (envelope.Operation == InstanceOperations.ApplicationShutdown
+                        && response.Success == true)
+                    {
+                        // 必须先完整写回成功响应再退出，避免根实例把正常关闭误判为管道断开。
+                        InstanceService.RequestApplicationShutdownAfterResponse();
+                    }
                 }
             }
         }

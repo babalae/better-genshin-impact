@@ -315,6 +315,127 @@
             </ui:TitleBar.Header>
             <ui:TitleBar.TrailingContent>
                 <StackPanel VerticalAlignment="Top" Orientation="Horizontal">
+                    <!-- 主实例在线子实例入口：直接展示前三个，其余实例收进“+N”菜单。 -->
+                    <Border Margin="0,2,8,0"
+                            Padding="4,0"
+                            Height="32"
+                            VerticalAlignment="Top"
+                            Background="{DynamicResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Visibility="{Binding HasConnectedChildInstances, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <StackPanel Orientation="Horizontal">
+                            <ItemsControl ItemsSource="{Binding VisibleConnectedChildInstances}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Width="30"
+                                              Height="30"
+                                              Margin="0,0,2,0"
+                                              Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
+                                            <b:Interaction.Behaviors>
+                                                <behavior:TitleBarContextMenuBehavior />
+                                            </b:Interaction.Behaviors>
+                                            <Grid.ContextMenu>
+                                                <!-- ContextMenu 不在可视树中，通过 PlacementTarget 取回实例项和主窗口 ViewModel。 -->
+                                                <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                                    <ui:MenuItem Header="{i18n:T 打开实例}"
+                                                                 Command="{Binding PlacementTarget.Tag.ActivateConnectedInstanceCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
+                                                                 CommandParameter="{Binding}"
+                                                                 Icon="{ui:SymbolIcon Open24}" />
+                                                    <Separator />
+                                                    <ui:MenuItem Header="{i18n:T 关闭实例}"
+                                                                 Command="{Binding PlacementTarget.Tag.CloseConnectedInstanceCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
+                                                                 CommandParameter="{Binding}"
+                                                                 Icon="{ui:SymbolIcon Dismiss24}" />
+                                                </ContextMenu>
+                                            </Grid.ContextMenu>
+                                            <ui:Button Width="28"
+                                                       Height="28"
+                                                       Padding="0"
+                                                       HorizontalAlignment="Left"
+                                                       VerticalAlignment="Center"
+                                                       Background="Transparent"
+                                                       BorderBrush="Transparent"
+                                                       Command="{Binding DataContext.ActivateConnectedInstanceCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                       CommandParameter="{Binding}"
+                                                       CornerRadius="14"
+                                                       ToolTip="{Binding ToolTip}">
+                                                <ui:Button.Icon>
+                                                    <ui:SymbolIcon Symbol="{Binding Icon}" />
+                                                </ui:Button.Icon>
+                                            </ui:Button>
+                                            <Ellipse Width="7"
+                                                     Height="7"
+                                                     Margin="0,0,0,2"
+                                                     HorizontalAlignment="Right"
+                                                     VerticalAlignment="Bottom"
+                                                     Panel.ZIndex="1"
+                                                     Fill="{DynamicResource SystemFillColorSuccessBrush}"
+                                                     IsHitTestVisible="False"
+                                                     Stroke="{DynamicResource ControlFillColorDefaultBrush}"
+                                                     StrokeThickness="1" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <ui:DropDownButton Height="28"
+                                               MinWidth="38"
+                                               Margin="0,1,0,0"
+                                               Padding="8,0"
+                                               Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                               BorderBrush="Transparent"
+                                               Content="{Binding ConnectedInstanceOverflowCount, StringFormat=+{0}}"
+                                               CornerRadius="6"
+                                               ToolTip="{i18n:T 查看全部在线子实例}"
+                                               Visibility="{Binding HasConnectedInstanceOverflow, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <ui:DropDownButton.Flyout>
+                                    <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+                                                 ItemsSource="{Binding ConnectedChildInstances}">
+                                        <ContextMenu.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <ui:SymbolIcon Margin="0,0,8,0" Symbol="{Binding Icon}" />
+                                                    <TextBlock VerticalAlignment="Center" Text="{Binding DisplayName}" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ContextMenu.ItemTemplate>
+                                        <ContextMenu.ItemContainerStyle>
+                                            <Style TargetType="{x:Type MenuItem}">
+                                                <Setter Property="Command"
+                                                        Value="{Binding DataContext.ActivateConnectedInstanceCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
+                                                <Setter Property="CommandParameter" Value="{Binding}" />
+                                                <Setter Property="ToolTip" Value="{Binding ToolTip}" />
+                                                <Setter Property="Tag"
+                                                        Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
+                                                <Setter Property="ContextMenu">
+                                                    <Setter.Value>
+                                                        <!-- “+N”列表项同样支持右键操作，PlacementTarget.Tag 保存主窗口 ViewModel。 -->
+                                                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                                            <ui:MenuItem Header="{i18n:T 打开实例}"
+                                                                         Command="{Binding PlacementTarget.Tag.ActivateConnectedInstanceCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
+                                                                         CommandParameter="{Binding}"
+                                                                         Icon="{ui:SymbolIcon Open24}" />
+                                                            <Separator />
+                                                            <ui:MenuItem Header="{i18n:T 关闭实例}"
+                                                                         Command="{Binding PlacementTarget.Tag.CloseConnectedInstanceCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
+                                                                         CommandParameter="{Binding}"
+                                                                         Icon="{ui:SymbolIcon Dismiss24}" />
+                                                        </ContextMenu>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </ContextMenu.ItemContainerStyle>
+                                    </ContextMenu>
+                                </ui:DropDownButton.Flyout>
+                            </ui:DropDownButton>
+                        </StackPanel>
+                    </Border>
                     <ui:Button Width="40"
                                Height="32"
                                Background="Transparent"

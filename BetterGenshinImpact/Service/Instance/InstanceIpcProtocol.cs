@@ -17,6 +17,10 @@ public static class InstanceOperations
     public const string Response = "response";
     public const string ConnectionOpen = "connection.open";
     public const string ActivationDispatch = "activation.dispatch";
+    /// <summary>
+    /// 根实例请求在线子实例正常退出。
+    /// </summary>
+    public const string ApplicationShutdown = "application.shutdown";
     public const string RelativeMouseSubscribe = "input.relativeMouse.subscribe";
     public const string RelativeMouseUnsubscribe = "input.relativeMouse.unsubscribe";
     public const string RelativeMouseState = "input.relativeMouse.state";

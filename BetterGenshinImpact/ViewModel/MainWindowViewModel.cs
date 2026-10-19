@@ -46,20 +46,60 @@ using BetterGenshinImpact.Platform.Wine;
 
 namespace BetterGenshinImpact.ViewModel;
 
-public partial class MainWindowViewModel : ObservableObject, IViewModel
+public partial class MainWindowViewModel : ObservableObject, IViewModel, IDisposable
 {
     private readonly ILogger<MainWindowViewModel> _logger;
     private readonly IConfigService _configService;
     private readonly INavigationService _navigationService;
     private readonly ChildSessionService _childSessionService;
+    /// <summary>
+    /// 提供在线子实例快照、状态变化通知与窗口激活能力。
+    /// </summary>
+    private readonly InstanceService _instanceService;
     private readonly IInferenceModelDiagnostics _inferenceDiagnostics;
     private readonly InferenceRuntimeService _inferenceRuntime;
     private bool _inferenceStartupHandled;
+    /// <summary>
+    /// 标记 ViewModel 已释放，防止退出阶段处理迟到的实例事件。
+    /// </summary>
+    private bool _disposed;
     public string Title => $"BetterGI · 更好的原神 · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}";
     public bool IsChildSessionInstance =>
         InstanceBootstrap.Current.Context.InstanceType == BetterGiInstanceType.ChildSession;
 
     [ObservableProperty] private bool _isVisible = true;
+
+    /// <summary>
+    /// 主实例当前已连接的全部子实例展示项。
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(VisibleConnectedChildInstances))]
+    [NotifyPropertyChangedFor(nameof(ConnectedInstanceOverflowCount))]
+    [NotifyPropertyChangedFor(nameof(HasConnectedChildInstances))]
+    [NotifyPropertyChangedFor(nameof(HasConnectedInstanceOverflow))]
+    private IReadOnlyList<ConnectedInstanceItem> _connectedChildInstances = [];
+
+    /// <summary>
+    /// 标题栏中直接展示的前三个在线子实例。
+    /// </summary>
+    public IReadOnlyList<ConnectedInstanceItem> VisibleConnectedChildInstances =>
+        ConnectedInstanceItem.GetVisibleItems(ConnectedChildInstances);
+
+    /// <summary>
+    /// 未直接显示在标题栏中的在线子实例数量。
+    /// </summary>
+    public int ConnectedInstanceOverflowCount =>
+        ConnectedInstanceItem.GetOverflowCount(ConnectedChildInstances);
+
+    /// <summary>
+    /// 当前是否存在需要展示的在线子实例。
+    /// </summary>
+    public bool HasConnectedChildInstances => ConnectedChildInstances.Count > 0;
+
+    /// <summary>
+    /// 当前在线子实例是否超过标题栏直接展示上限。
+    /// </summary>
+    public bool HasConnectedInstanceOverflow => ConnectedInstanceOverflowCount > 0;
 
     [ObservableProperty] private WindowState _windowState = WindowState.Normal;
 
@@ -108,6 +148,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         INavigationService navigationService,
         IConfigService configService,
         ChildSessionService childSessionService,
+        InstanceService instanceService,
         IInferenceModelDiagnostics inferenceDiagnostics,
         InferenceRuntimeService inferenceRuntime)
     {
@@ -116,11 +157,170 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         _navigationService = navigationService;
         _configService = configService;
         _childSessionService = childSessionService;
+        _instanceService = instanceService;
         Config = _configService.Get();
         _logger = App.GetLogger<MainWindowViewModel>();
         // 订阅通用配置变更：设置页修改背景图路径或开关后，主窗口背景实时刷新
         Config.CommonConfig.PropertyChanged += OnCommonConfigPropertyChanged;
         LoadMainBackground();
+
+        if (_instanceService.Context.IsRoot)
+        {
+            _instanceService.ConnectedInstancesChanged += OnConnectedInstancesChanged;
+            RefreshConnectedChildInstances();
+        }
+    }
+
+    /// <summary>
+    /// 释放主窗口 ViewModel 持有的事件订阅和可取消资源。
+    /// </summary>
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        Config.CommonConfig.PropertyChanged -= OnCommonConfigPropertyChanged;
+        _instanceService.ConnectedInstancesChanged -= OnConnectedInstancesChanged;
+        _redeemCodeDismissCts?.Cancel();
+        _redeemCodeDismissCts?.Dispose();
+        _redeemCodeDismissCts = null;
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// 将实例连接变化切回 UI 线程后刷新标题栏集合。
+    /// </summary>
+    private void OnConnectedInstancesChanged(object? sender, EventArgs e)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.HasShutdownStarted)
+        {
+            return;
+        }
+
+        if (dispatcher.CheckAccess())
+        {
+            RefreshConnectedChildInstances();
+            return;
+        }
+
+        _ = dispatcher.BeginInvoke(new Action(RefreshConnectedChildInstances));
+    }
+
+    /// <summary>
+    /// 从实例服务读取一致快照并生成标题栏展示项。
+    /// </summary>
+    private void RefreshConnectedChildInstances()
+    {
+        if (_disposed || !_instanceService.Context.IsRoot)
+        {
+            return;
+        }
+
+        ConnectedChildInstances = ConnectedInstanceItem.CreateItems(
+            _instanceService.GetConnectedChildInstances());
+    }
+
+    /// <summary>
+    /// 打开桌面分身容器并唤起指定子实例窗口。
+    /// </summary>
+    /// <param name="item">用户点击的在线子实例展示项。</param>
+    [RelayCommand]
+    private async Task ActivateConnectedInstanceAsync(ConnectedInstanceItem? item)
+    {
+        if (item is null)
+        {
+            return;
+        }
+
+        try
+        {
+            if (item.Endpoint.InstanceType == BetterGiInstanceType.ChildSession)
+            {
+                _childSessionService.ShowWindow();
+            }
+
+            await _instanceService.ActivateChildInstanceAsync(item.Endpoint);
+        }
+        catch (Exception exception) when (exception is InvalidOperationException
+                                          or IOException
+                                          or TimeoutException
+                                          or OperationCanceledException)
+        {
+            _logger.LogWarning(exception, "唤起子实例失败：{Instance}", item.DisplayName);
+            RefreshConnectedChildInstances();
+            ThemedMessageBox.Warning(
+                $"无法唤起「{item.DisplayName}」，该实例可能已经离线。",
+                "实例不可用");
+        }
+    }
+
+    /// <summary>
+    /// 请求在线子实例正常退出；桌面分身会在关闭其中的 BetterGI 后注销远程桌面会话。
+    /// </summary>
+    /// <param name="item">用户选择关闭的在线子实例展示项。</param>
+    [RelayCommand]
+    private async Task CloseConnectedInstanceAsync(ConnectedInstanceItem? item)
+    {
+        if (item is null)
+        {
+            return;
+        }
+
+        try
+        {
+            if (item.Endpoint.InstanceType == BetterGiInstanceType.ChildSession)
+            {
+                await CloseChildSessionInstanceAsync(item);
+            }
+            else
+            {
+                await _instanceService.CloseChildInstanceAsync(item.Endpoint);
+            }
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "关闭子实例失败：{Instance}", item.DisplayName);
+            RefreshConnectedChildInstances();
+            var action = item.Endpoint.InstanceType == BetterGiInstanceType.ChildSession
+                ? "关闭并注销"
+                : "关闭";
+            ThemedMessageBox.Warning(
+                $"无法{action}「{item.DisplayName}」：{exception.GetBaseException().Message}",
+                "实例不可用");
+        }
+    }
+
+    /// <summary>
+    /// 先请求桌面分身中的 BetterGI 正常退出，再断开 RDP、注销 Child Session 并隐藏分身窗口。
+    /// 即使 BetterGI 已经离线，也继续注销会话，保证“关闭实例”不会遗留远程桌面会话。
+    /// </summary>
+    /// <param name="item">需要关闭并注销的桌面分身展示项。</param>
+    private async Task CloseChildSessionInstanceAsync(ConnectedInstanceItem item)
+    {
+        try
+        {
+            await _instanceService.CloseChildInstanceAsync(item.Endpoint);
+        }
+        catch (Exception exception)
+        {
+            // 子进程可能恰好先退出；注销 Session 仍能完成用户要求的最终关闭动作。
+            _logger.LogWarning(
+                exception,
+                "请求桌面分身 BetterGI 正常退出失败，将继续注销会话：{Instance}",
+                item.DisplayName);
+        }
+
+        await _childSessionService.LogoffAndHideAsync(
+            checked((uint)item.Endpoint.WindowsSessionId));
     }
 
     private void OnCommonConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)

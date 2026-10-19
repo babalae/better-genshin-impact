@@ -67,8 +67,15 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
             _relativeMouseMessageHandler,
             EnqueueActivation,
             DispatchWebViewMessage,
+            NotifyConnectedInstancesChanged,
             logger);
     }
+
+    /// <summary>
+    /// 主实例中的在线子实例集合发生变化时触发。
+    /// 事件可能从命名管道后台线程触发，UI 订阅方需要自行切换到 UI 线程。
+    /// </summary>
+    public event EventHandler? ConnectedInstancesChanged;
 
     public event EventHandler<WebViewMessageReceivedEventArgs>? WebViewMessageReceived;
 
@@ -80,6 +87,114 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
     public void SetGameMouseModeEnabled(bool enabled)
     {
         _relativeMouseMessageHandler.SetGameMouseModeEnabled(enabled);
+    }
+
+    /// <summary>
+    /// 获取主实例当前已完成 IPC 登记的在线子实例快照。
+    /// 桌面分身优先显示，云原神实例按名称排序。
+    /// </summary>
+    public InstanceEndpoint[] GetConnectedChildInstances()
+    {
+        if (Context.InstanceType != BetterGiInstanceType.Primary)
+        {
+            return [];
+        }
+
+        lock (_messageState.RegistrationLock)
+        {
+            return OrderConnectedChildInstances(
+                _messageState.BetterGiConnectionsBySession.Values
+                    .Concat(_messageState.WebViewConnectionsByProcessId.Values)
+                    .Select(x => x.Endpoint));
+        }
+    }
+
+    /// <summary>
+    /// 请求主实例当前连接的指定子实例显示并激活自身主窗口。
+    /// </summary>
+    /// <param name="endpoint">需要激活的在线子实例。</param>
+    /// <param name="cancellationToken">取消等待 IPC 响应的令牌。</param>
+    public async Task ActivateChildInstanceAsync(
+        InstanceEndpoint endpoint,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(endpoint);
+        if (Context.InstanceType != BetterGiInstanceType.Primary)
+        {
+            throw new InvalidOperationException("只有主实例可以激活子实例。");
+        }
+
+        var target = GetRequiredChildConnection(endpoint);
+        var response = await target.Connection.SendRequestAsync(
+            InstanceOperations.ActivationDispatch,
+            new ActivationDispatchRequest(),
+            RequestTimeout,
+            cancellationToken).ConfigureAwait(false);
+        EnsureSuccessfulResponse(response);
+    }
+
+    /// <summary>
+    /// 请求主实例当前连接的指定子实例正常退出。
+    /// </summary>
+    /// <param name="endpoint">需要关闭的在线子实例。</param>
+    /// <param name="cancellationToken">取消等待 IPC 响应的令牌。</param>
+    public async Task CloseChildInstanceAsync(
+        InstanceEndpoint endpoint,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(endpoint);
+        if (Context.InstanceType != BetterGiInstanceType.Primary)
+        {
+            throw new InvalidOperationException("只有主实例可以关闭子实例。");
+        }
+
+        var target = GetRequiredChildConnection(endpoint);
+        var response = await target.Connection.SendRequestAsync(
+            InstanceOperations.ApplicationShutdown,
+            null,
+            RequestTimeout,
+            cancellationToken).ConfigureAwait(false);
+        EnsureSuccessfulResponse(response);
+    }
+
+    /// <summary>
+    /// 按标题栏展示规则为在线子实例生成稳定顺序。
+    /// </summary>
+    internal static InstanceEndpoint[] OrderConnectedChildInstances(
+        IEnumerable<InstanceEndpoint> endpoints)
+    {
+        return endpoints
+            .OrderBy(endpoint => endpoint.InstanceType == BetterGiInstanceType.ChildSession ? 0 : 1)
+            .ThenBy(endpoint => endpoint.InstanceType == BetterGiInstanceType.ChildSession
+                ? endpoint.WindowsSessionId.ToString("D10")
+                : endpoint.InstanceName ?? string.Empty,
+                StringComparer.OrdinalIgnoreCase)
+            .ThenBy(endpoint => endpoint.ProcessId)
+            .ToArray();
+    }
+
+    /// <summary>
+    /// 根据端点标识重新解析当前有效连接，避免对已经被替换的旧连接执行操作。
+    /// </summary>
+    private RegisteredInstanceConnection GetRequiredChildConnection(InstanceEndpoint endpoint)
+    {
+        lock (_messageState.RegistrationLock)
+        {
+            return endpoint.InstanceType switch
+            {
+                BetterGiInstanceType.ChildSession
+                    when _messageState.BetterGiConnectionsBySession.TryGetValue(
+                        endpoint.WindowsSessionId,
+                        out var child)
+                         && child.Endpoint.ProcessId == endpoint.ProcessId => child,
+                BetterGiInstanceType.WebView
+                    when _messageState.WebViewConnectionsByProcessId.TryGetValue(
+                        endpoint.ProcessId,
+                        out var webView)
+                         && webView.Endpoint.WindowsSessionId == endpoint.WindowsSessionId => webView,
+                _ => throw new InvalidOperationException("目标子实例当前不在线。")
+            };
+        }
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -282,37 +397,57 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
 
     internal void ConnectionClosed(InstanceConnection connection)
     {
+        var connectedInstancesChanged = false;
+        int? disconnectedChildSessionId = null;
         if (Context.InstanceType == BetterGiInstanceType.Primary
             && connection.RemoteEndpoint is { } endpoint)
         {
-            if (endpoint.InstanceType == BetterGiInstanceType.ChildSession
-                && _messageState.BetterGiConnectionsBySession.TryGetValue(
-                    endpoint.WindowsSessionId,
-                    out var child)
-                && ReferenceEquals(child.Connection, connection))
+            lock (_messageState.RegistrationLock)
             {
-                _messageState.BetterGiConnectionsBySession.TryRemove(
-                    endpoint.WindowsSessionId,
-                    out _);
-                _relativeMouseMessageHandler.RemoveTarget(endpoint.WindowsSessionId);
+                if (endpoint.InstanceType == BetterGiInstanceType.ChildSession
+                    && _messageState.BetterGiConnectionsBySession.TryGetValue(
+                        endpoint.WindowsSessionId,
+                        out var child)
+                    && ReferenceEquals(child.Connection, connection))
+                {
+                    _messageState.BetterGiConnectionsBySession.TryRemove(
+                        endpoint.WindowsSessionId,
+                        out _);
+                    disconnectedChildSessionId = endpoint.WindowsSessionId;
+                    connectedInstancesChanged = true;
+                }
+                else if (endpoint.InstanceType == BetterGiInstanceType.WebView
+                         && _messageState.WebViewConnectionsByProcessId.TryGetValue(
+                             endpoint.ProcessId,
+                             out var webView)
+                         && ReferenceEquals(webView.Connection, connection))
+                {
+                    _messageState.WebViewConnectionsByProcessId.TryRemove(
+                        endpoint.ProcessId,
+                        out _);
+                    connectedInstancesChanged = true;
+                }
+            }
+
+            if (disconnectedChildSessionId is not null)
+            {
+                _relativeMouseMessageHandler.RemoveTarget(disconnectedChildSessionId.Value);
                 _logger.LogInformation(
                     "桌面分身 BetterGI 已断开：进程 {ProcessId}，Session {SessionId}",
                     endpoint.ProcessId,
                     endpoint.WindowsSessionId);
             }
-            else if (endpoint.InstanceType == BetterGiInstanceType.WebView
-                     && _messageState.WebViewConnectionsByProcessId.TryGetValue(
-                         endpoint.ProcessId,
-                         out var webView)
-                     && ReferenceEquals(webView.Connection, connection))
+            else if (connectedInstancesChanged)
             {
-                _messageState.WebViewConnectionsByProcessId.TryRemove(
-                    endpoint.ProcessId,
-                    out _);
                 _logger.LogInformation(
                     "WebView 已断开：进程 {ProcessId}，Session {SessionId}",
                     endpoint.ProcessId,
                     endpoint.WindowsSessionId);
+            }
+
+            if (connectedInstancesChanged)
+            {
+                NotifyConnectedInstancesChanged();
             }
         }
 
@@ -592,6 +727,21 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
                 message.Data));
     }
 
+    /// <summary>
+    /// 安全通知在线子实例集合变化，避免 UI 订阅方异常影响 IPC 登记流程。
+    /// </summary>
+    private void NotifyConnectedInstancesChanged()
+    {
+        try
+        {
+            ConnectedInstancesChanged?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "通知在线子实例集合变化失败");
+        }
+    }
+
     private static void RequestApplicationShutdown()
     {
         var application = Application.Current;
@@ -602,6 +752,14 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
         }
 
         _ = application.Dispatcher.BeginInvoke(new Action(application.Shutdown));
+    }
+
+    /// <summary>
+    /// 在关闭请求的成功响应已经写回根实例后，关闭当前子实例应用。
+    /// </summary>
+    internal static void RequestApplicationShutdownAfterResponse()
+    {
+        RequestApplicationShutdown();
     }
 
     private static void EnsureSuccessfulResponse(InstanceIpcEnvelope response)

@@ -23,6 +23,10 @@ internal sealed class InstanceRequestHandler
     private readonly RelativeMouseMessageHandler _relativeMouseMessageHandler;
     private readonly Action<string[]> _enqueueActivation;
     private readonly Action<WebViewMessage> _dispatchWebViewMessage;
+    /// <summary>
+    /// 子实例连接集合发生变化时通知上层服务刷新公开状态。
+    /// </summary>
+    private readonly Action _connectedInstancesChanged;
     private readonly ILogger _logger;
     private readonly ConcurrentDictionary<Guid, InstanceIpcEnvelope> _activationResponses = new();
 
@@ -32,6 +36,7 @@ internal sealed class InstanceRequestHandler
         RelativeMouseMessageHandler relativeMouseMessageHandler,
         Action<string[]> enqueueActivation,
         Action<WebViewMessage> dispatchWebViewMessage,
+        Action connectedInstancesChanged,
         ILogger logger)
     {
         _context = context;
@@ -39,6 +44,7 @@ internal sealed class InstanceRequestHandler
         _relativeMouseMessageHandler = relativeMouseMessageHandler;
         _enqueueActivation = enqueueActivation;
         _dispatchWebViewMessage = dispatchWebViewMessage;
+        _connectedInstancesChanged = connectedInstancesChanged;
         _logger = logger;
     }
 
@@ -63,6 +69,9 @@ internal sealed class InstanceRequestHandler
                         request,
                         cancellationToken).ConfigureAwait(false),
                 InstanceOperations.ActivationDispatch => HandleActivationDispatch(
+                    connection,
+                    request),
+                InstanceOperations.ApplicationShutdown => HandleApplicationShutdown(
                     connection,
                     request),
                 InstanceOperations.RelativeMouseSubscribe =>
@@ -128,6 +137,22 @@ internal sealed class InstanceRequestHandler
     }
 
     /// <summary>
+    /// 校验请求来自根实例后，安排当前子实例在响应写回后退出。
+    /// </summary>
+    private InstanceIpcEnvelope HandleApplicationShutdown(
+        InstanceConnection connection,
+        InstanceIpcEnvelope request)
+    {
+        if (_context.InstanceType == BetterGiInstanceType.Primary
+            || connection.RemoteEndpoint?.InstanceType != BetterGiInstanceType.Primary)
+        {
+            throw new InvalidOperationException("只有根实例可以请求关闭 BetterGI 子实例。");
+        }
+
+        return InstanceIpcEnvelope.Response(request);
+    }
+
+    /// <summary>
     /// 校验子实例身份和启动记录后，将当前连接登记为有效子连接。
     /// v2 不再校验父实例 ID 或启动记录，而是使用根管道客户端的真实 PID 和 Session。
     /// </summary>
@@ -189,6 +214,7 @@ internal sealed class InstanceRequestHandler
                 instanceName ?? "(无)",
                 processId,
                 sessionId);
+            _connectedInstancesChanged();
             return CreateOpenResponse(
                 request,
                 ConnectionOpenDisposition.Accepted,
@@ -304,6 +330,7 @@ internal sealed class InstanceRequestHandler
             "桌面分身 BetterGI 已连接根实例：进程 {ProcessId}，Session {SessionId}",
             processId,
             sessionId);
+        _connectedInstancesChanged();
         return CreateOpenResponse(
             request,
             ConnectionOpenDisposition.Accepted,
