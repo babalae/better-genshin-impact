@@ -39,23 +39,26 @@ public class TaskRunner
     /// <summary>
     /// 加锁并独立运行任务
     /// </summary>
-    /// <param name="action"></param>
+    /// <param name="action">要执行的任务。</param>
     /// <param name="resetCancellationContext">任务开始时是否重建 CancellationContext。</param>
-    /// <param name="clearCancellationContextOnLockFailure">获取信号量锁失败时是否清理 CancellationContext。</param>
-    /// <returns></returns>
-    public async Task RunCurrentAsync(Func<Task> action, bool resetCancellationContext = true, bool clearCancellationContextOnLockFailure = false)
+    public async Task RunCurrentAsync(Func<Task> action, bool resetCancellationContext = true)
     {
-        // 加锁
-        var hasLock = await TaskSemaphore.WaitAsync(0);
-        if (!hasLock)
+        if (!await TaskSemaphore.WaitAsync(0))
         {
             _logger.LogError("任务启动失败：当前存在正在运行中的独立任务，请不要重复执行任务！");
-            if (clearCancellationContextOnLockFailure)
-            {
-                CancellationContext.Instance.Clear();
-            }
             return;
         }
+
+        await RunCurrentWithLockAsync(action, resetCancellationContext);
+    }
+
+    /// <summary>
+    /// 执行调用方已持有任务锁的任务，并在结束时释放该锁。
+    /// </summary>
+    /// <param name="action">要执行的任务。</param>
+    /// <param name="resetCancellationContext">任务开始时是否重建 CancellationContext。</param>
+    private async Task RunCurrentWithLockAsync(Func<Task> action, bool resetCancellationContext)
+    {
         try
         {
             _logger.LogInformation("→ {Text}", _name + "任务启动！");
@@ -104,11 +107,8 @@ public class TaskRunner
             CancellationContext.Instance.Clear();
             RunnerContext.Instance.Clear();
 
-            // 释放锁
-            if (hasLock)
-            {
-                TaskSemaphore.Release();
-            }
+            // 释放调用方已取得的锁。
+            TaskSemaphore.Release();
         }
     }
 
@@ -122,26 +122,50 @@ public class TaskRunner
         await Task.Run(() => RunCurrentAsync(action));
     }
 
+    /// <summary>
+    /// 启动并运行独立任务；启动期间持有任务锁，避免重复请求替换活动任务的取消上下文。
+    /// </summary>
+    /// <param name="soloTask">要启动的独立任务。</param>
     public async Task RunSoloTaskAsync(ISoloTask soloTask)
     {
-        // 启动等待之前先进行取消操作的初始化，便于在任务开始前终止任务.
-        CancellationContext.Instance.Set();
-
-        // 没启动的时候先启动
-        bool waitForMainUi = soloTask.Name != "自动七圣召唤" && !soloTask.Name.Contains("自动音游") &&
-                             !soloTask.Name.Contains("幽境危战");
-        await ScriptService.StartGameTask(waitForMainUi);
-        if (CancellationContext.Instance.IsCancellationRequested)
+        // 先占用任务锁，再重建全局取消上下文。否则重复启动请求会替换正在运行任务的
+        // CancellationTokenSource，随后清理新上下文时会让当前任务访问到已释放的 CTS。
+        var hasLock = await TaskSemaphore.WaitAsync(0);
+        if (!hasLock)
         {
-            _logger.LogInformation("独立任务在启动阶段被取消: {Name}", soloTask.Name);
-            CancellationContext.Instance.Clear();
+            _logger.LogError("任务启动失败：当前存在正在运行中的独立任务，请不要重复执行任务！");
             return;
         }
-        
-        await Task.Run(() => RunCurrentAsync(
-            async () => await soloTask.Start(CancellationContext.Instance.Cts.Token),
-            resetCancellationContext: false,
-            clearCancellationContextOnLockFailure: true));
+
+        var lockTransferred = false;
+        try
+        {
+            // 启动等待之前先进行取消操作的初始化，便于在任务开始前终止任务.
+            CancellationContext.Instance.Set();
+
+            // 没启动的时候先启动
+            bool waitForMainUi = soloTask.Name != "自动七圣召唤" && !soloTask.Name.Contains("自动音游") &&
+                                 !soloTask.Name.Contains("幽境危战");
+            await ScriptService.StartGameTask(waitForMainUi);
+            if (CancellationContext.Instance.IsCancellationRequested)
+            {
+                _logger.LogInformation("独立任务在启动阶段被取消: {Name}", soloTask.Name);
+                return;
+            }
+
+            lockTransferred = true;
+            await Task.Run(() => RunCurrentWithLockAsync(
+                async () => await soloTask.Start(CancellationContext.Instance.Cts.Token),
+                resetCancellationContext: false));
+        }
+        finally
+        {
+            if (!lockTransferred)
+            {
+                CancellationContext.Instance.Clear();
+                TaskSemaphore.Release();
+            }
+        }
     }
 
     public void Init()
