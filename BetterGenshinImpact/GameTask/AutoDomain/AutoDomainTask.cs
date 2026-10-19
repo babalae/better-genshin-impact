@@ -195,6 +195,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         ResetTrainingGuideState();
 
         Init();
+        CheckGuideRewardResolution();
 
         // 自动吃药只在本次秘境期间启用，返回（含异常）时撤销
         using var autoEatLease = _config.AutoEat ? TaskTriggerDispatcher.Instance().AddTrigger("AutoEat") : null;
@@ -1642,7 +1643,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
     private async Task TryRecognizeRewardResult()
     {
-        if (!_taskParam.ShouldRecognizeRewards())
+        if (!_taskParam.ShouldRecognizeRewards() || (_guideRewardResolutionUnsupported && !_taskParam.RewardRecognitionEnabled))
         {
             return;
         }
@@ -1657,7 +1658,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
             // 使用多页识别（自动检测是否需要翻页）
             Logger.LogInformation("自动秘境：开始奖励识别");
-            var useRewardsForPlanning = _guidePlanning && _taskParam.TrainingGuideRewardRecognitionEnabled;
+            var useRewardsForPlanning = _guidePlanning && GuideRewardRecognitionEnabled;
             var rewards = RewardResultRecognizer.Instance.RecognizeMultiPage(
                 requireReliableCounts: useRewardsForPlanning,
                 allowUnreliableCount: useRewardsForPlanning ? TrainingGuideRewardPolicy.IsCommonReward : null);

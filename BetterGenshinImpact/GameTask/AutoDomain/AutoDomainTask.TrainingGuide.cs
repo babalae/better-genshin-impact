@@ -21,6 +21,24 @@ namespace BetterGenshinImpact.GameTask.AutoDomain;
 public partial class AutoDomainTask
 {
     private bool _guidePlanning;
+    private bool _guideRewardResolutionUnsupported;
+    private bool GuideRewardRecognitionEnabled =>
+        _taskParam.TrainingGuideRewardRecognitionEnabled && !_guideRewardResolutionUnsupported;
+
+    private void CheckGuideRewardResolution()
+    {
+        _guideRewardResolutionUnsupported = false;
+        if (!_guidePlanning || !GuideRewardRecognitionEnabled) return;
+        using var capture = CaptureToRectArea();
+        if (capture.Width == 1920 && capture.Height == 1080) return;
+        if (!_taskParam.TrainingGuideRewardFailureBudgetEnabled)
+            throw new InvalidOperationException($"培养计划：当前截图分辨率 {capture.Width}×{capture.Height} 不支持奖励识别，且未开启固定预算兜底；请使用 1920×1080 或更高的 16:9 分辨率后重试");
+
+        // 仅影响本次运行，不修改用户配置或任务参数。
+        _guideRewardResolutionUnsupported = true;
+        Logger.LogWarning("培养计划：当前截图分辨率 {Width}×{Height} 不支持奖励识别，本次任务按初始预算执行，请手动核实库存",
+            capture.Width, capture.Height);
+    }
     private readonly Dictionary<TrainingGuideEntry, double> _guideEntryPositions = new();
     private enum GuideNextAction { Continue, Stop, AdvancePlan }
     private GuideNextAction _guideNextAction;
@@ -344,7 +362,7 @@ public partial class AutoDomainTask
             var materials = await ReadEntryMaterials(entry, difficulty);
             if (materials.Count == 0) continue;
             if (!_guidePlans.TryGetValue(key, out var plan)) _guidePlans[key] = plan = new(materials, difficulty);
-            else if (_taskParam.TrainingGuideRewardRecognitionEnabled) plan.Refresh(materials);
+            else if (GuideRewardRecognitionEnabled) plan.Refresh(materials);
             var remaining = RemainingGuideResin(plan);
             if (remaining == null) throw new InvalidOperationException($"{entry.Entry}：已识别材料之间存在库存缺失，不能开始刷取");
             ReportGuidePlan(entry.Entry, plan, remaining.Value, atEntry: true);
@@ -617,7 +635,7 @@ public partial class AutoDomainTask
     {
         var materials = string.Join("、", plan.Materials.Select(m =>
             $"{m.Material.Name} {m.Stock}/{(m.IsTarget ? m.Required.ToString() : "-")}"));
-        var inventoryLabel = !_taskParam.TrainingGuideRewardRecognitionEnabled || plan.HasMissingRewards
+        var inventoryLabel = !GuideRewardRecognitionEnabled || plan.HasMissingRewards
             ? "库存快照/目标（预算模式，不代表当前库存）" : "库存/目标";
         Logger.LogInformation("培养材料（{InventoryLabel}）{Level}，难度 {Difficulty}：{Materials}", inventoryLabel, level, plan.Difficulty, materials);
         var allocation = atEntry ? string.Empty : DescribeGuideResinAllocation(remaining);
@@ -631,9 +649,9 @@ public partial class AutoDomainTask
             $"材料（{inventoryLabel}）：{materials}\n" +
             $"树脂进度 {plan.KnownResinSpent}/{(long)plan.KnownResinSpent + remaining}体\n" +
             allocation;
-        if (!_taskParam.TrainingGuideRewardRecognitionEnabled || plan.HasMissingRewards)
+        if (!GuideRewardRecognitionEnabled || plan.HasMissingRewards)
         {
-            var reason = !_taskParam.TrainingGuideRewardRecognitionEnabled
+            var reason = _guideRewardResolutionUnsupported ? "当前分辨率不支持培养奖励识别" : !GuideRewardRecognitionEnabled
                 ? "未启用培养奖励识别" : "奖励未能可靠识别";
             message = $"{reason}，此材料按照初始预计体力刷取\n" +
                 $"树脂进度 {plan.KnownResinSpent}/{(long)plan.KnownResinSpent + remaining}体\n" +
@@ -642,7 +660,7 @@ public partial class AutoDomainTask
         if (remaining == 0)
         {
             var family = FormatGuideFamily(plan.Materials[0].Material.Family);
-            message = !_taskParam.TrainingGuideRewardRecognitionEnabled || plan.HasMissingRewards
+            message = !GuideRewardRecognitionEnabled || plan.HasMissingRewards
                 ? $"培养计划：{family}已按预算刷取 {plan.KnownResinSpent} 体，请手动核实库存"
                 : $"培养计划：{family}已满足需求（含可合成），库存/目标（高→低）：{DescribeGuideInventory(plan)}";
         }
@@ -753,7 +771,7 @@ public partial class AutoDomainTask
     {
         // 首次入口预读即固定原预算，不能等漏记奖励后用已变化的库存倒推。
         var budgetRemaining = plan.RemainingInitialResin(GuideReservePercent);
-        return !_taskParam.TrainingGuideRewardRecognitionEnabled || plan.HasMissingRewards
+        return !GuideRewardRecognitionEnabled || plan.HasMissingRewards
             ? budgetRemaining : plan.RemainingResin(GuideReservePercent);
     }
 
@@ -761,7 +779,7 @@ public partial class AutoDomainTask
     {
         if (!_guidePlanning || _guideActivePlan == null) return false;
         _guideRounds++;
-        var useRewards = _taskParam.TrainingGuideRewardRecognitionEnabled;
+        var useRewards = GuideRewardRecognitionEnabled;
         if (_guideRoundResin <= 0)
             throw new InvalidOperationException("培养计划：本轮树脂消耗未确认，无法可靠扣减预算，停止任务");
         if (!useRewards || _guideActivePlan.HasMissingRewards)
