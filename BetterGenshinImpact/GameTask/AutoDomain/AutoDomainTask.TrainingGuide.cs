@@ -75,8 +75,8 @@ public partial class AutoDomainTask
                 {
                     if (_guideUnavailableFamilies.Count > 0)
                     {
-                        Logger.LogWarning("自定义培养目标未全部完成，以下家族入口未开放或未识别，停止任务：{Families}",
-                            string.Join("、", _guideUnavailableFamilies));
+                        Logger.LogWarning("自定义培养目标未全部完成，以下材料入口未开放或未识别，停止任务：{Families}",
+                            string.Join("、", _guideUnavailableFamilies.Select(FormatGuideFamily)));
                         return;
                     }
                     await RunGuideFallback();
@@ -105,7 +105,7 @@ public partial class AutoDomainTask
                 _guidePendingEntries.RemoveAll(e => _guideProcessedLevels.Contains(e.Key));
                 if (_guideScannedDomain == _guideDomainName && _guidePendingEntries.Count == 0)
                 {
-                    Logger.LogInformation("培养计划：{Domain} 已缓存的入口均已执行结束，不重进复查；预算结束不代表实际需求已核实", _guideDomainName);
+                    Logger.LogInformation("培养计划：{Domain} 已缓存的入口均已执行结束，不重进复查", _guideDomainName);
                     _guideProcessedDomains.Add(_guideDomainName!);
                     _guideDomainName = null;
                     _guideActivePlan = null;
@@ -135,7 +135,7 @@ public partial class AutoDomainTask
                 _guideCustomTargets.Keys.Select(m => TrainingGuideEntryCatalog.Entries.Single(e =>
                     e.Family == m.Family && e.IsWeapon == m.IsWeapon).Domain).Distinct().ToList();
             if (_guideCustomTargets != null)
-                Logger.LogInformation("自定义培养计划（目标库存）：{Targets}；跳过游戏提升指南预读",
+                Logger.LogInformation("自定义培养计划（目标库存）：{Targets}；跳过提升指南预读",
                     string.Join("、", _guideCustomTargets.Select(p => $"{p.Key.Name}={p.Value}")));
         }
         var next = _guideDomainCandidates.FirstOrDefault(name => !_guideProcessedDomains.Contains(name));
@@ -146,8 +146,24 @@ public partial class AutoDomainTask
     private async Task<List<string>> ScanGuideDomains(bool firstOnly = false)
     {
         await OpenTrainingGuide();
+        bool noTargets;
         using (var initial = CaptureToRectArea())
-            BetterGenshinImpact.Core.Script.Dependence.GlobalMethod.MoveMouseTo((int)(initial.Width * .52), (int)(initial.Height * .45));
+        {
+            // 提升指南右侧中央的无目标提示区域，以 1920×1080 为基准缩放。
+            using var empty = initial.Find(RecognitionObject.Ocr(initial.Width * (880d / 1920),
+                initial.Height * (470d / 1080), initial.Width * (600d / 1920), initial.Height * (100d / 1080)));
+            var text = string.Concat(empty.Text.Where(c => !char.IsWhiteSpace(c)));
+            noTargets = text.Contains("当前暂无可获取的培养素材", StringComparison.Ordinal);
+            TrainingGuideDiagnostics.Detail("候选秘境测试：滚动前无目标提示 OCR【{Text}】，确认无目标 {NoTargets}", empty.Text, noTargets);
+            if (!noTargets)
+                BetterGenshinImpact.Core.Script.Dependence.GlobalMethod.MoveMouseTo((int)(initial.Width * .52), (int)(initial.Height * .45));
+        }
+        if (noTargets)
+        {
+            Logger.LogInformation("提升指南：当前暂无可获取的培养材料，跳过列表扫描");
+            await new ReturnMainUiTask().Start(_ct);
+            return new List<string>();
+        }
         // 这里只滚动秘境名称列表，不拖拽或点击冒险之证中的奖励材料。
         for (var i = 0; i < 20; i++) { InputHub.Foreground.Mouse.VerticalScroll(1); await Delay(70, _ct); }
         await Delay(500, _ct);
@@ -331,7 +347,7 @@ public partial class AutoDomainTask
             else if (_taskParam.TrainingGuideRewardRecognitionEnabled) plan.Refresh(materials);
             var remaining = RemainingGuideResin(plan);
             if (remaining == null) throw new InvalidOperationException($"{entry.Entry}：已识别材料之间存在库存缺失，不能开始刷取");
-            ReportGuidePlan(entry.Entry, plan, remaining.Value);
+            ReportGuidePlan(entry.Entry, plan, remaining.Value, atEntry: true);
             if (remaining == 0) _guideProcessedLevels.Add(key);
             else planned.Add((entry, difficulty, key));
         }
@@ -583,22 +599,34 @@ public partial class AutoDomainTask
             materials.Add(reading);
         }
         if (!materials.Any(m => m.IsTarget))
-            Logger.LogInformation("培养计划：当前难度展示的材料没有培养需求，不推算未展示的高级材料需求");
+            Logger.LogInformation("培养计划：当前难度展示的材料没有培养需求");
         if (materials.Select(m => m.Material.Family).Distinct().Count() != 1)
             throw new InvalidOperationException("奖励材料未能归入同一材料家族，停止规划");
         return materials;
     }
 
-    private void ReportGuidePlan(string level, TrainingGuideFamilyPlan plan, int remaining)
+    private static string FormatGuideFamily(string family) =>
+        family.StartsWith("「", StringComparison.Ordinal) && family.EndsWith("」", StringComparison.Ordinal)
+            ? family : $"「{family}」";
+
+    private static string DescribeGuideInventory(TrainingGuideFamilyPlan plan) =>
+        string.Join("、", plan.Materials.OrderByDescending(m => m.Material.Tier)
+            .Select(m => $"{m.Stock}/{(m.IsTarget ? m.Required.ToString() : "-")}"));
+
+    private void ReportGuidePlan(string level, TrainingGuideFamilyPlan plan, int remaining, bool atEntry = false)
     {
         var materials = string.Join("、", plan.Materials.Select(m =>
             $"{m.Material.Name} {m.Stock}/{(m.IsTarget ? m.Required.ToString() : "-")}"));
         var inventoryLabel = !_taskParam.TrainingGuideRewardRecognitionEnabled || plan.HasMissingRewards
             ? "库存快照/目标（预算模式，不代表当前库存）" : "库存/目标";
-        Logger.LogInformation("培养材料（{InventoryLabel}）{Level}，难度 {Difficulty}：{Materials}；仅处理本入口已识别的材料", inventoryLabel, level, plan.Difficulty, materials);
-        var allocation = DescribeGuideResinAllocation(remaining);
-        Logger.LogInformation("培养树脂规划 {Level}：当前进度 {Spent}/{Total}体；{Allocation}；合成预留 {Reserve}%",
-            level, plan.KnownResinSpent, (long)plan.KnownResinSpent + remaining, allocation, GuideReservePercent);
+        Logger.LogInformation("培养材料（{InventoryLabel}）{Level}，难度 {Difficulty}：{Materials}", inventoryLabel, level, plan.Difficulty, materials);
+        var allocation = atEntry ? string.Empty : DescribeGuideResinAllocation(remaining);
+        if (atEntry)
+            Logger.LogInformation("培养树脂规划 {Level}：当前进度 {Spent}/{Total}体；合成预留 {Reserve}%",
+                level, plan.KnownResinSpent, (long)plan.KnownResinSpent + remaining, GuideReservePercent);
+        else
+            Logger.LogInformation("培养树脂规划 {Level}：当前进度 {Spent}/{Total}体；{Allocation}；合成预留 {Reserve}%",
+                level, plan.KnownResinSpent, (long)plan.KnownResinSpent + remaining, allocation, GuideReservePercent);
         var message = $"培养规划 · {level}\n" +
             $"材料（{inventoryLabel}）：{materials}\n" +
             $"树脂进度 {plan.KnownResinSpent}/{(long)plan.KnownResinSpent + remaining}体\n" +
@@ -611,7 +639,14 @@ public partial class AutoDomainTask
                 $"树脂进度 {plan.KnownResinSpent}/{(long)plan.KnownResinSpent + remaining}体\n" +
                 allocation;
         }
-        UIDispatcherHelper.BeginInvoke(() => Toast.Information(message));
+        if (remaining == 0)
+        {
+            var family = FormatGuideFamily(plan.Materials[0].Material.Family);
+            message = !_taskParam.TrainingGuideRewardRecognitionEnabled || plan.HasMissingRewards
+                ? $"培养计划：{family}已按预算刷取 {plan.KnownResinSpent} 体，请手动核实库存"
+                : $"培养计划：{family}已满足需求（含可合成），库存/目标（高→低）：{DescribeGuideInventory(plan)}";
+        }
+        UIDispatcherHelper.BeginInvoke(() => Toast.Information(message.TrimEnd()));
     }
 
     private static int SelectGuideResinAmount(int remaining, int condensed, int original) =>
@@ -739,7 +774,7 @@ public partial class AutoDomainTask
             if (!_taskParam.TrainingGuideRewardFailureBudgetEnabled)
                 throw new InvalidOperationException("培养计划：奖励识别失败，未开启固定预算兜底，结束任务");
             _guideActivePlan.MarkRewardsMissing();
-            Logger.LogError("培养计划：本轮奖励未可靠识别，本入口转为原预算保守刷取，不再依据后续奖励恢复动态估算");
+            Logger.LogError("培养计划：本轮奖励未可靠识别，{Family}后续按预算保守刷取", FormatGuideFamily(_guideActivePlan.Materials[0].Material.Family));
         }
         var remaining = RemainingGuideResin(_guideActivePlan);
         if (remaining == null)
@@ -751,9 +786,9 @@ public partial class AutoDomainTask
         if (remaining == 0)
         {
             if (!useRewards || _guideActivePlan.HasMissingRewards)
-                Logger.LogWarning("培养计划：本入口预规划预算执行完毕，实际材料需求未核实；后续入口使用各自已读取的库存计划");
+                Logger.LogWarning("培养计划：{Family}已按预算刷取 {Spent} 体，请手动核实库存", FormatGuideFamily(_guideActivePlan.Materials[0].Material.Family), _guideActivePlan.KnownResinSpent);
             else
-                Logger.LogInformation("培养计划：本入口按可靠库存及奖励核算，当前难度可处理的需求已满足");
+                Logger.LogInformation("培养计划：{Family}已满足需求（含可合成），库存/目标（高→低）：{Inventory}", FormatGuideFamily(_guideActivePlan.Materials[0].Material.Family), DescribeGuideInventory(_guideActivePlan));
         }
         var limitReached = _guideRounds >= _taskParam.DomainRoundNum;
         var change = remaining == 0;

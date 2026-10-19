@@ -152,7 +152,7 @@ public partial class AutoDomainTask
                 }
                 if (unlocked != null) break;
                 if (!layoutStable && attempt < 2)
-                    Logger.LogWarning("培养入口排列暂未确认：{Entry} 难度 {Difficulty}，等待稳定后复查，不降级或重复点击",
+                    Logger.LogWarning("培养入口排列暂未确认：{Entry} 难度 {Difficulty}，等待稳定后复查",
                         entry.Entry, difficulty);
                 await Delay(400, _ct);
             }
