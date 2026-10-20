@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Windows;
+using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.ViewModel.Windows.Pulonia;
@@ -32,6 +33,7 @@ public partial class PuloniaTaskCreationDialog : FluentWindow
         ViewModel = new PuloniaTaskCreationDialogViewModel(definitions, resourceCatalog, creationTaskType);
         DataContext = ViewModel;
         InitializeComponent();
+        SourceInitialized += (_, _) => WindowHelper.TryApplySystemBackdrop(this);
         ViewModel.RequestClose += OnRequestClose;
         Loaded += OnLoaded;
         Closed += OnClosed;

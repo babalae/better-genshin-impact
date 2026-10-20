@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.ViewModel.Pages;
 using Wpf.Ui.Controls;
 
@@ -10,5 +11,8 @@ public partial class PuloniaOneDragonSettingsDialog : FluentWindow
     public PuloniaOneDragonViewModel ViewModel { get; }
     /// <summary>配置窗口只绑定已明确选择的节点，不建立另一份运行配置。</summary>
     public PuloniaOneDragonSettingsDialog(PuloniaOneDragonViewModel viewModel)
-    { ViewModel = viewModel; DataContext = ViewModel; InitializeComponent(); }
+    {
+        ViewModel = viewModel; DataContext = ViewModel; InitializeComponent();
+        SourceInitialized += (_, _) => WindowHelper.TryApplySystemBackdrop(this);
+    }
 }

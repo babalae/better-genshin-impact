@@ -1,4 +1,5 @@
 using System;
+using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.ViewModel.Windows.Pulonia;
 using Wpf.Ui.Controls;
 
@@ -12,7 +13,9 @@ public partial class PuloniaGenshinAccountsWindow : FluentWindow
     /// <summary>建立绑定；关闭时取消本窗口的输入操作。</summary>
     public PuloniaGenshinAccountsWindow(PuloniaGenshinAccountsViewModel viewModel)
     {
-        ViewModel = viewModel; DataContext = viewModel; InitializeComponent(); Closed += OnClosed;
+        ViewModel = viewModel; DataContext = viewModel; InitializeComponent();
+        SourceInitialized += (_, _) => WindowHelper.TryApplySystemBackdrop(this);
+        Closed += OnClosed;
     }
     /// <summary>释放窗口拥有的操作，不停止其他入口的运行。</summary>
     private void OnClosed(object? sender, EventArgs e) => ViewModel.Dispose();

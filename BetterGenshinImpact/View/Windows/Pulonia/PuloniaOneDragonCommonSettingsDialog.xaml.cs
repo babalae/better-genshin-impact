@@ -1,4 +1,5 @@
 using System;
+using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.ViewModel.Windows.Pulonia;
 using Wpf.Ui.Controls;
 
@@ -16,6 +17,7 @@ public partial class PuloniaOneDragonCommonSettingsDialog : FluentWindow
         ViewModel = viewModel;
         DataContext = viewModel;
         InitializeComponent();
+        SourceInitialized += (_, _) => WindowHelper.TryApplySystemBackdrop(this);
         ViewModel.RequestClose += OnRequestClose;
         Closed += OnClosed;
     }

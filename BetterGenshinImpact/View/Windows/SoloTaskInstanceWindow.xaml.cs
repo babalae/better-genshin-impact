@@ -1,4 +1,5 @@
 using BetterGenshinImpact.GameTask.SoloTask;
+using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.ViewModel.Windows;
 using System;
@@ -28,6 +29,7 @@ public partial class SoloTaskInstanceWindow : FluentWindow
         ViewModel = new SoloTaskInstanceWindowViewModel(instanceService, taskType, definitionFactory);
         DataContext = ViewModel;
         InitializeComponent();
+        SourceInitialized += (_, _) => WindowHelper.TryApplySystemBackdrop(this);
         // 按实例数量收紧默认高度；实例较多时由列表滚动承载，避免窗口占用过大。
         Height = Math.Clamp(218 + ViewModel.Instances.Count * 58, MinHeight, MaxHeight);
         ViewModel.CloseRequested += OnCloseRequested;

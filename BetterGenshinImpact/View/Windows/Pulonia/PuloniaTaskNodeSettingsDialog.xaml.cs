@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.ViewModel.Pages;
 using Wpf.Ui.Controls;
 
@@ -21,5 +22,6 @@ public partial class PuloniaTaskNodeSettingsDialog : FluentWindow
         ViewModel = viewModel;
         DataContext = ViewModel;
         InitializeComponent();
+        SourceInitialized += (_, _) => WindowHelper.TryApplySystemBackdrop(this);
     }
 }

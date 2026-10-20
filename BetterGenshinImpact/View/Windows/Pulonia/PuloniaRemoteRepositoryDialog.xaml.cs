@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Windows;
 using BetterGenshinImpact.Core.Script.Repositories;
+using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.ViewModel.Windows.Pulonia;
 using Wpf.Ui.Controls;
 
@@ -19,6 +20,7 @@ public partial class PuloniaRemoteRepositoryDialog : FluentWindow
         ViewModel = new PuloniaRemoteRepositoryDialogViewModel(repositories);
         DataContext = ViewModel;
         InitializeComponent();
+        SourceInitialized += (_, _) => WindowHelper.TryApplySystemBackdrop(this);
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
     }
 
