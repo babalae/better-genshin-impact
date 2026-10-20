@@ -572,7 +572,7 @@ public class LimitedFile(string rootPath)
             // 禁止删除根目录本身
             if (string.Equals(
                     Path.TrimEndingDirectorySeparator(path),
-                    Path.TrimEndingDirectorySeparator(rootPath), 
+                    Path.TrimEndingDirectorySeparator(rootPath),
                     StringComparison.OrdinalIgnoreCase
             ))
             {
