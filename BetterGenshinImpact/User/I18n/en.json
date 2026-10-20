@@ -913,7 +913,7 @@
   "检查是否存在最新测试版": "Check for Latest Beta",
   "检查更新": "Check for Updates",
   "检查软件是否有新版本可用": "Check whether a new version is available",
-  "检测到开启时会自动关闭原神 HDR 注册表设置": "Automatically disables the Genshin Impact HDR registry setting when it is enabled",
+  "通过 BetterGI 启动本地原神时生效。原生 HDR 保持关闭，Windows 自动 HDR 设置在启动后恢复；不改变系统 HDR。": "Applies when BetterGI launches the local game. Native HDR stays disabled; Windows Auto HDR settings are restored after launch. System HDR is unchanged.",
   "检测到战斗已经结束的情况下，停止自动战斗功能": "Stop auto combat when combat is detected as over",
   "检测到敌人血条时跳过战斗结束检查。与“旋转寻找敌人位置”互斥。": "Skip combat-end check when an enemy HP bar is detected. Mutually exclusive with Rotate to Find Enemies.",
   "检测到红血状态时自动使用便携营养袋": "Use NRE (Menu 30) automatically when HP is low",
