@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using BetterGenshinImpact.GameTask.SoloTask;
 
 namespace BetterGenshinImpact.Service.Instance.MessageHandlers;
 
@@ -24,6 +25,14 @@ internal sealed class InstanceRequestHandler
     private readonly Action<string[]> _enqueueActivation;
     private readonly Action<WebViewMessage> _dispatchWebViewMessage;
     /// <summary>
+    /// 当前进程的独立任务执行协调器。
+    /// </summary>
+    private readonly SoloTaskExecutionService _soloTaskExecutionService;
+    /// <summary>
+    /// 根实例接收子实例状态上报后的缓存更新入口。
+    /// </summary>
+    private readonly Action<InstanceConnection, SoloTaskStatusSnapshot> _receiveSoloTaskStatus;
+    /// <summary>
     /// 子实例连接集合发生变化时通知上层服务刷新公开状态。
     /// </summary>
     private readonly Action _connectedInstancesChanged;
@@ -36,6 +45,8 @@ internal sealed class InstanceRequestHandler
         RelativeMouseMessageHandler relativeMouseMessageHandler,
         Action<string[]> enqueueActivation,
         Action<WebViewMessage> dispatchWebViewMessage,
+        SoloTaskExecutionService soloTaskExecutionService,
+        Action<InstanceConnection, SoloTaskStatusSnapshot> receiveSoloTaskStatus,
         Action connectedInstancesChanged,
         ILogger logger)
     {
@@ -44,6 +55,8 @@ internal sealed class InstanceRequestHandler
         _relativeMouseMessageHandler = relativeMouseMessageHandler;
         _enqueueActivation = enqueueActivation;
         _dispatchWebViewMessage = dispatchWebViewMessage;
+        _soloTaskExecutionService = soloTaskExecutionService;
+        _receiveSoloTaskStatus = receiveSoloTaskStatus;
         _connectedInstancesChanged = connectedInstancesChanged;
         _logger = logger;
     }
@@ -85,15 +98,22 @@ internal sealed class InstanceRequestHandler
                         request,
                         cancellationToken).ConfigureAwait(false),
                 InstanceOperations.WebViewMessage => HandleWebViewMessage(connection, request),
+                InstanceOperations.TaskStart => await HandleTaskStartAsync(
+                    connection,
+                    request).ConfigureAwait(false),
+                InstanceOperations.TaskStop => await HandleTaskStopAsync(
+                    connection,
+                    request).ConfigureAwait(false),
+                InstanceOperations.TaskStatusGet => HandleTaskStatusGet(connection, request),
+                InstanceOperations.TaskStatusChanged => HandleTaskStatusChanged(connection, request),
                 _ => InstanceIpcEnvelope.Failure(
                     request,
                     "unsupported_operation",
                     $"不支持的实例 IPC 操作：{request.Operation}")
             };
 
-            // TODO: 多实例独立任务入口预留。
-            // 后续在此增加目标实例选择、任务下发与状态回传。
-            // 当前版本不注册任何 task.* 操作。
+            // 多实例独立任务通过 task.* 操作启动、停止并回传状态；
+            // 长时间运行的任务不会阻塞本次 IPC 请求，完成状态由后续状态消息同步。
         }
         catch (Exception exception) when (exception is ArgumentException
                                           or InvalidOperationException
@@ -417,6 +437,76 @@ internal sealed class InstanceRequestHandler
                       ?? throw new ArgumentException("WebView 消息缺少数据。");
         _dispatchWebViewMessage(message);
         return InstanceIpcEnvelope.Response(request);
+    }
+
+    /// <summary>
+    /// 校验根实例身份并接受一个不阻塞 IPC 的独立任务启动请求。
+    /// </summary>
+    private async Task<InstanceIpcEnvelope> HandleTaskStartAsync(
+        InstanceConnection connection,
+        InstanceIpcEnvelope request)
+    {
+        RequireTaskCommandFromRoot(connection);
+        var startRequest = request.Data?.ToObject<SoloTaskStartRequest>(InstanceIpcProtocol.Serializer)
+                           ?? throw new ArgumentException("独立任务启动请求缺少数据。");
+        var response = await _soloTaskExecutionService.StartAsync(startRequest).ConfigureAwait(false);
+        return InstanceIpcEnvelope.Response(request, response);
+    }
+
+    /// <summary>
+    /// 校验根实例身份并停止运行标识匹配的独立任务。
+    /// </summary>
+    private async Task<InstanceIpcEnvelope> HandleTaskStopAsync(
+        InstanceConnection connection,
+        InstanceIpcEnvelope request)
+    {
+        RequireTaskCommandFromRoot(connection);
+        var stopRequest = request.Data?.ToObject<SoloTaskStopRequest>(InstanceIpcProtocol.Serializer)
+                          ?? throw new ArgumentException("独立任务停止请求缺少数据。");
+        var response = await _soloTaskExecutionService.StopAsync(stopRequest).ConfigureAwait(false);
+        return InstanceIpcEnvelope.Response(request, response);
+    }
+
+    /// <summary>
+    /// 返回子实例当前独立任务状态，供根实例连接或超时后校正缓存。
+    /// </summary>
+    private InstanceIpcEnvelope HandleTaskStatusGet(
+        InstanceConnection connection,
+        InstanceIpcEnvelope request)
+    {
+        RequireTaskCommandFromRoot(connection);
+        return InstanceIpcEnvelope.Response(request, _soloTaskExecutionService.GetStatus());
+    }
+
+    /// <summary>
+    /// 根实例接收已登记子实例主动上报的独立任务状态。
+    /// </summary>
+    private InstanceIpcEnvelope HandleTaskStatusChanged(
+        InstanceConnection connection,
+        InstanceIpcEnvelope request)
+    {
+        if (_context.InstanceType != BetterGiInstanceType.Primary)
+        {
+            throw new InvalidOperationException("只有根实例可以接收子实例任务状态。");
+        }
+
+        _ = RequireRegisteredEndpoint(connection);
+        var status = request.Data?.ToObject<SoloTaskStatusSnapshot>(InstanceIpcProtocol.Serializer)
+                     ?? throw new ArgumentException("独立任务状态消息缺少数据。");
+        _receiveSoloTaskStatus(connection, status);
+        return InstanceIpcEnvelope.Response(request);
+    }
+
+    /// <summary>
+    /// 确认 task.* 控制请求只由根实例发送给子实例。
+    /// </summary>
+    private void RequireTaskCommandFromRoot(InstanceConnection connection)
+    {
+        if (_context.InstanceType == BetterGiInstanceType.Primary
+            || connection.RemoteEndpoint?.InstanceType != BetterGiInstanceType.Primary)
+        {
+            throw new InvalidOperationException("只有根实例可以控制 BetterGI 子实例中的独立任务。");
+        }
     }
 
     private InstanceIpcEnvelope CreateOpenResponse(

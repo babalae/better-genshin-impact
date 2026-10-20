@@ -10,6 +10,7 @@ using System.Windows;
 using System.Windows.Interop;
 using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Instance.MessageHandlers;
 using BetterGenshinImpact.Service.Interface;
@@ -30,6 +31,14 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
     private readonly InstanceMessageState _messageState = new();
     private readonly InstanceRequestHandler _requestHandler;
     private readonly RelativeMouseMessageHandler _relativeMouseMessageHandler;
+    /// <summary>
+    /// 当前进程独立任务的运行状态与启动停止入口。
+    /// </summary>
+    private readonly SoloTaskExecutionService _soloTaskExecutionService;
+    /// <summary>
+    /// 根实例缓存的在线子实例独立任务状态，键为子实例进程标识。
+    /// </summary>
+    private readonly ConcurrentDictionary<int, SoloTaskStatusSnapshot> _remoteSoloTaskStatuses = new();
     private readonly CancellationTokenSource _lifetimeCancellationTokenSource = new();
     private readonly ConcurrentQueue<string[]> _pendingActivations = new();
     private readonly object _activationLock = new();
@@ -46,10 +55,13 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
         IServiceProvider serviceProvider,
         RawInputMonitor rawInputMonitor,
         IConfigService configService,
+        SoloTaskExecutionService soloTaskExecutionService,
         ILogger<InstanceService> logger)
     {
         _bootstrap = bootstrap;
         _logger = logger;
+        _soloTaskExecutionService = soloTaskExecutionService;
+        _soloTaskExecutionService.StatusChanged += OnLocalSoloTaskStatusChanged;
         _relativeMouseMessageHandler = new RelativeMouseMessageHandler(
             Context,
             serviceProvider,
@@ -67,6 +79,8 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
             _relativeMouseMessageHandler,
             EnqueueActivation,
             DispatchWebViewMessage,
+            _soloTaskExecutionService,
+            ReceiveSoloTaskStatus,
             NotifyConnectedInstancesChanged,
             logger);
     }
@@ -76,6 +90,11 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
     /// 事件可能从命名管道后台线程触发，UI 订阅方需要自行切换到 UI 线程。
     /// </summary>
     public event EventHandler? ConnectedInstancesChanged;
+
+    /// <summary>
+    /// 本实例或任一在线子实例的独立任务状态发生变化时触发。
+    /// </summary>
+    public event EventHandler? SoloTaskStatusesChanged;
 
     public event EventHandler<WebViewMessageReceivedEventArgs>? WebViewMessageReceived;
 
@@ -87,6 +106,132 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
     public void SetGameMouseModeEnabled(bool enabled)
     {
         _relativeMouseMessageHandler.SetGameMouseModeEnabled(enabled);
+    }
+
+    /// <summary>
+    /// 返回当前界面允许管理的实例列表。只有主实例会列出在线子实例。
+    /// </summary>
+    public InstanceEndpoint[] GetSoloTaskTargets()
+    {
+        if (!Context.IsRoot)
+        {
+            return [Context.ToEndpoint()];
+        }
+
+        return [Context.ToEndpoint(), .. GetConnectedChildInstances()];
+    }
+
+    /// <summary>
+    /// 返回指定实例最近一次同步到本进程的独立任务状态。
+    /// </summary>
+    public SoloTaskStatusSnapshot GetSoloTaskStatus(InstanceEndpoint endpoint)
+    {
+        ArgumentNullException.ThrowIfNull(endpoint);
+        if (IsCurrentInstance(endpoint))
+        {
+            return _soloTaskExecutionService.GetStatus();
+        }
+
+        return _remoteSoloTaskStatuses.TryGetValue(endpoint.ProcessId, out var status)
+            ? status
+            : SoloTaskStatusSnapshot.Idle();
+    }
+
+    /// <summary>
+    /// 主动查询指定实例的真实独立任务状态；用于请求超时后校正本地缓存。
+    /// </summary>
+    public async Task<SoloTaskStatusSnapshot> RefreshSoloTaskStatusAsync(
+        InstanceEndpoint endpoint,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(endpoint);
+        if (IsCurrentInstance(endpoint))
+        {
+            return _soloTaskExecutionService.GetStatus();
+        }
+
+        if (!Context.IsRoot)
+        {
+            throw new InvalidOperationException("只有主实例可以查询其他实例中的独立任务。");
+        }
+
+        var target = GetRequiredChildConnection(endpoint);
+        var response = await target.Connection.SendRequestAsync(
+            InstanceOperations.TaskStatusGet,
+            null,
+            RequestTimeout,
+            cancellationToken).ConfigureAwait(false);
+        EnsureSuccessfulResponse(response);
+        var status = response.Data?.ToObject<SoloTaskStatusSnapshot>(InstanceIpcProtocol.Serializer)
+                     ?? throw new InvalidDataException("目标实例返回的独立任务状态为空。");
+        UpdateRemoteSoloTaskStatus(endpoint, status);
+        return status;
+    }
+
+    /// <summary>
+    /// 在指定实例启动独立任务；远程实例只接受主实例转发。
+    /// </summary>
+    public async Task<SoloTaskOperationResponse> StartSoloTaskAsync(
+        InstanceEndpoint endpoint,
+        SoloTaskStartRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(endpoint);
+        ArgumentNullException.ThrowIfNull(request);
+        if (IsCurrentInstance(endpoint))
+        {
+            return await _soloTaskExecutionService.StartAsync(request).ConfigureAwait(false);
+        }
+
+        if (!Context.IsRoot)
+        {
+            throw new InvalidOperationException("只有主实例可以控制其他实例中的独立任务。");
+        }
+
+        var target = GetRequiredChildConnection(endpoint);
+        var response = await target.Connection.SendRequestAsync(
+            InstanceOperations.TaskStart,
+            request,
+            RequestTimeout,
+            cancellationToken).ConfigureAwait(false);
+        EnsureSuccessfulResponse(response);
+        var operation = response.Data?.ToObject<SoloTaskOperationResponse>(InstanceIpcProtocol.Serializer)
+                        ?? throw new InvalidDataException("目标实例返回的独立任务启动结果为空。");
+        UpdateRemoteSoloTaskStatus(endpoint, operation.Status);
+        return operation;
+    }
+
+    /// <summary>
+    /// 停止指定实例中运行标识匹配的独立任务。
+    /// </summary>
+    public async Task<SoloTaskOperationResponse> StopSoloTaskAsync(
+        InstanceEndpoint endpoint,
+        Guid runId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(endpoint);
+        var request = new SoloTaskStopRequest { RunId = runId };
+        if (IsCurrentInstance(endpoint))
+        {
+            return await _soloTaskExecutionService.StopAsync(request).ConfigureAwait(false);
+        }
+
+        if (!Context.IsRoot)
+        {
+            throw new InvalidOperationException("只有主实例可以控制其他实例中的独立任务。");
+        }
+
+        var target = GetRequiredChildConnection(endpoint);
+        var response = await target.Connection.SendRequestAsync(
+            InstanceOperations.TaskStop,
+            request,
+            RequestTimeout,
+            cancellationToken).ConfigureAwait(false);
+        EnsureSuccessfulResponse(response);
+        var operation = response.Data?.ToObject<SoloTaskOperationResponse>(InstanceIpcProtocol.Serializer)
+                        ?? throw new InvalidDataException("目标实例返回的独立任务停止结果为空。");
+        UpdateRemoteSoloTaskStatus(endpoint, operation.Status);
+        return operation;
     }
 
     /// <summary>
@@ -107,6 +252,15 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
                     .Concat(_messageState.WebViewConnectionsByProcessId.Values)
                     .Select(x => x.Endpoint));
         }
+    }
+
+    /// <summary>
+    /// 检查主实例当前是否仍连接着 WebView2 网页版实例。
+    /// </summary>
+    public bool HasConnectedWebViewInstance()
+    {
+        return GetConnectedChildInstances()
+            .Any(endpoint => endpoint.InstanceType == BetterGiInstanceType.WebView);
     }
 
     /// <summary>
@@ -447,7 +601,9 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
 
             if (connectedInstancesChanged)
             {
+                _remoteSoloTaskStatuses.TryRemove(endpoint.ProcessId, out _);
                 NotifyConnectedInstancesChanged();
+                NotifySoloTaskStatusesChanged();
             }
         }
 
@@ -464,6 +620,7 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        _soloTaskExecutionService.StatusChanged -= OnLocalSoloTaskStatusChanged;
         await StopAsync(CancellationToken.None).ConfigureAwait(false);
         _lifetimeCancellationTokenSource.Dispose();
         _bootstrap.Dispose();
@@ -728,6 +885,142 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
     }
 
     /// <summary>
+    /// 将本进程状态变化发布给本地 UI；子实例同时尽力上报给根实例。
+    /// </summary>
+    private void OnLocalSoloTaskStatusChanged(object? sender, SoloTaskStatusChangedEventArgs e)
+    {
+        NotifySoloTaskStatusesChanged();
+        if (Context.IsRoot)
+        {
+            return;
+        }
+
+        _ = ReportSoloTaskStatusToRootAsync(e.Status);
+    }
+
+    /// <summary>
+    /// 子实例通过已经登记的根连接上报自身独立任务状态。
+    /// </summary>
+    private async Task ReportSoloTaskStatusToRootAsync(SoloTaskStatusSnapshot status)
+    {
+        try
+        {
+            var connection = GetRequiredRootConnection();
+            var response = await connection.SendRequestAsync(
+                InstanceOperations.TaskStatusChanged,
+                status,
+                RequestTimeout,
+                _lifetimeCancellationTokenSource.Token).ConfigureAwait(false);
+            EnsureSuccessfulResponse(response);
+        }
+        catch (Exception exception) when (exception is InvalidOperationException
+                                          or IOException
+                                          or TimeoutException
+                                          or OperationCanceledException)
+        {
+            if (!_lifetimeCancellationTokenSource.IsCancellationRequested)
+            {
+                _logger.LogDebug(exception, "向根实例上报独立任务状态失败，重连后将重新同步");
+            }
+        }
+    }
+
+    /// <summary>
+    /// 根实例接收子实例主动上报的任务状态并更新缓存。
+    /// </summary>
+    private void ReceiveSoloTaskStatus(
+        InstanceConnection connection,
+        SoloTaskStatusSnapshot status)
+    {
+        var endpoint = connection.RemoteEndpoint
+                       ?? throw new InvalidOperationException("任务状态上报连接尚未完成登记。");
+        UpdateRemoteSoloTaskStatus(endpoint, status);
+    }
+
+    /// <summary>
+    /// 更新一个在线子实例的状态缓存并通知 UI。
+    /// </summary>
+    private void UpdateRemoteSoloTaskStatus(
+        InstanceEndpoint endpoint,
+        SoloTaskStatusSnapshot status)
+    {
+        if (!Context.IsRoot)
+        {
+            return;
+        }
+
+        var accepted = false;
+        _remoteSoloTaskStatuses.AddOrUpdate(
+            endpoint.ProcessId,
+            _ =>
+            {
+                accepted = true;
+                return status;
+            },
+            (_, current) =>
+            {
+                if (status.Version < current.Version)
+                {
+                    return current;
+                }
+
+                accepted = true;
+                return status;
+            });
+        if (accepted)
+        {
+            NotifySoloTaskStatusesChanged();
+        }
+    }
+
+    /// <summary>
+    /// 连接集合变化后从所有在线子实例重新查询状态，用于首次连接和重连校正。
+    /// </summary>
+    private async Task RefreshRemoteSoloTaskStatusesAsync()
+    {
+        if (!Context.IsRoot || _lifetimeCancellationTokenSource.IsCancellationRequested)
+        {
+            return;
+        }
+
+        var targets = GetConnectedChildInstances();
+        foreach (var endpoint in targets)
+        {
+            try
+            {
+                var target = GetRequiredChildConnection(endpoint);
+                var response = await target.Connection.SendRequestAsync(
+                    InstanceOperations.TaskStatusGet,
+                    null,
+                    RequestTimeout,
+                    _lifetimeCancellationTokenSource.Token).ConfigureAwait(false);
+                EnsureSuccessfulResponse(response);
+                var status = response.Data?.ToObject<SoloTaskStatusSnapshot>(InstanceIpcProtocol.Serializer)
+                             ?? SoloTaskStatusSnapshot.Idle();
+                UpdateRemoteSoloTaskStatus(endpoint, status);
+            }
+            catch (Exception exception) when (exception is InvalidOperationException
+                                              or IOException
+                                              or TimeoutException
+                                              or OperationCanceledException)
+            {
+                _logger.LogDebug(exception, "查询子实例 {ProcessId} 的独立任务状态失败", endpoint.ProcessId);
+            }
+        }
+
+        var onlineProcessIds = targets.Select(x => x.ProcessId).ToHashSet();
+        foreach (var processId in _remoteSoloTaskStatuses.Keys)
+        {
+            if (!onlineProcessIds.Contains(processId))
+            {
+                _remoteSoloTaskStatuses.TryRemove(processId, out _);
+            }
+        }
+
+        NotifySoloTaskStatusesChanged();
+    }
+
+    /// <summary>
     /// 安全通知在线子实例集合变化，避免 UI 订阅方异常影响 IPC 登记流程。
     /// </summary>
     private void NotifyConnectedInstancesChanged()
@@ -740,6 +1033,35 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
         {
             _logger.LogWarning(exception, "通知在线子实例集合变化失败");
         }
+
+        if (Context.IsRoot)
+        {
+            _ = Task.Run(RefreshRemoteSoloTaskStatusesAsync);
+        }
+    }
+
+    /// <summary>
+    /// 安全通知独立任务状态变化，订阅方自行切回 UI 线程。
+    /// </summary>
+    private void NotifySoloTaskStatusesChanged()
+    {
+        try
+        {
+            SoloTaskStatusesChanged?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "通知独立任务状态变化失败");
+        }
+    }
+
+    /// <summary>
+    /// 判断端点是否表示当前进程。
+    /// </summary>
+    private bool IsCurrentInstance(InstanceEndpoint endpoint)
+    {
+        return endpoint.ProcessId == Context.ProcessId
+               && endpoint.InstanceType == Context.InstanceType;
     }
 
     private static void RequestApplicationShutdown()

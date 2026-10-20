@@ -27,6 +27,10 @@ public static class InstanceOperations
     public const string WebViewList = "webview.list";
     public const string WebViewSend = "webview.send";
     public const string WebViewMessage = "webview.message";
+    public const string TaskStart = "task.start";
+    public const string TaskStop = "task.stop";
+    public const string TaskStatusGet = "task.status.get";
+    public const string TaskStatusChanged = "task.status.changed";
 }
 
 public sealed class InstanceIpcEnvelope

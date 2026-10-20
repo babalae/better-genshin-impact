@@ -11,6 +11,7 @@ using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.GameTask.AutoSkip.Audio;
 using BetterGenshinImpact.GameTask.Music.Service;
 using BetterGenshinImpact.GameTask.Runtime;
@@ -177,6 +178,8 @@ public partial class App : Application
 
                 services.AddNavigationViewPageProvider();
                 services.AddSingleton(InstanceBootstrap.Current);
+                services.AddSingleton<SoloTaskRegistry>();
+                services.AddSingleton<SoloTaskExecutionService>();
                 services.AddSingleton<InstanceService>();
                 services.AddHostedService(sp => sp.GetRequiredService<InstanceService>());
                 // 外部访问服务：协议适配层统一复用同一能力服务，仅 Primary 实例实际监听端口。

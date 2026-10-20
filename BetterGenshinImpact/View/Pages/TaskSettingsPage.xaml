@@ -88,15 +88,12 @@
                             <Run Text="{i18n:T 点击查看使用教程}" />
                         </Hyperlink>
                     </ui:TextBlock>
-                    <controls:TwoStateButton Grid.Row="0"
+                    <controls:SoloTaskButton Grid.Row="0"
                                              Grid.RowSpan="2"
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
-                                             DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="{i18n:T 停止}"
-                                             EnableCommand="{Binding SwitchAutoGeniusInvokationCommand}"
-                                             EnableContent="{Binding SwitchAutoGeniusInvokationButtonText}"
-                                             IsChecked="{Binding SwitchAutoGeniusInvokationEnabled}" />
+                                             ActionCommand="{Binding ManageSoloTaskCommand}"
+                                             State="{Binding SoloTaskStates[AutoGeniusInvokation]}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -202,15 +199,12 @@
                             <Run Text="{i18n:T 点击查看使用教程}" />
                         </Hyperlink>
                     </ui:TextBlock>
-                    <controls:TwoStateButton Grid.Row="0"
+                    <controls:SoloTaskButton Grid.Row="0"
                                              Grid.RowSpan="2"
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
-                                             DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="{i18n:T 停止}"
-                                             EnableCommand="{Binding SwitchAutoWoodCommand}"
-                                             EnableContent="{Binding SwitchAutoWoodButtonText}"
-                                             IsChecked="{Binding SwitchAutoWoodEnabled}" />
+                                             ActionCommand="{Binding ManageSoloTaskCommand}"
+                                             State="{Binding SoloTaskStates[AutoWood]}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -400,15 +394,12 @@
                             <Run Text="{i18n:T 点击查看使用教程}" />
                         </Hyperlink>
                     </ui:TextBlock>
-                    <controls:TwoStateButton Grid.Row="0"
+                    <controls:SoloTaskButton Grid.Row="0"
                                              Grid.RowSpan="2"
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
-                                             DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="{i18n:T 停止}"
-                                             EnableCommand="{Binding SwitchAutoFightCommand}"
-                                             EnableContent="{Binding SwitchAutoFightButtonText}"
-                                             IsChecked="{Binding SwitchAutoFightEnabled}" />
+                                             ActionCommand="{Binding ManageSoloTaskCommand}"
+                                             State="{Binding SoloTaskStates[AutoFight]}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -1366,15 +1357,12 @@
                             <Run Text="{i18n:T 点击查看使用教程}" />
                         </Hyperlink>
                     </ui:TextBlock>
-                    <controls:TwoStateButton Grid.Row="0"
+                    <controls:SoloTaskButton Grid.Row="0"
                                              Grid.RowSpan="2"
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
-                                             DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="{i18n:T 停止}"
-                                             EnableCommand="{Binding SwitchAutoDomainCommand}"
-                                             EnableContent="{Binding SwitchAutoDomainButtonText}"
-                                             IsChecked="{Binding SwitchAutoDomainEnabled}" />
+                                             ActionCommand="{Binding ManageSoloTaskCommand}"
+                                             State="{Binding SoloTaskStates[AutoDomain]}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -1854,15 +1842,12 @@
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Text="{i18n:T 自动传送、战斗并领取奖励}"
                                   TextWrapping="Wrap" />
-                    <controls:TwoStateButton Grid.Row="0"
+                    <controls:SoloTaskButton Grid.Row="0"
                                              Grid.RowSpan="2"
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
-                                             DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="{i18n:T 停止}"
-                                             EnableCommand="{Binding SwitchAutoBossCommand}"
-                                             EnableContent="{Binding SwitchAutoBossButtonText}"
-                                             IsChecked="{Binding SwitchAutoBossEnabled}" />
+                                             ActionCommand="{Binding ManageSoloTaskCommand}"
+                                             State="{Binding SoloTaskStates[AutoBoss]}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -2174,15 +2159,12 @@
                             <Run Text="{i18n:T 点击查看使用教程}" />
                         </Hyperlink>
                     </ui:TextBlock>
-                    <controls:TwoStateButton Grid.Row="0"
+                    <controls:SoloTaskButton Grid.Row="0"
                                              Grid.RowSpan="2"
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
-                                             DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="{i18n:T 停止}"
-                                             EnableCommand="{Binding SwitchAutoStygianOnslaughtCommand}"
-                                             EnableContent="{Binding SwitchAutoStygianOnslaughtButtonText}"
-                                             IsChecked="{Binding SwitchAutoStygianOnslaughtEnabled}" />
+                                             ActionCommand="{Binding ManageSoloTaskCommand}"
+                                             State="{Binding SoloTaskStates[AutoStygianOnslaught]}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -2566,15 +2548,12 @@
                             <Run Text="{i18n:T 点击查看使用教程}" />
                         </Hyperlink>
                     </ui:TextBlock>
-                    <controls:TwoStateButton Grid.Row="0"
+                    <controls:SoloTaskButton Grid.Row="0"
                                              Grid.RowSpan="2"
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
-                                             DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="{i18n:T 停止}"
-                                             EnableCommand="{Binding SwitchAutoFishingCommand}"
-                                             EnableContent="{Binding SwitchAutoFishingButtonText}"
-                                             IsChecked="{Binding SwitchAutoFishingEnabled}" />
+                                             ActionCommand="{Binding ManageSoloTaskCommand}"
+                                             State="{Binding SoloTaskStates[AutoFishing]}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -2752,15 +2731,12 @@
                             <Run Text="{i18n:T 点击查看使用教程}" />
                         </Hyperlink>
                     </ui:TextBlock>
-                    <controls:TwoStateButton Grid.Row="0"
+                    <controls:SoloTaskButton Grid.Row="0"
                                              Grid.RowSpan="2"
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
-                                             DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="{i18n:T 停止}"
-                                             EnableCommand="{Binding SwitchAutoLeyLineOutcropCommand}"
-                                             EnableContent="{Binding SwitchAutoLeyLineOutcropButtonText}"
-                                             IsChecked="{Binding SwitchAutoLeyLineOutcropEnabled}" />
+                                             ActionCommand="{Binding ManageSoloTaskCommand}"
+                                             State="{Binding SoloTaskStates[AutoLeyLineOutcrop]}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -3357,15 +3333,12 @@
                             <Run Text="{i18n:T 点击查看使用教程}" />
                         </Hyperlink>
                     </ui:TextBlock>
-                    <controls:TwoStateButton Grid.Row="0"
+                    <controls:SoloTaskButton Grid.Row="0"
                                              Grid.RowSpan="2"
                                              Grid.Column="1"
                                              Margin="0,0,36,0"
-                                             DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="{i18n:T 停止}"
-                                             EnableCommand="{Binding SwitchAutoMusicGameCommand}"
-                                             EnableContent="{Binding SwitchAutoMusicGameButtonText}"
-                                             IsChecked="{Binding SwitchAutoMusicGameEnabled}" />
+                                             ActionCommand="{Binding ManageSoloTaskCommand}"
+                                             State="{Binding SoloTaskStates[AutoMusicGame]}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -3391,15 +3364,12 @@
                             <Run Text="{i18n:T 点击查看使用教程}" />
                         </Hyperlink>
                     </ui:TextBlock>
-                    <controls:TwoStateButton Grid.Row="0"
+                    <controls:SoloTaskButton Grid.Row="0"
                                              Grid.RowSpan="2"
                                              Grid.Column="1"
                                              Margin="0,0,36,0"
-                                             DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="{i18n:T 停止}"
-                                             EnableCommand="{Binding SwitchAutoAlbumCommand}"
-                                             EnableContent="{Binding SwitchAutoAlbumButtonText}"
-                                             IsChecked="{Binding SwitchAutoAlbumEnabled}" />
+                                             ActionCommand="{Binding ManageSoloTaskCommand}"
+                                             State="{Binding SoloTaskStates[AutoAlbum]}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -3506,15 +3476,12 @@
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Text="{i18n:T 在手动烹饪界面运行，自动识别并点击结束烹饪}"
                                   TextWrapping="Wrap" />
-                    <controls:TwoStateButton Grid.Row="0"
+                    <controls:SoloTaskButton Grid.Row="0"
                                              Grid.RowSpan="2"
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
-                                             DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="{i18n:T 停止}"
-                                             EnableCommand="{Binding SwitchAutoCookCommand}"
-                                             EnableContent="{Binding SwitchAutoCookButtonText}"
-                                             IsChecked="{Binding SwitchAutoCookEnabled}" />
+                                             ActionCommand="{Binding ManageSoloTaskCommand}"
+                                             State="{Binding SoloTaskStates[AutoCook]}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -3609,15 +3576,12 @@
                                Content="{Binding SwitchAutoComboRunButtonText}"
                                Command="{Binding SwitchAutoComboRunCommand}"
                                Icon="{ui:SymbolIcon Play24}" />
-                    <controls:TwoStateButton Grid.Row="0"
+                    <controls:SoloTaskButton Grid.Row="0"
                                              Grid.RowSpan="2"
                                              Grid.Column="2"
                                              Margin="0,0,24,0"
-                                             DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="停止"
-                                             EnableCommand="{Binding SwitchAutoComboCommand}"
-                                             EnableContent="{Binding SwitchAutoComboButtonText}"
-                                             IsChecked="{Binding SwitchAutoComboEnabled}" />
+                                             ActionCommand="{Binding ManageSoloTaskCommand}"
+                                             State="{Binding SoloTaskStates[AutoCombo]}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -3940,15 +3904,12 @@
                             <Run Text="{i18n:T 点击查看使用教程}" />
                         </Hyperlink>
                     </ui:TextBlock>
-                    <controls:TwoStateButton Grid.Row="0"
+                    <controls:SoloTaskButton Grid.Row="0"
                                              Grid.RowSpan="2"
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
-                                             DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="{i18n:T 停止}"
-                                             EnableCommand="{Binding SwitchArtifactSalvageCommand}"
-                                             EnableContent="{Binding SwitchAutoFishingButtonText}"
-                                             IsChecked="{Binding SwitchArtifactSalvageEnabled}" />
+                                             ActionCommand="{Binding ManageSoloTaskCommand}"
+                                             State="{Binding SoloTaskStates[AutoArtifactSalvage]}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -4156,15 +4117,12 @@
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   TextWrapping="Wrap" Text="{i18n:T 自动使用输入的兑换码}" />
-                    <controls:TwoStateButton Grid.Row="0"
+                    <controls:SoloTaskButton Grid.Row="0"
                                              Grid.RowSpan="2"
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
-                                             DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="{i18n:T 停止}"
-                                             EnableCommand="{Binding SwitchAutoRedeemCodeCommand}"
-                                             EnableContent="{Binding SwitchAutoRedeemCodeButtonText}"
-                                             IsChecked="{Binding SwitchAutoRedeemCodeEnabled}" />
+                                             ActionCommand="{Binding ManageSoloTaskCommand}"
+                                             State="{Binding SoloTaskStates[AutoRedeemCode]}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -4234,15 +4192,13 @@
                             <Run Text="{i18n:T 点击查看使用教程}" />
                         </Hyperlink>
                     </ui:TextBlock>
-                    <controls:TwoStateButton Grid.Row="0"
+                    <controls:SoloTaskButton Grid.Row="0"
                                              Grid.RowSpan="2"
                                              Grid.Column="2"
                                              Margin="0,0,24,0"
-                                             DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="{i18n:T 停止}"
-                                             EnableCommand="{Binding SwitchGetGridIconsCommand}"
-                                             EnableContent="{Binding SwitchGetGridIconsButtonText}"
-                                             IsChecked="{Binding SwitchGetGridIconsEnabled}" VerticalAlignment="Top" />
+                                             ActionCommand="{Binding ManageSoloTaskCommand}"
+                                             State="{Binding SoloTaskStates[GetGridIcons]}"
+                                             VerticalAlignment="Top" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -4373,15 +4329,12 @@
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Text="{i18n:T 请先将游戏界面切换至待测试分类界面}"
                                   TextWrapping="Wrap" />
-                    <controls:TwoStateButton Grid.Row="0"
+                    <controls:SoloTaskButton Grid.Row="0"
                                              Grid.RowSpan="2"
                                              Grid.Column="1"
                                              Margin="0,0,36,0"
-                                             DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="{i18n:T 停止}"
-                                             EnableCommand="{Binding SwitchGridIconsModelAccuracyTestCommand}"
-                                             EnableContent="{Binding SwitchGridIconsAccuracyTestButtonText}"
-                                             IsChecked="{Binding SwitchGetGridIconsEnabled}" />
+                                             ActionCommand="{Binding ManageSoloTaskCommand}"
+                                             State="{Binding SoloTaskStates[GridIconsAccuracyTest]}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -4417,15 +4370,12 @@
                               ItemsSource="{Binding InventoryCountComparisonTargetDict}"
                               SelectedItem="{Binding InventoryCountComparisonTarget, Converter={StaticResource EnumToKVPConverter}, Mode=TwoWay}"
                               DisplayMemberPath="Value" />
-                    <controls:TwoStateButton Grid.Row="0"
+                    <controls:SoloTaskButton Grid.Row="0"
                                              Grid.RowSpan="2"
                                              Grid.Column="2"
                                              Margin="0,0,36,0"
-                                             DisableCommand="{Binding StopSoloTaskCommand}"
-                                             DisableContent="{i18n:T 停止}"
-                                             EnableCommand="{Binding RunInventoryCountComparisonCommand}"
-                                             EnableContent="{i18n:T 运行}"
-                                             IsChecked="{Binding SwitchGetGridIconsEnabled}" />
+                                             ActionCommand="{Binding ManageSoloTaskCommand}"
+                                             State="{Binding SoloTaskStates[InventoryCountComparison]}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>

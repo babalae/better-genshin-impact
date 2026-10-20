@@ -23,6 +23,7 @@ using BetterGenshinImpact.GameTask.QuickClaimReward;
 using BetterGenshinImpact.GameTask.QuickSereniteaPot;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.GameTask.UseRedeemCode;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
@@ -674,7 +675,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             nameof(Config.HotKeyConfig.AutoGeniusInvokationHotkey),
             Config.HotKeyConfig.AutoGeniusInvokationHotkey,
             Config.HotKeyConfig.AutoGeniusInvokationHotkeyType,
-            (_, _) => { SwitchSoloTask(_taskSettingsPageViewModel.SwitchAutoGeniusInvokationCommand); }
+            (_, _) => { ManageSoloTask(SoloTaskType.AutoGeniusInvokation); }
         ));
 
         soloTaskDirectory.Children.Add(new HotKeySettingModel(
@@ -682,7 +683,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             nameof(Config.HotKeyConfig.AutoWoodHotkey),
             Config.HotKeyConfig.AutoWoodHotkey,
             Config.HotKeyConfig.AutoWoodHotkeyType,
-            (_, _) => { SwitchSoloTask(_taskSettingsPageViewModel.SwitchAutoWoodCommand); }
+            (_, _) => { ManageSoloTask(SoloTaskType.AutoWood); }
         ));
 
         soloTaskDirectory.Children.Add(new HotKeySettingModel(
@@ -690,7 +691,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             nameof(Config.HotKeyConfig.AutoFightHotkey),
             Config.HotKeyConfig.AutoFightHotkey,
             Config.HotKeyConfig.AutoFightHotkeyType,
-            (_, _) => { SwitchSoloTask(_taskSettingsPageViewModel.SwitchAutoFightCommand); }
+            (_, _) => { ManageSoloTask(SoloTaskType.AutoFight); }
         ));
 
         soloTaskDirectory.Children.Add(new HotKeySettingModel(
@@ -698,28 +699,28 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             nameof(Config.HotKeyConfig.AutoDomainHotkey),
             Config.HotKeyConfig.AutoDomainHotkey,
             Config.HotKeyConfig.AutoDomainHotkeyType,
-            (_, _) => { SwitchSoloTask(_taskSettingsPageViewModel.SwitchAutoDomainCommand); }
+            (_, _) => { ManageSoloTask(SoloTaskType.AutoDomain); }
         ));
         soloTaskDirectory.Children.Add(new HotKeySettingModel(
             "启动/停止自动音游",
             nameof(Config.HotKeyConfig.AutoMusicGameHotkey),
             Config.HotKeyConfig.AutoMusicGameHotkey,
             Config.HotKeyConfig.AutoMusicGameHotkeyType,
-            (_, _) => { SwitchSoloTask(_taskSettingsPageViewModel.SwitchAutoMusicGameCommand); }
+            (_, _) => { ManageSoloTask(SoloTaskType.AutoMusicGame); }
         ));
         soloTaskDirectory.Children.Add(new HotKeySettingModel(
             "启动/停止自动钓鱼",
             nameof(Config.HotKeyConfig.AutoFishingGameHotkey),
             Config.HotKeyConfig.AutoFishingGameHotkey,
             Config.HotKeyConfig.AutoFishingGameHotkeyType,
-            (_, _) => { SwitchSoloTask(_taskSettingsPageViewModel.SwitchAutoFishingCommand); }
+            (_, _) => { ManageSoloTask(SoloTaskType.AutoFishing); }
         ));
         soloTaskDirectory.Children.Add(new HotKeySettingModel(
             "启动/停止自动烹饪",
             nameof(Config.HotKeyConfig.AutoCookGameHotkey),
             Config.HotKeyConfig.AutoCookGameHotkey,
             Config.HotKeyConfig.AutoCookGameHotkeyType,
-            (_, _) => { SwitchSoloTask(_taskSettingsPageViewModel.SwitchAutoCookCommand); }
+            (_, _) => { ManageSoloTask(SoloTaskType.AutoCook); }
         ));
 
         macroDirectory.Children.Add(new HotKeySettingModel(
@@ -1029,6 +1030,20 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         {
             asyncRelayCommand.Execute(null);
         }
+    }
+
+    /// <summary>
+    /// 独立任务专用快捷键与页面按钮共用同一多实例管理入口。
+    /// </summary>
+    private void ManageSoloTask(SoloTaskType taskType)
+    {
+        UIDispatcherHelper.BeginInvoke(() =>
+        {
+            if (_taskSettingsPageViewModel.ManageSoloTaskCommand.CanExecute(taskType))
+            {
+                _taskSettingsPageViewModel.ManageSoloTaskCommand.Execute(taskType);
+            }
+        });
     }
 
     private string ToChinese(bool enabled)

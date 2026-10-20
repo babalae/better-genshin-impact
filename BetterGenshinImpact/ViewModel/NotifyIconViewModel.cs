@@ -23,12 +23,19 @@ namespace BetterGenshinImpact.ViewModel;
 public partial class NotifyIconViewModel : ObservableObject
 {
     private readonly ChildSessionService _childSessionService;
+    /// <summary>
+    /// 提供主实例当前连接的 WebView2 子实例状态。
+    /// </summary>
+    private readonly InstanceService _instanceService;
 
     public bool IsChildSessionEntryVisible => InstanceBootstrap.Current.Context.IsRoot;
 
-    public NotifyIconViewModel(ChildSessionService childSessionService)
+    public NotifyIconViewModel(
+        ChildSessionService childSessionService,
+        InstanceService instanceService)
     {
         _childSessionService = childSessionService;
+        _instanceService = instanceService;
     }
 
     [RelayCommand]
@@ -56,6 +63,15 @@ public partial class NotifyIconViewModel : ObservableObject
     [RelayCommand]
     public void Exit()
     {
+        // WebView2 实例依赖主实例提供 IPC 服务，应先关闭网页版实例再退出主实例。
+        if (_instanceService.HasConnectedWebViewInstance())
+        {
+            ThemedMessageBox.Warning(
+                "WebView2 云原神实例仍在运行，请先关闭所有 WebView2 实例，再退出 BetterGI。",
+                "WebView2 实例未关闭");
+            return;
+        }
+
         if (_childSessionService.HasActiveChildSession())
         {
             ThemedMessageBox.Warning(

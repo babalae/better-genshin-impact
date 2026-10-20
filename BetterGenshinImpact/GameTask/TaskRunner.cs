@@ -13,6 +13,7 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
+using BetterGenshinImpact.GameTask.SoloTask;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -50,6 +51,20 @@ public class TaskRunner
     public async Task RunCurrentAsync(Func<GameRuntime, CancellationToken, Task> action, bool waitForMainUi = true,
         CancellationToken requestToken = default)
     {
+        _ = await RunCurrentWithResultAsync(action, waitForMainUi, requestToken);
+    }
+
+    /// <summary>
+    /// 加锁运行独立任务，并向多实例运行协调器返回明确的结束原因。
+    /// </summary>
+    /// <param name="action">接收本轮运行环境与取消令牌的任务操作。</param>
+    /// <param name="waitForMainUi">启动游戏运行环境后是否等待进入可执行任务的游戏界面。</param>
+    /// <param name="requestToken">调用方附加的取消令牌。</param>
+    public async Task<SoloTaskRunResult> RunCurrentWithResultAsync(
+        Func<GameRuntime, CancellationToken, Task> action,
+        bool waitForMainUi = true,
+        CancellationToken requestToken = default)
+    {
         ArgumentNullException.ThrowIfNull(action);
 
         // 加锁
@@ -57,7 +72,11 @@ public class TaskRunner
         if (!hasLock)
         {
             _logger.LogError("任务启动失败：当前存在正在运行中的独立任务，请不要重复执行任务！");
-            return;
+            return new SoloTaskRunResult
+            {
+                Outcome = SoloTaskRunOutcome.Rejected,
+                ErrorMessage = "当前实例存在正在运行中的独立任务"
+            };
         }
 
         var runCancellation = requestToken.CanBeCanceled
@@ -65,6 +84,7 @@ public class TaskRunner
             : new CancellationTokenSource();
         var stopReasonValue = -1;
         IDisposable? stopRegistration = null;
+        var result = new SoloTaskRunResult { Outcome = SoloTaskRunOutcome.Completed };
         // 进入任务模式后才有值，收尾时据此退出任务模式
         GameRuntime? taskRuntime = null;
         try
@@ -97,6 +117,13 @@ public class TaskRunner
                 // 连续执行时，抛出异常，终止执行
                 throw;
             }
+
+            result = new SoloTaskRunResult
+            {
+                Outcome = runCancellation.IsCancellationRequested
+                    ? SoloTaskRunOutcome.Cancelled
+                    : SoloTaskRunOutcome.Completed
+            };
         }
         catch (OperationCanceledException)
         {
@@ -109,12 +136,19 @@ public class TaskRunner
                 // 连续执行时，抛出异常，终止执行
                 throw;
             }
+
+            result = new SoloTaskRunResult { Outcome = SoloTaskRunOutcome.Cancelled };
         }
         catch (Exception e)
         {
             Notify.Event(NotificationEvent.TaskError).Error("任务执行异常", e);
             _logger.LogError(e.Message);
             _logger.LogDebug(e.StackTrace);
+            result = new SoloTaskRunResult
+            {
+                Outcome = SoloTaskRunOutcome.Failed,
+                ErrorMessage = e.GetBaseException().Message
+            };
         }
         finally
         {
@@ -149,6 +183,8 @@ public class TaskRunner
                 }
             }
         }
+
+        return result;
     }
 
     /// <summary>
@@ -186,6 +222,24 @@ public class TaskRunner
     {
         ArgumentNullException.ThrowIfNull(create);
         return RunThreadAsync((runtime, ct) => create(runtime).Start(ct), waitForMainUi, requestToken);
+    }
+
+    /// <summary>
+    /// 使用独立任务入口运行任务并返回明确的结束原因。
+    /// </summary>
+    /// <param name="create">用本轮运行环境构造独立任务。</param>
+    /// <param name="waitForMainUi">是否等待进入可执行任务的游戏界面。</param>
+    /// <param name="requestToken">调用方附加的取消令牌。</param>
+    public Task<SoloTaskRunResult> RunSoloTaskWithResultAsync(
+        Func<GameRuntime, ISoloTask> create,
+        bool waitForMainUi = true,
+        CancellationToken requestToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(create);
+        return Task.Run(() => RunCurrentWithResultAsync(
+            (runtime, ct) => create(runtime).Start(ct),
+            waitForMainUi,
+            requestToken));
     }
 
     /// <summary>

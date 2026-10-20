@@ -523,6 +523,16 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
     [RelayCommand]
     private void OnClosing(CancelEventArgs e)
     {
+        // WebView2 实例依赖主实例提供 IPC 服务，应先关闭网页版实例再退出主实例。
+        if (_instanceService.HasConnectedWebViewInstance())
+        {
+            e.Cancel = true;
+            ThemedMessageBox.Warning(
+                "WebView2 云原神实例仍在运行，请先关闭所有 WebView2 实例，再关闭主窗口。",
+                "WebView2 实例未关闭");
+            return;
+        }
+
         if (_childSessionService.HasActiveChildSession())
         {
             e.Cancel = true;
