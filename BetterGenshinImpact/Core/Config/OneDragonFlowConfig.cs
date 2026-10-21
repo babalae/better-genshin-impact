@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Model;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.Core.Config;
@@ -32,6 +33,20 @@ public partial class OneDragonFlowConfig : ObservableObject
     /// 任务定义（Id → 任务名），用于支持同名任务重复添加
     /// </summary>
     public Dictionary<string, string> TaskDefinitions { get; set; } = new();
+
+    /// <summary>
+    /// 任务条件（Id → 条件对象），键不存在或条件对象所有属性为 false 表示每天运行
+    /// </summary>
+    public Dictionary<string, OneDragonTaskCondition> TaskConditions { get; set; } = new();
+
+    public OneDragonTaskCondition GetTaskCondition(string id)
+    {
+        if (TaskConditions != null && TaskConditions.TryGetValue(id, out var condition) && condition != null)
+        {
+            return condition;
+        }
+        return new OneDragonTaskCondition();
+    }
     // 合成树脂的国家
     [ObservableProperty]
     private string _craftingBenchCountry = "枫丹";
