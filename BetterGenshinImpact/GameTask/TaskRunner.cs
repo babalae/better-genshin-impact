@@ -29,6 +29,12 @@ public class TaskRunner
     /// </summary>
     private readonly TaskStopService _taskStopService = App.GetService<TaskStopService>();
 
+    /// <summary>
+    /// 独立任务运行期间的 Windows 通知抑制服务。
+    /// </summary>
+    private readonly WindowsNotificationSuppressionService _windowsNotificationSuppressionService =
+        App.GetService<WindowsNotificationSuppressionService>()!;
+
     // private readonly DispatcherTimerOperationEnum _timerOperation = DispatcherTimerOperationEnum.None;
 
     private readonly string _name = string.Empty;
@@ -84,11 +90,14 @@ public class TaskRunner
             : new CancellationTokenSource();
         var stopReasonValue = -1;
         IDisposable? stopRegistration = null;
+        IDisposable? notificationSuppression = null;
         var result = new SoloTaskRunResult { Outcome = SoloTaskRunOutcome.Completed };
         // 进入任务模式后才有值，收尾时据此退出任务模式
         GameRuntime? taskRuntime = null;
         try
         {
+            // 成功取得独立任务锁后再修改系统设置，避免启动请求被拒绝时短暂切换勿扰。
+            notificationSuppression = _windowsNotificationSuppressionService.TrySuppressForSoloTask();
             stopRegistration = _taskStopService.Register(reason =>
             {
                 Interlocked.CompareExchange(ref stopReasonValue, (int)reason, -1);
@@ -172,13 +181,20 @@ public class TaskRunner
                 }
                 finally
                 {
-                    stopRegistration?.Dispose();
-                    runCancellation.Dispose();
-
-                    // 释放锁
-                    if (hasLock)
+                    try
                     {
-                        TaskSemaphore.Release();
+                        notificationSuppression?.Dispose();
+                    }
+                    finally
+                    {
+                        stopRegistration?.Dispose();
+                        runCancellation.Dispose();
+
+                        // 释放锁
+                        if (hasLock)
+                        {
+                            TaskSemaphore.Release();
+                        }
                     }
                 }
             }
