@@ -50,6 +50,8 @@ public partial class PathExecutor
     public int SuccessFight = 0;
     //路径追踪完全走完所有路径结束的标识
     public bool SuccessEnd = false;
+    //是否因 HandledException 中途结束（JS 调用不设置 EndAction 时，即表示中途放弃路径，不能视为成功）
+    public bool EndByHandledException = false;
     private PathingPartyConfig? _partyConfig;
     private CancellationToken ct;
     private PathExecutorSuspend pathExecutorSuspend;
@@ -253,6 +255,7 @@ public partial class PathExecutor
                 catch (HandledException handledException)
                 {
                     SuccessEnd = true;
+                    EndByHandledException = true;
                     break;
                 }
                 catch (NormalEndException normalEndException)
