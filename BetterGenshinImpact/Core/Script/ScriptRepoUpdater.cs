@@ -63,10 +63,17 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     public event EventHandler? AutoUpdateStateChanged;
 
     /// <summary>
-    /// 命令行启动时并行执行的自动更新 Task。
-    /// StartGameTask 结束后会 await 此 Task，确保更新完成后再执行任务。
+    /// 任务开始前等待订阅脚本自动更新的最长时间。
+    /// git 拉取与跨进程锁等待都不支持取消，超时后让本轮任务失败，避免无人值守时一直卡住
     /// </summary>
-    public Task? CommandLineAutoUpdateTask { get; set; }
+    private static readonly TimeSpan AutoUpdateWaitTimeout = TimeSpan.FromMinutes(10);
+
+    /// <summary>
+    /// 最近一次启动的订阅脚本自动更新。
+    /// 自动更新会先删除用户脚本目录再从仓库检出，任务开始前等待它结束，避免执行脚本时读到更新了一半的目录。
+    /// 启动流程写入、任务线程读取，因此使用 volatile；初始为已完成的 Task，无需判空
+    /// </summary>
+    private volatile Task _autoUpdateTask = Task.CompletedTask;
 
     // 仓储位置
     public static readonly string ReposPath = Global.Absolute("Repos");
@@ -143,12 +150,61 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     // }
 
     /// <summary>
+    /// 在线程池中启动一次订阅脚本自动更新，并记录为进行中的更新。平时启动和命令行启动共用这个入口，
+    /// 任务开始前通过 <see cref="WaitForAutoUpdateAsync"/> 等待它结束
+    /// </summary>
+    public void StartAutoUpdate()
+    {
+        // 使用 Task.Run 确保整个流程在线程池执行，避免 WPF SynchronizationContext
+        // 将 await 后续调度回 UI 线程导致大量 IO/Git 操作阻塞界面
+        _autoUpdateTask = Task.Run(async () =>
+        {
+            try
+            {
+                await AutoUpdateSubscribedScripts();
+            }
+            catch (Exception e)
+            {
+                // 更新主体已自行捕获异常，这里兜住订阅路径迁移等前置步骤，保证记录的 Task 不会以失败结束
+                _logger.LogWarning(e, "自动更新订阅脚本失败：{Message}", e.Message);
+            }
+        });
+    }
+
+    /// <summary>
+    /// 等待进行中的订阅脚本自动更新结束；没有进行中的更新时立即返回
+    /// </summary>
+    /// <param name="ct">当前任务的取消令牌</param>
+    /// <exception cref="TimeoutException">等待超过 <see cref="AutoUpdateWaitTimeout"/></exception>
+    public async Task WaitForAutoUpdateAsync(CancellationToken ct)
+    {
+        var pending = _autoUpdateTask;
+        if (pending.IsCompleted)
+        {
+            return;
+        }
+
+        _logger.LogInformation("正在等待订阅脚本更新完成...");
+        try
+        {
+            await pending.WaitAsync(AutoUpdateWaitTimeout, ct);
+        }
+        catch (TimeoutException)
+        {
+            // 更新仍在后台继续，下一轮任务会再次等待
+            throw new TimeoutException($"等待订阅脚本更新超时（{AutoUpdateWaitTimeout.TotalMinutes:0} 分钟），本次任务不再执行");
+        }
+
+        _logger.LogInformation("订阅脚本更新完成，继续执行任务");
+    }
+
+    /// <summary>
     /// 自动更新已订阅的脚本
     /// 在启动时先拉取最新仓库，然后检查已订阅的脚本是否有更新，
     /// 如果有则自动从仓库中检出最新版本到用户目录。
     /// 类似于 Web 端的"一键更新"功能
     /// </summary>
-    public async Task AutoUpdateSubscribedScripts()
+    private async Task AutoUpdateSubscribedScripts()
     {
         // 迁移旧 config.json 中的订阅路径到独立文件
         MigrateSubscribedPathsFromConfig();

@@ -419,7 +419,7 @@ WinEventHook 从 Dispatcher 搬进这里，同时做两处调整：
 - 总是调用 `HomePageViewModel.HandleActivation` → `GameRuntimeService.StartAsync`，与有没有 `start` 参数无关（例如应用内重启）。宿主窗口在 `StartAsync` 的同步阶段创建，并设为 `Application.MainWindow`，之后等待绑定。
 - 一条龙：依次调用 `OneDragonFlowViewModel.OnNavigatedTo()`（加载配置列表）和 `LoadedCommand`（读取命令行后执行），与页面被导航到时的顺序一致。
 - 配置组 / 任务进度：直接调用 `ScriptControlViewModel` 的对应方法。
-- 这些命令都由 `StartGameTask` 自行启动截图器，与上面的自动启动走同一个串行的 `StartAsync`，不会重复绑定。
+- 这些命令都由 `TaskRunner` 获取运行环境时自行启动截图器，与上面的自动启动走同一个串行的 `StartAsync`，不会重复绑定。
 
 ### 7.2 宿主窗口 CloudWebHostWindow
 
@@ -585,7 +585,7 @@ Primary 的首页：截图器启动过程中（`GameRuntimeService.IsStarting`�
 ## 8. 生命周期、所有权与 DI
 
 ```text
-启动（首页按钮 / ScriptService.StartGameTask / 命令行 start）
+启动（首页按钮 / TaskRunner.AcquireRuntimeAsync / 命令行 start）
   GameRuntimeService.StartAsync(ct)             切到 UI 线程；串行；已在运行时返回 true
     1. runtime = await provider.AcquireAsync(ct)    期间 IsStarting = true；返回 null 时整体返回 false
        获取期间收到停止请求（stopVersion 变化）：释放 runtime，返回 false，不绑定
@@ -824,7 +824,7 @@ P3：渐进收敛。
 | 5 | 移动、缩放游戏窗口 | 遮罩跟随 |
 | 6 | 运行中关闭游戏 | 截图器自动停止 |
 | 7 | 任务中切走焦点，分别开关 `RestoreFocusOnLostEnabled` | 开启时抢回焦点，关闭时暂停并重试 |
-| 8 | 未手动启动截图器，直接运行调度组 | `StartGameTask` 自动启动截图器，遮罩正常显示 |
+| 8 | 未手动启动截图器，直接运行调度组 | `TaskRunner` 自动启动截图器，遮罩正常显示 |
 | 9 | 一条龙结束后"关闭游戏" | 游戏被关闭，截图器随之停止 |
 | 10 | 在桌面分身实例中启动截图器 | 行为与改造前一致 |
 
@@ -860,7 +860,7 @@ P3：渐进收敛。
 | Provider 的启动接口 | 只保留一个 `AcquireAsync` | "找不到就启动"的策略属于各个环境，编排层不需要按环境分支 |
 | 网页版窗口 | `WebPageGameWindow` 继承 `Win32GameWindow` | 宿主是真实顶层窗口，几何、前台、钩子都可以复用，只覆写三个成员 |
 | WinEventHook | 按游戏进程订阅，去掉 SKIPOWN 标志 | 一套实现同时适用于两种环境，也不再接收全系统的事件 |
-| 启动在哪个线程执行 | 统一切到 UI 线程 | 宿主窗口和 WinEventHook 都依赖消息循环，而 `StartGameTask` 可能从后台线程调用 |
+| 启动在哪个线程执行 | 统一切到 UI 线程 | 宿主窗口和 WinEventHook 都依赖消息循环，而 `TaskRunner` 可能从后台线程启动截图器 |
 | 运行环境如何选择 | 由实例类型决定 | 网页版一定运行在独立实例中 |
 | 多实例 | 按实例名运行多个进程，每个进程一个运行环境 | 进程级单例天然隔离；`WebView2InputBridge` 需要和 WebView2 同进程 |
 | 实例名存储 | 每个实例一个目录，不建索引文件 | 数据目录本身就是实例名的唯一来源，不会出现不一致 |

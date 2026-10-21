@@ -57,7 +57,7 @@ public class ApplicationHostService(
     {
         // 总是先启动截图器：打开宿主并等待进入游戏，HomePageViewModel 同时负责遮罩窗口与键鼠监听。
         // 宿主在 StartAsync 的同步部分就已创建并设为主窗口，后面的命令行任务弹出的提示因此有 Owner；
-        // 任务自身调用 StartGameTask 时会等这次启动完成
+        // 任务自身经 TaskRunner 获取运行环境时会等这次启动完成
         serviceProvider.GetRequiredService<HomePageViewModel>().HandleActivation(cmdOptions);
 
         switch (cmdOptions.Action)
@@ -116,12 +116,11 @@ public class ApplicationHostService(
                 _ = _navigationWindow.Navigate(typeof(HomePage));
 
                 // 命令行启动时，并行更新订阅脚本（不阻塞游戏启动和导航）
-                // StartGameTask 会在游戏进入主界面后等待此 Task 完成，再开始执行任务
+                // TaskRunner 获取运行环境后会等待这次更新完成，再开始执行任务
                 var scriptConfig = config.ScriptConfig;
                 if (instanceService.Context.IsRoot && scriptConfig.AutoUpdateBeforeCommandLineRun)
                 {
-                    ScriptRepoUpdater.Instance.CommandLineAutoUpdateTask =
-                        Task.Run(() => ScriptRepoUpdater.Instance.AutoUpdateSubscribedScripts());
+                    ScriptRepoUpdater.Instance.StartAutoUpdate();
                 }
 
                 switch (cmdOptions.Action)

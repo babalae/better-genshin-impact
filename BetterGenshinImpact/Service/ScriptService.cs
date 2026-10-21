@@ -13,17 +13,12 @@ using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
-using BetterGenshinImpact.GameTask.Common;
-using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
-using BetterGenshinImpact.ViewModel.Pages;
-using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
-using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.Service;
 
@@ -369,94 +364,4 @@ public partial class ScriptService : IScriptService
 
     [GeneratedRegex(@"^(?!\s*\/\/)\s*dispatcher\.\s*addTimer", RegexOptions.Multiline)]
     private static partial Regex DispatcherAddTimerRegex();
-
-
-    /// <summary>
-    /// 按需启动游戏运行环境，并使用调用方令牌等待进入可执行任务的游戏界面。
-    /// </summary>
-    /// <param name="ct">当前任务的取消令牌。</param>
-    /// <param name="waitForMainUi">是否等待进入主界面、可关闭界面或秘境界面。</param>
-    /// <returns>本轮任务使用的运行环境</returns>
-    /// <exception cref="NormalEndException">截图器无法启动</exception>
-    public static async Task<GameRuntime> StartGameTask(CancellationToken ct, bool waitForMainUi = true)
-    {
-        // 没启动时候，启动截图器
-        // 静态方法无法构造注入（调用方包括直接 new 出来的 TaskRunner），这里从容器取服务
-        var gameRuntimeService = App.GetService<GameRuntimeService>()!;
-        var runtime = gameRuntimeService.Current;
-        if (runtime is null)
-        {
-            runtime = await gameRuntimeService.StartAsync(ct);
-            ct.ThrowIfCancellationRequested();
-            if (runtime is null)
-            {
-                // 未找到窗口、用户取消等原因已由启动流程提示，这里直接结束任务，不再空等
-                UIDispatcherHelper.Invoke(() => { Toast.Warning("请先在启动页，启动截图器再使用本功能"); });
-                throw new NormalEndException("截图器未启动");
-            }
-
-            if (waitForMainUi)
-            {
-                var startedRuntime = runtime;
-                await Task.Run(async () =>
-                {
-                    await Task.Delay(200, ct);
-                    var first = true;
-                    var sw = Stopwatch.StartNew();
-                    var loseFocusCount = 0;
-                    while (true)
-                    {
-                        ct.ThrowIfCancellationRequested();
-                        // 等待期间截图器被停止：本轮任务随之结束
-                        startedRuntime.ThrowIfStopping();
-
-                        using var content = startedRuntime.CaptureToRectArea();
-                        if (Bv.IsInMainUi(content) || Bv.IsInAnyClosableUi(content) || Bv.IsInDomain(content))
-                        {
-                            return;
-                        }
-
-                        if (first)
-                        {
-                            first = false;
-                            TaskControl.Logger.LogInformation("当前不在游戏主界面，等待进入主界面后执行任务...");
-                            TaskControl.Logger.LogInformation("如果你已经在游戏内的其他界面，请自行退出当前界面（ESC），或是30秒后将程序将自动尝试到入主界面，使当前任务能够继续运行！");
-                        }
-
-                        await Task.Delay(500, ct);
-                        if (sw.Elapsed.TotalSeconds >= 30)
-                        {
-                            //防止自启动游戏后因为一些原因失焦，导致一直卡住
-                            if (!startedRuntime.IsOperable())
-                            {
-                                loseFocusCount++;
-                                if (loseFocusCount>50 && loseFocusCount<100)
-                                {
-                                    SystemControl.MinimizeAndActivateWindow(startedRuntime.Window.Handle);
-                                }
-                                startedRuntime.Window.Activate();
-                            }
-
-                            //自启动游戏，如果鼠标在游戏外面，将无法自动开门，这里尝试移动到游戏界面
-                            if (sw.Elapsed.TotalSeconds < 200)
-                            {
-                                startedRuntime.GameRegion1080PPosMove(300, 300);
-                            }
-
-                        }
-                    }
-                }, ct);
-            }
-        }
-
-        // 等待命令行启动时并行执行的自动更新完成（如果有）
-        var pendingUpdate = ScriptRepoUpdater.Instance.CommandLineAutoUpdateTask;
-        if (pendingUpdate != null)
-        {
-            await pendingUpdate.WaitAsync(ct);
-            ScriptRepoUpdater.Instance.CommandLineAutoUpdateTask = null;
-        }
-
-        return runtime;
-    }
 }

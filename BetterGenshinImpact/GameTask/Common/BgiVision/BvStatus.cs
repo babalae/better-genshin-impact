@@ -158,6 +158,16 @@ public static partial class Bv
     }
 
     /// <summary>
+    /// 是否已进入游戏、处于可执行任务的界面：主界面、任意可关闭的界面或秘境中
+    /// </summary>
+    /// <param name="captureRa">当前截图区域</param>
+    /// <returns>处于上述任一界面时返回 true</returns>
+    public static bool IsInGameReadyUi(ImageRegion captureRa)
+    {
+        return IsInMainUi(captureRa) || IsInAnyClosableUi(captureRa) || IsInDomain(captureRa);
+    }
+
+    /// <summary>
     /// 是否在队伍选择界面
     /// </summary>
     /// <param name="captureRa"></param>

@@ -60,8 +60,8 @@ public class CommandLineOptions
     public bool HasTaskArgs => Action != CommandLineAction.None;
 
     /// <summary>
-    /// 是否是需要 StartGameTask 自行处理游戏启动的命令
-    /// （一条龙、配置组由各自流程中的 StartGameTask 启动游戏）
+    /// 是否是需要任务自行处理游戏启动的命令
+    /// （一条龙、配置组由各自流程中的 TaskRunner 按需启动游戏）
     /// </summary>
     public bool ShouldDeferGameStart => Action is CommandLineAction.StartOneDragon
         or CommandLineAction.StartGroups or CommandLineAction.PuloniaRun;

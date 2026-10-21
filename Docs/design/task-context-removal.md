@@ -190,7 +190,7 @@ public async Task RunCurrentAsync(Func<GameRuntime, CancellationToken, Task> act
 {
     // …加锁、注册停止回调，与现在一致…
     // 返回本轮使用的运行环境；启动失败时抛 NormalEndException，不再在等待主界面的循环里空转
-    var runtime = await ScriptService.StartGameTask(runCancellation.Token, waitForMainUi);
+    var runtime = await AcquireRuntimeAsync(waitForMainUi, runCancellation.Token);
     Init(runtime);                       // 清遮罩、runtime.Window.Activate()
     await action(runtime, runCancellation.Token);
     // finally：End(runtime)；runtime.Stopping 已取消时跳过释放按键
@@ -532,7 +532,7 @@ public sealed class GameScreenshotService(AllConfig config, ILogger<GameScreensh
 | # | 问题 | 现状 | 建议 |
 | --- | --- | --- | --- |
 | 8 | "一次运行"没有对应的对象 | `RunnerContext` 保存暂停状态、拾取暂停计数、`CombatScenes` 缓存、`IsContinuousRunGroup`、当前脚本项目，却是一个进程单例，靠每次运行前后调用 `Clear()` 重置 | `TaskRunner` 每次运行时创建一个运行对象，和 runtime 一起交给 action。做法与本设计显式传递 runtime 一致，适合在本设计落地后进行 |
-| 9 | `TaskRunner` 不在 DI 中 | 共 29 处 `new TaskRunner()`。它内部用 `App.GetService` 获取 `TaskStopService`；静态的 `ScriptService.StartGameTask` 也用服务定位获取 `GameRuntimeService`。全局任务锁是静态字段 `TaskControl.TaskSemaphore`，被调度器、Pulonia、推理基准直接引用 | 把 `TaskRunner` 注册为 DI 单例，持有任务锁、`TaskStopService` 和 `GameRuntimeService`，调用方改为注入。任务锁不再是静态字段 |
+| 9 | `TaskRunner` 不在 DI 中 | 共 29 处 `new TaskRunner()`。它内部用 `App.GetService` 获取 `TaskStopService` 和 `GameRuntimeService`。全局任务锁是静态字段 `TaskControl.TaskSemaphore`，被调度器、Pulonia、推理基准直接引用 | 把 `TaskRunner` 注册为 DI 单例，持有任务锁、`TaskStopService` 和 `GameRuntimeService`，调用方改为注入。任务锁不再是静态字段 |
 | 10 | 脚本宿主的创建不在 DI 中 | `EngineExtend.InitHost` 是静态方法，宿主需要的进程级服务（调度器、配置、截图服务）只能靠参数层层传入或服务定位获得 | 改为 DI 单例的宿主工厂：进程级服务通过构造函数注入，`Create(engine, runtime, ct)` 只接收每次执行时才有的参数。"进程级依赖注入、运行期对象传参"这个模式同样适用于 `CreateTriggers`，触发器的依赖继续增多时改为工厂服务 |
 
 不建议用 DI Scope 来表示"一次绑定"或"一次运行"：

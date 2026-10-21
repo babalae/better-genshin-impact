@@ -14,6 +14,9 @@ using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 using BetterGenshinImpact.GameTask.SoloTask;
+using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.Helpers;
+using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -35,6 +38,11 @@ public class TaskRunner
     private readonly WindowsNotificationSuppressionService _windowsNotificationSuppressionService =
         App.GetService<WindowsNotificationSuppressionService>()!;
 
+    /// <summary>
+    /// 游戏运行环境的编排服务，用于按需启动截图器。TaskRunner 有多处直接 new，暂时从容器获取
+    /// </summary>
+    private readonly GameRuntimeService _gameRuntimeService = App.GetService<GameRuntimeService>()!;
+
     // private readonly DispatcherTimerOperationEnum _timerOperation = DispatcherTimerOperationEnum.None;
 
     private readonly string _name = string.Empty;
@@ -52,7 +60,7 @@ public class TaskRunner
     /// 加锁并使用本轮独立取消令牌运行任务。
     /// </summary>
     /// <param name="action">接收本轮运行环境与取消令牌的任务操作。任务只使用这个运行环境，不查询"当前"</param>
-    /// <param name="waitForMainUi">启动游戏运行环境后是否等待进入可执行任务的游戏界面。</param>
+    /// <param name="waitForMainUi">本轮新启动截图器时是否等待进入可执行任务的游戏界面；截图器已在运行时不等待。</param>
     /// <param name="requestToken">调用方附加的取消令牌。</param>
     public async Task RunCurrentAsync(Func<GameRuntime, CancellationToken, Task> action, bool waitForMainUi = true,
         CancellationToken requestToken = default)
@@ -64,7 +72,7 @@ public class TaskRunner
     /// 加锁运行独立任务，并向多实例运行协调器返回明确的结束原因。
     /// </summary>
     /// <param name="action">接收本轮运行环境与取消令牌的任务操作。</param>
-    /// <param name="waitForMainUi">启动游戏运行环境后是否等待进入可执行任务的游戏界面。</param>
+    /// <param name="waitForMainUi">本轮新启动截图器时是否等待进入可执行任务的游戏界面；截图器已在运行时不等待。</param>
     /// <param name="requestToken">调用方附加的取消令牌。</param>
     public async Task<SoloTaskRunResult> RunCurrentWithResultAsync(
         Func<GameRuntime, CancellationToken, Task> action,
@@ -106,7 +114,7 @@ public class TaskRunner
             _logger.LogInformation("→ {Text}", _name + "任务启动！");
 
             // 本轮令牌覆盖游戏启动等待、任务模式和全部业务操作。
-            var runtime = await ScriptService.StartGameTask(runCancellation.Token, waitForMainUi);
+            var runtime = await AcquireRuntimeAsync(waitForMainUi, runCancellation.Token);
             runCancellation.Token.ThrowIfCancellationRequested();
             Init(runtime);
             taskRuntime = runtime;
@@ -207,7 +215,7 @@ public class TaskRunner
     /// 在后台启动任务且不等待完成。
     /// </summary>
     /// <param name="action">接收本轮运行环境与取消令牌的任务操作。</param>
-    /// <param name="waitForMainUi">是否等待进入可执行任务的游戏界面。</param>
+    /// <param name="waitForMainUi">本轮新启动截图器时是否等待进入可执行任务的游戏界面；截图器已在运行时不等待。</param>
     /// <param name="requestToken">调用方附加的取消令牌。</param>
     public void FireAndForget(Func<GameRuntime, CancellationToken, Task> action, bool waitForMainUi = true,
         CancellationToken requestToken = default)
@@ -219,7 +227,7 @@ public class TaskRunner
     /// 在线程池中运行独立任务。
     /// </summary>
     /// <param name="action">接收本轮运行环境与取消令牌的任务操作。</param>
-    /// <param name="waitForMainUi">是否等待进入可执行任务的游戏界面。</param>
+    /// <param name="waitForMainUi">本轮新启动截图器时是否等待进入可执行任务的游戏界面；截图器已在运行时不等待。</param>
     /// <param name="requestToken">调用方附加的取消令牌。</param>
     public async Task RunThreadAsync(Func<GameRuntime, CancellationToken, Task> action, bool waitForMainUi = true,
         CancellationToken requestToken = default)
@@ -231,7 +239,7 @@ public class TaskRunner
     /// 使用独立任务入口运行一个 <see cref="ISoloTask"/>。任务在拿到本轮运行环境之后才构造，构造期不会读到上一次绑定的旧值
     /// </summary>
     /// <param name="create">用本轮运行环境构造独立任务。</param>
-    /// <param name="waitForMainUi">启动游戏运行环境后是否等待进入可执行任务的游戏界面。</param>
+    /// <param name="waitForMainUi">本轮新启动截图器时是否等待进入可执行任务的游戏界面；截图器已在运行时不等待。</param>
     /// <param name="requestToken">调用方附加的取消令牌。</param>
     public Task RunSoloTaskAsync(Func<GameRuntime, ISoloTask> create, bool waitForMainUi = true,
         CancellationToken requestToken = default)
@@ -244,7 +252,7 @@ public class TaskRunner
     /// 使用独立任务入口运行任务并返回明确的结束原因。
     /// </summary>
     /// <param name="create">用本轮运行环境构造独立任务。</param>
-    /// <param name="waitForMainUi">是否等待进入可执行任务的游戏界面。</param>
+    /// <param name="waitForMainUi">本轮新启动截图器时是否等待进入可执行任务的游戏界面；截图器已在运行时不等待。</param>
     /// <param name="requestToken">调用方附加的取消令牌。</param>
     public Task<SoloTaskRunResult> RunSoloTaskWithResultAsync(
         Func<GameRuntime, ISoloTask> create,
@@ -256,6 +264,54 @@ public class TaskRunner
             (runtime, ct) => create(runtime).Start(ct),
             waitForMainUi,
             requestToken));
+    }
+
+    /// <summary>
+    /// 获取本轮任务使用的运行环境：按需启动截图器 → 本轮新启动时等待进入可执行任务的界面 → 等待订阅脚本自动更新结束
+    /// </summary>
+    /// <param name="waitForMainUi">本轮新启动截图器时是否等待进入可执行任务的界面；截图器已在运行时不等待</param>
+    /// <param name="ct">本轮任务的取消令牌</param>
+    /// <returns>本轮任务使用的运行环境</returns>
+    /// <exception cref="NormalEndException">截图器无法启动，或等待期间截图器被停止</exception>
+    /// <exception cref="TimeoutException">等待进入游戏或等待订阅脚本更新超时</exception>
+    private async Task<GameRuntime> AcquireRuntimeAsync(bool waitForMainUi, CancellationToken ct)
+    {
+        var runtime = _gameRuntimeService.Current;
+        if (runtime is null)
+        {
+            var started = await StartRuntimeOrThrowAsync(ct);
+            if (waitForMainUi)
+            {
+                // 识别是同步的截图与模板匹配，放到线程池执行，避免调用方在 UI 线程时卡住界面
+                await Task.Run(() => new WaitForGameReadyTask(started).Start(ct), ct);
+            }
+
+            runtime = started;
+        }
+
+        // 自动更新会删除并重新检出用户脚本目录，等它结束后再执行任务
+        await ScriptRepoUpdater.Instance.WaitForAutoUpdateAsync(ct);
+        return runtime;
+    }
+
+    /// <summary>
+    /// 启动截图器并返回绑定的运行环境；无法启动时提示用户，并按正常中断结束本轮任务
+    /// </summary>
+    /// <param name="ct">本轮任务的取消令牌</param>
+    /// <returns>本次启动绑定的运行环境</returns>
+    /// <exception cref="NormalEndException">截图器无法启动</exception>
+    private async Task<GameRuntime> StartRuntimeOrThrowAsync(CancellationToken ct)
+    {
+        var runtime = await _gameRuntimeService.StartAsync(ct);
+        ct.ThrowIfCancellationRequested();
+        if (runtime is not null)
+        {
+            return runtime;
+        }
+
+        // 未找到窗口、用户取消等原因已由启动流程提示，这里直接结束任务，不再空等
+        UIDispatcherHelper.Invoke(() => { Toast.Warning("请先在启动页，启动截图器再使用本功能"); });
+        throw new NormalEndException("截图器未启动");
     }
 
     /// <summary>
