@@ -45,9 +45,39 @@ public partial class PuloniaOneDragonViewModel
     {
         var settings = await _store.LoadAccountSettingsAsync();
         GenshinAccounts.Clear(); foreach (var account in settings.Accounts) GenshinAccounts.Add(account);
-        ShowAccountPreparation = settings.MultiAccountEnabled;
-        if (!ShowAccountPreparation) IsAccountPreparationSelected = false;
+        ApplyAccountPreparationVisibility(settings.MultiAccountEnabled);
         OnPropertyChanged(nameof(SelectedGenshinAccountId));
+    }
+
+    /// <summary>应用多账号步骤的显示状态；隐藏当前选中的准备项时回到首个普通任务。</summary>
+    private void ApplyAccountPreparationVisibility(bool isVisible)
+    {
+        ShowAccountPreparation = isVisible;
+        if (isVisible || !IsAccountPreparationSelected) return;
+        IsAccountPreparationSelected = false;
+        SelectedTask = TaskList.FirstOrDefault();
+    }
+
+    /// <summary>从一条龙“更多”菜单切换账号配置入口，并立即保存到全局账号设置。</summary>
+    [RelayCommand]
+    private async Task ToggleAccountPreparationAsync()
+    {
+        var isVisible = !ShowAccountPreparation;
+        try
+        {
+            // 每次基于最新账号目录修改显示标记，避免覆盖账号管理窗口已保存的资料。
+            var settings = await _store.LoadAccountSettingsAsync();
+            settings.MultiAccountEnabled = isVisible;
+            await _store.SaveAccountSettingsAsync(settings);
+            ApplyAccountPreparationVisibility(isVisible);
+            AccountMessage = isVisible ? "已显示多账号设置和切换账号步骤。" : "已隐藏多账号设置和切换账号步骤。";
+        }
+        catch (Exception ex)
+        {
+            // MenuItem 会先切换自身勾选状态；保存失败时主动刷新绑定以恢复已保存状态。
+            OnPropertyChanged(nameof(ShowAccountPreparation));
+            await ThemedMessageBox.ErrorAsync("切换账号配置显示状态失败：" + ex.Message, "一条龙");
+        }
     }
 
     /// <summary>选中固定的账号准备项，任务表仍保持原来的八个默认任务。</summary>

@@ -36,8 +36,8 @@ public partial class PuloniaGenshinAccountsViewModel : ObservableObject, IDispos
     private bool _disposed;
     /// <summary>可选账号，包括不可删除的默认账号。</summary>
     public ObservableCollection<PuloniaGenshinAccountProfile> Accounts { get; } = [];
-    /// <summary>是否显示一条龙账号准备项。</summary>
-    [ObservableProperty] private bool _multiAccountEnabled;
+    /// <summary>载入账号草稿时保留的一条龙账号准备项设置；该设置改由一条龙页面编辑。</summary>
+    private bool _multiAccountEnabled;
     /// <summary>当前编辑的账号。</summary>
     [ObservableProperty] private PuloniaGenshinAccountProfile? _selectedAccount;
     /// <summary>账号名称草稿。</summary>
@@ -79,7 +79,7 @@ public partial class PuloniaGenshinAccountsViewModel : ObservableObject, IDispos
     public async Task LoadAsync()
     {
         var settings = await _store.LoadAccountSettingsAsync(_closed.Token);
-        _revision = settings.Revision; MultiAccountEnabled = settings.MultiAccountEnabled;
+        _revision = settings.Revision; _multiAccountEnabled = settings.MultiAccountEnabled;
         foreach (var account in settings.Accounts) Accounts.Add(account);
         SelectedAccount = Accounts.FirstOrDefault();
     }
@@ -180,7 +180,7 @@ public partial class PuloniaGenshinAccountsViewModel : ObservableObject, IDispos
         try
         {
             CaptureDraft(SelectedAccount);
-            var settings = new PuloniaGenshinAccountSettings { Revision = _revision, MultiAccountEnabled = MultiAccountEnabled, Accounts = Accounts.ToList() };
+            var settings = new PuloniaGenshinAccountSettings { Revision = _revision, MultiAccountEnabled = _multiAccountEnabled, Accounts = Accounts.ToList() };
             PuloniaTaskStore.ValidateAccountSettings(settings);
             foreach (var (id, credentials) in _credentialDrafts)
             {
@@ -193,7 +193,7 @@ public partial class PuloniaGenshinAccountsViewModel : ObservableObject, IDispos
             }
             var saved = await _store.SaveAccountSettingsAsync(settings, _closed.Token);
             _revision = saved.Revision; _credentialDrafts.Clear(); LoginPassword = ""; LoginUsername = "";
-            Message = "账号目录和多账号显示设置已保存。";
+            Message = "账号目录已保存。";
         }
         catch (Exception ex) { Message = "未保存：" + ex.Message; }
         finally { IsBusy = false; }

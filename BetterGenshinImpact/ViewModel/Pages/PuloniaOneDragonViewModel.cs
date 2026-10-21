@@ -312,7 +312,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     {
         if (SelectedConfiguration is not { } document) return;
         var picker = new System.Windows.Controls.ComboBox { ItemsSource = Editor.Documents, DisplayMemberPath = "Name", MinWidth = 260, SelectedIndex = 0 };
-        var dialog = new PromptDialog("选择要加入的任务计划。", "加入已有计划", picker, null) { Owner = Application.Current.MainWindow };
+        var dialog = new PromptDialog("选择要加入的任务计划。", "添加已有计划", picker, null) { Owner = Application.Current.MainWindow };
         if (dialog.ShowDialog() != true || picker.SelectedItem is not PuloniaTaskPlanDocumentViewModel target) return;
         try
         {

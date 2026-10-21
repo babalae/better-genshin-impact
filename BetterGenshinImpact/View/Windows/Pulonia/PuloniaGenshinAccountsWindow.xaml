@@ -4,10 +4,9 @@
  xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
  Title="原神账号管理" Width="830" Height="750" MinWidth="700" MinHeight="560" WindowStartupLocation="CenterOwner"
  ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica" Background="{DynamicResource ApplicationBackgroundBrush}">
- <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+ <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
   <ui:TitleBar Title="原神账号管理" ShowMinimize="False"/>
-  <CheckBox Grid.Row="1" Margin="18,12" Content="显示一条龙的多账号设置和切换账号步骤" IsChecked="{Binding MultiAccountEnabled}" IsEnabled="{Binding CanEdit}"/>
-  <Grid Grid.Row="2" Margin="18,0,18,12" IsEnabled="{Binding CanEdit}">
+  <Grid Grid.Row="1" Margin="18,12,18,12" IsEnabled="{Binding CanEdit}">
    <Grid.ColumnDefinitions><ColumnDefinition Width="220"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
    <DockPanel Margin="0,0,18,0">
     <WrapPanel DockPanel.Dock="Bottom" Margin="0,12,0,0"><ui:Button Content="新增" Command="{Binding AddAccountCommand}" Margin="0,0,8,0"/><ui:Button Content="移除" Command="{Binding RemoveAccountCommand}"/></WrapPanel>
@@ -31,6 +30,6 @@
     </StackPanel>
    </ScrollViewer>
   </Grid>
-  <DockPanel Grid.Row="3" Margin="18,8,18,18"><ui:Button DockPanel.Dock="Right" Content="保存账号设置" Appearance="Primary" Command="{Binding SaveCommand}" IsEnabled="{Binding CanEdit}" Margin="12,0,0,0"/><TextBlock Text="{Binding Message}" TextWrapping="Wrap" VerticalAlignment="Center"/></DockPanel>
+  <DockPanel Grid.Row="2" Margin="18,8,18,18"><ui:Button DockPanel.Dock="Right" Content="保存账号设置" Appearance="Primary" Command="{Binding SaveCommand}" IsEnabled="{Binding CanEdit}" Margin="12,0,0,0"/><TextBlock Text="{Binding Message}" TextWrapping="Wrap" VerticalAlignment="Center"/></DockPanel>
  </Grid>
 </ui:FluentWindow>
