@@ -64,5 +64,11 @@ public sealed class NcnnShim : IDisposable
         return Marshal.GetDelegateForFunctionPointer<T>(address);
     }
 
-    public void Dispose() => NativeLibrary.Free(_library);
+    public void Dispose()
+    {
+        // 故意不调用 NativeLibrary.Free：
+        // 卸载 ncnn_shim 会触发其 CRT exit 表（execute_onexit_table），静态析构销毁 Vulkan 全局对象，
+        // 与 Intel 驱动（igvk64/tpsstool）的退出遥测冲突 → int29h FAST_FAIL_FATAL_APP_EXIT（0xc0000409）。
+        // 库句柄有意泄漏随进程存活，net 句柄已由各持有方 shim_destroy 释放。
+    }
 }
