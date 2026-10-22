@@ -197,6 +197,28 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
     }
 
     /// <summary>
+    /// 资源路径改变后清除旧路径的检查结果，等待页面重新检查。
+    /// </summary>
+    internal void ResetResourceCheck()
+    {
+        CurrentResourceVersion = null;
+        ApprovedDeclaredVersion = null;
+        CurrentDeclaredVersion = null;
+        ResourceCheckError = null;
+    }
+
+    /// <summary>
+    /// 文档一次性提交配置弹窗的修改后，刷新名称、路径、执行次数和启用状态的绑定。
+    /// </summary>
+    internal void NotifySettingsApplied()
+    {
+        OnPropertyChanged(nameof(Name));
+        OnPropertyChanged(nameof(Path));
+        OnPropertyChanged(nameof(RepeatCount));
+        NotifyEffectiveEnabledChangedRecursively();
+    }
+
+    /// <summary>
     /// 资源版本更新后通知侧栏和命令状态重新读取。
     /// </summary>
     internal void NotifyResourceVersionChanged()

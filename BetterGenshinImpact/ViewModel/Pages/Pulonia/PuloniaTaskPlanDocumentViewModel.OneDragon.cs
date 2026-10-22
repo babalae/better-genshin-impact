@@ -70,13 +70,9 @@ public partial class PuloniaTaskPlanDocumentViewModel
     /// <summary>完整校验后一次提交卡片中真实改变的字段，其余字段继续继承。</summary>
     internal void ApplyOneDragonParameters(PuloniaTaskNodeViewModel node, JObject changes)
     {
-        if (!EnumerateNodes().Contains(node) || IsDeleted)
-            throw new InvalidOperationException("当前任务已移除，请重新选择。");
+        EnsureEditableNode(node);
         if (changes.Count == 0) return;
-        var effective = GetOneDragonParameters(node);
-        foreach (var field in changes.Properties()) effective[field.Name] = field.Value.DeepClone();
-        if (GetDefinition(node.Model) is { } definition)
-            PuloniaTaskValidator.ValidateParameters(effective, definition.ParameterSchema, node.Name);
+        ValidateParameterChanges(node, changes);
         ApplyMutation(() =>
         {
             // 同一变更包含所有卡片设置，撤销不会只恢复一部分参数。

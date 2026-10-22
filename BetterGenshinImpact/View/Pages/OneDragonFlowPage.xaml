@@ -67,13 +67,14 @@
             FontSize="16"
             FontWeight="Bold"
             Text="{i18n:T 任务列表}" />
-        <ui:Button
+        <!--  与独立任务共用的启动按钮：单实例直接启停，多实例打开实例管理窗口  -->
+        <controls:SoloTaskButton
             Grid.Column="1"
             Grid.Row="0"
             Margin="0,0,10,0"
             Appearance="Primary"
-            Icon="{ui:SymbolIcon Play24}"
-            Command="{Binding OneKeyExecuteCommand}" />
+            ActionCommand="{Binding ManageSoloTaskCommand}"
+            State="{Binding OneDragonSoloTaskState}" />
         <ui:Button
             Grid.Column="2"
             Grid.Row="0"

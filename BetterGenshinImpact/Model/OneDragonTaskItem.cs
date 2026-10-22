@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.ViewModel.Pages.OneDragon;
@@ -22,6 +24,21 @@ namespace BetterGenshinImpact.Model;
 
 public partial class OneDragonTaskItem : ObservableObject
 {
+    /// <summary>
+    /// 一条龙内置任务名，顺序即新建配置时的默认顺序。不在其中的任务名视为配置组
+    /// </summary>
+    public static readonly IReadOnlyList<string> BuiltInTaskNames =
+    [
+        "领取邮件",
+        "合成树脂",
+        "自动秘境",
+        "自动首领讨伐",
+        "自动幽境危战",
+        "自动地脉花",
+        "领取每日奖励",
+        "领取尘歌壶奖励",
+    ];
+
     [ObservableProperty] private string _name;
 
     [ObservableProperty] private string _id = Guid.NewGuid().ToString();
@@ -48,6 +65,61 @@ public partial class OneDragonTaskItem : ObservableObject
     public OneDragonTaskItem(string name, string id) : this(name)
     {
         _id = id;
+    }
+
+    /// <summary>
+    /// 是否为一条龙内置任务；否则为配置组
+    /// </summary>
+    public bool IsBuiltIn => BuiltInTaskNames.Contains(Name);
+
+    /// <summary>
+    /// 按配置中的任务顺序、开关与定义还原任务列表，并标记"从此执行"的任务。
+    /// 兼容旧格式：TaskDefinitions 为空时，TaskEnabledList 的键就是任务名
+    /// </summary>
+    /// <param name="config">一条龙配置</param>
+    /// <returns>按执行顺序排列的任务项</returns>
+    public static List<OneDragonTaskItem> CreateListFromConfig(OneDragonFlowConfig config)
+    {
+        var items = new List<OneDragonTaskItem>();
+        if (config.TaskEnabledList == null)
+        {
+            return items;
+        }
+
+        var isOldFormat = config.TaskDefinitions == null || config.TaskDefinitions.Count == 0;
+
+        // 使用 TaskOrder 恢复顺序；若无则回退到 TaskEnabledList 的键顺序
+        var orderedKeys = config.TaskOrder?.Count > 0
+            ? config.TaskOrder
+            : config.TaskEnabledList.Keys.ToList();
+
+        foreach (var key in orderedKeys)
+        {
+            if (!config.TaskEnabledList.TryGetValue(key, out var enabled))
+            {
+                continue;
+            }
+
+            OneDragonTaskItem taskItem;
+            if (isOldFormat)
+            {
+                taskItem = new OneDragonTaskItem(key) { IsEnabled = enabled };
+            }
+            else
+            {
+                if (!config.TaskDefinitions!.TryGetValue(key, out var name))
+                {
+                    continue;
+                }
+
+                taskItem = new OneDragonTaskItem(name, key) { IsEnabled = enabled };
+            }
+
+            taskItem.IsNextTask = key == config.NextTaskId;
+            items.Add(taskItem);
+        }
+
+        return items;
     }
 
     // public OneDragonTaskItem(Type viewModelType, Func<Task> action)
@@ -119,8 +191,9 @@ public partial class OneDragonTaskItem : ObservableObject
                         allConfig.AutoFightConfig.StrategyName = "根据队伍自动选择";
                     }
 
+                    // 策略名取本次运行传入的配置根：在子实例中运行时，它是启动时从磁盘读取的最新配置
                     var taskSettingsPageViewModel = App.GetService<TaskSettingsPageViewModel>();
-                    if (taskSettingsPageViewModel!.GetFightStrategy(out var path))
+                    if (taskSettingsPageViewModel!.GetFightStrategy(allConfig.AutoFightConfig.StrategyName, out var path))
                     {
                         TaskControl.Logger.LogError("自动秘境战斗策略{Msg}，跳过", "未配置");
                         return;

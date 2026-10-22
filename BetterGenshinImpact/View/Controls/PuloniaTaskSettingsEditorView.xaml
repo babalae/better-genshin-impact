@@ -1,0 +1,43 @@
+<UserControl x:Class="BetterGenshinImpact.View.Controls.PuloniaTaskSettingsEditorView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+    <!--
+        任务设置编辑器（DataContext 为 PuloniaTaskSettingsEditorViewModel），新增与编辑弹窗共用：
+        1. 独立任务声明了专属设置界面：ContentControl 通过启动时全局注册的隐式模板渲染专属视图
+        2. 没有专属界面：按参数 Schema 生成的通用设置卡片
+        3. 两者都没有：显示无需设置的提示
+    -->
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="PuloniaOneDragonParameterResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <StackPanel>
+        <!--  专属设置界面  -->
+        <ContentControl Content="{Binding DedicatedSettings}"
+                        Focusable="False"
+                        Visibility="{Binding HasDedicatedSettings, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+        <!--  通用设置卡片  -->
+        <ItemsControl Focusable="False"
+                      ItemTemplate="{StaticResource OneDragonParameterFieldTemplate}"
+                      ItemsSource="{Binding Fields}"
+                      Visibility="{Binding HasFields, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+        <!--  无需设置  -->
+        <ui:CardControl Icon="{ui:SymbolIcon Info24}"
+                        Visibility="{Binding IsEmpty, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <ui:CardControl.Header>
+                <StackPanel>
+                    <ui:TextBlock FontTypography="Body" Text="此任务无需额外设置" />
+                    <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                  Text="运行时直接使用任务默认配置。"
+                                  TextWrapping="Wrap" />
+                </StackPanel>
+            </ui:CardControl.Header>
+        </ui:CardControl>
+    </StackPanel>
+</UserControl>

@@ -15,6 +15,7 @@ using BetterGenshinImpact.GameTask.AutoWood;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.GetGridIcons;
 using BetterGenshinImpact.GameTask.Model.GameUI;
+using BetterGenshinImpact.GameTask.OneDragon;
 using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.GameTask.SoloTask.Execution;
 using BetterGenshinImpact.GameTask.UseRedeemCode;
@@ -65,19 +66,14 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private readonly IConfigService _configService;
 
     /// <summary>
-    /// 当前进程及在线子实例的独立任务状态与操作入口。
-    /// </summary>
-    private readonly InstanceService _instanceService;
-
-    /// <summary>
-    /// 任一页面按钮正在等待启动或停止请求确认时置为 true。
-    /// </summary>
-    private bool _soloTaskUiOperationPending;
-
-    /// <summary>
     /// 独立任务注册表，提供可单独运行的任务清单、显示名和参数序列化。
     /// </summary>
     private readonly SoloTaskRegistry _soloTaskRegistry;
+
+    /// <summary>
+    /// 独立任务按钮的状态刷新与启动、停止、多实例管理流程。
+    /// </summary>
+    private readonly SoloTaskButtonController _soloTaskButtonController;
 
     /// <summary>
     /// 独立任务按钮共用的展示状态，键为任务标识（如 auto_wood）。
@@ -226,13 +222,12 @@ public partial class TaskSettingsPageViewModel : ViewModel
         _configService = configService;
         _navigationService = navigationService;
         _taskStopService = taskStopService;
-        _instanceService = instanceService;
         _soloTaskRegistry = soloTaskRegistry;
         // 页面按钮按任务标识绑定，清单来自注册表中可单独运行的任务
         SoloTaskStates = soloTaskRegistry.GetByScope(SoloTaskScopes.Standalone)
             .ToDictionary(descriptor => descriptor.TaskId, descriptor => new SoloTaskButtonState(descriptor.TaskId));
-        _instanceService.ConnectedInstancesChanged += OnSoloTaskInstancesChanged;
-        _instanceService.SoloTaskStatusesChanged += OnSoloTaskInstancesChanged;
+        _soloTaskButtonController = new SoloTaskButtonController(instanceService, soloTaskRegistry, configService,
+            SoloTaskStates.Values);
         NormalizeLeyLineOutcropType();
         _scanDropsAfterRewardEnabledUi = Config.AutoLeyLineOutcropConfig.ScanDropsAfterRewardEnabled;
 
@@ -243,7 +238,6 @@ public partial class TaskSettingsPageViewModel : ViewModel
         _domainNameList = ["", AutoDomainTask.DevelopmentGuideOption, .. MapLazyAssets.Get().DomainNameList];
         _autoFightViewModel = new AutoFightViewModel(Config);
         _oneDragonFlowViewModel = oneDragonFlowViewModel;
-        RefreshSoloTaskStates();
     }
 
     partial void OnScanDropsAfterRewardEnabledUiChanged(bool value)
@@ -320,21 +314,6 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
 
     [RelayCommand]
-    private async Task OnSOneDragonFlow()
-    {
-        if (OneDragonFlowViewModel == null || OneDragonFlowViewModel.SelectedConfig == null)
-        {
-            OneDragonFlowViewModel.OnNavigatedTo();
-            if (OneDragonFlowViewModel == null || OneDragonFlowViewModel.SelectedConfig == null)
-            {
-                Toast.Warning("未设置任务!");
-                return;
-            }
-        }
-        await OneDragonFlowViewModel.OnOneKeyExecute();
-    }
-
-    [RelayCommand]
     private void OnStrategyDropDownOpened(string type)
     {
         AutoFightViewModel?.OnStrategyDropDownOpened(type);
@@ -350,79 +329,9 @@ public partial class TaskSettingsPageViewModel : ViewModel
     /// 统一处理独立任务按钮和任务专用快捷键发出的启动、停止或管理请求。
     /// </summary>
     [RelayCommand(AllowConcurrentExecutions = false)]
-    public async Task ManageSoloTask(string taskId)
+    public Task ManageSoloTask(string taskId)
     {
-        var targets = _instanceService.GetSoloTaskTargets();
-        if (targets.Length > 1)
-        {
-            var window = new SoloTaskInstanceWindow(
-                _instanceService,
-                _soloTaskRegistry,
-                taskId,
-                () => BuildSoloTaskDefinitionAsync(taskId))
-            {
-                Owner = Application.Current.MainWindow
-            };
-            window.ShowDialog();
-            RefreshSoloTaskStates();
-            return;
-        }
-
-        var target = targets.Single();
-        var status = _instanceService.GetSoloTaskStatus(target);
-        if (status.IsActive && status.TaskId != taskId)
-        {
-            Toast.Warning($"当前实例正在运行“{_soloTaskRegistry.GetDisplayName(status.TaskId)}”，请先等待该任务结束或使用其停止入口。");
-            return;
-        }
-
-        _soloTaskUiOperationPending = true;
-        RefreshSoloTaskStates();
-        try
-        {
-            SoloTaskOperationResponse response;
-            if (status.IsActive && status.RunId is Guid runId)
-            {
-                response = await _instanceService.StopSoloTaskAsync(target, runId);
-            }
-            else
-            {
-                var definition = await BuildSoloTaskDefinitionAsync(taskId);
-                if (definition is null)
-                {
-                    return;
-                }
-
-                response = await _instanceService.StartSoloTaskAsync(target, definition.CreateRequest());
-            }
-
-            if (!response.Accepted)
-            {
-                Toast.Warning(response.ErrorMessage ?? "目标实例拒绝了本次操作。");
-            }
-        }
-        catch (TimeoutException ex)
-        {
-            try
-            {
-                await _instanceService.RefreshSoloTaskStatusAsync(target);
-            }
-            catch
-            {
-                // 查询失败时保留原始超时提示，连接状态事件会继续校正按钮。
-            }
-
-            await ThemedMessageBox.WarningAsync($"独立任务操作等待确认超时：{ex.Message}", "独立任务");
-        }
-        catch (Exception ex)
-        {
-            await ThemedMessageBox.ErrorAsync($"独立任务操作失败：{ex.Message}", "独立任务");
-        }
-        finally
-        {
-            _soloTaskUiOperationPending = false;
-            RefreshSoloTaskStates();
-        }
+        return _soloTaskButtonController.ManageAsync(taskId, () => BuildSoloTaskDefinitionAsync(taskId));
     }
 
     /// <summary>
@@ -433,20 +342,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private Task<SoloTaskStartDefinition?> BuildSoloTaskDefinitionAsync(string taskId)
     {
         var param = CreateSoloTaskParam(taskId);
-        if (param is null)
-        {
-            return Task.FromResult<SoloTaskStartDefinition?>(null);
-        }
-
-        var descriptor = _soloTaskRegistry.Get(taskId);
-
-        // 子实例按需从同一份配置文件读取，先确保本页面的配置修改已经落盘。
-        _configService.Flush();
-        return Task.FromResult<SoloTaskStartDefinition?>(new SoloTaskStartDefinition
-        {
-            TaskId = taskId,
-            Parameters = JObject.Parse(descriptor.SerializeParam(param))
-        });
+        return Task.FromResult(param is null ? null : _soloTaskButtonController.CreateDefinition(taskId, param));
     }
 
     /// <summary>
@@ -507,6 +403,9 @@ public partial class TaskSettingsPageViewModel : ViewModel
                 };
             case InventoryCountComparisonTask.TaskId:
                 return new InventoryCountComparisonParam { Target = InventoryCountComparisonTarget };
+            case OneDragonTask.TaskId:
+                // 一条龙的配置、"从此执行"标记由一条龙页面维护（快捷键经此入口启动）
+                return OneDragonFlowViewModel?.CreateOneDragonParam();
             default:
                 // 地脉花、音游、烹饪等任务的无参构造已按全局配置给出参数
                 return _soloTaskRegistry.Get(taskId).CreateDefaultParam();
@@ -548,40 +447,6 @@ public partial class TaskSettingsPageViewModel : ViewModel
         }
 
         return codes;
-    }
-
-    /// <summary>
-    /// 实例连接或任一任务状态变化后切回 UI 线程刷新 17 个按钮。
-    /// </summary>
-    private void OnSoloTaskInstancesChanged(object? sender, EventArgs e)
-    {
-        UIDispatcherHelper.BeginInvoke(RefreshSoloTaskStates);
-    }
-
-    /// <summary>
-    /// 根据当前可管理实例数量和真实任务状态刷新所有独立任务按钮。
-    /// </summary>
-    private void RefreshSoloTaskStates()
-    {
-        var targets = _instanceService.GetSoloTaskTargets();
-        var statuses = targets.Select(_instanceService.GetSoloTaskStatus).ToArray();
-        foreach (var pair in SoloTaskStates)
-        {
-            var taskId = pair.Value.TaskId;
-            var activeRunCount = statuses.Count(status => status.IsActive && status.TaskId == taskId);
-            var singleState = targets.Length == 1 && statuses[0].TaskId == taskId
-                ? statuses[0].State
-                : SoloTaskRunState.Idle;
-            var isBlockedByOtherTask = targets.Length == 1
-                                       && statuses[0].IsActive
-                                       && statuses[0].TaskId != taskId;
-            pair.Value.Update(
-                targets.Length,
-                activeRunCount,
-                singleState,
-                isBlockedByOtherTask,
-                _soloTaskUiOperationPending);
-        }
     }
 
     public bool GetTcgStrategy(out string content)

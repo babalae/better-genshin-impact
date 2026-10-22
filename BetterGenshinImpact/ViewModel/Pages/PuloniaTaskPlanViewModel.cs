@@ -7,12 +7,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.View.Windows.Pulonia;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
+using BetterGenshinImpact.ViewModel.Windows.Pulonia;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GongSolutions.Wpf.DragDrop;
@@ -51,6 +53,9 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
 
     /// <summary>任务计划页复用的仓库同步服务；老配置组的订阅与安装流程不经过此服务。</summary>
     private readonly PuloniaRepositoryManagementService _repositoryManagementService;
+
+    /// <summary>独立任务注册表；新增与编辑弹窗据此优先使用独立任务的专属设置界面，为空时只使用通用设置卡片。</summary>
+    private readonly SoloTaskRegistry? _soloTaskRegistry;
 
     /// <summary>
     /// 当前从存储加载的共享预设。
@@ -147,12 +152,14 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// </summary>
     public PuloniaTaskPlanViewModel(PuloniaTaskStore store, PuloniaTaskClipboardService clipboard,
         IPuloniaTaskService taskService, PuloniaTaskResourceCatalog resourceCatalog,
-        PuloniaTaskHistoryViewModel history, PuloniaTaskTriggerHost? triggerHost = null)
+        PuloniaTaskHistoryViewModel history, PuloniaTaskTriggerHost? triggerHost = null,
+        SoloTaskRegistry? soloTaskRegistry = null)
     {
         _store = store;
         _clipboard = clipboard;
         _taskService = taskService;
         _resourceCatalog = resourceCatalog;
+        _soloTaskRegistry = soloTaskRegistry;
         _repositoryManagementService = new PuloniaRepositoryManagementService(resourceCatalog.Repositories);
         _resourceVersionService = new PuloniaTaskResourceVersionService(resourceCatalog);
         History = history;
@@ -381,7 +388,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
 
     /// <summary>
     /// 在指定节点位置新增独立任务。参数由 XAML 的 MultiBinding 组装为 [目标节点, 任务类型]。
-    /// 没有可编辑参数的独立任务直接以显示名插入，有参数的打开创建对话框。
+    /// 没有可编辑参数的独立任务直接以显示名插入；有参数的打开新增弹窗，优先展示独立任务的专属设置界面。
     /// </summary>
     /// <param name="parameters">第 0 项为目标节点，第 1 项为独立任务的任务类型。</param>
     [RelayCommand]
@@ -396,18 +403,20 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
             StatusMessage = $"没有注册任务类型 {taskType}。";
             return;
         }
-
-        // 2. 有参数的独立任务沿用创建对话框，在创建前确认参数
-        if (PuloniaSoloTaskExecutor.HasEditableParameters(definition))
-        {
-            AddTask(targetNode, taskType);
-            return;
-        }
-
-        // 3. 无参数的独立任务不弹窗，直接插入；参数保持为空，运行时使用能力默认值
         if (!TryGetInsertionPoint(targetNode, out var document, out var parent, out var index))
             return;
+
+        // 2. 无参数的独立任务不弹窗，直接插入；参数保持为空，运行时使用能力默认值
         var task = new PuloniaTask { Name = definition.DisplayName, TaskType = definition.TaskType };
+        if (PuloniaSoloTaskExecutor.HasEditableParameters(definition))
+        {
+            // 3. 有参数的独立任务按插入位置的继承值打开新增弹窗，确认后才写入计划
+            var viewModel = new PuloniaSoloTaskCreationDialogViewModel(definition, _soloTaskRegistry,
+                document.PreviewEffectiveParameters(task, parent));
+            if (PuloniaSoloTaskCreationDialog.Show(viewModel, Application.Current.MainWindow) is not { } created)
+                return;
+            task = created;
+        }
         document.InsertNode(task, parent, index);
         StatusMessage = $"已添加任务“{task.Name}”。";
     }
@@ -464,20 +473,24 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     }
 
     /// <summary>
-    /// 在独立弹窗中编辑任意可见任务节点，避免树页面常驻配置侧栏。
+    /// 在独立弹窗中编辑任意可见任务节点；独立任务优先展示其专属设置界面。
     /// </summary>
     [RelayCommand]
     private void EditNodeConfiguration(PuloniaTaskNodeViewModel? node)
     {
         if (node is null || node.IsRoot)
             return;
+        // 高级设置区绑定文档的选中节点，打开前先选中被编辑节点
         SelectedDocument = node.Document;
         node.Document.SelectedNode = node;
-        var dialog = new PuloniaTaskNodeSettingsDialog(this)
+        var definition = _taskService.Definitions.FirstOrDefault(item => item.TaskType == node.TaskType);
+        var dialog = new PuloniaTaskNodeSettingsDialog(
+            new PuloniaTaskNodeSettingsDialogViewModel(this, node, definition, _soloTaskRegistry))
         {
             Owner = Application.Current.MainWindow
         };
-        dialog.ShowDialog();
+        if (dialog.ShowDialog() == true)
+            StatusMessage = $"已保存“{node.Name}”的配置。";
     }
 
     /// <summary>

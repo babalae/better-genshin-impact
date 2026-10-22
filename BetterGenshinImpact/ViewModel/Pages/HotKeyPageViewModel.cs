@@ -24,6 +24,7 @@ using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.GameTask.Macro;
 using BetterGenshinImpact.GameTask.Model.Area;
+using BetterGenshinImpact.GameTask.OneDragon;
 using BetterGenshinImpact.GameTask.QuickBuy;
 using BetterGenshinImpact.GameTask.QuickClaimReward;
 using BetterGenshinImpact.GameTask.QuickSereniteaPot;
@@ -673,7 +674,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             nameof(Config.HotKeyConfig.OnedragonHotkey),
             Config.HotKeyConfig.OnedragonHotkey,
             Config.HotKeyConfig.OnedragonHotkeyType,
-            (_, _) => { SwitchSoloTask(_taskSettingsPageViewModel.SOneDragonFlowCommand); }
+            (_, _) => { ManageSoloTask(OneDragonTask.TaskId); }
         ));
 
         soloTaskDirectory.Children.Add(new HotKeySettingModel(
@@ -1024,18 +1025,6 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         }
 
         return false;
-    }
-
-    private void SwitchSoloTask(IAsyncRelayCommand asyncRelayCommand)
-    {
-        if (asyncRelayCommand.IsRunning)
-        {
-            _taskStopService.StopAll(TaskStopReason.UserRequested);
-        }
-        else
-        {
-            asyncRelayCommand.Execute(null);
-        }
     }
 
     /// <summary>

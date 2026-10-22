@@ -3,21 +3,36 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
                  xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
-                 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-                 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                 xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                 Title="编辑节点配置"
-                 Width="680"
-                 Height="720"
-                 MinWidth="560"
-                 MinHeight="520"
+                 Title="{Binding WindowTitle}"
+                 Width="760"
+                 Height="760"
+                 MinWidth="580"
+                 MinHeight="500"
                  WindowStartupLocation="CenterOwner"
                  ExtendsContentIntoTitleBar="True"
                  WindowBackdropType="Mica"
                  Background="{DynamicResource ApplicationBackgroundBrush}"
                  FontFamily="{StaticResource TextThemeFontFamily}"
-                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                 mc:Ignorable="d">
+                 Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+    <ui:FluentWindow.Resources>
+        <!--  分区标题  -->
+        <Style x:Key="SectionTitle" TargetType="ui:TextBlock">
+            <Setter Property="Margin" Value="0,16,0,8" />
+            <Setter Property="FontTypography" Value="BodyStrong" />
+        </Style>
+        <!--  高级设置中的原始 JSON 编辑框  -->
+        <Style x:Key="JsonEditor" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="MinHeight" Value="96" />
+            <Setter Property="Margin" Value="0,6,0,0" />
+            <Setter Property="AcceptsReturn" Value="True" />
+            <Setter Property="FontFamily" Value="Consolas" />
+            <Setter Property="HorizontalScrollBarVisibility" Value="Auto" />
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+        </Style>
+    </ui:FluentWindow.Resources>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -26,284 +41,329 @@
         </Grid.RowDefinitions>
 
         <ui:TitleBar Grid.Row="0"
-                     Title="编辑节点配置"
-                     Icon="{ui:SymbolIcon Edit24}" />
+                     Title="{Binding WindowTitle}"
+                     Icon="{ui:SymbolIcon Edit24}"
+                     ShowMaximize="False"
+                     ShowMinimize="False" />
 
         <ScrollViewer Grid.Row="1"
-                      Margin="18,10,18,12"
+                      HorizontalScrollBarVisibility="Disabled"
                       VerticalScrollBarVisibility="Auto">
-            <StackPanel>
-                <Border Margin="0,0,0,12"
-                        Padding="14"
-                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1"
-                        CornerRadius="8">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="160" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel>
-                            <TextBlock FontSize="15"
-                                       FontWeight="SemiBold"
-                                       Text="{Binding SelectedDocument.SelectedNode.Name, TargetNullValue=未选择节点}" />
-                            <TextBlock Margin="0,4,0,0"
-                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                       Text="{Binding SelectedDocument.SelectedNode.TypeDisplayName}" />
-                        </StackPanel>
-                        <CheckBox Grid.Column="1"
-                                  HorizontalAlignment="Right"
-                                  VerticalAlignment="Center"
-                                  Content="节点自身启用"
-                                  IsChecked="{Binding SelectedDocument.SelectedNode.IsEnabled, Mode=TwoWay}" />
-                    </Grid>
-                </Border>
-
-                <Border Padding="14"
-                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1"
-                        CornerRadius="8">
-                    <StackPanel>
-                        <TextBlock FontWeight="SemiBold" Text="基本设置" />
-                        <TextBlock Margin="0,10,0,3" Text="名称" />
-                        <TextBox Text="{Binding SelectedDocument.SelectedNode.Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
-
-                        <Grid Margin="0,12,0,0"
-                              Visibility="{Binding SelectedDocument.SelectedNode.CanConfigureRepeat, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="180" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock VerticalAlignment="Center"
-                                       Text="执行次数"
-                                       ToolTip="按顺序完整执行本分组内的全部任务；1 表示只执行一轮" />
-                            <ui:NumberBox Grid.Column="1"
-                                          AcceptsExpression="False"
-                                          LargeChange="5"
-                                          MaxDecimalPlaces="0"
-                                          Maximum="10000"
-                                          Minimum="1"
-                                          SmallChange="1"
-                                          SpinButtonPlacementMode="Inline"
-                                          Value="{Binding SelectedDocument.SelectedNode.RepeatCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                                <b:Interaction.Behaviors>
-                                    <behavior:NumberBoxValueConstraintBehavior EmptyValue="1" MinimumValue="1" />
-                                </b:Interaction.Behaviors>
-                            </ui:NumberBox>
-                        </Grid>
-
-                        <TextBlock Margin="0,12,0,3" Text="资源定位" />
-                        <TextBox IsEnabled="{Binding SelectedDocument.CanEditPath}"
-                                 Text="{Binding SelectedDocument.SelectedNode.Path, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" />
-
-                        <Grid Margin="0,10,0,0"
-                              Visibility="{Binding SelectedDocument.SelectedNode.CanUpdateResourceVersion, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel>
-                                <TextBlock FontWeight="SemiBold" Text="任务使用版本" />
-                                <TextBlock Margin="0,2,8,0"
-                                           FontFamily="Consolas"
-                                           FontSize="11"
-                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                           Text="{Binding SelectedDocument.SelectedNode.ResourceVersionText}"
-                                           TextTrimming="CharacterEllipsis"
-                                           ToolTip="{Binding SelectedDocument.SelectedNode.ResourceVersionText}" />
-                            </StackPanel>
-                            <ui:Button Grid.Column="1"
-                                       Padding="8,3"
+            <StackPanel Margin="24,8,24,20">
+                <!--  概览：任务名称、类型与启用开关  -->
+                <Grid Margin="0,4,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Border Width="44"
+                            Height="44"
+                            Background="{DynamicResource AccentFillColorDefaultBrush}"
+                            CornerRadius="8">
+                        <ui:SymbolIcon HorizontalAlignment="Center"
                                        VerticalAlignment="Center"
-                                       Command="{Binding UpdateResourceVersionCommand}"
-                                       CommandParameter="{Binding SelectedDocument.SelectedNode}"
-                                       Content="更新任务资源" />
-                        </Grid>
+                                       FontSize="22"
+                                       Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                                       Symbol="TaskListLtr24" />
+                    </Border>
+                    <StackPanel Grid.Column="1"
+                                Margin="14,0,12,0"
+                                VerticalAlignment="Center">
+                        <ui:TextBlock FontTypography="Subtitle"
+                                      Text="{Binding Node.Name}"
+                                      TextTrimming="CharacterEllipsis" />
+                        <ui:TextBlock Margin="0,2,0,0"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                      Text="{Binding Node.TypeDisplayName}" />
                     </StackPanel>
-                </Border>
+                    <ui:ToggleSwitch Grid.Column="2"
+                                     VerticalAlignment="Center"
+                                     IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                     OffContent="已停用"
+                                     OnContent="已启用"
+                                     ToolTip="停用后运行计划时跳过此任务" />
+                </Grid>
 
-                <Border Margin="0,12,0,0" Padding="14" CornerRadius="8"
-                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                        Visibility="{Binding SelectedDocument.CanEditCollectionCooldown, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <StackPanel>
-                        <TextBlock Text="采集 CD" FontWeight="SemiBold" />
-                        <TextBlock Text="{Binding SelectedDocument.CollectionCooldownSummary}" TextWrapping="Wrap" Margin="0,8,0,8" />
-                        <ui:Button Content="配置采集 CD" HorizontalAlignment="Left" Command="{Binding SelectedDocument.EditCollectionCooldownCommand}" />
-                    </StackPanel>
-                </Border>
-                <Border Margin="0,12,0,0"
-                        Padding="14"
-                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1"
-                        CornerRadius="8"
-                        Visibility="{Binding SelectedDocument.CanEditCommonSettings, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <StackPanel>
-                        <TextBlock FontWeight="SemiBold" Text="任务设置（原配置组设置）" />
-                        <TextBlock Margin="0,5,0,10"
-                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   Text="配置行走、战斗、回血、食物与 Shell。分组设置由同类子任务继承，任务可单独覆盖。"
-                                   TextWrapping="Wrap" />
-                        <WrapPanel>
-                            <ui:Button Margin="0,0,8,6"
-                                       Command="{Binding SelectedDocument.EditCommonSettingsCommand}"
+                <!--  基本  -->
+                <ui:TextBlock Style="{StaticResource SectionTitle}" Text="基本" />
+                <ui:CardControl Margin="0,0,0,8" Icon="{ui:SymbolIcon Rename24}">
+                    <ui:CardControl.Header>
+                        <StackPanel>
+                            <ui:TextBlock FontTypography="Body" Text="任务名称" />
+                            <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                          Text="显示在任务计划中的名称"
+                                          TextWrapping="Wrap" />
+                        </StackPanel>
+                    </ui:CardControl.Header>
+                    <ui:TextBox Width="240"
+                                Margin="0,0,36,0"
+                                Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
+                </ui:CardControl>
+                <ui:CardControl Margin="0,0,0,8"
+                                Icon="{ui:SymbolIcon ArrowRepeatAll24}"
+                                Visibility="{Binding CanConfigureRepeat, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ui:CardControl.Header>
+                        <StackPanel>
+                            <ui:TextBlock FontTypography="Body" Text="执行次数" />
+                            <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                          Text="按顺序完整执行组内全部任务的轮数"
+                                          TextWrapping="Wrap" />
+                        </StackPanel>
+                    </ui:CardControl.Header>
+                    <ui:NumberBox Width="150"
+                                  Margin="0,0,36,0"
+                                  AcceptsExpression="False"
+                                  ClearButtonEnabled="False"
+                                  LargeChange="5"
+                                  MaxDecimalPlaces="0"
+                                  Maximum="10000"
+                                  Minimum="1"
+                                  SmallChange="1"
+                                  SpinButtonPlacementMode="Inline"
+                                  Value="{Binding RepeatCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                        <b:Interaction.Behaviors>
+                            <behavior:NumberBoxValueConstraintBehavior EmptyValue="1" MinimumValue="1" />
+                        </b:Interaction.Behaviors>
+                    </ui:NumberBox>
+                </ui:CardControl>
+                <ui:CardControl Margin="0,0,0,8"
+                                Icon="{ui:SymbolIcon Folder24}"
+                                Visibility="{Binding CanEditPath, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ui:CardControl.Header>
+                        <StackPanel>
+                            <ui:TextBlock FontTypography="Body" Text="资源路径" />
+                            <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                          Text="本地路线、脚本或录制文件的位置"
+                                          TextWrapping="Wrap" />
+                        </StackPanel>
+                    </ui:CardControl.Header>
+                    <ui:TextBox Width="300"
+                                Margin="0,0,36,0"
+                                Text="{Binding Path, UpdateSourceTrigger=PropertyChanged}" />
+                </ui:CardControl>
+                <ui:CardControl Margin="0,0,0,8"
+                                Icon="{ui:SymbolIcon ArrowSync24}"
+                                Visibility="{Binding CanUpdateResourceVersion, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ui:CardControl.Header>
+                        <StackPanel>
+                            <ui:TextBlock FontTypography="Body" Text="资源版本" />
+                            <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                          Text="{Binding Node.ResourceVersionText, StringFormat=当前使用：{0}}"
+                                          TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                    </ui:CardControl.Header>
+                    <ui:Button Margin="0,0,36,0"
+                               Command="{Binding Page.UpdateResourceVersionCommand}"
+                               CommandParameter="{Binding Node}"
+                               Content="更新资源"
+                               ToolTip="读取本机仓库的最新内容，确认后立即生效" />
+                </ui:CardControl>
+
+                <!--  独立任务设置：优先使用独立任务的专属设置界面  -->
+                <StackPanel Visibility="{Binding HasSettings, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ui:TextBlock Style="{StaticResource SectionTitle}" Text="任务设置" />
+                    <ui:TextBlock Margin="0,-4,0,10"
+                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                  Text="仅对这个任务生效；未修改的项沿用默认或分组设置。"
+                                  TextWrapping="Wrap" />
+                    <controls:PuloniaTaskSettingsEditorView DataContext="{Binding Settings}" />
+                </StackPanel>
+
+                <!--  其他任务的专用设置入口（在独立窗口中确认后立即生效）  -->
+                <StackPanel Visibility="{Binding HasTaskTools, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ui:TextBlock Style="{StaticResource SectionTitle}" Text="任务设置" />
+                    <ui:CardControl Margin="0,0,0,8"
+                                    Icon="{ui:SymbolIcon Settings24}"
+                                    Visibility="{Binding Document.CanEditCommonSettings, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ui:CardControl.Header>
+                            <StackPanel>
+                                <ui:TextBlock FontTypography="Body" Text="行走、战斗与执行" />
+                                <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                              Text="分组中的设置会被同类子任务继承，确认后立即生效"
+                                              TextWrapping="Wrap" />
+                            </StackPanel>
+                        </ui:CardControl.Header>
+                        <WrapPanel Margin="0,0,36,0" HorizontalAlignment="Right">
+                            <ui:Button Margin="8,2,0,2"
+                                       Command="{Binding Document.EditCommonSettingsCommand}"
                                        CommandParameter="pathing"
-                                       Content="地图追踪设置"
-                                       Visibility="{Binding SelectedDocument.CanEditPathingSettings, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                            <ui:Button Margin="0,0,8,6"
-                                       Command="{Binding SelectedDocument.EditCommonSettingsCommand}"
+                                       Content="地图追踪"
+                                       Visibility="{Binding Document.CanEditPathingSettings, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            <ui:Button Margin="8,2,0,2"
+                                       Command="{Binding Document.EditCommonSettingsCommand}"
                                        CommandParameter="javascript"
-                                       Content="JS 行走、战斗与食物设置"
-                                       Visibility="{Binding SelectedDocument.CanEditJavaScriptSettings, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                            <ui:Button Margin="0,0,0,6"
-                                       Command="{Binding SelectedDocument.EditCommonSettingsCommand}"
+                                       Content="JS 脚本"
+                                       Visibility="{Binding Document.CanEditJavaScriptSettings, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            <ui:Button Margin="8,2,0,2"
+                                       Command="{Binding Document.EditCommonSettingsCommand}"
                                        CommandParameter="shell"
-                                       Content="Shell 执行设置"
-                                       Visibility="{Binding SelectedDocument.CanEditShellSettings, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                       Content="Shell"
+                                       Visibility="{Binding Document.CanEditShellSettings, Converter={StaticResource BooleanToVisibilityConverter}}" />
                         </WrapPanel>
-                    </StackPanel>
-                </Border>
+                    </ui:CardControl>
+                    <ui:CardControl Margin="0,0,0,8"
+                                    Icon="{ui:SymbolIcon History24}"
+                                    Visibility="{Binding Document.CanEditCollectionCooldown, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ui:CardControl.Header>
+                            <StackPanel>
+                                <ui:TextBlock FontTypography="Body" Text="采集 CD" />
+                                <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                              Text="{Binding Document.CollectionCooldownSummary}"
+                                              TextWrapping="Wrap" />
+                            </StackPanel>
+                        </ui:CardControl.Header>
+                        <ui:Button Margin="0,0,36,0"
+                                   Command="{Binding Document.EditCollectionCooldownCommand}"
+                                   Content="配置" />
+                    </ui:CardControl>
+                </StackPanel>
 
-                <Border Margin="0,12,0,0"
-                        Padding="14"
-                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1"
-                        CornerRadius="8">
+                <!--  高级设置：原始数据编辑，点击各自的“应用”后立即生效  -->
+                <ui:CardExpander Margin="0,16,0,0"
+                                 ContentPadding="16"
+                                 Icon="{ui:SymbolIcon Code24}">
+                    <ui:CardExpander.Header>
+                        <StackPanel>
+                            <ui:TextBlock FontTypography="Body" Text="高级设置" />
+                            <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                          Text="参数预设、原始参数与执行策略，点击“应用”后立即生效"
+                                          TextWrapping="Wrap" />
+                        </StackPanel>
+                    </ui:CardExpander.Header>
                     <StackPanel>
-                        <Grid Margin="0,0,0,3">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock VerticalAlignment="Center"
-                                       FontWeight="SemiBold"
-                                       Text="参数预设（跨计划复用）"
-                                       ToolTip="复用相同任务类型和资源的一组参数；节点或分组中的显式设置优先" />
-                            <ui:Button Grid.Column="1"
-                                       Padding="7,2"
-                                       Command="{Binding RefreshPresetsCommand}"
-                                       Content="刷新" />
-                        </Grid>
-                        <ComboBox DisplayMemberPath="DisplayName"
-                                  IsEnabled="{Binding SelectedDocument.CanSelectPreset}"
-                                  ItemsSource="{Binding SelectedDocument.PresetOptions}"
-                                  SelectedItem="{Binding SelectedDocument.SelectedPresetOption, Mode=TwoWay}"
-                                  ToolTip="预设只复用参数，不包含任务结构、顺序或计划引用" />
+                        <!--  参数预设  -->
+                        <StackPanel Visibility="{Binding Document.CanSelectPreset, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <ui:TextBlock FontTypography="BodyStrong" Text="参数预设" />
+                            <ui:TextBlock Margin="0,2,0,0"
+                                          Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                          Text="跨计划复用同类任务的一组参数；本任务单独设置的参数优先"
+                                          TextWrapping="Wrap" />
+                            <Grid Margin="0,6,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ComboBox DisplayMemberPath="DisplayName"
+                                          ItemsSource="{Binding Document.PresetOptions}"
+                                          SelectedItem="{Binding Document.SelectedPresetOption, Mode=TwoWay}" />
+                                <ui:Button Grid.Column="1"
+                                           Margin="8,0,0,0"
+                                           Command="{Binding Page.RefreshPresetsCommand}"
+                                           Content="刷新" />
+                            </Grid>
+                        </StackPanel>
 
-                        <TextBlock Margin="0,14,0,3"
-                                   FontWeight="SemiBold"
-                                   Text="{Binding SelectedDocument.ParameterEditorTitle}" />
-                        <TextBox MinHeight="112"
-                                 AcceptsReturn="True"
-                                 FontFamily="Consolas"
-                                 HorizontalScrollBarVisibility="Auto"
-                                 Text="{Binding SelectedDocument.ParameterJson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 VerticalScrollBarVisibility="Auto" />
-                        <ui:Button Margin="0,5,0,0"
+                        <!--  原始参数  -->
+                        <ui:TextBlock Margin="0,16,0,0"
+                                      FontTypography="BodyStrong"
+                                      Text="{Binding Document.ParameterEditorTitle}" />
+                        <TextBox Style="{StaticResource JsonEditor}"
+                                 Text="{Binding Document.ParameterJson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <StackPanel Margin="0,6,0,0"
+                                    HorizontalAlignment="Right"
+                                    Orientation="Horizontal">
+                            <ui:Button Margin="0,0,8,0"
+                                       Command="{Binding Document.RestoreParameterInheritanceCommand}"
+                                       Content="清空本任务参数"
+                                       ToolTip="删除本任务单独设置的参数，恢复使用默认值、预设和分组设置"
+                                       Visibility="{Binding Document.CanSelectPreset, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            <ui:Button Command="{Binding Document.ApplyParametersCommand}" Content="应用参数" />
+                        </StackPanel>
+
+                        <!--  执行策略  -->
+                        <ui:TextBlock Margin="0,16,0,0"
+                                      FontTypography="BodyStrong"
+                                      Text="执行策略" />
+                        <TextBox Style="{StaticResource JsonEditor}"
+                                 Text="{Binding Document.PolicyJson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <ui:Button Margin="0,6,0,0"
                                    HorizontalAlignment="Right"
-                                   Padding="10,4"
-                                   Command="{Binding SelectedDocument.ApplyParametersCommand}"
-                                   Content="应用参数" />
+                                   Command="{Binding Document.ApplyPolicyCommand}"
+                                   Content="应用策略" />
 
-                        <Expander Margin="0,12,0,0" Header="执行策略">
-                            <StackPanel>
-                                <TextBox MinHeight="90"
-                                         AcceptsReturn="True"
-                                         FontFamily="Consolas"
-                                         HorizontalScrollBarVisibility="Auto"
-                                         Text="{Binding SelectedDocument.PolicyJson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                         VerticalScrollBarVisibility="Auto" />
-                                <ui:Button Margin="0,5,0,0"
-                                           HorizontalAlignment="Right"
-                                           Padding="10,4"
-                                           Command="{Binding SelectedDocument.ApplyPolicyCommand}"
-                                           Content="应用策略" />
-                            </StackPanel>
-                        </Expander>
+                        <!--  引用来源（仅计划或目录引用）  -->
+                        <StackPanel Visibility="{Binding Document.HasSource, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <ui:TextBlock Margin="0,16,0,0"
+                                          FontTypography="BodyStrong"
+                                          Text="引用来源" />
+                            <TextBox Style="{StaticResource JsonEditor}"
+                                     Text="{Binding Document.SourceJson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <ui:Button Margin="0,6,0,0"
+                                       HorizontalAlignment="Right"
+                                       Command="{Binding Document.ApplySourceCommand}"
+                                       Content="应用来源" />
+                        </StackPanel>
 
-                        <Expander Margin="0,8,0,0" Header="引用来源">
-                            <StackPanel>
-                                <TextBox MinHeight="90"
-                                         AcceptsReturn="True"
-                                         FontFamily="Consolas"
-                                         HorizontalScrollBarVisibility="Auto"
-                                         Text="{Binding SelectedDocument.SourceJson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                         VerticalScrollBarVisibility="Auto" />
-                                <ui:Button Margin="0,5,0,0"
-                                           HorizontalAlignment="Right"
-                                           Padding="10,4"
-                                           Command="{Binding SelectedDocument.ApplySourceCommand}"
-                                           Content="应用来源" />
-                            </StackPanel>
-                        </Expander>
-                    </StackPanel>
-                </Border>
-
-                <Border Margin="0,12,0,0"
-                        Padding="14"
-                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
-                        BorderThickness="1"
-                        CornerRadius="8">
-                    <StackPanel>
-                        <TextBlock Margin="0,0,0,5" FontWeight="SemiBold" Text="有效参数与来源" />
-                        <ItemsControl ItemsSource="{Binding SelectedDocument.EffectiveParameters}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Margin="0,0,0,5"
-                                            Padding="8"
-                                            Background="{DynamicResource SubtleFillColorSecondaryBrush}"
-                                            CornerRadius="5">
-                                        <StackPanel>
-                                            <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
-                                            <TextBlock Margin="0,2,0,0"
+                        <!--  最终生效的参数及其来源  -->
+                        <StackPanel Visibility="{Binding Node.IsLeaf, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <ui:TextBlock Margin="0,16,0,6"
+                                          FontTypography="BodyStrong"
+                                          Text="最终生效的参数" />
+                            <ItemsControl ItemsSource="{Binding Document.EffectiveParameters}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,0,0,4">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="180" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding Name}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       ToolTip="{Binding Source, StringFormat=来源：{0}}" />
+                                            <TextBlock Grid.Column="1"
                                                        FontFamily="Consolas"
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                                        Text="{Binding Value}"
-                                                       TextWrapping="Wrap" />
-                                            <TextBlock Margin="0,2,0,0"
-                                                       FontSize="11"
-                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                       Text="{Binding Source, StringFormat=来源：{0}}"
-                                                       TextWrapping="Wrap" />
-                                        </StackPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                        <TextBlock Margin="0,4,0,0"
-                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   Text="这里预览共享预设、父组覆盖和节点显式参数的最终结果。"
-                                   TextWrapping="Wrap" />
+                                                       TextTrimming="CharacterEllipsis"
+                                                       ToolTip="{Binding Value}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
                         <TextBlock Margin="0,10,0,0"
                                    Foreground="{DynamicResource SystemFillColorCautionBrush}"
-                                   Text="{Binding SelectedDocument.EditorMessage}"
-                                   TextWrapping="Wrap" />
-                        <TextBlock Margin="0,5,0,0"
-                                   Foreground="{DynamicResource SystemFillColorCriticalBrush}"
-                                   Text="{Binding SelectedDocument.LastSaveError, StringFormat=最近保存失败：{0}}"
+                                   Text="{Binding Document.EditorMessage}"
                                    TextWrapping="Wrap" />
                     </StackPanel>
-                </Border>
+                </ui:CardExpander>
+
+                <TextBlock Margin="0,10,0,0"
+                           Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                           Text="{Binding Document.LastSaveError, StringFormat=最近保存失败：{0}}"
+                           TextWrapping="Wrap" />
             </StackPanel>
         </ScrollViewer>
 
+        <!--  底部操作栏  -->
         <Border Grid.Row="2"
-                Padding="18,12"
+                Padding="24,12"
                 Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
                 BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                 BorderThickness="0,1,0,0">
             <Grid>
-                <TextBlock VerticalAlignment="Center"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                           Text="修改会立即写入当前草稿，并继续使用任务计划的自动保存与撤销。" />
-                <ui:Button HorizontalAlignment="Right"
-                           MinWidth="82"
-                           Appearance="Primary"
-                           Content="完成"
-                           IsCancel="True" />
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Margin="0,0,12,0"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                           Text="{Binding StatusMessage}"
+                           TextWrapping="Wrap" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <ui:Button MinWidth="96"
+                               Margin="0,0,8,0"
+                               Appearance="Primary"
+                               Command="{Binding SaveCommand}"
+                               Content="保存" />
+                    <ui:Button MinWidth="96"
+                               Command="{Binding CancelCommand}"
+                               Content="取消"
+                               IsCancel="True" />
+                </StackPanel>
             </Grid>
         </Border>
     </Grid>

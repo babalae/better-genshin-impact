@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
+using BetterGenshinImpact.ViewModel.Windows.Pulonia;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -14,7 +15,7 @@ public partial class PuloniaTaskPlanViewModel
     /// <summary>为触发窗口建立独立选择上下文，文档对象和保存门仍由主会话拥有。</summary>
     internal PuloniaTaskPlanViewModel CreateOneDragonTriggerEditor(PuloniaTaskPlanDocumentViewModel document)
     {
-        var editor = new PuloniaTaskPlanViewModel(_store, _clipboard, _taskService, _resourceCatalog, History, _triggerHost)
+        var editor = new PuloniaTaskPlanViewModel(_store, _clipboard, _taskService, _resourceCatalog, History, _triggerHost, _soloTaskRegistry)
         { _saveOwner = this, _presets = _presets, _isInitialized = true };
         // 不重复订阅文档编辑事件：自动保存只由主会话负责。
         foreach (var item in Documents) editor.Documents.Add(item);
@@ -37,6 +38,18 @@ public partial class PuloniaTaskPlanViewModel
         ScheduleAutoSave(document);
         return document;
     }
+
+    /// <summary>
+    /// 为一条龙配置建立新增独立任务弹窗视图模型：插入位置为根清单，独立任务保持内置名称。
+    /// </summary>
+    /// <param name="document">一条龙配置。</param>
+    /// <param name="definition">独立任务能力定义。</param>
+    /// <returns>新增弹窗视图模型。</returns>
+    internal PuloniaSoloTaskCreationDialogViewModel CreateOneDragonSoloTaskDialog(PuloniaTaskPlanDocumentViewModel document,
+        PuloniaTaskDefinition definition)
+        => new(definition, _soloTaskRegistry,
+            document.PreviewEffectiveParameters(new PuloniaTask { TaskType = definition.TaskType }, document.RootNode),
+            canEditName: false);
 
     /// <summary>在明确节点位置写入创建窗口确认的完整任务；一条龙始终插入根清单。</summary>
     internal void InsertOneDragonTask(PuloniaTaskPlanDocumentViewModel document, PuloniaTaskNodeViewModel? selected, PuloniaTask task)

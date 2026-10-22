@@ -196,13 +196,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
             && (cached.All(field => field.MatchesOriginalValue(values[field.Name])) || cached.Any(field => field.HasInputChanges))) return cached;
         var definition = _service.Definitions.FirstOrDefault(d => d.TaskType == node.TaskType && d.ResourceId == node.Path)
             ?? _service.Definitions.FirstOrDefault(d => d.TaskType == node.TaskType && d.ResourceId is null);
-        var fields = definition?.ParameterSchema["properties"] is JObject properties
-            ? properties.Properties().Select(p => new PuloniaOneDragonParameterFieldViewModel(p.Name,
-                p.Name == "weekday_overrides" ? PuloniaOneDragonSettingChoices.WeekdaySchema(properties, values, node.TaskType)
-                    : PuloniaOneDragonSettingChoices.Decorate(p.Name, (JObject)p.Value, values[p.Name], node.TaskType), values[p.Name],
-                definition.ParameterSchema["required"] is JArray required && required.Values<string>().Contains(p.Name))).ToArray()
-            : [];
-        return _drafts[(node.Document, node.Id)] = fields;
+        return _drafts[(node.Document, node.Id)] = PuloniaTaskSettingsEditorViewModel.CreateFields(definition, values);
     }
 
     /// <summary>仅丢弃指定配置的草稿，撤销、重新加载或删除不能影响其他配置的输入。</summary>
@@ -300,12 +294,18 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
         if (SelectedConfiguration is not { } document) return;
         try
         {
-            // 没有可填写参数的独立任务不弹创建窗口，直接以显示名插入
             if (PuloniaSoloTaskExecutor.IsSoloTaskType(taskType)
-                && _service.Definitions.FirstOrDefault(d => d.TaskType == taskType) is { } definition
-                && !PuloniaSoloTaskExecutor.HasEditableParameters(definition))
+                && _service.Definitions.FirstOrDefault(d => d.TaskType == taskType) is { } definition)
             {
-                Editor.InsertOneDragonTask(document, SelectedTask, new PuloniaTask { Name = definition.DisplayName, TaskType = taskType });
+                // 没有可填写参数的独立任务直接以显示名插入；有参数的使用独立任务新增弹窗，优先展示专属设置界面
+                var task = new PuloniaTask { Name = definition.DisplayName, TaskType = taskType };
+                if (PuloniaSoloTaskExecutor.HasEditableParameters(definition))
+                {
+                    var viewModel = Editor.CreateOneDragonSoloTaskDialog(document, definition);
+                    if (PuloniaSoloTaskCreationDialog.Show(viewModel, Application.Current.MainWindow) is not { } created) return;
+                    task = created;
+                }
+                Editor.InsertOneDragonTask(document, SelectedTask, task);
                 SelectedTask = document.SelectedNode;
                 return;
             }
