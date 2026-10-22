@@ -184,6 +184,9 @@ public sealed class BgiOnnxSessionFactory
                         // DirectML 执行提供程序不支持在 onnxruntime 中使用内存模式优化或并行执行。在创建 InferenceSession 期间提供会话选项时，必须禁用这些选项，否则将返回错误。
                         sessionOptions.EnableMemoryPattern = false;
                         sessionOptions.ExecutionMode = ExecutionMode.ORT_SEQUENTIAL;
+                        // Run 结束等 fence 时用 CPU 自旋代替 OS 事件等待：Windows 事件等待粒度约 1ms，
+                        // 是小模型单次推理毛刺（个别 Run 2~3 倍变慢）的主要来源之一；代价是 Run 期间占住一个核。
+                        sessionOptions.AddSessionConfigEntry("ep.dml.enable_cpu_sync_spinning", "true");
                         sessionOptions.AppendExecutionProvider_DML(DmlDeviceId);
                         break;
                     case ProviderType.Cpu:

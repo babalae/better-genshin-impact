@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using BetterGenshinImpact.Core.Recognition.OCR.Engine;
 using BetterGenshinImpact.Core.Recognition.ONNX;
+using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using OpenCvSharp;
@@ -11,6 +14,8 @@ namespace BetterGenshinImpact.Core.Recognition.OCR.Paddle;
 public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxSessionFactory bgiOnnxFactory)
     : IDisposable
 {
+    private static readonly ILogger Logger = App.GetLogger<Det>();
+
     private readonly object _sessionLock = new();
     private readonly InferenceSession _session = bgiOnnxFactory.CreateInferenceSession(model, true);
     private bool _disposed;
@@ -69,7 +74,10 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxSessionFact
             UnclipRatio,
             MinSize,
             UseDilation);
-        return postProcessor.Run(roi, src.Size());
+        var sw = Stopwatch.StartNew();
+        var boxes = postProcessor.Run(roi, src.Size());
+        Logger.LogDebug("[OCR][Det] 后处理 {Ms:F1}ms 文本框 {Count}", sw.Elapsed.TotalMilliseconds, boxes.Length);
+        return boxes;
     }
 
     public Mat RunRaw(Mat src, out Size resizedSize)
@@ -87,10 +95,16 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxSessionFact
             // 与 PaddleOCR Python DetResizeForTest 保持一致：
             // 1. h + w < 64 时先将图像补全到至少 32x32
             // 2. 按 limit_type 规则缩放，并将宽高分别对齐到 32 的倍数
-            using var resized = MatResizeForDetection(input);
-            resizedSize = new Size(resized.Width, resized.Height);
+            // 3. 再 pad 到固定档位的正方形画布，使模型输入形状有限（OpenVINO 会按形状编译，形状无限则每次检测都可能触发重新编译）
+            var sw = Stopwatch.StartNew();
+            using var resized = MatResizeForDetection(input, out var contentSize);
+            resizedSize = contentSize;
+            var resizeMs = sw.Elapsed.TotalMilliseconds;
             var inputTensor = OcrUtils.NormalizeToTensorDnn(resized, config.NormalizeImage.Scale,
                 config.NormalizeImage.Mean, config.NormalizeImage.Std, out var owner);
+            var normalizeMs = sw.Elapsed.TotalMilliseconds - resizeMs;
+            Mat result;
+            double inferMs;
             using (owner)
             {
                 lock (_sessionLock)
@@ -99,6 +113,7 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxSessionFact
                     using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = _session.Run([
                         NamedOnnxValue.CreateFromTensor(_session.InputNames[0], inputTensor)
                     ]);
+                    inferMs = sw.Elapsed.TotalMilliseconds - resizeMs - normalizeMs;
                     var output = results[0];
                     if (output.ElementType is not TensorElementType.Float)
                         throw new Exception($"Unexpected output tensor type: {output.ElementType}");
@@ -106,10 +121,16 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxSessionFact
                     if (output.ValueType is not OnnxValueType.ONNX_TYPE_TENSOR)
                         throw new Exception($"Unexpected output tensor value type: {output.ValueType}");
                     var outputTensor = output.AsTensor<float>();
-                    return OcrUtils.Tensor2Mat(outputTensor);
+                    result = OcrUtils.Tensor2Mat(outputTensor);
                     // 因为一个已知bug,tensor中内存在dml下使用完后会被释放掉,锁之外的代码会报错
                 }
             }
+
+            Logger.LogDebug(
+                "[OCR][Det] 桶{Bucket} 内容{Width}x{Height} | 预处理 {Resize:F1}ms 张量化 {Norm:F1}ms 推理 {Infer:F1}ms 输出转换 {Out:F1}ms",
+                resized.Width, contentSize.Width, contentSize.Height,
+                resizeMs, normalizeMs, inferMs, sw.Elapsed.TotalMilliseconds - resizeMs - normalizeMs - inferMs);
+            return result;
         }
         finally
         {
@@ -118,16 +139,54 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxSessionFact
     }
 
     /// <summary>
-    /// 按 PaddleOCR Python 的 DetResizeForTest 缩放图像：
-    /// 超小图先补边，再按 max/min/resize_long 规则缩放，并对齐到 32 的倍数。
+    ///     检测输入形状分桶的档位步长：内容区域 pad 到 320 的倍数的正方形画布，
+    ///     使模型输入形状只有有限几档（默认 LimitSideLen=960 时为 320/640/960 三档），
+    ///     避免 OpenVINO 等按输入形状编译的执行提供程序反复触发模型重编译。
     /// </summary>
-    /// <param name="src"></param>
-    /// <returns></returns>
-    private Mat MatResizeForDetection(Mat src)
-    {
-        using var preprocessed = PrepareTinyImage(src);
+    private const int DetBucketStep = 320;
 
-        var size = preprocessed.Size();
+    /// <summary>当前配置下可能出现的检测输入档位，供启动时预热编译。</summary>
+    internal int[] GetWarmupBuckets()
+    {
+        var limit = Math.Max(DetBucketStep, (int)Math.Ceiling(LimitSideLen / (double)DetBucketStep) * DetBucketStep);
+        var buckets = new List<int>();
+        for (var bucket = DetBucketStep; bucket <= limit; bucket += DetBucketStep)
+        {
+            buckets.Add(bucket);
+        }
+
+        return buckets.ToArray();
+    }
+
+    /// <summary>用零张量预热指定档位，提前触发该形状的底层编译（OpenVINO 按输入形状编译，首次耗时数秒）。</summary>
+    internal void Warmup(int bucket)
+    {
+        var input = new DenseTensor<float>(new[] { 1, 3, bucket, bucket });
+        lock (_sessionLock)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            using var results = _session.Run([
+                NamedOnnxValue.CreateFromTensor(_session.InputNames[0], input)
+            ]);
+        }
+    }
+
+    /// <summary>
+    ///     按 PaddleOCR Python 的 DetResizeForTest 缩放图像：
+    ///     超小图先补边，再按 max/min/resize_long 规则缩放，并对齐到 32 的倍数，
+    ///     最后放入黑底正方形画布（边长为 320 的倍数）。
+    /// </summary>
+    /// <param name="src">原始图像</param>
+    /// <param name="contentSize">缩放后内容区域的实际尺寸，推理输出只需按此区域截取</param>
+    /// <returns>已 pad 到分桶画布的图像</returns>
+    private Mat MatResizeForDetection(Mat src, out Size contentSize)
+    {
+        // 正常尺寸图像只做只读操作，直接使用原 Mat，避免整帧克隆；
+        // 仅极小图需要复制补边。
+        using var preprocessed = src.Width + src.Height >= 64 ? null : PrepareTinyImage(src);
+        var work = preprocessed ?? src;
+
+        var size = work.Size();
         var height = size.Height;
         var width = size.Width;
 
@@ -151,7 +210,17 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxSessionFact
                 $"Invalid det resize target size: {resizeWidth}x{resizeHeight}, src={width}x{height}");
         }
 
-        return preprocessed.Resize(new Size(resizeWidth, resizeHeight));
+        contentSize = new Size(resizeWidth, resizeHeight);
+        var bucket = Math.Max((Math.Max(resizeHeight, resizeWidth) + DetBucketStep - 1) / DetBucketStep * DetBucketStep,
+            DetBucketStep);
+        var canvas = new Mat(new Size(bucket, bucket), work.Type(), Scalar.Black);
+        using var resized = work.Resize(new Size(resizeWidth, resizeHeight));
+        using (var roi = canvas[new Rect(0, 0, resizeWidth, resizeHeight)])
+        {
+            resized.CopyTo(roi);
+        }
+
+        return canvas;
     }
 
     private static Mat PrepareTinyImage(Mat src)
