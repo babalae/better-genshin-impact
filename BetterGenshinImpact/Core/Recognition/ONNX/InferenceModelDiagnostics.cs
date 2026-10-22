@@ -6,6 +6,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Core.Recognition.OCR.Ncnn;
 using BetterGenshinImpact.Core.Recognition.OCR.Paddle;
 using Compunet.YoloSharp;
 using Microsoft.Extensions.Logging;
@@ -170,7 +172,11 @@ public sealed class InferenceModelDiagnostics(
                 if (scene == InferenceBenchmarkScene.Ocr)
                 {
                     var type = ocr.ActiveModelType;
-                    using var service = new PaddleOcrService(factory, type);
+                    // 测速应与业务一致：ncnn 开关开启时同样走 ncnn，否则测出的是 ONNX 引擎的数字
+                    using var service = TaskContext.Instance().Config.HardwareAccelerationConfig.UseNcnnOcr
+                        && NcnnOcrBackend.TryCreate(logger) is { } ncnn
+                        ? new PaddleOcrService(ncnn, type)
+                        : new PaddleOcrService(factory, type);
                     using var image = new Mat(ocr.ActiveModelType.PreHeatImagePath);
                     if (image.Empty()) throw new InvalidDataException("OCR 测试图片无法读取。");
                     return Measure("OCR", $"{factory.Runtime.OcrDescription} · {type.DetectionModel.Name}/{type.RecognitionModel.Name}",

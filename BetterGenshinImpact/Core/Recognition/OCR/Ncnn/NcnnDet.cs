@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using Microsoft.Extensions.Logging;
 using System.Runtime.InteropServices;
 using BetterGenshinImpact.Core.Recognition.OCR.Engine;
 using BetterGenshinImpact.Core.Recognition.OCR.Engine.data;
@@ -18,6 +20,8 @@ namespace BetterGenshinImpact.Core.Recognition.OCR.Ncnn;
 /// </summary>
 internal sealed class NcnnDet : IOcrDetector
 {
+    private static readonly ILogger Logger = App.GetLogger<NcnnDet>();
+
     private readonly NcnnShim _shim;
     private readonly OcrVersionConfig _config;
 
@@ -104,11 +108,18 @@ internal sealed class NcnnDet : IOcrDetector
     /// <summary>检测文本框（与 Det.RunBoxes 同语义）。</summary>
     public PaddleOcrDetectionBox[] RunBoxes(Mat src)
     {
+        var sw = Stopwatch.StartNew();
         using var pred = RunRaw(src, out var contentSize);
+        var inferMs = sw.Elapsed.TotalMilliseconds;
         using var roi = pred[0, contentSize.Height, 0, contentSize.Width];
         var postProcessor = new DbPostProcessor(
             BoxThreshold, BoxScoreThreshold, MaxCandidates, UnclipRatio, MinSize, UseDilation);
-        return postProcessor.Run(roi, src.Size());
+        var boxes = postProcessor.Run(roi, src.Size());
+        Logger.LogDebug(
+            "[OCR][Det][ncnn] 桶{Bucket} 内容{Width}x{Height} | 推理+转换 {Infer:F1}ms 后处理 {Post:F1}ms 文本框 {Count}",
+            pred.Width, contentSize.Width, contentSize.Height, inferMs, sw.Elapsed.TotalMilliseconds - inferMs,
+            boxes.Length);
+        return boxes;
     }
 
     /// <summary>推理概率图：返回 [1,B,B] 的 float Mat（B 为桶边长）。</summary>

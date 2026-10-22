@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using Microsoft.Extensions.Logging;
 using System.Runtime.InteropServices;
 using BetterGenshinImpact.Core.Recognition.OCR.Engine;
 using BetterGenshinImpact.Core.Recognition.OCR.Engine.data;
@@ -19,6 +21,8 @@ namespace BetterGenshinImpact.Core.Recognition.OCR.Ncnn;
 /// </summary>
 internal sealed class NcnnRec : IOcrRecognizer
 {
+    private static readonly ILogger Logger = App.GetLogger<NcnnRec>();
+
     private const int ModelHeight = 48;
 
     /// <summary>rec 主干下采样倍率：输出时间步 = 输入宽度 / 8。</summary>
@@ -84,7 +88,9 @@ internal sealed class NcnnRec : IOcrRecognizer
     {
         if (src.Empty()) throw new ArgumentException("src size should not be 0, wrong input picture provided?");
         var width = ChooseBucket(src.Width, src.Height);
+        var sw = Stopwatch.StartNew();
         var tensor = OcrUtils.ResizeNormImg(src, new OcrShape(3, width, ModelHeight), out var owner);
+        var preMs = sw.Elapsed.TotalMilliseconds;
         try
         {
             if (tensor is not DenseTensor<float> dense)
@@ -100,7 +106,13 @@ internal sealed class NcnnRec : IOcrRecognizer
                 var charCount = Math.Max(1, width / Downsample);
                 if (outCount % charCount != 0)
                     throw new InvalidOperationException($"ncnn rec 输出维度异常: {outCount} 不能被 {charCount} 整除");
-                return DecodeOne(managed, charCount, outCount / charCount);
+                var inferMs = sw.Elapsed.TotalMilliseconds - preMs;
+                var decodeSw = Stopwatch.StartNew();
+                var result = DecodeOne(managed, charCount, outCount / charCount);
+                Logger.LogDebug(
+                    "[OCR][Rec][ncnn] 桶宽{Bucket} | 归一化 {Pre:F1}ms 推理 {Inf:F1}ms 解码 {Dec:F1}ms",
+                    width, preMs, inferMs, decodeSw.Elapsed.TotalMilliseconds);
+                return result;
             }
             finally
             {
