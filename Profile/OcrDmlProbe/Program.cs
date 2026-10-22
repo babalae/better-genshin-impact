@@ -83,6 +83,19 @@ var config = OcrVersionConfig.PpOcrV6;
 Action<string> log = quiet ? _ => { } : Console.WriteLine;
 using var det = new DetProbe("PpOcrDetV6", detModelPath, config, dmlDeviceId, cpuThreads, log, providers, enableProfile);
 var labels = PaddlePipeline.LoadRecLabels(recModelPath);
+if (Has("--dump-labels"))
+{
+    Console.WriteLine($"[labels] 条目数 {labels.Count}");
+    Console.WriteLine($"[labels] 前5: {string.Join(" | ", labels.Take(5).Select(x => x == "" ? "<empty>" : x))}");
+    var idx = labels.ToList().IndexOf("领");
+    Console.WriteLine($"[labels] '领' 索引 {idx}");
+    if (Opt("--dump-labels-file") is { } dumpPath)
+    {
+        File.WriteAllLines(dumpPath, labels);
+        Console.WriteLine($"[labels] 已导出 {labels.Count} 条到 {dumpPath}");
+    }
+    return;
+}
 using var rec = new RecProbe("PpOcrRecV6", recModelPath, labels, config, dmlDeviceId, cpuThreads, log, providers, enableProfile);
 using var pipeline = new PaddlePipeline(det, rec);
 
