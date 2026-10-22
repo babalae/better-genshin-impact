@@ -109,11 +109,12 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
             CultureInfo cultureInfo = new CultureInfo("zh-Hans");
 
             //
-            AutoArtifactSalvageTask sut = new AutoArtifactSalvageTask(CreateRuntime(), new AutoArtifactSalvageTaskParam(5, null, null, null, null, cultureInfo, this.stringLocalizer), new FakeLogger());
+            AutoArtifactSalvageTaskParam salvageParam = new AutoArtifactSalvageTaskParam(5, null, null, null, null, cultureInfo, this.stringLocalizer);
+            AutoArtifactSalvageTask sut = new AutoArtifactSalvageTask(CreateRuntime(), new FakeLogger());
             string result = PaddleResultDic.GetOrAdd(screenshot, screenshot_ =>
             {
                 using Mat mat = new Mat(@$"..\..\..\Assets\AutoArtifactSalvage\{screenshot_}");
-                sut.GetArtifactStat(mat, paddle.Get(), out string allText);
+                sut.GetArtifactStat(mat, paddle.Get(), salvageParam, out string allText);
                 return allText;
             });
 
@@ -220,8 +221,9 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
             */
 
             //
-            AutoArtifactSalvageTask sut = new AutoArtifactSalvageTask(CreateRuntime(), new AutoArtifactSalvageTaskParam(5, null, null, null, null, cultureInfo, this.stringLocalizer), new FakeLogger());
-            ArtifactStat result = sut.GetArtifactStat(mat, paddle.Get(cultureInfo.Name), out string _);
+            AutoArtifactSalvageTaskParam salvageParam = new AutoArtifactSalvageTaskParam(5, null, null, null, null, cultureInfo, this.stringLocalizer);
+            AutoArtifactSalvageTask sut = new AutoArtifactSalvageTask(CreateRuntime(), new FakeLogger());
+            ArtifactStat result = sut.GetArtifactStat(mat, paddle.Get(cultureInfo.Name), salvageParam, out string _);
 
             //
             Assert.Equal(expectedArtifactStat.Name, result.Name);
@@ -252,8 +254,9 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
             CultureInfo cultureInfo = new CultureInfo("zh-Hans");
 
             //
-            AutoArtifactSalvageTask sut = new AutoArtifactSalvageTask(CreateRuntime(), new AutoArtifactSalvageTaskParam(5, null, null, null, null, cultureInfo, this.stringLocalizer), new FakeLogger());
-            ArtifactStat artifact = sut.GetArtifactStat(mat, paddle.Get(), out string _);
+            AutoArtifactSalvageTaskParam salvageParam = new AutoArtifactSalvageTaskParam(5, null, null, null, null, cultureInfo, this.stringLocalizer);
+            AutoArtifactSalvageTask sut = new AutoArtifactSalvageTask(CreateRuntime(), new FakeLogger());
+            ArtifactStat artifact = sut.GetArtifactStat(mat, paddle.Get(), salvageParam, out string _);
             bool result = await IsMatchJavaScript(artifact, js, new FakeLogger());
 
             //

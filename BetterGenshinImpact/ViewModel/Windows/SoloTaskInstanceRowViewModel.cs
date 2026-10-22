@@ -1,6 +1,7 @@
-using BetterGenshinImpact.GameTask.SoloTask;
+using BetterGenshinImpact.GameTask.SoloTask.Execution;
 using BetterGenshinImpact.Service.Instance;
 using CommunityToolkit.Mvvm.ComponentModel;
+using System;
 using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Windows;
@@ -24,6 +25,11 @@ public sealed partial class SoloTaskInstanceRowViewModel : ObservableObject
     /// 与实例类型匹配的 WPF-UI 图标。
     /// </summary>
     public SymbolRegular InstanceIcon { get; }
+
+    /// <summary>
+    /// 按任务标识返回任务显示名，用于提示实例被哪个任务占用。
+    /// </summary>
+    private readonly Func<string?, string> _getTaskDisplayName;
 
     /// <summary>
     /// 最近一次同步到界面的真实运行状态。
@@ -63,9 +69,12 @@ public sealed partial class SoloTaskInstanceRowViewModel : ObservableObject
     /// <summary>
     /// 创建一个实例展示行。
     /// </summary>
-    public SoloTaskInstanceRowViewModel(InstanceEndpoint endpoint)
+    /// <param name="endpoint">实例端点</param>
+    /// <param name="getTaskDisplayName">按任务标识返回任务显示名</param>
+    public SoloTaskInstanceRowViewModel(InstanceEndpoint endpoint, Func<string?, string> getTaskDisplayName)
     {
         Endpoint = endpoint;
+        _getTaskDisplayName = getTaskDisplayName;
         DisplayName = GetDisplayName(endpoint);
         InstanceIcon = endpoint.InstanceType == BetterGiInstanceType.WebView
             ? SymbolRegular.Cloud24
@@ -75,9 +84,13 @@ public sealed partial class SoloTaskInstanceRowViewModel : ObservableObject
     /// <summary>
     /// 使用实例在线状态和任务状态刷新整行展示。
     /// </summary>
+    /// <param name="status">实例当前任务状态</param>
+    /// <param name="managedTaskId">本窗口管理的任务标识</param>
+    /// <param name="isOnline">实例是否在线</param>
+    /// <param name="isOperationPending">窗口内是否有未确认的操作</param>
     public void Update(
         SoloTaskStatusSnapshot status,
-        SoloTaskType managedTaskType,
+        string managedTaskId,
         bool isOnline,
         bool isOperationPending)
     {
@@ -101,9 +114,9 @@ public sealed partial class SoloTaskInstanceRowViewModel : ObservableObject
             return;
         }
 
-        if (status.TaskType != managedTaskType)
+        if (status.TaskId != managedTaskId)
         {
-            StatusText = $"正被“{SoloTaskRegistry.GetDisplayName(status.TaskType!.Value)}”占用";
+            StatusText = $"正被“{_getTaskDisplayName(status.TaskId)}”占用";
             ActionText = "已占用";
             CanOperate = false;
             return;

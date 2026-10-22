@@ -37,13 +37,19 @@ public sealed class PuloniaTaskOutcome
     public IReadOnlyList<PuloniaTaskEvidence> Evidence { get; }
 
     /// <summary>
+    /// 机器可读的原因码，来自独立任务结果；成功或执行器未提供时为 null。
+    /// </summary>
+    public string? ReasonCode { get; }
+
+    /// <summary>
     /// 建立不可变执行结果，并复制调用方提供的数据。
     /// </summary>
     public PuloniaTaskOutcome(PuloniaTaskOutcomeKind kind, string message, JObject? data = null,
-        IEnumerable<PuloniaTaskEvidence>? evidence = null)
+        IEnumerable<PuloniaTaskEvidence>? evidence = null, string? reasonCode = null)
     {
         Kind = kind;
         Message = message;
+        ReasonCode = reasonCode;
         Data = data is null ? new JObject() : (JObject)data.DeepClone();
         Evidence = new ReadOnlyCollection<PuloniaTaskEvidence>((evidence ?? []).ToArray());
     }
@@ -73,6 +79,6 @@ public sealed class PuloniaTaskOutcome
     /// 建立失败结果。
     /// </summary>
     public static PuloniaTaskOutcome Failure(string message, JObject? data = null,
-        IEnumerable<PuloniaTaskEvidence>? evidence = null)
-        => new(PuloniaTaskOutcomeKind.Failed, message, data, evidence);
+        IEnumerable<PuloniaTaskEvidence>? evidence = null, string? reasonCode = null)
+        => new(PuloniaTaskOutcomeKind.Failed, message, data, evidence, reasonCode);
 }

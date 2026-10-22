@@ -12,8 +12,12 @@ using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoBoss;
 using BetterGenshinImpact.GameTask.AutoDomain;
+using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
+using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.SoloTask;
+using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Service;
 using Newtonsoft.Json.Linq;
@@ -209,44 +213,44 @@ public sealed class PuloniaTaskLegacyImporter
             if (!dragon.TaskEnabledList.TryGetValue(key, out var enabled)) continue;
             var name = dragon.TaskDefinitions.Count == 0 ? key : dragon.TaskDefinitions.GetValueOrDefault(key) ?? key;
             var node = new PuloniaTask { Name = name, IsEnabled = enabled };
+            // 战斗类任务借用了其他页面的全局配置，冻结为预设；一条龙自己的字段直接写入节点参数
             JObject? values = null;
             switch (name)
             {
-                case "领取邮件": node.TaskType = "builtin.claim_mail"; break;
-                case "合成树脂": node.TaskType = "builtin.craft_condensed_resin"; node.Parameters["country"] = dragon.CraftingBenchCountry; break;
-                case "领取每日奖励": node.TaskType = "builtin.daily_rewards"; node.Parameters = new JObject { ["country"] = dragon.AdventurersGuildCountry, ["party_name"] = dragon.DailyRewardPartyName }; break;
-                case "领取尘歌壶奖励": node.TaskType = "builtin.serenitea_pot_rewards"; break;
+                case "领取邮件": node.TaskType = PuloniaSoloTaskExecutor.ToTaskType(ClaimMailRewardsTask.TaskId); break;
+                case "合成树脂":
+                    node.TaskType = PuloniaSoloTaskExecutor.ToTaskType(GoToCraftingBenchTask.TaskId);
+                    node.Parameters = ToParameters(new CraftCondensedResinParam { Country = dragon.CraftingBenchCountry, MinResinToKeep = dragon.MinResinToKeep });
+                    result.Differences.Add(location + "/" + name + "：保留原粹树脂数取自本次导入的一条龙配置，运行时不再读取当前选中的一条龙配置。");
+                    break;
+                case "领取每日奖励":
+                    node.TaskType = PuloniaSoloTaskExecutor.ToTaskType(ClaimDailyRewardsTask.TaskId);
+                    node.Parameters = ToParameters(new DailyRewardsParam { Country = dragon.AdventurersGuildCountry, PartyName = dragon.DailyRewardPartyName });
+                    break;
+                case "领取尘歌壶奖励":
+                    node.TaskType = PuloniaSoloTaskExecutor.ToTaskType(GoToSereniteaPotTask.TaskId);
+                    node.Parameters = ToParameters(new SereniteaPotParam { TeleportType = dragon.SereniteaPotTpType, SecretTreasureObjects = [.. dragon.SecretTreasureObjects] });
+                    result.Differences.Add(location + "/" + name + "：进壶方式与洞天百宝购买清单取自本次导入的一条龙配置，运行时不再读取当前选中的一条龙配置。");
+                    break;
                 case "自动秘境":
-                    node.TaskType = "builtin.auto_domain"; values = PuloniaCombatTaskSettings.ToParameters(config.AutoDomainConfig);
-                    values["party_name"] = dragon.PartyName; values["domain_name"] = dragon.DomainName;
-                    values["sunday_selected_value"] = dragon.SundayEverySelectedValue;
-                    values["strategy_name"] = string.IsNullOrEmpty(config.AutoFightConfig.StrategyName) ? "根据队伍自动选择" : config.AutoFightConfig.StrategyName;
-                    values["max_artifact_star"] = config.AutoArtifactSalvageConfig.MaxArtifactStar;
+                    node.TaskType = PuloniaSoloTaskExecutor.ToTaskType(AutoDomainTask.TaskId);
+                    values = ToParameters(CreateDomainParam(config, dragon));
                     if (dragon.WeeklyDomainEnabled) AddDragonWeek(values, JObject.FromObject(dragon), domain: true);
                     break;
                 case "自动首领讨伐":
-                    node.TaskType = "builtin.auto_boss";
-                    var boss = new AutoBossConfig { BossName = dragon.AutoBossName, StrategyName = dragon.AutoBossStrategyName, TeamName = dragon.AutoBossTeamName,
-                        SpecifyRunCount = dragon.AutoBossSpecifyRunCount, RunCount = dragon.AutoBossRunCount, UseTransientResin = dragon.AutoBossUseTransientResin,
-                        UseFragileResin = dragon.AutoBossUseFragileResin, ReviveRetryCount = dragon.AutoBossReviveRetryCount, ReturnToStatueAfterEachRound = dragon.AutoBossReturnToStatueAfterEachRound,
-                        RewardRecognitionEnabled = dragon.AutoBossRewardRecognitionEnabled, Timeout = dragon.AutoBossTimeout };
-                    values = PuloniaCombatTaskSettings.ToParameters(boss);
-                    values["fight_config"] = PuloniaCombatTaskSettings.ToParameters(config.AutoFightConfig);
+                    node.TaskType = PuloniaSoloTaskExecutor.ToTaskType(AutoBossTask.TaskId);
+                    values = ToParameters(CreateBossParam(config, dragon));
                     if (dragon.AutoBossTotalRunCountLimit > 0) { node.IsEnabled = false; result.Differences.Add(location + "/" + name + "：旧累计上限 / 已完成次数无账号证据，未迁入；节点暂时禁用。"); }
                     break;
                 case "自动幽境危战":
-                    node.TaskType = "builtin.auto_stygian"; values = PuloniaCombatTaskSettings.ToParameters(config.AutoStygianOnslaughtConfig);
-                    values["max_artifact_star"] = config.AutoArtifactSalvageConfig.MaxArtifactStar; break;
+                    node.TaskType = PuloniaSoloTaskExecutor.ToTaskType(AutoStygianOnslaughtTask.TaskId);
+                    values = ToParameters(CreateStygianParam(config));
+                    break;
                 case "自动地脉花":
-                    node.TaskType = "builtin.auto_ley_line";
-                    var ley = PuloniaCombatTaskSettings.FromParameters<AutoLeyLineOutcropConfig>(PuloniaCombatTaskSettings.ToParameters(config.AutoLeyLineOutcropConfig));
-                    if (string.IsNullOrWhiteSpace(ley.FightConfig.StrategyName)) ley.FightConfig.CopyFromAutoFightConfig(config.AutoFightConfig);
-                    if (string.IsNullOrWhiteSpace(ley.FightConfig.StrategyName)) ley.FightConfig.StrategyName = "根据队伍自动选择";
-                    values = PuloniaCombatTaskSettings.ToParameters(ley);
-                    if (dragon.LeyLineRunCount > 0) values["count"] = dragon.LeyLineRunCount;
-                    values["is_resin_exhaustion_mode"] = dragon.LeyLineResinExhaustionMode; values["open_mode_count_min"] = dragon.LeyLineOpenModeCountMin;
-                    values["one_dragon_mode"] = dragon.LeyLineOneDragonMode;
-                    AddDragonWeek(values, JObject.FromObject(dragon), domain: false); break;
+                    node.TaskType = PuloniaSoloTaskExecutor.ToTaskType(AutoLeyLineOutcropTask.TaskId);
+                    values = ToParameters(CreateLeyLineParam(config, dragon));
+                    AddDragonWeek(values, JObject.FromObject(dragon), domain: false);
+                    break;
                 default:
                     var directory = Global.Absolute("User/ScriptGroup");
                     var source = Path.GetFullPath(Path.Combine(directory, name + ".json"));
@@ -266,10 +270,111 @@ public sealed class PuloniaTaskLegacyImporter
         }
         if (!string.IsNullOrEmpty(dragon.NextTaskId)) result.Differences.Add(location + "：旧从此执行标记未当作新历史断点导入。");
         if (!string.IsNullOrEmpty(dragon.CompletionAction)) result.Differences.Add(location + "：完成后操作“" + dragon.CompletionAction + "”未自动执行，请显式配置后处理步骤。");
-        result.Differences.Add(location + "：秘境、首领、幽境和地脉花的隐式业务配置已冻结为本次导入预设；旧领取流程结果仍需核验。");
+        result.Differences.Add(location + "：秘境、首领、幽境和地脉花的隐式业务配置已冻结为本次导入预设，战斗策略按名称保存并在运行时解析；旧领取流程结果仍需核验。");
     }
 
-    /// <summary>转换周安排并保留四点日切及空值回退语义。</summary>
+    /// <summary>按独立任务参数合同（SoloTaskJson）把强类型参数转换为节点或预设使用的参数 JSON。</summary>
+    private static JObject ToParameters<T>(T param) => PuloniaTaskJson.Read<JObject>(SoloTaskJson.Serialize(param));
+
+    /// <summary>取参数属性按 SoloTaskJson 命名规则得到的参数键，周安排的当天覆盖与参数使用同一套键。</summary>
+    private static string ParamKey(string propertyName) => SoloTaskJson.Options.PropertyNamingPolicy!.ConvertName(propertyName);
+
+    /// <summary>
+    /// 自动秘境：业务设置来自导入时的秘境配置，队伍、秘境和周日奖励来自一条龙；
+    /// 轮数 9999 表示按树脂配置刷取，策略保存名称，运行时再解析为路径。
+    /// </summary>
+    private static AutoDomainParam CreateDomainParam(AllConfig config, OneDragonFlowConfig dragon)
+    {
+        var domain = config.AutoDomainConfig;
+        var strategy = string.IsNullOrEmpty(config.AutoFightConfig.StrategyName) ? CombatStrategyResolver.AutoSelectName : config.AutoFightConfig.StrategyName;
+        // 内部构造不加载全局业务默认值，全部字段在这里显式填写
+        return new AutoDomainParam(strategy)
+        {
+            PartyName = dragon.PartyName,
+            DomainName = dragon.DomainName,
+            SundaySelectedValue = dragon.SundayEverySelectedValue,
+            AutoArtifactSalvage = domain.AutoArtifactSalvage,
+            MaxArtifactStar = config.AutoArtifactSalvageConfig.MaxArtifactStar,
+            SpecifyResinUse = domain.SpecifyResinUse,
+            ResinPriorityList = [.. domain.ResinPriorityList],
+            OriginalResinUseCount = domain.OriginalResinUseCount,
+            OriginalResin20UseCount = domain.OriginalResin20UseCount,
+            OriginalResin40UseCount = domain.OriginalResin40UseCount,
+            CondensedResinUseCount = domain.CondensedResinUseCount,
+            TransientResinUseCount = domain.TransientResinUseCount,
+            FragileResinUseCount = domain.FragileResinUseCount,
+            RewardRecognitionEnabled = domain.RewardRecognitionEnabled,
+            FightEndDelay = domain.FightEndDelay,
+            ShortMovement = domain.ShortMovement,
+            WalkToF = domain.WalkToF,
+            LeftRightMoveTimes = domain.LeftRightMoveTimes,
+            AutoEat = domain.AutoEat,
+            ReviveRetryCount = domain.ReviveRetryCount
+        };
+    }
+
+    /// <summary>
+    /// 自动首领讨伐：首领设置全部来自一条龙，战斗配置冻结导入时的全局自动战斗配置。
+    /// 策略路径保存策略名，后续修改策略名或路径都由任务按 CombatStrategyResolver 解析。
+    /// </summary>
+    private static AutoBossParam CreateBossParam(AllConfig config, OneDragonFlowConfig dragon)
+    {
+        var strategy = string.IsNullOrWhiteSpace(dragon.AutoBossStrategyName) ? CombatStrategyResolver.AutoSelectName : dragon.AutoBossStrategyName;
+        var param = AutoBossParam.CreateWithoutDefaultConfig(strategy);
+        param.BossName = dragon.AutoBossName;
+        param.StrategyName = strategy;
+        param.TeamName = dragon.AutoBossTeamName;
+        param.SpecifyRunCount = dragon.AutoBossSpecifyRunCount;
+        param.RunCount = dragon.AutoBossRunCount;
+        param.UseTransientResin = dragon.AutoBossUseTransientResin;
+        param.UseFragileResin = dragon.AutoBossUseFragileResin;
+        param.ReviveRetryCount = dragon.AutoBossReviveRetryCount;
+        param.ReturnToStatueAfterEachRound = dragon.AutoBossReturnToStatueAfterEachRound;
+        param.RewardRecognitionEnabled = dragon.AutoBossRewardRecognitionEnabled;
+        param.Timeout = dragon.AutoBossTimeout;
+        // 随后立即序列化，引用全局对象不会被保存下来，预设里得到的是导入时的副本
+        param.FightConfig = config.AutoFightConfig;
+        return param;
+    }
+
+    /// <summary>
+    /// 自动幽境危战：业务设置来自导入时的幽境配置；策略路径留空，运行时按策略名解析，导入的计划可以跨机器使用。
+    /// </summary>
+    private static AutoStygianOnslaughtParam CreateStygianParam(AllConfig config)
+    {
+        var stygian = config.AutoStygianOnslaughtConfig;
+        return new AutoStygianOnslaughtParam(stygian)
+        {
+            CombatScriptBagPath = string.Empty,
+            StrategyName = string.IsNullOrWhiteSpace(stygian.StrategyName) ? CombatStrategyResolver.AutoSelectName : stygian.StrategyName,
+            MaxArtifactStar = config.AutoArtifactSalvageConfig.MaxArtifactStar
+        };
+    }
+
+    /// <summary>
+    /// 自动地脉花：业务设置来自导入时的地脉花配置，次数、树脂耗尽、取小值和一条龙模式来自一条龙；
+    /// 地脉花战斗配置没有策略时补全为全局自动战斗配置，最后仍为空则按队伍自动选择。
+    /// </summary>
+    private static AutoLeyLineOutcropParam CreateLeyLineParam(AllConfig config, OneDragonFlowConfig dragon)
+    {
+        var source = config.AutoLeyLineOutcropConfig;
+        // 先复制战斗配置，补全策略时不能改写全局配置
+        var fight = SoloTaskJson.Deserialize<AutoLeyLineOutcropFightConfig>(
+            SoloTaskJson.Serialize(source.FightConfig ?? new AutoLeyLineOutcropFightConfig()));
+        if (string.IsNullOrWhiteSpace(fight.StrategyName)) fight.CopyFromAutoFightConfig(config.AutoFightConfig);
+        if (string.IsNullOrWhiteSpace(fight.StrategyName)) fight.StrategyName = CombatStrategyResolver.AutoSelectName;
+        var param = new AutoLeyLineOutcropParam(source)
+        {
+            FightConfig = fight,
+            IsResinExhaustionMode = dragon.LeyLineResinExhaustionMode,
+            OpenModeCountMin = dragon.LeyLineOpenModeCountMin,
+            OneDragonMode = dragon.LeyLineOneDragonMode
+        };
+        if (dragon.LeyLineRunCount > 0) param.Count = dragon.LeyLineRunCount;
+        return param;
+    }
+
+    /// <summary>转换周安排并保留四点日切及空值回退语义；当天对象中的键与独立任务参数名一致。</summary>
     private static void AddDragonWeek(JObject values, JObject dragon, bool domain)
     {
         var weekly = new JObject();
@@ -280,19 +385,23 @@ public sealed class PuloniaTaskLegacyImporter
             var day = days[i]; var entry = new JObject();
             if (domain)
             {
-                Copy(day + "PartyName", "party_name"); Copy(day + "DomainName", "domain_name");
+                // 秘境：当天队伍、秘境和周日奖励选择；未选择奖励时回退到每周设置
+                Copy(day + "PartyName", ParamKey(nameof(AutoDomainParam.PartyName)));
+                Copy(day + "DomainName", ParamKey(nameof(AutoDomainParam.DomainName)));
                 var selected = dragon.Value<string>(day + "SelectedValue");
-                entry["sunday_selected_value"] = string.IsNullOrWhiteSpace(selected) || selected == "0" ? dragon.Value<string>("SundayWeeklySelectedValue") : selected;
+                entry[ParamKey(nameof(AutoDomainParam.SundaySelectedValue))] = string.IsNullOrWhiteSpace(selected) || selected == "0" ? dragon.Value<string>("SundayWeeklySelectedValue") : selected;
             }
             else
             {
+                // 地脉花：一天都没勾选时视为每天运行；当天类型和国家为空时沿用任务设置
                 entry["enabled"] = !anyLeyDay || dragon.Value<bool?>("LeyLineRun" + day) == true;
-                Copy("LeyLine" + day + "Type", "ley_line_outcrop_type"); Copy("LeyLine" + day + "Country", "country");
+                Copy("LeyLine" + day + "Type", ParamKey(nameof(AutoLeyLineOutcropParam.LeyLineOutcropType)));
+                Copy("LeyLine" + day + "Country", ParamKey(nameof(AutoLeyLineOutcropParam.Country)));
             }
             weekly[i.ToString()] = entry;
             void Copy(string source, string target) { var value = dragon.Value<string>(source); if (!string.IsNullOrWhiteSpace(value)) entry[target] = value; }
         }
-        values["weekday_overrides"] = weekly;
+        values[PuloniaSoloTaskExecutor.WeekdayOverridesParameter] = weekly;
     }
 
     /// <summary>读取当前资源指纹，失败时保留节点和参数并禁用。</summary>

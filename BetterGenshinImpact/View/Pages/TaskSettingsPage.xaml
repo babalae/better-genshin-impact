@@ -93,7 +93,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
                                              ActionCommand="{Binding ManageSoloTaskCommand}"
-                                             State="{Binding SoloTaskStates[AutoGeniusInvokation]}" />
+                                             State="{Binding SoloTaskStates[auto_genius_invokation]}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -204,7 +204,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
                                              ActionCommand="{Binding ManageSoloTaskCommand}"
-                                             State="{Binding SoloTaskStates[AutoWood]}" />
+                                             State="{Binding SoloTaskStates[auto_wood]}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -399,7 +399,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
                                              ActionCommand="{Binding ManageSoloTaskCommand}"
-                                             State="{Binding SoloTaskStates[AutoFight]}" />
+                                             State="{Binding SoloTaskStates[auto_fight]}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -1362,7 +1362,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
                                              ActionCommand="{Binding ManageSoloTaskCommand}"
-                                             State="{Binding SoloTaskStates[AutoDomain]}" />
+                                             State="{Binding SoloTaskStates[auto_domain]}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -1847,7 +1847,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
                                              ActionCommand="{Binding ManageSoloTaskCommand}"
-                                             State="{Binding SoloTaskStates[AutoBoss]}" />
+                                             State="{Binding SoloTaskStates[auto_boss]}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -2164,7 +2164,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
                                              ActionCommand="{Binding ManageSoloTaskCommand}"
-                                             State="{Binding SoloTaskStates[AutoStygianOnslaught]}" />
+                                             State="{Binding SoloTaskStates[auto_stygian_onslaught]}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -2553,7 +2553,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
                                              ActionCommand="{Binding ManageSoloTaskCommand}"
-                                             State="{Binding SoloTaskStates[AutoFishing]}" />
+                                             State="{Binding SoloTaskStates[auto_fishing]}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -2736,7 +2736,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
                                              ActionCommand="{Binding ManageSoloTaskCommand}"
-                                             State="{Binding SoloTaskStates[AutoLeyLineOutcrop]}" />
+                                             State="{Binding SoloTaskStates[auto_ley_line_outcrop]}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -3338,7 +3338,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,36,0"
                                              ActionCommand="{Binding ManageSoloTaskCommand}"
-                                             State="{Binding SoloTaskStates[AutoMusicGame]}" />
+                                             State="{Binding SoloTaskStates[auto_music_game]}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -3369,7 +3369,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,36,0"
                                              ActionCommand="{Binding ManageSoloTaskCommand}"
-                                             State="{Binding SoloTaskStates[AutoAlbum]}" />
+                                             State="{Binding SoloTaskStates[auto_album]}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -3481,7 +3481,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
                                              ActionCommand="{Binding ManageSoloTaskCommand}"
-                                             State="{Binding SoloTaskStates[AutoCook]}" />
+                                             State="{Binding SoloTaskStates[auto_cook]}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -3581,7 +3581,7 @@
                                              Grid.Column="2"
                                              Margin="0,0,24,0"
                                              ActionCommand="{Binding ManageSoloTaskCommand}"
-                                             State="{Binding SoloTaskStates[AutoCombo]}" />
+                                             State="{Binding SoloTaskStates[auto_combo_build]}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -3909,7 +3909,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
                                              ActionCommand="{Binding ManageSoloTaskCommand}"
-                                             State="{Binding SoloTaskStates[AutoArtifactSalvage]}" />
+                                             State="{Binding SoloTaskStates[auto_artifact_salvage]}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -4122,7 +4122,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,24,0"
                                              ActionCommand="{Binding ManageSoloTaskCommand}"
-                                             State="{Binding SoloTaskStates[AutoRedeemCode]}" />
+                                             State="{Binding SoloTaskStates[redeem_code]}" />
                 </Grid>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -4197,7 +4197,7 @@
                                              Grid.Column="2"
                                              Margin="0,0,24,0"
                                              ActionCommand="{Binding ManageSoloTaskCommand}"
-                                             State="{Binding SoloTaskStates[GetGridIcons]}"
+                                             State="{Binding SoloTaskStates[get_grid_icons]}"
                                              VerticalAlignment="Top" />
                 </Grid>
             </ui:CardExpander.Header>
@@ -4334,7 +4334,7 @@
                                              Grid.Column="1"
                                              Margin="0,0,36,0"
                                              ActionCommand="{Binding ManageSoloTaskCommand}"
-                                             State="{Binding SoloTaskStates[GridIconsAccuracyTest]}" />
+                                             State="{Binding SoloTaskStates[grid_icons_accuracy_test]}" />
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -4375,7 +4375,7 @@
                                              Grid.Column="2"
                                              Margin="0,0,36,0"
                                              ActionCommand="{Binding ManageSoloTaskCommand}"
-                                             State="{Binding SoloTaskStates[InventoryCountComparison]}" />
+                                             State="{Binding SoloTaskStates[inventory_count_comparison]}" />
                 </Grid>
             </StackPanel>
         </ui:CardExpander>

@@ -8,6 +8,7 @@ using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Helpers.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
@@ -24,10 +25,16 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 namespace BetterGenshinImpact.GameTask.GetGridIcons;
 
 /// <summary>
-/// 获取Grid界面的物品图标
+/// Grid 图标识别模型准确率测试：逐个点击物品，对比模型推理结果与 OCR/CV 识别结果
 /// </summary>
-public class GridIconsAccuracyTestTask : ISoloTask
+[SoloTaskInfo(TaskId, "模型准确率测试", Group = "调试", Order = 620, Scopes = SoloTaskScopes.Standalone)]
+public class GridIconsAccuracyTestTask : ISoloTask<GridIconsAccuracyTestParam, NoData>
 {
+    /// <summary>
+    /// 任务标识。
+    /// </summary>
+    public const string TaskId = "grid_icons_accuracy_test";
+
     /// <summary>
     /// 本次运行使用的运行环境
     /// </summary>
@@ -38,23 +45,23 @@ public class GridIconsAccuracyTestTask : ISoloTask
 
     private CancellationToken ct;
 
-    public string Name => "获取Grid界面物品图标独立任务";
+    /// <summary>
+    /// 最多测试的数量，为空表示不限；在 RunAsync 开头由参数赋值
+    /// </summary>
+    private int? maxNumToTest;
 
-    private readonly int? maxNumToTest;
-
-    private readonly GridScreenName gridScreenName;
+    /// <summary>
+    /// 目标 Grid 界面；在 RunAsync 开头由参数赋值
+    /// </summary>
+    private GridScreenName gridScreenName;
 
     /// <summary>
     /// 创建 Grid 图标识别准确率测试任务
     /// </summary>
     /// <param name="runtime">本次运行使用的运行环境</param>
-    /// <param name="gridScreenName">目标 Grid 界面</param>
-    /// <param name="maxNumToTest">最多测试的数量，为空表示不限</param>
-    public GridIconsAccuracyTestTask(GameRuntime runtime, GridScreenName gridScreenName, int? maxNumToTest = null)
+    public GridIconsAccuracyTestTask(GameRuntime runtime)
     {
         _runtime = runtime;
-        this.gridScreenName = gridScreenName;
-        this.maxNumToTest = maxNumToTest;
     }
 
     /// <summary>
@@ -99,9 +106,17 @@ public class GridIconsAccuracyTestTask : ISoloTask
         }
     }
 
-    public async Task Start(CancellationToken ct)
+    /// <summary>
+    /// 遍历目标 Grid 界面，逐个统计模型识别的正确率。
+    /// </summary>
+    /// <param name="param">测试参数</param>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>测试结束返回 Success，消息中包含测试数量与正确率。</returns>
+    public async Task<SoloTaskResult<NoData>> RunAsync(GridIconsAccuracyTestParam param, CancellationToken ct)
     {
         this.ct = ct;
+        this.gridScreenName = param.GridName;
+        this.maxNumToTest = param.MaxNumToTest;
 
         switch (this.gridScreenName)
         {
@@ -188,6 +203,11 @@ public class GridIconsAccuracyTestTask : ISoloTask
         {
             _runtime.MaskWindowDrawingBoard.ClearAll();
         }
+
+        // 汇总本次测试的数量与正确率
+        return total_count > 0
+            ? SoloTaskResult.Success($"共测试 {total_count} 个物品，正确率{total_acc / total_count:0.00}")
+            : SoloTaskResult.Success("没有测试任何物品");
     }
 
     /// <summary>

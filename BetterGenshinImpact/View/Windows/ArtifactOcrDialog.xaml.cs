@@ -59,8 +59,8 @@ public partial class ArtifactOcrDialog
             return false;
         }
 
-        // 本次截图与识别使用同一个运行环境
-        var autoArtifactSalvageTask = new AutoArtifactSalvageTask(runtime, salvageTaskParam);
+        // 本次截图与识别使用同一个运行环境；识别所需的语言参数在调用识别方法时传入
+        var autoArtifactSalvageTask = new AutoArtifactSalvageTask(runtime);
         using var ra = runtime.CaptureToRectArea();
         using var card = ra.DeriveCrop(new OpenCvSharp.Rect((int)(ra.Width * xRatio), (int)(ra.Height * yRatio), (int)(ra.Width * widthRatio), (int)(ra.Height * heightRatio)));
         var bitmapImage = card.SrcMat.ToWriteableBitmap();
@@ -74,7 +74,7 @@ public partial class ArtifactOcrDialog
             // 将CPU密集的OCR操作放到后台线程执行
             var (artifact, allText) = await Task.Run(() =>
             {
-                ArtifactStat art = autoArtifactSalvageTask.GetArtifactStat(card.SrcMat, OcrFactory.Paddle, out string text);
+                ArtifactStat art = autoArtifactSalvageTask.GetArtifactStat(card.SrcMat, OcrFactory.Paddle, salvageTaskParam, out string text);
                 return (art, text);
             });
 

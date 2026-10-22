@@ -9,10 +9,15 @@ using BetterGenshinImpact.GameTask.AutoBoss;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFishing;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
+using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
+using BetterGenshinImpact.GameTask.AutoWood;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.GetGridIcons;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.GameTask.SoloTask;
+using BetterGenshinImpact.GameTask.SoloTask.Execution;
+using BetterGenshinImpact.GameTask.UseRedeemCode;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Service;
@@ -70,7 +75,12 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private bool _soloTaskUiOperationPending;
 
     /// <summary>
-    /// 17 个独立任务按钮共用的展示状态，键为 <see cref="SoloTaskType"/> 名称。
+    /// 独立任务注册表，提供可单独运行的任务清单、显示名和参数序列化。
+    /// </summary>
+    private readonly SoloTaskRegistry _soloTaskRegistry;
+
+    /// <summary>
+    /// 独立任务按钮共用的展示状态，键为任务标识（如 auto_wood）。
     /// </summary>
     public IReadOnlyDictionary<string, SoloTaskButtonState> SoloTaskStates { get; }
 
@@ -206,17 +216,21 @@ public partial class TaskSettingsPageViewModel : ViewModel
     /// <param name="taskStopService">任务停止服务</param>
     /// <param name="oneDragonFlowViewModel">一条龙页面 ViewModel（DI 单例注入，避免独立 new 导致状态分裂）</param>
     /// <param name="instanceService">多实例连接与独立任务运行服务</param>
+    /// <param name="soloTaskRegistry">独立任务注册表</param>
     public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService,
         TaskStopService taskStopService,
-        OneDragonFlowViewModel oneDragonFlowViewModel, InstanceService instanceService)
+        OneDragonFlowViewModel oneDragonFlowViewModel, InstanceService instanceService,
+        SoloTaskRegistry soloTaskRegistry)
     {
         Config = configService.Get();
         _configService = configService;
         _navigationService = navigationService;
         _taskStopService = taskStopService;
         _instanceService = instanceService;
-        SoloTaskStates = Enum.GetValues<SoloTaskType>()
-            .ToDictionary(taskType => taskType.ToString(), taskType => new SoloTaskButtonState(taskType));
+        _soloTaskRegistry = soloTaskRegistry;
+        // 页面按钮按任务标识绑定，清单来自注册表中可单独运行的任务
+        SoloTaskStates = soloTaskRegistry.GetByScope(SoloTaskScopes.Standalone)
+            .ToDictionary(descriptor => descriptor.TaskId, descriptor => new SoloTaskButtonState(descriptor.TaskId));
         _instanceService.ConnectedInstancesChanged += OnSoloTaskInstancesChanged;
         _instanceService.SoloTaskStatusesChanged += OnSoloTaskInstancesChanged;
         NormalizeLeyLineOutcropType();
@@ -336,15 +350,16 @@ public partial class TaskSettingsPageViewModel : ViewModel
     /// 统一处理独立任务按钮和任务专用快捷键发出的启动、停止或管理请求。
     /// </summary>
     [RelayCommand(AllowConcurrentExecutions = false)]
-    public async Task ManageSoloTask(SoloTaskType taskType)
+    public async Task ManageSoloTask(string taskId)
     {
         var targets = _instanceService.GetSoloTaskTargets();
         if (targets.Length > 1)
         {
             var window = new SoloTaskInstanceWindow(
                 _instanceService,
-                taskType,
-                () => BuildSoloTaskDefinitionAsync(taskType))
+                _soloTaskRegistry,
+                taskId,
+                () => BuildSoloTaskDefinitionAsync(taskId))
             {
                 Owner = Application.Current.MainWindow
             };
@@ -355,9 +370,9 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
         var target = targets.Single();
         var status = _instanceService.GetSoloTaskStatus(target);
-        if (status.IsActive && status.TaskType != taskType)
+        if (status.IsActive && status.TaskId != taskId)
         {
-            Toast.Warning($"当前实例正在运行“{SoloTaskRegistry.GetDisplayName(status.TaskType!.Value)}”，请先等待该任务结束或使用其停止入口。");
+            Toast.Warning($"当前实例正在运行“{_soloTaskRegistry.GetDisplayName(status.TaskId)}”，请先等待该任务结束或使用其停止入口。");
             return;
         }
 
@@ -372,7 +387,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
             }
             else
             {
-                var definition = await BuildSoloTaskDefinitionAsync(taskType);
+                var definition = await BuildSoloTaskDefinitionAsync(taskId);
                 if (definition is null)
                 {
                     return;
@@ -411,91 +426,91 @@ public partial class TaskSettingsPageViewModel : ViewModel
     }
 
     /// <summary>
-    /// 收集当前任务所需的瞬时参数；持久化配置由目标实例直接读取共享配置文件。
+    /// 按页面当前配置生成任务的完整参数并序列化为启动定义；任务内部用到的其余配置仍由目标实例读取共享配置文件。
     /// </summary>
-    private Task<SoloTaskStartDefinition?> BuildSoloTaskDefinitionAsync(SoloTaskType taskType)
+    /// <param name="taskId">任务标识</param>
+    /// <returns>启动定义；校验失败或用户取消输入时返回 null</returns>
+    private Task<SoloTaskStartDefinition?> BuildSoloTaskDefinitionAsync(string taskId)
     {
-        JObject? parameters = null;
-        switch (taskType)
+        var param = CreateSoloTaskParam(taskId);
+        if (param is null)
         {
-            case SoloTaskType.AutoGeniusInvokation:
-                if (GetTcgStrategy(out var strategyContent))
-                {
-                    return Task.FromResult<SoloTaskStartDefinition?>(null);
-                }
-
-                parameters = new JObject { ["strategyContent"] = strategyContent };
-                break;
-            case SoloTaskType.AutoWood:
-                parameters = new JObject
-                {
-                    ["roundNum"] = AutoWoodRoundNum,
-                    ["dailyMaxCount"] = AutoWoodDailyMaxCount
-                };
-                break;
-            case SoloTaskType.AutoFight:
-                if (GetFightStrategy(out var fightStrategyPath))
-                {
-                    return Task.FromResult<SoloTaskStartDefinition?>(null);
-                }
-
-                parameters = new JObject { ["strategyPath"] = fightStrategyPath };
-                break;
-            case SoloTaskType.AutoDomain:
-                if (GetFightStrategy(out var domainStrategyPath))
-                {
-                    return Task.FromResult<SoloTaskStartDefinition?>(null);
-                }
-
-                parameters = new JObject
-                {
-                    ["roundNum"] = AutoDomainRoundNum,
-                    ["strategyPath"] = domainStrategyPath
-                };
-                break;
-            case SoloTaskType.AutoBoss:
-                if (GetFightStrategy(Config.AutoBossConfig.StrategyName, out var bossStrategyPath))
-                {
-                    return Task.FromResult<SoloTaskStartDefinition?>(null);
-                }
-
-                parameters = new JObject { ["strategyPath"] = bossStrategyPath };
-                break;
-            case SoloTaskType.AutoStygianOnslaught:
-                if (GetFightStrategy(Config.AutoStygianOnslaughtConfig.StrategyName, out var stygianStrategyPath))
-                {
-                    return Task.FromResult<SoloTaskStartDefinition?>(null);
-                }
-
-                parameters = new JObject { ["strategyPath"] = stygianStrategyPath };
-                break;
-            case SoloTaskType.AutoFishing:
-                parameters = new JObject { ["saveScreenshotOnKeyTick"] = SaveScreenshotOnKeyTick };
-                break;
-            case SoloTaskType.AutoRedeemCode:
-                var codes = PromptForRedeemCodes();
-                if (codes is null)
-                {
-                    return Task.FromResult<SoloTaskStartDefinition?>(null);
-                }
-
-                parameters = new JObject { ["codes"] = JArray.FromObject(codes) };
-                break;
-            case SoloTaskType.InventoryCountComparison:
-                parameters = new JObject
-                {
-                    ["target"] = JToken.FromObject(InventoryCountComparisonTarget)
-                };
-                break;
+            return Task.FromResult<SoloTaskStartDefinition?>(null);
         }
+
+        var descriptor = _soloTaskRegistry.Get(taskId);
 
         // 子实例按需从同一份配置文件读取，先确保本页面的配置修改已经落盘。
         _configService.Flush();
         return Task.FromResult<SoloTaskStartDefinition?>(new SoloTaskStartDefinition
         {
-            TaskType = taskType,
-            Parameters = parameters
+            TaskId = taskId,
+            Parameters = JObject.Parse(descriptor.SerializeParam(param))
         });
+    }
+
+    /// <summary>
+    /// 按独立任务页面的配置与临时输入创建任务参数。
+    /// </summary>
+    /// <param name="taskId">任务标识</param>
+    /// <returns>参数对象；策略未配置或用户取消输入时返回 null</returns>
+    private object? CreateSoloTaskParam(string taskId)
+    {
+        switch (taskId)
+        {
+            case AutoGeniusInvokationTask.TaskId:
+                return GetTcgStrategy(out var strategyContent) ? null : new GeniusInvokationTaskParam(strategyContent);
+            case AutoWoodTask.TaskId:
+                return new WoodTaskParam(AutoWoodRoundNum, AutoWoodDailyMaxCount);
+            case AutoFightEntryTask.TaskId:
+                return GetFightStrategy(out var fightStrategyPath)
+                    ? null
+                    : new AutoFightParam(fightStrategyPath, Config.AutoFightConfig);
+            case AutoDomainTask.TaskId:
+                return GetFightStrategy(out var domainStrategyPath)
+                    ? null
+                    : new AutoDomainParam(AutoDomainRoundNum, domainStrategyPath);
+            case AutoBossTask.TaskId:
+                return GetFightStrategy(Config.AutoBossConfig.StrategyName, out var bossStrategyPath)
+                    ? null
+                    : new AutoBossParam(bossStrategyPath);
+            case AutoStygianOnslaughtTask.TaskId:
+                // 无参构造读取全局幽境危战配置，再用点击时选中的策略路径覆盖
+                return GetFightStrategy(Config.AutoStygianOnslaughtConfig.StrategyName, out var stygianStrategyPath)
+                    ? null
+                    : new AutoStygianOnslaughtParam(stygianStrategyPath);
+            case AutoFishingTask.TaskId:
+                return AutoFishingTaskParam.BuildFromConfig(Config.AutoFishingConfig, SaveScreenshotOnKeyTick);
+            case AutoArtifactSalvageTask.TaskId:
+                var salvageConfig = Config.AutoArtifactSalvageConfig;
+                return new AutoArtifactSalvageTaskParam(
+                    int.Parse(salvageConfig.MaxArtifactStar),
+                    salvageConfig.JavaScript,
+                    salvageConfig.ArtifactSetFilter,
+                    salvageConfig.MaxNumToCheck,
+                    salvageConfig.RecognitionFailurePolicy);
+            case UseRedemptionCodeTask.TaskId:
+                var codes = PromptForRedeemCodes();
+                return codes is null ? null : new UseRedemptionCodeParam { Codes = codes };
+            case GetGridIconsTask.TaskId:
+                return new GetGridIconsParam
+                {
+                    GridName = Config.GetGridIconsConfig.GridName,
+                    StarAsSuffix = Config.GetGridIconsConfig.StarAsSuffix,
+                    MaxNumToGet = Config.GetGridIconsConfig.MaxNumToGet
+                };
+            case GridIconsAccuracyTestTask.TaskId:
+                return new GridIconsAccuracyTestParam
+                {
+                    GridName = Config.GetGridIconsConfig.GridName,
+                    MaxNumToTest = Config.GetGridIconsConfig.MaxNumToGet
+                };
+            case InventoryCountComparisonTask.TaskId:
+                return new InventoryCountComparisonParam { Target = InventoryCountComparisonTarget };
+            default:
+                // 地脉花、音游、烹饪等任务的无参构造已按全局配置给出参数
+                return _soloTaskRegistry.Get(taskId).CreateDefaultParam();
+        }
     }
 
     /// <summary>
@@ -552,14 +567,14 @@ public partial class TaskSettingsPageViewModel : ViewModel
         var statuses = targets.Select(_instanceService.GetSoloTaskStatus).ToArray();
         foreach (var pair in SoloTaskStates)
         {
-            var taskType = pair.Value.TaskType;
-            var activeRunCount = statuses.Count(status => status.IsActive && status.TaskType == taskType);
-            var singleState = targets.Length == 1 && statuses[0].TaskType == taskType
+            var taskId = pair.Value.TaskId;
+            var activeRunCount = statuses.Count(status => status.IsActive && status.TaskId == taskId);
+            var singleState = targets.Length == 1 && statuses[0].TaskId == taskId
                 ? statuses[0].State
                 : SoloTaskRunState.Idle;
             var isBlockedByOtherTask = targets.Length == 1
                                        && statuses[0].IsActive
-                                       && statuses[0].TaskType != taskType;
+                                       && statuses[0].TaskId != taskId;
             pair.Value.Update(
                 targets.Length,
                 activeRunCount,
@@ -787,7 +802,8 @@ public partial class TaskSettingsPageViewModel : ViewModel
             // 消费最近一次建树任务暂存的会话；独立运行需显式开启自带战斗结束检测（AutoFightParam 默认关闭）
             var session = AutoComboRuntime.Session!;
             await new TaskRunner()
-                .RunSoloTaskAsync(rt => new AutoComboRunTask(rt, Config, new AutoFightParam { FightFinishDetectEnabled = true }, session));
+                .RunSoloTaskAsync(rt => new AutoComboRunTask(rt, Config, session),
+                    new AutoFightParam { FightFinishDetectEnabled = true });
         }
         finally
         {

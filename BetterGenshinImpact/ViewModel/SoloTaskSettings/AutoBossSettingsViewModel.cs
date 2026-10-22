@@ -1,0 +1,112 @@
+using System;
+using BetterGenshinImpact.ViewModel.Pages.Pulonia;
+using CommunityToolkit.Mvvm.ComponentModel;
+using Newtonsoft.Json.Linq;
+
+namespace BetterGenshinImpact.ViewModel.SoloTaskSettings;
+
+/// <summary>自动首领讨伐任务的专属设置草稿；对应 auto_boss 的常用参数，沿用旧一条龙卡片布局。</summary>
+public partial class AutoBossSettingsViewModel : SoloTaskSettingsViewModel
+{
+    /// <summary>载入时的 strategy_name 原值。</summary>
+    private readonly string _originalStrategyNameValue;
+    /// <summary>载入时的 combat_strategy_path 原值。</summary>
+    private readonly string _originalCombatStrategyPath;
+    /// <summary>载入时的战斗策略显示名快照（按任务实际使用的策略换算）。</summary>
+    private readonly string _originalStrategyName;
+    /// <summary>载入时的首领名快照。</summary>
+    private readonly string _originalBossName;
+    /// <summary>载入时的队伍名快照。</summary>
+    private readonly string _originalTeamName;
+    /// <summary>载入时的次数限制开关快照。</summary>
+    private readonly bool _originalSpecifyRunCount;
+    /// <summary>载入时的单次运行上限快照。</summary>
+    private readonly int _originalRunCount;
+    /// <summary>载入时的须臾树脂补充快照。</summary>
+    private readonly bool _originalUseTransientResin;
+    /// <summary>载入时的脆弱树脂补充快照。</summary>
+    private readonly bool _originalUseFragileResin;
+    /// <summary>载入时的回雕像开关快照。</summary>
+    private readonly bool _originalReturnToStatue;
+    /// <summary>载入时的奖励识别快照。</summary>
+    private readonly bool _originalRewardRecognitionEnabled;
+    /// <summary>载入时的死亡重试次数快照。</summary>
+    private readonly int _originalReviveRetryCount;
+
+    /// <summary>战斗策略选项；首领讨伐不提供联合策略，当前值不在列表中时追加显示。</summary>
+    public string[] StrategyChoices { get; }
+
+    /// <summary>本任务使用的战斗策略名称；保存时同时写入 strategy_name 与 combat_strategy_path。</summary>
+    [ObservableProperty] private string _strategyName;
+    /// <summary>讨伐的首领名称。</summary>
+    [ObservableProperty] private string _bossName;
+    /// <summary>进入战斗前切换的队伍名称，留空不更换。</summary>
+    [ObservableProperty] private string _teamName;
+    /// <summary>是否限制成功领奖次数。</summary>
+    [ObservableProperty] private bool _specifyRunCount;
+    /// <summary>单次运行的成功领奖次数上限。</summary>
+    [ObservableProperty] private int _runCount;
+    /// <summary>原粹不足时是否使用须臾树脂补充。</summary>
+    [ObservableProperty] private bool _useTransientResin;
+    /// <summary>原粹不足时是否使用脆弱树脂补充。</summary>
+    [ObservableProperty] private bool _useFragileResin;
+    /// <summary>每轮领奖后是否返回七天神像。</summary>
+    [ObservableProperty] private bool _returnToStatueAfterEachRound;
+    /// <summary>是否启用奖励名称识别。</summary>
+    [ObservableProperty] private bool _rewardRecognitionEnabled;
+    /// <summary>角色死亡后的复活重试次数。</summary>
+    [ObservableProperty] private int _reviveRetryCount;
+
+    /// <summary>从当前有效参数读取首领讨伐配置。</summary>
+    /// <param name="original">当前有效参数快照。</param>
+    public AutoBossSettingsViewModel(JObject original) : base(original)
+    {
+        _originalStrategyNameValue = ReadString(Original, "strategy_name");
+        _originalCombatStrategyPath = ReadString(Original, "combat_strategy_path");
+        // 任务优先使用非空的 combat_strategy_path，为空时才按 strategy_name 生成，显示与之一致
+        _originalStrategyName = ToStrategyName(string.IsNullOrWhiteSpace(_originalCombatStrategyPath)
+            ? _originalStrategyNameValue
+            : _originalCombatStrategyPath);
+        _originalBossName = ReadString(Original, "boss_name");
+        _originalTeamName = ReadString(Original, "team_name");
+        _originalSpecifyRunCount = ReadBool(Original, "specify_run_count");
+        _originalRunCount = ReadInt(Original, "run_count", 1);
+        _originalUseTransientResin = ReadBool(Original, "use_transient_resin");
+        _originalUseFragileResin = ReadBool(Original, "use_fragile_resin");
+        _originalReturnToStatue = ReadBool(Original, "return_to_statue_after_each_round");
+        _originalRewardRecognitionEnabled = ReadBool(Original, "reward_recognition_enabled");
+        _originalReviveRetryCount = ReadInt(Original, "revive_retry_count", 3);
+        StrategyChoices = WithCurrentChoice(PuloniaOneDragonSettingChoices.GetStrategies(false), _originalStrategyName);
+        _strategyName = _originalStrategyName;
+        _bossName = _originalBossName;
+        _teamName = _originalTeamName;
+        _specifyRunCount = _originalSpecifyRunCount;
+        _runCount = _originalRunCount;
+        _useTransientResin = _originalUseTransientResin;
+        _useFragileResin = _originalUseFragileResin;
+        _returnToStatueAfterEachRound = _originalReturnToStatue;
+        _rewardRecognitionEnabled = _originalRewardRecognitionEnabled;
+        _reviveRetryCount = _originalReviveRetryCount;
+    }
+
+    /// <summary>收集首领讨伐配置的真实变化；累计上限与已完成次数不在参数中，不参与提交。</summary>
+    /// <param name="changes">接收变化的对象。</param>
+    public override void CollectChanges(JObject changes)
+    {
+        // 修改策略时两个字段都写成策略名，避免旧路径继续覆盖新选择
+        if (!string.Equals(_originalStrategyName, StrategyName, StringComparison.Ordinal))
+        {
+            WriteString(changes, "strategy_name", _originalStrategyNameValue, StrategyName);
+            WriteString(changes, "combat_strategy_path", _originalCombatStrategyPath, StrategyName);
+        }
+        WriteString(changes, "boss_name", _originalBossName, BossName);
+        WriteString(changes, "team_name", _originalTeamName, TeamName);
+        WriteBool(changes, "specify_run_count", _originalSpecifyRunCount, SpecifyRunCount);
+        WriteInt(changes, "run_count", _originalRunCount, RunCount);
+        WriteBool(changes, "use_transient_resin", _originalUseTransientResin, UseTransientResin);
+        WriteBool(changes, "use_fragile_resin", _originalUseFragileResin, UseFragileResin);
+        WriteBool(changes, "return_to_statue_after_each_round", _originalReturnToStatue, ReturnToStatueAfterEachRound);
+        WriteBool(changes, "reward_recognition_enabled", _originalRewardRecognitionEnabled, RewardRecognitionEnabled);
+        WriteInt(changes, "revive_retry_count", _originalReviveRetryCount, ReviveRetryCount);
+    }
+}

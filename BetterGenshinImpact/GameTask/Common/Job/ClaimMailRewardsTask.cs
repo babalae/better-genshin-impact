@@ -7,6 +7,7 @@ using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.SoloTask;
 using Microsoft.Extensions.Logging;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
@@ -16,8 +17,14 @@ namespace BetterGenshinImpact.GameTask.Common.Job;
 /// <summary>
 /// 领取邮件奖励
 /// </summary>
-public class ClaimMailRewardsTask
+[SoloTaskInfo(TaskId, "领取邮件", Group = "日常奖励", Order = 110, OneDragonOrder = 1)]
+public class ClaimMailRewardsTask : ISoloTask<NoParam, NoData>
 {
+    /// <summary>
+    /// 任务标识。
+    /// </summary>
+    public const string TaskId = "claim_mail";
+
     /// <summary>
     /// 本次运行使用的运行环境
     /// </summary>
@@ -38,20 +45,14 @@ public class ClaimMailRewardsTask
         _returnMainUiTask = new ReturnMainUiTask(runtime);
     }
 
-    public async Task Start(CancellationToken ct)
-    {
-        try
-        {
-            await DoOnce(ct);
-        }
-        catch (Exception e)
-        {
-            Logger.LogDebug(e, "领取邮件奖励异常");
-            Logger.LogError("领取邮件奖励异常: {Msg}", e.Message);
-        }
-    }
-
-    public async Task DoOnce(CancellationToken ct)
+    /// <summary>
+    /// 打开派蒙菜单进入邮件页并点击“全部领取”，结束后返回主界面。
+    /// 识别或操作异常直接向外抛出，由调用方决定是否吞掉。
+    /// </summary>
+    /// <param name="param">空参数</param>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>流程正常结束返回 Unverified（无法确认奖励是否真正到账）</returns>
+    public async Task<SoloTaskResult<NoData>> RunAsync(NoParam param, CancellationToken ct)
     {
         await _returnMainUiTask.Start(ct);
 
@@ -61,6 +62,8 @@ public class ClaimMailRewardsTask
 
         await _runtime.Delay(1300, ct);
 
+        // 根据邮件图标与“全部领取”按钮的识别情况生成结果摘要
+        string message;
         using (var ra = _runtime.CaptureToRectArea())
         {
             var mailIcon = ra.Find(ElementRecognition.Get("EscMailReward", ra));
@@ -79,15 +82,22 @@ public class ClaimMailRewardsTask
                     // TODO 截图
 
                     InputHub.Background.Keyboard.KeyPress(User32.VK.VK_ESCAPE); // ESC 
+                    message = "已点击邮件全部领取。";
+                }
+                else
+                {
+                    message = "已打开邮件页，但未找到全部领取按钮。";
                 }
             }
             else
             {
                 Logger.LogInformation("邮件：{Text}", "没有邮件奖励");
+                message = "没有邮件奖励。";
             }
         }
 
         // 关闭
         await _returnMainUiTask.Start(ct);
+        return SoloTaskResult.Unverified(message);
     }
 }

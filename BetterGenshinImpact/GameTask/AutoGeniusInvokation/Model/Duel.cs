@@ -4,6 +4,7 @@ using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Service.Notification;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -79,6 +80,11 @@ public class Duel
     public int CurrentDiceCount { get; set; } = 0;
 
     private int _keqingECount = 0;
+
+    /// <summary>
+    /// 对局因业务原因提前结束时的结果（对战结束、指令执行完毕、没有可切换角色）；未记录时为 null
+    /// </summary>
+    public SoloTaskResult? EndResult { get; private set; }
 
     public async Task RunAsync(CancellationToken ct)
     {
@@ -302,7 +308,7 @@ public class Duel
 
                     if (ActionCommandQueue.Count == 0)
                     {
-                        throw new NormalEndException("策略中所有指令已经执行完毕，结束自动打牌");
+                        throw new SoloTaskAbortException(SoloTaskResult.Success("策略中所有指令已经执行完毕，结束自动打牌"));
                     }
                 }
 
@@ -325,6 +331,11 @@ public class Duel
         catch (NormalEndException ex)
         {
             _logger.LogInformation("对局结束");
+            // 业务原因的提前结束携带明确结果，记录下来交给任务返回；其余正常结束保持原来的吞没语义
+            if (ex is SoloTaskAbortException abort)
+            {
+                EndResult = abort.Result;
+            }
             // throw;
         }
         catch (System.Exception ex)

@@ -418,25 +418,7 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
-            <!-- 任务名称自动使用能力或资源的推荐名称，创建后可在计划树中重命名；仅内置入口需要选择能力。 -->
-            <ComboBox Grid.Row="0"
-                      MinWidth="200"
-                      Margin="0,0,0,12"
-                      HorizontalAlignment="Left"
-                      DisplayMemberPath="DisplayName"
-                      ItemsSource="{Binding AvailableDefinitions}"
-                      SelectedItem="{Binding SelectedDefinition, Mode=TwoWay}">
-                <ComboBox.Style>
-                    <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
-                        <Setter Property="Visibility" Value="Collapsed" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsBuiltinPicker}" Value="True">
-                                <Setter Property="Visibility" Value="Visible" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </ComboBox.Style>
-            </ComboBox>
+            <!-- 任务名称自动使用能力或资源的推荐名称，创建后可在计划树中重命名；菜单已传入具体任务类型，无需再选择能力。 -->
 
             <!-- 资源型任务使用可搜索清单；只对当前选择按需读取详情。 -->
             <Grid Grid.Row="1">

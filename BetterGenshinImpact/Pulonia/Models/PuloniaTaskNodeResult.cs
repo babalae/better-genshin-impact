@@ -67,13 +67,19 @@ public sealed class PuloniaTaskNodeResult
     public IReadOnlyList<PuloniaTaskEvidence> Evidence { get; }
 
     /// <summary>
+    /// 执行器给出的机器可读原因码；没有时为 null。
+    /// </summary>
+    public string? ReasonCode { get; }
+
+    /// <summary>
     /// 建立不可变节点结果。
     /// </summary>
     public PuloniaTaskNodeResult(string taskAddress, string taskName, string taskType, int attempt,
         PuloniaTaskNodeStatus status, string message, DateTimeOffset startedAt, DateTimeOffset finishedAt,
         JObject? data = null, PuloniaTaskOutcomeKind? outcomeKind = null,
-        IEnumerable<PuloniaTaskEvidence>? evidence = null)
+        IEnumerable<PuloniaTaskEvidence>? evidence = null, string? reasonCode = null)
     {
+        ReasonCode = reasonCode;
         TaskAddress = taskAddress;
         TaskName = taskName;
         TaskType = taskType;

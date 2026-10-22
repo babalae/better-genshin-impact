@@ -4,6 +4,7 @@ using BetterGenshinImpact.GameTask.AutoTrackPath;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Service;
 using Vanara.PInvoke;
@@ -448,7 +449,7 @@ public class Genshin
     public async Task ClaimBattlePassRewards()
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        await new ClaimBattlePassRewardsTask(_runtime, _config).DoOnce(_ct);
+        await new ClaimBattlePassRewardsTask(_runtime, _config).RunAsync(NoParam.Instance, _ct);
     }
 
     /// <summary>
@@ -458,7 +459,8 @@ public class Genshin
     public async Task<bool> ClaimEncounterPointsRewards()
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        return await new ClaimEncounterPointsRewardsTask(_runtime, _config).DoOnce(_ct);
+        var result = await new ClaimEncounterPointsRewardsTask(_runtime, _config).RunAsync(NoParam.Instance, _ct);
+        return result.Kind != SoloTaskResultKind.Failed;
     }
 
     /// <summary>
@@ -467,7 +469,7 @@ public class Genshin
     public async Task ClaimMailRewards()
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        await new ClaimMailRewardsTask(_runtime).DoOnce(_ct);
+        await new ClaimMailRewardsTask(_runtime).RunAsync(NoParam.Instance, _ct);
     }
 
     /// <summary>
@@ -476,7 +478,10 @@ public class Genshin
     public async Task<bool> ClaimSereniteaPotRewards()
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        return await new GoToSereniteaPotTask(_runtime, _config).DoOnce(_ct);
+        // 进壶方式与购买清单沿用原逻辑：读取当前选中的一条龙配置
+        var result = await new GoToSereniteaPotTask(_runtime, _config)
+            .RunAsync(SereniteaPotParam.FromSelectedOneDragonConfig(_config), _ct);
+        return result.Kind != SoloTaskResultKind.Failed;
     }
 
     /// <summary>
@@ -509,7 +514,13 @@ public class Genshin
     public async Task GoCraftResin(string country)
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        await new GoToCraftingBenchTask(_runtime, _config).GoCraftResin(country, _ct);
+        // 保留树脂数沿用原逻辑：读取当前选中的一条龙配置；失败时保持原来抛异常的行为
+        var result = await new GoToCraftingBenchTask(_runtime, _config)
+            .RunAsync(CraftCondensedResinParam.FromSelectedOneDragonConfig(_config, country), _ct);
+        if (result.Kind == SoloTaskResultKind.Failed)
+        {
+            throw new InvalidOperationException(result.Message);
+        }
     }
 
     /// <summary>
@@ -551,7 +562,7 @@ public class Genshin
 
         var param = AutoFishingTaskParam.BuildFromConfig(_config.AutoFishingConfig, taskSettingsPageViewModel.SaveScreenshotOnKeyTick);
         param.FishingTimePolicy = (FishingTimePolicy)fishingTimePolicy;
-        await new AutoFishingTask(_runtime, _config, param, _screenshots).Start(_ct);
+        await new AutoFishingTask(_runtime, _config, _screenshots).RunAsync(param, _ct);
     }
 
     /// <summary>

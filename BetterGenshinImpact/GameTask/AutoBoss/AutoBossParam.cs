@@ -1,5 +1,6 @@
 using System;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Service;
 
@@ -99,6 +100,12 @@ public class AutoBossParam : BaseTaskParam<AutoBossTask>
     /// 战斗超时
     /// </summary>
     public int Timeout { get; set; } = 240;
+
+    /// <summary>
+    /// 本次运行使用的自动战斗配置（战斗结束检测等）。为 null 时使用全局 <see cref="AllConfig.AutoFightConfig"/>，
+    /// 用于 Pulonia 等入口避免重新读取全局业务设置。
+    /// </summary>
+    public AutoFightConfig? FightConfig { get; set; }
 
     /// <summary>
     /// 每次成功领取奖励后的回调，仅供一条龙持久化累计成功次数。

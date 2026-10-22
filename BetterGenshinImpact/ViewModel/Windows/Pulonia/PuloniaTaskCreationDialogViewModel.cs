@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -20,7 +21,7 @@ namespace BetterGenshinImpact.ViewModel.Windows.Pulonia;
 public partial class PuloniaTaskCreationDialogViewModel : ViewModel
 {
     /// <summary>
-    /// 本次创建入口请求的类型；builtin 表示从全部内置能力中选择。
+    /// 本次创建入口请求的具体任务类型；独立任务由菜单直接传入 solo.{TaskId}。
     /// </summary>
     private readonly string _creationTaskType;
 
@@ -65,7 +66,7 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     private bool _javaScriptSettingsLoadFailed;
 
     /// <summary>
-    /// 用户可选择的能力定义；非内置入口通常只有一项。
+    /// 与本次创建入口任务类型一致的能力定义，通常只有一项。
     /// </summary>
     public IReadOnlyList<PuloniaTaskDefinition> AvailableDefinitions { get; }
 
@@ -107,19 +108,15 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     /// </summary>
     public string WindowTitle => _creationTaskType switch
     {
-        "builtin" => "添加内置任务",
         "pathing" => "添加地图追踪任务",
         "javascript" => "添加 JS 脚本任务",
         "keymouse" => "添加录制回放任务",
         "shell" => "添加 Shell 任务",
         "csharp" => "添加进程内 C# 任务",
+        _ when PuloniaSoloTaskExecutor.IsSoloTaskType(_creationTaskType) =>
+            $"添加任务：{(string.IsNullOrWhiteSpace(AvailableDefinitions[0].DisplayName) ? _creationTaskType : AvailableDefinitions[0].DisplayName)}",
         _ => "添加任务"
     };
-
-    /// <summary>
-    /// 当前入口是否允许选择多个内置能力。
-    /// </summary>
-    public bool IsBuiltinPicker => _creationTaskType == "builtin";
 
     /// <summary>
     /// 当前能力是否必须选择本地资源。
@@ -291,10 +288,9 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     {
         _creationTaskType = creationTaskType;
         _resourceCatalog = resourceCatalog;
+        // 菜单直接传入具体任务类型，这里只按类型精确匹配
         AvailableDefinitions = definitions
-            .Where(definition => creationTaskType == "builtin"
-                ? definition.TaskType.StartsWith("builtin.", StringComparison.Ordinal)
-                : definition.TaskType == creationTaskType)
+            .Where(definition => definition.TaskType == creationTaskType)
             .ToList();
         if (AvailableDefinitions.Count == 0)
             throw new InvalidOperationException($"没有注册 Pulonia 任务类型 {creationTaskType}。");
@@ -411,6 +407,9 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
                     continue;
                 // JS 的 settings 对象由所选项目自己的 settings_ui 表单生成，不显示通用 JSON 编辑框。
                 if (value.TaskType == "javascript" && property.Name == "settings")
+                    continue;
+                // 每周安排是计划编排能力，创建时不填写，在节点配置中按星期编辑。
+                if (property.Name == PuloniaSoloTaskExecutor.WeekdayOverridesParameter)
                     continue;
                 // 创建时保留常用选项；完整行走、战斗、食物和 Shell 设置通过节点配置的专用表单编辑。
                 if (PuloniaTaskCommonSettings.IsCommonParameter(value.TaskType, property.Name)

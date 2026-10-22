@@ -12,6 +12,7 @@ using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
@@ -28,16 +29,18 @@ namespace BetterGenshinImpact.GameTask.AutoEat;
 /// 自动吃药任务
 /// 检测红血自动使用便携营养袋
 /// </summary>
-public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
+public class AutoEatTask : BaseIndependentTask, ISoloTask<AutoEatParam, AutoEatData>
 {
-    public string Name => "自动吃药";
-
     /// <summary>
     /// 本次运行使用的运行环境，截图、等待与遮罩清理都只使用它
     /// </summary>
     private readonly GameRuntime _runtime;
 
-    private readonly AutoEatParam _taskParam;
+    /// <summary>
+    /// 本次运行的任务参数，在 <see cref="RunAsync"/> 开头赋值
+    /// </summary>
+    private AutoEatParam _taskParam = null!;
+
     private readonly AutoEatConfig _config;
     private readonly ILogger _logger = App.GetLogger<AutoEatTask>();
     private IInputChannel _input => InputHub.Foreground;
@@ -48,21 +51,22 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
     /// </summary>
     /// <param name="runtime">本次运行使用的运行环境</param>
     /// <param name="config">配置根</param>
-    /// <param name="taskParam">任务参数</param>
-    public AutoEatTask(GameRuntime runtime, AllConfig config, AutoEatParam taskParam) : base(runtime.SystemInfo)
+    public AutoEatTask(GameRuntime runtime, AllConfig config) : base(runtime.SystemInfo)
     {
         _runtime = runtime;
-        _taskParam = taskParam;
         _config = config.AutoEatConfig;
     }
 
-    async Task ISoloTask.Start(CancellationToken ct)
+    /// <summary>
+    /// 运行自动吃药。未指定食物时持续检测红血并使用便携营养袋，直到取消；
+    /// 指定食物时打开背包吃一份，并在结果数据中返回剩余数量。取消时抛出异常
+    /// </summary>
+    /// <param name="param">任务参数</param>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>任务结果，<see cref="AutoEatData.Count"/> 为原来的返回值</returns>
+    public async Task<SoloTaskResult<AutoEatData>> RunAsync(AutoEatParam param, CancellationToken ct)
     {
-        await Start(ct);
-    }
-
-    public async Task<int?> Start(CancellationToken ct)
-    {
+        _taskParam = param;
         _ct = ct;
 
         Init();
@@ -73,7 +77,7 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
             if (!IsTakeFood())
             {
                 _logger.LogWarning("未装备 \"{Tool}\"，无法启用自动吃药功能", "便携营养袋");
-                return null;
+                return SoloTaskResult.Failed("gadget_not_equipped", "未装备“便携营养袋”，无法启用自动吃药功能");
             }
 
             try
@@ -90,7 +94,9 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
                 _logger.LogInformation("自动吃药任务结束");
             }
 
-            return null;
+            // 主循环只会因取消结束，取消时向上抛出
+            _ct.ThrowIfCancellationRequested();
+            return SoloTaskResult.Unverified(new AutoEatData(), "自动吃药任务结束");
         }
         else
         {
@@ -154,7 +160,16 @@ public class AutoEatTask : BaseIndependentTask, ISoloTask<int?>
             }
             await new ReturnMainUiTask(_runtime).Start(ct);
 
-            return count;
+            var data = new AutoEatData { Count = count };
+            if (count == -1)
+            {
+                // 背包中没有该食物：业务失败，但仍携带原来的返回值 -1
+                return new SoloTaskResult<AutoEatData>(SoloTaskResultKind.Failed, $"没有找到{_taskParam.FoodName}",
+                    "food_not_found", data);
+            }
+
+            // 点击确认后没有再确认是否真的吃下，结果为未确认
+            return SoloTaskResult.Unverified(data, $"吃了一份{_taskParam.FoodName}");
         }
     }
 

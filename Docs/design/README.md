@@ -15,3 +15,4 @@
 - [TaskTriggerDispatcher 依赖注入改造设计](task-trigger-dispatcher-di.md)
 - [移除 TaskContext：按生命周期显式传递 GameRuntime](task-context-removal.md)
 - [BetterGI 外部访问服务设计](external-access.md)
+- [独立任务合同重构：ISoloTask 泛型化](task-contract.md)（草案，待评审）

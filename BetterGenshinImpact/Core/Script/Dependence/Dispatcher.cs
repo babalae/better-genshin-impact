@@ -27,7 +27,9 @@ using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Service;
+using SoloTask = BetterGenshinImpact.Core.Script.Dependence.Model.SoloTask;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
@@ -201,12 +203,13 @@ public class Dispatcher
                     }
                 }
 
-                await new AutoGeniusInvokationTask(_runtime, _allConfig, new GeniusInvokationTaskParam(content)).Start(cancellationToken);
+                LogIfFailed(await new AutoGeniusInvokationTask(_runtime, _allConfig)
+                    .RunAsync(new GeniusInvokationTaskParam(content), cancellationToken));
                 return null;
 
             case "AutoWood":
-                await new AutoWoodTask(_runtime, _allConfig, new WoodTaskParam(taskSettingsPageViewModel.AutoWoodRoundNum,
-                    taskSettingsPageViewModel.AutoWoodDailyMaxCount)).Start(cancellationToken);
+                LogIfFailed(await new AutoWoodTask(_runtime, _allConfig).RunAsync(new WoodTaskParam(
+                    taskSettingsPageViewModel.AutoWoodRoundNum, taskSettingsPageViewModel.AutoWoodDailyMaxCount), cancellationToken));
                 return null;
 
             case "AutoFight":
@@ -219,7 +222,8 @@ public class Dispatcher
                     return null;
                 }
 
-                return await new AutoDomainTask(_runtime, _allConfig, new AutoDomainParam(0, path)).Start(cancellationToken);
+                return ToRewardDictionary(await new AutoDomainTask(_runtime, _allConfig)
+                    .RunAsync(new AutoDomainParam(0, path), cancellationToken));
 
             case "AutoBoss":
                 var autoBossConfig = _allConfig.AutoBossConfig;
@@ -228,14 +232,15 @@ public class Dispatcher
                     return null;
                 }
 
-                return await new AutoBossTask(_runtime, _allConfig, new AutoBossParam(autoBossPath)).Start(cancellationToken);
+                return ToRewardDictionary(await new AutoBossTask(_runtime, _allConfig)
+                    .RunAsync(new AutoBossParam(autoBossPath), cancellationToken));
 
             case "AutoFishing":
-                await new AutoFishingTask(_runtime, _allConfig, AutoFishingTaskParam.BuildFromSoloTaskConfig(soloTask.Config),
-                    _screenshots).Start(cancellationToken);
+                LogIfFailed(await new AutoFishingTask(_runtime, _allConfig, _screenshots)
+                    .RunAsync(AutoFishingTaskParam.BuildFromSoloTaskConfig(soloTask.Config), cancellationToken));
                 return null;
             case "AutoCook":
-                await new AutoCookTask(_runtime, _allConfig).Start(cancellationToken);
+                LogIfFailed(await new AutoCookTask(_runtime, _allConfig).RunAsync(NoParam.Instance, cancellationToken));
                 return null;
             case "AutoEat":
                 {
@@ -292,13 +297,15 @@ public class Dispatcher
                     }
 
                     var autoEatConfig = _allConfig.AutoEatConfig;
-                    return await new AutoEatTask(_runtime, _allConfig, new AutoEatParam()
+                    var eatResult = await new AutoEatTask(_runtime, _allConfig).RunAsync(new AutoEatParam()
                     {
                         CheckInterval = autoEatConfig.CheckInterval,
                         EatInterval = autoEatConfig.EatInterval,
                         ShowNotification = autoEatConfig.ShowNotification,
                         FoodName = foodName
-                    }).Start(cancellationToken);
+                    }, cancellationToken);
+                    LogIfFailed(eatResult);
+                    return eatResult.Data?.Count;
                 }
             case "CountInventoryItem":
                 {
@@ -316,14 +323,8 @@ public class Dispatcher
                         ItemNames = itemNames?.ToList() ?? []
                     };
 
-                    var result = await new CountInventoryItem(_runtime, param).Start(cancellationToken);
-                    dynamic expando = new ExpandoObject();
-                    var expandoDict = (IDictionary<string, object>)expando;
-                    foreach (var kvp in (Dictionary<string, int>)result)
-                    {
-                        expandoDict[kvp.Key] = kvp.Value;
-                    }
-                    return expandoDict;
+                    var result = await new CountInventoryItem(_runtime).RunAsync(param, cancellationToken);
+                    return ToScriptObject(result.Data?.Counts);
                 }
             default:
                 throw new ArgumentException($"未知的任务名称: {soloTask.Name}", nameof(soloTask.Name));
@@ -368,7 +369,7 @@ public class Dispatcher
   
         using var linkedCts = CreateLinkedCancellationTokenSource(customCt);
         CancellationToken cancellationToken = linkedCts?.Token ?? _ct;
-        return await new AutoDomainTask(_runtime, _allConfig, param).Start(cancellationToken);
+        return ToRewardDictionary(await new AutoDomainTask(_runtime, _allConfig).RunAsync(param, cancellationToken));
     }  
 
     /// <summary>
@@ -387,7 +388,7 @@ public class Dispatcher
 
         using var linkedCts = CreateLinkedCancellationTokenSource(customCt);
         CancellationToken cancellationToken = linkedCts?.Token ?? _ct;
-        return await new AutoBossTask(_runtime, _allConfig, param).Start(cancellationToken);
+        return ToRewardDictionary(await new AutoBossTask(_runtime, _allConfig).RunAsync(param, cancellationToken));
     }
 
     /// <summary>  
@@ -407,8 +408,7 @@ public class Dispatcher
         using var linkedCts = CreateLinkedCancellationTokenSource(customCt);
         CancellationToken cancellationToken = linkedCts?.Token ?? _ct;
         var factory = GameTask.AutoFight.Factory.CombatTaskFactoryProvider.GetFactory(param.CombatStrategyPath);
-        var fightTask = factory.CreateTask(_runtime, _allConfig, param);
-        await fightTask.Start(cancellationToken);  
+        LogIfFailed(await factory.CreateTask(_runtime, _allConfig).RunAsync(param, cancellationToken));
     }
     
     /// <summary>
@@ -454,7 +454,7 @@ public class Dispatcher
   
         using var linkedCts = CreateLinkedCancellationTokenSource(customCt);
         CancellationToken cancellationToken = linkedCts?.Token ?? _ct;
-        await new AutoLeyLineOutcropTask(_runtime, _allConfig, param).Start(cancellationToken);  
+        LogIfFailed(await new AutoLeyLineOutcropTask(_runtime, _allConfig).RunAsync(param, cancellationToken));
     }
 
 
@@ -474,7 +474,7 @@ public class Dispatcher
 
         using var linkedCts = CreateLinkedCancellationTokenSource(customCt);
         CancellationToken cancellationToken = linkedCts?.Token ?? _ct;
-        await new AutoStygianOnslaughtTask(_runtime, _allConfig, param).Start(cancellationToken);
+        LogIfFailed(await new AutoStygianOnslaughtTask(_runtime, _allConfig).RunAsync(param, cancellationToken));
     }
     
     /// <summary>
@@ -493,11 +493,43 @@ public class Dispatcher
 
         using var linkedCts = CreateLinkedCancellationTokenSource(customCt);
         CancellationToken cancellationToken = linkedCts?.Token ?? _ct;
-        object result = await new CountInventoryItem(_runtime, param).Start(cancellationToken);
+        var result = await new CountInventoryItem(_runtime).RunAsync(param, cancellationToken);
+        return ToScriptObject(result.Data?.Counts);
+    }
 
+    /// <summary>
+    /// 任务返回失败结果时记录原因。JS 接口保持原有返回形状，不因失败结果抛出异常。
+    /// </summary>
+    /// <param name="result">任务结果。</param>
+    private void LogIfFailed(ISoloTaskResult result)
+    {
+        if (result.Kind == SoloTaskResultKind.Failed)
+        {
+            _logger.LogError("独立任务失败：{Message}（{Reason}）", result.Message, result.ReasonCode);
+        }
+    }
+
+    /// <summary>
+    /// 把奖励结果转换为 JS 原来使用的名称到数量字典；没有数据时返回空字典。
+    /// </summary>
+    /// <param name="result">秘境或首领任务的结果。</param>
+    /// <returns>名称到数量的字典。</returns>
+    private Dictionary<string, int> ToRewardDictionary(SoloTaskResult<RewardSummary> result)
+    {
+        LogIfFailed(result);
+        return result.Data?.ToDictionary() ?? [];
+    }
+
+    /// <summary>
+    /// 把名称到数量的字典转换为 JS 可直接访问属性的对象。
+    /// </summary>
+    /// <param name="counts">名称到数量的字典，可为空。</param>
+    /// <returns>ExpandoObject 形式的脚本对象。</returns>
+    private static IDictionary<string, object> ToScriptObject(Dictionary<string, int>? counts)
+    {
         dynamic expando = new ExpandoObject();
         var expandoDict = (IDictionary<string, object>)expando;
-        foreach (var kvp in (Dictionary<string, int>)result)
+        foreach (var kvp in counts ?? [])
         {
             expandoDict[kvp.Key] = kvp.Value;
         }

@@ -1,220 +1,174 @@
-using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
-using BetterGenshinImpact.GameTask.AutoBoss;
-using BetterGenshinImpact.GameTask.AutoCombo.ComboBuild;
-using BetterGenshinImpact.GameTask.AutoCook;
-using BetterGenshinImpact.GameTask.AutoDomain;
-using BetterGenshinImpact.GameTask.AutoFight;
-using BetterGenshinImpact.GameTask.AutoFight.Factory;
-using BetterGenshinImpact.GameTask.AutoFishing;
-using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
-using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
-using BetterGenshinImpact.GameTask.AutoMusicGame;
-using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
-using BetterGenshinImpact.GameTask.AutoWood;
-using BetterGenshinImpact.GameTask.GetGridIcons;
-using BetterGenshinImpact.GameTask.Runtime;
-using BetterGenshinImpact.GameTask.UseRedeemCode;
-using BetterGenshinImpact.Service;
-using BetterGenshinImpact.Service.Interface;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Text.RegularExpressions;
+using BetterGenshinImpact.GameTask.Runtime;
 
 namespace BetterGenshinImpact.GameTask.SoloTask;
 
 /// <summary>
-/// 将可传输的独立任务请求还原为目标实例中的具体任务对象。
+/// 独立任务注册表。启动时扫描程序集中带 <see cref="SoloTaskInfoAttribute"/> 的类，校验后生成描述符。
+/// 独立任务页、多实例、任务计划和一条龙都从这里获得任务清单。
 /// </summary>
-public sealed class SoloTaskRegistry(GameScreenshotService screenshots, IConfigService configService)
+public sealed partial class SoloTaskRegistry
 {
     /// <summary>
-    /// 根据请求创建只绑定当前运行环境的独立任务。
+    /// 按任务标识索引的描述符。
     /// </summary>
-    /// <param name="request">已完成校验的启动请求。</param>
-    /// <param name="runtime">目标实例本轮游戏运行环境。</param>
-    public ISoloTask CreateTask(SoloTaskStartRequest request, GameRuntime runtime)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-        ArgumentNullException.ThrowIfNull(runtime);
+    private readonly Dictionary<string, SoloTaskDescriptor> _byId = new(StringComparer.Ordinal);
 
-        // 所有实例共用同一份配置文件，任务开始构造时直接读取磁盘上的最新配置。
-        var config = configService.Read();
-        return request.TaskType switch
+    /// <summary>
+    /// 按任务实现类型索引的描述符。
+    /// </summary>
+    private readonly Dictionary<Type, SoloTaskDescriptor> _byType = [];
+
+    /// <summary>
+    /// 全部已注册任务，按 Order 排列。
+    /// </summary>
+    public IReadOnlyList<SoloTaskDescriptor> All { get; }
+
+    /// <summary>
+    /// 扫描指定程序集并建立注册表。将来加载插件时，把插件程序集追加到列表即可。
+    /// </summary>
+    /// <param name="assemblies">要扫描的程序集。</param>
+    /// <exception cref="InvalidOperationException">任务声明不符合合同。</exception>
+    public SoloTaskRegistry(IEnumerable<Assembly> assemblies)
+    {
+        var settingsViewModels = new HashSet<Type>();
+        foreach (var type in assemblies.SelectMany(GetLoadableTypes))
         {
-            SoloTaskType.AutoGeniusInvokation => new AutoGeniusInvokationTask(
-                runtime,
-                config,
-                new GeniusInvokationTaskParam(GetRequired<string>(request.Parameters, "strategyContent"))),
-            SoloTaskType.AutoWood => new AutoWoodTask(
-                runtime,
-                config,
-                new WoodTaskParam(
-                    GetRequired<int>(request.Parameters, "roundNum"),
-                    GetRequired<int>(request.Parameters, "dailyMaxCount"))),
-            SoloTaskType.AutoFight => CreateAutoFightTask(request, runtime, config),
-            SoloTaskType.AutoDomain => new AutoDomainTask(
-                runtime,
-                config,
-                new AutoDomainParam(
-                    GetRequired<int>(request.Parameters, "roundNum"),
-                    GetRequired<string>(request.Parameters, "strategyPath"))),
-            SoloTaskType.AutoBoss => CreateAutoBossTask(request, runtime, config),
-            SoloTaskType.AutoStygianOnslaught => CreateAutoStygianOnslaughtTask(request, runtime, config),
-            SoloTaskType.AutoFishing => CreateAutoFishingTask(request, runtime, config),
-            SoloTaskType.AutoLeyLineOutcrop => CreateAutoLeyLineOutcropTask(runtime, config),
-            SoloTaskType.AutoMusicGame => new AutoMusicGameTask(runtime, config, new AutoMusicGameParam()),
-            SoloTaskType.AutoAlbum => new AutoAlbumTask(runtime, config, new AutoMusicGameParam()),
-            SoloTaskType.AutoCook => new AutoCookTask(runtime, config),
-            SoloTaskType.AutoCombo => new AutoComboBuildTask(runtime, config),
-            SoloTaskType.AutoArtifactSalvage => CreateArtifactSalvageTask(runtime, config),
-            SoloTaskType.AutoRedeemCode => new UseRedemptionCodeTask(
-                runtime,
-                GetRequired<List<string>>(request.Parameters, "codes")),
-            SoloTaskType.GetGridIcons => new GetGridIconsTask(
-                runtime,
-                config.GetGridIconsConfig.GridName,
-                config.GetGridIconsConfig.StarAsSuffix,
-                config.GetGridIconsConfig.MaxNumToGet),
-            SoloTaskType.GridIconsAccuracyTest => new GridIconsAccuracyTestTask(
-                runtime,
-                config.GetGridIconsConfig.GridName,
-                config.GetGridIconsConfig.MaxNumToGet),
-            SoloTaskType.InventoryCountComparison => new InventoryCountComparisonTask(
-                runtime,
-                GetRequired<InventoryCountComparisonTarget>(request.Parameters, "target")),
-            _ => throw new ArgumentOutOfRangeException(nameof(request.TaskType), request.TaskType, "未知的独立任务类型")
-        };
+            var info = type.GetCustomAttribute<SoloTaskInfoAttribute>();
+            if (info is null)
+            {
+                continue;
+            }
+
+            var descriptor = CreateDescriptor(type, info);
+            if (!_byId.TryAdd(descriptor.TaskId, descriptor))
+            {
+                throw new InvalidOperationException($"独立任务标识 {descriptor.TaskId} 重复注册：{type.FullName}。");
+            }
+
+            if (descriptor.SettingsViewModelType is { } vmType && !settingsViewModels.Add(vmType))
+            {
+                throw new InvalidOperationException($"设置 VM {vmType.Name} 被多个独立任务绑定。");
+            }
+
+            _byType[type] = descriptor;
+        }
+
+        // Order 同时决定分组先后（约定按百位分组），菜单按此顺序分段
+        All = _byId.Values
+            .OrderBy(d => d.Order)
+            .ThenBy(d => d.TaskId, StringComparer.Ordinal)
+            .ToList()
+            .AsReadOnly();
     }
 
     /// <summary>
-    /// 返回任务是否需要等待游戏进入主界面后再开始业务逻辑。
+    /// 按任务标识获取描述符。
     /// </summary>
-    public static bool ShouldWaitForMainUi(SoloTaskType taskType)
-    {
-        return taskType is not (SoloTaskType.AutoGeniusInvokation
-            or SoloTaskType.AutoStygianOnslaught
-            or SoloTaskType.AutoMusicGame
-            or SoloTaskType.AutoAlbum);
-    }
+    /// <param name="taskId">任务标识。</param>
+    /// <returns>描述符。</returns>
+    /// <exception cref="KeyNotFoundException">任务未注册。</exception>
+    public SoloTaskDescriptor Get(string taskId)
+        => _byId.TryGetValue(taskId, out var descriptor)
+            ? descriptor
+            : throw new KeyNotFoundException($"未注册独立任务 {taskId}。");
 
     /// <summary>
-    /// 返回用于实例管理窗口展示的任务名称。
+    /// 尝试按任务标识获取描述符。
     /// </summary>
-    public static string GetDisplayName(SoloTaskType taskType)
+    /// <param name="taskId">任务标识。</param>
+    /// <param name="descriptor">找到的描述符。</param>
+    /// <returns>是否找到。</returns>
+    public bool TryGet(string? taskId, out SoloTaskDescriptor descriptor)
     {
-        return taskType switch
+        if (taskId is not null && _byId.TryGetValue(taskId, out var found))
         {
-            SoloTaskType.AutoGeniusInvokation => "自动七圣召唤",
-            SoloTaskType.AutoWood => "自动伐木",
-            SoloTaskType.AutoFight => "自动战斗",
-            SoloTaskType.AutoDomain => "自动秘境",
-            SoloTaskType.AutoBoss => "自动首领讨伐",
-            SoloTaskType.AutoStygianOnslaught => "自动幽境危战",
-            SoloTaskType.AutoFishing => "自动钓鱼",
-            SoloTaskType.AutoLeyLineOutcrop => "自动地脉花",
-            SoloTaskType.AutoMusicGame => "自动音游",
-            SoloTaskType.AutoAlbum => "自动演奏专辑",
-            SoloTaskType.AutoCook => "自动烹饪",
-            SoloTaskType.AutoCombo => "自动连招构建",
-            SoloTaskType.AutoArtifactSalvage => "自动分解圣遗物",
-            SoloTaskType.AutoRedeemCode => "自动使用兑换码",
-            SoloTaskType.GetGridIcons => "截取物品图标",
-            SoloTaskType.GridIconsAccuracyTest => "模型准确率测试",
-            SoloTaskType.InventoryCountComparison => "数量 OCR 对比",
-            _ => taskType.ToString()
-        };
+            descriptor = found;
+            return true;
+        }
+
+        descriptor = null!;
+        return false;
     }
 
     /// <summary>
-    /// 创建自动战斗任务并保留点击处选择的策略路径。
+    /// 按任务实现类型查找描述符；未加特性的类返回 null。
     /// </summary>
-    private static ISoloTask CreateAutoFightTask(
-        SoloTaskStartRequest request,
-        GameRuntime runtime,
-        AllConfig config)
+    /// <param name="taskType">任务实现类型。</param>
+    /// <returns>描述符或 null。</returns>
+    public SoloTaskDescriptor? FindByType(Type taskType) => _byType.GetValueOrDefault(taskType);
+
+    /// <summary>
+    /// 返回任务显示名；未注册时返回标识本身。
+    /// </summary>
+    /// <param name="taskId">任务标识。</param>
+    /// <returns>显示名。</returns>
+    public string GetDisplayName(string? taskId)
+        => TryGet(taskId, out var descriptor) ? descriptor.DisplayName : taskId ?? string.Empty;
+
+    /// <summary>
+    /// 返回指定入口可用的任务。
+    /// </summary>
+    /// <param name="scope">运行入口。</param>
+    /// <returns>按分组和顺序排列的描述符。</returns>
+    public IEnumerable<SoloTaskDescriptor> GetByScope(SoloTaskScopes scope) => All.Where(d => d.Scopes.HasFlag(scope));
+
+    /// <summary>
+    /// 校验任务类型并建立描述符。
+    /// </summary>
+    private static SoloTaskDescriptor CreateDescriptor(Type type, SoloTaskInfoAttribute info)
     {
-        var path = GetRequired<string>(request.Parameters, "strategyPath");
-        var param = new AutoFightParam(path, config.AutoFightConfig);
-        return CombatTaskFactoryProvider.GetFactory(path).CreateTask(runtime, config, param);
+        if (!TaskIdRegex().IsMatch(info.Id))
+        {
+            throw new InvalidOperationException($"独立任务标识 {info.Id} 不符合 snake_case 规则：{type.FullName}。");
+        }
+
+        if (type.IsAbstract || type.IsGenericTypeDefinition)
+        {
+            throw new InvalidOperationException($"独立任务 {info.Id} 不能是抽象类或开放泛型：{type.FullName}。");
+        }
+
+        var contracts = type.GetInterfaces()
+            .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ISoloTask<,>))
+            .ToArray();
+        if (contracts.Length != 1)
+        {
+            throw new InvalidOperationException($"独立任务 {info.Id} 必须恰好实现一个 ISoloTask<TParam, TData>：{type.FullName}。");
+        }
+
+        var constructors = type.GetConstructors();
+        if (constructors.Length != 1 || constructors[0].GetParameters().All(p => p.ParameterType != typeof(GameRuntime)))
+        {
+            throw new InvalidOperationException($"独立任务 {info.Id} 必须只有一个接收 GameRuntime 的公共构造函数：{type.FullName}。");
+        }
+
+        var arguments = contracts[0].GetGenericArguments();
+        return new SoloTaskDescriptor(type, info, arguments[0], arguments[1],
+            type.GetCustomAttribute<SoloTaskSettingsViewAttribute>(), constructors[0]);
     }
 
     /// <summary>
-    /// 创建自动首领讨伐任务。
+    /// 读取程序集中可加载的类型，部分类型加载失败时跳过它们。
     /// </summary>
-    private static ISoloTask CreateAutoBossTask(
-        SoloTaskStartRequest request,
-        GameRuntime runtime,
-        AllConfig config)
+    private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
     {
-        var param = new AutoBossParam(GetRequired<string>(request.Parameters, "strategyPath"));
-        param.SetAutoBossConfig(config.AutoBossConfig);
-        return new AutoBossTask(runtime, config, param);
+        try
+        {
+            return assembly.GetTypes();
+        }
+        catch (ReflectionTypeLoadException e)
+        {
+            return e.Types.OfType<Type>();
+        }
     }
 
     /// <summary>
-    /// 创建自动幽境危战任务。
+    /// 任务标识规则：小写 snake_case；插件任务为 {pluginId}.{name}。
     /// </summary>
-    private static ISoloTask CreateAutoStygianOnslaughtTask(
-        SoloTaskStartRequest request,
-        GameRuntime runtime,
-        AllConfig config)
-    {
-        var param = new AutoStygianOnslaughtParam();
-        param.SetAutoStygianOnslaughtConfig(config.AutoStygianOnslaughtConfig);
-        return new AutoStygianOnslaughtTask(
-            runtime,
-            config,
-            param,
-            GetRequired<string>(request.Parameters, "strategyPath"));
-    }
-
-    /// <summary>
-    /// 创建自动钓鱼任务，并按点击时的截图开关选择截图服务。
-    /// </summary>
-    private ISoloTask CreateAutoFishingTask(
-        SoloTaskStartRequest request,
-        GameRuntime runtime,
-        AllConfig config)
-    {
-        var saveScreenshot = GetRequired<bool>(request.Parameters, "saveScreenshotOnKeyTick");
-        var param = AutoFishingTaskParam.BuildFromConfig(config.AutoFishingConfig, saveScreenshot);
-        return new AutoFishingTask(runtime, config, param, saveScreenshot ? screenshots : null);
-    }
-
-    /// <summary>
-    /// 创建自动地脉花任务。
-    /// </summary>
-    private static ISoloTask CreateAutoLeyLineOutcropTask(GameRuntime runtime, AllConfig config)
-    {
-        var param = new AutoLeyLineOutcropParam();
-        param.SetAutoLeyLineOutcropConfig(config.AutoLeyLineOutcropConfig);
-        return new AutoLeyLineOutcropTask(runtime, config, param);
-    }
-
-    /// <summary>
-    /// 创建自动分解圣遗物任务。
-    /// </summary>
-    private static ISoloTask CreateArtifactSalvageTask(GameRuntime runtime, AllConfig config)
-    {
-        var taskConfig = config.AutoArtifactSalvageConfig;
-        var param = new AutoArtifactSalvageTaskParam(
-            int.Parse(taskConfig.MaxArtifactStar),
-            taskConfig.JavaScript,
-            taskConfig.ArtifactSetFilter,
-            taskConfig.MaxNumToCheck,
-            taskConfig.RecognitionFailurePolicy);
-        return new AutoArtifactSalvageTask(runtime, param);
-    }
-
-    /// <summary>
-    /// 从任务专用 JSON 载荷读取必需参数。
-    /// </summary>
-    private static T GetRequired<T>(JObject? parameters, string propertyName)
-    {
-        var token = parameters?[propertyName]
-                    ?? throw new ArgumentException($"独立任务参数缺少 {propertyName}。");
-        return token.ToObject<T>()
-               ?? throw new ArgumentException($"独立任务参数 {propertyName} 无效。");
-    }
+    [GeneratedRegex(@"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)?$")]
+    private static partial Regex TaskIdRegex();
 }

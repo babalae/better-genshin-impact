@@ -140,7 +140,7 @@ public partial class FeedWindowViewModel : ViewModel
         if (item?.Codes != null && item.Codes.Count != 0)
         {
             var codes = item.Codes;
-            await new TaskRunner().RunSoloTaskAsync(rt => new UseRedemptionCodeTask(rt, codes));
+            await new TaskRunner().RunSoloTaskAsync(rt => new UseRedemptionCodeTask(rt), new UseRedemptionCodeParam { Codes = codes });
         }
     }
 

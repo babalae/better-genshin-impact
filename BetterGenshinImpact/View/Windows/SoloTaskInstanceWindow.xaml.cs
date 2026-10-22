@@ -1,4 +1,5 @@
 using BetterGenshinImpact.GameTask.SoloTask;
+using BetterGenshinImpact.GameTask.SoloTask.Execution;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.ViewModel.Windows;
@@ -21,12 +22,17 @@ public partial class SoloTaskInstanceWindow : FluentWindow
     /// <summary>
     /// 创建模态实例管理窗口。
     /// </summary>
+    /// <param name="instanceService">多实例连接与独立任务操作服务</param>
+    /// <param name="registry">独立任务注册表</param>
+    /// <param name="taskId">要管理的任务标识</param>
+    /// <param name="definitionFactory">第一次启动时收集任务参数的回调</param>
     public SoloTaskInstanceWindow(
         InstanceService instanceService,
-        SoloTaskType taskType,
+        SoloTaskRegistry registry,
+        string taskId,
         Func<Task<SoloTaskStartDefinition?>> definitionFactory)
     {
-        ViewModel = new SoloTaskInstanceWindowViewModel(instanceService, taskType, definitionFactory);
+        ViewModel = new SoloTaskInstanceWindowViewModel(instanceService, registry, taskId, definitionFactory);
         DataContext = ViewModel;
         InitializeComponent();
         SourceInitialized += (_, _) => WindowHelper.TryApplySystemBackdrop(this);

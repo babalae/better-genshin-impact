@@ -8,6 +8,7 @@ using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Genshin.Settings;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -30,9 +31,13 @@ namespace BetterGenshinImpact.GameTask.AutoWood;
 /// <summary>
 /// 自动伐木
 /// </summary>
-public partial class AutoWoodTask : ISoloTask
+[SoloTaskInfo(TaskId, "自动伐木", Group = "采集与生活", Order = 310)]
+public partial class AutoWoodTask : ISoloTask<WoodTaskParam, NoData>
 {
-    public string Name => "自动伐木";
+    /// <summary>
+    /// 稳定任务标识
+    /// </summary>
+    public const string TaskId = "auto_wood";
 
     /// <summary>
     /// 本次运行使用的运行环境
@@ -46,29 +51,36 @@ public partial class AutoWoodTask : ISoloTask
 
     private bool _first = true;
 
-    private WoodStatisticsPrinter _printer;
+    /// <summary>
+    /// 木材统计，在 <see cref="RunAsync"/> 开头创建
+    /// </summary>
+    private WoodStatisticsPrinter _printer = null!;
 
     private readonly Login3rdParty _login3rdParty;
 
     // private VK _zKey = VK.VK_Z;
 
-    private readonly WoodTaskParam _taskParam;
+    /// <summary>
+    /// 本次运行的伐木参数，在 <see cref="RunAsync"/> 开头赋值
+    /// </summary>
+    private WoodTaskParam _taskParam = null!;
 
     private CancellationToken _ct;
 
-    private EnterAndExitWonderlandJob _enterAndExitWonderlandJob;
+    /// <summary>
+    /// 进出千星奇域刷新 CD 的作业，在 <see cref="RunAsync"/> 开头创建
+    /// </summary>
+    private EnterAndExitWonderlandJob _enterAndExitWonderlandJob = null!;
 
     /// <summary>
     /// 创建自动伐木任务
     /// </summary>
     /// <param name="runtime">本次运行使用的运行环境</param>
     /// <param name="config">配置根</param>
-    /// <param name="taskParam">伐木参数</param>
-    public AutoWoodTask(GameRuntime runtime, AllConfig config, WoodTaskParam taskParam)
+    public AutoWoodTask(GameRuntime runtime, AllConfig config)
     {
         _runtime = runtime;
         _config = config;
-        this._taskParam = taskParam;
         _login3rdParty = new(runtime);
     }
 
@@ -77,8 +89,16 @@ public partial class AutoWoodTask : ISoloTask
         return RecognitionAssets.Get("AutoWood", objectName, region);
     }
 
-    public async Task Start(CancellationToken ct)
+    /// <summary>
+    /// 运行自动伐木。未装备「王树瑞佑」、首次伐木未识别到木材时抛出携带失败结果的 <see cref="SoloTaskAbortException"/>；
+    /// 取消时抛出异常
+    /// </summary>
+    /// <param name="param">伐木参数</param>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>任务结果：木材达到上限返回成功，其余正常结束返回未确认</returns>
+    public async Task<SoloTaskResult<NoData>> RunAsync(WoodTaskParam param, CancellationToken ct)
     {
+        _taskParam = param;
         _printer = new WoodStatisticsPrinter(_runtime, _config);
         _enterAndExitWonderlandJob = new EnterAndExitWonderlandJob(_runtime);
         var runTimeWatch = new Stopwatch();
@@ -121,28 +141,28 @@ public partial class AutoWoodTask : ISoloTask
                     if (_printer.WoodStatisticsAlwaysEmpty())
                     {
                         Logger.LogInformation("连续{Cnt}次获取木材数量为0。判定附近没有能响应「王树瑞佑」的树木！或者已达每日数量上限", _printer.NothingCount);
-                        break;
+                        return SoloTaskResult.Unverified($"连续{_printer.NothingCount}次获取木材数量为0，结束伐木");
                     }
 
                     if (_printer.ReachedWoodMaxCount)
                     {
+                        // OCR 累计的木材数量已确认达到上限，视为完成
                         Logger.LogInformation("{Names}已达到设置的上限：{MaxCnt}", _printer.WoodTotalDict.Keys, _taskParam.WoodDailyMaxCount);
-                        break;
+                        return SoloTaskResult.Success($"木材已达到设置的上限：{_taskParam.WoodDailyMaxCount}");
                     }
                 }
 
                 Logger.LogInformation("第{Cnt}次伐木", i + 1);
-                if (_ct.IsCancellationRequested)
-                {
-                    break;
-                }
+                // 取消时向上抛出，不再静默结束
+                _ct.ThrowIfCancellationRequested();
 
                 await Felling(_taskParam, i + 1 == _taskParam.WoodRoundNum);
                 _runtime.MaskWindowDrawingBoard.ClearAll();
                 _runtime.Sleep(500, _ct);
             }
 
-            return;
+            // 跑完设定轮数，没有确认实际获得的木材
+            return SoloTaskResult.Unverified($"已完成设定的 {_taskParam.WoodRoundNum} 次伐木");
         }
         finally
         {
@@ -208,7 +228,8 @@ public partial class AutoWoodTask : ISoloTask
                 if (_woodMetricsDict.Count == 0)
                 {
                     _config.AutoWoodConfig.WoodCountOcrEnabled = false;
-                    throw new NormalEndException("首次伐木就未识别到木材数据，已经自动关闭【OCR识别并累计木材数】的功能，请重新启动【自动伐木】功能！");
+                    throw new SoloTaskAbortException(SoloTaskResult.Failed("wood_count_not_recognized",
+                        "首次伐木就未识别到木材数据，已经自动关闭【OCR识别并累计木材数】的功能，请重新启动【自动伐木】功能！"));
                 }
 
                 return;
@@ -476,7 +497,8 @@ public partial class AutoWoodTask : ISoloTask
             if (ra.IsEmpty())
             {
 #if !TEST_WITHOUT_Z_ITEM
-                throw new NormalEndException("请先装备小道具「王树瑞佑」！如果已经装备仍旧出现此提示，请重新仔细阅读文档中的《快速上手》！");
+                throw new SoloTaskAbortException(SoloTaskResult.Failed("gadget_not_equipped",
+                    "请先装备小道具「王树瑞佑」！如果已经装备仍旧出现此提示，请重新仔细阅读文档中的《快速上手》！"));
 #else
                 System.Threading.Thread.Sleep(2000);
                 InputHub.Foreground.SimulateAction(GIActions.QuickUseGadget);

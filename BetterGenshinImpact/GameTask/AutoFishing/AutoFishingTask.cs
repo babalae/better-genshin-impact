@@ -6,6 +6,7 @@ using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Service;
 using CsTrees;
 using CsTrees.Composites;
@@ -18,15 +19,26 @@ using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.GameTask.AutoFishing
 {
-    public class AutoFishingTask : ISoloTask
+    /// <summary>
+    /// 自动钓鱼独立任务
+    /// </summary>
+    [SoloTaskInfo(TaskId, "自动钓鱼", Group = "采集与生活", Order = 320)]
+    public class AutoFishingTask : ISoloTask<AutoFishingTaskParam, NoData>
     {
+        /// <summary>
+        /// 稳定任务标识
+        /// </summary>
+        public const string TaskId = "auto_fishing";
+
         private readonly ILogger _logger = App.GetLogger<AutoFishingTask>();
         private IInputChannel input => InputHub.Foreground;
-        public string Name => "钓鱼独立任务";
 
         private CancellationToken _ct;
 
-        private readonly AutoFishingTaskParam param;
+        /// <summary>
+        /// 本次运行的钓鱼参数，在 <see cref="RunAsync"/> 开头赋值
+        /// </summary>
+        private AutoFishingTaskParam param = null!;
 
         /// <summary>
         /// 本次运行使用的运行环境：截图、等待、前台判断都只使用它
@@ -48,18 +60,23 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// </summary>
         /// <param name="runtime">本次运行使用的运行环境</param>
         /// <param name="config">配置根</param>
-        /// <param name="param">任务参数</param>
-        /// <param name="screenshots">关键帧与出错截图的保存服务；只有开启 SaveScreenshotOnKeyTick 时需要，未提供时跳过保存</param>
-        public AutoFishingTask(GameRuntime runtime, AllConfig config, AutoFishingTaskParam param, GameScreenshotService? screenshots = null)
+        /// <param name="screenshots">关键帧与出错截图的保存服务；只有参数开启 SaveScreenshotOnKeyTick 时使用，未提供时跳过保存</param>
+        public AutoFishingTask(GameRuntime runtime, AllConfig config, GameScreenshotService? screenshots = null)
         {
             _runtime = runtime;
             _config = config;
-            this.param = param;
             _screenshots = screenshots;
         }
 
-        public async Task Start(CancellationToken ct)
+        /// <summary>
+        /// 运行自动钓鱼。没有确认钓到鱼的手段，正常结束返回未确认；取消时抛出异常
+        /// </summary>
+        /// <param name="param">钓鱼参数</param>
+        /// <param name="ct">取消令牌</param>
+        /// <returns>任务结果</returns>
+        public async Task<SoloTaskResult<NoData>> RunAsync(AutoFishingTaskParam param, CancellationToken ct)
         {
+            this.param = param;
             using var predictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiFish);
             this._ct = ct;
 
@@ -318,7 +335,9 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
             _logger.LogInformation("→ 钓鱼任务结束");
 
-            return;
+            // 取消时已完成收尾，向上抛出取消而不是当作正常结束
+            ct.ThrowIfCancellationRequested();
+            return SoloTaskResult.Unverified("钓鱼任务结束");
         }
 
         public void Sleep(int millisecondsTimeout)

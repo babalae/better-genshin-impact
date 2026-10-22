@@ -44,6 +44,11 @@ public class AutoLeyLineOutcropParam:BaseTaskParam<AutoLeyLineOutcropTask>
     /// 领取奖励后扫描掉落物光柱的最长时长，单位为秒。
     /// </summary>
     public int ScanDropsAfterRewardSeconds { get; set; }
+
+    /// <summary>
+    /// 是否为一条龙模式：为 true 时开始前不先传送到七天神像。默认 false（原任务构造参数 oneDragonMode）。
+    /// </summary>
+    public bool OneDragonMode { get; set; }
     
     public void SetDefault()
     {

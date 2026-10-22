@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -13,6 +14,11 @@ namespace BetterGenshinImpact.ViewModel.Pages.Pulonia;
 /// </summary>
 public sealed class PuloniaTaskNodeResultViewModel : ObservableObject
 {
+    /// <summary>
+    /// 奖励汇总在结果数据中的键，对应 RewardSummary 按 SoloTaskJson 序列化后的 items。
+    /// </summary>
+    private const string RewardItemsKey = "items";
+
     /// <summary>
     /// 本次尝试的原始结果。
     /// </summary>
@@ -98,6 +104,8 @@ public sealed class PuloniaTaskNodeResultViewModel : ObservableObject
             "keymouse" => "宏回放结束不等于游戏目标完成；录制文件本身没有结构化收益证据。",
             "shell" => "退出码表示进程结果；标准输出/错误每路最多保留 65536 字符，截断会明确标记。",
             "csharp" => "返回值与确认事件来自注册的 C# 能力；局部确认不等于整个节点成功。",
+            _ when PuloniaSoloTaskExecutor.IsSoloTaskType(result.TaskType) =>
+                "独立任务的结果种类与原因码由任务本身给出；“已执行，未核验”表示任务没有确认手段，需要核对游戏状态。奖励只列出任务识别到的物品，未识别时不推算收益。",
             _ => "没有返回领取/合成数量时不推算收益；“已执行，未核验”需要核对游戏状态。"
         };
         ResultFields = CreateResultFields(result);
@@ -133,6 +141,16 @@ public sealed class PuloniaTaskNodeResultViewModel : ObservableObject
     {
         var fields = new List<PuloniaTaskHistoryField>();
         var handled = new HashSet<string>();
+        // 1. 执行器给出的原因码放在最前，便于按原因筛查失败与跳过
+        if (!string.IsNullOrWhiteSpace(result.ReasonCode))
+            fields.Add(new PuloniaTaskHistoryField("原因码", result.ReasonCode));
+        // 2. 奖励汇总（RewardSummary 的 items）逐行展示为“名称 ×数量”
+        if (TryFormatRewards(result, out var rewards))
+        {
+            handled.Add(RewardItemsKey);
+            fields.Add(new PuloniaTaskHistoryField("奖励", rewards));
+        }
+        // 3. 各类型的关键结果
         switch (result.TaskType)
         {
             case "shell":
@@ -180,6 +198,29 @@ public sealed class PuloniaTaskNodeResultViewModel : ObservableObject
         if (fields.Count == 0)
             fields.Add(new PuloniaTaskHistoryField("执行结果", "执行器没有附带结构化返回值，请查看结果消息和证据。"));
         return fields;
+    }
+
+    /// <summary>
+    /// 把结果数据中的奖励数组格式化为逐行的“名称 ×数量”。
+    /// 独立任务的 items 一律按奖励解释；其他类型只在每一项都带 name 时才按奖励解释，避免误读扩展数据。
+    /// </summary>
+    /// <param name="result">节点结果。</param>
+    /// <param name="text">格式化后的奖励文本；无法按奖励解释时为空字符串。</param>
+    /// <returns>能够按奖励解释时返回 true。</returns>
+    private static bool TryFormatRewards(PuloniaTaskNodeResult result, out string text)
+    {
+        text = string.Empty;
+        if (result.Data[RewardItemsKey] is not JArray items)
+            return false;
+        var isSoloTask = PuloniaSoloTaskExecutor.IsSoloTaskType(result.TaskType);
+        var isRewardShaped = items.All(item => item is JObject entry && entry["name"] is { Type: JTokenType.String });
+        if (!isRewardShaped || (items.Count == 0 && !isSoloTask))
+            return false;
+        text = items.Count == 0
+            ? "没有识别到奖励。"
+            : string.Join("\n", items.OfType<JObject>().Select(item =>
+                $"{item.Value<string>("name")} ×{(item["count"] is { Type: not JTokenType.Null } count ? count.ToString(Formatting.None) : "?")}"));
+        return true;
     }
 
     /// <summary>
@@ -232,7 +273,12 @@ public sealed class PuloniaTaskNodeResultViewModel : ObservableObject
         "collection_cd" => "采集 CD 配置", "collection_material" => "采集物",
         "collection_rule" => "本次 CD 规则", "collection_rule_source" => "规则依据",
         "collection_last_success_at" => "最后成功时间（UTC）", "collection_next_eligible_at" => "下次可执行时间（UTC）",
-        "collection_basis" => "采集完成依据", _ => key
+        "collection_basis" => "采集完成依据",
+        // 独立任务常用参数
+        "weekday_overrides" => "每周安排", "combat_strategy_path" => "战斗策略", "strategy_name" => "战斗策略名称",
+        "domain_name" => "秘境", "boss_name" => "首领", "team_name" => "队伍名称",
+        "min_resin_to_keep" => "保留原粹树脂", "teleport_type" => "进壶方式", "secret_treasure_objects" => "洞天百宝购买",
+        _ => key
     };
 
     /// <summary>

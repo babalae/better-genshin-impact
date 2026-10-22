@@ -46,13 +46,30 @@ using BetterGenshinImpact.GameTask.AutoCombo.ComboBuild;
 using BetterGenshinImpact.GameTask.AutoCombo.ComboRun;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.View.Pages.SoloTaskSettings;
+using BetterGenshinImpact.ViewModel.SoloTaskSettings;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
-public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
+/// <summary>
+/// 自动秘境独立任务：传送并进入秘境，循环执行战斗、寻找石化古树、领取奖励，结束后可选分解圣遗物。
+/// 业务设置全部来自 <see cref="AutoDomainParam"/>，结果附带本次识别到的奖励汇总。
+/// </summary>
+[SoloTaskInfo(TaskId, "自动秘境", Group = "树脂与战斗", Order = 210, OneDragonOrder = 3)]
+[SoloTaskSettingsView(typeof(AutoDomainSettingsView), typeof(AutoDomainSettingsViewModel))]
+public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
 {
-    public string Name => "自动秘境";
+    /// <summary>
+    /// 任务稳定标识。
+    /// </summary>
+    public const string TaskId = "auto_domain";
+
+    /// <summary>
+    /// 原因码：领取奖励后长时间未检测到秘境结束（通常是背包物品已满）。
+    /// </summary>
+    public const string DomainEndNotDetectedReason = "domain_end_not_detected";
 
     /// <summary>
     /// 本次运行使用的运行环境
@@ -60,7 +77,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
     private readonly GameRuntime _runtime;
 
     /// <summary>
-    /// 配置根，由创建方传入。<see cref="_config"/> 已用于本次运行的秘境配置，因此命名为 _allConfig
+    /// 配置根，由创建方传入。只用于读取非本任务的全局设置（按键、拾取键、连招构建等），秘境业务设置来自 <see cref="_taskParam"/>
     /// </summary>
     private readonly AllConfig _allConfig;
 
@@ -69,17 +86,25 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
     /// </summary>
     private static AllConfig Config => ConfigService.Config!;
 
-    private readonly AutoDomainParam _taskParam;
+    /// <summary>
+    /// 本次运行的任务参数，在 <see cref="RunAsync"/> 开头赋值
+    /// </summary>
+    private AutoDomainParam _taskParam = null!;
 
     private BgiYoloPredictor _predictor = null!;
 
-    private readonly AutoDomainConfig _config;
+    /// <summary>
+    /// TXT 战斗策略解析结果；使用 JSON 或自动连招策略时为 null
+    /// </summary>
+    private CombatScriptBag? _combatScriptBag;
 
-    private readonly CombatScriptBag? _combatScriptBag;
-    private readonly string? _jsonCombatStrategyPath;
+    /// <summary>
+    /// JSON 战斗策略文件路径；不是 JSON 策略时为 null
+    /// </summary>
+    private string? _jsonCombatStrategyPath;
 
     /// <summary>策略为自动连招（LLM 行为树）时为 true：进本前调用 LLM 建树，循环战斗中 Tick 该树</summary>
-    private readonly bool _useComboStrategy;
+    private bool _useComboStrategy;
 
     /// <summary>建树任务：未配置 PartyName 时进本前启动、与传送进本并行；配置了 PartyName 时为 null，进本后切队再启动</summary>
     private Task<ComboTreeSession>? _comboBuildTask;
@@ -109,37 +134,18 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
     private readonly string replenishResinString;
     private readonly string cancelButtonString;
 
-    private List<ResinUseRecord> _resinPriorityListWhenSpecifyUse;
+    /// <summary>
+    /// 指定树脂使用次数时的树脂使用记录，在 <see cref="Initialize"/> 中按参数建立
+    /// </summary>
+    private List<ResinUseRecord> _resinPriorityListWhenSpecifyUse = [];
 
-    /// <summary>创建秘境任务；Pulonia 传入独立配置，原入口继续使用全局设置。</summary>
+    /// <summary>创建秘境任务。业务参数在 <see cref="RunAsync"/> 中传入，这里只做与参数无关的本地化初始化。</summary>
     /// <param name="runtime">本次运行使用的运行环境</param>
     /// <param name="config">配置根</param>
-    /// <param name="taskParam">任务参数</param>
-    /// <param name="domainConfig">本次运行的秘境配置，为空时使用配置根中的秘境配置</param>
-    public AutoDomainTask(GameRuntime runtime, AllConfig config, AutoDomainParam taskParam, AutoDomainConfig? domainConfig = null)
+    public AutoDomainTask(GameRuntime runtime, AllConfig config)
     {
         _runtime = runtime;
         _allConfig = config;
-        _taskParam = taskParam;
-
-        _config = domainConfig ?? config.AutoDomainConfig;
-
-        if (AutoFightParam.ComboStrategyName.Equals(_taskParam.CombatStrategyPath))
-        {
-            _useComboStrategy = true;
-            Logger.LogInformation("自动秘境：检测到自动连招策略，将使用LLM行为树");
-        }
-        else if (_taskParam.CombatStrategyPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
-        {
-            _jsonCombatStrategyPath = _taskParam.CombatStrategyPath;
-            Logger.LogInformation("自动秘境：检测到JSON策略文件，将使用JSON战斗引擎");
-        }
-        else
-        {
-            _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
-        }
-
-        _resinPriorityListWhenSpecifyUse = ResinUseRecord.BuildFromDomainParam(taskParam);
 
         IStringLocalizer<AutoDomainTask> stringLocalizer =
             App.GetService<IStringLocalizer<AutoDomainTask>>() ?? throw new NullReferenceException();
@@ -210,19 +216,108 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         InputHub.Foreground.Mouse.LeftButtonDown().Sleep(60).LeftButtonUp();
     }
 
-    Task ISoloTask.Start(CancellationToken ct) => Start(ct);
-
-    public async Task<Dictionary<string, int>> Start(CancellationToken ct)
+    /// <summary>
+    /// 按本次参数完成依赖参数的初始化：解析战斗策略、校验秘境与指定树脂配置、建立树脂使用记录。
+    /// </summary>
+    /// <param name="param">本次运行的任务参数</param>
+    /// <returns>参数不满足业务要求时返回失败结果；初始化成功返回 null</returns>
+    private SoloTaskResult? Initialize(AutoDomainParam param)
     {
-        using var predictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiTree);
-        _predictor = predictor;
+        _useComboStrategy = false;
+        _jsonCombatStrategyPath = null;
+        _combatScriptBag = null;
+        _comboBuildTask = null;
+        _guideDomainName = null;
+
+        // 1. 解析战斗策略路径：JS、旧入口传入的是已存在的路径；任务计划保存的可能是策略名，需要先解析
+        var strategyPath = param.CombatStrategyPath;
+        if (!System.IO.File.Exists(strategyPath) && !System.IO.Directory.Exists(strategyPath))
+        {
+            if (!CombatStrategyResolver.TryResolve(strategyPath, out var resolvedPath))
+            {
+                return SoloTaskResult.Failed(SoloTaskReasons.StrategyNotFound, $"战斗策略不存在：{strategyPath}");
+            }
+
+            strategyPath = resolvedPath;
+        }
+
+        // 2. 选择了具体秘境时必须能找到传送点。未选择秘境（站在秘境门口直接开始）与“根据提升指南选择秘境”保持原有流程
+        if (!string.IsNullOrEmpty(param.DomainName)
+            && param.DomainName != DevelopmentGuideOption
+            && !MapLazyAssets.Get().DomainPositionMap.ContainsKey(param.DomainName))
+        {
+            return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, $"未找到对应的秘境{param.DomainName}的传送点。");
+        }
+
+        // 3. 指定树脂使用次数时至少要配置一种树脂的次数，否则后续无法刷取
+        if (param.SpecifyResinUse && !HasAnySpecifiedResinUseCount(param))
+        {
+            return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, "你选择了指定树脂刷取次数，请至少配置一种树脂的刷取次数！");
+        }
+
+        // 4. 按策略类型选择战斗引擎：自动连招 / JSON / TXT
+        if (AutoFightParam.ComboStrategyName.Equals(strategyPath))
+        {
+            _useComboStrategy = true;
+            Logger.LogInformation("自动秘境：检测到自动连招策略，将使用LLM行为树");
+        }
+        else if (strategyPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+        {
+            _jsonCombatStrategyPath = strategyPath;
+            Logger.LogInformation("自动秘境：检测到JSON策略文件，将使用JSON战斗引擎");
+        }
+        else
+        {
+            _combatScriptBag = CombatScriptParser.ReadAndParse(strategyPath);
+        }
+
+        // 5. 建立指定树脂使用记录（未指定时为空列表）
+        _resinPriorityListWhenSpecifyUse = ResinUseRecord.BuildFromDomainParam(param);
+        return null;
+    }
+
+    /// <summary>
+    /// 判断指定树脂使用模式下是否至少配置了一种树脂的刷取次数，条件与 <see cref="ResinUseRecord.BuildFromDomainParam(AutoDomainParam)"/> 一致。
+    /// </summary>
+    /// <param name="param">本次运行的任务参数</param>
+    /// <returns>至少一种树脂次数大于 0 时返回 true</returns>
+    private static bool HasAnySpecifiedResinUseCount(AutoDomainParam param)
+    {
+        return param.CondensedResinUseCount > 0
+               || param.OriginalResin40UseCount > 0
+               || param.OriginalResin20UseCount > 0
+               || param.OriginalResinUseCount > 0
+               || param.TransientResinUseCount > 0
+               || param.FragileResinUseCount > 0;
+    }
+
+    /// <summary>
+    /// 运行自动秘境。参数无效或策略不存在时返回失败结果；秘境流程正常结束返回未确认结果并附带奖励汇总；取消时抛出 OperationCanceledException。
+    /// </summary>
+    /// <param name="param">本次运行的任务参数</param>
+    /// <param name="ct">本次运行的取消令牌</param>
+    /// <returns>任务结果，数据为本次识别到的奖励汇总</returns>
+    public async Task<SoloTaskResult<RewardSummary>> RunAsync(AutoDomainParam param, CancellationToken ct)
+    {
+        _taskParam = param;
         _ct = ct;
         _rewardSummary.Clear();
+
+        // 依赖参数的初始化（原构造函数中的策略解析、树脂记录等）
+        var initFailure = Initialize(param);
+        if (initFailure != null)
+        {
+            Logger.LogError("自动秘境：{Msg}", initFailure.Message);
+            return initFailure;
+        }
+
+        using var predictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiTree);
+        _predictor = predictor;
 
         Init();
 
         // 自动吃药只在本次秘境期间启用，返回（含异常）时撤销
-        using var autoEatLease = _config.AutoEat ? TaskTriggerDispatcher.Instance().AddTrigger("AutoEat") : null;
+        using var autoEatLease = _taskParam.AutoEat ? TaskTriggerDispatcher.Instance().AddTrigger("AutoEat") : null;
 
         Notify.Event(NotificationEvent.DomainStart).Success("自动秘境启动");
 
@@ -245,7 +340,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         try
         {
             // 复活重试
-            for (var i = 0; i < _config.ReviveRetryCount; i++)
+            for (var i = 0; i < _taskParam.ReviveRetryCount; i++)
             {
                 try
                 {
@@ -281,7 +376,8 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
             await ArtifactSalvage();
             Notify.Event(NotificationEvent.DomainEnd).Success("自动秘境结束");
-            return new Dictionary<string, int>(_rewardSummary);
+            // 没有确认奖励已到账的手段，按未确认结束返回，并附带本次识别到的奖励汇总
+            return SoloTaskResult.Unverified(RewardSummary.From(_rewardSummary), "秘境流程已结束。");
         }
         finally
         {
@@ -401,7 +497,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
     {
         LogScreenResolution();
 
-        if (_config.SpecifyResinUse)
+        if (_taskParam.SpecifyResinUse)
         {
             Logger.LogInformation("→ {Text} 指定使用树脂", "自动秘境，");
         }
@@ -822,7 +918,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
             _runtime.Sleep(30, _ct);
             // 组合键好像不能直接用 postmessage
-            if (!_config.WalkToF)
+            if (!_taskParam.WalkToF)
             {
                 InputHub.Foreground.SimulateAction(GIActions.SprintKeyboard, KeyType.KeyDown);
             }
@@ -858,7 +954,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             {
                 InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
                 _runtime.Sleep(50);
-                if (!_config.WalkToF)
+                if (!_taskParam.WalkToF)
                 {
                     InputHub.Foreground.SimulateAction(GIActions.SprintKeyboard, KeyType.KeyUp);
                 }
@@ -926,7 +1022,8 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         var comboTreeSession = await _comboBuildTask!;
 
         // 抑制其自带的结束检测（FightFinishDetectEnabled=false），由秘境的DomainEndDetectionTask控制战斗结束
-        var comboTask = new AutoComboRunTask(_runtime, _allConfig, new AutoFightParam { FightFinishDetectEnabled = false }, comboTreeSession);
+        var comboTask = new AutoComboRunTask(_runtime, _allConfig, comboTreeSession);
+        var comboParam = new AutoFightParam { FightFinishDetectEnabled = false };
 
         var domainEndTask = DomainEndDetectionTask(cts);
 
@@ -934,11 +1031,16 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         {
             try
             {
-                await comboTask.Start(cts.Token);
+                // 组合调用使用 RunAsync，保留子任务异常向外传播的语义
+                var result = await comboTask.RunAsync(comboParam, cts.Token);
+                if (result.Kind == SoloTaskResultKind.Failed)
+                {
+                    Logger.LogWarning("自动连招战斗任务失败：{Msg}", result.Message);
+                }
             }
             catch (RetryException)
             {
-                // 复活/恢复信号必须传回 Start 的重试循环，复活后重试秘境
+                // 复活/恢复信号必须传回 RunAsync 的重试循环，复活后重试秘境
                 await cts.CancelAsync();
                 throw;
             }
@@ -975,7 +1077,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             Timeout = 600,
         };
 
-        var jsonTask = new AutoFightJsonTask(_runtime, _allConfig, jsonParam);
+        var jsonTask = new AutoFightJsonTask(_runtime, _allConfig);
 
         var domainEndTask = DomainEndDetectionTask(cts);
 
@@ -983,11 +1085,16 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
         {
             try
             {
-                await jsonTask.Start(cts.Token);
+                // 组合调用使用 RunAsync，保留子任务异常向外传播的语义
+                var result = await jsonTask.RunAsync(jsonParam, cts.Token);
+                if (result.Kind == SoloTaskResultKind.Failed)
+                {
+                    Logger.LogWarning("JSON战斗任务失败：{Msg}", result.Message);
+                }
             }
             catch (RetryException)
             {
-                // 复活/恢复信号必须传回 Start 的重试循环，复活后重试秘境
+                // 复活/恢复信号必须传回 RunAsync 的重试循环，复活后重试秘境
                 await cts.CancelAsync();
                 throw;
             }
@@ -1012,8 +1119,8 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             return;
         }
 
-        // 独立配置入口必须沿用本次运行的战后等待，不能重新读取其他页面的值。
-        var s = _config.FightEndDelay;
+        // 沿用本次运行参数中的战后等待，不能重新读取其他页面的值。
+        var s = _taskParam.FightEndDelay;
         if (s > 0)
         {
             Logger.LogInformation("战斗结束后等待 {Second} 秒", s);
@@ -1075,7 +1182,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
     {
         return new Task(async () =>
         {
-            if (!_config.AutoEat)
+            if (!_taskParam.AutoEat)
             {
                 return;
             }
@@ -1162,7 +1269,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                 if (treeRect != default)
                 {
                     var treeMiddleX = treeRect.X + treeRect.Width / 2;
-                    if (treeRect.X + treeRect.Width < middleX && !_config.ShortMovement)
+                    if (treeRect.X + treeRect.Width < middleX && !_taskParam.ShortMovement)
                     {
                         backwardsAndForwardsCount = 0;
                         // 树在左边 往左走
@@ -1180,7 +1287,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                             leftKeyDown = true;
                         }
                     }
-                    else if (treeRect.X > middleX && !_config.ShortMovement)
+                    else if (treeRect.X > middleX && !_taskParam.ShortMovement)
                     {
                         backwardsAndForwardsCount = 0;
                         // 树在右边 往右走
@@ -1286,7 +1393,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
                     }
                 }
 
-                if (backwardsAndForwardsCount >= _config.LeftRightMoveTimes)
+                if (backwardsAndForwardsCount >= _taskParam.LeftRightMoveTimes)
                 {
                     // 左右移动5次说明已经在树中心了
                     InputHub.Foreground.Keyboard.KeyDown(moveForwardKey);
@@ -1588,7 +1695,8 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             _runtime.Sleep(300, _ct);
         }
 
-        throw new NormalEndException("未检测到秘境结束，可能是背包物品已满。");
+        // 业务原因提前结束：携带失败结果，继承 NormalEndException，旧入口的“正常结束”语义不变
+        throw new SoloTaskAbortException(SoloTaskResult.Failed(DomainEndNotDetectedReason, "未检测到秘境结束，可能是背包物品已满。"));
     }
 
     private async Task TryRecognizeRewardResult()
@@ -1815,6 +1923,6 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
             star = 4;
         }
 
-        await new AutoArtifactSalvageTask(_runtime, new AutoArtifactSalvageTaskParam(star, javaScript: null, artifactSetFilter: null, maxNumToCheck: null, recognitionFailurePolicy: null)).Start(_ct);
+        await new AutoArtifactSalvageTask(_runtime).RunAsync(new AutoArtifactSalvageTaskParam(star, javaScript: null, artifactSetFilter: null, maxNumToCheck: null, recognitionFailurePolicy: null), _ct);
     }
 }

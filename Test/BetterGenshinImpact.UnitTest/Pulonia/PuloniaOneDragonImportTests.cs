@@ -1,5 +1,6 @@
 using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.GameTask.AutoBoss;
+using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
@@ -15,45 +16,72 @@ public sealed class PuloniaOneDragonImportTests : IDisposable
     /// <summary>本测试独占的临时来源目录。</summary>
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-pulonia-import-" + Guid.NewGuid().ToString("N"));
 
-    /// <summary>新增战斗定义必须通过运行构建的完整 Schema 与默认值校验。</summary>
+    /// <summary>
+    /// 一条龙自有字段使用的参数类型，按 SoloTaskJson 序列化的默认值必须通过按同一合同生成的 Schema 校验，
+    /// 显式值在参数 JSON 与强类型参数之间往返后保持不变。
+    /// </summary>
     [Fact]
-    public void CombatDefinitions_ValidateAndKeepExplicitConfiguration()
+    public void SoloParameters_ValidateAndKeepExplicitConfiguration()
     {
-        foreach (var definition in new PuloniaCombatTaskExecutor(new AllConfig()).Definitions)
+        foreach (var definition in PuloniaSoloTestDefinitions.OneDragonCandidates()
+                     .Where(item => item.TaskType is "solo.craft_condensed_resin" or "solo.claim_daily_rewards"
+                         or "solo.serenitea_pot_rewards" or "solo.claim_mail"))
         {
             PuloniaTaskValidator.ValidateParameterSchema(definition.ParameterSchema, definition.TaskType);
             PuloniaTaskValidator.ValidateParameters(definition.DefaultParameters, definition.ParameterSchema, definition.TaskType);
         }
-        var source = new AutoBossConfig { BossName = "测试首领", TeamName = "指定队伍", RunCount = 3, UseFragileResin = false };
-        var parameters = PuloniaCombatTaskSettings.ToParameters(source);
-        source.TeamName = "后来修改";
-        var restored = PuloniaCombatTaskSettings.FromParameters<AutoBossConfig>(parameters);
-        Assert.Equal("指定队伍", restored.TeamName);
-        Assert.Equal(3, restored.RunCount);
-        Assert.False(restored.UseFragileResin);
+        var source = new CraftCondensedResinParam { Country = "璃月", MinResinToKeep = 40 };
+        var parameters = JObject.Parse(SoloTaskJson.Serialize(source));
+        source.Country = "后来修改";
+        var restored = SoloTaskJson.Deserialize<CraftCondensedResinParam>(parameters.ToString());
+        Assert.Equal("璃月", restored.Country);
+        Assert.Equal(40, restored.MinResinToKeep);
     }
 
-    /// <summary>旧一条龙的顺序、重复名称和关闭状态保留，隐式功能设置成为独立预设。</summary>
+    /// <summary>
+    /// 旧一条龙的顺序、重复名称和关闭状态保留；一条龙自有字段按新参数名写入独立任务节点。
+    /// 战斗类任务的参数基类依赖运行中的应用，预设冻结只能在应用内验证。
+    /// </summary>
     [Fact]
-    public async Task DragonImport_PreservesOrderAndFreezesHiddenSettings()
+    public async Task DragonImport_PreservesOrderAndWritesSoloParameters()
     {
         var dragon = new OneDragonFlowConfig { Name = "测试龙", CompletionAction = "关机", NextTaskId = "second" };
-        dragon.TaskOrder = ["first", "second", "third"];
-        dragon.TaskDefinitions = new() { ["first"] = "领取邮件", ["second"] = "自动首领讨伐", ["third"] = "领取邮件" };
-        dragon.TaskEnabledList = new() { ["first"] = true, ["second"] = false, ["third"] = true };
-        dragon.AutoBossName = "测试首领"; dragon.AutoBossTeamName = "指定队伍";
+        dragon.TaskOrder = ["first", "second", "third", "fourth", "fifth"];
+        dragon.TaskDefinitions = new()
+        {
+            ["first"] = "领取邮件", ["second"] = "合成树脂", ["third"] = "领取邮件",
+            ["fourth"] = "领取每日奖励", ["fifth"] = "领取尘歌壶奖励"
+        };
+        dragon.TaskEnabledList = new() { ["first"] = true, ["second"] = false, ["third"] = true, ["fourth"] = true, ["fifth"] = true };
+        dragon.CraftingBenchCountry = "稻妻"; dragon.MinResinToKeep = 40;
+        dragon.AdventurersGuildCountry = "璃月"; dragon.DailyRewardPartyName = "好感队";
+        dragon.SereniteaPotTpType = "尘歌壶道具"; dragon.SecretTreasureObjects = ["每天重复", "精锻用魔矿"];
         var json = PuloniaTaskJson.Write(dragon);
         var file = await WriteAsync("dragon.json", json);
         var result = await Importer().PrepareAsync([file], new AllConfig());
         var plan = Assert.Single(result.Plans);
-        Assert.Equal(new[] { "领取邮件", "自动首领讨伐", "领取邮件" }, plan.RootTask.Children.Select(n => n.Name));
-        Assert.False(plan.RootTask.Children[1].IsEnabled);
-        Assert.Equal(3, plan.RootTask.Children.Select(n => n.Id).Distinct().Count());
-        var bossValues = Assert.Single(result.Presets).Values;
-        Assert.Equal("指定队伍", bossValues.Value<string>("team_name"));
-        Assert.Equal(JTokenType.Object, bossValues["fight_config"]!.Type);
+        var nodes = plan.RootTask.Children;
+        Assert.Equal(new[] { "领取邮件", "合成树脂", "领取邮件", "领取每日奖励", "领取尘歌壶奖励" }, nodes.Select(n => n.Name));
+        Assert.Equal(new[]
+        {
+            PuloniaSoloTaskExecutor.ToTaskType(ClaimMailRewardsTask.TaskId), PuloniaSoloTaskExecutor.ToTaskType(GoToCraftingBenchTask.TaskId),
+            PuloniaSoloTaskExecutor.ToTaskType(ClaimMailRewardsTask.TaskId), PuloniaSoloTaskExecutor.ToTaskType(ClaimDailyRewardsTask.TaskId),
+            PuloniaSoloTaskExecutor.ToTaskType(GoToSereniteaPotTask.TaskId)
+        }, nodes.Select(n => n.TaskType));
+        Assert.False(nodes[1].IsEnabled);
+        Assert.Equal(5, nodes.Select(n => n.Id).Distinct().Count());
+        Assert.Empty(nodes[0].Parameters);
+        Assert.Equal("稻妻", nodes[1].Parameters.Value<string>("country"));
+        Assert.Equal(40, nodes[1].Parameters.Value<int>("min_resin_to_keep"));
+        Assert.Equal("璃月", nodes[3].Parameters.Value<string>("country"));
+        Assert.Equal("好感队", nodes[3].Parameters.Value<string>("party_name"));
+        Assert.Equal("尘歌壶道具", nodes[4].Parameters.Value<string>("teleport_type"));
+        Assert.Equal(new[] { "每天重复", "精锻用魔矿" }, nodes[4].Parameters["secret_treasure_objects"]!.Values<string>());
+        // 一条龙自有字段直接写入节点，不产生预设
+        Assert.Empty(result.Presets);
         Assert.Contains(result.Differences, d => d.Contains("关机"));
         Assert.Contains(result.Differences, d => d.Contains("断点"));
+        Assert.Contains(result.Differences, d => d.Contains("保留原粹树脂数"));
         Assert.Equal(json, await File.ReadAllTextAsync(file));
     }
 
@@ -115,10 +143,11 @@ public sealed class PuloniaOneDragonImportTests : IDisposable
     [Fact]
     public void ParameterEditor_KeepsOptionalDefaultsAndWritesOnlyChangedFields()
     {
-        var task = new PuloniaTask { Name = "首领", TaskType = "builtin.auto_boss" };
+        var definition = PuloniaSoloTestDefinitions.AutoBoss();
+        var task = new PuloniaTask { Name = "首领", TaskType = definition.TaskType };
         var document = new PuloniaTaskPlanDocumentViewModel(new PuloniaTaskPlan
             { Name = "参数表单", RootTask = new PuloniaTask { Children = [task] } }, [], new PuloniaTaskClipboardService(), false);
-        document.SetDefinitions(new PuloniaCombatTaskExecutor(new AllConfig()).Definitions);
+        document.SetDefinitions([definition]);
         document.SelectedNode = Assert.Single(document.RootNode.Children);
         var node = document.SelectedNode!;
         Assert.Equal("", document.GetOneDragonParameters(node).Value<string>("team_name"));
@@ -135,20 +164,24 @@ public sealed class PuloniaOneDragonImportTests : IDisposable
     [Fact]
     public void ParameterPreview_RejectsPresetWithDifferentSchemaVersion()
     {
-        var preset = new PuloniaTaskPreset { Name = "旧格式", TaskType = "builtin.auto_boss", SchemaVersion = 2,
+        var definition = PuloniaSoloTestDefinitions.AutoBoss();
+        var preset = new PuloniaTaskPreset { Name = "旧格式", TaskType = definition.TaskType, SchemaVersion = 2,
             Values = new JObject { ["team_name"] = "不兼容队伍" } };
-        var task = new PuloniaTask { Name = "首领", TaskType = "builtin.auto_boss", PresetId = preset.Id };
+        var task = new PuloniaTask { Name = "首领", TaskType = definition.TaskType, PresetId = preset.Id };
         var document = new PuloniaTaskPlanDocumentViewModel(new PuloniaTaskPlan
             { Name = "预设格式", RootTask = new PuloniaTask { Children = [task] } }, [preset], new PuloniaTaskClipboardService(), false);
-        document.SetDefinitions(new PuloniaCombatTaskExecutor(new AllConfig()).Definitions);
+        document.SetDefinitions([definition]);
         document.SelectedNode = Assert.Single(document.RootNode.Children);
         Assert.Contains("参数版本", document.EditorMessage);
         Assert.Equal("", document.GetOneDragonParameters(document.SelectedNode!).Value<string>("team_name"));
     }
 
-    /// <summary>使用真实能力定义转换，资源失败路径也经过正式指纹服务。</summary>
+    /// <summary>
+    /// 使用资源类执行器的真实能力定义与测试用独立任务定义转换，资源失败路径也经过正式指纹服务。
+    /// 独立任务没有外部资源，导入时不读取它们的定义。
+    /// </summary>
     private static PuloniaTaskLegacyImporter Importer() => new(
-        [.. new PuloniaBuiltinTaskExecutor(new AllConfig()).Definitions, .. new PuloniaCombatTaskExecutor(new AllConfig()).Definitions,
+        [.. PuloniaSoloTestDefinitions.OneDragonCandidates(),
             .. new PuloniaJavaScriptTaskExecutor().Definitions, .. new PuloniaPathingTaskExecutor(new AllConfig()).Definitions,
             .. new PuloniaKeyMouseTaskExecutor().Definitions, .. new PuloniaShellTaskExecutor().Definitions], new PuloniaTaskResourceCatalog());
 

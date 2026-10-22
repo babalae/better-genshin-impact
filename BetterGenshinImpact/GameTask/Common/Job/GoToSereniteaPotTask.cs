@@ -10,17 +10,13 @@ using BetterGenshinImpact.GameTask.QuickSereniteaPot;
 using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.GameTask.SoloTask;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Globalization;
-using System.IO;
-using Newtonsoft.Json;
-using BetterGenshinImpact.GameTask.QuickSereniteaPot;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using System.Linq;
 using System.Threading;
@@ -29,11 +25,26 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.Common.Job;
 
-internal class GoToSereniteaPotTask
+/// <summary>
+/// 领取尘歌壶奖励：进入尘歌壶，找到阿圆领取好感与宝钱，并按参数购买洞天百宝商品，最后传送回主世界。
+/// </summary>
+[SoloTaskInfo(TaskId, "领取尘歌壶奖励", Group = "日常奖励", Order = 140, OneDragonOrder = 8)]
+public class GoToSereniteaPotTask : ISoloTask<SereniteaPotParam, NoData>
 {
-    public string Name => "领取尘歌壶奖励";
+    /// <summary>
+    /// 任务标识。
+    /// </summary>
+    public const string TaskId = "serenitea_pot_rewards";
 
+    /// <summary>
+    /// 寻找阿圆是否失败
+    /// </summary>
     private bool fail = false;
+
+    /// <summary>
+    /// 本次运行的参数，在 RunAsync 开头赋值
+    /// </summary>
+    private SereniteaPotParam _param = new();
 
     /// <summary>
     /// 本次运行使用的运行环境
@@ -55,12 +66,12 @@ internal class GoToSereniteaPotTask
     private readonly string ayuanHuoling2String;
     private readonly string ayuanBelieveString;
     private readonly string ayuanShopString;
-    private string dongTianName;
-    
-    private  OneDragonFlowConfig? SelectedConfig;
-    private ObservableCollection<OneDragonFlowConfig> ConfigList = [];
-    private static readonly string OneDragonFlowConfigFolder = Global.Absolute(@"User\OneDragon");
-    
+
+    /// <summary>
+    /// 识别到的洞天名称，用于寻找阿圆前调整站位；未识别时为空字符串
+    /// </summary>
+    private string dongTianName = string.Empty;
+
 
     /// <summary>
     /// 创建领取尘歌壶奖励任务
@@ -79,23 +90,6 @@ internal class GoToSereniteaPotTask
         this.ayuanHuoling2String = stringLocalizer.WithCultureGet(cultureInfo, "<壶灵>");
         this.ayuanBelieveString = stringLocalizer.WithCultureGet(cultureInfo, "信任");
         this.ayuanShopString = stringLocalizer.WithCultureGet(cultureInfo, "洞天百宝");
-    }
-
-    public async Task Start(CancellationToken ct)
-    {
-        try
-        {
-            await DoOnce(ct);
-        }
-        catch (Exception e)
-        {
-            Logger.LogDebug(e, "领取尘歌壶奖励异常");
-            Logger.LogError("领取尘歌壶奖励异常: {Msg}", e.Message);
-        }
-        finally
-        {
-            InputHub.ReleaseAll();
-        }
     }
 
     private async Task<bool> IntoSereniteaPot(CancellationToken ct)
@@ -511,19 +505,20 @@ internal class GoToSereniteaPotTask
         }
         
         await _runtime.Delay(900, ct);
-        // 商店购买
-        if (SelectedConfig.SecretTreasureObjects.Count == 0) 
+        // 商店购买：第一项是购买日期，其后是商品名
+        var secretTreasureObjects = _param.SecretTreasureObjects ?? [];
+        if (secretTreasureObjects.Count == 0) 
         {
             Logger.LogInformation("领取尘歌壶奖励:{text}", "未配置购买商店物品");
             return; 
         }
         DateTimeOffset serverTime = ServerTimeHelper.GetServerTimeNow();
         DayOfWeek currentDayOfWeek = serverTime.Hour >= 4 ? serverTime.DayOfWeek : serverTime.AddDays(-1).DayOfWeek;
-        DayOfWeek? configDayOfWeek = GetDayOfWeekFromConfig(SelectedConfig.SecretTreasureObjects.First());
-        if (configDayOfWeek.HasValue || SelectedConfig.SecretTreasureObjects.First() == "每天重复" && SelectedConfig.SecretTreasureObjects.Count > 1)
+        DayOfWeek? configDayOfWeek = GetDayOfWeekFromConfig(secretTreasureObjects.First());
+        if (configDayOfWeek.HasValue || secretTreasureObjects.First() == "每天重复" && secretTreasureObjects.Count > 1)
         {
             // 对比当前日期的星期几与配置中的星期几
-            if (configDayOfWeek.HasValue && currentDayOfWeek == configDayOfWeek.Value || SelectedConfig.SecretTreasureObjects.First() == "每天重复")
+            if (configDayOfWeek.HasValue && currentDayOfWeek == configDayOfWeek.Value || secretTreasureObjects.First() == "每天重复")
             {
                 var shopOption = await _chooseTalkOptionTask.SingleSelectText(this.ayuanShopString, ct);
                 if (shopOption == TalkOptionRes.FoundAndClick)
@@ -532,9 +527,10 @@ internal class GoToSereniteaPotTask
                     await _runtime.Delay(500, ct);
                     // 购买的物品清单
                     var buy = new List<RecognitionObject>();
-                    SelectedConfig.SecretTreasureObjects.RemoveAt(0);
-                    Logger.LogInformation("购买洞天百宝物品：{text}",string.Join(" / ", SelectedConfig.SecretTreasureObjects)); // 输出所有需要购买的商品
-                    foreach (var potBuyItem in SelectedConfig.SecretTreasureObjects)
+                    // 跳过第一项（购买日期），不修改参数中的列表，避免参数被重复使用时丢失日期
+                    var buyItemNames = secretTreasureObjects.Skip(1).ToList();
+                    Logger.LogInformation("购买洞天百宝物品：{text}",string.Join(" / ", buyItemNames)); // 输出所有需要购买的商品
+                    foreach (var potBuyItem in buyItemNames)
                     {
                         switch (potBuyItem)
                         {
@@ -612,7 +608,7 @@ internal class GoToSereniteaPotTask
             }
             else
             {
-                Logger.LogInformation("领取尘歌壶奖励: 今天不是购买商店物品的{text}", SelectedConfig.SecretTreasureObjects.First());     
+                Logger.LogInformation("领取尘歌壶奖励: 今天不是购买商店物品的{text}", secretTreasureObjects.First());     
             }
         }
         else
@@ -649,96 +645,61 @@ internal class GoToSereniteaPotTask
     }
 
     /// <summary>
-    /// 执行一次尘歌壶奖励流程，并返回是否到达领取与收尾阶段。
+    /// 执行一次尘歌壶奖励流程。识别或操作异常直接向外抛出，由调用方决定是否吞掉；无论结果如何结束时都释放所有按键。
     /// </summary>
-    public async Task<bool> DoOnce(CancellationToken ct)
+    /// <param name="param">领取尘歌壶奖励参数</param>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>未能进壶或未找到阿圆返回 Failed(page_not_reached)；到达领取与收尾阶段返回 Unverified（无法确认奖励是否真正到账）</returns>
+    public async Task<SoloTaskResult<NoData>> RunAsync(SereniteaPotParam param, CancellationToken ct)
     {
-        InitConfigList();
-        // /**
-        //  * 1. 首先退出到主页面
-        //  * 2. 进入尘歌壶
-        //  * 3. 旋转视角寻找 阿圆
-        //  * 4. 贴近阿圆到能对话的地方，并对话
-        //  * 5. 领取奖励
-        //  */
-        // 进入尘歌壶
-        var success = false;
-        if (SelectedConfig!.SereniteaPotTpType == "地图传送")
+        _param = param;
+        fail = false;
+        try
         {
-            success = await IntoSereniteaPot(ct);
-        }
-        else
-        {
-            success = await IntoSereniteaPotByBag(ct);
-        }
-        if (!success)
-        {
-            await Finished(ct);
-            return false;
-        }
-        
-        // 寻找阿圆并靠近
-        await FindAYuan(ct);
-        // 领取奖励
-        if (fail)
-        {
-            await Finished(ct);
-            return false;
-        }
-
-        await _runtime.Delay(500, ct);
-        await GetReward(ct);
-
-        // 收尾操作 - 退出到主页面 - 传送到提瓦特大陆
-        await Finished(ct);
-        return true;
-    }
-    
-    private void InitConfigList()
-    {
-        Directory.CreateDirectory(OneDragonFlowConfigFolder);
-        // 读取文件夹内所有json配置，按创建时间正序
-        var configFiles = Directory.GetFiles(OneDragonFlowConfigFolder, "*.json");
-        var configs = new List<OneDragonFlowConfig>();
-
-        OneDragonFlowConfig? selected = null;
-        foreach (var configFile in configFiles)
-        {
-            var json = File.ReadAllText(configFile);
-            var config = JsonConvert.DeserializeObject<OneDragonFlowConfig>(json);
-            if (config != null)
+            // /**
+            //  * 1. 首先退出到主页面
+            //  * 2. 进入尘歌壶
+            //  * 3. 旋转视角寻找 阿圆
+            //  * 4. 贴近阿圆到能对话的地方，并对话
+            //  * 5. 领取奖励
+            //  */
+            // 进入尘歌壶：“地图传送”走大地图，其他方式使用背包中的尘歌壶道具
+            var success = false;
+            if (_param.TeleportType == "地图传送")
             {
-                configs.Add(config);
-                if (config.Name == _config.SelectedOneDragonFlowConfigName)
-                {
-                    selected = config;
-                }
-            }
-        }
-
-        if (selected == null)
-        {
-            if (configs.Count > 0)
-            {
-                selected = configs[0];
+                success = await IntoSereniteaPot(ct);
             }
             else
             {
-                selected = new OneDragonFlowConfig
-                {
-                    Name = "默认配置"
-                };
-                configs.Add(selected);
+                success = await IntoSereniteaPotByBag(ct);
             }
-        }
+            if (!success)
+            {
+                await Finished(ct);
+                return SoloTaskResult.Failed(SoloTaskReasons.PageNotReached, "尘歌壶奖励流程未到达领取与收尾阶段。");
+            }
+            
+            // 寻找阿圆并靠近
+            await FindAYuan(ct);
+            // 领取奖励
+            if (fail)
+            {
+                await Finished(ct);
+                return SoloTaskResult.Failed(SoloTaskReasons.PageNotReached, "尘歌壶奖励流程未到达领取与收尾阶段。");
+            }
 
-        ConfigList.Clear();
-        foreach (var config in configs)
+            await _runtime.Delay(500, ct);
+            await GetReward(ct);
+
+            // 收尾操作 - 退出到主页面 - 传送到提瓦特大陆
+            await Finished(ct);
+            return SoloTaskResult.Unverified("尘歌壶奖励领取流程已结束。");
+        }
+        finally
         {
-            ConfigList.Add(config);
+            // 与原 Start 一致：结束时释放所有按键，避免移动键残留按下
+            InputHub.ReleaseAll();
         }
-
-        SelectedConfig = selected;
     }
     
     private DayOfWeek? GetDayOfWeekFromConfig(string configDay)

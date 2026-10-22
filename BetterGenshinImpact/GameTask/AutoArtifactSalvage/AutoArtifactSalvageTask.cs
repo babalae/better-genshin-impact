@@ -12,6 +12,7 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Core.Mask;
@@ -38,8 +39,14 @@ namespace BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 /// <summary>
 /// 圣遗物自动分解
 /// </summary>
-public class AutoArtifactSalvageTask : ISoloTask
+[SoloTaskInfo(TaskId, "自动分解圣遗物", Group = "工具", Order = 410)]
+public class AutoArtifactSalvageTask : ISoloTask<AutoArtifactSalvageTaskParam, NoData>
 {
+    /// <summary>
+    /// 独立任务稳定标识。
+    /// </summary>
+    public const string TaskId = "auto_artifact_salvage";
+
     /// <summary>
     /// 本次运行使用的运行环境
     /// </summary>
@@ -50,43 +57,84 @@ public class AutoArtifactSalvageTask : ISoloTask
 
     private CancellationToken ct;
 
-    public string Name => "圣遗物分解独立任务";
+    /// <summary>
+    /// 分解的最大星级，在 RunAsync 开头从参数赋值。
+    /// </summary>
+    private int star;
 
-    private readonly int star;
+    /// <summary>
+    /// “快速选择”按钮的本地化匹配串，随参数中的语言初始化。
+    /// </summary>
+    private string quickSelectLocalizedString = string.Empty;
 
-    private readonly string quickSelectLocalizedString;
+    /// <summary>
+    /// 1—4 星圣遗物选项的本地化匹配串，随参数中的语言初始化。
+    /// </summary>
+    private string[] numOfStarLocalizedString = [];
 
-    private readonly string[] numOfStarLocalizedString;
+    /// <summary>
+    /// 逐个筛选 5 星圣遗物使用的 JavaScript；为空时只做快速分解。
+    /// </summary>
+    private string? javaScript;
 
-    private readonly string? javaScript;
+    /// <summary>
+    /// 套装筛选条件。
+    /// </summary>
+    private string? artifactSetFilter;
 
-    private readonly string? artifactSetFilter;
+    /// <summary>
+    /// 逐个筛选时最多检查的数量。
+    /// </summary>
+    private int? maxNumToCheck;
 
-    private readonly int? maxNumToCheck;
-
-    private readonly RecognitionFailurePolicy? recognitionFailurePolicy;
+    /// <summary>
+    /// 逐个筛选时识别失败的处理策略。
+    /// </summary>
+    private RecognitionFailurePolicy? recognitionFailurePolicy;
 
     private readonly bool returnToMainUi = true;
 
-    private readonly CultureInfo? cultureInfo;
-
-    private readonly FrozenDictionary<ArtifactAffixType, string> artifactAffixStrDic;
+    /// <summary>
+    /// 游戏语言，用于解析词条数值，随参数初始化。
+    /// </summary>
+    private CultureInfo? cultureInfo;
 
     /// <summary>
-    /// 创建圣遗物分解任务
+    /// 词条类型到本地化名称的映射，随参数中的语言初始化。
+    /// </summary>
+    private FrozenDictionary<ArtifactAffixType, string> artifactAffixStrDic = FrozenDictionary<ArtifactAffixType, string>.Empty;
+
+    /// <summary>
+    /// 创建圣遗物分解任务。业务参数通过 <see cref="RunAsync"/> 或识别方法传入。
     /// </summary>
     /// <param name="runtime">本次运行使用的运行环境</param>
-    /// <param name="param">任务参数</param>
     /// <param name="logger">日志记录器，为空时使用默认日志</param>
-    public AutoArtifactSalvageTask(GameRuntime runtime, AutoArtifactSalvageTaskParam param, ILogger? logger = null)
+    public AutoArtifactSalvageTask(GameRuntime runtime, ILogger? logger = null)
     {
         _runtime = runtime;
+        this.logger = logger ?? App.GetLogger<AutoArtifactSalvageTask>();
+    }
+
+    /// <summary>
+    /// 从参数初始化本次运行的业务字段与本地化字符串（原构造函数中依赖参数的部分）。
+    /// </summary>
+    /// <param name="param">本次运行的业务参数</param>
+    private void InitializeFromParam(AutoArtifactSalvageTaskParam param)
+    {
         this.star = param.Star;
         this.javaScript = param.JavaScript;
         this.artifactSetFilter = param.ArtifactSetFilter;
         this.maxNumToCheck = param.MaxNumToCheck;
         this.recognitionFailurePolicy = param.RecognitionFailurePolicy;
-        this.logger = logger ?? App.GetLogger<AutoArtifactSalvageTask>();
+        ApplyLocalization(param);
+    }
+
+    /// <summary>
+    /// 按参数中的游戏语言和本地化器初始化识别用的本地化字符串。
+    /// </summary>
+    /// <param name="param">提供游戏语言与本地化器的参数</param>
+    private void ApplyLocalization(AutoArtifactSalvageTaskParam param)
+    {
         var stringLocalizer = param.StringLocalizer;
         this.cultureInfo = param.GameCultureInfo;
         quickSelectLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "快速选择");
@@ -242,8 +290,17 @@ public class AutoArtifactSalvageTask : ISoloTask
         await runtime.Delay(800, ct);
     }
 
-    public async Task Start(CancellationToken ct)
+    /// <summary>
+    /// 运行圣遗物分解：打开背包分解界面，按星级快速分解；配置了 JavaScript 时再逐个筛选 5 星圣遗物。
+    /// </summary>
+    /// <param name="param">本次运行的业务参数</param>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>未进入分解界面或找不到快速选择相关按钮时返回 Failed(page_not_reached)；其余正常结束返回 Unverified。</returns>
+    public async Task<SoloTaskResult<NoData>> RunAsync(AutoArtifactSalvageTaskParam param, CancellationToken ct)
     {
+        // 依赖参数的初始化（原构造函数逻辑）
+        InitializeFromParam(param);
+
         this.ct = ct;
         if (returnToMainUi)
         {
@@ -263,7 +320,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         else
         {
             logger.LogError("未找到圣遗物分解按钮");
-            return;
+            return SoloTaskResult.Failed(SoloTaskReasons.PageNotReached, "未找到圣遗物分解按钮");
         }
 
         // 快速选择
@@ -283,7 +340,7 @@ public class AutoArtifactSalvageTask : ISoloTask
         if (!quickSelectBtnFound)
         {
             logger.LogError("没有找到可匹配{regex}的按钮，终止分解", quickSelectLocalizedString);
-            return;
+            return SoloTaskResult.Failed(SoloTaskReasons.PageNotReached, $"没有找到可匹配{quickSelectLocalizedString}的按钮，终止分解");
         }
 
         // 确认选择
@@ -308,7 +365,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                 if (!numOfStarFound)
                 {
                     logger.LogError("没有找到可匹配{regex}的按钮，终止分解", numOfStarLocalizedString[i]);
-                    return;
+                    return SoloTaskResult.Failed(SoloTaskReasons.PageNotReached, $"没有找到可匹配{numOfStarLocalizedString[i]}的按钮，终止分解");
                 }
             }
         }
@@ -412,6 +469,7 @@ public class AutoArtifactSalvageTask : ISoloTask
             // 逐一点选查看面板筛选
             await Salvage5Star();
             logger.LogInformation("筛选完毕，请复查并手动分解");
+            return SoloTaskResult.Unverified("筛选完毕，请复查并手动分解");
         }
         else
         {
@@ -422,6 +480,9 @@ public class AutoArtifactSalvageTask : ISoloTask
                 await new ReturnMainUiTask(_runtime).Start(ct);
             }
         }
+
+        // 现有流程没有分解结果的确认手段，结果为“已执行，未核验”
+        return SoloTaskResult.Unverified("圣遗物分解流程已结束。");
     }
 
     private async Task Salvage5Star()
@@ -456,7 +517,7 @@ public class AutoArtifactSalvageTask : ISoloTask
                         ArtifactStat artifact;
                         try
                         {
-                            artifact = GetArtifactStat(card.SrcMat, OcrFactory.Paddle, out string allText);
+                            artifact = RecognizeArtifactStat(card.SrcMat, OcrFactory.Paddle, out string allText);
                         }
                         catch (Exception e)
                         {
@@ -579,7 +640,29 @@ public class AutoArtifactSalvageTask : ISoloTask
         return match.Success;
     }
 
-    public ArtifactStat GetArtifactStat(Mat src, IOcrService ocrService, out string allText)
+    /// <summary>
+    /// 识别圣遗物属性卡片。供 OCR 对话框、单元测试等不运行任务的场景直接调用。
+    /// 会先按参数中的游戏语言和本地化器初始化识别用的本地化字符串。
+    /// </summary>
+    /// <param name="src">圣遗物属性卡片截图</param>
+    /// <param name="ocrService">OCR 服务</param>
+    /// <param name="param">提供游戏语言与本地化器的参数（只使用语言相关部分）</param>
+    /// <param name="allText">识别到的全部文本</param>
+    /// <returns>结构化的圣遗物属性</returns>
+    public ArtifactStat GetArtifactStat(Mat src, IOcrService ocrService, AutoArtifactSalvageTaskParam param, out string allText)
+    {
+        ApplyLocalization(param);
+        return RecognizeArtifactStat(src, ocrService, out allText);
+    }
+
+    /// <summary>
+    /// 使用已初始化的本地化字符串识别圣遗物属性卡片。调用前必须已执行 <see cref="ApplyLocalization"/>。
+    /// </summary>
+    /// <param name="src">圣遗物属性卡片截图</param>
+    /// <param name="ocrService">OCR 服务</param>
+    /// <param name="allText">识别到的全部文本</param>
+    /// <returns>结构化的圣遗物属性</returns>
+    private ArtifactStat RecognizeArtifactStat(Mat src, IOcrService ocrService, out string allText)
     {
         using Mat gray = src.CvtColor(ColorConversionCodes.BGR2GRAY);
         using Mat hatKernel = Cv2.GetStructuringElement(MorphShapes.Rect, new Size(15, 15)/*需根据实际文本大小调整*/);   // 顶帽运算核

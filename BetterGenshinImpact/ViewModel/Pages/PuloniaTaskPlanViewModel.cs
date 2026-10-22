@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.View.Windows;
@@ -122,9 +123,14 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     public ObservableCollection<PuloniaTaskPlanDocumentViewModel> ReferencePlans { get; } = [];
 
     /// <summary>
-    /// 首版树编辑器允许直接新增的叶子任务类型。
+    /// 完整的“添加任务”菜单：“独立任务”子菜单加上资源类与其他任务类型，供一条龙页使用。
     /// </summary>
-    public IReadOnlyList<PuloniaTaskTypeOption> TaskTypes { get; }
+    public IReadOnlyList<PuloniaTaskMenuItemViewModel> AddTaskMenu { get; }
+
+    /// <summary>
+    /// 只含独立任务的一层菜单，按分组插入分隔项；任务计划页的“添加独立任务”子菜单使用它。
+    /// </summary>
+    public IReadOnlyList<PuloniaTaskMenuItemViewModel> SoloTaskMenu { get; }
 
     /// <summary>
     /// 剪贴板是否已有可粘贴子树。
@@ -152,10 +158,9 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         History = history;
         _triggerHost = triggerHost;
         if (_triggerHost is not null) _triggerHost.Changed += OnTriggerHostChanged;
-        TaskTypes = taskService.Definitions
-            .Select(definition => new PuloniaTaskTypeOption(definition.TaskType,
-                string.IsNullOrWhiteSpace(definition.DisplayName) ? definition.TaskType : definition.DisplayName))
-            .ToList();
+        // 能力定义在服务建立后不再变化，菜单只需生成一次
+        AddTaskMenu = PuloniaTaskMenuBuilder.Build(taskService.Definitions);
+        SoloTaskMenu = PuloniaTaskMenuBuilder.BuildSoloTaskMenu(taskService.Definitions);
     }
 
     /// <summary>
@@ -375,11 +380,37 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     }
 
     /// <summary>
-    /// 在指定节点位置新增内置任务。
+    /// 在指定节点位置新增独立任务。参数由 XAML 的 MultiBinding 组装为 [目标节点, 任务类型]。
+    /// 没有可编辑参数的独立任务直接以显示名插入，有参数的打开创建对话框。
     /// </summary>
+    /// <param name="parameters">第 0 项为目标节点，第 1 项为独立任务的任务类型。</param>
     [RelayCommand]
-    private void AddBuiltinTask(PuloniaTaskNodeViewModel? targetNode)
-        => AddTask(targetNode, "builtin");
+    private void AddSoloTask(object[]? parameters)
+    {
+        // 1. 解析菜单传入的目标节点和任务类型；菜单尚未完成绑定时忽略
+        if (parameters is not [PuloniaTaskNodeViewModel targetNode, string taskType, ..])
+            return;
+        var definition = _taskService.Definitions.FirstOrDefault(item => item.TaskType == taskType);
+        if (definition is null)
+        {
+            StatusMessage = $"没有注册任务类型 {taskType}。";
+            return;
+        }
+
+        // 2. 有参数的独立任务沿用创建对话框，在创建前确认参数
+        if (PuloniaSoloTaskExecutor.HasEditableParameters(definition))
+        {
+            AddTask(targetNode, taskType);
+            return;
+        }
+
+        // 3. 无参数的独立任务不弹窗，直接插入；参数保持为空，运行时使用能力默认值
+        if (!TryGetInsertionPoint(targetNode, out var document, out var parent, out var index))
+            return;
+        var task = new PuloniaTask { Name = definition.DisplayName, TaskType = definition.TaskType };
+        document.InsertNode(task, parent, index);
+        StatusMessage = $"已添加任务“{task.Name}”。";
+    }
 
     /// <summary>
     /// 在指定节点位置新增地图追踪任务。

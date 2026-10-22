@@ -1,4 +1,6 @@
 using System.Linq;
+using BetterGenshinImpact.GameTask.AutoDomain;
+using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using Newtonsoft.Json.Linq;
 
@@ -9,6 +11,11 @@ namespace BetterGenshinImpact.UnitTest.Pulonia;
 /// </summary>
 public sealed class PuloniaOneDragonSettingsTests
 {
+    /// <summary>
+    /// 自动秘境在任务计划中的任务类型。
+    /// </summary>
+    private static readonly string DomainTaskType = PuloniaSoloTaskExecutor.ToTaskType(AutoDomainTask.TaskId);
+
     /// <summary>
     /// 可空类型字段保持 null 值时打开设置不产生变更，构建值仍为 null。
     /// </summary>
@@ -37,10 +44,10 @@ public sealed class PuloniaOneDragonSettingsTests
         var allProperties = new JObject
         {
             ["domain_name"] = new JObject { ["type"] = "string" },
-            ["round_count"] = new JObject { ["type"] = "integer" }
+            ["domain_round_num"] = new JObject { ["type"] = "integer" }
         };
-        var effectiveValues = new JObject { ["domain_name"] = "测试秘境", ["round_count"] = 2 };
-        var schema = PuloniaOneDragonSettingChoices.WeekdaySchema(allProperties, effectiveValues, "builtin.auto_domain");
+        var effectiveValues = new JObject { ["domain_name"] = "测试秘境", ["domain_round_num"] = 2 };
+        var schema = PuloniaOneDragonSettingChoices.WeekdaySchema(allProperties, effectiveValues, DomainTaskType);
 
         var field = new PuloniaOneDragonParameterFieldViewModel("weekday_overrides", schema, new JObject());
         Assert.False(field.HasChanges());
@@ -63,19 +70,19 @@ public sealed class PuloniaOneDragonSettingsTests
         var properties = new JObject
         {
             ["party_name"] = new JObject { ["type"] = "string" },
-            ["round_count"] = new JObject { ["type"] = "integer" }
+            ["domain_round_num"] = new JObject { ["type"] = "integer" }
         };
-        var values = new JObject { ["party_name"] = "基础队伍", ["round_count"] = 2 };
+        var values = new JObject { ["party_name"] = "基础队伍", ["domain_round_num"] = 2 };
         var original = new JObject { ["1"] = new JObject { ["enabled"] = false } };
         var field = new PuloniaOneDragonParameterFieldViewModel("weekday_overrides",
-            PuloniaOneDragonSettingChoices.WeekdaySchema(properties, values, "builtin.auto_domain"), original);
-        field.Children[1].Children.Single(item => item.Name == "round_count").NumberValue = 3;
+            PuloniaOneDragonSettingChoices.WeekdaySchema(properties, values, DomainTaskType), original);
+        field.Children[1].Children.Single(item => item.Name == "domain_round_num").NumberValue = 3;
 
         var built = Assert.IsType<JObject>(field.BuildValue());
         var monday = Assert.IsType<JObject>(built["1"]);
         Assert.Equal(2, monday.Count);
         Assert.False(monday.Value<bool>("enabled"));
-        Assert.Equal(3, monday.Value<int>("round_count"));
+        Assert.Equal(3, monday.Value<int>("domain_round_num"));
         Assert.False(monday.ContainsKey("party_name"));
         Assert.True(JToken.DeepEquals(new JObject { ["enabled"] = false }, original["1"]));
     }
@@ -88,7 +95,7 @@ public sealed class PuloniaOneDragonSettingsTests
     {
         var value = new JArray("浓缩树脂", "原粹树脂");
         var schema = PuloniaOneDragonSettingChoices.Decorate(
-            "resin_priority_list", new JObject { ["type"] = "array" }, value, "builtin.auto_domain");
+            "resin_priority_list", new JObject { ["type"] = "array" }, value, DomainTaskType);
 
         var field = new PuloniaOneDragonParameterFieldViewModel("resin_priority_list", schema, value);
         Assert.False(field.HasChanges());

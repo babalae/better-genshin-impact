@@ -9,6 +9,7 @@ using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using Microsoft.Extensions.Logging;
@@ -533,7 +534,7 @@ public class GeniusInvokationControl
 
             if (IsDuelEnd())
             {
-                throw new NormalEndException("对战已结束,停止自动打牌！");
+                throw new SoloTaskAbortException(SoloTaskResult.Success("对战已结束,停止自动打牌！"));
             }
 
             //MyLogger.Debug("识别骰子数量不正确,第{}次重试中...", retryCount);
@@ -1013,7 +1014,7 @@ public class GeniusInvokationControl
             }
             else if (IsDuelEnd())
             {
-                throw new NormalEndException("对战已结束,停止自动打牌！");
+                throw new SoloTaskAbortException(SoloTaskResult.Success("对战已结束,停止自动打牌！"));
             }
 
             retryCount++;
@@ -1056,7 +1057,7 @@ public class GeniusInvokationControl
             }
             else if (IsDuelEnd())
             {
-                throw new NormalEndException("对战已结束,停止自动打牌！");
+                throw new SoloTaskAbortException(SoloTaskResult.Success("对战已结束,停止自动打牌！"));
             }
             else
             {
@@ -1085,7 +1086,7 @@ public class GeniusInvokationControl
     /// 角色被打败后要切换角色
     /// </summary>
     /// <param name="duel"></param>
-    /// <exception cref="NormalEndException"></exception>
+    /// <exception cref="SoloTaskAbortException">后续策略中没有可切换且存活的角色时抛出，携带失败结果</exception>
     public void DoWhenCharacterDefeated(Duel duel)
     {
         _logger.LogInformation("当前出战角色被打败，需要选择新的出战角色");
@@ -1099,7 +1100,8 @@ public class GeniusInvokationControl
         var orderList = duel.GetCharacterSwitchOrder();
         if (orderList.Count == 0)
         {
-            throw new NormalEndException("后续行动策略中,已经没有可切换且存活的角色了,结束自动打牌(建议添加更多行动)");
+            throw new SoloTaskAbortException(SoloTaskResult.Failed("no_available_character",
+                "后续行动策略中,已经没有可切换且存活的角色了,结束自动打牌(建议添加更多行动)"));
         }
 
         foreach (var j in orderList)

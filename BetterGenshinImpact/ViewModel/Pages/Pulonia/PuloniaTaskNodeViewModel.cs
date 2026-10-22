@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -72,7 +73,7 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
             "keymouse" => "录制回放",
             "shell" => "Shell",
             "csharp" => "进程内 C#",
-            _ when _model.TaskType.StartsWith("builtin.", System.StringComparison.Ordinal) => "内置任务",
+            _ when PuloniaSoloTaskExecutor.IsSoloTaskType(_model.TaskType) => "独立任务",
             _ => _model.TaskType
         }
     };

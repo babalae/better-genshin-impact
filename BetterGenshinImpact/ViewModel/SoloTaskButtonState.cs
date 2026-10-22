@@ -1,4 +1,4 @@
-using BetterGenshinImpact.GameTask.SoloTask;
+using BetterGenshinImpact.GameTask.SoloTask.Execution;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.ViewModel;
@@ -6,12 +6,13 @@ namespace BetterGenshinImpact.ViewModel;
 /// <summary>
 /// 一个独立任务按钮的只读展示状态。
 /// </summary>
-public sealed partial class SoloTaskButtonState(SoloTaskType taskType) : ObservableObject
+/// <param name="taskId">此按钮负责管理的独立任务标识</param>
+public sealed partial class SoloTaskButtonState(string taskId) : ObservableObject
 {
     /// <summary>
-    /// 此按钮负责管理的独立任务类型。
+    /// 此按钮负责管理的独立任务标识。
     /// </summary>
-    public SoloTaskType TaskType { get; } = taskType;
+    public string TaskId { get; } = taskId;
 
     /// <summary>
     /// 当前可管理的实例总数。

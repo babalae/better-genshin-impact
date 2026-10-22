@@ -74,8 +74,9 @@ internal class AutoFightHandler(GameRuntime runtime, AllConfig config) : IAction
                    if (taskParams.OnlyPickEliteDropsMode == "DisableAutoPickupForNonElite")
                    {
                        var factory = CombatTaskFactoryProvider.GetFactory(taskParams.CombatStrategyPath);
+                       // 直接调用 RunAsync（而非 ExecuteAsync），保持战斗任务提前结束时异常向外传播的原有语义
                        await RunnerContext.Instance.StopAutoPickRunTask(
-                           async () => await factory.CreateTask(_runtime, _config, taskParams).Start(ct),
+                           async () => await factory.CreateTask(_runtime, _config).RunAsync(taskParams, ct),
                            5);
                        return;
                    }
@@ -86,8 +87,9 @@ internal class AutoFightHandler(GameRuntime runtime, AllConfig config) : IAction
         }
         
         var factory2 = CombatTaskFactoryProvider.GetFactory(taskParams.CombatStrategyPath);
-        var fightSoloTask = factory2.CreateTask(_runtime, _config, taskParams);
-        await fightSoloTask.Start(ct);
+        var fightSoloTask = factory2.CreateTask(_runtime, _config);
+        // 直接调用 RunAsync（而非 ExecuteAsync），保持战斗任务提前结束时异常向外传播的原有语义
+        await fightSoloTask.RunAsync(taskParams, ct);
     }
 
     private AutoFightParam GetFightAutoFightParam(AutoFightConfig? config)

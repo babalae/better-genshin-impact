@@ -32,7 +32,7 @@ public partial class PuloniaTaskPlanViewModel
     /// <summary>创建一份独立的一条龙计划，八个默认节点各自拥有稳定 ID。</summary>
     internal PuloniaTaskPlanDocumentViewModel CreateOneDragonConfiguration(string name)
     {
-        var document = new PuloniaTaskPlanDocumentViewModel(PuloniaOneDragonDefaults.CreatePlan(name), _presets, _clipboard, isNew: true);
+        var document = new PuloniaTaskPlanDocumentViewModel(PuloniaOneDragonDefaults.CreatePlan(name, _taskService.Definitions), _presets, _clipboard, isNew: true);
         AddDocument(document);
         ScheduleAutoSave(document);
         return document;

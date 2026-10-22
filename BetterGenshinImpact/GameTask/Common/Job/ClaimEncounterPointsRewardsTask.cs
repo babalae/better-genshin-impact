@@ -11,6 +11,7 @@ using BetterGenshinImpact.Core.Simulator.Extensions;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -22,8 +23,14 @@ namespace BetterGenshinImpact.GameTask.Common.Job;
 /// <summary>
 /// 领取长效历练点奖励
 /// </summary>
-public class ClaimEncounterPointsRewardsTask
+[SoloTaskInfo(TaskId, "领取历练点", Group = "日常奖励", Order = 160)]
+public class ClaimEncounterPointsRewardsTask : ISoloTask<NoParam, NoData>
 {
+    /// <summary>
+    /// 任务标识。
+    /// </summary>
+    public const string TaskId = "claim_encounter_points";
+
     /// <summary>
     /// 本次运行使用的运行环境
     /// </summary>
@@ -56,23 +63,14 @@ public class ClaimEncounterPointsRewardsTask
         this.commissionsLocalizedString = stringLocalizer.WithCultureGet(cultureInfo, "委托");
     }
 
-    public async Task Start(CancellationToken ct)
-    {
-        try
-        {
-            await DoOnce(ct);
-        }
-        catch (Exception e)
-        {
-            Logger.LogDebug(e, "领取长效历练点奖励异常");
-            Logger.LogError("领取长效历练点奖励异常: {Msg}", e.Message);
-        }
-    }
-
     /// <summary>
-    /// 执行一次历练点领取，并返回是否成功进入并处理委托页。
+    /// F1 打开冒险之证进入委托页，领取长效历练点奖励，结束后返回主界面。
+    /// 识别或操作异常直接向外抛出，由调用方决定是否吞掉。
     /// </summary>
-    public async Task<bool> DoOnce(CancellationToken ct)
+    /// <param name="param">空参数</param>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>未找到委托按钮返回 Failed(page_not_reached)；流程正常结束返回 Unverified（无法确认奖励是否真正到账）</returns>
+    public async Task<SoloTaskResult<NoData>> RunAsync(NoParam param, CancellationToken ct)
     {
         await _returnMainUiTask.Start(ct);
 
@@ -113,7 +111,7 @@ public class ClaimEncounterPointsRewardsTask
         if (!f1Success)
         {
             Logger.LogError("{F}未找到委托按钮,F1打开冒险之证失败", "历练点：");
-            return false;
+            return SoloTaskResult.Failed(SoloTaskReasons.PageNotReached, "未能进入或处理历练点领取页面。");
         }
 
         if (earlyClaim)
@@ -122,15 +120,17 @@ public class ClaimEncounterPointsRewardsTask
             await _runtime.Delay(1000, ct);
 
             // TODO 截图并通知
-            return true;
+            return SoloTaskResult.Unverified("已领取长效历练点奖励。");
         }
 
         await _runtime.Delay(1000, ct);
 
         // 领取
+        var claimed = false;
         using var claimCapture = _runtime.CaptureToRectArea();
         if (ClickClaimBtn(claimCapture))
         {
+            claimed = true;
             await _runtime.Delay(1000, ct);
 
             // TODO 截图并通知
@@ -138,7 +138,7 @@ public class ClaimEncounterPointsRewardsTask
 
         // 关闭
         await _returnMainUiTask.Start(ct);
-        return true;
+        return SoloTaskResult.Unverified(claimed ? "已领取长效历练点奖励。" : "没有可领取的长效历练点奖励。");
     }
 
     private static bool ClickClaimBtn(ImageRegion ra2)

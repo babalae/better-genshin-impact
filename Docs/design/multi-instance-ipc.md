@@ -14,7 +14,13 @@
 - 桌面分身 BetterGI 只能查询和访问相同 Session 中的 WebView；
 - 同一个 Session 只允许一个 BetterGI，WebView 则允许多个并通过进程 ID 精确寻址。
 
-独立任务的选择面板、任务下发和状态回传不在当前实现范围内。
+独立任务可以由根实例下发到在线子实例，并回传运行状态：
+
+- 启动请求 `SoloTaskStartRequest` 携带字符串任务标识 `TaskId`（如 `auto_wood`）和按 `SoloTaskJson` 约定序列化的完整参数；
+- 子实例按 `TaskId` 从 `SoloTaskRegistry` 取得任务，反序列化参数后运行；
+- 状态快照 `SoloTaskStatusSnapshot` 同样用 `TaskId` 标识任务。主实例与子实例要求版本相同，不做旧版本兼容。
+
+合同细节见 [task-contract.md](task-contract.md)。
 
 ## 管道和 Windows 用户隔离
 

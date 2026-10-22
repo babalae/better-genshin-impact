@@ -10,7 +10,6 @@
              xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:oneDragon="clr-namespace:BetterGenshinImpact.ViewModel.Pages.OneDragon"
-             xmlns:oneDragonView="clr-namespace:BetterGenshinImpact.View.Pages.OneDragon"
              xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta"
@@ -248,6 +247,7 @@
     </ContentControl>
 </DockPanel>
         <!--  右侧配置  -->
+        <!--  旧版右侧配置模板，仅保留为历史注释；未使用的 Pages/OneDragon 视图已移除。  -->
         <!--<ContentControl Grid.Column="1"
                         Margin="20,0,0,0"
                         Content="{Binding SelectedTask.ViewModel}">

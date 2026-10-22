@@ -5,6 +5,7 @@ using BetterGenshinImpact.Core.BgiVision;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.SoloTask;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -14,15 +15,35 @@ namespace BetterGenshinImpact.GameTask.Common.Job;
 /// 返回主界面
 /// </summary>
 /// <param name="runtime">本次运行使用的运行环境</param>
-public class ReturnMainUiTask(GameRuntime runtime)
+[SoloTaskInfo(TaskId, "返回主界面", Group = "工具", Order = 430, Scopes = SoloTaskScopes.Plan)]
+public class ReturnMainUiTask(GameRuntime runtime) : ISoloTask<NoParam, NoData>
 {
+    /// <summary>
+    /// 任务标识。
+    /// </summary>
+    public const string TaskId = "return_main_ui";
+
     /// <summary>
     /// 本次运行使用的运行环境
     /// </summary>
     private readonly GameRuntime _runtime = runtime;
 
-    public string Name => "返回主界面";
+    /// <summary>
+    /// 作为独立任务运行：返回主界面后报告成功。
+    /// </summary>
+    /// <param name="param">空参数</param>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>返回主界面流程结束后返回 Success</returns>
+    public async Task<SoloTaskResult<NoData>> RunAsync(NoParam param, CancellationToken ct)
+    {
+        await Start(ct);
+        return SoloTaskResult.Success("已返回主界面。");
+    }
 
+    /// <summary>
+    /// 反复按 ESC（必要时点击退出门）直到回到主界面。供其他任务内部组合调用。
+    /// </summary>
+    /// <param name="ct">取消令牌</param>
     public async Task Start(CancellationToken ct)
     {
         using var initialCapture = _runtime.CaptureToRectArea();

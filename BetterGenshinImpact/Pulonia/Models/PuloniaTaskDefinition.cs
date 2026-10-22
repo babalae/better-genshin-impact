@@ -62,4 +62,24 @@ public sealed class PuloniaTaskDefinition
     /// 此能力声明的 CD 与周期额度规则；只有结构化确认事件才会消费规则。
     /// </summary>
     public IReadOnlyList<PuloniaTaskAvailabilityRule> AvailabilityRules { get; init; } = [];
+
+    /// <summary>
+    /// 是否是由独立任务注册表提供的能力；添加菜单把它们收拢到“独立任务”子菜单。
+    /// </summary>
+    public bool IsSoloTask { get; init; }
+
+    /// <summary>
+    /// 菜单分组名，同组能力之间不插分隔线。
+    /// </summary>
+    public string Group { get; init; } = string.Empty;
+
+    /// <summary>
+    /// 菜单排序，数值小的在前。
+    /// </summary>
+    public int Order { get; init; }
+
+    /// <summary>
+    /// 新建一条龙配置时的默认顺序；0 表示不默认加入。
+    /// </summary>
+    public int OneDragonOrder { get; init; }
 }

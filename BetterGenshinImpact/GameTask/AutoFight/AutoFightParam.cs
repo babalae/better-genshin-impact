@@ -78,6 +78,14 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
     /// </summary>
     public bool ExpBasedPickupEnabled { get; set; } = false;
 
+    /// <summary>
+    /// 公共无参构造：使用全局自动战斗配置中的策略和设置，行为与 <c>AutoFightParam((string?)null)</c> 完全一致。
+    /// 供参数 JSON 反序列化、独立任务合同的 new() 约束，以及脚本和 C# 中的 <c>new AutoFightParam()</c> / 对象初始化器使用。
+    /// </summary>
+    public AutoFightParam() : this((string?)null)
+    {
+    }
+
     public AutoFightParam(string? strategyName = null) : base(null, null)
     {
         SetCombatStrategyPath(strategyName);

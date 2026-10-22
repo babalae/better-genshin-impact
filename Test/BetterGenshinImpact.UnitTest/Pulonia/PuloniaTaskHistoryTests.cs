@@ -145,12 +145,45 @@ public sealed class PuloniaTaskHistoryTests : IDisposable
     [InlineData("javascript", "JS")]
     [InlineData("keymouse", "宏回放")]
     [InlineData("csharp", "C#")]
-    [InlineData("builtin.claim_mail", "领取/合成")]
+    [InlineData("solo.claim_mail", "独立任务")]
+    [InlineData("legacy.unsupported", "领取/合成")]
     public void TaskTypes_HaveSpecificVerificationNotes(string taskType, string expected)
     {
         var node = CreateNode(taskType, new JObject { ["extension"] = new JObject { ["detail"] = 42 } });
         Assert.Contains(expected, node.VerificationNote);
         Assert.Contains("42", node.ResultFields.Single(field => field.Label == "extension").Value);
+    }
+
+    /// <summary>
+    /// 独立任务的原因码单独成行，奖励汇总逐行显示为“名称 ×数量”，items 不再作为原始 JSON 重复展示。
+    /// </summary>
+    [Fact]
+    public void SoloTaskResult_ShowsReasonCodeAndRewardItems()
+    {
+        var data = new JObject
+        {
+            ["items"] = new JArray(new JObject { ["name"] = "原粹树脂", ["count"] = 2 },
+                new JObject { ["name"] = "摩拉", ["count"] = 60000 })
+        };
+        var node = new PuloniaTaskNodeResultViewModel(new PuloniaTaskNodeResult("plan/node", "节点", "solo.auto_domain", 1,
+            PuloniaTaskNodeStatus.Failed, "结果消息", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, data,
+            PuloniaTaskOutcomeKind.Failed, reasonCode: "strategy_not_found"), null, "独立任务", []);
+
+        Assert.Equal("strategy_not_found", node.ResultFields.Single(field => field.Label == "原因码").Value);
+        Assert.Equal("原粹树脂 ×2\n摩拉 ×60000", node.ResultFields.Single(field => field.Label == "奖励").Value);
+        Assert.DoesNotContain(node.ResultFields, field => field.Label == "items");
+    }
+
+    /// <summary>
+    /// 没有原因码时不显示空的原因码行；独立任务返回空奖励时明确说明没有识别到奖励。
+    /// </summary>
+    [Fact]
+    public void SoloTaskResult_WithoutReasonCodeAndEmptyRewards()
+    {
+        var node = CreateNode("solo.auto_boss", new JObject { ["items"] = new JArray() });
+
+        Assert.DoesNotContain(node.ResultFields, field => field.Label == "原因码");
+        Assert.Equal("没有识别到奖励。", node.ResultFields.Single(field => field.Label == "奖励").Value);
     }
 
     /// <summary>

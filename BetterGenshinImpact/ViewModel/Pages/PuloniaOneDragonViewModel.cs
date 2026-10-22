@@ -7,13 +7,15 @@ using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.SoloTask;
+using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.View.Windows.Pulonia;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
-using BetterGenshinImpact.ViewModel.Pages.Pulonia.OneDragonTasks;
+using BetterGenshinImpact.ViewModel.SoloTaskSettings;
 using BetterGenshinImpact.ViewModel.Windows.Pulonia;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -38,6 +40,8 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     private readonly PuloniaTaskResourceCatalog _catalog;
     /// <summary>计划和导入报告存储。</summary>
     private readonly PuloniaTaskStore _store;
+    /// <summary>独立任务注册表；按描述符声明的设置界面创建专属设置 VM。</summary>
+    private readonly SoloTaskRegistry _registry;
     /// <summary>合并导航和 Loaded 生命周期，避免加载过程中创建重复默认配置。</summary>
     private readonly SemaphoreSlim _pageLoadGate = new(1, 1);
     /// <summary>加载成功前禁用清单编辑，避免异步读盘覆盖用户操作。</summary>
@@ -47,7 +51,9 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     /// <summary>按所属文档和节点身份隔离草稿；不同计划允许使用相同节点 ID。</summary>
     private readonly Dictionary<(PuloniaTaskPlanDocumentViewModel Document, string NodeId), IReadOnlyList<PuloniaOneDragonParameterFieldViewModel>> _drafts = [];
     /// <summary>固定任务专属设置视图的草稿缓存，生命周期与通用草稿一致。</summary>
-    private readonly Dictionary<(PuloniaTaskPlanDocumentViewModel Document, string NodeId), PuloniaOneDragonFixedSettingsViewModel> _fixedSettingsCache = [];
+    private readonly Dictionary<(PuloniaTaskPlanDocumentViewModel Document, string NodeId), SoloTaskSettingsViewModel> _fixedSettingsCache = [];
+    /// <summary>当前 <see cref="FixedSettings"/> 所属的清单节点；提交时据此确认草稿属于当前选中任务。</summary>
+    private PuloniaTaskNodeViewModel? _fixedSettingsNode;
     /// <summary>仅属于一条龙的配置列表。</summary>
     public ObservableCollection<PuloniaTaskPlanDocumentViewModel> Configurations => Editor.OneDragonDocuments;
     /// <summary>当前配置的平面根清单，引用和分组均作为一行。</summary>
@@ -59,7 +65,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     /// <summary>右侧当前任务的老样式设置卡片。</summary>
     [ObservableProperty] private IReadOnlyList<PuloniaOneDragonParameterFieldViewModel> _settingsFields = [];
     /// <summary>右侧当前任务的专属设置视图；为空时使用通用参数卡片。</summary>
-    [ObservableProperty] private PuloniaOneDragonFixedSettingsViewModel? _fixedSettings;
+    [ObservableProperty] private SoloTaskSettingsViewModel? _fixedSettings;
     /// <summary>当前配置应用结果。</summary>
     [ObservableProperty] private string _settingsMessage = "";
     /// <summary>上次导入报告路径。</summary>
@@ -81,8 +87,8 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
 
     /// <summary>注入共用编辑服务，界面仅维护选择与未提交的设置草稿。</summary>
     public PuloniaOneDragonViewModel(PuloniaTaskPlanViewModel editor, IPuloniaTaskService service,
-        PuloniaTaskResourceCatalog catalog, PuloniaTaskStore store)
-    { Editor = editor; _service = service; _catalog = catalog; _store = store; }
+        PuloniaTaskResourceCatalog catalog, PuloniaTaskStore store, SoloTaskRegistry registry)
+    { Editor = editor; _service = service; _catalog = catalog; _store = store; _registry = registry; }
 
     /// <summary>首次进入时加载共用文档，并为一条龙建立默认配置。</summary>
     public override async Task OnNavigatedToAsync()
@@ -151,7 +157,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     {
         if (value is not null) IsAccountPreparationSelected = false;
         if (SelectedConfiguration is { } document) document.SelectedNode = value;
-        if (value is null) { FixedSettings = null; SettingsFields = []; }
+        if (value is null) { _fixedSettingsNode = null; FixedSettings = null; SettingsFields = []; }
         else RefreshSettingsSurfaces(value);
         SettingsMessage = "";
     }
@@ -159,6 +165,8 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     private void RefreshSettingsSurfaces(PuloniaTaskNodeViewModel node)
     {
         var fixedSettings = CreateFixedSettings(node);
+        // 先记录草稿所属节点再切换视图，提交时据此确认草稿没有串到其他任务
+        _fixedSettingsNode = fixedSettings is not null ? node : null;
         if (fixedSettings is not null)
         {
             FixedSettings = fixedSettings;
@@ -170,21 +178,13 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
             SettingsFields = GetSettingsDraft(node);
         }
     }
-    /// <summary>按任务类型返回专属设置视图模型；未覆盖的类型返回 null 走通用卡片。</summary>
-    private PuloniaOneDragonFixedSettingsViewModel? CreateFixedSettings(PuloniaTaskNodeViewModel node)
+    /// <summary>按独立任务描述符返回专属设置视图模型；没有声明专属界面的任务返回 null 走通用卡片。</summary>
+    private SoloTaskSettingsViewModel? CreateFixedSettings(PuloniaTaskNodeViewModel node)
     {
         var key = (node.Document, node.Id);
         if (_fixedSettingsCache.TryGetValue(key, out var cached)) return cached;
-        PuloniaOneDragonFixedSettingsViewModel? settings = node.TaskType switch
-        {
-            "builtin.craft_condensed_resin" => new PuloniaOneDragonCraftSettingsViewModel(node),
-            "builtin.auto_domain" => new PuloniaOneDragonDomainSettingsViewModel(node),
-            "builtin.auto_boss" => new PuloniaOneDragonBossSettingsViewModel(node),
-            "builtin.auto_stygian" => new PuloniaOneDragonStygianSettingsViewModel(node),
-            "builtin.auto_ley_line" => new PuloniaOneDragonLeyLineSettingsViewModel(node),
-            "builtin.daily_rewards" => new PuloniaOneDragonDailyRewardSettingsViewModel(node),
-            _ => null
-        };
+        var settings = SoloTaskSettingsFactory.Create(_registry, PuloniaSoloTaskExecutor.ToTaskId(node.TaskType),
+            node.Document.GetOneDragonParameters(node));
         if (settings is not null) _fixedSettingsCache[key] = settings;
         return settings;
     }
@@ -224,13 +224,13 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
         try
         {
             // 专属视图走类型化草稿；通用卡片继续使用 schema 字段列表。
-            if (FixedSettings is not null && ReferenceEquals(FixedSettings.Node, node))
+            if (FixedSettings is { } fixedSettings && ReferenceEquals(_fixedSettingsNode, node))
             {
                 var fixedChanges = new JObject();
-                FixedSettings.CollectChanges(fixedChanges);
+                fixedSettings.CollectChanges(fixedChanges);
                 var fixedCurrent = node.Document.GetOneDragonParameters(node);
                 foreach (var field in fixedChanges.Properties())
-                    if (!JToken.DeepEquals(fixedCurrent[field.Name], FixedSettings.GetOriginalValue(field.Name)))
+                    if (!JToken.DeepEquals(fixedCurrent[field.Name], fixedSettings.GetOriginalValue(field.Name)))
                         throw new InvalidOperationException("此项设置的参数来源已改变，请重置草稿后重新设置。");
                 node.Document.ApplyOneDragonParameters(node, fixedChanges);
                 _fixedSettingsCache.Remove((node.Document, node.Id));
@@ -265,7 +265,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
         RefreshSettingsSurfaces(node);
         SettingsMessage = "已重新读取当前任务设置。";
     }
-    /// <summary>以配置为单位创建独立计划和默认八项任务。</summary>
+    /// <summary>以配置为单位创建独立计划和注册表声明的默认任务。</summary>
     [RelayCommand]
     private void NewConfiguration()
     {
@@ -300,6 +300,15 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
         if (SelectedConfiguration is not { } document) return;
         try
         {
+            // 没有可填写参数的独立任务不弹创建窗口，直接以显示名插入
+            if (PuloniaSoloTaskExecutor.IsSoloTaskType(taskType)
+                && _service.Definitions.FirstOrDefault(d => d.TaskType == taskType) is { } definition
+                && !PuloniaSoloTaskExecutor.HasEditableParameters(definition))
+            {
+                Editor.InsertOneDragonTask(document, SelectedTask, new PuloniaTask { Name = definition.DisplayName, TaskType = taskType });
+                SelectedTask = document.SelectedNode;
+                return;
+            }
             var dialog = new PuloniaOneDragonCreationDialog(_service.Definitions, _catalog, taskType) { Owner = Application.Current.MainWindow };
             if (dialog.ShowDialog() == true && dialog.ViewModel.Result is { } result)
             { Editor.InsertOneDragonTask(document, SelectedTask, result.Task); SelectedTask = document.SelectedNode; }

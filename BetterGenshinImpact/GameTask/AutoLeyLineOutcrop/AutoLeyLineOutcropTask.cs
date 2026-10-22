@@ -24,6 +24,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 using BetterGenshinImpact.Core.Mask;
@@ -42,11 +43,38 @@ using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using BetterGenshinImpact.View;
+using BetterGenshinImpact.View.Pages.SoloTaskSettings;
+using BetterGenshinImpact.ViewModel.SoloTaskSettings;
 
 namespace BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 
-public class AutoLeyLineOutcropTask : ISoloTask
+/// <summary>
+/// 自动地脉花：按冒险之证定位地脉花，沿节点路线前往、战斗并领取奖励。
+/// </summary>
+[SoloTaskInfo(TaskId, "自动地脉花", Group = "树脂与战斗", Order = 240, OneDragonOrder = 6)]
+[SoloTaskSettingsView(typeof(AutoLeyLineOutcropSettingsView), typeof(AutoLeyLineOutcropSettingsViewModel))]
+public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, NoData>
 {
+    /// <summary>
+    /// 独立任务稳定标识。
+    /// </summary>
+    public const string TaskId = "auto_ley_line_outcrop";
+
+    /// <summary>
+    /// 本任务专用原因码：树脂已耗尽，未执行地脉花挑战。
+    /// </summary>
+    public const string ResinExhaustedReason = "resin_exhausted";
+
+    /// <summary>
+    /// 本任务专用原因码：当前地脉花位置没有匹配的路线策略。
+    /// </summary>
+    public const string RouteStrategyNotFoundReason = "ley_line_route_not_found";
+
+    /// <summary>
+    /// 日志与通知中使用的任务名称。
+    /// </summary>
+    private const string TaskName = "自动地脉花";
+
     private readonly ILogger<AutoLeyLineOutcropTask> _logger = App.GetLogger<AutoLeyLineOutcropTask>();
 
     /// <summary>
@@ -59,8 +87,20 @@ public class AutoLeyLineOutcropTask : ISoloTask
     /// </summary>
     private readonly AllConfig _config;
 
-    private readonly AutoLeyLineOutcropParam _taskParam; 
-    private readonly bool _oneDragonMode;
+    /// <summary>
+    /// 本次运行的业务参数，在 RunAsync 开头赋值。
+    /// </summary>
+    private AutoLeyLineOutcropParam _taskParam = null!;
+
+    /// <summary>
+    /// 是否为一条龙模式（不先传送到七天神像），在 RunAsync 开头从参数赋值。
+    /// </summary>
+    private bool _oneDragonMode;
+
+    /// <summary>
+    /// 本次运行中是否出现过“未找到对应的地脉花策略”。
+    /// </summary>
+    private bool _routeStrategyNotFound;
     private TpTask _tpTask = null!;
     private readonly ReturnMainUiTask _returnMainUiTask;
     private SwitchPartyTask? _switchPartyTask;
@@ -112,28 +152,42 @@ public class AutoLeyLineOutcropTask : ISoloTask
     private static readonly object PickLock = new();
     private bool _friendshipTeamSwitched;
 
-    public string Name => "自动地脉花";
-
     /// <summary>
-    /// 创建自动地脉花任务
+    /// 创建自动地脉花任务。业务参数通过 <see cref="RunAsync"/> 传入。
     /// </summary>
     /// <param name="runtime">本次运行使用的运行环境</param>
     /// <param name="config">配置根</param>
-    /// <param name="taskParam">任务参数</param>
-    /// <param name="oneDragonMode">是否为一条龙模式（不先传送到七天神像）</param>
-    public AutoLeyLineOutcropTask(GameRuntime runtime, AllConfig config, AutoLeyLineOutcropParam taskParam, bool oneDragonMode = false)
+    public AutoLeyLineOutcropTask(GameRuntime runtime, AllConfig config)
     {
         _runtime = runtime;
         _config = config;
         _returnMainUiTask = new ReturnMainUiTask(runtime);
-        _taskParam = taskParam;
-        _oneDragonMode = oneDragonMode;
     }
 
-    public async Task Start(CancellationToken ct)
+    /// <summary>
+    /// 运行自动地脉花。
+    /// </summary>
+    /// <param name="param">本次运行的业务参数</param>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>
+    /// 参数无效返回 Failed(invalid_parameter)；树脂耗尽未执行返回 Skipped(resin_exhausted)；
+    /// 出现未匹配的地脉花路线策略返回 Failed(ley_line_route_not_found)；其余正常结束返回 Unverified。
+    /// </returns>
+    public async Task<SoloTaskResult<NoData>> RunAsync(AutoLeyLineOutcropParam param, CancellationToken ct)
     {
+        // 1. 参数校验：无效参数直接返回失败，不做任何游戏操作
+        var invalidReason = ValidateParam(param);
+        if (invalidReason != null)
+        {
+            return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, invalidReason);
+        }
+
+        // 2. 保存本次运行的参数（原构造函数参数）
+        _taskParam = param;
+        _oneDragonMode = param.OneDragonMode;
+        _routeStrategyNotFound = false;
         _ct = ct;
-        Notify.Event(NotificationEvent.LeyLineStart).Success($"{Name}启动");
+        Notify.Event(NotificationEvent.LeyLineStart).Success($"{TaskName}启动");
 
         try
         {
@@ -141,7 +195,9 @@ public class AutoLeyLineOutcropTask : ISoloTask
             var runTimesValue = await HandleResinExhaustionMode();
             if (runTimesValue <= 0)
             {
-                throw new Exception("树脂耗尽，任务结束");
+                // 树脂耗尽：条件不满足，未执行挑战
+                Logger.LogInformation("任务结束：{Msg}", "树脂耗尽，任务结束");
+                return SoloTaskResult.Skipped(ResinExhaustedReason, "树脂耗尽，任务结束");
             }
 
             await PrepareForLeyLineRun();
@@ -151,10 +207,21 @@ public class AutoLeyLineOutcropTask : ISoloTask
             {
                 await RecheckResinAndContinue();
             }
+
+            // 3. 汇总结果：流程中出现过未匹配的路线策略视为业务失败
+            if (_routeStrategyNotFound)
+            {
+                return SoloTaskResult.Failed(RouteStrategyNotFoundReason, "未找到对应的地脉花策略");
+            }
+
+            // 现有流程没有领取证据，结果为“已执行，未核验”
+            return SoloTaskResult.Unverified("地脉花流程已结束。");
         }
-        catch (Exception e) when (e is NormalEndException or TaskCanceledException)
+        catch (Exception e) when (e is NormalEndException or OperationCanceledException)
         {
+            // 取消或运行环境停止：记录后继续向上抛出，不再吞掉
             Logger.LogInformation("任务结束：{Msg}", e.Message);
+            throw;
         }
         catch (Exception e)
         {
@@ -184,7 +251,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             }
             finally
             {
-                Notify.Event(NotificationEvent.LeyLineEnd).Success($"{Name}结束");
+                Notify.Event(NotificationEvent.LeyLineEnd).Success($"{TaskName}结束");
             }
         }
     }
@@ -193,39 +260,53 @@ public class AutoLeyLineOutcropTask : ISoloTask
     {
         _systemInfo = _runtime.SystemInfo;
         _tpTask = new TpTask(_runtime, _config, _ct);
-        ValidateSettings();
+        NormalizeSettings();
         LoadConfigData();
         LoadRecognitionObjects();
     }
 
-    private void ValidateSettings()
+    /// <summary>
+    /// 校验本次运行的业务参数（原 ValidateSettings 中抛异常的检查，以及次数、超时必须为正数）。
+    /// </summary>
+    /// <param name="param">本次运行的业务参数</param>
+    /// <returns>参数无效时返回中文原因；有效时返回 null</returns>
+    private static string? ValidateParam(AutoLeyLineOutcropParam param)
+    {
+        // 次数与超时必须为正数（与 Pulonia 原执行器的校验一致）
+        if (param.Count < 1 || param.Timeout < 1)
+        {
+            return "地脉花次数和超时必须为正数。";
+        }
+
+        if (string.IsNullOrWhiteSpace(param.LeyLineOutcropType))
+        {
+            return "地脉花类型未选择";
+        }
+
+        if (param.LeyLineOutcropType != "启示之花" && param.LeyLineOutcropType != "藏金之花")
+        {
+            return "地脉花类型无效，请重新选择";
+        }
+
+        if (string.IsNullOrWhiteSpace(param.Country))
+        {
+            return "国家未配置";
+        }
+
+        if (!string.IsNullOrWhiteSpace(param.FriendshipTeam) && string.IsNullOrWhiteSpace(param.Team))
+        {
+            return "配置好感队时必须配置战斗队伍";
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// 规范化本次参数中的战斗配置与超时（参数已通过 <see cref="ValidateParam"/> 校验）。
+    /// </summary>
+    private void NormalizeSettings()
     {
         _taskParam.FightConfig ??= new AutoLeyLineOutcropFightConfig();
-
-        if (string.IsNullOrWhiteSpace(_taskParam.LeyLineOutcropType))
-        {
-            throw new Exception("地脉花类型未选择");
-        }
-
-        if (_taskParam.LeyLineOutcropType != "启示之花" && _taskParam.LeyLineOutcropType != "藏金之花")
-        {
-            throw new Exception("地脉花类型无效，请重新选择");
-        }
-
-        if (string.IsNullOrWhiteSpace(_taskParam.Country))
-        {
-            throw new Exception("国家未配置");
-        }
-
-        if (!string.IsNullOrWhiteSpace(_taskParam.FriendshipTeam) && string.IsNullOrWhiteSpace(_taskParam.Team))
-        {
-            throw new Exception("配置好感队时必须配置战斗队伍");
-        }
-
-        if (_taskParam.Count < 1)
-        {
-            _taskParam.Count = 1;
-        }
 
         if (string.IsNullOrWhiteSpace(_taskParam.FightConfig.StrategyName) && _taskParam.Timeout > 0)
         {
@@ -863,6 +944,8 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
     private void HandleNoStrategyFound()
     {
+        // 记录业务失败，流程结束后由 RunAsync 返回 Failed（不改变原有的后续流程）
+        _routeStrategyNotFound = true;
         _logger.LogError("未找到对应的地脉花策略");
         Notify.Event(NotificationEvent.LeyLineInfo).Error("未找到对应的地脉花策略");
     }
@@ -1222,8 +1305,8 @@ public class AutoLeyLineOutcropTask : ISoloTask
                 PickDropsAfterFightEnabled = false,
                 Timeout = autoFightConfig.Timeout > 0 ? autoFightConfig.Timeout : 600,
             };
-            var jsonTask = new AutoFightJsonTask(_runtime, _config, jsonParam);
-            return jsonTask.Start(ct);
+            // 战斗结束由 OCR 判定后取消 ct 控制，子任务结果不参与判断
+            return new AutoFightJsonTask(_runtime, _config).RunAsync(jsonParam, ct);
         }
         else
         {
@@ -1238,7 +1321,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
             taskParam.KazuhaPickupEnabled = false;
             taskParam.QinDoublePickUp = false;
             taskParam.OnlyPickEliteDropsMode = "DisableAutoPickupForNonElite";
-            return new AutoFightTask(_runtime, _config, taskParam).Start(ct);
+            return new AutoFightTask(_runtime, _config).RunAsync(taskParam, ct);
         }
     }
 
@@ -1905,7 +1988,7 @@ public class AutoLeyLineOutcropTask : ISoloTask
         InputHub.Foreground.Mouse.LeftButtonUp();
         await _runtime.Delay(60, _ct);
 
-        var (success, _) = AutoDomainTask.PressUseResin(_runtime, promptRegions, resinName, Name);
+        var (success, _) = AutoDomainTask.PressUseResin(_runtime, promptRegions, resinName, TaskName);
         if (success)
         {
             _logger.LogDebug("奖励页面已尝试使用树脂：{ResinName}", resinName);

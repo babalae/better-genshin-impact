@@ -18,6 +18,7 @@ using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Common.Reward;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Notification;
 using Microsoft.Extensions.Logging;
@@ -33,15 +34,27 @@ using System.Threading;
 using System.Threading.Tasks;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
+using BetterGenshinImpact.View.Pages.SoloTaskSettings;
+using BetterGenshinImpact.ViewModel.SoloTaskSettings;
 
 namespace BetterGenshinImpact.GameTask.AutoBoss;
 
 /// <summary>
 /// 自动首领讨伐独立任务，负责按配置前往 Boss、执行战斗策略、领取征讨之花奖励并处理重定位。
 /// </summary>
-public class AutoBossTask : ISoloTask<Dictionary<string, int>>
+[SoloTaskInfo(TaskId, "自动首领讨伐", Group = "树脂与战斗", Order = 220, OneDragonOrder = 4)]
+[SoloTaskSettingsView(typeof(AutoBossSettingsView), typeof(AutoBossSettingsViewModel))]
+public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
 {
-    public string Name => "自动首领讨伐";
+    /// <summary>
+    /// 任务稳定标识。
+    /// </summary>
+    public const string TaskId = "auto_boss";
+
+    /// <summary>
+    /// 日志与通知中使用的任务名称。
+    /// </summary>
+    private const string TaskName = "自动首领讨伐";
 
     private readonly ILogger<AutoBossTask> _logger = App.GetLogger<AutoBossTask>();
 
@@ -55,11 +68,25 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     /// </summary>
     private readonly AllConfig _config;
 
-    private readonly AutoBossParam _taskParam;
-    /// <summary>Pulonia 显式传入的战斗检测配置；原入口为空时保留原全局行为。</summary>
-    private readonly AutoFightConfig? _fightConfig;
-    private readonly CombatScriptBag? _combatScriptBag;
-    private readonly string? _jsonCombatStrategyPath;
+    /// <summary>
+    /// 本次运行的任务参数，在 <see cref="RunAsync"/> 开头赋值
+    /// </summary>
+    private AutoBossParam _taskParam = null!;
+
+    /// <summary>
+    /// 解析后的实际战斗策略路径，在 <see cref="Initialize"/> 中赋值
+    /// </summary>
+    private string _combatStrategyPath = string.Empty;
+
+    /// <summary>
+    /// TXT 战斗策略解析结果；使用 JSON 策略时为 null
+    /// </summary>
+    private CombatScriptBag? _combatScriptBag;
+
+    /// <summary>
+    /// JSON 战斗策略文件路径；不是 JSON 策略时为 null
+    /// </summary>
+    private string? _jsonCombatStrategyPath;
     private readonly ReturnMainUiTask _returnMainUiTask;
     private readonly Dictionary<string, int> _rewardSummary = new();
     private SwitchPartyTask? _switchPartyTask;
@@ -114,50 +141,44 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     private sealed record SupplementalResinOption(string Name, RecognitionObject Template);
 
     /// <summary>
-    /// 创建自动首领讨伐任务，并根据任务参数预解析战斗策略。
+    /// 创建自动首领讨伐任务。业务参数在 <see cref="RunAsync"/> 中传入。
     /// </summary>
     /// <param name="runtime">本次运行使用的运行环境。</param>
     /// <param name="config">配置根。</param>
-    /// <param name="taskParam">自动首领讨伐参数，包含 Boss、队伍、战斗策略、讨伐次数和补充树脂开关。</param>
-    /// <param name="fightConfig">可选的本次运行战斗配置，避免 Pulonia 重新读取全局业务设置。</param>
-    public AutoBossTask(GameRuntime runtime, AllConfig config, AutoBossParam taskParam, AutoFightConfig? fightConfig = null)
+    public AutoBossTask(GameRuntime runtime, AllConfig config)
     {
         _runtime = runtime;
         _config = config;
         _returnMainUiTask = new ReturnMainUiTask(runtime);
-        _taskParam = taskParam;
-        _fightConfig = fightConfig;
-        if (string.IsNullOrWhiteSpace(_taskParam.CombatStrategyPath))
-        {
-            _taskParam.SetCombatStrategyPath(_taskParam.StrategyName);
-        }
-
-        if (_taskParam.CombatStrategyPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
-        {
-            _jsonCombatStrategyPath = _taskParam.CombatStrategyPath;
-            _logger.LogInformation("自动首领讨伐：检测到JSON策略文件，将使用JSON战斗引擎");
-        }
-        else
-        {
-            _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
-        }
     }
 
     /// <summary>
-    /// 启动自动首领讨伐任务，包含参数校验、分辨率校验、死亡重试和最终输入状态释放。
+    /// 运行自动首领讨伐任务，包含参数校验、分辨率校验、死亡重试和最终输入状态释放。
+    /// 参数无效或策略不存在时返回失败结果；流程正常结束返回未确认结果并附带奖励汇总；取消时抛出 OperationCanceledException。
     /// </summary>
+    /// <param name="param">自动首领讨伐参数，包含 Boss、队伍、战斗策略、讨伐次数和补充树脂开关。</param>
     /// <param name="ct">任务取消令牌。</param>
-    Task ISoloTask.Start(CancellationToken ct) => Start(ct);
-
-    public async Task<Dictionary<string, int>> Start(CancellationToken ct)
+    /// <returns>任务结果，数据为本次识别到的奖励汇总。</returns>
+    public async Task<SoloTaskResult<RewardSummary>> RunAsync(AutoBossParam param, CancellationToken ct)
     {
+        _taskParam = param;
         _ct = ct;
         _rewardSummary.Clear();
         _successfulRewardCount = 0;
-        Validate();
+
+        // 1. 业务参数校验，可预见的参数问题直接返回失败结果
+        var failure = ValidateParam(param) ?? Initialize(param);
+        if (failure != null)
+        {
+            _logger.LogError("{Name}：{Msg}", TaskName, failure.Message);
+            return failure;
+        }
+
+        // 2. 运行环境校验：路线资源与分辨率
+        ValidateRouteFiles();
         LogScreenResolution();
 
-        Notify.Event("AutoBoss").Success($"{Name}启动");
+        Notify.Event("AutoBoss").Success($"{TaskName}启动");
         try
         {
             var retryCount = 0;
@@ -171,12 +192,12 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
                 catch (RetryException e) when (retryCount < _taskParam.ReviveRetryCount)
                 {
                     retryCount++;
-                    _logger.LogWarning("{Name}：第 {Retry}/{MaxRetry} 次重试当前首领讨伐，原因：{Reason}", Name, retryCount, _taskParam.ReviveRetryCount, e.Message);
+                    _logger.LogWarning("{Name}：第 {Retry}/{MaxRetry} 次重试当前首领讨伐，原因：{Reason}", TaskName, retryCount, _taskParam.ReviveRetryCount, e.Message);
                     await _runtime.Delay(2000, _ct);
                 }
                 catch (RetryException e)
                 {
-                    _logger.LogWarning("{Name}：角色死亡后重试次数已达上限 {MaxRetry}，结束任务，原因：{Reason}", Name, _taskParam.ReviveRetryCount, e.Message);
+                    _logger.LogWarning("{Name}：角色死亡后重试次数已达上限 {MaxRetry}，结束任务，原因：{Reason}", TaskName, _taskParam.ReviveRetryCount, e.Message);
                     throw;
                 }
             }
@@ -185,10 +206,61 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         {
             InputHub.ReleaseAll();
             InputHub.Foreground.Mouse.LeftButtonUp();
-            Notify.Event("AutoBoss").Success($"{Name}结束");
+            Notify.Event("AutoBoss").Success($"{TaskName}结束");
         }
 
-        return new Dictionary<string, int>(_rewardSummary);
+        // 没有确认奖励已到账的手段，按未确认结束返回，并附带本次识别到的奖励汇总
+        return SoloTaskResult.Unverified(RewardSummary.From(_rewardSummary), "首领讨伐流程已结束。");
+    }
+
+    /// <summary>
+    /// 按本次参数解析战斗策略：为空时按策略名称生成路径；不是已存在的路径时用 <see cref="CombatStrategyResolver"/> 解析。
+    /// </summary>
+    /// <param name="param">本次运行的任务参数。</param>
+    /// <returns>策略不存在或不受支持时返回失败结果；成功返回 null。</returns>
+    private SoloTaskResult? Initialize(AutoBossParam param)
+    {
+        _combatScriptBag = null;
+        _jsonCombatStrategyPath = null;
+
+        // 1. 未设置策略路径时按策略名称生成（与原构造函数行为一致）
+        if (string.IsNullOrWhiteSpace(param.CombatStrategyPath))
+        {
+            param.SetCombatStrategyPath(param.StrategyName);
+        }
+
+        // 2. 不是已存在的路径（例如任务计划保存的是策略名）时先解析
+        var strategyPath = param.CombatStrategyPath;
+        if (!File.Exists(strategyPath) && !Directory.Exists(strategyPath))
+        {
+            if (!CombatStrategyResolver.TryResolve(strategyPath, out var resolvedPath))
+            {
+                return SoloTaskResult.Failed(SoloTaskReasons.StrategyNotFound, "当前选择的自动战斗策略文件不存在");
+            }
+
+            strategyPath = resolvedPath;
+        }
+
+        // 自动连招策略没有对应的文件，首领讨伐不支持
+        if (AutoFightParam.ComboStrategyName.Equals(strategyPath, StringComparison.Ordinal))
+        {
+            return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, "自动首领讨伐不支持自动连招策略。");
+        }
+
+        _combatStrategyPath = strategyPath;
+
+        // 3. 按策略类型选择战斗引擎：JSON / TXT
+        if (strategyPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+        {
+            _jsonCombatStrategyPath = strategyPath;
+            _logger.LogInformation("自动首领讨伐：检测到JSON策略文件，将使用JSON战斗引擎");
+        }
+        else
+        {
+            _combatScriptBag = CombatScriptParser.ReadAndParse(strategyPath);
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -204,12 +276,12 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         while (ShouldContinueBeforeRound())
         {
             _ct.ThrowIfCancellationRequested();
-            _logger.LogInformation("{Name}：开始第 {Round} 次讨伐 {Boss}", Name, _successfulRewardCount + 1, _taskParam.BossName);
+            _logger.LogInformation("{Name}：开始第 {Round} 次讨伐 {Boss}", TaskName, _successfulRewardCount + 1, _taskParam.BossName);
             
             //3.树脂不足则退出
             if (!await EnsureResinBeforeRound())
             {
-                _logger.LogInformation("{Name}：原粹树脂不足或补充失败，结束任务", Name);
+                _logger.LogInformation("{Name}：原粹树脂不足或补充失败，结束任务", TaskName);
                 break;
             }
             
@@ -229,7 +301,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             var rewardSuccess = await TakeReward();
             if (!rewardSuccess)
             {
-                _logger.LogInformation("{Name}：原粹树脂不足或无法领取奖励，结束任务", Name);
+                _logger.LogInformation("{Name}：原粹树脂不足或无法领取奖励，结束任务", TaskName);
                 break;
             }
 
@@ -242,7 +314,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             
             if (_taskParam.ReturnToStatueAfterEachRound)
             {
-                _logger.LogInformation("{Name}：返回七天神像", Name);
+                _logger.LogInformation("{Name}：返回七天神像", TaskName);
                 await new TpTask(_runtime, _config, _ct).TpToStatueOfTheSeven();
                 await _runtime.Delay(3000, _ct);
                 shouldNavigateToBoss = true;
@@ -282,7 +354,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {
-                _logger.LogWarning("{Name}：战前原粹树脂预检失败，将继续通过领奖界面兜底，原因：{Reason}", Name, e.Message);
+                _logger.LogWarning("{Name}：战前原粹树脂预检失败，将继续通过领奖界面兜底，原因：{Reason}", TaskName, e.Message);
                 return true;
             }
 
@@ -291,7 +363,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
                 return true;
             }
 
-            _logger.LogInformation("{Name}：当前原粹树脂 {Count}/{Limit}，不足以领取首领奖励", Name, originalResin.Count, originalResin.Limit);
+            _logger.LogInformation("{Name}：当前原粹树脂 {Count}/{Limit}，不足以领取首领奖励", TaskName, originalResin.Count, originalResin.Limit);
             if (!_taskParam.SpecifyRunCount)
             {
                 return false;
@@ -299,7 +371,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
 
             if (!_taskParam.UseTransientResin && !_taskParam.UseFragileResin)
             {
-                _logger.LogInformation("{Name}：指定讨伐次数模式未开启补充树脂，停止讨伐", Name);
+                _logger.LogInformation("{Name}：指定讨伐次数模式未开启补充树脂，停止讨伐", TaskName);
                 return false;
             }
 
@@ -308,7 +380,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
                 return true;
             }
 
-            _logger.LogInformation("{Name}：补充树脂未成功，停止讨伐", Name);
+            _logger.LogInformation("{Name}：补充树脂未成功，停止讨伐", TaskName);
             return false;
         }
         finally
@@ -357,7 +429,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         }
 
         var originalResin = new OriginalResinInfo(resinLimit - missingResin, resinLimit);
-        _logger.LogInformation("{Name}：剩余树脂 {Count}", Name, originalResin.Count);
+        _logger.LogInformation("{Name}：剩余树脂 {Count}", TaskName, originalResin.Count);
         return originalResin;
     }
 
@@ -381,7 +453,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             throw new FormatException($"原粹树脂上限解析失败：{countText}");
         }
 
-        _logger.LogDebug("{Name}：原粹树脂上限 OCR：{Text} -> {Limit}", Name, countText, resinLimit);
+        _logger.LogDebug("{Name}：原粹树脂上限 OCR：{Text} -> {Limit}", TaskName, countText, resinLimit);
         return resinLimit;
     }
 
@@ -397,7 +469,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             .ThenBy(region => region.Rect.Center.X)
             .Select(region => region.Text));
         var normalizedText = NormalizeRecoveryText(text);
-        _logger.LogDebug("{Name}：原粹树脂恢复详情 OCR：{Text}", Name, normalizedText);
+        _logger.LogDebug("{Name}：原粹树脂恢复详情 OCR：{Text}", TaskName, normalizedText);
 
         return ExtractFullRecoveryTime(normalizedText);
     }
@@ -472,7 +544,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             var targetQuantity = CalculateSupplementalResinTargetQuantity(currentResin);
             if (targetQuantity <= 0)
             {
-                _logger.LogInformation("{Name}：当前原粹树脂 {Count}/{Limit}，使用任意补充树脂都会超过上限，停止补充", Name, currentResin.Count, currentResin.Limit);
+                _logger.LogInformation("{Name}：当前原粹树脂 {Count}/{Limit}，使用任意补充树脂都会超过上限，停止补充", TaskName, currentResin.Count, currentResin.Limit);
                 return false;
             }
 
@@ -502,7 +574,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
                 }
 
                 usedAnyResin = true;
-                _logger.LogInformation("{Name}：已使用 {Quantity} 个{ResinName}补充原粹树脂", Name, usedQuantity, resin.Name);
+                _logger.LogInformation("{Name}：已使用 {Quantity} 个{ResinName}补充原粹树脂", TaskName, usedQuantity, resin.Name);
                 await _runtime.Delay(800, _ct);
 
                 try
@@ -511,11 +583,11 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
                 }
                 catch (Exception e) when (e is not OperationCanceledException)
                 {
-                    _logger.LogWarning("{Name}：补充后重新识别原粹树脂失败，停止讨伐，原因：{Reason}", Name, e.Message);
+                    _logger.LogWarning("{Name}：补充后重新识别原粹树脂失败，停止讨伐，原因：{Reason}", TaskName, e.Message);
                     return false;
                 }
 
-                _logger.LogInformation("{Name}：补充后原粹树脂 {Count}/{Limit}", Name, currentResin.Count, currentResin.Limit);
+                _logger.LogInformation("{Name}：补充后原粹树脂 {Count}/{Limit}", TaskName, currentResin.Count, currentResin.Limit);
                 if (currentResin.Count >= 40)
                 {
                     return true;
@@ -526,7 +598,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
 
             if (!usedAnyResin)
             {
-                _logger.LogInformation("{Name}：未找到可用的须臾树脂或脆弱树脂", Name);
+                _logger.LogInformation("{Name}：未找到可用的须臾树脂或脆弱树脂", TaskName);
                 return false;
             }
         }
@@ -584,7 +656,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         }
         catch (TimeoutException e)
         {
-            _logger.LogWarning("{Name}：未能打开补充原粹树脂面板，原因：{Reason}", Name, e.Message);
+            _logger.LogWarning("{Name}：未能打开补充原粹树脂面板，原因：{Reason}", TaskName, e.Message);
             return false;
         }
     }
@@ -598,7 +670,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         var icons = await iconLocator.TryWaitFor(1500);
         if (icons.Count == 0)
         {
-            _logger.LogInformation("{Name}：补充面板未找到{ResinName}图标，视为不可用", Name, resin.Name);
+            _logger.LogInformation("{Name}：补充面板未找到{ResinName}图标，视为不可用", TaskName, resin.Name);
             return false;
         }
 
@@ -620,7 +692,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         }
         catch (TimeoutException e)
         {
-            _logger.LogWarning("{Name}：未能确认已选中{ResinName}，原因：{Reason}", Name, resin.Name, e.Message);
+            _logger.LogWarning("{Name}：未能确认已选中{ResinName}，原因：{Reason}", TaskName, resin.Name, e.Message);
             return false;
         }
     }
@@ -649,7 +721,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             return 1;
         }
 
-        _logger.LogWarning("{Name}：点击{ResinName}使用后未识别到快捷使用或获得界面", Name, resin.Name);
+        _logger.LogWarning("{Name}：点击{ResinName}使用后未识别到快捷使用或获得界面", TaskName, resin.Name);
         return 0;
     }
 
@@ -666,14 +738,14 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         var targetQuickQuantity = Math.Min(Math.Min(targetQuantity, availableQuantity), MaxQuickUseQuantity);
         if (targetQuickQuantity <= 0)
         {
-            _logger.LogWarning("{Name}：快捷使用面板未识别到{ResinName}可用数量", Name, resin.Name);
+            _logger.LogWarning("{Name}：快捷使用面板未识别到{ResinName}可用数量", TaskName, resin.Name);
             return 0;
         }
 
         var actualQuantity = await AdjustQuickUseQuantity(page, targetQuickQuantity);
         if (actualQuantity <= 0 || actualQuantity > targetQuickQuantity)
         {
-            _logger.LogWarning("{Name}：快捷使用{ResinName}数量无效，目标 {TargetQuantity}，识别 {ActualQuantity}", Name, resin.Name, targetQuickQuantity, actualQuantity);
+            _logger.LogWarning("{Name}：快捷使用{ResinName}数量无效，目标 {TargetQuantity}，识别 {ActualQuantity}", TaskName, resin.Name, targetQuickQuantity, actualQuantity);
             return 0;
         }
 
@@ -708,7 +780,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         }
 
         var availableQuantity = Math.Min(maxValue, MaxQuickUseQuantity);
-        _logger.LogDebug("{Name}：快捷使用可用数量 OCR：{Text} -> {Quantity}", Name, text, availableQuantity);
+        _logger.LogDebug("{Name}：快捷使用可用数量 OCR：{Text} -> {Quantity}", TaskName, text, availableQuantity);
         return availableQuantity;
     }
 
@@ -769,7 +841,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
 
         if (!completed)
         {
-            _logger.LogDebug("{Name}：快捷使用数量调整超时，目标 {TargetQuantity}，当前 {ActualQuantity}", Name, targetQuantity, actualQuantity);
+            _logger.LogDebug("{Name}：快捷使用数量调整超时，目标 {TargetQuantity}，当前 {ActualQuantity}", TaskName, targetQuantity, actualQuantity);
         }
 
         return actualQuantity;
@@ -784,7 +856,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         var text = NormalizeSupplementText(RecognizeSortedOcrText(ScaleRect(915, 540, 93, 81)));
         if (!text.Contains("使用数量", StringComparison.Ordinal))
         {
-            _logger.LogDebug("{Name}：快捷使用数量 OCR 未包含使用数量：{Text}", Name, text);
+            _logger.LogDebug("{Name}：快捷使用数量 OCR 未包含使用数量：{Text}", TaskName, text);
             return null;
         }
 
@@ -797,11 +869,11 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         var quantityText = match.Groups.Count > 1 && match.Groups[1].Success ? match.Groups[1].Value : match.Value;
         if (!match.Success || !int.TryParse(quantityText, NumberStyles.None, CultureInfo.InvariantCulture, out var quantity))
         {
-            _logger.LogDebug("{Name}：快捷使用数量 OCR 解析失败：{Text}", Name, text);
+            _logger.LogDebug("{Name}：快捷使用数量 OCR 解析失败：{Text}", TaskName, text);
             return null;
         }
 
-        _logger.LogDebug("{Name}：快捷使用数量 OCR：{Text} -> {Quantity}", Name, text, quantity);
+        _logger.LogDebug("{Name}：快捷使用数量 OCR：{Text} -> {Quantity}", TaskName, text, quantity);
         return quantity;
     }
 
@@ -816,7 +888,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         }
         catch (TimeoutException e)
         {
-            _logger.LogWarning("{Name}：未识别到补充树脂获得界面，原因：{Reason}", Name, e.Message);
+            _logger.LogWarning("{Name}：未识别到补充树脂获得界面，原因：{Reason}", TaskName, e.Message);
             return false;
         }
     }
@@ -830,7 +902,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         }
         catch (TimeoutException e)
         {
-            _logger.LogWarning("{Name}：未能点击文本按钮 {Text}，原因：{Reason}", Name, text, e.Message);
+            _logger.LogWarning("{Name}：未能点击文本按钮 {Text}，原因：{Reason}", TaskName, text, e.Message);
             return false;
         }
     }
@@ -891,7 +963,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     /// </summary>
     private async Task RunAutoFight()
     {
-        _logger.LogInformation("{Name}：执行战斗策略", Name);
+        _logger.LogInformation("{Name}：执行战斗策略", TaskName);
 
         if (_jsonCombatStrategyPath != null)
         {
@@ -903,9 +975,11 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             FindCombatScriptAndSwitchAvatar(combatScenes);
 
             var taskParam = BuildAutoFightParamForBoss();
+            SoloTaskResult<NoData>? fightResult = null;
             try
             {
-                await new AutoFightTask(_runtime, _config, taskParam).Start(_ct);
+                // 组合调用使用 RunAsync，保留子任务异常向外传播的语义
+                fightResult = await new AutoFightTask(_runtime, _config).RunAsync(taskParam, _ct);
             }
             catch (NormalEndException e)
             {
@@ -914,6 +988,13 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             finally
             {
                 combatScenes.AfterTask();
+            }
+
+            // 原来战斗任务的业务失败以异常形式中断首领讨伐，现在以结果返回，同样中断并携带子任务的失败原因
+            if (fightResult is { Kind: SoloTaskResultKind.Failed })
+            {
+                _logger.LogWarning("{Name}：战斗任务失败：{Msg}", TaskName, fightResult.Message);
+                throw new SoloTaskAbortException(new SoloTaskResult(fightResult.Kind, fightResult.Message, fightResult.ReasonCode));
             }
         }
     }
@@ -937,11 +1018,16 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             Timeout = _taskParam.Timeout,
         };
 
-        var jsonTask = new AutoFightJsonTask(_runtime, _config, jsonParam);
+        var jsonTask = new AutoFightJsonTask(_runtime, _config);
 
         try
         {
-            await jsonTask.Start(cts.Token);
+            // 组合调用使用 RunAsync；JSON 战斗原来吞掉异常只记日志，失败结果同样只记日志
+            var result = await jsonTask.RunAsync(jsonParam, cts.Token);
+            if (result.Kind == SoloTaskResultKind.Failed)
+            {
+                _logger.LogWarning("JSON战斗任务失败：{Msg}", result.Message);
+            }
         }
         catch (NormalEndException e)
         {
@@ -958,7 +1044,8 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     /// </summary>
     private AutoFightParam BuildAutoFightParamForBoss()
     {
-        var taskParam = new AutoFightParam(_taskParam.CombatStrategyPath, _fightConfig ?? _config.AutoFightConfig)
+        // 参数显式提供战斗配置时使用它，否则沿用全局自动战斗配置
+        var taskParam = new AutoFightParam(_combatStrategyPath, _taskParam.FightConfig ?? _config.AutoFightConfig)
         {
             FightFinishDetectEnabled = true,
             PickDropsAfterFightEnabled = false,
@@ -974,47 +1061,52 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     }
 
     /// <summary>
-    /// 校验自动首领讨伐启动所需的 Boss、战斗策略、讨伐次数、补充树脂开关、重试次数和路线文件。
+    /// 校验自动首领讨伐的业务参数：Boss、讨伐次数、补充树脂开关、重试次数和战斗超时。
     /// </summary>
-    /// <exception cref="Exception">配置缺失、Boss 不支持、策略不存在或重试次数非法时抛出。</exception>
-    /// <exception cref="FileNotFoundException">必需路线文件不存在时抛出。</exception>
-    private void Validate()
+    /// <param name="param">本次运行的任务参数。</param>
+    /// <returns>参数无效时返回失败结果；有效时返回 null。</returns>
+    private static SoloTaskResult? ValidateParam(AutoBossParam param)
     {
-        if (string.IsNullOrWhiteSpace(_taskParam.BossName))
+        if (string.IsNullOrWhiteSpace(param.BossName))
         {
-            throw new Exception("请选择需要讨伐的首领");
+            return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, "请选择首领。");
         }
 
-        if (!AutoBossData.IsSupportedBoss(_taskParam.BossName))
+        if (!AutoBossData.IsSupportedBoss(param.BossName))
         {
-            throw new Exception($"暂不支持首领：{_taskParam.BossName}");
+            return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, $"暂不支持首领：{param.BossName}");
         }
 
-        if (_taskParam.ReviveRetryCount < 0)
+        if (param.ReviveRetryCount < 0)
         {
-            throw new Exception("角色死亡后重试次数不能小于 0");
+            return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, "角色死亡后重试次数不能小于 0");
         }
 
-        if (_taskParam.SpecifyRunCount && _taskParam.RunCount < 1)
+        // 只有指定讨伐次数模式才使用 RunCount，与原校验一致
+        if (param.SpecifyRunCount && param.RunCount < 1)
         {
-            throw new Exception("指定讨伐次数必须大于 0");
+            return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, "指定讨伐次数必须大于 0");
         }
 
-        if (!_taskParam.SpecifyRunCount && (_taskParam.UseTransientResin || _taskParam.UseFragileResin))
+        if (!param.SpecifyRunCount && (param.UseTransientResin || param.UseFragileResin))
         {
-            throw new Exception("只有指定讨伐次数模式才能开启须臾树脂或脆弱树脂补充");
+            return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, "只有指定讨伐次数模式才能开启须臾树脂或脆弱树脂补充");
         }
 
-        if (string.IsNullOrWhiteSpace(_taskParam.CombatStrategyPath))
+        if (param.Timeout < 1)
         {
-            _taskParam.SetCombatStrategyPath(_taskParam.StrategyName);
+            return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, "战斗超时必须大于 0 秒");
         }
 
-        if (!File.Exists(_taskParam.CombatStrategyPath) && !Directory.Exists(_taskParam.CombatStrategyPath))
-        {
-            throw new Exception("当前选择的自动战斗策略文件不存在");
-        }
+        return null;
+    }
 
+    /// <summary>
+    /// 校验当前首领启动任务前必须存在的路线文件。
+    /// </summary>
+    /// <exception cref="FileNotFoundException">必需路线文件不存在时抛出。</exception>
+    private void ValidateRouteFiles()
+    {
         foreach (var route in GetRequiredRouteFiles(_taskParam.BossName))
         {
             if (!File.Exists(BuildPathingAssetPath(route)))
@@ -1078,7 +1170,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             return;
         }
 
-        _logger.LogInformation("{Name}：切换队伍 {TeamName}", Name, _taskParam.TeamName);
+        _logger.LogInformation("{Name}：切换队伍 {TeamName}", TaskName, _taskParam.TeamName);
         _switchPartyTask ??= new SwitchPartyTask(_runtime);
         var success = await _switchPartyTask.Start(_taskParam.TeamName, _ct);
         if (!success)
@@ -1092,7 +1184,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     /// </summary>
     private async Task NavigateToBoss()
     {
-        _logger.LogInformation("{Name}：前往 {Boss}", Name, _taskParam.BossName);
+        _logger.LogInformation("{Name}：前往 {Boss}", TaskName, _taskParam.BossName);
         if (AutoBossData.IsNoPathingSupportBoss(_taskParam.BossName))
         {
             await RunPathingFile($"{_taskParam.BossName}强制传送.json");
@@ -1170,7 +1262,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         using var navigationCts = CancellationTokenSource.CreateLinkedTokenSource(_ct);
         var page = new BvPage(_runtime, navigationCts.Token);
 
-        _logger.LogInformation("{Name}：开始寻找征讨之花", Name);
+        _logger.LogInformation("{Name}：开始寻找征讨之花", TaskName);
 
         var navigationStopwatch = Stopwatch.StartNew();
         var navigationTimeout = TimeSpan.FromSeconds(20);
@@ -1193,7 +1285,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
                 if (completedTask == monitorRewardPromptTask)
                 {
                     await monitorRewardPromptTask;
-                    _logger.LogInformation("{Name}：已进入征讨之花领奖界面", Name);
+                    _logger.LogInformation("{Name}：已进入征讨之花领奖界面", TaskName);
                     return;
                 }
 
@@ -1280,7 +1372,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             var boxRegions = page.Locator(LoadRecognitionObject("RewardBox")).FindAll();
             if (boxRegions.Count < 1)
             {
-                _logger.LogWarning("{Name}：未找到征讨之花图标，调整视角重试", Name);
+                _logger.LogWarning("{Name}：未找到征讨之花图标，调整视角重试", TaskName);
                 InputHub.Foreground.Mouse.MoveMouseBy(ScaleX(200), 0);
                 await _runtime.Delay(250, ct);
                 continue;
@@ -1326,7 +1418,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
                         isMovingForward = false;
                     }
 
-                    _logger.LogInformation("{Name}：检测到攀爬状态，尝试脱离", Name);
+                    _logger.LogInformation("{Name}：检测到攀爬状态，尝试脱离", TaskName);
                     InputHub.Foreground.SimulateAction(GIActions.Drop);
                     await _runtime.Delay(1000, ct);
                     InputHub.Foreground.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown);
@@ -1378,7 +1470,7 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
 
         await TryRecognizeRewardResult(page);
         await CloseRewardResult();
-        Notify.Event("AutoBoss").Success($"{Name}奖励领取");
+        Notify.Event("AutoBoss").Success($"{TaskName}奖励领取");
         return true;
     }
 
@@ -1393,29 +1485,29 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
         {
             if (!await WaitForRewardResultReady(page))
             {
-                _logger.LogWarning("{Name}：奖励结果页未检测到“点击空白区域继续”，已跳过本轮奖励识别", Name);
+                _logger.LogWarning("{Name}：奖励结果页未检测到“点击空白区域继续”，已跳过本轮奖励识别", TaskName);
                 return;
             }
 
             // 使用多页识别（自动检测是否需要翻页）
-            _logger.LogInformation("{Name}：开始奖励识别", Name);
+            _logger.LogInformation("{Name}：开始奖励识别", TaskName);
             var rewards = RewardResultRecognizer.Instance.RecognizeMultiPage(_runtime);
 
             RewardResultRecognizer.MergeIntoSummary(_rewardSummary, rewards);
 
             if (rewards.Count > 0)
             {
-                _logger.LogInformation("{Name}：本轮奖励识别结果 {Rewards}", Name,
+                _logger.LogInformation("{Name}：本轮奖励识别结果 {Rewards}", TaskName,
                     string.Join(", ", rewards.Select(r => $"{r.Key} x{r.Value}")));
             }
             else
             {
-                _logger.LogWarning("{Name}：本轮奖励识别结果为空", Name);
+                _logger.LogWarning("{Name}：本轮奖励识别结果为空", TaskName);
             }
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
-            _logger.LogWarning(e, "{Name}：奖励识别失败，已跳过本轮奖励汇总", Name);
+            _logger.LogWarning(e, "{Name}：奖励识别失败，已跳过本轮奖励汇总", TaskName);
         }
     }
 
@@ -1458,11 +1550,11 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
             var supplementRegions = await page.Locator("补充原粹树脂", useRect).TryWaitFor(1000);
             if (supplementRegions.Count > 0)
             {
-                _logger.LogInformation("{Name}：领奖界面提示补充原粹树脂，当前原粹树脂不足", Name);
+                _logger.LogInformation("{Name}：领奖界面提示补充原粹树脂，当前原粹树脂不足", TaskName);
             }
             else
             {
-                _logger.LogWarning("{Name}：未能在世界 Boss 领奖界面点击“使用原粹树脂”，原因：{Reason}", Name, e.Message);
+                _logger.LogWarning("{Name}：未能在世界 Boss 领奖界面点击“使用原粹树脂”，原因：{Reason}", TaskName, e.Message);
             }
 
             return false;
@@ -1540,26 +1632,26 @@ public class AutoBossTask : ISoloTask<Dictionary<string, int>>
     {
         if (AutoBossData.IsTalkToStartBoss(_taskParam.BossName))
         {
-            _logger.LogInformation("{Name}：战后重新靠近交互点", Name);
+            _logger.LogInformation("{Name}：战后重新靠近交互点", TaskName);
             await RunPathingFile($"{_taskParam.BossName}战斗后快速前往.json");
             return;
         }
 
         if (AutoBossData.IsNoPathingSupportBoss(_taskParam.BossName))
         {
-            _logger.LogInformation("{Name}：重新执行特殊路线靠近首领", Name);
+            _logger.LogInformation("{Name}：重新执行特殊路线靠近首领", TaskName);
             await NavigateToBoss();
             return;
         }
 
         if (AutoBossData.ShouldRerunRoute(_taskParam.BossName))
         {
-            _logger.LogInformation("{Name}：重新执行完整路线靠近首领", Name);
+            _logger.LogInformation("{Name}：重新执行完整路线靠近首领", TaskName);
             await RunPathingFile($"{_taskParam.BossName}前往.json");
             return;
         }
 
-        _logger.LogInformation("{Name}：重新靠近首领位置并等待 4 秒", Name);
+        _logger.LogInformation("{Name}：重新靠近首领位置并等待 4 秒", TaskName);
         var routePath = BuildPathingAssetPath($"{_taskParam.BossName}前往.json");
         var originalTask = PathingTask.BuildFromFilePath(routePath) ?? throw new Exception($"路径文件解析失败：{routePath}");
         var lastPosition = originalTask.Positions.LastOrDefault() ?? throw new Exception("路线文件缺少路径点");

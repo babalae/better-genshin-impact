@@ -34,7 +34,7 @@ public sealed class SoloTaskButton : Button
         {
             RelativeSource = RelativeSource.Self
         });
-        SetBinding(CommandParameterProperty, new Binding($"{nameof(State)}.{nameof(SoloTaskButtonState.TaskType)}")
+        SetBinding(CommandParameterProperty, new Binding($"{nameof(State)}.{nameof(SoloTaskButtonState.TaskId)}")
         {
             RelativeSource = RelativeSource.Self
         });
@@ -68,7 +68,7 @@ public sealed class SoloTaskButton : Button
     }
 
     /// <summary>
-    /// 接收 <see cref="BetterGenshinImpact.GameTask.SoloTask.SoloTaskType"/> 参数的统一管理命令。
+    /// 接收独立任务标识（字符串）参数的统一管理命令。
     /// </summary>
     public ICommand? ActionCommand
     {

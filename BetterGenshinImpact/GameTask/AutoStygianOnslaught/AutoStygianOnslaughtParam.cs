@@ -39,6 +39,13 @@ public class AutoStygianOnslaughtParam:BaseTaskParam<AutoStygianOnslaughtTask>
     public string FightTeamName { get; set; }
     // 战斗脚本包路径
     public string CombatScriptBagPath { get; set; }
+
+    /// <summary>
+    /// 战斗策略名称（可为策略名、路径或“根据队伍自动选择”）。
+    /// 仅当 <see cref="CombatScriptBagPath"/> 为空时，任务才按此名称解析策略路径；任务计划保存名称便于跨机器使用。
+    /// </summary>
+    public string? StrategyName { get; set; }
+
     public void SetDefault()
     {
         var config = Config.AutoStygianOnslaughtConfig;
@@ -55,6 +62,8 @@ public class AutoStygianOnslaughtParam:BaseTaskParam<AutoStygianOnslaughtTask>
         TransientResinUseCount = config.TransientResinUseCount;
         FragileResinUseCount = config.FragileResinUseCount;
         FightTeamName = config.FightTeamName;
+        // 同时记录策略名，路径被清空时任务可按名称重新解析
+        StrategyName = config.StrategyName;
         SetCombatStrategyPath(config.StrategyName);
     }
     public AutoStygianOnslaughtParam() : base(null, null)

@@ -7,6 +7,7 @@ using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.SoloTask;
 using Microsoft.Extensions.Logging;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
@@ -31,10 +32,13 @@ public class FishingHandler(GameRuntime runtime, AllConfig config) : IActionHand
 
     public async Task RunAsync(CancellationToken ct, WaypointForTrack? waypointForTrack = null, object? config = null)
     {
-        // 钓鱼
-        AutoFishingTask autoFishingTask = new(_runtime, _config, AutoFishingTaskParam.BuildFromConfig(_config.AutoFishingConfig));
-
-        await autoFishingTask.Start(ct);
+        // 钓鱼：路线中的钓鱼点不保存关键帧截图；失败时只记录原因，继续执行后续路线
+        var result = await new AutoFishingTask(_runtime, _config)
+            .RunAsync(AutoFishingTaskParam.BuildFromConfig(_config.AutoFishingConfig), ct);
+        if (result.Kind == SoloTaskResultKind.Failed)
+        {
+            Logger.LogWarning("自动钓鱼失败：{Message}", result.Message);
+        }
 
         await _runtime.Delay(1000, ct);
     }

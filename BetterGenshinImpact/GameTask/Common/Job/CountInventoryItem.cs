@@ -13,13 +13,15 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Script.Dependence;
+using BetterGenshinImpact.GameTask.SoloTask;
 
 namespace BetterGenshinImpact.GameTask.Common.Job
 {
-    internal class CountInventoryItem : ISoloTask<object>
+    /// <summary>
+    /// 背包数物品：按背包页扫描目标物品并识别数量
+    /// </summary>
+    internal class CountInventoryItem : ISoloTask<CountInventoryItemParam, InventoryCountData>
     {
-        public string Name => "背包数物品";
-
         private readonly ILogger logger = App.GetLogger<CountInventoryItem>();
 
         /// <summary>
@@ -28,19 +30,44 @@ namespace BetterGenshinImpact.GameTask.Common.Job
         private readonly GameRuntime _runtime;
         private IInputChannel input => InputHub.Foreground;
         private CancellationToken ct;
-        private readonly GridScreenName? gridScreenName;
-        private readonly IReadOnlyCollection<string> itemNames;
-        private readonly ItemIconRecognitionMode iconRecognitionMode;
-        private readonly bool stopByItemSort;
+
+        /// <summary>
+        /// 指定扫描的背包页，为空时按物品所在页自动分组；在 RunAsync 开头由参数赋值
+        /// </summary>
+        private GridScreenName? gridScreenName;
+
+        /// <summary>
+        /// 去重后的目标物品名称；在 RunAsync 开头由参数赋值
+        /// </summary>
+        private IReadOnlyCollection<string> itemNames = [];
+
+        /// <summary>
+        /// 物品图标识别方式；在 RunAsync 开头由参数赋值
+        /// </summary>
+        private ItemIconRecognitionMode iconRecognitionMode;
+
+        /// <summary>
+        /// 是否按物品排序提前结束扫描；在 RunAsync 开头由参数赋值
+        /// </summary>
+        private bool stopByItemSort;
 
         /// <summary>
         /// 创建背包数物品任务
         /// </summary>
         /// <param name="runtime">本次运行使用的运行环境</param>
-        /// <param name="param">任务参数</param>
-        public CountInventoryItem(GameRuntime runtime, CountInventoryItemParam param)
+        public CountInventoryItem(GameRuntime runtime)
         {
             _runtime = runtime;
+        }
+
+        /// <summary>
+        /// 校验参数并读取到字段中。参数无效时保持原来的抛异常行为，供 JS 脚本按原方式感知错误。
+        /// </summary>
+        /// <param name="param">任务参数</param>
+        /// <exception cref="ArgumentNullException">参数为空。</exception>
+        /// <exception cref="ArgumentException">目标物品列表为空或包含空名称。</exception>
+        private void Initialize(CountInventoryItemParam param)
+        {
             if (param == null)
             {
                 throw new ArgumentNullException(nameof(param));
@@ -49,6 +76,7 @@ namespace BetterGenshinImpact.GameTask.Common.Job
             param.Validate();
 
             this.gridScreenName = param.GridScreenName;
+            // 目标物品去重，避免重复扫描同一物品
             List<string> distinctItemNames = param.ItemNames.Distinct().ToList();
             if (distinctItemNames.Count != param.ItemNames.Count)
             {
@@ -59,9 +87,16 @@ namespace BetterGenshinImpact.GameTask.Common.Job
             this.stopByItemSort = param.StopByItemSort;
         }
 
-        public async Task<object> Start(CancellationToken ct)
+        /// <summary>
+        /// 逐页扫描背包，统计目标物品数量。
+        /// </summary>
+        /// <param name="param">任务参数</param>
+        /// <param name="ct">取消令牌</param>
+        /// <returns>扫描结束返回 Success，数据中包含找到的物品数量；未找到的物品不在结果中。</returns>
+        public async Task<SoloTaskResult<InventoryCountData>> RunAsync(CountInventoryItemParam param, CancellationToken ct)
         {
             this.ct = ct;
+            Initialize(param);
 
             //构造扫描批次
             List<(GridScreenName Page, List<string> PageItemNames)> pageBatches = BuildPageBatches();
@@ -96,7 +131,8 @@ namespace BetterGenshinImpact.GameTask.Common.Job
             }
 
             await new ReturnMainUiTask(_runtime).Start(ct);
-            return results;
+            return SoloTaskResult.Success(new InventoryCountData { Counts = results },
+                $"找到 {results.Count}/{this.itemNames.Count} 类物品");
         }
 
         /// <summary>
@@ -282,11 +318,6 @@ namespace BetterGenshinImpact.GameTask.Common.Job
 
             logger.LogWarning("无法识别数量，OCR 原文：{Text}，原因：{Reason}", result.RawText, result.Reason);
             return -2;
-        }
-
-        async Task ISoloTask.Start(CancellationToken ct)
-        {
-            await Start(ct);
         }
     }
 }

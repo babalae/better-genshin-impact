@@ -4,6 +4,7 @@
              xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
              xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
              xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
+             xmlns:converters="clr-namespace:BetterGenshinImpact.View.Converters"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:dd="urn:gong-wpf-dragdrop"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -28,6 +29,39 @@
     <UserControl.Resources>
         <!-- ContextMenu 位于独立可视树，必须通过 Freezable 代理稳定访问页面 ViewModel。 -->
         <behavior:BindingProxy x:Key="PageBindingProxy" Data="{Binding}" />
+        <converters:MultiValueArrayConverter x:Key="MultiValueArrayConverter" />
+
+        <!--
+            “添加独立任务”子菜单的菜单项。叶子项执行 AddSoloTaskCommand，参数为 [目标节点, 任务类型]；
+            目标节点取自父菜单项的 Tag，两处右键菜单因此共用同一个样式。分隔项显示为分隔线，不可点击、不可聚焦。
+        -->
+        <Style x:Key="SoloTaskMenuItemStyle"
+               BasedOn="{StaticResource {x:Type MenuItem}}"
+               TargetType="MenuItem">
+            <Setter Property="Header" Value="{Binding Header}" />
+            <Setter Property="Command" Value="{Binding Data.ViewModel.AddSoloTaskCommand, Source={StaticResource PageBindingProxy}}" />
+            <Setter Property="CommandParameter">
+                <Setter.Value>
+                    <MultiBinding Converter="{StaticResource MultiValueArrayConverter}">
+                        <Binding Path="Tag" RelativeSource="{RelativeSource AncestorType=MenuItem}" />
+                        <Binding Path="TaskType" />
+                    </MultiBinding>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSeparator}" Value="True">
+                    <Setter Property="Focusable" Value="False" />
+                    <Setter Property="IsHitTestVisible" Value="False" />
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="MenuItem">
+                                <Separator Style="{DynamicResource {x:Static MenuItem.SeparatorStyleKey}}" />
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
 
         <Style x:Key="EditorCardStyle" TargetType="Border">
             <Setter Property="Padding" Value="12" />
@@ -250,9 +284,11 @@
                         <MenuItem Header="添加分组"
                                   Command="{Binding Data.ViewModel.AddGroupCommand, Source={StaticResource PageBindingProxy}}"
                                   CommandParameter="{Binding}" />
-                        <MenuItem Header="添加内置任务"
-                                  Command="{Binding Data.ViewModel.AddBuiltinTaskCommand, Source={StaticResource PageBindingProxy}}"
-                                  CommandParameter="{Binding}" />
+                        <!-- Tag 记录目标节点，子菜单项从父菜单项读取它作为命令参数的第一项。 -->
+                        <MenuItem Header="添加独立任务"
+                                  ItemContainerStyle="{StaticResource SoloTaskMenuItemStyle}"
+                                  ItemsSource="{Binding Data.ViewModel.SoloTaskMenu, Source={StaticResource PageBindingProxy}}"
+                                  Tag="{Binding}" />
                         <MenuItem Header="添加地图追踪任务"
                                   Command="{Binding Data.ViewModel.AddPathingTaskCommand, Source={StaticResource PageBindingProxy}}"
                                   CommandParameter="{Binding}" />
@@ -523,9 +559,11 @@
                                                 <MenuItem Header="添加分组"
                                                           Command="{Binding Data.ViewModel.AddGroupCommand, Source={StaticResource PageBindingProxy}}"
                                                           CommandParameter="{Binding Data.ViewModel.SelectedDocument.RootNode, Source={StaticResource PageBindingProxy}}" />
-                                                <MenuItem Header="添加内置任务"
-                                                          Command="{Binding Data.ViewModel.AddBuiltinTaskCommand, Source={StaticResource PageBindingProxy}}"
-                                                          CommandParameter="{Binding Data.ViewModel.SelectedDocument.RootNode, Source={StaticResource PageBindingProxy}}" />
+                                                <!-- 空白处菜单的目标节点固定为当前计划的根节点。 -->
+                                                <MenuItem Header="添加独立任务"
+                                                          ItemContainerStyle="{StaticResource SoloTaskMenuItemStyle}"
+                                                          ItemsSource="{Binding Data.ViewModel.SoloTaskMenu, Source={StaticResource PageBindingProxy}}"
+                                                          Tag="{Binding Data.ViewModel.SelectedDocument.RootNode, Source={StaticResource PageBindingProxy}}" />
                                                 <MenuItem Header="添加地图追踪任务"
                                                           Command="{Binding Data.ViewModel.AddPathingTaskCommand, Source={StaticResource PageBindingProxy}}"
                                                           CommandParameter="{Binding Data.ViewModel.SelectedDocument.RootNode, Source={StaticResource PageBindingProxy}}" />

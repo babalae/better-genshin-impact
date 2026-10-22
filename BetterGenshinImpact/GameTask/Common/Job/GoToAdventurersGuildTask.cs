@@ -8,9 +8,11 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.SoloTask;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 using Microsoft.Extensions.Localization;
@@ -76,8 +78,16 @@ public class GoToAdventurersGuildTask
 
                 if (!onlyDoOnce)
                 {
-                    // F1领取奖励
-                    await new ClaimEncounterPointsRewardsTask(_runtime, _config).Start(ct);
+                    // F1领取奖励：与原行为一致，历练点领取的失败或异常不影响后续冒险家协会流程；取消与运行环境停止仍向外抛出
+                    try
+                    {
+                        await new ClaimEncounterPointsRewardsTask(_runtime, _config).RunAsync(NoParam.Instance, ct);
+                    }
+                    catch (Exception e) when (e is not NormalEndException and not OperationCanceledException)
+                    {
+                        Logger.LogDebug(e, "领取长效历练点奖励异常");
+                        Logger.LogError("领取长效历练点奖励异常: {Msg}", e.Message);
+                    }
                 }
 
                 await DoOnce(country, ct);

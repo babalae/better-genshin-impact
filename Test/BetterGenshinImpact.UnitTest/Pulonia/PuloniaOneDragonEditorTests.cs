@@ -1,4 +1,9 @@
-using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.AutoBoss;
+using BetterGenshinImpact.GameTask.AutoDomain;
+using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
+using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
+using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
@@ -21,26 +26,28 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-pulonia-editor-" + Guid.NewGuid().ToString("N"));
 
     /// <summary>
-    /// 默认清单按旧一条龙顺序包含八个内置任务，两份配置的计划与全部任务 ID 互相独立。
+    /// 默认清单由能力定义的 OneDragonOrder 生成，按旧一条龙顺序包含八个独立任务，未声明顺序的任务不加入；
+    /// 两份配置的计划与全部任务 ID 互相独立。
     /// </summary>
     [Fact]
     public void CreatePlan_KeepsDefaultOrderAndIndependentIds()
     {
-        var first = PuloniaOneDragonDefaults.CreatePlan("周一一条龙");
-        var second = PuloniaOneDragonDefaults.CreatePlan("周二一条龙");
+        var definitions = PuloniaSoloTestDefinitions.OneDragonCandidates();
+        var first = PuloniaOneDragonDefaults.CreatePlan("周一一条龙", definitions);
+        var second = PuloniaOneDragonDefaults.CreatePlan("周二一条龙", definitions);
 
         Assert.Equal(PuloniaTaskPlanPurpose.OneDragon, first.Purpose);
         Assert.Equal(PuloniaTaskPlanPurpose.OneDragon, second.Purpose);
         Assert.Equal(new[]
         {
-            ("领取邮件", "builtin.claim_mail"),
-            ("合成树脂", "builtin.craft_condensed_resin"),
-            ("自动秘境", "builtin.auto_domain"),
-            ("自动首领讨伐", "builtin.auto_boss"),
-            ("自动幽境危战", "builtin.auto_stygian"),
-            ("自动地脉花", "builtin.auto_ley_line"),
-            ("领取每日奖励", "builtin.daily_rewards"),
-            ("领取尘歌壶奖励", "builtin.serenitea_pot_rewards")
+            ("领取邮件", Solo(ClaimMailRewardsTask.TaskId)),
+            ("合成浓缩树脂", Solo(GoToCraftingBenchTask.TaskId)),
+            ("自动秘境", Solo(AutoDomainTask.TaskId)),
+            ("自动首领讨伐", Solo(AutoBossTask.TaskId)),
+            ("自动幽境危战", Solo(AutoStygianOnslaughtTask.TaskId)),
+            ("自动地脉花", Solo(AutoLeyLineOutcropTask.TaskId)),
+            ("领取每日奖励", Solo(ClaimDailyRewardsTask.TaskId)),
+            ("领取尘歌壶奖励", Solo(GoToSereniteaPotTask.TaskId))
         }, first.RootTask.Children.Select(task => (task.Name, task.TaskType)).ToArray());
         Assert.NotEqual(first.Id, second.Id);
 
@@ -67,7 +74,8 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
                 Children = [new PuloniaTask { Name = "计算", TaskType = "csharp", Parameters = new JObject { ["values"] = new JArray(1, 2) } }]
             }
         });
-        var oneDragon = await store.SavePlanAsync(PuloniaOneDragonDefaults.CreatePlan("一条龙配置"));
+        var oneDragon = await store.SavePlanAsync(
+            PuloniaOneDragonDefaults.CreatePlan("一条龙配置", PuloniaSoloTestDefinitions.OneDragonCandidates()));
         var page = CreatePage(store, service);
 
         await page.InitializeCommand.ExecuteAsync(null);
@@ -123,13 +131,14 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
         await using var service = CreateService(store);
         var page = CreatePage(store, service);
         var document = new PuloniaTaskPlanDocumentViewModel(
-            PuloniaOneDragonDefaults.CreatePlan("插入一条龙"), [], new PuloniaTaskClipboardService(), true);
+            PuloniaOneDragonDefaults.CreatePlan("插入一条龙", PuloniaSoloTestDefinitions.OneDragonCandidates()), [],
+            new PuloniaTaskClipboardService(), true);
         page.OneDragonDocuments.Add(document);
         var original = document.RootNode.Children[2];
-        Assert.Equal("builtin.auto_domain", original.TaskType);
+        Assert.Equal(Solo(AutoDomainTask.TaskId), original.TaskType);
 
         page.InsertOneDragonTask(document, document.RootNode,
-            new PuloniaTask { Name = "自动秘境", TaskType = "builtin.auto_domain" });
+            new PuloniaTask { Name = "自动秘境", TaskType = Solo(AutoDomainTask.TaskId) });
 
         var inserted = document.RootNode.Children[^1];
         Assert.Same(document.RootNode, inserted.Parent);
@@ -156,12 +165,13 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
     public void GroupDisable_PreservesChildLocalSwitches()
     {
         var document = new PuloniaTaskPlanDocumentViewModel(
-            PuloniaOneDragonDefaults.CreatePlan("开关一条龙"), [], new PuloniaTaskClipboardService(), true);
+            PuloniaOneDragonDefaults.CreatePlan("开关一条龙", PuloniaSoloTestDefinitions.OneDragonCandidates()), [],
+            new PuloniaTaskClipboardService(), true);
         var group = document.InsertNode(new PuloniaTask { Name = "周末加练", TaskType = "group" },
             document.RootNode, document.RootNode.Children.Count);
-        var enabledChild = document.InsertNode(new PuloniaTask { Name = "首领讨伐", TaskType = "builtin.auto_boss" },
+        var enabledChild = document.InsertNode(new PuloniaTask { Name = "首领讨伐", TaskType = Solo(AutoBossTask.TaskId) },
             group, 0);
-        var disabledChild = document.InsertNode(new PuloniaTask { Name = "地脉花", TaskType = "builtin.auto_ley_line" },
+        var disabledChild = document.InsertNode(new PuloniaTask { Name = "地脉花", TaskType = Solo(AutoLeyLineOutcropTask.TaskId) },
             group, 1);
         disabledChild.IsEnabled = false;
 
@@ -190,11 +200,10 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
     [Fact]
     public void ApplyOneDragonParameters_PersistsOnlyChangedFieldsAndIsolatesDuplicates()
     {
-        var definition = new PuloniaCombatTaskExecutor(new AllConfig()).Definitions
-            .First(item => item.TaskType == "builtin.auto_boss");
+        var definition = PuloniaSoloTestDefinitions.AutoBoss();
         var preset = new PuloniaTaskPreset
         {
-            Name = "首领预设", TaskType = "builtin.auto_boss", SchemaVersion = definition.SchemaVersion,
+            Name = "首领预设", TaskType = definition.TaskType, SchemaVersion = definition.SchemaVersion,
             Values = new JObject { ["run_count"] = 2 }
         };
         var document = new PuloniaTaskPlanDocumentViewModel(new PuloniaTaskPlan
@@ -205,12 +214,12 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
                 Name = "参数一条龙",
                 Children =
                 [
-                    new PuloniaTask { Name = "首领讨伐A", TaskType = "builtin.auto_boss", PresetId = preset.Id },
-                    new PuloniaTask { Name = "首领讨伐B", TaskType = "builtin.auto_boss" }
+                    new PuloniaTask { Name = "首领讨伐A", TaskType = definition.TaskType, PresetId = preset.Id },
+                    new PuloniaTask { Name = "首领讨伐B", TaskType = definition.TaskType }
                 ]
             }
         }, [preset], new PuloniaTaskClipboardService(), false);
-        document.SetDefinitions(new PuloniaCombatTaskExecutor(new AllConfig()).Definitions);
+        document.SetDefinitions([definition]);
         var nodeA = document.RootNode.Children[0];
         var nodeB = document.RootNode.Children[1];
 
@@ -244,7 +253,7 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
         using var store = new PuloniaTaskStore(_directory);
         await using var service = CreateService(store);
         var editor = CreatePage(store, service);
-        var page = new PuloniaOneDragonViewModel(editor, service, new PuloniaTaskResourceCatalog(), store);
+        var page = new PuloniaOneDragonViewModel(editor, service, new PuloniaTaskResourceCatalog(), store, EmptyRegistry());
         var first = CreateConfiguration(service.Definitions, "配置一", "same-node-id");
         var second = CreateConfiguration(service.Definitions, "配置二", "same-node-id");
         editor.OneDragonDocuments.Add(first);
@@ -275,7 +284,7 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
     {
         using var store = new PuloniaTaskStore(_directory);
         await using var service = CreateService(store);
-        var page = new PuloniaOneDragonViewModel(CreatePage(store, service), service, new PuloniaTaskResourceCatalog(), store);
+        var page = new PuloniaOneDragonViewModel(CreatePage(store, service), service, new PuloniaTaskResourceCatalog(), store, EmptyRegistry());
         var document = CreateConfiguration(service.Definitions, "配置一", "node-one");
         page.SelectedConfiguration = document;
         page.SettingsFields.Single(field => field.Name == "values").TextValue = draft;
@@ -295,7 +304,7 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
     {
         using var store = new PuloniaTaskStore(_directory);
         await using var service = CreateService(store);
-        var page = new PuloniaOneDragonViewModel(CreatePage(store, service), service, new PuloniaTaskResourceCatalog(), store);
+        var page = new PuloniaOneDragonViewModel(CreatePage(store, service), service, new PuloniaTaskResourceCatalog(), store, EmptyRegistry());
         var first = CreateConfiguration(service.Definitions, "配置一", "node-one");
         var second = CreateConfiguration(service.Definitions, "配置二", "node-two");
         page.SelectedConfiguration = second;
@@ -318,7 +327,7 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
         using var store = new PuloniaTaskStore(_directory);
         await using var service = CreateService(store);
         var editor = CreatePage(store, service);
-        var page = new PuloniaOneDragonViewModel(editor, service, new PuloniaTaskResourceCatalog(), store);
+        var page = new PuloniaOneDragonViewModel(editor, service, new PuloniaTaskResourceCatalog(), store, EmptyRegistry());
         var document = CreateConfiguration(service.Definitions, "配置一", "disabled-node");
         document.InsertNode(new PuloniaTask { Name = "启用的计算任务", TaskType = "csharp" }, document.RootNode, 1);
         editor.OneDragonDocuments.Add(document);
@@ -354,6 +363,16 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
         document.SetDefinitions(definitions);
         return document;
     }
+
+    /// <summary>
+    /// 把独立任务标识转换为任务计划中的任务类型（solo.{TaskId}）。
+    /// </summary>
+    private static string Solo(string taskId) => PuloniaSoloTaskExecutor.ToTaskType(taskId);
+
+    /// <summary>
+    /// 建立不扫描任何程序集的空注册表；这些测试只使用纯计算任务，不需要专属设置界面。
+    /// </summary>
+    private static SoloTaskRegistry EmptyRegistry() => new(Array.Empty<System.Reflection.Assembly>());
 
     /// <summary>
     /// 建立不启动游戏会话的纯任务服务。

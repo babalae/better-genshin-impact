@@ -25,15 +25,29 @@ using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.SoloTask;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
-public class AutoFightJsonTask : ISoloTask
+/// <summary>
+/// 自动战斗（JSON 策略实现）。不直接出现在任务菜单中，由 <see cref="AutoFightEntryTask"/> 或其他任务按策略类型选择调用
+/// </summary>
+public class AutoFightJsonTask : ISoloTask<AutoFightParam, NoData>
 {
-    public string Name => "自动战斗(JSON策略)";
+    /// <summary>
+    /// 原因码：当前队伍没有可执行的 JSON 策略动作，战斗未执行
+    /// </summary>
+    public const string NoUsableActionReason = "no_usable_action";
 
-    private readonly AutoFightParam _taskParam;
-    private readonly JsonCombatStrategy _strategy;
+    /// <summary>
+    /// 本次运行的战斗参数，在 RunAsync 开头赋值
+    /// </summary>
+    private AutoFightParam _taskParam = null!;
+
+    /// <summary>
+    /// 按参数中的策略路径解析得到的 JSON 战斗策略，在 RunAsync 开头赋值
+    /// </summary>
+    private JsonCombatStrategy _strategy = null!;
     private CancellationToken _ct;
 
     private DateTime _lastFightFlagTime = DateTime.Now;
@@ -91,33 +105,49 @@ public class AutoFightJsonTask : ISoloTask
     // 战斗点位
     public static WaypointForTrack? FightWaypoint { get; set; } = null;
 
-    private AutoFightTask.TaskFightFinishDetectConfig _finishDetectConfig;
+    /// <summary>
+    /// 由本次战斗参数换算得到的战斗结束检测配置，在 RunAsync 开头赋值
+    /// </summary>
+    private AutoFightTask.TaskFightFinishDetectConfig _finishDetectConfig = null!;
 
     /// <summary>
     /// 创建自动战斗任务（JSON 策略）
     /// </summary>
     /// <param name="runtime">本次战斗所在的运行环境</param>
     /// <param name="config">配置根</param>
-    /// <param name="taskParam">战斗参数</param>
-    public AutoFightJsonTask(GameRuntime runtime, AllConfig config, AutoFightParam taskParam)
+    public AutoFightJsonTask(GameRuntime runtime, AllConfig config)
     {
         _runtime = runtime;
         _config = config;
         _returnMainUiTask = new ReturnMainUiTask(runtime);
         _assetScale = runtime.SystemInfo.AssetScale;
         _dpi = runtime.SystemInfo.DpiScale;
-        _taskParam = taskParam;
+    }
+
+    /// <summary>
+    /// 依赖本次战斗参数的初始化：保存参数、读取并解析 JSON 策略文件、换算战斗结束检测配置
+    /// </summary>
+    /// <param name="param">本次战斗参数</param>
+    private void Initialize(AutoFightParam param)
+    {
+        _taskParam = param;
         _strategy = JsonCombatStrategyParser.ParseFile(_taskParam.CombatStrategyPath);
 
         _finishDetectConfig = new AutoFightTask.TaskFightFinishDetectConfig(_taskParam);
     }
 
     /// <summary>
-    /// 启动自动战斗（JSON策略模式）
+    /// 运行自动战斗（JSON策略模式）：按优先级循环求值并执行动作，直至检测到战斗结束或超时，随后按参数执行战后拾取。
+    /// 战斗是否真正清场没有确认手段，正常结束时返回 Unverified；当前队伍没有可执行动作时返回 Skipped；取消时抛出 OperationCanceledException
     /// </summary>
+    /// <param name="param">本次战斗参数</param>
     /// <param name="ct">取消令牌</param>
-    public async Task Start(CancellationToken ct)
+    /// <returns>任务结果</returns>
+    public async Task<SoloTaskResult<NoData>> RunAsync(AutoFightParam param, CancellationToken ct)
     {
+        // 依赖参数的初始化必须在读取 _taskParam 之前完成
+        Initialize(param);
+
         _ct = ct;
         AvatarRecognition.SetCurrentAutoFightParam(_taskParam);
         AvatarRecognition.ClearLegendaryBarTracker();
@@ -192,7 +222,8 @@ public class AutoFightJsonTask : ISoloTask
             if (validActions.Count == 0)
             {
                 Logger.LogWarning("JSON 策略：没有可用的动作节点，跳过战斗");
-                return;
+                // 当前队伍与策略不匹配，战斗未执行
+                return SoloTaskResult.Skipped(NoUsableActionReason, "JSON 策略：没有可用的动作节点，跳过战斗");
             }
     
             // 新的取消token
@@ -487,7 +518,7 @@ public class AutoFightJsonTask : ISoloTask
                         {
                             await new ScanPickTask(_runtime, _config).Start(_ct, _taskParam.PickDropsAfterFightSeconds);
                         }
-                        return;
+                        return SoloTaskResult.Unverified("战斗结束，未检测到经验值，跳过万叶拾取");
                     }
                 }
             }
@@ -498,6 +529,9 @@ public class AutoFightJsonTask : ISoloTask
     
             // 战后拾取（完全参照 AutoFightTask）
             await PostFightPickup(combatScenes, timeOutFlag, lastFightName);
+
+            // 战斗与战后拾取流程正常走完；是否清场没有确认手段
+            return SoloTaskResult.Unverified("战斗结束");
         }
         finally
         {

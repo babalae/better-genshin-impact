@@ -29,16 +29,24 @@ using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
+using BetterGenshinImpact.GameTask.SoloTask;
 
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
-public class AutoFightTask : ISoloTask
+/// <summary>
+/// 自动战斗（txt 策略实现）。不直接出现在任务菜单中，由 <see cref="AutoFightEntryTask"/> 或其他任务按策略类型选择调用
+/// </summary>
+public class AutoFightTask : ISoloTask<AutoFightParam, NoData>
 {
-    public string Name => "自动战斗";
+    /// <summary>
+    /// 本次运行的战斗参数，在 RunAsync 开头赋值
+    /// </summary>
+    private AutoFightParam _taskParam = null!;
 
-    private readonly AutoFightParam _taskParam;
-
-    private readonly CombatScriptBag _combatScriptBag;
+    /// <summary>
+    /// 按参数中的策略路径解析得到的战斗脚本集合，在 RunAsync 开头赋值
+    /// </summary>
+    private CombatScriptBag _combatScriptBag = null!;
 
     private CancellationToken _ct;
 
@@ -210,22 +218,32 @@ public class AutoFightTask : ISoloTask
         }
     }
 
-    private TaskFightFinishDetectConfig _finishDetectConfig;
+    /// <summary>
+    /// 由本次战斗参数换算得到的战斗结束检测配置，在 RunAsync 开头赋值
+    /// </summary>
+    private TaskFightFinishDetectConfig _finishDetectConfig = null!;
 
     /// <summary>
     /// 创建自动战斗任务（txt 策略）
     /// </summary>
     /// <param name="runtime">本次战斗所在的运行环境</param>
     /// <param name="config">配置根</param>
-    /// <param name="taskParam">战斗参数</param>
-    public AutoFightTask(GameRuntime runtime, AllConfig config, AutoFightParam taskParam)
+    public AutoFightTask(GameRuntime runtime, AllConfig config)
     {
         _runtime = runtime;
         _config = config;
         _dpi = runtime.SystemInfo.DpiScale;
         _assetScale = runtime.SystemInfo.AssetScale;
         _returnMainUiTask = new ReturnMainUiTask(runtime);
-        _taskParam = taskParam;
+    }
+
+    /// <summary>
+    /// 依赖本次战斗参数的初始化：保存参数、读取并解析策略脚本、换算战斗结束检测配置
+    /// </summary>
+    /// <param name="param">本次战斗参数</param>
+    private void Initialize(AutoFightParam param)
+    {
+        _taskParam = param;
         _combatScriptBag = CombatScriptParser.ReadAndParse(_taskParam.CombatStrategyPath);
 
         _finishDetectConfig = new TaskFightFinishDetectConfig(_taskParam);
@@ -236,8 +254,19 @@ public class AutoFightTask : ISoloTask
     public Dictionary<string, int> delayTimes = new();
     public double checkTime = 5;
     public List<string> checkNames = new();*/
-    public async Task Start(CancellationToken ct)
+
+    /// <summary>
+    /// 运行 txt 策略自动战斗：按策略循环出招直至检测到战斗结束或超时，随后按参数执行战后拾取。
+    /// 战斗是否真正清场没有确认手段，正常结束时返回 Unverified；取消时抛出 OperationCanceledException
+    /// </summary>
+    /// <param name="param">本次战斗参数</param>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>任务结果</returns>
+    public async Task<SoloTaskResult<NoData>> RunAsync(AutoFightParam param, CancellationToken ct)
     {
+        // 依赖参数的初始化必须在读取 _taskParam 之前完成
+        Initialize(param);
+
         using var predictor = _taskParam.FightFinishDetectEnabled
             ? App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiWorld)
             : null;
@@ -585,7 +614,7 @@ public class AutoFightTask : ISoloTask
                     {
                         await new ScanPickTask(_runtime, _config).Start(ct, _taskParam.PickDropsAfterFightSeconds);
                     }
-                    return;
+                    return SoloTaskResult.Unverified("战斗结束，未检测到经验值，跳过万叶拾取");
                 }
             }
         }
@@ -602,7 +631,7 @@ public class AutoFightTask : ISoloTask
         if (_taskParam.BattleThresholdForLoot>=2 && countFight < _taskParam.BattleThresholdForLoot)
         {
             Logger.LogInformation($"战斗人次（{countFight}）低于配置人次（{_taskParam.BattleThresholdForLoot}），跳过此次拾取！");
-            return;
+            return SoloTaskResult.Unverified("战斗结束，战斗人次低于配置人次，跳过拾取");
         }
         
         if (_taskParam.KazuhaPickupEnabled)
@@ -862,6 +891,9 @@ public class AutoFightTask : ISoloTask
             // 执行扫描掉落物光柱并靠近的功能
             await new ScanPickTask(_runtime, _config).Start(ct, _taskParam.PickDropsAfterFightSeconds);
         }
+
+        // 战斗与战后拾取流程正常走完；是否清场没有确认手段
+        return SoloTaskResult.Unverified("战斗结束");
     }
         finally
         {

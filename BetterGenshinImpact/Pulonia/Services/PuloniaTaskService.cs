@@ -853,7 +853,11 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
                 var context = new PuloniaTaskExecutionContext(state.RequestId, state.RunId, state.Snapshot, attempt,
                     task.TaskAddress, (gameTaskLease ?? accountLease)?.Runtime, (completionEvent, token) =>
                         ReportCompletionEventAsync(state, task, attempt, rules, completionEvent, token));
-                outcome = await executor.ExecuteAsync(task, context, nodeCancellation.Token).ConfigureAwait(false);
+                // 持有任务锁期间标记会话，执行器内部不能再通过 TaskRunner 启动任务
+                using (gameTaskLease is not null || accountLease is not null ? BetterGenshinImpact.GameTask.GameTaskSessionScope.Enter() : null)
+                {
+                    outcome = await executor.ExecuteAsync(task, context, nodeCancellation.Token).ConfigureAwait(false);
+                }
                 executorFinishedAt = DateTimeOffset.UtcNow;
                 // 兼容暂时未主动观察令牌的旧执行器：只有它真正返回后才确认取消或超时完成。
                 nodeCancellation.Token.ThrowIfCancellationRequested();
@@ -941,7 +945,8 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
                 message = "地图追踪文件未完整执行成功，不记录采集 CD。";
             var result = new PuloniaTaskNodeResult(task.TaskAddress, task.Name, task.TaskType, attempt,
                 status, message, startedAt, finished, resultData,
-                collectionPolicy is not null && !succeeded && !skipped ? PuloniaTaskOutcomeKind.Failed : outcome?.Kind, outcome?.Evidence);
+                collectionPolicy is not null && !succeeded && !skipped ? PuloniaTaskOutcomeKind.Failed : outcome?.Kind, outcome?.Evidence,
+                outcome?.ReasonCode);
             if (succeeded && collectionPolicy is not null)
                 await CommitCollectionSuccessAsync(state, task, collectionPolicy, result, nodeCancellation.Token).ConfigureAwait(false);
             else

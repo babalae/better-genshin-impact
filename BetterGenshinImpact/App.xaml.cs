@@ -12,6 +12,7 @@ using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.SoloTask;
+using BetterGenshinImpact.GameTask.SoloTask.Execution;
 using BetterGenshinImpact.GameTask.AutoSkip.Audio;
 using BetterGenshinImpact.GameTask.Music.Service;
 using BetterGenshinImpact.GameTask.Runtime;
@@ -38,6 +39,7 @@ using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel;
 using BetterGenshinImpact.ViewModel.Pages;
 using BetterGenshinImpact.ViewModel.Pages.View;
+using BetterGenshinImpact.ViewModel.SoloTaskSettings;
 using BetterGenshinImpact.ViewModel.Windows;
 using LazyCache;
 using Microsoft.Extensions.Caching.Memory;
@@ -178,7 +180,8 @@ public partial class App : Application
 
                 services.AddNavigationViewPageProvider();
                 services.AddSingleton(InstanceBootstrap.Current);
-                services.AddSingleton<SoloTaskRegistry>();
+                // 独立任务：启动时扫描主程序集中带 [SoloTaskInfo] 的任务类
+                services.AddSingleton(_ => new SoloTaskRegistry([typeof(App).Assembly]));
                 services.AddSingleton<SoloTaskExecutionService>();
                 services.AddSingleton<InstanceService>();
                 services.AddHostedService(sp => sp.GetRequiredService<InstanceService>());
@@ -290,8 +293,7 @@ public partial class App : Application
                 services.AddSingleton<IPuloniaTaskExecutor, PuloniaPathingTaskExecutor>();
                 services.AddSingleton<IPuloniaTaskExecutor, PuloniaJavaScriptTaskExecutor>();
                 services.AddSingleton<IPuloniaTaskExecutor, PuloniaKeyMouseTaskExecutor>();
-                services.AddSingleton<IPuloniaTaskExecutor, PuloniaBuiltinTaskExecutor>();
-                services.AddSingleton<IPuloniaTaskExecutor, PuloniaCombatTaskExecutor>();
+                services.AddSingleton<IPuloniaTaskExecutor, PuloniaSoloTaskExecutor>();
                 services.AddSingleton<PuloniaTaskResourceCatalog>();
                 services.AddSingleton(_ => BetterGenshinImpact.Core.Script.Repositories.ScriptRepositoryStore.Shared);
                 services.AddSingleton<PuloniaRepositoryManagementService>();
@@ -381,6 +383,8 @@ public partial class App : Application
             var inferenceRuntime = _host.Services.GetRequiredService<InferenceRuntimeService>();
             // 此处只准备设备配置；模型验证和提示由主实例的 MainWindowViewModel.OnLoaded 执行。
             await inferenceRuntime.InitializeAsync();
+            // 主窗口在宿主启动时创建；先在 UI 线程注册独立任务设置界面的隐式模板
+            SoloTaskSettingsTemplates.Register(Current.Resources, App.GetService<SoloTaskRegistry>()!);
             await _host.StartAsync();
             ServerTimeHelper.Initialize(_host.Services.GetRequiredService<IServerTimeProvider>());
             if (InstanceBootstrap.Current?.Context.IsRoot == true)

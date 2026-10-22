@@ -4,8 +4,11 @@ using System.Linq;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.ViewModel.Pages;
 using BetterGenshinImpact.GameTask.AutoBoss;
+using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
+using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.Pulonia.Executors;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.ViewModel.Pages.Pulonia;
@@ -13,6 +16,16 @@ namespace BetterGenshinImpact.ViewModel.Pages.Pulonia;
 /// <summary>一条龙设置卡片的展示选项；只修饰界面副本，不改变执行器 Schema。</summary>
 internal static class PuloniaOneDragonSettingChoices
 {
+    /// <summary>
+    /// 自动秘境的任务类型；只有自动秘境的策略下拉提供自动连招。
+    /// </summary>
+    private static readonly string DomainTaskType = PuloniaSoloTaskExecutor.ToTaskType(AutoDomainTask.TaskId);
+
+    /// <summary>
+    /// 自动地脉花的任务类型；只有自动地脉花的国家使用地脉花国家列表。
+    /// </summary>
+    private static readonly string LeyLineTaskType = PuloniaSoloTaskExecutor.ToTaskType(AutoLeyLineOutcropTask.TaskId);
+
     /// <summary>将秘境、首领和战斗策略展示为旧一条龙的下拉框，并展开战斗对象。</summary>
     internal static JObject Decorate(string name, JObject schema, JToken? value, string taskType)
     {
@@ -22,9 +35,10 @@ internal static class PuloniaOneDragonSettingChoices
         {
             "domain_name" => ["", .. MapLazyAssets.Get().DomainNameList],
             "boss_name" => ["", .. AutoBossData.SupportedBossNames],
-            "country" when taskType == "builtin.auto_ley_line" => [.. TaskSettingsPageViewModel.LeyLineOutcropCountryList],
+            "country" when taskType == LeyLineTaskType => [.. TaskSettingsPageViewModel.LeyLineOutcropCountryList],
             "ley_line_outcrop_type" => ["启示之花", "藏金之花"],
-            "strategy_name" => GetStrategies(taskType == "builtin.auto_domain"),
+            // 独立任务参数里的策略路径也接受策略名（由 CombatStrategyResolver 解析），因此与策略名共用下拉
+            "strategy_name" or "combat_strategy_path" => GetStrategies(taskType == DomainTaskType),
             "sunday_selected_value" => ["", "1", "2", "3"],
             "max_artifact_star" => ["1", "2", "3", "4"],
             _ => null
@@ -40,8 +54,9 @@ internal static class PuloniaOneDragonSettingChoices
             "boss_name" => "选择要讨伐的首领。",
             "country" => "选择任务前往的国家。",
             "party_name" or "team_name" or "team" or "fight_team_name" => "填写游戏内队伍名称，留空时使用当前队伍。",
-            "strategy_name" => "选择当前任务使用的战斗策略。",
+            "strategy_name" or "combat_strategy_path" => "选择当前任务使用的战斗策略。",
             "round_count" => "0 表示按树脂配置刷取，其余值表示指定轮数。",
+            "domain_round_num" => "9999 表示按树脂配置刷取，其余值表示指定轮数。",
             "is_resin_exhaustion_mode" => "开启后持续刷取至树脂耗尽。",
             "resin_priority_list" => "按列表顺序使用树脂。",
             "weekday_overrides" => "按周日到周六安排任务，服务器时间凌晨四点切换日期。",
@@ -73,7 +88,12 @@ internal static class PuloniaOneDragonSettingChoices
     internal static JObject WeekdaySchema(JObject properties, JObject values, string taskType)
     {
         var days = new[] { "周日", "周一", "周二", "周三", "周四", "周五", "周六" };
-        var keys = new[] { "domain_name", "party_name", "strategy_name", "round_count", "ley_line_outcrop_type", "country", "team", "count" };
+        // 只展示参数中存在的键；独立任务参数使用 combat_strategy_path、domain_round_num 等新参数名
+        var keys = new[]
+        {
+            "domain_name", "party_name", "sunday_selected_value", "strategy_name", "combat_strategy_path",
+            "round_count", "domain_round_num", "ley_line_outcrop_type", "country", "team", "count"
+        };
         return new JObject
         {
             ["type"] = "object", ["title"] = "每周安排", ["description"] = "按服务器时间凌晨四点切换日期，未设置的日期沿用当前任务设置。",

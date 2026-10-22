@@ -77,7 +77,7 @@ public class RedeemCodeManager
 
         Clipboard.Clear();
         // 任务在拿到本轮运行环境之后才构造
-        await new TaskRunner().RunSoloTaskAsync(rt => new UseRedemptionCodeTask(rt, codes));
+        await new TaskRunner().RunSoloTaskAsync(rt => new UseRedemptionCodeTask(rt), new UseRedemptionCodeParam { Codes = codes });
     }
 
     public static List<string> ExtractAllCodes(string clipboardText)

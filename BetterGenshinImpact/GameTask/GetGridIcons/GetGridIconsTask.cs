@@ -8,6 +8,7 @@ using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Helpers.Extensions;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -25,8 +26,14 @@ namespace BetterGenshinImpact.GameTask.GetGridIcons;
 /// <summary>
 /// 获取Grid界面的物品图标
 /// </summary>
-public class GetGridIconsTask : ISoloTask
+[SoloTaskInfo(TaskId, "截取物品图标", Group = "调试", Order = 610, Scopes = SoloTaskScopes.Standalone)]
+public class GetGridIconsTask : ISoloTask<GetGridIconsParam, NoData>
 {
+    /// <summary>
+    /// 任务标识。
+    /// </summary>
+    public const string TaskId = "get_grid_icons";
+
     /// <summary>
     /// 本次运行使用的运行环境
     /// </summary>
@@ -37,32 +44,42 @@ public class GetGridIconsTask : ISoloTask
 
     private CancellationToken ct;
 
-    public string Name => "获取Grid界面物品图标独立任务";
+    /// <summary>
+    /// 最多获取的数量，为空表示不限；在 RunAsync 开头由参数赋值
+    /// </summary>
+    private int? maxNumToGet;
 
-    private readonly int? maxNumToGet;
+    /// <summary>
+    /// 目标 Grid 界面；在 RunAsync 开头由参数赋值
+    /// </summary>
+    private GridScreenName gridScreenName;
 
-    private readonly GridScreenName gridScreenName;
-
-    private readonly bool starAsSuffix;
+    /// <summary>
+    /// 是否把星级作为文件名后缀；在 RunAsync 开头由参数赋值
+    /// </summary>
+    private bool starAsSuffix;
 
     /// <summary>
     /// 创建获取 Grid 界面物品图标任务
     /// </summary>
     /// <param name="runtime">本次运行使用的运行环境</param>
-    /// <param name="gridScreenName">目标 Grid 界面</param>
-    /// <param name="starAsSuffix">是否把星级作为文件名后缀</param>
-    /// <param name="maxNumToGet">最多获取的数量，为空表示不限</param>
-    public GetGridIconsTask(GameRuntime runtime, GridScreenName gridScreenName, bool starAsSuffix, int? maxNumToGet = null)
+    public GetGridIconsTask(GameRuntime runtime)
     {
         _runtime = runtime;
-        this.gridScreenName = gridScreenName;
-        this.starAsSuffix = starAsSuffix;
-        this.maxNumToGet = maxNumToGet;
     }
 
-    public async Task Start(CancellationToken ct)
+    /// <summary>
+    /// 遍历目标 Grid 界面，截取物品图标并按物品名保存到 log/gridIcons 下的时间戳目录。
+    /// </summary>
+    /// <param name="param">截取参数</param>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>流程结束返回 Unverified（图片在后台线程保存，不等待保存结果）。</returns>
+    public async Task<SoloTaskResult<NoData>> RunAsync(GetGridIconsParam param, CancellationToken ct)
     {
         this.ct = ct;
+        this.gridScreenName = param.GridName;
+        this.starAsSuffix = param.StarAsSuffix;
+        this.maxNumToGet = param.MaxNumToGet;
 
         int count = this.maxNumToGet ?? int.MaxValue;
         string directory = Path.Combine(AppContext.BaseDirectory, "log/gridIcons", $"{this.gridScreenName}{DateTime.Now:yyyyMMddHHmmss}");
@@ -85,13 +102,14 @@ public class GetGridIconsTask : ISoloTask
             case GridScreenName.ArtifactSetFilter:
                 logger.LogInformation("{name}暂不支持自动打开，请提前手动打开界面", gridScreenName.GetDescription());
                 await GetArtifactSetFilterGridIcons(count, directory);
-                return;
+                return SoloTaskResult.Unverified($"{gridScreenName.GetDescription()}图标截取结束，保存目录：{directory}");
             default:
                 logger.LogInformation("{name}暂不支持自动打开，请提前手动打开界面", gridScreenName.GetDescription());
                 break;
         }
 
         await GetInventoryGridIcons(count, directory);
+        return SoloTaskResult.Unverified($"{gridScreenName.GetDescription()}图标截取结束，保存目录：{directory}");
     }
 
     private async Task GetInventoryGridIcons(int count, string directory)

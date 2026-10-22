@@ -7,8 +7,14 @@ using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Simulator;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
+using BetterGenshinImpact.GameTask.AutoCook;
+using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
+using BetterGenshinImpact.GameTask.AutoFishing;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
+using BetterGenshinImpact.GameTask.AutoMusicGame;
+using BetterGenshinImpact.GameTask.AutoWood;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Handler;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
@@ -675,7 +681,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             nameof(Config.HotKeyConfig.AutoGeniusInvokationHotkey),
             Config.HotKeyConfig.AutoGeniusInvokationHotkey,
             Config.HotKeyConfig.AutoGeniusInvokationHotkeyType,
-            (_, _) => { ManageSoloTask(SoloTaskType.AutoGeniusInvokation); }
+            (_, _) => { ManageSoloTask(AutoGeniusInvokationTask.TaskId); }
         ));
 
         soloTaskDirectory.Children.Add(new HotKeySettingModel(
@@ -683,7 +689,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             nameof(Config.HotKeyConfig.AutoWoodHotkey),
             Config.HotKeyConfig.AutoWoodHotkey,
             Config.HotKeyConfig.AutoWoodHotkeyType,
-            (_, _) => { ManageSoloTask(SoloTaskType.AutoWood); }
+            (_, _) => { ManageSoloTask(AutoWoodTask.TaskId); }
         ));
 
         soloTaskDirectory.Children.Add(new HotKeySettingModel(
@@ -691,7 +697,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             nameof(Config.HotKeyConfig.AutoFightHotkey),
             Config.HotKeyConfig.AutoFightHotkey,
             Config.HotKeyConfig.AutoFightHotkeyType,
-            (_, _) => { ManageSoloTask(SoloTaskType.AutoFight); }
+            (_, _) => { ManageSoloTask(AutoFightEntryTask.TaskId); }
         ));
 
         soloTaskDirectory.Children.Add(new HotKeySettingModel(
@@ -699,28 +705,28 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             nameof(Config.HotKeyConfig.AutoDomainHotkey),
             Config.HotKeyConfig.AutoDomainHotkey,
             Config.HotKeyConfig.AutoDomainHotkeyType,
-            (_, _) => { ManageSoloTask(SoloTaskType.AutoDomain); }
+            (_, _) => { ManageSoloTask(AutoDomainTask.TaskId); }
         ));
         soloTaskDirectory.Children.Add(new HotKeySettingModel(
             "启动/停止自动音游",
             nameof(Config.HotKeyConfig.AutoMusicGameHotkey),
             Config.HotKeyConfig.AutoMusicGameHotkey,
             Config.HotKeyConfig.AutoMusicGameHotkeyType,
-            (_, _) => { ManageSoloTask(SoloTaskType.AutoMusicGame); }
+            (_, _) => { ManageSoloTask(AutoMusicGameTask.TaskId); }
         ));
         soloTaskDirectory.Children.Add(new HotKeySettingModel(
             "启动/停止自动钓鱼",
             nameof(Config.HotKeyConfig.AutoFishingGameHotkey),
             Config.HotKeyConfig.AutoFishingGameHotkey,
             Config.HotKeyConfig.AutoFishingGameHotkeyType,
-            (_, _) => { ManageSoloTask(SoloTaskType.AutoFishing); }
+            (_, _) => { ManageSoloTask(AutoFishingTask.TaskId); }
         ));
         soloTaskDirectory.Children.Add(new HotKeySettingModel(
             "启动/停止自动烹饪",
             nameof(Config.HotKeyConfig.AutoCookGameHotkey),
             Config.HotKeyConfig.AutoCookGameHotkey,
             Config.HotKeyConfig.AutoCookGameHotkeyType,
-            (_, _) => { ManageSoloTask(SoloTaskType.AutoCook); }
+            (_, _) => { ManageSoloTask(AutoCookTask.TaskId); }
         ));
 
         macroDirectory.Children.Add(new HotKeySettingModel(
@@ -1035,13 +1041,13 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
     /// <summary>
     /// 独立任务专用快捷键与页面按钮共用同一多实例管理入口。
     /// </summary>
-    private void ManageSoloTask(SoloTaskType taskType)
+    private void ManageSoloTask(string taskId)
     {
         UIDispatcherHelper.BeginInvoke(() =>
         {
-            if (_taskSettingsPageViewModel.ManageSoloTaskCommand.CanExecute(taskType))
+            if (_taskSettingsPageViewModel.ManageSoloTaskCommand.CanExecute(taskId))
             {
-                _taskSettingsPageViewModel.ManageSoloTaskCommand.Execute(taskType);
+                _taskSettingsPageViewModel.ManageSoloTaskCommand.Execute(taskId);
             }
         });
     }

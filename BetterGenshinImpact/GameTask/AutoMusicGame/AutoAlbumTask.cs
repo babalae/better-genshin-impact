@@ -10,6 +10,7 @@ using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 using Microsoft.Extensions.Logging;
@@ -18,11 +19,16 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 namespace BetterGenshinImpact.GameTask.AutoMusicGame;
 
 /// <summary>
-/// 自动音乐专辑
+/// 自动音乐专辑：在主题专辑界面逐首演奏未完成的乐曲，演奏部分组合 <see cref="AutoMusicGameTask"/>
 /// </summary>
-public class AutoAlbumTask : ISoloTask
+[SoloTaskInfo(TaskId, "自动演奏专辑", Group = "小游戏", Order = 530, Scopes = SoloTaskScopes.Standalone,
+    WaitForMainUi = false)]
+public class AutoAlbumTask : ISoloTask<AutoMusicGameParam, NoData>
 {
-    public string Name => "自动音游专辑";
+    /// <summary>
+    /// 稳定任务标识
+    /// </summary>
+    public const string TaskId = "auto_album";
 
     /// <summary>
     /// 本次运行使用的运行环境：截图、等待与点击都只使用它
@@ -34,50 +40,75 @@ public class AutoAlbumTask : ISoloTask
     /// </summary>
     private readonly AllConfig _config;
 
-    private AutoMusicGameTask _autoMusicGameTask;
+    /// <summary>
+    /// 负责单首乐曲演奏的音游任务，每首曲子用本次参数调用一次 RunAsync
+    /// </summary>
+    private readonly AutoMusicGameTask _autoMusicGameTask;
+
+    /// <summary>
+    /// 本次运行的任务参数，在 <see cref="RunAsync"/> 开头赋值，演奏每首曲子时传给音游任务
+    /// </summary>
+    private AutoMusicGameParam _taskParam = null!;
 
     /// <summary>
     /// 创建自动音游专辑任务
     /// </summary>
     /// <param name="runtime">本次运行使用的运行环境</param>
     /// <param name="config">配置根</param>
-    /// <param name="taskParam">任务参数</param>
-    public AutoAlbumTask(GameRuntime runtime, AllConfig config, AutoMusicGameParam taskParam)
+    public AutoAlbumTask(GameRuntime runtime, AllConfig config)
     {
         _runtime = runtime;
         _config = config;
-        _autoMusicGameTask = new AutoMusicGameTask(runtime, config, taskParam);
+        _autoMusicGameTask = new AutoMusicGameTask(runtime, config);
     }
 
-    public async Task Start(CancellationToken ct)
+    /// <summary>
+    /// 运行自动演奏专辑。不在主题专辑界面时返回失败；取消和运行环境停止时抛出异常
+    /// </summary>
+    /// <param name="param">任务参数，演奏每首曲子时原样传给音游任务</param>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>任务结果</returns>
+    public async Task<SoloTaskResult<NoData>> RunAsync(AutoMusicGameParam param, CancellationToken ct)
     {
+        _taskParam = param;
         try
         {
             AutoMusicGameTask.Init(_runtime);
             Notify.Event(NotificationEvent.AlbumStart).Success("自动音游专辑启动");
             Logger.LogInformation("开始自动演奏整个专辑未完成的音乐");
-            await StartOneAlbum(ct);
+            var result = await StartOneAlbum(ct);
+            if (result.Kind == SoloTaskResultKind.Failed)
+            {
+                // 保留原来的专辑异常通知
+                Notify.Event(NotificationEvent.AlbumError).Error($"自动音游专辑异常：{result.Message}");
+                return result;
+            }
+
             Notify.Event(NotificationEvent.AlbumEnd).Success("自动音游专辑结束");
+            return result;
         }
-        catch (NormalEndException e)
+        catch (Exception e) when (e is not OperationCanceledException and not NormalEndException)
         {
-            Logger.LogError("手动取消任务 - {Msg}", e.Message);
-        }
-        catch (Exception e)
-        {
-            Logger.LogError("自动音乐专辑任务异常:{Msg}", e.Message);
+            // 取消与运行环境停止直接向上抛出；其他异常保留专辑异常通知后交给调用方记录
             Logger.LogDebug(e, "自动音乐专辑任务异常详情");
             Notify.Event(NotificationEvent.AlbumError).Error("自动音游专辑异常", e);
+            throw;
         }
     }
 
-    public async Task StartOneAlbum(CancellationToken ct)
+    /// <summary>
+    /// 演奏当前专辑中未完成的乐曲
+    /// </summary>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>不在主题专辑界面时返回失败，全部演奏完毕返回未确认</returns>
+    private async Task<SoloTaskResult<NoData>> StartOneAlbum(CancellationToken ct)
     {
         using var ra1 = _runtime.CaptureToRectArea();
         using var iconRa = ra1.Find(RecognitionAssets.Get("AutoMusicGame", "UiLeftTopAlbumIcon", ra1));
         if (!iconRa.IsExist())
         {
-            throw new Exception("当前未处于主题专辑界面，请在专辑界面运行本任务。注意全部歌曲列表页面无法运行本任务！");
+            return SoloTaskResult.Failed(SoloTaskReasons.PageNotReached,
+                "当前未处于主题专辑界面，请在专辑界面运行本任务。注意全部歌曲列表页面无法运行本任务！");
         }
         else
         {
@@ -86,7 +117,8 @@ public class AutoAlbumTask : ISoloTask
             var ocrRes = ocrArea.FindMulti(RecognitionObject.OcrThis);
             if (ocrRes.Any(region => region.Text.Contains("全部")))
             {
-                throw new Exception("当前在全部歌曲页面，此页面无法运行本任务。请返回到主界面选择专辑列表中以国家为主题的专辑页！");
+                return SoloTaskResult.Failed(SoloTaskReasons.PageNotReached,
+                    "当前在全部歌曲页面，此页面无法运行本任务。请返回到主界面选择专辑列表中以国家为主题的专辑页！");
             }
         }
 
@@ -187,8 +219,8 @@ public class AutoAlbumTask : ISoloTask
                     }
                 }, cts.Token);
 
-                // 演奏任务
-                var musicTask = _autoMusicGameTask.StartWithOutInit(cts.Token);
+                // 演奏任务：组合调用音游任务，用本次参数运行，直到 cts 被取消
+                var musicTask = _autoMusicGameTask.RunAsync(_taskParam, cts.Token);
 
                 // 任意一侧先结束，就说明这一首歌已经可以开始收尾了。
                 await Task.WhenAny(checkTask, musicTask);
@@ -221,5 +253,6 @@ public class AutoAlbumTask : ISoloTask
         }
 
         Logger.LogInformation("当前专辑所有乐曲演奏结束");
+        return SoloTaskResult.Unverified("当前专辑所有乐曲演奏结束");
     }
 }

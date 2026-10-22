@@ -254,8 +254,7 @@ public partial class ScriptGroupProject : ObservableObject
                 shellConfig = GroupInfo?.Config.ShellConfig;
             }
 
-            var task = new ShellTask(runtime, ShellTaskParam.BuildFromConfig(Name, shellConfig ?? new ShellConfig()));
-            await task.Start(ct);
+            await new ShellTask(runtime).RunAsync(ShellTaskParam.BuildFromConfig(Name, shellConfig ?? new ShellConfig()), ct);
         }
     }
 

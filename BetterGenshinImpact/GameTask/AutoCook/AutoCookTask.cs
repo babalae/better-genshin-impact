@@ -4,6 +4,7 @@ using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.SoloTask;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using System;
@@ -15,8 +16,17 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoCook;
 
-public class AutoCookTask : ISoloTask
+/// <summary>
+/// 自动烹饪：在烹饪界面识别完美烹饪区间并自动按下空格
+/// </summary>
+[SoloTaskInfo(TaskId, "自动烹饪", Group = "采集与生活", Order = 330, Scopes = SoloTaskScopes.Standalone)]
+public class AutoCookTask : ISoloTask<NoParam, NoData>
 {
+    /// <summary>
+    /// 稳定任务标识
+    /// </summary>
+    public const string TaskId = "auto_cook";
+
     private readonly ILogger<AutoCookTask> _logger = App.GetLogger<AutoCookTask>();
     private const int UiCheckIntervalMs = 400;
     private const int PeakMinCount = 600; // 最小仙跳墙 700 多
@@ -47,9 +57,13 @@ public class AutoCookTask : ISoloTask
         _config = config;
     }
 
-    public string Name => "自动烹饪";
-
-    public async Task Start(CancellationToken ct)
+    /// <summary>
+    /// 运行自动烹饪，直到取消；开启“检测到自动烹饪按钮时结束”且识别到该按钮时返回成功。取消时抛出异常
+    /// </summary>
+    /// <param name="param">空参数</param>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>任务结果</returns>
+    public async Task<SoloTaskResult<NoData>> RunAsync(NoParam param, CancellationToken ct)
     {
         var assetScale = _runtime.SystemInfo.AssetScale;
         var autoCookConfig = _config.AutoCookConfig;
@@ -90,8 +104,9 @@ public class AutoCookTask : ISoloTask
                         var e = captureRegion.Find(ElementRecognition.Get("BtnWhiteRecover", captureRegion));
                         if (e.IsExist())
                         {
+                            // 出现自动烹饪按钮说明熟练度已满，确认完成
                             _logger.LogInformation("自动烹饪：{Text}", "检测到自动烹饪按钮，结束任务");
-                            return;
+                            return SoloTaskResult.Success("检测到自动烹饪按钮，结束任务");
                         }
                     }
 
@@ -124,6 +139,10 @@ public class AutoCookTask : ISoloTask
 
             await _runtime.Delay(checkIntervalMs, ct);
         }
+
+        // 循环只会因取消结束，取消时向上抛出
+        ct.ThrowIfCancellationRequested();
+        return SoloTaskResult.Unverified("自动烹饪结束");
     }
 
     private static void ResetPeakState(ref int? peakColorCount, ref int? peakCandidate, ref int peakCandidateStableFrames)

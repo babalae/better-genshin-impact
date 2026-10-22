@@ -14,6 +14,7 @@ using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.ViewModel.Pages;
 using Microsoft.Extensions.Logging;
 
@@ -82,7 +83,14 @@ public partial class OneDragonTaskItem : ObservableObject
             case "领取邮件":
                 Action = async (runtime, ct) =>
                 {
-                    await new ClaimMailRewardsTask(runtime).Start(ct);
+                    try
+                    {
+                        LogIfFailed(Name, await new ClaimMailRewardsTask(runtime).RunAsync(NoParam.Instance, ct));
+                    }
+                    catch (Exception e) when (!ct.IsCancellationRequested)
+                    {
+                        TaskControl.Logger.LogError("领取邮件执行异常：" + e.Message);
+                    }
                 };
                 break;
             case "合成树脂":
@@ -90,8 +98,12 @@ public partial class OneDragonTaskItem : ObservableObject
                 {
                     try
                     {
-                        await new GoToCraftingBenchTask(runtime, allConfig).GoCraftResin(config.CraftingBenchCountry,
-                            ct);
+                        var param = new CraftCondensedResinParam
+                        {
+                            Country = config.CraftingBenchCountry,
+                            MinResinToKeep = config.MinResinToKeep
+                        };
+                        LogIfFailed(Name, await new GoToCraftingBenchTask(runtime, allConfig).RunAsync(param, ct));
                     }
                     catch (Exception e)
                     {
@@ -131,7 +143,7 @@ public partial class OneDragonTaskItem : ObservableObject
                         DomainName = domainName,
                         SundaySelectedValue = sundaySelectedValue
                     };
-                    await new AutoDomainTask(runtime, allConfig, autoDomainParam).Start(ct);
+                    LogIfFailed(Name, await new AutoDomainTask(runtime, allConfig).RunAsync(autoDomainParam, ct));
                 };
                 break;
             case "自动首领讨伐":
@@ -180,13 +192,12 @@ public partial class OneDragonTaskItem : ObservableObject
                     param.ReviveRetryCount = config.AutoBossReviveRetryCount;
                     param.ReturnToStatueAfterEachRound = config.AutoBossReturnToStatueAfterEachRound;
                     param.RewardRecognitionEnabled = config.AutoBossRewardRecognitionEnabled;
-                    param.RewardRecognitionEnabled = config.AutoBossRewardRecognitionEnabled;
                     param.Timeout = config.AutoBossTimeout;
                     if (totalRunCountLimited)
                     {
                         param.RewardClaimedCallback = () => config.AutoBossCompletedRunCount++;
                     }
-                    await new AutoBossTask(runtime, allConfig, param).Start(ct);
+                    LogIfFailed(Name, await new AutoBossTask(runtime, allConfig).RunAsync(param, ct));
                 };
                 break;
             case "自动幽境危战":
@@ -206,7 +217,8 @@ public partial class OneDragonTaskItem : ObservableObject
 
                     AutoStygianOnslaughtParam param = new AutoStygianOnslaughtParam();
                     param.SetAutoStygianOnslaughtConfig(allConfig.AutoStygianOnslaughtConfig);
-                    await new AutoStygianOnslaughtTask(runtime, allConfig, param, path).Start(ct);
+                    param.CombatScriptBagPath = path;
+                    LogIfFailed(Name, await new AutoStygianOnslaughtTask(runtime, allConfig).RunAsync(param, ct));
                 };
                 break;
             case "领取每日奖励":
@@ -214,13 +226,34 @@ public partial class OneDragonTaskItem : ObservableObject
                 {
                     await new GoToAdventurersGuildTask(runtime, allConfig).Start(config.AdventurersGuildCountry,
                         ct, config.DailyRewardPartyName);
-                    await new ClaimBattlePassRewardsTask(runtime, allConfig).Start(ct);
+                    try
+                    {
+                        LogIfFailed("领取纪行奖励",
+                            await new ClaimBattlePassRewardsTask(runtime, allConfig).RunAsync(NoParam.Instance, ct));
+                    }
+                    catch (Exception e) when (!ct.IsCancellationRequested)
+                    {
+                        TaskControl.Logger.LogError("领取纪行奖励执行异常：" + e.Message);
+                    }
                 };
                 break;
             case "领取尘歌壶奖励":
                 Action = async (runtime, ct) =>
                 {
-                    await new GoToSereniteaPotTask(runtime, allConfig).Start(ct);
+                    try
+                    {
+                        var param = new SereniteaPotParam
+                        {
+                            TeleportType = config.SereniteaPotTpType,
+                            // 复制一份，避免任务运行时与一条龙配置共享同一个列表
+                            SecretTreasureObjects = [.. config.SecretTreasureObjects]
+                        };
+                        LogIfFailed(Name, await new GoToSereniteaPotTask(runtime, allConfig).RunAsync(param, ct));
+                    }
+                    catch (Exception e) when (!ct.IsCancellationRequested)
+                    {
+                        TaskControl.Logger.LogError("领取尘歌壶奖励执行异常：" + e.Message);
+                    }
                 };
                 break;
             case "自动地脉花":
@@ -232,43 +265,40 @@ public partial class OneDragonTaskItem : ObservableObject
                         return;
                     }
 
+                    // 先从全局地脉花配置生成参数，再用一条龙配置覆盖当天的类型、地区等字段；不修改全局配置
                     var taskConfig = allConfig.AutoLeyLineOutcropConfig;
-                    var originalType = taskConfig.LeyLineOutcropType;
-                    var originalCountry = taskConfig.Country;
-                    var originalCount = taskConfig.Count;
-                    var originalExhaustionMode = taskConfig.IsResinExhaustionMode;
-                    var originalOpenModeCountMin = taskConfig.OpenModeCountMin;
                     var (type, country) = config.GetLeyLineConfigForToday(taskConfig);
-
-                    try
+                    var param = new AutoLeyLineOutcropParam();
+                    param.SetAutoLeyLineOutcropConfig(taskConfig);
+                    param.LeyLineOutcropType = type;
+                    param.Country = country;
+                    param.IsResinExhaustionMode = config.LeyLineResinExhaustionMode;
+                    param.OpenModeCountMin = config.LeyLineOpenModeCountMin;
+                    if (config.LeyLineRunCount > 0)
                     {
-                        taskConfig.LeyLineOutcropType = type;
-                        taskConfig.Country = country;
-                        taskConfig.IsResinExhaustionMode = config.LeyLineResinExhaustionMode;
-                        taskConfig.OpenModeCountMin = config.LeyLineOpenModeCountMin;
-                        if (config.LeyLineRunCount > 0)
-                        {
-                            taskConfig.Count = config.LeyLineRunCount;
-                        }
+                        param.Count = config.LeyLineRunCount;
+                    }
 
-                        AutoLeyLineOutcropParam param = new AutoLeyLineOutcropParam();
-                        param.SetAutoLeyLineOutcropConfig(taskConfig);
-                        await new AutoLeyLineOutcropTask(runtime, allConfig, param, config.LeyLineOneDragonMode)
-                            .Start(ct);
-                    }
-                    finally
-                    {
-                        taskConfig.LeyLineOutcropType = originalType;
-                        taskConfig.Country = originalCountry;
-                        taskConfig.Count = originalCount;
-                        taskConfig.IsResinExhaustionMode = originalExhaustionMode;
-                        taskConfig.OpenModeCountMin = originalOpenModeCountMin;
-                    }
+                    param.OneDragonMode = config.LeyLineOneDragonMode;
+                    LogIfFailed(Name, await new AutoLeyLineOutcropTask(runtime, allConfig).RunAsync(param, ct));
                 };
                 break;
             default:
                 Action = (_, _) => Task.CompletedTask;
                 break;
+        }
+    }
+
+    /// <summary>
+    /// 任务返回失败结果时输出错误日志；一条龙遇到单个任务失败时继续执行后续任务
+    /// </summary>
+    /// <param name="taskName">日志中显示的任务名</param>
+    /// <param name="result">任务结果</param>
+    private static void LogIfFailed(string taskName, ISoloTaskResult result)
+    {
+        if (result.Kind == SoloTaskResultKind.Failed)
+        {
+            TaskControl.Logger.LogError("{Name}失败：{Message}", taskName, result.Message);
         }
     }
 }

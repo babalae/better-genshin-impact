@@ -9,15 +9,24 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Helpers;
 using Vanara.PInvoke;
 using static BetterGenshinImpact.GameTask.Common.TaskControl;
 
 namespace BetterGenshinImpact.GameTask.AutoMusicGame;
 
-public class AutoMusicGameTask : ISoloTask
+/// <summary>
+/// 自动音游：按键位取色自动演奏，直到被取消
+/// </summary>
+[SoloTaskInfo(TaskId, "自动音游", Group = "小游戏", Order = 520, Scopes = SoloTaskScopes.Standalone,
+    WaitForMainUi = false)]
+public class AutoMusicGameTask : ISoloTask<AutoMusicGameParam, NoData>
 {
-    public string Name => "自动音游";
+    /// <summary>
+    /// 稳定任务标识
+    /// </summary>
+    public const string TaskId = "auto_music_game";
 
     /// <summary>
     /// 本次运行使用的运行环境：截图、窗口句柄与画面信息都只使用它
@@ -30,21 +39,19 @@ public class AutoMusicGameTask : ISoloTask
     private readonly AllConfig _config;
 
     /// <summary>
-    /// 任务参数
+    /// 本次运行的任务参数，在 <see cref="RunAsync"/> 开头赋值
     /// </summary>
-    private readonly AutoMusicGameParam _taskParam;
+    private AutoMusicGameParam _taskParam = null!;
 
     /// <summary>
     /// 创建自动音游任务
     /// </summary>
     /// <param name="runtime">本次运行使用的运行环境</param>
     /// <param name="config">配置根</param>
-    /// <param name="taskParam">任务参数</param>
-    public AutoMusicGameTask(GameRuntime runtime, AllConfig config, AutoMusicGameParam taskParam)
+    public AutoMusicGameTask(GameRuntime runtime, AllConfig config)
     {
         _runtime = runtime;
         _config = config;
-        _taskParam = taskParam;
         _hWnd = runtime.Window.Handle;
     }
 
@@ -79,13 +86,28 @@ public class AutoMusicGameTask : ISoloTask
     /// </summary>
     private readonly IntPtr _hWnd;
 
-    public async Task Start(CancellationToken ct)
+    /// <summary>
+    /// 运行自动音游：检查分辨率后持续演奏，直到取消。取消时抛出异常
+    /// </summary>
+    /// <param name="param">任务参数</param>
+    /// <param name="ct">取消令牌，取消后停止演奏</param>
+    /// <returns>任务结果；演奏没有确认手段，正常结束时返回未确认</returns>
+    public async Task<SoloTaskResult<NoData>> RunAsync(AutoMusicGameParam param, CancellationToken ct)
     {
+        _taskParam = param;
         Init(_runtime);
         await StartWithOutInit(ct);
+
+        // 演奏循环只会因取消结束，取消时向上抛出
+        ct.ThrowIfCancellationRequested();
+        return SoloTaskResult.Unverified("结束自动演奏");
     }
 
-    public async Task StartWithOutInit(CancellationToken ct)
+    /// <summary>
+    /// 不做分辨率检查，直接开始演奏，直到取消
+    /// </summary>
+    /// <param name="ct">取消令牌</param>
+    private async Task StartWithOutInit(CancellationToken ct)
     {
         try
         {

@@ -1,4 +1,5 @@
 using BetterGenshinImpact.GameTask.SoloTask;
+using BetterGenshinImpact.GameTask.SoloTask.Execution;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -23,9 +24,14 @@ public sealed partial class SoloTaskInstanceWindowViewModel : ObservableObject, 
     private readonly InstanceService _instanceService;
 
     /// <summary>
-    /// 当前窗口管理的任务类型。
+    /// 当前窗口管理的任务标识。
     /// </summary>
-    private readonly SoloTaskType _taskType;
+    private readonly string _taskId;
+
+    /// <summary>
+    /// 独立任务注册表，用于显示任务名称。
+    /// </summary>
+    private readonly SoloTaskRegistry _registry;
 
     /// <summary>
     /// 第一次启动实例时收集任务专用参数的回调。
@@ -61,7 +67,7 @@ public sealed partial class SoloTaskInstanceWindowViewModel : ObservableObject, 
     /// <summary>
     /// 窗口标题。
     /// </summary>
-    public string Title => $"管理 · {SoloTaskRegistry.GetDisplayName(_taskType)}";
+    public string Title => $"管理 · {_registry.GetDisplayName(_taskId)}";
 
     /// <summary>
     /// 请求承载此 ViewModel 的窗口关闭。
@@ -71,13 +77,19 @@ public sealed partial class SoloTaskInstanceWindowViewModel : ObservableObject, 
     /// <summary>
     /// 创建实例管理窗口状态并订阅连接、任务状态变化。
     /// </summary>
+    /// <param name="instanceService">多实例连接与独立任务操作服务</param>
+    /// <param name="registry">独立任务注册表</param>
+    /// <param name="taskId">要管理的任务标识</param>
+    /// <param name="definitionFactory">第一次启动时收集任务参数的回调</param>
     public SoloTaskInstanceWindowViewModel(
         InstanceService instanceService,
-        SoloTaskType taskType,
+        SoloTaskRegistry registry,
+        string taskId,
         Func<Task<SoloTaskStartDefinition?>> definitionFactory)
     {
         _instanceService = instanceService;
-        _taskType = taskType;
+        _registry = registry;
+        _taskId = taskId;
         _definitionFactory = definitionFactory;
         _instanceService.ConnectedInstancesChanged += OnInstancesChanged;
         _instanceService.SoloTaskStatusesChanged += OnInstancesChanged;
@@ -100,7 +112,7 @@ public sealed partial class SoloTaskInstanceWindowViewModel : ObservableObject, 
         try
         {
             SoloTaskOperationResponse response;
-            if (row.Status.IsActive && row.Status.TaskType == _taskType && row.Status.RunId is Guid runId)
+            if (row.Status.IsActive && row.Status.TaskId == _taskId && row.Status.RunId is Guid runId)
             {
                 response = await _instanceService.StopSoloTaskAsync(row.Endpoint, runId);
             }
@@ -194,7 +206,7 @@ public sealed partial class SoloTaskInstanceWindowViewModel : ObservableObject, 
                 continue;
             }
 
-            var row = new SoloTaskInstanceRowViewModel(endpoint);
+            var row = new SoloTaskInstanceRowViewModel(endpoint, _registry.GetDisplayName);
             _rowsByProcessId.Add(endpoint.ProcessId, row);
             Instances.Add(row);
         }
@@ -207,7 +219,7 @@ public sealed partial class SoloTaskInstanceWindowViewModel : ObservableObject, 
             var status = isOnline
                 ? _instanceService.GetSoloTaskStatus(row.Endpoint)
                 : row.Status;
-            row.Update(status, _taskType, isOnline, IsOperationPending);
+            row.Update(status, _taskId, isOnline, IsOperationPending);
         }
     }
 

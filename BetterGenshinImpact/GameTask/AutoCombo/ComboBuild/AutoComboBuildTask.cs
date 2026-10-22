@@ -5,6 +5,7 @@ using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.ViewModel.Windows;
 using Anthropic;
@@ -29,9 +30,16 @@ namespace BetterGenshinImpact.GameTask.AutoCombo.ComboBuild;
 /// 识别队伍 → 调用 LLM 通过 Function Calling 逐节点构建连招行为树 → 打印树给用户
 /// 建树发生在战斗开始之前，树暂存内存中，后续集成进 AutoFight 运行
 /// </summary>
-public class AutoComboBuildTask : ISoloTask
+[SoloTaskInfo(TaskId, "自动连招构建", Group = "工具", Order = 440, Scopes = SoloTaskScopes.Standalone)]
+public class AutoComboBuildTask : ISoloTask<NoParam, NoData>
 {
-    public string Name => "自动连招";
+    /// <summary>
+    /// 任务稳定标识
+    /// </summary>
+    public const string TaskId = "auto_combo_build";
+
+    /// <summary>日志中使用的任务名</summary>
+    private const string TaskName = "自动连招";
 
     /// <summary>FunctionInvokingChatClient 单次 GetResponseAsync 允许的最大工具调用循环轮数</summary>
     private const int MaxToolCallIterations = 128;
@@ -64,11 +72,18 @@ public class AutoComboBuildTask : ISoloTask
         _config = config;
     }
 
-    public async Task Start(CancellationToken ct)
+    /// <summary>
+    /// 识别当前队伍并调用 LLM 构建连招行为树，构建完成后暂存到 <see cref="AutoComboRuntime.Session"/>。
+    /// 拿到建树会话即确认构建完成，返回 Success；取消时抛出 OperationCanceledException
+    /// </summary>
+    /// <param name="param">无业务参数</param>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>任务结果</returns>
+    public async Task<SoloTaskResult<NoData>> RunAsync(NoParam param, CancellationToken ct)
     {
         try
         {
-            Logger.LogInformation("{Name}任务启动", Name);
+            Logger.LogInformation("{Name}任务启动", TaskName);
 
             var avatars = await EnsureMainUiAndRecognizeTeamAsync(_runtime, _config, Logger, ct);
             var avatarNames = avatars.Select(a => a.Name).ToList();
@@ -78,15 +93,18 @@ public class AutoComboBuildTask : ISoloTask
 
             // 只暂存建树会话；CombatScenes 的绑定与生命周期由消费方（测试按钮/后续 AutoFight）负责
             AutoComboRuntime.Session = await BuildComboTreeAsync(avatars, config, Logger, ct);
+
+            // 建树会话已生成并暂存，构建结果可确认
+            return SoloTaskResult.Success("连招行为树构建完成");
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "{Name}任务异常", Name);
+            Logger.LogError(e, "{Name}任务异常", TaskName);
             throw;
         }
         finally
         {
-            Logger.LogInformation("{Name}任务结束", Name);
+            Logger.LogInformation("{Name}任务结束", TaskName);
         }
     }
 

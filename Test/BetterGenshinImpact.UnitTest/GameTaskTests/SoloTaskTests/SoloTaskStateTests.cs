@@ -1,4 +1,4 @@
-using BetterGenshinImpact.GameTask.SoloTask;
+using BetterGenshinImpact.GameTask.SoloTask.Execution;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.ViewModel;
 using BetterGenshinImpact.ViewModel.Windows;
@@ -36,7 +36,7 @@ public sealed class SoloTaskStateTests
         var request = new SoloTaskStartRequest
         {
             RunId = Guid.NewGuid(),
-            TaskType = SoloTaskType.AutoWood
+            TaskId = "auto_wood"
         };
 
         var firstStart = await service.StartAsync(request);
@@ -44,7 +44,7 @@ public sealed class SoloTaskStateTests
         var conflictingStart = await service.StartAsync(new SoloTaskStartRequest
         {
             RunId = Guid.NewGuid(),
-            TaskType = SoloTaskType.AutoFight
+            TaskId = "auto_fight"
         });
 
         Assert.True(firstStart.Accepted);
@@ -63,7 +63,7 @@ public sealed class SoloTaskStateTests
         var startWhileStopping = await service.StartAsync(new SoloTaskStartRequest
         {
             RunId = Guid.NewGuid(),
-            TaskType = SoloTaskType.AutoFight
+            TaskId = "auto_fight"
         });
 
         Assert.False(wrongStop.Accepted);
@@ -91,7 +91,7 @@ public sealed class SoloTaskStateTests
         var parameters = new JObject { ["roundNum"] = 3 };
         var definition = new SoloTaskStartDefinition
         {
-            TaskType = SoloTaskType.AutoWood,
+            TaskId = "auto_wood",
             Parameters = parameters
         };
 
@@ -115,7 +115,7 @@ public sealed class SoloTaskStateTests
                 markRunning();
                 return Task.FromResult(new SoloTaskRunResult
                 {
-                    Outcome = SoloTaskRunOutcome.Failed,
+                    Outcome = SoloTaskRunOutcome.Faulted,
                     ErrorMessage = "模拟任务失败"
                 });
             },
@@ -126,18 +126,18 @@ public sealed class SoloTaskStateTests
         var first = await service.StartAsync(new SoloTaskStartRequest
         {
             RunId = Guid.NewGuid(),
-            TaskType = SoloTaskType.AutoWood
+            TaskId = "auto_wood"
         });
         await WaitUntilAsync(() => service.GetStatus().State == SoloTaskRunState.Idle);
 
         Assert.True(first.Accepted);
         Assert.Equal("模拟任务失败", service.GetStatus().ErrorMessage);
-        Assert.Equal(SoloTaskRunOutcome.Failed, completedEvent?.Result.Outcome);
+        Assert.Equal(SoloTaskRunOutcome.Faulted, completedEvent?.Result.Outcome);
 
         var second = await service.StartAsync(new SoloTaskStartRequest
         {
             RunId = Guid.NewGuid(),
-            TaskType = SoloTaskType.AutoWood
+            TaskId = "auto_wood"
         });
         Assert.True(second.Accepted);
     }
@@ -148,7 +148,7 @@ public sealed class SoloTaskStateTests
     [Fact]
     public void ButtonState_ShouldReflectInstanceAndRunState()
     {
-        var state = new SoloTaskButtonState(SoloTaskType.AutoWood);
+        var state = new SoloTaskButtonState("auto_wood");
 
         state.Update(1, 0, SoloTaskRunState.Idle, false, false);
         Assert.Equal("启动", state.ButtonText);
@@ -188,31 +188,31 @@ public sealed class SoloTaskStateTests
         {
             InstanceType = BetterGiInstanceType.Primary,
             ProcessId = 1
-        });
+        }, taskId => taskId == "auto_fight" ? "自动战斗" : taskId ?? string.Empty);
 
-        row.Update(SoloTaskStatusSnapshot.Idle(), SoloTaskType.AutoWood, true, false);
+        row.Update(SoloTaskStatusSnapshot.Idle(), "auto_wood", true, false);
         Assert.Equal("可启动", row.StatusText);
         Assert.True(row.CanOperate);
 
         row.Update(new SoloTaskStatusSnapshot
         {
             RunId = Guid.NewGuid(),
-            TaskType = SoloTaskType.AutoFight,
+            TaskId = "auto_fight",
             State = SoloTaskRunState.Running
-        }, SoloTaskType.AutoWood, true, false);
+        }, "auto_wood", true, false);
         Assert.Contains("自动战斗", row.StatusText);
         Assert.False(row.CanOperate);
 
         row.Update(new SoloTaskStatusSnapshot
         {
             RunId = Guid.NewGuid(),
-            TaskType = SoloTaskType.AutoWood,
+            TaskId = "auto_wood",
             State = SoloTaskRunState.Running
-        }, SoloTaskType.AutoWood, true, false);
+        }, "auto_wood", true, false);
         Assert.Equal("停止", row.ActionText);
         Assert.True(row.CanOperate);
 
-        row.Update(row.Status, SoloTaskType.AutoWood, false, false);
+        row.Update(row.Status, "auto_wood", false, false);
         Assert.Equal("离线", row.StatusText);
         Assert.False(row.CanOperate);
     }

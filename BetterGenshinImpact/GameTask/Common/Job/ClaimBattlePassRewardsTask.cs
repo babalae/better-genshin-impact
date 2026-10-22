@@ -12,6 +12,7 @@ using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using Microsoft.Extensions.Localization;
@@ -24,8 +25,14 @@ namespace BetterGenshinImpact.GameTask.Common.Job;
 /// <summary>
 /// 一键领取纪行
 /// </summary>
-public class ClaimBattlePassRewardsTask
+[SoloTaskInfo(TaskId, "领取纪行", Group = "日常奖励", Order = 150)]
+public class ClaimBattlePassRewardsTask : ISoloTask<NoParam, NoData>
 {
+    /// <summary>
+    /// 任务标识。
+    /// </summary>
+    public const string TaskId = "claim_battle_pass";
+
     /// <summary>
     /// 本次运行使用的运行环境
     /// </summary>
@@ -60,20 +67,14 @@ public class ClaimBattlePassRewardsTask
         this.claimAllLocalizedStrings = ((string[])["一键", "领取"]).Select(i => stringLocalizer.WithCultureGet(cultureInfo, i)).ToArray();
     }
 
-    public async Task Start(CancellationToken ct)
-    {
-        try
-        {
-            await DoOnce(ct);
-        }
-        catch (Exception e)
-        {
-            Logger.LogDebug(e, "领取纪行奖励异常");
-            Logger.LogError("领取纪行奖励异常: {Msg}", e.Message);
-        }
-    }
-
-    public async Task DoOnce(CancellationToken ct)
+    /// <summary>
+    /// 打开纪行，先在任务页领取纪行点数，再回到奖励页一键领取奖励，结束后返回主界面。
+    /// 识别或操作异常直接向外抛出，由调用方决定是否吞掉。
+    /// </summary>
+    /// <param name="param">空参数</param>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>流程正常结束返回 Unverified（无法确认奖励是否真正到账）</returns>
+    public async Task<SoloTaskResult<NoData>> RunAsync(NoParam param, CancellationToken ct)
     {
         await _returnMainUiTask.Start(ct);
 
@@ -84,7 +85,7 @@ public class ClaimBattlePassRewardsTask
         await _runtime.Delay(1000, ct);
         _runtime.GameRegion1080PPosClick(960, 45); // 点中间
         await _runtime.Delay(500, ct);
-        await ClaimAll(ct);
+        var pointsClaimed = await ClaimAll(ct);
 
         // 最后再回到奖励页领取，若存在手动选择奖励则仅记录日志提醒
         await _runtime.Delay(2500, ct); // 等待升级动画
@@ -99,10 +100,11 @@ public class ClaimBattlePassRewardsTask
         }
         _runtime.GameRegion1080PPosClick(858, 45);
         await _runtime.Delay(1500, ct);
-        await ClaimAll(ct);
+        var rewardsClaimed = await ClaimAll(ct);
 
         // 关闭
         await _returnMainUiTask.Start(ct);
+        return SoloTaskResult.Unverified(pointsClaimed || rewardsClaimed ? "已执行纪行一键领取。" : "纪行无需领取。");
     }
 
     /// <summary>

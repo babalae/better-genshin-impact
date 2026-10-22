@@ -10,7 +10,7 @@ using System.Windows;
 using System.Windows.Interop;
 using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.GameTask;
-using BetterGenshinImpact.GameTask.SoloTask;
+using BetterGenshinImpact.GameTask.SoloTask.Execution;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Instance.MessageHandlers;
 using BetterGenshinImpact.Service.Interface;
