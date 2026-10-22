@@ -109,7 +109,7 @@ public class OcrFactory : IDisposable
         // 实验开关：OCR 全部走 ncnn Vulkan；前置产物缺失/加载失败时自动回退所选推理引擎
         if (TaskContext.Instance().Config.HardwareAccelerationConfig.UseNcnnOcr)
         {
-            var ncnn = NcnnOcrBackend.TryCreate(_activeModelType, _logger);
+            var ncnn = NcnnOcrBackend.TryCreate(_logger);
             if (ncnn is { } backends)
                 return new PaddleOcrService(backends, _activeModelType);
         }

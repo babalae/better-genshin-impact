@@ -18,8 +18,7 @@ internal static class NcnnOcrBackend
     /// <summary>
     ///     尝试创建 ncnn 后端组合。失败时返回 null 并通过 <paramref name="logger" /> 记录原因（调用方回退）。
     /// </summary>
-    public static (IOcrDetector Det, IOcrRecognizer Rec)? TryCreate(
-        PaddleOcrService.PaddleOcrModelType modelType, ILogger logger)
+    public static (IOcrDetector Det, IOcrRecognizer Rec)? TryCreate(ILogger logger)
     {
         var modelDir = Global.Absolute(RelativeModelDir);
         var shimPath = Path.Combine(modelDir, "ncnn_shim.dll");
@@ -33,11 +32,13 @@ internal static class NcnnOcrBackend
         NcnnRec? rec = null;
         try
         {
-            // 字典与 ONNX 路线同源：直接复用模型的 yml 解析结果，避免手工提取错位
-            var labels = modelType.RecLabel();
-            det = new NcnnDet(shimPath, modelDir, modelType.DetectionVersion);
+            // ncnn 产物固定为 PpOcrV6：字典/归一化参数必须取 V6 自身的配置，
+            // 不能跟随界面的 OCR 模型选择（V4/V5 字典与 V6 模型类数不同会整体错位）
+            var v6 = PaddleOcrService.PaddleOcrModelType.V6;
+            var labels = v6.RecLabel();
+            det = new NcnnDet(shimPath, modelDir, v6.DetectionVersion);
             rec = new NcnnRec(shimPath, modelDir, labels);
-            logger.LogInformation("[OCR] ncnn Vulkan 后端已启用（{Det} / {Rec}），模型目录 {Dir}",
+            logger.LogInformation("[OCR] ncnn Vulkan 后端已启用（{Det} / {Rec}，固定 PpOcrV6，忽略界面的 OCR 模型选择），模型目录 {Dir}",
                 det.GetConfigName, rec.GetConfigName, modelDir);
             return (det, rec);
         }
