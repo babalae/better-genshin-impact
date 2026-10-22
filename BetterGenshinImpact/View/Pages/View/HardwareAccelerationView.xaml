@@ -168,6 +168,15 @@
                             </StackPanel>
                         </DockPanel>
                         <Separator Margin="0,14,0,12" BorderThickness="0,1,0,0" />
+                        <DockPanel>
+                            <ui:ToggleSwitch DockPanel.Dock="Right" IsChecked="{Binding UseNcnnOcr, Mode=TwoWay}" IsEnabled="{Binding CanInteract}"
+                                             Margin="16,0,0,0" VerticalAlignment="Center" AutomationProperties.Name="OCR 使用 ncnn Vulkan 后端" />
+                            <StackPanel>
+                                <TextBlock Text="OCR 使用 ncnn（Vulkan，实验）" FontWeight="SemiBold" />
+                                <TextBlock Text="开启后检测与识别全部走 ncnn Vulkan，单行识别约 9~11ms；需资产目录内含 ncnn_shim.dll 与分桶模型，缺失时自动回退所选推理引擎。应用并重启后生效。" TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                        </DockPanel>
+                        <Separator Margin="0,14,0,12" BorderThickness="0,1,0,0" />
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />

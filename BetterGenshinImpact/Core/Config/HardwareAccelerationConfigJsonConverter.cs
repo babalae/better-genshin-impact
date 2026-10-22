@@ -17,7 +17,7 @@ public sealed class HardwareAccelerationConfigJsonConverter : JsonConverter<Hard
             if (data == null) return new();
             return new()
             {
-                FormatVersion = data.FormatVersion, InferenceDevice = data.InferenceDevice, CpuOcr = data.CpuOcr,
+                FormatVersion = data.FormatVersion, InferenceDevice = data.InferenceDevice, CpuOcr = data.CpuOcr, UseNcnnOcr = data.UseNcnnOcr,
                 Cpu = data.Cpu!, DirectML = data.DirectML!, OpenVINO = data.OpenVINO!, Cuda = data.Cuda!, TensorRT = data.TensorRT!,
                 PaddleOcrCpu = data.PaddleOcrCpu ?? new(),
                 ValidationState = data.ValidationState, VerifiedSignature = data.VerifiedSignature ?? "",
@@ -31,7 +31,7 @@ public sealed class HardwareAccelerationConfigJsonConverter : JsonConverter<Hard
     public override void Write(Utf8JsonWriter writer, HardwareAccelerationConfig value, JsonSerializerOptions options)
         => JsonSerializer.Serialize(writer, new SerializedConfiguration
         {
-            FormatVersion = value.FormatVersion, InferenceDevice = value.InferenceDevice, CpuOcr = value.CpuOcr,
+            FormatVersion = value.FormatVersion, InferenceDevice = value.InferenceDevice, CpuOcr = value.CpuOcr, UseNcnnOcr = value.UseNcnnOcr,
             Cpu = value.Cpu, DirectML = value.DirectML, OpenVINO = value.OpenVINO, Cuda = value.Cuda, TensorRT = value.TensorRT,
             PaddleOcrCpu = value.PaddleOcrCpu,
             ValidationState = value.ValidationState, VerifiedSignature = value.VerifiedSignature,
@@ -45,6 +45,7 @@ public sealed class HardwareAccelerationConfigJsonConverter : JsonConverter<Hard
         public int FormatVersion { get; set; }
         public InferenceDeviceType InferenceDevice { get; set; }
         public bool CpuOcr { get; set; } = true;
+        public bool UseNcnnOcr { get; set; }
         public InferenceEngineSettings? Cpu { get; set; }
         public PaddleOcrCpuConfig? PaddleOcrCpu { get; set; }
         public InferenceEngineSettings? DirectML { get; set; }

@@ -31,9 +31,9 @@ public class PaddleOcrService : IOcrService, IDisposable
     ///     模型列表:
     ///     https://github.com/PaddlePaddle/PaddleOCR/blob/release/2.5/doc/doc_ch/models_list.md
     /// </summary>
-    private readonly Det _localDetModel;
+    private readonly IOcrDetector _localDetModel;
 
-    private readonly Rec _localRecModel;
+    private readonly IOcrRecognizer _localRecModel;
     private readonly object _inferenceLock = new();
     private bool _disposed;
 
@@ -264,10 +264,15 @@ public class PaddleOcrService : IOcrService, IDisposable
     }
 
     internal PaddleOcrService(BgiOnnxSessionFactory bgiOnnxFactory, PaddleOcrModelType modelType)
+        : this(modelType.Build(bgiOnnxFactory), modelType)
     {
-        var (modelsDet, modelsRec) = modelType.Build(bgiOnnxFactory);
-        _localDetModel = modelsDet;
-        _localRecModel = modelsRec;
+    }
+
+    /// <summary>注入任意后端组合（ONNX 或 ncnn）。后端所有权转移给本实例，Dispose 时一并释放。</summary>
+    internal PaddleOcrService((IOcrDetector Det, IOcrRecognizer Rec) backends, PaddleOcrModelType modelType)
+    {
+        _localDetModel = backends.Det;
+        _localRecModel = backends.Rec;
 
         try
         {

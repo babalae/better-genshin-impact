@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition.OCR.Ncnn;
 using BetterGenshinImpact.Core.Recognition.OCR.Paddle;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.GameTask;
@@ -105,6 +106,14 @@ public class OcrFactory : IDisposable
     private PaddleOcrService CreatePaddleOcrInstance()
     {
         _activeModelType = ResolveModelType();
+        // 实验开关：OCR 全部走 ncnn Vulkan；前置产物缺失/加载失败时自动回退所选推理引擎
+        if (TaskContext.Instance().Config.HardwareAccelerationConfig.UseNcnnOcr)
+        {
+            var ncnn = NcnnOcrBackend.TryCreate(_activeModelType, _logger);
+            if (ncnn is { } backends)
+                return new PaddleOcrService(backends, _activeModelType);
+        }
+
         return new PaddleOcrService(App.ServiceProvider.GetRequiredService<BgiOnnxFactory>(), _activeModelType);
     }
 

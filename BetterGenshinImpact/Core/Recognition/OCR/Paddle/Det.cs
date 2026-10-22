@@ -12,7 +12,7 @@ using OpenCvSharp;
 namespace BetterGenshinImpact.Core.Recognition.OCR.Paddle;
 
 public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxSessionFactory bgiOnnxFactory)
-    : IDisposable
+    : IOcrDetector
 {
     private static readonly ILogger Logger = App.GetLogger<Det>();
 
@@ -253,6 +253,11 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxSessionFact
                 "limitType only supports max/min/resize_long")
         };
     }
+
+    // 显式接口实现：预热与分桶属于内部细节，不扩大公共 API
+    PaddleOcrDetectionBox[] IOcrDetector.RunBoxes(Mat src) => RunBoxes(src);
+    int[] IOcrDetector.GetWarmupBuckets() => GetWarmupBuckets();
+    void IOcrDetector.Warmup(int bucket) => Warmup(bucket);
 
     public string GetConfigName => config.Name;
 }

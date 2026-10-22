@@ -14,7 +14,7 @@ using OpenCvSharp;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR.Paddle;
 
-public class Rec : IDisposable
+public class Rec : IOcrRecognizer
 {
     private static readonly ILogger Logger = App.GetLogger<Rec>();
 
@@ -367,6 +367,10 @@ public class Rec : IDisposable
         var text = sb.ToString();
         return new OcrRecognizerResult(text, text.Length > 0 ? score / text.Length : 0);
     }
+
+    // 显式接口实现：预热与批档属于内部细节，不扩大公共 API
+    (int Batch, int Width)[] IOcrRecognizer.GetWarmupBuckets() => GetWarmupBuckets();
+    void IOcrRecognizer.Warmup(int batch, int width) => Warmup(batch, width);
 
     public string GetConfigName => config.Name;
 }

@@ -111,13 +111,13 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
             {
                 var saved = Config.GetEngineSettings(Config.InferenceDevice);
                 return SelectedEngine.Engine != Config.InferenceDevice || SelectedEngine.SelectedDevice.Id != saved.DeviceId
-                    || ForceCpuOcr != Config.CpuOcr || CpuThreads != Config.Cpu.CpuThreads
+                    || ForceCpuOcr != Config.CpuOcr || UseNcnnOcr != Config.UseNcnnOcr || CpuThreads != Config.Cpu.CpuThreads
                     || PaddleOcrCpu.ToOptions() != Config.PaddleOcrCpu.ToOptions()
                     || (SelectedEngine.SupportsCache && SelectedEngine.Settings.EnableModelCache != saved.EnableModelCache);
             }
             var current = _runtime.Current;
             return SelectedEngine.Engine != current.Engine || SelectedEngine.SelectedDevice.Id != current.Device.Id
-                || ForceCpuOcr != current.CpuOcr || CpuThreads != current.CpuThreads
+                || ForceCpuOcr != current.CpuOcr || UseNcnnOcr != Config.UseNcnnOcr || CpuThreads != current.CpuThreads
                 || PaddleOcrCpu.ToOptions() != current.PaddleOcrCpu
                 || (SelectedEngine.SupportsCache && SelectedEngine.Settings.EnableModelCache != current.EnableModelCache)
                 || (!SelectedEngine.IsCpu && !string.Equals(SelectedEngine.RuntimeDirectory, current.RuntimeDirectory, StringComparison.OrdinalIgnoreCase));
@@ -129,6 +129,7 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
 
     [ObservableProperty] private InferenceEngineCardViewModel? _selectedEngine;
     [ObservableProperty] private bool _forceCpuOcr;
+    [ObservableProperty] private bool _useNcnnOcr;
     [ObservableProperty] private int _cpuThreads;
     [ObservableProperty] private bool _isOcrAdvancedExpanded;
     [ObservableProperty] private bool _isBusy;
@@ -152,6 +153,7 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         _leases = leases;
         _interaction = interaction;
         _forceCpuOcr = Config.CpuOcr;
+        _useNcnnOcr = Config.UseNcnnOcr;
         _cpuThreads = Config.Cpu.CpuThreads;
         PaddleOcrCpu = PaddleOcrCpuConfig.FromOptions(Config.PaddleOcrCpu.ToOptions());
         _isOcrAdvancedExpanded = false;
@@ -188,6 +190,7 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         RefreshAvailability();
     }
     partial void OnForceCpuOcrChanged(bool value) => RefreshAvailability();
+    partial void OnUseNcnnOcrChanged(bool value) => RefreshAvailability();
     partial void OnCpuThreadsChanged(int value) => RefreshAvailability();
     private void OcrCpuSettingsChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -324,6 +327,14 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         {
             ProgressText = "正在保存推理设置…";
             if (HasDraftChanges) _runtime.Apply(SelectedEngine.Engine, SelectedEngine.Settings, ForceCpuOcr, CpuThreads, PaddleOcrCpu.ToOptions());
+            // ncnn 开关独立于推理引擎签名，直接写入配置；服务层在下次创建 OCR 实例时生效
+            if (Config.UseNcnnOcr != UseNcnnOcr)
+            {
+                Config.UseNcnnOcr = UseNcnnOcr;
+                _configService.Save();
+                OnPropertyChanged(nameof(HasDraftChanges)); OnPropertyChanged(nameof(CanApply));
+            }
+
             ProgressText = "设置已保存，等待重启生效。";
             await OfferRestartAsync();
         });

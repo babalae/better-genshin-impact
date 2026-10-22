@@ -57,6 +57,7 @@ public partial class HardwareAccelerationConfig : ObservableObject
         DirectML = new(); OpenVINO = new(); Cuda = new(); TensorRT = new();
         InferenceDevice = InferenceDeviceType.Cpu;
         CpuOcr = true;
+        UseNcnnOcr = false;
         ValidationState = InferenceValidationState.None;
         VerifiedSignature = "";
     }
@@ -87,6 +88,13 @@ public partial class HardwareAccelerationConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _cpuOcr = true;
+
+    /// <summary>
+    ///     OCR 使用 ncnn Vulkan 后端（实验）。开启后 Det/Rec 全部走 ncnn，需资产目录内提供
+    ///     ncnn_shim.dll 与按桶宽转换的模型；缺失或创建失败时自动回退到所选推理引擎。
+    /// </summary>
+    [ObservableProperty]
+    private bool _useNcnnOcr;
 
     #region 已移除参数的源注释（不读取、不保存，也不参与新推理设置）
     // 强制指定gpu设备,默认为0(使用默认设备)
