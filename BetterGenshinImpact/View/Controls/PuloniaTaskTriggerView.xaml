@@ -4,6 +4,7 @@
              xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:hotkey="clr-namespace:BetterGenshinImpact.View.Controls.HotKey"
+             xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
              Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <UserControl.Resources>
         <behavior:BindingProxy x:Key="TriggerPageProxy" Data="{Binding}" />
@@ -79,14 +80,13 @@
                     <StackPanel>
                         <Grid>
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                            <TextBlock Margin="0,0,8,0" Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <TextBlock Margin="0,0,8,0" FontSize="12" Text="{Binding Summary}" VerticalAlignment="Center" />
                             <ui:ToggleSwitch Grid.Column="1" OnContent="" OffContent="" VerticalAlignment="Center"
                                              IsChecked="{Binding Enabled, Mode=OneWay}"
                                              Command="{Binding Data.ToggleTriggerEnabledCommand, Source={StaticResource TriggerPageProxy}}"
                                              CommandParameter="{Binding}" ToolTip="启用 / 停用（立即保存）"
-                                             AutomationProperties.Name="{Binding Name, StringFormat=启用触发器：{0}}" />
+                                             AutomationProperties.Name="启用或停用触发器" />
                         </Grid>
-                        <TextBlock Margin="0,8,0,0" FontSize="12" Text="{Binding Summary}" />
                         <TextBlock Margin="0,6,0,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding RuntimeText}" />
                     </StackPanel>
                 </DataTemplate></ListBox.ItemTemplate>
@@ -98,49 +98,13 @@
                 <Grid.Style><Style TargetType="Grid"><Style.Triggers><DataTrigger Binding="{Binding TriggerEditor}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers></Style></Grid.Style>
                 <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel Margin="0,0,12,12" DataContext="{Binding TriggerEditor}">
-                        <TextBlock Text="名称" Margin="0,0,0,6" Style="{StaticResource Label}" />
-                        <ui:TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
-                        <StackPanel Visibility="{Binding IsSchedule, Converter={StaticResource BoolVisibility}}">
-                            <TextBlock Style="{StaticResource Label}" Text="快捷配置" />
-                            <WrapPanel>
-                                <Button Margin="0,0,6,6" Content="每日 04:00" Command="{Binding ApplyPresetCommand}" CommandParameter="daily4" />
-                                <Button Margin="0,0,6,6" Content="每周一 04:00" Command="{Binding ApplyPresetCommand}" CommandParameter="weekly4" />
-                                <Button Margin="0,0,6,6" Content="每月 1 日 04:00" Command="{Binding ApplyPresetCommand}" CommandParameter="monthly4" />
-                                <Button Margin="0,0,6,6" Content="20 小时" Command="{Binding ApplyPresetCommand}" CommandParameter="interval20" />
-                                <Button Margin="0,0,6,6" Content="24 小时" Command="{Binding ApplyPresetCommand}" CommandParameter="interval24" />
-                                <Button Margin="0,0,6,6" Content="48 小时" Command="{Binding ApplyPresetCommand}" CommandParameter="interval48" />
-                                <Button Margin="0,0,6,6" Content="72 小时" Command="{Binding ApplyPresetCommand}" CommandParameter="interval72" />
-                            </WrapPanel>
-                            <TextBlock Text="日 / 周 / 月刷新与固定 CD 是两种不同计时。固定间隔从保存的起点计算；游戏是否已完成仍以执行结果和账本为准。多个每日时刻可新增多个触发器，或用高级 Cron 配置同分钟的多个小时。" Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12" />
-                            <TextBlock Style="{StaticResource Label}" Text="日程类型" />
-                            <ComboBox ItemsSource="{Binding Modes}" DisplayMemberPath="Value" SelectedValuePath="Key" SelectedValue="{Binding Mode}" />
-                            <WrapPanel Margin="0,10,0,0" Visibility="{Binding ShowTime, Converter={StaticResource BoolVisibility}}">
-                                <ComboBox Width="96" Margin="0,0,8,6" ItemsSource="{Binding Weekdays}" DisplayMemberPath="Value" SelectedValuePath="Key" SelectedValue="{Binding Weekday}" Visibility="{Binding IsWeekly, Converter={StaticResource BoolVisibility}}" />
-                                <ComboBox Width="80" Margin="0,0,8,6" ItemsSource="{Binding MonthDays}" SelectedItem="{Binding MonthDay}" Visibility="{Binding IsMonthly, Converter={StaticResource BoolVisibility}}" />
-                                <DatePicker Width="145" Margin="0,0,8,6" SelectedDate="{Binding Date}" Visibility="{Binding ShowDate, Converter={StaticResource BoolVisibility}}" />
-                                <ui:TextBox Width="56" Margin="0,0,4,6" Text="{Binding Hour, UpdateSourceTrigger=PropertyChanged}" ToolTip="小时：0—23" />
-                                <TextBlock Margin="0,6,4,6" Text=":" />
-                                <ui:TextBox Width="56" Margin="0,0,8,6" Text="{Binding Minute, UpdateSourceTrigger=PropertyChanged}" ToolTip="分钟：0—59" />
-                            </WrapPanel>
-                            <TextBlock Visibility="{Binding IsMonthly, Converter={StaticResource BoolVisibility}}" Text="短月份没有该日期时跳过，不顺延到下个月。" FontSize="12" />
-                            <StackPanel Visibility="{Binding IsInterval, Converter={StaticResource BoolVisibility}}">
-                                <TextBlock Style="{StaticResource Label}" Text="间隔（分钟，可自定义） / 上方日期时间为起算点" />
-                                <ui:TextBox Text="{Binding IntervalMinutes, UpdateSourceTrigger=PropertyChanged}" />
-                            </StackPanel>
-                            <StackPanel Visibility="{Binding IsAdvanced, Converter={StaticResource BoolVisibility}}">
-                                <TextBlock Style="{StaticResource Label}" Text="Cron：分 时 日 月 星期" />
-                                <ui:TextBox Text="{Binding Cron, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas" />
-                                <TextBlock Margin="0,6,0,0" FontSize="12" Text="支持数字、*、逗号、范围和 / 步长；星期 0/7 为周日。例：0 4 * * *（每日4点）、0 4 * * 1（周一4点）。日和星期同时限制时取交集；不支持秒字段及 Quartz 的 ?/L/W/#。" />
-                            </StackPanel>
-                            <TextBlock Style="{StaticResource Label}" Text="执行时区（每日4点以此时区计算）" />
-                            <WrapPanel>
-                                <Button Margin="0,0,6,6" Content="UTC+8" Command="{Binding SetTimeZoneCommand}" CommandParameter="China Standard Time" />
-                                <Button Margin="0,0,6,6" Content="UTC+1" Command="{Binding SetTimeZoneCommand}" CommandParameter="W. Central Africa Standard Time" />
-                                <Button Margin="0,0,6,6" Content="UTC-5" Command="{Binding SetTimeZoneCommand}" CommandParameter="SA Pacific Standard Time" />
-                            </WrapPanel>
-                            <ComboBox ItemsSource="{Binding TimeZones}" DisplayMemberPath="Value" SelectedValuePath="Key" SelectedValue="{Binding TimeZoneId}" />
-                            <TextBlock Margin="0,8,0,0" Text="{Binding EffectiveCron, StringFormat=当前表达式：{0}}" FontFamily="Consolas" />
+                        <StackPanel Margin="0,0,12,12" DataContext="{Binding TriggerEditor}">
+                            <StackPanel Visibility="{Binding IsSchedule, Converter={StaticResource BoolVisibility}}">
+                            <!-- 定时触发只保存控件输出的一份 Cron，快捷设置不会建立额外日程状态。 -->
+                            <controls:PuloniaCronEditor DataContext="{Binding CronEditor}" />
+                            <TextBlock Style="{StaticResource Label}" Text="服务器时区（Cron 按此时区计算）" />
+                            <ComboBox ItemsSource="{Binding ServerTimeZones}" DisplayMemberPath="Value" SelectedValuePath="Key"
+                                      SelectedValue="{Binding ServerTimeZone, Mode=TwoWay}" />
                         </StackPanel>
                         <StackPanel Visibility="{Binding IsHotkey, Converter={StaticResource BoolVisibility}}">
                             <TextBlock Style="{StaticResource Label}" Text="快捷键（点击类型按钮可切换模式）" />
@@ -164,22 +128,17 @@
                         <TextBlock Style="{StaticResource Label}" Text="同一计划 / 账号已忙碌时" />
                         <ComboBox ItemsSource="{Binding BusyPolicies}" DisplayMemberPath="Value" SelectedValuePath="Key" SelectedValue="{Binding BusyPolicy}" />
                         <TextBlock Margin="0,6,0,0" FontSize="12" Text="不同计划自动串行排队；不会并发抢占游戏输入。停止当前策略需保存时确认。" />
-                        <TextBlock Style="{StaticResource Label}" Text="有效开始窗口（分钟）" />
+                        <TextBlock Style="{StaticResource Label}" Text="允许延迟启动（分钟）" />
                         <ui:TextBox Text="{Binding WindowMinutes, UpdateSourceTrigger=PropertyChanged}" />
-                        <CheckBox Margin="0,10,0,0" Content="离线 / 睡眠后，在有效窗口内只补最近一次" IsChecked="{Binding CatchUp}"
+                        <CheckBox Margin="0,10,0,0" Content="离线 / 睡眠后，只补仍可延迟启动的最近一次" IsChecked="{Binding CatchUp}"
                                   Visibility="{Binding IsSchedule, Converter={StaticResource BoolVisibility}}" />
                     </StackPanel>
                 </ScrollViewer>
                 <WrapPanel Grid.Row="1" Margin="0,12,0,0">
                     <ui:Button Margin="0,0,8,4" Appearance="Primary" Content="保存配置" Command="{Binding SaveTriggerCommand}" IsEnabled="{Binding TriggerEditor.IsValid}" />
-                    <Button Margin="0,0,8,4" Content="放弃草稿" Command="{Binding CancelTriggerEditCommand}" />
-                    <ui:Button Margin="0,0,8,4" Padding="8" Command="{Binding ViewTriggerHistoryCommand}" ToolTip="查看最近执行记录" AutomationProperties.Name="查看触发器执行记录">
+                    <ui:Button Margin="0,0,8,4" Content="取消" Command="{Binding CancelTriggerEditCommand}" />
+                    <ui:Button Margin="0,0,0,4" Appearance="Danger" Content="删除" Command="{Binding DeleteTriggerCommand}">
                         <ui:Button.Style><Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}"><Style.Triggers><DataTrigger Binding="{Binding SelectedTrigger}" Value="{x:Null}"><Setter Property="IsEnabled" Value="False" /></DataTrigger></Style.Triggers></Style></ui:Button.Style>
-                        <ui:SymbolIcon Symbol="History24" />
-                    </ui:Button>
-                    <ui:Button Margin="0,0,0,4" Padding="8" Command="{Binding DeleteTriggerCommand}" ToolTip="删除已保存触发器" AutomationProperties.Name="删除触发器">
-                        <ui:Button.Style><Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}"><Style.Triggers><DataTrigger Binding="{Binding SelectedTrigger}" Value="{x:Null}"><Setter Property="IsEnabled" Value="False" /></DataTrigger></Style.Triggers></Style></ui:Button.Style>
-                        <ui:SymbolIcon Symbol="Delete24" />
                     </ui:Button>
                 </WrapPanel>
             </Grid>

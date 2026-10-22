@@ -18,8 +18,8 @@ public partial class PuloniaTaskPlanViewModel
 {
     /// <summary>提供运行时状态的唯一调度宿主。</summary>
     private readonly PuloniaTaskTriggerHost? _triggerHost;
-    /// <summary>列表最后显示的内容签名，树编辑不覆盖尚未保存的触发器草稿。</summary>
-    private string _triggerListSignature = "";
+    /// <summary>列表最后显示的配置版本，树编辑不覆盖尚未保存的触发器草稿。</summary>
+    private string _triggerListRevision = "";
     /// <summary>卡片开关保存期间仅刷新列表，保留编辑器内其他尚未保存的字段。</summary>
     private bool _preserveTriggerDraft;
     /// <summary>当前计划的触发器列表。</summary>
@@ -36,9 +36,11 @@ public partial class PuloniaTaskPlanViewModel
     /// <summary>切换计划或撤销触发配置后刷新列表，保留仍存在的选择。</summary>
     private void RefreshTriggers(bool force = false)
     {
-        var signature = SelectedDocument?.Id + "/" + PuloniaTaskJson.Write(SelectedDocument?.Plan.Triggers);
-        if (!force && signature == _triggerListSignature) return;
-        _triggerListSignature = signature;
+        var revision = SelectedDocument is null ? "" : SelectedDocument.Id + "/"
+            + string.Join("|", SelectedDocument.Plan.Triggers.Select(trigger
+                => trigger.Id + ":" + trigger.ActivatedAtUtc.UtcTicks));
+        if (!force && revision == _triggerListRevision) return;
+        _triggerListRevision = revision;
         var id = force ? null : SelectedTrigger?.Trigger.Id;
         var draft = !force && _preserveTriggerDraft ? TriggerEditor : null;
         SelectedTrigger = null;
@@ -81,22 +83,6 @@ public partial class PuloniaTaskPlanViewModel
             dispatcher.BeginInvoke(new Action(UpdateTriggerStatus));
     }
 
-    /// <summary>复用原执行记录浏览器，定位最近一次触发提交，而不是打开另一套历史。</summary>
-    [RelayCommand]
-    private async Task ViewTriggerHistoryAsync()
-    {
-        var id = _triggerHost?.States.FirstOrDefault(item => item.PlanId == SelectedDocument?.Id
-            && item.TriggerId == SelectedTrigger?.Trigger.Id)?.LastRequestId;
-        History.PlanFilterId = SelectedDocument?.Id;
-        await History.RefreshAsync(id);
-        if (_showScopedTriggerHistory is not null)
-        {
-            await _showScopedTriggerHistory();
-            return;
-        }
-        SelectedPlanTabIndex = 1;
-    }
-
     /// <summary>新增默认禁用的每日 4 点日程草稿。</summary>
     [RelayCommand]
     private void AddScheduleTrigger()
@@ -113,8 +99,7 @@ public partial class PuloniaTaskPlanViewModel
         if (SelectedDocument is null) return;
         SelectedTrigger = null;
         TriggerEditor = new PuloniaTaskTriggerEditorViewModel(new PuloniaTaskTrigger
-        { Name = "快捷运行", Kind = PuloniaTaskTriggerKind.Hotkey,
-            HotkeyType = HotKeyTypeEnum.KeyboardMonitor, Hotkey = "F8" }, SelectedDocument.Plan);
+        { Kind = PuloniaTaskTriggerKind.Hotkey, HotkeyType = HotKeyTypeEnum.KeyboardMonitor, Hotkey = "F8" }, SelectedDocument.Plan);
     }
 
     /// <summary>卡片开关独立修改启用状态并立即保存，不提交右侧尚未保存的配置字段。</summary>
@@ -132,7 +117,7 @@ public partial class PuloniaTaskPlanViewModel
         {
             var saved = document.Plan.Triggers.FirstOrDefault(trigger => trigger.Id == item.Trigger.Id);
             if (saved is null) return;
-            var trigger = PuloniaTaskJson.Read<PuloniaTaskTrigger>(PuloniaTaskJson.Write(saved));
+            var trigger = saved.Clone();
             trigger.Enabled = !saved.Enabled;
             trigger.ActivatedAtUtc = DateTimeOffset.UtcNow;
             if (trigger.Enabled && trigger.BusyPolicy == PuloniaTaskBusyPolicy.StopCurrent)
@@ -150,7 +135,7 @@ public partial class PuloniaTaskPlanViewModel
                 document.Plan.Triggers[document.Plan.Triggers.FindIndex(value => value.Id == trigger.Id)] = trigger,
                 document.SelectedNode);
             if (await SaveDocumentAsync(document))
-                StatusMessage = $"触发器“{trigger.Name}”已{(trigger.Enabled ? "启用" : "停用")}并保存。其他配置草稿未提交。";
+                StatusMessage = $"触发器“{trigger.DisplayText}”已{(trigger.Enabled ? "启用" : "停用")}并保存。其他配置草稿未提交。";
             RefreshTriggers();
             UpdateTriggerStatus();
         }
@@ -210,7 +195,7 @@ public partial class PuloniaTaskPlanViewModel
         var target = item is null ? SelectedTrigger : Triggers.Contains(item) ? item : null;
         var trigger = target?.Trigger;
         if (document is null || trigger is null || IsBusy) return;
-        var answer = await ThemedMessageBox.ShowAsync($"删除触发器“{trigger.Name}”？已保存的执行历史不会删除。",
+        var answer = await ThemedMessageBox.ShowAsync($"删除触发器“{trigger.DisplayText}”？已保存的执行历史不会删除。",
             "删除触发器", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning, MessageBoxResult.No);
         if (answer != MessageBoxResult.Yes) return;
         document.ApplyMutation(() => document.Plan.Triggers.RemoveAll(saved => saved.Id == trigger.Id), document.SelectedNode);

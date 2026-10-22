@@ -57,8 +57,8 @@ public sealed class PuloniaTaskRequest
     public DateTimeOffset? OccurrenceUtc { get; init; }
     /// <summary>最晚开始时间，不是运行总预算。</summary>
     public DateTimeOffset? DeadlineUtc { get; init; }
-    /// <summary>自动触发配置签名，禁用/编辑后不能启动旧排队请求。</summary>
-    public string? TriggerSignature { get; init; }
+    /// <summary>自动触发配置的生效时间，禁用或编辑后不能启动旧排队请求。</summary>
+    public DateTimeOffset? TriggerActivatedAtUtc { get; init; }
     /// <summary>本次自动请求的繁忙策略。</summary>
     public PuloniaTaskBusyPolicy BusyPolicy { get; init; }
 }

@@ -11,7 +11,7 @@ public sealed class PuloniaTaskState
     /// <summary>
     /// 当前支持的状态格式版本。
     /// </summary>
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
 
     /// <summary>
     /// 状态格式版本。

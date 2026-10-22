@@ -116,9 +116,9 @@ public static class PuloniaTaskJson
                 throw new PuloniaTaskValidationException("state.json/trigger_states", "触发器状态为空或重复。");
             PuloniaTaskValidator.ValidateId(trigger.PlanId, "trigger_state/plan_id");
             PuloniaTaskValidator.ValidateId(trigger.TriggerId, "trigger_state/trigger_id");
-            if (trigger.Signature is null || trigger.Signature.Length != 64 || !trigger.Signature.All(Uri.IsHexDigit)
-                || trigger.LastRequestId == Guid.Empty || string.IsNullOrWhiteSpace(trigger.Status))
-                throw new PuloniaTaskValidationException("state.json/trigger_states", "触发器签名、请求 ID 或状态无效。");
+            if (trigger.TriggerActivatedAtUtc == default || trigger.LastRequestId == Guid.Empty
+                || string.IsNullOrWhiteSpace(trigger.Status))
+                throw new PuloniaTaskValidationException("state.json/trigger_states", "触发器配置版本、请求 ID 或状态无效。");
         }
         var runIds = new HashSet<Guid>();
         foreach (var record in state.PendingRequests)

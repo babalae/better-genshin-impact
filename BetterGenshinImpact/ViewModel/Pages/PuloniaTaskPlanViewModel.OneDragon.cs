@@ -11,14 +11,11 @@ public partial class PuloniaTaskPlanViewModel
 {
     /// <summary>次级窗口的保存归属，共用主会话的串行门和删除检查。</summary>
     private PuloniaTaskPlanViewModel? _saveOwner;
-    /// <summary>次级触发窗口的记录展示回调；普通任务计划仍使用原页签。</summary>
-    private Func<Task>? _showScopedTriggerHistory;
-
     /// <summary>为触发窗口建立独立选择上下文，文档对象和保存门仍由主会话拥有。</summary>
-    internal PuloniaTaskPlanViewModel CreateOneDragonTriggerEditor(PuloniaTaskPlanDocumentViewModel document, Func<Task> showHistory)
+    internal PuloniaTaskPlanViewModel CreateOneDragonTriggerEditor(PuloniaTaskPlanDocumentViewModel document)
     {
         var editor = new PuloniaTaskPlanViewModel(_store, _clipboard, _taskService, _resourceCatalog, History, _triggerHost)
-        { _saveOwner = this, _presets = _presets, _isInitialized = true, _showScopedTriggerHistory = showHistory };
+        { _saveOwner = this, _presets = _presets, _isInitialized = true };
         // 不重复订阅文档编辑事件：自动保存只由主会话负责。
         foreach (var item in Documents) editor.Documents.Add(item);
         foreach (var item in OneDragonDocuments) editor.OneDragonDocuments.Add(item);

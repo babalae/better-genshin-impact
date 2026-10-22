@@ -361,7 +361,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     {
         if (SelectedConfiguration is not { } document) return;
         var previousFilter = Editor.History.PlanFilterId;
-        var scoped = Editor.CreateOneDragonTriggerEditor(document, ShowHistoryAsync);
+        var scoped = Editor.CreateOneDragonTriggerEditor(document);
         try
         {
             new PromptDialog("", "一条龙触发设置", new PuloniaOneDragonTriggerView { DataContext = scoped }, null)

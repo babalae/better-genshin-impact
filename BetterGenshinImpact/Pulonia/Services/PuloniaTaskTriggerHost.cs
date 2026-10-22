@@ -22,8 +22,8 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, PuloniaTaskSe
 {
     /// <summary>UI 线程拥有的统一热键模型，复用应用的全局注册、键鼠监听与聊天屏蔽。</summary>
     private readonly List<HotKeySettingModel> _hotkeys = [];
-    /// <summary>已注册热键的配置签名。</summary>
-    private string _hotkeySignature = "";
+    /// <summary>已注册热键的配置版本。</summary>
+    private string _hotkeyRevision = "";
     /// <summary>热键冲突或注册错误。</summary>
     private string _hotkeyError = "";
     /// <summary>应用启动或关闭命令取消信号。</summary>
@@ -134,7 +134,7 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, PuloniaTaskSe
         _hotkeys.Clear();
     }
 
-    /// <summary>配置签名变化才重建注册；冲突可见，不偷偷替换应用已有快捷键。</summary>
+    /// <summary>配置版本变化才重建注册；冲突可见，不偷偷替换应用已有快捷键。</summary>
     private async Task RefreshHotkeysAsync(IReadOnlyList<PuloniaTaskPlan> plans, CancellationToken ct)
     {
         var dispatcher = _dispatcher;
@@ -142,9 +142,10 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, PuloniaTaskSe
             return;
         var bindings = plans.SelectMany(plan => plan.Triggers.Where(item => item.Enabled
             && item.Kind == PuloniaTaskTriggerKind.Hotkey).Select(trigger => (plan, trigger))).ToArray();
-        var signature = string.Join("|", bindings.Select(item => item.plan.Id + PuloniaTaskSchedule.Signature(item.trigger)));
+        var revision = string.Join("|", bindings.Select(item
+            => item.plan.Id + "/" + item.trigger.Id + "/" + item.trigger.ActivatedAtUtc.UtcTicks));
         // 注册冲突可能已由用户在快捷键页解除，定期读档时允许重试失败配置。
-        if (signature == _hotkeySignature && _hotkeyError.Length == 0) return;
+        if (revision == _hotkeyRevision && _hotkeyError.Length == 0) return;
         await dispatcher.InvokeAsync(() =>
         {
             if (_hotkeysReleased || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
@@ -161,7 +162,7 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, PuloniaTaskSe
                     if (HasApplicationHotkeyConflict(trigger))
                         throw new InvalidOperationException("与软件已有快捷键冲突，请选择其他键。");
                     // 不自行安装新钩子；监听模式随现有 MouseKeyMonitor 的启停与游戏前台规则生效。
-                    hotkeyModel = new HotKeySettingModel(trigger.Name, "Pulonia/" + plan.Id + "/" + trigger.Id,
+                    hotkeyModel = new HotKeySettingModel(trigger.DisplayText, "Pulonia/" + plan.Id + "/" + trigger.Id,
                         trigger.Hotkey, trigger.HotkeyType.ToString(), (_, _) =>
                         {
                             if (!_stopToken.IsCancellationRequested && !_hotkeysReleased
@@ -176,10 +177,10 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, PuloniaTaskSe
                 catch (Exception ex)
                 {
                     hotkeyModel?.UnRegisterHotKey();
-                    _hotkeyError += $" 热键“{trigger.Name}”注册失败（可能冲突）：{ex.Message}";
+                    _hotkeyError += $" 热键“{trigger.DisplayText}”注册失败（可能冲突）：{ex.Message}";
                 }
             }
-            _hotkeySignature = signature;
+            _hotkeyRevision = revision;
         }, DispatcherPriority.Normal, ct);
     }
 

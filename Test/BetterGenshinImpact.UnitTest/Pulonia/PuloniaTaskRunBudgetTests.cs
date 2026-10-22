@@ -2,32 +2,25 @@ using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.Service;
-using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.UnitTest.Pulonia;
 
-/// <summary>计划默认不限时及旧显式运行预算兼容回归，不访问游戏或 UI。</summary>
+/// <summary>计划默认不限时及显式运行预算回归，不访问游戏或 UI。</summary>
 public sealed class PuloniaTaskRunBudgetTests : IDisposable
 {
     /// <summary>每个测试独占的状态与历史目录。</summary>
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-pulonia-budget-" + Guid.NewGuid().ToString("N"));
 
-    /// <summary>新请求、新触发器与缺省 JSON 都不限时；旧数字预算保持原语义。</summary>
+    /// <summary>新请求与缺省 JSON 都不限时，显式数字预算保持原语义。</summary>
     [Fact]
-    public void DefaultsAndJson_KeepUnlimitedAndLegacyBudgetsDistinct()
+    public void DefaultsAndJson_KeepUnlimitedAndExplicitBudgetsDistinct()
     {
         Assert.Null(new PuloniaTaskRequest().TimeoutSeconds);
-        Assert.Null(new PuloniaTaskTrigger().TimeoutSeconds);
         Assert.Null(PuloniaTaskJson.Read<PuloniaTaskRequest>("{\"plan_id\":\"test\"}").TimeoutSeconds);
-        var plan = new PuloniaTaskPlan { Name = "预算兼容", RootTask = new PuloniaTask { Name = "根" } };
-        var newEditor = new PuloniaTaskTriggerEditorViewModel(new PuloniaTaskTrigger(), plan);
-        Assert.Null(newEditor.CreateTrigger().TimeoutSeconds);
-        var legacyEditor = new PuloniaTaskTriggerEditorViewModel(new PuloniaTaskTrigger { TimeoutSeconds = 3600 }, plan);
-        Assert.Equal(3600, legacyEditor.CreateTrigger().TimeoutSeconds);
-        var oldRequest = PuloniaTaskJson.Read<PuloniaTaskRequest>("{\"plan_id\":\"test\",\"timeout_seconds\":600}");
-        Assert.Equal(600, PuloniaTaskJson.Read<PuloniaTaskRequest>(PuloniaTaskJson.Write(oldRequest)).TimeoutSeconds);
+        var request = PuloniaTaskJson.Read<PuloniaTaskRequest>("{\"plan_id\":\"test\",\"timeout_seconds\":600}");
+        Assert.Equal(600, PuloniaTaskJson.Read<PuloniaTaskRequest>(PuloniaTaskJson.Write(request)).TimeoutSeconds);
         var unlimited = PuloniaTaskJson.Read<PuloniaTaskRequest>(PuloniaTaskJson.Write(new PuloniaTaskRequest { PlanId = "test" }));
         Assert.Null(unlimited.TimeoutSeconds);
     }
@@ -80,7 +73,6 @@ public sealed class PuloniaTaskRunBudgetTests : IDisposable
         await using var service = CreateService(store, new PuloniaCSharpTaskRegistry());
         await Assert.ThrowsAsync<PuloniaTaskValidationException>(() => service.EnqueueAsync(
             new PuloniaTaskRequest { PlanId = "test", TimeoutSeconds = budget }));
-        Assert.Throws<FormatException>(() => PuloniaTaskSchedule.Validate(new PuloniaTaskTrigger { TimeoutSeconds = budget }));
     }
 
     /// <summary>构建纯 C# 执行服务，不创建游戏会话。</summary>

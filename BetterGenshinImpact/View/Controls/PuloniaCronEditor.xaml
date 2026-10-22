@@ -1,0 +1,200 @@
+<UserControl x:Class="BetterGenshinImpact.View.Controls.PuloniaCronEditor"
+             x:Name="Root"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolVisibility" />
+        <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap" /></Style>
+        <Style TargetType="ComboBox" BasedOn="{StaticResource DefaultComboBoxStyle}">
+            <Setter Property="MinWidth" Value="110" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,0,0,5" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+    </UserControl.Resources>
+
+    <StackPanel>
+        <TextBlock Margin="0,14,0,6" FontWeight="SemiBold" Text="Cron 表达式" />
+        <Grid x:Name="CronInputRow">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <ui:TextBox MinWidth="220"
+                        FontFamily="Consolas"
+                        AutomationProperties.Name="Cron 表达式"
+                        Text="{Binding Expression, UpdateSourceTrigger=PropertyChanged}" />
+            <ToggleButton Grid.Column="1"
+                          Margin="8,0,0,0"
+                          MinWidth="96"
+                          Padding="12,6"
+                          HorizontalContentAlignment="Center"
+                          AutomationProperties.Name="打开 Cron 快捷设置"
+                          Background="{DynamicResource ControlFillColorDefaultBrush}"
+                          BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                          BorderThickness="1"
+                          Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                          IsChecked="{Binding IsPopupOpen, Mode=TwoWay}">
+                <ToggleButton.Template>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="ToggleBorder"
+                                Padding="{TemplateBinding Padding}"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{DynamicResource ControlCornerRadius}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock VerticalAlignment="Center" Foreground="{TemplateBinding Foreground}" Text="快捷设置" />
+                                <Path x:Name="Chevron" Width="10" Height="6" Margin="8,0,0,0" VerticalAlignment="Center"
+                                      Data="M 1,1 L 5,5 L 9,1" Stroke="{TemplateBinding Foreground}"
+                                      StrokeEndLineCap="Round" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeThickness="1.25">
+                                    <Path.RenderTransform><RotateTransform Angle="0" CenterX="5" CenterY="3" /></Path.RenderTransform>
+                                </Path>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ToggleBorder" Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="ToggleBorder" Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                                <Setter TargetName="Chevron" Property="RenderTransform">
+                                    <Setter.Value><RotateTransform Angle="180" CenterX="5" CenterY="3" /></Setter.Value>
+                                </Setter>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </ToggleButton.Template>
+            </ToggleButton>
+        </Grid>
+
+        <Grid Margin="0,6,104,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" HorizontalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="分 0—59" />
+            <TextBlock Grid.Column="1" HorizontalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="时 0—23" />
+            <TextBlock Grid.Column="2" HorizontalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="日 1—31" />
+            <TextBlock Grid.Column="3" HorizontalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="月 1—12" />
+            <TextBlock Grid.Column="4" HorizontalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="星期 0—7" />
+        </Grid>
+        <TextBlock Margin="0,5,0,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                   Text="五段格式：分 时 日 月 星期。仅支持数字、*、逗号、范围和 / 步长；星期 0/7 为周日，日和星期同时限制时取交集。不支持秒字段及 Quartz 的 ?/L/W/#。" />
+
+        <Popup AllowsTransparency="True"
+               DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+               IsOpen="{Binding IsPopupOpen, Mode=TwoWay}"
+               Placement="Bottom"
+               PlacementTarget="{Binding ElementName=CronInputRow}"
+               PopupAnimation="Fade"
+               StaysOpen="False"
+               VerticalOffset="4">
+            <Border Width="520"
+                    MaxHeight="560"
+                    Padding="16"
+                    Background="{DynamicResource ApplicationBackgroundBrush}"
+                    BorderBrush="{DynamicResource SurfaceStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{DynamicResource ControlCornerRadius}"
+                    SnapsToDevicePixels="True">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="16" Direction="270" Opacity="0.28" ShadowDepth="3" />
+                </Border.Effect>
+                <StackPanel>
+                    <TextBlock FontSize="16" FontWeight="SemiBold" Text="Cron 快捷设置" />
+                    <TextBlock Margin="0,4,0,10" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Text="选择预设可立即填写；也可以组合周期或固定时间后应用到表达式。" />
+                    <ItemsControl Margin="0,0,0,8" ItemsSource="{Binding Presets}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <ui:Button Margin="0,0,6,6"
+                                           Content="{Binding Key}"
+                                           Command="{Binding DataContext.ApplyPresetCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                           CommandParameter="{Binding Value}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TabControl SelectedIndex="{Binding GeneratorTabIndex}">
+                        <TabItem Header="周期执行">
+                            <StackPanel Margin="12">
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="周期单位" />
+                                <ComboBox ItemsSource="{Binding PeriodUnits}" DisplayMemberPath="Value" SelectedValuePath="Key" SelectedValue="{Binding PeriodUnit}" />
+
+                                <StackPanel Margin="0,12,0,0" Visibility="{Binding IsMinutePeriod, Converter={StaticResource BoolVisibility}}">
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="每隔多少分钟" />
+                                    <ComboBox ItemsSource="{Binding MinuteIntervals}" SelectedItem="{Binding MinuteInterval}" />
+                                </StackPanel>
+
+                                <Grid Margin="0,12,0,0" Visibility="{Binding IsHourPeriod, Converter={StaticResource BoolVisibility}}">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource FieldLabel}" Text="每隔多少小时" />
+                                        <ComboBox ItemsSource="{Binding HourIntervals}" SelectedItem="{Binding HourInterval}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Style="{StaticResource FieldLabel}" Text="在第几分钟执行" />
+                                        <ComboBox ItemsSource="{Binding Minutes}" SelectedItem="{Binding HourStartMinute}" />
+                                    </StackPanel>
+                                </Grid>
+                                <TextBlock Margin="0,10,0,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                           Text="周期值仅提供可整除 60 分钟或 24 小时的选项，避免跨小时、跨天后节奏与描述不一致。" />
+                            </StackPanel>
+                        </TabItem>
+
+                        <TabItem Header="固定时间执行">
+                            <StackPanel Margin="12">
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="执行频率" />
+                                <ComboBox ItemsSource="{Binding FixedFrequencies}" DisplayMemberPath="Value" SelectedValuePath="Key" SelectedValue="{Binding FixedFrequency}" />
+
+                                <WrapPanel Margin="0,12,0,0">
+                                    <StackPanel Width="140" Margin="0,0,12,0" Visibility="{Binding IsWeeklyFixed, Converter={StaticResource BoolVisibility}}">
+                                        <TextBlock Style="{StaticResource FieldLabel}" Text="星期" />
+                                        <ComboBox ItemsSource="{Binding Weekdays}" DisplayMemberPath="Value" SelectedValuePath="Key" SelectedValue="{Binding FixedWeekday}" />
+                                    </StackPanel>
+                                    <StackPanel Width="140" Margin="0,0,12,0" Visibility="{Binding IsMonthlyFixed, Converter={StaticResource BoolVisibility}}">
+                                        <TextBlock Style="{StaticResource FieldLabel}" Text="日期" />
+                                        <ComboBox ItemsSource="{Binding MonthDays}" SelectedItem="{Binding FixedMonthDay}" />
+                                    </StackPanel>
+                                    <StackPanel Width="140" Margin="0,0,12,0">
+                                        <TextBlock Style="{StaticResource FieldLabel}" Text="小时" />
+                                        <ComboBox ItemsSource="{Binding Hours}" SelectedItem="{Binding FixedHour}" />
+                                    </StackPanel>
+                                    <StackPanel Width="140">
+                                        <TextBlock Style="{StaticResource FieldLabel}" Text="分钟" />
+                                        <ComboBox ItemsSource="{Binding Minutes}" SelectedItem="{Binding FixedMinute}" />
+                                    </StackPanel>
+                                </WrapPanel>
+                                <TextBlock Margin="0,10,0,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                           Text="选择每月 29—31 日时，没有该日期的月份会跳过。" />
+                            </StackPanel>
+                        </TabItem>
+                    </TabControl>
+
+                    <Border Margin="0,12,0,0" Padding="10" CornerRadius="4" Background="{DynamicResource SubtleFillColorSecondaryBrush}">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="{Binding GeneratedDescription}" />
+                                <TextBlock Margin="0,3,0,0" FontFamily="Consolas" FontWeight="SemiBold" Text="{Binding GeneratedExpression}" />
+                            </StackPanel>
+                            <ui:Button Grid.Column="1" Margin="12,0,0,0" Appearance="Primary" Content="应用到表达式" Command="{Binding ApplyGeneratedExpressionCommand}" />
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </Border>
+        </Popup>
+    </StackPanel>
+</UserControl>

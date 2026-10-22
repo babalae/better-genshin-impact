@@ -26,6 +26,22 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
         => Assert.Equal(DateTimeOffset.Parse(expected).ToUniversalTime(), new PuloniaCronExpression(cron)
             .Next(DateTimeOffset.Parse(after), TimeZoneInfo.FindSystemTimeZoneById("China Standard Time")));
 
+    /// <summary>触发器只提供三个原神服务器时区，默认使用 UTC+8 固定偏移。</summary>
+    [Fact]
+    public void ServerTimeZones_AreLimitedAndDefaultToUtcPlus8()
+    {
+        var trigger = new PuloniaTaskTrigger();
+        var editor = new PuloniaTaskTriggerEditorViewModel(trigger, Plan());
+
+        Assert.Equal(PuloniaTaskServerTimeZone.UtcPlus8, trigger.ServerTimeZone);
+        Assert.Equal(3, editor.ServerTimeZones.Count);
+        Assert.Equal(TimeSpan.FromHours(8), PuloniaTaskSchedule.GetTimeZone(trigger.ServerTimeZone).BaseUtcOffset);
+        Assert.Equal(TimeSpan.FromHours(1), PuloniaTaskSchedule.GetTimeZone(PuloniaTaskServerTimeZone.Europe).BaseUtcOffset);
+        Assert.Equal(TimeSpan.FromHours(-5), PuloniaTaskSchedule.GetTimeZone(PuloniaTaskServerTimeZone.America).BaseUtcOffset);
+        Assert.Throws<FormatException>(() => PuloniaTaskSchedule.Validate(new PuloniaTaskTrigger
+            { ServerTimeZone = (PuloniaTaskServerTimeZone)0 }));
+    }
+
     /// <summary>不接受 Quartz、越界字段及零步长。</summary>
     [Theory]
     [InlineData("0 0 4 * * *")]
@@ -58,46 +74,75 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
         => Assert.Equal(DateTimeOffset.Parse("2026-06-01T04:00:00Z"), new PuloniaCronExpression("0 4 1 * 1")
             .Next(DateTimeOffset.Parse("2026-04-02T00:00:00Z"), TimeZoneInfo.Utc));
 
-    /// <summary>快捷表单、周时间修改和高级表单始终生成一致的唯一 Cron。</summary>
+    /// <summary>直接编辑表达式后，保存和校验始终读取同一份 Cron。</summary>
     [Fact]
-    public void Editor_WeeklyAndAdvancedPreserveSameSchedule()
+    public void Editor_DirectExpressionIsSingleScheduleSource()
     {
         var editor = new PuloniaTaskTriggerEditorViewModel(new PuloniaTaskTrigger(), Plan());
-        editor.ApplyPresetCommand.Execute("weekly4");
-        editor.Weekday = 3; editor.Hour = "17"; editor.Minute = "15";
-        Assert.Equal("15 17 * * 3", editor.CreateTrigger().Cron);
-        editor.Mode = "advanced";
-        Assert.Equal("15 17 * * 3", editor.Cron);
-        editor.Cron = "0 25 * * *";
+        editor.CronEditor.Expression = "*/20 1,13 * * *";
+        Assert.Equal("*/20 1,13 * * *", editor.CreateTrigger().Cron);
+
+        editor.CronEditor.Expression = "0 25 * * *";
         Assert.False(editor.IsValid);
         Assert.Contains("无效", editor.PreviewText);
     }
 
-    /// <summary>常用 CD 快捷按钮保存真实固定间隔，不能伪装成 Cron 跨日步长。</summary>
+    /// <summary>常用 Cron 预设必须直接写入可保存的标准五段表达式。</summary>
     [Theory]
-    [InlineData("interval20", 1200)]
-    [InlineData("interval24", 1440)]
-    [InlineData("interval48", 2880)]
-    [InlineData("interval72", 4320)]
-    public void Editor_IntervalPresetsUsePersistedAnchor(string preset, int minutes)
+    [InlineData("*/5 * * * *")]
+    [InlineData("*/15 * * * *")]
+    [InlineData("0 * * * *")]
+    [InlineData("0 4 * * *")]
+    [InlineData("0 9 * * 1-5")]
+    [InlineData("0 4 * * 1")]
+    [InlineData("0 4 1 * *")]
+    public void CronEditor_PresetsWriteExpression(string cron)
     {
-        var editor = new PuloniaTaskTriggerEditorViewModel(new PuloniaTaskTrigger(), Plan());
-        editor.ApplyPresetCommand.Execute(preset);
-        var trigger = editor.CreateTrigger();
-        Assert.Equal(PuloniaTaskScheduleKind.Interval, trigger.ScheduleKind);
-        Assert.Equal(minutes, trigger.IntervalMinutes);
-        var restored = PuloniaTaskJson.Read<PuloniaTaskTrigger>(PuloniaTaskJson.Write(trigger));
-        Assert.Equal(trigger.AnchorUtc.AddMinutes(minutes), PuloniaTaskSchedule.Next(restored, trigger.AnchorUtc));
+        var editor = new PuloniaCronEditorViewModel("0 4 * * *") { IsPopupOpen = true };
+        editor.ApplyPresetCommand.Execute(cron);
+        Assert.Equal(cron, editor.Expression);
+        Assert.False(editor.IsPopupOpen);
     }
 
-    /// <summary>重新编辑间隔日程不能丢掉锚点秒数，也不能因为改名重置 CD。</summary>
-    [Fact]
-    public void Editor_PreservesAnchorWhenChangingName()
+    /// <summary>周期生成器只使用能整除时间边界的周期，并生成对应步长表达式。</summary>
+    [Theory]
+    [InlineData("minute", 15, 1, 0, "*/15 * * * *")]
+    [InlineData("hour", 5, 6, 30, "30 */6 * * *")]
+    public void CronEditor_PeriodGeneratorWritesExpression(string unit, int minuteInterval,
+        int hourInterval, int startMinute, string cron)
     {
-        var trigger = new PuloniaTaskTrigger { ScheduleKind = PuloniaTaskScheduleKind.Interval,
-            AnchorUtc = DateTimeOffset.Parse("2026-10-03T20:12:34Z"), IntervalMinutes = 2880 };
-        var editor = new PuloniaTaskTriggerEditorViewModel(trigger, Plan()) { Name = "改名" };
-        Assert.Equal(trigger.AnchorUtc, editor.CreateTrigger().AnchorUtc);
+        var editor = new PuloniaCronEditorViewModel("0 4 * * *")
+        {
+            GeneratorTabIndex = 0,
+            PeriodUnit = unit,
+            MinuteInterval = minuteInterval,
+            HourInterval = hourInterval,
+            HourStartMinute = startMinute
+        };
+        editor.ApplyGeneratedExpressionCommand.Execute(null);
+        Assert.Equal(cron, editor.Expression);
+    }
+
+    /// <summary>固定时间生成器覆盖每天、工作日、每周和每月四种常见日程。</summary>
+    [Theory]
+    [InlineData("daily", 1, 1, "15 17 * * *")]
+    [InlineData("weekdays", 1, 1, "15 17 * * 1-5")]
+    [InlineData("weekly", 3, 1, "15 17 * * 3")]
+    [InlineData("monthly", 1, 20, "15 17 20 * *")]
+    public void CronEditor_FixedTimeGeneratorWritesExpression(string frequency, int weekday,
+        int monthDay, string cron)
+    {
+        var editor = new PuloniaCronEditorViewModel("0 4 * * *")
+        {
+            GeneratorTabIndex = 1,
+            FixedFrequency = frequency,
+            FixedHour = 17,
+            FixedMinute = 15,
+            FixedWeekday = weekday,
+            FixedMonthDay = monthDay
+        };
+        editor.ApplyGeneratedExpressionCommand.Execute(null);
+        Assert.Equal(cron, editor.Expression);
     }
 
     /// <summary>到点立即提交请求，重启及回拨都不会再次执行同一发生时间。</summary>
@@ -207,10 +252,10 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
                 RequestId = id, RunId = Guid.NewGuid(), PlanName = plan.Name, Message = "已排队", Status = PuloniaTaskRunStatus.Queued,
                 SnapshotJson = PuloniaTaskJson.Write(snapshot), SubmittedAt = clock.GetUtcNow(),
                 Request = new PuloniaTaskRequest { PlanId = plan.Id, Source = "schedule", TriggerId = trigger.Id,
-                    TriggerSignature = PuloniaTaskSchedule.Signature(trigger), OccurrenceUtc = occurrence, DeadlineUtc = occurrence.AddHours(6) }
+                    TriggerActivatedAtUtc = trigger.ActivatedAtUtc, OccurrenceUtc = occurrence, DeadlineUtc = occurrence.AddHours(6) }
             }],
             TriggerStates = [new PuloniaTaskTriggerState { PlanId = plan.Id, TriggerId = trigger.Id,
-                Signature = PuloniaTaskSchedule.Signature(trigger), LastOccurrenceUtc = occurrence, LastRequestId = id,
+                TriggerActivatedAtUtc = trigger.ActivatedAtUtc, LastOccurrenceUtc = occurrence, LastRequestId = id,
                 NextOccurrenceUtc = PuloniaTaskSchedule.Next(trigger, occurrence) }]
         });
         await using var service = Service(store, clock);
@@ -232,8 +277,8 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
         var registry = new PuloniaCSharpTaskRegistry();
         registry.Register("test.block", async (_, _, ct) => { entered.TrySetResult(); await release.Task.WaitAsync(ct); return PuloniaTaskOutcome.Success("退出"); });
         var plan = Plan("test.block"); var trigger = Trigger(clock);
-        trigger.BusyPolicy = policy; trigger.ScheduleKind = PuloniaTaskScheduleKind.Interval;
-        trigger.AnchorUtc = clock.GetUtcNow().AddSeconds(-2); trigger.IntervalMinutes = 1;
+        trigger.BusyPolicy = policy;
+        trigger.Cron = "* * * * *";
         plan.Triggers.Add(trigger); plan = await store.SavePlanAsync(plan);
         await using var service = Service(store, clock, registry);
         await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = plan.Id });

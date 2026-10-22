@@ -334,7 +334,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
             }
         }
 
-        // 人工续跑是新授权，不能继承旧触发窗口、旧配置签名或“停止当前”策略。
+        // 人工续跑是新授权，不能继承旧触发窗口、配置版本或“停止当前”策略。
         var resumeRequest = CloneAndValidateRequest(new PuloniaTaskRequest
         {
             PlanId = source.Request.PlanId, TargetTaskId = source.Request.TargetTaskId,
@@ -1332,9 +1332,9 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
         if (request.TriggerId is not null)
         {
             PuloniaTaskValidator.ValidateId(request.TriggerId, "request/trigger_id");
-            if (string.IsNullOrWhiteSpace(request.TriggerSignature) || request.TriggerSignature.Length != 64
+            if (request.TriggerActivatedAtUtc is null
                 || request.OccurrenceUtc is null || request.DeadlineUtc is null || request.DeadlineUtc <= request.OccurrenceUtc)
-                throw new PuloniaTaskValidationException("request", "自动请求必须带有配置签名、发生时间和有效截止时间。");
+                throw new PuloniaTaskValidationException("request", "自动请求必须带有配置版本、发生时间和有效截止时间。");
         }
         if (string.IsNullOrWhiteSpace(request.Server) || request.Server.Length > 32)
             throw new PuloniaTaskValidationException("request/server", "服务器标识必须是 1—32 个字符。");
@@ -1365,7 +1365,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
             Source = request.Source,
             TargetTaskId = request.TargetTaskId,
             TriggerId = request.TriggerId,
-            TriggerSignature = request.TriggerSignature,
+            TriggerActivatedAtUtc = request.TriggerActivatedAtUtc,
             OccurrenceUtc = request.OccurrenceUtc,
             DeadlineUtc = request.DeadlineUtc,
             BusyPolicy = request.BusyPolicy

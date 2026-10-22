@@ -24,7 +24,7 @@ public sealed partial class PuloniaTaskService
         finally { _stateGate.Release(); }
     }
 
-    /// <summary>检查当前配置；每次恢复只合并有效窗口内最新一次，不补跑整段离线历史。</summary>
+    /// <summary>检查当前配置；每次恢复只合并仍可延迟启动的最新一次，不补跑整段离线历史。</summary>
     public async Task CheckTriggersAsync(IReadOnlyList<PuloniaTaskPlan> plans, CancellationToken ct = default)
     {
         await _initialization.WaitAsync(ct).ConfigureAwait(false);
@@ -39,9 +39,6 @@ public sealed partial class PuloniaTaskService
                 var cursor = await GetTriggerCursorAsync(plan, trigger, ct).ConfigureAwait(false);
                 var floor = cursor.LastOccurrenceUtc ?? trigger.ActivatedAtUtc.AddTicks(-1);
                 var due = PuloniaTaskSchedule.Latest(trigger, now, floor);
-                if (!trigger.CatchUp && cursor.PendingOccurrenceUtc is { } observed
-                    && observed > floor && observed <= now && observed > now.AddMinutes(-trigger.WindowMinutes))
-                    due = observed;
                 if (due is null)
                 {
                     // 长时间离线只推进到现在；下次时间始终严格晚于已处理游标。
@@ -49,22 +46,18 @@ public sealed partial class PuloniaTaskService
                     if (next <= now)
                     {
                         cursor.LastOccurrenceUtc = now;
-                        cursor.PendingOccurrenceUtc = null;
                         cursor.Status = "已过期";
-                        cursor.Message = "遗漏的时间已超出有效窗口，未启动任务。";
+                        cursor.Message = "遗漏的时间已超过允许延迟启动时间，未启动任务。";
                         cursor.NextOccurrenceUtc = PuloniaTaskSchedule.Next(trigger, now);
                         await SaveTriggerCursorAsync(cursor, ct).ConfigureAwait(false);
                     }
                     continue;
                 }
-                var alreadyObserved = cursor.PendingOccurrenceUtc == due;
-                cursor.PendingOccurrenceUtc = due;
                 cursor.NextOccurrenceUtc = PuloniaTaskSchedule.Next(trigger, due.Value);
-                // 不补离线遗漏，但到点已观察到的事件仍可以在窗口内提交。
-                if (!trigger.CatchUp && !alreadyObserved && now - due.Value > TimeSpan.FromSeconds(5))
+                // 不补离线遗漏，但调度循环五秒内观察到的到点事件仍会提交。
+                if (!trigger.CatchUp && now - due.Value > TimeSpan.FromSeconds(5))
                 {
                     cursor.LastOccurrenceUtc = due;
-                    cursor.PendingOccurrenceUtc = null;
                     cursor.Status = "已过期";
                     cursor.Message = "未启用补触发，已跳过遗漏时间。";
                     await SaveTriggerCursorAsync(cursor, ct).ConfigureAwait(false);
@@ -100,13 +93,12 @@ public sealed partial class PuloniaTaskService
         PuloniaTaskTrigger trigger, CancellationToken ct)
     {
         var states = await ListTriggerStatesAsync(ct).ConfigureAwait(false);
-        var signature = PuloniaTaskSchedule.Signature(trigger);
         var cursor = states.FirstOrDefault(item => item.PlanId == plan.Id && item.TriggerId == trigger.Id
-            && item.Signature == signature);
+            && item.TriggerActivatedAtUtc == trigger.ActivatedAtUtc);
         if (cursor is not null) return cursor;
         cursor = new PuloniaTaskTriggerState
         {
-            PlanId = plan.Id, TriggerId = trigger.Id, Signature = signature,
+            PlanId = plan.Id, TriggerId = trigger.Id, TriggerActivatedAtUtc = trigger.ActivatedAtUtc,
             LastOccurrenceUtc = trigger.ActivatedAtUtc.AddTicks(-1),
             NextOccurrenceUtc = PuloniaTaskSchedule.Next(trigger, trigger.ActivatedAtUtc.AddTicks(-1)),
             Status = "等待", Message = "配置已生效。"
@@ -120,7 +112,7 @@ public sealed partial class PuloniaTaskService
     {
         var existing = (await ListTriggerStatesAsync(ct).ConfigureAwait(false))
             .FirstOrDefault(item => item.PlanId == cursor.PlanId && item.TriggerId == cursor.TriggerId);
-        if (existing is not null && PuloniaTaskJson.Write(existing) == PuloniaTaskJson.Write(cursor)) return;
+        if (existing is not null && existing.ContentEquals(cursor)) return;
         await PersistCurrentStateAsync(ct, state => PutCursor(state, cursor)).ConfigureAwait(false);
     }
 
@@ -128,7 +120,7 @@ public sealed partial class PuloniaTaskService
     private static void PutCursor(PuloniaTaskState state, PuloniaTaskTriggerState cursor)
     {
         state.TriggerStates.RemoveAll(item => item.PlanId == cursor.PlanId && item.TriggerId == cursor.TriggerId);
-        state.TriggerStates.Add(PuloniaTaskJson.Read<PuloniaTaskTriggerState>(PuloniaTaskJson.Write(cursor)));
+        state.TriggerStates.Add(cursor.Clone());
     }
 
     /// <summary>同步最近请求的运行/结束状态，不覆盖较新发生时间的等待或合并反馈。</summary>
@@ -136,7 +128,8 @@ public sealed partial class PuloniaTaskService
     {
         var cursor = state.TriggerStates.FirstOrDefault(item => item.PlanId == record.Request.PlanId
             && item.TriggerId == record.Request.TriggerId && item.LastRequestId == record.RequestId
-            && item.Signature == record.Request.TriggerSignature && item.Status is "已排队" or "运行中" or "停止中");
+            && item.TriggerActivatedAtUtc == record.Request.TriggerActivatedAtUtc
+            && item.Status is "已排队" or "运行中" or "停止中");
         if (cursor is null) return;
         cursor.Status = record.Status switch
         {
@@ -166,7 +159,6 @@ public sealed partial class PuloniaTaskService
             cursor.Status = "已合并";
             cursor.Message = "同一计划/账号已有请求，按忙碌策略跳过重复触发。";
             cursor.LastOccurrenceUtc = occurrence;
-            cursor.PendingOccurrenceUtc = null;
             await SaveTriggerCursorAsync(cursor, ct).ConfigureAwait(false);
             return;
         }
@@ -176,14 +168,14 @@ public sealed partial class PuloniaTaskService
             {
                 PlanId = plan.Id, TargetTaskId = trigger.TargetTaskId, AccountId = triggerAccountId,
                 Source = trigger.Kind == PuloniaTaskTriggerKind.Hotkey ? "hotkey" : "schedule",
-                TriggerId = trigger.Id, TriggerSignature = cursor.Signature, OccurrenceUtc = occurrence,
-                DeadlineUtc = occurrence.AddMinutes(trigger.WindowMinutes), TimeoutSeconds = trigger.TimeoutSeconds,
+                TriggerId = trigger.Id, TriggerActivatedAtUtc = cursor.TriggerActivatedAtUtc, OccurrenceUtc = occurrence,
+                DeadlineUtc = occurrence.AddMinutes(trigger.WindowMinutes),
                 BusyPolicy = trigger.BusyPolicy
             };
             await EnqueueCoreAsync(request, (state, id) =>
             {
                 var previous = state.TriggerStates.FirstOrDefault(item => item.PlanId == plan.Id
-                    && item.TriggerId == trigger.Id && item.Signature == cursor.Signature);
+                    && item.TriggerId == trigger.Id && item.TriggerActivatedAtUtc == cursor.TriggerActivatedAtUtc);
                 if (previous?.LastOccurrenceUtc >= occurrence)
                     throw new InvalidOperationException("该触发时间已提交，不能重复排队。");
                 // 准备快照可能让出线程：在同一状态门内再复核并发提交的手动/续跑请求。
@@ -194,7 +186,6 @@ public sealed partial class PuloniaTaskService
                     || existing.Any(item => item.GetStatus() == PuloniaTaskRunStatus.Queued)))
                     throw new TriggerBusyException();
                 cursor.LastOccurrenceUtc = occurrence;
-                cursor.PendingOccurrenceUtc = null;
                 cursor.LastRequestId = id;
                 cursor.Status = "已排队";
                 cursor.Message = "请求与调度游标已一并保存。";
@@ -207,7 +198,6 @@ public sealed partial class PuloniaTaskService
             cursor.Status = ex is TriggerBusyException ? "已合并" : "准备失败";
             cursor.Message = ex.Message;
             cursor.LastOccurrenceUtc = occurrence;
-            cursor.PendingOccurrenceUtc = null;
             await SaveTriggerCursorAsync(cursor, ct).ConfigureAwait(false);
         }
     }
@@ -232,7 +222,7 @@ public sealed partial class PuloniaTaskService
             return false;
         }
         var trigger = plan?.Triggers.FirstOrDefault(item => item.Id == state.Request.TriggerId && item.Enabled);
-        var invalid = trigger is null || PuloniaTaskSchedule.Signature(trigger) != state.Request.TriggerSignature;
+        var invalid = trigger is null || trigger.ActivatedAtUtc != state.Request.TriggerActivatedAtUtc;
         if (plan?.Purpose == PuloniaTaskPlanPurpose.OneDragon && _accountSwitcher is not null)
         {
             var bindings = plan.Accounts.Where(account => account.Enabled).ToArray();
@@ -245,7 +235,7 @@ public sealed partial class PuloniaTaskService
             {
                 if (state.Status != PuloniaTaskRunStatus.Queued) return false;
                 state.Status = invalid ? PuloniaTaskRunStatus.Cancelled : PuloniaTaskRunStatus.Expired;
-                state.Message = invalid ? "触发器已删除、禁用或调整，旧排队请求未启动。" : "已超过有效开始窗口，未启动任何执行器。";
+                state.Message = invalid ? "触发器已删除、禁用或调整，旧排队请求未启动。" : "已超过允许延迟启动时间，未启动任何执行器。";
                 state.FinishedAt = now;
             }
             await CompleteStateAsync(state).ConfigureAwait(false);

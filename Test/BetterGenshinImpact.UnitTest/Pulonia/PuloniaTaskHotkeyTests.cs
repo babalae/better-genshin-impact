@@ -1,6 +1,4 @@
 using System.Reflection;
-using System.Security.Cryptography;
-using System.Text;
 using System.Windows;
 using System.Windows.Input;
 using BetterGenshinImpact.Model;
@@ -17,7 +15,7 @@ using FormsMouseButtons = System.Windows.Forms.MouseButtons;
 
 namespace BetterGenshinImpact.UnitTest.Pulonia;
 
-/// <summary>两种快捷键、配置兼容和卡片开关回归；不创建窗口或安装真实系统钩子。</summary>
+/// <summary>两种快捷键、配置序列化和卡片开关回归；不创建窗口或安装真实系统钩子。</summary>
 public sealed class PuloniaTaskHotkeyTests : IDisposable
 {
     /// <summary>只用于本测试的独占本地存储目录。</summary>
@@ -56,22 +54,34 @@ public sealed class PuloniaTaskHotkeyTests : IDisposable
         => Assert.Throws<FormatException>(() => PuloniaTaskSchedule.Validate(new PuloniaTaskTrigger
         { Kind = PuloniaTaskTriggerKind.Hotkey, HotkeyType = type, Hotkey = hotkey }));
 
-    /// <summary>旧配置仍是全局模式且内容签名不变，新监听模式参与本地保存和排队复核签名。</summary>
+    /// <summary>快捷键类型作为普通配置字段持久化，展示文本始终使用实际快捷键。</summary>
     [Fact]
-    public void Serialization_PreservesLegacyGlobalSignatureAndPersistsMonitorType()
+    public void Serialization_PersistsHotkeyTypeAndDerivedDisplayText()
     {
-        var trigger = new PuloniaTaskTrigger { Kind = PuloniaTaskTriggerKind.Hotkey, Hotkey = "F8" };
+        var trigger = new PuloniaTaskTrigger
+        { Kind = PuloniaTaskTriggerKind.Hotkey, Hotkey = "F8", HotkeyType = HotKeyTypeEnum.KeyboardMonitor };
+        Assert.Equal("F8", trigger.DisplayText);
         var json = PuloniaTaskJson.Write(trigger);
-        Assert.Null(JObject.Parse(json)["hotkey_type"]);
+        Assert.NotNull(JObject.Parse(json)["hotkey_type"]);
         var restored = PuloniaTaskJson.Read<PuloniaTaskTrigger>(json);
-        Assert.Equal(HotKeyTypeEnum.GlobalRegister, restored.HotkeyType);
-        var originalSignature = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(json)));
-        Assert.Equal(originalSignature, PuloniaTaskSchedule.Signature(restored));
-
-        trigger.HotkeyType = HotKeyTypeEnum.KeyboardMonitor;
-        restored = PuloniaTaskJson.Read<PuloniaTaskTrigger>(PuloniaTaskJson.Write(trigger));
         Assert.Equal(HotKeyTypeEnum.KeyboardMonitor, restored.HotkeyType);
-        Assert.NotEqual(originalSignature, PuloniaTaskSchedule.Signature(restored));
+        Assert.Equal("F8", restored.DisplayText);
+    }
+
+    /// <summary>触发器不持久化可编辑名称，界面直接展示 Cron 或快捷键。</summary>
+    [Fact]
+    public void Serialization_DoesNotPersistEditableTriggerName()
+    {
+        var scheduleJson = PuloniaTaskJson.Write(new PuloniaTaskTrigger { Cron = "15 6 * * 1" });
+        var schedule = PuloniaTaskJson.Read<PuloniaTaskTrigger>(scheduleJson);
+        Assert.Null(JObject.Parse(scheduleJson)["name"]);
+        Assert.Equal("15 6 * * 1", schedule.DisplayText);
+
+        var hotkeyJson = PuloniaTaskJson.Write(new PuloniaTaskTrigger
+            { Kind = PuloniaTaskTriggerKind.Hotkey, Hotkey = "F8" });
+        var hotkey = PuloniaTaskJson.Read<PuloniaTaskTrigger>(hotkeyJson);
+        Assert.Null(JObject.Parse(hotkeyJson)["name"]);
+        Assert.Equal("F8", hotkey.DisplayText);
     }
 
     /// <summary>类型切换复用既有输入名称，并清空旧键值而不是把组合键误转成监听单键。</summary>
@@ -98,25 +108,23 @@ public sealed class PuloniaTaskHotkeyTests : IDisposable
     public async Task CardToggle_SavesOnlyEnabledAndPreservesInvalidDraft()
     {
         using var store = new PuloniaTaskStore(_directory);
-        var trigger = new PuloniaTaskTrigger { Name = "每日任务" };
+        var trigger = new PuloniaTaskTrigger();
         var plan = await store.SavePlanAsync(new PuloniaTaskPlan { Triggers = [trigger] });
         await using var service = CreateService(store);
         var page = new PuloniaTaskPlanViewModel(store, new PuloniaTaskClipboardService(), service,
             new PuloniaTaskResourceCatalog(), new PuloniaTaskHistoryViewModel(service, store));
         await page.InitializeCommand.ExecuteAsync(null);
         var editor = page.TriggerEditor!;
-        editor.Name = "未保存的名称";
-        editor.Hour = "99";
+        editor.WindowMinutes = "0";
         Assert.False(editor.IsValid);
 
         await page.ToggleTriggerEnabledCommand.ExecuteAsync(Assert.Single(page.Triggers));
         var saved = Assert.Single((await store.ListPlansAsync()).Single(value => value.Id == plan.Id).Triggers);
         Assert.True(saved.Enabled);
-        Assert.Equal("每日任务", saved.Name);
+        Assert.Equal("0 4 * * *", saved.DisplayText);
         Assert.Equal("0 4 * * *", saved.Cron);
         Assert.Same(editor, page.TriggerEditor);
-        Assert.Equal("未保存的名称", editor.Name);
-        Assert.Equal("99", editor.Hour);
+        Assert.Equal("0", editor.WindowMinutes);
         Assert.True(editor.Enabled);
 
         await page.ToggleTriggerEnabledCommand.ExecuteAsync(Assert.Single(page.Triggers));
@@ -138,11 +146,11 @@ public sealed class PuloniaTaskHotkeyTests : IDisposable
         page.AddHotkeyTriggerCommand.Execute(null);
         var editor = page.TriggerEditor!;
         Assert.Equal(HotKeyTypeEnum.KeyboardMonitor, editor.HotkeyType);
-        editor.Name = "新草稿";
+        editor.WindowMinutes = "120";
         await page.ToggleTriggerEnabledCommand.ExecuteAsync(Assert.Single(page.Triggers));
         Assert.Null(page.SelectedTrigger);
         Assert.Same(editor, page.TriggerEditor);
-        Assert.Equal("新草稿", editor.Name);
+        Assert.Equal("120", editor.WindowMinutes);
         Assert.Single((await store.ListPlansAsync()).Single().Triggers);
     }
 

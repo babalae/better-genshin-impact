@@ -13,7 +13,7 @@ public sealed class PuloniaTaskPlan
     /// <summary>
     /// 当前支持的文件格式版本。
     /// </summary>
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
 
     /// <summary>
     /// 稳定计划 ID，同时作为存储文件名。
