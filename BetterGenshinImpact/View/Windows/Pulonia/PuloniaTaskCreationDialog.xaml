@@ -1,6 +1,7 @@
 <ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.Pulonia.PuloniaTaskCreationDialog"
                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:combat="clr-namespace:BetterGenshinImpact.View.Controls.CombatStrategy"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
@@ -258,6 +259,15 @@
                         </Style>
                     </TextBox.Style>
                 </TextBox>
+                <combat:CombatStrategyPicker Width="288" VerticalAlignment="Center" HorizontalAlignment="Left"
+                    Strategy="{Binding TextValue, Mode=TwoWay}" AllowedKinds="{Binding AllowedStrategyKinds, Mode=OneWay}">
+                    <combat:CombatStrategyPicker.Style>
+                        <Style TargetType="combat:CombatStrategyPicker">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers><DataTrigger Binding="{Binding IsCombatStrategyEditor}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
+                        </Style>
+                    </combat:CombatStrategyPicker.Style>
+                </combat:CombatStrategyPicker>
                 <ComboBox ItemsSource="{Binding Choices}"
                           SelectedItem="{Binding SelectedChoice, Mode=TwoWay}">
                     <ComboBox.Style>

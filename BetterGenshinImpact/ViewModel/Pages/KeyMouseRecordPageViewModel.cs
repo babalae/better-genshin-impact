@@ -1,3 +1,5 @@
+using BetterGenshinImpact.ViewModel.Message;
+using CommunityToolkit.Mvvm.Messaging;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recorder;
 using BetterGenshinImpact.Core.Script;
@@ -36,16 +38,24 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
     private readonly ISnackbarService _snackbarService;
 
     /// <summary>
-    /// 游戏运行环境服务。开始录制时读取 <see cref="GameRuntimeService.Current"/>，不缓存
+    /// 共享的键鼠录制与保存服务。
     /// </summary>
-    private readonly GameRuntimeService _runtimeService;
+    private readonly KeyMouseRecordService _recordService;
 
     public AllConfig Config { get; set; }
 
-    public KeyMouseRecordPageViewModel(ISnackbarService snackbarService, IConfigService configService, GameRuntimeService runtimeService)
+    public KeyMouseRecordPageViewModel(ISnackbarService snackbarService, IConfigService configService, KeyMouseRecordService recordService)
     {
         _snackbarService = snackbarService;
-        _runtimeService = runtimeService;
+        _recordService = recordService;
+        IsRecording = recordService.IsRecording;
+        WeakReferenceMessenger.Default.Register<KeyMouseRecordStateChangedMessage>(this, static (recipient, message) =>
+            ((KeyMouseRecordPageViewModel)recipient).IsRecording = message.IsRecording);
+        WeakReferenceMessenger.Default.Register<KeyMouseRecordSavedMessage>(this, static (recipient, _) =>
+        {
+            // 刷新 ListView，来自选择控件和热键的录制同样显示。
+            ((KeyMouseRecordPageViewModel)recipient).InitScriptListViewData();
+        });
         Config = configService.Get();
     }
 
@@ -88,38 +98,13 @@ public partial class KeyMouseRecordPageViewModel : ViewModel
     [RelayCommand]
     public async Task OnStartRecord()
     {
-        if (_runtimeService.Current is not { } runtime)
-        {
-            Toast.Warning("请先在启动页，启动截图器再使用本功能");
-            return;
-        }
-        if (!IsRecording)
-        {
-            IsRecording = true;
-            IsRecording = await GlobalKeyMouseRecord.Instance.StartRecord(runtime);
-        }
+        await _recordService.StartAsync();
     }
 
     [RelayCommand]
     public void OnStopRecord()
     {
-        if (IsRecording)
-        {
-            try
-            {
-                var macro = GlobalKeyMouseRecord.Instance.StopRecord();
-                // Genshin Copilot Macro
-                File.WriteAllText(Path.Combine(scriptPath, $"BetterGI_GCM_{DateTime.Now:yyyyMMddHHmmssffff}.json"), macro);
-                // 刷新ListView
-                InitScriptListViewData();
-                IsRecording = false;
-            }
-            catch (Exception e)
-            {
-                _logger.LogDebug(e, "停止录制时发生异常");
-                _logger.LogWarning(e.Message);
-            }
-        }
+        _recordService.Stop();
     }
 
     [RelayCommand]

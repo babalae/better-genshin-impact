@@ -272,6 +272,7 @@ public partial class App : Application
                 services.AddTransient<CloudWebHostWindow>();
                 services.AddSingleton<Func<CloudWebHostWindow>>(sp => () => sp.GetRequiredService<CloudWebHostWindow>());
                 services.AddSingleton<GameRuntimeService>();
+                services.AddSingleton<BetterGenshinImpact.Core.Recorder.KeyMouseRecordService>();
                 // 云原神网页版实例：实例名存储与启动器（Primary 首页使用）
                 services.AddSingleton<WebViewInstanceStore>();
                 services.AddSingleton<WebViewInstanceLauncher>();

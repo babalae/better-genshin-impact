@@ -16,3 +16,4 @@
 - [移除 TaskContext：按生命周期显式传递 GameRuntime](task-context-removal.md)
 - [BetterGI 外部访问服务设计](external-access.md)
 - [独立任务合同重构：ISoloTask 泛型化](task-contract.md)（草案，待评审）
+- [自动战斗策略统一：策略模型、键鼠录制实现与策略选择控件](auto-fight-strategy.md)（第 3 版，已确认）

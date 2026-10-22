@@ -42,7 +42,7 @@
             <Style BasedOn="{StaticResource DefaultTextBoxStyle}" TargetType="{x:Type TextBox}">
                 <Setter Property="behavior:ClipboardInterceptor.EnableSafeClipboard" Value="True" />
             </Style>
-            <Style BasedOn="{StaticResource DefaultTextBoxStyle}" TargetType="{x:Type ui:TextBox}">
+            <Style BasedOn="{StaticResource DefaultUiTextBoxStyle}" TargetType="{x:Type ui:TextBox}">
                 <Setter Property="behavior:ClipboardInterceptor.EnableSafeClipboard" Value="True" />
             </Style>
         </ResourceDictionary>

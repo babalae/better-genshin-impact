@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.AutoFight.Strategy;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -44,6 +45,10 @@ public partial class PuloniaOneDragonParameterFieldViewModel : ObservableObject
     public bool IsBoolean => _scalar.IsBooleanEditor;
     /// <summary>是否为下拉框。</summary>
     public bool IsChoice => _scalar.IsChoiceEditor;
+    /// <summary>是否为战斗策略选择器。</summary>
+    public bool IsCombatStrategy => _scalar.IsCombatStrategyEditor;
+    /// <summary>当前任务允许的策略类型。</summary>
+    public CombatStrategyKind AllowedStrategyKinds => _scalar.AllowedStrategyKinds;
     /// <summary>是否为数字输入框。</summary>
     public bool IsNumber { get; }
     /// <summary>是否为文本输入框。</summary>

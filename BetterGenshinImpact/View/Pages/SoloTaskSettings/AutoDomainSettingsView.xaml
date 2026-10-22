@@ -1,5 +1,6 @@
 <UserControl x:Class="BetterGenshinImpact.View.Pages.SoloTaskSettings.AutoDomainSettingsView"
- xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:combat="clr-namespace:BetterGenshinImpact.View.Controls.CombatStrategy"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
  xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta" xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
  xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers"
@@ -24,8 +25,7 @@
      </Grid.ColumnDefinitions>
      <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="选择战斗策略" TextWrapping="Wrap"/>
      <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="仅用于本任务的秘境战斗" TextWrapping="Wrap"/>
-     <ComboBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Width="200" Margin="0,0,36,0"
-               ItemsSource="{Binding StrategyChoices}" SelectedItem="{Binding StrategyName, Mode=TwoWay}"/>
+     <combat:CombatStrategyPicker Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Margin="0,0,36,0" Width="288" VerticalAlignment="Center" AllowedKinds="All" Strategy="{Binding StrategyName, Mode=TwoWay}" />
     </Grid>
    </ui:CardExpander.Header>
   </ui:CardExpander>

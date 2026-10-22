@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.AutoFight.Strategy;
 using System.Collections.Generic;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Model;
@@ -99,12 +100,6 @@ public class AutoStygianOnslaughtParam:BaseTaskParam<AutoStygianOnslaughtTask>
             strategyName = Config.AutoFightConfig.StrategyName;
         }
 
-        if (string.IsNullOrWhiteSpace(strategyName) ||"根据队伍自动选择".Equals(strategyName))
-        {
-            CombatScriptBagPath= Global.Absolute(@"User\AutoFight\");
-            return;
-        }
-
-        CombatScriptBagPath= Global.Absolute(@"User\AutoFight\" + strategyName + ".txt");
+        CombatScriptBagPath = CombatStrategyResolver.Parse(strategyName).Path;
     }
 }

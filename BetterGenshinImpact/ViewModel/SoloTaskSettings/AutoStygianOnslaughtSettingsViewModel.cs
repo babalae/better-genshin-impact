@@ -38,8 +38,7 @@ public partial class AutoStygianOnslaughtSettingsViewModel : SoloTaskSettingsVie
     /// <summary>载入时的脆弱树脂次数快照。</summary>
     private readonly int _originalFragileResinUseCount;
 
-    /// <summary>战斗策略选项；幽境危战不提供联合策略，当前值不在列表中时追加显示。</summary>
-    public string[] StrategyChoices { get; }
+    // 策略目录与当前值显示由统一的 CombatStrategyPicker 负责。
 
     /// <summary>本任务使用的战斗策略名称；保存时写入 strategy_name 并清空 combat_script_bag_path。</summary>
     [ObservableProperty] private string _strategyName;
@@ -81,7 +80,6 @@ public partial class AutoStygianOnslaughtSettingsViewModel : SoloTaskSettingsVie
         _originalCondensedResinUseCount = ReadInt(Original, "condensed_resin_use_count");
         _originalTransientResinUseCount = ReadInt(Original, "transient_resin_use_count");
         _originalFragileResinUseCount = ReadInt(Original, "fragile_resin_use_count");
-        StrategyChoices = WithCurrentChoice(PuloniaOneDragonSettingChoices.GetStrategies(false), _originalStrategyName);
         _strategyName = _originalStrategyName;
         _bossNum = _originalBossNum;
         _fightTeamName = _originalFightTeamName;

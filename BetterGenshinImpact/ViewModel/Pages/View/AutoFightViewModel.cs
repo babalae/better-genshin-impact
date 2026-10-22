@@ -18,28 +18,9 @@ public partial class AutoFightViewModel : ObservableObject, IViewModel
     {
         Config = config;
         _strategyList = LoadCustomScript(Global.Absolute(@"User\AutoGeniusInvokation"));
-        _combatStrategyList = BuildCombatStrategyList();
-        _combatStrategyListWithoutCombo = BuildCombatStrategyListWithoutCombo();
     }
 
-    /// <summary>战斗策略下拉列表：固定项（根据队伍自动选择 / 自动连招）+ 用户自定义策略</summary>
-    private string[] BuildCombatStrategyList()
-    {
-        return ["根据队伍自动选择", AutoFightParam.ComboStrategyName, .. LoadCustomScript(Global.Absolute(@"User\AutoFight"))];
-    }
-
-    /// <summary>战斗策略下拉列表（不含自动连招）：供暂未接入自动连招的任务（首领讨伐/幽境危战/地脉花）使用</summary>
-    private string[] BuildCombatStrategyListWithoutCombo()
-    {
-        return ["根据队伍自动选择", .. LoadCustomScript(Global.Absolute(@"User\AutoFight"))];
-    }
-
-    [ObservableProperty]
-    private string[] _combatStrategyList;
-
-    [ObservableProperty]
-    private string[] _combatStrategyListWithoutCombo;
-
+    // 战斗策略目录由 CombatStrategyPicker 按需加载；此处只保留七圣召唤列表。
     [ObservableProperty]
     private string[] _strategyList;
 
@@ -91,11 +72,6 @@ public partial class AutoFightViewModel : ObservableObject, IViewModel
     {
         switch (type)
         {
-            case "Combat":
-                CombatStrategyList = BuildCombatStrategyList();
-                CombatStrategyListWithoutCombo = BuildCombatStrategyListWithoutCombo();
-                break;
-
             case "GeniusInvocation":
                 StrategyList = LoadCustomScript(Global.Absolute(@"User\AutoGeniusInvokation"));
                 break;

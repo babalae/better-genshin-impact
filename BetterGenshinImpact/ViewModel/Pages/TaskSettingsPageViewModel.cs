@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.AutoFight.Strategy;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Project;
@@ -502,22 +503,10 @@ public partial class TaskSettingsPageViewModel : ViewModel
             return true;
         }
 
-        if ("根据队伍自动选择".Equals(strategyName))
-        {
-            path = Global.Absolute(@"User\AutoFight\");
-        }
-        else if (AutoFightParam.ComboStrategyName.Equals(strategyName))
-        {
-            // 固定策略：不对应策略文件，跳过存在性检查，由 ComboCombatTaskFactory 路由
-            path = strategyName;
-            return false;
-        }
-        else
-        {
-            (path, _) = AutoFightParam.ResolveStrategyPath(strategyName);
-        }
-
-        if (!File.Exists(path) && !Directory.Exists(path))
+        // 固定策略不对应文件；所有名称、前缀和路径统一由解析器检查。
+        var strategy = CombatStrategyResolver.Parse(strategyName);
+        path = strategy.Path;
+        if (!strategy.Exists)
         {
             UIDispatcherHelper.Invoke(() => { Toast.Error("当前选择的自动战斗策略文件不存在"); });
             return true;

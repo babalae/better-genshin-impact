@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.AutoFight.Strategy;
 using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.BgiVision;
 using BetterGenshinImpact.Core.Config;
@@ -79,14 +80,14 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
     private string _combatStrategyPath = string.Empty;
 
     /// <summary>
-    /// TXT 战斗策略解析结果；使用 JSON 策略时为 null
+    /// TXT 战斗策略解析结果；使用 JSON/键鼠策略时为 null
     /// </summary>
     private CombatScriptBag? _combatScriptBag;
 
     /// <summary>
-    /// JSON 战斗策略文件路径；不是 JSON 策略时为 null
+    /// 由统一入口执行的 JSON/键鼠策略路径；文本策略时为 null
     /// </summary>
-    private string? _jsonCombatStrategyPath;
+    private string? _entryCombatStrategyPath;
     private readonly ReturnMainUiTask _returnMainUiTask;
     private readonly Dictionary<string, int> _rewardSummary = new();
     private SwitchPartyTask? _switchPartyTask;
@@ -221,7 +222,7 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
     private SoloTaskResult? Initialize(AutoBossParam param)
     {
         _combatScriptBag = null;
-        _jsonCombatStrategyPath = null;
+        _entryCombatStrategyPath = null;
 
         // 1. 未设置策略路径时按策略名称生成（与原构造函数行为一致）
         if (string.IsNullOrWhiteSpace(param.CombatStrategyPath))
@@ -230,30 +231,24 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
         }
 
         // 2. 不是已存在的路径（例如任务计划保存的是策略名）时先解析
-        var strategyPath = param.CombatStrategyPath;
-        if (!File.Exists(strategyPath) && !Directory.Exists(strategyPath))
-        {
-            if (!CombatStrategyResolver.TryResolve(strategyPath, out var resolvedPath))
-            {
-                return SoloTaskResult.Failed(SoloTaskReasons.StrategyNotFound, "当前选择的自动战斗策略文件不存在");
-            }
-
-            strategyPath = resolvedPath;
-        }
+        var strategy = CombatStrategyResolver.Parse(param.CombatStrategyPath);
+        if (!strategy.Exists)
+            return SoloTaskResult.Failed(SoloTaskReasons.StrategyNotFound, $"战斗策略不存在：{param.CombatStrategyPath}");
+        var strategyPath = strategy.Path;
 
         // 自动连招策略没有对应的文件，首领讨伐不支持
-        if (AutoFightParam.ComboStrategyName.Equals(strategyPath, StringComparison.Ordinal))
+        if (strategy.Kind == CombatStrategyKind.Combo)
         {
             return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, "自动首领讨伐不支持自动连招策略。");
         }
 
         _combatStrategyPath = strategyPath;
 
-        // 3. 按策略类型选择战斗引擎：JSON / TXT
-        if (strategyPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+        // 3. 按策略类型选择战斗引擎：统一入口（JSON、键鼠）/ TXT
+        if (strategy.Kind is not (CombatStrategyKind.Txt or CombatStrategyKind.AutoSelect))
         {
-            _jsonCombatStrategyPath = strategyPath;
-            _logger.LogInformation("自动首领讨伐：检测到JSON策略文件，将使用JSON战斗引擎");
+            _entryCombatStrategyPath = strategyPath;
+            _logger.LogInformation("自动首领讨伐：使用统一战斗入口执行所选策略");
         }
         else
         {
@@ -965,9 +960,9 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
     {
         _logger.LogInformation("{Name}：执行战斗策略", TaskName);
 
-        if (_jsonCombatStrategyPath != null)
+        if (_entryCombatStrategyPath != null)
         {
-            await StartJsonFight();
+            await StartEntryFight();
         }
         else
         {
@@ -979,7 +974,7 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
             try
             {
                 // 组合调用使用 RunAsync，保留子任务异常向外传播的语义
-                fightResult = await new AutoFightTask(_runtime, _config).RunAsync(taskParam, _ct);
+                fightResult = await new AutoFightEntryTask(_runtime, _config).RunAsync(taskParam, _ct);
             }
             catch (NormalEndException e)
             {
@@ -1000,17 +995,16 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
     }
 
     /// <summary>
-    /// JSON策略战斗入口：委托给AutoFightJsonTask，由其自身处理战斗结束检测，
+    /// JSON/键鼠策略战斗入口：委托给AutoFightEntryTask，由其自身处理战斗结束检测，
     /// 抑制战后拾取逻辑。
     /// </summary>
-    private async Task StartJsonFight()
+    private async Task StartEntryFight()
     {
-        CancellationTokenSource cts = new();
-        _ct.Register(cts.Cancel);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(_ct);
 
         var jsonParam = new AutoFightParam
         {
-            CombatStrategyPath = _jsonCombatStrategyPath!,
+            CombatStrategyPath = _entryCombatStrategyPath!,
             FightFinishDetectEnabled = true,
             ExpBasedPickupEnabled = false,
             KazuhaPickupEnabled = false,
@@ -1018,7 +1012,7 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
             Timeout = _taskParam.Timeout,
         };
 
-        var jsonTask = new AutoFightJsonTask(_runtime, _config);
+        var jsonTask = new AutoFightEntryTask(_runtime, _config);
 
         try
         {
@@ -1026,16 +1020,18 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
             var result = await jsonTask.RunAsync(jsonParam, cts.Token);
             if (result.Kind == SoloTaskResultKind.Failed)
             {
-                _logger.LogWarning("JSON战斗任务失败：{Msg}", result.Message);
+                _logger.LogWarning("JSON/键鼠战斗任务失败：{Msg}", result.Message);
             }
         }
+        catch (OperationCanceledException) when (_ct.IsCancellationRequested) { throw; }
+        catch (RetryException) { throw; }
         catch (NormalEndException e)
         {
             _logger.LogInformation("战斗操作中断：{Msg}", e.Message);
         }
         catch (Exception e)
         {
-            _logger.LogWarning("JSON战斗任务异常：{Msg}", e.Message);
+            _logger.LogWarning("JSON/键鼠战斗任务异常：{Msg}", e.Message);
         }
     }
 

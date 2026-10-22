@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.AutoFight.Strategy;
 using System.Collections.Generic;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.AutoFight;
@@ -172,18 +173,7 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
             strategyName = Config.AutoFightConfig.StrategyName;
         }
 
-        if ("根据队伍自动选择".Equals(strategyName))
-        {
-            return Global.Absolute(@"User\AutoFight\");
-        }
-        else if (AutoFightParam.ComboStrategyName.Equals(strategyName))
-        {
-            return AutoFightParam.ComboStrategyName;
-        }
-        else
-        {
-            return Global.Absolute(@"User\AutoFight\" + strategyName + ".txt");
-        }
+        return CombatStrategyResolver.Parse(strategyName).Path;
     }
 
     public void SetResinPriorityList(params string[] priorities)

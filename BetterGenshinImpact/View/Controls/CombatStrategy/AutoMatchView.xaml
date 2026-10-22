@@ -1,0 +1,47 @@
+<UserControl x:Class="BetterGenshinImpact.View.Controls.CombatStrategy.AutoMatchView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:b="http://schemas.microsoft.com/xaml/behaviors" xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:local="clr-namespace:BetterGenshinImpact.View.Controls.CombatStrategy" Foreground="{DynamicResource TextFillColorPrimaryBrush}" FontSize="14"
+             FontFamily="{DynamicResource TextThemeFontFamily}">
+    <UserControl.Resources><ResourceDictionary>
+        <ResourceDictionary.MergedDictionaries><ResourceDictionary Source="CombatStrategyStyles.xaml" /></ResourceDictionary.MergedDictionaries>
+        <local:ScopeIndentConverter x:Key="ScopeIndent" />
+    </ResourceDictionary></UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+        <StackPanel>
+            <TextBlock Text="按队伍匹配" FontSize="18" FontWeight="SemiBold" Margin="0,6,0,8" />
+            <TextBlock Text="开始战斗时识别当前队伍，从下方范围的文本策略中选择匹配角色最多的一个。JSON 与键鼠录制不参与。" Style="{StaticResource StrategySecondaryTextStyle}" />
+            <Border Height="1" Background="{DynamicResource DividerStrokeColorDefaultBrush}" Margin="0,14,0,12" />
+            <TextBlock Text="匹配范围（点击即选用）" Style="{StaticResource StrategySecondaryTextStyle}" Margin="0,0,0,6" />
+        </StackPanel>
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel>
+                <ListBox x:Name="ScopeList" ItemsSource="{Binding Scopes, Mode=OneWay}" SelectedItem="{Binding SelectedScope, Mode=TwoWay}"
+                         Style="{StaticResource StrategyListStyle}" ItemContainerStyle="{StaticResource StrategyListItemStyle}"
+                         ScrollViewer.VerticalScrollBarVisibility="Disabled" AutomationProperties.Name="文本策略匹配范围">
+                    <ListBox.ItemTemplate><DataTemplate>
+                        <Grid Margin="{Binding Depth, Mode=OneWay, Converter={StaticResource ScopeIndent}}" ToolTip="{Binding Title, Mode=OneWay}">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="22" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <ui:SymbolIcon Symbol="Checkmark16" FontSize="14" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" Visibility="{Binding IsCurrent, Mode=OneWay, Converter={StaticResource StrategyVisibility}}" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <ui:SymbolIcon Symbol="Folder24" FontSize="18" Margin="0,0,6,0" Foreground="{DynamicResource SystemFillColorCautionBrush}">
+                                    <ui:SymbolIcon.Style><Style TargetType="ui:SymbolIcon"><Style.Triggers><DataTrigger Binding="{Binding Node.RelativePath, Mode=OneWay}" Value=""><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers></Style></ui:SymbolIcon.Style>
+                                </ui:SymbolIcon>
+                                <TextBlock Text="{Binding Name, Mode=OneWay}" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="2" Text="{Binding Node.FileCount, Mode=OneWay}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="8,0,0,0" VerticalAlignment="Center" />
+                        </Grid>
+                    </DataTemplate></ListBox.ItemTemplate>
+                    <b:Interaction.Behaviors><local:StrategyEntryActivationBehavior /></b:Interaction.Behaviors>
+                </ListBox>
+                <TextBlock Text="选中子目录后，只在该目录及其子目录中按队伍匹配。" Style="{StaticResource StrategySecondaryTextStyle}" Margin="0,14,0,0" />
+                <TextBlock Text="{Binding MetadataStatus, Mode=OneWay}" Style="{StaticResource StrategyOptionalTextStyle}" Margin="0,8,0,0" />
+                <ui:Button Style="{StaticResource StrategySubtleButtonStyle}" Appearance="Transparent" Padding="0,6" Margin="0,10,0,0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                           Command="{Binding ShowErrorsCommand, Mode=OneWay}" Visibility="{Binding HasErrors, Mode=OneWay, Converter={StaticResource StrategyVisibility}}" ToolTip="查看解析失败的文本策略">
+                    <StackPanel Orientation="Horizontal"><ui:SymbolIcon Symbol="Warning20" Foreground="{DynamicResource SystemFillColorCautionBrush}" Margin="0,0,6,0" /><TextBlock Text="{Binding ErrorSummary, Mode=OneWay}" TextWrapping="Wrap" MaxWidth="330" Foreground="{DynamicResource SystemFillColorCautionBrush}" /><ui:SymbolIcon Symbol="ChevronRight16" FontSize="12" Margin="6,0,0,0" Foreground="{DynamicResource SystemFillColorCautionBrush}" /></StackPanel>
+                </ui:Button>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.AutoFight.Strategy;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.GameTask.SoloTask;
@@ -21,10 +22,6 @@ public class TxtCombatTaskFactory : ICombatTaskFactory
         return new AutoFightTask(runtime, config);
     }
 
-    public bool CanHandle(string strategyPath)
-    {
-        return string.IsNullOrEmpty(strategyPath)
-            || Directory.Exists(strategyPath)
-            || strategyPath.EndsWith(".txt", System.StringComparison.OrdinalIgnoreCase);
-    }
+    /// <summary>本工厂支持的策略类型。</summary>
+    public CombatStrategyKind Kinds => CombatStrategyKind.AutoSelect | CombatStrategyKind.Txt;
 }

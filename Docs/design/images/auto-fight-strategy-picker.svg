@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1140" height="580" viewBox="0 0 1140 580" font-family="Microsoft YaHei, Segoe UI, sans-serif">
+  <rect width="1140" height="580" fill="#1c1c1c"/>
+
+  <!-- ===== 触发区四种状态 ===== -->
+  <!-- 自动 -->
+  <rect x="20" y="24" width="260" height="32" rx="4" fill="#323232" stroke="#4a4a4a"/>
+  <rect x="28" y="31" width="38" height="18" rx="9" fill="none" stroke="#7fb0ff"/>
+  <text x="35" y="44" fill="#7fb0ff" font-size="11">自动</text>
+  <text x="74" y="45" fill="#ffffff" font-size="13">按队伍匹配 · 深渊</text>
+  <text x="262" y="45" fill="#bbbbbb" font-size="11">▾</text>
+  <text x="20" y="76" fill="#8a8a8a" font-size="11">自动：描边标签</text>
+
+  <!-- 手动 -->
+  <rect x="300" y="24" width="260" height="32" rx="4" fill="#323232" stroke="#4a4a4a"/>
+  <rect x="308" y="31" width="30" height="18" rx="3" fill="#2d5a3d"/>
+  <text x="315" y="44" fill="#9ee6b3" font-size="11">txt</text>
+  <text x="346" y="45" font-size="13"><tspan fill="#9a9a9a">深渊 / </tspan><tspan fill="#ffffff">12-3上</tspan></text>
+  <text x="542" y="45" fill="#bbbbbb" font-size="11">▾</text>
+  <text x="300" y="76" fill="#8a8a8a" font-size="11">手动：实底类型标签，目录部分次要色</text>
+
+  <!-- 失效 -->
+  <rect x="580" y="24" width="260" height="32" rx="4" fill="#323232" stroke="#8a6a2a"/>
+  <rect x="588" y="31" width="20" height="18" rx="3" fill="#6a4f14"/>
+  <text x="595" y="44" fill="#ffd27a" font-size="11">!</text>
+  <text x="616" y="45" fill="#ffd27a" font-size="13">旧策略名（不存在）</text>
+  <text x="822" y="45" fill="#bbbbbb" font-size="11">▾</text>
+  <text x="580" y="76" fill="#8a8a8a" font-size="11">当前值失效：保留原值，警告色</text>
+
+  <!-- 录制中 -->
+  <rect x="860" y="24" width="260" height="32" rx="4" fill="#3a2626" stroke="#8a3a3a"/>
+  <circle cx="876" cy="40" r="5" fill="#ff6b6b"/>
+  <text x="890" y="45" fill="#ffb3b3" font-size="13">录制中… 点击停止</text>
+  <text x="860" y="76" fill="#8a8a8a" font-size="11">由本控件发起的录制</text>
+
+  <!-- ===== 弹出层 A：手动 · 文本策略 ===== -->
+  <text x="20" y="106" fill="#cfcfcf" font-size="12">弹出层 A：手动指定 › 文本策略（逐级进入文件夹）</text>
+  <rect x="20" y="116" width="540" height="440" rx="8" fill="#2a2a2a" stroke="#4a4a4a"/>
+  <!-- 左栏 -->
+  <text x="34" y="142" fill="#8a8a8a" font-size="11">自动选择</text>
+  <text x="44" y="166" fill="#dddddd" font-size="13">按队伍匹配</text>
+  <text x="44" y="194" fill="#dddddd" font-size="13">自动连招（实验）</text>
+  <text x="34" y="228" fill="#8a8a8a" font-size="11">手动指定</text>
+  <rect x="28" y="238" width="136" height="26" rx="4" fill="#3a3f4b"/>
+  <rect x="28" y="243" width="3" height="16" rx="1.5" fill="#7fb0ff"/>
+  <text x="44" y="256" fill="#ffffff" font-size="13">文本策略</text>
+  <text x="156" y="256" fill="#bbbbbb" font-size="11" text-anchor="end">128</text>
+  <text x="44" y="284" fill="#dddddd" font-size="13">JSON 策略</text>
+  <text x="156" y="284" fill="#9a9a9a" font-size="11" text-anchor="end">6</text>
+  <text x="44" y="312" fill="#dddddd" font-size="13">键鼠录制</text>
+  <text x="156" y="312" fill="#9a9a9a" font-size="11" text-anchor="end">23</text>
+  <line x1="172" y1="124" x2="172" y2="508" stroke="#3a3a3a"/>
+  <!-- 右栏 -->
+  <rect x="184" y="128" width="290" height="28" rx="4" fill="#1f1f1f" stroke="#4a4a4a"/>
+  <text x="196" y="147" fill="#8a8a8a" font-size="12">🔍 在文本策略中搜索…</text>
+  <rect x="482" y="128" width="66" height="28" rx="4" fill="#323232" stroke="#4a4a4a"/>
+  <text x="494" y="147" fill="#dddddd" font-size="12">名称 ▾</text>
+  <text x="186" y="180" font-size="12"><tspan fill="#7fb0ff">文本策略</tspan><tspan fill="#8a8a8a"> › </tspan><tspan fill="#7fb0ff">深渊</tspan><tspan fill="#8a8a8a"> › </tspan><tspan fill="#ffffff">12层</tspan></text>
+  <line x1="184" y1="192" x2="548" y2="192" stroke="#3a3a3a"/>
+  <text x="192" y="216" fill="#ffffff" font-size="13">📁 上半</text>
+  <text x="540" y="216" fill="#9a9a9a" font-size="12" text-anchor="end">8  ›</text>
+  <text x="192" y="244" fill="#ffffff" font-size="13">📁 下半</text>
+  <text x="540" y="244" fill="#9a9a9a" font-size="12" text-anchor="end">6  ›</text>
+  <rect x="184" y="256" width="364" height="44" rx="4" fill="#3a3f4b"/>
+  <text x="192" y="274" fill="#7fb0ff" font-size="12">✓</text>
+  <text x="208" y="274" fill="#ffffff" font-size="13">钟离万叶班尼特香菱</text>
+  <text x="540" y="274" fill="#9ee6b3" font-size="11" text-anchor="end">txt</text>
+  <text x="208" y="292" fill="#9a9a9a" font-size="11">钟离 · 万叶 · 班尼特 · 香菱</text>
+  <text x="208" y="322" fill="#ffffff" font-size="13">那维莱特-芙宁娜</text>
+  <text x="540" y="322" fill="#9ee6b3" font-size="11" text-anchor="end">txt</text>
+  <text x="208" y="340" fill="#9a9a9a" font-size="11">那维莱特 · 芙宁娜 · 万叶 · 白术</text>
+  <text x="208" y="370" fill="#ffffff" font-size="13">旧版雷国</text>
+  <rect x="482" y="358" width="58" height="18" rx="3" fill="#6a4f14"/>
+  <text x="511" y="371" fill="#ffd27a" font-size="11" text-anchor="middle">解析失败</text>
+  <text x="208" y="388" fill="#d9a54a" font-size="11">第 3 行：未知指令 aim</text>
+  <text x="366" y="440" fill="#6a6a6a" font-size="11" text-anchor="middle">虚拟化列表 · 副标题后台加载</text>
+  <!-- 底栏 -->
+  <line x1="20" y1="508" x2="560" y2="508" stroke="#3a3a3a"/>
+  <text x="40" y="537" fill="#dddddd" font-size="12">📁 打开目录</text>
+  <text x="140" y="537" fill="#dddddd" font-size="12">📦 脚本仓库</text>
+
+  <!-- ===== 弹出层 B：自动 · 按队伍匹配 ===== -->
+  <text x="580" y="106" fill="#cfcfcf" font-size="12">弹出层 B：自动选择 › 按队伍匹配</text>
+  <rect x="580" y="116" width="540" height="440" rx="8" fill="#2a2a2a" stroke="#4a4a4a"/>
+  <!-- 左栏 -->
+  <text x="594" y="142" fill="#8a8a8a" font-size="11">自动选择</text>
+  <rect x="588" y="152" width="136" height="26" rx="4" fill="#3a3f4b"/>
+  <rect x="588" y="157" width="3" height="16" rx="1.5" fill="#7fb0ff"/>
+  <text x="604" y="170" fill="#ffffff" font-size="13">按队伍匹配</text>
+  <text x="604" y="198" fill="#dddddd" font-size="13">自动连招（实验）</text>
+  <text x="594" y="232" fill="#8a8a8a" font-size="11">手动指定</text>
+  <text x="604" y="260" fill="#dddddd" font-size="13">文本策略</text>
+  <text x="716" y="260" fill="#9a9a9a" font-size="11" text-anchor="end">128</text>
+  <text x="604" y="288" fill="#dddddd" font-size="13">JSON 策略</text>
+  <text x="716" y="288" fill="#9a9a9a" font-size="11" text-anchor="end">6</text>
+  <text x="604" y="316" fill="#dddddd" font-size="13">键鼠录制</text>
+  <text x="716" y="316" fill="#9a9a9a" font-size="11" text-anchor="end">23</text>
+  <line x1="732" y1="124" x2="732" y2="508" stroke="#3a3a3a"/>
+  <!-- 右栏 -->
+  <text x="746" y="150" fill="#ffffff" font-size="14" font-weight="bold">按队伍匹配</text>
+  <text x="746" y="174" fill="#bbbbbb" font-size="12">开始战斗时识别当前队伍，从下方范围的文本策略中</text>
+  <text x="746" y="192" fill="#bbbbbb" font-size="12">选择匹配角色最多的一个。JSON 与键鼠录制不参与。</text>
+  <line x1="744" y1="206" x2="1108" y2="206" stroke="#3a3a3a"/>
+  <text x="746" y="228" fill="#8a8a8a" font-size="11">匹配范围（点击即选用）</text>
+  <rect x="744" y="238" width="364" height="28" rx="4" fill="#323232"/>
+  <text x="754" y="257" fill="#dddddd" font-size="13">全部文本策略</text>
+  <text x="1098" y="257" fill="#9a9a9a" font-size="12" text-anchor="end">128</text>
+  <rect x="744" y="270" width="364" height="28" rx="4" fill="#3a3f4b"/>
+  <text x="754" y="289" fill="#7fb0ff" font-size="12">✓</text>
+  <text x="770" y="289" fill="#ffffff" font-size="13">📁 深渊</text>
+  <text x="1098" y="289" fill="#9a9a9a" font-size="12" text-anchor="end">24</text>
+  <text x="770" y="321" fill="#dddddd" font-size="13">📁 地图追踪</text>
+  <text x="1098" y="321" fill="#9a9a9a" font-size="12" text-anchor="end">61</text>
+  <text x="770" y="349" fill="#dddddd" font-size="13">📁 秘境</text>
+  <text x="1098" y="349" fill="#9a9a9a" font-size="12" text-anchor="end">9</text>
+  <text x="746" y="382" fill="#6a6a6a" font-size="11">选中子目录写入 auto:子目录，只在该目录内按队伍匹配</text>
+  <text x="746" y="414" fill="#d9a54a" font-size="12">⚠ 3 个文本策略解析失败，匹配时会被跳过  查看 ›</text>
+  <!-- 底栏 -->
+  <line x1="580" y1="508" x2="1120" y2="508" stroke="#3a3a3a"/>
+  <text x="600" y="537" fill="#dddddd" font-size="12">📁 打开目录</text>
+  <text x="700" y="537" fill="#dddddd" font-size="12">📦 脚本仓库</text>
+  <text x="1100" y="537" fill="#6a6a6a" font-size="11" text-anchor="end">键鼠录制类别底栏：打开目录 · ⏺ 录制新的 · 录制管理 →</text>
+</svg>

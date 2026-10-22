@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.AutoFight.Strategy;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoCombo.ComboRun;
 using BetterGenshinImpact.GameTask.Runtime;
@@ -37,8 +38,6 @@ public class ComboCombatTaskFactory : ICombatTaskFactory
         return new AutoComboRunTask(runtime, config, session);
     }
 
-    public bool CanHandle(string strategyPath)
-    {
-        return AutoFightParam.ComboStrategyName.Equals(strategyPath);
-    }
+    /// <summary>本工厂支持的策略类型。</summary>
+    public CombatStrategyKind Kinds => CombatStrategyKind.Combo;
 }

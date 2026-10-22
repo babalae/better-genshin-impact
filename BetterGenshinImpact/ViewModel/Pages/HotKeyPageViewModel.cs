@@ -805,21 +805,16 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             Config.HotKeyConfig.KeyMouseMacroRecordHotkey,
             Config.HotKeyConfig.KeyMouseMacroRecordHotkeyType, async (_, _) =>
             {
-                var vm = App.GetService<KeyMouseRecordPageViewModel>();
-                if (vm == null)
+                var service = App.GetService<KeyMouseRecordService>();
+                if (service == null) return;
+                if (!service.IsRecording)
                 {
-                    _logger.LogError("无法找到 KeyMouseRecordPageViewModel 单例对象！");
-                    return;
-                }
-
-                if (GlobalKeyMouseRecord.Instance.Status == KeyMouseRecorderStatus.Stop)
-                {
-                    Thread.Sleep(300); // 防止录进快捷键进去
-                    await vm.OnStartRecord();
+                    await Task.Delay(300); // 防止录进快捷键进去
+                    await service.StartAsync();
                 }
                 else
                 {
-                    vm.OnStopRecord();
+                    service.Stop();
                 }
             }
         ));

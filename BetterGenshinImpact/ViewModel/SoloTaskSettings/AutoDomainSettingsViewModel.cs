@@ -41,8 +41,7 @@ public partial class AutoDomainSettingsViewModel : SoloTaskSettingsViewModel
     /// <summary>载入时的脆弱树脂次数快照。</summary>
     private readonly int _originalFragileResinUseCount;
 
-    /// <summary>战斗策略选项；秘境允许联合策略与用户脚本，当前值不在列表中时追加显示。</summary>
-    public string[] StrategyChoices { get; }
+    // 策略目录与当前值显示由统一的 CombatStrategyPicker 负责。
 
     /// <summary>进入秘境切换的队伍名称，留空不切换。</summary>
     [ObservableProperty] private string _partyName;
@@ -90,7 +89,6 @@ public partial class AutoDomainSettingsViewModel : SoloTaskSettingsViewModel
         _originalCondensedResinUseCount = ReadInt(Original, "condensed_resin_use_count");
         _originalTransientResinUseCount = ReadInt(Original, "transient_resin_use_count");
         _originalFragileResinUseCount = ReadInt(Original, "fragile_resin_use_count");
-        StrategyChoices = WithCurrentChoice(PuloniaOneDragonSettingChoices.GetStrategies(true), _originalStrategyName);
         _partyName = _originalPartyName;
         _domainName = _originalDomainName;
         _sundayValue = _originalSundayValue;

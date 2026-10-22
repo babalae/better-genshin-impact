@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.AutoFight.Strategy;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.BgiVision;
@@ -115,14 +116,14 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     private AutoStygianOnslaughtParam _taskParam = null!;
 
     /// <summary>
-    /// TXT 战斗策略解析结果；使用 JSON 策略时为空。
+    /// TXT 战斗策略解析结果；使用 JSON/键鼠策略时为空。
     /// </summary>
     private CombatScriptBag? _combatScriptBag;
 
     /// <summary>
-    /// JSON 战斗策略路径；使用 TXT 策略时为空。
+    /// JSON/键鼠策略路径；使用 TXT 策略时为空。
     /// </summary>
-    private string? _jsonCombatStrategyPath;
+    private string? _entryCombatStrategyPath;
 
     /// <summary>
     /// 指定树脂使用次数时的树脂优先级与剩余次数。
@@ -155,13 +156,11 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     /// <returns>策略存在时返回 true</returns>
     private static bool TryResolveStrategyPath(AutoStygianOnslaughtParam param, out string path)
     {
-        if (!string.IsNullOrWhiteSpace(param.CombatScriptBagPath))
-        {
-            path = param.CombatScriptBagPath;
-            return System.IO.File.Exists(path) || System.IO.Directory.Exists(path);
-        }
+        var strategy = CombatStrategyResolver.Parse(string.IsNullOrWhiteSpace(param.CombatScriptBagPath)
+            ? param.StrategyName : param.CombatScriptBagPath);
+        path = strategy.Path;
+        return strategy.Exists;
 
-        return CombatStrategyResolver.TryResolve(param.StrategyName, out path);
     }
 
     /// <summary>
@@ -172,10 +171,12 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     private void InitializeFromParam(AutoStygianOnslaughtParam param, string strategyPath)
     {
         _taskParam = param;
-        if (strategyPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+        _entryCombatStrategyPath = null;
+        _combatScriptBag = null;
+        if (CombatStrategyResolver.Parse(strategyPath).Kind is not (CombatStrategyKind.Txt or CombatStrategyKind.AutoSelect))
         {
-            _jsonCombatStrategyPath = strategyPath;
-            Logger.LogInformation("自动幽境危战：检测到JSON策略文件，将使用JSON战斗引擎");
+            _entryCombatStrategyPath = strategyPath;
+            Logger.LogInformation("自动幽境危战：使用统一战斗入口执行所选策略");
         }
         else
         {
@@ -238,6 +239,9 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
         {
             return SoloTaskResult.Failed(SoloTaskReasons.StrategyNotFound, $"{TaskName}战斗策略不存在：{strategyPath}");
         }
+
+        if (CombatStrategyResolver.Parse(strategyPath).Kind == CombatStrategyKind.Combo)
+            return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, "幽境危战不支持自动连招策略。");
 
         // 3. 依赖参数的初始化（原构造函数逻辑）
         InitializeFromParam(param, strategyPath);
@@ -748,10 +752,10 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
         CurrentState = StygianState.BossSelect;
         await EnsureNextStateTransition(60000);
 
-        if (_jsonCombatStrategyPath != null)
+        if (_entryCombatStrategyPath != null)
         {
-            Logger.LogInformation($"{TaskName}：执行战斗策略(JSON)");
-            await StartJsonFight();
+            Logger.LogInformation($"{TaskName}：执行战斗策略(JSON/键鼠)");
+            await StartEntryFight();
         }
         else
         {
@@ -1114,17 +1118,17 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     }
 
     /// <summary>
-    /// JSON策略战斗入口：委托给AutoFightJsonTask，抑制其自带的结束检测和拾取逻辑，
+    /// JSON/键鼠策略战斗入口：委托给AutoFightEntryTask，抑制其自带的结束检测和拾取逻辑，
     /// 幽境危战的DomainEndDetectionTask通过CancellationToken控制战斗结束。
     /// </summary>
-    private async Task StartJsonFight()
+    private async Task StartEntryFight()
     {
         CancellationTokenSource cts = new();
         _ct.Register(cts.Cancel);
 
         var jsonParam = new AutoFightParam
         {
-            CombatStrategyPath = _jsonCombatStrategyPath!,
+            CombatStrategyPath = _entryCombatStrategyPath!,
             FightFinishDetectEnabled = false,
             ExpBasedPickupEnabled = false,
             KazuhaPickupEnabled = false,
@@ -1132,7 +1136,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
             Timeout = 600,
         };
 
-        var jsonTask = new AutoFightJsonTask(_runtime, _config);
+        var jsonTask = new AutoFightEntryTask(_runtime, _config);
 
         var domainEndTask = DomainEndDetectionTask(cts);
 
@@ -1145,7 +1149,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
             }
             catch (Exception e)
             {
-                Logger.LogWarning("JSON战斗任务异常：{Msg}", e.Message);
+                Logger.LogWarning("JSON/键鼠战斗任务异常：{Msg}", e.Message);
             }
         }, cts.Token);
 

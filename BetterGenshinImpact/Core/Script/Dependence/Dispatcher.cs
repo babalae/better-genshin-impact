@@ -407,8 +407,10 @@ public class Dispatcher
   
         using var linkedCts = CreateLinkedCancellationTokenSource(customCt);
         CancellationToken cancellationToken = linkedCts?.Token ?? _ct;
-        var factory = GameTask.AutoFight.Factory.CombatTaskFactoryProvider.GetFactory(param.CombatStrategyPath);
-        LogIfFailed(await factory.CreateTask(_runtime, _allConfig).RunAsync(param, cancellationToken));
+        var result = await new AutoFightEntryTask(_runtime, _allConfig).RunAsync(param, cancellationToken);
+        if (result.ReasonCode == SoloTaskReasons.StrategyNotFound)
+            throw new System.IO.FileNotFoundException(result.Message, param.CombatStrategyPath);
+        LogIfFailed(result);
     }
     
     /// <summary>
