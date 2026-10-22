@@ -151,6 +151,58 @@
    </StackPanel>
   </ui:CardExpander>
 
+  <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+   <ui:CardExpander.Header>
+    <StackPanel>
+     <ui:TextBlock FontTypography="Body" Text="领奖树脂设定" TextWrapping="Wrap"/>
+     <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="展开切换树脂使用模式，并设置各类树脂的刷取次数" TextWrapping="Wrap"/>
+    </StackPanel>
+   </ui:CardExpander.Header>
+   <!-- 树脂模式展开区域：关闭时按默认优先级，开启时按下方数量使用树脂。 -->
+   <StackPanel Margin="16">
+    <Grid>
+     <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/>
+     </Grid.ColumnDefinitions>
+     <ToggleButton Grid.Column="0" IsChecked="{Binding SpecifyResinUse, Mode=TwoWay}" Content="模式切换"/>
+     <ui:TextBlock Grid.Column="1" Margin="12,0,0,0" FontSize="14" VerticalAlignment="Center" HorizontalAlignment="Right"
+                   Text="先用浓缩，后原粹，其余不用" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap"
+                   Visibility="{Binding SpecifyResinUse, Converter={StaticResource BooleanToVisibilityRevertConverter}}"/>
+     <ui:TextBlock Grid.Column="1" Margin="12,0,0,0" FontSize="14" VerticalAlignment="Center" HorizontalAlignment="Right"
+                   Text="按下方配置数量使用树脂" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap"
+                   Visibility="{Binding SpecifyResinUse, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+    </Grid>
+    <StackPanel Margin="0,10,0,0" IsEnabled="{Binding SpecifyResinUse}"
+                Visibility="{Binding SpecifyResinUse, Converter={StaticResource BooleanToVisibilityConverter}}">
+     <Separator Height="1" Margin="0,0,0,0" Background="Gray"/>
+     <StackPanel Orientation="Horizontal" Margin="0,10,0,12">
+      <ui:TextBlock Text="原粹树脂刷取次数：" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,8,0"/>
+      <ui:NumberBox Value="{Binding OriginalResinUseCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                    Minimum="0" SmallChange="1" LargeChange="5" ClearButtonEnabled="False"
+                    SpinButtonPlacementMode="Inline" Width="120"/>
+     </StackPanel>
+     <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+      <ui:TextBlock Text="浓缩树脂刷取次数：" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,8,0"/>
+      <ui:NumberBox Value="{Binding CondensedResinUseCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                    Minimum="0" SmallChange="1" LargeChange="5" ClearButtonEnabled="False"
+                    SpinButtonPlacementMode="Inline" Width="120"/>
+     </StackPanel>
+     <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+      <ui:TextBlock Text="须臾树脂刷取次数：" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,8,0"/>
+      <ui:NumberBox Value="{Binding TransientResinUseCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                    Minimum="0" SmallChange="1" LargeChange="5" ClearButtonEnabled="False"
+                    SpinButtonPlacementMode="Inline" Width="120"/>
+     </StackPanel>
+     <StackPanel Orientation="Horizontal">
+      <ui:TextBlock Text="脆弱树脂刷取次数：" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,8,0"/>
+      <ui:NumberBox Value="{Binding FragileResinUseCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                    Minimum="0" SmallChange="1" LargeChange="5" ClearButtonEnabled="False"
+                    SpinButtonPlacementMode="Inline" Width="120"/>
+     </StackPanel>
+    </StackPanel>
+   </StackPanel>
+  </ui:CardExpander>
+
   <ui:CardControl Margin="0,0,0,12">
    <ui:CardControl.Header>
     <Grid>
@@ -158,64 +210,10 @@
       <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
      </Grid.RowDefinitions>
      <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+      <ColumnDefinition Width="*"/>
      </Grid.ColumnDefinitions>
-     <ToggleButton Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" Height="36" VerticalAlignment="Center"
-                   HorizontalAlignment="Center" Content="领奖树脂设定" x:Name="ResinToggleButton"/>
-     <ui:TextBlock Grid.Row="0" Grid.Column="1" FontTypography="Body" HorizontalAlignment="Right" Text="分解圣遗物" TextWrapping="Wrap"/>
-     <ui:TextBlock Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="最高的星级" TextWrapping="Wrap"/>
-     <!-- 树脂模式弹窗：关闭时按默认优先级，开启时按下方数量使用树脂。 -->
-     <Popup Grid.Row="0" Grid.Column="0" Placement="Center" PlacementTarget="{Binding ElementName=ResinToggleButton}"
-            IsOpen="{Binding IsChecked, ElementName=ResinToggleButton}" AllowsTransparency="True" PopupAnimation="Fade"
-            HorizontalAlignment="Center" Focusable="False" StaysOpen="False">
-      <Border CornerRadius="8" HorizontalAlignment="Left" VerticalAlignment="Top"
-              Background="{DynamicResource ApplicationBackgroundBrush}"
-              BorderBrush="{DynamicResource SystemAccentColorPrimaryBrush}" BorderThickness="1">
-       <StackPanel Margin="12">
-        <Grid>
-         <Grid.RowDefinitions><RowDefinition Height="*"/></Grid.RowDefinitions>
-         <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/>
-         </Grid.ColumnDefinitions>
-         <ToggleButton Grid.Column="0" IsChecked="{Binding SpecifyResinUse, Mode=TwoWay}" Content="模式切换"/>
-         <ui:TextBlock Grid.Column="1" Margin="12,0,0,0" FontSize="14" VerticalAlignment="Center" HorizontalAlignment="Right"
-                       Text="先用浓缩，后原粹，其余不用" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap"
-                       Visibility="{Binding SpecifyResinUse, Converter={StaticResource BooleanToVisibilityRevertConverter}}"/>
-         <ui:TextBlock Grid.Column="1" Margin="5,0,0,0" FontSize="14" VerticalAlignment="Center" HorizontalAlignment="Right"
-                       Text="按下方配置数量使用树脂" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap"
-                       Visibility="{Binding SpecifyResinUse, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-        </Grid>
-        <StackPanel Margin="0,10,0,0" IsEnabled="{Binding SpecifyResinUse}"
-                    Visibility="{Binding SpecifyResinUse, Converter={StaticResource BooleanToVisibilityConverter}}">
-         <Separator Height="1" Margin="0,0,0,0" Background="Gray"/>
-         <StackPanel Orientation="Horizontal" Margin="0,10,0,12">
-          <ui:TextBlock Text="原粹树脂刷取次数：" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,8,0"/>
-          <ui:NumberBox Value="{Binding OriginalResinUseCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                        Minimum="0" SmallChange="1" LargeChange="5" ClearButtonEnabled="False"
-                        SpinButtonPlacementMode="Inline" Width="120"/>
-         </StackPanel>
-         <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-          <ui:TextBlock Text="浓缩树脂刷取次数：" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,8,0"/>
-          <ui:NumberBox Value="{Binding CondensedResinUseCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                        Minimum="0" SmallChange="1" LargeChange="5" ClearButtonEnabled="False"
-                        SpinButtonPlacementMode="Inline" Width="120"/>
-         </StackPanel>
-         <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-          <ui:TextBlock Text="须臾树脂刷取次数：" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,8,0"/>
-          <ui:NumberBox Value="{Binding TransientResinUseCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                        Minimum="0" SmallChange="1" LargeChange="5" ClearButtonEnabled="False"
-                        SpinButtonPlacementMode="Inline" Width="120"/>
-         </StackPanel>
-         <StackPanel Orientation="Horizontal">
-          <ui:TextBlock Text="脆弱树脂刷取次数：" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,0,8,0"/>
-          <ui:NumberBox Value="{Binding FragileResinUseCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                        Minimum="0" SmallChange="1" LargeChange="5" ClearButtonEnabled="False"
-                        SpinButtonPlacementMode="Inline" Width="120"/>
-         </StackPanel>
-        </StackPanel>
-       </StackPanel>
-      </Border>
-     </Popup>
+     <ui:TextBlock Grid.Row="0" FontTypography="Body" Text="分解圣遗物" TextWrapping="Wrap"/>
+     <ui:TextBlock Grid.Row="1" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="最高的星级" TextWrapping="Wrap"/>
     </Grid>
    </ui:CardControl.Header>
    <StackPanel Orientation="Horizontal">

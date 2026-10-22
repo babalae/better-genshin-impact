@@ -11,6 +11,8 @@ using BetterGenshinImpact.GameTask.QuickTeleport.Assets;
 using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.GameTask.SoloTask;
+using BetterGenshinImpact.View.Pages.SoloTaskSettings;
+using BetterGenshinImpact.ViewModel.SoloTaskSettings;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -29,6 +31,7 @@ namespace BetterGenshinImpact.GameTask.Common.Job;
 /// 领取尘歌壶奖励：进入尘歌壶，找到阿圆领取好感与宝钱，并按参数购买洞天百宝商品，最后传送回主世界。
 /// </summary>
 [SoloTaskInfo(TaskId, "领取尘歌壶奖励", Group = "日常奖励", Order = 140, OneDragonOrder = 8)]
+[SoloTaskSettingsView(typeof(SereniteaPotSettingsView), typeof(SereniteaPotSettingsViewModel))]
 public class GoToSereniteaPotTask : ISoloTask<SereniteaPotParam, NoData>
 {
     /// <summary>
