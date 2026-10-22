@@ -35,13 +35,14 @@ var quiet = Has("--quiet");
 var cold = Has("--cold");
 var enableProfile = Has("--profile");
 var threads = int.TryParse(Opt("--threads"), out var th) ? th : 4;
+var intervalMs = int.TryParse(Opt("--interval"), out var iv) ? iv : 0;
 var verbose = Has("--verbose") || !quiet;
 
 DmlSessionFactory.GraphCapture = Has("--graph-capture");
 DmlSessionFactory.CpuSyncSpinning = Has("--spin");
 DmlSessionFactory.NoArena = Has("--no-arena");
-DmlSessionFactory.CpuSyncSpinning = Has("--spin");
 Console.OutputEncoding = System.Text.Encoding.UTF8;
+Action<string> log = quiet ? _ => { } : Console.WriteLine;
 Console.WriteLine($"PID = {Environment.ProcessId}（可用 --pause 暂停等待分析器 attach）");
 Console.WriteLine($"providers={providers} | DirectML 设备 {dmlDeviceId} | CPU兜底线程 {cpuThreads} | 模型 PpOcrDetV6/PpOcrRecV6 | 模式 {mode}");
 
@@ -67,6 +68,56 @@ var appRoot = candidates.FirstOrDefault(c => !string.IsNullOrEmpty(c) &&
         "未找到 Assets\\Model\\PaddleOCR，请用 --root <目录> 指定 BetterGI 输出目录（含 Assets）。");
 Console.WriteLine($"资产目录: {appRoot}");
 
+// ---------- YOLO 模式：只测 YOLO，必须在构建 OCR 管线前分流 ----------
+// DetProbe/RecProbe 的构造函数会触发 9 个形状的 DML 预热（几十秒 + 额外显存），这里提前返回。
+if (mode == "yolo")
+{
+    var yoloModelPath = Opt("--yolo-model")
+                        ?? Path.Combine(appRoot, "Assets", "Model", "World", "bgi_world.onnx");
+    if (!File.Exists(yoloModelPath)) throw new FileNotFoundException("YOLO 模型缺失", yoloModelPath);
+
+    using var yoloImage = LoadYoloImage(Opt("--image"));
+    Console.WriteLine($"模型: {yoloModelPath}");
+    Console.WriteLine($"测试图片: {yoloImage.Width}x{yoloImage.Height}");
+
+    using var yoloProbe = new YoloProbe(yoloModelPath, dmlDeviceId, cpuThreads, log, providers, enableProfile);
+    for (var w = 0; w < Math.Max(1, warmupCount); w++) yoloProbe.TimeRawRun();
+    for (var w = 0; w < Math.Max(1, warmupCount); w++) yoloProbe.DetectOnce(yoloImage);
+
+    var rawTimes = new double[Math.Max(1, iters)];
+    var gc2Before = GC.CollectionCount(2);
+    var allocBefore = GC.GetTotalAllocatedBytes();
+    for (var i = 0; i < rawTimes.Length; i++)
+    {
+        rawTimes[i] = yoloProbe.TimeRawRun();
+        Console.WriteLine($"#{i + 1,3} raw    {rawTimes[i],7:F2}ms  GC2 {GC.CollectionCount(2) - gc2Before}  " +
+                          $"分配 {(GC.GetTotalAllocatedBytes() - allocBefore) / 1048576.0:F1}MB");
+        if (intervalMs > 0) Thread.Sleep(intervalMs);
+    }
+    PrintSummary("纯推理 session.Run", rawTimes);
+
+    var detectTimes = new double[Math.Max(1, iters)];
+    var boxes = 0;
+    gc2Before = GC.CollectionCount(2);
+    allocBefore = GC.GetTotalAllocatedBytes();
+    for (var i = 0; i < detectTimes.Length; i++)
+    {
+        (detectTimes[i], boxes) = yoloProbe.DetectOnce(yoloImage);
+        Console.WriteLine($"#{i + 1,3} detect {detectTimes[i],7:F2}ms  框 {boxes}  GC2 {GC.CollectionCount(2) - gc2Before}  " +
+                          $"分配 {(GC.GetTotalAllocatedBytes() - allocBefore) / 1048576.0:F1}MB");
+        if (intervalMs > 0) Thread.Sleep(intervalMs);
+    }
+    PrintSummary("完整 Detect（预处理+NMS）", detectTimes);
+    Console.WriteLine($"==> 后处理开销 ≈ 平均 {detectTimes.Average() - rawTimes.Average():F1}ms");
+
+    if (enableProfile)
+    {
+        PrintOpSummary("Yolo", CaptureTrace(yoloProbe.EndProfiling(), "yolo"));
+    }
+
+    return;
+}
+
 var detModelPath = Opt("--det-model") ?? Path.Combine(appRoot, "Assets", "Model", "PaddleOCR", "Det", "V6",
     "PP-OCRv6_small_det_infer", "slim.onnx");
 var recModelPath = Opt("--rec-model") ?? Path.Combine(appRoot, "Assets", "Model", "PaddleOCR", "Rec", "V6",
@@ -80,7 +131,6 @@ foreach (var f in new[] { detModelPath, recModelPath, preheatImagePath })
 var config = OcrVersionConfig.PpOcrV6;
 
 // ---------- 构建管线（与 PaddleOcrService 构造一致：9 档形状预热 + 1 次完整预热推理） ----------
-Action<string> log = quiet ? _ => { } : Console.WriteLine;
 using var det = new DetProbe("PpOcrDetV6", detModelPath, config, dmlDeviceId, cpuThreads, log, providers, enableProfile);
 var labels = PaddlePipeline.LoadRecLabels(recModelPath);
 if (Has("--dump-labels"))
@@ -171,7 +221,7 @@ switch (mode)
         RunConcurrencyMode(threads, loopSeconds > 0 ? loopSeconds : 5);
         break;
     default:
-        throw new ArgumentException($"未知模式 {mode}，支持: pipeline / det / rec / buckets / batch / concurrency");
+        throw new ArgumentException($"未知模式 {mode}，支持: pipeline / det / rec / buckets / batch / single / concurrency / yolo");
 }
 
 // ---------- ORT 内置 profiler：按算子聚合输出热点（无需 VTune 即可定位是哪类算子在烧时间） ----------
@@ -526,6 +576,36 @@ void RunBucketsMode(int iterations)
 
         Console.WriteLine($"Rec 批{batch} 宽{width,4} 平均 {times.Average(),7:F2}ms  最小 {times.Min(),7:F2}  最大 {times.Max(),7:F2}");
     }
+}
+
+/// <summary>YOLO 测试图：显式路径优先；否则生成 1920×1080 合成图（与游戏采集分辨率一致）。</summary>
+static SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgb24> LoadYoloImage(string? path)
+{
+    if (!string.IsNullOrEmpty(path))
+    {
+        return SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgb24>(path);
+    }
+
+    // 纯色底 + 若干色块，保证 NMS 有候选框可处理，避免空图把后处理耗时测成 0
+    var synthetic = new SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgb24>(1920, 1080);
+    synthetic.ProcessPixelRows(accessor =>
+    {
+        for (var y = 0; y < accessor.Height; y++)
+        {
+            var row = accessor.GetRowSpan(y);
+            for (var x = 0; x < row.Length; x++)
+            {
+                row[x] = InRect(x, y, 200, 300, 160, 90) ? new SixLabors.ImageSharp.PixelFormats.Rgb24(30, 200, 30)
+                    : InRect(x, y, 900, 600, 120, 120) ? new SixLabors.ImageSharp.PixelFormats.Rgb24(200, 30, 30)
+                    : InRect(x, y, 1400, 400, 90, 140) ? new SixLabors.ImageSharp.PixelFormats.Rgb24(30, 30, 220)
+                    : new SixLabors.ImageSharp.PixelFormats.Rgb24(110, 120, 130);
+            }
+        }
+    });
+    return synthetic;
+
+    static bool InRect(int x, int y, int left, int top, int width, int height)
+        => x >= left && x < left + width && y >= top && y < top + height;
 }
 
 static void PrintSummary(string title, double[] times)

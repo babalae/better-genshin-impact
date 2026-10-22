@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -20,6 +21,9 @@ namespace BetterGenshinImpact.ViewModel.Pages.View;
 public sealed record InferenceThreadChoice(int Count, string Name);
 public sealed record PaddleOcrCpuModeChoice(PaddleOcrCpuMode Mode, string Name, string Description);
 
+/// <summary>ncnn 模型覆盖状态行（✓ = 已就绪，↩ = 产物缺失自动回退）。</summary>
+public sealed record NcnnModelStatusItem(string Mark, string DisplayName, string Detail);
+
 public partial class HardwareAccelerationViewModel : ObservableObject, IViewModel, IDisposable
 {
     private readonly InferenceRuntimeService _runtime;
@@ -40,6 +44,34 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
     public ObservableCollection<InferenceBenchmarkResult> Results { get; } = [];
     public InferenceThreadChoice[] CpuThreadChoices { get; }
     public int MaxCpuThreads => Environment.ProcessorCount;
+
+    /// <summary>ncnn 模型覆盖情况（按资产目录实际产物探测，打开设置页时构建一次）。</summary>
+    public IReadOnlyList<NcnnModelStatusItem> NcnnModelStatuses { get; } = BuildNcnnModelStatuses();
+
+    private static NcnnModelStatusItem[] BuildNcnnModelStatuses()
+    {
+        (BgiOnnxModel Model, string Display, string Usage)[] defs =
+        [
+            (BgiOnnxModel.BgiWorld, "世界物体检测", "拾取 · 战斗结束检测"),
+            (BgiOnnxModel.BgiFish, "鱼类检测", "自动钓鱼"),
+            (BgiOnnxModel.BgiMine, "矿石检测", "挖矿"),
+            (BgiOnnxModel.BgiTree, "古树检测", "自动秘境"),
+            (BgiOnnxModel.BgiQClassify, "Q 技能分类", "自动战斗"),
+            (BgiOnnxModel.BgiAvatarSide, "队伍头像分类", "自动战斗"),
+            (BgiOnnxModel.BgiEClassify, "E 技能分类", "自动战斗"),
+        ];
+        return defs.Select(def =>
+        {
+            var stem = Path.GetFileNameWithoutExtension(def.Model.ModalPath);
+            var ncnnParam = Path.Combine(Path.GetDirectoryName(def.Model.ModalPath)!, "Ncnn", stem + ".param");
+            var available = File.Exists(ncnnParam);
+            return new NcnnModelStatusItem(
+                available ? "✓" : "↩",
+                $"{def.Display} · {def.Usage}",
+                available ? "ncnn 已就绪" : "产物缺失，自动回退 ONNX");
+        }).ToArray();
+    }
+
     public PaddleOcrCpuModeChoice[] OcrCpuModeChoices { get; } =
     [
         new(PaddleOcrCpuMode.FollowGlobal, "跟随全局设置", "使用 CPU 卡片中的全局线程数。"),
@@ -47,6 +79,8 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         new(PaddleOcrCpuMode.GameplayPriority, "游戏流畅优先", "限制 OCR 的并行线程，减少游戏掉帧。"),
         new(PaddleOcrCpuMode.Custom, "自定义设置", "分别指定文本检测、文字识别和模型节点的线程数。")
     ];
+    public InferenceThreadChoice[] OpenCvThreadChoices { get; } = Enumerable.Range(0, Environment.ProcessorCount + 1)
+        .Select(i => new InferenceThreadChoice(i, i == 0 ? "自动（全部逻辑核）" : i.ToString())).ToArray();
     public PaddleOcrCpuConfig PaddleOcrCpu { get; }
     public bool IsOcrCpuCustom => PaddleOcrCpu.Mode == PaddleOcrCpuMode.Custom;
     public bool IsOcrCpuConfigured => PaddleOcrCpu.Mode is PaddleOcrCpuMode.GameplayPriority or PaddleOcrCpuMode.Custom;
@@ -111,13 +145,17 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
             {
                 var saved = Config.GetEngineSettings(Config.InferenceDevice);
                 return SelectedEngine.Engine != Config.InferenceDevice || SelectedEngine.SelectedDevice.Id != saved.DeviceId
-                    || ForceCpuOcr != Config.CpuOcr || UseNcnnOcr != Config.UseNcnnOcr || CpuThreads != Config.Cpu.CpuThreads
+                    || ForceCpuOcr != Config.CpuOcr || UseNcnnOcr != Config.UseNcnnOcr || UseNcnnYolo != Config.UseNcnnYolo
+                    || OpenCvThreads != Config.OpenCvThreads || OpenCvIdleSleep != Config.OpenCvIdleSleep
+                    || CpuThreads != Config.Cpu.CpuThreads
                     || PaddleOcrCpu.ToOptions() != Config.PaddleOcrCpu.ToOptions()
                     || (SelectedEngine.SupportsCache && SelectedEngine.Settings.EnableModelCache != saved.EnableModelCache);
             }
             var current = _runtime.Current;
             return SelectedEngine.Engine != current.Engine || SelectedEngine.SelectedDevice.Id != current.Device.Id
-                || ForceCpuOcr != current.CpuOcr || UseNcnnOcr != Config.UseNcnnOcr || CpuThreads != current.CpuThreads
+                || ForceCpuOcr != current.CpuOcr || UseNcnnOcr != Config.UseNcnnOcr || UseNcnnYolo != Config.UseNcnnYolo
+                || OpenCvThreads != Config.OpenCvThreads || OpenCvIdleSleep != Config.OpenCvIdleSleep
+                || CpuThreads != current.CpuThreads
                 || PaddleOcrCpu.ToOptions() != current.PaddleOcrCpu
                 || (SelectedEngine.SupportsCache && SelectedEngine.Settings.EnableModelCache != current.EnableModelCache)
                 || (!SelectedEngine.IsCpu && !string.Equals(SelectedEngine.RuntimeDirectory, current.RuntimeDirectory, StringComparison.OrdinalIgnoreCase));
@@ -130,6 +168,9 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
     [ObservableProperty] private InferenceEngineCardViewModel? _selectedEngine;
     [ObservableProperty] private bool _forceCpuOcr;
     [ObservableProperty] private bool _useNcnnOcr;
+    [ObservableProperty] private bool _useNcnnYolo;
+    [ObservableProperty] private int _openCvThreads;
+    [ObservableProperty] private bool _openCvIdleSleep;
     [ObservableProperty] private int _cpuThreads;
     [ObservableProperty] private bool _isOcrAdvancedExpanded;
     [ObservableProperty] private bool _isBusy;
@@ -154,6 +195,9 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         _interaction = interaction;
         _forceCpuOcr = Config.CpuOcr;
         _useNcnnOcr = Config.UseNcnnOcr;
+        _useNcnnYolo = Config.UseNcnnYolo;
+        _openCvThreads = Config.OpenCvThreads;
+        _openCvIdleSleep = Config.OpenCvIdleSleep;
         _cpuThreads = Config.Cpu.CpuThreads;
         PaddleOcrCpu = PaddleOcrCpuConfig.FromOptions(Config.PaddleOcrCpu.ToOptions());
         _isOcrAdvancedExpanded = false;
@@ -191,6 +235,9 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
     }
     partial void OnForceCpuOcrChanged(bool value) => RefreshAvailability();
     partial void OnUseNcnnOcrChanged(bool value) => RefreshAvailability();
+    partial void OnUseNcnnYoloChanged(bool value) => RefreshAvailability();
+    partial void OnOpenCvThreadsChanged(int value) => RefreshAvailability();
+    partial void OnOpenCvIdleSleepChanged(bool value) => RefreshAvailability();
     partial void OnCpuThreadsChanged(int value) => RefreshAvailability();
     private void OcrCpuSettingsChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -327,11 +374,21 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         {
             ProgressText = "正在保存推理设置…";
             if (HasDraftChanges) _runtime.Apply(SelectedEngine.Engine, SelectedEngine.Settings, ForceCpuOcr, CpuThreads, PaddleOcrCpu.ToOptions());
-            // ncnn 开关独立于推理引擎签名，直接写入配置；服务层在下次创建 OCR 实例时生效
-            if (Config.UseNcnnOcr != UseNcnnOcr)
+            // ncnn 开关独立于推理引擎签名，直接写入配置；服务层在下次创建实例时生效
+            if (Config.UseNcnnOcr != UseNcnnOcr || Config.UseNcnnYolo != UseNcnnYolo)
             {
                 Config.UseNcnnOcr = UseNcnnOcr;
+                Config.UseNcnnYolo = UseNcnnYolo;
                 _configService.Save();
+                OnPropertyChanged(nameof(HasDraftChanges)); OnPropertyChanged(nameof(CanApply));
+            }
+            // OpenCV 并行设置：线程数立即生效；空闲睡眠依赖启动期环境变量，重启后生效
+            if (Config.OpenCvThreads != OpenCvThreads || Config.OpenCvIdleSleep != OpenCvIdleSleep)
+            {
+                Config.OpenCvThreads = OpenCvThreads;
+                Config.OpenCvIdleSleep = OpenCvIdleSleep;
+                _configService.Save();
+                OpenCvParallel.ApplyThreads(OpenCvThreads);
                 OnPropertyChanged(nameof(HasDraftChanges)); OnPropertyChanged(nameof(CanApply));
             }
 

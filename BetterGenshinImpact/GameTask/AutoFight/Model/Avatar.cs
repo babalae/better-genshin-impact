@@ -748,7 +748,7 @@ public class Avatar
     internal static BurstReadyState IsBurstReadyByClassify(ImageRegion imageRegion)
     {
         using var qRa = imageRegion.DeriveCrop(AutoFightAssets.Get(imageRegion).QRectForClassify);
-        var result = QBurstClassifierLazy.Value.Predictor.Classify(qRa.CacheImage);
+        var result = QBurstClassifierLazy.Value.Classify(qRa.CacheImage);
         var topClass = result.GetTopClass();
         var topClassName = topClass.Name.Name;
         // Logger.LogInformation("Q技能冷却分类：{ClassName}，置信度：{Confidence:F2}", topClassName, topClass.Confidence);
@@ -790,7 +790,7 @@ public class Avatar
         YoloResult<Classification> result;
         lock (ESkillClassifierLock)
         {
-            result = ESkillClassifierLazy.Value.Predictor.Classify(eRa.CacheImage);
+            result = ESkillClassifierLazy.Value.Classify(eRa.CacheImage);
         }
         var topClass = result.GetTopClass();
         var topClassName = topClass.Name.Name;

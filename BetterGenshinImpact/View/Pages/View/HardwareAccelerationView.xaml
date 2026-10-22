@@ -168,15 +168,6 @@
                             </StackPanel>
                         </DockPanel>
                         <Separator Margin="0,14,0,12" BorderThickness="0,1,0,0" />
-                        <DockPanel>
-                            <ui:ToggleSwitch DockPanel.Dock="Right" IsChecked="{Binding UseNcnnOcr, Mode=TwoWay}" IsEnabled="{Binding CanInteract}"
-                                             Margin="16,0,0,0" VerticalAlignment="Center" AutomationProperties.Name="OCR 使用 ncnn Vulkan 后端" />
-                            <StackPanel>
-                                <TextBlock Text="OCR 使用 ncnn（Vulkan，实验）" FontWeight="SemiBold" />
-                                <TextBlock Text="开启后检测与识别全部走 ncnn Vulkan，单行识别约 9~11ms；需资产目录内含 ncnn_shim.dll 与分桶模型，缺失时自动回退所选推理引擎。应用并重启后生效。" TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                            </StackPanel>
-                        </DockPanel>
-                        <Separator Margin="0,14,0,12" BorderThickness="0,1,0,0" />
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -191,6 +182,77 @@
                                       SelectedValue="{Binding CpuThreads, Mode=TwoWay}" IsEnabled="{Binding CanInteract}" VerticalAlignment="Center"
                                       AutomationProperties.Name="通用 CPU 推理线程数" />
                         </Grid>
+                        <Separator Margin="0,14,0,12" BorderThickness="0,1,0,0" />
+                        <DockPanel>
+                            <ui:ToggleSwitch DockPanel.Dock="Right" IsChecked="{Binding OpenCvIdleSleep, Mode=TwoWay}" IsEnabled="{Binding CanInteract}"
+                                             Margin="16,0,0,0" VerticalAlignment="Center" AutomationProperties.Name="OpenCV 空闲时睡眠" />
+                            <StackPanel>
+                                <TextBlock Text="OpenCV 空闲时睡眠（省 CPU）" FontWeight="SemiBold" />
+                                <TextBlock Text="图像识别的并行池空闲时立即睡眠而非自旋等待。任务多为短并行区域，自旋会在游戏占核时白烧 CPU（PerfView 实测单线程每分钟空转 40s+）。需重启生效。" TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                        </DockPanel>
+                        <Separator Margin="0,14,0,12" BorderThickness="0,1,0,0" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="220" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="OpenCV 并行线程数" FontWeight="SemiBold" />
+                                <TextBlock Text="限制图像识别（模板匹配/轮廓等）的并行宽度，减少与游戏的抢核；0 = 全部逻辑核。保存后立即生效。"
+                                           TextWrapping="Wrap" Margin="0,4,20,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                            <ComboBox Grid.Column="1" ItemsSource="{Binding OpenCvThreadChoices}" DisplayMemberPath="Name" SelectedValuePath="Count"
+                                      SelectedValue="{Binding OpenCvThreads, Mode=TwoWay}" IsEnabled="{Binding CanInteract}" VerticalAlignment="Center"
+                                      AutomationProperties.Name="OpenCV 并行线程数" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+                <!-- ncnn Vulkan 后端（实验）：主开关在上，模型覆盖等次要信息在下 -->
+                <Border Padding="16" CornerRadius="10" BorderThickness="1" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" Margin="0,12,0,0">
+                    <StackPanel>
+                        <TextBlock Text="ncnn Vulkan 后端（实验）" FontWeight="SemiBold" />
+                        <TextBlock Text="ncnn 直接调用 Vulkan，用于消除 DirectML 在游戏运行中的推理延迟抖动。开关独立于上方推理引擎选择，产物缺失的模型自动回退；切换后点击「应用并重启」生效。"
+                                   TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <DockPanel Margin="0,14,0,0">
+                            <ui:ToggleSwitch DockPanel.Dock="Right" IsChecked="{Binding UseNcnnOcr, Mode=TwoWay}" IsEnabled="{Binding CanInteract}"
+                                             Margin="16,0,0,0" VerticalAlignment="Center" AutomationProperties.Name="OCR 使用 ncnn Vulkan 后端" />
+                            <StackPanel>
+                                <TextBlock Text="OCR 文字识别（Det + Rec）" FontWeight="SemiBold" />
+                                <TextBlock Text="全部 66 处文字识别生效。实测全流程 47ms，长时间运行无抖动。"
+                                           TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                        </DockPanel>
+                        <DockPanel Margin="0,12,0,0">
+                            <ui:ToggleSwitch DockPanel.Dock="Right" IsChecked="{Binding UseNcnnYolo, Mode=TwoWay}" IsEnabled="{Binding CanInteract}"
+                                             Margin="16,0,0,0" VerticalAlignment="Center" AutomationProperties.Name="YOLO 检测与分类使用 ncnn Vulkan 后端" />
+                            <StackPanel>
+                                <TextBlock Text="YOLO 检测与分类" FontWeight="SemiBold" />
+                                <TextBlock Text="拾取、战斗结束检测、钓鱼、挖矿与 Q 技能分类生效。实测游戏运行中平均 22ms（DirectML 平均 228ms，且伴有 100ms+ 卡顿）。"
+                                           TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                        </DockPanel>
+                        <Separator Margin="0,14,0,0" BorderThickness="0,1,0,0" />
+                        <TextBlock Text="模型覆盖情况" FontSize="12" FontWeight="SemiBold" Margin="0,12,0,4"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <ItemsControl ItemsSource="{Binding NcnnModelStatuses}" IsEnabled="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="16" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Mark}" FontSize="12" />
+                                        <TextBlock Grid.Column="1" FontSize="12" TextWrapping="Wrap">
+                                            <Run Text="{Binding DisplayName, Mode=OneWay}" />
+                                            <Run Text="{Binding Detail, Mode=OneWay}" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                        </TextBlock>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </StackPanel>
                 </Border>
                 <ui:CardExpander Margin="0,12,0,0" ContentPadding="0"

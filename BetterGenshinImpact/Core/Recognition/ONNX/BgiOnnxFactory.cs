@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
 
@@ -114,6 +116,15 @@ public sealed class BgiOnnxSessionFactory
     /// <returns>BgiYoloPredictor</returns>
     public BgiYoloPredictor CreateYoloPredictor(BgiOnnxModel model)
     {
+        // 实验开关：检测模型走 ncnn Vulkan；无产物或创建失败时自动回退所选推理引擎。
+        // SessionOptions 仍然创建并转交，脚本 API 通过 Predictor 属性访问 ORT 会话时保持可用。
+        if (TaskContext.Instance().Config.HardwareAccelerationConfig.UseNcnnYolo
+            && NcnnYoloBackend.TryCreate(model, _logger) is { } ncnnPredictor)
+        {
+            var ncnnOptions = CreateSessionOptions(model, EnableCache);
+            return new BgiYoloPredictor(model, model.ModalPath, ncnnOptions, ncnnPredictor);
+        }
+
         // 延后验证只影响后续新建会话，不修改或释放已经运行中的会话。
         // logger.LogDebug("[Yolo]创建yolo预测器，模型: {ModelName}", model.Name);
         var options = CreateSessionOptions(model, EnableCache);

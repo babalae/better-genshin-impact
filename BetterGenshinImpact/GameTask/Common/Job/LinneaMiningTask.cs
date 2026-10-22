@@ -269,7 +269,7 @@ public class LinneaMiningTask
 
         // SaveDebugImage(ra.SrcMat);
 
-        var rawResult = _predictor.Predictor.Detect(ra.CacheImage);
+        var rawResult = _predictor.Detect(ra.CacheImage);
 
         var centerX = ra.CacheImage.Width / 2.0;
         var centerY = ra.CacheImage.Height / 2.0;

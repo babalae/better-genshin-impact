@@ -18,6 +18,7 @@ public sealed class HardwareAccelerationConfigJsonConverter : JsonConverter<Hard
             return new()
             {
                 FormatVersion = data.FormatVersion, InferenceDevice = data.InferenceDevice, CpuOcr = data.CpuOcr, UseNcnnOcr = data.UseNcnnOcr,
+                UseNcnnYolo = data.UseNcnnYolo, OpenCvThreads = data.OpenCvThreads, OpenCvIdleSleep = data.OpenCvIdleSleep,
                 Cpu = data.Cpu!, DirectML = data.DirectML!, OpenVINO = data.OpenVINO!, Cuda = data.Cuda!, TensorRT = data.TensorRT!,
                 PaddleOcrCpu = data.PaddleOcrCpu ?? new(),
                 ValidationState = data.ValidationState, VerifiedSignature = data.VerifiedSignature ?? "",
@@ -32,6 +33,7 @@ public sealed class HardwareAccelerationConfigJsonConverter : JsonConverter<Hard
         => JsonSerializer.Serialize(writer, new SerializedConfiguration
         {
             FormatVersion = value.FormatVersion, InferenceDevice = value.InferenceDevice, CpuOcr = value.CpuOcr, UseNcnnOcr = value.UseNcnnOcr,
+            UseNcnnYolo = value.UseNcnnYolo, OpenCvThreads = value.OpenCvThreads, OpenCvIdleSleep = value.OpenCvIdleSleep,
             Cpu = value.Cpu, DirectML = value.DirectML, OpenVINO = value.OpenVINO, Cuda = value.Cuda, TensorRT = value.TensorRT,
             PaddleOcrCpu = value.PaddleOcrCpu,
             ValidationState = value.ValidationState, VerifiedSignature = value.VerifiedSignature,
@@ -46,6 +48,9 @@ public sealed class HardwareAccelerationConfigJsonConverter : JsonConverter<Hard
         public InferenceDeviceType InferenceDevice { get; set; }
         public bool CpuOcr { get; set; } = true;
         public bool UseNcnnOcr { get; set; }
+        public bool UseNcnnYolo { get; set; }
+        public int OpenCvThreads { get; set; }
+        public bool OpenCvIdleSleep { get; set; }
         public InferenceEngineSettings? Cpu { get; set; }
         public PaddleOcrCpuConfig? PaddleOcrCpu { get; set; }
         public InferenceEngineSettings? DirectML { get; set; }

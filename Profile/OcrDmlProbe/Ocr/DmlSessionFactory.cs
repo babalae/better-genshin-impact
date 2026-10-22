@@ -15,19 +15,25 @@ public static class DmlSessionFactory
     public static bool CpuSyncSpinning;
     public static bool NoArena;
 
-    /// <summary>provider 组合：both=生产默认 [Dml,Cpu]；dml=仅 DML（排查算子回退）；cpu=纯 CPU（对比基线）。</summary>
-    public static InferenceSession CreateSession(string modelPath, int dmlDeviceId, int cpuThreads, string modelName,
-        string providers = "both", bool enableProfiling = false, bool graphCapture = false, bool cpuSyncSpinning = false)
+    /// <summary>
+    /// 构造与生产一致的 SessionOptions。调用方负责释放；
+    /// 需要把同一套配置交给第三方库（YoloSharp）而非直接建会话时使用。
+    /// </summary>
+    /// <param name="providers">both=生产默认 [Dml,Cpu]；dml=仅 DML（排查算子回退）；cpu=纯 CPU（对比基线）。</param>
+    public static SessionOptions CreateSessionOptions(int dmlDeviceId, int cpuThreads,
+        string providers = "both", bool enableProfiling = false,
+        bool graphCapture = false, bool cpuSyncSpinning = false)
     {
         var options = new SessionOptions();
         try
         {
+            options.EnableProfiling = enableProfiling;
+
             if (providers == "cpu")
             {
                 options.IntraOpNumThreads = Math.Max(0, cpuThreads);
                 options.AppendExecutionProvider_CPU();
-                options.EnableProfiling = enableProfiling;
-                return new InferenceSession(modelPath, options);
+                return options;
             }
 
             // DirectML 执行提供程序不支持内存模式优化或并行执行，必须禁用，否则创建会话报错。
@@ -46,16 +52,29 @@ public static class DmlSessionFactory
             if (providers == "dml")
             {
                 // 仅 DML：若与 both 差异明显，说明生产组合中有算子回退到 CPU
-                options.EnableProfiling = enableProfiling;
-                return new InferenceSession(modelPath, options);
+                return options;
             }
             options.AppendExecutionProvider_CPU();
-            options.EnableProfiling = enableProfiling;
+            return options;
+        }
+        catch
+        {
+            options.Dispose();
+            throw;
+        }
+    }
+
+    public static InferenceSession CreateSession(string modelPath, int dmlDeviceId, int cpuThreads, string modelName,
+        string providers = "both", bool enableProfiling = false, bool graphCapture = false, bool cpuSyncSpinning = false)
+    {
+        try
+        {
+            using var options = CreateSessionOptions(dmlDeviceId, cpuThreads, providers, enableProfiling,
+                graphCapture, cpuSyncSpinning);
             return new InferenceSession(modelPath, options);
         }
         catch (Exception e)
         {
-            options.Dispose();
             var dml = Path.Combine(AppContext.BaseDirectory, "DirectML.dll");
             var ort = Path.Combine(AppContext.BaseDirectory, "onnxruntime.dll");
             throw new InvalidOperationException(
