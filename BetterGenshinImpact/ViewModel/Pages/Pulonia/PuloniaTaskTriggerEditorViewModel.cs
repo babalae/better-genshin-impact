@@ -60,9 +60,9 @@ public partial class PuloniaTaskTriggerEditorViewModel : ObservableObject
     public IReadOnlyDictionary<PuloniaTaskServerTimeZone, string> ServerTimeZones { get; }
         = new Dictionary<PuloniaTaskServerTimeZone, string>
         {
-            [PuloniaTaskServerTimeZone.UtcPlus8] = "UTC+8｜天空岛、世界树、亚洲服、港澳台服",
-            [PuloniaTaskServerTimeZone.Europe] = "UTC+1｜欧洲服",
-            [PuloniaTaskServerTimeZone.America] = "UTC-5｜美洲服"
+            [PuloniaTaskServerTimeZone.UtcPlus8] = "UTC+8｜天空岛/世界树",
+            [PuloniaTaskServerTimeZone.Europe] = "UTC+1｜欧服",
+            [PuloniaTaskServerTimeZone.America] = "UTC-5｜美服"
         };
     /// <summary>忙碌策略的用户文本。</summary>
     public IReadOnlyDictionary<PuloniaTaskBusyPolicy, string> BusyPolicies { get; } = new Dictionary<PuloniaTaskBusyPolicy, string>
