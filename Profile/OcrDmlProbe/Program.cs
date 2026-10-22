@@ -39,6 +39,8 @@ var verbose = Has("--verbose") || !quiet;
 
 DmlSessionFactory.GraphCapture = Has("--graph-capture");
 DmlSessionFactory.CpuSyncSpinning = Has("--spin");
+DmlSessionFactory.NoArena = Has("--no-arena");
+DmlSessionFactory.CpuSyncSpinning = Has("--spin");
 Console.OutputEncoding = System.Text.Encoding.UTF8;
 Console.WriteLine($"PID = {Environment.ProcessId}（可用 --pause 暂停等待分析器 attach）");
 Console.WriteLine($"providers={providers} | DirectML 设备 {dmlDeviceId} | CPU兜底线程 {cpuThreads} | 模型 PpOcrDetV6/PpOcrRecV6 | 模式 {mode}");
@@ -125,6 +127,9 @@ if (pause)
     Console.WriteLine("已暂停：请在分析器中 attach 本进程（PID 见首行），然后按回车继续...");
     Console.ReadLine();
 }
+
+var proc = System.Diagnostics.Process.GetCurrentProcess();
+Console.WriteLine($"[内存] 初始 提交 {proc.PrivateMemorySize64 / 1048576}MB / 工作集 {proc.WorkingSet64 / 1048576}MB");
 
 // ---------- 模式执行 ----------
 switch (mode)
@@ -438,6 +443,8 @@ void RunSingleMode(Mat image, int iterations, int warmups)
     }
 
     PrintSummary("单行完整管线", times);
+    var pm = System.Diagnostics.Process.GetCurrentProcess();
+    Console.WriteLine($"[内存] 运行后 提交 {pm.PrivateMemorySize64 / 1048576}MB / 工作集 {pm.WorkingSet64 / 1048576}MB");
 
     // 无检测器单行识别（等价 OcrWithoutDetector）
     using var line = pipeline.ExportCrops(roi)[0];

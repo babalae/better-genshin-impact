@@ -10,9 +10,10 @@ namespace OcrDmlProbe.Ocr;
 /// </summary>
 public static class DmlSessionFactory
 {
-    /// <summary>实验开关（由命令行设置）：DML 命令列表捕获回放 / fence 自旋等待。</summary>
+    /// <summary>实验开关（由命令行设置）：DML 命令列表捕获回放 / fence 自旋等待 / 关闭内存驻留 arena。</summary>
     public static bool GraphCapture;
     public static bool CpuSyncSpinning;
+    public static bool NoArena;
 
     /// <summary>provider 组合：both=生产默认 [Dml,Cpu]；dml=仅 DML（排查算子回退）；cpu=纯 CPU（对比基线）。</summary>
     public static InferenceSession CreateSession(string modelPath, int dmlDeviceId, int cpuThreads, string modelName,
@@ -36,6 +37,7 @@ public static class DmlSessionFactory
             // 实验开关：命令列表捕获回放（消灭 per-run 派发）与 fence 自旋等待（降同步延迟）
             if (graphCapture || GraphCapture) options.AddSessionConfigEntry("ep.dml.enable_graph_capture", "true");
             if (cpuSyncSpinning || CpuSyncSpinning) options.AddSessionConfigEntry("ep.dml.enable_cpu_sync_spinning", "true");
+            if (NoArena) options.AddSessionConfigEntry("ep.dml.disable_memory_arena", "1");
             // 与生产一致：CPU 兜底会话会设置全局线程数（0 = ORT 默认调度）
             if (cpuThreads >= 0)
             {
