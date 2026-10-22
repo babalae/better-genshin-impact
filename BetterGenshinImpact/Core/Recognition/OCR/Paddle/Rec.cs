@@ -277,12 +277,20 @@ public class Rec : IOcrRecognizer
             owners.ForEach(x => { x.Dispose(); });
         }
 
-        Logger.LogDebug(
-            stacked
-                ? "[OCR][Rec] 桶宽{BucketWidth} 行数{LineCount} 堆叠批{Batch} | 预处理 {Pre:F1}ms 推理 {Inf:F1}ms(均 {Avg:F1}ms/行) 解码 {Dec:F1}ms"
-                : "[OCR][Rec] 桶宽{BucketWidth} 行数{LineCount} | 预处理 {Pre:F1}ms 推理 {Inf:F1}ms(均 {Avg:F1}ms/行) 解码 {Dec:F1}ms",
-            maxWidth, srcs.Length, stacked ? RecStackBatch : 0, preprocessMs, inferMs,
-            inferMs / Math.Max(1, srcs.Length), decodeMs);
+        if (stacked)
+        {
+            Logger.LogDebug(
+                "[OCR][Rec] 桶宽{BucketWidth} 行数{LineCount} 堆叠批{Batch} | 预处理 {Pre:F1}ms 推理 {Inf:F1}ms(均 {Avg:F1}ms/行) 解码 {Dec:F1}ms",
+                maxWidth, srcs.Length, RecStackBatch, preprocessMs, inferMs,
+                inferMs / Math.Max(1, srcs.Length), decodeMs);
+        }
+        else
+        {
+            Logger.LogDebug(
+                "[OCR][Rec] 桶宽{BucketWidth} 行数{LineCount} | 预处理 {Pre:F1}ms 推理 {Inf:F1}ms(均 {Avg:F1}ms/行) 解码 {Dec:F1}ms",
+                maxWidth, srcs.Length, preprocessMs, inferMs,
+                inferMs / Math.Max(1, srcs.Length), decodeMs);
+        }
         return decodeResults;
     }
 
