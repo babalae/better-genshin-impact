@@ -30,11 +30,13 @@ public sealed class ChildSessionService : IDisposable
 
     private readonly IServiceProvider _serviceProvider;
     private readonly InstanceService _instanceService;
+    private readonly UuRemoteSessionRepairService _uuRemoteSessionRepairService;
     private readonly ChildSessionConfig _config;
     private readonly ILogger<ChildSessionService> _logger;
     private readonly DispatcherTimer _statusTimer;
     private readonly SemaphoreSlim _launchSemaphore = new(1, 1);
     private readonly CancellationTokenSource _disposeCancellationTokenSource = new();
+    private CancellationTokenSource _uuRemoteStartupMonitorCancellationTokenSource = new();
 
     private ChildSessionWindow? _desktopWindow;
     private bool _autoLaunchBetterGiPending;
@@ -46,6 +48,8 @@ public sealed class ChildSessionService : IDisposable
     private int _rdpSettingsReconnectRetriesRemaining;
     private bool _rdpSettingsReconnectRetryInProgress;
     private bool _statusTickInProgress;
+    private bool _uuRemoteStartupMonitorPending;
+    private Task? _uuRemoteStartupMonitorTask;
     private bool _disposed;
     private string? _lastOperationMessage;
     private IReadOnlyList<ChildSessionEnvironmentCheck.Issue> _environmentIssues = [];
@@ -57,6 +61,8 @@ public sealed class ChildSessionService : IDisposable
     public event EventHandler? SystemShortcutsReconnectCompleted;
 
     public event EventHandler? AudioReconnectCompleted;
+
+    public event EventHandler<UuRemoteRepairStateChangedEventArgs>? UuRemoteRepairStateChanged;
 
     public string StatusText { get; private set; } = "桌面分身尚未启动";
 
@@ -92,6 +98,26 @@ public sealed class ChildSessionService : IDisposable
         set => _config.SmallWindowPosition = value;
     }
 
+    public bool IsUuRemoteRepairEnabled => _uuRemoteSessionRepairService.IsEnabled;
+
+    public bool IsUuRemoteRepairAvailable => _uuRemoteSessionRepairService.IsAvailable;
+
+    public bool IsUuRemoteRepairRiskAcknowledged =>
+        _uuRemoteSessionRepairService.IsRiskAcknowledged;
+
+    public void SetUuRemoteRepairEnabled(bool enabled)
+    {
+        _uuRemoteSessionRepairService.SetEnabled(enabled);
+        RefreshState(enabled
+            ? "已开启启动时自动修复 UU 远程主会话冲突"
+            : "已关闭启动时自动修复 UU 远程主会话冲突");
+    }
+
+    public void AcknowledgeUuRemoteRepairRisk()
+    {
+        _uuRemoteSessionRepairService.AcknowledgeRisk();
+    }
+
     /// <summary>
     /// 系统是否已安装并启用 RDP Wrapper。它与桌面分身功能不兼容，界面会在启动前据此提示用户。
     /// </summary>
@@ -125,11 +151,15 @@ public sealed class ChildSessionService : IDisposable
     public ChildSessionService(
         IServiceProvider serviceProvider,
         InstanceService instanceService,
+        UuRemoteSessionRepairService uuRemoteSessionRepairService,
         IConfigService configService,
         ILogger<ChildSessionService> logger)
     {
         _serviceProvider = serviceProvider;
         _instanceService = instanceService;
+        _uuRemoteSessionRepairService = uuRemoteSessionRepairService;
+        _uuRemoteSessionRepairService.RepairStateChanged +=
+            OnUuRemoteRepairStateChanged;
         _config = configService.Get().ChildSessionConfig;
         SendSystemShortcutsToRemote = _config.SendSystemShortcutsToRemote;
         _logger = logger;
@@ -153,11 +183,41 @@ public sealed class ChildSessionService : IDisposable
         EnsureChildSessionsEnabled();
         RefreshState();
 
+        _logger.LogDebug(
+            "收到桌面分身启动请求。RDP 连接状态：{ConnectedState}，Child Session：{ChildSessionId}，"
+            + "UU 自动修复已启用：{UuRepairEnabled}，UU 修复可用：{UuRepairAvailable}。",
+            ConnectedState,
+            ChildSessionId,
+            _uuRemoteSessionRepairService.IsEnabled,
+            _uuRemoteSessionRepairService.IsAvailable);
+
+        // 每次用户点击“启动”都是一次新的启动周期。先结束上一周期可能仍在
+        // 运行的登录后观察任务，避免旧任务在本次修复后误报残留冲突。
+        CancelUuRemoteStartupMonitor();
+        _uuRemoteStartupMonitorPending = _uuRemoteSessionRepairService.IsEnabled;
+
         if (ConnectedState == 1)
         {
+            // 用户可能已经连接桌面分身，之后 UU 才切换到后台会话。
+            // 即使无需新建 RDP 连接，也应执行一次启动时检查。
+            _logger.LogDebug("桌面分身已连接，先检查 UU 远程会话冲突，再保留现有 RDP 连接。");
+            _uuRemoteSessionRepairService.BeginStartupCycle();
+            var connectedResult = await _uuRemoteSessionRepairService.TryRepairBeforeStartAsync(
+                _disposeCancellationTokenSource.Token);
+            _logger.LogInformation(
+                "桌面分身已连接状态下的 UU 检查完成。是否尝试修复：{WasAttempted}，"
+                + "是否成功：{IsSuccessful}，原因：{Reason}。",
+                connectedResult.WasAttempted,
+                connectedResult.IsSuccessful,
+                connectedResult.FailureReason);
+            if (!_disposed)
+            {
+                StartUuRemoteStartupMonitor();
+            }
             return;
         }
 
+        _uuRemoteSessionRepairService.BeginStartupCycle();
         var completionSource = _connectionAttemptCompletionSource;
         if (completionSource is null || completionSource.Task.IsCompleted)
         {
@@ -168,12 +228,26 @@ public sealed class ChildSessionService : IDisposable
 
             try
             {
+                var repairResult = await _uuRemoteSessionRepairService.TryRepairBeforeStartAsync(
+                    _disposeCancellationTokenSource.Token);
+                _logger.LogInformation(
+                    "桌面分身启动前 UU 检查完成。是否尝试修复：{WasAttempted}，"
+                    + "是否成功：{IsSuccessful}，原因：{Reason}。",
+                    repairResult.WasAttempted,
+                    repairResult.IsSuccessful,
+                    repairResult.FailureReason);
+                if (_disposed)
+                {
+                    return;
+                }
+
                 ConnectCore("正在启动 BetterGI 桌面分身");
             }
             catch
             {
                 _autoLaunchBetterGiPending = false;
                 _initialConnectionRetriesRemaining = 0;
+                _uuRemoteStartupMonitorPending = false;
                 completionSource.TrySetResult(false);
                 _connectionAttemptCompletionSource = null;
                 throw;
@@ -380,6 +454,7 @@ public sealed class ChildSessionService : IDisposable
             }
 
             // 完成目标会话校验后再取消连接和重试状态，避免旧菜单项影响刚创建的新会话。
+            CancelUuRemoteStartupMonitor();
             _autoLaunchBetterGiPending = false;
             _initialConnectionRetriesRemaining = 0;
             _pendingRdpSettingChanges = RdpSettingChange.None;
@@ -454,6 +529,7 @@ public sealed class ChildSessionService : IDisposable
         _statusTimer.Stop();
         _statusTimer.Tick -= OnStatusTimerTick;
         _disposeCancellationTokenSource.Cancel();
+        CancelUuRemoteStartupMonitor();
         _autoLaunchBetterGiPending = false;
         _connectionAttemptCompletionSource?.TrySetCanceled();
         _connectionAttemptCompletionSource = null;
@@ -489,6 +565,7 @@ public sealed class ChildSessionService : IDisposable
         }
 
         _launchSemaphore.Dispose();
+        _uuRemoteStartupMonitorCancellationTokenSource.Dispose();
         _disposeCancellationTokenSource.Dispose();
     }
 
@@ -628,6 +705,106 @@ public sealed class ChildSessionService : IDisposable
         RefreshState();
     }
 
+    private void OnUuRemoteRepairStateChanged(
+        object? sender,
+        UuRemoteRepairStateChangedEventArgs e)
+    {
+        UuRemoteRepairStateChanged?.Invoke(this, e);
+    }
+
+    private void StartUuRemoteStartupMonitor()
+    {
+        if (!_uuRemoteStartupMonitorPending
+            || !_uuRemoteSessionRepairService.IsEnabled
+            || _uuRemoteStartupMonitorTask is { IsCompleted: false }
+            || _disposed)
+        {
+            return;
+        }
+
+        _uuRemoteStartupMonitorPending = false;
+        var task = MonitorUuRemoteStartupAsync(
+            _uuRemoteStartupMonitorCancellationTokenSource.Token);
+        _uuRemoteStartupMonitorTask = task;
+        _ = ObserveUuRemoteStartupMonitorAsync(task);
+    }
+
+    private async Task MonitorUuRemoteStartupAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _uuRemoteSessionRepairService.CheckAfterStartAsync(
+                cancellationToken);
+            if (!result.WasAttempted || _disposed)
+            {
+                return;
+            }
+
+            _logger.LogInformation(
+                "桌面分身启动后的 UU 检查完成。是否成功：{IsSuccessful}，原因：{Reason}。",
+                result.IsSuccessful,
+                result.FailureReason);
+
+            if (_desktopWindow?.RdpHost.ConnectedState != 1)
+            {
+                RefreshState("UU 远程会话已处理，正在重新连接桌面分身");
+                _desktopWindow?.RdpHost.ReconnectToChildSession(DefaultDesktopSize);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            _logger.LogDebug(exception, "桌面分身启动后的 UU 远程会话监控失败");
+        }
+    }
+
+    private static async Task ObserveUuRemoteStartupMonitorAsync(Task monitorTask)
+    {
+        try
+        {
+            await monitorTask;
+        }
+        catch (Exception)
+        {
+            // 监控任务内部已处理可预期异常；这里负责观测取消等结束状态。
+        }
+    }
+
+    private void CancelUuRemoteStartupMonitor()
+    {
+        _uuRemoteStartupMonitorPending = false;
+        var monitorTask = _uuRemoteStartupMonitorTask;
+        var cancellationTokenSource = _uuRemoteStartupMonitorCancellationTokenSource;
+        _uuRemoteStartupMonitorCancellationTokenSource = new();
+        _uuRemoteStartupMonitorTask = null;
+        cancellationTokenSource.Cancel();
+        _ = DisposeUuRemoteStartupMonitorSourceAsync(
+            cancellationTokenSource,
+            monitorTask);
+    }
+
+    private static async Task DisposeUuRemoteStartupMonitorSourceAsync(
+        CancellationTokenSource cancellationTokenSource,
+        Task? monitorTask)
+    {
+        if (monitorTask is not null)
+        {
+            try
+            {
+                await monitorTask;
+            }
+            catch (Exception)
+            {
+                // 监控任务已由 ObserveUuRemoteStartupMonitorAsync 负责观测；
+                // 这里只等待其退出，确保取消源不会在任务仍使用时被释放。
+            }
+        }
+
+        cancellationTokenSource.Dispose();
+    }
+
     private void OnRdpConnectionFailed(
         object? sender,
         ChildSessionConnectionFailedEventArgs e)
@@ -695,6 +872,8 @@ public sealed class ChildSessionService : IDisposable
         {
             RefreshState("桌面分身登录初始化完成");
         }
+
+        StartUuRemoteStartupMonitor();
 
         if (!_autoLaunchBetterGiPending)
         {
@@ -861,6 +1040,7 @@ public sealed class ChildSessionService : IDisposable
         _lastConnectionFailure = diagnosed;
         _autoLaunchBetterGiPending = false;
         _initialConnectionRetriesRemaining = 0;
+        _uuRemoteStartupMonitorPending = false;
         _connectionAttemptCompletionSource?.TrySetResult(false);
         _logger.LogError(
             "桌面分身 RDP 连接失败：{ErrorMessage}，错误代码：{ErrorCode}，扩展错误代码：{ExtendedErrorCode}",

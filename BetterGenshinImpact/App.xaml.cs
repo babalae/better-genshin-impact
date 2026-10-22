@@ -278,6 +278,7 @@ public partial class App : Application
                 // Main window with navigation
                 services.AddView<INavigationWindow, MainWindow, MainWindowViewModel>();
                 services.AddSingleton<NotifyIconViewModel>();
+                services.AddSingleton<UuRemoteSessionRepairService>();
                 services.AddSingleton<ChildSessionService>();
                 services.AddTransient<ChildSessionWindowViewModel>();
                 services.AddTransient<ChildSessionWindow>();

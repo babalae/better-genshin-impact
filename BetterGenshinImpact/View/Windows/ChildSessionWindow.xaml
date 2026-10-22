@@ -240,6 +240,16 @@
                                                  Command="{Binding ShowTaskViewCommand}" />
                                 </ui:MenuItem>
                                 <ui:MenuItem Header="{i18n:T 更多}">
+                                    <ui:MenuItem Header="{i18n:T 启动时自动修复 UU 远程主会话冲突}"
+                                                 Command="{Binding ToggleUuRemoteRepairCommand}"
+                                                 IsCheckable="True"
+                                                 IsChecked="{Binding IsUuRemoteRepairEnabled, Mode=OneWay}"
+                                                 ToolTip="检测 UU 串流进程是否位于非主桌面会话；修复时会短暂重启 UU 串流进程，当前远程画面可能中断数秒。"
+                                                 Visibility="{Binding IsUuRemoteRepairOptionVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    <ui:MenuItem Header="{i18n:T 启动时自动修复 UU 远程主会话冲突（不可用）}"
+                                                 IsEnabled="False"
+                                                 ToolTip="{Binding UuRemoteRepairUnavailableReason}"
+                                                 Visibility="{Binding IsUuRemoteRepairOptionUnavailable, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                     <ui:MenuItem Header="{i18n:T 以管理员权限启动…}"
                                                  Command="{Binding LaunchExecutableCommand}"
                                                  Icon="{ui:SymbolIcon Shield24}" />
@@ -408,6 +418,26 @@
                                    TextAlignment="Center"
                                    TextWrapping="Wrap" />
 
+                        <Border Margin="0,18,0,0"
+                                Padding="16,12"
+                                Background="#1AFFB900"
+                                BorderBrush="#66FFB900"
+                                BorderThickness="1"
+                                CornerRadius="7"
+                                Visibility="{Binding IsUuRemoteRepairWarningVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <StackPanel>
+                                <TextBlock FontWeight="Bold"
+                                           Foreground="#FFFFD45C"
+                                           Text="UU 远程会话修复提示"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Margin="0,6,0,0"
+                                           Foreground="#F2FFFFFF"
+                                           FontWeight="Bold"
+                                           Text="{Binding UuRemoteRepairWarningText}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+
                         <Border Margin="0,22,0,0"
                                 Padding="16,12"
                                 Background="#10000000"
@@ -475,6 +505,7 @@
                     </StackPanel>
                 </Border>
             </Grid>
+
         </Grid>
     </Grid>
 </ui:FluentWindow>
