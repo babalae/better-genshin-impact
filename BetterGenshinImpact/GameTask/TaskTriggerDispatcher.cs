@@ -368,7 +368,9 @@ namespace BetterGenshinImpact.GameTask
                 // 检查游戏是否在前台
                 var hasBackgroundTriggerToRun = false;
                 var autoSkipConfig = _config.AutoSkipConfig;
-                var shouldShowPictureInPicture = autoSkipConfig.Enabled
+                // WebView2 云原神实例始终禁用画中画，不受开关和图像来源配置影响。
+                var shouldShowPictureInPicture = runtime.Kind != GameRuntimeKind.WebPage
+                                                 && autoSkipConfig.Enabled
                                                  && autoSkipConfig.PictureInPictureEnabled
                                                  && !PictureInPictureService.IsManuallyClosed
                                                  && TaskControl.TaskSemaphore.CurrentCount == 1; // 没有任务持有锁（也就是没有任务正在运行）
