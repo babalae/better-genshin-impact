@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>OcrDmlProbe</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- 让输出目录可以直接作为 VTune 工作目录 -->
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 与 BetterGenshinImpact.csproj 保持完全一致的 ORT/DirectML 版本组合 -->
+    <PackageReference Include="Microsoft.AI.DirectML" Version="1.15.4" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.21.0" IncludeAssets="none" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.21.0" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.21.0" />
+    <PackageReference Include="OpenCvSharp4.Windows" Version="4.11.0.20250507" />
+    <PackageReference Include="Clipper2" Version="2.0.0" />
+    <PackageReference Include="YamlDotNet" Version="16.3.0" />
+  </ItemGroup>
+
+</Project>
