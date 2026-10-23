@@ -40,6 +40,7 @@ internal static class NcnnConfigJson
         UseYolo = value.UseYolo,
         ComputeMode = value.ComputeMode,
         GpuIndex = value.GpuIndex,
+        OcrUseBuckets = value.OcrUseBuckets,
         Threads = value.Threads,
         DetTuning = SerializedNcnnTuning.From(value.DetTuning ?? NcnnTuningSettings.CreateDefault()),
         RecTuning = SerializedNcnnTuning.From(value.RecTuning ?? NcnnTuningSettings.CreateDefault()),
@@ -55,6 +56,7 @@ internal sealed class SerializedNcnnConfig
     public bool UseYolo { get; set; }
     public NcnnComputeMode? ComputeMode { get; set; }
     public int? GpuIndex { get; set; }
+    public bool? OcrUseBuckets { get; set; }
     public int? Threads { get; set; }
     public SerializedNcnnTuning? DetTuning { get; set; }
     public SerializedNcnnTuning? RecTuning { get; set; }
@@ -70,8 +72,9 @@ internal sealed class SerializedNcnnConfig
             PreferredBackend = PreferredBackend ?? InferenceBackend.Onnx,
             UseOcr = UseOcr,
             UseYolo = UseYolo,
-            ComputeMode = ComputeMode ?? NcnnComputeMode.Vulkan,
+            ComputeMode = ComputeMode ?? global::BetterGenshinImpact.Core.Config.NcnnComputeMode.Vulkan,
             GpuIndex = GpuIndex ?? 0,
+            OcrUseBuckets = OcrUseBuckets ?? true,
             Threads = fallbackThreads,
             DetTuning = DetTuning?.ToSettings(fallbackThreads) ?? NcnnTuningSettings.CreateDefault(fallbackThreads),
             RecTuning = RecTuning?.ToSettings(fallbackThreads) ?? NcnnTuningSettings.CreateDefault(fallbackThreads),

@@ -37,14 +37,18 @@ internal sealed class NcnnRec : IOcrRecognizer
     private readonly IReadOnlyList<string> _labels;
     private readonly NcnnBucketCache<NcnnSession> _sessions;
 
+    /// <summary>关闭分桶时的固定桶宽；0 表示按行宽高比自适应选桶。</summary>
+    private readonly int _fixedWidth;
+
     public NcnnRec(INcnnShim shim, string modelDir, IReadOnlyList<string> labels,
-        NcnnTuningSettings tuning, int gpuIndex = 0)
+        NcnnTuningSettings tuning, int gpuIndex = 0, bool useBuckets = true)
     {
         _shim = shim;
         _modelDir = modelDir;
         _labels = labels;
         _gpuIndex = gpuIndex;
         _tuning = tuning.NormalizedCopy();
+        _fixedWidth = useBuckets ? 0 : MaxBucketWidth;
         _sessions = new NcnnBucketCache<NcnnSession>(CreateBucketSession);
     }
 
@@ -52,6 +56,7 @@ internal sealed class NcnnRec : IOcrRecognizer
 
     public (int Batch, int Width)[] GetWarmupBuckets()
     {
+        if (_fixedWidth > 0) return [(1, _fixedWidth)];
         var buckets = new List<(int, int)>();
         for (var width = BucketStep; width <= MaxBucketWidth; width += BucketStep)
         {
@@ -118,9 +123,10 @@ internal sealed class NcnnRec : IOcrRecognizer
         }
     }
 
-    /// <summary>按行图宽高比计算输入桶宽（向上取整到 160，限制在 [160, 960]）。</summary>
-    private static int ChooseBucket(int width, int height)
+    /// <summary>按行图宽高比计算输入桶宽（向上取整到 160，限制在 [160, 960]）；关闭分桶时固定用最大宽度。</summary>
+    private int ChooseBucket(int width, int height)
     {
+        if (_fixedWidth > 0) return _fixedWidth;
         if (height <= 0) return BucketStep;
         var desired = (int)Math.Ceiling(width * (double)ModelHeight / height);
         var bucket = (int)Math.Ceiling(desired / (double)BucketStep) * BucketStep;

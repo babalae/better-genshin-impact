@@ -260,6 +260,16 @@
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                 </StackPanel>
             </DockPanel>
+            <DockPanel Margin="0,10,0,0">
+                <ui:ToggleSwitch DockPanel.Dock="Right" IsChecked="{Binding OcrUseBuckets, Mode=TwoWay}"
+                                 Margin="16,0,0,0" VerticalAlignment="Center" AutomationProperties.Name="OCR 输入分桶" />
+                <StackPanel>
+                    <TextBlock Text="OCR 输入分桶（det + rec，推荐开启）" FontWeight="SemiBold" FontSize="12" />
+                    <TextBlock Text="按输入尺寸选择 320/640/960 档位画布，GPU 计算量最小；关闭后固定使用最大档（det 960² / rec 宽 960），不再按内容选桶。仅用于对比测试。"
+                               TextWrapping="Wrap" Margin="0,2,0,0" FontSize="11"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+            </DockPanel>
         </StackPanel>
         <Border Padding="12,8" CornerRadius="8" Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}" Margin="0,10,0,0">
             <DockPanel>

@@ -26,6 +26,9 @@ internal sealed class NcnnDet : IOcrDetector
     private readonly OcrVersionConfig _config;
     private readonly NcnnTuningSettings _tuning;
 
+    /// <summary>关闭分桶时的固定画布边长；0 表示按内容自适应分桶。</summary>
+    private readonly int _fixedBucket;
+
     /// <summary>det 内容边长上限（与 Det.LimitSideLen 默认值一致）。</summary>
     public int LimitSideLen { get; set; } = 960;
 
@@ -45,14 +48,16 @@ internal sealed class NcnnDet : IOcrDetector
     private readonly NcnnBucketCache<NcnnSession> _sessions;
 
     public NcnnDet(INcnnShim shim, string modelDir, OcrVersionConfig config,
-        NcnnTuningSettings tuning, int gpuIndex = 0)
+        NcnnTuningSettings tuning, int gpuIndex = 0, bool useBuckets = true)
     {
         _shim = shim;
         _config = config;
         _tuning = tuning.NormalizedCopy();
         _modelDir = modelDir;
         _gpuIndex = gpuIndex;
-        // det 输入桶按内容尺寸选择，pnnx 静态形状要求每桶一份模型，故按需懒加载
+        // det 输入桶按内容尺寸选择，pnnx 静态形状要求每桶一份模型，故按需懒加载；
+        // 关闭分桶时固定用最大档画布（对比测试用），LimitSideLen 在使用点读取。
+        _fixedBucket = useBuckets ? 0 : Math.Max(BucketStep, (int)Math.Ceiling(LimitSideLen / (double)BucketStep) * BucketStep);
         _sessions = new NcnnBucketCache<NcnnSession>(CreateBucketSession);
     }
 
@@ -81,6 +86,7 @@ internal sealed class NcnnDet : IOcrDetector
 
     public int[] GetWarmupBuckets()
     {
+        if (_fixedBucket > 0) return [_fixedBucket];
         var limit = Math.Max(BucketStep, (int)Math.Ceiling(LimitSideLen / (double)BucketStep) * BucketStep);
         var buckets = new List<int>();
         for (var bucket = BucketStep; bucket <= limit; bucket += BucketStep)
@@ -194,9 +200,21 @@ internal sealed class NcnnDet : IOcrDetector
         if (resizeWidth <= 0 || resizeHeight <= 0)
             throw new InvalidOperationException($"Invalid det resize target size: {resizeWidth}x{resizeHeight}");
 
+        var bucket = _fixedBucket;
+        if (bucket > 0 && Math.Max(resizeHeight, resizeWidth) > bucket)
+        {
+            // 关闭分桶时内容超出固定画布（limitType=min 等非默认限边）：等比缩入画布再对齐。
+            var fitRatio = 1.0 * bucket / Math.Max(resizeHeight, resizeWidth);
+            resizeHeight = Math.Max((int)Math.Round(resizeHeight * fitRatio / 32.0) * 32, 32);
+            resizeWidth = Math.Max((int)Math.Round(resizeWidth * fitRatio / 32.0) * 32, 32);
+        }
+        else if (bucket <= 0)
+        {
+            bucket = Math.Max((Math.Max(resizeHeight, resizeWidth) + BucketStep - 1) / BucketStep * BucketStep,
+                BucketStep);
+        }
+
         contentSize = new Size(resizeWidth, resizeHeight);
-        var bucket = Math.Max((Math.Max(resizeHeight, resizeWidth) + BucketStep - 1) / BucketStep * BucketStep,
-            BucketStep);
         var canvas = new Mat(new Size(bucket, bucket), work.Type(), Scalar.Black);
         using var resized = work.Resize(new Size(resizeWidth, resizeHeight));
         using (var roi = canvas[new Rect(0, 0, resizeWidth, resizeHeight)])

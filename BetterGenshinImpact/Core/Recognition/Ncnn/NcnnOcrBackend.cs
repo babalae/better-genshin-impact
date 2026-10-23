@@ -33,12 +33,13 @@ internal static class NcnnOcrBackend
             var gpuIndex = settings.EffectiveGpuIndex;
             // det / rec 共享同一个 shim 实例（库句柄进程内缓存，导出绑定只做一次）
             INcnnShim shim = new NcnnShim(shimPath);
-            det = new NcnnDet(shim, modelDir, v6.DetectionVersion, settings.Det, gpuIndex);
-            rec = new NcnnRec(shim, modelDir, labels, settings.Rec, gpuIndex);
+            det = new NcnnDet(shim, modelDir, v6.DetectionVersion, settings.Det, gpuIndex, settings.OcrUseBuckets);
+            rec = new NcnnRec(shim, modelDir, labels, settings.Rec, gpuIndex, settings.OcrUseBuckets);
             logger.LogInformation(
-                "[OCR] ncnn 后端已启用（{Det} / {Rec}，固定 PpOcrV6，忽略界面的 OCR 模型选择），{Device}，检测 {DetThreads} 线程 / 识别 {RecThreads} 线程，模型目录 {Dir}",
+                "[OCR] ncnn 后端已启用（{Det} / {Rec}，固定 PpOcrV6，忽略界面的 OCR 模型选择），{Device}，检测 {DetThreads} 线程 / 识别 {RecThreads} 线程，分桶：{Buckets}，模型目录 {Dir}",
                 det.GetConfigName, rec.GetConfigName,
-                gpuIndex >= 0 ? $"Vulkan 设备 #{gpuIndex}" : "CPU 推理", settings.Det.Threads, settings.Rec.Threads, modelDir);
+                gpuIndex >= 0 ? $"Vulkan 设备 #{gpuIndex}" : "CPU 推理", settings.Det.Threads, settings.Rec.Threads,
+                settings.OcrUseBuckets ? "开" : "关（固定最大档）", modelDir);
             return (det, rec);
         }
         catch (Exception e)

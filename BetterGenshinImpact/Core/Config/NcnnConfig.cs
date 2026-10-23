@@ -62,6 +62,14 @@ public partial class NcnnConfig : ObservableObject
     [ObservableProperty]
     private NcnnTuningSettings _yoloTuning = NcnnTuningSettings.CreateDefault();
 
+    /// <summary>
+    ///     OCR 输入是否按形状分桶（det 320/640/960 方形画布、rec 宽 160 步长）。
+    ///     关闭后固定使用最大档位画布（det 960² / rec 宽 960），不再按内容选桶；
+    ///     GPU 计算量增大，仅用于对比测试。
+    /// </summary>
+    [ObservableProperty]
+    private bool _ocrUseBuckets = true;
+
     partial void OnPreferredBackendChanged(InferenceBackend value)
     {
         // 脚本或其他调用方写入未知值时回落 ONNX，与配置读取的兜底一致。
@@ -83,6 +91,7 @@ public partial class NcnnConfig : ObservableObject
         UseYolo = normalized.UseYolo;
         ComputeMode = normalized.ComputeMode;
         GpuIndex = normalized.GpuIndex;
+        OcrUseBuckets = normalized.OcrUseBuckets;
         Threads = normalized.Det.Threads;
         DetTuning = normalized.Det;
         RecTuning = normalized.Rec;
@@ -97,6 +106,7 @@ public partial class NcnnConfig : ObservableObject
         UseYolo = false;
         ComputeMode = NcnnComputeMode.Vulkan;
         GpuIndex = 0;
+        OcrUseBuckets = true;
         Threads = NcnnBackendSettings.DefaultThreads;
         DetTuning = NcnnTuningSettings.CreateDefault();
         RecTuning = NcnnTuningSettings.CreateDefault();

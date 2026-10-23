@@ -25,7 +25,8 @@ public enum NcnnComputeMode
 public sealed record NcnnBackendSettings(
     InferenceBackend Backend, bool UseOcr, bool UseYolo,
     NcnnComputeMode ComputeMode, int GpuIndex,
-    NcnnTuningSettings Det, NcnnTuningSettings Rec, NcnnTuningSettings Yolo)
+    NcnnTuningSettings Det, NcnnTuningSettings Rec, NcnnTuningSettings Yolo,
+    bool OcrUseBuckets = true)
 {
     public const int DefaultThreads = NcnnTuningSettings.DefaultThreads;
     public const int MaxThreads = NcnnTuningSettings.MaxThreads;
@@ -47,19 +48,20 @@ public sealed record NcnnBackendSettings(
 
     /// <summary>只比较是否变化用的稳定签名，不参与验证指纹。</summary>
     public string SignatureSuffix =>
-        $"|ncnn|{Backend}|{UseOcr}|{UseYolo}|{ComputeMode}|{GpuIndex}|det{Det.SignatureSuffix}|rec{Rec.SignatureSuffix}|yolo{Yolo.SignatureSuffix}";
+        $"|ncnn|{Backend}|{UseOcr}|{UseYolo}|{ComputeMode}|{GpuIndex}|{OcrUseBuckets}|det{Det.SignatureSuffix}|rec{Rec.SignatureSuffix}|yolo{Yolo.SignatureSuffix}";
 
     /// <summary>返回深拷贝并修正越界值，避免草稿对象与已保存配置共享引用。</summary>
     public NcnnBackendSettings Normalize() => new(Backend, UseOcr, UseYolo, ComputeMode,
         Math.Clamp(GpuIndex, 0, MaxGpuIndex),
-        Det.NormalizedCopy(), Rec.NormalizedCopy(), Yolo.NormalizedCopy());
+        Det.NormalizedCopy(), Rec.NormalizedCopy(), Yolo.NormalizedCopy(), OcrUseBuckets);
 
     public static NcnnBackendSettings FromConfig(NcnnConfig config) => new NcnnBackendSettings(
         config.PreferredBackend, config.UseOcr, config.UseYolo,
         config.ComputeMode, config.GpuIndex,
         config.DetTuning ?? NcnnTuningSettings.CreateDefault(config.Threads),
         config.RecTuning ?? NcnnTuningSettings.CreateDefault(config.Threads),
-        config.YoloTuning ?? NcnnTuningSettings.CreateDefault(config.Threads)).Normalize();
+        config.YoloTuning ?? NcnnTuningSettings.CreateDefault(config.Threads),
+        config.OcrUseBuckets).Normalize();
 
     public bool Equals(NcnnBackendSettings? other) => other != null && SignatureSuffix == other.SignatureSuffix;
 
