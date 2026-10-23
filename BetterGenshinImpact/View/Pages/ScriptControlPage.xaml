@@ -233,6 +233,7 @@
                                 <MenuItem Header="{i18n:T 地图追踪任务}" Command="{Binding AddPathingCommand}" />
                                 <MenuItem Header="{i18n:T 键鼠脚本}" Command="{Binding AddKmScriptCommand}" />
                                 <MenuItem Header="Shell" Command="{Binding AddShellCommand}" />
+                                <MenuItem Header="{i18n:T 独立任务}" Command="{Binding AddSoloTaskCommand}" />
                             </ContextMenu>
                         </ui:DropDownButton.Flyout>
                     </ui:DropDownButton>
@@ -334,6 +335,7 @@
                             <MenuItem Command="{Binding AddPathingCommand}" Header="{i18n:T 添加地图追踪任务}" />
                             <MenuItem Command="{Binding AddKmScriptCommand}" Header="{i18n:T 添加键鼠脚本}" />
                             <MenuItem Command="{Binding AddShellCommand}" Header="{i18n:T 添加Shell}" />
+                            <MenuItem Command="{Binding AddSoloTaskCommand}" Header="{i18n:T 添加独立任务}" />
                             <MenuItem Command="{Binding AddNextFlagCommand}" Header="{i18n:T 下一次任务从此处执行}"
                                       CommandParameter="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContextMenu}, Path=PlacementTarget.SelectedItem}"
                                       />

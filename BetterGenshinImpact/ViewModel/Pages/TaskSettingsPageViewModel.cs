@@ -18,6 +18,7 @@ using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.GameTask.AutoWood;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.GetGridIcons;
+using BetterGenshinImpact.GameTask.InventoryMaterialStats;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.GameTask.UseRedeemCode;
 using BetterGenshinImpact.Helpers;
@@ -267,6 +268,12 @@ public partial class TaskSettingsPageViewModel : ViewModel
     [ObservableProperty]
     private string _switchAutoRedeemCodeButtonText = "启动";
 
+    [ObservableProperty]
+    private bool _switchInventoryMaterialStatsEnabled;
+
+    [ObservableProperty]
+    private ObservableCollection<string> _inventoryMaterialStatsScriptFolders = [];
+
     public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService, TaskTriggerDispatcher taskTriggerDispatcher)
     {
         Config = configService.Get();
@@ -282,6 +289,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
         _domainNameList = ["", AutoDomainTask.DevelopmentGuideOption, .. MapLazyAssets.Get().DomainNameList];
         _autoFightViewModel = new AutoFightViewModel(Config);
         _oneDragonFlowViewModel = new OneDragonFlowViewModel();
+        RefreshInventoryMaterialStatsScripts();
     }
 
     partial void OnScanDropsAfterRewardEnabledUiChanged(bool value)
@@ -973,6 +981,49 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private void OnGoToInventoryCountComparisonFolder()
     {
         var path = Global.Absolute(@"log\InventoryCountComparison\");
+        if (!Directory.Exists(path))
+        {
+            Directory.CreateDirectory(path);
+        }
+
+        Process.Start("explorer.exe", path);
+    }
+
+    private void RefreshInventoryMaterialStatsScripts()
+    {
+        InventoryMaterialStatsScriptFolders.Clear();
+        foreach (var copy in InventoryMaterialStatsScriptLocator.FindInstalledCopies())
+        {
+            InventoryMaterialStatsScriptFolders.Add(copy.FolderName);
+        }
+
+        if (string.IsNullOrWhiteSpace(Config.InventoryMaterialStatsConfig.ScriptFolderName)
+            && InventoryMaterialStatsScriptFolders.Count == 1)
+        {
+            Config.InventoryMaterialStatsConfig.ScriptFolderName = InventoryMaterialStatsScriptFolders[0];
+        }
+    }
+
+    [RelayCommand]
+    private async Task OnSwitchInventoryMaterialStats()
+    {
+        RefreshInventoryMaterialStatsScripts();
+        try
+        {
+            SwitchInventoryMaterialStatsEnabled = true;
+            using var task = new InventoryMaterialStatsTask(Config.InventoryMaterialStatsConfig);
+            await new TaskRunner().RunSoloTaskAsync(task);
+        }
+        finally
+        {
+            SwitchInventoryMaterialStatsEnabled = false;
+        }
+    }
+
+    [RelayCommand]
+    private void OnGoToInventoryMaterialStatsFolder()
+    {
+        var path = InventoryMaterialStatsRecordStore.RootDirectory;
         if (!Directory.Exists(path))
         {
             Directory.CreateDirectory(path);

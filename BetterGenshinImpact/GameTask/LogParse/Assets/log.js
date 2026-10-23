@@ -1,5 +1,9 @@
-﻿document.addEventListener('DOMContentLoaded', function() {
+function initLogParseUi() {
     document.querySelectorAll('th').forEach(function(th) {
+        if (th.dataset.sortBound) {
+            return;
+        }
+        th.dataset.sortBound = '1';
         th.removeAttribute('onclick');
         th.addEventListener('click', function() {
             const table = this.closest('table');
@@ -8,7 +12,187 @@
             sortTable(table, columnIndex, sortType);
         });
     });
-});
+    document.querySelectorAll('.ims-copy').forEach(function(root) {
+        if (root.dataset.imsBound) {
+            return;
+        }
+        root.dataset.imsBound = '1';
+        initImsCopy(root);
+    });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initLogParseUi);
+} else {
+    initLogParseUi();
+}
+
+function initImsCopy(root) {
+    const dataEl = root.querySelector('.ims-data');
+    if (!dataEl) {
+        return;
+    }
+    let data;
+    try {
+        data = JSON.parse(dataEl.textContent || '{}');
+    } catch (e) {
+        return;
+    }
+    if (!data.records || data.records.length < 2) {
+        return;
+    }
+
+    const newer = root.querySelector('.ims-time-newer');
+    const older = root.querySelector('.ims-time-older');
+    const foodToggle = root.querySelector('.ims-show-food');
+    const tbody = root.querySelector('.ims-tbody');
+    if (!newer || !older || !tbody) {
+        return;
+    }
+
+    data.records.forEach(function(rec) {
+        const opt1 = document.createElement('option');
+        opt1.value = String(rec.index);
+        opt1.textContent = rec.label + (rec.serverDate ? '（' + rec.serverDate + '）' : '');
+        newer.appendChild(opt1);
+        const opt2 = document.createElement('option');
+        opt2.value = String(rec.index);
+        opt2.textContent = rec.label + (rec.serverDate ? '（' + rec.serverDate + '）' : '');
+        older.appendChild(opt2);
+    });
+    newer.value = '0';
+    older.value = '1';
+
+    function refresh() {
+        renderImsTable(tbody, data, parseInt(newer.value, 10), parseInt(older.value, 10), !!(foodToggle && foodToggle.checked));
+    }
+
+    newer.addEventListener('change', refresh);
+    older.addEventListener('change', refresh);
+    if (foodToggle) {
+        foodToggle.addEventListener('change', refresh);
+    }
+    refresh();
+}
+
+function renderImsTable(tbody, data, newerIndex, olderIndex, showFood) {
+    tbody.innerHTML = '';
+    if (newerIndex === olderIndex || !data.records[newerIndex] || !data.records[olderIndex]) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td class="ims-skip">请选择两个不同的扫描时间</td>';
+        tbody.appendChild(tr);
+        return;
+    }
+
+    const newer = data.records[newerIndex].counts || {};
+    const older = data.records[olderIndex].counts || {};
+    const items = data.items || [];
+    const byPage = {};
+    items.forEach(function(item) {
+        const page = item.page || '其他';
+        if (!byPage[page]) {
+            byPage[page] = [];
+        }
+        byPage[page].push(item);
+    });
+
+    // 首行：原石 + 摩拉
+    const currencyTr = document.createElement('tr');
+    currencyTr.className = 'ims-currency-row';
+    currencyTr.innerHTML =
+        '<td class="ims-currency-cell">' +
+        imsCurrencyChip('原石', newer['原石'], older['原石']) +
+        imsCurrencyChip('摩拉', newer['摩拉'], older['摩拉']) +
+        '</td>';
+    tbody.appendChild(currencyTr);
+
+    ['材料', '养成道具', '食物', '其他'].forEach(function(page) {
+        if (page === '食物' && !showFood) {
+            return;
+        }
+        const list = (byPage[page] || []).filter(function(item) {
+            if (item.name === '原石' || item.name === '摩拉') {
+                return false;
+            }
+            const a = imsQty(newer[item.name]);
+            const b = imsQty(older[item.name]);
+            if (a == null || b == null) {
+                return false;
+            }
+            return a - b !== 0;
+        });
+        if (list.length === 0) {
+            return;
+        }
+
+        var chips = list.map(function(item) {
+            const a = imsQty(newer[item.name]);
+            const b = imsQty(older[item.name]);
+            return imsMaterialChip(item, a, a - b);
+        }).join('');
+
+        const tr = document.createElement('tr');
+        tr.className = 'ims-page-row';
+        tr.innerHTML =
+            '<td class="ims-page-cell">' +
+            '<div class="ims-page-title">' + escapeHtml(page) + '</div>' +
+            '<div class="ims-chip-wrap">' + chips + '</div>' +
+            '</td>';
+        tbody.appendChild(tr);
+    });
+}
+
+function imsQty(v) {
+    if (v === undefined || v === null || v < 0) {
+        return null;
+    }
+    return v;
+}
+
+function imsCurrencyChip(name, newerVal, olderVal) {
+    const a = imsQty(newerVal);
+    const b = imsQty(olderVal);
+    if (a == null && b == null) {
+        return '<span class="ims-currency"><span class="ims-item-name">' + escapeHtml(name) + '</span> <span class="ims-skip">—</span></span>';
+    }
+    if (a == null || b == null) {
+        return '<span class="ims-currency"><span class="ims-item-name">' + escapeHtml(name) + '</span> ' +
+            (a == null ? '<span class="ims-skip">—</span>' : a) + '</span>';
+    }
+    return '<span class="ims-currency"><span class="ims-item-name">' + escapeHtml(name) + '</span> ' +
+        a + ' ' + imsDeltaHtml(a - b) + '</span>';
+}
+
+function imsMaterialChip(item, qty, delta) {
+    var html = '<span class="ims-chip">';
+    // icon 为相对路径；仅渲染有增量的芯片时才会请求图片（按需加载）
+    if (item.icon) {
+        html += '<img class="ims-icon" src="' + escapeHtml(item.icon) + '" alt="' + escapeHtml(item.name) + '" loading="lazy">';
+    }
+    html += '<span class="ims-chip-text">' +
+        '<span class="ims-item-name">' + escapeHtml(item.name) + '</span> ' +
+        qty + ' (' + imsDeltaHtml(delta) + ')' +
+        '</span></span>';
+    return html;
+}
+
+function imsDeltaHtml(diff) {
+    if (diff > 0) {
+        return '<span class="ims-gain">+' + diff + '</span>';
+    }
+    if (diff < 0) {
+        return '<span class="ims-lost">' + diff + '</span>';
+    }
+    return '<span class="ims-zero">0</span>';
+}
+
+function escapeHtml(text) {
+    return String(text == null ? '' : text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
 
 function getCellValue(row, columnIndex, sortType) {
     try {

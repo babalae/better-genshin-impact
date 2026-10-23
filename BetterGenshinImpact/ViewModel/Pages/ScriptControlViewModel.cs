@@ -5,6 +5,7 @@ using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.Core.Script.Utils;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
+using BetterGenshinImpact.GameTask.InventoryMaterialStats;
 using BetterGenshinImpact.GameTask.LogParse;
 using BetterGenshinImpact.GameTask.TaskProgress;
 using BetterGenshinImpact.Helpers.Ui;
@@ -245,10 +246,29 @@ public partial class ScriptControlViewModel : ViewModel
         };
         stackPanel.Children.Add(GenerateFarmingPlanData);
 
-        //firstRow.Children.Add(toggleSwitch);
-
-        // 将第一行添加到 StackPanel
         stackPanel.Children.Add(hoeingStatsSwitch);
+
+        StackPanel inventoryStatsRow = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Margin = new Thickness(0, 0, 0, 10),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        CheckBox inventoryMaterialStatsSwitch = new CheckBox
+        {
+            Content = "背包材料统计",
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 10, 0)
+        };
+        Button inventoryStatsHelpButton = new Button
+        {
+            Content = "?",
+            Width = 30,
+            Height = 30
+        };
+        inventoryStatsRow.Children.Add(inventoryMaterialStatsSwitch);
+        inventoryStatsRow.Children.Add(inventoryStatsHelpButton);
+        stackPanel.Children.Add(inventoryStatsRow);
 
         // 第二行：文本框和“？”按钮
         StackPanel secondRow = new StackPanel
@@ -334,12 +354,29 @@ public partial class ScriptControlViewModel : ViewModel
 
         questionButton.Click += OnQuestionButtonOnClick;
 
+        void OnInventoryStatsHelpButtonOnClick(object sender, RoutedEventArgs args)
+        {
+            WebpageWindow helpWin = new()
+            {
+                Title = "背包材料统计说明",
+                Width = 800,
+                Height = 600,
+                Owner = uiMessageBox,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
+            helpWin.NavigateToHtml(InventoryMaterialStatsLogHtml.BuildHelpHtml());
+            helpWin.Show();
+        }
+
+        inventoryStatsHelpButton.Click += OnInventoryStatsHelpButtonOnClick;
+
         //对象赋值
         rangeComboBox.SelectedValue = sgpc.RangeValue;
         dayRangeComboBox.SelectedValue = sgpc.DayRangeValue;
         cookieTextBox.Text = config.Cookie;
         hoeingStatsSwitch.IsChecked = sgpc.HoeingStatsSwitch;
         GenerateFarmingPlanData.IsChecked = sgpc.GenerateFarmingPlanData;
+        inventoryMaterialStatsSwitch.IsChecked = sgpc.InventoryMaterialStatsSwitch;
         faultStatsSwitch.IsChecked = sgpc.FaultStatsSwitch;
         mergerStatsSwitch.IsChecked = sgpc.MergerStatsSwitch;
 
@@ -359,6 +396,7 @@ public partial class ScriptControlViewModel : ViewModel
             sgpc.RangeValue = rangeValue;
             sgpc.HoeingStatsSwitch = hoeingStatsSwitch.IsChecked ?? false;
             sgpc.GenerateFarmingPlanData = GenerateFarmingPlanData.IsChecked ?? false;
+            sgpc.InventoryMaterialStatsSwitch = inventoryMaterialStatsSwitch.IsChecked ?? false;
             sgpc.FaultStatsSwitch = faultStatsSwitch.IsChecked ?? false;
             sgpc.MergerStatsSwitch = mergerStatsSwitch.IsChecked ?? false;
             sgpc.HoeingDelay = hoeingDelayTextBox.Text;
@@ -866,6 +904,22 @@ public partial class ScriptControlViewModel : ViewModel
         if (!string.IsNullOrEmpty(str))
         {
             SelectedScriptGroup?.AddProject(ScriptGroupProject.BuildShellProject(str));
+        }
+    }
+
+    [RelayCommand]
+    private void OnAddSoloTask()
+    {
+        var combobox = new ComboBox
+        {
+            VerticalAlignment = VerticalAlignment.Top
+        };
+        combobox.Items.Add(InventoryMaterialStatsScriptLocator.DefaultFolderName);
+        combobox.SelectedIndex = 0;
+        var str = PromptDialog.Prompt("请选择独立任务", "请选择独立任务", combobox);
+        if (!string.IsNullOrEmpty(str))
+        {
+            SelectedScriptGroup?.AddProject(ScriptGroupProject.BuildSoloTask(str, str));
         }
     }
 
@@ -1742,6 +1796,9 @@ public partial class ScriptControlViewModel : ViewModel
             switch (item.Type)
             {
                 case "Javascript":
+                    path = Path.Combine(Global.ScriptPath(), item.FolderName);
+                    break;
+                case "SoloTask":
                     path = Path.Combine(Global.ScriptPath(), item.FolderName);
                     break;
                 case "KeyMouse":

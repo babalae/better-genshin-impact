@@ -490,6 +490,12 @@ public partial class ScriptService : IScriptService
                 list.Add(newProject);
                 // hasTimer = true;
             }
+            else if (project.Type == "SoloTask")
+            {
+                var newProject = ScriptGroupProject.BuildSoloTask(project.FolderName, project.Name);
+                CopyProjectProperties(project, newProject);
+                list.Add(newProject);
+            }
         }
 
         return list;
@@ -558,6 +564,12 @@ public partial class ScriptService : IScriptService
         else if (project.Type == "Shell")
         {
             _logger.LogInformation("→ 开始执行shell: {Name}", project.Name);
+            if (RunnerContext.Instance.IsPreExecution) _logger.LogInformation("此任务为优先执行任务！");
+            await project.Run();
+        }
+        else if (project.Type == "SoloTask")
+        {
+            _logger.LogInformation("→ 开始执行独立任务: {Name}", project.Name);
             if (RunnerContext.Instance.IsPreExecution) _logger.LogInformation("此任务为优先执行任务！");
             await project.Run();
         }

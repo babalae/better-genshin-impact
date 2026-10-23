@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.GameTask.LogParse;
@@ -18,5 +18,6 @@ public partial class LogParseConfig : ObservableObject
         [ObservableProperty] private bool _generateFarmingPlanData;
         [ObservableProperty] private string _hoeingDelay= "0";
         [ObservableProperty] private bool _mergerStatsSwitch;
+        [ObservableProperty] private bool _inventoryMaterialStatsSwitch;
     }
 }
