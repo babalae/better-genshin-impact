@@ -5,7 +5,10 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Core.Recognition.Ncnn;
 using BetterGenshinImpact.Core.Recognition.OCR.Paddle;
 using Compunet.YoloSharp;
 using Microsoft.Extensions.Logging;
@@ -170,16 +173,35 @@ public sealed class InferenceModelDiagnostics(
                 if (scene == InferenceBenchmarkScene.Ocr)
                 {
                     var type = ocr.ActiveModelType;
-                    using var service = new PaddleOcrService(factory, type);
+                    // 测速与业务一致：ncnn 开关开启时强制走 ncnn；创建失败直接抛错让本次测速失败，
+                    // 绝不偷偷测成 ONNX 的数字。
+                    var hardware = TaskContext.Instance().Config.HardwareAccelerationConfig;
+                    var ncnnSettings = NcnnBackendSettings.FromConfig(hardware);
+                    (IOcrDetector Det, IOcrRecognizer Rec)? ncnn =
+                        hardware.UseNcnnOcr ? NcnnOcrBackend.Create(logger, ncnnSettings) : null;
+                    using var service = ncnn is { } ncnnBackend
+                        ? new PaddleOcrService(ncnnBackend, type)
+                        : new PaddleOcrService(factory, type);
                     using var image = new Mat(ocr.ActiveModelType.PreHeatImagePath);
                     if (image.Empty()) throw new InvalidDataException("OCR 测试图片无法读取。");
-                    return Measure("OCR", $"{factory.Runtime.OcrDescription} · {type.DetectionModel.Name}/{type.RecognitionModel.Name}",
+                    // ncnn 固定 PpOcrV6 并忽略界面的 OCR 模型选择，标签按实际加载的 det/rec 配置展示
+                    var ncnnDevice = ncnnSettings.ComputeMode == NcnnComputeMode.Cpu
+                        ? "CPU"
+                        : $"Vulkan 设备 #{ncnnSettings.GpuIndex}";
+                    var execution = ncnn is { } ncnnBackends
+                        ? $"ncnn {ncnnDevice} · {ncnnBackends.Det.GetConfigName}/{ncnnBackends.Rec.GetConfigName}"
+                        : $"{factory.Runtime.OcrDescription} · {type.DetectionModel.Name}/{type.RecognitionModel.Name}";
+                    return Measure("OCR", execution,
                         () => _ = service.Ocr(image), progress, linked.Token);
                 }
                 using var treeImage = Image.Load<Rgb24>(InferenceTestImages.DomainTreePath);
                 using var predictor = factory.CreateYoloPredictor(BgiOnnxModel.BgiTree);
-                return Measure("古树检测", factory.Runtime.Description,
-                    () => _ = predictor.Predictor.Detect(treeImage), progress, linked.Token);
+                // 测速应与业务一致：ncnn 开关生效时 Detect 同样走 ncnn，否则测出的是 ONNX 引擎的数字
+                var treeExecution = predictor.IsNcnnDetection
+                    ? $"ncnn Vulkan · {BgiOnnxModel.BgiTree.Name}"
+                    : factory.Runtime.Description;
+                return Measure("古树检测", treeExecution,
+                    () => _ = predictor.Detect(treeImage), progress, linked.Token);
             }, linked.Token);
         }
         finally { _gate.Release(); }

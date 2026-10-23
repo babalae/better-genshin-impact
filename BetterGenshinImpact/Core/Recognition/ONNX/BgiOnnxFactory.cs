@@ -4,6 +4,9 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition.Ncnn;
+using BetterGenshinImpact.GameTask;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
 
@@ -114,6 +117,17 @@ public sealed class BgiOnnxSessionFactory
     /// <returns>BgiYoloPredictor</returns>
     public BgiYoloPredictor CreateYoloPredictor(BgiOnnxModel model)
     {
+        // 检测模型是否走 ncnn 由设置页的用途开关决定；开启后产物缺失或创建失败直接抛错，不再静默换 ONNX。
+        // SessionOptions 仍然创建并转交，脚本 API 通过 Predictor 属性访问 ORT 会话时保持可用。
+        var hardware = TaskContext.Instance().Config.HardwareAccelerationConfig;
+        if (hardware.UseNcnnYolo)
+        {
+            var ncnnSettings = NcnnBackendSettings.FromConfig(hardware);
+            var ncnnPredictor = NcnnYoloBackend.Create(model, _logger, ncnnSettings);
+            var ncnnOptions = CreateSessionOptions(model, EnableCache);
+            return new BgiYoloPredictor(model, model.ModalPath, ncnnOptions, ncnnPredictor);
+        }
+
         // 延后验证只影响后续新建会话，不修改或释放已经运行中的会话。
         // logger.LogDebug("[Yolo]创建yolo预测器，模型: {ModelName}", model.Name);
         var options = CreateSessionOptions(model, EnableCache);
@@ -184,6 +198,9 @@ public sealed class BgiOnnxSessionFactory
                         // DirectML 执行提供程序不支持在 onnxruntime 中使用内存模式优化或并行执行。在创建 InferenceSession 期间提供会话选项时，必须禁用这些选项，否则将返回错误。
                         sessionOptions.EnableMemoryPattern = false;
                         sessionOptions.ExecutionMode = ExecutionMode.ORT_SEQUENTIAL;
+                        // Run 结束等 fence 时用 CPU 自旋代替 OS 事件等待：Windows 事件等待粒度约 1ms，
+                        // 是小模型单次推理毛刺（个别 Run 2~3 倍变慢）的主要来源之一；代价是 Run 期间占住一个核。
+                        sessionOptions.AddSessionConfigEntry("ep.dml.enable_cpu_sync_spinning", "true");
                         sessionOptions.AppendExecutionProvider_DML(DmlDeviceId);
                         break;
                     case ProviderType.Cpu:

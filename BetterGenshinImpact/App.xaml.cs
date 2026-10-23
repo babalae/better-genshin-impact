@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 using BetterGenshinImpact.Core.Mask;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Monitor;
@@ -117,6 +118,8 @@ public partial class App : Application
 
                 // 配置和日志已经就绪，在任何推理服务或会话初始化前选定原生运行库。
                 all.HardwareAccelerationConfig ??= new();
+                // OpenCV 并行行为：OMP_WAIT_POLICY 必须在 vcomp140.dll 加载（首次 cv 调用）前设置。
+                OpenCvParallel.ApplyStartup(all.HardwareAccelerationConfig);
                 var inferenceStartupStatus = InferenceRuntimeService.PrepareStartup(all.HardwareAccelerationConfig, InstanceBootstrap.Current.Context.IsRoot);
                 // 只规范配置并绑定运行库；待验证状态在主窗口实际开始验证时才落盘。
                 configService.Save();
@@ -374,11 +377,25 @@ public partial class App : Application
     /// <summary>
     /// Occurs when the application is closing.
     /// </summary>
-    protected override async void OnExit(ExitEventArgs e)
+    // 注意：必须保持同步签名（不能用 async void）。WPF 不会等待 OnExit 的异步续体：
+    // 第一个 await 挂起后 Shutdown 继续走完、进程正常退出，DLL 拆卸阶段 ncnn_shim 的
+    // 静态析构会再次触发 igvk64/tpsstool 的 fail-fast（8264 dump 已实证）。清理必须
+    // 在本调用栈内同步完成后立即 TerminateProcess。
+    protected override void OnExit(ExitEventArgs e)
     {
         base.OnExit(e);
 
         ConsoleHelper.WriteLine("BetterGI 应用程序正在关闭...");
+
+        // 看门狗：清理步骤若卡死（如服务等待已停摆的 Dispatcher 导致 GetResult 死锁），
+        // 兜底终止进程，保证绝不进入正常 DLL 拆卸流程。
+        var terminateWatchdog = new Thread(() =>
+        {
+            Thread.Sleep(5000);
+            TerminateProcess(GetCurrentProcess(), 0);
+        })
+        { IsBackground = false };
+        terminateWatchdog.Start();
 
         // 写入防抖窗口内尚未落盘的配置改动
         try
@@ -392,16 +409,40 @@ public partial class App : Application
 
         TempManager.CleanUp();
 
+        try
+        {
+            ExitCleanupAsync().GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
+
+        Log.CloseAndFlush();
+
+        // 释放控制台窗口
+        ConsoleHelper.FreeConsoleWindow();
+
+        // Intel 显卡驱动（igvk64/tpsstool）在进程退出拆卸期会 fail-fast（0xc0000409，
+        // FAST_FAIL_FATAL_APP_EXIT）：ncnn_shim 卸载销毁 Vulkan 全局对象的顺序与其遥测关闭冲突。
+        // 配置/日志/宿主已在上面完成清理，这里直接终止进程，跳过整个 DLL 拆卸流程。
+        TerminateProcess(GetCurrentProcess(), 0);
+    }
+
+    private async Task ExitCleanupAsync()
+    {
         await _host.Services.GetRequiredService<InferenceRuntimeService>().StopAsync();
         await _host.Services.GetRequiredService<OnnxRuntimeInstaller>().StopAsync();
         await _host.Services.GetRequiredService<InferenceModelDiagnostics>().StopAsync();
         await _host.StopAsync();
         _host.Dispose();
-        Log.CloseAndFlush();
-
-        // 释放控制台窗口
-        ConsoleHelper.FreeConsoleWindow();
     }
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool TerminateProcess(nint hProcess, uint uExitCode);
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll")]
+    private static extern nint GetCurrentProcess();
 
     /// <summary>
     /// 注册事件

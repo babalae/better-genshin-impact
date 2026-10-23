@@ -57,6 +57,17 @@ public partial class HardwareAccelerationConfig : ObservableObject
         DirectML = new(); OpenVINO = new(); Cuda = new(); TensorRT = new();
         InferenceDevice = InferenceDeviceType.Cpu;
         CpuOcr = true;
+        PreferredBackend = InferenceBackend.Onnx;
+        UseNcnnOcr = false;
+        UseNcnnYolo = false;
+        NcnnComputeMode = NcnnComputeMode.Vulkan;
+        NcnnGpuIndex = 0;
+        NcnnThreads = NcnnBackendSettings.DefaultThreads;
+        NcnnDetTuning = NcnnTuningSettings.CreateDefault();
+        NcnnRecTuning = NcnnTuningSettings.CreateDefault();
+        NcnnYoloTuning = NcnnTuningSettings.CreateDefault();
+        OpenCvThreads = 0;
+        OpenCvIdleSleep = false;
         ValidationState = InferenceValidationState.None;
         VerifiedSignature = "";
     }
@@ -87,6 +98,73 @@ public partial class HardwareAccelerationConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _cpuOcr = true;
+
+    /// <summary>
+    ///     全局推理后端选择意图。界面顶部二选一即写入这里；实际生效仍以
+    ///     <see cref="UseNcnnOcr" /> / <see cref="UseNcnnYolo" /> 为准，便于单项覆盖。
+    /// </summary>
+    [ObservableProperty]
+    private InferenceBackend _preferredBackend = InferenceBackend.Onnx;
+
+    /// <summary>
+    ///     OCR 是否走 ncnn 后端。全局选择 ncnn 时默认开启，可在高级区单独覆盖回 ONNX。
+    ///     开启后 Det/Rec 全部走 ncnn，需资产目录内提供 ncnn_shim.dll 与按桶宽转换的模型；
+    ///     运行库或产物不可用时直接报错并阻止启动，不再静默回退所选推理引擎。
+    /// </summary>
+    [ObservableProperty]
+    private bool _useNcnnOcr;
+
+    /// <summary>
+    ///     YOLO 检测是否走 ncnn 后端。全局选择 ncnn 时默认开启，可在高级区单独覆盖回 ONNX。
+    ///     开启后所有检测模型都必须有同名 ncnn 产物；缺失或创建失败时直接报错，
+    ///     需要自定义模型时请关闭该开关。
+    /// </summary>
+    [ObservableProperty]
+    private bool _useNcnnYolo;
+
+    /// <summary>
+    ///     ncnn 的计算后端：Vulkan 显卡加速或 ncnn 原生 CPU 推理。
+    /// </summary>
+    [ObservableProperty]
+    private NcnnComputeMode _ncnnComputeMode = NcnnComputeMode.Vulkan;
+
+    /// <summary>
+    ///     ncnn 使用的 Vulkan 设备索引。0 表示首个 Vulkan 设备（通常是独显）。
+    /// </summary>
+    [ObservableProperty]
+    private int _ncnnGpuIndex;
+
+    /// <summary>
+    ///     ncnn 每条会话的 CPU 线程数（ncnn 侧 num_threads，Vulkan 计算仍由 GPU 执行）。
+    ///     仅作为旧配置迁移的基线值：新配置的线程数存放在三套 <see cref="NcnnTuningSettings" /> 中。
+    /// </summary>
+    [ObservableProperty]
+    private int _ncnnThreads = NcnnBackendSettings.DefaultThreads;
+
+    /// <summary>OCR 文本检测的 ncnn 调优参数。</summary>
+    [ObservableProperty]
+    private NcnnTuningSettings _ncnnDetTuning = NcnnTuningSettings.CreateDefault();
+
+    /// <summary>OCR 文字识别的 ncnn 调优参数。</summary>
+    [ObservableProperty]
+    private NcnnTuningSettings _ncnnRecTuning = NcnnTuningSettings.CreateDefault();
+
+    /// <summary>YOLO 检测 / 分类的 ncnn 调优参数。</summary>
+    [ObservableProperty]
+    private NcnnTuningSettings _ncnnYoloTuning = NcnnTuningSettings.CreateDefault();
+
+    /// <summary>
+    ///     OpenCV 并行线程数。0 = 自动（全部逻辑核）。限制后可减少与游戏的抢核与线程池开销。
+    /// </summary>
+    [ObservableProperty]
+    private int _openCvThreads;
+
+    /// <summary>
+    ///     OpenCV 并行池空闲时立即睡眠而非自旋等待。识别任务多为短并行区域，
+    ///     自旋等待在游戏占核时会白烧 CPU（实测单线程可达 40s+/分钟级会话）。
+    /// </summary>
+    [ObservableProperty]
+    private bool _openCvIdleSleep;
 
     #region 已移除参数的源注释（不读取、不保存，也不参与新推理设置）
     // 强制指定gpu设备,默认为0(使用默认设备)

@@ -1269,7 +1269,7 @@ public partial class AutoDomainTask : ISoloTask<Dictionary<string, int>>
 
     private Rect DetectTree(ImageRegion region)
     {
-        var result = _predictor.Predictor.Detect(region.CacheImage);
+        var result = _predictor.Detect(region.CacheImage);
         var list = new List<MaskWindowDrawingShape>();
         foreach (var box in result)
         {

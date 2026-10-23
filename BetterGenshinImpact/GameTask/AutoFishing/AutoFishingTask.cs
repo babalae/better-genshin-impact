@@ -211,14 +211,20 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
                 try
                 {
-                    var prevManualGc = DateTime.MinValue;
+                    var lastForegroundCheck = DateTime.MinValue;
                     while (!ct.IsCancellationRequested)
                     {
-                        if (!SystemControl.IsGenshinImpactActiveByProcess())
+                        // 前台检查加 1 秒缓存：Process.GetProcessName 每次都进内核查询进程名，
+                        // tick 循环约 30Hz 时该调用占全进程 CPU 的 2.5%（VTune r000hs 实测）
+                        if ((DateTime.Now - lastForegroundCheck).TotalMilliseconds >= 1000)
                         {
-                            var name = SystemControl.GetActiveByProcess();
-                            _logger.LogWarning($"当前获取焦点的窗口为: {name}，不是原神，停止执行");
-                            return;
+                            lastForegroundCheck = DateTime.Now;
+                            if (!SystemControl.IsGenshinImpactActiveByProcess())
+                            {
+                                var name = SystemControl.GetActiveByProcess();
+                                _logger.LogWarning($"当前获取焦点的窗口为: {name}，不是原神，停止执行");
+                                return;
+                            }
                         }
 
                         await behaviourTree.Tick();
@@ -230,12 +236,6 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                             _logger.LogInformation("钓鱼结束");
 
                             break;
-                        }
-
-                        if ((DateTime.Now - prevManualGc).TotalSeconds > 2)
-                        {
-                            GC.Collect();
-                            prevManualGc = DateTime.Now;
                         }
                     }
                 }
