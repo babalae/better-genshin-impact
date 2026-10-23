@@ -64,8 +64,8 @@ public partial class NcnnConfig : ObservableObject
 
     /// <summary>
     ///     OCR 输入是否按形状分桶（det 320/640/960 方形画布、rec 宽 160 步长）。
-    ///     关闭后固定使用最大档位画布（det 960² / rec 宽 960），不再按内容选桶；
-    ///     GPU 计算量增大，仅用于对比测试。
+    ///     关闭后 rec 使用动态宽度单模型（rec_dyn.param，按行精确宽度、零 padding），
+    ///     产物缺失时回落固定最大档；det 固定使用最大档画布（960²）。
     /// </summary>
     [ObservableProperty]
     private bool _ocrUseBuckets = true;

@@ -20,7 +20,7 @@ namespace BetterGenshinImpact.Core.Recognition.Ncnn;
 /// </summary>
 internal sealed class NcnnDet : IOcrDetector
 {
-    private static readonly ILogger Logger = App.GetLogger<NcnnDet>();
+    private readonly ILogger _logger;
 
     private readonly INcnnShim _shim;
     private readonly OcrVersionConfig _config;
@@ -48,9 +48,10 @@ internal sealed class NcnnDet : IOcrDetector
     private readonly NcnnBucketCache<NcnnSession> _sessions;
 
     public NcnnDet(INcnnShim shim, string modelDir, OcrVersionConfig config,
-        NcnnTuningSettings tuning, int gpuIndex = 0, bool useBuckets = true)
+        NcnnTuningSettings tuning, int gpuIndex = 0, bool useBuckets = true, ILogger? logger = null)
     {
         _shim = shim;
+        _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         _config = config;
         _tuning = tuning.NormalizedCopy();
         _modelDir = modelDir;
@@ -107,7 +108,7 @@ internal sealed class NcnnDet : IOcrDetector
         var postProcessor = new DbPostProcessor(
             BoxThreshold, BoxScoreThreshold, MaxCandidates, UnclipRatio, MinSize, UseDilation);
         var boxes = postProcessor.Run(roi, src.Size());
-        Logger.LogDebug(
+        _logger.LogDebug(
             "[OCR][Det][ncnn] 桶{Bucket} 内容{Width}x{Height} | 推理+转换 {Infer:F1}ms 后处理 {Post:F1}ms 文本框 {Count}",
             pred.Width, contentSize.Width, contentSize.Height, inferMs, sw.Elapsed.TotalMilliseconds - inferMs,
             boxes.Length);
