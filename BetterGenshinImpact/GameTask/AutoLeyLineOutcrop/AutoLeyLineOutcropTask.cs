@@ -286,7 +286,7 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, NoData>
     }
 
     /// <summary>
-    /// 校验本次运行的业务参数（原 ValidateSettings 中抛异常的检查，以及次数、超时必须为正数）。
+    /// 校验本次运行的业务参数（次数、类型、国家、队伍与材料目标）。
     /// </summary>
     /// <param name="param">本次运行的业务参数</param>
     /// <returns>参数无效时返回中文原因；有效时返回 null</returns>
@@ -318,6 +318,18 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, NoData>
             return "配置好感队时必须配置战斗队伍";
         }
 
+        if (param.TargetItems.Count > 0)
+        {
+            try
+            {
+                TargetItemCatalog.Instance.ValidateLeylineSettings(param.LeyLineOutcropType, param.TargetItems);
+            }
+            catch (TargetItemConfigurationException e)
+            {
+                return e.Message;
+            }
+        }
+
         return null;
     }
 
@@ -340,11 +352,6 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, NoData>
         else
         {
             _taskParam.Timeout = _taskParam.FightConfig.Timeout;
-        }
-
-        if (_taskParam.TargetItems.Count > 0)
-        {
-            TargetItemCatalog.Instance.ValidateLeylineSettings(_taskParam.LeyLineOutcropType, _taskParam.TargetItems);
         }
     }
 
@@ -959,6 +966,8 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, NoData>
             try
             {
                 var result = await CountExpBooksAsync();
+                // 背包扫描不会返回 0；未识别到的物品会被省略，空结果无法区分“三档都是 0”
+                // 和“未识别到任何目标”，因此要求至少识别到一本，避免把识别失败当成 0 基线。
                 if (result.Count > 0 && result.Values.All(x => x >= 0))
                 {
                     return result;
@@ -2531,8 +2540,16 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, NoData>
         }
     }
 
+    /// <summary>
+    /// 树脂耗尽模式下重新统计树脂并继续刷取；材料目标已达成时不再重查。
+    /// </summary>
     private async Task RecheckResinAndContinue()
     {
+        if (_itemStopReached)
+        {
+            return;
+        }
+
         _recheckCount++;
         if (_taskParam.OpenModeCountMin)
         {

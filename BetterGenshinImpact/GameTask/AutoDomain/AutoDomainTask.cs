@@ -319,7 +319,12 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
         _predictor = predictor;
 
         Init();
-        ValidateTargetItemSettings();
+        var targetFailure = ValidateTargetItemSettings();
+        if (targetFailure != null)
+        {
+            Logger.LogError("自动秘境：{Msg}", targetFailure.Message);
+            return targetFailure;
+        }
 
         if (_taskParam.TargetItems.Count > 0)
         {
@@ -525,15 +530,24 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
     /// <summary>
     /// 材料目标模式启动前校验目标配置与奖励识别能力。
     /// </summary>
-    private void ValidateTargetItemSettings()
+    /// <returns>目标配置或奖励识别能力无效时的失败结果；有效时返回 null。</returns>
+    private SoloTaskResult? ValidateTargetItemSettings()
     {
         if (_taskParam.TargetItems.Count == 0)
         {
-            return;
+            return null;
         }
 
-        TargetItemCatalog.Instance.ValidateDomainTargets(_taskParam.DomainName, _taskParam.TargetItems);
-        RewardResultRecognizer.Instance.EnsureSupported(_runtime);
+        try
+        {
+            TargetItemCatalog.Instance.ValidateDomainTargets(_taskParam.DomainName, _taskParam.TargetItems);
+            RewardResultRecognizer.Instance.EnsureSupported(_runtime);
+            return null;
+        }
+        catch (Exception e) when (e is TargetItemConfigurationException or InvalidOperationException)
+        {
+            return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, e.Message);
+        }
     }
 
     private void LogScreenResolution()
