@@ -9,6 +9,8 @@
 - 静态入口 `TaskContext.Instance().Config`，转发到 `ConfigService.Config`。有 296 处调用，分布在 120 个文件。
 - DI 入口 `IConfigService.Get()`，约 27 个文件使用。
 
+这里的“全局唯一”指单个进程内。多实例共享配置文件，各自持有内存对象，允许读取滞后与普通配置后写覆盖，不要求跨实例实时同步；配置与 Pulonia 运行状态的不同边界见[三种实例的能力边界与 IPC 规划](instance-capability-boundaries.md)。
+
 "全局静态、任何地方都能读写"这种用法本身不变。本次只改写入之后的链路：变更感知、触发器刷新和落盘。
 
 ## 2. 现状问题
