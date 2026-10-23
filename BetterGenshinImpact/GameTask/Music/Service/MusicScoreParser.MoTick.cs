@@ -86,7 +86,27 @@ public sealed partial class MusicScoreParser
     }
 
     /// <summary>
+    /// 结构嗅探：YQ_moTools 录制文件不带 type 字段，
+    /// 用 format 标记，或 score_format="tick" 且存在 tick 节点来识别。
+    /// 与演奏无关的其它键值对不参与判断。
+    /// </summary>
+    /// <param name="json">整份谱面 JSON</param>
+    /// <returns>是否为 mo-Tick 谱面</returns>
+    private static bool IsMoTickJson(JObject json)
+    {
+        var fileFormat = GetString(json, "format", string.Empty).Trim();
+        if (string.Equals(fileFormat, MoTickFileFormat, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var scoreFormat = GetString(json, "score_format", string.Empty).Trim();
+        return string.Equals(scoreFormat, "tick", StringComparison.OrdinalIgnoreCase) && json["tick"] != null;
+    }
+
+    /// <summary>
     /// 解析 tick.unit：v3 起为毫秒；v2 旧文件的 "frame" 需要按采集时长换算成毫秒。
+    /// 未知单位一律报错，避免把按帧/按拍写的谱面静默当成毫秒播放。
     /// </summary>
     /// <param name="json">整份谱面 JSON，用于读取 capture</param>
     /// <param name="tick">tick 节点</param>
@@ -94,9 +114,14 @@ public sealed partial class MusicScoreParser
     private static double ResolveTickUnitScale(JObject json, JObject tick)
     {
         var unit = GetString(tick, "unit", "ms").Trim().ToLowerInvariant();
-        if (unit is not ("frame" or "frames"))
+        if (unit is "ms" or "millisecond" or "milliseconds")
         {
             return 1d;
+        }
+
+        if (unit is not ("frame" or "frames"))
+        {
+            throw new FormatException($"不支持的 mo-Tick 时间单位：{unit}（仅支持 ms / frame）");
         }
 
         var capture = json["capture"] as JObject;

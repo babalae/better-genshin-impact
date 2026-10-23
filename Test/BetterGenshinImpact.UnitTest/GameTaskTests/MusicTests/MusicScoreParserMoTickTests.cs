@@ -208,6 +208,86 @@ public class MusicScoreParserMoTickTests
     }
 
     /// <summary>
+    /// 新增与演奏无关的键值对（任意层级、任意类型）不应影响解析结果。
+    /// </summary>
+    [Fact]
+    public async Task ParseAsync_UnrelatedKeys_AreIgnored()
+    {
+        var score = await ParseAsync("""
+            {
+              "version": 4,
+              "format": "yqrec.recording",
+              "score_format": "tick",
+              "name": "带扩展字段的谱面",
+              "author": "YQ_moTools",
+              "tags": ["风物之诗", "练习"],
+              "notes": "这一层没有语义，不应被当作 AutoYuanQin 的 notes",
+              "export": { "tool": "yqrec", "build": 123, "plugins": [{ "id": "x", "enabled": true }] },
+              "ui": { "theme": "dark", "zoom": 1.5 },
+              "instrument": { "id": "fwzs", "name": "风物之诗", "key_count": 21, "color": "#ffffff", "vendor": { "v": 2 } },
+              "capture": { "backend": "gdi", "fps": 60, "frames": 10, "duration_ms": 150, "gpu": "n/a", "notes": "ignored" },
+              "tick": {
+                "unit": "ms",
+                "text": "A[800]1000DF",
+                "sustain": true,
+                "manual_edits": [{ "at": 120, "by": "ray" }],
+                "future_field": null
+              },
+              "checksum": "deadbeef"
+            }
+            """);
+
+        Assert.True(score.IsValid, score.Error);
+        Assert.Equal(MusicScoreFormat.MoTick, score.Format);
+        Assert.Equal("mo-Tick", score.FormatName);
+        Assert.Equal("带扩展字段的谱面", score.Name);
+        Assert.Equal("风物之诗", score.Instrument);
+
+        // 与不带扩展字段时的基准完全一致
+        var downs = Downs(score);
+        Assert.Equal([0d, 1000, 1000], downs.Select(x => x.Time.TotalMilliseconds).ToArray());
+        var aUp = score.SourceTimeline.Events.Single(x => x.Key == 'A' && x.Type == PerformanceEventType.KeyUp);
+        AssertTime(800, aUp);
+    }
+
+    /// <summary>
+    /// 未来版本若给 mo-Tick 谱面补上 type 字段（哪怕是不认识的值），仍按结构标记识别，不判为不支持。
+    /// </summary>
+    [Theory]
+    [InlineData("tick")]
+    [InlineData("tick_v5")]
+    [InlineData("yqrec.recording")]
+    public async Task ParseAsync_UnknownTypeWithMoTickMarkers_StillParsesAsMoTick(string type)
+    {
+        var score = await ParseAsync($$"""
+            {
+              "type": "{{type}}",
+              "format": "yqrec.recording",
+              "score_format": "tick",
+              "tick": { "unit": "ms", "text": "A100F" }
+            }
+            """);
+
+        Assert.True(score.IsValid, score.Error);
+        Assert.Equal(MusicScoreFormat.MoTick, score.Format);
+        Assert.Equal([0d, 100], Downs(score).Select(x => x.Time.TotalMilliseconds).ToArray());
+    }
+
+    /// <summary>
+    /// 未知时间单位必须报错：否则按帧/按拍写的谱面会被当成毫秒静默播放错乱的时间轴。
+    /// </summary>
+    [Fact]
+    public async Task ParseAsync_UnknownTickUnit_ReturnsInvalidScore()
+    {
+        var score = await ParseAsync("""
+            { "type": "motick", "tick": { "unit": "beat", "text": "A1F" } }
+            """);
+
+        Assert.False(score.IsValid);
+        Assert.Contains("时间单位", score.Error);
+    }
+
+    /// <summary>
     /// 取出按时间排序的按下事件。
     /// </summary>
     /// <param name="score">解析结果</param>

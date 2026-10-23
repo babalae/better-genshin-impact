@@ -66,8 +66,8 @@ public sealed partial class MusicScoreParser : IMusicScoreParser
             "yuanqin" => MusicScoreFormat.YuanQin,
             "midi" => MusicScoreFormat.MidiJson,
             "keyboard" => MusicScoreFormat.Keyboard,
-            "motick" or "mo_tick" or "mo-tick" or "yqrec" => MusicScoreFormat.MoTick,
-            _ => throw new FormatException($"不支持的 AutoYuanQin 曲谱类型：{type}")
+            "motick" or "mo_tick" or "mo-tick" or "yqrec" or "tick" => MusicScoreFormat.MoTick,
+            _ => ResolveUnsupportedType(json, type)
         };
 
         var timeline = format switch
@@ -112,15 +112,22 @@ public sealed partial class MusicScoreParser : IMusicScoreParser
             return type;
         }
 
-        var fileFormat = GetString(json, "format", string.Empty).Trim();
-        var scoreFormat = GetString(json, "score_format", string.Empty).Trim();
-        if (string.Equals(fileFormat, MoTickFileFormat, StringComparison.OrdinalIgnoreCase)
-            || (string.Equals(scoreFormat, "tick", StringComparison.OrdinalIgnoreCase) && json["tick"] != null))
-        {
-            return MoTickTypeName;
-        }
+        return IsMoTickJson(json) ? MoTickTypeName : "yuanqin";
+    }
 
-        return "yuanqin";
+    /// <summary>
+    /// 处理不认识的 type 值：谱面若带有 YQ_moTools 的结构标记，仍按 mo-Tick 解析，
+    /// 避免对方新增一个与演奏无关的 type 字段就把整份谱面判为不支持；
+    /// 其余情况保持原有的报错行为。其它无关键值对本分支没有影响。
+    /// </summary>
+    /// <param name="json">整份谱面 JSON</param>
+    /// <param name="type">原始 type 值，仅用于报错</param>
+    /// <returns>识别出的格式</returns>
+    private static MusicScoreFormat ResolveUnsupportedType(JObject json, string type)
+    {
+        return IsMoTickJson(json)
+            ? MusicScoreFormat.MoTick
+            : throw new FormatException($"不支持的 AutoYuanQin 曲谱类型：{type}");
     }
 
     /// <summary>
