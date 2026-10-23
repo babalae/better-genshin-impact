@@ -41,6 +41,8 @@
 		<!-- 云原神网页版输入 SDK，由 WebView2InputBridge.InstallAsync 读取并注入页面 -->
 		<None Remove="Resources\JavaScript\ys-input-inject.js" />
 		<EmbeddedResource Include="Resources\JavaScript\ys-input-inject.js" LogicalName="BetterGenshinImpact.Resources.JavaScript.ys-input-inject.js" />
+		<None Remove="Resources\TargetItem\target-item-data.json" />
+		<EmbeddedResource Include="Resources\TargetItem\target-item-data.json" LogicalName="BetterGenshinImpact.Resources.TargetItem.target-item-data.json" />
 	</ItemGroup>
 
 	<ItemGroup>
