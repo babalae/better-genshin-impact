@@ -23,7 +23,7 @@ public class BgiYoloPredictor : IDisposable
     private readonly Lazy<YoloPredictor> _lazyPredictor;
     private readonly SessionOptions _sessionOptions;
     /// <summary>非空时检测（Detect）走 ncnn Vulkan；分类与 Predictor 属性（脚本 API）仍走 ORT。</summary>
-    private readonly NcnnYoloPredictor? _ncnnPredictor;
+    private readonly IYoloPredictorBackend? _ncnnPredictor;
     private readonly object _syncRoot = new();
     private bool _disposed;
 
@@ -35,7 +35,7 @@ public class BgiYoloPredictor : IDisposable
     /// <param name="sessionOptions">sessionOptions</param>
     /// <param name="ncnnPredictor">ncnn 检测后端；为空时检测走 YoloSharp（ORT）</param>
     protected internal BgiYoloPredictor(BgiOnnxModel onnxModel, string modelPath, SessionOptions sessionOptions,
-        NcnnYoloPredictor? ncnnPredictor = null)
+        IYoloPredictorBackend? ncnnPredictor = null)
     {
         _model = onnxModel;
         _sessionOptions = sessionOptions;

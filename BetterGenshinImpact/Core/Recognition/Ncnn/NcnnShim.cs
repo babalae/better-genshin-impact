@@ -36,8 +36,9 @@ public sealed record NcnnOutput(NcnnTensorInfo Info, float[] Data);
 /// <summary>
 ///     ncnn_shim.dll 的动态加载封装（NativeLibrary，dll 路径运行时可配，绕开 DllImport 常量约束）。
 ///     旧接口始终可用；新接口（版本化选项、富元信息、指针直输、设备详情）按导出探测，缺失时降级。
+///     会话级互操作经由 <see cref="INcnnShim" /> 抽象，便于推理层单测注入托管替身。
 /// </summary>
-public sealed class NcnnShim : IDisposable
+public sealed class NcnnShim : INcnnShim
 {
     private readonly nint _library;
     private readonly DestroyDelegate _destroy;

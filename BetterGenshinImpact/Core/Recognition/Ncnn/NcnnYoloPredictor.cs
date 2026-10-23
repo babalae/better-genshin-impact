@@ -3,8 +3,8 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.InteropServices;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition.ONNX;
 using Compunet.YoloSharp.Data;
 using Compunet.YoloSharp.Metadata;
 using SixLabors.ImageSharp;using SixLabors.ImageSharp.PixelFormats;
@@ -23,15 +23,15 @@ namespace BetterGenshinImpact.Core.Recognition.Ncnn;
 ///     - 贪心 NMS：按置信度降序，仅同类且 IoU &gt; 阈值时抑制；无最大框数限制；
 ///     - 坐标按 1/缩放比映射回原图并截断取整（与 YoloSharp 的 (int) 转换一致）。
 ///     模型为 pnnx 固定形状转换产物，层名 in0/out0。
+///     shim 由装配方注入并持有生命周期，本类只负责会话与推理。
 /// </summary>
-public sealed class NcnnYoloPredictor : IDisposable
+public sealed class NcnnYoloPredictor : IYoloPredictorBackend
 {
     /// <summary>与 YoloConfiguration.Default 一致（生产调用 Detect 时不传配置）。</summary>
     public const float DefaultConfidence = 0.3f;
     public const float DefaultIou = 0.45f;
 
-    private readonly NcnnShim _shim;
-    private readonly NcnnSessionPool _pool;
+    private readonly NcnnSession _session;
     private readonly NcnnTuningSettings _tuning;
     private readonly YoloName[] _names;
     private readonly int _width;
@@ -39,11 +39,7 @@ public sealed class NcnnYoloPredictor : IDisposable
     private readonly int _channels;
     private readonly float _confidence;
     private readonly float _iou;
-    private readonly float[] _inputBuffer;
     private readonly object _inferLock = new();
-    private string _inputName = "in0";
-    private string _outputName = "out0";
-    private bool _blobsResolved;
     private bool _disposed;
 
     /// <summary>是否为分类模型（输出 [1,nc] 分数）；否则为检测模型（输出 [1,4+nc,N]）。</summary>
@@ -51,7 +47,7 @@ public sealed class NcnnYoloPredictor : IDisposable
 
     public string ConfigName { get; }
 
-    public NcnnYoloPredictor(string shimDllPath, string paramPath, string modelPath,
+    public NcnnYoloPredictor(INcnnShim shim, string paramPath, string modelPath,
         YoloName[] names, int width, int height, int channels = 3,
         float confidence = DefaultConfidence, float iou = DefaultIou,
         NcnnTuningSettings? tuning = null, int gpuIndex = 0, bool isClassifier = false)
@@ -66,19 +62,17 @@ public sealed class NcnnYoloPredictor : IDisposable
         _iou = iou;
         IsClassifier = isClassifier;
         _tuning = (tuning ?? NcnnTuningSettings.CreateDefault()).NormalizedCopy();
-        _shim = new NcnnShim(shimDllPath);
+        // 检测单次只跑一路，会话池固定 1 个会话即可。
+        _session = new NcnnSession(shim, _tuning.ToNetOptions(paramPath, modelPath, gpuIndex), 1,
+            channels * height * width);
         try
         {
-            // 检测单次只跑一路，会话池固定 1 个会话即可。
-            _pool = new NcnnSessionPool(_shim,
-                _tuning.ToNetOptions(paramPath, modelPath, gpuIndex), 1);
-            _inputBuffer = new float[channels * height * width];
             // 预热：首次 extract 会编译 Vulkan 管线，挪到构造时避免计入首次检测
-            _ = _pool.Use(net => RunInfer(net, _inputBuffer, _width, _height, _channels, Array.Empty<byte>()));
+            _ = _session.Infer(NcnnInput.FromFloat("in0", _session.InputBuffer, _width, _height, _channels));
         }
         catch
         {
-            _shim.Dispose();
+            _session.Dispose();
             throw;
         }
     }
@@ -189,18 +183,21 @@ public sealed class NcnnYoloPredictor : IDisposable
         }
         else
         {
-            Array.Clear(_inputBuffer);
-            WriteToTensor(resized, _inputBuffer, padX, padY);
+            Array.Clear(_session.InputBuffer);
+            WriteToTensor(resized, _session.InputBuffer, padX, padY);
         }
 
         var preMs = preSw.Elapsed.TotalMilliseconds;
         var inferSw = Stopwatch.StartNew();
-        var (data, count, info) = _pool.Use(net => RunInfer(net, _inputBuffer, _width, _height, _channels, pixels));
+        var input = pixels.Length > 0
+            ? NcnnInput.FromPixels("in0", pixels, _width, _height, NcnnPixelFormat.Rgb888)
+            : NcnnInput.FromFloat("in0", _session.InputBuffer, _width, _height, _channels);
+        var output = _session.Infer(input);
         var inferMs = inferSw.Elapsed.TotalMilliseconds;
 
-        var output = ArrayPool<float>.Shared.Rent(Math.Max(count, 1));
-        data.AsSpan(0, count).CopyTo(output);
-        return (output, count, info, preMs, inferMs);
+        var pooled = ArrayPool<float>.Shared.Rent(Math.Max(output.Data.Length, 1));
+        output.Data.AsSpan(0, output.Data.Length).CopyTo(pooled);
+        return (pooled, output.Data.Length, output.Info, preMs, inferMs);
     }
 
     /// <summary>把 letterbox 后的图像画到模型尺寸的黑底画布，返回 RGB888 像素（供像素直输）。</summary>
@@ -213,33 +210,11 @@ public sealed class NcnnYoloPredictor : IDisposable
         return pixels;
     }
 
-    /// <summary>单次推理：返回带元信息的紧凑 fp32；有像素缓冲时直接按 RGB888 喂入。</summary>
-    private (float[] Data, int Count, NcnnTensorInfo Info) RunInfer(nint net, float[] chw, int width, int height,
-        int channels, byte[] pixels)
-    {
-        if (!_blobsResolved) ResolveBlobs(net);
-        var input = pixels.Length > 0
-            ? NcnnInput.FromPixels(_inputName, pixels, width, height, NcnnPixelFormat.Rgb888)
-            : NcnnInput.FromFloat(_inputName, chw, width, height, channels);
-        var outputs = _shim.InferEx(net, [input], [_outputName]);
-        if (outputs.Count == 0) throw new InvalidOperationException("ncnn YOLO 未返回输出");
-        return (outputs[0].Data, outputs[0].Data.Length, outputs[0].Info);
-    }
-
-    private void ResolveBlobs(nint net)
-    {
-        var inputs = _shim.QueryInputBlobs(net);
-        var outputs = _shim.QueryOutputBlobs(net);
-        if (inputs.Length > 0 && !string.IsNullOrWhiteSpace(inputs[0])) _inputName = inputs[0];
-        if (outputs.Length > 0 && !string.IsNullOrWhiteSpace(outputs[0])) _outputName = outputs[0];
-        _blobsResolved = true;
-    }
-
     /// <summary>
     ///     解析检测输出布局：优先用 shim 返回的 w/h/c（[1,4+nc,N] 通常落成 w=N、h=4+nc、c=1），
     ///     无法与类别数对齐时回退为「元素数 / (4+nc)」。
     /// </summary>
-    private (int AnchorCount, int AttributeCount) ResolveOutputLayout(NcnnTensorInfo? info, int count, int classCount)
+    internal static (int AnchorCount, int AttributeCount) ResolveOutputLayout(NcnnTensorInfo? info, int count, int classCount)
     {
         var expectedAttributes = 4 + classCount;
         if (info != null)
@@ -389,8 +364,7 @@ public sealed class NcnnYoloPredictor : IDisposable
         {
             if (_disposed) return;
             _disposed = true;
-            _pool.Dispose();
-            _shim.Dispose();
+            _session.Dispose();
         }
     }
 }

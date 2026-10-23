@@ -27,7 +27,7 @@ internal static class NcnnYoloBackend
     /// <summary>已向日志栏报告过 ncnn 启用的模型：预测器每场战斗重建，启用日志每个模型只报一次。</summary>
     private static readonly HashSet<string> LoggedActivations = new();
 
-    public static NcnnYoloPredictor Create(BgiOnnxModel model, ILogger logger, NcnnBackendSettings settings)
+    public static IYoloPredictorBackend Create(BgiOnnxModel model, ILogger logger, NcnnBackendSettings settings)
     {
         var gpuIndex = settings.EffectiveGpuIndex;
         var numThreads = settings.Yolo.Threads;
@@ -49,8 +49,9 @@ internal static class NcnnYoloBackend
         try
         {
             var (names, width, height, isClassifier) = MetadataCache.GetOrAdd(model.ModalPath, ReadMetadata);
-            var predictor = new NcnnYoloPredictor(shimPath, paramPath, modelPath, names, width, height,
-                tuning: settings.Yolo, gpuIndex: gpuIndex, isClassifier: isClassifier);
+            IYoloPredictorBackend predictor =
+                new NcnnYoloPredictor(new NcnnShim(shimPath), paramPath, modelPath, names, width, height,
+                    tuning: settings.Yolo, gpuIndex: gpuIndex, isClassifier: isClassifier);
             var deviceText = gpuIndex >= 0 ? $"Vulkan 设备 #{gpuIndex}" : $"CPU（{numThreads} 线程）";
             string activationLine;
             lock (LoggedActivations)

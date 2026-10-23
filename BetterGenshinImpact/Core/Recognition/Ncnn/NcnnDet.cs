@@ -3,12 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using Microsoft.Extensions.Logging;
-using System.Runtime.InteropServices;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR.Engine;
 using BetterGenshinImpact.Core.Recognition.OCR.Engine.data;
 using BetterGenshinImpact.Core.Recognition.OCR.Paddle;
-using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using OpenCvSharp;
 
@@ -18,12 +16,13 @@ namespace BetterGenshinImpact.Core.Recognition.Ncnn;
 ///     ncnn Vulkan 后端的检测器（实验性）：输入 pad 到正方形桶（与 Det 的分桶一致），
 ///     ncnn 输出 [1,1,B,B] 概率图后交给同一套 DbPostProcessor 出文本框。
 ///     模型按桶边长分桶（320/640/960 各一份 pnnx 转换产物）。
+///     shim 由装配方注入并持有生命周期，本类只负责桶会话与推理。
 /// </summary>
 internal sealed class NcnnDet : IOcrDetector
 {
     private static readonly ILogger Logger = App.GetLogger<NcnnDet>();
 
-    private readonly NcnnShim _shim;
+    private readonly INcnnShim _shim;
     private readonly OcrVersionConfig _config;
     private readonly NcnnTuningSettings _tuning;
 
@@ -41,42 +40,23 @@ internal sealed class NcnnDet : IOcrDetector
 
     private const int BucketStep = 320;
 
-    public NcnnDet(string shimDllPath, string modelDir, OcrVersionConfig config,
-        NcnnTuningSettings tuning, int gpuIndex = 0)
-    {
-        _config = config;
-        _tuning = tuning.NormalizedCopy();
-        _shim = new NcnnShim(shimDllPath);
-        // det 输入桶按内容尺寸选择，pnnx 静态形状要求每桶一份模型，故按需懒加载（见 _sessions）
-        _modelDir = modelDir;
-        _gpuIndex = gpuIndex;
-    }
-
     private readonly string _modelDir;
     private readonly int _gpuIndex;
-    private readonly Dictionary<int, SessionEntry> _sessions = new();
-    private readonly object _sessionLock = new();
+    private readonly NcnnBucketCache<NcnnSession> _sessions;
 
-    /// <summary>单个桶的会话池与缓存下来的 blob 名（每个桶模型独立，首次推理时解析）。</summary>
-    private sealed class SessionEntry(NcnnSessionPool pool, float[] buffer)
+    public NcnnDet(INcnnShim shim, string modelDir, OcrVersionConfig config,
+        NcnnTuningSettings tuning, int gpuIndex = 0)
     {
-        public NcnnSessionPool Pool { get; } = pool;
-        public float[] Buffer { get; } = buffer;
-        public string InputName { get; set; } = "in0";
-        public string OutputName { get; set; } = "out0";
-        public bool BlobsResolved { get; set; }
+        _shim = shim;
+        _config = config;
+        _tuning = tuning.NormalizedCopy();
+        _modelDir = modelDir;
+        _gpuIndex = gpuIndex;
+        // det 输入桶按内容尺寸选择，pnnx 静态形状要求每桶一份模型，故按需懒加载
+        _sessions = new NcnnBucketCache<NcnnSession>(CreateBucketSession);
     }
 
-    public void Dispose()
-    {
-        lock (_sessionLock)
-        {
-            foreach (var entry in _sessions.Values) entry.Pool.Dispose();
-            _sessions.Clear();
-        }
-
-        _shim.Dispose();
-    }
+    public void Dispose() => _sessions.Dispose();
 
     public string GetConfigName => "PP-OCRv6 det (ncnn)";
 
@@ -97,8 +77,9 @@ internal sealed class NcnnDet : IOcrDetector
     /// <summary>用零张量预热指定桶。</summary>
     public void Warmup(int bucket)
     {
-        var entry = GetSession(bucket);
-        _ = RunSession(entry, new float[3 * bucket * bucket], bucket);
+        var session = _sessions.GetOrCreate(bucket);
+        Array.Clear(session.InputBuffer);
+        _ = session.Infer(NcnnInput.FromFloat("in0", session.InputBuffer, bucket, bucket, 3));
     }
 
     public int[] GetWarmupBuckets()
@@ -145,15 +126,17 @@ internal sealed class NcnnDet : IOcrDetector
         {
             using var canvas = MatResizeForDetection(input, out contentSize);
             var bucket = canvas.Width;
-            var entry = GetSession(bucket);
+            var session = _sessions.GetOrCreate(bucket);
             var tensor = OcrUtils.NormalizeToTensorDnn(canvas, _config.NormalizeImage.Scale,
                 _config.NormalizeImage.Mean, _config.NormalizeImage.Std, out var owner);
             try
             {
                 if (tensor is not DenseTensor<float> dense)
                     throw new InvalidOperationException("NormalizeToTensorDnn 应返回 DenseTensor<float>");
-                dense.Buffer.CopyTo(entry.Buffer);
-                var (data, info) = RunSession(entry, entry.Buffer, bucket);
+                dense.Buffer.CopyTo(session.InputBuffer);
+                var output = session.Infer(
+                    NcnnInput.FromFloat("in0", session.InputBuffer, bucket, bucket, 3));
+                var (data, info) = (output.Data, output.Info);
                 // 输出 [1,1,B,B]：ncnn Mat 为 (w,h,c)，平面存储，直接按行拷到 CV_32FC1
                 var expected = bucket * bucket;
                 if (data.Length < expected)
@@ -174,48 +157,18 @@ internal sealed class NcnnDet : IOcrDetector
         }
     }
 
-    /// <summary>单次推理：返回带元信息的紧凑 fp32。</summary>
-    private (float[] Data, NcnnTensorInfo Info) RunSession(SessionEntry entry, float[] buffer, int bucket)
-        => entry.Pool.Use(net =>
-        {
-            if (!entry.BlobsResolved) ResolveBlobs(entry, net);
-            var outputs = _shim.InferEx(net,
-                [NcnnInput.FromFloat(entry.InputName, buffer, bucket, bucket, 3)],
-                [entry.OutputName]);
-            if (outputs.Count == 0)
-                throw new InvalidOperationException($"ncnn det 未返回输出（桶 {bucket}）");
-            return (outputs[0].Data, outputs[0].Info);
-        });
-
-    /// <summary>从模型自身读取 blob 名；探测不到时保留默认的 in0 / out0。</summary>
-    private void ResolveBlobs(SessionEntry entry, nint net)
+    private NcnnSession CreateBucketSession(int bucket)
     {
-        var inputs = _shim.QueryInputBlobs(net);
-        var outputs = _shim.QueryOutputBlobs(net);
-        if (inputs.Length > 0 && !string.IsNullOrWhiteSpace(inputs[0])) entry.InputName = inputs[0];
-        if (outputs.Length > 0 && !string.IsNullOrWhiteSpace(outputs[0])) entry.OutputName = outputs[0];
-        entry.BlobsResolved = true;
+        var paramPath = Path.Combine(_modelDir, $"det_w{bucket}.param");
+        var modelPath = Path.Combine(_modelDir, $"det_w{bucket}.bin");
+        if (!File.Exists(paramPath) || !File.Exists(modelPath))
+            throw new FileNotFoundException($"ncnn det 模型缺失（桶 {bucket}）", paramPath);
+        return new NcnnSession(_shim, _tuning.ToNetOptions(paramPath, modelPath, _gpuIndex),
+            _tuning.ParallelSessions, 3 * bucket * bucket);
     }
 
     private static string DescribeShape(NcnnTensorInfo info, int count) =>
         $"dims={info.Dims} {info.ShapeText} elempack={info.ElementPack} elembits={info.ElementBits} count={count}";
-
-    private SessionEntry GetSession(int bucket)
-    {
-        lock (_sessionLock)
-        {
-            if (_sessions.TryGetValue(bucket, out var entry)) return entry;
-            var paramPath = Path.Combine(_modelDir, $"det_w{bucket}.param");
-            var modelPath = Path.Combine(_modelDir, $"det_w{bucket}.bin");
-            if (!File.Exists(paramPath) || !File.Exists(modelPath))
-                throw new FileNotFoundException($"ncnn det 模型缺失（桶 {bucket}）", paramPath);
-            var options = _tuning.ToNetOptions(paramPath, modelPath, _gpuIndex);
-            var pool = new NcnnSessionPool(_shim, options, _tuning.ParallelSessions);
-            entry = new SessionEntry(pool, new float[3 * bucket * bucket]);
-            _sessions[bucket] = entry;
-            return entry;
-        }
-    }
 
     /// <summary>与 Det.MatResizeForDetection 完全一致：按 limit 缩放 → 对齐 32 → pad 到正方形桶。</summary>
     private Mat MatResizeForDetection(Mat src, out Size contentSize)

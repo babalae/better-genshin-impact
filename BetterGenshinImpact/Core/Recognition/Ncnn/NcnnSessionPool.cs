@@ -15,7 +15,7 @@ namespace BetterGenshinImpact.Core.Recognition.Ncnn;
 /// </summary>
 internal sealed class NcnnSessionPool : IDisposable
 {
-    private readonly NcnnShim _shim;
+    private readonly INcnnShim _shim;
     private readonly NcnnNetOptions _template;
     private readonly int _maxSessions;
     private readonly SemaphoreSlim _gate;
@@ -24,7 +24,7 @@ internal sealed class NcnnSessionPool : IDisposable
     private readonly Stack<nint> _idle = [];
     private bool _disposed;
 
-    public NcnnSessionPool(NcnnShim shim, NcnnNetOptions template, int maxSessions)
+    public NcnnSessionPool(INcnnShim shim, NcnnNetOptions template, int maxSessions)
     {
         _shim = shim ?? throw new ArgumentNullException(nameof(shim));
         _template = template ?? throw new ArgumentNullException(nameof(template));
