@@ -288,6 +288,30 @@ public class MusicScoreParserMoTickTests
     }
 
     /// <summary>
+    /// rootFolder 为空时解析失败也只应返回无效谱面，不能抛出异常（否则调用方会直接崩溃）。
+    /// </summary>
+    [Fact]
+    public async Task ParseAsync_InvalidSheetWithEmptyRootFolder_ReturnsInvalidScore()
+    {
+        var folder = Path.Combine(Path.GetTempPath(), "bgi-music-tests");
+        Directory.CreateDirectory(folder);
+        var path = Path.Combine(folder, $"mo-tick-broken-{Guid.NewGuid():N}.json");
+        await File.WriteAllTextAsync(path, """{ "type": "motick" }""");
+        try
+        {
+            var parser = new MusicScoreParser();
+            var score = await parser.ParseAsync(path, string.Empty, CancellationToken.None);
+            Assert.False(score.IsValid);
+            Assert.Contains("tick", score.Error);
+            Assert.False(string.IsNullOrWhiteSpace(score.RelativePath));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    /// <summary>
     /// 取出按时间排序的按下事件。
     /// </summary>
     /// <param name="score">解析结果</param>

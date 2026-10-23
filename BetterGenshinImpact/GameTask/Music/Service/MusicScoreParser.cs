@@ -753,18 +753,49 @@ public sealed partial class MusicScoreParser : IMusicScoreParser
             : throw new FormatException($"{format} 曲谱的 notes 必须是字符串");
     }
 
+    /// <summary>
+    /// 为解析失败的曲谱构造占位结果，保证错误只体现在 <see cref="PerformanceScore.Error"/> 上，
+    /// 不会因为路径换算再抛出异常（rootFolder 为空或路径不合法时都能安全返回）。
+    /// </summary>
+    /// <param name="path">曲谱路径</param>
+    /// <param name="rootFolder">曲库根目录，可能为空</param>
+    /// <param name="error">解析失败原因</param>
+    /// <returns>标记为无效的曲谱</returns>
     private static PerformanceScore CreateInvalidScore(string path, string rootFolder, string error)
     {
         return new PerformanceScore
         {
             FullPath = path,
-            RelativePath = Path.GetRelativePath(rootFolder, path),
+            RelativePath = ToRelativePath(path, rootFolder),
             Name = Path.GetFileNameWithoutExtension(path),
             Format = Path.GetExtension(path).Equals(".json", StringComparison.OrdinalIgnoreCase)
                 ? MusicScoreFormat.YuanQin
                 : MusicScoreFormat.MidiFile,
             Error = error
         };
+    }
+
+    /// <summary>
+    /// 计算相对曲库根目录的路径，任何不合法输入都退化为文件名。
+    /// </summary>
+    /// <param name="path">曲谱路径</param>
+    /// <param name="rootFolder">曲库根目录，可能为空</param>
+    /// <returns>相对路径</returns>
+    private static string ToRelativePath(string path, string rootFolder)
+    {
+        if (string.IsNullOrWhiteSpace(rootFolder))
+        {
+            return Path.GetFileName(path);
+        }
+
+        try
+        {
+            return Path.GetRelativePath(rootFolder, path);
+        }
+        catch (Exception e) when (e is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            return Path.GetFileName(path);
+        }
     }
 
     [GeneratedRegex(@"^(?<status>[DU])(?<keys>[A-Z@]+)(?<ticks>\d+)$", RegexOptions.CultureInvariant)]
