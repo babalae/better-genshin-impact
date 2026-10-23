@@ -913,7 +913,7 @@
   "检查是否存在最新测试版": "Verifica presenza dell'ultima versione beta",
   "检查更新": "Controlla aggiornamenti",
   "检查软件是否有新版本可用": "Verifica se è disponibile una nuova versione del software",
-  "检测到开启时会自动关闭原神 HDR 注册表设置": "Se rilevato attivo, disattiva automaticamente l'impostazione del registro HDR di Genshin Impact",
+  "通过 BetterGI 启动本地原神时生效。原生 HDR 保持关闭，Windows 自动 HDR 设置在启动后恢复；不改变系统 HDR。": "Si applica quando BetterGI avvia il gioco locale. L'HDR nativo resta disattivato; le impostazioni di Windows Auto HDR vengono ripristinate dopo l'avvio. L'HDR di sistema non viene modificato.",
   "检测到战斗已经结束的情况下，停止自动战斗功能": "Interrompi il combattimento automatico quando viene rilevata la fine del combattimento",
   "检测到敌人血条时跳过战斗结束检查。与“旋转寻找敌人位置”互斥。": "Salta il controllo di fine combattimento se viene rilevata la barra HP del nemico. Mutuamente esclusivo con «Ruota per individuare i nemici».",
   "检测到红血状态时自动使用便携营养袋": "Usa automaticamente la Sacca di nutrienti (ver. 30) quando viene rilevata la salute bassa",
