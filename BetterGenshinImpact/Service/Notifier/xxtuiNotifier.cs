@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -31,7 +31,27 @@ public enum XxtuiChannel
     /// <summary>
     ///     Bark推送
     /// </summary>
-    BARK
+    BARK,
+
+    /// <summary>
+    ///     短信或语音电话
+    /// </summary>
+    SMS_VOICE,
+
+    /// <summary>
+    ///     电子邮箱
+    /// </summary>
+    EMAIL,
+
+    /// <summary>
+    ///     飞书群机器人
+    /// </summary>
+    FEI_SHU_ROBOT,
+
+    /// <summary>
+    ///     自定义 HTTP 接口
+    /// </summary>
+    CUSTOM_HTTP
 }
 
 /// <summary>
