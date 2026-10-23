@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition.Ncnn;
 using BetterGenshinImpact.GameTask;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
@@ -116,11 +117,13 @@ public sealed class BgiOnnxSessionFactory
     /// <returns>BgiYoloPredictor</returns>
     public BgiYoloPredictor CreateYoloPredictor(BgiOnnxModel model)
     {
-        // 实验开关：检测模型走 ncnn Vulkan；无产物或创建失败时自动回退所选推理引擎。
+        // 检测模型是否走 ncnn 由设置页的用途开关决定；开启后产物缺失或创建失败直接抛错，不再静默换 ONNX。
         // SessionOptions 仍然创建并转交，脚本 API 通过 Predictor 属性访问 ORT 会话时保持可用。
-        if (TaskContext.Instance().Config.HardwareAccelerationConfig.UseNcnnYolo
-            && NcnnYoloBackend.TryCreate(model, _logger) is { } ncnnPredictor)
+        var hardware = TaskContext.Instance().Config.HardwareAccelerationConfig;
+        if (hardware.UseNcnnYolo)
         {
+            var ncnnSettings = NcnnBackendSettings.FromConfig(hardware);
+            var ncnnPredictor = NcnnYoloBackend.Create(model, _logger, ncnnSettings);
             var ncnnOptions = CreateSessionOptions(model, EnableCache);
             return new BgiYoloPredictor(model, model.ModalPath, ncnnOptions, ncnnPredictor);
         }

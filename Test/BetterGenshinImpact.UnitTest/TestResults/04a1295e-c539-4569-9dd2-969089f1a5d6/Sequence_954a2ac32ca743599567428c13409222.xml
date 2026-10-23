@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<TestSequence>
+  <Test Name="BetterGenshinImpact.UnitTest.CoreTests.NcnnRecTest.NcnnRec_FirstLine_MatchesReference" DisplayName="BetterGenshinImpact.UnitTest.CoreTests.NcnnRecTest.NcnnRec_FirstLine_MatchesReference(width: 320)" Source="D:\bgiprro\better-genshin-impact\Test\BetterGenshinImpact.UnitTest\bin\Debug\net8.0-windows10.0.22621.0\BetterGenshinImpact.UnitTest.dll" Completed="False" />
+</TestSequence>

@@ -11,6 +11,7 @@ using Compunet.YoloSharp.Metadata;
 using Microsoft.ML.OnnxRuntime;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using BetterGenshinImpact.Core.Recognition.Ncnn;
 
 namespace BetterGenshinImpact.Core.Recognition.ONNX;
 
@@ -115,6 +116,9 @@ public class BgiYoloPredictor : IDisposable
         YoloLatencyMonitor.Report(_model.Name, start, result.Count);
         return result;
     }
+
+    /// <summary>检测（Detect）当前是否走 ncnn Vulkan 后端；false 时检测走 YoloSharp（ORT）。</summary>
+    public bool IsNcnnDetection => _ncnnPredictor is { IsClassifier: false };
 
     /// <summary>ncnn 开关生效且模型有产物时走 ncnn Vulkan，否则走 YoloSharp（ORT）。</summary>
     private YoloResult<Detection> DetectCore(Image<Rgb24> image)

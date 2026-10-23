@@ -1,0 +1,26 @@
+using System.Collections.Generic;
+
+namespace BetterGenshinImpact.Core.Recognition.Ncnn;
+
+/// <summary>ncnn 可用的 Vulkan 设备。</summary>
+public sealed record NcnnDeviceInfo(int Index, string Name, int TypeCode)
+{
+    /// <summary>ncnn GpuInfo::type()：0 独显 / 1 核显 / 2 虚拟显卡 / 3 CPU。</summary>
+    public string TypeName => TypeCode switch
+    {
+        0 => "独显",
+        1 => "核显",
+        2 => "虚拟显卡",
+        3 => "CPU",
+        _ => "未知类型"
+    };
+
+    public string DisplayName => $"#{Index} {Name}（{TypeName}）";
+}
+
+/// <summary>一次设备查询的结果；旧版 shim 缺少导出时返回空列表，由界面降级为索引。</summary>
+public sealed record NcnnDeviceQuery(IReadOnlyList<NcnnDeviceInfo> Devices, int DefaultIndex)
+{
+    public static NcnnDeviceQuery Empty { get; } = new([], -1);
+    public bool IsAvailable => Devices.Count > 0;
+}

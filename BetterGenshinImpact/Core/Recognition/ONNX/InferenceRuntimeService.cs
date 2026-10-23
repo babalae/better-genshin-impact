@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition.Ncnn;
 using BetterGenshinImpact.Service.Interface;
 using Microsoft.Extensions.Logging;
 
@@ -46,6 +47,45 @@ public sealed class InferenceRuntimeService(
         config.ValidatedEngines ??= [];
         // 新增 OCR 参数单独修正，避免无效比例或换用核心数较少的处理器时丢失其他引擎设置。
         config.PaddleOcrCpu = PaddleOcrCpuConfig.FromOptions((config.PaddleOcrCpu ?? new()).ToOptions().Normalize());
+        // ncnn 参数同样只修正越界值，不参与 IsExpectedConfiguration 的硬校验，避免旧配置被整体重置。
+        if (!Enum.IsDefined(config.PreferredBackend)) config.PreferredBackend = InferenceBackend.Onnx;
+        if (!Enum.IsDefined(config.NcnnComputeMode)) config.NcnnComputeMode = NcnnComputeMode.Vulkan;
+        config.NcnnDetTuning ??= NcnnTuningSettings.CreateDefault(config.NcnnThreads);
+        config.NcnnRecTuning ??= NcnnTuningSettings.CreateDefault(config.NcnnThreads);
+        config.NcnnYoloTuning ??= NcnnTuningSettings.CreateDefault(config.NcnnThreads);
+        // 只在确实使用 ncnn 时校验运行库并读取 shim 的真实默认值：
+        // 内置常量与 ncnn 版本漂移会改变着色器选择（bf16 packed 在部分设备上直接导致 Vulkan 崩溃）。
+        if (config.UseNcnnOcr || config.UseNcnnYolo)
+        {
+            var problem = ValidateNcnnRuntime();
+            if (problem.Length > 0)
+            {
+                // 只提示、不改写用户开关：让用户进设置页自行修正（关掉 ncnn 或补齐产物）。
+                fallbackMessage = problem;
+            }
+            else
+            {
+                try
+                {
+                    var shimDefaults = NcnnTuningSettings.FromNetOptions(
+                        NcnnShim.QueryDefaultOptions(NcnnAvailability.ShimFullPath), config.NcnnThreads);
+                    config.NcnnDetTuning.AlignWithDefaults(shimDefaults);
+                    config.NcnnRecTuning.AlignWithDefaults(shimDefaults);
+                    config.NcnnYoloTuning.AlignWithDefaults(shimDefaults);
+                }
+                catch (Exception)
+                {
+                    // 默认值对齐失败只影响内置常量的校正，不影响推理正确性，忽略即可。
+                }
+            }
+        }
+        var ncnn = NcnnBackendSettings.FromConfig(config);
+        config.NcnnComputeMode = ncnn.ComputeMode;
+        config.NcnnGpuIndex = ncnn.GpuIndex;
+        config.NcnnThreads = ncnn.Det.Threads;
+        config.NcnnDetTuning = ncnn.Det;
+        config.NcnnRecTuning = ncnn.Rec;
+        config.NcnnYoloTuning = ncnn.Yolo;
         if (config.IsExpectedConfiguration && !string.IsNullOrWhiteSpace(config.VerifiedSignature))
         {
             // 兼容已有的单份验证签名：只恢复能与保存参数匹配的历史成功记录。
@@ -83,6 +123,22 @@ public sealed class InferenceRuntimeService(
         }
         // PendingRestart 在窗口加载前保持原样，真正开始验证时才记录 Validating。
         return new(fallbackMessage, isMainInstance);
+    }
+
+    /// <summary>
+    ///     校验 ncnn 运行库是否可用；有问题时返回可直接展示给用户的错误，空字符串表示通过。
+    ///     这里只检查不修复：ncnn 开关与模型产物都由用户在设置页决定。
+    /// </summary>
+    private static string ValidateNcnnRuntime()
+    {
+        var shimPath = NcnnAvailability.ShimFullPath;
+        if (!System.IO.File.Exists(shimPath))
+            return $"ncnn 运行库缺失：{shimPath}\r\n\r\n"
+                   + "请在“硬件加速设置 → ncnn”中关闭 OCR / YOLO 的 ncnn 开关，或补齐 ncnn_shim.dll。";
+        if (!NcnnShim.IsSupported(shimPath))
+            return $"ncnn_shim.dll 版本过旧（缺少 shim_create_ex / shim_infer_ex）：{shimPath}\r\n\r\n"
+                   + "请更新 ncnn_shim.dll 后重启，或暂时关闭 ncnn。";
+        return "";
     }
 
     /// <summary>只准备设备与生效配置，不创建模型、运行推理或弹出提示。</summary>
@@ -235,11 +291,12 @@ public sealed class InferenceRuntimeService(
     }
 
     public void Apply(InferenceDeviceType engine, InferenceEngineSettings settings, bool cpuOcr, int cpuThreads,
-        PaddleOcrCpuOptions? paddleOcrCpu = null)
+        PaddleOcrCpuOptions? paddleOcrCpu = null, NcnnBackendSettings? ncnn = null)
     {
         if (!Enum.IsDefined(engine) || string.IsNullOrWhiteSpace(settings.DeviceId) || cpuThreads < 0 || cpuThreads > Environment.ProcessorCount)
             throw new ArgumentException("推理设置不符合预期。");
         if (paddleOcrCpu is { IsValid: false }) throw new ArgumentException("OCR CPU 线程策略参数不符合预期。");
+        if (ncnn is { IsValid: false }) throw new ArgumentException("ncnn 后端参数不符合预期。");
         // TensorRT 已下线：任何调用方都不能再把生效引擎切回该引擎。
         if (!engine.IsSelectable()) throw new ArgumentException($"{engine} 推理引擎已停止提供，请选择其他引擎。");
         lock (_settingsLock)
@@ -251,6 +308,21 @@ public sealed class InferenceRuntimeService(
             target.EnableModelCache = settings.EnableModelCache;
             config.Cpu.CpuThreads = cpuThreads;
             if (paddleOcrCpu != null) config.PaddleOcrCpu = PaddleOcrCpuConfig.FromOptions(paddleOcrCpu);
+            // ncnn 开关与参数和 ONNX 设置共用一次保存与一次 revision，让“应用并重启”对两者一致。
+            if (ncnn != null)
+            {
+                var normalized = ncnn.Normalize();
+                config.PreferredBackend = normalized.Backend;
+                config.UseNcnnOcr = normalized.UseOcr;
+                config.UseNcnnYolo = normalized.UseYolo;
+                config.NcnnComputeMode = normalized.ComputeMode;
+                config.NcnnGpuIndex = normalized.GpuIndex;
+                config.NcnnThreads = normalized.Det.Threads;
+                // 写回深拷贝：草稿对象后续修改不得影响已保存配置。
+                config.NcnnDetTuning = normalized.Det;
+                config.NcnnRecTuning = normalized.Rec;
+                config.NcnnYoloTuning = normalized.Yolo;
+            }
             config.CpuOcr = cpuOcr;
             config.InferenceDevice = engine;
             config.FormatVersion = 1;

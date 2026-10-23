@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using Microsoft.Extensions.Logging;
 using System.Runtime.InteropServices;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR.Engine;
 using BetterGenshinImpact.Core.Recognition.OCR.Engine.data;
 using BetterGenshinImpact.Core.Recognition.OCR.Paddle;
@@ -11,7 +12,7 @@ using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using OpenCvSharp;
 
-namespace BetterGenshinImpact.Core.Recognition.OCR.Ncnn;
+namespace BetterGenshinImpact.Core.Recognition.Ncnn;
 
 /// <summary>
 ///     ncnn Vulkan 后端的检测器（实验性）：输入 pad 到正方形桶（与 Det 的分桶一致），
@@ -24,6 +25,7 @@ internal sealed class NcnnDet : IOcrDetector
 
     private readonly NcnnShim _shim;
     private readonly OcrVersionConfig _config;
+    private readonly NcnnTuningSettings _tuning;
 
     /// <summary>det 内容边长上限（与 Det.LimitSideLen 默认值一致）。</summary>
     public int LimitSideLen { get; set; } = 960;
@@ -40,29 +42,39 @@ internal sealed class NcnnDet : IOcrDetector
     private const int BucketStep = 320;
 
     public NcnnDet(string shimDllPath, string modelDir, OcrVersionConfig config,
-        int gpuIndex = 0, int numThreads = 4)
+        NcnnTuningSettings tuning, int gpuIndex = 0)
     {
         _config = config;
+        _tuning = tuning.NormalizedCopy();
         _shim = new NcnnShim(shimDllPath);
         // det 输入桶按内容尺寸选择，pnnx 静态形状要求每桶一份模型，故按需懒加载（见 _sessions）
         _modelDir = modelDir;
         _gpuIndex = gpuIndex;
-        _numThreads = numThreads;
     }
 
     private readonly string _modelDir;
     private readonly int _gpuIndex;
-    private readonly int _numThreads;
-    private readonly Dictionary<int, (nint Net, float[] Buffer)> _sessions = new();
+    private readonly Dictionary<int, SessionEntry> _sessions = new();
+    private readonly object _sessionLock = new();
+
+    /// <summary>单个桶的会话池与缓存下来的 blob 名（每个桶模型独立，首次推理时解析）。</summary>
+    private sealed class SessionEntry(NcnnSessionPool pool, float[] buffer)
+    {
+        public NcnnSessionPool Pool { get; } = pool;
+        public float[] Buffer { get; } = buffer;
+        public string InputName { get; set; } = "in0";
+        public string OutputName { get; set; } = "out0";
+        public bool BlobsResolved { get; set; }
+    }
 
     public void Dispose()
     {
-        foreach (var (net, _) in _sessions.Values)
+        lock (_sessionLock)
         {
-            if (net != nint.Zero) _shim.Destroy(net);
+            foreach (var entry in _sessions.Values) entry.Pool.Dispose();
+            _sessions.Clear();
         }
 
-        _sessions.Clear();
         _shim.Dispose();
     }
 
@@ -78,19 +90,15 @@ internal sealed class NcnnDet : IOcrDetector
     {
         foreach (var bucket in GetWarmupBuckets())
         {
-            var (net, _) = GetSession(bucket);
-            var input = new float[3 * bucket * bucket];
-            _ = RunSession(net, input, bucket, out _, out _);
+            Warmup(bucket);
         }
     }
 
     /// <summary>用零张量预热指定桶。</summary>
     public void Warmup(int bucket)
     {
-        var (net, buffer) = GetSession(bucket);
-        var input = new float[3 * bucket * bucket];
-        _ = RunSession(net, input, bucket, out var ptr, out _);
-        _shim.FreeBuffer(ptr);
+        var entry = GetSession(bucket);
+        _ = RunSession(entry, new float[3 * bucket * bucket], bucket);
     }
 
     public int[] GetWarmupBuckets()
@@ -137,32 +145,23 @@ internal sealed class NcnnDet : IOcrDetector
         {
             using var canvas = MatResizeForDetection(input, out contentSize);
             var bucket = canvas.Width;
-            var (net, buffer) = GetSession(bucket);
+            var entry = GetSession(bucket);
             var tensor = OcrUtils.NormalizeToTensorDnn(canvas, _config.NormalizeImage.Scale,
                 _config.NormalizeImage.Mean, _config.NormalizeImage.Std, out var owner);
             try
             {
                 if (tensor is not DenseTensor<float> dense)
                     throw new InvalidOperationException("NormalizeToTensorDnn 应返回 DenseTensor<float>");
-                dense.Buffer.CopyTo(buffer);
-                var rc = RunSession(net, buffer, bucket, out var outPtr, out var outCount);
-                if (rc != 0) throw new InvalidOperationException($"ncnn det 推理失败: {rc}");
-                try
-                {
-                    // 输出 [1,1,B,B]：ncnn Mat 为 (w,h,c)，平面存储，直接按行拷到 CV_32FC1
-                    var mat = new Mat(bucket, bucket, MatType.CV_32FC1);
-                    var span = mat.AsSpan<float>();
-                    unsafe
-                    {
-                        new ReadOnlySpan<float>((float*)outPtr, outCount).CopyTo(span);
-                    }
-
-                    return mat;
-                }
-                finally
-                {
-                    _shim.FreeBuffer(outPtr);
-                }
+                dense.Buffer.CopyTo(entry.Buffer);
+                var (data, info) = RunSession(entry, entry.Buffer, bucket);
+                // 输出 [1,1,B,B]：ncnn Mat 为 (w,h,c)，平面存储，直接按行拷到 CV_32FC1
+                var expected = bucket * bucket;
+                if (data.Length < expected)
+                    throw new InvalidOperationException(
+                        $"ncnn det 输出维度异常（桶 {bucket}）：{DescribeShape(info, data.Length)}，期望至少 {expected} 个元素");
+                var mat = new Mat(bucket, bucket, MatType.CV_32FC1);
+                data.AsSpan(0, expected).CopyTo(mat.AsSpan<float>());
+                return mat;
             }
             finally
             {
@@ -175,22 +174,44 @@ internal sealed class NcnnDet : IOcrDetector
         }
     }
 
-    private int RunSession(nint net, float[] buffer, int bucket, out nint outPtr, out int outCount)
-        => _shim.Infer(net, "in0", "out0", buffer, bucket, bucket, 3, out outPtr, out outCount);
+    /// <summary>单次推理：返回带元信息的紧凑 fp32。</summary>
+    private (float[] Data, NcnnTensorInfo Info) RunSession(SessionEntry entry, float[] buffer, int bucket)
+        => entry.Pool.Use(net =>
+        {
+            if (!entry.BlobsResolved) ResolveBlobs(entry, net);
+            var outputs = _shim.InferEx(net,
+                [NcnnInput.FromFloat(entry.InputName, buffer, bucket, bucket, 3)],
+                [entry.OutputName]);
+            if (outputs.Count == 0)
+                throw new InvalidOperationException($"ncnn det 未返回输出（桶 {bucket}）");
+            return (outputs[0].Data, outputs[0].Info);
+        });
 
-    private (nint Net, float[] Buffer) GetSession(int bucket)
+    /// <summary>从模型自身读取 blob 名；探测不到时保留默认的 in0 / out0。</summary>
+    private void ResolveBlobs(SessionEntry entry, nint net)
     {
-        lock (_sessions)
+        var inputs = _shim.QueryInputBlobs(net);
+        var outputs = _shim.QueryOutputBlobs(net);
+        if (inputs.Length > 0 && !string.IsNullOrWhiteSpace(inputs[0])) entry.InputName = inputs[0];
+        if (outputs.Length > 0 && !string.IsNullOrWhiteSpace(outputs[0])) entry.OutputName = outputs[0];
+        entry.BlobsResolved = true;
+    }
+
+    private static string DescribeShape(NcnnTensorInfo info, int count) =>
+        $"dims={info.Dims} {info.ShapeText} elempack={info.ElementPack} elembits={info.ElementBits} count={count}";
+
+    private SessionEntry GetSession(int bucket)
+    {
+        lock (_sessionLock)
         {
             if (_sessions.TryGetValue(bucket, out var entry)) return entry;
             var paramPath = Path.Combine(_modelDir, $"det_w{bucket}.param");
             var modelPath = Path.Combine(_modelDir, $"det_w{bucket}.bin");
             if (!File.Exists(paramPath) || !File.Exists(modelPath))
                 throw new FileNotFoundException($"ncnn det 模型缺失（桶 {bucket}）", paramPath);
-            var net = _shim.Create(paramPath, modelPath, _gpuIndex, _numThreads);
-            if (net == nint.Zero)
-                throw new InvalidOperationException($"ncnn det 会话创建失败（桶 {bucket}）");
-            entry = (net, new float[3 * bucket * bucket]);
+            var options = _tuning.ToNetOptions(paramPath, modelPath, _gpuIndex);
+            var pool = new NcnnSessionPool(_shim, options, _tuning.ParallelSessions);
+            entry = new SessionEntry(pool, new float[3 * bucket * bucket]);
             _sessions[bucket] = entry;
             return entry;
         }

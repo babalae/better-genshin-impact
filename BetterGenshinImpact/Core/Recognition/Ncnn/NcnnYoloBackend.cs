@@ -3,21 +3,23 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition.ONNX;
 using Compunet.YoloSharp.Metadata;
 using Microsoft.Extensions.Logging;
 using Microsoft.ML.OnnxRuntime;
 
-namespace BetterGenshinImpact.Core.Recognition.ONNX;
+namespace BetterGenshinImpact.Core.Recognition.Ncnn;
 
 /// <summary>
-///     YOLO 检测模型的 ncnn Vulkan 后端装配入口。
+///     YOLO 检测模型的 ncnn 后端装配入口（Vulkan 显卡或 CPU 推理）。
 ///     模型产物约定：与 ONNX 同目录的 Ncnn 子目录下放同名 .param/.bin（pnnx 固定形状转换），
-///     例如 Assets\Model\World\Ncnn\bgi_world.param/bin。缺失或创建失败时返回 null，调用方回退 YoloSharp。
+///     例如 Assets\Model\World\Ncnn\bgi_world.param/bin。
+///     开关开启后产物缺失或创建失败直接抛 <see cref="NcnnUnavailableException" />，不再静默回退 YoloSharp。
 /// </summary>
 internal static class NcnnYoloBackend
 {
     /// <summary>shim 复用 OCR 的 ncnn_shim.dll（通用 ncnn 封装，与检测模型无绑定）。</summary>
-    private const string ShimRelativePath = @"Assets\Model\PaddleOCR\Ncnn\ncnn_shim.dll";
+    private const string ShimRelativePath = BetterGenshinImpact.Core.Recognition.Ncnn.NcnnAvailability.ShimRelativePath;
 
     /// <summary>ONNX 元数据（类别名、输入尺寸、任务类型）按模型路径缓存：CPU 临时会话读取一次，进程内复用。</summary>
     private static readonly ConcurrentDictionary<string, (YoloName[] Names, int Width, int Height, bool IsClassifier)> MetadataCache = new();
@@ -25,48 +27,48 @@ internal static class NcnnYoloBackend
     /// <summary>已向日志栏报告过 ncnn 启用的模型：预测器每场战斗重建，启用日志每个模型只报一次。</summary>
     private static readonly HashSet<string> LoggedActivations = new();
 
-    public static NcnnYoloPredictor? TryCreate(BgiOnnxModel model, ILogger logger)
+    public static NcnnYoloPredictor Create(BgiOnnxModel model, ILogger logger, NcnnBackendSettings settings)
     {
+        var gpuIndex = settings.EffectiveGpuIndex;
+        var numThreads = settings.Yolo.Threads;
+        var stem = Path.GetFileNameWithoutExtension(model.ModalPath);
+        var ncnnDir = Path.Combine(Path.GetDirectoryName(model.ModalPath) ?? ".", "Ncnn");
+        var paramPath = Path.Combine(ncnnDir, stem + ".param");
+        var modelPath = Path.Combine(ncnnDir, stem + ".bin");
+        if (!File.Exists(paramPath) || !File.Exists(modelPath))
+            throw new NcnnUnavailableException(
+                $"[YOLO] {model.Name} 没有 ncnn 产物：{paramPath} / {modelPath}；"
+                + "请在设置页关闭「YOLO 使用 ncnn」或补齐 pnnx 转换产物。");
+
+        var shimPath = Global.Absolute(ShimRelativePath);
+        if (!File.Exists(shimPath))
+            throw new NcnnUnavailableException($"[YOLO] ncnn 运行库缺失：{shimPath}");
+        if (!NcnnShim.IsSupported(shimPath))
+            throw new NcnnUnavailableException($"[YOLO] ncnn_shim.dll 版本过旧（缺少 shim_create_ex / shim_infer_ex）：{shimPath}");
+
         try
         {
-            var stem = Path.GetFileNameWithoutExtension(model.ModalPath);
-            var ncnnDir = Path.Combine(Path.GetDirectoryName(model.ModalPath) ?? ".", "Ncnn");
-            var paramPath = Path.Combine(ncnnDir, stem + ".param");
-            var modelPath = Path.Combine(ncnnDir, stem + ".bin");
-            if (!File.Exists(paramPath) || !File.Exists(modelPath))
-            {
-                // 尚未转换 ncnn 产物的模型（BgiFish/BgiMine/BgiTree…）静默回退，避免每个预测器创建都刷警告
-                logger.LogDebug("[YOLO] {Model} 无 ncnn 产物，使用所选推理引擎: {Param}", model.Name, paramPath);
-                return null;
-            }
-
-            var shimPath = Global.Absolute(ShimRelativePath);
-            if (!File.Exists(shimPath))
-            {
-                logger.LogWarning("[YOLO] ncnn 开关已开启但 shim 缺失，{Model} 回退所选推理引擎: {Path}", model.Name, shimPath);
-                return null;
-            }
-
             var (names, width, height, isClassifier) = MetadataCache.GetOrAdd(model.ModalPath, ReadMetadata);
             var predictor = new NcnnYoloPredictor(shimPath, paramPath, modelPath, names, width, height,
-                isClassifier: isClassifier);
+                tuning: settings.Yolo, gpuIndex: gpuIndex, isClassifier: isClassifier);
+            var deviceText = gpuIndex >= 0 ? $"Vulkan 设备 #{gpuIndex}" : $"CPU（{numThreads} 线程）";
             string activationLine;
             lock (LoggedActivations)
             {
                 // 后续重建只落文件日志（Debug），日志栏不重复刷
                 activationLine = LoggedActivations.Add(model.Name)
-                    ? $"[YOLO] {model.Name} 使用 ncnn Vulkan 后端（{predictor.ConfigName}），模型目录 {ncnnDir}"
+                    ? $"[YOLO] {model.Name} 使用 ncnn {deviceText} 后端（{predictor.ConfigName}），模型目录 {ncnnDir}"
                     : "";
             }
 
             if (activationLine.Length > 0) logger.LogInformation("{Activation}", activationLine);
-            else logger.LogDebug("[YOLO] {Model} ncnn Vulkan 后端已重建（{Config}）", model.Name, predictor.ConfigName);
+            else logger.LogDebug("[YOLO] {Model} ncnn {Device} 后端已重建（{Config}）", model.Name, deviceText, predictor.ConfigName);
             return predictor;
         }
         catch (Exception e)
         {
-            logger.LogWarning(e, "[YOLO] ncnn 后端创建失败，{Model} 回退所选推理引擎", model.Name);
-            return null;
+            logger.LogError(e, "[YOLO] ncnn 后端创建失败，{Model}", model.Name);
+            throw new NcnnUnavailableException($"[YOLO] {model.Name} 的 ncnn 后端创建失败：{e.Message}");
         }
     }
 

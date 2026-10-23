@@ -2,8 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using System.Runtime.InteropServices;
+using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OCR.Engine;
 using BetterGenshinImpact.Core.Recognition.OCR.Engine.data;
 using BetterGenshinImpact.Core.Recognition.OCR.Paddle;
@@ -11,7 +14,7 @@ using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using OpenCvSharp;
 
-namespace BetterGenshinImpact.Core.Recognition.OCR.Ncnn;
+namespace BetterGenshinImpact.Core.Recognition.Ncnn;
 
 /// <summary>
 ///     ncnn Vulkan 后端的识别器：单行识别，按宽度分桶懒加载会话。
@@ -34,20 +37,30 @@ internal sealed class NcnnRec : IOcrRecognizer
     private readonly NcnnShim _shim;
     private readonly string _modelDir;
     private readonly int _gpuIndex;
-    private readonly int _numThreads;
+    private readonly NcnnTuningSettings _tuning;
     private readonly IReadOnlyList<string> _labels;
-    private readonly Dictionary<int, (nint Net, float[] Buffer)> _sessions = new();
+    private readonly Dictionary<int, SessionEntry> _sessions = new();
     private readonly object _sessionLock = new();
 
+    /// <summary>单个宽度桶的会话池与 blob 名缓存。</summary>
+    private sealed class SessionEntry(NcnnSessionPool pool, float[] buffer)
+    {
+        public NcnnSessionPool Pool { get; } = pool;
+        public float[] Buffer { get; } = buffer;
+        public string InputName { get; set; } = "in0";
+        public string OutputName { get; set; } = "out0";
+        public bool BlobsResolved { get; set; }
+    }
+
     public NcnnRec(string shimDllPath, string modelDir, IReadOnlyList<string> labels,
-        int gpuIndex = 0, int numThreads = 4)
+        NcnnTuningSettings tuning, int gpuIndex = 0)
     {
         if (!File.Exists(shimDllPath))
             throw new FileNotFoundException("ncnn_shim.dll 未找到", shimDllPath);
         _modelDir = modelDir;
         _labels = labels;
         _gpuIndex = gpuIndex;
-        _numThreads = numThreads;
+        _tuning = tuning.NormalizedCopy();
         _shim = new NcnnShim(shimDllPath);
     }
 
@@ -66,16 +79,22 @@ internal sealed class NcnnRec : IOcrRecognizer
 
     public void Warmup(int batch, int width)
     {
-        var (net, buffer) = GetSession(width);
-        _ = Infer(net, buffer, width, out var ptr, out _);
-        _shim.FreeBuffer(ptr);
+        var entry = GetSession(width);
+        _ = RunSession(entry, entry.Buffer, width);
     }
 
     public OcrRecognizerResult[] Run(Mat[] srcs, int batchSize = 0)
     {
         if (srcs.Length == 0) return [];
-        // ncnn 无批维：逐行推理（单行 8.6~10.5ms，远低于 DML 逐行 20ms）
         var results = new OcrRecognizerResult[srcs.Length];
+        // ncnn 无批维：逐行推理；并行会话数 > 1 时按池大小并行，默认 1 保持历史顺序行为。
+        if (_tuning.ParallelSessions > 1 && srcs.Length > 1)
+        {
+            Parallel.For(0, srcs.Length, new ParallelOptions { MaxDegreeOfParallelism = _tuning.ParallelSessions },
+                i => results[i] = Run(srcs[i]));
+            return results;
+        }
+
         for (var i = 0; i < srcs.Length; i++)
         {
             results[i] = Run(srcs[i]);
@@ -95,34 +114,48 @@ internal sealed class NcnnRec : IOcrRecognizer
         {
             if (tensor is not DenseTensor<float> dense)
                 throw new InvalidOperationException("ResizeNormImg 应返回 DenseTensor<float>");
-            var (net, buffer) = GetSession(width);
-            dense.Buffer.CopyTo(buffer);
-            var rc = Infer(net, buffer, width, out var outPtr, out var outCount);
-            if (rc != 0) throw new InvalidOperationException($"ncnn rec 推理失败: {rc}");
-            try
-            {
-                var managed = new float[outCount];
-                Marshal.Copy(outPtr, managed, 0, outCount);
-                var charCount = Math.Max(1, width / Downsample);
-                if (outCount % charCount != 0)
-                    throw new InvalidOperationException($"ncnn rec 输出维度异常: {outCount} 不能被 {charCount} 整除");
-                var inferMs = sw.Elapsed.TotalMilliseconds - preMs;
-                var decodeSw = Stopwatch.StartNew();
-                var result = DecodeOne(managed, charCount, outCount / charCount);
-                Logger.LogDebug(
-                    "[OCR][Rec][ncnn] 桶宽{Bucket} | 归一化 {Pre:F1}ms 推理 {Inf:F1}ms 解码 {Dec:F1}ms",
-                    width, preMs, inferMs, decodeSw.Elapsed.TotalMilliseconds);
-                return result;
-            }
-            finally
-            {
-                _shim.FreeBuffer(outPtr);
-            }
+            var entry = GetSession(width);
+            dense.Buffer.CopyTo(entry.Buffer);
+            var (managed, info) = RunSession(entry, entry.Buffer, width);
+            var (charCount, labelCount) = ResolveOutputShape(info, managed.Length, width);
+            var inferMs = sw.Elapsed.TotalMilliseconds - preMs;
+            var decodeSw = Stopwatch.StartNew();
+            var result = DecodeOne(managed, charCount, labelCount);
+            Logger.LogDebug(
+                "[OCR][Rec][ncnn] 桶宽{Bucket} | 归一化 {Pre:F1}ms 推理 {Inf:F1}ms 解码 {Dec:F1}ms",
+                width, preMs, inferMs, decodeSw.Elapsed.TotalMilliseconds);
+            return result;
         }
         finally
         {
             owner.Dispose();
         }
+    }
+
+    /// <summary>
+    ///     解析输出形状：优先用 shim 返回的 w/h/c（fp32 unpacked 后），
+    ///     旧 DLL 或无元信息时按「时间步 = 桶宽 / 8」推断。
+    /// </summary>
+    private (int CharCount, int LabelCount) ResolveOutputShape(NcnnTensorInfo? info, int count, int width)
+    {
+        if (info != null)
+        {
+            var labels = info.Channels > 0 ? info.Channels : 0;
+            var steps = info.Width > 0 ? info.Width : 0;
+            if (labels > 1 && steps > 0 && steps * labels == count) return (steps, labels);
+
+            var fallbackSteps = Math.Max(1, width / Downsample);
+            if (labels > 1 && count % labels == 0 && count / labels > 0) return (count / labels, labels);
+            if (count % fallbackSteps == 0) return (fallbackSteps, count / fallbackSteps);
+
+            throw new InvalidOperationException(
+                $"ncnn rec 输出维度异常: dims={info.Dims} {info.ShapeText} count={count}（桶宽 {width}）");
+        }
+
+        var charCount = Math.Max(1, width / Downsample);
+        if (count % charCount != 0)
+            throw new InvalidOperationException($"ncnn rec 输出维度异常: {count} 不能被 {charCount} 整除");
+        return (charCount, count / charCount);
     }
 
     /// <summary>按行图宽高比计算输入桶宽（向上取整到 160，限制在 [160, 960]）。</summary>
@@ -134,10 +167,29 @@ internal sealed class NcnnRec : IOcrRecognizer
         return Math.Clamp(bucket, BucketStep, MaxBucketWidth);
     }
 
-    private int Infer(nint net, float[] buffer, int width, out nint outPtr, out int outCount)
-        => _shim.Infer(net, "in0", "out0", buffer, width, ModelHeight, 3, out outPtr, out outCount);
+    /// <summary>单次推理：返回带元信息的紧凑 fp32。</summary>
+    private (float[] Data, NcnnTensorInfo Info) RunSession(SessionEntry entry, float[] buffer, int width)
+        => entry.Pool.Use(net =>
+        {
+            if (!entry.BlobsResolved) ResolveBlobs(entry, net);
+            var outputs = _shim.InferEx(net,
+                [NcnnInput.FromFloat(entry.InputName, buffer, width, ModelHeight, 3)],
+                [entry.OutputName]);
+            if (outputs.Count == 0)
+                throw new InvalidOperationException($"ncnn rec 未返回输出（桶宽 {width}）");
+            return (outputs[0].Data, outputs[0].Info);
+        });
 
-    private (nint Net, float[] Buffer) GetSession(int width)
+    private void ResolveBlobs(SessionEntry entry, nint net)
+    {
+        var inputs = _shim.QueryInputBlobs(net);
+        var outputs = _shim.QueryOutputBlobs(net);
+        if (inputs.Length > 0 && !string.IsNullOrWhiteSpace(inputs[0])) entry.InputName = inputs[0];
+        if (outputs.Length > 0 && !string.IsNullOrWhiteSpace(outputs[0])) entry.OutputName = outputs[0];
+        entry.BlobsResolved = true;
+    }
+
+    private SessionEntry GetSession(int width)
     {
         lock (_sessionLock)
         {
@@ -146,10 +198,9 @@ internal sealed class NcnnRec : IOcrRecognizer
             var modelPath = Path.Combine(_modelDir, $"rec_w{width}.bin");
             if (!File.Exists(paramPath) || !File.Exists(modelPath))
                 throw new FileNotFoundException($"ncnn rec 模型缺失（桶宽 {width}）", paramPath);
-            var net = _shim.Create(paramPath, modelPath, _gpuIndex, _numThreads);
-            if (net == nint.Zero)
-                throw new InvalidOperationException($"ncnn rec 会话创建失败（桶宽 {width}）");
-            entry = (net, new float[3 * ModelHeight * width]);
+            var options = _tuning.ToNetOptions(paramPath, modelPath, _gpuIndex);
+            var pool = new NcnnSessionPool(_shim, options, _tuning.ParallelSessions);
+            entry = new SessionEntry(pool, new float[3 * ModelHeight * width]);
             _sessions[width] = entry;
             return entry;
         }
@@ -201,11 +252,7 @@ internal sealed class NcnnRec : IOcrRecognizer
     {
         lock (_sessionLock)
         {
-            foreach (var (net, _) in _sessions.Values)
-            {
-                if (net != nint.Zero) _shim.Destroy(net);
-            }
-
+            foreach (var entry in _sessions.Values) entry.Pool.Dispose();
             _sessions.Clear();
         }
 
