@@ -10,9 +10,11 @@ using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
+using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.GameTask.AutoWood;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Common.Reward;
 using BetterGenshinImpact.GameTask.GetGridIcons;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.GameTask.OneDragon;
@@ -53,6 +55,21 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 public partial class TaskSettingsPageViewModel : ViewModel
 {
     public AllConfig Config { get; set; }
+
+    /// <summary>
+    /// 自动首领讨伐的材料目标编辑器。
+    /// </summary>
+    public TargetItemListEditorViewModel AutoBossTargetItems { get; }
+
+    /// <summary>
+    /// 自动秘境的材料目标编辑器。
+    /// </summary>
+    public TargetItemListEditorViewModel AutoDomainTargetItems { get; }
+
+    /// <summary>
+    /// 自动地脉花的材料目标编辑器。
+    /// </summary>
+    public TargetItemListEditorViewModel AutoLeyLineTargetItems { get; }
 
     private readonly INavigationService _navigationService;
     /// <summary>
@@ -229,6 +246,18 @@ public partial class TaskSettingsPageViewModel : ViewModel
         _soloTaskButtonController = new SoloTaskButtonController(instanceService, soloTaskRegistry, configService,
             SoloTaskStates.Values);
         NormalizeLeyLineOutcropType();
+
+        // 材料目标直接读写各自任务的配置集合，候选物品随首领、秘境与地脉花类型变化
+        AutoBossTargetItems = new TargetItemListEditorViewModel(Config.AutoBossConfig.TargetItems);
+        AutoDomainTargetItems = new TargetItemListEditorViewModel(Config.AutoDomainConfig.TargetItems);
+        AutoLeyLineTargetItems = new TargetItemListEditorViewModel(Config.AutoLeyLineOutcropConfig.TargetItems);
+        RefreshAutoBossTargetItems();
+        RefreshAutoDomainTargetItems();
+        RefreshAutoLeyLineTargetItems();
+        Config.AutoBossConfig.PropertyChanged += OnAutoBossConfigPropertyChanged;
+        Config.AutoDomainConfig.PropertyChanged += OnAutoDomainConfigPropertyChanged;
+        Config.AutoLeyLineOutcropConfig.PropertyChanged += OnAutoLeyLineOutcropConfigPropertyChanged;
+
         _scanDropsAfterRewardEnabledUi = Config.AutoLeyLineOutcropConfig.ScanDropsAfterRewardEnabled;
 
         //_strategyList = LoadCustomScript(Global.Absolute(@"User\AutoGeniusInvokation"));
@@ -310,6 +339,122 @@ public partial class TaskSettingsPageViewModel : ViewModel
         {
             Config.AutoLeyLineOutcropConfig.LeyLineOutcropType = LeyLineOutcropTypeList[0];
         }
+    }
+
+    /// <summary>
+    /// 首领变化后刷新自动首领讨伐的材料目标候选物品。
+    /// </summary>
+    private void OnAutoBossConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(AutoBossConfig.BossName))
+        {
+            UIDispatcherHelper.Invoke(RefreshAutoBossTargetItems);
+        }
+    }
+
+    /// <summary>
+    /// 秘境变化后刷新自动秘境的材料目标候选物品。
+    /// </summary>
+    private void OnAutoDomainConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(AutoDomainConfig.DomainName))
+        {
+            UIDispatcherHelper.Invoke(RefreshAutoDomainTargetItems);
+        }
+    }
+
+    /// <summary>
+    /// 地脉花类型变化后刷新自动地脉花的材料目标候选物品。
+    /// </summary>
+    private void OnAutoLeyLineOutcropConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(AutoLeyLineOutcropConfig.LeyLineOutcropType))
+        {
+            UIDispatcherHelper.Invoke(RefreshAutoLeyLineTargetItems);
+        }
+    }
+
+    /// <summary>
+    /// 按当前首领刷新自动首领讨伐的材料目标候选物品。
+    /// </summary>
+    private void RefreshAutoBossTargetItems()
+    {
+        AutoBossTargetItems.ApplyChoices(BuildBossTargetItemChoices(Config.AutoBossConfig.BossName));
+    }
+
+    /// <summary>
+    /// 按当前秘境刷新自动秘境的材料目标候选物品。
+    /// </summary>
+    private void RefreshAutoDomainTargetItems()
+    {
+        AutoDomainTargetItems.ApplyChoices(BuildDomainTargetItemChoices(Config.AutoDomainConfig.DomainName));
+    }
+
+    /// <summary>
+    /// 按当前地脉花类型刷新自动地脉花的材料目标候选物品。
+    /// </summary>
+    private void RefreshAutoLeyLineTargetItems()
+    {
+        AutoLeyLineTargetItems.ApplyChoices(BuildLeyLineTargetItemChoices(Config.AutoLeyLineOutcropConfig.LeyLineOutcropType));
+    }
+
+    /// <summary>
+    /// 构造当前首领可掉落的材料目标：首领材料与各元素宝石。
+    /// </summary>
+    /// <param name="bossName">首领名称。</param>
+    /// <returns>可选的奖励物品；没有奖励数据时为空。</returns>
+    private static IReadOnlyList<TargetItemOption> BuildBossTargetItemChoices(string bossName)
+    {
+        if (!TargetItemCatalog.Instance.TryGetBossProfile(bossName, out var profile))
+        {
+            return [];
+        }
+
+        var choices = new List<TargetItemOption>
+        {
+            new(profile.BossMaterial, $"首领材料｜{profile.BossMaterial}")
+        };
+        foreach (var family in profile.GemFamilies)
+        {
+            foreach (var item in family.Items)
+            {
+                choices.Add(new TargetItemOption(item.ItemName, item.ItemName));
+            }
+        }
+
+        return choices;
+    }
+
+    /// <summary>
+    /// 构造当前秘境可掉落的材料目标。
+    /// </summary>
+    /// <param name="domainName">秘境名称。</param>
+    /// <returns>可选的奖励物品；圣遗物秘境、提升指南或未收录秘境为空。</returns>
+    private static IReadOnlyList<TargetItemOption> BuildDomainTargetItemChoices(string domainName)
+    {
+        TargetItemCatalog.Instance.TryGetDomainItems(domainName, out var items);
+        return items;
+    }
+
+    /// <summary>
+    /// 构造当前地脉花类型可获得的材料目标。
+    /// </summary>
+    /// <param name="leyLineType">地脉花类型。</param>
+    /// <returns>藏金之花为摩拉，启示之花为三档经验书；其他类型为空。</returns>
+    private static IReadOnlyList<TargetItemOption> BuildLeyLineTargetItemChoices(string leyLineType)
+    {
+        var catalog = TargetItemCatalog.Instance;
+        if (leyLineType == "藏金之花")
+        {
+            return [new TargetItemOption(catalog.LeylineMoraItemName, catalog.LeylineMoraItemName)];
+        }
+
+        if (leyLineType == "启示之花")
+        {
+            return catalog.LeylineExpItems.Select(x => new TargetItemOption(x.Name, x.Name)).ToList();
+        }
+
+        return [];
     }
 
 
