@@ -56,25 +56,26 @@ public sealed partial class MusicScoreParser : IMusicScoreParser
     {
         var text = await File.ReadAllTextAsync(path, cancellationToken);
         var json = JObject.Parse(text);
-        var type = GetString(json, "type", "yuanqin").Trim().ToLowerInvariant();
+        var type = ResolveJsonType(json);
         var bpm = GetDouble(json, "bpm", 120);
         var ticks = Math.Max(1, (int)Math.Round(GetDouble(json, "ticks", 480)));
         var timeSignature = GetString(json, "time_signature", "4/4");
-        var notes = json["notes"] ?? throw new FormatException("曲谱缺少 notes 字段");
 
         var format = type switch
         {
             "yuanqin" => MusicScoreFormat.YuanQin,
             "midi" => MusicScoreFormat.MidiJson,
             "keyboard" => MusicScoreFormat.Keyboard,
+            "motick" or "mo_tick" or "mo-tick" or "yqrec" => MusicScoreFormat.MoTick,
             _ => throw new FormatException($"不支持的 AutoYuanQin 曲谱类型：{type}")
         };
 
         var timeline = format switch
         {
-            MusicScoreFormat.YuanQin => ParseYuanQinTimeline(notes, bpm, timeSignature),
-            MusicScoreFormat.MidiJson => ParseMidiJsonTimeline(GetNotesString(notes, format), bpm, ticks),
-            MusicScoreFormat.Keyboard => ParseKeyboardTimeline(GetNotesString(notes, format), bpm),
+            MusicScoreFormat.YuanQin => ParseYuanQinTimeline(RequireNotes(json), bpm, timeSignature),
+            MusicScoreFormat.MidiJson => ParseMidiJsonTimeline(GetNotesString(RequireNotes(json), format), bpm, ticks),
+            MusicScoreFormat.Keyboard => ParseKeyboardTimeline(GetNotesString(RequireNotes(json), format), bpm),
+            MusicScoreFormat.MoTick => ParseMoTickTimeline(json),
             _ => PerformanceTimeline.Empty
         };
 
@@ -84,7 +85,7 @@ public sealed partial class MusicScoreParser : IMusicScoreParser
             RelativePath = Path.GetRelativePath(rootFolder, path),
             Name = GetString(json, "name", Path.GetFileNameWithoutExtension(path)),
             Author = GetString(json, "author", "未知作者"),
-            Instrument = GetString(json, "instrument", "风物之诗琴"),
+            Instrument = GetInstrumentName(json),
             Description = GetString(json, "description", "无描述"),
             Composer = GetString(json, "composer", "未知作曲者"),
             Arranger = GetString(json, "arranger", "未知编曲者"),
@@ -94,6 +95,56 @@ public sealed partial class MusicScoreParser : IMusicScoreParser
             TicksPerQuarterNote = ticks,
             SourceTimeline = timeline,
             MappedNoteCount = timeline.Events.Count(x => x.Type == PerformanceEventType.KeyDown)
+        };
+    }
+
+    /// <summary>
+    /// 解析谱面的格式标识：优先取 type 字段；缺失时按结构嗅探
+    /// （YQ_moTools 录制文件没有 type），都不匹配则回退 AutoYuanQin，保持历史行为。
+    /// </summary>
+    /// <param name="json">整份谱面 JSON</param>
+    /// <returns>用于格式分派的标识</returns>
+    private static string ResolveJsonType(JObject json)
+    {
+        var type = GetString(json, "type", string.Empty).Trim().ToLowerInvariant();
+        if (type.Length > 0)
+        {
+            return type;
+        }
+
+        var fileFormat = GetString(json, "format", string.Empty).Trim();
+        var scoreFormat = GetString(json, "score_format", string.Empty).Trim();
+        if (string.Equals(fileFormat, MoTickFileFormat, StringComparison.OrdinalIgnoreCase)
+            || (string.Equals(scoreFormat, "tick", StringComparison.OrdinalIgnoreCase) && json["tick"] != null))
+        {
+            return MoTickTypeName;
+        }
+
+        return "yuanqin";
+    }
+
+    /// <summary>
+    /// 读取 notes 节点，缺失时给出统一的解析错误。
+    /// </summary>
+    /// <param name="json">整份谱面 JSON</param>
+    /// <returns>notes 节点</returns>
+    private static JToken RequireNotes(JObject json)
+    {
+        return json["notes"] ?? throw new FormatException("曲谱缺少 notes 字段");
+    }
+
+    /// <summary>
+    /// 读取乐器名：既支持字符串写法，也支持 YQ_moTools 的 {"id","name","key_count"} 对象写法。
+    /// </summary>
+    /// <param name="json">整份谱面 JSON</param>
+    /// <returns>乐器名</returns>
+    private static string GetInstrumentName(JObject json)
+    {
+        return json["instrument"] switch
+        {
+            JObject instrument => GetString(instrument, "name", "风物之诗琴"),
+            null or { Type: JTokenType.Null } => "风物之诗琴",
+            var token => token.ToString()
         };
     }
 
