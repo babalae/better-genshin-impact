@@ -27,6 +27,7 @@ public sealed partial class PuloniaTaskService
     /// <summary>检查当前配置；每次恢复只合并仍可延迟启动的最新一次，不补跑整段离线历史。</summary>
     public async Task CheckTriggersAsync(IReadOnlyList<PuloniaTaskPlan> plans, CancellationToken ct = default)
     {
+        ThrowIfNotCoordinator();
         await _initialization.WaitAsync(ct).ConfigureAwait(false);
         ThrowIfPersistenceFailed();
         await _triggerGate.WaitAsync(ct).ConfigureAwait(false);
@@ -72,6 +73,7 @@ public sealed partial class PuloniaTaskService
     /// <summary>热键仍使用相同准入和忙碌策略，不旁路快照、账本或单消费者。</summary>
     public async Task FireHotkeyAsync(string planId, string triggerId, CancellationToken ct = default)
     {
+        ThrowIfNotCoordinator();
         await _initialization.WaitAsync(ct).ConfigureAwait(false);
         await _triggerGate.WaitAsync(ct).ConfigureAwait(false);
         try

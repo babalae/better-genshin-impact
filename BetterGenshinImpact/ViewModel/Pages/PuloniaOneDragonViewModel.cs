@@ -12,6 +12,7 @@ using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.View.Windows.Pulonia;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
@@ -84,16 +85,44 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StopCurrentRunCommand))]
     private bool _hasActiveRun;
+    /// <summary>子实例中的状态提示：子实例不运行 Pulonia 计划，由主实例派发。</summary>
+    private const string ChildInstanceHint = "子实例中不能直接运行，请在主实例的新一条龙页面选择本实例运行。";
+    /// <summary>多实例服务，用于列出在线子实例；测试直接构造时为空，只提供主实例。</summary>
+    private readonly InstanceService? _instances;
+    /// <summary>运行实例选项：主实例加在线子实例。</summary>
+    public ObservableCollection<PuloniaOneDragonTargetOption> ExecutionTargets { get; } = [PuloniaOneDragonTargetOption.Primary];
+    /// <summary>选中的运行实例；运行记录与账本仍由主实例保存。</summary>
+    [ObservableProperty] private PuloniaOneDragonTargetOption? _selectedExecutionTarget = PuloniaOneDragonTargetOption.Primary;
+    /// <summary>是否有子实例可选；只有主实例时隐藏下拉。</summary>
+    [ObservableProperty] private bool _hasExecutionTargetChoice;
+    /// <summary>当前实例能否提交运行：子实例只能由主实例派发。</summary>
+    public bool CanRunOnThisInstance => _instances?.Context.IsRoot ?? true;
 
     /// <summary>注入共用编辑服务，界面仅维护选择与未提交的设置草稿。</summary>
+    /// <param name="editor">与任务计划入口共享的编辑会话</param>
+    /// <param name="service">任务服务</param>
+    /// <param name="catalog">资源目录</param>
+    /// <param name="store">计划存储</param>
+    /// <param name="registry">独立任务注册表</param>
+    /// <param name="instances">多实例服务，提供运行实例选项</param>
     public PuloniaOneDragonViewModel(PuloniaTaskPlanViewModel editor, IPuloniaTaskService service,
-        PuloniaTaskResourceCatalog catalog, PuloniaTaskStore store, SoloTaskRegistry registry)
-    { Editor = editor; _service = service; _catalog = catalog; _store = store; _registry = registry; }
+        PuloniaTaskResourceCatalog catalog, PuloniaTaskStore store, SoloTaskRegistry registry,
+        InstanceService? instances = null)
+    {
+        Editor = editor; _service = service; _catalog = catalog; _store = store; _registry = registry;
+        _instances = instances;
+        if (!CanRunOnThisInstance) ExecutionStatusText = ChildInstanceHint;
+    }
 
     /// <summary>首次进入时加载共用文档，并为一条龙建立默认配置。</summary>
     public override async Task OnNavigatedToAsync()
     {
-        if (!_isListening) { _isListening = true; _service.RunChanged += OnRunChanged; }
+        if (!_isListening)
+        {
+            _isListening = true; _service.RunChanged += OnRunChanged;
+            if (_instances is not null) _instances.ConnectedInstancesChanged += OnConnectedInstancesChanged;
+            RefreshExecutionTargets();
+        }
         await _pageLoadGate.WaitAsync();
         try
         {
@@ -113,7 +142,26 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     public override Task OnNavigatedFromAsync()
     {
         _isListening = false; _service.RunChanged -= OnRunChanged;
+        if (_instances is not null) _instances.ConnectedInstancesChanged -= OnConnectedInstancesChanged;
         return Editor.OnNavigatedFromAsync();
+    }
+    /// <summary>子实例上线或下线时切回 UI 线程刷新运行实例选项。</summary>
+    private void OnConnectedInstancesChanged(object? sender, EventArgs e)
+        => Application.Current?.Dispatcher.BeginInvoke(new Action(RefreshExecutionTargets));
+    /// <summary>按在线子实例重建运行实例选项，并保留原来的选择；所选实例下线时回到主实例。</summary>
+    private void RefreshExecutionTargets()
+    {
+        var options = new List<PuloniaOneDragonTargetOption> { PuloniaOneDragonTargetOption.Primary };
+        if (_instances is { Context.IsRoot: true } instances)
+            options.AddRange(instances.GetConnectedChildInstances()
+                .Select(PuloniaOneDragonTargetOption.FromEndpoint).OfType<PuloniaOneDragonTargetOption>());
+        HasExecutionTargetChoice = options.Count > 1;
+        // 实例集合没变时不重建，避免下拉闪动或选择被清空
+        if (ExecutionTargets.Select(item => item.LaneKey).SequenceEqual(options.Select(item => item.LaneKey))) return;
+        var selectedLane = SelectedExecutionTarget?.LaneKey ?? PuloniaTaskExecutionTarget.PrimaryLaneKey;
+        ExecutionTargets.Clear();
+        foreach (var option in options) ExecutionTargets.Add(option);
+        SelectedExecutionTarget = options.FirstOrDefault(item => item.LaneKey == selectedLane) ?? PuloniaOneDragonTargetOption.Primary;
     }
     /// <summary>通过 Behaviors 接入加载生命周期。</summary>
     [RelayCommand] private Task OpenPageAsync() => OnNavigatedToAsync();
@@ -346,8 +394,8 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     {
         SelectedConfiguration?.UndoCommand.Execute(null);
     }
-    /// <summary>以当前配置提交固定快照，只应用启用任务的草稿；关闭任务保留输入但不阻止运行。</summary>
-    [RelayCommand]
+    /// <summary>以当前配置在所选实例上提交固定快照，只应用启用任务的草稿；关闭任务保留输入但不阻止运行。</summary>
+    [RelayCommand(CanExecute = nameof(CanRunOnThisInstance))]
     private async Task RunAsync()
     {
         if (SelectedConfiguration is not { } document) return;
@@ -361,7 +409,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
             if (!TryApplySettings()) return;
         }
         SelectedTask = selection;
-        await Editor.RunPlanCommand.ExecuteAsync(document);
+        await Editor.RunPlanOnAsync(document, SelectedExecutionTarget?.Target);
         await RefreshExecutionStatusAsync();
     }
     /// <summary>次级入口展示当前配置的定时和热键设置。</summary>
@@ -453,7 +501,11 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
             _activeRequestId = active?.RequestId; HasActiveRun = active is not null;
             var latest = active ?? runs.FirstOrDefault();
             foreach (var node in TaskList) node.UpdateOneDragonStatus(latest);
-            ExecutionStatusText = latest is null ? "尚未执行" : new PuloniaTaskRunItemViewModel(latest).StatusText + " · " + latest.Message;
+            // 同一配置同时只在一个实例上运行，状态里标明是哪个实例
+            var targetPrefix = latest?.ExecutionTarget is { } target ? $"[{target.DisplayName}] " : "";
+            ExecutionStatusText = latest is null
+                ? CanRunOnThisInstance ? "尚未执行" : ChildInstanceHint
+                : targetPrefix + new PuloniaTaskRunItemViewModel(latest).StatusText + " · " + latest.Message;
         }
         catch (Exception ex) { if (_isListening) ExecutionStatusText = "状态读取失败：" + ex.Message; }
     }

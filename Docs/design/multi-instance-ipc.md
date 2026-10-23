@@ -158,6 +158,15 @@ JSON 信封的主要字段：
 | `webview.list` | 查询当前调用方可见的 WebView，按实例名排序 |
 | `webview.send` | 根按目标进程 ID 向 WebView 单播 |
 | `webview.message` | 根向目标 WebView 下发消息 |
+| `application.shutdown` | 根请求子实例在响应写回后正常退出 |
+| `task.start` / `task.stop` | 根在子实例上启动或停止独立任务，按运行 ID 幂等 |
+| `task.status.get` / `task.status.changed` | 根查询子实例独立任务状态 / 子实例主动上报状态 |
+| `pulonia.node.start` | 根请求子实例执行一个 Pulonia 节点（或账号准备）；子实例立即确认，在后台执行 |
+| `pulonia.node.cancel` | 根请求子实例取消节点，随后等待结束回报确认执行器已退出 |
+| `pulonia.node.report` | 子实例转发执行器的完成事件，根写入账本后才确认 |
+| `pulonia.node.finished` | 子实例回报节点结束（结果、异常、账号失败或子实例本地停止） |
+
+Pulonia 跨实例运行由根编排：快照、CD、节点结果和历史都只在根落盘，子实例只执行节点，负载中的 Pulonia 模型以 `PuloniaTaskJson` 字符串承载。子实例断开时，根让该实例上等待中的节点立即失败；子实例与根断开时取消正在执行的节点。
 
 相对鼠标批次结构：
 

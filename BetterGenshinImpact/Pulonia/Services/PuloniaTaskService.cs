@@ -7,13 +7,15 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Pulonia.Remote;
 using BetterGenshinImpact.Service;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.Pulonia.Services;
 
 /// <summary>
-/// Pulonia 的单主协调器：提交时固定快照，随后串行执行、更新状态并协调取消。
+/// Pulonia 的单主协调器：提交时固定快照，按执行实例分通道执行（通道内串行），更新状态并协调取消。
+/// 在子实例上执行的运行同样由本协调器编排和落盘，子实例只执行叶子节点。
 /// </summary>
 public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisposable
 {
@@ -122,18 +124,30 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
     public event EventHandler<PuloniaTaskRunChangedEventArgs>? RunChanged;
 
     /// <summary>
-    /// 建立协调器，校验执行器注册并启动不触碰游戏环境的串行消费循环。
+    /// 建立协调器，校验执行器注册并启动不触碰游戏环境的消费循环。
     /// </summary>
+    /// <param name="store">计划与状态存储</param>
+    /// <param name="builder">运行快照准备</param>
+    /// <param name="executors">本进程执行器</param>
+    /// <param name="gameTaskCoordinator">游戏节点协调器</param>
+    /// <param name="taskStopService">本地停止信号</param>
+    /// <param name="timeProvider">时钟</param>
+    /// <param name="accountSwitcher">账号切换与核验</param>
+    /// <param name="remoteDispatcher">把节点交给子实例执行的入口；为空时只能本地执行</param>
+    /// <param name="isCoordinator">是否为唯一协调器；子实例传 false，不读写共享状态文件</param>
     public PuloniaTaskService(PuloniaTaskStore store, PuloniaTaskBuilder builder,
         IEnumerable<IPuloniaTaskExecutor> executors, PuloniaGameTaskCoordinator gameTaskCoordinator,
         TaskStopService taskStopService, TimeProvider? timeProvider = null,
-        IPuloniaGenshinAccountSwitcher? accountSwitcher = null)
+        IPuloniaGenshinAccountSwitcher? accountSwitcher = null,
+        IPuloniaRemoteNodeDispatcher? remoteDispatcher = null, bool isCoordinator = true)
     {
         _store = store;
         _builder = builder;
         _gameTaskCoordinator = gameTaskCoordinator;
         _taskStopService = taskStopService;
         _accountSwitcher = accountSwitcher;
+        _remoteDispatcher = remoteDispatcher;
+        _isCoordinator = isCoordinator;
         _timeProvider = timeProvider ?? TimeProvider.System;
         var executorMap = new Dictionary<string, IPuloniaTaskExecutor>(StringComparer.Ordinal);
         var definitionMap = new Dictionary<string, PuloniaTaskDefinition>(StringComparer.Ordinal);
@@ -152,8 +166,17 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
         foreach (var definition in Definitions)
             PuloniaTaskAvailability.ValidateRules(definition.AvailabilityRules,
                 "definition/" + definition.TaskType + "/availability");
-        _initialization = InitializePersistentStateAsync();
-        _worker = ProcessQueueAsync();
+        if (isCoordinator)
+        {
+            _initialization = InitializePersistentStateAsync();
+            _worker = ProcessQueueAsync();
+        }
+        else
+        {
+            // 子实例：只保留执行器定义供界面使用，不加载、不改写共享 state.json，也不消费队列
+            _initialization = Task.CompletedTask;
+            _worker = Task.CompletedTask;
+        }
     }
 
     /// <inheritdoc />
@@ -165,9 +188,12 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
         Action<PuloniaTaskState, Guid>? updateTrigger, CancellationToken ct)
     {
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposeStarted) != 0, this);
+        ThrowIfNotCoordinator();
         await _initialization.WaitAsync(ct).ConfigureAwait(false);
         ThrowIfPersistenceFailed();
         var fixedRequest = CloneAndValidateRequest(request);
+        EnsureExecutionTargetAvailable(fixedRequest);
+        EnsureNoOtherLaneForPlan(fixedRequest);
         var plan = await _store.LoadPlanAsync(fixedRequest.PlanId, ct).ConfigureAwait(false)
                    ?? throw new PuloniaTaskValidationException(fixedRequest.PlanId, "要运行的计划不存在。");
 
@@ -199,7 +225,12 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
         var state = new RunState(Guid.NewGuid(), Guid.NewGuid(), fixedRequest, plan.Name, snapshot);
         try
         {
-            await PersistCurrentStateAsync(ct, candidate => updateTrigger?.Invoke(candidate, state.RequestId), state).ConfigureAwait(false);
+            await PersistCurrentStateAsync(ct, candidate =>
+            {
+                // 准备快照期间可能有并发提交：在状态门内、加入运行集合之前再复核一次
+                EnsureNoOtherLaneForPlan(fixedRequest);
+                updateTrigger?.Invoke(candidate, state.RequestId);
+            }, state).ConfigureAwait(false);
         }
         catch
         {
@@ -290,6 +321,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
         bool allowUncertainReplay = false, CancellationToken ct = default)
     {
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposeStarted) != 0, this);
+        ThrowIfNotCoordinator();
         await _initialization.WaitAsync(ct).ConfigureAwait(false);
         ThrowIfPersistenceFailed();
         PuloniaTaskRunRecord source;
@@ -341,8 +373,12 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
             AccountId = source.Request.AccountId, WorldOwnerAccountId = source.Request.WorldOwnerAccountId,
             Server = source.Request.Server, ServerUtcOffsetMinutes = source.Request.ServerUtcOffsetMinutes,
             TimeoutSeconds = source.Request.TimeoutSeconds, ParameterOverrides = source.Request.ParameterOverrides,
-            Source = "resume"
+            Source = "resume",
+            // 续跑沿用原执行实例：快照、账号和 CD 都属于该实例上的游戏
+            ExecutionTarget = source.Request.ExecutionTarget
         });
+        EnsureExecutionTargetAvailable(resumeRequest);
+        EnsureNoOtherLaneForPlan(resumeRequest);
         var state = new RunState(Guid.NewGuid(), Guid.NewGuid(), resumeRequest,
             source.PlanName, snapshot, completed, startTaskAddress, source.RunId) { VerifiedUid = source.VerifiedUid };
         lock (_runsGate)
@@ -403,8 +439,11 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
             }
         }
 
-        // 上次进程留下的活动运行只能转为中断或待处理，绝不按成功或未执行推断。
-        if (_persistentState.ActiveRun is { } interrupted)
+        // 上次进程留下的活动运行（含子实例上执行的运行）只能转为中断或待处理，绝不按成功或未执行推断。
+        var interruptedRuns = _persistentState.RemoteActiveRuns.ToList();
+        if (_persistentState.ActiveRun is { } localInterrupted)
+            interruptedRuns.Insert(0, localInterrupted);
+        foreach (var interrupted in interruptedRuns)
         {
             interrupted.FinishedAt = DateTimeOffset.UtcNow;
             if (interrupted.OperationIntent is not null)
@@ -423,8 +462,12 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
                 interrupted.Status = PuloniaTaskRunStatus.Interrupted;
                 interrupted.Message = "应用在运行期间中断，可沿用原快照继续未完成节点。";
             }
-            _persistentState.ActiveRun = null;
             _persistentState.PendingArchives.Add(interrupted);
+        }
+        if (interruptedRuns.Count > 0)
+        {
+            _persistentState.ActiveRun = null;
+            _persistentState.RemoteActiveRuns.Clear();
             RecoveryNotice = RecoveryNotice is null
                 ? "检测到上次未正常结束的运行，已保留为可续跑历史。"
                 : RecoveryNotice + " 同时检测到上次未正常结束的运行。";
@@ -477,6 +520,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
                 lock (_runsGate) _runs.Add(addition.RequestId, addition);
             candidate.PendingRequests.Clear();
             candidate.ActiveRun = null;
+            candidate.RemoteActiveRuns.Clear();
             RunState[] states;
             lock (_runsGate)
                 states = _runs.Values.Where(item => !item.IsHistorical).ToArray();
@@ -487,11 +531,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
                 if (record.Status == PuloniaTaskRunStatus.Queued)
                     candidate.PendingRequests.Add(record);
                 else if (record.Status is PuloniaTaskRunStatus.Running or PuloniaTaskRunStatus.Cancelling)
-                {
-                    if (candidate.ActiveRun is not null && candidate.ActiveRun.RunId != record.RunId)
-                        throw new InvalidOperationException("Pulonia 状态中出现多个活动运行。");
-                    candidate.ActiveRun = record;
-                }
+                    AddActiveRecord(candidate, record);
             }
             candidate.Sequence = checked(candidate.Sequence + 1);
             try { await _store.SaveStateAsync(candidate, ct).ConfigureAwait(false); }
@@ -523,6 +563,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
             candidate.UncertainOperations.RemoveAll(item => item.RunId == sourceRunId);
             candidate.PendingRequests.Clear();
             candidate.ActiveRun = null;
+            candidate.RemoteActiveRuns.Clear();
             RunState[] states;
             lock (_runsGate)
                 states = _runs.Values.Where(item => !item.IsHistorical).ToArray();
@@ -532,7 +573,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
                 if (record.Status == PuloniaTaskRunStatus.Queued)
                     candidate.PendingRequests.Add(record);
                 else if (record.Status is PuloniaTaskRunStatus.Running or PuloniaTaskRunStatus.Cancelling)
-                    candidate.ActiveRun = record;
+                    AddActiveRecord(candidate, record);
             }
             candidate.Sequence = checked(candidate.Sequence + 1);
             await _store.SaveStateAsync(candidate, ct).ConfigureAwait(false);
@@ -561,23 +602,29 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
             await foreach (var wake in _queue.Reader.ReadAllAsync(_shutdown.Token).ConfigureAwait(false))
             {
                 // 通道只负责通知；从耐久队列挑选仍有效的请求，配置失效或过期时先归档再处理后续请求。
+                // 每个执行实例一条通道：通道内串行，空闲通道各启动一个请求，运行结束后再次唤醒本循环。
                 while (!_shutdown.IsCancellationRequested)
                 {
                     RunState[] pending;
-                    lock (_runsGate) pending = _runs.Values.Where(item => item.QueueReady && item.GetStatus() == PuloniaTaskRunStatus.Queued)
+                    lock (_runsGate) pending = _runs.Values.Where(item => item.QueueReady
+                            && item.GetStatus() == PuloniaTaskRunStatus.Queued
+                            && !_activeLanes.Contains(GetLaneKey(item)))
                         .OrderByDescending(item => item.Request.BusyPolicy == PuloniaTaskBusyPolicy.StopCurrent)
                         .ThenBy(item => item.SubmittedAt).ToArray();
                     if (pending.Length == 0) break;
-                    var executed = false;
+                    var started = false;
+                    var startedLanes = new HashSet<string>(StringComparer.Ordinal);
                     foreach (var state in pending)
                     {
+                        var lane = GetLaneKey(state);
+                        if (startedLanes.Contains(lane)) continue;
                         if (!await AdmitQueuedRunAsync(state).ConfigureAwait(false)) continue;
-                        await ExecuteRunAsync(state).ConfigureAwait(false);
-                        executed = true;
-                        break;
+                        StartLane(state, lane);
+                        startedLanes.Add(lane);
+                        started = true;
                     }
                     if (Volatile.Read(ref _persistenceFailure) is not null) return;
-                    if (!executed) await Task.Delay(TimeSpan.FromSeconds(1), _timeProvider, _shutdown.Token).ConfigureAwait(false);
+                    if (!started) await Task.Delay(TimeSpan.FromSeconds(1), _timeProvider, _shutdown.Token).ConfigureAwait(false);
                 }
             }
         }
@@ -618,7 +665,10 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
         }
         RaiseRunChanged(state.RequestId);
 
-        using var stopRegistration = _taskStopService.Register(reason => RequestCancellation(state, reason));
+        // 本实例的停止热键与截图器停止只作用于本地运行；子实例上的运行用页面停止或在子实例本地停止
+        using var stopRegistration = state.Request.ExecutionTarget is null
+            ? _taskStopService.Register(reason => RequestCancellation(state, reason))
+            : null;
         // 未配置总时限时不创建定时取消信号；用户停止、游戏退出和宿主关闭仍正常取消。
         using var timeoutCancellation = state.Request.TimeoutSeconds is { } runTimeout
             ? new CancellationTokenSource(TimeSpan.FromSeconds(runTimeout))
@@ -627,6 +677,8 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
             state.Cancellation.Token, timeoutCancellation.Token, _shutdown.Token);
         try
         {
+            if (state.Request.ExecutionTarget is { } target && _remoteDispatcher?.IsAvailable(target) != true)
+                throw new InvalidOperationException($"执行实例“{DescribeTarget(target)}”当前不在线，未启动任务。");
             await PrepareGenshinAccountAsync(state, runCancellation.Token).ConfigureAwait(false);
             var signal = await ExecuteTaskAsync(state, state.Snapshot.RootTask, runCancellation.Token).ConfigureAwait(false);
             runCancellation.Token.ThrowIfCancellationRequested();
@@ -704,7 +756,10 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
     /// <summary>
     /// 将外部停止来源记录到运行状态，再取消本次运行拥有的令牌源。
     /// </summary>
-    private void RequestCancellation(RunState state, TaskStopReason reason)
+    /// <param name="state">要取消的运行</param>
+    /// <param name="reason">停止来源</param>
+    /// <param name="message">自定义状态摘要；为空时按来源生成</param>
+    private void RequestCancellation(RunState state, TaskStopReason reason, string? message = null)
     {
         lock (state.SyncRoot)
         {
@@ -712,7 +767,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
                 return;
 
             state.Status = PuloniaTaskRunStatus.Cancelling;
-            state.Message = reason switch
+            state.Message = message ?? reason switch
             {
                 TaskStopReason.ApplicationShutdown => "应用正在关闭，正在等待当前执行器退出并释放资源。",
                 TaskStopReason.RuntimeStopped => "游戏运行环境已停止，正在等待当前执行器退出并释放资源。",
@@ -791,8 +846,10 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
         var collectionPolicy = task.TaskType == "pathing"
             ? task.CollectionCooldown ?? PuloniaCollectionCooldown.Resolve(task.Path, task.Resource, task.Parameters) : null;
         JObject? collectionData = null;
+        // 在子实例上执行时，输入、游戏环境与账号核验都在子实例中完成，本进程不占用任务锁
+        var isRemote = state.Request.ExecutionTarget is not null;
         // 已准备账号的游戏节点必须先取得输入并重新核验，再读取该 UID 的 CD。
-        using var accountLease = state.VerifiedUid is not null && _definitions[task.TaskType].RequiresGameSession
+        using var accountLease = !isRemote && state.VerifiedUid is not null && _definitions[task.TaskType].RequiresGameSession
             ? await _gameTaskCoordinator.AcquireAsync(runToken).ConfigureAwait(false) : null;
         if (accountLease is not null) await VerifyGenshinAccountAsync(state, accountLease.Runtime, runToken).ConfigureAwait(false);
         var availability = await EvaluateAvailabilityAsync(state.Request, rules, runToken, state.VerifiedUid).ConfigureAwait(false);
@@ -846,17 +903,26 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
                 // 文件级采集只在完整成功后结算，不为失败或中断留下待核验占用。
                 if (collectionPolicy is null)
                     await PersistOperationIntentAsync(state, task, rules, nodeCancellation.Token).ConfigureAwait(false);
-                using var gameTaskLease = accountLease is null && _definitions[task.TaskType].RequiresGameSession
-                    ? await _gameTaskCoordinator.AcquireAsync(nodeCancellation.Token).ConfigureAwait(false)
-                    : null;
-                // 游戏节点把租约记录的运行环境交给执行器，节点内的任务只使用它
-                var context = new PuloniaTaskExecutionContext(state.RequestId, state.RunId, state.Snapshot, attempt,
-                    task.TaskAddress, (gameTaskLease ?? accountLease)?.Runtime, (completionEvent, token) =>
-                        ReportCompletionEventAsync(state, task, attempt, rules, completionEvent, token));
-                // 持有任务锁期间标记会话，执行器内部不能再通过 TaskRunner 启动任务
-                using (gameTaskLease is not null || accountLease is not null ? BetterGenshinImpact.GameTask.GameTaskSessionScope.Enter() : null)
+                if (isRemote)
                 {
-                    outcome = await executor.ExecuteAsync(task, context, nodeCancellation.Token).ConfigureAwait(false);
+                    // 子实例执行节点，完成事件经回调在本协调器落盘
+                    outcome = await ExecuteRemoteNodeAsync(state, task, attempt, rules, nodeCancellation.Token)
+                        .ConfigureAwait(false);
+                }
+                else
+                {
+                    using var gameTaskLease = accountLease is null && _definitions[task.TaskType].RequiresGameSession
+                        ? await _gameTaskCoordinator.AcquireAsync(nodeCancellation.Token).ConfigureAwait(false)
+                        : null;
+                    // 游戏节点把租约记录的运行环境交给执行器，节点内的任务只使用它
+                    var context = new PuloniaTaskExecutionContext(state.RequestId, state.RunId, state.Snapshot, attempt,
+                        task.TaskAddress, (gameTaskLease ?? accountLease)?.Runtime, (completionEvent, token) =>
+                            ReportCompletionEventAsync(state, task, attempt, rules, completionEvent, token));
+                    // 持有任务锁期间标记会话，执行器内部不能再通过 TaskRunner 启动任务
+                    using (gameTaskLease is not null || accountLease is not null ? BetterGenshinImpact.GameTask.GameTaskSessionScope.Enter() : null)
+                    {
+                        outcome = await executor.ExecuteAsync(task, context, nodeCancellation.Token).ConfigureAwait(false);
+                    }
                 }
                 executorFinishedAt = DateTimeOffset.UtcNow;
                 // 兼容暂时未主动观察令牌的旧执行器：只有它真正返回后才确认取消或超时完成。
@@ -880,6 +946,11 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
             {
                 nodeTimedOut = true;
                 failure = new TimeoutException($"节点超过时限 {policy.TimeoutSeconds:0.###} 秒。");
+            }
+            catch (PuloniaGenshinAccountException) when (!runToken.IsCancellationRequested)
+            {
+                // 执行实例核验账号失败：与本地核验一致，整次运行转为待处理，不进入节点重试
+                throw;
             }
             catch (Exception ex)
             {
@@ -1065,8 +1136,8 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
                         $"完成事件会使周期额度超过上限 {rule.Quota}。");
             }
             candidate.Ledger.Add(entry);
-            var active = candidate.ActiveRun;
-            if (active is null || active.RunId != state.RunId || active.OperationIntent is null)
+            var active = FindActiveRecord(candidate, state.RunId);
+            if (active is null || active.OperationIntent is null)
                 throw new PuloniaTaskValidationException(task.TaskAddress, "耐久状态中的活动运行或操作意图已变化。");
             // 与账本在同一次原子写盘中留存运行内事实，异常退出也不会丢失已确认的副作用。
             var confirmedEffect = new PuloniaTaskConfirmedEffect
@@ -1246,6 +1317,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
                 candidate.ActiveRun = candidate.ActiveRun?.RequestId == state.RequestId
                     ? null
                     : candidate.ActiveRun;
+                candidate.RemoteActiveRuns.RemoveAll(item => item.RequestId == state.RequestId);
                 if (candidate.PendingArchives.All(item => item.RunId != record.RunId))
                     candidate.PendingArchives.Add(record);
                 UpdateTriggerRunStatus(candidate, record);
@@ -1358,6 +1430,13 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
                 throw new PuloniaTaskValidationException("request/parameter_overrides", "节点地址和覆盖对象不能为空。");
             overrides.Add(item.Key, (JObject)item.Value.DeepClone());
         }
+        // 自动触发只在主实例本地执行，执行目标只来自人工提交或续跑
+        if (request.ExecutionTarget is { } target)
+        {
+            target.Validate();
+            if (request.TriggerId is not null)
+                throw new PuloniaTaskValidationException("request/execution_target", "定时与热键请求只能在主实例执行。");
+        }
         return new PuloniaTaskRequest
         {
             PlanId = request.PlanId,
@@ -1373,7 +1452,8 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
             TriggerActivatedAtUtc = request.TriggerActivatedAtUtc,
             OccurrenceUtc = request.OccurrenceUtc,
             DeadlineUtc = request.DeadlineUtc,
-            BusyPolicy = request.BusyPolicy
+            BusyPolicy = request.BusyPolicy,
+            ExecutionTarget = request.ExecutionTarget?.Clone()
         };
     }
 
@@ -1422,7 +1502,18 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
             // 初始化错误已由公开 API 报告；释放阶段不能覆盖原始状态文件。
         }
 
-        if (_initialization.IsCompletedSuccessfully)
+        // 各通道的运行已收到取消，等待它们完成收尾和归档
+        try
+        {
+            await Task.WhenAll(_laneTasks.Values.ToArray()).ConfigureAwait(false);
+        }
+        catch
+        {
+            // 每个运行自行收敛最终状态；关闭阶段不再传播
+        }
+
+        // 子实例不写共享状态文件
+        if (_isCoordinator && _initialization.IsCompletedSuccessfully)
         {
             using var cleanup = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             try

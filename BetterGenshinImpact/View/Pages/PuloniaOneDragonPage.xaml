@@ -54,6 +54,7 @@
     <TextBlock Text="任务列表" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
     <!-- 开始按钮携带本入口配置，不能取历史或普通任务计划菜单的选择。 -->
     <ui:Button Grid.Column="1" Margin="0,0,6,0" Appearance="Primary" Icon="{ui:SymbolIcon Play24}" Command="{Binding ViewModel.RunCommand}" ToolTip="开始一条龙"/>
+    <!-- 停止当前配置的活动运行，无论它在主实例还是子实例上执行。 -->
     <ui:Button Grid.Column="2" Margin="0,0,6,0" Icon="{ui:SymbolIcon Stop24}" Command="{Binding ViewModel.StopCurrentRunCommand}" ToolTip="停止当前配置"/>
     <ui:DropDownButton Grid.Column="3" Icon="{ui:SymbolIcon MoreHorizontal24}" ToolTip="更多操作">
      <ui:DropDownButton.Flyout><ContextMenu>
@@ -73,6 +74,24 @@
       <MenuItem Header="查看导入报告" Command="{Binding Data.ShowImportReportCommand, Source={StaticResource DragonProxy}}"/>
      </ContextMenu></ui:DropDownButton.Flyout>
     </ui:DropDownButton>
+   </Grid>
+   <!-- 运行实例：主实例或在线子实例；运行记录与账本仍保存在主实例。只有主实例时隐藏。 -->
+   <Grid DockPanel.Dock="Top" Margin="0,0,10,8">
+    <Grid.Style>
+     <Style TargetType="Grid">
+      <Style.Triggers>
+       <DataTrigger Binding="{Binding ViewModel.HasExecutionTargetChoice}" Value="False">
+        <Setter Property="Visibility" Value="Collapsed"/>
+       </DataTrigger>
+      </Style.Triggers>
+     </Style>
+    </Grid.Style>
+    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+    <TextBlock Text="运行于" VerticalAlignment="Center" Margin="0,0,8,0"/>
+    <ComboBox Grid.Column="1" ItemsSource="{Binding ViewModel.ExecutionTargets}"
+              SelectedItem="{Binding ViewModel.SelectedExecutionTarget, Mode=TwoWay}"
+              DisplayMemberPath="Display" AutomationProperties.Name="运行实例"
+              ToolTip="选择执行这份配置的实例；同一配置同时只能在一个实例上运行"/>
    </Grid>
    <Separator DockPanel.Dock="Top" Margin="0,0,10,8"/>
    <TextBlock DockPanel.Dock="Bottom" Margin="0,10,10,0" Text="{Binding ViewModel.ExecutionStatusText}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>

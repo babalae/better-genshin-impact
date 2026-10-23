@@ -99,12 +99,18 @@ public static class PuloniaTaskJson
     public static PuloniaTaskState ReadState(string json)
     {
         var state = Read<PuloniaTaskState>(json);
+        // 版本 2 没有远程活动运行，字段缺省为空集合，直接升级为当前版本
+        if (state.SchemaVersion == PuloniaTaskState.PreviousSchemaVersion)
+            state.SchemaVersion = PuloniaTaskState.CurrentSchemaVersion;
         if (state.SchemaVersion != PuloniaTaskState.CurrentSchemaVersion)
             throw new PuloniaTaskValidationException("state.json",
                 $"不支持运行状态格式版本 {state.SchemaVersion}。");
         if (state.Sequence < 0 || state.PendingRequests is null || state.PendingArchives is null
-            || state.Ledger is null || state.UncertainOperations is null || state.TriggerStates is null)
+            || state.Ledger is null || state.UncertainOperations is null || state.TriggerStates is null
+            || state.RemoteActiveRuns is null)
             throw new PuloniaTaskValidationException("state.json", "运行状态内容不完整或序列无效。");
+        if (state.RemoteActiveRuns.Count > 1000)
+            throw new PuloniaTaskValidationException("state.json", "远程活动运行超过支持上限。");
         if (state.PendingRequests.Count > 10000 || state.PendingArchives.Count > 10000
             || state.Ledger.Count > 100000 || state.UncertainOperations.Count > 10000 || state.TriggerStates.Count > 10000)
             throw new PuloniaTaskValidationException("state.json", "运行状态集合超过支持上限。");
@@ -133,7 +139,20 @@ public static class PuloniaTaskJson
             ValidateRunRecord(active, "state.json/active_run");
             if (active.Status is not (PuloniaTaskRunStatus.Running or PuloniaTaskRunStatus.Cancelling))
                 throw new PuloniaTaskValidationException("state.json", "活动运行状态无效。");
+            if (active.Request.ExecutionTarget is not null)
+                throw new PuloniaTaskValidationException("state.json", "主实例活动运行不能带有执行实例。");
             AddRunIdentity(active, requestIds, runIds, "state.json");
+        }
+        // 每个执行实例同一时刻只有一个活动运行
+        var remoteLanes = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var remote in state.RemoteActiveRuns)
+        {
+            ValidateRunRecord(remote, "state.json/remote_active_runs");
+            if (remote.Status is not (PuloniaTaskRunStatus.Running or PuloniaTaskRunStatus.Cancelling))
+                throw new PuloniaTaskValidationException("state.json", "远程活动运行状态无效。");
+            if (remote.Request.ExecutionTarget is not { } target || !remoteLanes.Add(target.LaneKey))
+                throw new PuloniaTaskValidationException("state.json", "远程活动运行缺少执行实例或同一实例重复。");
+            AddRunIdentity(remote, requestIds, runIds, "state.json");
         }
         foreach (var record in state.PendingArchives)
         {

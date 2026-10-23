@@ -32,8 +32,18 @@ public partial class PuloniaTaskPlanViewModel
     /// 页面执行入口默认不限时；手动停止与节点自身的执行策略仍然生效。
     /// </summary>
     [RelayCommand(CanExecute = nameof(CanRunDocument))]
-    private async Task RunPlanAsync(PuloniaTaskPlanDocumentViewModel? document)
+    private Task RunPlanAsync(PuloniaTaskPlanDocumentViewModel? document) => RunPlanOnAsync(document, null);
+
+    /// <summary>
+    /// 保存后在指定执行实例上提交运行；执行实例为空时在主实例本地执行。
+    /// 运行仍由主实例编排、落盘并记录历史，子实例只执行叶子节点。
+    /// </summary>
+    /// <param name="document">要运行的计划文档，为空时使用当前计划</param>
+    /// <param name="executionTarget">执行实例</param>
+    public async Task RunPlanOnAsync(PuloniaTaskPlanDocumentViewModel? document, PuloniaTaskExecutionTarget? executionTarget)
     {
+        if (!CanRunDocument(document))
+            return;
         document ??= SelectedDocument;
         if (document is null)
             return;
@@ -54,10 +64,13 @@ public partial class PuloniaTaskPlanViewModel
             var requestId = await _taskService.EnqueueAsync(new PuloniaTaskRequest
             {
                 PlanId = document.Id,
-                Source = "ui"
+                Source = "ui",
+                ExecutionTarget = executionTarget
             });
             await History.RevealRunAsync(requestId);
-            StatusMessage = $"已提交“{document.Name}”，请求 {requestId:D} 已固定快照并进入串行队列。";
+            StatusMessage = executionTarget is null
+                ? $"已提交“{document.Name}”，请求 {requestId:D} 已固定快照并进入串行队列。"
+                : $"已提交“{document.Name}”到“{executionTarget.DisplayName}”，请求 {requestId:D} 已固定快照并进入该实例的执行队列。";
         }
         catch (Exception ex)
         {

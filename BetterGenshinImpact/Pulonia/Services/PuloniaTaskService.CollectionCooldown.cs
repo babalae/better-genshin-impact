@@ -59,12 +59,12 @@ public sealed partial class PuloniaTaskService
             var candidate = ClonePersistentState();
             if (candidate.Ledger.Exists(item => item.EventKey == entry.EventKey)) return;
             var active = state.ToRecord();
-            if (candidate.ActiveRun?.RunId != state.RunId)
+            if (FindActiveRecord(candidate, state.RunId) is null)
                 throw new InvalidOperationException("文件成功结算时活动运行已变化。");
             active.NodeResults.Add(result);
             active.ConfirmedEffects.Add(effect);
             active.CompletedTaskAddresses.Add(task.TaskAddress);
-            candidate.ActiveRun = active;
+            ReplaceActiveRecord(candidate, active);
             candidate.Ledger.Add(entry);
             candidate.Sequence = checked(candidate.Sequence + 1);
             using var cleanup = new CancellationTokenSource(TimeSpan.FromSeconds(15));
