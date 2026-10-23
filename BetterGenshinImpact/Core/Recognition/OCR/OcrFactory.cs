@@ -108,10 +108,11 @@ public class OcrFactory : IDisposable
         _activeModelType = ResolveModelType();
         // OCR 是否走 ncnn 由设置页的用途开关决定；开启后产物缺失或创建失败直接抛错，
         // 不再静默换用 ONNX（启动校验会先拦下不完整的运行库）。
-        var hardware = TaskContext.Instance().Config.HardwareAccelerationConfig;
-        if (hardware.UseNcnnOcr)
+        // 全局配置未初始化（如单元测试）时按关闭处理。
+        var ncnnConfig = NcnnStartup.TryGetActiveConfig();
+        if (ncnnConfig is { UseOcr: true })
         {
-            var ncnnSettings = NcnnBackendSettings.FromConfig(hardware);
+            var ncnnSettings = NcnnBackendSettings.FromConfig(ncnnConfig);
             return new PaddleOcrService(NcnnOcrBackend.Create(_logger, ncnnSettings), _activeModelType);
         }
 

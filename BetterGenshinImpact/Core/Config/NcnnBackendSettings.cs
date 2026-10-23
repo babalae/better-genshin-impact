@@ -54,12 +54,12 @@ public sealed record NcnnBackendSettings(
         Math.Clamp(GpuIndex, 0, MaxGpuIndex),
         Det.NormalizedCopy(), Rec.NormalizedCopy(), Yolo.NormalizedCopy());
 
-    public static NcnnBackendSettings FromConfig(HardwareAccelerationConfig config) => new NcnnBackendSettings(
-        config.PreferredBackend, config.UseNcnnOcr, config.UseNcnnYolo,
-        config.NcnnComputeMode, config.NcnnGpuIndex,
-        config.NcnnDetTuning ?? NcnnTuningSettings.CreateDefault(config.NcnnThreads),
-        config.NcnnRecTuning ?? NcnnTuningSettings.CreateDefault(config.NcnnThreads),
-        config.NcnnYoloTuning ?? NcnnTuningSettings.CreateDefault(config.NcnnThreads)).Normalize();
+    public static NcnnBackendSettings FromConfig(NcnnConfig config) => new NcnnBackendSettings(
+        config.PreferredBackend, config.UseOcr, config.UseYolo,
+        config.ComputeMode, config.GpuIndex,
+        config.DetTuning ?? NcnnTuningSettings.CreateDefault(config.Threads),
+        config.RecTuning ?? NcnnTuningSettings.CreateDefault(config.Threads),
+        config.YoloTuning ?? NcnnTuningSettings.CreateDefault(config.Threads)).Normalize();
 
     public bool Equals(NcnnBackendSettings? other) => other != null && SignatureSuffix == other.SignatureSuffix;
 

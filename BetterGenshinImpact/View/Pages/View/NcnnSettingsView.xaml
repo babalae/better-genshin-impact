@@ -235,6 +235,41 @@
     </UserControl.Resources>
 
     <StackPanel>
+        <!-- 用途开关：顶部后端切换选中 ncnn 时默认全开，可在此单独覆盖回 ONNX -->
+        <TextBlock Text="用途分配" FontSize="16" FontWeight="SemiBold" Margin="4,0,4,2" />
+        <TextBlock Text="决定 OCR 与 YOLO 哪些走 ncnn；关闭的用途由 ONNX Runtime 侧的设置承担。切换只改草稿，点击设置页底部「应用并重启」后生效。"
+                   TextWrapping="Wrap" Margin="4,0,4,10" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+
+        <!-- 用途覆盖：平铺两行，不折叠 -->
+        <StackPanel IsEnabled="{Binding CanInteract}" Margin="2,6,0,0">
+            <DockPanel>
+                <ui:ToggleSwitch DockPanel.Dock="Right" IsChecked="{Binding UseNcnnOcr, Mode=TwoWay}"
+                                 Margin="16,0,0,0" VerticalAlignment="Center" AutomationProperties.Name="OCR 使用 ncnn" />
+                <StackPanel>
+                    <TextBlock Text="OCR 文本检测与识别（Det + Rec）使用 ncnn" FontWeight="SemiBold" FontSize="12" />
+                    <TextBlock Text="{Binding OcrOverrideHint}" TextWrapping="Wrap" Margin="0,2,0,0" FontSize="11"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+            </DockPanel>
+            <DockPanel Margin="0,10,0,0">
+                <ui:ToggleSwitch DockPanel.Dock="Right" IsChecked="{Binding UseNcnnYolo, Mode=TwoWay}"
+                                 Margin="16,0,0,0" VerticalAlignment="Center" AutomationProperties.Name="YOLO 使用 ncnn" />
+                <StackPanel>
+                    <TextBlock Text="YOLO 使用 ncnn" FontWeight="SemiBold" FontSize="12" />
+                    <TextBlock Text="{Binding YoloOverrideHint}" TextWrapping="Wrap" Margin="0,2,0,0" FontSize="11"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+            </DockPanel>
+        </StackPanel>
+        <Border Padding="12,8" CornerRadius="8" Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}" Margin="0,10,0,0">
+            <DockPanel>
+                <TextBlock Text="已保存：" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <TextBlock Text="{Binding SavedBackendText}" FontSize="12" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding EffectiveCombinationText}" FontSize="12" Margin="24,0,0,0"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+        </Border>
+
         <!-- 状态行：一行文字（非卡片），运行库 / 模型资产 / 当前设备 -->
         <TextBlock FontSize="12" TextWrapping="Wrap" Margin="4,2,4,0" AutomationProperties.Name="ncnn 状态摘要">
             <Run Text="运行库" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />

@@ -41,40 +41,17 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
 
     public ObservableCollection<InferenceEngineCardViewModel> Engines { get; } = [];
     public ObservableCollection<InferenceBenchmarkResult> Results { get; } = [];
-    public ObservableCollection<InferenceBackendOptionViewModel> BackendOptions { get; } = [];
     public InferenceThreadChoice[] CpuThreadChoices { get; }
     public int MaxCpuThreads => Environment.ProcessorCount;
 
-    // ---------------- ncnn 设置（独立子 ViewModel） ----------------
+    // ---------------- ncnn 设置（独立子 ViewModel：引擎分配、计算模式、三套调优与产物自检） ----------------
     public NcnnSettingsViewModel NcnnSettings { get; }
 
     /// <summary>ncnn 运行库是否就绪：决定「应用并重启」是否可用。</summary>
     private bool NcnnShimReady => NcnnSettings.NcnnShimReady;
 
-    /// <summary>ncnn 当前设备文案（底部选择说明与顶部引擎卡片共用）。</summary>
-    private string NcnnDeviceText => NcnnSettings.NcnnDeviceText;
-
-    /// <summary>全局后端选择只决定默认值，逐用途开关才是实际生效来源。</summary>
-    [ObservableProperty] private InferenceBackend _selectedBackend = InferenceBackend.Onnx;
-    public bool IsNcnnBackend => SelectedBackend == InferenceBackend.Ncnn;
-    public bool IsOnnxBackend => !IsNcnnBackend;
-    public bool UsesNcnn => UseNcnnOcr || UseNcnnYolo;
-    /// <summary>某个用途单独切到 ONNX 时的目标名称。</summary>
-    public string OnnxTargetName => ForceCpuOcr && !SelectedEngineIsCpu ? "CPU（强制 OCR）" : SelectedEngine?.Name ?? "ONNX Runtime";
-    public string OcrTargetText => UseNcnnOcr
-        ? $"ncnn · {NcnnDeviceText} · PP-OCRv6（固定模型）"
-        : $"ONNX Runtime · {OnnxTargetName}";
-    public string YoloTargetText => UseNcnnYolo
-        ? $"ncnn · {NcnnDeviceText}"
-        : $"ONNX Runtime · {SelectedEngine?.Name ?? "ONNX Runtime"} · {SelectedEngine?.SelectedDevice?.Name ?? "尚无可用设备"}";
-    public string EffectiveCombinationText => $"OCR · {OcrTargetText}　|　YOLO · {YoloTargetText}";
-    public string OcrOverrideHint => IsNcnnBackend
-        ? "当前全局为 ncnn；关闭后 OCR 由 ONNX Runtime 承担。"
-        : "当前全局为 ONNX Runtime；开启后 OCR 覆盖为 ncnn。";
-    public string YoloOverrideHint => IsNcnnBackend
-        ? "当前全局为 ncnn；关闭后 YOLO 由 ONNX Runtime 承担。"
-        : "当前全局为 ONNX Runtime；开启后 YOLO 覆盖为 ncnn。";
-    private bool SelectedEngineIsCpu => SelectedEngine?.IsCpu == true;
+    /// <summary>任一用途启用 ncnn 时需要运行库就绪才能应用。</summary>
+    private bool UsesNcnn => NcnnSettings.UsesNcnn;
 
     public PaddleOcrCpuModeChoice[] OcrCpuModeChoices { get; } =
     [
@@ -89,8 +66,8 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
     public bool IsOcrCpuCustom => PaddleOcrCpu.Mode == PaddleOcrCpuMode.Custom;
     public bool IsOcrCpuConfigured => PaddleOcrCpu.Mode is PaddleOcrCpuMode.GameplayPriority or PaddleOcrCpuMode.Custom;
     public string OcrCpuPreview => PaddleOcrCpu.ToOptions().Describe(CpuThreads);
-    public string OcrCpuApplicability => UseNcnnOcr
-        ? "OCR 当前走 ncnn（Vulkan 或 CPU 由其计算模式决定），以下 ONNX Runtime 的 CPU 线程策略不生效；关闭「OCR 使用 ncnn」后生效。"
+    public string OcrCpuApplicability => NcnnSettings.UseNcnnOcr
+        ? "OCR 当前走 ncnn（Vulkan 或 CPU 由其计算模式决定），以下 ONNX Runtime 的 CPU 线程策略不生效；在 ncnn 卡片中关闭「OCR 使用 ncnn」后生效。"
         : ForceCpuOcr || SelectedEngine?.IsCpu == true
             ? "应用并重启后用于 PPOCR 的 CPU 检测和识别会话。"
             : "当前选择让 OCR 跟随其他引擎；以下参数会保存，在 PPOCR 使用纯 CPU 时生效。";
@@ -103,24 +80,13 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
     });
     public string CurrentRuntimeText => _runtime.Current.Description;
     public string CurrentEngineName => _runtime.Current.Engine == InferenceDeviceType.Cpu ? "CPU" : _runtime.Current.Engine.ToString();
-    private static string SavedNcnnDeviceText(HardwareAccelerationConfig config) =>
-        config.NcnnComputeMode == NcnnComputeMode.Cpu
-            ? $"CPU · {config.NcnnThreads} 线程"
-            : $"Vulkan 设备 #{config.NcnnGpuIndex}";
-    public string CurrentOcrText => Config.UseNcnnOcr
-        ? $"ncnn · {SavedNcnnDeviceText(Config)} · PP-OCRv6（固定模型）"
+    public string CurrentOcrText => Config.Ncnn.UseOcr
+        ? $"ncnn · {NcnnSettingsViewModel.SavedNcnnDeviceText(Config.Ncnn)} · PP-OCRv6（固定模型）"
         : _runtime.Current.OcrDescription;
-    public string CurrentYoloText => Config.UseNcnnYolo
-        ? $"ncnn · {SavedNcnnDeviceText(Config)}"
-        : _runtime.Current.Description;
-    /// <summary>已保存的全局后端摘要，用于顶部切换卡片与底部选择说明。</summary>
-    public string SavedBackendText => Config.PreferredBackend == InferenceBackend.Ncnn
-        ? $"ncnn · {SavedNcnnDeviceText(Config)} · ONNX Runtime 侧 {Config.InferenceDevice}"
-        : $"ONNX Runtime · {Config.InferenceDevice}";
     public string CurrentValidationText => _runtime.Current.Engine == InferenceDeviceType.Cpu
         ? "内置 CPU · 无需额外验证"
         : _runtime.IsCurrentValidated ? "模型兼容性检查通过" : "已生效 · 尚未完成模型兼容性检查";
-    private HardwareAccelerationConfig Config => _configService.Get().HardwareAccelerationConfig;
+    internal HardwareAccelerationConfig Config => _configService.Get().HardwareAccelerationConfig;
     public bool HasPendingChanges => _runtime.HasPendingRestart;
     public string PendingText
     {
@@ -131,10 +97,10 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
             var savedId = Config.GetEngineSettings(Config.InferenceDevice).DeviceId;
             var device = card.Devices.FirstOrDefault(d => d.Id == savedId)?.Name ?? savedId;
             var onnx = $"{card.Name} · {device}";
-            return Config.PreferredBackend == InferenceBackend.Ncnn
-                ? $"ncnn · {SavedNcnnDeviceText(Config)} · ONNX Runtime 侧 {onnx}"
-                : Config.UseNcnnOcr || Config.UseNcnnYolo
-                    ? $"{onnx} · OCR {(Config.UseNcnnOcr ? "ncnn" : "ONNX Runtime")} / YOLO {(Config.UseNcnnYolo ? "ncnn" : "ONNX Runtime")}"
+            return Config.Ncnn.PreferredBackend == InferenceBackend.Ncnn
+                ? $"ncnn · {NcnnSettingsViewModel.SavedNcnnDeviceText(Config.Ncnn)} · ONNX Runtime 侧 {onnx}"
+                : Config.Ncnn.UseOcr || Config.Ncnn.UseYolo
+                    ? $"{onnx} · OCR {(Config.Ncnn.UseOcr ? "ncnn" : "ONNX Runtime")} / YOLO {(Config.Ncnn.UseYolo ? "ncnn" : "ONNX Runtime")}"
                     : onnx;
         }
     }
@@ -150,9 +116,7 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
     public string ApplyButtonText => HasPendingChanges && !HasDraftChanges ? "立即重启" : "应用并重启";
     public string SelectionText => SelectedEngine == null
         ? "请选择推理引擎"
-        : IsNcnnBackend
-            ? $"ncnn · {NcnnDeviceText}"
-            : $"{SelectedEngine.Name} · {SelectedEngine.SelectedDevice?.Name ?? "尚无可用设备"}";
+        : $"{SelectedEngine.Name} · {SelectedEngine.SelectedDevice?.Name ?? "尚无可用设备"}";
     public string ApplyHint => IsBusy ? "请等待当前操作结束"
         : SelectedEngine == null ? "点击卡片选择引擎"
         : !SelectedEngine.IsInstalled || SelectedEngine.SelectedDevice == null ? SelectedEngine.ApplyBlockReason
@@ -166,10 +130,6 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
     public InferenceBenchmarkResult? TreeResult => Results.FirstOrDefault(r => r.Scene == "古树检测");
     public bool HasOcrResult => OcrResult != null;
     public bool HasTreeResult => TreeResult != null;
-    /// <summary>设置页草稿——ncnn 开关、GPU 索引、线程数与全局后端一起参与“尚未应用”判断。</summary>
-    private NcnnBackendSettings DraftNcnn =>
-        NcnnSettings.BuildSettings(SelectedBackend, UseNcnnOcr, UseNcnnYolo);
-    private bool HasNcnnDraftChanges => !DraftNcnn.Normalize().Equals(NcnnBackendSettings.FromConfig(Config));
     private bool HasDraftChanges
     {
         get
@@ -179,7 +139,7 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
             {
                 var saved = Config.GetEngineSettings(Config.InferenceDevice);
                 return SelectedEngine.Engine != Config.InferenceDevice || SelectedEngine.SelectedDevice.Id != saved.DeviceId
-                    || ForceCpuOcr != Config.CpuOcr || HasNcnnDraftChanges
+                    || ForceCpuOcr != Config.CpuOcr || NcnnSettings.HasDraftChanges
                     || OpenCvThreads != Config.OpenCvThreads || OpenCvIdleSleep != Config.OpenCvIdleSleep
                     || CpuThreads != Config.Cpu.CpuThreads
                     || PaddleOcrCpu.ToOptions() != Config.PaddleOcrCpu.ToOptions()
@@ -187,7 +147,7 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
             }
             var current = _runtime.Current;
             return SelectedEngine.Engine != current.Engine || SelectedEngine.SelectedDevice.Id != current.Device.Id
-                || ForceCpuOcr != current.CpuOcr || HasNcnnDraftChanges
+                || ForceCpuOcr != current.CpuOcr || NcnnSettings.HasDraftChanges
                 || OpenCvThreads != Config.OpenCvThreads || OpenCvIdleSleep != Config.OpenCvIdleSleep
                 || CpuThreads != current.CpuThreads
                 || PaddleOcrCpu.ToOptions() != current.PaddleOcrCpu
@@ -199,15 +159,10 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
     public bool CanBenchmarkTree => CanBenchmark && HasTreeImage;
     public bool CanInteract => !IsBusy;
     /// <summary>OCR 走 ncnn 时，「OCR 使用 CPU」及其线程策略不参与生效路径。</summary>
-    public bool IsOcrCpuSwitchEnabled => CanInteract && !UseNcnnOcr;
+    public bool IsOcrCpuSwitchEnabled => CanInteract && !NcnnSettings.UseNcnnOcr;
 
     [ObservableProperty] private InferenceEngineCardViewModel? _selectedEngine;
-    /// <summary>引擎设置 Tab 的选中索引：顶部切换全局引擎时跟随跳到对应引擎的设置页（反向不联动引擎选择）。</summary>
-    [ObservableProperty] private int _selectedTabIndex;
     [ObservableProperty] private bool _forceCpuOcr;
-    [ObservableProperty] private bool _useNcnnOcr;
-    [ObservableProperty] private bool _useNcnnYolo;
-    [ObservableProperty] private int _ncnnGpuIndex;
     [ObservableProperty] private int _openCvThreads;
     [ObservableProperty] private bool _openCvIdleSleep;
     [ObservableProperty] private int _cpuThreads;
@@ -233,12 +188,9 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         _leases = leases;
         _interaction = interaction;
         _forceCpuOcr = Config.CpuOcr;
-        _useNcnnOcr = Config.UseNcnnOcr;
-        _useNcnnYolo = Config.UseNcnnYolo;
-        _selectedBackend = Config.PreferredBackend;
-        // ncnn 的全部设置（三套调优、计算模式、设备与详情、产物自检）都在独立子 ViewModel 里，
-        // 本页只保留全局意图与两个用途开关，通过 BuildSettings 取草稿。
-        NcnnSettings = new NcnnSettingsViewModel(NcnnBackendSettings.FromConfig(Config));
+        // ncnn 的全部设置（引擎分配、三套调优、计算模式、设备与详情、产物自检）都在独立子 ViewModel 里，
+        // 本页通过 BuildDraft 取草稿并在 Apply 时一并保存。
+        NcnnSettings = new NcnnSettingsViewModel(Config.Ncnn, this);
         NcnnSettings.Changed += NcnnSettingsChanged;
         _openCvThreads = Config.OpenCvThreads;
         _openCvIdleSleep = Config.OpenCvIdleSleep;
@@ -248,8 +200,6 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         PaddleOcrCpu.PropertyChanged += OcrCpuSettingsChanged;
         CpuThreadChoices = Enumerable.Range(0, Environment.ProcessorCount + 1)
             .Select(i => new InferenceThreadChoice(i, i == 0 ? "自动（ORT 默认）" : i.ToString())).ToArray();
-        BackendOptions.Add(new InferenceBackendOptionViewModel(InferenceBackend.Ncnn) { IsSelected = _selectedBackend == InferenceBackend.Ncnn });
-        BackendOptions.Add(new InferenceBackendOptionViewModel(InferenceBackend.Onnx) { IsSelected = _selectedBackend == InferenceBackend.Onnx });
         foreach (var engine in Enum.GetValues<InferenceDeviceType>().Where(engine => engine.IsSelectable()))
         {
             var card = new InferenceEngineCardViewModel(engine, Config.GetEngineSettings(engine));
@@ -263,6 +213,9 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         _taskStatusTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(500), DispatcherPriority.Background,
             (_, _) => RefreshAvailability(), Dispatcher.CurrentDispatcher);
         _runtime.SettingsChanged += RuntimeSettingsChanged;
+        // 已保存的后端就是 ncnn 时，打开页面即激活探测（设备枚举异步执行，不阻塞 UI）；
+        // ONNX 用户则保持懒激活，由顶部切换到 ncnn 时触发。
+        if (NcnnSettings.IsNcnnBackend) NcnnSettings.Activate();
     }
 
     private void CardChanged(object? sender, PropertyChangedEventArgs e)
@@ -286,22 +239,6 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
     }
     partial void OnForceCpuOcrChanged(bool value)
     {
-        RefreshAvailability();
-    }
-    partial void OnUseNcnnOcrChanged(bool value) => RefreshAvailability();
-    partial void OnUseNcnnYoloChanged(bool value) => RefreshAvailability();
-    partial void OnSelectedBackendChanged(InferenceBackend value)
-    {
-        foreach (var option in BackendOptions) option.IsSelected = option.Backend == value;
-        // 全局切换把两个用途开关重置为该引擎默认值，高级区再单独覆盖。
-        UseNcnnOcr = value == InferenceBackend.Ncnn;
-        UseNcnnYolo = value == InferenceBackend.Ncnn;
-        OnPropertyChanged(nameof(IsNcnnBackend)); OnPropertyChanged(nameof(IsOnnxBackend));
-        OnPropertyChanged(nameof(OcrOverrideHint)); OnPropertyChanged(nameof(YoloOverrideHint));
-        // 引擎分配切换后跳到对应引擎的设置 Tab，用户不必再手动找。
-        SelectedTabIndex = value == InferenceBackend.Ncnn ? 1 : 0;
-        // 切到 ncnn 才探测资产与设备，避免 ONNX 用户承担 Vulkan 初始化开销。
-        if (value == InferenceBackend.Ncnn) NcnnSettings.ReloadAssets();
         RefreshAvailability();
     }
     partial void OnOpenCvThreadsChanged(int value)
@@ -372,35 +309,12 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         OnPropertyChanged(nameof(ApplyHint)); OnPropertyChanged(nameof(ApplyButtonText)); OnPropertyChanged(nameof(SelectionText));
         OnPropertyChanged(nameof(BenchmarkHint));
         OnPropertyChanged(nameof(OcrCpuPreview)); OnPropertyChanged(nameof(OcrCpuApplicability));
-        OnPropertyChanged(nameof(OcrTargetText)); OnPropertyChanged(nameof(YoloTargetText));
-        OnPropertyChanged(nameof(EffectiveCombinationText)); OnPropertyChanged(nameof(OnnxTargetName));
-        OnPropertyChanged(nameof(CurrentOcrText)); OnPropertyChanged(nameof(CurrentYoloText));
-        OnPropertyChanged(nameof(SavedBackendText)); OnPropertyChanged(nameof(PendingText));
+        OnPropertyChanged(nameof(CurrentOcrText)); OnPropertyChanged(nameof(PendingText));
         OnPropertyChanged(nameof(IsOcrCpuSwitchEnabled));
-        // 子 ViewModel 自行刷新设备与详情（内部有索引缓存），页面只同步「是否可交互」；
-        // IsActive 由用户进入 ncnn Tab（Activate）置位，不随全局引擎选择翻转。
+        // 子 ViewModel 自行刷新设备与详情（内部有索引缓存）并同步顶部后端切换卡片状态；
+        // IsActive 由顶部切换到 ncnn（Activate）置位，不随草稿回退翻转。
         NcnnSettings.CanInteract = CanInteract;
         NcnnSettings.Refresh();
-        RefreshBackendOptions();
-    }
-
-    /// <summary>顶部引擎卡片的当前/待重启/缺失状态。</summary>
-    private void RefreshBackendOptions()
-    {
-        var pending = _runtime.HasPendingRestart;
-        foreach (var option in BackendOptions)
-        {
-            option.IsCurrent = option.Backend == Config.PreferredBackend;
-            option.IsBlocked = option.Backend == InferenceBackend.Ncnn && !NcnnShimReady;
-            option.StatusText = option.Backend switch
-            {
-                // 设备详情可用时把能力摘要一并显示（FP16 / INT8 / ReBAR），否则只显示设备与产物状态。
-                InferenceBackend.Ncnn => NcnnSettings.CardSummary + (option.IsCurrent && pending ? " · 待重启" : ""),
-                _ => option.IsCurrent
-                    ? (pending ? $"{Config.InferenceDevice} · 待重启" : $"{Config.InferenceDevice} · 当前使用")
-                    : $"{SelectedEngine?.Name ?? Config.InferenceDevice.ToString()}"
-            };
-        }
     }
 
     [RelayCommand]
@@ -408,17 +322,6 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         => await ThemedMessageBox.ShowAsync($"{card.StatusText}\n\n{card.Details}\n\n{card.DeviceMessage}",
             $"{card.Name} · 运行库信息", MessageBoxButton.OK,
             card.HasFailure ? ThemedMessageBox.MessageBoxIcon.Warning : ThemedMessageBox.MessageBoxIcon.Information);
-
-    /// <summary>
-    ///     用户切到 ncnn Tab（SelectedIndex=1）：激活子页面并按需探测资产、枚举 Vulkan 设备。
-    ///     ncnn 的配置独立于全局引擎选择——全局仍是 ONNX Runtime 时同样可以配置设备与参数。
-    ///     走属性变化而不是 TabControl 的 SelectionChanged 事件：后者是冒泡路由事件，
-    ///     会被内层 ComboBox 的选择变化触发，曾导致选择设备时被误判为切 Tab 而清空设备列表。
-    /// </summary>
-    partial void OnSelectedTabIndexChanged(int value)
-    {
-        if (value == 1) NcnnSettings.Activate();
-    }
 
     [RelayCommand]
     private async Task ShowErrorAsync() => await ThemedMessageBox.ShowAsync(ErrorDetails, "操作详情", MessageBoxButton.OK, ThemedMessageBox.MessageBoxIcon.Error);
@@ -429,8 +332,8 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
     private async Task RefreshCoreAsync(CancellationToken token, InferenceEngineCardViewModel? updatedCard = null)
     {
         ProgressText = "正在检测运行库和设备…";
-        // ncnn 资产探测交给子 ViewModel；仅当用户激活过 ncnn 配置（打开过 ncnn Tab）时才重新枚举 Vulkan 设备。
-        NcnnSettings.ReloadAssets(NcnnSettings.IsActive);
+        // ncnn 资产探测交给子 ViewModel；后端已选 ncnn（或激活过 ncnn 配置）时才重新枚举 Vulkan 设备。
+        NcnnSettings.ReloadAssets(NcnnSettings.IsActive || NcnnSettings.IsNcnnBackend);
         // 下载完成只刷新变更的引擎，避免其他运行库的探测拖住“应用并重启”。手动检测优先处理所选卡片。
         var cards = updatedCard != null ? new[] { updatedCard } : Engines.OrderByDescending(card => card == SelectedEngine).ToArray();
         foreach (var card in cards)
@@ -497,7 +400,7 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
             if (HasDraftChanges)
             {
                 _runtime.Apply(SelectedEngine.Engine, SelectedEngine.Settings, ForceCpuOcr, CpuThreads,
-                    PaddleOcrCpu.ToOptions(), DraftNcnn.Normalize());
+                    PaddleOcrCpu.ToOptions(), NcnnSettings.BuildDraft().Normalize());
                 // 保存成功才把草稿标记为基线，失败时保留“尚未应用”状态供用户重试。
                 NcnnSettings.AcceptBaseline();
             }
@@ -522,9 +425,8 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         if (IsBusy) return;
         SelectedEngine = Engines.First(card => card.IsCpu);
         ForceCpuOcr = true; CpuThreads = 0;
-        // 恢复默认同时退出 ncnn，避免残留的用途开关在重启后继续走 ncnn；
+        // 恢复默认同时退出 ncnn（引擎分配与用途开关一起回出厂），避免残留的开关在重启后继续走 ncnn；
         // 计算模式与三套调优一起回到出厂值，避免下次启用时残留上一台设备的设置。
-        SelectedBackend = InferenceBackend.Onnx;
         NcnnSettings.ResetToDefault();
         var defaults = new PaddleOcrCpuOptions().Normalize();
         PaddleOcrCpu.Mode = defaults.Mode;

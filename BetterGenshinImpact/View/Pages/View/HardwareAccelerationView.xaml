@@ -2,7 +2,6 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
-             xmlns:config="clr-namespace:BetterGenshinImpact.Core.Config"
              xmlns:onnx="clr-namespace:BetterGenshinImpact.Core.Recognition.ONNX"
              xmlns:views="clr-namespace:BetterGenshinImpact.View.Pages.View"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
@@ -29,8 +28,7 @@
                 </Expander>
             </StackPanel>
         </DataTemplate>
-
-        <!-- 顶部「引擎分配」紧凑卡片：单行高度，选中态与 ONNX 设备卡片保持同一视觉语言 -->
+        <!-- 顶部「推理后端」二选一卡片：切换 ONNX Runtime 与 ncnn，各自设置区在下方独立显示 -->
         <Style x:Key="BackendCardStyle" TargetType="ListBoxItem">
             <Setter Property="Width" Value="336" />
             <Setter Property="Margin" Value="0,0,12,8" />
@@ -75,26 +73,26 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <ui:TitleBar Title="推理引擎设置">
             <ui:TitleBar.Icon><ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" /></ui:TitleBar.Icon>
         </ui:TitleBar>
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Margin="24,4,24,24">
-                <!-- 一、引擎分配：全局默认 + 每用途覆盖，两层呈现为一个紧凑区块 -->
-                <DockPanel Margin="0,8,0,4">
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="24,12,24,24">
+                <DockPanel Margin="0,12,0,4">
                     <ui:Button DockPanel.Dock="Right" Content="重新检测" Appearance="Transparent" Command="{Binding RefreshCommand}" IsEnabled="{Binding CanInteract}" />
-                    <TextBlock Text="引擎分配" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <TextBlock Text="推理后端" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
                 </DockPanel>
-                <TextBlock Text="选择全局默认引擎，并为 OCR 与 YOLO 单独决定是否使用 ncnn；切换只改草稿，点击底部「应用并重启」后生效。"
-                           TextWrapping="Wrap" Margin="0,0,0,10" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                <ListBox ItemsSource="{Binding BackendOptions}" SelectedValue="{Binding SelectedBackend, Mode=TwoWay}"
+                <TextBlock Text="选择推理后端，两侧设置互相独立；切换只改草稿，点击底部「应用并重启」后生效。"
+                           TextWrapping="Wrap" Margin="0,0,0,10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <ListBox ItemsSource="{Binding NcnnSettings.BackendOptions}" SelectedValue="{Binding NcnnSettings.SelectedBackend, Mode=TwoWay}"
                          SelectedValuePath="Backend" IsEnabled="{Binding CanInteract}"
                          Background="Transparent" BorderThickness="0" Padding="0"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                         ScrollViewer.CanContentScroll="False" AutomationProperties.Name="推理引擎选择"
+                         ScrollViewer.CanContentScroll="False" AutomationProperties.Name="推理后端选择"
                          ItemContainerStyle="{StaticResource BackendCardStyle}">
                     <ListBox.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ListBox.ItemsPanel>
                     <ListBox.ItemTemplate>
@@ -130,58 +128,169 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
 
-                <!-- 用途覆盖：平铺两行，不再折叠 -->
-                <StackPanel IsEnabled="{Binding CanInteract}" Margin="2,6,0,0">
-                    <DockPanel>
-                        <ui:ToggleSwitch DockPanel.Dock="Right" IsChecked="{Binding UseNcnnOcr, Mode=TwoWay}"
-                                         Margin="16,0,0,0" VerticalAlignment="Center" AutomationProperties.Name="OCR 使用 ncnn" />
-                        <StackPanel>
-                            <TextBlock Text="OCR 文本检测与识别（Det + Rec）使用 ncnn" FontWeight="SemiBold" FontSize="12" />
-                            <TextBlock Text="{Binding OcrOverrideHint}" TextWrapping="Wrap" Margin="0,2,0,0" FontSize="11"
-                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                        </StackPanel>
-                    </DockPanel>
-                    <DockPanel Margin="0,10,0,0">
-                        <ui:ToggleSwitch DockPanel.Dock="Right" IsChecked="{Binding UseNcnnYolo, Mode=TwoWay}"
-                                         Margin="16,0,0,0" VerticalAlignment="Center" AutomationProperties.Name="YOLO 使用 ncnn" />
-                        <StackPanel>
-                            <TextBlock Text="YOLO 使用 ncnn" FontWeight="SemiBold" FontSize="12" />
-                            <TextBlock Text="{Binding YoloOverrideHint}" TextWrapping="Wrap" Margin="0,2,0,0" FontSize="11"
-                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                        </StackPanel>
-                    </DockPanel>
-                </StackPanel>
-                <Border Padding="12,8" CornerRadius="8" Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}" Margin="0,10,0,0">
-                    <DockPanel>
-                        <TextBlock Text="已保存：" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                        <TextBlock Text="{Binding SavedBackendText}" FontSize="12" FontWeight="SemiBold" />
-                        <TextBlock Text="{Binding EffectiveCombinationText}" FontSize="12" Margin="24,0,0,0"
-                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextTrimming="CharacterEllipsis" />
-                    </DockPanel>
+                <!-- ONNX Runtime 侧设置：仅在后端切换选中 ONNX Runtime 时显示 -->
+                <StackPanel Visibility="{Binding NcnnSettings.IsOnnxBackend, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <DockPanel Margin="0,8,0,4">
+                    <TextBlock Text="执行引擎" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                </DockPanel>
+                <TextBlock Text="点击卡片选择执行设备，再直接调整该引擎的设备和设置。应用并重启后生效。" TextWrapping="Wrap" Margin="0,0,0,14" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <ListBox ItemsSource="{Binding Engines}" SelectedItem="{Binding SelectedEngine, Mode=TwoWay}" IsEnabled="{Binding CanInteract}"
+                         Background="Transparent" BorderThickness="0" Padding="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="False" AutomationProperties.Name="推理引擎选择">
+                    <ListBox.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ListBox.ItemsPanel>
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Width" Value="300" />
+                            <Setter Property="Margin" Value="0,0,12,12" />
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                            <Setter Property="AutomationProperties.Name" Value="{Binding Name}" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Border x:Name="Card" CornerRadius="10" BorderThickness="2" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
+                                            <Grid>
+                                                <Border x:Name="SelectionFill" Background="{DynamicResource SystemAccentColorPrimaryBrush}" CornerRadius="8" Opacity="0.07" Visibility="Collapsed" />
+                                                <ContentPresenter Margin="16" HorizontalAlignment="Stretch" />
+                                            </Grid>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" /></Trigger>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                                                <Setter TargetName="SelectionFill" Property="Visibility" Value="Visible" />
+                                            </Trigger>
+                                            <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" /></Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel>
+                                <DockPanel>
+                                    <Grid DockPanel.Dock="Right" Width="20" Height="20" VerticalAlignment="Center">
+                                        <Ellipse Stroke="{DynamicResource ControlStrokeColorDefaultBrush}" StrokeThickness="1.5" />
+                                        <Ellipse Fill="{DynamicResource SystemAccentColorPrimaryBrush}" Margin="5" Visibility="{Binding IsSelected, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    </Grid>
+                                    <ui:FontIcon FontSize="24" Margin="0,0,10,0" VerticalAlignment="Center">
+                                        <ui:FontIcon.Style>
+                                            <Style TargetType="ui:FontIcon" BasedOn="{StaticResource FaFontIconStyleForOneDragon}">
+                                                <Setter Property="Glyph" Value="&#xf2db;" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Engine}" Value="{x:Static onnx:InferenceDeviceType.DirectML}"><Setter Property="Glyph" Value="&#xe1ec;" /></DataTrigger>
+                                                    <DataTrigger Binding="{Binding Engine}" Value="{x:Static onnx:InferenceDeviceType.OpenVINO}"><Setter Property="Glyph" Value="&#xe1ec;" /></DataTrigger>
+                                                    <DataTrigger Binding="{Binding Engine}" Value="{x:Static onnx:InferenceDeviceType.CUDA}"><Setter Property="Glyph" Value="&#xe1ec;" /></DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ui:FontIcon.Style>
+                                    </ui:FontIcon>
+                                    <TextBlock Text="{Binding Name}" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                </DockPanel>
+                                <WrapPanel Height="28" Margin="0,8,0,0">
+                                    <Border CornerRadius="10" BorderThickness="1" BorderBrush="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                            Background="{DynamicResource ControlFillColorSecondaryBrush}" Padding="8,2" Margin="0,0,6,0"
+                                            Visibility="{Binding IsRecommended, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <TextBlock Text="Intel 设备推荐" FontSize="11" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                                    </Border>
+                                    <Border CornerRadius="10" BorderThickness="1" BorderBrush="{DynamicResource SystemFillColorSuccessBrush}"
+                                            Background="{DynamicResource ControlFillColorSecondaryBrush}" Padding="8,2"
+                                            Visibility="{Binding IsCurrent, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <TextBlock Text="当前使用" FontSize="11" Foreground="{DynamicResource SystemFillColorSuccessBrush}" />
+                                    </Border>
+                                </WrapPanel>
+                                <TextBlock Text="{Binding Description}" TextWrapping="Wrap" MinHeight="40" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                <DockPanel Margin="0,12,0,10">
+                                    <ui:Button DockPanel.Dock="Right" Content="详情" Appearance="Transparent" Padding="6,2" FontSize="12" VerticalAlignment="Center"
+                                               Visibility="{Binding HasDetails, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                               Command="{Binding DataContext.ShowEngineDetailsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                    <Ellipse Width="7" Height="7" Margin="0,0,6,0" VerticalAlignment="Center">
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse">
+                                                <Setter Property="Fill" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsInstalled}" Value="True"><Setter Property="Fill" Value="{DynamicResource SystemFillColorSuccessBrush}" /></DataTrigger>
+                                                    <DataTrigger Binding="{Binding HasFailure}" Value="True"><Setter Property="Fill" Value="{DynamicResource SystemFillColorCriticalBrush}" /></DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+                                    <TextBlock Text="{Binding StatusText}" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                </DockPanel>
+                                <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" Padding="0,12,0,0">
+                                    <StackPanel>
+                                        <TextBlock Text="执行设备" FontSize="12" Margin="0,0,0,6" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                        <ComboBox ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}" DisplayMemberPath="Name" HorizontalAlignment="Stretch"
+                                                  IsEnabled="{Binding IsInstalled}" ToolTip="{Binding SelectedDevice.Name}" AutomationProperties.Name="执行设备" />
+                                        <TextBlock Text="{Binding DeviceMessage}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" MaxHeight="34" ToolTip="{Binding DeviceMessage}" />
+                                        <ui:ToggleSwitch Margin="0,12,0,0" Content="启用模型缓存" IsChecked="{Binding Settings.EnableModelCache, Mode=TwoWay}" IsEnabled="{Binding IsInstalled}"
+                                                         ToolTip="缩短后续模型加载时间，缓存位置由程序管理。" Visibility="{Binding SupportsCache, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    </StackPanel>
+                                </Border>
+                                <ui:Button Content="下载运行库" HorizontalAlignment="Stretch" Margin="0,14,0,0"
+                                           Visibility="{Binding CanDownload, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                           Command="{Binding DataContext.DownloadRuntimeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                <ui:Button Content="补齐配套依赖" HorizontalAlignment="Stretch" Margin="0,14,0,0"
+                                           Visibility="{Binding CanCompleteDependencies, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                           Command="{Binding DataContext.CompleteDependenciesCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <Border Padding="16" CornerRadius="10" BorderThickness="1" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" Margin="0,12,0,0">
+                    <StackPanel>
+                        <DockPanel>
+                            <ui:ToggleSwitch DockPanel.Dock="Right" IsChecked="{Binding ForceCpuOcr, Mode=TwoWay}" IsEnabled="{Binding IsOcrCpuSwitchEnabled}"
+                                             Margin="16,0,0,0" VerticalAlignment="Center" AutomationProperties.Name="强制 OCR 使用 CPU" />
+                            <StackPanel>
+                                <TextBlock Text="OCR 使用 CPU" FontWeight="SemiBold" />
+                                <TextBlock Text="推荐开启。关闭后 OCR 跟随所选推理引擎，应用并重启后生效。" TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                        </DockPanel>
+                        <Separator Margin="0,14,0,12" BorderThickness="0,1,0,0" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="220" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="通用 CPU 推理线程数" FontWeight="SemiBold" />
+                                <TextBlock Text="供 CPU 模型和“跟随全局设置”的 OCR 使用；0 表示交给 ONNX Runtime 自动选择。"
+                                           TextWrapping="Wrap" Margin="0,4,20,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                            <ComboBox Grid.Column="1" ItemsSource="{Binding CpuThreadChoices}" DisplayMemberPath="Name" SelectedValuePath="Count"
+                                      SelectedValue="{Binding CpuThreads, Mode=TwoWay}" IsEnabled="{Binding CanInteract}" VerticalAlignment="Center"
+                                      AutomationProperties.Name="通用 CPU 推理线程数" />
+                        </Grid>
+                    </StackPanel>
                 </Border>
-
-                <!-- 二、引擎设置 Tab：ONNX Runtime 与 ncnn 完全隔离。
-                     ncnn Tab 的按需激活走 SelectedTabIndex 属性变化（OnSelectedTabIndexChanged），
-                     不监听 SelectionChanged：该路由事件会被内层 ComboBox 冒泡触发，导致选择设备时被误判为切 Tab。 -->
-                <TabControl Margin="0,16,0,0" SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}"
-                            AutomationProperties.Name="推理引擎设置分类">
-
-                    <!-- Tab 1：ONNX Runtime 的全部设置 -->
-                    <TabItem Header="ONNX Runtime">
-                        <StackPanel Margin="4,12,4,0">
-                            <DockPanel Margin="0,0,0,4">
-                                <TextBlock Text="ONNX Runtime 执行设备" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
-                            </DockPanel>
-                            <TextBlock Text="点击卡片选择执行设备，再直接调整该引擎的设备与缓存设置；找不到可用设备时可下载运行库。"
-                                       TextWrapping="Wrap" Margin="0,0,0,12" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                            <ListBox ItemsSource="{Binding Engines}" SelectedItem="{Binding SelectedEngine, Mode=TwoWay}" IsEnabled="{Binding CanInteract}"
-                                     Background="Transparent" BorderThickness="0" Padding="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                     ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="False" AutomationProperties.Name="ONNX 执行设备">
+                <ui:CardExpander Margin="0,12,0,0" ContentPadding="0"
+                                 IsExpanded="{Binding IsOcrAdvancedExpanded, Mode=TwoWay}">
+                    <ui:CardExpander.Header>
+                        <StackPanel>
+                            <TextBlock Text="高级 OCR CPU 线程策略" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding OcrCpuPreview}" TextWrapping="Wrap" Margin="0,3,24,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                    </ui:CardExpander.Header>
+                    <StackPanel IsEnabled="{Binding CanInteract}">
+                        <Separator BorderThickness="0,1,0,0" />
+                        <StackPanel Margin="16">
+                            <TextBlock Text="选择配置方案" FontWeight="SemiBold" />
+                            <TextBlock Text="参数只会在应用并重启后生效；保存、切换方案和重启均不会自动执行性能测试。" TextWrapping="Wrap" Margin="0,4,0,12" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            <ListBox ItemsSource="{Binding OcrCpuModeChoices}" SelectedValuePath="Mode"
+                                     SelectedValue="{Binding PaddleOcrCpu.Mode, Mode=TwoWay}" Background="Transparent" BorderThickness="0" Padding="0"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                                     AutomationProperties.Name="OCR CPU 线程策略">
                                 <ListBox.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ListBox.ItemsPanel>
                                 <ListBox.ItemContainerStyle>
                                     <Style TargetType="ListBoxItem">
-                                        <Setter Property="Width" Value="300" />
-                                        <Setter Property="Margin" Value="0,0,12,12" />
+                                        <Setter Property="Width" Value="220" />
+                                        <Setter Property="MinHeight" Value="82" />
+                                        <Setter Property="Margin" Value="0,0,8,8" />
                                         <Setter Property="Padding" Value="0" />
                                         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                                         <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
@@ -189,19 +298,18 @@
                                         <Setter Property="Template">
                                             <Setter.Value>
                                                 <ControlTemplate TargetType="ListBoxItem">
-                                                    <Border x:Name="Card" CornerRadius="10" BorderThickness="2" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
-                                                        <Grid>
-                                                            <Border x:Name="SelectionFill" Background="{DynamicResource SystemAccentColorPrimaryBrush}" CornerRadius="8" Opacity="0.07" Visibility="Collapsed" />
-                                                            <ContentPresenter Margin="16" HorizontalAlignment="Stretch" />
-                                                        </Grid>
+                                                    <Border x:Name="ModeCard" Padding="12" CornerRadius="8" BorderThickness="1"
+                                                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                                            Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
+                                                        <ContentPresenter />
                                                     </Border>
                                                     <ControlTemplate.Triggers>
-                                                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" /></Trigger>
+                                                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ModeCard" Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" /></Trigger>
                                                         <Trigger Property="IsSelected" Value="True">
-                                                            <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
-                                                            <Setter TargetName="SelectionFill" Property="Visibility" Value="Visible" />
+                                                            <Setter TargetName="ModeCard" Property="BorderThickness" Value="2" />
+                                                            <Setter TargetName="ModeCard" Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                                                            <Setter TargetName="ModeCard" Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
                                                         </Trigger>
-                                                        <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" /></Trigger>
                                                     </ControlTemplate.Triggers>
                                                 </ControlTemplate>
                                             </Setter.Value>
@@ -211,244 +319,91 @@
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
                                         <StackPanel>
-                                            <DockPanel>
-                                                <Grid DockPanel.Dock="Right" Width="20" Height="20" VerticalAlignment="Center">
-                                                    <Ellipse Stroke="{DynamicResource ControlStrokeColorDefaultBrush}" StrokeThickness="1.5" />
-                                                    <Ellipse Fill="{DynamicResource SystemAccentColorPrimaryBrush}" Margin="5" Visibility="{Binding IsSelected, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                                </Grid>
-                                                <ui:FontIcon FontSize="24" Margin="0,0,10,0" VerticalAlignment="Center">
-                                                    <ui:FontIcon.Style>
-                                                        <Style TargetType="ui:FontIcon" BasedOn="{StaticResource FaFontIconStyleForOneDragon}">
-                                                            <Setter Property="Glyph" Value="&#xf2db;" />
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding Engine}" Value="{x:Static onnx:InferenceDeviceType.DirectML}"><Setter Property="Glyph" Value="&#xe1ec;" /></DataTrigger>
-                                                                <DataTrigger Binding="{Binding Engine}" Value="{x:Static onnx:InferenceDeviceType.OpenVINO}"><Setter Property="Glyph" Value="&#xe1ec;" /></DataTrigger>
-                                                                <DataTrigger Binding="{Binding Engine}" Value="{x:Static onnx:InferenceDeviceType.CUDA}"><Setter Property="Glyph" Value="&#xe1ec;" /></DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </ui:FontIcon.Style>
-                                                </ui:FontIcon>
-                                                <TextBlock Text="{Binding Name}" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                            </DockPanel>
-                                            <WrapPanel Height="28" Margin="0,8,0,0">
-                                                <Border CornerRadius="10" BorderThickness="1" BorderBrush="{DynamicResource SystemAccentColorPrimaryBrush}"
-                                                        Background="{DynamicResource ControlFillColorSecondaryBrush}" Padding="8,2" Margin="0,0,6,0"
-                                                        Visibility="{Binding IsRecommended, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                    <TextBlock Text="Intel 设备推荐" FontSize="11" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" />
-                                                </Border>
-                                                <Border CornerRadius="10" BorderThickness="1" BorderBrush="{DynamicResource SystemFillColorSuccessBrush}"
-                                                        Background="{DynamicResource ControlFillColorSecondaryBrush}" Padding="8,2"
-                                                        Visibility="{Binding IsCurrent, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                                    <TextBlock Text="当前使用" FontSize="11" Foreground="{DynamicResource SystemFillColorSuccessBrush}" />
-                                                </Border>
-                                            </WrapPanel>
-                                            <TextBlock Text="{Binding Description}" TextWrapping="Wrap" MinHeight="40" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                            <DockPanel Margin="0,12,0,10">
-                                                <ui:Button DockPanel.Dock="Right" Content="详情" Appearance="Transparent" Padding="6,2" FontSize="12" VerticalAlignment="Center"
-                                                           Visibility="{Binding HasDetails, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                           Command="{Binding DataContext.ShowEngineDetailsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
-                                                <Ellipse Width="7" Height="7" Margin="0,0,6,0" VerticalAlignment="Center">
-                                                    <Ellipse.Style>
-                                                        <Style TargetType="Ellipse">
-                                                            <Setter Property="Fill" Value="{DynamicResource SystemFillColorCautionBrush}" />
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsInstalled}" Value="True"><Setter Property="Fill" Value="{DynamicResource SystemFillColorSuccessBrush}" /></DataTrigger>
-                                                                <DataTrigger Binding="{Binding HasFailure}" Value="True"><Setter Property="Fill" Value="{DynamicResource SystemFillColorCriticalBrush}" /></DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </Ellipse.Style>
-                                                </Ellipse>
-                                                <TextBlock Text="{Binding StatusText}" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" />
-                                            </DockPanel>
-                                            <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" Padding="0,12,0,0">
-                                                <StackPanel>
-                                                    <TextBlock Text="执行设备" FontSize="12" Margin="0,0,0,6" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                                    <ComboBox ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}" DisplayMemberPath="Name" HorizontalAlignment="Stretch"
-                                                              IsEnabled="{Binding IsInstalled}" ToolTip="{Binding SelectedDevice.Name}" AutomationProperties.Name="执行设备" />
-                                                    <TextBlock Text="{Binding DeviceMessage}" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" MaxHeight="34" ToolTip="{Binding DeviceMessage}" />
-                                                    <ui:ToggleSwitch Margin="0,12,0,0" Content="启用模型缓存" IsChecked="{Binding Settings.EnableModelCache, Mode=TwoWay}" IsEnabled="{Binding IsInstalled}"
-                                                                     ToolTip="缩短后续模型加载时间，缓存位置由程序管理。" Visibility="{Binding SupportsCache, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                                </StackPanel>
-                                            </Border>
-                                            <ui:Button Content="下载运行库" HorizontalAlignment="Stretch" Margin="0,14,0,0"
-                                                       Visibility="{Binding CanDownload, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                       Command="{Binding DataContext.DownloadRuntimeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
-                                            <ui:Button Content="补齐配套依赖" HorizontalAlignment="Stretch" Margin="0,14,0,0"
-                                                       Visibility="{Binding CanCompleteDependencies, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                       Command="{Binding DataContext.CompleteDependenciesCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                            <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Margin="0,4,0,0" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                         </StackPanel>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
 
-                            <!-- CPU 与线程策略：OCR 强制 CPU / 全局 CPU 线程 / OCR 线程策略，单张折叠卡收纳 -->
-                            <ui:CardExpander Margin="0,8,0,0" ContentPadding="0"
-                                             IsExpanded="{Binding IsOcrAdvancedExpanded, Mode=TwoWay}">
-                                <ui:CardExpander.Header>
-                                    <StackPanel>
-                                        <TextBlock Text="CPU 与线程策略" FontWeight="SemiBold" />
-                                        <TextBlock Text="{Binding OcrCpuPreview}" TextWrapping="Wrap" Margin="0,3,24,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                    </StackPanel>
-                                </ui:CardExpander.Header>
-                                <StackPanel IsEnabled="{Binding CanInteract}">
-                                    <Separator BorderThickness="0,1,0,0" />
-                                    <StackPanel Margin="16">
-                                        <DockPanel>
-                                            <ui:ToggleSwitch DockPanel.Dock="Right" IsChecked="{Binding ForceCpuOcr, Mode=TwoWay}"
-                                                             IsEnabled="{Binding IsOcrCpuSwitchEnabled}"
-                                                             Margin="16,0,0,0" VerticalAlignment="Center" AutomationProperties.Name="OCR 使用 CPU" />
-                                            <StackPanel>
-                                                <TextBlock Text="OCR 使用 CPU" FontWeight="SemiBold" FontSize="12" />
-                                                <TextBlock Text="推荐开启。关闭后 OCR 跟随所选 ONNX Runtime 引擎；OCR 走 ncnn 时此开关不生效。" TextWrapping="Wrap" Margin="0,2,0,0" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                            </StackPanel>
-                                        </DockPanel>
-                                        <Grid Margin="0,14,0,0">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="220" />
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel VerticalAlignment="Center">
-                                                <TextBlock Text="CPU 推理线程数" FontWeight="SemiBold" FontSize="12" />
-                                                <TextBlock Text="ONNX Runtime 的 CPU 模型使用的线程数；0 表示交给 ONNX Runtime 自动选择。"
-                                                           TextWrapping="Wrap" Margin="0,2,20,0" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                            </StackPanel>
-                                            <ComboBox Grid.Column="1" ItemsSource="{Binding CpuThreadChoices}" DisplayMemberPath="Name" SelectedValuePath="Count"
-                                                      SelectedValue="{Binding CpuThreads, Mode=TwoWay}" IsEnabled="{Binding CanInteract}" VerticalAlignment="Center"
-                                                      AutomationProperties.Name="CPU 推理线程数" />
-                                        </Grid>
-
-                                        <Separator Margin="0,16,0,14" BorderThickness="0,1,0,0" />
-                                        <TextBlock Text="OCR 线程策略" FontWeight="SemiBold" FontSize="12" />
-                                        <TextBlock Text="{Binding OcrCpuApplicability}" TextWrapping="Wrap" Margin="0,4,0,12" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                        <ListBox ItemsSource="{Binding OcrCpuModeChoices}" SelectedValuePath="Mode"
-                                                 SelectedValue="{Binding PaddleOcrCpu.Mode, Mode=TwoWay}" Background="Transparent" BorderThickness="0" Padding="0"
-                                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                                                 AutomationProperties.Name="OCR CPU 线程策略">
-                                            <ListBox.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ListBox.ItemsPanel>
-                                            <ListBox.ItemContainerStyle>
-                                                <Style TargetType="ListBoxItem">
-                                                    <Setter Property="Width" Value="220" />
-                                                    <Setter Property="MinHeight" Value="82" />
-                                                    <Setter Property="Margin" Value="0,0,8,8" />
-                                                    <Setter Property="Padding" Value="0" />
-                                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
-                                                    <Setter Property="AutomationProperties.Name" Value="{Binding Name}" />
-                                                    <Setter Property="Template">
-                                                        <Setter.Value>
-                                                            <ControlTemplate TargetType="ListBoxItem">
-                                                                <Border x:Name="ModeCard" Padding="12" CornerRadius="8" BorderThickness="1"
-                                                                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                                                                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
-                                                                    <ContentPresenter />
-                                                                </Border>
-                                                                <ControlTemplate.Triggers>
-                                                                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ModeCard" Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" /></Trigger>
-                                                                    <Trigger Property="IsSelected" Value="True">
-                                                                        <Setter TargetName="ModeCard" Property="BorderThickness" Value="2" />
-                                                                        <Setter TargetName="ModeCard" Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
-                                                                        <Setter TargetName="ModeCard" Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
-                                                                    </Trigger>
-                                                                </ControlTemplate.Triggers>
-                                                            </ControlTemplate>
-                                                        </Setter.Value>
-                                                    </Setter>
-                                                </Style>
-                                            </ListBox.ItemContainerStyle>
-                                            <ListBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <StackPanel>
-                                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                                                        <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Margin="0,4,0,0" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                                    </StackPanel>
-                                                </DataTemplate>
-                                            </ListBox.ItemTemplate>
-                                        </ListBox>
-
-                                        <Border Margin="0,4,0,0" Padding="12" CornerRadius="8" Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}">
-                                            <StackPanel>
-                                                <TextBlock Text="方案说明" FontWeight="SemiBold" FontSize="12" />
-                                                <TextBlock Text="{Binding OcrCpuModeHint}" TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                            </StackPanel>
-                                        </Border>
-
-                                        <StackPanel Margin="0,16,0,0" Visibility="{Binding IsOcrCpuCustom, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                            <TextBlock Text="自定义线程设置" FontWeight="SemiBold" />
-                                            <UniformGrid Columns="2" Margin="0,8,0,0">
-                                                <StackPanel Margin="0,0,12,0">
-                                                    <TextBlock Text="文本检测（Det）线程数" FontSize="12" Margin="0,0,0,6" />
-                                                    <ui:NumberBox Value="{Binding PaddleOcrCpu.DetectionThreads, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                  Minimum="0" Maximum="{Binding MaxCpuThreads}" SmallChange="1" ClearButtonEnabled="False" SpinButtonPlacementMode="Inline"
-                                                                  AutomationProperties.Name="文本检测（Det）线程数"
-                                                                  ToolTip="检测模型的 IntraOpNumThreads，包含调用线程。0 表示由 ONNX Runtime 自动选择。" />
-                                                </StackPanel>
-                                                <StackPanel Margin="12,0,0,0">
-                                                    <TextBlock Text="文本识别（Rec）线程数" FontSize="12" Margin="0,0,0,6" />
-                                                    <ui:NumberBox Value="{Binding PaddleOcrCpu.RecognitionThreads, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                                  Minimum="0" Maximum="{Binding MaxCpuThreads}" SmallChange="1" ClearButtonEnabled="False" SpinButtonPlacementMode="Inline"
-                                                                  AutomationProperties.Name="文本识别（Rec）线程数"
-                                                                  ToolTip="识别模型的 IntraOpNumThreads。识别输入较小，通常使用较少线程即可。0 表示自动选择。" />
-                                                </StackPanel>
-                                            </UniformGrid>
-                                            <ui:ToggleSwitch Content="启用模型节点并行" IsChecked="{Binding PaddleOcrCpu.ParallelExecution, Mode=TwoWay}" Margin="0,12,0,0"
-                                                             ToolTip="ExecutionMode：关闭时顺序执行模型节点，开启时允许并行执行。实际收益取决于模型结构。" />
-                                            <StackPanel Margin="0,8,0,0" MaxWidth="360" HorizontalAlignment="Left" IsEnabled="{Binding PaddleOcrCpu.ParallelExecution}">
-                                                <TextBlock Text="模型节点并行线程数" FontSize="12" Margin="0,0,0,6" />
-                                                <ui:NumberBox Value="{Binding PaddleOcrCpu.InterOpThreads, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                              Minimum="0" Maximum="{Binding MaxCpuThreads}" SmallChange="1" ClearButtonEnabled="False" SpinButtonPlacementMode="Inline"
-                                                              AutomationProperties.Name="模型节点并行线程数"
-                                                              ToolTip="InterOpNumThreads：仅在启用节点并行时生效。0 表示由 ONNX Runtime 自动选择。" />
-                                            </StackPanel>
-                                        </StackPanel>
-
-                                        <ui:ToggleSwitch Content="启用低延迟线程等待" IsChecked="{Binding PaddleOcrCpu.AllowSpinning, Mode=TwoWay}" Margin="0,16,0,0"
-                                                         Visibility="{Binding IsOcrCpuConfigured, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                                         ToolTip="对应 ONNX Runtime 线程自旋。开启可降低任务到来时的响应延迟，但等待期间会占用更多 CPU。" />
-                                        <Border Margin="0,16,0,0" Padding="12" CornerRadius="8" BorderThickness="1" BorderBrush="{DynamicResource SystemAccentColorPrimaryBrush}">
-                                            <StackPanel>
-                                                <TextBlock Text="预计生效参数" FontWeight="SemiBold" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" />
-                                                <TextBlock Text="{Binding OcrCpuPreview}" TextWrapping="Wrap" Margin="0,4,0,0" />
-                                                <TextBlock Text="{Binding OcrCpuApplicability}" TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                            </StackPanel>
-                                        </Border>
-                                    </StackPanel>
+                            <Border Margin="0,4,0,0" Padding="12" CornerRadius="8" Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}">
+                                <StackPanel>
+                                    <TextBlock Text="方案说明" FontWeight="SemiBold" FontSize="12" />
+                                    <TextBlock Text="{Binding OcrCpuModeHint}" TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                 </StackPanel>
-                            </ui:CardExpander>
+                            </Border>
+
+                            <StackPanel Margin="0,16,0,0" Visibility="{Binding IsOcrCpuCustom, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <TextBlock Text="自定义线程设置" FontWeight="SemiBold" />
+                                <UniformGrid Columns="2" Margin="0,8,0,0">
+                                    <StackPanel Margin="0,0,12,0">
+                                        <TextBlock Text="文本检测线程数" FontSize="12" Margin="0,0,0,6" />
+                                        <ui:NumberBox Value="{Binding PaddleOcrCpu.DetectionThreads, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                      Minimum="0" Maximum="{Binding MaxCpuThreads}" SmallChange="1" ClearButtonEnabled="False" SpinButtonPlacementMode="Inline"
+                                                      AutomationProperties.Name="文本检测线程数"
+                                                      ToolTip="检测模型的 IntraOpNumThreads，包含调用线程。0 表示由 ONNX Runtime 自动选择。" />
+                                    </StackPanel>
+                                    <StackPanel Margin="12,0,0,0">
+                                        <TextBlock Text="文字识别线程数" FontSize="12" Margin="0,0,0,6" />
+                                        <ui:NumberBox Value="{Binding PaddleOcrCpu.RecognitionThreads, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                      Minimum="0" Maximum="{Binding MaxCpuThreads}" SmallChange="1" ClearButtonEnabled="False" SpinButtonPlacementMode="Inline"
+                                                      AutomationProperties.Name="文字识别线程数"
+                                                      ToolTip="识别模型的 IntraOpNumThreads。识别输入较小，通常使用较少线程即可。0 表示自动选择。" />
+                                    </StackPanel>
+                                </UniformGrid>
+                                <ui:ToggleSwitch Content="启用模型节点并行" IsChecked="{Binding PaddleOcrCpu.ParallelExecution, Mode=TwoWay}" Margin="0,12,0,0"
+                                                 ToolTip="ExecutionMode：关闭时顺序执行模型节点，开启时允许并行执行。实际收益取决于模型结构。" />
+                                <StackPanel Margin="0,8,0,0" MaxWidth="360" HorizontalAlignment="Left" IsEnabled="{Binding PaddleOcrCpu.ParallelExecution}">
+                                    <TextBlock Text="模型节点并行线程数" FontSize="12" Margin="0,0,0,6" />
+                                    <ui:NumberBox Value="{Binding PaddleOcrCpu.InterOpThreads, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                  Minimum="0" Maximum="{Binding MaxCpuThreads}" SmallChange="1" ClearButtonEnabled="False" SpinButtonPlacementMode="Inline"
+                                                  AutomationProperties.Name="模型节点并行线程数"
+                                                  ToolTip="InterOpNumThreads：仅在启用节点并行时生效。0 表示由 ONNX Runtime 自动选择。" />
+                                </StackPanel>
+                            </StackPanel>
+
+                            <ui:ToggleSwitch Content="启用低延迟线程等待" IsChecked="{Binding PaddleOcrCpu.AllowSpinning, Mode=TwoWay}" Margin="0,16,0,0"
+                                             Visibility="{Binding IsOcrCpuConfigured, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                             ToolTip="对应 ONNX Runtime 线程自旋。开启可降低任务到来时的响应延迟，但等待期间会占用更多 CPU。" />
+                            <Border Margin="0,16,0,0" Padding="12" CornerRadius="8" BorderThickness="1" BorderBrush="{DynamicResource SystemAccentColorPrimaryBrush}">
+                                <StackPanel>
+                                    <TextBlock Text="预计生效参数" FontWeight="SemiBold" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                                    <TextBlock Text="{Binding OcrCpuPreview}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                    <TextBlock Text="{Binding OcrCpuApplicability}" TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
-                    </TabItem>
+                    </StackPanel>
+                </ui:CardExpander>
+                </StackPanel>
 
-                    <!-- Tab 2：ncnn 的全部设置（独立 UserControl） -->
-                    <TabItem Header="ncnn">
-                        <views:NcnnSettingsView DataContext="{Binding NcnnSettings}" Margin="4,12,4,0" />
-                    </TabItem>
-                </TabControl>
-
+                <!-- ncnn 侧设置：仅在后端切换选中 ncnn 时显示；切换到 ncnn 即激活资产探测与设备枚举（异步，不卡 UI） -->
+                <StackPanel Visibility="{Binding NcnnSettings.IsNcnnBackend, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <views:NcnnSettingsView DataContext="{Binding NcnnSettings}" Margin="0,4,0,0" />
+                </StackPanel>
                 <Border Margin="0,10,0,0" Padding="12" CornerRadius="8" Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}">
                     <DockPanel>
                         <ui:SymbolIcon Symbol="Info24" FontSize="18" Margin="0,0,8,0" VerticalAlignment="Top" />
                         <TextBlock Text="{Binding ValidationHint}" FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                     </DockPanel>
                 </Border>
-
-                <!-- 性能测试：低频功能，默认折叠 -->
-                <ui:CardExpander Margin="0,12,0,0" ContentPadding="0" Icon="{ui:SymbolIcon Timer24}" IsExpanded="False">
+                <ui:CardExpander Margin="0,20,0,0" ContentPadding="0" Icon="{ui:SymbolIcon Timer24}" IsExpanded="True">
                     <ui:CardExpander.Header>
                         <StackPanel>
                             <TextBlock Text="性能测试" FontWeight="SemiBold" />
-                            <TextBlock Text="{Binding CurrentRuntimeText, StringFormat='ONNX Runtime 测试引擎：{0}'}" TextWrapping="Wrap" Margin="0,3,24,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            <TextBlock Text="{Binding CurrentRuntimeText, StringFormat='当前测试引擎：{0}'}" TextWrapping="Wrap" Margin="0,3,24,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                         </StackPanel>
                     </ui:CardExpander.Header>
                     <StackPanel>
                         <Separator BorderThickness="0,1,0,0" />
                         <StackPanel Margin="20">
-                            <TextBlock Text="测速与业务链路一致：OCR / YOLO 的 ncnn 开关生效时同样走 ncnn，其余走 ONNX Runtime。切换引擎、开启 ncnn 或修改线程策略后，应用并重启才能测试新设置。"
-                                       FontSize="12" TextWrapping="Wrap" Margin="0,5,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            <TextBlock Text="切换引擎或修改 OCR CPU 线程策略后，应用并重启才能测试新设置。" FontSize="12" TextWrapping="Wrap" Margin="0,5,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                             <TextBlock Text="{Binding BenchmarkHint}" TextWrapping="Wrap" FontSize="12" Margin="0,5,0,16" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                             <Grid>
                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="16" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                                 <Border BorderThickness="1" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" CornerRadius="8" Padding="16">
                                     <StackPanel>
-                                        <TextBlock Text="OCR 识别（Det + Rec）" FontSize="16" FontWeight="SemiBold" />
+                                        <TextBlock Text="OCR 文本识别" FontSize="16" FontWeight="SemiBold" />
                                         <TextBlock Text="{Binding CurrentOcrText}" FontSize="12" TextWrapping="Wrap" Margin="0,6,0,12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                         <ui:Button Content="开始 OCR 测速" Command="{Binding BenchmarkOcrCommand}" IsEnabled="{Binding CanBenchmark}" HorizontalAlignment="Left" />
                                         <TextBlock Text="还没有测速结果" FontSize="12" Margin="0,16,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
@@ -459,7 +414,7 @@
                                 </Border>
                                 <Border Grid.Column="2" BorderThickness="1" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" CornerRadius="8" Padding="16">
                                     <StackPanel>
-                                        <TextBlock Text="古树检测（YOLO）" FontSize="16" FontWeight="SemiBold" />
+                                        <TextBlock Text="古树检测" FontSize="16" FontWeight="SemiBold" />
                                         <TextBlock Text="{Binding TreeImageText}" TextWrapping="Wrap" FontSize="12" Margin="0,6,0,12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                         <ui:Button Content="开始古树测速" Command="{Binding BenchmarkTreeCommand}" IsEnabled="{Binding CanBenchmarkTree}" HorizontalAlignment="Left" />
                                         <TextBlock Text="{Binding TreeBenchmarkEmptyText}" TextWrapping="Wrap" FontSize="12" Margin="0,16,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
@@ -472,9 +427,18 @@
                         </StackPanel>
                     </StackPanel>
                 </ui:CardExpander>
+                <ui:DropDownButton Content="更多" Appearance="Transparent" HorizontalAlignment="Left" Margin="0,10,0,0"
+                                   Icon="{ui:SymbolIcon MoreHorizontal24}">
+                    <ui:DropDownButton.Flyout>
+                        <ContextMenu>
+                            <ui:MenuItem Header="打开运行库目录" Command="{Binding OpenRuntimeFolderCommand}" Icon="{ui:SymbolIcon FolderOpen24}" />
+                            <ui:MenuItem Header="打开模型缓存目录" Command="{Binding OpenCacheFolderCommand}" Icon="{ui:SymbolIcon FolderOpen24}" />
+                        </ContextMenu>
+                    </ui:DropDownButton.Flyout>
+                </ui:DropDownButton>
             </StackPanel>
         </ScrollViewer>
-        <Border Grid.Row="2" Padding="24,14" Background="{DynamicResource ApplicationBackgroundBrush}" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+        <Border Grid.Row="3" Padding="24,14" Background="{DynamicResource ApplicationBackgroundBrush}" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
             <StackPanel>
                 <DockPanel Margin="0,0,0,10" Visibility="{Binding HasOperationMessage, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <ui:Button DockPanel.Dock="Right" Content="查看错误" Appearance="Transparent" Padding="8,2" Command="{Binding ShowErrorCommand}" Visibility="{Binding HasError, Converter={StaticResource BooleanToVisibilityConverter}}" />
@@ -482,19 +446,10 @@
                 </DockPanel>
                 <ProgressBar Value="{Binding ProgressValue}" IsIndeterminate="{Binding IsProgressIndeterminate}" Height="3" Margin="0,0,0,12" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
                 <DockPanel>
-                    <ui:DropDownButton DockPanel.Dock="Left" Content="更多" Appearance="Transparent" VerticalAlignment="Center" Margin="0,0,16,0"
-                                       Icon="{ui:SymbolIcon MoreHorizontal24}">
-                        <ui:DropDownButton.Flyout>
-                            <ContextMenu>
-                                <ui:MenuItem Header="打开运行库目录" Command="{Binding OpenRuntimeFolderCommand}" Icon="{ui:SymbolIcon FolderOpen24}" />
-                                <ui:MenuItem Header="打开模型缓存目录" Command="{Binding OpenCacheFolderCommand}" Icon="{ui:SymbolIcon FolderOpen24}" />
-                            </ContextMenu>
-                        </ui:DropDownButton.Flyout>
-                    </ui:DropDownButton>
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="16,0,0,0" VerticalAlignment="Center">
                         <ui:Button Content="取消" Command="{Binding CancelCommand}" Margin="0,0,8,0" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
                         <ui:Button Content="恢复默认并保存" Command="{Binding UseCpuCommand}" IsEnabled="{Binding CanInteract}" Margin="0,0,8,0"
-                                   ToolTip="将推理引擎、ncnn 开关与参数、强制 OCR、全局线程数与 OCR CPU 线程策略恢复为默认设置（CPU 推理）" />
+                                   ToolTip="将推理引擎、ncnn 后端、强制 OCR、全局线程数与 OCR CPU 线程策略恢复为默认设置（CPU 推理）" />
                         <ui:Button Content="{Binding ApplyButtonText}" Appearance="Primary" Command="{Binding ApplyCommand}" IsEnabled="{Binding CanApply}" MinWidth="128" />
                     </StackPanel>
                     <StackPanel>
@@ -505,4 +460,23 @@
             </StackPanel>
         </Border>
     </Grid>
+    <!-- 保留原设置项的源注释，新界面已收敛为引擎卡片和核心设置。 -->
+    <!--  推理设备配置  -->
+    <!-- <TextBlock FontWeight="SemiBold" Text="推理设备配置" /> -->
+    <!--  ONNX Runtime 运行库资源：目录由推理设备类型决定。  -->
+    <!--  Inference Device  -->
+    <!--  缓存管理  -->
+    <!--  CPU OCR  -->
+    <!--  GPU Device  -->
+    <!--  _optimizedModel  -->
+    <!--  CUDA配置  -->
+    <!--  CUDA Device  -->
+    <!--  Auto Append CUDA Path  -->
+    <!--  _additionalPath  -->
+    <!--  TensorRT配置  -->
+    <!--  Enable Cache  -->
+    <!--  Embed Mode  -->
+    <!--  OpenVino配置  -->
+    <!--  OpenVinoDevice  -->
+    <!--  _enableOpenVinoCache  -->
 </UserControl>

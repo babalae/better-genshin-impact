@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
+using System.Runtime.InteropServices;
 using BetterGenshinImpact.Core.Recognition.OCR;
 
 namespace BetterGenshinImpact.Core.Recognition.Ncnn;
@@ -47,18 +49,9 @@ internal static class NcnnRecDecoder
         float score = 0;
         for (var n = 0; n < charCount; ++n)
         {
-            var rowOffset = n * labelCount;
-            var maxVal = float.MinValue;
-            var maxIndex = 0;
-            for (var c = 0; c < labelCount; c++)
-            {
-                var value = data[rowOffset + c];
-                if (value > maxVal)
-                {
-                    maxVal = value;
-                    maxIndex = c;
-                }
-            }
+            // 每个时间步对 labelCount（字典可达上万）求 argmax 是解码的主要成本，
+            // 用两遍 SIMD（先归约最大值再定位首个命中）代替逐元素标量比较。
+            var (maxVal, maxIndex) = ArgMax(data.AsSpan(n * labelCount, labelCount));
 
             if (maxIndex > 0 && !(n > 0 && maxIndex == lastIndex))
             {
@@ -71,6 +64,53 @@ internal static class NcnnRecDecoder
 
         var text = sb.ToString();
         return new OcrRecognizerResult(text, text.Length > 0 ? score / text.Length : 0);
+    }
+
+    /// <summary>
+    ///     行 argmax：第一遍向量化归约最大值，第二遍定位第一个命中槽（与标量版一致，并列取最小索引）。
+    ///     行太短时 SIMD 无收益走标量；NaN 等异常值兜底回标量（logits 正常不含 NaN）。
+    /// </summary>
+    private static (float Max, int Index) ArgMax(ReadOnlySpan<float> row)
+    {
+        var lanes = Vector<float>.Count;
+        if (row.Length < lanes * 2) return ArgMaxScalar(row);
+
+        var vectors = MemoryMarshal.Cast<float, Vector<float>>(row);
+        var maxVector = vectors[0];
+        for (var i = 1; i < vectors.Length; i++) maxVector = Vector.Max(maxVector, vectors[i]);
+
+        var max = maxVector[0];
+        for (var i = 1; i < lanes; i++) max = MathF.Max(max, maxVector[i]);
+        for (var i = vectors.Length * lanes; i < row.Length; i++) max = MathF.Max(max, row[i]);
+
+        var target = new Vector<float>(max);
+        for (var vi = 0; vi < vectors.Length; vi++)
+        {
+            if (!Vector.EqualsAny(vectors[vi], target)) continue;
+            var baseIndex = vi * lanes;
+            for (var c = 0; c < lanes; c++)
+                if (vectors[vi][c] == max) return (max, baseIndex + c);
+        }
+        for (var i = vectors.Length * lanes; i < row.Length; i++)
+            if (row[i] == max) return (max, i);
+
+        // 理论不可达（NaN 等使 Vector.Max 与标量语义分叉时兜底），保持结果确定。
+        return ArgMaxScalar(row);
+    }
+
+    private static (float Max, int Index) ArgMaxScalar(ReadOnlySpan<float> row)
+    {
+        var maxVal = float.MinValue;
+        var maxIndex = 0;
+        for (var c = 0; c < row.Length; c++)
+        {
+            if (row[c] > maxVal)
+            {
+                maxVal = row[c];
+                maxIndex = c;
+            }
+        }
+        return (maxVal, maxIndex);
     }
 
     /// <summary>与 OcrUtils.GetLabelByIndex 同语义；尾部填充类返回空串（v6 输出类比 字典+2 多 0~1 个）。</summary>

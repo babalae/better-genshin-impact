@@ -118,11 +118,11 @@ public sealed class BgiOnnxSessionFactory
     public BgiYoloPredictor CreateYoloPredictor(BgiOnnxModel model)
     {
         // 检测模型是否走 ncnn 由设置页的用途开关决定；开启后产物缺失或创建失败直接抛错，不再静默换 ONNX。
-        // SessionOptions 仍然创建并转交，脚本 API 通过 Predictor 属性访问 ORT 会话时保持可用。
-        var hardware = TaskContext.Instance().Config.HardwareAccelerationConfig;
-        if (hardware.UseNcnnYolo)
+        // 全局配置未初始化（如单元测试）时按关闭处理，SessionOptions 仍然创建并转交，脚本 API 保持可用。
+        var ncnnConfig = NcnnStartup.TryGetActiveConfig();
+        if (ncnnConfig is { UseYolo: true })
         {
-            var ncnnSettings = NcnnBackendSettings.FromConfig(hardware);
+            var ncnnSettings = NcnnBackendSettings.FromConfig(ncnnConfig);
             var ncnnPredictor = NcnnYoloBackend.Create(model, _logger, ncnnSettings);
             var ncnnOptions = CreateSessionOptions(model, EnableCache);
             return new BgiYoloPredictor(model, model.ModalPath, ncnnOptions, ncnnPredictor);

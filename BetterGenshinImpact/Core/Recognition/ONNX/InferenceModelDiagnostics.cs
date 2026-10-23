@@ -173,24 +173,30 @@ public sealed class InferenceModelDiagnostics(
                 if (scene == InferenceBenchmarkScene.Ocr)
                 {
                     var type = ocr.ActiveModelType;
-                    // 测速与业务一致：ncnn 开关开启时强制走 ncnn；创建失败直接抛错让本次测速失败，
-                    // 绝不偷偷测成 ONNX 的数字。
-                    var hardware = TaskContext.Instance().Config.HardwareAccelerationConfig;
-                    var ncnnSettings = NcnnBackendSettings.FromConfig(hardware);
-                    (IOcrDetector Det, IOcrRecognizer Rec)? ncnn =
-                        hardware.UseNcnnOcr ? NcnnOcrBackend.Create(logger, ncnnSettings) : null;
-                    using var service = ncnn is { } ncnnBackend
-                        ? new PaddleOcrService(ncnnBackend, type)
-                        : new PaddleOcrService(factory, type);
-                    using var image = new Mat(ocr.ActiveModelType.PreHeatImagePath);
+                    // 测速与业务共用同一条链路：复用懒加载单例。ncnn 开启的进程里单例必然是 ncnn 后端
+                    // （推理配置随进程固定，ncnn 创建失败会直接抛错而不是静默回退 ONNX），因此绝不会测成
+                    // ONNX 的数字；也不再每次点击都重建 ncnn 后端——ncnn 的着色器缓存挂在 Net 上随 Net
+                    // 销毁，每次重建意味着每次测速都全量重新编译着色器（VTune r021hs 确认的热点）。
+                    // 绝不能 Dispose 这个单例：它属于业务路径，Dispose 会连带销毁所有任务在用的会话。
+                    var ncnnConfig = NcnnStartup.TryGetActiveConfig();
+                    var useNcnn = ncnnConfig is { UseOcr: true };
+                    var service = ocr.PaddleOcr;
+                    using var image = new Mat(type.PreHeatImagePath);
                     if (image.Empty()) throw new InvalidDataException("OCR 测试图片无法读取。");
-                    // ncnn 固定 PpOcrV6 并忽略界面的 OCR 模型选择，标签按实际加载的 det/rec 配置展示
-                    var ncnnDevice = ncnnSettings.ComputeMode == NcnnComputeMode.Cpu
-                        ? "CPU"
-                        : $"Vulkan 设备 #{ncnnSettings.GpuIndex}";
-                    var execution = ncnn is { } ncnnBackends
-                        ? $"ncnn {ncnnDevice} · {ncnnBackends.Det.GetConfigName}/{ncnnBackends.Rec.GetConfigName}"
-                        : $"{factory.Runtime.OcrDescription} · {type.DetectionModel.Name}/{type.RecognitionModel.Name}";
+                    // ncnn 固定 PpOcrV6 并忽略界面的 OCR 模型选择；det/rec 配置名与 NcnnDet/NcnnRec 的常量一致。
+                    string execution;
+                    if (useNcnn && ncnnConfig != null)
+                    {
+                        var settings = NcnnBackendSettings.FromConfig(ncnnConfig);
+                        var ncnnDevice = settings.ComputeMode == NcnnComputeMode.Cpu
+                            ? "CPU"
+                            : $"Vulkan 设备 #{settings.GpuIndex}";
+                        execution = $"ncnn {ncnnDevice} · PP-OCRv6 det (ncnn)/PP-OCRv6 (ncnn)（与业务同一会话）";
+                    }
+                    else
+                    {
+                        execution = $"{factory.Runtime.OcrDescription} · {type.DetectionModel.Name}/{type.RecognitionModel.Name}";
+                    }
                     return Measure("OCR", execution,
                         () => _ = service.Ocr(image), progress, linked.Token);
                 }
