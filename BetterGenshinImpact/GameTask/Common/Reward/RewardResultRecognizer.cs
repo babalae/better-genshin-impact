@@ -218,12 +218,19 @@ public class RewardResultRecognizer
             var directory = Global.Absolute(@"log\RewardRecognition");
             Directory.CreateDirectory(directory);
 
+            // 调试图顶部预留文字区，避免名称超出条带顶部被截断。
+            const int labelHeight = 22;
+            const int labelTopPadding = labelHeight + 4;
+
             using var bandMat = new Mat(screenMat, new Rect(220, 444, 1480, 220));
-            using var debugMat = bandMat.Clone();
+            using var debugMat = new Mat();
+            Cv2.CopyMakeBorder(bandMat, debugMat, labelTopPadding, 0, 0, 0, BorderTypes.Constant, Scalar.Black);
 
             foreach (var rect in pageResult.CardRects)
             {
-                Cv2.Rectangle(debugMat, rect, Scalar.LimeGreen, 2);
+                // 检测框向外扩 1px，避免边框压住图标边缘。
+                var debugRect = new Rect(rect.X - 1, rect.Y + labelTopPadding - 1, rect.Width + 2, rect.Height + 2);
+                Cv2.Rectangle(debugMat, debugRect, Scalar.LimeGreen, 2);
             }
 
             using var bitmap = debugMat.ToBitmap();
@@ -241,7 +248,6 @@ public class RewardResultRecognizer
             };
 
             var rewardsByCard = pageResult.Rewards.ToDictionary(r => r.CardIndex);
-            const int labelHeight = 22;
 
             for (int cardIdx = 0; cardIdx < pageResult.CardRects.Count; cardIdx++)
             {
@@ -268,7 +274,8 @@ public class RewardResultRecognizer
                 }
 
                 var cardRect = pageResult.CardRects[cardIdx];
-                var labelRect = new RectangleF(cardRect.X + 2, cardRect.Y + 2, cardRect.Width - 4, labelHeight);
+                // 名称画在卡片上方，底边与绿框保留 1px 间隙。
+                var labelRect = new RectangleF(cardRect.X + 2, cardRect.Y + labelTopPadding - labelHeight - 2, cardRect.Width - 4, labelHeight);
                 graphics.FillRectangle(backgroundBrush, labelRect);
                 graphics.DrawString(label, font, brush, labelRect, format);
             }
