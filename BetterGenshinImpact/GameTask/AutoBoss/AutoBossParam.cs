@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoFight;
+using BetterGenshinImpact.GameTask.Common.Reward;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Service;
 
@@ -108,6 +110,11 @@ public class AutoBossParam : BaseTaskParam<AutoBossTask>
     public AutoFightConfig? FightConfig { get; set; }
 
     /// <summary>
+    /// 材料目标列表：按物品名与数量提前停止。
+    /// </summary>
+    public List<TargetItem> TargetItems { get; set; } = [];
+
+    /// <summary>
     /// 每次成功领取奖励后的回调，仅供一条龙持久化累计成功次数。
     /// </summary>
     internal Action? RewardClaimedCallback { get; set; }
@@ -169,6 +176,7 @@ public class AutoBossParam : BaseTaskParam<AutoBossTask>
         ReturnToStatueAfterEachRound = config.ReturnToStatueAfterEachRound;
         RewardRecognitionEnabled = config.RewardRecognitionEnabled;
         Timeout = config.Timeout;
+        TargetItems = TargetItem.CloneAll(config.TargetItems);
     }
 
     /// <summary>

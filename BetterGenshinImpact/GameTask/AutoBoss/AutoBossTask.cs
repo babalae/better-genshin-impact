@@ -93,6 +93,9 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
     private CancellationToken _ct;
     private int _successfulRewardCount;
 
+    /// <summary>材料目标是否已全部达成。</summary>
+    private bool _itemStopReached;
+
     private static readonly TimeSpan OriginalResinRecoveryInterval = TimeSpan.FromMinutes(8);
     private const int MaxQuickUseQuantity = 20;
 
@@ -165,13 +168,20 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
         _ct = ct;
         _rewardSummary.Clear();
         _successfulRewardCount = 0;
+        _itemStopReached = false;
 
         // 1. 业务参数校验，可预见的参数问题直接返回失败结果
-        var failure = ValidateParam(param) ?? Initialize(param);
+        var failure = ValidateParam(param, _runtime) ?? Initialize(param);
         if (failure != null)
         {
             _logger.LogError("{Name}：{Msg}", TaskName, failure.Message);
             return failure;
+        }
+
+        if (_taskParam.TargetItems.Count > 0)
+        {
+            _logger.LogInformation("{Name}：材料目标 {Targets}，达到后提前结束", TaskName,
+                string.Join("，", _taskParam.TargetItems.Select(x => $"{x.ItemName}×{x.TargetCount}")));
         }
 
         // 2. 运行环境校验：路线资源与分辨率
@@ -329,12 +339,12 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
     }
 
     /// <summary>
-    /// 判断本轮开始前是否还有继续讨伐的次数。
+    /// 判断本轮开始前是否还有继续讨伐的次数：指定次数未达标且材料目标未达成时继续。
     /// </summary>
-    /// <returns>树脂耗尽模式始终返回 true；指定次数模式下未达到目标次数时返回 true。</returns>
     private bool ShouldContinueBeforeRound()
     {
-        return !_taskParam.SpecifyRunCount || _successfulRewardCount < _taskParam.RunCount;
+        return !(_taskParam.SpecifyRunCount && _successfulRewardCount >= _taskParam.RunCount)
+               && !_itemStopReached;
     }
 
     /// <summary>
@@ -371,7 +381,7 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
 
             if (!_taskParam.UseTransientResin && !_taskParam.UseFragileResin)
             {
-                _logger.LogInformation("{Name}：指定讨伐次数模式未开启补充树脂，停止讨伐", TaskName);
+                _logger.LogInformation("{Name}：当前模式未开启补充树脂，停止讨伐", TaskName);
                 return false;
             }
 
@@ -1065,7 +1075,7 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
     /// </summary>
     /// <param name="param">本次运行的任务参数。</param>
     /// <returns>参数无效时返回失败结果；有效时返回 null。</returns>
-    private static SoloTaskResult? ValidateParam(AutoBossParam param)
+    private static SoloTaskResult? ValidateParam(AutoBossParam param, GameRuntime runtime)
     {
         if (string.IsNullOrWhiteSpace(param.BossName))
         {
@@ -1096,6 +1106,24 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
         if (param.Timeout < 1)
         {
             return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, "战斗超时必须大于 0 秒");
+        }
+
+        if (param.TargetItems.Count > 0)
+        {
+            if (!TargetItemCatalog.Instance.TryGetBossProfile(param.BossName, out var profile))
+            {
+                return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, $"当前首领没有奖励数据：{param.BossName}");
+            }
+
+            try
+            {
+                TargetItemCatalog.Instance.ValidateBossSettings(profile, param.TargetItems);
+                RewardResultRecognizer.Instance.EnsureSupported(runtime);
+            }
+            catch (Exception e) when (e is TargetItemConfigurationException or InvalidOperationException)
+            {
+                return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, e.Message);
+            }
         }
 
         return null;
@@ -1476,7 +1504,7 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
 
     private async Task TryRecognizeRewardResult(BvPage page)
     {
-        if (!_taskParam.RewardRecognitionEnabled)
+        if (!_taskParam.RewardRecognitionEnabled && _taskParam.TargetItems.Count == 0)
         {
             return;
         }
@@ -1493,22 +1521,47 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
             _logger.LogInformation("{Name}：开始奖励识别", TaskName);
             var rewards = RewardResultRecognizer.Instance.RecognizeMultiPage(_runtime);
 
-            RewardResultRecognizer.MergeIntoSummary(_rewardSummary, rewards);
-
-            if (rewards.Count > 0)
-            {
-                _logger.LogInformation("{Name}：本轮奖励识别结果 {Rewards}", TaskName,
-                    string.Join(", ", rewards.Select(r => $"{r.Key} x{r.Value}")));
-            }
-            else
+            if (rewards.Count == 0)
             {
                 _logger.LogWarning("{Name}：本轮奖励识别结果为空", TaskName);
+                return;
+            }
+
+            RewardResultRecognizer.MergeIntoSummary(_rewardSummary, rewards);
+            _logger.LogInformation("{Name}：本轮奖励识别结果 {Rewards}", TaskName,
+                string.Join(", ", rewards.Select(r => $"{r.Key} x{r.Value}")));
+
+            if (_taskParam.TargetItems.Count > 0)
+            {
+                if (!TargetItemCatalog.Instance.TryGetBossProfile(_taskParam.BossName, out _))
+                {
+                    _logger.LogWarning("{Name}：当前首领没有奖励数据，跳过材料目标进度计算", TaskName);
+                    return;
+                }
+
+                var progress = TargetItemCatalog.Instance.CalculateBoss(_taskParam.TargetItems, _rewardSummary);
+                _itemStopReached = progress.AllSatisfied;
+                LogTargetProgress("材料目标", progress);
+
+                if (_itemStopReached)
+                {
+                    _logger.LogInformation("{Name}：材料目标已全部达成", TaskName);
+                }
             }
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
             _logger.LogWarning(e, "{Name}：奖励识别失败，已跳过本轮奖励汇总", TaskName);
         }
+    }
+
+    /// <summary>
+    /// 打印一组材料目标的进度。
+    /// </summary>
+    private void LogTargetProgress(string label, TargetProgress progress)
+    {
+        _logger.LogInformation("{Name}：{Label}进度 {Targets}", TaskName, label,
+            string.Join("，", progress.Targets.Select(x => $"{x.ItemName} {x.CountedCount}/{x.TargetCount}")));
     }
 
     private async Task<bool> WaitForRewardResultReady(BvPage page)
