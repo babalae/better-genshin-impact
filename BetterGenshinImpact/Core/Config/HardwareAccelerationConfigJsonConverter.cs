@@ -20,7 +20,6 @@ public sealed class HardwareAccelerationConfigJsonConverter : JsonConverter<Hard
                 FormatVersion = data.FormatVersion, InferenceDevice = data.InferenceDevice, CpuOcr = data.CpuOcr,
                 // ncnn 配置独立读取：优先嵌套节点，缺失时迁移旧平铺字段（细节见 NcnnConfigJson）。
                 Ncnn = NcnnConfigJson.Read(document.RootElement, options),
-                OpenCvThreads = data.OpenCvThreads, OpenCvIdleSleep = data.OpenCvIdleSleep,
                 Cpu = data.Cpu!, DirectML = data.DirectML!, OpenVINO = data.OpenVINO!, Cuda = data.Cuda!, TensorRT = data.TensorRT!,
                 PaddleOcrCpu = data.PaddleOcrCpu ?? new(),
                 ValidationState = data.ValidationState, VerifiedSignature = data.VerifiedSignature ?? "",
@@ -36,7 +35,6 @@ public sealed class HardwareAccelerationConfigJsonConverter : JsonConverter<Hard
         {
             FormatVersion = value.FormatVersion, InferenceDevice = value.InferenceDevice, CpuOcr = value.CpuOcr,
             Ncnn = NcnnConfigJson.ToDto(value.Ncnn),
-            OpenCvThreads = value.OpenCvThreads, OpenCvIdleSleep = value.OpenCvIdleSleep,
             Cpu = value.Cpu, DirectML = value.DirectML, OpenVINO = value.OpenVINO, Cuda = value.Cuda, TensorRT = value.TensorRT,
             PaddleOcrCpu = value.PaddleOcrCpu,
             ValidationState = value.ValidationState, VerifiedSignature = value.VerifiedSignature,
@@ -51,8 +49,6 @@ public sealed class HardwareAccelerationConfigJsonConverter : JsonConverter<Hard
         public InferenceDeviceType InferenceDevice { get; set; }
         public bool CpuOcr { get; set; } = true;
         public SerializedNcnnConfig? Ncnn { get; set; }
-        public int OpenCvThreads { get; set; }
-        public bool OpenCvIdleSleep { get; set; }
         public InferenceEngineSettings? Cpu { get; set; }
         public PaddleOcrCpuConfig? PaddleOcrCpu { get; set; }
         public InferenceEngineSettings? DirectML { get; set; }

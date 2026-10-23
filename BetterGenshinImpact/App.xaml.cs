@@ -118,8 +118,6 @@ public partial class App : Application
 
                 // 配置和日志已经就绪，在任何推理服务或会话初始化前选定原生运行库。
                 all.HardwareAccelerationConfig ??= new();
-                // OpenCV 并行行为：OMP_WAIT_POLICY 必须在 vcomp140.dll 加载（首次 cv 调用）前设置。
-                OpenCvParallel.ApplyStartup(all.HardwareAccelerationConfig);
                 var inferenceStartupStatus = InferenceRuntimeService.PrepareStartup(all.HardwareAccelerationConfig, InstanceBootstrap.Current.Context.IsRoot);
                 // 只规范配置并绑定运行库；待验证状态在主窗口实际开始验证时才落盘。
                 configService.Save();

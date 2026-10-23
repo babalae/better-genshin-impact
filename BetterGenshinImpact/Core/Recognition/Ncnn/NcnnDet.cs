@@ -60,9 +60,6 @@ internal sealed class NcnnDet : IOcrDetector
 
     public string GetConfigName => "PP-OCRv6 det (ncnn)";
 
-    // 显式接口实现：预热细节不扩大公共 API
-    int[] IOcrDetector.GetWarmupBuckets() => GetWarmupBuckets();
-    void IOcrDetector.Warmup(int bucket) => Warmup(bucket);
     PaddleOcrDetectionBox[] IOcrDetector.RunBoxes(Mat src) => RunBoxes(src);
 
     /// <summary>当前配置下预热所有可能的桶（启动时调用）。</summary>

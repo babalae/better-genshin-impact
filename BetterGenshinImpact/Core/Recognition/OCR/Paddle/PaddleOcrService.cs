@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Threading;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -9,7 +8,6 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR.Engine;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
-using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
 using YamlDotNet.Core;
@@ -20,11 +18,6 @@ namespace BetterGenshinImpact.Core.Recognition.OCR.Paddle;
 
 public class PaddleOcrService : IOcrService, IDisposable
 {
-    private static readonly ILogger Logger = App.GetLogger<PaddleOcrService>();
-
-    // 进程内首个实例用 Information 级别展示预热进度，后续实例（内核缓存命中，秒过）降为 Debug，避免日志重复刷屏。
-    private static int _warmupAnnounced;
-
     /// <summary>
     ///     Usage:
     ///     https://github.com/sdcb/PaddleSharp/blob/master/docs/ocr.md
@@ -276,36 +269,7 @@ public class PaddleOcrService : IOcrService, IDisposable
 
         try
         {
-            // 预热模型：先逐档位编译形状（OpenVINO 按输入形状编译，每个新形状首次推理需数秒），
-            // 再跑一次完整 OCR 预热推理管线。
-            var detBuckets = _localDetModel.GetWarmupBuckets();
-            var recBuckets = _localRecModel.GetWarmupBuckets();
-            var total = detBuckets.Length + recBuckets.Length;
-            var index = 0;
-            var announce = Interlocked.Exchange(ref _warmupAnnounced, 1) == 0;
-            Action<string, object[]> progress = announce
-                ? (template, values) => Logger.LogInformation(template, values)
-                : (template, values) => Logger.LogDebug(template, values);
-            if (!announce)
-                Logger.LogDebug("[OCR] 内核缓存命中，跳过展示预热进度（{Total} 档）", total);
-            foreach (var bucket in detBuckets)
-            {
-                index++;
-                progress("[OCR] 预热编译形状 {Index}/{Total}：检测 {Bucket}x{Bucket}", [index, total, bucket, bucket]);
-                _localDetModel.Warmup(bucket);
-            }
-
-            foreach (var (batch, width) in recBuckets)
-            {
-                index++;
-                progress("[OCR] 预热编译形状 {Index}/{Total}：识别 批{Batch} 宽{Bucket}", [index, total, batch, width]);
-                _localRecModel.Warmup(batch, width);
-            }
-
-
-            if (announce)
-                Logger.LogInformation("[OCR] 形状预热完成，共 {Total} 档", total);
-
+            // 预热模型
             using var preHeatImageMat = Bv.ImRead(modelType.PreHeatImagePath) ??
                                         throw new FileNotFoundException($"预热图片未找到: {modelType.PreHeatImagePath}");
             // Debug输出结果
@@ -358,7 +322,7 @@ public class PaddleOcrService : IOcrService, IDisposable
             var startTime = Stopwatch.GetTimestamp();
             var str = _localRecModel.Run(mat).Text;
             var time = Stopwatch.GetElapsedTime(startTime);
-            Logger.LogDebug("[OCR][Rec免检测] 全流程 {Ms:F1}ms", time.TotalMilliseconds);
+            // Debug.WriteLine($"PaddleOcrWithoutDetector 耗时 {time.TotalMilliseconds}ms 结果: {str}");
             return str;
         }
     }
@@ -368,7 +332,7 @@ public class PaddleOcrService : IOcrService, IDisposable
         var startTime = Stopwatch.GetTimestamp();
         var result = RunAll(mat);
         var time = Stopwatch.GetElapsedTime(startTime);
-        Logger.LogDebug("[OCR] 全流程 {Ms:F1}ms 文本区 {Count}", time.TotalMilliseconds, result.Regions.Length);
+        // Debug.WriteLine($"PaddleOcr 耗时 {time.TotalMilliseconds}ms 结果: {result.Text}");
         return result;
     }
 

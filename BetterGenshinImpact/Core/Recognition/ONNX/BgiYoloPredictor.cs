@@ -77,10 +77,7 @@ public class BgiYoloPredictor : IDisposable
     /// <returns>类别-矩形框</returns>
     public Dictionary<string, List<Rect>> Detect(ImageRegion region)
     {
-        var start = YoloLatencyMonitor.Start();
         var result = DetectCore(region.CacheImage);
-        YoloLatencyMonitor.Report(_model.Name, start, result.Count);
-
 
         var dict = new Dictionary<string, List<Rect>>();
         foreach (var box in result)
@@ -106,15 +103,10 @@ public class BgiYoloPredictor : IDisposable
         return dict;
     }
 
-    /// <summary>
-    /// 检测并记录耗时。供直接调用 YoloSharp 的调用方使用，返回原始检测结果。
-    /// </summary>
+    /// <summary>检测。供直接调用 YoloSharp 的调用方使用，返回原始检测结果。</summary>
     public YoloResult<Detection> Detect(Image<Rgb24> image)
     {
-        var start = YoloLatencyMonitor.Start();
-        var result = DetectCore(image);
-        YoloLatencyMonitor.Report(_model.Name, start, result.Count);
-        return result;
+        return DetectCore(image);
     }
 
     /// <summary>检测（Detect）当前是否走 ncnn Vulkan 后端；false 时检测走 YoloSharp（ORT）。</summary>

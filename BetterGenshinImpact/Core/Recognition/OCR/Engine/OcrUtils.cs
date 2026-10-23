@@ -126,11 +126,9 @@ public static class OcrUtils
         var w = img.Width;
 
         var resizedImage = rt.NewMat();
-        Mat tensorSource;
         if (!padding)
         {
             Cv2.Resize(img, resizedImage, new Size(imgW, imgH), 0, 0, interpolation);
-            tensorSource = resizedImage;
             // resized_w = imgW;
         }
         else
@@ -138,20 +136,6 @@ public static class OcrUtils
             var ratio = w / (double)h;
             var resizedW = Math.Ceiling(imgH * ratio) > imgW ? imgW : (int)Math.Ceiling(imgH * ratio);
             Cv2.Resize(img, resizedImage, new Size(resizedW, imgH), 0, 0, interpolation);
-            if (resizedW < imgW)
-            {
-                // pad 到目标宽度：张量形状固定为 [1,3,imgH,imgW]，
-                // 避免 OpenVINO 等按输入形状编译的执行提供程序每个新宽度都触发一次内核重编译（每次数百毫秒到数秒）。
-                // pad 区域为常数，CTC 解码会在该区域输出空白，不影响识别结果。
-                var padded = rt.NewMat(new Size(imgW, imgH), resizedImage.Type(), Scalar.Black);
-                using var roi = padded[new Rect(0, 0, resizedW, imgH)];
-                resizedImage.CopyTo(roi);
-                tensorSource = padded;
-            }
-            else
-            {
-                tensorSource = resizedImage;
-            }
         }
 
         /*
@@ -162,7 +146,7 @@ public static class OcrUtils
         // 归一化到 +-1
         // resizedImage.ConvertTo(resizedImage, MatType.CV_32F, 2 / 255f, 1);
         var blob = rt.T(CvDnn.BlobFromImage(
-            tensorSource,
+            resizedImage,
             2 / 255f,
             default,
             new Scalar(127.5, 127.5, 127.5),
@@ -175,7 +159,7 @@ public static class OcrUtils
         blob.AsSpan<float>().CopyTo(tensorMemoryOwner.Memory.Span);
         return new DenseTensor<float>(
             tensorMemoryOwner.Memory[..(int)total],
-            new[] { 1, tensorSource.Channels(), tensorSource.Rows, tensorSource.Cols }
+            new[] { 1, resizedImage.Channels(), resizedImage.Rows, resizedImage.Cols }
         );
     }
 

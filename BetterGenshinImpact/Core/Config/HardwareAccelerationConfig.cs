@@ -57,8 +57,6 @@ public partial class HardwareAccelerationConfig : ObservableObject
         DirectML = new(); OpenVINO = new(); Cuda = new(); TensorRT = new();
         InferenceDevice = InferenceDeviceType.Cpu;
         CpuOcr = true;
-        OpenCvThreads = 0;
-        OpenCvIdleSleep = false;
         ValidationState = InferenceValidationState.None;
         VerifiedSignature = "";
     }
@@ -96,19 +94,6 @@ public partial class HardwareAccelerationConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private NcnnConfig _ncnn = new();
-
-    /// <summary>
-    ///     OpenCV 并行线程数。0 = 自动（全部逻辑核）。限制后可减少与游戏的抢核与线程池开销。
-    /// </summary>
-    [ObservableProperty]
-    private int _openCvThreads;
-
-    /// <summary>
-    ///     OpenCV 并行池空闲时立即睡眠而非自旋等待。识别任务多为短并行区域，
-    ///     自旋等待在游戏占核时会白烧 CPU（实测单线程可达 40s+/分钟级会话）。
-    /// </summary>
-    [ObservableProperty]
-    private bool _openCvIdleSleep;
 
     #region 已移除参数的源注释（不读取、不保存，也不参与新推理设置）
     // 强制指定gpu设备,默认为0(使用默认设备)

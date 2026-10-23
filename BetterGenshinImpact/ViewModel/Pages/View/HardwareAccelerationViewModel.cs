@@ -60,8 +60,6 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         new(PaddleOcrCpuMode.GameplayPriority, "游戏流畅优先", "限制 OCR 的并行线程，减少游戏掉帧。"),
         new(PaddleOcrCpuMode.Custom, "自定义设置", "分别指定文本检测、文本识别和模型节点的线程数。")
     ];
-    public InferenceThreadChoice[] OpenCvThreadChoices { get; } = Enumerable.Range(0, Environment.ProcessorCount + 1)
-        .Select(i => new InferenceThreadChoice(i, i == 0 ? "自动（全部逻辑核）" : i.ToString())).ToArray();
     public PaddleOcrCpuConfig PaddleOcrCpu { get; }
     public bool IsOcrCpuCustom => PaddleOcrCpu.Mode == PaddleOcrCpuMode.Custom;
     public bool IsOcrCpuConfigured => PaddleOcrCpu.Mode is PaddleOcrCpuMode.GameplayPriority or PaddleOcrCpuMode.Custom;
@@ -140,7 +138,6 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
                 var saved = Config.GetEngineSettings(Config.InferenceDevice);
                 return SelectedEngine.Engine != Config.InferenceDevice || SelectedEngine.SelectedDevice.Id != saved.DeviceId
                     || ForceCpuOcr != Config.CpuOcr || NcnnSettings.HasDraftChanges
-                    || OpenCvThreads != Config.OpenCvThreads || OpenCvIdleSleep != Config.OpenCvIdleSleep
                     || CpuThreads != Config.Cpu.CpuThreads
                     || PaddleOcrCpu.ToOptions() != Config.PaddleOcrCpu.ToOptions()
                     || (SelectedEngine.SupportsCache && SelectedEngine.Settings.EnableModelCache != saved.EnableModelCache);
@@ -148,7 +145,6 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
             var current = _runtime.Current;
             return SelectedEngine.Engine != current.Engine || SelectedEngine.SelectedDevice.Id != current.Device.Id
                 || ForceCpuOcr != current.CpuOcr || NcnnSettings.HasDraftChanges
-                || OpenCvThreads != Config.OpenCvThreads || OpenCvIdleSleep != Config.OpenCvIdleSleep
                 || CpuThreads != current.CpuThreads
                 || PaddleOcrCpu.ToOptions() != current.PaddleOcrCpu
                 || (SelectedEngine.SupportsCache && SelectedEngine.Settings.EnableModelCache != current.EnableModelCache)
@@ -163,8 +159,6 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
 
     [ObservableProperty] private InferenceEngineCardViewModel? _selectedEngine;
     [ObservableProperty] private bool _forceCpuOcr;
-    [ObservableProperty] private int _openCvThreads;
-    [ObservableProperty] private bool _openCvIdleSleep;
     [ObservableProperty] private int _cpuThreads;
     [ObservableProperty] private bool _isOcrAdvancedExpanded;
     [ObservableProperty] private bool _isBusy;
@@ -192,8 +186,6 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         // 本页通过 BuildDraft 取草稿并在 Apply 时一并保存。
         NcnnSettings = new NcnnSettingsViewModel(Config.Ncnn, this);
         NcnnSettings.Changed += NcnnSettingsChanged;
-        _openCvThreads = Config.OpenCvThreads;
-        _openCvIdleSleep = Config.OpenCvIdleSleep;
         _cpuThreads = Config.Cpu.CpuThreads;
         PaddleOcrCpu = PaddleOcrCpuConfig.FromOptions(Config.PaddleOcrCpu.ToOptions());
         _isOcrAdvancedExpanded = false;
@@ -238,14 +230,6 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         RefreshAvailability();
     }
     partial void OnForceCpuOcrChanged(bool value)
-    {
-        RefreshAvailability();
-    }
-    partial void OnOpenCvThreadsChanged(int value)
-    {
-        RefreshAvailability();
-    }
-    partial void OnOpenCvIdleSleepChanged(bool value)
     {
         RefreshAvailability();
     }
@@ -404,16 +388,6 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
                 // 保存成功才把草稿标记为基线，失败时保留“尚未应用”状态供用户重试。
                 NcnnSettings.AcceptBaseline();
             }
-            // OpenCV 并行设置：线程数立即生效；空闲睡眠依赖启动期环境变量，重启后生效
-            if (Config.OpenCvThreads != OpenCvThreads || Config.OpenCvIdleSleep != OpenCvIdleSleep)
-            {
-                Config.OpenCvThreads = OpenCvThreads;
-                Config.OpenCvIdleSleep = OpenCvIdleSleep;
-                _configService.Save();
-                OpenCvParallel.ApplyThreads(OpenCvThreads);
-                OnPropertyChanged(nameof(HasDraftChanges)); OnPropertyChanged(nameof(CanApply));
-            }
-
             ProgressText = "设置已保存，等待重启生效。";
             await OfferRestartAsync();
         });
