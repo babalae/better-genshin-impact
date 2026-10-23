@@ -100,6 +100,13 @@ public partial class CommonSettingsPageViewModel : ViewModel
     }
 
     public AllConfig Config { get; set; }
+
+    /// <summary>OpenCV 并行线程数候选：0 = 全部逻辑核（自动）。</summary>
+    public int[] OpenCvThreadCounts { get; } = Enumerable.Range(0, Environment.ProcessorCount + 1).ToArray();
+
+    [RelayCommand]
+    private void SaveOpenCvSettings() => _configService.Save();
+
     public ObservableCollection<OverlayMetricSettingItem> OverlayMetricItems { get; }
     public ObservableCollection<OverlayStyleSettingGroup> OverlayStyleSettingGroups { get; }
     public ObservableCollection<string> CountryList { get; } = new();

@@ -686,7 +686,8 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         {
             Title = "推理引擎设置",
             Content = new HardwareAccelerationView(viewModel),
-            // 顶部引擎卡片两张并排（440 + 12），下方按分支展示设备卡片与 ncnn 设置。
+            // 顶部为紧凑「引擎分配」区（两张卡片并排），下方用 Tab 把 ONNX Runtime 与 ncnn 的设置完全隔开；
+            // 跨引擎的通用设置与性能测试位于 Tab 之下，底部为草稿提示与「应用并重启」。
             Width = 1000,
             Height = 860,
             MinWidth = 760,

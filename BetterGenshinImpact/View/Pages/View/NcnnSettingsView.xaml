@@ -3,7 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
     <UserControl.Resources>
-        <!-- ncnn 单套调优参数：检测 / 识别 / YOLO 共用同一模板，DataContext 为 NcnnTuningViewModel -->
+        <!-- ncnn 单套调优参数：文本检测（Det）/ 文本识别（Rec）/ YOLO 共用同一模板，DataContext 为 NcnnTuningViewModel。
+             并行参数常显，精度 / 卷积 / Vulkan 细节三组高级开关各自折叠，避免一屏铺开 60+ 开关。 -->
         <DataTemplate x:Key="NcnnTuningPanelTemplate">
             <ui:CardExpander Margin="0,0,0,8" ContentPadding="0">
                 <ui:CardExpander.Header>
@@ -33,11 +34,11 @@
                         <TextBlock Text="并行" FontWeight="SemiBold" FontSize="12" Margin="0,12,0,6" />
                         <UniformGrid Columns="3">
                             <StackPanel Margin="0,0,12,0">
-                                <TextBlock Text="线程数" FontSize="12" Margin="0,0,0,6" />
+                                <TextBlock Text="{Binding Title, StringFormat='{}{0} 线程数'}" FontSize="12" Margin="0,0,0,6" />
                                 <ComboBox ItemsSource="{Binding DataContext.NcnnThreadChoices, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                           DisplayMemberPath="Name" SelectedValuePath="Count" SelectedValue="{Binding Settings.Threads, Mode=TwoWay}"
                                           IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                          AutomationProperties.Name="线程数" />
+                                          AutomationProperties.Name="{Binding Title, StringFormat='{}{0} 线程数'}" />
                             </StackPanel>
                             <StackPanel Margin="12,0,12,0">
                                 <TextBlock Text="并行会话数" FontSize="12" Margin="0,0,0,6" />
@@ -47,270 +48,322 @@
                                           AutomationProperties.Name="并行会话数" />
                             </StackPanel>
                             <StackPanel Margin="12,0,0,0">
-                                <TextBlock Text="OpenMP blocktime" FontSize="12" Margin="0,0,0,6" />
+                                <TextBlock Text="OpenMP blocktime (ms)" FontSize="12" Margin="0,0,0,6" />
                                 <ui:NumberBox Value="{Binding Settings.OpenmpBlocktime, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                               Minimum="-1" Maximum="1000" SmallChange="1" ClearButtonEnabled="False" SpinButtonPlacementMode="Inline"
                                               IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                              AutomationProperties.Name="OpenMP blocktime"
+                                              AutomationProperties.Name="OpenMP blocktime (ms)"
                                               ToolTip="OpenMP 忙等毫秒数，-1 表示沿用 ncnn 默认（20ms）。" />
                             </StackPanel>
                         </UniformGrid>
                         <TextBlock Text="并行会话数 &gt; 1 时该用途会同时持有多个会话并并行推理，显存与线程占用同步上升；默认 1 保持顺序执行。"
                                    FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
 
-                        <DockPanel Margin="0,14,0,6">
-                            <TextBlock DockPanel.Dock="Right" Text="需 int8 量化模型" FontSize="11" VerticalAlignment="Center"
-                                       Foreground="{DynamicResource SystemFillColorCautionBrush}" />
-                            <TextBlock Text="精度" FontWeight="SemiBold" FontSize="12" />
-                        </DockPanel>
-                        <UniformGrid Columns="2">
-                            <ui:ToggleSwitch Margin="0,0,12,6" Content="FP16 packed" IsChecked="{Binding Settings.UseFp16Packed, Mode=TwoWay}"
-                                             IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                             ToolTip="Vulkan 使用 fp16 打包存储权重与中间张量，显存占用减半。" />
-                            <ui:ToggleSwitch Margin="12,0,0,6" Content="FP16 storage" IsChecked="{Binding Settings.UseFp16Storage, Mode=TwoWay}"
-                                             IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                             ToolTip="权重的 fp16 存储（不改变计算精度）。" />
-                            <ui:ToggleSwitch Margin="0,0,12,6" Content="FP16 arithmetic" IsChecked="{Binding Settings.UseFp16Arithmetic, Mode=TwoWay}"
-                                             IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                             ToolTip="fp16 算术指令；个别驱动上会出现数值差异。" />
-                            <ui:ToggleSwitch Margin="12,0,0,6" Content="BF16 storage" IsChecked="{Binding Settings.UseBf16Storage, Mode=TwoWay}"
-                                             IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                             ToolTip="bfloat16 权重存储，范围比 fp16 大但需要设备支持。" />
-                            <ui:ToggleSwitch Margin="0,0,12,6" Content="INT8 推理" IsChecked="{Binding Settings.UseInt8Inference, Mode=TwoWay}"
-                                             IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                             ToolTip="允许 int8 量化算子参与推理；未量化模型无收益。" />
-                            <ui:ToggleSwitch Margin="12,0,0,6" Content="INT8 packed" IsChecked="{Binding Settings.UseInt8Packed, Mode=TwoWay}"
-                                             IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                             ToolTip="int8 打包布局，需要模型本身为 int8 量化产物。" />
-                            <ui:ToggleSwitch Margin="0,0,12,6" Content="INT8 storage" IsChecked="{Binding Settings.UseInt8Storage, Mode=TwoWay}"
-                                             IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                             ToolTip="int8 权重存储，需要 int8 量化模型。" />
-                            <ui:ToggleSwitch Margin="12,0,0,6" Content="INT8 arithmetic" IsChecked="{Binding Settings.UseInt8Arithmetic, Mode=TwoWay}"
-                                             IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                             ToolTip="int8 算术指令，需要设备支持整数点积。" />
-                        </UniformGrid>
+                        <!-- 精度与量化：默认折叠 -->
+                        <Expander Margin="0,10,0,0" IsExpanded="False" AutomationProperties.Name="精度与量化">
+                            <Expander.Header>
+                                <StackPanel>
+                                    <TextBlock Text="精度与量化（8 项）" FontWeight="SemiBold" FontSize="12" />
+                                    <TextBlock Text="FP16 / INT8 / BF16 的存储与算术开关；INT8 需 int8 量化模型" FontSize="11" Margin="0,2,0,0"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                </StackPanel>
+                            </Expander.Header>
+                            <StackPanel Margin="0,8,0,0">
+                                <UniformGrid Columns="2">
+                                    <ui:ToggleSwitch Margin="0,0,12,6" Content="FP16 打包" IsChecked="{Binding Settings.UseFp16Packed, Mode=TwoWay}"
+                                                     IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                     ToolTip="Vulkan 使用 fp16 打包存储权重与中间张量，显存占用减半。" />
+                                    <ui:ToggleSwitch Margin="12,0,0,6" Content="FP16 存储" IsChecked="{Binding Settings.UseFp16Storage, Mode=TwoWay}"
+                                                     IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                     ToolTip="权重的 fp16 存储（不改变计算精度）。" />
+                                    <ui:ToggleSwitch Margin="0,0,12,6" Content="FP16 算术" IsChecked="{Binding Settings.UseFp16Arithmetic, Mode=TwoWay}"
+                                                     IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                     ToolTip="fp16 算术指令；个别驱动上会出现数值差异。" />
+                                    <ui:ToggleSwitch Margin="12,0,0,6" Content="BF16 存储" IsChecked="{Binding Settings.UseBf16Storage, Mode=TwoWay}"
+                                                     IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                     ToolTip="bfloat16 权重存储，范围比 fp16 大但需要设备支持。" />
+                                    <ui:ToggleSwitch Margin="0,0,12,6" Content="INT8 推理" IsChecked="{Binding Settings.UseInt8Inference, Mode=TwoWay}"
+                                                     IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                     ToolTip="允许 int8 量化算子参与推理；未量化模型无收益。" />
+                                    <ui:ToggleSwitch Margin="12,0,0,6" Content="INT8 打包" IsChecked="{Binding Settings.UseInt8Packed, Mode=TwoWay}"
+                                                     IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                     ToolTip="int8 打包布局，需要模型本身为 int8 量化产物。" />
+                                    <ui:ToggleSwitch Margin="0,0,12,6" Content="INT8 存储" IsChecked="{Binding Settings.UseInt8Storage, Mode=TwoWay}"
+                                                     IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                     ToolTip="int8 权重存储，需要 int8 量化模型。" />
+                                    <ui:ToggleSwitch Margin="12,0,0,6" Content="INT8 算术" IsChecked="{Binding Settings.UseInt8Arithmetic, Mode=TwoWay}"
+                                                     IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                     ToolTip="int8 算术指令，需要设备支持整数点积。" />
+                                </UniformGrid>
+                                <TextBlock Text="{Binding Int8Hint}" FontSize="11" TextWrapping="Wrap" Margin="0,2,0,0"
+                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                            </StackPanel>
+                        </Expander>
 
-                        <TextBlock Text="卷积优化" FontWeight="SemiBold" FontSize="12" Margin="0,12,0,6" />
-                        <UniformGrid Columns="2">
-                            <ui:ToggleSwitch Margin="0,0,12,6" Content="Winograd 卷积" IsChecked="{Binding Settings.UseWinogradConvolution, Mode=TwoWay}"
-                                             IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                             ToolTip="Winograd 3x3 卷积整体开关。" />
-                            <ui:ToggleSwitch Margin="12,0,0,6" Content="Winograd 2/3" IsChecked="{Binding Settings.UseWinograd23, Mode=TwoWay}"
-                                             IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                             ToolTip="2x3 / 3x2 核的 Winograd 实现。" />
-                            <ui:ToggleSwitch Margin="0,0,12,6" Content="Winograd 4/3" IsChecked="{Binding Settings.UseWinograd43, Mode=TwoWay}"
-                                             IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                             ToolTip="4x3 / 3x4 核的 Winograd 实现。" />
-                            <ui:ToggleSwitch Margin="12,0,0,6" Content="Winograd 6/3" IsChecked="{Binding Settings.UseWinograd63, Mode=TwoWay}"
-                                             IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                             ToolTip="6x3 核的 Winograd；收益依赖形状，某些模型会变慢。" />
-                            <ui:ToggleSwitch Margin="0,0,12,6" Content="SGEMM 卷积" IsChecked="{Binding Settings.UseSgemmConvolution, Mode=TwoWay}"
-                                             IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                             ToolTip="用 im2col + SGEMM 替代直接卷积，1x1 与大通道更稳。" />
-                            <ui:ToggleSwitch Margin="12,0,0,6" Content="packing layout" IsChecked="{Binding Settings.UsePackingLayout, Mode=TwoWay}"
-                                             IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                             ToolTip="ARM 等支持打包的平台上收益明显；x86 显卡通常无变化。" />
-                        </UniformGrid>
-                        <TextBlock Text="{Binding PackingHint}" FontSize="11" TextWrapping="Wrap" Margin="0,2,0,0"
-                                   Foreground="{DynamicResource SystemFillColorCautionBrush}" />
+                        <!-- 卷积优化：默认折叠 -->
+                        <Expander Margin="0,6,0,0" IsExpanded="False" AutomationProperties.Name="卷积优化">
+                            <Expander.Header>
+                                <StackPanel>
+                                    <TextBlock Text="卷积优化（6 项）" FontWeight="SemiBold" FontSize="12" />
+                                    <TextBlock Text="Winograd / SGEMM / 打包布局；个别开关在某些模型形状上会变慢" FontSize="11" Margin="0,2,0,0"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                </StackPanel>
+                            </Expander.Header>
+                            <StackPanel Margin="0,8,0,0">
+                                <UniformGrid Columns="2">
+                                    <ui:ToggleSwitch Margin="0,0,12,6" Content="Winograd 卷积" IsChecked="{Binding Settings.UseWinogradConvolution, Mode=TwoWay}"
+                                                     IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                     ToolTip="Winograd 3x3 卷积整体开关。" />
+                                    <ui:ToggleSwitch Margin="12,0,0,6" Content="Winograd 2×3" IsChecked="{Binding Settings.UseWinograd23, Mode=TwoWay}"
+                                                     IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                     ToolTip="2x3 / 3x2 核的 Winograd 实现。" />
+                                    <ui:ToggleSwitch Margin="0,0,12,6" Content="Winograd 4×3" IsChecked="{Binding Settings.UseWinograd43, Mode=TwoWay}"
+                                                     IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                     ToolTip="4x3 / 3x4 核的 Winograd 实现。" />
+                                    <ui:ToggleSwitch Margin="12,0,0,6" Content="Winograd 6×3" IsChecked="{Binding Settings.UseWinograd63, Mode=TwoWay}"
+                                                     IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                     ToolTip="6x3 核的 Winograd；收益依赖形状，某些模型会变慢。" />
+                                    <ui:ToggleSwitch Margin="0,0,12,6" Content="SGEMM 卷积" IsChecked="{Binding Settings.UseSgemmConvolution, Mode=TwoWay}"
+                                                     IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                     ToolTip="用 im2col + SGEMM 替代直接卷积，1x1 与大通道更稳。" />
+                                    <ui:ToggleSwitch Margin="12,0,0,6" Content="打包布局（packing）" IsChecked="{Binding Settings.UsePackingLayout, Mode=TwoWay}"
+                                                     IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                     ToolTip="ARM 等支持打包的平台上收益明显；x86 显卡通常无变化。" />
+                                </UniformGrid>
+                                <TextBlock Text="{Binding PackingHint}" FontSize="11" TextWrapping="Wrap" Margin="0,2,0,0"
+                                           Foreground="{DynamicResource SystemFillColorCautionBrush}" />
+                            </StackPanel>
+                        </Expander>
 
-                        <TextBlock Text="Vulkan 细节" FontWeight="SemiBold" FontSize="12" Margin="0,12,0,6" />
-                        <UniformGrid Columns="2">
-                            <ui:ToggleSwitch Margin="0,0,12,6" Content="cooperative matrix" IsChecked="{Binding Settings.UseCooperativeMatrix, Mode=TwoWay}"
-                                             IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                             ToolTip="使用 VK_KHR_cooperative_matrix 加速矩阵乘；仅新驱动与新显卡可用。" />
-                            <ui:ToggleSwitch Margin="12,0,0,6" Content="FP16 uniform" IsChecked="{Binding Settings.UseFp16Uniform, Mode=TwoWay}"
-                                             IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                             ToolTip="以 fp16 传递 uniform 参数，减少 CPU 侧写入。" />
-                            <ui:ToggleSwitch Margin="0,0,12,6" Content="INT16 packed" IsChecked="{Binding Settings.UseInt16Packed, Mode=TwoWay}"
-                                             IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                             ToolTip="int16 打包存储；需要设备支持 16 位整数存储。" />
-                            <ui:ToggleSwitch Margin="12,0,0,6" Content="shader local memory" IsChecked="{Binding Settings.UseShaderLocalMemory, Mode=TwoWay}"
-                                             IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                             ToolTip="优先使用 shader 本地内存缓存权重，显存紧张时反而更慢。" />
-                            <ui:ToggleSwitch Margin="0,0,12,6" Content="A53 / A55 优化核" IsChecked="{Binding Settings.UseA53A55OptimizedKernel, Mode=TwoWay}"
-                                             IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                             ToolTip="ARM Cortex-A53 / A55 专用卷积实现；x86 平台无效果。" />
-                            <ui:ToggleSwitch Margin="12,0,0,6" Content="像素直输" IsChecked="{Binding Settings.UsePixelInput, Mode=TwoWay}"
-                                             IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                             ToolTip="{Binding PixelInputHint}" />
-                        </UniformGrid>
-                        <TextBlock Text="{Binding Int8Hint}" FontSize="11" TextWrapping="Wrap" Margin="0,2,0,0"
-                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                        <!-- Vulkan 细节：默认折叠 -->
+                        <Expander Margin="0,6,0,0" IsExpanded="False" AutomationProperties.Name="Vulkan 细节">
+                            <Expander.Header>
+                                <StackPanel>
+                                    <TextBlock Text="Vulkan 细节（6 项）" FontWeight="SemiBold" FontSize="12" />
+                                    <TextBlock Text="Cooperative Matrix / uniform 传递 / 本地内存等高级开关，保持默认即可" FontSize="11" Margin="0,2,0,0"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                </StackPanel>
+                            </Expander.Header>
+                            <StackPanel Margin="0,8,0,0">
+                                <UniformGrid Columns="2">
+                                    <ui:ToggleSwitch Margin="0,0,12,6" Content="Cooperative Matrix" IsChecked="{Binding Settings.UseCooperativeMatrix, Mode=TwoWay}"
+                                                     IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                     ToolTip="使用 VK_KHR_cooperative_matrix 加速矩阵乘；仅新驱动与新显卡可用。" />
+                                    <ui:ToggleSwitch Margin="12,0,0,6" Content="FP16 uniform 传递" IsChecked="{Binding Settings.UseFp16Uniform, Mode=TwoWay}"
+                                                     IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                     ToolTip="以 fp16 传递 uniform 参数，减少 CPU 侧写入。" />
+                                    <ui:ToggleSwitch Margin="0,0,12,6" Content="INT16 打包" IsChecked="{Binding Settings.UseInt16Packed, Mode=TwoWay}"
+                                                     IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                     ToolTip="int16 打包存储；需要设备支持 16 位整数存储。" />
+                                    <ui:ToggleSwitch Margin="12,0,0,6" Content="Shader 本地内存" IsChecked="{Binding Settings.UseShaderLocalMemory, Mode=TwoWay}"
+                                                     IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                     ToolTip="优先使用 shader 本地内存缓存权重，显存紧张时反而更慢。" />
+                                    <ui:ToggleSwitch Margin="0,0,12,6" Content="A53 / A55 优化核" IsChecked="{Binding Settings.UseA53A55OptimizedKernel, Mode=TwoWay}"
+                                                     IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                     ToolTip="ARM Cortex-A53 / A55 专用卷积实现；x86 平台无效果。" />
+                                    <ui:ToggleSwitch Margin="12,0,0,6" Content="像素直输" IsChecked="{Binding Settings.UsePixelInput, Mode=TwoWay}"
+                                                     IsEnabled="{Binding DataContext.CanInteract, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                     ToolTip="{Binding PixelInputHint}" />
+                                </UniformGrid>
+                            </StackPanel>
+                        </Expander>
                     </StackPanel>
                 </StackPanel>
             </ui:CardExpander>
         </DataTemplate>
+
+        <!-- 产物分组行：状态点 + 名称 + 汇总 -->
+        <DataTemplate x:Key="NcnnAssetGroupTemplate">
+            <Grid Margin="0,3">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="14" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Ellipse Width="6" Height="6" VerticalAlignment="Center">
+                    <Ellipse.Style>
+                        <Style TargetType="Ellipse">
+                            <Setter Property="Fill" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsReady}" Value="True"><Setter Property="Fill" Value="{DynamicResource SystemFillColorSuccessBrush}" /></DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Ellipse.Style>
+                </Ellipse>
+                <TextBlock Grid.Column="1" FontSize="12" TextTrimming="CharacterEllipsis">
+                    <Run Text="{Binding Name, Mode=OneWay}" FontWeight="SemiBold" />
+                    <Run Text=" · " Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                    <Run Text="{Binding Summary, Mode=OneWay}" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                </TextBlock>
+                <Expander Grid.Column="2" IsExpanded="False" Margin="8,0,0,0" AutomationProperties.Name="{Binding Name}">
+                    <Expander.Header>
+                        <TextBlock Text="明细" FontSize="11" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                    </Expander.Header>
+                    <ItemsControl ItemsSource="{Binding Items}" Margin="0,6,0,0" MaxWidth="560" HorizontalAlignment="Left">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="14" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Ellipse Width="6" Height="6" VerticalAlignment="Center">
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse">
+                                                <Setter Property="Fill" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Ready}" Value="True"><Setter Property="Fill" Value="{DynamicResource SystemFillColorSuccessBrush}" /></DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+                                    <TextBlock Grid.Column="1" FontSize="12" TextWrapping="Wrap">
+                                        <Run Text="{Binding DisplayName, Mode=OneWay}" />
+                                        <Run Text=" · " Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                        <Run Text="{Binding Usage, Mode=OneWay}" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                    </TextBlock>
+                                    <TextBlock Grid.Column="2" Text="{Binding Detail}" FontSize="11" Margin="12,0,0,0"
+                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Expander>
+            </Grid>
+        </DataTemplate>
     </UserControl.Resources>
 
     <StackPanel>
-        <DockPanel Margin="0,14,0,4">
-            <TextBlock Text="ncnn 计算设置" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
-        </DockPanel>
+        <!-- 状态行：一行文字（非卡片），运行库 / 模型资产 / 当前设备 -->
+        <TextBlock FontSize="12" TextWrapping="Wrap" Margin="4,2,4,0" AutomationProperties.Name="ncnn 状态摘要">
+            <Run Text="运行库" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+            <Run Text="{Binding NcnnRuntimeText, Mode=OneWay}" FontWeight="SemiBold" />
+            <Run Text=" · 模型资产 " Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+            <Run Text="{Binding NcnnSummary, Mode=OneWay}" FontWeight="SemiBold" />
+            <Run Text=" · 当前设备 " Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+            <Run Text="{Binding NcnnDeviceText, Mode=OneWay}" FontWeight="SemiBold" />
+        </TextBlock>
 
-        <!-- 1. 基础：运行库、计算后端、设备、三套线程 -->
-        <ui:CardExpander ContentPadding="0" IsExpanded="True" Icon="{ui:SymbolIcon Settings24}">
-            <ui:CardExpander.Header>
-                <StackPanel>
-                    <TextBlock Text="基础" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding NcnnDeviceText, StringFormat='当前推理设备：{0}'}" TextWrapping="Wrap" Margin="0,3,24,0" FontSize="12"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                </StackPanel>
-            </ui:CardExpander.Header>
-            <StackPanel>
-                <Separator BorderThickness="0,1,0,0" />
-                <StackPanel Margin="16">
-                    <DockPanel>
-                        <Ellipse Width="7" Height="7" Margin="0,0,8,0" VerticalAlignment="Center">
-                            <Ellipse.Style>
-                                <Style TargetType="Ellipse">
-                                    <Setter Property="Fill" Value="{DynamicResource SystemFillColorCautionBrush}" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding NcnnShimReady}" Value="True"><Setter Property="Fill" Value="{DynamicResource SystemFillColorSuccessBrush}" /></DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Ellipse.Style>
-                        </Ellipse>
-                        <TextBlock Text="{Binding NcnnRuntimeText}" FontWeight="SemiBold" TextWrapping="Wrap" VerticalAlignment="Center" />
-                    </DockPanel>
-                    <Border Margin="0,12,0,0" Padding="12" CornerRadius="8" Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}">
-                        <StackPanel>
-                            <TextBlock Text="{Binding NcnnSummary}" FontWeight="SemiBold" />
-                            <TextBlock Text="{Binding NcnnApiText}" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0" />
-                            <TextBlock Text="{Binding NcnnShimPath}" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"
-                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
-                        </StackPanel>
-                    </Border>
-
-                    <TextBlock Text="计算后端" FontWeight="SemiBold" FontSize="12" Margin="0,14,0,6" />
-                    <ListBox ItemsSource="{Binding NcnnComputeModeChoices}" SelectedValuePath="Mode"
-                             SelectedValue="{Binding NcnnComputeMode, Mode=TwoWay}" IsEnabled="{Binding CanInteract}"
-                             Background="Transparent" BorderThickness="0" Padding="0"
-                             ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                             AutomationProperties.Name="ncnn 计算后端">
-                        <ListBox.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ListBox.ItemsPanel>
-                        <ListBox.ItemContainerStyle>
-                            <Style TargetType="ListBoxItem">
-                                <Setter Property="Width" Value="300" />
-                                <Setter Property="MinHeight" Value="78" />
-                                <Setter Property="Margin" Value="0,0,8,8" />
-                                <Setter Property="Padding" Value="0" />
-                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
-                                <Setter Property="AutomationProperties.Name" Value="{Binding Name}" />
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="ListBoxItem">
-                                            <Border x:Name="ComputeModeCard" Padding="12" CornerRadius="8" BorderThickness="1"
-                                                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                                                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
-                                                <ContentPresenter />
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ComputeModeCard" Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" /></Trigger>
-                                                <Trigger Property="IsSelected" Value="True">
-                                                    <Setter TargetName="ComputeModeCard" Property="BorderThickness" Value="2" />
-                                                    <Setter TargetName="ComputeModeCard" Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
-                                                    <Setter TargetName="ComputeModeCard" Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </ListBox.ItemContainerStyle>
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel>
-                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                                    <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Margin="0,4,0,0" FontSize="11"
-                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                </StackPanel>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                    <TextBlock Text="{Binding NcnnDeviceHint}" FontSize="11" TextWrapping="Wrap" Margin="0,2,0,0"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-
-                    <StackPanel Margin="0,14,0,0" Visibility="{Binding IsNcnnVulkan, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock Text="推理设备" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,6" />
-                        <ComboBox ItemsSource="{Binding NcnnDevices}" SelectedItem="{Binding SelectedNcnnDevice, Mode=TwoWay}"
-                                  DisplayMemberPath="DisplayName" IsEnabled="{Binding CanInteract}"
-                                  AutomationProperties.Name="ncnn Vulkan 推理设备" />
-                        <TextBlock Text="设备名称与显存预算均来自 ncnn_shim 的 Vulkan 枚举；索引 0 通常为独显。" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,0"
+        <!-- 计算模式与设备：核心设置直接平铺，不包卡片 -->
+        <TextBlock Text="计算模式" FontSize="16" FontWeight="SemiBold" Margin="0,14,0,2" />
+        <TextBlock Text="选择 ncnn 的执行方式；切换只改草稿，点击底部「应用并重启」后生效。"
+                   FontSize="12" TextWrapping="Wrap" Margin="0,0,0,10"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+        <ListBox ItemsSource="{Binding NcnnComputeModeChoices}" SelectedValuePath="Mode"
+                 SelectedValue="{Binding NcnnComputeMode, Mode=TwoWay}" IsEnabled="{Binding CanInteract}"
+                 Background="Transparent" BorderThickness="0" Padding="0"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                 AutomationProperties.Name="ncnn 计算模式">
+            <ListBox.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ListBox.ItemsPanel>
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="Width" Value="300" />
+                    <Setter Property="MinHeight" Value="78" />
+                    <Setter Property="Margin" Value="0,0,8,8" />
+                    <Setter Property="Padding" Value="0" />
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                    <Setter Property="AutomationProperties.Name" Value="{Binding Name}" />
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ListBoxItem">
+                                <Border x:Name="ComputeModeCard" Padding="12" CornerRadius="8" BorderThickness="1"
+                                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
+                                    <ContentPresenter />
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ComputeModeCard" Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" /></Trigger>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter TargetName="ComputeModeCard" Property="BorderThickness" Value="2" />
+                                        <Setter TargetName="ComputeModeCard" Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                                        <Setter TargetName="ComputeModeCard" Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </ListBox.ItemContainerStyle>
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel>
+                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Margin="0,4,0,0" FontSize="11"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+        <TextBlock Text="{Binding NcnnDeviceHint}" FontSize="11" TextWrapping="Wrap" Margin="2,2,0,0"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
 
-                    <UniformGrid Columns="3" Margin="0,14,0,0">
-                        <StackPanel Margin="0,0,12,0">
-                            <TextBlock Text="OCR 检测线程数" FontSize="12" Margin="0,0,0,6" />
-                            <ComboBox ItemsSource="{Binding NcnnThreadChoices}" DisplayMemberPath="Name" SelectedValuePath="Count"
-                                      SelectedValue="{Binding DetTuning.Settings.Threads, Mode=TwoWay}" IsEnabled="{Binding CanInteract}"
-                                      AutomationProperties.Name="OCR 检测线程数" />
-                        </StackPanel>
-                        <StackPanel Margin="12,0,12,0">
-                            <TextBlock Text="OCR 识别线程数" FontSize="12" Margin="0,0,0,6" />
-                            <ComboBox ItemsSource="{Binding NcnnThreadChoices}" DisplayMemberPath="Name" SelectedValuePath="Count"
-                                      SelectedValue="{Binding RecTuning.Settings.Threads, Mode=TwoWay}" IsEnabled="{Binding CanInteract}"
-                                      AutomationProperties.Name="OCR 识别线程数" />
-                        </StackPanel>
-                        <StackPanel Margin="12,0,0,0">
-                            <TextBlock Text="YOLO 线程数" FontSize="12" Margin="0,0,0,6" />
-                            <ComboBox ItemsSource="{Binding NcnnThreadChoices}" DisplayMemberPath="Name" SelectedValuePath="Count"
-                                      SelectedValue="{Binding YoloTuning.Settings.Threads, Mode=TwoWay}" IsEnabled="{Binding CanInteract}"
-                                      AutomationProperties.Name="YOLO 线程数" />
-                        </StackPanel>
-                    </UniformGrid>
-                    <TextBlock Text="三套线程数完全独立：CPU 计算时决定并行度，Vulkan 计算时用于 ncnn 的 CPU 侧层与数据搬运。"
-                               FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                </StackPanel>
-            </StackPanel>
-        </ui:CardExpander>
+        <StackPanel Margin="2,10,0,0" Visibility="{Binding IsNcnnVulkan, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <TextBlock Text="推理设备" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,6" />
+            <ComboBox ItemsSource="{Binding NcnnDevices}" SelectedItem="{Binding SelectedNcnnDevice, Mode=TwoWay}"
+                      DisplayMemberPath="DisplayName" IsEnabled="{Binding CanInteract}" MaxWidth="420" HorizontalAlignment="Left"
+                      AutomationProperties.Name="ncnn Vulkan 推理设备" />
+            <DockPanel Margin="0,8,0,0">
+                <TextBlock DockPanel.Dock="Right" Text="{Binding NcnnHeapBudgetText}" FontWeight="SemiBold"
+                           FontFamily="Consolas" VerticalAlignment="Center" Margin="16,0,0,0" />
+                <TextBlock Text="显存预算来自 ncnn_shim 的 Vulkan 枚举；超出后 ncnn 会重新分配或失败，可据此降低并行会话数。"
+                           FontSize="11" TextWrapping="Wrap" VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </DockPanel>
+        </StackPanel>
 
-        <!-- 2. 精度与调优：三套参数各自一个子折叠 -->
-        <ui:CardExpander Margin="0,12,0,0" ContentPadding="0" Icon="{ui:SymbolIcon Options24}">
+        <!-- 高级：调优 + 模型资产清单 + 诊断，单张折叠卡收纳全部低频内容 -->
+        <ui:CardExpander Margin="0,18,0,0" ContentPadding="0" IsExpanded="False" Icon="{ui:SymbolIcon Options24}">
             <ui:CardExpander.Header>
                 <StackPanel>
-                    <TextBlock Text="精度与调优" FontWeight="SemiBold" />
-                    <TextBlock Text="检测 / 识别 / YOLO 三套参数完全独立，全部在加载模型前写入 ncnn::Option。"
-                               TextWrapping="Wrap" Margin="0,3,24,0" FontSize="12"
+                    <TextBlock Text="高级" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding TuningChangeSummary}" TextWrapping="Wrap" Margin="0,3,24,0" FontSize="12"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                 </StackPanel>
             </ui:CardExpander.Header>
             <StackPanel>
                 <Separator BorderThickness="0,1,0,0" />
                 <StackPanel Margin="16">
-                    <ItemsControl ItemsSource="{Binding NcnnTunings}" ItemTemplate="{StaticResource NcnnTuningPanelTemplate}" />
-                </StackPanel>
-            </StackPanel>
-        </ui:CardExpander>
+                    <!-- 模型资产 -->
+                    <TextBlock Text="模型资产" FontWeight="SemiBold" FontSize="12" />
+                    <ItemsControl ItemsSource="{Binding NcnnAssetGroups}" ItemTemplate="{StaticResource NcnnAssetGroupTemplate}" Margin="0,6,0,0" />
 
-        <!-- 3. 设备详情与显存 -->
-        <ui:CardExpander Margin="0,12,0,0" ContentPadding="0" Icon="{ui:SymbolIcon DeveloperBoard24}">
-            <ui:CardExpander.Header>
-                <StackPanel>
-                    <TextBlock Text="设备详情与显存" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding NcnnDeviceTitle}" TextWrapping="Wrap" Margin="0,3,24,0" FontSize="12"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                </StackPanel>
-            </ui:CardExpander.Header>
-            <StackPanel>
-                <Separator BorderThickness="0,1,0,0" />
-                <StackPanel Margin="16">
-                    <Border Padding="12" CornerRadius="8" Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}">
-                        <DockPanel>
-                            <TextBlock DockPanel.Dock="Right" Text="{Binding NcnnHeapBudgetText}" FontWeight="SemiBold"
-                                       FontFamily="Consolas" VerticalAlignment="Center" />
-                            <StackPanel>
-                                <TextBlock Text="显存预算" FontWeight="SemiBold" FontSize="12" />
-                                <TextBlock Text="Vulkan 堆预算上限；超出后 ncnn 会重新分配或失败，可据此降低并行会话数。"
-                                           FontSize="11" TextWrapping="Wrap" Margin="0,4,12,0"
-                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                            </StackPanel>
-                        </DockPanel>
-                    </Border>
-                    <TextBlock Text="切换到 Vulkan 计算后，这里显示真实设备能力。" FontSize="12" TextWrapping="Wrap"
-                               Margin="0,12,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                    <Separator Margin="0,14,0,12" BorderThickness="0,1,0,0" />
+                    <!-- 调优 -->
+                    <TextBlock Text="调优参数" FontWeight="SemiBold" FontSize="12" />
+                    <TextBlock Text="文本检测（Det）/ 文本识别（Rec）/ YOLO 三套参数完全独立，全部在加载模型前写入 ncnn::Option；每套内的高精度开关按用途分组折叠。"
+                               TextWrapping="Wrap" FontSize="11" Margin="0,2,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <ItemsControl ItemsSource="{Binding NcnnTunings}" ItemTemplate="{StaticResource NcnnTuningPanelTemplate}" Margin="0,10,0,0" />
+
+                    <Separator Margin="0,14,0,12" BorderThickness="0,1,0,0" />
+                    <!-- 诊断 -->
+                    <TextBlock Text="诊断" FontWeight="SemiBold" FontSize="12" />
+                    <DockPanel Margin="0,6,0,0">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Top">
+                            <ui:ProgressRing Width="14" Height="14" IsIndeterminate="True" VerticalAlignment="Center"
+                                             Visibility="{Binding IsProbing, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            <ui:Button Content="探测 blob 名" Command="{Binding ProbeNcnnBlobsCommand}" IsEnabled="{Binding CanProbe}" Margin="8,0,0,0" />
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="模型输入输出" FontWeight="SemiBold" FontSize="12" />
+                            <TextBlock Text="{Binding NcnnBlobText}" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"
+                                       FontFamily="Consolas" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                    </DockPanel>
+                    <TextBlock Text="{Binding NcnnApiText}" FontSize="11" TextWrapping="Wrap" Margin="0,8,0,0"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+
+                    <TextBlock Text="{Binding NcnnCapabilityText}" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0"
+                               Visibility="{Binding HasNcnnDeviceDetails, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <TextBlock FontSize="11" TextWrapping="Wrap" Margin="0,8,0,0"
+                               Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                               Visibility="{Binding HasDeviceDetailsError, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Run Text="设备详情读取失败（不影响选择设备）：" />
+                        <Run Text="{Binding DeviceDetailsErrorText, Mode=OneWay}" />
+                    </TextBlock>
+                    <TextBlock Text="切换到 Vulkan 计算模式后，这里显示真实设备能力。" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
                                 <Style.Triggers>
@@ -321,97 +374,44 @@
                             </Style>
                         </TextBlock.Style>
                     </TextBlock>
-                    <ItemsControl ItemsSource="{Binding NcnnDetailRows}" Margin="0,8,0,0">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Grid Margin="0,5,16,5">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" MinWidth="132" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="{Binding Label}" FontSize="12" TextWrapping="Wrap"
-                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                    <TextBlock Grid.Column="1" Text="{Binding Value}" FontSize="12" TextWrapping="Wrap"
-                                               FontFamily="Consolas" />
-                                </Grid>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-            </StackPanel>
-        </ui:CardExpander>
-
-        <!-- 4. 模型自检：blob 名探测 + 产物清单（测速统一走页面底部「性能测试」） -->
-        <ui:CardExpander Margin="0,12,0,0" ContentPadding="0">
-            <ui:CardExpander.Header>
-                <StackPanel>
-                    <TextBlock Text="模型自检" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding NcnnSummary}" TextWrapping="Wrap" Margin="0,3,24,0" FontSize="12"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                </StackPanel>
-            </ui:CardExpander.Header>
-            <StackPanel>
-                <Separator BorderThickness="0,1,0,0" />
-                <StackPanel Margin="16">
-                    <DockPanel>
-                        <ui:Button DockPanel.Dock="Right" Content="探测 blob 名" Command="{Binding ProbeNcnnBlobsCommand}"
-                                   IsEnabled="{Binding CanInteract}" Margin="12,0,0,0" VerticalAlignment="Top" />
-                        <StackPanel>
-                            <TextBlock Text="模型输入输出" FontWeight="SemiBold" FontSize="12" />
-                            <TextBlock Text="{Binding NcnnBlobText}" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"
-                                       FontFamily="Consolas" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                        </StackPanel>
-                    </DockPanel>
-
-                    <TextBlock Text="产物清单" FontWeight="SemiBold" FontSize="12" Margin="0,14,0,6" />
-                    <ItemsControl ItemsSource="{Binding NcnnAssetGroups}" IsEnabled="False">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Margin="0,0,0,10" Padding="12" CornerRadius="8" Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}">
-                                    <StackPanel>
-                                        <DockPanel>
-                                            <TextBlock DockPanel.Dock="Right" Text="{Binding Summary}" FontSize="11"
-                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" VerticalAlignment="Center" />
-                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="12" />
-                                        </DockPanel>
-                                        <ItemsControl ItemsSource="{Binding Items}" Margin="0,6,0,0">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Grid Margin="0,2">
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="14" />
-                                                            <ColumnDefinition Width="*" />
-                                                            <ColumnDefinition Width="Auto" />
-                                                        </Grid.ColumnDefinitions>
-                                                        <Ellipse Width="6" Height="6" VerticalAlignment="Center">
-                                                            <Ellipse.Style>
-                                                                <Style TargetType="Ellipse">
-                                                                    <Setter Property="Fill" Value="{DynamicResource SystemFillColorCautionBrush}" />
-                                                                    <Style.Triggers>
-                                                                        <DataTrigger Binding="{Binding Ready}" Value="True"><Setter Property="Fill" Value="{DynamicResource SystemFillColorSuccessBrush}" /></DataTrigger>
-                                                                    </Style.Triggers>
-                                                                </Style>
-                                                            </Ellipse.Style>
-                                                        </Ellipse>
-                                                        <TextBlock Grid.Column="1" FontSize="12" TextWrapping="Wrap">
-                                                            <Run Text="{Binding DisplayName, Mode=OneWay}" />
-                                                            <Run Text=" · " Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
-                                                            <Run Text="{Binding Usage, Mode=OneWay}" Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
-                                                        </TextBlock>
-                                                        <TextBlock Grid.Column="2" Text="{Binding Detail}" FontSize="11" Margin="12,0,0,0"
-                                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
-                                                    </Grid>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <!-- 完整设备能力：20 个字段默认折叠，仅在需要排查驱动 / 能力问题时展开 -->
+                    <Expander Margin="0,8,0,0" IsExpanded="False" AutomationProperties.Name="完整设备能力">
+                        <Expander.Style>
+                            <Style TargetType="Expander">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasNcnnDeviceDetails}" Value="False">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Expander.Style>
+                        <Expander.Header>
+                            <StackPanel>
+                                <TextBlock Text="完整设备能力" FontWeight="SemiBold" FontSize="12" />
+                                <TextBlock Text="设备名称、驱动版本、队列、Subgroup、共享内存等来自 Vulkan 枚举的完整字段" FontSize="11"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                        </Expander.Header>
+                        <ItemsControl ItemsSource="{Binding NcnnDetailRows}" Margin="0,10,0,0">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,5,16,5">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" MinWidth="132" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Label}" FontSize="12" TextWrapping="Wrap"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Value}" FontSize="12" TextWrapping="Wrap"
+                                                   FontFamily="Consolas" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Expander>
                 </StackPanel>
             </StackPanel>
         </ui:CardExpander>
