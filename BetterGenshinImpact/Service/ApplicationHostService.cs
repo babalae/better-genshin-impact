@@ -50,26 +50,25 @@ public class ApplicationHostService(
     }
 
     /// <summary>
-    /// 网页版实例不创建主界面，云原神宿主窗口就是唯一的界面（由 WebPageRuntimeProvider 在启动截图器时打开）。
-    /// 页面的 Loaded / 导航不会发生，命令行任务直接交给对应的 ViewModel
+    /// 云原神子实例显示与桌面分身一致的 BetterGI 主界面，同时在后台创建固定 1080P 的网页宿主。
+    /// 命令行任务仍直接交给对应 ViewModel，避免主界面导航时序影响自动启动。
     /// </summary>
     private void HandleWebViewActivation(CommandLineOptions cmdOptions)
     {
-        // 总是先启动截图器：打开宿主并等待进入游戏，HomePageViewModel 同时负责遮罩窗口与键鼠监听。
-        // 宿主在 StartAsync 的同步部分就已创建并设为主窗口，后面的命令行任务弹出的提示因此有 Owner；
-        // 任务自身经 TaskRunner 获取运行环境时会等这次启动完成
+        // 总是先启动截图器：创建后台 1080P 宿主并等待进入游戏，HomePageViewModel 同时负责遮罩窗口与键鼠监听。
+        // BetterGI 主窗口已经创建，后面的命令行任务弹窗会自然以它为 Owner；任务自身经 TaskRunner
+        // 获取运行环境时会等待这次启动完成。
         serviceProvider.GetRequiredService<HomePageViewModel>().HandleActivation(cmdOptions);
 
         switch (cmdOptions.Action)
         {
             case CommandLineAction.StartOneDragon:
-                // 没有页面：模拟一条龙页面的导航（加载配置列表）与首次加载（按命令行选配置并执行）
-                var oneDragon = serviceProvider.GetRequiredService<OneDragonFlowViewModel>();
-                oneDragon.OnNavigatedTo();
-                oneDragon.LoadedCommand.Execute(null);
+                // 已有主界面后走正常导航，让页面按原有生命周期加载配置并执行。
+                _ = _navigationWindow?.Navigate(typeof(OneDragonFlowPage));
                 break;
 
             case CommandLineAction.StartGroups when cmdOptions.GroupNames.Length > 0:
+                _ = _navigationWindow?.Navigate(typeof(ScriptControlPage));
                 _ = serviceProvider.GetRequiredService<ScriptControlViewModel>()
                     .OnStartMultiScriptGroupWithNamesAsync(cmdOptions.GroupNames);
                 break;
@@ -82,20 +81,6 @@ public class ApplicationHostService(
     /// </summary>
     private async Task HandleActivationAsync()
     {
-        if (instanceService.Context.IsWebView)
-        {
-            try
-            {
-                await inferenceDiagnostics.PreheatOcrAsync();
-            }
-            catch (Exception e)
-            {
-                await BetterGenshinImpact.View.Windows.ThemedMessageBox.WarningAsync($"OCR 预热失败：{e.Message}");
-            }
-            HandleWebViewActivation(CommandLineOptions.Instance);
-            return;
-        }
-
         if (!Application.Current.Windows.OfType<MainWindow>().Any())
         {
             _navigationWindow = (serviceProvider.GetService(typeof(INavigationWindow)) as INavigationWindow)!;
@@ -103,6 +88,23 @@ public class ApplicationHostService(
             _navigationWindow!.ShowWindow();
 
             var cmdOptions = CommandLineOptions.Instance;
+            if (instanceService.Context.IsWebView)
+            {
+                // 先展示首页，避免 OCR 预热期间出现无界面进程；预热失败不阻止用户登录云原神。
+                _ = _navigationWindow.Navigate(typeof(HomePage));
+                try
+                {
+                    await inferenceDiagnostics.PreheatOcrAsync();
+                }
+                catch (Exception e)
+                {
+                    await BetterGenshinImpact.View.Windows.ThemedMessageBox.WarningAsync($"OCR 预热失败：{e.Message}");
+                }
+
+                HandleWebViewActivation(cmdOptions);
+                return;
+            }
+
             if (cmdOptions.IsPuloniaAction)
             {
                 _ = _navigationWindow.Navigate(typeof(PuloniaTaskHistoryPage));

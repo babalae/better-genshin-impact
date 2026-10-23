@@ -6,6 +6,7 @@ using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.GameTask.Runtime.WebPage;
 using BetterGenshinImpact.GameTask.Runtime.Win32;
 using BetterGenshinImpact.Genshin.Paths;
 using BetterGenshinImpact.Helpers;
@@ -55,11 +56,18 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 public partial class HomePageViewModel : ViewModel, IDisposable
 {
     private bool _disposed;
+
+    /// <summary>
+    /// 首页当前是否在可视树中，用于避免离开首页后继续复制 Banner 预览帧。
+    /// </summary>
+    private bool _isPageVisible;
+
     [ObservableProperty] private IEnumerable<EnumItem<CaptureModes>> _modeNames = EnumExtensions.ToEnumItems<CaptureModes>();
 
     [ObservableProperty] private string? _selectedMode = CaptureModes.BitBlt.ToString();
 
     [ObservableProperty] [NotifyPropertyChangedFor(nameof(IsTriggerButtonChecked))]
+    [NotifyPropertyChangedFor(nameof(CloudWebStatusText))]
     private bool _taskDispatcherEnabled = false;
 
     /// <summary>
@@ -67,12 +75,33 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsTriggerButtonChecked))]
+    [NotifyPropertyChangedFor(nameof(CloudWebStatusText))]
     private bool _isRuntimeStarting;
 
     /// <summary>
     /// 启动按钮显示为"停止"：运行中，或正在启动（此时点击提交停止请求，本次启动结束后不再绑定）
     /// </summary>
     public bool IsTriggerButtonChecked => TaskDispatcherEnabled || IsRuntimeStarting;
+
+    /// <summary>
+    /// 当前是否为云原神网页版子实例；该实例用实时页面预览替换首页默认 Banner。
+    /// </summary>
+    public bool IsWebViewInstance => InstanceBootstrap.Current.Context.IsWebView;
+
+    /// <summary>
+    /// 云原神实例在 Banner 中展示的名称。
+    /// </summary>
+    public string CloudWebInstanceDisplayName =>
+        $"云原神 · {InstanceBootstrap.Current.Context.InstanceName}";
+
+    /// <summary>
+    /// 云原神连接状态的简短展示文本。
+    /// </summary>
+    public string CloudWebStatusText => TaskDispatcherEnabled
+        ? "已连接 · 1080P"
+        : IsRuntimeStarting
+            ? "登录或排队中 · 1080P"
+            : "等待连接 · 1080P";
 
     /// <summary>
     /// 「云原神网页版」卡片只在 Primary 显示
@@ -95,14 +124,26 @@ public partial class HomePageViewModel : ViewModel, IDisposable
 
     private readonly GameRuntimeService _gameRuntimeService;
     private readonly Win32RuntimeProvider _win32RuntimeProvider;
+    private readonly WebPageRuntimeProvider _webPageRuntimeProvider;
     private readonly MouseKeyMonitor _mouseKeyMonitor = new();
     private readonly IBannerImageService _bannerImageService;
     private CancellationTokenSource? _bannerDownloadCancellationTokenSource;
+
+    /// <summary>
+    /// 云原神 Banner 是否已订阅 WPF 渲染帧，用于保证启停操作幂等。
+    /// </summary>
+    private bool _cloudWebPreviewRenderingSubscribed;
 
     [ObservableProperty] private InferenceDeviceType[] _inferenceDeviceTypes = InferenceDeviceTypeExtensions.Selectable.ToArray();
 
 
     [ObservableProperty] private ImageSource _bannerImageSource;
+
+    /// <summary>
+    /// 从当前 WGC 运行环境读取的云原神 Banner 预览。
+    /// </summary>
+    [ObservableProperty]
+    private ImageSource? _cloudWebPreviewImageSource;
 
     private const string DefaultBannerImagePath = "pack://application:,,,/Resources/Images/banner.jpg";
     private readonly string _customBannerImagePath = Global.Absolute("User/Images/custom_banner.jpg");
@@ -118,6 +159,7 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         IConfigService configService,
         GameRuntimeService gameRuntimeService,
         Win32RuntimeProvider win32RuntimeProvider,
+        WebPageRuntimeProvider webPageRuntimeProvider,
         ChildSessionService childSessionService,
         IBannerImageService bannerImageService,
         Func<CloudWebInstanceWindow> cloudWebInstanceWindowFactory,
@@ -130,6 +172,7 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         _hardwareAccelerationFactory = hardwareAccelerationFactory;
         _gameRuntimeService = gameRuntimeService;
         _win32RuntimeProvider = win32RuntimeProvider;
+        _webPageRuntimeProvider = webPageRuntimeProvider;
         _maskWindowHost = maskWindowHost;
         _customHtmlMaskService = customHtmlMaskService;
         _gameRuntimeService.Started += OnRuntimeStarted;
@@ -146,7 +189,10 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         }
 
         _inferenceRuntime.SettingsChanged += OnInferenceSettingsChanged;
-        InitializeBannerImage();
+        if (!IsWebViewInstance)
+        {
+            InitializeBannerImage();
+        }
 
 
         // WindowsGraphicsCapture 只支持 Win10 18362 及以上的版本 (Windows 10 version 1903 or later)
@@ -196,9 +242,90 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         _childSessionService.ShowWindow();
     }
 
+    /// <summary>
+    /// 打开保持原始 1920x1080 尺寸的云原神网页宿主，供用户登录和直接操作。
+    /// </summary>
+    [RelayCommand]
+    private void OpenCloudWebHost()
+    {
+        if (IsWebViewInstance)
+        {
+            _webPageRuntimeProvider.ShowHostForInteraction();
+        }
+    }
+
+    /// <summary>
+    /// 启动云原神 Banner 预览。与画中画一样跟随 WPF 渲染帧，避免定时器带来的卡顿和帧间隔抖动。
+    /// </summary>
+    private void StartCloudWebPreview()
+    {
+        if (_cloudWebPreviewRenderingSubscribed || !IsWebViewInstance)
+        {
+            return;
+        }
+
+        CompositionTarget.Rendering += OnCloudWebPreviewRendering;
+        _cloudWebPreviewRenderingSubscribed = true;
+    }
+
+    /// <summary>
+    /// 停止云原神 Banner 预览，避免离开首页后继续复制完整 1080P 帧。
+    /// </summary>
+    private void StopCloudWebPreview()
+    {
+        if (!_cloudWebPreviewRenderingSubscribed)
+        {
+            return;
+        }
+
+        CompositionTarget.Rendering -= OnCloudWebPreviewRendering;
+        _cloudWebPreviewRenderingSubscribed = false;
+    }
+
+    /// <summary>
+    /// 复用画中画的 CaptureLoop 链路：每个 WPF 渲染帧读取 WGC 缓存的最新帧并原地更新 WriteableBitmap。
+    /// 这里不创建 PictureInPictureWindow，也不对 WebView2 再做 JPEG 截图。
+    /// </summary>
+    private void OnCloudWebPreviewRendering(object? sender, EventArgs e)
+    {
+        var runtime = _gameRuntimeService.Current;
+        var mainWindow = Application.Current?.MainWindow;
+        if (_disposed || runtime?.Kind != GameRuntimeKind.WebPage
+                      || mainWindow is null
+                      || !mainWindow.IsVisible
+                      || mainWindow.WindowState == WindowState.Minimized)
+        {
+            return;
+        }
+
+        using var captureFrame = runtime.Capture.Capture();
+        var frame = captureFrame?.Frame;
+        if (frame == null || frame.Empty())
+        {
+            return;
+        }
+
+        if (CloudWebPreviewImageSource is not WriteableBitmap bitmap
+            || bitmap.PixelWidth != frame.Width
+            || bitmap.PixelHeight != frame.Height)
+        {
+            CloudWebPreviewImageSource = frame.ToWriteableBitmap();
+        }
+        else
+        {
+            frame.UpdateWriteableBitmap(bitmap);
+        }
+    }
+
     [RelayCommand]
     private void OnLoaded()
     {
+        _isPageVisible = true;
+        if (_gameRuntimeService.Current?.Kind == GameRuntimeKind.WebPage)
+        {
+            StartCloudWebPreview();
+        }
+
         // OnTest();
 
         // 实例列表与运行状态由管理窗口负责刷新，首页仅保留入口。
@@ -216,10 +343,21 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         HandleActivation(CommandLineOptions.Instance);
     }
 
+    /// <summary>
+    /// 离开首页后停止 Banner 的 UI 帧复制；WGC 本身仍供自动化任务使用。
+    /// </summary>
+    [RelayCommand]
+    private void OnUnloaded()
+    {
+        _isPageVisible = false;
+        StopCloudWebPreview();
+    }
+
     public void HandleActivation(CommandLineOptions commandLineOptions)
     {
-        // 网页版实例没有主界面，启动后总是打开宿主窗口并等待绑定（见 ApplicationHostService.HandleWebViewActivation）
-        if (commandLineOptions.Action == CommandLineAction.Start || InstanceBootstrap.Current.Context.IsWebView)
+        // 网页版实例启动后总是创建后台 1080P 宿主并等待绑定（见 ApplicationHostService.HandleWebViewActivation）。
+        if ((commandLineOptions.Action == CommandLineAction.Start || InstanceBootstrap.Current.Context.IsWebView)
+            && !IsTriggerButtonChecked)
         {
             _ = OnStartTriggerAsync();
         }
@@ -245,6 +383,7 @@ public partial class HomePageViewModel : ViewModel, IDisposable
 
         _disposed = true;
         _inferenceRuntime.SettingsChanged -= OnInferenceSettingsChanged;
+        StopCloudWebPreview();
         OnClosed();
         _gameRuntimeService.Started -= OnRuntimeStarted;
         _gameRuntimeService.Stopped -= OnRuntimeStopped;
@@ -353,6 +492,10 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         {
             _mouseKeyMonitor.Subscribe(handle);
         }
+        else if (_isPageVisible)
+        {
+            StartCloudWebPreview();
+        }
         TaskDispatcherEnabled = true;
         PrintSystemInfo(runtime);
     }
@@ -395,6 +538,9 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     private void OnRuntimeStopped(object? sender, EventArgs e)
     {
         _maskWindowHost.Detach();
+
+        StopCloudWebPreview();
+        CloudWebPreviewImageSource = null;
 
         TaskDispatcherEnabled = false;
         _mouseKeyMonitor.Unsubscribe();

@@ -17,9 +17,10 @@ using Vanara.PInvoke;
 namespace BetterGenshinImpact.View.Windows;
 
 /// <summary>
-/// 云原神网页版宿主窗口：承载页面、注入输入 SDK、轮询 SDK 状态判断游戏是否就绪。
+/// 云原神网页版渲染宿主：承载页面、注入输入 SDK、轮询 SDK 状态判断游戏是否就绪。
 /// <para>
-/// 网页版实例没有主界面，这个窗口就是唯一的界面。由 WebPageRuntimeProvider 创建并持有，关闭即退出实例。
+/// 网页版实例另有 BetterGI 主界面；本窗口默认放在虚拟屏幕外，用户从首页 Banner 点击后才移到屏幕内。
+/// 由 WebPageRuntimeProvider 创建并持有，关闭仍会退出当前实例。
 /// </para>
 /// <para>
 /// 客户区固定为 1920x1080 物理像素（不随 DPI 缩放），截图与识图直接工作在 1080P 下。
@@ -28,7 +29,8 @@ namespace BetterGenshinImpact.View.Windows;
 /// </para>
 /// <para>
 /// 注意：RTC 断开（断网、被踢下线等）后只会让 <see cref="IsGameReady"/> 变为 false，截图器随之停止；
-/// 这里不会自动刷新页面，也不会自动重新绑定。实例没有主界面，需要关闭本窗口后从主实例重新启动。
+/// 这里不会自动刷新页面，也不会自动重新绑定；用户可从 BetterGI 主界面重新操作启动流程，
+/// 或关闭本窗口后从主实例重新启动整个云原神实例。
 /// </para>
 /// </summary>
 public partial class CloudWebHostWindow : Window
@@ -75,6 +77,7 @@ public partial class CloudWebHostWindow : Window
     private bool _stoppingCaptureForClose;
     private bool _captureStoppedForClose;
     private bool _polling;
+    private bool _showAsBackgroundHost;
     private int _notReadyCount;
     private string? _lastNotReadyReason;
 
@@ -85,8 +88,8 @@ public partial class CloudWebHostWindow : Window
         _logger = logger;
 
         InitializeComponent();
-        // 网页版实例不会创建 MainWindow，必须由宿主窗口主动启用 Per-Monitor DPI 感知，
-        // 否则 Windows 会把后续的客户区尺寸和坐标虚拟化，1920x1080 会随系统缩放变化。
+        // 宿主窗口仍主动启用 Per-Monitor DPI 感知，避免它在主窗口初始化时序变化后被 Windows
+        // 虚拟化客户区尺寸和坐标，确保 1920x1080 不随系统缩放变化。
         this.InitializeDpiAwareness();
         Title = $"云原神 · {_instanceName}";
 
@@ -126,6 +129,38 @@ public partial class CloudWebHostWindow : Window
     public bool IsClosed => _isClosed;
 
     /// <summary>
+    /// 以后台渲染宿主方式显示窗口：保留可捕获的顶层窗口与完整 1080P 客户区，但不占用可见桌面。
+    /// </summary>
+    public void ShowAsBackgroundHost()
+    {
+        _showAsBackgroundHost = true;
+        Show();
+    }
+
+    /// <summary>
+    /// 将原始 1080P 网页宿主移到 BetterGI 主窗口所在屏幕，供用户完成登录或直接操作。
+    /// </summary>
+    public void ShowForInteraction()
+    {
+        if (_isClosed)
+        {
+            return;
+        }
+
+        _showAsBackgroundHost = false;
+        ShowInTaskbar = true;
+        if (WindowState == WindowState.Minimized)
+        {
+            WindowState = WindowState.Normal;
+        }
+
+        ApplyClientSize(center: true);
+        Activate();
+        Focus();
+        _controller?.MoveFocus(CoreWebView2MoveFocusReason.Programmatic);
+    }
+
+    /// <summary>
     /// 等待游戏就绪（登录、排队可能需要几分钟，不设超时）。
     /// 就绪返回 true；窗口被关闭返回 false；取消时抛出 <see cref="OperationCanceledException"/>
     /// </summary>
@@ -147,7 +182,34 @@ public partial class CloudWebHostWindow : Window
     private void OnSourceInitialized(object? sender, EventArgs e)
     {
         Handle = new WindowInteropHelper(this).Handle;
-        ApplyClientSize(center: true);
+        ApplyClientSize(center: !_showAsBackgroundHost);
+        if (_showAsBackgroundHost)
+        {
+            MoveOutsideVirtualScreen();
+        }
+    }
+
+    /// <summary>
+    /// 把后台宿主放到整个虚拟桌面的左侧。窗口仍保持显示状态，WebView2 与 WGC 因而继续拥有稳定的渲染表面。
+    /// </summary>
+    private void MoveOutsideVirtualScreen()
+    {
+        if (Handle == 0 || !User32.GetWindowRect(Handle, out var windowRect))
+        {
+            return;
+        }
+
+        var virtualScreen = System.Windows.Forms.SystemInformation.VirtualScreen;
+        var x = virtualScreen.Left - windowRect.Width - 32;
+        var y = virtualScreen.Top;
+        _ = User32.SetWindowPos(
+            Handle,
+            HWND.NULL,
+            x,
+            y,
+            windowRect.Width,
+            windowRect.Height,
+            User32.SetWindowPosFlags.SWP_NOZORDER | User32.SetWindowPosFlags.SWP_NOACTIVATE);
     }
 
     /// <summary>
@@ -178,7 +240,11 @@ public partial class CloudWebHostWindow : Window
         if (center)
         {
             // 进程为 Per-Monitor DPI 感知，WinForms Screen 返回物理像素
-            var workArea = System.Windows.Forms.Screen.FromHandle(Handle).WorkingArea;
+            var mainWindow = Application.Current?.MainWindow;
+            var anchorHandle = mainWindow != null && !ReferenceEquals(mainWindow, this)
+                ? new WindowInteropHelper(mainWindow).Handle
+                : Handle;
+            var workArea = System.Windows.Forms.Screen.FromHandle(anchorHandle).WorkingArea;
             if (width > workArea.Width || height > workArea.Height)
             {
                 _logger.LogWarning("当前显示器工作区 {W}x{H} 小于云原神窗口 {WW}x{WH}，窗口会超出屏幕", workArea.Width,

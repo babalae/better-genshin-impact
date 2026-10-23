@@ -4,6 +4,7 @@ using OpenCvSharp;
 using System;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoSkip;
+using BetterGenshinImpact.GameTask.Runtime;
 
 namespace BetterGenshinImpact.Service;
 
@@ -16,7 +17,7 @@ public static class PictureInPictureService
 
     public static void Update(Mat frame)
     {
-        if (_manualClosed)
+        if (_manualClosed || !IsWindowAllowed())
         {
             return;
         }
@@ -68,7 +69,7 @@ public static class PictureInPictureService
 
     private static void EnsureWindow()
     {
-        if (_window != null)
+        if (_window != null || !IsWindowAllowed())
         {
             return;
         }
@@ -82,5 +83,13 @@ public static class PictureInPictureService
         {
             _window = null;
         };
+    }
+
+    /// <summary>
+    /// 云原神 WebView2 子实例只在主界面 Banner 内显示预览，禁止创建独立画中画窗口。
+    /// </summary>
+    private static bool IsWindowAllowed()
+    {
+        return App.GetService<GameRuntimeService>()?.Kind != GameRuntimeKind.WebPage;
     }
 }

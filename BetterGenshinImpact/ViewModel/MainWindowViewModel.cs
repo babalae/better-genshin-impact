@@ -64,6 +64,23 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
     /// </summary>
     private bool _disposed;
     public string Title => $"BetterGI · 更好的原神 · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}";
+
+    /// <summary>
+    /// 当前进程是否为需要在标题栏标识的子实例。
+    /// </summary>
+    public bool IsChildInstance =>
+        InstanceBootstrap.Current.Context.InstanceType != BetterGiInstanceType.Primary;
+
+    /// <summary>
+    /// 当前子实例在标题栏展示的稳定标识。
+    /// </summary>
+    public string ChildInstanceTagText => InstanceBootstrap.Current.Context.InstanceType switch
+    {
+        BetterGiInstanceType.ChildSession => "桌面分身",
+        BetterGiInstanceType.WebView => $"云原神 · {InstanceBootstrap.Current.Context.InstanceName}",
+        _ => string.Empty
+    };
+
     public bool IsChildSessionInstance =>
         InstanceBootstrap.Current.Context.InstanceType == BetterGiInstanceType.ChildSession;
 

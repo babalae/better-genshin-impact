@@ -19,7 +19,8 @@ namespace BetterGenshinImpact.GameTask.Runtime.WebPage;
 /// 宿主窗口由本类持有，<see cref="GameRuntime.Dispose"/> 不会关闭它（与"停止截图器不关闭本地游戏"一致）。
 /// </para>
 /// <para>
-/// 网页版实例没有主界面，宿主窗口就是唯一界面：它被设为 Application.MainWindow，关闭即退出实例。
+/// 网页版实例显示 BetterGI 主界面；固定 1080P 的宿主窗口在后台渲染。
+/// 关闭宿主窗口仍会退出当前网页版实例。
 /// </para>
 /// </summary>
 public sealed class WebPageRuntimeProvider(
@@ -96,6 +97,22 @@ public sealed class WebPageRuntimeProvider(
     }
 
     /// <summary>
+    /// 将后台 1080P 网页宿主移到当前主窗口所在屏幕并激活，供用户完成登录或直接操作页面。
+    /// </summary>
+    public void ShowHostForInteraction()
+    {
+        var dispatcher = Application.Current.Dispatcher;
+        if (dispatcher.CheckAccess())
+        {
+            EnsureHost().ShowForInteraction();
+        }
+        else
+        {
+            dispatcher.Invoke(() => EnsureHost().ShowForInteraction());
+        }
+    }
+
+    /// <summary>
     /// 已打开的宿主直接复用（最小化时还原），否则新建。在 UI 线程上调用
     /// </summary>
     private CloudWebHostWindow EnsureHost()
@@ -115,18 +132,17 @@ public sealed class WebPageRuntimeProvider(
         host.Closed += OnHostClosed;
         _host = host;
 
-        // 没有主界面：宿主作为主窗口，供对话框 Owner、UIDispatcherHelper.MainWindow 等使用
-        Application.Current.MainWindow = host;
-        host.Show();
+        // 宿主保留完整 1920x1080 客户区并在虚拟屏幕外渲染；首页只显示其缩略预览。
+        host.ShowAsBackgroundHost();
         return host;
     }
 
     /// <summary>
-    /// 宿主是网页版实例唯一的界面，关闭后退出实例（CloseGame 同样会走到这里）
+    /// 宿主承载实际游戏页面，关闭后退出网页版实例（CloseGame 同样会走到这里）。
     /// </summary>
     private void OnHostClosed(object? sender, EventArgs e)
     {
-        if (ReferenceEquals(_host, sender))
+        if (_host is { } host && ReferenceEquals(host, sender))
         {
             _host = null;
         }

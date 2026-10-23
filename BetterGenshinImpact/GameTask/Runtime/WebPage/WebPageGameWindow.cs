@@ -25,8 +25,8 @@ public sealed class WebPageGameWindow : Win32GameWindow
 
     /// <summary>
     /// 宿主窗口未关闭，且 RTC 通道为 open、已进入游戏。
-    /// 注意：断开后截图器会停止，但不会自动刷新页面或重新绑定。网页版实例没有主界面、不响应热键，
-    /// 无法手动重新启动截图器，需要关闭云原神窗口（即退出实例）后从主实例重新启动
+    /// 注意：断开后截图器会停止，但不会自动刷新页面或重新绑定。网页版实例仍不响应热键，
+    /// 用户可在主界面重新启动截图器；若页面自身无法恢复，则关闭云原神窗口后从主实例重新启动。
     /// </summary>
     public override bool IsAlive => _host.IsGameReady;
 

@@ -3,6 +3,7 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
       xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
+      xmlns:converters="clr-namespace:BetterGenshinImpact.View.Converters"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -18,15 +19,94 @@
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       mc:Ignorable="d">
 
+    <Page.Resources>
+        <converters:AspectRatioHeightConverter x:Key="AspectRatioHeightConverter" />
+    </Page.Resources>
+
     <b:Interaction.Triggers>
         <b:EventTrigger EventName="Loaded">
-            <b:InvokeCommandAction Command="{Binding LoadedCommand}" CommandParameter="{Binding}" />
+            <b:InvokeCommandAction Command="{Binding LoadedCommand, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" />
+        </b:EventTrigger>
+        <b:EventTrigger EventName="Unloaded">
+            <b:InvokeCommandAction Command="{Binding UnloadedCommand, Mode=OneWay}" />
         </b:EventTrigger>
     </b:Interaction.Triggers>
 
-    <StackPanel Margin="42,16,42,12">
+    <StackPanel x:Name="HomeContent" Margin="42,16,42,12">
 
-        <Border Height="200" CornerRadius="8">
+        <!-- 云原神子实例：使用独立 16:9 画框展示 WGC 最新帧，不复用普通 Banner 的固定高度和全局遮罩。 -->
+        <Border Height="{Binding ActualWidth, ElementName=HomeContent, Mode=OneWay, Converter={StaticResource AspectRatioHeightConverter}, ConverterParameter=1.7777777777777777}"
+                Background="#FF10151D"
+                BorderBrush="#30FFFFFF"
+                BorderThickness="1"
+                CornerRadius="10"
+                SnapsToDevicePixels="True"
+                Visibility="{Binding IsWebViewInstance, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Grid ClipToBounds="True">
+                <Border CornerRadius="9">
+                    <Border.Background>
+                        <ImageBrush ImageSource="{Binding CloudWebPreviewImageSource, Mode=OneWay}"
+                                    RenderOptions.BitmapScalingMode="HighQuality"
+                                    Stretch="Uniform" />
+                    </Border.Background>
+                </Border>
+
+                <Grid Margin="20,0,18,16" VerticalAlignment="Bottom">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" VerticalAlignment="Bottom">
+                        <TextBlock FontSize="16"
+                                   FontWeight="SemiBold"
+                                   Foreground="White"
+                                   CacheMode="BitmapCache"
+                                   Text="{Binding CloudWebInstanceDisplayName, Mode=OneWay}">
+                            <TextBlock.Effect>
+                                <DropShadowEffect BlurRadius="4"
+                                                  Direction="315"
+                                                  Opacity="0.9"
+                                                  ShadowDepth="1"
+                                                  Color="Black" />
+                            </TextBlock.Effect>
+                        </TextBlock>
+                        <StackPanel Margin="1,4,0,0" Orientation="Horizontal">
+                            <Ellipse Width="6"
+                                     Height="6"
+                                     Margin="0,0,6,0"
+                                     VerticalAlignment="Center"
+                                     Fill="{DynamicResource SystemFillColorSuccessBrush}" />
+                            <TextBlock FontSize="12"
+                                       VerticalAlignment="Center"
+                                       Foreground="#E6FFFFFF"
+                                       CacheMode="BitmapCache"
+                                       Text="{Binding CloudWebStatusText, Mode=OneWay}">
+                                <TextBlock.Effect>
+                                    <DropShadowEffect BlurRadius="3"
+                                                      Direction="315"
+                                                      Opacity="0.9"
+                                                      ShadowDepth="1"
+                                                      Color="Black" />
+                                </TextBlock.Effect>
+                            </TextBlock>
+                        </StackPanel>
+                    </StackPanel>
+                    <ui:Button Grid.Column="1"
+                               MinWidth="116"
+                               Height="36"
+                               Padding="12,0"
+                               VerticalAlignment="Bottom"
+                               Appearance="Primary"
+                               Command="{Binding OpenCloudWebHostCommand, Mode=OneWay}"
+                               Content="进入云原神"
+                               Icon="{ui:SymbolIcon Games24}" />
+                </Grid>
+            </Grid>
+        </Border>
+
+        <Border Height="200"
+                CornerRadius="8"
+                Visibility="{Binding IsWebViewInstance, Mode=OneWay, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
             <Border.ContextMenu>
                 <ContextMenu>
                     <ui:MenuItem Header="{i18n:T 更换背景图片}" Command="{Binding ChangeBannerImageCommand}" Icon="{ui:SymbolIcon Image24}" />

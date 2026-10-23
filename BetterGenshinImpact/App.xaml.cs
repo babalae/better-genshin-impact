@@ -269,7 +269,8 @@ public partial class App : Application
                 // 游戏运行环境：按实例类型选定 Provider，见 Docs/design/game-runtime.md
                 services.AddSingleton<Win32RuntimeProvider>();
                 services.AddSingleton<IGameRuntimeProvider>(sp => sp.GetRequiredService<Win32RuntimeProvider>());
-                services.AddSingleton<IGameRuntimeProvider, WebPageRuntimeProvider>();
+                services.AddSingleton<WebPageRuntimeProvider>();
+                services.AddSingleton<IGameRuntimeProvider>(sp => sp.GetRequiredService<WebPageRuntimeProvider>());
                 services.AddTransient<CloudWebHostWindow>();
                 services.AddSingleton<Func<CloudWebHostWindow>>(sp => () => sp.GetRequiredService<CloudWebHostWindow>());
                 services.AddSingleton<GameRuntimeService>();

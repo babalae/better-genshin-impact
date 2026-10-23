@@ -103,7 +103,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
     /// <summary>
     /// 网页版实例不响应任何热键（全局热键与键鼠监听都不注册）：
     /// 同一 Windows Session 中全局热键只能被先启动的实例注册，键鼠监听也会与 Primary 重复响应。
-    /// 网页版实例没有主界面，一般不会创建本 ViewModel，这里是兜底
+    /// 网页版实例虽然显示主界面，但热键页只展示共享配置，不应在当前进程重复注册。
     /// </summary>
     public bool IsHotKeyEnabled { get; } = !InstanceBootstrap.Current.Context.IsWebView;
 
