@@ -17,17 +17,21 @@ internal static class NcnnRecDecoder
 
     /// <summary>
     ///     解析输出形状：优先用 shim 返回的 w/h/c（fp32 unpacked 后），
-    ///     旧 DLL 或无元信息时按「时间步 = 桶宽 / 8」推断。
+    ///     旧 DLL 或无元信息时按「时间步 = 桶宽 / 8 向上取整」推断。
     /// </summary>
     public static (int CharCount, int LabelCount) ResolveOutputShape(NcnnTensorInfo? info, int count, int width)
     {
         if (info != null)
         {
+            // 二维输出（动态宽度模型的常态）：w=类别数，h=时间步
+            if (info.Dims == 2 && info.Width > 1 && info.Height > 0 && (long)info.Width * info.Height == count)
+                return (info.Height, info.Width);
+
             var labels = info.Channels > 0 ? info.Channels : 0;
             var steps = info.Width > 0 ? info.Width : 0;
             if (labels > 1 && steps > 0 && steps * labels == count) return (steps, labels);
 
-            var fallbackSteps = Math.Max(1, width / Downsample);
+            var fallbackSteps = Math.Max(1, (int)Math.Ceiling(width / (double)Downsample));
             if (labels > 1 && count % labels == 0 && count / labels > 0) return (count / labels, labels);
             if (count % fallbackSteps == 0) return (fallbackSteps, count / fallbackSteps);
 
@@ -35,7 +39,7 @@ internal static class NcnnRecDecoder
                 $"ncnn rec 输出维度异常: dims={info.Dims} {info.ShapeText} count={count}（桶宽 {width}）");
         }
 
-        var charCount = Math.Max(1, width / Downsample);
+        var charCount = Math.Max(1, (int)Math.Ceiling(width / (double)Downsample));
         if (count % charCount != 0)
             throw new InvalidOperationException($"ncnn rec 输出维度异常: {count} 不能被 {charCount} 整除");
         return (charCount, count / charCount);

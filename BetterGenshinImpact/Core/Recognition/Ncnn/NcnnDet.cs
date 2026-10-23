@@ -26,9 +26,6 @@ internal sealed class NcnnDet : IOcrDetector
     private readonly OcrVersionConfig _config;
     private readonly NcnnTuningSettings _tuning;
 
-    /// <summary>关闭分桶时的固定画布边长；0 表示按内容自适应分桶。</summary>
-    private readonly int _fixedBucket;
-
     /// <summary>det 内容边长上限（与 Det.LimitSideLen 默认值一致）。</summary>
     public int LimitSideLen { get; set; } = 960;
 
@@ -42,10 +39,23 @@ internal sealed class NcnnDet : IOcrDetector
     public float UnclipRatio { get; set; } = 1.5f;
 
     private const int BucketStep = 320;
+    private const int AlignStep = 32;
+
+    private const string DynamicParamName = "det_dyn.param";
+    private const string DynamicBinName = "det_dyn.bin";
 
     private readonly string _modelDir;
     private readonly int _gpuIndex;
     private readonly NcnnBucketCache<NcnnSession> _sessions;
+
+    /// <summary>是否使用动态方形画布单模型（分桶关闭且 det_dyn 产物在位）。</summary>
+    private readonly bool _dynamicDet;
+
+    /// <summary>动态模式不可用时的固定画布边长（最大档）；0 表示按内容自适应分桶。</summary>
+    private readonly int _fixedBucket;
+
+    /// <summary>动态模式单会话的输入缓冲画布上限（构造时按 LimitSideLen 对齐）。</summary>
+    private readonly int _maxCanvas;
 
     public NcnnDet(INcnnShim shim, string modelDir, OcrVersionConfig config,
         NcnnTuningSettings tuning, int gpuIndex = 0, bool useBuckets = true, ILogger? logger = null)
@@ -56,10 +66,17 @@ internal sealed class NcnnDet : IOcrDetector
         _tuning = tuning.NormalizedCopy();
         _modelDir = modelDir;
         _gpuIndex = gpuIndex;
-        // det 输入桶按内容尺寸选择，pnnx 静态形状要求每桶一份模型，故按需懒加载；
-        // 关闭分桶时固定用最大档画布（对比测试用），LimitSideLen 在使用点读取。
-        _fixedBucket = useBuckets ? 0 : Math.Max(BucketStep, (int)Math.Ceiling(LimitSideLen / (double)BucketStep) * BucketStep);
-        _sessions = new NcnnBucketCache<NcnnSession>(CreateBucketSession);
+        _maxCanvas = Math.Max(64, (int)Math.Ceiling(LimitSideLen / (double)AlignStep) * AlignStep);
+        // det 画布恒为正方形：动态方形模型在 Vulkan 上全尺寸对拍通过，产物在位时优先使用
+        // （画布=内容对齐 32 的正方形，小于 320 步长桶）；缺失回落固定最大档。
+        _dynamicDet = !useBuckets && File.Exists(Path.Combine(modelDir, DynamicParamName))
+                      && File.Exists(Path.Combine(modelDir, DynamicBinName));
+        _fixedBucket = useBuckets || _dynamicDet
+            ? 0
+            : Math.Max(BucketStep, (int)Math.Ceiling(LimitSideLen / (double)BucketStep) * BucketStep);
+        if (!useBuckets && !_dynamicDet)
+            _logger.LogWarning("[OCR][Det][ncnn] 分桶已关闭但 {Param} 缺失，回落到固定 {Bucket} 桶画布", DynamicParamName, _fixedBucket);
+        _sessions = new NcnnBucketCache<NcnnSession>(CreateSession);
     }
 
     public void Dispose() => _sessions.Dispose();
@@ -80,13 +97,17 @@ internal sealed class NcnnDet : IOcrDetector
     /// <summary>用零张量预热指定桶。</summary>
     public void Warmup(int bucket)
     {
-        var session = _sessions.GetOrCreate(bucket);
+        var session = _sessions.GetOrCreate(SessionKey(bucket));
         Array.Clear(session.InputBuffer);
         _ = session.Infer(NcnnInput.FromFloat("in0", session.InputBuffer, bucket, bucket, 3));
     }
 
+    /// <summary>动态模式全部输入共用会话 0；分桶模式按桶边长分会话。</summary>
+    private int SessionKey(int bucket) => _dynamicDet ? 0 : bucket;
+
     public int[] GetWarmupBuckets()
     {
+        if (_dynamicDet) return [_maxCanvas];
         if (_fixedBucket > 0) return [_fixedBucket];
         var limit = Math.Max(BucketStep, (int)Math.Ceiling(LimitSideLen / (double)BucketStep) * BucketStep);
         var buckets = new List<int>();
@@ -130,7 +151,7 @@ internal sealed class NcnnDet : IOcrDetector
         {
             using var canvas = MatResizeForDetection(input, out contentSize);
             var bucket = canvas.Width;
-            var session = _sessions.GetOrCreate(bucket);
+            var session = _sessions.GetOrCreate(SessionKey(bucket));
             var tensor = OcrUtils.NormalizeToTensorDnn(canvas, _config.NormalizeImage.Scale,
                 _config.NormalizeImage.Mean, _config.NormalizeImage.Std, out var owner);
             try
@@ -161,14 +182,28 @@ internal sealed class NcnnDet : IOcrDetector
         }
     }
 
-    private NcnnSession CreateBucketSession(int bucket)
+    private NcnnSession CreateSession(int key)
     {
-        var paramPath = Path.Combine(_modelDir, $"det_w{bucket}.param");
-        var modelPath = Path.Combine(_modelDir, $"det_w{bucket}.bin");
+        string paramPath;
+        string modelPath;
+        int inputBufferSize;
+        if (_dynamicDet)
+        {
+            paramPath = Path.Combine(_modelDir, DynamicParamName);
+            modelPath = Path.Combine(_modelDir, DynamicBinName);
+            inputBufferSize = 3 * _maxCanvas * _maxCanvas;
+        }
+        else
+        {
+            paramPath = Path.Combine(_modelDir, $"det_w{key}.param");
+            modelPath = Path.Combine(_modelDir, $"det_w{key}.bin");
+            inputBufferSize = 3 * key * key;
+        }
+
         if (!File.Exists(paramPath) || !File.Exists(modelPath))
-            throw new FileNotFoundException($"ncnn det 模型缺失（桶 {bucket}）", paramPath);
+            throw new FileNotFoundException($"ncnn det 模型缺失（{(_dynamicDet ? "动态" : $"桶 {key}")}）", paramPath);
         return new NcnnSession(_shim, _tuning.ToNetOptions(paramPath, modelPath, _gpuIndex),
-            _tuning.ParallelSessions, 3 * bucket * bucket);
+            _tuning.ParallelSessions, inputBufferSize);
     }
 
     private static string DescribeShape(NcnnTensorInfo info, int count) =>
@@ -201,15 +236,33 @@ internal sealed class NcnnDet : IOcrDetector
         if (resizeWidth <= 0 || resizeHeight <= 0)
             throw new InvalidOperationException($"Invalid det resize target size: {resizeWidth}x{resizeHeight}");
 
-        var bucket = _fixedBucket;
-        if (bucket > 0 && Math.Max(resizeHeight, resizeWidth) > bucket)
+        int bucket;
+        if (_dynamicDet)
         {
-            // 关闭分桶时内容超出固定画布（limitType=min 等非默认限边）：等比缩入画布再对齐。
-            var fitRatio = 1.0 * bucket / Math.Max(resizeHeight, resizeWidth);
-            resizeHeight = Math.Max((int)Math.Round(resizeHeight * fitRatio / 32.0) * 32, 32);
-            resizeWidth = Math.Max((int)Math.Round(resizeWidth * fitRatio / 32.0) * 32, 32);
+            // 动态方形画布：内容对齐 32 的最小正方形（上限 _maxCanvas，超限等比缩入）
+            var side = Math.Max((Math.Max(resizeHeight, resizeWidth) + AlignStep - 1) / AlignStep * AlignStep, 64);
+            if (side > _maxCanvas)
+            {
+                var fitRatio = 1.0 * _maxCanvas / side;
+                resizeHeight = Math.Max((int)Math.Round(resizeHeight * fitRatio / (double)AlignStep) * AlignStep, AlignStep);
+                resizeWidth = Math.Max((int)Math.Round(resizeWidth * fitRatio / (double)AlignStep) * AlignStep, AlignStep);
+                side = _maxCanvas;
+            }
+
+            bucket = side;
         }
-        else if (bucket <= 0)
+        else if (_fixedBucket > 0)
+        {
+            bucket = _fixedBucket;
+            if (Math.Max(resizeHeight, resizeWidth) > bucket)
+            {
+                // 固定画布（limitType=min 等非默认限边）：等比缩入画布再对齐。
+                var fitRatio = 1.0 * bucket / Math.Max(resizeHeight, resizeWidth);
+                resizeHeight = Math.Max((int)Math.Round(resizeHeight * fitRatio / (double)AlignStep) * AlignStep, AlignStep);
+                resizeWidth = Math.Max((int)Math.Round(resizeWidth * fitRatio / (double)AlignStep) * AlignStep, AlignStep);
+            }
+        }
+        else
         {
             bucket = Math.Max((Math.Max(resizeHeight, resizeWidth) + BucketStep - 1) / BucketStep * BucketStep,
                 BucketStep);
