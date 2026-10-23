@@ -312,6 +312,40 @@ public class MusicScoreParserMoTickTests
     }
 
     /// <summary>
+    /// 超长数字不能因为 long 溢出回绕成小数值而绕过上限检查：
+    /// 18446744073709556616 = 2^64 + 5000，回绕后正好是 5000ms，曾经被静默接受。
+    /// </summary>
+    [Theory]
+    [InlineData("18446744073709556616A", "间隔")]
+    [InlineData("99999999999A", "间隔")]
+    [InlineData("86400001A", "间隔")]
+    [InlineData("A[86400001]F", "延音")]
+    [InlineData("A[18446744073709556616]F", "延音")]
+    public async Task ParseAsync_OverflowingNumbers_AreRejected(string text, string errorKeyword)
+    {
+        var score = await ParseAsync($$"""
+            { "type": "motick", "tick": { "unit": "ms", "text": "{{text}}" } }
+            """);
+
+        Assert.False(score.IsValid);
+        Assert.Contains(errorKeyword, score.Error);
+    }
+
+    /// <summary>
+    /// 上限边界值本身合法：正好 24 小时可以通过，不会被误杀。
+    /// </summary>
+    [Fact]
+    public async Task ParseAsync_GapAtUpperBound_IsAccepted()
+    {
+        var score = await ParseAsync("""
+            { "type": "motick", "tick": { "unit": "ms", "text": "86400000A" } }
+            """);
+
+        Assert.True(score.IsValid, score.Error);
+        AssertTime(86400000, Assert.Single(Downs(score)));
+    }
+
+    /// <summary>
     /// 取出按时间排序的按下事件。
     /// </summary>
     /// <param name="score">解析结果</param>

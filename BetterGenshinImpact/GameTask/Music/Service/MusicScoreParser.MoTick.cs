@@ -155,11 +155,7 @@ public sealed partial class MusicScoreParser
 
         void AddChord()
         {
-            if (pendingGap > MaxGapMilliseconds)
-            {
-                throw new FormatException($"mo-Tick 谱面的间隔过大：{pendingGap}ms");
-            }
-
+            // pendingGap 在累加时就被限制在 MaxGapMilliseconds 以内，这里无需再判上限
             notes.Add(new MoTickNote(chord.ToString(), pendingGap, 0));
             chord.Clear();
             pendingGap = 0;
@@ -191,7 +187,15 @@ public sealed partial class MusicScoreParser
                 }
 
                 canSustain = false;
+                // 每次累加后立刻判上限：保证 pendingGap 始终不超过 MaxGapMilliseconds，
+                // 下一轮「乘 10 加个位」就不会溢出 long。若把上限检查留到收尾（AddChord），
+                // 超长数字会先溢出回绕成小数值甚至负数，从而静默绕过检查。
                 pendingGap = pendingGap * 10 + (current - '0');
+                if (pendingGap > MaxGapMilliseconds)
+                {
+                    throw new FormatException($"mo-Tick 谱面的间隔过大：{pendingGap}ms");
+                }
+
                 index++;
                 continue;
             }
@@ -225,11 +229,6 @@ public sealed partial class MusicScoreParser
                 var content = text[(index + 1)..bracketEnd];
                 if (TryReadDigits(content, out var sustain) && notes.Count > 0)
                 {
-                    if (sustain > MaxGapMilliseconds)
-                    {
-                        throw new FormatException($"mo-Tick 谱面的延音过大：{sustain}ms");
-                    }
-
                     notes[^1] = notes[^1] with { SustainMilliseconds = sustain };
                 }
 
@@ -253,10 +252,12 @@ public sealed partial class MusicScoreParser
 
     /// <summary>
     /// 读取方括号内的延音数值，只接受纯数字（允许首尾空白），其余一律视为无效。
+    /// 累加过程中超过上限立即报错，避免超长数字溢出回绕后绕过上限检查。
     /// </summary>
     /// <param name="content">方括号内的文本</param>
     /// <param name="value">解析结果</param>
     /// <returns>是否为合法数值</returns>
+    /// <exception cref="FormatException">数值超过允许的最大延音</exception>
     private static bool TryReadDigits(string content, out long value)
     {
         value = 0;
@@ -274,7 +275,12 @@ public sealed partial class MusicScoreParser
                 return false;
             }
 
+            // 与间隔同理：边累加边判上限，value 不会超过 MaxGapMilliseconds*10+9，不会溢出
             value = value * 10 + (c - '0');
+            if (value > MaxGapMilliseconds)
+            {
+                throw new FormatException($"mo-Tick 谱面的延音过大：{value}ms");
+            }
         }
 
         return true;
