@@ -19,6 +19,7 @@ using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.Common.Reward;
 using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Model;
@@ -102,6 +103,11 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, NoData>
     /// </summary>
     private bool _routeStrategyNotFound;
     private TpTask _tpTask = null!;
+
+    /// <summary>
+    /// 背包摩拉扫描器
+    /// </summary>
+    private MoraFromInventoryScanner _moraFromInventoryScanner = null!;
     private readonly ReturnMainUiTask _returnMainUiTask;
     private SwitchPartyTask? _switchPartyTask;
     private ISystemInfo _systemInfo = null!;
@@ -121,6 +127,15 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, NoData>
     private int _currentRunTimes;
     private int _recheckCount;
     private int _consecutiveFailureCount;
+
+    /// <summary>材料目标是否已全部达成。</summary>
+    private bool _itemStopReached;
+
+    /// <summary>启示之花奖励停止的背包基线。</summary>
+    private Dictionary<string, int>? _expBaseline;
+
+    /// <summary>藏金之花奖励停止的摩拉基线。</summary>
+    private int? _moraBaseline;
     private DateTime _lastRewardNavLog = DateTime.MinValue;
 
     private RecognitionObject? _paimonMenuRo;
@@ -187,6 +202,9 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, NoData>
         _oneDragonMode = param.OneDragonMode;
         _routeStrategyNotFound = false;
         _ct = ct;
+        _itemStopReached = false;
+        _expBaseline = null;
+        _moraBaseline = null;
         Notify.Event(NotificationEvent.LeyLineStart).Success($"{TaskName}启动");
 
         try
@@ -201,6 +219,7 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, NoData>
             }
 
             await PrepareForLeyLineRun();
+            await CaptureLeylineBaselineAsync();
             await RunLeyLineChallenges();
 
             if (_taskParam.IsResinExhaustionMode)
@@ -260,6 +279,7 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, NoData>
     {
         _systemInfo = _runtime.SystemInfo;
         _tpTask = new TpTask(_runtime, _config, _ct);
+        _moraFromInventoryScanner = new MoraFromInventoryScanner(_runtime, _logger);
         NormalizeSettings();
         LoadConfigData();
         LoadRecognitionObjects();
@@ -320,6 +340,11 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, NoData>
         else
         {
             _taskParam.Timeout = _taskParam.FightConfig.Timeout;
+        }
+
+        if (_taskParam.TargetItems.Count > 0)
+        {
+            TargetItemCatalog.Instance.ValidateLeylineSettings(_taskParam.LeyLineOutcropType, _taskParam.TargetItems);
         }
     }
 
@@ -446,7 +471,7 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, NoData>
 
     private async Task RunLeyLineChallenges()
     {
-        while (_currentRunTimes < _taskParam.Count)
+        while (!_itemStopReached && _currentRunTimes < _taskParam.Count)
         {
             await FindLeyLineOutcropByBook(_taskParam.Country, _taskParam.LeyLineOutcropType);
 
@@ -513,13 +538,13 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, NoData>
             await ExecutePath(optimal);
             _currentRunTimes++;
 
-            if (_currentRunTimes >= _taskParam.Count)
+            if (_itemStopReached || _currentRunTimes >= _taskParam.Count)
             {
                 return;
             }
 
             var currentNode = targetNode;
-            while (currentNode.Next.Count > 0 && _currentRunTimes < _taskParam.Count)
+            while (!_itemStopReached && currentNode.Next.Count > 0 && _currentRunTimes < _taskParam.Count)
             {
                 if (currentNode.Next.Count == 1)
                 {
@@ -776,11 +801,182 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, NoData>
         var rewardSuccess = await AttemptReward();
         if (!rewardSuccess)
         {
+            if (_taskParam.TargetItems.Count > 0)
+            {
+                throw new NormalEndException("树脂不足或无法领取奖励，地脉花材料目标未全部达成");
+            }
+
             throw new Exception("无法领取奖励");
         }
 
         await TryScanDropsAfterReward();
+        await TryEvaluateLeylineTargetItemAsync();
         _consecutiveFailureCount = 0;
+    }
+
+    /// <summary>
+    /// 材料目标模式启动时记录背包基线，后续按增量判断。
+    /// </summary>
+    private async Task CaptureLeylineBaselineAsync()
+    {
+        if (_taskParam.TargetItems.Count == 0)
+        {
+            return;
+        }
+
+        if (_taskParam.LeyLineOutcropType == "藏金之花")
+        {
+            _moraBaseline = await ScanMoraWithRetryAsync();
+            if (_moraBaseline == null)
+            {
+                throw new Exception("摩拉背包扫描失败，无法建立奖励基线");
+            }
+
+            _logger.LogInformation("地脉花：摩拉基线 {Mora}", _moraBaseline.Value);
+        }
+        else if (_taskParam.LeyLineOutcropType == "启示之花")
+        {
+            _expBaseline = await ScanExpBooksWithRetryAsync();
+            if (_expBaseline == null)
+            {
+                throw new Exception("经验书背包扫描失败，无法建立奖励基线");
+            }
+
+            _logger.LogInformation("地脉花：经验书基线 {Baseline}",
+                string.Join("，", _expBaseline.Select(x => $"{x.Key} {x.Value}")));
+        }
+    }
+
+    /// <summary>
+    /// 每轮领奖后重新扫描背包，按本次任务增量判断材料目标。
+    /// </summary>
+    private async Task TryEvaluateLeylineTargetItemAsync()
+    {
+        if (_taskParam.TargetItems.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var catalog = TargetItemCatalog.Instance;
+            var gains = new Dictionary<string, int>(StringComparer.Ordinal);
+            if (_taskParam.LeyLineOutcropType == "藏金之花")
+            {
+                var current = await ScanMoraWithRetryAsync();
+                if (current == null)
+                {
+                    _logger.LogWarning("地脉花：本轮摩拉扫描失败，不更新材料目标进度");
+                    return;
+                }
+
+                gains[catalog.LeylineMoraItemName] = Math.Max(0, current.Value - (_moraBaseline ?? 0));
+            }
+            else
+            {
+                var current = await ScanExpBooksWithRetryAsync();
+                if (current == null)
+                {
+                    _logger.LogWarning("地脉花：本轮经验书扫描失败，不更新材料目标进度");
+                    return;
+                }
+
+                foreach (var item in catalog.LeylineExpItems)
+                {
+                    var baseline = _expBaseline?.TryGetValue(item.Name, out var value) == true ? value : 0;
+                    var currentCount = current.TryGetValue(item.Name, out var count) ? count : 0;
+                    gains[item.Name] = Math.Max(0, currentCount - baseline);
+                }
+            }
+
+            var progress = catalog.CalculateLeyline(_taskParam.TargetItems, gains);
+            _itemStopReached = progress.AllSatisfied;
+            _logger.LogInformation("地脉花：材料目标进度 {Progress}",
+                string.Join("，", progress.Targets.Select(x => $"{x.ItemName} {x.CountedCount}/{x.TargetCount}")));
+            if (_itemStopReached)
+            {
+                _logger.LogInformation("地脉花：材料目标已全部达成");
+            }
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            _logger.LogWarning(e, "地脉花：本轮背包扫描失败，继续任务");
+        }
+    }
+
+    /// <summary>
+    /// 统计三档经验书的当前背包数量。
+    /// </summary>
+    private async Task<Dictionary<string, int>> CountExpBooksAsync()
+    {
+        var itemNames = TargetItemCatalog.Instance.LeylineExpItems.Select(x => x.Name).ToList();
+        var param = new CountInventoryItemParam
+        {
+            ItemNames = itemNames,
+            StopByItemSort = true
+        };
+        var result = await new CountInventoryItem(_runtime).RunAsync(param, _ct);
+        return result.Data?.Counts ?? [];
+    }
+
+    /// <summary>
+    /// 扫描摩拉，失败时重试一次，共两次尝试。
+    /// </summary>
+    private async Task<int?> ScanMoraWithRetryAsync()
+    {
+        for (var attempt = 1; attempt <= 2; attempt++)
+        {
+            try
+            {
+                var result = await _moraFromInventoryScanner.ScanAsync(InputHub.Foreground, _ct);
+                if (result != null)
+                {
+                    return result;
+                }
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                _logger.LogWarning(e, "地脉花：摩拉扫描失败（第 {Attempt} 次）", attempt);
+            }
+
+            _ct.ThrowIfCancellationRequested();
+            if (attempt < 2)
+            {
+                await _runtime.Delay(500, _ct);
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// 扫描经验书，失败时重试一次，共两次尝试。
+    /// </summary>
+    private async Task<Dictionary<string, int>?> ScanExpBooksWithRetryAsync()
+    {
+        for (var attempt = 1; attempt <= 2; attempt++)
+        {
+            try
+            {
+                var result = await CountExpBooksAsync();
+                if (result.Count > 0 && result.Values.All(x => x >= 0))
+                {
+                    return result;
+                }
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                _logger.LogWarning(e, "地脉花：经验书扫描失败（第 {Attempt} 次）", attempt);
+            }
+
+            _ct.ThrowIfCancellationRequested();
+            if (attempt < 2)
+            {
+                await _runtime.Delay(500, _ct);
+            }
+        }
+
+        return null;
     }
 
     private static string BuildTargetRoute(string routePath)

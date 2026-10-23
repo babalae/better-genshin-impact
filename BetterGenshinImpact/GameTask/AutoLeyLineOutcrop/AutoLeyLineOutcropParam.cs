@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.Common.Reward;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Service;
 
@@ -49,7 +51,12 @@ public class AutoLeyLineOutcropParam:BaseTaskParam<AutoLeyLineOutcropTask>
     /// 是否为一条龙模式：为 true 时开始前不先传送到七天神像。默认 false（原任务构造参数 oneDragonMode）。
     /// </summary>
     public bool OneDragonMode { get; set; }
-    
+
+    /// <summary>
+    /// 材料目标列表：按物品名与数量提前停止。
+    /// </summary>
+    public List<TargetItem> TargetItems { get; set; } = [];
+
     public void SetDefault()
     {
         var config = Config.AutoLeyLineOutcropConfig;
@@ -72,6 +79,7 @@ public class AutoLeyLineOutcropParam:BaseTaskParam<AutoLeyLineOutcropTask>
         Count = config.Count;
         Country = config.Country;
         LeyLineOutcropType = config.LeyLineOutcropType;
+        TargetItems = TargetItem.CloneAll(config.TargetItems);
     }
 
     public AutoLeyLineOutcropParam() : base(null, null)
