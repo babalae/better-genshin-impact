@@ -127,7 +127,6 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
 
     public void SetResinPriorityList(params string[] priorities)
     {
-        ResinPriorityList.Clear();
-        ResinPriorityList.AddRange(priorities);
+        ResinPriorityList = new List<string>(priorities);
     }
 }
