@@ -104,6 +104,8 @@ namespace BetterGenshinImpact.GameTask
         private RECT _gameRect = RECT.Empty;
         private bool _prevGameActive;
 
+        private DateTime _prevManualGc = DateTime.MinValue;
+
         /// <summary>
         /// 截图器停止或游戏已退出。由 GameRuntimeService 订阅并停止运行环境
         /// </summary>
@@ -515,6 +517,12 @@ namespace BetterGenshinImpact.GameTask
             finally
             {
                 tickMetrics.EndProcessing();
+
+                if ((DateTime.Now - _prevManualGc).TotalSeconds > 2)
+                {
+                    GC.Collect();
+                    _prevManualGc = DateTime.Now;
+                }
 
                 if (hasLock)
                 {
