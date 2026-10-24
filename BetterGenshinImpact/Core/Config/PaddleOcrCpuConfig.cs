@@ -4,10 +4,10 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.Core.Config;
 
-/// <summary>OCR 纯 CPU 推理的独立线程设置，默认跟随全局 CPU 线程数。</summary>
+/// <summary>OCR 纯 CPU 推理的独立线程设置，默认使用游戏流畅优先方案。</summary>
 public partial class PaddleOcrCpuConfig : ObservableObject
 {
-    [ObservableProperty] private PaddleOcrCpuMode _mode;
+    [ObservableProperty] private PaddleOcrCpuMode _mode = PaddleOcrCpuMode.GameplayPriority;
     [ObservableProperty] private int _detectionThreads = Math.Min(2, Environment.ProcessorCount);
     [ObservableProperty] private int _recognitionThreads = Math.Min(2, Environment.ProcessorCount);
     [ObservableProperty] private int _interOpThreads = 1;
