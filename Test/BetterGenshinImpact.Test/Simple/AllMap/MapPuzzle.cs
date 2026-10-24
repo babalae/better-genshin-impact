@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
@@ -27,7 +27,7 @@ public class MapPuzzle
 
     public static void PutAll()
     {
-        var folder = @"E:\HuiTask\更好的原神\地图匹配\拼图结果\7.0";
+        var folder = @"E:\HuiTask\更好的原神\地图匹配\拼图结果\7.2";
         Directory.CreateDirectory(folder);
         
         // 保存2048大图
