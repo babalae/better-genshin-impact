@@ -825,7 +825,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
                         _logger.LogInformation("对话交互键：{Text}", "同一帧点击探索派遣 + 按交互键领取每日委托");
                         _prevGetDailyRewardsTime = DateTime.Now; // 记录领取时间
 
-                        Thread.Sleep(1500); // 等待探索派遣界面打开
+                        // 不等固定时间,由 OneKeyExpeditionTask 内的 NewRetry 等待派遣页面和确认框出现
                         new OneKeyExpeditionTask().Run(true);
                     }
                     else if (dailyOption != null)
@@ -868,7 +868,7 @@ public partial class AutoSkipTrigger : ITaskTrigger
                             return true;
                         }
 
-                        Thread.Sleep(800); // 等待探索派遣界面打开
+                            Thread.Sleep(300); // 等派遣界面出现;"全部领取"由 OneKeyExpeditionTask 轮询,出现即点
                         new OneKeyExpeditionTask().Run(false);
                     }
 
