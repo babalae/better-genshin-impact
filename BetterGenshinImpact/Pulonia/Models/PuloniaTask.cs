@@ -97,9 +97,5 @@ public sealed class PuloniaTask
     [JsonProperty("parameter_overrides", Required = Required.DisallowNull)]
     public List<PuloniaTaskParameterOverride> ParameterOverrides { get; set; } = [];
 
-    /// <summary>
-    /// 仅用于树视图，不影响执行。
-    /// </summary>
-    [JsonProperty("is_expanded")]
-    public bool IsExpanded { get; set; } = true;
+    // 树视图展开状态不属于计划，存于编辑器的 plan-view-state.json。
 }

@@ -22,56 +22,7 @@ public sealed class PuloniaTaskHistoryTests : IDisposable
     /// </summary>
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-" + BetterGenshinImpact.Helpers.ShortId.Create(null, 8));
 
-    /// <summary>
-    /// 正常成功与部分成功都应归档确认事实，重复报告只保存一次，重建服务后仍可查看。
-    /// </summary>
-    [Theory]
-    [InlineData("sample.ledger.daily", PuloniaTaskRunStatus.Succeeded)]
-    [InlineData("sample.ledger.partial", PuloniaTaskRunStatus.Failed)]
-    public async Task ConfirmedEffects_SurviveRestartWithoutDuplicates(string operation, PuloniaTaskRunStatus expectedStatus)
-    {
-        using var store = new PuloniaTaskStore(_directory);
-        var plan = await store.SavePlanAsync(CreatePlan("确认事件", operation));
-        string requestId;
-        await using (var service = CreateService(store))
-        {
-            requestId = await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = plan.Id });
-            var run = await service.WaitForCompletionAsync(requestId).WaitAsync(TimeSpan.FromSeconds(20));
-            Assert.Equal(expectedStatus, run.Status);
-            Assert.True(run.IsHistorical);
-            Assert.Single(run.ConfirmedEffects);
-            Assert.Single(await service.ListLedgerAsync());
-            var effect = run.ConfirmedEffects[0];
-            Assert.Equal(1, effect.Attempt);
-            Assert.Equal(run.NodeResults[0].TaskAddress, effect.TaskAddress);
-
-            // 查询返回对象的修改不能污染运行内部已落盘的确认事实。
-            effect.Entry.Evidence.Data["sample"] = false;
-            Assert.True((await service.GetRunAsync(requestId)).ConfirmedEffects[0].Entry.Evidence.Data.Value<bool>("sample"));
-        }
-        await using var restarted = CreateService(store);
-        var restored = await restarted.GetRunAsync(requestId);
-        Assert.Single(restored.ConfirmedEffects);
-        Assert.True(restored.ConfirmedEffects[0].Entry.Evidence.Data.Value<bool>("sample"));
-        var history = Assert.Single(await store.ListHistoryAsync());
-        Assert.Single(history.ConfirmedEffects);
-        var path = Path.Combine(_directory, "history", plan.Id, history.RunId + ".json");
-        var bytes = await File.ReadAllBytesAsync(path);
-        Assert.False(bytes.Take(3).SequenceEqual(new byte[] { 0xEF, 0xBB, 0xBF }));
-        var node = new PuloniaTaskRunItemViewModel(restored).NodeDetails[0];
-        Assert.Contains(node.EvidenceFields, field => field.Label.StartsWith("已确认副作用"));
-    }
-
-    /// <summary>
-    /// 旧格式缺少新确认事件集合时应兼容，不能补造确认事实。
-    /// </summary>
-    [Fact]
-    public void OldHistory_WithoutConfirmedEffectsStillLoads()
-    {
-        var json = JObject.Parse(PuloniaTaskJson.WriteRunRecord(CreateRecord()));
-        json.Remove("confirmed_effects");
-        Assert.Empty(PuloniaTaskJson.ReadRunRecord(json.ToString()).ConfirmedEffects);
-    }
+    // 确认事实的归档与重启回归随通用额度框架移除，改由 PuloniaCollectionCooldownTests 以文件级 CD 覆盖。
 
     /// <summary>
     /// 重新打开存储后，类型专属返回值、多行中文日志与结构化证据仍完整保留。
@@ -336,7 +287,7 @@ public sealed class PuloniaTaskHistoryTests : IDisposable
         plan = await store.SavePlanAsync(plan);
         var clipboard = new PuloniaTaskClipboardService();
         var document = new PuloniaTaskPlanDocumentViewModel(plan, [], clipboard, isNew: false);
-        var page = new PuloniaTaskPlanViewModel(store, clipboard, service, new PuloniaTaskResourceCatalog(), history)
+        var page = new PuloniaTaskPlanViewModel(new PuloniaPlanEditingSession(store, clipboard, service, new PuloniaTaskResourceCatalog()), history)
         {
             SelectedDocument = document,
             SelectedPlanTabIndex = tabIndex
@@ -380,7 +331,7 @@ public sealed class PuloniaTaskHistoryTests : IDisposable
         var selectedDocument = new PuloniaTaskPlanDocumentViewModel(selected, [], clipboard, isNew: false);
         var cardDocument = new PuloniaTaskPlanDocumentViewModel(card, [], clipboard, isNew: false);
         var history = new PuloniaTaskHistoryViewModel(service, store);
-        var page = new PuloniaTaskPlanViewModel(store, clipboard, service, new PuloniaTaskResourceCatalog(), history)
+        var page = new PuloniaTaskPlanViewModel(new PuloniaPlanEditingSession(store, clipboard, service, new PuloniaTaskResourceCatalog()), history)
         { SelectedDocument = selectedDocument, SelectedPlanTabIndex = 1 };
         page.Documents.Add(selectedDocument);
         page.Documents.Add(cardDocument);
@@ -602,7 +553,7 @@ public sealed class PuloniaTaskHistoryTests : IDisposable
         new PuloniaGameTaskCoordinator(null!), stopService ?? new TaskStopService(NullLogger<TaskStopService>.Instance));
 
     /// <summary>
-    /// 建立受控计算或账本计划。
+    /// 建立受控计算计划。
     /// </summary>
     private static PuloniaTaskPlan CreatePlan(string name, string operation) => new()
     {
@@ -613,7 +564,7 @@ public sealed class PuloniaTaskHistoryTests : IDisposable
             [new PuloniaTask
             {
                 Name = "测试节点", TaskType = "csharp",
-                Parameters = new JObject { ["operation"] = operation, ["values"] = new JArray(1, 2, 3), ["report_twice"] = true }
+                Parameters = new JObject { ["operation"] = operation, ["values"] = new JArray(1, 2, 3) }
             }]
         }
     };

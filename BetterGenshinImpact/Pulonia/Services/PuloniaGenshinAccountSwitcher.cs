@@ -16,6 +16,7 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Pulonia.Models;
+using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using Vanara.PInvoke;
 
@@ -35,7 +36,6 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
     /// <inheritdoc />
     public async Task<string> PrepareAsync(GameRuntime runtime, PuloniaGenshinAccountProfile account, CancellationToken ct)
     {
-        Debug.WriteLine($"[Pulonia UID] 开始准备账号：名称={account.Name}，默认账号={account.IsDefault}，目标UID={account.Uid ?? "<未指定>"}，运行环境={runtime.GetType().Name}");
         if (!account.IsDefault && !Regex.IsMatch(account.Uid ?? "", "^[0-9]{9,10}$"))
             throw new InvalidOperationException("指定账号需要填写完整 UID，不能按未指定目标切换。");
         if (!account.IsDefault) EnsureSupportedRuntime(runtime);
@@ -45,7 +45,6 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
         {
             using var recognition = new PuloniaGenshinAccountRecognition();
             var current = await ReadStableUidAsync(runtime, null, budget.Token).ConfigureAwait(false);
-            Debug.WriteLine($"[Pulonia UID] 首次读取完成：识别UID={current ?? "<失败>"}，默认账号={account.IsDefault}");
             if (current is not null && (account.IsDefault || current == account.Uid)) return current;
             if (!account.IsDefault)
             {
@@ -62,7 +61,6 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
             }
             for (var attempt = 0; attempt < 2; attempt++)
             {
-                Debug.WriteLine($"[Pulonia UID] 开始第 {attempt + 1}/2 轮账号进入与核验。");
                 if (!account.IsDefault)
                 {
                     await GoToAccountSelectionAsync(runtime, recognition, budget.Token).ConfigureAwait(false);
@@ -70,10 +68,8 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
                 }
                 await EnterMainUiAsync(runtime, recognition, budget.Token).ConfigureAwait(false);
                 current = await ReadStableUidAsync(runtime, account.Uid, budget.Token).ConfigureAwait(false);
-                Debug.WriteLine($"[Pulonia UID] 第 {attempt + 1}/2 轮核验完成：识别UID={current ?? "<失败>"}，目标UID={account.Uid ?? "<未指定>"}");
                 if (current is not null) return current;
             }
-            Debug.WriteLine("[Pulonia UID] 两轮账号核验均未得到稳定 UID，准备抛出失败。");
             throw new InvalidOperationException("切号后无法完整核验目标 UID，未执行任何业务任务。");
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
@@ -97,62 +93,41 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
             throw new InvalidOperationException("自动切号首版仅支持 PC 官服的键鼠输入。");
         User32.GetWindowThreadProcessId(runtime.Window.Handle, out var processId);
         using var process = Process.GetProcessById((int)processId);
+        // B 服同为 YuanShen 进程，但登录界面与官服模板不同，会在模板匹配阶段停止而不会误操作，因此不再读取 config.ini 区分渠道。
         if (!string.Equals(process.ProcessName, "YuanShen", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("自动切号首版仅支持本机 PC 官服。");
-        var directory = Path.GetDirectoryName(process.MainModule?.FileName);
-        var config = directory is null ? null : Path.Combine(directory, "config.ini");
-        if (config is not null && File.Exists(config)
-            && File.ReadLines(config).Any(line => Regex.IsMatch(line, @"^\s*channel\s*=\s*14\s*$")))
-            throw new InvalidOperationException("首版账号切换尚未支持 B 服登录界面。");
     }
 
     /// <summary>在独立的新截图中连续读取两次完整 UID，识别失败不当作 UID 为零。</summary>
     private static async Task<string?> ReadStableUidAsync(GameRuntime runtime, string? expected, CancellationToken ct)
     {
         string? previous = null;
-        Debug.WriteLine($"[Pulonia UID] 开始稳定 UID 识别：目标UID={expected ?? "<不限定>"}，最多读取 6 帧，要求连续两帧一致。");
         for (var i = 0; i < 6; i++)
         {
             ct.ThrowIfCancellationRequested();
             using (var frame = runtime.CaptureToRectArea())
             {
-                var isInMainUi = Bv.IsInMainUi(frame);
-                var uidRegion = PuloniaGenshinAccountRecognition.Scale(frame, new Rect(1683, 1051, 234, 28));
-                Debug.WriteLine($"[Pulonia UID] 第 {i + 1}/6 帧：截图={frame.Width}x{frame.Height}，主界面={isInMainUi}，识别区域=({uidRegion.X},{uidRegion.Y},{uidRegion.Width},{uidRegion.Height})，上一候选={previous ?? "<无>"}");
-                if (isInMainUi)
+                if (Bv.IsInMainUi(frame))
                 {
-                    var ocr = RecognitionObject.Ocr(uidRegion);
+                    var ocr = RecognitionObject.Ocr(PuloniaGenshinAccountRecognition.Scale(frame, new Rect(1683, 1051, 234, 28)));
                     using var pen = ocr.DrawOnWindowPen;
                     using var result = frame.Find(ocr);
                     var rawText = result.Text ?? "";
-                    var displayText = rawText.Replace("\r", "\\r").Replace("\n", "\\n");
                     var uid = Regex.Match(rawText.Replace(" ", ""), @"(?<!\d)\d{9,10}(?!\d)").Value;
-                    Debug.WriteLine($"[Pulonia UID] 第 {i + 1}/6 帧 OCR：原文=\"{displayText}\"，提取UID={(!string.IsNullOrEmpty(uid) ? uid : "<无>")}，符合目标={uid.Length > 0 && (expected is null || uid == expected)}");
+                    // UID 核验失败时只能从 OCR 原文判断原因；Debug 级别只写入日志文件，不显示在遮罩日志框。
+                    TaskControl.Logger.LogDebug("Pulonia UID 识别第 {Frame}/6 帧：OCR 原文“{Text}”，提取 UID“{Uid}”，目标 UID“{Expected}”",
+                        i + 1, rawText, uid, expected ?? "不限定");
                     if (uid.Length > 0 && (expected is null || uid == expected))
                     {
-                        if (previous == uid)
-                        {
-                            Debug.WriteLine($"[Pulonia UID] 第 {i + 1}/6 帧与上一帧一致，稳定识别成功：{uid}");
-                            return uid;
-                        }
+                        if (previous == uid) return uid;
                         previous = uid;
-                        Debug.WriteLine($"[Pulonia UID] 第 {i + 1}/6 帧记录候选 UID，等待下一帧确认：{uid}");
                     }
-                    else
-                    {
-                        previous = null;
-                        Debug.WriteLine($"[Pulonia UID] 第 {i + 1}/6 帧没有符合目标的 UID，已清空连续帧候选。");
-                    }
+                    else previous = null;
                 }
-                else
-                {
-                    previous = null;
-                    Debug.WriteLine($"[Pulonia UID] 第 {i + 1}/6 帧未识别为主界面，跳过 UID OCR 并清空连续帧候选。");
-                }
+                else previous = null;
             }
             await Task.Delay(ResponseDelayMilliseconds, ct).ConfigureAwait(false);
         }
-        Debug.WriteLine("[Pulonia UID] 6 帧内未得到连续两帧一致的 UID。");
         return null;
     }
 

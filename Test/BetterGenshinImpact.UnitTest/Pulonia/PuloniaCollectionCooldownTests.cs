@@ -102,7 +102,7 @@ public sealed class PuloniaCollectionCooldownTests : IDisposable
         var original = Resolve("落落莓");
         var storedNext = success.AddHours(46);
         var entry = new PuloniaTaskLedgerEntry { EffectKey = PuloniaCollectionCooldown.GetEffectKey(original),
-            ScopeKey = PuloniaTaskAvailability.BuildScopeKey(request, PuloniaTaskScopeKind.World), OccurredAt = success, NextEligibleAt = storedNext };
+            ScopeKey = PuloniaCollectionCooldown.BuildScopeKey(), OccurredAt = success, NextEligibleAt = storedNext };
         var shortened = Resolve("落落莓", new JObject { ["mode"] = "rolling", ["hours"] = 12 });
         var decision = PuloniaCollectionCooldown.Evaluate(shortened, request, [entry], success.AddHours(12), out var data);
         Assert.True(decision.IsAllowed);
@@ -289,6 +289,39 @@ public sealed class PuloniaCollectionCooldownTests : IDisposable
         Assert.Single(await service.ListLedgerAsync());
     }
 
+    /// <summary>文件成功的确认事实随历史归档，重启后仍可查看；查询结果是独立副本，历史文件无 BOM。</summary>
+    [Fact]
+    public async Task ConfirmedEffect_IsArchivedAndSurvivesRestart()
+    {
+        using var store = new PuloniaTaskStore(Path.Combine(_directory, "state"));
+        var plan = await store.SavePlanAsync(Plan(CreateTask("落落莓", "A.json")));
+        string runId;
+        await using (var service = Service(store, new FileExecutor()))
+        {
+            var run = await Run(service, plan);
+            runId = run.RunId;
+            Assert.Equal(PuloniaTaskRunStatus.Succeeded, run.Status);
+            Assert.True(run.IsHistorical);
+            var effect = Assert.Single(run.ConfirmedEffects);
+            Assert.Equal(1, effect.Attempt);
+            Assert.Equal(run.NodeResults[0].TaskAddress, effect.TaskAddress);
+            Assert.Single(await service.ListLedgerAsync());
+
+            // 查询返回对象的修改不能污染运行内部已落盘的确认事实
+            effect.Entry.Evidence.Data["probe"] = true;
+            Assert.Null((await service.GetRunAsync(runId)).ConfirmedEffects[0].Entry.Evidence.Data["probe"]);
+        }
+        await using var restarted = Service(store, new FileExecutor());
+        var restored = await restarted.GetRunAsync(runId);
+        Assert.Single(restored.ConfirmedEffects);
+        var history = Assert.Single(await store.ListHistoryAsync());
+        Assert.Single(history.ConfirmedEffects);
+        var path = Path.Combine(_directory, "state", "history", plan.Id, history.RunId + ".json");
+        Assert.False((await File.ReadAllBytesAsync(path)).Take(3).SequenceEqual(new byte[] { 0xEF, 0xBB, 0xBF }));
+        Assert.Contains(new PuloniaTaskRunItemViewModel(restored).ConfirmedEffectFields,
+            field => field.Label.StartsWith("已确认副作用 · pathing.file:"));
+    }
+
     /// <summary>提交后修改计划不会改变已固定的采集规则，未成功的排队文件也没有提前占用。</summary>
     [Fact]
     public async Task QueuedSnapshot_KeepsOriginalRule()
@@ -317,26 +350,54 @@ public sealed class PuloniaCollectionCooldownTests : IDisposable
         Assert.Equal(TimeSpan.FromHours(5), fact.NextEligibleAt - fact.OccurredAt);
     }
 
-    /// <summary>相同文件在不同世界拥有者下分别记录。</summary>
+    /// <summary>
+    /// 世界拥有者字段删除后的作用域规则：未切换账号的运行（普通计划不论选择哪份账号资料）都代表当前登录账号，
+    /// 共用默认作用域的采集 CD；切换到指定账号时才按核验 UID 隔离（见 <see cref="PuloniaGenshinAccountTests"/>）。
+    /// </summary>
     [Fact]
-    public async Task WorldScopes_DoNotShareCooldown()
+    public async Task UnswitchedRuns_ShareDefaultScope()
     {
         using var store = new PuloniaTaskStore(Path.Combine(_directory, "state"));
         var executor = new FileExecutor();
-        var plan = await store.SavePlanAsync(Plan(CreateTask("落落莓", "A.json")));
+        var plan = Plan(CreateTask("落落莓", "A.json"));
+        plan.Accounts = [new PuloniaTaskAccountBinding { AccountId = "profile-one" }, new PuloniaTaskAccountBinding { AccountId = "profile-two" }];
+        plan = await store.SavePlanAsync(plan);
         await using var service = Service(store, executor);
-        foreach (var world in new[] { "world-one", "world-two", "world-one" })
+        foreach (var account in new[] { "profile-one", "profile-two", null })
         {
-            var id = await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = plan.Id, WorldOwnerAccountId = world });
+            var id = await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = plan.Id, AccountId = account });
             await service.WaitForCompletionAsync(id).WaitAsync(TimeSpan.FromSeconds(20));
         }
-        Assert.Equal(2, executor.Executions);
-        Assert.Equal(2, (await service.ListLedgerAsync()).Count);
+        Assert.Equal(1, executor.Executions);
+        Assert.Equal("cn/world/default", Assert.Single(await service.ListLedgerAsync()).ScopeKey);
+    }
+
+    /// <summary>账本对每个（作用域，文件）只保留最新一条，每次成功的明细仍在各自运行历史的确认事件中。</summary>
+    [Fact]
+    public async Task Ledger_KeepsOnlyLatestSuccessPerFile()
+    {
+        using var store = new PuloniaTaskStore(Path.Combine(_directory, "state"));
+        var executor = new FileExecutor();
+        // 未知材料不限制执行，同一文件可以连续成功多次。
+        var plan = await store.SavePlanAsync(Plan(CreateTask("未知材料", "A.json"), CreateTask("未知材料", "B.json")));
+        await using var service = Service(store, executor);
+        var runs = new List<PuloniaTaskRunView>();
+        for (var i = 0; i < 3; i++)
+            runs.Add(await Run(service, plan));
+
+        Assert.Equal(6, executor.Executions);
+        var ledger = await service.ListLedgerAsync();
+        Assert.Equal(2, ledger.Count);
+        var latest = runs[^1].ConfirmedEffects.Select(effect => effect.Entry.EventKey).Order().ToArray();
+        Assert.Equal(latest, ledger.Select(entry => entry.EventKey).Order().ToArray());
+        Assert.All(runs, run => Assert.Equal(2, run.ConfirmedEffects.Count));
+        Assert.Equal(2, (await store.LoadStateAsync()).State.Ledger.Count);
+        Assert.All(await store.ListHistoryAsync(), record => Assert.Equal(2, record.ConfirmedEffects.Count));
     }
 
     /// <summary>超时后，即使旧执行器返回完整成功也不能写入 CD 或成功结果。</summary>
     [Fact]
-    public async Task Timeout_RejectsLateSuccessWithoutUncertainOperations()
+    public async Task Timeout_RejectsLateSuccess()
     {
         using var store = new PuloniaTaskStore(Path.Combine(_directory, "state"));
         var executor = new FileExecutor { Execute = async (_, ct) => { await Task.Delay(Timeout.Infinite, ct).ContinueWith(_ => { }); return Completed(); } };
@@ -347,7 +408,7 @@ public sealed class PuloniaCollectionCooldownTests : IDisposable
         var run = await Run(service, plan);
         Assert.Equal(PuloniaTaskNodeStatus.TimedOut, Assert.Single(run.NodeResults).Status);
         Assert.Empty(await service.ListLedgerAsync());
-        Assert.Empty((await store.LoadStateAsync()).State.UncertainOperations);
+        Assert.Empty((await store.LoadStateAsync()).State.Ledger);
     }
 
     /// <summary>取消不会留下采集占用；整份文件下次可从头重新运行。</summary>

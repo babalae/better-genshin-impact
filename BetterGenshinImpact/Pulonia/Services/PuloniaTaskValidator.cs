@@ -27,6 +27,7 @@ public static class PuloniaTaskValidator
     /// <summary>
     /// 校验可以安全用于 Windows 文件名和运行地址的稳定 ID。
     /// 上限 32 位：生成的 ID 最长 24 位（运行 ID），收紧上限防止 ID 成为路径中的长段。
+    /// 保留名检查不能删除：命令行传入的计划 ID 会直接拼成 plans/{id}.json 等文件路径。
     /// </summary>
     public static void ValidateId(string? id, string location)
     {
@@ -49,30 +50,26 @@ public static class PuloniaTaskValidator
             throw new PuloniaTaskValidationException(location, $"不支持格式版本 {plan.SchemaVersion}。");
         if (plan.Revision < 0 || string.IsNullOrWhiteSpace(plan.Name))
             throw new PuloniaTaskValidationException(location, "修订号不能为负数，名称不能为空。");
-        if (plan.RootTask is null || plan.RootTask.TaskType != "group" || plan.RootTask.Source is not null
-            || plan.RootTask.RepeatCount is not null)
+        if (plan.RootTask is not { TaskType: "group", Source: null, RepeatCount: null })
             throw new PuloniaTaskValidationException(location, "根节点必须是无来源引用、无重复配置的 group。");
-        if (plan.Accounts is null || plan.Triggers is null)
-            throw new PuloniaTaskValidationException(location, "账号绑定和触发配置不能为 null。");
+        // 账号绑定、触发配置、预设选择等集合由 JSON 契约（Required.DisallowNull）和模型默认值保证非空，不再重复检查。
 
-        // 同一对象不能挂在两个父节点下；相同 ID 也不能出现在不同位置。
-        var ids = new HashSet<string>(StringComparer.Ordinal);
-        var objects = new HashSet<PuloniaTask>(ReferenceEqualityComparer.Instance);
-        ValidateTask(plan.RootTask, location, ids, objects, 0);
+        // 相同 ID 不能出现在不同位置；同一对象挂在两个父节点下或形成循环时，第二次出现同样因 ID 重复被拒绝。
+        var tasks = new Dictionary<string, PuloniaTask>(StringComparer.Ordinal);
+        ValidateTask(plan.RootTask, location, tasks, 0);
         var accounts = new HashSet<string>(StringComparer.Ordinal);
-        var tasksById = objects.ToDictionary(task => task.Id, StringComparer.Ordinal);
         foreach (var account in plan.Accounts)
         {
             if (account is null)
                 throw new PuloniaTaskValidationException(location, "账号绑定不能为 null。");
             ValidateId(account.AccountId, location + "/accounts");
-            if (!accounts.Add(account.AccountId) || account.PresetSelections is null)
-                throw new PuloniaTaskValidationException(location, "账号不能重复绑定，预设选择不能为 null。");
+            if (!accounts.Add(account.AccountId))
+                throw new PuloniaTaskValidationException(location, "账号不能重复绑定。");
             foreach (var (taskId, presetId) in account.PresetSelections)
             {
-                if (!ids.Contains(taskId))
+                if (!tasks.TryGetValue(taskId, out var target))
                     throw new PuloniaTaskValidationException(location, $"账号预设指向不存在的节点 {taskId}。");
-                if (!IsLeafType(tasksById[taskId].TaskType))
+                if (!IsLeafType(target.TaskType))
                     throw new PuloniaTaskValidationException(location, $"账号预设不能配置在控制节点 {taskId}。");
                 ValidateId(presetId, location + "/accounts/preset_selections");
             }
@@ -84,7 +81,7 @@ public static class PuloniaTaskValidator
                 throw new PuloniaTaskValidationException(location, "触发器不能为空或重复。");
             try { PuloniaTaskSchedule.Validate(trigger); }
             catch (Exception ex) { throw new PuloniaTaskValidationException(location + "/triggers", ex.Message); }
-            if (trigger.TargetTaskId is { } target && !ids.Contains(target)
+            if (trigger.TargetTaskId is { } target && !tasks.ContainsKey(target)
                 || trigger.AccountId is { } accountId && !accounts.Contains(accountId))
                 throw new PuloniaTaskValidationException(location, "触发器指向不存在的节点或未绑定的账号。");
         }
@@ -151,10 +148,11 @@ public static class PuloniaTaskValidator
     /// <summary>
     /// 检查参数作用域；JS 自定义参数必须绑定资源，宿主公共设置可以跨资源复用。
     /// </summary>
-    public static void ValidateScope(string type, string? resourceId, int version, JObject? values, string location)
+    public static void ValidateScope(string type, string? resourceId, int version, JObject values, string location)
     {
-        if (!IsLeafType(type) || version <= 0 || values is null)
-            throw new PuloniaTaskValidationException(location, "参数作用域必须有具体能力类型、正整数版本和对象参数。");
+        // values 由 JSON 契约（Required.DisallowNull）和模型默认值保证非空。
+        if (!IsLeafType(type) || version <= 0)
+            throw new PuloniaTaskValidationException(location, "参数作用域必须有具体能力类型和正整数版本。");
         if (resourceId is not null && string.IsNullOrWhiteSpace(resourceId)
             || type == "javascript" && resourceId is null
                 && (values.Count == 0 || values.Properties().Any(property => !PuloniaTaskCommonSettings.IsPathingParameter(property.Name))))
@@ -183,12 +181,33 @@ public static class PuloniaTaskValidator
     }
 
     /// <summary>
+    /// 一次性检查一组能力说明：字段非空、作用域合法、类型与资源不重复、参数 Schema 只用受支持的子集。
+    /// 能力说明来自执行器代码，只需在注册时或单元测试中校验，运行准备不再逐次复验。
+    /// </summary>
+    /// <param name="definitions">要注册的全部能力说明。</param>
+    public static void ValidateDefinitions(IEnumerable<PuloniaTaskDefinition> definitions)
+    {
+        var keys = new HashSet<(string, string?)>();
+        foreach (var definition in definitions)
+        {
+            if (definition is null || definition.ParameterSchema is null || definition.PublicParameters is null)
+                throw new PuloniaTaskValidationException("definition", "类型说明不能为空。");
+            var location = "definition/" + definition.TaskType;
+            ValidateDefinitionScope(definition.TaskType, definition.ResourceId, definition.SchemaVersion,
+                definition.DefaultParameters, location);
+            if (!keys.Add((definition.TaskType, definition.ResourceId)))
+                throw new PuloniaTaskValidationException(location, "类型和资源说明重复注册。");
+            ValidateParameterSchema(definition.ParameterSchema, location);
+        }
+    }
+
+    /// <summary>
     /// 校验有限超时、重试和失败行为。
     /// </summary>
-    public static void ValidatePolicy(PuloniaTaskPolicy? policy, string location)
+    public static void ValidatePolicy(PuloniaTaskPolicy policy, string location)
     {
-        if (policy is null
-            || policy.TimeoutSeconds is { } timeout && (!double.IsFinite(timeout) || timeout <= 0 || timeout > int.MaxValue / 1000d)
+        // policy 由 JSON 契约（Required.DisallowNull）和模型默认值保证非空。
+        if (policy.TimeoutSeconds is { } timeout && (!double.IsFinite(timeout) || timeout <= 0 || timeout > int.MaxValue / 1000d)
             || policy.RetryDelaySeconds is { } delay && (!double.IsFinite(delay) || delay < 0 || delay > int.MaxValue / 1000d)
             || policy.MaxRetries is < 0 or > 100
             || policy.FailureBehavior is not (null or "stop_plan" or "skip_group" or "continue"))
@@ -196,41 +215,28 @@ public static class PuloniaTaskValidator
     }
 
     /// <summary>
-    /// 按支持的 Schema 子集检查有效参数，未知关键字明确拒绝。
+    /// 按支持的 Schema 子集检查有效参数。Schema 本身的合法性（关键字、类型名与约束格式）只由
+    /// <see cref="ValidateParameterSchema"/> 检查：能力说明在注册时或单元测试中校验，其余 Schema 由代码构造。
     /// </summary>
     public static void ValidateParameters(JToken value, JObject schema, string location, int depth = 0)
     {
         if (depth > MaxTreeDepth)
             throw new PuloniaTaskValidationException(location, "参数嵌套过深。");
-        foreach (var property in schema.Properties())
-        {
-            if (property.Name is not ("type" or "properties" or "required" or "additionalProperties" or "items" or "enum"))
-                throw new PuloniaTaskValidationException(location, $"原型尚不支持 Schema 关键字 {property.Name}。");
-        }
 
+        // 1. 标量约束：类型、允许值和数值下限
         if (schema["type"] is { } type)
         {
-            var types = type is JArray array ? array.ToArray() : [type];
-            if (types.Length == 0 || types.Any(t => t.Type != JTokenType.String || !IsParameterType(t.Value<string>()!)))
-                throw new PuloniaTaskValidationException(location, "Schema type 必须是已知类型或非空类型数组。");
-            if (!types.Any(t => MatchesType(value, t.Value<string>()!)))
+            var types = type is JArray array ? array.Values<string>() : [type.Value<string>()];
+            if (!types.Any(t => MatchesType(value, t!)))
                 throw new PuloniaTaskValidationException(location, $"参数类型应为 {type.ToString(Newtonsoft.Json.Formatting.None)}，实际为 {value.Type}。");
         }
-        if (schema["enum"] is { } choices)
-        {
-            if (choices is not JArray allowed || allowed.Count == 0)
-                throw new PuloniaTaskValidationException(location, "Schema enum 必须是非空数组。");
-            if (!allowed.Any(item => JToken.DeepEquals(item, value)))
-                throw new PuloniaTaskValidationException(location, "参数不在允许值列表内。");
-        }
+        if (schema["enum"] is JArray allowed && !allowed.Any(item => JToken.DeepEquals(item, value)))
+            throw new PuloniaTaskValidationException(location, "参数不在允许值列表内。");
+        if (schema["minimum"] is { } minimum && value.Type is JTokenType.Integer or JTokenType.Float
+            && (double)value < (double)minimum)
+            throw new PuloniaTaskValidationException(location, $"参数不能小于 {minimum.ToString(Newtonsoft.Json.Formatting.None)}。");
 
-        var properties = schema["properties"] as JObject;
-        if (schema["properties"] is not null && properties is null
-            || schema["additionalProperties"] is { Type: not JTokenType.Boolean }
-            || schema["required"] is { } requiredValue && (requiredValue is not JArray || requiredValue.Any(t => t.Type != JTokenType.String))
-            || schema["items"] is not null and not JObject)
-            throw new PuloniaTaskValidationException(location, "Schema 对象或数组约束格式无效。");
-
+        // 2. 对象：必填字段、已声明字段递归检查、按需拒绝未声明字段
         if (value is JObject obj)
         {
             foreach (var required in (schema["required"] as JArray ?? new JArray()).Values<string>())
@@ -238,18 +244,17 @@ public static class PuloniaTaskValidator
                 if (obj.Property(required!) is null)
                     throw new PuloniaTaskValidationException(location + "/" + required, "缺少必填参数。");
             }
+            var properties = schema["properties"] as JObject;
             foreach (var field in obj.Properties())
             {
-                if (properties?[field.Name] is { } fieldSchema)
-                {
-                    if (fieldSchema is not JObject childSchema)
-                        throw new PuloniaTaskValidationException(location, "字段 Schema 必须是对象。");
-                    ValidateParameters(field.Value, childSchema, location + "/" + field.Name, depth + 1);
-                }
+                if (properties?[field.Name] is JObject fieldSchema)
+                    ValidateParameters(field.Value, fieldSchema, location + "/" + field.Name, depth + 1);
                 else if (schema["additionalProperties"]?.Value<bool>() == false)
                     throw new PuloniaTaskValidationException(location + "/" + field.Name, "不允许未声明的参数。");
             }
         }
+
+        // 3. 数组：逐项检查
         if (value is JArray items && schema["items"] is JObject itemSchema)
         {
             for (var i = 0; i < items.Count; i++)
@@ -258,7 +263,8 @@ public static class PuloniaTaskValidator
     }
 
     /// <summary>
-    /// 预先检查全部 Schema 分支，未提供的可选字段也不能藏有未知约束。
+    /// 预先检查全部 Schema 分支，未提供的可选字段也不能藏有未知约束；这是 Schema 合法性的唯一检查入口。
+    /// 支持的关键字：type、properties、required、additionalProperties、items、enum、minimum。
     /// </summary>
     public static void ValidateParameterSchema(JObject schema, string location, int depth = 0)
     {
@@ -266,7 +272,7 @@ public static class PuloniaTaskValidator
             throw new PuloniaTaskValidationException(location, "参数 Schema 嵌套过深。");
         foreach (var property in schema.Properties())
         {
-            if (property.Name is not ("type" or "properties" or "required" or "additionalProperties" or "items" or "enum"))
+            if (property.Name is not ("type" or "properties" or "required" or "additionalProperties" or "items" or "enum" or "minimum"))
                 throw new PuloniaTaskValidationException(location, $"原型尚不支持 Schema 关键字 {property.Name}。");
         }
         if (schema["type"] is { } type)
@@ -277,7 +283,8 @@ public static class PuloniaTaskValidator
         }
         if (schema["enum"] is not null && (schema["enum"] is not JArray choices || choices.Count == 0)
             || schema["additionalProperties"] is { Type: not JTokenType.Boolean }
-            || schema["required"] is { } required && (required is not JArray || required.Any(t => t.Type != JTokenType.String)))
+            || schema["required"] is { } required && (required is not JArray || required.Any(t => t.Type != JTokenType.String))
+            || schema["minimum"] is { Type: not (JTokenType.Integer or JTokenType.Float) })
             throw new PuloniaTaskValidationException(location, "Schema 约束格式无效。");
         if (schema["properties"] is { } properties)
         {
@@ -322,18 +329,18 @@ public static class PuloniaTaskValidator
     }
 
     /// <summary>
-    /// 递归检查编辑树；先检查对象所有权，避免循环导致栈溢出。
+    /// 递归检查编辑树；先登记节点 ID 再递归，同一对象挂在多处或形成循环时第二次出现即因 ID 重复被拒绝，不会栈溢出。
     /// </summary>
-    private static void ValidateTask(PuloniaTask task, string parent, HashSet<string> ids, HashSet<PuloniaTask> objects, int depth)
+    /// <param name="tasks">已检查的节点，按 ID 索引，供账号预设和触发目标查找。</param>
+    private static void ValidateTask(PuloniaTask task, string parent, Dictionary<string, PuloniaTask> tasks, int depth)
     {
-        if (task is null || depth > MaxTreeDepth || objects.Count >= MaxTreeNodes || !objects.Add(task))
-            throw new PuloniaTaskValidationException(parent, "树含空节点、对象循环、重复父节点，或超过深度/数量上限。");
+        if (task is null || depth > MaxTreeDepth || tasks.Count >= MaxTreeNodes)
+            throw new PuloniaTaskValidationException(parent, "树含空节点，或超过深度/数量上限。");
         ValidateId(task.Id, parent + "/id");
         var location = parent + "/" + task.Id;
-        if (!ids.Add(task.Id) || string.IsNullOrWhiteSpace(task.Name) || !IsTaskType(task.TaskType))
-            throw new PuloniaTaskValidationException(location, "节点 ID 重复，或名称/类型无效。");
-        if (task.Parameters is null || task.Children is null || task.ParameterOverrides is null)
-            throw new PuloniaTaskValidationException(location, "参数、子节点和公共参数不能为 null。");
+        if (!tasks.TryAdd(task.Id, task) || string.IsNullOrWhiteSpace(task.Name) || !IsTaskType(task.TaskType))
+            throw new PuloniaTaskValidationException(location, "节点 ID 重复（含同一节点挂在多处或形成循环），或名称/类型无效。");
+        // 参数、子节点和公共参数集合由 JSON 契约（Required.DisallowNull）和模型默认值保证非空，不再重复检查。
         ValidateJsonValue(task.Parameters, location + "/parameters");
         if (task.TaskType == "pathing") PuloniaCollectionCooldown.ValidateSettings(task.Parameters[PuloniaCollectionCooldown.ParameterName], location + "/parameters/collection_cd");
         ValidatePolicy(task.Policy, location);
@@ -414,7 +421,7 @@ public static class PuloniaTaskValidator
         }
 
         foreach (var child in task.Children)
-            ValidateTask(child, location, ids, objects, depth + 1);
+            ValidateTask(child, location, tasks, depth + 1);
     }
 
     /// <summary>校验仓库资源类型的根路径，防止把其他能力的文件误当作路线或 JS 项目。</summary>

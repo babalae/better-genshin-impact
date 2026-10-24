@@ -5,6 +5,7 @@ namespace BetterGenshinImpact.Pulonia.Models;
 
 /// <summary>
 /// 当前状态文件中的一条已确认 CD 或额度事实。
+/// 写入账本后视为不可变：已提交的状态与查询结果共用同一对象，只能整条替换，不能原地修改。
 /// </summary>
 public sealed class PuloniaTaskLedgerEntry
 {
@@ -15,7 +16,7 @@ public sealed class PuloniaTaskLedgerEntry
     public string EventKey { get; set; } = string.Empty;
 
     /// <summary>
-    /// 服务器与账号或世界拥有者组成的作用域键。
+    /// 采集记录所属世界的作用域键，形如 <c>cn/world/{身份}</c>：未切换账号时身份为 <c>default</c>，切换到指定账号时为核验后的 UID。
     /// </summary>
     [JsonProperty("scope_key", Required = Required.Always)]
     public string ScopeKey { get; set; } = string.Empty;

@@ -22,7 +22,6 @@ public interface IPuloniaRemoteNodeDispatcher
     /// </summary>
     /// <param name="target">执行目标</param>
     /// <param name="start">节点启动信息</param>
-    /// <param name="reporter">执行器完成事件的落盘回调；账号准备时为 null</param>
     /// <param name="ct">节点取消令牌</param>
     /// <returns>子实例的结束回报</returns>
     /// <exception cref="OperationCanceledException">已取消，且子实例确认退出</exception>
@@ -30,5 +29,5 @@ public interface IPuloniaRemoteNodeDispatcher
     /// <exception cref="System.IO.IOException">执行期间执行实例断开</exception>
     /// <exception cref="TimeoutException">请求未确认，或取消后执行实例没有在限定时间内确认退出</exception>
     Task<PuloniaRemoteNodeFinished> ExecuteAsync(PuloniaTaskExecutionTarget target, PuloniaRemoteNodeStart start,
-        Func<PuloniaTaskCompletionEvent, CancellationToken, Task>? reporter, CancellationToken ct);
+        CancellationToken ct);
 }

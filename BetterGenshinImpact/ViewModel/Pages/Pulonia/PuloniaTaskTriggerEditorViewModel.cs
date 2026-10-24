@@ -78,11 +78,14 @@ public partial class PuloniaTaskTriggerEditorViewModel : ObservableObject
 
     /// <summary>一条龙始终使用自身账号绑定，不能由触发器建立第二套选择。</summary>
     public bool UsesPlanAccountBinding { get; }
-    /// <summary>普通计划仍允许选择原有账号参数资料。</summary>
+    /// <summary>普通计划仍允许选择原有账号参数资料；一条龙不显示账号下拉框。</summary>
     public bool CanSelectAccount => !UsesPlanAccountBinding;
+    /// <summary>账号区域的标题：一条龙表示实际运行账号，普通计划表示只提供参数的账号资料。</summary>
+    public string AccountSelectionTitle => UsesPlanAccountBinding ? "运行账号" : "账号参数资料（不会自动切换账号）";
     /// <summary>当前入口的账号选择语义。</summary>
     public string AccountSelectionDescription => UsesPlanAccountBinding
-        ? "按一条龙配置的账号绑定执行，并在任务前核验 UID" : "账号参数资料（普通计划不自动切换账号）";
+        ? "使用这份一条龙配置绑定的账号：运行前切换到该账号并核验 UID。可在一条龙页面的“切换账号”中修改。"
+        : "只选择参数使用的账号资料；运行时使用当前登录的账号，不会自动切换。";
 
     /// <summary>从计划和触发器建立独立草稿。</summary>
     public PuloniaTaskTriggerEditorViewModel(PuloniaTaskTrigger trigger, PuloniaTaskPlan plan)
@@ -182,6 +185,9 @@ public partial class PuloniaTaskTriggerEditorViewModel : ObservableObject
         if (IsSchedule)
             result.Cron = CronEditor.Expression.Trim();
         PuloniaTaskSchedule.Validate(result);
+        // 计划校验不检查键位组合，保存前由热键规则拦截当前模式不支持的键。
+        if (IsHotkey)
+            PuloniaTaskHotkeyValidator.Validate(result);
         return result;
     }
 
@@ -197,15 +203,15 @@ public partial class PuloniaTaskTriggerEditorViewModel : ObservableObject
                 IsValid = true;
                 return;
             }
-            var zone = PuloniaTaskSchedule.GetTimeZone(trigger.ServerTimeZone);
+            var utcOffset = PuloniaTaskSchedule.GetUtcOffset(trigger.ServerTimeZone);
             var cron = new PuloniaCronExpression(trigger.Cron);
             var lines = new List<string>();
             var after = DateTimeOffset.UtcNow;
             for (var index = 0; index < 5; index++)
             {
-                var next = cron.Next(after, zone);
+                var next = cron.Next(after, utcOffset);
                 if (next is null) break;
-                lines.Add(TimeZoneInfo.ConvertTime(next.Value, zone).ToString("yyyy-MM-dd ddd HH:mm zzz", CultureInfo.GetCultureInfo("zh-CN")));
+                lines.Add(next.Value.ToOffset(utcOffset).ToString("yyyy-MM-dd ddd HH:mm zzz", CultureInfo.GetCultureInfo("zh-CN")));
                 after = next.Value;
             }
             PreviewText = lines.Count > 0 ? "接下来执行（所选时区）：\n" + string.Join("\n", lines) : "未来八年没有可执行时间。";

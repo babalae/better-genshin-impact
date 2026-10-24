@@ -38,36 +38,46 @@ public sealed partial class ScriptRepositoryStore
             { Id = pair.Key, Name = pair.Key, Url = pair.Value }).ToArray(), Branch = "release"
     };
 
-    /// <summary>补入唯一的官方记录，不创建 clone 目录，不在打开管理窗口时下载内容。</summary>
+    /// <summary>
+    /// 补入唯一的官方记录，不创建 clone 目录，不在打开管理窗口时下载内容。
+    /// 官方记录已存在时只读取注册、不取锁；缺失时才在 registry 锁内重新读取并补入。
+    /// </summary>
     public async Task<ScriptRepositoryRegistration> EnsureOfficialRepositoryAsync(CancellationToken ct = default)
     {
+        if (FindValidOfficial(ReadRegistrations()) is { } existing) return existing;
         using var gate = await AcquireLockAsync("registry", ct).ConfigureAwait(false);
         var registrations = ReadRegistrations();
-        var official = registrations.FirstOrDefault(r => r.IsOfficial);
-        if (official is not null)
-        {
-            if (!official.IsEnabled || official.Kind != "official" || official.Branch != "release"
-                || !string.Equals(official.Directory, OfficialDirectory, StringComparison.OrdinalIgnoreCase))
-                throw new IOException("官方仓库配置无效，官方来源不能禁用、修改分支或重新定位。");
-            return official;
-        }
+        if (FindValidOfficial(registrations) is { } official) return official;
         official = CreateOfficialRegistration();
         registrations.Add(official);
         WriteJson(Path.Combine(RootDirectory, "repositories.json"), registrations);
         return official;
     }
 
+    /// <summary>返回注册列表中的官方记录并校验其固定配置；尚未补入时返回 null。</summary>
+    private ScriptRepositoryRegistration? FindValidOfficial(IEnumerable<ScriptRepositoryRegistration> registrations)
+    {
+        var official = registrations.FirstOrDefault(r => r.IsOfficial);
+        if (official is not null && (!official.IsEnabled || official.Kind != "official" || official.Branch != "release"
+                || !string.Equals(official.Directory, OfficialDirectory, StringComparison.OrdinalIgnoreCase)))
+            throw new IOException("官方仓库配置无效，官方来源不能禁用、修改分支或重新定位。");
+        return official;
+    }
+
     /// <summary>读取一个已注册来源，管理操作可以识别未下载和已经移除的记录。</summary>
     public Task<ScriptRepositoryRegistration> GetRepositoryAsync(string id, CancellationToken ct = default)
-        => GetRegistrationAsync(id, ct);
+    {
+        ct.ThrowIfCancellationRequested();
+        return Task.FromResult(GetRegistration(id));
+    }
 
     /// <summary>重新读取用户维护的本地仓库并发布当前版本；不会访问远端或修改任何任务引用。</summary>
     public async Task RefreshLocalRepositoryAsync(string id, CancellationToken ct = default)
     {
-        var registration = await GetRegistrationAsync(id, ct).ConfigureAwait(false);
+        var registration = GetRegistration(id);
         if (!registration.IsEnabled || registration.IsRemote)
             throw new InvalidOperationException("只有已启用的本地仓库可以刷新目录。");
-        using var sourceAccess = await EnterSourceAccessAsync(ct).ConfigureAwait(false);
+        using var sourceAccess = await EnterSourceAccessAsync(registration.Directory, ct).ConfigureAwait(false);
         await Task.Run(() =>
         {
             ct.ThrowIfCancellationRequested();
@@ -79,7 +89,7 @@ public sealed partial class ScriptRepositoryStore
             }
             else
             {
-                _ = ReadFileSourceInventory(registration, ct);
+                _ = ReadFileSourceInventory(registration.Directory, ct);
             }
         }, ct).ConfigureAwait(false);
         NotifyUpdated(registration.Directory);
@@ -177,8 +187,7 @@ public sealed partial class ScriptRepositoryStore
         var updated = new ScriptRepositoryRegistration
         {
             Id = existing.Id, Name = name.Trim(), Directory = existing.Directory, Kind = existing.Kind,
-            IsEnabled = existing.IsEnabled, Remotes = remotes.ToArray(), ActiveRemoteId = activeRemoteId, Branch = branch.Trim(),
-            SourceGeneration = existing.SourceGeneration
+            IsEnabled = existing.IsEnabled, Remotes = remotes.ToArray(), ActiveRemoteId = activeRemoteId, Branch = branch.Trim()
         };
         registrations[index] = updated;
         WriteJson(Path.Combine(RootDirectory, "repositories.json"), registrations);

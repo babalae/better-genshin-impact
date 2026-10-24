@@ -30,4 +30,15 @@ public sealed class PuloniaTaskPolicy
     /// </summary>
     [JsonProperty("retry_delay_seconds")]
     public double? RetryDelaySeconds { get; set; }
+
+    /// <summary>
+    /// 复制全部字段；运行节点用它保存冻结副本并对外只给出副本。
+    /// </summary>
+    public PuloniaTaskPolicy Clone() => new()
+    {
+        TimeoutSeconds = TimeoutSeconds,
+        FailureBehavior = FailureBehavior,
+        MaxRetries = MaxRetries,
+        RetryDelaySeconds = RetryDelaySeconds
+    };
 }

@@ -125,6 +125,7 @@ public partial class AutoDomainSettingsViewModel : SoloTaskSettingsViewModel
             }
             Weekdays.Add(row);
         }
+        TrackEdits(Weekdays);
     }
 
     /// <summary>收集全部卡片输入的真实变化；每周安排整体重建，留空字段不写入即回退每日配置。</summary>

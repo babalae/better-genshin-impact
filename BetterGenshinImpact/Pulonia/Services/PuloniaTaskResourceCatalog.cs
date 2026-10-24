@@ -34,12 +34,12 @@ public sealed class PuloniaTaskResourceCatalog
     private const int MaxVisitedDirectoryCount = 20000;
 
     /// <summary>
-    /// 保护索引刷新与缓存替换。
+    /// 保护索引刷新与缓存读写；缓存只在持有该门时访问，不再另加 lock。
     /// </summary>
     private readonly SemaphoreSlim _refreshGate = new(1, 1);
 
     /// <summary>
-    /// 以任务类型和完整根目录为键的进程内索引缓存。
+    /// 以任务类型和完整根目录为键的进程内索引缓存；只在持有 <see cref="_refreshGate"/> 时访问。
     /// </summary>
     private readonly Dictionary<(string TaskType, string Root), PuloniaTaskResourceIndex> _cache = [];
 
@@ -57,17 +57,14 @@ public sealed class PuloniaTaskResourceCatalog
             ? string.Empty
             : Path.GetFullPath(definition.ResourceBaseDirectory);
         var key = (definition.TaskType, root);
-        if (!forceRefresh && TryGetCached(key, out var cached))
-            return cached;
 
         await _refreshGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            if (!forceRefresh && TryGetCached(key, out cached))
+            if (!forceRefresh && _cache.TryGetValue(key, out var cached))
                 return cached;
             var index = await Task.Run(() => BuildIndex(definition, root, ct), ct).ConfigureAwait(false);
-            lock (_cache)
-                _cache[key] = index;
+            _cache[key] = index;
             return index;
         }
         finally
@@ -99,10 +96,10 @@ public sealed class PuloniaTaskResourceCatalog
                     using var snapshot = await Repositories.OpenCurrentAsync(repository.Id, ct).ConfigureAwait(false);
                     var key = (taskType, repository.Id + "/" + snapshot.Revision + "/" + repository.Name);
                     retainedKeys.Add(key);
-                    if (forceRefresh || !TryGetCached(key, out var index))
+                    if (forceRefresh || !_cache.TryGetValue(key, out var index))
                     {
                         index = await Task.Run(() => BuildRepositoryIndex(snapshot, taskType, ct), ct).ConfigureAwait(false);
-                        lock (_cache) _cache[key] = index;
+                        _cache[key] = index;
                     }
                     var room = MaxResourceCount - resources.Count;
                     resources.AddRange(index.Resources.Take(room));
@@ -115,13 +112,10 @@ public sealed class PuloniaTaskResourceCatalog
                     skipped++;
                 }
             }
-            lock (_cache)
-            {
-                // 仓库更新后的旧索引由当前打开弹窗持有，缓存仅保留最新版本，避免长期累积。
-                foreach (var old in _cache.Keys.Where(k => k.TaskType == taskType && !retainedKeys.Contains(k)
-                             && (repositoryId is null || k.Root.StartsWith(repositoryId + "/", StringComparison.Ordinal))).ToArray())
-                    _cache.Remove(old);
-            }
+            // 仓库更新后的旧索引由当前打开弹窗持有，缓存仅保留最新版本，避免长期累积。
+            foreach (var old in _cache.Keys.Where(k => k.TaskType == taskType && !retainedKeys.Contains(k)
+                         && (repositoryId is null || k.Root.StartsWith(repositoryId + "/", StringComparison.Ordinal))).ToArray())
+                _cache.Remove(old);
             return new PuloniaTaskResourceIndex(resources, truncated, skipped);
         }
         finally { _refreshGate.Release(); }
@@ -222,15 +216,6 @@ public sealed class PuloniaTaskResourceCatalog
     public Task<IReadOnlyList<string>> GetDirectoryFilesAsync(string directory, string pattern,
         bool recursive, CancellationToken ct = default)
         => Task.Run<IReadOnlyList<string>>(() => EnumerateDirectoryFiles(directory, pattern, recursive, ct), ct);
-
-    /// <summary>
-    /// 尝试读取一份已经建立的索引。
-    /// </summary>
-    private bool TryGetCached((string TaskType, string Root) key, out PuloniaTaskResourceIndex index)
-    {
-        lock (_cache)
-            return _cache.TryGetValue(key, out index!);
-    }
 
     /// <summary>
     /// 按任务类型建立资源索引，不读取路线 JSON 正文和 JS README。

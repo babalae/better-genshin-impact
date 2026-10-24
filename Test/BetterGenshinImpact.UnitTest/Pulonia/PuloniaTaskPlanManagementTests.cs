@@ -1,4 +1,3 @@
-using System.Reflection;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
@@ -193,7 +192,7 @@ public sealed class PuloniaTaskPlanManagementTests : IDisposable
     }
 
     /// <summary>
-    /// 已在保存门前排队的保存遇到文档删除必须退出，不能重新创建文件或过早释放仍在使用的门。
+    /// 已在保存门前排队的保存遇到文档删除必须退出，不能重新创建文件；保存门随文档存在、不再释放，之后的保存同样直接退出。
     /// </summary>
     [Fact]
     public async Task PendingSave_DoesNotRecreateDeletedDocument()
@@ -204,23 +203,21 @@ public sealed class PuloniaTaskPlanManagementTests : IDisposable
         var document = new PuloniaTaskPlanDocumentViewModel(CreatePlan("已删除草稿"), [], clipboard, true);
         var page = CreatePage(store, service, clipboard);
         page.Documents.Add(document);
-        var flags = BindingFlags.Instance | BindingFlags.NonPublic;
-        var acquire = typeof(PuloniaTaskPlanViewModel).GetMethod("GetSaveGate", flags)!;
-        var release = typeof(PuloniaTaskPlanViewModel).GetMethod("ReleaseSaveGate", flags)!;
-        var save = typeof(PuloniaTaskPlanViewModel).GetMethod("SaveDocumentAsync", flags)!;
-        var gate = (SemaphoreSlim)acquire.Invoke(page, [document])!;
-        await gate.WaitAsync();
-        var pending = (Task<bool>)save.Invoke(page, [document])!;
+        // 模拟删除正持有保存门：自动保存在门前排队。
+        await document.SaveGate.WaitAsync();
+        var pending = page.Session.SaveDocumentAsync(document);
         Assert.False(pending.IsCompleted);
 
         document.IsDeleted = true;
         page.Documents.Remove(document);
-        release.Invoke(page, [document, gate]);
+        document.SaveGate.Release();
 
         Assert.False(await pending.WaitAsync(TimeSpan.FromSeconds(5)));
         Assert.Empty(await store.ListPlansAsync());
-        Assert.False(await (Task<bool>)save.Invoke(page, [document])!);
-        Assert.Throws<ObjectDisposedException>(() => gate.Wait(0));
+        Assert.False(await page.Session.SaveDocumentAsync(document));
+        // 门已归还且未释放，删除后的保存只按删除标记退出。
+        Assert.True(document.SaveGate.Wait(0));
+        document.SaveGate.Release();
     }
 
     /// <summary>
@@ -234,7 +231,8 @@ public sealed class PuloniaTaskPlanManagementTests : IDisposable
     /// 建立列表命令使用的页面模型，不创建 WPF 窗口。
     /// </summary>
     private static PuloniaTaskPlanViewModel CreatePage(PuloniaTaskStore store, PuloniaTaskService service,
-        PuloniaTaskClipboardService clipboard) => new(store, clipboard, service, new PuloniaTaskResourceCatalog(),
+        PuloniaTaskClipboardService clipboard) => new(
+        new PuloniaPlanEditingSession(store, clipboard, service, new PuloniaTaskResourceCatalog()),
         new PuloniaTaskHistoryViewModel(service, store));
 
     /// <summary>

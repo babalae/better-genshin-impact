@@ -314,8 +314,9 @@ public partial class App : Application
                     sp.GetRequiredService<TaskStopService>(),
                     sp.GetRequiredService<ILogger<PuloniaRemoteNodeHost>>(),
                     sp.GetService<IPuloniaGenshinAccountSwitcher>()));
-                // 只有主实例是协调器：子实例不读写共享的 User/Pulonia/state.json，也不消费队列
-                services.AddSingleton(sp => new PuloniaTaskService(
+                // 只有主实例是协调器：子实例不读写共享的 User/Pulonia/state.json，也不消费队列。
+                // 调度宿主与页面都依赖接口，只注册这一份单例；容器关闭时释放它（IAsyncDisposable）。
+                services.AddSingleton<IPuloniaTaskService>(sp => new PuloniaTaskService(
                     sp.GetRequiredService<PuloniaTaskStore>(),
                     sp.GetRequiredService<PuloniaTaskBuilder>(),
                     sp.GetServices<IPuloniaTaskExecutor>(),
@@ -324,11 +325,15 @@ public partial class App : Application
                     sp.GetRequiredService<TimeProvider>(),
                     sp.GetService<IPuloniaGenshinAccountSwitcher>(),
                     sp.GetRequiredService<IPuloniaRemoteNodeDispatcher>(),
-                    sp.GetRequiredService<InstanceBootstrap>().Context.IsRoot));
-                services.AddSingleton<IPuloniaTaskService>(sp => sp.GetRequiredService<PuloniaTaskService>());
+                    sp.GetRequiredService<InstanceBootstrap>().Context.IsRoot,
+                    sp.GetRequiredService<ILogger<PuloniaTaskService>>()));
                 services.AddSingleton(TimeProvider.System);
                 services.AddSingleton<PuloniaTaskTriggerHost>();
                 services.AddHostedService(sp => sp.GetRequiredService<PuloniaTaskTriggerHost>());
+                // Pulonia 任务计划页与新一条龙页共用同一编辑会话；高级设置的公共设置与采集 CD 表单由视图层提供。
+                services.AddSingleton<BetterGenshinImpact.ViewModel.Pages.Pulonia.PuloniaPlanEditingSession>();
+                services.AddSingleton<BetterGenshinImpact.ViewModel.Pages.Pulonia.IPuloniaTaskSettingsDialogs,
+                    BetterGenshinImpact.View.Windows.Pulonia.PuloniaTaskSettingsDialogs>();
                 services.AddSingleton<IMusicScoreParser, MusicScoreParser>();
                 services.AddSingleton<IMusicStateStore, MusicStateStore>();
                 services.AddSingleton<IInstrumentProfileService, InstrumentProfileService>();

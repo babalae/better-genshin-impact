@@ -148,7 +148,7 @@ public sealed class PuloniaTaskLegacyImporter
         result.Differences.Add(location + "：行走、战斗、食物与 Shell 设置已转为分组公共配置；旧任务周期、完成跳过、执行优先级及断点不迁入。");
     }
 
-    /// <summary>递归迁移 d-v3 树，保留父子开关、顺序和展开状态。</summary>
+    /// <summary>递归迁移 d-v3 树，保留父子开关和顺序；展开状态属于编辑器界面，不随计划导入。</summary>
     private PuloniaTask ConvertGear(JObject data, PuloniaTaskImportResult result, string location, int depth, int[] refCount)
     {
         if (depth > 64 || ++refCount[0] > 10000) throw new InvalidOperationException("d-v3 树超过层级或数量限制。");
@@ -158,7 +158,7 @@ public sealed class PuloniaTaskLegacyImporter
         try { parameters = raw is JObject obj ? (JObject)obj.DeepClone() : string.IsNullOrWhiteSpace(raw?.Value<string>()) ? new JObject() : PuloniaTaskJson.Read<JObject>(raw!.Value<string>()!); }
         catch (Exception) { parameters = new JObject { ["raw"] = raw?.DeepClone() }; }
         var node = new PuloniaTask { Name = Value<string>(data, "name") ?? "导入任务", TaskType = type,
-            IsEnabled = Value<bool?>(data, "is_enabled") ?? true, IsExpanded = Value<bool?>(data, "is_expanded") ?? true,
+            IsEnabled = Value<bool?>(data, "is_enabled") ?? true,
             Path = Value<string>(data, "path") };
         if (type is "group" or "root") node.TaskType = "group";
         else if (type == "javascript")

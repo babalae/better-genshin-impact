@@ -10,7 +10,7 @@ namespace BetterGenshinImpact.UnitTest.Pulonia;
 
 /// <summary>
 /// 新一条龙跨实例派发：主实例编排与落盘、子实例执行节点。用进程内回环通道连接派发代理和节点宿主，
-/// 覆盖节点与快照的序列化往返、执行通道并行、同一计划互斥、取消、断线和子实例只读模式
+/// 覆盖节点与快照的序列化往返、本地与远程共用串行队列、取消、断线、旧版本状态拒绝和子实例只读模式
 /// </summary>
 public sealed class PuloniaRemoteExecutionTests : IDisposable
 {
@@ -57,14 +57,14 @@ public sealed class PuloniaRemoteExecutionTests : IDisposable
         Assert.Equal(WebViewTarget.LaneKey, run.ExecutionTarget!.LaneKey);
         var archived = Assert.Single(await store.ListHistoryAsync());
         Assert.Equal("云原神（test）", archived.Request.ExecutionTarget!.DisplayName);
-        Assert.Empty((await store.LoadStateAsync()).State.RemoteActiveRuns);
+        Assert.Null((await store.LoadStateAsync()).State.ActiveRun);
     }
 
     /// <summary>
-    /// 主实例本地通道与子实例通道互不阻塞：本地运行未结束时，远程运行可以完成
+    /// 主实例本地运行与子实例运行共用一个串行队列：本地运行结束前，远程运行保持排队，结束后再派发
     /// </summary>
     [Fact]
-    public async Task LocalAndRemoteLanes_RunConcurrently()
+    public async Task LocalAndRemoteRuns_ShareOneSerialQueue()
     {
         using var store = new PuloniaTaskStore(_directory);
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -84,18 +84,23 @@ public sealed class PuloniaRemoteExecutionTests : IDisposable
         var localId = await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = localPlan.Id });
         await entered.Task.WaitAsync(TimeSpan.FromSeconds(15));
         var remoteId = await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = remotePlan.Id, ExecutionTarget = WebViewTarget });
-        var remoteRun = await service.WaitForCompletionAsync(remoteId).WaitAsync(TimeSpan.FromSeconds(15));
 
-        Assert.Equal(PuloniaTaskRunStatus.Succeeded, remoteRun.Status);
+        // 给队列足够时间：若存在并行通道，远程运行早已完成
+        await Task.Delay(300);
+        Assert.Equal(PuloniaTaskRunStatus.Queued, (await service.GetRunAsync(remoteId)).Status);
         Assert.Equal(PuloniaTaskRunStatus.Running, (await service.GetRunAsync(localId)).Status);
+
         await service.CancelAsync(localId).WaitAsync(TimeSpan.FromSeconds(15));
+        var remoteRun = await service.WaitForCompletionAsync(remoteId).WaitAsync(TimeSpan.FromSeconds(15));
+        Assert.Equal(PuloniaTaskRunStatus.Succeeded, remoteRun.Status);
+        Assert.Equal(PuloniaTaskRunStatus.Cancelled, (await service.GetRunAsync(localId)).Status);
     }
 
     /// <summary>
-    /// 同一计划在子实例上运行时不能再提交到主实例；停止后子实例执行器退出，运行记为已取消
+    /// 子实例上的运行就是唯一活动运行，状态中记录执行实例；停止后子实例执行器退出，运行记为已取消
     /// </summary>
     [Fact]
-    public async Task SamePlanOnOtherLane_IsRejected_AndCancelStopsRemoteNode()
+    public async Task RemoteRun_IsTheActiveRun_AndCancelStopsRemoteNode()
     {
         using var store = new PuloniaTaskStore(_directory);
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -119,9 +124,8 @@ public sealed class PuloniaRemoteExecutionTests : IDisposable
         var id = await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = plan.Id, ExecutionTarget = WebViewTarget });
         await entered.Task.WaitAsync(TimeSpan.FromSeconds(15));
         var state = (await store.LoadStateAsync()).State;
-        Assert.Null(state.ActiveRun);
-        Assert.Single(state.RemoteActiveRuns);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => service.EnqueueAsync(new PuloniaTaskRequest { PlanId = plan.Id }));
+        Assert.Equal(id, state.ActiveRun!.RunId);
+        Assert.Equal(WebViewTarget.LaneKey, state.ActiveRun.Request.ExecutionTarget!.LaneKey);
 
         await service.CancelAsync(id).WaitAsync(TimeSpan.FromSeconds(15));
         var run = await service.WaitForCompletionAsync(id).WaitAsync(TimeSpan.FromSeconds(15));
@@ -207,19 +211,16 @@ public sealed class PuloniaRemoteExecutionTests : IDisposable
     }
 
     /// <summary>
-    /// 格式版本 2 的状态文件读取时升级为当前版本，远程活动运行为空
+    /// 开发期不升级旧版本状态文件：非当前版本明确报错，并提示删除旧文件
     /// </summary>
     [Fact]
-    public void StateVersion2_IsUpgradedOnRead()
+    public void OlderStateVersion_IsRejectedWithCleanupHint()
     {
         var json = JObject.Parse(PuloniaTaskJson.WriteState(new PuloniaTaskState()));
-        json["schema_version"] = PuloniaTaskState.PreviousSchemaVersion;
-        json.Remove("remote_active_runs");
+        json["schema_version"] = 3;
 
-        var state = PuloniaTaskJson.ReadState(json.ToString());
-
-        Assert.Equal(PuloniaTaskState.CurrentSchemaVersion, state.SchemaVersion);
-        Assert.Empty(state.RemoteActiveRuns);
+        var error = Assert.Throws<PuloniaTaskValidationException>(() => PuloniaTaskJson.ReadState(json.ToString()));
+        Assert.Contains("删除 state.json", error.Message);
     }
 
     /// <summary>
@@ -249,7 +250,8 @@ public sealed class PuloniaRemoteExecutionTests : IDisposable
             await service.DisposeAsync();
         }
 
-        Assert.Single(leftover.RemoteActiveRuns);
+        Assert.Equal(id, leftover.ActiveRun!.RunId);
+        Assert.NotNull(leftover.ActiveRun.Request.ExecutionTarget);
         var restored = Path.Combine(_directory, "restored");
         using var restartedStore = new PuloniaTaskStore(restored);
         await restartedStore.SaveStateAsync(leftover);
@@ -259,7 +261,7 @@ public sealed class PuloniaRemoteExecutionTests : IDisposable
         var run = await restarted.GetRunAsync(id);
         Assert.Equal(PuloniaTaskRunStatus.Interrupted, run.Status);
         Assert.True(run.IsHistorical);
-        Assert.Empty((await restartedStore.LoadStateAsync()).State.RemoteActiveRuns);
+        Assert.Null((await restartedStore.LoadStateAsync()).State.ActiveRun);
     }
 
     /// <summary>
@@ -367,13 +369,6 @@ public sealed class PuloniaRemoteExecutionTests : IDisposable
             EnsureOnline();
             var cancel = await RoundtripAsync(new PuloniaRemoteNodeCancel { ExecutionId = executionId });
             _host!.Cancel(cancel.ExecutionId);
-        }
-
-        /// <inheritdoc />
-        public async Task ReportRemoteNodeAsync(PuloniaRemoteNodeReport report, CancellationToken ct)
-        {
-            EnsureOnline();
-            await _broker!.ReceiveReportAsync(ChildProcessId, await RoundtripAsync(report));
         }
 
         /// <inheritdoc />

@@ -17,6 +17,6 @@ public partial class PuloniaGenshinAccountsWindow : FluentWindow
         SourceInitialized += (_, _) => WindowHelper.TryApplySystemBackdrop(this);
         Closed += OnClosed;
     }
-    /// <summary>释放窗口拥有的操作，不停止其他入口的运行。</summary>
+    /// <summary>取消窗口拥有的操作并清空密码草稿，不停止其他入口的运行。</summary>
     private void OnClosed(object? sender, EventArgs e) => ViewModel.Dispose();
 }

@@ -9,14 +9,10 @@ namespace BetterGenshinImpact.Pulonia.Models;
 public sealed class PuloniaTaskState
 {
     /// <summary>
-    /// 当前支持的状态格式版本。3 起增加远程活动运行；读取 2 时自动升级。
+    /// 当前支持的状态格式版本。4 起所有执行实例共用一个串行队列，活动运行只有一个，
+    /// 并去掉通用额度框架的未决操作，触发游标只保存防重复字段；开发期不升级旧版本文件。
     /// </summary>
-    public const int CurrentSchemaVersion = 3;
-
-    /// <summary>
-    /// 可以直接升级读取的上一个格式版本。
-    /// </summary>
-    public const int PreviousSchemaVersion = 2;
+    public const int CurrentSchemaVersion = 4;
 
     /// <summary>
     /// 状态格式版本。
@@ -37,16 +33,10 @@ public sealed class PuloniaTaskState
     public List<PuloniaTaskRunRecord> PendingRequests { get; set; } = [];
 
     /// <summary>
-    /// 主实例本地通道的唯一活动运行。
+    /// 唯一活动运行；在主实例或子实例执行都占用同一个串行队列，<see cref="PuloniaTaskRequest.ExecutionTarget"/> 记录执行实例。
     /// </summary>
     [JsonProperty("active_run")]
     public PuloniaTaskRunRecord? ActiveRun { get; set; }
-
-    /// <summary>
-    /// 在子实例上执行的活动运行，每个执行实例最多一个。旧格式没有此字段时为空集合。
-    /// </summary>
-    [JsonProperty("remote_active_runs", Required = Required.DisallowNull)]
-    public List<PuloniaTaskRunRecord> RemoteActiveRuns { get; set; } = [];
 
     /// <summary>
     /// 已结束但尚未确认写入不可变历史文件的运行。
@@ -55,17 +45,15 @@ public sealed class PuloniaTaskState
     public List<PuloniaTaskRunRecord> PendingArchives { get; set; } = [];
 
     /// <summary>
-    /// 仍约束当前执行的 CD 与额度事实。
+    /// 仍约束当前执行的采集 CD 事实：每个（作用域，文件）只保留最新一条，判定本来就只看最新一条；
+    /// 每次成功的明细由运行历史中的确认事件保留。
     /// </summary>
     [JsonProperty("ledger", Required = Required.DisallowNull)]
     public List<PuloniaTaskLedgerEntry> Ledger { get; set; } = [];
 
     /// <summary>
-    /// 崩溃恢复后尚未核验或由用户明确释放的操作意图。
+    /// 已处理日程的定时触发游标，恢复、补触发和时钟回拨共用此游标；热键不写游标。
+    /// 每个现有定时触发器至多一条，计划或触发器删除后由调度检查剔除。
     /// </summary>
-    [JsonProperty("uncertain_operations", Required = Required.DisallowNull)]
-    public List<PuloniaTaskOperationIntent> UncertainOperations { get; set; } = [];
-
-    /// <summary>已处理日程与待提交发生项，恢复、补触发和时钟回拨共用此游标。</summary>
     public List<PuloniaTaskTriggerState> TriggerStates { get; set; } = [];
 }

@@ -28,10 +28,6 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable, IPulonia
 {
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan ReconnectDelay = TimeSpan.FromSeconds(1);
-    /// <summary>
-    /// 完成事件需要主实例写入账本后才确认，留出比普通请求更长的时间。
-    /// </summary>
-    private static readonly TimeSpan PuloniaReportTimeout = TimeSpan.FromSeconds(30);
 
     private readonly InstanceBootstrap _bootstrap;
     private readonly ILogger<InstanceService> _logger;
@@ -135,17 +131,6 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable, IPulonia
     Task IPuloniaRemoteTransport.CancelRemoteNodeAsync(int processId, Guid executionId, CancellationToken ct)
         => SendPuloniaRequestToChildAsync(processId, InstanceOperations.PuloniaNodeCancel,
             new PuloniaRemoteNodeCancel { ExecutionId = executionId }, ct);
-
-    /// <inheritdoc />
-    async Task IPuloniaRemoteTransport.ReportRemoteNodeAsync(PuloniaRemoteNodeReport report, CancellationToken ct)
-    {
-        var response = await GetRequiredRootConnection().SendRequestAsync(
-            InstanceOperations.PuloniaNodeReport,
-            report,
-            PuloniaReportTimeout,
-            ct).ConfigureAwait(false);
-        EnsureSuccessfulResponse(response);
-    }
 
     /// <inheritdoc />
     async Task IPuloniaRemoteTransport.FinishRemoteNodeAsync(PuloniaRemoteNodeFinished finished, CancellationToken ct)

@@ -7,46 +7,47 @@
   <ui:TitleBar Title="一条龙步骤配置" ShowMinimize="False" ShowMaximize="False"/>
   <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
    <StackPanel Margin="20,12,20,20">
+    <!-- 窗口只编辑打开时的步骤；高级编辑状态由窗口专属的 Advanced 按需计算。 -->
     <ui:Card Style="{StaticResource DragonCard}"><StackPanel>
-     <TextBlock Text="{Binding SelectedConfiguration.SelectedNode.TypeDisplayName}" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-     <ui:TextBox Margin="0,8,0,8" Text="{Binding SelectedConfiguration.SelectedNode.Name, Mode=TwoWay}" PlaceholderText="步骤名称" Visibility="{Binding SelectedConfiguration.SelectedNode.CanEditOneDragonName, Converter={StaticResource DragonBoolVisibility}}"/>
-     <TextBlock Margin="0,8,0,8" Text="{Binding SelectedConfiguration.SelectedNode.Name}" Visibility="{Binding SelectedConfiguration.SelectedNode.CanEditOneDragonName, Converter={StaticResource BooleanToVisibilityRevertConverter}}"/>
-     <CheckBox Content="启用此步骤" IsChecked="{Binding SelectedConfiguration.SelectedNode.IsEnabled, Mode=TwoWay}"/>
-     <StackPanel Margin="0,10,0,0" Visibility="{Binding SelectedConfiguration.SelectedNode.CanConfigureRepeat, Converter={StaticResource DragonBoolVisibility}}">
-      <TextBlock Text="整组执行次数"/><ui:TextBox Margin="0,6,0,0" Text="{Binding SelectedConfiguration.SelectedNode.RepeatCount, Mode=TwoWay}"/>
+     <TextBlock Text="{Binding Node.TypeDisplayName, Mode=OneWay}" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+     <ui:TextBox Margin="0,8,0,8" Text="{Binding Node.Name, Mode=TwoWay}" PlaceholderText="步骤名称" Visibility="{Binding Node.CanEditOneDragonName, Mode=OneWay, Converter={StaticResource DragonBoolVisibility}}"/>
+     <TextBlock Margin="0,8,0,8" Text="{Binding Node.Name, Mode=OneWay}" Visibility="{Binding Node.CanEditOneDragonName, Mode=OneWay, Converter={StaticResource BooleanToVisibilityRevertConverter}}"/>
+     <CheckBox Content="启用此步骤" IsChecked="{Binding Node.IsEnabled, Mode=TwoWay}"/>
+     <StackPanel Margin="0,10,0,0" Visibility="{Binding Node.CanConfigureRepeat, Mode=OneWay, Converter={StaticResource DragonBoolVisibility}}">
+      <TextBlock Text="整组执行次数"/><ui:TextBox Margin="0,6,0,0" Text="{Binding Node.RepeatCount, Mode=TwoWay}"/>
      </StackPanel>
-     <StackPanel Margin="0,10,0,0" Visibility="{Binding SelectedConfiguration.CanEditPath, Converter={StaticResource DragonBoolVisibility}}"><TextBlock Text="资源位置"/><ui:TextBox Margin="0,6,0,0" Text="{Binding SelectedConfiguration.SelectedNode.Path, Mode=TwoWay}"/></StackPanel>
-     <WrapPanel Margin="0,10,0,0"><TextBlock Text="{Binding SelectedConfiguration.SelectedNode.ResourceVersionText}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-      <ui:Button Content="更新此任务资源" Command="{Binding Editor.UpdateResourceVersionCommand}" CommandParameter="{Binding SelectedConfiguration.SelectedNode}" Visibility="{Binding SelectedConfiguration.SelectedNode.CanUpdateResourceVersion, Converter={StaticResource DragonBoolVisibility}}"/>
+     <StackPanel Margin="0,10,0,0" Visibility="{Binding Advanced.CanEditPath, Mode=OneWay, Converter={StaticResource DragonBoolVisibility}}"><TextBlock Text="资源位置"/><ui:TextBox Margin="0,6,0,0" Text="{Binding Node.Path, Mode=TwoWay}"/></StackPanel>
+     <WrapPanel Margin="0,10,0,0"><TextBlock Text="{Binding Node.ResourceVersionText, Mode=OneWay}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+      <ui:Button Content="更新此任务资源" Command="{Binding Session.UpdateResourceVersionCommand, Mode=OneWay}" CommandParameter="{Binding Node, Mode=OneWay}" Visibility="{Binding Node.CanUpdateResourceVersion, Mode=OneWay, Converter={StaticResource DragonBoolVisibility}}"/>
      </WrapPanel>
     </StackPanel></ui:Card>
-    <ui:Card Style="{StaticResource DragonCard}" Visibility="{Binding SelectedConfiguration.CanSelectPreset, Converter={StaticResource DragonBoolVisibility}}"><StackPanel>
+    <ui:Card Style="{StaticResource DragonCard}" Visibility="{Binding Advanced.CanSelectPreset, Mode=OneWay, Converter={StaticResource DragonBoolVisibility}}"><StackPanel>
      <TextBlock Text="参数来源" FontWeight="SemiBold"/><TextBlock Text="预设与分组提供公共设置；此步骤的修改优先。" Margin="0,4,0,10" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-     <ComboBox ItemsSource="{Binding SelectedConfiguration.PresetOptions}" DisplayMemberPath="DisplayName" SelectedItem="{Binding SelectedConfiguration.SelectedPresetOption, Mode=TwoWay}"/>
-     <WrapPanel Margin="0,10,0,0"><ui:Button Content="刷新预设" Command="{Binding Editor.RefreshPresetsCommand}" Margin="0,0,8,0"/><ui:Button Content="恢复参数继承" Command="{Binding SelectedConfiguration.RestoreParameterInheritanceCommand}"/></WrapPanel>
+     <ComboBox ItemsSource="{Binding Advanced.PresetOptions, Mode=OneWay}" DisplayMemberPath="DisplayName" SelectedItem="{Binding Advanced.SelectedPresetOption, Mode=TwoWay}"/>
+     <WrapPanel Margin="0,10,0,0"><ui:Button Content="刷新预设" Command="{Binding Session.RefreshPresetsCommand, Mode=OneWay}" Margin="0,0,8,0"/><ui:Button Content="恢复参数继承" Command="{Binding Advanced.RestoreParameterInheritanceCommand, Mode=OneWay}"/></WrapPanel>
     </StackPanel></ui:Card>
-    <ui:Card Style="{StaticResource DragonCard}" Visibility="{Binding SelectedConfiguration.CanEditCommonSettings, Converter={StaticResource DragonBoolVisibility}}"><StackPanel>
+    <ui:Card Style="{StaticResource DragonCard}" Visibility="{Binding Advanced.CanEditCommonSettings, Mode=OneWay, Converter={StaticResource DragonBoolVisibility}}"><StackPanel>
      <TextBlock Text="行走、战斗与食物" FontWeight="SemiBold"/><WrapPanel Margin="0,10,0,0">
-      <ui:Button Content="地图追踪" Command="{Binding EditCommonSettingsCommand}" CommandParameter="pathing" Visibility="{Binding SelectedConfiguration.CanEditPathingSettings, Converter={StaticResource DragonBoolVisibility}}" Margin="0,0,8,0"/>
-      <ui:Button Content="JS 宿主设置" Command="{Binding EditCommonSettingsCommand}" CommandParameter="javascript" Visibility="{Binding SelectedConfiguration.CanEditJavaScriptSettings, Converter={StaticResource DragonBoolVisibility}}" Margin="0,0,8,0"/>
-      <ui:Button Content="Shell 设置" Command="{Binding EditCommonSettingsCommand}" CommandParameter="shell" Visibility="{Binding SelectedConfiguration.CanEditShellSettings, Converter={StaticResource DragonBoolVisibility}}"/>
+      <ui:Button Content="地图追踪" Command="{Binding EditCommonSettingsCommand, Mode=OneWay}" CommandParameter="pathing" Visibility="{Binding Advanced.CanEditPathingSettings, Mode=OneWay, Converter={StaticResource DragonBoolVisibility}}" Margin="0,0,8,0"/>
+      <ui:Button Content="JS 宿主设置" Command="{Binding EditCommonSettingsCommand, Mode=OneWay}" CommandParameter="javascript" Visibility="{Binding Advanced.CanEditJavaScriptSettings, Mode=OneWay, Converter={StaticResource DragonBoolVisibility}}" Margin="0,0,8,0"/>
+      <ui:Button Content="Shell 设置" Command="{Binding EditCommonSettingsCommand, Mode=OneWay}" CommandParameter="shell" Visibility="{Binding Advanced.CanEditShellSettings, Mode=OneWay, Converter={StaticResource DragonBoolVisibility}}"/>
      </WrapPanel>
     </StackPanel></ui:Card>
-    <!-- 运行配置由主面板的独立卡片草稿负责；此处只保留高级来源与参数 JSON。 -->
+    <!-- 运行配置由主面板的设置卡片即时提交；此处只保留高级来源与参数 JSON。 -->
     <ui:Card Style="{StaticResource DragonCard}"><Expander Header="高级配置与有效来源"><StackPanel Margin="0,12,0,0">
-     <TextBlock Text="{Binding SelectedConfiguration.ParameterEditorTitle}" FontWeight="SemiBold"/><TextBox Margin="0,6,0,0" MinHeight="100" AcceptsReturn="True" FontFamily="Consolas" Text="{Binding SelectedConfiguration.ParameterJson, UpdateSourceTrigger=PropertyChanged}" VerticalScrollBarVisibility="Auto"/>
-     <ui:Button Content="应用参数 JSON" Command="{Binding SelectedConfiguration.ApplyParametersCommand}" HorizontalAlignment="Right" Margin="0,8,0,12"/>
-     <TextBlock Text="执行策略" FontWeight="SemiBold"/><TextBox MinHeight="80" AcceptsReturn="True" FontFamily="Consolas" Text="{Binding SelectedConfiguration.PolicyJson, UpdateSourceTrigger=PropertyChanged}" VerticalScrollBarVisibility="Auto"/>
-     <ui:Button Content="应用策略" Command="{Binding SelectedConfiguration.ApplyPolicyCommand}" HorizontalAlignment="Right" Margin="0,8,0,12"/>
-     <TextBlock Text="引用来源" FontWeight="SemiBold"/><TextBox MinHeight="80" AcceptsReturn="True" FontFamily="Consolas" Text="{Binding SelectedConfiguration.SourceJson, UpdateSourceTrigger=PropertyChanged}" VerticalScrollBarVisibility="Auto"/>
-     <ui:Button Content="应用来源" Command="{Binding SelectedConfiguration.ApplySourceCommand}" HorizontalAlignment="Right" Margin="0,8,0,12"/>
+     <TextBlock Text="{Binding Advanced.ParameterEditorTitle, Mode=OneWay}" FontWeight="SemiBold"/><TextBox Margin="0,6,0,0" MinHeight="100" AcceptsReturn="True" FontFamily="Consolas" Text="{Binding Advanced.ParameterJson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalScrollBarVisibility="Auto"/>
+     <ui:Button Content="应用参数 JSON" Command="{Binding Advanced.ApplyParametersCommand, Mode=OneWay}" HorizontalAlignment="Right" Margin="0,8,0,12"/>
+     <TextBlock Text="执行策略" FontWeight="SemiBold"/><TextBox MinHeight="80" AcceptsReturn="True" FontFamily="Consolas" Text="{Binding Advanced.PolicyJson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalScrollBarVisibility="Auto"/>
+     <ui:Button Content="应用策略" Command="{Binding Advanced.ApplyPolicyCommand, Mode=OneWay}" HorizontalAlignment="Right" Margin="0,8,0,12"/>
+     <TextBlock Text="引用来源" FontWeight="SemiBold"/><TextBox MinHeight="80" AcceptsReturn="True" FontFamily="Consolas" Text="{Binding Advanced.SourceJson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalScrollBarVisibility="Auto"/>
+     <ui:Button Content="应用来源" Command="{Binding Advanced.ApplySourceCommand, Mode=OneWay}" HorizontalAlignment="Right" Margin="0,8,0,12"/>
      <TextBlock Text="有效参数与来源" FontWeight="SemiBold"/>
-     <ItemsControl ItemsSource="{Binding SelectedConfiguration.EffectiveParameters}"><ItemsControl.ItemTemplate><DataTemplate><StackPanel Margin="0,8,0,0">
-      <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/><TextBlock Text="{Binding Value}" TextWrapping="Wrap"/><TextBlock Text="{Binding Source, StringFormat=来源：{0}}" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+     <ItemsControl ItemsSource="{Binding Advanced.EffectiveParameters, Mode=OneWay}"><ItemsControl.ItemTemplate><DataTemplate><StackPanel Margin="0,8,0,0">
+      <TextBlock Text="{Binding Name, Mode=OneWay}" FontWeight="SemiBold"/><TextBlock Text="{Binding Value, Mode=OneWay}" TextWrapping="Wrap"/><TextBlock Text="{Binding Source, Mode=OneWay, StringFormat=来源：{0}}" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
      </StackPanel></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
     </StackPanel></Expander></ui:Card>
-    <TextBlock Text="{Binding SelectedConfiguration.EditorMessage}" TextWrapping="Wrap" Foreground="{DynamicResource SystemFillColorCautionBrush}"/>
-    <TextBlock Text="{Binding SelectedConfiguration.LastSaveError}" TextWrapping="Wrap" Foreground="{DynamicResource SystemFillColorCriticalBrush}"/>
+    <TextBlock Text="{Binding Advanced.Message, Mode=OneWay}" TextWrapping="Wrap" Foreground="{DynamicResource SystemFillColorCautionBrush}"/>
+    <TextBlock Text="{Binding Document.LastSaveError, Mode=OneWay}" TextWrapping="Wrap" Foreground="{DynamicResource SystemFillColorCriticalBrush}"/>
    </StackPanel>
   </ScrollViewer>
   <ui:Card Grid.Row="2" Padding="20,12"><Grid><TextBlock Text="应用后自动保存；配置变更可在一条龙中撤销。" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/><ui:Button Content="完成" IsCancel="True" HorizontalAlignment="Right"/></Grid></ui:Card>

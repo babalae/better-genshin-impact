@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Enumeration;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Script.Project;
@@ -12,28 +11,11 @@ using BetterGenshinImpact.Helpers;
 namespace BetterGenshinImpact.Core.Script.Repositories;
 
 /// <summary>
-/// 计算固定版本的资源指纹、确认保留资源并准备隔离的 JS 可写目录。
-/// 路线和键鼠直接从已保留归档读取正文，不生成提取缓存。
+/// 确认保留资源并准备隔离的 JS 可写目录。
+/// 路线和键鼠直接从已保留归档读取正文，不生成提取缓存；资源指纹由 Pulonia 的 PuloniaTaskResourceFingerprint 统一计算。
 /// </summary>
 public sealed partial class ScriptRepositoryStore
 {
-    /// <summary>为仓库文件计算与现有 Pulonia 一致的版本；JS 严格只检查两个入口文件。</summary>
-    public static string ComputeVersion(ScriptRepositorySnapshot snapshot, string relativePath, string taskType,
-        bool recursive = true, bool directory = false)
-    {
-        relativePath = ScriptRepositorySnapshot.NormalizePath(relativePath);
-        var root = "repo/" + relativePath;
-        if (taskType == "javascript")
-            return Hash("main.js\0" + Hash(snapshot.ReadBytes(root + "/main.js")) + "\n"
-                        + "manifest.json\0" + Hash(snapshot.ReadBytes(root + "/manifest.json")) + "\n");
-        if (!directory) return Hash(snapshot.ReadBytes(root));
-        var files = ListDirectoryResources(snapshot, relativePath, recursive);
-        if (files.Count == 0 || files.Count > 10000) throw new IOException("目录中没有资源或资源数量超过安全上限。");
-        var manifest = new StringBuilder();
-        foreach (var file in files) manifest.Append(file).Append('\0').Append(Hash(snapshot.ReadBytes(root + "/" + file))).Append('\n');
-        return Hash(manifest.ToString());
-    }
-
     /// <summary>
     /// 列出仓库目录引用中的 JSON 资源，返回相对该目录、使用正斜杠的路径，按忽略大小写的序号排序。
     /// 目录指纹、运行准备和创建任务共用这一份清单与顺序，保证同一目录得到同一指纹。
@@ -104,25 +86,27 @@ public sealed partial class ScriptRepositoryStore
         { throw new IOException("JS 项目校验失败：" + ex.Message, ex); }
     }
 
-    /// <summary>在受控根目录内定位文件，检查每级已存在路径，禁止重解析点。</summary>
+    /// <summary>
+    /// 在受控根目录内定位文件：规范化外部给出的相对路径（仓库路径、manifest 声明、saved_files），拒绝越出根目录。
+    /// 根目录都是程序自建的临时、预览或工作目录，不会出现链接，因此不再逐级检查重解析点。
+    /// </summary>
     internal static string SafeCombine(string root, string relative)
     {
         relative = ScriptRepositorySnapshot.NormalizePath(relative);
         var path = Path.GetFullPath(Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar)));
         if (!IsWithin(root, path)) throw new IOException("资源路径逃逸到根目录外。");
-        for (var current = path; current is not null && IsWithin(root, current); current = Path.GetDirectoryName(current))
-            if ((File.Exists(current) || Directory.Exists(current)) && (File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
-                throw new IOException("资源路径不能包含重解析点。");
         return path;
     }
 
-    /// <summary>只删除资源区中经过完整边界和链接校验的程序临时目录。</summary>
+    /// <summary>
+    /// 删除资源区中的程序临时目录；只保留“位于资源区内”的边界检查，不再预先枚举全部文件。
+    /// 递归删除遇到目录链接时只删除链接本身，不会进入链接目标。
+    /// </summary>
     private void DeleteOwnedDirectory(string path)
     {
         path = Path.GetFullPath(path);
         if (!IsWithin(RootDirectory, path) || path.Equals(RootDirectory, StringComparison.OrdinalIgnoreCase))
             throw new IOException("拒绝删除资源区以外的目录。");
-        EnumerateSourceFiles(path, CancellationToken.None);
         Directory.Delete(path, true);
     }
 
@@ -145,13 +129,16 @@ public sealed partial class ScriptRepositoryStore
     /// <summary>
     /// 取得按仓库和脚本共享的工作目录，直到执行退出都保持跨进程独占。
     /// 工作目录锁是同级的 <c>&lt;目录名&gt;.lock</c>，替换目录时不受影响，用完保留供下次复用。
+    /// 另一个运行（可能来自其他 BetterGI 实例）正在使用同一脚本时，等待 <see cref="WorkspaceLockTimeout"/> 后明确报错。
     /// </summary>
     public async Task<ScriptWorkspaceLease> AcquireWorkspaceAsync(ScriptResourceReference reference, CancellationToken ct = default)
     {
         await RetainAsync(reference, "javascript", ct).ConfigureAwait(false);
         var directory = GetWorkspaceDirectory(reference);
         Directory.CreateDirectory(Path.GetDirectoryName(directory)!);
-        var gate = await AcquireFileLockAsync(directory + ".lock", ct).ConfigureAwait(false);
+        var gate = await AcquireFileLockAsync(directory + ".lock", ct, WorkspaceLockTimeout,
+            $"另一个运行（可能来自其他 BetterGI 实例）正在使用脚本“{reference.RelativePath}”的工作目录，"
+            + $"等待 {WorkspaceLockTimeout.TotalSeconds:0} 秒后仍未释放。请等待其结束后再运行。").ConfigureAwait(false);
         try
         {
             using var snapshot = await OpenApprovedAsync(reference, ct).ConfigureAwait(false);

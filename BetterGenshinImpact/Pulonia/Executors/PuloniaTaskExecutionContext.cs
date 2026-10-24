@@ -1,6 +1,3 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Diagnostics.CodeAnalysis;
 using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Pulonia.Models;
@@ -12,11 +9,6 @@ namespace BetterGenshinImpact.Pulonia.Executors;
 /// </summary>
 public sealed class PuloniaTaskExecutionContext
 {
-    /// <summary>
-    /// 将完成事件直接提交到状态文件的宿主回调。
-    /// </summary>
-    private readonly Func<PuloniaTaskCompletionEvent, CancellationToken, Task> _completionReporter;
-
     /// <summary>
     /// 本次运行 ID，形如 <c>run_yyyyMMdd-HHmmss-xxxx</c>。
     /// </summary>
@@ -46,14 +38,13 @@ public sealed class PuloniaTaskExecutionContext
     /// 建立一个节点执行上下文。
     /// </summary>
     internal PuloniaTaskExecutionContext(string runId, PuloniaTaskSnapshot snapshot, int attempt,
-        string taskAddress, GameRuntime? runtime, Func<PuloniaTaskCompletionEvent, CancellationToken, Task> completionReporter)
+        string taskAddress, GameRuntime? runtime)
     {
         RunId = runId;
         Snapshot = snapshot;
         Attempt = attempt;
         TaskAddress = taskAddress;
         Runtime = runtime;
-        _completionReporter = completionReporter;
     }
 
     /// <summary>
@@ -82,15 +73,5 @@ public sealed class PuloniaTaskExecutionContext
         runtime = Runtime;
         failureMessage = null;
         return true;
-    }
-
-    /// <summary>
-    /// 立即持久化一条带证据的幂等完成事件；写入失败会阻止当前节点继续成功收尾。
-    /// </summary>
-    public Task ReportCompletionAsync(PuloniaTaskCompletionEvent completionEvent,
-        CancellationToken ct = default)
-    {
-        ArgumentNullException.ThrowIfNull(completionEvent);
-        return _completionReporter(completionEvent, ct);
     }
 }

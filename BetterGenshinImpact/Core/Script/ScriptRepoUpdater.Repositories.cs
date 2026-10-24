@@ -33,7 +33,8 @@ public partial class ScriptRepoUpdater
         await _repoWriteLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            using var sourceAccess = await ScriptRepositoryStore.Shared.EnterSourceAccessAsync(ct).ConfigureAwait(false);
+            // 来源锁只覆盖本次更新的目录，同步这个仓库时其他仓库仍可浏览和读取。
+            using var sourceAccess = await ScriptRepositoryStore.Shared.EnterSourceAccessAsync(directory, ct).ConfigureAwait(false);
             return await UpdateRepositoryAtPathCoreAsync(repoUrl.Trim(), directory, branch.Trim(), progress, ct).ConfigureAwait(false);
         }
         finally { _repoWriteLock.Release(); }
@@ -46,7 +47,7 @@ public partial class ScriptRepoUpdater
         await _repoWriteLock.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            using var sourceAccess = await ScriptRepositoryStore.Shared.EnterSourceAccessAsync(ct).ConfigureAwait(false);
+            using var sourceAccess = await ScriptRepositoryStore.Shared.EnterSourceAccessAsync(directory, ct).ConfigureAwait(false);
             await Task.Run(() =>
             {
                 ct.ThrowIfCancellationRequested();

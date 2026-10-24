@@ -1,70 +1,109 @@
-# Pulonia：执行、生命周期、恢复与 API
+# Pulonia：执行、恢复与 API
 
-[返回总览](../automation-system.md) · [用户故事](requirements.md) · [开发与验收计划](development-plan.md)
+[返回总览](README.md) · [用户故事](requirements.md) · [路线图](roadmap.md)
 
-说明如何运行任务、按需获取游戏资源、停止与恢复，以及 JS/C# 接入。CD 和可靠落盘的详细语义见[结果与存储](results-and-storage.md)。
+说明一次运行如何排队、执行、取消、判定结果和续跑，以及如何从 C# 接入。采集 CD 和落盘语义见[结果、CD 与存储](results-and-storage.md)。2026-10-24 按当前代码核对。
 
 ## 执行结构与资源生命周期
 
 ```mermaid
 flowchart LR
-    Entry[页面 / 定时 / 热键 / C#] --> Service[PuloniaTaskService]
-    Service --> Executors[具体 IPuloniaTaskExecutor]
-    Service --> Store[PuloniaTaskStore：JSON 文件]
-    Executors --> Existing[现有脚本 / 路线 / 游戏能力]
+    Entry["页面 / 定时 / 热键 / 命令行 / C#"] --> Service["PuloniaTaskService"]
+    Service --> Builder["PuloniaTaskBuilder<br/>固定快照"]
+    Service --> RunState["PuloniaTaskRunStateStore<br/>state.json"]
+    Service --> Local["PuloniaLocalNodeRunner"]
+    Service --> Broker["PuloniaRemoteExecutionBroker"]
+    Broker -. "IPC pulonia.node.*" .-> Host["子实例 PuloniaRemoteNodeHost"]
+    Host --> Local2["PuloniaLocalNodeRunner（子实例）"]
+    Local --> Coord["PuloniaGameTaskCoordinator"]
+    Local --> Executors["IPuloniaTaskExecutor"]
+    Local2 --> Executors
 ```
 
-主链只保留以下职责：
-
-| 部分 | 内容 |
+| 部分 | 职责 |
 | --- | --- |
-| `PuloniaTaskService` | 统一入口、串行队列、集中准备运行快照/执行树、执行编排、条件/CD 检查、运行状态和取消 |
-| `IPuloniaTaskExecutor` 的具体实现 | JS、路线、Shell、C#、内置功能的实际执行，接收已解析参数并返回真实结果 |
-| `PuloniaTaskStore` | 读写计划、状态、历史等 JSON；不引用 ViewModel，不负责执行 |
-| 触发入口 | 定时循环和热键回调只提交请求；代码较长时可放进 `PuloniaTaskService` 的独立 partial 文件 |
+| `PuloniaTaskService` | 统一入口（实现 `IPuloniaTaskService`）、唯一串行队列、准入复核、账号准备、快照树编排、采集 CD 判定、重试、最终状态、归档、续跑、触发调度。由 `.Accounts`、`.CollectionCooldown`、`.Remote`、`.RunState`、`.Scheduling` 等 partial 组成；`RunState` 是其内部的可变运行状态 |
+| `PuloniaTaskRunStateStore` | state.json 的内存副本与唯一写入入口，写入失败时熔断，见[存储](results-and-storage.md#statejson) |
+| `PuloniaLocalNodeRunner` | 本进程执行一次节点尝试或一次账号准备；主实例与子实例各持一个实例，代码相同 |
+| `PuloniaGameTaskCoordinator` | 发放游戏任务租约 `PuloniaGameTaskLease` |
+| `IPuloniaTaskExecutor` | 6 个具体执行器，按 `Definitions` 声明的任务类型注册，类型重复注册时启动报错 |
+| `PuloniaTaskTriggerHost` | 后台托管服务：每秒调用调度检查、注册热键、处理命令行 `--pulonia-run`，见[触发与热键](scheduling.md) |
 
-`PuloniaTaskService` 通过 `TaskType → IPuloniaTaskExecutor` 注册查找具体能力。运行准备集中完成展开、参数解析、校验与版本固定，可产出只读执行树，具体选择见[任务模型](task-model.md)。这不是另一套执行服务；避免重复的 Converter/Factory 链、Engine/Runner 调度层、通用事件总线和后台历史 Recorder。游戏会话准备及恢复复用已有运行环境；可按职责拆分辅助类，不要求把所有逻辑堆入一个大服务。
+能力是否需要游戏由 `PuloniaTaskDefinition.RequiresGameSession` 声明：路线、JS、键鼠和独立任务需要，Shell 与 C# 不需要。不需要游戏的节点不取租约，也不启动截图器。
 
-目录结构按 `Pulonia/Models`、`Pulonia/Services`、`Pulonia/Executors` 组织；WPF View/ViewModel 保持现有项目位置。Model 是普通数据，ViewModel 包装同一模型进行编辑；执行时深复制并固定配置，防止编辑影响运行。实现可以按功能分文件，但不增加仅透传参数的层。
+### 游戏任务租约
 
-现有原型中各类型的职责、所属层级与必要性见[类型职责与关系图](task-model.md#先看清当前类型的职责和关系)。该节的准备流程到快照为止，尚不执行任务。正式执行仍通过统一任务服务调用准备入口和类型执行器；Builder 不另设排队、取消或历史管理入口，Json/Validator 保持直接调用的技术辅助。
+`PuloniaGameTaskCoordinator.AcquireAsync` 的顺序：
 
-### 按需求获取资源
+1. 当前已在任务会话中（`GameTaskSessionScope.IsActive`）时直接报错“当前已在任务会话中，不能再次获取游戏任务租约”，嵌套获取不会死锁。
+2. 等待全局任务锁 `TaskControl.TaskSemaphore`，与独立任务、旧配置组互斥。
+3. `GameRuntimeService.StartAsync` 按需准备运行环境；环境为空或正在停止时报错。
+4. 等待订阅脚本自动更新结束，最长 10 分钟，超时报错且本节点不执行。
+5. 进入任务模式（触发器调度、遮罩、窗口激活）并返回租约。
 
-| 能力 | 所需资源 | 生命周期 |
-| --- | --- | --- |
-| Shell、文件处理、纯计算 C# | 通常无游戏资源 | 自己拥有子进程、文件流等资源 |
-| 纯计算 JS | 脚本引擎 | 本次动作内创建、结束时释放 |
-| 游戏路线、秘境、游戏 JS/C# | 游戏会话、截图、独占输入 | 执行前按需获取；相邻游戏动作允许复用会话 |
-| 游戏启动/账号切换 | 启动或登录阶段能力 | 不要求先到大世界；完成后核验身份 |
-| 自动拾取等实时辅助 | 当前游戏动作的辅助能力集合 | 随动作作用域注册与撤销 |
+释放租约时释放 `InputHub` 全部按键、清理遮罩并归还任务锁，游戏会话保留供下一个节点复用。任一步失败都会先清理再归还锁。`PuloniaGameTaskCoordinator` 与 `TaskRunner` 仍各有一份会话代码，合并为统一的 `GameTaskLease` 见 [task-contract.md](../task-contract.md) 步骤 D，尚未实施。
 
-能力声明独立于实现语言。JS 不天然等于游戏任务，C# 也不天然等于纯计算。旧脚本没有声明时，兼容适配按需要游戏处理；新脚本可声明为纯脚本。声明缺失的游戏调用必须明确失败或通过受控会话入口获取资源，不能绕过协调器。
+## 队列与执行顺序
 
-`GameRuntimeService` 目前将绑定窗口与截图启动组合在一起，可先复用这个组合边界。第一步只要求纯任务不碰它；确有需求后再拆分窗口、输入、截图获取，不先建复杂资源依赖图。
+所有执行实例共用一个串行队列，一次只执行一个运行。消费循环由 `SemaphoreSlim` 信号唤醒，每次挑选“停止当前”策略触发的请求优先，其余按提交时间先后。
 
-租约区分“借用用户已启动的截图器”和“本次自动启动”。借用者不能在结束时关闭其他使用者仍需要的环境。动作负责释放自己创建的 `Mat`、`Bitmap`、流、引擎和子 CTS；会话服务负责环境。恢复监测只读截图，恢复动作与业务动作必须交接输入控制权。
+一次运行的顺序：
 
-### 并发、取消、线程
+1. **准入复核**（仅触发器请求）：重新读取计划，触发器已删除、停用或配置版本变化时记为“已取消”；超过截止时间记为“已过期”；读不出计划记为“待处理”。
+2. **账号准备**（一条龙计划且含启用的游戏节点）：默认账号不切号，只读取并记录当前登录 UID；指定账号切号后核验 UID。核验结果与“切换账号”节点结果一起落盘后才执行业务节点；失败则整次运行进入待处理，见[多账号](accounts.md)。普通计划没有账号准备，也不核验 UID。
+3. **深度优先遍历快照树**，对每个叶子：
+   1. 禁用、或续跑时已确认完成的节点记为跳过；
+   2. 地图追踪节点判定文件级采集 CD，仍在 CD 内则跳过并继续后续节点；
+   3. 每次尝试：需要游戏时由 `PuloniaLocalNodeRunner` 取游戏租约，核验本次运行的 UID，再调用执行器；指定子实例时改为派发；
+   4. 节点结果（地图追踪成功时连同采集 CD）在同一次 state.json 替换中落盘；
+   5. 失败按 `max_retries` 和 `retry_delay_seconds` 重试，耗尽后按 `failure_behavior` 编排。
+4. **最终状态**：执行器全部退出后由 `ResolveFinalStatus` 一次判定。
+5. **归档**：运行先进入 `pending_archives`，写入不可变历史后移出。
 
-- 首版由一个主协调器串行执行请求；Shell 即使不依赖游戏，也可以先排队，避免为首版引入并发复杂度。
-- 同一 Windows 交互会话只允许一个前台输入所有者。已有子进程和 WebView 实例必须通过统一协调器申请；独立启动的旧入口在切换完成后不能绕过它。
-- 等待未来时段、排队和等待人工处理期间不持有游戏输入租约。
-- 每次运行独立 `CancellationTokenSource`；节点超时建立关联 CTS 并及时释放。运行开始时向 `TaskStopService` 注册取消回调，结束时立即注销；该服务只转发外部停止来源，不持有或暴露运行令牌。
-- 计划默认不限时，`PuloniaTaskRequest.TimeoutSeconds` 为 `null` 时不建立总时限定时取消信号；页面新执行与新触发器均采用该默认值，不展示总时限输入。进程内 API 或旧配置显式设置总预算时，节点重试和公共恢复仍共享该预算，时限到达后走正常取消与清理，不强行把仍在运行的节点标成已停止。不限时不取消节点策略、手动停止及宿主关闭处理。请求截止时间控制能否开始，与运行总时限分别保存。
-- 取消请求不等于停止完成。等待执行器退出、释放按键及资源后才能启动下一项；不配合取消的旧代码必须保持租约隔离并显示“停止中/待处理”，不能后台继续点击。
-- Shell 记录退出码并异步读取输出；超时/取消需要结束本次拥有的进程树并确认退出，不能只取消 `WaitForExitAsync`。
-- WPF 页面、窗口钩子和依赖消息循环的对象继续在 UI/STA 线程建立与释放；耗时执行、扫描、索引在后台。核心 DTO 和引擎不依赖 `Dispatcher`，通过 UI 适配层切换。
+取租约在每次尝试内完成，不跨重试持有：运行环境停止后，下一次尝试会重新准备。取租约失败按普通节点失败进入重试。CD 判定在取租约之前，CD 内的节点不会占用游戏。做过账号准备的运行，每个需要游戏的节点尝试在取得输入后都会再次核验 UID（是否改为只在准备和恢复后核验待定 D7）；核验失败抛 `PuloniaGenshinAccountException`，不进入节点重试，整次运行转为待处理。
 
-### 推荐执行顺序
+当前执行节点的地址只在内存中更新，不为它单独写盘；续跑和中断恢复只依赖快照与已落盘的节点结果。
 
-请求准入 → 固定计划、引用与配置版本 → 校验资源 → 获取所需会话 → 核验 UID → 刷新关键状态 → 保存操作意图和额度占用 → 执行动作 → 确认副作用 → 在同一运行状态中保存证据、CD 和进度 → 释放作用域。
+### 运行状态与最终判定
 
-触发配置和截止时间在真正执行前再次检查；CD 在执行前核验，业务动作跨日切或账号状态变化时，再检查关键状态。状态写入锁只保护短暂的检查与保存，不能跨游戏操作持有。
+运行状态 `PuloniaTaskRunStatus`：Queued、Running、Cancelling、Succeeded、Failed、Cancelled、TimedOut、Interrupted、NeedsAttention、Expired。节点状态 `PuloniaTaskNodeStatus`：Skipped、Succeeded、Failed、Cancelled、TimedOut、NeedsAttention。执行器返回的完成程度 `PuloniaTaskOutcomeKind`：Succeeded、ExecutedUnverified、PartiallySucceeded、Failed、Cancelled、Skipped、NeedsAttention（两套节点枚举的合并待定）。
+
+`ResolveFinalStatus` 的判定顺序：
+
+1. 运行令牌已取消且流程以取消结束：总时限到期且没有显式停止时为 TimedOut，否则为 Cancelled。
+2. 账号准备或核验失败：NeedsAttention。
+3. 其他异常：关键状态写入已熔断时为 NeedsAttention，否则为 Failed（执行基础设施失败）。
+4. 计划走完：有节点在重试耗尽后失败时为 Failed，否则为 Succeeded。
+
+判定只看执行结果和异常，不比较进度文字。
+
+## 跨实例派发
+
+新一条龙可以选择子实例（桌面分身或云原神网页版实例）作为执行实例，请求的 `ExecutionTarget` 记录目标。规则：
+
+- **只派发、不并行。** 子实例上的运行与主实例本地运行一样占用唯一的 `active_run`；快照、CD 判定、节点结果和历史都在主实例完成和落盘。
+- 主实例通过 `PuloniaRemoteExecutionBroker` 发送 `pulonia.node.start`（叶子节点或账号准备），子实例的 `PuloniaRemoteNodeHost` 确认后在后台用自己的 `PuloniaLocalNodeRunner` 执行，结束时发送一次 `pulonia.node.finished`，**不重试**。主实例取消节点时发送 `pulonia.node.cancel`，并最多等待 60 秒确认执行器退出。
+- 结果类型 `PuloniaRemoteNodeResultKind`：Completed、AccountFailed、Failed、Cancelled、CancelledByTarget。`Cancelled` 表示子实例按主实例的取消请求或断开而退出，此时主实例节点已在走取消流程；`CancelledByTarget` 表示子实例本地停止（停止热键、截图器停止、应用关闭），主实例据此**停止整次运行**，不重试该节点。
+- 子实例断开时，主实例让该实例上等待中的节点以“结果未知”失败；子实例与主实例断开时取消正在执行的节点。
+- 主实例的停止热键只作用于本地运行；子实例上的运行用页面停止，或在子实例本地停止。
+- 派发负载上限约 900 KB（低于实例通信 1 MiB 的单帧限制），快照过大时拒绝派发并提示拆分计划。
+- 触发器请求不能指定执行实例。
+- `pulonia.node.report`、执行通道和 `remote_active_runs` 已删除；版本 3 的 state.json 中遗留的 `remote_active_runs` 在读取时转为“已中断”的待归档运行，可续跑。
+
+协议细节见[多实例命名管道协议](../multi-instance-ipc.md)。子实例是否会写 `User/Pulonia`（影响 Store 跨进程写锁能否删除）待定 D15。
+
+## 取消、时限与线程
+
+- 每次运行有独立的 `CancellationTokenSource`，与总时限、应用关闭关联；节点超时另建关联令牌。本地运行开始时向 `TaskStopService` 注册取消回调，结束时注销。
+- 取消请求不等于停止完成：状态先变为 Cancelling，等执行器退出、释放按键与资源后才判定 Cancelled 并放行下一项。
+- 请求的 `TimeoutSeconds` 为 null（默认）时不建立总时限；页面和触发器不提供总时限输入。请求的 `DeadlineUtc` 只控制能否开始，与运行总时限分开。
+- “停止当前”忙碌策略只对触发器请求生效：入队写盘成功后调用 `TaskStopService.StopAll`，会停止所有已注册的本地运行，而不只是同一计划（限定范围或删除该策略待定 D8）。
+- Shell 异步读取输出并记录退出码；超时或取消时结束本次拥有的进程树并确认退出。
+- WPF 窗口、钩子和依赖消息循环的对象在 UI 线程建立与释放；执行、扫描、索引在后台，服务层不依赖 `Dispatcher`。
 
 ## 异常恢复
 
-恢复链为“识别已知打断 → 处理弹窗/等待网络 → 重新建立已知起始场景 → 核验副作用 → 按合同决定重试或待处理”。
+路线图步骤 8（有界恢复）暂缓，以下是设计方向，**尚未实现**。当前实现中，账号准备与核验失败、关键状态写入失败会进入待处理；其余异常按节点失败处理。
 
 | 场景 | 建议行为 |
 | --- | --- |
@@ -72,73 +111,76 @@ flowchart LR
 | 已知日切月卡、已知奖励弹窗 | 由专用处理器处理，确认界面稳定后继续 |
 | 进入已知剧情/菜单 | 按明确识别结果退出；任务重新准备起始状态 |
 | 被顶号、需要验证码、UID 不符 | 停止该账号自动执行，进入待处理，不无限重登抢号 |
-| 游戏退出、截图失效 | 按配置重建会话，重新核验 UID、游戏状态和未决副作用 |
-| 背包空间不足、任务所需资源不足 | 返回明确原因并退出该能力；按计划策略跳过依赖它的部分或待处理，不自动销毁物品 |
+| 游戏退出、截图失效 | 按配置重建会话，重新核验 UID 和游戏状态 |
+| 背包空间不足、任务所需资源不足 | 返回明确原因并退出该能力，不自动销毁物品 |
 | 版本更新或未知界面 | 保存诊断截图及步骤；有限恢复仍未知则待处理 |
 
-恢复动作不能与业务动作同时发送输入。局部任务状态机负责自己的正常页面；公共恢复器只处理明确识别的全局中断。任务内部重试与公共恢复共享总时长/总次数预算，避免层层重试相乘。
+恢复动作不能与业务动作同时发送输入；任务内部重试与公共恢复共享总时长和总次数预算。游戏输入后必须等待响应再识别，不能用旧帧判断成功。不承诺“未知界面都能自动恢复”，只在明确预算内尝试并给出可续跑的位置。
 
-游戏输入后必须等待响应再识别，不能立即用旧帧判断成功；可取得帧编号/时间戳时先要求新帧，再核验目标界面。公共中断处理不能被脚本清理自身实时辅助时误撤销；脚本只管理自己的作用域，宿主负责暂停、交接输入和恢复。旧 JS 无法安全交接时取消当前节点后重新准备，不承诺保留其任意指令位置。
+## 续跑
 
-任何“未知界面都能自动恢复”的承诺都不可靠。可持续做法是扩大已知打断覆盖面，记录无法恢复的样本，在明确预算内尝试，最后给出可续跑的位置。
+`ResumeAsync(runId, startTaskAddress?, allowUncertainReplay)` 沿用历史运行的原快照建立新运行，新运行的 `resumed_from_run_id` 指向原运行：
 
-## 续跑与版本快照
+- **继续上次**：跳过原运行中已确认成功（节点 Succeeded 且完成程度 Succeeded）的节点地址，执行其余节点；“已执行、未核验”的节点不算完成。
+- **从此节点开始**：显式起点之前的节点视为已完成，起点及之后的节点重新执行（已确认成功的也可能重复，界面会要求确认）。
+- 原运行处于待处理，或任一节点最后一次结果不确定（NeedsAttention 或 ExecutedUnverified）时，必须传 `allowUncertainReplay=true`；界面在用户确认后才传。
+- 续跑前复核快照中的资源：仓库资源从原已确认版本的保留归档重新计算指纹，本地资源重新计算文件或 JS 指纹；不一致或已不可用时拒绝续跑，提示按新版本重新运行。
+- 账号续跑仍核验历史中的实际 UID，使用账号的当前凭据。
 
-首版提供节点级续跑，满足“从这里开始”：
+只支持节点级续跑，不要求任意 JS、Shell 或 C# 从某一行恢复。
 
-- 运行前保存完整计划、引用展开结果、有效配置、账号绑定、资产版本与文件指纹快照。
-- 中断后展示已完成节点、未确认节点、失败节点和未开始节点。
-- “继续上次”创建关联的新运行，沿用原快照，跳过已确认完成的节点；对不确定节点先核验，不盲目重放。
-- “从此节点开始”是明确的运行范围；仍执行必要的会话初始化、账号核验、祖先条件与额度检查。
-- 被引用计划多次出现、重复执行多轮，靠 `TaskAddress` 区分，不能只存 `NextTaskIndex`。
-- 无法保留旧脚本版本时，检测指纹变化并提示改为按新版本新开运行，不能假装精确恢复。支持旧版本续跑的资源应保留不可变版本缓存。
-- 后续仅让有明确检查点的路线/内置能力保存 `Checkpoint`，不要求任意 JS、Shell 或 C# 从某一行恢复。
+## C# 接口
 
-长任务的最小确认粒度建议是一次领取、一次秘境结算、一个路线段；即使首版只支持节点级续跑，已确认副作用也要即时入账。
-
-## C# 调用及自定义能力
-
-两件事分别支持：C# 发起已有计划，以及 C# 实现一个新能力。步骤 3 已提供进程内 `IPuloniaTaskService`、只读执行节点和 `IPuloniaTaskExecutor`；以下代码保留合同要点，实际状态查询、等待完成和取消接口以当前类型定义为准。外部进程客户端仍属于步骤 10。
+进程内接口，DI 中只注册 `IPuloniaTaskService` 一份。外部进程客户端（命名管道或 HTTP）不在当前范围。
 
 ```csharp
-namespace BetterGenshinImpact.Pulonia;
+namespace BetterGenshinImpact.Pulonia.Services;
 
 public interface IPuloniaTaskService
 {
-    Task<string> EnqueueAsync(PuloniaTaskRequest request, CancellationToken ct);   // 返回运行 ID：run_<本地时间>-<4 位>
-    Task<PuloniaTaskPlanRunView> GetRunAsync(string runId, CancellationToken ct);
-    Task CancelAsync(string runId, CancellationToken ct);
+    IReadOnlyList<PuloniaTaskDefinition> Definitions { get; }
+    string? RecoveryNotice { get; }                       // 启动恢复提示：备份回退、中断运行、跳过的坏历史等
+    event EventHandler<PuloniaTaskRunChangedEventArgs>? RunChanged;
+
+    Task<string> EnqueueAsync(PuloniaTaskRequest request, CancellationToken ct = default);   // 返回运行 ID
+    Task<PuloniaTaskRunView> GetRunAsync(string runId, CancellationToken ct = default);
+    Task<IReadOnlyList<PuloniaTaskRunView>> ListRunsAsync(CancellationToken ct = default);
+    Task<PuloniaTaskRunView> WaitForCompletionAsync(string runId, CancellationToken ct = default);
+    Task CancelAsync(string runId, CancellationToken ct = default);
+    Task<string> ResumeAsync(string runId, string? startTaskAddress = null,
+        bool allowUncertainReplay = false, CancellationToken ct = default);
+    Task<IReadOnlyList<PuloniaTaskLedgerEntry>> ListLedgerAsync(CancellationToken ct = default);
+
+    Task CheckTriggersAsync(IReadOnlyList<PuloniaTaskPlan> plans,
+        IReadOnlyCollection<string>? unreadablePlanIds = null, CancellationToken ct = default);
+    Task FireHotkeyAsync(string planId, string triggerId, CancellationToken ct = default);
+    IReadOnlyList<PuloniaTaskTriggerStatus> GetTriggerStatuses();
 }
+```
+
+```csharp
+namespace BetterGenshinImpact.Pulonia.Executors;
 
 public interface IPuloniaTaskExecutor
 {
-    string TaskType { get; }
+    IReadOnlyList<PuloniaTaskDefinition> Definitions { get; }
 
-    Task<PuloniaTaskOutcome> ExecuteAsync(
-        PuloniaTask task,
-        PuloniaTaskExecutionContext context,
-        CancellationToken ct);
+    Task<PuloniaTaskOutcome> ExecuteAsync(PuloniaTaskPreparedTask task,
+        PuloniaTaskExecutionContext context, CancellationToken ct);
 }
 ```
 
 调用示意：
 
 ```csharp
-// 返回请求 ID；排队时不要求游戏或截图器已启动。
-var requestId = await puloniaTasks.EnqueueAsync(
-    new PuloniaTaskRequest { PlanId = planId, AccountId = accountId }, ct);
+// 返回运行 ID（run_yyyyMMdd-HHmmss-xxxx）；排队时不要求游戏或截图器已启动。
+var runId = await puloniaTasks.EnqueueAsync(new PuloniaTaskRequest { PlanId = planId }, ct);
+var view = await puloniaTasks.WaitForCompletionAsync(runId, ct);
 ```
 
-实际 SDK 同时提供按 `requestId` 查询状态与运行 ID、等待完成、查询节点结果和取消排队请求。请求调用的 `ct` 只控制提交/查询等待；持久化请求的取消使用显式 API，避免客户端断开导致语义不清。
-
-提交时由服务生成并保护 ID、状态、来源等服务端字段，调用方只填写目标和允许的参数。同一个请求模型即可，不另建仅复制字段的 RequestSpec、Invocation 等中间层；需要边界隔离的外部 IPC 消息可以有最小 DTO。
-
-`PuloniaTaskExecutionContext` 提供本次账号、有效配置、日志、进度、受控游戏能力及完成事件报告。内部组合使用 `ExecuteChildAsync` 一类同运行入口，继承同一取消、输入所有权和账本，并记录子步骤；不能通过再入全局队列等待自己，造成死锁或绕过记录。
-
-JS 桥接同样提供可等待的结构化结果，包括状态、原因、确认程度与子步骤关联；保留旧 API 签名的兼容包装，但新脚本不需要伪造日志或按停止热键来报告失败。新树的 JS、C# 与直接执行都必须经过相同的能力适配和记账边界；旧脚本自存的 CD 只能作为带来源的迁移数据，未经核验不能与新账本重复累计。
-
-外部程序使用轻量客户端，通过本机命名管道访问同一服务；复用当前实例通信基础设施的可用部分，增加协议版本和当前用户访问限制。先支持列出能力、提交计划/单动作、状态、取消；有明确远程需求时再考虑 HTTP。
-
-保留 d-v3 中 C# 与 JS/Shell 同列的交互入口，但普通使用者选择已注册方法及参数。首版采用编译后 DI 注册的执行器或委托，明确注入取消令牌和返回 `PuloniaTaskOutcome`。不将“程序集扫描 → 猜测重载 → 无参构造实例”的反射链作为默认机制；否则改个方法名就会破坏任务文件，也难以保证取消和依赖注入。需要导入旧 `MethodPath` 时提供显式映射和不支持提示。
-
-进程外工具通过 CLI/客户端调用。动态编译 `.csx`、热加载 DLL 和依赖隔离有确切需求再考虑，不引入 Roslyn 作为前置条件。
+- 请求 ID 与运行 ID 合一。调用方的 `ct` 只控制提交或等待本身，不取消已提交的运行；取消必须调用 `CancelAsync`。
+- 入队时服务覆盖服务端字段：`ServerUtcOffsetMinutes` 由 `PuloniaServerTime` 统一填写（未初始化按 UTC+8），续跑沿用原请求。一条龙计划的账号必须与配置绑定一致。
+- `PuloniaTaskExecutionContext` 向执行器提供 `RunId`、`Snapshot`、`Attempt`、`TaskAddress` 和本次租约的 `Runtime`；执行器用 `TryGetRuntime` 取运行环境，为空或已停止时节点失败。
+- 结果只通过返回的 `PuloniaTaskOutcome` 表达（`Kind`、`Message`、`Data`、`Evidence`、`ReasonCode`）。通用完成事件报告已随额度框架删除。
+- C# 能力由编译后 DI 注册的执行器或 `PuloniaCSharpTaskRegistry` 中的显式委托提供，不做程序集扫描或反射猜测方法；导入旧 `MethodPath` 时报告不支持。
+- 尚未实现的方向：同一运行内的子调用入口（继承取消、输入所有权和记账，不再入全局队列），以及 JS 桥接的结构化结果。

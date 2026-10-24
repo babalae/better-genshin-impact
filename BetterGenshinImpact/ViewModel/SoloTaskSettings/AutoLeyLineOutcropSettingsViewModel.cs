@@ -71,6 +71,7 @@ public partial class AutoLeyLineOutcropSettingsViewModel : SoloTaskSettingsViewM
             }
             Weekdays.Add(row);
         }
+        TrackEdits(Weekdays);
     }
 
     /// <summary>收集地脉花配置的真实变化；周安排整体重建并保留“全部未勾选则每天执行”的旧语义。</summary>

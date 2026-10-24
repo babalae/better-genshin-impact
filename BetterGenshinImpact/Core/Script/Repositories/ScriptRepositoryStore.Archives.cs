@@ -25,7 +25,8 @@ public sealed partial class ScriptRepositoryStore
     {
         var path = Path.Combine(snapshotDirectory, "retained.json");
         if (!File.Exists(path)) return new ScriptRetainedIndex();
-        var index = JsonConvert.DeserializeObject<ScriptRetainedIndex>(File.ReadAllText(path, Utf8))
+        // 读取不取 retain 锁；写入方以原子替换发布新索引，读取期间替换也只会读到完整的旧版本。
+        var index = JsonConvert.DeserializeObject<ScriptRetainedIndex>(ReadText(path))
                     ?? throw new IOException("资源归档索引为空。");
         if (index.Blocks is null || index.Revisions is null || index.Revisions.Values.Any(scopes => scopes is null))
             throw new IOException("资源归档索引格式无效。");
@@ -47,34 +48,72 @@ public sealed partial class ScriptRepositoryStore
     /// </summary>
     private async Task EnsureResourceRetainedAsync(ScriptResourceReference reference, string taskType, CancellationToken ct)
     {
-        var sourcePath = "repo/" + reference.RelativePath;
         var directory = GetSnapshotDirectory(reference.RepositoryId);
         using var gate = await AcquireLockAsync("retain." + reference.RepositoryId, ct).ConfigureAwait(false);
-        if (HasRetainedResource(ReadRetainedIndex(directory), reference.ApprovedRevision, sourcePath)) return;
-        var registration = await GetRegistrationAsync(reference.RepositoryId, ct).ConfigureAwait(false);
+        if (HasRetainedResource(ReadRetainedIndex(directory), reference.ApprovedRevision, "repo/" + reference.RelativePath)) return;
+        var registration = GetRegistration(reference.RepositoryId);
         using var snapshot = await OpenSourceAsync(registration, reference.ApprovedRevision, ct).ConfigureAwait(false);
+        await Task.Run(() => RetainFromSnapshot(directory, snapshot, reference, taskType, ct), ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// 固定来源当前版本，在同一读取会话中先由调用方核对内容，再保留该资源，返回指向该版本的新引用。
+    /// 核对与保留读取同一份固定内容，不需要先释放来源锁再重新打开；确认期间来源被更新时不会保留未审阅的版本。
+    /// 锁顺序与首次保留一致：retain → sources。
+    /// </summary>
+    /// <param name="reference">任务当前引用；只使用其中的仓库与相对路径</param>
+    /// <param name="taskType">资源能力类型，决定保留范围和内容校验</param>
+    /// <param name="verify">在固定快照上核对修订与内容指纹，不符合时抛出异常并放弃保留</param>
+    /// <param name="ct">取消令牌</param>
+    public async Task<ScriptResourceReference> RetainCurrentAsync(ScriptResourceReference reference, string taskType,
+        Action<ScriptRepositorySnapshot> verify, CancellationToken ct = default)
+    {
+        reference.Validate();
+        var directory = GetSnapshotDirectory(reference.RepositoryId);
+        using var gate = await AcquireLockAsync("retain." + reference.RepositoryId, ct).ConfigureAwait(false);
+        var registration = GetRegistration(reference.RepositoryId);
+        using var snapshot = await OpenSourceAsync(registration, null, ct).ConfigureAwait(false);
+        var updated = reference.WithRevision(snapshot.Revision);
         await Task.Run(() =>
         {
-            // 资源已被同修订的其他范围覆盖时不会走到这里，例如 JS 共享的 repo/pathing 已包含该路线；
-            // 此时路线正文由执行器解析时校验。
-            ValidateResourceContent(snapshot, sourcePath, taskType, ct);
-            var index = ReadRetainedIndex(directory);
-            if (!index.Revisions.TryGetValue(reference.ApprovedRevision, out var scopes))
-                index.Revisions[reference.ApprovedRevision] = scopes = new Dictionary<string, string>(StringComparer.Ordinal);
-            Directory.CreateDirectory(directory);
-            if (taskType == "javascript")
-            {
-                // 动态调用和目录查询无法预先列出路线依赖，因此按版本共享整个 pathing 子树。
-                foreach (var common in new[] { "packages", "repo/pathing" })
-                    if (snapshot.DirectoryExists(common) && !scopes.ContainsKey(common))
-                        scopes[common] = WriteResourceArchive(index, directory, snapshot, common, ct);
-            }
-            scopes[sourcePath] = WriteResourceArchive(index, directory, snapshot, sourcePath, ct);
-            ct.ThrowIfCancellationRequested();
-            // 归档块先完整发布，最后原子替换索引；失败不暴露半份批准版本。
-            // 块已写入、索引尚未更新时崩溃会留下孤儿块，与“不自动清理保留版本”一致，暂不清理。
-            WriteJson(Path.Combine(directory, "retained.json"), index);
+            verify(snapshot);
+            RetainFromSnapshot(directory, snapshot, updated, taskType, ct);
         }, ct).ConfigureAwait(false);
+        return updated;
+    }
+
+    /// <summary>
+    /// 从已固定的来源会话保留一个资源范围；该修订已覆盖此资源时不重复写入。调用方持有 retain 锁。
+    /// </summary>
+    /// <param name="directory">仓库归档目录</param>
+    /// <param name="snapshot">与引用修订一致的来源读取会话</param>
+    /// <param name="reference">要保留的资源引用</param>
+    /// <param name="taskType">资源能力类型</param>
+    /// <param name="ct">取消令牌</param>
+    private void RetainFromSnapshot(string directory, ScriptRepositorySnapshot snapshot, ScriptResourceReference reference,
+        string taskType, CancellationToken ct)
+    {
+        var sourcePath = "repo/" + reference.RelativePath;
+        var index = ReadRetainedIndex(directory);
+        if (HasRetainedResource(index, reference.ApprovedRevision, sourcePath)) return;
+        // 资源已被同修订的其他范围覆盖时不会走到这里，例如 JS 共享的 repo/pathing 已包含该路线；
+        // 此时路线正文由执行器解析时校验。
+        ValidateResourceContent(snapshot, sourcePath, taskType, ct);
+        if (!index.Revisions.TryGetValue(reference.ApprovedRevision, out var scopes))
+            index.Revisions[reference.ApprovedRevision] = scopes = new Dictionary<string, string>(StringComparer.Ordinal);
+        Directory.CreateDirectory(directory);
+        if (taskType == "javascript")
+        {
+            // 动态调用和目录查询无法预先列出路线依赖，因此按版本共享整个 pathing 子树。
+            foreach (var common in new[] { "packages", "repo/pathing" })
+                if (snapshot.DirectoryExists(common) && !scopes.ContainsKey(common))
+                    scopes[common] = WriteResourceArchive(index, directory, snapshot, common, ct);
+        }
+        scopes[sourcePath] = WriteResourceArchive(index, directory, snapshot, sourcePath, ct);
+        ct.ThrowIfCancellationRequested();
+        // 归档块先完整发布，最后原子替换索引；失败不暴露半份批准版本。
+        // 块已写入、索引尚未更新时崩溃会留下孤儿块，与“不自动清理保留版本”一致，暂不清理。
+        WriteJson(Path.Combine(directory, "retained.json"), index);
     }
 
     /// <summary>

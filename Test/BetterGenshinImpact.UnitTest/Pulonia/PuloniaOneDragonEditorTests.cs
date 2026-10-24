@@ -83,10 +83,10 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
         var loadedGeneral = Assert.Single(page.Documents);
         Assert.Equal(general.Id, loadedGeneral.Id);
         Assert.Equal(PuloniaTaskPlanPurpose.General, loadedGeneral.Purpose);
-        var loadedOneDragon = Assert.Single(page.OneDragonDocuments);
+        var loadedOneDragon = Assert.Single(page.Session.OneDragonDocuments);
         Assert.Equal(oneDragon.Id, loadedOneDragon.Id);
         Assert.Equal(PuloniaTaskPlanPurpose.OneDragon, loadedOneDragon.Purpose);
-        Assert.Equal(2, page.AllDocuments.Count());
+        Assert.Equal(2, page.Session.AllDocuments.Count());
         var listedIds = (await store.ListPlansAsync()).Select(plan => plan.Id).OrderBy(id => id, StringComparer.Ordinal);
         Assert.Equal(new[] { general.Id, oneDragon.Id }.OrderBy(id => id, StringComparer.Ordinal), listedIds);
     }
@@ -129,22 +129,22 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
     {
         using var store = new PuloniaTaskStore(_directory);
         await using var service = CreateService(store);
-        var page = CreatePage(store, service);
+        var session = CreateSession(store, service);
         var document = new PuloniaTaskPlanDocumentViewModel(
             PuloniaOneDragonDefaults.CreatePlan("插入一条龙", PuloniaSoloTestDefinitions.OneDragonCandidates()), [],
             new PuloniaTaskClipboardService(), true);
-        page.OneDragonDocuments.Add(document);
+        session.OneDragonDocuments.Add(document);
         var original = document.RootNode.Children[2];
         Assert.Equal(Solo(AutoDomainTask.TaskId), original.TaskType);
 
-        page.InsertOneDragonTask(document, document.RootNode,
+        session.InsertOneDragonTask(document, document.RootNode,
             new PuloniaTask { Name = "自动秘境", TaskType = Solo(AutoDomainTask.TaskId) });
 
         var inserted = document.RootNode.Children[^1];
         Assert.Same(document.RootNode, inserted.Parent);
         Assert.Equal(9, document.RootNode.Children.Count);
         Assert.NotEqual(original.Id, inserted.Id);
-        document.ApplyOneDragonParameters(inserted, new JObject { ["party_name"] = "副本专属队伍" });
+        document.ReplaceOneDragonParameters(inserted, new JObject { ["party_name"] = "副本专属队伍" });
 
         // 移动只改变树位置：包装、稳定 ID 和已提交的参数都跟随着同一个节点。
         document.MoveNode(inserted, document.RootNode, 0);
@@ -198,7 +198,7 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
     /// 卡片参数提交只把真实变化写入节点覆盖，默认值与预设继承不落盘，重复节点互不影响。
     /// </summary>
     [Fact]
-    public void ApplyOneDragonParameters_PersistsOnlyChangedFieldsAndIsolatesDuplicates()
+    public void ReplaceOneDragonParameters_PersistsOnlyChangedFieldsAndIsolatesDuplicates()
     {
         var definition = PuloniaSoloTestDefinitions.AutoBoss();
         var preset = new PuloniaTaskPreset
@@ -228,7 +228,7 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
         Assert.Empty(nodeA.Model.Parameters);
         Assert.Empty(nodeB.Model.Parameters);
 
-        document.ApplyOneDragonParameters(nodeA, new JObject { ["team_name"] = "固定队伍" });
+        document.ReplaceOneDragonParameters(nodeA, new JObject { ["team_name"] = "固定队伍" });
 
         Assert.Single(nodeA.Model.Parameters);
         Assert.Equal("固定队伍", nodeA.Model.Parameters["team_name"]!.Value<string>());
@@ -236,7 +236,7 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
         Assert.Equal(2, document.GetOneDragonParameters(nodeA)["run_count"]!.Value<int>());
         Assert.NotEqual("固定队伍", document.GetOneDragonParameters(nodeB)["team_name"]?.Value<string>());
 
-        document.ApplyOneDragonParameters(nodeB, new JObject { ["run_count"] = 5 });
+        document.ReplaceOneDragonParameters(nodeB, new JObject { ["run_count"] = 5 });
 
         Assert.Single(nodeB.Model.Parameters);
         Assert.Equal(5, nodeB.Model.Parameters["run_count"]!.Value<int>());
@@ -246,48 +246,93 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
         Assert.NotEqual("固定队伍", document.GetOneDragonParameters(nodeB)["team_name"]?.Value<string>());
     }
 
-    /// <summary>不同计划允许复用节点 ID，切换配置不能串用未提交的参数草稿。</summary>
+    /// <summary>不同计划允许复用节点 ID：设置即时写入各自计划，切换配置不会串用输入或参数。</summary>
     [Fact]
-    public async Task SettingsDraft_SameNodeIdInDifferentPlansRemainsIndependent()
+    public async Task Settings_CommitImmediatelyAndStayIsolatedAcrossPlans()
     {
         using var store = new PuloniaTaskStore(_directory);
         await using var service = CreateService(store);
-        var editor = CreatePage(store, service);
-        var page = new PuloniaOneDragonViewModel(editor, service, new PuloniaTaskResourceCatalog(), store, EmptyRegistry());
+        var session = CreateSession(store, service);
+        var page = new PuloniaOneDragonViewModel(session, service, new PuloniaTaskResourceCatalog(), store, EmptyRegistry());
         var first = CreateConfiguration(service.Definitions, "配置一", "same-node-id");
         var second = CreateConfiguration(service.Definitions, "配置二", "same-node-id");
-        editor.OneDragonDocuments.Add(first);
-        editor.OneDragonDocuments.Add(second);
+        session.OneDragonDocuments.Add(first);
+        session.OneDragonDocuments.Add(second);
 
+        // 1. 输入立即写入当前计划节点，设置区不因自身提交而重建
         page.SelectedConfiguration = first;
-        var firstDraft = page.SettingsFields.Single(field => field.Name == "values");
-        firstDraft.TextValue = "[4,5]";
+        var firstField = page.SettingsFields.Single(field => field.Name == "values");
+        firstField.TextValue = "[4,5]";
+        Assert.Equal("[4,5]", ValuesOf(first));
+        Assert.True(first.IsDirty);
+        Assert.Same(firstField, page.SettingsFields.Single(field => field.Name == "values"));
+        Assert.Equal("", page.SettingsMessage);
+
+        // 2. 另一份计划的同 ID 节点使用独立输入，修改互不影响
         page.SelectedConfiguration = second;
-        var secondDraft = page.SettingsFields.Single(field => field.Name == "values");
-        Assert.NotSame(firstDraft, secondDraft);
-        Assert.Equal("[1,2,3]", secondDraft.BuildValue()!.ToString(Newtonsoft.Json.Formatting.None));
-        secondDraft.TextValue = "[9]";
-        page.ApplySettingsCommand.Execute(null);
+        var secondField = page.SettingsFields.Single(field => field.Name == "values");
+        Assert.NotSame(firstField, secondField);
+        Assert.Equal("[1,2,3]", secondField.BuildValue()!.ToString(Newtonsoft.Json.Formatting.None));
+        secondField.TextValue = "[9]";
+        Assert.Equal("[9]", ValuesOf(second));
+        Assert.Equal("[4,5]", ValuesOf(first));
 
+        // 3. 切回后按已生效的参数重建
         page.SelectedConfiguration = first;
-        Assert.Same(firstDraft, page.SettingsFields.Single(field => field.Name == "values"));
-        Assert.Equal("[4,5]", firstDraft.TextValue);
-        Assert.Empty(first.RootNode.Children[0].Model.Parameters);
-        Assert.Equal("[9]", second.GetOneDragonParameters(second.RootNode.Children[0])["values"]!.ToString(Newtonsoft.Json.Formatting.None));
+        Assert.Equal("[4,5]", page.SettingsFields.Single(field => field.Name == "values").BuildValue()!
+            .ToString(Newtonsoft.Json.Formatting.None));
     }
 
-    /// <summary>撤销已提交编辑不应先提交设置草稿，无效 JSON 也不能阻止撤销。</summary>
-    [Theory]
-    [InlineData("[8]")]
-    [InlineData("[")]
-    public async Task UndoConfiguration_DoesNotCommitOrValidatePendingDraft(string draft)
+    /// <summary>无效输入不生效并提示，后续有效输入照常提交；同一字段的连续输入合并为一次撤销，换字段另起一步。</summary>
+    [Fact]
+    public async Task Settings_InvalidInputIsSkippedAndConsecutiveEditsMergeUndo()
     {
         using var store = new PuloniaTaskStore(_directory);
         await using var service = CreateService(store);
-        var page = new PuloniaOneDragonViewModel(CreatePage(store, service), service, new PuloniaTaskResourceCatalog(), store, EmptyRegistry());
+        var page = new PuloniaOneDragonViewModel(CreateSession(store, service), service, new PuloniaTaskResourceCatalog(), store, EmptyRegistry());
         var document = CreateConfiguration(service.Definitions, "配置一", "node-one");
         page.SelectedConfiguration = document;
-        page.SettingsFields.Single(field => field.Name == "values").TextValue = draft;
+        var values = page.SettingsFields.Single(field => field.Name == "values");
+
+        // 1. 逐字输入：中间的无效 JSON 不写入，只在设置区提示
+        values.TextValue = "[4";
+        Assert.Empty(document.RootNode.Children[0].Model.Parameters);
+        Assert.False(document.IsDirty);
+        Assert.NotEqual("", page.SettingsMessage);
+        values.TextValue = "[4]";
+        Assert.Equal("", page.SettingsMessage);
+        values.TextValue = "[4,5]";
+        Assert.Equal("[4,5]", ValuesOf(document));
+
+        // 2. 修改另一个字段是新的撤销步骤
+        page.SettingsFields.Single(field => field.Name == "delay_milliseconds").NumberValue = 10;
+        Assert.Equal(10, document.RootNode.Children[0].Model.Parameters.Value<int>("delay_milliseconds"));
+
+        // 3. 第一次撤销只恢复延时，设置区按撤销后的参数重建
+        page.UndoConfigurationCommand.Execute(null);
+        Assert.False(document.RootNode.Children[0].Model.Parameters.ContainsKey("delay_milliseconds"));
+        Assert.Equal("[4,5]", ValuesOf(document));
+        Assert.NotSame(values, page.SettingsFields.Single(field => field.Name == "values"));
+
+        // 4. 第二次撤销一次性恢复整段连续输入
+        page.UndoConfigurationCommand.Execute(null);
+        Assert.Empty(document.RootNode.Children[0].Model.Parameters);
+        Assert.False(document.IsDirty);
+        Assert.Equal("[1,2,3]", page.SettingsFields.Single(field => field.Name == "values").BuildValue()!
+            .ToString(Newtonsoft.Json.Formatting.None));
+        Assert.Same(document.RootNode.Children[0], page.SelectedTask);
+    }
+
+    /// <summary>未生效的无效输入不会在撤销时被提交或校验，撤销只恢复已提交的编辑。</summary>
+    [Fact]
+    public async Task UndoConfiguration_IgnoresInvalidPendingInput()
+    {
+        using var store = new PuloniaTaskStore(_directory);
+        await using var service = CreateService(store);
+        var page = new PuloniaOneDragonViewModel(CreateSession(store, service), service, new PuloniaTaskResourceCatalog(), store, EmptyRegistry());
+        var document = CreateConfiguration(service.Definitions, "配置一", "node-one");
+        page.SelectedConfiguration = document;
+        page.SettingsFields.Single(field => field.Name == "values").TextValue = "[";
         document.RootNode.Children[0].Name = "修改后的名称";
 
         page.UndoConfigurationCommand.Execute(null);
@@ -298,44 +343,44 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
         Assert.Same(document.RootNode.Children[0], page.SelectedTask);
     }
 
-    /// <summary>撤销重建一份配置的节点时，只重置该配置草稿，其他配置的输入必须保留。</summary>
+    /// <summary>撤销一份配置只影响该配置，其他配置已生效的设置保持不变。</summary>
     [Fact]
-    public async Task UndoConfiguration_PreservesDraftsInOtherPlans()
+    public async Task UndoConfiguration_KeepsSettingsInOtherPlans()
     {
         using var store = new PuloniaTaskStore(_directory);
         await using var service = CreateService(store);
-        var page = new PuloniaOneDragonViewModel(CreatePage(store, service), service, new PuloniaTaskResourceCatalog(), store, EmptyRegistry());
+        var page = new PuloniaOneDragonViewModel(CreateSession(store, service), service, new PuloniaTaskResourceCatalog(), store, EmptyRegistry());
         var first = CreateConfiguration(service.Definitions, "配置一", "node-one");
         var second = CreateConfiguration(service.Definitions, "配置二", "node-two");
         page.SelectedConfiguration = second;
-        var secondDraft = page.SettingsFields.Single(field => field.Name == "values");
-        secondDraft.TextValue = "[7]";
+        page.SettingsFields.Single(field => field.Name == "values").TextValue = "[7]";
         page.SelectedConfiguration = first;
         first.RootNode.Children[0].Name = "修改后的名称";
         page.UndoConfigurationCommand.Execute(null);
 
+        Assert.Equal("原始名称", first.RootNode.Children[0].Name);
+        Assert.Equal("[7]", ValuesOf(second));
         page.SelectedConfiguration = second;
-        Assert.Same(secondDraft, page.SettingsFields.Single(field => field.Name == "values"));
-        Assert.Equal("[7]", secondDraft.TextValue);
-        Assert.Empty(second.RootNode.Children[0].Model.Parameters);
+        Assert.Equal("[7]", page.SettingsFields.Single(field => field.Name == "values").BuildValue()!
+            .ToString(Newtonsoft.Json.Formatting.None));
     }
 
-    /// <summary>关闭任务的无效输入保留为草稿，不能阻止同一配置中其他启用任务运行。</summary>
+    /// <summary>未生效的无效输入保留在设置区，不阻止同一配置运行；运行使用已生效的参数。</summary>
     [Fact]
-    public async Task RunCommand_DisabledInvalidDraftDoesNotBlockEnabledTask()
+    public async Task RunCommand_InvalidInputDoesNotBlockRun()
     {
         using var store = new PuloniaTaskStore(_directory);
         await using var service = CreateService(store);
-        var editor = CreatePage(store, service);
-        var page = new PuloniaOneDragonViewModel(editor, service, new PuloniaTaskResourceCatalog(), store, EmptyRegistry());
+        var session = CreateSession(store, service);
+        var page = new PuloniaOneDragonViewModel(session, service, new PuloniaTaskResourceCatalog(), store, EmptyRegistry());
         var document = CreateConfiguration(service.Definitions, "配置一", "disabled-node");
         document.InsertNode(new PuloniaTask { Name = "启用的计算任务", TaskType = "csharp" }, document.RootNode, 1);
-        editor.OneDragonDocuments.Add(document);
+        session.OneDragonDocuments.Add(document);
         page.SelectedConfiguration = document;
         var disabledNode = document.RootNode.Children[0];
         page.SelectedTask = disabledNode;
-        var draft = page.SettingsFields.Single(field => field.Name == "values");
-        draft.TextValue = "[";
+        var input = page.SettingsFields.Single(field => field.Name == "values");
+        input.TextValue = "[";
         disabledNode.IsEnabled = false;
 
         await page.RunCommand.ExecuteAsync(null);
@@ -346,10 +391,14 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
         Assert.Contains(completed.NodeResults, item => item.TaskAddress.EndsWith("/" + disabledNode.Id, StringComparison.Ordinal)
             && item.Status == PuloniaTaskNodeStatus.Skipped);
         Assert.Contains(completed.NodeResults, item => item.TaskName == "启用的计算任务" && item.Status == PuloniaTaskNodeStatus.Succeeded);
-        Assert.Same(draft, page.SettingsFields.Single(field => field.Name == "values"));
-        Assert.Equal("[", draft.TextValue);
+        Assert.Same(input, page.SettingsFields.Single(field => field.Name == "values"));
+        Assert.Equal("[", input.TextValue);
         Assert.Empty(disabledNode.Model.Parameters);
     }
+
+    /// <summary>读取配置首个节点显式保存的 values 参数，缺失时返回空字符串。</summary>
+    private static string ValuesOf(PuloniaTaskPlanDocumentViewModel document)
+        => document.RootNode.Children[0].Model.Parameters["values"]?.ToString(Newtonsoft.Json.Formatting.None) ?? "";
 
     /// <summary>建立具有已保存检查点和真实能力定义的纯计算一条龙文档。</summary>
     private static PuloniaTaskPlanDocumentViewModel CreateConfiguration(
@@ -382,11 +431,16 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
         new PuloniaGameTaskCoordinator(null!), new TaskStopService(NullLogger<TaskStopService>.Instance));
 
     /// <summary>
-    /// 建立一条龙插入命令使用的页面模型，不创建 WPF 窗口。
+    /// 建立两个页面共用的编辑会话，不创建 WPF 窗口。
+    /// </summary>
+    private static PuloniaPlanEditingSession CreateSession(PuloniaTaskStore store, PuloniaTaskService service)
+        => new(store, new PuloniaTaskClipboardService(), service, new PuloniaTaskResourceCatalog());
+
+    /// <summary>
+    /// 建立任务计划页面模型，不创建 WPF 窗口。
     /// </summary>
     private static PuloniaTaskPlanViewModel CreatePage(PuloniaTaskStore store, PuloniaTaskService service)
-        => new(store, new PuloniaTaskClipboardService(), service, new PuloniaTaskResourceCatalog(),
-            new PuloniaTaskHistoryViewModel(service, store));
+        => new(CreateSession(store, service), new PuloniaTaskHistoryViewModel(service, store));
 
     /// <summary>
     /// 只清理当前测试创建的唯一临时目录。

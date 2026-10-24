@@ -61,10 +61,11 @@ public partial class PuloniaOneDragonCreationDialog : FluentWindow
     }
 
     /// <summary>
-    /// 窗口关闭时解除事件订阅。
+    /// 窗口关闭时取消未完成的资源读取、释放预览目录并解除事件订阅；通过标题栏关闭也不会遗留后台请求。
     /// </summary>
     private void OnClosed(object? sender, EventArgs e)
     {
+        ViewModel.Close();
         ViewModel.RequestClose -= OnRequestClose;
         Loaded -= OnLoaded;
         Closed -= OnClosed;

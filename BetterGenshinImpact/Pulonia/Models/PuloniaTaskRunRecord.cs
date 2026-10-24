@@ -80,9 +80,9 @@ public sealed class PuloniaTaskRunRecord
     public List<PuloniaTaskNodeResult> NodeResults { get; set; } = [];
 
     /// <summary>
-    /// 已确认的副作用；旧历史未提供此字段时保持空集合，不凭执行状态补造事件。
+    /// 已确认的副作用；没有确认事件时为空集合，不凭执行状态补造事件。
     /// </summary>
-    [JsonProperty("confirmed_effects", Required = Required.DisallowNull)]
+    [JsonProperty("confirmed_effects", Required = Required.Always)]
     public List<PuloniaTaskConfirmedEffect> ConfirmedEffects { get; set; } = [];
 
     /// <summary>
@@ -104,8 +104,28 @@ public sealed class PuloniaTaskRunRecord
     public string? ResumedFromRunId { get; set; }
 
     /// <summary>
-    /// 执行前已落盘、但尚未由确认事件结清的操作意图。
+    /// 复制一份只替换快照 JSON 的浅副本；请求与各集合沿用同一实例，双方此后都不能再修改。
+    /// 运行历史常驻内存时用它去掉快照正文，快照按需从历史文件读取。
     /// </summary>
-    [JsonProperty("operation_intent")]
-    public PuloniaTaskOperationIntent? OperationIntent { get; set; }
+    /// <param name="snapshotJson">副本使用的快照 JSON；常驻历史传空字符串。</param>
+    /// <returns>新的记录对象。</returns>
+    internal PuloniaTaskRunRecord WithSnapshotJson(string snapshotJson) => new()
+    {
+        VerifiedUid = VerifiedUid,
+        RunId = RunId,
+        Request = Request,
+        PlanName = PlanName,
+        SnapshotJson = snapshotJson,
+        Status = Status,
+        CurrentTaskAddress = CurrentTaskAddress,
+        Message = Message,
+        SubmittedAt = SubmittedAt,
+        StartedAt = StartedAt,
+        FinishedAt = FinishedAt,
+        NodeResults = NodeResults,
+        ConfirmedEffects = ConfirmedEffects,
+        CompletedTaskAddresses = CompletedTaskAddresses,
+        ResumeFromTaskAddress = ResumeFromTaskAddress,
+        ResumedFromRunId = ResumedFromRunId
+    };
 }

@@ -165,10 +165,12 @@ public sealed class ScriptRepositorySnapshot : IDisposable
             var bytes = File.ReadAllBytes(entry.PhysicalPath);
             VerifySourceMetadata(entry);
             var hash = ScriptRepositoryStore.Hash(bytes);
+            // 前后两次元数据核对之间读到的正文，先回填到跨会话缓存；即使下面因缓存过期而拒绝本次读取，
+            // 重新打开会话后也会使用正确的哈希，不会一直报告来源变化。
+            _recordFileHash?.Invoke(entry.PhysicalPath, entry.Length, entry.Modified.Ticks, hash);
             var expected = entry.Hash.Length > 0 ? entry.Hash : _observedFileHashes.GetValueOrDefault(path);
             if (expected is not null && expected != hash) throw new IOException("读取期间文件式来源变化，请刷新资源列表。");
             _observedFileHashes[path] = hash;
-            _recordFileHash?.Invoke(entry.PhysicalPath, entry.Length, entry.Modified.Ticks, hash);
             return new MemoryStream(bytes, false);
         }
         if (_scopeArchives.Count > 0)

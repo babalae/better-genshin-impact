@@ -28,5 +28,9 @@ public sealed class PuloniaTaskTriggerHostShutdownTests
         shutdown(null, EventArgs.Empty);
 
         Assert.Null(Application.Current);
+        // 关闭回调是唯一的关闭守卫：取消调度生命周期后，晚到的热键注册与触发都不再执行。
+        var lifetime = (CancellationTokenSource)typeof(PuloniaTaskTriggerHost)
+            .GetField("_lifetime", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(host)!;
+        Assert.True(lifetime.IsCancellationRequested);
     }
 }

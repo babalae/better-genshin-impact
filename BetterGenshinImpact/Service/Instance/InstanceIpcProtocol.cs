@@ -43,11 +43,6 @@ public static class InstanceOperations
     public const string PuloniaNodeCancel = "pulonia.node.cancel";
 
     /// <summary>
-    /// 子实例转发执行器的完成事件，主实例写入账本后才确认
-    /// </summary>
-    public const string PuloniaNodeReport = "pulonia.node.report";
-
-    /// <summary>
     /// 子实例回报 Pulonia 节点结束
     /// </summary>
     public const string PuloniaNodeFinished = "pulonia.node.finished";

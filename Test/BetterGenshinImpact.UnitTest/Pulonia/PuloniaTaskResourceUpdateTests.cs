@@ -68,13 +68,14 @@ public sealed class PuloniaTaskResourceUpdateTests : IDisposable
             RootTask = new PuloniaTask { Name = "根", Children =
             [new PuloniaTask { Name = "脚本", TaskType = "javascript", Path = "script" }] } }, [], clipboard, isNew: false);
         var page = CreatePage(store, service, clipboard, document);
-        await page.RefreshResourceVersionsAsync();
+        await page.Session.RefreshResourceVersionsAsync();
         var node = Assert.Single(document.RootNode.Children);
         Assert.Null(node.CurrentResourceVersion);
         Assert.False(node.HasResourceUpdate);
         Assert.Equal("资源不可用", node.ResourceUpdateText);
         Assert.Equal(1, document.ResourceErrorCount);
-        Assert.True(page.ConfirmResourceUpdatesCommand.CanExecute(document));
+        // 没有任何可更新的资源，卡片更新按钮不可用；读取错误只作为标签展示。
+        Assert.False(page.Session.ConfirmResourceUpdatesCommand.CanExecute(document));
     }
 
     /// <summary>JS、路线、回放和目录更新分别标记，一次确认后落盘，旧执行历史保持不变。</summary>
@@ -120,10 +121,10 @@ public sealed class PuloniaTaskResourceUpdateTests : IDisposable
         var document = new PuloniaTaskPlanDocumentViewModel(plan, [], clipboard, isNew: false);
         var page = CreatePage(store, service, clipboard, document);
         var unchangedPlanJson = PuloniaTaskJson.WritePlan(document.Plan);
-        await page.RefreshResourceVersionsAsync();
+        await page.Session.RefreshResourceVersionsAsync();
         Assert.Equal(unchangedPlanJson, PuloniaTaskJson.WritePlan(document.Plan));
         Assert.Equal(4, document.ResourceUpdateCount);
-        Assert.True(page.ConfirmResourceUpdatesCommand.CanExecute(document));
+        Assert.True(page.Session.ConfirmResourceUpdatesCommand.CanExecute(document));
         Assert.All(document.RootNode.Children, node =>
         {
             Assert.True(node.HasResourceNotice);
@@ -133,9 +134,9 @@ public sealed class PuloniaTaskResourceUpdateTests : IDisposable
         // 页面使用同一批量模型操作；这里只绕过交互对话框，不绕过版本校验与存储。
         document.ApplyConfirmedResourceVersions(document.RootNode.Children.ToDictionary(node => node.Id, node => node.CurrentResourceVersion!));
         plan = await store.SavePlanAsync(document.Plan);
-        await page.RefreshResourceVersionsAsync();
+        await page.Session.RefreshResourceVersionsAsync();
         Assert.Equal(0, document.ResourceUpdateCount);
-        Assert.False(page.ConfirmResourceUpdatesCommand.CanExecute(document));
+        Assert.False(page.Session.ConfirmResourceUpdatesCommand.CanExecute(document));
         Assert.All(document.RootNode.Children, node => Assert.False(node.HasResourceNotice));
         using var reopened = new PuloniaTaskStore(Path.Combine(_directory, "store"));
         var restored = (await reopened.LoadPlanAsync(plan.Id))!;
@@ -168,13 +169,13 @@ public sealed class PuloniaTaskResourceUpdateTests : IDisposable
         var sourceDocument = new PuloniaTaskPlanDocumentViewModel(source, [], clipboard, isNew: false);
         var page = CreatePage(store, service, clipboard, sourceDocument);
         page.Documents.Add(targetDocument);
-        await page.RefreshResourceVersionsAsync();
+        await page.Session.RefreshResourceVersionsAsync();
         Assert.Equal(1, sourceDocument.ResourceUpdateCount);
         Assert.All(sourceDocument.RootNode.Children, node => Assert.True(node.HasResourceNotice));
-        Assert.True(page.ConfirmResourceUpdatesCommand.CanExecute(sourceDocument));
+        Assert.True(page.Session.ConfirmResourceUpdatesCommand.CanExecute(sourceDocument));
         var resource = Assert.Single(targetDocument.RootNode.Children);
         targetDocument.ApplyConfirmedResourceVersions(new Dictionary<string, string> { [resource.Id] = resource.CurrentResourceVersion! });
-        await page.RefreshResourceVersionsAsync();
+        await page.Session.RefreshResourceVersionsAsync();
         Assert.Equal(0, sourceDocument.ResourceUpdateCount);
         Assert.All(sourceDocument.RootNode.Children, node => Assert.False(node.HasResourceNotice));
     }
@@ -192,11 +193,12 @@ public sealed class PuloniaTaskResourceUpdateTests : IDisposable
         { Name = "根", Children = [new PuloniaTask { Name = "路线", TaskType = "pathing", Path = "route.json" },
             new PuloniaTask { Name = "缺失回放", TaskType = "keymouse", Path = "missing.json" }] } }, [], clipboard, isNew: false);
         var page = CreatePage(store, service, clipboard, document);
-        await page.RefreshResourceVersionsAsync();
+        await page.Session.RefreshResourceVersionsAsync();
         Assert.Equal(1, document.ResourceUpdateCount);
         Assert.Equal(1, document.ResourceErrorCount);
         Assert.Equal("资源不可用", document.RootNode.Children[1].ResourceUpdateText);
-        Assert.False(page.ConfirmResourceUpdatesCommand.CanExecute(document));
+        // 批量更新按项尽力完成：其他资源检查失败不隐藏可用的更新，失败项在执行时保持原版本。
+        Assert.True(page.Session.ConfirmResourceUpdatesCommand.CanExecute(document));
         var original = PuloniaTaskJson.WritePlan(document.Plan);
         Assert.Throws<InvalidOperationException>(() => document.ApplyConfirmedResourceVersions(
             document.RootNode.Children.ToDictionary(node => node.Id, node => node.CurrentResourceVersion ?? new string('a', 64))));
@@ -238,7 +240,7 @@ public sealed class PuloniaTaskResourceUpdateTests : IDisposable
         var clipboard = new PuloniaTaskClipboardService();
         var document = new PuloniaTaskPlanDocumentViewModel(plan, [], clipboard, isNew: false);
         var page = CreatePage(store, service, clipboard, document);
-        await page.RefreshResourceVersionsAsync();
+        await page.Session.RefreshResourceVersionsAsync();
         Assert.Equal(0, document.ResourceUpdateCount);
         Assert.Equal(0, document.ResourceErrorCount);
         var resumedId = await service.ResumeAsync(original.RunId, original.NodeResults.Single().TaskAddress);
@@ -247,7 +249,7 @@ public sealed class PuloniaTaskResourceUpdateTests : IDisposable
         var freshId = await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = plan.Id });
         Assert.Equal(PuloniaTaskRunStatus.Succeeded, (await service.WaitForCompletionAsync(freshId).WaitAsync(TimeSpan.FromSeconds(20))).Status);
         await File.WriteAllTextAsync(Path.Combine(root, versionFile), "更新的版本文件内容");
-        await page.RefreshResourceVersionsAsync();
+        await page.Session.RefreshResourceVersionsAsync();
         Assert.Equal(1, document.ResourceUpdateCount);
         await Assert.ThrowsAsync<PuloniaTaskValidationException>(() => service.EnqueueAsync(new PuloniaTaskRequest { PlanId = plan.Id }));
         await Assert.ThrowsAsync<PuloniaTaskValidationException>(() => service.ResumeAsync(original.RunId, original.NodeResults.Single().TaskAddress));
@@ -353,7 +355,8 @@ public sealed class PuloniaTaskResourceUpdateTests : IDisposable
     private static PuloniaTaskPlanViewModel CreatePage(PuloniaTaskStore store, PuloniaTaskService service,
         PuloniaTaskClipboardService clipboard, PuloniaTaskPlanDocumentViewModel document)
     {
-        var page = new PuloniaTaskPlanViewModel(store, clipboard, service, new PuloniaTaskResourceCatalog(),
+        var page = new PuloniaTaskPlanViewModel(
+            new PuloniaPlanEditingSession(store, clipboard, service, new PuloniaTaskResourceCatalog()),
             new PuloniaTaskHistoryViewModel(service, store)) { SelectedDocument = document };
         page.Documents.Add(document);
         return page;

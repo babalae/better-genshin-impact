@@ -1,20 +1,50 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Script.Repositories;
 
 namespace BetterGenshinImpact.Pulonia.Services;
 
 /// <summary>
 /// 统一计算文件、JS 项目和目录引用的稳定 SHA-256 资源指纹。
+/// 本地资源、仓库固定快照、创建任务、运行准备、更新检查和续跑都只调用这里；
+/// 输出与已保存计划中的 resource_version 逐字节一致，调整实现时不能改变结果。
 /// </summary>
 public static class PuloniaTaskResourceFingerprint
 {
     /// <summary>JS 版本只由根目录这两个文件决定；顺序固定为相对路径的稳定排序。</summary>
     private static readonly string[] _javaScriptResourceFileNames = ["main.js", "manifest.json"];
+
+    /// <summary>仓库目录引用参与指纹的资源数量上限，超过时拒绝生成部分清单的指纹。</summary>
+    private const int MaxRepositoryDirectoryResourceCount = 10000;
+
+    /// <summary>计算原始内容的指纹：SHA-256 的小写十六进制。</summary>
+    public static string ComputeContentVersion(byte[] content)
+        => Convert.ToHexString(SHA256.HashData(content)).ToLowerInvariant();
+
+    /// <summary>
+    /// 对规范化清单文本计算稳定指纹。
+    /// </summary>
+    public static string ComputeTextVersion(string value)
+        => ComputeContentVersion(Encoding.UTF8.GetBytes(value));
+
+    /// <summary>
+    /// 计算清单指纹：每项写成“相对路径\0指纹\n”后整体求指纹。
+    /// JS 项目、目录引用和运行准备中的目录分组共用这一格式，调用方负责传入稳定顺序。
+    /// </summary>
+    /// <param name="entries">按稳定顺序排列的相对路径与对应指纹</param>
+    public static string ComputeManifestVersion(IEnumerable<(string RelativePath, string? Version)> entries)
+    {
+        var manifest = new StringBuilder();
+        foreach (var (relativePath, version) in entries)
+            manifest.Append(relativePath).Append('\0').Append(version).Append('\n');
+        return ComputeTextVersion(manifest.ToString());
+    }
 
     /// <summary>只计算根目录 manifest.json 与 main.js 的内容指纹；不扫描或读取任何其他文件。</summary>
     public static Task<string> ComputeJavaScriptVersionAsync(string directory, CancellationToken ct = default)
@@ -60,21 +90,40 @@ public static class PuloniaTaskResourceFingerprint
     public static async Task<string> ComputeDirectoryVersionAsync(string directory,
         IEnumerable<string> orderedFiles, CancellationToken ct = default)
     {
-        var manifest = new StringBuilder();
+        var entries = new List<(string RelativePath, string? Version)>();
         foreach (var file in orderedFiles)
         {
             ct.ThrowIfCancellationRequested();
             var hash = await ComputeFileVersionAsync(file, ct).ConfigureAwait(false);
-            manifest.Append(NormalizeRelativePath(directory, file)).Append('\0').Append(hash).Append('\n');
+            entries.Add((NormalizeRelativePath(directory, file), hash));
         }
-        return ComputeTextVersion(manifest.ToString());
+        return ComputeManifestVersion(entries);
     }
 
     /// <summary>
-    /// 对规范化清单文本计算稳定指纹。
+    /// 在固定版本的仓库快照上计算资源指纹，算法与本地资源相同：
+    /// JS 只看 main.js 和 manifest.json，单文件为正文指纹，目录为 JSON 资源清单指纹。
     /// </summary>
-    public static string ComputeTextVersion(string value)
-        => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
+    /// <param name="snapshot">固定版本的读取会话</param>
+    /// <param name="relativePath">相对仓库 repo/ 内容目录的资源路径</param>
+    /// <param name="taskType">资源能力类型</param>
+    /// <param name="recursive">目录引用是否包含子目录</param>
+    /// <param name="directory">是否为目录引用</param>
+    public static string ComputeRepositoryVersion(ScriptRepositorySnapshot snapshot, string relativePath, string taskType,
+        bool recursive = true, bool directory = false)
+    {
+        relativePath = ScriptRepositorySnapshot.NormalizePath(relativePath);
+        var root = "repo/" + relativePath;
+        if (taskType == "javascript")
+            return ComputeManifestVersion(_javaScriptResourceFileNames.Select(name =>
+                (name, (string?)ComputeContentVersion(snapshot.ReadBytes(root + "/" + name)))));
+        if (!directory) return ComputeContentVersion(snapshot.ReadBytes(root));
+        var files = ScriptRepositoryStore.ListDirectoryResources(snapshot, relativePath, recursive);
+        if (files.Count == 0 || files.Count > MaxRepositoryDirectoryResourceCount)
+            throw new IOException("目录中没有资源或资源数量超过安全上限。");
+        return ComputeManifestVersion(files.Select(file =>
+            (file, (string?)ComputeContentVersion(snapshot.ReadBytes(root + "/" + file)))));
+    }
 
     /// <summary>
     /// 统一相对路径分隔符，确保指纹不依赖 Windows 路径展示格式。

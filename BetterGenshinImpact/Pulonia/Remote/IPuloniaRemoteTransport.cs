@@ -6,7 +6,7 @@ using BetterGenshinImpact.Pulonia.Models;
 namespace BetterGenshinImpact.Pulonia.Remote;
 
 /// <summary>
-/// Pulonia 远程节点的实例通信通道，由多实例服务实现。主实例用前三个方法派发，子实例用后两个方法回报
+/// Pulonia 远程节点的实例通信通道，由多实例服务实现。主实例用前三个方法派发，子实例用最后一个方法回报结束
 /// </summary>
 public interface IPuloniaRemoteTransport
 {
@@ -36,11 +36,6 @@ public interface IPuloniaRemoteTransport
     /// 主实例：请求子实例取消节点
     /// </summary>
     Task CancelRemoteNodeAsync(int processId, Guid executionId, CancellationToken ct);
-
-    /// <summary>
-    /// 子实例：转发完成事件，主实例持久化后返回；主实例拒绝时抛出异常
-    /// </summary>
-    Task ReportRemoteNodeAsync(PuloniaRemoteNodeReport report, CancellationToken ct);
 
     /// <summary>
     /// 子实例：回报节点结束

@@ -38,21 +38,6 @@ public sealed class ScriptRepositoryRegistration
     [JsonProperty("branch")]
     public string Branch { get; init; } = "release";
 
-    /// <summary>
-    /// 文件式来源的导入代次；每次更新导入后重新生成，覆盖解压后文件大小与时间都不变的替换。
-    /// Git 来源不使用；首次读取文件式来源时生成。
-    /// </summary>
-    [JsonProperty("source_generation")]
-    public string? SourceGeneration { get; init; }
-
-    /// <summary>复制注册并替换导入代次，其余字段保持不变。</summary>
-    /// <param name="generation">新的导入代次</param>
-    public ScriptRepositoryRegistration WithSourceGeneration(string generation) => new()
-    {
-        Id = Id, Name = Name, Directory = Directory, IsEnabled = IsEnabled, Kind = Kind, Remotes = Remotes,
-        ActiveRemoteId = ActiveRemoteId, Branch = Branch, SourceGeneration = generation
-    };
-
     /// <summary>官方身份使用保留 ID 判定，不能通过改名规避保护。</summary>
     [JsonIgnore]
     public bool IsOfficial => Id == ScriptRepositoryStore.OfficialRepositoryId;

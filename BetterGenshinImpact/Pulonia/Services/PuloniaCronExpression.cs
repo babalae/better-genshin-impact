@@ -8,6 +8,7 @@ namespace BetterGenshinImpact.Pulonia.Services;
 /// <summary>
 /// 有界的五段数字 Cron 解析器，支持通配、列表、范围与步长；不接受 Quartz 的秒段和 L/W/#/?。
 /// 日与星期同时限制时采用 AND，不暗中迁移其他 Cron 方言。
+/// 只按固定 UTC 偏移计算（原神服务器时区都没有夏令时），因此不存在缺失或重复的本地时刻。
 /// </summary>
 public sealed class PuloniaCronExpression
 {
@@ -36,10 +37,12 @@ public sealed class PuloniaCronExpression
     }
 
     /// <summary>查找严格晚于给定 UTC 时刻的下一次发生，最多扫描八个日历年。</summary>
-    public DateTimeOffset? Next(DateTimeOffset afterUtc, TimeZoneInfo zone)
+    /// <param name="afterUtc">起点（不含）。</param>
+    /// <param name="utcOffset">日程所在时区的固定 UTC 偏移。</param>
+    public DateTimeOffset? Next(DateTimeOffset afterUtc, TimeSpan utcOffset)
     {
-        var day = TimeZoneInfo.ConvertTime(afterUtc, zone).Date;
-        for (var offset = 0; offset < 8 * 366 && day.Year < 9999; offset++, day = day.AddDays(1))
+        var day = afterUtc.ToOffset(utcOffset).Date;
+        for (var index = 0; index < 8 * 366 && day.Year < 9999; index++, day = day.AddDays(1))
         {
             if (!MatchesDay(day))
                 continue;
@@ -47,7 +50,7 @@ public sealed class PuloniaCronExpression
             foreach (var hour in _hours)
             foreach (var minute in _minutes)
             {
-                var candidate = ResolveLocal(day.AddHours(hour).AddMinutes(minute), zone);
+                var candidate = ToUtc(day.AddHours(hour).AddMinutes(minute), utcOffset);
                 if (candidate > afterUtc && (earliest is null || candidate < earliest))
                     earliest = candidate;
             }
@@ -58,10 +61,13 @@ public sealed class PuloniaCronExpression
     }
 
     /// <summary>查找有效回看窗口内最后一次发生，合并遗漏而非逐分钟补跑。</summary>
-    public DateTimeOffset? Latest(DateTimeOffset nowUtc, DateTimeOffset lowerExclusive, TimeZoneInfo zone)
+    /// <param name="nowUtc">当前时刻（含）。</param>
+    /// <param name="lowerExclusive">回看下限（不含）。</param>
+    /// <param name="utcOffset">日程所在时区的固定 UTC 偏移。</param>
+    public DateTimeOffset? Latest(DateTimeOffset nowUtc, DateTimeOffset lowerExclusive, TimeSpan utcOffset)
     {
-        var day = TimeZoneInfo.ConvertTime(nowUtc, zone).Date;
-        var lastDay = TimeZoneInfo.ConvertTime(lowerExclusive, zone).Date.AddDays(-1);
+        var day = nowUtc.ToOffset(utcOffset).Date;
+        var lastDay = lowerExclusive.ToOffset(utcOffset).Date.AddDays(-1);
         for (; day >= lastDay; day = day.AddDays(-1))
         {
             if (!MatchesDay(day))
@@ -70,7 +76,7 @@ public sealed class PuloniaCronExpression
             foreach (var hour in _hours)
             foreach (var minute in _minutes)
             {
-                var candidate = ResolveLocal(day.AddHours(hour).AddMinutes(minute), zone);
+                var candidate = ToUtc(day.AddHours(hour).AddMinutes(minute), utcOffset);
                 if (candidate <= nowUtc && candidate > lowerExclusive && (latest is null || candidate > latest))
                     latest = candidate;
             }
@@ -80,22 +86,11 @@ public sealed class PuloniaCronExpression
         return null;
     }
 
-    /// <summary>缺失时刻顺延到第一个有效分钟；重复时刻固定为首次 UTC 发生，不能触发两次。</summary>
-    public static DateTimeOffset ResolveLocal(DateTime local, TimeZoneInfo zone)
-    {
-        local = DateTime.SpecifyKind(local, DateTimeKind.Unspecified);
-        var attempts = 0;
-        while (zone.IsInvalidTime(local))
-        {
-            if (++attempts > 2 * 24 * 60)
-                throw new FormatException("时区缺失时间超过两天，无法安全安排。" );
-            local = local.AddMinutes(1);
-        }
-        var utcOffset = zone.IsAmbiguousTime(local)
-            ? zone.GetAmbiguousTimeOffsets(local).Max()
-            : zone.GetUtcOffset(local);
-        return new DateTimeOffset(local, utcOffset).ToUniversalTime();
-    }
+    /// <summary>把固定偏移下的本地日程时刻换算为 UTC；固定偏移没有缺失或重复时刻。</summary>
+    /// <param name="local">不带时区种类的本地时刻。</param>
+    /// <param name="utcOffset">固定 UTC 偏移。</param>
+    private static DateTimeOffset ToUtc(DateTime local, TimeSpan utcOffset)
+        => new DateTimeOffset(DateTime.SpecifyKind(local, DateTimeKind.Unspecified), utcOffset).ToUniversalTime();
 
     /// <summary>不存在的月内日期自然跳过，日和星期限制同时生效。</summary>
     private bool MatchesDay(DateTime day) => Array.BinarySearch(_months, day.Month) >= 0

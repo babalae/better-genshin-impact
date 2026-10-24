@@ -26,9 +26,17 @@ public sealed partial class PuloniaTaskStore : IDisposable
     private static readonly UTF8Encoding Utf8WithoutBom = new(false, true);
 
     /// <summary>
-    /// 串行化当前存储实例的读写。
+    /// 串行化当前存储实例的写入（以及预设、账号等仍按旧方式读取的数据）。
+    /// 计划、运行历史的读取不等待它：写入都是同目录临时文件加 <see cref="File.Replace(string, string, string?)"/> 的原子替换，
+    /// 读取以 <see cref="FileShare.Read"/> | <see cref="FileShare.Delete"/> 打开，替换不会因读者句柄失败，读者也只会看到完整的旧版或新版。
     /// </summary>
     private readonly SemaphoreSlim _gate = new(1, 1);
+
+    /// <summary>
+    /// 加载 state.json 时正式文件已损坏、状态取自备份；下一次保存不能把损坏的正式文件挪成备份覆盖有效备份。
+    /// 只在 <see cref="_gate"/> 内读写；保存成功后清除。
+    /// </summary>
+    private bool _preserveStateBackup;
 
     /// <summary>
     /// 存储根目录，默认位于程序的 User/Pulonia。
@@ -51,21 +59,10 @@ public sealed partial class PuloniaTaskStore : IDisposable
     }
 
     /// <summary>
-    /// 按稳定 ID 读取计划；文件缺失返回 null，损坏直接报错。
+    /// 按稳定 ID 读取计划；文件缺失返回 null，损坏直接报错。不等待写入门，原子替换保证读到完整版本。
     /// </summary>
     public async Task<PuloniaTaskPlan?> LoadPlanAsync(string id, CancellationToken ct = default)
-    {
-        var path = GetPath("plans", id);
-        await _gate.WaitAsync(ct).ConfigureAwait(false);
-        try
-        {
-            return await ReadPlanAsync(path, id, ct).ConfigureAwait(false);
-        }
-        finally
-        {
-            _gate.Release();
-        }
-    }
+        => await ReadPlanAsync(GetPath("plans", id), id, ct).ConfigureAwait(false);
 
     /// <summary>
     /// 读取预设，不将缺失预设替换为空参数。
@@ -181,38 +178,69 @@ public sealed partial class PuloniaTaskStore : IDisposable
     }
 
     /// <summary>
-    /// 列出计划的独立编辑副本；任一损坏文件明确报错，不悄悄忽略。
+    /// 计划目录的修改标记，由各计划文件的名称、长度和最后写入时间组成；新增、删除或替换计划后都会变化。
+    /// 只读取目录元数据，供调度宿主判断是否需要重读计划（包括子实例保存的计划）。
+    /// </summary>
+    public string GetPlanFilesStamp()
+    {
+        var directory = new DirectoryInfo(Path.Combine(RootDirectory, "plans"));
+        if (!directory.Exists)
+            return string.Empty;
+        return string.Join("|", directory.EnumerateFiles("*.json")
+            .Select(file => file.Name + ":" + file.Length + ":" + file.LastWriteTimeUtc.Ticks)
+            .Order(StringComparer.Ordinal));
+    }
+
+    /// <summary>
+    /// 列出可读取计划的独立编辑副本；损坏的计划文件被跳过（不删除），需要提示用户时改用 <see cref="ListPlansWithFailuresAsync"/>。
     /// </summary>
     public async Task<IReadOnlyList<PuloniaTaskPlan>> ListPlansAsync(CancellationToken ct = default)
+        => (await ListPlansWithFailuresAsync(ct).ConfigureAwait(false)).Items;
+
+    /// <summary>
+    /// 列出可读取计划的独立编辑副本，并给出被跳过的损坏文件：一份坏计划不再阻断其余计划的显示和调度。
+    /// 计划顺序文件 plan-order.json 损坏时同样记入失败并按 ID 排序。不等待写入门。
+    /// </summary>
+    /// <param name="ct">取消令牌。</param>
+    /// <returns>按显示顺序排列的计划与读取失败的文件；失败项的 <see cref="PuloniaTaskFileLoadFailure.Id"/> 为文件名对应的计划 ID。</returns>
+    public async Task<PuloniaTaskFileListResult<PuloniaTaskPlan>> ListPlansWithFailuresAsync(CancellationToken ct = default)
     {
-        await _gate.WaitAsync(ct).ConfigureAwait(false);
-        try
+        var directory = Path.Combine(RootDirectory, "plans");
+        if (!Directory.Exists(directory))
+            return PuloniaTaskFileListResult<PuloniaTaskPlan>.Empty;
+        var result = new List<PuloniaTaskPlan>();
+        var failures = new List<PuloniaTaskFileLoadFailure>();
+        // 1. 逐个读取计划文件，任一文件失败只记录原因
+        foreach (var path in Directory.EnumerateFiles(directory, "*.json"))
         {
-            var directory = Path.Combine(RootDirectory, "plans");
-            if (!Directory.Exists(directory))
-                return Array.Empty<PuloniaTaskPlan>();
-            var result = new List<PuloniaTaskPlan>();
-            foreach (var path in Directory.EnumerateFiles(directory, "*.json"))
+            ct.ThrowIfCancellationRequested();
+            var id = Path.GetFileNameWithoutExtension(path);
+            try
             {
-                ct.ThrowIfCancellationRequested();
-                var id = Path.GetFileNameWithoutExtension(path);
                 PuloniaTaskValidator.ValidateId(id, path);
-                var plan = await ReadPlanAsync(path, id, ct).ConfigureAwait(false);
-                if (plan is not null)
+                // 枚举后被删除的文件返回 null，直接略过。
+                if (await ReadPlanAsync(path, id, ct).ConfigureAwait(false) is { } plan)
                     result.Add(plan);
             }
-            // 列表顺序是编辑器布局元数据，不写入任何单个计划，也不影响执行修订。
-            var catalog = await ReadPlanCatalogAsync(ct).ConfigureAwait(false);
-            var positions = catalog.PlanOrder
-                .Select((id, index) => (id, index))
-                .ToDictionary(item => item.id, item => item.index, StringComparer.Ordinal);
-            result.Sort((a, b) => ComparePlanOrder(a, b, positions));
-            return result.AsReadOnly();
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                failures.Add(new PuloniaTaskFileLoadFailure(path, AsValidId(id), ex.Message));
+            }
         }
-        finally
+        // 2. 列表顺序是编辑器布局元数据，不写入任何单个计划，也不影响执行修订；损坏时退回按 ID 排序。
+        var catalogPath = Path.Combine(RootDirectory, "plan-order.json");
+        PuloniaTaskPlanCatalog catalog;
+        try { catalog = await ReadPlanCatalogAsync(ct).ConfigureAwait(false); }
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _gate.Release();
+            failures.Add(new PuloniaTaskFileLoadFailure(catalogPath, null, ex.Message));
+            catalog = new PuloniaTaskPlanCatalog();
         }
+        var positions = catalog.PlanOrder
+            .Select((id, index) => (id, index))
+            .ToDictionary(item => item.id, item => item.index, StringComparer.Ordinal);
+        result.Sort((a, b) => ComparePlanOrder(a, b, positions));
+        return new PuloniaTaskFileListResult<PuloniaTaskPlan>(result.AsReadOnly(), failures.AsReadOnly());
     }
 
     /// <summary>
@@ -268,7 +296,7 @@ public sealed partial class PuloniaTaskStore : IDisposable
     }
 
     /// <summary>
-    /// 读取唯一当前运行状态；正式文件损坏时仅允许从有效备份显式恢复。
+    /// 读取唯一当前运行状态；正式文件损坏时仅允许从有效备份显式恢复，并记住下一次保存要保留该备份。
     /// </summary>
     public async Task<PuloniaTaskStateLoadResult> LoadStateAsync(CancellationToken ct = default)
     {
@@ -276,9 +304,11 @@ public sealed partial class PuloniaTaskStore : IDisposable
         try
         {
             var path = Path.Combine(RootDirectory, "state.json");
+            _preserveStateBackup = false;
             var json = await ReadIfExistsAsync(path, ct).ConfigureAwait(false);
             if (json is null)
             {
+                // 正式文件缺失时保存直接新建正式文件，备份保持不变，不需要标记。
                 var backupOnlyJson = await ReadIfExistsAsync(path + ".bak", ct).ConfigureAwait(false);
                 return backupOnlyJson is null
                     ? new PuloniaTaskStateLoadResult(new PuloniaTaskState(), false)
@@ -298,7 +328,10 @@ public sealed partial class PuloniaTaskStore : IDisposable
                         "正式运行状态已损坏且没有可用备份，已停止自动运行。", primaryError);
                 try
                 {
-                    return new PuloniaTaskStateLoadResult(PuloniaTaskJson.ReadState(backupJson), true);
+                    var recovered = new PuloniaTaskStateLoadResult(PuloniaTaskJson.ReadState(backupJson), true);
+                    // 正式文件已损坏：下一次保存直接替换正式文件，不能把它挪成备份覆盖这份有效备份。
+                    _preserveStateBackup = true;
+                    return recovered;
                 }
                 catch (Exception backupError) when (backupError is Newtonsoft.Json.JsonException
                                                      or PuloniaTaskValidationException)
@@ -317,32 +350,23 @@ public sealed partial class PuloniaTaskStore : IDisposable
 
     /// <summary>
     /// 用刷新到底层存储的完整文件替换保存当前运行状态。
+    /// 是否保留现有备份由 <see cref="LoadStateAsync"/> 记录的标志决定，不再回读旧文件；
+    /// 因此正式文件损坏时必须先经本存储加载（任务服务启动时总是如此），再保存。
     /// </summary>
     public async Task SaveStateAsync(PuloniaTaskState state, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(state);
-        var candidate = PuloniaTaskJson.ReadState(PuloniaTaskJson.WriteState(state));
+        // 只序列化一次，并按读取规则校验这份文本，保证写下的文件下次一定能加载。
+        var json = PuloniaTaskJson.WriteState(state);
+        _ = PuloniaTaskJson.ReadState(json);
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             using var writerLock = AcquireWriterLock();
             var path = Path.Combine(RootDirectory, "state.json");
-            var replaceWithoutChangingBackup = false;
-            var currentJson = await ReadIfExistsAsync(path, ct).ConfigureAwait(false);
-            if (currentJson is not null)
-            {
-                try
-                {
-                    _ = PuloniaTaskJson.ReadState(currentJson);
-                }
-                catch (Exception ex) when (ex is Newtonsoft.Json.JsonException or PuloniaTaskValidationException)
-                {
-                    // 正式文件损坏且本次状态来自有效备份时，不能用损坏文件覆盖该备份。
-                    replaceWithoutChangingBackup = true;
-                }
-            }
-            await WriteAtomicallyAsync(path, PuloniaTaskJson.WriteState(candidate), ct,
-                replaceWithoutChangingBackup).ConfigureAwait(false);
+            await WriteAtomicallyAsync(path, json, ct, _preserveStateBackup).ConfigureAwait(false);
+            // 正式文件已是有效版本，此后恢复正常的“上一版作为备份”替换。
+            _preserveStateBackup = false;
         }
         finally
         {
@@ -359,8 +383,7 @@ public sealed partial class PuloniaTaskStore : IDisposable
         PuloniaTaskValidator.ValidateId(record.Request.PlanId, "history/plan_id");
         PuloniaTaskValidator.ValidateId(record.RunId, "history/run_id");
         var candidateJson = PuloniaTaskJson.WriteRunRecord(record);
-        // 文件名直接使用可读运行 ID：history\<计划ID>\run_yyyyMMdd-HHmmss-xxxx.json。
-        var path = Path.Combine(RootDirectory, "history", record.Request.PlanId, record.RunId + ".json");
+        var path = GetHistoryPath(record.Request.PlanId, record.RunId);
 
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
@@ -386,32 +409,110 @@ public sealed partial class PuloniaTaskStore : IDisposable
     }
 
     /// <summary>
-    /// 列出全部不可变运行历史，损坏文件会明确阻止返回不完整列表。
+    /// 列出可读取的全部不可变运行历史（按提交时间倒序）；损坏文件被跳过，需要提示时改用 <see cref="ListHistoryWithFailuresAsync"/>。
     /// </summary>
     public async Task<IReadOnlyList<PuloniaTaskRunRecord>> ListHistoryAsync(CancellationToken ct = default)
+        => (await ListHistoryWithFailuresAsync(ct).ConfigureAwait(false)).Items;
+
+    /// <summary>
+    /// 列出可读取的全部不可变运行历史（按提交时间倒序），并给出被跳过的损坏文件。
+    /// 历史不参与 CD 判定，一份坏文件不能让其余历史无法查看；坏文件保留在磁盘上，不删除也不改写。不等待写入门。
+    /// </summary>
+    /// <param name="ct">取消令牌。</param>
+    /// <returns>完整历史记录（含快照）与读取失败的文件。</returns>
+    public async Task<PuloniaTaskFileListResult<PuloniaTaskRunRecord>> ListHistoryWithFailuresAsync(CancellationToken ct = default)
     {
-        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        var root = Path.Combine(RootDirectory, "history");
+        if (!Directory.Exists(root))
+            return PuloniaTaskFileListResult<PuloniaTaskRunRecord>.Empty;
+        var records = new List<PuloniaTaskRunRecord>();
+        var failures = new List<PuloniaTaskFileLoadFailure>();
+        foreach (var path in Directory.EnumerateFiles(root, "*.json", SearchOption.AllDirectories))
+        {
+            ct.ThrowIfCancellationRequested();
+            try
+            {
+                // 枚举后消失的文件不是损坏，直接略过。
+                if (await ReadIfExistsAsync(path, ct).ConfigureAwait(false) is { } json)
+                    records.Add(ReadHistoryJson(path, json));
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                failures.Add(new PuloniaTaskFileLoadFailure(path, AsValidId(Path.GetFileNameWithoutExtension(path)), ex.Message));
+            }
+        }
+        return new PuloniaTaskFileListResult<PuloniaTaskRunRecord>(
+            records.OrderByDescending(item => item.SubmittedAt).ToArray(), failures.AsReadOnly());
+    }
+
+    /// <summary>
+    /// 按计划与运行 ID 读取一份完整历史（含快照），供续跑等按需读取。不等待写入门。
+    /// </summary>
+    /// <param name="planId">历史所属计划 ID。</param>
+    /// <param name="runId">运行 ID。</param>
+    /// <param name="ct">取消令牌。</param>
+    /// <returns>历史记录；文件不存在时为 null，损坏时抛出。</returns>
+    public async Task<PuloniaTaskRunRecord?> LoadHistoryRecordAsync(string planId, string runId, CancellationToken ct = default)
+    {
+        var path = GetHistoryPath(planId, runId);
+        return await ReadIfExistsAsync(path, ct).ConfigureAwait(false) is { } json ? ReadHistoryJson(path, json) : null;
+    }
+
+    /// <summary>
+    /// 同步读取一份完整历史，供运行视图首次访问快照时按需加载；与 <see cref="LoadHistoryRecordAsync"/> 读取同一文件。
+    /// </summary>
+    /// <param name="planId">历史所属计划 ID。</param>
+    /// <param name="runId">运行 ID。</param>
+    /// <returns>历史记录；文件不存在时为 null，损坏时抛出。</returns>
+    internal PuloniaTaskRunRecord? ReadHistoryRecord(string planId, string runId)
+    {
+        var path = GetHistoryPath(planId, runId);
         try
         {
-            var root = Path.Combine(RootDirectory, "history");
-            if (!Directory.Exists(root))
-                return Array.Empty<PuloniaTaskRunRecord>();
-            var records = new List<PuloniaTaskRunRecord>();
-            foreach (var path in Directory.EnumerateFiles(root, "*.json", SearchOption.AllDirectories))
-            {
-                ct.ThrowIfCancellationRequested();
-                var json = await ReadIfExistsAsync(path, ct).ConfigureAwait(false)
-                           ?? throw new IOException($"读取历史时文件消失：{path}");
-                var record = PuloniaTaskJson.ReadRunRecord(json);
-                if (!string.Equals(Path.GetFileNameWithoutExtension(path), record.RunId, StringComparison.Ordinal))
-                    throw new PuloniaTaskValidationException(path, "历史文件名与运行 ID 不一致。");
-                records.Add(record);
-            }
-            return records.OrderByDescending(item => item.SubmittedAt).ToArray();
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete);
+            using var reader = new StreamReader(stream, Utf8WithoutBom, detectEncodingFromByteOrderMarks: true);
+            return ReadHistoryJson(path, reader.ReadToEnd());
         }
-        finally
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
         {
-            _gate.Release();
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 解析一份历史文件并检查文件名与运行 ID 一致。
+    /// </summary>
+    private static PuloniaTaskRunRecord ReadHistoryJson(string path, string json)
+    {
+        var record = PuloniaTaskJson.ReadRunRecord(json);
+        if (!string.Equals(Path.GetFileNameWithoutExtension(path), record.RunId, StringComparison.Ordinal))
+            throw new PuloniaTaskValidationException(path, "历史文件名与运行 ID 不一致。");
+        return record;
+    }
+
+    /// <summary>
+    /// 历史文件路径：文件名直接使用可读运行 ID，<c>history\&lt;计划ID&gt;\run_yyyyMMdd-HHmmss-xxxx.json</c>。
+    /// </summary>
+    private string GetHistoryPath(string planId, string runId)
+    {
+        PuloniaTaskValidator.ValidateId(planId, "history/plan_id");
+        PuloniaTaskValidator.ValidateId(runId, "history/run_id");
+        return Path.Combine(RootDirectory, "history", planId, runId + ".json");
+    }
+
+    /// <summary>
+    /// 文件名是合法稳定 ID 时原样返回，否则返回 null；用于在读取失败说明中标出对应的计划或运行。
+    /// </summary>
+    private static string? AsValidId(string id)
+    {
+        try
+        {
+            PuloniaTaskValidator.ValidateId(id, "file");
+            return id;
+        }
+        catch (PuloniaTaskValidationException)
+        {
+            return null;
         }
     }
 
@@ -563,8 +664,9 @@ public sealed partial class PuloniaTaskStore : IDisposable
             ct.ThrowIfCancellationRequested();
 
             // 替换是提交点；提交后即使令牌刚好取消，也应返回保存成功。
+            // 目标已存在时一律用 File.Replace：读取方以 FileShare.Delete 打开时也能完成替换（覆盖式 Move 会因读者句柄失败）。
             if (File.Exists(path) && preserveExistingBackup)
-                File.Move(temporaryPath, path, overwrite: true);
+                File.Replace(temporaryPath, path, null);
             else if (File.Exists(path))
                 File.Replace(temporaryPath, path, path + ".bak");
             else

@@ -133,26 +133,11 @@ public partial class PuloniaTaskCreationDialogViewModel
         SelectedResource = null;
     }
 
-    /// <summary>仓库操作仅在资源选择空闲时可执行。</summary>
-    private bool CanAddRepository() => CanManageRepositories;
-
-    /// <summary>移除需要明确选中的仓库；加载和确认时不得变更来源。</summary>
-    private bool CanRemoveRepository() => CanManageRepositories && SelectedRepository is { IsOfficial: false };
-
-    /// <summary>选择已有本地来源的入口统一引导至独立仓库管理窗口。</summary>
-    [RelayCommand(CanExecute = nameof(CanAddRepository))]
-    private Task AddLocalRepositoryAsync() => OpenRepositoryManagerAsync();
-
-    /// <summary>官方及第三方的远端配置和拉取统一在独立管理窗口进行。</summary>
-    [RelayCommand(CanExecute = nameof(CanAddRepository))]
-    private Task AddRemoteRepositoryAsync() => OpenRepositoryManagerAsync();
-
-    /// <summary>来源移除统一进入管理窗口；已有任务保留身份和确认内容。</summary>
-    [RelayCommand(CanExecute = nameof(CanRemoveRepository))]
-    private Task RemoveRepositoryAsync() => OpenRepositoryManagerAsync();
-
-    /// <summary>打开当前选择的仓库管理，关闭后刷新列表并定位所选来源。</summary>
-    [RelayCommand(CanExecute = nameof(CanAddRepository))]
+    /// <summary>
+    /// 打开当前选择的仓库管理，关闭后刷新列表并定位所选来源。
+    /// 添加本地/远程仓库与移除仓库都统一在管理窗口进行，仓库操作仅在资源选择空闲时可执行。
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanManageRepositories))]
     private async Task OpenRepositoryManagerAsync()
     {
         // 停止已失去焦点的预览，让管理窗口更新仓库时及时取得来源锁。
@@ -184,9 +169,6 @@ public partial class PuloniaTaskCreationDialogViewModel
     private void NotifyRepositoryCommands()
     {
         OnPropertyChanged(nameof(CanManageRepositories));
-        AddLocalRepositoryCommand.NotifyCanExecuteChanged();
-        AddRemoteRepositoryCommand.NotifyCanExecuteChanged();
-        RemoveRepositoryCommand.NotifyCanExecuteChanged();
         OpenRepositoryManagerCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(ShowRepositoryGuidance));
         OnPropertyChanged(nameof(RepositoryGuidance));

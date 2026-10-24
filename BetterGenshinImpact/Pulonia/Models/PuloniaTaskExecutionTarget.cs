@@ -37,7 +37,7 @@ public sealed class PuloniaTaskExecutionTarget
     public string DisplayName { get; init; } = string.Empty;
 
     /// <summary>
-    /// 执行通道标识：同一通道内的运行串行，不同通道可以并行
+    /// 执行实例标识，用于界面选择与记录比对；所有执行实例共用同一个串行队列，不按标识并行
     /// </summary>
     [JsonIgnore]
     public string LaneKey => Kind switch
@@ -48,15 +48,15 @@ public sealed class PuloniaTaskExecutionTarget
     };
 
     /// <summary>
-    /// 主实例本地执行通道标识
+    /// 主实例本地执行的实例标识
     /// </summary>
     public const string PrimaryLaneKey = "primary";
 
     /// <summary>
-    /// 返回请求所属的执行通道；未指定目标时为主实例通道
+    /// 返回请求使用的执行实例标识；未指定目标时为主实例
     /// </summary>
     /// <param name="target">请求的执行实例</param>
-    /// <returns>执行通道标识</returns>
+    /// <returns>执行实例标识</returns>
     public static string GetLaneKey(PuloniaTaskExecutionTarget? target) => target?.LaneKey ?? PrimaryLaneKey;
 
     /// <summary>
@@ -90,14 +90,6 @@ public sealed class PuloniaTaskExecutionTarget
         WindowsSessionId = WindowsSessionId,
         DisplayName = DisplayName
     };
-
-    /// <summary>
-    /// 是否与另一个目标指向同一执行通道
-    /// </summary>
-    /// <param name="other">另一个目标</param>
-    /// <returns>同一通道时返回 true</returns>
-    public bool IsSameLane(PuloniaTaskExecutionTarget? other)
-        => string.Equals(GetLaneKey(this), GetLaneKey(other), StringComparison.Ordinal);
 }
 
 /// <summary>

@@ -58,13 +58,13 @@
     <ui:Button Grid.Column="2" Margin="0,0,6,0" Icon="{ui:SymbolIcon Stop24}" Command="{Binding ViewModel.StopCurrentRunCommand, Mode=OneWay}" ToolTip="停止当前配置"/>
     <ui:DropDownButton Grid.Column="3" Icon="{ui:SymbolIcon MoreHorizontal24}" ToolTip="更多操作">
      <ui:DropDownButton.Flyout><ContextMenu>
-      <MenuItem Header="添加已有任务计划" Command="{Binding Data.AddPlanReferenceCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
-      <MenuItem Header="添加任务" ItemsSource="{Binding Data.Editor.AddTaskMenu, Source={StaticResource DragonProxy}, Mode=OneWay}"
+      <MenuItem Header="引用已有任务计划…" Command="{Binding Data.AddPlanReferenceCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
+      <MenuItem Header="添加任务" ItemsSource="{Binding Data.AddTaskMenu, Source={StaticResource DragonProxy}, Mode=OneWay}"
                 ItemContainerStyle="{StaticResource AddTaskMenuItemStyle}"/>
       <Separator/>
       <MenuItem Header="执行记录" Command="{Binding Data.ShowHistoryCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
       <MenuItem Header="账号管理" Command="{Binding Data.ManageGenshinAccountsCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
-      <MenuItem Header="显示账号切换步骤" IsCheckable="True"
+      <MenuItem Header="显示账号切换步骤" IsCheckable="True" ToolTip="只控制清单中是否显示“切换账号”步骤；绑定的运行账号始终生效，并显示在配置旁"
        IsChecked="{Binding Data.ShowAccountPreparation, Source={StaticResource DragonProxy}, Mode=OneWay}"
        Command="{Binding Data.ToggleAccountPreparationCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
       <MenuItem Header="定时与热键" Command="{Binding Data.ShowTriggersCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
@@ -126,8 +126,8 @@
      <ui:Card Padding="12,14">
       <ui:Card.ContextMenu>
        <ContextMenu>
-        <MenuItem Header="添加已有任务计划" Command="{Binding Data.AddPlanReferenceCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
-        <MenuItem Header="添加任务" ItemsSource="{Binding Data.Editor.AddTaskMenu, Source={StaticResource DragonProxy}, Mode=OneWay}"
+        <MenuItem Header="引用已有任务计划…" Command="{Binding Data.AddPlanReferenceCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
+        <MenuItem Header="添加任务" ItemsSource="{Binding Data.AddTaskMenu, Source={StaticResource DragonProxy}, Mode=OneWay}"
                   ItemContainerStyle="{StaticResource AddTaskMenuItemStyle}"/>
         <Separator/>
         <MenuItem Header="删除任务" Command="{Binding Data.DeleteTaskCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
@@ -135,7 +135,20 @@
       </ui:Card.ContextMenu>
       <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
        <ui:FontIcon Glyph="&#xe411;" Style="{StaticResource FaFontIconStyleForOneDragon}" ToolTip="拖动排序"/>
-       <Ellipse Grid.Column="1" Width="9" Height="9" Margin="10,0" ToolTip="{Binding OneDragonStatusText, Mode=OneWay}" Fill="{Binding OneDragonStatusBrush, Mode=OneWay}"/>
+       <!-- 状态点按运行状态分类取主题语义色：执行中用强调色，失败/待核验/已完成用系统语义色，尚未执行与已跳过或停止为中性灰。 -->
+       <Ellipse Grid.Column="1" Width="9" Height="9" Margin="10,0" ToolTip="{Binding OneDragonStatusText, Mode=OneWay}">
+        <Ellipse.Style>
+         <Style TargetType="Ellipse">
+          <Setter Property="Fill" Value="{DynamicResource TextFillColorTertiaryBrush}"/>
+          <Style.Triggers>
+           <DataTrigger Binding="{Binding OneDragonStatusKind, Mode=OneWay}" Value="Running"><Setter Property="Fill" Value="{DynamicResource AccentFillColorDefaultBrush}"/></DataTrigger>
+           <DataTrigger Binding="{Binding OneDragonStatusKind, Mode=OneWay}" Value="Failed"><Setter Property="Fill" Value="{DynamicResource SystemFillColorCriticalBrush}"/></DataTrigger>
+           <DataTrigger Binding="{Binding OneDragonStatusKind, Mode=OneWay}" Value="NeedsVerification"><Setter Property="Fill" Value="{DynamicResource SystemFillColorCautionBrush}"/></DataTrigger>
+           <DataTrigger Binding="{Binding OneDragonStatusKind, Mode=OneWay}" Value="Completed"><Setter Property="Fill" Value="{DynamicResource SystemFillColorSuccessBrush}"/></DataTrigger>
+          </Style.Triggers>
+         </Style>
+        </Ellipse.Style>
+       </Ellipse>
        <TextBlock Grid.Column="2" Text="{Binding Name, Mode=OneWay}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding ConfigurationSummary, Mode=OneWay}" Margin="0,0,8,0"/>
        <ui:ToggleSwitch Grid.Column="3" IsChecked="{Binding IsEnabled, Mode=TwoWay}" ToolTip="启用或关闭此任务；关闭分组保留子项选择"/>
       </Grid>
@@ -148,7 +161,20 @@
    <StackPanel DockPanel.Dock="Top" Margin="0,0,18,10">
     <Grid>
      <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-     <TextBlock Text="配置" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+     <DockPanel LastChildFill="False">
+      <TextBlock DockPanel.Dock="Left" Text="配置" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
+      <!-- 绑定非默认账号时常驻显示运行账号，与“显示账号切换步骤”无关：运行前会切换到该账号并核验 UID。 -->
+      <ui:Button DockPanel.Dock="Right" Margin="10,0,0,0" Padding="8,4" Appearance="Transparent"
+                 Command="{Binding ViewModel.SelectAccountPreparationCommand, Mode=OneWay}"
+                 Visibility="{Binding ViewModel.HasRunAccount, Mode=OneWay, Converter={StaticResource DragonBoolVisibility}}"
+                 ToolTip="这份配置运行前会切换到该账号并核验 UID；点击查看或修改。"
+                 AutomationProperties.Name="{Binding ViewModel.RunAccountText, Mode=OneWay}">
+       <StackPanel Orientation="Horizontal">
+        <ui:SymbolIcon Symbol="PeopleSwap24" Margin="0,0,6,0"/>
+        <TextBlock Text="{Binding ViewModel.RunAccountText, Mode=OneWay}" MaxWidth="220" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+       </StackPanel>
+      </ui:Button>
+     </DockPanel>
      <ComboBox Grid.Column="1" MinWidth="200" MaxWidth="280" Height="34" Margin="10,0" DisplayMemberPath="Name" ItemsSource="{Binding ViewModel.Configurations, Mode=OneWay}" SelectedItem="{Binding ViewModel.SelectedConfiguration, Mode=TwoWay}"/>
      <ui:Button Grid.Column="2" Margin="0,0,8,0" Icon="{ui:SymbolIcon Add24}" Command="{Binding ViewModel.NewConfigurationCommand, Mode=OneWay}" ToolTip="新增配置"/>
      <ui:Button Grid.Column="3" Margin="0,0,8,0" Icon="{ui:SymbolIcon Edit24}" Command="{Binding ViewModel.RenameConfigurationCommand, Mode=OneWay}" ToolTip="重命名配置"/>
@@ -202,14 +228,14 @@
         <ui:CardControl.Header><StackPanel><TextBlock Text="{Binding ViewModel.SelectedTask.TypeDisplayName, Mode=OneWay}"/><TextBlock Text="{Binding ViewModel.SelectedTask.ConfigurationSummary, Mode=OneWay}" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap"/></StackPanel></ui:CardControl.Header>
        </ui:CardControl>
       </StackPanel>
-      <WrapPanel HorizontalAlignment="Right" Margin="0,2,0,8">
-       <ui:Button Content="重置草稿" Margin="0,0,8,0" Command="{Binding ViewModel.ResetSettingsDraftCommand, Mode=OneWay}"/>
-       <ui:Button Content="高级设置" Margin="0,0,8,0" Command="{Binding ViewModel.ConfigureNodeCommand, Mode=OneWay}" CommandParameter="{Binding ViewModel.SelectedTask, Mode=OneWay}"/>
-       <ui:Button Content="应用设置" Appearance="Primary" Command="{Binding ViewModel.ApplySettingsCommand, Mode=OneWay}"/>
-      </WrapPanel>
-      <TextBlock Text="{Binding ViewModel.SettingsMessage, Mode=OneWay}" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+      <!-- 设置修改即时写入当前配置并自动保存，连续输入合并为一次撤销，不再需要应用或重置草稿。 -->
+      <DockPanel Margin="0,2,0,8" LastChildFill="True">
+       <ui:Button DockPanel.Dock="Right" Content="高级设置" Command="{Binding ViewModel.ConfigureNodeCommand, Mode=OneWay}" CommandParameter="{Binding ViewModel.SelectedTask, Mode=OneWay}"/>
+       <TextBlock Margin="4,0,12,0" VerticalAlignment="Center" Text="修改后立即生效并自动保存，可用撤销恢复。" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+      </DockPanel>
+      <TextBlock Text="{Binding ViewModel.SettingsMessage, Mode=OneWay}" TextWrapping="Wrap" Foreground="{DynamicResource SystemFillColorCautionBrush}"/>
       <TextBlock Text="{Binding ViewModel.SelectedTask.ResourceCheckError, Mode=OneWay}" TextWrapping="Wrap" Foreground="{DynamicResource SystemFillColorCriticalBrush}"/>
-      <ui:Button Margin="0,10,0,0" Content="{Binding ViewModel.SelectedConfiguration.ResourceUpdateSummary, Mode=OneWay}" Command="{Binding ViewModel.Editor.ConfirmResourceUpdatesCommand, Mode=OneWay}" CommandParameter="{Binding ViewModel.SelectedConfiguration, Mode=OneWay}" Visibility="{Binding ViewModel.SelectedConfiguration.HasResourceUpdates, Converter={StaticResource DragonBoolVisibility}, Mode=OneWay}"/>
+      <ui:Button Margin="0,10,0,0" Content="{Binding ViewModel.SelectedConfiguration.ResourceUpdateSummary, Mode=OneWay}" Command="{Binding ViewModel.Session.ConfirmResourceUpdatesCommand, Mode=OneWay}" CommandParameter="{Binding ViewModel.SelectedConfiguration, Mode=OneWay}" Visibility="{Binding ViewModel.SelectedConfiguration.HasResourceUpdates, Converter={StaticResource DragonBoolVisibility}, Mode=OneWay}"/>
      </StackPanel>
     </StackPanel>
    </ScrollViewer>

@@ -1,3 +1,5 @@
+using BetterGenshinImpact.Pulonia.Models;
+
 namespace BetterGenshinImpact.ViewModel.Windows.Pulonia;
 
 /// <summary>
@@ -6,9 +8,9 @@ namespace BetterGenshinImpact.ViewModel.Windows.Pulonia;
 public sealed class PuloniaDirectoryImportModeOption
 {
     /// <summary>
-    /// 稳定模式键。
+    /// 稳定模式键，直接传给创建服务。
     /// </summary>
-    public string Key { get; }
+    public PuloniaTaskDirectoryImportMode Mode { get; }
 
     /// <summary>
     /// 用户可见名称。
@@ -23,9 +25,9 @@ public sealed class PuloniaDirectoryImportModeOption
     /// <summary>
     /// 建立一种目录添加方式。
     /// </summary>
-    public PuloniaDirectoryImportModeOption(string key, string displayName, string description)
+    public PuloniaDirectoryImportModeOption(PuloniaTaskDirectoryImportMode mode, string displayName, string description)
     {
-        Key = key;
+        Mode = mode;
         DisplayName = displayName;
         Description = description;
     }

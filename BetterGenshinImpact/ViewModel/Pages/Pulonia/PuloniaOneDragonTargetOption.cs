@@ -21,7 +21,7 @@ public sealed class PuloniaOneDragonTargetOption(string display, PuloniaTaskExec
     public PuloniaTaskExecutionTarget? Target { get; } = target;
 
     /// <summary>
-    /// 执行通道标识，刷新列表时据此保留选择
+    /// 执行实例标识，刷新列表时据此保留选择
     /// </summary>
     public string LaneKey => PuloniaTaskExecutionTarget.GetLaneKey(Target);
 

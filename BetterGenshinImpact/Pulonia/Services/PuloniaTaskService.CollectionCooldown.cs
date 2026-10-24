@@ -9,19 +9,16 @@ namespace BetterGenshinImpact.Pulonia.Services;
 /// <summary>地图追踪文件级 CD 的查询与成功结算，复用同一份运行状态和账本。</summary>
 public sealed partial class PuloniaTaskService
 {
-    /// <summary>在状态锁内读取最新文件成功事实，不依赖计划或资源版本。</summary>
-    private async Task<(PuloniaTaskAvailabilityDecision Decision, JObject Data)> EvaluateCollectionCooldownAsync(
-        RunState state, PuloniaCollectionCooldownPolicy policy, CancellationToken ct)
-    {
-        await _stateGate.WaitAsync(ct).ConfigureAwait(false);
-        try
-        {
-            var decision = PuloniaCollectionCooldown.Evaluate(policy, state.Request, _persistentState.Ledger,
-                DateTimeOffset.UtcNow, out var data, state.VerifiedUid);
-            return (decision, data);
-        }
-        finally { _stateGate.Release(); }
-    }
+    /// <summary>
+    /// 本次运行的采集作用域身份：切换到指定账号时为核验 UID；默认账号或没有账号准备时为空（共用默认身份）。
+    /// </summary>
+    private static string? GetCooldownUid(RunState state) => state.UsesSwitchedAccount ? state.VerifiedUid : null;
+
+    /// <summary>读取已提交账本中的最新文件成功事实，不依赖计划或资源版本；已提交状态不再修改，无需加锁。</summary>
+    private PuloniaCollectionCooldownDecision EvaluateCollectionCooldown(RunState state,
+        PuloniaCollectionCooldownPolicy policy, out JObject data)
+        => PuloniaCollectionCooldown.Evaluate(policy, state.Request, _runState.Current.Ledger,
+            DateTimeOffset.UtcNow, out data, GetCooldownUid(state));
 
     /// <summary>
     /// 完整成功后一次性提交节点结果和采集事实；落盘失败不修改内存，也不允许自动重试。
@@ -37,7 +34,7 @@ public sealed partial class PuloniaTaskService
         {
             // 事件键直接使用可读的运行 ID 与节点地址，同一节点同一尝试重复结算不会重复记账。
             EventKey = $"pathing.file:{state.RunId}:{task.TaskAddress}:{result.Attempt}",
-            ScopeKey = PuloniaTaskAvailability.BuildScopeKey(state.Request, PuloniaTaskScopeKind.World, state.VerifiedUid),
+            ScopeKey = PuloniaCollectionCooldown.BuildScopeKey(GetCooldownUid(state)),
             EffectKey = PuloniaCollectionCooldown.GetEffectKey(policy),
             WindowKey = "file_success",
             OccurredAt = result.FinishedAt.ToUniversalTime(),
@@ -52,44 +49,47 @@ public sealed partial class PuloniaTaskService
             }
         };
         var effect = new PuloniaTaskConfirmedEffect { TaskAddress = task.TaskAddress, Attempt = result.Attempt, Entry = entry };
-        await _stateGate.WaitAsync(ct).ConfigureAwait(false);
+        // 修改候选状态成功后才置位，用来区分“提交前检查失败”和“写盘失败”。
+        var prepared = false;
+        // 一旦开始写盘，使用独立时限把整次结算完成，不复用可能随时取消的节点令牌。
+        using var cleanup = new CancellationTokenSource(TimeSpan.FromSeconds(15));
         try
         {
-            // 进入提交前仍须未取消；一旦开始写盘，使用独立时限把整次结算完成。
-            ct.ThrowIfCancellationRequested();
-            var candidate = ClonePersistentState();
-            if (candidate.Ledger.Exists(item => item.EventKey == entry.EventKey)) return;
-            var active = state.ToRecord();
-            if (FindActiveRecord(candidate, state.RunId) is null)
-                throw new InvalidOperationException("文件成功结算时活动运行已变化。");
-            active.NodeResults.Add(result);
-            active.ConfirmedEffects.Add(effect);
-            active.CompletedTaskAddresses.Add(task.TaskAddress);
-            ReplaceActiveRecord(candidate, active);
-            candidate.Ledger.Add(entry);
-            candidate.Sequence = checked(candidate.Sequence + 1);
-            using var cleanup = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-            try { await _store.SaveStateAsync(candidate, cleanup.Token).ConfigureAwait(false); }
-            catch (Exception ex)
+            // 先按运行集合投影再追加，不能使用投影在最后的 PersistStateAsync，否则追加内容会被覆盖。
+            await _runState.MutateAsync(candidate =>
             {
-                Volatile.Write(ref _persistenceFailure, ex);
-                lock (state.SyncRoot)
+                // 1. 进入提交前仍须未取消
+                ct.ThrowIfCancellationRequested();
+                // 2. 活动运行记录由本次投影新建，直接追加结果与确认事件
+                ProjectRuns(candidate, null);
+                if (candidate.ActiveRun is not { } active || active.RunId != state.RunId)
+                    throw new InvalidOperationException("文件成功结算时活动运行已变化。");
+                active.NodeResults.Add(result);
+                active.ConfirmedEffects.Add(effect);
+                active.CompletedTaskAddresses.Add(task.TaskAddress);
+                // 3. 账本每个（作用域，文件）只保留最新一条，明细留在运行历史的确认事件中
+                PuloniaCollectionCooldown.PutLatest(candidate.Ledger, entry);
+                prepared = true;
+            }, cleanup.Token, committed: () =>
+            {
+                // 落盘成功后在同一状态门内更新内存，后续写入的活动运行一定包含这次成功。
+                lock (_runsGate)
                 {
-                    state.RequiresAttention = true;
-                    state.HasFinalFailure = true;
-                    state.Message = "采集文件成功记录写盘失败，已停止自动运行：" + ex.Message;
+                    state.NodeResults.Add(result);
+                    state.ConfirmedEffects.Add(effect);
+                    state.CompletedTaskAddresses.Add(task.TaskAddress);
                 }
-                throw new InvalidOperationException(state.Message, ex);
-            }
-            _persistentState = candidate;
-            lock (state.SyncRoot)
-            {
-                state.NodeResults.Add(result);
-                state.ConfirmedEffects.Add(effect);
-                state.CompletedTaskAddresses.Add(task.TaskAddress);
-            }
+            }).ConfigureAwait(false);
         }
-        finally { _stateGate.Release(); }
+        catch (Exception ex) when (prepared)
+        {
+            // 写盘失败（含超时）：熔断自动运行，成功不能被当作可重试的普通节点失败。
+            _runState.ReportFailure(ex);
+            var message = "采集文件成功记录写盘失败，已停止自动运行：" + ex.Message;
+            lock (_runsGate)
+                state.Message = message;
+            throw new InvalidOperationException(message, ex);
+        }
         RaiseRunChanged(state.RunId);
     }
 }

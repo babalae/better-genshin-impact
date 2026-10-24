@@ -1,12 +1,10 @@
 using System;
-using System.IO;
-using System.Threading.Tasks;
 using BetterGenshinImpact.Pulonia.Remote;
 
 namespace BetterGenshinImpact.Service.Instance.MessageHandlers;
 
 /// <summary>
-/// pulonia.node.* 请求的处理：子实例接受主实例派发的节点启动与取消，主实例接收子实例的完成事件与结束回报。
+/// pulonia.node.* 请求的处理：子实例接受主实例派发的节点启动与取消，主实例接收子实例的结束回报。
 /// 处理方法都快速返回，节点执行在后台进行，不阻塞连接的接收循环
 /// </summary>
 internal sealed class PuloniaRemoteMessageHandler
@@ -61,33 +59,6 @@ internal sealed class PuloniaRemoteMessageHandler
         var cancel = request.Data?.ToObject<PuloniaRemoteNodeCancel>(InstanceIpcProtocol.Serializer)
                      ?? throw new ArgumentException("Pulonia 节点取消请求缺少数据。");
         _nodeHost().Cancel(cancel.ExecutionId);
-        return InstanceIpcEnvelope.Response(request);
-    }
-
-    /// <summary>
-    /// 主实例：把完成事件交给协调器落盘，成功后才确认；落盘被拒绝时返回失败，子实例的执行器随之失败
-    /// </summary>
-    internal async Task<InstanceIpcEnvelope> HandleNodeReportAsync(InstanceConnection connection, InstanceIpcEnvelope request)
-    {
-        var source = RequireReportFromChild(connection);
-        var report = request.Data?.ToObject<PuloniaRemoteNodeReport>(InstanceIpcProtocol.Serializer)
-                     ?? throw new ArgumentException("Pulonia 完成事件缺少数据。");
-        try
-        {
-            await _broker().ReceiveReportAsync(source.ProcessId, report).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException exception)
-        {
-            // 取消类异常会被接收循环当作断线处理，这里转成可回报的超时
-            throw new TimeoutException("完成事件落盘超时。", exception);
-        }
-        catch (Exception exception) when (exception is not (ArgumentException or InvalidOperationException
-                                              or IOException or TimeoutException))
-        {
-            // 校验与序列化异常也要转成失败响应，未列出的异常类型会终止连接的接收循环
-            throw new InvalidOperationException(exception.Message, exception);
-        }
-
         return InstanceIpcEnvelope.Response(request);
     }
 

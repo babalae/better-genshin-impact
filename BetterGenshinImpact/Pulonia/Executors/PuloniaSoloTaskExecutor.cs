@@ -7,7 +7,6 @@ using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.GameTask.AutoBoss;
 using BetterGenshinImpact.GameTask.AutoDomain;
-using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
 using Newtonsoft.Json;
@@ -114,9 +113,10 @@ public sealed class PuloniaSoloTaskExecutor : IPuloniaTaskExecutor
 
         // 1. 每周安排：按服务器四点日切取当天配置，只合并本节点的参数，不修改计划
         var values = (JObject)task.Parameters.DeepClone();
+        var gameDay = PuloniaServerTime.GetGameDate(DateTimeOffset.UtcNow, PuloniaServerTime.GetUtcOffset()).DayOfWeek;
         if (values.Value<bool?>(WeekdayOverridesEnabledParameter) != false
             && values[WeekdayOverridesParameter] is JObject weekly
-            && weekly[((int)ServerTimeHelper.GetServerTimeNow().AddHours(-4).DayOfWeek).ToString()] is JObject today)
+            && weekly[((int)gameDay).ToString()] is JObject today)
         {
             if (today.Value<bool?>("enabled") == false)
             {

@@ -36,8 +36,11 @@ public sealed class PuloniaTaskHotkeyTests : IDisposable
     [InlineData(HotKeyTypeEnum.KeyboardMonitor, "XButton1")]
     [InlineData(HotKeyTypeEnum.KeyboardMonitor, "XButton2")]
     public void Validation_AcceptsSupportedInputs(HotKeyTypeEnum type, string hotkey)
-        => PuloniaTaskSchedule.Validate(new PuloniaTaskTrigger
-        { Kind = PuloniaTaskTriggerKind.Hotkey, HotkeyType = type, Hotkey = hotkey });
+    {
+        var trigger = new PuloniaTaskTrigger { Kind = PuloniaTaskTriggerKind.Hotkey, HotkeyType = type, Hotkey = hotkey };
+        PuloniaTaskSchedule.Validate(trigger);
+        PuloniaTaskHotkeyValidator.Validate(trigger);
+    }
 
     /// <summary>拒绝模式不兼容、修饰键单独使用及无效枚举键，不能保存后静默失效。</summary>
     [Theory]
@@ -51,8 +54,20 @@ public sealed class PuloniaTaskHotkeyTests : IDisposable
     [InlineData(HotKeyTypeEnum.KeyboardMonitor, "< None >")]
     [InlineData((HotKeyTypeEnum)100, "F8")]
     public void Validation_RejectsUnsupportedInputs(HotKeyTypeEnum type, string hotkey)
-        => Assert.Throws<FormatException>(() => PuloniaTaskSchedule.Validate(new PuloniaTaskTrigger
+        => Assert.Throws<FormatException>(() => PuloniaTaskHotkeyValidator.Validate(new PuloniaTaskTrigger
         { Kind = PuloniaTaskTriggerKind.Hotkey, HotkeyType = type, Hotkey = hotkey }));
+
+    /// <summary>计划校验只确认热键配置存在，键位组合留给热键入口检查，调度层不依赖 WPF 输入类型。</summary>
+    [Fact]
+    public void PlanValidation_LeavesKeyCombinationToHotkeyEntry()
+    {
+        PuloniaTaskSchedule.Validate(new PuloniaTaskTrigger
+            { Kind = PuloniaTaskTriggerKind.Hotkey, HotkeyType = HotKeyTypeEnum.KeyboardMonitor, Hotkey = "Ctrl + F8" });
+        Assert.Throws<FormatException>(() => PuloniaTaskSchedule.Validate(new PuloniaTaskTrigger
+            { Kind = PuloniaTaskTriggerKind.Hotkey, Hotkey = " " }));
+        Assert.Throws<FormatException>(() => PuloniaTaskSchedule.Validate(new PuloniaTaskTrigger
+            { Kind = PuloniaTaskTriggerKind.Hotkey, HotkeyType = (HotKeyTypeEnum)100, Hotkey = "F8" }));
+    }
 
     /// <summary>快捷键类型作为普通配置字段持久化，展示文本始终使用实际快捷键。</summary>
     [Fact]
@@ -111,25 +126,26 @@ public sealed class PuloniaTaskHotkeyTests : IDisposable
         var trigger = new PuloniaTaskTrigger();
         var plan = await store.SavePlanAsync(new PuloniaTaskPlan { Triggers = [trigger] });
         await using var service = CreateService(store);
-        var page = new PuloniaTaskPlanViewModel(store, new PuloniaTaskClipboardService(), service,
-            new PuloniaTaskResourceCatalog(), new PuloniaTaskHistoryViewModel(service, store));
+        var page = new PuloniaTaskPlanViewModel(
+            new PuloniaPlanEditingSession(store, new PuloniaTaskClipboardService(), service, new PuloniaTaskResourceCatalog()),
+            new PuloniaTaskHistoryViewModel(service, store));
         await page.InitializeCommand.ExecuteAsync(null);
-        var editor = page.TriggerEditor!;
+        var editor = page.TriggerSettings.TriggerEditor!;
         editor.WindowMinutes = "0";
         Assert.False(editor.IsValid);
 
-        await page.ToggleTriggerEnabledCommand.ExecuteAsync(Assert.Single(page.Triggers));
+        await page.TriggerSettings.ToggleTriggerEnabledCommand.ExecuteAsync(Assert.Single(page.TriggerSettings.Triggers));
         var saved = Assert.Single((await store.ListPlansAsync()).Single(value => value.Id == plan.Id).Triggers);
         Assert.True(saved.Enabled);
         Assert.Equal("0 4 * * *", saved.DisplayText);
         Assert.Equal("0 4 * * *", saved.Cron);
-        Assert.Same(editor, page.TriggerEditor);
+        Assert.Same(editor, page.TriggerSettings.TriggerEditor);
         Assert.Equal("0", editor.WindowMinutes);
         Assert.True(editor.Enabled);
 
-        await page.ToggleTriggerEnabledCommand.ExecuteAsync(Assert.Single(page.Triggers));
+        await page.TriggerSettings.ToggleTriggerEnabledCommand.ExecuteAsync(Assert.Single(page.TriggerSettings.Triggers));
         Assert.False(Assert.Single((await store.ListPlansAsync()).Single(value => value.Id == plan.Id).Triggers).Enabled);
-        Assert.Same(editor, page.TriggerEditor);
+        Assert.Same(editor, page.TriggerSettings.TriggerEditor);
         Assert.False(editor.Enabled);
     }
 
@@ -140,16 +156,17 @@ public sealed class PuloniaTaskHotkeyTests : IDisposable
         using var store = new PuloniaTaskStore(_directory);
         await store.SavePlanAsync(new PuloniaTaskPlan { Triggers = [new PuloniaTaskTrigger()] });
         await using var service = CreateService(store);
-        var page = new PuloniaTaskPlanViewModel(store, new PuloniaTaskClipboardService(), service,
-            new PuloniaTaskResourceCatalog(), new PuloniaTaskHistoryViewModel(service, store));
+        var page = new PuloniaTaskPlanViewModel(
+            new PuloniaPlanEditingSession(store, new PuloniaTaskClipboardService(), service, new PuloniaTaskResourceCatalog()),
+            new PuloniaTaskHistoryViewModel(service, store));
         await page.InitializeCommand.ExecuteAsync(null);
-        page.AddHotkeyTriggerCommand.Execute(null);
-        var editor = page.TriggerEditor!;
+        page.TriggerSettings.AddHotkeyTriggerCommand.Execute(null);
+        var editor = page.TriggerSettings.TriggerEditor!;
         Assert.Equal(HotKeyTypeEnum.KeyboardMonitor, editor.HotkeyType);
         editor.WindowMinutes = "120";
-        await page.ToggleTriggerEnabledCommand.ExecuteAsync(Assert.Single(page.Triggers));
-        Assert.Null(page.SelectedTrigger);
-        Assert.Same(editor, page.TriggerEditor);
+        await page.TriggerSettings.ToggleTriggerEnabledCommand.ExecuteAsync(Assert.Single(page.TriggerSettings.Triggers));
+        Assert.Null(page.TriggerSettings.SelectedTrigger);
+        Assert.Same(editor, page.TriggerSettings.TriggerEditor);
         Assert.Equal("120", editor.WindowMinutes);
         Assert.Single((await store.ListPlansAsync()).Single().Triggers);
     }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -9,11 +10,16 @@ using BetterGenshinImpact.Pulonia.Models;
 
 namespace BetterGenshinImpact.Pulonia.Services;
 
-/// <summary>复用计划存储的写锁、修订校验与原子替换保存原神账号目录。</summary>
+/// <summary>复用计划存储的写锁、修订校验与原子替换保存原神账号目录，并在目录保存成功后提交登录凭据。</summary>
 public sealed partial class PuloniaTaskStore
 {
     /// <summary>账号图片目录名，相对于 User/Pulonia。</summary>
     private const string AccountImageDirectoryName = "account-images";
+    /// <summary>Windows 凭据目标名前缀，后接账号 ID；同一账号的目标名固定，改密码时覆盖原条目。</summary>
+    private const string CredentialTargetPrefix = "BetterGenshinImpact.Pulonia.Account.";
+
+    /// <summary>登录凭据的保存位置；默认使用 Windows 凭据管理器，测试可替换为内存实现。</summary>
+    internal IPuloniaCredentialVault CredentialVault { get; init; } = new PuloniaWindowsCredentialVault();
 
     /// <summary>读取独立账号草稿；首次使用不要求创建任何账号。</summary>
     public async Task<PuloniaGenshinAccountSettings> LoadAccountSettingsAsync(CancellationToken ct = default)
@@ -23,12 +29,35 @@ public sealed partial class PuloniaTaskStore
         finally { _gate.Release(); }
     }
 
-    /// <summary>校验全部账号后一次耐久保存，失败时不替换界面草稿。</summary>
+    /// <summary>校验全部账号后一次耐久保存，不写入新的登录凭据；失败时不替换界面草稿。</summary>
+    /// <param name="settings">要保存的账号目录草稿，调用方对象不会被修改</param>
+    /// <param name="ct">取消令牌</param>
     public async Task<PuloniaGenshinAccountSettings> SaveAccountSettingsAsync(PuloniaGenshinAccountSettings settings,
         CancellationToken ct = default)
+        => (await SaveAccountSettingsAsync(settings, new Dictionary<string, (string UserName, string Password)>(), ct)
+            .ConfigureAwait(false)).Settings;
+
+    /// <summary>
+    /// 校验后先耐久保存账号目录，成功后再提交登录凭据：写入本次填写的凭据，删除目录不再引用的旧凭据。
+    /// 目录保存失败时不触碰任何凭据，不会留下孤立条目。
+    /// </summary>
+    /// <remarks>
+    /// 运行快照只记录凭据目标名，排队或续跑的运行在登录时读取当前凭据：改密码后旧运行使用新密码；
+    /// 账号被移除或改用不使用密码的登录方式后，旧运行也无法再用密码登录。
+    /// </remarks>
+    /// <param name="settings">要保存的账号目录草稿，调用方对象不会被修改</param>
+    /// <param name="credentials">以账号 ID 为键的新登录凭据；未列出的账号保留已保存凭据</param>
+    /// <param name="ct">取消令牌；目录写入完成后不再响应，确保凭据与目录一致</param>
+    /// <returns>保存后的目录及凭据写入失败说明</returns>
+    public async Task<PuloniaGenshinAccountSaveResult> SaveAccountSettingsAsync(PuloniaGenshinAccountSettings settings,
+        IReadOnlyDictionary<string, (string UserName, string Password)> credentials, CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(credentials);
+        // 先复制凭据草稿：调用方（如关闭中的窗口）可能在保存期间清空自己的草稿，提交阶段必须与目录使用同一份内容。
+        credentials = new Dictionary<string, (string UserName, string Password)>(credentials, StringComparer.Ordinal);
         var candidate = PuloniaTaskJson.Read<PuloniaGenshinAccountSettings>(PuloniaTaskJson.Write(settings));
         ValidateAccountSettings(candidate);
+        ApplyCredentialReferences(candidate, credentials);
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
@@ -39,10 +68,70 @@ public sealed partial class PuloniaTaskStore
             candidate.Revision = checked(current.Revision + 1);
             await WriteAtomicallyAsync(Path.Combine(RootDirectory, "accounts.json"), PuloniaTaskJson.Write(candidate), ct)
                 .ConfigureAwait(false);
-            return candidate;
+            // 目录已耐久保存，此后才提交凭据；仍在写锁内，避免与下一次保存交错。
+            return new PuloniaGenshinAccountSaveResult(candidate, CommitCredentials(current, candidate, credentials));
         }
         finally { _gate.Release(); }
     }
+
+    /// <summary>
+    /// 按本次凭据草稿和登录方式确定每个账号的凭据引用：填写了凭据的账号指向固定目标名，
+    /// 不使用密码的登录方式（账号图片、列表文字）不保留引用，保存成功后删除其旧凭据。
+    /// </summary>
+    /// <param name="candidate">已通过校验的目录副本</param>
+    /// <param name="credentials">以账号 ID 为键的新登录凭据</param>
+    private static void ApplyCredentialReferences(PuloniaGenshinAccountSettings candidate,
+        IReadOnlyDictionary<string, (string UserName, string Password)> credentials)
+    {
+        foreach (var (id, credential) in credentials)
+        {
+            var account = candidate.Accounts.SingleOrDefault(item => item.Id == id && !item.IsDefault)
+                          ?? throw new InvalidOperationException("登录凭据对应的账号不存在，或为不需要登录资料的默认账号。");
+            if (string.IsNullOrWhiteSpace(credential.UserName) || string.IsNullOrEmpty(credential.Password))
+                throw new InvalidOperationException("保存登录凭据时必须同时填写账号和密码；无需更新凭据时请留空。");
+            if (!UsesPassword(account.LoginMode))
+                throw new InvalidOperationException($"账号“{account.Name}”的登录方式不使用密码，请清空账号和密码，或改用自动或账号密码方式。");
+            account.CredentialReference = GetCredentialTarget(account.Id);
+        }
+        foreach (var account in candidate.Accounts.Where(item => !UsesPassword(item.LoginMode)))
+            account.CredentialReference = null;
+    }
+
+    /// <summary>
+    /// 目录保存成功后提交凭据：先写入新凭据（同名覆盖），再删除旧目录引用而新目录不再引用的凭据。
+    /// </summary>
+    /// <param name="previous">保存前的耐久目录</param>
+    /// <param name="saved">刚保存的目录</param>
+    /// <param name="credentials">以账号 ID 为键的新登录凭据</param>
+    /// <returns>写入失败说明；全部成功时为空</returns>
+    private string? CommitCredentials(PuloniaGenshinAccountSettings previous, PuloniaGenshinAccountSettings saved,
+        IReadOnlyDictionary<string, (string UserName, string Password)> credentials)
+    {
+        var failures = new List<string>();
+        foreach (var (id, credential) in credentials)
+        {
+            var account = saved.Accounts.Single(item => item.Id == id);
+            try { CredentialVault.Write(account.CredentialReference!, credential.UserName, credential.Password); }
+            catch (Exception ex) { failures.Add($"“{account.Name}”：{ex.Message}"); }
+        }
+        // 账号被移除或改用无密码方式后，旧凭据不再被目录引用；删除是尽力而为，遗留条目不影响登录。
+        var referenced = saved.Accounts.Select(item => item.CredentialReference).OfType<string>().ToHashSet(StringComparer.Ordinal);
+        foreach (var target in previous.Accounts.Select(item => item.CredentialReference).OfType<string>()
+                     .Where(target => !referenced.Contains(target)).Distinct(StringComparer.Ordinal))
+            CredentialVault.Delete(target);
+        return failures.Count == 0
+            ? null
+            : "以下账号的登录凭据未能写入，请重新填写后保存：" + string.Join("；", failures);
+    }
+
+    /// <summary>登录方式是否可能使用密码；自动方式把密码作为图片和列表文字之后的备用。</summary>
+    /// <param name="mode">账号的登录方式</param>
+    private static bool UsesPassword(PuloniaGenshinAccountLoginMode mode)
+        => mode is PuloniaGenshinAccountLoginMode.Automatic or PuloniaGenshinAccountLoginMode.Password;
+
+    /// <summary>账号固定的 Windows 凭据目标名。</summary>
+    /// <param name="accountId">账号 ID</param>
+    internal static string GetCredentialTarget(string accountId) => CredentialTargetPrefix + accountId;
 
     /// <summary>读取耐久资料；损坏时明确报错，不能偷偷换成默认账号。</summary>
     private async Task<PuloniaGenshinAccountSettings> ReadAccountSettingsAsync(CancellationToken ct)

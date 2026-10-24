@@ -124,22 +124,6 @@ public sealed class PuloniaRemoteNodeCancel
 }
 
 /// <summary>
-/// pulonia.node.report：子实例转发执行器提交的完成事件，主实例写入账本后才确认
-/// </summary>
-public sealed class PuloniaRemoteNodeReport
-{
-    /// <summary>
-    /// 所属远程执行标识
-    /// </summary>
-    public Guid ExecutionId { get; init; }
-
-    /// <summary>
-    /// 完成事件 JSON（PuloniaTaskCompletionEvent）
-    /// </summary>
-    public string EventJson { get; init; } = string.Empty;
-}
-
-/// <summary>
 /// pulonia.node.finished：子实例回报节点结束
 /// </summary>
 public sealed class PuloniaRemoteNodeFinished

@@ -91,8 +91,9 @@ public sealed class PuloniaSoloTaskMenuTests : IDisposable
         await using var service = new PuloniaTaskService(store, new PuloniaTaskBuilder(store),
             [new PuloniaDefinitionOnlyExecutor(PuloniaSoloTestDefinitions.OneDragonCandidates())],
             new PuloniaGameTaskCoordinator(null!), new TaskStopService(NullLogger<TaskStopService>.Instance));
-        var page = new PuloniaTaskPlanViewModel(store, new PuloniaTaskClipboardService(), service,
-            new PuloniaTaskResourceCatalog(), new PuloniaTaskHistoryViewModel(service, store));
+        var page = new PuloniaTaskPlanViewModel(
+            new PuloniaPlanEditingSession(store, new PuloniaTaskClipboardService(), service, new PuloniaTaskResourceCatalog()),
+            new PuloniaTaskHistoryViewModel(service, store));
         var document = new PuloniaTaskPlanDocumentViewModel(new PuloniaTaskPlan
         {
             Name = "菜单计划",
@@ -122,8 +123,9 @@ public sealed class PuloniaSoloTaskMenuTests : IDisposable
         await using var service = new PuloniaTaskService(store, new PuloniaTaskBuilder(store),
             [new PuloniaDefinitionOnlyExecutor(PuloniaSoloTestDefinitions.OneDragonCandidates())],
             new PuloniaGameTaskCoordinator(null!), new TaskStopService(NullLogger<TaskStopService>.Instance));
-        var page = new PuloniaTaskPlanViewModel(store, new PuloniaTaskClipboardService(), service,
-            new PuloniaTaskResourceCatalog(), new PuloniaTaskHistoryViewModel(service, store));
+        var page = new PuloniaTaskPlanViewModel(
+            new PuloniaPlanEditingSession(store, new PuloniaTaskClipboardService(), service, new PuloniaTaskResourceCatalog()),
+            new PuloniaTaskHistoryViewModel(service, store));
         var document = new PuloniaTaskPlanDocumentViewModel(new PuloniaTaskPlan
         {
             Name = "菜单计划",

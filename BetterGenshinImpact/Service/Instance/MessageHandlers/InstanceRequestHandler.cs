@@ -116,8 +116,6 @@ internal sealed class InstanceRequestHandler
                     _puloniaRemoteMessageHandler.HandleNodeStart(connection, request),
                 InstanceOperations.PuloniaNodeCancel =>
                     _puloniaRemoteMessageHandler.HandleNodeCancel(connection, request),
-                InstanceOperations.PuloniaNodeReport =>
-                    await _puloniaRemoteMessageHandler.HandleNodeReportAsync(connection, request).ConfigureAwait(false),
                 InstanceOperations.PuloniaNodeFinished =>
                     _puloniaRemoteMessageHandler.HandleNodeFinished(connection, request),
                 _ => InstanceIpcEnvelope.Failure(

@@ -19,18 +19,10 @@ public sealed class PuloniaTaskRequest
     /// </summary>
     public string? AccountId { get; init; }
 
-    /// <summary>
-    /// 可选世界拥有者账号 ID；联机采集时用于与实际世界隔离。
-    /// </summary>
-    public string? WorldOwnerAccountId { get; init; }
 
     /// <summary>
-    /// 服务器稳定标识，参与账号和世界作用域键。
-    /// </summary>
-    public string Server { get; init; } = "cn";
-
-    /// <summary>
-    /// 服务器相对 UTC 的分钟偏移，用于计算日、周、月重置窗口。
+    /// 服务器相对 UTC 的分钟偏移，用于计算采集 CD 的日、周重置窗口。
+    /// 新运行入队时由任务服务按应用配置的服务器时区（ServerTimeHelper）统一填写，调用方的取值会被覆盖；续跑沿用原请求。
     /// </summary>
     public int ServerUtcOffsetMinutes { get; init; } = 8 * 60;
 

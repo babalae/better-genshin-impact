@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.ViewModel.Windows.Pulonia;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Newtonsoft.Json;
@@ -79,39 +80,9 @@ public partial class PuloniaOneDragonParameterFieldViewModel : ObservableObject
         bool required = false)
     {
         Name = name;
+        // 战斗对象等子设置来自强类型配置，键可能是帕斯卡命名，先转为蛇形再查共用中文名。
         var displayKey = System.Text.Json.JsonNamingPolicy.SnakeCaseLower.ConvertName(name);
-        DisplayName = schema.Value<string>("title") ?? displayKey switch
-        {
-            "team_names" => "战斗队伍", "fight_finish_detect_enabled" => "检测战斗结束",
-            "finish_detect_config" => "战斗结束检测", "action_scheduler_by_cd" => "按冷却调度动作",
-            "only_pick_elite_drops_mode" => "精英掉落拾取模式", "pick_drops_after_fight_enabled" => "战斗后拾取掉落物",
-            "pick_drops_after_fight_seconds" => "战斗后拾取时长（秒）", "fast_check_enabled" => "快速结束检测",
-            "rotate_find_enemy_enabled" => "旋转寻找敌人", "fast_check_params" => "快速检测参数",
-            "check_after_switch_avatar" => "切换角色后检测", "check_end_delay" => "结束检测延时",
-            "before_detect_delay" => "检测前延时", "rotary_factor" => "旋转幅度",
-            "is_first_check" => "首次检测", "check_before_burst" => "施放元素爆发前检测",
-            "skip_fight_end_check_when_enemy_visible" => "敌人可见时跳过结束检测",
-            "block_check_before_battle_seconds" => "战斗开始后暂缓检测（秒）",
-            "paimon_end_check_enabled" => "派蒙图标辅助结束检测", "paimon_end_check_delay" => "派蒙检测延时（秒）",
-            "battle_threshold_for_loot" => "拾取前战斗次数", "kazuha_pickup_enabled" => "万叶辅助拾取",
-            "qin_double_pick_up" => "琴二次拾取", "guardian_avatar" => "保护角色",
-            "guardian_combat_skip" => "保护角色跳过战斗", "guardian_avatar_hold" => "保护角色长按技能",
-            "burst_enabled" => "使用元素爆发", "kazuha_party_name" => "万叶拾取队伍",
-            "swimming_enabled" => "游泳辅助", "exp_based_pickup_enabled" => "根据经验识别拾取",
-            "enable_combat_targeting" => "战斗目标锁定", "lock_lost_wait_time" => "目标丢失等待（秒）",
-            "domain_round_num" => "秘境刷取轮数", "min_resin_to_keep" => "合成后保留原粹树脂",
-            "weekday_overrides_enabled" => "启用每周安排",
-            "seek_enemy_enabled" => "旋转寻找敌人", "seek_enemy_interval_seconds" => "寻敌间隔（秒）",
-            "seek_enemy_rotary_factor" => "寻敌旋转幅度", "targeting_detection_interval" => "索敌识别间隔（毫秒）",
-            "damage_number_recognition_mode" => "伤害数字识别方式", "draw_recognition_results" => "显示识别结果边框",
-            "wood_round_num" => "伐木轮数", "wood_daily_max_count" => "每日伐木上限",
-            "whole_process_timeout_seconds" => "钓鱼流程超时（秒）", "throw_rod_time_out_timeout_seconds" => "抛竿超时（秒）",
-            "fishing_time_policy" => "钓鱼时段", "save_screenshot_on_key_tick" => "保存钓鱼关键步骤截图",
-            "star" => "圣遗物最高星级", "java_script" => "分解筛选脚本", "artifact_set_filter" => "圣遗物套装筛选",
-            "max_num_to_check" => "最多检查数量", "recognition_failure_policy" => "识别失败时的处理方式",
-            "codes" => "兑换码列表",
-            _ => PuloniaTaskParameterFieldViewModel.GetDisplayName(displayKey)
-        };
+        DisplayName = schema.Value<string>("title") ?? PuloniaTaskFieldNames.GetDisplayName(displayKey);
         _original = value?.DeepClone();
         _scalar = new(name, schema, value, value is not null, required);
         Description = schema.Value<string>("description") ?? (required ? "请选择或填写此项设置。" : "未修改的设置继续使用参数来源中的值。");

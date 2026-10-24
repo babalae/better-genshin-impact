@@ -119,32 +119,59 @@ public static class PuloniaCollectionCooldown
         if (policy.Mode == "rolling") return succeededAt.AddHours(policy.Hours).ToUniversalTime();
         var offset = TimeSpan.FromMinutes(serverUtcOffsetMinutes);
         var local = succeededAt.ToOffset(offset);
+        // 日期间隔按服务器时区的午夜保守估算，不按游戏日切换。
         if (policy.Mode == "calendar_days")
             return new DateTimeOffset(local.Date.AddDays(policy.Days), offset).ToUniversalTime();
         if (policy.Mode is not ("daily" or "weekly")) return null;
-        var boundary = new DateTimeOffset(local.Date.AddHours(policy.ResetHour), offset);
+        // 下一游戏日开始的那一刻就是每日边界；成功恰在边界上时属于新的游戏日，下次边界顺延一天。
+        var next = PuloniaServerTime.GetGameDate(succeededAt, offset, policy.ResetHour).AddDays(1);
+        // 每周边界再顺延到指定星期（ResetWeekday：1 为周一、7 为周日）。
         if (policy.Mode == "weekly")
-            boundary = boundary.AddDays((policy.ResetWeekday % 7 - (int)boundary.DayOfWeek + 7) % 7);
-        if (boundary <= local) boundary = boundary.AddDays(policy.Mode == "weekly" ? 7 : 1);
-        return boundary.ToUniversalTime();
+            next = next.AddDays((policy.ResetWeekday % 7 - (int)next.DayOfWeek + 7) % 7);
+        return new DateTimeOffset(next.AddHours(policy.ResetHour), offset).ToUniversalTime();
     }
 
+    /// <summary>
+    /// 采集作用域键的固定前缀；格式沿用 <c>cn/world/{身份}</c>，已有账本记录的键仍然有效。
+    /// </summary>
+    public const string ScopeKeyPrefix = "cn/world/";
+
+    /// <summary>
+    /// 未切换账号（默认账号或没有账号准备）时的作用域身份：代表“当前登录账号”，普通计划与一条龙默认账号共用。
+    /// </summary>
+    public const string DefaultScopeIdentity = "default";
+
+    /// <summary>
+    /// 建立采集记录所属世界的作用域键，不依赖计划名、节点 ID 或账号资料 ID。
+    /// 同一真实账号在普通计划与一条龙之间共享 CD：未切换账号时都用 <see cref="DefaultScopeIdentity"/>，切换到指定账号时用核验后的 UID。
+    /// </summary>
+    /// <param name="switchedAccountUid">切换到指定账号后核验的实际 UID；未切换账号时为空。</param>
+    /// <returns>作用域键。</returns>
+    public static string BuildScopeKey(string? switchedAccountUid = null)
+        => ScopeKeyPrefix + (switchedAccountUid ?? DefaultScopeIdentity);
+
     /// <summary>查询最新成功事实，规则修改后始终从原成功时间重新计算。</summary>
-    internal static PuloniaTaskAvailabilityDecision Evaluate(PuloniaCollectionCooldownPolicy policy,
+    /// <param name="policy">本节点固定的采集规则。</param>
+    /// <param name="request">本次运行请求，提供服务器时区偏移。</param>
+    /// <param name="ledger">当前账本。</param>
+    /// <param name="now">判断时刻。</param>
+    /// <param name="data">写入节点结果的机器可读说明。</param>
+    /// <param name="switchedAccountUid">切换到指定账号后核验的实际 UID；未切换账号时为空。</param>
+    internal static PuloniaCollectionCooldownDecision Evaluate(PuloniaCollectionCooldownPolicy policy,
         PuloniaTaskRequest request, IEnumerable<PuloniaTaskLedgerEntry> ledger, DateTimeOffset now,
-        out JObject data, string? verifiedUid = null)
+        out JObject data, string? switchedAccountUid = null)
     {
-        var scope = PuloniaTaskAvailability.BuildScopeKey(request, PuloniaTaskScopeKind.World, verifiedUid);
+        var scope = BuildScopeKey(switchedAccountUid);
         var key = GetEffectKey(policy);
         var latest = ledger.Where(entry => entry.ScopeKey == scope && entry.EffectKey == key)
             .OrderByDescending(entry => entry.OccurredAt).FirstOrDefault();
         var next = latest is null ? null : GetNextEligibleAt(policy, latest.OccurredAt, request.ServerUtcOffsetMinutes);
         data = Describe(policy, latest?.OccurredAt, next);
         if (latest is not null && policy.Mode == "once")
-            return new(false, false, null, $"{policy.MaterialName ?? "路线"}为一次性任务，该文件已成功执行，已跳过。");
+            return new(false, null, $"{policy.MaterialName ?? "路线"}为一次性任务，该文件已成功执行，已跳过。");
         if (next > now)
-            return new(false, false, next, $"{policy.MaterialName ?? "路线"}仍在 CD，{next.Value.ToLocalTime():yyyy-MM-dd HH:mm:ss} 后可执行，已跳过。规则：{policy.Description}。");
-        return new(true, false, next, policy.Description);
+            return new(false, next, $"{policy.MaterialName ?? "路线"}仍在 CD，{next.Value.ToLocalTime():yyyy-MM-dd HH:mm:ss} 后可执行，已跳过。规则：{policy.Description}。");
+        return new(true, next, policy.Description);
     }
 
     /// <summary>固定本次规则和时间的机器可读说明，供历史和证据复用。</summary>
@@ -158,6 +185,18 @@ public static class PuloniaCollectionCooldown
             ["collection_next_eligible_at"] = next?.ToUniversalTime().ToString("O"),
             ["collection_basis"] = "按整份文件执行成功估算采集完成"
         };
+
+    /// <summary>
+    /// 把一次文件成功写入账本：同一（作用域，文件）只保留这条最新记录，旧记录的明细已在对应运行历史的确认事件中。
+    /// </summary>
+    /// <remarks>新成功总是刚刚发生，按“后写入即最新”替换，不处理系统时钟回拨造成的时间倒序。</remarks>
+    /// <param name="ledger">候选状态中的账本，会被直接修改。</param>
+    /// <param name="entry">本次成功事实。</param>
+    internal static void PutLatest(List<PuloniaTaskLedgerEntry> ledger, PuloniaTaskLedgerEntry entry)
+    {
+        ledger.RemoveAll(item => item.ScopeKey == entry.ScopeKey && item.EffectKey == entry.EffectKey);
+        ledger.Add(entry);
+    }
 
     /// <summary>建立刷新文档中的明确材料与别名；混合规则不猜测统一时长。</summary>
     private static IReadOnlyDictionary<string, (string Mode, double Hours, int Days, bool Reference)> CreateRules()
@@ -185,3 +224,11 @@ public static class PuloniaCollectionCooldown
         }
     }
 }
+
+/// <summary>
+/// 一次执行前的文件级采集 CD 判断结果。
+/// </summary>
+/// <param name="IsAllowed">当前是否允许执行。</param>
+/// <param name="NextEligibleAt">已知的下次可执行时间。</param>
+/// <param name="Message">面向用户的判断原因。</param>
+internal sealed record PuloniaCollectionCooldownDecision(bool IsAllowed, DateTimeOffset? NextEligibleAt, string Message);

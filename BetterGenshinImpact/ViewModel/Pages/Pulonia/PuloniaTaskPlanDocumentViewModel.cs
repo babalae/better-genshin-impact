@@ -1,12 +1,11 @@
 using System;
 using BetterGenshinImpact.Core.Script.Repositories;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
-using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json;
@@ -48,14 +47,19 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     private readonly List<string> _undoSnapshots = [];
 
     /// <summary>
+    /// 最近一次可合并编辑的标识；连续提交相同标识的编辑（例如逐字输入同一设置）只保留一次撤销快照。
+    /// </summary>
+    private string? _lastUndoMergeKey;
+
+    /// <summary>
     /// 最近一次成功读取或保存后的内容快照；新计划为 null。
     /// </summary>
     private string? _savedSnapshot;
 
     /// <summary>
-    /// 刷新编辑器控件时阻止选项回写模型。
+    /// 已折叠的节点 ID；属于编辑器界面状态，不写入计划、不进入撤销或运行快照。
     /// </summary>
-    private bool _isRefreshingEditor;
+    private readonly HashSet<string> _collapsedNodeIds = new(StringComparer.Ordinal);
 
     /// <summary>当前计划（含计划引用）的待更新资源数，由页面检查结果更新，不持久化提示状态。</summary>
     [ObservableProperty]
@@ -80,17 +84,20 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     /// <summary>按稳定树顺序枚举节点，供资源检查和卡片批量确认使用。</summary>
     public IEnumerable<PuloniaTaskNodeViewModel> EnumerateNodes() => Flatten(RootNode);
 
-    /// <summary>以一次可撤销编辑更新本计划全部指定资源，并返回仅供保存失败时使用的回滚操作。</summary>
-    public Action ApplyConfirmedResourceVersions(IReadOnlyDictionary<string, string> versions,
+    /// <summary>
+    /// 以一次可撤销编辑更新本计划全部指定资源。
+    /// 保存失败时不自动回滚：新引用留在草稿中并显示 LastSaveError，用户可以撤销本次更新或稍后重试保存。
+    /// </summary>
+    public void ApplyConfirmedResourceVersions(IReadOnlyDictionary<string, string> versions,
         IReadOnlyDictionary<string, ScriptResourceReference?>? references = null)
     {
+        // 节点被删除、改了路径或来源（会清空检查结果）时拒绝整批，不部分更新同一计划。
         var nodes = EnumerateNodes().Where(node => versions.ContainsKey(node.Id)).ToArray();
         if (nodes.Length != versions.Count || nodes.Any(node => !node.CanUpdateResourceVersion
             || node.ResourceCheckError is not null || node.CurrentResourceVersion != versions[node.Id]))
             throw new InvalidOperationException("资源检查结果已经变化，请重新检查并确认。");
         if (nodes.Length == 0)
-            return static () => { };
-        var rollbackSnapshot = SerializeForHistory(_plan);
+            return;
         // 全部校验通过后才一起更新模型，保留任务参数、开关、目录引用和原执行历史。
         ApplyMutation(() =>
         {
@@ -110,26 +117,6 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
         }, SelectedNode);
         foreach (var node in nodes)
             node.NotifyResourceVersionChanged();
-        var appliedSnapshot = SerializeForHistory(_plan);
-        return () =>
-        {
-            // 批量保存期间页面处于忙碌状态；仍校验完整快照，避免覆盖意外插入的新编辑。
-            if (SerializeForHistory(_plan) != appliedSnapshot)
-                throw new InvalidOperationException("保存失败后任务配置又发生变化，无法自动恢复旧资源引用。");
-            var currentRevision = _plan.Revision;
-            var saveError = LastSaveError;
-            _plan = DeserializeHistory(rollbackSnapshot);
-            _plan.Revision = currentRevision;
-            if (_undoSnapshots.Count > 0 && _undoSnapshots[^1] == rollbackSnapshot)
-                _undoSnapshots.RemoveAt(_undoSnapshots.Count - 1);
-            RebuildTree(SelectedNode?.Id);
-            LastSaveError = saveError;
-            UpdateDirtyState();
-            OnPropertyChanged(nameof(Revision));
-            UndoCommand.NotifyCanExecuteChanged();
-            Changed?.Invoke(this, EventArgs.Empty);
-            ContentChanged?.Invoke(this, EventArgs.Empty);
-        };
     }
 
     /// <summary>
@@ -151,52 +138,12 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     private string? _lastSaveError;
 
     /// <summary>
-    /// 参数或分组公共覆盖的 JSON 编辑文本。
-    /// </summary>
-    [ObservableProperty]
-    private string _parameterJson = "{}";
-
-    /// <summary>
-    /// 执行策略的 JSON 编辑文本。
-    /// </summary>
-    [ObservableProperty]
-    private string _policyJson = "{}";
-
-    /// <summary>
-    /// 目录或计划引用来源的 JSON 编辑文本。
-    /// </summary>
-    [ObservableProperty]
-    private string _sourceJson = string.Empty;
-
-    /// <summary>
-    /// 参数编辑器当前选择的共享预设。
-    /// </summary>
-    [ObservableProperty]
-    private PuloniaTaskPresetOptionViewModel? _selectedPresetOption;
-
-    /// <summary>
-    /// 参数编辑区域最近一次解析或应用结果。
-    /// </summary>
-    [ObservableProperty]
-    private string? _editorMessage;
-
-    /// <summary>
     /// 计划的内部根节点；界面只展示其子节点，空白区域命令以该节点为插入目标。
     /// </summary>
     public PuloniaTaskNodeViewModel RootNode { get; private set; } = null!;
 
     /// <summary>
-    /// 当前节点可选择的共享预设。
-    /// </summary>
-    public ObservableCollection<PuloniaTaskPresetOptionViewModel> PresetOptions { get; } = [];
-
-    /// <summary>
-    /// 当前叶子节点的有效参数和来源预览。
-    /// </summary>
-    public ObservableCollection<PuloniaTaskEffectiveParameterViewModel> EffectiveParameters { get; } = [];
-
-    /// <summary>
-    /// 文档内容或选择发生变化时通知页面刷新跨文档命令状态。
+    /// 文档内容、选择或保存状态发生变化时通知页面刷新跨文档命令状态。
     /// </summary>
     public event EventHandler? Changed;
 
@@ -204,6 +151,21 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     /// 计划持久化内容发生变化时通知页面安排自动保存；纯选择变化不会触发。
     /// </summary>
     public event EventHandler? ContentChanged;
+
+    /// <summary>
+    /// 节点展开或折叠后通知编辑会话保存界面状态；不改变计划内容。
+    /// </summary>
+    internal event EventHandler? ViewStateChanged;
+
+    /// <summary>
+    /// 共享预设列表刷新后通知打开中的高级设置窗口重新读取预设选项与来源。
+    /// </summary>
+    internal event EventHandler? PresetsChanged;
+
+    /// <summary>
+    /// 本计划独立的保存门，确保同一计划的修订始终按顺序写入；删除后不释放，排队的保存通过 <see cref="IsDeleted"/> 退出。
+    /// </summary>
+    internal SemaphoreSlim SaveGate { get; } = new(1, 1);
 
     /// <summary>
     /// 当前编辑模型，仅供保存服务使用。
@@ -274,68 +236,68 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     public bool CanUndo => _undoSnapshots.Count > 0;
 
     /// <summary>
-    /// 当前节点是否允许选择预设。
-    /// </summary>
-    public bool CanSelectPreset => SelectedNode?.IsLeaf == true;
-
-    /// <summary>
-    /// 当前节点是否允许编辑资源定位。
-    /// </summary>
-    public bool CanEditPath => SelectedNode?.IsLeaf == true && SelectedNode.Model.Resource is null;
-
-    /// <summary>
-    /// 当前节点是否存在来源配置。
-    /// </summary>
-    public bool HasSource => SelectedNode?.Model.Source is not null;
-
-    /// <summary>
-    /// 当前参数编辑框的内容说明。
-    /// </summary>
-    public string ParameterEditorTitle => SelectedNode?.TaskType == "group"
-        ? "分组公共参数覆盖（JSON 数组）"
-        : "节点参数（JSON 对象）";
-
-    /// <summary>
     /// 建立一个已加载或新建的计划编辑会话。
     /// </summary>
+    /// <param name="plan">计划模型。</param>
+    /// <param name="presets">可用共享预设。</param>
+    /// <param name="clipboard">跨计划剪贴板。</param>
+    /// <param name="isNew">是否为尚未保存的新计划。</param>
+    /// <param name="collapsedNodeIds">编辑器记录的已折叠节点；为空时全部展开。</param>
     public PuloniaTaskPlanDocumentViewModel(PuloniaTaskPlan plan, IReadOnlyList<PuloniaTaskPreset> presets,
-        PuloniaTaskClipboardService clipboard, bool isNew)
+        PuloniaTaskClipboardService clipboard, bool isNew, IEnumerable<string>? collapsedNodeIds = null)
     {
         _plan = plan;
         _presets = presets;
         _clipboard = clipboard;
         _savedSnapshot = isNew ? null : SerializeForHistory(plan);
+        if (collapsedNodeIds is not null)
+            _collapsedNodeIds.UnionWith(collapsedNodeIds);
         RebuildTree(plan.RootTask.Id);
         IsDirty = isNew;
     }
 
     /// <summary>
+    /// 指定节点在任务树中是否展开；未记录的节点默认展开。
+    /// </summary>
+    /// <param name="nodeId">节点 ID。</param>
+    internal bool IsNodeExpanded(string nodeId) => !_collapsedNodeIds.Contains(nodeId);
+
+    /// <summary>
+    /// 记录节点展开或折叠；只改变界面状态，不标记计划为已修改。
+    /// </summary>
+    /// <param name="nodeId">节点 ID。</param>
+    /// <param name="isExpanded">是否展开。</param>
+    internal void SetNodeExpanded(string nodeId, bool isExpanded)
+    {
+        var changed = isExpanded ? _collapsedNodeIds.Remove(nodeId) : _collapsedNodeIds.Add(nodeId);
+        if (changed)
+            ViewStateChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// 取得仍存在于当前树中的折叠节点 ID，已删除节点的旧记录随之丢弃。
+    /// </summary>
+    internal IReadOnlyCollection<string> GetCollapsedNodeIds()
+        => EnumerateNodes().Select(node => node.Id).Where(_collapsedNodeIds.Contains).Distinct(StringComparer.Ordinal).ToArray();
+
+    /// <summary>
     /// 在变更前记录快照并执行一次原子内存编辑。
     /// </summary>
-    internal void ApplyMutation(Action mutation, PuloniaTaskNodeViewModel? selection)
+    /// <param name="mutation">要执行的编辑。</param>
+    /// <param name="selection">编辑后选中的节点；为空时保持当前选择。</param>
+    /// <param name="undoMergeKey">可合并编辑的标识；与上一次编辑相同时不新增撤销快照，为空表示独立编辑。</param>
+    internal void ApplyMutation(Action mutation, PuloniaTaskNodeViewModel? selection, string? undoMergeKey = null)
     {
         ArgumentNullException.ThrowIfNull(mutation);
-        RecordUndoSnapshot();
+        if (undoMergeKey is null || undoMergeKey != _lastUndoMergeKey || _undoSnapshots.Count == 0)
+            RecordUndoSnapshot();
+        _lastUndoMergeKey = undoMergeKey;
         mutation();
         LastSaveError = null;
         UpdateDirtyState();
         if (selection is not null)
             SelectedNode = selection;
-        RefreshSelectedEditor();
         RefreshConfigurationSummaries();
-        Changed?.Invoke(this, EventArgs.Empty);
-        ContentChanged?.Invoke(this, EventArgs.Empty);
-    }
-
-    /// <summary>
-    /// 保存不进入撤销栈的界面状态，例如树节点展开状态。
-    /// </summary>
-    internal void ApplyViewStateMutation(Action mutation)
-    {
-        ArgumentNullException.ThrowIfNull(mutation);
-        mutation();
-        LastSaveError = null;
-        UpdateDirtyState();
         Changed?.Invoke(this, EventArgs.Empty);
         ContentChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -419,7 +381,6 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     internal void CopyNode(PuloniaTaskNodeViewModel node)
     {
         _clipboard.Set(Name, node.Model, CaptureEffectiveLeafParameters(node));
-        EditorMessage = $"已复制“{node.Name}”，可切换计划后粘贴。";
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
@@ -516,6 +477,7 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
         _plan = plan;
         _savedSnapshot = SerializeForHistory(plan);
         _undoSnapshots.Clear();
+        _lastUndoMergeKey = null;
         LastSaveError = null;
         RebuildTree(plan.RootTask.Id);
         UpdateDirtyState();
@@ -532,21 +494,19 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     internal void SetPresets(IReadOnlyList<PuloniaTaskPreset> presets)
     {
         _presets = presets;
-        RefreshSelectedEditor();
         RefreshConfigurationSummaries();
+        PresetsChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>更新能力定义并刷新有效设置，默认值不写入持久化草稿。</summary>
     internal void SetDefinitions(IReadOnlyList<PuloniaTaskDefinition> definitions)
     {
         _definitions = definitions;
-        RefreshSelectedEditor();
         RefreshConfigurationSummaries();
     }
 
-    /// <summary>按资源优先、通用类型其次选择能力，与运行构建保持相同顺序。</summary>
-    private PuloniaTaskDefinition? GetDefinition(PuloniaTask task) => _definitions.FirstOrDefault(d => d.TaskType == task.TaskType && d.ResourceId == task.ResourceKey)
-        ?? _definitions.FirstOrDefault(d => d.TaskType == task.TaskType && d.ResourceId is null);
+    /// <summary>按资源优先、通用类型其次选择能力，与运行构建共用同一查找规则。</summary>
+    private PuloniaTaskDefinition? GetDefinition(PuloniaTask task) => PuloniaParameterResolver.FindDefinition(_definitions, task);
 
     /// <summary>
     /// 设置保存失败信息而不丢弃当前内存草稿。
@@ -555,154 +515,6 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     {
         LastSaveError = message;
         Changed?.Invoke(this, EventArgs.Empty);
-    }
-
-    /// <summary>
-    /// 根据当前选中节点刷新 JSON、预设及有效参数预览。
-    /// </summary>
-    internal void RefreshSelectedEditor()
-    {
-        _isRefreshingEditor = true;
-        try
-        {
-            PresetOptions.Clear();
-            EffectiveParameters.Clear();
-            EditorMessage = null;
-            var node = SelectedNode;
-            if (node is null)
-            {
-                ParameterJson = "{}";
-                PolicyJson = "{}";
-                SourceJson = string.Empty;
-                SelectedPresetOption = null;
-                NotifyEditorPropertiesChanged();
-                return;
-            }
-
-            ParameterJson = node.TaskType == "group"
-                ? JArray.FromObject(node.Model.ParameterOverrides).ToString(Formatting.Indented)
-                : node.Model.Parameters.ToString(Formatting.Indented);
-            PolicyJson = JObject.FromObject(node.Model.Policy).ToString(Formatting.Indented);
-            SourceJson = node.Model.Source is null
-                ? string.Empty
-                : JObject.FromObject(node.Model.Source).ToString(Formatting.Indented);
-
-            PresetOptions.Add(new PuloniaTaskPresetOptionViewModel(null, "不使用共享预设"));
-            foreach (var preset in _presets.Where(preset => MatchesScope(preset.TaskType, preset.ResourceId, node.Model)
-                         && preset.SchemaVersion == (GetDefinition(node.Model)?.SchemaVersion ?? 1))
-                         .OrderBy(preset => preset.Name, StringComparer.CurrentCulture))
-                PresetOptions.Add(new PuloniaTaskPresetOptionViewModel(preset.Id, $"{preset.Name} · r{preset.Revision}"));
-            if (node.Model.PresetId is { } selectedPresetId
-                && PresetOptions.All(option => option.Id != selectedPresetId))
-            {
-                var knownPreset = _presets.FirstOrDefault(preset => preset.Id == selectedPresetId);
-                PresetOptions.Add(new PuloniaTaskPresetOptionViewModel(selectedPresetId,
-                    knownPreset is null
-                        ? $"⚠ 缺失预设：{selectedPresetId}"
-                        : $"⚠ 预设与节点不匹配：{knownPreset.Name}"));
-                EditorMessage = knownPreset is null
-                    ? "当前节点引用的共享预设不存在，保存草稿不会自动清除该引用。"
-                    : "当前共享预设的任务类型、资源或参数版本与节点不匹配，请重新选择。";
-            }
-            SelectedPresetOption = PresetOptions.FirstOrDefault(option => option.Id == node.Model.PresetId)
-                                   ?? PresetOptions[0];
-
-            if (node.IsLeaf)
-            {
-                var effective = ResolveEffectiveParameters(node.Model, GetAncestorModels(node.Parent), out var sources);
-                foreach (var property in effective.Properties().OrderBy(property => property.Name, StringComparer.Ordinal))
-                {
-                    EffectiveParameters.Add(new PuloniaTaskEffectiveParameterViewModel(property.Name,
-                        property.Value.ToString(Formatting.None), sources[property.Name]));
-                }
-            }
-            NotifyEditorPropertiesChanged();
-        }
-        finally
-        {
-            _isRefreshingEditor = false;
-        }
-    }
-
-    /// <summary>
-    /// 解析并应用参数 JSON；解析或校验失败时保留原模型和输入文本。
-    /// </summary>
-    [RelayCommand]
-    private void ApplyParameters()
-    {
-        var node = SelectedNode;
-        if (node is null)
-            return;
-        try
-        {
-            if (node.TaskType == "group")
-            {
-                var overrides = ReadParameterOverrides(ParameterJson);
-                ApplyMutation(() => node.Model.ParameterOverrides = overrides, node);
-            }
-            else
-            {
-                var parameters = PuloniaTaskJson.Read<JObject>(ParameterJson);
-                ApplyMutation(() => node.Model.Parameters = parameters, node);
-            }
-            EditorMessage = "参数已应用到草稿，保存计划后写入磁盘。";
-        }
-        catch (Exception ex) when (ex is JsonException or PuloniaTaskValidationException or InvalidOperationException)
-        {
-            EditorMessage = "参数未应用：" + ex.Message;
-            ThemedMessageBox.Error(EditorMessage, "参数格式错误");
-        }
-    }
-
-    /// <summary>
-    /// 解析并应用执行策略 JSON；失败时不修改原策略。
-    /// </summary>
-    [RelayCommand]
-    private void ApplyPolicy()
-    {
-        var node = SelectedNode;
-        if (node is null)
-            return;
-        try
-        {
-            var policy = PuloniaTaskJson.Read<PuloniaTaskPolicy>(PolicyJson);
-            PuloniaTaskValidator.ValidatePolicy(policy, node.Id + "/policy");
-            ApplyMutation(() => node.Model.Policy = policy, node);
-            EditorMessage = "执行策略已应用到草稿。";
-        }
-        catch (Exception ex) when (ex is JsonException or PuloniaTaskValidationException)
-        {
-            EditorMessage = "执行策略未应用：" + ex.Message;
-            ThemedMessageBox.Error(EditorMessage, "执行策略格式错误");
-        }
-    }
-
-    /// <summary>
-    /// 解析并应用计划或目录引用来源；空文本会清除来源。
-    /// </summary>
-    [RelayCommand]
-    private void ApplySource()
-    {
-        var node = SelectedNode;
-        if (node is null)
-            return;
-        try
-        {
-            var source = string.IsNullOrWhiteSpace(SourceJson)
-                ? null
-                : PuloniaTaskJson.Read<PuloniaTaskSource>(SourceJson);
-            ApplyMutation(() =>
-            {
-                node.Model.Source = source;
-                node.NotifySourceChanged();
-            }, node);
-            EditorMessage = "引用来源已应用到草稿。";
-        }
-        catch (Exception ex) when (ex is JsonException or PuloniaTaskValidationException)
-        {
-            EditorMessage = "引用来源未应用：" + ex.Message;
-            ThemedMessageBox.Error(EditorMessage, "引用来源格式错误");
-        }
     }
 
     /// <summary>
@@ -716,6 +528,8 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
         var selectedId = SelectedNode?.Id;
         var snapshot = _undoSnapshots[^1];
         _undoSnapshots.RemoveAt(_undoSnapshots.Count - 1);
+        // 撤销后的下一次编辑必须重新记录快照，不能并入已经撤销的编辑。
+        _lastUndoMergeKey = null;
         var currentRevision = _plan.Revision;
         _plan = DeserializeHistory(snapshot);
         // 撤销恢复的是内容而不是磁盘版本；沿用最新修订，避免自动保存被误判为旧版本覆盖。
@@ -732,23 +546,10 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     }
 
     /// <summary>
-    /// 在预设下拉框变化时立即更新模型和有效参数来源预览。
-    /// </summary>
-    partial void OnSelectedPresetOptionChanged(PuloniaTaskPresetOptionViewModel? value)
-    {
-        if (_isRefreshingEditor || SelectedNode is not { IsLeaf: true } node)
-            return;
-        if (node.Model.PresetId == value?.Id)
-            return;
-        ApplyMutation(() => node.Model.PresetId = value?.Id, node);
-    }
-
-    /// <summary>
-    /// 在树选中项变化时刷新右侧统一参数编辑器。
+    /// 树选中项变化时通知页面刷新命令状态；高级设置等编辑器状态由打开的窗口按需计算。
     /// </summary>
     partial void OnSelectedNodeChanged(PuloniaTaskNodeViewModel? value)
     {
-        RefreshSelectedEditor();
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
@@ -783,64 +584,45 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
         IsDirty = _savedSnapshot is null || SerializeForHistory(_plan) != _savedSnapshot;
     }
 
-    /// <summary>
-    /// 通知所有依赖当前选中节点的编辑器属性刷新绑定。
-    /// </summary>
-    private void NotifyEditorPropertiesChanged()
-    {
-        OnPropertyChanged(nameof(CanSelectPreset));
-        OnPropertyChanged(nameof(CanEditPath));
-        OnPropertyChanged(nameof(HasSource));
-        OnPropertyChanged(nameof(ParameterEditorTitle));
-        OnPropertyChanged(nameof(CanEditPathingSettings));
-        OnPropertyChanged(nameof(CanEditJavaScriptSettings));
-        OnPropertyChanged(nameof(CanEditShellSettings));
-        OnPropertyChanged(nameof(CanEditCommonSettings));
-        OnPropertyChanged(nameof(CanEditCollectionCooldown));
-        OnPropertyChanged(nameof(CollectionCooldownSummary));
-    }
 
     /// <summary>
-    /// 计算叶子节点的有效参数及每个字段的最后来源。
+    /// 计算叶子节点的有效参数及每个字段的最后来源（界面展示文本）。
     /// </summary>
     private JObject ResolveEffectiveParameters(PuloniaTask task, IReadOnlyList<PuloniaTask> ancestors,
         out Dictionary<string, string> sources)
     {
-        var result = new JObject();
-        sources = new Dictionary<string, string>(StringComparer.Ordinal);
-        var definition = GetDefinition(task);
-        if (definition is not null)
-            ApplyValues(result, sources, definition.DefaultParameters, "能力默认值");
-        var selectedPreset = task.PresetId is null
-            ? null
-            : _presets.FirstOrDefault(preset => preset.Id == task.PresetId);
-        var schemaVersion = definition?.SchemaVersion ?? 1;
-        if (selectedPreset is not null && selectedPreset.SchemaVersion == schemaVersion
-            && MatchesScope(selectedPreset.TaskType, selectedPreset.ResourceId, task))
-            ApplyValues(result, sources, selectedPreset.Values, $"预设“{selectedPreset.Name}”");
-
-        foreach (var ancestor in ancestors)
-        {
-            foreach (var item in ancestor.ParameterOverrides
-                         .Where(item => item.SchemaVersion == schemaVersion && MatchesScope(item.TaskType, item.ResourceId, task))
-                         .OrderBy(item => item.ResourceId is null ? 0 : 1))
-                ApplyValues(result, sources, item.Values, $"分组“{ancestor.Name}”");
-        }
-        ApplyValues(result, sources, task.Parameters, $"节点“{task.Name}”");
-        return result;
+        var resolution = ResolveParameters(task, ancestors);
+        sources = resolution.Sources.ToDictionary(item => item.Key,
+            item => DescribeParameterSource(item.Value, task, ancestors, resolution.Preset), StringComparer.Ordinal);
+        return resolution.Parameters;
     }
 
     /// <summary>
-    /// 以顶层字段整体替换方式合并参数，并同步记录字段来源。
+    /// 与运行准备共用 <see cref="PuloniaParameterResolver"/> 解析有效参数；预设缺失或不兼容时跳过该层而不抛异常，
+    /// 由结果中的预设判定提示。编辑界面不知道本次运行的账号和调用覆盖，这两层不参与预览。
     /// </summary>
-    private static void ApplyValues(JObject result, IDictionary<string, string> sources, JObject values, string source)
+    /// <param name="task">要预览的具体任务。</param>
+    /// <param name="ancestors">由根到父节点的模型链。</param>
+    private PuloniaParameterResolution ResolveParameters(PuloniaTask task, IReadOnlyList<PuloniaTask> ancestors)
     {
-        foreach (var property in values.Properties())
-        {
-            result[property.Name] = property.Value.DeepClone();
-            sources[property.Name] = source;
-        }
+        var preset = task.PresetId is { } presetId ? _presets.FirstOrDefault(item => item.Id == presetId) : null;
+        return PuloniaParameterResolver.Resolve(task, GetDefinition(task), task.PresetId, preset,
+            ancestors.Select(ancestor => ancestor.ParameterOverrides));
     }
+
+    /// <summary>
+    /// 把解析来源转换为“有效参数与来源”中展示的文本。
+    /// </summary>
+    private static string DescribeParameterSource(PuloniaParameterSource source, PuloniaTask task,
+        IReadOnlyList<PuloniaTask> ancestors, PuloniaTaskPreset? preset) => source.Layer switch
+    {
+        PuloniaParameterLayer.Default => "能力默认值",
+        PuloniaParameterLayer.Preset => $"预设“{preset?.Name}”",
+        PuloniaParameterLayer.Group => $"分组“{ancestors.FirstOrDefault(ancestor => ancestor.ParameterOverrides.Contains(source.Override!))?.Name}”",
+        PuloniaParameterLayer.Node => $"节点“{task.Name}”",
+        PuloniaParameterLayer.ReferencePublic => "计划引用公共参数",
+        _ => "本次调用覆盖"
+    };
 
     /// <summary>
     /// 取得从根节点到指定父节点的模型链。
@@ -853,12 +635,6 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
         ancestors.Reverse();
         return ancestors;
     }
-
-    /// <summary>
-    /// 判断预设或公共覆盖是否与具体叶子的类型和资源一致。
-    /// </summary>
-    private static bool MatchesScope(string taskType, string? resourceId, PuloniaTask task)
-        => taskType == task.TaskType && (resourceId is null || resourceId == task.ResourceKey);
 
     /// <summary>
     /// 判断模型节点是否是具体能力节点。

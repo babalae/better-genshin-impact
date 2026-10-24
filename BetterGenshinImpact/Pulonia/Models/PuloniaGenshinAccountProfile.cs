@@ -22,7 +22,10 @@ public sealed class PuloniaGenshinAccountProfile
     public string? ImagePath { get; set; }
     /// <summary>登录列表显示的完整脱敏账号文字。</summary>
     public string ListText { get; set; } = "";
-    /// <summary>Windows 凭据的引用，不包含用户名或密码；目标名按账号固定，保存时覆盖同名凭据。</summary>
+    /// <summary>
+    /// Windows 凭据的引用，不包含用户名或密码；目标名按账号固定，保存时覆盖同名凭据。
+    /// 由账号存储确定：账号目录保存成功后才写入凭据，账号被移除或改用不使用密码的登录方式时清除引用并删除凭据。
+    /// </summary>
     public string? CredentialReference { get; set; }
     /// <summary>是否表示当前登录账号。</summary>
     [JsonIgnore] public bool IsDefault => Id == DefaultId;

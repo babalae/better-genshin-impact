@@ -216,7 +216,7 @@ public sealed class PuloniaRepositoryResourceTests : IDisposable
         await store.RetainAsync(reference, "javascript");
         string originalVersion;
         using (var approved = await store.OpenApprovedAsync(reference))
-            originalVersion = ScriptRepositoryStore.ComputeVersion(approved, reference.RelativePath, "javascript");
+            originalVersion = PuloniaTaskResourceFingerprint.ComputeRepositoryVersion(approved, reference.RelativePath, "javascript");
         var task = new PuloniaTask { TaskType = "javascript", Resource = reference, ResourceVersion = originalVersion };
         var service = new PuloniaTaskResourceVersionService(new PuloniaTaskResourceCatalog(store));
         Assert.Equal(originalVersion, await service.ReadCurrentVersionAsync(task, []));
@@ -266,10 +266,13 @@ public sealed class PuloniaRepositoryResourceTests : IDisposable
     public async Task Catalog_SeparatesSameNamedSources_AndDoesNotUseSubscriptionDirectories()
     {
         var store = CreateStore();
-        CreateSource("official");
+        var first = CreateSource("official");
         var thirdParty = CreateSource("third-party");
         Write(thirdParty, "repo/pathing/路线.json", "{\"third_party\":true}");
         Commit(thirdParty);
+        // 资源目录只列出明确注册的仓库，不自动发现 Repos 下的文件夹。
+        await store.RegisterAsync(first);
+        await store.RegisterAsync(thirdParty);
         var catalog = new PuloniaTaskResourceCatalog(store);
         var scripts = await catalog.GetIndexAsync(new PuloniaTaskDefinition { TaskType = "javascript" });
         Assert.Equal(2, scripts.Resources.Count);
@@ -321,7 +324,7 @@ public sealed class PuloniaRepositoryResourceTests : IDisposable
         var reference = await ReferenceAsync(store, source, "pathing");
         await store.RetainAsync(reference, "pathing");
         using var approved = await store.OpenApprovedAsync(reference);
-        var version = ScriptRepositoryStore.ComputeVersion(approved, "pathing", "pathing", directory: true);
+        var version = PuloniaTaskResourceFingerprint.ComputeRepositoryVersion(approved, "pathing", "pathing", directory: true);
         var group = new PuloniaTask
         {
             TaskType = "group", Source = new PuloniaTaskSource { Kind = "directory", Resource = reference, TaskType = "pathing", Version = version }
@@ -367,6 +370,7 @@ public sealed class PuloniaRepositoryResourceTests : IDisposable
         var store = CreateStore();
         var source = CreateSource("sparse");
         DeleteTemporary(Path.Combine(source, "repo"));
+        await store.RegisterAsync(source);
         var catalog = new PuloniaTaskResourceCatalog(store);
         var index = await catalog.GetIndexAsync(new PuloniaTaskDefinition { TaskType = "javascript" });
         var resource = Assert.Single(index.Resources).Resource!;
@@ -421,31 +425,127 @@ public sealed class PuloniaRepositoryResourceTests : IDisposable
         Assert.Same(reference, task.Resource);
     }
 
-    /// <summary>ZIP 更新时间、大小不变时由持久化代次通知其他实例，事件携带确切版本。</summary>
+    /// <summary>
+    /// ZIP 导入重写 repo_updated.json；即使正文替换后大小、时间不变，其他实例也得到新修订并丢弃旧哈希缓存。
+    /// 没有内容变化的通知不改变修订，事件携带确切版本，旧版本仍可读取。
+    /// </summary>
     [Fact]
-    public async Task FileRepository_UpdateGenerationInvalidatesOtherInstance()
+    public async Task FileRepository_ImportMarkerInvalidatesOtherInstance()
     {
         var reader = CreateStore();
         var writer = CreateStore();
         var source = CreateSource("offline", false);
+        Write(source, "repo_updated.json", "{\"indexes\":[]}");
         var reference = await ReferenceAsync(reader, source, "pathing/路线.json");
         await reader.RetainAsync(reference, "pathing");
         writer.NotifyUpdated(source);
         using (var unchanged = await reader.OpenCurrentAsync(reference.RepositoryId))
             Assert.Equal(reference.ApprovedRevision, unchanged.Revision);
+
+        // 模拟另一实例导入 ZIP：正文等长替换并恢复时间，导入器随后重写更新标记。
         var path = Path.Combine(source, "repo/pathing/路线.json");
         var timestamp = File.GetLastWriteTimeUtc(path);
         Write(source, "repo/pathing/路线.json", "{\"route\":3}");
         File.SetLastWriteTimeUtc(path, timestamp);
+        var marker = Path.Combine(source, "repo_updated.json");
+        Write(source, "repo_updated.json", "{\"indexes\":[]}");
+        File.SetLastWriteTimeUtc(marker, File.GetLastWriteTimeUtc(marker).AddSeconds(5));
         ScriptRepositoryChangedEventArgs? notification = null;
         writer.RepositoryChanged += (_, args) => notification = args;
         writer.NotifyUpdated(source);
-        using var latest = await reader.OpenCurrentAsync(reference.RepositoryId);
-        Assert.NotEqual(reference.ApprovedRevision, latest.Revision);
-        Assert.Equal(latest.Revision, notification?.Revision);
-        Assert.Equal(reference.RepositoryId, notification?.RepositoryId);
+
+        using (var latest = await reader.OpenCurrentAsync(reference.RepositoryId))
+        {
+            Assert.NotEqual(reference.ApprovedRevision, latest.Revision);
+            Assert.Equal(latest.Revision, notification?.Revision);
+            Assert.Equal(reference.RepositoryId, notification?.RepositoryId);
+            // 读取方的旧哈希缓存随导入标记失效，不会把新正文误判为“读取期间来源变化”。
+            Assert.Equal("{\"route\":3}", latest.ReadText("repo/pathing/路线.json"));
+        }
         using var old = await reader.OpenApprovedAsync(reference);
         Assert.Equal("{\"route\":1}", old.ReadText("repo/pathing/路线.json"));
+    }
+
+    /// <summary>来源锁按仓库目录区分：一个仓库正在同步时，另一个仓库仍可打开读取。</summary>
+    [Fact]
+    public async Task SourceLock_IsPerRepository()
+    {
+        var store = CreateStore();
+        var syncing = await store.RegisterAsync(CreateSource("syncing", false));
+        var browsing = await store.RegisterAsync(CreateSource("browsing", false));
+        using (await store.EnterSourceAccessAsync(syncing.Directory))
+        {
+            using (var other = await store.OpenCurrentAsync(browsing.Id).WaitAsync(TimeSpan.FromSeconds(5)))
+                Assert.True(other.FileExists("repo/pathing/路线.json"));
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromMilliseconds(150));
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => store.OpenCurrentAsync(syncing.Id, cancellation.Token));
+        }
+        using var released = await store.OpenCurrentAsync(syncing.Id).WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.True(released.FileExists("repo/pathing/路线.json"));
+    }
+
+    /// <summary>注册与选择偏好的读取不取锁：另一实例持有 registry 写锁时，浏览仍可继续。</summary>
+    [Fact]
+    public async Task RegistryAndSelectionReads_DoNotWaitForWriterLock()
+    {
+        var store = CreateStore();
+        var registration = await store.RegisterAsync(CreateSource("readers", false));
+        await store.SelectRepositoryAsync("pathing", registration.Id);
+        // 官方记录已经补入后，列出仓库只读取注册文件。
+        await store.EnsureOfficialRepositoryAsync();
+        var locks = Path.Combine(store.RootDirectory, "Locks");
+        Directory.CreateDirectory(locks);
+        using (new FileStream(Path.Combine(locks, "registry.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
+        {
+            Assert.Contains((await store.GetRepositoriesAsync().WaitAsync(TimeSpan.FromSeconds(5))), r => r.Id == registration.Id);
+            Assert.Equal(registration.Id, await store.GetSelectedRepositoryIdAsync("pathing").WaitAsync(TimeSpan.FromSeconds(5)));
+            using var snapshot = await store.OpenCurrentAsync(registration.Id).WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.True(snapshot.FileExists("repo.json"));
+        }
+    }
+
+    /// <summary>同一脚本的工作目录被占用时，超过等待时间后明确报错，而不是无限等待。</summary>
+    [Fact]
+    public async Task WorkspaceLock_TimesOutWithClearMessage()
+    {
+        var store = new ScriptRepositoryStore(Path.Combine(_root, "resources"), Path.Combine(_root, "repos"))
+        { WorkspaceLockTimeout = TimeSpan.FromMilliseconds(300) };
+        var reference = await ReferenceAsync(store, CreateSource("busy-script"));
+        using (await store.AcquireWorkspaceAsync(reference))
+        {
+            var error = await Assert.ThrowsAsync<IOException>(() => store.AcquireWorkspaceAsync(reference))
+                .WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.Contains("另一个运行", error.Message);
+            Assert.Contains(reference.RelativePath, error.Message);
+        }
+        using var released = await store.AcquireWorkspaceAsync(reference);
+        Assert.True(File.Exists(Path.Combine(released.Path, "main.js")));
+    }
+
+    /// <summary>批量检查按项返回结果：同一仓库的缺失资源只影响自身，其余结果与单项检查一致。</summary>
+    [Fact]
+    public async Task BatchCheck_ReturnsPerTaskResults()
+    {
+        var store = CreateStore();
+        var source = CreateSource("batch");
+        var script = await ReferenceAsync(store, source);
+        var route = script.WithPath("pathing/路线.json");
+        var missing = script.WithPath("pathing/缺失.json");
+        await store.RetainAsync(script, "javascript");
+        var tasks = new[]
+        {
+            new PuloniaTask { TaskType = "javascript", Resource = script },
+            new PuloniaTask { TaskType = "pathing", Resource = missing },
+            new PuloniaTask { TaskType = "pathing", Resource = route }
+        };
+        var service = new PuloniaTaskResourceVersionService(new PuloniaTaskResourceCatalog(store));
+        var results = await service.ReadCurrentStatesAsync(tasks, []);
+        Assert.Equal(3, results.Count);
+        Assert.Equal(await service.ReadCurrentVersionAsync(tasks[0], []), results[0].State!.CurrentContentVersion);
+        Assert.Equal("1", results[0].State!.ApprovedDeclaredVersion);
+        Assert.IsType<FileNotFoundException>(results[1].Error);
+        Assert.Null(results[1].State);
+        Assert.Equal(await service.ReadCurrentVersionAsync(tasks[2], []), results[2].State!.CurrentContentVersion);
     }
 
     /// <summary>来源删除资源后更新检查明确失败，批准的旧资源仍可提取和运行。</summary>
@@ -480,6 +580,7 @@ public sealed class PuloniaRepositoryResourceTests : IDisposable
         Write(source, "repo/js/未索引/manifest.json", ScriptManifest);
         Write(source, "repo/js/未索引/main.js", new string('x', 1024 * 1024));
         if (git) Commit(source);
+        await store.RegisterAsync(source);
         var catalog = new PuloniaTaskResourceCatalog(store);
         var index = await catalog.GetIndexAsync(new PuloniaTaskDefinition { TaskType = "javascript" });
         var resource = Assert.Single(index.Resources);

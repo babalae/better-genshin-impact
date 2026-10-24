@@ -192,7 +192,6 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
             ResourceCheckError = null;
             _document.ApplyMutation(() => _model.Path = value, this);
             OnPropertyChanged();
-            _document.RefreshSelectedEditor();
         }
     }
 
@@ -258,16 +257,16 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
     public bool IsDisabledByParent => _model.IsEnabled && !(_parent?.IsEffectivelyEnabled ?? true);
 
     /// <summary>
-    /// 树视图展开状态。
+    /// 树视图展开状态；保存在编辑器界面状态中，不写入计划，也不进入撤销或运行快照。
     /// </summary>
     public bool IsExpanded
     {
-        get => _model.IsExpanded;
+        get => _document.IsNodeExpanded(Id);
         set
         {
-            if (_model.IsExpanded == value)
+            if (IsExpanded == value)
                 return;
-            _document.ApplyViewStateMutation(() => _model.IsExpanded = value);
+            _document.SetNodeExpanded(Id, value);
             OnPropertyChanged();
         }
     }

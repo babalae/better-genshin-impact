@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.IO;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,76 +22,24 @@ using GongSolutions.Wpf.DragDrop;
 namespace BetterGenshinImpact.ViewModel.Pages;
 
 /// <summary>
-/// “任务计划”页面视图模型，组织计划文档、树编辑命令、跨计划复制和拖拽。
+/// “任务计划”页面视图模型，组织计划列表选择、树编辑命令、跨计划复制和拖拽。
+/// 文档集合、加载、自动保存、资源检查与运行提交由共用的编辑会话负责。
 /// </summary>
 public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
 {
-    /// <summary>
-    /// 连续编辑完成后等待写盘的时间，避免快速勾选或拖拽产生无意义的中间修订。
-    /// </summary>
-    private const int AutoSaveDelayMilliseconds = 350;
-
-    /// <summary>
-    /// 计划与预设的文件存储服务。
-    /// </summary>
-    private readonly PuloniaTaskStore _store;
-
-    /// <summary>
-    /// 跨计划复制使用的进程内剪贴板。
-    /// </summary>
-    private readonly PuloniaTaskClipboardService _clipboard;
-
-    /// <summary>
-    /// 统一的任务提交、状态查询和取消服务。
-    /// </summary>
-    private readonly IPuloniaTaskService _taskService;
-
-    /// <summary>
-    /// 任务创建弹窗使用的轻量资源索引。
-    /// </summary>
-    private readonly PuloniaTaskResourceCatalog _resourceCatalog;
-
-    /// <summary>任务计划页复用的仓库同步服务；老配置组的订阅与安装流程不经过此服务。</summary>
-    private readonly PuloniaRepositoryManagementService _repositoryManagementService;
-
     /// <summary>独立任务注册表；新增与编辑弹窗据此优先使用独立任务的专属设置界面，为空时只使用通用设置卡片。</summary>
     private readonly SoloTaskRegistry? _soloTaskRegistry;
 
-    /// <summary>
-    /// 当前从存储加载的共享预设。
-    /// </summary>
-    private IReadOnlyList<PuloniaTaskPreset> _presets = [];
+    /// <summary>高级设置中公共设置与采集 CD 表单的入口；为空时这两类表单不可用。</summary>
+    private readonly IPuloniaTaskSettingsDialogs? _settingsDialogs;
+
+    /// <summary>首次加载结果是否已经显示，后续进入页面不再覆盖最近操作结果。</summary>
+    private bool _hasShownLoadMessage;
 
     /// <summary>
-    /// 每个计划当前等待执行的自动保存延迟，用于合并短时间内的连续操作。
+    /// 与新一条龙页共用的编辑会话。
     /// </summary>
-    private readonly Dictionary<PuloniaTaskPlanDocumentViewModel, CancellationTokenSource> _autoSaveDelays = [];
-
-    /// <summary>
-    /// 每个计划独立的保存门，确保同一计划的修订始终按顺序写入。
-    /// </summary>
-    private readonly Dictionary<PuloniaTaskPlanDocumentViewModel, SemaphoreSlim> _saveGates = [];
-
-    /// <summary>
-    /// 每个保存门的使用者数量，删除文档后等待所有使用者退出再释放同步资源。
-    /// </summary>
-    private readonly Dictionary<PuloniaTaskPlanDocumentViewModel, int> _saveGateUsers = [];
-
-    /// <summary>
-    /// 正在删除的计划，阻止等待中的保存或新编辑重新安排写盘。
-    /// </summary>
-    private readonly HashSet<PuloniaTaskPlanDocumentViewModel> _deletingDocuments = [];
-
-    /// <summary>
-    /// 是否已经完成首次加载，避免导航缓存重复覆盖未保存草稿。
-    /// </summary>
-    private bool _isInitialized;
-
-    /// <summary>两个菜单和 Loaded 共用首次加载门，后来的入口必须等待同一次初始化完成。</summary>
-    private readonly SemaphoreSlim _initializationGate = new(1, 1);
-
-    /// <summary>供独立入口判断加载是否成功，失败时不得创建并覆盖尚未加载的配置。</summary>
-    internal bool IsInitialized => _isInitialized;
+    public PuloniaPlanEditingSession Session { get; }
 
     /// <summary>
     /// 当前选中的计划文档。
@@ -100,27 +48,27 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     private PuloniaTaskPlanDocumentViewModel? _selectedDocument;
 
     /// <summary>
-    /// 页面是否正在执行文件读写。
+    /// 编辑会话是否正在执行文件读写；两个页面共用同一忙碌状态。
     /// </summary>
-    [ObservableProperty]
-    private bool _isBusy;
+    public bool IsBusy
+    {
+        get => Session.IsBusy;
+        set => Session.IsBusy = value;
+    }
+
+    /// <summary>供页面判断加载是否成功，失败时不得创建并覆盖尚未加载的配置。</summary>
+    internal bool IsInitialized => Session.IsInitialized;
 
     /// <summary>
     /// 页面底部的最近操作结果。
     /// </summary>
     [ObservableProperty]
-    private string _statusMessage = "纯任务不会启动截图器；游戏任务会按需准备会话并在结束后释放输入。";
+    private string _statusMessage = "在任务列表中右键添加任务；所有修改都会自动保存。";
 
     /// <summary>
-    /// 当前打开的计划编辑文档。
+    /// 普通任务计划列表，即编辑会话中的普通计划集合。
     /// </summary>
-    public ObservableCollection<PuloniaTaskPlanDocumentViewModel> Documents { get; } = [];
-
-    /// <summary>完整编辑会话，用于保存、引用校验和资源检查，不直接绑定菜单。</summary>
-    internal IEnumerable<PuloniaTaskPlanDocumentViewModel> AllDocuments => Documents.Concat(OneDragonDocuments);
-
-    /// <summary>仅属于一条龙入口的配置，与普通任务计划列表分开。</summary>
-    public ObservableCollection<PuloniaTaskPlanDocumentViewModel> OneDragonDocuments { get; } = [];
+    public ObservableCollection<PuloniaTaskPlanDocumentViewModel> Documents => Session.Documents;
 
     /// <summary>
     /// 当前计划可引用的其他计划。
@@ -128,7 +76,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     public ObservableCollection<PuloniaTaskPlanDocumentViewModel> ReferencePlans { get; } = [];
 
     /// <summary>
-    /// 完整的“添加任务”菜单：“独立任务”子菜单加上资源类与其他任务类型，供一条龙页使用。
+    /// 完整的“添加任务”菜单：“独立任务”子菜单加上资源类与其他任务类型。
     /// </summary>
     public IReadOnlyList<PuloniaTaskMenuItemViewModel> AddTaskMenu { get; }
 
@@ -138,9 +86,17 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     public IReadOnlyList<PuloniaTaskMenuItemViewModel> SoloTaskMenu { get; }
 
     /// <summary>
+    /// 当前计划的定时与快捷键触发配置，“触发方式”页签绑定此视图模型。
+    /// </summary>
+    public PuloniaPlanTriggersViewModel TriggerSettings { get; }
+
+    /// <summary>计划页当前页签，触发器可直达其最近执行记录。</summary>
+    [ObservableProperty] private int _selectedPlanTabIndex;
+
+    /// <summary>
     /// 剪贴板是否已有可粘贴子树。
     /// </summary>
-    public bool CanPaste => _clipboard.HasContent && SelectedDocument is not null;
+    public bool CanPaste => Session.Clipboard.HasContent && SelectedDocument is not null;
 
     /// <summary>
     /// 当前是否存在可供引用的其他计划。
@@ -150,41 +106,43 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// <summary>
     /// 建立任务计划页面视图模型。
     /// </summary>
-    public PuloniaTaskPlanViewModel(PuloniaTaskStore store, PuloniaTaskClipboardService clipboard,
-        IPuloniaTaskService taskService, PuloniaTaskResourceCatalog resourceCatalog,
-        PuloniaTaskHistoryViewModel history, PuloniaTaskTriggerHost? triggerHost = null,
-        SoloTaskRegistry? soloTaskRegistry = null)
+    /// <param name="session">与一条龙页共用的编辑会话。</param>
+    /// <param name="history">计划内执行记录。</param>
+    /// <param name="triggerHost">调度宿主；为空时只显示触发配置。</param>
+    /// <param name="soloTaskRegistry">独立任务注册表。</param>
+    /// <param name="settingsDialogs">公共设置与采集 CD 表单入口。</param>
+    public PuloniaTaskPlanViewModel(PuloniaPlanEditingSession session, PuloniaTaskHistoryViewModel history,
+        PuloniaTaskTriggerHost? triggerHost = null, SoloTaskRegistry? soloTaskRegistry = null,
+        IPuloniaTaskSettingsDialogs? settingsDialogs = null)
     {
-        _store = store;
-        _clipboard = clipboard;
-        _taskService = taskService;
-        _resourceCatalog = resourceCatalog;
-        _soloTaskRegistry = soloTaskRegistry;
-        _repositoryManagementService = new PuloniaRepositoryManagementService(resourceCatalog.Repositories);
-        _resourceVersionService = new PuloniaTaskResourceVersionService(resourceCatalog);
+        Session = session;
         History = history;
-        _triggerHost = triggerHost;
-        if (_triggerHost is not null) _triggerHost.Changed += OnTriggerHostChanged;
+        _soloTaskRegistry = soloTaskRegistry;
+        _settingsDialogs = settingsDialogs;
+        TriggerSettings = new PuloniaPlanTriggersViewModel(session, triggerHost);
         // 能力定义在服务建立后不再变化，菜单只需生成一次
-        AddTaskMenu = PuloniaTaskMenuBuilder.Build(taskService.Definitions);
-        SoloTaskMenu = PuloniaTaskMenuBuilder.BuildSoloTaskMenu(taskService.Definitions);
+        AddTaskMenu = PuloniaTaskMenuBuilder.Build(session.TaskService.Definitions);
+        SoloTaskMenu = PuloniaTaskMenuBuilder.BuildSoloTaskMenu(session.TaskService.Definitions);
+        Session.StatusReported += (_, message) => StatusMessage = message;
+        Session.DocumentChanged += OnSessionDocumentChanged;
+        Session.PropertyChanged += OnSessionPropertyChanged;
+        Session.Documents.CollectionChanged += (_, _) => RefreshReferencePlans();
     }
 
     /// <summary>
-    /// 页面首次导航时加载计划和预设，后续导航保留内存草稿。
+    /// 进入页面时加载计划（首次）并设置当前计划的记录范围，开始定期检查资源；再次进入保留内存草稿。
     /// </summary>
     public override async Task OnNavigatedToAsync()
     {
-        // 在首次异步加载前建立页面生命周期，避免加载期间离开后又启动后台监控。
-        StartResourceMonitor();
-        var ct = _resourceMonitorCancellation?.Token ?? CancellationToken.None;
+        // 在首次异步加载前登记资源检查，避免加载期间离开后又启动后台监控。
+        var ct = Session.StartResourceMonitor(this);
         try
         {
             await InitializeAsync();
             ct.ThrowIfCancellationRequested();
             History.PlanFilterId = SelectedDocument?.Id;
             await History.RefreshAsync();
-            await RefreshResourceVersionsAsync(ct);
+            await Session.RefreshResourceVersionsAsync(ct);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -192,58 +150,40 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         }
     }
 
+    /// <summary>离开页面时停止本页的资源检查，不改变已经保存的计划或历史。</summary>
+    public override Task OnNavigatedFromAsync()
+    {
+        Session.StopResourceMonitor(this);
+        return base.OnNavigatedFromAsync();
+    }
+
     /// <summary>
-    /// Loaded 行为同样设置当前计划范围，兼容导航缓存重新进入页面。
+    /// 页面 Loaded 是唯一的进入入口，兼容导航缓存重新进入页面。
     /// </summary>
     [RelayCommand]
     private Task OpenPageAsync() => OnNavigatedToAsync();
 
+    /// <summary>页面 Unloaded 是唯一的离开入口，兼容导航缓存及窗口关闭。</summary>
+    [RelayCommand]
+    private Task ClosePageAsync() => OnNavigatedFromAsync();
+
     /// <summary>
-    /// 首次加载存储内容；空存储会建立一个等待自动保存的新计划。
+    /// 等待编辑会话完成首次加载（并发进入共用同一次加载），然后选中第一个计划。
     /// </summary>
     [RelayCommand]
     private async Task InitializeAsync()
     {
-        await _initializationGate.WaitAsync();
-        try { await InitializeCoreAsync(); }
-        finally { _initializationGate.Release(); }
-    }
-
-    /// <summary>在首次加载门内读取文档，其他入口不会把正在加载误判为已完成。</summary>
-    private async Task InitializeCoreAsync()
-    {
-        if (_isInitialized || IsBusy)
+        await Session.InitializeAsync();
+        if (!Session.IsInitialized)
             return;
-        IsBusy = true;
-        try
+        if (SelectedDocument is null || !Documents.Contains(SelectedDocument))
+            SelectedDocument = Documents.FirstOrDefault();
+        if (!_hasShownLoadMessage && Session.LoadMessage is { } message)
         {
-            _presets = await _store.ListPresetsAsync();
-            var plans = await _store.ListPlansAsync();
-            Documents.Clear();
-            OneDragonDocuments.Clear();
-            foreach (var plan in plans)
-                AddDocument(new PuloniaTaskPlanDocumentViewModel(plan, _presets, _clipboard, isNew: false));
-            if (Documents.Count == 0)
-                AddDocument(CreateNewDocument("我的任务计划"));
-            SelectedDocument = Documents[0];
-            _isInitialized = true;
-            if (SelectedDocument.IsDirty)
-                ScheduleAutoSave(SelectedDocument);
-            await History.RefreshAsync();
-            StatusMessage = _taskService.RecoveryNotice is null
-                ? $"已加载 {Documents.Count} 个计划和 {_presets.Count} 个共享预设。"
-                : _taskService.RecoveryNotice;
+            StatusMessage = message;
+            _hasShownLoadMessage = true;
         }
-        catch (Exception ex)
-        {
-            StatusMessage = "加载失败：" + ex.Message;
-            await ThemedMessageBox.ErrorAsync(StatusMessage, "无法加载任务计划");
-        }
-        finally
-        {
-            IsBusy = false;
-            NotifyCommandStates();
-        }
+        NotifyCommandStates();
     }
 
     /// <summary>
@@ -257,10 +197,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         var name = baseName;
         while (Documents.Any(document => document.Name == name))
             name = baseName + " " + ++suffix;
-        var document = CreateNewDocument(name);
-        AddDocument(document);
-        SelectedDocument = document;
-        ScheduleAutoSave(document);
+        SelectedDocument = Session.CreatePlanDocument(name);
         StatusMessage = "已新建计划。";
     }
 
@@ -281,94 +218,13 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     }
 
     /// <summary>
-    /// 保存指定计划文档；自动保存和建立计划引用前的立即提交共用此串行入口。
-    /// </summary>
-    private async Task<bool> SaveDocumentAsync(PuloniaTaskPlanDocumentViewModel document)
-    {
-        if (_saveOwner is not null) return await _saveOwner.SaveDocumentAsync(document);
-        if (document.IsDeleted || _deletingDocuments.Contains(document))
-            return false;
-        CancelPendingAutoSave(document);
-        var saveGate = GetSaveGate(document);
-        await saveGate.WaitAsync();
-        try
-        {
-            // 删除可能在本次等待保存门期间开始，必须在实际写盘前再次检查。
-            if (document.IsDeleted || _deletingDocuments.Contains(document))
-                return false;
-            if (!document.IsDirty)
-                return true;
-
-            // Store 会在首次让出线程前复制当前模型；保存期间发生的新编辑仍留在内存，并在本次完成后再次保存。
-            var saved = await _store.SavePlanAsync(document.Plan);
-            document.AcceptAutoSaved(saved);
-            if (saved.Revision == 1)
-                _ = PersistPlanOrderAsync();
-            return true;
-        }
-        catch (Exception ex)
-        {
-            document.SetSaveError(ex.Message);
-            StatusMessage = $"“{document.Name}”保存失败，草稿仍保留在当前编辑会话：{ex.Message}";
-            await ThemedMessageBox.ErrorAsync(StatusMessage, "任务计划保存失败");
-            return false;
-        }
-        finally
-        {
-            ReleaseSaveGate(document, saveGate);
-            NotifyCommandStates();
-        }
-    }
-
-    /// <summary>
     /// 用户明确确认后，从磁盘重新读取当前计划并丢弃其内存草稿。
     /// </summary>
     [RelayCommand]
     private async Task ReloadAsync()
     {
-        var document = SelectedDocument;
-        if (document is null || document.IsDeleted || _deletingDocuments.Contains(document))
-            return;
-        if (document.IsDirty)
-        {
-            var result = await ThemedMessageBox.ShowAsync(
-                "重新加载会丢弃当前计划尚未保存的编辑，是否继续？",
-                "重新加载任务计划", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning,
-                MessageBoxResult.No);
-            if (result != MessageBoxResult.Yes)
-                return;
-        }
-
-        CancelPendingAutoSave(document);
-        var saveGate = GetSaveGate(document);
-        IsBusy = true;
-        await saveGate.WaitAsync();
-        try
-        {
-            if (document.IsDeleted || _deletingDocuments.Contains(document))
-                return;
-            var diskPlan = await _store.LoadPlanAsync(document.Id);
-            if (diskPlan is null)
-            {
-                StatusMessage = "该计划尚未保存，磁盘上没有可重新加载的版本。";
-                ScheduleAutoSave(document);
-                return;
-            }
-            document.ReplaceFromDisk(diskPlan);
-            StatusMessage = $"已从磁盘重新加载“{diskPlan.Name}”。";
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = "重新加载失败，当前草稿未变：" + ex.Message;
-            await ThemedMessageBox.ErrorAsync(StatusMessage, "任务计划重新加载失败");
-            ScheduleAutoSave(document);
-        }
-        finally
-        {
-            ReleaseSaveGate(document, saveGate);
-            IsBusy = false;
-            NotifyCommandStates();
-        }
+        if (SelectedDocument is { } document)
+            await Session.ReloadDocumentAsync(document);
     }
 
     /// <summary>
@@ -397,7 +253,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         // 1. 解析菜单传入的目标节点和任务类型；菜单尚未完成绑定时忽略
         if (parameters is not [PuloniaTaskNodeViewModel targetNode, string taskType, ..])
             return;
-        var definition = _taskService.Definitions.FirstOrDefault(item => item.TaskType == taskType);
+        var definition = Session.TaskService.Definitions.FirstOrDefault(item => item.TaskType == taskType);
         if (definition is null)
         {
             StatusMessage = $"没有注册任务类型 {taskType}。";
@@ -463,13 +319,13 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     {
         if (targetNode is null)
             return;
-        var creation = PuloniaTaskCreationDialog.Show(_taskService.Definitions, _resourceCatalog, taskType,
+        var creation = PuloniaTaskCreationDialog.Show(Session.TaskService.Definitions, Session.ResourceCatalog, taskType,
             owner: Application.Current.MainWindow);
         if (creation is null
             || !TryGetInsertionPoint(targetNode, out var document, out var parent, out var index))
             return;
         document.InsertNode(creation.Task, parent, index);
-        StatusMessage = $"已添加任务“{creation.Task.Name}”；资源与运行设置已在创建前确认。";
+        StatusMessage = $"已添加任务“{creation.Task.Name}”。";
     }
 
     /// <summary>
@@ -480,12 +336,12 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     {
         if (node is null || node.IsRoot)
             return;
-        // 高级设置区绑定文档的选中节点，打开前先选中被编辑节点
+        // 打开前选中被编辑节点，关闭后树上仍停留在该任务
         SelectedDocument = node.Document;
         node.Document.SelectedNode = node;
-        var definition = _taskService.Definitions.FirstOrDefault(item => item.TaskType == node.TaskType);
+        var definition = Session.TaskService.Definitions.FirstOrDefault(item => item.TaskType == node.TaskType);
         var dialog = new PuloniaTaskNodeSettingsDialog(
-            new PuloniaTaskNodeSettingsDialogViewModel(this, node, definition, _soloTaskRegistry))
+            new PuloniaTaskNodeSettingsDialogViewModel(Session, node, definition, _soloTaskRegistry, _settingsDialogs))
         {
             Owner = Application.Current.MainWindow
         };
@@ -494,80 +350,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     }
 
     /// <summary>
-    /// 重新读取本机仓库并在用户确认后更新任务使用版本，资源变化不会静默影响运行。
-    /// </summary>
-    [RelayCommand]
-    private async Task UpdateResourceVersionAsync(PuloniaTaskNodeViewModel? node)
-    {
-        if (node is null || !node.CanUpdateResourceVersion)
-            return;
-        try
-        {
-            var model = node.Model;
-            var key = ResourceCheckKey(model);
-            var snapshot = PuloniaTaskJson.Read<PuloniaTask>(PuloniaTaskJson.Write(model));
-            var reviewed = await _resourceVersionService.ReadCurrentStateAsync(snapshot, _taskService.Definitions);
-            var newVersion = reviewed.CurrentContentVersion
-                              ?? throw new InvalidOperationException("当前节点没有可确认的资源。");
-            var oldVersion = model.Source?.Kind == "directory" ? model.Source.Version : model.ResourceVersion;
-
-            if (oldVersion == newVersion)
-            {
-                StatusMessage = $"“{node.Name}”的资源版本没有变化。";
-                return;
-            }
-            var result = await ThemedMessageBox.ShowAsync(
-                $"资源“{node.Name}”已经变化。\n\n{FormatVersionChange(reviewed)}\n\n确认后只更新后续运行使用的任务版本，历史运行快照不变。",
-                "更新任务资源", MessageBoxButton.YesNo,
-                ThemedMessageBox.MessageBoxIcon.Question, MessageBoxResult.No);
-            if (result != MessageBoxResult.Yes)
-                return;
-
-            if (newVersion != await _resourceVersionService.ReadCurrentVersionAsync(snapshot, _taskService.Definitions)
-                || key != ResourceCheckKey(model) || !node.Document.EnumerateNodes().Contains(node))
-                throw new InvalidOperationException("确认期间资源再次变化，请重新检查并确认。");
-
-            var updatedReference = await _resourceVersionService.PrepareUpdateAsync(snapshot, reviewed);
-            if (key != ResourceCheckKey(model))
-                throw new InvalidOperationException("提取期间任务配置变化，请重新确认。");
-            node.Document.ApplyMutation(() =>
-            {
-                if (model.Source?.Kind == "directory")
-                {
-                    model.Source.Version = newVersion;
-                    if (updatedReference is not null) model.Source.Resource = updatedReference;
-                }
-                else
-                {
-                    model.ResourceVersion = newVersion;
-                    if (updatedReference is not null) model.Resource = updatedReference;
-                }
-            }, node);
-            node.NotifyResourceVersionChanged();
-            if (!await SaveDocumentAsync(node.Document)) return;
-            await RefreshResourceVersionsAsync();
-            StatusMessage = $"已更新“{node.Name}”的任务使用版本。";
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException
-            or LibGit2Sharp.LibGit2SharpException or System.Text.Json.JsonException or Newtonsoft.Json.JsonException)
-        {
-            StatusMessage = "更新任务资源失败：" + ex.Message;
-            await ThemedMessageBox.ErrorAsync(StatusMessage, "无法更新任务资源");
-        }
-    }
-
-    /// <summary>优先展示资源声明版本变化；缺少可读版本时只说明内容已经变化。</summary>
-    private static string FormatVersionChange(PuloniaTaskResourceVersionState state)
-    {
-        if (!string.IsNullOrWhiteSpace(state.ApprovedDeclaredVersion)
-            && !string.IsNullOrWhiteSpace(state.CurrentDeclaredVersion)
-            && state.ApprovedDeclaredVersion != state.CurrentDeclaredVersion)
-            return $"版本：{state.ApprovedDeclaredVersion} → {state.CurrentDeclaredVersion}";
-        return "内容已经变化，但资源没有可显示的版本号变化。";
-    }
-
-    /// <summary>
-    /// 新增对其他计划的引用节点，不复制目标计划内容。
+    /// 新增对其他计划的引用节点，不复制目标计划内容；目标计划之后的修改会同步生效。
     /// </summary>
     [RelayCommand(CanExecute = nameof(CanAddPlanReference))]
     private async Task AddPlanReferenceAsync(PuloniaTaskNodeViewModel? targetNode)
@@ -586,21 +369,21 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
             SelectedIndex = 0,
             MinWidth = 280
         };
-        var dialog = new PromptDialog("选择要引用的计划。", "添加计划引用", selector, null);
+        var dialog = new PromptDialog("选择要引用的任务计划；之后修改该计划会同步影响这里。", "引用已有任务计划", selector, null);
         if (dialog.ShowDialog() != true
             || selector.SelectedItem is not PuloniaTaskPlanDocumentViewModel referencePlan)
             return;
         var sourceDocument = targetNode.Document;
 
-        if (WouldCreatePlanReferenceCycle(sourceDocument, referencePlan))
+        if (Session.WouldCreatePlanReferenceCycle(sourceDocument, referencePlan))
         {
-            StatusMessage = $"不能引用“{referencePlan.Name}”：这会形成计划引用循环。";
-            await ThemedMessageBox.ErrorAsync(StatusMessage, "无法添加计划引用");
+            StatusMessage = $"不能引用“{referencePlan.Name}”：两个计划会互相引用。";
+            await ThemedMessageBox.ErrorAsync(StatusMessage, "无法引用任务计划");
             return;
         }
 
         // 引用必须指向已落盘版本；若目标仍在防抖窗口中，则立即完成它的自动保存，不再要求用户确认。
-        if (referencePlan.IsDirty && !await SaveDocumentAsync(referencePlan))
+        if (referencePlan.IsDirty && !await Session.SaveDocumentAsync(referencePlan))
             return;
 
         // 保存引用目标期间用户仍可能切换计划；插入位置始终以发起右键操作的节点为准。
@@ -622,15 +405,16 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     [RelayCommand]
     private async Task PasteAsync(PuloniaTaskNodeViewModel? targetNode)
     {
+        var clipboard = Session.Clipboard;
         if (!TryGetInsertionPoint(targetNode, out var document, out var parent, out var index)
-            || !_clipboard.TryCreatePaste(out var source, out var pasted, out var effectiveParameters)
+            || !clipboard.TryCreatePaste(out var source, out var pasted, out var effectiveParameters)
             || source is null || pasted is null)
             return;
 
         if (document.HasPasteInheritanceDifference(source, pasted, effectiveParameters, parent))
         {
             var result = await ThemedMessageBox.ShowAsync(
-                $"复制内容来自“{_clipboard.SourcePlanName}”，目标位置的父组继承会改变部分有效参数。\n\n" +
+                $"复制内容来自“{clipboard.SourcePlanName}”，目标位置的父组继承会改变部分有效参数。\n\n" +
                 "选择“是”：把复制时已有的有效值写入新节点；目标位置额外继承项仍保留。\n" +
                 "选择“否”：使用目标位置的继承结果。\n选择“取消”：不粘贴。",
                 "粘贴时发现配置差异", MessageBoxButton.YesNoCancel,
@@ -642,35 +426,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         }
 
         document.InsertNode(pasted, parent, index);
-        StatusMessage = "已粘贴子树；全部节点已生成新 ID，预设引用和 JSON 参数类型保持不变。";
-    }
-
-    /// <summary>
-    /// 刷新预设文件并立即更新所有打开文档的预设选择和来源预览。
-    /// </summary>
-    [RelayCommand]
-    private async Task RefreshPresetsAsync()
-    {
-        if (IsBusy)
-            return;
-        IsBusy = true;
-        try
-        {
-            _presets = await _store.ListPresetsAsync();
-            foreach (var document in AllDocuments)
-                document.SetPresets(_presets);
-            StatusMessage = $"已刷新 {_presets.Count} 个共享预设。";
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = "刷新预设失败：" + ex.Message;
-            await ThemedMessageBox.ErrorAsync(StatusMessage, "无法刷新共享预设");
-        }
-        finally
-        {
-            IsBusy = false;
-            NotifyCommandStates();
-        }
+        StatusMessage = "已粘贴；粘贴的任务是独立副本，修改不会影响原任务。";
     }
 
     /// <summary>
@@ -716,13 +472,17 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     }
 
     /// <summary>
-    /// 将合法拖拽提交为一次可撤销的树移动。
+    /// 将合法拖拽提交为一次可撤销的树移动，或调整计划列表顺序。
     /// </summary>
     public void Drop(IDropInfo dropInfo)
     {
         if (dropInfo.Data is PuloniaTaskPlanDocumentViewModel document)
         {
-            MoveDocument(document, dropInfo.InsertIndex);
+            if (Session.MoveDocument(document, dropInfo.InsertIndex))
+            {
+                SelectedDocument = document;
+                StatusMessage = $"已调整“{document.Name}”的计划列表顺序。";
+            }
             return;
         }
 
@@ -731,11 +491,11 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
             || !TryResolveDropTarget(source, target, dropInfo.InsertPosition, out var parent, out var index))
             return;
         source.Document.MoveNode(source, parent, index);
-        StatusMessage = $"已移动“{source.Name}”；节点 ID 和子项启用选择保持不变。";
+        StatusMessage = $"已移动“{source.Name}”。";
     }
 
     /// <summary>
-    /// 当前计划切换后刷新可引用计划列表和命令状态。
+    /// 当前计划切换后刷新可引用计划列表、记录范围、触发配置和命令状态。
     /// </summary>
     partial void OnSelectedDocumentChanged(PuloniaTaskPlanDocumentViewModel? oldValue,
         PuloniaTaskPlanDocumentViewModel? newValue)
@@ -743,146 +503,23 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         RefreshReferencePlans();
         History.PlanFilterId = newValue?.Id;
         NotifyCommandStates();
-        RefreshTriggers(force: true);
+        TriggerSettings.Document = newValue;
     }
 
     /// <summary>
-    /// 忙碌状态变化后刷新保存命令。
+    /// 会话内文档变化时刷新粘贴与列表命令。
     /// </summary>
-    partial void OnIsBusyChanged(bool value) => NotifyCommandStates();
+    private void OnSessionDocumentChanged(object? sender, EventArgs e) => NotifyCommandStates();
 
     /// <summary>
-    /// 建立一个带根分组的新计划文档。
+    /// 会话忙碌状态变化后同步页面属性和命令。
     /// </summary>
-    private PuloniaTaskPlanDocumentViewModel CreateNewDocument(string name)
+    private void OnSessionPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        var plan = new PuloniaTaskPlan
-        {
-            Name = name,
-            RootTask = new PuloniaTask { Name = name, TaskType = "group" }
-        };
-        return new PuloniaTaskPlanDocumentViewModel(plan, _presets, _clipboard, isNew: true);
-    }
-
-    /// <summary>
-    /// 把文档加入页面并订阅其编辑状态变化。
-    /// </summary>
-    private void AddDocument(PuloniaTaskPlanDocumentViewModel document)
-    {
-        document.SetDefinitions(_taskService.Definitions);
-        if (document.Purpose == PuloniaTaskPlanPurpose.OneDragon) OneDragonDocuments.Add(document);
-        else Documents.Add(document);
-        _saveGates.Add(document, new SemaphoreSlim(1, 1));
-        document.Changed += OnDocumentChanged;
-        document.ContentChanged += OnDocumentContentChanged;
-        RefreshReferencePlans();
-    }
-
-    /// <summary>
-    /// 文档变化时刷新跨文档命令和页面状态。
-    /// </summary>
-    private void OnDocumentChanged(object? sender, EventArgs e)
-    {
-        RefreshTriggers();
-        OnPropertyChanged(nameof(CanPaste));
+        if (e.PropertyName != nameof(PuloniaPlanEditingSession.IsBusy))
+            return;
+        OnPropertyChanged(nameof(IsBusy));
         NotifyCommandStates();
-    }
-
-    /// <summary>
-    /// 计划内容变化后安排自动保存；保存失败后等待下一次真实编辑再重试。
-    /// </summary>
-    private void OnDocumentContentChanged(object? sender, EventArgs e)
-    {
-        // 删除节点、修改路径或撤销后立即撤掉失效统计；磁盘版本由页面检查循环重新读取。
-        UpdateResourceSummaries(GetResourceDocuments());
-        ConfirmResourceUpdatesCommand.NotifyCanExecuteChanged();
-        UpdateAllResourceVersionsCommand.NotifyCanExecuteChanged();
-        SyncAndUpdateResourcesCommand.NotifyCanExecuteChanged();
-        if (sender is PuloniaTaskPlanDocumentViewModel { IsDirty: true, LastSaveError: null } document)
-            ScheduleAutoSave(document);
-    }
-
-    /// <summary>
-    /// 重新安排指定计划的自动保存；短时间内的连续操作只保留最后一个延迟任务。
-    /// </summary>
-    private void ScheduleAutoSave(PuloniaTaskPlanDocumentViewModel document)
-    {
-        if (!AllDocuments.Contains(document) || document.IsDeleted || _deletingDocuments.Contains(document)
-            || !document.IsDirty || document.LastSaveError is not null)
-            return;
-
-        CancelPendingAutoSave(document);
-        var cancellation = new CancellationTokenSource();
-        _autoSaveDelays[document] = cancellation;
-        _ = AutoSaveAfterDelayAsync(document, cancellation);
-    }
-
-    /// <summary>
-    /// 等待防抖时间后保存计划；取消只终止尚未开始的延迟，不中断原子文件替换。
-    /// </summary>
-    private async Task AutoSaveAfterDelayAsync(PuloniaTaskPlanDocumentViewModel document,
-        CancellationTokenSource cancellation)
-    {
-        try
-        {
-            await Task.Delay(AutoSaveDelayMilliseconds, cancellation.Token);
-            if (AllDocuments.Contains(document) && document.IsDirty)
-                await SaveDocumentAsync(document);
-        }
-        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
-        {
-            // 新操作已重新安排保存，本次延迟正常结束。
-        }
-        finally
-        {
-            if (_autoSaveDelays.TryGetValue(document, out var current)
-                && ReferenceEquals(current, cancellation))
-                _autoSaveDelays.Remove(document);
-            cancellation.Dispose();
-        }
-    }
-
-    /// <summary>
-    /// 取消指定计划尚处于防抖等待中的自动保存。
-    /// </summary>
-    private void CancelPendingAutoSave(PuloniaTaskPlanDocumentViewModel document)
-    {
-        if (_autoSaveDelays.Remove(document, out var cancellation))
-            cancellation.Cancel();
-    }
-
-    /// <summary>
-    /// 取得指定计划的串行保存门，并登记本次使用，包含尚在排队的使用者。
-    /// </summary>
-    private SemaphoreSlim GetSaveGate(PuloniaTaskPlanDocumentViewModel document)
-    {
-        _saveGateUsers.TryGetValue(document, out var users);
-        _saveGateUsers[document] = users + 1;
-        if (_saveGates.TryGetValue(document, out var saveGate))
-            return saveGate;
-        saveGate = new SemaphoreSlim(1, 1);
-        _saveGates.Add(document, saveGate);
-        return saveGate;
-    }
-
-    /// <summary>
-    /// 退出保存门；已删除文档的最后一个使用者负责清理资源，避免释放仍有等待者的门。
-    /// </summary>
-    private void ReleaseSaveGate(PuloniaTaskPlanDocumentViewModel document, SemaphoreSlim saveGate)
-    {
-        saveGate.Release();
-        var users = _saveGateUsers[document] - 1;
-        if (users > 0)
-        {
-            _saveGateUsers[document] = users;
-            return;
-        }
-        _saveGateUsers.Remove(document);
-        if (document.IsDeleted)
-        {
-            _saveGates.Remove(document);
-            saveGate.Dispose();
-        }
     }
 
     /// <summary>
@@ -962,79 +599,6 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     }
 
     /// <summary>
-    /// 判断新增引用是否会通过任意打开计划间的引用关系回到来源计划。
-    /// </summary>
-    private bool WouldCreatePlanReferenceCycle(PuloniaTaskPlanDocumentViewModel source,
-        PuloniaTaskPlanDocumentViewModel target)
-    {
-        var visited = new HashSet<string>(StringComparer.Ordinal);
-        return ReachesSource(target);
-
-        bool ReachesSource(PuloniaTaskPlanDocumentViewModel current)
-        {
-            if (!visited.Add(current.Id))
-                return false;
-            foreach (var referencedId in EnumeratePlanReferenceIds(current.Plan.RootTask))
-            {
-                if (referencedId == source.Id)
-                    return true;
-                var referencedDocument = AllDocuments.FirstOrDefault(document => document.Id == referencedId);
-                if (referencedDocument is not null && ReachesSource(referencedDocument))
-                    return true;
-            }
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// 深度优先枚举任务树中的计划引用 ID。
-    /// </summary>
-    private static IEnumerable<string> EnumeratePlanReferenceIds(PuloniaTask task)
-    {
-        if (task.Source is { Kind: "plan", PlanId: { } planId })
-            yield return planId;
-        foreach (var child in task.Children)
-        foreach (var referencedPlanId in EnumeratePlanReferenceIds(child))
-            yield return referencedPlanId;
-    }
-
-    /// <summary>
-    /// 在计划列表中移动文档，并把当前顺序作为独立界面元数据持久化。
-    /// </summary>
-    private void MoveDocument(PuloniaTaskPlanDocumentViewModel document, int insertIndex)
-    {
-        var sourceIndex = Documents.IndexOf(document);
-        if (sourceIndex < 0)
-            return;
-        var targetIndex = Math.Clamp(insertIndex, 0, Documents.Count);
-        if (sourceIndex < targetIndex)
-            targetIndex--;
-        if (sourceIndex == targetIndex)
-            return;
-
-        Documents.Move(sourceIndex, targetIndex);
-        SelectedDocument = document;
-        StatusMessage = $"已调整“{document.Name}”的计划列表顺序。";
-        _ = PersistPlanOrderAsync();
-    }
-
-    /// <summary>
-    /// 保存当前计划列表顺序；失败只影响下次启动的显示顺序，不回滚当前编辑会话。
-    /// </summary>
-    private async Task PersistPlanOrderAsync()
-    {
-        try
-        {
-            await _store.SavePlanOrderAsync(Documents.Concat(OneDragonDocuments).Select(document => document.Id).ToArray());
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = "计划内容未受影响，但列表顺序保存失败：" + ex.Message;
-            await ThemedMessageBox.ErrorAsync(StatusMessage, "无法保存计划顺序");
-        }
-    }
-
-    /// <summary>
     /// 通知源生成命令重新计算可执行状态。
     /// </summary>
     private void NotifyCommandStates()
@@ -1044,7 +608,6 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         OnPropertyChanged(nameof(CanRunPlan));
         AddPlanReferenceCommand.NotifyCanExecuteChanged();
         RunPlanCommand.NotifyCanExecuteChanged();
-        ConfirmResourceUpdatesCommand.NotifyCanExecuteChanged();
         CopyPlanCommand.NotifyCanExecuteChanged();
         DeletePlanCommand.NotifyCanExecuteChanged();
     }

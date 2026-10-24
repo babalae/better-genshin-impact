@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
@@ -14,16 +13,11 @@ using Microsoft.Extensions.Logging;
 namespace BetterGenshinImpact.Pulonia.Remote;
 
 /// <summary>
-/// 子实例侧的远程节点执行：用本进程的执行器和游戏环境运行主实例派发的节点，并把完成事件与结束结果回报主实例。
+/// 子实例侧的远程节点执行：用本进程的执行器和游戏环境运行主实例派发的节点，并把结束结果回报主实例。
 /// 不读写 Pulonia 状态文件；与主实例断开、本地停止时取消正在执行的节点
 /// </summary>
 public sealed class PuloniaRemoteNodeHost
 {
-    /// <summary>
-    /// 结束回报的重试次数，期间连接仍在但请求超时时使用
-    /// </summary>
-    private const int FinishRetryCount = 3;
-
     /// <summary>
     /// 延迟取得的通信通道
     /// </summary>
@@ -35,14 +29,9 @@ public sealed class PuloniaRemoteNodeHost
     private readonly IReadOnlyDictionary<string, IPuloniaTaskExecutor> _executors;
 
     /// <summary>
-    /// 游戏节点的任务锁、运行环境与任务模式
+    /// 本进程游戏中的节点执行与账号准备，与主实例本地执行共用同一实现（取租约 → 核验 UID → 建上下文 → 会话作用域 → 执行器）
     /// </summary>
-    private readonly PuloniaGameTaskCoordinator _gameTaskCoordinator;
-
-    /// <summary>
-    /// 账号准备与核验；没有注册时账号相关节点失败
-    /// </summary>
-    private readonly IPuloniaGenshinAccountSwitcher? _accountSwitcher;
+    private readonly PuloniaLocalNodeRunner _localNodes;
 
     /// <summary>
     /// 本地停止信号（停止热键、截图器停止、应用关闭）
@@ -84,10 +73,9 @@ public sealed class PuloniaRemoteNodeHost
         ILogger<PuloniaRemoteNodeHost> logger, IPuloniaGenshinAccountSwitcher? accountSwitcher = null)
     {
         _transportFactory = transportFactory;
-        _gameTaskCoordinator = gameTaskCoordinator;
+        _localNodes = new PuloniaLocalNodeRunner(gameTaskCoordinator, accountSwitcher);
         _taskStopService = taskStopService;
         _logger = logger;
-        _accountSwitcher = accountSwitcher;
         var map = new Dictionary<string, IPuloniaTaskExecutor>(StringComparer.Ordinal);
         foreach (var executor in executors)
         foreach (var definition in executor.Definitions)
@@ -123,7 +111,6 @@ public sealed class PuloniaRemoteNodeHost
     /// </summary>
     /// <param name="start">节点启动信息</param>
     /// <exception cref="ArgumentException">启动信息缺失必要字段</exception>
-    /// <exception cref="InvalidOperationException">同一执行标识已在执行</exception>
     public void Start(PuloniaRemoteNodeStart start)
     {
         ArgumentNullException.ThrowIfNull(start);
@@ -136,11 +123,8 @@ public sealed class PuloniaRemoteNodeHost
 
         _ = Transport;
         var node = new RunningNode(start);
-        if (!_running.TryAdd(start.ExecutionId, node))
-        {
-            node.Dispose();
-            throw new InvalidOperationException("该远程节点已经在执行。");
-        }
+        // 执行标识是主实例每次新建的 GUID，不会重复，不再做重复检查
+        _running[start.ExecutionId] = node;
 
         _logger.LogInformation("开始执行主实例派发的 Pulonia 节点：{Address}（第 {Attempt} 次）", start.TaskAddress, start.Attempt);
         _ = Task.Run(() => RunAsync(node));
@@ -191,7 +175,7 @@ public sealed class PuloniaRemoteNodeHost
                 Message = node.StoppedLocally ? "执行实例本地停止了节点。" : "节点已按主实例请求取消。"
             };
         }
-        catch (RemoteAccountException exception)
+        catch (PuloniaGenshinAccountException exception)
         {
             finished = new PuloniaRemoteNodeFinished
             {
@@ -220,7 +204,7 @@ public sealed class PuloniaRemoteNodeHost
     }
 
     /// <summary>
-    /// 用本进程执行器执行快照节点；游戏节点先取得输入并核验账号，与主实例本地执行的顺序一致
+    /// 用本进程执行器执行快照节点；与主实例本地执行共用同一实现，游戏节点先取得输入并核验账号
     /// </summary>
     private async Task<PuloniaRemoteNodeFinished> ExecuteTaskAsync(PuloniaRemoteNodeStart start, CancellationToken ct)
     {
@@ -229,30 +213,8 @@ public sealed class PuloniaRemoteNodeHost
         if (!_executors.TryGetValue(task.TaskType, out var executor))
             throw new InvalidOperationException($"执行实例没有注册 {task.TaskType} 执行器。");
 
-        using var lease = start.RequiresGameSession
-            ? await _gameTaskCoordinator.AcquireAsync(ct).ConfigureAwait(false)
-            : null;
-        if (lease is not null && start.ExpectedUid is { } expectedUid && _accountSwitcher is not null)
-        {
-            try
-            {
-                await _accountSwitcher.VerifyAsync(lease.Runtime, expectedUid, ct).ConfigureAwait(false);
-            }
-            catch (Exception exception) when (exception is not OperationCanceledException)
-            {
-                throw new RemoteAccountException(exception.Message, exception);
-            }
-        }
-
-        var context = new PuloniaTaskExecutionContext(start.RunId, snapshot, start.Attempt,
-            task.TaskAddress, lease?.Runtime, (completionEvent, token) => ReportAsync(start.ExecutionId, completionEvent, token));
-        PuloniaTaskOutcome outcome;
-        // 持有任务锁期间标记会话，执行器内部不能再通过 TaskRunner 启动任务
-        using (lease is not null ? GameTaskSessionScope.Enter() : null)
-        {
-            outcome = await executor.ExecuteAsync(task, context, ct).ConfigureAwait(false);
-        }
-
+        var outcome = await _localNodes.ExecuteAsync(executor, task, start.RunId, snapshot, start.Attempt,
+            start.RequiresGameSession, start.ExpectedUid, ct).ConfigureAwait(false);
         ct.ThrowIfCancellationRequested();
         return PuloniaRemoteNodeFinished.FromOutcome(start.ExecutionId, outcome);
     }
@@ -262,84 +224,31 @@ public sealed class PuloniaRemoteNodeHost
     /// </summary>
     private async Task<PuloniaRemoteNodeFinished> PrepareAccountAsync(PuloniaRemoteNodeStart start, CancellationToken ct)
     {
-        if (_accountSwitcher is null)
-            throw new RemoteAccountException("执行实例没有账号切换能力。", new InvalidOperationException());
+        // 账号资料来自主实例运行快照，主实例与子实例版本一致，按当前格式严格读取。
         var account = PuloniaTaskJson.Read<PuloniaGenshinAccountProfile>(start.AccountJson!);
-        PuloniaGameTaskLease lease;
-        try
+        var uid = await _localNodes.PrepareAccountAsync(account, start.ExpectedUid, ct).ConfigureAwait(false);
+        return new PuloniaRemoteNodeFinished
         {
-            lease = await _gameTaskCoordinator.AcquireAsync(ct).ConfigureAwait(false);
-        }
-        catch (Exception exception) when (exception is not OperationCanceledException)
-        {
-            throw new RemoteAccountException("无法准备账号的游戏环境：" + exception.Message, exception);
-        }
-
-        using (lease)
-        {
-            string uid;
-            try
-            {
-                if (start.ExpectedUid is { } expected)
-                {
-                    if (!account.IsDefault)
-                        await _accountSwitcher.PrepareAsync(lease.Runtime, account, ct).ConfigureAwait(false);
-                    await _accountSwitcher.VerifyAsync(lease.Runtime, expected, ct).ConfigureAwait(false);
-                    uid = expected;
-                }
-                else
-                {
-                    uid = await _accountSwitcher.PrepareAsync(lease.Runtime, account, ct).ConfigureAwait(false);
-                }
-            }
-            catch (Exception exception) when (exception is not OperationCanceledException)
-            {
-                throw new RemoteAccountException(exception.Message, exception);
-            }
-
-            return new PuloniaRemoteNodeFinished
-            {
-                ExecutionId = start.ExecutionId,
-                ResultKind = PuloniaRemoteNodeResultKind.Completed,
-                Message = "账号已核验，实际 UID：" + uid,
-                VerifiedUid = uid
-            };
-        }
+            ExecutionId = start.ExecutionId,
+            ResultKind = PuloniaRemoteNodeResultKind.Completed,
+            Message = "账号已核验，实际 UID：" + uid,
+            VerifiedUid = uid
+        };
     }
 
     /// <summary>
-    /// 把执行器的完成事件转发给主实例；主实例落盘成功后才返回，失败时执行器随之失败
-    /// </summary>
-    private Task ReportAsync(Guid executionId, PuloniaTaskCompletionEvent completionEvent, CancellationToken ct)
-    {
-        return Transport.ReportRemoteNodeAsync(new PuloniaRemoteNodeReport
-        {
-            ExecutionId = executionId,
-            EventJson = PuloniaTaskJson.Write(completionEvent)
-        }, ct);
-    }
-
-    /// <summary>
-    /// 回报节点结束；请求超时时重试，连接已断开时放弃（主实例已按断开处理该节点）
+    /// 回报节点结束；只发送一次，失败时记录日志。连接已断开时主实例已按断开处理该节点；
+    /// 连接仍在却请求超时（罕见）时不再重试，主实例的节点会一直等到节点时限、用户停止或断开，再按超时或失败收尾
     /// </summary>
     private async Task SendFinishedAsync(PuloniaRemoteNodeFinished finished)
     {
-        for (var attempt = 1; attempt <= FinishRetryCount; attempt++)
+        try
         {
-            try
-            {
-                await Transport.FinishRemoteNodeAsync(finished, CancellationToken.None).ConfigureAwait(false);
-                return;
-            }
-            catch (TimeoutException) when (attempt < FinishRetryCount)
-            {
-                await Task.Delay(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
-            }
-            catch (Exception exception) when (exception is InvalidOperationException or IOException or TimeoutException)
-            {
-                _logger.LogWarning(exception, "向主实例回报 Pulonia 节点结束失败：{ExecutionId}", finished.ExecutionId);
-                return;
-            }
+            await Transport.FinishRemoteNodeAsync(finished, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or IOException or TimeoutException)
+        {
+            _logger.LogWarning(exception, "向主实例回报 Pulonia 节点结束失败：{ExecutionId}", finished.ExecutionId);
         }
     }
 
@@ -394,8 +303,6 @@ public sealed class PuloniaRemoteNodeHost
         public void Dispose() => _cancellation.Dispose();
     }
 
-    /// <summary>
-    /// 账号准备或核验失败，回报为 AccountFailed，主实例据此把运行转为待处理
-    /// </summary>
-    private sealed class RemoteAccountException(string message, Exception inner) : Exception(message, inner);
+    // 账号准备或核验失败统一使用 PuloniaGenshinAccountException（与主实例本地执行共用），回报为 AccountFailed，
+    // 主实例据此把运行转为待处理。
 }

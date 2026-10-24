@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using BetterGenshinImpact.Pulonia.Services;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using BetterGenshinImpact.Core.Script.Repositories;
@@ -14,14 +13,14 @@ namespace BetterGenshinImpact.Pulonia.Models;
 public sealed class PuloniaTaskPreparedTask
 {
     /// <summary>
-    /// 私有的参数副本，避免调用者通过 JToken 修改运行配置。
+    /// 构造时复制并冻结的参数，从不对外暴露，避免调用者通过 JToken 修改运行配置。
     /// </summary>
-    private readonly string _parametersJson;
+    private readonly JObject _parameters;
 
     /// <summary>
-    /// 私有的策略副本。
+    /// 构造时复制并冻结的策略，从不对外暴露。
     /// </summary>
-    private readonly string _policyJson;
+    private readonly PuloniaTaskPolicy _policy;
 
     /// <summary>
     /// 原计划 ID。
@@ -90,7 +89,7 @@ public sealed class PuloniaTaskPreparedTask
     /// 有效参数的防御性副本；修改返回值不影响运行树。
     /// </summary>
     [JsonProperty("parameters")]
-    public JObject Parameters => PuloniaTaskJson.Read<JObject>(_parametersJson);
+    public JObject Parameters => (JObject)_parameters.DeepClone();
 
     /// <summary>
     /// 每个顶层参数的最终来源。
@@ -99,10 +98,10 @@ public sealed class PuloniaTaskPreparedTask
     public IReadOnlyDictionary<string, string> ParameterSources { get; }
 
     /// <summary>
-    /// 有效策略的防御性副本。
+    /// 有效策略的防御性副本；修改返回值不影响运行树。
     /// </summary>
     [JsonProperty("policy")]
-    public PuloniaTaskPolicy Policy => PuloniaTaskJson.Read<PuloniaTaskPolicy>(_policyJson);
+    public PuloniaTaskPolicy Policy => _policy.Clone();
 
     /// <summary>
     /// 展开后的只读子树，顺序与用户编排一致。
@@ -131,8 +130,8 @@ public sealed class PuloniaTaskPreparedTask
         Resource = resource;
         ResourceVersion = resourceVersion;
         CollectionCooldown = collectionCooldown;
-        _parametersJson = PuloniaTaskJson.Write(parameters);
-        _policyJson = PuloniaTaskJson.Write(policy);
+        _parameters = (JObject)parameters.DeepClone();
+        _policy = policy.Clone();
         ParameterSources = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(parameterSources));
         Children = System.Array.AsReadOnly(children.ToArray());
     }

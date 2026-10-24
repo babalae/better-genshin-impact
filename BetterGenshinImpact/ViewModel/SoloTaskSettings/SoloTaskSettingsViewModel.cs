@@ -1,5 +1,7 @@
 using BetterGenshinImpact.GameTask.AutoFight.Strategy;
 using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using BetterGenshinImpact.Core.Config;
@@ -18,14 +20,29 @@ public abstract class SoloTaskSettingsViewModel : ObservableObject
     /// <summary>专属界面已提供的参数；其余参数由宿主补充为设置卡片，避免专属界面遮蔽可用功能。</summary>
     public abstract string[] EditedParameterNames { get; }
 
-    /// <summary>载入时的有效参数快照；“重置草稿”和来源变化检测依赖它。</summary>
+    /// <summary>载入时的有效参数快照；变化收集与来源变化检测依赖它。</summary>
     protected JObject Original { get; }
+
+    /// <summary>
+    /// 任一输入（包括每周安排、商品勾选等子行）发生变化时触发；即时生效的宿主据此立即提交，
+    /// 先确认后提交的宿主可以忽略。
+    /// </summary>
+    public event EventHandler? Edited;
 
     /// <summary>保存当前有效参数快照，具体字段由派生类填充。</summary>
     /// <param name="original">当前有效参数；内部保存独立副本，调用方后续修改不影响快照。</param>
     protected SoloTaskSettingsViewModel(JObject original)
     {
         Original = (JObject)original.DeepClone();
+        PropertyChanged += (_, _) => Edited?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>把子行的属性变化也转发为 <see cref="Edited"/>，派生类在填充子行后调用一次。</summary>
+    /// <param name="items">可编辑的子行。</param>
+    protected void TrackEdits(IEnumerable<INotifyPropertyChanged> items)
+    {
+        foreach (var item in items)
+            item.PropertyChanged += (_, _) => Edited?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>把输入相对快照的真实变化写入 changes；由宿主的“应用设置”统一校验提交。</summary>

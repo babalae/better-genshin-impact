@@ -50,6 +50,7 @@ public partial class SereniteaPotSettingsViewModel : SoloTaskSettingsViewModel
         PurchaseScheduleChoices = WithCurrentChoice(["每天重复", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"], _originalPurchaseSchedule);
         PurchaseItems = Goods.Concat(_originalPurchaseItems).Distinct(StringComparer.Ordinal)
             .Select(name => new SereniteaPotPurchaseItemViewModel(name, _originalPurchaseItems.Contains(name, StringComparer.Ordinal))).ToArray();
+        TrackEdits(PurchaseItems);
     }
 
     /// <summary>仅提交真正修改的设置，并将日期及商品恢复为任务原有的字符串数组。</summary>

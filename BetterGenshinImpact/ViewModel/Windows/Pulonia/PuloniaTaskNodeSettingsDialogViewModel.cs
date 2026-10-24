@@ -2,7 +2,6 @@ using System;
 using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
-using BetterGenshinImpact.ViewModel.Pages;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using BetterGenshinImpact.ViewModel.SoloTaskSettings;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -13,7 +12,7 @@ namespace BetterGenshinImpact.ViewModel.Windows.Pulonia;
 
 /// <summary>
 /// 编辑任务节点弹窗视图模型：名称、启用状态、执行次数、资源路径与任务设置均为草稿，点击“保存”后一次性提交；
-/// 高级设置区沿用文档自身的即时应用命令。
+/// 高级设置区由窗口专属的 <see cref="Advanced"/> 按需计算，点击各自的“应用”后即时生效。
 /// </summary>
 public partial class PuloniaTaskNodeSettingsDialogViewModel : ObservableObject
 {
@@ -23,11 +22,14 @@ public partial class PuloniaTaskNodeSettingsDialogViewModel : ObservableObject
     /// <summary>节点对应的能力定义；分组或未注册能力为空。</summary>
     private readonly PuloniaTaskDefinition? _definition;
 
-    /// <summary>任务计划页面视图模型，提供刷新预设、更新资源等页面级命令。</summary>
-    public PuloniaTaskPlanViewModel Page { get; }
+    /// <summary>编辑会话，提供刷新预设、更新资源等会话级命令。</summary>
+    public PuloniaPlanEditingSession Session { get; }
 
-    /// <summary>节点所属的计划文档，高级设置直接绑定其编辑器状态。</summary>
+    /// <summary>节点所属的计划文档。</summary>
     public PuloniaTaskPlanDocumentViewModel Document { get; }
+
+    /// <summary>高级设置区的原始参数、策略、来源、预设与公共设置入口，只在本窗口打开期间存在。</summary>
+    public PuloniaTaskNodeAdvancedSettingsViewModel Advanced { get; }
 
     /// <summary>被编辑的节点。</summary>
     public PuloniaTaskNodeViewModel Node { get; }
@@ -76,7 +78,7 @@ public partial class PuloniaTaskNodeSettingsDialogViewModel : ObservableObject
     public bool HasBasicOptions => CanConfigureRepeat || CanEditPath || CanUpdateResourceVersion;
 
     /// <summary>非独立任务是否提供行走、战斗、Shell 或采集 CD 等专用设置入口。</summary>
-    public bool HasTaskTools => !HasSettings && (Document.CanEditCommonSettings || Document.CanEditCollectionCooldown);
+    public bool HasTaskTools => !HasSettings && (Advanced.CanEditCommonSettings || Advanced.CanEditCollectionCooldown);
 
     /// <summary>节点是否为独立任务。</summary>
     private bool IsSoloTask => PuloniaSoloTaskExecutor.IsSoloTaskType(Node.TaskType);
@@ -85,18 +87,20 @@ public partial class PuloniaTaskNodeSettingsDialogViewModel : ObservableObject
     public event EventHandler<bool>? RequestClose;
 
     /// <summary>
-    /// 建立编辑弹窗视图模型；调用方需先把节点设为文档的选中节点，高级设置区依赖该选择。
+    /// 建立编辑弹窗视图模型；高级设置区按被编辑节点计算，不依赖文档的当前选中节点。
     /// </summary>
-    /// <param name="page">任务计划页面视图模型。</param>
+    /// <param name="session">编辑会话。</param>
     /// <param name="node">被编辑的节点。</param>
     /// <param name="definition">节点能力定义。</param>
     /// <param name="registry">独立任务注册表。</param>
-    public PuloniaTaskNodeSettingsDialogViewModel(PuloniaTaskPlanViewModel page, PuloniaTaskNodeViewModel node,
-        PuloniaTaskDefinition? definition, SoloTaskRegistry? registry)
+    /// <param name="dialogs">公共设置与采集 CD 表单入口；为空时这两类表单不可用。</param>
+    public PuloniaTaskNodeSettingsDialogViewModel(PuloniaPlanEditingSession session, PuloniaTaskNodeViewModel node,
+        PuloniaTaskDefinition? definition, SoloTaskRegistry? registry, IPuloniaTaskSettingsDialogs? dialogs = null)
     {
-        Page = page;
+        Session = session;
         Node = node;
         Document = node.Document;
+        Advanced = new PuloniaTaskNodeAdvancedSettingsViewModel(node.Document, node, dialogs);
         _definition = definition;
         _registry = registry;
         _name = node.Name;
@@ -143,7 +147,11 @@ public partial class PuloniaTaskNodeSettingsDialogViewModel : ObservableObject
     private void Cancel() => RequestClose?.Invoke(this, false);
 
     /// <summary>弹窗关闭时解除文档事件订阅。</summary>
-    public void Close() => Document.ContentChanged -= OnDocumentContentChanged;
+    public void Close()
+    {
+        Document.ContentChanged -= OnDocumentContentChanged;
+        Advanced.Dispose();
+    }
 
     /// <summary>独立任务按当前有效参数建立设置编辑器，其余节点不提供。</summary>
     /// <returns>设置编辑器或 null。</returns>

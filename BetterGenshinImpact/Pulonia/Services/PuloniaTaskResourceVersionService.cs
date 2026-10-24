@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Concurrent;
 using BetterGenshinImpact.Core.Script.Repositories;
 using BetterGenshinImpact.Core.Script.Project;
 using BetterGenshinImpact.Pulonia.Models;
@@ -12,17 +11,20 @@ using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.Pulonia.Services;
 
-/// <summary>统一读取编辑树的当前资源版本，不执行脚本、不修改资源或计划。</summary>
+/// <summary>
+/// 统一读取编辑树的当前资源版本，不执行脚本、不修改资源或计划。
+/// 调用方串行调用同一实例（任务计划页由 _resourceCheckGate 串行化），因此缓存使用普通字典。
+/// </summary>
 public sealed class PuloniaTaskResourceVersionService
 {
     /// <summary>带数量、层级和重解析点保护的资源扫描入口。</summary>
     private readonly PuloniaTaskResourceCatalog _catalog;
 
     /// <summary>同一仓库版本内只读取一次资源指纹，定时检查不会反复读取正文。</summary>
-    private readonly ConcurrentDictionary<(string Repository, string Revision, string Path, string Type, bool Recursive, bool Directory), string> _versions = new();
+    private readonly Dictionary<(string Repository, string Revision, string Path, string Type, bool Recursive, bool Directory), string> _versions = new();
 
     /// <summary>同一固定版本的声明版本只解析一次；空字符串表示正文没有声明可展示的版本号。</summary>
-    private readonly ConcurrentDictionary<(string Repository, string Revision, string Path, string Type), string> _declaredVersions = new();
+    private readonly Dictionary<(string Repository, string Revision, string Path, string Type), string> _declaredVersions = new();
 
     /// <summary>复用页面资源目录服务，确保检查与用户确认采用相同的文件清单。</summary>
     public PuloniaTaskResourceVersionService(PuloniaTaskResourceCatalog catalog) => _catalog = catalog;
@@ -36,32 +38,116 @@ public sealed class PuloniaTaskResourceVersionService
     public async Task<PuloniaTaskResourceVersionState> ReadCurrentStateAsync(PuloniaTask task,
         IReadOnlyList<PuloniaTaskDefinition> definitions, CancellationToken ct = default)
     {
-        var reference = task.Resource ?? task.Source?.Resource;
-        if (reference is not null)
+        if (GetReference(task) is not { } reference)
+            return await ReadLocalStateAsync(task, definitions, ct).ConfigureAwait(false);
+        using var snapshot = await _catalog.Repositories.OpenCurrentAsync(reference.RepositoryId, ct).ConfigureAwait(false);
+        return await ReadRepositoryStateAsync(task, reference, snapshot, null, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// 一轮检查多个任务：每个仓库只打开一次当前快照，同一已确认版本最多打开一次归档，
+    /// 声明版本先查缓存再打开归档。单项读取失败只记录在该项结果中，不影响其他任务。
+    /// </summary>
+    /// <param name="tasks">待检查的任务副本，读取期间不会被界面修改</param>
+    /// <param name="definitions">本地资源解析路径所需的能力定义</param>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>与 <paramref name="tasks"/> 一一对应的检查结果</returns>
+    public async Task<IReadOnlyList<PuloniaTaskResourceCheckResult>> ReadCurrentStatesAsync(IReadOnlyList<PuloniaTask> tasks,
+        IReadOnlyList<PuloniaTaskDefinition> definitions, CancellationToken ct = default)
+    {
+        var results = new PuloniaTaskResourceCheckResult[tasks.Count];
+        var repositoryTasks = new List<(int Index, ScriptResourceReference Reference)>();
+
+        // 本地路径资源逐项读取；仓库资源先收集，再按仓库分组共用读取会话。
+        for (var index = 0; index < tasks.Count; index++)
         {
-            string? currentDeclaredVersion;
-            string? version;
-            string? revision;
-            using var snapshot = await _catalog.Repositories.OpenCurrentAsync(reference.RepositoryId, ct).ConfigureAwait(false);
-            var type = task.Source?.TaskType ?? task.TaskType;
-            var recursive = task.Source?.Recursive ?? true;
-            var key = (reference.RepositoryId, snapshot.Revision, reference.RelativePath, type, recursive, task.Source?.Kind == "directory");
-            revision = snapshot.Revision;
-            if (!_versions.TryGetValue(key, out version))
+            ct.ThrowIfCancellationRequested();
+            if (GetReference(tasks[index]) is { } reference)
             {
-                version = await Task.Run(() => ScriptRepositoryStore.ComputeVersion(snapshot, reference.RelativePath,
-                    type, recursive, task.Source?.Kind == "directory"), ct).ConfigureAwait(false);
-                _versions[key] = version;
+                repositoryTasks.Add((index, reference));
+                continue;
             }
-            currentDeclaredVersion = ReadDeclaredVersion(snapshot, reference.RelativePath, type,
-                task.Source?.Kind == "directory");
-            // 旧版本由快照存储保留，提示缓存只保留当前来源版本，避免每次更新都累积指纹。
-            foreach (var old in _versions.Keys.Where(k => k.Repository == reference.RepositoryId && k.Revision != snapshot.Revision))
-                _versions.TryRemove(old, out _);
-            var approvedDeclaredVersion = await TryReadApprovedDeclaredVersionAsync(reference, type,
-                task.Source?.Kind == "directory", ct).ConfigureAwait(false);
-            return new PuloniaTaskResourceVersionState(version, revision, approvedDeclaredVersion, currentDeclaredVersion);
+            try { results[index] = new PuloniaTaskResourceCheckResult(await ReadLocalStateAsync(tasks[index], definitions, ct).ConfigureAwait(false)); }
+            catch (Exception ex) when (IsResourceReadError(ex)) { results[index] = new PuloniaTaskResourceCheckResult(ex); }
         }
+
+        foreach (var group in repositoryTasks.GroupBy(item => item.Reference.RepositoryId, StringComparer.Ordinal))
+        {
+            ScriptRepositorySnapshot snapshot;
+            try { snapshot = await _catalog.Repositories.OpenCurrentAsync(group.Key, ct).ConfigureAwait(false); }
+            catch (Exception ex) when (IsResourceReadError(ex))
+            {
+                // 来源不可读时，本仓库的全部任务共用同一个错误。
+                foreach (var item in group) results[item.Index] = new PuloniaTaskResourceCheckResult(ex);
+                continue;
+            }
+            // 本轮按已确认修订复用的归档读取会话；打开失败记为 null，本轮不再重试。
+            var approvedSnapshots = new Dictionary<string, ScriptRepositorySnapshot?>(StringComparer.Ordinal);
+            try
+            {
+                foreach (var (index, reference) in group)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    try
+                    {
+                        results[index] = new PuloniaTaskResourceCheckResult(await ReadRepositoryStateAsync(tasks[index], reference,
+                            snapshot, approvedSnapshots, ct).ConfigureAwait(false));
+                    }
+                    catch (Exception ex) when (IsResourceReadError(ex)) { results[index] = new PuloniaTaskResourceCheckResult(ex); }
+                }
+            }
+            finally
+            {
+                snapshot.Dispose();
+                foreach (var approved in approvedSnapshots.Values) approved?.Dispose();
+            }
+        }
+        return results;
+    }
+
+    /// <summary>
+    /// 资源缺失、不可读、路径或配置无效等可展示为节点检查错误的异常；其他异常属于程序错误，继续向上抛出。
+    /// </summary>
+    private static bool IsResourceReadError(Exception ex)
+        => ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException
+            or LibGit2Sharp.LibGit2SharpException;
+
+    /// <summary>任务引用的仓库资源；本地路径资源返回 null。</summary>
+    private static ScriptResourceReference? GetReference(PuloniaTask task) => task.Resource ?? task.Source?.Resource;
+
+    /// <summary>在已打开的当前快照上读取仓库资源状态；指纹按仓库修订缓存，声明版本只用于展示。</summary>
+    /// <param name="task">待检查的任务副本</param>
+    /// <param name="reference">任务引用的仓库资源</param>
+    /// <param name="snapshot">该仓库本轮的当前快照</param>
+    /// <param name="approvedSnapshots">本轮复用的已确认版本读取会话；为 null 时按需单独打开</param>
+    /// <param name="ct">取消令牌</param>
+    private async Task<PuloniaTaskResourceVersionState> ReadRepositoryStateAsync(PuloniaTask task,
+        ScriptResourceReference reference, ScriptRepositorySnapshot snapshot,
+        Dictionary<string, ScriptRepositorySnapshot?>? approvedSnapshots, CancellationToken ct)
+    {
+        var type = task.Source?.TaskType ?? task.TaskType;
+        var recursive = task.Source?.Recursive ?? true;
+        var directory = task.Source?.Kind == "directory";
+        var key = (reference.RepositoryId, snapshot.Revision, reference.RelativePath, type, recursive, directory);
+        if (!_versions.TryGetValue(key, out var version))
+        {
+            version = await Task.Run(() => PuloniaTaskResourceFingerprint.ComputeRepositoryVersion(snapshot,
+                reference.RelativePath, type, recursive, directory), ct).ConfigureAwait(false);
+            _versions[key] = version;
+        }
+        var currentDeclaredVersion = ReadDeclaredVersion(snapshot, reference.RelativePath, type, directory);
+        // 旧版本由快照存储保留，提示缓存只保留当前来源版本，避免每次更新都累积指纹。
+        foreach (var old in _versions.Keys.Where(k => k.Repository == reference.RepositoryId && k.Revision != snapshot.Revision).ToArray())
+            _versions.Remove(old);
+        var approvedDeclaredVersion = await TryReadApprovedDeclaredVersionAsync(reference, type, directory,
+            approvedSnapshots, ct).ConfigureAwait(false);
+        return new PuloniaTaskResourceVersionState(version, snapshot.Revision, approvedDeclaredVersion, currentDeclaredVersion);
+    }
+
+    /// <summary>读取本地路径资源与本地目录引用的当前指纹；不经过仓库存储。</summary>
+    private async Task<PuloniaTaskResourceVersionState> ReadLocalStateAsync(PuloniaTask task,
+        IReadOnlyList<PuloniaTaskDefinition> definitions, CancellationToken ct)
+    {
         if (task is { TaskType: "group", Source.Kind: "directory" })
         {
             var directory = ResolvePath(task.Source.Path, null);
@@ -80,29 +166,43 @@ public sealed class PuloniaTaskResourceVersionService
         var path = ResolvePath(task.Path, definition.ResourceBaseDirectory);
         if (task.TaskType == "javascript")
         {
-            var declared = await Task.Run(() => NormalizeDeclaredVersion(Manifest.FromJson(
+            var version = await PuloniaTaskResourceFingerprint.ComputeJavaScriptVersionAsync(path, ct).ConfigureAwait(false);
+            var declared = await Task.Run(() => TryReadDeclaredVersion(() => Manifest.FromJson(
                 File.ReadAllText(Path.Combine(path, "manifest.json"))).Version), ct).ConfigureAwait(false);
-            return new PuloniaTaskResourceVersionState(
-                await PuloniaTaskResourceFingerprint.ComputeJavaScriptVersionAsync(path, ct).ConfigureAwait(false),
-                null, null, declared);
+            return new PuloniaTaskResourceVersionState(version, null, null, declared);
         }
+        var fileVersion = await PuloniaTaskResourceFingerprint.ComputeFileVersionAsync(path, ct).ConfigureAwait(false);
         var currentDeclared = task.TaskType == "pathing"
-            ? await Task.Run(() => NormalizeDeclaredVersion(JObject.Parse(File.ReadAllText(path))["info"]?["version"]?.Value<string>()), ct)
+            ? await Task.Run(() => TryReadDeclaredVersion(() => JObject.Parse(File.ReadAllText(path))["info"]?["version"]?.Value<string>()), ct)
                 .ConfigureAwait(false)
             : null;
-        return new PuloniaTaskResourceVersionState(
-            await PuloniaTaskResourceFingerprint.ComputeFileVersionAsync(path, ct).ConfigureAwait(false),
-            null, null, currentDeclared);
+        return new PuloniaTaskResourceVersionState(fileVersion, null, null, currentDeclared);
     }
 
-    /// <summary>从任务已经保留的精确版本读取声明版本；展示信息缺失不能影响内容更新检查。</summary>
+    /// <summary>
+    /// 从任务已经保留的精确版本读取声明版本；展示信息缺失不能影响内容更新检查。
+    /// 已确认版本的正文不可变，先查缓存，命中时不再打开已保留归档。
+    /// </summary>
     private async Task<string?> TryReadApprovedDeclaredVersionAsync(ScriptResourceReference reference, string taskType,
-        bool directory, CancellationToken ct)
+        bool directory, Dictionary<string, ScriptRepositorySnapshot?>? approvedSnapshots, CancellationToken ct)
     {
+        if (directory) return null;
+        if (_declaredVersions.TryGetValue((reference.RepositoryId, reference.ApprovedRevision, reference.RelativePath, taskType),
+                out var cached))
+            return cached.Length == 0 ? null : cached;
+        ScriptRepositorySnapshot? owned = null;
         try
         {
-            using var snapshot = await _catalog.Repositories.OpenApprovedAsync(reference, ct).ConfigureAwait(false);
-            return ReadDeclaredVersion(snapshot, reference.RelativePath, taskType, directory);
+            ScriptRepositorySnapshot? snapshot;
+            if (approvedSnapshots is null)
+                snapshot = owned = await _catalog.Repositories.OpenApprovedAsync(reference, ct).ConfigureAwait(false);
+            else if (!approvedSnapshots.TryGetValue(reference.ApprovedRevision, out snapshot))
+            {
+                try { snapshot = await _catalog.Repositories.OpenApprovedAsync(reference, ct).ConfigureAwait(false); }
+                catch (Exception ex) when (ex is not OperationCanceledException) { snapshot = null; }
+                approvedSnapshots[reference.ApprovedRevision] = snapshot;
+            }
+            return snapshot is null ? null : ReadDeclaredVersion(snapshot, reference.RelativePath, taskType, directory);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -113,6 +213,10 @@ public sealed class PuloniaTaskResourceVersionService
             // 声明版本仅用于展示，旧快照缺失或元数据损坏不能遮蔽内容指纹检查结果。
             return null;
         }
+        finally
+        {
+            owned?.Dispose();
+        }
     }
 
     /// <summary>从实际运行正文读取声明版本；目录引用没有唯一版本号，因此只返回 null。</summary>
@@ -122,15 +226,25 @@ public sealed class PuloniaTaskResourceVersionService
         if (directory) return null;
         var key = (snapshot.Registration.Id, snapshot.Revision, relativePath, taskType);
         if (_declaredVersions.TryGetValue(key, out var cached)) return cached.Length == 0 ? null : cached;
-        string? value = taskType switch
+        // 固定版本的正文不变，正文损坏得到的 null 同样缓存，定时检查不会反复解析。
+        var value = TryReadDeclaredVersion(() => taskType switch
         {
             "javascript" => Manifest.FromJson(snapshot.ReadText("repo/" + relativePath + "/manifest.json")).Version,
             "pathing" => JObject.Parse(snapshot.ReadText("repo/" + relativePath))["info"]?["version"]?.Value<string>(),
             _ => null
-        };
-        value = NormalizeDeclaredVersion(value);
+        });
         _declaredVersions[key] = value ?? string.Empty;
         return value;
+    }
+
+    /// <summary>
+    /// 读取仅用于展示的声明版本；正文不是有效 JSON 或无法读取时返回 null，
+    /// 不能让一份损坏的 manifest 或路线遮蔽内容指纹检查结果，更新确认时再由内容校验拒绝。
+    /// </summary>
+    private static string? TryReadDeclaredVersion(Func<string?> read)
+    {
+        try { return NormalizeDeclaredVersion(read()); }
+        catch (Exception ex) when (ex is not OperationCanceledException) { return null; }
     }
 
     /// <summary>限制声明版本的展示长度并清理换行，防止仓库元数据破坏紧凑任务树布局。</summary>
@@ -150,26 +264,25 @@ public sealed class PuloniaTaskResourceVersionService
         return PrepareUpdateAsync(task, expectedVersion, ct, expectedState.CurrentRepositoryRevision);
     }
 
-    /// <summary>确认前固定最新来源并完成保留；失败时调用方不得修改计划引用。</summary>
+    /// <summary>
+    /// 确认前固定最新来源并完成保留；失败时调用方不得修改计划引用。
+    /// 修订与指纹核对、内容校验和保留在同一份固定来源上完成，不需要先释放来源锁再重新打开。
+    /// </summary>
     public async Task<ScriptResourceReference?> PrepareUpdateAsync(PuloniaTask task, string expectedVersion,
         CancellationToken ct = default, string? expectedRevision = null)
     {
-        var reference = task.Resource ?? task.Source?.Resource;
-        if (reference is null) return null;
-        ScriptResourceReference updated;
+        if (GetReference(task) is not { } reference) return null;
         var type = task.Source?.TaskType ?? task.TaskType;
-        using (var snapshot = await _catalog.Repositories.OpenCurrentAsync(reference.RepositoryId, ct).ConfigureAwait(false))
+        var recursive = task.Source?.Recursive ?? true;
+        var directory = task.Source?.Kind == "directory";
+        return await _catalog.Repositories.RetainCurrentAsync(reference, type, snapshot =>
         {
             if (expectedRevision is not null && snapshot.Revision != expectedRevision)
                 throw new InvalidOperationException("确认期间仓库版本再次变化，请重新检查。");
-            var actual = await Task.Run(() => ScriptRepositoryStore.ComputeVersion(snapshot, reference.RelativePath,
-                type, task.Source?.Recursive ?? true, task.Source?.Kind == "directory"), ct).ConfigureAwait(false);
+            var actual = PuloniaTaskResourceFingerprint.ComputeRepositoryVersion(snapshot, reference.RelativePath,
+                type, recursive, directory);
             if (actual != expectedVersion) throw new InvalidOperationException("确认期间资源再次变化，请重新检查。");
-            updated = reference.WithRevision(snapshot.Revision);
-        }
-        // 保留刚审阅的精确版本；先释放来源读取锁，再进入归档保留锁，避免重入死锁。
-        await _catalog.Repositories.RetainAsync(updated, type, ct).ConfigureAwait(false);
-        return updated;
+        }, ct).ConfigureAwait(false);
     }
 
     /// <summary>拒绝未解析变量和空路径，不用错误路径生成可供确认的指纹。</summary>

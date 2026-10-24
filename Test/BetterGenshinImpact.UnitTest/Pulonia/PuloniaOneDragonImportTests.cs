@@ -151,16 +151,16 @@ public sealed class PuloniaOneDragonImportTests : IDisposable
         document.SelectedNode = Assert.Single(document.RootNode.Children);
         var node = document.SelectedNode!;
         Assert.Equal("", document.GetOneDragonParameters(node).Value<string>("team_name"));
-        document.ApplyOneDragonParameters(node, new JObject());
+        document.ReplaceOneDragonParameters(node, new JObject());
         Assert.Empty(task.Parameters);
         Assert.False(document.IsDirty);
-        document.ApplyOneDragonParameters(node, new JObject { ["run_count"] = 3 });
+        document.ReplaceOneDragonParameters(node, new JObject { ["run_count"] = 3 });
         Assert.Single(task.Parameters);
         Assert.Equal(3, task.Parameters.Value<int>("run_count"));
         Assert.True(document.IsDirty);
     }
 
-    /// <summary>参数版本不兼容的预设不能混入卡片与配置预览。</summary>
+    /// <summary>参数版本不兼容的预设不能混入卡片与配置预览；提示由打开的高级设置按需计算，切换选中节点不再刷新。</summary>
     [Fact]
     public void ParameterPreview_RejectsPresetWithDifferentSchemaVersion()
     {
@@ -172,7 +172,8 @@ public sealed class PuloniaOneDragonImportTests : IDisposable
             { Name = "预设格式", RootTask = new PuloniaTask { Children = [task] } }, [preset], new PuloniaTaskClipboardService(), false);
         document.SetDefinitions([definition]);
         document.SelectedNode = Assert.Single(document.RootNode.Children);
-        Assert.Contains("参数版本", document.EditorMessage);
+        using var advanced = new PuloniaTaskNodeAdvancedSettingsViewModel(document, document.SelectedNode!, dialogs: null);
+        Assert.Contains("参数版本", advanced.Message);
         Assert.Equal("", document.GetOneDragonParameters(document.SelectedNode!).Value<string>("team_name"));
     }
 

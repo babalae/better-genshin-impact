@@ -6,7 +6,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
@@ -26,15 +25,13 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using BetterGenshinImpact.View.Controls;
 using GongSolutions.Wpf.DragDrop;
-using Newtonsoft.Json.Linq;
-using System.Threading;
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-/// <summary>沿用老一条龙布局的计划包装；保存和执行仍由唯一 Pulonia 编辑与任务服务负责。</summary>
+/// <summary>沿用老一条龙布局的计划包装；保存和执行仍由共用的 Pulonia 编辑会话与任务服务负责。</summary>
 public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
 {
-    /// <summary>与任务计划入口共享的完整编辑会话。</summary>
-    public PuloniaTaskPlanViewModel Editor { get; }
+    /// <summary>与任务计划入口共享的编辑会话。</summary>
+    public PuloniaPlanEditingSession Session { get; }
     /// <summary>唯一任务服务。</summary>
     private readonly IPuloniaTaskService _service;
     /// <summary>新增窗口使用的资源目录。</summary>
@@ -43,42 +40,32 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     private readonly PuloniaTaskStore _store;
     /// <summary>独立任务注册表；按描述符声明的设置界面创建专属设置 VM。</summary>
     private readonly SoloTaskRegistry _registry;
-    /// <summary>合并导航和 Loaded 生命周期，避免加载过程中创建重复默认配置。</summary>
-    private readonly SemaphoreSlim _pageLoadGate = new(1, 1);
+    /// <summary>调度宿主，为触发设置窗口提供运行反馈；测试直接构造时为空。</summary>
+    private readonly PuloniaTaskTriggerHost? _triggerHost;
+    /// <summary>首次进入页面的加载任务；导航与 Loaded 并发进入时复用同一次加载，失败后下次进入重试。</summary>
+    private Task? _pageLoad;
+    /// <summary>合并高频进度查询，查询期间收到新事件后再读取一次。</summary>
+    private readonly PuloniaCoalescedRefresh _statusRefresh;
     /// <summary>加载成功前禁用清单编辑，避免异步读盘覆盖用户操作。</summary>
     [ObservableProperty] private bool _isReady;
     /// <summary>未选择配置时的空任务清单。</summary>
     private readonly ObservableCollection<PuloniaTaskNodeViewModel> _emptyTasks = [];
-    /// <summary>按所属文档和节点身份隔离草稿；不同计划允许使用相同节点 ID。</summary>
-    private readonly Dictionary<(PuloniaTaskPlanDocumentViewModel Document, string NodeId), IReadOnlyList<PuloniaOneDragonParameterFieldViewModel>> _drafts = [];
-    /// <summary>固定任务专属设置视图的草稿缓存，生命周期与通用草稿一致。</summary>
-    private readonly Dictionary<(PuloniaTaskPlanDocumentViewModel Document, string NodeId), SoloTaskSettingsViewModel> _fixedSettingsCache = [];
-    /// <summary>当前 <see cref="FixedSettings"/> 所属的清单节点；提交时据此确认草稿属于当前选中任务。</summary>
-    private PuloniaTaskNodeViewModel? _fixedSettingsNode;
     /// <summary>仅属于一条龙的配置列表。</summary>
-    public ObservableCollection<PuloniaTaskPlanDocumentViewModel> Configurations => Editor.OneDragonDocuments;
+    public ObservableCollection<PuloniaTaskPlanDocumentViewModel> Configurations => Session.OneDragonDocuments;
     /// <summary>当前配置的平面根清单，引用和分组均作为一行。</summary>
     public ObservableCollection<PuloniaTaskNodeViewModel> TaskList => SelectedConfiguration?.RootNode.Children ?? _emptyTasks;
+    /// <summary>“添加任务”菜单：“独立任务”子菜单加上资源类与其他任务类型。</summary>
+    public IReadOnlyList<PuloniaTaskMenuItemViewModel> AddTaskMenu { get; }
     /// <summary>当前配置，与普通任务计划菜单的选择互不影响。</summary>
     [ObservableProperty] private PuloniaTaskPlanDocumentViewModel? _selectedConfiguration;
     /// <summary>左侧选中的任务。</summary>
     [ObservableProperty] private PuloniaTaskNodeViewModel? _selectedTask;
-    /// <summary>右侧当前任务的老样式设置卡片。</summary>
-    [ObservableProperty] private IReadOnlyList<PuloniaOneDragonParameterFieldViewModel> _settingsFields = [];
-    /// <summary>右侧当前任务的专属设置视图；为空时使用通用参数卡片。</summary>
-    [ObservableProperty] private SoloTaskSettingsViewModel? _fixedSettings;
-    /// <summary>当前配置应用结果。</summary>
-    [ObservableProperty] private string _settingsMessage = "";
     /// <summary>上次导入报告路径。</summary>
     [ObservableProperty] private string? _importReportPath;
     /// <summary>当前配置的活动运行 ID，独立于历史选择。</summary>
     private string? _activeRunId;
     /// <summary>页面是否正在接收运行事件。</summary>
     private bool _isListening;
-    /// <summary>合并高频进度查询。</summary>
-    private bool _statusRefreshPending;
-    /// <summary>查询期间收到新事件后再读取一次。</summary>
-    private bool _statusRefreshAgain;
     /// <summary>当前配置运行摘要。</summary>
     [ObservableProperty] private string _executionStatusText = "尚未执行";
     /// <summary>是否有可停止的请求。</summary>
@@ -98,23 +85,29 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     /// <summary>当前实例能否提交运行：子实例只能由主实例派发。</summary>
     public bool CanRunOnThisInstance => _instances?.Context.IsRoot ?? true;
 
-    /// <summary>注入共用编辑服务，界面仅维护选择与未提交的设置草稿。</summary>
-    /// <param name="editor">与任务计划入口共享的编辑会话</param>
+    /// <summary>注入共用编辑会话，界面只维护选择和右侧设置区，设置修改即时写入计划。</summary>
+    /// <param name="session">与任务计划入口共享的编辑会话</param>
     /// <param name="service">任务服务</param>
     /// <param name="catalog">资源目录</param>
     /// <param name="store">计划存储</param>
     /// <param name="registry">独立任务注册表</param>
     /// <param name="instances">多实例服务，提供运行实例选项</param>
-    public PuloniaOneDragonViewModel(PuloniaTaskPlanViewModel editor, IPuloniaTaskService service,
+    /// <param name="triggerHost">调度宿主，为触发设置窗口提供运行反馈</param>
+    public PuloniaOneDragonViewModel(PuloniaPlanEditingSession session, IPuloniaTaskService service,
         PuloniaTaskResourceCatalog catalog, PuloniaTaskStore store, SoloTaskRegistry registry,
-        InstanceService? instances = null)
+        InstanceService? instances = null, PuloniaTaskTriggerHost? triggerHost = null)
     {
-        Editor = editor; _service = service; _catalog = catalog; _store = store; _registry = registry;
-        _instances = instances;
+        Session = session; _service = service; _catalog = catalog; _store = store; _registry = registry;
+        _instances = instances; _triggerHost = triggerHost;
+        AddTaskMenu = PuloniaTaskMenuBuilder.Build(service.Definitions);
+        _statusRefresh = new PuloniaCoalescedRefresh(async () =>
+        {
+            if (_isListening) await RefreshExecutionStatusAsync();
+        });
         if (!CanRunOnThisInstance) ExecutionStatusText = ChildInstanceHint;
     }
 
-    /// <summary>首次进入时加载共用文档，并为一条龙建立默认配置。</summary>
+    /// <summary>进入页面：接收运行事件并开始资源检查；首次进入时加载共用文档，并为一条龙建立默认配置。</summary>
     public override async Task OnNavigatedToAsync()
     {
         if (!_isListening)
@@ -123,27 +116,44 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
             if (_instances is not null) _instances.ConnectedInstancesChanged += OnConnectedInstancesChanged;
             RefreshExecutionTargets();
         }
-        await _pageLoadGate.WaitAsync();
-        try
+        var ct = Session.StartResourceMonitor(this);
+        await EnsurePageLoadedAsync();
+        if (!_isListening || !IsReady) return;
+        await RefreshExecutionStatusAsync();
+        try { await Session.RefreshResourceVersionsAsync(ct); }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            if (!_isListening) return;
-            await Editor.OnNavigatedToAsync();
-            if (!_isListening || !Editor.IsInitialized) return;
-            if (Configurations.Count == 0) NewConfiguration();
-            SelectedConfiguration ??= Configurations.FirstOrDefault();
-            try { await RefreshGenshinAccountsAsync(); }
-            catch (Exception ex) { AccountMessage = "账号目录读取失败，运行前请修复：" + ex.Message; }
-            IsReady = true;
-            await RefreshExecutionStatusAsync();
+            // 离开页面时取消版本检查，不弹出错误。
         }
-        finally { _pageLoadGate.Release(); }
     }
-    /// <summary>离开后解除页面事件，服务继续管理已经提交的运行。</summary>
+
+    /// <summary>复用首次加载任务；加载失败（会话未初始化）后允许下次进入重新加载。</summary>
+    private Task EnsurePageLoadedAsync()
+    {
+        if (_pageLoad is { IsCompleted: true } && !IsReady)
+            _pageLoad = null;
+        return _pageLoad ??= LoadPageCoreAsync();
+    }
+
+    /// <summary>等待会话加载，然后补默认配置、选中首个配置并读取账号目录。</summary>
+    private async Task LoadPageCoreAsync()
+    {
+        await Session.InitializeAsync();
+        if (!Session.IsInitialized) return;
+        if (Configurations.Count == 0) NewConfiguration();
+        SelectedConfiguration ??= Configurations.FirstOrDefault();
+        try { await RefreshGenshinAccountsAsync(); }
+        catch (Exception ex) { AccountMessage = "账号目录读取失败，运行前请修复：" + ex.Message; }
+        IsReady = true;
+    }
+
+    /// <summary>离开后解除页面事件并停止本页的资源检查，服务继续管理已经提交的运行。</summary>
     public override Task OnNavigatedFromAsync()
     {
         _isListening = false; _service.RunChanged -= OnRunChanged;
         if (_instances is not null) _instances.ConnectedInstancesChanged -= OnConnectedInstancesChanged;
-        return Editor.OnNavigatedFromAsync();
+        Session.StopResourceMonitor(this);
+        return base.OnNavigatedFromAsync();
     }
     /// <summary>子实例上线或下线时切回 UI 线程刷新运行实例选项。</summary>
     private void OnConnectedInstancesChanged(object? sender, EventArgs e)
@@ -163,19 +173,28 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
         foreach (var option in options) ExecutionTargets.Add(option);
         SelectedExecutionTarget = options.FirstOrDefault(item => item.LaneKey == selectedLane) ?? PuloniaOneDragonTargetOption.Primary;
     }
-    /// <summary>通过 Behaviors 接入加载生命周期。</summary>
+    /// <summary>页面 Loaded 是唯一的进入入口，通过 Behaviors 接入。</summary>
     [RelayCommand] private Task OpenPageAsync() => OnNavigatedToAsync();
-    /// <summary>通过 Behaviors 接入卸载生命周期。</summary>
+    /// <summary>页面 Unloaded 是唯一的离开入口，通过 Behaviors 接入。</summary>
     [RelayCommand] private Task ClosePageAsync() => OnNavigatedFromAsync();
 
     /// <summary>选择配置后只展示其根清单，不触碰普通菜单的当前计划。</summary>
     partial void OnSelectedConfigurationChanged(PuloniaTaskPlanDocumentViewModel? oldValue, PuloniaTaskPlanDocumentViewModel? value)
     {
-        if (oldValue is not null) oldValue.PropertyChanged -= OnConfigurationPropertyChanged;
-        if (value is not null) value.PropertyChanged += OnConfigurationPropertyChanged;
+        if (oldValue is not null)
+        {
+            oldValue.PropertyChanged -= OnConfigurationPropertyChanged;
+            oldValue.ContentChanged -= OnConfigurationContentChanged;
+        }
+        if (value is not null)
+        {
+            value.PropertyChanged += OnConfigurationPropertyChanged;
+            // 高级设置、公共设置或撤销改写参数后，右侧设置区按最新有效值重建
+            value.ContentChanged += OnConfigurationContentChanged;
+        }
         OnPropertyChanged(nameof(TaskList));
         IsAccountPreparationSelected = false;
-        OnPropertyChanged(nameof(SelectedGenshinAccountId));
+        NotifyAccountBindingChanged();
         SelectedTask = value?.SelectedNode is { IsRoot: false } node && ReferenceEquals(node.Parent, value.RootNode)
             ? node : TaskList.FirstOrDefault();
         // 切换时立即撤销旧请求的停止目标，异步查询返回前不能停止上一份配置。
@@ -189,9 +208,8 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     {
         if (e.PropertyName == nameof(PuloniaTaskPlanDocumentViewModel.RootNode))
         {
-            if (sender is PuloniaTaskPlanDocumentViewModel document) RemoveSettingsDrafts(document);
             OnPropertyChanged(nameof(TaskList));
-            OnPropertyChanged(nameof(SelectedGenshinAccountId));
+            NotifyAccountBindingChanged();
             QueueStatusRefresh();
         }
         else if (e.PropertyName == nameof(PuloniaTaskPlanDocumentViewModel.SelectedNode))
@@ -200,110 +218,14 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
             SelectedTask = node is not null && TaskList.Contains(node) ? node : TaskList.FirstOrDefault();
         }
     }
-    /// <summary>选中行后显示其独立设置草稿；固定任务使用专属视图，其余走通用卡片。</summary>
+    /// <summary>选中行后按该任务的当前有效参数重建右侧设置区；固定任务使用专属视图，其余走通用卡片。</summary>
     partial void OnSelectedTaskChanged(PuloniaTaskNodeViewModel? value)
     {
         if (value is not null) IsAccountPreparationSelected = false;
         if (SelectedConfiguration is { } document) document.SelectedNode = value;
-        if (value is null) { _fixedSettingsNode = null; FixedSettings = null; SettingsFields = []; }
+        if (value is null) ClearSettingsSurfaces();
         else RefreshSettingsSurfaces(value);
         SettingsMessage = "";
-    }
-    /// <summary>按任务类型刷新右侧设置区域：专属视图或通用参数卡片。</summary>
-    private void RefreshSettingsSurfaces(PuloniaTaskNodeViewModel node)
-    {
-        var fixedSettings = CreateFixedSettings(node);
-        // 先记录草稿所属节点再切换视图，提交时据此确认草稿没有串到其他任务
-        _fixedSettingsNode = fixedSettings is not null ? node : null;
-        if (fixedSettings is not null)
-        {
-            FixedSettings = fixedSettings;
-            var edited = fixedSettings.EditedParameterNames.ToHashSet(StringComparer.Ordinal);
-            SettingsFields = GetSettingsDraft(node).Where(field => !edited.Contains(field.Name)).ToArray();
-            if (fixedSettings is AutoBossSettingsViewModel boss)
-                _ = boss.SetProgressScopeAsync(node.Document.Id, node.Id);
-        }
-        else
-        {
-            FixedSettings = null;
-            SettingsFields = GetSettingsDraft(node);
-        }
-    }
-    /// <summary>按独立任务描述符返回专属设置视图模型；没有声明专属界面的任务返回 null 走通用卡片。</summary>
-    private SoloTaskSettingsViewModel? CreateFixedSettings(PuloniaTaskNodeViewModel node)
-    {
-        var key = (node.Document, node.Id);
-        if (_fixedSettingsCache.TryGetValue(key, out var cached)) return cached;
-        var settings = SoloTaskSettingsFactory.Create(_registry, PuloniaSoloTaskExecutor.ToTaskId(node.TaskType),
-            node.Document.GetOneDragonParameters(node));
-        if (settings is not null) _fixedSettingsCache[key] = settings;
-        return settings;
-    }
-    /// <summary>按所属文档和稳定节点 ID 保留草稿，禁止开关或名称刷新重建输入。</summary>
-    private IReadOnlyList<PuloniaOneDragonParameterFieldViewModel> GetSettingsDraft(PuloniaTaskNodeViewModel node)
-    {
-        var values = node.Document.GetOneDragonParameters(node);
-        if (_drafts.TryGetValue((node.Document, node.Id), out var cached)
-            && (cached.All(field => field.MatchesOriginalValue(values[field.Name])) || cached.Any(field => field.HasInputChanges))) return cached;
-        var definition = _service.Definitions.FirstOrDefault(d => d.TaskType == node.TaskType && d.ResourceId == node.Path)
-            ?? _service.Definitions.FirstOrDefault(d => d.TaskType == node.TaskType && d.ResourceId is null);
-        return _drafts[(node.Document, node.Id)] = PuloniaTaskSettingsEditorViewModel.CreateFields(definition, values);
-    }
-
-    /// <summary>仅丢弃指定配置的草稿，撤销、重新加载或删除不能影响其他配置的输入。</summary>
-    private void RemoveSettingsDrafts(PuloniaTaskPlanDocumentViewModel document)
-    {
-        foreach (var key in _drafts.Keys.Where(key => ReferenceEquals(key.Document, document)).ToArray())
-            _drafts.Remove(key);
-        foreach (var key in _fixedSettingsCache.Keys.Where(key => ReferenceEquals(key.Document, document)).ToArray())
-            _fixedSettingsCache.Remove(key);
-    }
-    /// <summary>提交当前任务的变化字段，校验失败保留全部卡片输入。</summary>
-    [RelayCommand]
-    private void ApplySettings() => TryApplySettings();
-
-    /// <summary>完整校验并提交设置，供运行与高级窗口复用。</summary>
-    private bool TryApplySettings()
-    {
-        if (SelectedTask is not { } node) return true;
-        try
-        {
-            // 专属视图与补充卡片合并提交，统一检查来源，避免遗漏未被专属界面接管的业务参数。
-            var changes = new JObject();
-            var current = node.Document.GetOneDragonParameters(node);
-            if (FixedSettings is { } fixedSettings && ReferenceEquals(_fixedSettingsNode, node))
-            {
-                fixedSettings.CollectChanges(changes);
-                foreach (var field in changes.Properties())
-                    if (!JToken.DeepEquals(current[field.Name], fixedSettings.GetOriginalValue(field.Name)))
-                        throw new InvalidOperationException("此项设置的参数来源已改变，请重置草稿后重新设置。");
-            }
-            foreach (var field in SettingsFields)
-                if (field.HasChanges() && field.BuildValue() is { } value)
-                {
-                    if (!field.MatchesOriginalValue(current[field.Name]))
-                        throw new InvalidOperationException("此项设置的参数来源已改变，请重置草稿后重新设置。");
-                    changes[field.Name] = value;
-                }
-            node.Document.ApplyOneDragonParameters(node, changes);
-            _drafts.Remove((node.Document, node.Id));
-            _fixedSettingsCache.Remove((node.Document, node.Id));
-            RefreshSettingsSurfaces(node);
-            SettingsMessage = "设置已应用，将自动保存。";
-            return true;
-        }
-        catch (Exception ex) when (ex is FormatException or Newtonsoft.Json.JsonException or PuloniaTaskValidationException or InvalidOperationException)
-        { SettingsMessage = "设置未应用：" + ex.Message; return false; }
-    }
-    /// <summary>放弃当前任务未提交的卡片输入，重新读取有效参数。</summary>
-    [RelayCommand]
-    private void ResetSettingsDraft()
-    {
-        if (SelectedTask is not { } node) return;
-        _fixedSettingsCache.Remove((node.Document, node.Id));
-        _drafts.Remove((node.Document, node.Id));
-        RefreshSettingsSurfaces(node);
-        SettingsMessage = "已重新读取当前任务设置。";
     }
     /// <summary>以配置为单位创建独立计划和注册表声明的默认任务。</summary>
     [RelayCommand]
@@ -311,7 +233,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     {
         var name = "新一条龙配置"; var suffix = 1;
         while (Configurations.Any(d => d.Name == name)) name = "新一条龙配置 " + ++suffix;
-        SelectedConfiguration = Editor.CreateOneDragonConfiguration(name);
+        SelectedConfiguration = Session.CreateOneDragonConfiguration(name);
     }
     /// <summary>重命名当前配置，保持计划与任务身份。</summary>
     [RelayCommand]
@@ -321,17 +243,14 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
         var name = PromptDialog.Prompt("请输入配置名称。", "重命名一条龙配置", document.Name).Trim();
         if (!string.IsNullOrWhiteSpace(name)) document.Name = name;
     }
-    /// <summary>复用串行删除和引用检查，成功后选中剩余配置。</summary>
+    /// <summary>复用会话的串行删除和引用检查，成功后选中剩余配置。</summary>
     [RelayCommand]
     private async Task DeleteConfigurationAsync()
     {
         if (SelectedConfiguration is not { } document) return;
-        await Editor.DeletePlanCommand.ExecuteAsync(document);
-        if (document.IsDeleted)
-        {
-            RemoveSettingsDrafts(document);
-            if (ReferenceEquals(SelectedConfiguration, document)) SelectedConfiguration = Configurations.FirstOrDefault();
-        }
+        await Session.DeletePlanAsync(document);
+        if (document.IsDeleted && ReferenceEquals(SelectedConfiguration, document))
+            SelectedConfiguration = Configurations.FirstOrDefault();
     }
     /// <summary>从能力创建窗口添加任务，允许同一类型与资源重复出现。</summary>
     [RelayCommand]
@@ -347,96 +266,89 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
                 var task = new PuloniaTask { Name = definition.DisplayName, TaskType = taskType };
                 if (PuloniaSoloTaskExecutor.HasEditableParameters(definition))
                 {
-                    var viewModel = Editor.CreateOneDragonSoloTaskDialog(document, definition);
+                    var viewModel = CreateSoloTaskDialog(document, definition);
                     if (PuloniaSoloTaskCreationDialog.Show(viewModel, Application.Current.MainWindow) is not { } created) return;
                     task = created;
                 }
-                Editor.InsertOneDragonTask(document, SelectedTask, task);
+                Session.InsertOneDragonTask(document, SelectedTask, task);
                 SelectedTask = document.SelectedNode;
                 return;
             }
             var dialog = new PuloniaOneDragonCreationDialog(_service.Definitions, _catalog, taskType) { Owner = Application.Current.MainWindow };
             if (dialog.ShowDialog() == true && dialog.ViewModel.Result is { } result)
-            { Editor.InsertOneDragonTask(document, SelectedTask, result.Task); SelectedTask = document.SelectedNode; }
+            { Session.InsertOneDragonTask(document, SelectedTask, result.Task); SelectedTask = document.SelectedNode; }
         }
         catch (Exception ex) { ThemedMessageBox.Error("无法添加任务：" + ex.Message, "一条龙"); }
     }
-    /// <summary>已有普通计划作为清单的一行引用，重复添加不改变目标归属。</summary>
+
+    /// <summary>
+    /// 为一条龙配置建立新增独立任务弹窗视图模型：插入位置为根清单，独立任务保持内置名称。
+    /// </summary>
+    /// <param name="document">一条龙配置。</param>
+    /// <param name="definition">独立任务能力定义。</param>
+    /// <returns>新增弹窗视图模型。</returns>
+    private PuloniaSoloTaskCreationDialogViewModel CreateSoloTaskDialog(PuloniaTaskPlanDocumentViewModel document,
+        PuloniaTaskDefinition definition)
+        => new(definition, _registry,
+            document.PreviewEffectiveParameters(new PuloniaTask { TaskType = definition.TaskType }, document.RootNode),
+            canEditName: false);
+
+    /// <summary>已有普通计划作为清单的一行引用，重复添加不改变目标归属；之后修改该计划会同步生效。</summary>
     [RelayCommand]
     private async Task AddPlanReferenceAsync()
     {
         if (SelectedConfiguration is not { } document) return;
-        var picker = new System.Windows.Controls.ComboBox { ItemsSource = Editor.Documents, DisplayMemberPath = "Name", MinWidth = 260, SelectedIndex = 0 };
-        var dialog = new PromptDialog("选择要加入的任务计划。", "添加已有计划", picker, null) { Owner = Application.Current.MainWindow };
+        var picker = new System.Windows.Controls.ComboBox { ItemsSource = Session.Documents, DisplayMemberPath = "Name", MinWidth = 260, SelectedIndex = 0 };
+        var dialog = new PromptDialog("选择要引用的任务计划；之后修改该计划会同步影响这里。", "引用已有任务计划", picker, null) { Owner = Application.Current.MainWindow };
         if (dialog.ShowDialog() != true || picker.SelectedItem is not PuloniaTaskPlanDocumentViewModel target) return;
         try
         {
-            await Editor.AddOneDragonReferenceAsync(document, SelectedTask, target);
+            await Session.AddOneDragonReferenceAsync(document, SelectedTask, target);
             // 保存目标期间用户可能切换配置；只更新仍在显示的来源配置，不能把它的节点选到另一份计划。
             if (ReferenceEquals(SelectedConfiguration, document)) SelectedTask = document.SelectedNode;
         }
-        catch (Exception ex) { await ThemedMessageBox.ErrorAsync(ex.Message, "无法加入计划"); }
+        catch (Exception ex) { await ThemedMessageBox.ErrorAsync(ex.Message, "无法引用任务计划"); }
     }
     /// <summary>删除当前行，原文档负责撤销与自动保存。</summary>
     [RelayCommand]
     private void DeleteTask()
     {
         if (SelectedTask is not { } node) return;
-        node.Document.RemoveNode(node); _drafts.Remove((node.Document, node.Id));
-        _fixedSettingsCache.Remove((node.Document, node.Id));
+        node.Document.RemoveNode(node);
         SelectedTask = TaskList.FirstOrDefault();
     }
-    /// <summary>撤销已提交的最近编辑，重建时重新读取本配置设置，不先提交或校验未保存草稿。</summary>
+    /// <summary>撤销已提交的最近编辑（设置区的连续输入合并为一步），重建时重新读取本配置设置。</summary>
     [RelayCommand]
     private void UndoConfiguration()
     {
         SelectedConfiguration?.UndoCommand.Execute(null);
     }
-    /// <summary>以当前配置在所选实例上提交固定快照，只应用启用任务的草稿；关闭任务保留输入但不阻止运行。</summary>
+    /// <summary>以当前配置在所选实例上提交固定快照；设置已即时写入计划，未生效的无效输入不阻止运行。</summary>
     [RelayCommand(CanExecute = nameof(CanRunOnThisInstance))]
     private async Task RunAsync()
     {
         if (SelectedConfiguration is not { } document) return;
-        var selection = SelectedTask;
-        foreach (var node in TaskList.ToArray())
-        {
-            if (!node.IsEffectivelyEnabled) continue;
-            // 只应用有未提交草稿的任务，专属视图和通用卡片都会在提交前重新校验。
-            if (!_drafts.ContainsKey((document, node.Id)) && !_fixedSettingsCache.ContainsKey((document, node.Id))) continue;
-            SelectedTask = node;
-            if (!TryApplySettings()) return;
-        }
-        SelectedTask = selection;
-        await Editor.RunPlanOnAsync(document, SelectedExecutionTarget?.Target);
+        await Session.RunPlanOnAsync(document, SelectedExecutionTarget?.Target);
         await RefreshExecutionStatusAsync();
     }
-    /// <summary>次级入口展示当前配置的定时和热键设置。</summary>
+    /// <summary>次级入口展示当前配置的定时和快捷键设置，与任务计划页共用同一触发配置界面。</summary>
     [RelayCommand]
     private void ShowTriggers()
     {
         if (SelectedConfiguration is not { } document) return;
-        var previousFilter = Editor.History.PlanFilterId;
-        var scoped = Editor.CreateOneDragonTriggerEditor(document);
-        try
-        {
-            new PromptDialog("", "一条龙触发设置", new PuloniaOneDragonTriggerView { DataContext = scoped }, null)
-            { Owner = Application.Current.MainWindow, Width = 1000, Height = 720, SizeToContent = SizeToContent.Manual }.ShowDialog();
-        }
-        finally { scoped.CloseOneDragonTriggerEditor(); Editor.History.PlanFilterId = previousFilter; }
+        // 窗口专属的触发配置视图模型直接编辑共享文档，关闭时解除订阅；不复制页面或编辑会话。
+        using var triggers = new PuloniaPlanTriggersViewModel(Session, _triggerHost) { Document = document };
+        new PromptDialog("", "一条龙触发设置", new PuloniaTaskTriggerView { DataContext = triggers }, null)
+        { Owner = Application.Current.MainWindow, Width = 1000, Height = 720, SizeToContent = SizeToContent.Manual }.ShowDialog();
     }
-    /// <summary>次级入口展示当前配置的运行历史，关闭后恢复普通菜单的过滤范围。</summary>
+    /// <summary>次级入口展示当前配置的运行历史；窗口使用自己的记录实例，不改写任务计划页的记录范围。</summary>
     [RelayCommand]
     private async Task ShowHistoryAsync()
     {
-        var previous = Editor.History.PlanFilterId;
-        try
-        {
-            Editor.History.PlanFilterId = SelectedConfiguration?.Id;
-            await Editor.History.RefreshAsync();
-            new PromptDialog("", "一条龙执行记录", new PuloniaOneDragonHistoryView { DataContext = Editor.History }, null)
-            { Owner = Application.Current.MainWindow, Width = 1100, Height = 750, SizeToContent = SizeToContent.Manual }.ShowDialog();
-        }
-        finally { Editor.History.PlanFilterId = previous; }
+        using var history = new PuloniaTaskHistoryViewModel(_service, _store) { PlanFilterId = SelectedConfiguration?.Id };
+        await history.RefreshAsync();
+        new PromptDialog("", "一条龙执行记录", new PuloniaOneDragonHistoryView { DataContext = history }, null)
+        { Owner = Application.Current.MainWindow, Width = 1100, Height = 750, SizeToContent = SizeToContent.Manual }.ShowDialog();
     }
     /// <summary>高级参数和来源保留为次级窗口，主配置使用老样式卡片。</summary>
     [RelayCommand]
@@ -444,48 +356,18 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     {
         if (node is null) return;
         SelectedTask = node;
-        if (!TryApplySettings()) return;
-        try { new PuloniaOneDragonSettingsDialog(this) { Owner = Application.Current.MainWindow }.ShowDialog(); }
+        using var viewModel = new PuloniaOneDragonSettingsDialogViewModel(Session, node);
+        try { new PuloniaOneDragonSettingsDialog(viewModel) { Owner = Application.Current.MainWindow }.ShowDialog(); }
         finally
         {
-            // 高级窗口可能直接改写参数 JSON；丢弃两类草稿缓存后按最新有效参数重建。
-            _drafts.Remove((node.Document, node.Id));
-            _fixedSettingsCache.Remove((node.Document, node.Id));
-            RefreshSettingsSurfaces(node);
+            // 高级窗口可能改写参数 JSON、资源位置或预设；按最新有效参数重建，节点已被替换时由选择变化负责。
+            if (ReferenceEquals(SelectedTask, node)) RefreshSettingsSurfaces(node);
         }
-    }
-    /// <summary>公共设置仍按本节点覆盖提交，禁止写回旧全局任务配置。</summary>
-    [RelayCommand]
-    private void EditCommonSettings(string taskType)
-    {
-        if (SelectedTask is not { } node || taskType is not ("pathing" or "javascript" or "shell")) return;
-        try
-        {
-            var document = node.Document;
-            var original = PuloniaTaskCommonSettings.ToParameters(taskType,
-                PuloniaTaskCommonSettings.FromParameters(taskType, document.GetCommonSettingsParameters(node, taskType)));
-            var draft = new PuloniaOneDragonCommonSettingsViewModel(taskType, original);
-            var dialog = new PuloniaOneDragonCommonSettingsDialog(draft) { Owner = Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive) ?? Application.Current.MainWindow };
-            if (dialog.ShowDialog() == true) document.ApplyCommonSettings(node, taskType, original, draft.Result ?? original, draft.RestoreInheritance);
-        }
-        catch (Exception ex) when (ex is System.Text.Json.JsonException or Newtonsoft.Json.JsonException
-                                   or ArgumentException or InvalidOperationException or OverflowException)
-        { ThemedMessageBox.Error("任务设置未应用：" + ex.Message, "任务设置"); }
     }
     /// <summary>后台状态事件只调度 UI 查询，不能直接跨线程修改绑定。</summary>
     private void OnRunChanged(object? sender, PuloniaTaskRunChangedEventArgs e) => QueueStatusRefresh();
     /// <summary>合并高频进度事件，避免重复历史查询堆积。</summary>
-    private void QueueStatusRefresh()
-    {
-        Application.Current?.Dispatcher.BeginInvoke(new Action(async () =>
-        {
-            if (!_isListening) return;
-            if (_statusRefreshPending) { _statusRefreshAgain = true; return; }
-            _statusRefreshPending = true;
-            try { do { _statusRefreshAgain = false; await RefreshExecutionStatusAsync(); } while (_isListening && _statusRefreshAgain); }
-            finally { _statusRefreshPending = false; }
-        }));
-    }
+    private void QueueStatusRefresh() => _statusRefresh.Request();
     /// <summary>只应用仍属于当前配置的运行状态。</summary>
     private async Task RefreshExecutionStatusAsync()
     {
@@ -551,10 +433,10 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
             result = await Task.Run(() => new PuloniaTaskLegacyImporter(_service.Definitions, _catalog).PrepareAsync(picker.FileNames, config));
             var preview = new PuloniaOneDragonImportDialog(result) { Owner = Application.Current.MainWindow };
             if (preview.ShowDialog() != true || result.Plans.Count == 0) return;
-            await Editor.ImportPreparedAsync(result);
+            await Session.ImportPreparedAsync(result);
             SelectedConfiguration = Configurations.LastOrDefault();
             result.Differences.Add("写入完成：" + DateTimeOffset.Now.ToString("yyyy-MM-dd HH:mm:ss zzz"));
-            Editor.StatusMessage = $"已导入 {result.Plans.Count} 个计划；原文件保留，差异报告可从导入按钮旁打开。";
+            Session.ReportStatus($"已导入 {result.Plans.Count} 个计划；原文件保留，差异报告可从导入按钮旁打开。");
         }
         catch (Exception ex)
         {
@@ -570,7 +452,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
                     var directory = Path.Combine(_store.RootDirectory, "imports"); Directory.CreateDirectory(directory);
                     ImportReportPath = await WriteImportReportAsync(directory, result.Report);
                 }
-                catch (Exception ex) { Editor.StatusMessage = "导入报告保存失败：" + ex.Message; ImportReportPath = null; }
+                catch (Exception ex) { Session.ReportStatus("导入报告保存失败：" + ex.Message); ImportReportPath = null; }
             }
         }
     }

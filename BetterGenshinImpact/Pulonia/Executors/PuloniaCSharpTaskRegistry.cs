@@ -17,17 +17,16 @@ public delegate Task<PuloniaTaskOutcome> PuloniaCSharpTaskHandler(
 /// <summary>
 /// 保存显式注册的进程内 C# 操作，避免按字符串反射程序集和重载。
 /// </summary>
+/// <remarks>
+/// 前提：所有注册都在注册表交给执行器、开始查询之前完成（生产只在构造函数注册内置样例，测试在建立服务前注册），
+/// 之后只有并发读取，因此不加锁。若将来需要在运行期间动态注册，需要重新引入同步。
+/// </remarks>
 public sealed class PuloniaCSharpTaskRegistry
 {
     /// <summary>
-    /// 受注册门保护的操作表。
+    /// 操作表；只在开始使用前写入，之后只读。
     /// </summary>
     private readonly Dictionary<string, PuloniaCSharpTaskHandler> _handlers = new(StringComparer.Ordinal);
-
-    /// <summary>
-    /// 串行化运行期间的动态注册和查询。
-    /// </summary>
-    private readonly object _gate = new();
 
     /// <summary>
     /// 建立注册表并加入不接触游戏资源的验收计算样例。
@@ -35,36 +34,25 @@ public sealed class PuloniaCSharpTaskRegistry
     public PuloniaCSharpTaskRegistry()
     {
         Register("sample.sum", ExecuteSampleSumAsync);
-        Register("sample.ledger.daily", ExecuteSampleLedgerAsync);
-        Register("sample.ledger.weekly", ExecuteSampleLedgerAsync);
-        Register("sample.ledger.monthly", ExecuteSampleLedgerAsync);
-        Register("sample.ledger.rolling", ExecuteSampleLedgerAsync);
-        Register("sample.ledger.partial", ExecuteSampleLedgerAsync);
     }
 
     /// <summary>
-    /// 注册一个稳定操作名；重复名称明确失败，防止静默替换正在使用的能力。
+    /// 注册一个稳定操作名；重复名称明确失败，防止静默替换正在使用的能力。只能在注册表开始被查询之前调用。
     /// </summary>
     public void Register(string operation, PuloniaCSharpTaskHandler handler)
     {
         if (string.IsNullOrWhiteSpace(operation))
             throw new ArgumentException("C# 操作名不能为空。", nameof(operation));
         ArgumentNullException.ThrowIfNull(handler);
-        lock (_gate)
-        {
-            if (!_handlers.TryAdd(operation, handler))
-                throw new InvalidOperationException($"C# 操作 {operation} 已注册。");
-        }
+        if (!_handlers.TryAdd(operation, handler))
+            throw new InvalidOperationException($"C# 操作 {operation} 已注册。");
     }
 
     /// <summary>
-    /// 查找指定操作的固定处理委托。
+    /// 查找指定操作的固定处理委托；注册完成后只读，可并发调用。
     /// </summary>
     internal bool TryGet(string operation, out PuloniaCSharpTaskHandler? handler)
-    {
-        lock (_gate)
-            return _handlers.TryGetValue(operation, out handler);
-    }
+        => _handlers.TryGetValue(operation, out handler);
 
     /// <summary>
     /// 对一组数字求和；可选延时用于验收取消和快照隔离，不启动游戏或截图器。
@@ -95,47 +83,5 @@ public sealed class PuloniaCSharpTaskRegistry
             ["value_count"] = values.Count,
             ["run_id"] = context.RunId
         });
-    }
-
-    /// <summary>
-    /// 提交一条受控结构化完成事件，用于验收重复事件、周期边界和作用域隔离。
-    /// </summary>
-    private static async Task<PuloniaTaskOutcome> ExecuteSampleLedgerAsync(
-        PuloniaTaskExecutionContext context, JObject parameters, CancellationToken ct)
-    {
-        var operation = parameters.Value<string>("operation")!;
-        var ruleId = operation["sample.ledger.".Length..];
-        var delayMilliseconds = parameters.Value<int?>("delay_milliseconds") ?? 0;
-        if (delayMilliseconds is < 0 or > 600000)
-            return PuloniaTaskOutcome.Failure("delay_milliseconds 必须在 0—600000 之间。");
-        if (delayMilliseconds > 0)
-            await Task.Delay(delayMilliseconds, ct).ConfigureAwait(false);
-        var occurredAt = parameters.Value<DateTimeOffset?>("occurred_at") ?? DateTimeOffset.UtcNow;
-        var evidence = new PuloniaTaskEvidence
-        {
-            Kind = "executor",
-            Source = operation,
-            OccurredAt = occurredAt,
-            Data = new JObject
-            {
-                ["sample"] = true,
-                ["task_address"] = context.TaskAddress
-            }
-        };
-        var completionEvent = new PuloniaTaskCompletionEvent
-        {
-            RuleId = ruleId,
-            EventKey = parameters.Value<string>("event_key"),
-            Units = parameters.Value<int?>("units") ?? 1,
-            OccurredAt = occurredAt,
-            Evidence = evidence
-        };
-        await context.ReportCompletionAsync(completionEvent, ct).ConfigureAwait(false);
-        if (parameters.Value<bool?>("report_twice") == true)
-            await context.ReportCompletionAsync(completionEvent, ct).ConfigureAwait(false);
-        if (operation == "sample.ledger.partial")
-            return PuloniaTaskOutcome.Partial("已确认并保存局部副作用，随后按受控样例返回部分成功。",
-                evidence: [evidence]);
-        return PuloniaTaskOutcome.Success($"受控账本事件 {ruleId} 已确认并持久化。", evidence: [evidence]);
     }
 }

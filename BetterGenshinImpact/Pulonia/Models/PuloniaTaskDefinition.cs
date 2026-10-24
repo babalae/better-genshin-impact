@@ -49,7 +49,7 @@ public sealed class PuloniaTaskDefinition
     public JObject DefaultParameters { get; init; } = new();
 
     /// <summary>
-    /// 受支持的 JSON Schema 子集：type、properties、required、additionalProperties、items、enum。
+    /// 受支持的 JSON Schema 子集：type、properties、required、additionalProperties、items、enum、minimum。
     /// </summary>
     public JObject ParameterSchema { get; init; } = new() { ["type"] = "object" };
 
@@ -57,11 +57,6 @@ public sealed class PuloniaTaskDefinition
     /// 允许由计划引用节点覆盖的公共参数名；其余参数只能在被引用计划内配置。
     /// </summary>
     public IReadOnlyList<string> PublicParameters { get; init; } = [];
-
-    /// <summary>
-    /// 此能力声明的 CD 与周期额度规则；只有结构化确认事件才会消费规则。
-    /// </summary>
-    public IReadOnlyList<PuloniaTaskAvailabilityRule> AvailabilityRules { get; init; } = [];
 
     /// <summary>
     /// 是否是由独立任务注册表提供的能力；添加菜单把它们收拢到“独立任务”子菜单。
