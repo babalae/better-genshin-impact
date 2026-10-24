@@ -85,6 +85,8 @@
 dotnet build BetterGenshinImpact.sln -c Debug
 ```
 
+禁止 新增 BetterGenshinImpact\Assets 目录，这里的资源已经被 BetterGI.Assets.* 的外部资源给占用了。如果要新增资源，需要人工去修改对应 nuget 包的资源。
+
 ## 识别与模拟操作
 
 在进行键鼠操作后再识图的时候，必须添加适当的延时！因为游戏内对键鼠的响应是有 30~60ms 的延迟的，截图的来源图也是有延迟的。

@@ -20,7 +20,7 @@ public class PartyAvatarInitTests
         get
         {
             return LazyInitializer.EnsureInitialized(ref predictor,
-                () => new BgiOnnxFactory(new FakeLogger<BgiOnnxFactory>())
+                () => new BgiOnnxSessionFactory(new FakeLogger<BgiOnnxFactory>(), ResolvedInferenceRuntime.Cpu())
                     .CreateYoloPredictor(BgiOnnxModel.BgiAvatarSide));
         }
     }

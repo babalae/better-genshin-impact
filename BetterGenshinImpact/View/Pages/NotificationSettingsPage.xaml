@@ -1733,7 +1733,7 @@
                                 Grid.Column="1"
                                 Margin="0,0,36,0"
                                 Text="{Binding Config.NotificationConfig.XxtuiChannels, Mode=TwoWay}"
-                                PlaceholderText="WX_MP／WX_QY_ROBOT／DING_ROBOT／BARK"
+                                PlaceholderText="WX_MP／WX_QY_ROBOT／DING_ROBOT／BARK／SMS_VOICE／EMAIL／FEI_SHU_ROBOT／CUSTOM_HTTP"
                                 TextWrapping="NoWrap" />
                 </Grid>
                 <Grid Margin="16">

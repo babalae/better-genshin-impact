@@ -472,10 +472,11 @@ public class SystemControl
         var runtime = TaskContext.Instance().Runtime ?? throw new Exception("请先启动BetterGI");
         runtime.Window.Activate();
     }
-    public static void RestartApplication(string[] newArgs)
+    public static void RestartApplication(string[] newArgs, bool graceful = false)
     {
         // 获取当前程序路径
-        string exePath = Process.GetCurrentProcess().MainModule.FileName;
+        using var currentProcess = Process.GetCurrentProcess();
+        string exePath = currentProcess.MainModule!.FileName;
 
         // 构建参数字符串
         var restartArgs = new List<string>(newArgs);
@@ -502,16 +503,21 @@ public class SystemControl
         var startInfo = new ProcessStartInfo
         {
             FileName = exePath,
+            WorkingDirectory = AppContext.BaseDirectory,
             UseShellExecute = false
         };
         foreach (var argument in restartArgs)
         {
             startInfo.ArgumentList.Add(argument);
         }
-        Process.Start(startInfo);
+        using var restartedProcess = Process.Start(startInfo)
+            ?? throw new InvalidOperationException("无法启动重启后的程序。");
 
         // 关闭当前程序
-        Environment.Exit(0);
+        if (graceful)
+            System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() => System.Windows.Application.Current.Shutdown()));
+        else
+            Environment.Exit(0);
     }
     public static void FocusWindow(nint hWnd)
     {

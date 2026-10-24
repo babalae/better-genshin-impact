@@ -2202,5 +2202,17 @@
       "瓦列里",
       "Valeriy"
     ]
+  },
+  {
+    "id": "10000136",
+    "name": "米提亚",
+    "nameEn": "Mitya",
+    "weapon": "10",
+    "skillCD": 18,
+    "burstCD": 15,
+    "alias": [
+      "米提亚",
+      "Mitya"
+    ]
   }
 ]

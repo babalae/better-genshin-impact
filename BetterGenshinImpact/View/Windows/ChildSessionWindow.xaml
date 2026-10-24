@@ -59,7 +59,8 @@
                     <b:Interaction.Behaviors>
                         <behavior:ResponsiveTitleBarBehavior />
                     </b:Interaction.Behaviors>
-                    <ui:Button Width="80"
+                    <ui:Button x:Name="StartButton"
+                               Width="80"
                                Height="32"
                                Background="Transparent"
                                BorderBrush="Transparent"
@@ -69,7 +70,8 @@
                                CornerRadius="0"
                                Icon="{ui:SymbolIcon Play24}"
                                ToolTip="{i18n:T 启动并连接 BetterGI 桌面分身}" />
-                    <ui:Button Width="80"
+                    <ui:Button x:Name="HideButton"
+                               Width="80"
                                Height="32"
                                Background="Transparent"
                                BorderBrush="Transparent"
@@ -79,7 +81,8 @@
                                CornerRadius="0"
                                Icon="{ui:SymbolIcon EyeOff24}"
                                ToolTip="{i18n:T 隐藏窗口并保持 RDP 连接}" />
-                    <ui:Button Width="110"
+                    <ui:Button x:Name="SwitchWindowButton"
+                               Width="110"
                                Height="32"
                                Background="Transparent"
                                BorderBrush="Transparent"
@@ -89,7 +92,8 @@
                                CornerRadius="0"
                                Icon="{ui:SymbolIcon ArrowSwap24}"
                                ToolTip="{i18n:T 向桌面分身发送 Win+Tab}" />
-                    <ui:Button Width="110"
+                    <ui:Button x:Name="GameMouseButton"
+                               Width="110"
                                Height="32"
                                Background="Transparent"
                                BorderBrush="Transparent"
@@ -116,6 +120,72 @@
                             </ui:SymbolIcon>
                         </ui:Button.Icon>
                     </ui:Button>
+                    <ui:DropDownButton Width="40"
+                                       Height="32"
+                                       Background="Transparent"
+                                       BorderBrush="Transparent"
+                                       CornerRadius="0"
+                                       Visibility="{Binding ElementName=StartButton, Path=IsVisible, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
+                        <ui:DropDownButton.Icon>
+                            <ui:SymbolIcon FontSize="16" Symbol="MoreHorizontal24" />
+                        </ui:DropDownButton.Icon>
+                        <ui:DropDownButton.Template>
+                            <ControlTemplate TargetType="{x:Type ui:DropDownButton}">
+                                <Border x:Name="ContentBorder"
+                                        Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        CornerRadius="{TemplateBinding CornerRadius}">
+                                    <ContentPresenter Margin="{TemplateBinding Padding}"
+                                                      HorizontalAlignment="Center"
+                                                      VerticalAlignment="Center"
+                                                      Content="{TemplateBinding Icon}"
+                                                      Focusable="False"
+                                                      TextElement.FontSize="{TemplateBinding FontSize}"
+                                                      TextElement.Foreground="{TemplateBinding Foreground}" />
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <MultiTrigger>
+                                        <MultiTrigger.Conditions>
+                                            <Condition Property="IsMouseOver" Value="True" />
+                                            <Condition Property="IsPressed" Value="False" />
+                                        </MultiTrigger.Conditions>
+                                        <Setter TargetName="ContentBorder" Property="Background" Value="{Binding MouseOverBackground, RelativeSource={RelativeSource TemplatedParent}}" />
+                                        <Setter TargetName="ContentBorder" Property="BorderBrush" Value="{Binding MouseOverBorderBrush, RelativeSource={RelativeSource TemplatedParent}}" />
+                                    </MultiTrigger>
+                                    <MultiTrigger>
+                                        <MultiTrigger.Conditions>
+                                            <Condition Property="IsMouseOver" Value="True" />
+                                            <Condition Property="IsPressed" Value="True" />
+                                        </MultiTrigger.Conditions>
+                                        <Setter TargetName="ContentBorder" Property="Background" Value="{Binding PressedBackground, RelativeSource={RelativeSource TemplatedParent}}" />
+                                        <Setter TargetName="ContentBorder" Property="BorderBrush" Value="{Binding PressedBorderBrush, RelativeSource={RelativeSource TemplatedParent}}" />
+                                    </MultiTrigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </ui:DropDownButton.Template>
+                        <ui:DropDownButton.Flyout>
+                            <ContextMenu>
+                                <ui:MenuItem Header="{i18n:T 启动}"
+                                             Command="{Binding StartCommand}"
+                                             Icon="{ui:SymbolIcon Play24}"
+                                             Visibility="{Binding Source={x:Reference StartButton}, Path=IsVisible, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                                <ui:MenuItem Header="{i18n:T 隐藏}"
+                                             Command="{Binding HideCommand}"
+                                             Icon="{ui:SymbolIcon EyeOff24}"
+                                             Visibility="{Binding Source={x:Reference HideButton}, Path=IsVisible, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                                <ui:MenuItem Header="{i18n:T 切换窗口}"
+                                             Command="{Binding SwitchWindowCommand}"
+                                             Icon="{ui:SymbolIcon ArrowSwap24}"
+                                             Visibility="{Binding Source={x:Reference SwitchWindowButton}, Path=IsVisible, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                                <ui:MenuItem Header="{Binding GameMouseModeButtonText}"
+                                             Command="{Binding ToggleGameMouseModeCommand}"
+                                             Icon="{ui:SymbolIcon Cursor24}"
+                                             ToolTip="{Binding GameMouseModeButtonToolTip}"
+                                             Visibility="{Binding Source={x:Reference GameMouseButton}, Path=IsVisible, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                            </ContextMenu>
+                        </ui:DropDownButton.Flyout>
+                    </ui:DropDownButton>
                     <ui:DropDownButton Width="120"
                                        Height="32"
                                        Background="Transparent"
@@ -130,6 +200,9 @@
                                 <ui:MenuItem Header="{Binding WindowSizeModeMenuHeader}"
                                              Command="{Binding ToggleSmallWindowModeCommand}"
                                              ToolTip="{Binding WindowSizeModeMenuToolTip}" />
+                                <ui:MenuItem Header="{Binding WatchModeMenuHeader}"
+                                             Command="{Binding ToggleWatchModeCommand}"
+                                             ToolTip="{Binding WatchModeMenuToolTip}" />
                                 <Separator />
                                 <ui:MenuItem Header="{i18n:T 桌面分辨率}">
                                     <ui:MenuItem Header="1920 × 1080"

@@ -25,6 +25,10 @@ issues:
             - bug
           titlePrefixes:
             - "[bug]"
+          formSignatures:
+            - 我已经搜索过现有 issue，确认这不是重复问题
+            - 确认文档的内容无法解决我的问题
+            - 我愿意为了解决这个问题尽自己所能
         requiredSections:
           - id: environment
             aliases:
@@ -54,6 +58,11 @@ issues:
             - feature
           titlePrefixes:
             - "[feature]"
+          formSignatures:
+            - 我已经搜索过现有 issue，确认这不是重复建议
+            - 我已确认当前版本中尚未提供该功能，或至少没有等价实现
+            - 我认为这个需求能为更多用户带来明确收益，而不仅仅是个人偏好
+            - 我理解这个需求可能因实现成本、维护成本或项目方向而暂不采纳
         requiredSections:
           - id: request
             aliases:
@@ -75,6 +84,9 @@ issues:
             - suggestion
           titlePrefixes:
             - "[suggestion]"
+          formSignatures:
+            - 我已经搜索过现有 issue，确认这不是重复建议
+            - 确认文档的内容无法解决我的问题或覆盖我的建议
         requiredSections:
           - id: suggestion
             aliases:
@@ -95,6 +107,9 @@ issues:
             - question
           titlePrefixes:
             - "[question]"
+          formSignatures:
+            - 我已经搜索过现有 issue，确认这不是重复问题
+            - 确认文档的内容无法解决我的问题
         requiredSections:
           - id: question
             aliases:
@@ -115,6 +130,9 @@ issues:
           titlePrefixes:
             - "[feedback]"
             - "[normal]"
+          formSignatures:
+            - 我已经搜索过现有 issue，确认这不是重复反馈
+            - 确认文档的内容无法解决我的问题或覆盖我的反馈
         requiredSections:
           - id: description
             aliases:
@@ -226,3 +244,9 @@ pullRequests:
     enabled: false
   summary:
     enabled: false
+  issueLink:
+    enabled: true
+    commentAnchor: pull-bot:issue-link
+    appendCloseKeyword: true
+    closeKeywordTemplate: "close #{number}"
+    requireSameRepository: true

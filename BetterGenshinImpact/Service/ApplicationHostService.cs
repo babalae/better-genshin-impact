@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Service.Instance;
@@ -21,7 +22,8 @@ namespace BetterGenshinImpact.Service;
 /// </summary>
 public class ApplicationHostService(
     IServiceProvider serviceProvider,
-    InstanceService instanceService) : IHostedService
+    InstanceService instanceService,
+    IInferenceModelDiagnostics inferenceDiagnostics) : IHostedService
 {
     private INavigationWindow? _navigationWindow;
 
@@ -83,6 +85,14 @@ public class ApplicationHostService(
     {
         if (instanceService.Context.IsWebView)
         {
+            try
+            {
+                await inferenceDiagnostics.PreheatOcrAsync();
+            }
+            catch (Exception e)
+            {
+                await BetterGenshinImpact.View.Windows.ThemedMessageBox.WarningAsync($"OCR 预热失败：{e.Message}");
+            }
             HandleWebViewActivation(CommandLineOptions.Instance);
             return;
         }
@@ -90,6 +100,7 @@ public class ApplicationHostService(
         if (!Application.Current.Windows.OfType<MainWindow>().Any())
         {
             _navigationWindow = (serviceProvider.GetService(typeof(INavigationWindow)) as INavigationWindow)!;
+            if (_navigationWindow is Window window) Application.Current.MainWindow = window;
             _navigationWindow!.ShowWindow();
 
             var cmdOptions = CommandLineOptions.Instance;

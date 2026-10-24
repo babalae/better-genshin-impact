@@ -1,6 +1,7 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
+using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.UseRedeemCode;
@@ -51,6 +52,9 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     private readonly IConfigService _configService;
     private readonly INavigationService _navigationService;
     private readonly ChildSessionService _childSessionService;
+    private readonly IInferenceModelDiagnostics _inferenceDiagnostics;
+    private readonly InferenceRuntimeService _inferenceRuntime;
+    private bool _inferenceStartupHandled;
     public string Title => $"BetterGI · 更好的原神 · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}";
     public bool IsChildSessionInstance =>
         InstanceBootstrap.Current.Context.InstanceType == BetterGiInstanceType.ChildSession;
@@ -103,8 +107,12 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
     public MainWindowViewModel(
         INavigationService navigationService,
         IConfigService configService,
-        ChildSessionService childSessionService)
+        ChildSessionService childSessionService,
+        IInferenceModelDiagnostics inferenceDiagnostics,
+        InferenceRuntimeService inferenceRuntime)
     {
+        _inferenceDiagnostics = inferenceDiagnostics;
+        _inferenceRuntime = inferenceRuntime;
         _navigationService = navigationService;
         _configService = configService;
         _childSessionService = childSessionService;
@@ -410,6 +418,10 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
             Config.CommonConfig.RunForVersion = Global.Version;
         }
 
+        // 仅在用户应用新设置后执行友好验证，日常启动不执行古树预热或速度检查。
+        await ValidateInferenceAsync();
+        if (_inferenceRuntime.IsStopping) return;
+
         // 预热OCR
         await OcrPreheating();
 
@@ -552,6 +564,26 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
         }
     }
 
+    private async Task ValidateInferenceAsync()
+    {
+        if (_inferenceStartupHandled || !InstanceBootstrap.Current.Context.IsRoot) return;
+        _inferenceStartupHandled = true;
+        try
+        {
+            await _inferenceRuntime.ValidatePendingAsync();
+            if (!_inferenceRuntime.IsStopping && !string.IsNullOrWhiteSpace(_inferenceRuntime.StartupMessage))
+                await ThemedMessageBox.WarningAsync(_inferenceRuntime.StartupMessage);
+        }
+        catch (Exception e)
+        {
+            // 这是主窗口加载后的友好提示，不应让验证流程异常阻止软件继续使用。
+            _logger.LogWarning(e, "推理引擎启动验证未完成");
+            if (!_inferenceRuntime.IsStopping)
+                await ThemedMessageBox.WarningAsync("推理引擎验证未能正常完成。\r\n\r\n" +
+                                                    "软件可以继续使用；详细错误已写入日志，请在首页的“硬件加速设置”中重新检测后再试。");
+        }
+    }
+
     private async Task OcrPreheating()
     {
         try
@@ -563,8 +595,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
                     // 现在OCR创建的时候会自己读设置了
                     // string gameCultureInfoName = TaskContext.Instance().Config.OtherConfig.GameCultureInfoName;
                     // await OcrFactory.ChangeCulture(gameCultureInfoName);
-                    var s = OcrFactory.Paddle.Ocr(new Mat(Global.Absolute(@"Assets\Model\PaddleOCR\test_pp_ocr.png")));
-                    Debug.WriteLine("PaddleOcr预热结果:" + s);
+                    await _inferenceDiagnostics.PreheatOcrAsync();
                 }
                 catch (Exception e)
                 {
@@ -587,8 +618,10 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel
                 }
             });
         }
+        catch (OperationCanceledException) when (_inferenceRuntime.IsStopping) { }
         catch (Exception e)
         {
+            if (_inferenceRuntime.IsStopping) return;
             ThemedMessageBox.Warning("PaddleOcr预热失败，解决方案：【https://www.bettergi.com/faq.html】   \r\n" + e.Source + "\r\n--" +
                                Environment.NewLine + e.StackTrace + "\r\n---" + Environment.NewLine + e.Message);
             Process.Start(

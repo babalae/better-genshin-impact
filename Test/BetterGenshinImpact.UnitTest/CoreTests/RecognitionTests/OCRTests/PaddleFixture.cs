@@ -17,12 +17,14 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests
                 {
                     if (version == "V5")
                     {
-                        return new PaddleOcrService(new BgiOnnxFactory(new FakeLogger<BgiOnnxFactory>()),
+                        return new PaddleOcrService(new BgiOnnxSessionFactory(new FakeLogger<BgiOnnxFactory>(),
+                                ResolvedInferenceRuntime.Cpu()),
                             PaddleOcrService.PaddleOcrModelType.FromCultureInfo(new CultureInfo(cultureInfoName)) ?? PaddleOcrService.PaddleOcrModelType.V5);
                     }
                     else if (version == "V4")
                     {
-                        return new PaddleOcrService(new BgiOnnxFactory(new FakeLogger<BgiOnnxFactory>()),
+                        return new PaddleOcrService(new BgiOnnxSessionFactory(new FakeLogger<BgiOnnxFactory>(),
+                                ResolvedInferenceRuntime.Cpu()),
                             PaddleOcrService.PaddleOcrModelType.FromCultureInfoV4(new CultureInfo(cultureInfoName)) ?? PaddleOcrService.PaddleOcrModelType.V4);
                     }
                     else

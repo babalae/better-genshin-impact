@@ -53,6 +53,12 @@ public partial class ChildSessionConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _audioMuted = false;
+
+    /// <summary>
+    /// 桌面分身是否处于观看模式。开启后键鼠不会在桌面分身内生效，仅显示画面。
+    /// </summary>
+    [ObservableProperty]
+    private bool _watchModeEnabled = false;
 }
 
 [Serializable]

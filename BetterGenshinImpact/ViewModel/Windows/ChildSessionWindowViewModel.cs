@@ -91,6 +91,11 @@ public partial class ChildSessionWindowViewModel : ViewModel
     private bool _isGameMouseModeEnabled;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(WatchModeMenuHeader))]
+    [NotifyPropertyChangedFor(nameof(WatchModeMenuToolTip))]
+    private bool _isWatchModeEnabled;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(AudioButtonToolTip))]
     private bool _isAudioMuted;
 
@@ -134,6 +139,12 @@ public partial class ChildSessionWindowViewModel : ViewModel
     public string WindowSizeModeMenuToolTip => IsSmallWindowMode
         ? "将桌面分身窗口还原至默认大小"
         : "将桌面分身窗口缩放至宽 750，并按 16:9 比例同步缩小高度";
+
+    public string WatchModeMenuHeader => IsWatchModeEnabled ? "控制模式" : "观看模式";
+
+    public string WatchModeMenuToolTip => IsWatchModeEnabled
+        ? "退出观看模式"
+        : "桌面分身画面仅可观看，键鼠不会生效";
 
     public double WindowResizeTargetWidth => IsSmallWindowMode
         ? SmallWindowWidth
@@ -210,6 +221,10 @@ public partial class ChildSessionWindowViewModel : ViewModel
         OnPropertyChanged(nameof(TopmostButtonToolTip));
     }
 
+    /// <summary>
+    /// 启动桌面分身的命令入口。启动前依次检查 RDP Wrapper 兼容性与环境预检结论，
+    /// 命中时先请用户确认；用户选择不继续则中止启动。
+    /// </summary>
     [RelayCommand]
     private async Task StartAsync()
     {
@@ -223,6 +238,23 @@ public partial class ChildSessionWindowViewModel : ViewModel
                 "RDP Wrapper 兼容性提醒",
                 MessageBoxButton.YesNo,
                 MessageBoxResult.No);
+            if (result != MessageBoxResult.Yes)
+            {
+                return;
+            }
+        }
+
+        if (_childSessionService.ConnectedState != 1
+            && Execute(_childSessionService.RefreshEnvironmentCheck)
+            && _childSessionService.HasEnvironmentIssue)
+        {
+            // 默认按钮为「是」：这些条件只是风险提示，不应该挡住本来可以连上的用户。
+            var result = await ThemedMessageBox.WarningAsync(
+                _childSessionService.EnvironmentIssueSummary
+                + "\n\n检测到可能影响桌面分身的环境设置。是否仍要继续？",
+                "桌面分身环境检查",
+                MessageBoxButton.YesNo,
+                MessageBoxResult.Yes);
             if (result != MessageBoxResult.Yes)
             {
                 return;
@@ -366,6 +398,25 @@ public partial class ChildSessionWindowViewModel : ViewModel
             enabled
                 ? "桌面分身内的 BetterGI 打开时生效。当前窗口处于焦点时，鼠标将会被锁定在窗口内，按住 Alt 临时释放鼠标。"
                 : "BetterGI 不再向桌面分身转发相对鼠标信息。",
+            enabled ? InfoBarSeverity.Informational : InfoBarSeverity.Success);
+    }
+
+    [RelayCommand]
+    private void ToggleWatchMode()
+    {
+        var enabled = !IsWatchModeEnabled;
+        if (!Execute(() => _childSessionService.SetWatchModeEnabled(enabled)))
+        {
+            IsWatchModeEnabled = _childSessionService.WatchModeEnabled;
+            return;
+        }
+
+        IsWatchModeEnabled = _childSessionService.WatchModeEnabled;
+        ShowNotification(
+            enabled ? "观看模式已开启" : "观看模式已关闭",
+            enabled
+                ? "本机键鼠不会对分身生效，但控制中心的组合键仍然生效。"
+                : "本机键鼠恢复操作桌面分身。",
             enabled ? InfoBarSeverity.Informational : InfoBarSeverity.Success);
     }
 
@@ -590,6 +641,7 @@ public partial class ChildSessionWindowViewModel : ViewModel
         KeepAspectRatio = _childSessionService.KeepAspectRatio;
         SendSystemShortcutsToRemote = _childSessionService.SendSystemShortcutsToRemote;
         IsGameMouseModeEnabled = _childSessionService.IsGameMouseModeEnabled;
+        IsWatchModeEnabled = _childSessionService.WatchModeEnabled;
         IsAudioMuted = _childSessionService.AudioMuted;
         IsRdpConnected = connectedState == 1;
         IsConnectionPromptVisible = IsSessionClosing || connectedState == 0 && !_startRequested;

@@ -9,7 +9,7 @@
     "bgi_version": "0.45.0",
     "description": "",
     "enable_monster_loot_split": false,
-    "last_modified_time": 1790405641993,
+    "last_modified_time": 1792010524557,
     "map_match_method": "TemplateMatch",
     "map_name": "Teyvat",
     "name": "游雪的护刃前往",
@@ -22,7 +22,20 @@
       "action": "force_tp",
       "action_params": "",
       "id": 1,
+      "locked": false,
       "move_mode": "walk",
+      "point_ext_params": {
+        "description": "",
+        "misidentification": {
+          "arrival_time": 0,
+          "handling_mode": "mapRecognition",
+          "type": [
+            "unrecognized",
+            "pathTooFar"
+          ]
+        },
+        "monster_tag": ""
+      },
       "type": "teleport",
       "x": 6278.2637,
       "y": 7655.835
@@ -31,7 +44,20 @@
       "action": "",
       "action_params": "",
       "id": 2,
+      "locked": false,
       "move_mode": "walk",
+      "point_ext_params": {
+        "description": "",
+        "misidentification": {
+          "arrival_time": 0,
+          "handling_mode": "mapRecognition",
+          "type": [
+            "unrecognized",
+            "pathTooFar"
+          ]
+        },
+        "monster_tag": ""
+      },
       "type": "path",
       "x": 6248.4414,
       "y": 7674.5337
@@ -40,7 +66,20 @@
       "action": "",
       "action_params": "",
       "id": 3,
+      "locked": false,
       "move_mode": "walk",
+      "point_ext_params": {
+        "description": "",
+        "misidentification": {
+          "arrival_time": 0,
+          "handling_mode": "mapRecognition",
+          "type": [
+            "unrecognized",
+            "pathTooFar"
+          ]
+        },
+        "monster_tag": ""
+      },
       "type": "path",
       "x": 6228.9082,
       "y": 7706.9521
@@ -49,6 +88,7 @@
       "action": "",
       "action_params": "",
       "id": 4,
+      "locked": false,
       "move_mode": "walk",
       "type": "path",
       "x": 6214.4238,
@@ -58,6 +98,7 @@
       "action": "",
       "action_params": "",
       "id": 5,
+      "locked": false,
       "move_mode": "walk",
       "type": "path",
       "x": 6206.293,
@@ -67,6 +108,7 @@
       "action": "",
       "action_params": "",
       "id": 6,
+      "locked": false,
       "move_mode": "walk",
       "type": "path",
       "x": 6202.0068,

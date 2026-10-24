@@ -16,7 +16,24 @@ public class OcrFactory : IDisposable
 
 
     public static IOcrService Paddle => App.ServiceProvider.GetRequiredService<OcrFactory>().PaddleOcr;
-    private IOcrService PaddleOcr => _paddleOcrService ??= Create(OcrEngineTypes.Paddle);
+    public IOcrService PaddleOcr
+    {
+        get
+        {
+            lock (_serviceLock)
+            {
+                ObjectDisposedException.ThrowIf(_disposed, this);
+                return _paddleOcrService ??= Create(OcrEngineTypes.Paddle);
+            }
+        }
+    }
+    private readonly object _serviceLock = new();
+    private bool _disposed;
+    private PaddleOcrService.PaddleOcrModelType? _activeModelType;
+    public PaddleOcrService.PaddleOcrModelType ActiveModelType
+    {
+        get { lock (_serviceLock) return _activeModelType ?? ResolveModelType(); }
+    }
 
     private IOcrService? _paddleOcrService;
     private readonly ILogger<BgiOnnxFactory> _logger;
@@ -87,37 +104,34 @@ public class OcrFactory : IDisposable
 
     private PaddleOcrService CreatePaddleOcrInstance()
     {
+        _activeModelType = ResolveModelType();
+        return new PaddleOcrService(App.ServiceProvider.GetRequiredService<BgiOnnxFactory>(), _activeModelType);
+    }
+
+    private PaddleOcrService.PaddleOcrModelType ResolveModelType()
+    {
         return _config.PaddleOcrModelConfig switch
         {
             PaddleOcrModelConfig.V4Auto =>
-                new PaddleOcrService(App.ServiceProvider.GetRequiredService<BgiOnnxFactory>(),
-                    PaddleOcrService.PaddleOcrModelType.FromCultureInfoV4(GetCultureInfo()) ??
-                    PaddleOcrService.PaddleOcrModelType.V4),
+                PaddleOcrService.PaddleOcrModelType.FromCultureInfoV4(GetCultureInfo()) ??
+                    PaddleOcrService.PaddleOcrModelType.V4,
             PaddleOcrModelConfig.V5Auto =>
-                new PaddleOcrService(App.ServiceProvider.GetRequiredService<BgiOnnxFactory>(),
-                    PaddleOcrService.PaddleOcrModelType.FromCultureInfo(GetCultureInfo()) ??
-                    PaddleOcrService.PaddleOcrModelType.V5),
+                PaddleOcrService.PaddleOcrModelType.FromCultureInfo(GetCultureInfo()) ??
+                    PaddleOcrService.PaddleOcrModelType.V5,
             PaddleOcrModelConfig.V5 =>
-                new PaddleOcrService(App.ServiceProvider.GetRequiredService<BgiOnnxFactory>(),
-                    PaddleOcrService.PaddleOcrModelType.V5),
+                PaddleOcrService.PaddleOcrModelType.V5,
             PaddleOcrModelConfig.V6 =>
-                new PaddleOcrService(App.ServiceProvider.GetRequiredService<BgiOnnxFactory>(),
-                    PaddleOcrService.PaddleOcrModelType.V6),
+                PaddleOcrService.PaddleOcrModelType.V6,
             PaddleOcrModelConfig.V4 =>
-                new PaddleOcrService(App.ServiceProvider.GetRequiredService<BgiOnnxFactory>(),
-                    PaddleOcrService.PaddleOcrModelType.V4),
+                PaddleOcrService.PaddleOcrModelType.V4,
             PaddleOcrModelConfig.V4En =>
-                new PaddleOcrService(App.ServiceProvider.GetRequiredService<BgiOnnxFactory>(),
-                    PaddleOcrService.PaddleOcrModelType.V4En),
+                PaddleOcrService.PaddleOcrModelType.V4En,
             PaddleOcrModelConfig.V5Korean =>
-                new PaddleOcrService(App.ServiceProvider.GetRequiredService<BgiOnnxFactory>(),
-                    PaddleOcrService.PaddleOcrModelType.V5Korean),
+                PaddleOcrService.PaddleOcrModelType.V5Korean,
             PaddleOcrModelConfig.V5Latin =>
-                new PaddleOcrService(App.ServiceProvider.GetRequiredService<BgiOnnxFactory>(),
-                    PaddleOcrService.PaddleOcrModelType.V5Latin),
+                PaddleOcrService.PaddleOcrModelType.V5Latin,
             PaddleOcrModelConfig.V5Eslav =>
-                new PaddleOcrService(App.ServiceProvider.GetRequiredService<BgiOnnxFactory>(),
-                    PaddleOcrService.PaddleOcrModelType.V5Eslav),
+                PaddleOcrService.PaddleOcrModelType.V5Eslav,
             _ => throw new ArgumentOutOfRangeException(nameof(_config.PaddleOcrModelConfig),
                 _config.PaddleOcrModelConfig, "不支持的 Paddle OCR 模型配置")
         };
@@ -125,27 +139,23 @@ public class OcrFactory : IDisposable
 
     public Task Unload()
     {
-        if (_paddleOcrService is not IDisposable disposable)
+        lock (_serviceLock)
         {
+            if (_paddleOcrService is IDisposable disposable) disposable.Dispose();
             _paddleOcrService = null;
-            return Task.CompletedTask;
+            _activeModelType = null;
         }
-        try
-        {
-            disposable.Dispose();
-            _paddleOcrService = null;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "卸载 OCR 服务时发生错误");
-        }
-
         return Task.CompletedTask;
     }
 
     public void Dispose()
     {
-        Unload().GetAwaiter().GetResult();
+        lock (_serviceLock)
+        {
+            if (_disposed) return;
+            _disposed = true;
+            Unload().GetAwaiter().GetResult();
+        }
         GC.SuppressFinalize(this);
     }
 
