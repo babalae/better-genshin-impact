@@ -13,6 +13,7 @@ using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Core.Script.Utils;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.Common.Reward;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoBoss;
 using BetterGenshinImpact.GameTask.AutoFight;
@@ -174,6 +175,7 @@ public class EngineExtend
         engine.AddHostType("ItemIconRecognitionMode", typeof(ItemIconRecognitionMode));
         engine.AddHostType("AutoFightParam", typeof(AutoFightParam));
         engine.AddHostType("AutoLeyLineOutcropParam", typeof(AutoLeyLineOutcropParam));
+        engine.AddHostType("TargetItem", typeof(TargetItem));
         engine.AddHostType("AutoStygianOnslaughtParam", typeof(AutoStygianOnslaughtParam));
         engine.AddHostObject("strategyFile", new StrategyFile());
         // 添加C#的类型

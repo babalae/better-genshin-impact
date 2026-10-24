@@ -1,5 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
+using System.Collections.ObjectModel;
+using BetterGenshinImpact.GameTask.Common.Reward;
 
 namespace BetterGenshinImpact.GameTask.AutoBoss;
 
@@ -47,6 +49,13 @@ public partial class AutoBossConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private int _timeout  = 240;
+
+    /// <summary>
+    /// 材料目标列表：按物品名与数量提前停止。
+    /// </summary>
+    [ObservableProperty]
+    private ObservableCollection<TargetItem> _targetItems = [];
+
     /// <summary>
     /// 关闭指定讨伐次数时清空补充树脂开关，避免树脂耗尽模式误用须臾或脆弱树脂。
     /// </summary>

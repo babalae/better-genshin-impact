@@ -1548,6 +1548,45 @@
                         </StackPanel>
                     </StackPanel>
                 </Border>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="{i18n:T 按材料数量提前结束}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 达到全部目标后停止任务}"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsEnabled="{Binding AutoDomainTargetItems.HasChoices}"
+                                     IsChecked="{Binding AutoDomainTargetItems.IsTargetModeEnabled, Mode=TwoWay}" />
+                </Grid>
+                <ui:TextBlock Margin="16,0,16,8"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="{i18n:T 当前秘境没有可用的奖励材料，请先选择秘境}"
+                              TextWrapping="Wrap"
+                              Visibility="{Binding AutoDomainTargetItems.IsUnavailable, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                <Border Margin="16,8,16,16"
+                        BorderThickness="1"
+                        BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
+                        Background="{ui:ThemeResource ControlFillColorSecondaryBrush}"
+                        CornerRadius="8"
+                        Visibility="{Binding AutoDomainTargetItems.IsTargetModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <controls:TargetItemListEditorView Margin="12" DataContext="{Binding AutoDomainTargetItems}" />
+                </Border>
 
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -1729,12 +1768,13 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="{i18n:T 每轮领取后识别奖励名称与数量（图标匹配+OCR双路），任务结束打印汇总}"
+                                  Text="{i18n:T 每轮领取后识别奖励名称与数量，测试功能，如有问题请提交截图反馈}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
                                      Grid.Column="1"
                                      Margin="0,0,36,0"
+                                     IsEnabled="{Binding AutoDomainTargetItems.IsTargetModeEnabled, Converter={StaticResource InverseBooleanConverter}}"
                                      IsChecked="{Binding Config.AutoDomainConfig.RewardRecognitionEnabled, Mode=TwoWay}" />
                 </Grid>
                 <Grid Margin="16">
@@ -1988,14 +2028,55 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="{i18n:T 每轮领取后识别奖励名称与数量（图标匹配+OCR双路），任务结束打印汇总}"
+                                  Text="{i18n:T 每轮领取后识别奖励名称与数量，测试功能，如有问题请提交截图反馈}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
                                      Grid.Column="1"
                                      Margin="0,0,36,0"
+                                     IsEnabled="{Binding AutoBossTargetItems.IsTargetModeEnabled, Converter={StaticResource InverseBooleanConverter}}"
                                      IsChecked="{Binding Config.AutoBossConfig.RewardRecognitionEnabled, Mode=TwoWay}" />
                 </Grid>
+
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="{i18n:T 按材料数量提前结束}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 达到全部目标后停止任务}"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsEnabled="{Binding AutoBossTargetItems.HasChoices}"
+                                     IsChecked="{Binding AutoBossTargetItems.IsTargetModeEnabled, Mode=TwoWay}" />
+                </Grid>
+                <ui:TextBlock Margin="16,0,16,8"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="{i18n:T 当前首领没有可用的奖励材料，请先选择首领}"
+                              TextWrapping="Wrap"
+                              Visibility="{Binding AutoBossTargetItems.IsUnavailable, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                <Border Margin="16,8,16,16"
+                        BorderThickness="1"
+                        BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
+                        Background="{ui:ThemeResource ControlFillColorSecondaryBrush}"
+                        CornerRadius="8"
+                        Visibility="{Binding AutoBossTargetItems.IsTargetModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <controls:TargetItemListEditorView Margin="12" DataContext="{Binding AutoBossTargetItems}" />
+                </Border>
 
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
@@ -3073,6 +3154,45 @@
                                      Margin="0,0,36,0"
                                      IsChecked="{Binding Config.AutoLeyLineOutcropConfig.UseFragileResin, Mode=TwoWay}" />
                 </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="{i18n:T 按材料数量提前结束}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 达到全部目标后停止任务}"
+                                  TextWrapping="Wrap" />
+                    <ui:ToggleSwitch Grid.Row="0"
+                                     Grid.RowSpan="2"
+                                     Grid.Column="1"
+                                     Margin="0,0,36,0"
+                                     IsEnabled="{Binding AutoLeyLineTargetItems.HasChoices}"
+                                     IsChecked="{Binding AutoLeyLineTargetItems.IsTargetModeEnabled, Mode=TwoWay}" />
+                </Grid>
+                <ui:TextBlock Margin="16,0,16,8"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="{i18n:T 当前地脉花类型没有可用的奖励材料}"
+                              TextWrapping="Wrap"
+                              Visibility="{Binding AutoLeyLineTargetItems.IsUnavailable, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                <Border Margin="16,8,16,16"
+                        BorderThickness="1"
+                        BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
+                        Background="{ui:ThemeResource ControlFillColorSecondaryBrush}"
+                        CornerRadius="8"
+                        Visibility="{Binding AutoLeyLineTargetItems.IsTargetModeEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <controls:TargetItemListEditorView Margin="12" DataContext="{Binding AutoLeyLineTargetItems}" />
+                </Border>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />

@@ -4,6 +4,7 @@ using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.GameTask.Common.Reward;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
@@ -98,6 +99,11 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
     public int ReviveRetryCount { get; set; } = 3;
 
     /// <summary>
+    /// 材料目标列表。
+    /// </summary>
+    public List<TargetItem> TargetItems { get; set; } = [];
+
+    /// <summary>
     /// 使用全局秘境配置创建参数，轮数为无限（9999），战斗策略取全局自动战斗策略。
     /// 行为与原来的 <c>new AutoDomainParam()</c>（即 <c>AutoDomainParam(0)</c>）一致，供 ClearScript 与任务框架的无参构造使用。
     /// </summary>
@@ -148,6 +154,7 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
         LeftRightMoveTimes = config.LeftRightMoveTimes;
         AutoEat = config.AutoEat;
         ReviveRetryCount = config.ReviveRetryCount;
+        TargetItems = TargetItem.CloneAll(config.TargetItems);
     }
 
     public AutoDomainParam(int domainRoundNum = 0) : base(null, null)

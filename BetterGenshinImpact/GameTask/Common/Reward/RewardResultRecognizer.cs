@@ -147,6 +147,27 @@ public class RewardResultRecognizer
     }
 
     /// <summary>
+    /// 启动前校验奖励识别支持的分辨率与物品图标模型。
+    /// </summary>
+    /// <exception cref="InvalidOperationException">分辨率或模型不可用时抛出。</exception>
+    public void EnsureSupported(GameRuntime runtime)
+    {
+        if (!IsSupportedRewardResolution(runtime))
+        {
+            throw new InvalidOperationException("奖励识别仅支持 1920×1080 分辨率");
+        }
+
+        try
+        {
+            using var recognizer = ItemIconRecognizerFactory.CreateConfigured();
+        }
+        catch (Exception e)
+        {
+            throw new InvalidOperationException("奖励识别的物品图标模型不可用", e);
+        }
+    }
+
+    /// <summary>
     /// 识别单页奖励截图。
     /// </summary>
     /// <param name="screen">当前页全屏截图。</param>

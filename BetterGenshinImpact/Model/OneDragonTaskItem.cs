@@ -214,7 +214,9 @@ public partial class OneDragonTaskItem : ObservableObject
                     {
                         PartyName = partyName,
                         DomainName = domainName,
-                        SundaySelectedValue = sundaySelectedValue
+                        SundaySelectedValue = sundaySelectedValue,
+                        // 材料目标是独立任务页的专属设置，一条龙当天的秘境可能不同，不能沿用
+                        TargetItems = []
                     };
                     LogIfFailed(Name, await new AutoDomainTask(runtime, allConfig).RunAsync(autoDomainParam, ct));
                 };
@@ -343,6 +345,8 @@ public partial class OneDragonTaskItem : ObservableObject
                     var (type, country) = config.GetLeyLineConfigForToday(taskConfig);
                     var param = new AutoLeyLineOutcropParam();
                     param.SetAutoLeyLineOutcropConfig(taskConfig);
+                    // 材料目标是独立任务页的专属设置，一条龙当天的地脉花类型可能不同，不能沿用
+                    param.TargetItems = [];
                     param.LeyLineOutcropType = type;
                     param.Country = country;
                     param.IsResinExhaustionMode = config.LeyLineResinExhaustionMode;

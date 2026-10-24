@@ -1,6 +1,8 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using BetterGenshinImpact.GameTask.Common.Reward;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
@@ -99,4 +101,9 @@ public partial class AutoDomainConfig : ObservableObject
     [ObservableProperty]
     private bool _rewardRecognitionEnabled = false;
 
+    /// <summary>
+    /// 材料目标列表：按物品名与数量提前停止。
+    /// </summary>
+    [ObservableProperty]
+    private ObservableCollection<TargetItem> _targetItems = [];
 }
