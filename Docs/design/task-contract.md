@@ -1,12 +1,13 @@
 # 独立任务合同重构：ISoloTask 泛型化
 
-状态：第 3 版（2026-10-22），步骤 A—C 已实现，步骤 D 未做。实现与本文不一致的地方见第 13 节。
+状态：第 4 版（2026-10-24，按当前工作区代码核对）。**ISoloTask 泛型化及入口迁移的主体工作（步骤 A—C）已完成**；步骤 D 的统一会话租约仍未实现，步骤 E、F 继续预留。正文已按实际实现修订，代码依据及本次验证结果见第 13 节。
 
 版本记录：
 
 - 第 1 版以 Pulonia 为中心，另建处理类并保留数据兼容。已废弃。
 - 第 2 版改为直接替换 `ISoloTask`，命名改用 `BgiTask`。
-- 第 3 版（本版）按评审意见，命名保持以 `SoloTask` 为主题，其余方案不变。
+- 第 3 版（2026-10-22）按评审意见，命名保持以 `SoloTask` 为主题，并记录步骤 A—C 的实施偏差。
+- 第 4 版（本版）对照代码更新合同、参数、异常、设置界面、默认清单和会话边界，区分已完成工作与后续事项。
 
 本版遵循的评审意见：
 
@@ -26,10 +27,10 @@
 - **JS**：JS `Dispatcher` 是社区脚本在用的对外 API，保留显式方法，只改内部调用。
 - **分层**：依赖方向是入口层 → 运行层 → 任务层。
   - 任务层：合同、注册表、任务类；
-  - 运行层：`TaskRunner`、`SoloTaskExecutionService`、会话租约；
+  - 运行层：`TaskRunner`、`SoloTaskExecutionService`、`PuloniaGameTaskCoordinator` / `PuloniaGameTaskLease`，以及共用的 `GameTaskSessionScope` 嵌套检测；
   - 入口层：独立任务页、热键、多实例、Pulonia、JS、旧一条龙和调度器。
 - **TaskRunner**：`RunSoloTaskAsync` 保留方法名，改为两个都返回 `SoloTaskRunResult` 的重载；删除 `RunSoloTaskWithResultAsync`。锁、取消、异常映射的语义保留，第 6.1 节逐条说明。
-- **Pulonia**：只保留一个很薄的执行器 `PuloniaSoloTaskExecutor`，把注册表接入 `PuloniaTaskService`，任务类型写作 `solo.{TaskId}`。
+- **Pulonia**：独立任务统一由 `PuloniaSoloTaskExecutor` 执行，把注册表接入 `PuloniaTaskService`，任务类型写作 `solo.{TaskId}`。执行器还负责星期覆盖和首领累计领奖次数等编排参数。
 - **改名面小**：现有的 `SoloTask*` 名称大多保留，包括运行服务、请求与状态模型、按钮、实例窗口和 `ManageSoloTask`。这些地方只把枚举参数换成字符串 Id。
 
 ## 2. 命名
@@ -52,7 +53,7 @@
 | 请求与状态模型 | `SoloTaskStartRequest`、`SoloTaskStatusSnapshot` 等 | 保留类名，`TaskType` 字段改为 `TaskId` |
 | 运行结果 | `SoloTaskRunResult`、`SoloTaskRunOutcome` | 保留类名，增加 `TaskResult`；`Failed` 改为 `Faulted` |
 | TaskRunner 入口 | `RunSoloTaskAsync` | 保留方法名，签名改变 |
-| 设置 VM 基类、工厂 | `SoloTaskSettingsViewModel<TParam>`、`SoloTaskSettingsFactory` | 新增，替代 `PuloniaOneDragonFixedSettingsViewModel` |
+| 设置 VM 基类、工厂 | `SoloTaskSettingsViewModel`、`SoloTaskSettingsFactory` | 新增，使用 `JObject` 参数快照，替代 `PuloniaOneDragonFixedSettingsViewModel` |
 | 界面组件 | `SoloTaskButton`、`SoloTaskButtonState`、`SoloTaskInstanceWindow` | 保留类名 |
 | Pulonia 执行器 | `PuloniaSoloTaskExecutor` | 替代两个内置执行器 |
 | Pulonia 任务类型 | `solo.auto_domain` | 替代 `builtin.auto_domain` |
@@ -72,17 +73,17 @@
 
 基于同样的理由，运行层的 `Failed` 改为 `Faulted`，表示抛出了异常，与任务的业务失败 `Failed` 区分。
 
-上表中新增的类型名在全仓检索均无同名类型。
+上述合同与运行类型已落地，源码位置见第 13 节。
 
 ## 3. 需求对照
 
-| 编号 | 需求 | 方案 | 本期 |
+| 编号 | 需求 | 实现方式 | 当前状态 |
 | --- | --- | --- | --- |
-| R1 | 返回值明确成功或失败、失败原因，以及奖励等附加数据 | `SoloTaskResult<TData>` 包含结果种类、文字原因、原因码和强类型数据；秘境、首领返回奖励汇总（5.4） | 实现 |
-| R2 | 用泛型规范出入参 | `ISoloTask<TParam, TData>`，出入参由编译器约束（5.1） | 实现 |
+| R1 | 返回值明确成功或失败、失败原因，以及奖励等附加数据 | `SoloTaskResult<TData>` 包含结果种类、文字原因、原因码和强类型数据；秘境、首领返回奖励汇总（5.4） | 已实现 |
+| R2 | 用泛型规范出入参 | `ISoloTask<TParam, TData>`，出入参由编译器约束（5.1） | 已实现 |
 | R3 | 入参动态生成配置界面 | 参数元数据特性（5.8） | 预留 |
-| R4 | 在任务定义上直接看到绑定的 XAML 界面 | `[SoloTaskSettingsView]` 写在任务类上（5.7） | 实现 |
-| R5 | 一条龙和任务计划通过发现获得任务；添加菜单收拢 | 注册表加“独立任务 ▸”子菜单（7.3） | 实现 |
+| R4 | 在任务定义上直接看到绑定的 XAML 界面 | `[SoloTaskSettingsView]` 写在任务类上（5.7） | 已实现 |
+| R5 | 一条龙和任务计划通过发现获得任务；添加菜单收拢 | 注册表加“独立任务 ▸”子菜单（7.3） | 已实现 |
 | R6 | 未来支持外部插件任务 | 注册表按程序集构建，规定插件 Id 命名（第 9 节） | 预留 |
 
 ## 4. 分层
@@ -98,9 +99,9 @@ flowchart TB
     end
     subgraph Run["运行层"]
         RS["SoloTaskExecutionService<br/>本实例运行状态"]
-        TR["TaskRunner<br/>独立运行：停止、通知"]
-        PS["PuloniaTaskService<br/>计划运行（不变）"]
-        L["GameTaskLease<br/>锁、运行环境、任务模式"]
+        TR["TaskRunner<br/>独立运行：锁、运行环境、停止、通知"]
+        PS["PuloniaTaskService / PuloniaLocalNodeRunner<br/>计划节点运行"]
+        L["PuloniaGameTaskCoordinator / PuloniaGameTaskLease<br/>计划运行：锁、运行环境、任务模式"]
     end
     subgraph Task["任务层"]
         REG["SoloTaskRegistry"]
@@ -111,7 +112,6 @@ flowchart TB
     RS --> TR
     E5 --> TR
     E3 --> PS
-    TR --> L
     PS --> L
     TR --> REG
     PS --> REG
@@ -131,12 +131,12 @@ flowchart TB
 - `GameTask/SoloTask/Execution/`：运行层的 `SoloTaskExecutionService`、请求与状态模型、`SoloTaskRunResult`。`TaskRunner` 仍在 `GameTask/`。
 - 任务层文件不引用 `Execution`，依赖方向从目录上就能看出来。任务类留在各自原来的目录。
 
-两条硬规则：
+调用边界与当前限制：
 
-1. **只有会话租约持有 `TaskControl.TaskSemaphore`。** 任务类和任务内部组合（例如每日奖励里调用领取纪行）直接 `new` 子任务并调用 `RunAsync`，绝不经过 `TaskRunner`。
-2. **业务参数只来自 `TParam`。** 构造函数里的 `AllConfig` 只用于全局环境设置，例如按键绑定、游戏语言。任务不能在没传参数时退回去读全局配置，也不能自己读其他页面的配置文件。
-   - 典型反例：现在 `GoToCraftingBenchTask` 和 `GoToSereniteaPotTask` 会在任务内部读取旧一条龙当前选中的 `User\OneDragon\*.json`，从中取保留树脂数量、进壶方式和购买商品。
-   - 后果是 Pulonia 运行这两个任务时，也会悄悄依赖旧一条龙的配置。这是本次要消除的问题。
+1. **独立运行和计划运行共用 `TaskControl.TaskSemaphore`，锁的获取与收尾尚未合并。** `TaskRunner` 自行管理独立运行，Pulonia 使用自己的协调器和租约。任务内部组合直接 `new` 子任务并调用 `RunAsync`；需要把提前结束异常转换为结果时使用 `ExecuteAsync`，不再进入 `TaskRunner`。
+2. **任务合同显式接收 `TParam`，但尚未完全消除全局配置依赖。** 主实例下发已构造的参数；构造函数中的 `AllConfig` 仍提供运行环境设置，部分参数默认构造和可选配置回退也仍读取全局配置，不能视为完全隔离的参数快照。
+   - `GoToCraftingBenchTask` 和 `GoToSereniteaPotTask` 已改为从参数取得保留树脂数量、进壶方式和购买商品，不再读取旧一条龙当前选中的 `User\OneDragon\*.json`。
+   - 保留旧 JS 参数构造语义与彻底消除配置回退是两个边界，当前仅完成前者及已迁移的显式业务参数。
 
 ## 5. 任务层
 
@@ -173,7 +173,7 @@ public interface ISoloTask<TParam, TData>
 | 属性 | 说明 |
 | --- | --- |
 | `Id` | 稳定标识，小写 snake_case，发布后不改 |
-| `DisplayName` | 显示名，取代 `SoloTaskRegistry.GetDisplayName`。现在那份硬编码名称和各类自己的 `Name` 有 7 处不一致 |
+| `DisplayName` | 显示名的统一来源；`SoloTaskRegistry.GetDisplayName` 改为查询描述符，不再维护硬编码名称 |
 | `Description` | 用途说明 |
 | `Group` / `Order` | 在菜单中的分组和组内排序 |
 | `Scopes` | `SoloTaskScopes.Standalone`：可以从独立任务页、热键、多实例运行；`SoloTaskScopes.Plan`：出现在任务计划和一条龙中。默认两者都有 |
@@ -185,24 +185,24 @@ public interface ISoloTask<TParam, TData>
 
 ### 5.3 参数
 
-- **结构：** 参数是类，有公共无参构造函数，属性的初始值就是默认值。
-- **可序列化：** 参数必须能 JSON 往返，不能包含委托、`ScriptObject`、`CancellationToken` 或内存中的会话对象。这类运行时依赖改由构造函数传入。例如：
-  - 删除 `AutoBossParam.RewardClaimedCallback`；
+- **结构：** 参数是类，有公共无参构造函数。默认值由属性初始值和构造函数共同决定；JS 已暴露的参数类型保留从全局配置填充默认值的行为，因此 Pulonia 能力定义中的默认参数会包含建立执行器时的配置快照。
+- **可序列化：** 参数的 JSON 合同不包含委托、`ScriptObject`、`CancellationToken` 或内存中的会话对象。例如：
+  - `AutoBossParam.RewardClaimedCallback` 保留为 `internal`，不参与序列化，由旧一条龙或 Pulonia 执行器在运行前注入，用于每次成功领奖后更新累计次数；
   - `AutoComboRunTask` 的行为树会话从构造函数传入，这个类也不加特性。
-- **序列化库：** 统一用 System.Text.Json，选项集中在 `SoloTaskJson`：snake_case、枚举存为字符串、遇到未知字段报错。
+- **序列化库：** 统一用 System.Text.Json，选项集中在 `SoloTaskJson`：snake_case、枚举存为字符串、包含公共字段。反序列化沿用忽略未知字段的默认行为；Pulonia 另用生成的 Schema 限制节点参数，不能把它等同于所有入口都严格校验未知字段。
   - 原因是参数类会直接包含或继承 `AllConfig` 下已经用 System.Text.Json 序列化的配置类（`AutoDomainConfig`、`AutoFightConfig` 等），按仓库规则应沿用 System.Text.Json。
-  - 改用 Newtonsoft 会忽略这些类上的 System.Text.Json 特性。Pulonia 现在专门过滤 `JsonIgnore`，就是为了绕开这个问题。
+  - 改用 Newtonsoft 会忽略这些类上的 System.Text.Json 特性；当前 Schema 也从同一套 System.Text.Json 类型元数据生成。
   - Pulonia 和 IPC 内部使用 Newtonsoft 的 `JObject`，只在边界处按字符串转换。
 - **JS 对外合同：** 有 6 个参数类已经作为 JS 宿主类型暴露给社区脚本：`AutoDomainParam`、`AutoBossParam`、`AutoFightParam`、`AutoLeyLineOutcropParam`、`AutoStygianOnslaughtParam`、`CountInventoryItemParam`。
   - 它们直接充当 `TParam`。
   - 现有的构造函数和属性不删、不改名、不改语义，只允许新增无参构造函数和新属性。
-- **每周安排：** 属于参数。自动秘境、自动地脉花的参数带强类型的“按星期覆盖”。
-  - 任务开始时按服务器时间（凌晨 4 点日切）解析出当天参数，当天不运行就返回 `Skipped`。
-  - 这样外部代码不再需要自己合并 `weekday_overrides`。
-- **战斗策略：** 统一传策略名，任务用共享的 `CombatStrategyResolver` 解析出路径。
-  - 这个解析器由现在 Pulonia 执行器里的 `StrategyPath` 迁入任务层。
+- **每周安排：** 属于 Pulonia 编排参数，不加入任务的强类型 `TParam`。
+  - `PuloniaSoloTaskExecutor` 为所有独立任务的 Schema 添加 `weekday_overrides`，按服务器时间（凌晨 4 点日切）合并当天覆盖，当天禁用则返回 `Skipped(not_scheduled_today)`。
+  - 秘境还提供 `weekday_overrides_enabled` 开关；执行器在反序列化为任务参数前移除这些编排字段。
+- **战斗策略：** 任务使用共享的 `CombatStrategyResolver` 解析策略名或路径。
+  - 参数继续沿用 `CombatStrategyPath` 等已公开的属性名。
   - JS 现有调用传的是路径，所以解析器也接受路径。
-  - 入口不再调用 `TaskSettingsPageViewModel.GetFightStrategy` 拼路径。
+  - 独立任务页仍通过 `GetFightStrategy` 校验选择并构造参数；统一战斗入口是 `AutoFightEntryTask`，原 TXT 实现仍叫 `AutoFightTask`。
 
 ### 5.4 结果
 
@@ -272,17 +272,17 @@ public sealed record SoloTaskResult(SoloTaskResultKind Kind, string Message, str
 
 奖励数据：
 
-- 统一为 `RewardSummary { Items: [{ Name, Count }] }`，自动秘境和自动首领讨伐把它作为 `TData` 返回。现在这两个任务返回的掉落字典，在 Pulonia 中会被直接丢弃。
-- 奖励是本次观测到的产出，不等于 Pulonia 账本中“已确认的副作用”。周期额度仍然只通过 Pulonia 的完成事件结算。
-- 其余任务暂时返回 `NoData`。
+- 统一为 `RewardSummary { Items: [{ Name, Count }] }`，自动秘境和自动首领讨伐把它作为 `TData` 返回。Pulonia 保留到结果 `Data`，JS 入口转换回原来的字典返回形状。
+- 奖励是本次观测到的产出，不等于 Pulonia 账本中“已确认的副作用”。首领累计领奖次数由独立的内部回调逐次保存，不能从奖励物品数量推算。
+- JS 专用任务 `AutoEatTask`、`CountInventoryItem` 分别返回 `AutoEatData`、`InventoryCountData`；其他任务使用 `NoData`。
 
 ### 5.5 异常约定
 
-- 可以预见的业务失败返回 `Failed`，不要再“记一条错误日志后 return”。现在这样写，调用方会以为执行成功了。
+- 可以预见的业务失败返回 `Failed`，避免仅记录错误日志就返回，使调用方误判为成功。
 - 取消时抛出 `OperationCanceledException`。
-- `NormalEndException` 的含义收窄为“运行环境停止或任务被取消”。目前有几处把它当作业务上的提前结束来用，迁移时改为返回结果：
+- 深层业务流程的提前结束使用 `SoloTaskAbortException` 携带结果；它继承 `NormalEndException`，以保留直接调用 `RunAsync` 的旧入口语义。对应结果包括：
 
-  | 任务 | 现在抛出的消息 | 改为 |
+  | 任务 | 提前结束的情形 | 结果 |
   | --- | --- | --- |
   | 自动七圣召唤 | 对战已结束；策略中所有指令已经执行完毕 | `Succeeded` |
   | 自动七圣召唤 | 已经没有可切换且存活的角色 | `Failed` |
@@ -290,7 +290,8 @@ public sealed record SoloTaskResult(SoloTaskResultKind Kind, string Message, str
   | 自动秘境 | 未检测到秘境结束，可能是背包物品已满 | `Failed` |
   | 连招运行 | 战斗结束 | `Succeeded` |
 
-  如果抛出点嵌套太深，不方便直接返回，可以改抛任务私有的异常，在 `RunAsync` 顶层捕获后转成结果。
+  `SoloTaskExtensions.ExecuteAsync` 捕获 `SoloTaskAbortException` 并返回其结果。`TaskRunner` 的强类型入口和描述符调用都会经过它；直接调用 `RunAsync` 时，异常仍沿旧调用链传播。
+- 对其余 `NormalEndException`，`TaskRunner` 保留原来的映射：已请求取消时为 `Cancelled`，否则为 `Completed`，通常没有 `TaskResult`。Pulonia 则在未请求取消时映射为 `Failed(runtime_stopped)`，已请求取消时抛出 `OperationCanceledException`。
 - 其他异常直接抛出，由运行层记录。
 
 ### 5.6 注册表与描述符
@@ -298,12 +299,12 @@ public sealed record SoloTaskResult(SoloTaskResultKind Kind, string Message, str
 **扫描与校验**
 
 - `SoloTaskRegistry` 是 DI 单例。构造时扫描指定程序集中带 `[SoloTaskInfo]` 的类，本期只扫描主程序集。
-- 启动时逐项校验，任一项失败直接抛异常，由单元测试覆盖：
+- 注册表建立时进行结构校验，任一项失败直接抛异常：
   - Id 格式正确且唯一；
-  - 类不是抽象类，恰好实现一个 `ISoloTask<,>`；
-  - 有一个包含 `GameRuntime` 参数的公共构造函数；
-  - 参数类能构造，且能 JSON 往返；
-  - 设置界面的类型合法，且 VM 类型唯一。
+  - 类不是抽象类或开放泛型，恰好实现一个 `ISoloTask<,>`；
+  - 恰好有一个公共构造函数，且包含 `GameRuntime` 参数；
+  - 声明的设置 VM 类型不被多个任务复用。
+- 参数默认构造与 JSON 往返不在注册表结构校验中执行；Pulonia 建立能力定义时才创建默认参数和 Schema。设置 VM 的基类检查发生在 `SoloTaskSettingsFactory.Create`，视图能否实例化和布局需由 WPF 验证覆盖。
 - 调用委托在注册时生成，执行期间不再使用反射。
 
 **`SoloTaskDescriptor` 的内容**
@@ -315,11 +316,11 @@ public sealed record SoloTaskResult(SoloTaskResultKind Kind, string Message, str
 **注册表查询**
 
 - 按 Id：供动态入口使用；
-- 按 CLR 类型：供 `TaskRunner` 的强类型重载取显示名使用。
+- 按 CLR 类型：提供 `FindByType` 查询；当前 `TaskRunner` 的强类型重载尚未使用它取得显示名或主界面等待策略。
 
 **两种调用方式**
 
-- 编译期就知道任务类型的调用方（任务内部组合、JS `Dispatcher`、旧一条龙）：直接 `new`，再调用 `RunAsync`，不经过描述符。
+- 编译期就知道任务类型的调用方（任务内部组合、JS `Dispatcher`、旧一条龙）：直接 `new`，再调用 `RunAsync`，不经过描述符；需要接收提前结束结果时可调用 `ExecuteAsync`。
 - 按 Id 动态调用的入口（独立任务页、IPC、Pulonia）：使用 `InvokeAsync`。
 
 ### 5.7 设置界面绑定（R4）
@@ -330,28 +331,28 @@ public sealed record SoloTaskResult(SoloTaskResultKind Kind, string Message, str
 
 **VM**
 
-- VM 继承 `SoloTaskSettingsViewModel<TParam>`，构造时传入当前有效参数。
-- VM 持有原值 `Original` 和可编辑副本 `Value`。`GetChanges()` 把两者序列化后比较，返回发生变化的顶层字段。
-- VM 不再依赖 Pulonia 节点，也不用逐个字段写 `ReadString`、`WriteString`。
-- 子类只补充界面辅助内容，例如下拉选项、每周安排的行。
+- VM 继承非泛型的 `SoloTaskSettingsViewModel`，构造时接收当前有效参数 `JObject`，并深拷贝为 `Original` 快照。
+- 子类把字段映射到可编辑属性，使用 `CollectChanges(JObject)` 收集相对快照真实变化的顶层字段，继续复用 `ReadString`、`WriteString` 等辅助方法。
+- VM 不依赖 Pulonia 节点，宿主负责合并、校验和保存变化；`Edited` 事件供需要即时保存的宿主订阅。
+- `EditedParameterNames` 声明专属界面已覆盖的字段，剩余 Schema 参数由宿主补充为通用卡片，避免隐藏可用设置。
 
 **视图**
 
-- 视图直接绑定 `Value` 的属性，以及子类提供的选项。
+- 视图绑定各设置 VM 的可编辑属性、选项和每周安排等辅助行；没有泛型的 `Value` 属性。
 
 **模板注册**
 
 - 应用启动时，在 UI 线程为每个声明了界面的任务注册一个隐式 `DataTemplate`，以 VM 类型为键。页面上的 `ContentControl` 会按 VM 类型自动匹配。
-- 删除 `PuloniaOneDragonPage` 中写死的 6 个 `DataTemplate`。
-- 删除 `PuloniaOneDragonViewModel.CreateFixedSettings` 中的 switch，改由 `SoloTaskSettingsFactory` 根据描述符创建 VM。
+- `SoloTaskSettingsTemplates.Register` 在应用资源中注册隐式模板，替代页面内写死的模板。
+- 宿主通过 `SoloTaskSettingsFactory` 根据描述符创建 VM，不再按任务类型维护设置界面 switch。
 
 **迁移与边界**
 
-- 现有 6 套界面迁移到 `View/Pages/SoloTaskSettings/` 和 `ViewModel/SoloTaskSettings/`，并去掉 `PuloniaOneDragon` 前缀，例如改为 `AutoDomainSettingsView`。
+- 当前共有 7 套专属设置界面，位于 `View/Pages/SoloTaskSettings/` 和 `ViewModel/SoloTaskSettings/`：合成浓缩树脂、每日奖励、尘歌壶、秘境、首领、幽境危战、地脉花，例如 `AutoDomainSettingsView`。
 - 这套界面与 Pulonia 无关，以后独立任务页也可以直接复用，但不在本期范围。
 - 任务层只通过 `typeof` 引用视图类型，从不创建界面。
 
-### 5.8 预留：参数界面元数据（R3）
+### 5.8 预留：参数界面元数据（R3，尚未实现）
 
 - 参数属性上可以加两个特性：
   - `[SoloTaskParam(Title, Description, Order, Group, Minimum, Maximum, Advanced)]`；
@@ -362,9 +363,11 @@ public sealed record SoloTaskResult(SoloTaskResultKind Kind, string Message, str
 
 ### 5.9 示例
 
+以下是按当前接口与调用边界整理的流程示意，省略实际识别和操作代码；星期覆盖在 Pulonia 执行器中处理。
+
 ```csharp
 /// <summary>自动秘境：按参数刷取秘境，返回识别到的掉落。</summary>
-[SoloTaskInfo(TaskId, "自动秘境", Group = "树脂与战斗", Order = 30, OneDragonOrder = 3)]
+[SoloTaskInfo(TaskId, "自动秘境", Group = "树脂与战斗", Order = 210, OneDragonOrder = 3)]
 [SoloTaskSettingsView(typeof(AutoDomainSettingsView), typeof(AutoDomainSettingsViewModel))]
 public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
 {
@@ -377,13 +380,12 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
     /// <inheritdoc />
     public async Task<SoloTaskResult<RewardSummary>> RunAsync(AutoDomainParam param, CancellationToken ct)
     {
-        // 按服务器时间解析当天参数，当天不运行则跳过
-        if (!param.TryResolveToday(ServerTimeHelper.GetServerTimeNow(), out var today))
-            return SoloTaskResult.Skipped(SoloTaskReasons.NotScheduledToday, "今天不在运行日期内。");
-        if (string.IsNullOrWhiteSpace(today.DomainName))
+        // 按服务器时间合并当天参数已由 Pulonia 完成；任务只处理本次收到的业务参数
+        if (string.IsNullOrWhiteSpace(param.DomainName))
             return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, "请选择秘境。");
-        if (!CombatStrategyResolver.TryResolve(today.StrategyName, out var strategyPath))
-            return SoloTaskResult.Failed(SoloTaskReasons.StrategyNotFound, $"战斗策略“{today.StrategyName}”不存在。");
+        var strategy = CombatStrategyResolver.Parse(param.CombatStrategyPath);
+        if (!strategy.Exists)
+            return SoloTaskResult.Failed(SoloTaskReasons.StrategyNotFound, $"战斗策略“{param.CombatStrategyPath}”不存在。");
 
         // 原 Start 的流程；依赖参数的初始化从构造函数移到这里
 
@@ -393,9 +395,9 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
 }
 
 /// <summary>领取每日奖励：组合历练点、冒险家协会和纪行。</summary>
-[SoloTaskInfo(TaskId, "领取每日奖励", Group = "日常奖励", Order = 40, OneDragonOrder = 7)]
-[SoloTaskSettingsView(typeof(DailyRewardsSettingsView), typeof(DailyRewardsSettingsViewModel))]
-public sealed class ClaimDailyRewardsTask(GameRuntime runtime, AllConfig config) : ISoloTask<DailyRewardsParam, NoData>
+[SoloTaskInfo(TaskId, "领取每日奖励", Group = "日常奖励", Order = 130, OneDragonOrder = 7)]
+[SoloTaskSettingsView(typeof(ClaimDailyRewardsSettingsView), typeof(ClaimDailyRewardsSettingsViewModel))]
+public class ClaimDailyRewardsTask(GameRuntime runtime, AllConfig config) : ISoloTask<DailyRewardsParam, NoData>
 {
     /// <summary>任务标识。</summary>
     public const string TaskId = "claim_daily_rewards";
@@ -406,8 +408,9 @@ public sealed class ClaimDailyRewardsTask(GameRuntime runtime, AllConfig config)
         // 子任务直接组合调用，不经过 TaskRunner
         var points = await new ClaimEncounterPointsRewardsTask(runtime, config).RunAsync(new NoParam(), ct);
         if (points.Kind == SoloTaskResultKind.Failed) return points;
-        await new GoToAdventurersGuildTask(runtime, config).ClaimAsync(param.Country, param.PartyName, ct);
-        return await new ClaimBattlePassRewardsTask(runtime, config).RunAsync(new NoParam(), ct);
+        await new GoToAdventurersGuildTask(runtime, config).Start(param.Country, ct, param.PartyName, onlyDoOnce: true);
+        await new ClaimBattlePassRewardsTask(runtime, config).RunAsync(new NoParam(), ct);
+        return SoloTaskResult.Unverified("每日奖励领取流程已结束。");
     }
 }
 ```
@@ -416,22 +419,22 @@ public sealed class ClaimDailyRewardsTask(GameRuntime runtime, AllConfig config)
 
 ### 6.1 TaskRunner
 
-| 现在 | 改造后 |
+| 原入口或实现 | 当前实现 |
 | --- | --- |
 | `RunCurrentWithResultAsync(Func<GameRuntime, CancellationToken, Task>)` → `SoloTaskRunResult` | 保留 |
 | `RunCurrentAsync`、`RunThreadAsync`、`FireAndForget` | 保留。调度器配置组、旧一条龙、地图追踪、录制回放、JS 列表等组合运行仍然使用它们 |
 | `RunSoloTaskAsync(Func<GameRuntime, ISoloTask>)` → `Task` | 保留方法名，改为两个重载，都返回 `SoloTaskRunResult`（见下） |
 | `RunSoloTaskWithResultAsync(...)` | 删除，并入上面两个重载 |
-| 私有字段 `_name`：从未赋值，日志永远显示“任务启动！” | 删除。两个重载改用任务显示名写日志；委托版本增加一个可选的名称参数 |
+| 私有字段 `_name`：从未赋值，日志永远显示“任务启动！” | 已删除。描述符重载使用任务显示名；委托版本接受可选名称；强类型重载目前传入空名称 |
 
 两个重载共用一份私有实现，本身都很薄：
 
 ```csharp
-/// <summary>编译期已知类型的入口，例如兑换码、连招运行。显示名和是否等待主界面先查注册表；
-/// 未注册的类用类名，并默认等待主界面，与现在一致。</summary>
+/// <summary>编译期已知类型的入口，例如兑换码、连招运行。是否等待主界面由调用方传入，
+/// 默认等待；当前不会从注册表推断显示名或等待策略。</summary>
 public Task<SoloTaskRunResult> RunSoloTaskAsync<TParam, TData>(
     Func<GameRuntime, ISoloTask<TParam, TData>> create, TParam param,
-    CancellationToken requestToken = default)
+    bool waitForMainUi = true, CancellationToken requestToken = default)
     where TParam : class, new() where TData : class;
 
 /// <summary>按描述符运行，供 SoloTaskExecutionService 使用。</summary>
@@ -450,7 +453,8 @@ public sealed class SoloTaskRunResult
     public SoloTaskRunOutcome Outcome { get; init; }
     /// <summary>取消、异常或拒绝的原因。</summary>
     public string? ErrorMessage { get; init; }
-    /// <summary>任务自己的结果；只有通过 RunSoloTaskAsync 运行且状态为 Completed 时才有值。</summary>
+    /// <summary>任务自己的结果；通过 RunSoloTaskAsync 正常返回时有值。
+    /// 旧 NormalEndException 路径可能以 Completed 结束但没有任务结果。</summary>
     public ISoloTaskResult? TaskResult { get; init; }
 }
 ```
@@ -461,8 +465,8 @@ public sealed class SoloTaskRunResult
    - `TaskRunner` 拿不到锁就立即拒绝（`WaitAsync(0)` 失败时返回 `Rejected`）；
    - Pulonia 等待锁。
 2. **嵌套。** 已经在会话内的代码不能再调用 `TaskRunner`。“会话内”包括 `TaskRunner` 的委托里、Pulonia 节点里和任务内部。
-   - 现在嵌套调用只会静默拿到 `Rejected`，很难排查。
-   - 改为在获取会话时设置一个 `AsyncLocal` 标记。`TaskRunner` 发现当前异步流已在会话内，就直接抛出 `InvalidOperationException`。
+   - `GameTaskSessionScope` 使用 `AsyncLocal` 标记当前异步流。`TaskRunner` 发现已经处于会话内，会在获取锁前抛出 `InvalidOperationException`。
+   - Pulonia 的 `PuloniaLocalNodeRunner` 在游戏节点执行器调用期间进入作用域；`PuloniaGameTaskCoordinator.AcquireAsync` 同样拒绝会话内再次获取租约。
    - 在会话内运行任务，应使用 `InvokeAsync` 或直接 `new`。
 3. **构造时机。** 任务在拿到运行环境之后才构造，保留现有的保证：构造期间不会读到上一次绑定的旧运行环境。
    - `onStarted` 在构造之后、调用 `RunAsync` 之前触发，运行服务据此把状态从“启动中”切到“运行中”。
@@ -471,16 +475,17 @@ public sealed class SoloTaskRunResult
 
    | 情况 | `Outcome` | 通知 |
    | --- | --- | --- |
-   | 任务返回了结果 | `Completed`，`TaskResult` 为任务结果 | 结果为 `Failed` 时发送 `TaskError`，内容包含原因和原因码；其他结果不发送 |
+   | 任务返回了结果 | `Completed`，`TaskResult` 为任务结果 | 结果为 `Failed` 时发送 `TaskError`，通知包含失败消息，日志记录原因码；其他结果不发送 |
    | 抛出 `OperationCanceledException` | `Cancelled` | 不发送，与现在相同 |
-   | 抛出 `NormalEndException`（运行环境停止） | `Cancelled`，`ErrorMessage` 为原因（见下方说明） | 没有请求取消时发送 `TaskCancel`，与现在相同 |
+   | 抛出携带业务结果的 `SoloTaskAbortException` | `ExecuteAsync` 转换为任务结果，按上面的返回结果规则处理 | 同返回结果 |
+   | 其余 `NormalEndException` | 已请求取消时为 `Cancelled`，否则为 `Completed`；不附带任务结果或错误消息 | 没有请求取消时发送 `TaskCancel`，与旧行为相同 |
    | 抛出其他异常 | `Faulted`（原 `Failed`） | 发送 `TaskError`，与现在相同 |
    | 拿不到锁 | `Rejected` | 不发送，与现在相同 |
 
-   - `NormalEndException` 现在映射为 `Completed`。业务上的提前结束已经改为返回结果，剩下的只有运行环境停止这一种情况，所以改为 `Cancelled`。
-   - `Failed` 结果也发送 `TaskError`，保住现在靠抛异常触发的失败通知。
-5. **连续执行。** 在 `RunnerContext.IsContinuousRunGroup` 下重新抛出 `NormalEndException` 和 `OperationCanceledException`，这段逻辑只在委托路径里，保持不变。`RunSoloTaskAsync` 不用于连续执行。
-6. **线程。** 两个重载内部都用 `Task.Run`，任务的构造和运行都在线程池上，与现在的 `RunSoloTaskWithResultAsync` 一样。任务代码不能访问 WPF 对象。
+   - 未将所有 `NormalEndException` 统一改为 `Cancelled`；旧入口与明确业务结果的差异由 `SoloTaskAbortException` / `ExecuteAsync` 衔接。
+   - `Failed` 结果也发送 `TaskError`，原因码写入日志，通知文本包含失败消息。
+5. **连续执行。** 共用的 `RunCoreAsync` 在 `RunnerContext.IsContinuousRunGroup` 下重新抛出 `NormalEndException` 和 `OperationCanceledException`，继续终止连续执行链。`RunSoloTaskAsync` 不用于连续执行。
+6. **线程。** 两个重载内部都用 `Task.Run`，任务的构造和运行都在线程池上，保留原 `RunSoloTaskWithResultAsync` 的线程行为。任务代码不能访问 WPF 对象。
 
 ### 6.2 运行服务
 
@@ -494,11 +499,11 @@ public sealed class SoloTaskRunResult
 
 - **启动请求：** `SoloTaskStartRequest` 从 `{RunId, TaskType: 枚举, Parameters}` 改为 `{RunId, TaskId: 字符串, Parameters}`。服务按 Id 取得描述符，反序列化参数，再调用描述符版本的 `RunSoloTaskAsync`。
 - **其他模型：** `SoloTaskStatusSnapshot`、`SoloTaskStartDefinition`、`SoloTaskRunCompletedEventArgs` 的 `TaskType` 字段同样改为 `TaskId`。
-- **最新配置：** 现在的注册表会在任务启动时从磁盘读取最新的 `AllConfig`，这一点保留。运行服务读取后，通过 `config` 参数传入。业务参数已经全部在 `TParam` 中，这份配置只影响环境设置。
+- **最新配置：** 运行服务通过 `IConfigService.Read()` 读取磁盘上的最新 `AllConfig`，再经 `config` 参数传入任务构造。请求携带参数时直接反序列化，未携带时使用默认参数；不能据此认为任务内部已完全消除全局配置回退（见第 4 节）。
 - **失败提示：** 任务返回 `Failed` 时，运行服务把原因写入空闲状态的 `ErrorMessage`。界面提示与现在抛异常失败时一致。
 - **完成事件：** `RunCompleted` 事件携带的 `SoloTaskRunResult` 包含任务结果。
 
-### 6.3 会话租约合并（步骤 D）
+### 6.3 会话租约合并（步骤 D，尚未实现）
 
 现在有两份几乎相同的“进入任务会话”代码：
 
@@ -510,17 +515,19 @@ public sealed class SoloTaskRunResult
 - 进入时：获取锁，取得运行环境，`TaskTriggerDispatcher.BeginTask`，清理遮罩，激活窗口，清空 `RunnerContext`；
 - 收尾时：释放按键，关闭 HTML 遮罩，释放锁。
 
-合并方案：
+当前已补齐两项行为：`PuloniaGameTaskCoordinator` 在游戏节点执行前也等待订阅脚本自动更新结束；两条运行路径使用 `GameTaskSessionScope` 检测嵌套。协调器的嵌套获取已有 `PuloniaGameTaskCoordinatorTests` 覆盖。**这些补充不等于统一租约已经落地**，仓库仍没有 `GameTaskLease`。
+
+剩余合并方案：
 
 - 合并为运行层的 `GameTaskLease`，提供两种获取方式：
   - `TryAcquireAsync`：拿不到锁立即失败，供 `TaskRunner` 使用；
   - `AcquireAsync`：等待锁，供 Pulonia 使用。
 - 以下两项做成选项：新启动截图器时等待进入主界面；等待订阅脚本自动更新结束。
-  - 合并后 Pulonia 节点也会等待脚本更新结束，避免 JS 节点在脚本目录被重新检出的过程中运行。
-- 第 6.1 节第 2 条的嵌套检测，在租约里统一实现。
+  - Pulonia 等待脚本更新已独立实现，合并时保持这项行为；是否等待主界面仍是两条路径的差异。
+- 第 6.1 节第 2 条的嵌套检测已通过作用域实现，后续合并时统一作用域的进入和释放边界。
 - 删除 `PuloniaGameTaskCoordinator` 和 `PuloniaGameTaskLease`。
 
-这一步与任务合同相互独立，可以单独验收。嵌套检测可以在步骤 A 先分别加到两处。
+这一步与已经完成的任务合同迁移相互独立，仍待单独实施和验收。
 
 ## 7. 入口层改动
 
@@ -531,13 +538,13 @@ public sealed class SoloTaskRunResult
   - 7 个热键改用 `AutoWoodTask.TaskId` 这类常量；
   - `SoloTaskButton`、`SoloTaskButtonState`、`SoloTaskInstanceWindow` 及其 VM 保留类名，只把枚举参数换成字符串。
 - **参数构造：** `BuildSoloTaskDefinitionAsync` 保留方法名，改为构造完整的 `TParam`。
-  - 先用 `XxxParam.FromConfig(Config.XxxConfig)` 取得配置值，再叠加页面上的临时值，例如所选策略、弹窗里输入的兑换码。
+  - 使用参数构造函数及 `SetAutoBossConfig`、`SetAutoStygianOnslaughtConfig` 等配置复制方法，再叠加页面上的临时值，例如所选策略、弹窗里输入的兑换码。
   - 子实例不再按配置文件自己拼参数。
   - 页面布局不变。
 - **IPC：** `task.start` 载荷改为 `{runId, taskId, parameters}`，状态快照中的任务字段也改为字符串 Id。
   - 主实例和子实例本来就要求版本相同，所以不做兼容。
-  - 这样还顺带消除了一个隐患：现在按枚举序号传输，一旦调整枚举顺序就会错乱。
-- **文档：** 同步更新 `multi-instance-ipc.md`。其中“独立任务下发不在实现范围内”的描述已经过时。
+  - 已不再按枚举序号传输，避免调整枚举顺序造成任务类型错乱。
+- **文档：** 跨实例协议与当前独立任务下发约定见 `multi-instance-ipc.md`。
 
 ### 7.2 JS Dispatcher
 
@@ -546,7 +553,7 @@ public sealed class SoloTaskRunResult
   - 秘境和首领返回字典；
   - 背包计数返回对象；
   - 自动吃药返回数字。
-- **失败处理：** `Failed` 结果会记日志，然后按原来的方式返回（null 或空字典），不抛异常，保证现有脚本的行为不变。
+- **失败处理：** 常规 `Failed` 结果记日志，再转换为旧返回形状；直接调用 `RunAsync` 仍保留提前结束异常语义。自动战斗的策略不存在时，`RunAutoFightTask` 继续抛出 `FileNotFoundException`，不能概括为所有失败都不抛异常。
 - **参数来源：** `runTask` 中原来从 `TaskSettingsPageViewModel` 读取策略路径和伐木次数的分支，改为用 `_allConfig` 构造参数。数据来源仍是同一份全局配置，行为不变。
 - **后续（不在本期）：** 可以新增 `dispatcher.runSoloTask(id, params)`，返回结构化结果。
 
@@ -554,29 +561,30 @@ public sealed class SoloTaskRunResult
 
 **执行**
 
-- 只保留一个执行器 `PuloniaSoloTaskExecutor`。
+- 独立任务统一由 `PuloniaSoloTaskExecutor` 执行；JS、地图追踪等其他任务类型仍有各自执行器。
 - `Definitions` 由注册表中带 `Plan` 范围的任务生成：
   - 任务类型为 `solo.{TaskId}`；
   - 默认参数和 Schema 都从参数类生成；
   - `RequiresGameSession` 固定为 `true`；
   - 公共参数为全部顶层字段。
-- 执行流程：`JObject` → `TParam` → `InvokeAsync` → `PuloniaTaskOutcome`。
-  - 结果种类一一对应；
+- 执行流程：`JObject` → 合并星期覆盖、处理首领累计次数 → 移除编排字段 → `TParam` → `InvokeAsync` → `PuloniaTaskOutcome`。
+  - 结果映射为：`Succeeded` → `Succeeded`、`Unverified` → `ExecutedUnverified`、`Partial` → `PartiallySucceeded`、`Failed` → `Failed`、`Skipped` → `Skipped`；
   - `Data` 存放奖励等数据；
   - `ReasonCode` 原样带出。
 - 任务抛出 `NormalEndException`（运行环境停止）时，映射为 `Failure(runtime_stopped)`，下一个节点会重新获取运行环境，符合 Pulonia 现有约定。
 - `PuloniaTaskOutcome` 和 `PuloniaTaskNodeResult` 增加 `ReasonCode` 字段。
 - 删除 `PuloniaBuiltinTaskExecutor`、`PuloniaCombatTaskExecutor` 和 `PuloniaCombatTaskSettings`。
-- Schema 生成并入 `PuloniaSoloTaskExecutor`，沿用 `PuloniaTaskCommonSettings.CreatePropertySchema` 的规则。枚举改为字符串，与序列化结果一致；现在 Schema 里是整数、JSON 里是字符串，这个不一致随之修正。
+- Schema 由独立的 `PuloniaSoloTaskSchema` 按 `SoloTaskJson.Options` 的类型元数据生成，支持公共字段、嵌套对象、数组和可空类型，枚举按字符串处理。执行器在此基础上添加星期覆盖、首领累计次数等编排字段。
+- 首领累计成功领奖上限和重置批次由编排层维护：执行器读取已完成次数并限制本次运行次数，每次确认领奖后立即持久化；取消不丢失已经记录的次数。
 
 **默认清单**
 
 - 由注册表的 `OneDragonOrder` 生成。
-- 删除 `PuloniaOneDragonDefaults` 中写死的 8 项。
+- 保留 `PuloniaOneDragonDefaults` 作为计划数据工厂；删除其中写死的 8 项，改为筛选 `IsSoloTask && OneDragonOrder > 0` 的能力定义并排序。
 
 **添加菜单**
 
-两个页面共用 `PuloniaTaskPlanViewModel.AddTaskMenu`：资源类固定项，加上一个“独立任务 ▸”子菜单。子菜单取注册表中带 `Plan` 范围的任务，按 `Group` 分段、按 `Order` 排序：
+两个页面各自持有 `AddTaskMenu`，均由 `PuloniaTaskMenuBuilder.Build` 生成：资源类固定项，加上一个“独立任务 ▸”子菜单。子菜单来自注册表中带 `Plan` 范围的任务，按 `Order` 排序，并在 `Group` 变化处分段：
 
 ```text
 添加任务
@@ -613,8 +621,8 @@ public sealed class SoloTaskRunResult
 
 - **调用点：** `OneDragonTaskItem.InitAction` 和 `ScriptGroupProject.Run`（Shell）只改调用点，改为 `new` 任务后调用 `RunAsync(param, ct)`。它们仍在 `TaskRunner.RunThreadAsync` 的委托里执行，会话语义不变。
 - **参数来源：** 旧一条龙把自己配置里的保留树脂数量、进壶方式、购买商品放进参数传给任务。两个任务不再读取一条龙的配置文件。
-- **自动地脉花：** 现在会先临时改写全局 `AutoLeyLineOutcropConfig`，跑完再还原。参数已经能携带全部字段，这段改写共享状态的代码直接删除。
-- **自动首领讨伐的累计成功次数：** 回调删除后，改为任务结束后按结果里的领奖次数累加。**这是一处行为变化**：任务被取消时，本次已经领取的次数不再计入。
+- **自动地脉花：** 已删除临时改写全局 `AutoLeyLineOutcropConfig` 再还原的逻辑，改为从全局配置构造参数，再用旧一条龙配置覆盖当天类型、地区及运行模式等字段。
+- **自动首领讨伐的累计成功次数：** 保留内部 `RewardClaimedCallback`，旧一条龙仍在每次成功领奖后增加配置中的累计次数，取消不会撤销本次已经累计的次数。Pulonia 使用相同回调保存自己的统计，回调不进入参数 JSON。
 - **异常吞没：** 原来 `Start` 中会吞掉异常的任务（如领取邮件），由旧一条龙的调用点自己保留 try/catch，行为不变。
 
 ### 7.5 其他直接构造点
@@ -629,30 +637,31 @@ public sealed class SoloTaskRunResult
   - 运行服务状态机测试；
   - Pulonia 一条龙的设置测试和编辑测试。
 
-迁移前再全仓检索一次 `new \w+Task\(`，确认没有遗漏的直接构造点。
+上述入口已迁移到新合同；后续修改任务构造函数时仍需检索直接构造点，避免遗漏 JS 和内部组合调用。
 
 ## 8. 任务迁移清单
 
-可发现的任务（加特性）：
+当前主程序集共 25 个可发现的任务（加特性），其中 16 个带 `Plan` 范围、7 个声明专属设置界面：
 
-| 现在的类 | TaskId | 参数 | 数据 | 范围 | 分组 | 一条龙顺序 | 说明 |
+| 任务类 | TaskId | 参数 | 数据 | 范围 | 分组 | 一条龙顺序 | 说明 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| `OneDragonTask` | `one_dragon` | `OneDragonParam` | `NoData` | 独立 | 日常奖励 | — | 旧一条龙入口复用独立运行及跨实例下发，不加入计划清单 |
 | `ClaimMailRewardsTask` | `claim_mail` | `NoParam` | `NoData` | 独立、计划 | 日常奖励 | 1 | 原 `DoOnce` 逻辑成为 `RunAsync` |
-| `GoToCraftingBenchTask` | `craft_condensed_resin` | 国家、保留树脂数 | `NoData` | 独立、计划 | 日常奖励 | 2 | 不再读旧一条龙配置文件 |
-| `AutoDomainTask` | `auto_domain` | `AutoDomainParam` | `RewardSummary` | 独立、计划 | 树脂与战斗 | 3 | 并入原 `AutoDomainConfig` 覆盖项和每周安排 |
-| `AutoBossTask` | `auto_boss` | `AutoBossParam` | `RewardSummary` | 独立、计划 | 树脂与战斗 | 4 | 删除回调；战斗配置并入参数 |
+| `GoToCraftingBenchTask` | `craft_condensed_resin` | `CraftCondensedResinParam` | `NoData` | 独立、计划 | 日常奖励 | 2 | 国家和保留树脂数由参数传入，不再读旧一条龙配置文件 |
+| `AutoDomainTask` | `auto_domain` | `AutoDomainParam` | `RewardSummary` | 独立、计划 | 树脂与战斗 | 3 | 并入原 `AutoDomainConfig` 业务字段；星期覆盖由 Pulonia 处理 |
+| `AutoBossTask` | `auto_boss` | `AutoBossParam` | `RewardSummary` | 独立、计划 | 树脂与战斗 | 4 | 保留不序列化的内部领奖回调；战斗配置可随参数传入 |
 | `AutoStygianOnslaughtTask` | `auto_stygian_onslaught` | `AutoStygianOnslaughtParam` | `NoData` | 独立、计划 | 树脂与战斗 | 5 | 不等待主界面 |
-| `AutoLeyLineOutcropTask` | `auto_ley_line_outcrop` | `AutoLeyLineOutcropParam` | `NoData` | 独立、计划 | 树脂与战斗 | 6 | 一条龙模式和每周安排并入参数 |
-| 新建 `ClaimDailyRewardsTask` | `claim_daily_rewards` | 国家、好感队 | `NoData` | 独立、计划 | 日常奖励 | 7 | 组合历练点、冒险家协会、纪行 |
-| `GoToSereniteaPotTask` | `serenitea_pot_rewards` | 进壶方式、购买商品 | `NoData` | 独立、计划 | 日常奖励 | 8 | 未完成时返回 `Failed(page_not_reached)` |
+| `AutoLeyLineOutcropTask` | `auto_ley_line_outcrop` | `AutoLeyLineOutcropParam` | `NoData` | 独立、计划 | 树脂与战斗 | 6 | 参数携带本次业务设置；星期覆盖由 Pulonia 处理 |
+| `ClaimDailyRewardsTask` | `claim_daily_rewards` | `DailyRewardsParam` | `NoData` | 独立、计划 | 日常奖励 | 7 | 组合历练点、冒险家协会、纪行 |
+| `GoToSereniteaPotTask` | `serenitea_pot_rewards` | `SereniteaPotParam` | `NoData` | 独立、计划 | 日常奖励 | 8 | 参数携带进壶方式和购买商品；未完成时返回 `Failed(page_not_reached)` |
 | `ClaimBattlePassRewardsTask` | `claim_battle_pass` | `NoParam` | `NoData` | 独立、计划 | 日常奖励 | — | |
 | `ClaimEncounterPointsRewardsTask` | `claim_encounter_points` | `NoParam` | `NoData` | 独立、计划 | 日常奖励 | — | 未完成时返回 `Failed(page_not_reached)` |
 | `ReturnMainUiTask` | `return_main_ui` | `NoParam` | `NoData` | 计划 | 工具 | — | 返回 `Succeeded` |
-| 新建 `AutoFightTask` | `auto_fight` | `AutoFightParam` | `NoData` | 独立、计划 | 树脂与战斗 | — | 按策略选择 TXT、JSON 或连招实现；原 TXT 实现改名为 `AutoFightTxtTask` |
+| `AutoFightEntryTask` | `auto_fight` | `AutoFightParam` | `NoData` | 独立、计划 | 树脂与战斗 | — | 按策略选择 TXT、JSON、连招或键鼠实现；原 TXT 实现仍叫 `AutoFightTask` |
 | `AutoWoodTask` | `auto_wood` | `WoodTaskParam` | `NoData` | 独立、计划 | 采集与生活 | — | |
 | `AutoFishingTask` | `auto_fishing` | `AutoFishingTaskParam` | `NoData` | 独立、计划 | 采集与生活 | — | 截图服务从构造函数注入 |
 | `AutoArtifactSalvageTask` | `auto_artifact_salvage` | `AutoArtifactSalvageTaskParam` | `NoData` | 独立、计划 | 工具 | — | 语言和本地化器移到构造函数 |
-| `UseRedemptionCodeTask` | `redeem_code` | 兑换码列表 | `NoData` | 独立、计划 | 工具 | — | |
+| `UseRedemptionCodeTask` | `redeem_code` | `UseRedemptionCodeParam` | `NoData` | 独立、计划 | 工具 | — | 参数携带兑换码列表 |
 | `AutoGeniusInvokationTask` | `auto_genius_invokation` | `GeniusInvokationTaskParam` | `NoData` | 独立 | 小游戏 | — | 不等待主界面 |
 | `AutoMusicGameTask` | `auto_music_game` | `AutoMusicGameParam` | `NoData` | 独立 | 小游戏 | — | 不等待主界面 |
 | `AutoAlbumTask` | `auto_album` | `AutoMusicGameParam` | `NoData` | 独立 | 小游戏 | — | 不等待主界面 |
@@ -664,7 +673,7 @@ public sealed class SoloTaskRunResult
 
 只实现接口、不加特性的任务：
 
-- `AutoFightTxtTask`、`AutoFightJsonTask`：`AutoFightTask` 的具体实现。`ICombatTaskFactory` 改为返回 `ISoloTask<AutoFightParam, NoData>`。
+- `AutoFightTask`（TXT）、`AutoFightJsonTask`、`AutoFightKeyMouseTask`：`AutoFightEntryTask` 分派到的具体实现。`ICombatTaskFactory` 返回 `ISoloTask<AutoFightParam, NoData>`。
 - `AutoComboRunTask`：构造函数接收行为树会话。
 - `AutoEatTask`、`CountInventoryItem`：目前只有 JS 使用，数据分别包装为 `AutoEatData`、`InventoryCountData`。
 - `AutoOpenChestTask`、`ShellTask`。
@@ -690,7 +699,7 @@ public sealed class SoloTaskRunResult
 
 ## 10. 改动清单
 
-| 现在 | 之后 |
+| 原实现 | 当前结果 |
 | --- | --- |
 | `GameTask/ISoloTask.cs`（`ISoloTask`、`ISoloTask<T>`） | 删除，由 `GameTask/SoloTask/ISoloTask.cs`（`ISoloTask<TParam, TData>`）替代 |
 | `SoloTaskType` 枚举 | 删除，改用各任务类的 `TaskId` 常量 |
@@ -701,51 +710,60 @@ public sealed class SoloTaskRunResult
 | `TaskRunner.RunSoloTaskWithResultAsync`、`_name` | 删除 |
 | `SoloTaskButton`、`SoloTaskButtonState`、`SoloTaskInstanceWindow` 及其 VM、`ManageSoloTask` | 保留名称，参数从枚举改为字符串 |
 | 各任务类的 `Name` 属性 | 删除，显示名由特性提供 |
-| 原 TXT 战斗实现 `AutoFightTask` | 改名为 `AutoFightTxtTask`，`AutoFightTask` 这个名字留给新的统一入口 |
-| `AutoBossParam.RewardClaimedCallback` | 删除 |
+| 原 TXT 战斗实现 `AutoFightTask` | 保留原名，新增可发现的统一入口 `AutoFightEntryTask` |
+| `AutoBossParam.RewardClaimedCallback` | 保留为不序列化的 `internal` 回调，旧一条龙和 Pulonia 分别维护累计次数 |
 | 两个 Job 任务中读取旧一条龙配置文件的代码 | 删除，改由参数传入 |
 | `PuloniaBuiltinTaskExecutor`、`PuloniaCombatTaskExecutor`、`PuloniaCombatTaskSettings` | 删除，由 `PuloniaSoloTaskExecutor` 替代 |
-| `PuloniaOneDragonDefaults` | 删除 |
-| `PuloniaOneDragonFixedSettingsViewModel`，以及 6 个设置 VM 和 6 个视图 | 改为 `SoloTaskSettingsViewModel<TParam>` 和 `XxxSettingsView` / `XxxSettingsViewModel`，移到 `SoloTaskSettings` 目录 |
-| `PuloniaGameTaskCoordinator`、`PuloniaGameTaskLease` | 步骤 D 中由 `GameTaskLease` 替代 |
+| `PuloniaOneDragonDefaults` | 保留为数据工厂，按能力定义的 `OneDragonOrder` 生成清单 |
+| `PuloniaOneDragonFixedSettingsViewModel` 及原专属设置界面 | 改为非泛型的 `SoloTaskSettingsViewModel` 和 `XxxSettingsView` / `XxxSettingsViewModel`，当前共 7 套，位于 `SoloTaskSettings` 目录 |
+| `PuloniaGameTaskCoordinator`、`PuloniaGameTaskLease` | 仍保留；统一为 `GameTaskLease` 的步骤 D 尚未实施 |
 
 保留不动：JS 宿主类型 `SoloTask`（`Core/Script/Dependence/Model/SoloTask.cs`），以及 6 个参数宿主类型的可见成员。
 
 ## 11. 实施步骤
 
-每一步自查后提交验收，通过后再进入下一步。
+以下状态按 2026-10-24 当前工作区核对。“已实现”表示代码已落地，不代表本次重新运行了全部单元测试或完成游戏实机验收。
 
-| 步骤 | 内容 | 自查 |
-| --- | --- | --- |
-| A. 任务层与独立运行 | `GameTask/SoloTask` 下的合同与注册表；`TaskRunner.RunSoloTaskAsync`、`SoloTaskExecutionService`、IPC、独立任务页、热键、JS `Dispatcher`；旧一条龙和调度器的调用点；23 个旧 `ISoloTask` 实现一次性迁移；删除旧接口和 `SoloTaskType`；嵌套检测 | 编译；注册表校验和参数往返的单元测试；运行服务状态机测试 |
-| B. 一条龙任务与 Pulonia 执行 | 迁移一条龙的 Job 任务，包括新建的 `ClaimDailyRewardsTask`；实现 `PuloniaSoloTaskExecutor`，删除两个旧执行器；加入 `ReasonCode`、奖励数据和默认清单；改造导入 | 编译；Pulonia 现有单元测试 |
-| C. 界面 | 设置界面特性与通用 VM、两个页面的菜单、创建对话框、类型显示、执行记录 | 编译；一条龙页和任务计划页逐项对照 |
-| D. 会话租约合并 | 用 `GameTaskLease` 替代 `PuloniaGameTaskCoordinator` 和 `TaskRunner` 内的会话代码 | 编译；独立运行和计划运行的锁与收尾对照 |
-| E. 参数元数据表单（预留） | R3 | — |
-| F. 插件加载（预留） | R6 | — |
+| 步骤 | 内容 | 当前状态 | 验证范围 |
+| --- | --- | --- | --- |
+| A. 任务层与独立运行 | 泛型合同、注册表、运行服务、TaskRunner、IPC、页面与热键、JS、旧一条龙和调度器调用点；删除旧接口及 `SoloTaskType` | 已实现 | 代码检索；已有运行服务状态机测试 |
+| B. 一条龙任务与 Pulonia 执行 | Job 任务、`PuloniaSoloTaskExecutor`、结构化结果、默认清单和导入 | 已实现 | 代码核对；已有参数 / Schema、导入与默认清单测试 |
+| C. 界面 | 设置特性与 7 套专属界面、通用设置 VM、菜单、创建对话框、类型及结果显示 | 已实现 | 已有菜单、参数编辑覆盖和双主题视图实例化 / 布局测试 |
+| D. 会话租约合并 | 用 `GameTaskLease` 替代协调器和 `TaskRunner` 的重复会话代码 | 尚未实现；嵌套检测及等待脚本更新已补齐 | 仍需实施；已有协调器拒绝嵌套获取的测试 |
+| E. 参数元数据表单（预留） | R3 | 未实现，继续预留 | — |
+| F. 插件加载（预留） | R6 | 未实现，继续预留 | — |
 
-步骤 A 必须一次完成。如果为了过渡保留旧 `ISoloTask`，就等于又加了一层兼容层。
+步骤 A 已直接替换旧合同，当前仓库没有保留旧 `ISoloTask` / `ISoloTask<T>` 作为过渡兼容层。
 
-## 12. 待确认
+## 12. 已落地的选择与后续边界
 
-1. **JS API 保留：** `SoloTask` 宿主类型名、`dispatcher` 的现有方法，以及 6 个参数宿主类型的可见成员都不改。它们是社区脚本在用的对外合同，改名会让现有脚本直接报错。
-2. **参数序列化：** 统一使用 System.Text.Json，理由见 5.3。
-3. **旧一条龙首领累计次数：** 任务被取消时，本次已领次数不再计入。这个变化是否可以接受？
-4. **独立任务页参数下发：** 改为由主实例构造完整参数后下发，子实例不再按配置文件拼参数。
-5. **会话租约合并：** 步骤 D 放进本次重构，还是另行安排？
-6. **无参数任务的添加方式：** 从菜单添加时跳过对话框、直接插入，是否可以？
-7. **Pulonia 界面用语：** 子菜单和类型列显示“独立任务”，与独立任务页一致。还是沿用现在的“内置任务”？
+1. **JS API 保留：** 继续保留 `SoloTask` 宿主类型名、既有任务调用方法、6 个参数宿主类型的公开构造和成员语义；内部改用新任务合同。
+2. **参数序列化：** 已使用 System.Text.Json；未知字段严格校验仅由 Pulonia Schema 等具体边界提供，见 5.3。
+3. **首领累计次数：** 保留内部领奖回调，取消时不丢失已经累计的次数；原先拟删除回调的方案未采用。
+4. **独立任务页参数下发：** 已由主实例构造参数后序列化下发；其他全局配置依赖仍存在，见第 4 节。
+5. **无参数任务的添加方式：** 两个页面已跳过创建对话框并直接插入；有参数的任务优先展示专属设置界面。
+6. **Pulonia 界面用语：** 菜单和类型显示已使用“独立任务”。
+7. **后续边界：** 统一会话租约（D）、参数元数据表单（E）和插件加载（F）均不能标为完成；这三项不影响对步骤 A—C 已落地的判断。
 
-## 13. 实施记录与偏差
+## 13. 代码核对与验证记录
 
-步骤 A—C 已实现，`dotnet build BetterGenshinImpact.sln -c Debug` 通过（含单元测试项目）。下列几处与正文不同，以代码为准：
+本次以 2026-10-24 当前工作区为准，包含工作区已有的未提交改动；仅更新本文及设计文档索引，不修改业务代码。第 3 版集中列出的实施偏差已合并回正文，避免方案与实施记录相互矛盾。
 
-1. **自动战斗入口：** `AutoFightTask`（TXT 策略）静态引用很多，没有改名。新增 `AutoFightEntryTask`（`auto_fight`）作为可发现的统一入口，按策略类型（连招、JSON、TXT 或目录）分派到对应实现。
-2. **首领累计次数：** 保留 `AutoBossParam.RewardClaimedCallback`（internal，不参与序列化），旧一条龙的累计次数语义不变。第 12 节第 3 条不再适用。
-3. **`NormalEndException` 映射：** `SoloTaskAbortException` 派生自 `NormalEndException`。`ExecuteAsync`、`TaskRunner` 和 Pulonia 执行器把它转换为结果；`TaskRunner` 对其余 `NormalEndException` 的处理保持原样（已取消时为 Cancelled，否则为 Completed），没有统一改为 Cancelled。
-4. **星期覆盖：** 不在参数类型里加星期字段。`PuloniaSoloTaskExecutor` 统一处理 `weekday_overrides` 属性，所有独立任务的 Schema 都带这个属性。
-5. **会话租约合并（步骤 D）：** 未做。改为用 `GameTaskSessionScope`（AsyncLocal）在 `TaskRunner` 和 Pulonia 执行器调用处做嵌套检测。
-6. **设置 VM：** 使用非泛型的 `SoloTaskSettingsViewModel(JObject original)`，没有采用 5.7 的泛型 `Original`/`Value` 形式，以免重写现有视图。视图模板在启动时注册为全局隐式 `DataTemplate`。
-7. **注册表校验：** 启动时只做结构校验（标识格式、唯一构造函数、唯一合同），不做参数往返，避免启动时读取全局配置。
-8. **参数默认值：** JS 用到的参数类型新增的无参构造函数沿用旧逻辑读取全局配置，因此 Pulonia 定义中的默认参数是启动时全局配置的快照。
-9. **独立任务页参数：** 主实例按页面配置构造完整参数后序列化下发（第 12 节第 4 条）；任务内部用到的其他配置仍由目标实例读取共享配置文件。
+| 核对项 | 当前代码依据 |
+| --- | --- |
+| 泛型合同、结构化结果、注册与动态调用 | [`ISoloTask.cs`](../../BetterGenshinImpact/GameTask/SoloTask/ISoloTask.cs)、[`SoloTaskRegistry.cs`](../../BetterGenshinImpact/GameTask/SoloTask/SoloTaskRegistry.cs)、[`SoloTaskDescriptor.cs`](../../BetterGenshinImpact/GameTask/SoloTask/SoloTaskDescriptor.cs) |
+| 独立运行、取消及完成事件 | [`TaskRunner.cs`](../../BetterGenshinImpact/GameTask/TaskRunner.cs)、[`SoloTaskExecutionService.cs`](../../BetterGenshinImpact/GameTask/SoloTask/Execution/SoloTaskExecutionService.cs) |
+| 提前结束异常转结果 | [`SoloTaskAbortException.cs`](../../BetterGenshinImpact/GameTask/SoloTask/SoloTaskAbortException.cs)、[`SoloTaskExtensions.cs`](../../BetterGenshinImpact/GameTask/SoloTask/SoloTaskExtensions.cs) |
+| Pulonia 执行、星期覆盖、首领累计次数及 Schema | [`PuloniaSoloTaskExecutor.cs`](../../BetterGenshinImpact/Pulonia/Executors/PuloniaSoloTaskExecutor.cs)、[`PuloniaSoloTaskSchema.cs`](../../BetterGenshinImpact/Pulonia/Services/PuloniaSoloTaskSchema.cs) |
+| 注册表驱动的默认清单与菜单 | [`PuloniaOneDragonDefaults.cs`](../../BetterGenshinImpact/ViewModel/Pages/Pulonia/PuloniaOneDragonDefaults.cs)、[`PuloniaTaskMenuBuilder.cs`](../../BetterGenshinImpact/ViewModel/Pages/Pulonia/PuloniaTaskMenuBuilder.cs) |
+| 非泛型设置 VM、工厂与全局模板 | [`SoloTaskSettingsViewModel.cs`](../../BetterGenshinImpact/ViewModel/SoloTaskSettings/SoloTaskSettingsViewModel.cs)、[`SoloTaskSettingsFactory.cs`](../../BetterGenshinImpact/ViewModel/SoloTaskSettings/SoloTaskSettingsFactory.cs)、[`SoloTaskSettingsTemplates.cs`](../../BetterGenshinImpact/ViewModel/SoloTaskSettings/SoloTaskSettingsTemplates.cs) |
+| 原 TXT 实现保留，新增统一入口 | [`AutoFightEntryTask.cs`](../../BetterGenshinImpact/GameTask/AutoFight/AutoFightEntryTask.cs) |
+| 会话仍由两条路径管理，统一租约未落地 | [`PuloniaGameTaskCoordinator.cs`](../../BetterGenshinImpact/Pulonia/Services/PuloniaGameTaskCoordinator.cs)、[`PuloniaLocalNodeRunner.cs`](../../BetterGenshinImpact/Pulonia/Services/PuloniaLocalNodeRunner.cs)、[`GameTaskSessionScope.cs`](../../BetterGenshinImpact/GameTask/GameTaskSessionScope.cs) |
+
+本次执行仓库约定的编译命令：
+
+```powershell
+dotnet msbuild BetterGenshinImpact.sln -restore -p:Configuration=Debug -nologo -tl:off -clp:ErrorsOnly
+```
+
+结果：**失败，退出码 1**。WPF 编译报 `BG1002`，缺少中间产物 `BetterGenshinImpact/obj/x64/Debug/net10.0-windows10.0.22621.0/View/Windows/SoloTaskInstanceWindow.baml`。因此本次不能确认当前工作区整个解决方案编译通过；也没有运行单元测试或程序。第 3 版记载的历史构建成功不作为本次验证结论。
