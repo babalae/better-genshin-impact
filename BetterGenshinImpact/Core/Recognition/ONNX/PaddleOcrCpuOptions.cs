@@ -15,7 +15,7 @@ public sealed record PaddleOcrCpuThreadOptions(int IntraOpThreads, int InterOpTh
 /// <summary>冻结用户设置，检测和识别会话共享相同的参数来源，但分别计算算子内线程数。</summary>
 public sealed record PaddleOcrCpuOptions
 {
-    public PaddleOcrCpuMode Mode { get; init; }
+    public PaddleOcrCpuMode Mode { get; init; } = PaddleOcrCpuMode.GameplayPriority;
     public int DetectionThreads { get; init; } = Math.Min(2, Environment.ProcessorCount);
     public int RecognitionThreads { get; init; } = Math.Min(2, Environment.ProcessorCount);
     public int InterOpThreads { get; init; } = 1;
@@ -29,7 +29,7 @@ public sealed record PaddleOcrCpuOptions
 
     public PaddleOcrCpuOptions Normalize() => this with
     {
-        Mode = Enum.IsDefined(Mode) ? Mode : PaddleOcrCpuMode.FollowGlobal,
+        Mode = Enum.IsDefined(Mode) ? Mode : PaddleOcrCpuMode.GameplayPriority,
         DetectionThreads = Math.Clamp(DetectionThreads, 0, Environment.ProcessorCount),
         RecognitionThreads = Math.Clamp(RecognitionThreads, 0, Environment.ProcessorCount),
         InterOpThreads = Math.Clamp(InterOpThreads, 0, Environment.ProcessorCount)
