@@ -28,12 +28,6 @@ public sealed class NcnnAvailability
 
     private const string OcrModelRelativeDir = @"Assets\Model\PaddleOCR\Ncnn";
 
-    /// <summary>与 <see cref="NcnnDet" /> 的 BucketStep / 默认 LimitSideLen 保持一致。</summary>
-    private static readonly int[] DetBuckets = [320, 640, 960];
-
-    /// <summary>与 <see cref="NcnnRec" /> 的 BucketStep..MaxBucketWidth 保持一致。</summary>
-    private static readonly int[] RecBuckets = [160, 320, 480, 640, 800, 960];
-
     private static readonly (BgiOnnxModel Model, string Display, string Usage)[] YoloModels =
     [
         (BgiOnnxModel.BgiWorld, "世界物体检测", "拾取 · 战斗结束检测"),
@@ -50,12 +44,6 @@ public sealed class NcnnAvailability
 
     /// <summary>OCR 模型目录（绝对路径），诊断探测与装配路径共用。</summary>
     public static string OcrModelDirectory => Global.Absolute(OcrModelRelativeDir);
-
-    /// <summary>文本检测可用的固定形状桶（升序），诊断探测取最小桶以缩短耗时。</summary>
-    public static IReadOnlyList<int> DetectionBuckets => DetBuckets;
-
-    /// <summary>文字识别可用的桶宽（升序）。</summary>
-    public static IReadOnlyList<int> RecognitionBuckets => RecBuckets;
 
     private NcnnAvailability(bool shimReady, string shimPath, IReadOnlyList<NcnnAssetGroup> groups)
     {
@@ -98,10 +86,10 @@ public sealed class NcnnAvailability
 
         return new NcnnAvailability(shimReady, shimPath,
         [
-            BuildGroup("OCR 文本检测", DetBuckets.Select(bucket => BuildItem(
-                ocrDir, $"det_w{bucket}", $"文本检测 · 桶 {bucket}", "全部 OCR 文本定位"))),
-            BuildGroup("OCR 文字识别", RecBuckets.Select(width => BuildItem(
-                ocrDir, $"rec_w{width}", $"文字识别 · 宽度 {width}", "OCR 结果解码"))),
+            BuildGroup("OCR 文本检测", [BuildItem(
+                ocrDir, "det_dyn", "文本检测 · 动态形状", "全部 OCR 文本定位")]),
+            BuildGroup("OCR 文字识别", [BuildItem(
+                ocrDir, "rec_dyn", "文字识别 · 动态形状", "OCR 结果解码")]),
             BuildGroup("YOLO 检测与分类", YoloModels.Select(def => BuildItem(
                 Path.Combine(Path.GetDirectoryName(def.Model.ModalPath) ?? ".", "Ncnn"),
                 Path.GetFileNameWithoutExtension(def.Model.ModalPath), def.Display, def.Usage)))

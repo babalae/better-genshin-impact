@@ -55,9 +55,9 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
         // 三套参数完全独立；旧配置缺失时由 FromConfig 统一回落到 ncnn 默认值。
         // 标题使用标准用途名：文本检测（Det）/ 文本识别（Rec）/ YOLO。
         DetTuning = new NcnnTuningViewModel("det", "文本检测（Det）",
-            "文本检测（DB）输入固定形状分桶，调优只影响该用途的会话。", normalized.Det);
+            "文本检测（DB）使用 det_dyn 动态模型，调优只影响该用途的会话。", normalized.Det);
         RecTuning = new NcnnTuningViewModel("rec", "文本识别（Rec）",
-            "文本识别（CTC）按桶宽分桶，线程与并行会话可独立设置。", normalized.Rec);
+            "文本识别（CTC）使用 rec_dyn 动态宽度模型，线程与并行会话可独立设置。", normalized.Rec);
         YoloTuning = new NcnnTuningViewModel("yolo", "YOLO",
             "所有 ncnn YOLO 模型共用这套参数；像素直输需模型自带归一化。", normalized.Yolo);
         NcnnTunings = [DetTuning, RecTuning, YoloTuning];
@@ -68,7 +68,6 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
         _selectedBackend = normalized.Backend;
         _useNcnnOcr = normalized.UseOcr;
         _useNcnnYolo = normalized.UseYolo;
-        _ocrUseBuckets = normalized.OcrUseBuckets;
 
         NcnnThreadChoices = Enumerable.Range(1, NcnnBackendSettings.MaxThreads)
             .Select(i => new InferenceThreadChoice(i,
@@ -132,9 +131,6 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
 
     /// <summary>YOLO 是否走 ncnn（草稿；应用后写入 NcnnConfig.UseYolo）。</summary>
     [ObservableProperty] private bool _useNcnnYolo;
-
-    /// <summary>OCR 输入是否分桶（草稿；关闭后 det/rec 固定用最大档画布，仅用于对比测试）。</summary>
-    [ObservableProperty] private bool _ocrUseBuckets = true;
 
     public ObservableCollection<InferenceBackendOptionViewModel> BackendOptions { get; } = [];
 
@@ -274,7 +270,7 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
     /// <summary>把本区草稿（引擎分配 + 三套调优 + 计算模式）合成一份完整设置，供页面 Apply 使用。</summary>
     public NcnnBackendSettings BuildDraft()
         => new(SelectedBackend, UseNcnnOcr, UseNcnnYolo, NcnnComputeMode, NcnnGpuIndex,
-            DetTuning.Snapshot(), RecTuning.Snapshot(), YoloTuning.Snapshot(), OcrUseBuckets);
+            DetTuning.Snapshot(), RecTuning.Snapshot(), YoloTuning.Snapshot());
 
     /// <summary>草稿与已保存基线是否存在差异（页面「尚未应用」判断的 ncnn 部分）。</summary>
     public bool HasDraftChanges => !BuildDraft().Normalize().Equals(_baseline);
@@ -304,7 +300,6 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
         SelectedBackend = normalized.Backend;
         UseNcnnOcr = normalized.UseOcr;
         UseNcnnYolo = normalized.UseYolo;
-        OcrUseBuckets = normalized.OcrUseBuckets;
         ReloadAssets();
     }
 
@@ -314,7 +309,6 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
         SelectedBackend = InferenceBackend.Onnx;
         UseNcnnOcr = false;
         UseNcnnYolo = false;
-        OcrUseBuckets = true;
         NcnnComputeMode = NcnnComputeMode.Vulkan;
         NcnnGpuIndex = 0;
         foreach (var tuning in NcnnTunings) tuning.Reload(NcnnTuningSettings.CreateDefault());

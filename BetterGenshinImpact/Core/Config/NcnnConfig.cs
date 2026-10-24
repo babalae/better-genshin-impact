@@ -21,7 +21,7 @@ public partial class NcnnConfig : ObservableObject
 
     /// <summary>
     ///     OCR 是否走 ncnn 后端。全局选择 ncnn 时默认开启，可在设置区单独覆盖回 ONNX。
-    ///     开启后 Det/Rec 全部走 ncnn，需资产目录内提供 ncnn_shim.dll 与按桶宽转换的模型；
+    ///     开启后 Det/Rec 全部走 ncnn，需资产目录内提供 ncnn_shim.dll 与 det_dyn/rec_dyn 动态模型；
     ///     运行库或产物不可用时直接报错并阻止启动，不再静默回退所选推理引擎。
     /// </summary>
     [ObservableProperty]
@@ -62,14 +62,6 @@ public partial class NcnnConfig : ObservableObject
     [ObservableProperty]
     private NcnnTuningSettings _yoloTuning = NcnnTuningSettings.CreateDefault();
 
-    /// <summary>
-    ///     OCR 输入是否按形状分桶（det 320/640/960 方形画布、rec 宽 160 步长）。
-    ///     关闭后 rec 使用动态宽度单模型（rec_dyn.param，按行精确宽度、零 padding），
-    ///     产物缺失时回落固定最大档；det 固定使用最大档画布（960²）。
-    /// </summary>
-    [ObservableProperty]
-    private bool _ocrUseBuckets = true;
-
     partial void OnPreferredBackendChanged(InferenceBackend value)
     {
         // 脚本或其他调用方写入未知值时回落 ONNX，与配置读取的兜底一致。
@@ -91,7 +83,6 @@ public partial class NcnnConfig : ObservableObject
         UseYolo = normalized.UseYolo;
         ComputeMode = normalized.ComputeMode;
         GpuIndex = normalized.GpuIndex;
-        OcrUseBuckets = normalized.OcrUseBuckets;
         Threads = normalized.Det.Threads;
         DetTuning = normalized.Det;
         RecTuning = normalized.Rec;
@@ -106,7 +97,6 @@ public partial class NcnnConfig : ObservableObject
         UseYolo = false;
         ComputeMode = NcnnComputeMode.Vulkan;
         GpuIndex = 0;
-        OcrUseBuckets = true;
         Threads = NcnnBackendSettings.DefaultThreads;
         DetTuning = NcnnTuningSettings.CreateDefault();
         RecTuning = NcnnTuningSettings.CreateDefault();

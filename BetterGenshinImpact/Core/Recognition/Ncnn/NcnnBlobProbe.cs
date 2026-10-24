@@ -8,14 +8,18 @@ using BetterGenshinImpact.Core.Config;
 namespace BetterGenshinImpact.Core.Recognition.Ncnn;
 
 /// <summary>
-///     设置页的只读诊断探测：按当前调优参数加载最小桶的 OCR det / rec 模型，
+///     设置页的只读诊断探测：按当前调优参数加载动态形状的 OCR det / rec 模型（det_dyn / rec_dyn），
 ///     报告真实的输入 / 输出 blob 名与一次真实推理的输出形状。
 ///     会话用完即销毁，不进入业务会话池，也不修改已保存设置。
 /// </summary>
 internal static class NcnnBlobProbe
 {
-    /// <summary>与 <c>NcnnRec</c> 的模型高度保持一致（pnnx 固定形状）。</summary>
+    /// <summary>与 <c>NcnnRec</c> 的模型高度保持一致（pnnx 固定高度）。</summary>
     private const int RecHeight = 48;
+
+    /// <summary>探测输入的代表性尺寸：动态模型接受任意合法形状，取常用值以缩短耗时。</summary>
+    private const int ProbeDetSide = 320;
+    private const int ProbeRecWidth = 320;
 
     public static string Describe(string shimPath, string modelDir, NcnnTuningSettings detTuning,
         NcnnTuningSettings recTuning, int gpuIndex)
@@ -35,10 +39,8 @@ internal static class NcnnBlobProbe
         using (shim)
         {
             var builder = new StringBuilder();
-            var detBucket = NcnnAvailability.DetectionBuckets.Count > 0 ? NcnnAvailability.DetectionBuckets[0] : 320;
-            var recWidth = NcnnAvailability.RecognitionBuckets.Count > 0 ? NcnnAvailability.RecognitionBuckets[0] : 160;
-            Append(builder, shim, modelDir, "OCR 检测", $"det_w{detBucket}", detBucket, detBucket, detTuning, gpuIndex);
-            Append(builder, shim, modelDir, "OCR 识别", $"rec_w{recWidth}", recWidth, RecHeight, recTuning, gpuIndex);
+            Append(builder, shim, modelDir, "OCR 检测", "det_dyn", ProbeDetSide, ProbeDetSide, detTuning, gpuIndex);
+            Append(builder, shim, modelDir, "OCR 识别", "rec_dyn", ProbeRecWidth, RecHeight, recTuning, gpuIndex);
             return builder.ToString().TrimEnd();
         }
     }
