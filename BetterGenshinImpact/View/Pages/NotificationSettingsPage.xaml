@@ -95,7 +95,7 @@
                     <ui:TextBlock Grid.Row="1"
                                   Grid.Column="0"
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="{i18n:T 结束时打开地图与冒险之证，推送体力与每日委托奖励汇总及截图}"
+                                  Text="{i18n:T 结束时打开地图与冒险之证，推送体力与每日委托奖励汇总及截图；汇总经“检查每日奖励领取状态”事件推送，需在下方“需要通知的事件”中启用（未选择任何事件时按全部通知处理）}"
                                   TextWrapping="Wrap" />
                     <ui:ToggleSwitch Grid.Row="0"
                                      Grid.RowSpan="2"
