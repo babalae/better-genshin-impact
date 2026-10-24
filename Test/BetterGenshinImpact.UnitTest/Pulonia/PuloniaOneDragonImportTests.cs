@@ -14,7 +14,7 @@ namespace BetterGenshinImpact.UnitTest.Pulonia;
 public sealed class PuloniaOneDragonImportTests : IDisposable
 {
     /// <summary>本测试独占的临时来源目录。</summary>
-    private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-pulonia-import-" + Guid.NewGuid().ToString("N"));
+    private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-" + BetterGenshinImpact.Helpers.ShortId.Create(null, 8));
 
     /// <summary>
     /// 一条龙自有字段使用的参数类型，按 SoloTaskJson 序列化的默认值必须通过按同一合同生成的 Schema 校验，
@@ -197,7 +197,7 @@ public sealed class PuloniaOneDragonImportTests : IDisposable
     {
         var target = Path.GetFullPath(_directory);
         if (Path.GetDirectoryName(target) == Path.TrimEndingDirectorySeparator(Path.GetFullPath(Path.GetTempPath()))
-            && Path.GetFileName(target).StartsWith("bgi-pulonia-import-", StringComparison.Ordinal) && Directory.Exists(target))
+            && Path.GetFileName(target).StartsWith("bgi-", StringComparison.Ordinal) && Directory.Exists(target))
             Directory.Delete(target, recursive: true);
     }
 }

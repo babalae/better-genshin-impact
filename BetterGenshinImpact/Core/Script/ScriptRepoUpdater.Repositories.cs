@@ -66,7 +66,7 @@ public partial class ScriptRepoUpdater
         var name = Path.GetFileName(directory);
         if (!directory.Equals(official, StringComparison.OrdinalIgnoreCase)
             && !(string.Equals(Path.GetDirectoryName(directory), remoteRoot, StringComparison.OrdinalIgnoreCase)
-                 && name.Length == 32 && name.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f')))
+                 && ShortId.IsMatch(name, "rep")))
             throw new IOException("只能更新或重置由仓库管理分配的固定 clone 目录。");
         VerifySourceDirectory(directory);
         return directory;
@@ -104,8 +104,10 @@ public partial class ScriptRepoUpdater
     {
         ScriptRepositoryStore.ValidateRemote(url, branch);
         directory = ValidateManagedRepositoryDirectory(directory);
-        var temporary = directory + ".update." + Guid.NewGuid().ToString("N");
-        var backup = directory + ".backup." + Guid.NewGuid().ToString("N");
+        // 临时目录与备份放在同级，名称与仓库目录名无关，避免在长目录名后再叠加随机后缀。
+        var parent = Path.GetDirectoryName(directory)!;
+        var temporary = Path.Combine(parent, ShortId.NewTemporaryName(".update"));
+        var backup = Path.Combine(parent, ShortId.NewTemporaryName(".backup"));
         var updated = await Task.Run(() =>
         {
             ct.ThrowIfCancellationRequested();

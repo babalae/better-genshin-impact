@@ -19,6 +19,7 @@
 | [触发、托管与多账号](pulonia/scheduling-and-managed.md) | 程序内定时/热键、目标规划、账号切换 |
 | [体力计划设计](pulonia/resin-plan.md) | 术语、已确认需求与玩家调研、方案绑定与无状态规划、ER 图与类图、UI / UX 及预计算展示 |
 | [结果、CD 与文件存储](pulonia/results-and-storage.md) | 成功证据、周期额度、去重、JSON 状态与故障恢复、依赖选择 |
+| [标识与磁盘路径整治](pulonia/identifiers-and-paths.md) | 短 ID 规则、资源存储目录布局、取消提取缓存、路径长度预算 |
 | [界面与新增任务](pulonia/user-interface.md) | 新菜单、树表、一条龙左右布局、配置编辑、资源搜索和整目录添加 |
 | [重构与迁移](pulonia/migration.md) | 旧代码解耦、d-v3 复用、数据导入、旧入口替代边界 |
 | [开发与逐步验收计划](pulonia/development-plan.md) | 每一步的交付物、用户验收重点、验收记录和关键场景 |

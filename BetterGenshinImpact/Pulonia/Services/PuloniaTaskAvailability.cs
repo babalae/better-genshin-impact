@@ -45,7 +45,7 @@ internal static class PuloniaTaskAvailability
                 reservation.ScopeKey == scopeKey && reservation.EffectKey == rule.EffectKey));
             if (uncertain is not null)
                 return new PuloniaTaskAvailabilityDecision(false, true, null,
-                    $"资源 {rule.EffectKey} 存在未核验操作（运行 {uncertain.RunId:D}），不能自动重放。");
+                    $"资源 {rule.EffectKey} 存在未核验操作（运行 {uncertain.RunId}），不能自动重放。");
 
             var matching = ledger.Where(item => item.ScopeKey == scopeKey && item.EffectKey == rule.EffectKey).ToArray();
             if (rule.Kind == PuloniaTaskAvailabilityKind.RollingCooldown)
@@ -73,7 +73,7 @@ internal static class PuloniaTaskAvailability
     /// </summary>
     public static PuloniaTaskLedgerEntry CreateLedgerEntry(PuloniaTaskRequest request,
         PuloniaTaskAvailabilityRule rule, PuloniaTaskCompletionEvent completionEvent, string eventKey,
-        Guid runId, string taskAddress, string? verifiedUid = null)
+        string runId, string taskAddress, string? verifiedUid = null)
     {
         var window = rule.Kind == PuloniaTaskAvailabilityKind.ResetQuota
             ? GetWindow(rule, request.ServerUtcOffsetMinutes, completionEvent.OccurredAt).Key
@@ -90,7 +90,7 @@ internal static class PuloniaTaskAvailability
             Units = completionEvent.Units,
             OccurredAt = completionEvent.OccurredAt.ToUniversalTime(),
             NextEligibleAt = nextEligible?.ToUniversalTime(),
-            TaskRunId = $"{runId:N}:{taskAddress}",
+            TaskRunId = $"{runId}:{taskAddress}",
             Evidence = completionEvent.Evidence
         };
     }

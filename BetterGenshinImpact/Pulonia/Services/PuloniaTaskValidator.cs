@@ -26,13 +26,14 @@ public static class PuloniaTaskValidator
 
     /// <summary>
     /// 校验可以安全用于 Windows 文件名和运行地址的稳定 ID。
+    /// 上限 32 位：生成的 ID 最长 24 位（运行 ID），收紧上限防止 ID 成为路径中的长段。
     /// </summary>
     public static void ValidateId(string? id, string location)
     {
-        if (id is null || !Regex.IsMatch(id, "^[a-z0-9][a-z0-9_-]{0,95}\\z")
+        if (id is null || !Regex.IsMatch(id, "^[a-z0-9][a-z0-9_-]{0,31}\\z")
             || Regex.IsMatch(id, "^(con|prn|aux|nul|com[0-9]|lpt[0-9])\\z"))
         {
-            throw new PuloniaTaskValidationException(location, "ID 必须为 1—96 位小写字母、数字、下划线或短横线，且不能使用 Windows 保留名称。");
+            throw new PuloniaTaskValidationException(location, "ID 必须为 1—32 位小写字母、数字、下划线或短横线，且不能使用 Windows 保留名称。");
         }
     }
 

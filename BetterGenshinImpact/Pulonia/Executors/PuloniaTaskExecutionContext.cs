@@ -18,14 +18,9 @@ public sealed class PuloniaTaskExecutionContext
     private readonly Func<PuloniaTaskCompletionEvent, CancellationToken, Task> _completionReporter;
 
     /// <summary>
-    /// 本次提交请求 ID。
+    /// 本次运行 ID，形如 <c>run_yyyyMMdd-HHmmss-xxxx</c>。
     /// </summary>
-    public Guid RequestId { get; }
-
-    /// <summary>
-    /// 本次运行 ID。
-    /// </summary>
-    public Guid RunId { get; }
+    public string RunId { get; }
 
     /// <summary>
     /// 提交时固定的完整运行快照。
@@ -50,10 +45,9 @@ public sealed class PuloniaTaskExecutionContext
     /// <summary>
     /// 建立一个节点执行上下文。
     /// </summary>
-    internal PuloniaTaskExecutionContext(Guid requestId, Guid runId, PuloniaTaskSnapshot snapshot, int attempt,
+    internal PuloniaTaskExecutionContext(string runId, PuloniaTaskSnapshot snapshot, int attempt,
         string taskAddress, GameRuntime? runtime, Func<PuloniaTaskCompletionEvent, CancellationToken, Task> completionReporter)
     {
-        RequestId = requestId;
         RunId = runId;
         Snapshot = snapshot;
         Attempt = attempt;

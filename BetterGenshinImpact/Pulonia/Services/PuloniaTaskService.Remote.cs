@@ -35,7 +35,7 @@ public sealed partial class PuloniaTaskService
     /// <summary>
     /// 正在执行的运行任务，关闭时等待全部退出
     /// </summary>
-    private readonly ConcurrentDictionary<Guid, Task> _laneTasks = new();
+    private readonly ConcurrentDictionary<string, Task> _laneTasks = new(StringComparer.Ordinal);
 
     /// <summary>
     /// 返回运行所属的执行通道
@@ -51,7 +51,7 @@ public sealed partial class PuloniaTaskService
     {
         lock (_runsGate)
             _activeLanes.Add(lane);
-        _laneTasks[state.RequestId] = Task.Run(async () =>
+        _laneTasks[state.RunId] = Task.Run(async () =>
         {
             try
             {
@@ -61,7 +61,7 @@ public sealed partial class PuloniaTaskService
             {
                 lock (_runsGate)
                     _activeLanes.Remove(lane);
-                _laneTasks.TryRemove(state.RequestId, out _);
+                _laneTasks.TryRemove(state.RunId, out _);
                 _queue.Writer.TryWrite(state);
             }
         });
@@ -139,7 +139,7 @@ public sealed partial class PuloniaTaskService
     /// <summary>
     /// 在候选状态中查找本运行的活动记录
     /// </summary>
-    private static PuloniaTaskRunRecord? FindActiveRecord(PuloniaTaskState candidate, Guid runId)
+    private static PuloniaTaskRunRecord? FindActiveRecord(PuloniaTaskState candidate, string runId)
         => candidate.ActiveRun?.RunId == runId
             ? candidate.ActiveRun
             : candidate.RemoteActiveRuns.FirstOrDefault(item => item.RunId == runId);
@@ -176,7 +176,6 @@ public sealed partial class PuloniaTaskService
         {
             ExecutionId = Guid.NewGuid(),
             Kind = PuloniaRemoteNodeKind.Task,
-            RequestId = state.RequestId,
             RunId = state.RunId,
             Attempt = attempt,
             TaskAddress = task.TaskAddress,
@@ -219,7 +218,6 @@ public sealed partial class PuloniaTaskService
         {
             ExecutionId = Guid.NewGuid(),
             Kind = PuloniaRemoteNodeKind.AccountPrepare,
-            RequestId = state.RequestId,
             RunId = state.RunId,
             Attempt = 1,
             TaskAddress = state.Snapshot.RootTask.TaskAddress + "/account",

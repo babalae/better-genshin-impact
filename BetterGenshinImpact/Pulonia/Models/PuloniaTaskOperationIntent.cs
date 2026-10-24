@@ -13,7 +13,7 @@ public sealed class PuloniaTaskOperationIntent
     /// 运行 ID。
     /// </summary>
     [JsonProperty("run_id", Required = Required.Always)]
-    public Guid RunId { get; set; }
+    public string RunId { get; set; } = string.Empty;
 
     /// <summary>
     /// 快照中的节点地址。

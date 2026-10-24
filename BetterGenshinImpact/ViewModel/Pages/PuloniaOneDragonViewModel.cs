@@ -71,8 +71,8 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     [ObservableProperty] private string _settingsMessage = "";
     /// <summary>上次导入报告路径。</summary>
     [ObservableProperty] private string? _importReportPath;
-    /// <summary>当前配置的活动运行请求，独立于历史选择。</summary>
-    private Guid? _activeRequestId;
+    /// <summary>当前配置的活动运行 ID，独立于历史选择。</summary>
+    private string? _activeRunId;
     /// <summary>页面是否正在接收运行事件。</summary>
     private bool _isListening;
     /// <summary>合并高频进度查询。</summary>
@@ -179,7 +179,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
         SelectedTask = value?.SelectedNode is { IsRoot: false } node && ReferenceEquals(node.Parent, value.RootNode)
             ? node : TaskList.FirstOrDefault();
         // 切换时立即撤销旧请求的停止目标，异步查询返回前不能停止上一份配置。
-        _activeRequestId = null;
+        _activeRunId = null;
         HasActiveRun = false;
         ExecutionStatusText = value is null ? "尚未选择配置" : "正在读取运行状态…";
         QueueStatusRefresh();
@@ -496,7 +496,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
             if (!_isListening || planId != SelectedConfiguration?.Id) return;
             var active = runs.FirstOrDefault(r => r.Status is PuloniaTaskRunStatus.Running or PuloniaTaskRunStatus.Cancelling)
                 ?? runs.FirstOrDefault(r => r.Status == PuloniaTaskRunStatus.Queued);
-            _activeRequestId = active?.RequestId; HasActiveRun = active is not null;
+            _activeRunId = active?.RunId; HasActiveRun = active is not null;
             var latest = active ?? runs.FirstOrDefault();
             foreach (var node in TaskList) node.UpdateOneDragonStatus(latest);
             // 同一配置同时只在一个实例上运行，状态里标明是哪个实例
@@ -514,8 +514,8 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     [RelayCommand(CanExecute = nameof(HasActiveRun))]
     private async Task StopCurrentRunAsync()
     {
-        if (_activeRequestId is not { } requestId) return;
-        try { await _service.CancelAsync(requestId); await RefreshExecutionStatusAsync(); }
+        if (_activeRunId is not { } runId) return;
+        try { await _service.CancelAsync(runId); await RefreshExecutionStatusAsync(); }
         catch (Exception ex) { await ThemedMessageBox.ErrorAsync("停止失败：" + ex.Message, "一条龙"); }
     }
     /// <summary>拖拽仅允许当前根清单内的任务排序。</summary>
@@ -568,11 +568,32 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
                 try
                 {
                     var directory = Path.Combine(_store.RootDirectory, "imports"); Directory.CreateDirectory(directory);
-                    ImportReportPath = Path.Combine(directory, DateTime.Now.ToString("yyyyMMdd-HHmmss") + "-" + Guid.NewGuid().ToString("N") + ".txt");
-                    await File.WriteAllTextAsync(ImportReportPath, result.Report, new UTF8Encoding(false));
+                    ImportReportPath = await WriteImportReportAsync(directory, result.Report);
                 }
                 catch (Exception ex) { Editor.StatusMessage = "导入报告保存失败：" + ex.Message; ImportReportPath = null; }
             }
+        }
+    }
+
+    /// <summary>
+    /// 以 <c>yyyyMMdd-HHmmss.txt</c> 新建导入报告，同秒重名时依次追加 <c>-2</c>、<c>-3</c>，不覆盖已有报告。
+    /// </summary>
+    /// <param name="directory">imports 目录</param>
+    /// <param name="report">报告正文</param>
+    /// <returns>新报告的完整路径</returns>
+    private static async Task<string> WriteImportReportAsync(string directory, string report)
+    {
+        var baseName = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+        var bytes = new UTF8Encoding(false).GetBytes(report);
+        for (var index = 1; ; index++)
+        {
+            var path = Path.Combine(directory, (index == 1 ? baseName : baseName + "-" + index) + ".txt");
+            FileStream stream;
+            try { stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None); }
+            catch (IOException) when (File.Exists(path)) { continue; }
+            await using (stream)
+                await stream.WriteAsync(bytes);
+            return path;
         }
     }
 

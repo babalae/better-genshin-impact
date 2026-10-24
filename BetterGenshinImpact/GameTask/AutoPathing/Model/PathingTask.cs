@@ -85,10 +85,23 @@ public class PathingTask
 
     public static PathingTask? BuildFromFilePath(string filePath)
     {
-        var json = File.ReadAllText(filePath);
+        return BuildFromJson(File.ReadAllText(filePath), filePath);
+    }
+
+    /// <summary>
+    /// 从路线正文构建任务，供已保留归档等不落地的来源使用。
+    /// </summary>
+    /// <param name="json">路线 JSON 正文</param>
+    /// <param name="logicalPath">
+    /// 路线的逻辑完整路径，只用于文件名、日志和按目录识别采集物，不会读取该位置。
+    /// 仓库路线传入 User\AutoPathing 下对应的相对位置，使材料识别与本地路线一致。
+    /// </param>
+    /// <returns>路线要求的 BetterGI 版本高于当前版本时返回 null</returns>
+    public static PathingTask? BuildFromJson(string json, string logicalPath)
+    {
         var task = JsonSerializer.Deserialize<PathingTask>(json, PathRecorder.JsonOptions) ?? throw new Exception("Failed to deserialize PathingTask");
-        task.FileName = Path.GetFileName(filePath);
-        task.FullPath = filePath;
+        task.FileName = Path.GetFileName(logicalPath);
+        task.FullPath = logicalPath;
         //添加区分怪物拾取标志
         foreach (var taskPosition in task.Positions)
         {

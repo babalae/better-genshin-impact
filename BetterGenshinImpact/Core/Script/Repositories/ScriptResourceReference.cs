@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using BetterGenshinImpact.Helpers;
 using Newtonsoft.Json;
 
 namespace BetterGenshinImpact.Core.Script.Repositories;
@@ -36,10 +37,17 @@ public sealed class ScriptResourceReference
         RepositoryId = RepositoryId, RelativePath = RelativePath, ApprovedRevision = revision
     };
 
+    /// <summary>
+    /// 检查仓库 ID 格式：官方仓库固定为 <c>official</c>，其他仓库为 <c>rep_</c> + 16 位短 ID。
+    /// ID 会直接作为目录名，因此格式必须严格限定。
+    /// </summary>
+    public static bool IsValidRepositoryId(string? repositoryId)
+        => repositoryId == ScriptRepositoryStore.OfficialRepositoryId || ShortId.IsMatch(repositoryId, "rep");
+
     /// <summary>拒绝路径逃逸、无效身份和不受支持的版本格式。</summary>
     public void Validate()
     {
-        if (RepositoryId.Length != 32 || !RepositoryId.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f')
+        if (!IsValidRepositoryId(RepositoryId)
             || ApprovedRevision.Length is not (40 or 64)
             || !ApprovedRevision.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f')
             || string.IsNullOrWhiteSpace(RelativePath))

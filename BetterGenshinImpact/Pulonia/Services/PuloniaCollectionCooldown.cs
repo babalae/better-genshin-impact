@@ -106,9 +106,11 @@ public static class PuloniaCollectionCooldown
         };
     }
 
-    /// <summary>为账本生成不包含计划、版本和内容哈希的文件资源键。</summary>
+    /// <summary>
+    /// 为账本生成不包含计划、版本和内容哈希的文件资源键；直接使用文件身份原文，历史中能看出是哪个文件。
+    /// </summary>
     public static string GetEffectKey(PuloniaCollectionCooldownPolicy policy)
-        => "pathing.file:" + PuloniaTaskResourceFingerprint.ComputeTextVersion(policy.FileIdentity);
+        => "pathing.file:" + policy.FileIdentity;
 
     /// <summary>按服务器时区计算严格晚于成功时刻的日历边界；一次性和无限制返回空时间。</summary>
     public static DateTimeOffset? GetNextEligibleAt(PuloniaCollectionCooldownPolicy policy,

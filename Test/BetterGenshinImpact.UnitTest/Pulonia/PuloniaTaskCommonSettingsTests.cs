@@ -18,7 +18,7 @@ public sealed class PuloniaTaskCommonSettingsTests : IDisposable
     /// <summary>
     /// 当前测试独占的资源与存储目录。
     /// </summary>
-    private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-pulonia-settings-" + Guid.NewGuid().ToString("N"));
+    private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-" + BetterGenshinImpact.Helpers.ShortId.Create(null, 8));
 
     /// <summary>
     /// 新增的完整默认配置必须符合执行器声明，原有参数名继续可用。

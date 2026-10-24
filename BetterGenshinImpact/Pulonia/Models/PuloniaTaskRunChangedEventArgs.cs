@@ -8,15 +8,15 @@ namespace BetterGenshinImpact.Pulonia.Models;
 public sealed class PuloniaTaskRunChangedEventArgs : EventArgs
 {
     /// <summary>
-    /// 状态发生变化的请求 ID。
+    /// 状态发生变化的运行 ID。
     /// </summary>
-    public Guid RequestId { get; }
+    public string RunId { get; }
 
     /// <summary>
     /// 建立运行状态变化通知。
     /// </summary>
-    public PuloniaTaskRunChangedEventArgs(Guid requestId)
+    public PuloniaTaskRunChangedEventArgs(string runId)
     {
-        RequestId = requestId;
+        RunId = runId;
     }
 }

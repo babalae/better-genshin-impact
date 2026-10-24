@@ -11,7 +11,7 @@ namespace BetterGenshinImpact.UnitTest.Pulonia;
 public sealed class PuloniaTaskRunBudgetTests : IDisposable
 {
     /// <summary>每个测试独占的状态与历史目录。</summary>
-    private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-pulonia-budget-" + Guid.NewGuid().ToString("N"));
+    private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-" + BetterGenshinImpact.Helpers.ShortId.Create(null, 8));
 
     /// <summary>新请求与缺省 JSON 都不限时，显式数字预算保持原语义。</summary>
     [Fact]

@@ -173,8 +173,8 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel
         try
         {
             StatusMessage = "正在取消运行，并等待当前执行器释放资源……";
-            await _taskService.CancelAsync(selected.RequestId);
-            await RefreshAsync(selected.RequestId);
+            await _taskService.CancelAsync(selected.RunId);
+            await RefreshAsync(selected.RunId);
             StatusMessage = "取消请求已处理；请以运行详情中的最终状态及核验提示为准。";
         }
         catch (Exception ex)
@@ -194,9 +194,9 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel
             return;
         try
         {
-            var requestId = await _taskService.ResumeAsync(selected.Run.RunId);
-            await RevealRunAsync(requestId);
-            StatusMessage = $"已沿用历史运行 {selected.Run.RunId:D} 的固定快照继续未完成节点。";
+            var runId = await _taskService.ResumeAsync(selected.Run.RunId);
+            await RevealRunAsync(runId);
+            StatusMessage = $"已沿用历史运行 {selected.Run.RunId} 的固定快照继续未完成节点。";
         }
         catch (Exception ex)
         {
@@ -232,8 +232,8 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel
             return;
         try
         {
-            var requestId = await _taskService.ResumeAsync(selected.Run.RunId, node.TaskAddress, allowUncertainReplay);
-            await RevealRunAsync(requestId);
+            var runId = await _taskService.ResumeAsync(selected.Run.RunId, node.TaskAddress, allowUncertainReplay);
+            await RevealRunAsync(runId);
             StatusMessage = $"已沿用原快照，从节点 {node.TaskAddress} 开始关联运行。";
         }
         catch (Exception ex)
@@ -249,17 +249,17 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel
     private Task RefreshRunsAsync() => RefreshAsync();
 
     /// <summary>
-    /// 用户主动提交或续跑时显示新请求，立即定位到该运行的最新状态。
+    /// 用户主动提交或续跑时显示新运行，立即定位到该运行的最新状态。
     /// </summary>
-    public async Task RevealRunAsync(Guid requestId)
+    public async Task RevealRunAsync(string runId)
     {
-        await RefreshAsync(requestId);
+        await RefreshAsync(runId);
     }
 
     /// <summary>
-    /// 刷新运行列表并优先选中指定请求，后台事件不抢占用户正在查看的记录。
+    /// 刷新运行列表并优先选中指定运行，后台事件不抢占用户正在查看的记录。
     /// </summary>
-    public async Task RefreshAsync(Guid? preferredRequestId = null)
+    public async Task RefreshAsync(string? preferredRunId = null)
     {
         await _runRefreshGate.WaitAsync();
         IsRefreshing = true;
@@ -276,7 +276,7 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel
             LedgerEntries.Clear();
             foreach (var entry in ledger.OrderByDescending(item => item.OccurredAt))
                 LedgerEntries.Add(new PuloniaTaskLedgerItemViewModel(entry));
-            ApplyPlanFilter(preferredRequestId);
+            ApplyPlanFilter(preferredRunId);
             StatusMessage = _taskService.RecoveryNotice ?? "记录已更新；所有时间按本地时区显示。";
         }
         catch (Exception ex)
@@ -322,11 +322,11 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel
     }
 
     /// <summary>
-    /// 在 UI 线程按计划范围同步列表，并按请求、节点地址、尝试次数恢复选择。
+    /// 在 UI 线程按计划范围同步列表，并按运行、节点地址、尝试次数恢复选择。
     /// </summary>
-    private void ApplyPlanFilter(Guid? preferredRequestId = null)
+    private void ApplyPlanFilter(string? preferredRunId = null)
     {
-        var selectedRequestId = preferredRequestId ?? SelectedRun?.RequestId;
+        var selectedRunId = preferredRunId ?? SelectedRun?.RunId;
         var selectedAddress = SelectedRunNodeResult?.TaskAddress;
         var selectedAttempt = SelectedRunNodeResult?.Attempt;
         var filtered = _allRuns.Where(item => PlanFilterId is null || item.Run.PlanId == PlanFilterId).ToArray();
@@ -345,10 +345,10 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel
             Runs.RemoveAt(Runs.Count - 1);
         // 未选中也是有效状态；后台刷新和计划切换不得强制选回第一条历史。
         // 只有显式提交/续跑指定请求，或保留用户正在查看的请求时才恢复选择。
-        SelectedRun = selectedRequestId is { } requestId
-            ? Runs.FirstOrDefault(item => item.RequestId == requestId)
+        SelectedRun = selectedRunId is { } runId
+            ? Runs.FirstOrDefault(item => item.RunId == runId)
             : null;
-        if (SelectedRun is { } current && current.RequestId == selectedRequestId)
+        if (SelectedRun is { } current && current.RunId == selectedRunId)
             SelectedRunNodeResult = current.NodeDetails.FirstOrDefault(item =>
                 item.TaskAddress == selectedAddress && item.Attempt == selectedAttempt) ?? SelectedRunNodeResult;
         OnPropertyChanged(nameof(CountText));

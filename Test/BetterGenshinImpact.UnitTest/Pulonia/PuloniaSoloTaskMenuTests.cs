@@ -17,7 +17,7 @@ public sealed class PuloniaSoloTaskMenuTests : IDisposable
     /// <summary>
     /// 当前测试独占的存储目录。
     /// </summary>
-    private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-pulonia-menu-" + Guid.NewGuid().ToString("N"));
+    private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-" + BetterGenshinImpact.Helpers.ShortId.Create(null, 8));
 
     /// <summary>
     /// 独立任务子菜单按 Order 排序，Group 变化处插入分隔项，分隔项不携带任务类型。

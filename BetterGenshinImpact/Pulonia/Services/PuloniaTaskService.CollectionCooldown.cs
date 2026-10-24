@@ -35,13 +35,14 @@ public sealed partial class PuloniaTaskService
         evidenceData["policy"] = JObject.FromObject(policy);
         var entry = new PuloniaTaskLedgerEntry
         {
-            EventKey = $"pathing.file:{state.RunId:N}:{PuloniaTaskResourceFingerprint.ComputeTextVersion(task.TaskAddress)}:{result.Attempt}",
+            // 事件键直接使用可读的运行 ID 与节点地址，同一节点同一尝试重复结算不会重复记账。
+            EventKey = $"pathing.file:{state.RunId}:{task.TaskAddress}:{result.Attempt}",
             ScopeKey = PuloniaTaskAvailability.BuildScopeKey(state.Request, PuloniaTaskScopeKind.World, state.VerifiedUid),
             EffectKey = PuloniaCollectionCooldown.GetEffectKey(policy),
             WindowKey = "file_success",
             OccurredAt = result.FinishedAt.ToUniversalTime(),
             NextEligibleAt = next,
-            TaskRunId = $"{state.RunId:N}:{task.TaskAddress}",
+            TaskRunId = $"{state.RunId}:{task.TaskAddress}",
             Evidence = new PuloniaTaskEvidence
             {
                 Kind = "executor",
@@ -89,6 +90,6 @@ public sealed partial class PuloniaTaskService
             }
         }
         finally { _stateGate.Release(); }
-        RaiseRunChanged(state.RequestId);
+        RaiseRunChanged(state.RunId);
     }
 }

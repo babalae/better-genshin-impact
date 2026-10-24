@@ -23,9 +23,9 @@ public sealed class PuloniaTaskRunItemViewModel : ObservableObject
     public PuloniaTaskRunView Run { get; }
 
     /// <summary>
-    /// 请求 ID。
+    /// 运行 ID；选择、取消和续跑都按此身份定位。
     /// </summary>
-    public Guid RequestId => Run.RequestId;
+    public string RunId => Run.RunId;
 
     /// <summary>
     /// 计划名称。
@@ -96,8 +96,7 @@ public sealed class PuloniaTaskRunItemViewModel : ObservableObject
     public IReadOnlyList<PuloniaTaskHistoryField> OverviewFields =>
     [
         new("运行摘要", Message),
-        new("运行 ID", Run.RunId.ToString("D")),
-        new("请求 ID", RequestId.ToString("D")),
+        new("运行 ID", Run.RunId),
         new("实际核验 UID", Run.VerifiedUid ?? "尚未核验 / 无游戏任务"),
         new("来源 / 作用域", $"{Run.Source} · {ScopeText}"),
         new("运行实例", ExecutionTargetText),
@@ -106,7 +105,7 @@ public sealed class PuloniaTaskRunItemViewModel : ObservableObject
         new("提交 / 开始 / 结束", $"{SubmittedAtText} / {PuloniaTaskHistoryText.Time(Run.StartedAt)} / {PuloniaTaskHistoryText.Time(Run.FinishedAt)}"),
         new("执行耗时", PuloniaTaskHistoryText.Duration(Run.StartedAt, Run.FinishedAt)),
         new("续跑关联", Run.ResumedFromRunId is { } from
-            ? $"来源运行：{from:D}\n起点：{Run.ResumeFromTaskAddress ?? "未完成节点"}" : "首次运行")
+            ? $"来源运行：{from}\n起点：{Run.ResumeFromTaskAddress ?? "未完成节点"}" : "首次运行")
     ];
 
     /// <summary>

@@ -114,7 +114,6 @@ public static class PuloniaTaskJson
         if (state.PendingRequests.Count > 10000 || state.PendingArchives.Count > 10000
             || state.Ledger.Count > 100000 || state.UncertainOperations.Count > 10000 || state.TriggerStates.Count > 10000)
             throw new PuloniaTaskValidationException("state.json", "运行状态集合超过支持上限。");
-        var requestIds = new HashSet<Guid>();
         var triggerKeys = new HashSet<string>(StringComparer.Ordinal);
         foreach (var trigger in state.TriggerStates)
         {
@@ -122,17 +121,18 @@ public static class PuloniaTaskJson
                 throw new PuloniaTaskValidationException("state.json/trigger_states", "触发器状态为空或重复。");
             PuloniaTaskValidator.ValidateId(trigger.PlanId, "trigger_state/plan_id");
             PuloniaTaskValidator.ValidateId(trigger.TriggerId, "trigger_state/trigger_id");
-            if (trigger.TriggerActivatedAtUtc == default || trigger.LastRequestId == Guid.Empty
-                || string.IsNullOrWhiteSpace(trigger.Status))
-                throw new PuloniaTaskValidationException("state.json/trigger_states", "触发器配置版本、请求 ID 或状态无效。");
+            if (trigger.TriggerActivatedAtUtc == default || string.IsNullOrWhiteSpace(trigger.Status))
+                throw new PuloniaTaskValidationException("state.json/trigger_states", "触发器配置版本或状态无效。");
+            if (trigger.LastRunId is { } lastRunId)
+                PuloniaTaskValidator.ValidateId(lastRunId, "trigger_state/last_run_id");
         }
-        var runIds = new HashSet<Guid>();
+        var runIds = new HashSet<string>(StringComparer.Ordinal);
         foreach (var record in state.PendingRequests)
         {
             ValidateRunRecord(record, "state.json/pending_requests");
             if (record.Status != PuloniaTaskRunStatus.Queued)
                 throw new PuloniaTaskValidationException("state.json", "待执行请求必须处于排队状态。");
-            AddRunIdentity(record, requestIds, runIds, "state.json");
+            AddRunIdentity(record, runIds, "state.json");
         }
         if (state.ActiveRun is { } active)
         {
@@ -141,7 +141,7 @@ public static class PuloniaTaskJson
                 throw new PuloniaTaskValidationException("state.json", "活动运行状态无效。");
             if (active.Request.ExecutionTarget is not null)
                 throw new PuloniaTaskValidationException("state.json", "主实例活动运行不能带有执行实例。");
-            AddRunIdentity(active, requestIds, runIds, "state.json");
+            AddRunIdentity(active, runIds, "state.json");
         }
         // 每个执行实例同一时刻只有一个活动运行
         var remoteLanes = new HashSet<string>(StringComparer.Ordinal);
@@ -152,7 +152,7 @@ public static class PuloniaTaskJson
                 throw new PuloniaTaskValidationException("state.json", "远程活动运行状态无效。");
             if (remote.Request.ExecutionTarget is not { } target || !remoteLanes.Add(target.LaneKey))
                 throw new PuloniaTaskValidationException("state.json", "远程活动运行缺少执行实例或同一实例重复。");
-            AddRunIdentity(remote, requestIds, runIds, "state.json");
+            AddRunIdentity(remote, runIds, "state.json");
         }
         foreach (var record in state.PendingArchives)
         {
@@ -160,7 +160,7 @@ public static class PuloniaTaskJson
             if (record.Status is PuloniaTaskRunStatus.Queued or PuloniaTaskRunStatus.Running
                 or PuloniaTaskRunStatus.Cancelling)
                 throw new PuloniaTaskValidationException("state.json", "待归档运行尚未结束。");
-            AddRunIdentity(record, requestIds, runIds, "state.json");
+            AddRunIdentity(record, runIds, "state.json");
         }
         var eventKeys = new HashSet<string>(StringComparer.Ordinal);
         foreach (var entry in state.Ledger)
@@ -173,7 +173,7 @@ public static class PuloniaTaskJson
         }
         foreach (var intent in state.UncertainOperations)
         {
-            if (intent.RunId == Guid.Empty || string.IsNullOrWhiteSpace(intent.TaskAddress)
+            if (string.IsNullOrWhiteSpace(intent.RunId) || string.IsNullOrWhiteSpace(intent.TaskAddress)
                 || intent.RuleIds is null || intent.Reservations is null || intent.RuleIds.Count == 0)
                 throw new PuloniaTaskValidationException("state.json/uncertain_operations", "未决操作字段无效。");
         }
@@ -205,11 +205,14 @@ public static class PuloniaTaskJson
     /// </summary>
     private static void ValidateRunRecord(PuloniaTaskRunRecord record, string path)
     {
-        if (record.RequestId == Guid.Empty || record.RunId == Guid.Empty || record.Request is null
+        if (record.Request is null
             || string.IsNullOrWhiteSpace(record.PlanName) || string.IsNullOrWhiteSpace(record.SnapshotJson)
             || string.IsNullOrWhiteSpace(record.Message) || record.NodeResults is null
             || record.CompletedTaskAddresses is null || record.ConfirmedEffects is null)
             throw new PuloniaTaskValidationException(path, "运行记录必要字段缺失。");
+        PuloniaTaskValidator.ValidateId(record.RunId, path + "/run_id");
+        if (record.ResumedFromRunId is { } resumedFrom)
+            PuloniaTaskValidator.ValidateId(resumedFrom, path + "/resumed_from_run_id");
         PuloniaTaskValidator.ValidateId(record.Request.PlanId, path + "/plan_id");
         if (record.Request.ParameterOverrides is null)
             throw new PuloniaTaskValidationException(path, "运行请求参数覆盖不能为空。");
@@ -221,20 +224,19 @@ public static class PuloniaTaskJson
                 || effect.Entry is null || string.IsNullOrWhiteSpace(effect.Entry.EventKey)
                 || string.IsNullOrWhiteSpace(effect.Entry.EffectKey) || string.IsNullOrWhiteSpace(effect.Entry.ScopeKey)
                 || effect.Entry.Units <= 0 || effect.Entry.Evidence is null
-                || effect.Entry.TaskRunId != $"{record.RunId:N}:{effect.TaskAddress}"
+                || effect.Entry.TaskRunId != $"{record.RunId}:{effect.TaskAddress}"
                 || !eventKeys.Add(effect.Entry.EventKey))
                 throw new PuloniaTaskValidationException(path, "运行确认事件身份、额度或证据无效。");
         }
     }
 
     /// <summary>
-    /// 校验当前状态内请求与运行身份不重复。
+    /// 校验当前状态内运行身份不重复。
     /// </summary>
-    private static void AddRunIdentity(PuloniaTaskRunRecord record, ISet<Guid> requestIds,
-        ISet<Guid> runIds, string path)
+    private static void AddRunIdentity(PuloniaTaskRunRecord record, ISet<string> runIds, string path)
     {
-        if (!requestIds.Add(record.RequestId) || !runIds.Add(record.RunId))
-            throw new PuloniaTaskValidationException(path, "请求 ID 或运行 ID 在当前状态中重复。");
+        if (!runIds.Add(record.RunId))
+            throw new PuloniaTaskValidationException(path, "运行 ID 在当前状态中重复。");
     }
 
     /// <summary>

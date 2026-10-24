@@ -23,7 +23,7 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
     /// <summary>
     /// 当前测试独占的存储目录，避免接触程序真实的计划文件。
     /// </summary>
-    private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-pulonia-editor-" + Guid.NewGuid().ToString("N"));
+    private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-" + BetterGenshinImpact.Helpers.ShortId.Create(null, 8));
 
     /// <summary>
     /// 默认清单由能力定义的 OneDragonOrder 生成，按旧一条龙顺序包含八个独立任务，未声明顺序的任务不加入；
@@ -341,7 +341,7 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
         await page.RunCommand.ExecuteAsync(null);
 
         var request = Assert.Single(await service.ListRunsAsync());
-        var completed = await service.WaitForCompletionAsync(request.RequestId);
+        var completed = await service.WaitForCompletionAsync(request.RunId);
         Assert.Equal(PuloniaTaskRunStatus.Succeeded, completed.Status);
         Assert.Contains(completed.NodeResults, item => item.TaskAddress.EndsWith("/" + disabledNode.Id, StringComparison.Ordinal)
             && item.Status == PuloniaTaskNodeStatus.Skipped);

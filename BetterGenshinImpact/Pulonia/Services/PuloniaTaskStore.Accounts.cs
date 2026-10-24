@@ -1,7 +1,7 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,6 +12,9 @@ namespace BetterGenshinImpact.Pulonia.Services;
 /// <summary>复用计划存储的写锁、修订校验与原子替换保存原神账号目录。</summary>
 public sealed partial class PuloniaTaskStore
 {
+    /// <summary>账号图片目录名，相对于 User/Pulonia。</summary>
+    private const string AccountImageDirectoryName = "account-images";
+
     /// <summary>读取独立账号草稿；首次使用不要求创建任何账号。</summary>
     public async Task<PuloniaGenshinAccountSettings> LoadAccountSettingsAsync(CancellationToken ct = default)
     {
@@ -79,37 +82,58 @@ public sealed partial class PuloniaTaskStore
     /// <summary>解析账号图片路径，只允许访问账号图片目录内的文件。</summary>
     public string GetAccountImagePath(string relativePath)
     {
-        var directory = Path.GetFullPath(Path.Combine(RootDirectory, "account-images")) + Path.DirectorySeparatorChar;
+        var directory = Path.GetFullPath(Path.Combine(RootDirectory, AccountImageDirectoryName)) + Path.DirectorySeparatorChar;
         var resolved = Path.GetFullPath(Path.Combine(RootDirectory, relativePath));
         if (!resolved.StartsWith(directory, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("账号图片必须位于 User/Pulonia/account-images 目录。");
         return resolved;
     }
 
-    /// <summary>将图片内容固定到版本目录，后续替换账号图片不改变运行快照。</summary>
-    public PuloniaGenshinAccountProfile FreezeAccount(PuloniaGenshinAccountProfile account)
+    /// <summary>
+    /// 为账号新建一张图片 <c>account-images\&lt;账号ID&gt;-&lt;yyyyMMdd-HHmmss&gt;.png</c>，返回相对于 User/Pulonia 的路径。
+    /// 同名文件已存在时依次追加 <c>-2</c>、<c>-3</c>……；以排他方式创建，永远不覆盖已有文件。
+    /// </summary>
+    /// <remarks>
+    /// 图片文件每次新建、不覆盖，已有运行快照引用的旧图片内容不会变化，因此运行快照只需记录 ImagePath，
+    /// 不再另存版本副本或在运行前复核内容指纹。被替换或随账号删除而不再引用的旧图片暂不清理。
+    /// 自动采集与手动导入共用此方法。
+    /// </remarks>
+    /// <param name="accountId">图片所属账号 ID，作为文件名前缀</param>
+    /// <param name="png">PNG 编码后的图片内容</param>
+    /// <param name="ct">取消令牌</param>
+    public async Task<string> CreateAccountImageAsync(string accountId, byte[] png, CancellationToken ct = default)
     {
-        var candidate = PuloniaTaskJson.Read<PuloniaGenshinAccountProfile>(PuloniaTaskJson.Write(account));
-        if (candidate.ImagePath is null) return candidate;
-        var source = GetAccountImagePath(candidate.ImagePath);
-        var bytes = File.ReadAllBytes(source);
-        var version = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
-        var relative = Path.Combine("account-images", "versions", version + ".png");
-        var target = GetAccountImagePath(relative);
-        Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-        // 不可变内容使用排他创建；并发提交同一图片时已有文件可直接复用。
-        try
+        PuloniaTaskValidator.ValidateId(accountId, "account/id");
+        ArgumentNullException.ThrowIfNull(png);
+        Directory.CreateDirectory(Path.Combine(RootDirectory, AccountImageDirectoryName));
+        var baseName = accountId + "-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
+        for (var index = 1; ; index++)
         {
-            using var stream = new FileStream(target, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
-            stream.Write(bytes);
-            stream.Flush(true);
+            ct.ThrowIfCancellationRequested();
+            // 第一个候选不带序号，同秒重名时从 -2 开始依次尝试。
+            var fileName = (index == 1 ? baseName : baseName + "-" + index.ToString(CultureInfo.InvariantCulture)) + ".png";
+            var relative = Path.Combine(AccountImageDirectoryName, fileName);
+            var path = GetAccountImagePath(relative);
+            FileStream stream;
+            try { stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None); }
+            catch (IOException) when (File.Exists(path)) { continue; }
+            try
+            {
+                using (stream)
+                {
+                    await stream.WriteAsync(png, ct).ConfigureAwait(false);
+                    stream.Flush(true);
+                }
+            }
+            catch
+            {
+                // 文件刚由本方法排他创建，尚未被任何账号引用；写入中断时删除残缺文件，删除失败则留待人工清理。
+                try { File.Delete(path); }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+                throw;
+            }
+            return relative;
         }
-        catch (IOException) when (File.Exists(target))
-        {
-            if (!File.ReadAllBytes(target).AsSpan().SequenceEqual(bytes)) throw;
-        }
-        candidate.ImagePath = relative;
-        candidate.ImageVersion = version;
-        return candidate;
     }
 }

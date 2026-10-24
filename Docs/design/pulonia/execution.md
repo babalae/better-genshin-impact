@@ -105,9 +105,9 @@ namespace BetterGenshinImpact.Pulonia;
 
 public interface IPuloniaTaskService
 {
-    Task<Guid> EnqueueAsync(PuloniaTaskRequest request, CancellationToken ct);
-    Task<PuloniaTaskPlanRunView> GetRunAsync(Guid planRunId, CancellationToken ct);
-    Task CancelAsync(Guid planRunId, CancellationToken ct);
+    Task<string> EnqueueAsync(PuloniaTaskRequest request, CancellationToken ct);   // 返回运行 ID：run_<本地时间>-<4 位>
+    Task<PuloniaTaskPlanRunView> GetRunAsync(string runId, CancellationToken ct);
+    Task CancelAsync(string runId, CancellationToken ct);
 }
 
 public interface IPuloniaTaskExecutor

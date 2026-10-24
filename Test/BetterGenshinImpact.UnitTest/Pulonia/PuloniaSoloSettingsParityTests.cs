@@ -136,7 +136,7 @@ public sealed class PuloniaSoloSettingsParityTests
     [Fact]
     public async Task BossProgress_PersistsAndSeparatesTasksAccountsAndResetDrafts()
     {
-        var directory = Path.Combine(Path.GetTempPath(), "bgi-solo-parity-" + Guid.NewGuid().ToString("N"));
+        var directory = Path.Combine(Path.GetTempPath(), "bgi-" + BetterGenshinImpact.Helpers.ShortId.Create(null, 8));
         try
         {
             using (var store = new PuloniaTaskStore(directory))

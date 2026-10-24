@@ -72,14 +72,9 @@ public sealed class PuloniaRemoteNodeStart
     public PuloniaRemoteNodeKind Kind { get; init; }
 
     /// <summary>
-    /// 所属请求 ID
-    /// </summary>
-    public Guid RequestId { get; init; }
-
-    /// <summary>
     /// 所属运行 ID
     /// </summary>
-    public Guid RunId { get; init; }
+    public string RunId { get; init; } = string.Empty;
 
     /// <summary>
     /// 节点从 1 开始的尝试次数

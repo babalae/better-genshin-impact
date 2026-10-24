@@ -129,7 +129,7 @@ public sealed partial class PuloniaTaskService
     private static void UpdateTriggerRunStatus(PuloniaTaskState state, PuloniaTaskRunRecord record)
     {
         var cursor = state.TriggerStates.FirstOrDefault(item => item.PlanId == record.Request.PlanId
-            && item.TriggerId == record.Request.TriggerId && item.LastRequestId == record.RequestId
+            && item.TriggerId == record.Request.TriggerId && item.LastRunId == record.RunId
             && item.TriggerActivatedAtUtc == record.Request.TriggerActivatedAtUtc
             && item.Status is "已排队" or "运行中" or "停止中");
         if (cursor is null) return;
@@ -188,7 +188,7 @@ public sealed partial class PuloniaTaskService
                     || existing.Any(item => item.GetStatus() == PuloniaTaskRunStatus.Queued)))
                     throw new TriggerBusyException();
                 cursor.LastOccurrenceUtc = occurrence;
-                cursor.LastRequestId = id;
+                cursor.LastRunId = id;
                 cursor.Status = "已排队";
                 cursor.Message = "请求与调度游标已一并保存。";
                 PutCursor(state, cursor);

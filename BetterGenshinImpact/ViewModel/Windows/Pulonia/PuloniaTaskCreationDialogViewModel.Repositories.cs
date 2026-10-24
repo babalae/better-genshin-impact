@@ -212,6 +212,8 @@ public partial class PuloniaTaskCreationDialogViewModel
         _resourceLoadCancellationTokenSource?.Cancel();
         _previewCancellationTokenSource?.Cancel();
         _filterCancellationTokenSource?.Cancel();
+        // 窗口已关闭，删除当前预览的一次性目录。
+        ReleasePreview();
         NotifyRepositoryCommands();
     }
 }

@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Helpers;
 using LibGit2Sharp;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -14,8 +15,8 @@ namespace BetterGenshinImpact.Core.Script.Repositories;
 /// <summary>仓库管理的注册操作，官方保护和固定目录约束同时在服务层执行。</summary>
 public sealed partial class ScriptRepositoryStore
 {
-    /// <summary>保留的官方仓库身份，重置或切换镜像时始终保持不变。</summary>
-    public const string OfficialRepositoryId = "00000000000000000000000000000001";
+    /// <summary>保留的官方仓库身份，重置或切换镜像时始终保持不变；同时作为资源目录名。</summary>
+    public const string OfficialRepositoryId = "official";
 
     /// <summary>与原官方仓库弹窗共用的固定 clone 目录。</summary>
     public string OfficialDirectory => Path.Combine(_repositoriesDirectory, "bettergi-scripts-list");
@@ -23,7 +24,8 @@ public sealed partial class ScriptRepositoryStore
     /// <summary>按稳定身份取得唯一的第三方 clone 位置，配置不能重定向到另一个仓库。</summary>
     public string GetManagedRemoteDirectory(string repositoryId)
     {
-        if (repositoryId.Length != 32 || !repositoryId.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f'))
+        // 官方仓库使用固定的 bettergi-scripts-list 目录，这里只分配第三方 rep_ 目录。
+        if (!ShortId.IsMatch(repositoryId, "rep"))
             throw new ArgumentException("仓库 ID 无效。");
         return Path.Combine(_repositoriesDirectory, "Pulonia", repositoryId);
     }
@@ -77,7 +79,7 @@ public sealed partial class ScriptRepositoryStore
             }
             else
             {
-                _ = ReadFileSourceInventory(registration.Directory, ct);
+                _ = ReadFileSourceInventory(registration, ct);
             }
         }, ct).ConfigureAwait(false);
         NotifyUpdated(registration.Directory);
@@ -143,8 +145,8 @@ public sealed partial class ScriptRepositoryStore
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("仓库名称不能为空。");
         using var gate = await AcquireLockAsync("registry", ct).ConfigureAwait(false);
         var registrations = ReadRegistrations();
-        var id = Guid.NewGuid().ToString("N");
-        var remoteId = Guid.NewGuid().ToString("N");
+        var id = NewRepositoryId(registrations);
+        var remoteId = ShortId.Create("rem");
         var registration = new ScriptRepositoryRegistration
         {
             Id = id, Name = name.Trim(), Kind = "remote", Directory = GetManagedRemoteDirectory(id),
@@ -175,7 +177,8 @@ public sealed partial class ScriptRepositoryStore
         var updated = new ScriptRepositoryRegistration
         {
             Id = existing.Id, Name = name.Trim(), Directory = existing.Directory, Kind = existing.Kind,
-            IsEnabled = existing.IsEnabled, Remotes = remotes.ToArray(), ActiveRemoteId = activeRemoteId, Branch = branch.Trim()
+            IsEnabled = existing.IsEnabled, Remotes = remotes.ToArray(), ActiveRemoteId = activeRemoteId, Branch = branch.Trim(),
+            SourceGeneration = existing.SourceGeneration
         };
         registrations[index] = updated;
         WriteJson(Path.Combine(RootDirectory, "repositories.json"), registrations);

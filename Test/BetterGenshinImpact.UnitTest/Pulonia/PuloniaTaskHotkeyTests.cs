@@ -19,7 +19,7 @@ namespace BetterGenshinImpact.UnitTest.Pulonia;
 public sealed class PuloniaTaskHotkeyTests : IDisposable
 {
     /// <summary>只用于本测试的独占本地存储目录。</summary>
-    private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-pulonia-hotkeys-" + Guid.NewGuid().ToString("N"));
+    private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-" + BetterGenshinImpact.Helpers.ShortId.Create(null, 8));
 
     /// <summary>两种模式分别支持组合 / 功能键和单键 / 侧键。</summary>
     [Theory]
@@ -240,7 +240,7 @@ public sealed class PuloniaTaskHotkeyTests : IDisposable
     {
         var path = Path.GetFullPath(_directory);
         if (!path.StartsWith(Path.GetFullPath(Path.GetTempPath()), StringComparison.OrdinalIgnoreCase)
-            || !Path.GetFileName(path).StartsWith("bgi-pulonia-hotkeys-", StringComparison.Ordinal))
+            || !Path.GetFileName(path).StartsWith("bgi-", StringComparison.Ordinal))
             throw new InvalidOperationException("测试目录越界。");
         if (Directory.Exists(path)) Directory.Delete(path, true);
     }

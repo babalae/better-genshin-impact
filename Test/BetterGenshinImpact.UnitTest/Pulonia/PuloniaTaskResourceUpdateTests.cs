@@ -13,7 +13,7 @@ namespace BetterGenshinImpact.UnitTest.Pulonia;
 public sealed class PuloniaTaskResourceUpdateTests : IDisposable
 {
     /// <summary>每个测试独占的临时目录，不触碰真实 User 数据。</summary>
-    private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-pulonia-resources-" + Guid.NewGuid().ToString("N"));
+    private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-" + BetterGenshinImpact.Helpers.ShortId.Create(null, 8));
 
     /// <summary>只有根目录两个版本文件的内容变化才算更新，其他脚本及子目录同名文件均不参与。</summary>
     [Theory]
@@ -275,7 +275,7 @@ public sealed class PuloniaTaskResourceUpdateTests : IDisposable
         json["root_task"]!["children"]![0]!["resource_version"] = fullVersion;
         plan.RootTask.Children[0].ResourceVersion = fullVersion;
         json["plan_json_by_id"]![plan.Id] = PuloniaTaskJson.WritePlan(plan);
-        var record = new PuloniaTaskRunRecord { RequestId = Guid.NewGuid(), RunId = Guid.NewGuid(),
+        var record = new PuloniaTaskRunRecord { RunId = PuloniaId.NewRunId(DateTimeOffset.Now),
             Request = new PuloniaTaskRequest { PlanId = plan.Id, TimeoutSeconds = 600 }, PlanName = plan.Name,
             SnapshotJson = json.ToString(), Status = PuloniaTaskRunStatus.Cancelled,
             SubmittedAt = DateTimeOffset.UtcNow, FinishedAt = DateTimeOffset.UtcNow, Message = "旧运行" };
@@ -284,7 +284,7 @@ public sealed class PuloniaTaskResourceUpdateTests : IDisposable
         using var exclusiveFile = new FileStream(runtime, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
         // 即使旧指纹与整个目录完全一致，也不能为了兼容去读取其余被占用的文件。
         await Assert.ThrowsAsync<PuloniaTaskValidationException>(() => service.ResumeAsync(record.RunId));
-        Assert.Equal(record.SnapshotJson, (await service.GetRunAsync(record.RequestId)).SnapshotJson);
+        Assert.Equal(record.SnapshotJson, (await service.GetRunAsync(record.RunId)).SnapshotJson);
     }
 
     /// <summary>JS 准备不扫描无关目录，目录深度和无关文件数量不得消耗资源扫描额度。</summary>
@@ -339,7 +339,7 @@ public sealed class PuloniaTaskResourceUpdateTests : IDisposable
         await page.RunPlanCommand.ExecuteAsync(document);
         Assert.Equal(1, document.ResourceUpdateCount);
         Assert.True(document.RootNode.Children[0].HasResourceNotice);
-        var run = await service.WaitForCompletionAsync(page.History.SelectedRun!.RequestId).WaitAsync(TimeSpan.FromSeconds(20));
+        var run = await service.WaitForCompletionAsync(page.History.SelectedRun!.RunId).WaitAsync(TimeSpan.FromSeconds(20));
         Assert.Equal(PuloniaTaskRunStatus.Succeeded, run.Status);
         Assert.Contains(run.NodeResults, node => node.TaskType == "keymouse" && node.Status == PuloniaTaskNodeStatus.Succeeded);
     }

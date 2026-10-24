@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recorder;
+using BetterGenshinImpact.Core.Script.Repositories;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
 using Newtonsoft.Json.Linq;
@@ -41,12 +42,22 @@ public sealed class PuloniaKeyMouseTaskExecutor : IPuloniaTaskExecutor
     public async Task<PuloniaTaskOutcome> ExecuteAsync(PuloniaTaskPreparedTask task,
         PuloniaTaskExecutionContext context, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(task.Path))
-            return PuloniaTaskOutcome.Failure("录制回放节点没有固定资源路径。");
+        if (task.Resource is null && string.IsNullOrWhiteSpace(task.Path))
+            return PuloniaTaskOutcome.Failure("录制回放节点没有固定资源。");
         // 回放只使用本节点租约记录的运行环境；它已停止时当前节点失败
         if (!context.TryGetRuntime(out var runtime, out var runtimeError))
             return PuloniaTaskOutcome.Failure(runtimeError);
-        var json = await File.ReadAllTextAsync(task.Path, ct).ConfigureAwait(false);
+        string json;
+        if (task.Resource is { } resource)
+        {
+            // 仓库录制从已保留归档读取正文，不落地缓存文件。
+            using var snapshot = await ScriptRepositoryStore.Shared.OpenApprovedAsync(resource, ct).ConfigureAwait(false);
+            json = snapshot.ReadText("repo/" + resource.RelativePath);
+        }
+        else
+        {
+            json = await File.ReadAllTextAsync(task.Path!, ct).ConfigureAwait(false);
+        }
         await KeyMouseMacroPlayer.PlayMacro(runtime, json, ct, task.Parameters.Value<bool>("with_delay")).ConfigureAwait(false);
         ct.ThrowIfCancellationRequested();
         return PuloniaTaskOutcome.ExecutedUnverified("键鼠宏已完整回放，但录制文件没有结构化副作用证据。",

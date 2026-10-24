@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Script;
+using BetterGenshinImpact.Core.Script.Repositories;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
@@ -243,6 +244,11 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     private string? _readmeFilePath;
 
     /// <summary>
+    /// 当前显示的资源预览；仓库 JS 预览持有一次性预览目录，切换或关闭时释放。
+    /// </summary>
+    private PuloniaTaskResourcePreview? _currentPreview;
+
+    /// <summary>
     /// 当前 JS 项目自定义设置的加载状态或空状态说明。
     /// </summary>
     [ObservableProperty]
@@ -390,7 +396,7 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     {
         ParameterFields.Clear();
         JavaScriptSettingFields.Clear();
-        ReadmeFilePath = null;
+        ReleasePreview();
         if (value is not null)
         {
             var properties = value.ParameterSchema["properties"] as JObject ?? new JObject();
@@ -463,7 +469,7 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
         OnPropertyChanged(nameof(IsDirectoryImport));
         var generation = ++_previewGeneration;
         _previewCancellationTokenSource?.Cancel();
-        ReadmeFilePath = null;
+        ReleasePreview();
         JavaScriptSettingFields.Clear();
         _javaScriptSettingsLoadFailed = false;
         JavaScriptSettingsMessage = IsJavaScriptTask ? "正在读取脚本设置…" : string.Empty;
@@ -506,6 +512,16 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     /// 资源详情加载状态变化后刷新统一加载状态。
     /// </summary>
     partial void OnIsResourceDetailsLoadingChanged(bool value) => OnPropertyChanged(nameof(IsLoading));
+
+    /// <summary>
+    /// 先清除 README 路径让 Markdown 控件停止读取，再释放当前预览，删除其一次性预览目录。
+    /// </summary>
+    private void ReleasePreview()
+    {
+        ReadmeFilePath = null;
+        _currentPreview?.Dispose();
+        _currentPreview = null;
+    }
 
     /// <summary>
     /// README 文件变化后切换原生 Markdown 预览和普通文本空状态。
@@ -714,7 +730,13 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
             var preview = await PuloniaTaskResourcePreviewLoader.LoadAsync(resource, taskType,
                 cancellationTokenSource.Token, _resourceCatalog.Repositories);
             if (generation != _previewGeneration)
+            {
+                // 已切换选择或关闭弹窗，这份预览不会显示，立即删除其预览目录。
+                preview.Dispose();
                 return;
+            }
+            ReleasePreview();
+            _currentPreview = preview;
             ResourcePreview = preview.Text;
             ReadmeFilePath = preview.MarkdownFilePath;
             foreach (var item in preview.JavaScriptSettingItems)
@@ -895,9 +917,9 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
             };
         }
 
-        // 提取选中版本成功后才建立节点，计划不会保存未完成缓存的资源引用。
+        // 仓库资源保留所选版本成功后才建立节点，计划不会保存未保留的资源引用。
         if (resource.Resource is { } repositoryResource)
-            resource = resource.WithFullPath(await _resourceCatalog.Repositories.MaterializeAsync(repositoryResource, definition.TaskType));
+            return await BuildRepositoryTaskAsync(name, definition, repositoryResource, overrides);
 
         if (!IsDirectoryImport)
         {
@@ -908,8 +930,7 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
             {
                 Name = name,
                 TaskType = definition.TaskType,
-                Path = resource.Resource is null ? resource.RelativePath : null,
-                Resource = resource.Resource,
+                Path = resource.RelativePath,
                 ResourceVersion = version,
                 Parameters = overrides
             };
@@ -931,8 +952,7 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
                 Source = new PuloniaTaskSource
                 {
                     Kind = "directory",
-                    Path = resource.Resource is null ? resource.FullPath : null,
-                    Resource = resource.Resource,
+                    Path = resource.FullPath,
                     TaskType = definition.TaskType,
                     Recursive = IncludeSubdirectories,
                     Version = version
@@ -952,8 +972,7 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
             {
                 Name = Path.GetFileNameWithoutExtension(file),
                 TaskType = definition.TaskType,
-                Path = resource.Resource is null ? Path.GetRelativePath(definition.ResourceBaseDirectory!, file) : null,
-                Resource = resource.Resource?.WithPath(resource.Resource.RelativePath + "/" + Path.GetRelativePath(resource.FullPath, file).Replace('\\', '/')),
+                Path = Path.GetRelativePath(definition.ResourceBaseDirectory!, file),
                 ResourceVersion = await PuloniaTaskResourceFingerprint.ComputeFileVersionAsync(file)
             };
             if (mode == "flat")
@@ -961,7 +980,79 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
                 group.Children.Add(leaf);
                 continue;
             }
-            AddStructuredLeaf(group, resource.FullPath, file, leaf);
+            AddStructuredLeaf(group, Path.GetRelativePath(resource.FullPath, file), leaf);
+        }
+        return group;
+    }
+
+    /// <summary>
+    /// 为仓库资源建立任务节点：先保留所选版本，再在固定快照上计算与运行准备、更新检查一致的指纹。
+    /// 目录清单与顺序和运行准备共用，确认后不会因列举方式不同而判为内容变化。
+    /// </summary>
+    private async Task<PuloniaTask> BuildRepositoryTaskAsync(string name, PuloniaTaskDefinition definition,
+        ScriptResourceReference reference, JObject overrides)
+    {
+        var repositories = _resourceCatalog.Repositories;
+        var taskType = definition.TaskType;
+        await repositories.RetainAsync(reference, taskType);
+        using var snapshot = await repositories.OpenApprovedAsync(reference);
+        if (!IsDirectoryImport)
+        {
+            var version = await Task.Run(() => ScriptRepositoryStore.ComputeVersion(snapshot, reference.RelativePath, taskType));
+            return new PuloniaTask
+            {
+                Name = name,
+                TaskType = taskType,
+                Resource = reference,
+                ResourceVersion = version,
+                Parameters = overrides
+            };
+        }
+
+        var recursive = IncludeSubdirectories;
+        var files = await Task.Run(() => ScriptRepositoryStore.ListDirectoryResources(snapshot, reference.RelativePath, recursive));
+        if (files.Count == 0)
+            throw new FormatException("选中的目录中没有可添加的 JSON 资源。");
+        var mode = SelectedDirectoryImportMode?.Key ?? "reference";
+        if (mode == "reference")
+        {
+            var version = await Task.Run(() => ScriptRepositoryStore.ComputeVersion(snapshot, reference.RelativePath,
+                taskType, recursive, directory: true));
+            var directoryReference = new PuloniaTask
+            {
+                Name = name,
+                TaskType = "group",
+                Source = new PuloniaTaskSource
+                {
+                    Kind = "directory",
+                    Resource = reference,
+                    TaskType = taskType,
+                    Recursive = recursive,
+                    Version = version
+                }
+            };
+            AddGroupParameterOverride(directoryReference, definition, overrides);
+            return directoryReference;
+        }
+
+        var group = new PuloniaTask { Name = name, TaskType = "group" };
+        AddGroupParameterOverride(group, definition, overrides);
+        for (var index = 0; index < files.Count; index++)
+        {
+            var relative = files[index];
+            StatusMessage = $"正在固定资源版本（{index + 1}/{files.Count}）…";
+            var child = reference.WithPath(reference.RelativePath + "/" + relative);
+            var leaf = new PuloniaTask
+            {
+                Name = Path.GetFileNameWithoutExtension(relative),
+                TaskType = taskType,
+                Resource = child,
+                ResourceVersion = await Task.Run(() => ScriptRepositoryStore.ComputeVersion(snapshot, child.RelativePath, taskType))
+            };
+            if (mode == "flat")
+                group.Children.Add(leaf);
+            else
+                AddStructuredLeaf(group, relative, leaf);
         }
         return group;
     }
@@ -993,10 +1084,13 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     /// <summary>
     /// 按选中目录的相对层级建立分组，并把叶子任务放入对应目录分组。
     /// </summary>
-    private static void AddStructuredLeaf(PuloniaTask rootGroup, string selectedDirectory, string file,
-        PuloniaTask leaf)
+    /// <param name="rootGroup">选中目录对应的根分组</param>
+    /// <param name="relativeFile">相对选中目录的文件路径，正斜杠或反斜杠均可</param>
+    /// <param name="leaf">要放入的叶子任务</param>
+    private static void AddStructuredLeaf(PuloniaTask rootGroup, string relativeFile, PuloniaTask leaf)
     {
-        var relativeDirectory = Path.GetDirectoryName(Path.GetRelativePath(selectedDirectory, file));
+        // Path.GetDirectoryName 会把正斜杠统一为当前系统分隔符。
+        var relativeDirectory = Path.GetDirectoryName(relativeFile);
         var parent = rootGroup;
         if (!string.IsNullOrWhiteSpace(relativeDirectory) && relativeDirectory != ".")
         {

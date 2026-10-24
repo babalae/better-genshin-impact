@@ -205,7 +205,7 @@ erDiagram
         object Observations "可空值及观测来源"
     }
     PuloniaTaskRunRecord {
-        guid RunId "已有运行ID"
+        string RunId "已有运行ID"
         string VerifiedUid "已有核验结果"
         string SnapshotJson "已有固定运行快照"
     }

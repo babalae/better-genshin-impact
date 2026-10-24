@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Pulonia.Models;
 
 namespace BetterGenshinImpact.Pulonia.Services;
@@ -356,10 +357,10 @@ public sealed partial class PuloniaTaskStore : IDisposable
     {
         ArgumentNullException.ThrowIfNull(record);
         PuloniaTaskValidator.ValidateId(record.Request.PlanId, "history/plan_id");
-        if (record.RunId == Guid.Empty || record.RequestId == Guid.Empty)
-            throw new PuloniaTaskValidationException("history", "运行或请求 ID 不能为空。");
+        PuloniaTaskValidator.ValidateId(record.RunId, "history/run_id");
         var candidateJson = PuloniaTaskJson.WriteRunRecord(record);
-        var path = Path.Combine(RootDirectory, "history", record.Request.PlanId, record.RunId.ToString("N") + ".json");
+        // 文件名直接使用可读运行 ID：history\<计划ID>\run_yyyyMMdd-HHmmss-xxxx.json。
+        var path = Path.Combine(RootDirectory, "history", record.Request.PlanId, record.RunId + ".json");
 
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
@@ -369,7 +370,7 @@ public sealed partial class PuloniaTaskStore : IDisposable
             if (existingJson is not null)
             {
                 var existing = PuloniaTaskJson.ReadRunRecord(existingJson);
-                if (existing.RunId != record.RunId || existing.RequestId != record.RequestId)
+                if (existing.RunId != record.RunId)
                     throw new PuloniaTaskValidationException(path, "历史文件身份与待归档运行不一致。");
                 if (!string.Equals(PuloniaTaskJson.WriteRunRecord(existing), candidateJson,
                         StringComparison.Ordinal))
@@ -402,8 +403,7 @@ public sealed partial class PuloniaTaskStore : IDisposable
                 var json = await ReadIfExistsAsync(path, ct).ConfigureAwait(false)
                            ?? throw new IOException($"读取历史时文件消失：{path}");
                 var record = PuloniaTaskJson.ReadRunRecord(json);
-                if (!string.Equals(Path.GetFileNameWithoutExtension(path), record.RunId.ToString("N"),
-                        StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(Path.GetFileNameWithoutExtension(path), record.RunId, StringComparison.Ordinal))
                     throw new PuloniaTaskValidationException(path, "历史文件名与运行 ID 不一致。");
                 records.Add(record);
             }
@@ -549,7 +549,8 @@ public sealed partial class PuloniaTaskStore : IDisposable
     {
         var directory = Path.GetDirectoryName(path)!;
         Directory.CreateDirectory(directory);
-        var temporaryPath = Path.Combine(directory, $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
+        // 临时名与目标名无关，避免长文件名再叠加一段 GUID。
+        var temporaryPath = Path.Combine(directory, ShortId.NewTemporaryName());
         try
         {
             var bytes = Utf8WithoutBom.GetBytes(json);

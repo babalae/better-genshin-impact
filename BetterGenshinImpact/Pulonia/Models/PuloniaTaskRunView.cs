@@ -13,15 +13,11 @@ public sealed class PuloniaTaskRunView
 {
     /// <summary>执行前核验的实际 UID，未准备账号或纯计算运行时为空。</summary>
     public string? VerifiedUid { get; }
-    /// <summary>
-    /// 提交操作生成的请求 ID。
-    /// </summary>
-    public Guid RequestId { get; }
 
     /// <summary>
-    /// 本次运行 ID；历史和续跑使用此身份关联。
+    /// 本次运行 ID，提交时生成；查询、取消、历史和续跑都使用此身份关联。
     /// </summary>
-    public Guid RunId { get; }
+    public string RunId { get; }
 
     /// <summary>
     /// 入口计划 ID。
@@ -104,7 +100,7 @@ public sealed class PuloniaTaskRunView
     /// <summary>
     /// 来源历史运行 ID。
     /// </summary>
-    public Guid? ResumedFromRunId { get; }
+    public string? ResumedFromRunId { get; }
 
     /// <summary>
     /// 显式续跑起点。
@@ -129,15 +125,14 @@ public sealed class PuloniaTaskRunView
     /// <summary>
     /// 建立运行状态的防御性副本。
     /// </summary>
-    internal PuloniaTaskRunView(Guid requestId, Guid runId, string planId, string planName, string source,
+    internal PuloniaTaskRunView(string runId, string planId, string planName, string source,
         PuloniaTaskRunStatus status, string? currentTaskAddress, string message, DateTimeOffset submittedAt,
         DateTimeOffset? startedAt, DateTimeOffset? finishedAt, string snapshotJson,
         IEnumerable<PuloniaTaskNodeResult> nodeResults, string? accountId, string? worldOwnerAccountId,
-        Guid? resumedFromRunId, string? resumeFromTaskAddress, bool isHistorical, bool hasUncertainOperation,
+        string? resumedFromRunId, string? resumeFromTaskAddress, bool isHistorical, bool hasUncertainOperation,
         IEnumerable<PuloniaTaskConfirmedEffect>? confirmedEffects = null, PuloniaTaskRequest? request = null,
         string? verifiedUid = null)
     {
-        RequestId = requestId;
         VerifiedUid = verifiedUid;
         RunId = runId;
         PlanId = planId;

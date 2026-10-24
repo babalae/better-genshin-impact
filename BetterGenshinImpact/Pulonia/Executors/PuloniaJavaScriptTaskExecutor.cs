@@ -50,8 +50,8 @@ public sealed class PuloniaJavaScriptTaskExecutor : IPuloniaTaskExecutor
     public async Task<PuloniaTaskOutcome> ExecuteAsync(PuloniaTaskPreparedTask task,
         PuloniaTaskExecutionContext context, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(task.Path))
-            return PuloniaTaskOutcome.Failure("JS 节点没有固定项目路径。");
+        if (task.Resource is null && string.IsNullOrWhiteSpace(task.Path))
+            return PuloniaTaskOutcome.Failure("JS 节点没有固定项目。");
         // 脚本只使用本节点租约记录的运行环境；它已停止时当前节点失败
         if (!context.TryGetRuntime(out var runtime, out var runtimeError))
             return PuloniaTaskOutcome.Failure(runtimeError);
@@ -61,7 +61,7 @@ public sealed class PuloniaJavaScriptTaskExecutor : IPuloniaTaskExecutor
         using var repositoryResources = task.Resource is { } source
             ? new ScriptRepositoryResourceContext(await ScriptRepositoryStore.Shared.OpenApprovedAsync(source, ct).ConfigureAwait(false)) : null;
         var scriptRoot = workspace?.Path ?? Path.GetFullPath(Global.ScriptPath());
-        var projectPath = workspace?.Path ?? Path.GetFullPath(task.Path);
+        var projectPath = workspace?.Path ?? Path.GetFullPath(task.Path!);
         var relativeProjectPath = Path.GetRelativePath(scriptRoot, projectPath);
         if (relativeProjectPath == ".." || relativeProjectPath.StartsWith(".." + Path.DirectorySeparatorChar,
                 StringComparison.Ordinal) || Path.IsPathRooted(relativeProjectPath))

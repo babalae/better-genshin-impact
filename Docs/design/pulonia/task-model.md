@@ -302,10 +302,10 @@ UI 可为内置能力提供专用参数编辑器；JS 依据 Schema 生成表单
 
 以下表示已随步骤 1 用户验收固定为后续运行合同；新增能力仍须遵守同一身份、复制和快照语义。后续验收由用户使用真实配置核对，开发自查数据不作为用户验收材料。
 
-- 新建计划/预设的 `revision` 为 0；保存成功返回修订递增的独立副本，保存旧修订明确报冲突。ID 实际生成为 GUID 的小写 N 格式；文件读取同时允许小写可读 ID，长度最多 96，拒绝路径字符及 Windows 保留名称。
+- 新建计划/预设的 `revision` 为 0；保存成功返回修订递增的独立副本，保存旧修订明确报冲突。ID 生成为 `前缀_16 位小写 Crockford Base32`（计划 `pln_`、节点 `tsk_`、预设 `pre_`、触发器 `trg_`、账号 `acc_`），运行 ID 为 `run_<本地时间>-<4 位>`；校验允许小写可读 ID，长度最多 32，拒绝路径字符及 Windows 保留名称（2026-10-24 按[标识与磁盘路径整治](identifiers-and-paths.md)调整）。
 - `group.parameters` 保持空对象；叶子任务的 `parameters` 是本节点覆盖。分组的 `parameter_overrides` 保存 `{task_type, resource_id?, schema_version, values}` 列表，明确公共参数作用域。JS 必须绑定 `resource_id` 和参数版本；其他能力允许通用预设或资源专用预设。同层先应用通用覆盖，再应用资源专用覆盖；最近祖先始终更优先。
 - `Source` 只配置在 `group`：目录格式为 `{kind: "directory", path, task_type, recursive, version?}`，计划格式为 `{kind: "plan", plan_id}`。引用分组不保存可编辑 `children`。`plan` 不是合法任务类型。目录原型只展开 pathing/keymouse JSON 文件；超深、超量和访问失败明确报错，跳过重解析点。
-- 非根 `group.repeat_count` 可选，取值为 1—10000；缺省或 1 表示顺序执行一次，大于 1 时完整重复该分组的全部子项。固定展开的地址使用节点 ID、`@planId` 引用路径和 `#轮次`。`repeat` 不是合法任务类型。目录展开节点 ID 来自相对路径的 SHA-256，`source_task_id` 定位原引用分组。条件循环不是固定次数配置，若未来需要应建立独立、具备明确终止条件的执行语义。
+- 非根 `group.repeat_count` 可选，取值为 1—10000；缺省或 1 表示顺序执行一次，大于 1 时完整重复该分组的全部子项。固定展开的地址使用节点 ID、`@planId` 引用路径和 `#轮次`。`repeat` 不是合法任务类型。目录展开节点 ID 为 `res_` 加由小写相对路径派生的 16 位短 ID，同一目录内重复时明确报错，`source_task_id` 定位原引用分组。条件循环不是固定次数配置，若未来需要应建立独立、具备明确终止条件的执行语义。
 - `Policy` 按 `timeout_seconds`、`failure_behavior`、`max_retries`、`retry_delay_seconds` 字段继承。计划引用的内部树只接收引用节点显式配置的策略及公共参数，普通外部祖先配置不会隐式灌入。
 - `Triggers` 暂用 `JArray` 保留 JSON；账号绑定只定义身份引用及节点预设选择。调度、账号核验、运行状态和历史在对应步骤实现。
 - 原型采用 `PuloniaTaskPreparedTask` 和 `PuloniaTaskSnapshot` 两个只读运行表示。参数和策略通过防御性副本读取；快照保存原计划/预设 JSON、有效参数、来源和资源指纹，不含执行器实例。该只读运行表示已随步骤 1 的用户验收固定。

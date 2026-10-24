@@ -28,8 +28,12 @@ public partial class PuloniaGenshinAccountsViewModel : ObservableObject, IDispos
     private readonly IPuloniaGenshinAccountSwitcher _switcher;
     /// <summary>窗口关闭时取消尚在采集的操作。</summary>
     private readonly CancellationTokenSource _closed = new();
+    /// <summary>Windows 凭据目标名前缀，后接账号 ID；目标名按账号固定。</summary>
+    private const string CredentialTargetPrefix = "BetterGenshinImpact.Pulonia.Account.";
     /// <summary>密码草稿只保留在内存，账号目录只保存凭据引用。</summary>
     private readonly Dictionary<string, (string Username, string Password)> _credentialDrafts = [];
+    /// <summary>已从草稿移除账号的凭据目标名，账号目录保存成功后才删除。</summary>
+    private readonly HashSet<string> _removedCredentialTargets = new(StringComparer.Ordinal);
     /// <summary>上次读入或成功保存的目录修订。</summary>
     private long _revision;
     /// <summary>窗口是否正在释放。</summary>
@@ -114,7 +118,7 @@ public partial class PuloniaGenshinAccountsViewModel : ObservableObject, IDispos
         var account = new PuloniaGenshinAccountProfile(); Accounts.Add(account); SelectedAccount = account;
     }
 
-    /// <summary>拒绝移除仍由计划引用的资料；历史凭据和图片继续保留供快照续跑。</summary>
+    /// <summary>拒绝移除仍由计划引用的资料；保存成功后一并删除该账号的登录凭据，账号图片暂不清理。</summary>
     [RelayCommand] private async Task RemoveAccountAsync()
     {
         if (SelectedAccount is not { IsDefault: false } account || IsBusy) return;
@@ -124,16 +128,18 @@ public partial class PuloniaGenshinAccountsViewModel : ObservableObject, IDispos
             if ((await _store.ListPlansAsync(_closed.Token)).Any(plan => plan.Accounts.Any(binding => binding.AccountId == account.Id)))
                 throw new InvalidOperationException("仍有计划绑定此账号，请先将这些计划改为其他账号。");
             Accounts.Remove(account); SelectedAccount = Accounts.FirstOrDefault(); _credentialDrafts.Remove(account.Id);
-            Message = "账号已从草稿移除，保存后生效；历史运行的图片与凭据保留。";
+            // 凭据等账号目录保存成功后再删除；未保存就关闭窗口时账号仍在目录中，凭据必须保留。
+            if (account.CredentialReference is { } target) _removedCredentialTargets.Add(target);
+            Message = "账号已从草稿移除，保存后生效；保存时一并删除该账号的登录凭据，图片暂不清理。";
         }
         catch (Exception ex) { Message = ex.Message; }
         finally { IsBusy = false; }
     }
 
-    /// <summary>导入 1080p 登录列表中的账号标识图片，验证可解码后保存为独立 PNG。</summary>
+    /// <summary>导入 1080p 登录列表中的账号标识图片，验证可解码后另存为该账号的新 PNG，不覆盖已有图片。</summary>
     [RelayCommand] private async Task ImportImageAsync()
     {
-        if (!CanEditAccount || IsBusy) return;
+        if (SelectedAccount is not { IsDefault: false } account || IsBusy) return;
         var picker = new OpenFileDialog { Filter = "账号图片|*.png;*.jpg;*.jpeg", Title = "选择 1080p 登录列表中的账号标识裁剪图" };
         if (picker.ShowDialog() != true) return;
         IsBusy = true;
@@ -143,11 +149,9 @@ public partial class PuloniaGenshinAccountsViewModel : ObservableObject, IDispos
             using var image = Cv2.ImDecode(bytes, ImreadModes.Color);
             if (image.Empty() || image.Width > 1920 || image.Height > 1080)
                 throw new InvalidOperationException("请选择可解码的 1080p 账号标识裁剪图片，或使用自动采集。");
-            var relative = Path.Combine("account-images", Guid.NewGuid().ToString("N") + ".png");
-            var path = _store.GetAccountImagePath(relative);
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            await File.WriteAllBytesAsync(path, image.ImEncode(".png"), _closed.Token);
-            ImagePath = relative; Message = "图片已导入，保存账号目录后生效。";
+            // 每次导入都新建 account-images\<账号ID>-<时间>.png，已有运行快照引用的旧图片保持不变。
+            ImagePath = await _store.CreateAccountImageAsync(account.Id, image.ImEncode(".png"), _closed.Token);
+            Message = "图片已导入，保存账号目录后生效。";
         }
         catch (Exception ex) { Message = "图片未导入：" + ex.Message; }
         finally { IsBusy = false; }
@@ -156,7 +160,7 @@ public partial class PuloniaGenshinAccountsViewModel : ObservableObject, IDispos
     /// <summary>采集前确认会进入登录界面，过程共用游戏任务输入租约。</summary>
     [RelayCommand] private async Task CaptureImageAsync()
     {
-        if (!CanEditAccount || IsBusy) return;
+        if (SelectedAccount is not { IsDefault: false } account || IsBusy) return;
         if (await ThemedMessageBox.ShowAsync("将从当前已登录账号识别 UID，退出到登录界面采集账号标识，再返回游戏。请确认当前登录的是要保存的账号。",
                 "采集账号图片", System.Windows.MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Question,
                 System.Windows.MessageBoxResult.No) != System.Windows.MessageBoxResult.Yes) return;
@@ -164,7 +168,7 @@ public partial class PuloniaGenshinAccountsViewModel : ObservableObject, IDispos
         try
         {
             using var lease = await _coordinator.AcquireAsync(_closed.Token);
-            var result = await _switcher.CaptureCurrentAccountAsync(lease.Runtime, _closed.Token);
+            var result = await _switcher.CaptureCurrentAccountAsync(lease.Runtime, account.Id, _closed.Token);
             Uid = result.Uid; ImagePath = result.ImagePath;
             Message = "采集完成，已返回游戏。保存账号目录后生效。";
         }
@@ -172,7 +176,10 @@ public partial class PuloniaGenshinAccountsViewModel : ObservableObject, IDispos
         finally { IsBusy = false; }
     }
 
-    /// <summary>校验后保存整个目录；新凭据使用独立版本引用，不改变正在执行的旧快照。</summary>
+    /// <summary>
+    /// 校验后保存整个目录；凭据目标名按账号固定，再次保存时覆盖同名凭据。
+    /// 运行快照只记录凭据引用，排队中的运行在登录时读取，会使用最新保存的凭据。
+    /// </summary>
     [RelayCommand] private async Task SaveAsync()
     {
         if (IsBusy) return;
@@ -187,12 +194,17 @@ public partial class PuloniaGenshinAccountsViewModel : ObservableObject, IDispos
                 if (string.IsNullOrWhiteSpace(credentials.Username) || string.IsNullOrEmpty(credentials.Password))
                     throw new InvalidOperationException("保存登录凭据时必须同时填写账号和密码；无需更新凭据时请留空。");
                 var account = settings.Accounts.Single(a => a.Id == id);
-                account.CredentialReference = "BetterGenshinImpact.Pulonia.Account." + Guid.NewGuid().ToString("N");
+                // 同一账号始终写入同一目标名，覆盖旧凭据而不是另建条目，避免旧凭据持续累积。
+                // 凭据先于账号目录写入：目录保存失败时，下次保存仍写入同一目标名，不会遗留孤立条目。
+                account.CredentialReference = CredentialTargetPrefix + account.Id;
                 CredentialManagerHelper.SaveCredential(account.CredentialReference, credentials.Username, credentials.Password,
                     "Pulonia 原神登录资料", CredentialPersistence.LocalMachine);
             }
             var saved = await _store.SaveAccountSettingsAsync(settings, _closed.Token);
             _revision = saved.Revision; _credentialDrafts.Clear(); LoginPassword = ""; LoginUsername = "";
+            // 账号目录已不再引用被移除的账号，此时删除其凭据；仍在排队且使用这些账号的运行将无法再用密码登录。
+            foreach (var target in _removedCredentialTargets) CredentialManagerHelper.DeleteCredential(target);
+            _removedCredentialTargets.Clear();
             Message = "账号目录已保存。";
         }
         catch (Exception ex) { Message = "未保存：" + ex.Message; }

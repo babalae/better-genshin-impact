@@ -17,7 +17,7 @@ public sealed class PuloniaRemoteExecutionTests : IDisposable
     /// <summary>
     /// 每个测试独占的状态与历史目录
     /// </summary>
-    private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-pulonia-remote-" + Guid.NewGuid().ToString("N"));
+    private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-" + BetterGenshinImpact.Helpers.ShortId.Create(null, 8));
 
     /// <summary>
     /// 测试使用的云原神执行目标
@@ -228,7 +228,7 @@ public sealed class PuloniaRemoteExecutionTests : IDisposable
     [Fact]
     public async Task Restart_ArchivesLeftoverRemoteActiveRunAsInterrupted()
     {
-        Guid id;
+        string id;
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var remoteRegistry = new PuloniaCSharpTaskRegistry();
         remoteRegistry.Register("test.wait", async (_, _, ct) =>

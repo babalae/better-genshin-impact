@@ -44,7 +44,7 @@ public sealed partial class PuloniaTaskService
 
     /// <summary>在本进程的游戏中准备账号并返回完整核验 UID；续跑时核验历史 UID。</summary>
     /// <param name="state">本次运行状态</param>
-    /// <param name="account">冻结的账号资料</param>
+    /// <param name="account">运行快照中固定的账号资料；图片按快照路径读取，凭据按账号固定目标名读取最新值</param>
     /// <param name="ct">取消令牌</param>
     private async Task<string> PrepareLocalGenshinAccountAsync(RunState state, PuloniaGenshinAccountProfile account,
         CancellationToken ct)

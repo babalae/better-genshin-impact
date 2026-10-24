@@ -8,15 +8,19 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Helpers;
 using LibGit2Sharp;
 using Newtonsoft.Json;
 
 namespace BetterGenshinImpact.Core.Script.Repositories;
 
-/// <summary>管理远程来源注册、按资源保留的版本归档和共享资源缓存；不依赖任务页面。</summary>
+/// <summary>
+/// 管理远程来源注册、按资源保留的版本归档、JS 工作目录与预览；不依赖任务页面。
+/// 目录名和文件名只使用短 ID 与可读名称，哈希和来源修订只保存在 JSON 中，避免 Windows 路径过长。
+/// </summary>
 public sealed partial class ScriptRepositoryStore
 {
-    /// <summary>Pulonia 共用的资源存储，归档、缓存和脚本工作数据随任务系统集中保存。</summary>
+    /// <summary>Pulonia 共用的资源存储，归档和脚本工作数据随任务系统集中保存。</summary>
     public static ScriptRepositoryStore Shared { get; } = new(Global.Absolute("User/Pulonia/ScriptResources"), Global.Absolute("Repos"));
     /// <summary>资源区根目录，与更新器能够重置的 Repos 目录分开。</summary>
     public string RootDirectory { get; }
@@ -55,9 +59,9 @@ public sealed partial class ScriptRepositoryStore
         }
 
         var removed = 0;
+        // Locks 目录只由本存储写入，目录下的全部 *.lock 都按可读锁名处理。
         foreach (var path in paths)
         {
-            if (!IsOwnedLockFile(path)) continue;
             try
             {
                 // 独占打开并在关闭句柄时原子删除；其他实例持有或等待同名锁时不会形成两个锁文件。
@@ -73,22 +77,23 @@ public sealed partial class ScriptRepositoryStore
         return removed;
     }
 
-    /// <summary>检查文件是否符合本存储生成的 SHA-256 锁文件命名格式。</summary>
-    private static bool IsOwnedLockFile(string path)
-    {
-        var name = Path.GetFileNameWithoutExtension(path);
-        return name.Length == 64 && name.All(character => character is >= '0' and <= '9' or >= 'a' and <= 'f');
-    }
-
     /// <summary>取得跨进程来源锁；更新器与读取服务使用相同的短期临界区。</summary>
     public Task<FileStream> EnterSourceAccessAsync(CancellationToken ct = default) => AcquireLockAsync("sources", ct);
 
-    /// <summary>取得独立文件锁，不依赖线程亲和的 Mutex，等待期间支持取消。</summary>
-    private async Task<FileStream> AcquireLockAsync(string key, CancellationToken ct)
+    /// <summary>
+    /// 取得 <c>Locks\&lt;名称&gt;.lock</c> 跨进程锁。名称为 sources、registry、selection 或 retain.&lt;仓库ID&gt;。
+    /// 锁顺序固定为：工作目录锁 → retain → sources → registry，持有后者时不再取得前者。
+    /// </summary>
+    private Task<FileStream> AcquireLockAsync(string name, CancellationToken ct)
     {
         var directory = Path.Combine(RootDirectory, "Locks");
         Directory.CreateDirectory(directory);
-        var path = Path.Combine(directory, Hash(key) + ".lock");
+        return AcquireFileLockAsync(Path.Combine(directory, name + ".lock"), ct);
+    }
+
+    /// <summary>独占打开指定锁文件，不依赖线程亲和的 Mutex，等待期间支持取消。</summary>
+    private static async Task<FileStream> AcquireFileLockAsync(string path, CancellationToken ct)
+    {
         while (true)
         {
             ct.ThrowIfCancellationRequested();
@@ -101,7 +106,8 @@ public sealed partial class ScriptRepositoryStore
     /// <summary>原子写入配置，失败时不会覆盖旧文件。</summary>
     private static void WriteJson(string path, object value)
     {
-        var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        // 临时名与目标名无关，不让长文件名再叠加一段随机后缀。
+        var temporary = Path.Combine(Path.GetDirectoryName(path)!, ShortId.NewTemporaryName());
         try
         {
             File.WriteAllText(temporary, JsonConvert.SerializeObject(value, Formatting.Indented), Utf8);
@@ -117,6 +123,16 @@ public sealed partial class ScriptRepositoryStore
         return File.Exists(path)
             ? JsonConvert.DeserializeObject<List<ScriptRepositoryRegistration>>(File.ReadAllText(path, Utf8))
               ?? throw new IOException("仓库注册文件为空。") : [];
+    }
+
+    /// <summary>生成未被已有注册占用的仓库 ID（<c>rep_</c> + 16 位）；调用方须持有 registry 锁。</summary>
+    private static string NewRepositoryId(IReadOnlyCollection<ScriptRepositoryRegistration> registrations)
+    {
+        while (true)
+        {
+            var id = ShortId.Create("rep");
+            if (registrations.All(r => r.Id != id)) return id;
+        }
     }
 
     /// <summary>注册或显式重新定位来源；稳定 ID 不从文件夹名称推断。</summary>
@@ -148,11 +164,12 @@ public sealed partial class ScriptRepositoryStore
         }
         var registration = new ScriptRepositoryRegistration
         {
-            Id = existing?.Id ?? Guid.NewGuid().ToString("N"), Directory = directory,
+            Id = existing?.Id ?? NewRepositoryId(registrations), Directory = directory,
             Name = name ?? existing?.Name ?? Path.GetFileName(directory),
             IsEnabled = reactivate || existing?.IsEnabled != false,
             Kind = existing?.Kind ?? "local", Remotes = existing?.Remotes ?? [],
-            ActiveRemoteId = existing?.ActiveRemoteId, Branch = existing?.Branch ?? "release"
+            ActiveRemoteId = existing?.ActiveRemoteId, Branch = existing?.Branch ?? "release",
+            SourceGeneration = existing?.SourceGeneration
         };
         if (existing is not null && existing.Directory == registration.Directory && existing.Name == registration.Name
             && existing.IsEnabled == registration.IsEnabled)
@@ -217,7 +234,8 @@ public sealed partial class ScriptRepositoryStore
         {
             Id = registration.Id, Name = registration.Name, Directory = registration.Directory, IsEnabled = false,
             Kind = registration.Kind, Remotes = registration.Remotes,
-            ActiveRemoteId = registration.ActiveRemoteId, Branch = registration.Branch
+            ActiveRemoteId = registration.ActiveRemoteId, Branch = registration.Branch,
+            SourceGeneration = registration.SourceGeneration
         };
         // 禁用标记持久化后自动发现不会重新加入；用户显式添加相同目录才恢复。
         WriteJson(Path.Combine(RootDirectory, "repositories.json"), registrations);
@@ -270,7 +288,7 @@ public sealed partial class ScriptRepositoryStore
         return OpenSnapshot(registration, reference.ApprovedRevision);
     }
 
-    /// <summary>为一个已保留版本打开独立的资源读取会话，兼容已有 Git 和整仓 ZIP 快照。</summary>
+    /// <summary>为一个已保留版本打开独立的资源读取会话，内容来自仓库归档目录中的归档块。</summary>
     private ScriptRepositorySnapshot OpenSnapshot(ScriptRepositoryRegistration registration, string revision)
         => new(registration, revision, Path.Combine(RootDirectory, "Snapshots", registration.Id));
 
@@ -305,7 +323,7 @@ public sealed partial class ScriptRepositoryStore
                     }
                     catch { repository.Dispose(); throw; }
                 }
-                var inventory = ReadFileSourceInventory(sourcePath, ct);
+                var inventory = ReadFileSourceInventory(registration, ct);
                 if (revision is not null && revision != inventory.Revision)
                     throw new IOException("文件式仓库已更新，请刷新资源列表；不能替换为最新内容。");
                 return new ScriptRepositorySnapshot(registration, inventory.Revision, inventory.Files, gate,
@@ -317,19 +335,15 @@ public sealed partial class ScriptRepositoryStore
 
     /// <summary>文件式来源只读取索引正文和文件元数据，内容指纹在预览或提取对应资源时才计算。</summary>
     private (string Revision, string Generation, IReadOnlyDictionary<string, (string PhysicalPath, string Hash, long Length, DateTime Modified)> Files)
-        ReadFileSourceInventory(string sourcePath, CancellationToken ct)
+        ReadFileSourceInventory(ScriptRepositoryRegistration registration, CancellationToken ct)
     {
+        var sourcePath = registration.Directory;
         if (!File.Exists(Path.Combine(sourcePath, "repo.json")) || !Directory.Exists(Path.Combine(sourcePath, "repo")))
             throw new IOException("文件式仓库必须包含 repo.json 和 repo/ 目录。");
         var files = EnumerateSourceFiles(sourcePath, ct);
-        var generationPath = Path.Combine(RootDirectory, "SourceVersions", Hash(sourcePath) + ".json");
-        // 跨进程使用持久化代次，ZIP 保留文件时间且内容等长时也不能复用旧哈希。
-        if (!File.Exists(generationPath))
-        {
-            Directory.CreateDirectory(Path.GetDirectoryName(generationPath)!);
-            WriteJson(generationPath, Guid.NewGuid().ToString("N"));
-        }
-        var generation = File.ReadAllText(generationPath, Utf8);
+        // 跨进程使用注册中持久化的导入代次，ZIP 保留文件时间且内容等长时也不能复用旧哈希。
+        // 调用方持有 sources 锁，这里重新读取注册，不使用取得锁之前可能已过期的注册副本。
+        var generation = EnsureSourceGeneration(registration.Id);
         var indexHash = Hash(File.ReadAllBytes(Path.Combine(sourcePath, "repo.json")));
         var entries = new Dictionary<string, (string PhysicalPath, string Hash, long Length, DateTime Modified)>(StringComparer.Ordinal);
         foreach (var file in files)
@@ -349,6 +363,23 @@ public sealed partial class ScriptRepositoryStore
             + string.Join("\n", entries.Select(f => f.Key + "\0" + f.Value.Length + "\0" + f.Value.Modified.Ticks)));
         // 读取所选资源时再次核对固定元数据和已经取得的内容指纹，拒绝发布混合内容。
         return (revision, generation, entries);
+    }
+
+    /// <summary>
+    /// 读取注册当前的导入代次；尚无代次时生成并持久化，返回最终生效的值。
+    /// 调用方可能持有 sources 锁；这里只取 registry 锁，与其他路径的锁顺序一致。
+    /// </summary>
+    private string EnsureSourceGeneration(string repositoryId)
+    {
+        using var gate = AcquireLockAsync("registry", CancellationToken.None).GetAwaiter().GetResult();
+        var registrations = ReadRegistrations();
+        var index = registrations.FindIndex(r => r.Id == repositoryId);
+        if (index < 0) throw new IOException("未注册的脚本仓库：" + repositoryId);
+        if (registrations[index].SourceGeneration is { } existing) return existing;
+        var generation = ShortId.Create(null);
+        registrations[index] = registrations[index].WithSourceGeneration(generation);
+        WriteJson(Path.Combine(RootDirectory, "repositories.json"), registrations);
+        return generation;
     }
 
     /// <summary>有限扫描文件式来源；不归档 Git 元数据和界面更新标记。</summary>
@@ -385,10 +416,7 @@ public sealed partial class ScriptRepositoryStore
         {
             directory = Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory));
             _fileHashes.Clear();
-            var generationDirectory = Path.Combine(RootDirectory, "SourceVersions");
-            Directory.CreateDirectory(generationDirectory);
-            WriteJson(Path.Combine(generationDirectory, Hash(directory) + ".json"), Guid.NewGuid().ToString("N"));
-            var registrations = GetRegisteredForNotification();
+            var registrations = RenewSourceGenerations(directory);
             foreach (var registration in registrations.Where(r => string.Equals(r.Directory, directory, StringComparison.OrdinalIgnoreCase)))
             {
                 // 调用方持有来源锁；事件只携带版本，不在更新结束时为整仓制作快照。
@@ -398,7 +426,7 @@ public sealed partial class ScriptRepositoryStore
                     using var repository = new Repository(directory);
                     revision = repository.Head.Tip?.Sha ?? throw new IOException("仓库没有可用提交。");
                 }
-                else revision = ReadFileSourceInventory(directory, CancellationToken.None).Revision;
+                else revision = ReadFileSourceInventory(registration, CancellationToken.None).Revision;
                 if (RepositoryChanged is not { } changed) continue;
                 foreach (EventHandler<ScriptRepositoryChangedEventArgs> handler in changed.GetInvocationList())
                     try { handler(this, new ScriptRepositoryChangedEventArgs(registration.Id, revision)); }
@@ -408,11 +436,24 @@ public sealed partial class ScriptRepositoryStore
         catch (Exception ex) { System.Diagnostics.Debug.WriteLine(ex); }
     }
 
-    /// <summary>在更新器持有来源锁时只读取注册文件，避免重复取得来源锁。</summary>
-    private IReadOnlyList<ScriptRepositoryRegistration> GetRegisteredForNotification()
+    /// <summary>
+    /// 为目录匹配的文件式注册重新生成导入代次并返回全部注册；Git 来源的修订来自提交，不需要代次。
+    /// 更新器持有来源锁时调用，这里只取 registry 锁，避免重复取得来源锁。
+    /// </summary>
+    private IReadOnlyList<ScriptRepositoryRegistration> RenewSourceGenerations(string directory)
     {
         using var gate = AcquireLockAsync("registry", CancellationToken.None).GetAwaiter().GetResult();
-        return ReadRegistrations();
+        var registrations = ReadRegistrations();
+        if (Repository.IsValid(directory)) return registrations;
+        var changed = false;
+        for (var index = 0; index < registrations.Count; index++)
+        {
+            if (!string.Equals(registrations[index].Directory, directory, StringComparison.OrdinalIgnoreCase)) continue;
+            registrations[index] = registrations[index].WithSourceGeneration(ShortId.Create(null));
+            changed = true;
+        }
+        if (changed) WriteJson(Path.Combine(RootDirectory, "repositories.json"), registrations);
+        return registrations;
     }
 
     /// <summary>生成规范化、大小写固定的内容标识。</summary>

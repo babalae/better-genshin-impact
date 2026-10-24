@@ -61,16 +61,16 @@ public partial class PuloniaTaskPlanViewModel
                     && node.Model.Resource is null && node.Model.Source?.Resource is null);
             if (pendingUpdates > 0)
                 throw new InvalidOperationException($"“{document.Name}”有 {pendingUpdates} 项启用中的资源更新，请先点击计划卡片的更新任务资源按钮。");
-            var requestId = await _taskService.EnqueueAsync(new PuloniaTaskRequest
+            var runId = await _taskService.EnqueueAsync(new PuloniaTaskRequest
             {
                 PlanId = document.Id,
                 Source = "ui",
                 ExecutionTarget = executionTarget
             });
-            await History.RevealRunAsync(requestId);
+            await History.RevealRunAsync(runId);
             StatusMessage = executionTarget is null
-                ? $"已提交“{document.Name}”，请求 {requestId:D} 已固定快照并进入串行队列。"
-                : $"已提交“{document.Name}”到“{executionTarget.DisplayName}”，请求 {requestId:D} 已固定快照并进入该实例的执行队列。";
+                ? $"已提交“{document.Name}”，运行 {runId} 已固定快照并进入串行队列。"
+                : $"已提交“{document.Name}”到“{executionTarget.DisplayName}”，运行 {runId} 已固定快照并进入该实例的执行队列。";
         }
         catch (Exception ex)
         {

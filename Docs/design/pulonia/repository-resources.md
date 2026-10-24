@@ -28,7 +28,7 @@
 
 ```json
 {
-  "repository_id": "32位小写本机注册ID",
+  "repository_id": "本机注册ID：官方为 official，其他为 rep_ 加 16 位短 ID",
   "relative_path": "js/自动采集",
   "approved_revision": "40位Git提交或64位文件仓库来源版本"
 }
@@ -38,24 +38,24 @@
 
 ```text
 Repos/bettergi-scripts-list/                  共享的固定官方 clone
-Repos/Pulonia/<仓库ID>/                      固定的第三方 clone
-User/Pulonia/ScriptResources/repositories.json   稳定身份、名称、本地位置
+Repos/Pulonia/<rep_…>/                       固定的第三方 clone
+User/Pulonia/ScriptResources/repositories.json   稳定身份、名称、本地位置、文件来源导入代次
 User/Pulonia/ScriptResources/selection.json      JS、地图追踪各自上次选择
-User/Pulonia/ScriptResources/Snapshots/<仓库ID>/Archives/<内容块ID>.zip
-User/Pulonia/ScriptResources/Snapshots/<仓库ID>/<版本>/scopes.json
-User/Pulonia/ScriptResources/Previews/<仓库ID>/<版本>/<资源键>/
-User/Pulonia/ScriptResources/Cache/<仓库ID>/<版本>/<资源键>/content/
-User/Pulonia/ScriptResources/Workspaces/<仓库ID>/<资源键>/
-User/Pulonia/ScriptResources/Locks/              跨实例文件锁
-User/Pulonia/ScriptResources/SourceVersions/     文件来源的更新代次
+User/Pulonia/ScriptResources/Snapshots/<仓库ID>/retained.json   修订 → 范围 → 归档块；归档块 → 内容身份
+User/Pulonia/ScriptResources/Snapshots/<仓库ID>/<blk_…>.zip     归档块
+User/Pulonia/ScriptResources/Workspaces/<仓库ID>/<JS 项目相对路径>/   JS 工作目录，同级 <项目目录名>.lock 为工作目录锁
+User/Pulonia/ScriptResources/Previews/<pv_…>/   一次性预览，用完即删
+User/Pulonia/ScriptResources/Locks/              sources、registry、selection、retain.<仓库ID> 跨实例文件锁
 User/Pulonia/                               原有计划、参数、运行记录
 ```
 
+目录名和文件名只使用短 ID 与可读名称；来源修订、内容身份和资源指纹只保存在 JSON 中，详见[标识与磁盘路径整治](identifiers-and-paths.md)。
+
 资源数据归属 Pulonia，统一保存到 `User/Pulonia/ScriptResources`，便于和计划、参数及运行记录一起管理和备份。程序直接使用新目录，不迁移或回退读取旧 `User/ScriptResources`；旧数据由用户自行删除。原始拉取来源仍在 `Repos`，添加的本地来源保持自己的位置。
 
-`Locks` 中的 SHA-256 命名空文件只作为跨实例独占句柄，不保存业务数据。BetterGI 宿主启动完成、实例上下文已初始化后，仅主实例尽力清理当前没有被任何实例持有的锁文件；活跃锁因无法独占打开而保留，异常退出产生的残留文件不需要等到正常关闭才能回收。清理与日志记录失败均不得中断程序启动。
+`Locks` 中按可读名称命名的空文件只作为跨实例独占句柄，不保存业务数据；锁顺序固定为工作目录锁 → retain → sources → registry。BetterGI 宿主启动完成、实例上下文已初始化后，仅主实例尽力清理当前没有被任何实例持有的锁文件；活跃锁因无法独占打开而保留，异常退出产生的残留文件不需要等到正常关闭才能回收。清理与日志记录失败均不得中断程序启动。
 
-`repositories.json` 保存仓库身份、名称、类型、本地目录、远端集合、当前远端和分支；`selection.json` 保存 JS 与地图追踪各自上次选择的仓库。官方渠道与自定义地址继续保存在 `User/config.json` 的 `ScriptConfig` 配置中，保证两个官方更新入口同步。Git 用户名与令牌保存在 Windows 凭据管理器的 `BetterGenshinImpact.GitCredentials` 项中。
+`repositories.json` 保存仓库身份、名称、类型、本地目录、远端集合、当前远端、分支和文件来源导入代次 `source_generation`；`selection.json` 保存 JS 与地图追踪各自上次选择的仓库。官方渠道与自定义地址继续保存在 `User/config.json` 的 `ScriptConfig` 配置中，保证两个官方更新入口同步。Git 用户名与令牌保存在 Windows 凭据管理器的 `BetterGenshinImpact.GitCredentials` 项中。
 
 仓库注册、版本会话和提取由共享的 `ScriptRepositoryStore` 提供。每次读取会话固定一个版本；索引、检查和提取不重复读取 HEAD 拼接内容。
 
@@ -63,17 +63,17 @@ User/Pulonia/                               原有计划、参数、运行记录
 
 列表只解析固定来源版本中的 `repo.json`，复用仓库 Web 页的资源清单，不遍历 Git 正文、不提取资源、不制作版本快照。Git 来源直接读取提交对象，即使只检出索引也能浏览。文件式来源仅扫描文件元数据并读取索引，版本由索引、元数据与持久化导入代次共同确定，正文指纹延迟到使用对应文件时计算。更新导入会变更代次，覆盖解压后文件大小和时间都未变化的情况。
 
-JS 预览只提取 `manifest.json`、声明的设置文件和可选的 `README.md` 到 `Previews`，不复制代码、图片、模块或公共包。切换选择和取消弹窗会取消旧预览。预览仍使用索引对应的精确版本，来源已不可用时要求刷新，不改读最新内容。
+JS 预览只提取 `manifest.json`、声明的设置文件和可选的 `README.md` 到一次性目录 `Previews\pv_…`，不复制代码、图片、模块或公共包；切换选择或关闭弹窗时删除该目录。切换选择和取消弹窗会取消旧预览。预览仍使用索引对应的精确版本，来源已不可用时要求刷新，不改读最新内容。
 
-确认添加或更新时才保留实际引用内容，新快照不包含 `.git`、整仓历史或其他 JS 项目。路线保存所选 JSON 或所选目录。JS 保存完整项目、同版本的公共 `packages` 和 `repo/pathing`；动态路线读取、目录枚举不能静态推断，因此所有引用同版本的 JS 共享该路线块。内容块存为 ZIP，固定版本的 `scopes.json` 记录范围与内容块身份；Git 子树 ID 或文件内容指纹未变化时跨版本复用归档。完整内容块发布后才原子发布映射，归档过程核对文件内容，来源重置、更新或重新克隆不影响已批准资源。
+确认添加或更新时才保留实际引用内容，新快照不包含 `.git`、整仓历史或其他 JS 项目。路线保存所选 JSON 或所选目录。JS 保存完整项目、同版本的公共 `packages` 和 `repo/pathing`；动态路线读取、目录枚举不能静态推断，因此所有引用同版本的 JS 共享该路线块。内容块存为以短 ID 命名的 ZIP，仓库的 `retained.json` 记录各修订的范围与内容块，以及内容块的内容身份；Git 子树 ID 或文件内容指纹未变化时跨版本复用归档。完整内容块发布后才原子替换索引，归档过程核对文件内容，来源重置、更新或重新克隆不影响已批准资源。块已写入、索引尚未更新时崩溃会留下孤儿块，暂不清理。
 
-旧 `objects.git` 和整仓 `<版本>.zip` 快照继续兼容读取，不自动删除，也不为新确认版本建立整仓对象库。
+2026-10-24 起不再读取旧 `objects.git`、整仓 `<版本>.zip` 和 `scopes.json`，开发期旧数据由开发者手动删除。
 
 保留版本是执行策略，并非浏览仓库的技术前提。目前继续采用“用户确认后才替换内容”，因此已选资源必须保留，以支持来源删除、仓库重置和旧运行续跑。若改为随仓库最新内容运行，可以省去旧版本保留，但更新会直接影响任务，不能继续承诺上述行为。取消版本保留需要独立调整执行合同，当前不会自动删除已保留数据。
 
-路线按需提取 JSON；目录引用固定对应版本的 JSON 清单。JS 提取完整项目及同版本的公共 `packages`，动态依赖不会读取最新来源。缓存键包含完整仓库版本，不使用两文件指纹代替版本。
+不再生成提取缓存。路线和键鼠执行时直接从已保留归档读取正文，路线以 `User\AutoPathing` 下对应的逻辑路径识别材料；目录引用在固定快照上列出 JSON 清单，排序与目录指纹计算共用。JS 由归档直接准备工作目录，包括完整项目及同版本的公共 `packages`，动态依赖不会读取最新来源。运行快照只记录 `resource`，不记录本机路径。
 
-缓存通过临时目录、完整性清单、校验和原子重命名发布。JSON 语法、JS 清单、入口及声明的设置文件校验失败时不产生任务引用。损坏或缺失的缓存只能从原批准版本重建，不能回退到当前来源。提取所有候选资源成功后，确认命令才修改计划。
+首次保留资源时校验 JSON 语法、JS 清单、入口及声明的设置文件，校验失败不产生归档和任务引用；资源已被同修订的其他范围覆盖时（例如 JS 共享的 `repo/pathing`），路线正文由执行器解析时校验。保留所有候选资源成功后，确认命令才修改计划。
 
 目前不自动清理保留版本；后续清理必须先核对计划、运行快照与保留记录，不能按当前 HEAD 或缓存时间删除旧版本。
 
@@ -97,7 +97,7 @@ JS 预览只提取 `manifest.json`、声明的设置文件和可选的 `README.m
 
 `ScriptProject` 保留原构造入口，Pulonia 传入经过校验的工作目录和固定来源上下文。`pathingScript.RunFileFromUser`、文件/目录存在查询、目录枚举及路线文本读取映射到该版本的 `repo/pathing`；缺失资源明确失败，不搜索其他仓库。非 Pulonia 调用继续使用 `User/AutoPathing`。
 
-JS 执行前从缓存准备工作副本，准备和执行全程持有按仓库与脚本划分的跨实例文件锁。版本切换保留旧、新 `manifest.saved_files` 声明的数据；入口和清单采用确认内容。任务参数仍由各计划分别持有，工作目录中的代码修改不回写缓存。
+JS 执行前从已保留归档准备工作副本，准备和执行全程持有按仓库与脚本划分的跨实例文件锁。工作目录镜像仓库相对路径；嵌套的 JS 项目或只差大小写的两个项目路径会落到同一目录，暂不支持。版本切换保留旧、新 `manifest.saved_files` 声明的数据；入口和清单采用确认内容。任务参数仍由各计划分别持有，工作目录中的代码修改不回写缓存。
 
 ## 验证
 

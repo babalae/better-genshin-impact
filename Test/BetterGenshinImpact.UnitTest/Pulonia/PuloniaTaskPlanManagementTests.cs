@@ -18,7 +18,7 @@ public sealed class PuloniaTaskPlanManagementTests : IDisposable
     /// <summary>
     /// 测试独占目录，避免接触程序真实计划和历史。
     /// </summary>
-    private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-pulonia-plans-" + Guid.NewGuid().ToString("N"));
+    private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-" + BetterGenshinImpact.Helpers.ShortId.Create(null, 8));
 
     /// <summary>
     /// 整份复制重新映射账号预设和触发目标，保留参数类型、引用和配置，且不修改来源。
@@ -123,7 +123,7 @@ public sealed class PuloniaTaskPlanManagementTests : IDisposable
         plan = await store.SavePlanAsync(plan);
         var record = new PuloniaTaskRunRecord
         {
-            RequestId = Guid.NewGuid(), RunId = Guid.NewGuid(), Request = new PuloniaTaskRequest { PlanId = plan.Id },
+            RunId = PuloniaId.NewRunId(DateTimeOffset.Now), Request = new PuloniaTaskRequest { PlanId = plan.Id },
             PlanName = plan.Name, SnapshotJson = "{}", Status = PuloniaTaskRunStatus.Succeeded,
             Message = "完成", SubmittedAt = DateTimeOffset.UtcNow
         };

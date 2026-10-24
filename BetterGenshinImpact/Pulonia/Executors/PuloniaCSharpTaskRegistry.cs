@@ -93,7 +93,7 @@ public sealed class PuloniaCSharpTaskRegistry
         {
             ["sum"] = sum,
             ["value_count"] = values.Count,
-            ["run_id"] = context.RunId.ToString("D")
+            ["run_id"] = context.RunId
         });
     }
 

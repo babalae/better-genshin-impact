@@ -12,17 +12,12 @@ public sealed class PuloniaTaskRunRecord
     /// <summary>执行前完整核验的实际 UID，续跑与账本使用此身份。</summary>
     [JsonProperty("verified_uid")]
     public string? VerifiedUid { get; set; }
-    /// <summary>
-    /// 请求 ID。
-    /// </summary>
-    [JsonProperty("request_id", Required = Required.Always)]
-    public Guid RequestId { get; set; }
 
     /// <summary>
-    /// 运行 ID。
+    /// 运行 ID，形如 <c>run_yyyyMMdd-HHmmss-xxxx</c>；提交、查询、取消、历史文件名和账本键都使用此身份。
     /// </summary>
     [JsonProperty("run_id", Required = Required.Always)]
-    public Guid RunId { get; set; }
+    public string RunId { get; set; } = string.Empty;
 
     /// <summary>
     /// 固定后的调用请求。
@@ -106,7 +101,7 @@ public sealed class PuloniaTaskRunRecord
     /// 来源运行 ID；普通新运行为空。
     /// </summary>
     [JsonProperty("resumed_from_run_id")]
-    public Guid? ResumedFromRunId { get; set; }
+    public string? ResumedFromRunId { get; set; }
 
     /// <summary>
     /// 执行前已落盘、但尚未由确认事件结清的操作意图。

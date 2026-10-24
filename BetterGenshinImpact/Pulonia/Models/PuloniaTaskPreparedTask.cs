@@ -66,7 +66,8 @@ public sealed class PuloniaTaskPreparedTask
     public bool IsEnabled { get; }
 
     /// <summary>
-    /// 解析后的资源绝对路径。
+    /// 本地资源解析后的绝对路径；仓库资源为空，执行器按 <see cref="Resource"/> 从已保留归档读取，
+    /// 运行快照不记录本机缓存位置。
     /// </summary>
     [JsonProperty("path")]
     public string? Path { get; }

@@ -13,7 +13,7 @@ namespace BetterGenshinImpact.UnitTest.Pulonia;
 public sealed class PuloniaGenshinAccountTests : IDisposable
 {
     /// <summary>本测试独占的目录，不接触用户真实账号与凭据。</summary>
-    private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-pulonia-account-" + Guid.NewGuid().ToString("N"));
+    private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-" + BetterGenshinImpact.Helpers.ShortId.Create(null, 8));
 
     /// <summary>首次使用无需目录文件，默认账号不会包含目标 UID 或登录凭据。</summary>
     [Fact] public async Task DefaultAccountNeedsNoConfiguration()
@@ -61,7 +61,7 @@ public sealed class PuloniaGenshinAccountTests : IDisposable
         var second = new PuloniaTaskRequest { AccountId = "profile_b" };
         var now = DateTimeOffset.UtcNow;
         var entry = PuloniaTaskAvailability.CreateLedgerEntry(first, rule,
-            new PuloniaTaskCompletionEvent { RuleId = rule.RuleId, OccurredAt = now, Units = 1 }, "event", Guid.NewGuid(), "task", "100000001");
+            new PuloniaTaskCompletionEvent { RuleId = rule.RuleId, OccurredAt = now, Units = 1 }, "event", PuloniaId.NewRunId(now), "task", "100000001");
         Assert.False(PuloniaTaskAvailability.Evaluate(second, [rule], [entry], [], now, "100000001").IsAllowed);
         Assert.True(PuloniaTaskAvailability.Evaluate(second, [rule], [entry], [], now, "100000002").IsAllowed);
         Assert.Equal("cn/world/owner", PuloniaTaskAvailability.BuildScopeKey(new() { WorldOwnerAccountId = "owner" }, PuloniaTaskScopeKind.World, "100000001"));
@@ -93,18 +93,17 @@ public sealed class PuloniaGenshinAccountTests : IDisposable
         await Assert.ThrowsAsync<InvalidOperationException>(() => service.EnqueueAsync(new() { PlanId = plan.Id, AccountId = "other" }));
     }
 
-    /// <summary>账号图片缓存是内容固定版本，更新原图不影响旧快照。</summary>
-    [Fact] public async Task FrozenImageDoesNotFollowOriginalChanges()
+    /// <summary>账号图片每次都新建可读文件名，不覆盖旧图片，旧快照引用的内容保持不变。</summary>
+    [Fact] public async Task AccountImagesAreNeverOverwritten()
     {
         using var store = new PuloniaTaskStore(_directory);
-        Directory.CreateDirectory(Path.Combine(_directory, "account-images"));
-        var account = new PuloniaGenshinAccountProfile { Uid = "100000001", ImagePath = "account-images/input.png" };
-        var source = store.GetAccountImagePath(account.ImagePath);
-        await File.WriteAllBytesAsync(source, [1, 2, 3]);
-        var frozen = store.FreezeAccount(account);
-        await File.WriteAllBytesAsync(source, [4, 5, 6]);
-        Assert.Equal(new byte[] { 1, 2, 3 }, await File.ReadAllBytesAsync(store.GetAccountImagePath(frozen.ImagePath!)));
-        Assert.NotEqual(frozen.ImageVersion, store.FreezeAccount(account).ImageVersion);
+        var account = new PuloniaGenshinAccountProfile { Uid = "100000001" };
+        var first = await store.CreateAccountImageAsync(account.Id, [1, 2, 3]);
+        var second = await store.CreateAccountImageAsync(account.Id, [4, 5, 6]);
+        Assert.NotEqual(first, second);
+        Assert.Matches("^account-images\\\\" + account.Id + "-\\d{8}-\\d{6}(-\\d+)?\\.png$", first);
+        Assert.Equal(new byte[] { 1, 2, 3 }, await File.ReadAllBytesAsync(store.GetAccountImagePath(first)));
+        Assert.Equal(new byte[] { 4, 5, 6 }, await File.ReadAllBytesAsync(store.GetAccountImagePath(second)));
         Assert.Throws<InvalidOperationException>(() => store.GetAccountImagePath("../outside.png"));
     }
 
@@ -140,7 +139,7 @@ public sealed class PuloniaGenshinAccountTests : IDisposable
         public Task VerifyAsync(GameRuntime runtime, string expectedUid, CancellationToken ct)
         { Calls++; throw new InvalidOperationException("纯任务不能核验游戏"); }
         /// <inheritdoc />
-        public Task<(string Uid, string ImagePath)> CaptureCurrentAccountAsync(GameRuntime runtime, CancellationToken ct)
+        public Task<(string Uid, string ImagePath)> CaptureCurrentAccountAsync(GameRuntime runtime, string accountId, CancellationToken ct)
         { Calls++; throw new InvalidOperationException("纯任务不能采集账号"); }
     }
 

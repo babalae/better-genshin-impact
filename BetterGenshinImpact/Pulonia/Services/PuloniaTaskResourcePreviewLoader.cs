@@ -18,13 +18,34 @@ public static class PuloniaTaskResourcePreviewLoader
 {
     /// <summary>
     /// 加载一项资源的轻量详情；JS 只解析清单与设置定义，README 交给原生控件读取。
+    /// 仓库 JS 预览持有一次性预览目录，调用方在不再显示时释放返回的预览。
     /// </summary>
     public static async Task<PuloniaTaskResourcePreview> LoadAsync(PuloniaTaskResourceDescriptor resource,
         string? taskType, CancellationToken ct = default, ScriptRepositoryStore? repositories = null)
     {
+        ScriptPreviewLease? lease = null;
         if (resource.Resource is { } reference && taskType == "javascript")
-            resource = resource.WithFullPath(await (repositories ?? ScriptRepositoryStore.Shared)
-                .PreparePreviewAsync(reference, ct).ConfigureAwait(false));
+        {
+            lease = await (repositories ?? ScriptRepositoryStore.Shared).PreparePreviewAsync(reference, ct).ConfigureAwait(false);
+            resource = resource.WithFullPath(lease.Path);
+        }
+        try
+        {
+            return await LoadCoreAsync(resource, taskType, lease, ct).ConfigureAwait(false);
+        }
+        catch
+        {
+            lease?.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// 从本地路径或已准备的预览目录读取详情；预览租约随结果返回。
+    /// </summary>
+    private static async Task<PuloniaTaskResourcePreview> LoadCoreAsync(PuloniaTaskResourceDescriptor resource,
+        string? taskType, ScriptPreviewLease? lease, CancellationToken ct)
+    {
         var header = $"相对路径：{resource.Resource?.RelativePath ?? resource.RelativePath}\n最后修改：{resource.LastWriteTime:yyyy-MM-dd HH:mm:ss}";
         if (resource.IsDirectory && taskType is "pathing" or "keymouse")
             header += $"\n包含资源：{resource.ChildResourceCount} 项";
@@ -51,7 +72,7 @@ public static class PuloniaTaskResourcePreviewLoader
         var readmePath = Path.Combine(resource.FullPath, "README.md");
         var markdownFilePath = File.Exists(readmePath) ? readmePath : null;
         var text = markdownFilePath is null ? "该脚本未提供 README.md。" : string.Empty;
-        return new PuloniaTaskResourcePreview(text, manifest.Name, markdownFilePath, settingItems, settingsError);
+        return new PuloniaTaskResourcePreview(text, manifest.Name, markdownFilePath, settingItems, settingsError, lease);
     }
 
     /// <summary>

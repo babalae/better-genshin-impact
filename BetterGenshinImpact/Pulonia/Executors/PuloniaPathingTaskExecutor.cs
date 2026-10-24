@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -63,14 +65,14 @@ public sealed class PuloniaPathingTaskExecutor : IPuloniaTaskExecutor
     public async Task<PuloniaTaskOutcome> ExecuteAsync(PuloniaTaskPreparedTask task,
         PuloniaTaskExecutionContext context, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(task.Path))
-            return PuloniaTaskOutcome.Failure("地图追踪节点没有固定资源路径。");
+        if (task.Resource is null && string.IsNullOrWhiteSpace(task.Path))
+            return PuloniaTaskOutcome.Failure("地图追踪节点没有固定资源。");
         // 路线只使用本节点租约记录的运行环境；它已停止时当前节点失败
         if (!context.TryGetRuntime(out var runtime, out var runtimeError))
             return PuloniaTaskOutcome.Failure(runtimeError);
-        var resourcePath = task.Resource is { } resource
-            ? await ScriptRepositoryStore.Shared.MaterializeAsync(resource, "pathing", ct).ConfigureAwait(false) : task.Path;
-        var pathingTask = PathingTask.BuildFromFilePath(resourcePath);
+        var pathingTask = task.Resource is { } resource
+            ? await ReadRepositoryRouteAsync(resource, ct).ConfigureAwait(false)
+            : PathingTask.BuildFromFilePath(task.Path!);
         if (pathingTask is null)
             return PuloniaTaskOutcome.Failure("路线版本高于当前 BetterGI，已拒绝执行。");
 
@@ -86,6 +88,22 @@ public sealed class PuloniaPathingTaskExecutor : IPuloniaTaskExecutor
         var result = await executor.Pathing(pathingTask).ConfigureAwait(false);
         ct.ThrowIfCancellationRequested();
         return CreateOutcome(result, task.ResourceVersion);
+    }
+
+    /// <summary>
+    /// 从已保留归档读取仓库路线正文，不落地缓存文件。
+    /// 逻辑路径取 User\AutoPathing 下对应的位置，只用于文件名、日志和按目录识别采集物。
+    /// </summary>
+    private static async Task<PathingTask?> ReadRepositoryRouteAsync(ScriptResourceReference resource, CancellationToken ct)
+    {
+        string json;
+        using (var snapshot = await ScriptRepositoryStore.Shared.OpenApprovedAsync(resource, ct).ConfigureAwait(false))
+            json = snapshot.ReadText("repo/" + resource.RelativePath);
+        const string pathingPrefix = "pathing/";
+        var relative = resource.RelativePath.StartsWith(pathingPrefix, StringComparison.OrdinalIgnoreCase)
+            ? resource.RelativePath[pathingPrefix.Length..] : resource.RelativePath;
+        var logicalPath = Path.Combine(MapPathingViewModel.PathJsonPath, relative.Replace('/', Path.DirectorySeparatorChar));
+        return PathingTask.BuildFromJson(json, logicalPath);
     }
 
     /// <summary>把本次路线结果对象转换为任务结果；成功状态只读取 IsSuccess，其他字段随结果完整保存。</summary>

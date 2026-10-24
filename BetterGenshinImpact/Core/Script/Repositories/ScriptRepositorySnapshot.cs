@@ -4,22 +4,20 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text;
+using BetterGenshinImpact.Helpers;
 using LibGit2Sharp;
-using Newtonsoft.Json;
 
 namespace BetterGenshinImpact.Core.Script.Repositories;
 
 /// <summary>一次固定版本的仓库读取会话；Git 和文件式仓库提供相同的路径语义。</summary>
 public sealed class ScriptRepositorySnapshot : IDisposable
 {
-    /// <summary>当前来源或旧版受保护的 Git 对象库，随读取会话释放。</summary>
+    /// <summary>当前 Git 来源，随读取会话释放。</summary>
     private readonly Repository? _repository;
     /// <summary>固定的 Git 内容树，不再读取当前 HEAD。</summary>
     private readonly Tree? _tree;
     /// <summary>Git 资源展示提交时间，避免用纪元时间误导用户。</summary>
     private readonly DateTime _commitTime;
-    /// <summary>文件式仓库的不可变归档，随读取会话释放。</summary>
-    private readonly ZipArchive? _archive;
     /// <summary>按资源保留的不可变归档，会话结束时全部释放。</summary>
     private readonly List<ZipArchive> _scopeArchives = [];
     /// <summary>已保留归档的文件入口，避免重复扫描 ZIP 目录。</summary>
@@ -41,56 +39,41 @@ public sealed class ScriptRepositorySnapshot : IDisposable
     /// <summary>本次固定的来源版本。</summary>
     public string Revision { get; }
 
-    /// <summary>打开已经保留的来源版本，失败时不回退到最新版本。</summary>
+    /// <summary>
+    /// 打开已经保留的来源版本：从仓库归档目录的 retained.json 找到该修订的各个范围，打开对应归档块。
+    /// 失败时不回退到最新版本。
+    /// </summary>
+    /// <param name="registration">来源仓库注册</param>
+    /// <param name="revision">已确认的来源修订</param>
+    /// <param name="directory">仓库归档目录 <c>Snapshots\&lt;仓库ID&gt;</c></param>
     internal ScriptRepositorySnapshot(ScriptRepositoryRegistration registration, string revision, string directory)
     {
         Registration = registration;
         Revision = revision;
-        var scopesPath = System.IO.Path.Combine(directory, revision, "scopes.json");
-        if (File.Exists(scopesPath))
+        try
         {
-            try
+            var index = ScriptRepositoryStore.ReadRetainedIndex(directory);
+            if (!index.Revisions.TryGetValue(revision, out var scopes) || scopes.Count == 0)
+                throw new IOException("所需仓库版本未保留，不能替换为最新内容。");
+            foreach (var scope in scopes)
             {
-                var scopes = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText(scopesPath))
-                             ?? throw new IOException("资源归档清单为空。");
-                if (scopes.Count == 0) throw new IOException("资源归档清单没有保留的内容。");
-                foreach (var scope in scopes)
+                var root = NormalizePath(scope.Key);
+                if (root.Length == 0 || root != scope.Key || !ShortId.IsMatch(scope.Value, "blk"))
+                    throw new IOException("资源归档索引包含无效路径或归档块。");
+                var archive = ZipFile.OpenRead(System.IO.Path.Combine(directory, scope.Value + ".zip"));
+                _scopeArchives.Add(archive);
+                foreach (var entry in archive.Entries)
                 {
-                    var root = NormalizePath(scope.Key);
-                    if (root.Length == 0 || root != scope.Key || scope.Value is null || scope.Value.Length != 64
-                        || !scope.Value.All(c => c is >= '0' and <= '9' or >= 'a' and <= 'f'))
-                        throw new IOException("资源归档清单包含无效路径。");
-                    var archive = ZipFile.OpenRead(System.IO.Path.Combine(directory, "Archives", scope.Value + ".zip"));
-                    _scopeArchives.Add(archive);
-                    foreach (var entry in archive.Entries)
-                    {
-                        var isDirectory = entry.FullName.EndsWith('/');
-                        var path = NormalizePath(isDirectory ? entry.FullName.TrimEnd('/') : entry.FullName);
-                        if (path != root && !path.StartsWith(root + "/", StringComparison.Ordinal))
-                            throw new IOException("归档文件超出声明的资源范围。");
-                        if (isDirectory) _retainedDirectories.Add(path);
-                        else _retainedFiles.TryAdd(path, entry);
-                    }
+                    var isDirectory = entry.FullName.EndsWith('/');
+                    var path = NormalizePath(isDirectory ? entry.FullName.TrimEnd('/') : entry.FullName);
+                    if (path != root && !path.StartsWith(root + "/", StringComparison.Ordinal))
+                        throw new IOException("归档文件超出声明的资源范围。");
+                    if (isDirectory) _retainedDirectories.Add(path);
+                    else _retainedFiles.TryAdd(path, entry);
                 }
-                return;
             }
-            catch { Dispose(); throw; }
         }
-        var archivePath = System.IO.Path.Combine(directory, revision + ".zip");
-        if (File.Exists(archivePath))
-            _archive = ZipFile.OpenRead(archivePath);
-        else
-        {
-            _repository = new Repository(System.IO.Path.Combine(directory, "objects.git"));
-            try
-            {
-                var commit = _repository.Lookup<Commit>("refs/pulonia/revisions/" + revision)
-                             ?? throw new IOException("所需仓库旧版本不存在，不能替换为最新内容。");
-                _tree = commit.Tree;
-                _commitTime = commit.Committer.When.UtcDateTime;
-            }
-            catch { _repository.Dispose(); throw; }
-        }
+        catch { Dispose(); throw; }
     }
 
     /// <summary>直接打开一个固定提交；来源锁由读取会话接管，不复制 Git 对象。</summary>
@@ -149,8 +132,7 @@ public sealed class ScriptRepositorySnapshot : IDisposable
         path = NormalizePath(path);
         if (_sourceFiles is not null) return _sourceFiles.ContainsKey(path);
         if (_scopeArchives.Count > 0) return _retainedFiles.ContainsKey(path);
-        return _archive is not null ? _archive.GetEntry(path) is not null
-            : GetGitEntry(path)?.TargetType == TreeEntryTargetType.Blob;
+        return GetGitEntry(path)?.TargetType == TreeEntryTargetType.Blob;
     }
 
     /// <summary>检查固定版本中的资源目录是否存在。</summary>
@@ -160,8 +142,7 @@ public sealed class ScriptRepositorySnapshot : IDisposable
         if (_sourceFiles is not null) return path.Length == 0 || _sourceFiles.Keys.Any(p => p.StartsWith(path + "/", StringComparison.Ordinal));
         if (_scopeArchives.Count > 0) return path.Length == 0 || _retainedDirectories.Contains(path)
             || _retainedFiles.Keys.Any(p => p.StartsWith(path + "/", StringComparison.Ordinal));
-        return _archive is not null ? path.Length == 0 || _archive.Entries.Any(e => e.FullName.StartsWith(path + "/", StringComparison.Ordinal))
-            : path.Length == 0 || GetGitEntry(path)?.TargetType == TreeEntryTargetType.Tree;
+        return path.Length == 0 || GetGitEntry(path)?.TargetType == TreeEntryTargetType.Tree;
     }
 
     /// <summary>读取原始文件字节；缺失文件必须明确失败。</summary>
@@ -192,9 +173,7 @@ public sealed class ScriptRepositorySnapshot : IDisposable
         }
         if (_scopeArchives.Count > 0)
             return (_retainedFiles.GetValueOrDefault(path) ?? throw new FileNotFoundException("已保留版本中不存在资源：" + path)).Open();
-        return _archive is not null
-            ? (_archive.GetEntry(path) ?? throw new FileNotFoundException("仓库资源不存在：" + path)).Open()
-            : (GetGitEntry(path)?.Target as Blob ?? throw new FileNotFoundException("仓库资源不存在：" + path)).GetContentStream();
+        return (GetGitEntry(path)?.Target as Blob ?? throw new FileNotFoundException("仓库资源不存在：" + path)).GetContentStream();
     }
 
     /// <summary>确认文件式来源仍符合打开会话时的固定元数据，外部写入不得混进批准内容。</summary>
@@ -252,15 +231,6 @@ public sealed class ScriptRepositorySnapshot : IDisposable
                 result.Add(new ScriptRepositoryEntry(item.Key, item.Value.Length, item.Value.LastWriteTime.UtcDateTime));
             }
         }
-        else if (_archive is not null)
-        {
-            foreach (var item in _archive.Entries.Where(e => !e.FullName.EndsWith('/')
-                && (path.Length == 0 || e.FullName.StartsWith(path + "/", StringComparison.Ordinal))))
-            {
-                if (result.Count >= limit) throw new IOException("仓库文件数量超过安全上限。");
-                result.Add(new ScriptRepositoryEntry(NormalizePath(item.FullName), item.Length, item.LastWriteTime.UtcDateTime));
-            }
-        }
         else
         {
             var tree = path.Length == 0 ? _tree : GetGitEntry(path)?.Target as Tree;
@@ -291,7 +261,6 @@ public sealed class ScriptRepositorySnapshot : IDisposable
     public void Dispose()
     {
         foreach (var archive in _scopeArchives) archive.Dispose();
-        _archive?.Dispose();
         _repository?.Dispose();
         _sourceAccess?.Dispose();
     }

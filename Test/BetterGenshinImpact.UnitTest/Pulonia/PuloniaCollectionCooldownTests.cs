@@ -15,7 +15,7 @@ namespace BetterGenshinImpact.UnitTest.Pulonia;
 public sealed class PuloniaCollectionCooldownTests : IDisposable
 {
     /// <summary>本测试独占的临时资源和状态目录。</summary>
-    private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-collection-cd-" + Guid.NewGuid().ToString("N"));
+    private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-" + BetterGenshinImpact.Helpers.ShortId.Create(null, 8));
 
     /// <summary>材料目录和别名使用明确的规则，不把矿物外形误当作日期刷新。</summary>
     [Theory]
@@ -44,13 +44,15 @@ public sealed class PuloniaCollectionCooldownTests : IDisposable
     [Fact]
     public void RepositoryIdentity_UsesOriginalPathAndIgnoresRevision()
     {
-        var reference = new ScriptResourceReference { RepositoryId = new string('a', 32), RelativePath = "pathing/落落莓/蒙德/A.json", ApprovedRevision = new string('1', 40) };
+        var reference = new ScriptResourceReference { RepositoryId = "rep_aaaaaaaaaaaaaaaa", RelativePath = "pathing/落落莓/蒙德/A.json", ApprovedRevision = new string('1', 40) };
         var first = PuloniaCollectionCooldown.Resolve(Path.Combine(_directory, "cache", "A.json"), reference, new JObject());
         var second = PuloniaCollectionCooldown.Resolve(Path.Combine(_directory, "other", "A.json"), reference.WithRevision(new string('2', 40)), new JObject());
         Assert.Equal("落落莓", first.MaterialName);
         Assert.Equal(first.FileIdentity, second.FileIdentity);
         Assert.Equal(PuloniaCollectionCooldown.GetEffectKey(first), PuloniaCollectionCooldown.GetEffectKey(second));
-        var other = PuloniaCollectionCooldown.Resolve(null, new ScriptResourceReference { RepositoryId = new string('b', 32), RelativePath = reference.RelativePath }, new JObject());
+        // 资源键直接使用文件身份原文，历史中能看出是哪个文件。
+        Assert.Equal("pathing.file:repository:rep_aaaaaaaaaaaaaaaa/pathing/落落莓/蒙德/a.json", PuloniaCollectionCooldown.GetEffectKey(first));
+        var other = PuloniaCollectionCooldown.Resolve(null, new ScriptResourceReference { RepositoryId = "rep_bbbbbbbbbbbbbbbb", RelativePath = reference.RelativePath }, new JObject());
         Assert.NotEqual(PuloniaCollectionCooldown.GetEffectKey(first), PuloniaCollectionCooldown.GetEffectKey(other));
     }
 

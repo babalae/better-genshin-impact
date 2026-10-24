@@ -13,7 +13,7 @@ namespace BetterGenshinImpact.UnitTest.Pulonia;
 public sealed class PuloniaTaskTriggerTests : IDisposable
 {
     /// <summary>本测试独占临时目录。</summary>
-    private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-pulonia-triggers-" + Guid.NewGuid().ToString("N"));
+    private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-" + BetterGenshinImpact.Helpers.ShortId.Create(null, 8));
 
     /// <summary>常见日周月和数字 Cron 的下次发生采用明确时区。</summary>
     [Theory]
@@ -153,16 +153,16 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
         var clock = new TestClock();
         var plan = Plan(); plan.Triggers.Add(Trigger(clock));
         plan = await store.SavePlanAsync(plan);
-        Guid id;
+        string id;
         await using (var service = Service(store, clock))
         {
             await service.CheckTriggersAsync([plan]);
-            id = Assert.Single(await service.ListRunsAsync()).RequestId;
+            id = Assert.Single(await service.ListRunsAsync()).RunId;
             Assert.Equal(PuloniaTaskRunStatus.Succeeded, (await service.WaitForCompletionAsync(id).WaitAsync(TimeSpan.FromSeconds(15))).Status);
             await service.CheckTriggersAsync([plan]);
             Assert.Single(await service.ListRunsAsync());
             var persisted = await store.LoadStateAsync();
-            Assert.Equal(id, Assert.Single(persisted.State.TriggerStates).LastRequestId);
+            Assert.Equal(id, Assert.Single(persisted.State.TriggerStates).LastRunId);
             Assert.Equal("已完成", Assert.Single(persisted.State.TriggerStates).Status);
         }
         await using var restarted = Service(store, clock);
@@ -170,7 +170,7 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
         clock.Advance(TimeSpan.FromMinutes(-20));
         await restarted.CheckTriggersAsync([plan]);
         Assert.Single(await restarted.ListRunsAsync());
-        Assert.Equal(id, Assert.Single(await restarted.ListTriggerStatesAsync()).LastRequestId);
+        Assert.Equal(id, Assert.Single(await restarted.ListTriggerStatesAsync()).LastRunId);
     }
 
     /// <summary>离线多日只合并窗口内最新一次，关闭补触发时不会运行旧时间。</summary>
@@ -208,16 +208,16 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
         await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = blocker.Id });
         await entered.Task.WaitAsync(TimeSpan.FromSeconds(15));
         await service.CheckTriggersAsync([plan]);
-        var id = (await service.ListRunsAsync()).Single(item => item.PlanId == plan.Id).RequestId;
+        var id = (await service.ListRunsAsync()).Single(item => item.PlanId == plan.Id).RunId;
         var durable = (await store.LoadStateAsync()).State;
-        Assert.Equal(id, durable.TriggerStates.Single(item => item.TriggerId == plan.Triggers[0].Id).LastRequestId);
-        Assert.Contains(durable.PendingRequests, item => item.RequestId == id);
+        Assert.Equal(id, durable.TriggerStates.Single(item => item.TriggerId == plan.Triggers[0].Id).LastRunId);
+        Assert.Contains(durable.PendingRequests, item => item.RunId == id);
         if (disable) { plan.Triggers[0].Enabled = false; await store.SavePlanAsync(plan); }
         else clock.Advance(TimeSpan.FromHours(7));
         release.SetResult();
         var result = await service.WaitForCompletionAsync(id).WaitAsync(TimeSpan.FromSeconds(15));
         Assert.Equal(expected, result.Status); Assert.Null(result.StartedAt); Assert.Empty(result.NodeResults);
-        Assert.Contains(await store.ListHistoryAsync(), item => item.RequestId == id && item.Request.TriggerId == plan.Triggers[0].Id);
+        Assert.Contains(await store.ListHistoryAsync(), item => item.RunId == id && item.Request.TriggerId == plan.Triggers[0].Id);
     }
 
     /// <summary>子树范围不准备被排除资源，同时保留目标稳定地址。</summary>
@@ -242,20 +242,20 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
         using var store = new PuloniaTaskStore(_directory);
         var clock = new TestClock();
         var plan = Plan(); var trigger = Trigger(clock); plan.Triggers.Add(trigger); plan = await store.SavePlanAsync(plan);
-        var id = Guid.NewGuid(); var occurrence = clock.GetUtcNow().AddSeconds(-2);
+        var id = PuloniaId.NewRunId(clock.GetUtcNow()); var occurrence = clock.GetUtcNow().AddSeconds(-2);
         var snapshot = await new PuloniaTaskBuilder(store).BuildAsync(plan, new PuloniaTaskBuildOptions
         { Definitions = new PuloniaCSharpTaskExecutor(new PuloniaCSharpTaskRegistry()).Definitions.ToList() });
         await store.SaveStateAsync(new PuloniaTaskState
         {
             PendingRequests = [new PuloniaTaskRunRecord
             {
-                RequestId = id, RunId = Guid.NewGuid(), PlanName = plan.Name, Message = "已排队", Status = PuloniaTaskRunStatus.Queued,
+                RunId = id, PlanName = plan.Name, Message = "已排队", Status = PuloniaTaskRunStatus.Queued,
                 SnapshotJson = PuloniaTaskJson.Write(snapshot), SubmittedAt = clock.GetUtcNow(),
                 Request = new PuloniaTaskRequest { PlanId = plan.Id, Source = "schedule", TriggerId = trigger.Id,
                     TriggerActivatedAtUtc = trigger.ActivatedAtUtc, OccurrenceUtc = occurrence, DeadlineUtc = occurrence.AddHours(6) }
             }],
             TriggerStates = [new PuloniaTaskTriggerState { PlanId = plan.Id, TriggerId = trigger.Id,
-                TriggerActivatedAtUtc = trigger.ActivatedAtUtc, LastOccurrenceUtc = occurrence, LastRequestId = id,
+                TriggerActivatedAtUtc = trigger.ActivatedAtUtc, LastOccurrenceUtc = occurrence, LastRunId = id,
                 NextOccurrenceUtc = PuloniaTaskSchedule.Next(trigger, occurrence) }]
         });
         await using var service = Service(store, clock);
@@ -309,7 +309,7 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
         await using var service = Service(store, clock, registry);
         var old = await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = blocker.Id });
         await entered.Task.WaitAsync(TimeSpan.FromSeconds(15)); await service.CheckTriggersAsync([plan]);
-        var next = (await service.ListRunsAsync()).Single(item => item.PlanId == plan.Id).RequestId;
+        var next = (await service.ListRunsAsync()).Single(item => item.PlanId == plan.Id).RunId;
         Assert.Equal(PuloniaTaskRunStatus.Cancelled, (await service.WaitForCompletionAsync(old).WaitAsync(TimeSpan.FromSeconds(15))).Status);
         Assert.Equal(PuloniaTaskRunStatus.Succeeded, (await service.WaitForCompletionAsync(next).WaitAsync(TimeSpan.FromSeconds(15))).Status);
     }
@@ -336,7 +336,7 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
         plan.Triggers.Add(trigger); plan = await store.SavePlanAsync(plan);
         await using var service = Service(store, clock);
         await service.CheckTriggersAsync([plan]);
-        var id = Assert.Single(await service.ListRunsAsync()).RequestId;
+        var id = Assert.Single(await service.ListRunsAsync()).RunId;
         Assert.Equal(PuloniaTaskRunStatus.Succeeded,
             (await service.WaitForCompletionAsync(id).WaitAsync(TimeSpan.FromSeconds(15))).Status);
         clock.Advance(TimeSpan.FromMinutes(10));
@@ -349,7 +349,7 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
     {
         var path = Path.GetFullPath(_directory);
         if (!path.StartsWith(Path.GetFullPath(Path.GetTempPath()), StringComparison.OrdinalIgnoreCase)
-            || !Path.GetFileName(path).StartsWith("bgi-pulonia-triggers-", StringComparison.Ordinal))
+            || !Path.GetFileName(path).StartsWith("bgi-", StringComparison.Ordinal))
             throw new InvalidOperationException("测试清理目标越界。");
         if (Directory.Exists(path)) Directory.Delete(path, true);
     }

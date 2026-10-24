@@ -2,7 +2,6 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -223,12 +222,13 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
         await LoginWithPasswordAsync(runtime, account, recognition, ct).ConfigureAwait(false);
     }
 
-    /// <summary>匹配固定版本账号图片；使用唯一结果，不能点击多个相同标识。</summary>
+    /// <summary>
+    /// 匹配运行快照记录的账号图片；使用唯一结果，不能点击多个相同标识。
+    /// 图片文件每次新建、不覆盖，快照中的 ImagePath 即固定了图片内容，因此不再复核内容指纹。
+    /// </summary>
     private async Task<bool> SelectByImageAsync(GameRuntime runtime, PuloniaGenshinAccountProfile account, CancellationToken ct)
     {
         var bytes = await File.ReadAllBytesAsync(store.GetAccountImagePath(account.ImagePath!), ct).ConfigureAwait(false);
-        if (account.ImageVersion is { } version && Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant() != version)
-            throw new InvalidOperationException("账号图片版本已变化，不能执行旧运行快照。");
         using var original = Cv2.ImDecode(bytes, ImreadModes.Color);
         for (var i = 0; i < 6; i++)
         {
@@ -405,8 +405,11 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
     }
 
     /// <inheritdoc />
-    public async Task<(string Uid, string ImagePath)> CaptureCurrentAccountAsync(GameRuntime runtime, CancellationToken ct)
+    public async Task<(string Uid, string ImagePath)> CaptureCurrentAccountAsync(GameRuntime runtime, string accountId,
+        CancellationToken ct)
     {
+        // 先校验账号 ID，避免退出到登录界面后才发现无法保存图片。
+        PuloniaTaskValidator.ValidateId(accountId, "account/id");
         EnsureSupportedRuntime(runtime);
         using var budget = CancellationTokenSource.CreateLinkedTokenSource(ct);
         budget.CancelAfter(PreparationBudget);
@@ -423,16 +426,16 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
                 throw new InvalidOperationException("账号标识采集需要收起账号列表并显示进入游戏按钮，请返回主界面后重试。");
         }
         // 账号图片统一为 1080p 参考尺寸，运行时按实际截图宽度缩放。
-        var relative = Path.Combine("account-images", Guid.NewGuid().ToString("N") + ".png");
-        var path = store.GetAccountImagePath(relative);
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        byte[] png;
         using (var frame = runtime.CaptureToRectArea())
         using (var crop = frame.DeriveCrop(PuloniaGenshinAccountRecognition.Scale(frame, new Rect(780, 481, 150, 27))))
         using (var normalized = new Mat())
         {
             Cv2.Resize(crop.SrcMat, normalized, new Size(150, 27));
-            await File.WriteAllBytesAsync(path, normalized.ImEncode(".png"), budget.Token).ConfigureAwait(false);
+            png = normalized.ImEncode(".png");
         }
+        // 每次采集都新建 account-images\<账号ID>-<时间>.png，不覆盖已有图片，旧运行快照引用的图片保持不变。
+        var relative = await store.CreateAccountImageAsync(accountId, png, budget.Token).ConfigureAwait(false);
         await EnterMainUiAsync(runtime, recognition, budget.Token).ConfigureAwait(false);
         await VerifyAsync(runtime, uid, budget.Token).ConfigureAwait(false);
         return (uid, relative);

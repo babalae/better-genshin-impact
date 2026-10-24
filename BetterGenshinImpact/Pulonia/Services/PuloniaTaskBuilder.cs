@@ -59,7 +59,7 @@ public sealed class PuloniaTaskBuilder
         // 扫描和哈希都在后台进行；输入副本在返回 Task 前已固定，不受后续编辑影响。
         return Task.Run(async () =>
         {
-            var context = new BuildContext(fixedOptions, ct);
+            using var context = new BuildContext(fixedOptions, ct);
             var definitionKeys = new HashSet<(string, string?)>();
             foreach (var definition in fixedOptions.Definitions)
             {
@@ -166,25 +166,43 @@ public sealed class PuloniaTaskBuilder
             nestedOverrides.AddRange(task.ParameterOverrides.OrderBy(item => item.ResourceId is null ? 0 : 1));
             if (task.Source is { Kind: "directory" } directory)
             {
-                path = directory.Resource is { } directoryResource
-                    ? await _repositories.MaterializeAsync(directoryResource, directory.TaskType!, context.Cancellation).ConfigureAwait(false)
-                    : ResolvePath(context, directory.Path!, address);
-                var files = EnumerateFiles(context, path, "*.json", directory.Recursive, address);
+                // 目录内资源统一表示为相对路径：仓库资源从固定快照列出，本地资源扫描磁盘。
+                IReadOnlyList<(string Relative, string? File)> entries;
+                if (directory.Resource is { } directoryResource)
+                {
+                    var snapshot = await OpenRetainedSnapshotAsync(context, directoryResource, directory.TaskType!)
+                        .ConfigureAwait(false);
+                    entries = ScriptRepositoryStore.ListDirectoryResources(snapshot, directoryResource.RelativePath,
+                            directory.Recursive).Select(relative => (relative, (string?)null)).ToArray();
+                    if (entries.Count > context.Options.MaxNodes)
+                        throw new PuloniaTaskValidationException(address, "资源目录超过扫描数量限制。");
+                }
+                else
+                {
+                    path = ResolvePath(context, directory.Path!, address);
+                    var directoryPath = path;
+                    entries = EnumerateFiles(context, directoryPath, "*.json", directory.Recursive, address)
+                        .Select(file => (NormalizeRelativePath(directoryPath, file), (string?)file)).ToArray();
+                }
+                // ID 来自相对资源位置，与文件内容、数组顺序和组名无关；只差大小写的两个文件会得到同一 ID，明确报错。
+                var generatedIds = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var entry in entries)
+                {
+                    if (!generatedIds.Add(PuloniaId.FromResourcePath(entry.Relative)))
+                        throw new PuloniaTaskValidationException(address, $"目录中的资源 {entry.Relative} 与其他资源生成了相同的节点 ID。");
+                }
                 var manifest = new StringBuilder();
                 for (var iteration = 1; iteration <= repeatCount; iteration++)
                 {
                     var iterationAddress = GetGroupIterationAddress(address, repeatCount, iteration);
-                    foreach (var file in files)
+                    foreach (var (relative, file) in entries)
                     {
-                        var relative = NormalizeRelativePath(path, file);
-                        // ID 来自相对资源位置，与文件内容、数组顺序和组名无关。
-                        var generatedId = "resource-" + HashText(relative.ToLowerInvariant());
                         var generatedTask = new PuloniaTask
                         {
-                            Id = generatedId,
-                            Name = System.IO.Path.GetFileNameWithoutExtension(file),
+                            Id = PuloniaId.FromResourcePath(relative),
+                            Name = System.IO.Path.GetFileNameWithoutExtension(relative),
                             TaskType = directory.TaskType!,
-                            Path = directory.Resource is null ? file : null,
+                            Path = file,
                             Resource = directory.Resource?.WithPath(directory.Resource.RelativePath + "/" + relative)
                         };
                         var prepared = await BuildTaskAsync(context, plan, generatedTask, iterationAddress, true, policy,
@@ -257,18 +275,26 @@ public sealed class PuloniaTaskBuilder
             PuloniaTaskValidator.ValidateParameters(parameters, definition.ParameterSchema, address + "/parameters");
             if (task.TaskType is "javascript" or "pathing" or "keymouse")
             {
-                path = task.Resource is { } resource
-                    ? await _repositories.MaterializeAsync(resource, task.TaskType, context.Cancellation).ConfigureAwait(false)
-                    : ResolvePath(context, task.Path!, address, definition.ResourceBaseDirectory);
-                try
+                if (task.Resource is { } resource)
                 {
-                    version = task.TaskType == "javascript"
-                        ? await HashDirectoryAsync(context, path, address).ConfigureAwait(false)
-                        : await HashFileAsync(context, path, address).ConfigureAwait(false);
+                    // 仓库资源不写本机路径：执行器只按 resource 从已保留归档读取，指纹在固定快照上计算。
+                    var snapshot = await OpenRetainedSnapshotAsync(context, resource, task.TaskType).ConfigureAwait(false);
+                    path = null;
+                    version = ComputeRepositoryVersion(context, snapshot, resource, task.TaskType, address);
                 }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                else
                 {
-                    throw new PuloniaTaskValidationException(address, $"无法读取能力资源 {path}：{ex.Message}", ex);
+                    path = ResolvePath(context, task.Path!, address, definition.ResourceBaseDirectory);
+                    try
+                    {
+                        version = task.TaskType == "javascript"
+                            ? await HashDirectoryAsync(context, path, address).ConfigureAwait(false)
+                            : await HashFileAsync(context, path, address).ConfigureAwait(false);
+                    }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    {
+                        throw new PuloniaTaskValidationException(address, $"无法读取能力资源 {path}：{ex.Message}", ex);
+                    }
                 }
                 if (task.ResourceVersion is not null && task.ResourceVersion != version)
                     throw new PuloniaTaskValidationException(address,
@@ -455,14 +481,52 @@ public sealed class PuloniaTaskBuilder
         => PuloniaTaskResourceFingerprint.NormalizeRelativePath(directory, file);
 
     /// <summary>
-    /// 生成稳定的文本 SHA-256。
+    /// 确认仓库资源已保留，并返回本次准备中该修订的固定快照；同一修订的快照在一次准备内复用。
+    /// 缓存的快照不含新保留的范围时重新打开，准备结束后统一释放。
     /// </summary>
-    private static string HashText(string value) => PuloniaTaskResourceFingerprint.ComputeTextVersion(value);
+    private async Task<ScriptRepositorySnapshot> OpenRetainedSnapshotAsync(BuildContext context,
+        ScriptResourceReference reference, string taskType)
+    {
+        await _repositories.RetainAsync(reference, taskType, context.Cancellation).ConfigureAwait(false);
+        var key = (reference.RepositoryId, reference.ApprovedRevision);
+        var source = "repo/" + reference.RelativePath;
+        if (context.Snapshots.TryGetValue(key, out var cached)
+            && (cached.FileExists(source) || cached.DirectoryExists(source)))
+            return cached;
+        cached?.Dispose();
+        var snapshot = await _repositories.OpenApprovedAsync(reference, context.Cancellation).ConfigureAwait(false);
+        context.Snapshots[key] = snapshot;
+        return snapshot;
+    }
 
     /// <summary>
-    /// 仅属于一次准备的缓存与预算，不跨运行共享可变状态。
+    /// 在固定快照上计算仓库资源指纹，算法与创建任务和更新检查一致；相同资源在本次准备中只计算一次。
     /// </summary>
-    private sealed class BuildContext
+    private static string ComputeRepositoryVersion(BuildContext context, ScriptRepositorySnapshot snapshot,
+        ScriptResourceReference reference, string taskType, string address)
+    {
+        context.Cancellation.ThrowIfCancellationRequested();
+        var key = (reference.RepositoryId, reference.ApprovedRevision, reference.RelativePath, taskType);
+        if (context.RepositoryVersions.TryGetValue(key, out var cached))
+            return cached;
+        if (context.RepositoryVersions.Count + context.ResourceHashes.Count >= context.Options.MaxNodes)
+            throw new PuloniaTaskValidationException(address, "本次资源文件总数超过限制。");
+        try
+        {
+            var version = ScriptRepositoryStore.ComputeVersion(snapshot, reference.RelativePath, taskType);
+            context.RepositoryVersions.Add(key, version);
+            return version;
+        }
+        catch (Exception ex) when (ex is IOException or ArgumentException)
+        {
+            throw new PuloniaTaskValidationException(address, $"无法读取仓库资源 {reference.RelativePath}：{ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    /// 仅属于一次准备的缓存与预算，不跨运行共享可变状态；释放时关闭本次打开的固定快照。
+    /// </summary>
+    private sealed class BuildContext : IDisposable
     {
         /// <summary>
         /// 已固定的本次选项。
@@ -497,9 +561,17 @@ public sealed class PuloniaTaskBuilder
         /// </summary>
         public Dictionary<PuloniaTaskParameterOverride, string> OverrideSources { get; } = new();
         /// <summary>
-        /// 已固定的资源指纹。
+        /// 已固定的本地资源指纹，按完整路径索引。
         /// </summary>
         public Dictionary<string, string> ResourceHashes { get; } = new(StringComparer.OrdinalIgnoreCase);
+        /// <summary>
+        /// 已固定的仓库资源指纹，按仓库、修订、相对路径和类型索引。
+        /// </summary>
+        public Dictionary<(string Repository, string Revision, string Path, string Type), string> RepositoryVersions { get; } = new();
+        /// <summary>
+        /// 本次准备打开的固定快照，按仓库和修订复用，准备结束后统一释放。
+        /// </summary>
+        public Dictionary<(string Repository, string Revision), ScriptRepositorySnapshot> Snapshots { get; } = new();
         /// <summary>
         /// 本次固定的目录清单，重复引用不重新枚举。
         /// </summary>
@@ -516,6 +588,16 @@ public sealed class PuloniaTaskBuilder
         {
             Options = options;
             Cancellation = cancellation;
+        }
+
+        /// <summary>
+        /// 释放本次准备打开的全部固定快照；准备结果不持有快照引用。
+        /// </summary>
+        public void Dispose()
+        {
+            foreach (var snapshot in Snapshots.Values)
+                snapshot.Dispose();
+            Snapshots.Clear();
         }
     }
 }

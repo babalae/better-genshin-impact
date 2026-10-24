@@ -244,7 +244,7 @@ public sealed class PuloniaRemoteNodeHost
             }
         }
 
-        var context = new PuloniaTaskExecutionContext(start.RequestId, start.RunId, snapshot, start.Attempt,
+        var context = new PuloniaTaskExecutionContext(start.RunId, snapshot, start.Attempt,
             task.TaskAddress, lease?.Runtime, (completionEvent, token) => ReportAsync(start.ExecutionId, completionEvent, token));
         PuloniaTaskOutcome outcome;
         // 持有任务锁期间标记会话，执行器内部不能再通过 TaskRunner 启动任务

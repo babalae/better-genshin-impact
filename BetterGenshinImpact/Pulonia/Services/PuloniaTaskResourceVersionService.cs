@@ -18,7 +18,7 @@ public sealed class PuloniaTaskResourceVersionService
     /// <summary>带数量、层级和重解析点保护的资源扫描入口。</summary>
     private readonly PuloniaTaskResourceCatalog _catalog;
 
-    /// <summary>同一仓库版本内只读取一次资源指纹，定时检查不会反复提取正文。</summary>
+    /// <summary>同一仓库版本内只读取一次资源指纹，定时检查不会反复读取正文。</summary>
     private readonly ConcurrentDictionary<(string Repository, string Revision, string Path, string Type, bool Recursive, bool Directory), string> _versions = new();
 
     /// <summary>同一固定版本的声明版本只解析一次；空字符串表示正文没有声明可展示的版本号。</summary>
@@ -150,7 +150,7 @@ public sealed class PuloniaTaskResourceVersionService
         return PrepareUpdateAsync(task, expectedVersion, ct, expectedState.CurrentRepositoryRevision);
     }
 
-    /// <summary>确认前固定最新来源并完成提取；失败时调用方不得修改计划引用。</summary>
+    /// <summary>确认前固定最新来源并完成保留；失败时调用方不得修改计划引用。</summary>
     public async Task<ScriptResourceReference?> PrepareUpdateAsync(PuloniaTask task, string expectedVersion,
         CancellationToken ct = default, string? expectedRevision = null)
     {
@@ -167,8 +167,8 @@ public sealed class PuloniaTaskResourceVersionService
             if (actual != expectedVersion) throw new InvalidOperationException("确认期间资源再次变化，请重新检查。");
             updated = reference.WithRevision(snapshot.Revision);
         }
-        // 提取使用刚审阅的精确版本；先释放来源读取锁，再进入快照发布锁，避免重入死锁。
-        await _catalog.Repositories.MaterializeAsync(updated, type, ct).ConfigureAwait(false);
+        // 保留刚审阅的精确版本；先释放来源读取锁，再进入归档保留锁，避免重入死锁。
+        await _catalog.Repositories.RetainAsync(updated, type, ct).ConfigureAwait(false);
         return updated;
     }
 

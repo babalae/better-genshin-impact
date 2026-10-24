@@ -1,78 +1,54 @@
 using System;
-using System.Security.Cryptography;
+using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Pulonia.Models;
 
 /// <summary>
-/// 为 Pulonia 持久化实体生成带类型前缀的短稳定 ID。
+/// 为 Pulonia 持久化实体生成带类型前缀的短稳定 ID；字母表与编码由 <see cref="ShortId"/> 统一提供。
 /// </summary>
 public static class PuloniaId
 {
     /// <summary>
-    /// 小写 Crockford Base32 字符表；排除容易混淆的 i、l、o、u。
+    /// 运行 ID 末尾随机部分的字符数；同一秒内另由单写入者查重。
     /// </summary>
-    private const string Alphabet = "0123456789abcdefghjkmnpqrstvwxyz";
-
-    /// <summary>
-    /// 每个 ID 使用的随机字节数，对应 80 位随机空间。
-    /// </summary>
-    private const int RandomByteCount = 10;
-
-    /// <summary>
-    /// 80 位随机值编码后的固定字符数。
-    /// </summary>
-    private const int RandomPartLength = 16;
+    private const int RunRandomLength = 4;
 
     /// <summary>
     /// 生成任务计划 ID。
     /// </summary>
-    public static string NewPlanId() => Create("pln");
+    public static string NewPlanId() => ShortId.Create("pln");
 
     /// <summary>
     /// 生成任务节点 ID。
     /// </summary>
-    public static string NewTaskId() => Create("tsk");
+    public static string NewTaskId() => ShortId.Create("tsk");
 
     /// <summary>
     /// 生成共享参数预设 ID。
     /// </summary>
-    public static string NewPresetId() => Create("pre");
+    public static string NewPresetId() => ShortId.Create("pre");
 
     /// <summary>
     /// 生成任务触发器 ID。
     /// </summary>
-    public static string NewTriggerId() => Create("trg");
+    public static string NewTriggerId() => ShortId.Create("trg");
 
     /// <summary>
-    /// 使用密码学随机数和小写 Base32 构造可安全用作 Windows 文件名的 ID。
+    /// 生成游戏账号资料 ID。
     /// </summary>
-    private static string Create(string prefix)
-    {
-        Span<byte> randomBytes = stackalloc byte[RandomByteCount];
-        RandomNumberGenerator.Fill(randomBytes);
+    public static string NewAccountId() => ShortId.Create("acc");
 
-        Span<char> result = stackalloc char[prefix.Length + 1 + RandomPartLength];
-        prefix.AsSpan().CopyTo(result);
-        result[prefix.Length] = '_';
+    /// <summary>
+    /// 生成运行 ID：<c>run_本地时间-4 位随机</c>，便于在历史目录中按文件名辨认先后；排序仍以提交时间为准。
+    /// </summary>
+    /// <param name="localTime">生成时刻，按本地时间格式化</param>
+    public static string NewRunId(DateTimeOffset localTime)
+        => "run_" + localTime.ToLocalTime().ToString("yyyyMMdd-HHmmss") + "-" + ShortId.Create(null, RunRandomLength);
 
-        // 10 字节恰好编码为 16 个 Base32 字符，不需要补位或截断随机数据。
-        uint bitBuffer = 0;
-        var bitCount = 0;
-        var outputIndex = prefix.Length + 1;
-        foreach (var value in randomBytes)
-        {
-            bitBuffer = (bitBuffer << 8) | value;
-            bitCount += 8;
-            while (bitCount >= 5)
-            {
-                bitCount -= 5;
-                result[outputIndex++] = Alphabet[(int)((bitBuffer >> bitCount) & 31)];
-            }
-
-            // 只保留尚未输出的低位，避免后续左移积累无关数据。
-            bitBuffer = bitCount == 0 ? 0 : bitBuffer & ((1u << bitCount) - 1);
-        }
-
-        return new string(result);
-    }
+    /// <summary>
+    /// 由目录内规范化相对路径派生展开节点 ID；同一路径始终得到同一 ID，与内容、顺序和组名无关。
+    /// </summary>
+    /// <param name="relativePath">相对引用目录的资源路径</param>
+    public static string FromResourcePath(string relativePath)
+        => ShortId.FromText("res", relativePath.ToLowerInvariant());
 }

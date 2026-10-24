@@ -18,6 +18,26 @@ public sealed class PuloniaIdTests
         Assert.Matches("^tsk_[0123456789abcdefghjkmnpqrstvwxyz]{16}$", PuloniaId.NewTaskId());
         Assert.Matches("^pre_[0123456789abcdefghjkmnpqrstvwxyz]{16}$", PuloniaId.NewPresetId());
         Assert.Matches("^trg_[0123456789abcdefghjkmnpqrstvwxyz]{16}$", PuloniaId.NewTriggerId());
+        Assert.Matches("^acc_[0123456789abcdefghjkmnpqrstvwxyz]{16}$", PuloniaId.NewAccountId());
+        Assert.StartsWith("acc_", new PuloniaGenshinAccountProfile().Id, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// 运行 ID 带本地时间便于在历史目录中辨认，展开节点 ID 由相对路径确定性派生且忽略大小写。
+    /// </summary>
+    [Fact]
+    public void RunAndResourceIds_AreReadableAndDeterministic()
+    {
+        var time = new DateTimeOffset(2026, 10, 24, 15, 30, 12, TimeSpan.Zero);
+        var runId = PuloniaId.NewRunId(time);
+        Assert.Matches("^run_\\d{8}-\\d{6}-[0123456789abcdefghjkmnpqrstvwxyz]{4}$", runId);
+        Assert.StartsWith("run_" + time.ToLocalTime().ToString("yyyyMMdd-HHmmss") + "-", runId, StringComparison.Ordinal);
+        PuloniaTaskValidator.ValidateId(runId, "run");
+
+        var resourceId = PuloniaId.FromResourcePath("蒙德/风车菊-01.json");
+        Assert.Matches("^res_[0123456789abcdefghjkmnpqrstvwxyz]{16}$", resourceId);
+        Assert.Equal(resourceId, PuloniaId.FromResourcePath("蒙德/风车菊-01.JSON"));
+        Assert.NotEqual(resourceId, PuloniaId.FromResourcePath("蒙德/风车菊-02.json"));
     }
 
     /// <summary>
@@ -33,10 +53,10 @@ public sealed class PuloniaIdTests
     }
 
     /// <summary>
-    /// 新建模型和复制操作都使用对应实体类型的短 ID，并保留旧 ID 的读取能力。
+    /// 新建模型和复制操作都使用对应实体类型的短 ID；ID 上限为 32 位，避免成为路径中的长段。
     /// </summary>
     [Fact]
-    public void ModelsAndCopies_UseTypedIdsAndKeepLegacyIdsValid()
+    public void ModelsAndCopies_UseTypedIdsAndLimitLength()
     {
         var plan = new PuloniaTaskPlan
         {
@@ -57,7 +77,8 @@ public sealed class PuloniaIdTests
         Assert.All(EnumerateTasks(copy.RootTask), task => Assert.StartsWith("tsk_", task.Id, StringComparison.Ordinal));
         Assert.All(copy.Triggers, trigger => Assert.StartsWith("trg_", trigger.Id, StringComparison.Ordinal));
 
-        PuloniaTaskValidator.ValidateId(Guid.NewGuid().ToString("N"), "legacy");
+        PuloniaTaskValidator.ValidateId(new string('a', 32), "max");
+        Assert.Throws<PuloniaTaskValidationException>(() => PuloniaTaskValidator.ValidateId(new string('a', 33), "too-long"));
     }
 
     /// <summary>
