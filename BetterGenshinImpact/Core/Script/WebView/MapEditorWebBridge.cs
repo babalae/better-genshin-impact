@@ -5,7 +5,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.Service;
-using Serilog.Core;
+using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Script.WebView;
 
@@ -24,7 +24,19 @@ public class MapEditorWebBridge
 
     public async Task RunPathing(string json)
     {
+        using var cancellationScope = CancellationContext.Instance.TryBeginScope();
+        if (cancellationScope == null)
+        {
+            App.GetLogger<MapEditorWebBridge>().LogWarning("当前存在正在执行的任务，请勿重复启动");
+            return;
+        }
+
         await ScriptService.StartGameTask();
+        if (cancellationScope.Token.IsCancellationRequested)
+        {
+            return;
+        }
+
         SystemControl.ActivateWindow();
         await new TaskRunner().RunThreadAsync(async () =>
         {
