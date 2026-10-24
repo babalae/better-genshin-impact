@@ -40,10 +40,11 @@ public static class ResinRecognition
     public static ResinRecognitionResult? RecognizeInBigMapTopBar(ImageRegion capture)
     {
         var assetScale = capture.GetAssetScale();
-
+        
+        // 当新老深渊都有战绩时，左边界需要放宽到 900
         using var iconSearchRegion = capture.DeriveCrop(new Rect(
-            (int)(1200 * assetScale), (int)(25 * assetScale),
-            (int)(580 * assetScale), (int)(50 * assetScale)));
+            (int)(900 * assetScale), (int)(25 * assetScale),
+            (int)(880 * assetScale), (int)(50 * assetScale)));
         var captureRect = capture.GetScaleMax1080PFrameSize();
         var iconRa = iconSearchRegion.Find(RecognitionAssets.Get("AutoBoss", "OriginalResinTopIcon", captureRect.Width, captureRect.Height));
         if (iconRa.IsEmpty())
@@ -59,10 +60,12 @@ public static class ResinRecognition
         var (condensedResin, condensedIconRect) = RecognizeCondensedResin(
             capture, resinIconRect, assetScale);
 
+        // 宽度需容纳三位数当前值（如 160/200）；右缘可能带入数字后的"+"按钮，
+        // 但正则只匹配 "当前/200" 部分，不受尾部内容影响
         var countRect = new Rect(
             resinIconRect.Right + (int)(25 * assetScale),
             (int)(33 * assetScale),
-            (int)(105 * assetScale),
+            (int)(125 * assetScale),
             (int)(25 * assetScale));
         using var countRegion = capture.DeriveCrop(countRect);
 

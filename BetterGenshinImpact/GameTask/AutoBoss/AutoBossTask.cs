@@ -391,9 +391,10 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
     {
         var page = new BvPage(_runtime, _ct);
         //树脂图标
+        // 当新老深渊都有战绩时，左边界需要放宽到 900
         var resinIconLocator = page
             .Locator(LoadRecognitionObject("OriginalResinTopIcon"))
-            .WithRoi(ScaleRect(1200, 25, 580, 50));
+            .WithRoi(ScaleRect(900, 25, 880, 50));
         
         await page.Flow()
             .Do((Action)(() =>

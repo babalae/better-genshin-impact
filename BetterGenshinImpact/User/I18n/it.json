@@ -1092,7 +1092,7 @@
   "绑定群": "Associa gruppo",
   "绑定群 OpenID": "Associa l'OpenID del gruppo",
   "结束后自动分解圣遗物": "Smantella automaticamente i manufatti al termine",
-  "结束时打开地图与冒险之证，推送体力与每日委托奖励汇总及截图": "",
+  "结束时打开地图与冒险之证，推送体力与每日委托奖励汇总及截图；汇总经“检查每日奖励领取状态”事件推送，需在下方“需要通知的事件”中启用": "Al termine, apre la Mappa e il Manuale dell'avventuriere e invia un riepilogo con screenshot della Resina Originale e delle ricompense degli Incarichi giornalieri; il riepilogo viene inviato tramite l'evento \"Verifica dello stato di riscatto delle ricompense giornaliere\", che va abilitato in \"Eventi da notificare\" qui sotto",
   "绘制识别结果位置": "Disegna la posizione dei risultati di riconoscimento",
   "绘制调试框": "Disegna riquadri di debug",
   "给 Clawbot 发消息后自动获取，无需手动填写": "Ottenuto automaticamente dopo aver inviato un messaggio a Clawbot; non serve inserirlo a mano",
