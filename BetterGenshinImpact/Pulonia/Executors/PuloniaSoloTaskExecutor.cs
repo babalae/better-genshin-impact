@@ -5,11 +5,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.SoloTask;
+using BetterGenshinImpact.GameTask.AutoBoss;
+using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BetterGenshinImpact.Pulonia.Executors;
 
@@ -28,6 +31,15 @@ public sealed class PuloniaSoloTaskExecutor : IPuloniaTaskExecutor
     /// 每周安排参数名：按服务器时间凌晨四点切换日期，当天的字段覆盖任务参数，enabled=false 表示当天跳过。
     /// </summary>
     public const string WeekdayOverridesParameter = "weekday_overrides";
+
+    /// <summary>每周覆盖的独立开关；关闭时保留已配置日期，旧计划缺省时仍启用已有覆盖。</summary>
+    public const string WeekdayOverridesEnabledParameter = "weekday_overrides_enabled";
+
+    /// <summary>首领讨伐累计成功领奖上限，由编排层维护，0 表示不限制。</summary>
+    public const string BossTotalRunCountLimitParameter = "total_run_count_limit";
+
+    /// <summary>累计次数清空批次；修改批次只在保存配置后生效。</summary>
+    public const string BossRewardCountResetParameter = "reward_count_reset_id";
 
     /// <summary>
     /// 独立任务注册表。
@@ -102,7 +114,8 @@ public sealed class PuloniaSoloTaskExecutor : IPuloniaTaskExecutor
 
         // 1. 每周安排：按服务器四点日切取当天配置，只合并本节点的参数，不修改计划
         var values = (JObject)task.Parameters.DeepClone();
-        if (values[WeekdayOverridesParameter] is JObject weekly
+        if (values.Value<bool?>(WeekdayOverridesEnabledParameter) != false
+            && values[WeekdayOverridesParameter] is JObject weekly
             && weekly[((int)ServerTimeHelper.GetServerTimeNow().AddHours(-4).DayOfWeek).ToString()] is JObject today)
         {
             if (today.Value<bool?>("enabled") == false)
@@ -120,6 +133,7 @@ public sealed class PuloniaSoloTaskExecutor : IPuloniaTaskExecutor
         }
 
         values.Remove(WeekdayOverridesParameter);
+        values.Remove(WeekdayOverridesEnabledParameter);
 
         // 2. 任务只使用本节点租约记录的运行环境；它已停止时当前节点失败
         if (!context.TryGetRuntime(out var runtime, out var runtimeError))
@@ -128,7 +142,24 @@ public sealed class PuloniaSoloTaskExecutor : IPuloniaTaskExecutor
         }
 
         // 3. 节点 JSON → 强类型参数 → 运行任务
+        // 累计统计属于编排层，不传入独立任务的业务参数。
+        var totalLimit = values.Value<int?>(BossTotalRunCountLimitParameter) ?? 0;
+        var resetId = values.Value<string>(BossRewardCountResetParameter) ?? string.Empty;
+        values.Remove(BossTotalRunCountLimitParameter);
+        values.Remove(BossRewardCountResetParameter);
         var param = descriptor.DeserializeParam(values.ToString(Formatting.None));
+        if (param is AutoBossParam boss)
+        {
+            var store = _services.GetRequiredService<PuloniaTaskStore>();
+            var counts = await store.ReadBossRewardCountsAsync(task.PlanId, task.SourceTaskId, resetId, ct).ConfigureAwait(false);
+            var completed = counts.GetValueOrDefault(context.Snapshot.AccountId ?? string.Empty);
+            if (!ApplyBossRewardLimit(boss, totalLimit, completed))
+                return new PuloniaTaskOutcome(PuloniaTaskOutcomeKind.Skipped,
+                    $"首领累计成功领奖已达上限（{completed}/{totalLimit}）。");
+            // 回调来自任务线程，每次成功领奖立即持久化；取消时也必须保留刚刚确认的次数。
+            boss.RewardClaimedCallback = () => store.IncrementBossRewardCountAsync(task.PlanId, task.SourceTaskId,
+                resetId, context.Snapshot.AccountId).GetAwaiter().GetResult();
+        }
         ISoloTaskResult result;
         try
         {
@@ -146,6 +177,23 @@ public sealed class PuloniaSoloTaskExecutor : IPuloniaTaskExecutor
 
         ct.ThrowIfCancellationRequested();
         return ToOutcome(result);
+    }
+
+    /// <summary>把累计剩余额度作为本次次数上限，保留树脂耗尽模式禁止补充树脂的语义。</summary>
+    internal static bool ApplyBossRewardLimit(AutoBossParam boss, int totalLimit, int completed)
+    {
+        if (totalLimit <= 0) return true;
+        var remaining = Math.Max(0, totalLimit - completed);
+        if (remaining == 0) return false;
+        if (!boss.SpecifyRunCount)
+        {
+            boss.RunCount = remaining;
+            boss.UseTransientResin = false;
+            boss.UseFragileResin = false;
+        }
+        else boss.RunCount = Math.Min(boss.RunCount, remaining);
+        boss.SpecifyRunCount = true;
+        return true;
     }
 
     /// <summary>
@@ -182,6 +230,13 @@ public sealed class PuloniaSoloTaskExecutor : IPuloniaTaskExecutor
         var properties = schema["properties"] as JObject ?? new JObject();
         // 每周安排是任务计划的编排能力，所有独立任务都可以按星期覆盖参数或跳过
         properties[WeekdayOverridesParameter] = new JObject { ["type"] = "object" };
+        if (descriptor.TaskId == AutoDomainTask.TaskId)
+            properties[WeekdayOverridesEnabledParameter] = new JObject { ["type"] = "boolean" };
+        if (descriptor.TaskId == AutoBossTask.TaskId)
+        {
+            properties[BossTotalRunCountLimitParameter] = new JObject { ["type"] = "integer", ["minimum"] = 0 };
+            properties[BossRewardCountResetParameter] = new JObject { ["type"] = "string" };
+        }
         schema["properties"] = properties;
         schema["additionalProperties"] = false;
         return new PuloniaTaskDefinition

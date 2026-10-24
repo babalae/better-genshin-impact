@@ -1,145 +1,160 @@
-<UserControl x:Class="BetterGenshinImpact.View.Pages.SoloTaskSettings.AutoBossSettingsView"
- xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:combat="clr-namespace:BetterGenshinImpact.View.Controls.CombatStrategy"
- xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
- xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
- xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta" xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
- xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers">
- <UserControl.Resources>
-  <ResourceDictionary>
-   <ResourceDictionary.MergedDictionaries>
-    <ResourceDictionary Source="../../Controls/PuloniaOneDragonResources.xaml"/>
-   </ResourceDictionary.MergedDictionaries>
-  </ResourceDictionary>
- </UserControl.Resources>
- <!-- 自动首领讨伐：沿用旧一条龙的配置卡片，字段绑定 auto_boss 参数；旧累计上限未迁入新系统。 -->
- <StackPanel>
-  <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
-   <ui:CardExpander.Header>
-    <Grid>
-     <Grid.RowDefinitions>
-      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
-     </Grid.RowDefinitions>
-     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="*"/>
-     </Grid.ColumnDefinitions>
-     <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="自动首领讨伐配置" TextWrapping="Wrap"/>
-     <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="自动传送、战斗并领取奖励" TextWrapping="Wrap"/>
-    </Grid>
-   </ui:CardExpander.Header>
-   <StackPanel>
-    <Grid Margin="16">
-     <Grid.RowDefinitions>
-      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
-     </Grid.RowDefinitions>
-     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
-     </Grid.ColumnDefinitions>
-     <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="选择战斗策略" TextWrapping="Wrap"/>
-     <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="仅用于首领讨伐，不覆盖其他策略设置" TextWrapping="Wrap"/>
-     <combat:CombatStrategyPicker Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Margin="0,0,36,0" Width="288" VerticalAlignment="Center" AllowedKinds="WithoutCombo" Strategy="{Binding StrategyName, Mode=TwoWay}" />
-    </Grid>
-    <Grid Margin="16">
-     <Grid.RowDefinitions>
-      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
-     </Grid.RowDefinitions>
-     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
-     </Grid.ColumnDefinitions>
-     <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="选择首领" TextWrapping="Wrap"/>
-     <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="部分首领因机制问题未添加" TextWrapping="Wrap"/>
-     <vio:CascadingComboBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Width="200" Margin="0,0,36,0"
-               behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding BossName, Mode=TwoWay}"
-               behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
-               ItemsSource="{x:Static helpers:AutoBossCascadingItems.Items}"
-               SelectedCascadingItem="{Binding BossName, Mode=TwoWay, Converter={StaticResource AutoBossNameConverter}}"/>
-    </Grid>
-    <Grid Margin="16">
-     <Grid.RowDefinitions>
-      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
-     </Grid.RowDefinitions>
-     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
-     </Grid.ColumnDefinitions>
-     <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="切换队伍" TextWrapping="Wrap"/>
-     <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="留空则不更换队伍" TextWrapping="Wrap"/>
-     <ui:TextBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Width="200" Margin="0,0,36,0"
-                 Text="{Binding TeamName, Mode=TwoWay}" PlaceholderText="例如：首领队"/>
-    </Grid>
-    <Grid Margin="16">
-     <Grid.RowDefinitions>
-      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
-     </Grid.RowDefinitions>
-     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
-     </Grid.ColumnDefinitions>
-     <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="成功领奖次数限制" TextWrapping="Wrap"/>
-     <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="开启后，限制单次运行的成功领奖次数" TextWrapping="Wrap"/>
-     <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Margin="0,0,36,0"
-                      IsChecked="{Binding SpecifyRunCount, Mode=TwoWay}"/>
-    </Grid>
-    <Border Margin="16,8,16,16" BorderThickness="1" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
-            Background="{DynamicResource ControlFillColorSecondaryBrush}" CornerRadius="8"
-            Visibility="{Binding SpecifyRunCount, Converter={StaticResource BooleanToVisibilityConverter}, Mode=OneWay}">
-     <StackPanel Margin="12">
-      <StackPanel Orientation="Horizontal" Margin="0,8,0,12">
-       <ui:TextBlock Text="单次运行上限：" VerticalAlignment="Center" Margin="0,0,8,0"/>
-       <ui:NumberBox Value="{Binding RunCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                     Minimum="1" MaxDecimalPlaces="0" SmallChange="1" LargeChange="5"
-                     SpinButtonPlacementMode="Hidden" AcceptsExpression="False" Width="120">
-        <b:Interaction.Behaviors>
-         <behavior:NumberBoxValueConstraintBehavior EmptyValue="1" MinimumValue="1"/>
-        </b:Interaction.Behaviors>
-       </ui:NumberBox>
-      </StackPanel>
-      <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-       <ui:TextBlock Text="原粹不足时使用须臾树脂补充：" VerticalAlignment="Center" Margin="0,0,8,0"/>
-       <ui:ToggleSwitch IsChecked="{Binding UseTransientResin, Mode=TwoWay}"/>
-      </StackPanel>
-      <StackPanel Orientation="Horizontal">
-       <ui:TextBlock Text="原粹不足时使用脆弱树脂补充：" VerticalAlignment="Center" Margin="0,0,8,0"/>
-       <ui:ToggleSwitch IsChecked="{Binding UseFragileResin, Mode=TwoWay}"/>
-      </StackPanel>
-     </StackPanel>
-    </Border>
-    <Grid Margin="16">
-     <Grid.RowDefinitions>
-      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
-     </Grid.RowDefinitions>
-     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
-     </Grid.ColumnDefinitions>
-     <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="每轮讨伐后返回七天神像" TextWrapping="Wrap"/>
-     <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="开启后每次领奖后先回血，再重新前往首领" TextWrapping="Wrap"/>
-     <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Margin="0,0,36,0"
-                      IsChecked="{Binding ReturnToStatueAfterEachRound, Mode=TwoWay}"/>
-    </Grid>
-    <Grid Margin="16">
-     <Grid.RowDefinitions>
-      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
-     </Grid.RowDefinitions>
-     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
-     </Grid.ColumnDefinitions>
-     <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="启用奖励识别" TextWrapping="Wrap"/>
-     <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="每轮领取后识别奖励名称与数量，任务结束打印汇总" TextWrapping="Wrap"/>
-     <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Margin="0,0,36,0"
-                      IsChecked="{Binding RewardRecognitionEnabled, Mode=TwoWay}"/>
-    </Grid>
-    <Grid Margin="16">
-     <Grid.RowDefinitions>
-      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
-     </Grid.RowDefinitions>
-     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
-     </Grid.ColumnDefinitions>
-     <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="角色死亡后重试次数" TextWrapping="Wrap"/>
-     <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="战斗中存在角色死亡时，复活后重新讨伐当前首领" TextWrapping="Wrap"/>
-     <ui:NumberBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Width="120" Margin="0,0,36,0"
-                   Minimum="0" MaxDecimalPlaces="0" SmallChange="1" LargeChange="3"
-                   SpinButtonPlacementMode="Hidden" AcceptsExpression="False"
-                   Value="{Binding ReviveRetryCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-    </Grid>
-   </StackPanel>
-  </ui:CardExpander>
- </StackPanel>
+<UserControl xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" xmlns:combat="clr-namespace:BetterGenshinImpact.View.Controls.CombatStrategy" xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta" xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior" xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers" xmlns:tasksVm="clr-namespace:BetterGenshinImpact.ViewModel.SoloTaskSettings" x:Class="BetterGenshinImpact.View.Pages.SoloTaskSettings.AutoBossSettingsView">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="SoloTaskSettingsResources.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <!-- 自动首领讨伐：沿用旧一条龙的配置卡片，字段绑定 auto_boss 参数；旧累计上限未迁入新系统。 -->
+    <!-- Fluent 设置布局：单项设置独立成卡，强关联设置使用展开卡片及带分隔线的设置行。 -->
+    <StackPanel>
+        <ui:CardControl Style="{StaticResource SoloCard}">
+            <ui:CardControl.Header>
+                <StackPanel Margin="0,0,16,0">
+                    <ui:TextBlock FontTypography="Body" Text="战斗策略" TextWrapping="Wrap"/>
+                    <TextBlock Style="{StaticResource SoloDescription}" Text="选择此任务使用的首领讨伐策略。"/>
+                </StackPanel>
+            </ui:CardControl.Header>
+            <combat:CombatStrategyPicker Width="288" AllowedKinds="WithoutCombo" Strategy="{Binding StrategyName, Mode=TwoWay}"/>
+        </ui:CardControl>
+        <ui:CardControl Style="{StaticResource SoloCard}">
+            <ui:CardControl.Header>
+                <StackPanel Margin="0,0,16,0">
+                    <ui:TextBlock FontTypography="Body" Text="讨伐首领" TextWrapping="Wrap"/>
+                    <TextBlock Style="{StaticResource SoloDescription}" Text="选择要挑战的首领，暂不支持部分特殊机制首领。"/>
+                </StackPanel>
+            </ui:CardControl.Header>
+            <vio:CascadingComboBox Width="210" behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding BossName, Mode=TwoWay}" behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True" ItemsSource="{x:Static helpers:AutoBossCascadingItems.Items}" SelectedCascadingItem="{Binding BossName, Mode=TwoWay, Converter={StaticResource AutoBossNameConverter}}"/>
+        </ui:CardControl>
+        <ui:CardControl Style="{StaticResource SoloCard}">
+            <ui:CardControl.Header>
+                <StackPanel Margin="0,0,16,0">
+                    <ui:TextBlock FontTypography="Body" Text="战斗队伍" TextWrapping="Wrap"/>
+                    <TextBlock Style="{StaticResource SoloDescription}" Text="填写游戏内队伍名称；留空使用当前队伍。"/>
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ui:TextBox Width="210" Text="{Binding TeamName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="留空则不切换队伍"/>
+        </ui:CardControl>
+        <ui:CardExpander Style="{StaticResource SoloExpander}">
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,16,0">
+                        <ui:TextBlock FontTypography="Body" Text="指定成功领奖次数" TextWrapping="Wrap"/>
+                        <TextBlock Style="{StaticResource SoloDescription}" Text="关闭时刷至原粹树脂不足；开启后按单次运行上限停止。"/>
+                    </StackPanel>
+                    <ui:ToggleSwitch Grid.Column="1" Margin="12,0,16,0" IsChecked="{Binding SpecifyRunCount, Mode=TwoWay}"/>
+                </Grid>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Style="{StaticResource SoloRow}" IsEnabled="{Binding SpecifyRunCount, Mode=OneWay}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,16,0">
+                        <ui:TextBlock FontTypography="Body" Text="单次运行上限" TextWrapping="Wrap"/>
+                        <TextBlock Style="{StaticResource SoloDescription}" Text="只统计成功领取奖励的次数。"/>
+                    </StackPanel>
+                    <ContentControl Grid.Column="1" VerticalAlignment="Center" HorizontalContentAlignment="Right">
+                        <ui:NumberBox Width="150" Minimum="1" SmallChange="1" LargeChange="5" ClearButtonEnabled="False" SpinButtonPlacementMode="Inline" Value="{Binding RunCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                    </ContentControl>
+                </Grid>
+                <Separator Margin="20,0"/>
+                <Grid Style="{StaticResource SoloRow}" IsEnabled="{Binding SpecifyRunCount, Mode=OneWay}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,16,0">
+                        <ui:TextBlock FontTypography="Body" Text="使用须臾树脂补充" TextWrapping="Wrap"/>
+                        <TextBlock Style="{StaticResource SoloDescription}" Text="仅在指定次数模式且原粹树脂不足时使用。"/>
+                    </StackPanel>
+                    <ContentControl Grid.Column="1" VerticalAlignment="Center" HorizontalContentAlignment="Right">
+                        <ui:ToggleSwitch IsChecked="{Binding UseTransientResin, Mode=TwoWay}"/>
+                    </ContentControl>
+                </Grid>
+                <Separator Margin="20,0"/>
+                <Grid Style="{StaticResource SoloRow}" IsEnabled="{Binding SpecifyRunCount, Mode=OneWay}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,16,0">
+                        <ui:TextBlock FontTypography="Body" Text="使用脆弱树脂补充" TextWrapping="Wrap"/>
+                        <TextBlock Style="{StaticResource SoloDescription}" Text="仅在指定次数模式且原粹树脂不足时使用。"/>
+                    </StackPanel>
+                    <ContentControl Grid.Column="1" VerticalAlignment="Center" HorizontalContentAlignment="Right">
+                        <ui:ToggleSwitch IsChecked="{Binding UseFragileResin, Mode=TwoWay}"/>
+                    </ContentControl>
+                </Grid>
+            </StackPanel>
+        </ui:CardExpander>
+        <ui:CardExpander Style="{StaticResource SoloExpander}">
+            <ui:CardExpander.Header>
+                <StackPanel Margin="0,0,16,0">
+                    <ui:TextBlock FontTypography="Body" Text="累计成功领奖次数" TextWrapping="Wrap"/>
+                    <TextBlock Style="{StaticResource SoloDescription}" Text="跨次运行累计，每个任务、账号分别统计；0 表示不限制。"/>
+                </StackPanel>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Style="{StaticResource SoloRow}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,16,0">
+                        <ui:TextBlock FontTypography="Body" Text="累计上限" TextWrapping="Wrap"/>
+                        <TextBlock Style="{StaticResource SoloDescription}" Text="到达上限后跳过本任务，不影响后续步骤。"/>
+                    </StackPanel>
+                    <ContentControl Grid.Column="1" VerticalAlignment="Center" HorizontalContentAlignment="Right">
+                        <ui:NumberBox Width="150" Minimum="0" SmallChange="1" LargeChange="5" ClearButtonEnabled="False" SpinButtonPlacementMode="Inline" Value="{Binding TotalRunCountLimit, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                    </ContentControl>
+                </Grid>
+                <Separator Margin="20,0"/>
+                <Grid Style="{StaticResource SoloRow}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding CompletedRunCountText, Mode=OneWay}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <ui:Button Margin="8,0,0,0" Content="刷新累计" Command="{Binding RefreshProgressCommand}"/>
+                        <ui:Button Margin="8,0,0,0" Content="清空累计" Command="{Binding ResetProgressCommand}"/>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </ui:CardExpander>
+        <ui:CardControl Style="{StaticResource SoloCard}">
+            <ui:CardControl.Header>
+                <StackPanel Margin="0,0,16,0">
+                    <ui:TextBlock FontTypography="Body" Text="每轮结束返回七天神像" TextWrapping="Wrap"/>
+                    <TextBlock Style="{StaticResource SoloDescription}" Text="领奖后先回神像恢复，再前往首领开始下一轮。"/>
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ui:ToggleSwitch IsChecked="{Binding ReturnToStatueAfterEachRound, Mode=TwoWay}"/>
+        </ui:CardControl>
+        <ui:CardControl Style="{StaticResource SoloCard}">
+            <ui:CardControl.Header>
+                <StackPanel Margin="0,0,16,0">
+                    <ui:TextBlock FontTypography="Body" Text="奖励识别" TextWrapping="Wrap"/>
+                    <TextBlock Style="{StaticResource SoloDescription}" Text="每轮领奖后识别奖励名称与数量，结束时汇总。"/>
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ui:ToggleSwitch IsChecked="{Binding RewardRecognitionEnabled, Mode=TwoWay}"/>
+        </ui:CardControl>
+        <ui:CardControl Style="{StaticResource SoloCard}">
+            <ui:CardControl.Header>
+                <StackPanel Margin="0,0,16,0">
+                    <ui:TextBlock FontTypography="Body" Text="角色死亡后重试次数" TextWrapping="Wrap"/>
+                    <TextBlock Style="{StaticResource SoloDescription}" Text="复活后重新挑战当前首领，0 表示不重试。"/>
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ui:NumberBox Width="150" Minimum="0" SmallChange="1" LargeChange="5" ClearButtonEnabled="False" SpinButtonPlacementMode="Inline" Value="{Binding ReviveRetryCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+        </ui:CardControl>
+    </StackPanel>
 </UserControl>

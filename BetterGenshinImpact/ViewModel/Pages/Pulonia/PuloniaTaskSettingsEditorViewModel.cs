@@ -26,14 +26,14 @@ public sealed class PuloniaTaskSettingsEditorViewModel : ObservableObject
     /// <summary>独立任务的专属设置视图模型；为空时使用 <see cref="Fields"/>。</summary>
     public SoloTaskSettingsViewModel? DedicatedSettings { get; }
 
-    /// <summary>按 Schema 自动生成的通用设置字段；使用专属界面时为空。</summary>
+    /// <summary>按 Schema 自动生成的通用设置字段；专属界面存在时补齐尚未提供的参数。</summary>
     public IReadOnlyList<PuloniaOneDragonParameterFieldViewModel> Fields { get; }
 
     /// <summary>是否使用独立任务的专属设置界面。</summary>
     public bool HasDedicatedSettings => DedicatedSettings is not null;
 
     /// <summary>是否使用自动生成的通用设置卡片。</summary>
-    public bool HasFields => DedicatedSettings is null && Fields.Count > 0;
+    public bool HasFields => Fields.Count > 0;
 
     /// <summary>任务既没有专属界面也没有可编辑参数。</summary>
     public bool IsEmpty => DedicatedSettings is null && Fields.Count == 0;
@@ -60,16 +60,22 @@ public sealed class PuloniaTaskSettingsEditorViewModel : ObservableObject
     /// <param name="registry">独立任务注册表；为空时只使用通用卡片。</param>
     /// <param name="definition">能力定义。</param>
     /// <param name="effectiveParameters">当前有效参数（默认值、预设、分组覆盖与节点参数合并后的结果）。</param>
+    /// <param name="services">可选专属设置依赖容器，省略时使用应用服务。</param>
     /// <returns>设置编辑器。</returns>
     public static PuloniaTaskSettingsEditorViewModel Create(SoloTaskRegistry? registry,
-        PuloniaTaskDefinition definition, JObject effectiveParameters)
+        PuloniaTaskDefinition definition, JObject effectiveParameters, IServiceProvider? services = null)
     {
         // 1. 优先使用独立任务自己的设置界面，与独立任务页、一条龙看到的配置保持一致
         var dedicated = registry is null
             ? null
-            : SoloTaskSettingsFactory.Create(registry, PuloniaSoloTaskExecutor.ToTaskId(definition.TaskType), effectiveParameters);
+            : SoloTaskSettingsFactory.Create(registry, PuloniaSoloTaskExecutor.ToTaskId(definition.TaskType), effectiveParameters, services);
         if (dedicated is not null)
-            return new PuloniaTaskSettingsEditorViewModel(definition, effectiveParameters, dedicated, []);
+        {
+            // 专属界面仅接管明确编辑的字段，其他业务参数仍可通过卡片修改。
+            var edited = dedicated.EditedParameterNames.ToHashSet(StringComparer.Ordinal);
+            return new PuloniaTaskSettingsEditorViewModel(definition, effectiveParameters, dedicated,
+                CreateFields(definition, effectiveParameters).Where(field => !edited.Contains(field.Name)).ToArray());
+        }
 
         // 2. 没有专属界面时按 Schema 生成通用设置卡片
         return new PuloniaTaskSettingsEditorViewModel(definition, effectiveParameters, null,
@@ -114,7 +120,6 @@ public sealed class PuloniaTaskSettingsEditorViewModel : ObservableObject
         if (DedicatedSettings is not null)
         {
             DedicatedSettings.CollectChanges(changes);
-            return changes;
         }
         foreach (var field in Fields)
         {

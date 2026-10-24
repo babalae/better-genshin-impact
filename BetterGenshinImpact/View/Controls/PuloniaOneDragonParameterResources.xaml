@@ -30,7 +30,7 @@
 
             <!--  布尔字段：右侧开关  -->
             <ui:CardControl Margin="0,0,0,8"
-                            Visibility="{Binding IsBoolean, Converter={StaticResource FieldVisibility}}">
+                            Visibility="{Binding IsBoolean, Converter={StaticResource FieldVisibility}, Mode=OneWay}">
                 <ui:CardControl.Header>
                     <Grid>
                         <Grid.RowDefinitions>
@@ -40,23 +40,23 @@
                         <!--  字段标题  -->
                         <ui:TextBlock Grid.Row="0"
                                       FontTypography="Body"
-                                      Text="{Binding DisplayName}"
+                                      Text="{Binding DisplayName, Mode=OneWay}"
                                       TextWrapping="Wrap" />
                         <!--  字段说明（小号次要文字）  -->
                         <ui:TextBlock Grid.Row="1"
                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                      Text="{Binding Description}"
+                                      Text="{Binding Description, Mode=OneWay}"
                                       TextWrapping="Wrap" />
                     </Grid>
                 </ui:CardControl.Header>
-                <ui:ToggleSwitch Margin="0,0,36,0"
+                <ui:ToggleSwitch Margin="0"
                                  HorizontalAlignment="Right"
                                  IsChecked="{Binding BooleanValue, Mode=TwoWay}" />
             </ui:CardControl>
 
             <!--  选项字段：右侧下拉框  -->
             <ui:CardControl Margin="0,0,0,8"
-                            Visibility="{Binding IsChoice, Converter={StaticResource FieldVisibility}}">
+                            Visibility="{Binding IsChoice, Converter={StaticResource FieldVisibility}, Mode=OneWay}">
                 <ui:CardControl.Header>
                     <Grid>
                         <Grid.RowDefinitions>
@@ -65,25 +65,25 @@
                         </Grid.RowDefinitions>
                         <ui:TextBlock Grid.Row="0"
                                       FontTypography="Body"
-                                      Text="{Binding DisplayName}"
+                                      Text="{Binding DisplayName, Mode=OneWay}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                      Text="{Binding Description}"
+                                      Text="{Binding Description, Mode=OneWay}"
                                       TextWrapping="Wrap" />
                     </Grid>
                 </ui:CardControl.Header>
-                <ComboBox Margin="0,0,36,0"
+                <ComboBox Margin="0"
                           MinWidth="160"
                           MaxWidth="360"
                           HorizontalAlignment="Right"
-                          ItemsSource="{Binding Choices}"
+                          ItemsSource="{Binding Choices, Mode=OneWay}"
                           SelectedItem="{Binding SelectedChoice, Mode=TwoWay}" />
             </ui:CardControl>
 
         <!-- 战斗策略字段：使用统一的两级选择器。 -->
         <ui:CardControl Margin="0,0,0,8"
-                            Visibility="{Binding IsCombatStrategy, Converter={StaticResource FieldVisibility}}">
+                            Visibility="{Binding IsCombatStrategy, Converter={StaticResource FieldVisibility}, Mode=OneWay}">
                 <ui:CardControl.Header>
                     <Grid>
                         <Grid.RowDefinitions>
@@ -92,20 +92,20 @@
                         </Grid.RowDefinitions>
                         <ui:TextBlock Grid.Row="0"
                                       FontTypography="Body"
-                                      Text="{Binding DisplayName}"
+                                      Text="{Binding DisplayName, Mode=OneWay}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                      Text="{Binding Description}"
+                                      Text="{Binding Description, Mode=OneWay}"
                                       TextWrapping="Wrap" />
                     </Grid>
                 </ui:CardControl.Header>
-                <combat:CombatStrategyPicker Width="288" VerticalAlignment="Center" Margin="0,0,36,0" HorizontalAlignment="Right" Strategy="{Binding TextValue, Mode=TwoWay}" AllowedKinds="{Binding AllowedStrategyKinds, Mode=OneWay}" />
+                <combat:CombatStrategyPicker Width="288" VerticalAlignment="Center" Margin="0" HorizontalAlignment="Right" Strategy="{Binding TextValue, Mode=TwoWay}" AllowedKinds="{Binding AllowedStrategyKinds, Mode=OneWay}" />
             </ui:CardControl>
 
             <!--  文本字段：右侧文本框  -->
             <ui:CardControl Margin="0,0,0,8"
-                            Visibility="{Binding IsText, Converter={StaticResource FieldVisibility}}">
+                            Visibility="{Binding IsText, Converter={StaticResource FieldVisibility}, Mode=OneWay}">
                 <ui:CardControl.Header>
                     <Grid>
                         <Grid.RowDefinitions>
@@ -114,15 +114,15 @@
                         </Grid.RowDefinitions>
                         <ui:TextBlock Grid.Row="0"
                                       FontTypography="Body"
-                                      Text="{Binding DisplayName}"
+                                      Text="{Binding DisplayName, Mode=OneWay}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                      Text="{Binding Description}"
+                                      Text="{Binding Description, Mode=OneWay}"
                                       TextWrapping="Wrap" />
                     </Grid>
                 </ui:CardControl.Header>
-                <ui:TextBox Margin="0,0,36,0"
+                <ui:TextBox Margin="0"
                             MinWidth="160"
                             MaxWidth="360"
                             HorizontalAlignment="Right"
@@ -132,7 +132,7 @@
 
             <!--  数字字段：右侧数字框，上下限由 VM 的 Minimum / Maximum 提供  -->
             <ui:CardControl Margin="0,0,0,8"
-                            Visibility="{Binding IsNumber, Converter={StaticResource FieldVisibility}}">
+                            Visibility="{Binding IsNumber, Converter={StaticResource FieldVisibility}, Mode=OneWay}">
                 <ui:CardControl.Header>
                     <Grid>
                         <Grid.RowDefinitions>
@@ -141,20 +141,20 @@
                         </Grid.RowDefinitions>
                         <ui:TextBlock Grid.Row="0"
                                       FontTypography="Body"
-                                      Text="{Binding DisplayName}"
+                                      Text="{Binding DisplayName, Mode=OneWay}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                      Text="{Binding Description}"
+                                      Text="{Binding Description, Mode=OneWay}"
                                       TextWrapping="Wrap" />
                     </Grid>
                 </ui:CardControl.Header>
-                <ui:NumberBox Margin="0,0,36,0"
+                <ui:NumberBox Margin="0"
                               Width="150"
                               HorizontalAlignment="Right"
                               ClearButtonEnabled="False"
-                              Maximum="{Binding Maximum}"
-                              Minimum="{Binding Minimum}"
+                              Maximum="{Binding Maximum, Mode=OneWay}"
+                              Minimum="{Binding Minimum, Mode=OneWay}"
                               SpinButtonPlacementMode="Inline"
                               ValidationMode="InvalidInputOverwritten"
                               Value="{Binding NumberValue, Mode=TwoWay}" />
@@ -166,7 +166,7 @@
             -->
             <ui:CardExpander Margin="0,0,0,8"
                              ContentPadding="0"
-                             Visibility="{Binding IsObject, Converter={StaticResource FieldVisibility}}">
+                             Visibility="{Binding IsObject, Converter={StaticResource FieldVisibility}, Mode=OneWay}">
                 <ui:CardExpander.Header>
                     <Grid>
                         <Grid.RowDefinitions>
@@ -175,18 +175,18 @@
                         </Grid.RowDefinitions>
                         <ui:TextBlock Grid.Row="0"
                                       FontTypography="Body"
-                                      Text="{Binding DisplayName}"
+                                      Text="{Binding DisplayName, Mode=OneWay}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                      Text="{Binding Description}"
+                                      Text="{Binding Description, Mode=OneWay}"
                                       TextWrapping="Wrap" />
                     </Grid>
                 </ui:CardExpander.Header>
                 <!--  子字段列表：缩进展示并通过 DynamicResource 递归引用本模板  -->
                 <StackPanel Margin="16,6,16,10">
                     <ItemsControl ItemTemplate="{DynamicResource OneDragonParameterFieldTemplate}"
-                                  ItemsSource="{Binding Children}" />
+                                  ItemsSource="{Binding Children, Mode=OneWay}" />
                 </StackPanel>
             </ui:CardExpander>
 
@@ -196,7 +196,7 @@
             -->
             <ui:CardExpander Margin="0,0,0,8"
                              ContentPadding="0"
-                             Visibility="{Binding IsAdvancedJson, Converter={StaticResource FieldVisibility}}">
+                             Visibility="{Binding IsAdvancedJson, Converter={StaticResource FieldVisibility}, Mode=OneWay}">
                 <ui:CardExpander.Header>
                     <Grid>
                         <Grid.RowDefinitions>
@@ -205,11 +205,11 @@
                         </Grid.RowDefinitions>
                         <ui:TextBlock Grid.Row="0"
                                       FontTypography="Body"
-                                      Text="{Binding DisplayName}"
+                                      Text="{Binding DisplayName, Mode=OneWay}"
                                       TextWrapping="Wrap" />
                         <ui:TextBlock Grid.Row="1"
                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                      Text="{Binding Description}"
+                                      Text="{Binding Description, Mode=OneWay}"
                                       TextWrapping="Wrap" />
                     </Grid>
                 </ui:CardExpander.Header>

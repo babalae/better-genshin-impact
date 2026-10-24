@@ -9,6 +9,13 @@ namespace BetterGenshinImpact.ViewModel.SoloTaskSettings;
 /// <summary>自动地脉花任务的专属设置草稿；对应 auto_ley_line_outcrop 的常用参数，沿用旧一条龙卡片布局。</summary>
 public partial class AutoLeyLineOutcropSettingsViewModel : SoloTaskSettingsViewModel
 {
+    /// <inheritdoc />
+    public override string[] EditedParameterNames =>
+    [
+        "one_dragon_mode", "is_resin_exhaustion_mode", "open_mode_count_min", "count",
+        PuloniaSoloTaskExecutor.WeekdayOverridesParameter
+    ];
+
     /// <summary>每周安排的日期顺序，索引与执行器的服务器星期值一致（0 为周日）。</summary>
     private static readonly string[] DayNames = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 
@@ -77,20 +84,32 @@ public partial class AutoLeyLineOutcropSettingsViewModel : SoloTaskSettingsViewM
 
         // 每周安排：七天各一项，只写入非空的类型与国家；全部未勾选时视为每天执行
         var anyEnabledDay = Weekdays.Any(row => row.Enabled);
-        var weekly = new JObject();
+        var original = Original[PuloniaSoloTaskExecutor.WeekdayOverridesParameter];
+        var weekly = original is JObject originalWeekly ? (JObject)originalWeekly.DeepClone() : new JObject();
         for (var i = 0; i < DayNames.Length; i++)
         {
             var row = Weekdays[i];
-            var entry = new JObject { ["enabled"] = !anyEnabledDay || row.Enabled };
-            if (!string.IsNullOrWhiteSpace(row.Type)) entry["ley_line_outcrop_type"] = row.Type;
-            if (!string.IsNullOrWhiteSpace(row.Country)) entry["country"] = row.Country;
-            weekly[i.ToString()] = entry;
+            var day = (original as JObject)?[i.ToString()] as JObject ?? new JObject();
+            var entry = (JObject)day.DeepClone();
+            var enabled = !anyEnabledDay || row.Enabled;
+            if (enabled != ReadBool(day, "enabled", true)) entry["enabled"] = enabled;
+            UpdateWeekdayString(entry, day, "ley_line_outcrop_type", row.Type);
+            UpdateWeekdayString(entry, day, "country", row.Country);
+            if (entry.Count > 0 || (original as JObject)?.ContainsKey(i.ToString()) == true)
+                weekly[i.ToString()] = entry;
         }
 
         // 七天都只是“当天执行”时与没有每周安排等价，快照里没有安排就不写入
-        var original = Original[PuloniaSoloTaskExecutor.WeekdayOverridesParameter];
-        var noOverride = weekly.Properties().All(p => p.Value is JObject { Count: 1 } entry && entry.Value<bool>("enabled"));
+        var noOverride = weekly.Count == 0;
         if (noOverride && original is null or { Type: JTokenType.Null } or JObject { Count: 0 }) return;
         if (!JToken.DeepEquals(weekly, original)) changes[PuloniaSoloTaskExecutor.WeekdayOverridesParameter] = weekly;
+    }
+
+    /// <summary>更新实际改动的单日字段，保留其他运行参数，清空输入时恢复继承。</summary>
+    private static void UpdateWeekdayString(JObject entry, JObject original, string name, string current)
+    {
+        if (ReadString(original, name) == current) return;
+        if (string.IsNullOrWhiteSpace(current)) entry.Remove(name);
+        else entry[name] = current;
     }
 }

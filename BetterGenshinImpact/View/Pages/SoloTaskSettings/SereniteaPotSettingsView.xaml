@@ -1,41 +1,65 @@
-<UserControl x:Class="BetterGenshinImpact.View.Pages.SoloTaskSettings.SereniteaPotSettingsView"
- xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
- xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
- <!-- 尘歌壶奖励：按原一条龙提供进壶方式、购买日期及商品勾选，由宿主统一应用草稿。 -->
- <StackPanel>
-  <ui:CardControl Margin="0,0,0,12">
-   <ui:CardControl.Header>
+<UserControl xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" xmlns:combat="clr-namespace:BetterGenshinImpact.View.Controls.CombatStrategy" xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta" xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior" xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers" xmlns:tasksVm="clr-namespace:BetterGenshinImpact.ViewModel.SoloTaskSettings" x:Class="BetterGenshinImpact.View.Pages.SoloTaskSettings.SereniteaPotSettingsView">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="SoloTaskSettingsResources.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <!-- 尘歌壶奖励：按原一条龙提供进壶方式、购买日期及商品勾选，由宿主统一应用草稿。 -->
+    <!-- Fluent 设置布局：单项设置独立成卡，强关联设置使用展开卡片及带分隔线的设置行。 -->
     <StackPanel>
-     <ui:TextBlock FontTypography="Body" Text="进壶方式选择" TextWrapping="Wrap"/>
-     <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="通过地图传送或背包中的尘歌壶道具进入" TextWrapping="Wrap"/>
+        <ui:CardControl Style="{StaticResource SoloCard}">
+            <ui:CardControl.Header>
+                <StackPanel Margin="0,0,16,0">
+                    <ui:TextBlock FontTypography="Body" Text="进壶方式" TextWrapping="Wrap"/>
+                    <TextBlock Style="{StaticResource SoloDescription}" Text="通过地图传送或背包中的尘歌壶道具进入。"/>
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ComboBox Width="180" ItemsSource="{Binding TeleportTypeChoices, Mode=OneWay}" SelectedItem="{Binding TeleportType, Mode=TwoWay}"/>
+        </ui:CardControl>
+        <ui:CardExpander Style="{StaticResource SoloExpander}">
+            <ui:CardExpander.Header>
+                <StackPanel Margin="0,0,16,0">
+                    <ui:TextBlock FontTypography="Body" Text="洞天百宝购买" TextWrapping="Wrap"/>
+                    <TextBlock Style="{StaticResource SoloDescription}" Text="购买日期和商品仅影响购买，领取好感与宝钱照常进行。"/>
+                </StackPanel>
+            </ui:CardExpander.Header>
+            <StackPanel>
+                <Grid Style="{StaticResource SoloRow}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,16,0">
+                        <ui:TextBlock FontTypography="Body" Text="购买日期" TextWrapping="Wrap"/>
+                        <TextBlock Style="{StaticResource SoloDescription}" Text="仅在所选日期购买已勾选的商品。"/>
+                    </StackPanel>
+                    <ContentControl Grid.Column="1" VerticalAlignment="Center" HorizontalContentAlignment="Right">
+                        <ComboBox Width="180" ItemsSource="{Binding PurchaseScheduleChoices, Mode=OneWay}" SelectedItem="{Binding PurchaseSchedule, Mode=TwoWay}"/>
+                    </ContentControl>
+                </Grid>
+                <Separator Margin="20,0"/>
+                <ItemsControl ItemsSource="{Binding PurchaseItems, Mode=OneWay}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Style="{StaticResource SoloRow}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,16,0">
+                                    <ui:TextBlock FontTypography="Body" Text="{Binding Name, Mode=OneWay}" TextWrapping="Wrap"/>
+                                    <TextBlock Style="{StaticResource SoloDescription}" Text="按勾选的商品依次购买。"/>
+                                </StackPanel>
+                                <ContentControl Grid.Column="1" VerticalAlignment="Center" HorizontalContentAlignment="Right">
+                                    <ui:ToggleSwitch IsChecked="{Binding IsSelected, Mode=TwoWay}"/>
+                                </ContentControl>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ui:CardExpander>
     </StackPanel>
-   </ui:CardControl.Header>
-   <ComboBox MinWidth="120" Margin="0,0,36,0" ItemsSource="{Binding TeleportTypeChoices}"
-             SelectedItem="{Binding TeleportType, Mode=TwoWay}"/>
-  </ui:CardControl>
-  <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
-   <ui:CardExpander.Header>
-    <StackPanel>
-     <ui:TextBlock FontTypography="Body" Text="购买选择" TextWrapping="Wrap"/>
-     <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="购买日期和商品；日期不影响领取好感和钱币" TextWrapping="Wrap"/>
-    </StackPanel>
-   </ui:CardExpander.Header>
-   <StackPanel Margin="16">
-    <Grid>
-     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-     <ui:TextBlock Text="购买日期" VerticalAlignment="Center"/>
-     <ComboBox Grid.Column="1" MinWidth="150" ItemsSource="{Binding PurchaseScheduleChoices}"
-               SelectedItem="{Binding PurchaseSchedule, Mode=TwoWay}"/>
-    </Grid>
-    <Separator Margin="0,12"/>
-    <ItemsControl ItemsSource="{Binding PurchaseItems}">
-     <ItemsControl.ItemTemplate>
-      <DataTemplate>
-       <CheckBox Margin="0,0,0,8" Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}"/>
-      </DataTemplate>
-     </ItemsControl.ItemTemplate>
-    </ItemsControl>
-   </StackPanel>
-  </ui:CardExpander>
- </StackPanel>
 </UserControl>

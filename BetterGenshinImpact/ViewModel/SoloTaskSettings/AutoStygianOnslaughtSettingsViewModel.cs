@@ -8,6 +8,14 @@ namespace BetterGenshinImpact.ViewModel.SoloTaskSettings;
 /// <summary>自动幽境危战任务的专属设置草稿；对应 auto_stygian_onslaught 的常用参数，按旧卡片风格设计。</summary>
 public partial class AutoStygianOnslaughtSettingsViewModel : SoloTaskSettingsViewModel
 {
+    /// <inheritdoc />
+    public override string[] EditedParameterNames =>
+    [
+        "strategy_name", "combat_script_bag_path", "boss_num", "fight_team_name", "specify_resin_use",
+        "original_resin_use_count", "condensed_resin_use_count", "transient_resin_use_count", "fragile_resin_use_count",
+        "auto_artifact_salvage", "max_artifact_star"
+    ];
+
     /// <summary>幽境首领序号选项；与任务的 1—3 校验一致。</summary>
     public static readonly int[] BossNumChoices = [1, 2, 3];
     /// <summary>分解圣遗物的最高星级选项。</summary>

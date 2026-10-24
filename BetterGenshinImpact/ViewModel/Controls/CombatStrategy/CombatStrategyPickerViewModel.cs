@@ -27,9 +27,9 @@ namespace BetterGenshinImpact.ViewModel.Controls.CombatStrategy;
 public partial class CombatStrategyPickerViewModel : ObservableObject
 {
     /// <summary>共享录制服务。</summary>
-    private readonly KeyMouseRecordService _recordService;
+    private readonly Lazy<KeyMouseRecordService> _recordService;
     /// <summary>主窗口页面导航服务。</summary>
-    private readonly INavigationService _navigation;
+    private readonly Lazy<INavigationService> _navigation;
     /// <summary>用户实际选用策略时通知视图写回依赖属性。</summary>
     public event Action<string>? StrategySelected;
     /// <summary>目录加载取消源。</summary>
@@ -122,9 +122,15 @@ public partial class CombatStrategyPickerViewModel : ObservableObject
 
     /// <summary>每个控件创建自己的 VM，复用全局录制与导航服务。</summary>
     public CombatStrategyPickerViewModel(KeyMouseRecordService recordService, INavigationService navigation)
+        : this(() => recordService, () => navigation)
     {
-        _recordService = recordService;
-        _navigation = navigation;
+    }
+
+    /// <summary>延后获取服务，构造专属设置模板时只建立显示状态，不启动应用宿主。</summary>
+    internal CombatStrategyPickerViewModel(Func<KeyMouseRecordService> recordService, Func<INavigationService> navigation)
+    {
+        _recordService = new Lazy<KeyMouseRecordService>(recordService);
+        _navigation = new Lazy<INavigationService>(navigation);
         SetAllowedKinds(CombatStrategyKind.All);
     }
 
@@ -172,7 +178,7 @@ public partial class CombatStrategyPickerViewModel : ObservableObject
     public void Attach(bool canNavigate)
     {
         CanNavigate = canNavigate;
-        IsRecording = _recordService.IsRecording;
+        IsRecording = _recordService.Value.IsRecording;
         if (_attached) return;
         _attached = true;
         WeakReferenceMessenger.Default.Register<KeyMouseRecordStateChangedMessage>(this, static (recipient, message) =>
@@ -208,7 +214,7 @@ public partial class CombatStrategyPickerViewModel : ObservableObject
     [RelayCommand]
     private void Opened()
     {
-        if (_ownsRecording && IsRecording) { _recordService.Stop(); IsOpen = false; return; }
+        if (_ownsRecording && IsRecording) { _recordService.Value.Stop(); IsOpen = false; return; }
         SetCurrent(_value);
         ClearSearch();
         SelectedCategory = Categories.FirstOrDefault(c => c.Kind == Current?.Kind) ?? Categories.FirstOrDefault();
@@ -329,8 +335,8 @@ public partial class CombatStrategyPickerViewModel : ObservableObject
     {
         Close();
         _ownsRecording = true;
-        if (!await _recordService.StartAsync("AutoFight", this)) _ownsRecording = false;
-        IsRecording = _recordService.IsRecording;
+        if (!await _recordService.Value.StartAsync("AutoFight", this)) _ownsRecording = false;
+        IsRecording = _recordService.Value.IsRecording;
         NotifyTrigger();
     }
 
@@ -340,7 +346,7 @@ public partial class CombatStrategyPickerViewModel : ObservableObject
     {
         if (!CanNavigate) return;
         Close();
-        _navigation.Navigate(typeof(KeyMouseRecordPage));
+        _navigation.Value.Navigate(typeof(KeyMouseRecordPage));
     }
 
     /// <summary>从空搜索结果跳到另一类别，保留搜索文本。</summary>

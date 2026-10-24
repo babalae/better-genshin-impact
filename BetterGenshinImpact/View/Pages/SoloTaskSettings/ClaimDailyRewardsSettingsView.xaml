@@ -1,50 +1,31 @@
-<UserControl x:Class="BetterGenshinImpact.View.Pages.SoloTaskSettings.ClaimDailyRewardsSettingsView"
- xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
- xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
- xmlns:tasksVm="clr-namespace:BetterGenshinImpact.ViewModel.SoloTaskSettings">
- <UserControl.Resources>
-  <ResourceDictionary>
-   <ResourceDictionary.MergedDictionaries>
-    <ResourceDictionary Source="../../Controls/PuloniaOneDragonResources.xaml"/>
-   </ResourceDictionary.MergedDictionaries>
-  </ResourceDictionary>
- </UserControl.Resources>
- <!-- 领取每日奖励：沿用旧一条龙的冒险家协会与好感队卡片。 -->
- <StackPanel>
-  <ui:CardControl Margin="0,0,0,12">
-   <ui:CardControl.Header>
-    <Grid>
-     <Grid.RowDefinitions>
-      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
-     </Grid.RowDefinitions>
-     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
-     </Grid.ColumnDefinitions>
-     <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="领取奖励的冒险者协会" TextWrapping="Wrap"/>
-     <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="前往指定地区冒险者协会领取" TextWrapping="Wrap"/>
-     <ComboBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" MinWidth="120" Margin="18,0,0,0"
-               HorizontalContentAlignment="Center"
-               ItemsSource="{x:Static tasksVm:ClaimDailyRewardsSettingsViewModel.CountryChoices}"
-               SelectedItem="{Binding Country, Mode=TwoWay}"/>
-    </Grid>
-   </ui:CardControl.Header>
-  </ui:CardControl>
-  <ui:CardControl Margin="0,0,0,12">
-   <ui:CardControl.Header>
-    <Grid>
-     <Grid.RowDefinitions>
-      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
-     </Grid.RowDefinitions>
-     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
-     </Grid.ColumnDefinitions>
-     <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="领取前切换队伍（好感队）" TextWrapping="Wrap"/>
-     <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="用于给指定队伍加好感度，留空使用当前队伍" TextWrapping="Wrap"/>
-     <ui:TextBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Width="200" Margin="18,0,0,0"
-                 Text="{Binding PartyName, Mode=TwoWay}"
-                 PlaceholderText="填写好感队名称" TextAlignment="Center" VerticalAlignment="Center"/>
-    </Grid>
-   </ui:CardControl.Header>
-  </ui:CardControl>
- </StackPanel>
+<UserControl xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" xmlns:combat="clr-namespace:BetterGenshinImpact.View.Controls.CombatStrategy" xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta" xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior" xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers" xmlns:tasksVm="clr-namespace:BetterGenshinImpact.ViewModel.SoloTaskSettings" x:Class="BetterGenshinImpact.View.Pages.SoloTaskSettings.ClaimDailyRewardsSettingsView">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="SoloTaskSettingsResources.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <!-- 领取每日奖励：沿用旧一条龙的冒险家协会与好感队卡片。 -->
+    <!-- Fluent 设置布局：单项设置独立成卡，强关联设置使用展开卡片及带分隔线的设置行。 -->
+    <StackPanel>
+        <ui:CardControl Style="{StaticResource SoloCard}">
+            <ui:CardControl.Header>
+                <StackPanel Margin="0,0,16,0">
+                    <ui:TextBlock FontTypography="Body" Text="领取奖励的冒险家协会" TextWrapping="Wrap"/>
+                    <TextBlock Style="{StaticResource SoloDescription}" Text="前往所选地区领取每日委托奖励。"/>
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ComboBox Width="180" ItemsSource="{x:Static tasksVm:ClaimDailyRewardsSettingsViewModel.CountryChoices}" SelectedItem="{Binding Country, Mode=TwoWay}"/>
+        </ui:CardControl>
+        <ui:CardControl Style="{StaticResource SoloCard}">
+            <ui:CardControl.Header>
+                <StackPanel Margin="0,0,16,0">
+                    <ui:TextBlock FontTypography="Body" Text="领取前切换好感队" TextWrapping="Wrap"/>
+                    <TextBlock Style="{StaticResource SoloDescription}" Text="填写游戏内队伍名称；留空使用当前队伍。"/>
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ui:TextBox Width="210" Text="{Binding PartyName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="留空则不切换队伍"/>
+        </ui:CardControl>
+    </StackPanel>
 </UserControl>

@@ -6,6 +6,9 @@ namespace BetterGenshinImpact.ViewModel.SoloTaskSettings;
 /// <summary>领取每日奖励任务的专属设置草稿；对应 claim_daily_rewards 的 country 与 party_name。</summary>
 public partial class ClaimDailyRewardsSettingsViewModel : SoloTaskSettingsViewModel
 {
+    /// <inheritdoc />
+    public override string[] EditedParameterNames => ["country", "party_name"];
+
     /// <summary>冒险家协会所在国家选项，对应路线文件“冒险家协会_{国家}.json”。</summary>
     public static readonly string[] CountryChoices = ["蒙德", "璃月", "稻妻", "须弥", "枫丹", "挪德卡莱"];
 

@@ -1,33 +1,31 @@
-<UserControl x:Class="BetterGenshinImpact.View.Pages.SoloTaskSettings.CraftCondensedResinSettingsView"
- xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
- xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
- xmlns:tasksVm="clr-namespace:BetterGenshinImpact.ViewModel.SoloTaskSettings">
- <UserControl.Resources>
-  <ResourceDictionary>
-   <ResourceDictionary.MergedDictionaries>
-    <ResourceDictionary Source="../../Controls/PuloniaOneDragonResources.xaml"/>
-   </ResourceDictionary.MergedDictionaries>
-  </ResourceDictionary>
- </UserControl.Resources>
- <!-- 合成浓缩树脂：沿用旧一条龙的合成台卡片，绑定本任务的 country 参数。 -->
- <StackPanel>
-  <ui:CardControl Margin="0,0,0,12">
-   <ui:CardControl.Header>
-    <Grid>
-     <Grid.RowDefinitions>
-      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
-     </Grid.RowDefinitions>
-     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
-     </Grid.ColumnDefinitions>
-     <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="合成树脂合成台" TextWrapping="Wrap"/>
-     <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="指定地区合成树脂" TextWrapping="Wrap"/>
-     <ComboBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" MinWidth="120" Margin="18,0,0,0"
-               HorizontalContentAlignment="Center"
-               ItemsSource="{x:Static tasksVm:CraftCondensedResinSettingsViewModel.CountryChoices}"
-               SelectedItem="{Binding Country, Mode=TwoWay}"/>
-    </Grid>
-   </ui:CardControl.Header>
-  </ui:CardControl>
- </StackPanel>
+<UserControl xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" xmlns:combat="clr-namespace:BetterGenshinImpact.View.Controls.CombatStrategy" xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta" xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior" xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers" xmlns:tasksVm="clr-namespace:BetterGenshinImpact.ViewModel.SoloTaskSettings" x:Class="BetterGenshinImpact.View.Pages.SoloTaskSettings.CraftCondensedResinSettingsView">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="SoloTaskSettingsResources.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <!-- 合成浓缩树脂：沿用旧一条龙的合成台卡片，绑定本任务的 country 参数。 -->
+    <!-- Fluent 设置布局：单项设置独立成卡，强关联设置使用展开卡片及带分隔线的设置行。 -->
+    <StackPanel>
+        <ui:CardControl Style="{StaticResource SoloCard}">
+            <ui:CardControl.Header>
+                <StackPanel Margin="0,0,16,0">
+                    <ui:TextBlock FontTypography="Body" Text="合成台所在地区" TextWrapping="Wrap"/>
+                    <TextBlock Style="{StaticResource SoloDescription}" Text="前往所选地区的合成台合成浓缩树脂。"/>
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ComboBox Width="180" ItemsSource="{x:Static tasksVm:CraftCondensedResinSettingsViewModel.CountryChoices}" SelectedItem="{Binding Country, Mode=TwoWay}"/>
+        </ui:CardControl>
+        <ui:CardControl Style="{StaticResource SoloCard}">
+            <ui:CardControl.Header>
+                <StackPanel Margin="0,0,16,0">
+                    <ui:TextBlock FontTypography="Body" Text="合成后保留原粹树脂" TextWrapping="Wrap"/>
+                    <TextBlock Style="{StaticResource SoloDescription}" Text="大于 0 时预留指定数量，0 或负数使用默认合成方式。"/>
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ui:NumberBox Width="150" Minimum="-1" SmallChange="1" LargeChange="5" ClearButtonEnabled="False" SpinButtonPlacementMode="Inline" Value="{Binding MinResinToKeep, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+        </ui:CardControl>
+    </StackPanel>
 </UserControl>

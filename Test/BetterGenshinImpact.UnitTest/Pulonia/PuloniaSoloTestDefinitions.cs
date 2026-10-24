@@ -35,6 +35,13 @@ internal static class PuloniaSoloTestDefinitions
         var schema = PuloniaSoloTaskSchema.Create(paramType);
         var properties = schema["properties"] as JObject ?? new JObject();
         properties[PuloniaSoloTaskExecutor.WeekdayOverridesParameter] = new JObject { ["type"] = "object" };
+        if (taskId == AutoDomainTask.TaskId)
+            properties[PuloniaSoloTaskExecutor.WeekdayOverridesEnabledParameter] = new JObject { ["type"] = "boolean" };
+        if (taskId == AutoBossTask.TaskId)
+        {
+            properties[PuloniaSoloTaskExecutor.BossTotalRunCountLimitParameter] = new JObject { ["type"] = "integer", ["minimum"] = 0 };
+            properties[PuloniaSoloTaskExecutor.BossRewardCountResetParameter] = new JObject { ["type"] = "string" };
+        }
         schema["properties"] = properties;
         schema["additionalProperties"] = false;
         return new PuloniaTaskDefinition

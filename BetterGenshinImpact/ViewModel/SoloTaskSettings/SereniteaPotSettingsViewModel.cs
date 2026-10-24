@@ -9,6 +9,9 @@ namespace BetterGenshinImpact.ViewModel.SoloTaskSettings;
 /// <summary>领取尘歌壶奖励的专属设置草稿，沿用原一条龙的进壶方式、购买日期和商品选择。</summary>
 public partial class SereniteaPotSettingsViewModel : SoloTaskSettingsViewModel
 {
+    /// <inheritdoc />
+    public override string[] EditedParameterNames => ["teleport_type", "secret_treasure_objects"];
+
     /// <summary>洞天百宝支持的商品，顺序与原一条龙的商品勾选列表一致。</summary>
     private static readonly string[] Goods = ["布匹", "须臾树脂", "大英雄的经验", "流浪者的经验", "精锻用魔矿", "摩拉", "祝圣精华", "祝圣油膏"];
 

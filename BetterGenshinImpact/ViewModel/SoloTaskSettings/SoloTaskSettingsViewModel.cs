@@ -15,6 +15,9 @@ namespace BetterGenshinImpact.ViewModel.SoloTaskSettings;
 /// </summary>
 public abstract class SoloTaskSettingsViewModel : ObservableObject
 {
+    /// <summary>专属界面已提供的参数；其余参数由宿主补充为设置卡片，避免专属界面遮蔽可用功能。</summary>
+    public abstract string[] EditedParameterNames { get; }
+
     /// <summary>载入时的有效参数快照；“重置草稿”和来源变化检测依赖它。</summary>
     protected JObject Original { get; }
 

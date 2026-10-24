@@ -218,7 +218,10 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
         if (fixedSettings is not null)
         {
             FixedSettings = fixedSettings;
-            SettingsFields = [];
+            var edited = fixedSettings.EditedParameterNames.ToHashSet(StringComparer.Ordinal);
+            SettingsFields = GetSettingsDraft(node).Where(field => !edited.Contains(field.Name)).ToArray();
+            if (fixedSettings is AutoBossSettingsViewModel boss)
+                _ = boss.SetProgressScopeAsync(node.Document.Id, node.Id);
         }
         else
         {
@@ -265,23 +268,16 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
         if (SelectedTask is not { } node) return true;
         try
         {
-            // 专属视图走类型化草稿；通用卡片继续使用 schema 字段列表。
-            if (FixedSettings is { } fixedSettings && ReferenceEquals(_fixedSettingsNode, node))
-            {
-                var fixedChanges = new JObject();
-                fixedSettings.CollectChanges(fixedChanges);
-                var fixedCurrent = node.Document.GetOneDragonParameters(node);
-                foreach (var field in fixedChanges.Properties())
-                    if (!JToken.DeepEquals(fixedCurrent[field.Name], fixedSettings.GetOriginalValue(field.Name)))
-                        throw new InvalidOperationException("此项设置的参数来源已改变，请重置草稿后重新设置。");
-                node.Document.ApplyOneDragonParameters(node, fixedChanges);
-                _fixedSettingsCache.Remove((node.Document, node.Id));
-                RefreshSettingsSurfaces(node);
-                SettingsMessage = "设置已应用，将自动保存。";
-                return true;
-            }
+            // 专属视图与补充卡片合并提交，统一检查来源，避免遗漏未被专属界面接管的业务参数。
             var changes = new JObject();
             var current = node.Document.GetOneDragonParameters(node);
+            if (FixedSettings is { } fixedSettings && ReferenceEquals(_fixedSettingsNode, node))
+            {
+                fixedSettings.CollectChanges(changes);
+                foreach (var field in changes.Properties())
+                    if (!JToken.DeepEquals(current[field.Name], fixedSettings.GetOriginalValue(field.Name)))
+                        throw new InvalidOperationException("此项设置的参数来源已改变，请重置草稿后重新设置。");
+            }
             foreach (var field in SettingsFields)
                 if (field.HasChanges() && field.BuildValue() is { } value)
                 {
@@ -290,7 +286,9 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
                     changes[field.Name] = value;
                 }
             node.Document.ApplyOneDragonParameters(node, changes);
-            _drafts.Remove((node.Document, node.Id)); SettingsFields = GetSettingsDraft(node);
+            _drafts.Remove((node.Document, node.Id));
+            _fixedSettingsCache.Remove((node.Document, node.Id));
+            RefreshSettingsSurfaces(node);
             SettingsMessage = "设置已应用，将自动保存。";
             return true;
         }
@@ -506,6 +504,9 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
             ExecutionStatusText = latest is null
                 ? CanRunOnThisInstance ? "尚未执行" : ChildInstanceHint
                 : targetPrefix + new PuloniaTaskRunItemViewModel(latest).StatusText + " · " + latest.Message;
+            // 运行状态变化时同步首领累计，子实例落盘的结果也能在当前设置页看到。
+            if (FixedSettings is AutoBossSettingsViewModel boss && boss.RefreshProgressCommand.CanExecute(null))
+                await boss.RefreshProgressCommand.ExecuteAsync(null);
         }
         catch (Exception ex) { if (_isListening) ExecutionStatusText = "状态读取失败：" + ex.Message; }
     }

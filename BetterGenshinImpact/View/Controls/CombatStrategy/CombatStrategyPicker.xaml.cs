@@ -27,7 +27,7 @@ public partial class CombatStrategyPicker : UserControl
 
     /// <summary>创建独立 VM，保留宿主的 DataContext 供策略依赖属性绑定。</summary>
     public CombatStrategyPicker() : this(new CombatStrategyPickerViewModel(
-        App.GetService<KeyMouseRecordService>()!, App.GetService<INavigationService>()!)) { }
+        () => App.GetService<KeyMouseRecordService>()!, () => App.GetService<INavigationService>()!)) { }
 
     /// <summary>注入每实例的状态，XAML 默认构造复用应用服务。</summary>
     public CombatStrategyPicker(CombatStrategyPickerViewModel viewModel)

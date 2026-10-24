@@ -4,6 +4,7 @@ using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.ViewModel.Pages;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
+using BetterGenshinImpact.ViewModel.SoloTaskSettings;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json.Linq;
@@ -147,9 +148,14 @@ public partial class PuloniaTaskNodeSettingsDialogViewModel : ObservableObject
     /// <summary>独立任务按当前有效参数建立设置编辑器，其余节点不提供。</summary>
     /// <returns>设置编辑器或 null。</returns>
     private PuloniaTaskSettingsEditorViewModel? CreateSettings()
-        => _definition is not null && Node.IsLeaf && IsSoloTask
+    {
+        var settings = _definition is not null && Node.IsLeaf && IsSoloTask
             ? PuloniaTaskSettingsEditorViewModel.Create(_registry, _definition, Document.GetOneDragonParameters(Node))
             : null;
+        if (settings?.DedicatedSettings is AutoBossSettingsViewModel boss)
+            _ = boss.SetProgressScopeAsync(Document.Id, Node.Id);
+        return settings;
+    }
 
     /// <summary>参数在高级设置中被即时修改后，若任务设置没有未保存输入则按最新值重建。</summary>
     private void OnDocumentContentChanged(object? sender, EventArgs e)

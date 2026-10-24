@@ -4,8 +4,8 @@
    xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior" xmlns:dd="urn:gong-wpf-dragdrop"
  FontFamily="{StaticResource TextThemeFontFamily}" Foreground="{DynamicResource TextFillColorPrimaryBrush}">
  <b:Interaction.Triggers>
-  <b:EventTrigger EventName="Loaded"><b:InvokeCommandAction Command="{Binding ViewModel.OpenPageCommand}"/></b:EventTrigger>
-  <b:EventTrigger EventName="Unloaded"><b:InvokeCommandAction Command="{Binding ViewModel.ClosePageCommand}"/></b:EventTrigger>
+  <b:EventTrigger EventName="Loaded"><b:InvokeCommandAction Command="{Binding ViewModel.OpenPageCommand, Mode=OneWay}"/></b:EventTrigger>
+  <b:EventTrigger EventName="Unloaded"><b:InvokeCommandAction Command="{Binding ViewModel.ClosePageCommand, Mode=OneWay}"/></b:EventTrigger>
  </b:Interaction.Triggers>
  <UserControl.Resources>
   <ResourceDictionary>
@@ -14,7 +14,7 @@
     <ResourceDictionary Source="../Controls/PuloniaOneDragonParameterResources.xaml"/>
    </ResourceDictionary.MergedDictionaries>
    <!-- 弹出菜单跨可视树，显式携带节点与所属编辑会话。 -->
-   <behavior:BindingProxy x:Key="DragonProxy" Data="{Binding ViewModel}"/>
+   <behavior:BindingProxy x:Key="DragonProxy" Data="{Binding ViewModel, Mode=OneWay}"/>
    <Style x:Key="TaskRow" TargetType="ListViewItem">
     <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
     <Setter Property="Padding" Value="0"/><Setter Property="Margin" Value="0,2,8,2"/>
@@ -22,15 +22,15 @@
    </Style>
    <!-- “添加任务”菜单项：子菜单取 Children，样式会沿用到每一级子项；叶子项（TaskType 非空）执行添加命令，分隔项显示为分隔线。 -->
    <Style x:Key="AddTaskMenuItemStyle" TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
-    <Setter Property="Header" Value="{Binding Header}"/>
-    <Setter Property="ItemsSource" Value="{Binding Children}"/>
-    <Setter Property="Command" Value="{Binding Data.AddTaskCommand, Source={StaticResource DragonProxy}}"/>
-    <Setter Property="CommandParameter" Value="{Binding TaskType}"/>
+    <Setter Property="Header" Value="{Binding Header, Mode=OneWay}"/>
+    <Setter Property="ItemsSource" Value="{Binding Children, Mode=OneWay}"/>
+    <Setter Property="Command" Value="{Binding Data.AddTaskCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
+    <Setter Property="CommandParameter" Value="{Binding TaskType, Mode=OneWay}"/>
     <Style.Triggers>
-     <DataTrigger Binding="{Binding TaskType}" Value="{x:Null}">
+     <DataTrigger Binding="{Binding TaskType, Mode=OneWay}" Value="{x:Null}">
       <Setter Property="Command" Value="{x:Null}"/>
      </DataTrigger>
-     <DataTrigger Binding="{Binding IsSeparator}" Value="True">
+     <DataTrigger Binding="{Binding IsSeparator, Mode=OneWay}" Value="True">
       <Setter Property="Focusable" Value="False"/>
       <Setter Property="IsHitTestVisible" Value="False"/>
       <Setter Property="Template">
@@ -45,7 +45,7 @@
    </Style>
   </ResourceDictionary>
  </UserControl.Resources>
- <Grid Margin="22,16,8,12" IsEnabled="{Binding ViewModel.IsReady}">
+ <Grid Margin="22,16,8,12" IsEnabled="{Binding ViewModel.IsReady, Mode=OneWay}">
   <Grid.ColumnDefinitions><ColumnDefinition Width="*" MaxWidth="300" MinWidth="240"/><ColumnDefinition Width="2*"/></Grid.ColumnDefinitions>
   <!-- 左侧沿用老一条龙的平面任务清单；分组和引用作为一行，拖拽只排序。 -->
   <DockPanel>
@@ -53,25 +53,25 @@
     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
     <TextBlock Text="任务列表" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
     <!-- 开始按钮携带本入口配置，不能取历史或普通任务计划菜单的选择。 -->
-    <ui:Button Grid.Column="1" Margin="0,0,6,0" Appearance="Primary" Icon="{ui:SymbolIcon Play24}" Command="{Binding ViewModel.RunCommand}" ToolTip="开始一条龙"/>
+    <ui:Button Grid.Column="1" Margin="0,0,6,0" Appearance="Primary" Icon="{ui:SymbolIcon Play24}" Command="{Binding ViewModel.RunCommand, Mode=OneWay}" ToolTip="开始一条龙"/>
     <!-- 停止当前配置的活动运行，无论它在主实例还是子实例上执行。 -->
-    <ui:Button Grid.Column="2" Margin="0,0,6,0" Icon="{ui:SymbolIcon Stop24}" Command="{Binding ViewModel.StopCurrentRunCommand}" ToolTip="停止当前配置"/>
+    <ui:Button Grid.Column="2" Margin="0,0,6,0" Icon="{ui:SymbolIcon Stop24}" Command="{Binding ViewModel.StopCurrentRunCommand, Mode=OneWay}" ToolTip="停止当前配置"/>
     <ui:DropDownButton Grid.Column="3" Icon="{ui:SymbolIcon MoreHorizontal24}" ToolTip="更多操作">
      <ui:DropDownButton.Flyout><ContextMenu>
-      <MenuItem Header="添加已有任务计划" Command="{Binding Data.AddPlanReferenceCommand, Source={StaticResource DragonProxy}}"/>
-      <MenuItem Header="添加任务" ItemsSource="{Binding Data.Editor.AddTaskMenu, Source={StaticResource DragonProxy}}"
+      <MenuItem Header="添加已有任务计划" Command="{Binding Data.AddPlanReferenceCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
+      <MenuItem Header="添加任务" ItemsSource="{Binding Data.Editor.AddTaskMenu, Source={StaticResource DragonProxy}, Mode=OneWay}"
                 ItemContainerStyle="{StaticResource AddTaskMenuItemStyle}"/>
       <Separator/>
-      <MenuItem Header="执行记录" Command="{Binding Data.ShowHistoryCommand, Source={StaticResource DragonProxy}}"/>
-      <MenuItem Header="账号管理" Command="{Binding Data.ManageGenshinAccountsCommand, Source={StaticResource DragonProxy}}"/>
+      <MenuItem Header="执行记录" Command="{Binding Data.ShowHistoryCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
+      <MenuItem Header="账号管理" Command="{Binding Data.ManageGenshinAccountsCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
       <MenuItem Header="显示账号切换步骤" IsCheckable="True"
        IsChecked="{Binding Data.ShowAccountPreparation, Source={StaticResource DragonProxy}, Mode=OneWay}"
-       Command="{Binding Data.ToggleAccountPreparationCommand, Source={StaticResource DragonProxy}}"/>
-      <MenuItem Header="定时与热键" Command="{Binding Data.ShowTriggersCommand, Source={StaticResource DragonProxy}}"/>
-      <MenuItem Header="撤销最近编辑" Command="{Binding Data.UndoConfigurationCommand, Source={StaticResource DragonProxy}}"/>
+       Command="{Binding Data.ToggleAccountPreparationCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
+      <MenuItem Header="定时与热键" Command="{Binding Data.ShowTriggersCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
+      <MenuItem Header="撤销最近编辑" Command="{Binding Data.UndoConfigurationCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
       <Separator/>
-      <MenuItem Header="导入旧配置" Command="{Binding Data.ImportLegacyCommand, Source={StaticResource DragonProxy}}"/>
-      <MenuItem Header="查看导入报告" Command="{Binding Data.ShowImportReportCommand, Source={StaticResource DragonProxy}}"/>
+      <MenuItem Header="导入旧配置" Command="{Binding Data.ImportLegacyCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
+      <MenuItem Header="查看导入报告" Command="{Binding Data.ShowImportReportCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
      </ContextMenu></ui:DropDownButton.Flyout>
     </ui:DropDownButton>
    </Grid>
@@ -80,7 +80,7 @@
     <Grid.Style>
      <Style TargetType="Grid">
       <Style.Triggers>
-       <DataTrigger Binding="{Binding ViewModel.HasExecutionTargetChoice}" Value="False">
+       <DataTrigger Binding="{Binding ViewModel.HasExecutionTargetChoice, Mode=OneWay}" Value="False">
         <Setter Property="Visibility" Value="Collapsed"/>
        </DataTrigger>
       </Style.Triggers>
@@ -88,24 +88,24 @@
     </Grid.Style>
     <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
     <TextBlock Text="运行于" VerticalAlignment="Center" Margin="0,0,8,0"/>
-    <ComboBox Grid.Column="1" ItemsSource="{Binding ViewModel.ExecutionTargets}"
+    <ComboBox Grid.Column="1" ItemsSource="{Binding ViewModel.ExecutionTargets, Mode=OneWay}"
               SelectedItem="{Binding ViewModel.SelectedExecutionTarget, Mode=TwoWay}"
               DisplayMemberPath="Display" AutomationProperties.Name="运行实例"
               ToolTip="选择执行这份配置的实例；同一配置同时只能在一个实例上运行"/>
    </Grid>
    <Separator DockPanel.Dock="Top" Margin="0,0,10,8"/>
-   <TextBlock DockPanel.Dock="Bottom" Margin="0,10,10,0" Text="{Binding ViewModel.ExecutionStatusText}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-   <TextBlock DockPanel.Dock="Bottom" Margin="0,6,10,0" Text="{Binding ViewModel.AccountMessage}" TextWrapping="Wrap" FontSize="12">
-    <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><DataTrigger Binding="{Binding ViewModel.AccountMessage}" Value=""><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+   <TextBlock DockPanel.Dock="Bottom" Margin="0,10,10,0" Text="{Binding ViewModel.ExecutionStatusText, Mode=OneWay}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+   <TextBlock DockPanel.Dock="Bottom" Margin="0,6,10,0" Text="{Binding ViewModel.AccountMessage, Mode=OneWay}" TextWrapping="Wrap" FontSize="12">
+    <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><DataTrigger Binding="{Binding ViewModel.AccountMessage, Mode=OneWay}" Value=""><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
    </TextBlock>
    <!-- 平面清单直接包装同一组根节点，不转换、不保存另一份任务树。 -->
    <!-- 系统准备项不参与任务树、拖拽和删除，默认隐藏。 -->
    <ui:CardAction DockPanel.Dock="Top" Padding="12,14" Margin="0,2,8,2" HorizontalContentAlignment="Stretch"
-    IsChevronVisible="False" Command="{Binding ViewModel.SelectAccountPreparationCommand}"
-    Visibility="{Binding ViewModel.ShowAccountPreparation, Converter={StaticResource DragonBoolVisibility}}"
+    IsChevronVisible="False" Command="{Binding ViewModel.SelectAccountPreparationCommand, Mode=OneWay}"
+    Visibility="{Binding ViewModel.ShowAccountPreparation, Converter={StaticResource DragonBoolVisibility}, Mode=OneWay}"
     ToolTip="配置当前一条龙运行前使用的账号">
     <ui:CardAction.Style><Style TargetType="ui:CardAction" BasedOn="{StaticResource {x:Type ui:CardAction}}">
-     <Style.Triggers><DataTrigger Binding="{Binding ViewModel.IsAccountPreparationSelected}" Value="True">
+     <Style.Triggers><DataTrigger Binding="{Binding ViewModel.IsAccountPreparationSelected, Mode=OneWay}" Value="True">
       <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
       <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
      </DataTrigger></Style.Triggers>
@@ -117,26 +117,26 @@
      <ui:SymbolIcon Grid.Column="3" Symbol="ChevronRight24" Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
     </Grid>
    </ui:CardAction>
-   <ui:ListView ItemsSource="{Binding ViewModel.TaskList}" SelectedItem="{Binding ViewModel.SelectedTask, Mode=TwoWay}"
+   <ui:ListView ItemsSource="{Binding ViewModel.TaskList, Mode=OneWay}" SelectedItem="{Binding ViewModel.SelectedTask, Mode=TwoWay}"
     ItemContainerStyle="{StaticResource TaskRow}" SelectionMode="Single" BorderThickness="0" Background="Transparent"
     ScrollViewer.HorizontalScrollBarVisibility="Disabled" dd:DragDrop.IsDragSource="True" dd:DragDrop.IsDropTarget="True"
-    dd:DragDrop.UseDefaultDragAdorner="True" dd:DragDrop.DropHandler="{Binding ViewModel}"
+    dd:DragDrop.UseDefaultDragAdorner="True" dd:DragDrop.DropHandler="{Binding ViewModel, Mode=OneWay}"
     behavior:RightClickSelectBehavior.Enabled="True">
     <ui:ListView.ItemTemplate><DataTemplate>
      <ui:Card Padding="12,14">
       <ui:Card.ContextMenu>
        <ContextMenu>
-        <MenuItem Header="添加已有任务计划" Command="{Binding Data.AddPlanReferenceCommand, Source={StaticResource DragonProxy}}"/>
-        <MenuItem Header="添加任务" ItemsSource="{Binding Data.Editor.AddTaskMenu, Source={StaticResource DragonProxy}}"
+        <MenuItem Header="添加已有任务计划" Command="{Binding Data.AddPlanReferenceCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
+        <MenuItem Header="添加任务" ItemsSource="{Binding Data.Editor.AddTaskMenu, Source={StaticResource DragonProxy}, Mode=OneWay}"
                   ItemContainerStyle="{StaticResource AddTaskMenuItemStyle}"/>
         <Separator/>
-        <MenuItem Header="删除任务" Command="{Binding Data.DeleteTaskCommand, Source={StaticResource DragonProxy}}"/>
+        <MenuItem Header="删除任务" Command="{Binding Data.DeleteTaskCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
        </ContextMenu>
       </ui:Card.ContextMenu>
       <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
        <ui:FontIcon Glyph="&#xe411;" Style="{StaticResource FaFontIconStyleForOneDragon}" ToolTip="拖动排序"/>
-       <Ellipse Grid.Column="1" Width="9" Height="9" Margin="10,0" ToolTip="{Binding OneDragonStatusText}" Fill="{Binding OneDragonStatusBrush}"/>
-       <TextBlock Grid.Column="2" Text="{Binding Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding ConfigurationSummary}" Margin="0,0,8,0"/>
+       <Ellipse Grid.Column="1" Width="9" Height="9" Margin="10,0" ToolTip="{Binding OneDragonStatusText, Mode=OneWay}" Fill="{Binding OneDragonStatusBrush, Mode=OneWay}"/>
+       <TextBlock Grid.Column="2" Text="{Binding Name, Mode=OneWay}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding ConfigurationSummary, Mode=OneWay}" Margin="0,0,8,0"/>
        <ui:ToggleSwitch Grid.Column="3" IsChecked="{Binding IsEnabled, Mode=TwoWay}" ToolTip="启用或关闭此任务；关闭分组保留子项选择"/>
       </Grid>
      </ui:Card>
@@ -149,60 +149,67 @@
     <Grid>
      <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
      <TextBlock Text="配置" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
-     <ComboBox Grid.Column="1" MinWidth="200" MaxWidth="280" Height="34" Margin="10,0" DisplayMemberPath="Name" ItemsSource="{Binding ViewModel.Configurations}" SelectedItem="{Binding ViewModel.SelectedConfiguration, Mode=TwoWay}"/>
-     <ui:Button Grid.Column="2" Margin="0,0,8,0" Icon="{ui:SymbolIcon Add24}" Command="{Binding ViewModel.NewConfigurationCommand}" ToolTip="新增配置"/>
-     <ui:Button Grid.Column="3" Margin="0,0,8,0" Icon="{ui:SymbolIcon Edit24}" Command="{Binding ViewModel.RenameConfigurationCommand}" ToolTip="重命名配置"/>
-     <ui:Button Grid.Column="4" Icon="{ui:SymbolIcon Delete24}" Command="{Binding ViewModel.DeleteConfigurationCommand}" ToolTip="删除配置"/>
+     <ComboBox Grid.Column="1" MinWidth="200" MaxWidth="280" Height="34" Margin="10,0" DisplayMemberPath="Name" ItemsSource="{Binding ViewModel.Configurations, Mode=OneWay}" SelectedItem="{Binding ViewModel.SelectedConfiguration, Mode=TwoWay}"/>
+     <ui:Button Grid.Column="2" Margin="0,0,8,0" Icon="{ui:SymbolIcon Add24}" Command="{Binding ViewModel.NewConfigurationCommand, Mode=OneWay}" ToolTip="新增配置"/>
+     <ui:Button Grid.Column="3" Margin="0,0,8,0" Icon="{ui:SymbolIcon Edit24}" Command="{Binding ViewModel.RenameConfigurationCommand, Mode=OneWay}" ToolTip="重命名配置"/>
+     <ui:Button Grid.Column="4" Icon="{ui:SymbolIcon Delete24}" Command="{Binding ViewModel.DeleteConfigurationCommand, Mode=OneWay}" ToolTip="删除配置"/>
     </Grid>
     <Separator Margin="0,8,0,0"/>
    </StackPanel>
-   <TextBlock DockPanel.Dock="Bottom" Margin="0,8,18,0" Text="{Binding ViewModel.SelectedConfiguration.LastSaveError}" TextWrapping="Wrap" Foreground="{DynamicResource SystemFillColorCriticalBrush}"/>
+   <TextBlock DockPanel.Dock="Bottom" Margin="0,8,18,0" Text="{Binding ViewModel.SelectedConfiguration.LastSaveError, Mode=OneWay}" TextWrapping="Wrap" Foreground="{DynamicResource SystemFillColorCriticalBrush}"/>
    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
     <StackPanel Margin="0,0,18,0">
-     <StackPanel Visibility="{Binding ViewModel.IsAccountPreparationSelected, Converter={StaticResource DragonBoolVisibility}}">
+     <StackPanel Visibility="{Binding ViewModel.IsAccountPreparationSelected, Converter={StaticResource DragonBoolVisibility}, Mode=OneWay}">
       <TextBlock Text="切换账号" FontSize="16" FontWeight="SemiBold" Margin="4,0,0,12"/>
       <ui:CardControl Margin="0,0,0,12"><ui:CardControl.Header><StackPanel><TextBlock Text="本配置使用的账号"/><TextBlock Text="默认账号使用当前登录状态；指定账号在任务前切换并核验 UID。" TextWrapping="Wrap" FontSize="12"/></StackPanel></ui:CardControl.Header>
-       <ComboBox MinWidth="200" DisplayMemberPath="Name" SelectedValuePath="Id" ItemsSource="{Binding ViewModel.GenshinAccounts}" SelectedValue="{Binding ViewModel.SelectedGenshinAccountId, Mode=TwoWay}"/>
+       <ComboBox MinWidth="200" DisplayMemberPath="Name" SelectedValuePath="Id" ItemsSource="{Binding ViewModel.GenshinAccounts, Mode=OneWay}" SelectedValue="{Binding ViewModel.SelectedGenshinAccountId, Mode=TwoWay}"/>
       </ui:CardControl>
-      <ui:Button Content="管理账号与登录资料" Command="{Binding ViewModel.ManageGenshinAccountsCommand}"/>
-      <TextBlock Text="{Binding ViewModel.AccountMessage}" TextWrapping="Wrap" Margin="0,12,0,0"/>
+      <ui:Button Content="管理账号与登录资料" Command="{Binding ViewModel.ManageGenshinAccountsCommand, Mode=OneWay}"/>
+      <TextBlock Text="{Binding ViewModel.AccountMessage, Mode=OneWay}" TextWrapping="Wrap" Margin="0,12,0,0"/>
      </StackPanel>
-     <TextBlock Text="选择左侧任务查看配置。" Margin="4,10"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding ViewModel.SelectedTask}" Value="{x:Null}"><Setter Property="Visibility" Value="Visible"/></DataTrigger><DataTrigger Binding="{Binding ViewModel.IsAccountPreparationSelected}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
-     <StackPanel><StackPanel.Style><Style TargetType="StackPanel"><Style.Triggers><DataTrigger Binding="{Binding ViewModel.SelectedTask}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></StackPanel.Style>
-      <TextBlock Text="{Binding ViewModel.SelectedTask.Name}" Margin="4,0,0,8" FontSize="14" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"/>
-      <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Edit24}" Visibility="{Binding ViewModel.SelectedTask.CanEditOneDragonName, Converter={StaticResource DragonBoolVisibility}}">
+     <TextBlock Text="选择左侧任务查看配置。" Margin="4,10"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding ViewModel.SelectedTask, Mode=OneWay}" Value="{x:Null}"><Setter Property="Visibility" Value="Visible"/></DataTrigger><DataTrigger Binding="{Binding ViewModel.IsAccountPreparationSelected, Mode=OneWay}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
+     <StackPanel><StackPanel.Style><Style TargetType="StackPanel"><Style.Triggers><DataTrigger Binding="{Binding ViewModel.SelectedTask, Mode=OneWay}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></StackPanel.Style>
+      <TextBlock Text="{Binding ViewModel.SelectedTask.Name, Mode=OneWay}" Margin="4,0,0,8" FontSize="14" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"/>
+      <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Edit24}" Visibility="{Binding ViewModel.SelectedTask.CanEditOneDragonName, Converter={StaticResource DragonBoolVisibility}, Mode=OneWay}">
        <ui:CardControl.Header><StackPanel><TextBlock Text="任务名称"/><TextBlock Text="只影响当前任务的显示名称。" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}"/></StackPanel></ui:CardControl.Header>
        <TextBox Width="200" Text="{Binding ViewModel.SelectedTask.Name, Mode=TwoWay}"/>
       </ui:CardControl>
-      <ui:CardControl Margin="0,0,0,12" Visibility="{Binding ViewModel.SelectedTask.CanConfigureRepeat, Converter={StaticResource DragonBoolVisibility}}">
+      <ui:CardControl Margin="0,0,0,12" Visibility="{Binding ViewModel.SelectedTask.CanConfigureRepeat, Converter={StaticResource DragonBoolVisibility}, Mode=OneWay}">
        <ui:CardControl.Header><StackPanel><TextBlock Text="整组执行次数"/><TextBlock Text="引用计划和分组均作为清单中的一项执行。" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}"/></StackPanel></ui:CardControl.Header>
        <ui:NumberBox Width="120" Value="{Binding ViewModel.SelectedTask.RepeatCount, Mode=TwoWay}" Minimum="1" Maximum="10000"/>
       </ui:CardControl>
       <!-- 声明了专属界面的独立任务显示设置视图（隐式模板在应用启动时按 VM 类型全局注册），其余任务回退通用参数卡片。 -->
-      <ContentControl Content="{Binding ViewModel.FixedSettings}" Focusable="False">
+      <ContentControl Content="{Binding ViewModel.FixedSettings, Mode=OneWay}" Focusable="False" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
        <ContentControl.Style><Style TargetType="ContentControl">
         <Setter Property="Visibility" Value="Collapsed"/>
-        <Style.Triggers><DataTrigger Binding="{Binding ViewModel.FixedSettings, Converter={StaticResource NotNullConverter}}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
+        <Style.Triggers><DataTrigger Binding="{Binding ViewModel.FixedSettings, Converter={StaticResource NotNullConverter}, Mode=OneWay}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
        </Style></ContentControl.Style>
       </ContentControl>
+      <!-- 专属设置未覆盖的业务参数继续提供可编辑卡片，不再因存在专属视图而隐藏。 -->
+      <ui:CardExpander ContentPadding="16" Margin="0,0,0,8">
+       <ui:CardExpander.Style><Style TargetType="ui:CardExpander" BasedOn="{StaticResource {x:Type ui:CardExpander}}">
+        <Setter Property="Header" Value="更多任务设置"/>
+        <Style.Triggers>
+         <DataTrigger Binding="{Binding ViewModel.SettingsFields.Count, Mode=OneWay}" Value="0"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+         <DataTrigger Binding="{Binding ViewModel.FixedSettings, Mode=OneWay}" Value="{x:Null}"><Setter Property="Header" Value="任务设置"/><Setter Property="IsExpanded" Value="True"/></DataTrigger>
+        </Style.Triggers>
+       </Style></ui:CardExpander.Style>
+       <ItemsControl ItemsSource="{Binding ViewModel.SettingsFields, Mode=OneWay}" ItemTemplate="{StaticResource OneDragonParameterFieldTemplate}"/>
+      </ui:CardExpander>
       <StackPanel>
-       <StackPanel.Style><Style TargetType="StackPanel">
-        <Setter Property="Visibility" Value="Visible"/>
-        <Style.Triggers><DataTrigger Binding="{Binding ViewModel.FixedSettings, Converter={StaticResource NotNullConverter}}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers>
-       </Style></StackPanel.Style>
-       <ItemsControl ItemsSource="{Binding ViewModel.SettingsFields}" ItemTemplate="{StaticResource OneDragonParameterFieldTemplate}"/>
-       <ui:CardControl Margin="0,0,0,12"><ui:CardControl.Style><Style TargetType="ui:CardControl" BasedOn="{StaticResource {x:Type ui:CardControl}}"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding ViewModel.SettingsFields.Count}" Value="0"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></ui:CardControl.Style>
-        <ui:CardControl.Header><StackPanel><TextBlock Text="{Binding ViewModel.SelectedTask.TypeDisplayName}"/><TextBlock Text="{Binding ViewModel.SelectedTask.ConfigurationSummary}" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap"/></StackPanel></ui:CardControl.Header>
+       <StackPanel.Style><Style TargetType="StackPanel"><Style.Triggers><DataTrigger Binding="{Binding ViewModel.FixedSettings, Mode=OneWay, Converter={StaticResource NotNullConverter}}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></StackPanel.Style>
+       <ui:CardControl Margin="0,0,0,12"><ui:CardControl.Style><Style TargetType="ui:CardControl" BasedOn="{StaticResource {x:Type ui:CardControl}}"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding ViewModel.SettingsFields.Count, Mode=OneWay}" Value="0"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></ui:CardControl.Style>
+        <ui:CardControl.Header><StackPanel><TextBlock Text="{Binding ViewModel.SelectedTask.TypeDisplayName, Mode=OneWay}"/><TextBlock Text="{Binding ViewModel.SelectedTask.ConfigurationSummary, Mode=OneWay}" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap"/></StackPanel></ui:CardControl.Header>
        </ui:CardControl>
       </StackPanel>
       <WrapPanel HorizontalAlignment="Right" Margin="0,2,0,8">
-       <ui:Button Content="重置草稿" Margin="0,0,8,0" Command="{Binding ViewModel.ResetSettingsDraftCommand}"/>
-       <ui:Button Content="高级设置" Margin="0,0,8,0" Command="{Binding ViewModel.ConfigureNodeCommand}" CommandParameter="{Binding ViewModel.SelectedTask}"/>
-       <ui:Button Content="应用设置" Appearance="Primary" Command="{Binding ViewModel.ApplySettingsCommand}"/>
+       <ui:Button Content="重置草稿" Margin="0,0,8,0" Command="{Binding ViewModel.ResetSettingsDraftCommand, Mode=OneWay}"/>
+       <ui:Button Content="高级设置" Margin="0,0,8,0" Command="{Binding ViewModel.ConfigureNodeCommand, Mode=OneWay}" CommandParameter="{Binding ViewModel.SelectedTask, Mode=OneWay}"/>
+       <ui:Button Content="应用设置" Appearance="Primary" Command="{Binding ViewModel.ApplySettingsCommand, Mode=OneWay}"/>
       </WrapPanel>
-      <TextBlock Text="{Binding ViewModel.SettingsMessage}" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-      <TextBlock Text="{Binding ViewModel.SelectedTask.ResourceCheckError}" TextWrapping="Wrap" Foreground="{DynamicResource SystemFillColorCriticalBrush}"/>
-      <ui:Button Margin="0,10,0,0" Content="{Binding ViewModel.SelectedConfiguration.ResourceUpdateSummary}" Command="{Binding ViewModel.Editor.ConfirmResourceUpdatesCommand}" CommandParameter="{Binding ViewModel.SelectedConfiguration}" Visibility="{Binding ViewModel.SelectedConfiguration.HasResourceUpdates, Converter={StaticResource DragonBoolVisibility}}"/>
+      <TextBlock Text="{Binding ViewModel.SettingsMessage, Mode=OneWay}" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+      <TextBlock Text="{Binding ViewModel.SelectedTask.ResourceCheckError, Mode=OneWay}" TextWrapping="Wrap" Foreground="{DynamicResource SystemFillColorCriticalBrush}"/>
+      <ui:Button Margin="0,10,0,0" Content="{Binding ViewModel.SelectedConfiguration.ResourceUpdateSummary, Mode=OneWay}" Command="{Binding ViewModel.Editor.ConfirmResourceUpdatesCommand, Mode=OneWay}" CommandParameter="{Binding ViewModel.SelectedConfiguration, Mode=OneWay}" Visibility="{Binding ViewModel.SelectedConfiguration.HasResourceUpdates, Converter={StaticResource DragonBoolVisibility}, Mode=OneWay}"/>
      </StackPanel>
     </StackPanel>
    </ScrollViewer>

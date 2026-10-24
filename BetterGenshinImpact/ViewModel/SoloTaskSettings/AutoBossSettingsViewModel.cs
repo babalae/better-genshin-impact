@@ -1,6 +1,14 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using BetterGenshinImpact.Pulonia.Executors;
+using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.ViewModel.SoloTaskSettings;
@@ -8,6 +16,14 @@ namespace BetterGenshinImpact.ViewModel.SoloTaskSettings;
 /// <summary>自动首领讨伐任务的专属设置草稿；对应 auto_boss 的常用参数，沿用旧一条龙卡片布局。</summary>
 public partial class AutoBossSettingsViewModel : SoloTaskSettingsViewModel
 {
+    /// <inheritdoc />
+    public override string[] EditedParameterNames =>
+    [
+        "strategy_name", "combat_strategy_path", "boss_name", "team_name", "specify_run_count", "run_count",
+        "use_transient_resin", "use_fragile_resin", "return_to_statue_after_each_round",
+        "reward_recognition_enabled", "revive_retry_count", "total_run_count_limit", "reward_count_reset_id"
+    ];
+
     /// <summary>载入时的 strategy_name 原值。</summary>
     private readonly string _originalStrategyNameValue;
     /// <summary>载入时的 combat_strategy_path 原值。</summary>
@@ -56,10 +72,27 @@ public partial class AutoBossSettingsViewModel : SoloTaskSettingsViewModel
     /// <summary>角色死亡后的复活重试次数。</summary>
     [ObservableProperty] private int _reviveRetryCount;
 
+    /// <summary>跨次运行累计的成功领奖上限，0 表示不限制。</summary>
+    [ObservableProperty] private int _totalRunCountLimit;
+    /// <summary>当前草稿的累计批次，清空累计通过生成新批次实现，保存前不写入存储。</summary>
+    private string _rewardCountResetId;
+    /// <summary>累计统计存储，由 DI 提供；纯草稿测试或新增任务不要求读取统计。</summary>
+    private readonly PuloniaTaskStore? _progressStore;
+    /// <summary>所属计划的稳定 ID。</summary>
+    private string? _progressPlanId;
+    /// <summary>所属节点的稳定 ID。</summary>
+    private string? _progressTaskId;
+    /// <summary>展示各账号累计次数，读取错误保留在界面上。</summary>
+    [ObservableProperty] private string _completedRunCountText = "新任务的累计次数为 0。";
+
     /// <summary>从当前有效参数读取首领讨伐配置。</summary>
     /// <param name="original">当前有效参数快照。</param>
-    public AutoBossSettingsViewModel(JObject original) : base(original)
+    /// <param name="progressStore">累计次数存储；新增任务或测试可以不提供。</param>
+    public AutoBossSettingsViewModel(JObject original, PuloniaTaskStore? progressStore = null) : base(original)
     {
+        _progressStore = progressStore;
+        _totalRunCountLimit = ReadInt(Original, PuloniaSoloTaskExecutor.BossTotalRunCountLimitParameter);
+        _rewardCountResetId = ReadString(Original, PuloniaSoloTaskExecutor.BossRewardCountResetParameter);
         _originalStrategyNameValue = ReadString(Original, "strategy_name");
         _originalCombatStrategyPath = ReadString(Original, "combat_strategy_path");
         // 任务优先使用非空的 combat_strategy_path，为空时才按 strategy_name 生成，显示与之一致
@@ -87,7 +120,7 @@ public partial class AutoBossSettingsViewModel : SoloTaskSettingsViewModel
         _reviveRetryCount = _originalReviveRetryCount;
     }
 
-    /// <summary>收集首领讨伐配置的真实变化；累计上限与已完成次数不在参数中，不参与提交。</summary>
+    /// <summary>收集首领讨伐配置的真实变化；累计上限与清空批次属于编排参数，已完成次数由存储维护。</summary>
     /// <param name="changes">接收变化的对象。</param>
     public override void CollectChanges(JObject changes)
     {
@@ -106,5 +139,53 @@ public partial class AutoBossSettingsViewModel : SoloTaskSettingsViewModel
         WriteBool(changes, "return_to_statue_after_each_round", _originalReturnToStatue, ReturnToStatueAfterEachRound);
         WriteBool(changes, "reward_recognition_enabled", _originalRewardRecognitionEnabled, RewardRecognitionEnabled);
         WriteInt(changes, "revive_retry_count", _originalReviveRetryCount, ReviveRetryCount);
+        WriteInt(changes, PuloniaSoloTaskExecutor.BossTotalRunCountLimitParameter,
+            ReadInt(Original, PuloniaSoloTaskExecutor.BossTotalRunCountLimitParameter), TotalRunCountLimit);
+        WriteString(changes, PuloniaSoloTaskExecutor.BossRewardCountResetParameter,
+            ReadString(Original, PuloniaSoloTaskExecutor.BossRewardCountResetParameter), _rewardCountResetId);
+    }
+
+    /// <summary>宿主提供稳定节点身份后异步读取累计；运行统计与设置草稿分别保存。</summary>
+    public Task SetProgressScopeAsync(string planId, string taskId)
+    {
+        _progressPlanId = planId;
+        _progressTaskId = taskId;
+        return RefreshProgress();
+    }
+
+    /// <summary>重新读取各账号累计；草稿已清空时继续显示待保存状态。</summary>
+    [RelayCommand]
+    private async Task RefreshProgress()
+    {
+        if (_rewardCountResetId != ReadString(Original, PuloniaSoloTaskExecutor.BossRewardCountResetParameter))
+        {
+            CompletedRunCountText = "保存设置后清空累计，重新从 0 开始。";
+            return;
+        }
+        if (_progressStore is null || _progressPlanId is null || _progressTaskId is null) return;
+        try
+        {
+            var counts = await _progressStore.ReadBossRewardCountsAsync(_progressPlanId, _progressTaskId, _rewardCountResetId);
+            var accounts = await _progressStore.LoadAccountSettingsAsync();
+            var names = accounts.Accounts.ToDictionary(account => account.Id, account => account.Name);
+            // 读取期间可能点击清空，不能让旧读取结果覆盖清空提示。
+            if (_rewardCountResetId != ReadString(Original, PuloniaSoloTaskExecutor.BossRewardCountResetParameter)) return;
+            CompletedRunCountText = counts.Count == 0 ? "累计成功领奖：0 次。"
+                : string.Join(Environment.NewLine, counts.OrderBy(pair => pair.Key).Select(pair =>
+                    $"{(pair.Key.Length == 0 ? "当前游戏" : names.GetValueOrDefault(pair.Key, "账号 " + pair.Key))}：{pair.Value} 次"));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or Newtonsoft.Json.JsonException
+                                       or PuloniaTaskValidationException or InvalidOperationException)
+        {
+            CompletedRunCountText = "读取累计失败：" + ex.Message;
+        }
+    }
+
+    /// <summary>清空全部账号的当前累计，仅改变草稿，取消弹窗不会修改已保存累计。</summary>
+    [RelayCommand]
+    private void ResetProgress()
+    {
+        _rewardCountResetId = Guid.NewGuid().ToString("N");
+        CompletedRunCountText = "保存设置后清空累计，重新从 0 开始。";
     }
 }

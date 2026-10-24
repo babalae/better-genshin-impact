@@ -99,12 +99,25 @@ public partial class PuloniaOneDragonParameterFieldViewModel : ObservableObject
             "burst_enabled" => "使用元素爆发", "kazuha_party_name" => "万叶拾取队伍",
             "swimming_enabled" => "游泳辅助", "exp_based_pickup_enabled" => "根据经验识别拾取",
             "enable_combat_targeting" => "战斗目标锁定", "lock_lost_wait_time" => "目标丢失等待（秒）",
+            "domain_round_num" => "秘境刷取轮数", "min_resin_to_keep" => "合成后保留原粹树脂",
+            "weekday_overrides_enabled" => "启用每周安排",
+            "seek_enemy_enabled" => "旋转寻找敌人", "seek_enemy_interval_seconds" => "寻敌间隔（秒）",
+            "seek_enemy_rotary_factor" => "寻敌旋转幅度", "targeting_detection_interval" => "索敌识别间隔（毫秒）",
+            "damage_number_recognition_mode" => "伤害数字识别方式", "draw_recognition_results" => "显示识别结果边框",
+            "wood_round_num" => "伐木轮数", "wood_daily_max_count" => "每日伐木上限",
+            "whole_process_timeout_seconds" => "钓鱼流程超时（秒）", "throw_rod_time_out_timeout_seconds" => "抛竿超时（秒）",
+            "fishing_time_policy" => "钓鱼时段", "save_screenshot_on_key_tick" => "保存钓鱼关键步骤截图",
+            "star" => "圣遗物最高星级", "java_script" => "分解筛选脚本", "artifact_set_filter" => "圣遗物套装筛选",
+            "max_num_to_check" => "最多检查数量", "recognition_failure_policy" => "识别失败时的处理方式",
+            "codes" => "兑换码列表",
             _ => PuloniaTaskParameterFieldViewModel.GetDisplayName(displayKey)
         };
         _original = value?.DeepClone();
         _scalar = new(name, schema, value, value is not null, required);
         Description = schema.Value<string>("description") ?? (required ? "请选择或填写此项设置。" : "未修改的设置继续使用参数来源中的值。");
-        _isArray = schema["type"]?.Type == JTokenType.String && schema.Value<string>("type") == "array";
+        _isArray = schema["type"] is JArray allowedTypes
+            ? allowedTypes.Values<string>().Contains("array")
+            : schema.Value<string>("type") == "array";
         Children = schema["properties"] is JObject properties
             ? properties.Properties().Select(p => new PuloniaOneDragonParameterFieldViewModel(p.Name,
                 (JObject)p.Value, value is JArray array && int.TryParse(p.Name, out var index) && index < array.Count

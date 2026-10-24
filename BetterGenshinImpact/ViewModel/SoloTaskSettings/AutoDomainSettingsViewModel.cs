@@ -9,6 +9,15 @@ namespace BetterGenshinImpact.ViewModel.SoloTaskSettings;
 /// <summary>自动秘境任务的专属设置草稿；对应 auto_domain 的常用参数，沿用旧一条龙卡片布局。</summary>
 public partial class AutoDomainSettingsViewModel : SoloTaskSettingsViewModel
 {
+    /// <inheritdoc />
+    public override string[] EditedParameterNames =>
+    [
+        "party_name", "domain_name", "sunday_selected_value", "combat_strategy_path", "specify_resin_use",
+        "original_resin_use_count", "condensed_resin_use_count", "transient_resin_use_count", "fragile_resin_use_count",
+        "auto_artifact_salvage", "max_artifact_star", "reward_recognition_enabled",
+        PuloniaSoloTaskExecutor.WeekdayOverridesParameter, PuloniaSoloTaskExecutor.WeekdayOverridesEnabledParameter
+    ];
+
     /// <summary>周日或限时秘境的奖励序号选项；与旧一条龙的下拉一致。</summary>
     public static readonly string[] SundayChoices = ["", "1", "2", "3"];
     /// <summary>分解圣遗物的最高星级选项。</summary>
@@ -102,9 +111,9 @@ public partial class AutoDomainSettingsViewModel : SoloTaskSettingsViewModel
         _transientResinUseCount = _originalTransientResinUseCount;
         _fragileResinUseCount = _originalFragileResinUseCount;
 
-        // 每周配置以 weekday_overrides 是否存在内容为准；关闭时不生成任何天条目。
+        // 旧计划按 weekday_overrides 是否存在内容判断开关；新开关关闭时保留各日期配置。
         var weekly = Original[PuloniaSoloTaskExecutor.WeekdayOverridesParameter] as JObject;
-        _weeklyEnabled = weekly is { Count: > 0 };
+        _weeklyEnabled = ReadBool(Original, PuloniaSoloTaskExecutor.WeekdayOverridesEnabledParameter, weekly is { Count: > 0 });
         for (var i = 0; i < DayNames.Length; i++)
         {
             var row = new AutoDomainWeekdayRowViewModel(DayNames[i]);
@@ -136,22 +145,33 @@ public partial class AutoDomainSettingsViewModel : SoloTaskSettingsViewModel
         WriteString(changes, "max_artifact_star", _originalMaxArtifactStar, MaxArtifactStar);
         WriteBool(changes, "reward_recognition_enabled", _originalRewardRecognitionEnabled, RewardRecognitionEnabled);
 
-        // 每周安排：启用时七天各生成一项，只写入非空字段；与快照不同才整体提交（缺失视同空对象，避免无变化时写入）
-        var weekly = new JObject();
-        if (WeeklyEnabled)
-        {
-            for (var i = 0; i < DayNames.Length; i++)
-            {
-                var row = Weekdays[i];
-                var entry = new JObject();
-                if (!string.IsNullOrWhiteSpace(row.PartyName)) entry["party_name"] = row.PartyName;
-                if (!string.IsNullOrWhiteSpace(row.DomainName)) entry["domain_name"] = row.DomainName;
-                if (!string.IsNullOrWhiteSpace(row.SundayValue)) entry["sunday_selected_value"] = row.SundayValue;
-                weekly[i.ToString()] = entry;
-            }
-        }
+        // 每周安排：保留原有日期，只更新实际变化的输入；缺失视同空对象，避免无变化时写入。
         var originalWeekly = Original[PuloniaSoloTaskExecutor.WeekdayOverridesParameter] as JObject ?? new JObject();
+        var weekly = (JObject)originalWeekly.DeepClone();
+        // 开关只控制执行，关闭后仍保存单日输入，重新开启时无需重填。
+        WriteBool(changes, PuloniaSoloTaskExecutor.WeekdayOverridesEnabledParameter,
+            ReadBool(Original, PuloniaSoloTaskExecutor.WeekdayOverridesEnabledParameter, originalWeekly.Count > 0), WeeklyEnabled);
+        for (var i = 0; i < DayNames.Length; i++)
+        {
+            var row = Weekdays[i];
+            var day = originalWeekly[i.ToString()] as JObject ?? new JObject();
+            var entry = (JObject)day.DeepClone();
+            // 只更新改动的输入；其他执行器支持的按日覆盖继续保留。
+            UpdateWeekdayString(entry, day, "party_name", row.PartyName);
+            UpdateWeekdayString(entry, day, "domain_name", row.DomainName);
+            UpdateWeekdayString(entry, day, "sunday_selected_value", row.SundayValue);
+            if (entry.Count > 0 || originalWeekly.ContainsKey(i.ToString()))
+                weekly[i.ToString()] = entry;
+        }
         if (!JToken.DeepEquals(weekly, originalWeekly))
             changes[PuloniaSoloTaskExecutor.WeekdayOverridesParameter] = weekly;
+    }
+
+    /// <summary>修改单日输入，清空时恢复默认继承，保持未编辑字段的原始表示。</summary>
+    private static void UpdateWeekdayString(JObject entry, JObject original, string name, string current)
+    {
+        if (ReadString(original, name) == current) return;
+        if (string.IsNullOrWhiteSpace(current)) entry.Remove(name);
+        else entry[name] = current;
     }
 }

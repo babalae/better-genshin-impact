@@ -1,0 +1,34 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                    xmlns:converters="clr-namespace:BetterGenshinImpact.View.Converters">
+    <!-- 专属设置页独立加载所需资源，构造时不依赖父窗口的资源树。 -->
+    <BooleanToVisibilityConverter x:Key="SoloVisibility" />
+    <converters:InverseBooleanConverter x:Key="SoloInverse" />
+    <converters:DomainNameToCascadingItemConverter x:Key="DomainNameConverter" />
+    <converters:AutoBossNameToCascadingItemConverter x:Key="AutoBossNameConverter" />
+
+    <!-- 沿用 WPF-UI 的主题、悬停和禁用状态，仅统一间距及内容拉伸。 -->
+    <Style x:Key="SoloCard" TargetType="ui:CardControl" BasedOn="{StaticResource {x:Type ui:CardControl}}">
+        <Setter Property="Margin" Value="0,0,0,8" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style x:Key="SoloExpander" TargetType="ui:CardExpander" BasedOn="{StaticResource {x:Type ui:CardExpander}}">
+        <Setter Property="Margin" Value="0,0,0,8" />
+        <Setter Property="ContentPadding" Value="0" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style x:Key="SoloDescription" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+        <Setter Property="Margin" Value="0,4,0,0" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+    </Style>
+    <!-- 关联设置使用轻量行与分隔线，避免在展开卡片中层层嵌套卡片。 -->
+    <Style x:Key="SoloRow" TargetType="Grid">
+        <Setter Property="Margin" Value="20,12" />
+        <Setter Property="MinHeight" Value="40" />
+    </Style>
+</ResourceDictionary>

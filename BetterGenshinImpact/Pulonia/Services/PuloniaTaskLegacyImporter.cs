@@ -241,7 +241,12 @@ public sealed class PuloniaTaskLegacyImporter
                 case "自动首领讨伐":
                     node.TaskType = PuloniaSoloTaskExecutor.ToTaskType(AutoBossTask.TaskId);
                     values = ToParameters(CreateBossParam(config, dragon));
-                    if (dragon.AutoBossTotalRunCountLimit > 0) { node.IsEnabled = false; result.Differences.Add(location + "/" + name + "：旧累计上限 / 已完成次数无账号证据，未迁入；节点暂时禁用。"); }
+                    if (dragon.AutoBossTotalRunCountLimit > 0)
+                    {
+                        values[PuloniaSoloTaskExecutor.BossTotalRunCountLimitParameter] = dragon.AutoBossTotalRunCountLimit;
+                        node.IsEnabled = false;
+                        result.Differences.Add(location + "/" + name + "：累计上限已迁入；旧已完成次数无账号证据，未迁入，节点暂时禁用，请核对后启用。");
+                    }
                     break;
                 case "自动幽境危战":
                     node.TaskType = PuloniaSoloTaskExecutor.ToTaskType(AutoStygianOnslaughtTask.TaskId);
