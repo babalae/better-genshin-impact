@@ -407,7 +407,8 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
             }))
             .UntilAny(BuildBigMapLocators(page))
             .WaitUntil(resinIconLocator)
-            .Click().UntilAnyText(new[] { "全部恢复", "原粹树脂已完全恢复" }, ScaleRect(1180, 75, 620, 200))
+            // 树脂详情弹窗随图标左移，扫描区左边界与新图标 ROI 对齐，右边界保持不变
+            .Click().UntilAnyText(new[] { "全部恢复", "原粹树脂已完全恢复" }, ScaleRect(900, 75, 900, 200))
             .Run();
 
         //根据树脂图标位置偏移，计算出体力恢复时间的弹窗位置
@@ -633,7 +634,8 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
         }
 
         var openButtonLocator = page.Locator(LoadRecognitionObject("OpenResinSupplementPaneButton"))
-            .WithRoi(ScaleRect(1200, 25, 580, 50))
+            // 浓缩树脂为 0 时顶栏不显示浓缩条目，"+"按钮随原粹药丸整体左移，搜索区与图标 ROI 保持一致
+            .WithRoi(ScaleRect(900, 25, 880, 50))
             .WithRetryInterval(300);
 
         try
