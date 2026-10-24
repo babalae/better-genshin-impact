@@ -122,6 +122,11 @@ public sealed class PuloniaTaskRunView
     public bool HasUncertainOperation { get; }
 
     /// <summary>
+    /// 执行实例；为空表示在主实例本地执行。
+    /// </summary>
+    public PuloniaTaskExecutionTarget? ExecutionTarget { get; }
+
+    /// <summary>
     /// 建立运行状态的防御性副本。
     /// </summary>
     internal PuloniaTaskRunView(Guid requestId, Guid runId, string planId, string planName, string source,
@@ -142,6 +147,7 @@ public sealed class PuloniaTaskRunView
         TargetTaskId = request?.TargetTaskId;
         OccurrenceUtc = request?.OccurrenceUtc;
         DeadlineUtc = request?.DeadlineUtc;
+        ExecutionTarget = request?.ExecutionTarget?.Clone();
         Status = status;
         CurrentTaskAddress = currentTaskAddress;
         Message = message;

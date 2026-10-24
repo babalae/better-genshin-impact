@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.AutoFight.Strategy;
 using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
@@ -94,14 +95,14 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
     private BgiYoloPredictor _predictor = null!;
 
     /// <summary>
-    /// TXT 战斗策略解析结果；使用 JSON 或自动连招策略时为 null
+    /// TXT 战斗策略解析结果；使用 JSON、键鼠或自动连招策略时为 null
     /// </summary>
     private CombatScriptBag? _combatScriptBag;
 
     /// <summary>
-    /// JSON 战斗策略文件路径；不是 JSON 策略时为 null
+    /// 由统一入口执行的 JSON/键鼠策略路径；文本策略时为 null
     /// </summary>
-    private string? _jsonCombatStrategyPath;
+    private string? _entryCombatStrategyPath;
 
     /// <summary>策略为自动连招（LLM 行为树）时为 true：进本前调用 LLM 建树，循环战斗中 Tick 该树</summary>
     private bool _useComboStrategy;
@@ -227,22 +228,16 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
     private SoloTaskResult? Initialize(AutoDomainParam param)
     {
         _useComboStrategy = false;
-        _jsonCombatStrategyPath = null;
+        _entryCombatStrategyPath = null;
         _combatScriptBag = null;
         _comboBuildTask = null;
         _guideDomainName = null;
 
         // 1. 解析战斗策略路径：JS、旧入口传入的是已存在的路径；任务计划保存的可能是策略名，需要先解析
-        var strategyPath = param.CombatStrategyPath;
-        if (!System.IO.File.Exists(strategyPath) && !System.IO.Directory.Exists(strategyPath))
-        {
-            if (!CombatStrategyResolver.TryResolve(strategyPath, out var resolvedPath))
-            {
-                return SoloTaskResult.Failed(SoloTaskReasons.StrategyNotFound, $"战斗策略不存在：{strategyPath}");
-            }
-
-            strategyPath = resolvedPath;
-        }
+        var strategy = CombatStrategyResolver.Parse(param.CombatStrategyPath);
+        if (!strategy.Exists)
+            return SoloTaskResult.Failed(SoloTaskReasons.StrategyNotFound, $"战斗策略不存在：{param.CombatStrategyPath}");
+        var strategyPath = strategy.Path;
 
         // 2. 选择了具体秘境时必须能找到传送点。未选择秘境（站在秘境门口直接开始）与“根据提升指南选择秘境”保持原有流程
         if (!string.IsNullOrEmpty(param.DomainName)
@@ -258,16 +253,16 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
             return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, "你选择了指定树脂刷取次数，请至少配置一种树脂的刷取次数！");
         }
 
-        // 4. 按策略类型选择战斗引擎：自动连招 / JSON / TXT
-        if (AutoFightParam.ComboStrategyName.Equals(strategyPath))
+        // 4. 按策略类型选择战斗引擎：自动连招 / 统一入口（JSON、键鼠）/ TXT
+        if (strategy.Kind == CombatStrategyKind.Combo)
         {
             _useComboStrategy = true;
             Logger.LogInformation("自动秘境：检测到自动连招策略，将使用LLM行为树");
         }
-        else if (strategyPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+        else if (strategy.Kind is not (CombatStrategyKind.Txt or CombatStrategyKind.AutoSelect))
         {
-            _jsonCombatStrategyPath = strategyPath;
-            Logger.LogInformation("自动秘境：检测到JSON策略文件，将使用JSON战斗引擎");
+            _entryCombatStrategyPath = strategyPath;
+            Logger.LogInformation("自动秘境：使用统一战斗入口执行所选策略");
         }
         else
         {
@@ -455,17 +450,17 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
                 Logger.LogInformation("自动秘境：{Text}", "2. 执行战斗策略(自动连招)");
                 await StartComboFight();
             }
-            else if (_jsonCombatStrategyPath != null)
+            else if (_entryCombatStrategyPath != null)
             {
                 ESkillCdTracker.Clear();
-                // JSON策略：战斗引擎内部初始化队伍，无需TXTSpecific步骤
+                // JSON/键鼠策略：由统一入口初始化，无需文本战斗的队伍准备步骤
                 // 1. 走到钥匙处启动
                 Logger.LogInformation("自动秘境：{Text}", "1. 走到钥匙处启动");
                 await WalkToPressF();
 
-                // 2. 执行战斗（JSON战斗引擎）
-                Logger.LogInformation("自动秘境：{Text}", "2. 执行战斗策略(JSON)");
-                await StartJsonFight();
+                // 2. 执行战斗（统一入口：JSON/键鼠）
+                Logger.LogInformation("自动秘境：{Text}", "2. 执行战斗策略(JSON/键鼠)");
+                await StartEntryFight();
             }
             else
             {
@@ -1102,17 +1097,17 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
     }
 
     /// <summary>
-    /// JSON策略战斗入口：委托给AutoFightJsonTask，抑制其自带的结束检测和拾取逻辑，
+    /// JSON/键鼠策略战斗入口：委托给AutoFightEntryTask，抑制其自带的结束检测和拾取逻辑，
     /// 秘境的DomainEndDetectionTask通过CancellationToken控制战斗结束。
     /// </summary>
-    private async Task StartJsonFight()
+    private async Task StartEntryFight()
     {
         CancellationTokenSource cts = new();
         _ct.Register(cts.Cancel);
 
         var jsonParam = new AutoFightParam
         {
-            CombatStrategyPath = _jsonCombatStrategyPath!,
+            CombatStrategyPath = _entryCombatStrategyPath!,
             FightFinishDetectEnabled = false,
             ExpBasedPickupEnabled = false,
             KazuhaPickupEnabled = false,
@@ -1120,7 +1115,7 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
             Timeout = 600,
         };
 
-        var jsonTask = new AutoFightJsonTask(_runtime, _allConfig);
+        var jsonTask = new AutoFightEntryTask(_runtime, _allConfig);
 
         var domainEndTask = DomainEndDetectionTask(cts);
 
@@ -1132,7 +1127,7 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
                 var result = await jsonTask.RunAsync(jsonParam, cts.Token);
                 if (result.Kind == SoloTaskResultKind.Failed)
                 {
-                    Logger.LogWarning("JSON战斗任务失败：{Msg}", result.Message);
+                    Logger.LogWarning("JSON/键鼠战斗任务失败：{Msg}", result.Message);
                 }
             }
             catch (RetryException)
@@ -1147,7 +1142,7 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
             }
             catch (Exception e)
             {
-                Logger.LogWarning("JSON战斗任务异常：{Msg}", e.Message);
+                Logger.LogWarning("JSON/键鼠战斗任务异常：{Msg}", e.Message);
             }
         }, cts.Token);
 

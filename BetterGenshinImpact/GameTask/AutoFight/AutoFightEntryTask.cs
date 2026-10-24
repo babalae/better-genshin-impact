@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.AutoFight.Strategy;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
@@ -8,7 +9,7 @@ using BetterGenshinImpact.GameTask.SoloTask;
 namespace BetterGenshinImpact.GameTask.AutoFight;
 
 /// <summary>
-/// 自动战斗的统一入口：按参数中的策略类型选择 txt、JSON 或连招实现，并把参数原样交给具体实现运行
+/// 自动战斗的统一入口：解析策略后按类型选择文本、JSON、连招或键鼠实现，并交给具体实现运行
 /// </summary>
 [SoloTaskInfo(TaskId, "自动战斗", Group = "树脂与战斗", Order = 250)]
 public class AutoFightEntryTask : ISoloTask<AutoFightParam, NoData>
@@ -48,18 +49,20 @@ public class AutoFightEntryTask : ISoloTask<AutoFightParam, NoData>
     /// <returns>具体战斗实现的结果</returns>
     public async Task<SoloTaskResult<NoData>> RunAsync(AutoFightParam param, CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
         // 参数里可能保存策略名（任务计划）或路径（旧入口、JS），统一解析为路径并校验存在性
-        if (!CombatStrategyResolver.TryResolve(param.CombatStrategyPath, out var strategyPath))
+        var strategy = CombatStrategyResolver.Parse(param.CombatStrategyPath);
+        if (!strategy.Exists)
         {
             return SoloTaskResult.Failed(SoloTaskReasons.StrategyNotFound,
                 $"战斗策略不存在：{param.CombatStrategyPath}");
         }
 
         // 具体实现按 CombatStrategyPath 读取策略，这里写回解析后的路径
-        param.CombatStrategyPath = strategyPath;
+        param.CombatStrategyPath = strategy.Path;
 
-        // 按策略类型（连招固定名 / .json / .txt 或目录）选择工厂，创建实现并运行
-        var factory = CombatTaskFactoryProvider.GetFactory(param.CombatStrategyPath);
+        // 按策略类型（自动选择 / 文本 / JSON / 连招 / 键鼠录制）选择工厂，创建实现并运行
+        var factory = CombatTaskFactoryProvider.GetFactory(strategy.Kind);
         return await factory.CreateTask(_runtime, _config).RunAsync(param, ct);
     }
 }

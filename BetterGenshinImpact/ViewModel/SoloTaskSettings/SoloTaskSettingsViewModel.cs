@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.AutoFight.Strategy;
 using System;
 using System.IO;
 using System.Linq;
@@ -97,24 +98,16 @@ public abstract class SoloTaskSettingsViewModel : ObservableObject
     }
 
     /// <summary>
-    /// 把参数里的战斗策略名或路径转换为下拉框显示的策略名：
-    /// 自动战斗策略目录本身显示为“根据队伍自动选择”，目录下的策略文件显示为文件名（不含扩展名），
-    /// 策略名原样显示，目录之外的路径无法用名称表示也原样显示。
+    /// 把参数里的战斗策略名或路径转换为选择器使用的规范值：
+    /// 自动战斗根目录转为“根据队伍自动选择”，子目录转为 auto: 范围；
+    /// 文件按统一规则省略扩展名，存在歧义时保留扩展名，根目录外的路径保持绝对路径。
     /// </summary>
     /// <param name="nameOrPath">参数中的策略名或路径；为空时视为自动选择，与任务的解析规则一致。</param>
-    /// <returns>策略显示名。</returns>
+    /// <returns>策略规范值。</returns>
     protected static string ToStrategyName(string? nameOrPath)
     {
-        if (string.IsNullOrWhiteSpace(nameOrPath)) return CombatStrategyResolver.AutoSelectName;
-        // 非绝对路径即策略名（包括“根据队伍自动选择”和连招固定名）
-        if (!Path.IsPathRooted(nameOrPath)) return nameOrPath;
-
-        var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Global.Absolute(@"User\AutoFight\")));
-        var full = Path.TrimEndingDirectorySeparator(Path.GetFullPath(nameOrPath));
-        if (string.Equals(full, root, StringComparison.OrdinalIgnoreCase)) return CombatStrategyResolver.AutoSelectName;
-        if (string.Equals(Path.GetDirectoryName(full), root, StringComparison.OrdinalIgnoreCase))
-            return Path.GetFileNameWithoutExtension(full);
-        return nameOrPath;
+        // 非绝对路径的策略名和固定项也经过同一规则，避免同名 txt/json 混淆。
+        return CombatStrategyResolver.Parse(nameOrPath).Value;
     }
 
     /// <summary>当前值不在选项中时追加到末尾，外部导入的暂不可用选项仍能显示，用户可以主动改选。</summary>

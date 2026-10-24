@@ -1,0 +1,15 @@
+<UserControl x:Class="BetterGenshinImpact.View.Controls.CombatStrategy.ComboView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" Foreground="{DynamicResource TextFillColorPrimaryBrush}" FontSize="14"
+             FontFamily="{DynamicResource TextThemeFontFamily}">
+    <UserControl.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceDictionary Source="CombatStrategyStyles.xaml" /></ResourceDictionary.MergedDictionaries></ResourceDictionary></UserControl.Resources>
+    <StackPanel>
+        <TextBlock Text="自动连招（实验）" FontSize="18" FontWeight="SemiBold" Margin="0,6,0,8" />
+        <TextBlock Text="根据已构建的连招树自动战斗。首次使用请先在自动连招页面完成队伍配置并构建连招树。" Style="{StaticResource StrategySecondaryTextStyle}" />
+        <Border Height="1" Background="{DynamicResource DividerStrokeColorDefaultBrush}" Margin="0,14" />
+        <Border Padding="12" Background="{DynamicResource ControlFillColorSecondaryBrush}" CornerRadius="4">
+            <TextBlock Text="{Binding StatusText, Mode=OneWay}" TextWrapping="Wrap" />
+        </Border>
+        <ui:Button Content="选用自动连招" Command="{Binding SelectCommand, Mode=OneWay}" Appearance="Primary" Margin="0,16,0,0" />
+    </StackPanel>
+</UserControl>

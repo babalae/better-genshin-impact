@@ -1,0 +1,64 @@
+<UserControl x:Class="BetterGenshinImpact.View.Controls.CombatStrategy.CombatStrategyPickerPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:local="clr-namespace:BetterGenshinImpact.View.Controls.CombatStrategy"
+             KeyboardNavigation.TabNavigation="Cycle" UseLayoutRounding="True" Foreground="{DynamicResource TextFillColorPrimaryBrush}" FontSize="14"
+             FontFamily="{DynamicResource TextThemeFontFamily}">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="CombatStrategyStyles.xaml" />
+                <ResourceDictionary Source="CombatStrategyPickerResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <CollectionViewSource x:Key="CategoryGroups" Source="{Binding Categories, Mode=OneWay}">
+                <CollectionViewSource.GroupDescriptions><PropertyGroupDescription PropertyName="GroupName" /></CollectionViewSource.GroupDescriptions>
+            </CollectionViewSource>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <b:Interaction.Behaviors><local:StrategyPickerKeyboardBehavior /></b:Interaction.Behaviors>
+    <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+        <StackPanel>
+            <Border Background="{DynamicResource SystemFillColorCautionBackgroundBrush}" Padding="12,8" Visibility="{Binding HasCurrentWarning, Mode=OneWay, Converter={StaticResource StrategyVisibility}}">
+                <TextBlock Text="{Binding CurrentWarning, Mode=OneWay}" TextWrapping="Wrap" Foreground="{DynamicResource SystemFillColorCautionBrush}" />
+            </Border>
+            <Border Background="{DynamicResource SystemFillColorCriticalBackgroundBrush}" Padding="12,8" Visibility="{Binding HasLoadError, Mode=OneWay, Converter={StaticResource StrategyVisibility}}">
+                <TextBlock Text="{Binding LoadError, Mode=OneWay}" TextWrapping="Wrap" Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
+            </Border>
+            <TextBlock Text="正在读取策略目录…" Margin="12,8" Style="{StaticResource StrategySecondaryTextStyle}" Visibility="{Binding IsLoading, Mode=OneWay, Converter={StaticResource StrategyVisibility}}" />
+        </StackPanel>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="176" /><ColumnDefinition Width="1" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+            <ui:ListView x:Name="CategoryList" ItemsSource="{Binding Source={StaticResource CategoryGroups}, Mode=OneWay}"
+                         SelectedItem="{Binding SelectedCategory, Mode=TwoWay}" Margin="8,8,8,12" Padding="0" Background="Transparent" BorderThickness="0"
+                         AutomationProperties.Name="策略类别" ScrollViewer.HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
+                <ui:ListView.ItemContainerStyle>
+                    <Style TargetType="ui:ListViewItem" BasedOn="{StaticResource ListViewItemStyle}">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Padding" Value="12,6" />
+                        <Setter Property="Margin" Value="0,1" /><Setter Property="MinHeight" Value="34" /><Setter Property="Border.CornerRadius" Value="4" />
+                    </Style>
+                </ui:ListView.ItemContainerStyle>
+                <ui:ListView.GroupStyle><GroupStyle><GroupStyle.HeaderTemplate><DataTemplate><TextBlock Text="{Binding Name, Mode=OneWay}" Style="{StaticResource StrategySecondaryTextStyle}" Margin="8,10,0,6" /></DataTemplate></GroupStyle.HeaderTemplate></GroupStyle></ui:ListView.GroupStyle>
+                <ui:ListView.ItemTemplate><DataTemplate>
+                    <DockPanel><TextBlock DockPanel.Dock="Right" Text="{Binding CountText, Mode=OneWay}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="8,0,0,0" /><TextBlock Text="{Binding Title, Mode=OneWay}" TextTrimming="CharacterEllipsis" /></DockPanel>
+                </DataTemplate></ui:ListView.ItemTemplate>
+            </ui:ListView>
+            <Border Grid.Column="1" Background="{DynamicResource DividerStrokeColorDefaultBrush}" />
+            <ContentControl x:Name="CategoryContent" Grid.Column="2" Content="{Binding SelectedCategory, Mode=OneWay}" Margin="14,14,14,12"
+                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+        </Grid>
+        <Border Grid.Row="2" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}" Padding="12,10">
+            <DockPanel LastChildFill="True">
+                <ui:Button DockPanel.Dock="Right" Icon="{ui:SymbolIcon ArrowClockwise24}" Style="{StaticResource StrategyFooterButtonStyle}" Command="{Binding RefreshCommand, Mode=OneWay}" ToolTip="刷新策略列表" AutomationProperties.Name="刷新策略列表" Margin="4,0,0,0" />
+                <WrapPanel VerticalAlignment="Center">
+                    <ui:Button Content="打开目录" Icon="{ui:SymbolIcon FolderOpen24}" Style="{StaticResource StrategyFooterButtonStyle}" Command="{Binding OpenFolderCommand, Mode=OneWay}" />
+                    <ui:Button Content="脚本仓库" Icon="{ui:SymbolIcon Box24}" Style="{StaticResource StrategyFooterButtonStyle}" Command="{Binding OpenRepositoryCommand, Mode=OneWay}" Visibility="{Binding ShowRepository, Mode=OneWay, Converter={StaticResource StrategyVisibility}}" />
+                    <ui:Button Content="录制新的" Icon="{ui:SymbolIcon Record24}" Style="{StaticResource StrategyFooterButtonStyle}" Command="{Binding RecordCommand, Mode=OneWay}" Visibility="{Binding IsKeyMouseCategory, Mode=OneWay, Converter={StaticResource StrategyVisibility}}" />
+                    <ui:Button Content="录制管理" Icon="{ui:SymbolIcon ArrowRight24}" Style="{StaticResource StrategyFooterButtonStyle}" Command="{Binding NavigateRecordCommand, Mode=OneWay}" Visibility="{Binding ShowRecordManagement, Mode=OneWay, Converter={StaticResource StrategyVisibility}}" />
+                </WrapPanel>
+            </DockPanel>
+        </Border>
+    </Grid>
+</UserControl>

@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.AutoFight.Strategy;
 using System;
 using System.IO;
 using System.Linq;
@@ -17,7 +18,7 @@ namespace BetterGenshinImpact.ViewModel.Pages.Pulonia;
 internal static class PuloniaOneDragonSettingChoices
 {
     /// <summary>
-    /// 自动秘境的任务类型；只有自动秘境的策略下拉提供自动连招。
+    /// 自动秘境的任务类型；与独立自动战斗一样允许选择自动连招。
     /// </summary>
     private static readonly string DomainTaskType = PuloniaSoloTaskExecutor.ToTaskType(AutoDomainTask.TaskId);
 
@@ -26,19 +27,25 @@ internal static class PuloniaOneDragonSettingChoices
     /// </summary>
     private static readonly string LeyLineTaskType = PuloniaSoloTaskExecutor.ToTaskType(AutoLeyLineOutcropTask.TaskId);
 
-    /// <summary>将秘境、首领和战斗策略展示为旧一条龙的下拉框，并展开战斗对象。</summary>
+    /// <summary>为秘境、首领补充展示选项，为战斗策略标记专用选择器，并展开战斗对象。</summary>
     internal static JObject Decorate(string name, JObject schema, JToken? value, string taskType)
     {
         var result = (JObject)schema.DeepClone();
         var key = System.Text.Json.JsonNamingPolicy.SnakeCaseLower.ConvertName(name);
+        if (key is "strategy_name" or "combat_strategy_path")
+        {
+            result.Remove("enum");
+            result["x-combat-strategy-kinds"] = (int)(taskType == DomainTaskType
+                || taskType == PuloniaSoloTaskExecutor.ToTaskType(AutoFightEntryTask.TaskId)
+                ? CombatStrategyKind.All : CombatStrategyKind.WithoutCombo);
+        }
         string[]? choices = key switch
         {
             "domain_name" => ["", .. MapLazyAssets.Get().DomainNameList],
             "boss_name" => ["", .. AutoBossData.SupportedBossNames],
             "country" when taskType == LeyLineTaskType => [.. TaskSettingsPageViewModel.LeyLineOutcropCountryList],
             "ley_line_outcrop_type" => ["启示之花", "藏金之花"],
-            // 独立任务参数里的策略路径也接受策略名（由 CombatStrategyResolver 解析），因此与策略名共用下拉
-            "strategy_name" or "combat_strategy_path" => GetStrategies(taskType == DomainTaskType),
+            // 战斗策略使用独立字段形态，由选择控件扫描目录。
             "sunday_selected_value" => ["", "1", "2", "3"],
             "max_artifact_star" => ["1", "2", "3", "4"],
             _ => null
@@ -122,12 +129,5 @@ internal static class PuloniaOneDragonSettingChoices
         }
     };
 
-    /// <summary>读取策略名称，不创建旧自动战斗视图模型或读取其选择；固定任务专属视图也复用此列表。</summary>
-    internal static string[] GetStrategies(bool allowCombo)
-    {
-        var directory = Global.Absolute(@"User\AutoFight");
-        var scripts = Directory.Exists(directory)
-            ? Directory.EnumerateFiles(directory, "*.txt").Select(Path.GetFileNameWithoutExtension).OfType<string>().Order().ToArray() : [];
-        return ["根据队伍自动选择", .. allowCombo ? new[] { AutoFightParam.ComboStrategyName } : Array.Empty<string>(), .. scripts];
-    }
+    // 策略目录统一由 CombatStrategyCatalog / CombatStrategyPicker 按需加载。
 }

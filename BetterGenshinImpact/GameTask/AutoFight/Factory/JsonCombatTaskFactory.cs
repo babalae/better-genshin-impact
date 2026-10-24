@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.AutoFight.Strategy;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.GameTask.SoloTask;
@@ -21,8 +22,6 @@ public class JsonCombatTaskFactory : ICombatTaskFactory
         return new AutoFightJsonTask(runtime, config);
     }
 
-    public bool CanHandle(string strategyPath)
-    {
-        return strategyPath.EndsWith(".json", System.StringComparison.OrdinalIgnoreCase);
-    }
+    /// <summary>本工厂支持的策略类型。</summary>
+    public CombatStrategyKind Kinds => CombatStrategyKind.Json;
 }

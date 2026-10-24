@@ -36,6 +36,10 @@ internal sealed class InstanceRequestHandler
     /// 子实例连接集合发生变化时通知上层服务刷新公开状态。
     /// </summary>
     private readonly Action _connectedInstancesChanged;
+    /// <summary>
+    /// pulonia.node.* 跨实例节点派发请求的处理器。
+    /// </summary>
+    private readonly PuloniaRemoteMessageHandler _puloniaRemoteMessageHandler;
     private readonly ILogger _logger;
     private readonly ConcurrentDictionary<Guid, InstanceIpcEnvelope> _activationResponses = new();
 
@@ -48,8 +52,10 @@ internal sealed class InstanceRequestHandler
         SoloTaskExecutionService soloTaskExecutionService,
         Action<InstanceConnection, SoloTaskStatusSnapshot> receiveSoloTaskStatus,
         Action connectedInstancesChanged,
+        PuloniaRemoteMessageHandler puloniaRemoteMessageHandler,
         ILogger logger)
     {
+        _puloniaRemoteMessageHandler = puloniaRemoteMessageHandler;
         _context = context;
         _state = state;
         _relativeMouseMessageHandler = relativeMouseMessageHandler;
@@ -106,6 +112,14 @@ internal sealed class InstanceRequestHandler
                     request).ConfigureAwait(false),
                 InstanceOperations.TaskStatusGet => HandleTaskStatusGet(connection, request),
                 InstanceOperations.TaskStatusChanged => HandleTaskStatusChanged(connection, request),
+                InstanceOperations.PuloniaNodeStart =>
+                    _puloniaRemoteMessageHandler.HandleNodeStart(connection, request),
+                InstanceOperations.PuloniaNodeCancel =>
+                    _puloniaRemoteMessageHandler.HandleNodeCancel(connection, request),
+                InstanceOperations.PuloniaNodeReport =>
+                    await _puloniaRemoteMessageHandler.HandleNodeReportAsync(connection, request).ConfigureAwait(false),
+                InstanceOperations.PuloniaNodeFinished =>
+                    _puloniaRemoteMessageHandler.HandleNodeFinished(connection, request),
                 _ => InstanceIpcEnvelope.Failure(
                     request,
                     "unsupported_operation",

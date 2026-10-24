@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.AutoFight.Strategy;
 using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
@@ -1499,7 +1500,7 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, NoData>
         var autoFightConfig = BuildLeyLineAutoFightConfig();
         var strategyPath = BuildAutoFightStrategyPath(autoFightConfig);
 
-        if (strategyPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+        if (CombatStrategyResolver.Parse(strategyPath).Kind is not (CombatStrategyKind.Txt or CombatStrategyKind.AutoSelect))
         {
             var jsonParam = new AutoFightParam
             {
@@ -1511,7 +1512,7 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, NoData>
                 Timeout = autoFightConfig.Timeout > 0 ? autoFightConfig.Timeout : 600,
             };
             // 战斗结束由 OCR 判定后取消 ct 控制，子任务结果不参与判断
-            return new AutoFightJsonTask(_runtime, _config).RunAsync(jsonParam, ct);
+            return new AutoFightEntryTask(_runtime, _config).RunAsync(jsonParam, ct);
         }
         else
         {
@@ -1526,7 +1527,7 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, NoData>
             taskParam.KazuhaPickupEnabled = false;
             taskParam.QinDoublePickUp = false;
             taskParam.OnlyPickEliteDropsMode = "DisableAutoPickupForNonElite";
-            return new AutoFightTask(_runtime, _config).RunAsync(taskParam, ct);
+            return new AutoFightEntryTask(_runtime, _config).RunAsync(taskParam, ct);
         }
     }
 
@@ -1558,13 +1559,10 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, NoData>
 
     private static string BuildAutoFightStrategyPath(AutoFightConfig config)
     {
-        var (path, _) = AutoFightParam.ResolveStrategyPath(config.StrategyName);
-        if (!File.Exists(path) && !Directory.Exists(path))
-        {
-            throw new Exception("战斗策略文件不存在");
-        }
-
-        return path;
+        var strategy = CombatStrategyResolver.Resolve(config.StrategyName);
+        if (strategy.Kind == CombatStrategyKind.Combo)
+            throw new InvalidOperationException("地脉花不支持自动连招策略");
+        return strategy.Path;
     }
 
     private async Task<bool> RecognizeTextInRegion(int timeoutMs)
@@ -1573,7 +1571,9 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, NoData>
         var noTextCount = 0;
         var fightTextDetectedAt = DateTime.MinValue;
         var lastSeekAssistAt = DateTime.MinValue;
-        var seekEnemyEnabled = _taskParam.FightConfig.SeekEnemyEnabled;
+        // 键鼠宏独占输入和录制视角，外部的寻敌辅助也不能并发操作。
+        var seekEnemyEnabled = _taskParam.FightConfig.SeekEnemyEnabled
+            && CombatStrategyResolver.Parse(_taskParam.FightConfig.StrategyName).Kind != CombatStrategyKind.KeyMouse;
         var seekEnemyInterval = TimeSpan.FromSeconds(Math.Clamp(_taskParam.FightConfig.SeekEnemyIntervalSeconds, 1, 60));
         var seekEnemyRotaryFactor = Math.Clamp(_taskParam.FightConfig.SeekEnemyRotaryFactor, 1, 13);
         var successKeywords = new[] { "挑战达成", "战斗胜利", "挑战成功" };

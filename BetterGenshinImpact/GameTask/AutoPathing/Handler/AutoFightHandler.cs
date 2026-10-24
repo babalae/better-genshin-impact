@@ -53,7 +53,7 @@ internal class AutoFightHandler(GameRuntime runtime, AllConfig config) : IAction
         }
         else
         {
-            taskParams = new AutoFightParam(GetFightStrategy(), _config.AutoFightConfig);
+            taskParams = new AutoFightParam(_config.AutoFightConfig.StrategyName, _config.AutoFightConfig);
         }
 
         //根据怪物标签，调整拾取配置
@@ -73,10 +73,9 @@ internal class AutoFightHandler(GameRuntime runtime, AllConfig config) : IAction
                    //禁止自动拾取，除了关闭配置拾取外，连自动拾取都关掉
                    if (taskParams.OnlyPickEliteDropsMode == "DisableAutoPickupForNonElite")
                    {
-                       var factory = CombatTaskFactoryProvider.GetFactory(taskParams.CombatStrategyPath);
                        // 直接调用 RunAsync（而非 ExecuteAsync），保持战斗任务提前结束时异常向外传播的原有语义
                        await RunnerContext.Instance.StopAutoPickRunTask(
-                           async () => await factory.CreateTask(_runtime, _config).RunAsync(taskParams, ct),
+                           async () => await RunFightAsync(taskParams, ct),
                            5);
                        return;
                    }
@@ -86,42 +85,19 @@ internal class AutoFightHandler(GameRuntime runtime, AllConfig config) : IAction
             
         }
         
-        var factory2 = CombatTaskFactoryProvider.GetFactory(taskParams.CombatStrategyPath);
-        var fightSoloTask = factory2.CreateTask(_runtime, _config);
-        // 直接调用 RunAsync（而非 ExecuteAsync），保持战斗任务提前结束时异常向外传播的原有语义
-        await fightSoloTask.RunAsync(taskParams, ct);
+        // 直接调用 RunAsync（而非 ExecuteAsync），保持战斗任务提前结束时异常向外传播的原有语义。
+        await RunFightAsync(taskParams, ct);
     }
 
-    private AutoFightParam GetFightAutoFightParam(AutoFightConfig? config)
+    /// <summary>通过统一入口运行战斗，失败时向地图追踪传播异常。</summary>
+    private async Task RunFightAsync(AutoFightParam param, CancellationToken ct)
     {
-        AutoFightParam autoFightParam = new AutoFightParam(GetFightStrategy(config), config);
-        return autoFightParam;
+        var result = await new AutoFightEntryTask(_runtime, _config).RunAsync(param, ct);
+        if (result.Kind == BetterGenshinImpact.GameTask.SoloTask.SoloTaskResultKind.Failed)
+            throw new InvalidOperationException(result.Message);
     }
 
-    private string GetFightStrategy(AutoFightConfig config)
-    {
-        if ("根据队伍自动选择".Equals(config.StrategyName) || string.IsNullOrEmpty(config.StrategyName))
-        {
-            return Global.Absolute(@"User\AutoFight\");
-        }
-
-        // 固定策略：不对应策略文件，跳过存在性检查，由 ComboCombatTaskFactory 路由
-        if (AutoFightParam.ComboStrategyName.Equals(config.StrategyName))
-        {
-            return config.StrategyName;
-        }
-
-        var (path, _) = AutoFightParam.ResolveStrategyPath(config.StrategyName);
-        if (!File.Exists(path))
-        {
-            throw new Exception("战斗策略文件不存在");
-        }
-
-        return path;
-    }
-
-    private string GetFightStrategy()
-    {
-        return GetFightStrategy(_config.AutoFightConfig);
-    }
+    /// <summary>使用地图追踪的独立配置创建战斗参数；固定策略的校验与路由由统一入口负责。</summary>
+    private AutoFightParam GetFightAutoFightParam(AutoFightConfig config)
+        => new(config.StrategyName, config);
 }

@@ -100,6 +100,7 @@ public sealed class PuloniaTaskRunItemViewModel : ObservableObject
         new("请求 ID", RequestId.ToString("D")),
         new("实际核验 UID", Run.VerifiedUid ?? "尚未核验 / 无游戏任务"),
         new("来源 / 作用域", $"{Run.Source} · {ScopeText}"),
+        new("运行实例", ExecutionTargetText),
         new("触发器 / 执行范围", $"{Run.TriggerId ?? "手动提交"} / {Run.TargetTaskId ?? "整个计划"}"),
         new("触发 / 最晚开始", $"{PuloniaTaskHistoryText.Time(Run.OccurrenceUtc)} / {PuloniaTaskHistoryText.Time(Run.DeadlineUtc)}"),
         new("提交 / 开始 / 结束", $"{SubmittedAtText} / {PuloniaTaskHistoryText.Time(Run.StartedAt)} / {PuloniaTaskHistoryText.Time(Run.FinishedAt)}"),
@@ -149,6 +150,11 @@ public sealed class PuloniaTaskRunItemViewModel : ObservableObject
     /// 运行账号与世界作用域摘要。
     /// </summary>
     public string ScopeText => $"账号：{Run.AccountId ?? "默认"} · 世界：{Run.WorldOwnerAccountId ?? Run.AccountId ?? "默认"}";
+
+    /// <summary>
+    /// 执行实例的显示名；本地执行时为主实例。
+    /// </summary>
+    public string ExecutionTargetText => Run.ExecutionTarget?.DisplayName is { Length: > 0 } name ? name : "主实例";
 
     /// <summary>
     /// 条目来自当前状态还是不可变历史。

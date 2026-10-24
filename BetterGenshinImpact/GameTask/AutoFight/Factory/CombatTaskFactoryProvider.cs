@@ -1,46 +1,40 @@
 using System.Collections.Generic;
 using System.Linq;
+using System;
+using BetterGenshinImpact.GameTask.AutoFight.Strategy;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Factory;
 
 /// <summary>
 /// 战斗策略工厂提供者
-/// 根据策略文件扩展名自动选择合适的工厂
+/// 根据已解析的策略类型选择工厂，不依赖文件扩展名或注册顺序
 /// </summary>
 public static class CombatTaskFactoryProvider
 {
-    private static readonly List<ICombatTaskFactory> _factories = [];
-
-    static CombatTaskFactoryProvider()
-    {
-        // 注册顺序：自动连招优先，json 次之，txt 兜底
-        RegisterFactory(new ComboCombatTaskFactory());
-        RegisterFactory(new JsonCombatTaskFactory());
-        RegisterFactory(new TxtCombatTaskFactory());
-    }
-
-    /// <summary>
-    /// 注册战斗任务工厂
-    /// </summary>
-    /// <param name="factory">战斗任务工厂实例</param>
-    public static void RegisterFactory(ICombatTaskFactory factory)
-    {
-        _factories.Add(factory);
-    }
+    /// <summary>固定注册的战斗任务工厂；类型集合必须互不重叠。</summary>
+    private static readonly IReadOnlyList<ICombatTaskFactory> _factories =
+    [
+        // 固定注册全部实现，单一类型只匹配一个工厂。
+        new ComboCombatTaskFactory(),
+        new JsonCombatTaskFactory(),
+        new TxtCombatTaskFactory(),
+        new KeyMouseCombatTaskFactory(),
+    ];
 
     /// <summary>
-    /// 根据策略文件路径获取对应的工厂
+    /// 根据单一策略类型获取对应的工厂
     /// </summary>
-    /// <param name="strategyPath">策略文件路径</param>
+    /// <param name="kind">解析后的单一策略类型</param>
     /// <returns>匹配的战斗任务工厂</returns>
     /// <exception cref="InvalidOperationException">不支持的文件类型</exception>
-    public static ICombatTaskFactory GetFactory(string strategyPath)
+    public static ICombatTaskFactory GetFactory(CombatStrategyKind kind)
     {
-        strategyPath ??= string.Empty;
-        var factory = _factories.FirstOrDefault(f => f.CanHandle(strategyPath));
+        if (kind == CombatStrategyKind.None || ((int)kind & ((int)kind - 1)) != 0)
+            throw new ArgumentOutOfRangeException(nameof(kind), kind, "必须指定单一战斗策略类型");
+        var factory = _factories.SingleOrDefault(f => (f.Kinds & kind) != 0);
         if (factory == null)
         {
-            throw new System.InvalidOperationException($"不支持的战斗策略文件类型：{strategyPath}");
+            throw new InvalidOperationException($"不支持的战斗策略类型：{kind}");
         }
         return factory;
     }

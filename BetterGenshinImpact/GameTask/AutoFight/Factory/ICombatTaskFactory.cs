@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.AutoFight.Strategy;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.GameTask.SoloTask;
@@ -18,7 +19,7 @@ public interface ICombatTaskFactory
     ISoloTask<AutoFightParam, NoData> CreateTask(GameRuntime runtime, AllConfig config);
 
     /// <summary>
-    /// 判断本工厂是否可以处理指定路径的策略文件
+    /// 本工厂支持的策略类型，可按位组合
     /// </summary>
-    bool CanHandle(string strategyPath);
+    CombatStrategyKind Kinds { get; }
 }

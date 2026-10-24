@@ -12,19 +12,26 @@ using BetterGenshinImpact.Core.Monitor;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.SoloTask.Execution;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Pulonia.Remote;
 using BetterGenshinImpact.Service.Instance.MessageHandlers;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.ViewModel.Pages;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.Service.Instance;
 
-public sealed class InstanceService : IHostedService, IAsyncDisposable
+public sealed class InstanceService : IHostedService, IAsyncDisposable, IPuloniaRemoteTransport
 {
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan ReconnectDelay = TimeSpan.FromSeconds(1);
+    /// <summary>
+    /// 完成事件需要主实例写入账本后才确认，留出比普通请求更长的时间。
+    /// </summary>
+    private static readonly TimeSpan PuloniaReportTimeout = TimeSpan.FromSeconds(30);
 
     private readonly InstanceBootstrap _bootstrap;
     private readonly ILogger<InstanceService> _logger;
@@ -73,6 +80,11 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
             _relativeMouseMessageHandler.SetGameMouseModeEnabled(
                 configService.Get().ChildSessionConfig.GameMouseModeEnabled);
         }
+        // Pulonia 远程节点的宿主与派发代理依赖执行器和 Pulonia 服务，收到请求时才从容器取得，避免构造期循环依赖
+        var puloniaRemoteMessageHandler = new PuloniaRemoteMessageHandler(
+            Context,
+            serviceProvider.GetRequiredService<PuloniaRemoteNodeHost>,
+            serviceProvider.GetRequiredService<PuloniaRemoteExecutionBroker>);
         _requestHandler = new InstanceRequestHandler(
             Context,
             _messageState,
@@ -82,7 +94,117 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
             _soloTaskExecutionService,
             ReceiveSoloTaskStatus,
             NotifyConnectedInstancesChanged,
+            puloniaRemoteMessageHandler,
             logger);
+    }
+
+    /// <inheritdoc />
+    public event Action<int>? RemoteInstanceDisconnected;
+
+    /// <inheritdoc />
+    public event Action? RootConnectionLost;
+
+    /// <summary>
+    /// 主实例：按执行目标查找当前在线的子实例。桌面分身按会话匹配，云原神按实例名匹配（不区分大小写）
+    /// </summary>
+    /// <param name="target">执行目标</param>
+    /// <returns>在线子实例；不在线时为 null</returns>
+    public InstanceEndpoint? FindPuloniaTargetEndpoint(PuloniaTaskExecutionTarget target)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        return GetConnectedChildInstances().FirstOrDefault(endpoint => target.Kind switch
+        {
+            PuloniaTaskExecutionTargetKind.ChildSession => endpoint.InstanceType == BetterGiInstanceType.ChildSession
+                                                           && endpoint.WindowsSessionId == target.WindowsSessionId,
+            PuloniaTaskExecutionTargetKind.WebView => endpoint.InstanceType == BetterGiInstanceType.WebView
+                                                      && string.Equals(endpoint.InstanceName, target.InstanceName,
+                                                          StringComparison.OrdinalIgnoreCase),
+            _ => false
+        });
+    }
+
+    /// <inheritdoc />
+    int? IPuloniaRemoteTransport.ResolveTargetProcessId(PuloniaTaskExecutionTarget target)
+        => FindPuloniaTargetEndpoint(target)?.ProcessId;
+
+    /// <inheritdoc />
+    Task IPuloniaRemoteTransport.StartRemoteNodeAsync(int processId, PuloniaRemoteNodeStart start, CancellationToken ct)
+        => SendPuloniaRequestToChildAsync(processId, InstanceOperations.PuloniaNodeStart, start, ct);
+
+    /// <inheritdoc />
+    Task IPuloniaRemoteTransport.CancelRemoteNodeAsync(int processId, Guid executionId, CancellationToken ct)
+        => SendPuloniaRequestToChildAsync(processId, InstanceOperations.PuloniaNodeCancel,
+            new PuloniaRemoteNodeCancel { ExecutionId = executionId }, ct);
+
+    /// <inheritdoc />
+    async Task IPuloniaRemoteTransport.ReportRemoteNodeAsync(PuloniaRemoteNodeReport report, CancellationToken ct)
+    {
+        var response = await GetRequiredRootConnection().SendRequestAsync(
+            InstanceOperations.PuloniaNodeReport,
+            report,
+            PuloniaReportTimeout,
+            ct).ConfigureAwait(false);
+        EnsureSuccessfulResponse(response);
+    }
+
+    /// <inheritdoc />
+    async Task IPuloniaRemoteTransport.FinishRemoteNodeAsync(PuloniaRemoteNodeFinished finished, CancellationToken ct)
+    {
+        var response = await GetRequiredRootConnection().SendRequestAsync(
+            InstanceOperations.PuloniaNodeFinished,
+            finished,
+            RequestTimeout,
+            ct).ConfigureAwait(false);
+        EnsureSuccessfulResponse(response);
+    }
+
+    /// <summary>
+    /// 主实例向指定子实例发送 Pulonia 节点控制请求
+    /// </summary>
+    /// <exception cref="InvalidOperationException">当前不是主实例、目标不在线或目标拒绝</exception>
+    private async Task SendPuloniaRequestToChildAsync(int processId, string operation, object data, CancellationToken ct)
+    {
+        if (!Context.IsRoot)
+        {
+            throw new InvalidOperationException("只有主实例可以向子实例派发 Pulonia 节点。");
+        }
+
+        var endpoint = GetConnectedChildInstances().FirstOrDefault(item => item.ProcessId == processId)
+                       ?? throw new InvalidOperationException("执行实例当前不在线。");
+        var target = GetRequiredChildConnection(endpoint);
+        var response = await target.Connection.SendRequestAsync(operation, data, RequestTimeout, ct)
+            .ConfigureAwait(false);
+        EnsureSuccessfulResponse(response);
+    }
+
+    /// <summary>
+    /// 安全通知子实例断开，订阅方异常不影响连接清理
+    /// </summary>
+    private void RaiseRemoteInstanceDisconnected(int processId)
+    {
+        try
+        {
+            RemoteInstanceDisconnected?.Invoke(processId);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "通知子实例断开失败");
+        }
+    }
+
+    /// <summary>
+    /// 安全通知与根实例的连接已断开
+    /// </summary>
+    private void RaiseRootConnectionLost()
+    {
+        try
+        {
+            RootConnectionLost?.Invoke();
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "通知根实例连接断开失败");
+        }
     }
 
     /// <summary>
@@ -602,6 +724,8 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
             if (connectedInstancesChanged)
             {
                 _remoteSoloTaskStatuses.TryRemove(endpoint.ProcessId, out _);
+                // 发往该子实例的 Pulonia 节点结果已无法送达，让等待中的节点立即失败
+                RaiseRemoteInstanceDisconnected(endpoint.ProcessId);
                 NotifyConnectedInstancesChanged();
                 NotifySoloTaskStatusesChanged();
             }
@@ -682,6 +806,7 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
         while (!cancellationToken.IsCancellationRequested)
         {
             InstanceConnection? connection = null;
+            var registeredAsRoot = false;
             try
             {
                 ConnectionOpenResponse openResponse;
@@ -758,6 +883,7 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
                 {
                     _rootConnection = connection;
                 }
+                registeredAsRoot = true;
 
                 includeActivationArguments = false;
                 restartFromProcessId = null;
@@ -818,6 +944,12 @@ public sealed class InstanceService : IHostedService, IAsyncDisposable
                 if (connection is not null)
                 {
                     await connection.DisposeAsync().ConfigureAwait(false);
+                }
+
+                // 主实例派发的 Pulonia 节点结果已无法回报，重连后也不会再有人等待它们
+                if (registeredAsRoot)
+                {
+                    RaiseRootConnectionLost();
                 }
             }
 

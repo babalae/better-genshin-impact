@@ -1,0 +1,86 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+    <BooleanToVisibilityConverter x:Key="StrategyVisibility" />
+    <!-- 基于 WPF-UI 样式调整密度，保留主题、悬停、选中和键盘焦点状态。 -->
+    <Style x:Key="StrategyListStyle" TargetType="ListBox" BasedOn="{StaticResource DefaultListBoxStyle}">
+        <Style.Resources>
+            <!-- 使用 Fluent 的低强调选中色，仅作用于本控件，不改全局 ListBox。 -->
+            <SolidColorBrush x:Key="ListBoxItemSelectedBackgroundThemeBrush" Color="{DynamicResource SubtleFillColorSecondary}" />
+            <SolidColorBrush x:Key="ListBoxItemSelectedForegroundThemeBrush" Color="{DynamicResource TextFillColorPrimary}" />
+        </Style.Resources>
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style x:Key="StrategyListItemStyle" TargetType="ListBoxItem" BasedOn="{StaticResource DefaultListBoxItemStyle}">
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Padding" Value="8,6" />
+        <Setter Property="Margin" Value="0,1" />
+        <Setter Property="MinHeight" Value="34" />
+        <Setter Property="Border.CornerRadius" Value="4" />
+    </Style>
+    <Style x:Key="StrategySecondaryTextStyle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style x:Key="StrategyOptionalTextStyle" TargetType="TextBlock" BasedOn="{StaticResource StrategySecondaryTextStyle}">
+        <Style.Triggers>
+            <Trigger Property="Text" Value=""><Setter Property="Visibility" Value="Collapsed" /></Trigger>
+            <Trigger Property="Text" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed" /></Trigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="StrategySubtleButtonStyle" TargetType="ui:Button" BasedOn="{StaticResource DefaultUiButtonStyle}">
+        <Setter Property="Appearance" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="MouseOverBorderBrush" Value="Transparent" />
+        <Setter Property="PressedBorderBrush" Value="Transparent" />
+        <Setter Property="MouseOverBackground" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+        <Setter Property="PressedBackground" Value="{DynamicResource SubtleFillColorTertiaryBrush}" />
+    </Style>
+    <Style x:Key="StrategyFooterButtonStyle" TargetType="ui:Button" BasedOn="{StaticResource StrategySubtleButtonStyle}">
+        <Setter Property="Padding" Value="8,6" />
+        <Setter Property="MinHeight" Value="32" />
+        <Setter Property="Margin" Value="0,0,4,0" />
+    </Style>
+    <Style x:Key="StrategyTriggerStyle" TargetType="ToggleButton" BasedOn="{StaticResource DefaultToggleButtonStyle}">
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Padding" Value="10,5" />
+        <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="1" CornerRadius="{DynamicResource ControlCornerRadius}" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" /></Trigger>
+            <Trigger Property="IsChecked" Value="True"><Setter Property="BorderBrush" Value="{DynamicResource AccentTextFillColorPrimaryBrush}" /></Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True"><Setter Property="BorderBrush" Value="{DynamicResource AccentTextFillColorPrimaryBrush}" /></Trigger>
+            <DataTrigger Binding="{Binding HasWarning, Mode=OneWay}" Value="True">
+                <Setter Property="Background" Value="{DynamicResource SystemFillColorCautionBackgroundBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsOwnRecording, Mode=OneWay}" Value="True">
+                <Setter Property="Background" Value="{DynamicResource SystemFillColorCriticalBackgroundBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+            </DataTrigger>
+            <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.5" /></Trigger>
+        </Style.Triggers>
+    </Style>
+</ResourceDictionary>

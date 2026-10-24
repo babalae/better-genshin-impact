@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.AutoFight.Strategy;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Service;
@@ -103,51 +104,24 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
             strategyName = Config.AutoFightConfig.StrategyName;
         }
 
-        if ("根据队伍自动选择".Equals(strategyName))
-        {
-            CombatStrategyPath =  Global.Absolute(@"User\AutoFight\");
-        }
-        else if (ComboStrategyName.Equals(strategyName))
-        {
-            CombatStrategyPath = strategyName;
-        }
-        else
-        {
-            CombatStrategyPath =  Global.Absolute(@"User\AutoFight\" + strategyName + ".txt");
-        }
+        CombatStrategyPath = CombatStrategyResolver.Parse(strategyName).Path;
     }
 
     /// <summary>
-    /// 解析策略文件路径，自动检测 .json 或 .txt 扩展名。
-    /// 优先检测 .json，未命中则回退 .txt。
+    /// 解析策略文件路径，优先检测 .json，未命中则回退 .txt；同时支持自动选择、连招和键鼠录制。
     /// </summary>
-    /// <param name="strategyName">策略名称（不含扩展名）</param>
-    /// <returns>(完整路径, 类型标识: "json" / "txt")</returns>
+    /// <param name="strategyName">策略名称、规范引用值或绝对路径。</param>
+    /// <returns>完整路径及类型标识（json / txt / combo / keymouse）。</returns>
     public static (string path, string type) ResolveStrategyPath(string strategyName)
     {
-        if ("根据队伍自动选择".Equals(strategyName))
+        var strategy = CombatStrategyResolver.Parse(strategyName);
+        return (strategy.Path, strategy.Kind switch
         {
-            var dir = Global.Absolute(@"User\AutoFight\");
-            return (dir, "txt");
-        }
-
-        if (ComboStrategyName.Equals(strategyName))
-        {
-            return (strategyName, "combo");
-        }
-
-        var baseDir = Global.Absolute(@"User\AutoFight\");
-
-        // 优先检测 .json
-        var jsonPath = System.IO.Path.Combine(baseDir, strategyName + ".json");
-        if (System.IO.File.Exists(jsonPath))
-        {
-            return (jsonPath, "json");
-        }
-
-        // 回退 .txt
-        var txtPath = System.IO.Path.Combine(baseDir, strategyName + ".txt");
-        return (txtPath, "txt");
+            CombatStrategyKind.Json => "json",
+            CombatStrategyKind.Combo => "combo",
+            CombatStrategyKind.KeyMouse => "keymouse",
+            _ => "txt",
+        });
     }
 
     public void SetDefault()

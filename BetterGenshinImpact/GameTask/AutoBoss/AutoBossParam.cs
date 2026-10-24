@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.AutoFight.Strategy;
 using System;
 using System.Collections.Generic;
 using BetterGenshinImpact.Core.Config;
@@ -202,8 +203,6 @@ public class AutoBossParam : BaseTaskParam<AutoBossTask>
     /// <returns>策略文件路径；“根据队伍自动选择”返回自动战斗策略目录。</returns>
     private static string BuildCombatStrategyPath(string strategyName)
     {
-        return AutoStrategyName.Equals(strategyName)
-            ? Global.Absolute(@"User\AutoFight\")
-            : Global.Absolute(@"User\AutoFight\" + strategyName + ".txt");
+        return CombatStrategyResolver.Parse(strategyName).Path;
     }
 }

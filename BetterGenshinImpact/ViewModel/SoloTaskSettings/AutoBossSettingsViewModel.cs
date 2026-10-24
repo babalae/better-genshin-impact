@@ -33,8 +33,7 @@ public partial class AutoBossSettingsViewModel : SoloTaskSettingsViewModel
     /// <summary>载入时的死亡重试次数快照。</summary>
     private readonly int _originalReviveRetryCount;
 
-    /// <summary>战斗策略选项；首领讨伐不提供联合策略，当前值不在列表中时追加显示。</summary>
-    public string[] StrategyChoices { get; }
+    // 策略目录与当前值显示由统一的 CombatStrategyPicker 负责。
 
     /// <summary>本任务使用的战斗策略名称；保存时同时写入 strategy_name 与 combat_strategy_path。</summary>
     [ObservableProperty] private string _strategyName;
@@ -76,7 +75,6 @@ public partial class AutoBossSettingsViewModel : SoloTaskSettingsViewModel
         _originalReturnToStatue = ReadBool(Original, "return_to_statue_after_each_round");
         _originalRewardRecognitionEnabled = ReadBool(Original, "reward_recognition_enabled");
         _originalReviveRetryCount = ReadInt(Original, "revive_retry_count", 3);
-        StrategyChoices = WithCurrentChoice(PuloniaOneDragonSettingChoices.GetStrategies(false), _originalStrategyName);
         _strategyName = _originalStrategyName;
         _bossName = _originalBossName;
         _teamName = _originalTeamName;

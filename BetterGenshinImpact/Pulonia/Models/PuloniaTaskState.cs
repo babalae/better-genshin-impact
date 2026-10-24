@@ -9,9 +9,14 @@ namespace BetterGenshinImpact.Pulonia.Models;
 public sealed class PuloniaTaskState
 {
     /// <summary>
-    /// 当前支持的状态格式版本。
+    /// 当前支持的状态格式版本。3 起增加远程活动运行；读取 2 时自动升级。
     /// </summary>
-    public const int CurrentSchemaVersion = 2;
+    public const int CurrentSchemaVersion = 3;
+
+    /// <summary>
+    /// 可以直接升级读取的上一个格式版本。
+    /// </summary>
+    public const int PreviousSchemaVersion = 2;
 
     /// <summary>
     /// 状态格式版本。
@@ -32,10 +37,16 @@ public sealed class PuloniaTaskState
     public List<PuloniaTaskRunRecord> PendingRequests { get; set; } = [];
 
     /// <summary>
-    /// 当前唯一活动运行。
+    /// 主实例本地通道的唯一活动运行。
     /// </summary>
     [JsonProperty("active_run")]
     public PuloniaTaskRunRecord? ActiveRun { get; set; }
+
+    /// <summary>
+    /// 在子实例上执行的活动运行，每个执行实例最多一个。旧格式没有此字段时为空集合。
+    /// </summary>
+    [JsonProperty("remote_active_runs", Required = Required.DisallowNull)]
+    public List<PuloniaTaskRunRecord> RemoteActiveRuns { get; set; } = [];
 
     /// <summary>
     /// 已结束但尚未确认写入不可变历史文件的运行。

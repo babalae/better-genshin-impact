@@ -32,9 +32,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 using System;
 using System.Collections.Frozen;
-using System.Collections.ObjectModel;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -111,8 +109,8 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     [ObservableProperty]
     private bool _isCustomNetworkBanner = false;
     private readonly ChildSessionService _childSessionService;
-    private readonly WebViewInstanceStore _webViewInstanceStore;
-    private readonly WebViewInstanceLauncher _webViewInstanceLauncher;
+    /// <summary>按需创建云原神管理窗口，首页不再持有实例列表或轮询状态。</summary>
+    private readonly Func<CloudWebInstanceWindow> _cloudWebInstanceWindowFactory;
     private readonly InferenceRuntimeService _inferenceRuntime;
     private readonly HardwareAccelerationViewModelFactory _hardwareAccelerationFactory;
 
@@ -122,8 +120,7 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         Win32RuntimeProvider win32RuntimeProvider,
         ChildSessionService childSessionService,
         IBannerImageService bannerImageService,
-        WebViewInstanceStore webViewInstanceStore,
-        WebViewInstanceLauncher webViewInstanceLauncher,
+        Func<CloudWebInstanceWindow> cloudWebInstanceWindowFactory,
         IMaskWindowHost maskWindowHost,
         CustomHtmlMaskService customHtmlMaskService,
         InferenceRuntimeService inferenceRuntime,
@@ -138,8 +135,7 @@ public partial class HomePageViewModel : ViewModel, IDisposable
         _gameRuntimeService.Started += OnRuntimeStarted;
         _gameRuntimeService.Stopped += OnRuntimeStopped;
         _gameRuntimeService.StartingChanged += OnRuntimeStartingChanged;
-        _webViewInstanceStore = webViewInstanceStore;
-        _webViewInstanceLauncher = webViewInstanceLauncher;
+        _cloudWebInstanceWindowFactory = cloudWebInstanceWindowFactory;
         _childSessionService = childSessionService;
         _bannerImageService = bannerImageService;
         Config = configService.Get();
@@ -205,11 +201,7 @@ public partial class HomePageViewModel : ViewModel, IDisposable
     {
         // OnTest();
 
-        // 每次进入首页都刷新网页版实例的运行状态
-        if (IsCloudWebEntryVisible)
-        {
-            RefreshCloudWebInstances();
-        }
+        // 实例列表与运行状态由管理窗口负责刷新，首页仅保留入口。
 
         // 组件首次加载时运行一次。
         if (!_autoRun)
@@ -415,106 +407,20 @@ public partial class HomePageViewModel : ViewModel, IDisposable
 
     #region 云原神网页版实例（Primary 首页）
 
-    [ObservableProperty]
-    private ObservableCollection<CloudWebInstanceItem> _cloudWebInstances = [];
-
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(LaunchCloudWebInstanceCommand))]
-    [NotifyCanExecuteChangedFor(nameof(DeleteCloudWebInstanceCommand))]
-    private CloudWebInstanceItem? _selectedCloudWebInstance;
-
     /// <summary>
-    /// 重新读取实例列表与运行状态，尽量保持当前选中项
+    /// 打开独立的云原神管理窗口，实例创建、启动与删除统一在窗口中完成。
     /// </summary>
     [RelayCommand]
-    private void RefreshCloudWebInstances()
+    private void OpenCloudWebInstanceWindow()
     {
-        var selectedName = SelectedCloudWebInstance?.Name;
-        var items = _webViewInstanceStore.List()
-            .Select(name => new CloudWebInstanceItem(name, WebViewInstanceStore.IsRunning(name)))
-            .ToList();
-        CloudWebInstances = new ObservableCollection<CloudWebInstanceItem>(items);
-        SelectedCloudWebInstance = items.FirstOrDefault(i => string.Equals(i.Name, selectedName, StringComparison.OrdinalIgnoreCase))
-                                   ?? items.FirstOrDefault();
-    }
-
-    [RelayCommand]
-    private void CreateCloudWebInstance()
-    {
-        var name = PromptDialog.Prompt(
-            $"实例名用于区分不同账号，同时作为该实例 WebView 数据（登录态等）的目录名。\n最多 {WebViewInstanceStore.MaxNameLength} 个字符，不能包含 \\ / : * ? \" < > |",
-            "新建云原神网页版实例");
-        if (string.IsNullOrWhiteSpace(name))
+        if (!IsCloudWebEntryVisible)
         {
             return;
         }
 
-        try
-        {
-            var created = _webViewInstanceStore.Create(name);
-            RefreshCloudWebInstances();
-            SelectedCloudWebInstance = CloudWebInstances.FirstOrDefault(i => i.Name == created);
-        }
-        catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
-        {
-            ThemedMessageBox.Warning(ex.Message, "新建实例失败");
-        }
-    }
-
-    private bool CanOperateCloudWebInstance() => SelectedCloudWebInstance is { IsRunning: false };
-
-    [RelayCommand(CanExecute = nameof(CanOperateCloudWebInstance))]
-    private async Task LaunchCloudWebInstanceAsync()
-    {
-        var item = SelectedCloudWebInstance;
-        if (item == null)
-        {
-            return;
-        }
-
-        try
-        {
-            _webViewInstanceLauncher.Launch(item.Name);
-        }
-        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or Win32Exception)
-        {
-            ThemedMessageBox.Warning(ex.Message, "启动实例失败");
-            RefreshCloudWebInstances();
-            return;
-        }
-
-        // 新进程获取实例名互斥体需要一点时间，稍后再刷新运行状态
-        await Task.Delay(3000);
-        RefreshCloudWebInstances();
-    }
-
-    [RelayCommand(CanExecute = nameof(CanOperateCloudWebInstance))]
-    private async Task DeleteCloudWebInstanceAsync()
-    {
-        var item = SelectedCloudWebInstance;
-        if (item == null)
-        {
-            return;
-        }
-
-        var result = await ThemedMessageBox.QuestionAsync(
-            $"确定删除实例「{item.Name}」吗？\n该实例的登录态等 WebView 数据会一并删除，且无法恢复。",
-            "删除云原神网页版实例");
-        if (result != System.Windows.MessageBoxResult.Yes)
-        {
-            return;
-        }
-
-        try
-        {
-            _webViewInstanceStore.Delete(item.Name);
-        }
-        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or IOException or UnauthorizedAccessException)
-        {
-            ThemedMessageBox.Warning(ex.Message, "删除实例失败");
-        }
-
-        RefreshCloudWebInstances();
+        var window = _cloudWebInstanceWindowFactory();
+        window.Owner = UIDispatcherHelper.MainWindow;
+        window.ShowDialog();
     }
 
     #endregion

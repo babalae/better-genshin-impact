@@ -556,4 +556,50 @@ public class LimitedFile(string rootPath)
             return false;
         }
     }
+
+    /// <summary>
+    /// 删除文件或文件夹（相对于根目录），文件夹为递归删除
+    /// </summary>
+    /// <param name="path">文件或文件夹路径（相对于根目录）</param>
+    /// <returns>是否删除成功</returns>
+    public bool DeletePathSync(string path)
+    {
+        try
+        {
+            // 标准化路径
+            path = NormalizePath(path);
+
+            // 禁止删除根目录本身
+            if (string.Equals(
+                    Path.TrimEndingDirectorySeparator(path),
+                    Path.TrimEndingDirectorySeparator(rootPath),
+                    StringComparison.OrdinalIgnoreCase
+            ))
+            {
+                TaskControl.Logger.LogError("DeletePathSync 异常: DeletePathSync 拒绝删除根目录 {Path}，这样你会消失的！", path);
+                return false;
+            }
+
+            // 文件夹递归删除
+            if (Directory.Exists(path))
+            {
+                Directory.Delete(path, true);
+                return true;
+            }
+
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+                return true;
+            }
+
+            TaskControl.Logger.LogError("DeletePathSync 异常: 路径不存在 {Path}", path);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            TaskControl.Logger.LogError("DeletePathSync 异常: {Message}", ex.Message);
+            return false;
+        }
+    }
 }

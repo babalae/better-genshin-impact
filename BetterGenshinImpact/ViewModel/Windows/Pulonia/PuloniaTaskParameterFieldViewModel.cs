@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.AutoFight.Strategy;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -27,6 +28,9 @@ public enum PuloniaTaskParameterEditorKind
     /// 固定选项编辑器。
     /// </summary>
     Choice,
+
+    /// <summary>统一战斗策略选择器。</summary>
+    CombatStrategy,
 
     /// <summary>
     /// JSON 数组或对象编辑器。
@@ -84,9 +88,12 @@ public partial class PuloniaTaskParameterFieldViewModel : ObservableObject
     /// </summary>
     public bool IsBooleanEditor => EditorKind == PuloniaTaskParameterEditorKind.Boolean;
 
-    /// <summary>
-    /// 是否显示固定选项编辑器。
-    /// </summary>
+    /// <summary>是否显示统一战斗策略选择器。</summary>
+    public bool IsCombatStrategyEditor => EditorKind == PuloniaTaskParameterEditorKind.CombatStrategy;
+    /// <summary>当前任务可使用的策略类型。</summary>
+    public CombatStrategyKind AllowedStrategyKinds { get; }
+
+    /// <summary>是否显示固定选项编辑器。</summary>
     public bool IsChoiceEditor => EditorKind == PuloniaTaskParameterEditorKind.Choice;
 
     /// <summary>
@@ -157,7 +164,9 @@ public partial class PuloniaTaskParameterFieldViewModel : ObservableObject
             ? choices.ToDictionary(choice => choice.Type == JTokenType.String ? choice.Value<string>()! : choice.ToString(Formatting.None), choice => choice.DeepClone(), StringComparer.Ordinal)
             : new Dictionary<string, JToken>();
         Choices = _choiceValues.Keys.ToArray();
-        EditorKind = Choices.Count > 0
+        AllowedStrategyKinds = (CombatStrategyKind)(schema.Value<int?>("x-combat-strategy-kinds") ?? (int)CombatStrategyKind.WithoutCombo);
+        var isCombatStrategy = System.Text.Json.JsonNamingPolicy.SnakeCaseLower.ConvertName(name) is "strategy_name" or "combat_strategy_path";
+        EditorKind = isCombatStrategy ? PuloniaTaskParameterEditorKind.CombatStrategy : Choices.Count > 0
             ? PuloniaTaskParameterEditorKind.Choice
             : _valueType switch
             {
@@ -260,7 +269,7 @@ public partial class PuloniaTaskParameterFieldViewModel : ObservableObject
     /// </summary>
     internal static string GetDisplayName(string name) => name switch
     {
-        "domain_name" => "秘境", "boss_name" => "首领", "strategy_name" => "战斗策略",
+        "domain_name" => "秘境", "boss_name" => "首领", "strategy_name" or "combat_strategy_path" => "战斗策略",
         "team_name" or "team" or "fight_team_name" => "队伍", "run_count" or "count" or "round_count" => "次数",
         "specify_run_count" => "指定次数", "revive_retry_count" => "死亡重试次数", "timeout" => "战斗超时（秒）",
         "boss_num" => "幽境首领序号", "weekday_overrides" => "每周安排（0 周日至 6 周六，服务器四点日切）",

@@ -1,4 +1,5 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:combat="clr-namespace:BetterGenshinImpact.View.Controls.CombatStrategy"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
 
@@ -22,8 +23,8 @@
     <DataTemplate x:Key="OneDragonParameterFieldTemplate">
 
         <!--
-            根容器同时承载六种字段形态，由各形态的 Visibility 保证同一时刻只显示一种：
-            IsBoolean / IsChoice / IsText / IsNumber / IsObject / IsAdvancedJson 互斥为 True。
+            根容器同时承载七种字段形态，由各形态的 Visibility 保证同一时刻只显示一种：
+            IsBoolean / IsChoice / IsCombatStrategy / IsText / IsNumber / IsObject / IsAdvancedJson 互斥为 True。
         -->
         <Grid>
 
@@ -78,6 +79,28 @@
                           HorizontalAlignment="Right"
                           ItemsSource="{Binding Choices}"
                           SelectedItem="{Binding SelectedChoice, Mode=TwoWay}" />
+            </ui:CardControl>
+
+        <!-- 战斗策略字段：使用统一的两级选择器。 -->
+        <ui:CardControl Margin="0,0,0,8"
+                            Visibility="{Binding IsCombatStrategy, Converter={StaticResource FieldVisibility}}">
+                <ui:CardControl.Header>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      FontTypography="Body"
+                                      Text="{Binding DisplayName}"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                      Text="{Binding Description}"
+                                      TextWrapping="Wrap" />
+                    </Grid>
+                </ui:CardControl.Header>
+                <combat:CombatStrategyPicker Width="288" VerticalAlignment="Center" Margin="0,0,36,0" HorizontalAlignment="Right" Strategy="{Binding TextValue, Mode=TwoWay}" AllowedKinds="{Binding AllowedStrategyKinds, Mode=OneWay}" />
             </ui:CardControl>
 
             <!--  文本字段：右侧文本框  -->

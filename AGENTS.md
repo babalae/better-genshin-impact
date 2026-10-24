@@ -26,6 +26,10 @@
 - ViewModel 必须直接或间接继承 `ObservableObject`；项目的 `ViewModel` 基类已满足此要求。
 - 使用 `[ObservableProperty]` 生成属性，使用 `[RelayCommand]` 生成命令；异步命令返回 `Task`。
 - View 通过构造函数注入 ViewModel，沿用所在页面的 `DataContext` 约定；XAML 绑定路径须与其一致，避免复杂逻辑。
+- XAML 绑定只读属性、计算属性或纯展示文本时，必须显式指定 `Mode=OneWay`，不要依赖目标依赖属性的默认绑定模式。尤其 `Run.Text` 默认双向绑定，绑定只读属性会在加载 XAML 时抛出异常。示例：`<Run Text="{Binding TriggerDirectory, Mode=OneWay}" />`。
+- 只有需要将用户输入回写到可写属性的绑定才使用 `Mode=TwoWay`；新增或修改含 `Run.Text` 的视图时，必须检查所有展示用绑定的方向。
+- 子视图构造时尚未加入父控件资源树，`StaticResource` 必须能在本视图或明确合并的字典中解析；禁止依赖稍后才挂接的父视图资源。新增类别模板须验证实际实例化及布局，不能只以编译通过作为 XAML 可用的依据。
+- 控件局部样式应通过 `BasedOn` 继承对应 WPF-UI 默认样式；承载类别视图的 `ContentControl` 须明确内容拉伸，避免覆盖主题状态或出现内容挤缩。
 - 交互优先使用 Behaviors，避免在代码后置中编写不符合 MVVM 的交互逻辑。
 - 在 `App.xaml.cs` 中注册依赖：页面使用 `services.AddView<ExamplePage, ExampleViewModel>()`，单例服务使用 `services.AddSingleton<IExampleService, ExampleService>()`。
 - 新增窗口必须启用主题背景；简单对话框优先使用 `ThemedMessageBox`，不要使用 WPF 自带的 `MessageBox`。

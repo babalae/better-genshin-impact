@@ -22,6 +22,7 @@ using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Pulonia.Executors;
+using BetterGenshinImpact.Pulonia.Remote;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.ChildSession;
@@ -272,9 +273,13 @@ public partial class App : Application
                 services.AddTransient<CloudWebHostWindow>();
                 services.AddSingleton<Func<CloudWebHostWindow>>(sp => () => sp.GetRequiredService<CloudWebHostWindow>());
                 services.AddSingleton<GameRuntimeService>();
-                // 云原神网页版实例：实例名存储与启动器（Primary 首页使用）
+                services.AddSingleton<BetterGenshinImpact.Core.Recorder.KeyMouseRecordService>();
+                // 云原神网页版实例：实例名存储与启动器（Primary 首页的管理窗口使用）
                 services.AddSingleton<WebViewInstanceStore>();
                 services.AddSingleton<WebViewInstanceLauncher>();
+                services.AddTransient<CloudWebInstanceWindowViewModel>();
+                services.AddTransient<CloudWebInstanceWindow>();
+                services.AddSingleton<Func<CloudWebInstanceWindow>>(sp => () => sp.GetRequiredService<CloudWebInstanceWindow>());
                 services.AddSingleton<RecognitionTemplateAssetService>();
                 services.AddSingleton<RecognitionTemplateEditorService>();
                 services.AddSingleton<NotificationService>();
@@ -297,7 +302,28 @@ public partial class App : Application
                 services.AddSingleton<PuloniaTaskResourceCatalog>();
                 services.AddSingleton(_ => BetterGenshinImpact.Core.Script.Repositories.ScriptRepositoryStore.Shared);
                 services.AddSingleton<PuloniaRepositoryManagementService>();
-                services.AddSingleton<PuloniaTaskService>();
+                // Pulonia 跨实例派发：主实例经派发代理把节点交给子实例，子实例用节点宿主执行。
+                // 两者都在首次使用时才取得多实例服务，避免与其构造互相依赖
+                services.AddSingleton(sp => new PuloniaRemoteExecutionBroker(() => sp.GetRequiredService<InstanceService>()));
+                services.AddSingleton<IPuloniaRemoteNodeDispatcher>(sp => sp.GetRequiredService<PuloniaRemoteExecutionBroker>());
+                services.AddSingleton(sp => new PuloniaRemoteNodeHost(
+                    () => sp.GetRequiredService<InstanceService>(),
+                    sp.GetServices<IPuloniaTaskExecutor>(),
+                    sp.GetRequiredService<PuloniaGameTaskCoordinator>(),
+                    sp.GetRequiredService<TaskStopService>(),
+                    sp.GetRequiredService<ILogger<PuloniaRemoteNodeHost>>(),
+                    sp.GetService<IPuloniaGenshinAccountSwitcher>()));
+                // 只有主实例是协调器：子实例不读写共享的 User/Pulonia/state.json，也不消费队列
+                services.AddSingleton(sp => new PuloniaTaskService(
+                    sp.GetRequiredService<PuloniaTaskStore>(),
+                    sp.GetRequiredService<PuloniaTaskBuilder>(),
+                    sp.GetServices<IPuloniaTaskExecutor>(),
+                    sp.GetRequiredService<PuloniaGameTaskCoordinator>(),
+                    sp.GetRequiredService<TaskStopService>(),
+                    sp.GetRequiredService<TimeProvider>(),
+                    sp.GetService<IPuloniaGenshinAccountSwitcher>(),
+                    sp.GetRequiredService<IPuloniaRemoteNodeDispatcher>(),
+                    sp.GetRequiredService<InstanceBootstrap>().Context.IsRoot));
                 services.AddSingleton<IPuloniaTaskService>(sp => sp.GetRequiredService<PuloniaTaskService>());
                 services.AddSingleton(TimeProvider.System);
                 services.AddSingleton<PuloniaTaskTriggerHost>();

@@ -412,7 +412,10 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
                         or "auto_fight_enabled" or "auto_skip_enabled"))
                     continue;
                 var defaultProperty = value.DefaultParameters.Property(property.Name);
-                ParameterFields.Add(new PuloniaTaskParameterFieldViewModel(property.Name, fieldSchema,
+                ParameterFields.Add(new PuloniaTaskParameterFieldViewModel(property.Name,
+                    property.Name is "strategy_name" or "combat_strategy_path"
+                        ? BetterGenshinImpact.ViewModel.Pages.Pulonia.PuloniaOneDragonSettingChoices.Decorate(property.Name, fieldSchema, defaultProperty?.Value, value.TaskType)
+                        : fieldSchema,
                     defaultProperty?.Value, defaultProperty is not null, required.Contains(property.Name)));
             }
             SetSuggestedName(value.DisplayName);

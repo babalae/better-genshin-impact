@@ -61,4 +61,6 @@ public sealed class PuloniaTaskRequest
     public DateTimeOffset? TriggerActivatedAtUtc { get; init; }
     /// <summary>本次自动请求的繁忙策略。</summary>
     public PuloniaTaskBusyPolicy BusyPolicy { get; init; }
+    /// <summary>执行实例；为空时在主实例本地执行，否则由主实例编排、子实例执行叶子节点。</summary>
+    public PuloniaTaskExecutionTarget? ExecutionTarget { get; init; }
 }
