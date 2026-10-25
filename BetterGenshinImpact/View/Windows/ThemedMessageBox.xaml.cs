@@ -153,9 +153,26 @@ public partial class ThemedMessageBox : FluentWindow
         // 设置按钮并保存按钮类型
         messageBox._buttonType = button;
         SetButtons(messageBox, button);
+        SetDefaultButton(messageBox, defaultResult);
 
         var result = messageBox.ShowDialogWithResult();
         return result == MessageBoxResult.None ? defaultResult : result;
+    }
+
+    /// <summary>显式默认结果同时决定 Enter 和初始焦点；未指定时保留原有行为。</summary>
+    private static void SetDefaultButton(ThemedMessageBox messageBox, MessageBoxResult defaultResult)
+    {
+        var target = defaultResult switch
+        {
+            MessageBoxResult.OK or MessageBoxResult.Yes => messageBox.PrimaryButton,
+            MessageBoxResult.No => messageBox.SecondaryButton,
+            MessageBoxResult.Cancel when messageBox._buttonType == MessageBoxButton.YesNoCancel => messageBox.CloseButton,
+            MessageBoxResult.Cancel => messageBox.SecondaryButton,
+            _ => null
+        };
+        if (target is not { Visibility: Visibility.Visible }) return;
+        target.IsDefault = true;
+        messageBox.ContentRendered += (_, _) => target.Focus();
     }
 
     /// <summary>

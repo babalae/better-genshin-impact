@@ -178,18 +178,17 @@ public class ConfigService : IConfigService
         {
             if (!File.Exists(filePath))
             {
-                return new AllConfig();
+                return MigrateLegacyConfig(new AllConfig());
             }
 
             var json = File.ReadAllText(filePath);
             var config = JsonSerializer.Deserialize<AllConfig>(json, JsonOptions);
             if (config == null)
             {
-                return new AllConfig();
+                return MigrateLegacyConfig(new AllConfig());
             }
 
-            config.AutoPickConfig.MigrateLegacyConfig();
-            return config;
+            return MigrateLegacyConfig(config);
         }
         catch (Exception e)
         {
@@ -197,8 +196,21 @@ public class ConfigService : IConfigService
             Console.WriteLine(e.StackTrace);
             BackupConfigFile(filePath);
             ShowConfigExceptionDialog("读取", e);
-            return new AllConfig();
+            return MigrateLegacyConfig(new AllConfig());
         }
+    }
+
+    /// <summary>统一迁移读取或新建的配置；所有 Read 返回分支均经过这里。</summary>
+    /// <param name="config">反序列化或新建的配置。</param>
+    /// <returns>已完成旧字段迁移的配置。</returns>
+    private static AllConfig MigrateLegacyConfig(AllConfig config)
+    {
+        config.AutoPickConfig.MigrateLegacyConfig();
+        config.AutoDomainConfig.MigrateLegacyResinUsage();
+        config.AutoStygianOnslaughtConfig.MigrateLegacyResinUsage();
+        config.AutoBossConfig.MigrateLegacyResinUsage();
+        config.AutoLeyLineOutcropConfig.MigrateLegacyResinUsage();
+        return config;
     }
 
     public void Write(AllConfig config)

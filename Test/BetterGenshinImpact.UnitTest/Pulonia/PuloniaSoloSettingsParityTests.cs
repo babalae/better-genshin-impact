@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.Common.Resin;
 using System.Runtime.CompilerServices;
 using BetterGenshinImpact.GameTask.AutoBoss;
 using BetterGenshinImpact.GameTask.SoloTask;
@@ -54,7 +55,7 @@ public sealed class PuloniaSoloSettingsParityTests
     [InlineData(false)]
     public void WeeklySettings_PreserveSparseOverridesAndUneditedFields(bool domain)
     {
-        var originalDay = new JObject { ["enabled"] = false, ["count"] = 2, ["party_name"] = "原队伍" };
+        var originalDay = new JObject { ["enabled"] = false, ["resin_usage"] = JObject.Parse(SoloTaskJson.Serialize(new ResinUsage { Mode = ResinUsageMode.RunCount, RunCount = 2 })), ["party_name"] = "原队伍" };
         var original = new JObject { ["weekday_overrides"] = new JObject { ["1"] = originalDay } };
         SoloTaskSettingsViewModel settings = domain
             ? new AutoDomainSettingsViewModel(original)
@@ -69,7 +70,7 @@ public sealed class PuloniaSoloSettingsParityTests
         var weekly = Assert.IsType<JObject>(changes["weekday_overrides"]);
         Assert.Single(weekly);
         Assert.False(weekly["1"]!.Value<bool>("enabled"));
-        Assert.Equal(2, weekly["1"]!.Value<int>("count"));
+        Assert.Equal(2, weekly["1"]!["resin_usage"]!.Value<int>("run_count"));
         Assert.Equal("原队伍", originalDay.Value<string>("party_name"));
     }
 
@@ -95,19 +96,25 @@ public sealed class PuloniaSoloSettingsParityTests
         Assert.True(changes.Value<bool>(PuloniaSoloTaskExecutor.WeekdayOverridesEnabledParameter));
     }
 
-    /// <summary>真实 Schema 的可空数组编辑后仍必须输出字符串数组，不能意外变为对象。</summary>
+    /// <summary>树脂使用卡片保持嵌套对象合同，未修改时不生成覆盖。</summary>
     [Fact]
-    public void ResinPriority_NullableArrayKeepsArrayContract()
+    public void ResinUsage_GenericCardKeepsNestedObjectContract()
     {
-        var original = new JArray("浓缩树脂", "原粹树脂");
-        var schema = PuloniaOneDragonSettingChoices.Decorate("resin_priority_list",
-            new JObject { ["type"] = new JArray("array", "null") }, original, "solo.auto_domain");
-        var field = new PuloniaOneDragonParameterFieldViewModel("resin_priority_list", schema, original);
-        field.Children[0].SelectedChoice = "原粹树脂";
-        Assert.IsType<JArray>(field.BuildValue());
+        var value = JObject.Parse(SoloTaskJson.Serialize(ResinCapabilities.Domain.Defaults));
+        var schema = PuloniaOneDragonSettingChoices.Decorate("resin_usage",
+            PuloniaSoloTaskSchema.Create(typeof(ResinUsage)), value, "solo.auto_domain");
+        Assert.Equal("solo.auto_domain", schema.Value<string>("x-resin-usage"));
+        var field = new PuloniaOneDragonParameterFieldViewModel("resin_usage", schema, value);
+        Assert.False(field.HasChanges());
+        Assert.True(field.IsResinUsage);
+        Assert.Empty(field.Children);
+        var edited = field.Resin!.Value;
+        edited.RunCount = 6;
+        field.Resin.Reset(edited);
+        Assert.Equal(6, Assert.IsType<JObject>(field.BuildValue()).Value<int>("run_count"));
     }
 
-    /// <summary>累计上限与单次上限共同生效；树脂耗尽模式不会因累计上限而启用补充树脂。</summary>
+    /// <summary>累计上限与单次上限共同生效；耗尽方式转为指定次数后保留补充开关，且不修改共享原值。</summary>
     [Theory]
     [InlineData(false, 1, 10, 7, true, 3)]
     [InlineData(true, 2, 10, 7, true, 2)]
@@ -119,17 +126,20 @@ public sealed class PuloniaSoloSettingsParityTests
     {
         // 此方法只操作次数字段，绕过依赖正在运行应用的语言服务构造函数。
         var boss = (AutoBossParam)RuntimeHelpers.GetUninitializedObject(typeof(AutoBossParam));
+        boss.ResinUsage = ResinCapabilities.Boss.Defaults;
         boss.SpecifyRunCount = specified;
         boss.RunCount = runCount;
         boss.UseTransientResin = true;
         boss.UseFragileResin = true;
+        var shared = boss.ResinUsage;
+        var snapshot = shared.Clone();
         Assert.Equal(expectedRun, PuloniaSoloTaskExecutor.ApplyBossRewardLimit(boss, limit, completed));
+        Assert.Equal(snapshot, shared);
         Assert.Equal(expectedCount, boss.RunCount);
-        if (!specified && limit > 0 && expectedRun)
-        {
-            Assert.False(boss.UseTransientResin);
-            Assert.False(boss.UseFragileResin);
-        }
+        Assert.True(boss.UseTransientResin);
+        Assert.True(boss.UseFragileResin);
+        Assert.Equal(expectedRun && limit > 0 ? ResinUsageMode.RunCount : snapshot.Mode, boss.ResinUsage.Mode);
+
     }
 
     /// <summary>累计跨存储实例持久化，并按任务、账号与清空批次分别统计；清空仅生成草稿。</summary>

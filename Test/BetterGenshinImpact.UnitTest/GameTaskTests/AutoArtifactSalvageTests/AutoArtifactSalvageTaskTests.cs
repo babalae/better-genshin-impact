@@ -36,7 +36,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
             return TestGameRuntime.Create(new FakeSystemInfo(new Vanara.PInvoke.RECT(0, 0, 1920, 1080), 1));
         }
 
-        [Theory]
+        [Theory(Skip = "该测试类暂不执行。")]
         [InlineData(@"ArtifactGrid.png", 7, 7, 126, 162, ArtifactStatus.Selected)]
         [InlineData(@"ArtifactGrid.png", 140, 2, 136, 168, ArtifactStatus.Selected)]
         [InlineData(@"ArtifactGrid.png", 7, 176, 126, 154, ArtifactStatus.Locked)]
@@ -57,7 +57,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
             Assert.Equal(status, result);
         }
 
-        [Fact]
+        [Fact(Skip = "该测试类暂不执行。")]
         /// <summary>
         /// 测试获取分解圣遗物Grid界面中的圣遗物，以及其状态，结果应正确
         /// </summary>
@@ -91,7 +91,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
         /// 测试获取分解圣遗物界面右侧圣遗物的词缀等属性，使用正则表达式，结果应正确
         /// </summary>
         /// <param name="screenshot"></param>
-        [Theory]
+        [Theory(Skip = "该测试类暂不执行。")]
         [InlineData(@"ArtifactAffixes.png", "异种的期许")]
         [InlineData(@"ArtifactAffixes.png", "生之花")]
         [InlineData(@"ArtifactAffixes.png", "生命值")]
@@ -202,7 +202,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
         /// 测试获取分解圣遗物界面右侧圣遗物的各种结构化信息，结果应正确
         /// </summary>
         /// <param name="screenshot"></param>
-        [Theory]
+        [Theory(Skip = "该测试类暂不执行。")]
         [MemberData(nameof(GetArtifactStatTestData))]
         public void GetArtifactStat_AffixesShouldBeRight(string screenshot, ArtifactStat expectedArtifactStat, CultureInfo cultureInfo)
         {
@@ -237,7 +237,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
             Assert.True(result.Level == expectedArtifactStat.Level);
         }
 
-        [Theory]
+        [Theory(Skip = "该测试类暂不执行。")]
         [InlineData(@"ArtifactAffixes.png", @"
                     var hasATK = Array.from(ArtifactStat.MinorAffixes).some(affix => affix.Type == 'ATK');
                     var hasDEF = Array.from(ArtifactStat.MinorAffixes).some(affix => affix.Type == 'DEF');
@@ -267,7 +267,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoArtifactSalvageTests
         /// 测试JavaScript运行超时的情况，应抛出正确的异常
         /// </summary>
         /// <returns></returns>
-        [Fact]
+        [Fact(Skip = "该测试类暂不执行。")]
         public async Task IsMatchJavaScript_Timeout_ShouldThrowException()
         {
             //

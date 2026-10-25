@@ -11,6 +11,7 @@ using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoFishing;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation;
+using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.GameTask.AutoWood;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
@@ -28,6 +29,7 @@ using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel.Pages.View;
+using BetterGenshinImpact.ViewModel.Resin;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json.Linq;
@@ -54,6 +56,15 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 public partial class TaskSettingsPageViewModel : ViewModel
 {
     public AllConfig Config { get; set; }
+
+    /// <summary>秘境树脂入口，与旧一条龙秘境入口同步同一配置。</summary>
+    public ResinUsageEntryViewModel DomainResin { get; }
+    /// <summary>首领树脂入口。</summary>
+    public ResinUsageEntryViewModel BossResin { get; }
+    /// <summary>幽境树脂入口。</summary>
+    public ResinUsageEntryViewModel StygianResin { get; }
+    /// <summary>地脉花树脂入口。</summary>
+    public ResinUsageEntryViewModel LeyLineResin { get; }
 
     private readonly INavigationService _navigationService;
     /// <summary>
@@ -214,12 +225,26 @@ public partial class TaskSettingsPageViewModel : ViewModel
     /// <param name="oneDragonFlowViewModel">一条龙页面 ViewModel（DI 单例注入，避免独立 new 导致状态分裂）</param>
     /// <param name="instanceService">多实例连接与独立任务运行服务</param>
     /// <param name="soloTaskRegistry">独立任务注册表</param>
+    /// <param name="dialogs">公共树脂弹窗服务。</param>
     public TaskSettingsPageViewModel(IConfigService configService, INavigationService navigationService,
         TaskStopService taskStopService,
         OneDragonFlowViewModel oneDragonFlowViewModel, InstanceService instanceService,
-        SoloTaskRegistry soloTaskRegistry)
+        SoloTaskRegistry soloTaskRegistry, IResinSettingsDialogs? dialogs = null)
     {
         Config = configService.Get();
+        // 入口只整体替换配置；同配置上的其他页面入口会收到属性通知并刷新摘要。
+        var domainConfig = Config.AutoDomainConfig;
+        DomainResin = ResinUsageConfigBinding.Create("自动秘境", AutoDomainTask.ResinCapability, domainConfig,
+            domainConfig.EnsureResinUsage, value => domainConfig.ResinUsage = value, dialogs);
+        var bossConfig = Config.AutoBossConfig;
+        BossResin = ResinUsageConfigBinding.Create("自动首领讨伐", AutoBossTask.ResinCapability, bossConfig,
+            bossConfig.EnsureResinUsage, value => bossConfig.ResinUsage = value, dialogs);
+        var stygianConfig = Config.AutoStygianOnslaughtConfig;
+        StygianResin = ResinUsageConfigBinding.Create("自动幽境危战", AutoStygianOnslaughtTask.ResinCapability, stygianConfig,
+            stygianConfig.EnsureResinUsage, value => stygianConfig.ResinUsage = value, dialogs);
+        var leyLineConfig = Config.AutoLeyLineOutcropConfig;
+        LeyLineResin = ResinUsageConfigBinding.Create("自动地脉花", AutoLeyLineOutcropTask.ResinCapability, leyLineConfig,
+            leyLineConfig.EnsureResinUsage, value => leyLineConfig.ResinUsage = value, dialogs);
         _configService = configService;
         _navigationService = navigationService;
         _taskStopService = taskStopService;

@@ -13,6 +13,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.OneDragon;
@@ -26,6 +27,7 @@ using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel.Pages.View;
+using BetterGenshinImpact.ViewModel.Resin;
 using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json;
 using BetterGenshinImpact.Core.Script.Project;
@@ -231,6 +233,8 @@ public partial class OneDragonFlowViewModel : ViewModel
     [ObservableProperty] private AutoFightViewModel? _autoFightViewModel;
     
     public AllConfig Config { get; set; }
+    /// <summary>与独立任务页共用全局秘境设置的树脂入口。</summary>
+    public ResinUsageEntryViewModel DomainResin { get; }
 
     /// <summary>
     /// 创建一条龙页面 ViewModel
@@ -239,10 +243,14 @@ public partial class OneDragonFlowViewModel : ViewModel
     /// <param name="instanceService">多实例连接与独立任务操作服务</param>
     /// <param name="soloTaskRegistry">独立任务注册表</param>
     /// <param name="configService">配置服务，启动前把配置落盘供目标实例读取</param>
+    /// <param name="dialogs">公共树脂弹窗服务。</param>
     public OneDragonFlowViewModel(AllConfig config, InstanceService instanceService,
-        SoloTaskRegistry soloTaskRegistry, IConfigService configService)
+        SoloTaskRegistry soloTaskRegistry, IConfigService configService, IResinSettingsDialogs? dialogs = null)
     {
         Config = config;
+        var domainConfig = Config.AutoDomainConfig;
+        DomainResin = ResinUsageConfigBinding.Create("自动秘境", AutoDomainTask.ResinCapability, domainConfig,
+            domainConfig.EnsureResinUsage, value => domainConfig.ResinUsage = value, dialogs);
         AutoFightViewModel = new AutoFightViewModel(Config);
 
         // 启动按钮复用独立任务的按钮行为：单实例直接启停，多实例打开实例管理窗口

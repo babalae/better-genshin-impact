@@ -6,6 +6,8 @@ using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.ViewModel.SoloTaskSettings;
+using BetterGenshinImpact.ViewModel.Resin;
+using Microsoft.Extensions.DependencyInjection;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Newtonsoft.Json.Linq;
 
@@ -74,12 +76,12 @@ public sealed class PuloniaTaskSettingsEditorViewModel : ObservableObject
             // 专属界面仅接管明确编辑的字段，其他业务参数仍可通过卡片修改。
             var edited = dedicated.EditedParameterNames.ToHashSet(StringComparer.Ordinal);
             return new PuloniaTaskSettingsEditorViewModel(definition, effectiveParameters, dedicated,
-                CreateFields(definition, effectiveParameters).Where(field => !edited.Contains(field.Name)).ToArray());
+                CreateFields(definition, effectiveParameters, services?.GetService<IResinSettingsDialogs>()).Where(field => !edited.Contains(field.Name)).ToArray());
         }
 
         // 2. 没有专属界面时按 Schema 生成通用设置卡片
         return new PuloniaTaskSettingsEditorViewModel(definition, effectiveParameters, null,
-            CreateFields(definition, effectiveParameters));
+            CreateFields(definition, effectiveParameters, services?.GetService<IResinSettingsDialogs>()));
     }
 
     /// <summary>
@@ -89,7 +91,7 @@ public sealed class PuloniaTaskSettingsEditorViewModel : ObservableObject
     /// <param name="values">当前有效参数。</param>
     /// <returns>设置字段。</returns>
     internal static IReadOnlyList<PuloniaOneDragonParameterFieldViewModel> CreateFields(
-        PuloniaTaskDefinition? definition, JObject values)
+        PuloniaTaskDefinition? definition, JObject values, IResinSettingsDialogs? dialogs = null)
     {
         if (definition?.ParameterSchema["properties"] is not JObject properties)
             return [];
@@ -104,7 +106,7 @@ public sealed class PuloniaTaskSettingsEditorViewModel : ObservableObject
                     : PuloniaOneDragonSettingChoices.Decorate(property.Name, property.Value as JObject ?? new JObject(),
                         values[property.Name], definition.TaskType);
                 return new PuloniaOneDragonParameterFieldViewModel(property.Name, schema, values[property.Name],
-                    required.Contains(property.Name));
+                    required.Contains(property.Name), dialogs);
             })
             .ToArray();
     }

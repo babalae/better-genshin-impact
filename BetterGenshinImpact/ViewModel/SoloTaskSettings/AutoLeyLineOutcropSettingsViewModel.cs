@@ -1,5 +1,10 @@
 using System.Collections.ObjectModel;
 using System.Linq;
+using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
+using BetterGenshinImpact.GameTask.Common.Resin;
+using BetterGenshinImpact.GameTask.SoloTask;
+using BetterGenshinImpact.ViewModel.Resin;
+using Microsoft.Extensions.DependencyInjection;
 using BetterGenshinImpact.Pulonia.Executors;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Newtonsoft.Json.Linq;
@@ -12,8 +17,7 @@ public partial class AutoLeyLineOutcropSettingsViewModel : SoloTaskSettingsViewM
     /// <inheritdoc />
     public override string[] EditedParameterNames =>
     [
-        "one_dragon_mode", "is_resin_exhaustion_mode", "open_mode_count_min", "count",
-        PuloniaSoloTaskExecutor.WeekdayOverridesParameter
+        "one_dragon_mode", "resin_usage", PuloniaSoloTaskExecutor.WeekdayOverridesParameter
     ];
 
     /// <summary>每周安排的日期顺序，索引与执行器的服务器星期值一致（0 为周日）。</summary>
@@ -27,36 +31,30 @@ public partial class AutoLeyLineOutcropSettingsViewModel : SoloTaskSettingsViewM
 
     /// <summary>载入时的跳过准备流程快照。</summary>
     private readonly bool _originalOneDragonMode;
-    /// <summary>载入时的树脂耗尽模式快照。</summary>
-    private readonly bool _originalResinExhaustionMode;
-    /// <summary>载入时的次数取小值快照。</summary>
-    private readonly bool _originalOpenModeCountMin;
-    /// <summary>载入时的刷取次数快照。</summary>
-    private readonly int _originalCount;
 
     /// <summary>是否跳过部分准备流程（例如传送回七天神像）。</summary>
     [ObservableProperty] private bool _oneDragonMode;
-    /// <summary>是否按当前树脂与库存自动计算可刷次数。</summary>
-    [ObservableProperty] private bool _resinExhaustionMode;
-    /// <summary>是否与手动次数取最小值。</summary>
-    [ObservableProperty] private bool _openModeCountMin;
-    /// <summary>地脉花刷取次数。</summary>
-    [ObservableProperty] private int _count;
     /// <summary>周日至周六的运行日期输入行，索引 0 为周日。</summary>
     public ObservableCollection<AutoLeyLineOutcropWeekdayRowViewModel> Weekdays { get; } = [];
 
     /// <summary>从当前有效参数读取地脉花配置并还原运行日期。</summary>
     /// <param name="original">当前有效参数快照。</param>
-    public AutoLeyLineOutcropSettingsViewModel(JObject original) : base(original)
+    public AutoLeyLineOutcropSettingsViewModel(JObject original) : this(original, null) { }
+
+    /// <summary>初始化后的树脂快照，用于按结构收集变化。</summary>
+    private readonly ResinUsage _originalResin;
+    /// <summary>树脂使用设置入口。</summary>
+    public ResinUsageEntryViewModel Resin { get; }
+
+    /// <summary>注入可选的树脂弹窗服务，不依赖应用静态容器。</summary>
+    [ActivatorUtilitiesConstructor]
+    public AutoLeyLineOutcropSettingsViewModel(JObject original, IResinSettingsDialogs? dialogs = null) : base(original)
     {
+        _originalResin = ResinUsageViewModelSupport.Read(Original["resin_usage"], AutoLeyLineOutcropTask.ResinCapability);
+        Resin = new("自动地脉花", AutoLeyLineOutcropTask.ResinCapability, _originalResin, dialogs);
+        TrackEdits([Resin]);
         _originalOneDragonMode = ReadBool(Original, "one_dragon_mode", true);
-        _originalResinExhaustionMode = ReadBool(Original, "is_resin_exhaustion_mode");
-        _originalOpenModeCountMin = ReadBool(Original, "open_mode_count_min");
-        _originalCount = ReadInt(Original, "count", 6);
         _oneDragonMode = _originalOneDragonMode;
-        _resinExhaustionMode = _originalResinExhaustionMode;
-        _openModeCountMin = _originalOpenModeCountMin;
-        _count = _originalCount;
 
         var weekly = Original[PuloniaSoloTaskExecutor.WeekdayOverridesParameter] as JObject;
         for (var i = 0; i < DayNames.Length; i++)
@@ -78,10 +76,8 @@ public partial class AutoLeyLineOutcropSettingsViewModel : SoloTaskSettingsViewM
     /// <param name="changes">接收变化的对象。</param>
     public override void CollectChanges(JObject changes)
     {
+        if (Resin.Value != _originalResin) changes["resin_usage"] = JObject.Parse(SoloTaskJson.Serialize(Resin.Value));
         WriteBool(changes, "one_dragon_mode", _originalOneDragonMode, OneDragonMode);
-        WriteBool(changes, "is_resin_exhaustion_mode", _originalResinExhaustionMode, ResinExhaustionMode);
-        WriteBool(changes, "open_mode_count_min", _originalOpenModeCountMin, OpenModeCountMin);
-        WriteInt(changes, "count", _originalCount, Count);
 
         // 每周安排：七天各一项，只写入非空的类型与国家；全部未勾选时视为每天执行
         var anyEnabledDay = Weekdays.Any(row => row.Enabled);

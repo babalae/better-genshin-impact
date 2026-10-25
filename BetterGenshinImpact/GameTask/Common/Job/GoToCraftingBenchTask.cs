@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.Common.Resin;
 using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoPathing;
@@ -29,7 +30,7 @@ namespace BetterGenshinImpact.GameTask.Common.Job;
 /// </summary>
 [SoloTaskInfo(TaskId, "合成浓缩树脂", Group = "日常奖励", Order = 120, OneDragonOrder = 2)]
 [SoloTaskSettingsView(typeof(CraftCondensedResinSettingsView), typeof(CraftCondensedResinSettingsViewModel))]
-public class GoToCraftingBenchTask : ISoloTask<CraftCondensedResinParam, NoData>
+public class GoToCraftingBenchTask : ISoloTask<CraftCondensedResinParam, CraftCondensedResinData>
 {
     /// <summary>
     /// 任务标识。
@@ -89,7 +90,7 @@ public class GoToCraftingBenchTask : ISoloTask<CraftCondensedResinParam, NoData>
     /// <param name="param">合成浓缩树脂参数</param>
     /// <param name="ct">取消令牌</param>
     /// <returns>参数无效返回 Failed(invalid_parameter)；重试全部失败返回 Failed(craft_failed)；流程正常结束返回 Unverified。取消与运行环境停止向外抛出。</returns>
-    public async Task<SoloTaskResult<NoData>> RunAsync(CraftCondensedResinParam param, CancellationToken ct)
+    public async Task<SoloTaskResult<CraftCondensedResinData>> RunAsync(CraftCondensedResinParam param, CancellationToken ct)
     {
         // 国家决定合成台路线文件，为空时无法执行
         if (string.IsNullOrWhiteSpace(param.Country))
@@ -102,9 +103,9 @@ public class GoToCraftingBenchTask : ISoloTask<CraftCondensedResinParam, NoData>
         {
             try
             {
-                var message = await CraftResinOnce(param, ct);
+                var (message, craftedCount) = await CraftResinOnce(param, ct);
                 Logger.LogInformation("→ {Name} 结束", TaskName);
-                return SoloTaskResult.Unverified(message);
+                return SoloTaskResult.Unverified(new CraftCondensedResinData { CraftedCount = craftedCount }, message);
             }
             catch (Exception e) when (e is not NormalEndException and not OperationCanceledException)
             {
@@ -131,10 +132,12 @@ public class GoToCraftingBenchTask : ISoloTask<CraftCondensedResinParam, NoData>
     /// <param name="param">合成浓缩树脂参数</param>
     /// <param name="ct">取消令牌</param>
     /// <returns>本次流程的结果摘要</returns>
-    private async Task<string> CraftResinOnce(CraftCondensedResinParam param, CancellationToken ct)
+    private async Task<(string Message, int? CraftedCount)> CraftResinOnce(CraftCondensedResinParam param, CancellationToken ct)
     {
         string message;
-         // 1. 走到合成台并交互
+        int? craftedCount = null;
+        var minResinToKeep = ResinUsageLegacyMapper.NormalizeMinResinToKeep(param.MinResinToKeep);
+        // 1. 走到合成台并交互
         await GoToCraftingBenchOnce(param.Country, ct);
 
         // 判断浓缩树脂是否存在
@@ -145,23 +148,23 @@ public class GoToCraftingBenchTask : ISoloTask<CraftCondensedResinParam, NoData>
         if (resin.IsExist())
         {
             // 3. 点击合成树脂
-            if (param.MinResinToKeep > 0){//开关判断，填写的数量大于0时启用 param.MinResinToKeep
-                var fragileResinCount = 0;
+            if (minResinToKeep > 0){//开关判断，填写的数量大于0时启用 param.MinResinToKeep
+                var originalResinCount = 0;
                 var condensedResinCount = 0;
-                var fragileResinCountRa = ra.Find(ElementRecognition.Get("fragileResinCount", ra));
-                if (!fragileResinCountRa.IsEmpty())
+                var originalResinCountRa = ra.Find(ElementRecognition.Get("fragileResinCount", ra));
+                if (!originalResinCountRa.IsEmpty())
                 {
-                    // 图像下方就是脆弱树脂数量
-                    var countArea = ra.DeriveCrop(fragileResinCountRa.X, fragileResinCountRa.Y + fragileResinCountRa.Height,
-                        fragileResinCountRa.Width, fragileResinCountRa.Height);
+                    // 图像下方就是原粹树脂数量；资源键沿用外部资源包的 fragileResinCount。
+                    var countArea = ra.DeriveCrop(originalResinCountRa.X, originalResinCountRa.Y + originalResinCountRa.Height,
+                        originalResinCountRa.Width, originalResinCountRa.Height);
                     var count = OcrFactory.Paddle.OcrWithoutDetector(countArea.SrcMat);
                     // Logger.LogInformation("识别原粹树脂数量：{Count}", count);
                     var match = System.Text.RegularExpressions.Regex.Match(count, @"(\d+)\s*[/17]\s*(6|60)");
                     if (match.Success)
                     {
                         var numericPart = match.Groups[1].Value;
-                        fragileResinCount = StringUtils.TryParseInt(numericPart);
-                        Logger.LogInformation("提取到的原粹树脂数量：{fragileResinCount}", fragileResinCount);
+                        originalResinCount = StringUtils.TryParseInt(numericPart);
+                        Logger.LogInformation("提取到的原粹树脂数量：{originalResinCount}", originalResinCount);
                     }
                 }
                 
@@ -189,9 +192,9 @@ public class GoToCraftingBenchTask : ISoloTask<CraftCondensedResinParam, NoData>
                 // 每次合成消耗的数量
                 const int resinConsumedPerCraft = 60;
                 // 需要保留的最小数量
-                 int minResinToKeep = param.MinResinToKeep;
+                // 保留量已在入口按旧字段规则归一化。
                 // 可以用来合成的树脂数量
-                int resinAvailableForCrafting = fragileResinCount - minResinToKeep;
+                int resinAvailableForCrafting = originalResinCount - minResinToKeep;
                 // 最大可合成次数
                 int maxCraftsPossible = 5 - condensedResinCount;
                 // 计算需要合成的次数
@@ -202,9 +205,10 @@ public class GoToCraftingBenchTask : ISoloTask<CraftCondensedResinParam, NoData>
                 }
                 // 计算最大合成次数
                 craftsNeeded = Math.Min(maxCraftsPossible, craftsNeeded);
-                Logger.LogInformation("原粹树脂: {FragileResinCount}，浓缩树脂: {CondensedResinCount}，最大可合成次数为: {maxCraftsPossible}", fragileResinCount,
+                Logger.LogInformation("原粹树脂: {OriginalResinCount}，浓缩树脂: {CondensedResinCount}，最大可合成次数为: {maxCraftsPossible}", originalResinCount,
                     condensedResinCount, maxCraftsPossible);
                 Logger.LogInformation("保留 {MinResinToKeep} 原粹树脂需要合成次数： {craftsNeeded}",minResinToKeep,craftsNeeded);
+                craftedCount = craftsNeeded;
                 if (craftsNeeded > 0)
                 {
                     for (int i = 0; i < 5; i++)
@@ -251,10 +255,11 @@ public class GoToCraftingBenchTask : ISoloTask<CraftCondensedResinParam, NoData>
         {
             Logger.LogInformation("无需合成浓缩树脂");
             message = "无需合成浓缩树脂。";
+            craftedCount = 0;
         }
 
         await new ReturnMainUiTask(_runtime).Start(ct);
-        return message;
+        return (message, craftedCount);
     }
 
     /// <summary>

@@ -4,6 +4,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.GameTask.Common.Resin;
+using BetterGenshinImpact.GameTask.SoloTask;
+using BetterGenshinImpact.ViewModel.Resin;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -32,6 +35,9 @@ public enum PuloniaTaskParameterEditorKind
 
     /// <summary>统一战斗策略选择器。</summary>
     CombatStrategy,
+
+    /// <summary>公共树脂入口卡片，确认后整体替换嵌套对象。</summary>
+    ResinUsage,
 
     /// <summary>
     /// JSON 数组或对象编辑器。
@@ -91,6 +97,14 @@ public partial class PuloniaTaskParameterFieldViewModel : ObservableObject
 
     /// <summary>是否显示统一战斗策略选择器。</summary>
     public bool IsCombatStrategyEditor => EditorKind == PuloniaTaskParameterEditorKind.CombatStrategy;
+    /// <summary>是否使用树脂入口，其他标量与 JSON 编辑器均不显示。</summary>
+    public bool IsResinUsageEditor => EditorKind == PuloniaTaskParameterEditorKind.ResinUsage;
+    /// <summary>树脂字段的独立草稿入口，非树脂字段为 null。</summary>
+    public ResinUsageEntryViewModel? Resin { get; }
+    /// <summary>解析后的初始树脂设置，用于保持缺失、null 和格式错误原值不产生覆盖。</summary>
+    private readonly ResinUsage? _initialResin;
+    /// <summary>树脂值是否相对初始草稿发生结构变化。</summary>
+    internal bool HasResinChanges => Resin is not null && Resin.Value != _initialResin;
     /// <summary>当前任务可使用的策略类型。</summary>
     public CombatStrategyKind AllowedStrategyKinds { get; }
 
@@ -147,7 +161,7 @@ public partial class PuloniaTaskParameterFieldViewModel : ObservableObject
     /// 根据字段 Schema 和能力默认值建立编辑字段。
     /// </summary>
     public PuloniaTaskParameterFieldViewModel(string name, JObject schema, JToken? defaultValue,
-        bool hasDefaultValue, bool isRequired)
+        bool hasDefaultValue, bool isRequired, IResinSettingsDialogs? dialogs = null)
     {
         Name = name;
         DisplayName = PuloniaTaskFieldNames.GetDisplayName(name);
@@ -155,6 +169,14 @@ public partial class PuloniaTaskParameterFieldViewModel : ObservableObject
         IsRequired = isRequired;
         _hasDefaultValue = hasDefaultValue;
         _defaultValue = defaultValue?.DeepClone();
+        if (ResinUsageViewModelSupport.GetTask(schema.Value<string>("x-resin-usage")) is { } task)
+        {
+            // 字段来自静态 Schema 工厂而非 DI；显式服务优先，真实应用中才尝试静态容器，取不到仍可显示摘要。
+            Resin = new(task.Name, task.Capability, ResinUsageViewModelSupport.Read(defaultValue, task.Capability),
+                ResinUsageViewModelSupport.ResolveDialogs(dialogs));
+            _initialResin = Resin.Value;
+            Resin.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(Resin.Value)) OnPropertyChanged(nameof(Resin)); };
+        }
 
         var types = schema["type"] is JArray typeArray
             ? typeArray.Values<string>().Where(type => type is not null).Cast<string>().ToList()
@@ -167,7 +189,7 @@ public partial class PuloniaTaskParameterFieldViewModel : ObservableObject
         Choices = _choiceValues.Keys.ToArray();
         AllowedStrategyKinds = (CombatStrategyKind)(schema.Value<int?>("x-combat-strategy-kinds") ?? (int)CombatStrategyKind.WithoutCombo);
         var isCombatStrategy = System.Text.Json.JsonNamingPolicy.SnakeCaseLower.ConvertName(name) is "strategy_name" or "combat_strategy_path";
-        EditorKind = isCombatStrategy ? PuloniaTaskParameterEditorKind.CombatStrategy : Choices.Count > 0
+        EditorKind = Resin is not null ? PuloniaTaskParameterEditorKind.ResinUsage : isCombatStrategy ? PuloniaTaskParameterEditorKind.CombatStrategy : Choices.Count > 0
             ? PuloniaTaskParameterEditorKind.Choice
             : _valueType switch
             {
@@ -176,6 +198,7 @@ public partial class PuloniaTaskParameterFieldViewModel : ObservableObject
                 _ => PuloniaTaskParameterEditorKind.Text
             };
 
+        if (IsResinUsageEditor) return;
         var initialValue = defaultValue ?? JValue.CreateNull();
         if (EditorKind == PuloniaTaskParameterEditorKind.Boolean)
             BooleanValue = initialValue.Value<bool?>() ?? false;
@@ -194,6 +217,8 @@ public partial class PuloniaTaskParameterFieldViewModel : ObservableObject
     /// </summary>
     public JToken BuildValue()
     {
+        if (Resin is not null)
+            return HasResinChanges ? JObject.Parse(SoloTaskJson.Serialize(Resin.Value)) : _defaultValue?.DeepClone() ?? JValue.CreateNull();
         if (EditorKind == PuloniaTaskParameterEditorKind.Boolean)
             return new JValue(BooleanValue);
         if (EditorKind == PuloniaTaskParameterEditorKind.Choice)
@@ -248,6 +273,7 @@ public partial class PuloniaTaskParameterFieldViewModel : ObservableObject
     /// </summary>
     public bool ShouldPersist(JToken value)
     {
+        if (IsResinUsageEditor && !HasResinChanges) return false;
         if (_hasDefaultValue)
             return !JToken.DeepEquals(_defaultValue, value);
         return IsRequired || value.Type != JTokenType.Null;

@@ -1,7 +1,9 @@
+using BetterGenshinImpact.GameTask.Common.Resin;
+using BetterGenshinImpact.GameTask.SoloTask;
+using BetterGenshinImpact.Pulonia.Services;
 using System.Linq;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.Common.Job;
-using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using BetterGenshinImpact.ViewModel.SoloTaskSettings;
@@ -113,9 +115,9 @@ public sealed class PuloniaOneDragonSettingsTests
         var allProperties = new JObject
         {
             ["domain_name"] = new JObject { ["type"] = "string" },
-            ["domain_round_num"] = new JObject { ["type"] = "integer" }
+            ["resin_usage"] = PuloniaSoloTaskSchema.Create(typeof(ResinUsage))
         };
-        var effectiveValues = new JObject { ["domain_name"] = "测试秘境", ["domain_round_num"] = 2 };
+        var effectiveValues = new JObject { ["domain_name"] = "测试秘境", ["resin_usage"] = JObject.Parse(SoloTaskJson.Serialize(new ResinUsage { Mode = ResinUsageMode.RunCount, RunCount = 2 })) };
         var schema = PuloniaOneDragonSettingChoices.WeekdaySchema(allProperties, effectiveValues, DomainTaskType);
 
         var field = new PuloniaOneDragonParameterFieldViewModel("weekday_overrides", schema, new JObject());
@@ -139,43 +141,34 @@ public sealed class PuloniaOneDragonSettingsTests
         var properties = new JObject
         {
             ["party_name"] = new JObject { ["type"] = "string" },
-            ["domain_round_num"] = new JObject { ["type"] = "integer" }
+            ["resin_usage"] = PuloniaSoloTaskSchema.Create(typeof(ResinUsage))
         };
-        var values = new JObject { ["party_name"] = "基础队伍", ["domain_round_num"] = 2 };
+        var values = new JObject { ["party_name"] = "基础队伍", ["resin_usage"] = JObject.Parse(SoloTaskJson.Serialize(new ResinUsage { Mode = ResinUsageMode.RunCount, RunCount = 2 })) };
         var original = new JObject { ["1"] = new JObject { ["enabled"] = false } };
         var field = new PuloniaOneDragonParameterFieldViewModel("weekday_overrides",
             PuloniaOneDragonSettingChoices.WeekdaySchema(properties, values, DomainTaskType), original);
-        field.Children[1].Children.Single(item => item.Name == "domain_round_num").NumberValue = 3;
+        var resin = field.Children[1].Children.Single(item => item.Name == "resin_usage").Resin!;
+        var next = resin.Value;
+        next.RunCount = 3;
+        resin.Reset(next);
 
         var built = Assert.IsType<JObject>(field.BuildValue());
         var monday = Assert.IsType<JObject>(built["1"]);
         Assert.Equal(2, monday.Count);
         Assert.False(monday.Value<bool>("enabled"));
-        Assert.Equal(3, monday.Value<int>("domain_round_num"));
+        Assert.Equal(3, monday["resin_usage"]!.Value<int>("run_count"));
         Assert.False(monday.ContainsKey("party_name"));
         Assert.True(JToken.DeepEquals(new JObject { ["enabled"] = false }, original["1"]));
     }
 
-    /// <summary>
-    /// 树脂优先级数组仅替换被修改的选项，其余项与字符串类型原样保留。
-    /// </summary>
+    /// <summary>旧优先级字段不再提供专用选项，使用顺序由公共模型固定。</summary>
     [Fact]
-    public void ResinPriority_ChangingFirstChoicePreservesRemainingStrings()
+    public void ResinPriority_NoLongerHasSpecialChoices()
     {
-        var value = new JArray("浓缩树脂", "原粹树脂");
-        var schema = PuloniaOneDragonSettingChoices.Decorate(
-            "resin_priority_list", new JObject { ["type"] = "array" }, value, DomainTaskType);
-
-        var field = new PuloniaOneDragonParameterFieldViewModel("resin_priority_list", schema, value);
-        Assert.False(field.HasChanges());
-
-        field.Children[0].SelectedChoice = "脆弱树脂";
-
-        var built = Assert.IsType<JArray>(field.BuildValue());
-        Assert.Equal(JTokenType.String, built[0]!.Type);
-        Assert.Equal("脆弱树脂", built[0]!.Value<string>());
-        Assert.Equal(JTokenType.String, built[1]!.Type);
-        Assert.Equal("原粹树脂", built[1]!.Value<string>());
+        var schema = PuloniaOneDragonSettingChoices.Decorate("resin_priority_list",
+            new JObject { ["type"] = "array" }, new JArray("浓缩树脂", "原粹树脂"), DomainTaskType);
+        Assert.Null(schema["properties"]);
+        Assert.Null(schema["enum"]);
     }
 
     /// <summary>

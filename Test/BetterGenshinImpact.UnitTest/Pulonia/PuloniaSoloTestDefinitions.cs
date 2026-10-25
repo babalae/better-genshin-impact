@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.Common.Resin;
 using BetterGenshinImpact.GameTask.AutoBoss;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
@@ -75,7 +76,7 @@ internal static class PuloniaSoloTestDefinitions
         new JObject
         {
             ["boss_name"] = "", ["strategy_name"] = "根据队伍自动选择", ["combat_strategy_path"] = "根据队伍自动选择",
-            ["team_name"] = "", ["specify_run_count"] = false, ["run_count"] = 1, ["revive_retry_count"] = 3, ["timeout"] = 240
+            ["team_name"] = "", ["resin_usage"] = Defaults(ResinCapabilities.Boss.Defaults), ["revive_retry_count"] = 3, ["timeout"] = 240
         }, "树脂与战斗", 220, 4);
 
     /// <summary>
@@ -88,13 +89,13 @@ internal static class PuloniaSoloTestDefinitions
         Create(ReturnMainUiTask.TaskId, "返回主界面", typeof(NoParam), new JObject(), "工具", 430),
         Create(ClaimMailRewardsTask.TaskId, "领取邮件", typeof(NoParam), new JObject(), "日常奖励", 110, 1),
         Create(AutoDomainTask.TaskId, "自动秘境", typeof(AutoDomainParam),
-            new JObject { ["domain_round_num"] = 9999, ["party_name"] = "", ["domain_name"] = "" }, "树脂与战斗", 210, 3),
+            new JObject { ["resin_usage"] = Defaults(ResinCapabilities.Domain.Defaults), ["party_name"] = "", ["domain_name"] = "" }, "树脂与战斗", 210, 3),
         Create(GoToCraftingBenchTask.TaskId, "合成浓缩树脂", typeof(CraftCondensedResinParam), Defaults(new CraftCondensedResinParam()), "日常奖励", 120, 2),
         AutoBoss(),
         Create(AutoStygianOnslaughtTask.TaskId, "自动幽境危战", typeof(AutoStygianOnslaughtParam),
-            new JObject { ["boss_num"] = 1, ["strategy_name"] = "根据队伍自动选择" }, "树脂与战斗", 230, 5),
+            new JObject { ["resin_usage"] = Defaults(ResinCapabilities.StygianOnslaught.Defaults), ["boss_num"] = 1, ["strategy_name"] = "根据队伍自动选择" }, "树脂与战斗", 230, 5),
         Create(AutoLeyLineOutcropTask.TaskId, "自动地脉花", typeof(AutoLeyLineOutcropParam),
-            new JObject { ["count"] = 6, ["country"] = "蒙德", ["ley_line_outcrop_type"] = "启示之花" }, "树脂与战斗", 240, 6),
+            new JObject { ["resin_usage"] = Defaults(ResinCapabilities.LeyLineOutcrop.Defaults), ["country"] = "蒙德", ["ley_line_outcrop_type"] = "启示之花" }, "树脂与战斗", 240, 6),
         Create(ClaimDailyRewardsTask.TaskId, "领取每日奖励", typeof(DailyRewardsParam), Defaults(new DailyRewardsParam()), "日常奖励", 130, 7)
     ];
 }

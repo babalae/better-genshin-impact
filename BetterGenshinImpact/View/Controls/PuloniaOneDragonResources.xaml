@@ -1,5 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:combat="clr-namespace:BetterGenshinImpact.View.Controls.CombatStrategy"
+ xmlns:resin="clr-namespace:BetterGenshinImpact.View.Controls.Resin"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
  xmlns:pulonia="clr-namespace:BetterGenshinImpact.ViewModel.Windows.Pulonia"
  xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls">
@@ -155,12 +156,15 @@
     <!--
         旧任务计划参数字段模板：改为与 PuloniaOneDragonParameterResources 中
         OneDragonParameterFieldTemplate 一致的老一条龙卡片视觉（ui:CardControl / ui:CardExpander）。
-        五种编辑器互斥：由各 Is*Editor 标志配合 DragonBoolVisibility 控制显隐，同一字段只显示对应编辑器。
+        六种编辑器互斥：由各 Is*Editor 标志配合 DragonBoolVisibility 控制显隐，同一字段只显示对应编辑器。
     -->
     <Grid>
+        <resin:ResinSettingsCard Summary="{Binding Resin.Summary, Mode=OneWay}" Problem="{Binding Resin.Problem, Mode=OneWay}"
+                                Command="{Binding Resin.EditCommand, Mode=OneWay}" Margin="0,0,0,8"
+                                Visibility="{Binding IsResinUsageEditor, Converter={StaticResource DragonBoolVisibility}, Mode=OneWay}" />
         <!--  文本字段：左侧标题+小号说明，右侧文本框  -->
         <ui:CardControl Margin="0,0,0,8"
-                        Visibility="{Binding IsTextEditor, Converter={StaticResource DragonBoolVisibility}}">
+                        Visibility="{Binding IsTextEditor, Converter={StaticResource DragonBoolVisibility}, Mode=OneWay}">
             <ui:CardControl.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -170,12 +174,12 @@
                     <!--  字段标题  -->
                     <ui:TextBlock Grid.Row="0"
                                   FontTypography="Body"
-                                  Text="{Binding DisplayLabel}"
+                                  Text="{Binding DisplayLabel, Mode=OneWay}"
                                   TextWrapping="Wrap" />
                     <!--  字段说明（小号次要文字）  -->
                     <ui:TextBlock Grid.Row="1"
                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                  Text="{Binding Description}"
+                                  Text="{Binding Description, Mode=OneWay}"
                                   TextWrapping="Wrap" />
                 </Grid>
             </ui:CardControl.Header>
@@ -189,7 +193,7 @@
 
         <!--  选项字段：左侧标题+小号说明，右侧下拉框  -->
         <ui:CardControl Margin="0,0,0,8"
-                        Visibility="{Binding IsChoiceEditor, Converter={StaticResource DragonBoolVisibility}}">
+                        Visibility="{Binding IsChoiceEditor, Converter={StaticResource DragonBoolVisibility}, Mode=OneWay}">
             <ui:CardControl.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -198,11 +202,11 @@
                     </Grid.RowDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                   FontTypography="Body"
-                                  Text="{Binding DisplayLabel}"
+                                  Text="{Binding DisplayLabel, Mode=OneWay}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                  Text="{Binding Description}"
+                                  Text="{Binding Description, Mode=OneWay}"
                                   TextWrapping="Wrap" />
                 </Grid>
             </ui:CardControl.Header>
@@ -210,13 +214,13 @@
                       MinWidth="160"
                       MaxWidth="360"
                       HorizontalAlignment="Right"
-                      ItemsSource="{Binding Choices}"
+                      ItemsSource="{Binding Choices, Mode=OneWay}"
                       SelectedItem="{Binding SelectedChoice, Mode=TwoWay}" />
         </ui:CardControl>
 
         <!-- 战斗策略字段：使用统一的两级选择器。 -->
         <ui:CardControl Margin="0,0,0,8"
-                        Visibility="{Binding IsCombatStrategyEditor, Converter={StaticResource DragonBoolVisibility}}">
+                        Visibility="{Binding IsCombatStrategyEditor, Converter={StaticResource DragonBoolVisibility}, Mode=OneWay}">
             <ui:CardControl.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -225,11 +229,11 @@
                     </Grid.RowDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                   FontTypography="Body"
-                                  Text="{Binding DisplayLabel}"
+                                  Text="{Binding DisplayLabel, Mode=OneWay}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                  Text="{Binding Description}"
+                                  Text="{Binding Description, Mode=OneWay}"
                                   TextWrapping="Wrap" />
                 </Grid>
             </ui:CardControl.Header>
@@ -238,7 +242,7 @@
 
         <!--  布尔字段：左侧标题+小号说明，右侧开关  -->
         <ui:CardControl Margin="0,0,0,8"
-                        Visibility="{Binding IsBooleanEditor, Converter={StaticResource DragonBoolVisibility}}">
+                        Visibility="{Binding IsBooleanEditor, Converter={StaticResource DragonBoolVisibility}, Mode=OneWay}">
             <ui:CardControl.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -247,11 +251,11 @@
                     </Grid.RowDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                   FontTypography="Body"
-                                  Text="{Binding DisplayLabel}"
+                                  Text="{Binding DisplayLabel, Mode=OneWay}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                  Text="{Binding Description}"
+                                  Text="{Binding Description, Mode=OneWay}"
                                   TextWrapping="Wrap" />
                 </Grid>
             </ui:CardControl.Header>
@@ -263,7 +267,7 @@
         <!--  高级 JSON 字段：默认折叠的卡片展开器，展开后为等宽字体多行文本框，而不是通用表单卡片  -->
         <ui:CardExpander Margin="0,0,0,8"
                          ContentPadding="0"
-                         Visibility="{Binding IsJsonEditor, Converter={StaticResource DragonBoolVisibility}}">
+                         Visibility="{Binding IsJsonEditor, Converter={StaticResource DragonBoolVisibility}, Mode=OneWay}">
             <ui:CardExpander.Header>
                 <Grid>
                     <Grid.RowDefinitions>
@@ -272,11 +276,11 @@
                     </Grid.RowDefinitions>
                     <ui:TextBlock Grid.Row="0"
                                   FontTypography="Body"
-                                  Text="{Binding DisplayLabel}"
+                                  Text="{Binding DisplayLabel, Mode=OneWay}"
                                   TextWrapping="Wrap" />
                     <ui:TextBlock Grid.Row="1"
                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                  Text="{Binding Description}"
+                                  Text="{Binding Description, Mode=OneWay}"
                                   TextWrapping="Wrap" />
                 </Grid>
             </ui:CardExpander.Header>

@@ -106,15 +106,15 @@ public sealed class PuloniaTaskHistoryTests : IDisposable
     }
 
     /// <summary>
-    /// 独立任务的原因码单独成行，奖励汇总逐行显示为“名称 ×数量”，items 不再作为原始 JSON 重复展示。
+    /// 独立任务的原因码单独成行，奖励汇总从 rewards.items 显示为“名称 ×数量”，不重复展示原始 JSON。
     /// </summary>
     [Fact]
     public void SoloTaskResult_ShowsReasonCodeAndRewardItems()
     {
         var data = new JObject
         {
-            ["items"] = new JArray(new JObject { ["name"] = "原粹树脂", ["count"] = 2 },
-                new JObject { ["name"] = "摩拉", ["count"] = 60000 })
+            ["rewards"] = new JObject { ["items"] = new JArray(new JObject { ["name"] = "原粹树脂", ["count"] = 2 },
+                new JObject { ["name"] = "摩拉", ["count"] = 60000 }) }
         };
         var node = new PuloniaTaskNodeResultViewModel(new PuloniaTaskNodeResult("plan/node", "节点", "solo.auto_domain", 1,
             PuloniaTaskNodeStatus.Failed, "结果消息", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, data,
@@ -123,6 +123,7 @@ public sealed class PuloniaTaskHistoryTests : IDisposable
         Assert.Equal("strategy_not_found", node.ResultFields.Single(field => field.Label == "原因码").Value);
         Assert.Equal("原粹树脂 ×2\n摩拉 ×60000", node.ResultFields.Single(field => field.Label == "奖励").Value);
         Assert.DoesNotContain(node.ResultFields, field => field.Label == "items");
+        Assert.DoesNotContain(node.ResultFields, field => field.Label == "rewards");
     }
 
     /// <summary>
@@ -131,7 +132,7 @@ public sealed class PuloniaTaskHistoryTests : IDisposable
     [Fact]
     public void SoloTaskResult_WithoutReasonCodeAndEmptyRewards()
     {
-        var node = CreateNode("solo.auto_boss", new JObject { ["items"] = new JArray() });
+        var node = CreateNode("solo.auto_boss", new JObject { ["rewards"] = new JObject { ["items"] = new JArray() } });
 
         Assert.DoesNotContain(node.ResultFields, field => field.Label == "原因码");
         Assert.Equal("没有识别到奖励。", node.ResultFields.Single(field => field.Label == "奖励").Value);

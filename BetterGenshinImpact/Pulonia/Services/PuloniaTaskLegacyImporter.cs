@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.Common.Resin;
 using BetterGenshinImpact.GameTask.AutoFight.Strategy;
 using System;
 using System.Collections.Generic;
@@ -221,7 +222,7 @@ public sealed class PuloniaTaskLegacyImporter
                 case "领取邮件": node.TaskType = PuloniaSoloTaskExecutor.ToTaskType(ClaimMailRewardsTask.TaskId); break;
                 case "合成树脂":
                     node.TaskType = PuloniaSoloTaskExecutor.ToTaskType(GoToCraftingBenchTask.TaskId);
-                    node.Parameters = ToParameters(new CraftCondensedResinParam { Country = dragon.CraftingBenchCountry, MinResinToKeep = dragon.MinResinToKeep });
+                    node.Parameters = ToParameters(new CraftCondensedResinParam { Country = dragon.CraftingBenchCountry, MinResinToKeep = ResinUsageLegacyMapper.NormalizeMinResinToKeep(dragon.MinResinToKeep) });
                     result.Differences.Add(location + "/" + name + "：保留原粹树脂数取自本次导入的一条龙配置，运行时不再读取当前选中的一条龙配置。");
                     break;
                 case "领取每日奖励":
@@ -287,7 +288,7 @@ public sealed class PuloniaTaskLegacyImporter
 
     /// <summary>
     /// 自动秘境：业务设置来自导入时的秘境配置，队伍、秘境和周日奖励来自一条龙；
-    /// 轮数 9999 表示按树脂配置刷取，策略保存名称，运行时再解析为路径。
+    /// 树脂设置复制迁移后的统一模型，策略保存名称，运行时再解析为路径。
     /// </summary>
     private static AutoDomainParam CreateDomainParam(AllConfig config, OneDragonFlowConfig dragon)
     {
@@ -301,14 +302,7 @@ public sealed class PuloniaTaskLegacyImporter
             SundaySelectedValue = dragon.SundayEverySelectedValue,
             AutoArtifactSalvage = domain.AutoArtifactSalvage,
             MaxArtifactStar = config.AutoArtifactSalvageConfig.MaxArtifactStar,
-            SpecifyResinUse = domain.SpecifyResinUse,
-            ResinPriorityList = [.. domain.ResinPriorityList],
-            OriginalResinUseCount = domain.OriginalResinUseCount,
-            OriginalResin20UseCount = domain.OriginalResin20UseCount,
-            OriginalResin40UseCount = domain.OriginalResin40UseCount,
-            CondensedResinUseCount = domain.CondensedResinUseCount,
-            TransientResinUseCount = domain.TransientResinUseCount,
-            FragileResinUseCount = domain.FragileResinUseCount,
+            ResinUsage = domain.EnsureResinUsage().Clone(),
             RewardRecognitionEnabled = domain.RewardRecognitionEnabled,
             FightEndDelay = domain.FightEndDelay,
             ShortMovement = domain.ShortMovement,
@@ -330,10 +324,8 @@ public sealed class PuloniaTaskLegacyImporter
         param.BossName = dragon.AutoBossName;
         param.StrategyName = strategy;
         param.TeamName = dragon.AutoBossTeamName;
-        param.SpecifyRunCount = dragon.AutoBossSpecifyRunCount;
-        param.RunCount = dragon.AutoBossRunCount;
-        param.UseTransientResin = dragon.AutoBossUseTransientResin;
-        param.UseFragileResin = dragon.AutoBossUseFragileResin;
+        param.ResinUsage = ResinUsageLegacyMapper.FromBoss(dragon.AutoBossSpecifyRunCount,
+            dragon.AutoBossRunCount, dragon.AutoBossUseTransientResin, dragon.AutoBossUseFragileResin);
         param.ReviveRetryCount = dragon.AutoBossReviveRetryCount;
         param.ReturnToStatueAfterEachRound = dragon.AutoBossReturnToStatueAfterEachRound;
         param.RewardRecognitionEnabled = dragon.AutoBossRewardRecognitionEnabled;
@@ -372,11 +364,12 @@ public sealed class PuloniaTaskLegacyImporter
         var param = new AutoLeyLineOutcropParam(source)
         {
             FightConfig = fight,
-            IsResinExhaustionMode = dragon.LeyLineResinExhaustionMode,
-            OpenModeCountMin = dragon.LeyLineOpenModeCountMin,
             OneDragonMode = dragon.LeyLineOneDragonMode
         };
-        if (dragon.LeyLineRunCount > 0) param.Count = dragon.LeyLineRunCount;
+        // 一条龙保存模式与次数，补充开关仍来自导入时的地脉花配置。
+        param.ResinUsage = ResinUsageLegacyMapper.FromLeyLine(dragon.LeyLineResinExhaustionMode,
+            dragon.LeyLineOpenModeCountMin, dragon.LeyLineRunCount > 0 ? dragon.LeyLineRunCount : param.Count,
+            source.EnsureResinUsage().Allowed.Transient, source.EnsureResinUsage().Allowed.Fragile);
         return param;
     }
 

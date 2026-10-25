@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.Common.Resin;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -179,20 +180,23 @@ public sealed class PuloniaSoloTaskExecutor : IPuloniaTaskExecutor
         return ToOutcome(result);
     }
 
-    /// <summary>把累计剩余额度作为本次次数上限，保留树脂耗尽模式禁止补充树脂的语义。</summary>
+    /// <summary>把累计剩余额度作为本次领奖上限；复制后整体替换设置，保留允许的树脂及补充开关。</summary>
     internal static bool ApplyBossRewardLimit(AutoBossParam boss, int totalLimit, int completed)
     {
         if (totalLimit <= 0) return true;
         var remaining = Math.Max(0, totalLimit - completed);
         if (remaining == 0) return false;
-        if (!boss.SpecifyRunCount)
+        var usage = boss.ResinUsage.Clone();
+        if (usage.Mode == ResinUsageMode.Exhaust)
         {
-            boss.RunCount = remaining;
-            boss.UseTransientResin = false;
-            boss.UseFragileResin = false;
+            usage.Mode = ResinUsageMode.RunCount;
+            usage.RunCount = remaining;
         }
-        else boss.RunCount = Math.Min(boss.RunCount, remaining);
-        boss.SpecifyRunCount = true;
+        else if (usage.Mode == ResinUsageMode.RunCount)
+        {
+            usage.RunCount = Math.Min(usage.RunCount, remaining);
+        }
+        boss.ResinUsage = usage;
         return true;
     }
 

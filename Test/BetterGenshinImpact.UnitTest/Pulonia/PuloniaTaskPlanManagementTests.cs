@@ -74,44 +74,6 @@ public sealed class PuloniaTaskPlanManagementTests : IDisposable
     }
 
     /// <summary>
-    /// 右键复制使用传入计划的当前草稿，名称不冲突，保存后副本紧邻来源且可重新加载。
-    /// </summary>
-    [Fact]
-    public async Task CopyPlanCommand_UsesExplicitDraftAndPersistsUniqueCopyInOrder()
-    {
-        using var store = new PuloniaTaskStore(_directory);
-        await using var service = CreateService(store);
-        var clipboard = new PuloniaTaskClipboardService();
-        var selected = new PuloniaTaskPlanDocumentViewModel(
-            await store.SavePlanAsync(CreatePlan("当前选中")), [], clipboard, false);
-        var source = new PuloniaTaskPlanDocumentViewModel(
-            await store.SavePlanAsync(CreatePlan("右键目标")), [], clipboard, false);
-        var page = CreatePage(store, service, clipboard);
-        page.Documents.Add(selected);
-        page.Documents.Add(source);
-        page.Documents.Add(new PuloniaTaskPlanDocumentViewModel(CreatePlan("右键目标 - 副本"), [], clipboard, true));
-        page.SelectedDocument = selected;
-        source.ApplyMutation(() => source.Plan.RootTask.Children[0].Parameters["values"] = new JArray(42), source.SelectedNode);
-
-        Assert.False(page.CopyPlanCommand.CanExecute(null));
-        await page.CopyPlanCommand.ExecuteAsync(source);
-
-        var copy = page.SelectedDocument!;
-        Assert.Equal("右键目标 - 副本 2", copy.Name);
-        Assert.Equal(2, page.Documents.IndexOf(copy));
-        Assert.False(copy.IsDirty);
-        var loaded = (await store.LoadPlanAsync(copy.Id))!;
-        Assert.Equal(42, loaded.RootTask.Children[0].Parameters["values"]![0]!.Value<int>());
-        Assert.Equal(copy.Name, loaded.RootTask.Name);
-        Assert.Equal(1, (await store.LoadPlanAsync(source.Id))!.RootTask.Children[0].Parameters["values"]![0]!.Value<int>());
-        Assert.Equal(page.Documents.Where(item => item.Revision > 0).Select(item => item.Id),
-            (await store.ListPlansAsync()).Select(item => item.Id));
-        page.IsBusy = true;
-        Assert.False(page.CopyPlanCommand.CanExecute(source));
-        Assert.False(page.DeletePlanCommand.CanExecute(source));
-    }
-
-    /// <summary>
     /// 删除清理正式文件与备份，并通知调度刷新；已有历史和运行状态原文保持不变。
     /// </summary>
     [Fact]

@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.Common.Resin;
 using BetterGenshinImpact.GameTask.AutoFight.Strategy;
 using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.Config;
@@ -60,8 +61,11 @@ namespace BetterGenshinImpact.GameTask.AutoDomain;
 /// </summary>
 [SoloTaskInfo(TaskId, "自动秘境", Group = "树脂与战斗", Order = 210, OneDragonOrder = 3)]
 [SoloTaskSettingsView(typeof(AutoDomainSettingsView), typeof(AutoDomainSettingsViewModel))]
-public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
+public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
 {
+    /// <summary>本任务支持的树脂使用方式、种类、档位及默认设置。</summary>
+    public static ResinUsageCapability ResinCapability => ResinCapabilities.Domain;
+
     /// <summary>
     /// 任务稳定标识。
     /// </summary>
@@ -135,10 +139,12 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
     private readonly string replenishResinString;
     private readonly string cancelButtonString;
 
-    /// <summary>
-    /// 指定树脂使用次数时的树脂使用记录，在 <see cref="Initialize"/> 中按参数建立
-    /// </summary>
-    private List<ResinUseRecord> _resinPriorityListWhenSpecifyUse = [];
+    /// <summary>本次运行的树脂候选、领奖次数与消耗记录。</summary>
+    private ResinClaimSelector _selector = null!;
+    /// <summary>最近一次树脂判断的结束原因。</summary>
+    private ResinStopReason _stopReason;
+    /// <summary>是否已开始挑战，用于区分开始前不足与战斗后的提前结束。</summary>
+    private bool _hasBattled;
 
     /// <summary>创建秘境任务。业务参数在 <see cref="RunAsync"/> 中传入，这里只做与参数无关的本地化初始化。</summary>
     /// <param name="runtime">本次运行使用的运行环境</param>
@@ -169,32 +175,6 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
         this.cancelButtonString = stringLocalizer.WithCultureGet(cultureInfo, "取消");
     }
 
-    /// <summary>
-    /// 解析"使用"按键的本地化匹配串。独立于实例字段，因为 <see cref="PressUseResin(GameRuntime, List{Region}, string, string)"/>
-    /// 是 static 的，且被 AutoLeyLineOutcropTask/AutoStygianOnslaughtTask 等其他任务类共享调用。
-    /// </summary>
-    private static string ResolveUseButtonPattern()
-    {
-        IStringLocalizer<AutoDomainTask> stringLocalizer =
-            App.GetService<IStringLocalizer<AutoDomainTask>>() ?? throw new NullReferenceException();
-        CultureInfo cultureInfo = new CultureInfo(Config.OtherConfig.GameCultureInfoName);
-        return stringLocalizer.WithCultureGet(cultureInfo, "使用");
-    }
-
-    /// <summary>
-    /// 解析树脂名称的本地化匹配串，同一个 idiom 用于 <see cref="PressUseResin(GameRuntime, List{Region}, string, string)"/>。
-    /// <paramref name="resinName"/> 是内部使用的中文 key（20/40 原粹树脂已在调用前折叠为"原粹树脂"）；
-    /// 若资源里没有对应条目（如 zh-Hans，或调用方已经传入本地化后的值），本地化器会原样回退返回入参本身，
-    /// 因此对已本地化的调用方（future PR-B）是无操作的、向后兼容的。
-    /// </summary>
-    private static string ResolveResinNamePattern(string resinName)
-    {
-        IStringLocalizer<AutoDomainTask> stringLocalizer =
-            App.GetService<IStringLocalizer<AutoDomainTask>>() ?? throw new NullReferenceException();
-        CultureInfo cultureInfo = new CultureInfo(Config.OtherConfig.GameCultureInfoName);
-        return stringLocalizer.WithCultureGet(cultureInfo, resinName);
-    }
-
     private RecognitionObject GetConfirmRa(params string[] targetText)
     {
         using var screenArea = _runtime.CaptureToRectArea();
@@ -218,7 +198,7 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
     }
 
     /// <summary>
-    /// 按本次参数完成依赖参数的初始化：解析战斗策略、校验秘境与指定树脂配置、建立树脂使用记录。
+    /// 按本次参数完成依赖参数的初始化：解析战斗策略、校验秘境；树脂设置和进度在任务入口统一初始化。
     /// </summary>
     /// <param name="param">本次运行的任务参数</param>
     /// <returns>参数不满足业务要求时返回失败结果；初始化成功返回 null</returns>
@@ -244,12 +224,7 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
             return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, $"未找到对应的秘境{param.DomainName}的传送点。");
         }
 
-        // 3. 指定树脂使用次数时至少要配置一种树脂的次数，否则后续无法刷取
-        if (param.SpecifyResinUse && !HasAnySpecifiedResinUseCount(param))
-        {
-            return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, "你选择了指定树脂刷取次数，请至少配置一种树脂的刷取次数！");
-        }
-
+        // 3. 树脂设置已在入口统一校验，此处只选择战斗引擎。
         // 4. 按策略类型选择战斗引擎：自动连招 / 统一入口（JSON、键鼠）/ TXT
         if (strategy.Kind == CombatStrategyKind.Combo)
         {
@@ -266,24 +241,7 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
             _combatScriptBag = CombatScriptParser.ReadAndParse(strategyPath);
         }
 
-        // 5. 建立指定树脂使用记录（未指定时为空列表）
-        _resinPriorityListWhenSpecifyUse = ResinUseRecord.BuildFromDomainParam(param);
         return null;
-    }
-
-    /// <summary>
-    /// 判断指定树脂使用模式下是否至少配置了一种树脂的刷取次数，条件与 <see cref="ResinUseRecord.BuildFromDomainParam(AutoDomainParam)"/> 一致。
-    /// </summary>
-    /// <param name="param">本次运行的任务参数</param>
-    /// <returns>至少一种树脂次数大于 0 时返回 true</returns>
-    private static bool HasAnySpecifiedResinUseCount(AutoDomainParam param)
-    {
-        return param.CondensedResinUseCount > 0
-               || param.OriginalResin40UseCount > 0
-               || param.OriginalResin20UseCount > 0
-               || param.OriginalResinUseCount > 0
-               || param.TransientResinUseCount > 0
-               || param.FragileResinUseCount > 0;
     }
 
     /// <summary>
@@ -292,8 +250,14 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
     /// <param name="param">本次运行的任务参数</param>
     /// <param name="ct">本次运行的取消令牌</param>
     /// <returns>任务结果，数据为本次识别到的奖励汇总</returns>
-    public async Task<SoloTaskResult<RewardSummary>> RunAsync(AutoDomainParam param, CancellationToken ct)
+    public async Task<SoloTaskResult<ResinClaimData>> RunAsync(AutoDomainParam param, CancellationToken ct)
     {
+        param.ResolveResinUsage();
+        if (param.ResinUsage.Validate(ResinCapability) is { } problem)
+            return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, problem);
+        _selector = new ResinClaimSelector(param.ResinUsage, ResinCapability);
+        _stopReason = ResinStopReason.NoUsableOption;
+        _hasBattled = false;
         _taskParam = param;
         _ct = ct;
         _rewardSummary.Clear();
@@ -372,7 +336,12 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
             await ArtifactSalvage();
             Notify.Event(NotificationEvent.DomainEnd).Success("自动秘境结束");
             // 没有确认奖励已到账的手段，按未确认结束返回，并附带本次识别到的奖励汇总
-            return SoloTaskResult.Unverified(RewardSummary.From(_rewardSummary), "秘境流程已结束。");
+            return ResinClaimResults.Complete(_selector, _stopReason, "秘境流程已结束", _hasBattled, RewardSummary.From(_rewardSummary));
+        }
+        catch (SoloTaskAbortException e) when (e.Result.ReasonCode == SoloTaskReasons.ResinExhausted)
+        {
+            return ResinClaimResults.Complete(_selector, ResinStopReason.ResinExhausted,
+                "秘境流程已结束", _hasBattled, RewardSummary.From(_rewardSummary));
         }
         finally
         {
@@ -397,8 +366,9 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
         await EnterDomain();
 
         var combatScenes = new CombatScenes(_runtime, _allConfig);
-        for (var i = 0; i < _taskParam.DomainRoundNum; i++)
+        for (var i = 0; i < _taskParam.DomainRoundNum && !_selector.IsTargetReached; i++)
         {
+            _hasBattled = true;
             // 0. 关闭秘境提示
             Logger.LogDebug("0. 关闭秘境提示");
             await CloseDomainTip();
@@ -483,23 +453,18 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
             if (!await GettingTreasure())
             {
                 Logger.LogInformation("体力耗尽或者设置轮次已达标，结束自动秘境");
-                break;
+                return;
             }
         }
+        // JS 额外轮数上限仍可独立结束任务。
+        _stopReason = ResinStopReason.TargetReached;
     }
 
     private void Init()
     {
         LogScreenResolution();
 
-        if (_taskParam.SpecifyResinUse)
-        {
-            Logger.LogInformation("→ {Text} 指定使用树脂", "自动秘境，");
-        }
-        else
-        {
-            Logger.LogInformation("→ {Text} 用尽所有浓缩树脂和原粹树脂后结束", "自动秘境，");
-        }
+        Logger.LogInformation("自动秘境：{ResinUsage}", ResinUsageText.Summary(_taskParam.ResinUsage, ResinCapability));
     }
 
     private void LogScreenResolution()
@@ -791,7 +756,7 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
                 if (confirmRectArea2.IsExist() && Regex.IsMatch(confirmRectArea2.Text, retryDomainPromptPattern))
                 {
                     Logger.LogWarning("自动秘境：检测到树脂不足提示：{Text}", confirmRectArea2.Text);
-                    throw new Exception("当前树脂不足，自动秘境停止运行。");
+                    throw new SoloTaskAbortException(SoloTaskResult.Skipped(SoloTaskReasons.ResinExhausted, ResinUsageText.Skipped));
                 }
             },
             _ct,
@@ -1518,120 +1483,79 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
         // 再 OCR 一次，弹出框，确认当前是否有原粹树脂
         using var ra2 = _runtime.CaptureToRectArea();
         var textListInPrompt = ra2.FindMulti(RecognitionObject.Ocr(ra2.Width * 0.25, ra2.Height * 0.2, ra2.Width * 0.5, ra2.Height * 0.6));
-        if (textListInPrompt.Any(t => Regex.IsMatch(t.Text, insufficientCountString, RegexOptions.IgnoreCase) || Regex.IsMatch(t.Text, replenishResinString, RegexOptions.IgnoreCase)))
-        {
-            // 没有原粹树脂，直接退出秘境
-            Logger.LogInformation("自动秘境：原粹树脂已用尽，退出秘境");
-            await ExitDomain();
-            return false;
-        }
-
+        var shortage = textListInPrompt.Any(t => Regex.IsMatch(t.Text, insufficientCountString, RegexOptions.IgnoreCase)
+            || Regex.IsMatch(t.Text, replenishResinString, RegexOptions.IgnoreCase));
         if (chooseResinPrompt)
         {
-            using var ra3 = _runtime.CaptureToRectArea();
-
-            if (!_taskParam.SpecifyResinUse)
+            using var capture = _runtime.CaptureToRectArea();
+            var regions = capture.FindMulti(RecognitionObject.Ocr(capture.Width * 0.25, capture.Height * 0.2, capture.Width * 0.5, capture.Height * 0.6));
+            var offered = ResinRewardPrompt.DetectOffered(regions, capture.Width / 2d, _taskParam.GameCultureInfo);
+            var candidates = _selector.Candidates(offered);
+            if (candidates.Count == 0)
             {
-                // 自动刷干树脂
-                // 识别树脂状况
-                var resinStatus = ResinStatus.RecogniseFromRegion(ra3, _runtime.SystemInfo, OcrFactory.Paddle);
-                resinStatus.Print(Logger);
-
-                if (resinStatus is { CondensedResinCount: <= 0, OriginalResinCount: < 20 })
-                {
-                    Logger.LogWarning("树脂不足");
-                    await ExitDomain();
-                    return false;
-                }
-
-                bool resinUsed = false;
-                if (resinStatus.CondensedResinCount > 0)
-                {
-                    (resinUsed, _) = PressUseResin(_runtime, ra3, "浓缩树脂");
-                    resinStatus.CondensedResinCount -= 1;
-                }
-                else if (resinStatus.OriginalResinCount >= 20)
-                {
-                    (resinUsed, var num) = PressUseResin(_runtime, ra3, "原粹树脂");
-                    resinStatus.OriginalResinCount -= num;
-                }
-
-                if (!resinUsed)
-                {
-                    Logger.LogWarning("自动秘境：未找到可用的树脂，可能是{Msg1} 或者 {Msg2}。", "树脂不足", "OCR 识别失败");
-                    await ExitDomain();
-                    return false;
-                }
-
-                if (resinStatus is { CondensedResinCount: <= 0, OriginalResinCount: < 20 })
-                {
-                    // 没树脂了就是最后一回合了
-                    isLastTurn = true;
-                }
+                // “补充原粹树脂”只说明原粹不足；其他行仍有使用按钮时继续由选择器筛选。
+                _stopReason = ResinExecutionRules.NoCandidateReason(offered, shortage);
+                await ExitDomain();
+                return false;
             }
-            else
+
+            ResinStatus? status = null;
+            try
             {
-                // 指定使用树脂
-                var textListInPrompt2 = ra3.FindMulti(RecognitionObject.Ocr(ra3.Width * 0.25, ra3.Height * 0.2, ra3.Width * 0.5, ra3.Height * 0.6));
-                // 按优先级使用
-                int successCount = 0;
-                foreach (var record in _resinPriorityListWhenSpecifyUse)
+                status = ResinStatus.RecogniseFromRegion(capture, _runtime.SystemInfo, OcrFactory.Paddle);
+                status.Print(Logger);
+            }
+            catch (Exception e) when (e is not OperationCanceledException and not NormalEndException)
+            {
+                Logger.LogWarning("自动秘境：顶栏树脂识别失败，无法预测最后一轮，将继续：{Reason}", e.Message);
+            }
+
+            var claimed = false;
+            foreach (var kind in candidates)
+            {
+                if (kind == ResinKind.Original && _taskParam.ResinUsage.OriginalTier != OriginalResinTier.Default)
                 {
-                    if (record.RemainCount > 0)
-                    {
-                        if (record.Name == "原粹树脂20" || record.Name == "原粹树脂40")
-                        {
-                            int expectedNum = record.Name == "原粹树脂20" ? 20 : 40;
-                            bool switched;
-                            try
-                            {
-                                switched = SwitchOriginalResinType(expectedNum, _ct);
-                            }
-                            catch (RetryException)
-                            {
-                                Logger.LogWarning("自动秘境：切换原粹树脂类型重试超时，跳过 {Name}", record.Name);
-                                switched = false;
-                            }
-
-                            if (!switched)
-                            {
-                                continue;
-                            }
-                        }
-
-                        var (success, _) = PressUseResin(_runtime, textListInPrompt2, record.Name);
-                        if (success)
-                        {
-                            record.RemainCount -= 1;
-                            Logger.LogInformation("自动秘境：{Name} 刷取 {Re}/{Max}", record.Name, record.MaxCount - record.RemainCount, record.MaxCount);
-                            successCount++;
-                            break;
-                        }
-                    }
+                    var tier = _taskParam.ResinUsage.OriginalTier;
+                    var switched = ResinRewardPrompt.SwitchOriginalTier(_runtime,
+                        tier == OriginalResinTier.Only20 ? 20 : 40, Logger, "自动秘境", _ct);
+                    if (!switched && (tier == OriginalResinTier.Only20
+                        || !ResinRewardPrompt.SwitchOriginalTier(_runtime, 20, Logger, "自动秘境", _ct))) continue;
+                    using var fresh = _runtime.CaptureToRectArea();
+                    regions = fresh.FindMulti(RecognitionObject.Ocr(fresh.Width * 0.25, fresh.Height * 0.2, fresh.Width * 0.5, fresh.Height * 0.6));
                 }
-
-                if (_resinPriorityListWhenSpecifyUse.Sum(o => o.RemainCount) <= 0)
-                {
-                    // 全部刷完
-                    isLastTurn = true;
-                }
-
-                if (successCount == 0)
-                {
-                    // 没有找到对应的树脂
-                    Logger.LogWarning("自动秘境：指定树脂领取次数时，当前可用树脂选项无法满足配置。你可能设置的刷取次数过多！退出秘境。");
-                    Logger.LogInformation("当前刷取情况：{ResinList}", string.Join(", ", _resinPriorityListWhenSpecifyUse.Select(o => $"{o.Name}({o.MaxCount - o.RemainCount}/{o.MaxCount})")));
-                    await ExitDomain();
-                    return false;
-                }
+                var (success, originalSpent) = ResinRewardPrompt.PressUseResin(_runtime, regions, kind,
+                    Logger, "自动秘境", _ct, _taskParam.GameCultureInfo);
+                if (!success) continue;
+                _selector.RecordClaim(kind, originalSpent);
+                isLastTurn = ResinExecutionRules.IsLastRound(_taskParam.ResinUsage, _selector,
+                    status?.OriginalResinCount, status?.CondensedResinCount, kind, originalSpent);
+                claimed = true;
+                break;
+            }
+            if (!claimed)
+            {
+                _stopReason = ResinStopReason.NoUsableOption;
+                await ExitDomain();
+                return false;
             }
         }
         else
         {
-            // 如果没有选择树脂的提示，说明只有原粹树脂
-            // 继续向下执行
+            // 如果没有选择树脂的提示，说明只有原粹树脂；保持旧流程，实际消耗无法识别时按 20。
+            if (shortage)
+            {
+                _stopReason = ResinStopReason.ResinExhausted;
+                await ExitDomain();
+                return false;
+            }
+            var originalSpent = ResinRewardPrompt.GetResinNum(new Region { Text = string.Concat(textListInPrompt.Select(r => r.Text)) },
+                ResinKind.Original, Logger, "自动秘境");
+            _selector.RecordClaim(ResinKind.Original, originalSpent);
+            isLastTurn = _selector.IsTargetReached;
         }
-        
+        if (isLastTurn)
+            _stopReason = _selector.IsTargetReached ? ResinStopReason.TargetReached : ResinStopReason.ResinExhausted;
+
         Notify.Event(NotificationEvent.DomainReward).Success("自动秘境奖励领取");
 
         _runtime.Sleep(1000, _ct);
@@ -1677,6 +1601,7 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
                             var cancelBtn = textListInNoResinPrompt.FirstOrDefault(t => Regex.IsMatch(t.Text, cancelButtonString));
                             if (cancelBtn != null)
                             {
+                                _stopReason = ResinStopReason.ResinExhausted;
                                 cancelBtn.Click();
                                 return false;
                             }
@@ -1754,156 +1679,6 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
         await _runtime.Delay(800, _ct);
         using var capture = _runtime.CaptureToRectArea();
         Bv.ClickBlackConfirmButton(capture);
-    }
-
-    /// <summary>
-    /// 在树脂选择弹框中识别并点击指定树脂的使用按键
-    /// </summary>
-    /// <param name="runtime">运行环境</param>
-    /// <param name="ra">完整游戏截图</param>
-    /// <param name="resinName">树脂名称（内部中文 key）</param>
-    /// <param name="logPrefix">日志前缀</param>
-    /// <returns>(是否使用成功, 消耗数量)</returns>
-    public static (bool, int) PressUseResin(GameRuntime runtime, ImageRegion ra, string resinName, string logPrefix = "自动秘境")
-    {
-        var regionList = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.25, ra.Height * 0.2, ra.Width * 0.5, ra.Height * 0.6));
-        return PressUseResin(runtime, regionList, resinName, logPrefix);
-    }
-
-    /// <summary>
-    /// 在已识别的弹框文字中找到指定树脂的使用按键并点击
-    /// </summary>
-    /// <param name="runtime">运行环境</param>
-    /// <param name="regionList">树脂选择弹框的 OCR 结果</param>
-    /// <param name="resinName">树脂名称（内部中文 key）</param>
-    /// <param name="logPrefix">日志前缀</param>
-    /// <returns>(是否使用成功, 消耗数量)</returns>
-    public static (bool, int) PressUseResin(GameRuntime runtime, List<Region> regionList, string resinName, string logPrefix = "自动秘境")
-    {
-        if (resinName == "原粹树脂20" || resinName == "原粹树脂40")
-        {
-            resinName = "原粹树脂";
-        }
-
-        // resinName 折叠后仍是内部中文 key（GetResinNum 的分支判断依赖这个中文字面量），
-        // 这里只本地化用于匹配 OCR 文本的模式，不改变 resinName 本身
-        var resinNamePattern = ResolveResinNamePattern(resinName);
-        var resinKey = regionList.FirstOrDefault(t => Regex.IsMatch(t.Text, resinNamePattern));
-        if (resinKey != null)
-        {
-            // 找到树脂名称对应的按键，关键词为使用，是同一行的（高度相交）
-            var useButtonPattern = ResolveUseButtonPattern();
-            var useList = regionList.Where(t => Regex.IsMatch(t.Text, useButtonPattern)).ToList();
-            if (useList.Count != 0)
-            {
-                // 找到使用按键
-                var useKey = useList.FirstOrDefault(t => t.X > runtime.SystemInfo.ScaleMax1080PCaptureRect.Width / 2
-                                                         && IsHeightOverlap(t, resinKey));
-                if (useKey != null)
-                {
-                    // 点击使用
-                    useKey.Click();
-                    // 解决水龙王按下左键后没松开，然后后续点击按下就没反应了。使用双击
-                    runtime.Sleep(60);
-                    useKey.Click();
-                    var num = GetResinNum(resinKey, resinName, logPrefix);
-                    Logger.LogInformation("{LogPrefix}：使用 {ResinName}, 数量：{Num}", logPrefix, resinName, num);
-                    return (true, num);
-                }
-                else
-                {
-                    Logger.LogWarning("{LogPrefix}：未找到 {ResinName} 的使用按键", logPrefix, resinName);
-                }
-            }
-            else
-            {
-                Logger.LogWarning("{LogPrefix}：未找到 {ResinName} 的使用按键", logPrefix, resinName);
-            }
-        }
-
-        return (false, 0);
-    }
-
-    private bool SwitchOriginalResinType(int expectedNum, CancellationToken ct)
-    {
-        return NewRetry.Do(() =>
-        {
-            using var ra0 = _runtime.CaptureToRectArea();
-            var regionList = ra0.FindMulti(RecognitionObject.Ocr(ra0.Width * 0.25, ra0.Height * 0.2, ra0.Width * 0.5, ra0.Height * 0.6));
-            var has20 = regionList.Any(t => t.Text.Contains("20"));
-            var has40 = regionList.Any(t => t.Text.Contains("40"));
-            if (expectedNum == 20 && has20)
-            {
-                Logger.LogInformation("自动秘境：已切换到使用20原粹树脂");
-                return true;
-            }
-
-            if (expectedNum == 40 && has40)
-            {
-                Logger.LogInformation("自动秘境：已切换到使用40原粹树脂");
-                return true;
-            }
-
-            //切换20/40原粹树脂的按钮是亮的
-            var clickable = ra0.Find(RecognitionAssets.Get("AutoDomain", "ResinSwitchBtn", ra0.Width, ra0.Height));
-            if (clickable.IsExist())
-            {
-                Logger.LogDebug("自动秘境：切换原粹树脂使用数量");
-                clickable.Click();
-            }
-
-            //切换20/40原粹树脂的按钮是暗的
-            var disabled = ra0.Find(RecognitionAssets.Get("AutoDomain", "ResinSwitchBtnNoActive", ra0.Width, ra0.Height));
-            if (disabled.IsExist())
-            {
-                Logger.LogWarning("自动秘境：切换原粹树脂的使用数量失败，可能是体力不足，当前目标：{Num}", expectedNum);
-                return false; // 不可点击  
-            }
-
-            throw new RetryException("未检测到按钮"); // 继续重试  
-        }, TimeSpan.FromMilliseconds(500), 10);
-    }
-
-    private static int GetResinNum(Region region, string resinName, string logPrefix)
-    {
-        if (resinName == "原粹树脂")
-        {
-            if (region.Text.Contains("20"))
-            {
-                return 20;
-            }
-            else if (region.Text.Contains("40"))
-            {
-                return 40;
-            }
-            else
-            {
-                Logger.LogWarning("{LogPrefix}：未识别到原粹树脂消耗体力数量，默认按20计算", logPrefix);
-                return 20;
-            }
-        }
-        else if (resinName == "浓缩树脂" || resinName == "脆弱树脂" || resinName == "须臾树脂")
-        {
-            return 1;
-        }
-        else
-        {
-            throw new ArgumentException("未知的树脂名称");
-        }
-    }
-
-    /// <summary>
-    /// 判断两个区域在垂直方向上是否有重叠
-    /// </summary>
-    private static bool IsHeightOverlap(Region region1, Region region2)
-    {
-        int region1Top = region1.Y;
-        int region1Bottom = region1.Y + region1.Height;
-        int region2Top = region2.Y;
-        int region2Bottom = region2.Y + region2.Height;
-
-        // 检查区域是否在垂直方向上重叠
-        return (region1Top <= region2Bottom && region1Bottom >= region2Top);
     }
 
     private async Task ArtifactSalvage()

@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.Common.Resin;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 
@@ -9,6 +10,10 @@ namespace BetterGenshinImpact.GameTask.AutoBoss;
 [Serializable]
 public partial class AutoBossConfig : ObservableObject
 {
+    /// <summary>统一树脂设置；为空时在读取配置后由旧字段迁移。</summary>
+    [ObservableProperty]
+    private ResinUsage? _resinUsage;
+
     [ObservableProperty]
     private string _bossName = string.Empty;
 
@@ -18,15 +23,19 @@ public partial class AutoBossConfig : ObservableObject
     [ObservableProperty]
     private string _teamName = string.Empty;
 
+    /// <summary>仅用于迁移旧树脂设置；界面与执行层使用 ResinUsage。</summary>
     [ObservableProperty]
     private bool _specifyRunCount = false;
 
+    /// <summary>仅用于迁移旧树脂设置；界面与执行层使用 ResinUsage。</summary>
     [ObservableProperty]
     private int _runCount = 1;
 
+    /// <summary>仅用于迁移旧树脂设置；界面与执行层使用 ResinUsage。</summary>
     [ObservableProperty]
     private bool _useTransientResin = false;
 
+    /// <summary>仅用于迁移旧树脂设置；界面与执行层使用 ResinUsage。</summary>
     [ObservableProperty]
     private bool _useFragileResin = false;
 
@@ -47,20 +56,7 @@ public partial class AutoBossConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private int _timeout  = 240;
-    /// <summary>
-    /// 关闭指定讨伐次数时清空补充树脂开关，避免树脂耗尽模式误用须臾或脆弱树脂。
-    /// </summary>
-    /// <param name="value">新的指定讨伐次数开关状态。</param>
-    partial void OnSpecifyRunCountChanged(bool value)
-    {
-        if (value)
-        {
-            return;
-        }
-
-        UseTransientResin = false;
-        UseFragileResin = false;
-    }
+    // 关闭指定讨伐次数时不再清空补充开关，刷至耗尽也允许补充。
 
     partial void OnRunCountChanged(int value)
     {
@@ -76,5 +72,20 @@ public partial class AutoBossConfig : ObservableObject
         {
             ReviveRetryCount = 0;
         }
+    }
+
+    /// <summary>仅在尚无统一设置时，从旧字段迁移一次；已有新设置始终优先。</summary>
+    public void MigrateLegacyResinUsage()
+    {
+        if (ResinUsage is not null) return;
+        ResinUsage = ResinUsageLegacyMapper.FromBoss(SpecifyRunCount, RunCount, UseTransientResin, UseFragileResin);
+    }
+
+    /// <summary>确保完成旧字段迁移并返回配置持有的设置；参数类读取后必须 Clone。</summary>
+    /// <returns>配置持有的非空树脂设置。</returns>
+    public ResinUsage EnsureResinUsage()
+    {
+        MigrateLegacyResinUsage();
+        return ResinUsage!;
     }
 }

@@ -21,7 +21,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
         private static ItemRecognizer itemRecognizer => itemRecognizerLazy.Value;
 
 
-        public BehavioursTests(PaddleFixture paddle, TorchFixture torch, LocalizationFixture localization, GridIconModelFixture iconModel)
+        public BehavioursTests(PaddleFixture paddle, LocalizationFixture localization, GridIconModelFixture iconModel)
         {
             this.paddle = paddle;
             this.stringLocalizer = localization.CreateStringLocalizer<AutoFishingTask>();

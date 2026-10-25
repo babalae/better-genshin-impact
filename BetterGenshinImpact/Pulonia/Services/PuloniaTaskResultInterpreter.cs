@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using BetterGenshinImpact.GameTask.Common.Resin;
+using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using Newtonsoft.Json.Linq;
@@ -14,9 +16,9 @@ namespace BetterGenshinImpact.Pulonia.Services;
 public static class PuloniaTaskResultInterpreter
 {
     /// <summary>
-    /// 奖励汇总在结果数据中的键，对应 RewardSummary 按 SoloTaskJson 序列化后的 items。
+    /// 奖励汇总在结果数据中的路径，对应 ResinClaimData.Rewards 按 SoloTaskJson 序列化后的 items。
     /// </summary>
-    public const string RewardItemsKey = "items";
+    public const string RewardItemsKey = "rewards.items";
 
     /// <summary>
     /// Shell 执行器的关键结果字段；缺失时标记为未返回，不冒充退出码 0 或空输出。
@@ -72,11 +74,27 @@ public static class PuloniaTaskResultInterpreter
         // 1. 执行器给出的原因码放在最前，便于按原因筛查失败与跳过
         if (!string.IsNullOrWhiteSpace(result.ReasonCode))
             entries.Add(new PuloniaTaskResultEntry("原因码", PuloniaTaskResultEntryKind.Value, new JValue(result.ReasonCode)));
-        // 2. 奖励汇总（RewardSummary 的 items）由界面逐行展示为“名称 ×数量”
+        // 2. 奖励汇总（ResinClaimData 的 rewards.items）由界面逐行展示为“名称 ×数量”。
         if (TryReadRewards(result, out var rewards))
         {
-            handled.Add(RewardItemsKey);
+            handled.Add("rewards");
             entries.Add(new PuloniaTaskResultEntry("奖励", PuloniaTaskResultEntryKind.Rewards, rewards));
+        }
+        if (data["resin"] is JObject resin)
+        {
+            try
+            {
+                var report = SoloTaskJson.Deserialize<ResinUsageReport>(resin.ToString());
+                report.Claims ??= new();
+                report.Consumed ??= new();
+                entries.Add(new PuloniaTaskResultEntry("树脂使用", PuloniaTaskResultEntryKind.Value,
+                    new JValue(ResinUsageText.Report(report))));
+                handled.Add("resin");
+            }
+            catch (Exception e) when (e is System.Text.Json.JsonException or ArgumentException)
+            {
+                // 损坏或其他执行器的 resin 数据留给后面的原始字段展示，不推算出一份报告。
+            }
         }
         // 3. 各类型的关键结果
         switch (result.TaskType)
@@ -135,8 +153,8 @@ public static class PuloniaTaskResultInterpreter
     }
 
     /// <summary>
-    /// 判断结果数据中的 items 能否按奖励解释。
-    /// 独立任务的 items 一律按奖励解释；其他类型只在每一项都带 name 时才按奖励解释，避免误读扩展数据。
+    /// 判断结果数据中的 rewards.items 能否按奖励解释。
+    /// 每项必须带 name；空数组只对独立任务解释为“未识别到奖励”，避免误读扩展数据。
     /// </summary>
     /// <param name="result">节点结果。</param>
     /// <param name="rewards">可以按奖励解释的数组；无法解释时为 null。</param>
@@ -144,7 +162,7 @@ public static class PuloniaTaskResultInterpreter
     private static bool TryReadRewards(PuloniaTaskNodeResult result, out JArray? rewards)
     {
         rewards = null;
-        if (result.Data[RewardItemsKey] is not JArray items)
+        if (result.Data.SelectToken(RewardItemsKey) is not JArray items)
             return false;
         var isSoloTask = PuloniaSoloTaskExecutor.IsSoloTaskType(result.TaskType);
         var isRewardShaped = items.All(item => item is JObject entry && entry["name"] is { Type: JTokenType.String });

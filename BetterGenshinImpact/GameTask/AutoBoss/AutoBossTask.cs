@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.Common.Resin;
 using BetterGenshinImpact.GameTask.AutoFight.Strategy;
 using BetterGenshinImpact.Core.Input;
 using BetterGenshinImpact.Core.BgiVision;
@@ -45,8 +46,11 @@ namespace BetterGenshinImpact.GameTask.AutoBoss;
 /// </summary>
 [SoloTaskInfo(TaskId, "自动首领讨伐", Group = "树脂与战斗", Order = 220, OneDragonOrder = 4)]
 [SoloTaskSettingsView(typeof(AutoBossSettingsView), typeof(AutoBossSettingsViewModel))]
-public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
+public class AutoBossTask : ISoloTask<AutoBossParam, ResinClaimData>
 {
+    /// <summary>本任务支持的树脂使用方式、种类、档位及默认设置。</summary>
+    public static ResinUsageCapability ResinCapability => ResinCapabilities.Boss;
+
     /// <summary>
     /// 任务稳定标识。
     /// </summary>
@@ -92,7 +96,12 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
     private readonly Dictionary<string, int> _rewardSummary = new();
     private SwitchPartyTask? _switchPartyTask;
     private CancellationToken _ct;
-    private int _successfulRewardCount;
+    /// <summary>首领领奖及战前补充的统一记账，领奖只记录原粹。</summary>
+    private ResinClaimSelector _selector = null!;
+    /// <summary>本次结束原因，区分战前不足、领奖不足和未找到使用选项。</summary>
+    private ResinStopReason _stopReason;
+    /// <summary>是否已经开始首领战斗，首次预检不足时返回跳过。</summary>
+    private bool _hasBattled;
 
     private static readonly TimeSpan OriginalResinRecoveryInterval = TimeSpan.FromMinutes(8);
     private const int MaxQuickUseQuantity = 20;
@@ -139,7 +148,8 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
 
     private sealed record OriginalResinInfo(int Count, int Limit);
 
-    private sealed record SupplementalResinOption(string Name, RecognitionObject Template);
+    /// <summary>首领战前补充选项；种类用于消耗记账，模板及面板流程沿用原实现。</summary>
+    private sealed record SupplementalResinOption(ResinKind Kind, string Name, RecognitionObject Template);
 
     /// <summary>
     /// 创建自动首领讨伐任务。业务参数在 <see cref="RunAsync"/> 中传入。
@@ -160,12 +170,16 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
     /// <param name="param">自动首领讨伐参数，包含 Boss、队伍、战斗策略、讨伐次数和补充树脂开关。</param>
     /// <param name="ct">任务取消令牌。</param>
     /// <returns>任务结果，数据为本次识别到的奖励汇总。</returns>
-    public async Task<SoloTaskResult<RewardSummary>> RunAsync(AutoBossParam param, CancellationToken ct)
+    public async Task<SoloTaskResult<ResinClaimData>> RunAsync(AutoBossParam param, CancellationToken ct)
     {
         _taskParam = param;
         _ct = ct;
         _rewardSummary.Clear();
-        _successfulRewardCount = 0;
+        if (param.ResinUsage.Validate(ResinCapability) is { } problem)
+            return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, problem);
+        _selector = new ResinClaimSelector(param.ResinUsage, ResinCapability);
+        _stopReason = ResinStopReason.NoUsableOption;
+        _hasBattled = false;
 
         // 1. 业务参数校验，可预见的参数问题直接返回失败结果
         var failure = ValidateParam(param) ?? Initialize(param);
@@ -211,7 +225,8 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
         }
 
         // 没有确认奖励已到账的手段，按未确认结束返回，并附带本次识别到的奖励汇总
-        return SoloTaskResult.Unverified(RewardSummary.From(_rewardSummary), "首领讨伐流程已结束。");
+        return ResinClaimResults.Complete(_selector, _selector.IsTargetReached ? ResinStopReason.TargetReached : _stopReason,
+            "首领讨伐流程已结束", _hasBattled, RewardSummary.From(_rewardSummary));
     }
 
     /// <summary>
@@ -271,11 +286,12 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
         while (ShouldContinueBeforeRound())
         {
             _ct.ThrowIfCancellationRequested();
-            _logger.LogInformation("{Name}：开始第 {Round} 次讨伐 {Boss}", TaskName, _successfulRewardCount + 1, _taskParam.BossName);
+            _logger.LogInformation("{Name}：开始第 {Round} 次讨伐 {Boss}", TaskName, _selector.ClaimCount + 1, _taskParam.BossName);
             
             //3.树脂不足则退出
             if (!await EnsureResinBeforeRound())
             {
+                _stopReason = ResinStopReason.ResinExhausted;
                 _logger.LogInformation("{Name}：原粹树脂不足或补充失败，结束任务", TaskName);
                 break;
             }
@@ -287,6 +303,7 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
             }
             
             //5.开始战斗
+            _hasBattled = true;
             await RunAutoFight();
             
             //6.寻路到征讨之花
@@ -300,7 +317,6 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
                 break;
             }
 
-            _successfulRewardCount++;
             _taskParam.RewardClaimedCallback?.Invoke();
             if (!ShouldContinueBeforeRound())
             {
@@ -329,7 +345,7 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
     /// <returns>树脂耗尽模式始终返回 true；指定次数模式下未达到目标次数时返回 true。</returns>
     private bool ShouldContinueBeforeRound()
     {
-        return !_taskParam.SpecifyRunCount || _successfulRewardCount < _taskParam.RunCount;
+        return !_selector.IsTargetReached;
     }
 
     /// <summary>
@@ -359,14 +375,10 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
             }
 
             _logger.LogInformation("{Name}：当前原粹树脂 {Count}/{Limit}，不足以领取首领奖励", TaskName, originalResin.Count, originalResin.Limit);
-            if (!_taskParam.SpecifyRunCount)
+            // 耗尽和指定次数都允许战前补充，只由本次设置与能力决定。
+            if (_selector.ReplenishKinds.Count == 0)
             {
-                return false;
-            }
-
-            if (!_taskParam.UseTransientResin && !_taskParam.UseFragileResin)
-            {
-                _logger.LogInformation("{Name}：指定讨伐次数模式未开启补充树脂，停止讨伐", TaskName);
+                _logger.LogInformation("{Name}：未开启可用的补充树脂，停止讨伐", TaskName);
                 return false;
             }
 
@@ -568,6 +580,7 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
                     return false;
                 }
 
+                _selector.RecordConsumed(resin.Kind, usedQuantity);
                 usedAnyResin = true;
                 _logger.LogInformation("{Name}：已使用 {Quantity} 个{ResinName}补充原粹树脂", TaskName, usedQuantity, resin.Name);
                 await _runtime.Delay(800, _ct);
@@ -601,20 +614,12 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
         return true;
     }
 
+    /// <summary>按选择器提供的须臾、脆弱顺序建立战前补充选项，不将补充视为领奖。</summary>
     private List<SupplementalResinOption> BuildSupplementalResinOptions()
     {
-        var options = new List<SupplementalResinOption>();
-        if (_taskParam.UseTransientResin)
-        {
-            options.Add(new SupplementalResinOption("须臾树脂", LoadRecognitionObject("TransientResinInSupplementPane")));
-        }
-
-        if (_taskParam.UseFragileResin)
-        {
-            options.Add(new SupplementalResinOption("脆弱树脂", LoadRecognitionObject("FragileResinInSupplementPane")));
-        }
-
-        return options;
+        return _selector.ReplenishKinds.Select(kind => new SupplementalResinOption(kind,
+            ResinUsageText.DisplayName(kind), LoadRecognitionObject(kind == ResinKind.Transient
+                ? "TransientResinInSupplementPane" : "FragileResinInSupplementPane"))).ToList();
     }
 
     private static int CalculateSupplementalResinTargetQuantity(OriginalResinInfo originalResin)
@@ -1078,16 +1083,7 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
             return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, "角色死亡后重试次数不能小于 0");
         }
 
-        // 只有指定讨伐次数模式才使用 RunCount，与原校验一致
-        if (param.SpecifyRunCount && param.RunCount < 1)
-        {
-            return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, "指定讨伐次数必须大于 0");
-        }
-
-        if (!param.SpecifyRunCount && (param.UseTransientResin || param.UseFragileResin))
-        {
-            return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, "只有指定讨伐次数模式才能开启须臾树脂或脆弱树脂补充");
-        }
+        // 树脂方式、次数和补充开关由任务入口按能力统一校验。
 
         if (param.Timeout < 1)
         {
@@ -1464,6 +1460,8 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
             return false;
         }
 
+        // 世界首领奖励只消耗原粹，补充记录与领奖记录分开。
+        _selector.RecordClaim(ResinKind.Original, 40);
         await TryRecognizeRewardResult(page);
         await CloseRewardResult();
         Notify.Event("AutoBoss").Success($"{TaskName}奖励领取");
@@ -1546,10 +1544,12 @@ public class AutoBossTask : ISoloTask<AutoBossParam, RewardSummary>
             var supplementRegions = await page.Locator("补充原粹树脂", useRect).TryWaitFor(1000);
             if (supplementRegions.Count > 0)
             {
+                _stopReason = ResinStopReason.ResinExhausted;
                 _logger.LogInformation("{Name}：领奖界面提示补充原粹树脂，当前原粹树脂不足", TaskName);
             }
             else
             {
+                _stopReason = ResinStopReason.NoUsableOption;
                 _logger.LogWarning("{Name}：未能在世界 Boss 领奖界面点击“使用原粹树脂”，原因：{Reason}", TaskName, e.Message);
             }
 

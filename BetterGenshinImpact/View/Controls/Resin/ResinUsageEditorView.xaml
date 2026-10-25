@@ -1,0 +1,91 @@
+<UserControl x:Class="BetterGenshinImpact.View.Controls.Resin.ResinUsageEditorView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             FontFamily="{DynamicResource TextThemeFontFamily}" FontSize="14"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/BetterGI;component/View/Pages/SoloTaskSettings/SoloTaskSettingsResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <Style x:Key="ResinNumber" TargetType="ui:NumberBox" BasedOn="{StaticResource {x:Type ui:NumberBox}}">
+                <Setter Property="Width" Value="150" /><Setter Property="Minimum" Value="0" /><Setter Property="Maximum" Value="999" />
+                <Setter Property="SmallChange" Value="1" /><Setter Property="LargeChange" Value="5" />
+                <Setter Property="SpinButtonPlacementMode" Value="Inline" /><Setter Property="ClearButtonEnabled" Value="False" />
+                <Setter Property="ValidationMode" Value="InvalidInputOverwritten" />
+            </Style>
+            <Style x:Key="ResinRow" TargetType="Grid" BasedOn="{StaticResource SoloRow}">
+                <Setter Property="Margin" Value="20,8" />
+                <Style.Triggers><Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.6" /></Trigger></Style.Triggers>
+            </Style>
+            <Style x:Key="ResinMode" TargetType="RadioButton" BasedOn="{StaticResource {x:Type RadioButton}}">
+                <Setter Property="Margin" Value="0,6" /><Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            </Style>
+            <!-- 行模板在本视图内定义，构造子视图时不依赖父窗口资源。 -->
+            <DataTemplate x:Key="ResinKindRow">
+                <Grid Style="{StaticResource ResinRow}" IsEnabled="{Binding IsEditable, Mode=OneWay}">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="150" /></Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,16,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding DisplayName, Mode=OneWay}" />
+                        <TextBlock Text="{Binding Description, Mode=OneWay}" Style="{StaticResource SoloDescription}" />
+                    </StackPanel>
+                    <ui:ToggleSwitch Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                     IsChecked="{Binding IsAllowed, Mode=TwoWay}"
+                                     Visibility="{Binding ShowToggle, Mode=OneWay, Converter={StaticResource SoloVisibility}}"
+                                     AutomationProperties.Name="{Binding AutomationName, Mode=OneWay}" />
+                    <ui:NumberBox Grid.Column="1" Style="{StaticResource ResinNumber}" VerticalAlignment="Center" SpinButtonPlacementMode="Inline" ValidationMode="InvalidInputOverwritten"
+                                  Value="{Binding Count, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  Visibility="{Binding ShowCount, Mode=OneWay, Converter={StaticResource SoloVisibility}}"
+                                  AutomationProperties.Name="{Binding AutomationName, Mode=OneWay}" />
+                </Grid>
+            </DataTemplate>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <StackPanel>
+        <StackPanel Margin="20,12,20,8">
+            <TextBlock Text="使用方式" FontWeight="SemiBold" Margin="0,0,0,4" />
+            <RadioButton GroupName="ResinUsageMode" Style="{StaticResource ResinMode}"
+                         IsChecked="{Binding IsExhaustMode, Mode=TwoWay}" IsEnabled="{Binding IsExhaustModeEnabled, Mode=OneWay}"
+                         AutomationProperties.Name="刷至树脂耗尽">
+                <StackPanel><TextBlock Text="刷至树脂耗尽" /><TextBlock Text="{Binding ExhaustModeDescription, Mode=OneWay}" Style="{StaticResource SoloDescription}" /></StackPanel>
+            </RadioButton>
+            <RadioButton GroupName="ResinUsageMode" Style="{StaticResource ResinMode}"
+                         IsChecked="{Binding IsRunCountMode, Mode=TwoWay}" IsEnabled="{Binding IsRunCountModeEnabled, Mode=OneWay}"
+                         AutomationProperties.Name="指定领奖次数">
+                <StackPanel><TextBlock Text="指定领奖次数" /><TextBlock Text="{Binding RunCountModeDescription, Mode=OneWay}" Style="{StaticResource SoloDescription}" /></StackPanel>
+            </RadioButton>
+            <RadioButton GroupName="ResinUsageMode" Style="{StaticResource ResinMode}"
+                         IsChecked="{Binding IsPerTypeMode, Mode=TwoWay}" IsEnabled="{Binding IsPerTypeModeEnabled, Mode=OneWay}"
+                         AutomationProperties.Name="按树脂分别指定">
+                <StackPanel><TextBlock Text="按树脂分别指定" /><TextBlock Text="{Binding PerTypeModeDescription, Mode=OneWay}" Style="{StaticResource SoloDescription}" /></StackPanel>
+            </RadioButton>
+        </StackPanel>
+        <StackPanel Visibility="{Binding ShowRunCount, Mode=OneWay, Converter={StaticResource SoloVisibility}}">
+            <Separator Margin="20,0" />
+            <Grid Style="{StaticResource SoloRow}">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="150" /></Grid.ColumnDefinitions>
+                <StackPanel Margin="0,0,16,0" VerticalAlignment="Center">
+                    <TextBlock Text="领奖次数" /><TextBlock Text="只统计成功领取奖励的次数" Style="{StaticResource SoloDescription}" />
+                </StackPanel>
+                <ui:NumberBox Grid.Column="1" Style="{StaticResource ResinNumber}" Minimum="1" VerticalAlignment="Center" SpinButtonPlacementMode="Inline" ValidationMode="InvalidInputOverwritten"
+                              Value="{Binding RunCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="领奖次数" />
+            </Grid>
+        </StackPanel>
+        <Separator Margin="20,0" />
+        <StackPanel Margin="20,12,20,4">
+            <TextBlock Text="{Binding KindsHeader, Mode=OneWay}" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding KindsDescription, Mode=OneWay}" Style="{StaticResource SoloDescription}" />
+        </StackPanel>
+        <ItemsControl ItemsSource="{Binding Kinds, Mode=OneWay}" ItemTemplate="{StaticResource ResinKindRow}" />
+        <Separator Margin="20,4,20,0" />
+        <Grid Style="{StaticResource ResinRow}" IsEnabled="{Binding IsTierEditable, Mode=OneWay}" Margin="20,12,20,16">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="150" /></Grid.ColumnDefinitions>
+            <StackPanel Margin="0,0,16,0" VerticalAlignment="Center">
+                <TextBlock Text="原粹树脂档位" /><TextBlock Text="{Binding TierDescription, Mode=OneWay}" Style="{StaticResource SoloDescription}" />
+            </StackPanel>
+            <ComboBox Grid.Column="1" Width="150" VerticalAlignment="Center" ItemsSource="{Binding TierChoices, Mode=OneWay}"
+                      SelectedItem="{Binding SelectedTier, Mode=TwoWay}" DisplayMemberPath="DisplayName" AutomationProperties.Name="原粹树脂档位" />
+        </Grid>
+    </StackPanel>
+</UserControl>

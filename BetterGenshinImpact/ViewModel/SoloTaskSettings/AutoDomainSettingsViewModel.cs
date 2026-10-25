@@ -1,4 +1,9 @@
 using System.Collections.ObjectModel;
+using BetterGenshinImpact.GameTask.AutoDomain;
+using BetterGenshinImpact.GameTask.Common.Resin;
+using BetterGenshinImpact.GameTask.SoloTask;
+using BetterGenshinImpact.ViewModel.Resin;
+using Microsoft.Extensions.DependencyInjection;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -12,9 +17,7 @@ public partial class AutoDomainSettingsViewModel : SoloTaskSettingsViewModel
     /// <inheritdoc />
     public override string[] EditedParameterNames =>
     [
-        "party_name", "domain_name", "sunday_selected_value", "combat_strategy_path", "specify_resin_use",
-        "original_resin_use_count", "condensed_resin_use_count", "transient_resin_use_count", "fragile_resin_use_count",
-        "auto_artifact_salvage", "max_artifact_star", "reward_recognition_enabled",
+        "party_name", "domain_name", "sunday_selected_value", "combat_strategy_path", "auto_artifact_salvage", "max_artifact_star", "reward_recognition_enabled", "resin_usage",
         PuloniaSoloTaskExecutor.WeekdayOverridesParameter, PuloniaSoloTaskExecutor.WeekdayOverridesEnabledParameter
     ];
 
@@ -35,20 +38,10 @@ public partial class AutoDomainSettingsViewModel : SoloTaskSettingsViewModel
     private readonly string _originalStrategyName;
     /// <summary>载入时的圣遗物星级快照。</summary>
     private readonly string _originalMaxArtifactStar;
-    /// <summary>载入时的树脂模式快照。</summary>
-    private readonly bool _originalSpecifyResinUse;
     /// <summary>载入时的自动分解快照。</summary>
     private readonly bool _originalAutoArtifactSalvage;
     /// <summary>载入时的奖励识别快照。</summary>
     private readonly bool _originalRewardRecognitionEnabled;
-    /// <summary>载入时的原粹树脂次数快照。</summary>
-    private readonly int _originalOriginalResinUseCount;
-    /// <summary>载入时的浓缩树脂次数快照。</summary>
-    private readonly int _originalCondensedResinUseCount;
-    /// <summary>载入时的须臾树脂次数快照。</summary>
-    private readonly int _originalTransientResinUseCount;
-    /// <summary>载入时的脆弱树脂次数快照。</summary>
-    private readonly int _originalFragileResinUseCount;
 
     // 策略目录与当前值显示由统一的 CombatStrategyPicker 负责。
 
@@ -60,16 +53,6 @@ public partial class AutoDomainSettingsViewModel : SoloTaskSettingsViewModel
     [ObservableProperty] private string _sundayValue;
     /// <summary>本任务使用的战斗策略名称；保存时写入 combat_strategy_path。</summary>
     [ObservableProperty] private string _strategyName;
-    /// <summary>是否按下方数量指定树脂使用。</summary>
-    [ObservableProperty] private bool _specifyResinUse;
-    /// <summary>原粹树脂刷取次数。</summary>
-    [ObservableProperty] private int _originalResinUseCount;
-    /// <summary>浓缩树脂刷取次数。</summary>
-    [ObservableProperty] private int _condensedResinUseCount;
-    /// <summary>须臾树脂刷取次数。</summary>
-    [ObservableProperty] private int _transientResinUseCount;
-    /// <summary>脆弱树脂刷取次数。</summary>
-    [ObservableProperty] private int _fragileResinUseCount;
     /// <summary>结束后是否自动分解圣遗物。</summary>
     [ObservableProperty] private bool _autoArtifactSalvage;
     /// <summary>分解圣遗物的最高星级。</summary>
@@ -80,36 +63,37 @@ public partial class AutoDomainSettingsViewModel : SoloTaskSettingsViewModel
     [ObservableProperty] private bool _weeklyEnabled;
     /// <summary>周日至周六的每周安排输入行，索引 0 为周日。</summary>
     public ObservableCollection<AutoDomainWeekdayRowViewModel> Weekdays { get; } = [];
+    /// <summary>载入时的树脂设置副本，格式错误时以能力默认值作为比较基准。</summary>
+    private readonly ResinUsage _originalResin;
+    /// <summary>只编辑当前参数草稿的树脂入口。</summary>
+    public ResinUsageEntryViewModel Resin { get; }
 
     /// <summary>从当前有效参数读取全部字段并还原每周安排。</summary>
     /// <param name="original">当前有效参数快照。</param>
-    public AutoDomainSettingsViewModel(JObject original) : base(original)
+    public AutoDomainSettingsViewModel(JObject original) : this(original, null) { }
+
+    /// <summary>通过 DI 注入可选弹窗服务；隔离容器未注册时仍能显示草稿。</summary>
+    [ActivatorUtilitiesConstructor]
+    public AutoDomainSettingsViewModel(JObject original, IResinSettingsDialogs? dialogs = null) : base(original)
     {
+        _originalResin = ResinUsageViewModelSupport.Read(Original["resin_usage"], AutoDomainTask.ResinCapability);
+        Resin = new("自动秘境", AutoDomainTask.ResinCapability, _originalResin, dialogs);
+        TrackEdits([Resin]);
         _originalPartyName = ReadString(Original, "party_name");
         _originalDomainName = ReadString(Original, "domain_name");
         _originalSundayValue = ReadString(Original, "sunday_selected_value");
         // 默认参数里的策略可能是绝对路径，界面统一显示为策略名
         _originalStrategyName = ToStrategyName(ReadString(Original, "combat_strategy_path"));
         _originalMaxArtifactStar = ReadString(Original, "max_artifact_star");
-        _originalSpecifyResinUse = ReadBool(Original, "specify_resin_use");
         _originalAutoArtifactSalvage = ReadBool(Original, "auto_artifact_salvage");
         _originalRewardRecognitionEnabled = ReadBool(Original, "reward_recognition_enabled");
-        _originalOriginalResinUseCount = ReadInt(Original, "original_resin_use_count");
-        _originalCondensedResinUseCount = ReadInt(Original, "condensed_resin_use_count");
-        _originalTransientResinUseCount = ReadInt(Original, "transient_resin_use_count");
-        _originalFragileResinUseCount = ReadInt(Original, "fragile_resin_use_count");
         _partyName = _originalPartyName;
         _domainName = _originalDomainName;
         _sundayValue = _originalSundayValue;
         _strategyName = _originalStrategyName;
         _maxArtifactStar = _originalMaxArtifactStar;
-        _specifyResinUse = _originalSpecifyResinUse;
         _autoArtifactSalvage = _originalAutoArtifactSalvage;
         _rewardRecognitionEnabled = _originalRewardRecognitionEnabled;
-        _originalResinUseCount = _originalOriginalResinUseCount;
-        _condensedResinUseCount = _originalCondensedResinUseCount;
-        _transientResinUseCount = _originalTransientResinUseCount;
-        _fragileResinUseCount = _originalFragileResinUseCount;
 
         // 旧计划按 weekday_overrides 是否存在内容判断开关；新开关关闭时保留各日期配置。
         var weekly = Original[PuloniaSoloTaskExecutor.WeekdayOverridesParameter] as JObject;
@@ -132,16 +116,12 @@ public partial class AutoDomainSettingsViewModel : SoloTaskSettingsViewModel
     /// <param name="changes">接收变化的对象。</param>
     public override void CollectChanges(JObject changes)
     {
+        if (Resin.Value != _originalResin) changes["resin_usage"] = JObject.Parse(SoloTaskJson.Serialize(Resin.Value));
         WriteString(changes, "party_name", _originalPartyName, PartyName);
         WriteString(changes, "domain_name", _originalDomainName, DomainName);
         WriteString(changes, "sunday_selected_value", _originalSundayValue, SundayValue);
         // 任务接受策略名或路径；修改时写入策略名，便于跨机器使用
         WriteString(changes, "combat_strategy_path", _originalStrategyName, StrategyName);
-        WriteBool(changes, "specify_resin_use", _originalSpecifyResinUse, SpecifyResinUse);
-        WriteInt(changes, "original_resin_use_count", _originalOriginalResinUseCount, OriginalResinUseCount);
-        WriteInt(changes, "condensed_resin_use_count", _originalCondensedResinUseCount, CondensedResinUseCount);
-        WriteInt(changes, "transient_resin_use_count", _originalTransientResinUseCount, TransientResinUseCount);
-        WriteInt(changes, "fragile_resin_use_count", _originalFragileResinUseCount, FragileResinUseCount);
         WriteBool(changes, "auto_artifact_salvage", _originalAutoArtifactSalvage, AutoArtifactSalvage);
         WriteString(changes, "max_artifact_star", _originalMaxArtifactStar, MaxArtifactStar);
         WriteBool(changes, "reward_recognition_enabled", _originalRewardRecognitionEnabled, RewardRecognitionEnabled);

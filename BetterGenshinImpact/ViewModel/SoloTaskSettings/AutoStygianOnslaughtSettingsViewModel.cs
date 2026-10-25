@@ -1,4 +1,9 @@
 using System;
+using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
+using BetterGenshinImpact.GameTask.Common.Resin;
+using BetterGenshinImpact.GameTask.SoloTask;
+using BetterGenshinImpact.ViewModel.Resin;
+using Microsoft.Extensions.DependencyInjection;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Newtonsoft.Json.Linq;
@@ -11,9 +16,7 @@ public partial class AutoStygianOnslaughtSettingsViewModel : SoloTaskSettingsVie
     /// <inheritdoc />
     public override string[] EditedParameterNames =>
     [
-        "strategy_name", "combat_script_bag_path", "boss_num", "fight_team_name", "specify_resin_use",
-        "original_resin_use_count", "condensed_resin_use_count", "transient_resin_use_count", "fragile_resin_use_count",
-        "auto_artifact_salvage", "max_artifact_star"
+        "strategy_name", "combat_script_bag_path", "boss_num", "fight_team_name", "auto_artifact_salvage", "max_artifact_star", "resin_usage"
     ];
 
     /// <summary>幽境首领序号选项；与任务的 1—3 校验一致。</summary>
@@ -31,20 +34,10 @@ public partial class AutoStygianOnslaughtSettingsViewModel : SoloTaskSettingsVie
     private readonly int _originalBossNum;
     /// <summary>载入时的队伍名快照。</summary>
     private readonly string _originalFightTeamName;
-    /// <summary>载入时的树脂模式快照。</summary>
-    private readonly bool _originalSpecifyResinUse;
     /// <summary>载入时的自动分解快照。</summary>
     private readonly bool _originalAutoArtifactSalvage;
     /// <summary>载入时的圣遗物星级快照。</summary>
     private readonly string _originalMaxArtifactStar;
-    /// <summary>载入时的原粹树脂次数快照。</summary>
-    private readonly int _originalOriginalResinUseCount;
-    /// <summary>载入时的浓缩树脂次数快照。</summary>
-    private readonly int _originalCondensedResinUseCount;
-    /// <summary>载入时的须臾树脂次数快照。</summary>
-    private readonly int _originalTransientResinUseCount;
-    /// <summary>载入时的脆弱树脂次数快照。</summary>
-    private readonly int _originalFragileResinUseCount;
 
     // 策略目录与当前值显示由统一的 CombatStrategyPicker 负责。
 
@@ -54,16 +47,6 @@ public partial class AutoStygianOnslaughtSettingsViewModel : SoloTaskSettingsVie
     [ObservableProperty] private int _bossNum;
     /// <summary>指派的战斗队伍名称。</summary>
     [ObservableProperty] private string _fightTeamName;
-    /// <summary>是否按下方数量指定树脂使用。</summary>
-    [ObservableProperty] private bool _specifyResinUse;
-    /// <summary>原粹树脂挑战次数。</summary>
-    [ObservableProperty] private int _originalResinUseCount;
-    /// <summary>浓缩树脂挑战次数。</summary>
-    [ObservableProperty] private int _condensedResinUseCount;
-    /// <summary>须臾树脂挑战次数。</summary>
-    [ObservableProperty] private int _transientResinUseCount;
-    /// <summary>脆弱树脂挑战次数。</summary>
-    [ObservableProperty] private int _fragileResinUseCount;
     /// <summary>结束后是否自动分解圣遗物。</summary>
     [ObservableProperty] private bool _autoArtifactSalvage;
     /// <summary>分解圣遗物的最高星级；空字符串表示沿用全局设置。</summary>
@@ -71,8 +54,20 @@ public partial class AutoStygianOnslaughtSettingsViewModel : SoloTaskSettingsVie
 
     /// <summary>从当前有效参数读取幽境危战配置。</summary>
     /// <param name="original">当前有效参数快照。</param>
-    public AutoStygianOnslaughtSettingsViewModel(JObject original) : base(original)
+    public AutoStygianOnslaughtSettingsViewModel(JObject original) : this(original, null) { }
+
+    /// <summary>原树脂快照；与入口结构比较，不因打开页面写入默认值。</summary>
+    private readonly ResinUsage _originalResin;
+    /// <summary>树脂使用草稿入口。</summary>
+    public ResinUsageEntryViewModel Resin { get; }
+
+    /// <summary>注入可选的公共树脂弹窗服务。</summary>
+    [ActivatorUtilitiesConstructor]
+    public AutoStygianOnslaughtSettingsViewModel(JObject original, IResinSettingsDialogs? dialogs = null) : base(original)
     {
+        _originalResin = ResinUsageViewModelSupport.Read(Original["resin_usage"], AutoStygianOnslaughtTask.ResinCapability);
+        Resin = new("自动幽境危战", AutoStygianOnslaughtTask.ResinCapability, _originalResin, dialogs);
+        TrackEdits([Resin]);
         _originalStrategyNameValue = ReadString(Original, "strategy_name");
         _originalCombatScriptBagPath = ReadString(Original, "combat_script_bag_path");
         // 任务优先使用非空的 combat_script_bag_path，为空时才按 strategy_name 解析，显示与之一致
@@ -81,29 +76,20 @@ public partial class AutoStygianOnslaughtSettingsViewModel : SoloTaskSettingsVie
             : _originalCombatScriptBagPath);
         _originalBossNum = ReadInt(Original, "boss_num", 1);
         _originalFightTeamName = ReadString(Original, "fight_team_name");
-        _originalSpecifyResinUse = ReadBool(Original, "specify_resin_use");
         _originalAutoArtifactSalvage = ReadBool(Original, "auto_artifact_salvage");
         _originalMaxArtifactStar = ReadString(Original, "max_artifact_star");
-        _originalOriginalResinUseCount = ReadInt(Original, "original_resin_use_count");
-        _originalCondensedResinUseCount = ReadInt(Original, "condensed_resin_use_count");
-        _originalTransientResinUseCount = ReadInt(Original, "transient_resin_use_count");
-        _originalFragileResinUseCount = ReadInt(Original, "fragile_resin_use_count");
         _strategyName = _originalStrategyName;
         _bossNum = _originalBossNum;
         _fightTeamName = _originalFightTeamName;
-        _specifyResinUse = _originalSpecifyResinUse;
         _autoArtifactSalvage = _originalAutoArtifactSalvage;
         _maxArtifactStar = _originalMaxArtifactStar;
-        _originalResinUseCount = _originalOriginalResinUseCount;
-        _condensedResinUseCount = _originalCondensedResinUseCount;
-        _transientResinUseCount = _originalTransientResinUseCount;
-        _fragileResinUseCount = _originalFragileResinUseCount;
     }
 
-    /// <summary>收集幽境危战配置的真实变化；自定义树脂优先级保留给高级设置编辑。</summary>
+    /// <summary>收集幽境危战配置的真实变化，树脂设置按完整对象提交。</summary>
     /// <param name="changes">接收变化的对象。</param>
     public override void CollectChanges(JObject changes)
     {
+        if (Resin.Value != _originalResin) changes["resin_usage"] = JObject.Parse(SoloTaskJson.Serialize(Resin.Value));
         // 修改策略时写策略名并清空脚本包路径，任务在路径为空时按策略名解析
         if (!string.Equals(_originalStrategyName, StrategyName, StringComparison.Ordinal))
         {
@@ -112,11 +98,6 @@ public partial class AutoStygianOnslaughtSettingsViewModel : SoloTaskSettingsVie
         }
         WriteInt(changes, "boss_num", _originalBossNum, BossNum);
         WriteString(changes, "fight_team_name", _originalFightTeamName, FightTeamName);
-        WriteBool(changes, "specify_resin_use", _originalSpecifyResinUse, SpecifyResinUse);
-        WriteInt(changes, "original_resin_use_count", _originalOriginalResinUseCount, OriginalResinUseCount);
-        WriteInt(changes, "condensed_resin_use_count", _originalCondensedResinUseCount, CondensedResinUseCount);
-        WriteInt(changes, "transient_resin_use_count", _originalTransientResinUseCount, TransientResinUseCount);
-        WriteInt(changes, "fragile_resin_use_count", _originalFragileResinUseCount, FragileResinUseCount);
         WriteBool(changes, "auto_artifact_salvage", _originalAutoArtifactSalvage, AutoArtifactSalvage);
         WriteString(changes, "max_artifact_star", _originalMaxArtifactStar, MaxArtifactStar);
     }

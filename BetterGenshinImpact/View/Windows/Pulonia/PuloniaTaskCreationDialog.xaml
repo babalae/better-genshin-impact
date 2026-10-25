@@ -1,6 +1,7 @@
 <ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.Pulonia.PuloniaTaskCreationDialog"
                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                  xmlns:combat="clr-namespace:BetterGenshinImpact.View.Controls.CombatStrategy"
+                 xmlns:resin="clr-namespace:BetterGenshinImpact.View.Controls.Resin"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -224,18 +225,30 @@
         <!-- 所有能力共用同一份 Schema 字段模板，避免创建弹窗和后续参数编辑出现两套语义。 -->
         <DataTemplate x:Key="ParameterFieldTemplate" DataType="{x:Type pulonia:PuloniaTaskParameterFieldViewModel}">
             <StackPanel Margin="0,0,0,14">
-                <TextBlock FontWeight="SemiBold" Text="{Binding DisplayLabel}" />
+                <resin:ResinSettingsCard Summary="{Binding Resin.Summary, Mode=OneWay}" Problem="{Binding Resin.Problem, Mode=OneWay}"
+                                        Command="{Binding Resin.EditCommand, Mode=OneWay}">
+                    <resin:ResinSettingsCard.Style>
+                        <Style TargetType="resin:ResinSettingsCard">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers><DataTrigger Binding="{Binding IsResinUsageEditor, Mode=OneWay}" Value="True"><Setter Property="Visibility" Value="Visible" /></DataTrigger></Style.Triggers>
+                        </Style>
+                    </resin:ResinSettingsCard.Style>
+                </resin:ResinSettingsCard>
+                <StackPanel>
+                    <StackPanel.Style><Style TargetType="StackPanel"><Style.Triggers><DataTrigger Binding="{Binding IsResinUsageEditor, Mode=OneWay}" Value="True"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers></Style></StackPanel.Style>
+                <TextBlock FontWeight="SemiBold" Text="{Binding DisplayLabel, Mode=OneWay}" />
                 <TextBlock Margin="0,3,0,6"
                            FontSize="11"
                            Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                           Text="{Binding Description}"
+                           Text="{Binding Description, Mode=OneWay}"
                            TextWrapping="Wrap" />
+                </StackPanel>
                 <TextBox Text="{Binding TextValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
                     <TextBox.Style>
                         <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
                             <Setter Property="Visibility" Value="Collapsed" />
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsTextEditor}" Value="True">
+                                <DataTrigger Binding="{Binding IsTextEditor, Mode=OneWay}" Value="True">
                                     <Setter Property="Visibility" Value="Visible" />
                                 </DataTrigger>
                             </Style.Triggers>
@@ -252,7 +265,7 @@
                         <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
                             <Setter Property="Visibility" Value="Collapsed" />
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsJsonEditor}" Value="True">
+                                <DataTrigger Binding="{Binding IsJsonEditor, Mode=OneWay}" Value="True">
                                     <Setter Property="Visibility" Value="Visible" />
                                 </DataTrigger>
                             </Style.Triggers>
@@ -264,17 +277,17 @@
                     <combat:CombatStrategyPicker.Style>
                         <Style TargetType="combat:CombatStrategyPicker">
                             <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers><DataTrigger Binding="{Binding IsCombatStrategyEditor}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
+                            <Style.Triggers><DataTrigger Binding="{Binding IsCombatStrategyEditor, Mode=OneWay}" Value="True"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers>
                         </Style>
                     </combat:CombatStrategyPicker.Style>
                 </combat:CombatStrategyPicker>
-                <ComboBox ItemsSource="{Binding Choices}"
+                <ComboBox ItemsSource="{Binding Choices, Mode=OneWay}"
                           SelectedItem="{Binding SelectedChoice, Mode=TwoWay}">
                     <ComboBox.Style>
                         <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
                             <Setter Property="Visibility" Value="Collapsed" />
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsChoiceEditor}" Value="True">
+                                <DataTrigger Binding="{Binding IsChoiceEditor, Mode=OneWay}" Value="True">
                                     <Setter Property="Visibility" Value="Visible" />
                                 </DataTrigger>
                             </Style.Triggers>
@@ -288,7 +301,7 @@
                         <Style TargetType="ui:ToggleSwitch" BasedOn="{StaticResource {x:Type ui:ToggleSwitch}}">
                             <Setter Property="Visibility" Value="Collapsed" />
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsBooleanEditor}" Value="True">
+                                <DataTrigger Binding="{Binding IsBooleanEditor, Mode=OneWay}" Value="True">
                                     <Setter Property="Visibility" Value="Visible" />
                                 </DataTrigger>
                             </Style.Triggers>

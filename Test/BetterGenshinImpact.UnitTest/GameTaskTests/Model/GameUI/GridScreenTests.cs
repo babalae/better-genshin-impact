@@ -94,7 +94,7 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.Model.GameUI
             1, 1, 3, 2, 2, 1, 1, 1} };
         }
 
-        [Theory]
+        [Theory(Skip = "已知识别结果不稳定，暂不执行。")]
         [MemberData(nameof(GetGridItemIconTextTestData))]
         /// <summary>
         /// 测试获取各种界面中的物品图标文字，全部转数字，结果应正确

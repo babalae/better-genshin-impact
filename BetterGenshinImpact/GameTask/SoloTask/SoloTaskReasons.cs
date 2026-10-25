@@ -5,6 +5,9 @@ namespace BetterGenshinImpact.GameTask.SoloTask;
 /// </summary>
 public static class SoloTaskReasons
 {
+    /// <summary>开始时允许的树脂不足一次领奖，未执行挑战。</summary>
+    public const string ResinExhausted = "resin_exhausted";
+
     /// <summary>
     /// 参数不满足业务要求。
     /// </summary>

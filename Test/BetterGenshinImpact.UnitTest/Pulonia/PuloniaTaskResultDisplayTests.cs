@@ -1,4 +1,6 @@
 using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.GameTask.Common.Resin;
+using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using BetterGenshinImpact.ViewModel.Windows.Pulonia;
@@ -11,6 +13,26 @@ namespace BetterGenshinImpact.UnitTest.Pulonia;
 /// </summary>
 public sealed class PuloniaTaskResultDisplayTests
 {
+    /// <summary>新结果结构的奖励与树脂报告各显示一次，树脂原始 JSON 不重复展示。</summary>
+    [Fact]
+    public void ResinResult_ShowsNestedRewardsAndFormattedReport()
+    {
+        var data = new ResinClaimData
+        {
+            Rewards = RewardSummary.From(new Dictionary<string, int> { ["摩拉"] = 60000 }),
+            Resin = new ResinUsageReport
+            {
+                Mode = ResinUsageMode.RunCount, ClaimCount = 4, TargetCount = 6,
+                Claims = new() { Condensed = 2, Original = 2 }, Consumed = new() { Condensed = 2, Original = 80 },
+                StopReason = ResinStopReason.ResinExhausted
+            }
+        };
+        var node = CreateNode("solo.auto_domain", JObject.Parse(SoloTaskJson.Serialize(data)));
+        Assert.Equal("摩拉 ×60000", Field(node, "奖励"));
+        Assert.Equal("领奖 4/6 次（浓缩 2、原粹 80），树脂不足，提前结束。", Field(node, "树脂使用"));
+        Assert.Equal(2, node.ResultFields.Count);
+    }
+
     /// <summary>测试使用的固定时间。</summary>
     private static readonly DateTimeOffset Now = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
@@ -21,6 +43,13 @@ public sealed class PuloniaTaskResultDisplayTests
         Assert.Equal("程序或命令", PuloniaTaskFieldNames.GetDisplayName("file_name"));
         Assert.Equal("计算输入", PuloniaTaskFieldNames.GetDisplayName("values"));
         Assert.Equal("合成后保留原粹树脂", PuloniaTaskFieldNames.GetDisplayName("min_resin_to_keep"));
+        Assert.Equal("树脂使用", PuloniaTaskFieldNames.GetDisplayName("resin_usage"));
+        foreach (var removed in new[] { "specify_resin_use", "resin_priority_list", "original_resin_use_count",
+            "original_resin20_use_count", "original_resin40_use_count", "condensed_resin_use_count",
+            "transient_resin_use_count", "fragile_resin_use_count", "domain_round_num", "use_transient_resin",
+            "use_fragile_resin", "is_resin_exhaustion_mode", "open_mode_count_min", "is_go_to_synthesizer",
+            "specify_run_count", "run_count", "count", "round_count" })
+            Assert.Equal(removed, PuloniaTaskFieldNames.GetDisplayName(removed));
         Assert.Equal("extension_key", PuloniaTaskFieldNames.GetDisplayName("extension_key"));
 
         var stringSchema = new JObject { ["type"] = "string" };

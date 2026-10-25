@@ -1,0 +1,225 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1340" height="790" viewBox="0 0 1340 790">
+  <style>
+    text { font-family: "Microsoft YaHei UI", "Segoe UI", sans-serif; }
+    .cap { font-size: 15px; font-weight: 600; fill: #1A1A1A; }
+    .wt { font-size: 12.5px; fill: #1A1A1A; }
+    .title { font-size: 14px; fill: #1A1A1A; }
+    .sum { font-size: 12px; fill: #5F5F5F; }
+    .warn { font-size: 12px; fill: #9D5D00; }
+    .h { font-size: 13px; fill: #1A1A1A; }
+    .d { font-size: 11.5px; fill: #6B6B6B; }
+    .h.off { fill: #A3A3A3; }
+    .d.off { fill: #B3B3B3; }
+    .val { font-size: 13px; fill: #1A1A1A; }
+    .val.off { fill: #A3A3A3; }
+    .ph { font-size: 12px; fill: #9A9A9A; }
+    .glyph { font-size: 14px; fill: #5F5F5F; }
+    .btn { font-size: 13px; fill: #1A1A1A; }
+    .btnp { font-size: 13px; fill: #FFFFFF; }
+    .note { font-size: 12px; fill: #5F5F5F; }
+    .card { fill: #FFFFFF; stroke: #E3E3E3; }
+    .win { fill: #FFFFFF; stroke: #CFCFCF; }
+    .line { stroke: #EBEBEB; }
+    .sep { stroke: #F2F2F2; }
+  </style>
+  <rect width="1340" height="790" fill="#F3F3F3"/>
+
+  <!-- ===================== A：设置页中的入口卡片按钮 ===================== -->
+  <text class="cap" x="20" y="40">入口：设置页中的卡片按钮</text>
+  <rect x="20" y="56" width="400" height="656" rx="8" fill="#FAFAFA" stroke="#E3E3E3"/>
+
+  <rect class="card" x="32" y="72" width="376" height="60" rx="6"/>
+  <text class="h" x="48" y="97">战斗策略</text>
+  <text class="d" x="48" y="115">此任务使用的战斗策略</text>
+  <rect x="252" y="88" width="140" height="28" rx="4" fill="#FFFFFF" stroke="#D0D0D0"/>
+  <text class="val" x="262" y="107">根据队伍自动选择</text>
+
+  <rect class="card" x="32" y="140" width="376" height="60" rx="6"/>
+  <text class="h" x="48" y="165">首领</text>
+  <text class="d" x="48" y="183">要讨伐的首领</text>
+  <rect x="252" y="156" width="140" height="28" rx="4" fill="#FFFFFF" stroke="#D0D0D0"/>
+  <text class="val" x="262" y="175">某首领</text>
+
+  <rect class="card" x="32" y="208" width="376" height="60" rx="6"/>
+  <text class="h" x="48" y="233">队伍名称</text>
+  <text class="d" x="48" y="251">留空则不切换队伍</text>
+  <rect x="252" y="224" width="140" height="28" rx="4" fill="#FFFFFF" stroke="#D0D0D0"/>
+  <text class="ph" x="262" y="243">留空则不切换</text>
+
+  <!-- 树脂使用：卡片按钮（整卡可点击） -->
+  <rect x="32" y="276" width="376" height="68" rx="6" fill="#FFFFFF" stroke="#005FB8" stroke-width="1.5"/>
+  <path d="M60,293 C60,293 50,305 50,312 A10,10 0 0 0 70,312 C70,305 60,293 60,293 Z" fill="none" stroke="#005FB8" stroke-width="1.5"/>
+  <text class="h" x="84" y="304">树脂使用</text>
+  <text class="sum" x="84" y="324">领奖 6 次 · 原粹 → 须臾</text>
+  <polyline points="384,303 390,310 384,317" fill="none" stroke="#5F5F5F" stroke-width="1.5"/>
+
+  <rect class="card" x="32" y="352" width="376" height="60" rx="6"/>
+  <text class="h" x="48" y="377">累计成功领奖次数</text>
+  <text class="d" x="48" y="395">跨次运行累计；0 表示不限制</text>
+  <polyline points="381,379 387,385 393,379" fill="none" stroke="#5F5F5F" stroke-width="1.5"/>
+
+  <rect class="card" x="32" y="420" width="376" height="60" rx="6"/>
+  <text class="h" x="48" y="445">每轮结束返回七天神像</text>
+  <text class="d" x="48" y="463">领奖后先回神像恢复</text>
+  <rect x="352" y="440" width="40" height="20" rx="10" fill="#FFFFFF" stroke="#8A8A8A"/>
+  <circle cx="362" cy="450" r="5" fill="#5F5F5F"/>
+
+  <rect class="card" x="32" y="488" width="376" height="60" rx="6"/>
+  <text class="h" x="48" y="513">奖励识别</text>
+  <text class="d" x="48" y="531">识别奖励名称与数量</text>
+  <rect x="352" y="508" width="40" height="20" rx="10" fill="#005FB8"/>
+  <circle cx="382" cy="518" r="6" fill="#FFFFFF"/>
+
+  <!-- 设置无效时的入口 -->
+  <text class="d" x="36" y="584">设置无效时（例如 JS 或导入写入的值）</text>
+  <rect class="card" x="32" y="594" width="376" height="68" rx="6"/>
+  <polygon points="60,610 71,630 49,630" fill="none" stroke="#9D5D00" stroke-width="1.5"/>
+  <line x1="60" y1="617" x2="60" y2="623" stroke="#9D5D00" stroke-width="1.5"/>
+  <circle cx="60" cy="627" r="0.9" fill="#9D5D00"/>
+  <text class="h" x="84" y="621">树脂使用</text>
+  <text class="warn" x="84" y="641">按树脂分别指定 · 尚未填写次数</text>
+  <polyline points="384,621 390,628 384,635" fill="none" stroke="#5F5F5F" stroke-width="1.5"/>
+
+  <!-- 点击后打开弹窗 -->
+  <line x1="408" y1="310" x2="452" y2="310" stroke="#005FB8" stroke-width="1.5"/>
+  <polygon points="458,310 450,305 450,315" fill="#005FB8"/>
+
+  <!-- ===================== B：弹窗 · 自动首领讨伐 · 指定领奖次数 ===================== -->
+  <text class="cap" x="460" y="40">弹窗：自动首领讨伐 · 指定领奖次数</text>
+  <rect class="win" x="460" y="56" width="400" height="656" rx="8"/>
+  <text class="wt" x="476" y="79">树脂使用 · 自动首领讨伐</text>
+  <text class="glyph" x="836" y="80">✕</text>
+  <line class="line" x1="460" y1="92" x2="860" y2="92"/>
+
+  <text class="h" x="476" y="116">使用方式</text>
+  <circle cx="484" cy="138" r="7" fill="#FFFFFF" stroke="#8A8A8A" stroke-width="1.2"/>
+  <text class="h" x="498" y="142">刷至树脂耗尽</text>
+  <text class="d" x="498" y="159">按顺序使用允许的树脂，不足一次领奖时结束</text>
+  <circle cx="484" cy="178" r="7" fill="#FFFFFF" stroke="#005FB8" stroke-width="1.5"/>
+  <circle cx="484" cy="178" r="3.5" fill="#005FB8"/>
+  <text class="h" x="498" y="182">指定领奖次数</text>
+  <text class="d" x="498" y="199">成功领奖达到次数后结束，树脂不足时提前结束</text>
+  <circle cx="484" cy="218" r="7" fill="#FFFFFF" stroke="#D0D0D0" stroke-width="1.2"/>
+  <text class="h off" x="498" y="222">按树脂分别指定</text>
+  <text class="d off" x="498" y="239">首领讨伐只按领奖次数控制</text>
+  <line class="line" x1="476" y1="256" x2="844" y2="256"/>
+
+  <text class="h" x="476" y="278">领奖次数</text>
+  <text class="d" x="476" y="295">只统计成功领取奖励的次数</text>
+  <rect x="694" y="268" width="150" height="30" rx="4" fill="#FFFFFF" stroke="#D0D0D0"/>
+  <line x1="695" y1="297.5" x2="843" y2="297.5" stroke="#8A8A8A"/>
+  <text class="val" x="706" y="288">6</text>
+  <text class="glyph" x="800" y="288">−</text>
+  <text class="glyph" x="824" y="288">+</text>
+  <line class="line" x1="476" y1="312" x2="844" y2="312"/>
+
+  <text class="h" x="476" y="336">可用树脂</text>
+  <text class="d" x="476" y="354">按从上到下的顺序使用</text>
+  <text class="h off" x="476" y="384">浓缩树脂</text>
+  <text class="d off" x="476" y="401">首领讨伐暂不支持浓缩树脂</text>
+  <rect x="804" y="380" width="40" height="20" rx="10" fill="#FFFFFF" stroke="#D0D0D0"/>
+  <circle cx="814" cy="390" r="5" fill="#D0D0D0"/>
+  <line class="sep" x1="476" y1="416" x2="844" y2="416"/>
+  <text class="h" x="476" y="436">原粹树脂</text>
+  <text class="d" x="476" y="453">首领奖励固定消耗 40 原粹树脂</text>
+  <rect x="804" y="432" width="40" height="20" rx="10" fill="#A7C3E3"/>
+  <circle cx="834" cy="442" r="6" fill="#FFFFFF"/>
+  <line class="sep" x1="476" y1="468" x2="844" y2="468"/>
+  <text class="h" x="476" y="488">须臾树脂</text>
+  <text class="d" x="476" y="505">原粹不足 40 时，战前补充为原粹树脂</text>
+  <rect x="804" y="484" width="40" height="20" rx="10" fill="#005FB8"/>
+  <circle cx="834" cy="494" r="6" fill="#FFFFFF"/>
+  <line class="sep" x1="476" y1="520" x2="844" y2="520"/>
+  <text class="h" x="476" y="540">脆弱树脂</text>
+  <text class="d" x="476" y="557">须臾不可用时，战前补充为原粹树脂</text>
+  <rect x="804" y="536" width="40" height="20" rx="10" fill="#FFFFFF" stroke="#8A8A8A"/>
+  <circle cx="814" cy="546" r="5" fill="#5F5F5F"/>
+  <line class="line" x1="476" y1="572" x2="844" y2="572"/>
+
+  <text class="h off" x="476" y="594">原粹树脂档位</text>
+  <text class="d off" x="476" y="611">首领固定使用 40 原粹树脂</text>
+  <rect x="694" y="584" width="150" height="30" rx="4" fill="#F7F7F7" stroke="#E3E3E3"/>
+  <text class="val off" x="706" y="604">默认</text>
+  <polyline points="826,596 831,601 836,596" fill="none" stroke="#C8C8C8" stroke-width="1.3"/>
+
+  <rect x="461" y="652" width="398" height="59" fill="#F7F7F7"/>
+  <line class="line" x1="460" y1="652" x2="860" y2="652"/>
+  <text class="sum" x="476" y="687">领奖 6 次 · 原粹 → 须臾</text>
+  <rect x="664" y="666" width="84" height="32" rx="4" fill="#005FB8"/>
+  <text class="btnp" x="706" y="687" text-anchor="middle">确定</text>
+  <rect x="756" y="666" width="88" height="32" rx="4" fill="#FFFFFF" stroke="#D0D0D0"/>
+  <text class="btn" x="800" y="687" text-anchor="middle">取消</text>
+
+  <!-- ===================== C：弹窗 · 自动秘境 · 刷至耗尽时开启须臾 ===================== -->
+  <text class="cap" x="900" y="40">弹窗：自动秘境 · 刷至耗尽时开启须臾</text>
+  <rect class="win" x="900" y="56" width="420" height="656" rx="8"/>
+  <text class="wt" x="916" y="79">树脂使用 · 自动秘境</text>
+  <text class="glyph" x="1296" y="80">✕</text>
+  <line class="line" x1="900" y1="92" x2="1320" y2="92"/>
+
+  <text class="h" x="916" y="116">使用方式</text>
+  <circle cx="924" cy="138" r="7" fill="#FFFFFF" stroke="#005FB8" stroke-width="1.5"/>
+  <circle cx="924" cy="138" r="3.5" fill="#005FB8"/>
+  <text class="h" x="938" y="142">刷至树脂耗尽</text>
+  <text class="d" x="938" y="159">按顺序使用允许的树脂，不足一次领奖时结束</text>
+  <circle cx="924" cy="178" r="7" fill="#FFFFFF" stroke="#8A8A8A" stroke-width="1.2"/>
+  <text class="h" x="938" y="182">指定领奖次数</text>
+  <text class="d" x="938" y="199">成功领奖达到次数后结束，树脂不足时提前结束</text>
+  <circle cx="924" cy="218" r="7" fill="#FFFFFF" stroke="#8A8A8A" stroke-width="1.2"/>
+  <text class="h" x="938" y="222">按树脂分别指定</text>
+  <text class="d" x="938" y="239">每种树脂各领奖指定次数</text>
+  <line class="line" x1="916" y1="256" x2="1304" y2="256"/>
+
+  <text class="h" x="916" y="280">可用树脂</text>
+  <text class="d" x="916" y="298">按从上到下的顺序使用</text>
+  <text class="h" x="916" y="328">浓缩树脂</text>
+  <text class="d" x="916" y="345">最先使用</text>
+  <rect x="1264" y="324" width="40" height="20" rx="10" fill="#005FB8"/>
+  <circle cx="1294" cy="334" r="6" fill="#FFFFFF"/>
+  <line class="sep" x1="916" y1="360" x2="1304" y2="360"/>
+  <text class="h" x="916" y="380">原粹树脂</text>
+  <text class="d" x="916" y="397">浓缩不足时使用</text>
+  <rect x="1264" y="376" width="40" height="20" rx="10" fill="#005FB8"/>
+  <circle cx="1294" cy="386" r="6" fill="#FFFFFF"/>
+  <line class="sep" x1="916" y1="412" x2="1304" y2="412"/>
+  <text class="h" x="916" y="432">须臾树脂</text>
+  <text class="d" x="916" y="449">默认关闭；开启后浓缩和原粹不足时使用，直到用完</text>
+  <rect x="1264" y="428" width="40" height="20" rx="10" fill="#005FB8"/>
+  <circle cx="1294" cy="438" r="6" fill="#FFFFFF"/>
+  <line class="sep" x1="916" y1="464" x2="1304" y2="464"/>
+  <text class="h" x="916" y="484">脆弱树脂</text>
+  <text class="d" x="916" y="501">默认关闭；开启后须臾不可用时使用，直到用完</text>
+  <rect x="1264" y="480" width="40" height="20" rx="10" fill="#FFFFFF" stroke="#8A8A8A"/>
+  <circle cx="1274" cy="490" r="5" fill="#5F5F5F"/>
+  <line class="line" x1="916" y1="516" x2="1304" y2="516"/>
+
+  <text class="h" x="916" y="538">原粹树脂档位</text>
+  <text class="d" x="916" y="555">默认使用领奖界面当前档位</text>
+  <rect x="1154" y="528" width="150" height="30" rx="4" fill="#FFFFFF" stroke="#D0D0D0"/>
+  <text class="val" x="1166" y="548">默认</text>
+  <polyline points="1286,540 1291,545 1296,540" fill="none" stroke="#5F5F5F" stroke-width="1.3"/>
+
+  <rect x="901" y="652" width="418" height="59" fill="#F7F7F7"/>
+  <line class="line" x1="900" y1="652" x2="1320" y2="652"/>
+  <text class="sum" x="916" y="687">刷至树脂耗尽 · 浓缩 → 原粹 → 须臾</text>
+  <rect x="1144" y="666" width="76" height="32" rx="4" fill="#005FB8"/>
+  <text class="btnp" x="1182" y="687" text-anchor="middle">确定</text>
+  <rect x="1228" y="666" width="76" height="32" rx="4" fill="#FFFFFF" stroke="#D0D0D0"/>
+  <text class="btn" x="1266" y="687" text-anchor="middle">取消</text>
+
+  <!-- 开启须臾时的确认提示（ThemedMessageBox） -->
+  <rect x="900" y="56" width="420" height="656" rx="8" fill="#000000" opacity="0.32"/>
+  <rect x="946" y="292" width="328" height="176" rx="8" fill="#FFFFFF" stroke="#CFCFCF"/>
+  <text x="968" y="324" font-size="14" font-weight="600" fill="#1A1A1A">使用须臾树脂</text>
+  <text class="h" x="968" y="354">刷至树脂耗尽时，浓缩和原粹不足后会</text>
+  <text class="h" x="968" y="376">持续使用须臾树脂，直到用完。</text>
+  <text class="h" x="968" y="398">确定开启吗？</text>
+  <rect x="1082" y="420" width="84" height="32" rx="4" fill="#FFFFFF" stroke="#D0D0D0"/>
+  <text class="btn" x="1124" y="441" text-anchor="middle">是</text>
+  <rect x="1174" y="420" width="84" height="32" rx="4" fill="#005FB8"/>
+  <text class="btnp" x="1216" y="441" text-anchor="middle">否</text>
+
+  <!-- 说明 -->
+  <text class="note" x="20" y="744">示意：设置页只显示“树脂使用”卡片按钮和摘要，点击后在弹窗中编辑；“确定”后回写摘要，“取消”或关闭不保存。</text>
+  <text class="note" x="20" y="766">弹窗结构、文案、顺序在各任务一致；任务不支持的项置灰并写明原因；刷至树脂耗尽时开启须臾或脆弱需要确认，默认按钮为“否”。</text>
+</svg>

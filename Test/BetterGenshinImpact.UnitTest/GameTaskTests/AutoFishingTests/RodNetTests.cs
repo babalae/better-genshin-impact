@@ -1,26 +1,20 @@
 using BetterGenshinImpact.GameTask.AutoFishing;
-using static TorchSharp.torch;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
 {
-    [Collection("Init Collection")]
-    public partial class RodNetTests
+    /// <summary>
+    /// 验证当前纯 C# RodNet 推理实现。
+    /// </summary>
+    public class RodNetTests
     {
-        public RodNetTests(TorchFixture torch)
-        {
-            if (!torch.UseTorch)
-                throw new NotSupportedException("torch加载失败，请检查TorchFixture硬编码的dll地址配置");
-        }
-
         [Theory]
         [InlineData(517.6326F, 548.49023F, 255.25723F, 263.55743F, 256.57538F, 351.56964F, 274.65656F, 333.1523F, 5)]
         /// <summary>
-        /// 测试计算给到后处理之前的浮点数输出，Torch推理的结果和直接用数学计算的结果，两者的数值应该在转换到单精度时相同
+        /// 固定输入的分数和最终状态应保持稳定，避免模型参数或计算流程被意外改动。
         /// </summary>
-        public void ComputeScoresTest_ShouldBeTheSame(double rod_x1, double rod_x2, double rod_y1, double rod_y2, double fish_x1, double fish_x2, double fish_y1, double fish_y2, int fish_label)
+        public void ComputeScores_KnownInput_ShouldMatchExpectedValues(double rod_x1, double rod_x2, double rod_y1, double rod_y2, double fish_x1, double fish_x2, double fish_y1, double fish_y2, int fish_label)
         {
-            //
-            RodInput rodInput = new RodInput
+            var rodInput = new RodInput
             {
                 rod_x1 = rod_x1,
                 rod_x2 = rod_x2,
@@ -32,16 +26,14 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFishingTests
                 fish_y2 = fish_y2,
                 fish_label = fish_label
             };
-            RodNetTorch sut = new RodNetTorch();
 
-            //
-            Tensor outputTensor = sut.ComputeScores(rodInput);
-            double[] pred = RodNet.ComputeScores(rodInput);
+            var scores = RodNet.ComputeScores(rodInput);
+            var state = new RodNet().GetRodState(rodInput);
 
-            //
-            Assert.Equal((float)pred[0], (float)outputTensor.data<double>()[0]);    // 对比时降低精度，差不多就行
-            Assert.Equal((float)pred[1], (float)outputTensor.data<double>()[1]);
-            Assert.Equal((float)pred[2], (float)outputTensor.data<double>()[2]);
+            Assert.Equal(-0.29814935209909826, scores[0], 12);
+            Assert.Equal(0.000000337885823033982, scores[1], 12);
+            Assert.Equal(0.9981490142132753, scores[2], 12);
+            Assert.Equal(2, state);
         }
     }
 }

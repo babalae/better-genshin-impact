@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.Common.Resin;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script.Dependence.Model;
 using BetterGenshinImpact.GameTask;
@@ -516,10 +517,10 @@ public class Dispatcher
     /// </summary>
     /// <param name="result">秘境或首领任务的结果。</param>
     /// <returns>名称到数量的字典。</returns>
-    private Dictionary<string, int> ToRewardDictionary(SoloTaskResult<RewardSummary> result)
+    private Dictionary<string, int> ToRewardDictionary(SoloTaskResult<ResinClaimData> result)
     {
         LogIfFailed(result);
-        return result.Data?.ToDictionary() ?? [];
+        return result.Data?.Rewards.ToDictionary() ?? [];
     }
 
     /// <summary>

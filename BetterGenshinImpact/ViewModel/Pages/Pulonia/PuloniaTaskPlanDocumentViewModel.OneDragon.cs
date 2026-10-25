@@ -1,3 +1,5 @@
+using BetterGenshinImpact.GameTask.Common.Resin;
+using BetterGenshinImpact.GameTask.SoloTask;
 using System;
 using System.Linq;
 using BetterGenshinImpact.Pulonia.Models;
@@ -37,9 +39,31 @@ public partial class PuloniaTaskPlanDocumentViewModel
             PuloniaPresetStatus.Incompatible => "⚠ 预设不兼容",
             _ => resolution.Preset!.Name
         };
-        var keys = new[] { "party_name", "team_name", "team", "fight_team_name", "domain_name", "boss_name", "boss_num", "strategy_name", "combat_script", "run_count", "count", "round_count", "country" };
+        var keys = new[] { "party_name", "team_name", "team", "fight_team_name", "domain_name", "boss_name", "boss_num", "strategy_name", "combat_script", "country" };
+        var capability = node.Model.TaskType switch
+        {
+            "solo.auto_domain" => ResinCapabilities.Domain,
+            "solo.auto_stygian_onslaught" => ResinCapabilities.StygianOnslaught,
+            "solo.auto_boss" => ResinCapabilities.Boss,
+            "solo.auto_ley_line_outcrop" => ResinCapabilities.LeyLineOutcrop,
+            _ => null
+        };
         var summary = keys.Where(values.ContainsKey).Select(key =>
             $"{PuloniaTaskFieldNames.GetDisplayName(key)}：{DisplayValue(key)}").ToList();
+        if (capability is not null)
+        {
+            // 摘要与卡片共用能力校验；缺失或 null 沿用任务默认值，格式错误仅在预览中提示。
+            try
+            {
+                var usage = values["resin_usage"] is { Type: not JTokenType.Null } resin
+                    ? SoloTaskJson.Deserialize<ResinUsage>(resin.ToString()) : capability.Defaults;
+                summary.Add("树脂使用：" + ResinUsageText.Summary(usage, capability));
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                summary.Add("树脂使用：参数格式无效");
+            }
+        }
         if (values["fight_config"] is JObject fight && !string.IsNullOrWhiteSpace(fight.Value<string>("StrategyName")))
             summary.Add("战斗策略：" + fight.Value<string>("StrategyName"));
         if (!string.IsNullOrWhiteSpace(node.Path)) summary.Add("资源：" + node.Path);
@@ -47,12 +71,9 @@ public partial class PuloniaTaskPlanDocumentViewModel
         if (values["weekday_overrides"] is JObject weekly && weekly.Count > 0) summary.Add("已配置每周安排（配置中查看）");
         return string.Join(" · ", summary);
 
-        // 次数参数的 0 和树脂耗尽模式有业务语义，清单不能把它们显示成执行零次或一次。
+        // 树脂次数及方式由公共摘要解释，其余字段保留原始显示值。
         string DisplayValue(string key)
         {
-            if (key == "round_count" && values.Value<int?>(key) == 0) return "按树脂配置";
-            if (key == "run_count" && values.Value<bool?>("specify_run_count") == false) return "原粹树脂用尽";
-            if (key == "count" && values.Value<bool?>("is_resin_exhaustion_mode") == true) return "树脂用尽";
             return values[key]?.Type == JTokenType.Null ? "默认" : values[key]!.ToString();
         }
     }

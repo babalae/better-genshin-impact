@@ -334,6 +334,8 @@ public partial class App : Application
                 services.AddSingleton<BetterGenshinImpact.ViewModel.Pages.Pulonia.PuloniaPlanEditingSession>();
                 services.AddSingleton<BetterGenshinImpact.ViewModel.Pages.Pulonia.IPuloniaTaskSettingsDialogs,
                     BetterGenshinImpact.View.Windows.Pulonia.PuloniaTaskSettingsDialogs>();
+                // 树脂设置公共弹窗；各宿主页面在后续接入时只依赖视图模型层接口。
+                services.AddSingleton<BetterGenshinImpact.ViewModel.Resin.IResinSettingsDialogs, ResinSettingsDialogs>();
                 services.AddSingleton<IMusicScoreParser, MusicScoreParser>();
                 services.AddSingleton<IMusicStateStore, MusicStateStore>();
                 services.AddSingleton<IInstrumentProfileService, InstrumentProfileService>();

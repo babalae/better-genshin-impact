@@ -1,4 +1,8 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
+using BetterGenshinImpact.GameTask.Common.Resin;
+using BetterGenshinImpact.ViewModel.Resin;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.ViewModel.SoloTaskSettings;
@@ -19,15 +23,35 @@ public partial class CraftCondensedResinSettingsViewModel : SoloTaskSettingsView
     [ObservableProperty] private string _country;
 
     /// <summary>合成后保留的原粹树脂数量；不大于零时按默认方式合成。</summary>
-    [ObservableProperty] private int _minResinToKeep;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ResinSummary))]
+    private int _minResinToKeep;
+    /// <summary>可选弹窗服务；隔离环境仅显示摘要。</summary>
+    private readonly IResinSettingsDialogs? _dialogs;
+    /// <summary>入口卡片的统一合成摘要。</summary>
+    public string ResinSummary => ResinUsageText.CraftSummary(MinResinToKeep);
+    /// <summary>是否可以打开编辑器。</summary>
+    public bool CanEditResin => _dialogs is not null;
 
     /// <summary>从当前有效参数读取国家。</summary>
     /// <param name="original">当前有效参数快照。</param>
-    public CraftCondensedResinSettingsViewModel(JObject original) : base(original)
+    public CraftCondensedResinSettingsViewModel(JObject original) : this(original, null) { }
+
+    /// <summary>注入可选的树脂弹窗服务，保留快照中的 -1 表示以免产生无操作修改。</summary>
+    [ActivatorUtilitiesConstructor]
+    public CraftCondensedResinSettingsViewModel(JObject original, IResinSettingsDialogs? dialogs = null) : base(original)
     {
+        _dialogs = dialogs;
         _originalCountry = ReadString(Original, "country");
         _country = _originalCountry;
         _minResinToKeep = ReadInt(Original, "min_resin_to_keep");
+    }
+
+    /// <summary>确定后只更新本页面草稿，取消不改值；提交仍由宿主负责。</summary>
+    [RelayCommand(CanExecute = nameof(CanEditResin))]
+    private void EditResin()
+    {
+        if (_dialogs?.EditCraftResin(MinResinToKeep) is { } value) MinResinToKeep = value;
     }
 
     /// <summary>国家变化时提交 country。</summary>

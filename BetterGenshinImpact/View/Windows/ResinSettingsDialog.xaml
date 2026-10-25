@@ -1,0 +1,51 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.ResinSettingsDialog"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:vm="clr-namespace:BetterGenshinImpact.ViewModel.Resin"
+                 xmlns:resin="clr-namespace:BetterGenshinImpact.View.Controls.Resin"
+                 Title="{Binding Title, Mode=OneWay}" Width="480" SizeToContent="Height" ResizeMode="NoResize"
+                 WindowStartupLocation="CenterOwner" WindowBackdropType="Auto" ExtendsContentIntoTitleBar="True"
+                 Background="{DynamicResource ApplicationBackgroundBrush}" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                 FontFamily="{DynamicResource TextThemeFontFamily}" FontSize="14" UseLayoutRounding="True">
+    <ui:FluentWindow.Resources>
+        <DataTemplate DataType="{x:Type vm:ResinUsageEditorViewModel}"><resin:ResinUsageEditorView /></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:CraftResinEditorViewModel}"><resin:CraftResinEditorView /></DataTemplate>
+        <Style x:Key="ResinDialogButton" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+            <Setter Property="MinWidth" Value="72" /><Setter Property="Padding" Value="12,6" />
+        </Style>
+    </ui:FluentWindow.Resources>
+    <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+        <ui:TitleBar Title="{Binding Title, Mode=OneWay}" ShowMinimize="False" ShowMaximize="False" />
+        <!-- 隐式模板属于窗口本身；内容双向拉伸，子视图独立加载行资源。 -->
+        <ContentControl Grid.Row="1" Content="{Binding Mode=OneWay}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+        <Border Grid.Row="2" Padding="20,12" Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}">
+            <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <Grid Margin="0,0,12,0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Summary, Mode=OneWay}" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers><DataTrigger Binding="{Binding ValidationMessage, Mode=OneWay}" Value="{x:Null}"><Setter Property="Visibility" Value="Visible" /></DataTrigger></Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock Text="{Binding ValidationMessage, Mode=OneWay}" TextWrapping="Wrap" Foreground="{DynamicResource SystemFillColorCautionBrush}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                <Style.Triggers><DataTrigger Binding="{Binding ValidationMessage, Mode=OneWay}" Value="{x:Null}"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <ui:Button Content="确定" Style="{StaticResource ResinDialogButton}" Appearance="Primary" IsDefault="True"
+                               IsEnabled="{Binding CanConfirm, Mode=OneWay}" Click="Confirm_Click" Margin="0,0,8,0" />
+                    <ui:Button Content="取消" Style="{StaticResource ResinDialogButton}" IsCancel="True" Click="Cancel_Click" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</ui:FluentWindow>

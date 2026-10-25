@@ -424,7 +424,7 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
                     continue;
                 var defaultProperty = value.DefaultParameters.Property(property.Name);
                 ParameterFields.Add(new PuloniaTaskParameterFieldViewModel(property.Name,
-                    property.Name is "strategy_name" or "combat_strategy_path"
+                    property.Name is "strategy_name" or "combat_strategy_path" or "resin_usage"
                         ? BetterGenshinImpact.ViewModel.Pages.Pulonia.PuloniaOneDragonSettingChoices.Decorate(property.Name, fieldSchema, defaultProperty?.Value, value.TaskType)
                         : fieldSchema,
                     defaultProperty?.Value, defaultProperty is not null, required.Contains(property.Name)));

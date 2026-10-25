@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.ViewModel.Windows.Pulonia;
+using BetterGenshinImpact.ViewModel.Resin;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -32,12 +33,16 @@ public partial class PuloniaOneDragonParameterFieldViewModel : ObservableObject
     private readonly bool _initialBoolean;
     /// <summary>初始选项，未知或空选项不会仅因打开设置被改写。</summary>
     private readonly string? _initialChoice;
-    /// <summary>树脂优先级以有序子字段展示，保存时恢复数组类型。</summary>
+    /// <summary>数组以有序子字段展示，保存时恢复数组类型。</summary>
     private readonly bool _isArray;
     /// <summary>对象的子设置。</summary>
     public IReadOnlyList<PuloniaOneDragonParameterFieldViewModel> Children { get; }
     /// <summary>下拉框选项。</summary>
     public IReadOnlyList<string> Choices => _scalar.Choices;
+    /// <summary>树脂使用整体编辑形态，不递归展开原始嵌套字段。</summary>
+    public bool IsResinUsage => _scalar.IsResinUsageEditor;
+    /// <summary>公共树脂入口，其他形态为 null。</summary>
+    public ResinUsageEntryViewModel? Resin => _scalar.Resin;
     /// <summary>是否为对象卡片。</summary>
     public bool IsObject => Children.Count > 0;
     /// <summary>是否为高级 JSON 设置。</summary>
@@ -68,7 +73,7 @@ public partial class PuloniaOneDragonParameterFieldViewModel : ObservableObject
     public string? SelectedChoice { get => _scalar.SelectedChoice; set { _scalar.SelectedChoice = value; OnPropertyChanged(); } }
 
     /// <summary>不解析草稿即可判断是否输入过，切换行不会因无效 JSON 丢失草稿。</summary>
-    internal bool HasInputChanges => IsObject ? Children.Any(child => child.HasInputChanges)
+    internal bool HasInputChanges => IsResinUsage ? _scalar.HasResinChanges : IsObject ? Children.Any(child => child.HasInputChanges)
         : IsNumber ? !NumberValue.Equals(_initialNumber)
         : TextValue != _initialText || BooleanValue != _initialBoolean || SelectedChoice != _initialChoice;
 
@@ -77,22 +82,24 @@ public partial class PuloniaOneDragonParameterFieldViewModel : ObservableObject
 
     /// <summary>按能力参数生成老一条龙样式所需的字段，复杂对象递归展示。</summary>
     public PuloniaOneDragonParameterFieldViewModel(string name, JObject schema, JToken? value,
-        bool required = false)
+        bool required = false, IResinSettingsDialogs? dialogs = null)
     {
         Name = name;
         // 战斗对象等子设置来自强类型配置，键可能是帕斯卡命名，先转为蛇形再查共用中文名。
         var displayKey = System.Text.Json.JsonNamingPolicy.SnakeCaseLower.ConvertName(name);
         DisplayName = schema.Value<string>("title") ?? PuloniaTaskFieldNames.GetDisplayName(displayKey);
         _original = value?.DeepClone();
-        _scalar = new(name, schema, value, value is not null, required);
+        _scalar = new(name, schema, value, value is not null, required, dialogs);
+        if (Resin is not null)
+            Resin.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(Resin.Value)) OnPropertyChanged(nameof(Resin)); };
         Description = schema.Value<string>("description") ?? (required ? "请选择或填写此项设置。" : "未修改的设置继续使用参数来源中的值。");
         _isArray = schema["type"] is JArray allowedTypes
             ? allowedTypes.Values<string>().Contains("array")
             : schema.Value<string>("type") == "array";
-        Children = schema["properties"] is JObject properties
+        Children = !IsResinUsage && schema["properties"] is JObject properties
             ? properties.Properties().Select(p => new PuloniaOneDragonParameterFieldViewModel(p.Name,
                 (JObject)p.Value, value is JArray array && int.TryParse(p.Name, out var index) && index < array.Count
-                    ? array[index] : (value as JObject)?[p.Name] ?? p.Value["default"])).ToArray() : [];
+                    ? array[index] : (value as JObject)?[p.Name] ?? p.Value["default"], dialogs: dialogs)).ToArray() : [];
         var type = schema["type"] is JArray types ? types.Values<string>().FirstOrDefault(t => t != "null") : schema.Value<string>("type");
         IsNumber = _scalar.IsTextEditor && type is "integer" or "number";
         Minimum = schema.Value<double?>("minimum") ?? -double.MaxValue;
@@ -106,6 +113,7 @@ public partial class PuloniaOneDragonParameterFieldViewModel : ObservableObject
     /// <summary>返回变化后的值；未编辑字段保留原始 null、缺失字段和 JSON 类型。</summary>
     public JToken? BuildValue()
     {
+        if (IsResinUsage) return _scalar.HasResinChanges ? _scalar.BuildValue() : _original?.DeepClone();
         if (IsObject)
         {
             if (Children.All(child => !child.HasChanges())) return _original?.DeepClone();

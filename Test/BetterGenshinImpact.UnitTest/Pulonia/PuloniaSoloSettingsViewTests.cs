@@ -7,6 +7,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.ViewModel.SoloTaskSettings;
+using BetterGenshinImpact.UnitTest.ViewModelTests.ResinTests;
 using Newtonsoft.Json.Linq;
 using Wpf.Ui.Appearance;
 using Wpf.Ui.Markup;
@@ -47,9 +48,8 @@ public sealed class PuloniaSoloSettingsViewTests
                             // 与实际 ContentControl 相同，通过 VM 的隐式模板实例化子视图。
                             var vm = (SoloTaskSettingsViewModel)Activator.CreateInstance(descriptor.SettingsViewModelType!,
                                 descriptor.TaskId == "auto_boss" ? [new JObject(), null] : [new JObject()])!;
-                            if (vm is AutoDomainSettingsViewModel domain) { domain.WeeklyEnabled = true; domain.SpecifyResinUse = true; domain.AutoArtifactSalvage = true; }
-                            if (vm is AutoBossSettingsViewModel boss) boss.SpecifyRunCount = true;
-                            if (vm is AutoStygianOnslaughtSettingsViewModel stygian) { stygian.SpecifyResinUse = true; stygian.AutoArtifactSalvage = true; }
+                            if (vm is AutoDomainSettingsViewModel domain) { domain.WeeklyEnabled = true; domain.AutoArtifactSalvage = true; }
+                            if (vm is AutoStygianOnslaughtSettingsViewModel stygian) { stygian.AutoArtifactSalvage = true; }
                             var template = (DataTemplate)app.FindResource(new DataTemplateKey(vm.GetType()));
                             var view = Assert.IsAssignableFrom<FrameworkElement>(template.LoadContent());
                             view.DataContext = vm;
@@ -77,6 +77,8 @@ public sealed class PuloniaSoloSettingsViewTests
                             }
                             SavePreview(view, descriptor.TaskId + "-" + theme);
                         }
+                        // 树脂内容共用本测试的唯一 Application、STA、主题资源和绑定错误监听器，不额外创建窗口。
+                        ResinSettingsViewAssertions.VerifyCurrentTheme();
                     }
                     Assert.Empty(trace.Errors);
                 }

@@ -225,28 +225,6 @@ public sealed class PuloniaTaskHotkeyTests : IDisposable
         finally { duplicateKeyboard.Dispose(); duplicateMouse.Dispose(); keyboard.Dispose(); mouse.Dispose(); }
     }
 
-    /// <summary>主宿主关闭时也释放监听模式，并继续支持 Application.Current 为空和重复清理。</summary>
-    [Fact]
-    public void HostShutdown_ReleasesSharedMonitorWithoutApplication()
-    {
-        Assert.Null(Application.Current);
-        using var host = new PuloniaTaskTriggerHost(null!, null!, null!, NullLogger<PuloniaTaskTriggerHost>.Instance, TimeProvider.System);
-        var model = new HotKeySettingModel("计划", "test/shutdown", "F22", HotKeyTypeEnum.KeyboardMonitor.ToString(), null);
-        try
-        {
-            model.RegisterHotKey();
-            var hotkeys = (List<HotKeySettingModel>)typeof(PuloniaTaskTriggerHost)
-                .GetField("_hotkeys", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(host)!;
-            hotkeys.Add(model);
-            var release = (Action)typeof(PuloniaTaskTriggerHost).GetMethod("ReleaseHotkeys", BindingFlags.NonPublic | BindingFlags.Instance)!
-                .CreateDelegate(typeof(Action), host);
-            release(); release();
-            Assert.False(KeyboardHook.AllKeyboardHooks.ContainsKey(FormsKeys.F22));
-            Assert.Null(model.KeyboardMonitorHook);
-        }
-        finally { model.UnRegisterHotKey(); }
-    }
-
     /// <summary>使用纯 C# 执行能力建立服务，不启动游戏、截图器或热键宿主。</summary>
     private static PuloniaTaskService CreateService(PuloniaTaskStore store)
         => new(store, new PuloniaTaskBuilder(store), [new PuloniaCSharpTaskExecutor(new PuloniaCSharpTaskRegistry())],

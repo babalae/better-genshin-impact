@@ -3,6 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoBoss;
+using BetterGenshinImpact.GameTask.Common.Resin;
+using BetterGenshinImpact.GameTask.SoloTask;
+using BetterGenshinImpact.ViewModel.Resin;
+using Microsoft.Extensions.DependencyInjection;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
@@ -19,9 +24,8 @@ public partial class AutoBossSettingsViewModel : SoloTaskSettingsViewModel
     /// <inheritdoc />
     public override string[] EditedParameterNames =>
     [
-        "strategy_name", "combat_strategy_path", "boss_name", "team_name", "specify_run_count", "run_count",
-        "use_transient_resin", "use_fragile_resin", "return_to_statue_after_each_round",
-        "reward_recognition_enabled", "revive_retry_count", "total_run_count_limit", "reward_count_reset_id"
+        "strategy_name", "combat_strategy_path", "boss_name", "team_name", "return_to_statue_after_each_round",
+        "reward_recognition_enabled", "revive_retry_count", "total_run_count_limit", "reward_count_reset_id", "resin_usage"
     ];
 
     /// <summary>载入时的 strategy_name 原值。</summary>
@@ -34,14 +38,6 @@ public partial class AutoBossSettingsViewModel : SoloTaskSettingsViewModel
     private readonly string _originalBossName;
     /// <summary>载入时的队伍名快照。</summary>
     private readonly string _originalTeamName;
-    /// <summary>载入时的次数限制开关快照。</summary>
-    private readonly bool _originalSpecifyRunCount;
-    /// <summary>载入时的单次运行上限快照。</summary>
-    private readonly int _originalRunCount;
-    /// <summary>载入时的须臾树脂补充快照。</summary>
-    private readonly bool _originalUseTransientResin;
-    /// <summary>载入时的脆弱树脂补充快照。</summary>
-    private readonly bool _originalUseFragileResin;
     /// <summary>载入时的回雕像开关快照。</summary>
     private readonly bool _originalReturnToStatue;
     /// <summary>载入时的奖励识别快照。</summary>
@@ -57,14 +53,6 @@ public partial class AutoBossSettingsViewModel : SoloTaskSettingsViewModel
     [ObservableProperty] private string _bossName;
     /// <summary>进入战斗前切换的队伍名称，留空不更换。</summary>
     [ObservableProperty] private string _teamName;
-    /// <summary>是否限制成功领奖次数。</summary>
-    [ObservableProperty] private bool _specifyRunCount;
-    /// <summary>单次运行的成功领奖次数上限。</summary>
-    [ObservableProperty] private int _runCount;
-    /// <summary>原粹不足时是否使用须臾树脂补充。</summary>
-    [ObservableProperty] private bool _useTransientResin;
-    /// <summary>原粹不足时是否使用脆弱树脂补充。</summary>
-    [ObservableProperty] private bool _useFragileResin;
     /// <summary>每轮领奖后是否返回七天神像。</summary>
     [ObservableProperty] private bool _returnToStatueAfterEachRound;
     /// <summary>是否启用奖励名称识别。</summary>
@@ -88,8 +76,20 @@ public partial class AutoBossSettingsViewModel : SoloTaskSettingsViewModel
     /// <summary>从当前有效参数读取首领讨伐配置。</summary>
     /// <param name="original">当前有效参数快照。</param>
     /// <param name="progressStore">累计次数存储；新增任务或测试可以不提供。</param>
-    public AutoBossSettingsViewModel(JObject original, PuloniaTaskStore? progressStore = null) : base(original)
+    public AutoBossSettingsViewModel(JObject original, PuloniaTaskStore? progressStore = null) : this(original, progressStore, null) { }
+
+    /// <summary>载入时的树脂快照。</summary>
+    private readonly ResinUsage _originalResin;
+    /// <summary>本节点的树脂设置入口，不直接改写全局配置。</summary>
+    public ResinUsageEntryViewModel Resin { get; }
+
+    /// <summary>注入累计存储与可选树脂弹窗服务。</summary>
+    [ActivatorUtilitiesConstructor]
+    public AutoBossSettingsViewModel(JObject original, PuloniaTaskStore? progressStore = null, IResinSettingsDialogs? dialogs = null) : base(original)
     {
+        _originalResin = ResinUsageViewModelSupport.Read(Original["resin_usage"], AutoBossTask.ResinCapability);
+        Resin = new("自动首领讨伐", AutoBossTask.ResinCapability, _originalResin, dialogs);
+        TrackEdits([Resin]);
         _progressStore = progressStore;
         _totalRunCountLimit = ReadInt(Original, PuloniaSoloTaskExecutor.BossTotalRunCountLimitParameter);
         _rewardCountResetId = ReadString(Original, PuloniaSoloTaskExecutor.BossRewardCountResetParameter);
@@ -101,20 +101,12 @@ public partial class AutoBossSettingsViewModel : SoloTaskSettingsViewModel
             : _originalCombatStrategyPath);
         _originalBossName = ReadString(Original, "boss_name");
         _originalTeamName = ReadString(Original, "team_name");
-        _originalSpecifyRunCount = ReadBool(Original, "specify_run_count");
-        _originalRunCount = ReadInt(Original, "run_count", 1);
-        _originalUseTransientResin = ReadBool(Original, "use_transient_resin");
-        _originalUseFragileResin = ReadBool(Original, "use_fragile_resin");
         _originalReturnToStatue = ReadBool(Original, "return_to_statue_after_each_round");
         _originalRewardRecognitionEnabled = ReadBool(Original, "reward_recognition_enabled");
         _originalReviveRetryCount = ReadInt(Original, "revive_retry_count", 3);
         _strategyName = _originalStrategyName;
         _bossName = _originalBossName;
         _teamName = _originalTeamName;
-        _specifyRunCount = _originalSpecifyRunCount;
-        _runCount = _originalRunCount;
-        _useTransientResin = _originalUseTransientResin;
-        _useFragileResin = _originalUseFragileResin;
         _returnToStatueAfterEachRound = _originalReturnToStatue;
         _rewardRecognitionEnabled = _originalRewardRecognitionEnabled;
         _reviveRetryCount = _originalReviveRetryCount;
@@ -124,6 +116,7 @@ public partial class AutoBossSettingsViewModel : SoloTaskSettingsViewModel
     /// <param name="changes">接收变化的对象。</param>
     public override void CollectChanges(JObject changes)
     {
+        if (Resin.Value != _originalResin) changes["resin_usage"] = JObject.Parse(SoloTaskJson.Serialize(Resin.Value));
         // 修改策略时两个字段都写成策略名，避免旧路径继续覆盖新选择
         if (!string.Equals(_originalStrategyName, StrategyName, StringComparison.Ordinal))
         {
@@ -132,10 +125,6 @@ public partial class AutoBossSettingsViewModel : SoloTaskSettingsViewModel
         }
         WriteString(changes, "boss_name", _originalBossName, BossName);
         WriteString(changes, "team_name", _originalTeamName, TeamName);
-        WriteBool(changes, "specify_run_count", _originalSpecifyRunCount, SpecifyRunCount);
-        WriteInt(changes, "run_count", _originalRunCount, RunCount);
-        WriteBool(changes, "use_transient_resin", _originalUseTransientResin, UseTransientResin);
-        WriteBool(changes, "use_fragile_resin", _originalUseFragileResin, UseFragileResin);
         WriteBool(changes, "return_to_statue_after_each_round", _originalReturnToStatue, ReturnToStatueAfterEachRound);
         WriteBool(changes, "reward_recognition_enabled", _originalRewardRecognitionEnabled, RewardRecognitionEnabled);
         WriteInt(changes, "revive_retry_count", _originalReviveRetryCount, ReviveRetryCount);

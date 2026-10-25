@@ -10,6 +10,7 @@ using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.Pulonia.Executors;
+using BetterGenshinImpact.ViewModel.Resin;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.ViewModel.Pages.Pulonia;
@@ -32,6 +33,12 @@ internal static class PuloniaOneDragonSettingChoices
     {
         var result = (JObject)schema.DeepClone();
         var key = System.Text.Json.JsonNamingPolicy.SnakeCaseLower.ConvertName(name);
+        // 仅装饰界面 Schema，执行合同仍为封闭的嵌套 resin_usage 对象。
+        if (key == "resin_usage" && ResinUsageViewModelSupport.GetTask(taskType) is not null)
+        {
+            result["x-resin-usage"] = taskType;
+            return result;
+        }
         if (key is "strategy_name" or "combat_strategy_path")
         {
             result.Remove("enum");
@@ -62,10 +69,6 @@ internal static class PuloniaOneDragonSettingChoices
             "country" => "选择任务前往的国家。",
             "party_name" or "team_name" or "team" or "fight_team_name" => "填写游戏内队伍名称，留空时使用当前队伍。",
             "strategy_name" or "combat_strategy_path" => "选择当前任务使用的战斗策略。",
-            "round_count" => "0 表示按树脂配置刷取，其余值表示指定轮数。",
-            "domain_round_num" => "9999 表示按树脂配置刷取，其余值表示指定轮数。",
-            "is_resin_exhaustion_mode" => "开启后持续刷取至树脂耗尽。",
-            "resin_priority_list" => "按列表顺序使用树脂。",
             "weekday_overrides" => "按周日到周六安排任务，服务器时间凌晨四点切换日期。",
             "boss_num" => "选择幽境危战中的首领序号（1—3）。",
             "fight_config" or "finish_detect_config" => "展开设置当前任务的战斗与结束检测方式。",
@@ -78,16 +81,6 @@ internal static class PuloniaOneDragonSettingChoices
             result["properties"] = new JObject(properties.Properties().Select(p => new JProperty(p.Name,
                 Decorate(p.Name, (JObject)p.Value, values[p.Name], taskType))));
         }
-        if (key == "resin_priority_list" && value is JArray priority)
-        {
-            // 优先顺序使用与老一条龙一致的树脂下拉框，持久化仍是原有字符串数组。
-            result["properties"] = new JObject(priority.Select((item, index) => new JProperty(index.ToString(), new JObject
-            {
-                ["type"] = "string", ["title"] = $"第 {index + 1} 优先",
-                ["enum"] = new JArray(new[] { "浓缩树脂", "原粹树脂", "须臾树脂", "脆弱树脂" }
-                    .Append(item.Value<string>() ?? "").Distinct())
-            })));
-        }
         return result;
     }
 
@@ -95,11 +88,11 @@ internal static class PuloniaOneDragonSettingChoices
     internal static JObject WeekdaySchema(JObject properties, JObject values, string taskType)
     {
         var days = new[] { "周日", "周一", "周二", "周三", "周四", "周五", "周六" };
-        // 只展示参数中存在的键；独立任务参数使用 combat_strategy_path、domain_round_num 等新参数名
+        // 只展示参数中存在的键；树脂设置按 resin_usage 对象整体覆盖。
         var keys = new[]
         {
             "domain_name", "party_name", "sunday_selected_value", "strategy_name", "combat_strategy_path",
-            "round_count", "domain_round_num", "ley_line_outcrop_type", "country", "team", "count"
+            "round_count", "ley_line_outcrop_type", "country", "team", "count", "resin_usage"
         };
         return new JObject
         {

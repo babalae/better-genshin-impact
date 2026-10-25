@@ -1,9 +1,10 @@
+using BetterGenshinImpact.GameTask.Common.Resin;
+using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.GameTask.AutoBoss;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.GameTask.Common.Job;
-using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
@@ -20,6 +21,26 @@ namespace BetterGenshinImpact.UnitTest.Pulonia;
 /// </summary>
 public sealed class PuloniaOneDragonEditorTests : IDisposable
 {
+    /// <summary>四类树脂任务的摘要共用文案及对应能力，首领不能套用秘境的支持范围。</summary>
+    [Theory]
+    [InlineData("solo.auto_domain", "领奖 6 次 · 浓缩 → 原粹")]
+    [InlineData("solo.auto_stygian_onslaught", "领奖 6 次 · 浓缩 → 原粹")]
+    [InlineData("solo.auto_ley_line_outcrop", "领奖 6 次 · 浓缩 → 原粹")]
+    [InlineData("solo.auto_boss", "此任务不能使用浓缩树脂。")]
+    public void ResinSummary_UsesTaskSpecificCapability(string taskType, string expected)
+    {
+        var definition = PuloniaSoloTestDefinitions.OneDragonCandidates().Single(item => item.TaskType == taskType);
+        var usage = new ResinUsage { Mode = ResinUsageMode.RunCount, RunCount = 6 };
+        var task = new PuloniaTask { Name = "树脂任务", TaskType = taskType,
+            Parameters = new JObject { ["resin_usage"] = JObject.Parse(SoloTaskJson.Serialize(usage)) } };
+        var document = new PuloniaTaskPlanDocumentViewModel(new PuloniaTaskPlan
+            { Name = "摘要测试", RootTask = new PuloniaTask { Children = [task] } }, [], new PuloniaTaskClipboardService(), false);
+        document.SetDefinitions([definition]);
+        var summary = document.GetOneDragonConfigurationSummary(document.RootNode.Children[0]);
+        Assert.Contains("树脂使用：" + expected, summary);
+        Assert.DoesNotContain("原粹树脂用尽", summary);
+    }
+
     /// <summary>
     /// 当前测试独占的存储目录，避免接触程序真实的计划文件。
     /// </summary>
@@ -204,7 +225,7 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
         var preset = new PuloniaTaskPreset
         {
             Name = "首领预设", TaskType = definition.TaskType, SchemaVersion = definition.SchemaVersion,
-            Values = new JObject { ["run_count"] = 2 }
+            Values = new JObject { ["resin_usage"] = JObject.Parse(SoloTaskJson.Serialize(ResinUsageLegacyMapper.FromBoss(true, 2, false, false))) }
         };
         var document = new PuloniaTaskPlanDocumentViewModel(new PuloniaTaskPlan
         {
@@ -224,7 +245,7 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
         var nodeB = document.RootNode.Children[1];
 
         // 打开配置不产生草稿：预设次数只是继承结果，节点自身没有持久化任何参数。
-        Assert.Equal(2, document.GetOneDragonParameters(nodeA)["run_count"]!.Value<int>());
+        Assert.Equal(2, document.GetOneDragonParameters(nodeA)["resin_usage"]!["run_count"]!.Value<int>());
         Assert.Empty(nodeA.Model.Parameters);
         Assert.Empty(nodeB.Model.Parameters);
 
@@ -232,17 +253,17 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
 
         Assert.Single(nodeA.Model.Parameters);
         Assert.Equal("固定队伍", nodeA.Model.Parameters["team_name"]!.Value<string>());
-        Assert.False(nodeA.Model.Parameters.ContainsKey("run_count"));
-        Assert.Equal(2, document.GetOneDragonParameters(nodeA)["run_count"]!.Value<int>());
+        Assert.False(nodeA.Model.Parameters.ContainsKey("resin_usage"));
+        Assert.Equal(2, document.GetOneDragonParameters(nodeA)["resin_usage"]!["run_count"]!.Value<int>());
         Assert.NotEqual("固定队伍", document.GetOneDragonParameters(nodeB)["team_name"]?.Value<string>());
 
-        document.ReplaceOneDragonParameters(nodeB, new JObject { ["run_count"] = 5 });
+        document.ReplaceOneDragonParameters(nodeB, new JObject { ["resin_usage"] = JObject.Parse(SoloTaskJson.Serialize(ResinUsageLegacyMapper.FromBoss(true, 5, false, false))) });
 
         Assert.Single(nodeB.Model.Parameters);
-        Assert.Equal(5, nodeB.Model.Parameters["run_count"]!.Value<int>());
+        Assert.Equal(5, nodeB.Model.Parameters["resin_usage"]!["run_count"]!.Value<int>());
         Assert.Single(nodeA.Model.Parameters);
         Assert.Equal("固定队伍", nodeA.Model.Parameters["team_name"]!.Value<string>());
-        Assert.Equal(2, document.GetOneDragonParameters(nodeA)["run_count"]!.Value<int>());
+        Assert.Equal(2, document.GetOneDragonParameters(nodeA)["resin_usage"]!["run_count"]!.Value<int>());
         Assert.NotEqual("固定队伍", document.GetOneDragonParameters(nodeB)["team_name"]?.Value<string>());
     }
 

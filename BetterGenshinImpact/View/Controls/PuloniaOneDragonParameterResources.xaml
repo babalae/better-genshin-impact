@@ -1,5 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:combat="clr-namespace:BetterGenshinImpact.View.Controls.CombatStrategy"
+                    xmlns:resin="clr-namespace:BetterGenshinImpact.View.Controls.Resin"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
 
@@ -23,10 +24,14 @@
     <DataTemplate x:Key="OneDragonParameterFieldTemplate">
 
         <!--
-            根容器同时承载七种字段形态，由各形态的 Visibility 保证同一时刻只显示一种：
-            IsBoolean / IsChoice / IsCombatStrategy / IsText / IsNumber / IsObject / IsAdvancedJson 互斥为 True。
+            根容器同时承载八种字段形态，由各形态的 Visibility 保证同一时刻只显示一种：
+            IsBoolean / IsChoice / IsCombatStrategy / IsResinUsage / IsText / IsNumber / IsObject / IsAdvancedJson 互斥为 True。
         -->
         <Grid>
+            <!-- 树脂使用保持嵌套对象合同，只通过公共弹窗整体编辑。 -->
+            <resin:ResinSettingsCard Summary="{Binding Resin.Summary, Mode=OneWay}" Problem="{Binding Resin.Problem, Mode=OneWay}"
+                                    Command="{Binding Resin.EditCommand, Mode=OneWay}" Margin="0,0,0,8"
+                                    Visibility="{Binding IsResinUsage, Converter={StaticResource FieldVisibility}, Mode=OneWay}" />
 
             <!--  布尔字段：右侧开关  -->
             <ui:CardControl Margin="0,0,0,8"

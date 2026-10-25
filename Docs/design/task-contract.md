@@ -196,6 +196,7 @@ public interface ISoloTask<TParam, TData>
 - **JS 对外合同：** 有 6 个参数类已经作为 JS 宿主类型暴露给社区脚本：`AutoDomainParam`、`AutoBossParam`、`AutoFightParam`、`AutoLeyLineOutcropParam`、`AutoStygianOnslaughtParam`、`CountInventoryItemParam`。
   - 它们直接充当 `TParam`。
   - 现有的构造函数和属性不删、不改名、不改语义，只允许新增无参构造函数和新属性。
+  - 秘境、首领、幽境危战、地脉花的旧树脂属性保留为 `[JsonIgnore]` 兼容属性，实际读写新属性 `ResinUsage`；同时注册了宿主类型 `ResinUsage`、`ResinUsageMode`、`OriginalResinTier`、`ResinKind`，新脚本可以直接修改 `param.ResinUsage`。见[树脂使用设置统一](resin-usage-settings.md) 5.5 节。
 - **每周安排：** 属于 Pulonia 编排参数，不加入任务的强类型 `TParam`。
   - `PuloniaSoloTaskExecutor` 为所有独立任务的 Schema 添加 `weekday_overrides`，按服务器时间（凌晨 4 点日切）合并当天覆盖，当天禁用则返回 `Skipped(not_scheduled_today)`。
   - 秘境还提供 `weekday_overrides_enabled` 开关；执行器在反序列化为任务参数前移除这些编排字段。
@@ -272,7 +273,8 @@ public sealed record SoloTaskResult(SoloTaskResultKind Kind, string Message, str
 
 奖励数据：
 
-- 统一为 `RewardSummary { Items: [{ Name, Count }] }`，自动秘境和自动首领讨伐把它作为 `TData` 返回。Pulonia 保留到结果 `Data`，JS 入口转换回原来的字典返回形状。
+- 奖励统一为 `RewardSummary { Items: [{ Name, Count }] }`。
+- 秘境、首领、幽境危战、地脉花四个领奖任务的 `TData` 统一为 `ResinClaimData { Rewards, Resin }`：`Rewards` 是奖励汇总，`Resin` 是树脂使用报告（领奖次数、各类用量、结束原因）。Pulonia 结果 `Data` 中对应 `rewards.items` 与 `resin`，JS 入口把 `Rewards` 转换回原来的字典返回形状。合成浓缩树脂返回 `CraftCondensedResinData { CraftedCount }`。详见[树脂使用设置统一](resin-usage-settings.md)第 6 节。
 - 奖励是本次观测到的产出，不等于 Pulonia 账本中“已确认的副作用”。首领累计领奖次数由独立的内部回调逐次保存，不能从奖励物品数量推算。
 - JS 专用任务 `AutoEatTask`、`CountInventoryItem` 分别返回 `AutoEatData`、`InventoryCountData`；其他任务使用 `NoData`。
 
@@ -349,6 +351,7 @@ public sealed record SoloTaskResult(SoloTaskResultKind Kind, string Message, str
 **迁移与边界**
 
 - 当前共有 7 套专属设置界面，位于 `View/Pages/SoloTaskSettings/` 和 `ViewModel/SoloTaskSettings/`：合成浓缩树脂、每日奖励、尘歌壶、秘境、首领、幽境危战、地脉花，例如 `AutoDomainSettingsView`。
+- 秘境、首领、幽境危战、地脉花、合成浓缩树脂的树脂设置不在专属界面里展开，统一使用“树脂使用”卡片按钮（`View/Controls/Resin/ResinSettingsCard`）打开公共弹窗编辑；四个领奖任务只编辑一个参数 `resin_usage`。见[树脂使用设置统一](resin-usage-settings.md)第 7 节。
 - 这套界面与 Pulonia 无关，以后独立任务页也可以直接复用，但不在本期范围。
 - 任务层只通过 `typeof` 引用视图类型，从不创建界面。
 
@@ -369,7 +372,7 @@ public sealed record SoloTaskResult(SoloTaskResultKind Kind, string Message, str
 /// <summary>自动秘境：按参数刷取秘境，返回识别到的掉落。</summary>
 [SoloTaskInfo(TaskId, "自动秘境", Group = "树脂与战斗", Order = 210, OneDragonOrder = 3)]
 [SoloTaskSettingsView(typeof(AutoDomainSettingsView), typeof(AutoDomainSettingsViewModel))]
-public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
+public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
 {
     /// <summary>任务标识，特性、热键和 XAML 都引用它。</summary>
     public const string TaskId = "auto_domain";
@@ -378,7 +381,7 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
     public AutoDomainTask(GameRuntime runtime, AllConfig config) { /* 保存依赖 */ }
 
     /// <inheritdoc />
-    public async Task<SoloTaskResult<RewardSummary>> RunAsync(AutoDomainParam param, CancellationToken ct)
+    public async Task<SoloTaskResult<ResinClaimData>> RunAsync(AutoDomainParam param, CancellationToken ct)
     {
         // 按服务器时间合并当天参数已由 Pulonia 完成；任务只处理本次收到的业务参数
         if (string.IsNullOrWhiteSpace(param.DomainName))
@@ -389,8 +392,8 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, RewardSummary>
 
         // 原 Start 的流程；依赖参数的初始化从构造函数移到这里
 
-        // 现有流程没有领取证据，所以结果是“已执行，未核验”，同时带回掉落汇总
-        return SoloTaskResult.Unverified(RewardSummary.From(_rewardSummary), "秘境流程已结束。");
+        // 现有流程没有领取证据，所以结果是“已执行，未核验”，同时带回掉落汇总和树脂使用报告
+        return ResinClaimResults.Complete(_selector, _stopReason, "秘境流程已结束", _hasBattled, RewardSummary.From(_rewardSummary));
     }
 }
 
@@ -613,7 +616,7 @@ public sealed class SoloTaskRunResult
 
 - **设置界面：** 见 5.7。`PuloniaOneDragonSettingChoices` 里针对这些任务的选项（秘境、首领、策略、地脉花国家等）移到对应的设置 VM。
 - **类型显示：** `TypeDisplayName` 遇到 `solo.` 前缀时显示“独立任务”。这个前缀是 Pulonia 自己的命名规则，常量定义在执行器上。
-- **执行记录：** 显示原因码；`RewardSummary` 按“名称 ×数量”逐行展示。
+- **执行记录：** 显示原因码；结果数据中的 `rewards.items` 按“名称 ×数量”逐行展示，`resin` 显示为一条“树脂使用”说明。
 - **导入：** `PuloniaTaskLegacyImporter` 转换旧一条龙中文名时，改为先构造强类型参数再序列化，任务类型改为 `solo.*`。d-v3 和配置组的转换不变。
 - **开发数据：** 开发阶段已保存的计划中，`builtin.*` 节点会显示为“没有注册执行器”，需要删除后重建，或者重新导入。
 
@@ -647,11 +650,11 @@ public sealed class SoloTaskRunResult
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `OneDragonTask` | `one_dragon` | `OneDragonParam` | `NoData` | 独立 | 日常奖励 | — | 旧一条龙入口复用独立运行及跨实例下发，不加入计划清单 |
 | `ClaimMailRewardsTask` | `claim_mail` | `NoParam` | `NoData` | 独立、计划 | 日常奖励 | 1 | 原 `DoOnce` 逻辑成为 `RunAsync` |
-| `GoToCraftingBenchTask` | `craft_condensed_resin` | `CraftCondensedResinParam` | `NoData` | 独立、计划 | 日常奖励 | 2 | 国家和保留树脂数由参数传入，不再读旧一条龙配置文件 |
-| `AutoDomainTask` | `auto_domain` | `AutoDomainParam` | `RewardSummary` | 独立、计划 | 树脂与战斗 | 3 | 并入原 `AutoDomainConfig` 业务字段；星期覆盖由 Pulonia 处理 |
-| `AutoBossTask` | `auto_boss` | `AutoBossParam` | `RewardSummary` | 独立、计划 | 树脂与战斗 | 4 | 保留不序列化的内部领奖回调；战斗配置可随参数传入 |
-| `AutoStygianOnslaughtTask` | `auto_stygian_onslaught` | `AutoStygianOnslaughtParam` | `NoData` | 独立、计划 | 树脂与战斗 | 5 | 不等待主界面 |
-| `AutoLeyLineOutcropTask` | `auto_ley_line_outcrop` | `AutoLeyLineOutcropParam` | `NoData` | 独立、计划 | 树脂与战斗 | 6 | 参数携带本次业务设置；星期覆盖由 Pulonia 处理 |
+| `GoToCraftingBenchTask` | `craft_condensed_resin` | `CraftCondensedResinParam` | `CraftCondensedResinData` | 独立、计划 | 日常奖励 | 2 | 国家和保留树脂数由参数传入，不再读旧一条龙配置文件 |
+| `AutoDomainTask` | `auto_domain` | `AutoDomainParam` | `ResinClaimData` | 独立、计划 | 树脂与战斗 | 3 | 并入原 `AutoDomainConfig` 业务字段；树脂设置为 `resin_usage`；星期覆盖由 Pulonia 处理 |
+| `AutoBossTask` | `auto_boss` | `AutoBossParam` | `ResinClaimData` | 独立、计划 | 树脂与战斗 | 4 | 保留不序列化的内部领奖回调；战斗配置可随参数传入；树脂设置为 `resin_usage` |
+| `AutoStygianOnslaughtTask` | `auto_stygian_onslaught` | `AutoStygianOnslaughtParam` | `ResinClaimData` | 独立、计划 | 树脂与战斗 | 5 | 不等待主界面；树脂设置为 `resin_usage` |
+| `AutoLeyLineOutcropTask` | `auto_ley_line_outcrop` | `AutoLeyLineOutcropParam` | `ResinClaimData` | 独立、计划 | 树脂与战斗 | 6 | 参数携带本次业务设置；树脂设置为 `resin_usage`；星期覆盖由 Pulonia 处理 |
 | `ClaimDailyRewardsTask` | `claim_daily_rewards` | `DailyRewardsParam` | `NoData` | 独立、计划 | 日常奖励 | 7 | 组合历练点、冒险家协会、纪行 |
 | `GoToSereniteaPotTask` | `serenitea_pot_rewards` | `SereniteaPotParam` | `NoData` | 独立、计划 | 日常奖励 | 8 | 参数携带进壶方式和购买商品；未完成时返回 `Failed(page_not_reached)` |
 | `ClaimBattlePassRewardsTask` | `claim_battle_pass` | `NoParam` | `NoData` | 独立、计划 | 日常奖励 | — | |
