@@ -254,11 +254,10 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, ResinCl
                 return SoloTaskResult.Failed(RouteStrategyNotFoundReason, "未找到对应的地脉花策略");
             }
 
-            // 现有流程没有领取证据，结果为“已执行，未核验”
-            // 领奖次数或材料目标任一达成都按目标完成结算。
+            // 领奖次数或材料目标任一达成都按目标完成结算并返回成功；树脂不足等提前结束为“已执行，未核验”。
             return ResinClaimResults.Complete(_selector,
                 _selector.IsTargetReached || _itemStopReached ? ResinStopReason.TargetReached : _stopReason,
-                "地脉花流程已结束", true);
+                "地脉花流程已结束", true, targetItemsReached: _itemStopReached);
         }
         catch (Exception e) when (e is NormalEndException or OperationCanceledException)
         {

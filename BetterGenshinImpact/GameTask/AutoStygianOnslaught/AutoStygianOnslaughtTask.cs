@@ -303,7 +303,7 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
         await ArtifactSalvage();
         Notify.Event(NotificationEvent.DomainEnd).Success($"{TaskName}结束");
 
-        // 现有流程没有领取证据，结果为“已执行，未核验”
+        // 按树脂设置刷取完成返回成功；树脂不足等提前结束为“已执行，未核验”
         return ResinClaimResults.Complete(_selector, _stopReason,
             domainErrorMessage == null ? "幽境危战流程已结束" : $"幽境危战流程异常结束：{domainErrorMessage}",
             _hasBattled);

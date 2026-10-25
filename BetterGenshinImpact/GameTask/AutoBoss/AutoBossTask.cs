@@ -234,11 +234,10 @@ public class AutoBossTask : ISoloTask<AutoBossParam, ResinClaimData>
             Notify.Event("AutoBoss").Success($"{TaskName}结束");
         }
 
-        // 没有确认奖励已到账的手段，按未确认结束返回，并附带本次识别到的奖励汇总
-        // 讨伐次数或材料目标任一达成都按目标完成结算。
+        // 讨伐次数或材料目标任一达成都按目标完成结算并返回成功；树脂不足等提前结束按未确认结束返回，并附带奖励汇总。
         return ResinClaimResults.Complete(_selector,
             _selector.IsTargetReached || _itemStopReached ? ResinStopReason.TargetReached : _stopReason,
-            "首领讨伐流程已结束", _hasBattled, RewardSummary.From(_rewardSummary));
+            "首领讨伐流程已结束", _hasBattled, RewardSummary.From(_rewardSummary), _itemStopReached);
     }
 
     /// <summary>

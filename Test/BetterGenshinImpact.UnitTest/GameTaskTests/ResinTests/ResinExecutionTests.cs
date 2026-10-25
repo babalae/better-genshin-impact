@@ -124,7 +124,8 @@ public sealed class ResinExecutionTests
         for (var i = 0; i < 3; i++) selector.RecordClaim(ResinKind.Original, 40);
         Assert.True(selector.IsTargetReached);
         var result = ResinClaimResults.Complete(selector, ResinStopReason.TargetReached, "首领讨伐流程已结束", true);
-        Assert.Equal(SoloTaskResultKind.Unverified, result.Kind);
+        // 按树脂设置刷取完成返回成功。
+        Assert.Equal(SoloTaskResultKind.Succeeded, result.Kind);
         Assert.Null(result.ReasonCode);
         Assert.Equal("首领讨伐流程已结束：领奖 3/3 次（原粹 120，补充须臾 2 个）。", result.Message);
         Assert.Equal(0, result.Data!.Resin.Claims.Transient);

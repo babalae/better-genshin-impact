@@ -351,8 +351,9 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
 
             await ArtifactSalvage();
             Notify.Event(NotificationEvent.DomainEnd).Success("自动秘境结束");
-            // 没有确认奖励已到账的手段，按未确认结束返回，并附带本次识别到的奖励汇总
-            return ResinClaimResults.Complete(_selector, _stopReason, "秘境流程已结束", _hasBattled, RewardSummary.From(_rewardSummary));
+            // 按树脂设置刷取完成或材料目标达成返回成功；提前结束按未确认结束返回，并附带本次识别到的奖励汇总
+            return ResinClaimResults.Complete(_selector, _stopReason, "秘境流程已结束", _hasBattled,
+                RewardSummary.From(_rewardSummary), _itemStopReached);
         }
         catch (SoloTaskAbortException e) when (e.Result.ReasonCode == SoloTaskReasons.ResinExhausted)
         {

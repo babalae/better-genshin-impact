@@ -259,8 +259,8 @@ public sealed record SoloTaskResult(SoloTaskResultKind Kind, string Message, str
 
 | 结果种类 | 含义 | 例子 |
 | --- | --- | --- |
-| `Succeeded` | 完成，且完成情况已确认 | 已返回主界面；七圣召唤对战结束 |
-| `Unverified` | 流程正常结束，但没有确认副作用 | 秘境流程结束，没有领取证据 |
+| `Succeeded` | 完成，且完成情况已确认 | 已返回主界面；七圣召唤对战结束；秘境按树脂设置刷取完成 |
+| `Unverified` | 流程正常结束，但没有确认副作用 | 秘境因树脂不足提前结束；旧 JS 脚本正常返回 |
 | `Partial` | 只确认了部分副作用 | 预留 |
 | `Failed` | 业务失败，必须带原因码 | 未选择秘境；未装备王树瑞佑 |
 | `Skipped` | 条件不满足，没有执行 | 今天不在运行日期内 |
@@ -392,7 +392,7 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
 
         // 原 Start 的流程；依赖参数的初始化从构造函数移到这里
 
-        // 现有流程没有领取证据，所以结果是“已执行，未核验”，同时带回掉落汇总和树脂使用报告
+        // 按树脂设置刷取完成返回成功，提前结束为“已执行，未核验”，同时带回掉落汇总和树脂使用报告
         return ResinClaimResults.Complete(_selector, _stopReason, "秘境流程已结束", _hasBattled, RewardSummary.From(_rewardSummary));
     }
 }
