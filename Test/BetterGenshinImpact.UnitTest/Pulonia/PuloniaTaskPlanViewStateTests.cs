@@ -41,8 +41,24 @@ public sealed class PuloniaTaskPlanViewStateTests : IDisposable
     public async Task PlanViewState_RoundTripsAndRejectsCorruption()
     {
         using var store = new PuloniaTaskStore(_directory);
-        Assert.Empty((await store.LoadPlanViewStateAsync()).CollapsedTaskIds);
         var statePath = Path.Combine(_directory, "plan-view-state.json");
+        var missingFileExceptionCount = 0;
+        EventHandler<System.Runtime.ExceptionServices.FirstChanceExceptionEventArgs> handler = (_, args) =>
+        {
+            if (args.Exception is FileNotFoundException exception && exception.FileName == statePath)
+                Interlocked.Increment(ref missingFileExceptionCount);
+        };
+        // 首次读取属于正常流程，不应先抛出再捕获文件缺失异常，以免调试器启用“抛出时中断”后无法打开页面。
+        AppDomain.CurrentDomain.FirstChanceException += handler;
+        try
+        {
+            Assert.Empty((await store.LoadPlanViewStateAsync()).CollapsedTaskIds);
+        }
+        finally
+        {
+            AppDomain.CurrentDomain.FirstChanceException -= handler;
+        }
+        Assert.Equal(0, missingFileExceptionCount);
         Assert.False(File.Exists(statePath));
 
         var plan = await store.SavePlanAsync(CreatePlan());

@@ -1,4 +1,4 @@
-<UserControl xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" xmlns:resin="clr-namespace:BetterGenshinImpact.View.Controls.Resin" xmlns:combat="clr-namespace:BetterGenshinImpact.View.Controls.CombatStrategy" xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta" xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior" xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers" xmlns:tasksVm="clr-namespace:BetterGenshinImpact.ViewModel.SoloTaskSettings" x:Class="BetterGenshinImpact.View.Pages.SoloTaskSettings.CraftCondensedResinSettingsView">
+<UserControl xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" xmlns:combat="clr-namespace:BetterGenshinImpact.View.Controls.CombatStrategy" xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta" xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior" xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers" xmlns:tasksVm="clr-namespace:BetterGenshinImpact.ViewModel.SoloTaskSettings" x:Class="BetterGenshinImpact.View.Pages.SoloTaskSettings.CraftCondensedResinSettingsView">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -18,6 +18,15 @@
             </ui:CardControl.Header>
             <ComboBox Width="180" ItemsSource="{x:Static tasksVm:CraftCondensedResinSettingsViewModel.CountryChoices}" SelectedItem="{Binding Country, Mode=TwoWay}"/>
         </ui:CardControl>
-        <resin:ResinSettingsCard Summary="{Binding ResinSummary, Mode=OneWay}" Command="{Binding EditResinCommand, Mode=OneWay}" Margin="0,0,0,8"/>
+        <ui:CardControl Style="{StaticResource SoloCard}">
+            <ui:CardControl.Header>
+                <StackPanel Margin="0,0,16,0">
+                    <ui:TextBlock FontTypography="Body" Text="树脂使用" TextWrapping="Wrap" />
+                    <TextBlock Style="{StaticResource SoloDescription}" Text="{Binding ResinSummary, Mode=OneWay}" />
+                </StackPanel>
+            </ui:CardControl.Header>
+            <ui:Button Content="设置" MinWidth="88" Command="{Binding EditResinCommand, Mode=OneWay}"
+                       AutomationProperties.Name="设置树脂使用" ToolTip="{Binding ResinSummary, Mode=OneWay}" />
+        </ui:CardControl>
     </StackPanel>
 </UserControl>

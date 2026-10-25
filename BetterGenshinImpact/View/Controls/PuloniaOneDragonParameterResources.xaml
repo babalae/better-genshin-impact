@@ -1,8 +1,11 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:combat="clr-namespace:BetterGenshinImpact.View.Controls.CombatStrategy"
-                    xmlns:resin="clr-namespace:BetterGenshinImpact.View.Controls.Resin"
+                    
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="/BetterGI;component/View/Controls/Resin/ResinUsageResources.xaml" />
+    </ResourceDictionary.MergedDictionaries>
 
     <!--
         一条龙参数字段资源字典（Pulonia 一条龙专用）。
@@ -29,9 +32,18 @@
         -->
         <Grid>
             <!-- 树脂使用保持嵌套对象合同，只通过公共弹窗整体编辑。 -->
-            <resin:ResinSettingsCard Summary="{Binding Resin.Summary, Mode=OneWay}" Problem="{Binding Resin.Problem, Mode=OneWay}"
-                                    Command="{Binding Resin.EditCommand, Mode=OneWay}" Margin="0,0,0,8"
-                                    Visibility="{Binding IsResinUsage, Converter={StaticResource FieldVisibility}, Mode=OneWay}" />
+            <ui:CardControl Margin="0,0,0,8" Visibility="{Binding IsResinUsage, Converter={StaticResource FieldVisibility}, Mode=OneWay}">
+                <ui:CardControl.Header>
+                    <StackPanel Margin="0,0,16,0">
+                        <ui:TextBlock FontTypography="Body" Text="树脂使用" TextWrapping="Wrap" />
+                        <ContentControl Content="{Binding Resin, Mode=OneWay}" ContentTemplate="{StaticResource ResinUsageSummaryTemplate}"
+                                        Margin="0,4,0,0" FontSize="14" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                        HorizontalContentAlignment="Stretch" Focusable="False" />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <ui:Button Content="设置" MinWidth="88"  Command="{Binding Resin.EditCommand, Mode=OneWay}"
+                           AutomationProperties.Name="设置树脂使用" ToolTip="{Binding Resin.Summary, Mode=OneWay}" />
+            </ui:CardControl>
 
             <!--  布尔字段：右侧开关  -->
             <ui:CardControl Margin="0,0,0,8"

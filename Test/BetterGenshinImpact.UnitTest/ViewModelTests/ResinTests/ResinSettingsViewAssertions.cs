@@ -61,31 +61,56 @@ internal static class ResinSettingsViewAssertions
         CheckGenericTemplates();
     }
 
-    /// <summary>检查依赖属性绑定没有覆盖宿主 DataContext，并且警告同时包含图标和原因。</summary>
-    private static void CheckCard(bool problem)
+    /// <summary>从三个宿主的实际 XAML 读取入口，检查晚绑定、折叠展开和编辑后的标题、摘要及命令。</summary>
+    private static void CheckCard(bool problem, [CallerFilePath] string sourceFile = "")
     {
         var value = new ResinUsage { Mode = problem ? ResinUsageMode.PerType : ResinUsageMode.Exhaust };
         var host = new ResinUsageEntryViewModel("秘境", ResinCapabilities.Domain, value, null);
-        var card = new ResinSettingsCard { DataContext = host };
-        card.SetBinding(ResinSettingsCard.SummaryProperty, new Binding(nameof(host.Summary)) { Mode = BindingMode.OneWay });
-        card.SetBinding(ResinSettingsCard.ProblemProperty, new Binding(nameof(host.Problem)) { Mode = BindingMode.OneWay });
-        card.SetBinding(ResinSettingsCard.CommandProperty, new Binding(nameof(host.EditCommand)) { Mode = BindingMode.OneWay });
-        CheckLayout(card);
-        Assert.Same(host, card.DataContext);
-        var action = Assert.Single(Descendants(card).OfType<CardAction>());
-        Assert.Same(host, action.DataContext);
+        var context = new { Resin = host, DomainResin = host, BossResin = host, StygianResin = host, LeyLineResin = host };
+        XNamespace presentation = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
+        XNamespace ui = "http://schemas.lepo.co/wpfui/2022/xaml";
+        XNamespace xaml = "http://schemas.microsoft.com/winfx/2006/xaml";
+        foreach (var relativePath in new[] { "TaskSettingsPage.xaml", "OneDragonFlowPage.xaml", "SoloTaskSettings/AutoDomainSettingsView.xaml" })
+        {
+            var path = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(sourceFile)!, "../../../../BetterGenshinImpact/View/Pages", relativePath));
+            var document = XDocument.Load(path);
+            foreach (var button in document.Descendants(ui + "Button").Where(element => ((string?)element.Attribute("Command"))?.Contains("Resin.EditCommand", StringComparison.Ordinal) == true))
+            {
+                // 读取实际入口，避免复制一份简化布局后漏掉宿主容器及绑定路径问题。
+                var dictionary = new XElement(presentation + "ResourceDictionary",
+                    new XAttribute(XNamespace.Xmlns + "x", xaml), new XAttribute(XNamespace.Xmlns + "ui", ui),
+                    new XElement(presentation + "ResourceDictionary.MergedDictionaries",
+                        new XElement(presentation + "ResourceDictionary", new XAttribute("Source", "/BetterGI;component/View/Pages/SoloTaskSettings/SoloTaskSettingsResources.xaml"))),
+                    new XElement(presentation + "DataTemplate", new XAttribute(xaml + "Key", "Entry"), new XElement(button.Parent!)));
+                var resources = (ResourceDictionary)XamlReader.Parse(dictionary.ToString());
+                var view = Assert.IsAssignableFrom<FrameworkElement>(((DataTemplate)resources["Entry"]).LoadContent());
+                if (relativePath == "TaskSettingsPage.xaml") Assert.IsType<Grid>(view);
+                else Assert.IsType<CardControl>(view);
+                var expander = new CardExpander { Content = view, DataContext = context };
+                CheckLayout(expander);
+                expander.IsExpanded = true;
+                CheckLayout(expander);
+                Assert.Same(context, view.DataContext);
+                AssertEntry(view, host);
+                var warning = Assert.Single(Descendants(view).OfType<SymbolIcon>().Where(icon => icon.Symbol == SymbolRegular.Warning24));
+                Assert.Equal(problem ? Visibility.Visible : Visibility.Collapsed, ((FrameworkElement)warning.Parent).Visibility);
+                host.Reset(new() { Mode = ResinUsageMode.RunCount, RunCount = 6 });
+                CheckLayout(expander);
+                AssertEntry(view, host);
+                host.Reset(value);
+            }
+        }
+    }
+
+    /// <summary>入口必须实际显示标题和当前摘要或校验原因，设置按钮仍调用当前入口的命令。</summary>
+    private static void AssertEntry(FrameworkElement view, ResinUsageEntryViewModel host)
+    {
+        var text = Descendants(view).OfType<System.Windows.Controls.TextBlock>().Where(element => element.Visibility == Visibility.Visible).ToArray();
+        Assert.Contains(text, element => element.Text == "树脂使用");
+        Assert.Contains(text, element => element.Text == (host.Problem ?? host.Summary));
+        var action = Assert.Single(Descendants(view).OfType<Wpf.Ui.Controls.Button>());
         Assert.Same(host.EditCommand, action.Command);
-        Assert.Equal("树脂使用：" + (host.Problem ?? host.Summary), AutomationProperties.GetName(card));
-        Assert.Equal(card.AutomationName, AutomationProperties.GetName(action));
-        Assert.Single(Descendants(card).OfType<System.Windows.Controls.TextBlock>()
-            .Where(text => text.Text == host.Summary && text.Visibility == Visibility.Visible));
-        var warning = Assert.Single(Descendants(card).OfType<SymbolIcon>().Where(icon => icon.Symbol == SymbolRegular.Warning24));
-        Assert.Equal(problem ? Visibility.Visible : Visibility.Collapsed, ((FrameworkElement)warning.Parent).Visibility);
-        if (problem) Assert.Contains(host.Problem!, AutomationProperties.GetName(action));
-        host.Reset(new() { Mode = ResinUsageMode.RunCount, RunCount = 6 });
-        CheckLayout(card);
-        Assert.Equal(host.Summary, card.Summary);
-        Assert.True(BindingOperations.IsDataBound(card, ResinSettingsCard.SummaryProperty));
+        Assert.Equal("设置树脂使用", AutomationProperties.GetName(action));
     }
 
     /// <summary>三套参数模板都实际实例化树脂卡片，不创建包含它们的 FluentWindow。</summary>
@@ -109,7 +134,7 @@ internal static class ResinSettingsViewAssertions
                 var view = Assert.IsAssignableFrom<FrameworkElement>(template.LoadContent());
                 view.DataContext = field;
                 CheckLayout(view, false);
-                Assert.Single(Descendants(view).OfType<ResinSettingsCard>());
+                AssertEntry(view, field is PuloniaOneDragonParameterFieldViewModel modernField ? modernField.Resin! : ((PuloniaTaskParameterFieldViewModel)field).Resin!);
             }
         }
     }
@@ -129,7 +154,9 @@ internal static class ResinSettingsViewAssertions
         var copy = new XElement(template);
         foreach (var element in copy.DescendantsAndSelf().Where(element => element.Name.NamespaceName.StartsWith("clr-namespace:BetterGenshinImpact.", StringComparison.Ordinal)))
             element.Name = XName.Get(element.Name.LocalName, element.Name.NamespaceName + ";assembly=BetterGI");
-        var dictionary = new XElement(presentation + "ResourceDictionary", namespaces, copy);
+        var dictionary = new XElement(presentation + "ResourceDictionary", namespaces,
+            new XElement(presentation + "ResourceDictionary.MergedDictionaries",
+                new XElement(presentation + "ResourceDictionary", new XAttribute("Source", "/BetterGI;component/View/Controls/Resin/ResinUsageResources.xaml"))), copy);
         var resources = (ResourceDictionary)XamlReader.Parse(dictionary.ToString());
         return (DataTemplate)resources["ParameterFieldTemplate"];
     }

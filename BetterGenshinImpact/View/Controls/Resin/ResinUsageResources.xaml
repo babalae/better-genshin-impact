@@ -1,0 +1,40 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+    <!-- 只共用摘要和校验提示；设置行、卡片、间距及按钮由各宿主页面决定。 -->
+    <DataTemplate x:Key="ResinUsageSummaryTemplate">
+        <Grid>
+            <TextBlock Text="{Binding Summary, Mode=OneWay}" TextWrapping="Wrap">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasProblem, Mode=OneWay}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+            <Grid>
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasProblem, Mode=OneWay}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <ui:SymbolIcon Symbol="Warning24" FontSize="16" Margin="0,0,6,0" VerticalAlignment="Top"
+                               Foreground="{DynamicResource SystemFillColorCautionBrush}" />
+                <TextBlock Grid.Column="1" Text="{Binding Problem, Mode=OneWay}" TextWrapping="Wrap"
+                           Foreground="{DynamicResource SystemFillColorCautionBrush}" />
+            </Grid>
+        </Grid>
+    </DataTemplate>
+</ResourceDictionary>

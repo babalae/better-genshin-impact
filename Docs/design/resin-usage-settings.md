@@ -430,19 +430,20 @@ public sealed class ResinUsageReport
 
 ### 7.1 入口：树脂使用卡片按钮
 
-设置页不再展开树脂的具体控件，只放一张卡片按钮：
+设置页不再展开树脂的具体控件，只放一张与其他设置项一致的卡片：
 
 ```text
 ┌──────────────────────────────────────────────────────────┐
-│ 💧 树脂使用                                              › │
-│    领奖 6 次 · 原粹 → 须臾                    （摘要，只读） │
+│ 树脂使用                                          [设置] │
+│ 领奖 6 次 · 原粹 → 须臾                    （摘要，只读） │
 └──────────────────────────────────────────────────────────┘
 ```
 
-- 控件 `ResinSettingsCard`，基于 `ui:CardAction`（整张卡片可点击，右侧箭头）。标题固定“树脂使用”，图标使用 WPF-UI 内置 `SymbolIcon`，不新增图片资源。
+- 各宿主分别沿用自己的布局：独立任务页在展开区内使用普通设置行；新一条龙专属设置使用 `ui:CardControl` 和 `SoloCard` 样式；旧一条龙使用原页面的 `ui:CardControl`、间距和按钮对齐方式。左侧显示“树脂使用”和摘要，右侧“设置”按钮打开弹窗，不再用一个入口控件包办三种容器。
+- 仅摘要和校验提示共用 `ResinUsageSummaryTemplate`；它直接绑定入口 ViewModel，不跨 `UserControl` 查找名称或祖先，背景、边框和排版由宿主负责。
 - 摘要随设置变化，与弹窗底部的摘要和任务计划文档中的摘要是同一段文字。
 - 当前值不合法（例如 JS 或导入写入的值）时，摘要显示原因，并显示警告图标，不只靠颜色。
-- 键盘：Tab 可聚焦，Enter 或空格打开弹窗。
+- 键盘：Tab 可聚焦“设置”按钮，Enter 或空格打开弹窗。
 
 位置规则：**卡片位于任务目标设置之后、结束后处理之前。**
 
@@ -819,7 +820,7 @@ ViewModel/Resin/
 ├─ ResinConfirmation.cs                确认提示的标题与正文
 └─ CraftResinEditorViewModel.cs        弹窗内容：合成浓缩树脂
 View/Controls/Resin/
-├─ ResinSettingsCard.xaml(.cs)         入口卡片
+├─ ResinUsageResources.xaml            摘要和校验提示模板；入口容器由各宿主页面定义
 ├─ ResinUsageEditorView.xaml(.cs)
 └─ CraftResinEditorView.xaml(.cs)
 View/Windows/

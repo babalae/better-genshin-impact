@@ -2,6 +2,9 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                     xmlns:converters="clr-namespace:BetterGenshinImpact.View.Converters">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="/BetterGI;component/View/Controls/Resin/ResinUsageResources.xaml" />
+    </ResourceDictionary.MergedDictionaries>
     <!-- 专属设置页独立加载所需资源，构造时不依赖父窗口的资源树。 -->
     <BooleanToVisibilityConverter x:Key="SoloVisibility" />
     <converters:InverseBooleanConverter x:Key="SoloInverse" />

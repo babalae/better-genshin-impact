@@ -621,10 +621,13 @@ public sealed partial class PuloniaTaskStore : IDisposable
     }
 
     /// <summary>
-    /// 只把真正的文件缺失当作 null，权限或编码错误必须保留。
+    /// 常规文件缺失直接返回 null；检查后文件恰好消失时同样返回 null，已有文件的权限或编码错误必须保留。
     /// </summary>
     private static async Task<string?> ReadIfExistsAsync(string path, CancellationToken ct)
     {
+        // 文件允许尚未创建，先做无异常检查，避免正常流程触发调试器的 first-chance 异常断点。
+        if (!File.Exists(path))
+            return null;
         try
         {
             // 允许正式文件被完整替换；已打开的句柄仍读取原版本。

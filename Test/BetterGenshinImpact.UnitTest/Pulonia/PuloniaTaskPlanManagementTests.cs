@@ -20,6 +20,35 @@ public sealed class PuloniaTaskPlanManagementTests : IDisposable
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-" + BetterGenshinImpact.Helpers.ShortId.Create(null, 8));
 
     /// <summary>
+    /// 新计划首次保存时文件尚不存在，但这是正常流程，不应先抛出再捕获文件缺失异常。
+    /// </summary>
+    [Fact]
+    public async Task FirstSave_DoesNotThrowMissingFileFirstChanceException()
+    {
+        using var store = new PuloniaTaskStore(_directory);
+        var plan = CreatePlan("首次保存");
+        var planPath = Path.Combine(_directory, "plans", plan.Id + ".json");
+        var missingFileExceptionCount = 0;
+        EventHandler<System.Runtime.ExceptionServices.FirstChanceExceptionEventArgs> handler = (_, args) =>
+        {
+            if (args.Exception is FileNotFoundException exception && exception.FileName == planPath)
+                Interlocked.Increment(ref missingFileExceptionCount);
+        };
+        AppDomain.CurrentDomain.FirstChanceException += handler;
+        try
+        {
+            var saved = await store.SavePlanAsync(plan);
+            Assert.Equal(1, saved.Revision);
+        }
+        finally
+        {
+            AppDomain.CurrentDomain.FirstChanceException -= handler;
+        }
+        Assert.Equal(0, missingFileExceptionCount);
+        Assert.True(File.Exists(planPath));
+    }
+
+    /// <summary>
     /// 整份复制重新映射账号预设和触发目标，保留参数类型、引用和配置，且不修改来源。
     /// </summary>
     [Fact]
