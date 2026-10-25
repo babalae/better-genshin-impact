@@ -295,7 +295,7 @@ public sealed class PuloniaTaskLegacyImporter
         var domain = config.AutoDomainConfig;
         var strategy = string.IsNullOrEmpty(config.AutoFightConfig.StrategyName) ? CombatStrategyResolver.AutoSelectName : config.AutoFightConfig.StrategyName;
         // 内部构造不加载全局业务默认值，全部字段在这里显式填写
-        return new AutoDomainParam(strategy)
+        var param = new AutoDomainParam(strategy)
         {
             PartyName = dragon.PartyName,
             DomainName = dragon.DomainName,
@@ -311,6 +311,9 @@ public sealed class PuloniaTaskLegacyImporter
             AutoEat = domain.AutoEat,
             ReviveRetryCount = domain.ReviveRetryCount
         };
+        // 培养计划设置同样来自导入时的秘境配置
+        param.CopyTrainingGuideSettings(domain);
+        return param;
     }
 
     /// <summary>

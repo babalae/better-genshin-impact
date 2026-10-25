@@ -1,0 +1,131 @@
+<Window x:Class="BetterGenshinImpact.View.MusicGuidedWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="引导式跟弹"
+        Width="1920"
+        Height="1080"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ShowActivated="False"
+        ShowInTaskbar="False"
+        Topmost="True"
+        WindowStartupLocation="Manual"
+        WindowStyle="None">
+    <Grid>
+        <!-- 引导圈：每个「本段要按的琴键」的边缘上套一个高饱和亮色的圈（底部留缺口，不压琴键上的
+             唱名与字母块），位置直接照原神演奏界面的真实琴键算（见 MusicKeyLayout），不额外画提示板 -->
+        <Canvas x:Name="OverlayCanvas"
+                Background="Transparent"
+                IsHitTestVisible="False" />
+
+        <!-- 状态面板：当前第几段、本段键位、进度与提示（放在画面上方，不再压住游戏下方操作区） -->
+        <Border x:Name="StatusPanel"
+                MinWidth="360"
+                Padding="18,12"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Top"
+                Margin="0,14,0,0"
+                Background="#B31C1F24"
+                BorderBrush="#4DFFFFFF"
+                BorderThickness="1"
+                CornerRadius="14">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="18"
+                                  Direction="270"
+                                  Opacity="0.55"
+                                  ShadowDepth="3"
+                                  Color="#000000" />
+            </Border.Effect>
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock x:Name="SegmentText"
+                               FontSize="15"
+                               FontWeight="SemiBold"
+                               Foreground="#FFFFFFFF"
+                               Text="第 1 / 1 段" />
+                    <TextBlock x:Name="TrackText"
+                               Margin="12,0,0,0"
+                               VerticalAlignment="Center"
+                               FontSize="12"
+                               Foreground="#B3FFFFFF"
+                               Text="" />
+                </StackPanel>
+
+                <ItemsControl x:Name="KeyChips"
+                              Margin="0,10,0,0"
+                              ItemsSource="{Binding Chips}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <!-- 用 WrapPanel：和弦（一个方块里写 "E + T"）会变宽，本段按键多时自动换行，不会被裁掉 -->
+                            <WrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border MinWidth="44"
+                                    Height="44"
+                                    Margin="4,0,4,4"
+                                    Padding="8,0"
+                                    Background="{Binding Background}"
+                                    BorderBrush="{Binding BorderBrush}"
+                                    BorderThickness="1.5"
+                                    CornerRadius="10">
+                                <TextBlock HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           FontSize="{Binding FontSize}"
+                                           FontWeight="Bold"
+                                           Foreground="{Binding Foreground}"
+                                           Text="{Binding Text}" />
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock x:Name="HintText"
+                           Margin="0,9,0,0"
+                           FontSize="12"
+                           Foreground="#99FFFFFF"
+                           TextWrapping="Wrap"
+                           Text="照着圈起来的琴键弹，整段弹对后自动显示下一段" />
+                <TextBlock x:Name="CalibrateText"
+                           Margin="0,4,0,0"
+                           FontSize="11"
+                           Foreground="#80FFFFFF"
+                           TextWrapping="Wrap"
+                           Text="引导圈没套准琴键？按住 Ctrl 再按方向键移动、[ ] 调键距、, . 调排距、PgUp/PgDn 调圈大小、R 重新识别（Shift 加速，自动保存）" />
+                <!-- 键位来源诊断：自动识别到的分辨率与参数，或回退到配置参数的原因 -->
+                <TextBlock x:Name="DetectionText"
+                           Margin="0,4,0,0"
+                           FontSize="11"
+                           Foreground="#80B9E8FF"
+                           TextWrapping="Wrap"
+                           Text="" />
+                <TextBlock x:Name="UnmappedText"
+                           Margin="0,4,0,0"
+                           FontSize="11"
+                           Foreground="#99FFB4B4"
+                           Text=""
+                           Visibility="Collapsed" />
+            </StackPanel>
+        </Border>
+
+        <!-- 退出按钮：窗口本身是点击穿透的，用开关单独恢复这个小区域的交互 -->
+        <Button x:Name="ExitButton"
+                Width="30"
+                Height="30"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Margin="0,14,14,0"
+                Background="#8C1C1F24"
+                BorderBrush="#4DFFFFFF"
+                BorderThickness="1"
+                Cursor="Hand"
+                ToolTip="退出引导式跟弹"
+                Click="OnExitClick">
+            <TextBlock FontSize="15"
+                       FontWeight="Bold"
+                       Foreground="#E6FFFFFF"
+                       Text="✕" />
+        </Button>
+    </Grid>
+</Window>

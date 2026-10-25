@@ -3,7 +3,9 @@ using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Music.Model;
 using BetterGenshinImpact.GameTask.Music.Service;
+using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -37,11 +39,16 @@ public partial class MusicPageViewModel : ViewModel
     private readonly IMusicTimelineBuilder _timelineBuilder;
     private readonly IMusicStateStore _stateStore;
     private readonly ISnackbarService _snackbarService;
+
+    /// <summary>游戏运行环境服务；引导式跟弹每次读取 Current，不持有运行环境</summary>
+    private readonly GameRuntimeService _runtimeService;
     private readonly ILogger<MusicPageViewModel> _logger = App.GetLogger<MusicPageViewModel>();
     private CancellationTokenSource? _refreshCancellationTokenSource;
     private CancellationTokenSource? _coverLoadCancellationTokenSource;
     private Task? _sessionTask;
     private IReadOnlyList<PerformanceScore> _activePlaybackQueue = [];
+    private MusicGuidedSession? _guidedSession;
+    private MusicGuidedWindow? _guidedWindow;
     private bool _isLoading;
     private bool _isUpdatingSelection;
     private bool _isSeeking;
@@ -57,8 +64,10 @@ public partial class MusicPageViewModel : ViewModel
         IMusicTimelineBuilder timelineBuilder,
         IMusicStateStore stateStore,
         IConfigService configService,
-        ISnackbarService snackbarService)
+        ISnackbarService snackbarService,
+        GameRuntimeService runtimeService)
     {
+        _runtimeService = runtimeService;
         _libraryService = libraryService;
         _coverService = coverService;
         _playbackService = playbackService;
@@ -95,6 +104,8 @@ public partial class MusicPageViewModel : ViewModel
             nameof(MusicPlaybackMode.Shuffle) => MusicPlaybackMode.Shuffle,
             _ => MusicPlaybackMode.Sequential
         };
+        IsGuidedPlayMode = string.Equals(Config.MusicConfig.PlayMode, MusicPlayModeNames.Guided,
+            StringComparison.OrdinalIgnoreCase);
 
         _libraryService.FilesChanged += OnLibraryFilesChanged;
         _libraryService.ScoreParseFailed += OnScoreParseFailed;
@@ -142,6 +153,21 @@ public partial class MusicPageViewModel : ViewModel
     [NotifyPropertyChangedFor(nameof(InputModeDisplayText))]
     [NotifyPropertyChangedFor(nameof(InputModeToolTip))]
     private bool _useBackgroundInput = true;
+
+    /// <summary>true = 引导式跟弹，false = 自动演奏</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PlayModeDisplayText))]
+    private bool _isGuidedPlayMode;
+
+    /// <summary>引导式跟弹进行中（用于界面上显示进度）</summary>
+    [ObservableProperty]
+    private bool _isGuidedPlaying;
+
+    /// <summary>引导进度文本，例如「第 2 / 12 段」</summary>
+    [ObservableProperty]
+    private string _guidedStatusText = string.Empty;
+
+    public string PlayModeDisplayText => IsGuidedPlayMode ? "引导式跟弹" : "自动演奏";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(PlaybackModeSymbol))]
@@ -214,6 +240,12 @@ public partial class MusicPageViewModel : ViewModel
     public override Task OnNavigatedToAsync()
     {
         return InitializeAsync();
+    }
+
+    public override void OnNavigatedFrom()
+    {
+        // 离开音乐页时不要留下置顶的引导层和键盘钩子。
+        StopGuidedSession("已离开音乐页面");
     }
 
     [RelayCommand]
@@ -315,6 +347,21 @@ public partial class MusicPageViewModel : ViewModel
     {
         Config.MusicConfig.PlaybackMode = value.ToString();
         _playbackService.SetPlaybackMode(value);
+    }
+
+    partial void OnIsGuidedPlayModeChanged(bool value)
+    {
+        Config.MusicConfig.PlayMode = value ? MusicPlayModeNames.Guided : MusicPlayModeNames.Auto;
+
+        // 切模式时把另一条通路停下来，避免「自动演奏」和「引导式跟弹」同时跑。
+        if (value)
+        {
+            _playbackService.Stop();
+        }
+        else if (IsGuidedPlaying)
+        {
+            StopGuidedSession("已切换到自动演奏");
+        }
     }
 
     [RelayCommand]
@@ -472,6 +519,18 @@ public partial class MusicPageViewModel : ViewModel
     [RelayCommand]
     private void PlayPause()
     {
+        if (IsGuidedPlayMode)
+        {
+            if (IsGuidedPlaying)
+            {
+                StopGuidedSession("已停止引导式跟弹");
+                return;
+            }
+
+            StartGuidedSessionAsync(SelectedMusicItem);
+            return;
+        }
+
         var snapshot = _playbackService.Snapshot;
         if (snapshot.State == MusicPlaybackState.Playing)
         {
@@ -502,6 +561,13 @@ public partial class MusicPageViewModel : ViewModel
             return;
         }
 
+        if (IsGuidedPlayMode)
+        {
+            SelectedMusicItem = musicItem;
+            StartGuidedSessionAsync(musicItem);
+            return;
+        }
+
         var currentSession = _sessionTask;
         if (_playbackService.Snapshot.State != MusicPlaybackState.Stopped)
         {
@@ -519,6 +585,11 @@ public partial class MusicPageViewModel : ViewModel
     [RelayCommand]
     private void Stop()
     {
+        if (IsGuidedPlaying)
+        {
+            StopGuidedSession("已停止引导式跟弹");
+        }
+
         _playbackService.Stop();
         if (SelectedMusicItem != null)
         {
@@ -530,12 +601,22 @@ public partial class MusicPageViewModel : ViewModel
     [RelayCommand]
     private void Next()
     {
+        if (IsGuidedPlaying)
+        {
+            StopGuidedSession("已切换到下一首");
+        }
+
         _playbackService.Next();
     }
 
     [RelayCommand]
     private void Previous()
     {
+        if (IsGuidedPlaying)
+        {
+            StopGuidedSession("已切换到上一首");
+        }
+
         _playbackService.Previous();
     }
 
@@ -725,6 +806,11 @@ public partial class MusicPageViewModel : ViewModel
 
     private void StartPlaybackSession(bool restoreSavedPosition = true)
     {
+        if (IsGuidedPlaying)
+        {
+            StopGuidedSession("已切换到自动演奏");
+        }
+
         if (SelectedMusicItem is not { IsValid: true })
         {
             _snackbarService.Show(
@@ -780,6 +866,231 @@ public partial class MusicPageViewModel : ViewModel
         {
             // TaskRunner 已经记录并展示任务异常
         }
+    }
+
+    /// <summary>
+    /// 开始引导式跟弹：不再自动按键，只在游戏画面上显示每一段的引导圈。
+    /// </summary>
+    private void StartGuidedSessionAsync(PerformanceScore? musicItem)
+    {
+        if (musicItem is not { IsValid: true })
+        {
+            _snackbarService.Show(
+                "无法引导",
+                musicItem?.Error ?? "请选择一首有效曲谱。",
+                ControlAppearance.Danger,
+                null,
+                TimeSpan.FromSeconds(4));
+            return;
+        }
+
+        StopGuidedSession("已切换到新的曲目");
+
+        SelectedMusicItem = musicItem;
+        SaveAllPreferences();
+
+        var profile = _profileService.Find(musicItem.OutputProfileName);
+        musicItem.OutputProfileName = profile.Name;
+
+        var timeline = _timelineBuilder.Build(musicItem, profile, Transpose);
+        var presses = MusicGuidedSegmentBuilder.Build(timeline);
+        if (presses.Count == 0)
+        {
+            _snackbarService.Show(
+                "无法引导",
+                "这首曲谱在当前乐器下没有任何可弹奏的按键。",
+                ControlAppearance.Danger,
+                null,
+                TimeSpan.FromSeconds(4));
+            return;
+        }
+
+        var layoutConfig = Config.MusicConfig.GuidedKeyLayout;
+        _guidedWindow = new MusicGuidedWindow { IsGameForeground = IsGuidedGameForeground };
+        // 覆盖层与会话共用同一份键位参数：这样在覆盖层上现场微调（按住 Ctrl + 方向键）
+        // 时，窗口改的就是会话正在用的那份配置，改完立刻重画。
+        _guidedWindow.KeyLayout = layoutConfig;
+        _guidedWindow.ExitRequested += OnGuidedExitRequested;
+
+        var options = new MusicGuidedSessionOptions
+        {
+            SegmentSize = Math.Max(1, Config.MusicConfig.GuidedSegmentSize),
+            OverlayEnabled = Config.MusicConfig.GuidedOverlayEnabled,
+            ErrorFlashMilliseconds = Config.MusicConfig.GuidedErrorFlashMilliseconds,
+            TrackName = musicItem.DisplayTitle,
+            InstrumentName = profile.Name,
+            KeyProfile = profile,
+            KeyLayout = layoutConfig,
+            // 开始前先从游戏画面里把琴键的实际位置量出来（1080P / 2K / 4K 都不用自己配键位参数）
+            AutoDetectKeys = Config.MusicConfig.GuidedAutoDetectKeys,
+            // 段内必须按从左往右的顺序弹（默认开；关掉则段内任意顺序都算对）
+            StrictOrder = Config.MusicConfig.GuidedStrictOrder,
+            Overlay = _guidedWindow,
+            // 截图器未绑定时「按进程判断前台」而不是按窗口句柄：引导模式不要求截图器已经绑定游戏窗口，
+            // 玩家切出游戏去聊天时也不会把聊天按键误判成琴键。
+            IsGameActive = IsGuidedGameForeground,
+            Logger = message => _logger.LogInformation("{Message}", message),
+            OnSegmentChanged = OnGuidedSegmentChanged,
+            // 截图器已启动时用当前运行环境截图与定位窗口，否则会话临时创建截图器
+            CurrentRuntime = () => _runtimeService.Current,
+            Config = Config
+        };
+
+        // 自动识别琴键位置要截到「演奏界面」，所以先把游戏窗口切到前台再开始：
+        // 识别发生在 session.Start() 内部、且在贴覆盖层之前截图（覆盖层也画在游戏画面上，
+        // 先贴上去再截图就可能把引导圈一起截进去）。
+        // 手动校准过的参数不会再去识别，也就不用为了截图切前台。
+        if (Config.MusicConfig.GuidedAutoDetectKeys && !layoutConfig.ManualCalibrated)
+        {
+            FocusGameWindow();
+        }
+
+        try
+        {
+            var session = new MusicGuidedSession(presses, options);
+            if (!session.Start())
+            {
+                session.Dispose();
+                StopGuidedSession("引导启动失败");
+                _snackbarService.Show(
+                    "无法引导",
+                    "启动键盘监听失败，请检查是否有其他程序占用了输入。",
+                    ControlAppearance.Danger,
+                    null,
+                    TimeSpan.FromSeconds(4));
+                return;
+            }
+
+            _guidedSession = session;
+            _guidedWindow.Session = session;
+            IsGuidedPlaying = true;
+
+            // 玩家是在 BetterGI 界面上双击曲谱的，不把前台还给游戏，
+            // 接下来敲的琴键就全落在 BetterGI 自己的窗口上（游戏收不到，判定却会当成按错）。
+            FocusGameWindow();
+            TotalDurationMilliseconds = Math.Max(1, timeline.Duration.TotalMilliseconds);
+            CurrentPositionMilliseconds = 0;
+            CurrentTrackName = musicItem.DisplayTitle;
+            CurrentMusicItem = musicItem;
+            _snackbarService.Show(
+                "引导式跟弹已开始",
+                $"共 {session.SegmentCount} 段，每段 {options.SegmentSize} 次按键；按 Esc 退出。",
+                ControlAppearance.Success,
+                null,
+                TimeSpan.FromSeconds(4));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "启动引导式跟弹失败：{TrackName}", musicItem.DisplayTitle);
+            StopGuidedSession("引导启动失败");
+            _snackbarService.Show(
+                "无法引导",
+                ex.Message,
+                ControlAppearance.Danger,
+                null,
+                TimeSpan.FromSeconds(4));
+        }
+    }
+
+    /// <summary>
+    /// 引导式跟弹判断游戏是否在前台：有运行环境时看它的窗口，截图器未启动时按前台窗口的进程名判断。
+    /// </summary>
+    /// <returns>游戏在前台时返回 true。</returns>
+    private bool IsGuidedGameForeground() => SystemControl.IsGameForeground(_runtimeService.Current?.Window);
+
+    /// <summary>
+    /// 引导开始后把前台交还给游戏窗口（覆盖层自己是 WS_EX_NOACTIVATE + 点击穿透的，不会再抢走焦点）。
+    /// </summary>
+    private void FocusGameWindow()
+    {
+        try
+        {
+            var handle = _runtimeService.Current?.Window.Handle ?? IntPtr.Zero;
+            if (handle == IntPtr.Zero)
+            {
+                handle = SystemControl.FindGenshinImpactHandle();
+            }
+
+            if (handle != IntPtr.Zero)
+            {
+                SystemControl.RestoreWindow(handle);
+                return;
+            }
+
+            _logger.LogWarning("引导式跟弹：没有找到原神窗口，无法自动切回游戏，请手动点击游戏窗口。");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "引导式跟弹：切回游戏窗口失败。");
+        }
+    }
+
+    /// <summary>
+    /// 引导过程中切换段落：0 表示整首已经弹完，自动收尾。
+    /// </summary>
+    private void OnGuidedSegmentChanged(int segmentIndex, int totalSegments)
+    {
+        void Update()
+        {
+            if (segmentIndex <= 0)
+            {
+                if (IsGuidedPlaying)
+                {
+                    _logger.LogInformation("引导式跟弹：整首曲目已弹完。");
+                    StopGuidedSession("整首曲目已弹完");
+                }
+
+                return;
+            }
+
+            GuidedStatusText = $"第 {segmentIndex + 1} / {totalSegments} 段";
+            CurrentPositionMilliseconds = 0;
+        }
+
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher == null || dispatcher.CheckAccess())
+        {
+            Update();
+        }
+        else
+        {
+            dispatcher.BeginInvoke(Update);
+        }
+    }
+
+    private void OnGuidedExitRequested()
+    {
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher == null || dispatcher.CheckAccess())
+        {
+            StopGuidedSession("已退出引导式跟弹");
+        }
+        else
+        {
+            dispatcher.BeginInvoke(() => StopGuidedSession("已退出引导式跟弹"));
+        }
+    }
+
+    private void StopGuidedSession(string reason)
+    {
+        var session = _guidedSession;
+        if (session != null)
+        {
+            session.ExitRequested -= OnGuidedExitRequested;
+            session.Stop(reason);
+            session.Dispose();
+            _guidedSession = null;
+        }
+
+        if (_guidedWindow != null)
+        {
+            _guidedWindow.ExitRequested -= OnGuidedExitRequested;
+            _guidedWindow.Close();
+            _guidedWindow = null;
+        }
+
+        IsGuidedPlaying = false;
+        GuidedStatusText = string.Empty;
     }
 
     private bool FilterMusicItem(object item)

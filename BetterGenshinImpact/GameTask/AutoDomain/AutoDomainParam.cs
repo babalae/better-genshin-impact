@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using BetterGenshinImpact.GameTask.Common.Resin;
 using BetterGenshinImpact.GameTask.AutoFight.Strategy;
 using System.Collections.Generic;
+using BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.Core.Config;
@@ -48,6 +49,17 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
     /// 配置根。参数类由脚本和界面直接 new，没有创建方可以传入配置，暂时读配置根（见 task-context-removal.md 第 5 节）
     /// </summary>
     private static AllConfig Config => ConfigService.Config!;
+
+    /// <summary>仅本次运行使用。null 沿用游戏培养计划；JSON 数组元素为 material 和 target（目标库存）。</summary>
+    public string? TrainingTargetsJson { get; set; }
+
+    /// <summary>JS 使用 JSON.stringify([{material: "材料完整名称", target: 28}]) 传入。</summary>
+    /// <param name="json">自定义培养目标 JSON，格式错误时抛出异常且不修改当前值。</param>
+    public void SetTrainingTargets(string json)
+    {
+        TrainingGuideCustomTargets.Parse(json);
+        TrainingTargetsJson = json;
+    }
 
     /// <summary>JS 兼容的额外轮数上限；构造参数 0 按原语义转换为 9999，不进入树脂设置。</summary>
     [JsonIgnore]
@@ -188,6 +200,57 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
     {
     }
 
+    /// <summary>Training guide options inherit task settings at construction; JS may override any subset for this run.</summary>
+    public bool TrainingGuideCalculateRunsEnabled { get; set; }
+
+    /// <summary>0: reserve crafting bonuses; 1: ignore crafting bonuses. Other values normalize to 0.</summary>
+    public int TrainingGuideRunPreference
+    {
+        get => _trainingGuideRunPreference;
+        set => _trainingGuideRunPreference = value is 0 or 1 ? value : 0;
+    }
+
+    /// <summary>培养计划刷取偏好的存储字段，只保存 0 或 1。</summary>
+    private int _trainingGuideRunPreference;
+
+    /// <summary>Crafting bonus reserve percentage, clamped to 0 through 20.</summary>
+    public int TrainingGuideCraftingBonusReservePercent
+    {
+        get => _trainingGuideCraftingBonusReservePercent;
+        set => _trainingGuideCraftingBonusReservePercent = Math.Clamp(value, 0,
+            TrainingGuideRunCalculator.MaxCraftingBonusReservePercent);
+    }
+
+    /// <summary>合成收益预留百分比的存储字段，范围 0～20。</summary>
+    private int _trainingGuideCraftingBonusReservePercent;
+
+    /// <summary>Use recognized rewards to update the remaining training plan.</summary>
+    public bool TrainingGuideRewardRecognitionEnabled { get; set; }
+
+    /// <summary>培养奖励识别失败后是否按当前入口的初始预算继续；关闭时识别失败即结束任务。</summary>
+    public bool TrainingGuideRewardFailureBudgetEnabled { get; set; }
+
+    /// <summary>是否保存培养计划的详细诊断记录与截图。</summary>
+    public bool TrainingGuideDiagnosticsEnabled { get; set; }
+
+    /// <summary>是否启用低世界等级适配：选择入口时检查解锁状态并自动降低难度。</summary>
+    public bool TrainingGuideLowARAdaptationEnabled { get; set; }
+
+    /// <summary>Fallback domain after training targets are complete. Empty disables fallback.</summary>
+    public string TrainingGuideFallbackDomainName { get; set; } = string.Empty;
+
+    /// <summary>Sunday or limited-time reward selection for the fallback domain.</summary>
+    public string TrainingGuideFallbackSundaySelectedValue { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 本次运行是否需要识别奖励：常规奖励识别、材料目标或培养计划奖励识别任一需要即识别。
+    /// </summary>
+    /// <returns>需要识别奖励时返回 true。</returns>
+    public bool ShouldRecognizeRewards() => RewardRecognitionEnabled || TargetItems.Count > 0 ||
+        (TrainingTargetsJson != null && TrainingGuideRewardRecognitionEnabled) ||
+        (DomainName == AutoDomainTask.TrainingGuideOption &&
+         TrainingGuideCalculateRunsEnabled && TrainingGuideRewardRecognitionEnabled);
+
     public AutoDomainParam(int domainRoundNum, string path) : base(null, null)
     {
         DomainRoundNum = domainRoundNum;
@@ -231,6 +294,22 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
         AutoEat = config.AutoEat;
         ReviveRetryCount = config.ReviveRetryCount;
         TargetItems = TargetItem.CloneAll(config.TargetItems);
+        CopyTrainingGuideSettings(config);
+    }
+
+    /// <summary>从秘境配置复制培养计划相关设置；Pulonia 导入旧配置时也使用此方法。</summary>
+    /// <param name="config">秘境业务配置。</param>
+    internal void CopyTrainingGuideSettings(AutoDomainConfig config)
+    {
+        TrainingGuideCalculateRunsEnabled = config.TrainingGuideCalculateRunsEnabled;
+        TrainingGuideRunPreference = config.TrainingGuideRunPreference;
+        TrainingGuideCraftingBonusReservePercent = config.TrainingGuideCraftingBonusReservePercent;
+        TrainingGuideRewardRecognitionEnabled = config.TrainingGuideRewardRecognitionEnabled;
+        TrainingGuideRewardFailureBudgetEnabled = config.TrainingGuideRewardFailureBudgetEnabled;
+        TrainingGuideDiagnosticsEnabled = config.TrainingGuideDiagnosticsEnabled;
+        TrainingGuideLowARAdaptationEnabled = config.TrainingGuideLowARAdaptationEnabled;
+        TrainingGuideFallbackDomainName = config.TrainingGuideFallbackDomainName;
+        TrainingGuideFallbackSundaySelectedValue = config.TrainingGuideFallbackSundaySelectedValue;
     }
 
     public AutoDomainParam(int domainRoundNum = 0) : base(null, null)

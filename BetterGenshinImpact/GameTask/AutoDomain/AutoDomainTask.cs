@@ -5,6 +5,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Simulator.Extensions;
+using BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.AutoFight.Script;
@@ -52,6 +53,7 @@ using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Pages.SoloTaskSettings;
 using BetterGenshinImpact.ViewModel.SoloTaskSettings;
+using Newtonsoft.Json;
 
 namespace BetterGenshinImpact.GameTask.AutoDomain;
 
@@ -221,10 +223,20 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
 
         // 2. 选择了具体秘境时必须能找到传送点。未选择秘境（站在秘境门口直接开始）与“根据提升指南选择秘境”保持原有流程
         if (!string.IsNullOrEmpty(param.DomainName)
-            && param.DomainName != DevelopmentGuideOption
+            && param.DomainName != TrainingGuideOption
             && !MapLazyAssets.Get().DomainPositionMap.ContainsKey(param.DomainName))
         {
             return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, $"未找到对应的秘境{param.DomainName}的传送点。");
+        }
+
+        // 2.5 解析本次运行的自定义培养目标；未传入时为 null，沿用游戏内培养计划
+        try
+        {
+            _guideCustomTargets = TrainingGuideCustomTargets.Parse(param.TrainingTargetsJson);
+        }
+        catch (Exception e) when (e is ArgumentException or JsonException)
+        {
+            return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, $"自定义培养目标无效：{e.Message}");
         }
 
         // 3. 树脂设置已在入口统一校验，此处只选择战斗引擎。
@@ -277,12 +289,33 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
         using var predictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(BgiOnnxModel.BgiTree);
         _predictor = predictor;
 
+        _guidePlanning = _guideCustomTargets != null ||
+            (_taskParam.DomainName == TrainingGuideOption && _taskParam.TrainingGuideCalculateRunsEnabled);
+        using var diagnostics = TrainingGuideDiagnostics.Begin(_guidePlanning && _taskParam.TrainingGuideDiagnosticsEnabled, Logger);
+        if (TrainingGuideDiagnostics.Enabled)
+        {
+            Logger.LogInformation("培养计划详细判断保存至 {Path}，按日期统一记录", TrainingGuideDiagnostics.DirectoryPath);
+            TrainingGuideDiagnostics.Detail("培养任务开始：{StartedAt:O}", DateTime.Now);
+        }
+        ResetTrainingGuideState();
+
         Init();
         var targetFailure = ValidateTargetItemSettings();
         if (targetFailure != null)
         {
             Logger.LogError("自动秘境：{Msg}", targetFailure.Message);
             return targetFailure;
+        }
+
+        // 培养计划奖励识别需要 1920×1080；不支持且未开启预算兜底时按参数无效结束
+        try
+        {
+            CheckGuideRewardResolution();
+        }
+        catch (InvalidOperationException e)
+        {
+            Logger.LogError("自动秘境：{Msg}", e.Message);
+            return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, e.Message);
         }
 
         if (_taskParam.TargetItems.Count > 0)
@@ -319,7 +352,8 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
             {
                 try
                 {
-                    await DoDomain();
+                    if (_guidePlanning) await RunTrainingGuidePlan();
+                    else await DoDomain();
                     // 其他场景不重试
                     break;
                 }
@@ -343,8 +377,6 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
                     throw;
                 }
             }
-
-
             await _runtime.Delay(2000, ct);
             await Bv.WaitForMainUi(_runtime, _ct, 30);
             await _runtime.Delay(2000, ct);
@@ -469,7 +501,11 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
             Logger.LogInformation("自动秘境：{Text}", "5. 领取奖励");
             if (!await GettingTreasure())
             {
-                Logger.LogInformation("体力耗尽或者设置轮次已达标，结束自动秘境");
+                if (_guidePlanning && _guideNextAction == GuideNextAction.AdvancePlan)
+                    Logger.LogInformation("培养计划：当前入口执行结束，退出后按缓存计划选择下一步");
+                else
+                    Logger.LogInformation("体力耗尽或者设置轮次已达标，结束自动秘境");
+                // 结束原因已在领奖时记录，直接返回，避免被下方的轮数上限覆盖
                 return;
             }
         }
@@ -539,78 +575,27 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
 
     private async Task TpDomain()
     {
-        if (_taskParam.DomainName == DevelopmentGuideOption)
+        // 初次进入及切换目标共用传送路径，不复用上一轮画面坐标。
+        _guideEntryPositions.Clear();
+        if (_taskParam.DomainName == TrainingGuideOption && !_guidePlanning)
         {
-            await SelectDevelopmentGuideDestination();
+            _guideDomainName = null;
+            _guideDomainName = (await ScanGuideDomains(firstOnly: true)).FirstOrDefault()
+                ?? throw new InvalidOperationException("提升指南：没有可用的材料秘境，停止任务");
         }
         // 传送到秘境
-        if (!string.IsNullOrEmpty(_taskParam.DomainName))
+        if (!string.IsNullOrEmpty(_guideDomainName ?? _taskParam.DomainName))
         {
             if (MapLazyAssets.Get().DomainPositionMap.TryGetValue(_guideDomainName ?? _taskParam.DomainName, out var domainPosition))
             {
-                Logger.LogInformation("自动秘境：传送到秘境{Text}", _taskParam.DomainName);
+                Logger.LogInformation("自动秘境：传送到秘境{Text}", _guideDomainName ?? _taskParam.DomainName);
                 await new TpTask(_runtime, _allConfig, _ct).Tp(domainPosition.X, domainPosition.Y);
                 await _runtime.Delay(1000, _ct);
-                await Bv.WaitForMainUi(_runtime, _ct);
+                if (!await Bv.WaitForMainUi(_runtime, _ct) && _guidePlanning)
+                    throw new InvalidOperationException("传送后未确认回到主界面，停止接近秘境入口");
 
-                var menuFound = false;
-                AutoPickAssets pickAssets;
-                using (var gameCaptureRegion = _runtime.CaptureToRectArea())
-                {
-                    pickAssets = AutoPickAssets.Get(gameCaptureRegion, _allConfig.AutoPickConfig.PickKey);
-                }
-                if ("芬德尼尔之顶".Equals(_taskParam.DomainName))
-                {
-                    menuFound = await NewRetry.WaitForElementAppear(_runtime,
-                        pickAssets.PickRo,
-                        () => InputHub.Foreground.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown),
-                        _ct,
-                        20,
-                        500
-                    );
-                    InputHub.Foreground.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
-                }
-                else if ("无妄引咎密宫".Equals(_taskParam.DomainName))
-                {
-                    InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
-                    Thread.Sleep(500);
-                    InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-
-                    menuFound = await NewRetry.WaitForElementAppear(_runtime,
-                        pickAssets.PickRo,
-                        () => InputHub.Foreground.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown),
-                        _ct,
-                        20,
-                        500
-                    );
-                    InputHub.Foreground.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
-                }
-                else if ("太山府".Equals(_taskParam.DomainName))
-                {
-                    menuFound = await NewRetry.WaitForElementAppear(_runtime,
-                        pickAssets.PickRo,
-                        () => { },
-                        _ct,
-                        20,
-                        500
-                    );
-                }
-                else
-                {
-                    menuFound = await NewRetry.WaitForElementAppear(_runtime,
-                        pickAssets.PickRo,
-                        () => InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown),
-                        _ct,
-                        20,
-                        500
-                    );
-                    InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-                }
-
-                if (!menuFound)
-                {
-                    throw new Exception("请检查是否在秘境门前");
-                }
+                await ApproachDomainEntrance(_guideDomainName ?? _taskParam.DomainName);
+                await _runtime.Delay(300, _ct);
 
             }
             else
@@ -618,6 +603,84 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
                 Logger.LogError("自动秘境：未找到对应的秘境{Text}的传送点", _taskParam.DomainName);
                 throw new Exception($"未找到对应的秘境{_taskParam.DomainName}的传送点");
             }
+        }
+    }
+
+    /// <summary>
+    /// 接近秘境入口；已有交互提示时无需移动，普通任务和培养计划共用此逻辑。
+    /// </summary>
+    /// <param name="domainName">本次传送的秘境名称，用于选择接近方向。</param>
+    private async Task ApproachDomainEntrance(string domainName)
+    {
+        var menuFound = false;
+        AutoPickAssets pickAssets;
+        using (var gameCaptureRegion = _runtime.CaptureToRectArea())
+        {
+            pickAssets = AutoPickAssets.Get(gameCaptureRegion, _allConfig.AutoPickConfig.PickKey);
+            using var interaction = gameCaptureRegion.Find(pickAssets.PickRo);
+            if (interaction.IsExist()) return;
+        }
+        try
+        {
+            if ("芬德尼尔之顶".Equals(domainName))
+            {
+                menuFound = await NewRetry.WaitForElementAppear(_runtime,
+                    pickAssets.PickRo,
+                    () => InputHub.Foreground.SimulateAction(GIActions.MoveBackward, KeyType.KeyDown),
+                    _ct,
+                    20,
+                    500
+                );
+                InputHub.Foreground.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
+            }
+            else if ("无妄引咎密宫".Equals(domainName))
+            {
+                InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
+                await _runtime.Delay(500, _ct);
+                InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+
+                menuFound = await NewRetry.WaitForElementAppear(_runtime,
+                    pickAssets.PickRo,
+                    () => InputHub.Foreground.SimulateAction(GIActions.MoveLeft, KeyType.KeyDown),
+                    _ct,
+                    20,
+                    500
+                );
+                InputHub.Foreground.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
+            }
+            else if ("太山府".Equals(domainName))
+            {
+                menuFound = await NewRetry.WaitForElementAppear(_runtime,
+                    pickAssets.PickRo,
+                    () => { },
+                    _ct,
+                    20,
+                    500
+                );
+            }
+            else
+            {
+                menuFound = await NewRetry.WaitForElementAppear(_runtime,
+                    pickAssets.PickRo,
+                    () => InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown),
+                    _ct,
+                    20,
+                    500
+                );
+                InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+            }
+
+        }
+        finally
+        {
+            InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+            InputHub.Foreground.SimulateAction(GIActions.MoveBackward, KeyType.KeyUp);
+            InputHub.Foreground.SimulateAction(GIActions.MoveLeft, KeyType.KeyUp);
+        }
+
+        if (!menuFound)
+        {
+            throw new Exception("请检查是否在秘境门前");
         }
     }
 
@@ -686,8 +749,12 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
                 500
             );
         }
+        // 培养指南只等待入口菜单，不在选择前检查挑战按钮或解锁状态。
+        using var menuScreen = _runtime.CaptureToRectArea();
         var menuFound = await NewRetry.WaitForElementAppear(_runtime,
-            GetConfirmRa(singlePlayerChallengeString),
+            (_guidePlanning || _taskParam.DomainName == TrainingGuideOption)
+                ? RecognitionObject.OcrMatch(0, 0, menuScreen.Width * .47, menuScreen.Height * .12, "秘境入口")
+                : GetConfirmRa(singlePlayerChallengeString),
             null,//只等待,不执行操作
             _ct,
             20,
@@ -695,6 +762,8 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
         );
         if (!menuFound)
         {
+            if (_guidePlanning || _taskParam.DomainName == TrainingGuideOption)
+                throw new InvalidOperationException("未确认秘境入口菜单，停止培养任务");
             Logger.LogWarning("单人挑战 按键未出现，请检查是否已进入秘境页面");
         }
 
@@ -709,11 +778,15 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
         {
             Logger.LogInformation("自动秘境：{Text}", "检测到秘境限时全开");
         }
+        foreach (var region in limitedFullyStringRaocrList) region.Dispose();
 
         var serverTime = ServerTimeHelper.GetServerTimeNow();
-        if (_taskParam.DomainName == DevelopmentGuideOption)
+        if (_guidePlanning || _taskParam.DomainName == TrainingGuideOption)
         {
-            await SelectDevelopmentGuideLevel();
+            var allOpen = serverTime is { DayOfWeek: DayOfWeek.Sunday, Hour: >= 4 }
+                || serverTime is { DayOfWeek: DayOfWeek.Monday, Hour: < 4 }
+                || limitedFullyStringRaocrListdone != null;
+            await SelectTrainingGuideLevel(allOpen);
         }
         else if (serverTime is { DayOfWeek: DayOfWeek.Sunday, Hour: >= 4 } || serverTime is { DayOfWeek: DayOfWeek.Monday, Hour: < 4 } || limitedFullyStringRaocrListdone != null)
         {
@@ -1499,6 +1572,8 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
     /// </summary>
     private async Task<bool> GettingTreasure()
     {
+        _guideRoundResin = 0;
+        _guideRoundRewards = null;
         bool isLastTurn = false;
         // 等待窗口弹出
         await _runtime.Delay(300, _ct);
@@ -1552,26 +1627,47 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
             }
 
             var claimed = false;
-            foreach (var kind in candidates)
+            if (_guidePlanning && _guideActivePlan != null && _taskParam.ResinUsage.Mode != ResinUsageMode.PerType)
             {
-                if (kind == ResinKind.Original && _taskParam.ResinUsage.OriginalTier != OriginalResinTier.Default)
+                // 培养计划：刷至耗尽或指定次数时，按剩余需求在候选中选择树脂与原粹档位；顶栏库存未识别时无法规划，停止领取
+                var used = status == null ? null : await UseTrainingGuideResin(candidates, status);
+                if (used is { } claim)
                 {
-                    var tier = _taskParam.ResinUsage.OriginalTier;
-                    var switched = ResinRewardPrompt.SwitchOriginalTier(_runtime,
-                        tier == OriginalResinTier.Only20 ? 20 : 40, Logger, "自动秘境", _ct);
-                    if (!switched && (tier == OriginalResinTier.Only20
-                        || !ResinRewardPrompt.SwitchOriginalTier(_runtime, 20, Logger, "自动秘境", _ct))) continue;
-                    using var fresh = _runtime.CaptureToRectArea();
-                    regions = fresh.FindMulti(RecognitionObject.Ocr(fresh.Width * 0.25, fresh.Height * 0.2, fresh.Width * 0.5, fresh.Height * 0.6));
+                    _selector.RecordClaim(claim.Kind, claim.OriginalSpent);
+                    isLastTurn = ResinExecutionRules.IsLastRound(_taskParam.ResinUsage, _selector,
+                        status!.OriginalResinCount, status.CondensedResinCount, claim.Kind, claim.OriginalSpent);
+                    claimed = true;
                 }
-                var (success, originalSpent) = ResinRewardPrompt.PressUseResin(_runtime, regions, kind,
-                    Logger, "自动秘境", _ct, _taskParam.GameCultureInfo);
-                if (!success) continue;
-                _selector.RecordClaim(kind, originalSpent);
-                isLastTurn = ResinExecutionRules.IsLastRound(_taskParam.ResinUsage, _selector,
-                    status?.OriginalResinCount, status?.CondensedResinCount, kind, originalSpent);
-                claimed = true;
-                break;
+            }
+            else
+            {
+                foreach (var kind in candidates)
+                {
+                    if (kind == ResinKind.Original && _taskParam.ResinUsage.OriginalTier != OriginalResinTier.Default)
+                    {
+                        var tier = _taskParam.ResinUsage.OriginalTier;
+                        var switched = ResinRewardPrompt.SwitchOriginalTier(_runtime,
+                            tier == OriginalResinTier.Only20 ? 20 : 40, Logger, "自动秘境", _ct);
+                        if (!switched && (tier == OriginalResinTier.Only20
+                            || !ResinRewardPrompt.SwitchOriginalTier(_runtime, 20, Logger, "自动秘境", _ct))) continue;
+                        using var fresh = _runtime.CaptureToRectArea();
+                        regions = fresh.FindMulti(RecognitionObject.Ocr(fresh.Width * 0.25, fresh.Height * 0.2, fresh.Width * 0.5, fresh.Height * 0.6));
+                    }
+
+                    // 培养计划按实际消耗扣减预算，原粹档位必须唯一确认，不能按默认 20 记账
+                    if (_guidePlanning && kind == ResinKind.Original && ReadGuideOriginalCost(regions) == null)
+                        throw new InvalidOperationException("未确认原粹树脂消耗档位，停止领取");
+                    var (success, originalSpent) = ResinRewardPrompt.PressUseResin(_runtime, regions, kind,
+                        Logger, "自动秘境", _ct, _taskParam.GameCultureInfo);
+                    if (!success) continue;
+                    _selector.RecordClaim(kind, originalSpent);
+                    // 浓缩、须臾、脆弱树脂每次按 60 体计入培养预算
+                    if (_guidePlanning) _guideRoundResin = kind == ResinKind.Original ? originalSpent : 60;
+                    isLastTurn = ResinExecutionRules.IsLastRound(_taskParam.ResinUsage, _selector,
+                        status?.OriginalResinCount, status?.CondensedResinCount, kind, originalSpent);
+                    claimed = true;
+                    break;
+                }
             }
             if (!claimed)
             {
@@ -1601,6 +1697,12 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
 
         _runtime.Sleep(1000, _ct);
         await TryRecognizeRewardResult();
+        // 培养计划切换入口或达到轮数上限时本轮后退出；树脂原因未结束时，按目标完成记录结束原因
+        if (_guidePlanning && UpdateGuideAfterReward(isLastTurn))
+        {
+            if (!isLastTurn) _stopReason = ResinStopReason.TargetReached;
+            isLastTurn = true;
+        }
 
         if (_taskParam.TargetItems.Count > 0 && _itemStopReached)
         {
@@ -1608,11 +1710,22 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
             isLastTurn = true;
             // 材料目标达成按目标完成结算，不视为树脂不足。
             _stopReason = ResinStopReason.TargetReached;
+            // 材料目标达成后不再切换培养入口或备选秘境
+            if (_guidePlanning) _guideNextAction = GuideNextAction.Stop;
         }
 
         for (var i = 0; i < 30; i++)
         {
             using var ra = _runtime.CaptureToRectArea();
+            if (_guidePlanning && isLastTurn)
+            {
+                using var plannedExit = ra.Find(RecognitionAssets.Get("AutoFight", "Exit", ra));
+                if (plannedExit.IsExist())
+                {
+                    plannedExit.Click();
+                    return false;
+                }
+            }
             // 优先点击继续
             using var confirmRectArea = ra.Find(RecognitionAssets.Get("AutoFight", "Confirm", ra));
             if (!confirmRectArea.IsEmpty())
@@ -1620,7 +1733,7 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
                 if (isLastTurn)
                 {
                     // 最后一回合 退出
-                    var exitRectArea = ra.Find(RecognitionAssets.Get("AutoFight", "Exit", ra));
+                    using var exitRectArea = ra.Find(RecognitionAssets.Get("AutoFight", "Exit", ra));
                     if (!exitRectArea.IsEmpty())
                     {
                         exitRectArea.Click();
@@ -1670,7 +1783,9 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
 
     private async Task TryRecognizeRewardResult()
     {
-        if (!_taskParam.RewardRecognitionEnabled && _taskParam.TargetItems.Count == 0)
+        // 只有培养计划需要识别、但当前分辨率不支持时跳过；常规奖励识别与材料目标仍按原逻辑识别
+        if (!_taskParam.ShouldRecognizeRewards() || (_guideRewardResolutionUnsupported
+                && !_taskParam.RewardRecognitionEnabled && _taskParam.TargetItems.Count == 0))
         {
             return;
         }
@@ -1685,7 +1800,13 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
 
             // 使用多页识别（自动检测是否需要翻页）
             Logger.LogInformation("自动秘境：开始奖励识别");
-            var rewards = RewardResultRecognizer.Instance.RecognizeMultiPage(_runtime);
+            // 培养计划依据奖励更新库存，要求数量可靠；通用奖励数量失败时可忽略
+            var useRewardsForPlanning = _guidePlanning && GuideRewardRecognitionEnabled;
+            var rewards = RewardResultRecognizer.Instance.RecognizeMultiPage(_runtime,
+                requireReliableCounts: useRewardsForPlanning,
+                allowUnreliableCount: useRewardsForPlanning ? TrainingGuideRewardPolicy.IsCommonReward : null);
+            if (useRewardsForPlanning)
+                _guideRoundRewards = new Dictionary<string, int>(rewards);
 
             if (rewards.Count == 0)
             {

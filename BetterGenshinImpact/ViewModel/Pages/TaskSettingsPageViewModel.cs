@@ -289,7 +289,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
 
         //_combatStrategyList = ["根据队伍自动选择", .. LoadCustomScript(Global.Absolute(@"User\AutoFight"))];
 
-        _domainNameList = ["", AutoDomainTask.DevelopmentGuideOption, .. MapLazyAssets.Get().DomainNameList];
+        _domainNameList = ["", AutoDomainTask.TrainingGuideOption, .. MapLazyAssets.Get().DomainNameList];
         _autoFightViewModel = new AutoFightViewModel(Config);
         _oneDragonFlowViewModel = oneDragonFlowViewModel;
     }
