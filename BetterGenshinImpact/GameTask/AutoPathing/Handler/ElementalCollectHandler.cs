@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.AutoFight.Config;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using Microsoft.Extensions.Logging;
@@ -75,61 +76,10 @@ public class ElementalCollectAvatar(string name, ElementalType elementalType, bo
 
 public class ElementalCollectAvatarConfigs
 {
-    public static List<ElementalCollectAvatar> Lists { get; set; } =
-    [
-        // 水
-        new ElementalCollectAvatar("芭芭拉", ElementalType.Hydro, true, true),
-        new ElementalCollectAvatar("莫娜", ElementalType.Hydro, true, false),
-        new ElementalCollectAvatar("珊瑚宫心海", ElementalType.Hydro, true, true),
-        new ElementalCollectAvatar("玛拉妮", ElementalType.Hydro, true, false),
-        new ElementalCollectAvatar("那维莱特", ElementalType.Hydro, true, true),
-        new ElementalCollectAvatar("芙宁娜", ElementalType.Hydro, true, false),
-        new ElementalCollectAvatar("妮露", ElementalType.Hydro, false, true),
-        new ElementalCollectAvatar("坎蒂斯", ElementalType.Hydro, false, true),
-        new ElementalCollectAvatar("行秋", ElementalType.Hydro, false, true),
-        new ElementalCollectAvatar("神里绫人", ElementalType.Hydro, false, true),
-        new ElementalCollectAvatar("哥伦比娅", ElementalType.Hydro, true, true),
-        new ElementalCollectAvatar("沃雅妮莎", ElementalType.Hydro, true, true),
-        new ElementalCollectAvatar("爱诺", ElementalType.Hydro, false, true),
-        // 雷
-        new ElementalCollectAvatar("丽莎", ElementalType.Electro, true, true),
-        new ElementalCollectAvatar("八重神子", ElementalType.Electro, true, false),
-        new ElementalCollectAvatar("瓦雷莎", ElementalType.Electro, true, false),
-        new ElementalCollectAvatar("雷电将军", ElementalType.Electro, false, true),
-        new ElementalCollectAvatar("久岐忍", ElementalType.Electro, false, true),
-        new ElementalCollectAvatar("北斗", ElementalType.Electro, false, true),
-        new ElementalCollectAvatar("菲谢尔", ElementalType.Electro, false, true),
-        new ElementalCollectAvatar("雷泽", ElementalType.Electro, false, true),
-        new ElementalCollectAvatar("伊涅芙", ElementalType.Electro, false, true),
-        // 风
-        new ElementalCollectAvatar("砂糖", ElementalType.Anemo, true, true),
-        new ElementalCollectAvatar("鹿野院平藏", ElementalType.Anemo, true, true),
-        new ElementalCollectAvatar("流浪者", ElementalType.Anemo, true, false),
-        new ElementalCollectAvatar("闲云", ElementalType.Anemo, true, false),
-        new ElementalCollectAvatar("蓝砚", ElementalType.Anemo, true, false),
-        new ElementalCollectAvatar("枫原万叶", ElementalType.Anemo, false, true),
-        new ElementalCollectAvatar("珐露珊", ElementalType.Anemo, false, true),
-        new ElementalCollectAvatar("琳妮特", ElementalType.Anemo, false, true),
-        new ElementalCollectAvatar("温迪", ElementalType.Anemo, false, true),
-        new ElementalCollectAvatar("琴", ElementalType.Anemo, false, true),
-        new ElementalCollectAvatar("早柚", ElementalType.Anemo, false, true),
-        new ElementalCollectAvatar("伊法", ElementalType.Anemo, true, false),
-        new ElementalCollectAvatar("梦见月瑞希", ElementalType.Anemo, true, false),
-        // 火
-        new ElementalCollectAvatar("烟绯", ElementalType.Pyro, true, true),
-        new ElementalCollectAvatar("迪卢克", ElementalType.Pyro, false,true),
-        new ElementalCollectAvatar("可莉", ElementalType.Pyro, true, true),
-        new ElementalCollectAvatar("班尼特", ElementalType.Pyro, false, true),
-        new ElementalCollectAvatar("香菱", ElementalType.Pyro, false, true),
-        new ElementalCollectAvatar("托马", ElementalType.Pyro,false, true),
-        new ElementalCollectAvatar("胡桃", ElementalType.Pyro, false, true),
-        new ElementalCollectAvatar("迪希雅", ElementalType.Pyro, false, true),
-        new ElementalCollectAvatar("夏沃蕾", ElementalType.Pyro, false, true),
-        new ElementalCollectAvatar("辛焱", ElementalType.Pyro, false, true),
-        new ElementalCollectAvatar("林尼", ElementalType.Pyro, false, true),
-        new ElementalCollectAvatar("宵宫", ElementalType.Pyro, false, true),
-        new ElementalCollectAvatar("尼可", ElementalType.Pyro, true, true),
-    ];
+    public static List<ElementalCollectAvatar> Lists { get; } = DefaultAutoFightConfig.CombatAvatarMap.Values
+        .Where(x => x.ElementalType is not null && (x.NormalAttack || x.ElementalSkill))
+        .Select(x => new ElementalCollectAvatar(x.Name, x.ElementalType!.Value, x.NormalAttack, x.ElementalSkill))
+        .ToList();
 
     public static ElementalCollectAvatar? Get(string name, ElementalType type) => Lists.FirstOrDefault(x => x.Name == name && x.ElementalType == type);
 
