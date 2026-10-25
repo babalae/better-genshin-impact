@@ -1097,7 +1097,7 @@
   "绑定群": "Bind Group",
   "绑定群 OpenID": "Bind Group OpenID",
   "结束后自动分解圣遗物": "Salvage artifacts automatically when finished",
-  "结束时打开地图与冒险之证，推送体力与每日委托奖励汇总及截图": "At the end, open the Map and Adventurer's Handbook, then send a summary and screenshot of Original Resin and Daily Commission rewards",
+  "结束时打开地图与冒险之证，推送体力与每日委托奖励汇总及截图；汇总经“检查每日奖励领取状态”事件推送，需在下方“需要通知的事件”中启用（未选择任何事件时按全部通知处理）": "At the end, open the Map and Adventurer's Handbook, then send a summary and screenshot of Original Resin and Daily Commission rewards; the summary is sent via the \"Check daily reward claim status\" event, which must be enabled under \"Events to Notify\" below (if no events are selected, all events are notified)",
   "绘制识别结果位置": "Draw Recognition Results",
   "绘制调试框": "Draw Debug Boxes",
   "给 Clawbot 发消息后自动获取，无需手动填写": "Filled automatically after messaging Clawbot. No need to enter it manually",
