@@ -25,6 +25,7 @@ public sealed class ChildSessionService : IDisposable
     private static readonly DrawingSize DefaultDesktopSize = new(1920, 1080);
     private static readonly TimeSpan ConnectionTimeout = TimeSpan.FromSeconds(60);
     private const int InitialConnectionRetryCount = 3;
+    private const int StaleSessionRecoveryRetryCount = 1;
     private const int RdpSettingsReconnectRetryCount = 2;
     private const int ErrorTimeout = 1460;
 
@@ -46,6 +47,7 @@ public sealed class ChildSessionService : IDisposable
     private int _rdpSettingsReconnectRetriesRemaining;
     private bool _rdpSettingsReconnectRetryInProgress;
     private bool _statusTickInProgress;
+    private uint? _reconnectingSessionId;
     private bool _disposed;
     private string? _lastOperationMessage;
     private IReadOnlyList<ChildSessionEnvironmentCheck.Issue> _environmentIssues = [];
@@ -182,18 +184,42 @@ public sealed class ChildSessionService : IDisposable
 
         try
         {
-            await completionSource.Task.WaitAsync(
-                ConnectionTimeout,
-                _disposeCancellationTokenSource.Token);
-        }
-        catch (TimeoutException)
-        {
-            if (!completionSource.Task.IsCompleted)
+            for (var recoveryAttempt = 0;
+                 recoveryAttempt <= StaleSessionRecoveryRetryCount;
+                 recoveryAttempt++)
             {
-                _autoLaunchBetterGiPending = false;
-                _initialConnectionRetriesRemaining = 0;
-                CompleteConnectionFailure(CreateConnectionTimeoutFailure());
-                TryDisconnectRdpHost();
+                try
+                {
+                    await completionSource.Task.WaitAsync(
+                        ConnectionTimeout,
+                        _disposeCancellationTokenSource.Token);
+                    break;
+                }
+                catch (TimeoutException)
+                {
+                    if (completionSource.Task.IsCompleted)
+                    {
+                        break;
+                    }
+
+                    if (recoveryAttempt < StaleSessionRecoveryRetryCount
+                        && await TryRecoverStaleChildSessionAsync())
+                    {
+                        completionSource = new TaskCompletionSource<bool>(
+                            TaskCreationOptions.RunContinuationsAsynchronously);
+                        _connectionAttemptCompletionSource = completionSource;
+                        _lastConnectionFailure = null;
+                        _initialConnectionRetriesRemaining = InitialConnectionRetryCount;
+                        ConnectCore("正在重建 BetterGI 桌面分身连接");
+                        continue;
+                    }
+
+                    _autoLaunchBetterGiPending = false;
+                    _initialConnectionRetriesRemaining = 0;
+                    CompleteConnectionFailure(CreateConnectionTimeoutFailure());
+                    TryDisconnectRdpHost();
+                    break;
+                }
             }
         }
         finally
@@ -202,6 +228,40 @@ public sealed class ChildSessionService : IDisposable
             {
                 _connectionAttemptCompletionSource = null;
             }
+        }
+    }
+
+    private async Task<bool> TryRecoverStaleChildSessionAsync()
+    {
+        var staleSessionId = ChildSessionNativeMethods.TryGetChildSessionId();
+        if (staleSessionId is null)
+        {
+            return false;
+        }
+
+        RefreshState(
+            $"RDP 连接超时，正在保留桌面分身会话 {staleSessionId.Value} 并重建连接");
+        TryDisconnectRdpHost();
+
+        try
+        {
+            // UU 强效切换会让 RDP ActiveX 丢失连接事件，但 Child Session
+            // 本身仍保留有效的登录上下文。注销它会迫使下一次连接重新登录，
+            // 从而弹出 localhost 凭据窗口，因此这里只断开并复用原会话。
+            await Task.Delay(TimeSpan.FromMilliseconds(250), _disposeCancellationTokenSource.Token);
+            return ChildSessionNativeMethods.TryGetChildSessionId() == staleSessionId;
+        }
+        catch (OperationCanceledException) when (_disposed)
+        {
+            return false;
+        }
+        catch (Exception exception) when (IsExpectedChildSessionException(exception))
+        {
+            _logger.LogWarning(
+                exception,
+                "恢复桌面分身会话 {ChildSessionId} 连接失败，保留原连接错误。",
+                staleSessionId.Value);
+            return false;
         }
     }
 
@@ -480,13 +540,12 @@ public sealed class ChildSessionService : IDisposable
         var window = EnsureDesktopWindow();
         ShowDesktopWindow(window);
 
-        if (window.RdpHost.ConnectedState == 0)
+        if (window.RdpHost.ConnectedState != 1)
         {
+            _reconnectingSessionId = existingSessionId;
             _autoLaunchBetterGiPending = existingSessionId is null;
-            _initialConnectionRetriesRemaining = _autoLaunchBetterGiPending
-                ? InitialConnectionRetryCount
-                : 0;
-            window.RdpHost.ConnectToChildSession(DefaultDesktopSize);
+            _initialConnectionRetriesRemaining = InitialConnectionRetryCount;
+            window.RdpHost.ReconnectToChildSession(DefaultDesktopSize);
         }
 
         RefreshState(operationMessage);
@@ -535,6 +594,19 @@ public sealed class ChildSessionService : IDisposable
         try
         {
             RefreshState();
+            // 重新附着已登录会话时，ActiveX 可能不再发送 OnLoginComplete。
+            // 仅对同一个已有会话使用系统状态兜底，新建会话仍等待登录完成事件。
+            if (_connectionAttemptCompletionSource is { Task.IsCompleted: false }
+                && ConnectedState == 1
+                && _reconnectingSessionId is uint sessionId
+                && ChildSessionId == sessionId
+                && ChildSessionNativeMethods.IsSessionLoggedOnAndActive(sessionId))
+            {
+                _logger.LogInformation(
+                    "桌面分身会话 {SessionId} 已恢复连接，通过 RDP 与 WTS 状态确认重连完成。",
+                    sessionId);
+                _desktopWindow?.RdpHost.ConfirmExistingSessionConnection();
+            }
         }
         catch (Exception exception) when (IsExpectedChildSessionException(exception))
         {
@@ -632,8 +704,11 @@ public sealed class ChildSessionService : IDisposable
             _pendingRdpSettingChanges = RdpSettingChange.None;
         }
 
-        if (_autoLaunchBetterGiPending
-            && _initialConnectionRetriesRemaining > 0
+        // A child session may already exist but still be recovering from an
+        // external RDP disconnect (for example, UU's force switch). Treat
+        // that reconnect like the initial connection so a transient ActiveX
+        // failure does not consume the whole 60-second timeout.
+        if (_initialConnectionRetriesRemaining > 0
             && !_connectionRetryInProgress)
         {
             RetryInitialConnectionAsync(e);
@@ -647,6 +722,7 @@ public sealed class ChildSessionService : IDisposable
     // 使用 OnLoginComplete 等待实际登录完成，避免依赖固定时长的延时。
     private async void OnRdpLoginCompleted(object? sender, EventArgs e)
     {
+        _reconnectingSessionId = null;
         _lastConnectionFailure = null;
         _initialConnectionRetriesRemaining = 0;
         _connectionRetryInProgress = false;
@@ -773,7 +849,7 @@ public sealed class ChildSessionService : IDisposable
         var retryDelay = TimeSpan.FromSeconds(1 << (retryNumber - 1));
 
         _logger.LogWarning(
-            "桌面分身首次初始化连接失败，将在 {RetryDelaySeconds} 秒后进行第 {RetryNumber} 次重试。"
+            "桌面分身连接失败，将在 {RetryDelaySeconds} 秒后进行第 {RetryNumber} 次重试。"
             + "错误：{ErrorMessage}，错误代码：{ErrorCode}，扩展错误代码：{ExtendedErrorCode}",
             retryDelay.TotalSeconds,
             retryNumber,
@@ -781,13 +857,13 @@ public sealed class ChildSessionService : IDisposable
             firstFailure.ErrorCode,
             firstFailure.ExtendedErrorCode);
         RefreshState(
-            $"桌面分身首次初始化尚未完成，{retryDelay.TotalSeconds:0} 秒后自动重试"
+            $"桌面分身连接尚未完成，{retryDelay.TotalSeconds:0} 秒后自动重试"
             + $"（{retryNumber}/{InitialConnectionRetryCount}）");
 
         try
         {
             await Task.Delay(retryDelay, _disposeCancellationTokenSource.Token);
-            if (_disposed || !_autoLaunchBetterGiPending)
+            if (_disposed)
             {
                 return;
             }
