@@ -18,9 +18,6 @@ namespace BetterGenshinImpact.Core.Recognition.Ncnn;
 /// </summary>
 internal static class NcnnYoloBackend
 {
-    /// <summary>shim 复用 OCR 的 ncnn_shim.dll（通用 ncnn 封装，与检测模型无绑定）。</summary>
-    private const string ShimRelativePath = BetterGenshinImpact.Core.Recognition.Ncnn.NcnnAvailability.ShimRelativePath;
-
     /// <summary>ONNX 元数据（类别名、输入尺寸、任务类型）按模型路径缓存：CPU 临时会话读取一次，进程内复用。</summary>
     private static readonly ConcurrentDictionary<string, (YoloName[] Names, int Width, int Height, bool IsClassifier)> MetadataCache = new();
 
@@ -40,17 +37,14 @@ internal static class NcnnYoloBackend
                 $"[YOLO] {model.Name} 没有 ncnn 产物：{paramPath} / {modelPath}；"
                 + "请在设置页关闭「YOLO 使用 ncnn」或补齐 pnnx 转换产物。");
 
-        var shimPath = Global.Absolute(ShimRelativePath);
-        if (!File.Exists(shimPath))
-            throw new NcnnUnavailableException($"[YOLO] ncnn 运行库缺失：{shimPath}");
-        if (!NcnnShim.IsSupported(shimPath))
-            throw new NcnnUnavailableException($"[YOLO] ncnn_shim.dll 版本过旧（缺少 shim_create_ex / shim_infer_ex）：{shimPath}");
+        if (!NcnnShim.IsSupported())
+            throw new NcnnUnavailableException("[YOLO] ncnn_shim.dll 缺失或版本过旧（缺少 shim_create_ex / shim_infer_ex）。");
 
         try
         {
             var (names, width, height, isClassifier) = MetadataCache.GetOrAdd(model.ModalPath, ReadMetadata);
             IYoloPredictorBackend predictor =
-                new NcnnYoloPredictor(new NcnnShim(shimPath), paramPath, modelPath, names, width, height,
+                new NcnnYoloPredictor(new NcnnShim(), paramPath, modelPath, names, width, height,
                     tuning: settings.Yolo, gpuIndex: gpuIndex, isClassifier: isClassifier);
             var deviceText = gpuIndex >= 0 ? $"Vulkan 设备 #{gpuIndex}" : $"CPU（{numThreads} 线程）";
             string activationLine;

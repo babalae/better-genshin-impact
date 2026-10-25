@@ -21,15 +21,13 @@ internal static class NcnnBlobProbe
     private const int ProbeDetSide = 320;
     private const int ProbeRecWidth = 320;
 
-    public static string Describe(string shimPath, string modelDir, NcnnTuningSettings detTuning,
+    public static string Describe(string? shimPath, string modelDir, NcnnTuningSettings detTuning,
         NcnnTuningSettings recTuning, int gpuIndex)
     {
-        if (!File.Exists(shimPath)) return "ncnn_shim.dll 缺失，无法探测。";
-
         NcnnShim shim;
         try
         {
-            shim = new NcnnShim(shimPath);
+            shim = string.IsNullOrEmpty(shimPath) ? new NcnnShim() : new NcnnShim(shimPath);
         }
         catch (Exception e)
         {

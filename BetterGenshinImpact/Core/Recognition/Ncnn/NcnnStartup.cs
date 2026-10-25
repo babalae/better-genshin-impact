@@ -51,7 +51,7 @@ public static class NcnnStartup
                 try
                 {
                     var shimDefaults = NcnnTuningSettings.FromNetOptions(
-                        NcnnShim.QueryDefaultOptions(NcnnAvailability.ShimFullPath), config.Threads);
+                        NcnnShim.QueryDefaultOptions(), config.Threads);
                     config.DetTuning.AlignWithDefaults(shimDefaults);
                     config.RecTuning.AlignWithDefaults(shimDefaults);
                     config.YoloTuning.AlignWithDefaults(shimDefaults);
@@ -78,13 +78,10 @@ public static class NcnnStartup
     /// </summary>
     public static string ValidateRuntime()
     {
-        var shimPath = NcnnAvailability.ShimFullPath;
-        if (!System.IO.File.Exists(shimPath))
-            return $"ncnn 运行库缺失：{shimPath}\r\n\r\n"
-                   + "请在“硬件加速设置的 ncnn 卡片中”关闭 OCR / YOLO 的 ncnn 开关，或补齐 ncnn_shim.dll。";
-        if (!NcnnShim.IsSupported(shimPath))
-            return $"ncnn_shim.dll 版本过旧（缺少 shim_create_ex / shim_infer_ex）：{shimPath}\r\n\r\n"
-                   + "请更新 ncnn_shim.dll 后重启，或暂时关闭 ncnn。";
+        if (!NcnnShim.IsSupported())
+            return "ncnn 运行库缺失或版本过旧（缺少 shim_create_ex / shim_infer_ex）。\r\n\r\n"
+                   + "运行库由 NuGet 包 BetterGI.NcnnShim 随构建部署；"
+                   + "请在“硬件加速设置的 ncnn 卡片中”关闭 OCR / YOLO 的 ncnn 开关，或更新该包。";
         return "";
     }
 }

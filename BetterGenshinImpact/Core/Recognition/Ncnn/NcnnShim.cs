@@ -34,7 +34,8 @@ public sealed record NcnnInput
 public sealed record NcnnOutput(NcnnTensorInfo Info, float[] Data);
 
 /// <summary>
-///     ncnn_shim.dll 的动态加载封装（NativeLibrary，dll 路径运行时可配，绕开 DllImport 常量约束）。
+///     ncnn_shim.dll 的动态加载封装（NativeLibrary 裸名解析：普通构建探测 deps.json 的
+///     runtimes/win-x64/native/，单文件发布探测 exe 旁，两种布局由 .NET 标准机制自动处理）。
 ///     旧接口始终可用；新接口（版本化选项、富元信息、指针直输、设备详情）按导出探测，缺失时降级。
 ///     会话级互操作经由 <see cref="INcnnShim" /> 抽象，便于推理层单测注入托管替身。
 /// </summary>
@@ -86,8 +87,11 @@ public sealed class NcnnShim : INcnnShim
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     private delegate int DeviceNameDelegate(int index, [Out] byte[] buffer, int bufferSize);
 
-    /// <summary>加载 shim 并绑定全部必需导出；缺少任一导出直接抛错，不再支持旧版 DLL。</summary>
-    public NcnnShim(string dllPath)
+    /// <summary>
+    ///     加载 shim 并绑定全部必需导出；缺少任一导出直接抛错，不再支持旧版 DLL。
+    ///     <paramref name="dllPath" /> 为空时按标准机制裸名解析（测试可用显式路径注入替身）。
+    /// </summary>
+    public NcnnShim(string? dllPath = null)
     {
         _library = GetLibrary(dllPath);
         _createEx = GetExport<CreateExDelegate>(_library, "shim_create_ex");
@@ -101,11 +105,11 @@ public sealed class NcnnShim : INcnnShim
     }
 
     /// <summary>只探测导出表、不构造会话：供启动校验与设置页判断运行库版本，永远不抛异常。</summary>
-    public static bool IsSupported(string dllPath)
+    public static bool IsSupported()
     {
         try
         {
-            var library = GetLibrary(dllPath);
+            var library = GetLibrary(null);
             return NativeLibrary.TryGetExport(library, "shim_create_ex", out _)
                 && NativeLibrary.TryGetExport(library, "shim_infer_ex", out _);
         }
@@ -270,12 +274,23 @@ public sealed class NcnnShim : INcnnShim
     private static readonly object DeviceLock = new();
     private static NcnnDeviceQuery? _devices;
 
-    private static nint GetLibrary(string dllPath)
+    private static nint GetLibrary(string? dllPath)
     {
         lock (LibraryLock)
         {
             if (Libraries.TryGetValue(dllPath, out var library)) return library;
-            library = NativeLibrary.Load(dllPath);
+            if (string.IsNullOrEmpty(dllPath))
+            {
+                // 裸名解析：普通构建命中 deps.json 的 runtimes/win-x64/native/，
+                // 单文件发布命中 exe 旁——两种布局由 .NET 标准机制处理
+                if (!NativeLibrary.TryLoad("ncnn_shim", typeof(NcnnShim).Assembly, null, out library))
+                    throw new NcnnUnavailableException(
+                        "ncnn_shim.dll 加载失败：未找到运行库（应由 NuGet 包 BetterGI.NcnnShim 随构建部署）。");
+            }
+            else
+            {
+                library = NativeLibrary.Load(dllPath);
+            }
             Libraries[dllPath] = library;
             return library;
         }
@@ -285,7 +300,7 @@ public sealed class NcnnShim : INcnnShim
     ///     枚举 Vulkan 设备（首次调用会初始化 ncnn 的 Vulkan 实例，之后随进程常驻）。
     ///     运行库缺失或导出缺失直接抛错，由启动校验转成可读提示。
     /// </summary>
-    public static NcnnDeviceQuery QueryDevices(string dllPath)
+    public static NcnnDeviceQuery QueryDevices(string? dllPath = null)
     {
         lock (DeviceLock)
         {
@@ -301,9 +316,11 @@ public sealed class NcnnShim : INcnnShim
         }
     }
 
-    private static nint RequireLibrary(string dllPath)
+    private static nint RequireLibrary(string? dllPath)
     {
-        if (!File.Exists(dllPath)) throw new NcnnUnavailableException($"ncnn 运行库缺失：{dllPath}");
+        // 裸名模式下由 GetLibrary 在找不到时抛 NcnnUnavailableException；显式路径仍保留存在性检查
+        if (!string.IsNullOrEmpty(dllPath) && !File.Exists(dllPath))
+            throw new NcnnUnavailableException($"ncnn 运行库缺失：{dllPath}");
         return GetLibrary(dllPath);
     }
 
@@ -338,7 +355,7 @@ public sealed class NcnnShim : INcnnShim
     }
 
     /// <summary>读取单个设备的完整能力与显存预算；查询失败即抛错，不返回半残详情。</summary>
-    public static NcnnDeviceDetails QueryDeviceDetails(string dllPath, int index)
+    public static NcnnDeviceDetails QueryDeviceDetails(int index, string? dllPath = null)
     {
         var library = RequireLibrary(dllPath);
         if (!NativeLibrary.TryGetExport(library, "shim_get_device_info", out var address))
@@ -376,7 +393,7 @@ public sealed class NcnnShim : INcnnShim
     }
 
     /// <summary>显存预算（MB）；驱动未提供预算时返回 0 表示未知。</summary>
-    public static uint QueryHeapBudget(string dllPath, int index)
+    public static uint QueryHeapBudget(int index, string? dllPath = null)
     {
         var library = RequireLibrary(dllPath);
         if (!NativeLibrary.TryGetExport(library, "shim_get_heap_budget", out var address))
@@ -388,7 +405,7 @@ public sealed class NcnnShim : INcnnShim
     ///     读取 ncnn::Option 的真实默认值；缺导出抛 <see cref="NotSupportedException" />，
     ///     由调用方决定是否跳过默认值对齐（对齐失败不影响推理正确性）。
     /// </summary>
-    public static NcnnNetOptions QueryDefaultOptions(string dllPath)
+    public static NcnnNetOptions QueryDefaultOptions(string? dllPath = null)
     {
         var library = RequireLibrary(dllPath);
         if (!NativeLibrary.TryGetExport(library, "shim_get_default_options", out var address))

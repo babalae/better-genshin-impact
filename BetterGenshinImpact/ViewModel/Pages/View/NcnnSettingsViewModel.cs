@@ -392,7 +392,7 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
         var defaultIndex = -1;
         try
         {
-            var query = await Task.Run(() => NcnnShim.QueryDevices(NcnnShimPath)).ConfigureAwait(true);
+            var query = await Task.Run(() => NcnnShim.QueryDevices()).ConfigureAwait(true);
             if (_disposed || ticket != Volatile.Read(ref _deviceQueryGate)) return;
             devices = [.. query.Devices];
             defaultIndex = query.DefaultIndex;
@@ -459,10 +459,10 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
         var ticket = Interlocked.Increment(ref _detailsQueryGate);
         try
         {
-            var details = await Task.Run(() => NcnnShim.QueryDeviceDetails(NcnnShimPath, gpuIndex)).ConfigureAwait(true);
+            var details = await Task.Run(() => NcnnShim.QueryDeviceDetails(gpuIndex)).ConfigureAwait(true);
             var budget = details?.HeapBudgetMB ?? 0;
             if (budget == 0)
-                budget = await Task.Run(() => NcnnShim.QueryHeapBudget(NcnnShimPath, gpuIndex)).ConfigureAwait(true);
+                budget = await Task.Run(() => NcnnShim.QueryHeapBudget(gpuIndex)).ConfigureAwait(true);
             if (_disposed || ticket != Volatile.Read(ref _detailsQueryGate)) return;
             NcnnDeviceDetails = details;
             NcnnHeapBudgetMB = budget;
@@ -580,7 +580,7 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
             var gpuIndex = IsNcnnCpu ? -1 : NcnnGpuIndex;
             var det = DetTuning.Snapshot();
             var rec = RecTuning.Snapshot();
-            NcnnBlobText = await Task.Run(() => NcnnBlobProbe.Describe(NcnnShimPath,
+            NcnnBlobText = await Task.Run(() => NcnnBlobProbe.Describe(null,
                 NcnnAvailability.OcrModelDirectory, det, rec, gpuIndex));
         }
         catch (Exception ex)

@@ -23,9 +23,6 @@ public sealed record NcnnAssetGroup(string Name, int ReadyCount, int TotalCount,
 /// </summary>
 public sealed class NcnnAvailability
 {
-    /// <summary>shim 位置（相对启动目录），与 OCR / YOLO 装配路径共用。</summary>
-    public const string ShimRelativePath = @"Assets\Model\PaddleOCR\Ncnn\ncnn_shim.dll";
-
     private const string OcrModelRelativeDir = @"Assets\Model\PaddleOCR\Ncnn";
 
     private static readonly (BgiOnnxModel Model, string Display, string Usage)[] YoloModels =
@@ -38,9 +35,6 @@ public sealed class NcnnAvailability
         (BgiOnnxModel.BgiAvatarSide, "队伍头像分类", "自动战斗"),
         (BgiOnnxModel.BgiEClassify, "E 技能分类", "自动战斗")
     ];
-
-    /// <summary>shim 的绝对路径（不触发加载），供启动准备与设置页共用。</summary>
-    public static string ShimFullPath => Global.Absolute(ShimRelativePath);
 
     /// <summary>OCR 模型目录（绝对路径），诊断探测与装配路径共用。</summary>
     public static string OcrModelDirectory => Global.Absolute(OcrModelRelativeDir);
@@ -80,11 +74,12 @@ public sealed class NcnnAvailability
 
     public static NcnnAvailability Detect()
     {
-        var shimPath = Global.Absolute(ShimRelativePath);
-        var shimReady = File.Exists(shimPath);
+        // shim 走 NuGet 原生包标准解析（裸名加载），可用性以导出探测为准
+        var shimReady = NcnnShim.IsSupported();
+        var shimText = "NuGet 包 BetterGI.NcnnShim（runtimes/win-x64/native/ncnn_shim.dll）";
         var ocrDir = Global.Absolute(OcrModelRelativeDir);
 
-        return new NcnnAvailability(shimReady, shimPath,
+        return new NcnnAvailability(shimReady, shimText,
         [
             BuildGroup("OCR 文本检测", [BuildItem(
                 ocrDir, "det_dyn", "文本检测 · 动态形状", "全部 OCR 文本定位")]),

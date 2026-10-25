@@ -19,8 +19,7 @@ internal static class NcnnOcrBackend
     public static (IOcrDetector Det, IOcrRecognizer Rec) Create(ILogger logger, NcnnBackendSettings settings)
     {
         var modelDir = Global.Absolute(RelativeModelDir);
-        var shimPath = Global.Absolute(NcnnAvailability.ShimRelativePath);
-        RequireShim(shimPath);
+        RequireShim();
 
         NcnnDet? det = null;
         NcnnRec? rec = null;
@@ -32,7 +31,7 @@ internal static class NcnnOcrBackend
             var labels = v6.RecLabel();
             var gpuIndex = settings.EffectiveGpuIndex;
             // det / rec 共享同一个 shim 实例（库句柄进程内缓存，导出绑定只做一次）
-            INcnnShim shim = new NcnnShim(shimPath);
+            INcnnShim shim = new NcnnShim();
             det = new NcnnDet(shim, modelDir, v6.DetectionVersion, settings.Det, gpuIndex, logger);
             rec = new NcnnRec(shim, modelDir, labels, settings.Rec, gpuIndex, logger);
             logger.LogInformation(
@@ -52,14 +51,12 @@ internal static class NcnnOcrBackend
         }
     }
 
-    /// <summary>运行库缺失或版本过旧都要在创建会话前拦下，错误信息直接带绝对路径。</summary>
-    private static void RequireShim(string shimPath)
+    /// <summary>运行库缺失或版本过旧都要在创建会话前拦下（裸名加载，缺失时在此抛可读错误）。</summary>
+    private static void RequireShim()
     {
-        if (!File.Exists(shimPath))
+        if (!NcnnShim.IsSupported())
             throw new NcnnUnavailableException(
-                $"ncnn 运行库缺失：{shimPath}（需要随程序发布的 ncnn_shim.dll）");
-        if (!NcnnShim.IsSupported(shimPath))
-            throw new NcnnUnavailableException(
-                $"ncnn_shim.dll 版本过旧（缺少 shim_create_ex / shim_infer_ex）：{shimPath}");
+                "ncnn_shim.dll 缺失或版本过旧（缺少 shim_create_ex / shim_infer_ex）。"
+                + "运行库由 NuGet 包 BetterGI.NcnnShim 随构建部署，请更新包或暂时关闭 ncnn 开关。");
     }
 }
