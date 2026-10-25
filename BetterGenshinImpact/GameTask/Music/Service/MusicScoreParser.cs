@@ -56,25 +56,26 @@ public sealed partial class MusicScoreParser : IMusicScoreParser
     {
         var text = await File.ReadAllTextAsync(path, cancellationToken);
         var json = JObject.Parse(text);
-        var type = GetString(json, "type", "yuanqin").Trim().ToLowerInvariant();
+        var type = ResolveJsonType(json);
         var bpm = GetDouble(json, "bpm", 120);
         var ticks = Math.Max(1, (int)Math.Round(GetDouble(json, "ticks", 480)));
         var timeSignature = GetString(json, "time_signature", "4/4");
-        var notes = json["notes"] ?? throw new FormatException("曲谱缺少 notes 字段");
 
         var format = type switch
         {
             "yuanqin" => MusicScoreFormat.YuanQin,
             "midi" => MusicScoreFormat.MidiJson,
             "keyboard" => MusicScoreFormat.Keyboard,
-            _ => throw new FormatException($"不支持的 AutoYuanQin 曲谱类型：{type}")
+            "motick" or "mo_tick" or "mo-tick" or "yqrec" or "tick" => MusicScoreFormat.MoTick,
+            _ => ResolveUnsupportedType(json, type)
         };
 
         var timeline = format switch
         {
-            MusicScoreFormat.YuanQin => ParseYuanQinTimeline(notes, bpm, timeSignature),
-            MusicScoreFormat.MidiJson => ParseMidiJsonTimeline(GetNotesString(notes, format), bpm, ticks),
-            MusicScoreFormat.Keyboard => ParseKeyboardTimeline(GetNotesString(notes, format), bpm),
+            MusicScoreFormat.YuanQin => ParseYuanQinTimeline(RequireNotes(json), bpm, timeSignature),
+            MusicScoreFormat.MidiJson => ParseMidiJsonTimeline(GetNotesString(RequireNotes(json), format), bpm, ticks),
+            MusicScoreFormat.Keyboard => ParseKeyboardTimeline(GetNotesString(RequireNotes(json), format), bpm),
+            MusicScoreFormat.MoTick => ParseMoTickTimeline(json),
             _ => PerformanceTimeline.Empty
         };
 
@@ -84,7 +85,7 @@ public sealed partial class MusicScoreParser : IMusicScoreParser
             RelativePath = Path.GetRelativePath(rootFolder, path),
             Name = GetString(json, "name", Path.GetFileNameWithoutExtension(path)),
             Author = GetString(json, "author", "未知作者"),
-            Instrument = GetString(json, "instrument", "风物之诗琴"),
+            Instrument = GetInstrumentName(json),
             Description = GetString(json, "description", "无描述"),
             Composer = GetString(json, "composer", "未知作曲者"),
             Arranger = GetString(json, "arranger", "未知编曲者"),
@@ -94,6 +95,63 @@ public sealed partial class MusicScoreParser : IMusicScoreParser
             TicksPerQuarterNote = ticks,
             SourceTimeline = timeline,
             MappedNoteCount = timeline.Events.Count(x => x.Type == PerformanceEventType.KeyDown)
+        };
+    }
+
+    /// <summary>
+    /// 解析谱面的格式标识：优先取 type 字段；缺失时按结构嗅探
+    /// （YQ_moTools 录制文件没有 type），都不匹配则回退 AutoYuanQin，保持历史行为。
+    /// </summary>
+    /// <param name="json">整份谱面 JSON</param>
+    /// <returns>用于格式分派的标识</returns>
+    private static string ResolveJsonType(JObject json)
+    {
+        var type = GetString(json, "type", string.Empty).Trim().ToLowerInvariant();
+        if (type.Length > 0)
+        {
+            return type;
+        }
+
+        return IsMoTickJson(json) ? MoTickTypeName : "yuanqin";
+    }
+
+    /// <summary>
+    /// 处理不认识的 type 值：谱面若带有 YQ_moTools 的结构标记，仍按 mo-Tick 解析，
+    /// 避免对方新增一个与演奏无关的 type 字段就把整份谱面判为不支持；
+    /// 其余情况保持原有的报错行为。其它无关键值对本分支没有影响。
+    /// </summary>
+    /// <param name="json">整份谱面 JSON</param>
+    /// <param name="type">原始 type 值，仅用于报错</param>
+    /// <returns>识别出的格式</returns>
+    private static MusicScoreFormat ResolveUnsupportedType(JObject json, string type)
+    {
+        return IsMoTickJson(json)
+            ? MusicScoreFormat.MoTick
+            : throw new FormatException($"不支持的 AutoYuanQin 曲谱类型：{type}");
+    }
+
+    /// <summary>
+    /// 读取 notes 节点，缺失时给出统一的解析错误。
+    /// </summary>
+    /// <param name="json">整份谱面 JSON</param>
+    /// <returns>notes 节点</returns>
+    private static JToken RequireNotes(JObject json)
+    {
+        return json["notes"] ?? throw new FormatException("曲谱缺少 notes 字段");
+    }
+
+    /// <summary>
+    /// 读取乐器名：既支持字符串写法，也支持 YQ_moTools 的 {"id","name","key_count"} 对象写法。
+    /// </summary>
+    /// <param name="json">整份谱面 JSON</param>
+    /// <returns>乐器名</returns>
+    private static string GetInstrumentName(JObject json)
+    {
+        return json["instrument"] switch
+        {
+            JObject instrument => GetString(instrument, "name", "风物之诗琴"),
+            null or { Type: JTokenType.Null } => "风物之诗琴",
+            var token => token.ToString()
         };
     }
 
@@ -695,18 +753,49 @@ public sealed partial class MusicScoreParser : IMusicScoreParser
             : throw new FormatException($"{format} 曲谱的 notes 必须是字符串");
     }
 
+    /// <summary>
+    /// 为解析失败的曲谱构造占位结果，保证错误只体现在 <see cref="PerformanceScore.Error"/> 上，
+    /// 不会因为路径换算再抛出异常（rootFolder 为空或路径不合法时都能安全返回）。
+    /// </summary>
+    /// <param name="path">曲谱路径</param>
+    /// <param name="rootFolder">曲库根目录，可能为空</param>
+    /// <param name="error">解析失败原因</param>
+    /// <returns>标记为无效的曲谱</returns>
     private static PerformanceScore CreateInvalidScore(string path, string rootFolder, string error)
     {
         return new PerformanceScore
         {
             FullPath = path,
-            RelativePath = Path.GetRelativePath(rootFolder, path),
+            RelativePath = ToRelativePath(path, rootFolder),
             Name = Path.GetFileNameWithoutExtension(path),
             Format = Path.GetExtension(path).Equals(".json", StringComparison.OrdinalIgnoreCase)
                 ? MusicScoreFormat.YuanQin
                 : MusicScoreFormat.MidiFile,
             Error = error
         };
+    }
+
+    /// <summary>
+    /// 计算相对曲库根目录的路径，任何不合法输入都退化为文件名。
+    /// </summary>
+    /// <param name="path">曲谱路径</param>
+    /// <param name="rootFolder">曲库根目录，可能为空</param>
+    /// <returns>相对路径</returns>
+    private static string ToRelativePath(string path, string rootFolder)
+    {
+        if (string.IsNullOrWhiteSpace(rootFolder))
+        {
+            return Path.GetFileName(path);
+        }
+
+        try
+        {
+            return Path.GetRelativePath(rootFolder, path);
+        }
+        catch (Exception e) when (e is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            return Path.GetFileName(path);
+        }
     }
 
     [GeneratedRegex(@"^(?<status>[DU])(?<keys>[A-Z@]+)(?<ticks>\d+)$", RegexOptions.CultureInvariant)]
