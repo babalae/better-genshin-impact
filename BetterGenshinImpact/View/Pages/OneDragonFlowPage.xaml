@@ -1006,7 +1006,7 @@
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="{i18n:T 每轮领取后识别奖励名称与数量，任务结束打印汇总}"
+                                              Text="{i18n:T 每轮领取后识别奖励名称与数量，测试功能，如有问题请提交截图反馈}"
                                               TextWrapping="Wrap" />
                             </Grid>
                         </ui:CardControl.Header>
@@ -1280,7 +1280,7 @@
                                 <ui:TextBlock Grid.Row="1"
                                               Grid.Column="0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="{i18n:T 每轮领取后识别奖励名称与数量，任务结束打印汇总}"
+                                              Text="{i18n:T 每轮领取后识别奖励名称与数量，测试功能，如有问题请提交截图反馈}"
                                               TextWrapping="Wrap" />
                                 <ui:ToggleSwitch Grid.Row="0"
                                                  Grid.RowSpan="2"

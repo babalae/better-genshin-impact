@@ -1,7 +1,9 @@
 using BetterGenshinImpact.GameTask.Common.Resin;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
+using BetterGenshinImpact.GameTask.Common.Reward;
 
 namespace BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 
@@ -67,6 +69,12 @@ public partial class AutoLeyLineOutcropConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private int _scanDropsAfterRewardSeconds = 12;
+
+    /// <summary>
+    /// 材料目标列表：按物品名与数量提前停止。
+    /// </summary>
+    [ObservableProperty]
+    private ObservableCollection<TargetItem> _targetItems = [];
 
     [ObservableProperty]
     private AutoLeyLineOutcropFightConfig _fightConfig = new();

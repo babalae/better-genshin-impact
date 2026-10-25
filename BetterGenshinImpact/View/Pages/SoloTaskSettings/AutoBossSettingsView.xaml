@@ -97,7 +97,7 @@
             <ui:CardControl.Header>
                 <StackPanel Margin="0,0,16,0">
                     <ui:TextBlock FontTypography="Body" Text="奖励识别" TextWrapping="Wrap"/>
-                    <TextBlock Style="{StaticResource SoloDescription}" Text="每轮领奖后识别奖励名称与数量，结束时汇总。"/>
+                    <TextBlock Style="{StaticResource SoloDescription}" Text="每轮领奖后识别奖励名称与数量，测试功能，如有问题请提交截图反馈。"/>
                 </StackPanel>
             </ui:CardControl.Header>
             <ui:ToggleSwitch IsChecked="{Binding RewardRecognitionEnabled, Mode=TwoWay}"/>

@@ -118,6 +118,9 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
     private CancellationTokenSource? _comboBuildCts;
     private readonly Dictionary<string, int> _rewardSummary = new();
 
+    /// <summary>材料目标是否已全部达成。</summary>
+    private bool _itemStopReached;
+
     private CancellationToken _ct;
 
     private ObservableCollection<OneDragonFlowConfig> ConfigList = [];
@@ -261,6 +264,7 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
         _taskParam = param;
         _ct = ct;
         _rewardSummary.Clear();
+        _itemStopReached = false;
 
         // 依赖参数的初始化（原构造函数中的策略解析、树脂记录等）
         var initFailure = Initialize(param);
@@ -274,6 +278,18 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
         _predictor = predictor;
 
         Init();
+        var targetFailure = ValidateTargetItemSettings();
+        if (targetFailure != null)
+        {
+            Logger.LogError("自动秘境：{Msg}", targetFailure.Message);
+            return targetFailure;
+        }
+
+        if (_taskParam.TargetItems.Count > 0)
+        {
+            Logger.LogInformation("自动秘境：材料目标 {Targets}，达到后提前结束",
+                string.Join("，", _taskParam.TargetItems.Select(x => $"{x.ItemName}×{x.TargetCount}")));
+        }
 
         // 自动吃药只在本次秘境期间启用，返回（含异常）时撤销
         using var autoEatLease = _taskParam.AutoEat ? TaskTriggerDispatcher.Instance().AddTrigger("AutoEat") : null;
@@ -464,7 +480,31 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
     {
         LogScreenResolution();
 
+        // 材料目标在 RunAsync 中单独输出；树脂设置与材料目标同时生效，任一达成即结束。
         Logger.LogInformation("自动秘境：{ResinUsage}", ResinUsageText.Summary(_taskParam.ResinUsage, ResinCapability));
+    }
+
+    /// <summary>
+    /// 材料目标模式启动前校验目标配置与奖励识别能力。
+    /// </summary>
+    /// <returns>目标配置或奖励识别能力无效时的失败结果；有效时返回 null。</returns>
+    private SoloTaskResult? ValidateTargetItemSettings()
+    {
+        if (_taskParam.TargetItems.Count == 0)
+        {
+            return null;
+        }
+
+        try
+        {
+            TargetItemCatalog.Instance.ValidateDomainTargets(_taskParam.DomainName, _taskParam.TargetItems);
+            RewardResultRecognizer.Instance.EnsureSupported(_runtime);
+            return null;
+        }
+        catch (Exception e) when (e is TargetItemConfigurationException or InvalidOperationException)
+        {
+            return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, e.Message);
+        }
     }
 
     private void LogScreenResolution()
@@ -1561,6 +1601,14 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
         _runtime.Sleep(1000, _ct);
         await TryRecognizeRewardResult();
 
+        if (_taskParam.TargetItems.Count > 0 && _itemStopReached)
+        {
+            Logger.LogInformation("自动秘境：材料目标已全部达成，本轮领奖后结束");
+            isLastTurn = true;
+            // 材料目标达成按目标完成结算，不视为树脂不足。
+            _stopReason = ResinStopReason.TargetReached;
+        }
+
         for (var i = 0; i < 30; i++)
         {
             using var ra = _runtime.CaptureToRectArea();
@@ -1621,7 +1669,7 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
 
     private async Task TryRecognizeRewardResult()
     {
-        if (!_taskParam.RewardRecognitionEnabled)
+        if (!_taskParam.RewardRecognitionEnabled && _taskParam.TargetItems.Count == 0)
         {
             return;
         }
@@ -1638,16 +1686,22 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
             Logger.LogInformation("自动秘境：开始奖励识别");
             var rewards = RewardResultRecognizer.Instance.RecognizeMultiPage(_runtime);
 
-            RewardResultRecognizer.MergeIntoSummary(_rewardSummary, rewards);
-
-            if (rewards.Count > 0)
-            {
-                Logger.LogInformation("自动秘境：本轮奖励识别结果 {Rewards}",
-                    string.Join(", ", rewards.Select(r => $"{r.Key} x{r.Value}")));
-            }
-            else
+            if (rewards.Count == 0)
             {
                 Logger.LogWarning("自动秘境：本轮奖励识别结果为空");
+                return;
+            }
+
+            RewardResultRecognizer.MergeIntoSummary(_rewardSummary, rewards);
+            Logger.LogInformation("自动秘境：本轮奖励识别结果 {Rewards}",
+                string.Join(", ", rewards.Select(r => $"{r.Key} x{r.Value}")));
+
+            if (_taskParam.TargetItems.Count > 0)
+            {
+                var progress = TargetItemCatalog.Instance.CalculateDomain(_taskParam.TargetItems, _rewardSummary);
+                _itemStopReached = progress.AllSatisfied;
+                Logger.LogInformation("自动秘境：材料目标进度 {Progress}",
+                    string.Join("，", progress.Targets.Select(x => $"{x.ItemName} {x.CountedCount}/{x.TargetCount}")));
             }
         }
         catch (Exception e) when (e is not OperationCanceledException and not NormalEndException)

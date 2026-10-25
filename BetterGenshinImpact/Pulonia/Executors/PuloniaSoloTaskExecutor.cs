@@ -230,6 +230,12 @@ public sealed class PuloniaSoloTaskExecutor : IPuloniaTaskExecutor
     private static PuloniaTaskDefinition BuildDefinition(SoloTaskDescriptor descriptor)
     {
         var defaults = PuloniaTaskJson.Read<JObject>(descriptor.SerializeParam(descriptor.CreateDefaultParam()));
+        // 材料目标是独立任务页的专属设置，任务计划节点不继承全局配置，避免节点改动首领或秘境后目标不匹配
+        if (defaults["target_items"] is not null)
+        {
+            defaults["target_items"] = new JArray();
+        }
+
         var schema = PuloniaSoloTaskSchema.Create(descriptor.ParamType);
         var properties = schema["properties"] as JObject ?? new JObject();
         // 每周安排是任务计划的编排能力，所有独立任务都可以按星期覆盖参数或跳过

@@ -1,8 +1,10 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
 using System.Diagnostics.CodeAnalysis;
 using BetterGenshinImpact.GameTask.Common.Resin;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.GameTask.Common.Reward;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.Service;
 
@@ -120,6 +122,11 @@ public class AutoLeyLineOutcropParam:BaseTaskParam<AutoLeyLineOutcropTask>
     /// 是否为一条龙模式：为 true 时开始前不先传送到七天神像。默认 false（原任务构造参数 oneDragonMode）。
     /// </summary>
     public bool OneDragonMode { get; set; }
+
+    /// <summary>
+    /// 材料目标列表：按物品名与数量提前停止。
+    /// </summary>
+    public List<TargetItem> TargetItems { get; set; } = [];
     
     /// <summary>归一化 JS 已赋值的组合字段；未赋值的模式、补充开关及新模型专属字段保持原值。</summary>
     public void ResolveResinUsage()
@@ -159,6 +166,7 @@ public class AutoLeyLineOutcropParam:BaseTaskParam<AutoLeyLineOutcropTask>
         ScanDropsAfterRewardSeconds = config.ScanDropsAfterRewardSeconds;
         Country = config.Country;
         LeyLineOutcropType = config.LeyLineOutcropType;
+        TargetItems = TargetItem.CloneAll(config.TargetItems);
     }
 
     public AutoLeyLineOutcropParam() : base(null, null)

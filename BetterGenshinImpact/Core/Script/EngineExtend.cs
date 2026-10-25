@@ -14,6 +14,7 @@ using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Core.Script.Utils;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Common.Resin;
+using BetterGenshinImpact.GameTask.Common.Reward;
 using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoBoss;
 using BetterGenshinImpact.GameTask.AutoFight;
@@ -175,6 +176,7 @@ public class EngineExtend
         engine.AddHostType("ItemIconRecognitionMode", typeof(ItemIconRecognitionMode));
         engine.AddHostType("AutoFightParam", typeof(AutoFightParam));
         engine.AddHostType("AutoLeyLineOutcropParam", typeof(AutoLeyLineOutcropParam));
+        engine.AddHostType("TargetItem", typeof(TargetItem));
         engine.AddHostType("AutoStygianOnslaughtParam", typeof(AutoStygianOnslaughtParam));
         // 统一树脂设置：新脚本可直接修改 param.ResinUsage（如 Mode、RunCount、Allowed、Counts、OriginalTier），
         // 旧的 SpecifyResinUse、RunCount、IsResinExhaustionMode 等兼容属性继续可用

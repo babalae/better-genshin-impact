@@ -1,0 +1,55 @@
+<UserControl x:Class="BetterGenshinImpact.View.Controls.TargetItemListEditorView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+    <!-- 材料目标的名称与数量列表；三个独立任务共用，DataContext 由宿主页面设为 TargetItemListEditorViewModel。 -->
+    <StackPanel>
+        <ItemsControl ItemsSource="{Binding Items}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="3*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="2*" />
+                        </Grid.ColumnDefinitions>
+                        <ComboBox Grid.Column="0"
+                                  MinWidth="180"
+                                  VerticalAlignment="Center"
+                                  DisplayMemberPath="DisplayName"
+                                  ItemsSource="{Binding DataContext.Choices, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                  SelectedValue="{Binding ItemName, Mode=TwoWay}"
+                                  SelectedValuePath="Name" />
+                        <ui:NumberBox Grid.Column="1"
+                                      Width="108"
+                                      Margin="8,0,0,0"
+                                      VerticalAlignment="Center"
+                                      Minimum="1"
+                                      SmallChange="1"
+                                      LargeChange="5"
+                                      ClearButtonEnabled="False"
+                                      SpinButtonPlacementMode="Inline"
+                                      Value="{Binding TargetCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <ui:Button Grid.Column="2"
+                                   Margin="8,0,0,0"
+                                   VerticalAlignment="Center"
+                                   Command="{Binding DataContext.RemoveCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                   CommandParameter="{Binding}"
+                                   Content="{i18n:T 删除}" />
+                    </Grid>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <ui:TextBlock Margin="0,0,0,8"
+                      Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                      Text="{i18n:T 同一材料只能添加一次}"
+                      TextWrapping="Wrap"
+                      Visibility="{Binding HasDuplicateAttempt, Converter={StaticResource BooleanToVisibilityConverter}}" />
+        <ui:Button Margin="0,4,0,0"
+                   HorizontalAlignment="Left"
+                   Command="{Binding AddCommand}"
+                   Content="{i18n:T 添加材料}" />
+    </StackPanel>
+</UserControl>
