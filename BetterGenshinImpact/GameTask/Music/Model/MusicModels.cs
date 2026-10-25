@@ -13,7 +13,13 @@ public enum MusicScoreFormat
     YuanQin,
     MidiJson,
     Keyboard,
-    MidiFile
+    MidiFile,
+
+    /// <summary>
+    /// mo-Tick 谱面：YQ_moTools 录制导出的谱面，以「和弦字母串 + 相对毫秒间隔 + 可选 [延音毫秒]」描述，
+    /// 例如 A[800]1000DF 表示 0ms 按下 A 并按住 800ms，1000ms 时按下 D+F。
+    /// </summary>
+    MoTick
 }
 
 public enum MusicInputMode
@@ -176,6 +182,7 @@ public partial class PerformanceScore : ObservableObject
         MusicScoreFormat.MidiJson => "MIDI JSON",
         MusicScoreFormat.Keyboard => "网络键谱",
         MusicScoreFormat.MidiFile => "MIDI",
+        MusicScoreFormat.MoTick => "mo-Tick",
         _ => Format.ToString()
     };
 
