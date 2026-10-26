@@ -53,6 +53,10 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
     private readonly INavigationService _navigationService;
     private readonly ChildSessionService _childSessionService;
     /// <summary>
+    /// 为当前实例提供跨窗口与托盘一致的名称、颜色和图标。
+    /// </summary>
+    private readonly InstanceVisualIdentity _instanceVisualIdentity;
+    /// <summary>
     /// 提供在线子实例快照、状态变化通知与窗口激活能力。
     /// </summary>
     private readonly InstanceService _instanceService;
@@ -63,23 +67,47 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
     /// 标记 ViewModel 已释放，防止退出阶段处理迟到的实例事件。
     /// </summary>
     private bool _disposed;
-    public string Title => $"BetterGI · 更好的原神 · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}";
+    /// <summary>
+    /// 不包含实例身份的应用标题和版本信息。
+    /// </summary>
+    public string Title => _instanceVisualIdentity.ApplicationTitle;
 
     /// <summary>
-    /// 当前进程是否为需要在标题栏标识的子实例。
+    /// 当前实例在 Windows 标题、任务栏和 Alt+Tab 中展示的完整标题。
     /// </summary>
-    public bool IsChildInstance =>
-        InstanceBootstrap.Current.Context.InstanceType != BetterGiInstanceType.Primary;
+    public string WindowTitle => IsInstanceIdentityVisible
+        ? _instanceVisualIdentity.WindowTitle
+        : _instanceVisualIdentity.ApplicationTitle;
 
     /// <summary>
-    /// 当前子实例在标题栏展示的稳定标识。
+    /// 子实例始终展示身份；主实例仅在至少一个子实例在线时展示身份。
     /// </summary>
-    public string ChildInstanceTagText => InstanceBootstrap.Current.Context.InstanceType switch
-    {
-        BetterGiInstanceType.ChildSession => "桌面分身",
-        BetterGiInstanceType.WebView => $"云原神 · {InstanceBootstrap.Current.Context.InstanceName}",
-        _ => string.Empty
-    };
+    public bool IsInstanceIdentityVisible =>
+        !_instanceVisualIdentity.IsPrimary || HasConnectedChildInstances;
+
+    /// <summary>
+    /// 当前实例在标题栏标签中展示的名称。
+    /// </summary>
+    public string InstanceTagText => _instanceVisualIdentity.DisplayName;
+
+    /// <summary>
+    /// 当前实例的稳定强调色画刷。
+    /// </summary>
+    public Brush InstanceAccentBrush => _instanceVisualIdentity.AccentBrush;
+
+    /// <summary>
+    /// 当前实例在窗口、标题栏和托盘中共用的图标。
+    /// </summary>
+    public ImageSource InstanceIconSource => IsInstanceIdentityVisible
+        ? _instanceVisualIdentity.IconSource
+        : _instanceVisualIdentity.DefaultIconSource;
+
+    /// <summary>
+    /// 当前实例的托盘提示文本。
+    /// </summary>
+    public string TrayTooltipText => IsInstanceIdentityVisible
+        ? _instanceVisualIdentity.TrayTooltipText
+        : "BetterGI";
 
     public bool IsChildSessionInstance =>
         InstanceBootstrap.Current.Context.InstanceType == BetterGiInstanceType.ChildSession;
@@ -94,6 +122,10 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
     [NotifyPropertyChangedFor(nameof(ConnectedInstanceOverflowCount))]
     [NotifyPropertyChangedFor(nameof(HasConnectedChildInstances))]
     [NotifyPropertyChangedFor(nameof(HasConnectedInstanceOverflow))]
+    [NotifyPropertyChangedFor(nameof(IsInstanceIdentityVisible))]
+    [NotifyPropertyChangedFor(nameof(WindowTitle))]
+    [NotifyPropertyChangedFor(nameof(InstanceIconSource))]
+    [NotifyPropertyChangedFor(nameof(TrayTooltipText))]
     private IReadOnlyList<ConnectedInstanceItem> _connectedChildInstances = [];
 
     /// <summary>
@@ -166,6 +198,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
         IConfigService configService,
         ChildSessionService childSessionService,
         InstanceService instanceService,
+        InstanceVisualIdentity instanceVisualIdentity,
         IInferenceModelDiagnostics inferenceDiagnostics,
         InferenceRuntimeService inferenceRuntime)
     {
@@ -175,6 +208,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
         _configService = configService;
         _childSessionService = childSessionService;
         _instanceService = instanceService;
+        _instanceVisualIdentity = instanceVisualIdentity;
         Config = _configService.Get();
         _logger = App.GetLogger<MainWindowViewModel>();
         // 订阅通用配置变更：设置页修改背景图路径或开关后，主窗口背景实时刷新
@@ -540,6 +574,20 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
     [RelayCommand]
     private void OnClosing(CancelEventArgs e)
     {
+        // “关闭到托盘”只隐藏当前实例，不应因为其他实例仍在运行而阻止隐藏窗口。
+        if (Config.CommonConfig.ExitToTray)
+        {
+            e.Cancel = true;
+            OnHide();
+            return;
+        }
+
+        // 子实例只负责自己的生命周期；只有主实例退出时需要保护其提供的共享能力。
+        if (!_instanceVisualIdentity.IsPrimary)
+        {
+            return;
+        }
+
         // WebView2 实例依赖主实例提供 IPC 服务，应先关闭网页版实例再退出主实例。
         if (_instanceService.HasConnectedWebViewInstance())
         {
@@ -559,11 +607,6 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
             return;
         }
 
-        if (Config.CommonConfig.ExitToTray)
-        {
-            e.Cancel = true;
-            OnHide();
-        }
     }
 
     [RelayCommand]

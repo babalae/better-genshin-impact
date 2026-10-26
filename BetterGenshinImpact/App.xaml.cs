@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Mask;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
@@ -181,6 +182,10 @@ public partial class App : Application
 
                 services.AddNavigationViewPageProvider();
                 services.AddSingleton(InstanceBootstrap.Current);
+                // 窗口、任务栏、Alt+Tab 与托盘共用同一份实例视觉身份。
+                services.AddSingleton(_ => InstanceVisualIdentity.Create(
+                    instanceContext,
+                    $"BetterGI · 更好的原神 · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}"));
                 // 独立任务：启动时扫描主程序集中带 [SoloTaskInfo] 的任务类
                 services.AddSingleton(_ => new SoloTaskRegistry([typeof(App).Assembly]));
                 services.AddSingleton<SoloTaskExecutionService>();

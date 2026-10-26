@@ -11,7 +11,8 @@
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:viewModel="clr-namespace:BetterGenshinImpact.ViewModel"
                  xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
-                 Title="{i18n:T 更好的原神}"
+                 Title="{Binding WindowTitle, Mode=OneWay}"
+                 Icon="{Binding InstanceIconSource, Mode=OneWay}"
                  Width="1050"
                  Height="700"
                  d:Background="#D2D2D2"
@@ -289,7 +290,7 @@
 
         <ui:TitleBar Grid.Row="0" Grid.Column="0">
             <ui:TitleBar.Icon>
-                <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
+                <ui:ImageIcon Source="{Binding InstanceIconSource, Mode=OneWay}" />
             </ui:TitleBar.Icon>
             <ui:TitleBar.Header>
                 <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
@@ -302,14 +303,14 @@
                             Margin="8,0,0,0"
                             Padding="8,0"
                             VerticalAlignment="Center"
-                            Background="{DynamicResource SystemAccentColorPrimaryBrush}"
+                            Background="{Binding InstanceAccentBrush, Mode=OneWay}"
                             CornerRadius="11"
-                            Visibility="{Binding IsChildInstance, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            Visibility="{Binding IsInstanceIdentityVisible, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <TextBlock VerticalAlignment="Center"
                                    FontSize="12"
                                    FontWeight="SemiBold"
                                    Foreground="White"
-                                   Text="{Binding ChildInstanceTagText, Mode=OneWay}" />
+                                   Text="{Binding InstanceTagText, Mode=OneWay}" />
                     </Border>
                 </StackPanel>
             </ui:TitleBar.Header>
@@ -467,26 +468,41 @@
 
         <tray:NotifyIcon Grid.Row="0" Grid.Column="0"
                          FocusOnLeftClick="False"
-                         Icon="pack://application:,,,/Resources/Images/logo.ico"
+                         Icon="{Binding InstanceIconSource, Mode=OneWay}"
                          LeftDoubleClick="OnNotifyIconLeftDoubleClick"
                          MenuOnRightClick="True"
-                         TooltipText="BetterGI">
+                         TooltipText="{Binding TrayTooltipText, Mode=OneWay}">
             <tray:NotifyIcon.Menu>
                 <ContextMenu>
                     <ContextMenu.DataContext>
                         <markup:ServiceLocator Type="{x:Type viewModel:NotifyIconViewModel}" />
                     </ContextMenu.DataContext>
+                    <ui:MenuItem Header="{Binding InstanceDisplayName, Mode=OneWay}"
+                                 IsEnabled="False"
+                                 Visibility="{Binding IsInstanceIdentityVisible, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ui:MenuItem.Icon>
+                            <Ellipse Width="12"
+                                     Height="12"
+                                     Fill="{Binding InstanceAccentBrush, Mode=OneWay}" />
+                        </ui:MenuItem.Icon>
+                    </ui:MenuItem>
+                    <Separator Visibility="{Binding IsInstanceIdentityVisible, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <ui:MenuItem Command="{Binding ShowOrHideCommand}"
+                                 Header="{i18n:T 显示或隐藏此实例窗口}"
+                                 Icon="{ui:SymbolIcon Window24}" />
+                    <Separator />
                     <ui:MenuItem Command="{Binding OpenChildSessionWindowCommand}"
                                   Header="{i18n:T 桌面分身}"
                                   Icon="{ui:SymbolIcon DesktopCursor24}"
-                                  Visibility="{Binding IsChildSessionEntryVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                    <Separator Visibility="{Binding IsChildSessionEntryVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                  Visibility="{Binding IsPrimaryInstance, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <Separator Visibility="{Binding IsPrimaryInstance, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     <ui:MenuItem Command="{Binding CheckUpdateCommand}"
                                  Header="{i18n:T 检查更新}"
-                                 Icon="{ui:SymbolIcon ArrowAutofitUp24}" />
-                    <Separator />
+                                 Icon="{ui:SymbolIcon ArrowAutofitUp24}"
+                                 Visibility="{Binding IsPrimaryInstance, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <Separator Visibility="{Binding IsPrimaryInstance, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     <ui:MenuItem Command="{Binding ExitCommand}"
-                                 Header="{i18n:T 退出}"
+                                 Header="{Binding ExitMenuText, Mode=OneWay}"
                                  Icon="{ui:SymbolIcon Dismiss24}" />
                 </ContextMenu>
             </tray:NotifyIcon.Menu>
