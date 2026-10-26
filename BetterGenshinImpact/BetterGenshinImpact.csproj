@@ -88,6 +88,9 @@
 		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2592.51" />
 		<PackageReference Include="MimeKit" Version="4.16.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+		<!-- QuestVoice 原神配音：沿用已验证的图像预处理与共享模式音频输出。 -->
+		<PackageReference Include="SkiaSharp" Version="3.119.4" />
+		<PackageReference Include="NAudio" Version="2.2.1" />
 		<PackageReference Include="OpenccNetLib" Version="1.7.0" />
 		<PackageReference Include="OpenCvSharp4.WpfExtensions" Version="4.11.0.20250507" />
 		<PackageReference Include="OpenCvSharp4.Extensions" Version="4.11.0.20250507" />
@@ -121,6 +124,11 @@
 
 	<ItemGroup>
 		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- 仅嵌入小型布局和目录示例，模型/权重由用户在外部部署。 -->
+		<EmbeddedResource Include="Resources\QuestVoice\*" />
 	</ItemGroup>
 
 	<ItemGroup Condition=" '$(Configuration)' == 'Debug'">

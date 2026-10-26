@@ -1,0 +1,103 @@
+<UserControl x:Class="BetterGenshinImpact.View.Pages.QuestVoicePage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             FontFamily="{DynamicResource TextThemeFontFamily}"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="{DynamicResource PagePadding}">
+            <ui:TextBlock Text="自动配音" FontTypography="Title" Margin="0,0,0,8" />
+            <ui:TextBlock Text="使用 QuestVoice 原神识别与配音管线。先在启动页绑定原神并启用截图，再启动配音。页面切换不会停止配音。"
+                          TextWrapping="Wrap" Margin="0,0,0,8" />
+            <ui:TextBlock Text="共存提示：自动剧情的快速跳过可能让对白来不及稳定识别或合成，请按需手动关闭；本模块不会修改既有任务设置。失焦、最小化与推理暂停沿用 BetterGI 截图规则。"
+                          TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,12" />
+
+            <ui:CardExpander Header="运行状态与控制" IsExpanded="True" Margin="0,0,0,12">
+                <StackPanel>
+                    <WrapPanel Margin="0,0,0,12">
+                        <ui:Button Content="启动自动配音" Appearance="Primary" Command="{Binding ViewModel.StartCommand, Mode=OneWay}" Margin="0,0,8,8" />
+                        <ui:Button Content="停止配音与播放" Command="{Binding ViewModel.StopCommand, Mode=OneWay}" Margin="0,0,8,8" />
+                        <ui:Button Content="校验配置" Command="{Binding ViewModel.ValidateCommand, Mode=OneWay}" Margin="0,0,8,8" />
+                    </WrapPanel>
+                    <ui:TextBlock Text="{Binding ViewModel.Status.Game, Mode=OneWay}" TextWrapping="Wrap" />
+                    <ui:TextBlock Text="{Binding ViewModel.Status.Session, Mode=OneWay}" FontTypography="BodyStrong" Margin="0,4,0,8" />
+                    <ui:TextBlock Text="当前角色" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <ui:TextBlock Text="{Binding ViewModel.Status.Character, Mode=OneWay}" TextWrapping="Wrap" Margin="0,2,0,8" />
+                    <ui:TextBlock Text="最近接受的对白" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <ui:TextBlock Text="{Binding ViewModel.Status.Dialogue, Mode=OneWay}" TextWrapping="Wrap" Margin="0,2,0,8" />
+                    <ui:TextBlock Text="{Binding ViewModel.Status.Error, Mode=OneWay}" Foreground="{DynamicResource SystemFillColorCriticalBrush}" TextWrapping="Wrap" />
+                    <ui:TextBlock Text="{Binding ViewModel.CommandError, Mode=OneWay}" Foreground="{DynamicResource SystemFillColorCriticalBrush}" TextWrapping="Wrap" />
+                </StackPanel>
+            </ui:CardExpander>
+
+            <ui:CardExpander Header="声线与角色路由" IsExpanded="True" Margin="0,0,0,12">
+                <StackPanel>
+                    <ui:TextBlock Text="实际选择的声线" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <ui:TextBlock Text="{Binding ViewModel.Status.Voice, Mode=OneWay}" TextWrapping="Wrap" Margin="0,2,0,12" />
+                    <StackPanel IsEnabled="{Binding ViewModel.IsConfigEditable, Mode=OneWay}">
+                        <ui:TextBlock Text="默认 NPC / 固定声线名称" />
+                        <ui:TextBox Text="{Binding ViewModel.Config.VoiceName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,4,0,8" />
+                        <ui:TextBlock Text="GPT 权重（.ckpt）" />
+                        <ui:TextBox Text="{Binding ViewModel.Config.GptWeightsPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,4,0,8" />
+                        <ui:TextBlock Text="SoVITS 权重（.pth）" />
+                        <ui:TextBox Text="{Binding ViewModel.Config.SovitsWeightsPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,4,0,8" />
+                        <ui:TextBlock Text="参考音频与逐字原文" />
+                        <ui:TextBox Text="{Binding ViewModel.Config.ReferenceAudioPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,4,0,4" />
+                        <ui:TextBox Text="{Binding ViewModel.Config.PromptText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" TextWrapping="Wrap" AcceptsReturn="True" MinHeight="64" Margin="0,0,0,12" />
+                        <ui:ToggleSwitch Content="启用角色声线路由" IsChecked="{Binding ViewModel.Config.RoutingEnabled, Mode=TwoWay}" Margin="0,0,0,8" />
+                        <ui:TextBox Text="{Binding ViewModel.Config.RoutingCatalogPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8" />
+                    </StackPanel>
+                    <WrapPanel>
+                        <ui:Button Content="编辑角色映射 JSON" Command="{Binding ViewModel.OpenRoutingCommand, Mode=OneWay}" Margin="0,0,8,8" />
+                        <ui:Button Content="打开配置与资源目录" Command="{Binding ViewModel.OpenConfigurationCommand, Mode=OneWay}" Margin="0,0,0,8" />
+                    </WrapPanel>
+                    <ui:TextBlock Text="旅行者在 JSON 中用 ProtagonistId（genshin.aether / genshin.lumine）和 PlayerNames（游戏昵称）设置；FallbackVoiceId 为默认 NPC，空值沿用上方声线。外部 JSON 编辑完成后停止再启动配音即可重读，无需重启 BetterGI。"
+                                  TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,4,0,8" />
+                    <ui:TextBlock Text="{Binding ViewModel.Status.Routing, Mode=OneWay}" TextWrapping="Wrap" />
+                    <ui:TextBlock Text="{Binding ViewModel.Status.Validation, Mode=OneWay}" TextWrapping="Wrap" Margin="0,8,0,0" />
+                </StackPanel>
+            </ui:CardExpander>
+
+            <ui:CardExpander Header="OCR 与捕获" IsExpanded="True" Margin="0,0,0,12">
+                <StackPanel>
+                    <ui:TextBlock Text="捕获来源：沿用启动页的全局设置，自动配音不创建独立捕获器。" TextWrapping="Wrap" />
+                    <ui:TextBlock Text="{Binding ViewModel.AllConfig.CaptureMode, Mode=OneWay}" Margin="0,4,0,4" />
+                    <ui:TextBlock Text="{Binding ViewModel.Status.Capture, Mode=OneWay}" TextWrapping="Wrap" />
+                    <ui:TextBlock Text="{Binding ViewModel.Status.Ocr, Mode=OneWay}" TextWrapping="Wrap" Margin="0,4,0,4" />
+                    <ui:TextBlock Text="{Binding ViewModel.Status.Layout, Mode=OneWay}" TextWrapping="Wrap" Margin="0,0,0,12" />
+                    <StackPanel IsEnabled="{Binding ViewModel.IsConfigEditable, Mode=OneWay}">
+                        <ui:TextBlock Text="PP-OCRv6 Rec 模型路径（带 18708 字 character 字典）" TextWrapping="Wrap" />
+                        <ui:TextBox Text="{Binding ViewModel.Config.OcrModelPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,4,0,8" />
+                        <ui:TextBlock Text="DirectML 设备序号" />
+                        <ui:NumberBox Value="{Binding ViewModel.Config.DeviceId, Mode=TwoWay}" Minimum="0" Maximum="16" Margin="0,4,0,8" />
+                        <ui:TextBlock Text="采样间隔（毫秒；不改变全局截图频率）" TextWrapping="Wrap" />
+                        <ui:NumberBox Value="{Binding ViewModel.Config.SampleIntervalMilliseconds, Mode=TwoWay}" Minimum="50" Maximum="500" Margin="0,4,0,8" />
+                    </StackPanel>
+                    <ui:TextBlock Text="OCR 模型不随移植代码分发；请自行部署。原神底部单行/多行、称号布局由原场景算法判定。专用 OCR 需要 DirectML；若全局加载了不含 DirectML 的 CUDA/OpenVINO 运行库，启动会提示切回内置运行库并重启，不会自动替换宿主 DLL。" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+            </ui:CardExpander>
+
+            <ui:CardExpander Header="GPT-SoVITS 与音频" IsExpanded="True" Margin="0,0,0,12">
+                <StackPanel>
+                    <ui:TextBox Text="{Binding ViewModel.Config.ServiceUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding ViewModel.IsConfigEditable, Mode=OneWay}" Margin="0,0,0,8" />
+                    <WrapPanel>
+                        <ui:Button Content="检测后端 HTTP" Command="{Binding ViewModel.ProbeBackendCommand, Mode=OneWay}" Margin="0,0,8,8" />
+                        <ui:Button Content="确认后端已重启" Command="{Binding ViewModel.ConfirmBackendRestartedCommand, Mode=OneWay}" Margin="0,0,0,8" ToolTip="仅在后端状态未知时可用；须先手动重启 GPT-SoVITS，再确认恢复。" />
+                    </WrapPanel>
+                    <ui:TextBlock Text="{Binding ViewModel.Status.Tts, Mode=OneWay}" TextWrapping="Wrap" />
+                    <ui:TextBlock Text="{Binding ViewModel.Status.Playback, Mode=OneWay}" TextWrapping="Wrap" Margin="0,4,0,8" />
+                    <ui:TextBlock Text="使用默认音频设备共享模式输出。新句音频完整就绪后才接替旧句。停止立即取消播放与待播内容，已经发出的后端请求会继续排空（最长 180 秒）；超时后请重启后端并确认恢复。当前协议为 GPT-SoVITS api_v2；声线文件须在本机与后端使用同一路径。"
+                                  TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+            </ui:CardExpander>
+
+            <ui:CardExpander Header="日志与诊断" IsExpanded="True" Margin="0,0,0,12">
+                <StackPanel>
+                    <ui:TextBlock Text="{Binding ViewModel.Status.Diagnostics, Mode=OneWay}" TextWrapping="Wrap" />
+                    <ui:TextBlock Text="完整记录接入 BetterGI 主日志。停止后清理本轮音频与 OCR profile 缓存；页面设置自动持久化，下次启动配音生效。路径相对于 BetterGI 程序目录，也可填写自行选择的绝对路径。"
+                                  TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,8,0,0" />
+                </StackPanel>
+            </ui:CardExpander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

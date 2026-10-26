@@ -11,7 +11,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Interop;
 using Vanara.PInvoke;
@@ -27,6 +26,8 @@ public partial class MaskWindow : Window
     private readonly MaskWindowViewModel _viewModel;
     private readonly IRichTextBox _richTextBox;
     private readonly ILogger<MaskWindow> _logger;
+    /// <summary>窗口拥有合并调度的日志维护，避免TextChanged同步递归裁剪。</summary>
+    private readonly OverlayLogDocument _logDocument;
 
     /// <summary>
     /// 游戏运行环境服务。计算 DPI 时读取 <see cref="GameRuntimeService.Current"/> 的窗口句柄，不缓存。
@@ -54,7 +55,7 @@ public partial class MaskWindow : Window
         InitializeComponent();
         this.InitializeDpiAwareness();
 
-        LogTextBox.TextChanged += LogTextBoxTextChanged;
+        _logDocument = new OverlayLogDocument(LogTextBox);
         Loaded += OnLoaded;
         _viewModel.PropertyChanged += ViewModelOnPropertyChanged;
     }
@@ -76,7 +77,9 @@ public partial class MaskWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         _viewModel.PropertyChanged -= ViewModelOnPropertyChanged;
-        LogTextBox.TextChanged -= LogTextBoxTextChanged;
+        _logDocument.Dispose();
+        // 已关闭窗口不再接收后台排队日志；不能清除另一新窗口的目标。
+        if (ReferenceEquals(_richTextBox.RichTextBox, LogTextBox)) _richTextBox.RichTextBox = null!;
 
         _mapLabelCategorySelectCts?.Cancel();
         _mapLabelCategorySelectCts?.Dispose();
@@ -102,22 +105,6 @@ public partial class MaskWindow : Window
         {
             _ = Dispatcher.InvokeAsync(() => _mapLabelSearchWindow?.Hide());
         }
-    }
-
-    private void LogTextBoxTextChanged(object sender, TextChangedEventArgs e)
-    {
-        if (LogTextBox.Document.Blocks.FirstBlock is Paragraph p && p.Inlines.Count > 200)
-        {
-            (p.Inlines as System.Collections.IList).RemoveAt(0);
-        }
-
-        var textRange = new TextRange(LogTextBox.Document.ContentStart, LogTextBox.Document.ContentEnd);
-        if (textRange.Text.Length > 10000)
-        {
-            LogTextBox.Document.Blocks.Clear();
-        }
-
-        LogTextBox.ScrollToEnd();
     }
 
     private void MapLabelSearchTextBox_OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)

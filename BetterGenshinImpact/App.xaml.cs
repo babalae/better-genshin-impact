@@ -15,6 +15,8 @@ using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.GameTask.SoloTask.Execution;
 using BetterGenshinImpact.GameTask.AutoSkip.Audio;
 using BetterGenshinImpact.GameTask.Music.Service;
+using BetterGenshinImpact.GameTask.QuestVoice;
+using BetterGenshinImpact.GameTask.QuestVoice.Features.Diagnostics;
 using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.GameTask.Runtime.Win32;
 using BetterGenshinImpact.GameTask.Runtime.WebPage;
@@ -109,6 +111,8 @@ public partial class App : Application
 
                 var loggerConfiguration = new LoggerConfiguration()
                     .WriteTo.Logger(fileLoggerConfiguration => fileLoggerConfiguration
+                        // 原始诊断独立留档；不再在文件额外复制仅供悬浮显示的OCR摘要。
+                        .Filter.ByExcluding(QuestVoiceLog.IsSummary)
                         .Enrich.WithProperty("BgiInstance", instanceIdentity)
                         .WriteTo.File(logFile,
                             outputTemplate:
@@ -130,8 +134,8 @@ public partial class App : Application
                 loggerConfiguration.WriteTo.Sink(
                     new ConditionalLogEventSink(
                         new LoggerConfiguration()
-                            .WriteTo.RichTextBox(richTextBox, LogEventLevel.Information,
-                                "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+                            .Filter.ByIncludingOnly(QuestVoiceLog.IsOverlayVisible)
+                            .WriteTo.Sink(new BoundedRichTextBoxSink(richTextBox), LogEventLevel.Information)
                             .CreateLogger(),
                         () => all.MaskWindowConfig is { MaskEnabled: true, ShowLogBox: true }),
                     LogEventLevel.Information);
@@ -224,6 +228,11 @@ public partial class App : Application
                 services.AddView<PuloniaOneDragonPage, PuloniaOneDragonViewModel>();
                 services.AddView<PuloniaTaskHistoryPage, PuloniaTaskHistoryViewModel>();
                 services.AddView<MusicPage, MusicPageViewModel>();
+                services.AddView<QuestVoicePage, QuestVoicePageViewModel>();
+                services.AddSingleton(sp => new QuestVoiceSessionFactory(all.QuestVoiceConfig, Core.Config.Global.StartUpPath));
+                services.AddSingleton<IQuestVoiceSessionFactory>(sp => sp.GetRequiredService<QuestVoiceSessionFactory>());
+                services.AddSingleton<QuestVoiceSessionController>();
+                services.AddSingleton<QuestVoiceService>();
                 services.AddSingleton<PathingConfigViewModel>();
                 services.AddSingleton<IBannerImageService, BannerImageService>();
                 services.AddTransient<WebImageInputViewModel>();
@@ -507,6 +516,16 @@ public partial class App : Application
 
         // 先通知当前运行退出，再停止宿主服务，避免任务在依赖项释放后继续执行。
         _host.Services.GetService<TaskStopService>()?.StopAll(TaskStopReason.ApplicationShutdown);
+
+        // 在推理运行时、日志和临时文件清理之前排空配音任务；退出可以关闭本地 HTTP。
+        try
+        {
+            await _host.Services.GetRequiredService<QuestVoiceService>().StopAsync(applicationExit: true);
+        }
+        catch (Exception ex)
+        {
+            _exceptionLog.Error(ex, "自动配音退出收尾失败。");
+        }
 
         // 写入防抖窗口内尚未落盘的配置改动
         try
