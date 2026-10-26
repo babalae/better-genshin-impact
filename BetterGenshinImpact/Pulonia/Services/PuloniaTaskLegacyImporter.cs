@@ -237,7 +237,9 @@ public sealed class PuloniaTaskLegacyImporter
                 case "自动秘境":
                     node.TaskType = PuloniaSoloTaskExecutor.ToTaskType(AutoDomainTask.TaskId);
                     values = ToParameters(CreateDomainParam(config, dragon));
-                    if (dragon.WeeklyDomainEnabled) AddDragonWeek(values, JObject.FromObject(dragon), domain: true);
+                    // 新一条龙不支持按星期切换配置，旧的每周秘境配置不导入
+                    if (dragon.WeeklyDomainEnabled)
+                        result.Differences.Add(location + "/" + name + "：每周秘境配置未导入，新一条龙每天使用同一套秘境配置。");
                     break;
                 case "自动首领讨伐":
                     node.TaskType = PuloniaSoloTaskExecutor.ToTaskType(AutoBossTask.TaskId);
@@ -256,7 +258,9 @@ public sealed class PuloniaTaskLegacyImporter
                 case "自动地脉花":
                     node.TaskType = PuloniaSoloTaskExecutor.ToTaskType(AutoLeyLineOutcropTask.TaskId);
                     values = ToParameters(CreateLeyLineParam(config, dragon));
-                    AddDragonWeek(values, JObject.FromObject(dragon), domain: false);
+                    // 新一条龙不支持按星期运行，旧的运行日期、类型和国家安排不导入
+                    if (HasLeyLineWeekSettings(dragon))
+                        result.Differences.Add(location + "/" + name + "：每周运行安排未导入，新一条龙每天执行并使用同一套地脉花类型与国家。");
                     break;
                 default:
                     var directory = Global.Absolute("User/ScriptGroup");
@@ -282,9 +286,6 @@ public sealed class PuloniaTaskLegacyImporter
 
     /// <summary>按独立任务参数合同（SoloTaskJson）把强类型参数转换为节点或预设使用的参数 JSON。</summary>
     private static JObject ToParameters<T>(T param) => PuloniaTaskJson.Read<JObject>(SoloTaskJson.Serialize(param));
-
-    /// <summary>取参数属性按 SoloTaskJson 命名规则得到的参数键，周安排的当天覆盖与参数使用同一套键。</summary>
-    private static string ParamKey(string propertyName) => SoloTaskJson.Options.PropertyNamingPolicy!.ConvertName(propertyName);
 
     /// <summary>
     /// 自动秘境：业务设置来自导入时的秘境配置，队伍、秘境和周日奖励来自一条龙；
@@ -376,34 +377,22 @@ public sealed class PuloniaTaskLegacyImporter
         return param;
     }
 
-    /// <summary>转换周安排并保留四点日切及空值回退语义；当天对象中的键与独立任务参数名一致。</summary>
-    private static void AddDragonWeek(JObject values, JObject dragon, bool domain)
+    /// <summary>旧一条龙是否为地脉花设置了按星期的运行日期、类型或国家；用于提示这些设置未导入。</summary>
+    private static bool HasLeyLineWeekSettings(OneDragonFlowConfig dragon)
     {
-        var weekly = new JObject();
-        var days = new[] { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
-        var anyLeyDay = days.Any(d => dragon.Value<bool?>("LeyLineRun" + d) == true);
-        for (var i = 0; i < 7; i++)
-        {
-            var day = days[i]; var entry = new JObject();
-            if (domain)
-            {
-                // 秘境：当天队伍、秘境和周日奖励选择；未选择奖励时回退到每周设置
-                Copy(day + "PartyName", ParamKey(nameof(AutoDomainParam.PartyName)));
-                Copy(day + "DomainName", ParamKey(nameof(AutoDomainParam.DomainName)));
-                var selected = dragon.Value<string>(day + "SelectedValue");
-                entry[ParamKey(nameof(AutoDomainParam.SundaySelectedValue))] = string.IsNullOrWhiteSpace(selected) || selected == "0" ? dragon.Value<string>("SundayWeeklySelectedValue") : selected;
-            }
-            else
-            {
-                // 地脉花：一天都没勾选时视为每天运行；当天类型和国家为空时沿用任务设置
-                entry["enabled"] = !anyLeyDay || dragon.Value<bool?>("LeyLineRun" + day) == true;
-                Copy("LeyLine" + day + "Type", ParamKey(nameof(AutoLeyLineOutcropParam.LeyLineOutcropType)));
-                Copy("LeyLine" + day + "Country", ParamKey(nameof(AutoLeyLineOutcropParam.Country)));
-            }
-            weekly[i.ToString()] = entry;
-            void Copy(string source, string target) { var value = dragon.Value<string>(source); if (!string.IsNullOrWhiteSpace(value)) entry[target] = value; }
-        }
-        values[PuloniaSoloTaskExecutor.WeekdayOverridesParameter] = weekly;
+        bool[] runDays =
+        [
+            dragon.LeyLineRunMonday, dragon.LeyLineRunTuesday, dragon.LeyLineRunWednesday, dragon.LeyLineRunThursday,
+            dragon.LeyLineRunFriday, dragon.LeyLineRunSaturday, dragon.LeyLineRunSunday
+        ];
+        string[] dayValues =
+        [
+            dragon.LeyLineMondayType, dragon.LeyLineMondayCountry, dragon.LeyLineTuesdayType, dragon.LeyLineTuesdayCountry,
+            dragon.LeyLineWednesdayType, dragon.LeyLineWednesdayCountry, dragon.LeyLineThursdayType, dragon.LeyLineThursdayCountry,
+            dragon.LeyLineFridayType, dragon.LeyLineFridayCountry, dragon.LeyLineSaturdayType, dragon.LeyLineSaturdayCountry,
+            dragon.LeyLineSundayType, dragon.LeyLineSundayCountry
+        ];
+        return runDays.Any(run => run) || dayValues.Any(value => !string.IsNullOrWhiteSpace(value));
     }
 
     /// <summary>读取当前资源指纹，失败时保留节点和参数并禁用。</summary>

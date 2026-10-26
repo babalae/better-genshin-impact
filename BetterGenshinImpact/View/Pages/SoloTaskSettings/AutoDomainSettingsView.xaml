@@ -6,8 +6,7 @@
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>
-    <!-- 自动秘境：沿用旧一条龙的每日/每周/树脂/分解卡片，字段绑定 auto_domain 参数。 -->
-    <!-- 周日至周六各一行；字段留空表示沿用默认行配置。 -->
+    <!-- 自动秘境：沿用旧一条龙的秘境/树脂/分解卡片，字段绑定 auto_domain 参数；新一条龙不提供每周安排。 -->
     <!-- 树脂设置已归入 resin_usage，入口卡片在第四层接入。 -->
     <!-- Fluent 设置布局：单项设置独立成卡，强关联设置使用展开卡片及带分隔线的设置行。 -->
     <StackPanel>
@@ -23,8 +22,8 @@
         <ui:CardExpander Style="{StaticResource SoloExpander}" IsExpanded="True">
             <ui:CardExpander.Header>
                 <StackPanel Margin="0,0,16,0">
-                    <ui:TextBlock FontTypography="Body" Text="每日默认配置" TextWrapping="Wrap"/>
-                    <TextBlock Style="{StaticResource SoloDescription}" Text="每日执行使用此配置；每周安排中留空的设置也使用此配置。"/>
+                    <ui:TextBlock FontTypography="Body" Text="秘境配置" TextWrapping="Wrap"/>
+                    <TextBlock Style="{StaticResource SoloDescription}" Text="设置每次执行使用的队伍、秘境和奖励。"/>
                 </StackPanel>
             </ui:CardExpander.Header>
             <StackPanel>
@@ -71,84 +70,6 @@
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
-        <ui:CardExpander Style="{StaticResource SoloExpander}">
-            <ui:CardExpander.Header>
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Margin="0,0,16,0">
-                        <ui:TextBlock FontTypography="Body" Text="每周秘境安排" TextWrapping="Wrap"/>
-                        <TextBlock Style="{StaticResource SoloDescription}" Text="开启后按服务器日期选择当天配置；关闭时使用每日默认配置。"/>
-                    </StackPanel>
-                    <ui:ToggleSwitch Grid.Column="1" Margin="12,0,16,0" IsChecked="{Binding WeeklyEnabled, Mode=TwoWay}"/>
-                </Grid>
-            </ui:CardExpander.Header>
-            <StackPanel>
-                <StackPanel IsEnabled="{Binding WeeklyEnabled, Mode=OneWay}">
-                    <TextBlock Style="{StaticResource SoloDescription}" Margin="20,12" Text="服务器时间凌晨 4:00 切换日期；单日留空的设置沿用默认配置。"/>
-                    <ItemsControl ItemsSource="{Binding Weekdays, Mode=OneWay}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <ui:CardExpander Style="{StaticResource SoloExpander}">
-                                    <ui:CardExpander.Header>
-                                        <StackPanel Margin="0,0,16,0">
-                                            <ui:TextBlock FontTypography="Body" Text="{Binding DayName, Mode=OneWay}" TextWrapping="Wrap"/>
-                                            <TextBlock Style="{StaticResource SoloDescription}" Text="设置当天的队伍、秘境和奖励序号。"/>
-                                        </StackPanel>
-                                    </ui:CardExpander.Header>
-                                    <StackPanel>
-                                        <Grid Style="{StaticResource SoloRow}">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel Margin="0,0,16,0">
-                                                <ui:TextBlock FontTypography="Body" Text="队伍名称" TextWrapping="Wrap"/>
-                                                <TextBlock Style="{StaticResource SoloDescription}" Text="留空沿用默认队伍。"/>
-                                            </StackPanel>
-                                            <ContentControl Grid.Column="1" VerticalAlignment="Center" HorizontalContentAlignment="Right">
-                                                <ui:TextBox Width="210" Text="{Binding PartyName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="留空沿用默认"/>
-                                            </ContentControl>
-                                        </Grid>
-                                        <Separator Margin="20,0"/>
-                                        <Grid Style="{StaticResource SoloRow}">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel Margin="0,0,16,0">
-                                                <ui:TextBlock FontTypography="Body" Text="秘境" TextWrapping="Wrap"/>
-                                                <TextBlock Style="{StaticResource SoloDescription}" Text="留空沿用默认秘境。"/>
-                                            </StackPanel>
-                                            <ContentControl Grid.Column="1" VerticalAlignment="Center" HorizontalContentAlignment="Right">
-                                                <vio:CascadingComboBox Width="210" behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding DomainName, Mode=TwoWay}" behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True" ItemsSource="{x:Static helpers:DomainCascadingItems.Items}" SelectedCascadingItem="{Binding DomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}"/>
-                                            </ContentControl>
-                                        </Grid>
-                                        <Separator Margin="20,0"/>
-                                        <Grid Style="{StaticResource SoloRow}">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <StackPanel Margin="0,0,16,0">
-                                                <ui:TextBlock FontTypography="Body" Text="奖励序号" TextWrapping="Wrap"/>
-                                                <TextBlock Style="{StaticResource SoloDescription}" Text="周日或限时秘境使用，留空沿用默认。"/>
-                                            </StackPanel>
-                                            <ContentControl Grid.Column="1" VerticalAlignment="Center" HorizontalContentAlignment="Right">
-                                                <ComboBox Width="100" ItemsSource="{x:Static tasksVm:AutoDomainSettingsViewModel.SundayChoices}" SelectedItem="{Binding SundayValue, Mode=TwoWay}"/>
-                                            </ContentControl>
-                                        </Grid>
-                                    </StackPanel>
-                                </ui:CardExpander>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-            </StackPanel>
-        </ui:CardExpander>
-
         <ui:CardControl Style="{StaticResource SoloCard}">
             <ui:CardControl.Header>
                 <StackPanel Margin="0,0,16,0">

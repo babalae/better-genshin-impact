@@ -85,7 +85,7 @@ public sealed class PuloniaTaskSettingsEditorViewModel : ObservableObject
     }
 
     /// <summary>
-    /// 按能力 Schema 生成通用设置卡片：枚举、秘境和战斗策略显示为下拉框，每周安排展开为七天卡片。
+    /// 按能力 Schema 生成通用设置卡片：枚举、秘境和战斗策略显示为下拉框。
     /// </summary>
     /// <param name="definition">能力定义；为空时没有字段。</param>
     /// <param name="values">当前有效参数。</param>
@@ -101,10 +101,8 @@ public sealed class PuloniaTaskSettingsEditorViewModel : ObservableObject
         return properties.Properties()
             .Select(property =>
             {
-                var schema = property.Name == PuloniaSoloTaskExecutor.WeekdayOverridesParameter
-                    ? PuloniaOneDragonSettingChoices.WeekdaySchema(properties, values, definition.TaskType)
-                    : PuloniaOneDragonSettingChoices.Decorate(property.Name, property.Value as JObject ?? new JObject(),
-                        values[property.Name], definition.TaskType);
+                var schema = PuloniaOneDragonSettingChoices.Decorate(property.Name, property.Value as JObject ?? new JObject(),
+                    values[property.Name], definition.TaskType);
                 return new PuloniaOneDragonParameterFieldViewModel(property.Name, schema, values[property.Name],
                     required.Contains(property.Name), dialogs);
             })

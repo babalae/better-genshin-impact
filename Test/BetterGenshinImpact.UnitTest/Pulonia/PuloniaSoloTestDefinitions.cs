@@ -16,7 +16,7 @@ namespace BetterGenshinImpact.UnitTest.Pulonia;
 /// <summary>
 /// 单元测试使用的独立任务能力定义。真实的 <see cref="PuloniaSoloTaskExecutor"/> 要创建参数默认实例，
 /// 战斗类参数的基类会读取运行中应用的全局配置与本地化服务，测试进程里无法创建；
-/// 这里按执行器的同一规则建立定义：任务类型为 solo.{TaskId}，Schema 由参数类型生成并附带每周安排。
+/// 这里按执行器的同一规则建立定义：任务类型为 solo.{TaskId}，Schema 由参数类型生成，首领讨伐附带累计次数参数。
 /// </summary>
 internal static class PuloniaSoloTestDefinitions
 {
@@ -36,9 +36,6 @@ internal static class PuloniaSoloTestDefinitions
     {
         var schema = PuloniaSoloTaskSchema.Create(paramType);
         var properties = schema["properties"] as JObject ?? new JObject();
-        properties[PuloniaSoloTaskExecutor.WeekdayOverridesParameter] = new JObject { ["type"] = "object" };
-        if (taskId == AutoDomainTask.TaskId)
-            properties[PuloniaSoloTaskExecutor.WeekdayOverridesEnabledParameter] = new JObject { ["type"] = "boolean" };
         if (taskId == AutoBossTask.TaskId)
         {
             properties[PuloniaSoloTaskExecutor.BossTotalRunCountLimitParameter] = new JObject { ["type"] = "integer", ["minimum"] = 0 };

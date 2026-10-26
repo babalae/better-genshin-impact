@@ -9,14 +9,14 @@
 | 问题 | 由谁处理 | 示例 |
 | --- | --- | --- |
 | 什么时候发起？ | 触发器 `PuloniaTaskTrigger` | 每天 04:00 |
-| 现在能不能开始？ | 请求准入与节点开关 | 触发器仍启用、未超过截止时间、今天在每周安排内 |
+| 现在能不能开始？ | 请求准入与节点开关 | 触发器仍启用、未超过截止时间、节点已启用 |
 | 这个资源现在能不能再做？ | 文件级采集 CD 与账本 | 这份路线文件距上次成功还没到刷新时间 |
 
 “每周跑一次”是执行偏好，“某奖励每周只能领一次”是游戏事实，两者分开处理。
 
 ## 完成合同
 
-执行器返回 `PuloniaTaskOutcome`，完成程度 `Kind` 为 Succeeded、ExecutedUnverified、PartiallySucceeded、Failed、Cancelled、Skipped、NeedsAttention，另带消息、结构化数据、证据和机器可读原因码 `ReasonCode`（如“不在今天的运行日期内”）。Succeeded 与 ExecutedUnverified 都让节点记为成功，但只有 Succeeded 能产生采集 CD，续跑时也只有 Succeeded 的节点视为已完成。
+执行器返回 `PuloniaTaskOutcome`，完成程度 `Kind` 为 Succeeded、ExecutedUnverified、PartiallySucceeded、Failed、Cancelled、Skipped、NeedsAttention，另带消息、结构化数据、证据和机器可读原因码 `ReasonCode`（如“树脂不足，未执行挑战”）。Succeeded 与 ExecutedUnverified 都让节点记为成功，但只有 Succeeded 能产生采集 CD，续跑时也只有 Succeeded 的节点视为已完成。
 
 | 场景 | 可以确认什么 | 处理 |
 | --- | --- | --- |
@@ -90,7 +90,7 @@
 
 `auto` 模式下 `reset_hour` 固定为 4，`reset_weekday` 却仍读取用户设置，两者取值规则尚未统一。
 
-日与周边界使用 `PuloniaServerTime.GetGameDate`（按服务器偏移减去日切小时取日期），与独立任务每周安排的星期判断共用同一实现。服务器偏移在入队时由 `PuloniaServerTime` 从 `ServerTimeHelper` 取得并写入请求的 `ServerUtcOffsetMinutes`，未初始化时按 UTC+8；续跑沿用原请求的偏移。
+日与周边界使用 `PuloniaServerTime.GetGameDate`（按服务器偏移减去日切小时取日期）。服务器偏移在入队时由 `PuloniaServerTime` 从 `ServerTimeHelper` 取得并写入请求的 `ServerUtcOffsetMinutes`，未初始化时按 UTC+8；续跑沿用原请求的偏移。
 
 准备快照固定本节点的规则，排队期间修改设置不影响本次运行。修改规则或关闭限制后，下一次判定从原成功时间按新规则重新计算，不改写历史；关闭限制及未匹配规则时，完整成功仍记录时间。节点设置提供独立的“采集 CD”表单，显示材料、有效规则和配置来源。
 

@@ -54,7 +54,6 @@ public partial class PuloniaTaskPlanDocumentViewModel
             if (node.IsEffectivelyEnabled && HasEnabledResinTask(node))
                 parts.Add("⚠ 计划中另有消耗树脂的任务，会与体力计划共用树脂");
             parts.Add("预设：" + preset);
-            if (values["weekday_overrides"] is JObject planWeekly && planWeekly.Count > 0) parts.Add("已配置每周安排（配置中查看）");
             return string.Join(" · ", parts);
         }
         var keys = new[] { "party_name", "team_name", "team", "fight_team_name", "domain_name", "boss_name", "boss_num", "strategy_name", "combat_script", "country" };
@@ -89,7 +88,6 @@ public partial class PuloniaTaskPlanDocumentViewModel
             summary.Add("战斗策略：" + fight.Value<string>("StrategyName"));
         if (!string.IsNullOrWhiteSpace(node.Path)) summary.Add("资源：" + node.Path);
         summary.Add("预设：" + preset);
-        if (values["weekday_overrides"] is JObject weekly && weekly.Count > 0) summary.Add("已配置每周安排（配置中查看）");
         return string.Join(" · ", summary);
 
         // 树脂次数及方式由公共摘要解释，其余字段保留原始显示值。

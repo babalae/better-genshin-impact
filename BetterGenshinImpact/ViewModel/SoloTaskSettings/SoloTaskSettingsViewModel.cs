@@ -24,7 +24,7 @@ public abstract class SoloTaskSettingsViewModel : ObservableObject
     protected JObject Original { get; }
 
     /// <summary>
-    /// 任一输入（包括每周安排、商品勾选等子行）发生变化时触发；即时生效的宿主据此立即提交，
+    /// 任一输入（包括树脂入口、商品勾选等子行）发生变化时触发；即时生效的宿主据此立即提交，
     /// 先确认后提交的宿主可以忽略。
     /// </summary>
     public event EventHandler? Edited;

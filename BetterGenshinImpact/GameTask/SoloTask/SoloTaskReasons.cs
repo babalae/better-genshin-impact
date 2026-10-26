@@ -14,11 +14,6 @@ public static class SoloTaskReasons
     public const string InvalidParameter = "invalid_parameter";
 
     /// <summary>
-    /// 今天不在运行日期内。
-    /// </summary>
-    public const string NotScheduledToday = "not_scheduled_today";
-
-    /// <summary>
     /// 战斗策略不存在。
     /// </summary>
     public const string StrategyNotFound = "strategy_not_found";

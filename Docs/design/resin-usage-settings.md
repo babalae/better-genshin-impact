@@ -331,7 +331,6 @@ public sealed record ResinKindValues<T>
 
 | 位置 | 变化 |
 | --- | --- |
-| `PuloniaSoloTaskExecutor` 每周安排 | `resin_usage` 是顶层字段，某天覆盖时整体替换 |
 | `ApplyBossRewardLimit` | `Exhaust` 转为 `RunCount`，`run_count` 取剩余额度，`allowed` 不变（刷至耗尽允许补充后，不再强制关闭）；`RunCount` 取较小值 |
 | `PuloniaOneDragonSettingChoices` | 为 `resin_usage` 标记 `x-resin-usage` 形态，通用字段显示同一张入口卡片和弹窗，不出现原始嵌套字段；删除 `resin_priority_list`、`domain_round_num`、`is_resin_exhaustion_mode` 的说明和选项 |
 | `PuloniaTaskFieldNames` | 新增 `resin_usage` → “树脂使用”；删除被替换的键 |
@@ -449,10 +448,10 @@ public sealed class ResinUsageReport
 
 | 入口 | 位置 |
 | --- | --- |
-| 自动秘境（专属） | 战斗策略 → 每日默认配置 → 每周安排 → **树脂使用** → 结束后分解圣遗物 → 奖励识别 |
+| 自动秘境（专属） | 战斗策略 → 秘境配置 → **树脂使用** → 结束后分解圣遗物 → 奖励识别 |
 | 自动幽境危战（专属） | 战斗策略 → 首领序号 → 战斗队伍 → **树脂使用** → 结束后分解圣遗物 |
 | 自动首领讨伐（专属） | 战斗策略 → 首领 → 队伍 → **树脂使用** → 累计成功领奖次数 → 每轮结束返回七天神像 → 奖励识别 → 角色死亡后重试次数 |
-| 自动地脉花（专属） | 跳过准备流程 → 每周运行安排 → **树脂使用** |
+| 自动地脉花（专属） | 跳过准备流程 → **树脂使用** |
 | 合成浓缩树脂（专属） | 合成台所在地区 → **树脂使用** |
 | 独立任务页 | 各任务展开区中，替换原来的树脂开关、次数框和取小值等控件，放在原位置 |
 | 旧一条龙页 | 秘境卡片中替换“领奖树脂设定”弹出层 |
