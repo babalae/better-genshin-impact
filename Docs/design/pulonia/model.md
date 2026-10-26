@@ -217,4 +217,4 @@ erDiagram
 - R2：`csharp` 类型与 `sample.sum` 样例的去留。
 - 能力参数元数据表单（[task-contract.md](../task-contract.md) 步骤 E）。
 
-托管阶段的拟新增实体（玩家状态快照、培养目标、体力方案）见[目标托管提案](proposals/managed-hosting.md#托管阶段的拟新增实体)。
+托管阶段的拟新增实体（玩家状态快照、培养目标）见[目标托管提案](proposals/managed-hosting.md#托管阶段的拟新增实体)；体力计划是独立任务，不是实体，见[体力计划提案](proposals/resin-plan.md)。

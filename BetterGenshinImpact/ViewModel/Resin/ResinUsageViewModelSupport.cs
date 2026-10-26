@@ -5,7 +5,9 @@ using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.GameTask.Common.Resin;
+using BetterGenshinImpact.GameTask.ResinPlan;
 using BetterGenshinImpact.GameTask.SoloTask;
+using BetterGenshinImpact.ViewModel.SoloTaskSettings;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.ViewModel.Resin;
@@ -29,6 +31,8 @@ public static class ResinUsageViewModelSupport
             "auto_stygian_onslaught" or "solo.auto_stygian_onslaught" => ("自动幽境危战", AutoStygianOnslaughtTask.ResinCapability),
             "auto_boss" or "solo.auto_boss" => ("自动首领讨伐", AutoBossTask.ResinCapability),
             "auto_ley_line_outcrop" or "solo.auto_ley_line_outcrop" => ("自动地脉花", AutoLeyLineOutcropTask.ResinCapability),
+            // 体力计划内的首领只用原粹，不提供须臾、脆弱补充
+            ResinPlanSubTaskSpec.BossResinTaskKey => ("自动首领讨伐", ResinPlanBudget.BossCapability),
             _ => null
         };
 

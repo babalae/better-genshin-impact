@@ -28,7 +28,7 @@ namespace BetterGenshinImpact.GameTask.Common.Job;
 /// <summary>
 /// 前往合成台：走到指定国家的合成台并进入合成界面；作为独立任务运行时按保留树脂数合成浓缩树脂。
 /// </summary>
-[SoloTaskInfo(TaskId, "合成浓缩树脂", Group = "日常奖励", Order = 120, OneDragonOrder = 2)]
+[SoloTaskInfo(TaskId, "合成浓缩树脂", Group = "日常奖励", Order = 120)]
 [SoloTaskSettingsView(typeof(CraftCondensedResinSettingsView), typeof(CraftCondensedResinSettingsViewModel))]
 public class GoToCraftingBenchTask : ISoloTask<CraftCondensedResinParam, CraftCondensedResinData>
 {
@@ -98,6 +98,17 @@ public class GoToCraftingBenchTask : ISoloTask<CraftCondensedResinParam, CraftCo
             return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, "未指定前往合成台的国家。");
         }
 
+        // 指定份数时必须为非负数；0 份无需前往合成台
+        if (param.CraftCount is < 0)
+        {
+            return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, "合成份数不能为负数。");
+        }
+
+        if (param.CraftCount == 0)
+        {
+            return SoloTaskResult.Unverified(new CraftCondensedResinData { CraftedCount = 0 }, "指定合成 0 份，未前往合成台。");
+        }
+
         Logger.LogInformation("→ {Name} 开始", TaskName);
         for (int i = 0; i < _retryTimes; i++)
         {
@@ -147,8 +158,9 @@ public class GoToCraftingBenchTask : ISoloTask<CraftCondensedResinParam, CraftCo
         
         if (resin.IsExist())
         {
-            // 3. 点击合成树脂
-            if (minResinToKeep > 0){//开关判断，填写的数量大于0时启用 param.MinResinToKeep
+            // 3. 点击合成树脂：指定份数或保留量大于 0 时先识别数量再计算合成次数
+            if (param.CraftCount is > 0 || minResinToKeep > 0)
+            {
                 var originalResinCount = 0;
                 var condensedResinCount = 0;
                 var originalResinCountRa = ra.Find(ElementRecognition.Get("fragileResinCount", ra));
@@ -191,23 +203,33 @@ public class GoToCraftingBenchTask : ISoloTask<CraftCondensedResinParam, CraftCo
                 
                 // 每次合成消耗的数量
                 const int resinConsumedPerCraft = 60;
-                // 需要保留的最小数量
-                // 保留量已在入口按旧字段规则归一化。
-                // 可以用来合成的树脂数量
-                int resinAvailableForCrafting = originalResinCount - minResinToKeep;
                 // 最大可合成次数
                 int maxCraftsPossible = 5 - condensedResinCount;
-                // 计算需要合成的次数
-                int craftsNeeded = resinAvailableForCrafting / resinConsumedPerCraft;
+                int craftsNeeded;
+                if (param.CraftCount is { } requested && requested > 0)
+                {
+                    // 指定份数：不超过持有上限的空位与当前原粹可合成的份数
+                    craftsNeeded = Math.Min(requested, Math.Min(maxCraftsPossible, originalResinCount / resinConsumedPerCraft));
+                    Logger.LogInformation("原粹树脂: {OriginalResinCount}，浓缩树脂: {CondensedResinCount}，指定合成 {Requested} 份，实际合成 {CraftsNeeded} 份",
+                        originalResinCount, condensedResinCount, requested, craftsNeeded);
+                }
+                else
+                {
+                    // 保留量已在入口按旧字段规则归一化；可以用来合成的树脂数量
+                    int resinAvailableForCrafting = originalResinCount - minResinToKeep;
+                    // 计算需要合成的次数
+                    craftsNeeded = resinAvailableForCrafting / resinConsumedPerCraft;
+                    // 计算最大合成次数
+                    craftsNeeded = Math.Min(maxCraftsPossible, craftsNeeded);
+                    Logger.LogInformation("原粹树脂: {OriginalResinCount}，浓缩树脂: {CondensedResinCount}，最大可合成次数为: {maxCraftsPossible}", originalResinCount,
+                        condensedResinCount, maxCraftsPossible);
+                    Logger.LogInformation("保留 {MinResinToKeep} 原粹树脂需要合成次数： {craftsNeeded}",minResinToKeep,craftsNeeded);
+                }
+
                 if (craftsNeeded < 0)
                 {
                     craftsNeeded = 0;
                 }
-                // 计算最大合成次数
-                craftsNeeded = Math.Min(maxCraftsPossible, craftsNeeded);
-                Logger.LogInformation("原粹树脂: {OriginalResinCount}，浓缩树脂: {CondensedResinCount}，最大可合成次数为: {maxCraftsPossible}", originalResinCount,
-                    condensedResinCount, maxCraftsPossible);
-                Logger.LogInformation("保留 {MinResinToKeep} 原粹树脂需要合成次数： {craftsNeeded}",minResinToKeep,craftsNeeded);
                 craftedCount = craftsNeeded;
                 if (craftsNeeded > 0)
                 {

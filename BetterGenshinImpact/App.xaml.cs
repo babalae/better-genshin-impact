@@ -336,6 +336,8 @@ public partial class App : Application
                     BetterGenshinImpact.View.Windows.Pulonia.PuloniaTaskSettingsDialogs>();
                 // 树脂设置公共弹窗；各宿主页面在后续接入时只依赖视图模型层接口。
                 services.AddSingleton<BetterGenshinImpact.ViewModel.Resin.IResinSettingsDialogs, ResinSettingsDialogs>();
+                // 体力计划子任务设置弹窗；设置视图模型只依赖接口，隔离环境下不打开窗口。
+                services.AddSingleton<BetterGenshinImpact.ViewModel.SoloTaskSettings.IResinPlanSettingsDialogs, ResinPlanSettingsDialogs>();
                 services.AddSingleton<IMusicScoreParser, MusicScoreParser>();
                 services.AddSingleton<IMusicStateStore, MusicStateStore>();
                 services.AddSingleton<IInstrumentProfileService, InstrumentProfileService>();

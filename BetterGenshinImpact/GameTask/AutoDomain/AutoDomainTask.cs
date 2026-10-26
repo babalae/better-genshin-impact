@@ -61,7 +61,7 @@ namespace BetterGenshinImpact.GameTask.AutoDomain;
 /// 自动秘境独立任务：传送并进入秘境，循环执行战斗、寻找石化古树、领取奖励，结束后可选分解圣遗物。
 /// 业务设置全部来自 <see cref="AutoDomainParam"/>，结果附带本次识别到的奖励汇总。
 /// </summary>
-[SoloTaskInfo(TaskId, "自动秘境", Group = "树脂与战斗", Order = 210, OneDragonOrder = 3)]
+[SoloTaskInfo(TaskId, "自动秘境", Group = "树脂与战斗", Order = 210)]
 [SoloTaskSettingsView(typeof(AutoDomainSettingsView), typeof(AutoDomainSettingsViewModel))]
 public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
 {

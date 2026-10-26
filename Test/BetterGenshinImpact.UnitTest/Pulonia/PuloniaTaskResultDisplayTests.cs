@@ -1,5 +1,6 @@
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.GameTask.Common.Resin;
+using BetterGenshinImpact.GameTask.ResinPlan;
 using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
@@ -31,6 +32,48 @@ public sealed class PuloniaTaskResultDisplayTests
         Assert.Equal("摩拉 ×60000", Field(node, "奖励"));
         Assert.Equal("领奖 4/6 次（浓缩 2、原粹 80），树脂不足，提前结束。", Field(node, "树脂使用"));
         Assert.Equal(2, node.ResultFields.Count);
+    }
+
+    /// <summary>体力计划结果展示合并奖励、合计树脂、预算与逐步说明，不重复展示原始阶段 JSON。</summary>
+    [Fact]
+    public void ResinPlanResult_ShowsBudgetAndSteps()
+    {
+        var data = new ResinPlanData
+        {
+            Rewards = RewardSummary.From(new Dictionary<string, int> { ["教导"] = 3 }),
+            Resin = new ResinUsageReport
+            {
+                Mode = ResinUsageMode.Exhaust, ClaimCount = 3, Claims = new() { Original = 3 },
+                Consumed = new() { Original = 60 }, StopReason = ResinStopReason.ResinExhausted
+            },
+            Budget = new ResinPlanBudgetReport { MaxResin = 0, StartOriginal = 60, StartCondensed = 0, SpentPoints = 60 },
+            Steps =
+            [
+                new ResinPlanStep
+                {
+                    Name = "秘境养成", Target = "根据提升指南选择秘境", Executed = true, Kind = SoloTaskResultKind.Succeeded,
+                    Message = "秘境流程已结束", RewardsRecognized = true,
+                    Resin = new ResinUsageReport { ClaimCount = 3 },
+                    Rewards = RewardSummary.From(new Dictionary<string, int> { ["教导"] = 3 })
+                },
+                new ResinPlanStep
+                {
+                    Name = "地脉花", Executed = true, Kind = SoloTaskResultKind.Unverified, Message = "地脉花流程已结束",
+                    Resin = new ResinUsageReport { ClaimCount = 1 }
+                },
+                new ResinPlanStep { Name = "备选秘境", Message = "未设置备选秘境，剩余树脂保留。" }
+            ]
+        };
+
+        var node = CreateNode("solo.resin_plan", JObject.Parse(SoloTaskJson.Serialize(data)));
+
+        Assert.Equal("教导 ×3", Field(node, "奖励"));
+        Assert.Equal("领奖 3 次（原粹 60），树脂已用完。", Field(node, "树脂使用"));
+        Assert.Equal("全部可用树脂；开始时原粹 60、浓缩 0；领奖共消耗 60 点", Field(node, "体力预算"));
+        Assert.Equal("成功（根据提升指南选择秘境）：秘境流程已结束；奖励：教导 ×3", Field(node, "第 1 步 · 秘境养成"));
+        Assert.Equal("已执行，未核验：地脉花流程已结束；此任务暂不识别奖励", Field(node, "第 2 步 · 地脉花"));
+        Assert.Equal("跳过：未设置备选秘境，剩余树脂保留。", Field(node, "第 3 步 · 备选秘境"));
+        Assert.Equal(6, node.ResultFields.Count);
     }
 
     /// <summary>测试使用的固定时间。</summary>

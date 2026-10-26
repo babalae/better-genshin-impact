@@ -37,7 +37,25 @@ public static class PuloniaTaskFieldNames
         { "fishing_time_policy", "钓鱼时段" }, { "save_screenshot_on_key_tick", "保存钓鱼关键步骤截图" },
         { "star", "圣遗物最高星级" }, { "java_script", "分解筛选脚本" }, { "artifact_set_filter", "圣遗物套装筛选" },
         { "max_num_to_check", "最多检查数量" }, { "recognition_failure_policy", "识别失败时的处理方式" },
-        { "codes", "兑换码列表" },
+        { "codes", "兑换码列表" }, { "target_items", "材料目标" }, { "craft_count", "指定合成份数" },
+
+        // 1.1 自动秘境的提升指南设置
+        { "training_guide_calculate_runs_enabled", "按养成计划计算次数" },
+        { "training_guide_run_preference", "养成刷取偏好" },
+        { "training_guide_crafting_bonus_reserve_percent", "合成收益预留（%）" },
+        { "training_guide_reward_recognition_enabled", "按领奖结果更新养成库存" },
+        { "training_guide_reward_failure_budget_enabled", "奖励识别失败时按固定预算继续" },
+        { "training_guide_diagnostics_enabled", "保存养成诊断记录" },
+        { "training_guide_low_ar_adaptation_enabled", "低冒险等阶适配" },
+        { "training_guide_fallback_domain_name", "备选秘境" },
+        { "training_guide_fallback_sunday_selected_value", "备选秘境周日奖励序号" },
+        { "training_targets_json", "自定义培养目标" },
+
+        // 1.2 体力计划参数与结果
+        { "max_resin", "体力用量（0 为全部）" }, { "craft_condensed_first", "优先合成浓缩树脂" },
+        { "domain", "自动秘境" }, { "boss", "自动首领讨伐" },
+        { "stygian", "自动幽境危战" }, { "ley_line", "自动地脉花" }, { "craft", "合成浓缩树脂" },
+        { "budget", "体力预算" }, { "steps", "执行步骤" },
 
         // 2. 战斗与结束检测子设置（一条龙设置卡片展开的战斗对象）
         { "team_names", "战斗队伍" }, { "fight_finish_detect_enabled", "检测战斗结束" },
