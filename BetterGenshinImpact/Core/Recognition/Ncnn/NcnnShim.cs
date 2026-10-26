@@ -276,9 +276,11 @@ public sealed class NcnnShim : INcnnShim
 
     private static nint GetLibrary(string? dllPath)
     {
+        // 缓存键：裸名模式用固定键（dllPath 为 null 会破坏字典查找）
+        var key = string.IsNullOrEmpty(dllPath) ? "ncnn_shim" : dllPath;
         lock (LibraryLock)
         {
-            if (Libraries.TryGetValue(dllPath, out var library)) return library;
+            if (Libraries.TryGetValue(key, out var library)) return library;
             if (string.IsNullOrEmpty(dllPath))
             {
                 // 裸名解析：普通构建命中 deps.json 的 runtimes/win-x64/native/，
@@ -291,7 +293,7 @@ public sealed class NcnnShim : INcnnShim
             {
                 library = NativeLibrary.Load(dllPath);
             }
-            Libraries[dllPath] = library;
+            Libraries[key] = library;
             return library;
         }
     }
