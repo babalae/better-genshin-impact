@@ -229,6 +229,7 @@ public partial class App : Application
                 services.AddView<PuloniaTaskHistoryPage, PuloniaTaskHistoryViewModel>();
                 services.AddView<MusicPage, MusicPageViewModel>();
                 services.AddView<QuestVoicePage, QuestVoicePageViewModel>();
+                services.AddSingleton<QuestVoiceSettingsPage>();
                 services.AddSingleton(sp => new QuestVoiceSessionFactory(all.QuestVoiceConfig, Core.Config.Global.StartUpPath));
                 services.AddSingleton<IQuestVoiceSessionFactory>(sp => sp.GetRequiredService<QuestVoiceSessionFactory>());
                 services.AddSingleton<QuestVoiceSessionController>();

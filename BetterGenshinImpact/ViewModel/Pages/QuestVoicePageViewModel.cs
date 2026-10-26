@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -10,10 +11,11 @@ using BetterGenshinImpact.GameTask.QuestVoice;
 using BetterGenshinImpact.Service;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Win32;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
-/// <summary>只负责状态投递与用户命令，OCR/捕获/播放均在服务层。</summary>
+/// <summary>只负责状态投递与用户命令，OCR/捕获/播放均在服务层。两个子页面共用同一实例，切换页面不中断会话。</summary>
 public partial class QuestVoicePageViewModel : ViewModel
 {
     /// <summary>应用级单例，页面导航不拥有配音生命周期。</summary>
@@ -33,16 +35,20 @@ public partial class QuestVoicePageViewModel : ViewModel
     [NotifyPropertyChangedFor(nameof(IsConfigEditable))]
     private QuestVoiceStatus _status;
     /// <summary>命令失败的具体诊断。</summary>
-    [ObservableProperty] private string _commandError = "";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCommandError))]
+    private string _commandError = "";
     /// <summary>本轮运行时冻结设置，停止后可编辑。</summary>
     public bool IsConfigEditable => !Status.IsRunning && !Status.IsBusy;
+    /// <summary>是否存在需要显示的命令错误。</summary>
+    public bool HasCommandError => !string.IsNullOrWhiteSpace(CommandError);
 
     /// <summary>按现有页面约定构造注入。</summary>
     public QuestVoicePageViewModel(AllConfig config, QuestVoiceService service, QuestVoiceSessionFactory factory)
     {
         AllConfig = config; Config = config.QuestVoiceConfig;
         _service = service; _factory = factory;
-        _dispatcher = Application.Current.Dispatcher;
+        _dispatcher = Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
         _status = service.Status;
         service.Changed += OnServiceChanged;
     }
@@ -130,5 +136,132 @@ public partial class QuestVoicePageViewModel : ViewModel
             Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
         }
         catch (Exception exception) { CommandError = exception.Message; }
+    }
+
+    /// <summary>打开 BetterGI 当前主日志文件；若尚无日志文件则打开日志目录。</summary>
+    [RelayCommand]
+    private void OpenLogFile()
+    {
+        try
+        {
+            var logFolder = Global.Absolute("log");
+            Directory.CreateDirectory(logFolder);
+            var latestLog = new DirectoryInfo(logFolder)
+                .GetFiles("better-genshin-impact*.log")
+                .OrderByDescending(file => file.LastWriteTimeUtc)
+                .FirstOrDefault();
+            var target = latestLog?.FullName ?? logFolder;
+            Process.Start(new ProcessStartInfo(target) { UseShellExecute = true });
+        }
+        catch (Exception exception) { CommandError = exception.Message; }
+    }
+
+    /// <summary>复用 BetterGI 既有日志目录入口打开 log 文件夹。</summary>
+    [RelayCommand]
+    private void OpenLogFolder()
+    {
+        try
+        {
+            var logFolder = Global.Absolute("log");
+            Directory.CreateDirectory(logFolder);
+            Process.Start("explorer.exe", logFolder);
+        }
+        catch (Exception exception) { CommandError = exception.Message; }
+    }
+
+    /// <summary>选择角色路由 JSON 配置文件。</summary>
+    [RelayCommand]
+    private void BrowseRoutingCatalog()
+    {
+        if (PickFile("选择角色路由 JSON 配置文件", "JSON 配置文件 (*.json)|*.json|所有文件 (*.*)|*.*", Config.RoutingCatalogPath, useRelativeIfUnderStartup: true) is { } selected)
+        {
+            Config.RoutingCatalogPath = selected;
+        }
+    }
+
+    /// <summary>选择 GPT 权重（.ckpt）文件。</summary>
+    [RelayCommand]
+    private void BrowseGptWeights()
+    {
+        if (PickFile("选择 GPT 权重文件 (.ckpt)", "GPT 权重文件 (*.ckpt)|*.ckpt|所有文件 (*.*)|*.*", Config.GptWeightsPath, useRelativeIfUnderStartup: false) is { } selected)
+        {
+            Config.GptWeightsPath = selected;
+        }
+    }
+
+    /// <summary>选择 SoVITS 权重（.pth）文件。</summary>
+    [RelayCommand]
+    private void BrowseSovitsWeights()
+    {
+        if (PickFile("选择 SoVITS 权重文件 (.pth)", "SoVITS 权重文件 (*.pth)|*.pth|所有文件 (*.*)|*.*", Config.SovitsWeightsPath, useRelativeIfUnderStartup: false) is { } selected)
+        {
+            Config.SovitsWeightsPath = selected;
+        }
+    }
+
+    /// <summary>选择参考音频文件。</summary>
+    [RelayCommand]
+    private void BrowseReferenceAudio()
+    {
+        if (PickFile("选择参考音频文件", "音频文件 (*.wav;*.mp3;*.flac;*.ogg)|*.wav;*.mp3;*.flac;*.ogg|所有文件 (*.*)|*.*", Config.ReferenceAudioPath, useRelativeIfUnderStartup: false) is { } selected)
+        {
+            Config.ReferenceAudioPath = selected;
+        }
+    }
+
+    /// <summary>选择 PP-OCRv6 Rec ONNX 模型文件。</summary>
+    [RelayCommand]
+    private void BrowseOcrModel()
+    {
+        if (PickFile("选择 PP-OCRv6 Rec ONNX 模型文件", "ONNX 模型文件 (*.onnx)|*.onnx|所有文件 (*.*)|*.*", Config.OcrModelPath, useRelativeIfUnderStartup: true) is { } selected)
+        {
+            Config.OcrModelPath = selected;
+        }
+    }
+
+    /// <summary>打开文件选择对话框；支持程序目录内路径规范化。</summary>
+    private static string? PickFile(string title, string filter, string? currentPath, bool useRelativeIfUnderStartup)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = title,
+            Filter = filter,
+            Multiselect = false
+        };
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(currentPath))
+            {
+                var full = Path.GetFullPath(currentPath, Global.StartUpPath);
+                var directory = Path.GetDirectoryName(full);
+                if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory))
+                {
+                    dialog.InitialDirectory = directory;
+                }
+            }
+        }
+        catch
+        {
+            // 忽略无效初始路径，使用系统默认目录打开对话框。
+        }
+
+        if (dialog.ShowDialog() != true) return null;
+        if (useRelativeIfUnderStartup)
+        {
+            try
+            {
+                var startup = Path.GetFullPath(Global.StartUpPath);
+                var chosen = Path.GetFullPath(dialog.FileName);
+                if (chosen.StartsWith(startup, StringComparison.OrdinalIgnoreCase))
+                {
+                    return Path.GetRelativePath(startup, chosen).Replace('\\', '/');
+                }
+            }
+            catch
+            {
+                // 转换相对路径失败时直接保留完整路径。
+            }
+        }
+        return dialog.FileName;
     }
 }

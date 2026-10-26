@@ -3,6 +3,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.QuestVoice;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Continuous;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.Routing;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.Tts;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.QuestVoiceTests;
 
@@ -57,6 +59,46 @@ public sealed class QuestVoiceControllerTests
         factory.Last.FailObservation = false;
         Assert.True(controller.TryObserve(new byte[] { 2 }, TimeSpan.FromMilliseconds(2)));
         await controller.StopAsync();
+    }
+
+    /// <summary>运行页流程状态与声线路由结果展示文案保持真实映射。</summary>
+    [Fact]
+    public void StatusStageLabelsAndRoutedVoiceDisplayReflectRealRoutingOutcome()
+    {
+        var initial = new QuestVoiceStatus();
+        Assert.Equal("已停止", initial.OverallStatus);
+        Assert.Equal(QuestVoiceStageState.Pending, initial.SceneStage);
+        Assert.Equal("未开始", initial.SceneStageText);
+        Assert.False(initial.HasError);
+        Assert.False(initial.HasRecentEvents);
+
+        var active = initial with
+        {
+            SceneStage = QuestVoiceStageState.Completed,
+            OcrStage = QuestVoiceStageState.Completed,
+            SpeakerStage = QuestVoiceStageState.Completed,
+            RoutingStage = QuestVoiceStageState.Completed,
+            TtsStage = QuestVoiceStageState.InProgress,
+            PlaybackStage = QuestVoiceStageState.Failed,
+            Error = "合成超时",
+            RecentEvents = ["21:31:05  检测到对话界面"]
+        };
+        Assert.Equal("已完成", active.SceneStageText);
+        Assert.Equal("进行中", active.TtsStageText);
+        Assert.Equal("异常", active.PlaybackStageText);
+        Assert.True(active.HasError);
+        Assert.True(active.HasRecentEvents);
+
+        var voiceBinding = new VoiceBinding("甘雨", "ganyu.ckpt", "ganyu.pth", [new ReferenceAudio("ref.wav", "原文")]);
+        var canonicalHit = new VoiceRoutingResult(
+            new SpeakerRoutingInput("甘雨", SpeakerNameStatus.Accepted),
+            new SpeakerRoute(RoutingLayer.Canonical, "genshin.ganyu", "voice.ganyu", "ExactName"),
+            "sha", "voice.ganyu", "voice.ganyu", voiceBinding, null, null, "甘雨");
+        Assert.Equal("甘雨（角色映射命中）", QuestVoiceStatus.FormatRoutedVoice(canonicalHit, "默认 NPC"));
+
+        var fallbackHit = canonicalHit with { FallbackReason = "UnknownName" };
+        Assert.Equal("甘雨（兜底：UnknownName）", QuestVoiceStatus.FormatRoutedVoice(fallbackHit, "默认 NPC"));
+        Assert.Equal("默认 NPC（默认声线）", QuestVoiceStatus.FormatRoutedVoice(null, "默认 NPC"));
     }
 
     /// <summary>模拟外部设备边界，仍运行真实会话所有者。</summary>

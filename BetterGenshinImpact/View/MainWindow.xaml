@@ -190,12 +190,26 @@
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
 
-                <ui:NavigationViewItem Content="自动配音"
-                                       NavigationCacheMode="Enabled"
-                                       TargetPageType="{x:Type pages:QuestVoicePage}">
+                <ui:NavigationViewItem Content="自动配音">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Speaker224" />
                     </ui:NavigationViewItem.Icon>
+                    <ui:NavigationViewItem.MenuItems>
+                        <ui:NavigationViewItem Content="运行与日志"
+                                               NavigationCacheMode="Enabled"
+                                               TargetPageType="{x:Type pages:QuestVoicePage}">
+                            <ui:NavigationViewItem.Icon>
+                                <ui:SymbolIcon Symbol="PlayCircle24" />
+                            </ui:NavigationViewItem.Icon>
+                        </ui:NavigationViewItem>
+                        <ui:NavigationViewItem Content="配置与映射"
+                                               NavigationCacheMode="Enabled"
+                                               TargetPageType="{x:Type pages:QuestVoiceSettingsPage}">
+                            <ui:NavigationViewItem.Icon>
+                                <ui:SymbolIcon Symbol="Options24" />
+                            </ui:NavigationViewItem.Icon>
+                        </ui:NavigationViewItem>
+                    </ui:NavigationViewItem.MenuItems>
                 </ui:NavigationViewItem>
 
                 <ui:NavigationViewItem Content="{i18n:T 快捷键}"
