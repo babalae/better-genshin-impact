@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Configuration;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Routing;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.Tts;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Audio;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Continuous;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Ocr;
@@ -74,45 +75,39 @@ public sealed class QuestVoiceSessionFactory(QuestVoiceConfig config, string pro
         {
             token.ThrowIfCancellationRequested();
             await EnsureResourcesAsync(token).ConfigureAwait(false);
-            if (!Uri.TryCreate(config.ServiceUrl?.Trim(), UriKind.Absolute, out var endpoint)
-                || endpoint.Scheme is not ("http" or "https") || !string.IsNullOrEmpty(endpoint.Query)
-                || !string.IsNullOrEmpty(endpoint.Fragment))
-                errors.Add("GPT-SoVITS 地址必须为完整 HTTP/HTTPS 服务地址（不带查询或片段）。");
+            var settings = CreateTtsSettings();
+            var capabilities = TtsProviderRegistry.GetInfo(settings.Provider!.ProviderId).Capabilities;
             if (config.SampleIntervalMilliseconds is < 50 or > 500)
                 errors.Add("捕获采样间隔必须为 50～500 毫秒。");
             if (config.DeviceId < 0) errors.Add("OCR DirectML 设备序号必须为非负整数。");
 
             // 启动时创建不可变快照，运行中编辑配置不会改变某一轮的声线或布局。
-            var voice = new VoiceSettings(config.VoiceName, ResolveOptional(config.GptWeightsPath),
-                ResolveOptional(config.SovitsWeightsPath), ResolveOptional(config.ReferenceAudioPath), config.PromptText);
+            var voice = settings.Voice;
             var ocr = new OcrSettings(ResolveOptional(config.OcrModelPath),
                 Path.Combine(ConfigurationDirectory, "dialogue-one-line.xml"), config.DeviceId);
             CheckFile(ocr.ModelPath, "OCR PP-OCRv6 模型", errors);
             var scene = new SceneSettings(Path.Combine(ConfigurationDirectory, "auto-scene.json"));
             await new SceneCatalog().LoadAsync(scene.CatalogPath, token).ConfigureAwait(false);
             RoutingSettings? routing = null;
-            if (config.RoutingEnabled)
+            if (capabilities.VoiceAssets && config.RoutingEnabled)
             {
-                routing = new(Resolve(config.RoutingCatalogPath));
-                var catalog = (await new SpeakerCatalogLoader().LoadAsync(routing.CatalogPath, token).ConfigureAwait(false)).Catalog;
+                routing = new(Resolve(config.RoutingCatalogPath), voice.ServerSidePaths);
+                var catalog = (await new SpeakerCatalogLoader().LoadAsync(routing.CatalogPath, token, voice.ServerSidePaths).ConfigureAwait(false)).Catalog;
                 // 主角和昵称直接由原路由器解释；这里提供只读摘要。
                 routingSummary = $"角色 {catalog.Speakers.Count} 项，声线 {catalog.Voices.Count} 项；旅行者：{catalog.ProtagonistId ?? "未指定"}；"
                     + $"昵称：{string.Join("、", catalog.PlayerNames)}；NPC：{catalog.FallbackVoiceId ?? voice.Name}";
                 if (catalog.FallbackVoiceId is null) CheckVoice(voice, errors);
                 foreach (var binding in catalog.Voices)
                 {
-                    var reason = await RoutingVoiceAssets.UnavailableAsync(binding, token).ConfigureAwait(false);
+                    var reason = await RoutingVoiceAssets.UnavailableAsync(binding, token, voice.ServerSidePaths).ConfigureAwait(false);
                     if (reason is not null && (catalog.MissingVoicePolicy == MissingVoicePolicy.Fail
                         || string.Equals(binding.Id, catalog.FallbackVoiceId, StringComparison.OrdinalIgnoreCase)))
                         errors.Add($"声线 {binding.Id}：{reason}");
                 }
             }
-            else CheckVoice(voice, errors);
-            var settings = endpoint is null ? null : new AppSettings(programDirectory,
-                new Uri(endpoint.AbsoluteUri.TrimEnd('/') + "/"), new(10, 30, 180), voice,
-                new(ConfigurationDirectory, ConfigurationDirectory), new(0, 0),
-                Protocol: new(StreamingMode: config.StreamingEnabled, StreamPlayback: config.StreamingEnabled),
-                Ocr: ocr, Scene: scene, Routing: routing);
+            else if (capabilities.VoiceAssets) CheckVoice(voice, errors);
+            else routingSummary = "当前引擎使用默认预设音色；原 GPT 角色映射已保留，切回后生效。";
+            settings = settings with { Ocr = ocr, Scene = scene, Routing = routing };
             return new(errors.Count == 0, errors.Count == 0
                 ? "文件与路由校验通过；OCR 推理、后端合成和音频输出待实际运行验证。"
                 : string.Join(Environment.NewLine, errors), routingSummary, settings);
@@ -123,6 +118,33 @@ public sealed class QuestVoiceSessionFactory(QuestVoiceConfig config, string pro
             errors.Add(exception.Message);
             return new(false, string.Join(Environment.NewLine, errors), routingSummary, null);
         }
+    }
+
+    /// <summary>仅构造 TTS 快照，测试语音不要求 OCR 模型或截图环境。</summary>
+    public AppSettings CreateTtsSettings(bool validateProvider = true)
+    {
+        var info = TtsProviderRegistry.GetInfo(config.ProviderId);
+        var remote = info.Capabilities.ServerConnection && config.UseRemoteService;
+        var address = remote ? config.RemoteServiceUrl : config.ServiceUrl;
+        if (!info.Capabilities.ServerConnection) address = "https://translate.volcengine.com/";
+        if (!Uri.TryCreate(address?.Trim(), UriKind.Absolute, out var endpoint))
+            throw new VoiceException(VoiceErrorCode.Configuration, "请填写有效的 HTTP/HTTPS 服务地址。");
+        endpoint = new Uri(endpoint.AbsoluteUri.TrimEnd('/') + "/");
+        var voice = !info.Capabilities.VoiceAssets ? new VoiceSettings(info.DisplayName, "", "", "", "") : new VoiceSettings(config.VoiceName,
+            remote ? config.RemoteGptWeightsPath.Trim() : ResolveOptional(config.GptWeightsPath),
+            remote ? config.RemoteSovitsWeightsPath.Trim() : ResolveOptional(config.SovitsWeightsPath),
+            remote ? config.RemoteReferenceAudioPath.Trim() : ResolveOptional(config.ReferenceAudioPath),
+            remote ? config.RemotePromptText : config.PromptText, ServerSidePaths: remote);
+        // 无资产的 Provider 完全不解析旧版路径（包括客户端平台不支持的旧值）。
+        var streaming = info.Capabilities.Streaming && config.StreamingEnabled;
+        var settings = new AppSettings(programDirectory, endpoint,
+            new(config.ConnectTimeoutSeconds, config.RequestTimeoutSeconds, config.SynthesisTimeoutSeconds), voice,
+            new(ConfigurationDirectory, ConfigurationDirectory), new(0, 0),
+            Protocol: new(StreamingMode: streaming, StreamPlayback: streaming),
+            Provider: new(info.Id, remote ? "remote" : "local", config.HuoshanVoiceId));
+        using var provider = TtsProviderRegistry.Create(info.Id);
+        if (validateProvider) provider.Validate(settings);
+        return settings;
     }
 
     /// <summary>空路径保留为缺失，避免把程序目录当成文件。</summary>
@@ -141,9 +163,12 @@ public sealed class QuestVoiceSessionFactory(QuestVoiceConfig config, string pro
     /// <summary>兜底必须有可用的成套本机资产。</summary>
     private static void CheckVoice(VoiceSettings voice, ICollection<string> errors)
     {
-        CheckFile(voice.GptWeightsPath, "GPT 权重", errors);
-        CheckFile(voice.SovitsWeightsPath, "SoVITS 权重", errors);
-        CheckFile(voice.ReferenceAudioPath, "参考音频", errors);
+        foreach (var (path, label) in new[] { (voice.GptWeightsPath, "GPT 权重"),
+                     (voice.SovitsWeightsPath, "SoVITS 权重"), (voice.ReferenceAudioPath, "参考音频") })
+        {
+            if (!voice.ServerSidePaths) CheckFile(path, label, errors);
+            else if (string.IsNullOrWhiteSpace(path)) errors.Add(label + "服务器路径不能为空。");
+        }
         if (string.IsNullOrWhiteSpace(voice.Name) || string.IsNullOrWhiteSpace(voice.PromptText))
             errors.Add("请填写默认声线名称及参考音频的逐字原文。");
     }
@@ -158,8 +183,7 @@ public sealed class QuestVoiceSessionFactory(QuestVoiceConfig config, string pro
             throw new InvalidOperationException("当前 BetterGI 原生 ONNX 运行库不包含 DirectML。QuestVoice OCR 需要 DirectML；请在硬件加速设置选择内置 CPU / DirectML 并重启 BetterGI。不会为配音替换正在使用的运行库。");
         var scratch = Path.Combine(ConfigurationDirectory, "cache", Guid.NewGuid().ToString("N"));
         var settings = validation.Settings with { Output = new(scratch, Path.Combine(scratch, "audio")) };
-        var engine = new GptSovitsEngine(timeouts => new HttpClient(new SocketsHttpHandler
-            { ConnectTimeout = TimeSpan.FromSeconds(timeouts.ConnectSeconds) }), new ReferenceAudioSelector(), new WavProcessor());
+        var engine = TtsProviderRegistry.Create(settings.Provider!.ProviderId);
         var metrics = Metrics = new QuestVoiceMetrics();
         var ocr = new DirectMlOcrEngine(metrics);
         var player = new WasapiAudioPlayer(() => new WasapiOut());

@@ -265,7 +265,7 @@ public sealed partial class ContinuousVoiceSession(AppSettings settings, ITtsEng
         VoiceErrorCode? error = null, bool playbackSucceeded = false, long? revision = null, long? epoch = null)
     {
         var value = new ContinuousVoiceEvent(++_sequence, _clock.Elapsed, kind, work?.Candidate.Revision ?? revision ?? _revision,
-            work?.Candidate.Epoch ?? epoch ?? _epoch, work?.Candidate.SourceSequence, work, detail, error, playbackSucceeded);
+            work?.Candidate.Epoch ?? epoch ?? _epoch, work?.Candidate.SourceSequence, work, detail, error, playbackSucceeded, _backendUnknown);
         _notifications.Enqueue(value);
         if (_notifying) return;
         _notifying = true;

@@ -51,6 +51,8 @@ public partial class QuestVoicePageViewModel : ViewModel
         _dispatcher = Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
         _status = service.Status;
         service.Changed += OnServiceChanged;
+        Config.PropertyChanged += OnTtsConfigChanged;
+        _ = RefreshVoicesAsync();
     }
 
     /// <summary>读取最新快照而不是排队时的旧快照，避免多线程事件倒序覆盖。</summary>
@@ -69,6 +71,7 @@ public partial class QuestVoicePageViewModel : ViewModel
         StartCommand.NotifyCanExecuteChanged();
         StopCommand.NotifyCanExecuteChanged();
         ConfirmBackendRestartedCommand.NotifyCanExecuteChanged();
+        TestSpeechCommand.NotifyCanExecuteChanged();
     }
     /// <summary>防止并发启动；远端未知时先恢复后端。</summary>
     private bool CanStart() => IsConfigEditable && !Status.BackendUnknown;

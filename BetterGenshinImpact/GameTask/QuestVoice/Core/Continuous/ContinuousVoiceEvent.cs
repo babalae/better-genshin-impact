@@ -22,4 +22,4 @@ public enum ContinuousVoiceEventKind
 /// <summary>Elapsed is monotonic session time; StopRequested never implies playback exited.</summary>
 public sealed record ContinuousVoiceEvent(long Sequence, TimeSpan Elapsed, ContinuousVoiceEventKind Kind,
     long Revision, long Epoch, long? SourceSequence, ContinuousVoiceWork? Work = null,
-    string? Detail = null, VoiceErrorCode? Error = null, bool PlaybackSucceeded = false);
+    string? Detail = null, VoiceErrorCode? Error = null, bool PlaybackSucceeded = false, bool BackendUnknown = false);

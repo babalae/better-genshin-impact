@@ -27,7 +27,8 @@ public sealed record ReferenceSelection(ReferenceAudio Audio, ReferenceFallback 
 public sealed record TtsRequest(string Text, VoiceBinding Voice, string? Emotion = null);
 /// <summary>TtsResult：原神自动配音的业务类型。</summary>
 public sealed record TtsResult(byte[] Wav, double SynthesisSeconds, double TimeToFirstByteSeconds,
-    double AudioSeconds, int SampleRate, int Channels, ReferenceFallback ReferenceFallback);
+    double AudioSeconds, int SampleRate, int Channels, ReferenceFallback ReferenceFallback,
+    TtsAudioEncoding SourceEncoding = TtsAudioEncoding.Pcm16Wav);
 /// <summary>VoiceStatus：原神自动配音的业务类型。</summary>
 public sealed record VoiceStatus(VoiceState State, string? Detail = null, string? ArtifactPath = null,
     VoiceErrorCode? Error = null);

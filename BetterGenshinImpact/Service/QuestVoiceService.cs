@@ -16,6 +16,7 @@ using BetterGenshinImpact.GameTask.QuestVoice.Core.Ocr;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Routing;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Tts;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Diagnostics;
+using BetterGenshinImpact.GameTask.QuestVoice.Features.Tts;
 using BetterGenshinImpact.GameTask.Runtime;
 using Microsoft.Extensions.Logging;
 using OpenCvSharp;
@@ -24,7 +25,7 @@ using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 namespace BetterGenshinImpact.Service;
 
 /// <summary>原生宿主适配：借用已有运行环境和截图，不接管输入或其他任务。</summary>
-public sealed class QuestVoiceService : IDisposable
+public sealed partial class QuestVoiceService : IDisposable
 {
     /// <summary>最近事件列表最大保留条数。</summary>
     private const int MaxRecentEvents = 8;
@@ -61,6 +62,10 @@ public sealed class QuestVoiceService : IDisposable
     private int _sampleInterval;
     /// <summary>在启动时冻结流式配音与角色路由开关。</summary>
     private bool _activeStreamingEnabled, _activeRoutingEnabled;
+    /// <summary>当前引擎显示名冻结于启动时。</summary>
+    private string _activeProviderName = "GPT-SoVITS";
+    /// <summary>冻结实际默认声音；预设引擎显示其 voice ID，不借用旧 GPT 默认名。</summary>
+    private string _activeVoiceName = "默认 NPC";
     /// <summary>单调时钟起点及上次已接收帧。</summary>
     private long _startedAt, _lastCapture;
     /// <summary>限频计数摘要，下次输出的单调时刻；仅编码任务写入。</summary>
@@ -107,6 +112,7 @@ public sealed class QuestVoiceService : IDisposable
             if (Status.BackendUnknown) throw new InvalidOperationException("后端状态未知。请先手动重启 GPT-SoVITS，再点击“确认后端已重启”。");
             var runtime = _runtime.Current ?? throw new InvalidOperationException("请先在 BetterGI 启动页启用截图并绑定原神，再启动自动配音。");
             if (runtime.IsStopping || !runtime.Window.IsAlive) throw new InvalidOperationException("游戏窗口已失效，请重新绑定。");
+            var ttsSettings = _factory.CreateTtsSettings();
             lock (_captureGate) _startCancellation = CancellationTokenSource.CreateLinkedTokenSource(token, runtime.Stopping);
             lock (_statusGate)
             {
@@ -116,8 +122,11 @@ public sealed class QuestVoiceService : IDisposable
                 _playingCandidate = null;
                 _inDialogue = false;
                 _isPlayingAudio = false;
-                _activeStreamingEnabled = _config.QuestVoiceConfig.StreamingEnabled;
-                _activeRoutingEnabled = _config.QuestVoiceConfig.RoutingEnabled;
+                var info = TtsProviderRegistry.GetInfo(_config.QuestVoiceConfig.ProviderId);
+                _activeStreamingEnabled = info.Capabilities.Streaming && _config.QuestVoiceConfig.StreamingEnabled;
+                _activeRoutingEnabled = info.Capabilities.VoiceAssets && _config.QuestVoiceConfig.RoutingEnabled;
+                _activeProviderName = info.DisplayName;
+                _activeVoiceName = info.Capabilities.PresetVoices ? ttsSettings.Provider!.VoiceId : ttsSettings.Voice.Name;
                 _lastEventText = null;
             }
             Update(s => ResetStages(s) with
@@ -193,6 +202,8 @@ public sealed class QuestVoiceService : IDisposable
             _sampling = false;
             _dispatcher.FrameCaptured -= OnCaptured;
             _startCancellation?.Cancel();
+            _testCancellation?.Cancel();
+            if (applicationExit) _testProvider?.Shutdown();
             encoding = _encoding;
         }
         var stop = _controller.StopAsync(abortBackend: applicationExit);
@@ -323,13 +334,10 @@ public sealed class QuestVoiceService : IDisposable
     {
         try
         {
-            if (!Uri.TryCreate(_config.QuestVoiceConfig.ServiceUrl, UriKind.Absolute, out var endpoint)
-                || endpoint.Scheme is not ("http" or "https")) throw new InvalidOperationException("请先填写有效的 HTTP/HTTPS 后端地址。");
-            using var client = new HttpClient(new SocketsHttpHandler { ConnectTimeout = TimeSpan.FromSeconds(3) })
-                { Timeout = TimeSpan.FromSeconds(5) };
-            using var response = await client.GetAsync(new Uri(endpoint.AbsoluteUri.TrimEnd('/') + "/docs"),
-                HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
-            Update(s => s with { Tts = $"HTTP {(int)response.StatusCode} 已响应；实际合成待验证", Error = "" });
+            var settings = _factory.CreateTtsSettings();
+            using var provider = TtsProviderRegistry.Create(settings.Provider!.ProviderId);
+            var detail = await provider.ProbeAsync(settings, token).ConfigureAwait(false);
+            Update(s => s with { Tts = detail, Error = "" });
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
         catch (Exception exception)
@@ -641,7 +649,7 @@ public sealed class QuestVoiceService : IDisposable
                 var routing = value.Work?.Routing;
                 var characterName = routing?.CanonicalName ?? value.Work?.Candidate.AcceptedName ?? "默认 NPC";
                 var voiceDisplay = FormatRoutedVoice(routing);
-                var voiceShortName = routing?.Voice.Name ?? _config.QuestVoiceConfig.VoiceName;
+                var voiceShortName = routing?.Voice.Name ?? _activeVoiceName;
                 Update(s => s with
                 {
                     Character = characterName,
@@ -669,13 +677,13 @@ public sealed class QuestVoiceService : IDisposable
                 {
                     RoutingStage = QuestVoiceStageState.Completed,
                     TtsStage = QuestVoiceStageState.InProgress,
-                    Tts = streamingMode ? "流式合成中" : "切换权重 / 合成中",
+                    Tts = streamingMode ? "流式合成中" : "合成中",
                     Playback = playingAudio ? s.Playback : "等待播放音频",
                     StageSummary = streamingMode
                         ? "当前阶段：正在等待流式音频首段返回"
-                        : "当前阶段：正在请求 GPT-SoVITS 合成语音"
+                        : $"当前阶段：正在请求 {_activeProviderName} 合成语音"
                 });
-                RecordEvent("开始 GPT-SoVITS 合成");
+                RecordEvent($"开始 {_activeProviderName} 合成");
                 break;
 
             case ContinuousVoiceEventKind.SynthesisDraining:
@@ -730,7 +738,7 @@ public sealed class QuestVoiceService : IDisposable
                 break;
 
             case ContinuousVoiceEventKind.CandidateFailed:
-                var unknown = value.Error is VoiceErrorCode.Timeout or VoiceErrorCode.InterruptedResponse or VoiceErrorCode.BackendUnknown;
+                var unknown = value.BackendUnknown;
                 var failedDuringRouting = value.Work?.Routing is null && routingMode;
                 Update(s => s with
                 {
@@ -795,7 +803,7 @@ public sealed class QuestVoiceService : IDisposable
 
     /// <summary>生成实际声线路由展示文本，明确区分映射命中、固定默认声线与兜底原因。</summary>
     private string FormatRoutedVoice(VoiceRoutingResult? routing) =>
-        QuestVoiceStatus.FormatRoutedVoice(routing, _config.QuestVoiceConfig.VoiceName);
+        QuestVoiceStatus.FormatRoutedVoice(routing, _activeVoiceName);
 
     /// <summary>检查事件是否早于当前已推进的对白周期和视觉版本。</summary>
     private bool IsStale(long epoch, long revision) =>

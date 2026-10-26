@@ -25,7 +25,8 @@ internal static class RoutingVoiceAssets
         Array.AsReadOnly(new[] { new ReferenceAudio(voice.ReferenceAudioPath, voice.PromptText, voice.ReferenceEmotion) }));
 
     /// <summary>校验声线资产可读且非空，并返回具体不可用原因。</summary>
-    public static async Task<string?> UnavailableAsync(RoutingVoice voice, CancellationToken cancellationToken)
+    public static async Task<string?> UnavailableAsync(RoutingVoice voice, CancellationToken cancellationToken,
+        bool serverSidePaths = false)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (string.IsNullOrWhiteSpace(voice.Name)) return "Voice.Name: Nonempty text is required.";
@@ -34,6 +35,11 @@ internal static class RoutingVoiceAssets
             ("SovitsWeightsPath", voice.SovitsWeightsPath), ("ReferenceAudioPath", voice.ReferenceAudioPath) })
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (serverSidePaths)
+            {
+                if (string.IsNullOrWhiteSpace(path)) return $"{field}: Server path is required.";
+                continue;
+            }
             try
             {
                 await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read,
