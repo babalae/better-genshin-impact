@@ -48,8 +48,8 @@ public sealed class GameRuntime(
     public IInputBackend Input { get; } = input ?? throw new ArgumentNullException(nameof(input));
 
     /// <summary>
-    /// 绑定时画面区域的快照（含 DpiScale），由 Provider 在启动截图器之前构建。
-    /// 窗口移动时由调度器同步 CaptureAreaRect
+    /// 当前画面区域及其分辨率派生数据，由 Provider 在启动截图器之前构建。
+    /// 窗口移动或缩放时由调度器同步 CaptureAreaRect；DpiScale 仍为绑定时快照
     /// </summary>
     public ISystemInfo SystemInfo { get; } = systemInfo ?? throw new ArgumentNullException(nameof(systemInfo));
 
