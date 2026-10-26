@@ -228,6 +228,7 @@ public partial class App : Application
                 services.AddView<PuloniaTaskPlanPage, PuloniaTaskPlanViewModel>();
                 services.AddView<PuloniaOneDragonPage, PuloniaOneDragonViewModel>();
                 services.AddView<PuloniaTaskHistoryPage, PuloniaTaskHistoryViewModel>();
+                services.AddView<AccountRecordsPage, AccountRecordsPageViewModel>();
                 services.AddView<MusicPage, MusicPageViewModel>();
                 services.AddSingleton<PathingConfigViewModel>();
                 services.AddSingleton<IBannerImageService, BannerImageService>();
