@@ -32,7 +32,7 @@ public sealed record TimeoutSettings(int ConnectSeconds, int RequestSeconds, int
 public sealed record VoiceSettings(
     string Name, string GptWeightsPath, string SovitsWeightsPath,
     string ReferenceAudioPath, string PromptText, string? RequestedEmotion = null, string? ReferenceEmotion = null,
-    bool ServerSidePaths = false);
+    bool ServerSidePaths = false, TtsProviderSettings? Provider = null);
 
 /// <summary>OutputSettings：原神自动配音的业务类型。</summary>
 public sealed record OutputSettings(string LogsDirectory, string AudioDirectory);

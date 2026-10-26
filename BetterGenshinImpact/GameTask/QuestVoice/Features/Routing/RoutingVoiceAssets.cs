@@ -18,11 +18,13 @@ internal static class RoutingVoiceAssets
     /// <summary>把固定声线设置转换为路由兜底声线。</summary>
     public static RoutingVoice Legacy(VoiceSettings voice) => new(RoutingCatalog.ConfiguredVoiceId, voice.Name,
         voice.GptWeightsPath, voice.SovitsWeightsPath, voice.ReferenceAudioPath, voice.PromptText,
-        voice.RequestedEmotion, voice.ReferenceEmotion);
+        voice.RequestedEmotion, voice.ReferenceEmotion, voice.Provider?.ProviderId ?? "gpt-sovits",
+        voice.Provider?.InstanceId, voice.Provider?.VoiceId);
 
     /// <summary>读取当前不可变状态快照。</summary>
     public static VoiceBinding Snapshot(RoutingVoice voice) => new(voice.Name, voice.GptWeightsPath, voice.SovitsWeightsPath,
-        Array.AsReadOnly(new[] { new ReferenceAudio(voice.ReferenceAudioPath, voice.PromptText, voice.ReferenceEmotion) }));
+        Array.AsReadOnly(new[] { new ReferenceAudio(voice.ReferenceAudioPath, voice.PromptText, voice.ReferenceEmotion) }),
+        new(voice.ProviderId, voice.InstanceId ?? "", voice.ProviderVoiceId ?? ""));
 
     /// <summary>校验声线资产可读且非空，并返回具体不可用原因。</summary>
     public static async Task<string?> UnavailableAsync(RoutingVoice voice, CancellationToken cancellationToken,
@@ -30,6 +32,9 @@ internal static class RoutingVoiceAssets
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (string.IsNullOrWhiteSpace(voice.Name)) return "Voice.Name: Nonempty text is required.";
+        if (!Tts.TtsProviderRegistry.GetInfo(voice.ProviderId).Capabilities.VoiceAssets)
+            return string.IsNullOrWhiteSpace(voice.ProviderVoiceId) ? "ProviderVoiceId: A voice ID is required." : null;
+        if (voice.InstanceId is not null) serverSidePaths = voice.InstanceId == "remote";
         if (string.IsNullOrWhiteSpace(voice.PromptText)) return "Voice.PromptText: Nonempty reference text is required.";
         foreach (var (field, path) in new[] { ("GptWeightsPath", voice.GptWeightsPath),
             ("SovitsWeightsPath", voice.SovitsWeightsPath), ("ReferenceAudioPath", voice.ReferenceAudioPath) })

@@ -35,7 +35,7 @@ public partial class QuestVoicePageViewModel
     /// <summary>预设音色引擎显示声音和语言列表。</summary>
     public bool SupportsPresetVoices => SelectedProvider?.Capabilities.PresetVoices == true;
     /// <summary>恢复按钮仅属于有后端排空语义的引擎。</summary>
-    public bool RequiresBackendDrain => SelectedProvider?.Capabilities.RequiresDrain == true;
+    public bool RequiresBackendDrain => SelectedProvider?.Capabilities.RequiresDrain == true || Status.BackendUnknown;
     /// <summary>没有任何专属高级参数时折叠整个高级配置卡片。</summary>
     public bool HasProviderSettings => SupportsVoiceAssets || SupportsStreaming || SupportsServerConnection;
     /// <summary>列表与内部 voice ID 分开显示。</summary>

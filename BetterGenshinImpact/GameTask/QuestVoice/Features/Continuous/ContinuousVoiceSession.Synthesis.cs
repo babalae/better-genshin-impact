@@ -76,7 +76,8 @@ public sealed partial class ContinuousVoiceSession
                 if (phase != TtsPhase.Draining) return;
                 lock (_gate) Emit(ContinuousVoiceEventKind.SynthesisDraining, work);
             });
-            var streaming = settings.Protocol?.StreamPlayback == true;
+            var streaming = settings.Protocol?.StreamPlayback == true
+                && (engine is not IStreamingTtsEngine selectable || selectable.CanStream(resolved.Request));
             if (streaming && (engine is not IStreamingTtsEngine || player is not IStreamingAudioPlayer))
                 throw new VoiceException(VoiceErrorCode.Configuration, "当前配音引擎或播放器不支持流式，请关闭流式开关。");
             // Ready回调只移交一个播放引用，合成泵仍等待同一HTTP正常EOF。

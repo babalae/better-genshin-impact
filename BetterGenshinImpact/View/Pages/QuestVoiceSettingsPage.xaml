@@ -64,7 +64,7 @@
                 </StackPanel>
             </ui:CardExpander>
             <!-- 5.1 基础配置 -->
-            <ui:CardExpander Visibility="{Binding ViewModel.HasProviderSettings, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,0,0,12"
+            <ui:CardExpander Margin="0,0,0,12"
                              ContentPadding="0"
                              IsExpanded="True"
                              Icon="{ui:SymbolIcon Settings24}">
@@ -82,7 +82,7 @@
                     </Grid>
                 </ui:CardExpander.Header>
                 <StackPanel>
-                    <Grid Visibility="{Binding ViewModel.SupportsVoiceAssets, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="16" IsEnabled="{Binding ViewModel.IsConfigEditable, Mode=OneWay}">
+                    <Grid Margin="16" IsEnabled="{Binding ViewModel.IsConfigEditable, Mode=OneWay}">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
@@ -206,10 +206,7 @@
             </ui:CardExpander>
 
             <!-- 5.2 角色映射与声线配置 -->
-            <ui:CardExpander Visibility="{Binding ViewModel.SupportsVoiceAssets, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,0,0,12"
-                             ContentPadding="0"
-                             IsExpanded="True"
-                             Icon="{ui:SymbolIcon PeopleSwap24}">
+            <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" IsExpanded="True" Icon="{ui:SymbolIcon PeopleSwap24}">
                 <ui:CardExpander.Header>
                     <Grid>
                         <Grid.RowDefinitions>
@@ -281,10 +278,11 @@
                                 <Run Text="{Binding ViewModel.Status.Validation, Mode=OneWay}" />
                             </ui:TextBlock>
                             <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                          Text="旅行者（ProtagonistId）、玩家昵称（PlayerNames）、角色别名及 FallbackVoiceId 在 JSON 中定义；修改配置后停止并重新启动自动配音即可生效。"
+                                          Text="下方管理器使用独立草稿，点击保存后下次启动生效；直接编辑外部 JSON 后请重新加载。"
                                           TextWrapping="Wrap" />
                         </StackPanel>
                     </Grid>
+                    <local:QuestVoiceManagementView DataContext="{Binding ViewModel.Management, Mode=OneWay}" />
                 </StackPanel>
             </ui:CardExpander>
 

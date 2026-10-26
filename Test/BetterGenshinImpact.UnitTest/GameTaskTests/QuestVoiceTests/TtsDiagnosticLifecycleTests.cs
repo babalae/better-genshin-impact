@@ -12,6 +12,7 @@ using BetterGenshinImpact.GameTask.QuestVoice.Core.Tts;
 using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Service;
 using Microsoft.Extensions.Logging.Abstractions;
+using BetterGenshinImpact.ViewModel.Pages;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.QuestVoiceTests;
 
@@ -108,6 +109,10 @@ public sealed class TtsDiagnosticLifecycleTests
                 var error = await Assert.ThrowsAsync<VoiceException>(() => synthesis);
                 Assert.True(error.BackendUnknown);
                 Assert.True(service.Status.BackendUnknown);
+                // 混合声线可能在默认普通 Provider 下遇到 GPT 未知，恢复入口仍必须可见。
+                config.ProviderId = "huoshan";
+                var page = new QuestVoicePageViewModel(all, service, factory);
+                Assert.True(page.RequiresBackendDrain);
             }
             else
             {

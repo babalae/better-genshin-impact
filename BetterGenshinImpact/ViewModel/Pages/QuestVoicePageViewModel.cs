@@ -68,6 +68,7 @@ public partial class QuestVoicePageViewModel : ViewModel
     /// <summary>真实状态驱动所有生命周期按钮。</summary>
     partial void OnStatusChanged(QuestVoiceStatus value)
     {
+        OnPropertyChanged(nameof(RequiresBackendDrain));
         StartCommand.NotifyCanExecuteChanged();
         StopCommand.NotifyCanExecuteChanged();
         ConfirmBackendRestartedCommand.NotifyCanExecuteChanged();

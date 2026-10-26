@@ -2,6 +2,8 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Tts;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.Routing;
+using BetterGenshinImpact.GameTask.QuestVoice.Features.Routing;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Audio;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Tts;
 using NAudio.Wave;
@@ -17,14 +19,26 @@ public sealed partial class QuestVoiceService
     private ITtsProvider? _testProvider;
 
     /// <summary>无需游戏或 OCR 即可测试当前默认声线；与正式会话互斥。</summary>
-    public async Task TestSpeechAsync(string text, CancellationToken token = default)
+    public Task TestSpeechAsync(string text, CancellationToken token = default) => TestSpeechCoreAsync(text, null, token);
+
+    /// <summary>试听选中声线草稿，复用正式测试的互斥、取消、排空与播放器。</summary>
+    public Task TestVoiceAsync(string text, RoutingVoice profile, CancellationToken token = default)
+        => TestSpeechCoreAsync(text, profile, token);
+
+    /// <summary>两个测试入口共享唯一的播放与后端资源所有权。</summary>
+    private async Task TestSpeechCoreAsync(string text, RoutingVoice? profile, CancellationToken token)
     {
         await _operations.WaitAsync(token).ConfigureAwait(false);
         try
         {
             if (Status.IsRunning || Status.IsBusy) throw new InvalidOperationException("请先停止自动配音再测试语音。");
             if (Status.BackendUnknown) throw new InvalidOperationException("后端状态未知，请先手动恢复并确认。");
-            var settings = _factory.CreateTtsSettings();
+            var settings = profile is null ? _factory.CreateTtsSettings() : _factory.CreateVoiceSettings(profile);
+            if (profile is not null)
+            {
+                var reason = await RoutingVoiceAssets.UnavailableAsync(profile, token, _factory.RoutingServerSidePaths).ConfigureAwait(false);
+                if (reason is not null) throw new VoiceException(VoiceErrorCode.Configuration, reason);
+            }
             settings = settings with { Protocol = settings.Protocol! with { StreamingMode = false, StreamPlayback = false } };
             using var provider = TtsProviderRegistry.Create(settings.Provider!.ProviderId);
             using var player = new WasapiAudioPlayer(() => new WasapiOut());
@@ -38,7 +52,7 @@ public sealed partial class QuestVoiceService
             {
                 var voice = settings.Voice;
                 var request = new TtsRequest(text, new(voice.Name, voice.GptWeightsPath, voice.SovitsWeightsPath,
-                    [new(voice.ReferenceAudioPath, voice.PromptText)]));
+                    [new(voice.ReferenceAudioPath, voice.PromptText)], settings.Provider));
                 // 测试入口完整接收后播放；正式流式能力仍由原会话及其 Ready 机制验收。
                 var result = await provider.SynthesizeAsync(settings, request, null, _testCancellation.Token).ConfigureAwait(false);
                 Update(s => s with { Tts = $"合成完成：{result.AudioSeconds:F2}s · {result.SampleRate} Hz · {result.SourceEncoding}", Playback = "正在播放测试语音" });

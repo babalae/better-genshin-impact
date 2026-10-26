@@ -56,7 +56,8 @@ public sealed class SpeakerDefinition(string id, IEnumerable<string> names, IEnu
 
 /// <summary>RoutingVoice：原神自动配音的业务类型。</summary>
 public sealed record RoutingVoice(string Id, string Name, string GptWeightsPath, string SovitsWeightsPath,
-    string ReferenceAudioPath, string PromptText, string? RequestedEmotion = null, string? ReferenceEmotion = null);
+    string ReferenceAudioPath, string PromptText, string? RequestedEmotion = null, string? ReferenceEmotion = null,
+    string ProviderId = "gpt-sovits", string? InstanceId = null, string? ProviderVoiceId = null);
 
 /// <summary>RoutingCatalogSnapshot：原神自动配音的业务类型。</summary>
 public sealed record RoutingCatalogSnapshot(RoutingCatalog Catalog, string CatalogSha256, string CatalogPath);

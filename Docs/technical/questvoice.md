@@ -14,9 +14,29 @@
 
 ## 角色与旅行者
 
-「打开配置与资源目录」或首次校验会按需部署小型场景目录、XML 和路由示例到 `User/QuestVoice`，已有文件不会覆盖。启用「角色声线路由」后，编辑所选 JSON。示例中角色仅有身份，尚未绑定模型。
+「打开配置与资源目录」或首次校验会按需部署小型场景目录、XML 和路由示例到 `User/QuestVoice`，已有文件不会覆盖。启用「角色声线路由」后，在「配置与映射 → 角色映射与声线配置」加载所选目录，可搜索、增加、编辑和删除角色及独立声线。示例中角色仅有身份，尚未绑定声线。
 
-目录包含 `Speakers`（规范名称、Aliases、Corrections 和 VoiceId）与 `Voices`（声线资产）。`ProtagonistId` 可填写 `genshin.aether` 或 `genshin.lumine`，并在 `PlayerNames` 添加游戏昵称；对应角色需在 `Speakers` 中绑定真实 `VoiceId`。`FallbackVoiceId` 指定默认 NPC，空值沿用页面默认声线；`NarratorVoiceId` 为旁白声线。未绑定或资产不可用角色按 `MissingVoicePolicy` 的 `Fallback` / `Fail` 处理。
+目录包含 `Speakers`（规范名称、Aliases、Corrections 和 VoiceId）与 `Voices`（独立声线 profile）。选择空或荧时，仅在缺少对应角色时补齐身份；二者的声线分别维护。`ProtagonistId` 也可引用已有其他角色，`PlayerNames` 一行一个游戏昵称；新版目录拒绝昵称抢占其他角色的姓名、别名或纠错名。`FallbackVoiceId` 指定默认 NPC，空值沿用默认引擎声线；`NarratorVoiceId` 为旁白声线。明确角色、别名和纠错优先于未知 NPC 兜底；已知角色无声线或资产不可用时按 `MissingVoicePolicy` 的 `Fallback` / `Fail` 处理。当前旅行者或仍被角色/旁白/兜底引用的声线不能直接删除。
+
+管理编辑保留在草稿中，切换选中项或页面不会清空；点击「保存配置并备份」才写外置 JSON。原文件保留为 `.bak`，临时文件完成后原子替换，摘要冲突会拒绝覆盖并保留草稿；可导出草稿再重新加载核对。导入只加载草稿，保存才覆盖当前目标；跨目录导出会重新计算本地资产路径。放弃未保存输入需明确点击「放弃草稿并重新加载」。统一引擎/OCR设置仍沿用 BetterGI 自动保存。
+
+旧 `Version: 1` 文件继续读取，管理器保存升级为 `Version: 2`。旧 GPT profile 未指定实例时继续沿用 `UseRemoteService`；新版声线可显式引用 `ProviderId`、`InstanceId`（`local` / `remote`）和 `ProviderVoiceId`。连接地址和超时仍由对应实例的引擎设置管理，目录不复制地址或凭据。普通引擎无需 GPT 权重/参考音频，多个角色可共享同一 profile。例如：
+
+```json
+{
+  "Version": 2, "Game": "genshin", "ProtagonistId": "genshin.lumine", "PlayerNames": ["星海旅人"],
+  "NarratorVoiceId": null, "FallbackVoiceId": "voice.npc", "MissingVoicePolicy": "Fallback",
+  "Speakers": [
+    { "Id": "genshin.lumine", "Names": ["荧"], "Aliases": [], "Corrections": [], "VoiceId": "voice.traveler" }
+  ],
+  "Voices": [
+    { "Id": "voice.traveler", "Name": "旅行者", "ProviderId": "huoshan", "InstanceId": "local", "ProviderVoiceId": "zh_female_qingxin" },
+    { "Id": "voice.npc", "Name": "NPC", "ProviderId": "huoshan", "InstanceId": "local", "ProviderVoiceId": "zh_male_zhubo" }
+  ]
+}
+```
+
+「试听选中声线」使用当前草稿及生产服务的同一互斥/取消/播放器，不要求先保存，也不需要游戏或 OCR。运行或试听时管理操作禁用；试听结束恢复可编辑。GPT 状态未知时，即使默认引擎为火山，也会显示手动恢复确认入口。试听完整接收后播放；正式连续对白按本句实际 Provider 的能力决定流式或完整播放。
 
 本地实例的 JSON 资产路径相对于 JSON 所在目录解析；远程实例原样交给服务器解释，请优先使用服务器绝对路径。配置示例：
 
@@ -84,11 +104,11 @@ Debug 日志每 10 秒至多输出一次 `QuestVoice metrics`，停止排空后�
 
 本地和远程 GPT-SoVITS 是同一 Provider 的两个保存实例。`UseRemoteService` 选择实例，旧 `ServiceUrl` 和默认声线字段原样保留，远程使用独立 `Remote*` 字段。远程支持 HTTP/HTTPS 和反向代理子路径；路径由服务器解释，不检查客户端同名文件、不自动上传，也不实现不存在的上传 API。连接超时 1～120 秒，请求和合成超时 1～600 秒；不在 URL 内嵌账号、密码、查询参数或令牌。受保护服务可在用户管理的反向代理侧配置认证，本阶段未增加凭据管理。
 
-配置由 BetterGI 统一保存，缺少 `ProviderId` 时自动采用 `gpt-sovits`，无需迁移或覆盖旧字段。引擎切换保留所有配置；火山暂用默认预设音色，保留但不启用 GPT 角色映射。运行或测试时设置不可编辑，修改在下次启动生效。GPT 的 Unknown 只由实际后端状态传播；在线引擎的普通网络失败不会要求重启 GPT。
+配置由 BetterGI 统一保存，缺少 `ProviderId` 时自动采用 `gpt-sovits`，无需迁移或覆盖旧字段。引擎切换保留所有配置；旧 v1 目录在默认火山引擎下继续保持固定音色，管理器保存升级到 v2 后，启用角色路由即可为角色选择不同引擎/声音。运行或测试时设置不可编辑，修改在下次启动生效。GPT 的 Unknown 只由实际后端状态传播；在线引擎的普通网络失败不会要求重启 GPT。
 
 「测试合成并播放」不要求截图或 OCR，使用当前默认声线、完整接收后播放，并与正式配音互斥。「取消测试」立即取消本地播放；GPT 已发请求仍排空。整体退出可关闭测试和正式会话的本地 HTTP 连接，不关闭远端服务。测试入口不代表正式流式或真实游戏已验收。
 
-新增第三个普通 Provider：实现 `ITtsProvider`（返回已解码 PCM16 WAV 的 `TtsResult`），在注册表添加描述与创建函数，并为实际参数增加独立持久化字段及工厂快照。共通设置通过能力控制显隐；有新参数时添加对应 MVVM 模板即可，无需修改 OCR、游戏捕获、连续对白调度或播放器。未来角色管理可以用 ProviderId、InstanceId 和专属 voice ID 引用声音，GPT 特有权重与排空继续留在自身实现中。
+新增第三个普通 Provider：实现 `ITtsProvider`（返回已解码 PCM16 WAV 的 `TtsResult`），在注册表添加描述与创建函数，并为实际参数增加独立持久化字段及工厂快照。共通设置通过能力控制显隐；有新参数时添加对应 MVVM 模板即可，无需修改 OCR、游戏捕获、连续对白调度或播放器。角色管理已经使用 ProviderId、InstanceId 和专属 voice ID 引用声音；`RoutedTtsProvider` 按冻结实例复用 Provider，同实例不同声线保留安全切权状态。`IStreamingTtsEngine.CanStream` 仅决定当前请求是否走增量播放，Ready/EOF、GPT 排空与 Unknown 继续由原实现拥有。
 
 `GameTask/QuestVoice/Core` 和 `Features` 来自 QuestVoice `1fc59d9c374a2c36180c2116be4397a0b8be719c` 的原神业务契约和算法。`QuestVoiceSessionController` / `QuestVoiceSessionFactory` / `QuestVoiceSession` 管理独立单轮所有权，`Service/QuestVoiceService` 接入宿主运行环境与已有帧，ViewModel 只异步投递状态和执行命令。没有引入 QuestVoice WinUI 宿主、第二套 WGC、星铁业务或七页面导航。
 
