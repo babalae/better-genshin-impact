@@ -57,9 +57,9 @@ public sealed record NcnnBackendSettings(
     public static NcnnBackendSettings FromConfig(NcnnConfig config) => new NcnnBackendSettings(
         config.PreferredBackend, config.UseOcr, config.UseYolo,
         config.ComputeMode, config.GpuIndex,
-        config.DetTuning ?? NcnnTuningSettings.CreateDefault(config.Threads),
-        config.RecTuning ?? NcnnTuningSettings.CreateDefault(config.Threads),
-        config.YoloTuning ?? NcnnTuningSettings.CreateDefault(config.Threads)).Normalize();
+        config.DetTuning ?? NcnnTuningSettings.CreateDefault(),
+        config.RecTuning ?? NcnnTuningSettings.CreateDefault(),
+        config.YoloTuning ?? NcnnTuningSettings.CreateDefault()).Normalize();
 
     public bool Equals(NcnnBackendSettings? other) => other != null && SignatureSuffix == other.SignatureSuffix;
 

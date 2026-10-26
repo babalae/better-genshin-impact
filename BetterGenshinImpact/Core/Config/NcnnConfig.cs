@@ -43,13 +43,6 @@ public partial class NcnnConfig : ObservableObject
     [ObservableProperty]
     private int _gpuIndex;
 
-    /// <summary>
-    ///     ncnn 每条会话的 CPU 线程数（ncnn 侧 num_threads，Vulkan 计算仍由 GPU 执行）。
-    ///     仅作为旧配置迁移的基线值：新配置的线程数存放在三套 <see cref="NcnnTuningSettings" /> 中。
-    /// </summary>
-    [ObservableProperty]
-    private int _threads = NcnnBackendSettings.DefaultThreads;
-
     /// <summary>OCR 文本检测的 ncnn 调优参数。</summary>
     [ObservableProperty]
     private NcnnTuningSettings _detTuning = NcnnTuningSettings.CreateDefault();
@@ -83,7 +76,6 @@ public partial class NcnnConfig : ObservableObject
         UseYolo = normalized.UseYolo;
         ComputeMode = normalized.ComputeMode;
         GpuIndex = normalized.GpuIndex;
-        Threads = normalized.Det.Threads;
         DetTuning = normalized.Det;
         RecTuning = normalized.Rec;
         YoloTuning = normalized.Yolo;
@@ -97,7 +89,6 @@ public partial class NcnnConfig : ObservableObject
         UseYolo = false;
         ComputeMode = NcnnComputeMode.Vulkan;
         GpuIndex = 0;
-        Threads = NcnnBackendSettings.DefaultThreads;
         DetTuning = NcnnTuningSettings.CreateDefault();
         RecTuning = NcnnTuningSettings.CreateDefault();
         YoloTuning = NcnnTuningSettings.CreateDefault();

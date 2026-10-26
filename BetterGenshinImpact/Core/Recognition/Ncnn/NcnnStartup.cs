@@ -31,10 +31,10 @@ public static class NcnnStartup
     /// </summary>
     public static string Prepare(NcnnConfig config)
     {
-        // 调优参数被脚本等路径写空时补默认，线程基线沿用历史单一字段。
-        config.DetTuning ??= NcnnTuningSettings.CreateDefault(config.Threads);
-        config.RecTuning ??= NcnnTuningSettings.CreateDefault(config.Threads);
-        config.YoloTuning ??= NcnnTuningSettings.CreateDefault(config.Threads);
+        // 调优参数被脚本等路径写空时补默认。
+        config.DetTuning ??= NcnnTuningSettings.CreateDefault();
+        config.RecTuning ??= NcnnTuningSettings.CreateDefault();
+        config.YoloTuning ??= NcnnTuningSettings.CreateDefault();
         // 只在确实使用 ncnn 时校验运行库并读取 shim 的真实默认值：
         // 内置常量与 ncnn 版本漂移会改变着色器选择（bf16 packed 在部分设备上直接导致 Vulkan 崩溃）。
         var fallbackMessage = "";
@@ -51,7 +51,7 @@ public static class NcnnStartup
                 try
                 {
                     var shimDefaults = NcnnTuningSettings.FromNetOptions(
-                        NcnnShim.QueryDefaultOptions(), config.Threads);
+                        NcnnShim.QueryDefaultOptions(), config.DetTuning.Threads);
                     config.DetTuning.AlignWithDefaults(shimDefaults);
                     config.RecTuning.AlignWithDefaults(shimDefaults);
                     config.YoloTuning.AlignWithDefaults(shimDefaults);
@@ -65,7 +65,6 @@ public static class NcnnStartup
         var normalized = NcnnBackendSettings.FromConfig(config);
         config.ComputeMode = normalized.ComputeMode;
         config.GpuIndex = normalized.GpuIndex;
-        config.Threads = normalized.Det.Threads;
         config.DetTuning = normalized.Det;
         config.RecTuning = normalized.Rec;
         config.YoloTuning = normalized.Yolo;

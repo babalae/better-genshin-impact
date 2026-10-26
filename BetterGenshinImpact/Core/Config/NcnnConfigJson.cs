@@ -3,14 +3,14 @@ using System.Text.Json;
 namespace BetterGenshinImpact.Core.Config;
 
 /// <summary>
-///     ncnn 配置的 JSON 读写：白名单 DTO + 旧平铺结构迁移。
+///     ncnn 配置的 JSON 读写：白名单 DTO，嵌套节点缺失或损坏时回落默认配置。
 ///     从 <see cref="HardwareAccelerationConfigJsonConverter" /> 独立，保持 ncnn 序列化细节与主转换器解耦。
 /// </summary>
 internal static class NcnnConfigJson
 {
     /// <summary>
     ///     从 hardwareAcceleration 节点读取 ncnn 配置：优先读嵌套 <c>ncnn</c> 节点；
-    ///     节点缺失时迁移旧平铺字段（ncnn 独立化前写入的 config.json），缺失字段回落默认值。
+    ///     节点缺失或损坏时回落默认 ncnn 配置（ncnn 为未发布分支引入的实验后端，无历史用户需要迁移）。
     /// </summary>
     public static NcnnConfig Read(JsonElement hardwareRoot, JsonSerializerOptions options)
     {
@@ -28,8 +28,8 @@ internal static class NcnnConfigJson
             }
         }
 
-        var legacy = hardwareRoot.Deserialize<LegacyNcnnFields>(options);
-        return legacy?.ToConfig() ?? new NcnnConfig();
+        // 嵌套节点缺失/损坏：ncnn 是未发布分支引入的实验后端，直接回落默认配置
+        return new NcnnConfig();
     }
 
     /// <summary>把持久化对象转成嵌套节点的白名单 DTO，供主转换器序列化。</summary>
@@ -40,7 +40,6 @@ internal static class NcnnConfigJson
         UseYolo = value.UseYolo,
         ComputeMode = value.ComputeMode,
         GpuIndex = value.GpuIndex,
-        Threads = value.Threads,
         DetTuning = SerializedNcnnTuning.From(value.DetTuning ?? NcnnTuningSettings.CreateDefault()),
         RecTuning = SerializedNcnnTuning.From(value.RecTuning ?? NcnnTuningSettings.CreateDefault()),
         YoloTuning = SerializedNcnnTuning.From(value.YoloTuning ?? NcnnTuningSettings.CreateDefault())
@@ -55,16 +54,12 @@ internal sealed class SerializedNcnnConfig
     public bool UseYolo { get; set; }
     public NcnnComputeMode? ComputeMode { get; set; }
     public int? GpuIndex { get; set; }
-    public int? Threads { get; set; }
     public SerializedNcnnTuning? DetTuning { get; set; }
     public SerializedNcnnTuning? RecTuning { get; set; }
     public SerializedNcnnTuning? YoloTuning { get; set; }
 
     public NcnnConfig ToConfig()
     {
-        var fallbackThreads = Threads is >= 1 and <= NcnnTuningSettings.MaxThreads
-            ? Threads.Value
-            : NcnnBackendSettings.DefaultThreads;
         return new NcnnConfig
         {
             PreferredBackend = PreferredBackend ?? InferenceBackend.Onnx,
@@ -72,51 +67,13 @@ internal sealed class SerializedNcnnConfig
             UseYolo = UseYolo,
             ComputeMode = ComputeMode ?? global::BetterGenshinImpact.Core.Config.NcnnComputeMode.Vulkan,
             GpuIndex = GpuIndex ?? 0,
-            Threads = fallbackThreads,
-            DetTuning = DetTuning?.ToSettings(fallbackThreads) ?? NcnnTuningSettings.CreateDefault(fallbackThreads),
-            RecTuning = RecTuning?.ToSettings(fallbackThreads) ?? NcnnTuningSettings.CreateDefault(fallbackThreads),
-            YoloTuning = YoloTuning?.ToSettings(fallbackThreads) ?? NcnnTuningSettings.CreateDefault(fallbackThreads)
+            DetTuning = DetTuning?.ToSettings(NcnnBackendSettings.DefaultThreads) ?? NcnnTuningSettings.CreateDefault(),
+            RecTuning = RecTuning?.ToSettings(NcnnBackendSettings.DefaultThreads) ?? NcnnTuningSettings.CreateDefault(),
+            YoloTuning = YoloTuning?.ToSettings(NcnnBackendSettings.DefaultThreads) ?? NcnnTuningSettings.CreateDefault()
         };
     }
 }
 
-/// <summary>
-///     ncnn 独立化前的旧平铺字段（写在 hardwareAcceleration 根节点上），仅用于读迁移，不再写出。
-/// </summary>
-internal sealed class LegacyNcnnFields
-{
-    public InferenceBackend? PreferredBackend { get; set; }
-    public bool UseNcnnOcr { get; set; }
-    public bool UseNcnnYolo { get; set; }
-    public NcnnComputeMode? NcnnComputeMode { get; set; }
-    public int? NcnnGpuIndex { get; set; }
-    public int? NcnnThreads { get; set; }
-    public SerializedNcnnTuning? NcnnDetTuning { get; set; }
-    public SerializedNcnnTuning? NcnnRecTuning { get; set; }
-    public SerializedNcnnTuning? NcnnYoloTuning { get; set; }
-
-    public NcnnConfig ToConfig()
-    {
-        // 旧配置没有三套调优参数：线程数回落到历史单一字段，其余字段回落到 ncnn::Option 默认。
-        var fallbackThreads = NcnnThreads is >= 1 and <= NcnnTuningSettings.MaxThreads
-            ? NcnnThreads.Value
-            : NcnnBackendSettings.DefaultThreads;
-        return new NcnnConfig
-        {
-            // 旧配置没有全局后端字段：只有 OCR 与 YOLO 都走 ncnn 才视为全局 ncnn，混合状态保持单项覆盖语义。
-            PreferredBackend = PreferredBackend
-                               ?? (UseNcnnOcr && UseNcnnYolo ? InferenceBackend.Ncnn : InferenceBackend.Onnx),
-            UseOcr = UseNcnnOcr,
-            UseYolo = UseNcnnYolo,
-            ComputeMode = NcnnComputeMode ?? global::BetterGenshinImpact.Core.Config.NcnnComputeMode.Vulkan,
-            GpuIndex = NcnnGpuIndex ?? 0,
-            Threads = fallbackThreads,
-            DetTuning = NcnnDetTuning?.ToSettings(fallbackThreads) ?? NcnnTuningSettings.CreateDefault(fallbackThreads),
-            RecTuning = NcnnRecTuning?.ToSettings(fallbackThreads) ?? NcnnTuningSettings.CreateDefault(fallbackThreads),
-            YoloTuning = NcnnYoloTuning?.ToSettings(fallbackThreads) ?? NcnnTuningSettings.CreateDefault(fallbackThreads)
-        };
-    }
-}
 
 /// <summary>
 ///     单套调优参数的白名单载体：全部字段可空，缺失即回落默认。

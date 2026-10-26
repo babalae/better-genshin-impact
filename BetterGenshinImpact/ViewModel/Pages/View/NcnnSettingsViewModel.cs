@@ -170,7 +170,7 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
 
     internal static string SavedNcnnDeviceText(NcnnConfig config) =>
         config.ComputeMode == NcnnComputeMode.Cpu
-            ? $"CPU · {config.Threads} 线程"
+            ? $"CPU · {config.DetTuning.Threads} 线程"
             : $"Vulkan 设备 #{config.GpuIndex}";
 
     public string OcrOverrideHint => IsNcnnBackend
