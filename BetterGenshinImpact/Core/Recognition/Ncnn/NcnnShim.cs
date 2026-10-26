@@ -271,13 +271,16 @@ public sealed class NcnnShim : INcnnShim
 
     private static readonly object LibraryLock = new();
     private static readonly Dictionary<string, nint> Libraries = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>裸名加载名，与 NuGet 包 BetterGI.NcnnShim 的 runtimes/win-x64/native/ 产物同名。</summary>
+    private const string ShimLibraryName = "ncnn_shim";
     private static readonly object DeviceLock = new();
     private static NcnnDeviceQuery? _devices;
 
     private static nint GetLibrary(string? dllPath)
     {
         // 缓存键：裸名模式用固定键（dllPath 为 null 会破坏字典查找）
-        var key = string.IsNullOrEmpty(dllPath) ? "ncnn_shim" : dllPath;
+        var key = string.IsNullOrEmpty(dllPath) ? ShimLibraryName : dllPath;
         lock (LibraryLock)
         {
             if (Libraries.TryGetValue(key, out var library)) return library;
@@ -285,7 +288,7 @@ public sealed class NcnnShim : INcnnShim
             {
                 // 裸名解析：普通构建命中 deps.json 的 runtimes/win-x64/native/，
                 // 单文件发布命中 exe 旁——两种布局由 .NET 标准机制处理
-                if (!NativeLibrary.TryLoad("ncnn_shim", typeof(NcnnShim).Assembly, null, out library))
+                if (!NativeLibrary.TryLoad(ShimLibraryName, typeof(NcnnShim).Assembly, null, out library))
                     throw new NcnnUnavailableException(
                         "ncnn_shim.dll 加载失败：未找到运行库（应由 NuGet 包 BetterGI.NcnnShim 随构建部署）。");
             }
