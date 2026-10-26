@@ -286,11 +286,31 @@ public sealed class NcnnShim : INcnnShim
             if (Libraries.TryGetValue(key, out var library)) return library;
             if (string.IsNullOrEmpty(dllPath))
             {
-                // 裸名解析：普通构建命中 deps.json 的 runtimes/win-x64/native/，
-                // 单文件发布命中 exe 旁——两种布局由 .NET 标准机制处理
-                if (!NativeLibrary.TryLoad(ShimLibraryName, typeof(NcnnShim).Assembly, null, out library))
-                    throw new NcnnUnavailableException(
-                        "ncnn_shim.dll 加载失败：未找到运行库（应由 NuGet 包 BetterGI.NcnnShim 随构建部署）。");
+                // 候选按序探测（全部命中即用绝对路径 Load，不依赖 deps.json 探测——
+                // 单文件发布嵌入 deps 且 Assembly.Location 为空，assembly 重载解析不可靠）：
+                // 1) 标准机制：deps.json 探测（普通构建命中 runtimes/win-x64/native/）
+                if (NativeLibrary.TryLoad(ShimLibraryName, typeof(NcnnShim).Assembly, null, out library))
+                {
+                    Libraries[key] = library;
+                    return library;
+                }
+                // 2) 单文件发布（PublishSingleFile）：native 库扁平化到 exe 旁
+                // 3) runtimes 树（BaseDirectory + runtimes/win-x64/native/）
+                var baseDir = AppContext.BaseDirectory;
+                foreach (var candidate in new[]
+                         {
+                             Path.Combine(baseDir, ShimLibraryName + ".dll"),
+                             Path.Combine(baseDir, "runtimes", "win-x64", "native", ShimLibraryName + ".dll"),
+                         })
+                {
+                    if (!File.Exists(candidate)) continue;
+                    library = NativeLibrary.Load(candidate);
+                    Libraries[key] = library;
+                    return library;
+                }
+                throw new NcnnUnavailableException(
+                    "ncnn_shim.dll 加载失败：exe 旁与 runtimes/win-x64/native/ 均未找到运行库"
+                    + "（应由 NuGet 包 BetterGI.NcnnShim 随构建/发布部署）。");
             }
             else
             {
