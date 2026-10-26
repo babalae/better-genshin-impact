@@ -129,6 +129,9 @@
   <data name="4星圣遗物" xml:space="preserve">
     <value>Manufatti.*da.*4★?</value>
   </data>
+  <data name="待激活" xml:space="preserve">
+    <value>non attivato</value>
+  </data>
   <data name="元素充能效率" xml:space="preserve">
     <value>Ricarica di energia</value>
   </data>

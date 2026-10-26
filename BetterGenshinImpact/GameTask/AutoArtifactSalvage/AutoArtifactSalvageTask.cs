@@ -73,6 +73,11 @@ public class AutoArtifactSalvageTask : ISoloTask<AutoArtifactSalvageTaskParam, N
     private string[] numOfStarLocalizedString = [];
 
     /// <summary>
+    /// 圣遗物副词条待激活本地化匹配串，随参数中的语言初始化。
+    /// </summary>
+    private string artifactAffixUnactivatedFlagStr = string.Empty;
+
+    /// <summary>
     /// 逐个筛选 5 星圣遗物使用的 JavaScript；为空时只做快速分解。
     /// </summary>
     private string? javaScript;
@@ -146,6 +151,7 @@ public class AutoArtifactSalvageTask : ISoloTask<AutoArtifactSalvageTaskParam, N
             stringLocalizer.WithCultureGet(cultureInfo, "4星圣遗物")
         ];
 
+        artifactAffixUnactivatedFlagStr = stringLocalizer.WithCultureGet(cultureInfo, "待激活");
         artifactAffixStrDic = ArtifactAffix.DefaultStrDic.Select(kvp => new KeyValuePair<ArtifactAffixType, string>(kvp.Key, stringLocalizer.WithCultureGet(cultureInfo, kvp.Value))).ToFrozenDictionary();
     }
 
@@ -746,7 +752,7 @@ public class AutoArtifactSalvageTask : ISoloTask<AutoArtifactSalvageTaskParam, N
 
         #region 副词条
         var minorAffixes = new List<ArtifactAffix>();
-        string pattern = @"^([^+:：]+)\+([\d., 。]*)(%?).*$";
+        string pattern = @"^([^+:：]+)\+([\d., 。]*)(%?)(.*)$";
         pattern = pattern.Replace("%", percentStr);
         foreach (var r in levelAndMinorAffixResult)
         {
@@ -817,8 +823,12 @@ public class AutoArtifactSalvageTask : ISoloTask<AutoArtifactSalvageTaskParam, N
             }
 
             bool isUnactivated = false;
-            // 只有在已经成功识别至少 3 个词条后才执行额外的直方图分析。
-            if (minorAffixes.Count >= 3)
+            // 如果能显示判定未激活
+            if (match.Groups[4].Value.Contains(this.artifactAffixUnactivatedFlagStr)) {
+                isUnactivated = true;
+            }
+            // 否则，只有在已经成功识别至少 3 个词条后才执行额外的直方图分析。
+            else if (minorAffixes.Count >= 3)
             {
                 using var lineRoi = levelAndMinorAffixRoi.SubMat(r.Rect);
                 using var lineHistogram = new Mat();
