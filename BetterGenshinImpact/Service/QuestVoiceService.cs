@@ -274,7 +274,9 @@ public sealed class QuestVoiceService : IDisposable
                 break;
             case ContinuousVoiceEventKind.SynthesisStarted: Update(s => s with { Tts = "切换权重 / 合成中" }); break;
             case ContinuousVoiceEventKind.SynthesisDraining: Update(s => s with { Tts = "候选已取消，正在排空旧响应" }); break;
-            case ContinuousVoiceEventKind.AudioReady: Update(s => s with { Tts = "完整音频已就绪" }); break;
+            case ContinuousVoiceEventKind.AudioReady: Update(s => s with { Tts = value.Detail ?? "完整音频已就绪" }); break;
+            case ContinuousVoiceEventKind.SynthesisCompleted when value.Detail is not null:
+                Update(s => s with { Tts = value.Detail }); break;
             case ContinuousVoiceEventKind.PlaybackStarted: Update(s => s with { Playback = "正在播放" }); break;
             case ContinuousVoiceEventKind.PlaybackCompleted:
                 Update(s => s with { Playback = value.Error is null ? "播放结束" : "播放失败", Error = value.Error is null ? s.Error : value.Detail ?? "播放设备错误" }); break;

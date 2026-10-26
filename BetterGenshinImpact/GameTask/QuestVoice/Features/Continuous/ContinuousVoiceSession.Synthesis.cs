@@ -11,6 +11,7 @@ using Serilog;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Continuous;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Routing;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Tts;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.Audio;
 
 namespace BetterGenshinImpact.GameTask.QuestVoice.Features.Continuous;
 
@@ -70,15 +71,35 @@ public sealed partial class ContinuousVoiceSession
                 Emit(ContinuousVoiceEventKind.SynthesisStarted, work);
                 CheckCurrent(work, token);
             }
-            var result = await engine.SynthesizeAsync(settings, resolved.Request, new PhaseProgress(phase =>
+            var progress = new PhaseProgress(phase =>
             {
                 if (phase != TtsPhase.Draining) return;
                 lock (_gate) Emit(ContinuousVoiceEventKind.SynthesisDraining, work);
-            }), token).ConfigureAwait(false);
+            });
+            var streaming = settings.Protocol?.StreamPlayback == true;
+            if (streaming && (engine is not IStreamingTtsEngine || player is not IStreamingAudioPlayer))
+                throw new VoiceException(VoiceErrorCode.Configuration, "当前配音引擎或播放器不支持流式，请关闭流式开关。");
+            // Ready回调只移交一个播放引用，合成泵仍等待同一HTTP正常EOF。
+            // 候选失效不会使已经播放的旧流停止；它只禁止新的Ready进入槽位。
+            void StreamingReady(StreamingPcmAudio source)
+            {
+                lock (_gate)
+                {
+                    if (IsDiscarded(work, token)) return;
+                    source.Retain();
+                    _ready = new(work, key, [], source);
+                    _error = null; _errorDetail = null;
+                    Emit(ContinuousVoiceEventKind.AudioReady, work, "流式首段已就绪，后续音频接收中");
+                    Pulse();
+                }
+            }
+            var result = streaming
+                ? await ((IStreamingTtsEngine)engine).SynthesizeStreamingAsync(settings, resolved.Request, StreamingReady, progress, token).ConfigureAwait(false)
+                : await engine.SynthesizeAsync(settings, resolved.Request, progress, token).ConfigureAwait(false);
             lock (_gate)
             {
                 CheckCurrent(work, token);
-                Emit(ContinuousVoiceEventKind.SynthesisCompleted, work);
+                Emit(ContinuousVoiceEventKind.SynthesisCompleted, work, streaming ? "流式音频已全部接收" : null);
                 CheckCurrent(work, token);
             }
             var audio = wav.ValidateCompletedResponse(result.Wav);
@@ -94,8 +115,11 @@ public sealed partial class ContinuousVoiceSession
                 work = work with { ArtifactPath = path };
                 CheckCurrent(work, token);
                 _error = null; _errorDetail = null;
-                _ready = new(work, key, audio.Bytes);
-                Emit(ContinuousVoiceEventKind.AudioReady, work);
+                if (!streaming)
+                {
+                    _ready = new(work, key, audio.Bytes);
+                    Emit(ContinuousVoiceEventKind.AudioReady, work);
+                }
                 // Reentrant callbacks may discard _ready. Playback checks revision and observation
                 // leases itself before requesting any stop or issuing PlayAsync.
                 Pulse();
@@ -112,6 +136,13 @@ public sealed partial class ContinuousVoiceSession
                 work.Candidate.Revision, work.Candidate.Epoch);
             lock (_gate)
             {
+                // 失败源不可再接替旧句；只停止本次失败流，不误停其他候选的旧语音。
+                if (_ready is { Stream: not null } failedReady && failedReady.Work.Candidate == work.Candidate)
+                {
+                    _ready = null; failedReady.Stream.Dispose();
+                }
+                if (_playing is { Stream: not null } failedPlaying && failedPlaying.Work.Candidate == work.Candidate)
+                    RequestStop(failedPlaying, "Streaming response failed");
                 var voice = exception as VoiceException;
                 if (voice?.BackendUnknown != true && IsDiscarded(work, token))
                 {

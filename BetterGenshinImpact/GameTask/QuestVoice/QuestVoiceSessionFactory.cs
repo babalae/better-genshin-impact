@@ -110,7 +110,9 @@ public sealed class QuestVoiceSessionFactory(QuestVoiceConfig config, string pro
             else CheckVoice(voice, errors);
             var settings = endpoint is null ? null : new AppSettings(programDirectory,
                 new Uri(endpoint.AbsoluteUri.TrimEnd('/') + "/"), new(10, 30, 180), voice,
-                new(ConfigurationDirectory, ConfigurationDirectory), new(0, 0), Ocr: ocr, Scene: scene, Routing: routing);
+                new(ConfigurationDirectory, ConfigurationDirectory), new(0, 0),
+                Protocol: new(StreamingMode: config.StreamingEnabled, StreamPlayback: config.StreamingEnabled),
+                Ocr: ocr, Scene: scene, Routing: routing);
             return new(errors.Count == 0, errors.Count == 0
                 ? "文件与路由校验通过；OCR 推理、后端合成和音频输出待实际运行验证。"
                 : string.Join(Environment.NewLine, errors), routingSummary, settings);

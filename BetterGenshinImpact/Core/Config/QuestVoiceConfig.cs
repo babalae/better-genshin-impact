@@ -7,6 +7,8 @@ public partial class QuestVoiceConfig : ObservableObject
 {
     /// <summary>本机 GPT-SoVITS api_v2 HTTP 服务。</summary>
     [ObservableProperty] private string _serviceUrl = "http://127.0.0.1:9880/";
+    /// <summary>实验性按句流式配音；默认关闭，停止后修改、下次启动配音生效。</summary>
+    [ObservableProperty] private bool _streamingEnabled;
     /// <summary>带 character 字典的 PP-OCRv6 Rec 模型，支持程序目录相对路径。</summary>
     [ObservableProperty] private string _ocrModelPath = "User/QuestVoice/ocr/PP-OCRv6_rec_small.onnx";
     /// <summary>专用 OCR 使用的 DirectML 设备序号，不修改全局 OCR。</summary>

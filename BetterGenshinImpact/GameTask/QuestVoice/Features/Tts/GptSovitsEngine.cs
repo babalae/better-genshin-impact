@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Configuration;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.Audio;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Tts;
 using System.Diagnostics;
 using System.Net.Http.Json;
@@ -14,8 +15,8 @@ using System.Net.Sockets;
 using System.Text.Json;
 namespace BetterGenshinImpact.GameTask.QuestVoice.Features.Tts;
 /// <summary>GptSovitsEngine：原神自动配音的业务类型。</summary>
-public sealed class GptSovitsEngine(Func<TimeoutSettings, HttpClient> clientFactory,
-    IReferenceAudioSelector selector, IWavProcessor wavProcessor) : ITtsEngine, IDisposable
+public sealed partial class GptSovitsEngine(Func<TimeoutSettings, HttpClient> clientFactory,
+    IReferenceAudioSelector selector, IWavProcessor wavProcessor) : IStreamingTtsEngine, IDisposable
 {
     /// <summary>保护异步操作所有权，确保停止等待已发出的工作。</summary>
     private readonly SemaphoreSlim _ownership = new(1, 1);
@@ -25,8 +26,12 @@ public sealed class GptSovitsEngine(Func<TimeoutSettings, HttpClient> clientFact
     private bool _backendUnknown;
 
     /// <summary>串行切换声线权重并读取完整语音响应，取消后丢弃结果。</summary>
-    public async Task<TtsResult> SynthesizeAsync(AppSettings settings, TtsRequest request, IProgress<TtsPhase>? progress,
-        CancellationToken cancellationToken)
+    public Task<TtsResult> SynthesizeAsync(AppSettings settings, TtsRequest request, IProgress<TtsPhase>? progress,
+        CancellationToken cancellationToken) => SynthesizeOwnedAsync(settings, request, progress, cancellationToken, null);
+
+    /// <summary>完整与流式共用同一个切权/在途HTTP所有权，Ready不能提前释放它。</summary>
+    private async Task<TtsResult> SynthesizeOwnedAsync(AppSettings settings, TtsRequest request, IProgress<TtsPhase>? progress,
+        CancellationToken cancellationToken, Action<StreamingPcmAudio>? ready)
     {
         using var queueToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _shutdown.Token);
         await _ownership.WaitAsync(queueToken.Token).ConfigureAwait(false);
@@ -53,7 +58,9 @@ public sealed class GptSovitsEngine(Func<TimeoutSettings, HttpClient> clientFact
             queueToken.Token.ThrowIfCancellationRequested();
             progress?.Report(TtsPhase.Synthesizing);
             queueToken.Token.ThrowIfCancellationRequested();
-            var result = await ReadSynthesisAsync(client, settings, request, reference).ConfigureAwait(false);
+            var result = ready is null
+                ? await ReadSynthesisAsync(client, settings, request, reference).ConfigureAwait(false)
+                : await ReadStreamingAsync(client, settings, request, reference, ready, cancellationToken).ConfigureAwait(false);
             queueToken.Token.ThrowIfCancellationRequested();
             var audio = wavProcessor.ValidateCompletedResponse(result.Bytes);
             return new(audio.Bytes, result.Elapsed, result.FirstByte, audio.DurationSeconds,
@@ -166,7 +173,7 @@ public sealed class GptSovitsEngine(Func<TimeoutSettings, HttpClient> clientFact
     }
     /// <summary>构造响应中断且远端状态未知的错误。</summary>
     private static VoiceException Interrupted(Exception exception) => new(VoiceErrorCode.InterruptedResponse,
-        "后端响应中断，未接受任何部分音频；后端状态未知。", true, exception);
+        "后端响应中断，无法确认完整音频或远端任务结束；后端状态未知。", true, exception);
     /// <summary>中断本地 HTTP 等待，不向后端发送关闭指令。</summary>
     public void Shutdown() => _shutdown.Cancel();
     /// <summary>释放本实例拥有的本地资源。</summary>

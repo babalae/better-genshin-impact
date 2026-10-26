@@ -80,13 +80,17 @@
             <ui:CardExpander Header="GPT-SoVITS 与音频" IsExpanded="True" Margin="0,0,0,12">
                 <StackPanel>
                     <ui:TextBox Text="{Binding ViewModel.Config.ServiceUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding ViewModel.IsConfigEditable, Mode=OneWay}" Margin="0,0,0,8" />
+                    <ui:ToggleSwitch Content="流式配音（实验性）" IsChecked="{Binding ViewModel.Config.StreamingEnabled, Mode=TwoWay}"
+                                     IsEnabled="{Binding ViewModel.IsConfigEditable, Mode=OneWay}" Margin="0,0,0,8" />
+                    <ui:TextBlock Text="默认关闭。开启后，新句首段可播放时接替旧句，并继续接收后续音频；关闭后等待完整音频。请先停止配音再修改，下次启动生效。需要本地 GPT-SoVITS api_v2 支持分片返回。"
+                                  TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,12" />
                     <WrapPanel>
                         <ui:Button Content="检测后端 HTTP" Command="{Binding ViewModel.ProbeBackendCommand, Mode=OneWay}" Margin="0,0,8,8" />
                         <ui:Button Content="确认后端已重启" Command="{Binding ViewModel.ConfirmBackendRestartedCommand, Mode=OneWay}" Margin="0,0,0,8" ToolTip="仅在后端状态未知时可用；须先手动重启 GPT-SoVITS，再确认恢复。" />
                     </WrapPanel>
                     <ui:TextBlock Text="{Binding ViewModel.Status.Tts, Mode=OneWay}" TextWrapping="Wrap" />
                     <ui:TextBlock Text="{Binding ViewModel.Status.Playback, Mode=OneWay}" TextWrapping="Wrap" Margin="0,4,0,8" />
-                    <ui:TextBlock Text="使用默认音频设备共享模式输出。新句音频完整就绪后才接替旧句。停止立即取消播放与待播内容，已经发出的后端请求会继续排空（最长 180 秒）；超时后请重启后端并确认恢复。当前协议为 GPT-SoVITS api_v2；声线文件须在本机与后端使用同一路径。"
+                    <ui:TextBlock Text="使用默认音频设备共享模式输出。新句音频就绪后才接替旧句。停止立即取消播放与待播内容，已经发出的后端请求会继续排空（最长 180 秒）；超时后请重启后端并确认恢复。流式中断时停止本句，关闭流式开关可恢复完整合成。声线文件须在本机与后端使用同一路径。"
                                   TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                 </StackPanel>
             </ui:CardExpander>

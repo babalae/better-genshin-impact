@@ -46,7 +46,7 @@ public sealed partial class ContinuousVoiceSession(AppSettings settings, ITtsEng
     private ContinuousVoiceWork? _pending, _synthesizing;
     /// <summary>当前合成候选的取消源。</summary>
     private CancellationTokenSource? _synthesisCancellation;
-    /// <summary>完整校验并保存、等待接替旧句的音频。</summary>
+    /// <summary>完整音频或已达到有效PCM水位、等待接替旧句的流。</summary>
     private ReadyAudio? _ready;
     /// <summary>当前播放及其完成信号。</summary>
     private Playback? _playing;
@@ -224,6 +224,7 @@ public sealed partial class ContinuousVoiceSession(AppSettings settings, ITtsEng
     {
         var pending = _pending; var ready = _ready;
         _pending = null; _ready = null;
+        ready?.Stream?.Dispose();
         CancelSafely(_synthesisCancellation);
         if (pending is not null) Emit(ContinuousVoiceEventKind.Discarded, pending, reason);
         if (ready is not null) Emit(ContinuousVoiceEventKind.Discarded, ready.Work, reason);
@@ -295,10 +296,12 @@ public sealed partial class ContinuousVoiceSession(AppSettings settings, ITtsEng
     /// <summary>DialogueKey：原神自动配音的业务类型。</summary>
     private sealed record DialogueKey(long Epoch, ContinuousVoiceIdentity Identity, string Text);
     /// <summary>ReadyAudio：原神自动配音的业务类型。</summary>
-    private sealed record ReadyAudio(ContinuousVoiceWork Work, DialogueKey Key, byte[] Bytes);
+    private sealed record ReadyAudio(ContinuousVoiceWork Work, DialogueKey Key, byte[] Bytes, StreamingPcmAudio? Stream = null);
     /// <summary>Playback：原神自动配音的业务类型。</summary>
-    private sealed class Playback(ContinuousVoiceWork work, DialogueKey key)
+    private sealed class Playback(ContinuousVoiceWork work, DialogueKey key, StreamingPcmAudio? stream = null)
     {
+        /// <summary>由Ready转交的播放引用，不与候选取消令牌绑定。</summary>
+        public StreamingPcmAudio? Stream { get; } = stream;
         /// <summary>Work：当前业务对象的配置、身份或状态值。</summary>
         public ContinuousVoiceWork Work { get; } = work;
         /// <summary>Key：当前业务对象的配置、身份或状态值。</summary>

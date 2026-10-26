@@ -22,7 +22,7 @@ public sealed record AppSettings(
 
 /// <summary>TtsProtocolSettings：原神自动配音的业务类型。</summary>
 public sealed record TtsProtocolSettings(string TextLanguage = "zh", string PromptLanguage = "zh",
-    string MediaType = "wav", string TextSplitMethod = "cut5", bool StreamingMode = true);
+    string MediaType = "wav", string TextSplitMethod = "cut5", bool StreamingMode = true, bool StreamPlayback = false);
 
 /// <summary>TimeoutSettings：原神自动配音的业务类型。</summary>
 public sealed record TimeoutSettings(int ConnectSeconds, int RequestSeconds, int SynthesisSeconds);

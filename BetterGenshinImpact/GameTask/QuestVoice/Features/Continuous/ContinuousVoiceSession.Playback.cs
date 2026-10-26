@@ -8,13 +8,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Continuous;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Tts;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.Audio;
 
 namespace BetterGenshinImpact.GameTask.QuestVoice.Features.Continuous;
 
 /// <summary>ContinuousVoiceSession：原神自动配音的业务类型。</summary>
 public sealed partial class ContinuousVoiceSession
 {
-    /// <summary>新句完整音频准备好且观察租约归还后，再接替旧句。</summary>
+    /// <summary>新句完整音频或流式有效首段准备好且观察租约归还后，再接替旧句。</summary>
     private async Task PlaybackPumpAsync()
     {
         while (true)
@@ -47,11 +48,16 @@ public sealed partial class ContinuousVoiceSession
     /// <summary>启动一个已经校验并保存的音频，记录实际播放所有权。</summary>
     private void StartPlayback(ReadyAudio ready)
     {
-        if (!IsCurrent(ready.Work.Candidate) || _observations != 0) return;
-        var playback = new Playback(ready.Work, ready.Key);
+        if (!IsCurrent(ready.Work.Candidate) || _observations != 0) { ready.Stream?.Dispose(); return; }
+        var playback = new Playback(ready.Work, ready.Key, ready.Stream);
         _playing = playback;
         Task operation;
-        try { operation = player.PlayAsync(ready.Bytes, playback.Cancellation.Token); }
+        try
+        {
+            operation = ready.Stream is { } source
+                ? ((IStreamingAudioPlayer)player).PlayStreamingAsync(source, playback.Cancellation.Token)
+                : player.PlayAsync(ready.Bytes, playback.Cancellation.Token);
+        }
         catch (Exception exception) { operation = Task.FromException(exception); }
         if (_currentKey == ready.Key) _currentPlayed = true;
         Emit(ContinuousVoiceEventKind.PlaybackStarted, ready.Work);
@@ -65,6 +71,7 @@ public sealed partial class ContinuousVoiceSession
         try { await operation.ConfigureAwait(false); }
         catch (OperationCanceledException) when (playback.Cancellation.IsCancellationRequested) { }
         catch (Exception exception) { failure = exception; }
+        finally { playback.Stream?.Dispose(); }
         lock (_gate)
         {
             var succeeded = failure is null && !playback.Cancellation.IsCancellationRequested;
