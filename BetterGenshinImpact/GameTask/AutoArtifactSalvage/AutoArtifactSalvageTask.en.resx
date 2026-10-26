@@ -129,6 +129,9 @@
   <data name="4星圣遗物" xml:space="preserve">
     <value>4-Star.*Artifacts</value>
   </data>
+  <data name="待激活" xml:space="preserve">
+    <value>unactivated</value>
+  </data>
   <data name="元素充能效率" xml:space="preserve">
     <value>Energy Recharge</value>
   </data>

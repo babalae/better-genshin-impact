@@ -129,6 +129,9 @@
   <data name="4星圣遗物" xml:space="preserve">
     <value>4星圣遗物</value>
   </data>
+  <data name="待激活" xml:space="preserve">
+    <value>待激活</value>
+  </data>
   <data name="元素充能效率" xml:space="preserve">
     <value>元素充能效率</value>
   </data>
