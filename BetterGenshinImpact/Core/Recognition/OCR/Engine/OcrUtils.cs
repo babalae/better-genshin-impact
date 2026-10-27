@@ -191,4 +191,30 @@ public static class OcrUtils
         denseTensor.Buffer.Span.CopyTo(mat.AsSpan<float>());
         return mat;
     }
+
+    /// <summary>
+    ///     超小图（宽高和不足 64）先补黑边到至少 32x32，与 PaddleOCR Python 的 DetResizeForTest 一致。
+    ///     ncnn / ONNX 两条 det 预处理路径共用。
+    /// </summary>
+    public static Mat PrepareTinyImage(Mat src)
+    {
+        if (src.Width + src.Height >= 64) return src.Clone();
+        var newHeight = Math.Max(32, src.Height);
+        var newWidth = Math.Max(32, src.Width);
+        var padded = new Mat(newHeight, newWidth, src.Type(), Scalar.Black);
+        using var roi = padded[new Rect(0, 0, src.Width, src.Height)];
+        src.CopyTo(roi);
+        return padded;
+    }
+
+    /// <summary>按 limit_type（max / min / resize_long）规则计算缩放比，与 PaddleOCR Python 一致。</summary>
+    public static double CalculateResizeRatio(int width, int height, int limitSideLen, string limitType)
+        => limitType switch
+        {
+            "max" => Math.Max(height, width) > limitSideLen ? 1.0 * limitSideLen / Math.Max(height, width) : 1.0,
+            "min" => Math.Min(height, width) < limitSideLen ? 1.0 * limitSideLen / Math.Min(height, width) : 1.0,
+            "resize_long" => 1.0 * limitSideLen / Math.Max(height, width),
+            _ => throw new ArgumentOutOfRangeException(nameof(limitType), limitType,
+                "limitType only supports max/min/resize_long")
+        };
 }

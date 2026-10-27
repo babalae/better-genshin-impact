@@ -56,7 +56,7 @@ internal static class NcnnOcrBackend
     {
         if (!NcnnShim.IsSupported())
             throw new NcnnUnavailableException(
-                "ncnn_shim.dll 缺失或版本过旧（缺少 shim_create_ex / shim_infer_ex）。"
-                + "运行库由 NuGet 包 BetterGI.NcnnShim 随构建部署，请更新包或暂时关闭 ncnn 开关。");
+                NcnnShim.ShimMissingOrOutdatedText
+                + "。运行库由 NuGet 包 BetterGI.NcnnShim 随构建部署，请更新包或暂时关闭 ncnn 开关。");
     }
 }

@@ -36,7 +36,7 @@ internal static class NcnnRecDecoder
             if (count % fallbackSteps == 0) return (fallbackSteps, count / fallbackSteps);
 
             throw new InvalidOperationException(
-                $"ncnn rec 输出维度异常: dims={info.Dims} {info.ShapeText} count={count}（桶宽 {width}）");
+                $"ncnn rec 输出维度异常: {info.Describe(count)}（桶宽 {width}）");
         }
 
         var charCount = Math.Max(1, (int)Math.Ceiling(width / (double)Downsample));

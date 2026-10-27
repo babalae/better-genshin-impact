@@ -91,9 +91,7 @@ internal static class NcnnBlobProbe
             }
 
             var info = results[0].Info;
-            builder.AppendLine("  实际输出形状：" + info.ShapeText +
-                string.Create(CultureInfo.InvariantCulture,
-                    $" · {info.ElementBits}bit · elempack {info.ElementPack} · {results[0].Data.Length} 个 fp32 元素"));
+            builder.AppendLine("  实际输出形状：" + info.Describe(results[0].Data.Length));
         }
         catch (Exception e)
         {

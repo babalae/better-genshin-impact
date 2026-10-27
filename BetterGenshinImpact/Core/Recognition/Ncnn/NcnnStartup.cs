@@ -78,7 +78,7 @@ public static class NcnnStartup
     public static string ValidateRuntime()
     {
         if (!NcnnShim.IsSupported())
-            return "ncnn 运行库缺失或版本过旧（缺少 shim_create_ex / shim_infer_ex）。\r\n\r\n"
+            return NcnnShim.ShimMissingOrOutdatedText + "。\r\n\r\n"
                    + "运行库由 NuGet 包 BetterGI.NcnnShim 随构建部署；"
                    + "请在“硬件加速设置的 ncnn 卡片中”关闭 OCR / YOLO 的 ncnn 开关，或更新该包。";
         return "";

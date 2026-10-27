@@ -127,13 +127,13 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxSessionFact
     /// <returns></returns>
     private Mat MatResizeForDetection(Mat src)
     {
-        using var preprocessed = PrepareTinyImage(src);
+        using var preprocessed = OcrUtils.PrepareTinyImage(src);
 
         var size = preprocessed.Size();
         var height = size.Height;
         var width = size.Width;
 
-        var ratio = CalculateResizeRatio(width, height, LimitSideLen, LimitType);
+        var ratio = OcrUtils.CalculateResizeRatio(width, height, LimitSideLen, LimitType);
         var resizeHeight = (int)(height * ratio);
         var resizeWidth = (int)(width * ratio);
 
@@ -154,37 +154,6 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxSessionFact
         }
 
         return preprocessed.Resize(new Size(resizeWidth, resizeHeight));
-    }
-
-    private static Mat PrepareTinyImage(Mat src)
-    {
-        if (src.Width + src.Height >= 64)
-        {
-            return src.Clone();
-        }
-
-        var newHeight = Math.Max(32, src.Height);
-        var newWidth = Math.Max(32, src.Width);
-        var padded = new Mat(newHeight, newWidth, src.Type(), Scalar.Black);
-        using var roi = padded[new Rect(0, 0, src.Width, src.Height)];
-        src.CopyTo(roi);
-        return padded;
-    }
-
-    private static double CalculateResizeRatio(int width, int height, int limitSideLen, string limitType)
-    {
-        return limitType switch
-        {
-            "max" => Math.Max(height, width) > limitSideLen
-                ? 1.0 * limitSideLen / Math.Max(height, width)
-                : 1.0,
-            "min" => Math.Min(height, width) < limitSideLen
-                ? 1.0 * limitSideLen / Math.Min(height, width)
-                : 1.0,
-            "resize_long" => 1.0 * limitSideLen / Math.Max(height, width),
-            _ => throw new ArgumentOutOfRangeException(nameof(limitType), limitType,
-                "limitType only supports max/min/resize_long")
-        };
     }
 
     public string GetConfigName => config.Name;

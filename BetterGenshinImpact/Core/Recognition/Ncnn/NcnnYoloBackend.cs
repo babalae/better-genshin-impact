@@ -38,7 +38,7 @@ internal static class NcnnYoloBackend
                 + "请在设置页关闭「YOLO 使用 ncnn」或补齐 pnnx 转换产物。");
 
         if (!NcnnShim.IsSupported())
-            throw new NcnnUnavailableException("[YOLO] ncnn_shim.dll 缺失或版本过旧（缺少 shim_create_ex / shim_infer_ex）。");
+            throw new NcnnUnavailableException("[YOLO] " + NcnnShim.ShimMissingOrOutdatedText + "。");
 
         try
         {

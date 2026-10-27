@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using BetterGenshinImpact.Core.Config;
@@ -50,7 +49,8 @@ internal sealed class NcnnRec : IOcrRecognizer
         _gpuIndex = gpuIndex;
         _tuning = tuning.NormalizedCopy();
         // 动态宽度单模型：构造时直接建会话（产物缺失立即失败）
-        _session = CreateSession();
+        _session = NcnnSession.Create(_shim, _modelDir, DynamicParamName, DynamicBinName, _tuning, _gpuIndex,
+            3 * ModelHeight * MaxDynamicWidth, "ncnn rec 动态形状模型缺失（rec_dyn.param / rec_dyn.bin）");
     }
 
     public string GetConfigName => "PP-OCRv6 (ncnn)";
@@ -115,16 +115,6 @@ internal sealed class NcnnRec : IOcrRecognizer
         if (src.Height <= 0) return MinDynamicWidth;
         var desired = (int)Math.Ceiling(ModelHeight * src.Width / (double)src.Height);
         return Math.Clamp(desired, MinDynamicWidth, MaxDynamicWidth);
-    }
-
-    private NcnnSession CreateSession()
-    {
-        var paramPath = Path.Combine(_modelDir, DynamicParamName);
-        var modelPath = Path.Combine(_modelDir, DynamicBinName);
-        if (!File.Exists(paramPath) || !File.Exists(modelPath))
-            throw new FileNotFoundException("ncnn rec 动态形状模型缺失（rec_dyn.param / rec_dyn.bin）", paramPath);
-        return new NcnnSession(_shim, _tuning.ToNetOptions(paramPath, modelPath, _gpuIndex),
-            _tuning.ParallelSessions, 3 * ModelHeight * MaxDynamicWidth);
     }
 
     public void Dispose() => _session.Dispose();

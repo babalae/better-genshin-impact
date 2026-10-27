@@ -34,7 +34,7 @@ public class BgiYoloPredictor : IDisposable
     /// <param name="modelPath">实际要加载的模型文件的绝对路径，在使用模型缓存的场景下可能有差别</param>
     /// <param name="sessionOptions">sessionOptions</param>
     /// <param name="ncnnPredictor">ncnn 检测后端；为空时检测走 YoloSharp（ORT）</param>
-    protected internal BgiYoloPredictor(BgiOnnxModel onnxModel, string modelPath, SessionOptions sessionOptions,
+    internal BgiYoloPredictor(BgiOnnxModel onnxModel, string modelPath, SessionOptions sessionOptions,
         IYoloPredictorBackend? ncnnPredictor = null)
     {
         _model = onnxModel;

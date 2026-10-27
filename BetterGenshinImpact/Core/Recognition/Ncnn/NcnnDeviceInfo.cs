@@ -6,7 +6,12 @@ namespace BetterGenshinImpact.Core.Recognition.Ncnn;
 public sealed record NcnnDeviceInfo(int Index, string Name, int TypeCode)
 {
     /// <summary>ncnn GpuInfo::type()：0 独显 / 1 核显 / 2 虚拟显卡 / 3 CPU。</summary>
-    public string TypeName => TypeCode switch
+    public string TypeName => TypeText(TypeCode);
+
+    public string DisplayName => $"#{Index} {Name}（{TypeName}）";
+
+    /// <summary>设备类型描述（ncnn GpuInfo::type()）：0 独显 / 1 核显 / 2 虚拟显卡 / 3 CPU；设备列表与设备详情两处记录共用。</summary>
+    public static string TypeText(int typeCode) => typeCode switch
     {
         0 => "独显",
         1 => "核显",
@@ -14,8 +19,6 @@ public sealed record NcnnDeviceInfo(int Index, string Name, int TypeCode)
         3 => "CPU",
         _ => "未知类型"
     };
-
-    public string DisplayName => $"#{Index} {Name}（{TypeName}）";
 }
 
 /// <summary>一次设备查询的结果；旧版 shim 缺少导出时返回空列表，由界面降级为索引。</summary>

@@ -41,6 +41,13 @@ public sealed record NcnnOutput(NcnnTensorInfo Info, float[] Data);
 /// </summary>
 public sealed class NcnnShim : INcnnShim
 {
+    /// <summary>
+    ///     运行库缺失或版本过旧（缺少 shim_create_ex / shim_infer_ex 两个关键导出）的统一提示文案；
+    ///     OCR / YOLO 装配与启动校验共用，调用方在其后拼接各自的处置建议。
+    /// </summary>
+    public const string ShimMissingOrOutdatedText =
+        "ncnn_shim.dll 缺失或版本过旧（缺少 shim_create_ex / shim_infer_ex）";
+
     private readonly nint _library;
     private readonly DestroyDelegate _destroy;
     private readonly FreeBufferDelegate _freeBuffer;

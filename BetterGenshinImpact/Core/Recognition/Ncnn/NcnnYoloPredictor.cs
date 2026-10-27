@@ -25,7 +25,7 @@ namespace BetterGenshinImpact.Core.Recognition.Ncnn;
 ///     模型为 pnnx 固定形状转换产物，层名 in0/out0。
 ///     shim 由装配方注入并持有生命周期，本类只负责会话与推理。
 /// </summary>
-public sealed class NcnnYoloPredictor : IYoloPredictorBackend
+internal sealed class NcnnYoloPredictor : IYoloPredictorBackend
 {
     /// <summary>与 YoloConfiguration.Default 一致（生产调用 Detect 时不传配置）。</summary>
     public const float DefaultConfidence = 0.3f;
@@ -139,7 +139,7 @@ public sealed class NcnnYoloPredictor : IYoloPredictorBackend
             {
                 if (count < _names.Length)
                     throw new InvalidOperationException(
-                        $"ncnn 分类输出维度异常: {count} < 类别数 {_names.Length}（{DescribeLayout(info)}）");
+                        $"ncnn 分类输出维度异常: {count} < 类别数 {_names.Length}（{info?.Describe() ?? "无张量元信息"}）");
                 var classifications = new Classification[_names.Length];
                 for (var i = 0; i < _names.Length; i++)
                 {
@@ -234,12 +234,8 @@ public sealed class NcnnYoloPredictor : IYoloPredictorBackend
 
         if (count > 0 && count % expectedAttributes == 0) return (count / expectedAttributes, expectedAttributes);
         throw new InvalidOperationException(
-            $"YOLO 输出维度异常: {count} 不能被 {expectedAttributes} 整除（{DescribeLayout(info)}）");
+            $"YOLO 输出维度异常: {count} 不能被 {expectedAttributes} 整除（{info?.Describe() ?? "无张量元信息"}）");
     }
-
-    private static string DescribeLayout(NcnnTensorInfo? info) => info == null
-        ? "无张量元信息"
-        : $"dims={info.Dims} {info.ShapeText} elempack={info.ElementPack}";
 
     /// <summary>与 YoloSharp SessionRunnerService.ResizeImage 一致：Max 内接 + 最近邻。</summary>
     private Image<Rgb24> ResizeLetterbox(Image<Rgb24> image, out int padX, out int padY)

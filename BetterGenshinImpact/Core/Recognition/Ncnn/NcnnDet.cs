@@ -1,6 +1,5 @@
 using System;
 using System.Diagnostics;
-using System.IO;
 using Microsoft.Extensions.Logging;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR.Engine;
@@ -60,7 +59,8 @@ internal sealed class NcnnDet : IOcrDetector
         _gpuIndex = gpuIndex;
         _maxCanvas = Math.Max(64, (int)Math.Ceiling(LimitSideLen / (double)AlignStep) * AlignStep);
         // det 画布恒为正方形：动态方形模型在 Vulkan 上全尺寸对拍通过，构造时直接建会话（产物缺失立即失败）
-        _session = CreateSession();
+        _session = NcnnSession.Create(_shim, _modelDir, DynamicParamName, DynamicBinName, _tuning, _gpuIndex,
+            3 * _maxCanvas * _maxCanvas, "ncnn det 动态形状模型缺失（det_dyn.param / det_dyn.bin）");
     }
 
     public void Dispose() => _session.Dispose();
@@ -113,7 +113,7 @@ internal sealed class NcnnDet : IOcrDetector
                 var expected = side * side;
                 if (data.Length < expected)
                     throw new InvalidOperationException(
-                        $"ncnn det 输出维度异常（画布 {side}）：{DescribeShape(info, data.Length)}，期望至少 {expected} 个元素");
+                        $"ncnn det 输出维度异常（画布 {side}）：{info.Describe(data.Length)}，期望至少 {expected} 个元素");
                 var mat = new Mat(side, side, MatType.CV_32FC1);
                 data.AsSpan(0, expected).CopyTo(mat.AsSpan<float>());
                 return mat;
@@ -129,30 +129,17 @@ internal sealed class NcnnDet : IOcrDetector
         }
     }
 
-    private NcnnSession CreateSession()
-    {
-        var paramPath = Path.Combine(_modelDir, DynamicParamName);
-        var modelPath = Path.Combine(_modelDir, DynamicBinName);
-        if (!File.Exists(paramPath) || !File.Exists(modelPath))
-            throw new FileNotFoundException("ncnn det 动态形状模型缺失（det_dyn.param / det_dyn.bin）", paramPath);
-        return new NcnnSession(_shim, _tuning.ToNetOptions(paramPath, modelPath, _gpuIndex),
-            _tuning.ParallelSessions, 3 * _maxCanvas * _maxCanvas);
-    }
-
-    private static string DescribeShape(NcnnTensorInfo info, int count) =>
-        $"dims={info.Dims} {info.ShapeText} elempack={info.ElementPack} elembits={info.ElementBits} count={count}";
-
     /// <summary>与 Det.MatResizeForDetection 完全一致：按 limit 缩放 → 对齐 32 → pad 到正方形画布。</summary>
     private Mat MatResizeForDetection(Mat src, out Size contentSize)
     {
-        using var preprocessed = src.Width + src.Height >= 64 ? null : PrepareTinyImage(src);
+        using var preprocessed = src.Width + src.Height >= 64 ? null : OcrUtils.PrepareTinyImage(src);
         var work = preprocessed ?? src;
 
         var size = work.Size();
         var height = size.Height;
         var width = size.Width;
 
-        var ratio = CalculateResizeRatio(width, height, LimitSideLen, LimitType);
+        var ratio = OcrUtils.CalculateResizeRatio(width, height, LimitSideLen, LimitType);
         var resizeHeight = (int)(height * ratio);
         var resizeWidth = (int)(width * ratio);
 
@@ -189,25 +176,4 @@ internal sealed class NcnnDet : IOcrDetector
 
         return canvas;
     }
-
-    private static Mat PrepareTinyImage(Mat src)
-    {
-        if (src.Width + src.Height >= 64) return src.Clone();
-        var newHeight = Math.Max(32, src.Height);
-        var newWidth = Math.Max(32, src.Width);
-        var padded = new Mat(newHeight, newWidth, src.Type(), Scalar.Black);
-        using var roi = padded[new Rect(0, 0, src.Width, src.Height)];
-        src.CopyTo(roi);
-        return padded;
-    }
-
-    private static double CalculateResizeRatio(int width, int height, int limitSideLen, string limitType)
-        => limitType switch
-        {
-            "max" => Math.Max(height, width) > limitSideLen ? 1.0 * limitSideLen / Math.Max(height, width) : 1.0,
-            "min" => Math.Min(height, width) < limitSideLen ? 1.0 * limitSideLen / Math.Min(height, width) : 1.0,
-            "resize_long" => 1.0 * limitSideLen / Math.Max(height, width),
-            _ => throw new ArgumentOutOfRangeException(nameof(limitType), limitType,
-                "limitType only supports max/min/resize_long")
-        };
 }

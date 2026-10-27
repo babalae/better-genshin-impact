@@ -153,6 +153,16 @@ public sealed record NcnnTensorInfo(
         3 => $"{Width}×{Height}×{Channels}",
         _ => $"{Width}×{Height}×{Depth}×{Channels}"
     };
+
+    /// <summary>
+    ///     统一的张量诊断串：dims、形状、elempack、elembits；
+    ///     <paramref name="count" /> 非空时附加紧凑元素数（推理输出元素数）。异常消息与诊断面板共用。
+    /// </summary>
+    public string Describe(int? count = null)
+    {
+        var text = $"dims={Dims} {ShapeText} elempack={ElementPack} elembits={ElementBits}";
+        return count is { } actual ? $"{text} count={actual}" : text;
+    }
 }
 
 /// <summary>ncnn 会话的完整调优参数；默认值与 ncnn::Option 一致。</summary>
@@ -212,14 +222,7 @@ public sealed record NcnnDeviceDetails(
     uint SubgroupSize, uint MinSubgroupSize, uint MaxSubgroupSize,
     uint MaxSharedMemorySize, uint MaxWorkgroupInvocations, uint RoughScore, uint HeapBudgetMB)
 {
-    public string TypeName => TypeCode switch
-    {
-        0 => "独显",
-        1 => "核显",
-        2 => "虚拟显卡",
-        3 => "CPU",
-        _ => "未知类型"
-    };
+    public string TypeName => NcnnDeviceInfo.TypeText(TypeCode);
 
     public string DisplayName => $"#{Index} {Name}（{TypeName}）";
 

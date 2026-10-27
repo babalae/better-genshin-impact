@@ -34,7 +34,8 @@ public sealed class HardwareAccelerationConfigJsonConverter : JsonConverter<Hard
         => JsonSerializer.Serialize(writer, new SerializedConfiguration
         {
             FormatVersion = value.FormatVersion, InferenceDevice = value.InferenceDevice, CpuOcr = value.CpuOcr,
-            Ncnn = NcnnConfigJson.ToDto(value.Ncnn),
+            // ncnn 直接序列化持久化对象：public 属性即嵌套节点白名单（无循环，调优的派生属性已 [JsonIgnore]）。
+            Ncnn = value.Ncnn,
             Cpu = value.Cpu, DirectML = value.DirectML, OpenVINO = value.OpenVINO, Cuda = value.Cuda, TensorRT = value.TensorRT,
             PaddleOcrCpu = value.PaddleOcrCpu,
             ValidationState = value.ValidationState, VerifiedSignature = value.VerifiedSignature,
@@ -48,7 +49,7 @@ public sealed class HardwareAccelerationConfigJsonConverter : JsonConverter<Hard
         public int FormatVersion { get; set; }
         public InferenceDeviceType InferenceDevice { get; set; }
         public bool CpuOcr { get; set; } = true;
-        public SerializedNcnnConfig? Ncnn { get; set; }
+        public NcnnConfig? Ncnn { get; set; }
         public InferenceEngineSettings? Cpu { get; set; }
         public PaddleOcrCpuConfig? PaddleOcrCpu { get; set; }
         public InferenceEngineSettings? DirectML { get; set; }

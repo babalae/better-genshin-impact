@@ -3,8 +3,10 @@ using System.Text.Json;
 namespace BetterGenshinImpact.Core.Config;
 
 /// <summary>
-///     ncnn 配置的 JSON 读写：白名单 DTO，嵌套节点缺失或损坏时回落默认配置。
+///     ncnn 配置的 JSON 读取：嵌套节点缺失或损坏时回落默认配置。
 ///     从 <see cref="HardwareAccelerationConfigJsonConverter" /> 独立，保持 ncnn 序列化细节与主转换器解耦。
+///     写路径由主转换器直接序列化 <see cref="NcnnConfig" />：其 public 属性即白名单
+///     （后端意图、逐用途开关、计算模式、设备索引与三套调优），无多余字段、无循环引用。
 /// </summary>
 internal static class NcnnConfigJson
 {
@@ -19,7 +21,14 @@ internal static class NcnnConfigJson
         {
             try
             {
-                return nested.Deserialize<SerializedNcnnConfig>(options)?.ToConfig() ?? new NcnnConfig();
+                // 直接反序列化持久化对象：枚举越界由 NcnnConfig 的 OnPreferredBackendChanged /
+                // OnComputeModeChanged 兜底回落，缺失字段保持属性初始化器默认。
+                var config = nested.Deserialize<NcnnConfig>(options) ?? new NcnnConfig();
+                // 调优参数节点缺失时属性为 null，读路径统一补默认（FromConfig 侧的 null 保护继续兜底）。
+                config.DetTuning ??= NcnnTuningSettings.CreateDefault();
+                config.RecTuning ??= NcnnTuningSettings.CreateDefault();
+                config.YoloTuning ??= NcnnTuningSettings.CreateDefault();
+                return config;
             }
             catch (JsonException)
             {
@@ -30,53 +39,5 @@ internal static class NcnnConfigJson
 
         // 嵌套节点缺失/损坏：ncnn 是未发布分支引入的实验后端，直接回落默认配置
         return new NcnnConfig();
-    }
-
-    /// <summary>把持久化对象转成嵌套节点的白名单 DTO，供主转换器序列化。</summary>
-    public static SerializedNcnnConfig ToDto(NcnnConfig value) => new()
-    {
-        PreferredBackend = value.PreferredBackend,
-        UseOcr = value.UseOcr,
-        UseYolo = value.UseYolo,
-        ComputeMode = value.ComputeMode,
-        GpuIndex = value.GpuIndex,
-        DetTuning = value.DetTuning,
-        RecTuning = value.RecTuning,
-        YoloTuning = value.YoloTuning
-    };
-}
-
-/// <summary>
-///     嵌套 <c>ncnn</c> 节点的白名单载体；调优参数缺失时回落默认，其余字段缺失沿用各字段默认值。
-///     <para>
-///         三套调优由 <see cref="NcnnTuningSettings" /> 直接 JSON 往返：属性名与主仓库 CamelCase
-///         命名策略一致，JSON 形状与旧白名单 DTO 兼容；未来给 <see cref="NcnnTuningSettings" />
-///         加纯展示 public 属性时需 <c>[JsonIgnore]</c>，避免被写进配置文件。
-///     </para>
-/// </summary>
-internal sealed class SerializedNcnnConfig
-{
-    public InferenceBackend? PreferredBackend { get; set; }
-    public bool UseOcr { get; set; }
-    public bool UseYolo { get; set; }
-    public NcnnComputeMode? ComputeMode { get; set; }
-    public int? GpuIndex { get; set; }
-    public NcnnTuningSettings? DetTuning { get; set; }
-    public NcnnTuningSettings? RecTuning { get; set; }
-    public NcnnTuningSettings? YoloTuning { get; set; }
-
-    public NcnnConfig ToConfig()
-    {
-        return new NcnnConfig
-        {
-            PreferredBackend = PreferredBackend ?? InferenceBackend.Onnx,
-            UseOcr = UseOcr,
-            UseYolo = UseYolo,
-            ComputeMode = ComputeMode ?? global::BetterGenshinImpact.Core.Config.NcnnComputeMode.Vulkan,
-            GpuIndex = GpuIndex ?? 0,
-            DetTuning = DetTuning is null ? NcnnTuningSettings.CreateDefault() : DetTuning.Normalize(),
-            RecTuning = RecTuning is null ? NcnnTuningSettings.CreateDefault() : RecTuning.Normalize(),
-            YoloTuning = YoloTuning is null ? NcnnTuningSettings.CreateDefault() : YoloTuning.Normalize()
-        };
     }
 }
