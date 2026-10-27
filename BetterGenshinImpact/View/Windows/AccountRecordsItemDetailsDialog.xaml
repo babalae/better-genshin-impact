@@ -1,0 +1,53 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.AccountRecordsItemDetailsDialog"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" Title="物品详情" Width="620" Height="540" MinWidth="440" MinHeight="340"
+ WindowStartupLocation="CenterOwner" ShowInTaskbar="False" ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica"
+ Background="{DynamicResource ApplicationBackgroundBrush}" Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+ <ui:FluentWindow.Resources><BooleanToVisibilityConverter x:Key="BoolVisibility" /></ui:FluentWindow.Resources>
+ <ui:FluentWindow.InputBindings><KeyBinding Key="Escape" Command="{x:Static ApplicationCommands.Close}" /></ui:FluentWindow.InputBindings>
+ <ui:FluentWindow.CommandBindings><CommandBinding Command="{x:Static ApplicationCommands.Close}" Executed="CloseWindow" /></ui:FluentWindow.CommandBindings>
+ <Grid>
+  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+  <ui:TitleBar Title="物品详情" ShowMinimize="False" />
+  <Grid Grid.Row="1" Margin="20,12,20,16">
+   <Grid.ColumnDefinitions><ColumnDefinition Width="48"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+   <Grid Width="48" Height="48" VerticalAlignment="Top">
+    <ui:SymbolIcon Symbol="Box24" FontSize="28" Opacity="0.2">
+     <ui:SymbolIcon.Style>
+      <Style TargetType="ui:SymbolIcon">
+       <Setter Property="Visibility" Value="Collapsed" />
+       <Style.Triggers>
+        <DataTrigger Binding="{Binding Item.Icon, Mode=OneWay}" Value="{x:Null}">
+         <Setter Property="Visibility" Value="Visible" />
+        </DataTrigger>
+       </Style.Triggers>
+      </Style>
+     </ui:SymbolIcon.Style>
+    </ui:SymbolIcon>
+    <Image Source="{Binding Item.Icon, Mode=OneWay}" Stretch="Uniform" />
+   </Grid>
+   <StackPanel Grid.Column="1" Margin="12,0,0,0">
+    <TextBlock Text="{Binding Item.Name, Mode=OneWay}" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" />
+    <TextBlock Text="{Binding Item.Category, Mode=OneWay}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,4,0,0" />
+   </StackPanel>
+  </Grid>
+  <ScrollViewer Grid.Row="2" Margin="20,0,20,20" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+   <StackPanel>
+    <TextBlock Text="各来源最近一次确认记录，首条为当前库存；不包含待核实增量。" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,12" />
+    <TextBlock Text="尚无有效库存记录。" Visibility="{Binding IsEmpty, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
+    <ItemsControl ItemsSource="{Binding Records, Mode=OneWay}">
+     <ItemsControl.ItemTemplate><DataTemplate>
+      <Border Background="{DynamicResource ControlFillColorSecondaryBrush}" CornerRadius="6" Padding="12" Margin="0,0,0,8">
+       <StackPanel>
+        <DockPanel><TextBlock DockPanel.Dock="Right" Text="{Binding RecordedAt, Mode=OneWay}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/><TextBlock Text="{Binding Label, Mode=OneWay}" FontWeight="SemiBold" /></DockPanel>
+        <TextBlock Margin="0,6,0,0"><Run Text="库存："/><Run Text="{Binding Quantity, Mode=OneWay}" FontWeight="SemiBold" /></TextBlock>
+        <TextBlock TextWrapping="Wrap" Margin="0,4,0,0"><Run Text="来源："/><Run Text="{Binding SourceName, Mode=OneWay}" /></TextBlock>
+        <TextBox Text="{Binding Source, Mode=OneWay}" IsReadOnly="True" BorderThickness="0" Background="Transparent" TextWrapping="Wrap" Padding="0" Margin="0,4,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+       </StackPanel>
+      </Border>
+     </DataTemplate></ItemsControl.ItemTemplate>
+    </ItemsControl>
+   </StackPanel>
+  </ScrollViewer>
+ </Grid>
+</ui:FluentWindow>

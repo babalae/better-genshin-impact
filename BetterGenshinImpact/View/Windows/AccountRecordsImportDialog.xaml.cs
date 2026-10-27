@@ -13,6 +13,8 @@ public partial class AccountRecordsImportDialog : FluentWindow
     {
         DataContext = viewModel;
         InitializeComponent();
+        viewModel.CloseRequested += Close;
+        Closed += (_, _) => viewModel.CloseRequested -= Close;
         Closing += (_, e) => e.Cancel = viewModel.IsBusy;
         SourceInitialized += (_, _) => WindowHelper.TryApplySystemBackdrop(this);
     }

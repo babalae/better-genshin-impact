@@ -19,6 +19,8 @@
                           IsEnabled="{Binding NeedsDefinition, Mode=OneWay}" />
                 <TextBlock Text="数量" Margin="0,12,0,6" />
                 <ui:TextBox Text="{Binding QuantityText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MaxLength="19" />
+                <CheckBox Content="修改后，标记上次扫描有错误" Margin="0,12,0,0"
+                          IsChecked="{Binding MarkScanIncorrect, Mode=TwoWay}" IsEnabled="{Binding CanMarkScanIncorrect, Mode=OneWay}" />
                 <TextBlock Text="编辑后，对应来源将显示为“狛荷屋-人工编辑”。" TextWrapping="Wrap" Margin="0,12,0,0"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                 <TextBlock Text="{Binding Message, Mode=OneWay}" TextWrapping="Wrap" Margin="0,8,0,0"

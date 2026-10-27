@@ -8,12 +8,28 @@ using CommunityToolkit.Mvvm.Input;
 using BetterGenshinImpact.Service.AccountRecords;
 using Microsoft.Win32;
 using Newtonsoft.Json.Linq;
+using System.Windows;
+using BetterGenshinImpact.View.Windows;
 
 namespace BetterGenshinImpact.ViewModel.Controls;
 
 /// <summary>统一导入入口：选择文件、确认目标账号及字典补充，再局部合并库存。</summary>
 public partial class AccountRecordsImportViewModel : ObservableObject
 {
+    /// <summary>无异常导入完成后请求关闭窗口。</summary>
+    public event Action? CloseRequested;
+    /// <summary>本次导入接受的条目数。</summary>
+    [ObservableProperty] private int _acceptedCount;
+    /// <summary>本次导入异常条目数。</summary>
+    [ObservableProperty] private int _rejectedCount;
+    /// <summary>被忽略的重复输入数量。</summary>
+    [ObservableProperty] private int _duplicateCount;
+    /// <summary>重复项中已有的未处理异常。</summary>
+    [ObservableProperty] private int _duplicateErrorCount;
+    /// <summary>无异常关闭后提供给主页面的摘要。</summary>
+    public string? CompletionSummary { get; private set; }
+    /// <summary>仅在导入结果含异常时展示处理提示。</summary>
+    [ObservableProperty] private bool _hasImportErrors;
     /// <summary>库存持久化入口。</summary>
     private readonly InventoryStore _store;
     /// <summary>预览通过的文件快照，避免导入时文件已被替换。</summary>
@@ -52,6 +68,8 @@ public partial class AccountRecordsImportViewModel : ObservableObject
         IncludeDefinitions = false;
         Definitions.Clear();
         Message = "";
+        HasImportErrors = false;
+        CompletionSummary = null;
         try
         {
             _package = await InventoryStore.ReadExchangeAsync(dialog.FileName);
@@ -61,6 +79,7 @@ public partial class AccountRecordsImportViewModel : ObservableObject
             foreach (var item in ((JObject)_package["itemDefinitions"]!).Properties())
                 Definitions.Add($"{item.Name}：{item.Value["category"]}");
             Summary = $"{Path.GetFileName(dialog.FileName)}\n文件 UID：{account.Name} · 库存 {count} 项 · 字典补充 {Definitions.Count} 项";
+            if (account.Value["deltas"] is JArray { Count: > 0 } deltas) Summary += $"\n包含 {deltas.Count} 条开发测试增量，导入前需要确认。";
             if (_package["note"]?.Type == JTokenType.String) Summary += "\n" + (string?)_package["note"];
             HasPackage = true;
         }
@@ -73,16 +92,30 @@ public partial class AccountRecordsImportViewModel : ObservableObject
     private async Task Import()
     {
         if (_package == null || IsBusy) return;
+        var closeAfterImport = false;
+        HasImportErrors = false;
+        CompletionSummary = null;
+        Message = "";
         IsBusy = true;
         try
         {
-            var result = await _store.ImportInventoryAsync(_package, TargetUid.Trim(), IncludeDefinitions);
+            var hasDeltas = ((JObject)_package["accounts"]!).Properties().Any(account => account.Value["deltas"] is JArray { Count: > 0 });
+            if (hasDeltas && await ThemedMessageBox.ShowAsync("此文件包含库存增量测试数据，仅供开发调试与报错验证，不代表正式开放。是否继续导入？",
+                "开发测试操作", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
+            var result = await _store.ImportInventoryAsync(_package, TargetUid.Trim(), IncludeDefinitions, hasDeltas);
             ImportedUid = TargetUid.Trim();
-            Message = $"导入完成：接受 {result.Accepted.Count} 项，异常 {result.Rejected.Count} 项。关闭窗口后可在目标 UID 的库存中查看，红灯异常需要手动处理。";
+            AcceptedCount = result.Accepted.Count;
+            RejectedCount = result.Rejected.Count;
+            DuplicateCount = result.DuplicateCount;
+            DuplicateErrorCount = result.DuplicateErrorCount;
+            HasImportErrors = RejectedCount > 0 || DuplicateErrorCount > 0;
+            CompletionSummary = $"接受 {AcceptedCount} 项，忽略重复 {DuplicateCount} 项（已有异常 {DuplicateErrorCount} 项），新增异常 {RejectedCount} 项。";
+            closeAfterImport = !HasImportErrors;
             HasPackage = false;
             _package = null;
         }
         catch (Exception ex) { Message = $"导入未完成：{ex.Message}\n已经成功保存的批次会保留，请查看库存后重试。"; }
         finally { IsBusy = false; }
+        if (closeAfterImport) CloseRequested?.Invoke();
     }
 }

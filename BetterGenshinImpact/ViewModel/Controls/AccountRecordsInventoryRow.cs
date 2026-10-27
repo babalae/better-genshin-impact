@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows.Media;
 using BetterGenshinImpact.Service.AccountRecords.Model;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -7,8 +8,26 @@ using CommunityToolkit.Mvvm.ComponentModel;
 namespace BetterGenshinImpact.ViewModel.Controls;
 
 /// <summary>库存列表的一行，由持久化快照生成，不直接绑定可写业务数据。</summary>
-public sealed class AccountRecordsInventoryRow : ObservableObject
+public sealed partial class AccountRecordsInventoryRow : ObservableObject
 {
+    /// <summary>最高优先级的未归档事件。</summary>
+    public InventoryEvent? Event { get; init; }
+    /// <summary>当前底部提示正在展示本行事件。</summary>
+    [ObservableProperty] private bool _isNoticeActive;
+    /// <summary>最近一次可追溯扫描批次，包括失败上报。</summary>
+    public string? LastScanAttemptId { get; init; }
+    /// <summary>状态优先级：红、橘、黄、绿、灰、无灯。</summary>
+    public int StateRank => HasError ? 0 : Event?.State switch { "Error" => 0, "Warning" => 1, "Pending" => 2, "Completed" => 3, "Planned" => 4, _ => 5 };
+    /// <summary>是否显示状态灯。</summary>
+    public bool HasStatusLight => StateRank < 5;
+    /// <summary>累计待核实增量；为空表示没有待核实变动。</summary>
+    public decimal? PendingDelta { get; init; }
+    /// <summary>附在确认库存右侧，不参与主数量居中。</summary>
+    public string DeltaText => PendingDelta is { } value ? $"（{(value > 0 ? "+" : value == 0 ? "±" : "")}{value}）" : "";
+    /// <summary>两行提示的来源及变动摘要。</summary>
+    public string StatusDetails { get; init; } = "";
+    /// <summary>悬停同样显示两行摘要。</summary>
+    public string StatusText => (Event?.Message ?? Error?.Message ?? "") + "\n" + StatusDetails;
     /// <summary>标准名称或待修订名称。</summary>
     public string Name { get; init; } = "";
     /// <summary>展示分类。</summary>

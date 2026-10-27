@@ -6,6 +6,8 @@ namespace BetterGenshinImpact.Service.AccountRecords.Model;
 /// <summary>某来源最后一次被接受的库存记录；队首代表当前库存。</summary>
 public sealed class InventoryRecord
 {
+    /// <summary>核实来源的一次上报标识；人工编辑为空。</summary>
+    public string AttemptId { get; set; } = "";
     /// <summary>非负库存数量。</summary>
     public long Quantity { get; set; }
     /// <summary>原始记录时间，统一保存为 UTC，导入时不刷新。</summary>
@@ -17,6 +19,8 @@ public sealed class InventoryRecord
 /// <summary>批量上报的一项；时间缺省代表本次新采集，历史导入必须携带原时间。</summary>
 public sealed class InventoryReport
 {
+    /// <summary>可信扫描时刻；历史导入需明确提供才能核实待确认增量。</summary>
+    public string? VerifiedAt { get; set; }
     /// <summary>标准物品名称。</summary>
     public string Name { get; set; } = "";
     /// <summary>来源提交的数量。</summary>
@@ -49,6 +53,10 @@ public sealed class InventoryError
 /// <summary>批量写入结果，让上报方知道哪些条目需要用户处理。</summary>
 public sealed class InventoryReportResult
 {
+    /// <summary>本次忽略的重复输入数量，不作为新增异常。</summary>
+    public int DuplicateCount { get; set; }
+    /// <summary>重复输入中仍关联未处理错误的数量。</summary>
+    public int DuplicateErrorCount { get; set; }
     /// <summary>正常接受的物品名称。</summary>
     public List<string> Accepted { get; set; } = [];
     /// <summary>被拒绝的名称和可读原因。</summary>
@@ -58,6 +66,10 @@ public sealed class InventoryReportResult
 /// <summary>单账号的库存文件；两个逻辑表一起原子保存，避免库存与异常不同步。</summary>
 public sealed class InventoryDocument
 {
+    /// <summary>亮灯事件与归档历史，跟库存一起原子保存。</summary>
+    public List<InventoryEvent> Events { get; set; } = [];
+    /// <summary>清理历史后保留的去重凭证，按物品分组；删除物品时一并重置。</summary>
+    public Dictionary<string, HashSet<string>> EventReceipts { get; set; } = new(StringComparer.Ordinal);
     /// <summary>文件格式版本。</summary>
     public int SchemaVersion { get; set; } = 1;
     /// <summary>账号标识。</summary>

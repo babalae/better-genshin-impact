@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Service.AccountRecords;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -21,6 +22,10 @@ public partial class AccountRecordsInventoryEditViewModel : ObservableObject
     private readonly string _uid;
     /// <summary>待修订的原行。</summary>
     private readonly AccountRecordsInventoryRow? _original;
+    /// <summary>用户明确反馈原扫描错误，默认不选。</summary>
+    [ObservableProperty] private bool _markScanIncorrect;
+    /// <summary>仅有可追溯的核实记录时允许反馈。</summary>
+    public bool CanMarkScanIncorrect => _original?.LastScanAttemptId != null;
     /// <summary>保存成功后请求视图关闭。</summary>
     public event Action? Saved;
     /// <summary>名称字段仅新增或未知名称可编辑。</summary>
@@ -77,7 +82,8 @@ public partial class AccountRecordsInventoryEditViewModel : ObservableObject
         try
         {
             if (CanEditCategory && !string.IsNullOrWhiteSpace(Category)) await _store.DefineAsync(name, Category);
-            await _store.SetLocalQuantityAsync(_uid, name, quantity);
+            await _store.SetLocalQuantityAsync(_uid, name, quantity,
+                MarkScanIncorrect && CanMarkScanIncorrect ? _original!.LastScanAttemptId : null);
             if (_original?.Error != null && _original.Name != name)
                 await _store.ResolveAsync(_uid, _original.Name, _original.Error.Id, false);
             Saved?.Invoke();

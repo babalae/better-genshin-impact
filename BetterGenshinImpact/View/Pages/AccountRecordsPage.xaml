@@ -49,6 +49,7 @@
                     <ui:DropDownButton.Flyout>
                         <ContextMenu>
                             <MenuItem Header="刷新库存" Command="{Binding Data.Inventory.RefreshCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" />
+                            <MenuItem Header="事件记录…" Command="{Binding Data.Inventory.OpenEventsCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" CommandParameter="all" />
                             <MenuItem Header="新增库存记录…" Command="{Binding Data.Inventory.AddCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" IsEnabled="{Binding Data.Inventory.HasUid, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" />
                             <Separator />
                             <MenuItem Header="导入库存…" Command="{Binding Data.OpenImportCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" />
@@ -59,13 +60,26 @@
                                       Command="{Binding Data.Inventory.ToggleSourceNamesCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" />
                             <MenuItem Header="恢复所有分页默认栏宽" Command="{Binding Data.ResetColumnWidthsCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" />
                             <Separator />
-                            <MenuItem Header="自动日期快照" IsCheckable="True"
-                                      IsChecked="{Binding Data.Inventory.SnapshotsEnabled, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}"
-                                      Command="{Binding Data.Inventory.ToggleSnapshotsCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" />
-                            <MenuItem Header="来源记录保留数量…" Command="{Binding Data.Inventory.SetRetentionCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" CommandParameter="recent" />
-                            <MenuItem Header="快照保留数量…" Command="{Binding Data.Inventory.SetRetentionCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" CommandParameter="snapshots" />
-                            <Separator />
-                            <MenuItem Header="清理所有图标缓存…" Command="{Binding Data.Inventory.ClearIconCacheCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" />
+                            <MenuItem Header="高级">
+                                <MenuItem Header="追踪来源提醒（未建设）" IsCheckable="True" IsChecked="False" IsEnabled="False"
+                                          ToolTip="暂未开放，来源提醒追踪保持关闭。" />
+                                <MenuItem Header="自定义提醒规则（未建设）" IsEnabled="False" ToolTip="预留关联文件：User/AccountRecords/warning-rules.json。"
+                                          Command="{Binding Data.Inventory.EditWarningRulesCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" />
+                                <MenuItem Header="查看物品字典…" Command="{Binding Data.Inventory.ViewDictionaryCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" CommandParameter="items" />
+                                <MenuItem Header="查看用户字典…" Command="{Binding Data.Inventory.ViewDictionaryCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" CommandParameter="user" />
+                                <MenuItem Header="查看来源字典…" Command="{Binding Data.Inventory.ViewDictionaryCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" CommandParameter="sources" />
+                                <Separator />
+                                <MenuItem Header="来源记录保留数量…" Command="{Binding Data.Inventory.SetRetentionCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" CommandParameter="recent" />
+                                <MenuItem Header="归档事件保留数量…" Command="{Binding Data.Inventory.SetRetentionCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" CommandParameter="events" />
+                                <MenuItem Header="快照设置">
+                                    <MenuItem Header="自动日期快照" IsCheckable="True"
+                                              IsChecked="{Binding Data.Inventory.SnapshotsEnabled, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}"
+                                              Command="{Binding Data.Inventory.ToggleSnapshotsCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" />
+                                    <MenuItem Header="快照保留数量…" Command="{Binding Data.Inventory.SetRetentionCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" CommandParameter="snapshots" />
+                                </MenuItem>
+                                <Separator />
+                                <MenuItem Header="清理所有图标缓存…" Command="{Binding Data.Inventory.ClearIconCacheCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" />
+                            </MenuItem>
                         </ContextMenu>
                     </ui:DropDownButton.Flyout>
                 </ui:DropDownButton>
@@ -344,8 +358,7 @@
                                                             <ui:Button Content="确认" Icon="{ui:SymbolIcon Checkmark16}">
                                                                 <b:Interaction.Triggers>
                                                                     <b:EventTrigger EventName="Click">
-                                                                        <b:ChangePropertyAction PropertyName="IsOpen" Value="False"
-                                                                            TargetObject="{Binding RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                                        <behavior:CloseContainingMenuAction />
                                                                     </b:EventTrigger>
                                                                 </b:Interaction.Triggers>
                                                             </ui:Button>

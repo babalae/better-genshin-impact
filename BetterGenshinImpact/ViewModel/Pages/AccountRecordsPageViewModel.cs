@@ -136,6 +136,11 @@ public partial class AccountRecordsPageViewModel : ViewModel
         dialog.ShowDialog();
         await Load();
         if (import.ImportedUid != null && UidOptions.Contains(import.ImportedUid)) SelectedUid = import.ImportedUid;
+        if (import.CompletionSummary != null && !import.HasImportErrors)
+        {
+            await Inventory.SelectUidAsync(SelectedUid);
+            _ = Inventory.ShowImportSummaryAsync(import.CompletionSummary);
+        }
     }
 
     /// <summary>从标题菜单导出所选 UID 的当前库存；完整写入临时文件后替换目标。</summary>

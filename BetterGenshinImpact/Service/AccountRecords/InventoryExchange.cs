@@ -36,7 +36,15 @@ public sealed partial class InventoryStore
             package["sources"] is not JObject sources || package["itemDefinitions"] is not JObject definitions)
             throw new InvalidDataException("当前仅支持单个账号，且必须包含 sources 和 itemDefinitions 对象。");
         var account = accounts.Properties().Single();
-        if (!System.Text.RegularExpressions.Regex.IsMatch(account.Name, "^[0-9]{1,20}$") ||
+        // 先检查全部来源，避免导入部分库存后才发现后续来源无法保存。
+        foreach (var entry in sources.Properties())
+        {
+            if (entry.Value is not JObject descriptor || entry.Name != entry.Name.Trim() ||
+                (string?)descriptor["reference"] != entry.Name || descriptor["displayName"]?.Type != JTokenType.String)
+                throw new InvalidDataException("来源字典结构无效。");
+            _ = ValidateSource(new AccountRecordSource { Reference = entry.Name, DisplayName = (string)descriptor["displayName"]! });
+        }
+        if (!IsValidUid(account.Name) ||
             account.Value is not JObject body || body["inventory"] is not JObject inventory || inventory.Count > 5000)
             throw new InvalidDataException("账号或库存结构无效（最多 5000 项）。");
         foreach (var item in inventory.Properties())
@@ -47,6 +55,8 @@ public sealed partial class InventoryStore
                 string.IsNullOrWhiteSpace((string?)record["recordedAt"]) || record["source"]?.Type != JTokenType.String)
                 throw new InvalidDataException($"{item.Name}：必须提供一条当前记录，包含整数 quantity、recordedAt 和 source。");
             _ = record["quantity"]!.Value<long>();
+            if (record["verifiedAt"] != null && record["verifiedAt"]!.Type != JTokenType.String)
+                throw new InvalidDataException($"{item.Name}：verifiedAt 必须是带时区的扫描时间字符串。");
             var source = (string)record["source"]!;
             if (source.Length is 0 or > 1024 || source != source.Trim() || sources[source] is not JObject descriptor ||
                 (string?)descriptor["reference"] != source || descriptor["displayName"]?.Type != JTokenType.String)
@@ -56,6 +66,18 @@ public sealed partial class InventoryStore
             if (inventory[item.Name] == null || item.Value is not JObject definition || definition["category"]?.Type != JTokenType.String ||
                 string.IsNullOrWhiteSpace((string?)definition["category"]) || ((string)definition["category"]!).Length > 128)
                 throw new InvalidDataException("物品补充字典必须对应本文件库存，并提供有效分类。");
+        if (body["deltas"] != null)
+        {
+            if (body["deltas"] is not JArray deltas || deltas.Count > 5000) throw new InvalidDataException("增量表必须为数组，最多 5000 项。");
+            foreach (var delta in deltas)
+            {
+                if (delta is not JObject || delta["name"]?.Type != JTokenType.String || delta["delta"]?.Type != JTokenType.Integer ||
+                    delta["recordedAt"]?.Type != JTokenType.String || delta["source"]?.Type != JTokenType.String ||
+                    sources[(string)delta["source"]!] is not JObject descriptor || (string?)descriptor["reference"] != (string?)delta["source"] ||
+                    descriptor["displayName"]?.Type != JTokenType.String) throw new InvalidDataException("增量项必须包含 name、delta、recordedAt 及已登记的 source。");
+                _ = delta["delta"]!.Value<long>();
+            }
+        }
     }
 
     /// <summary>导出当前项及所引用的来源和用户补充；不暴露本机路径、错误和缓存。</summary>
@@ -88,10 +110,13 @@ public sealed partial class InventoryStore
     });
 
     /// <summary>按来源局部合并；每批复用库存的校验、冲突记录和原子保存，不清除未提及的物品。</summary>
-    public async Task<InventoryReportResult> ImportInventoryAsync(JObject package, string uid, bool includeDefinitions)
+    public async Task<InventoryReportResult> ImportInventoryAsync(JObject package, string uid, bool includeDefinitions, bool allowDeveloperDeltas = false)
     {
         package = (JObject)package.DeepClone();
         ValidateExchange(package);
+        var body = ((JObject)package["accounts"]!).Properties().Single().Value;
+        var deltas = body["deltas"] as JArray;
+        if (deltas is { Count: > 0 } && !allowDeveloperDeltas) throw new InvalidOperationException("增量导入仅供开发测试，需要明确确认。");
         _ = AccountDirectory(uid);
         if (includeDefinitions)
             await Locked(() =>
@@ -114,12 +139,27 @@ public sealed partial class InventoryStore
             var source = new AccountRecordSource
             { Reference = group.Key, DisplayName = (string)descriptor["displayName"]! };
             var batch = group.Select(item => new InventoryReport { Name = item.Name,
-                Quantity = (long)item.Value[0]!["quantity"]!, RecordedAt = (string)item.Value[0]!["recordedAt"]! });
+                Quantity = (long)item.Value[0]!["quantity"]!, RecordedAt = (string)item.Value[0]!["recordedAt"]!, VerifiedAt = (string?)item.Value[0]!["verifiedAt"] });
             var imported = await ReportAsync(uid, source, batch, preserveSourceName: true);
             result.Accepted.AddRange(imported.Accepted);
+            result.DuplicateCount += imported.DuplicateCount;
+            result.DuplicateErrorCount += imported.DuplicateErrorCount;
             foreach (var error in imported.Rejected) result.Rejected[error.Key] = error.Value;
         }
         if (inventory.Count == 0) await AddUidAsync(uid);
+        if (deltas != null)
+        {
+            var imported = await ReportDeltasAsync(uid, deltas.Select(item =>
+            {
+                var reference = (string)item["source"]!;
+                return (new AccountRecordSource { Reference = reference, DisplayName = (string)package["sources"]![reference]!["displayName"]! },
+                    new InventoryDeltaReport { Name = (string)item["name"]!, Delta = (long)item["delta"]!, RecordedAt = (string)item["recordedAt"]! });
+            }));
+            result.Accepted.AddRange(imported.Accepted);
+            result.DuplicateCount += imported.DuplicateCount;
+            result.DuplicateErrorCount += imported.DuplicateErrorCount;
+            foreach (var error in imported.Rejected) result.Rejected[error.Key] = error.Value;
+        }
         return result;
     }
 }
