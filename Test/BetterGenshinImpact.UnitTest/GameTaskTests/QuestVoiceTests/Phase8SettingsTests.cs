@@ -376,137 +376,63 @@ public sealed class Phase8SettingsTests
         Assert.Equal("voice.narrator", saved.NarratorVoiceId);
     }
 
-    /// <summary>两实例的默认声线均按完整资源组提交，非法输入不能提前改变任何有效宿主字段。</summary>
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void Incomplete_default_voice_set_preserves_config_and_keeps_draft(bool remote)
-    {
-        using var fixture = new RoutingFixture();
-        var config = CreateDefaultVoiceConfig(fixture);
-        var original = DefaultVoiceValues(config);
-        using var draft = new GptSovitsDefaultVoiceDraft(config, remote, fixture.Root);
-        draft.Name = "尚未完成的新名称";
-        draft.GptWeightsPath = remote ? "/server/new.ckpt" : Path.Combine("assets", "fallback.ckpt");
-        draft.SovitsWeightsPath = remote ? "/server/new.pth" : Path.Combine("assets", "fallback.pth");
-        draft.ReferenceAudioPath = remote ? "/server/new.wav" : Path.Combine("assets", "fallback.wav");
-        draft.PromptText = "";
-
-        Assert.False(draft.TryCommit());
-        Assert.Equal(original, DefaultVoiceValues(config));
-        Assert.True(draft.HasChanges);
-        Assert.Equal("尚未完成的新名称", draft.Name);
-        Assert.Equal("", draft.PromptText);
-    }
-
-    /// <summary>本机相对资源按安装目录校验和构造 GPT 快照，编辑器不能切换全局默认引擎。</summary>
+    /// <summary>旧配置仍由工厂按安装目录解析，删除旧编辑器不改变快照和全局引擎。</summary>
     [Fact]
-    public void Local_default_relative_paths_use_program_directory_in_draft_and_provider_snapshot()
+    public void Local_default_relative_paths_use_program_directory_in_provider_snapshot()
     {
         using var fixture = new RoutingFixture();
         var config = CreateDefaultVoiceConfig(fixture);
-        using var draft = new GptSovitsDefaultVoiceDraft(config, false, fixture.Root);
-        draft.GptWeightsPath = Path.Combine("assets", "fallback.ckpt");
-        draft.SovitsWeightsPath = Path.Combine("assets", "fallback.pth");
-        draft.ReferenceAudioPath = Path.Combine("assets", "fallback.wav");
-        draft.PromptText = "本机相对路径对应的参考台词。";
-
-        Assert.True(draft.TryCommit());
-        Assert.False(draft.HasChanges);
-        Assert.Equal(draft.GptWeightsPath, config.GptWeightsPath);
-        Assert.Equal(draft.SovitsWeightsPath, config.SovitsWeightsPath);
-        Assert.Equal(draft.ReferenceAudioPath, config.ReferenceAudioPath);
         var factory = new QuestVoiceSessionFactory(config, fixture.Root);
         var settings = factory.CreateProviderSettings("gpt-sovits", false);
-        Assert.Equal(fixture.Asset("fallback.ckpt"), settings.Voice.GptWeightsPath);
-        Assert.Equal(fixture.Asset("fallback.pth"), settings.Voice.SovitsWeightsPath);
-        Assert.Equal(fixture.Asset("fallback.wav"), settings.Voice.ReferenceAudioPath);
-        Assert.Equal(draft.PromptText, settings.Voice.PromptText);
-        Assert.True(Path.IsPathFullyQualified(settings.Voice.GptWeightsPath));
-        Assert.False(settings.Voice.ServerSidePaths);
+        Assert.Equal(fixture.Asset("ganyu.ckpt"), settings.Voice.GptWeightsPath);
+        Assert.Equal(fixture.Asset("ganyu.pth"), settings.Voice.SovitsWeightsPath);
+        Assert.Equal(fixture.Asset("ganyu.wav"), settings.Voice.ReferenceAudioPath);
+        Assert.Equal(config.PromptText, settings.Voice.PromptText);
         Assert.Equal("gpt-sovits", settings.Provider!.ProviderId);
-        Assert.Equal("local", settings.Provider.InstanceId);
         Assert.Equal("huoshan", config.ProviderId);
-        Assert.False(config.UseRemoteService);
     }
 
-    /// <summary>远程默认声线的服务器路径无需存在于本机，提交时保持原样且不改本机资源。</summary>
+    /// <summary>新建项立即成为下拉选中项，列表临时空回写不清空其独立草稿。</summary>
     [Fact]
-    public void Remote_default_voice_commits_server_paths_without_local_asset_lookup()
+    public async Task New_gpt_profile_is_selected_in_shared_picker_and_survives_transient_null()
     {
         using var fixture = new RoutingFixture();
-        var config = CreateDefaultVoiceConfig(fixture);
-        var local = new[] { config.GptWeightsPath, config.SovitsWeightsPath, config.ReferenceAudioPath, config.PromptText };
-        using var draft = new GptSovitsDefaultVoiceDraft(config, true, fixture.Root);
-        var serverDirectory = "/server-only/" + Guid.NewGuid().ToString("N");
-        draft.GptWeightsPath = serverDirectory + "/voice.ckpt";
-        draft.SovitsWeightsPath = serverDirectory + "/voice.pth";
-        draft.ReferenceAudioPath = serverDirectory + "/voice.wav";
-        draft.PromptText = "服务器参考音频的台词。";
-        Assert.False(File.Exists(draft.GptWeightsPath));
-        Assert.False(File.Exists(draft.SovitsWeightsPath));
-        Assert.False(File.Exists(draft.ReferenceAudioPath));
-
-        Assert.True(draft.TryCommit());
-        Assert.False(draft.HasChanges);
-        Assert.Equal(draft.GptWeightsPath, config.RemoteGptWeightsPath);
-        Assert.Equal(draft.SovitsWeightsPath, config.RemoteSovitsWeightsPath);
-        Assert.Equal(draft.ReferenceAudioPath, config.RemoteReferenceAudioPath);
-        Assert.Equal(draft.PromptText, config.RemotePromptText);
-        Assert.Equal(local, new[] { config.GptWeightsPath, config.SovitsWeightsPath, config.ReferenceAudioPath, config.PromptText });
-        Assert.Equal("huoshan", config.ProviderId);
+        await fixture.WriteAsync();
+        using var page = new PassivePage(fixture);
+        var model = page.Owner.Management;
+        await model.LoadCommand.ExecuteAsync(null);
+        model.AddGptProfileCommand.Execute(null);
+        var created = model.SelectedProfile;
+        Assert.NotNull(created);
+        Assert.Same(created, model.SelectedGptProfile);
+        Assert.Contains(created, model.GptProfiles);
+        Assert.True(model.HasSelectedGptProfile);
+        model.SelectedGptProfile = null;
+        Assert.Same(created, model.SelectedGptProfile);
+        model.DeleteProfileCommand.Execute(null);
+        Assert.False(model.HasSelectedGptProfile);
+        Assert.DoesNotContain(created, model.GptProfiles);
     }
 
-    /// <summary>撤销后的旧草稿即使收到迟到提交和后续字段变动，也不能覆盖新宿主配置。</summary>
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void Disposed_default_voice_draft_cannot_commit_stale_or_late_input(bool remote)
+    /// <summary>没有声音时不显示空白资源编辑器，新增后才展开对应草稿。</summary>
+    [Fact]
+    public async Task Empty_gpt_library_exposes_editor_only_after_creating_profile()
     {
         using var fixture = new RoutingFixture();
-        var config = CreateDefaultVoiceConfig(fixture);
-        using var draft = new GptSovitsDefaultVoiceDraft(config, remote, fixture.Root);
-        draft.Name = "已撤销草稿的旧名称";
-        draft.PromptText = "已撤销草稿的旧台词。";
-        draft.Dispose();
-        config.VoiceName = "撤销后由新草稿设置的名称";
-        config.PromptText = "新的本机台词。";
-        config.RemotePromptText = "新的远程台词。";
-        var expected = DefaultVoiceValues(config);
-
-        draft.TryCommit();
-        Assert.Equal(expected, DefaultVoiceValues(config));
-        draft.Name = "撤销后的迟到名称输入";
-        draft.PromptText = "撤销后的迟到台词输入。";
-        draft.TryCommit();
-        Assert.Equal(expected, DefaultVoiceValues(config));
+        fixture.Json["Voices"]!.AsArray().Clear();
+        fixture.Json["FallbackVoiceId"] = null;
+        fixture.Json["NarratorVoiceId"] = null;
+        foreach (var speaker in fixture.Json["Speakers"]!.AsArray()) speaker!["VoiceId"] = null;
+        await fixture.WriteAsync();
+        using var page = new PassivePage(fixture);
+        var model = page.Owner.Management;
+        await model.LoadCommand.ExecuteAsync(null);
+        Assert.Empty(model.GptProfiles);
+        Assert.False(model.HasSelectedGptProfile);
+        model.AddGptProfileCommand.Execute(null);
+        Assert.Single(model.GptProfiles);
+        Assert.True(model.HasSelectedGptProfile);
     }
-
-    /// <summary>默认名称虽由本远实例共享，另一实例仅改资源时不能把它回退到创建草稿时的旧名称。</summary>
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void Shared_default_voice_name_survives_resource_only_commit_from_other_instance(bool renameRemote)
-    {
-        using var fixture = new RoutingFixture();
-        var config = CreateDefaultVoiceConfig(fixture);
-        using var local = new GptSovitsDefaultVoiceDraft(config, false, fixture.Root);
-        using var remote = new GptSovitsDefaultVoiceDraft(config, true, fixture.Root);
-        var renamed = renameRemote ? remote : local;
-        var resourceOnly = renameRemote ? local : remote;
-        renamed.Name = "已经由用户修改的共享名称";
-        Assert.True(renamed.TryCommit());
-        Assert.Equal("原有默认声线", resourceOnly.Name);
-        resourceOnly.GptWeightsPath = renameRemote ? Path.Combine("assets", "fallback.ckpt") : "/server/resource-only.ckpt";
-        resourceOnly.PromptText = "只调整另一实例的参考台词。";
-
-        Assert.True(resourceOnly.TryCommit());
-        Assert.Equal("已经由用户修改的共享名称", config.VoiceName);
-        Assert.Equal(resourceOnly.GptWeightsPath, renameRemote ? config.GptWeightsPath : config.RemoteGptWeightsPath);
-        Assert.Equal(resourceOnly.PromptText, renameRemote ? config.PromptText : config.RemotePromptText);
-        Assert.Equal("huoshan", config.ProviderId);
-    }
-
     /// <summary>引擎声线注册必须把非法输入异常交给调用页处理，不能吞错后添加空声音或改动目录。</summary>
     [Theory]
     [InlineData("")]
@@ -543,14 +469,6 @@ public sealed class Phase8SettingsTests
         RemoteReferenceAudioPath = "/server/original.wav",
         RemotePromptText = "原有远程参考台词。"
     };
-
-    /// <summary>同时记录两个资源组和全局引擎选择，发现非法或迟到提交造成的任意部分覆盖。</summary>
-    private static string[] DefaultVoiceValues(QuestVoiceConfig config) =>
-    [
-        config.VoiceName, config.GptWeightsPath, config.SovitsWeightsPath, config.ReferenceAudioPath, config.PromptText,
-        config.RemoteGptWeightsPath, config.RemoteSovitsWeightsPath, config.RemoteReferenceAudioPath, config.RemotePromptText,
-        config.ProviderId, config.UseRemoteService.ToString()
-    ];
 
     /// <summary>仅为设置模型提供空闲宿主和真实存储路径，沿用已有管理测试的资源所有权。</summary>
     private sealed class PassivePage : IDisposable

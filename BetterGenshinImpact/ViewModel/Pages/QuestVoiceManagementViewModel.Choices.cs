@@ -34,13 +34,10 @@ public partial class QuestVoiceManagementViewModel
     public string SelectedProfileDiagnostic => SelectedProfile is { } item
         ? (VoiceChoices.FirstOrDefault(x => x.Id == item.OriginalId)?.DisplayName ?? item.Name) + " · 服务可用性请通过连接测试或试听确认"
         : "请选择或新建声线；未完成资源保留在草稿中。";
-    /// <summary>声线库搜索仅改变显示，不移除任何草稿。</summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(GptProfiles))]
-    private string _profileSearch = "";
     /// <summary>GPT 页面只显示 GPT 资源，其他引擎通过其设置页提供声音。</summary>
-    public IEnumerable<QuestVoiceManagementProfile> GptProfiles => Profiles.Where(x => x.ProviderId == "gpt-sovits"
-        && (string.IsNullOrWhiteSpace(ProfileSearch) || x.Name.Contains(ProfileSearch, StringComparison.OrdinalIgnoreCase)));
+    public IEnumerable<QuestVoiceManagementProfile> GptProfiles => Profiles.Where(x => x.ProviderId == "gpt-sovits");
+    /// <summary>空声线库只显示紧凑选择框，选中或新建后才展示资源编辑器。</summary>
+    public bool HasSelectedGptProfile => SelectedGptProfile is not null;
     /// <summary>列表刷新时的暂时空选择不清空正在编辑的 GPT 草稿。</summary>
     public QuestVoiceManagementProfile? SelectedGptProfile
     {

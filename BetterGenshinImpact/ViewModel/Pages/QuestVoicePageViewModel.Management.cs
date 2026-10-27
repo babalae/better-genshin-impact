@@ -14,10 +14,7 @@ public partial class QuestVoicePageViewModel
     /// <summary>关闭和启动前排空已打开的编辑器；未进入设置页时不创建目录。</summary>
     public async System.Threading.Tasks.Task<bool> FlushSettingsAsync()
     {
-        var defaultsSaved = FlushGptSettings?.Invoke() ?? true;
         var routesSaved = _management is null || await _management.FlushAutoSaveAsync();
-        return defaultsSaved && routesSaved;
+        return routesSaved;
     }
-    /// <summary>GPT 设置首次打开才注册其资源草稿的退出收尾。</summary>
-    internal System.Func<bool>? FlushGptSettings { get; set; }
 }

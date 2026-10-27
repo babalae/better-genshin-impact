@@ -37,14 +37,14 @@
     <StackPanel DataContext="{Binding ViewModel.Management, Mode=OneWay}">
      <ui:TextBlock Text="{Binding SaveStatus, Mode=OneWay}" TextWrapping="Wrap" Margin="0,0,0,8" />
      <ui:TextBlock Text="{Binding EditStatus, Mode=OneWay}" TextWrapping="Wrap" Margin="0,0,0,8" />
-     <ui:TextBox PlaceholderText="搜索声线名称" Text="{Binding ProfileSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8" />
-     <ListBox ItemsSource="{Binding GptProfiles, Mode=OneWay}" SelectedItem="{Binding SelectedGptProfile, Mode=TwoWay}" DisplayMemberPath="Name" Height="130" />
+     <ComboBox ItemsSource="{Binding GptProfiles, Mode=OneWay}" SelectedItem="{Binding SelectedGptProfile, Mode=TwoWay}"
+               DisplayMemberPath="Name" IsTextSearchEnabled="True" TextSearch.TextPath="Name" MaxDropDownHeight="320" HorizontalAlignment="Stretch" />
      <ui:TextBlock Text="{Binding SelectedProfileDiagnostic, Mode=OneWay}" TextWrapping="Wrap" Margin="0,8,0,0" />
      <WrapPanel Margin="0,8,0,8">
       <ui:Button Content="新增声线" Command="{Binding AddGptProfileCommand, Mode=OneWay}" Margin="0,0,8,8" />
       <ui:Button Content="删除选中声线" Command="{Binding DeleteProfileCommand, Mode=OneWay}" Margin="0,0,0,8" />
      </WrapPanel>
-     <StackPanel IsEnabled="{Binding CanEditDraft, Mode=OneWay}">
+     <StackPanel IsEnabled="{Binding CanEditDraft, Mode=OneWay}" Visibility="{Binding HasSelectedGptProfile, Mode=OneWay, Converter={StaticResource GptBoolVisibility}}">
       <ui:TextBlock Text="显示名称（自由命名；修改名称保留全部角色引用）" TextWrapping="Wrap" Margin="0,0,0,6" />
       <ui:TextBox Text="{Binding SelectedProfile.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8" />
       <ui:TextBlock Text="实例（空白继承 GPT 当前实例）" Margin="0,0,0,6" />
@@ -65,20 +65,6 @@
       <ui:Button Content="试听选中声线" Command="{Binding PreviewProfileCommand, Mode=OneWay}" HorizontalAlignment="Left" />
      </StackPanel>
      <ui:Button Content="取消试听" Command="{Binding CancelPreviewCommand, Mode=OneWay}" HorizontalAlignment="Left" Margin="0,8,0,0" />
-    </StackPanel>
-   </ui:CardExpander>
-   <ui:CardExpander IsExpanded="False" ContentPadding="16" Margin="0,0,0,12">
-    <ui:CardExpander.Header><ui:TextBlock Text="高级配置 · 兼容旧默认声线" /></ui:CardExpander.Header>
-    <StackPanel>
-     <ui:TextBlock Text="未绑定独立 Profile 时使用原默认资源。旧配置继续读取，不复制到角色。" TextWrapping="Wrap" Margin="0,0,0,8" />
-     <ui:TextBlock Text="{Binding ViewModel.DefaultVoiceDraft.SaveStatus, Mode=OneWay}" TextWrapping="Wrap" Margin="0,0,0,8" /><ui:Button Content="撤销未完成的默认资源输入" Command="{Binding ViewModel.DiscardDefaultDraftCommand, Mode=OneWay}" HorizontalAlignment="Left" Margin="0,0,0,8" /><ui:TextBlock Text="名称" /><ui:TextBox Text="{Binding ViewModel.DefaultVoiceDraft.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,8" />
-     <ui:TextBlock Text="GPT 权重路径" /><ui:TextBox Text="{Binding ViewModel.DefaultVoiceDraft.GptWeightsPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,8" />
-     <ui:TextBlock Text="SoVITS 权重路径" /><ui:TextBox Text="{Binding ViewModel.DefaultVoiceDraft.SovitsWeightsPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,8" />
-     <ui:TextBlock Text="参考音频路径" /><ui:TextBox Text="{Binding ViewModel.DefaultVoiceDraft.ReferenceAudioPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,8" />
-     <ui:TextBlock Text="参考台词" /><ui:TextBox Text="{Binding ViewModel.DefaultVoiceDraft.PromptText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" TextWrapping="Wrap" AcceptsReturn="True" MinHeight="48" Margin="0,6,0,8" />
-     <ui:TextBlock Text="试听文本" /><ui:TextBox Text="{Binding ViewModel.TestText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,8" />
-     <ui:Button Content="试听旧默认声线" Command="{Binding ViewModel.PreviewDefaultCommand, Mode=OneWay}" HorizontalAlignment="Left" />
-     <ui:Button Content="取消试听" Command="{Binding ViewModel.CancelPreviewCommand, Mode=OneWay}" HorizontalAlignment="Left" Margin="0,8,0,0" />
     </StackPanel>
    </ui:CardExpander>
   </StackPanel>

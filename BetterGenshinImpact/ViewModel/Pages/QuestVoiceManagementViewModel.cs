@@ -369,6 +369,7 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
     partial void OnSelectedProfileChanged(QuestVoiceManagementProfile? value)
     {
         OnPropertyChanged(nameof(SelectedGptProfile));
+        OnPropertyChanged(nameof(HasSelectedGptProfile));
         OnPropertyChanged(nameof(SelectedProfileDiagnostic));
         OnPropertyChanged(nameof(CanBrowseSelectedProfileAssets));
         OnPropertyChanged(nameof(SelectedPresetVoice));
