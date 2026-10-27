@@ -113,3 +113,25 @@ Debug 日志每 10 秒至多输出一次 `QuestVoice metrics`，停止排空后�
 `GameTask/QuestVoice/Core` 和 `Features` 来自 QuestVoice `1fc59d9c374a2c36180c2116be4397a0b8be719c` 的原神业务契约和算法。`QuestVoiceSessionController` / `QuestVoiceSessionFactory` / `QuestVoiceSession` 管理独立单轮所有权，`Service/QuestVoiceService` 接入宿主运行环境与已有帧，ViewModel 只异步投递状态和执行命令。没有引入 QuestVoice WinUI 宿主、第二套 WGC、星铁业务或七页面导航。
 
 自动验证可使用组件测试与独立离屏 XAML harness；遵守仓库 AGENTS.md，不自动启动 BetterGI 主程序。实际游戏连续对白、后端、声音、DPI 与其他任务共存需要人工验收。
+
+### 扩展语音引擎
+
+在原「配置与映射」页面选择引擎。声音ID与显示名分开保存；手输ID后也可以给角色创建独立profile。新增引擎参数位于`ExtraProviders`，与原GPT/火山字段隔离；本地/远程URL分别保存，profile引用`local`或`remote`，为空时沿用该引擎的当前实例。两实例共享该引擎的语言、模型、密钥与调节参数。配置由宿主自动保存，运行/试听使用冻结快照。
+
+|引擎|设置与声音|协议/限制|
+|---|---|---|
+|Windows 系统语音|刷新已安装SAPI声音，保存完整token ID；速度0.5～2|无需网络、账号、Python或额外模型。专用STA内存生成22050Hz PCM16 WAV；不调用系统直出扬声器。语速等级对应实际倍率由声音引擎决定。|
+|VOICEVOX|引擎URL（默认50021）、刷新speaker/style列表、style ID、速度0.5～2、音高-0.15～0.15|POST audio_query后保留查询对象并POST synthesis，完整WAV。自行提供合法引擎和声音库，遵守VOICEVOX署名和各声音条款。|
+|vits-simple-api|默认23456、可选X-API-KEY、语言auto/zh/ja/en、速度0.5～2；声音如VITS:0或BERT-VITS2:0|当前`/voice/speakers`及`/voice/vits`、`/voice/bert-vits2`，POST JSON，强制streaming=false/format=wav。其他模型类型不发布为可用声音。不下载模型或安装服务。|
+|OpenAI兼容语音API|Base URL含服务前缀（例如`https://api.openai.com/v1/`）、可选Bearer Key、model、voice、速度0.25～4、wav/mp3/pcm|POST audio/speech。pcm按协议解释为24kHz单声道小端PCM16；其他格式不显示为可用。内置声音仅为建议，不是远程发现；支持兼容服务自定义voice。连接检测只做格式检查，实际认证与推理用试听验证。|
+|Google Translate TTS|预设语言为voice ID；正常1或慢速0.5|非Cloud承诺接口，100字符分段；每段MP3独立解码再顺序合并PCM，不拼接WAV首部。需要网络可达，不影响宿主启动，不绕过服务拒绝。|
+
+服务声音列表只在用户点击刷新时联网（VOICEVOX/VITS）；普通页面切换不发送发现请求。地址/实例/选中profile改变后，迟到列表或错误不得覆盖当前选择。SAPI和静态声音建议可离线枚举。
+
+SAPI枚举与合成通过进程内可取消的串行入口访问COM，再在专用STA完成操作与清理；不同实例不会并发释放共享系统token的RCW。排队取消不干扰当前持有者，合成总期限包含排队等待。原生COM调用若自身永久挂起，不能由托管取消强制终止；不会把这一情况声称为可杀死后端。
+
+新增引擎均完整接收和解码后播放，`Streaming=false`；HTTP分块不等于实际增量播放。单个HTTP请求和整个合成都有期限，正文读取、取消及大小限制贯穿处理。普通网络/认证/格式错误可以重试，不改变GPT的排空与Unknown语义。Key只进入请求头，错误不回显服务响应；密码输入遮罩，Key仍由宿主配置文件保存在本机，勿分享该配置。URL不接受内嵌凭据或查询令牌。
+
+Edge当前Luna实现依赖Sec-MS-GEC v2客户端令牌，BCUT没有确立第三方开放调用前提，VoiceRoid/A.I.VOICE/NeoSpeech需要独立软件和许可；本阶段未注册这些空引擎，也不模拟访问控制或下载商业资源。Tolk直接输出到读屏软件且不返回音频，与当前播放器所有权不符；自定义Python及当前不存在的Chrome适配同样不引入。
+
+实现为独立C#协议适配，参考当前LunaTranslator公开源码和服务官方接口；未嵌入/运行Python、LunaTranslator.exe或商业DLL。服务与模型的许可仍分别适用。真实服务缺失时的隔离HTTP测试只证明协议行为，不代表真实模型推理通过。官方Speech API模型有生命周期限制，使用OpenAI官方服务时需按其当前弃用公告选择可用模型；兼容服务的模型名称由服务端决定。

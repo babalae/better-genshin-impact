@@ -135,8 +135,22 @@ public sealed class QuestVoiceSessionFactory(QuestVoiceConfig config, string pro
     /// <summary>仅构造 TTS 快照，测试语音不要求 OCR 模型或截图环境。</summary>
     public AppSettings CreateTtsSettings(bool validateProvider = true)
         => CreateTtsSettings(config.ProviderId,
-            config.UseRemoteService && TtsProviderRegistry.GetInfo(config.ProviderId).Capabilities.ServerConnection ? "remote" : "local",
-            config.HuoshanVoiceId, validateProvider);
+            (ExtraConfig(config.ProviderId)?.UseRemote ?? config.UseRemoteService) && TtsProviderRegistry.GetInfo(config.ProviderId).Capabilities.ServerConnection ? "remote" : "local",
+            ExtraConfig(config.ProviderId)?.VoiceId ?? config.HuoshanVoiceId, validateProvider);
+
+    /// <summary>新增引擎独立配置；旧配置缺失字典条目时补齐缺省，不触碰旧引擎。</summary>
+    public QuestVoiceEngineConfig? ExtraConfig(string providerId)
+    {
+        var defaults = QuestVoiceEngineConfig.Defaults();
+        if (!defaults.TryGetValue(providerId, out var fallback)) return null;
+        config.ExtraProviders ??= defaults;
+        if (!config.ExtraProviders.TryGetValue(providerId, out var selected) || selected is null)
+        {
+            selected = fallback;
+            config.ExtraProviders = new(config.ExtraProviders) { [providerId] = selected };
+        }
+        return selected;
+    }
 
     /// <summary>为一个明确 Provider/实例构造快照，不改写用户配置或另一实例的路径。</summary>
     private AppSettings CreateTtsSettings(string providerId, string instanceId, string providerVoiceId, bool validateProvider,
@@ -146,7 +160,9 @@ public sealed class QuestVoiceSessionFactory(QuestVoiceConfig config, string pro
         if (instanceId is not ("local" or "remote") || (!info.Capabilities.ServerConnection && instanceId == "remote"))
             throw new VoiceException(VoiceErrorCode.Configuration, "所选声线引用了未配置的服务实例：" + instanceId);
         var remote = info.Capabilities.ServerConnection && instanceId == "remote";
-        var address = remote ? config.RemoteServiceUrl : config.ServiceUrl;
+        var extra = ExtraConfig(providerId);
+        var address = extra is null ? remote ? config.RemoteServiceUrl : config.ServiceUrl
+            : remote ? extra.RemoteUrl : extra.LocalUrl;
         if (!info.Capabilities.ServerConnection) address = "https://translate.volcengine.com/";
         if (!Uri.TryCreate(address?.Trim(), UriKind.Absolute, out var endpoint))
             throw new VoiceException(VoiceErrorCode.Configuration, "请填写有效的 HTTP/HTTPS 服务地址。");
@@ -167,7 +183,8 @@ public sealed class QuestVoiceSessionFactory(QuestVoiceConfig config, string pro
             new(config.ConnectTimeoutSeconds, config.RequestTimeoutSeconds, config.SynthesisTimeoutSeconds), voice,
             new(ConfigurationDirectory, ConfigurationDirectory), new(0, 0),
             Protocol: new(StreamingMode: streaming, StreamPlayback: streaming),
-            Provider: providerReference);
+            Provider: providerReference,
+            Extra: extra is null ? null : new(extra.Language, extra.Model, extra.Format, extra.ApiKey, extra.Rate, extra.Pitch));
         using var provider = TtsProviderRegistry.Create(info.Id);
         if (validateProvider) provider.Validate(settings);
         return settings;
@@ -184,8 +201,8 @@ public sealed class QuestVoiceSessionFactory(QuestVoiceConfig config, string pro
         var providerId = reference?.ProviderId ?? config.ProviderId;
         var capabilities = TtsProviderRegistry.GetInfo(providerId).Capabilities;
         var instance = string.IsNullOrWhiteSpace(reference?.InstanceId)
-            ? capabilities.ServerConnection && config.UseRemoteService ? "remote" : "local" : reference.InstanceId;
-        var settings = CreateTtsSettings(providerId, instance!, reference?.VoiceId ?? config.HuoshanVoiceId, validateProvider, binding);
+            ? capabilities.ServerConnection && (ExtraConfig(providerId)?.UseRemote ?? config.UseRemoteService) ? "remote" : "local" : reference.InstanceId;
+        var settings = CreateTtsSettings(providerId, instance!, reference?.VoiceId ?? ExtraConfig(providerId)?.VoiceId ?? config.HuoshanVoiceId, validateProvider, binding);
         if (!capabilities.VoiceAssets) return settings;
         var audio = binding.References.FirstOrDefault();
         return settings with { Voice = settings.Voice with

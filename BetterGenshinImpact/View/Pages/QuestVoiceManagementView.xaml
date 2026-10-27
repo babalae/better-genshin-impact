@@ -89,6 +89,7 @@
                     <ui:TextBlock Text="ProviderVoiceId（选择预设或直接输入该引擎的音色 ID）" TextWrapping="Wrap" />
                     <ComboBox ItemsSource="{Binding PresetVoices, Mode=OneWay}" DisplayMemberPath="DisplayName"
                               SelectedItem="{Binding SelectedPresetVoice, Mode=TwoWay}" HorizontalAlignment="Stretch" Margin="0,6,0,6" />
+                    <ui:Button Content="刷新当前引擎声音" Command="{Binding RefreshPresetVoicesCommand, Mode=OneWay}" HorizontalAlignment="Left" Margin="0,0,0,6" />
                     <ui:TextBox Text="{Binding SelectedProfile.ProviderVoiceId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8" />
                     <StackPanel Visibility="{Binding SelectedProfile.UsesGptAssets, Mode=OneWay, Converter={StaticResource ManagementBoolVisibility}}">
                         <ui:TextBlock Text="GPT 权重路径（.ckpt）" />

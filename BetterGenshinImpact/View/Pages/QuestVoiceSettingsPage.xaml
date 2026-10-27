@@ -4,6 +4,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
+             xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              d:DataContext="{d:DesignInstance Type=local:QuestVoiceSettingsPage}"
              d:DesignHeight="950"
@@ -36,14 +38,54 @@
                                   DisplayMemberPath="DisplayName" HorizontalAlignment="Stretch" />
                         <ui:TextBlock Margin="0,8,0,12" Text="{Binding ViewModel.ProviderDescription, Mode=OneWay}" TextWrapping="Wrap" />
                         <StackPanel Visibility="{Binding ViewModel.SupportsPresetVoices, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <ui:TextBlock Text="默认预设音色与语言" Margin="0,0,0,6" />
+                            <ui:TextBlock Text="默认声音（选择预设或输入声音 ID）" Margin="0,0,0,6" />
                             <ComboBox ItemsSource="{Binding ViewModel.Voices, Mode=OneWay}"
                                       DisplayMemberPath="DisplayName"
                                       SelectedItem="{Binding ViewModel.SelectedVoice, Mode=TwoWay}" />
+                            <ui:Button Content="刷新声音列表" Command="{Binding ViewModel.RefreshVoicesCommand, Mode=OneWay}" HorizontalAlignment="Left" Margin="0,6,0,6" />
+                            <ui:TextBox Text="{Binding ViewModel.SelectedVoiceId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="声音 ID / SAPI token / 兼容服务自定义 ID" />
+                            <ui:TextBlock Text="VOICEVOX 与 vits-simple-api 需点击刷新读取服务声音；刷新不会清除已填写的 ID。" TextWrapping="Wrap" Margin="0,6,0,6" />
                         </StackPanel>
-                        <StackPanel Margin="0,6,0,6" Visibility="{Binding ViewModel.SupportsServerConnection, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <StackPanel Margin="0,6,0,6" Visibility="{Binding ViewModel.SupportsVoiceAssets, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <ui:ToggleSwitch Content="使用远程服务实例（独立保存地址和默认声线）" IsChecked="{Binding ViewModel.Config.UseRemoteService, Mode=TwoWay}" />
                             <ui:TextBlock Margin="0,6,0,0" Text="远程权重及参考音频必须已经存在于服务器；支持 Linux 或服务器相对路径，不会自动上传本机文件。角色映射中的路径也按当前服务器解释。" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <StackPanel Margin="0,8,0,8" Visibility="{Binding ViewModel.SupportsExtraServerConnection, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <ui:TextBlock Text="当前引擎服务连接" FontWeight="SemiBold" Margin="0,0,0,6" />
+                            <ui:ToggleSwitch Content="使用此引擎的远程实例" IsChecked="{Binding ViewModel.SelectedEngineConfig.UseRemote, Mode=TwoWay}" />
+                            <ui:TextBox Margin="0,6,0,6" Text="{Binding ViewModel.ActiveExtraServiceUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="HTTP / HTTPS Base URL，保留代理子路径与 /v1/" />
+                            <ui:TextBlock Text="本地与远程地址分别保存；请自行启动已有服务。OpenAI 兼容服务填写完整 Base URL（例如 https://api.openai.com/v1/）。" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <StackPanel Margin="0,6,0,6" Visibility="{Binding ViewModel.SupportsLanguage, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <ui:TextBlock Text="语言（使用服务支持的语言代码，例如 auto / zh / ja）" Margin="0,0,0,6" />
+                            <ui:TextBox Text="{Binding ViewModel.SelectedEngineConfig.Language, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+                        <StackPanel Margin="0,6,0,6" Visibility="{Binding ViewModel.SupportsModel, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <ui:TextBlock Text="模型（由兼容服务提供，例如 tts-1）" Margin="0,0,0,6" />
+                            <ui:TextBox Text="{Binding ViewModel.SelectedEngineConfig.Model, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        </StackPanel>
+                        <StackPanel Margin="0,6,0,6" Visibility="{Binding ViewModel.SupportsApiKey, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <ui:TextBlock Text="API Key（可选，取决于服务要求）" Margin="0,0,0,6" />
+                            <PasswordBox>
+                                <i:Interaction.Behaviors>
+                                    <behavior:PasswordBoxBindingBehavior Password="{Binding ViewModel.SelectedEngineConfig.ApiKey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                </i:Interaction.Behaviors>
+                            </PasswordBox>
+                        </StackPanel>
+                        <StackPanel Margin="0,6,0,6" Visibility="{Binding ViewModel.SupportsRate, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <ui:TextBlock Text="{Binding ViewModel.RateHint, Mode=OneWay}" Margin="0,0,0,6" />
+                            <ui:NumberBox Minimum="0.25" Maximum="4" MaxDecimalPlaces="2"
+                                          Value="{Binding ViewModel.SelectedEngineConfig.Rate, Mode=TwoWay}" Visibility="{Binding ViewModel.SupportsContinuousRate, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            <ComboBox ItemsSource="{Binding ViewModel.DiscreteRates, Mode=OneWay}" SelectedItem="{Binding ViewModel.SelectedEngineConfig.Rate, Mode=TwoWay}"
+                                      Visibility="{Binding ViewModel.UsesDiscreteRate, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        </StackPanel>
+                        <StackPanel Margin="0,6,0,6" Visibility="{Binding ViewModel.SupportsPitch, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <ui:TextBlock Text="音高 pitchScale（-0.15～0.15，0 为默认）" Margin="0,0,0,6" />
+                            <ui:NumberBox Minimum="-0.15" Maximum="0.15" MaxDecimalPlaces="2" Value="{Binding ViewModel.SelectedEngineConfig.Pitch, Mode=TwoWay}" />
+                        </StackPanel>
+                        <StackPanel Margin="0,6,0,6" Visibility="{Binding ViewModel.SupportsAudioFormat, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <ui:TextBlock Text="服务返回格式（pcm 按 OpenAI PCM16 / 24kHz / 单声道解释）" TextWrapping="Wrap" Margin="0,0,0,6" />
+                            <ComboBox ItemsSource="{Binding ViewModel.AudioFormats, Mode=OneWay}" SelectedItem="{Binding ViewModel.SelectedEngineConfig.Format, Mode=TwoWay}" />
                         </StackPanel>
                         <ui:TextBlock Margin="0,8,0,6" Text="连接 / 请求 / 合成超时（秒）" />
                         <WrapPanel>
@@ -150,7 +192,7 @@
                                          IsChecked="{Binding ViewModel.Config.StreamingEnabled, Mode=TwoWay}" />
                     </Grid>
                     <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
-                    <Grid Visibility="{Binding ViewModel.SupportsServerConnection, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="16" IsEnabled="{Binding ViewModel.IsConfigEditable, Mode=OneWay}">
+                    <Grid Visibility="{Binding ViewModel.SupportsVoiceAssets, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="16" IsEnabled="{Binding ViewModel.IsConfigEditable, Mode=OneWay}">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
