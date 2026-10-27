@@ -18,6 +18,7 @@ using BetterGenshinImpact.ViewModel.Windows.Pulonia;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GongSolutions.Wpf.DragDrop;
+using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -319,13 +320,31 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     {
         if (targetNode is null)
             return;
+        // 1. 选择资源和常用运行选项
         var creation = PuloniaTaskCreationDialog.Show(Session.TaskService.Definitions, Session.ResourceCatalog, taskType,
             owner: Application.Current.MainWindow);
-        if (creation is null
-            || !TryGetInsertionPoint(targetNode, out var document, out var parent, out var index))
+        if (creation is null)
             return;
-        document.InsertNode(creation.Task, parent, index);
-        StatusMessage = $"已添加任务“{creation.Task.Name}”。";
+        var task = creation.Task;
+
+        // 2. JS 项目声明了 settings_ui 时，与独立任务一致在添加后弹出设置窗口；取消则不添加
+        if (creation.JavaScriptSettingItems.Count > 0)
+        {
+            var settingsViewModel = new PuloniaJsScriptSettingsDialogViewModel(task.Name, creation.JavaScriptSettingItems,
+                task.Parameters["settings"] as JObject, isCreation: true);
+            if (PuloniaJsScriptSettingsDialog.Show(settingsViewModel, Application.Current.MainWindow) is not { } settings)
+                return;
+            if (settings.Count > 0)
+                task.Parameters["settings"] = settings;
+            else
+                task.Parameters.Remove("settings");
+        }
+
+        // 3. 确认后才一次插入任务树
+        if (!TryGetInsertionPoint(targetNode, out var document, out var parent, out var index))
+            return;
+        document.InsertNode(task, parent, index);
+        StatusMessage = $"已添加任务“{task.Name}”。";
     }
 
     /// <summary>
@@ -347,6 +366,42 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         };
         if (dialog.ShowDialog() == true)
             StatusMessage = $"已保存“{node.Name}”的配置。";
+    }
+
+    /// <summary>
+    /// 打开节点（含计划根）的共享设置窗口；修改即时生效并向下传播，能力不使用共享设置的叶子不打开。
+    /// </summary>
+    [RelayCommand]
+    private void EditNodeSharedSettings(PuloniaTaskNodeViewModel? node)
+    {
+        if (node is null || _settingsDialogs is null)
+            return;
+        if (node.IsLeaf && node.Document.GetSharedSettingUsage(node).Keys is not { Count: > 0 })
+        {
+            StatusMessage = $"“{node.Name}”这类任务不使用共享设置，请在“编辑配置”中修改任务参数。";
+            return;
+        }
+        SelectedDocument = node.Document;
+        _settingsDialogs.EditSharedSettings(new PuloniaSharedSettingsEditorViewModel(
+            new PuloniaNodeSharedSettingsTarget(node), Session, _settingsDialogs));
+    }
+
+    /// <summary>打开计划级共享设置（计划根节点），会传给计划中的全部任务。</summary>
+    [RelayCommand]
+    private void EditPlanSharedSettings(PuloniaTaskPlanDocumentViewModel? document)
+    {
+        if ((document ?? SelectedDocument) is not { } target)
+            return;
+        EditNodeSharedSettings(target.RootNode);
+    }
+
+    /// <summary>打开设置方案管理。</summary>
+    [RelayCommand]
+    private void ManageSettingsProfiles()
+    {
+        if (_settingsDialogs is null)
+            return;
+        _settingsDialogs.ManageProfiles(Session, null);
     }
 
     /// <summary>
@@ -407,22 +462,22 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     {
         var clipboard = Session.Clipboard;
         if (!TryGetInsertionPoint(targetNode, out var document, out var parent, out var index)
-            || !clipboard.TryCreatePaste(out var source, out var pasted, out var effectiveParameters)
+            || !clipboard.TryCreatePaste(out var source, out var pasted, out var effectiveParameters, out var outerSettings)
             || source is null || pasted is null)
             return;
 
         if (document.HasPasteInheritanceDifference(source, pasted, effectiveParameters, parent))
         {
             var result = await ThemedMessageBox.ShowAsync(
-                $"复制内容来自“{clipboard.SourcePlanName}”，目标位置的父组继承会改变部分有效参数。\n\n" +
-                "选择“是”：把复制时已有的有效值写入新节点；目标位置额外继承项仍保留。\n" +
+                $"复制内容来自“{clipboard.SourcePlanName}”，目标位置继承的共享设置会改变部分有效设置。\n\n" +
+                "选择“是”：保留复制时的有效设置，不同的项写在粘贴的节点上。\n" +
                 "选择“否”：使用目标位置的继承结果。\n选择“取消”：不粘贴。",
-                "粘贴时发现配置差异", MessageBoxButton.YesNoCancel,
+                "粘贴时发现设置差异", MessageBoxButton.YesNoCancel,
                 ThemedMessageBox.MessageBoxIcon.Question, MessageBoxResult.Cancel);
             if (result == MessageBoxResult.Cancel)
                 return;
             if (result == MessageBoxResult.Yes)
-                PuloniaTaskPlanDocumentViewModel.PreserveCopiedEffectiveParameters(source, pasted, effectiveParameters);
+                document.PreserveCopiedSettings(pasted, outerSettings, parent);
         }
 
         document.InsertNode(pasted, parent, index);
@@ -490,7 +545,9 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
             || dropInfo.TargetItem is not PuloniaTaskNodeViewModel target
             || !TryResolveDropTarget(source, target, dropInfo.InsertPosition, out var parent, out var index))
             return;
-        source.Document.MoveNode(source, parent, index);
+        // 跨父节点移动可能改变继承的共享设置，有变化时显示非模态提示
+        var settingsChange = source.Document.MoveNodeTrackingSettings(source, parent, index);
+        ShowMoveSettingsNotice(settingsChange);
         StatusMessage = $"已移动“{source.Name}”。";
     }
 
@@ -504,6 +561,8 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         History.PlanFilterId = newValue?.Id;
         NotifyCommandStates();
         TriggerSettings.Document = newValue;
+        // 移动提示只针对当时的计划，切换计划后不再保留
+        ShowMoveSettingsNotice(null);
     }
 
     /// <summary>

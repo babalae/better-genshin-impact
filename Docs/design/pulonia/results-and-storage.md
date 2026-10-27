@@ -120,7 +120,7 @@
 ```text
 User/Pulonia/
 ├─ plans/<planId>.json              计划；保存时留 .bak
-├─ presets/<presetId>.json          共享预设
+├─ profiles/<profileId>.json        设置方案（共享设置）
 ├─ plan-order.json                  计划列表顺序（编辑器元数据）
 ├─ plan-view-state.json             节点折叠状态（编辑器元数据）
 ├─ accounts.json                    账号目录

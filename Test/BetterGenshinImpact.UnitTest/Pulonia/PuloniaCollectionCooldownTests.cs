@@ -220,10 +220,10 @@ public sealed class PuloniaCollectionCooldownTests : IDisposable
         await using var service = Service(store, executor);
         await Run(service, plan);
         Assert.Null(Assert.Single(await service.ListLedgerAsync()).NextEligibleAt);
-        plan.RootTask.Children[0].Parameters[PuloniaCollectionCooldown.ParameterName] = new JObject { ["mode"] = "rolling", ["hours"] = 24 };
+        plan.RootTask.Children[0].Settings[PuloniaSettingCatalog.CollectionCooldownKey] = new JObject { ["mode"] = "rolling", ["hours"] = 24 };
         plan = await store.SavePlanAsync(plan);
         Assert.Equal(PuloniaTaskNodeStatus.Skipped, Assert.Single((await Run(service, plan)).NodeResults).Status);
-        plan.RootTask.Children[0].Parameters[PuloniaCollectionCooldown.ParameterName] = new JObject { ["mode"] = "disabled" };
+        plan.RootTask.Children[0].Settings[PuloniaSettingCatalog.CollectionCooldownKey] = new JObject { ["mode"] = "disabled" };
         plan = await store.SavePlanAsync(plan);
         Assert.Equal(PuloniaTaskNodeStatus.Succeeded, Assert.Single((await Run(service, plan)).NodeResults).Status);
         Assert.Equal(2, executor.Executions);
@@ -341,7 +341,7 @@ public sealed class PuloniaCollectionCooldownTests : IDisposable
         await blocking.Task.WaitAsync(TimeSpan.FromSeconds(20));
         var secondId = await service.EnqueueAsync(new PuloniaTaskRequest { PlanId = second.Id });
         Assert.Empty(await service.ListLedgerAsync());
-        second.RootTask.Children[0].Parameters[PuloniaCollectionCooldown.ParameterName] = new JObject { ["mode"] = "disabled" };
+        second.RootTask.Children[0].Settings[PuloniaSettingCatalog.CollectionCooldownKey] = new JObject { ["mode"] = "disabled" };
         await store.SavePlanAsync(second);
         release.SetResult();
         await service.WaitForCompletionAsync(firstId);
@@ -437,7 +437,7 @@ public sealed class PuloniaCollectionCooldownTests : IDisposable
         CreateTask("落落莓", "B.json");
         using var store = new PuloniaTaskStore(Path.Combine(_directory, "state"));
         var group = new PuloniaTask { Name = "目录", Source = new PuloniaTaskSource { Kind = "directory", TaskType = "pathing", Path = Path.GetDirectoryName(a.Path) } };
-        group.ParameterOverrides.Add(new PuloniaTaskParameterOverride { TaskType = "pathing", Values = new JObject { [PuloniaCollectionCooldown.ParameterName] = new JObject { ["mode"] = "rolling", ["hours"] = 5 } } });
+        group.Settings[PuloniaSettingCatalog.CollectionCooldownKey] = new JObject { ["mode"] = "rolling", ["hours"] = 5 };
         var plan = await store.SavePlanAsync(Plan(group));
         var executor = new FileExecutor();
         await using var service = Service(store, executor);
@@ -447,7 +447,7 @@ public sealed class PuloniaCollectionCooldownTests : IDisposable
 
         var leaf = CreateTask("落落莓", "C.json");
         var editorPlan = Plan(leaf);
-        editorPlan.RootTask.ParameterOverrides = group.ParameterOverrides;
+        editorPlan.RootTask.Settings = (JObject)group.Settings.DeepClone();
         var document = new PuloniaTaskPlanDocumentViewModel(editorPlan, [], new PuloniaTaskClipboardService(), false);
         document.SetDefinitions(executor.Definitions);
         var node = document.RootNode.Children[0];
@@ -502,7 +502,7 @@ public sealed class PuloniaCollectionCooldownTests : IDisposable
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(path, "{}");
         return new PuloniaTask { Name = file, TaskType = "pathing", Path = path,
-            Parameters = config is null ? new JObject() : new JObject { [PuloniaCollectionCooldown.ParameterName] = config } };
+            Settings = config is null ? new JObject() : new JObject { [PuloniaSettingCatalog.CollectionCooldownKey] = config } };
     }
 
     /// <summary>建立材料目录解析输入。</summary>
@@ -543,6 +543,7 @@ public sealed class PuloniaCollectionCooldownTests : IDisposable
         /// <inheritdoc />
         public IReadOnlyList<PuloniaTaskDefinition> Definitions { get; } = [new() { TaskType = "pathing",
             DefaultParameters = new JObject { [PuloniaCollectionCooldown.ParameterName] = PuloniaCollectionCooldown.CreateDefaults() },
+            SettingBindings = new Dictionary<string, string> { [PuloniaSettingCatalog.CollectionCooldownKey] = PuloniaCollectionCooldown.ParameterName },
             ParameterSchema = new JObject { ["type"] = "object", ["additionalProperties"] = true } }];
         /// <inheritdoc />
         public Task<PuloniaTaskOutcome> ExecuteAsync(PuloniaTaskPreparedTask task, PuloniaTaskExecutionContext context, CancellationToken ct)

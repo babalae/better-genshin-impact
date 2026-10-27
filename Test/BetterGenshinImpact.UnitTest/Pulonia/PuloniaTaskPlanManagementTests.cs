@@ -49,7 +49,7 @@ public sealed class PuloniaTaskPlanManagementTests : IDisposable
     }
 
     /// <summary>
-    /// 整份复制重新映射账号预设和触发目标，保留参数类型、引用和配置，且不修改来源。
+    /// 整份复制重新映射触发目标，保留参数类型、共享设置、方案、引用和配置，且不修改来源。
     /// </summary>
     [Fact]
     public void CopyPlan_RemapsInternalReferencesAndPreservesIndependentConfiguration()
@@ -57,7 +57,8 @@ public sealed class PuloniaTaskPlanManagementTests : IDisposable
         var plan = CreatePlan("来源计划");
         var leaf = plan.RootTask.Children[0];
         leaf.IsEnabled = false;
-        leaf.PresetId = "shared-preset";
+        leaf.ProfileId = "shared-profile";
+        leaf.Settings["shell.timeout_seconds"] = 5;
         leaf.Policy.MaxRetries = 2;
         plan.Description = "计划说明";
         plan.RootTask.Children.Add(new PuloniaTask
@@ -66,7 +67,7 @@ public sealed class PuloniaTaskPlanManagementTests : IDisposable
         });
         plan.Accounts.Add(new PuloniaTaskAccountBinding
         {
-            AccountId = "account", PresetSelections = new Dictionary<string, string> { [leaf.Id] = "account-preset" }
+            AccountId = "account"
         });
         plan.Triggers.Add(new PuloniaTaskTrigger
         {
@@ -85,11 +86,12 @@ public sealed class PuloniaTaskPlanManagementTests : IDisposable
             Assert.NotEqual(plan.RootTask.Children[i].Id, copy.RootTask.Children[i].Id);
         Assert.Equal(plan.Description, copy.Description);
         Assert.False(copiedLeaf.IsEnabled);
-        Assert.Equal(leaf.PresetId, copiedLeaf.PresetId);
+        Assert.Equal(leaf.ProfileId, copiedLeaf.ProfileId);
+        Assert.True(JToken.DeepEquals(leaf.Settings, copiedLeaf.Settings));
         Assert.Equal(2, copiedLeaf.Policy.MaxRetries);
         Assert.True(JToken.DeepEquals(leaf.Parameters, copiedLeaf.Parameters));
         Assert.Equal("other-plan", copy.RootTask.Children[1].Source!.PlanId);
-        Assert.Equal("account-preset", Assert.Single(copy.Accounts).PresetSelections[copiedLeaf.Id]);
+        Assert.Equal("account", Assert.Single(copy.Accounts).AccountId);
         Assert.Equal(copiedLeaf.Id, copy.Triggers[0].TargetTaskId);
         Assert.Null(copy.Triggers[1].TargetTaskId);
         Assert.All(copy.Triggers, trigger => Assert.False(trigger.Enabled));

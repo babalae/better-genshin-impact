@@ -148,6 +148,26 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     public bool HasJavaScriptSettings => JavaScriptSettingFields.Count > 0;
 
     /// <summary>
+    /// 任务计划新增弹窗是否展示能力参数：地图追踪与 JS 的运行设置添加后在“编辑配置”中修改；
+    /// 录制回放的“按录制延时回放”暂无其他可视化入口，仍在添加时设置。新一条龙弹窗不使用此属性，照常展示全部字段。
+    /// </summary>
+    public bool ShowCreationParameters => SelectedDefinition?.TaskType == "keymouse";
+
+    /// <summary>
+    /// 任务计划新增弹窗的运行设置提示：说明地图追踪与 JS 的运行设置去向，以及 JS 自定义设置会在添加后弹窗填写。
+    /// 录制回放没有需要说明的设置，返回空字符串。
+    /// </summary>
+    public string RunSettingsHint => SelectedDefinition?.TaskType switch
+    {
+        "pathing" => "队伍、拾取、战斗与采集 CD 等共享设置沿用所在分组或计划的设置，添加后可在“编辑配置 → 共享设置”中单独修改。",
+        "javascript" => (HasJavaScriptSettings
+                            ? "此脚本提供自定义设置，点击“添加任务”后会弹出设置窗口。"
+                            : JavaScriptSettingsMessage)
+                        + "\n队伍、拾取与战斗等共享设置沿用所在分组或计划的设置，添加后可在“编辑配置 → 共享设置”中单独修改。",
+        _ => string.Empty
+    };
+
+    /// <summary>
     /// 当前资源详情区标题；JS 详情只展示 README.md。
     /// </summary>
     public string ResourcePreviewTitle => IsJavaScriptTask ? "README.md" : "资源详情";
@@ -256,6 +276,7 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     /// 当前 JS 项目自定义设置的加载状态或空状态说明。
     /// </summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RunSettingsHint))]
     private string _javaScriptSettingsMessage = "请选择一个 JS 项目。";
 
     /// <summary>
@@ -408,6 +429,7 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
             var required = new HashSet<string>(
                 (value.ParameterSchema["required"] as JArray ?? new JArray()).Values<string>()
                 .Where(name => name is not null).Cast<string>(), StringComparer.Ordinal);
+            var sharedRoots = value.SettingBindings.Values.Select(path => path.Split('.')[0]).ToHashSet(StringComparer.Ordinal);
             foreach (var property in properties.Properties())
             {
                 if (property.Value is not JObject fieldSchema)
@@ -417,10 +439,10 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
                 // JS 的 settings 对象由所选项目自己的 settings_ui 表单生成，不显示通用 JSON 编辑框。
                 if (value.TaskType == "javascript" && property.Name == "settings")
                     continue;
-                // 创建时保留常用选项；完整行走、战斗、食物和 Shell 设置通过节点配置的专用表单编辑。
-                if (PuloniaTaskCommonSettings.IsCommonParameter(value.TaskType, property.Name)
-                    && property.Name is not ("party_name" or "skip_party_switch" or "auto_pick_enabled"
-                        or "auto_fight_enabled" or "auto_skip_enabled"))
+                // 共享设置覆盖的参数默认沿用插入位置的继承值，创建后在共享设置中修改；
+                // 只保留少数常用项，填写后写成新任务自身的共享设置。
+                if (sharedRoots.Contains(property.Name)
+                    && property.Name is not ("party_name" or "skip_party_switch" or "auto_pick_enabled" or "auto_skip_enabled" or "with_delay"))
                     continue;
                 var defaultProperty = value.DefaultParameters.Property(property.Name);
                 ParameterFields.Add(new PuloniaTaskParameterFieldViewModel(property.Name,
@@ -438,6 +460,8 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
         OnPropertyChanged(nameof(IsPathingResourceSelector));
         OnPropertyChanged(nameof(IsJavaScriptTask));
         OnPropertyChanged(nameof(HasJavaScriptSettings));
+        OnPropertyChanged(nameof(ShowCreationParameters));
+        OnPropertyChanged(nameof(RunSettingsHint));
         OnPropertyChanged(nameof(ResourcePreviewTitle));
         OnPropertyChanged(nameof(ShowMarkdownPreview));
         OnPropertyChanged(nameof(ShowTextResourcePreview));
@@ -480,6 +504,7 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
         JavaScriptSettingsMessage = IsJavaScriptTask ? "正在读取脚本设置…" : string.Empty;
         OnPropertyChanged(nameof(HasParameters));
         OnPropertyChanged(nameof(HasJavaScriptSettings));
+        OnPropertyChanged(nameof(RunSettingsHint));
         if (value is null)
         {
             IsResourceDetailsLoading = false;
@@ -631,7 +656,9 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
                 },
                 (current, total) => StatusMessage = $"正在固定资源版本（{current}/{total}）…");
             if (_isClosed) return;
-            Result = new PuloniaTaskCreationResult(task);
+            // 设置定义只是内存对象，不依赖随弹窗释放的预览目录；任务计划据此在添加后弹出脚本设置窗口。
+            Result = new PuloniaTaskCreationResult(task,
+                SelectedDefinition.TaskType == "javascript" ? _currentPreview?.JavaScriptSettingItems : null);
             StatusMessage = string.Empty;
             IsBusy = false;
             RequestClose?.Invoke(this, true);
@@ -756,6 +783,7 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
             _javaScriptSettingsLoadFailed = !string.IsNullOrWhiteSpace(preview.JavaScriptSettingsError);
             OnPropertyChanged(nameof(HasParameters));
             OnPropertyChanged(nameof(HasJavaScriptSettings));
+            OnPropertyChanged(nameof(RunSettingsHint));
             if (!string.IsNullOrWhiteSpace(preview.SuggestedName))
                 SetSuggestedName(preview.SuggestedName);
         }

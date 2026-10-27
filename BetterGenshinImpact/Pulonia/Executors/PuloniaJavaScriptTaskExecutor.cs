@@ -43,7 +43,8 @@ public sealed class PuloniaJavaScriptTaskExecutor : IPuloniaTaskExecutor
             },
             ["additionalProperties"] = false
         },
-        PublicParameters = ["settings", .. PuloniaTaskCommonSettings.CreateDefaults("javascript").Properties().Select(property => property.Name)]
+        // JS 使用地图追踪共用的宿主共享设置；脚本自定义 settings 是只属于本任务的任务参数。
+        SettingBindings = PuloniaSettingCatalog.CreateBindings(PuloniaSettingCatalog.HostCategories)
     }];
 
     /// <inheritdoc />

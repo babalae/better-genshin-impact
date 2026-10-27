@@ -17,7 +17,7 @@ namespace BetterGenshinImpact.Pulonia.Services;
 public sealed class PuloniaTaskBuilder
 {
     /// <summary>
-    /// 读取引用计划和共享预设的同一存储入口。
+    /// 读取引用计划和设置方案的同一存储入口。
     /// </summary>
     private readonly PuloniaTaskStore _store;
 
@@ -72,14 +72,14 @@ public sealed class PuloniaTaskBuilder
             foreach (var referencedPlan in planGraph.Values)
                 RegisterPlan(context, referencedPlan);
             var root = await BuildTaskAsync(context, fixedPlan, fixedPlan.RootTask, fixedPlan.Id,
-                true, new PuloniaTaskPolicy(), [], [], new HashSet<string> { fixedPlan.Id }, 0).ConfigureAwait(false);
+                true, new PuloniaTaskPolicy(), [], new HashSet<string> { fixedPlan.Id }, 0).ConfigureAwait(false);
             foreach (var address in fixedOptions.ParameterOverrides.Keys)
             {
                 if (!context.UsedCallOverrides.Contains(address))
                     throw new PuloniaTaskValidationException(address, "调用覆盖未指向启用的具体任务。");
             }
             ct.ThrowIfCancellationRequested();
-            return new PuloniaTaskSnapshot(fixedPlan, fixedOptions.AccountId, root, context.PlanJson, context.PresetJson);
+            return new PuloniaTaskSnapshot(fixedPlan, fixedOptions.AccountId, root, context.PlanJson, context.ProfileJson);
         }, ct);
     }
 
@@ -101,13 +101,15 @@ public sealed class PuloniaTaskBuilder
     /// <summary>
     /// 递归构建节点；每一步都受取消、深度和总节点数限制。
     /// </summary>
-    /// <param name="ancestorOverrides">当前计划内由外到内每个祖先分组的公共参数项；引用边界处重置为空。</param>
-    /// <param name="referenceOverrides">最近一层计划引用节点提供的公共参数项。</param>
+    /// <param name="chain">祖先的设置链，由外到内，不含本节点。</param>
+    /// <param name="referenceLevel">
+    /// 仅在构建被引用计划的根时传入：引用节点的设置层，排在被引用计划根之后、内部节点之前，
+    /// 使引用节点上的设置替换被引用计划的计划级设置，而内部节点的设置始终保留。
+    /// </param>
     private async Task<PuloniaTaskPreparedTask> BuildTaskAsync(BuildContext context, PuloniaTaskPlan plan,
         PuloniaTask task, string parentAddress, bool parentEnabled, PuloniaTaskPolicy inheritedPolicy,
-        IReadOnlyList<IReadOnlyList<PuloniaTaskParameterOverride>> ancestorOverrides,
-        IReadOnlyList<PuloniaTaskParameterOverride> referenceOverrides,
-        HashSet<string> planStack, int depth, string? sourceTaskId = null)
+        IReadOnlyList<PuloniaSettingLevel> chain, HashSet<string> planStack, int depth, string? sourceTaskId = null,
+        PuloniaSettingLevel? referenceLevel = null)
     {
         context.Cancellation.ThrowIfCancellationRequested();
         var address = parentAddress + "/" + task.Id;
@@ -118,16 +120,17 @@ public sealed class PuloniaTaskBuilder
         var children = new List<PuloniaTaskPreparedTask>();
         var parameters = new JObject();
         var sources = new Dictionary<string, string>(StringComparer.Ordinal);
+        var settingSources = new Dictionary<string, string>(StringComparer.Ordinal);
         string? path = task.Path;
         string? version = null;
 
         if (!enabled)
         {
-            // 保留禁用结构和有效开关，不读取资源/预设，也不展开已校验过的引用计划。
+            // 保留禁用结构和有效开关，不读取资源/方案，也不展开已校验过的引用计划。
             parameters = (JObject)task.Parameters.DeepClone();
             foreach (var child in task.Children)
                 children.Add(await BuildTaskAsync(context, plan, child, address, false, policy,
-                    ancestorOverrides, referenceOverrides, planStack, depth + 1).ConfigureAwait(false));
+                    chain, planStack, depth + 1).ConfigureAwait(false));
         }
         else if (task.TaskType == "group" && task.Source is { Kind: "plan" } planSource)
         {
@@ -137,22 +140,26 @@ public sealed class PuloniaTaskBuilder
             var target = context.Plans[targetId];
             var nextStack = new HashSet<string>(planStack, StringComparer.Ordinal) { targetId };
 
-            // 引用边界重置普通祖先参数；只有引用节点显式提供的公共参数可以跨入。
+            // 共享设置跨越引用继续传播：外部祖先 → 被引用计划根 → 引用节点 → 被引用计划内部节点。
+            var referenceSettings = await CreateLevelAsync(context, task, address).ConfigureAwait(false);
             var repeatCount = task.RepeatCount ?? 1;
             for (var iteration = 1; iteration <= repeatCount; iteration++)
             {
                 var iterationAddress = GetGroupIterationAddress(address, repeatCount, iteration);
                 children.Add(await BuildTaskAsync(context, target, target.RootTask,
                     iterationAddress + "/@" + targetId, true,
-                    MergePolicy(new PuloniaTaskPolicy(), task.Policy), [], task.ParameterOverrides,
-                    nextStack, depth + 1).ConfigureAwait(false));
+                    MergePolicy(new PuloniaTaskPolicy(), task.Policy), chain,
+                    nextStack, depth + 1, referenceLevel: referenceSettings).ConfigureAwait(false));
             }
         }
         else if (task.TaskType == "group")
         {
             var repeatCount = task.RepeatCount ?? 1;
-            // 本组公共参数作为最内一层追加；同层通用覆盖先应用、资源专用覆盖后应用（由参数解析器统一排序），两者都低于更近的祖先。
-            IReadOnlyList<IReadOnlyList<PuloniaTaskParameterOverride>> nestedOverrides = [.. ancestorOverrides, task.ParameterOverrides];
+            // 本组设置作为最内一层追加；被引用计划的根之后紧跟引用节点的设置层。
+            var ownLevel = await CreateLevelAsync(context, task, address).ConfigureAwait(false);
+            IReadOnlyList<PuloniaSettingLevel> nestedChain = referenceLevel is null
+                ? [.. chain, ownLevel]
+                : [.. chain, ownLevel, referenceLevel];
             if (task.Source is { Kind: "directory" } directory)
             {
                 // 目录内资源统一表示为相对路径：仓库资源从固定快照列出，本地资源扫描磁盘。
@@ -195,7 +202,7 @@ public sealed class PuloniaTaskBuilder
                             Resource = directory.Resource?.WithPath(directory.Resource.RelativePath + "/" + relative)
                         };
                         var prepared = await BuildTaskAsync(context, plan, generatedTask, iterationAddress, true, policy,
-                            nestedOverrides, referenceOverrides, planStack, depth + 1, task.Id).ConfigureAwait(false);
+                            nestedChain, planStack, depth + 1, task.Id).ConfigureAwait(false);
                         children.Add(prepared);
                         if (iteration == 1)
                             manifest.Add((relative, prepared.ResourceVersion));
@@ -213,7 +220,7 @@ public sealed class PuloniaTaskBuilder
                     var iterationAddress = GetGroupIterationAddress(address, repeatCount, iteration);
                     foreach (var child in task.Children)
                         children.Add(await BuildTaskAsync(context, plan, child, iterationAddress, true, policy,
-                            nestedOverrides, referenceOverrides, planStack, depth + 1).ConfigureAwait(false));
+                            nestedChain, planStack, depth + 1).ConfigureAwait(false));
                 }
             }
         }
@@ -222,31 +229,33 @@ public sealed class PuloniaTaskBuilder
             var definition = PuloniaParameterResolver.FindDefinition(context.Options.Definitions, task)
                              ?? throw new PuloniaTaskValidationException(address, $"未注册能力或资源 {task.TaskType}/{task.Path}。");
 
-            // 1. 账号绑定可替换预设选择；预设在本次准备内只读取一次，是否缺失或不兼容由共用解析器判定
-            var presetId = PuloniaParameterResolver.GetEffectivePresetId(task, plan.Accounts, context.Options.AccountId);
-            var preset = presetId is null ? null : await LoadPresetAsync(context, presetId).ConfigureAwait(false);
+            // 1. 设置链加上任务自身一层；方案在本次准备内只读取一次，缺失时已在建立层级时报错
+            var ownLevel = await CreateLevelAsync(context, task, address).ConfigureAwait(false);
+            IReadOnlyList<PuloniaSettingLevel> leafChain = [.. chain, ownLevel];
 
-            // 2. 与界面预览共用同一套层级解析，再按运行准备的要求把预设、公共参数和调用覆盖问题报为错误
+            // 2. 与界面预览共用同一套层级解析，再按运行准备的要求把共享设置冲突和调用覆盖问题报为错误
             var hasCallOverride = context.Options.ParameterOverrides.TryGetValue(address, out var callValues);
-            var resolution = PuloniaParameterResolver.Resolve(task, definition, presetId, preset, ancestorOverrides,
-                referenceOverrides, callValues);
-            if (resolution.PresetStatus == PuloniaPresetStatus.Missing)
-                throw new PuloniaTaskValidationException(address, $"预设 {presetId} 不存在。");
-            if (resolution.PresetStatus == PuloniaPresetStatus.Incompatible)
-                throw new PuloniaTaskValidationException(address, "预设的类型、资源或参数版本不匹配。");
-            if (resolution.HasUndeclaredPublicOverride)
-                throw new PuloniaTaskValidationException(address, "计划引用试图覆盖未声明的公共参数。");
+            if (hasCallOverride && callValues is null)
+                throw new PuloniaTaskValidationException(address, "调用覆盖必须是对象。");
+            var resolution = PuloniaParameterResolver.Resolve(task, definition, leafChain, callValues);
+            if (resolution.ConflictingParameters.Count > 0)
+                throw new PuloniaTaskValidationException(address,
+                    $"任务参数 {string.Join("、", resolution.ConflictingParameters)} 属于共享设置，请在共享设置中修改。");
+            if (resolution.ConflictingCallParameters.Count > 0)
+                throw new PuloniaTaskValidationException(address,
+                    $"调用覆盖不能直接修改共享设置覆盖的参数 {string.Join("、", resolution.ConflictingCallParameters)}。");
+            if (resolution.UnusedLeafSettings.Count > 0)
+                throw new PuloniaTaskValidationException(address,
+                    $"任务类型 {task.TaskType} 不使用共享设置 {string.Join("、", resolution.UnusedLeafSettings)}。");
             if (hasCallOverride)
-            {
-                if (callValues is null)
-                    throw new PuloniaTaskValidationException(address, "调用覆盖必须是对象。");
                 context.UsedCallOverrides.Add(address);
-            }
 
-            // 3. 来源文本随运行快照持久化，格式保持不变
+            // 3. 来源文本随运行快照持久化
             parameters = resolution.Parameters;
-            foreach (var (name, source) in resolution.Sources)
-                sources[name] = DescribeSource(context, source, task, presetId, address);
+            foreach (var (name, layer) in resolution.Sources)
+                sources[name] = DescribeSource(layer, task, address);
+            foreach (var key in resolution.BoundSettingKeys)
+                settingSources[key] = DescribeSettingSource(resolution.Settings.Sources[key]);
             PuloniaTaskValidator.ValidateParameters(parameters, definition.ParameterSchema, address + "/parameters");
             if (task.TaskType is "javascript" or "pathing" or "keymouse")
             {
@@ -280,7 +289,7 @@ public sealed class PuloniaTaskBuilder
         return new PuloniaTaskPreparedTask(plan.Id, task.Id, sourceTaskId ?? task.Id, address, task.Name,
             task.TaskType, enabled, path, version, parameters, sources, policy, children, task.Resource ?? task.Source?.Resource,
             task.TaskType == "pathing" && enabled
-                ? PuloniaCollectionCooldown.Resolve(path, task.Resource, parameters) : null);
+                ? PuloniaCollectionCooldown.Resolve(path, task.Resource, parameters) : null, settingSources);
     }
 
     /// <summary>
@@ -290,35 +299,43 @@ public sealed class PuloniaTaskBuilder
         => repeatCount > 1 ? address + "/#" + iteration : address;
 
     /// <summary>
-    /// 读取并固定本次准备使用的预设；同一预设只读取一次。缺失时返回 null，由解析结果判定并报错。
+    /// 建立节点的设置层并固定其方案；同一方案在本次准备内只读取一次，缺失时直接报错，请求不入队。
     /// </summary>
-    private async Task<PuloniaTaskPreset?> LoadPresetAsync(BuildContext context, string presetId)
+    private async Task<PuloniaSettingLevel> CreateLevelAsync(BuildContext context, PuloniaTask task, string address)
     {
-        if (context.Presets.TryGetValue(presetId, out var cached))
-            return cached;
-        var preset = await _store.LoadPresetAsync(presetId, context.Cancellation).ConfigureAwait(false);
-        if (preset is not null)
+        if (task.ProfileId is not { } profileId)
+            return new PuloniaSettingLevel(task, address, null);
+        if (!context.Profiles.TryGetValue(profileId, out var profile))
         {
-            context.Presets.Add(presetId, preset);
-            context.PresetJson.Add(presetId, PuloniaTaskJson.WritePreset(preset));
+            profile = await _store.LoadProfileAsync(profileId, context.Cancellation).ConfigureAwait(false)
+                      ?? throw new PuloniaTaskValidationException(address, $"设置方案 {profileId} 不存在。");
+            context.Profiles.Add(profileId, profile);
+            context.ProfileJson.Add(profileId, PuloniaTaskJson.WriteProfile(profile));
         }
-        return preset;
+        return new PuloniaSettingLevel(task, address, profile);
     }
 
     /// <summary>
-    /// 生成写入运行快照的参数来源文本：默认值和预设带类型/ID，分组与引用公共参数指向其在编辑树中的位置，
-    /// 节点参数和调用覆盖指向运行地址。文本随快照持久化，格式不能改变。
+    /// 生成写入运行快照的顶层参数来源文本：默认值带类型，共享设置记为 settings，节点参数和调用覆盖指向运行地址。
     /// </summary>
-    private static string DescribeSource(BuildContext context, PuloniaParameterSource source, PuloniaTask task,
-        string? presetId, string address) => source.Layer switch
+    private static string DescribeSource(PuloniaParameterLayer layer, PuloniaTask task, string address) => layer switch
     {
         PuloniaParameterLayer.Default => "default/" + task.TaskType,
-        PuloniaParameterLayer.Preset => "preset/" + presetId,
-        PuloniaParameterLayer.Group => context.OverrideSources[source.Override!],
+        PuloniaParameterLayer.Settings => "settings",
         PuloniaParameterLayer.Node => address,
-        PuloniaParameterLayer.ReferencePublic => context.OverrideSources[source.Override!] + "/public",
         PuloniaParameterLayer.Call => "call/" + address,
-        _ => throw new ArgumentOutOfRangeException(nameof(source), source.Layer, "未知的参数来源层级。")
+        _ => throw new ArgumentOutOfRangeException(nameof(layer), layer, "未知的参数来源层级。")
+    };
+
+    /// <summary>
+    /// 生成写入运行快照的共享设置来源文本：default、node/&lt;地址&gt; 或 profile/&lt;方案 ID&gt;@&lt;地址&gt;。
+    /// </summary>
+    private static string DescribeSettingSource(PuloniaSettingSource source) => source.Kind switch
+    {
+        PuloniaSettingSourceKind.Default => "default",
+        PuloniaSettingSourceKind.Node => "node/" + source.Level!.Location,
+        PuloniaSettingSourceKind.Profile => "profile/" + source.Level!.Node.ProfileId + "@" + source.Level.Location,
+        _ => throw new ArgumentOutOfRangeException(nameof(source), source.Kind, "未知的共享设置来源。")
     };
 
     /// <summary>
@@ -340,19 +357,6 @@ public sealed class PuloniaTaskBuilder
     {
         context.Plans.Add(plan.Id, plan);
         context.PlanJson.Add(plan.Id, PuloniaTaskJson.Write(plan));
-        RegisterOverrideSources(context, plan.RootTask, plan.Id);
-    }
-
-    /// <summary>
-    /// 记录公共参数在编辑树中的原始位置。
-    /// </summary>
-    private static void RegisterOverrideSources(BuildContext context, PuloniaTask task, string parent)
-    {
-        var address = parent + "/" + task.Id;
-        foreach (var item in task.ParameterOverrides)
-            context.OverrideSources.Add(item, address);
-        foreach (var child in task.Children)
-            RegisterOverrideSources(context, child, address);
     }
 
     /// <summary>
@@ -526,17 +530,13 @@ public sealed class PuloniaTaskBuilder
         /// </summary>
         public Dictionary<string, string> PlanJson { get; } = new(StringComparer.Ordinal);
         /// <summary>
-        /// 本次固定的预设。
+        /// 本次固定的设置方案。
         /// </summary>
-        public Dictionary<string, PuloniaTaskPreset> Presets { get; } = new(StringComparer.Ordinal);
+        public Dictionary<string, PuloniaSettingsProfile> Profiles { get; } = new(StringComparer.Ordinal);
         /// <summary>
-        /// 序列化的预设副本。
+        /// 序列化的设置方案副本。
         /// </summary>
-        public Dictionary<string, string> PresetJson { get; } = new(StringComparer.Ordinal);
-        /// <summary>
-        /// 公共参数的编辑位置。
-        /// </summary>
-        public Dictionary<PuloniaTaskParameterOverride, string> OverrideSources { get; } = new();
+        public Dictionary<string, string> ProfileJson { get; } = new(StringComparer.Ordinal);
         /// <summary>
         /// 已固定的本地资源指纹，按完整路径索引。
         /// </summary>

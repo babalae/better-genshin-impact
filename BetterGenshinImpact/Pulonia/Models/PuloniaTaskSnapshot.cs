@@ -52,16 +52,25 @@ public sealed class PuloniaTaskSnapshot
     public IReadOnlyDictionary<string, string> PlanJsonById { get; }
 
     /// <summary>
-    /// 实际使用的预设 JSON，包含修订及参数格式版本。
+    /// 旧版快照固定的预设 JSON；预设已由设置方案取代，新快照始终为空，仅为读取旧历史保留。
     /// </summary>
     [JsonProperty("preset_json_by_id")]
     public IReadOnlyDictionary<string, string> PresetJsonById { get; }
 
     /// <summary>
+    /// 实际使用的设置方案 JSON，包含修订；修改方案不影响已固定的快照。
+    /// </summary>
+    [JsonProperty("profile_json_by_id")]
+    public IReadOnlyDictionary<string, string> ProfileJsonById { get; }
+
+    /// <summary>没有使用方案时不写出，旧快照读入后再写出保持逐字一致。</summary>
+    public bool ShouldSerializeProfileJsonById() => ProfileJsonById.Count > 0;
+
+    /// <summary>
     /// 复制来源记录并建立只读快照。
     /// </summary>
     internal PuloniaTaskSnapshot(PuloniaTaskPlan plan, string? accountId, PuloniaTaskPreparedTask root,
-        Dictionary<string, string> plans, Dictionary<string, string> presets)
+        Dictionary<string, string> plans, Dictionary<string, string> profiles)
     {
         PlanId = plan.Id;
         Revision = plan.Revision;
@@ -69,16 +78,18 @@ public sealed class PuloniaTaskSnapshot
         AccountId = accountId;
         RootTask = root;
         PlanJsonById = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(plans));
-        PresetJsonById = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(presets));
+        PresetJsonById = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>());
+        ProfileJsonById = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(profiles));
     }
 
     /// <summary>
-    /// 从持久化运行快照恢复不可变对象。
+    /// 从持久化运行快照恢复不可变对象；旧快照没有方案字段时视为空。
     /// </summary>
     [JsonConstructor]
     internal PuloniaTaskSnapshot(string planId, long revision, DateTimeOffset preparedAt, string? accountId,
         PuloniaTaskPreparedTask rootTask, IDictionary<string, string> planJsonById,
-        IDictionary<string, string> presetJsonById, string? genshinAccountJson = null)
+        IDictionary<string, string>? presetJsonById, string? genshinAccountJson = null,
+        IDictionary<string, string>? profileJsonById = null)
     {
         PlanId = planId;
         Revision = revision;
@@ -87,7 +98,12 @@ public sealed class PuloniaTaskSnapshot
         GenshinAccountJson = genshinAccountJson;
         RootTask = rootTask;
         PlanJsonById = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(planJsonById));
-        PresetJsonById = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(presetJsonById));
+        PresetJsonById = new ReadOnlyDictionary<string, string>(presetJsonById is null
+            ? new Dictionary<string, string>()
+            : new Dictionary<string, string>(presetJsonById));
+        ProfileJsonById = new ReadOnlyDictionary<string, string>(profileJsonById is null
+            ? new Dictionary<string, string>()
+            : new Dictionary<string, string>(profileJsonById));
     }
 
     /// <summary>
@@ -99,5 +115,5 @@ public sealed class PuloniaTaskSnapshot
     internal PuloniaTaskSnapshot WithGenshinAccount(PuloniaGenshinAccountProfile account)
         => new(PlanId, Revision, PreparedAt, AccountId, RootTask,
             new Dictionary<string, string>(PlanJsonById), new Dictionary<string, string>(PresetJsonById),
-            PuloniaTaskJson.Write(account));
+            PuloniaTaskJson.Write(account), new Dictionary<string, string>(ProfileJsonById));
 }

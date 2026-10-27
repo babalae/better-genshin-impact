@@ -223,7 +223,7 @@ public sealed class PuloniaSoloTaskExecutor : IPuloniaTaskExecutor
             RequiresGameSession = true,
             DefaultParameters = defaults,
             ParameterSchema = schema,
-            PublicParameters = properties.Properties().Select(p => p.Name).ToArray(),
+            // 首批不让独立任务参与共享设置，参数都是只属于本任务的任务参数。
             IsSoloTask = true,
             Group = descriptor.Group,
             Order = descriptor.Order,

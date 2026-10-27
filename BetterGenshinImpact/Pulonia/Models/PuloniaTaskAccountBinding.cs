@@ -1,10 +1,9 @@
-using System.Collections.Generic;
 using Newtonsoft.Json;
 
 namespace BetterGenshinImpact.Pulonia.Models;
 
 /// <summary>
-/// 计划中的账号选择与节点预设替换，不存储登录凭据。
+/// 计划中的账号选择，不存储登录凭据。
 /// </summary>
 public sealed class PuloniaTaskAccountBinding
 {
@@ -20,9 +19,5 @@ public sealed class PuloniaTaskAccountBinding
     [JsonProperty("enabled")]
     public bool Enabled { get; set; } = true;
 
-    /// <summary>
-    /// 以本计划节点 ID 为键、预设 ID 为值，替换预设选择而非增加覆盖层。
-    /// </summary>
-    [JsonProperty("preset_selections", Required = Required.DisallowNull)]
-    public Dictionary<string, string> PresetSelections { get; set; } = new();
+    // 按账号替换预设（preset_selections）随共享设置改造删除，是否按账号区分设置随 D5 决定。
 }

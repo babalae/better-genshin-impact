@@ -41,6 +41,13 @@ public partial class PathingPartyConfig : ObservableObject
 
     [JsonIgnore]
     public bool SkipPartySwitch { get; set; }
+
+    /// <summary>
+    /// 仅由 Pulonia 共享设置在运行时设置：队伍名、行走位和生存位按地图追踪条件配置选择，
+    /// 其余字段（战斗、赶路、拾取、食物、回复时机）保持本配置的值。旧调度器的 <see cref="Enabled"/>=false 仍整份回落。
+    /// </summary>
+    [JsonIgnore]
+    public bool PartyByCondition { get; set; }
     
     // 切换队伍前是否前往须弥七天神像
     [ObservableProperty]

@@ -110,9 +110,11 @@ public partial class PuloniaJsScriptSettingFieldViewModel : ObservableObject
     private bool _isInitializing = true;
 
     /// <summary>
-    /// 从项目既有的 SettingItem 模型建立一个可编辑字段。
+    /// 从项目既有的 SettingItem 模型建立一个可编辑字段；已保存值优先于 settings_ui 声明的默认值。
     /// </summary>
-    public PuloniaJsScriptSettingFieldViewModel(SettingItem item)
+    /// <param name="item">settings_ui 中声明的设置项。</param>
+    /// <param name="savedValue">任务中已保存的设置值；为空或 JSON null 时使用默认值。</param>
+    public PuloniaJsScriptSettingFieldViewModel(SettingItem item, JToken? savedValue = null)
     {
         Name = item.Name;
         Label = item.Label;
@@ -120,7 +122,8 @@ public partial class PuloniaJsScriptSettingFieldViewModel : ObservableObject
         Options = item.Options ?? [];
         CascadeOptions = item.CascadeOptions;
 
-        var defaultValue = item.Default;
+        // JValue 实现 IConvertible、JArray 实现 IEnumerable，可直接复用默认值的字符串与列表转换。
+        var defaultValue = savedValue is null || savedValue.Type == JTokenType.Null ? item.Default : savedValue;
         _hasValue = defaultValue is not null || IsMultiCheckbox;
         if (IsTextInput)
             _textValue = ConvertDefaultToString(defaultValue);

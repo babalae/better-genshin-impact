@@ -25,14 +25,14 @@ public partial class PuloniaPlanEditingSession : ObservableObject
     private const int AutoSaveDelayMilliseconds = 350;
 
     /// <summary>
-    /// 计划、预设与编辑器元数据的文件存储服务。
+    /// 计划、设置方案与编辑器元数据的文件存储服务。
     /// </summary>
     private readonly PuloniaTaskStore _store;
 
     /// <summary>
-    /// 当前从存储加载的共享预设。
+    /// 当前从存储加载的设置方案，按名称排序。
     /// </summary>
-    private IReadOnlyList<PuloniaTaskPreset> _presets = [];
+    private IReadOnlyList<PuloniaSettingsProfile> _profiles = [];
 
     /// <summary>
     /// 每个计划当前等待执行的自动保存延迟，用于合并短时间内的连续操作。
@@ -137,9 +137,9 @@ public partial class PuloniaPlanEditingSession : ObservableObject
         IsBusy = true;
         try
         {
-            // 1. 读取预设、计划和编辑器展开状态
-            _presets = await _store.ListPresetsAsync();
-            // 损坏的计划文件被跳过而不阻断其他计划；文件保留在磁盘上，修复后重新进入页面即可加载
+            // 1. 读取设置方案、计划和编辑器展开状态；损坏的方案与计划文件都被跳过并提示，文件保留在磁盘上
+            var profiles = await _store.ListProfilesAsync();
+            _profiles = profiles.Items;
             var plans = await _store.ListPlansWithFailuresAsync();
             var viewState = await LoadViewStateAsync();
 
@@ -149,16 +149,17 @@ public partial class PuloniaPlanEditingSession : ObservableObject
             foreach (var plan in plans.Items)
             {
                 viewState.CollapsedTaskIds.TryGetValue(plan.Id, out var collapsed);
-                AddDocument(new PuloniaTaskPlanDocumentViewModel(plan, _presets, Clipboard, isNew: false, collapsed));
+                AddDocument(new PuloniaTaskPlanDocumentViewModel(plan, _profiles, Clipboard, isNew: false, collapsed));
             }
             IsInitialized = true;
             if (Documents.Count == 0)
                 CreatePlanDocument("我的任务计划");
-            var failureNotice = plans.Failures.Count == 0 ? null
-                : $"有 {plans.Failures.Count} 个计划文件无法读取，已跳过（文件未删除）：" + string.Join("；", plans.Failures);
+            var failures = plans.Failures.Concat(profiles.Failures).ToArray();
+            var failureNotice = failures.Length == 0 ? null
+                : $"有 {failures.Length} 个计划或设置方案文件无法读取，已跳过（文件未删除）：" + string.Join("；", failures.Select(item => item.ToString()));
             LoadMessage = string.Join("\n", new[] { TaskService.RecoveryNotice, failureNotice }.OfType<string>()) is { Length: > 0 } notice
                 ? notice
-                : $"已加载 {Documents.Count} 个计划和 {_presets.Count} 个共享预设。";
+                : $"已加载 {Documents.Count} 个计划和 {_profiles.Count} 个设置方案。";
             if (failureNotice is not null)
             {
                 ReportStatus(failureNotice);
@@ -195,7 +196,7 @@ public partial class PuloniaPlanEditingSession : ObservableObject
             Name = name,
             RootTask = new PuloniaTask { Name = name, TaskType = "group" }
         };
-        var document = new PuloniaTaskPlanDocumentViewModel(plan, _presets, Clipboard, isNew: true);
+        var document = new PuloniaTaskPlanDocumentViewModel(plan, _profiles, Clipboard, isNew: true);
         AddDocument(document);
         ScheduleAutoSave(document);
         return document;
@@ -207,7 +208,7 @@ public partial class PuloniaPlanEditingSession : ObservableObject
     internal PuloniaTaskPlanDocumentViewModel CreateOneDragonConfiguration(string name)
     {
         var document = new PuloniaTaskPlanDocumentViewModel(
-            PuloniaOneDragonDefaults.CreatePlan(name, TaskService.Definitions), _presets, Clipboard, isNew: true);
+            PuloniaOneDragonDefaults.CreatePlan(name, TaskService.Definitions), _profiles, Clipboard, isNew: true);
         AddDocument(document);
         ScheduleAutoSave(document);
         return document;
@@ -428,7 +429,7 @@ public partial class PuloniaPlanEditingSession : ObservableObject
                 plan.RootTask.Name = name;
             plan.Name = name;
 
-            var copy = new PuloniaTaskPlanDocumentViewModel(plan, _presets, Clipboard, isNew: true);
+            var copy = new PuloniaTaskPlanDocumentViewModel(plan, _profiles, Clipboard, isNew: true);
             AddDocument(copy);
             // 副本紧邻来源计划，便于连续复制后比较编辑内容。
             documents.Move(documents.IndexOf(copy), documents.IndexOf(document) + 1);
@@ -618,12 +619,9 @@ public partial class PuloniaPlanEditingSession : ObservableObject
     }
 
     /// <summary>导入确认后逐份原子保存并加入当前会话；部分失败保留已完成计划并由调用方反馈。</summary>
-    /// <param name="result">导入预览确认后的计划与预设。</param>
+    /// <param name="result">导入预览确认后的计划。</param>
     internal async Task ImportPreparedAsync(PuloniaTaskImportResult result)
     {
-        foreach (var preset in result.Presets) await _store.SavePresetAsync(preset);
-        _presets = await _store.ListPresetsAsync();
-        foreach (var document in AllDocuments) document.SetPresets(_presets);
         foreach (var plan in result.Plans)
         {
             var baseName = plan.Name; var suffix = 2;
@@ -631,7 +629,7 @@ public partial class PuloniaPlanEditingSession : ObservableObject
             // 归属来自导入入口，不以名称、任务类型或引用目标推断。
             plan.Purpose = PuloniaTaskPlanPurpose.OneDragon;
             var saved = await _store.SavePlanAsync(plan);
-            AddDocument(new PuloniaTaskPlanDocumentViewModel(saved, _presets, Clipboard, isNew: false));
+            AddDocument(new PuloniaTaskPlanDocumentViewModel(saved, _profiles, Clipboard, isNew: false));
         }
         await PersistPlanOrderAsync();
         await RefreshResourceVersionsAsync();
@@ -688,33 +686,7 @@ public partial class PuloniaPlanEditingSession : ObservableObject
         }
     }
 
-    /// <summary>
-    /// 刷新预设文件并立即更新所有打开文档的预设选择和来源预览。
-    /// </summary>
-    [RelayCommand]
-    private async Task RefreshPresetsAsync()
-    {
-        if (IsBusy)
-            return;
-        IsBusy = true;
-        try
-        {
-            _presets = await _store.ListPresetsAsync();
-            foreach (var document in AllDocuments)
-                document.SetPresets(_presets);
-            ReportStatus($"已刷新 {_presets.Count} 个共享预设。");
-        }
-        catch (Exception ex)
-        {
-            var message = "刷新预设失败：" + ex.Message;
-            ReportStatus(message);
-            await ThemedMessageBox.ErrorAsync(message, "无法刷新共享预设");
-        }
-        finally
-        {
-            IsBusy = false;
-        }
-    }
+
 
     /// <summary>
     /// 忙碌状态变化后刷新资源相关命令。

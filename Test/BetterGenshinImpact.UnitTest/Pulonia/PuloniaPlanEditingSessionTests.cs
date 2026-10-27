@@ -103,11 +103,13 @@ public sealed class PuloniaPlanEditingSessionTests : IDisposable
         var node = document.RootNode.Children[0];
         using var advanced = new PuloniaTaskNodeAdvancedSettingsViewModel(document, node, dialogs: null);
         Assert.Equal("{}", advanced.ParameterJson);
-        Assert.Equal("不使用共享预设", advanced.PresetOptions[0].DisplayName);
+        Assert.Equal("{}", advanced.SettingsJson);
 
         document.SelectedNode = document.RootNode;
         Assert.Same(node, advanced.Node);
-        Assert.True(advanced.CanSelectPreset);
+        Assert.True(advanced.CanEditParameters);
+        // 进程内 C# 不使用共享设置，叶子上不提供共享设置入口；分组总是提供
+        Assert.False(advanced.CanEditSharedSettings);
 
         advanced.ParameterJson = "{\"values\":[7]}";
         advanced.ApplyParametersCommand.Execute(null);

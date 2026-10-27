@@ -14,7 +14,7 @@ Pulonia 是 BetterGI 新的任务计划系统，命名空间 `BetterGenshinImpac
 | 编辑会话 | `PuloniaPlanEditingSession`（DI 单例）、`PuloniaTaskPlanDocumentViewModel`（一份计划）、`PuloniaTaskNodeViewModel` | 两个页面共用的文档集合、首次加载、自动保存、计划增删与导入、资源检查和运行提交；文档负责节点树、30 步撤销和有效参数预览 |
 | 应用服务 | `IPuloniaTaskService` / `PuloniaTaskService`、`PuloniaTaskTriggerHost`、`PuloniaTaskBuilder`、`PuloniaParameterResolver`、`PuloniaTaskRunStateStore`、`PuloniaTaskCreationService`、`PuloniaTaskResourceVersionService`、`PuloniaTaskLegacyImporter` | 提交与串行队列、快照准备、唯一的有效参数解析、state.json 唯一写入、触发调度、新增任务构建、资源版本检查、旧数据导入 |
 | 执行 | `PuloniaLocalNodeRunner`、`IPuloniaTaskExecutor` 的 6 个实现、`PuloniaGameTaskCoordinator` / `PuloniaGameTaskLease`、`PuloniaGenshinAccountSwitcher`、`PuloniaRemoteExecutionBroker` / `PuloniaRemoteNodeHost` | 每次节点尝试取游戏租约、核验 UID、调用执行器；账号切换；向子实例派发节点 |
-| 存储 | `PuloniaTaskStore`、`ScriptRepositoryStore` | `User/Pulonia` 下的计划、预设、账号、状态、历史；脚本仓库注册、保留归档和 JS 工作目录 |
+| 存储 | `PuloniaTaskStore`、`ScriptRepositoryStore` | `User/Pulonia` 下的计划、设置方案、账号、状态、历史；脚本仓库注册、保留归档和 JS 工作目录 |
 
 六个执行器及任务类型：`PuloniaPathingTaskExecutor`（`pathing`）、`PuloniaJavaScriptTaskExecutor`（`javascript`）、`PuloniaKeyMouseTaskExecutor`（`keymouse`）、`PuloniaSoloTaskExecutor`（`solo.<TaskId>`，独立任务）、`PuloniaShellTaskExecutor`（`shell`）、`PuloniaCSharpTaskExecutor`（`csharp`，目前只有 `sample.sum` 样例，去留待定 R2）。`group` 由服务编排，不对应执行器。
 
@@ -23,8 +23,8 @@ Pulonia 是 BetterGI 新的任务计划系统，命名空间 `BetterGenshinImpac
 | 对象 | 类型 | 说明 | 保存位置 |
 | --- | --- | --- | --- |
 | 计划 | `PuloniaTaskPlan` | 一棵任务树（`RootTask`）加触发器和账号绑定；`Purpose` 区分普通计划与一条龙 | `plans/<planId>.json` |
-| 节点 | `PuloniaTask` | 分组或叶子任务；嵌套 `Source`（计划/目录引用）、`Policy`（超时与重试）、`ParameterOverrides`（分组公共参数） | 计划内 |
-| 预设 | `PuloniaTaskPreset` | 可被多个节点复用的一套参数，按类型、资源和参数版本限定兼容范围 | `presets/<presetId>.json` |
+| 节点 | `PuloniaTask` | 分组或叶子任务；嵌套 `Source`（计划/目录引用）、`Policy`（超时与重试）；`Settings`（共享设置，向下传播）与 `ProfileId`（所挂方案）、`Parameters`（任务参数，只属于本任务） | 计划内 |
+| 设置方案 | `PuloniaSettingsProfile` | 命名的共享设置集合，可挂在任意计划的任意节点上复用；设置项由代码中的 `PuloniaSettingCatalog` 定义 | `profiles/<profileId>.json` |
 | 触发器 | `PuloniaTaskTrigger` | 定时或热键，嵌入计划 | 计划内 |
 | 账号资料 | `PuloniaGenshinAccountProfile` | 游戏账号身份、UID 与登录方式；`default` 表示当前登录账号 | `accounts.json` |
 | 请求 | `PuloniaTaskRequest` | 一次提交：计划、范围、账号、触发信息、执行实例 | 运行记录内 |
@@ -100,9 +100,9 @@ flowchart TB
 ## 关键约束
 
 1. **一份 `PuloniaTaskPlan`，两种界面。** 一条龙配置是 `Purpose=OneDragon` 的计划，界面沿用旧 `OneDragonFlowPage` 左右布局；执行器没有用途分支。
-2. **快照不可变。** 运行只读提交时固定的快照，编辑、预设或资源变化不影响已排队和正在运行的请求；续跑沿用原快照。
+2. **快照不可变。** 运行只读提交时固定的快照，编辑、设置方案或资源变化不影响已排队和正在运行的请求；续跑沿用原快照。
 3. **串行、只派发不并行。** 所有执行实例共用一个队列和唯一 `active_run`；子实例只执行叶子节点和账号准备，快照、CD、结果和历史都在主实例落盘。
-4. **state.json 单写者。** 只有主实例的 `PuloniaTaskRunStateStore` 写入；配置类文件（计划、预设、账号、偏好、仓库注册）只需原子替换加后写者胜。
+4. **state.json 单写者。** 只有主实例的 `PuloniaTaskRunStateStore` 写入；配置类文件（计划、设置方案、账号、偏好、仓库注册）只需原子替换加后写者胜。
 5. **唯一参数解析。** 运行准备与界面预览共用 `PuloniaParameterResolver`，规则只写在[模型与配置](model.md#有效参数解析规则)。
 6. **唯一 CD 规则。** 文件级采集 CD 是当前唯一的执行前资源限制；通用额度框架已于 2026-10-24 删除。
 7. **不引入 Quartz、SQLite、ORM 或工作流框架。** 调度用 .NET 定时循环，存储用 JSON 文件。
@@ -112,7 +112,7 @@ flowchart TB
 | 文档 | 内容 |
 | --- | --- |
 | [用户故事与边界](requirements.md) | 12 条故事、范围约束、边界分级、复杂规则来源追踪 |
-| [模型与配置](model.md) | 计划、节点、预设、触发器、账号绑定的字段；任务树语义；唯一的有效参数解析规则 |
+| [模型与配置](model.md) | 计划、节点、共享设置与设置方案、触发器、账号绑定的字段；任务树语义；唯一的有效参数解析规则 |
 | [执行、恢复与 API](execution.md) | 串行队列、节点执行顺序、游戏租约、跨实例派发、取消、最终状态、续跑、C# 接口 |
 | [触发与热键](scheduling.md) | 定时、补触发、忙碌策略、热键、命令行入口 |
 | [多账号](accounts.md) | 默认账号、切号与 UID 核验、凭据与图片、采集 CD 作用域 |
@@ -124,13 +124,12 @@ flowchart TB
 | [调研依据](research.md) | 社区 issues、JS 脚本、本体与 d-v3 代码依据 |
 | [路线图](roadmap.md) | 步骤状态、验收规则、待决定事项、2026-10-24 改造摘要 |
 
-后续能力（提案，未实现）：[体力计划](proposals/resin-plan.md)、[目标托管](proposals/managed-hosting.md)。过程记录与被替换的旧文原文见[归档](archive/README.md)。
+后续能力（提案，未实现）：[体力计划](proposals/resin-plan.md)、[目标托管](proposals/managed-hosting.md)。已实现的专题设计：[共享设置与设置方案](proposals/shared-settings.md)（独立任务绑定未做）。过程记录与被替换的旧文原文见[归档](archive/README.md)。
 
 ## 已知偏差
 
 以下与上述分层不一致，代码中仍存在，尚未排期：
 
-- `PuloniaOneDragonSettingsDialogViewModel.EditCommonSettings` 在 VM 中直接创建 `PuloniaOneDragonCommonSettingsDialog`。
 - `PuloniaOneDragonViewModel.ImportLegacyAsync` 仍读取全局 `ConfigService.Config`。
 - `PuloniaTaskPlanViewModel.EditNodeConfiguration` 直接创建 `PuloniaTaskNodeSettingsDialog`。
 - `PuloniaGameTaskCoordinator` 与 `TaskRunner` 的会话代码仍各有一份，合并为 `GameTaskLease` 见 [task-contract.md](../task-contract.md) 步骤 D。

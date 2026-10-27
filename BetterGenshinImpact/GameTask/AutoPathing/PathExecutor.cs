@@ -394,9 +394,9 @@ public partial class PathExecutor
         }
         else
         {
-            if (PartyConfig is { Enabled: false })
+            if (PartyConfig is { Enabled: false } || PartyConfig.PartyByCondition)
             {
-                // 调度器未配置的情况下，根据地图追踪条件配置切换队伍
+                // 调度器未配置或共享设置选择按条件选队时，根据地图追踪条件配置切换队伍
                 var partyName = FilterPartyNameByConditionConfig(task);
                 if (!await SwitchParty(partyName, false))
                 {
@@ -522,6 +522,15 @@ public partial class PathExecutor
         {
             PartyConfig = pathingConditionConfig.BuildPartyConfigByCondition(_combatScenes);
             PartyConfig.SkipPartySwitch = skipPartySwitch;
+        }
+        else if (PartyConfig.PartyByCondition)
+        {
+            // 共享设置的条件选队只替换行走位与生存位，战斗、赶路、拾取等设置保持不变；四项每条路线都重新计算。
+            var byCondition = pathingConditionConfig.BuildPartyConfigByCondition(_combatScenes);
+            PartyConfig.MainAvatarIndex = byCondition.MainAvatarIndex;
+            PartyConfig.GuardianAvatarIndex = byCondition.GuardianAvatarIndex;
+            PartyConfig.GuardianElementalSkillSecondInterval = byCondition.GuardianElementalSkillSecondInterval;
+            PartyConfig.GuardianElementalSkillLongPress = byCondition.GuardianElementalSkillLongPress;
         }
 
         // 校验角色是否存在

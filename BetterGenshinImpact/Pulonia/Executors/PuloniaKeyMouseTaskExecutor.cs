@@ -35,7 +35,8 @@ public sealed class PuloniaKeyMouseTaskExecutor : IPuloniaTaskExecutor
             },
             ["additionalProperties"] = false
         },
-        PublicParameters = ["with_delay"]
+        // 回放方式经共享设置继承，录制目录引用也能统一设置。
+        SettingBindings = PuloniaSettingCatalog.CreateBindings(PuloniaSettingCatalog.KeyMouseCategory)
     }];
 
     /// <inheritdoc />

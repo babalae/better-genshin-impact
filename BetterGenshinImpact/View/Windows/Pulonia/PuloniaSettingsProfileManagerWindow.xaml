@@ -1,0 +1,133 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.Pulonia.PuloniaSettingsProfileManagerWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 Title="设置方案"
+                 Width="1120"
+                 Height="740"
+                 MinWidth="880"
+                 MinHeight="500"
+                 Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ExtendsContentIntoTitleBar="True"
+                 FontFamily="{StaticResource TextThemeFontFamily}"
+                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                 WindowBackdropType="Mica"
+                 WindowStartupLocation="CenterOwner">
+    <!--  设置方案管理：左侧列表，右侧方案编辑器；方案修改是草稿，显式保存  -->
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0"
+                     Title="设置方案"
+                     Icon="{ui:SymbolIcon Library24}"
+                     ShowMaximize="True"
+                     ShowMinimize="False" />
+
+        <Grid Grid.Row="1" Margin="24,8,24,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="260" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!--  方案列表与操作  -->
+            <Grid Grid.Column="0" Margin="0,0,16,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <ui:TextBlock Margin="0,0,0,8"
+                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                              Text="方案是一组可复用的共享设置，可以挂在任意计划的任意节点上。"
+                              TextWrapping="Wrap" />
+                <ListBox Grid.Row="1"
+                         ItemsSource="{Binding Profiles, Mode=OneWay}"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         SelectedItem="{Binding SelectedProfile, Mode=TwoWay}">
+                    <!--  WPF-UI 的滚动条浮在列表内容之上，右侧留出滚动条宽度，选中背景不与滚动条重叠  -->
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem" BasedOn="{StaticResource DefaultListBoxItemStyle}">
+                            <Setter Property="Margin" Value="0,0,14,0" />
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="2,4">
+                                <ui:TextBlock FontTypography="Body" Text="{Binding Name, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
+                                <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="{Binding Detail, Mode=OneWay}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <WrapPanel Grid.Row="2" Margin="0,8,0,0">
+                    <ui:Button Margin="0,0,6,6" Command="{Binding NewCommand, Mode=OneWay}" Content="新建" Icon="{ui:SymbolIcon Add24}" />
+                    <ui:Button Margin="0,0,6,6" Command="{Binding DuplicateCommand, Mode=OneWay}" Content="复制" />
+                    <ui:Button Margin="0,0,6,6" Command="{Binding RenameCommand, Mode=OneWay}" Content="重命名" />
+                    <ui:Button Margin="0,0,6,6" Command="{Binding DeleteCommand, Mode=OneWay}" Content="删除" />
+                    <ui:Button Margin="0,0,6,6"
+                               Command="{Binding CreateFromGlobalCommand, Mode=OneWay}"
+                               Content="从全局配置创建…"
+                               ToolTip="复制当前自动战斗与地图追踪条件配置中能对应的设置，之后修改全局配置不影响方案"
+                               Visibility="{Binding CanCreateFromGlobal, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                </WrapPanel>
+            </Grid>
+
+            <!--  方案编辑器  -->
+            <Grid Grid.Column="1">
+                <ContentControl HorizontalContentAlignment="Stretch"
+                                VerticalContentAlignment="Stretch"
+                                Content="{Binding Editor, Mode=OneWay}"
+                                Focusable="False"
+                                Visibility="{Binding HasSelection, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ContentControl.ContentTemplate>
+                        <DataTemplate>
+                            <controls:PuloniaSharedSettingsEditorView />
+                        </DataTemplate>
+                    </ContentControl.ContentTemplate>
+                </ContentControl>
+                <ui:TextBlock HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                              Text="还没有设置方案。点击“新建”或“从全局配置创建…”开始。"
+                              Visibility="{Binding HasSelection, Mode=OneWay, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+            </Grid>
+        </Grid>
+
+        <Border Grid.Row="2"
+                Padding="24,12"
+                Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
+                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                BorderThickness="0,1,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock VerticalAlignment="Center"
+                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                              Text="{Binding Message, Mode=OneWay}"
+                              TextWrapping="Wrap" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <ui:Button MinWidth="96"
+                               Margin="0,0,8,0"
+                               Appearance="Primary"
+                               Command="{Binding SaveCommand, Mode=OneWay}"
+                               Content="保存" />
+                    <ui:Button MinWidth="96"
+                               Margin="0,0,8,0"
+                               Command="{Binding DiscardCommand, Mode=OneWay}"
+                               Content="放弃修改" />
+                    <ui:Button MinWidth="96"
+                               Click="OnCloseClick"
+                               Content="关闭"
+                               IsCancel="True" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</ui:FluentWindow>

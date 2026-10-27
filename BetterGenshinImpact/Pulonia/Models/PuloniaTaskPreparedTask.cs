@@ -92,10 +92,19 @@ public sealed class PuloniaTaskPreparedTask
     public JObject Parameters => (JObject)_parameters.DeepClone();
 
     /// <summary>
-    /// 每个顶层参数的最终来源。
+    /// 每个顶层参数的最终来源；由共享设置写入的顶层参数记为 settings，明细见 <see cref="SettingSources"/>。
     /// </summary>
     [JsonProperty("parameter_sources")]
     public IReadOnlyDictionary<string, string> ParameterSources { get; }
+
+    /// <summary>
+    /// 本任务使用的每个共享设置项的来源：default、node/&lt;地址&gt; 或 profile/&lt;方案 ID&gt;@&lt;地址&gt;；旧快照为空。
+    /// </summary>
+    [JsonProperty("setting_sources")]
+    public IReadOnlyDictionary<string, string> SettingSources { get; }
+
+    /// <summary>没有共享设置来源时不写出，旧快照读入后再写出保持逐字一致。</summary>
+    public bool ShouldSerializeSettingSources() => SettingSources.Count > 0;
 
     /// <summary>
     /// 有效策略的防御性副本；修改返回值不影响运行树。
@@ -117,7 +126,7 @@ public sealed class PuloniaTaskPreparedTask
         string name, string taskType, bool isEnabled, string? path, string? resourceVersion, JObject parameters,
         IDictionary<string, string> parameterSources, PuloniaTaskPolicy policy,
         IEnumerable<PuloniaTaskPreparedTask> children, ScriptResourceReference? resource = null,
-        PuloniaCollectionCooldownPolicy? collectionCooldown = null)
+        PuloniaCollectionCooldownPolicy? collectionCooldown = null, IDictionary<string, string>? settingSources = null)
     {
         PlanId = planId;
         TaskId = taskId;
@@ -133,6 +142,9 @@ public sealed class PuloniaTaskPreparedTask
         _parameters = (JObject)parameters.DeepClone();
         _policy = policy.Clone();
         ParameterSources = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(parameterSources));
+        SettingSources = new ReadOnlyDictionary<string, string>(settingSources is null
+            ? new Dictionary<string, string>()
+            : new Dictionary<string, string>(settingSources));
         Children = System.Array.AsReadOnly(children.ToArray());
     }
 }

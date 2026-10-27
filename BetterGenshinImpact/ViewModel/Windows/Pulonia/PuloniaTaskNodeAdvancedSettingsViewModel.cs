@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
+using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.View.Windows;
@@ -13,15 +16,18 @@ using Newtonsoft.Json.Linq;
 namespace BetterGenshinImpact.ViewModel.Windows.Pulonia;
 
 /// <summary>
-/// 高级设置窗口打开期间按需计算的节点编辑状态：原始参数、策略、来源 JSON，共享预设，有效参数来源，
-/// 以及公共设置与采集 CD 表单入口。切换计划树选中节点不会刷新它；文档内容变化后重新读取。
+/// 节点设置窗口打开期间按需计算的编辑状态：共享设置入口与摘要、JS 脚本设置入口，
+/// 以及原始任务参数、共享设置、策略、来源 JSON 和有效参数来源。切换计划树选中节点不会刷新它；文档内容变化后重新读取。
 /// </summary>
 public partial class PuloniaTaskNodeAdvancedSettingsViewModel : ObservableObject, IDisposable
 {
-    /// <summary>公共设置与采集 CD 表单入口；为空时这两类表单不可用（例如测试）。</summary>
+    /// <summary>共享设置、采集 CD 与 JS 脚本设置窗口入口；为空时这些窗口不可用（例如测试）。</summary>
     private readonly IPuloniaTaskSettingsDialogs? _dialogs;
 
-    /// <summary>重新读取编辑器状态期间，阻止预设下拉框回写模型。</summary>
+    /// <summary>编辑会话，共享设置窗口用它选择和保存方案；为空时窗口不提供方案。</summary>
+    private readonly PuloniaPlanEditingSession? _session;
+
+    /// <summary>重新读取编辑器状态期间，阻止回写模型。</summary>
     private bool _isRefreshing;
 
     /// <summary>节点所属的计划文档。</summary>
@@ -33,8 +39,11 @@ public partial class PuloniaTaskNodeAdvancedSettingsViewModel : ObservableObject
     /// <summary>被编辑的节点；树包装被重建时切换为同一 ID 的新包装。</summary>
     [ObservableProperty] private PuloniaTaskNodeViewModel _node;
 
-    /// <summary>参数或分组公共覆盖的 JSON 编辑文本。</summary>
+    /// <summary>任务参数的 JSON 编辑文本（仅叶子）。</summary>
     [ObservableProperty] private string _parameterJson = "{}";
+
+    /// <summary>本节点共享设置的 JSON 编辑文本。</summary>
+    [ObservableProperty] private string _settingsJson = "{}";
 
     /// <summary>执行策略的 JSON 编辑文本。</summary>
     [ObservableProperty] private string _policyJson = "{}";
@@ -42,20 +51,14 @@ public partial class PuloniaTaskNodeAdvancedSettingsViewModel : ObservableObject
     /// <summary>目录或计划引用来源的 JSON 编辑文本。</summary>
     [ObservableProperty] private string _sourceJson = string.Empty;
 
-    /// <summary>当前选择的共享预设。</summary>
-    [ObservableProperty] private PuloniaTaskPresetOptionViewModel? _selectedPresetOption;
-
-    /// <summary>最近一次解析、应用结果或预设提示。</summary>
+    /// <summary>最近一次解析或应用结果。</summary>
     [ObservableProperty] private string? _message;
-
-    /// <summary>当前节点可选择的共享预设。</summary>
-    public ObservableCollection<PuloniaTaskPresetOptionViewModel> PresetOptions { get; } = [];
 
     /// <summary>叶子节点的有效参数和来源预览。</summary>
     public ObservableCollection<PuloniaTaskEffectiveParameterViewModel> EffectiveParameters { get; } = [];
 
-    /// <summary>当前节点是否允许选择预设。</summary>
-    public bool CanSelectPreset => Node.IsLeaf;
+    /// <summary>当前节点是否有任务参数（叶子）。</summary>
+    public bool CanEditParameters => Node.IsLeaf;
 
     /// <summary>当前节点是否允许编辑资源定位。</summary>
     public bool CanEditPath => Node.IsLeaf && Node.Model.Resource is null;
@@ -63,59 +66,59 @@ public partial class PuloniaTaskNodeAdvancedSettingsViewModel : ObservableObject
     /// <summary>当前节点是否存在来源配置。</summary>
     public bool HasSource => Node.Model.Source is not null;
 
-    /// <summary>参数编辑框的内容说明。</summary>
-    public string ParameterEditorTitle => Node.TaskType == "group"
-        ? "分组公共参数覆盖（JSON 数组）"
-        : "节点参数（JSON 对象）";
+    /// <summary>任务参数编辑框的标题。</summary>
+    public string ParameterEditorTitle => "任务参数（JSON 对象，只属于本任务）";
 
-    /// <summary>当前节点是否能够配置地图追踪公共设置。</summary>
-    public bool CanEditPathingSettings => Node.TaskType is "group" or "pathing";
+    /// <summary>
+    /// 当前节点是否提供共享设置：分组、计划根和引用总是提供；叶子只有能力使用共享设置时提供。
+    /// </summary>
+    public bool CanEditSharedSettings => Node.UsesSharedSettings;
 
-    /// <summary>当前节点是否能够配置 JS 使用的行走、战斗和食物设置。</summary>
-    public bool CanEditJavaScriptSettings => Node.TaskType is "group" or "javascript";
+    /// <summary>共享设置摘要：方案与本节点修改的项数。</summary>
+    public string SharedSettingsSummary => Node.SharedSettingsSummary;
 
-    /// <summary>当前节点是否能够配置 Shell 公共设置。</summary>
-    public bool CanEditShellSettings => Node.TaskType is "group" or "shell";
+    /// <summary>JS 叶子节点提供按项目 settings_ui 生成的脚本自定义设置；分组不对应具体项目。</summary>
+    public bool CanEditScriptSettings => Node.IsLeaf && Node.TaskType == "javascript";
 
-    /// <summary>是否展示原配置组设置的可视化编辑入口。</summary>
-    public bool CanEditCommonSettings => CanEditPathingSettings || CanEditJavaScriptSettings || CanEditShellSettings;
+    /// <summary>正在读取项目的 settings_ui 定义。</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ScriptSettingsSummary))]
+    private bool _isLoadingScriptSettings;
 
-    /// <summary>地图追踪叶子或分组提供采集 CD 设置。</summary>
-    public bool CanEditCollectionCooldown => Node.TaskType is "pathing" or "group";
-
-    /// <summary>当前材料、规则和配置来源的简要预览。</summary>
-    public string CollectionCooldownSummary
+    /// <summary>脚本自定义设置卡片的状态说明：读取中或当前有效 settings 的字段数量。</summary>
+    public string ScriptSettingsSummary
     {
         get
         {
-            if (!CanEditCollectionCooldown) return string.Empty;
-            try
-            {
-                var draft = Document.CreateCollectionCooldownDraft(Node);
-                return draft.Preview + "\n配置来源：" + draft.ConfigurationSource;
-            }
-            catch (Exception ex) when (ex is PuloniaTaskValidationException or ArgumentException) { return "配置无效：" + ex.Message; }
+            if (!CanEditScriptSettings) return string.Empty;
+            if (IsLoadingScriptSettings) return "正在读取脚本设置…";
+            var count = (Document.GetOneDragonParameters(Node)["settings"] as JObject)?.Count ?? 0;
+            return count > 0
+                ? $"已保存 {count} 项设置，确认后立即生效"
+                : "尚未保存设置，脚本按自身默认值运行；确认后立即生效";
         }
     }
 
-    /// <summary>为指定节点建立高级设置状态，并在文档变化时重新读取。</summary>
+    /// <summary>为指定节点建立设置状态，并在文档变化时重新读取。</summary>
     /// <param name="document">节点所属的计划文档。</param>
     /// <param name="node">被编辑的节点。</param>
-    /// <param name="dialogs">公共设置与采集 CD 表单入口；为空时这两类表单不可用。</param>
+    /// <param name="dialogs">窗口入口；为空时共享设置、采集 CD 与脚本设置窗口不可用。</param>
+    /// <param name="session">编辑会话；为空时共享设置窗口不提供方案。</param>
     public PuloniaTaskNodeAdvancedSettingsViewModel(PuloniaTaskPlanDocumentViewModel document, PuloniaTaskNodeViewModel node,
-        IPuloniaTaskSettingsDialogs? dialogs)
+        IPuloniaTaskSettingsDialogs? dialogs, PuloniaPlanEditingSession? session = null)
     {
         Document = document;
         _node = node;
         _nodeId = node.Id;
         _dialogs = dialogs;
+        _session = session;
         Refresh();
-        // 只在模型内容或预设变化时重读；自动保存完成等状态通知不能覆盖正在输入的 JSON。
+        // 只在模型内容或方案变化时重读；自动保存完成等状态通知不能覆盖正在输入的 JSON。
         Document.ContentChanged += OnDocumentChanged;
-        Document.PresetsChanged += OnDocumentChanged;
+        Document.ProfilesChanged += OnDocumentChanged;
     }
 
-    /// <summary>从节点当前模型重新读取 JSON、预设选项和有效参数来源。</summary>
+    /// <summary>从节点当前模型重新读取 JSON、共享设置摘要和有效参数来源。</summary>
     public void Refresh()
     {
         _isRefreshing = true;
@@ -126,36 +129,24 @@ public partial class PuloniaTaskNodeAdvancedSettingsViewModel : ObservableObject
                 && Document.EnumerateNodes().FirstOrDefault(item => item.Id == _nodeId) is { } current)
                 Node = current;
             Message = null;
-            ParameterJson = Node.TaskType == "group"
-                ? JArray.FromObject(Node.Model.ParameterOverrides).ToString(Formatting.Indented)
-                : Node.Model.Parameters.ToString(Formatting.Indented);
+            ParameterJson = Node.Model.Parameters.ToString(Formatting.Indented);
+            SettingsJson = Node.Model.Settings.ToString(Formatting.Indented);
             PolicyJson = JObject.FromObject(Node.Model.Policy).ToString(Formatting.Indented);
             SourceJson = Node.Model.Source is null
                 ? string.Empty
                 : JObject.FromObject(Node.Model.Source).ToString(Formatting.Indented);
 
-            PresetOptions.Clear();
-            var options = Document.GetPresetOptions(Node, out var warning);
-            foreach (var option in options)
-                PresetOptions.Add(option);
-            Message = warning;
-            SelectedPresetOption = PresetOptions.FirstOrDefault(option => option.Id == Node.Model.PresetId)
-                                   ?? PresetOptions[0];
-
             EffectiveParameters.Clear();
             foreach (var item in Document.GetEffectiveParameterSources(Node))
                 EffectiveParameters.Add(item);
 
-            OnPropertyChanged(nameof(CanSelectPreset));
+            OnPropertyChanged(nameof(CanEditParameters));
             OnPropertyChanged(nameof(CanEditPath));
             OnPropertyChanged(nameof(HasSource));
-            OnPropertyChanged(nameof(ParameterEditorTitle));
-            OnPropertyChanged(nameof(CanEditPathingSettings));
-            OnPropertyChanged(nameof(CanEditJavaScriptSettings));
-            OnPropertyChanged(nameof(CanEditShellSettings));
-            OnPropertyChanged(nameof(CanEditCommonSettings));
-            OnPropertyChanged(nameof(CanEditCollectionCooldown));
-            OnPropertyChanged(nameof(CollectionCooldownSummary));
+            OnPropertyChanged(nameof(CanEditSharedSettings));
+            OnPropertyChanged(nameof(SharedSettingsSummary));
+            OnPropertyChanged(nameof(CanEditScriptSettings));
+            OnPropertyChanged(nameof(ScriptSettingsSummary));
         }
         finally
         {
@@ -163,19 +154,44 @@ public partial class PuloniaTaskNodeAdvancedSettingsViewModel : ObservableObject
         }
     }
 
-    /// <summary>解析并应用参数 JSON；解析或校验失败时保留原模型和输入文本。</summary>
+    /// <summary>打开共享设置窗口；修改即时生效并进入计划撤销历史。</summary>
+    [RelayCommand]
+    private void EditSharedSettings()
+    {
+        if (_dialogs is null || !CanEditSharedSettings)
+            return;
+        _dialogs.EditSharedSettings(new PuloniaSharedSettingsEditorViewModel(new PuloniaNodeSharedSettingsTarget(Node), _session, _dialogs));
+    }
+
+    /// <summary>解析并应用任务参数 JSON；解析或校验失败时保留原模型和输入文本。</summary>
     [RelayCommand]
     private void ApplyParameters()
     {
         try
         {
             Document.ApplyRawParameters(Node, ParameterJson);
-            Message = "参数已应用，将自动保存。";
+            Message = "任务参数已应用，将自动保存。";
         }
         catch (Exception ex) when (ex is JsonException or PuloniaTaskValidationException or InvalidOperationException)
         {
             Message = "参数未应用：" + ex.Message;
             ThemedMessageBox.Error(Message, "参数格式错误");
+        }
+    }
+
+    /// <summary>解析并应用共享设置 JSON；设置项不存在或值无效时不修改模型。</summary>
+    [RelayCommand]
+    private void ApplySettings()
+    {
+        try
+        {
+            Document.ApplyRawSettings(Node, SettingsJson);
+            Message = "共享设置已应用，将自动保存。";
+        }
+        catch (Exception ex) when (ex is JsonException or PuloniaTaskValidationException or InvalidOperationException)
+        {
+            Message = "共享设置未应用：" + ex.Message;
+            ThemedMessageBox.Error(Message, "共享设置格式错误");
         }
     }
 
@@ -211,7 +227,7 @@ public partial class PuloniaTaskNodeAdvancedSettingsViewModel : ObservableObject
         }
     }
 
-    /// <summary>移除本任务的显式参数，使能力默认值、预设及父组配置重新生效。</summary>
+    /// <summary>移除本任务的任务参数，使能力默认值重新生效；共享设置不受影响。</summary>
     [RelayCommand]
     private void RestoreParameterInheritance()
     {
@@ -220,59 +236,61 @@ public partial class PuloniaTaskNodeAdvancedSettingsViewModel : ObservableObject
     }
 
     /// <summary>
-    /// 在独立副本上编辑类型公共设置，确认时只提交变化字段；取消不会污染计划或全局配置。
+    /// 按节点固定的项目读取 settings_ui，在独立窗口中编辑脚本自定义设置；确认后作为一次可撤销编辑立即生效，取消不写入。
+    /// 本地项目按已保存的路径读取，基本区中尚未保存的路径修改不参与。
     /// </summary>
-    /// <param name="taskType">pathing、javascript 或 shell。</param>
     [RelayCommand]
-    private void EditCommonSettings(string taskType)
+    private async Task EditScriptSettingsAsync()
     {
-        if (_dialogs is null || taskType is not ("pathing" or "javascript" or "shell")
-            || Node.TaskType != "group" && Node.TaskType != taskType)
-            return;
+        if (_dialogs is null || !CanEditScriptSettings) return;
+        var node = Node;
+        IReadOnlyList<SettingItem> items;
+        string? error;
+        IsLoadingScriptSettings = true;
         try
         {
-            var effective = Document.GetCommonSettingsParameters(Node, taskType);
-            var original = PuloniaTaskCommonSettings.ToParameters(taskType, PuloniaTaskCommonSettings.FromParameters(taskType, effective));
-            if (_dialogs.EditCommonSettings(taskType, Node.TaskType == "group", effective) is not { } result)
-                return;
-            Document.ApplyCommonSettings(Node, taskType, original, result.Value ?? original, result.RestoreInheritance);
-            Message = result.RestoreInheritance ? "已恢复继承的任务设置。" : "任务设置已应用，将自动保存。";
+            // 1. 只需要设置定义：读取后立即释放仓库预览目录
+            using var preview = await PuloniaTaskResourcePreviewLoader.LoadJavaScriptTaskAsync(node.Model,
+                Document.GetResourceBaseDirectory(node));
+            items = preview.JavaScriptSettingItems;
+            error = preview.JavaScriptSettingsError;
         }
-        catch (Exception ex) when (ex is System.Text.Json.JsonException or JsonException
-                                   or ArgumentException or InvalidOperationException or OverflowException)
+        catch (Exception ex)
         {
-            ThemedMessageBox.Error("任务设置未应用：" + ex.Message, "任务设置");
+            // 清单缺失、仓库版本不可用或路径无效时只提示，不修改任务
+            items = [];
+            error = "无法读取脚本设置：" + ex.Message;
         }
-    }
+        finally
+        {
+            IsLoadingScriptSettings = false;
+        }
+        if (error is not null)
+        {
+            ThemedMessageBox.Error(error, "脚本自定义设置");
+            return;
+        }
+        if (items.Count == 0)
+        {
+            ThemedMessageBox.Information("此脚本未提供自定义设置。", "脚本自定义设置");
+            return;
+        }
 
-    /// <summary>在模态草稿表单中编辑采集 CD；取消不写入，确认和恢复继承均作为一次文档变更。</summary>
-    [RelayCommand]
-    private void EditCollectionCooldown()
-    {
-        if (_dialogs is null || !CanEditCollectionCooldown) return;
+        // 2. 以当前有效值为初值编辑草稿，确认后整体替换本任务的 settings
         try
         {
-            var draft = Document.CreateCollectionCooldownDraft(Node);
-            var original = draft.BuildValue();
-            if (_dialogs.EditCollectionCooldown(draft, Node.IsLeaf) is not { } result) return;
-            Document.ApplyCollectionCooldown(Node, original, result.RestoreInheritance ? null : draft.BuildValue(), result.RestoreInheritance);
-            Message = result.RestoreInheritance ? "已恢复继承的采集 CD。" : "采集 CD 已应用，将自动保存。";
+            var current = Document.GetOneDragonParameters(node)["settings"] as JObject;
+            var viewModel = new PuloniaJsScriptSettingsDialogViewModel(node.Name, items, current, isCreation: false);
+            if (_dialogs.EditJavaScriptSettings(viewModel) is not { } settings) return;
+            Message = Document.ApplyJavaScriptSettings(node, settings) ? "脚本设置已应用，将自动保存。" : "脚本设置没有变化。";
         }
-        catch (Exception ex) when (ex is PuloniaTaskValidationException or FormatException or ArgumentException or OverflowException)
+        catch (Exception ex) when (ex is PuloniaTaskValidationException or InvalidOperationException)
         {
-            ThemedMessageBox.Error("采集 CD 设置未应用：" + ex.Message, "采集 CD");
+            ThemedMessageBox.Error("脚本设置未应用：" + ex.Message, "脚本自定义设置");
         }
     }
 
-    /// <summary>预设下拉框变化时立即更新模型；读取状态期间的赋值不回写。</summary>
-    partial void OnSelectedPresetOptionChanged(PuloniaTaskPresetOptionViewModel? value)
-    {
-        if (_isRefreshing)
-            return;
-        Document.SelectPreset(Node, value?.Id);
-    }
-
-    /// <summary>文档内容或预设变化后重新读取，显示的始终是最新模型。</summary>
+    /// <summary>文档内容或方案变化后重新读取，显示的始终是最新模型。</summary>
     private void OnDocumentChanged(object? sender, EventArgs e)
     {
         if (!_isRefreshing)
@@ -283,6 +301,6 @@ public partial class PuloniaTaskNodeAdvancedSettingsViewModel : ObservableObject
     public void Dispose()
     {
         Document.ContentChanged -= OnDocumentChanged;
-        Document.PresetsChanged -= OnDocumentChanged;
+        Document.ProfilesChanged -= OnDocumentChanged;
     }
 }

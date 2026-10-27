@@ -20,7 +20,7 @@
 
 | 对象 | 格式 | 示例 |
 | --- | --- | --- |
-| 计划、节点、预设、触发器 | `pln_`、`tsk_`、`pre_`、`trg_` + 16 位 | `pln_7k2m9q4x8c1v5b3n` |
+| 计划、节点、设置方案、触发器 | `pln_`、`tsk_`、`prf_`、`trg_` + 16 位 | `pln_7k2m9q4x8c1v5b3n` |
 | 账号 | `acc_` + 16 位；默认账号为 `default` | `acc_4x9c1v5b3n7k2m8q` |
 | 仓库注册 | 官方 `official`；其他 `rep_` + 16 位，生成时在注册锁内查重 | `rep_3n8q2k7m4x9c1v5b` |
 | 远端 | 第三方 `rem_` + 16 位；官方沿用渠道名 | 只在 `repositories.json` 中 |

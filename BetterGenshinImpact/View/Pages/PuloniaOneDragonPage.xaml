@@ -70,6 +70,12 @@
       <MenuItem Header="定时与热键" Command="{Binding Data.ShowTriggersCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
       <MenuItem Header="撤销最近编辑" Command="{Binding Data.UndoConfigurationCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
       <Separator/>
+      <!-- 配置级共享设置写在配置根节点，传给清单中的全部任务；方案可被多份配置和任务计划复用。 -->
+      <MenuItem Header="配置共享设置…" ToolTip="修改会传给这份配置中的全部任务，任务自身的修改优先"
+                Command="{Binding Data.ConfigurePlanSharedSettingsCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
+      <MenuItem Header="设置方案…" ToolTip="管理可复用的共享设置方案"
+                Command="{Binding Data.ManageSettingsProfilesCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
+      <Separator/>
       <MenuItem Header="导入旧配置" Command="{Binding Data.ImportLegacyCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
       <MenuItem Header="查看导入报告" Command="{Binding Data.ShowImportReportCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
      </ContextMenu></ui:DropDownButton.Flyout>
@@ -133,7 +139,7 @@
         <MenuItem Header="删除任务" Command="{Binding Data.DeleteTaskCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
        </ContextMenu>
       </ui:Card.ContextMenu>
-      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
        <ui:FontIcon Glyph="&#xe411;" Style="{StaticResource FaFontIconStyleForOneDragon}" ToolTip="拖动排序"/>
        <!-- 状态点按运行状态分类取主题语义色：执行中用强调色，失败/待核验/已完成用系统语义色，尚未执行与已跳过或停止为中性灰。 -->
        <Ellipse Grid.Column="1" Width="9" Height="9" Margin="10,0" ToolTip="{Binding OneDragonStatusText, Mode=OneWay}">
@@ -150,7 +156,21 @@
         </Ellipse.Style>
        </Ellipse>
        <TextBlock Grid.Column="2" Text="{Binding Name, Mode=OneWay}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding ConfigurationSummary, Mode=OneWay}" Margin="0,0,8,0"/>
-       <ui:ToggleSwitch Grid.Column="3" IsChecked="{Binding IsEnabled, Mode=TwoWay}" ToolTip="启用或关闭此任务；关闭分组保留子项选择"/>
+       <!-- 共享设置标记：挂了方案或本任务有修改时显示，悬停列出方案与修改项；方案缺失时用警示色。 -->
+       <StackPanel Grid.Column="3" Orientation="Horizontal" Margin="0,0,8,0" VerticalAlignment="Center"
+                   ToolTip="{Binding SharedSettingsToolTip, Mode=OneWay}"
+                   Visibility="{Binding HasSharedSettingsBadge, Converter={StaticResource DragonBoolVisibility}, Mode=OneWay}">
+        <ui:SymbolIcon Symbol="Settings16" FontSize="12">
+         <ui:SymbolIcon.Style><Style TargetType="ui:SymbolIcon">
+          <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}"/>
+          <Style.Triggers><DataTrigger Binding="{Binding IsProfileMissing, Mode=OneWay}" Value="True"><Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}"/></DataTrigger></Style.Triggers>
+         </Style></ui:SymbolIcon.Style>
+        </ui:SymbolIcon>
+        <TextBlock Margin="2,0,0,0" FontSize="11" VerticalAlignment="Center" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                   Text="{Binding SharedSettingCount, Mode=OneWay}"
+                   Visibility="{Binding HasSharedSettings, Converter={StaticResource DragonBoolVisibility}, Mode=OneWay}"/>
+       </StackPanel>
+       <ui:ToggleSwitch Grid.Column="4" IsChecked="{Binding IsEnabled, Mode=TwoWay}" ToolTip="启用或关闭此任务；关闭分组保留子项选择"/>
       </Grid>
      </ui:Card>
     </DataTemplate></ui:ListView.ItemTemplate>
@@ -228,6 +248,17 @@
         <ui:CardControl.Header><StackPanel><TextBlock Text="{Binding ViewModel.SelectedTask.TypeDisplayName, Mode=OneWay}"/><TextBlock Text="{Binding ViewModel.SelectedTask.ConfigurationSummary, Mode=OneWay}" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap"/></StackPanel></ui:CardControl.Header>
        </ui:CardControl>
       </StackPanel>
+      <!-- 共享设置入口：队伍、战斗、拾取、路线等设置；分组和引用的修改会传给其下全部任务。任务类型不使用共享设置时隐藏。 -->
+      <ui:CardAction Margin="0,0,0,12" Icon="{ui:SymbolIcon Settings24}"
+                     Command="{Binding ViewModel.ConfigureNodeSharedSettingsCommand, Mode=OneWay}"
+                     CommandParameter="{Binding ViewModel.SelectedTask, Mode=OneWay}"
+                     Visibility="{Binding ViewModel.SelectedTask.UsesSharedSettings, Converter={StaticResource DragonBoolVisibility}, Mode=OneWay}"
+                     AutomationProperties.Name="共享设置">
+       <StackPanel>
+        <TextBlock Text="共享设置"/>
+        <TextBlock Text="{Binding ViewModel.SelectedTask.SharedSettingsSummary, Mode=OneWay}" FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
+       </StackPanel>
+      </ui:CardAction>
       <!-- 设置修改即时写入当前配置并自动保存，连续输入合并为一次撤销，不再需要应用或重置草稿。 -->
       <DockPanel Margin="0,2,0,8" LastChildFill="True">
        <ui:Button DockPanel.Dock="Right" Content="高级设置" Command="{Binding ViewModel.ConfigureNodeCommand, Mode=OneWay}" CommandParameter="{Binding ViewModel.SelectedTask, Mode=OneWay}"/>

@@ -3,20 +3,18 @@ using System.Windows;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Controls;
-using BetterGenshinImpact.View.Pages.View;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
-using BetterGenshinImpact.ViewModel.Pages.View;
 using BetterGenshinImpact.ViewModel.Windows.Pulonia;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.View.Windows.Pulonia;
 
 /// <summary>
-/// 高级设置窗口使用的公共设置与采集 CD 表单；在视图层创建窗口并读取软件配置，结果交回视图模型提交。
+/// 共享设置、设置方案、采集 CD 与 JS 脚本设置窗口；在视图层创建窗口并读取软件配置，结果交回视图模型提交。
 /// </summary>
 public sealed class PuloniaTaskSettingsDialogs : IPuloniaTaskSettingsDialogs
 {
-    /// <summary>软件配置；配置组表单需要读取全局配置中的队伍与战斗选项。</summary>
+    /// <summary>软件配置；“从全局配置创建方案”需要读取当前全局配置。</summary>
     private readonly IConfigService _configService;
 
     /// <summary>注入软件配置服务。</summary>
@@ -24,52 +22,34 @@ public sealed class PuloniaTaskSettingsDialogs : IPuloniaTaskSettingsDialogs
     public PuloniaTaskSettingsDialogs(IConfigService configService) => _configService = configService;
 
     /// <inheritdoc />
-    public PuloniaTaskSettingsDialogResult? EditCommonSettings(string taskType, bool isGroup, JObject effective)
+    public void EditSharedSettings(PuloniaSharedSettingsEditorViewModel editor)
     {
-        // 在独立副本上编辑，确认时由调用方只提交变化字段；取消不会污染计划或全局配置。
-        var config = PuloniaTaskCommonSettings.FromParameters(taskType, effective);
-        var title = taskType switch
+        var window = new PuloniaSharedSettingsWindow(editor) { Owner = GetOwner() };
+        try
         {
-            "pathing" => "地图追踪设置",
-            "javascript" => "JS 行走、战斗与食物设置",
-            _ => "Shell 执行设置"
-        };
-        var viewModel = new ScriptGroupConfigViewModel(_configService.Get(), config)
+            window.ShowDialog();
+        }
+        finally
         {
-            ShowPathingSettings = taskType != "shell",
-            ShowShellSettings = taskType == "shell",
-            ShowLegacySchedulingSettings = false,
-            ShowTitleBar = false,
-            IsPulonia = true
-        };
-        var restoreInheritance = false;
-        PromptDialog? dialog = null;
-        var dialogConfig = new PromptDialogConfig
+            editor.Dispose();
+        }
+    }
+
+    /// <inheritdoc />
+    public void ManageProfiles(PuloniaPlanEditingSession session, string? selectProfileId)
+    {
+        // 全局配置只在用户点击“从全局配置创建”时读取一次并复制，之后修改全局配置不影响方案。
+        var manager = new PuloniaSettingsProfileManagerViewModel(session, this,
+            () => PuloniaLegacySettingsConverter.FromGlobalConfig(_configService.Get()), selectProfileId);
+        var window = new PuloniaSettingsProfileManagerWindow(manager) { Owner = GetOwner() };
+        try
         {
-            ShowLeftButton = true,
-            LeftButtonText = "恢复继承",
-            LeftButtonClick = (_, _) =>
-            {
-                restoreInheritance = true;
-                dialog!.DialogResult = true;
-            }
-        };
-        dialog = new PromptDialog(isGroup
-                ? "修改的字段应用于本组下的同类任务；子组、资源专用设置和任务自身设置优先。"
-                : "显示当前有效设置；只将修改的字段保存为本任务的设置。",
-            title, new ScriptGroupConfigView(viewModel), null, dialogConfig)
+            window.ShowDialog();
+        }
+        finally
         {
-            Owner = GetOwner(),
-            Width = 850,
-            Height = 720,
-            MinWidth = 850,
-            MinHeight = 520,
-            SizeToContent = SizeToContent.Manual,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner
-        };
-        if (dialog.ShowDialog() != true)
-            return null;
-        return new PuloniaTaskSettingsDialogResult(PuloniaTaskCommonSettings.ToParameters(taskType, config), restoreInheritance);
+            manager.Dispose();
+        }
     }
 
     /// <inheritdoc />
@@ -93,7 +73,11 @@ public sealed class PuloniaTaskSettingsDialogs : IPuloniaTaskSettingsDialogs
         return dialog.ShowDialog() == true ? new PuloniaTaskSettingsDialogResult(null, restore) : null;
     }
 
-    /// <summary>以当前活动窗口为所有者，使表单显示在打开它的高级设置窗口之上。</summary>
+    /// <inheritdoc />
+    public JObject? EditJavaScriptSettings(PuloniaJsScriptSettingsDialogViewModel viewModel)
+        => PuloniaJsScriptSettingsDialog.Show(viewModel, GetOwner());
+
+    /// <summary>以当前活动窗口为所有者，使窗口显示在打开它的窗口之上。</summary>
     private static Window GetOwner()
         => Application.Current.Windows.OfType<Window>().FirstOrDefault(window => window.IsActive)
            ?? Application.Current.MainWindow;

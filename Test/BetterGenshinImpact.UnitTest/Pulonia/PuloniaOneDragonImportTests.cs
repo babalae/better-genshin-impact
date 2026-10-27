@@ -81,8 +81,7 @@ public sealed class PuloniaOneDragonImportTests : IDisposable
         Assert.Equal("好感队", nodes[3].Parameters.Value<string>("party_name"));
         Assert.Equal("尘歌壶道具", nodes[4].Parameters.Value<string>("teleport_type"));
         Assert.Equal(new[] { "每天重复", "精锻用魔矿" }, nodes[4].Parameters["secret_treasure_objects"]!.Values<string>());
-        // 一条龙自有字段直接写入节点，不产生预设
-        Assert.Empty(result.Presets);
+        // 一条龙自有字段直接写入节点任务参数
         Assert.Contains(result.Differences, d => d.Contains("关机"));
         Assert.Contains(result.Differences, d => d.Contains("断点"));
         Assert.Contains(result.Differences, d => d.Contains("保留原粹树脂数"));
@@ -164,21 +163,22 @@ public sealed class PuloniaOneDragonImportTests : IDisposable
         Assert.True(document.IsDirty);
     }
 
-    /// <summary>参数版本不兼容的预设不能混入卡片与配置预览；提示由打开的高级设置按需计算，切换选中节点不再刷新。</summary>
+    /// <summary>旧配置组设置导入为分组共享设置，只保留与默认值不同的项，运行准备可以直接使用。</summary>
     [Fact]
-    public void ParameterPreview_RejectsPresetWithDifferentSchemaVersion()
+    public async Task GroupImport_ConvertsGroupConfigToSharedSettings()
     {
-        var definition = PuloniaSoloTestDefinitions.AutoBoss();
-        var preset = new PuloniaTaskPreset { Name = "旧格式", TaskType = definition.TaskType, SchemaVersion = 2,
-            Values = new JObject { ["team_name"] = "不兼容队伍" } };
-        var task = new PuloniaTask { Name = "首领", TaskType = definition.TaskType, PresetId = preset.Id };
-        var document = new PuloniaTaskPlanDocumentViewModel(new PuloniaTaskPlan
-            { Name = "预设格式", RootTask = new PuloniaTask { Children = [task] } }, [preset], new PuloniaTaskClipboardService(), false);
-        document.SetDefinitions([definition]);
-        document.SelectedNode = Assert.Single(document.RootNode.Children);
-        using var advanced = new PuloniaTaskNodeAdvancedSettingsViewModel(document, document.SelectedNode!, dialogs: null);
-        Assert.Contains("参数版本", advanced.Message);
-        Assert.Equal("", document.GetOneDragonParameters(document.SelectedNode!).Value<string>("team_name"));
+        var json = new JObject
+        {
+            ["name"] = "带设置的配置组",
+            ["config"] = new JObject { ["pathingConfig"] = new JObject { ["partyName"] = "采集队", ["autoPickEnabled"] = false } },
+            ["projects"] = new JArray(new JObject { ["index"] = 1, ["name"] = "echo import", ["type"] = "Shell", ["status"] = "Enabled", ["runNum"] = 1 })
+        }.ToString();
+        var result = await Importer().PrepareAsync([await WriteAsync("group-settings.json", json)], new AllConfig());
+        var plan = Assert.Single(result.Plans);
+        Assert.Equal("采集队", plan.RootTask.Settings.Value<string>("party.party_name"));
+        Assert.False(plan.RootTask.Settings.Value<bool>("pickup.auto_pick"));
+        Assert.Equal(2, plan.RootTask.Settings.Count);
+        PuloniaTaskValidator.ValidatePlan(plan);
     }
 
     /// <summary>

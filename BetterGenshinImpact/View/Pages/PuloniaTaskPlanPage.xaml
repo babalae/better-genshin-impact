@@ -280,6 +280,9 @@
                                   Command="{Binding Data.ViewModel.EditNodeConfigurationCommand, Source={StaticResource PageBindingProxy}}"
                                   CommandParameter="{Binding}"
                                   InputGestureText="F2" />
+                        <MenuItem Header="共享设置…"
+                                  Command="{Binding Data.ViewModel.EditNodeSharedSettingsCommand, Source={StaticResource PageBindingProxy}}"
+                                  CommandParameter="{Binding}" />
                         <Separator />
                         <MenuItem Header="添加分组"
                                   Command="{Binding Data.ViewModel.AddGroupCommand, Source={StaticResource PageBindingProxy}}"
@@ -343,6 +346,7 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}" />
                         <Border Grid.Column="1" Margin="8,0,0,0" Padding="5,1" CornerRadius="3"
@@ -352,6 +356,34 @@
                             <TextBlock FontSize="11" Text="{Binding ResourceUpdateText}"
                                        Foreground="{DynamicResource SystemFillColorCautionBrush}" />
                         </Border>
+                        <!-- 共享设置标记：方案名与本节点覆盖数量，悬停列出覆盖的设置项。 -->
+                        <StackPanel Grid.Column="2" Margin="8,0,0,0" Orientation="Horizontal"
+                                    ToolTip="{Binding SharedSettingsToolTip, Mode=OneWay}"
+                                    Visibility="{Binding HasSharedSettingsBadge, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Border Margin="0,0,4,0" Padding="5,1" CornerRadius="3"
+                                    Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                                    Visibility="{Binding HasProfile, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <TextBlock FontSize="11" Text="{Binding ProfileLabel, Mode=OneWay}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsProfileMissing, Mode=OneWay}" Value="True">
+                                                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Border>
+                            <StackPanel Orientation="Horizontal"
+                                        Visibility="{Binding HasSharedSettings, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <ui:SymbolIcon FontSize="12" Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" Symbol="Settings16" />
+                                <TextBlock Margin="2,0,0,0" FontSize="11" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                                           Text="{Binding SharedSettingCount, Mode=OneWay}" />
+                            </StackPanel>
+                        </StackPanel>
                     </Grid>
                     <TextBlock Grid.Column="1"
                                Margin="8,0"
@@ -380,6 +412,7 @@
     <Grid Margin="16,12,16,16">
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
@@ -446,6 +479,12 @@
                                 <MenuItem Header="删除"
                                           Command="{Binding Data.ViewModel.DeletePlanCommand, Source={StaticResource PageBindingProxy}}"
                                           CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
+                                <Separator />
+                                <MenuItem Header="计划共享设置…"
+                                          Command="{Binding Data.ViewModel.EditPlanSharedSettingsCommand, Source={StaticResource PageBindingProxy}}"
+                                          CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
+                                <MenuItem Header="设置方案…"
+                                          Command="{Binding Data.ViewModel.ManageSettingsProfilesCommand, Source={StaticResource PageBindingProxy}}" />
                                 <Separator />
                                 <MenuItem Header="重新加载"
                                           Command="{Binding Data.ViewModel.ReloadCommand, Source={StaticResource PageBindingProxy}}" />
@@ -583,6 +622,12 @@
                                                           Command="{Binding Data.ViewModel.AddPlanReferenceCommand, Source={StaticResource PageBindingProxy}}"
                                                           CommandParameter="{Binding Data.ViewModel.SelectedDocument.RootNode, Source={StaticResource PageBindingProxy}}" />
                                                 <Separator />
+                                                <MenuItem Header="计划共享设置…"
+                                                          Command="{Binding Data.ViewModel.EditNodeSharedSettingsCommand, Source={StaticResource PageBindingProxy}}"
+                                                          CommandParameter="{Binding Data.ViewModel.SelectedDocument.RootNode, Source={StaticResource PageBindingProxy}}" />
+                                                <MenuItem Header="设置方案…"
+                                                          Command="{Binding Data.ViewModel.ManageSettingsProfilesCommand, Source={StaticResource PageBindingProxy}}" />
+                                                <Separator />
                                                 <MenuItem Header="粘贴到计划末尾"
                                                           Command="{Binding Data.ViewModel.PasteCommand, Source={StaticResource PageBindingProxy}}"
                                                           CommandParameter="{Binding Data.ViewModel.SelectedDocument.RootNode, Source={StaticResource PageBindingProxy}}"
@@ -660,7 +705,59 @@
             </Border>
         </Grid>
 
-        <Grid Grid.Row="1" Margin="2,10,2,0">
+        <!-- 拖动移动后共享设置变化的非模态提示：可查看明细、保留原值或忽略（接受新位置的继承）。 -->
+        <Border Grid.Row="1"
+                Margin="0,10,0,0"
+                Padding="12,8"
+                Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
+                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="6"
+                Visibility="{Binding ViewModel.HasMoveSettingsNotice, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:SymbolIcon Margin="0,0,8,0"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                   Symbol="Warning20" />
+                    <TextBlock Grid.Column="1"
+                               VerticalAlignment="Center"
+                               Text="{Binding ViewModel.MoveSettingsNoticeText, Mode=OneWay}"
+                               TextWrapping="Wrap" />
+                    <StackPanel Grid.Column="2" Margin="12,0,0,0" Orientation="Horizontal">
+                        <ui:Button Margin="0,0,6,0"
+                                   Command="{Binding ViewModel.ToggleMoveSettingsDetailsCommand, Mode=OneWay}"
+                                   Content="查看"
+                                   ToolTip="展开或收起各任务的设置变化" />
+                        <ui:Button Margin="0,0,6,0"
+                                   Appearance="Primary"
+                                   Command="{Binding ViewModel.KeepMovedSettingsCommand, Mode=OneWay}"
+                                   Content="保留原值"
+                                   ToolTip="把移动前的设置写到被移动的项目上，可与移动一起撤销" />
+                        <ui:Button Command="{Binding ViewModel.DismissMoveSettingsNoticeCommand, Mode=OneWay}"
+                                   Content="忽略"
+                                   ToolTip="接受新位置继承的设置" />
+                    </StackPanel>
+                </Grid>
+                <ScrollViewer MaxHeight="160"
+                              Margin="28,8,0,0"
+                              HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto"
+                              Visibility="{Binding ViewModel.IsMoveSettingsDetailsVisible, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <TextBlock FontSize="12"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Text="{Binding ViewModel.MoveSettingsNoticeDetails, Mode=OneWay}"
+                               TextWrapping="Wrap" />
+                </ScrollViewer>
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="2" Margin="2,10,2,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />

@@ -5,56 +5,79 @@ using Newtonsoft.Json.Linq;
 namespace BetterGenshinImpact.Pulonia.Services;
 
 /// <summary>
-/// 有效参数的来源层级，按生效顺序排列：后面的层级覆盖前面的同名顶层字段。
+/// 有效参数顶层字段的来源层级，按生效顺序排列：后面的层级覆盖前面的同名顶层字段。
 /// </summary>
 public enum PuloniaParameterLayer
 {
     /// <summary>能力说明的默认参数。</summary>
     Default,
 
-    /// <summary>节点选用（或账号替换）的共享预设。</summary>
-    Preset,
+    /// <summary>由共享设置按绑定写入（顶层参数内的明细来源见设置来源）。</summary>
+    Settings,
 
-    /// <summary>当前计划内祖先分组的公共参数。</summary>
-    Group,
-
-    /// <summary>节点自身参数。</summary>
+    /// <summary>节点自身的任务参数。</summary>
     Node,
-
-    /// <summary>计划引用节点向被引用计划传入的公共参数。</summary>
-    ReferencePublic,
 
     /// <summary>本次运行按节点地址提供的调用覆盖。</summary>
     Call
 }
 
 /// <summary>
-/// 预设层的判定结果；运行准备据此报错，界面预览据此提示。
+/// 共享设置值的来源种类。
 /// </summary>
-public enum PuloniaPresetStatus
+public enum PuloniaSettingSourceKind
 {
-    /// <summary>节点未选用预设。</summary>
-    None,
+    /// <summary>设置目录默认值。</summary>
+    Default,
 
-    /// <summary>预设存在且作用域匹配，已参与解析。</summary>
-    Applied,
+    /// <summary>某个节点所挂的设置方案。</summary>
+    Profile,
 
-    /// <summary>预设不存在，预设层被跳过。</summary>
-    Missing,
-
-    /// <summary>预设的类型、资源或参数版本与节点不匹配，预设层被跳过。</summary>
-    Incompatible
+    /// <summary>某个节点自身的共享设置。</summary>
+    Node
 }
 
 /// <summary>
-/// 单个顶层参数的最终来源；分组和引用公共参数同时给出提供该值的覆盖项，调用方据此生成各自的来源文本。
+/// 设置链中的一层：节点及其已加载的方案。节点 <see cref="PuloniaTask.ProfileId"/> 不为空而方案为 null 表示方案缺失。
 /// </summary>
-/// <param name="Layer">来源层级。</param>
-/// <param name="Override">提供该值的分组或引用公共参数项；其他层级为 null。</param>
-public readonly record struct PuloniaParameterSource(PuloniaParameterLayer Layer, PuloniaTaskParameterOverride? Override = null);
+/// <param name="Node">提供设置的节点（编辑树或准备树中的节点）。</param>
+/// <param name="Location">节点位置文本：运行准备为节点地址，界面预览可为空。</param>
+/// <param name="Profile">节点所挂的方案；未挂或缺失时为 null。</param>
+public sealed record PuloniaSettingLevel(PuloniaTask Node, string Location, PuloniaSettingsProfile? Profile);
 
 /// <summary>
-/// 一次有效参数解析的结果：参数副本、逐字段来源和预设判定。
+/// 单个共享设置项的最终来源。
+/// </summary>
+/// <param name="Kind">来源种类。</param>
+/// <param name="Level">提供该值的设置链层级；默认值为 null。</param>
+public readonly record struct PuloniaSettingSource(PuloniaSettingSourceKind Kind, PuloniaSettingLevel? Level = null);
+
+/// <summary>
+/// 一条设置链解析出的全部共享设置有效值与来源。
+/// </summary>
+public sealed class PuloniaSettingsResolution
+{
+    /// <summary>目录中每个设置项的有效值，由调用方独占。</summary>
+    public IReadOnlyDictionary<string, JToken> Values { get; }
+
+    /// <summary>每个设置项的来源。</summary>
+    public IReadOnlyDictionary<string, PuloniaSettingSource> Sources { get; }
+
+    /// <summary>挂了方案但方案缺失的层级；运行准备应报错，界面预览应提示。</summary>
+    public IReadOnlyList<PuloniaSettingLevel> MissingProfiles { get; }
+
+    /// <summary>建立解析结果；仅由 <see cref="PuloniaParameterResolver"/> 创建。</summary>
+    internal PuloniaSettingsResolution(IReadOnlyDictionary<string, JToken> values,
+        IReadOnlyDictionary<string, PuloniaSettingSource> sources, IReadOnlyList<PuloniaSettingLevel> missingProfiles)
+    {
+        Values = values;
+        Sources = sources;
+        MissingProfiles = missingProfiles;
+    }
+}
+
+/// <summary>
+/// 一次有效参数解析的结果：参数副本、顶层来源、共享设置明细，以及运行准备需要报错的冲突。
 /// </summary>
 public sealed class PuloniaParameterResolution
 {
@@ -64,41 +87,48 @@ public sealed class PuloniaParameterResolution
     public JObject Parameters { get; }
 
     /// <summary>
-    /// 每个顶层参数最后一次被赋值的来源，按字段首次出现的顺序排列。
+    /// 每个顶层参数最后一次被赋值的来源层级。
     /// </summary>
-    public IReadOnlyDictionary<string, PuloniaParameterSource> Sources { get; }
+    public IReadOnlyDictionary<string, PuloniaParameterLayer> Sources { get; }
 
     /// <summary>
-    /// 实际参与判定的预设 ID（已应用账号替换）；未选用时为 null。
+    /// 设置链的解析结果，包含未被本能力使用的设置项。
     /// </summary>
-    public string? PresetId { get; }
+    public PuloniaSettingsResolution Settings { get; }
 
     /// <summary>
-    /// 按 <see cref="PresetId"/> 找到的预设；缺失时为 null，不兼容时仍给出以便展示名称。
+    /// 本能力绑定使用的设置项 ID。
     /// </summary>
-    public PuloniaTaskPreset? Preset { get; }
+    public IReadOnlyList<string> BoundSettingKeys { get; }
 
     /// <summary>
-    /// 预设层的判定结果。
+    /// 任务参数中试图直接写入被共享设置覆盖的顶层参数的字段；这些字段未参与解析，运行准备应报错。
     /// </summary>
-    public PuloniaPresetStatus PresetStatus { get; }
+    public IReadOnlyList<string> ConflictingParameters { get; }
 
     /// <summary>
-    /// 是否有匹配的计划引用公共参数项包含能力未声明为公共的字段；该项不参与解析，运行准备应报错。
+    /// 调用覆盖中试图直接写入被共享设置覆盖的顶层参数的字段；这些字段未参与解析，运行准备应报错。
     /// </summary>
-    public bool HasUndeclaredPublicOverride { get; }
+    public IReadOnlyList<string> ConflictingCallParameters { get; }
+
+    /// <summary>
+    /// 叶子自身共享设置中本能力不使用的设置项；运行准备应报错。
+    /// </summary>
+    public IReadOnlyList<string> UnusedLeafSettings { get; }
 
     /// <summary>
     /// 建立解析结果；仅由 <see cref="PuloniaParameterResolver"/> 创建。
     /// </summary>
-    internal PuloniaParameterResolution(JObject parameters, IReadOnlyDictionary<string, PuloniaParameterSource> sources,
-        string? presetId, PuloniaTaskPreset? preset, PuloniaPresetStatus presetStatus, bool hasUndeclaredPublicOverride)
+    internal PuloniaParameterResolution(JObject parameters, IReadOnlyDictionary<string, PuloniaParameterLayer> sources,
+        PuloniaSettingsResolution settings, IReadOnlyList<string> boundSettingKeys, IReadOnlyList<string> conflictingParameters,
+        IReadOnlyList<string> conflictingCallParameters, IReadOnlyList<string> unusedLeafSettings)
     {
         Parameters = parameters;
         Sources = sources;
-        PresetId = presetId;
-        Preset = preset;
-        PresetStatus = presetStatus;
-        HasUndeclaredPublicOverride = hasUndeclaredPublicOverride;
+        Settings = settings;
+        BoundSettingKeys = boundSettingKeys;
+        ConflictingParameters = conflictingParameters;
+        ConflictingCallParameters = conflictingCallParameters;
+        UnusedLeafSettings = unusedLeafSettings;
     }
 }

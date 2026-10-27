@@ -51,7 +51,6 @@ internal static class PuloniaSoloTestDefinitions
             RequiresGameSession = true,
             DefaultParameters = defaults,
             ParameterSchema = schema,
-            PublicParameters = properties.Properties().Select(p => p.Name).ToArray(),
             IsSoloTask = true,
             Group = group,
             Order = order,

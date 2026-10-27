@@ -61,7 +61,7 @@ public sealed class PuloniaTaskSettingsEditorViewModel : ObservableObject
     /// </summary>
     /// <param name="registry">独立任务注册表；为空时只使用通用卡片。</param>
     /// <param name="definition">能力定义。</param>
-    /// <param name="effectiveParameters">当前有效参数（默认值、预设、分组覆盖与节点参数合并后的结果）。</param>
+    /// <param name="effectiveParameters">当前有效参数（能力默认值、共享设置与任务参数合并后的结果）。</param>
     /// <param name="services">可选专属设置依赖容器，省略时使用应用服务。</param>
     /// <returns>设置编辑器。</returns>
     public static PuloniaTaskSettingsEditorViewModel Create(SoloTaskRegistry? registry,
@@ -98,7 +98,10 @@ public sealed class PuloniaTaskSettingsEditorViewModel : ObservableObject
         var required = new HashSet<string>(
             (definition.ParameterSchema["required"] as JArray ?? new JArray()).Values<string>().OfType<string>(),
             StringComparer.Ordinal);
+        // 共享设置覆盖的顶层参数只能在共享设置中修改，任务参数表单不显示
+        var sharedRoots = definition.SettingBindings.Values.Select(path => path.Split('.')[0]).ToHashSet(StringComparer.Ordinal);
         return properties.Properties()
+            .Where(property => !sharedRoots.Contains(property.Name))
             .Select(property =>
             {
                 var schema = PuloniaOneDragonSettingChoices.Decorate(property.Name, property.Value as JObject ?? new JObject(),
