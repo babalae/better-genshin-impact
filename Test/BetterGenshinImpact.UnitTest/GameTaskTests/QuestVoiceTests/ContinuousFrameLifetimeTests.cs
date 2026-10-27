@@ -55,12 +55,12 @@ public sealed class ContinuousFrameLifetimeTests
         await using var fixture = new ContinuousFrameFixture(); await fixture.StartAsync(true);
         await fixture.Stable(0, 0); (await fixture.Ocr.NextAsync()).Complete(" ");
         await fixture.EventAsync(ContinuousFrameEventKind.Discarded, 2);
-        var revision = fixture.Session.Snapshot.Revision;
+        var generation = fixture.Session.Snapshot.SemanticGeneration;
         await fixture.Frame(3, 1400); await fixture.Frame(4, 2400);
         (await fixture.Ocr.NextAsync()).Complete("new text");
         await fixture.EventAsync(ContinuousFrameEventKind.CandidateAccepted, 4);
         await fixture.Session.CompleteAsync();
-        Assert.True(fixture.Session.Snapshot.Revision > revision);
+        Assert.True(fixture.Session.Snapshot.SemanticGeneration > generation);
         Assert.Single(fixture.Events, value => value.Kind == ContinuousFrameEventKind.CandidateAccepted);
     }
 
@@ -79,6 +79,9 @@ public sealed class ContinuousFrameLifetimeTests
         public void Invalidate(long revision) => inner.Invalidate(revision);
         /// <summary>只接受当前版本与周期中尚未提交的对白候选。</summary>
         public void Offer(ContinuousDialogueCandidate candidate) => inner.Offer(candidate);
+        /// <summary>转发真实路由预检，测试包装器不能静默跳过同句所有权判断。</summary>
+        public Task<bool> MatchesCurrentDialogueAsync(ContinuousDialogueCandidate candidate, CancellationToken token = default)
+            => inner.MatchesCurrentDialogueAsync(candidate, token);
         /// <summary>离开对白时切换周期，停止播放并等待其实际退出。</summary>
         public Task LeaveDialogueAsync(long revision) => inner.LeaveDialogueAsync(revision);
         /// <summary>取得观察租约，在画面版本判定之前阻止新播放。</summary>

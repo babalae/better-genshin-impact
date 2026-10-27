@@ -48,12 +48,24 @@ public sealed partial class ContinuousFrameSession : IAsyncDisposable
     private TaskCompletionSource? _start, _startFinished, _complete, _stop, _dispose;
     /// <summary>保存 _started, _accepting, _observing, _inputEnded 对应的本轮状态或配置，不跨会话复用。</summary>
     private bool _started, _accepting, _observing, _inputEnded;
-    /// <summary>保存 _notifying, _visualFailed, _emptyResultObserved 对应的本轮状态或配置，不跨会话复用。</summary>
-    private bool _notifying, _visualFailed, _emptyResultObserved;
+    /// <summary>标记正在投递事件，防止重入打乱事件顺序。</summary>
+    private bool _notifying;
     /// <summary>停止后不再接受观察。</summary>
     private volatile bool _stopped;
     /// <summary>保存 _revision, _epoch, _eventSequence, _lastInputSequence 对应的本轮状态或配置，不跨会话复用。</summary>
     private long _revision, _epoch, _eventSequence, _lastInputSequence = -1;
+    /// <summary>语音代际独立于视觉版本；只有接受新句、可信清空或离场才递增。</summary>
+    private long _semanticGeneration, _dialogueOccurrence;
+    /// <summary>等待后续独立OCR证据的小幅变化；只影响取证调度。</summary>
+    private TextConfirmation? _confirmation;
+    /// <summary>最近接受文字对应的可信对白锚点，用现有场景证据确认正文清空。</summary>
+    private ContinuousFrameInspection? _dialogueAnchor;
+    /// <summary>连续空正文的起点；单帧或跨观察间隙不构成话轮边界。</summary>
+    private TimeSpan? _clearAt;
+    /// <summary>连续可靠清空帧数量，以及本段清空是否已经提交。</summary>
+    private int _clearFrames;
+    /// <summary>清空证据仅提交一次，恢复文字后才允许下一话轮。</summary>
+    private bool _clearCommitted;
     /// <summary>最近接受帧的单调观察时间。</summary>
     private TimeSpan? _lastInputTime;
     /// <summary>保存 _pending 对应的本轮状态或配置，不跨会话复用。</summary>
@@ -62,8 +74,6 @@ public sealed partial class ContinuousFrameSession : IAsyncDisposable
     private CancellationTokenSource? _activeOcr;
     /// <summary>最近正式接受的姓名与正文组合。</summary>
     private AcceptedText? _accepted;
-    /// <summary>已经提交候选的视觉版本，用于去重。</summary>
-    private long? _offeredRevision;
 
     /// <summary>建立 ContinuousFrameSession 的业务依赖与初始状态。</summary>
     public ContinuousFrameSession(ContinuousSettings settings, IContinuousFrameInspector inspector,
@@ -160,15 +170,18 @@ public sealed partial class ContinuousFrameSession : IAsyncDisposable
                 if (_stopped) throw new OperationCanceledException(_lifetime.Token);
                 if (decision.Invalidate)
                 {
-                    _visualFailed = false; _emptyResultObserved = false;
                     Invalidate(frame, decision.Reason, decision.Leave);
                 }
+                ObserveDialogueClear(frame, inspection, decision);
                 UpdateSnapshot();
-                if (decision.Recognize && !_stopped)
+                var targeted = ShouldConfirm(frame, decision);
+                if ((decision.Recognize || targeted) && !_stopped)
                 {
                     if (_pending is { } previous) EmitWork(ContinuousFrameEventKind.Discarded, previous, "LatestPendingReplaced");
                     _pending = new(frame, inspection, _revision, _epoch, Stopwatch.GetTimestamp());
-                    EmitWork(ContinuousFrameEventKind.OcrQueued, _pending); Pulse();
+                    if (targeted && _confirmation is { } confirmation)
+                        _confirmation = confirmation with { Attempts = confirmation.Attempts + 1, LastRequestedAt = frame.ObservedAt };
+                    EmitWork(ContinuousFrameEventKind.OcrQueued, _pending, targeted ? "TargetedTextConfirmation" : null); Pulse();
                 }
             }
             finally { _publication.Release(); }
@@ -181,7 +194,7 @@ public sealed partial class ContinuousFrameSession : IAsyncDisposable
                 await _publication.WaitAsync().ConfigureAwait(false);
                 try
                 {
-                    if (!_stopped) { _gate.Reset(); _visualFailed = false; _emptyResultObserved = false; Invalidate(frame, "InspectionFailedOrCancelled"); }
+                    if (!_stopped) { _gate.Reset(); Invalidate(frame, "InspectionFailedOrCancelled"); }
                     Emit(ContinuousFrameEventKind.Failed, frame, exception.Message); UpdateSnapshot();
                 }
                 finally { _publication.Release(); }
@@ -201,21 +214,22 @@ public sealed partial class ContinuousFrameSession : IAsyncDisposable
         lock (_ownership) _observing = false;
         if (failure is null) completion.TrySetResult(); else completion.TrySetException(failure);
     }
-    /// <summary>递增视觉版本并丢弃尚未播放的旧内容。</summary>
+    /// <summary>视觉版本只废弃截图/OCR；可信离场才结束语音所有权。</summary>
     private void Invalidate(ContinuousFrameSnapshot frame, string reason, bool leave = false)
     {
         _revision++;
         CancelSafely(_activeOcr);
         if (_pending is { } pending) EmitWork(ContinuousFrameEventKind.Discarded, pending, reason);
-        _pending = null;
+        _pending = null; _confirmation = null;
+        _clearAt = null; _clearFrames = 0;
         if (leave)
         {
-            _epoch++; _accepted = null;
+            _epoch++; _accepted = null; _dialogueAnchor = null; _clearCommitted = false;
             // The voice session owns this playback wait. Its pumps are drained by our terminal path.
-            if (_voice is not null) _ = _voice.LeaveDialogueAsync(_revision);
+            _semanticGeneration++;
+            if (_voice is not null) _ = _voice.LeaveDialogueAsync(_semanticGeneration);
             Emit(ContinuousFrameEventKind.LeftDialogue, frame, reason);
         }
-        else _voice?.Invalidate(_revision);
         Emit(ContinuousFrameEventKind.Invalidated, frame, reason);
     }
     /// <summary>请求取消并记录回调异常，仍然继续排空所有权。</summary>
@@ -228,11 +242,14 @@ public sealed partial class ContinuousFrameSession : IAsyncDisposable
     /// <summary>唤醒管线泵重新检查可执行工作。</summary>
     private void Pulse() { if (_wake.CurrentCount == 0) try { _wake.Release(); } catch (SemaphoreFullException) { } }
     /// <summary>发布供其他线程读取的不可变快照。</summary>
-    private void UpdateSnapshot(bool completed = false) => Volatile.Write(ref _snapshot, new(_revision, _epoch, _gate.Stable, completed, _stopped));
+    private void UpdateSnapshot(bool completed = false) => Volatile.Write(ref _snapshot, new(_revision, _epoch, _gate.Stable, completed, _stopped, _semanticGeneration));
     /// <summary>创建异步执行延续的完成信号，避免在状态锁内运行调用方。</summary>
     private static TaskCompletionSource NewSignal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
     /// <summary>OcrWork：原神自动配音的业务类型。</summary>
     private sealed record OcrWork(ContinuousFrameSnapshot Frame, ContinuousFrameInspection Inspection, long Revision, long Epoch, long QueuedAt);
+    /// <summary>有界取证状态；不通过定时器制造接受证据。</summary>
+    private sealed record TextConfirmation(AcceptedText Text, long Revision, long Epoch, long Generation,
+        long SourceSequence, TimeSpan LastRequestedAt, int Attempts = 0);
     /// <summary>AcceptedText：原神自动配音的业务类型。</summary>
     private sealed record AcceptedText(string? Name, Core.Routing.SpeakerNameStatus Status, string Text);
 }

@@ -14,7 +14,11 @@ namespace BetterGenshinImpact.GameTask.QuestVoice.Core.Continuous;
 /// <summary>ContinuousDialogueCandidate：原神自动配音的业务类型。</summary>
 public sealed record ContinuousDialogueCandidate(long Revision, long Epoch, long SourceSequence,
     TimeSpan ObservedAt, string ImageSha256, string LayoutId, string? AcceptedName,
-    SpeakerNameStatus NameStatus, string Dialogue);
+    SpeakerNameStatus NameStatus, string Dialogue, long? SemanticGeneration = null, long DialogueOccurrence = 0)
+{
+    /// <summary>语音所有权的语义代际；旧直接调用以Revision兼容。</summary>
+    public long Generation => SemanticGeneration ?? Revision;
+}
 
 /// <summary>ContinuousVoiceWork：原神自动配音的业务类型。</summary>
 public sealed record ContinuousVoiceWork(ContinuousDialogueCandidate Candidate, ContinuousVoiceIdentity? Identity = null,
@@ -36,10 +40,13 @@ public interface IContinuousVoiceSession : IAsyncDisposable
     event Action<ContinuousVoiceEvent>? Event;
     /// <summary>Starts the single-use session at Revision=0, Epoch=0. The token cancels this start only.</summary>
     Task StartAsync(CancellationToken cancellationToken = default);
-    /// <summary>Requires a greater revision. Discards only unplayed work; current playback continues.</summary>
+    /// <summary>Requires a greater semantic generation. Discards only unplayed work; current playback continues.</summary>
     void Invalidate(long revision);
-    /// <summary>Accepts at most one candidate per current revision and epoch; stale/repeated offers are discarded.</summary>
+    /// <summary>Accepts at most one candidate per current semantic generation and epoch; stale/repeated offers are discarded.</summary>
     void Offer(ContinuousDialogueCandidate candidate);
+    /// <summary>只读解析姓名与实际声线路由，不发HTTP；调用方拥有等待并在返回后复查帧版本。
+    /// 返回true时当前语义已有同句所有权，候选仍保留最初接受的图像来源。</summary>
+    Task<bool> MatchesCurrentDialogueAsync(ContinuousDialogueCandidate candidate, CancellationToken cancellationToken = default);
     /// <summary>Increments Epoch, invalidates work, stops playback and waits for its actual exit.
     /// Issued synthesis drains in the background and remains owned until Complete/Stop/Dispose.</summary>
     Task LeaveDialogueAsync(long revision);

@@ -72,6 +72,8 @@ public sealed partial class QuestVoiceService : IDisposable
     private long _nextMetricsAt;
     /// <summary>当前跟踪的对白周期与视觉版本，区分新旧对白轮次。</summary>
     private long _currentEpoch, _currentRevision;
+    /// <summary>已观察到的语音代际；视觉重检不清除仍有效的语音工作。</summary>
+    private long _currentSemanticGeneration;
     /// <summary>当前正式接受的候选身份（Epoch, Revision, SourceSequence）。</summary>
     private (long Epoch, long Revision, long Source)? _acceptedCandidate;
     /// <summary>当前正在播放的候选身份（Epoch, Revision, SourceSequence）。</summary>
@@ -118,6 +120,7 @@ public sealed partial class QuestVoiceService : IDisposable
             {
                 _currentEpoch = 0;
                 _currentRevision = 0;
+                _currentSemanticGeneration = 0;
                 _acceptedCandidate = null;
                 _playingCandidate = null;
                 _inDialogue = false;
@@ -389,14 +392,14 @@ public sealed partial class QuestVoiceService : IDisposable
                 var hasAcceptedCurrent = false;
                 lock (_statusGate)
                 {
-                    if (!AdvanceVersion(value.Epoch, value.Revision)) return;
+                    if (!AdvanceVersion(value.Epoch, value.Revision, value.SemanticGeneration)) return;
                     if (isSelected && !_inDialogue)
                     {
                         _inDialogue = true;
                         enteredDialogue = true;
                     }
                     hasAcceptedCurrent = _acceptedCandidate is { } acc
-                        && acc.Epoch == value.Epoch && acc.Revision == value.Revision;
+                        && acc.Epoch == value.Epoch;
                 }
                 if (enteredDialogue) RecordEvent("检测到对话界面");
                 Update(s =>
@@ -422,7 +425,9 @@ public sealed partial class QuestVoiceService : IDisposable
                 var playingNow = false;
                 lock (_statusGate)
                 {
-                    if (!AdvanceVersion(value.Epoch, value.Revision)) return;
+                    if (!AdvanceVersion(value.Epoch, value.Revision, value.SemanticGeneration)) return;
+                    // 普通画面变化仅重做观察/OCR，不回退正在合成或播放的语音阶段。
+                    if (_acceptedCandidate is not null) break;
                     inDialogueNow = _inDialogue;
                     playingNow = _isPlayingAudio;
                 }
@@ -444,12 +449,12 @@ public sealed partial class QuestVoiceService : IDisposable
                 var playingDuringOcr = false;
                 lock (_statusGate)
                 {
-                    if (!AdvanceVersion(value.Epoch, value.Revision)) return;
+                    if (!AdvanceVersion(value.Epoch, value.Revision, value.SemanticGeneration)) return;
                     _inDialogue = true;
                     playingDuringOcr = _isPlayingAudio;
-                    // 已正式接受当前视觉版本后的周期性复查不回退流程节点。
+                    // 已接受语音身份跨视觉重检保持有效，不回退流程节点。
                     skipRecheck = _acceptedCandidate is { } acc
-                        && acc.Epoch == value.Epoch && acc.Revision == value.Revision;
+                        && acc.Epoch == value.Epoch;
                 }
                 if (!skipRecheck)
                 {
@@ -476,7 +481,7 @@ public sealed partial class QuestVoiceService : IDisposable
                 {
                     if (IsStale(value.Epoch, value.Revision)) return;
                     isAcceptedRevision = _acceptedCandidate is { } acc
-                        && acc.Epoch == value.Epoch && acc.Revision == value.Revision;
+                        && acc.Epoch == value.Epoch;
                 }
                 if (value.Detail is not null)
                 {
@@ -499,7 +504,7 @@ public sealed partial class QuestVoiceService : IDisposable
                 var playingWhenAccepted = false;
                 lock (_statusGate)
                 {
-                    if (!AdvanceVersion(value.Epoch, value.Revision)) return;
+                    if (!AdvanceVersion(value.Epoch, value.Revision, value.SemanticGeneration)) return;
                     var identity = (value.Epoch, value.Revision, sourceSeq);
                     if (_acceptedCandidate == identity) return;
                     _acceptedCandidate = identity;
@@ -530,7 +535,7 @@ public sealed partial class QuestVoiceService : IDisposable
                 break;
 
             case ContinuousFrameEventKind.LeftDialogue:
-                HandleLeftDialogue(value.Epoch, value.Revision);
+                HandleLeftDialogue(value.Epoch, value.Revision, value.SemanticGeneration);
                 break;
 
             case ContinuousFrameEventKind.Failed:
@@ -554,7 +559,7 @@ public sealed partial class QuestVoiceService : IDisposable
         _overlay.OnVoice(value);
         if (value.Kind == ContinuousVoiceEventKind.LeftDialogue)
         {
-            HandleLeftDialogue(value.Epoch, value.Revision);
+            HandleLeftDialogue(value.Epoch, null, value.Revision);
             return;
         }
 
@@ -777,14 +782,15 @@ public sealed partial class QuestVoiceService : IDisposable
     }
 
     /// <summary>处理确认离开对白界面时的状态复位。</summary>
-    private void HandleLeftDialogue(long epoch, long revision)
+    private void HandleLeftDialogue(long epoch, long? revision, long semanticGeneration)
     {
         var wasInDialogue = false;
         lock (_statusGate)
         {
             if (epoch < _currentEpoch) return;
             _currentEpoch = epoch;
-            _currentRevision = revision;
+            if (revision is { } visualRevision) _currentRevision = visualRevision;
+            _currentSemanticGeneration = Math.Max(_currentSemanticGeneration, semanticGeneration);
             wasInDialogue = _inDialogue;
             _inDialogue = false;
             _acceptedCandidate = null;
@@ -810,15 +816,16 @@ public sealed partial class QuestVoiceService : IDisposable
         epoch < _currentEpoch || (epoch == _currentEpoch && revision < _currentRevision);
 
     /// <summary>推进周期与视觉版本；若进入新版本则清理上一版本的候选标记。</summary>
-    private bool AdvanceVersion(long epoch, long revision)
+    private bool AdvanceVersion(long epoch, long revision, long semanticGeneration)
     {
         if (IsStale(epoch, revision)) return false;
-        if (epoch != _currentEpoch || revision != _currentRevision)
+        if (epoch != _currentEpoch || semanticGeneration > _currentSemanticGeneration)
         {
-            _currentEpoch = epoch;
-            _currentRevision = revision;
             _acceptedCandidate = null;
         }
+        _currentEpoch = epoch;
+        _currentRevision = revision;
+        _currentSemanticGeneration = semanticGeneration;
         return true;
     }
 

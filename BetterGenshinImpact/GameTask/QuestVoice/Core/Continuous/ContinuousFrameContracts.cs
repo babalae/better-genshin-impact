@@ -60,9 +60,9 @@ public enum ContinuousFrameEventKind
 /// <summary>Elapsed is this session's monotonic time. Frame time is caller-observed input time.</summary>
 public sealed record ContinuousFrameEvent(long Sequence, TimeSpan Elapsed, ContinuousFrameEventKind Kind,
     long Revision, long Epoch, long? SourceSequence, TimeSpan? ObservedAt, string? ImageSha256,
-    string? Detail = null, ContinuousFrameInspection? Inspection = null, ImageOcrResult? Ocr = null);
+    string? Detail = null, ContinuousFrameInspection? Inspection = null, ImageOcrResult? Ocr = null, long SemanticGeneration = 0);
 /// <summary>ContinuousFrameState：原神自动配音的业务类型。</summary>
-public sealed record ContinuousFrameState(long Revision, long Epoch, bool Stable, bool Completed, bool Stopped);
+public sealed record ContinuousFrameState(long Revision, long Epoch, bool Stable, bool Completed, bool Stopped, long SemanticGeneration = 0);
 /// <summary>IContinuousFrameInspector：原神自动配音的业务类型。</summary>
 public interface IContinuousFrameInspector
 {

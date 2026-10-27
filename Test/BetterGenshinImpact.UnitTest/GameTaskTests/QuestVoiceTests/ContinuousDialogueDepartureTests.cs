@@ -92,8 +92,7 @@ public sealed class ContinuousDialogueDepartureTests
         await f.Frame(3, 2100);
         await f.Frame(4, 2300); await f.Frame(5, 2500);
         (await f.Ocr.NextAsync()).Complete("A");
-        await f.EventAsync(ContinuousFrameEventKind.CandidateAccepted, 5);
-        await f.Voice.EventAsync(ContinuousVoiceEventKind.Duplicate, f.Session.Snapshot.Revision);
+        await f.EventAsync(ContinuousFrameEventKind.Discarded, 5);
         Assert.Single(f.Voice.Engine.All);
         Assert.False(a.Stop.Task.IsCompleted);
 

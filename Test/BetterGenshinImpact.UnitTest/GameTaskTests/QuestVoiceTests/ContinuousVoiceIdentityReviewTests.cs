@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Continuous;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.Routing;
 using Xunit;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.QuestVoiceTests;
@@ -33,6 +34,26 @@ public sealed class ContinuousVoiceIdentityReviewTests
         Assert.Equal(ContinuousVoiceEventKind.SynthesisStarted, decision.Kind);
         (await f.Engine.NextAsync()).Complete(); var second = await f.Player.NextAsync(); second.Exit.SetResult(true);
         await f.Session.CompleteAsync(); Assert.Equal(2, f.Player.All.Count);
+    }
+
+    /// <summary>未具名 NPC 的姓名抖动不改变同一 fallback 声线所有权，不能重启同句合成。</summary>
+    [Fact]
+    public async Task Unknown_speaker_name_flicker_does_not_restart_same_line()
+    {
+        await using var f = new ContinuousVoiceFixture();
+        await f.StartAsync();
+        var first = await f.PlayAsync(1, "same line", "Visitor");
+        first.Exit.TrySetResult(true);
+        await f.EventAsync(ContinuousVoiceEventKind.PlaybackCompleted, 1);
+        f.Session.Invalidate(2);
+        var missing = ContinuousVoiceFixture.Candidate(2, "same line", "Visitor") with
+        {
+            AcceptedName = null,
+            NameStatus = SpeakerNameStatus.Missing,
+            SemanticGeneration = 2
+        };
+        Assert.True(await f.Session.MatchesCurrentDialogueAsync(missing));
+        await f.Session.CompleteAsync();
     }
 
     /// <summary>移植回归验证：Accepted name identity uses routing case and Unicode semantics。</summary>

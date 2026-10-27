@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Text;
 using Serilog;
+using Newtonsoft.Json;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Continuous;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Routing;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Tts;
@@ -62,7 +63,7 @@ public sealed partial class ContinuousVoiceSession
                 work = resolved.Work; _synthesizing = work;
                 Emit(ContinuousVoiceEventKind.Routed, work);
                 CheckCurrent(work, token);
-                key = new(work.Candidate.Epoch, work.Identity!, Normalize(work.Candidate.Dialogue));
+                key = CreateDialogueKey(work, resolved.Request);
                 if (_currentKey == key && _currentPlayed)
                 {
                     Emit(ContinuousVoiceEventKind.Duplicate, work); return;
@@ -170,9 +171,9 @@ public sealed partial class ContinuousVoiceSession
     }
 
     /// <summary>按接受姓名解析角色和实际声线，保留兜底原因。</summary>
-    private async Task<(ContinuousVoiceWork Work, TtsRequest Request)> ResolveAsync(ContinuousVoiceWork work, CancellationToken token)
+    private async Task<(ContinuousVoiceWork Work, TtsRequest Request)> ResolveAsync(ContinuousVoiceWork work, CancellationToken token, bool notify = true)
     {
-        lock (_gate) { CheckCurrent(work, token); Emit(ContinuousVoiceEventKind.RoutingStarted, work); CheckCurrent(work, token); }
+        lock (_gate) { CheckCurrent(work, token); if (notify) Emit(ContinuousVoiceEventKind.RoutingStarted, work); CheckCurrent(work, token); }
         var candidate = work.Candidate;
         if (settings.Routing is not { } routingSettings)
         {
@@ -194,6 +195,77 @@ public sealed partial class ContinuousVoiceSession
         return (work with { Identity = identityKey, Routing = result }, new(candidate.Dialogue, result.Voice, result.RequestedEmotion));
     }
 
+    /// <summary>比较当前语义所有权的真实路由；新名字不会先取消仍有效的合成或Ready。</summary>
+    public async Task<bool> MatchesCurrentDialogueAsync(ContinuousDialogueCandidate candidate, CancellationToken cancellationToken = default)
+    {
+        ContinuousVoiceWork? owner; DialogueKey? previousKey;
+        lock (_gate)
+        {
+            if (!_accepting || !IsCurrent(candidate) || _backendUnknown) return false;
+            owner = new[] { _pending, _synthesizing, _ready?.Work, _playing?.Work }
+                .FirstOrDefault(work => work is not null && IsCurrent(work.Candidate));
+            previousKey = _currentKey;
+        }
+        if (owner is not null && DialogueTextComparison.Compare(owner.Candidate.Dialogue, candidate.Dialogue)
+            != DialogueTextRelation.Equivalent) return false;
+        if (owner is null && previousKey is { } previous
+            && DialogueTextComparison.Compare(previous.Text, candidate.Dialogue) != DialogueTextRelation.Equivalent) return false;
+        // 路由只读本地目录及配置，不触碰串行合成泵的HTTP/模型所有权。
+        var incoming = await ResolveAsync(new(candidate), cancellationToken, notify: false).ConfigureAwait(false);
+        DialogueKey? ownedKey = previousKey;
+        if (owner is not null)
+        {
+            if (owner.Identity is null)
+            {
+                var original = await ResolveAsync(owner, cancellationToken, notify: false).ConfigureAwait(false);
+                ownedKey = CreateDialogueKey(original.Work, original.Request);
+            }
+            else
+            {
+                ownedKey = CreateOwnedDialogueKey(owner);
+            }
+        }
+        var incomingKey = CreateDialogueKey(incoming.Work, incoming.Request);
+        lock (_gate)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!_accepting || !IsCurrent(candidate) || ownedKey is null) return false;
+            // Pending可能在上述await期间已完成实际路由，最后以该冻结结果复核，避免目录切换竞态。
+            var currentOwner = new[] { _pending, _synthesizing, _ready?.Work, _playing?.Work }
+                .FirstOrDefault(work => work is not null && IsCurrent(work.Candidate));
+            if (currentOwner is { Identity: not null }) ownedKey = CreateOwnedDialogueKey(currentOwner);
+            else if (currentOwner is null && _currentKey is not null && _currentKey != previousKey) ownedKey = _currentKey;
+            // 正文等价由Frame与原所有权共同验证；其原文和TTS请求均不改写。
+            // OCR 姓名一侧缺失时，空名不应否定同一实际声线；两侧都有已接受姓名时仍按姓名区分。
+            return SameOwnership(incomingKey, ownedKey);
+        }
+    }
+
+    /// <summary>同一话轮、实际声线与文本的所有权；只把单侧缺失的 OCR 姓名视为可忽略。</summary>
+    private static bool SameOwnership(DialogueKey incoming, DialogueKey owned)
+    {
+        if (incoming with { Identity = owned.Identity, Text = owned.Text } != owned) return false;
+        if (incoming.Identity.Kind != owned.Identity.Kind
+            || !StringComparer.OrdinalIgnoreCase.Equals(incoming.Identity.CanonicalId, owned.Identity.CanonicalId)) return false;
+        if (string.IsNullOrEmpty(incoming.Identity.AcceptedName) || string.IsNullOrEmpty(owned.Identity.AcceptedName)) return true;
+        return StringComparer.OrdinalIgnoreCase.Equals(incoming.Identity.AcceptedName, owned.Identity.AcceptedName);
+    }
+
+    /// <summary>已解析工作使用当时冻结的实际路由，不能重新读目录后假装旧声线已切换。</summary>
+    private DialogueKey CreateOwnedDialogueKey(ContinuousVoiceWork owner)
+    {
+        var voice = owner.Routing?.Voice ?? new VoiceBinding(settings.Voice.Name, settings.Voice.GptWeightsPath,
+            settings.Voice.SovitsWeightsPath, [new(settings.Voice.ReferenceAudioPath, settings.Voice.PromptText,
+                settings.Voice.ReferenceEmotion)]);
+        return CreateDialogueKey(owner, new(owner.Candidate.Dialogue, voice,
+            owner.Routing is { } routed ? routed.RequestedEmotion : settings.Voice.RequestedEmotion));
+    }
+    /// <summary>真实话轮、规范角色和最终声线参数共同标识语音；与视觉版本无关。</summary>
+    private static DialogueKey CreateDialogueKey(ContinuousVoiceWork work, TtsRequest request) => new(
+        work.Candidate.Epoch, work.Candidate.DialogueOccurrence, work.Identity!,
+        DialogueTextComparison.CreateComparisonKey(work.Candidate.Dialogue), request.Voice.GptWeightsPath,
+        request.Voice.SovitsWeightsPath, JsonConvert.SerializeObject(request.Voice.References),
+        request.Voice.Provider, request.Emotion);
     /// <summary>只采用通过 OCR 接受判定的姓名。</summary>
     private static string AcceptedName(ContinuousDialogueCandidate candidate) =>
         candidate.NameStatus == SpeakerNameStatus.Accepted ? Normalize(candidate.AcceptedName ?? "") : "";

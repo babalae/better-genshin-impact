@@ -14,6 +14,67 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.QuestVoiceTests;
 /// <summary>移植回归验证：ContinuousVoiceIdentityTests。</summary>
 public sealed class ContinuousVoiceIdentityTests
 {
+    /// <summary>同一语义的视觉来源可以变化，合成中和Ready时重复Offer均不重入。</summary>
+    [Fact] public async Task SemanticGenerationOwnsSynthesisAndReadyAcrossVisualRevisions()
+    {
+        await using var f = new ContinuousVoiceFixture(); await f.StartAsync();
+        using var lease = f.Session.BeginObservation();
+        f.Session.Invalidate(1);
+        var candidate = ContinuousVoiceFixture.Candidate(10, "same") with { SemanticGeneration = 1 };
+        f.Session.Offer(candidate); var first = await f.Engine.NextAsync();
+        f.Session.Offer(candidate with { Revision = 11 });
+        Assert.False(first.Token.IsCancellationRequested);
+        first.Complete(); await f.EventAsync(ContinuousVoiceEventKind.AudioReady, 1);
+        f.Session.Offer(candidate with { Revision = 12 });
+        Assert.Equal(10, f.Session.Snapshot.Ready!.Candidate.Revision);
+        Assert.Single(f.Engine.All);
+        lease.Dispose(); var playing = await f.Player.NextAsync();
+        playing.Exit.TrySetResult(true); await f.Session.CompleteAsync();
+    }
+    /// <summary>旧HTTP尚在排空时，新的Pending也可只读核对别名，不发并行合成。</summary>
+    [Fact] public async Task RouteComparisonCoversUnresolvedPendingWithoutIssuingHttp()
+    {
+        await using var f = new ContinuousVoiceFixture(); await f.StartAsync();
+        f.Offer(1, "old"); var old = await f.Engine.NextAsync();
+        f.Offer(2, "same");
+        var alias = ContinuousVoiceFixture.Candidate(20, "same", "测试别名") with { SemanticGeneration = 2 };
+        Assert.True(await f.Session.MatchesCurrentDialogueAsync(alias));
+        Assert.Single(f.Engine.All);
+        Assert.NotNull(f.Session.Snapshot.Pending);
+        Assert.True(old.Token.IsCancellationRequested);
+    }
+
+    /// <summary>别名预检在Ready和已播所有权上均保留原结果。</summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task RouteComparisonCoversReadyAndPlayedOwnership(bool readyOnly)
+    {
+        await using var f = new ContinuousVoiceFixture(); await f.StartAsync();
+        using var lease = readyOnly ? f.Session.BeginObservation() : null;
+        f.Offer(1, "same"); (await f.Engine.NextAsync()).Complete();
+        if (readyOnly) await f.EventAsync(ContinuousVoiceEventKind.AudioReady, 1);
+        else
+        {
+            (await f.Player.NextAsync()).Exit.TrySetResult(true);
+            await f.EventAsync(ContinuousVoiceEventKind.PlaybackCompleted, 1);
+        }
+        var alias = ContinuousVoiceFixture.Candidate(20, "same", "测试别名") with { SemanticGeneration = 1 };
+        Assert.True(await f.Session.MatchesCurrentDialogueAsync(alias));
+        Assert.Single(f.Engine.All);
+    }
+
+    /// <summary>同canonical的实际模型改变不能复用原来冻结的声线。</summary>
+    [Fact] public async Task RouteComparisonRejectsChangedActualVoiceBinding()
+    {
+        await using var f = new ContinuousVoiceFixture(); await f.StartAsync();
+        f.Offer(1, "same"); var first = await f.Engine.NextAsync();
+        f.Catalog.Json["Voices"]![0]!["GptWeightsPath"] = "../assets/fallback.ckpt";
+        await f.Catalog.WriteAsync();
+        var alias = ContinuousVoiceFixture.Candidate(20, "same", "测试别名") with { SemanticGeneration = 1 };
+        Assert.False(await f.Session.MatchesCurrentDialogueAsync(alias));
+        Assert.False(first.Token.IsCancellationRequested);
+    }
     /// <summary>移植回归验证：Canonical alias and trim form C match without changing synthesis text。</summary>
     [Fact]
     public async Task Canonical_alias_and_trim_form_C_match_without_changing_synthesis_text()

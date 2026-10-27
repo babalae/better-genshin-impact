@@ -63,6 +63,35 @@ public sealed class QuestVoiceOverlayTests
         Assert.Single(output.Where(item => item.Text.Contains("OCR · 派蒙：你好")));
     }
 
+    /// <summary>画面版本更新不会隐藏仍有效的旧来源合成及播放事件。</summary>
+    [Fact]
+    public void Visual_recheck_keeps_accepted_voice_visible()
+    {
+        var (presenter, output) = Create();
+        presenter.OnFrame(Frame(2, ContinuousFrameEventKind.CandidateAccepted, text: "你好"));
+        presenter.OnVoice(Voice(1, ContinuousVoiceEventKind.SynthesisStarted));
+        presenter.OnFrame(Frame(3, ContinuousFrameEventKind.Invalidated, revision: 2));
+        presenter.OnVoice(Voice(2, ContinuousVoiceEventKind.PlaybackStarted));
+        Assert.Equal("正在播放语音", output.Last().Text);
+    }
+
+    /// <summary>真正语义失效后，旧来源即使仍在同一周期也不能恢复为当前阶段。</summary>
+    [Fact]
+    public void Semantic_invalidation_rejects_late_voice_without_mixing_visual_versions()
+    {
+        var (presenter, output) = Create();
+        presenter.OnFrame(Frame(2, ContinuousFrameEventKind.CandidateAccepted, text: "旧句") with { SemanticGeneration = 1 });
+        presenter.OnVoice(Voice(1, ContinuousVoiceEventKind.SynthesisStarted, generation: 1));
+        presenter.OnFrame(Frame(3, ContinuousFrameEventKind.Invalidated, revision: 20) with { SemanticGeneration = 2 });
+        var count = output.Count;
+        presenter.OnVoice(Voice(2, ContinuousVoiceEventKind.PlaybackStarted, generation: 1));
+        Assert.Equal(count, output.Count);
+        presenter.OnFrame(Frame(4, ContinuousFrameEventKind.CandidateAccepted, revision: 20, source: 30, text: "新句")
+            with { SemanticGeneration = 3 });
+        presenter.OnVoice(Voice(3, ContinuousVoiceEventKind.PlaybackStarted, revision: 20, source: 30, generation: 3));
+        Assert.Equal("正在播放语音", output.Last().Text);
+    }
+
     /// <summary>相同文字在新对白身份或周期内仍应显示，不能永久按文本去重。</summary>
     [Fact]
     public void Identical_text_in_a_new_dialogue_identity_is_shown_again()
@@ -76,7 +105,7 @@ public sealed class QuestVoiceOverlayTests
         Assert.Equal(3, output.Count(item => item.Text.Contains("OCR ·")));
     }
 
-    /// <summary>旧合成/播放消息不应覆盖新对白阶段，旧序号与旧周期也被忽略。</summary>
+    /// <summary>纯视觉重检保留有效语音；新候选接受后才拒绝旧语音来源。</summary>
     [Fact]
     public void Late_voice_and_frame_events_cannot_roll_back_new_dialogue()
     {
@@ -89,11 +118,14 @@ public sealed class QuestVoiceOverlayTests
         presenter.OnVoice(Voice(2, ContinuousVoiceEventKind.SynthesisStarted));
         presenter.OnVoice(Voice(3, ContinuousVoiceEventKind.PlaybackStarted));
         presenter.OnFrame(Frame(2, ContinuousFrameEventKind.CandidateAccepted, text: "旧句"));
-        Assert.Equal(count, output.Count);
+        Assert.Equal("正在播放语音", output.Last().Text);
         presenter.OnFrame(Frame(5, ContinuousFrameEventKind.CandidateAccepted, revision: 2, source: 20, text: "新句"));
         presenter.OnVoice(Voice(4, ContinuousVoiceEventKind.SynthesisStarted, revision: 2, source: 20));
         presenter.OnVoice(Voice(5, ContinuousVoiceEventKind.PlaybackStarted, revision: 2, source: 20));
         Assert.Equal("正在播放语音", output.Last().Text);
+        count = output.Count;
+        presenter.OnVoice(Voice(6, ContinuousVoiceEventKind.PlaybackStarted));
+        Assert.Equal(count, output.Count);
     }
 
     /// <summary>停止立即屏蔽旧事件，重新启动允许相同身份的真实新会话。</summary>
@@ -278,9 +310,9 @@ public sealed class QuestVoiceOverlayTests
 
     /// <summary>配音事件携带正式候选身份和只应进入文件的详细故障。</summary>
     private static ContinuousVoiceEvent Voice(long sequence, ContinuousVoiceEventKind kind, long revision = 1,
-        long epoch = 0, long source = 10, VoiceErrorCode? error = null)
-        => new(sequence, TimeSpan.Zero, kind, revision, epoch, source,
-            new(new(revision, epoch, source, TimeSpan.Zero, "hash", "layout", "派蒙", SpeakerNameStatus.Accepted, "正文")),
+        long epoch = 0, long source = 10, VoiceErrorCode? error = null, long? generation = null)
+        => new(sequence, TimeSpan.Zero, kind, generation ?? revision, epoch, source,
+            new(new(revision, epoch, source, TimeSpan.Zero, "hash", "layout", "派蒙", SpeakerNameStatus.Accepted, "正文", generation)),
             "secret token or stack", error);
 
     /// <summary>只有实际Selected事件才表示检测到了对白画面。</summary>

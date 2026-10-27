@@ -38,7 +38,7 @@ public sealed partial class ContinuousVoiceSession(AppSettings settings, ITtsEng
     private bool _started, _accepting, _stopping, _completed, _synthesisDone, _backendUnknown;
     /// <summary>保存 _revision, _epoch, _sequence 对应的本轮状态或配置，不跨会话复用。</summary>
     private long _revision, _epoch, _sequence;
-    /// <summary>已经提交候选的视觉版本，用于去重。</summary>
+    /// <summary>已经提交候选的语义代际，覆盖待处理、合成、Ready与已播所有权。</summary>
     private long? _offeredRevision;
     /// <summary>尚未归还的画面观察租约数量，阻止播放旧版本。</summary>
     private int _observations;
@@ -87,7 +87,7 @@ public sealed partial class ContinuousVoiceSession(AppSettings settings, ITtsEng
         return Task.CompletedTask;
     }
 
-    /// <summary>递增视觉版本并丢弃尚未播放的旧内容。</summary>
+    /// <summary>递增语义代际并丢弃尚未播放的旧内容。</summary>
     public void Invalidate(long revision)
     {
         lock (_gate)
@@ -98,13 +98,13 @@ public sealed partial class ContinuousVoiceSession(AppSettings settings, ITtsEng
         }
     }
 
-    /// <summary>在状态锁内发布新的视觉版本。</summary>
+    /// <summary>在状态锁内发布新的语义代际。</summary>
     private void InvalidateCore(long revision)
     {
         if (revision <= _revision) throw new ArgumentOutOfRangeException(nameof(revision), "Revision must increase.");
         _revision = revision;
         var epoch = _epoch;
-        DiscardUnplayed("New visual revision");
+        DiscardUnplayed("New semantic generation");
         Emit(ContinuousVoiceEventKind.Invalidated, revision: revision, epoch: epoch);
         Pulse();
     }
@@ -116,14 +116,14 @@ public sealed partial class ContinuousVoiceSession(AppSettings settings, ITtsEng
         lock (_gate)
         {
             RequireStarted();
-            if (!_accepting || !IsCurrent(candidate) || _backendUnknown || _offeredRevision == candidate.Revision)
+            if (!_accepting || !IsCurrent(candidate) || _backendUnknown || _offeredRevision == candidate.Generation)
             {
                 Emit(ContinuousVoiceEventKind.Discarded, new(candidate), "Candidate is stale, repeated, or session unavailable");
                 return;
             }
             if (candidate.SourceSequence < 0 || candidate.ObservedAt < TimeSpan.Zero || string.IsNullOrWhiteSpace(candidate.Dialogue))
                 throw new ArgumentException("A candidate needs valid source metadata and dialogue.", nameof(candidate));
-            _offeredRevision = candidate.Revision;
+            _offeredRevision = candidate.Generation;
             _pending = new(candidate);
             Emit(ContinuousVoiceEventKind.CandidateOffered, _pending);
             Pulse();
@@ -230,10 +230,10 @@ public sealed partial class ContinuousVoiceSession(AppSettings settings, ITtsEng
         if (ready is not null) Emit(ContinuousVoiceEventKind.Discarded, ready.Work, reason);
     }
 
-    /// <summary>判断候选是否仍属于当前视觉版本和对白周期。</summary>
+    /// <summary>判断候选是否仍属于当前语义代际和对白周期。</summary>
     private bool IsCurrent(ContinuousDialogueCandidate candidate) => !_stopping
-        && candidate.Revision == _revision && candidate.Epoch == _epoch;
-    /// <summary>同时检查取消、视觉版本与对白周期。</summary>
+        && candidate.Generation == _revision && candidate.Epoch == _epoch;
+    /// <summary>同时检查取消、语义代际与对白周期。</summary>
     private void CheckCurrent(ContinuousVoiceWork work, CancellationToken token)
     {
         token.ThrowIfCancellationRequested();
@@ -264,7 +264,7 @@ public sealed partial class ContinuousVoiceSession(AppSettings settings, ITtsEng
     private void Emit(ContinuousVoiceEventKind kind, ContinuousVoiceWork? work = null, string? detail = null,
         VoiceErrorCode? error = null, bool playbackSucceeded = false, long? revision = null, long? epoch = null)
     {
-        var value = new ContinuousVoiceEvent(++_sequence, _clock.Elapsed, kind, work?.Candidate.Revision ?? revision ?? _revision,
+        var value = new ContinuousVoiceEvent(++_sequence, _clock.Elapsed, kind, work?.Candidate.Generation ?? revision ?? _revision,
             work?.Candidate.Epoch ?? epoch ?? _epoch, work?.Candidate.SourceSequence, work, detail, error, playbackSucceeded, _backendUnknown);
         _notifications.Enqueue(value);
         if (_notifying) return;
@@ -294,7 +294,8 @@ public sealed partial class ContinuousVoiceSession(AppSettings settings, ITtsEng
         public void Dispose() => Interlocked.Exchange(ref _session, null)?.EndObservation();
     }
     /// <summary>DialogueKey：原神自动配音的业务类型。</summary>
-    private sealed record DialogueKey(long Epoch, ContinuousVoiceIdentity Identity, string Text);
+    private sealed record DialogueKey(long Epoch, long Occurrence, ContinuousVoiceIdentity Identity, string Text,
+        string GptWeights, string SovitsWeights, string References, TtsProviderSettings? Provider, string? Emotion);
     /// <summary>ReadyAudio：原神自动配音的业务类型。</summary>
     private sealed record ReadyAudio(ContinuousVoiceWork Work, DialogueKey Key, byte[] Bytes, StreamingPcmAudio? Stream = null);
     /// <summary>Playback：原神自动配音的业务类型。</summary>

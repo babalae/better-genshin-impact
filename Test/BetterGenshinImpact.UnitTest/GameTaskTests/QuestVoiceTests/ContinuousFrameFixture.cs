@@ -62,6 +62,12 @@ internal sealed class ContinuousFrameFixture : IAsyncDisposable
         public bool Hold { get; set; }
         /// <summary>在真实帧状态机测试中注入未知布局，不替代播放或候选逻辑。</summary>
         public SceneDecisionKind? NonSelectedKind { get; set; }
+        /// <summary>注入来自真实selector同键的可靠清空证据。</summary>
+        public bool ClearDialogueEvidence { get; set; }
+        /// <summary>模拟另一分隔线有像素但超过厚度上界，原Selected仍只有standard有效。</summary>
+        public bool InvalidOtherSeparatorEvidence { get; set; }
+        /// <summary>在清空帧移除原来唯一有效的分隔线。</summary>
+        public bool DropSelectedSeparatorEvidence { get; set; }
         /// <summary>未知布局的诊断原因。</summary>
         public string UnknownReason { get; set; } = "UnsupportedTextGeometry";
         /// <summary>移植回归验证：Reached。</summary>
@@ -76,6 +82,18 @@ internal sealed class ContinuousFrameFixture : IAsyncDisposable
             Last = frame; Reached.TrySetResult();
             if (Hold) await Release.Task;
             var result = ContinuousFrameGateTests.Inspection(identity: frame.Bytes.Span[0].ToString(), selected: frame.Bytes.Span[0] != 0);
+            // 已选中帧的证据来自相同catalog；清空只改变正文，保留可信名字和分隔线。
+            if (result.Selection.Decision.Kind == SceneDecisionKind.Selected || ClearDialogueEvidence)
+            {
+                var evidence = new Dictionary<string, double> { ["NamePixels"] = 200, ["NameTallComponents"] = 2,
+                    ["StandardSeparator.Rows"] = DropSelectedSeparatorEvidence ? 0 : 2, ["StandardSeparator.SideRun"] = 200,
+                    ["TitleSeparator.Rows"] = InvalidOtherSeparatorEvidence ? 10 : 0, ["TitleSeparator.SideRun"] = 200,
+                    ["TextPixels"] = ClearDialogueEvidence ? 0 : 100, ["TextComponents"] = ClearDialogueEvidence ? 0 : 5 };
+                result = result with { Selection = result.Selection with { Decision = result.Selection.Decision with { Evidence = evidence } } };
+                if (ClearDialogueEvidence) result = result with { Signature = null, Selection = result.Selection with
+                    { Profile = null, Decision = result.Selection.Decision with
+                        { Kind = SceneDecisionKind.Rejected, Reason = "NoSupportedDialogueFrame", LayoutId = null } } };
+            }
             return NonSelectedKind is { } kind ? result with { Signature = null, Selection = result.Selection with
                 { Profile = null, Decision = result.Selection.Decision with { Kind = kind, Reason = UnknownReason } } } : result;
         }
@@ -115,6 +133,9 @@ internal sealed class ContinuousFrameFixture : IAsyncDisposable
         public void Invalidate(long revision) => inner.Invalidate(revision);
         /// <summary>只接受当前版本与周期中尚未提交的对白候选。</summary>
         public void Offer(ContinuousDialogueCandidate candidate) => inner.Offer(candidate);
+        /// <summary>转发真实路由预检，包装器不能静默退化为“姓名一变即新句”。</summary>
+        public Task<bool> MatchesCurrentDialogueAsync(ContinuousDialogueCandidate candidate, CancellationToken token = default)
+            => inner.MatchesCurrentDialogueAsync(candidate, token);
         /// <summary>离开对白时切换周期，停止播放并等待其实际退出。</summary>
         public Task LeaveDialogueAsync(long revision) => inner.LeaveDialogueAsync(revision);
         /// <summary>取得观察租约，在画面版本判定之前阻止新播放。</summary>
