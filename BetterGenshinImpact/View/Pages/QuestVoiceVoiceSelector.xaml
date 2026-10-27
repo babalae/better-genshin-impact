@@ -1,0 +1,6 @@
+<UserControl x:Class="BetterGenshinImpact.View.Pages.QuestVoiceVoiceSelector" x:Name="SelectorRoot"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+ <ComboBox ItemsSource="{Binding ItemsSource, ElementName=SelectorRoot, Mode=OneWay}"
+  DisplayMemberPath="DisplayName" SelectedValuePath="Id" HorizontalAlignment="Stretch" MaxDropDownHeight="300"
+  SelectedValue="{Binding SelectedVoiceId, ElementName=SelectorRoot, Mode=TwoWay}" />
+</UserControl>

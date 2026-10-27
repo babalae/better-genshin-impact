@@ -8,6 +8,16 @@ public partial class QuestVoicePageViewModel
     /// <summary>首次打开设置页才创建编辑器，切页后继续保留未保存草稿。</summary>
     private QuestVoiceManagementViewModel? _management;
 
-    /// <summary>路由文件使用显式保存，其他统一配置仍沿用原自动保存机制。</summary>
+    /// <summary>路由文件通过共享编辑器安全自动保存，其他配置沿用宿主机制。</summary>
     public QuestVoiceManagementViewModel Management => _management ??= new(this, _factory, _service, new RoutingCatalogStore());
+
+    /// <summary>关闭和启动前排空已打开的编辑器；未进入设置页时不创建目录。</summary>
+    public async System.Threading.Tasks.Task<bool> FlushSettingsAsync()
+    {
+        var defaultsSaved = FlushGptSettings?.Invoke() ?? true;
+        var routesSaved = _management is null || await _management.FlushAutoSaveAsync();
+        return defaultsSaved && routesSaved;
+    }
+    /// <summary>GPT 设置首次打开才注册其资源草稿的退出收尾。</summary>
+    internal System.Func<bool>? FlushGptSettings { get; set; }
 }

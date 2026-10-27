@@ -87,7 +87,11 @@ public partial class QuestVoicePageViewModel : ViewModel
     private async Task StartAsync()
     {
         CommandError = "";
-        try { await _service.StartAsync(); }
+        try
+        {
+            if (!await FlushSettingsAsync()) { CommandError = "路由草稿尚未保存，请先修正配置或处理冲突。"; return; }
+            await _service.StartAsync();
+        }
         catch (OperationCanceledException) { CommandError = "启动已取消。"; }
         catch (Exception exception) { CommandError = exception.Message; }
     }

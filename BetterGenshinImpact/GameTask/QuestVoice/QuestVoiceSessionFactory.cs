@@ -138,6 +138,14 @@ public sealed class QuestVoiceSessionFactory(QuestVoiceConfig config, string pro
             (ExtraConfig(config.ProviderId)?.UseRemote ?? config.UseRemoteService) && TtsProviderRegistry.GetInfo(config.ProviderId).Capabilities.ServerConnection ? "remote" : "local",
             ExtraConfig(config.ProviderId)?.VoiceId ?? config.HuoshanVoiceId, validateProvider);
 
+    /// <summary>设置页指定引擎的旧默认声线快照，沿用生产路径与实例解析，不改变全局引擎。</summary>
+    public AppSettings CreateProviderSettings(string providerId, bool validateProvider = true) => CreateTtsSettings(providerId,
+        TtsProviderRegistry.GetInfo(providerId).Capabilities.ServerConnection && (ExtraConfig(providerId)?.UseRemote ?? config.UseRemoteService) ? "remote" : "local",
+        ExtraConfig(providerId)?.VoiceId ?? config.HuoshanVoiceId, validateProvider);
+
+    /// <summary>资源草稿验证使用与运行时一致的相对路径基准。</summary>
+    public string ProgramDirectory => programDirectory;
+
     /// <summary>新增引擎独立配置；旧配置缺失字典条目时补齐缺省，不触碰旧引擎。</summary>
     public QuestVoiceEngineConfig? ExtraConfig(string providerId)
     {

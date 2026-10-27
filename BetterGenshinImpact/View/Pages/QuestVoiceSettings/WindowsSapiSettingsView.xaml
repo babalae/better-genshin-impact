@@ -1,0 +1,19 @@
+<UserControl x:Class="BetterGenshinImpact.View.Pages.QuestVoiceSettings.WindowsSapiSettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+             xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages.QuestVoiceSettings"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             HorizontalContentAlignment="Stretch">
+    <StackPanel>
+        <ui:TextBlock Text="Windows 系统语音（SAPI）" FontSize="18" FontWeight="SemiBold" />
+        <ui:TextBlock Text="使用已安装的系统声音，无需联网；安装新声音后点击刷新。未找到声音时需先安装支持 SAPI 的语音。" TextWrapping="Wrap" Margin="0,8,0,12" />
+        <local:EngineVoiceListView />
+        <ui:TextBlock Text="速度倍率（0.5～2）" Margin="0,8,0,6" />
+        <Slider Minimum="0.5" Maximum="2" TickFrequency="0.1" Value="{Binding EngineConfig.Rate, Mode=TwoWay}" />
+        <ui:TextBlock Text="{Binding EngineConfig.Rate, Mode=OneWay, StringFormat={}{0:F2}}" />
+        <local:EnginePreviewView />
+    </StackPanel>
+</UserControl>
