@@ -18,7 +18,7 @@ public sealed class VoiceRoutingService(SpeakerCatalogLoader loader, ISpeakerRou
     public async Task<VoiceRoutingResult> ResolveAsync(VoiceRoutingRequest request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var snapshot = await loader.LoadAsync(request.Settings.CatalogPath, cancellationToken).ConfigureAwait(false);
+        var snapshot = await loader.LoadAsync(request.Settings.CatalogPath, cancellationToken, request.Settings.ServerSidePaths).ConfigureAwait(false);
         var catalog = snapshot.Catalog;
         var speaker = router.Route(request.Input, catalog);
         cancellationToken.ThrowIfCancellationRequested();
@@ -32,7 +32,7 @@ public sealed class VoiceRoutingService(SpeakerCatalogLoader loader, ISpeakerRou
         else
         {
             voice = Find(catalog, speaker.VoiceId);
-            var unavailable = await RoutingVoiceAssets.UnavailableAsync(voice, cancellationToken).ConfigureAwait(false);
+            var unavailable = await RoutingVoiceAssets.UnavailableAsync(voice, cancellationToken, request.Settings.ServerSidePaths).ConfigureAwait(false);
             if (unavailable is not null) fallbackReason = "VoiceAssetsUnavailable: " + unavailable;
         }
         cancellationToken.ThrowIfCancellationRequested();
@@ -41,7 +41,7 @@ public sealed class VoiceRoutingService(SpeakerCatalogLoader loader, ISpeakerRou
             if (speaker.Layer != RoutingLayer.Fallback && catalog.MissingVoicePolicy == MissingVoicePolicy.Fail)
                 throw RoutingPath.Invalid($"Catalog '{snapshot.CatalogPath}' / {speaker.CanonicalId}", fallbackReason);
             voice = catalog.FallbackVoiceId is null ? RoutingVoiceAssets.Legacy(request.FallbackVoice) : Find(catalog, catalog.FallbackVoiceId);
-            var unavailable = await RoutingVoiceAssets.UnavailableAsync(voice, cancellationToken).ConfigureAwait(false);
+            var unavailable = await RoutingVoiceAssets.UnavailableAsync(voice, cancellationToken, request.Settings.ServerSidePaths).ConfigureAwait(false);
             cancellationToken.ThrowIfCancellationRequested();
             if (unavailable is not null)
                 throw RoutingPath.Invalid($"Catalog '{snapshot.CatalogPath}' / FallbackVoice '{voice.Id}'", unavailable);

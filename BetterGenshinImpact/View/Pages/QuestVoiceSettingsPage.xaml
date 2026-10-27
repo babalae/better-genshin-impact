@@ -20,11 +20,49 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="{DynamicResource PagePadding}">
             <ui:TextBlock Text="自动配音" FontTypography="Title" Margin="0,0,0,4" />
-            <ui:TextBlock Text="配置角色声线、映射规则、OCR 与 GPT-SoVITS 后端。运行状态请在「运行与日志」页面查看。"
+            <ui:TextBlock Text="配置 TTS 引擎、角色声线、映射规则与 OCR。运行状态请在「运行与日志」页面查看。"
                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                           TextWrapping="Wrap"
                           Margin="0,0,0,12" />
 
+            <ui:CardExpander Margin="0,0,0,12" ContentPadding="16" IsExpanded="True" Icon="{ui:SymbolIcon Speaker224}">
+                <ui:CardExpander.Header>
+                    <ui:TextBlock FontTypography="Body" Text="TTS 引擎与测试语音" />
+                </ui:CardExpander.Header>
+                <StackPanel>
+                    <StackPanel IsEnabled="{Binding ViewModel.IsConfigEditable, Mode=OneWay}">
+                        <ComboBox ItemsSource="{Binding ViewModel.Providers, Mode=OneWay}"
+                                  SelectedItem="{Binding ViewModel.SelectedProvider, Mode=TwoWay}"
+                                  DisplayMemberPath="DisplayName" HorizontalAlignment="Stretch" />
+                        <ui:TextBlock Margin="0,8,0,12" Text="{Binding ViewModel.ProviderDescription, Mode=OneWay}" TextWrapping="Wrap" />
+                        <StackPanel Visibility="{Binding ViewModel.SupportsPresetVoices, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <ui:TextBlock Text="默认预设音色与语言" Margin="0,0,0,6" />
+                            <ComboBox ItemsSource="{Binding ViewModel.Voices, Mode=OneWay}"
+                                      DisplayMemberPath="DisplayName"
+                                      SelectedItem="{Binding ViewModel.SelectedVoice, Mode=TwoWay}" />
+                        </StackPanel>
+                        <StackPanel Margin="0,6,0,6" Visibility="{Binding ViewModel.SupportsServerConnection, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <ui:ToggleSwitch Content="使用远程服务实例（独立保存地址和默认声线）" IsChecked="{Binding ViewModel.Config.UseRemoteService, Mode=TwoWay}" />
+                            <ui:TextBlock Margin="0,6,0,0" Text="远程权重及参考音频必须已经存在于服务器；支持 Linux 或服务器相对路径，不会自动上传本机文件。角色映射中的路径也按当前服务器解释。" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <ui:TextBlock Margin="0,8,0,6" Text="连接 / 请求 / 合成超时（秒）" />
+                        <WrapPanel>
+                            <ui:NumberBox Width="150" Minimum="1" Maximum="120" MaxDecimalPlaces="0" Value="{Binding ViewModel.Config.ConnectTimeoutSeconds, Mode=TwoWay}" />
+                            <ui:NumberBox Width="150" Margin="8,0" Minimum="1" Maximum="600" MaxDecimalPlaces="0" Value="{Binding ViewModel.Config.RequestTimeoutSeconds, Mode=TwoWay}" />
+                            <ui:NumberBox Width="150" Minimum="1" Maximum="600" MaxDecimalPlaces="0" Value="{Binding ViewModel.Config.SynthesisTimeoutSeconds, Mode=TwoWay}" />
+                        </WrapPanel>
+                        <ui:TextBox Margin="0,12,0,8" Text="{Binding ViewModel.TestText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" TextWrapping="Wrap" AcceptsReturn="True" />
+                    </StackPanel>
+                    <WrapPanel>
+                        <ui:Button Content="连接检测" Command="{Binding ViewModel.ProbeBackendCommand, Mode=OneWay}" Margin="0,0,8,6" />
+                        <ui:Button Content="测试合成并播放" Command="{Binding ViewModel.TestSpeechCommand, Mode=OneWay}" Margin="0,0,8,6" />
+                        <ui:Button Content="取消测试" Command="{Binding ViewModel.CancelTestSpeechCommand, Mode=OneWay}" Margin="0,0,8,6" />
+                    </WrapPanel>
+                    <ui:TextBlock Text="{Binding ViewModel.Status.Tts, Mode=OneWay}" TextWrapping="Wrap" />
+                    <ui:TextBlock Text="{Binding ViewModel.Status.Playback, Mode=OneWay}" TextWrapping="Wrap" />
+                    <ui:TextBlock Margin="0,6,0,0" Text="设置自动保存，停止后修改，下次启动生效。测试语音无需游戏或 OCR；测试入口完整接收后播放。" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+            </ui:CardExpander>
             <!-- 5.1 基础配置 -->
             <ui:CardExpander Margin="0,0,0,12"
                              ContentPadding="0"
@@ -39,7 +77,7 @@
                         <ui:TextBlock Grid.Row="0" FontTypography="Body" Text="基础配置" />
                         <ui:TextBlock Grid.Row="1"
                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                      Text="控制自动配音的角色路由、默认声线、流式模式与 GPT-SoVITS 服务"
+                                      Text="控制当前引擎支持的角色路由、默认声线、流式模式与服务连接"
                                       TextWrapping="Wrap" />
                     </Grid>
                 </ui:CardExpander.Header>
@@ -66,7 +104,7 @@
                                          IsChecked="{Binding ViewModel.Config.RoutingEnabled, Mode=TwoWay}" />
                     </Grid>
                     <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
-                    <Grid Margin="16" IsEnabled="{Binding ViewModel.IsConfigEditable, Mode=OneWay}">
+                    <Grid Visibility="{Binding ViewModel.SupportsVoiceAssets, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="16" IsEnabled="{Binding ViewModel.IsConfigEditable, Mode=OneWay}">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
@@ -90,7 +128,7 @@
                                     Text="{Binding ViewModel.Config.VoiceName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                     </Grid>
                     <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
-                    <Grid Margin="16" IsEnabled="{Binding ViewModel.IsConfigEditable, Mode=OneWay}">
+                    <Grid Visibility="{Binding ViewModel.SupportsStreaming, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="16" IsEnabled="{Binding ViewModel.IsConfigEditable, Mode=OneWay}">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
@@ -112,7 +150,7 @@
                                          IsChecked="{Binding ViewModel.Config.StreamingEnabled, Mode=TwoWay}" />
                     </Grid>
                     <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
-                    <Grid Margin="16" IsEnabled="{Binding ViewModel.IsConfigEditable, Mode=OneWay}">
+                    <Grid Visibility="{Binding ViewModel.SupportsServerConnection, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="16" IsEnabled="{Binding ViewModel.IsConfigEditable, Mode=OneWay}">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
@@ -133,10 +171,10 @@
                                     Width="280"
                                     Margin="16,0,24,0"
                                     VerticalAlignment="Center"
-                                    Text="{Binding ViewModel.Config.ServiceUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    Text="{Binding ViewModel.ActiveServiceUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                     </Grid>
                     <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
-                    <Grid Margin="16">
+                    <Grid Visibility="{Binding ViewModel.RequiresBackendDrain, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="16">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
@@ -168,10 +206,7 @@
             </ui:CardExpander>
 
             <!-- 5.2 角色映射与声线配置 -->
-            <ui:CardExpander Margin="0,0,0,12"
-                             ContentPadding="0"
-                             IsExpanded="True"
-                             Icon="{ui:SymbolIcon PeopleSwap24}">
+            <ui:CardExpander Margin="0,0,0,12" ContentPadding="0" IsExpanded="True" Icon="{ui:SymbolIcon PeopleSwap24}">
                 <ui:CardExpander.Header>
                     <Grid>
                         <Grid.RowDefinitions>
@@ -243,15 +278,16 @@
                                 <Run Text="{Binding ViewModel.Status.Validation, Mode=OneWay}" />
                             </ui:TextBlock>
                             <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                          Text="旅行者（ProtagonistId）、玩家昵称（PlayerNames）、角色别名及 FallbackVoiceId 在 JSON 中定义；修改配置后停止并重新启动自动配音即可生效。"
+                                          Text="下方管理器使用独立草稿，点击保存后下次启动生效；直接编辑外部 JSON 后请重新加载。"
                                           TextWrapping="Wrap" />
                         </StackPanel>
                     </Grid>
+                    <local:QuestVoiceManagementView DataContext="{Binding ViewModel.Management, Mode=OneWay}" />
                 </StackPanel>
             </ui:CardExpander>
 
             <!-- 5.3 高级声线资源（默认折叠） -->
-            <ui:CardExpander Margin="0,0,0,12"
+            <ui:CardExpander Visibility="{Binding ViewModel.SupportsVoiceAssets, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,0,0,12"
                              ContentPadding="0"
                              IsExpanded="False"
                              Icon="{ui:SymbolIcon Box24}">
@@ -264,7 +300,7 @@
                         <ui:TextBlock Grid.Row="0" FontTypography="Body" Text="高级声线资源" />
                         <ui:TextBlock Grid.Row="1"
                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                      Text="配置默认 NPC 声线的 GPT 权重、SoVITS 权重、参考音频路径与逐字原文"
+                                      Text="配置当前实例的权重、参考音频和逐字原文；远程实例只使用服务器已有路径，不上传文件"
                                       TextWrapping="Wrap" />
                     </Grid>
                 </ui:CardExpander.Header>
@@ -282,11 +318,11 @@
                         <ui:TextBox Grid.Row="1"
                                     Grid.Column="0"
                                     Margin="0,6,8,0"
-                                    Text="{Binding ViewModel.Config.GptWeightsPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    Text="{Binding ViewModel.ActiveGptWeightsPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                         <ui:Button Grid.Row="1"
                                    Grid.Column="1"
                                    Margin="0,6,24,0"
-                                   Command="{Binding ViewModel.BrowseGptWeightsCommand, Mode=OneWay}"
+                                   Visibility="{Binding ViewModel.CanBrowseVoiceAssets, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" Command="{Binding ViewModel.BrowseGptWeightsCommand, Mode=OneWay}"
                                    Content="浏览"
                                    Icon="{ui:SymbolIcon FolderOpen24}" />
                     </Grid>
@@ -304,11 +340,11 @@
                         <ui:TextBox Grid.Row="1"
                                     Grid.Column="0"
                                     Margin="0,6,8,0"
-                                    Text="{Binding ViewModel.Config.SovitsWeightsPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    Text="{Binding ViewModel.ActiveSovitsWeightsPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                         <ui:Button Grid.Row="1"
                                    Grid.Column="1"
                                    Margin="0,6,24,0"
-                                   Command="{Binding ViewModel.BrowseSovitsWeightsCommand, Mode=OneWay}"
+                                   Visibility="{Binding ViewModel.CanBrowseVoiceAssets, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" Command="{Binding ViewModel.BrowseSovitsWeightsCommand, Mode=OneWay}"
                                    Content="浏览"
                                    Icon="{ui:SymbolIcon FolderOpen24}" />
                     </Grid>
@@ -326,11 +362,11 @@
                         <ui:TextBox Grid.Row="1"
                                     Grid.Column="0"
                                     Margin="0,6,8,0"
-                                    Text="{Binding ViewModel.Config.ReferenceAudioPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    Text="{Binding ViewModel.ActiveReferenceAudioPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                         <ui:Button Grid.Row="1"
                                    Grid.Column="1"
                                    Margin="0,6,24,0"
-                                   Command="{Binding ViewModel.BrowseReferenceAudioCommand, Mode=OneWay}"
+                                   Visibility="{Binding ViewModel.CanBrowseVoiceAssets, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" Command="{Binding ViewModel.BrowseReferenceAudioCommand, Mode=OneWay}"
                                    Content="浏览"
                                    Icon="{ui:SymbolIcon FolderOpen24}" />
                     </Grid>
@@ -340,7 +376,7 @@
                         <ui:TextBox Margin="0,6,0,0"
                                     MinHeight="64"
                                     AcceptsReturn="True"
-                                    Text="{Binding ViewModel.Config.PromptText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Text="{Binding ViewModel.ActivePromptText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                     TextWrapping="Wrap" />
                     </StackPanel>
                 </StackPanel>

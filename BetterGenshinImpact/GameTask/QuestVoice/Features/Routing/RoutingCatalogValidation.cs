@@ -35,7 +35,7 @@ internal static class RoutingCatalogValidation
     /// <summary>校验配置的边界、引用和参数关系。</summary>
     public static void Validate(RoutingCatalog catalog)
     {
-        if (catalog.Version != 1) throw RoutingPath.Invalid("Version", "Expected version 1.");
+        if (catalog.Version is not (1 or 2)) throw RoutingPath.Invalid("Version", "Expected version 1 or 2.");
         if (catalog.Game != "genshin") throw RoutingPath.Invalid("Game", "Expected genshin.");
         if (!Enum.IsDefined(catalog.MissingVoicePolicy))
             throw RoutingPath.Invalid("MissingVoicePolicy", "Expected Fallback or Fail.");
@@ -52,10 +52,19 @@ internal static class RoutingCatalogValidation
             if (Same(voice.Id, RoutingCatalog.ConfiguredVoiceId))
                 throw RoutingPath.Invalid(field + ".Id", "The configured voice ID is reserved.");
             Text(voice.Name, field + ".Name");
-            Text(voice.GptWeightsPath, field + ".GptWeightsPath");
-            Text(voice.SovitsWeightsPath, field + ".SovitsWeightsPath");
-            Text(voice.ReferenceAudioPath, field + ".ReferenceAudioPath");
-            Text(voice.PromptText, field + ".PromptText");
+            var capabilities = Tts.TtsProviderRegistry.GetInfo(voice.ProviderId).Capabilities;
+            if (voice.InstanceId is not (null or "local" or "remote") || (!capabilities.ServerConnection && voice.InstanceId == "remote"))
+                throw RoutingPath.Invalid(field + ".InstanceId", "Unknown or unavailable service instance.");
+            if (catalog.Version == 1 && (voice.ProviderId != "gpt-sovits" || voice.InstanceId is not null || voice.ProviderVoiceId is not null))
+                throw RoutingPath.Invalid(field, "Provider references require version 2.");
+            if (capabilities.VoiceAssets)
+            {
+                Text(voice.GptWeightsPath, field + ".GptWeightsPath");
+                Text(voice.SovitsWeightsPath, field + ".SovitsWeightsPath");
+                Text(voice.ReferenceAudioPath, field + ".ReferenceAudioPath");
+                Text(voice.PromptText, field + ".PromptText");
+            }
+            else Text(voice.ProviderVoiceId, field + ".ProviderVoiceId");
             if (voice.RequestedEmotion is not null) Text(voice.RequestedEmotion, field + ".RequestedEmotion");
             if (voice.ReferenceEmotion is not null) Text(voice.ReferenceEmotion, field + ".ReferenceEmotion");
         }
@@ -73,6 +82,13 @@ internal static class RoutingCatalogValidation
             Reference(voiceIds, speaker.VoiceId, field + ".VoiceId");
         }
         Reference(speakerIds, catalog.ProtagonistId, "ProtagonistId");
+        // 新版管理目录拒绝昵称抢占其他角色；旧版既有路由优先级保持兼容。
+        if (catalog.Version >= 2)
+            foreach (var player in catalog.PlayerNames)
+                foreach (var speaker in catalog.Speakers)
+                    if ((catalog.ProtagonistId is null || !Same(speaker.Id, catalog.ProtagonistId))
+                        && speaker.Names.Concat(speaker.Aliases).Concat(speaker.Corrections).Any(name => Same(name, player)))
+                        throw RoutingPath.Invalid("PlayerNames", $"玩家昵称 '{player}' 与角色 '{speaker.Id}' 的识别名称冲突。");
         Reference(voiceIds, catalog.NarratorVoiceId, "NarratorVoiceId");
         Reference(voiceIds, catalog.FallbackVoiceId, "FallbackVoiceId");
     }

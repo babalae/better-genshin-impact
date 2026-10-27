@@ -49,7 +49,7 @@ public sealed class RoutingCatalogTests
 
     /// <summary>移植回归验证：Wrong fields and dangling references fail。</summary>
     [Theory]
-    [InlineData("Version", "2")]
+    [InlineData("Version", "3")]
     [InlineData("Version", "\"1\"")]
     [InlineData("Game", "\"starrail\"")]
     [InlineData("PlayerNames", "{}")]

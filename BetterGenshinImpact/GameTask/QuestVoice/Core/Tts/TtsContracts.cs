@@ -20,14 +20,15 @@ public enum ReferenceFallback { None, CharacterHasNoEmotionTags, EmotionNotAvail
 public sealed record ReferenceAudio(string Path, string PromptText, string? Emotion = null);
 /// <summary>VoiceBinding：原神自动配音的业务类型。</summary>
 public sealed record VoiceBinding(string Name, string GptWeightsPath, string SovitsWeightsPath,
-    IReadOnlyList<ReferenceAudio> References);
+    IReadOnlyList<ReferenceAudio> References, TtsProviderSettings? Provider = null);
 /// <summary>ReferenceSelection：原神自动配音的业务类型。</summary>
 public sealed record ReferenceSelection(ReferenceAudio Audio, ReferenceFallback Fallback);
 /// <summary>TtsRequest：原神自动配音的业务类型。</summary>
 public sealed record TtsRequest(string Text, VoiceBinding Voice, string? Emotion = null);
 /// <summary>TtsResult：原神自动配音的业务类型。</summary>
 public sealed record TtsResult(byte[] Wav, double SynthesisSeconds, double TimeToFirstByteSeconds,
-    double AudioSeconds, int SampleRate, int Channels, ReferenceFallback ReferenceFallback);
+    double AudioSeconds, int SampleRate, int Channels, ReferenceFallback ReferenceFallback,
+    TtsAudioEncoding SourceEncoding = TtsAudioEncoding.Pcm16Wav);
 /// <summary>VoiceStatus：原神自动配音的业务类型。</summary>
 public sealed record VoiceStatus(VoiceState State, string? Detail = null, string? ArtifactPath = null,
     VoiceErrorCode? Error = null);

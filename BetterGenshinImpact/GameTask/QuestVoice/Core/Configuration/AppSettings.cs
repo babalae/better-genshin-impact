@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.Tts;
 namespace BetterGenshinImpact.GameTask.QuestVoice.Core.Configuration;
 
 /// <summary>AppSettings：原神自动配音的业务类型。</summary>
@@ -18,7 +19,7 @@ public sealed record AppSettings(
     WindowSettings Window,
     TtsProtocolSettings? Protocol = null, OcrSettings? Ocr = null, string? OcrConfigurationError = null,
     SceneSettings? Scene = null, string? SceneConfigurationError = null,
-    RoutingSettings? Routing = null, string? RoutingConfigurationError = null);
+    RoutingSettings? Routing = null, string? RoutingConfigurationError = null, TtsProviderSettings? Provider = null);
 
 /// <summary>TtsProtocolSettings：原神自动配音的业务类型。</summary>
 public sealed record TtsProtocolSettings(string TextLanguage = "zh", string PromptLanguage = "zh",
@@ -30,7 +31,8 @@ public sealed record TimeoutSettings(int ConnectSeconds, int RequestSeconds, int
 /// <summary>VoiceSettings：原神自动配音的业务类型。</summary>
 public sealed record VoiceSettings(
     string Name, string GptWeightsPath, string SovitsWeightsPath,
-    string ReferenceAudioPath, string PromptText, string? RequestedEmotion = null, string? ReferenceEmotion = null);
+    string ReferenceAudioPath, string PromptText, string? RequestedEmotion = null, string? ReferenceEmotion = null,
+    bool ServerSidePaths = false, TtsProviderSettings? Provider = null);
 
 /// <summary>OutputSettings：原神自动配音的业务类型。</summary>
 public sealed record OutputSettings(string LogsDirectory, string AudioDirectory);

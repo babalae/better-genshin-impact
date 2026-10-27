@@ -15,7 +15,7 @@ namespace BetterGenshinImpact.GameTask.QuestVoice.Features.Routing;
 internal static class RoutingCatalogJson
 {
     /// <summary>解析并拒绝未知、缺失或重复的配置字段。</summary>
-    public static RoutingCatalog Parse(JsonElement root, string directory)
+    public static RoutingCatalog Parse(JsonElement root, string directory, bool serverSidePaths = false)
     {
         Object(root, "Catalog", ["Version", "Game", "ProtagonistId", "PlayerNames", "NarratorVoiceId",
             "FallbackVoiceId", "MissingVoicePolicy", "Speakers", "Voices"]);
@@ -34,7 +34,7 @@ internal static class RoutingCatalogJson
             };
         }
         var speakers = Array(root, "Speakers", "Speakers").Select((item, index) => Speaker(item, $"Speakers[{index}]"));
-        var voices = Array(root, "Voices", "Voices").Select((item, index) => Voice(item, directory, $"Voices[{index}]"));
+        var voices = Array(root, "Voices", "Voices").Select((item, index) => Voice(item, directory, $"Voices[{index}]", serverSidePaths, number));
         return new(number, String(root, "Game", "Game"), Optional(root, "ProtagonistId", "ProtagonistId"),
             Strings(root, "PlayerNames", "PlayerNames"), Optional(root, "NarratorVoiceId", "NarratorVoiceId"),
             Optional(root, "FallbackVoiceId", "FallbackVoiceId"), policy, speakers, voices);
@@ -50,15 +50,29 @@ internal static class RoutingCatalogJson
     }
 
     /// <summary>Voice：执行RoutingCatalogJson中的对应校验或计算步骤。</summary>
-    private static RoutingVoice Voice(JsonElement element, string directory, string field)
+    private static RoutingVoice Voice(JsonElement element, string directory, string field, bool serverSidePaths, int version)
     {
-        Object(element, field, ["Id", "Name", "GptWeightsPath", "SovitsWeightsPath", "ReferenceAudioPath",
-            "PromptText", "RequestedEmotion", "ReferenceEmotion"]);
-        string PathField(string key) => RoutingPath.Resolve(String(element, key, field + "." + key), directory, field + "." + key);
+        string[] legacyFields = ["Id", "Name", "GptWeightsPath", "SovitsWeightsPath", "ReferenceAudioPath",
+            "PromptText", "RequestedEmotion", "ReferenceEmotion"];
+        Object(element, field, version == 2 ? [.. legacyFields, "ProviderId", "InstanceId", "ProviderVoiceId"] : legacyFields);
+        var provider = version == 2 ? Optional(element, "ProviderId", field + ".ProviderId") ?? "gpt-sovits" : "gpt-sovits";
+        var instance = version == 2 ? Optional(element, "InstanceId", field + ".InstanceId") : null;
+        var hasAssets = Tts.TtsProviderRegistry.GetInfo(provider).Capabilities.VoiceAssets;
+        var remote = instance is null ? serverSidePaths : instance == "remote";
+        string PathField(string key)
+        {
+            if (!hasAssets) return "";
+            var value = String(element, key, field + "." + key);
+            if (remote) return value;
+            // 版本一仍严格使用相对路径；版本二允许编辑器选择本机绝对路径。
+            return version == 2 && Path.IsPathFullyQualified(value) ? Path.GetFullPath(value)
+                : RoutingPath.Resolve(value, directory, field + "." + key);
+        }
         return new(String(element, "Id", field + ".Id"), String(element, "Name", field + ".Name"),
             PathField("GptWeightsPath"), PathField("SovitsWeightsPath"), PathField("ReferenceAudioPath"),
-            String(element, "PromptText", field + ".PromptText"), Optional(element, "RequestedEmotion", field + ".RequestedEmotion"),
-            Optional(element, "ReferenceEmotion", field + ".ReferenceEmotion"));
+            hasAssets ? String(element, "PromptText", field + ".PromptText") : "", Optional(element, "RequestedEmotion", field + ".RequestedEmotion"),
+            Optional(element, "ReferenceEmotion", field + ".ReferenceEmotion"), provider, instance,
+            version == 2 ? Optional(element, "ProviderVoiceId", field + ".ProviderVoiceId") : null);
     }
 
     /// <summary>Object：执行RoutingCatalogJson中的对应校验或计算步骤。</summary>

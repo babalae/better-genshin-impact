@@ -9,4 +9,4 @@ using System.Threading.Tasks;
 namespace BetterGenshinImpact.GameTask.QuestVoice.Core.Configuration;
 
 /// <summary>RoutingSettings：原神自动配音的业务类型。</summary>
-public sealed record RoutingSettings(string CatalogPath);
+public sealed record RoutingSettings(string CatalogPath, bool ServerSidePaths = false);

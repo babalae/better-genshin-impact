@@ -17,7 +17,8 @@ namespace BetterGenshinImpact.GameTask.QuestVoice.Features.Routing;
 public sealed class SpeakerCatalogLoader
 {
     /// <summary>异步读取并严格校验外置配置或布局。</summary>
-    public async Task<RoutingCatalogSnapshot> LoadAsync(string catalogPath, CancellationToken cancellationToken = default)
+    public async Task<RoutingCatalogSnapshot> LoadAsync(string catalogPath, CancellationToken cancellationToken = default,
+        bool serverSidePaths = false)
     {
         cancellationToken.ThrowIfCancellationRequested();
         try
@@ -29,7 +30,7 @@ public sealed class SpeakerCatalogLoader
             // The optional UTF-8 BOM belongs to the hashed bytes, not the JSON document.
             var offset = bytes.AsSpan().StartsWith(new byte[] { 0xef, 0xbb, 0xbf }) ? 3 : 0;
             using var document = JsonDocument.Parse(bytes.AsMemory(offset));
-            var catalog = RoutingCatalogJson.Parse(document.RootElement, Path.GetDirectoryName(path)!);
+            var catalog = RoutingCatalogJson.Parse(document.RootElement, Path.GetDirectoryName(path)!, serverSidePaths);
             RoutingCatalogValidation.Validate(catalog);
             cancellationToken.ThrowIfCancellationRequested();
             return new(catalog, hash, path);

@@ -16,7 +16,7 @@ using System.Text.Json;
 namespace BetterGenshinImpact.GameTask.QuestVoice.Features.Tts;
 /// <summary>GptSovitsEngine：原神自动配音的业务类型。</summary>
 public sealed partial class GptSovitsEngine(Func<TimeoutSettings, HttpClient> clientFactory,
-    IReferenceAudioSelector selector, IWavProcessor wavProcessor) : IStreamingTtsEngine, IDisposable
+    IReferenceAudioSelector selector, IWavProcessor wavProcessor) : IStreamingTtsEngine, ITtsProvider
 {
     /// <summary>保护异步操作所有权，确保停止等待已发出的工作。</summary>
     private readonly SemaphoreSlim _ownership = new(1, 1);
@@ -42,7 +42,8 @@ public sealed partial class GptSovitsEngine(Func<TimeoutSettings, HttpClient> cl
             if (string.IsNullOrWhiteSpace(request.Text))
                 throw new VoiceException(VoiceErrorCode.Configuration, "请输入台词。");
             var reference = selector.Select(request.Voice, request.Emotion);
-            await Task.Run(() => ValidateAssets(request.Voice, reference.Audio), queueToken.Token).ConfigureAwait(false);
+            Validate(settings);
+            await Task.Run(() => ValidateAssets(request.Voice, reference.Audio, settings.Voice.ServerSidePaths), queueToken.Token).ConfigureAwait(false);
             using var client = clientFactory(settings.Timeouts);
             client.BaseAddress = settings.TtsServiceUrl;
             client.Timeout = Timeout.InfiniteTimeSpan;
@@ -139,6 +140,8 @@ public sealed partial class GptSovitsEngine(Func<TimeoutSettings, HttpClient> cl
                 var count = await bodyStream.ReadAsync(block, timeout.Token).ConfigureAwait(false);
                 if (count == 0) break;
                 firstByte ??= watch.Elapsed.TotalSeconds;
+                if (buffer.Length + count > 32 * 1024 * 1024)
+                    throw new VoiceException(VoiceErrorCode.InvalidAudio, "完整 WAV 超过32MiB预算；已关闭本地连接，后端状态未知。", true);
                 buffer.Write(block, 0, count);
             }
             var elapsed = watch.Elapsed.TotalSeconds;
@@ -152,10 +155,11 @@ public sealed partial class GptSovitsEngine(Func<TimeoutSettings, HttpClient> cl
     }
 
     /// <summary>合成前确认权重、参考音频和逐字参考文本存在。</summary>
-    private static void ValidateAssets(VoiceBinding voice, ReferenceAudio reference)
+    private static void ValidateAssets(VoiceBinding voice, ReferenceAudio reference, bool serverSidePaths)
     {
         foreach (var path in new[] { voice.GptWeightsPath, voice.SovitsWeightsPath, reference.Path })
-            if (!File.Exists(path)) throw new VoiceException(VoiceErrorCode.Configuration, $"资产文件不存在：{path}");
+            if (string.IsNullOrWhiteSpace(path) || (!serverSidePaths && !File.Exists(path)))
+                throw new VoiceException(VoiceErrorCode.Configuration, $"资产路径缺失或本机文件不存在：{path}");
         if (string.IsNullOrWhiteSpace(reference.PromptText))
             throw new VoiceException(VoiceErrorCode.Configuration, "参考音频文本不能为空。");
     }

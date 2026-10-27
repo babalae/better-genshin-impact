@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Continuous;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.Tts;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Audio;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Continuous;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Ocr;
@@ -14,7 +15,7 @@ namespace BetterGenshinImpact.GameTask.QuestVoice;
 
 /// <summary>一轮管线资源的所有者，先排空核心，再释放 OCR/音频和本轮临时文件。</summary>
 public sealed class QuestVoiceSession(ContinuousFrameSession frames, ContinuousVoiceSession voice,
-    GptSovitsEngine engine, DirectMlOcrEngine ocr, WasapiAudioPlayer player, string scratch) : IQuestVoiceSession
+    ITtsProvider engine, DirectMlOcrEngine ocr, WasapiAudioPlayer player, string scratch) : IQuestVoiceSession
 {
     /// <summary>订阅已经排好序的识别事件。</summary>
     public event Action<ContinuousFrameEvent>? FrameEvent { add => frames.Event += value; remove => frames.Event -= value; }
