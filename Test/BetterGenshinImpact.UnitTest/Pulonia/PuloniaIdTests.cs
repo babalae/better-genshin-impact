@@ -16,7 +16,7 @@ public sealed class PuloniaIdTests
     {
         Assert.Matches("^pln_[0123456789abcdefghjkmnpqrstvwxyz]{16}$", PuloniaId.NewPlanId());
         Assert.Matches("^tsk_[0123456789abcdefghjkmnpqrstvwxyz]{16}$", PuloniaId.NewTaskId());
-        Assert.Matches("^pre_[0123456789abcdefghjkmnpqrstvwxyz]{16}$", PuloniaId.NewPresetId());
+        Assert.Matches("^prf_[0123456789abcdefghjkmnpqrstvwxyz]{16}$", PuloniaId.NewProfileId());
         Assert.Matches("^trg_[0123456789abcdefghjkmnpqrstvwxyz]{16}$", PuloniaId.NewTriggerId());
         Assert.Matches("^acc_[0123456789abcdefghjkmnpqrstvwxyz]{16}$", PuloniaId.NewAccountId());
         Assert.StartsWith("acc_", new PuloniaGenshinAccountProfile().Id, StringComparison.Ordinal);
@@ -71,7 +71,7 @@ public sealed class PuloniaIdTests
 
         Assert.StartsWith("pln_", plan.Id, StringComparison.Ordinal);
         Assert.StartsWith("tsk_", plan.RootTask.Id, StringComparison.Ordinal);
-        Assert.StartsWith("pre_", new PuloniaTaskPreset().Id, StringComparison.Ordinal);
+        Assert.StartsWith("prf_", new PuloniaSettingsProfile().Id, StringComparison.Ordinal);
         Assert.StartsWith("trg_", plan.Triggers[0].Id, StringComparison.Ordinal);
         Assert.StartsWith("pln_", copy.Id, StringComparison.Ordinal);
         Assert.All(EnumerateTasks(copy.RootTask), task => Assert.StartsWith("tsk_", task.Id, StringComparison.Ordinal));

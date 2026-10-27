@@ -85,7 +85,7 @@ public sealed class PuloniaTaskCreationServiceTests : IDisposable
         Assert.Equal(RouteVersion, task.ResourceVersion);
     }
 
-    /// <summary>本地目录引用保存固定清单指纹，显式参数成为分组公共参数。</summary>
+    /// <summary>本地目录引用保存固定清单指纹，表单中的共享设置写在引用分组上。</summary>
     [Fact]
     public async Task LocalDirectoryReference_PinsManifestAndGroupOverrides()
     {
@@ -106,9 +106,10 @@ public sealed class PuloniaTaskCreationServiceTests : IDisposable
         Assert.Equal("keymouse", task.Source.TaskType);
         Assert.True(task.Source.Recursive);
         Assert.Equal(DirectoryVersion, task.Source.Version);
-        var groupOverride = Assert.Single(task.ParameterOverrides);
-        Assert.Equal("keymouse", groupOverride.TaskType);
-        Assert.False(groupOverride.Values.Value<bool>("with_delay"));
+        // 回放方式是共享设置，写在引用分组上由展开的录制继承
+        Assert.Single(task.Settings);
+        Assert.False(task.Settings.Value<bool>("keymouse.with_delay"));
+        Assert.Empty(task.Parameters);
     }
 
     /// <summary>结构化展开按子目录建立分组，扁平展开放入同一分组；逐项回调进度。</summary>
@@ -127,7 +128,7 @@ public sealed class PuloniaTaskCreationServiceTests : IDisposable
         }, (current, total) => progress.Add((current, total)));
 
         Assert.Equal([(1, 2), (2, 2)], progress);
-        Assert.Empty(structured.ParameterOverrides);
+        Assert.Empty(structured.Settings);
         Assert.Equal(["a", "子目录"], structured.Children.Select(child => child.Name));
         Assert.Equal(Path.Combine("dir", "a.json"), structured.Children[0].Path);
         var nested = Assert.Single(structured.Children[1].Children);
@@ -206,12 +207,13 @@ public sealed class PuloniaTaskCreationServiceTests : IDisposable
     {
         TaskType = "keymouse",
         ResourceBaseDirectory = root,
-        DefaultParameters = new JObject { ["with_delay"] = true },
+        DefaultParameters = new JObject { ["with_delay"] = false },
         ParameterSchema = new JObject
         {
             ["type"] = "object",
             ["properties"] = new JObject { ["with_delay"] = new JObject { ["type"] = "boolean" } }
-        }
+        },
+        SettingBindings = new Dictionary<string, string> { ["keymouse.with_delay"] = "with_delay" }
     };
 
     /// <summary>建立一项本地资源描述，模拟本地资源索引的结果。</summary>

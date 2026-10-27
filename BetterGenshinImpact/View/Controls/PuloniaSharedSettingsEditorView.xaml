@@ -1,0 +1,333 @@
+<UserControl x:Class="BetterGenshinImpact.View.Controls.PuloniaSharedSettingsEditorView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:combat="clr-namespace:BetterGenshinImpact.View.Controls.CombatStrategy"
+             xmlns:pulonia="clr-namespace:BetterGenshinImpact.ViewModel.Windows.Pulonia"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+    <!--
+        共享设置编辑器（DataContext 为 PuloniaSharedSettingsEditorViewModel），节点设置窗口与方案管理窗口共用：
+        1. 顶部：说明、方案选择（仅节点）、搜索与筛选
+        2. 左侧类别导航：圆点表示本类别有修改，置灰表示当前位置下没有任务使用
+        3. 右侧逐项显示有效值、来源与恢复继承；修改立即生效
+    -->
+    <UserControl.Resources>
+        <!--  单个设置项  -->
+        <DataTemplate x:Key="SharedSettingRowTemplate" DataType="{x:Type pulonia:PuloniaSharedSettingRowViewModel}">
+            <Border Margin="0,0,0,4"
+                    Padding="0,10,8,10"
+                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="6">
+                <Grid>
+                    <!--  来源图标与恢复按钮使用固定列宽：恢复按钮出现或隐藏时，各行的编辑控件仍上下对齐  -->
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="4" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="40" />
+                        <ColumnDefinition Width="36" />
+                    </Grid.ColumnDefinitions>
+
+                    <!--  修改标记：本节点（或方案）设置了这一项  -->
+                    <Border Grid.Column="0"
+                            Margin="0,2,0,2"
+                            Background="{DynamicResource AccentFillColorDefaultBrush}"
+                            CornerRadius="0,2,2,0"
+                            Visibility="{Binding IsOverridden, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                    <!--  名称、说明与提示  -->
+                    <StackPanel Grid.Column="1" Margin="12,0,12,0" VerticalAlignment="Center">
+                        <ui:TextBlock FontTypography="Body" Text="{Binding DisplayName, Mode=OneWay}" TextWrapping="Wrap" />
+                        <ui:TextBlock Margin="0,2,0,0"
+                                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                      Text="{Binding Description, Mode=OneWay}"
+                                      TextWrapping="Wrap"
+                                      Visibility="{Binding HasDescription, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        <ui:TextBlock Margin="0,2,0,0"
+                                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                      Text="{Binding DisabledReason, Mode=OneWay}"
+                                      TextWrapping="Wrap"
+                                      Visibility="{Binding HasDisabledReason, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        <ui:TextBlock Margin="0,2,0,0"
+                                      Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                      Text="{Binding Warning, Mode=OneWay}"
+                                      TextWrapping="Wrap"
+                                      Visibility="{Binding HasWarning, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        <ui:TextBlock Margin="0,2,0,0"
+                                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                      Text="与继承值相同，可以恢复继承"
+                                      Visibility="{Binding IsSameAsInherited, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    </StackPanel>
+
+                    <!--  编辑控件：按编辑提示只显示一种  -->
+                    <StackPanel Grid.Column="2"
+                                VerticalAlignment="Center"
+                                IsEnabled="{Binding IsEditable, Mode=OneWay}"
+                                Orientation="Horizontal">
+                        <ui:ToggleSwitch IsChecked="{Binding BoolValue, Mode=TwoWay}"
+                                         Visibility="{Binding IsBoolean, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        <ui:TextBox Width="220"
+                                    Text="{Binding TextValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Visibility="{Binding IsText, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        <ui:NumberBox Width="160"
+                                      AcceptsExpression="False"
+                                      ClearButtonEnabled="False"
+                                      MaxDecimalPlaces="{Binding MaxDecimalPlaces, Mode=OneWay}"
+                                      SpinButtonPlacementMode="Hidden"
+                                      Value="{Binding NumberValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                      Visibility="{Binding IsNumber, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        <ComboBox Width="200"
+                                  DisplayMemberPath="Label"
+                                  ItemsSource="{Binding Choices, Mode=OneWay}"
+                                  SelectedItem="{Binding SelectedChoice, Mode=TwoWay}"
+                                  Visibility="{Binding IsChoice, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        <combat:CombatStrategyPicker Width="260"
+                                                     AllowedKinds="All"
+                                                     Strategy="{Binding StrategyValue, Mode=TwoWay}"
+                                                     Visibility="{Binding IsCombatStrategy, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        <StackPanel Orientation="Horizontal"
+                                    Visibility="{Binding IsCollectionCooldown, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <ui:TextBlock Margin="0,0,8,0"
+                                          VerticalAlignment="Center"
+                                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                          Text="{Binding ValueText, Mode=OneWay}" />
+                            <ui:Button Command="{Binding EditCollectionCooldownCommand, Mode=OneWay}" Content="配置…" />
+                        </StackPanel>
+                        <ui:TextBlock Margin="6,0,0,0"
+                                      VerticalAlignment="Center"
+                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                      Text="{Binding Unit, Mode=OneWay}"
+                                      Visibility="{Binding HasUnit, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    </StackPanel>
+
+                    <!--
+                        来源：只显示图标，悬停查看来源文字和沿设置链的每一层取值。
+                        圆点为默认值（方案中为未设置），转折箭头为上层节点的修改，书架为设置方案，铅笔为本节点（方案中为已设置）。
+                        透明背景让整个方块都能触发悬停说明。
+                    -->
+                    <Border Grid.Column="3"
+                            Width="28"
+                            Height="28"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            AutomationProperties.Name="{Binding SourceText, Mode=OneWay}"
+                            Background="Transparent"
+                            ToolTip="{Binding SourceToolTip, Mode=OneWay}"
+                            ToolTipService.InitialShowDelay="200"
+                            ToolTipService.ShowDuration="60000">
+                        <ui:SymbolIcon HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16">
+                            <ui:SymbolIcon.Style>
+                                <Style TargetType="ui:SymbolIcon">
+                                    <Setter Property="Symbol" Value="Circle16" />
+                                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SourceKind, Mode=OneWay}" Value="Inherited">
+                                            <Setter Property="Symbol" Value="ArrowTurnDownRight20" />
+                                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding SourceKind, Mode=OneWay}" Value="Profile">
+                                            <Setter Property="Symbol" Value="Library16" />
+                                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding SourceKind, Mode=OneWay}" Value="Own">
+                                            <Setter Property="Symbol" Value="Edit16" />
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ui:SymbolIcon.Style>
+                        </ui:SymbolIcon>
+                    </Border>
+
+                    <!--  恢复继承：所在列固定宽度，隐藏时不改变其他列的位置  -->
+                    <ui:Button Grid.Column="4"
+                               Width="32"
+                               Height="32"
+                               Padding="0"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Center"
+                               Appearance="Transparent"
+                               Command="{Binding ResetCommand, Mode=OneWay}"
+                               Icon="{ui:SymbolIcon ArrowUndo24}"
+                               ToolTip="{Binding ResetToolTip, Mode=OneWay}"
+                               Visibility="{Binding CanReset, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <!--  左侧类别项：WPF-UI 的滚动条浮在列表内容之上，右侧留出滚动条宽度，选中背景不与滚动条重叠  -->
+        <Style x:Key="SharedSettingCategoryItemStyle" TargetType="ListBoxItem" BasedOn="{StaticResource DefaultListBoxItemStyle}">
+            <Setter Property="Margin" Value="0,0,14,0" />
+        </Style>
+
+        <!--  左侧类别  -->
+        <DataTemplate x:Key="SharedSettingCategoryTemplate" DataType="{x:Type pulonia:PuloniaSharedSettingCategoryViewModel}">
+            <Grid Margin="2,4">
+                <!--  当前位置下没有任务使用的类别置灰，但仍可选择和设置  -->
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsUnused, Mode=OneWay}" Value="True">
+                                <Setter Property="Opacity" Value="0.55" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock VerticalAlignment="Center" Text="{Binding DisplayName, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
+                <Border Grid.Column="1"
+                        Margin="6,0,0,0"
+                        Padding="6,0"
+                        VerticalAlignment="Center"
+                        Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                        CornerRadius="8"
+                        Visibility="{Binding HasMatches, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ui:TextBlock FontSize="11" Text="{Binding MatchCount, Mode=OneWay}" />
+                </Border>
+                <Ellipse Grid.Column="2"
+                         Width="7"
+                         Height="7"
+                         Margin="6,0,0,0"
+                         VerticalAlignment="Center"
+                         Fill="{DynamicResource AccentFillColorDefaultBrush}"
+                         ToolTip="{Binding OverrideCount, Mode=OneWay, StringFormat=有 {0} 项修改}"
+                         Visibility="{Binding HasOverrides, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!--  顶部：说明、方案、搜索与筛选  -->
+        <StackPanel Grid.Row="0">
+            <ui:TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                          Text="{Binding Description, Mode=OneWay}"
+                          TextWrapping="Wrap" />
+            <Grid Margin="0,10,0,0" Visibility="{Binding CanSelectProfile, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Margin="0,0,10,0" VerticalAlignment="Center" Text="设置方案" />
+                <ComboBox Grid.Column="1"
+                          DisplayMemberPath="DisplayName"
+                          IsEnabled="{Binding IsEditable, Mode=OneWay}"
+                          ItemsSource="{Binding ProfileOptions, Mode=OneWay}"
+                          SelectedItem="{Binding SelectedProfileOption, Mode=TwoWay}"
+                          ToolTip="方案中的设置先于本节点自己的修改生效，可在多个计划中复用" />
+                <StackPanel Grid.Column="2" Margin="8,0,0,0" Orientation="Horizontal">
+                    <ui:Button Margin="0,0,6,0"
+                               Command="{Binding EditProfileCommand, Mode=OneWay}"
+                               Content="编辑方案"
+                               IsEnabled="{Binding CanEditProfile, Mode=OneWay}" />
+                    <ui:Button Margin="0,0,6,0"
+                               Command="{Binding SaveAsProfileCommand, Mode=OneWay}"
+                               Content="另存为方案…"
+                               IsEnabled="{Binding IsEditable, Mode=OneWay}"
+                               ToolTip="把本节点当前的设置存成方案，用在其他节点或计划上" />
+                    <ui:Button Command="{Binding ManageProfilesCommand, Mode=OneWay}" Content="管理方案…" />
+                </StackPanel>
+            </Grid>
+            <ui:TextBlock Margin="0,4,0,0"
+                          Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                          Text="{Binding ProfileWarning, Mode=OneWay}"
+                          TextWrapping="Wrap"
+                          Visibility="{Binding HasProfileWarning, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+            <Grid Margin="0,10,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBox Icon="{ui:SymbolIcon Search24}"
+                            PlaceholderText="搜索设置，例如“万叶”“赶路”"
+                            Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <CheckBox Grid.Column="1"
+                          Margin="12,0,0,0"
+                          VerticalAlignment="Center"
+                          Content="{Binding OnlyOverriddenLabel, Mode=OneWay}"
+                          IsChecked="{Binding ShowOnlyOverridden, Mode=TwoWay}" />
+                <CheckBox Grid.Column="2"
+                          Margin="12,0,0,0"
+                          VerticalAlignment="Center"
+                          Content="显示高级设置"
+                          IsChecked="{Binding ShowAdvanced, Mode=TwoWay}" />
+            </Grid>
+        </StackPanel>
+
+        <!--  类别导航与设置项  -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="180" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <ListBox Grid.Column="0"
+                     Margin="0,0,12,0"
+                     ItemContainerStyle="{StaticResource SharedSettingCategoryItemStyle}"
+                     ItemTemplate="{StaticResource SharedSettingCategoryTemplate}"
+                     ItemsSource="{Binding Categories, Mode=OneWay}"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     SelectedItem="{Binding SelectedCategory, Mode=TwoWay}" />
+            <!--  WPF-UI 的滚动条浮在内容之上，用右侧内边距给滚动条留出位置，卡片不被遮住  -->
+            <ScrollViewer Grid.Column="1"
+                          Padding="0,0,16,0"
+                          HorizontalScrollBarVisibility="Disabled"
+                          VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <ui:TextBlock FontTypography="BodyStrong" Text="{Binding ListHeader, Mode=OneWay}" />
+                    <ui:TextBlock Margin="0,2,0,0"
+                                  Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                  Text="{Binding ListHint, Mode=OneWay}"
+                                  TextWrapping="Wrap"
+                                  Visibility="{Binding HasListHint, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <ItemsControl Margin="0,8,0,0"
+                                  Focusable="False"
+                                  ItemTemplate="{StaticResource SharedSettingRowTemplate}"
+                                  ItemsSource="{Binding VisibleRows, Mode=OneWay}" />
+                    <ui:TextBlock Margin="0,12,0,0"
+                                  Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                  Text="{Binding EmptyText, Mode=OneWay}"
+                                  TextWrapping="Wrap"
+                                  Visibility="{Binding IsEmpty, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
+        <!--  底部：统计、操作结果与批量操作  -->
+        <Grid Grid.Row="2" Margin="0,10,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel VerticalAlignment="Center">
+                <ui:TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding FooterText, Mode=OneWay}" />
+                <ui:TextBlock Margin="0,2,0,0"
+                              Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                              Text="{Binding Message, Mode=OneWay}"
+                              TextWrapping="Wrap"
+                              Visibility="{Binding HasMessage, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <ui:Button Margin="0,0,8,0"
+                           Command="{Binding RemoveRedundantCommand, Mode=OneWay}"
+                           Content="清除与继承值相同的修改"
+                           IsEnabled="{Binding IsEditable, Mode=OneWay}"
+                           Visibility="{Binding ShowsInheritance, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                <ui:Button Command="{Binding ResetAllCommand, Mode=OneWay}"
+                           Content="{Binding ResetAllText, Mode=OneWay}"
+                           IsEnabled="{Binding IsEditable, Mode=OneWay}" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

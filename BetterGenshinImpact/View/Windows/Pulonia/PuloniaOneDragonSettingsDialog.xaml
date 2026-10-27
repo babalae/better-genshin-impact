@@ -21,22 +21,24 @@
       <ui:Button Content="更新此任务资源" Command="{Binding Session.UpdateResourceVersionCommand, Mode=OneWay}" CommandParameter="{Binding Node, Mode=OneWay}" Visibility="{Binding Node.CanUpdateResourceVersion, Mode=OneWay, Converter={StaticResource DragonBoolVisibility}}"/>
      </WrapPanel>
     </StackPanel></ui:Card>
-    <ui:Card Style="{StaticResource DragonCard}" Visibility="{Binding Advanced.CanSelectPreset, Mode=OneWay, Converter={StaticResource DragonBoolVisibility}}"><StackPanel>
-     <TextBlock Text="参数来源" FontWeight="SemiBold"/><TextBlock Text="预设与分组提供公共设置；此步骤的修改优先。" Margin="0,4,0,10" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-     <ComboBox ItemsSource="{Binding Advanced.PresetOptions, Mode=OneWay}" DisplayMemberPath="DisplayName" SelectedItem="{Binding Advanced.SelectedPresetOption, Mode=TwoWay}"/>
-     <WrapPanel Margin="0,10,0,0"><ui:Button Content="刷新预设" Command="{Binding Session.RefreshPresetsCommand, Mode=OneWay}" Margin="0,0,8,0"/><ui:Button Content="恢复参数继承" Command="{Binding Advanced.RestoreParameterInheritanceCommand, Mode=OneWay}"/></WrapPanel>
+    <!-- 共享设置：队伍、战斗、拾取、行走等逐项修改，立即生效；分组或引用上的修改会传给下面所有任务。 -->
+    <ui:Card Style="{StaticResource DragonCard}" Visibility="{Binding Advanced.CanEditSharedSettings, Mode=OneWay, Converter={StaticResource DragonBoolVisibility}}"><StackPanel>
+     <TextBlock Text="共享设置" FontWeight="SemiBold"/>
+     <TextBlock Text="{Binding Advanced.SharedSettingsSummary, Mode=OneWay}" Margin="0,4,0,10" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+     <WrapPanel><ui:Button Content="配置共享设置" Command="{Binding Advanced.EditSharedSettingsCommand, Mode=OneWay}"/></WrapPanel>
     </StackPanel></ui:Card>
-    <ui:Card Style="{StaticResource DragonCard}" Visibility="{Binding Advanced.CanEditCommonSettings, Mode=OneWay, Converter={StaticResource DragonBoolVisibility}}"><StackPanel>
-     <TextBlock Text="行走、战斗与食物" FontWeight="SemiBold"/><WrapPanel Margin="0,10,0,0">
-      <ui:Button Content="地图追踪" Command="{Binding EditCommonSettingsCommand, Mode=OneWay}" CommandParameter="pathing" Visibility="{Binding Advanced.CanEditPathingSettings, Mode=OneWay, Converter={StaticResource DragonBoolVisibility}}" Margin="0,0,8,0"/>
-      <ui:Button Content="JS 宿主设置" Command="{Binding EditCommonSettingsCommand, Mode=OneWay}" CommandParameter="javascript" Visibility="{Binding Advanced.CanEditJavaScriptSettings, Mode=OneWay, Converter={StaticResource DragonBoolVisibility}}" Margin="0,0,8,0"/>
-      <ui:Button Content="Shell 设置" Command="{Binding EditCommonSettingsCommand, Mode=OneWay}" CommandParameter="shell" Visibility="{Binding Advanced.CanEditShellSettings, Mode=OneWay, Converter={StaticResource DragonBoolVisibility}}"/>
-     </WrapPanel>
+    <ui:Card Style="{StaticResource DragonCard}" Visibility="{Binding Advanced.CanEditParameters, Mode=OneWay, Converter={StaticResource DragonBoolVisibility}}"><StackPanel>
+     <TextBlock Text="任务参数" FontWeight="SemiBold"/><TextBlock Text="只属于此步骤的参数；清空后使用任务默认值，共享设置不受影响。" Margin="0,4,0,10" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+     <WrapPanel><ui:Button Content="清空本任务参数" Command="{Binding Advanced.RestoreParameterInheritanceCommand, Mode=OneWay}"/></WrapPanel>
     </StackPanel></ui:Card>
     <!-- 运行配置由主面板的设置卡片即时提交；此处只保留高级来源与参数 JSON。 -->
     <ui:Card Style="{StaticResource DragonCard}"><Expander Header="高级配置与有效来源"><StackPanel Margin="0,12,0,0">
-     <TextBlock Text="{Binding Advanced.ParameterEditorTitle, Mode=OneWay}" FontWeight="SemiBold"/><TextBox Margin="0,6,0,0" MinHeight="100" AcceptsReturn="True" FontFamily="Consolas" Text="{Binding Advanced.ParameterJson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalScrollBarVisibility="Auto"/>
-     <ui:Button Content="应用参数 JSON" Command="{Binding Advanced.ApplyParametersCommand, Mode=OneWay}" HorizontalAlignment="Right" Margin="0,8,0,12"/>
+     <StackPanel Visibility="{Binding Advanced.CanEditParameters, Mode=OneWay, Converter={StaticResource DragonBoolVisibility}}">
+      <TextBlock Text="{Binding Advanced.ParameterEditorTitle, Mode=OneWay}" FontWeight="SemiBold"/><TextBox Margin="0,6,0,0" MinHeight="100" AcceptsReturn="True" FontFamily="Consolas" Text="{Binding Advanced.ParameterJson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalScrollBarVisibility="Auto"/>
+      <ui:Button Content="应用参数 JSON" Command="{Binding Advanced.ApplyParametersCommand, Mode=OneWay}" HorizontalAlignment="Right" Margin="0,8,0,12"/>
+     </StackPanel>
+     <TextBlock Text="共享设置（JSON 对象，设置项 ID 到值）" FontWeight="SemiBold"/><TextBox Margin="0,6,0,0" MinHeight="80" AcceptsReturn="True" FontFamily="Consolas" Text="{Binding Advanced.SettingsJson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalScrollBarVisibility="Auto"/>
+     <ui:Button Content="应用共享设置" Command="{Binding Advanced.ApplySettingsCommand, Mode=OneWay}" HorizontalAlignment="Right" Margin="0,8,0,12"/>
      <TextBlock Text="执行策略" FontWeight="SemiBold"/><TextBox MinHeight="80" AcceptsReturn="True" FontFamily="Consolas" Text="{Binding Advanced.PolicyJson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalScrollBarVisibility="Auto"/>
      <ui:Button Content="应用策略" Command="{Binding Advanced.ApplyPolicyCommand, Mode=OneWay}" HorizontalAlignment="Right" Margin="0,8,0,12"/>
      <TextBlock Text="引用来源" FontWeight="SemiBold"/><TextBox MinHeight="80" AcceptsReturn="True" FontFamily="Consolas" Text="{Binding Advanced.SourceJson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" VerticalScrollBarVisibility="Auto"/>

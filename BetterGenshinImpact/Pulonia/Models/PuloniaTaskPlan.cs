@@ -13,7 +13,8 @@ public sealed class PuloniaTaskPlan
     /// <summary>
     /// 当前支持的文件格式版本。
     /// </summary>
-    public const int CurrentSchemaVersion = 2;
+    /// <remarks>版本 3 以共享设置（settings、profile_id）取代预设和分组公共参数；开发期不读取旧版本。</remarks>
+    public const int CurrentSchemaVersion = 3;
 
     /// <summary>
     /// 稳定计划 ID，同时作为存储文件名。

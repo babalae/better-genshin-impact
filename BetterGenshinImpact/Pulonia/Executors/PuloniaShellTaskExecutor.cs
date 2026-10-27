@@ -51,8 +51,8 @@ public sealed class PuloniaShellTaskExecutor : IPuloniaTaskExecutor
             ["required"] = new JArray("file_name", "arguments"),
             ["additionalProperties"] = false
         },
-        PublicParameters = ["file_name", "arguments", "working_directory",
-            .. PuloniaTaskCommonSettings.CreateDefaults("shell").Properties().Select(property => property.Name)]
+        // 命令、参数和工作目录是任务参数；执行方式（跳过、超时、窗口、输出）经共享设置继承。
+        SettingBindings = PuloniaSettingCatalog.CreateBindings(PuloniaSettingCatalog.ShellCategory)
     }];
 
     /// <inheritdoc />
@@ -60,8 +60,8 @@ public sealed class PuloniaShellTaskExecutor : IPuloniaTaskExecutor
         PuloniaTaskExecutionContext context, CancellationToken ct)
     {
         var parameters = task.Parameters;
-        var config = PuloniaTaskCommonSettings.FromParameters("shell", parameters);
-        var shellConfig = config.EnableShellConfig ? config.ShellConfig : null;
+        // 执行方式总是来自参数（共享设置），默认值与改造前未启用 Shell 配置时一致。
+        BetterGenshinImpact.Core.Config.ShellConfig? shellConfig = PuloniaTaskCommonSettings.FromParameters("shell", parameters).ShellConfig;
         ct.ThrowIfCancellationRequested();
         if (shellConfig?.Disable == true)
             return new PuloniaTaskOutcome(PuloniaTaskOutcomeKind.Skipped, "Shell 任务已按执行设置跳过。");

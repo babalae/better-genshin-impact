@@ -165,56 +165,43 @@
                     <ui:TextBlock Style="{StaticResource SectionTitle}" Text="任务设置" />
                     <ui:TextBlock Margin="0,-4,0,10"
                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                  Text="仅对这个任务生效；未修改的项沿用默认或分组设置。"
+                                  Text="仅对这个任务生效；未修改的项沿用任务默认值。"
                                   TextWrapping="Wrap" />
                     <controls:PuloniaTaskSettingsEditorView DataContext="{Binding Settings}" />
                 </StackPanel>
 
-                <!--  其他任务的专用设置入口（在独立窗口中确认后立即生效）  -->
+                <!--  JS 脚本自定义设置：按项目 settings_ui 在独立窗口中编辑，确认后立即生效  -->
                 <StackPanel Visibility="{Binding HasTaskTools, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <ui:TextBlock Style="{StaticResource SectionTitle}" Text="任务设置" />
-                    <ui:CardControl Margin="0,0,0,8"
-                                    Icon="{ui:SymbolIcon Settings24}"
-                                    Visibility="{Binding Advanced.CanEditCommonSettings, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ui:CardControl Margin="0,0,0,8" Icon="{ui:SymbolIcon Code24}">
                         <ui:CardControl.Header>
                             <StackPanel>
-                                <ui:TextBlock FontTypography="Body" Text="行走、战斗与执行" />
+                                <ui:TextBlock FontTypography="Body" Text="脚本自定义设置" />
                                 <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                              Text="分组中的设置会被同类子任务继承，确认后立即生效"
-                                              TextWrapping="Wrap" />
-                            </StackPanel>
-                        </ui:CardControl.Header>
-                        <WrapPanel Margin="0,0,36,0" HorizontalAlignment="Right">
-                            <ui:Button Margin="8,2,0,2"
-                                       Command="{Binding Advanced.EditCommonSettingsCommand, Mode=OneWay}"
-                                       CommandParameter="pathing"
-                                       Content="地图追踪"
-                                       Visibility="{Binding Advanced.CanEditPathingSettings, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                            <ui:Button Margin="8,2,0,2"
-                                       Command="{Binding Advanced.EditCommonSettingsCommand, Mode=OneWay}"
-                                       CommandParameter="javascript"
-                                       Content="JS 脚本"
-                                       Visibility="{Binding Advanced.CanEditJavaScriptSettings, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                            <ui:Button Margin="8,2,0,2"
-                                       Command="{Binding Advanced.EditCommonSettingsCommand, Mode=OneWay}"
-                                       CommandParameter="shell"
-                                       Content="Shell"
-                                       Visibility="{Binding Advanced.CanEditShellSettings, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                        </WrapPanel>
-                    </ui:CardControl>
-                    <ui:CardControl Margin="0,0,0,8"
-                                    Icon="{ui:SymbolIcon History24}"
-                                    Visibility="{Binding Advanced.CanEditCollectionCooldown, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <ui:CardControl.Header>
-                            <StackPanel>
-                                <ui:TextBlock FontTypography="Body" Text="采集 CD" />
-                                <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                              Text="{Binding Advanced.CollectionCooldownSummary, Mode=OneWay}"
+                                              Text="{Binding Advanced.ScriptSettingsSummary, Mode=OneWay}"
                                               TextWrapping="Wrap" />
                             </StackPanel>
                         </ui:CardControl.Header>
                         <ui:Button Margin="0,0,36,0"
-                                   Command="{Binding Advanced.EditCollectionCooldownCommand, Mode=OneWay}"
+                                   Command="{Binding Advanced.EditScriptSettingsCommand, Mode=OneWay}"
+                                   Content="配置" />
+                    </ui:CardControl>
+                </StackPanel>
+
+                <!--  共享设置：队伍、战斗、拾取、行走、采集 CD 与 Shell，在独立窗口中逐项修改，立即生效并向下传播  -->
+                <StackPanel Visibility="{Binding Advanced.CanEditSharedSettings, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <ui:TextBlock Style="{StaticResource SectionTitle}" Text="共享设置" />
+                    <ui:CardControl Margin="0,0,0,8" Icon="{ui:SymbolIcon Settings24}">
+                        <ui:CardControl.Header>
+                            <StackPanel>
+                                <ui:TextBlock FontTypography="Body" Text="队伍、战斗、拾取与行走等" />
+                                <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                              Text="{Binding Advanced.SharedSettingsSummary, Mode=OneWay}"
+                                              TextWrapping="Wrap" />
+                            </StackPanel>
+                        </ui:CardControl.Header>
+                        <ui:Button Margin="0,0,36,0"
+                                   Command="{Binding Advanced.EditSharedSettingsCommand, Mode=OneWay}"
                                    Content="配置" />
                     </ui:CardControl>
                 </StackPanel>
@@ -227,49 +214,37 @@
                         <StackPanel>
                             <ui:TextBlock FontTypography="Body" Text="高级设置" />
                             <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                          Text="参数预设、原始参数与执行策略，点击“应用”后立即生效"
+                                          Text="原始任务参数、共享设置与执行策略，点击“应用”后立即生效"
                                           TextWrapping="Wrap" />
                         </StackPanel>
                     </ui:CardExpander.Header>
                     <StackPanel>
-                        <!--  参数预设  -->
-                        <StackPanel Visibility="{Binding Advanced.CanSelectPreset, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <ui:TextBlock FontTypography="BodyStrong" Text="参数预设" />
-                            <ui:TextBlock Margin="0,2,0,0"
-                                          Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                          Text="跨计划复用同类任务的一组参数；本任务单独设置的参数优先"
-                                          TextWrapping="Wrap" />
-                            <Grid Margin="0,6,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <ComboBox DisplayMemberPath="DisplayName"
-                                          ItemsSource="{Binding Advanced.PresetOptions, Mode=OneWay}"
-                                          SelectedItem="{Binding Advanced.SelectedPresetOption, Mode=TwoWay}" />
-                                <ui:Button Grid.Column="1"
-                                           Margin="8,0,0,0"
-                                           Command="{Binding Session.RefreshPresetsCommand, Mode=OneWay}"
-                                           Content="刷新" />
-                            </Grid>
+                        <!--  原始任务参数（仅叶子）  -->
+                        <StackPanel Visibility="{Binding Advanced.CanEditParameters, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <ui:TextBlock FontTypography="BodyStrong" Text="{Binding Advanced.ParameterEditorTitle, Mode=OneWay}" />
+                            <TextBox Style="{StaticResource JsonEditor}"
+                                     Text="{Binding Advanced.ParameterJson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <StackPanel Margin="0,6,0,0"
+                                        HorizontalAlignment="Right"
+                                        Orientation="Horizontal">
+                                <ui:Button Margin="0,0,8,0"
+                                           Command="{Binding Advanced.RestoreParameterInheritanceCommand, Mode=OneWay}"
+                                           Content="清空本任务参数"
+                                           ToolTip="删除本任务单独设置的任务参数，恢复使用能力默认值；共享设置不受影响" />
+                                <ui:Button Command="{Binding Advanced.ApplyParametersCommand, Mode=OneWay}" Content="应用参数" />
+                            </StackPanel>
                         </StackPanel>
 
-                        <!--  原始参数  -->
+                        <!--  原始共享设置  -->
                         <ui:TextBlock Margin="0,16,0,0"
                                       FontTypography="BodyStrong"
-                                      Text="{Binding Advanced.ParameterEditorTitle, Mode=OneWay}" />
+                                      Text="共享设置（JSON 对象，设置项 ID 到值）" />
                         <TextBox Style="{StaticResource JsonEditor}"
-                                 Text="{Binding Advanced.ParameterJson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                        <StackPanel Margin="0,6,0,0"
-                                    HorizontalAlignment="Right"
-                                    Orientation="Horizontal">
-                            <ui:Button Margin="0,0,8,0"
-                                       Command="{Binding Advanced.RestoreParameterInheritanceCommand, Mode=OneWay}"
-                                       Content="清空本任务参数"
-                                       ToolTip="删除本任务单独设置的参数，恢复使用默认值、预设和分组设置"
-                                       Visibility="{Binding Advanced.CanSelectPreset, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                            <ui:Button Command="{Binding Advanced.ApplyParametersCommand, Mode=OneWay}" Content="应用参数" />
-                        </StackPanel>
+                                 Text="{Binding Advanced.SettingsJson, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <ui:Button Margin="0,6,0,0"
+                                   HorizontalAlignment="Right"
+                                   Command="{Binding Advanced.ApplySettingsCommand, Mode=OneWay}"
+                                   Content="应用共享设置" />
 
                         <!--  执行策略  -->
                         <ui:TextBlock Margin="0,16,0,0"

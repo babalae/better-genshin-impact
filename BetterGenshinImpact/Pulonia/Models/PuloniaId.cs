@@ -24,9 +24,9 @@ public static class PuloniaId
     public static string NewTaskId() => ShortId.Create("tsk");
 
     /// <summary>
-    /// 生成共享参数预设 ID。
+    /// 生成共享设置方案 ID。
     /// </summary>
-    public static string NewPresetId() => ShortId.Create("pre");
+    public static string NewProfileId() => ShortId.Create("prf");
 
     /// <summary>
     /// 生成任务触发器 ID。

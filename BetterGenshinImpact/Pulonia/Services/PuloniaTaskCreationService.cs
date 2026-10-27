@@ -66,7 +66,8 @@ public sealed class PuloniaTaskCreationService
             {
                 Name = request.Name,
                 TaskType = request.Definition.TaskType,
-                Parameters = request.Overrides
+                Parameters = TaskParameters(request),
+                Settings = SharedSettings(request)
             };
         }
 
@@ -107,7 +108,8 @@ public sealed class PuloniaTaskCreationService
                 TaskType = definition.TaskType,
                 Path = resource.RelativePath,
                 ResourceVersion = await PuloniaTaskResourceFingerprint.ComputeFileVersionAsync(resource.FullPath),
-                Parameters = request.Overrides
+                Parameters = TaskParameters(request),
+                Settings = SharedSettings(request)
             };
         }
 
@@ -131,7 +133,7 @@ public sealed class PuloniaTaskCreationService
                     Version = await PuloniaTaskResourceFingerprint.ComputeDirectoryVersionAsync(resource.FullPath, files)
                 }
             };
-            AddGroupParameterOverride(reference, definition, request.Overrides);
+            ApplyReferenceSettings(reference, request);
             return reference;
         }
 
@@ -145,7 +147,8 @@ public sealed class PuloniaTaskCreationService
                 Name = Path.GetFileNameWithoutExtension(file),
                 TaskType = definition.TaskType,
                 Path = Path.GetRelativePath(definition.ResourceBaseDirectory!, file),
-                ResourceVersion = await PuloniaTaskResourceFingerprint.ComputeFileVersionAsync(file)
+                ResourceVersion = await PuloniaTaskResourceFingerprint.ComputeFileVersionAsync(file),
+                Parameters = TaskParameters(request)
             };
             AddExpandedLeaf(group, request.DirectoryImportMode, Path.GetRelativePath(resource.FullPath, file), leaf);
         }
@@ -174,7 +177,8 @@ public sealed class PuloniaTaskCreationService
                 TaskType = taskType,
                 Resource = reference,
                 ResourceVersion = version,
-                Parameters = request.Overrides
+                Parameters = TaskParameters(request),
+                Settings = SharedSettings(request)
             };
         }
 
@@ -199,7 +203,7 @@ public sealed class PuloniaTaskCreationService
                     Version = version
                 }
             };
-            AddGroupParameterOverride(directoryReference, definition, request.Overrides);
+            ApplyReferenceSettings(directoryReference, request);
             return directoryReference;
         }
 
@@ -215,7 +219,8 @@ public sealed class PuloniaTaskCreationService
                 TaskType = taskType,
                 Resource = child,
                 ResourceVersion = await Task.Run(() => PuloniaTaskResourceFingerprint.ComputeRepositoryVersion(snapshot,
-                    child.RelativePath, taskType))
+                    child.RelativePath, taskType)),
+                Parameters = TaskParameters(request)
             };
             AddExpandedLeaf(group, request.DirectoryImportMode, relative, leaf);
         }
@@ -223,29 +228,44 @@ public sealed class PuloniaTaskCreationService
     }
 
     /// <summary>
-    /// 建立展开目录使用的根分组，表单中的显式设置作为分组公共参数应用到全部子任务。
+    /// 建立展开目录使用的根分组：表单中属于共享设置的项写在根分组上，由全部子任务继承；任务参数写在每个子任务上。
     /// </summary>
     private static PuloniaTask CreateExpandedGroup(PuloniaTaskCreationRequest request)
+        => new() { Name = request.Name, TaskType = "group", Settings = SharedSettings(request) };
+
+    /// <summary>
+    /// 目录引用展开的任务只能继承共享设置，表单中的显式设置写在引用分组上；不能表示的任务参数明确拒绝。
+    /// </summary>
+    /// <exception cref="FormatException">表单中有不属于共享设置的任务参数。</exception>
+    private static void ApplyReferenceSettings(PuloniaTask reference, PuloniaTaskCreationRequest request)
     {
-        var group = new PuloniaTask { Name = request.Name, TaskType = "group" };
-        AddGroupParameterOverride(group, request.Definition, request.Overrides);
-        return group;
+        var parameters = TaskParameters(request);
+        if (parameters.Count > 0)
+            throw new FormatException("目录引用不能保存任务参数：" + string.Join("、", parameters.Properties()
+                .Select(property => PuloniaTaskFieldNames.GetDisplayName(property.Name))) + "。请改用展开方式添加。");
+        reference.Settings = SharedSettings(request);
     }
 
     /// <summary>
-    /// 把创建表单中的显式设置作为分组公共参数应用到批量资源。
+    /// 表单显式设置中只属于本任务的任务参数（不由共享设置覆盖的顶层参数）。
     /// </summary>
-    private static void AddGroupParameterOverride(PuloniaTask group, PuloniaTaskDefinition definition,
-        JObject overrides)
+    private static JObject TaskParameters(PuloniaTaskCreationRequest request)
     {
-        if (overrides.Count == 0)
-            return;
-        group.ParameterOverrides.Add(new PuloniaTaskParameterOverride
-        {
-            TaskType = definition.TaskType,
-            SchemaVersion = definition.SchemaVersion,
-            Values = (JObject)overrides.DeepClone()
-        });
+        var shared = request.Definition.SettingBindings.Values.ToHashSet(StringComparer.Ordinal);
+        return new JObject(request.Overrides.Properties().Where(property => !shared.Contains(property.Name))
+            .Select(property => new JProperty(property.Name, property.Value.DeepClone())));
+    }
+
+    /// <summary>
+    /// 表单显式设置中属于共享设置的项，按设置项 ID 写入节点自身的共享设置。
+    /// 只处理参数路径就是顶层参数名的设置项；嵌套对象参数不在创建表单中出现。
+    /// </summary>
+    private static JObject SharedSettings(PuloniaTaskCreationRequest request)
+    {
+        var keyByPath = request.Definition.SettingBindings.ToDictionary(item => item.Value, item => item.Key, StringComparer.Ordinal);
+        return new JObject(request.Overrides.Properties()
+            .Where(property => keyByPath.ContainsKey(property.Name))
+            .Select(property => new JProperty(keyByPath[property.Name], property.Value.DeepClone())));
     }
 
     /// <summary>

@@ -65,15 +65,15 @@ public sealed partial class PuloniaTaskStore : IDisposable
         => await ReadPlanAsync(GetPath("plans", id), id, ct).ConfigureAwait(false);
 
     /// <summary>
-    /// 读取预设，不将缺失预设替换为空参数。
+    /// 读取设置方案；缺失返回 null，不替换为空方案。
     /// </summary>
-    public async Task<PuloniaTaskPreset?> LoadPresetAsync(string id, CancellationToken ct = default)
+    public async Task<PuloniaSettingsProfile?> LoadProfileAsync(string id, CancellationToken ct = default)
     {
-        var path = GetPath("presets", id);
+        var path = GetPath("profiles", id);
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            return await ReadPresetAsync(path, id, ct).ConfigureAwait(false);
+            return await ReadProfileAsync(path, id, ct).ConfigureAwait(false);
         }
         finally
         {
@@ -155,20 +155,20 @@ public sealed partial class PuloniaTaskStore : IDisposable
            || task.Children.Any(child => ReferencesPlan(child, planId));
 
     /// <summary>
-    /// 保存预设，使用相同的修订检查和完整文件替换。
+    /// 保存设置方案，使用与计划相同的修订检查和完整文件替换；返回保存后的新修订副本。
     /// </summary>
-    public async Task<PuloniaTaskPreset> SavePresetAsync(PuloniaTaskPreset preset, CancellationToken ct = default)
+    public async Task<PuloniaSettingsProfile> SaveProfileAsync(PuloniaSettingsProfile profile, CancellationToken ct = default)
     {
-        var candidate = PuloniaTaskJson.ReadPreset(PuloniaTaskJson.WritePreset(preset));
-        var path = GetPath("presets", candidate.Id);
+        var candidate = PuloniaTaskJson.CloneProfile(profile);
+        var path = GetPath("profiles", candidate.Id);
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
             using var writerLock = AcquireWriterLock();
-            var current = await ReadPresetAsync(path, candidate.Id, ct).ConfigureAwait(false);
+            var current = await ReadProfileAsync(path, candidate.Id, ct).ConfigureAwait(false);
             CheckRevision(candidate.Revision, current?.Revision, candidate.Id);
             candidate.Revision = checked(candidate.Revision + 1);
-            await WriteAtomicallyAsync(path, PuloniaTaskJson.WritePreset(candidate), ct).ConfigureAwait(false);
+            await WriteAtomicallyAsync(path, PuloniaTaskJson.WriteProfile(candidate), ct).ConfigureAwait(false);
             return candidate;
         }
         finally
@@ -176,6 +176,51 @@ public sealed partial class PuloniaTaskStore : IDisposable
             _gate.Release();
         }
     }
+
+    /// <summary>
+    /// 删除指定修订的设置方案；仍被已保存计划引用时拒绝删除，并列出引用的计划。
+    /// </summary>
+    public async Task DeleteProfileAsync(string id, long expectedRevision, CancellationToken ct = default)
+    {
+        var path = GetPath("profiles", id);
+        await _gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            using var writerLock = AcquireWriterLock();
+            var current = await ReadProfileAsync(path, id, ct).ConfigureAwait(false);
+            CheckRevision(expectedRevision, current?.Revision, id);
+
+            // 检查和删除共用写锁；读不出的计划无法确认引用，按“明确报错即可”拒绝删除。
+            var directory = Path.Combine(RootDirectory, "plans");
+            if (Directory.Exists(directory))
+            {
+                var users = new List<string>();
+                foreach (var planPath in Directory.EnumerateFiles(directory, "*.json"))
+                {
+                    var planId = Path.GetFileNameWithoutExtension(planPath);
+                    var plan = await ReadPlanAsync(planPath, planId, ct).ConfigureAwait(false);
+                    if (plan is not null && UsesProfile(plan.RootTask, id))
+                        users.Add("“" + plan.Name + "”");
+                }
+                if (users.Count > 0)
+                    throw new PuloniaTaskValidationException(id,
+                        $"计划 {string.Join("、", users)} 仍在使用此方案，请先改掉这些引用后再删除。");
+            }
+
+            ct.ThrowIfCancellationRequested();
+            File.Delete(path);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    /// <summary>
+    /// 检查全部节点（包括禁用节点）是否使用了指定方案。
+    /// </summary>
+    private static bool UsesProfile(PuloniaTask task, string profileId)
+        => task.ProfileId == profileId || task.Children.Any(child => UsesProfile(child, profileId));
 
     /// <summary>
     /// 计划目录的修改标记，由各计划文件的名称、长度和最后写入时间组成；新增、删除或替换计划后都会变化。
@@ -266,28 +311,37 @@ public sealed partial class PuloniaTaskStore : IDisposable
     }
 
     /// <summary>
-    /// 列出共享预设的独立编辑副本；任一损坏文件明确报错，不悄悄忽略。
+    /// 列出设置方案的独立编辑副本（按名称排序）；损坏的方案文件被跳过并记入失败，文件保留在磁盘上。
     /// </summary>
-    public async Task<IReadOnlyList<PuloniaTaskPreset>> ListPresetsAsync(CancellationToken ct = default)
+    public async Task<PuloniaTaskFileListResult<PuloniaSettingsProfile>> ListProfilesAsync(CancellationToken ct = default)
     {
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            var directory = Path.Combine(RootDirectory, "presets");
+            var directory = Path.Combine(RootDirectory, "profiles");
             if (!Directory.Exists(directory))
-                return Array.Empty<PuloniaTaskPreset>();
-            var result = new List<PuloniaTaskPreset>();
+                return PuloniaTaskFileListResult<PuloniaSettingsProfile>.Empty;
+            var result = new List<PuloniaSettingsProfile>();
+            var failures = new List<PuloniaTaskFileLoadFailure>();
             foreach (var path in Directory.EnumerateFiles(directory, "*.json"))
             {
                 ct.ThrowIfCancellationRequested();
                 var id = Path.GetFileNameWithoutExtension(path);
-                PuloniaTaskValidator.ValidateId(id, path);
-                var preset = await ReadPresetAsync(path, id, ct).ConfigureAwait(false);
-                if (preset is not null)
-                    result.Add(preset);
+                try
+                {
+                    PuloniaTaskValidator.ValidateId(id, path);
+                    if (await ReadProfileAsync(path, id, ct).ConfigureAwait(false) is { } profile)
+                        result.Add(profile);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    failures.Add(new PuloniaTaskFileLoadFailure(path, AsValidId(id), ex.Message));
+                }
             }
-            result.Sort((a, b) => StringComparer.Ordinal.Compare(a.Id, b.Id));
-            return result.AsReadOnly();
+            result.Sort((a, b) => StringComparer.CurrentCulture.Compare(a.Name, b.Name) is var byName and not 0
+                ? byName
+                : StringComparer.Ordinal.Compare(a.Id, b.Id));
+            return new PuloniaTaskFileListResult<PuloniaSettingsProfile>(result.AsReadOnly(), failures.AsReadOnly());
         }
         finally
         {
@@ -558,17 +612,17 @@ public sealed partial class PuloniaTaskStore : IDisposable
     }
 
     /// <summary>
-    /// 读取并检查预设文件的身份。
+    /// 读取并检查设置方案文件的身份。
     /// </summary>
-    private static async Task<PuloniaTaskPreset?> ReadPresetAsync(string path, string id, CancellationToken ct)
+    private static async Task<PuloniaSettingsProfile?> ReadProfileAsync(string path, string id, CancellationToken ct)
     {
         var json = await ReadIfExistsAsync(path, ct).ConfigureAwait(false);
         if (json is null)
             return null;
-        var preset = PuloniaTaskJson.ReadPreset(json);
-        if (preset.Id != id)
-            throw new PuloniaTaskValidationException(path, "文件名与预设 ID 不一致。");
-        return preset;
+        var profile = PuloniaTaskJson.ReadProfile(json);
+        if (profile.Id != id)
+            throw new PuloniaTaskValidationException(path, "文件名与方案 ID 不一致。");
+        return profile;
     }
 
     /// <summary>

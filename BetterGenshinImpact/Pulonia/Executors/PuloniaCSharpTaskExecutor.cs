@@ -43,8 +43,7 @@ public sealed class PuloniaCSharpTaskExecutor : IPuloniaTaskExecutor
             },
             ["required"] = new JArray("operation"),
             ["additionalProperties"] = true
-        },
-        PublicParameters = ["operation", "values", "delay_milliseconds"]
+        }
     }];
 
     /// <summary>

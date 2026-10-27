@@ -70,6 +70,34 @@ public partial class PuloniaTaskPlanDocumentViewModel
         return true;
     }
 
+    /// <summary>取得节点能力的资源根目录，用于解析本地资源的相对路径；与运行构建共用同一能力查找规则。</summary>
+    /// <param name="node">目标节点。</param>
+    /// <returns>资源根目录；未注册能力时为空。</returns>
+    internal string? GetResourceBaseDirectory(PuloniaTaskNodeViewModel node) => GetDefinition(node.Model)?.ResourceBaseDirectory;
+
+    /// <summary>
+    /// 用脚本设置弹窗确认的完整 settings 对象替换 JS 叶子节点的脚本自定义设置，作为一次可撤销编辑提交。
+    /// 与当前有效值相同时不写入，保持预设或分组设置的继承。
+    /// </summary>
+    /// <param name="node">JS 叶子节点。</param>
+    /// <param name="settings">完整的脚本 settings 对象。</param>
+    /// <returns>设置确有变化并已提交时返回 true。</returns>
+    /// <exception cref="InvalidOperationException">节点已经移除或不是 JS 任务。</exception>
+    /// <exception cref="PuloniaTaskValidationException">合并后的参数不符合 Schema。</exception>
+    internal bool ApplyJavaScriptSettings(PuloniaTaskNodeViewModel node, JObject settings)
+    {
+        EnsureEditableNode(node);
+        if (!node.IsLeaf || node.TaskType != "javascript")
+            throw new InvalidOperationException("只有 JS 脚本任务可以编辑脚本自定义设置。");
+        if (JToken.DeepEquals(GetOneDragonParameters(node)["settings"], settings))
+            return false;
+
+        var changes = new JObject { ["settings"] = settings.DeepClone() };
+        ValidateParameterChanges(node, changes);
+        ApplyMutation(() => node.Model.Parameters["settings"] = settings.DeepClone(), node);
+        return true;
+    }
+
     /// <summary>确认节点仍属于当前未删除的计划，弹窗打开期间节点可能被撤销或删除。</summary>
     /// <param name="node">待编辑节点。</param>
     /// <exception cref="InvalidOperationException">节点已经移除。</exception>

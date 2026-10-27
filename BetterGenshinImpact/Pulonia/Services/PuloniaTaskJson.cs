@@ -34,23 +34,28 @@ public static class PuloniaTaskJson
     }
 
     /// <summary>
-    /// 从 JSON 读取并校验参数预设。
+    /// 从 JSON 读取并校验设置方案。
     /// </summary>
-    public static PuloniaTaskPreset ReadPreset(string json)
+    public static PuloniaSettingsProfile ReadProfile(string json)
     {
-        var preset = Read<PuloniaTaskPreset>(json);
-        PuloniaTaskValidator.ValidatePreset(preset);
-        return preset;
+        var profile = Read<PuloniaSettingsProfile>(json);
+        PuloniaTaskValidator.ValidateProfile(profile);
+        return profile;
     }
 
     /// <summary>
-    /// 校验后输出预设 JSON。
+    /// 校验后输出设置方案 JSON。
     /// </summary>
-    public static string WritePreset(PuloniaTaskPreset preset)
+    public static string WriteProfile(PuloniaSettingsProfile profile)
     {
-        PuloniaTaskValidator.ValidatePreset(preset);
-        return Write(preset);
+        PuloniaTaskValidator.ValidateProfile(profile);
+        return Write(profile);
     }
+
+    /// <summary>
+    /// 深复制设置方案，供编辑草稿使用。
+    /// </summary>
+    public static PuloniaSettingsProfile CloneProfile(PuloniaSettingsProfile profile) => ReadProfile(WriteProfile(profile));
 
     /// <summary>
     /// 深复制计划，保留全部稳定 ID；运行准备使用此入口。
@@ -67,12 +72,9 @@ public static class PuloniaTaskJson
         copy.Id = PuloniaId.NewPlanId();
         copy.Revision = 0;
 
-        // 节点身份改变后，账号预设选择和触发目标必须同步指向副本节点。
+        // 节点身份改变后，触发目标必须同步指向副本节点。
         var taskIds = new Dictionary<string, string>(StringComparer.Ordinal);
         AssignNewIds(copy.RootTask, taskIds);
-        foreach (var account in copy.Accounts)
-            account.PresetSelections = account.PresetSelections.ToDictionary(
-                item => taskIds[item.Key], item => item.Value, StringComparer.Ordinal);
         foreach (var trigger in copy.Triggers)
         {
             trigger.Id = PuloniaId.NewTriggerId();
