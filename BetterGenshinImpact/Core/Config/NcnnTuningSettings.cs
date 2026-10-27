@@ -152,7 +152,8 @@ public partial class NcnnTuningSettings : ObservableObject
         return copy.Normalize();
     }
 
-    /// <summary>只比较是否变化用的稳定签名（不参与验证指纹）。</summary>
+    /// <summary>只比较是否变化用的稳定签名（不参与验证指纹；派生属性，不参与 JSON 往返）。</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
     public string SignatureSuffix => string.Create(CultureInfo.InvariantCulture,
         $"|{Threads}|{OpenmpBlocktime}|{B(UseFp16Packed)}{B(UseFp16Storage)}{B(UseFp16Arithmetic)}|" +
         $"{B(UseInt8Inference)}{B(UseInt8Packed)}{B(UseInt8Storage)}{B(UseInt8Arithmetic)}|{B(UseBf16Storage)}|" +

@@ -55,13 +55,6 @@ internal sealed class NcnnRec : IOcrRecognizer
 
     public string GetConfigName => "PP-OCRv6 (ncnn)";
 
-    /// <summary>用零张量按常用宽度预热一次（触发 Vulkan shader 编译等首次推理开销）。</summary>
-    public void Warmup()
-    {
-        Array.Clear(_session.InputBuffer);
-        _ = _session.Infer(NcnnInput.FromFloat("in0", _session.InputBuffer, 320, ModelHeight, 3));
-    }
-
     public OcrRecognizerResult[] Run(Mat[] srcs, int batchSize = 0)
     {
         if (srcs.Length == 0) return [];

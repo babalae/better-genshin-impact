@@ -238,16 +238,6 @@ public sealed class NcnnShim : INcnnShim
         }
     }
 
-    /// <summary>像素直输：RGB/BGR/RGBA/BGRA/NV12 直接喂入，省掉一次 CHW 浮点写入。</summary>
-    public NcnnOutput? InferPixels(nint handle, byte[] pixels, int width, int height,
-        NcnnPixelFormat format, string inputName, string outputName, int stride = 0)
-    {
-        var outputs = InferEx(handle,
-            [NcnnInput.FromPixels(inputName, pixels, width, height, format, stride)],
-            [outputName]);
-        return outputs.Count > 0 ? outputs[0] : null;
-    }
-
     public string[] QueryInputBlobs(nint handle) => QueryBlobNames(handle, _getInputCount, _getInputName);
     public string[] QueryOutputBlobs(nint handle) => QueryBlobNames(handle, _getOutputCount, _getOutputName);
 
@@ -567,13 +557,6 @@ public sealed class NcnnShim : INcnnShim
         if (!NativeLibrary.TryGetExport(library, name, out var address))
             throw new EntryPointNotFoundException($"ncnn_shim 导出未找到: {name}");
         return Marshal.GetDelegateForFunctionPointer<T>(address);
-    }
-
-    private static T? TryGetDelegate<T>(nint library, string name) where T : Delegate
-    {
-        return NativeLibrary.TryGetExport(library, name, out var address)
-            ? Marshal.GetDelegateForFunctionPointer<T>(address)
-            : null;
     }
 
     public void Dispose()

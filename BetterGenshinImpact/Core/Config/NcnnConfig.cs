@@ -80,17 +80,4 @@ public partial class NcnnConfig : ObservableObject
         RecTuning = normalized.Rec;
         YoloTuning = normalized.Yolo;
     }
-
-    /// <summary>恢复出厂值。「恢复默认 CPU」与整体配置重置以外的路径不得调用。</summary>
-    public void ResetToDefaults()
-    {
-        PreferredBackend = InferenceBackend.Onnx;
-        UseOcr = false;
-        UseYolo = false;
-        ComputeMode = NcnnComputeMode.Vulkan;
-        GpuIndex = 0;
-        DetTuning = NcnnTuningSettings.CreateDefault();
-        RecTuning = NcnnTuningSettings.CreateDefault();
-        YoloTuning = NcnnTuningSettings.CreateDefault();
-    }
 }

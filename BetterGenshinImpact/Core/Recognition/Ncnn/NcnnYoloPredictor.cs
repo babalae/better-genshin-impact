@@ -276,17 +276,6 @@ public sealed class NcnnYoloPredictor : IYoloPredictorBackend
         });
     }
 
-    /// <summary>解码 [1, 4+nc, N] 输出并做同类贪心 NMS（复刻 Yolo11RawBoundingBoxParser + NonMaxSuppressionService）。</summary>
-    internal static List<RawBox> DecodeAndNms(float[] output, int outCount, int classCount,
-        float confidenceThreshold, float iouThreshold)
-    {
-        var attributeCount = 4 + classCount;
-        if (outCount <= 0 || outCount % attributeCount != 0)
-            throw new InvalidOperationException($"YOLO 输出维度异常: {outCount} 不能被 {attributeCount} 整除");
-        return DecodeAndNmsCore(output, outCount / attributeCount, attributeCount, classCount,
-            confidenceThreshold, iouThreshold);
-    }
-
     /// <summary>按显式 anchor / 属性数解码（元信息路径），避免用元素总数反推布局。</summary>
     internal static List<RawBox> DecodeAndNmsCore(float[] output, int anchorCount, int attributeCount,
         int classCount, float confidenceThreshold, float iouThreshold)

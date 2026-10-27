@@ -146,8 +146,6 @@ public sealed record NcnnTensorInfo(
     int Dims, int Width, int Height, int Depth, int Channels,
     int ElementPack, int ElementBits, int ChannelStep, int Count)
 {
-    public int CompactCount => Width * Height * Math.Max(Depth, 1) * Channels;
-
     public string ShapeText => Dims switch
     {
         <= 1 => $"{Width}",

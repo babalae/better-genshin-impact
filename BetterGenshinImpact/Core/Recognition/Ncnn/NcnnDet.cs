@@ -67,15 +67,6 @@ internal sealed class NcnnDet : IOcrDetector
 
     public string GetConfigName => "PP-OCRv6 det (ncnn)";
 
-    PaddleOcrDetectionBox[] IOcrDetector.RunBoxes(Mat src) => RunBoxes(src);
-
-    /// <summary>用零张量按最大画布预热一次（触发 Vulkan shader 编译等首次推理开销）。</summary>
-    public void Warmup()
-    {
-        Array.Clear(_session.InputBuffer);
-        _ = _session.Infer(NcnnInput.FromFloat("in0", _session.InputBuffer, _maxCanvas, _maxCanvas, 3));
-    }
-
     /// <summary>检测文本框（与 Det.RunBoxes 同语义）。</summary>
     public PaddleOcrDetectionBox[] RunBoxes(Mat src)
     {

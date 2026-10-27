@@ -28,9 +28,6 @@ internal sealed class NcnnSession : IDisposable
     /// <summary>复用的模型输入缓冲（CHW fp32），调用方写入后作为输入传给 <see cref="Infer" />。</summary>
     public float[] InputBuffer { get; }
 
-    /// <summary>当前会话池已创建的会话数（诊断展示用）。</summary>
-    public int CreatedSessions => _pool.CreatedCount;
-
     /// <summary>单输入单输出推理；首次推理时从模型解析真实 blob 名（解析不到保留 in0 / out0）。</summary>
     public NcnnOutput Infer(NcnnInput input)
     {

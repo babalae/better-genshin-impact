@@ -15,7 +15,6 @@ public partial class InferenceBackendOptionViewModel(InferenceBackend backend) :
         : "按设备选择 CPU、DirectML、OpenVINO 或 CUDA，兼容性最好，可调整线程与缓存。";
     public string Tagline => Backend == InferenceBackend.Ncnn ? "计算模式：Vulkan 显卡 / CPU" : "按显卡/处理器挑选执行设备";
 
-    [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private bool _isCurrent;
     [ObservableProperty] private bool _isBlocked;
     [ObservableProperty, NotifyPropertyChangedFor(nameof(HasStatus))] private string _statusText = "";

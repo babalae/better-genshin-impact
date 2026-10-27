@@ -27,17 +27,7 @@ public sealed record NcnnBackendSettings(
     NcnnComputeMode ComputeMode, int GpuIndex,
     NcnnTuningSettings Det, NcnnTuningSettings Rec, NcnnTuningSettings Yolo)
 {
-    public const int DefaultThreads = NcnnTuningSettings.DefaultThreads;
-    public const int MaxThreads = NcnnTuningSettings.MaxThreads;
-    public const int MaxParallelSessions = NcnnTuningSettings.MaxParallelSessions;
     public const int MaxGpuIndex = 7;
-
-    public static NcnnBackendSettings Default { get; } = new(InferenceBackend.Onnx, false, false,
-        NcnnComputeMode.Vulkan, 0,
-        NcnnTuningSettings.CreateDefault(), NcnnTuningSettings.CreateDefault(), NcnnTuningSettings.CreateDefault());
-
-    /// <summary>检测用途的线程数（摘要与日志使用的代表值）。</summary>
-    public int Threads => Det.Threads;
 
     public bool IsValid => GpuIndex is >= 0 and <= MaxGpuIndex
         && Det.IsThreadsValid() && Rec.IsThreadsValid() && Yolo.IsThreadsValid();

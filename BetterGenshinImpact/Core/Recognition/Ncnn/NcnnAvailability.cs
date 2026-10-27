@@ -52,10 +52,6 @@ public sealed class NcnnAvailability
     public int ReadyCount => Groups.Sum(group => group.ReadyCount);
     public int TotalCount => Groups.Sum(group => group.TotalCount);
     public bool IsReady => ShimReady && ReadyCount == TotalCount;
-    public bool HasOcrAssets => Groups.Where(group => group.Name.StartsWith("OCR", StringComparison.Ordinal))
-        .All(group => group.IsReady);
-    public bool HasYoloAssets => Groups.Where(group => group.Name.StartsWith("YOLO", StringComparison.Ordinal))
-        .All(group => group.IsReady);
 
     public string Summary
     {

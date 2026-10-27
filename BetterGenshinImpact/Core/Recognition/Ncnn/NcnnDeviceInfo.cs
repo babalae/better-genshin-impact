@@ -19,8 +19,4 @@ public sealed record NcnnDeviceInfo(int Index, string Name, int TypeCode)
 }
 
 /// <summary>一次设备查询的结果；旧版 shim 缺少导出时返回空列表，由界面降级为索引。</summary>
-public sealed record NcnnDeviceQuery(IReadOnlyList<NcnnDeviceInfo> Devices, int DefaultIndex)
-{
-    public static NcnnDeviceQuery Empty { get; } = new([], -1);
-    public bool IsAvailable => Devices.Count > 0;
-}
+public sealed record NcnnDeviceQuery(IReadOnlyList<NcnnDeviceInfo> Devices, int DefaultIndex);

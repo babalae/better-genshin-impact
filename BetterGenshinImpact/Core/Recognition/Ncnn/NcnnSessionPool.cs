@@ -32,17 +32,6 @@ internal sealed class NcnnSessionPool : IDisposable
         _gate = new SemaphoreSlim(_maxSessions, _maxSessions);
     }
 
-    /// <summary>已创建的会话数（用于诊断展示）。</summary>
-    public int CreatedCount
-    {
-        get
-        {
-            lock (_createLock) return _owned.Count;
-        }
-    }
-
-    public int MaxSessions => _maxSessions;
-
     /// <summary>租用一个会话；并行数用尽时阻塞等待归还。</summary>
     public nint Rent()
     {

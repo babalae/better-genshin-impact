@@ -14,18 +14,14 @@ public partial class NcnnTuningViewModel : ObservableObject
 {
     private NcnnTuningSettings _baseline;
 
-    public NcnnTuningViewModel(string key, string title, string description, NcnnTuningSettings baseline)
+    public NcnnTuningViewModel(string title, string description, NcnnTuningSettings baseline)
     {
-        Key = key;
         Title = title;
         Description = description;
         _baseline = baseline.NormalizedCopy();
         Settings = baseline.NormalizedCopy();
         Settings.PropertyChanged += SettingsChanged;
     }
-
-    /// <summary>用途标识（det / rec / yolo），用于日志与诊断。</summary>
-    public string Key { get; }
 
     public string Title { get; }
 
@@ -56,9 +52,6 @@ public partial class NcnnTuningViewModel : ObservableObject
         OnPropertyChanged(nameof(HasChanges));
         OnPropertyChanged(nameof(ChangeSummary));
     }
-
-    /// <summary>丢弃草稿，回到已保存值（例如检测到配置被其他入口改写）。</summary>
-    public void RevertToBaseline() => Settings.CopyFrom(_baseline);
 
     /// <summary>用外部值重置草稿与基线（配置重载后调用）。</summary>
     public void Reload(NcnnTuningSettings baseline)

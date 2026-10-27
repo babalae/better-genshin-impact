@@ -54,11 +54,11 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
 
         // 三套参数完全独立；旧配置缺失时由 FromConfig 统一回落到 ncnn 默认值。
         // 标题使用标准用途名：文本检测（Det）/ 文本识别（Rec）/ YOLO。
-        DetTuning = new NcnnTuningViewModel("det", "文本检测（Det）",
+        DetTuning = new NcnnTuningViewModel("文本检测（Det）",
             "文本检测（DB）使用 det_dyn 动态模型，调优只影响该用途的会话。", normalized.Det);
-        RecTuning = new NcnnTuningViewModel("rec", "文本识别（Rec）",
+        RecTuning = new NcnnTuningViewModel("文本识别（Rec）",
             "文本识别（CTC）使用 rec_dyn 动态宽度模型，线程与并行会话可独立设置。", normalized.Rec);
-        YoloTuning = new NcnnTuningViewModel("yolo", "YOLO",
+        YoloTuning = new NcnnTuningViewModel("YOLO",
             "所有 ncnn YOLO 模型共用这套参数；像素直输需模型自带归一化。", normalized.Yolo);
         NcnnTunings = [DetTuning, RecTuning, YoloTuning];
         foreach (var tuning in NcnnTunings) tuning.Changed += OnTuningChanged;
@@ -69,13 +69,13 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
         _useNcnnOcr = normalized.UseOcr;
         _useNcnnYolo = normalized.UseYolo;
 
-        NcnnThreadChoices = Enumerable.Range(1, NcnnBackendSettings.MaxThreads)
+        NcnnThreadChoices = Enumerable.Range(1, NcnnTuningSettings.MaxThreads)
             .Select(i => new InferenceThreadChoice(i,
-                i == NcnnBackendSettings.DefaultThreads ? $"{i}（默认）" : i.ToString())).ToArray();
-        NcnnParallelChoices = Enumerable.Range(1, NcnnBackendSettings.MaxParallelSessions)
+                i == NcnnTuningSettings.DefaultThreads ? $"{i}（默认）" : i.ToString())).ToArray();
+        NcnnParallelChoices = Enumerable.Range(1, NcnnTuningSettings.MaxParallelSessions)
             .Select(i => new InferenceThreadChoice(i, i == 1 ? "1（顺序执行，推荐）" : $"{i} 路并行")).ToArray();
-        BackendOptions.Add(new InferenceBackendOptionViewModel(InferenceBackend.Ncnn) { IsSelected = _selectedBackend == InferenceBackend.Ncnn });
-        BackendOptions.Add(new InferenceBackendOptionViewModel(InferenceBackend.Onnx) { IsSelected = _selectedBackend == InferenceBackend.Onnx });
+        BackendOptions.Add(new InferenceBackendOptionViewModel(InferenceBackend.Ncnn));
+        BackendOptions.Add(new InferenceBackendOptionViewModel(InferenceBackend.Onnx));
         // 构造阶段只做文件层探测（字段初始化已完成）；设备枚举与 Vulkan 详情由 Activate / ReloadAssets 触发，
         // 避免仅仅打开设置页或构造测试就初始化 Vulkan。
     }
@@ -145,15 +145,11 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
         ? "CPU（强制 OCR）"
         : _owner?.SelectedEngine?.Name ?? "ONNX Runtime";
 
-    public string OcrTargetText => UseNcnnOcr
+    public string EffectiveCombinationText => $"OCR · {(UseNcnnOcr
         ? $"ncnn · {NcnnDeviceText} · PP-OCRv6（固定模型）"
-        : $"ONNX Runtime · {OnnxTargetName}";
-
-    public string YoloTargetText => UseNcnnYolo
+        : $"ONNX Runtime · {OnnxTargetName}")}　|　YOLO · {(UseNcnnYolo
         ? $"ncnn · {NcnnDeviceText}"
-        : $"ONNX Runtime · {_owner?.SelectedEngine?.Name ?? "ONNX Runtime"} · {_owner?.SelectedEngine?.SelectedDevice?.Name ?? "尚无可用设备"}";
-
-    public string EffectiveCombinationText => $"OCR · {OcrTargetText}　|　YOLO · {YoloTargetText}";
+        : $"ONNX Runtime · {_owner?.SelectedEngine?.Name ?? "ONNX Runtime"} · {_owner?.SelectedEngine?.SelectedDevice?.Name ?? "尚无可用设备"}")}";
 
     /// <summary>已保存的全局后端摘要（引擎分配区底部状态条）。</summary>
     public string SavedBackendText
@@ -218,7 +214,6 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
     [ObservableProperty] private NcnnAvailability _ncnnStatus = NcnnAvailability.Detect();
 
     public bool NcnnShimReady => NcnnStatus.ShimReady;
-    public string NcnnShimPath => NcnnStatus.ShimPath;
     public string NcnnSummary => NcnnStatus.Summary;
     public bool NcnnAssetsReady => NcnnStatus.IsReady;
     public IReadOnlyList<NcnnAssetGroup> NcnnAssetGroups => NcnnStatus.Groups;
@@ -246,8 +241,6 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
     public bool HasNcnnDeviceDetails => NcnnDeviceDetails != null;
 
     public IReadOnlyList<NcnnDetailRow> NcnnDetailRows => NcnnDeviceDetails is { } d ? BuildDetailRows(d) : [];
-
-    public string NcnnDeviceTitle => NcnnDeviceDetails?.DisplayName ?? (IsNcnnVulkan ? "尚未获取设备详情" : "CPU 推理");
 
     public string NcnnHeapBudgetText => NcnnHeapBudgetMB == 0 ? "显存预算未知" : $"{NcnnHeapBudgetMB} MB";
 
@@ -281,26 +274,6 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
         foreach (var tuning in NcnnTunings) tuning.AcceptBaseline();
         _baseline = BuildDraft().Normalize();
         OnPropertyChanged(nameof(TuningChangeSummary));
-    }
-
-    /// <summary>配置被外部改写后重新加载三套草稿与计算模式。</summary>
-    public void Reload(NcnnConfig saved)
-    {
-        var normalized = NcnnBackendSettings.FromConfig(saved);
-        foreach (var (tuning, settings) in new[]
-                 {
-                     (DetTuning, normalized.Det), (RecTuning, normalized.Rec), (YoloTuning, normalized.Yolo)
-                 })
-        {
-            tuning.Reload(settings);
-        }
-
-        NcnnComputeMode = normalized.ComputeMode;
-        NcnnGpuIndex = normalized.GpuIndex;
-        SelectedBackend = normalized.Backend;
-        UseNcnnOcr = normalized.UseOcr;
-        UseNcnnYolo = normalized.UseYolo;
-        ReloadAssets();
     }
 
     /// <summary>「恢复默认」把引擎分配、计算模式与三套调优一起回到出厂值（不影响其他页面设置）。</summary>
@@ -347,7 +320,6 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
     {
         if (_disposed) return;
         RefreshBackendOptions();
-        OnPropertyChanged(nameof(OcrTargetText)); OnPropertyChanged(nameof(YoloTargetText));
         OnPropertyChanged(nameof(EffectiveCombinationText)); OnPropertyChanged(nameof(OnnxTargetName));
         OnPropertyChanged(nameof(OcrOverrideHint)); OnPropertyChanged(nameof(YoloOverrideHint));
         if (!IsActive || !NcnnShimReady || !IsNcnnVulkan || !HasNcnnDevices) return;
@@ -487,7 +459,6 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
 
     partial void OnSelectedBackendChanged(InferenceBackend value)
     {
-        foreach (var option in BackendOptions) option.IsSelected = option.Backend == value;
         // 全局切换把两个用途开关重置为该引擎默认值，高级区再单独覆盖。
         UseNcnnOcr = value == InferenceBackend.Ncnn;
         UseNcnnYolo = value == InferenceBackend.Ncnn;
@@ -501,20 +472,19 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
 
     partial void OnUseNcnnOcrChanged(bool value)
     {
-        OnPropertyChanged(nameof(OcrTargetText)); OnPropertyChanged(nameof(EffectiveCombinationText));
+        OnPropertyChanged(nameof(EffectiveCombinationText));
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
     partial void OnUseNcnnYoloChanged(bool value)
     {
-        OnPropertyChanged(nameof(YoloTargetText)); OnPropertyChanged(nameof(EffectiveCombinationText));
+        OnPropertyChanged(nameof(EffectiveCombinationText));
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
     partial void OnNcnnComputeModeChanged(NcnnComputeMode value)
     {
         OnPropertyChanged(nameof(IsNcnnVulkan));
-        OnPropertyChanged(nameof(IsNcnnCpu));
         OnPropertyChanged(nameof(NcnnDeviceText));
         OnPropertyChanged(nameof(NcnnDeviceHint));
         EnsureDevices(force: true);
@@ -541,7 +511,6 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(HasNcnnDeviceDetails));
         OnPropertyChanged(nameof(NcnnDetailRows));
-        OnPropertyChanged(nameof(NcnnDeviceTitle));
         OnPropertyChanged(nameof(NcnnCapabilityText));
         OnPropertyChanged(nameof(CardSummary));
     }
@@ -551,7 +520,6 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
     partial void OnNcnnStatusChanged(NcnnAvailability value)
     {
         OnPropertyChanged(nameof(NcnnShimReady));
-        OnPropertyChanged(nameof(NcnnShimPath));
         OnPropertyChanged(nameof(NcnnSummary));
         OnPropertyChanged(nameof(NcnnAssetsReady));
         OnPropertyChanged(nameof(NcnnAssetGroups));
