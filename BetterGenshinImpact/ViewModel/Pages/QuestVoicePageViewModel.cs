@@ -52,7 +52,8 @@ public partial class QuestVoicePageViewModel : ViewModel
         _status = service.Status;
         service.Changed += OnServiceChanged;
         Config.PropertyChanged += OnTtsConfigChanged;
-        _ = RefreshVoicesAsync();
+        ObserveEngineConfigs();
+        RefreshVoicesForSelection();
     }
 
     /// <summary>读取最新快照而不是排队时的旧快照，避免多线程事件倒序覆盖。</summary>

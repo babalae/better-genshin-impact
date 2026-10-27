@@ -21,7 +21,9 @@ public interface ITtsProvider : ITtsEngine, IDisposable
 
 /// <summary>驱动配置页面显隐，避免按引擎名散布条件判断。</summary>
 public sealed record TtsProviderCapabilities(bool ServerConnection = false, bool VoiceAssets = false,
-    bool Streaming = false, bool PresetVoices = false, bool RequiresDrain = false);
+    bool Streaming = false, bool PresetVoices = false, bool RequiresDrain = false,
+    bool Rate = false, bool Pitch = false, bool Language = false, bool Model = false, bool ApiKey = false,
+    bool AudioFormat = false);
 
 /// <summary>注册表和页面共用的不可变引擎描述。</summary>
 public sealed record TtsProviderInfo(string Id, string DisplayName, TtsProviderCapabilities Capabilities,
@@ -35,4 +37,4 @@ public sealed record TtsProviderSettings(string ProviderId = "gpt-sovits", strin
     string VoiceId = "");
 
 /// <summary>源编码显式标记，播放器只接收正规化后的 PCM16 WAV。</summary>
-public enum TtsAudioEncoding { Pcm16Wav, Mp3 }
+public enum TtsAudioEncoding { Pcm16Wav, Mp3, Pcm16 }

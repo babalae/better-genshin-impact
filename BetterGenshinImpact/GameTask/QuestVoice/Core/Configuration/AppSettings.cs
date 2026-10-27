@@ -19,7 +19,16 @@ public sealed record AppSettings(
     WindowSettings Window,
     TtsProtocolSettings? Protocol = null, OcrSettings? Ocr = null, string? OcrConfigurationError = null,
     SceneSettings? Scene = null, string? SceneConfigurationError = null,
-    RoutingSettings? Routing = null, string? RoutingConfigurationError = null, TtsProviderSettings? Provider = null);
+    RoutingSettings? Routing = null, string? RoutingConfigurationError = null, TtsProviderSettings? Provider = null,
+    ExtraTtsSettings? Extra = null);
+
+/// <summary>普通引擎的不可变参数快照，连接与角色引用仍各自独立。</summary>
+public sealed record ExtraTtsSettings(string Language = "zh", string Model = "", string Format = "wav",
+    string ApiKey = "", double Rate = 1, double Pitch = 0)
+{
+    /// <summary>诊断字符串不得包含密钥。</summary>
+    public override string ToString() => $"Language={Language}, Format={Format}, Rate={Rate}, Pitch={Pitch}, ApiKey=[redacted]";
+}
 
 /// <summary>TtsProtocolSettings：原神自动配音的业务类型。</summary>
 public sealed record TtsProtocolSettings(string TextLanguage = "zh", string PromptLanguage = "zh",

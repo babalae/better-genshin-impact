@@ -7,6 +7,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.QuestVoice;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Routing;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Tts;
@@ -36,6 +37,10 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
     private string? _expectedSha256;
     /// <summary>填充草稿时抑制脏状态和旅行者自动补齐。</summary>
     private bool _loading;
+    /// <summary>区分声音刷新代次，实例切换后旧结果不能回写。</summary>
+    private int _presetRequestGeneration;
+    /// <summary>跟踪独立引擎实例地址变更。</summary>
+    private readonly HashSet<QuestVoiceEngineConfig> _observedPresetConfigs = new();
     /// <summary>是否已经加载或明确新建了目录。</summary>
     [ObservableProperty] private bool _isLoaded;
     /// <summary>编辑器自身文件操作期间也禁止写入。</summary>
@@ -140,6 +145,13 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
         {
             if (e.PropertyName is nameof(QuestVoicePageViewModel.IsConfigEditable) or nameof(QuestVoicePageViewModel.Status)) RefreshAvailability();
         };
+        owner.Config.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName != nameof(QuestVoiceConfig.ExtraProviders)) return;
+            ObservePresetConfigs();
+            ResetPresetVoicesForSelection();
+        };
+        ObservePresetConfigs();
     }
 
     /// <summary>本模型字段改变时维护显式草稿状态。</summary>
@@ -345,30 +357,86 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
     partial void OnSelectedProfileChanged(QuestVoiceManagementProfile? value)
     {
         OnPropertyChanged(nameof(SelectedPresetVoice));
-        _ = RefreshPresetVoicesAsync();
+        ResetPresetVoicesForSelection();
     }
 
+    /// <summary>字典补齐后重挂嵌套通知，支持profile与全局默认引擎不同。</summary>
+    private void ObservePresetConfigs()
+    {
+        if (_owner.Config.ExtraProviders is null) _factory.ExtraConfig("windows-sapi");
+        var configurations = _owner.Config.ExtraProviders!;
+        var current = configurations.Values.Where(x => x is not null).ToHashSet();
+        foreach (var item in _observedPresetConfigs.Except(current).ToArray())
+        {
+            item.PropertyChanged -= OnPresetInstanceChanged;
+            _observedPresetConfigs.Remove(item);
+        }
+        foreach (var item in current.Except(_observedPresetConfigs))
+        {
+            item.PropertyChanged += OnPresetInstanceChanged;
+            _observedPresetConfigs.Add(item);
+        }
+    }
+
+    /// <summary>连接输入改变立即废弃旧结果，但不会自动查询服务。</summary>
+    private void OnPresetInstanceChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (SelectedProfile is null || sender != _factory.ExtraConfig(SelectedProfile.ProviderId)) return;
+        // 同Provider的管理声线也同步模型对应的静态建议，不改变自定义VoiceId。
+        if (SelectedProfile.ProviderId == "openai-speech" && e.PropertyName == nameof(QuestVoiceEngineConfig.Model))
+            ResetPresetVoicesForSelection();
+        if (e.PropertyName is nameof(QuestVoiceEngineConfig.LocalUrl) or nameof(QuestVoiceEngineConfig.RemoteUrl)
+            or nameof(QuestVoiceEngineConfig.UseRemote)) ResetPresetVoicesForSelection();
+    }
+
+    /// <summary>自动枚举仅用于无需联网的列表，VOICEVOX与VITS由刷新按钮触发。</summary>
+    private void ResetPresetVoicesForSelection()
+    {
+        Interlocked.Increment(ref _presetRequestGeneration);
+        PresetVoices.Clear();
+        if (SelectedProfile is { } item && QuestVoicePageViewModel.CanEnumerateVoicesOffline(item.ProviderId))
+            _ = RefreshPresetVoicesAsync();
+    }
 
     /// <summary>按当前 profile 的注册 Provider 获取预设，而非依赖全局默认引擎。</summary>
+    [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task RefreshPresetVoicesAsync()
     {
+        var generation = Interlocked.Increment(ref _presetRequestGeneration);
         var item = SelectedProfile; PresetVoices.Clear();
         if (item is null) return;
         var id = item.ProviderId;
+        var instance = item.InstanceId;
+        Uri? address = null;
+        string? resolvedInstance = null;
+        // 草稿对象、刷新代次和生产解析出的实例URL共同确定查询身份。
+        bool IsCurrent()
+        {
+            if (generation != Volatile.Read(ref _presetRequestGeneration) || SelectedProfile != item || item.ProviderId != id || item.InstanceId != instance) return false;
+            if (address is null) return true;
+            try
+            {
+                var current = _factory.CreateVoiceSettings(BuildProfile(item), validateProvider: false);
+                return current.TtsServiceUrl == address && current.Provider?.InstanceId == resolvedInstance;
+            }
+            catch { return false; }
+        }
         try
         {
             using var provider = TtsProviderRegistry.Create(id);
             if (!provider.Info.Capabilities.PresetVoices) return;
             // 预设只依赖选中 profile 的引擎和实例，不能被全局默认 GPT 地址阻断。
             var settings = _factory.CreateVoiceSettings(BuildProfile(item), validateProvider: false);
+            address = settings.TtsServiceUrl;
+            resolvedInstance = settings.Provider?.InstanceId;
             var voices = await provider.GetVoicesAsync(settings, default);
-            if (SelectedProfile != item || item.ProviderId != id) return;
+            if (!IsCurrent()) return;
             foreach (var voice in voices) PresetVoices.Add(voice);
         }
         catch (Exception exception)
         {
             // 切换角色或引擎后，旧查询的失败也不能覆盖当前选择的状态。
-            if (SelectedProfile == item && item.ProviderId == id) Report(exception);
+            if (IsCurrent()) Report(exception);
         }
     }
 
@@ -433,7 +501,8 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
     {
         if (!_loading) HasChanges = true;
         if (sender == SelectedProfile && e.PropertyName == nameof(QuestVoiceManagementProfile.ProviderVoiceId)) OnPropertyChanged(nameof(SelectedPresetVoice));
-        if (sender == SelectedProfile && e.PropertyName == nameof(QuestVoiceManagementProfile.ProviderId)) _ = RefreshPresetVoicesAsync();
+        if (sender == SelectedProfile && e.PropertyName is nameof(QuestVoiceManagementProfile.ProviderId)
+            or nameof(QuestVoiceManagementProfile.InstanceId)) ResetPresetVoicesForSelection();
     }
     /// <summary>通知计算列表，避免创建第二份会丢编辑的角色集合。</summary>
     private void NotifyLists() { OnPropertyChanged(nameof(FilteredSpeakers)); OnPropertyChanged(nameof(VoiceIds)); OnPropertyChanged(nameof(TravelerChoices)); }

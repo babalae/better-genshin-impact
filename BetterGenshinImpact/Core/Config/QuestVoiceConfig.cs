@@ -1,10 +1,13 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using System.Collections.Generic;
 
 namespace BetterGenshinImpact.Core.Config;
 
 /// <summary>自动配音设置，由 AllConfig 统一持久化；更改在下次启动配音时生效。</summary>
 public partial class QuestVoiceConfig : ObservableObject
 {
+    /// <summary>新增引擎的独立配置，沿用 AllConfig 序列化。</summary>
+    [ObservableProperty] private Dictionary<string, QuestVoiceEngineConfig> _extraProviders = QuestVoiceEngineConfig.Defaults();
     /// <summary>缺省保留旧版 GPT-SoVITS；独立引擎配置互不覆盖。</summary>
     [ObservableProperty] private string _providerId = "gpt-sovits";
     /// <summary>使用远程实例；本地 ServiceUrl 和声线字段继续保留。</summary>
