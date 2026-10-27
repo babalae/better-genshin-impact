@@ -15,7 +15,7 @@
                 <ui:TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanEditName, Mode=OneWay}" MaxLength="128" />
                 <TextBlock Text="物品类型（缺失时可补充）" Margin="0,12,0,6" />
                 <ui:TextBox Text="{Binding Category, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanEditCategory, Mode=OneWay}" MaxLength="128" />
-                <CheckBox Content="确认将此名称补充到用户字典" Margin="0,10,0,0" IsChecked="{Binding AddToDictionary, Mode=TwoWay}"
+                <CheckBox Content="确认将此名称添加到补充字典" Margin="0,10,0,0" IsChecked="{Binding AddToDictionary, Mode=TwoWay}"
                           IsEnabled="{Binding NeedsDefinition, Mode=OneWay}" />
                 <TextBlock Text="数量" Margin="0,12,0,6" />
                 <ui:TextBox Text="{Binding QuantityText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MaxLength="19" />

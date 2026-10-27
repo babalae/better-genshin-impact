@@ -60,17 +60,16 @@ public partial class MainWindow : FluentWindow, INavigationWindow
         if (scrollViewer == null)
             return;
 
+        // 内容滚动由控件自身管理；强制改为物理滚动会让 DataGrid 等控件失去虚拟化。
+        // 保留原生滚轮处理，避免一次生成全部行并在导航时反复重建。
+        if (scrollViewer.CanContentScroll)
+            return;
+
         e.Handled = true;
 
         if (_currentScrollViewer != scrollViewer)
         {
             _currentScrollViewer = scrollViewer;
-            if (scrollViewer.CanContentScroll)
-            {
-                scrollViewer.CanContentScroll = false;
-                scrollViewer.UpdateLayout();
-            }
-
             _targetOffset = scrollViewer.VerticalOffset;
         }
 

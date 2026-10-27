@@ -3,7 +3,7 @@ using System.Windows.Controls;
 
 namespace BetterGenshinImpact.View.Pages;
 
-/// <summary>账号记录的「狛荷屋」页面，当前展示空内容占位画面。</summary>
+/// <summary>账号记录的「狛荷屋」页面，承载库存管理及需求、活动日历占位分页。</summary>
 public partial class AccountRecordsPage : UserControl
 {
     /// <summary>页面使用的账号记录视图模型。</summary>

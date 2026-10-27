@@ -5,9 +5,11 @@ using Newtonsoft.Json;
 
 namespace BetterGenshinImpact.Service.AccountRecords.Model;
 
-/// <summary>一个可追溯的库存事件；确认仅归档提示，不删除证据。</summary>
+/// <summary>可追溯的库存事件；归档保留证据，超出保留上限时才清理旧归档。</summary>
 public sealed class InventoryEvent
 {
+    /// <summary>正增量明确上报的新增到期批次；负增量按最早到期优先推算。</summary>
+    public List<InventoryExpiration>? Expirations { get; set; }
     /// <summary>UTC 创建时间加随机后缀，创建后不变。</summary>
     public string Id { get; set; } = DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmssfffffff") + "-" + Guid.NewGuid().ToString("N")[..8];
     /// <summary>物品名称。</summary>
@@ -19,17 +21,19 @@ public sealed class InventoryEvent
     {
         "Red" => "Error", "Yellow" => kind == "SourceWarning" ? "Warning" : "Pending", "Warning" when kind == "Delta" => "Pending", "Green" or "Complete" => "Completed", "Gray" => "Planned", _ => state
     };
-    /// <summary>事件种类 Delta、Report、SourceWarning。</summary>
+    /// <summary>事件种类 Delta、Report、CategoryWarning、ThresholdWarning、ExpirationCheck；SourceWarning 仅兼容历史记录。</summary>
     public string Kind { get; set; } = "Report";
     /// <summary>核实上报批次，用于用户反馈去重。</summary>
     public string AttemptId { get; set; } = "";
+    /// <summary>对应库存错误的稳定标识；业务关联不依赖历史说明文本。</summary>
+    public string ErrorId { get; set; } = "";
     /// <summary>失败输入的稳定指纹，删除物品后不再参与去重。</summary>
     public string ReportFingerprint { get; set; } = "";
-    /// <summary>相同失败输入累计接收次数，不重复增加历史行。</summary>
+    /// <summary>重复失败输入或同来源分类提醒的累计接收次数，不重复增加历史行。</summary>
     public long RepeatCount { get; set; } = 1;
-    /// <summary>最近一次收到相同失败输入的 UTC 时间。</summary>
+    /// <summary>最近一次收到重复失败输入或分类提醒的 UTC 时间。</summary>
     public DateTimeOffset? LastReceivedAt { get; set; }
-    /// <summary>是否已确认归档。</summary>
+    /// <summary>是否已归档，可由用户操作或系统状态更新设置，不等同于核实成功。</summary>
     public bool Archived { get; set; }
     /// <summary>物品已被明确删除；历史保留，但不参与重建后的增量去重。</summary>
     public bool ItemDeleted { get; set; }
@@ -88,6 +92,8 @@ public sealed class InventoryEvent
 /// <summary>独立增量输入，人工编辑不使用这个模型。</summary>
 public sealed class InventoryDeltaReport
 {
+    /// <summary>新增数量对应的到期批次；已有到期信息的物品增加时必须完整提供。</summary>
+    public List<InventoryExpiration>? Expirations { get; set; }
     /// <summary>标准名称。</summary>
     public string Name { get; set; } = "";
     /// <summary>有符号变动数量。</summary>

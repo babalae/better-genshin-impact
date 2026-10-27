@@ -102,15 +102,17 @@ public partial class AccountRecordsImportViewModel : ObservableObject
             var hasDeltas = ((JObject)_package["accounts"]!).Properties().Any(account => account.Value["deltas"] is JArray { Count: > 0 });
             if (hasDeltas && await ThemedMessageBox.ShowAsync("此文件包含库存增量测试数据，仅供开发调试与报错验证，不代表正式开放。是否继续导入？",
                 "开发测试操作", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
-            var result = await _store.ImportInventoryAsync(_package, TargetUid.Trim(), IncludeDefinitions, hasDeltas);
+            var result = await AccountRecordsInteractionGate.Instance.ExecuteManualAsync(() => _store.ImportInventoryAsync(_package, TargetUid.Trim(), IncludeDefinitions, hasDeltas));
             ImportedUid = TargetUid.Trim();
             AcceptedCount = result.Accepted.Count;
             RejectedCount = result.Rejected.Count;
             DuplicateCount = result.DuplicateCount;
             DuplicateErrorCount = result.DuplicateErrorCount;
             HasImportErrors = RejectedCount > 0 || DuplicateErrorCount > 0;
-            CompletionSummary = $"接受 {AcceptedCount} 项，忽略重复 {DuplicateCount} 项（已有异常 {DuplicateErrorCount} 项），新增异常 {RejectedCount} 项。";
-            closeAfterImport = !HasImportErrors;
+            CompletionSummary = $"接受 {AcceptedCount} 项，忽略重复 {DuplicateCount} 项（已有异常 {DuplicateErrorCount} 项），新增异常 {RejectedCount} 项，分类提醒 {result.Warnings.Count} 项。";
+            if (result.Warnings.Count > 0)
+                Message = $"分类提醒 {result.Warnings.Count} 项：已保留本地分类，数量独立处理。关闭窗口后可在库存中查看橘灯详情。\n{CompletionSummary}";
+            closeAfterImport = !HasImportErrors && result.Warnings.Count == 0;
             HasPackage = false;
             _package = null;
         }

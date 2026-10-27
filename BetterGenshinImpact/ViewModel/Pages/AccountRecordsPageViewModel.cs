@@ -28,12 +28,39 @@ public partial class AccountRecordsPageViewModel : ViewModel
     [RelayCommand]
     private void ResetColumnWidths() => ColumnWidthResetVersion++;
 
+    /// <summary>两次确认后重置全部账号数据和设置，并同步页面的 UID、筛选与显示偏好。</summary>
+    [RelayCommand]
+    private async Task ResetToDefaults()
+    {
+        if (await ThemedMessageBox.ShowAsync("将重置所有 UID 及其库存、异常、事件和快照，恢复补充字典、来源字典、Warning 规则及账号记录设置为预设值。预设 UID 列表为空。是否继续？",
+                "重置为预设值（1/2）", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning) != MessageBoxResult.Yes) return;
+        if (await ThemedMessageBox.ShowAsync("再次确认：此操作影响所有账号，覆盖全部自定义字典和账号记录配置。原数据会保留在 AccountRecords 同级备份目录，但界面不提供撤销。确定执行重置？",
+                "最终确认（2/2）", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning) != MessageBoxResult.Yes) return;
+        try
+        {
+            await AccountRecordsInteractionGate.Instance.ExecuteManualAsync(() => _store.ResetToDefaultsAsync());
+            CloseUidPopups();
+            SelectedUid = null;
+            UidOptions.Clear();
+            Array.Fill(_searchTexts, "");
+            SelectedTabIndex = 0;
+            OnPropertyChanged(nameof(SearchText));
+            Inventory.SearchText = "";
+            Inventory.AllCategoriesSelected = true;
+            ResetColumnWidths();
+            await Inventory.SelectUidAsync(null);
+            await Load();
+            await ThemedMessageBox.ShowAsync("已重置为预设值，UID 列表已清空。", "重置完成", MessageBoxButton.OK);
+        }
+        catch (Exception ex) { await ThemedMessageBox.ShowAsync(ex.Message, "重置失败", MessageBoxButton.OK, ThemedMessageBox.MessageBoxIcon.Error); }
+    }
+
     /// <summary>注入公共存储与独立的库存分页模型。</summary>
     public AccountRecordsPageViewModel(InventoryStore store, AccountRecordsInventoryViewModel inventory)
     {
         _store = store; Inventory = inventory;
     }
-    /// <summary>各分页独立保留的搜索词，待对应列表接入后用于过滤。</summary>
+    /// <summary>各分页独立保留搜索词；库存已接入过滤，其余分页等待实现。</summary>
     private readonly string[] _searchTexts = ["", "", ""];
 
     /// <summary>已保存的 UID；新增操作独立于此集合。</summary>
@@ -91,18 +118,18 @@ public partial class AccountRecordsPageViewModel : ViewModel
     /// <summary>账号切换由子模型保证异步结果不会串号。</summary>
     partial void OnSelectedUidChanged(string? value) => _ = Inventory.SelectUidAsync(value);
 
-    /// <summary>页面进入时同步磁盘账号列表和当前库存。</summary>
+    /// <summary>页面进入时同步账号列表，并在数据未变时复用当前库存快照。</summary>
     [RelayCommand]
     private async Task Load()
     {
         try
         {
-            await Inventory.LoadPreferencesAsync();
+            if (Inventory.Uid == null) await Inventory.LoadPreferencesAsync();
             var uids = await _store.ListUidsAsync();
             foreach (var uid in UidOptions.Except(uids).ToArray()) UidOptions.Remove(uid);
             foreach (var uid in uids.Except(UidOptions)) UidOptions.Add(uid);
             if (SelectedUid == null || !UidOptions.Contains(SelectedUid)) SelectedUid = uids.FirstOrDefault();
-            else await Inventory.SelectUidAsync(SelectedUid);
+            else await Inventory.ResumeAsync(SelectedUid);
         }
         catch (Exception ex) { await ThemedMessageBox.ShowAsync(ex.Message, "读取账号记录", MessageBoxButton.OK); }
     }
@@ -185,7 +212,7 @@ public partial class AccountRecordsPageViewModel : ViewModel
 
         try
         {
-            await _store.AddUidAsync(uid);
+            await AccountRecordsInteractionGate.Instance.ExecuteManualAsync(() => _store.AddUidAsync(uid));
             if (!UidOptions.Contains(uid)) UidOptions.Add(uid);
             SelectedUid = uid;
             CancelAddUid();
@@ -208,7 +235,7 @@ public partial class AccountRecordsPageViewModel : ViewModel
         if (await ThemedMessageBox.ShowAsync($"确定{description}？此操作不可撤销。", "清除账号记录", MessageBoxButton.YesNo, ThemedMessageBox.MessageBoxIcon.Warning) != MessageBoxResult.Yes) return;
         try
         {
-            await _store.ClearAsync(uid, false, scope == "uid");
+            await AccountRecordsInteractionGate.Instance.ExecuteManualAsync(() => _store.ClearAsync(uid, false, scope == "uid"));
             await Load();
         }
         catch (Exception ex) { await ThemedMessageBox.ShowAsync(ex.Message, "清除账号记录失败", MessageBoxButton.OK); }

@@ -6,10 +6,12 @@ using System.ComponentModel;
 using System.Windows.Data;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
+using System.Linq;
+using BetterGenshinImpact.ViewModel.Controls;
 
 namespace BetterGenshinImpact.View.Behavior;
 
-/// <summary>右键菜单打开前先选中对应行，保留系统菜单和键盘操作。</summary>
+/// <summary>处理右键选行、双击详情及置顶优先的列排序，保留其他菜单和键盘操作。</summary>
 public sealed class AccountRecordsRowSelectionBehavior : Behavior<DataGrid>
 {
     /// <summary>双击物品行时打开只读详情。</summary>
@@ -28,7 +30,7 @@ public sealed class AccountRecordsRowSelectionBehavior : Behavior<DataGrid>
     {
         base.OnAttached();
         AssociatedObject.PreviewMouseRightButtonDown += SelectRow;
-        AssociatedObject.Sorting += SortStatus;
+        AssociatedObject.Sorting += SortRows;
         AssociatedObject.MouseDoubleClick += OpenDetails;
     }
 
@@ -59,22 +61,44 @@ public sealed class AccountRecordsRowSelectionBehavior : Behavior<DataGrid>
         }
     }
 
-    /// <summary>状态排序始终将有灯物品置前，点击切换灯色顺序；同级按记录时间倒序。</summary>
-    private void SortStatus(object sender, DataGridSortingEventArgs e)
+    /// <summary>置顶始终优先；组内沿用列排序及 Shift 多列排序，状态排序保留有灯优先规则。</summary>
+    private void SortRows(object sender, DataGridSortingEventArgs e)
     {
-        if (e.Column.SortMemberPath != "StateRank") return;
+        // 加载时保留表头及排序箭头，避免对尚未完整建立的行集合重复排序。
+        if (AssociatedObject.DataContext is AccountRecordsInventoryViewModel { IsLoading: true })
+        {
+            e.Handled = true;
+            return;
+        }
+        var member = e.Column.SortMemberPath;
+        if (string.IsNullOrEmpty(member)) return;
         e.Handled = true;
         var direction = e.Column.SortDirection == ListSortDirection.Ascending
             ? ListSortDirection.Descending : ListSortDirection.Ascending;
         var view = CollectionViewSource.GetDefaultView(AssociatedObject.ItemsSource);
+        foreach (var row in view.SourceCollection.OfType<AccountRecordsInventoryRow>()) row.CaptureSortValues();
+        var path = "SortValues." + member;
+        var append = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
+        var sorts = append ? view.SortDescriptions.Where(sort => sort.PropertyName != "SortValues.Prior").ToList() : [];
+        var index = sorts.FindIndex(sort => sort.PropertyName == path);
+        if (index >= 0) sorts[index] = new SortDescription(path, direction);
+        else
+        {
+            if (member == nameof(AccountRecordsInventoryRow.StateRank))
+                sorts.Add(new SortDescription("SortValues.HasStatusLight", ListSortDirection.Descending));
+            if (member == nameof(AccountRecordsInventoryRow.EarliestExpiration))
+                sorts.Add(new SortDescription("SortValues.HasExpiration", ListSortDirection.Descending));
+            sorts.Add(new SortDescription(path, direction));
+        }
+        if (member == nameof(AccountRecordsInventoryRow.StateRank) && !sorts.Any(sort => sort.PropertyName == "SortValues.RecordedAt"))
+            sorts.Add(new SortDescription("SortValues.RecordedAt", ListSortDirection.Descending));
         using (view.DeferRefresh())
         {
             view.SortDescriptions.Clear();
-            view.SortDescriptions.Add(new SortDescription("HasStatusLight", ListSortDirection.Descending));
-            view.SortDescriptions.Add(new SortDescription("StateRank", direction));
-            view.SortDescriptions.Add(new SortDescription("RecordedAt", ListSortDirection.Descending));
+            view.SortDescriptions.Add(new SortDescription("SortValues.Prior", ListSortDirection.Descending));
+            foreach (var sort in sorts) view.SortDescriptions.Add(sort);
         }
-        foreach (var column in AssociatedObject.Columns) column.SortDirection = null;
+        if (!append) foreach (var column in AssociatedObject.Columns) column.SortDirection = null;
         e.Column.SortDirection = direction;
     }
 
@@ -82,7 +106,7 @@ public sealed class AccountRecordsRowSelectionBehavior : Behavior<DataGrid>
     protected override void OnDetaching()
     {
         AssociatedObject.PreviewMouseRightButtonDown -= SelectRow;
-        AssociatedObject.Sorting -= SortStatus;
+        AssociatedObject.Sorting -= SortRows;
         AssociatedObject.MouseDoubleClick -= OpenDetails;
         base.OnDetaching();
     }

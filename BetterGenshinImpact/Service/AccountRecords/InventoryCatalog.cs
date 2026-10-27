@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using BetterGenshinImpact.Core.Config;
@@ -10,6 +11,29 @@ namespace BetterGenshinImpact.Service.AccountRecords;
 /// <summary>按标准名称加载公共目录；分类缺失不阻止数量上报。</summary>
 public sealed class InventoryCatalog
 {
+    /// <summary>中文 CSV 展示文本共用的排序区域，不随操作系统区域变化。</summary>
+    /// <remarks>TODO：接入项目 i18n 后跟随展示语言；切换语言时由调用方刷新集合视图的 Culture 和排序。</remarks>
+    public CultureInfo TextSortCulture => CultureInfo.GetCultureInfo("zh-CN");
+
+    /// <summary>供分类等非集合视图列表复用的文本比较器；不用于存储键的相等性判断。</summary>
+    public StringComparer TextComparer => StringComparer.Create(TextSortCulture, false);
+
+    /// <summary>解析物品展示名称；当前返回中文标准名称，不改变库存关联键。</summary>
+    /// <remarks>TODO：供项目 i18n 接入物品翻译，缺失翻译时回退 standardName；届时展示、搜索与名称排序统一使用解析结果。</remarks>
+    public string ResolveItemName(string standardName) => standardName;
+
+    /// <summary>生成物品名称排序文本，忽略开头连续的常见双引号和左括号，保留括号内文字及其余标点。</summary>
+    public string GetItemNameSortKey(string standardName)
+    {
+        var name = ResolveItemName(standardName);
+        // 仅跳过前缀符号，不删除名称中间的标点，也不跳过括号内的限定文字。
+        var start = 0;
+        while (start < name.Length && name[start] is '「' or '『' or '"' or '＂' or '“' or '”'
+               or '(' or '（' or '[' or '［' or '【' or '〔' or '{' or '｛' or '〈' or '《')
+            start++;
+        return name[start..];
+    }
+
     /// <summary>同一实例只读取一次 CSV，模型更新后随程序重启刷新。</summary>
     private readonly Lazy<Dictionary<string, string>> _items;
 

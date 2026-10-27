@@ -9,7 +9,7 @@ namespace BetterGenshinImpact.Service.AccountRecords;
 /// <summary>外部字典校验与稳定英文诊断文本。</summary>
 public sealed partial class InventoryStore
 {
-    /// <summary>用户字典允许清空为零条，不将主动清空误判为损坏并恢复旧备份。</summary>
+    /// <summary>补充字典允许清空为零条，不将主动清空误判为损坏并恢复旧备份。</summary>
     internal static string NormalizeUserDictionary(string path, string text) =>
         string.Equals(Path.GetFileName(path), "item-overrides.json", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(text)
             ? "{}" : text;
@@ -43,8 +43,6 @@ public sealed partial class InventoryStore
                 continue;
             }
             Require(item["Reference"]?.Type == JTokenType.String && (string?)item["Reference"] == key, key + ".Reference");
-            if (item["WarningTrackingSince"] is { Type: not JTokenType.Null } trackingSince)
-                Require(trackingSince.Type == JTokenType.String && DateTimeOffset.TryParse((string?)trackingSince, out _), key + ".WarningTrackingSince");
             Require(item["DisplayName"]?.Type == JTokenType.String && !string.IsNullOrWhiteSpace((string?)item["DisplayName"]) && ((string)item["DisplayName"]!).Length <= 1024, key + ".DisplayName");
             // 老版本省略 Attempts 时使用模型默认空列表，显式 null 则拒绝。
             if (item["Attempts"] == null) continue;
@@ -75,21 +73,20 @@ public sealed partial class InventoryStore
         "增量早于当前确认库存，已拒绝。" => "Delta RecordedAt precedes the confirmed inventory record.",
         "增量推算超出有效库存范围，已拒绝。" => "Estimated Quantity is outside the valid inventory range.",
         "同一批次中存在互相冲突的重复记录。" => "Conflicting records for the same Name exist in one batch.",
-        "名称不在物品字典中，请手动修订名称或确认补充用户字典。" => "Name is not present in the item dictionary; manual correction or confirmation is required.",
-        "传入记录早于当前记录，或同一时间的数量不同。请选择接受或舍弃，也可右键手动修改数量。" => "Incoming RecordedAt is older, or Quantity differs at the same RecordedAt; accept, discard, or correct manually.",
+        // 兼容更名前已保存的事件说明。
+        "名称不在物品字典中，请手动修订名称或确认补充用户字典。" or
+        "名称不在物品字典中，请手动修订名称或确认添加到补充字典。" => "Name is not present in the item dictionary; manual correction or confirmation is required.",
+        "传入记录早于当前记录，或同一时间的数量不同。请选择接受或舍弃，也可右键手动修改数量。" or
+        "传入记录早于当前记录，或同一时间的数量或到期信息不同。请选择接受或舍弃，也可右键手动修改数量。" => "Incoming RecordedAt is older, or Quantity/Expirations differ at the same RecordedAt; accept, discard, or correct manually.",
         "数量不能为负数，请右键手动修改数量。" => "Quantity must be non-negative; manual correction is required.",
         "时间无法解析或缺少时区，请手动修改后重新上报。" => "RecordedAt is invalid or has no time zone.",
         "记录时间超过当前时间五分钟，请核对来源时钟，或右键手动修改数量以重新确认。" => "RecordedAt is more than five minutes in the future; check the source clock.",
-        "该核实来源近期多次报错，请自查或联系开发者。" => "The verification Source has repeated recent errors; review it or contact its developer.",
         "该材料曾有增减信息，已完成核实。" => "Pending inventory deltas have been verified.",
         "该材料曾有增减信息，已完成核实。人工确认。" => "Pending inventory deltas have been verified manually.",
         "用户标记上次扫描有错误。" => "The user reported an error in the previous scan.",
         "用户已批量归档。" => "The user archived completed events in bulk.",
         "用户已确认。" => "The user acknowledged this event.",
-        "已知情，重新统计来源错误。" => "Acknowledged; source warning tracking restarted.",
-        "已关闭来源提醒追踪。" => "Source warning tracking disabled.",
         "用户删除物品记录。" => "The user deleted the item record.",
-        "已重新评估核实来源。" => "The verification Source was reevaluated.",
         "用户接受冲突记录。" => "The user accepted the conflicting record.",
         "用户舍弃异常上报。" => "The user discarded the rejected report.",
         "用户已手动修订库存。" => "The user corrected inventory manually.",

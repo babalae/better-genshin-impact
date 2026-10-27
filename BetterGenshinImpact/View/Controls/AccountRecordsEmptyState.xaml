@@ -25,11 +25,22 @@
                     </Rectangle.OpacityMask>
                 </Rectangle>
                 <TextBlock Margin="0,12,0,0"
-                           Text="{Binding ViewModel.Message, ElementName=Root, Mode=OneWay}" FontSize="20"
+                           FontSize="20"
                            TextWrapping="Wrap"
                            TextAlignment="Center"
                            Opacity="0.14"
-                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                           Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                            <Setter Property="Text" Value="{Binding ViewModel.Message, ElementName=Root, Mode=OneWay}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsLoading, ElementName=Root, Mode=OneWay}" Value="True">
+                                    <Setter Property="Text" Value="加载中…" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
             </StackPanel>
         </Viewbox>
     </Grid>

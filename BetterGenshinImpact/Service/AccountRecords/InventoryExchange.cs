@@ -11,7 +11,7 @@ using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.Service.AccountRecords;
 
-/// <summary>库存交换文件：当前版本仅交换单个账号的当前库存，不携带错误和快照。</summary>
+/// <summary>单账号库存交换；导出当前库存，导入另支持经确认的开发测试增量，不交换错误和快照。</summary>
 public sealed partial class InventoryStore
 {
     /// <summary>读取有限大小的交换文件；保留原始时间字符串，交由库存校验报告时间错误。</summary>
@@ -55,6 +55,12 @@ public sealed partial class InventoryStore
                 string.IsNullOrWhiteSpace((string?)record["recordedAt"]) || record["source"]?.Type != JTokenType.String)
                 throw new InvalidDataException($"{item.Name}：必须提供一条当前记录，包含整数 quantity、recordedAt 和 source。");
             _ = record["quantity"]!.Value<long>();
+            if (record["expirations"] is { Type: not JTokenType.Null } expirations)
+            {
+                if (expirations is not JArray batches || batches.Count > 100 || batches.Any(batch => batch is not JObject ||
+                    batch["quantity"]?.Type != JTokenType.Integer || batch["expiresAt"]?.Type != JTokenType.String))
+                    throw new InvalidDataException($"{item.Name}：expirations 必须为包含整数 quantity 和带时区 expiresAt 的数组，最多 100 批。");
+            }
             if (record["verifiedAt"] != null && record["verifiedAt"]!.Type != JTokenType.String)
                 throw new InvalidDataException($"{item.Name}：verifiedAt 必须是带时区的扫描时间字符串。");
             var source = (string)record["source"]!;
@@ -76,6 +82,10 @@ public sealed partial class InventoryStore
                     sources[(string)delta["source"]!] is not JObject descriptor || (string?)descriptor["reference"] != (string?)delta["source"] ||
                     descriptor["displayName"]?.Type != JTokenType.String) throw new InvalidDataException("增量项必须包含 name、delta、recordedAt 及已登记的 source。");
                 _ = delta["delta"]!.Value<long>();
+                if (delta["expirations"] is { Type: not JTokenType.Null } expirationToken &&
+                    (expirationToken is not JArray batches || batches.Count > 100 || batches.Any(batch => batch is not JObject ||
+                        batch["quantity"]?.Type != JTokenType.Integer || batch["expiresAt"]?.Type != JTokenType.String)))
+                    throw new InvalidDataException("增量 expirations 必须为包含整数 quantity 和带时区 expiresAt 的数组，最多 100 批。");
             }
         }
     }
@@ -96,6 +106,9 @@ public sealed partial class InventoryStore
             {
                 ["quantity"] = record.Quantity, ["recordedAt"] = record.RecordedAt.UtcDateTime.ToString("O", CultureInfo.InvariantCulture), ["source"] = record.Source
             });
+            if (record.Expirations != null)
+                inventory[item.Key]![0]!["expirations"] = new JArray(record.Expirations.Select(batch => new JObject
+                { ["quantity"] = batch.Quantity, ["expiresAt"] = batch.ExpiresAt }));
             origins[record.Source] = new JObject { ["reference"] = record.Source,
                 ["displayName"] = sources.TryGetValue(record.Source, out var origin) ? origin.DisplayName : record.Source };
             if (overrides.TryGetValue(item.Key, out var definition)) definitions[item.Key] = new JObject { ["category"] = definition.Category };
@@ -110,6 +123,7 @@ public sealed partial class InventoryStore
     });
 
     /// <summary>按来源局部合并；每批复用库存的校验、冲突记录和原子保存，不清除未提及的物品。</summary>
+    /// <remarks>字典补充和各来源分别提交；后续批次失败不会回滚已保存内容。</remarks>
     public async Task<InventoryReportResult> ImportInventoryAsync(JObject package, string uid, bool includeDefinitions, bool allowDeveloperDeltas = false)
     {
         package = (JObject)package.DeepClone();
@@ -139,9 +153,12 @@ public sealed partial class InventoryStore
             var source = new AccountRecordSource
             { Reference = group.Key, DisplayName = (string)descriptor["displayName"]! };
             var batch = group.Select(item => new InventoryReport { Name = item.Name,
+                Category = (string?)package["itemDefinitions"]?[item.Name]?["category"],
+                Expirations = item.Value[0]!["expirations"]?.ToObject<List<InventoryExpiration>>(),
                 Quantity = (long)item.Value[0]!["quantity"]!, RecordedAt = (string)item.Value[0]!["recordedAt"]!, VerifiedAt = (string?)item.Value[0]!["verifiedAt"] });
             var imported = await ReportAsync(uid, source, batch, preserveSourceName: true);
             result.Accepted.AddRange(imported.Accepted);
+            foreach (var warning in imported.Warnings) result.Warnings[warning.Key] = warning.Value;
             result.DuplicateCount += imported.DuplicateCount;
             result.DuplicateErrorCount += imported.DuplicateErrorCount;
             foreach (var error in imported.Rejected) result.Rejected[error.Key] = error.Value;
@@ -153,7 +170,8 @@ public sealed partial class InventoryStore
             {
                 var reference = (string)item["source"]!;
                 return (new AccountRecordSource { Reference = reference, DisplayName = (string)package["sources"]![reference]!["displayName"]! },
-                    new InventoryDeltaReport { Name = (string)item["name"]!, Delta = (long)item["delta"]!, RecordedAt = (string)item["recordedAt"]! });
+                    new InventoryDeltaReport { Name = (string)item["name"]!, Delta = (long)item["delta"]!, RecordedAt = (string)item["recordedAt"]!,
+                        Expirations = item["expirations"]?.ToObject<List<InventoryExpiration>>() });
             }));
             result.Accepted.AddRange(imported.Accepted);
             result.DuplicateCount += imported.DuplicateCount;

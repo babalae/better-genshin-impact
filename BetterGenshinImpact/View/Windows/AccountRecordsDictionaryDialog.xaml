@@ -27,11 +27,17 @@
   <StackPanel Grid.Row="3" Margin="16,12,16,16">
    <TextBlock Text="{Binding Message, Mode=OneWay}" TextWrapping="Wrap" />
    <StackPanel Visibility="{Binding CanEdit, Converter={StaticResource BoolVisibility}, Mode=OneWay}">
-    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+    <WrapPanel Margin="0,8,0,0">
      <CheckBox Content="启用编辑" IsChecked="{Binding EditingEnabled, Mode=TwoWay}" VerticalAlignment="Center" />
      <ui:Button Content="打开源文件编辑…" Margin="12,0,0,0" IsEnabled="{Binding EditingEnabled, Mode=OneWay}" Command="{Binding OpenSourceCommand, Mode=OneWay}" />
-    </StackPanel>
+     <ui:Button Content="恢复预置分类…" Margin="12,0,0,0" IsEnabled="{Binding EditingEnabled, Mode=OneWay}"
+                Visibility="{Binding IsSupplementaryDictionary, Converter={StaticResource BoolVisibility}, Mode=OneWay}"
+                Command="{Binding RestorePresetCategoriesCommand, Mode=OneWay}" />
+    </WrapPanel>
     <TextBlock Text="字典由所有 UID 共用。外部保存后点击刷新；编辑不会自动迁移物品名称对应的库存记录。" TextWrapping="Wrap" Margin="0,8,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+    <TextBlock Text="不建议修改补充字典中的初始值，以免影响依赖这些名称和分类的脚本；需要补充物品时，建议新增条目。"
+               Visibility="{Binding IsSupplementaryDictionary, Converter={StaticResource BoolVisibility}, Mode=OneWay}"
+               FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
    </StackPanel>
   </StackPanel>
  </Grid>

@@ -22,9 +22,16 @@ public sealed class InventoryIconCache
     private string PathFor(string name) => Path.Combine(_root, Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(name))) + ".png");
 
     /// <summary>扫描或用户提供裁剪图；仅保存标准化缓存，不保留上传原图。</summary>
+    /// <remarks>TODO：写入入口尚未接入 UseImageCache；外围程序关闭缓存时应忽略建立和更新请求。</remarks>
     public void Store(string name, byte[] encodedImage)
     {
         lock (_gate) StoreCore(name, encodedImage);
+    }
+
+    /// <summary>检查当前模型下是否存在物品缓存文件，无需加载或解码图像。</summary>
+    public bool Exists(string name)
+    {
+        lock (_gate) return File.Exists(PathFor(name));
     }
 
     /// <summary>删除当前模型下单个物品的共享缓存，等待扫描重建。</summary>
@@ -61,7 +68,7 @@ public sealed class InventoryIconCache
             Cv2.ImEncode(".png", square, out var bytes);
             File.WriteAllBytes(temporary, bytes);
             File.Move(temporary, path, true);
-            // 缓存可重建；最多保留 64 MiB，优先淘汰旧版本和最久未更新的图标。
+            // 所有模型版本合计最多保留 64 MiB，按文件最后写入时间从旧到新淘汰。
             var files = new DirectoryInfo(Global.Absolute(@"Cache\AccountRecords\icons")).EnumerateFiles("*.png", SearchOption.AllDirectories)
                 .OrderBy(file => file.LastWriteTimeUtc).ToArray();
             var total = files.Sum(file => file.Length);
@@ -96,12 +103,12 @@ public sealed class InventoryIconCache
         catch (Exception ex) when (ex is IOException or NotSupportedException or System.IO.FileFormatException) { return null; }
     }
 
-    /// <summary>只清除派生图标缓存，不接触账号数据。</summary>
+    /// <summary>清除 AccountRecords 统一目录下的全部派生图像缓存，不接触账号数据。</summary>
     public void Clear()
     {
         lock (_gate)
         {
-            var root = Global.Absolute(@"Cache\AccountRecords\icons");
+            var root = Global.Absolute(@"Cache\AccountRecords");
             if (Directory.Exists(root)) Directory.Delete(root, true);
         }
     }

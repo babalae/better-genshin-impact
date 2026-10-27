@@ -54,8 +54,8 @@ public sealed partial class InventoryStore
         _mutexName = "Local\\BetterGI.AccountRecords." + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(_root.ToUpperInvariant())));
     }
 
-    /// <summary>后台执行完整读改写事务；互斥量在同一线程取得并释放。</summary>
-    private Task<T> Locked<T>(Func<T> action) => Task.Run(() =>
+    /// <summary>后台串行执行读改写操作；互斥量在同一线程取得并释放，不提供跨文件回滚。</summary>
+    private Task<T> Locked<T>(Func<T> action, bool initialize = true) => Task.Run(() =>
     {
         using var mutex = new Mutex(false, _mutexName);
         var acquired = false;
@@ -64,14 +64,77 @@ public sealed partial class InventoryStore
             try { acquired = mutex.WaitOne(TimeSpan.FromSeconds(10)); }
             catch (AbandonedMutexException) { acquired = true; }
             if (!acquired) throw new IOException("账号记录正在被其他实例更新，请稍后重试。");
+            if (initialize) EnsureSupplementaryDictionary();
             return action();
         }
         finally { if (acquired) mutex.ReleaseMutex(); }
     });
 
+    /// <summary>首次使用时建立补充字典；已有文件（包括空文件）不覆盖，不补回用户删除的条目。</summary>
+    private void EnsureSupplementaryDictionary()
+    {
+        var path = Path.Combine(_root, "item-overrides.json");
+        if (File.Exists(path)) return;
+        Write(path, CreatePresetCategories());
+    }
+
+    /// <summary>首次初始化和手动恢复共用的预置分类，仅包含明确的标准名称，不含赝作。</summary>
+    private static Dictionary<string, InventoryItemOverride> CreatePresetCategories() =>
+        new(StringComparer.Ordinal)
+        {
+            ["原石"] = new() { Category = "珍稀货币" },
+            ["摩拉"] = new() { Category = "通用货币" },
+            ["创世结晶"] = new() { Category = "珍稀货币" },
+            ["原粹树脂"] = new() { Category = "树脂" },
+            ["浓缩树脂"] = new() { Category = "树脂" },
+            ["脆弱树脂"] = new() { Category = "树脂" },
+            ["须臾树脂"] = new() { Category = "树脂" }
+        };
+
+    /// <summary>恢复预置分类并保留其他条目；在存储锁内校验、合并和保存，已有文件通过 Write 保留备份。</summary>
+    public Task RestorePresetCategoriesAsync() => Locked(() =>
+    {
+        var path = Path.Combine(_root, "item-overrides.json");
+        var entries = Read<Dictionary<string, InventoryItemOverride>>(path);
+        foreach (var pair in CreatePresetCategories()) entries[pair.Key] = pair.Value;
+        Write(path, entries);
+        return true;
+    });
+
+    /// <summary>用初始预设替换全部账号记录；先准备新目录，替换失败时恢复原目录。</summary>
+    public Task ResetToDefaultsAsync() => Locked(() =>
+    {
+        var replacement = _root + ".reset-" + Guid.NewGuid().ToString("N");
+        var backup = _root + ".backup-" + Guid.NewGuid().ToString("N");
+        // 预设不包含 UID 或库存；模型字典由资源包提供，补充字典恢复内置条目。
+        try
+        {
+            Write(Path.Combine(replacement, "settings.json"), new AccountRecordsSettings());
+            Write(Path.Combine(replacement, "item-overrides.json"), CreatePresetCategories());
+            Write(Path.Combine(replacement, "sources.json"), new Dictionary<string, AccountRecordSource>());
+            Write(Path.Combine(replacement, "warning-rules.json"), new InventoryWarningRule { InventoryRules = CreateInventoryRuleExamples() });
+            Directory.Move(_root, backup);
+            try { Directory.Move(replacement, _root); }
+            catch
+            {
+                Directory.Move(backup, _root);
+                throw;
+            }
+            // 原数据保留在独立备份目录，不再被账号列表、快照或字典读取。
+            _sources = [];
+            _sourceStamp = default;
+            _thresholdRuleError = null;
+            return true;
+        }
+        finally
+        {
+            if (Directory.Exists(replacement)) Directory.Delete(replacement, true);
+        }
+    });
+
     /// <summary>游戏 UID 使用九至十位 ASCII 数字，首位不得为零。</summary>
     public static bool IsValidUid(string uid) => Regex.IsMatch(uid, @"\A[1-9][0-9]{8,9}\z");
-    /// <summary>账号只允许 1～20 位 ASCII 数字，避免路径注入。</summary>
+    /// <summary>先排除非数字路径，再校验 9～10 位 UID，返回账号目录。</summary>
     private string AccountDirectory(string uid)
     {
         if (!Regex.IsMatch(uid, @"\A[0-9]{1,20}\z")) throw new ArgumentException("UID 必须为数字。");
@@ -81,26 +144,30 @@ public sealed partial class InventoryStore
     }
 
     /// <summary>按最近记录变动列出 UID；空账号排在后面，读取页面不改变排序。</summary>
-    public Task<string[]> ListUidsAsync() => Locked(() => !Directory.Exists(_root) ? [] :
+    public Task<string[]> ListUidsAsync() => Task.Run(() => !Directory.Exists(_root) ? [] :
         Directory.EnumerateDirectories(_root).Select(Path.GetFileName)
             .Where(name => name != null && IsValidUid(name)).Cast<string>()
             .OrderByDescending(LastModified).ThenBy(name => name, StringComparer.Ordinal).ToArray());
 
-    /// <summary>读取业务变动时间；损坏文件仍保留账号入口，由正式加载显示错误。</summary>
+    /// <summary>仅读取总表文件修改时间排序账号，不反序列化各账号库存。</summary>
     private DateTimeOffset LastModified(string uid)
     {
         var path = Path.Combine(AccountDirectory(uid), "inventory.json");
         try
         {
             return File.Exists(path)
-                ? JsonConvert.DeserializeObject<InventoryDocument>(File.ReadAllText(path))?.ModifiedAt ?? DateTimeOffset.MinValue
+                ? new DateTimeOffset(File.GetLastWriteTimeUtc(path))
                 : DateTimeOffset.MinValue;
         }
-        catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             return DateTimeOffset.MinValue;
         }
     }
+
+    /// <summary>返回页面时只检查总表修改时间，不读取内容、不进入维护或存储写锁。</summary>
+    public Task<DateTime> GetInventoryUpdatedAtAsync(string uid) =>
+        Task.Run(() => File.GetLastWriteTimeUtc(Path.Combine(AccountDirectory(uid), "inventory.json")));
 
     /// <summary>显式创建空账号，不生成虚构库存。</summary>
     public Task AddUidAsync(string uid) => Locked(() =>
@@ -112,21 +179,41 @@ public sealed partial class InventoryStore
     });
 
     /// <summary>没有账号时也能读取共享显示和保存偏好。</summary>
-    public Task<AccountRecordsSettings> GetSettingsAsync() => Locked(Settings);
+    public Task<AccountRecordsSettings> GetSettingsAsync() => Locked(() => Settings());
 
-    /// <summary>读取账号；跨日时备份最后已知状态，不伪造缺失日期。</summary>
-    public Task<InventoryWorkspace> LoadAsync(string uid) => Locked(() =>
+    /// <summary>兼容已有调用者：先执行维护，再读取账号；新展示代码显式选择读取或维护。</summary>
+    public async Task<InventoryWorkspace> LoadAsync(string uid, bool includeHistory = true)
     {
-        var data = Load(uid);
+        await MaintainAsync(uid);
+        return await ReadAsync(uid, includeHistory);
+    }
+
+    /// <summary>维护日期快照、旧来源迁移和时间提醒；页面进入、主动刷新及分钟检查时显式调用。</summary>
+    public Task MaintainAsync(string uid) => Locked(() =>
+    {
+        Sources();
+        var data = Load(uid, includeHistory: false);
         var settings = Settings();
         Snapshot(data, settings);
-        return new InventoryWorkspace
-        {
-            Inventory = data, Settings = settings, Definitions = Definitions(),
-            Sources = Sources().ToDictionary(pair => pair.Key,
-                pair => new AccountRecordSource { Reference = pair.Value.Reference, DisplayName = pair.Value.DisplayName, Attempts = pair.Value.Attempts.ToList(), WarningTrackingSince = pair.Value.WarningTrackingSince }, StringComparer.Ordinal)
-        };
+        if (RefreshThresholdWarnings(data)) PersistInventory(data);
+        return true;
     });
+
+    /// <summary>只读取展示所需快照，不初始化文件、不迁移来源、不创建提醒或日期快照。</summary>
+    public Task<InventoryWorkspace> ReadAsync(string uid, bool includeHistory = true) => Locked(() =>
+    {
+        var sources = Sources(migrate: false);
+        var data = Load(uid, includeHistory, restoreBackup: false);
+        if (!includeHistory) data.Events.RemoveAll(item => item.Archived);
+        var workspace = new InventoryWorkspace
+        {
+            Inventory = data, Settings = Settings(restoreBackup: false), Definitions = Definitions(restoreBackup: false), WarningRuleError = _thresholdRuleError,
+            Sources = sources.ToDictionary(pair => pair.Key,
+                pair => new AccountRecordSource { Reference = pair.Value.Reference, DisplayName = pair.Value.DisplayName }, StringComparer.Ordinal)
+        };
+        workspace.UpdatedAt = File.GetLastWriteTimeUtc(Path.Combine(AccountDirectory(uid), "inventory.json"));
+        return workspace;
+    }, initialize: false);
 
     /// <summary>批量局部上报；失败项保留原库存，成功项一起保存。</summary>
     /// <remarks>
@@ -136,63 +223,58 @@ public sealed partial class InventoryStore
     public Task<InventoryReportResult> ReportAsync(string uid, AccountRecordSource source, IEnumerable<InventoryReport> reports, bool preserveSourceName = false)
     {
         // 复制调用方数据，避免等待锁期间外部继续修改上报集合。
-        var batch = reports.Select(report => new InventoryReport { Name = report.Name, Quantity = report.Quantity, RecordedAt = report.RecordedAt, VerifiedAt = report.VerifiedAt }).ToArray();
+        var batch = reports.Select(report => new InventoryReport { Name = report.Name, Category = report.Category, Quantity = report.Quantity, RecordedAt = report.RecordedAt, VerifiedAt = report.VerifiedAt,
+            Expirations = report.Expirations?.Select(item => item == null ? null! : new InventoryExpiration { Quantity = item.Quantity, ExpiresAt = item.ExpiresAt }).ToList() }).ToArray();
         var origin = ValidateSource(source);
         return Locked(() =>
         {
             if (origin.Reference.Length == 0 || origin.Reference.Length > 1024) throw new ArgumentException("来源标识不能为空或超过 1024 字符。");
+            var sources = Sources();
             var data = Load(uid);
             var settings = Settings();
             var definitions = Definitions();
-            var warningRule = settings.WarningTrackingEnabled ? ReadWarningRule() : null;
             Snapshot(data, settings);
-            var sources = Sources();
             if (!preserveSourceName || !sources.ContainsKey(origin.Reference))
             {
-                if (sources.TryGetValue(origin.Reference, out var previous))
-                {
-                    origin.Attempts = previous.Attempts;
-                    origin.WarningTrackingSince = previous.WarningTrackingSince;
-                }
                 sources[origin.Reference] = origin;
             }
-            var registered = sources[origin.Reference];
             var attemptId = batch.All(item => item.RecordedAt != null)
                 ? Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(uid + "\n" + origin.Reference + "\n" + JsonConvert.SerializeObject(batch))))
                 : Guid.NewGuid().ToString("N");
-            var attempt = registered.Attempts.FirstOrDefault(item => item.Id == attemptId) ?? new InventorySourceAttempt { Uid = uid, Id = attemptId };
-            if (batch.Length > 0 && origin.Reference != LocalQuantitySource && !registered.Attempts.Contains(attempt)) registered.Attempts.Add(attempt);
-            if (registered.Attempts.Count > 20) registered.Attempts.RemoveRange(0, registered.Attempts.Count - 20);
             var now = DateTimeOffset.UtcNow;
             var result = new InventoryReportResult();
             foreach (var group in batch.GroupBy(report => report.Name?.Trim() ?? "", StringComparer.Ordinal))
             {
                 var report = group.First();
                 report.Name = group.Key;
+                // 分类提醒与数量校验独立；重复数量上报仍需核对分类，不改写本地字典。
+                if (definitions.TryGetValue(group.Key, out var localCategory) && !string.IsNullOrEmpty(localCategory))
+                    CheckReportedCategories(data, group.Key, origin.Reference, group.Select(item => item.Category), localCategory, now, result);
                 data.Items.TryGetValue(group.Key, out var records);
                 var current = records?.FirstOrDefault();
                 var candidate = Parse(report, origin.Reference, now, out var reason);
-                if (group.Skip(1).Any(other => other.Quantity != report.Quantity || other.RecordedAt != report.RecordedAt))
+                if (group.Skip(1).Any(other => other.Quantity != report.Quantity || other.RecordedAt != report.RecordedAt || !SameExpirations(other.Expirations, report.Expirations)))
                     reason = "同一批次中存在互相冲突的重复记录。";
-                // 已接收的同来源、同时间、同数量记录不参与本轮冲突或增量核实。
+                // 已接收的同来源、同时间、同数量及同到期信息记录不参与本轮冲突或增量核实。
                 // 先保留解析与同批冲突检查，避免把不同数量误当作重复丢弃。
                 if (reason == null && candidate != null && records?.Any(record =>
-                    record.Source == candidate.Source && record.RecordedAt == candidate.RecordedAt && record.Quantity == candidate.Quantity) == true)
+                    record.Source == candidate.Source && record.RecordedAt == candidate.RecordedAt && record.Quantity == candidate.Quantity && SameExpirations(record.Expirations, candidate.Expirations)) == true)
                 {
                     result.DuplicateCount++;
                     continue;
                 }
-                if (!definitions.ContainsKey(group.Key)) reason = "名称不在物品字典中，请手动修订名称或确认补充用户字典。";
+                if (!definitions.ContainsKey(group.Key)) reason = "名称不在物品字典中，请手动修订名称或确认添加到补充字典。";
                 var conflict = reason == null && current != null && candidate != null &&
-                    (candidate.RecordedAt < current.RecordedAt || candidate.RecordedAt == current.RecordedAt && candidate.Quantity != current.Quantity);
-                if (conflict) reason = "传入记录早于当前记录，或同一时间的数量不同。请选择接受或舍弃，也可右键手动修改数量。";
+                    (candidate.RecordedAt < current.RecordedAt || candidate.RecordedAt == current.RecordedAt && (candidate.Quantity != current.Quantity || !SameExpirations(candidate.Expirations, current.Expirations)));
+                if (conflict) reason = "传入记录早于当前记录，或同一时间的数量或到期信息不同。请选择接受或舍弃，也可右键手动修改数量。";
                 var verificationError = VerificationError(data, report, candidate);
                 if (verificationError != null) { reason = verificationError; conflict = false; }
                 if (reason != null)
                 {
                     var fingerprint = report.RecordedAt == null ? "" : Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
                         JsonConvert.SerializeObject(new { Source = origin.Reference, report.Name, report.Quantity,
-                            RecordedAt = NormalizeReportTime(report.RecordedAt), VerifiedAt = NormalizeReportTime(report.VerifiedAt) }))));
+                            RecordedAt = NormalizeReportTime(report.RecordedAt), VerifiedAt = NormalizeReportTime(report.VerifiedAt) }) +
+                        (report.Expirations == null ? "" : JsonConvert.SerializeObject(report.Expirations)))));
                     if (fingerprint.Length > 0 && HasReceipt(data, group.Key, "Report:" + fingerprint))
                     {
                         result.DuplicateCount++;
@@ -216,32 +298,28 @@ public sealed partial class InventoryStore
                         CanAccept = conflict, OccurredAt = now
                     };
                     result.Rejected[group.Key] = reason;
-                    attempt.Failed = true;
-                    if (!attempt.Errors.Contains($"{group.Key}：{reason}") && attempt.Errors.Count < 20) attempt.Errors.Add($"{group.Key}：{reason}");
                     var failure = AddEvent(data, group.Key, origin.Reference, "Report", "Error", report.Quantity,
                         candidate?.RecordedAt ?? now, reason, current?.Quantity);
-                    failure.History.Add($"Id={data.Errors[group.Key].Id}；AttemptId={attempt.Id}；RecordedAt={report.RecordedAt}；VerifiedAt={report.VerifiedAt}");
-                    failure.AttemptId = attempt.Id;
+                    failure.ErrorId = data.Errors[group.Key].Id;
+                    failure.History.Add($"Id={data.Errors[group.Key].Id}；AttemptId={attemptId}；RecordedAt={report.RecordedAt}；VerifiedAt={report.VerifiedAt}");
+                    failure.AttemptId = attemptId;
                     failure.ReportFingerprint = fingerprint;
                     failure.LastReceivedAt = now;
                     failure.History.Add("Current=" + JsonConvert.SerializeObject(current) + "；Incoming=" + JsonConvert.SerializeObject(report));
                     continue;
                 }
-                candidate!.AttemptId = origin.Reference == LocalQuantitySource ? "" : attempt.Id;
+                candidate!.AttemptId = origin.Reference == LocalQuantitySource ? "" : attemptId;
                 VerifyPending(data, group.Key, candidate);
                 Accept(data, group.Key, candidate!, settings.RecentLimit);
+                var accepted = AddEvent(data, group.Key, origin.Reference, "Report", "Completed", candidate.Quantity,
+                    candidate.RecordedAt, "库存上报已接收。", current?.Quantity);
+                accepted.AttemptId = attemptId;
+                accepted.Expirations = candidate.Expirations;
+                accepted.Archived = true;
+                accepted.EndedAt = now;
+                accepted.History.Add("Incoming=" + JsonConvert.SerializeObject(report));
                 result.Accepted.Add(group.Key);
                 // 已有异常需要用户主动处理，正常后台上报不静默清除红灯。
-            }
-            foreach (var name in result.Accepted)
-            {
-                foreach (var old in data.Events.Where(item => item.Name == name && item.Kind == "SourceWarning" && !item.Archived))
-                    Transition(old, "Warning", "已重新评估核实来源。", true);
-                if (warningRule != null && SourceWarning(registered, warningRule))
-                {
-                    var warning = AddEvent(data, name, origin.Reference, "SourceWarning", "Warning", 0, now, warningRule.Message);
-                    warning.History.Add("WarningRule=" + JsonConvert.SerializeObject(warningRule));
-                }
             }
             Save(data); SaveSources();
             return result;
@@ -255,13 +333,11 @@ public sealed partial class InventoryStore
         if (string.IsNullOrWhiteSpace(source.Reference) || source.Reference.Length > 1024 || string.IsNullOrWhiteSpace(name) || name.Length > 128 || message.Length > 4096)
             throw new ArgumentException("失败报告的来源、物品名称或说明无效。");
         name = name.Trim();
+        var sources = Sources();
         var data = Load(uid);
         if (data.Errors.Count >= 5000 && !data.Errors.ContainsKey(name)) throw new InvalidDataException("请先处理已有库存异常。");
-        var sources = Sources();
         if (!sources.ContainsKey(source.Reference)) sources[source.Reference] = new AccountRecordSource { Reference = source.Reference, DisplayName = source.DisplayName };
-        var attempt = new InventorySourceAttempt { Uid = uid, Failed = true, Errors = [$"{name}：{message}"] };
-        sources[source.Reference].Attempts.Add(attempt);
-        if (sources[source.Reference].Attempts.Count > 20) sources[source.Reference].Attempts.RemoveAt(0);
+        var attemptId = Guid.NewGuid().ToString("N");
         Write(Path.Combine(_root, "sources.json"), sources);
         _sourceStamp = File.GetLastWriteTimeUtc(Path.Combine(_root, "sources.json"));
         data.Items.TryGetValue(name, out var records);
@@ -273,8 +349,9 @@ public sealed partial class InventoryStore
             Message = $"读取失败：{message}。已保留上次有效库存，请重新采集或右键手动修改。"
         };
         var failureEvent = AddEvent(data, name, source.Reference, "Report", "Error", 0, DateTimeOffset.UtcNow, data.Errors[name].Message, records?.FirstOrDefault()?.Quantity);
-        failureEvent.History.Add($"Id={data.Errors[name].Id}；AttemptId={attempt.Id}");
-        failureEvent.AttemptId = attempt.Id;
+        failureEvent.ErrorId = data.Errors[name].Id;
+        failureEvent.History.Add($"Id={data.Errors[name].Id}；AttemptId={attemptId}");
+        failureEvent.AttemptId = attemptId;
         failureEvent.History.Add("Message=" + message);
         failureEvent.History.Add("Current=" + JsonConvert.SerializeObject(records?.FirstOrDefault()));
         Save(data);
@@ -292,8 +369,32 @@ public sealed partial class InventoryStore
                   !DateTimeOffset.TryParse(report.RecordedAt, CultureInfo.InvariantCulture, DateTimeStyles.AllowWhiteSpaces, out time)))
             error = "时间无法解析或缺少时区，请手动修改后重新上报。";
         else if (time > now.AddMinutes(5)) error = "记录时间超过当前时间五分钟，请核对来源时钟，或右键手动修改数量以重新确认。";
-        return error == null ? new InventoryRecord { Quantity = report.Quantity, RecordedAt = time.ToUniversalTime(), Source = source } : null;
+        if (error == null) error = ValidateExpirations(report.Expirations, report.Quantity);
+        return error == null ? new InventoryRecord { Quantity = report.Quantity, RecordedAt = time.ToUniversalTime(), Source = source,
+            Expirations = report.Expirations?.Select(item => new InventoryExpiration { Quantity = item.Quantity, ExpiresAt = item.Time.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture) }).OrderBy(item => item.Time).ThenBy(item => item.Quantity).ToList() } : null;
     }
+
+    /// <summary>分批数量不超过总库存，时间必须显式带时区；允许已过期记录用于追溯。</summary>
+    private static string? ValidateExpirations(List<InventoryExpiration>? entries, long quantity)
+    {
+        if (entries == null) return null;
+        if (entries.Count > 100) return "到期批次不能超过 100 条。";
+        decimal total = 0;
+        foreach (var entry in entries)
+        {
+            if (entry == null || entry.Quantity <= 0 || string.IsNullOrWhiteSpace(entry.ExpiresAt) ||
+                !Regex.IsMatch(entry.ExpiresAt.Trim(), @"(?:[zZ]|[+-]\d{2}:?\d{2})$") ||
+                !DateTimeOffset.TryParse(entry.ExpiresAt, CultureInfo.InvariantCulture, DateTimeStyles.AllowWhiteSpaces, out _))
+                return "到期批次必须提供正整数数量和带时区的到期时间。";
+            total += entry.Quantity;
+        }
+        return total > quantity ? "到期批次数量合计不能超过库存数量。" : null;
+    }
+
+    /// <summary>比较分批到期内容，忽略批次排列及等价时区写法。</summary>
+    private static bool SameExpirations(List<InventoryExpiration>? left, List<InventoryExpiration>? right) =>
+        JsonConvert.SerializeObject(left?.Select(item => item == null ? "null" : $"{item.Quantity}:{NormalizeReportTime(item.ExpiresAt)}").OrderBy(value => value, StringComparer.Ordinal)) ==
+        JsonConvert.SerializeObject(right?.Select(item => item == null ? "null" : $"{item.Quantity}:{NormalizeReportTime(item.ExpiresAt)}").OrderBy(value => value, StringComparer.Ordinal));
 
     /// <summary>同一来源替换并移至队首；不按数量变化推断获得量。</summary>
     private static void Accept(InventoryDocument data, string name, InventoryRecord record, int limit)
@@ -305,7 +406,7 @@ public sealed partial class InventoryStore
     }
 
     /// <summary>仅处理弹窗看到的异常；接受仍必须通过名称、数量和时间校验。</summary>
-    public Task ResolveAsync(string uid, string name, string errorId, bool accept) => Locked(() =>
+    public Task ResolveAsync(string uid, string name, string errorId, bool accept, string? displayedEventId = null) => Locked(() =>
     {
         var data = Load(uid);
         if (!data.Errors.TryGetValue(name, out var error) || error.Id != errorId)
@@ -314,6 +415,15 @@ public sealed partial class InventoryStore
         Snapshot(data, settings);
         if (accept)
         {
+            // 提交时再校验展示目标，防止打开提示后又收到新的错误而误接受旧记录。
+            if (displayedEventId != null)
+            {
+                var latestError = data.Events.Where(item => item.Name == name && item.State == "Error" && !item.Archived)
+                    .OrderByDescending(item => item.Id).FirstOrDefault();
+                if (latestError?.Id != displayedEventId || latestError.Kind != "Report" ||
+                    latestError.ErrorId != errorId)
+                    throw new InvalidOperationException("当前展示的异常已发生变化，请刷新后重新处理。");
+            }
             var record = Parse(error.Incoming, error.Source, DateTimeOffset.UtcNow, out var reason);
             if (!error.CanAccept || record == null || !Definitions().ContainsKey(name))
                 throw new InvalidOperationException(reason ?? "请先手动修正名称或字典内容。");
@@ -323,7 +433,7 @@ public sealed partial class InventoryStore
                 throw new InvalidOperationException("当前库存已发生变化，请刷新并手动修改，避免覆盖新的记录。");
             var verificationError = VerificationError(data, error.Incoming, record);
             if (verificationError != null) throw new InvalidOperationException(verificationError);
-            record.AttemptId = data.Events.LastOrDefault(item => item.History.Any(line => line.Contains(error.Id)))?.AttemptId ?? "";
+            record.AttemptId = data.Events.LastOrDefault(item => item.ErrorId == error.Id)?.AttemptId ?? "";
             VerifyPending(data, name, record);
             Accept(data, name, record, settings.RecentLimit);
         }
@@ -341,21 +451,18 @@ public sealed partial class InventoryStore
     public Task SetLocalQuantityAsync(string uid, string name, long quantity, string? incorrectAttemptId = null) => Locked(() =>
     {
         if (quantity < 0 || !Definitions().ContainsKey(name)) throw new ArgumentException("请先确认合法名称，并填写非负整数数量。");
+        var sources = Sources();
         var data = Load(uid);
         var settings = Settings();
         Snapshot(data, settings);
-        var sources = Sources();
         if (incorrectAttemptId != null)
         {
-            var match = sources.Values.SelectMany(source => source.Attempts.Select(attempt => (source, attempt)))
-                .FirstOrDefault(pair => pair.attempt.Id == incorrectAttemptId && pair.attempt.Uid == uid);
-            if (match.attempt == null) throw new InvalidOperationException("原扫描记录已不在来源统计中，请刷新后重试。");
-            if ((!data.Items.TryGetValue(name, out var previousRecords) || !previousRecords.Any(record => record.AttemptId == incorrectAttemptId)) &&
-                !data.Events.Any(item => item.Name == name && item.AttemptId == incorrectAttemptId))
-                throw new InvalidOperationException("原扫描记录已变化，不能标记其他记录。");
-            match.attempt.Failed = true;
-            if (match.attempt.Errors.Count < 20) match.attempt.Errors.Add($"{name}：用户标记扫描有误，修订为 {quantity}。");
-            var feedback = AddEvent(data, name, match.source.Reference, "Report", "Error", quantity, DateTimeOffset.UtcNow, "用户标记上次扫描有错误。");
+            data.Items.TryGetValue(name, out var previousRecords);
+            var original = previousRecords?.FirstOrDefault(record => record.AttemptId == incorrectAttemptId);
+            var originalEvent = data.Events.LastOrDefault(item => item.Name == name && item.AttemptId == incorrectAttemptId);
+            var originalSource = original?.Source ?? originalEvent?.Source;
+            if (originalSource == null) throw new InvalidOperationException("原扫描记录已变化或超出保留范围，请刷新后重试。");
+            var feedback = AddEvent(data, name, originalSource, "Report", "Error", quantity, DateTimeOffset.UtcNow, "用户标记上次扫描有错误。");
             feedback.History.Add("AttemptId=" + incorrectAttemptId);
             feedback.AttemptId = incorrectAttemptId;
             feedback.History.Add("Current=" + JsonConvert.SerializeObject(previousRecords?.FirstOrDefault()));
@@ -366,6 +473,9 @@ public sealed partial class InventoryStore
         var manual = new InventoryRecord { Quantity = quantity, RecordedAt = DateTimeOffset.UtcNow, Source = LocalQuantitySource };
         VerifyPending(data, name, manual, true);
         Accept(data, name, manual, settings.RecentLimit);
+        // 人工修订代表已检查库存，结束过期待核实；不推断新的到期批次。
+        foreach (var check in data.Events.Where(item => item.Name == name && item.Kind == "ExpirationCheck" && !item.Archived))
+            Transition(check, "Completed", "用户已检查并手动修订库存。", true);
         data.Errors.Remove(name);
         ArchiveErrors(data, name, "用户已手动修订库存。");
         Save(data);
@@ -386,26 +496,21 @@ public sealed partial class InventoryStore
         return true;
     });
 
-    /// <summary>保存有界配置，并立即收紧当前账号的记录与快照数量。</summary>
+    /// <summary>保存共享配置，并对所有合法 UID 应用来源记录、归档事件和快照保留上限。</summary>
     public Task ConfigureAsync(AccountRecordsSettings settings) => Locked(() =>
     {
-        if (settings.WarningTrackingEnabled && !Settings().WarningTrackingEnabled)
-        {
-            var now = DateTimeOffset.UtcNow;
-            foreach (var source in Sources().Values) source.WarningTrackingSince = now;
-            SaveSources();
-        }
+        var previous = Settings();
         settings.RecentLimit = Math.Clamp(settings.RecentLimit, 1, 10);
         settings.SnapshotLimit = Math.Clamp(settings.SnapshotLimit, 1, 30);
-        settings.ArchivedEventLimit = Math.Clamp(settings.ArchivedEventLimit, 100, 10000);
+        settings.EventLimit = Math.Clamp(settings.EventLimit, 1000, 50000);
         Write(Path.Combine(_root, "settings.json"), settings);
+        // 显示偏好只保存设置；只有降低保留上限才需要维护各账号历史。
+        if (previous.RecentLimit <= settings.RecentLimit && previous.SnapshotLimit <= settings.SnapshotLimit &&
+            previous.EventLimit <= settings.EventLimit) return true;
         if (Directory.Exists(_root))
             foreach (var directory in Directory.EnumerateDirectories(_root).Where(path => IsValidUid(Path.GetFileName(path))))
             {
                 var data = Load(Path.GetFileName(directory));
-                if (!settings.WarningTrackingEnabled)
-                    foreach (var warning in data.Events.Where(item => !item.Archived && item.Kind == "SourceWarning" && item.State == "Warning"))
-                        Transition(warning, warning.State, "已关闭来源提醒追踪。", true);
                 foreach (var records in data.Items.Values)
                     if (records.Count > settings.RecentLimit) records.RemoveRange(settings.RecentLimit, records.Count - settings.RecentLimit);
                 PersistInventory(data);
@@ -414,11 +519,26 @@ public sealed partial class InventoryStore
         return true;
     });
 
+    /// <summary>设置当前账号物品的置顶标记，不修改数量、来源或记录时间。</summary>
+    public Task SetPriorAsync(string uid, string name, bool prior) => Locked(() =>
+    {
+        var data = Load(uid);
+        if (!data.Items.ContainsKey(name) && !data.Errors.ContainsKey(name) &&
+            !data.Events.Any(item => item.Name == name && !item.Archived))
+            throw new InvalidOperationException("物品记录已不存在，请刷新后重试。");
+        if (prior) data.Prior.Add(name); else data.Prior.Remove(name);
+        PersistInventory(data);
+        return true;
+    });
+
     /// <summary>删除物品及其异常、日期快照中的副本。</summary>
     public Task DeleteItemAsync(string uid, string name) => Locked(() =>
     {
         var data = Load(uid);
         data.Items.Remove(name); data.Errors.Remove(name);
+        data.Prior.Remove(name);
+        foreach (var id in data.ThresholdStates.Where(pair => pair.Value.Name == name).Select(pair => pair.Key).ToArray())
+            data.ThresholdStates.Remove(id);
         if (data.EventReceipts.TryGetValue(name, out var receipts)) receipts.RemoveWhere(value => !value.StartsWith("Id:", StringComparison.Ordinal));
         foreach (var item in data.Events.Where(item => item.Name == name && !item.ItemDeleted))
         {
@@ -458,8 +578,8 @@ public sealed partial class InventoryStore
         return true;
     });
 
-    /// <summary>读取并验证文件，损坏时使用上一次原子保存的备份恢复。</summary>
-    private static T Read<T>(string path) where T : new()
+    /// <summary>读取并验证文件；可编辑字典错误时保留原文，其他文件语法损坏时尝试备份恢复。</summary>
+    private static T Read<T>(string path, bool restoreBackup = true) where T : new()
     {
         if (!File.Exists(path)) return new T();
         try
@@ -476,8 +596,11 @@ public sealed partial class InventoryStore
             var backupText = NormalizeUserDictionary(path, File.ReadAllText(path + ".bak"));
             ValidateDictionaryFile(path, backupText);
             var backup = JsonConvert.DeserializeObject<T>(backupText) ?? throw new InvalidDataException($"备份也无法读取：{path}");
-            File.Copy(path, path + ".corrupt", true);
-            File.Copy(path + ".bak", path, true);
+            if (restoreBackup)
+            {
+                File.Copy(path, path + ".corrupt", true);
+                File.Copy(path + ".bak", path, true);
+            }
             return backup;
         }
     }
@@ -497,24 +620,38 @@ public sealed partial class InventoryStore
     }
 
     /// <summary>读取账号内容，未知结构不静默覆盖。</summary>
-    private InventoryDocument Load(string uid)
+    private InventoryDocument Load(string uid, bool includeHistory = true, bool restoreBackup = true)
     {
-        var data = Read<InventoryDocument>(Path.Combine(AccountDirectory(uid), "inventory.json"));
+        var data = Read<InventoryDocument>(Path.Combine(AccountDirectory(uid), "inventory.json"), restoreBackup);
         if (data.SchemaVersion != 1 || data.Items == null || data.Errors == null || data.Uid == null || data.Uid.Length > 0 && data.Uid != uid ||
             data.Items.Values.Any(records => records == null || records.Any(record => record == null || record.Quantity < 0 || string.IsNullOrEmpty(record.Source))) ||
             data.Errors.Values.Any(error => error == null || error.Incoming == null))
             throw new InvalidDataException("库存格式或 UID 不匹配，请检查记录文件。");
         data.Uid = uid;
+        if (data.Prior == null || data.Prior.Any(string.IsNullOrWhiteSpace))
+            throw new InvalidDataException("库存置顶标记损坏，请检查记录文件。");
+        if (data.ThresholdStates == null || data.ThresholdStates.Values.Any(state => state == null || state.Name == null || state.Signature == null || state.EventId == null))
+            throw new InvalidDataException("库存提醒状态损坏，请检查记录文件。");
+        if (data.Items.Values.SelectMany(records => records).Any(record => ValidateExpirations(record.Expirations, record.Quantity) != null))
+            throw new InvalidDataException("库存到期批次无效，请检查记录文件。");
         if (data.Events == null || data.Events.Any(item => item == null || item.History == null)) throw new InvalidDataException("库存事件结构损坏。");
         if (data.EventReceipts == null || data.EventReceipts.Values.Any(value => value == null)) throw new InvalidDataException("事件去重凭证结构损坏。");
-        LoadEventArchive(data);
-        foreach (var item in data.Events) item.State = InventoryEvent.NormalizeState(item.State, item.Kind);
+        if (includeHistory) LoadEventArchive(data, restoreBackup);
+        foreach (var item in data.Events)
+        {
+            item.State = InventoryEvent.NormalizeState(item.State, item.Kind);
+            InventoryEventCompatibility.RestoreErrorId(item);
+        }
+        // 来源错误提醒已移除，旧事件归档保留证据，不再参与物品状态展示。
+        foreach (var warning in data.Events.Where(item => item.Kind == "SourceWarning" && !item.Archived))
+            Transition(warning, "Completed", "来源错误提醒功能已移除。", true);
         foreach (var pair in data.Errors)
-            if (!data.Events.Any(item => item.History.Any(line => line.Contains(pair.Value.Id))))
+            if (!data.Events.Any(item => item.ErrorId == pair.Value.Id))
             {
                 var legacy = AddEvent(data, pair.Key, pair.Value.Source, "Report", "Error", pair.Value.Incoming.Quantity, pair.Value.OccurredAt,
                     pair.Value.Message, pair.Value.Current?.Quantity);
                 legacy.Id = pair.Value.OccurredAt.UtcDateTime.ToString("yyyyMMdd-HHmmssfffffff") + "-" + pair.Value.Id;
+                legacy.ErrorId = pair.Value.Id;
                 legacy.History.Add("Id=" + pair.Value.Id);
             }
         foreach (var name in data.Items.Keys.ToArray())
@@ -533,28 +670,34 @@ public sealed partial class InventoryStore
     /// <summary>保存本地变更时间。</summary>
     private void Save(InventoryDocument data)
     {
+        RefreshThresholdWarnings(data);
         data.ModifiedAt = DateTimeOffset.UtcNow;
         PersistInventory(data);
     }
 
     /// <summary>读取共享设置，并防止手改文件突破容量上限。</summary>
-    private AccountRecordsSettings Settings()
+    private AccountRecordsSettings Settings(bool restoreBackup = true)
     {
-        var settings = Read<AccountRecordsSettings>(Path.Combine(_root, "settings.json"));
+        var settings = Read<AccountRecordsSettings>(Path.Combine(_root, "settings.json"), restoreBackup);
         settings.RecentLimit = Math.Clamp(settings.RecentLimit, 1, 10);
         settings.SnapshotLimit = Math.Clamp(settings.SnapshotLimit, 1, 30);
-        settings.ArchivedEventLimit = Math.Clamp(settings.ArchivedEventLimit, 100, 10000);
+        settings.EventLimit = Math.Clamp(settings.EventLimit, 1000, 50000);
         return settings;
     }
 
     /// <summary>文件未变时复用来源字典，跨实例更新后重新读取一次。</summary>
-    private Dictionary<string, AccountRecordSource> Sources()
+    private Dictionary<string, AccountRecordSource> Sources(bool migrate = true)
     {
         var path = Path.Combine(_root, "sources.json");
         var stamp = File.GetLastWriteTimeUtc(path);
         if (stamp != _sourceStamp)
         {
-            _sources = Read<Dictionary<string, AccountRecordSource>>(path);
+            _sources = Read<Dictionary<string, AccountRecordSource>>(path, restoreBackup: migrate);
+            _sourceStamp = File.GetLastWriteTimeUtc(path);
+        }
+        if (migrate)
+        {
+            MigrateSourceAttempts(_sources);
             _sourceStamp = File.GetLastWriteTimeUtc(path);
         }
         _sources.Remove("Local/AccountRecords");
@@ -564,11 +707,14 @@ public sealed partial class InventoryStore
     }
 
     /// <summary>原始字典优先，用户补充只填充名称或分类空缺。</summary>
-    private Dictionary<string, string> Definitions()
+    private Dictionary<string, string> Definitions(bool restoreBackup = true)
     {
         var definitions = _catalog.Items.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
-        foreach (var pair in Read<Dictionary<string, InventoryItemOverride>>(Path.Combine(_root, "item-overrides.json")))
-            if (!definitions.TryGetValue(pair.Key, out var category) || category.Length == 0) definitions[pair.Key] = pair.Value.Category;
+        // 用户补充字典优先于内置分类；删除补充条目后自然回退到模型字典。
+        var path = Path.Combine(_root, "item-overrides.json");
+        var overrides = File.Exists(path) ? Read<Dictionary<string, InventoryItemOverride>>(path, restoreBackup) : CreatePresetCategories();
+        foreach (var pair in overrides)
+            definitions[pair.Key] = pair.Value.Category;
         return definitions;
     }
 

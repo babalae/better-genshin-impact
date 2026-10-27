@@ -41,6 +41,7 @@
        <StackPanel>
         <DockPanel><TextBlock DockPanel.Dock="Right" Text="{Binding RecordedAt, Mode=OneWay}" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/><TextBlock Text="{Binding Label, Mode=OneWay}" FontWeight="SemiBold" /></DockPanel>
         <TextBlock Margin="0,6,0,0"><Run Text="库存："/><Run Text="{Binding Quantity, Mode=OneWay}" FontWeight="SemiBold" /></TextBlock>
+        <TextBlock Text="{Binding ExpirationDetails, Mode=OneWay}" Visibility="{Binding HasExpirationDetails, Converter={StaticResource BoolVisibility}, Mode=OneWay}" TextWrapping="Wrap" Margin="0,4,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
         <TextBlock TextWrapping="Wrap" Margin="0,4,0,0"><Run Text="来源："/><Run Text="{Binding SourceName, Mode=OneWay}" /></TextBlock>
         <TextBox Text="{Binding Source, Mode=OneWay}" IsReadOnly="True" BorderThickness="0" Background="Transparent" TextWrapping="Wrap" Padding="0" Margin="0,4,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
        </StackPanel>

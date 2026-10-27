@@ -9,7 +9,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace BetterGenshinImpact.ViewModel.Controls;
 
-/// <summary>数量编辑和用户字典补充，合法名称不允许就地重命名。</summary>
+/// <summary>数量编辑和补充字典维护，合法名称不允许就地重命名。</summary>
 public partial class AccountRecordsInventoryEditViewModel : ObservableObject
 {
     /// <summary>保存入口。</summary>
@@ -78,14 +78,17 @@ public partial class AccountRecordsInventoryEditViewModel : ObservableObject
         if (!long.TryParse(QuantityText, NumberStyles.None, CultureInfo.InvariantCulture, out var quantity) || quantity < 0)
         { Message = "数量必须为非负整数。"; return; }
         if (NeedsDefinition && (!AddToDictionary || string.IsNullOrWhiteSpace(Category)))
-        { Message = "名称未收录：请改为标准名称，或填写分类并勾选补充用户字典。"; return; }
+        { Message = "名称未收录：请改为标准名称，或填写分类并勾选添加到补充字典。"; return; }
         try
         {
-            if (CanEditCategory && !string.IsNullOrWhiteSpace(Category)) await _store.DefineAsync(name, Category);
-            await _store.SetLocalQuantityAsync(_uid, name, quantity,
-                MarkScanIncorrect && CanMarkScanIncorrect ? _original!.LastScanAttemptId : null);
-            if (_original?.Error != null && _original.Name != name)
-                await _store.ResolveAsync(_uid, _original.Name, _original.Error.Id, false);
+            await AccountRecordsInteractionGate.Instance.ExecuteManualAsync(async () =>
+            {
+                if (CanEditCategory && !string.IsNullOrWhiteSpace(Category)) await _store.DefineAsync(name, Category);
+                await _store.SetLocalQuantityAsync(_uid, name, quantity,
+                    MarkScanIncorrect && CanMarkScanIncorrect ? _original!.LastScanAttemptId : null);
+                if (_original?.Error != null && _original.Name != name)
+                    await _store.ResolveAsync(_uid, _original.Name, _original.Error.Id, false);
+            });
             Saved?.Invoke();
         }
         catch (Exception ex) { Message = ex.Message; }

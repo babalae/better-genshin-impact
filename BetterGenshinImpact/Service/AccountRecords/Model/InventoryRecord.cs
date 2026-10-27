@@ -1,11 +1,15 @@
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace BetterGenshinImpact.Service.AccountRecords.Model;
 
 /// <summary>某来源最后一次被接受的库存记录；队首代表当前库存。</summary>
 public sealed class InventoryRecord
 {
+    /// <summary>可选的分批到期信息；未提供的数量不推断为永久有效。</summary>
+    [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+    public List<InventoryExpiration>? Expirations { get; set; }
     /// <summary>核实来源的一次上报标识；人工编辑为空。</summary>
     public string AttemptId { get; set; } = "";
     /// <summary>非负库存数量。</summary>
@@ -19,10 +23,16 @@ public sealed class InventoryRecord
 /// <summary>批量上报的一项；时间缺省代表本次新采集，历史导入必须携带原时间。</summary>
 public sealed class InventoryReport
 {
+    /// <summary>可选的数量与到期时间列表，随本次记录保存，不沿用其他记录的到期信息。</summary>
+    [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+    public List<InventoryExpiration>? Expirations { get; set; }
     /// <summary>可信扫描时刻；历史导入需明确提供才能核实待确认增量。</summary>
     public string? VerifiedAt { get; set; }
     /// <summary>标准物品名称。</summary>
     public string Name { get; set; } = "";
+    /// <summary>可选的来源分类，仅用于与本地分类核对，不覆盖本地字典。</summary>
+    [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+    public string? Category { get; set; }
     /// <summary>来源提交的数量。</summary>
     public long Quantity { get; set; }
     /// <summary>带时区的原记录时间，无法解析的值作为异常保留。</summary>
@@ -53,6 +63,8 @@ public sealed class InventoryError
 /// <summary>批量写入结果，让上报方知道哪些条目需要用户处理。</summary>
 public sealed class InventoryReportResult
 {
+    /// <summary>不阻断数量处理的分类提醒，调用方应与拒绝结果分别展示。</summary>
+    public Dictionary<string, string> Warnings { get; set; } = new(StringComparer.Ordinal);
     /// <summary>本次忽略的重复输入数量，不作为新增异常。</summary>
     public int DuplicateCount { get; set; }
     /// <summary>重复输入中仍关联未处理错误的数量。</summary>
@@ -66,6 +78,14 @@ public sealed class InventoryReportResult
 /// <summary>单账号的库存文件；两个逻辑表一起原子保存，避免库存与异常不同步。</summary>
 public sealed class InventoryDocument
 {
+    /// <summary>本次读取是否已合并归档；保存前补齐，避免错误计算保留数量。</summary>
+    [JsonIgnore]
+    internal bool EventArchiveLoaded { get; set; }
+
+    /// <summary>当前 UID 置顶的物品名称；仅影响本地展示，不随来源上报覆盖。</summary>
+    public HashSet<string> Prior { get; set; } = new(StringComparer.Ordinal);
+    /// <summary>阈值规则当前触发轮次，归档后仍保留直到条件明确解除。</summary>
+    public Dictionary<string, InventoryThresholdState> ThresholdStates { get; set; } = new();
     /// <summary>亮灯事件与归档历史，跟库存一起原子保存。</summary>
     public List<InventoryEvent> Events { get; set; } = [];
     /// <summary>清理历史后保留的去重凭证，按物品分组；删除物品时一并重置。</summary>

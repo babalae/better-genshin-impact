@@ -13,6 +13,7 @@
         <behavior:BindingProxy x:Key="InventoryProxy" Data="{Binding Mode=OneWay}" />
         <BooleanToVisibilityConverter x:Key="BoolVisibility" />
         <controls:AccountRecordsTimeConverter x:Key="InventoryTime" />
+        <controls:AccountRecordsRowNumberConverter x:Key="InventoryRowNumber" />
         <Style x:Key="InventoryText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
             <Setter Property="FontSize" Value="14" />
             <Setter Property="VerticalAlignment" Value="Center" />
@@ -71,7 +72,7 @@
         <Style x:Key="InventoryQuantityHeader" TargetType="DataGridColumnHeader" BasedOn="{StaticResource InventoryHeader}">
             <Setter Property="HorizontalContentAlignment" Value="Center" />
         </Style>
-        <!-- 红灯只表示库存异常；短暂悬停/按压动画避免持续闪烁干扰阅读。 -->
+        <!-- 状态灯颜色由 StateRank 决定；只在悬停或按压时反馈，避免持续闪烁。 -->
         <Style x:Key="ErrorButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
             <Setter Property="Width" Value="30" /><Setter Property="Height" Value="30" />
             <Setter Property="HorizontalAlignment" Value="Center" /><Setter Property="VerticalAlignment" Value="Center" />
@@ -109,16 +110,24 @@
         </Style>
     </UserControl.Resources>
     <Grid>
-        <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-        <DataGrid ItemsSource="{Binding Items, Mode=OneWay}" AutoGenerateColumns="False" IsReadOnly="True"
+        <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+        <DataGrid x:Name="InventoryGrid" AutoGenerateColumns="False" IsReadOnly="True"
                   CanUserAddRows="False" CanUserDeleteRows="False" CanUserResizeRows="False" CanUserReorderColumns="False" RowHeight="36" MinRowHeight="36"
                   FontSize="14" ColumnHeaderHeight="36" ColumnHeaderStyle="{StaticResource InventoryHeader}"
                   HeadersVisibility="Column" GridLinesVisibility="None" SelectionMode="Single"
-                  EnableRowVirtualization="True" EnableColumnVirtualization="True"
+                  EnableRowVirtualization="True" EnableColumnVirtualization="True" AlternationCount="2147483647"
+                  ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
                   Background="Transparent" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                   RowBackground="{DynamicResource ApplicationBackgroundBrush}"
+                  AlternatingRowBackground="{DynamicResource ApplicationBackgroundBrush}"
                   ScrollViewer.HorizontalScrollBarVisibility="Auto" BorderThickness="0">
+            <DataGrid.Style>
+                <Style TargetType="DataGrid" BasedOn="{StaticResource {x:Type DataGrid}}">
+                    <Setter Property="ItemsSource" Value="{Binding Items, Mode=OneWay}" />
+                </Style>
+            </DataGrid.Style>
             <b:Interaction.Behaviors>
+                <behavior:AccountRecordsTimeRefreshBehavior Command="{Binding RefreshTimeWarningsCommand, Mode=OneWay}" />
                 <behavior:AccountRecordsRowSelectionBehavior OpenDetailsCommand="{Binding ShowRecentCommand, Mode=OneWay}" />
                 <behavior:AccountRecordsColumnWidthsBehavior ResetVersion="{Binding DataContext.ColumnWidthResetVersion, RelativeSource={RelativeSource AncestorType={x:Type pages:AccountRecordsPage}}, Mode=OneWay}" />
             </b:Interaction.Behaviors>
@@ -156,11 +165,18 @@
                     <Setter Property="Template">
                         <Setter.Value>
                             <ControlTemplate TargetType="DataGridRow">
-                                <Grid Background="{TemplateBinding Background}">
+                                <!-- 行号借用交替索引；行底色统一由主题提供，不继承交替或选中背景。 -->
+                                <Grid Background="{DynamicResource ApplicationBackgroundBrush}">
                                     <Border x:Name="Highlight" Background="{DynamicResource AccentFillColorDefaultBrush}" Opacity="0" IsHitTestVisible="False" />
                                     <DataGridCellsPresenter />
+                                    <Border x:Name="PriorSeparator" Height="1" VerticalAlignment="Bottom" Margin="8,0"
+                                            Background="{DynamicResource TextFillColorSecondaryBrush}" Opacity="0.35"
+                                            Visibility="Collapsed" IsHitTestVisible="False" />
                                 </Grid>
                                 <ControlTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding ShowPriorSeparator, Mode=OneWay}" Value="True">
+                                        <Setter TargetName="PriorSeparator" Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
                                     <Trigger Property="IsMouseOver" Value="True">
                                         <Setter TargetName="Highlight" Property="Opacity" Value="0.06" />
                                     </Trigger>
@@ -214,13 +230,18 @@
                     <Setter Property="ContextMenu">
                         <Setter.Value>
                             <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}, Mode=OneWay}">
-                                <MenuItem Header="查看物品详情…" FontWeight="SemiBold" ToolTip="双击物品行也可查看最近来源记录" Command="{Binding Data.ShowRecentCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" />
+                                <MenuItem Header="{Binding PriorActionText, Mode=OneWay}" Command="{Binding Data.TogglePriorCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" />
+                                <MenuItem Header="查看物品详情…" ToolTip="双击物品行也可查看最近来源记录" Command="{Binding Data.ShowRecentCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" />
                                 <MenuItem Header="修改数量 / 修订字典" Command="{Binding Data.EditCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" />
-                                <MenuItem Header="归档所有已完成事件" Command="{Binding Data.ArchiveCompletedEventsCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" IsEnabled="{Binding Data.HasCompletedEvents, Source={StaticResource InventoryProxy}, Mode=OneWay}" />
+                                <MenuItem Header="归档同类未受阻的完成事件" Command="{Binding Data.ArchiveCompletedEventsCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" Visibility="{Binding CanBatchArchive, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
                                 <MenuItem Header="查看异常" Command="{Binding Data.ShowStatusCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" IsEnabled="{Binding HasStatusLight, Mode=OneWay}" />
                                 <Separator />
-                                <MenuItem Header="删除图标缓存（等待重建）" Command="{Binding Data.DeleteIconCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" />
-                                <MenuItem Header="上传图标（不推荐）…" Command="{Binding Data.UploadIconCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" />
+                                <MenuItem Header="显示过期时间" IsCheckable="True"
+                                          IsChecked="{Binding Data.ShowExpirationColumn, Source={StaticResource InventoryProxy}, Mode=OneWay}"
+                                          Command="{Binding Data.ToggleExpirationColumnCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" />
+                                <Separator />
+                                <MenuItem Header="删除图像缓存" Command="{Binding Data.DeleteIconCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" />
+                                <MenuItem Header="上传图标…" Command="{Binding Data.UploadIconCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" />
                                 <Separator />
                                 <MenuItem Header="删除此物品记录" Command="{Binding Data.DeleteCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" />
                             </ContextMenu>
@@ -247,11 +268,39 @@
                     </DataGridTemplateColumn.HeaderStyle>
                     <DataGridTemplateColumn.CellTemplate><DataTemplate>
                         <Grid Width="36" Height="36">
-                            <ui:SymbolIcon Symbol="Box24" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Opacity="0.15" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Viewbox MaxWidth="30" MaxHeight="24" Stretch="Uniform" StretchDirection="DownOnly"
+                                     Opacity="0.14" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Viewbox.Style>
+                                    <Style TargetType="Viewbox">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding Icon, Mode=OneWay}" Value="{x:Null}" />
+                                                    <Condition Binding="{Binding Data.ShowMissingIconRowNumbers, Source={StaticResource InventoryProxy}, Mode=OneWay}" Value="True" />
+                                                </MultiDataTrigger.Conditions>
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </MultiDataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Viewbox.Style>
+                                <TextBlock FontSize="16" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                           Text="{Binding (ItemsControl.AlternationIndex), RelativeSource={RelativeSource AncestorType=DataGridRow}, Converter={StaticResource InventoryRowNumber}, Mode=OneWay}" />
+                            </Viewbox>
+                            <ui:SymbolIcon Symbol="Box24" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Opacity="0.14"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center">
                                 <ui:SymbolIcon.Style>
                                     <Style TargetType="ui:SymbolIcon">
                                         <Setter Property="Visibility" Value="Collapsed" />
-                                        <Style.Triggers><DataTrigger Binding="{Binding Icon, Mode=OneWay}" Value="{x:Null}"><Setter Property="Visibility" Value="Visible" /></DataTrigger></Style.Triggers>
+                                        <Style.Triggers>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding Icon, Mode=OneWay}" Value="{x:Null}" />
+                                                    <Condition Binding="{Binding Data.ShowMissingIconRowNumbers, Source={StaticResource InventoryProxy}, Mode=OneWay}" Value="False" />
+                                                </MultiDataTrigger.Conditions>
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </MultiDataTrigger>
+                                        </Style.Triggers>
                                     </Style>
                                 </ui:SymbolIcon.Style>
                             </ui:SymbolIcon>
@@ -260,7 +309,7 @@
                     </DataTemplate></DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
                 <!-- 固定默认宽度，不随窗口压缩；放不下时使用横向滚动。 -->
-                <DataGridTextColumn Header="名称" Binding="{Binding Name, Mode=OneWay}" ElementStyle="{StaticResource InventoryText}" Width="156" MinWidth="44" />
+                <DataGridTextColumn Header="名称" Binding="{Binding Name, Mode=OneWay}" SortMemberPath="ItemNameSortKey" ElementStyle="{StaticResource InventoryText}" Width="156" MinWidth="44" />
                 <DataGridTextColumn Header="类型" Binding="{Binding Category, Mode=OneWay}" ElementStyle="{StaticResource InventoryText}" Width="112" MinWidth="44" />
                 <DataGridTemplateColumn Header="库存" SortMemberPath="Quantity" HeaderStyle="{StaticResource InventoryQuantityHeader}" Width="120" MinWidth="44">
                     <DataGridTemplateColumn.CellTemplate><DataTemplate>
@@ -281,6 +330,12 @@
                                 </MultiBinding>
                             </TextBlock.Text>
                         </TextBlock>
+                    </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="过期时间" Width="160" MinWidth="80" SortMemberPath="EarliestExpiration"
+                    Visibility="{Binding Data.ShowExpirationColumn, Source={StaticResource InventoryProxy}, Converter={StaticResource BoolVisibility}, Mode=OneWay}">
+                    <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                        <TextBlock Text="{Binding ExpirationText, Mode=OneWay}" ToolTip="{Binding ExpirationDetails, Mode=OneWay}" Style="{StaticResource InventoryText}" />
                     </DataTemplate></DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
                 <DataGridTemplateColumn Header="来源" Width="*" MinWidth="160" CanUserResize="True" SortMemberPath="SourceName">
@@ -306,7 +361,16 @@
                 </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
-        <controls:AccountRecordsEmptyState Margin="0,38,0,0" Visibility="{Binding IsEmpty, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
+        <!-- 加载遮罩只覆盖表体，保留当前表头、列宽和排序箭头，阻止操作未完成的行。 -->
+        <Grid Width="0" Height="0" HorizontalAlignment="Left" VerticalAlignment="Top" ClipToBounds="True"
+              Visibility="{Binding ShowPlaceholder, Converter={StaticResource BoolVisibility}, Mode=OneWay}">
+            <b:Interaction.Behaviors>
+                <behavior:AccountRecordsViewportOverlayBehavior Target="{Binding ElementName=InventoryGrid, Mode=OneWay}" />
+            </b:Interaction.Behaviors>
+            <Border Background="{DynamicResource ApplicationBackgroundBrush}"
+                    Visibility="{Binding IsLoading, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
+            <controls:AccountRecordsEmptyState IsHitTestVisible="False" IsLoading="{Binding IsLoading, Mode=OneWay}" />
+        </Grid>
         <!-- 异常提示只占底部局部区域，不覆盖表格或拦截表格交互。 -->
         <Border Grid.Row="1" Margin="0,8,0,0" Padding="12,8" CornerRadius="6"
                 Background="{DynamicResource ControlFillColorSecondaryBrush}"
@@ -316,16 +380,24 @@
                     <ui:Button Width="32" Height="32" Padding="0" Margin="0,0,4,0" VerticalContentAlignment="Center" Icon="{ui:SymbolIcon DocumentBulletList20}" ToolTip="查看事件记录" AutomationProperties.Name="查看事件记录" Command="{Binding OpenEventsCommand, Mode=OneWay}" />
                     <ui:Button Height="32" VerticalContentAlignment="Center" Content="接受" Command="{Binding ResolveNoticeCommand, Mode=OneWay}" CommandParameter="accept" Visibility="{Binding CanAcceptNotice, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
                     <ui:Button Height="32" VerticalContentAlignment="Center" Content="舍弃" Command="{Binding ResolveNoticeCommand, Mode=OneWay}" CommandParameter="discard" Visibility="{Binding CanResolveNotice, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
-                    <ui:Button Height="32" VerticalContentAlignment="Center" Content="保留提示" Command="{Binding KeepNoticeCommand, Mode=OneWay}" Visibility="{Binding CanKeepNotice, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
                     <ui:Button Height="32" VerticalContentAlignment="Center" Content="归档" Command="{Binding AcknowledgeNoticeCommand, Mode=OneWay}" Visibility="{Binding CanAcknowledgeNotice, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
-                    <ui:Button Height="32" VerticalContentAlignment="Center" Content="批量归档" ToolTip="归档当前 UID 的所有已完成事件，仅处理绿色事件。" Command="{Binding ArchiveCompletedEventsCommand, Mode=OneWay}" Visibility="{Binding ShowBatchArchive, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
+                    <ui:Button Height="32" VerticalContentAlignment="Center" Content="批量归档" ToolTip="归档当前账号中与此提示同类型、且未被错误或待处理事件阻挡的完成事件。" Command="{Binding ArchiveCompletedEventsCommand, Mode=OneWay}" Visibility="{Binding ShowBatchArchive, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
                     <ui:Button Height="32" VerticalContentAlignment="Center" Content="关闭" ToolTip="收起提示，不归档事件" Command="{Binding CloseNoticeCommand, Mode=OneWay}" />
                 </StackPanel>
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="{Binding Status, Mode=OneWay}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Status, Mode=OneWay}" />
+                    <!-- 错误总数优先保留宽度，空间不足时只截断前面的说明。 -->
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Status, Mode=OneWay}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Status, Mode=OneWay}" />
+                        <TextBlock Grid.Column="1" Text="{Binding NoticeErrorCountText, Mode=OneWay}" />
+                    </Grid>
                     <TextBlock Text="{Binding NoticeDetails, Mode=OneWay}" TextTrimming="CharacterEllipsis" ToolTip="{Binding NoticeDetails, Mode=OneWay}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                 </StackPanel>
             </DockPanel>
         </Border>
+        <TextBlock Grid.Row="2" Margin="4,6,4,0" FontSize="11"
+                   Text="{Binding ItemCountText, Mode=OneWay}"
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" Opacity="0.14"
+                   IsHitTestVisible="False" />
     </Grid>
 </UserControl>
