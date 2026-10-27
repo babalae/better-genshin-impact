@@ -51,7 +51,7 @@
 
 		<PackageReference Include="BetterGI.VCRuntime" Version="14.44.35208" />
 		<PackageReference Include="BetterGI.Assets.Map" Version="1.0.24" />
-        <PackageReference Include="BetterGI.Assets.Model" Version="1.0.38" />
+        <PackageReference Include="BetterGI.Assets.Model" Version="1.0.40" />
         <!-- ncnn Vulkan 胶水层原生库：源与产物见 ../bettergi-ncnn-shim 独立仓库；
              还原后由包内 targets 部署到输出目录 Assets/Model/PaddleOCR/Ncnn/ -->
         <PackageReference Include="Guamian.BetterGI.NcnnShim" Version="0.1.2" />
