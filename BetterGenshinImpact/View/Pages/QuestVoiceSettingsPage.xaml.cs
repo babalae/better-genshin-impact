@@ -15,5 +15,6 @@ public partial class QuestVoiceSettingsPage : UserControl
         ViewModel = viewModel;
         DataContext = this;
         InitializeComponent();
+        Loaded += async (_, _) => await ViewModel.Management.EnsureLoadedAsync();
     }
 }

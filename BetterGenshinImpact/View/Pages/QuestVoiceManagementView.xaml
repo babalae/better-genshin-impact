@@ -1,45 +1,31 @@
 <UserControl x:Class="BetterGenshinImpact.View.Pages.QuestVoiceManagementView"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-             FontFamily="{DynamicResource TextThemeFontFamily}"
-             Foreground="{DynamicResource TextFillColorPrimaryBrush}">
-    <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="ManagementBoolVisibility" />
-    </UserControl.Resources>
-    <StackPanel Margin="16">
-        <ui:TextBlock Text="{Binding DraftNotice, Mode=OneWay}" TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,0,0,8" />
-        <WrapPanel IsEnabled="{Binding IsEditingAllowed, Mode=OneWay}">
-            <ui:Button Content="加载配置" Command="{Binding LoadCommand, Mode=OneWay}" Margin="0,0,8,8" />
-            <ui:Button Content="新建空目录" Command="{Binding NewCatalogCommand, Mode=OneWay}" Margin="0,0,8,8" />
-            <ui:Button Content="保存配置并备份" Command="{Binding SaveCommand, Mode=OneWay}" Margin="0,0,8,8" />
-            <ui:Button Content="校验草稿" Command="{Binding ValidateDraftCommand, Mode=OneWay}" Margin="0,0,8,8" />
-            <ui:Button Content="导入草稿" Command="{Binding ImportCommand, Mode=OneWay}" Margin="0,0,8,8" />
-            <ui:Button Content="导出草稿" Command="{Binding ExportCommand, Mode=OneWay}" Margin="0,0,8,8" />
-            <ui:Button Content="放弃草稿并重新加载" Command="{Binding DiscardAndReloadCommand, Mode=OneWay}" Margin="0,0,8,8" />
-        </WrapPanel>
-        <ui:TextBlock Text="{Binding EditStatus, Mode=OneWay}" TextWrapping="Wrap" Margin="0,0,0,12" />
-        <StackPanel IsEnabled="{Binding CanEditDraft, Mode=OneWay}">
-            <ui:CardExpander IsExpanded="True" Margin="0,0,0,12" ContentPadding="16">
-                <ui:CardExpander.Header>
-                    <ui:TextBlock Text="旅行者、玩家昵称与兜底策略" />
-                </ui:CardExpander.Header>
-                <StackPanel Margin="0,8,0,0">
-                    <ui:TextBlock Text="旅行者（选择空或荧时才会补齐缺少的角色）" />
-                    <ComboBox ItemsSource="{Binding TravelerChoices, Mode=OneWay}" DisplayMemberPath="Value" SelectedValuePath="Key"
-                              SelectedValue="{Binding SelectedTravelerId, Mode=TwoWay}" HorizontalAlignment="Stretch" Margin="0,6,0,8" />
-                    <ui:TextBlock Text="玩家昵称（PlayerNames，一行一个）" />
-                    <ui:TextBox Text="{Binding PlayerNames, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True"
-                                MinHeight="64" MaxHeight="140" VerticalScrollBarVisibility="Auto" TextWrapping="Wrap" Margin="0,6,0,8" />
-                    <ui:TextBlock Text="NPC 兜底声线（空值使用默认配置）" />
-                    <ComboBox ItemsSource="{Binding VoiceIds, Mode=OneWay}" SelectedItem="{Binding SelectedFallbackVoiceId, Mode=TwoWay}" HorizontalAlignment="Stretch" Margin="0,6,0,8" />
-                    <ui:TextBlock Text="旁白声线（NarratorVoiceId）" />
-                    <ComboBox ItemsSource="{Binding VoiceIds, Mode=OneWay}" SelectedItem="{Binding SelectedNarratorVoiceId, Mode=TwoWay}" HorizontalAlignment="Stretch" Margin="0,6,0,8" />
-                    <ui:TextBlock Text="缺失声线策略：Fallback 使用兜底；Fail 报错停止该次处理" TextWrapping="Wrap" />
-                    <ComboBox ItemsSource="{Binding MissingPolicies, Mode=OneWay}" SelectedItem="{Binding MissingVoicePolicy, Mode=TwoWay}" HorizontalAlignment="Stretch" Margin="0,6,0,0" />
-                </StackPanel>
-            </ui:CardExpander>
-            <ui:CardExpander IsExpanded="True" Margin="0,0,0,12" ContentPadding="16">
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages">
+ <StackPanel>
+  <ui:TextBlock Text="{Binding SaveStatus, Mode=OneWay}" TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,0,0,8" />
+  <ui:TextBlock Text="{Binding EditStatus, Mode=OneWay}" TextWrapping="Wrap" Margin="0,0,0,12" />
+  <StackPanel IsEnabled="{Binding CanEditDraft, Mode=OneWay}">
+   <ui:CardExpander IsExpanded="True" ContentPadding="16" Margin="0,0,0,12">
+    <ui:CardExpander.Header><ui:TextBlock Text="旅行者" /></ui:CardExpander.Header>
+    <StackPanel>
+     <ui:TextBlock Text="游戏内名称（OCR 匹配；如有历史昵称，一行一个）" TextWrapping="Wrap" />
+     <ui:TextBox Text="{Binding PlayerNames, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" MinHeight="40" MaxHeight="100" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Margin="0,6,0,12" />
+     <ui:TextBlock Text="使用声线" Margin="0,0,0,6" />
+     <local:QuestVoiceVoiceSelector ItemsSource="{Binding VoiceChoices, Mode=OneWay}" SelectedVoiceId="{Binding TravelerVoiceId, Mode=TwoWay}" />
+    </StackPanel>
+   </ui:CardExpander>
+   <ui:CardExpander IsExpanded="True" ContentPadding="16" Margin="0,0,0,12">
+    <ui:CardExpander.Header><ui:TextBlock Text="未知 NPC 与旁白" /></ui:CardExpander.Header>
+    <StackPanel>
+     <ui:TextBlock Text="默认 NPC 声线" Margin="0,0,0,6" />
+     <local:QuestVoiceVoiceSelector ItemsSource="{Binding VoiceChoices, Mode=OneWay}" SelectedVoiceId="{Binding SelectedFallbackVoiceId, Mode=TwoWay}" />
+     <ui:TextBlock Text="有姓名栏，但未匹配专属声音时使用；不会覆盖已知角色的明确绑定。" TextWrapping="Wrap" Margin="0,6,0,12" />
+     <ui:TextBlock Text="旁白声线" Margin="0,0,0,6" />
+     <local:QuestVoiceVoiceSelector ItemsSource="{Binding VoiceChoices, Mode=OneWay}" SelectedVoiceId="{Binding SelectedNarratorVoiceId, Mode=TwoWay}" />
+     <ui:TextBlock Text="只按已有场景结构识别无姓名栏旁白；姓名 OCR 失败仍遵循原 NPC 回退。" TextWrapping="Wrap" Margin="0,6,0,0" />
+    </StackPanel>
+   </ui:CardExpander>
+            <ui:CardExpander IsExpanded="False" Margin="0,0,0,12" ContentPadding="16">
                 <ui:CardExpander.Header>
                     <ui:TextBlock Text="角色管理" />
                 </ui:CardExpander.Header>
@@ -63,54 +49,25 @@
                         <ui:TextBox Text="{Binding Corrections, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" MinHeight="48" MaxHeight="120" VerticalScrollBarVisibility="Auto" Margin="0,6,0,8" />
                     </StackPanel>
                     <ui:TextBlock Text="角色声线（VoiceId，空值表示无专用声线）" />
-                    <ComboBox ItemsSource="{Binding VoiceIds, Mode=OneWay}" SelectedItem="{Binding SelectedSpeakerVoiceId, Mode=TwoWay}" HorizontalAlignment="Stretch" Margin="0,6,0,0" />
+                    <ComboBox ItemsSource="{Binding VoiceChoices, Mode=OneWay}" DisplayMemberPath="DisplayName" SelectedValuePath="Id" SelectedValue="{Binding SelectedSpeakerVoiceId, Mode=TwoWay}" HorizontalAlignment="Stretch" Margin="0,6,0,0" />
                 </StackPanel>
             </ui:CardExpander>
-            <ui:CardExpander IsExpanded="False" Margin="0,0,0,12" ContentPadding="16">
-                <ui:CardExpander.Header>
-                    <ui:TextBlock Text="独立声线 Profile 管理" />
-                </ui:CardExpander.Header>
-                <StackPanel Margin="0,8,0,0">
-                    <ListBox ItemsSource="{Binding Profiles, Mode=OneWay}" SelectedItem="{Binding SelectedProfile, Mode=TwoWay}"
-                             DisplayMemberPath="Name" Height="140" ScrollViewer.VerticalScrollBarVisibility="Auto" />
-                    <WrapPanel Margin="0,8,0,8">
-                        <ui:Button Content="新增声线" Command="{Binding AddProfileCommand, Mode=OneWay}" Margin="0,0,8,0" />
-                        <ui:Button Content="删除选中声线" Command="{Binding DeleteProfileCommand, Mode=OneWay}" />
-                    </WrapPanel>
-                    <ui:TextBlock Text="声线独立于角色，可被多个角色共享。修改 ID 后引用在保存时同步迁移；下拉引用保存前仍显示原 ID。" TextWrapping="Wrap" Margin="0,0,0,8" />
-                    <ui:TextBlock Text="声线 ID / 展示名称" />
-                    <ui:TextBox Text="{Binding SelectedProfile.Id, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,6" />
-                    <ui:TextBox Text="{Binding SelectedProfile.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8" />
-                    <ui:TextBlock Text="Provider" />
-                    <ComboBox ItemsSource="{Binding Providers, Mode=OneWay}" DisplayMemberPath="DisplayName" SelectedValuePath="Id"
-                              SelectedValue="{Binding SelectedProfile.ProviderId, Mode=TwoWay}" HorizontalAlignment="Stretch" Margin="0,6,0,8" />
-                    <ui:TextBlock Text="实例（空白继承当前选择，local 本地，remote 远程）" TextWrapping="Wrap" />
-                    <ComboBox ItemsSource="{Binding Instances, Mode=OneWay}" SelectedItem="{Binding SelectedProfile.InstanceId, Mode=TwoWay}" HorizontalAlignment="Stretch" Margin="0,6,0,8" />
-                    <ui:TextBlock Text="ProviderVoiceId（选择预设或直接输入该引擎的音色 ID）" TextWrapping="Wrap" />
-                    <ComboBox ItemsSource="{Binding PresetVoices, Mode=OneWay}" DisplayMemberPath="DisplayName"
-                              SelectedItem="{Binding SelectedPresetVoice, Mode=TwoWay}" HorizontalAlignment="Stretch" Margin="0,6,0,6" />
-                    <ui:Button Content="刷新当前引擎声音" Command="{Binding RefreshPresetVoicesCommand, Mode=OneWay}" HorizontalAlignment="Left" Margin="0,0,0,6" />
-                    <ui:TextBox Text="{Binding SelectedProfile.ProviderVoiceId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8" />
-                    <StackPanel Visibility="{Binding SelectedProfile.UsesGptAssets, Mode=OneWay, Converter={StaticResource ManagementBoolVisibility}}">
-                        <ui:TextBlock Text="GPT 权重路径（.ckpt）" />
-                        <ui:TextBox Text="{Binding SelectedProfile.GptWeightsPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,8" />
-                        <ui:TextBlock Text="SoVITS 权重路径（.pth）" />
-                        <ui:TextBox Text="{Binding SelectedProfile.SovitsWeightsPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,8" />
-                        <ui:TextBlock Text="参考音频路径" />
-                        <ui:TextBox Text="{Binding SelectedProfile.ReferenceAudioPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,8" />
-                        <ui:TextBlock Text="参考音频逐字原文（PromptText）" />
-                        <ui:TextBox Text="{Binding SelectedProfile.PromptText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" Margin="0,6,0,8" />
-                        <ui:TextBlock Text="请求情绪 / 参考情绪（可留空）" />
-                        <ui:TextBox Text="{Binding SelectedProfile.RequestedEmotion, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,6" />
-                        <ui:TextBox Text="{Binding SelectedProfile.ReferenceEmotion, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8" />
-                        <ui:TextBlock Text="远程资产是服务器已有路径，不会上传；本地输入相对路径以当前路由文件目录为基准，导入资产保留源文件基准。" TextWrapping="Wrap" Margin="0,0,0,8" />
-                    </StackPanel>
-                    <ui:TextBlock Text="选中声线试听文本（使用草稿，不要求先保存）" />
-                    <ui:TextBox Text="{Binding PreviewText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" TextWrapping="Wrap" AcceptsReturn="True" Margin="0,6,0,8" />
-                    <ui:Button Content="试听选中声线" Command="{Binding PreviewProfileCommand, Mode=OneWay}" HorizontalAlignment="Left" />
-                </StackPanel>
-            </ui:CardExpander>
-        </StackPanel>
-        <ui:Button Content="取消试听" Command="{Binding CancelPreviewCommand, Mode=OneWay}" HorizontalAlignment="Left" />
-    </StackPanel>
+
+  </StackPanel>
+  <ui:CardExpander IsExpanded="False" ContentPadding="16" Margin="0,0,0,12">
+   <ui:CardExpander.Header><ui:TextBlock Text="高级路由目录与缺失策略" /></ui:CardExpander.Header>
+   <StackPanel>
+    <ui:TextBlock Text="缺失声线策略：Fallback 回退，Fail 报错" TextWrapping="Wrap" Margin="0,0,0,6" />
+    <ComboBox ItemsSource="{Binding MissingPolicies, Mode=OneWay}" SelectedItem="{Binding MissingVoicePolicy, Mode=TwoWay}" />
+    <WrapPanel Margin="0,12,0,0" IsEnabled="{Binding IsEditingAllowed, Mode=OneWay}">
+     <ui:Button Content="加载配置" Command="{Binding LoadCommand, Mode=OneWay}" Margin="0,0,8,8" />
+     <ui:Button Content="新建空目录" Command="{Binding NewCatalogCommand, Mode=OneWay}" Margin="0,0,8,8" />
+     <ui:Button Content="校验草稿" Command="{Binding ValidateDraftCommand, Mode=OneWay}" Margin="0,0,8,8" />
+     <ui:Button Content="导入配置" Command="{Binding ImportCommand, Mode=OneWay}" Margin="0,0,8,8" />
+     <ui:Button Content="导出草稿" Command="{Binding ExportCommand, Mode=OneWay}" Margin="0,0,8,8" />
+     <ui:Button Content="放弃草稿并重新加载" Command="{Binding DiscardAndReloadCommand, Mode=OneWay}" Margin="0,0,8,8" />
+    </WrapPanel>
+   </StackPanel>
+  </ui:CardExpander>
+ </StackPanel>
 </UserControl>

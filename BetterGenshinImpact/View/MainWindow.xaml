@@ -209,6 +209,12 @@
                                 <ui:SymbolIcon Symbol="Options24" />
                             </ui:NavigationViewItem.Icon>
                         </ui:NavigationViewItem>
+                        <ui:NavigationViewItem Content="GPT-SoVITS 配置" NavigationCacheMode="Enabled" TargetPageType="{x:Type pages:QuestVoiceGptSettingsPage}">
+                            <ui:NavigationViewItem.Icon><ui:SymbolIcon Symbol="Speaker224" /></ui:NavigationViewItem.Icon>
+                        </ui:NavigationViewItem>
+                        <ui:NavigationViewItem Content="其他引擎设置" NavigationCacheMode="Enabled" TargetPageType="{x:Type pages:QuestVoiceOtherEnginesPage}">
+                            <ui:NavigationViewItem.Icon><ui:SymbolIcon Symbol="Settings24" /></ui:NavigationViewItem.Icon>
+                        </ui:NavigationViewItem>
                     </ui:NavigationViewItem.MenuItems>
                 </ui:NavigationViewItem>
 

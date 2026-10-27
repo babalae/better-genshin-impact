@@ -1,0 +1,31 @@
+<UserControl x:Class="BetterGenshinImpact.View.Pages.QuestVoiceSettings.VitsSettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+             xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages.QuestVoiceSettings"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             HorizontalContentAlignment="Stretch">
+    <StackPanel>
+        <ui:TextBlock Text="vits-simple-api" FontSize="18" FontWeight="SemiBold" />
+        <ui:TextBlock Text="支持 VITS 与 BERT-VITS2 文本合成；刷新声音只在点击后连接服务，不会自动安装模型。" TextWrapping="Wrap" Margin="0,8,0,4" />
+        <local:EngineConnectionView />
+        <ui:TextBlock Text="API Key（可选，只通过请求头发送）" Margin="0,8,0,6" />
+        <PasswordBox>
+            <i:Interaction.Behaviors>
+                <behavior:PasswordBoxBindingBehavior Password="{Binding EngineConfig.ApiKey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </i:Interaction.Behaviors>
+        </PasswordBox>
+        <ui:TextBlock Text="服务声音" Margin="0,12,0,6" />
+        <local:EngineVoiceListView />
+        <ui:TextBlock Text="复合声音 ID（例如 VITS:0 或 BERT-VITS2:0）" Margin="0,4,0,6" />
+        <ui:TextBox Text="{Binding VoiceId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+        <ui:TextBlock Text="语言" Margin="0,12,0,6" />
+        <ComboBox ItemsSource="{Binding Languages, Mode=OneWay}" SelectedItem="{Binding EngineConfig.Language, Mode=TwoWay}" />
+        <ui:TextBlock Text="速度倍率（0.5～2）" Margin="0,12,0,6" />
+        <Slider Minimum="0.5" Maximum="2" TickFrequency="0.1" Value="{Binding EngineConfig.Rate, Mode=TwoWay}" />
+        <ui:TextBlock Text="{Binding EngineConfig.Rate, Mode=OneWay, StringFormat={}{0:F2}}" />
+        <local:EnginePreviewView />
+    </StackPanel>
+</UserControl>

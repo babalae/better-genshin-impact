@@ -1,0 +1,72 @@
+<UserControl x:Class="BetterGenshinImpact.View.Pages.QuestVoiceGptSettingsPage"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+ FontFamily="{DynamicResource TextThemeFontFamily}" Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+ <UserControl.Resources><BooleanToVisibilityConverter x:Key="GptBoolVisibility" /></UserControl.Resources>
+ <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+  <StackPanel Margin="{DynamicResource PagePadding}">
+   <ui:TextBlock Text="GPT-SoVITS 配置" FontTypography="Title" Margin="0,0,0,8" />
+   <ui:TextBlock Text="管理连接与声音资源。修改自动保存，下次启动配音生效；页面切换不改变运行会话。" TextWrapping="Wrap" Margin="0,0,0,12" />
+   <ui:CardExpander IsExpanded="True" ContentPadding="16" Margin="0,0,0,12">
+    <ui:CardExpander.Header><ui:TextBlock Text="服务连接" /></ui:CardExpander.Header>
+    <StackPanel>
+     <ui:ToggleSwitch Content="使用远程实例（本地与远程地址独立保留）" IsChecked="{Binding ViewModel.Config.UseRemoteService, Mode=TwoWay}" Margin="0,0,0,8" />
+     <ui:TextBlock Text="API URL" Margin="0,0,0,6" />
+     <ui:TextBox Text="{Binding ViewModel.ServiceUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+     <ui:TextBlock Text="远程权重和音频必须已存在于服务器；不会自动上传本机文件或检查服务器路径的本机存在性。" TextWrapping="Wrap" Margin="0,6,0,12" />
+     <ui:TextBlock Text="连接 / 请求 / 合成超时（秒；沿用所有引擎共享的超时配置）" TextWrapping="Wrap" Margin="0,0,0,6" />
+     <WrapPanel>
+      <ui:NumberBox Width="125" Minimum="1" Maximum="120" MaxDecimalPlaces="0" Value="{Binding ViewModel.Config.ConnectTimeoutSeconds, Mode=TwoWay}" Margin="0,0,8,8" />
+      <ui:NumberBox Width="125" Minimum="1" Maximum="600" MaxDecimalPlaces="0" Value="{Binding ViewModel.Config.RequestTimeoutSeconds, Mode=TwoWay}" Margin="0,0,8,8" />
+      <ui:NumberBox Width="125" Minimum="1" Maximum="600" MaxDecimalPlaces="0" Value="{Binding ViewModel.Config.SynthesisTimeoutSeconds, Mode=TwoWay}" Margin="0,0,8,8" />
+     </WrapPanel>
+     <ui:Button Content="测试连接" Command="{Binding ViewModel.ProbeCommand, Mode=OneWay}" HorizontalAlignment="Left" />
+     <ui:TextBlock Text="{Binding ViewModel.ConnectionStatus, Mode=OneWay}" TextWrapping="Wrap" Margin="0,8,0,0" />
+     <ui:TextBlock Text="{Binding ViewModel.SaveStatus, Mode=OneWay}" TextWrapping="Wrap" Margin="0,8,0,0" />
+    </StackPanel>
+   </ui:CardExpander>
+   <ui:CardExpander IsExpanded="True" ContentPadding="16" Margin="0,0,0,12">
+    <ui:CardExpander.Header><ui:TextBlock Text="合成与流式设置" /></ui:CardExpander.Header>
+    <StackPanel>
+     <ui:ToggleSwitch Content="按句流式合成与增量播放（关闭时完整合成）" IsChecked="{Binding ViewModel.Config.StreamingEnabled, Mode=TwoWay}" />
+     <ui:TextBlock Text="当前协议固定中文文本 / 中文参考语言、cut5 文本切分、WAV。现有版本未提供可调整语速或其他流式模式。试听采用完整接收后播放；正式配音保留 Ready/EOF 与安全排空。" TextWrapping="Wrap" Margin="0,8,0,0" />
+    </StackPanel>
+   </ui:CardExpander>
+   <ui:CardExpander IsExpanded="True" ContentPadding="16" Margin="0,0,0,12">
+    <ui:CardExpander.Header><ui:TextBlock Text="GPT-SoVITS 声线库" /></ui:CardExpander.Header>
+    <StackPanel DataContext="{Binding ViewModel.Management, Mode=OneWay}">
+     <ui:TextBlock Text="{Binding SaveStatus, Mode=OneWay}" TextWrapping="Wrap" Margin="0,0,0,8" />
+     <ui:TextBlock Text="{Binding EditStatus, Mode=OneWay}" TextWrapping="Wrap" Margin="0,0,0,8" />
+     <ComboBox ItemsSource="{Binding GptProfiles, Mode=OneWay}" SelectedItem="{Binding SelectedGptProfile, Mode=TwoWay}"
+               DisplayMemberPath="Name" IsTextSearchEnabled="True" TextSearch.TextPath="Name" MaxDropDownHeight="320" HorizontalAlignment="Stretch" />
+     <ui:TextBlock Text="{Binding SelectedProfileDiagnostic, Mode=OneWay}" TextWrapping="Wrap" Margin="0,8,0,0" />
+     <WrapPanel Margin="0,8,0,8">
+      <ui:Button Content="新增声线" Command="{Binding AddGptProfileCommand, Mode=OneWay}" Margin="0,0,8,8" />
+      <ui:Button Content="删除选中声线" Command="{Binding DeleteProfileCommand, Mode=OneWay}" Margin="0,0,0,8" />
+     </WrapPanel>
+     <StackPanel IsEnabled="{Binding CanEditDraft, Mode=OneWay}" Visibility="{Binding HasSelectedGptProfile, Mode=OneWay, Converter={StaticResource GptBoolVisibility}}">
+      <ui:TextBlock Text="显示名称（自由命名；修改名称保留全部角色引用）" TextWrapping="Wrap" Margin="0,0,0,6" />
+      <ui:TextBox Text="{Binding SelectedProfile.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8" />
+      <ui:TextBlock Text="实例（空白继承 GPT 当前实例）" Margin="0,0,0,6" />
+      <ComboBox ItemsSource="{Binding Instances, Mode=OneWay}" SelectedItem="{Binding SelectedProfile.InstanceId, Mode=TwoWay}" Margin="0,0,0,8" />
+      <ui:TextBlock Text="GPT 权重（.ckpt）" />
+      <ui:TextBox Text="{Binding SelectedProfile.GptWeightsPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,6" />
+      <ui:Button Content="浏览本机 GPT 权重" Visibility="{Binding CanBrowseSelectedProfileAssets, Mode=OneWay, Converter={StaticResource GptBoolVisibility}}" Command="{Binding BrowseProfileAssetCommand, Mode=OneWay}" CommandParameter="gpt" HorizontalAlignment="Left" Margin="0,0,0,8" />
+      <ui:TextBlock Text="SoVITS 权重（.pth）" />
+      <ui:TextBox Text="{Binding SelectedProfile.SovitsWeightsPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,6" />
+      <ui:Button Content="浏览本机 SoVITS 权重" Visibility="{Binding CanBrowseSelectedProfileAssets, Mode=OneWay, Converter={StaticResource GptBoolVisibility}}" Command="{Binding BrowseProfileAssetCommand, Mode=OneWay}" CommandParameter="sovits" HorizontalAlignment="Left" Margin="0,0,0,8" />
+      <ui:TextBlock Text="参考音频" />
+      <ui:TextBox Text="{Binding SelectedProfile.ReferenceAudioPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,6" />
+      <ui:Button Content="浏览本机参考音频" Visibility="{Binding CanBrowseSelectedProfileAssets, Mode=OneWay, Converter={StaticResource GptBoolVisibility}}" Command="{Binding BrowseProfileAssetCommand, Mode=OneWay}" CommandParameter="audio" HorizontalAlignment="Left" Margin="0,0,0,8" />
+      <ui:TextBlock Text="参考台词（当前参考语言固定中文）" />
+      <ui:TextBox Text="{Binding SelectedProfile.PromptText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" TextWrapping="Wrap" AcceptsReturn="True" MinHeight="64" Margin="0,6,0,8" />
+      <ui:TextBlock Text="试听文本" />
+      <ui:TextBox Text="{Binding PreviewText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" TextWrapping="Wrap" AcceptsReturn="True" MinHeight="48" Margin="0,6,0,8" />
+      <ui:Button Content="试听选中声线" Command="{Binding PreviewProfileCommand, Mode=OneWay}" HorizontalAlignment="Left" />
+     </StackPanel>
+     <ui:Button Content="取消试听" Command="{Binding CancelPreviewCommand, Mode=OneWay}" HorizontalAlignment="Left" Margin="0,8,0,0" />
+    </StackPanel>
+   </ui:CardExpander>
+  </StackPanel>
+ </ScrollViewer>
+</UserControl>

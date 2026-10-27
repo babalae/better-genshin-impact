@@ -63,6 +63,10 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
     /// 标记 ViewModel 已释放，防止退出阶段处理迟到的实例事件。
     /// </summary>
     private bool _disposed;
+    /// <summary>正常关闭的异步保存守卫只放行一次，避免递归关闭。</summary>
+    private bool _questVoiceCloseApproved;
+    /// <summary>多个关闭请求共用一次排空，不重复弹出提示。</summary>
+    private bool _questVoiceClosePending;
     public string Title => $"BetterGI · 更好的原神 · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}";
 
     /// <summary>
@@ -537,8 +541,8 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
         }
     }
 
-    [RelayCommand]
-    private void OnClosing(CancelEventArgs e)
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private async Task OnClosingAsync(CancelEventArgs e)
     {
         // WebView2 实例依赖主实例提供 IPC 服务，应先关闭网页版实例再退出主实例。
         if (_instanceService.HasConnectedWebViewInstance())
@@ -563,7 +567,19 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
         {
             e.Cancel = true;
             OnHide();
+            return;
         }
+        if (_questVoiceCloseApproved) return;
+        e.Cancel = true;
+        if (_questVoiceClosePending) return;
+        _questVoiceClosePending = true;
+        try
+        {
+            if (!await QuestVoiceSettingsExitGuard.PrepareAsync()) return;
+            _questVoiceCloseApproved = true;
+            Application.Current.MainWindow.Close();
+        }
+        finally { _questVoiceClosePending = false; }
     }
 
     [RelayCommand]

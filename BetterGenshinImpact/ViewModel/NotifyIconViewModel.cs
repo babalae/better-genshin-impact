@@ -16,6 +16,7 @@ using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.ChildSession;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.ViewModel.Pages;
 using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.ViewModel;
@@ -61,7 +62,7 @@ public partial class NotifyIconViewModel : ObservableObject
     }
 
     [RelayCommand]
-    public void Exit()
+    public async Task ExitAsync()
     {
         // WebView2 实例依赖主实例提供 IPC 服务，应先关闭网页版实例再退出主实例。
         if (_instanceService.HasConnectedWebViewInstance())
@@ -80,6 +81,7 @@ public partial class NotifyIconViewModel : ObservableObject
             return;
         }
 
+        if (!await QuestVoiceSettingsExitGuard.PrepareAsync()) return;
         App.GetService<IConfigService>()?.Save();
         Application.Current.Shutdown();
     }

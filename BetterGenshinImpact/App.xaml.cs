@@ -17,6 +17,7 @@ using BetterGenshinImpact.GameTask.AutoSkip.Audio;
 using BetterGenshinImpact.GameTask.Music.Service;
 using BetterGenshinImpact.GameTask.QuestVoice;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Diagnostics;
+using BetterGenshinImpact.ViewModel.Pages.QuestVoiceSettings;
 using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.GameTask.Runtime.Win32;
 using BetterGenshinImpact.GameTask.Runtime.WebPage;
@@ -230,6 +231,10 @@ public partial class App : Application
                 services.AddView<MusicPage, MusicPageViewModel>();
                 services.AddView<QuestVoicePage, QuestVoicePageViewModel>();
                 services.AddSingleton<QuestVoiceSettingsPage>();
+                services.AddSingleton<GptSovitsSettingsViewModel>();
+                services.AddSingleton<QuestVoiceGptSettingsPage>();
+                services.AddSingleton<OtherEnginesSettingsViewModel>();
+                services.AddSingleton<QuestVoiceOtherEnginesPage>();
                 services.AddSingleton(sp => new QuestVoiceSessionFactory(all.QuestVoiceConfig, Core.Config.Global.StartUpPath));
                 services.AddSingleton<IQuestVoiceSessionFactory>(sp => sp.GetRequiredService<QuestVoiceSessionFactory>());
                 services.AddSingleton<QuestVoiceSessionController>();
