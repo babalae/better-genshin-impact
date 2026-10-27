@@ -21,7 +21,7 @@ internal static class NcnnYoloBackend
     /// <summary>ONNX 元数据（类别名、输入尺寸、任务类型）按模型路径缓存：CPU 临时会话读取一次，进程内复用。</summary>
     private static readonly ConcurrentDictionary<string, (YoloName[] Names, int Width, int Height, bool IsClassifier)> MetadataCache = new();
 
-    /// <summary>已向日志栏报告过 ncnn 启用的模型：预测器每场战斗重建，启用日志每个模型只报一次。</summary>
+    /// <summary>已报告过 ncnn 启用的模型：预测器每场战斗重建，启用日志每个模型只报一次。</summary>
     private static readonly HashSet<string> LoggedActivations = new();
 
     public static IYoloPredictorBackend Create(BgiOnnxModel model, ILogger logger, NcnnBackendSettings settings)
@@ -47,17 +47,13 @@ internal static class NcnnYoloBackend
                 new NcnnYoloPredictor(new NcnnShim(), paramPath, modelPath, names, width, height,
                     tuning: settings.Yolo, gpuIndex: gpuIndex, isClassifier: isClassifier);
             var deviceText = gpuIndex >= 0 ? $"Vulkan 设备 #{gpuIndex}" : $"CPU（{numThreads} 线程）";
-            string activationLine;
             lock (LoggedActivations)
             {
-                // 后续重建只落文件日志（Debug），日志栏不重复刷
-                activationLine = LoggedActivations.Add(model.Name)
-                    ? $"[YOLO] {model.Name} 使用 ncnn {deviceText} 后端（{predictor.ConfigName}），模型目录 {ncnnDir}"
-                    : "";
+                if (LoggedActivations.Add(model.Name))
+                    logger.LogInformation("[YOLO] {Model} 使用 ncnn {Device} 后端（{Config}），模型目录 {Dir}",
+                        model.Name, deviceText, predictor.ConfigName, ncnnDir);
             }
 
-            if (activationLine.Length > 0) logger.LogInformation("{Activation}", activationLine);
-            else logger.LogDebug("[YOLO] {Model} ncnn {Device} 后端已重建（{Config}）", model.Name, deviceText, predictor.ConfigName);
             return predictor;
         }
         catch (Exception e)

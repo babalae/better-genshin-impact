@@ -32,8 +32,8 @@ internal static class NcnnOcrBackend
             var gpuIndex = settings.EffectiveGpuIndex;
             // det / rec 共享同一个 shim 实例（库句柄进程内缓存，导出绑定只做一次）
             INcnnShim shim = new NcnnShim();
-            det = new NcnnDet(shim, modelDir, v6.DetectionVersion, settings.Det, gpuIndex, logger);
-            rec = new NcnnRec(shim, modelDir, labels, settings.Rec, gpuIndex, logger);
+            det = new NcnnDet(shim, modelDir, v6.DetectionVersion, settings.Det, gpuIndex);
+            rec = new NcnnRec(shim, modelDir, labels, settings.Rec, gpuIndex);
             logger.LogInformation(
                 "[OCR] ncnn 后端已启用（{Det} / {Rec}，固定 PpOcrV6，忽略界面的 OCR 模型选择），{Device}，检测 {DetThreads} 线程 / 识别 {RecThreads} 线程，输入模式：动态形状（det_dyn / rec_dyn），模型目录 {Dir}",
                 det.GetConfigName, rec.GetConfigName,

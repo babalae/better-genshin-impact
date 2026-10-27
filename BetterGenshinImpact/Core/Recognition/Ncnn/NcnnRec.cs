@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OCR.Engine;
@@ -21,8 +19,6 @@ namespace BetterGenshinImpact.Core.Recognition.Ncnn;
 /// </summary>
 internal sealed class NcnnRec : IOcrRecognizer
 {
-    private readonly ILogger _logger;
-
     private const int ModelHeight = 48;
 
     /// <summary>动态宽度的输入边界；下限保证至少 1 个时间步（下采样 8），上限约束缓冲与单行计算量。</summary>
@@ -40,10 +36,9 @@ internal sealed class NcnnRec : IOcrRecognizer
     private readonly NcnnSession _session;
 
     public NcnnRec(INcnnShim shim, string modelDir, IReadOnlyList<string> labels,
-        NcnnTuningSettings tuning, int gpuIndex = 0, ILogger? logger = null)
+        NcnnTuningSettings tuning, int gpuIndex = 0)
     {
         _shim = shim;
-        _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         _modelDir = modelDir;
         _labels = labels;
         _gpuIndex = gpuIndex;
@@ -79,9 +74,7 @@ internal sealed class NcnnRec : IOcrRecognizer
     {
         if (src.Empty()) throw new ArgumentException("src size should not be 0, wrong input picture provided?");
         var width = SelectInputWidth(src);
-        var sw = Stopwatch.StartNew();
         var tensor = OcrUtils.ResizeNormImg(src, new OcrShape(3, width, ModelHeight), out var owner);
-        var preMs = sw.Elapsed.TotalMilliseconds;
         try
         {
             if (tensor is not DenseTensor<float> dense)
@@ -95,13 +88,7 @@ internal sealed class NcnnRec : IOcrRecognizer
             var output = _session.Infer(NcnnInput.FromFloat("in0", _session.InputBuffer, width, ModelHeight, 3));
             var (charCount, labelCount) =
                 NcnnRecDecoder.ResolveOutputShape(output.Info, output.Data.Length, width);
-            var inferMs = sw.Elapsed.TotalMilliseconds - preMs;
-            var decodeSw = Stopwatch.StartNew();
-            var result = NcnnRecDecoder.Decode(output.Data, charCount, labelCount, _labels);
-            _logger.LogDebug(
-                "[OCR][Rec][ncnn] 宽度{Width} | 归一化 {Pre:F1}ms 推理 {Inf:F1}ms 解码 {Dec:F1}ms",
-                width, preMs, inferMs, decodeSw.Elapsed.TotalMilliseconds);
-            return result;
+            return NcnnRecDecoder.Decode(output.Data, charCount, labelCount, _labels);
         }
         finally
         {

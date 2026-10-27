@@ -1,6 +1,4 @@
 using System;
-using System.Diagnostics;
-using Microsoft.Extensions.Logging;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR.Engine;
 using BetterGenshinImpact.Core.Recognition.OCR.Engine.data;
@@ -18,8 +16,6 @@ namespace BetterGenshinImpact.Core.Recognition.Ncnn;
 /// </summary>
 internal sealed class NcnnDet : IOcrDetector
 {
-    private readonly ILogger _logger;
-
     private readonly INcnnShim _shim;
     private readonly OcrVersionConfig _config;
     private readonly NcnnTuningSettings _tuning;
@@ -49,10 +45,9 @@ internal sealed class NcnnDet : IOcrDetector
     private readonly int _maxCanvas;
 
     public NcnnDet(INcnnShim shim, string modelDir, OcrVersionConfig config,
-        NcnnTuningSettings tuning, int gpuIndex = 0, ILogger? logger = null)
+        NcnnTuningSettings tuning, int gpuIndex = 0)
     {
         _shim = shim;
-        _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         _config = config;
         _tuning = tuning.NormalizedCopy();
         _modelDir = modelDir;
@@ -70,18 +65,11 @@ internal sealed class NcnnDet : IOcrDetector
     /// <summary>检测文本框（与 Det.RunBoxes 同语义）。</summary>
     public PaddleOcrDetectionBox[] RunBoxes(Mat src)
     {
-        var sw = Stopwatch.StartNew();
         using var pred = RunRaw(src, out var contentSize);
-        var inferMs = sw.Elapsed.TotalMilliseconds;
         using var roi = pred[0, contentSize.Height, 0, contentSize.Width];
         var postProcessor = new DbPostProcessor(
             BoxThreshold, BoxScoreThreshold, MaxCandidates, UnclipRatio, MinSize, UseDilation);
-        var boxes = postProcessor.Run(roi, src.Size());
-        _logger.LogDebug(
-            "[OCR][Det][ncnn] 画布{Canvas} 内容{Width}x{Height} | 推理+转换 {Infer:F1}ms 后处理 {Post:F1}ms 文本框 {Count}",
-            pred.Width, contentSize.Width, contentSize.Height, inferMs, sw.Elapsed.TotalMilliseconds - inferMs,
-            boxes.Length);
-        return boxes;
+        return postProcessor.Run(roi, src.Size());
     }
 
     /// <summary>推理概率图：返回 [1,B,B] 的 float Mat（B 为方形画布边长）。</summary>
