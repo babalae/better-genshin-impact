@@ -2,16 +2,23 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
              xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              HorizontalContentAlignment="Stretch"
              VerticalContentAlignment="Stretch"
              Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <b:Interaction.Triggers>
+        <b:EventTrigger EventName="Loaded">
+            <b:InvokeCommandAction Command="{Binding LoadCommand, Mode=OneWay}" />
+        </b:EventTrigger>
         <b:EventTrigger EventName="Unloaded">
             <b:InvokeCommandAction Command="{Binding CloseUidPopupsCommand}" />
         </b:EventTrigger>
     </b:Interaction.Triggers>
+    <UserControl.Resources>
+        <behavior:BindingProxy x:Key="AccountRecordsProxy" Data="{Binding Mode=OneWay}" />
+    </UserControl.Resources>
     <Grid Margin="22,16,16,12" Grid.IsSharedSizeScope="True">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -28,13 +35,38 @@
                            FontSize="24" FontWeight="SemiBold" Margin="0,4,16,0"
                            VerticalAlignment="Top"
                            Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                <ui:Button Appearance="Primary" Icon="{ui:SymbolIcon ArrowDownload24}" Height="34"
+                <ui:Button Appearance="Primary" Height="34"
                            Margin="0,0,8,0" ToolTip="导入数据"
-                           Command="{Binding OpenImportCommand, Mode=OneWay}" />
+                           Command="{Binding OpenPlaceholderCommand, Mode=OneWay}">
+                    <ui:Button.Icon>
+                        <ui:SymbolIcon Symbol="ArrowEnter20" RenderTransformOrigin="0.5,0.5">
+                            <ui:SymbolIcon.RenderTransform><RotateTransform Angle="90" /></ui:SymbolIcon.RenderTransform>
+                        </ui:SymbolIcon>
+                    </ui:Button.Icon>
+                </ui:Button>
                 <ui:DropDownButton Icon="{ui:SymbolIcon MoreHorizontal24}" Height="34"
                                    Margin="0,0,12,0" ToolTip="当前页签的更多操作">
                     <ui:DropDownButton.Flyout>
-                        <ContextMenu />
+                        <ContextMenu>
+                            <MenuItem Header="刷新库存" Command="{Binding Data.Inventory.RefreshCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" />
+                            <MenuItem Header="新增库存记录…" Command="{Binding Data.Inventory.AddCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" IsEnabled="{Binding Data.Inventory.HasUid, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" />
+                            <Separator />
+                            <MenuItem Header="导入库存…" Command="{Binding Data.OpenImportCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" />
+                            <MenuItem Header="导出库存…" Command="{Binding Data.ExportInventoryCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" />
+                            <Separator />
+                            <MenuItem Header="优先显示来源名称" IsCheckable="True"
+                                      IsChecked="{Binding Data.Inventory.PreferReadableSource, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}"
+                                      Command="{Binding Data.Inventory.ToggleSourceNamesCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" />
+                            <MenuItem Header="恢复所有分页默认栏宽" Command="{Binding Data.ResetColumnWidthsCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" />
+                            <Separator />
+                            <MenuItem Header="自动日期快照" IsCheckable="True"
+                                      IsChecked="{Binding Data.Inventory.SnapshotsEnabled, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}"
+                                      Command="{Binding Data.Inventory.ToggleSnapshotsCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" />
+                            <MenuItem Header="来源记录保留数量…" Command="{Binding Data.Inventory.SetRetentionCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" CommandParameter="recent" />
+                            <MenuItem Header="快照保留数量…" Command="{Binding Data.Inventory.SetRetentionCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" CommandParameter="snapshots" />
+                            <Separator />
+                            <MenuItem Header="清理所有图标缓存…" Command="{Binding Data.Inventory.ClearIconCacheCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" />
+                        </ContextMenu>
                     </ui:DropDownButton.Flyout>
                 </ui:DropDownButton>
             </StackPanel>
@@ -60,7 +92,11 @@
                     </ControlTemplate>
                 </ui:DropDownButton.Template>
                 <ui:DropDownButton.Flyout>
-                    <ContextMenu />
+                    <ContextMenu>
+                        <MenuItem Header="清空库存记录…" Command="{Binding Data.ClearAccountCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" CommandParameter="inventory" />
+                        <Separator />
+                        <MenuItem Header="删除 UID 及全部账号数据…" Command="{Binding Data.ClearAccountCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" CommandParameter="uid" />
+                    </ContextMenu>
                 </ui:DropDownButton.Flyout>
             </ui:DropDownButton>
             <Grid x:Name="UidToolbar" Grid.Column="1">
@@ -257,41 +293,70 @@
                                     <TranslateTransform Y="-5" />
                                 </ui:TextBox.RenderTransform>
                             </ui:TextBox>
-                            <ToggleButton Grid.Column="2" Width="20" MinWidth="0" Height="34" Padding="0"
-                                          Margin="4,0,0,8" VerticalAlignment="Center"
-                                          IsChecked="{Binding IsFilterEnabled, Mode=TwoWay}"
-                                          ToolTip="筛选（预留，暂不影响数据）"
-                                          AutomationProperties.Name="筛选开关">
-                                <ToggleButton.RenderTransform>
-                                    <TranslateTransform Y="-5" />
-                                </ToggleButton.RenderTransform>
-                                <ToggleButton.Style>
-                                    <Style TargetType="ToggleButton" BasedOn="{StaticResource {x:Type ToggleButton}}">
+                            <ui:DropDownButton Grid.Column="2" Width="20" MinWidth="0" Height="34" Padding="0"
+                                               Margin="4,0,0,8" VerticalAlignment="Center" ToolTip="筛选库存类型"
+                                               AutomationProperties.Name="筛选库存类型">
+                                <ui:DropDownButton.RenderTransform><TranslateTransform Y="-5" /></ui:DropDownButton.RenderTransform>
+                                <ui:DropDownButton.Style>
+                                    <Style TargetType="ui:DropDownButton" BasedOn="{StaticResource {x:Type ui:DropDownButton}}">
                                         <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
                                         <Setter Property="Template">
                                             <Setter.Value>
-                                                <ControlTemplate TargetType="ToggleButton">
-                                                    <Border x:Name="FilterBackground" Background="Transparent" CornerRadius="4">
-                                                        <ui:SymbolIcon Symbol="Filter24" FontSize="16"
-                                                                       Foreground="{TemplateBinding Foreground}"
+                                                <ControlTemplate TargetType="ui:DropDownButton">
+                                                    <Border Background="Transparent">
+                                                        <ui:SymbolIcon Symbol="Filter24" FontSize="16" Foreground="{TemplateBinding Foreground}"
                                                                        HorizontalAlignment="Center" VerticalAlignment="Center" />
                                                     </Border>
-                                                    <ControlTemplate.Triggers>
-                                                        <Trigger Property="IsMouseOver" Value="True">
-                                                            <Setter TargetName="FilterBackground" Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
-                                                        </Trigger>
-                                                    </ControlTemplate.Triggers>
                                                 </ControlTemplate>
                                             </Setter.Value>
                                         </Setter>
                                         <Style.Triggers>
-                                            <Trigger Property="IsChecked" Value="True">
+                                            <DataTrigger Binding="{Binding Inventory.HasCategoryFilter, Mode=OneWay}" Value="True">
                                                 <Setter Property="Foreground" Value="{DynamicResource AccentFillColorDefaultBrush}" />
-                                            </Trigger>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding SelectedTabIndex, Mode=OneWay}" Value="1"><Setter Property="IsEnabled" Value="False" /></DataTrigger>
+                                            <DataTrigger Binding="{Binding SelectedTabIndex, Mode=OneWay}" Value="2"><Setter Property="IsEnabled" Value="False" /></DataTrigger>
                                         </Style.Triggers>
                                     </Style>
-                                </ToggleButton.Style>
-                            </ToggleButton>
+                                </ui:DropDownButton.Style>
+                                <ui:DropDownButton.Flyout>
+                                    <ContextMenu MinWidth="220" MaxHeight="420">
+                                        <ContextMenu.Resources>
+                                            <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                                <Setter Property="Header" Value="{Binding Name, Mode=OneWay}" />
+                                                <Setter Property="IsCheckable" Value="True" />
+                                                <Setter Property="IsChecked" Value="{Binding IsSelected, Mode=TwoWay}" />
+                                                <Setter Property="StaysOpenOnClick" Value="True" />
+                                            </Style>
+                                        </ContextMenu.Resources>
+                                        <ContextMenu.ItemsSource>
+                                            <CompositeCollection>
+                                                <MenuItem Header="全部类型" IsCheckable="True" StaysOpenOnClick="True"
+                                                          IsChecked="{Binding Data.Inventory.AllCategoriesSelected, Source={StaticResource AccountRecordsProxy}, Mode=TwoWay}" />
+                                                <Separator />
+                                                <CollectionContainer Collection="{Binding Data.Inventory.Categories, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" />
+                                                <Separator />
+                                                <MenuItem IsCheckable="False" IsChecked="False" StaysOpenOnClick="True">
+                                                    <MenuItem.Header>
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <ui:Button Content="重置" Icon="{ui:SymbolIcon ArrowClockwise24}" Margin="0,0,8,0"
+                                                                       Command="{Binding Data.Inventory.ResetCategoriesCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" />
+                                                            <ui:Button Content="确认" Icon="{ui:SymbolIcon Checkmark16}">
+                                                                <b:Interaction.Triggers>
+                                                                    <b:EventTrigger EventName="Click">
+                                                                        <b:ChangePropertyAction PropertyName="IsOpen" Value="False"
+                                                                            TargetObject="{Binding RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                                    </b:EventTrigger>
+                                                                </b:Interaction.Triggers>
+                                                            </ui:Button>
+                                                        </StackPanel>
+                                                    </MenuItem.Header>
+                                                </MenuItem>
+                                            </CompositeCollection>
+                                        </ContextMenu.ItemsSource>
+                                    </ContextMenu>
+                                </ui:DropDownButton.Flyout>
+                            </ui:DropDownButton>
                         </Grid>
                         <ContentPresenter x:Name="PART_SelectedContentHost" Grid.Row="1" Margin="0,8,0,0"
                                           ContentSource="SelectedContent"
@@ -301,7 +366,7 @@
                 </ControlTemplate>
             </TabControl.Template>
             <TabItem Header="库存记录">
-                <controls:AccountRecordsEmptyState />
+                <controls:AccountRecordsInventoryView DataContext="{Binding Inventory, Mode=OneWay}" />
             </TabItem>
             <TabItem Header="材料需求">
                 <controls:AccountRecordsEmptyState />

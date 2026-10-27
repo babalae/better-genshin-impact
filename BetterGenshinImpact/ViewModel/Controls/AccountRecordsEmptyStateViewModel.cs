@@ -13,7 +13,12 @@ public partial class AccountRecordsEmptyStateViewModel : ObservableObject
     [
         "...喵？",
         "有什么快递要送吗？",
-        "感谢选择「狛荷屋」！"
+        "感谢选择「狛荷屋」！",
+        "让我看看订单…",
+        "请您签收，喵~",
+        "嘿咻！",
+        "≽^•⩊•^≼",
+        "ฅ^•ㅅ•^ฅ"
     ];
 
     /// <summary>当前展示的提示语句。</summary>

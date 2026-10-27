@@ -1,0 +1,33 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.AccountRecordsInventoryEditDialog"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 Title="编辑库存记录" Width="460" Height="480" ResizeMode="NoResize"
+                 WindowStartupLocation="CenterOwner" ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica"
+                 ShowInTaskbar="False" Background="{DynamicResource ApplicationBackgroundBrush}"
+                 Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+    <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+        <ui:TitleBar Title="编辑库存记录" ShowMaximize="False" ShowMinimize="False" />
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="24,12">
+                <TextBlock Text="物品名称" Margin="0,0,0,6" />
+                <ui:TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanEditName, Mode=OneWay}" MaxLength="128" />
+                <TextBlock Text="物品类型（缺失时可补充）" Margin="0,12,0,6" />
+                <ui:TextBox Text="{Binding Category, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanEditCategory, Mode=OneWay}" MaxLength="128" />
+                <CheckBox Content="确认将此名称补充到用户字典" Margin="0,10,0,0" IsChecked="{Binding AddToDictionary, Mode=TwoWay}"
+                          IsEnabled="{Binding NeedsDefinition, Mode=OneWay}" />
+                <TextBlock Text="数量" Margin="0,12,0,6" />
+                <ui:TextBox Text="{Binding QuantityText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MaxLength="19" />
+                <TextBlock Text="编辑后，对应来源将显示为“狛荷屋-人工编辑”。" TextWrapping="Wrap" Margin="0,12,0,0"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <TextBlock Text="{Binding Message, Mode=OneWay}" TextWrapping="Wrap" Margin="0,8,0,0"
+                           Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
+            </StackPanel>
+        </ScrollViewer>
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="24,8,24,20">
+            <ui:Button Content="取消" IsCancel="True" Margin="0,0,8,0" />
+            <ui:Button Content="保存" Appearance="Primary" Command="{Binding SaveCommand, Mode=OneWay}" IsDefault="True" />
+        </StackPanel>
+    </Grid>
+</ui:FluentWindow>

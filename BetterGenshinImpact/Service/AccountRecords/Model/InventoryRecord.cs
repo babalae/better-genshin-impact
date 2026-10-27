@@ -1,0 +1,71 @@
+using System;
+using System.Collections.Generic;
+
+namespace BetterGenshinImpact.Service.AccountRecords.Model;
+
+/// <summary>某来源最后一次被接受的库存记录；队首代表当前库存。</summary>
+public sealed class InventoryRecord
+{
+    /// <summary>非负库存数量。</summary>
+    public long Quantity { get; set; }
+    /// <summary>原始记录时间，统一保存为 UTC，导入时不刷新。</summary>
+    public DateTimeOffset RecordedAt { get; set; }
+    /// <summary>公共来源字典中的标识。</summary>
+    public string Source { get; set; } = "";
+}
+
+/// <summary>批量上报的一项；时间缺省代表本次新采集，历史导入必须携带原时间。</summary>
+public sealed class InventoryReport
+{
+    /// <summary>标准物品名称。</summary>
+    public string Name { get; set; } = "";
+    /// <summary>来源提交的数量。</summary>
+    public long Quantity { get; set; }
+    /// <summary>带时区的原记录时间，无法解析的值作为异常保留。</summary>
+    public string? RecordedAt { get; set; }
+}
+
+/// <summary>只保存尚未处理的库存异常，和有效库存分开管理。</summary>
+public sealed class InventoryError
+{
+    /// <summary>可供调用方区分的异常类型。</summary>
+    public string Code { get; set; } = "Validation";
+    /// <summary>处理凭证，防止旧弹窗处理后来产生的新异常。</summary>
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+    /// <summary>异常原因及手动修订提示。</summary>
+    public string Message { get; set; } = "";
+    /// <summary>发生时间。</summary>
+    public DateTimeOffset OccurredAt { get; set; } = DateTimeOffset.UtcNow;
+    /// <summary>上报来源。</summary>
+    public string Source { get; set; } = "";
+    /// <summary>原始上报，供修订和追溯。</summary>
+    public InventoryReport Incoming { get; set; } = new();
+    /// <summary>冲突发生时的有效记录快照。</summary>
+    public InventoryRecord? Current { get; set; }
+    /// <summary>是否仅为新旧冲突，允许明确接受。</summary>
+    public bool CanAccept { get; set; }
+}
+
+/// <summary>批量写入结果，让上报方知道哪些条目需要用户处理。</summary>
+public sealed class InventoryReportResult
+{
+    /// <summary>正常接受的物品名称。</summary>
+    public List<string> Accepted { get; set; } = [];
+    /// <summary>被拒绝的名称和可读原因。</summary>
+    public Dictionary<string, string> Rejected { get; set; } = new(StringComparer.Ordinal);
+}
+
+/// <summary>单账号的库存文件；两个逻辑表一起原子保存，避免库存与异常不同步。</summary>
+public sealed class InventoryDocument
+{
+    /// <summary>文件格式版本。</summary>
+    public int SchemaVersion { get; set; } = 1;
+    /// <summary>账号标识。</summary>
+    public string Uid { get; set; } = "";
+    /// <summary>标准名称到最近来源记录队列。</summary>
+    public Dictionary<string, List<InventoryRecord>> Items { get; set; } = new(StringComparer.Ordinal);
+    /// <summary>标准名称或未通过校验的名称到当前异常。</summary>
+    public Dictionary<string, InventoryError> Errors { get; set; } = new(StringComparer.Ordinal);
+    /// <summary>本地最后修改时间，用于快照分日，不替换物品记录时间。</summary>
+    public DateTimeOffset? ModifiedAt { get; set; }
+}
