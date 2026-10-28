@@ -23,7 +23,7 @@ namespace BetterGenshinImpact.GameTask.ResinPlan;
 /// <summary>
 /// 体力计划：在一次运行中按固定顺序调度合成浓缩树脂、首领、秘境养成与剩余树脂承接，并汇总本次全部奖励。
 /// 秘境养成沿用自动秘境的“根据提升指南选择秘境”，需求以游戏内养成计划为准；账号由一条龙负责。
-/// 顺序：读取树脂 → 合成浓缩（可选）→ 首领 → 秘境养成 → 剩余树脂（幽境危战 → 地脉花 → 备选秘境）。
+/// 顺序：读取树脂 → 识别活动 → 合成浓缩（可选）→ 首领 → 秘境养成 → 剩余树脂（幽境危战 → 地脉花 → 备选秘境）。
 /// </summary>
 [SoloTaskInfo(TaskId, "体力计划", Description = "按体力用量依次调度合成浓缩、首领、提升指南养成与剩余树脂任务，并汇总本次全部奖励。",
     Group = "树脂与战斗", Order = 200, Scopes = SoloTaskScopes.Plan, OneDragonOrder = 2)]
@@ -78,6 +78,11 @@ public sealed class ResinPlanTask : ISoloTask<ResinPlanParam, ResinPlanData>
         }
 
         run.Start(stock);
+
+        // 1.1 识别活动：移涌活动与幽境危战紊乱爆发期；识别失败按没有活动处理，结束后回到主界面
+        // 活动优先的调度（移涌领取、爆发期暂停养成）尚未实现，目前只记录结果，并在爆发期已结束时跳过危战
+        run.Data.Events = await new ResinPlanEventDetector(_runtime).DetectAsync(ct);
+        await SafeReturnMainUiAsync(ct);
 
         // 2. 合成浓缩树脂（可选），为首领预留原粹
         if (param.CraftCondensedFirst)
@@ -223,6 +228,13 @@ public sealed class ResinPlanTask : ISoloTask<ResinPlanParam, ResinPlanData>
     {
         var stygianParam = param.Stygian.Param;
         var step = run.AddStep(ResinPlanStage.Stygian, "幽境危战", AutoStygianOnslaughtTask.TaskId, $"首领 {stygianParam.BossNum}");
+        // 活动页已明确显示爆发期结束时不再前往危战；其余情况仍由危战任务自行判断
+        if (run.Data.Events?.StygianBurst == StygianBurstState.Ended)
+        {
+            Skip(step, AutoStygianOnslaughtTask.EventEndedReason, "活动页显示紊乱爆发期已结束，跳过幽境危战。");
+            return;
+        }
+
         var usage = await PlanUsageAsync(run, step, ResinPlanBudget.MinClaimPoints,
             stock => ResinPlanBudget.BuildClaimUsage(run.Remaining, stock), ct);
         if (usage is null)
