@@ -9,7 +9,7 @@
              HorizontalContentAlignment="Stretch">
     <StackPanel>
         <ui:TextBlock Text="Google Translate TTS" FontSize="18" FontWeight="SemiBold" />
-        <ui:TextBlock Text="在线语言合成；使用网页 TTS 协议，需要网络可达，服务没有 Cloud API 的稳定性承诺。语言列表为本地预设。" TextWrapping="Wrap" Margin="0,8,0,12" />
+        <ui:TextBlock Text="在线语音合成；使用网页 TTS 协议，需要网络可达，服务没有 Cloud API 的稳定性承诺。语言列表为本地预设。" TextWrapping="Wrap" Margin="0,8,0,12" />
         <ui:TextBlock Text="语言" Margin="0,0,0,6" />
         <ComboBox ItemsSource="{Binding Voices, Mode=OneWay}" DisplayMemberPath="DisplayName"
                   SelectedItem="{Binding SelectedVoice, Mode=TwoWay}" />
