@@ -488,15 +488,17 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
     {
         var uid = scope == "all" ? Uid : _noticeUid ?? Uid;
         if (uid == null) return;
+        // 读取前固定提示目标，避免异步期间悬停变化导致定位到其他物品。
+        var notice = scope == "all" ? null : NoticeRow;
         try
         {
             var workspace = await _store.ReadAsync(uid);
-            new AccountRecordsEventsDialog(new AccountRecordsEventsViewModel(workspace.Inventory, scope == "all" ? null : NoticeRow?.Event?.Id, async (kind, ids) =>
+            new AccountRecordsEventsDialog(new AccountRecordsEventsViewModel(workspace.Inventory, notice?.Event?.Id, async (kind, ids) =>
             {
                 await _store.ArchiveCompletedEventsAsync(uid, kind, ids);
                 if (Uid == uid) await RefreshRowsAsync();
                 return (await _store.ReadAsync(uid)).Inventory;
-            }))
+            }, notice?.Name))
             { Owner = Application.Current.MainWindow }.ShowDialog();
         }
         catch (Exception ex) { Status = ex.Message; }

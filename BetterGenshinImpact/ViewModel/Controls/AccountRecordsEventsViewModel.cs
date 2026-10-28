@@ -110,12 +110,13 @@ public partial class AccountRecordsEventsViewModel : ObservableObject
     }
     /// <summary>保留未经改写的完整历史，供溯源及复制。</summary>
     public string HistoryDetails => Selected == null ? "" : $"RepeatCount={Selected.RepeatCount}\nLastReceivedAt={Selected.LastReceivedAt:O}\n\n" + string.Join("\n\n", Selected.History);
-    /// <summary>由调用者提供快照，可定位到指定事件。</summary>
-    public AccountRecordsEventsViewModel(InventoryDocument inventory, string? id, Func<string, IReadOnlyCollection<string>, Task<InventoryDocument>> archiveCompleted)
+    /// <summary>由调用者提供快照，可按初始关键词筛选并定位到指定事件。</summary>
+    public AccountRecordsEventsViewModel(InventoryDocument inventory, string? id, Func<string, IReadOnlyCollection<string>, Task<InventoryDocument>> archiveCompleted, string? searchText = null)
     {
         _archiveCompleted = archiveCompleted;
         _inventory = inventory;
         _allEvents = inventory.Events.ToList();
+        _searchText = searchText ?? "";
         // 从具体提醒跳转时优先展示目标，避免默认过滤隐藏 Pending 或 Warning。
         if (id != null && _allEvents.Any(item => item.Id == id && item.State != "Error")) _errorsOnly = false;
         RefreshEvents(id);

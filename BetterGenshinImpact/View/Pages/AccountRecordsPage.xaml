@@ -343,10 +343,25 @@
                                         <Setter Property="Template">
                                             <Setter.Value>
                                                 <ControlTemplate TargetType="ui:DropDownButton">
-                                                    <Border Background="Transparent">
+                                                    <Border x:Name="FilterBackground" Background="Transparent" CornerRadius="4">
                                                         <ui:SymbolIcon Symbol="Filter24" FontSize="16" Foreground="{TemplateBinding Foreground}"
                                                                        HorizontalAlignment="Center" VerticalAlignment="Center" />
                                                     </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="FilterBackground" Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                                                        </Trigger>
+                                                        <Trigger Property="IsKeyboardFocused" Value="True">
+                                                            <Setter TargetName="FilterBackground" Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                                                            <Setter TargetName="FilterBackground" Property="BorderThickness" Value="1" />
+                                                        </Trigger>
+                                                        <Trigger Property="IsPressed" Value="True">
+                                                            <Setter TargetName="FilterBackground" Property="Background" Value="{DynamicResource ControlFillColorTertiaryBrush}" />
+                                                        </Trigger>
+                                                        <Trigger Property="IsEnabled" Value="False">
+                                                            <Setter TargetName="FilterBackground" Property="Opacity" Value="0.4" />
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
                                                 </ControlTemplate>
                                             </Setter.Value>
                                         </Setter>
