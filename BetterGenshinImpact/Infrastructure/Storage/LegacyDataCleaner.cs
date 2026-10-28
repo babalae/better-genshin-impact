@@ -35,6 +35,8 @@ public sealed class LegacyDataCleaner(bool isRoot, ILogger<LegacyDataCleaner> lo
         // 阶段 5：通用缓存和音乐封面改到 Data/Cache/Files
         @"User\Cache\MemoryFileCache",
         @"User\Music\Artwork",
+        // 阶段 6：网页数据改到 Data/WebView2（软件内网页为 App，云原神实例为 CloudGame）
+        "WebView2Data",
     ];
 
     /// <summary>

@@ -1,58 +1,75 @@
-﻿using BetterGenshinImpact.ViewModel.Pages;
+using BetterGenshinImpact.Infrastructure.WebView;
+using Microsoft.Extensions.Logging;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Net;
-using System.Security.AccessControl;
 using System.Text;
-using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.View.Controls.Webview;
 
+/// <summary>
+/// 软件内网页面板：更新日志、脚本仓库、地图路径编辑器、日志分析。
+/// 使用 <see cref="WebViewProfiles.Default"/>，经 <see cref="WebViewSetup"/> 初始化；导航请求会等到初始化完成后执行
+/// </summary>
 public class WebpagePanel : UserControl
 {
+    private readonly ILogger<WebpagePanel> _logger = App.GetLogger<WebpagePanel>();
     private Uri _currentUri = null!;
     private WebView2 _webView = null!;
-    private bool _initialized = false;
+
+    /// <summary>
+    /// 承载 WebView 和异常提示的容器；WebView 是原生窗口，提示不能叠在它上面，只能替换显示
+    /// </summary>
+    private readonly Grid _host = new();
+
+    /// <summary>
+    /// 网页进程异常退出后的提示，替换 WebView 显示
+    /// </summary>
+    private FrameworkElement? _crashNotice;
+
+    /// <summary>
+    /// 初始化任务，第一次加载或导航时开始，只执行一次
+    /// </summary>
+    private Task? _initialization;
 
     public WebView2 WebView => _webView;
 
+    /// <summary>
+    /// 页面下载的保存目录，需在第一次导航前设置；为空时拒绝页面发起的下载
+    /// </summary>
     public string? DownloadFolderPath { get; set; }
 
+    /// <summary>
+    /// 初始化完成后调用，用于添加虚拟主机映射、HostObject 等特有逻辑；在首次导航之前执行
+    /// </summary>
     public Action? OnWebViewInitializedAction { get; set; }
     
     public Action<CoreWebView2NavigationCompletedEventArgs>? OnNavigationCompletedAction { get; set; }
 
     public WebpagePanel()
     {
-        if (!IsWebView2Available())
+        if (!WebViewRuntime.IsAvailable)
         {
             Content = CreateDownloadButton();
         }
         else
         {
-            EnsureWebView2DataFolder();
-            _webView = new WebView2()
-            {
-                CreationProperties = new CoreWebView2CreationProperties
-                {
-                    UserDataFolder = Path.Combine(new FileInfo(Environment.ProcessPath!).DirectoryName!, @"WebView2Data\\"),
-
-                    // TODO: change the theme from `md2html.html` to fit it firstly.
-                    // AdditionalBrowserArguments = "--enable-features=WebContentsForceDark"
-                }
-            };
-            _webView.CoreWebView2InitializationCompleted += WebView_CoreWebView2InitializationCompleted;
+            // 不设置 CreationProperties：环境由 WebViewSetup 从环境入口取得，数据目录统一在 Data/WebView2/App
+            _webView = new WebView2();
             _webView.NavigationStarting += NavigationStarting_CancelNavigation;
             _webView.NavigationCompleted += WebView_NavigationCompleted;
 
-            Content = _webView;
+            // TODO: change the theme from `md2html.html` to fit it firstly.
+            // AdditionalBrowserArguments = "--enable-features=WebContentsForceDark"
+            _host.Children.Add(_webView);
+            Content = _host;
+            Loaded += (_, _) => _ = EnsureInitializedAsync();
         }
     }
     
@@ -80,36 +97,55 @@ public class WebpagePanel : UserControl
         // 调用外部设置的导航完成 Action
         OnNavigationCompletedAction?.Invoke(e);
     }
-    
-    private void WebView_CoreWebView2InitializationCompleted(object? sender, CoreWebView2InitializationCompletedEventArgs e)
-    {
-        if (e.IsSuccess)
-        {
-            _initialized = true;
-            if (!string.IsNullOrEmpty(DownloadFolderPath))
-            {
-                WebView.CoreWebView2.Profile.DefaultDownloadFolderPath = DownloadFolderPath;
-            }
-            // 调用外部设置的 Action
-            OnWebViewInitializedAction?.Invoke();
-        }
-        else
-        {
-            _ = e.InitializationException;
-        }
-    }
 
-    public static bool IsWebView2Available()
+    /// <summary>
+    /// 开始初始化（只执行一次）并返回初始化任务；运行时不可用时为已完成的任务
+    /// </summary>
+    private Task EnsureInitializedAsync() => _webView == null ? Task.CompletedTask : _initialization ??= InitializeAsync();
+
+    /// <summary>
+    /// 用环境入口初始化控件，再执行外部设置的初始化 Action
+    /// </summary>
+    private async Task InitializeAsync()
     {
         try
         {
-            return !string.IsNullOrEmpty(CoreWebView2Environment.GetAvailableBrowserVersionString());
+            var provider = App.GetService<IWebViewEnvironmentProvider>()
+                           ?? throw new InvalidOperationException("WebView2 环境入口尚未初始化");
+            await _webView.InitializeAsync(provider, WebViewProfiles.Default, new WebViewOptions
+            {
+                DownloadFolder = DownloadFolderPath,
+                ProcessCrashed = ShowCrashNotice,
+            });
+            // 调用外部设置的 Action
+            OnWebViewInitializedAction?.Invoke();
         }
-        catch (Exception)
+        catch (Exception e)
         {
-            return false;
+            _logger.LogError(e, "软件内网页初始化失败");
+            ShowNotice($"网页初始化失败：{e.Message}", null);
         }
     }
+
+    /// <summary>
+    /// 初始化完成后在界面线程执行导航；可以从任意线程调用
+    /// </summary>
+    private void RunWhenReady(Action navigate)
+    {
+        if (_webView == null)
+            return;
+
+        Dispatcher.InvokeAsync(async () =>
+        {
+            await EnsureInitializedAsync();
+            if (_webView?.CoreWebView2 != null)
+            {
+                navigate();
+            }
+        });
+    }
+
+    public static bool IsWebView2Available() => WebViewRuntime.IsAvailable;
 
     public static Uri FilePathToFileUrl(string filePath)
     {
@@ -150,29 +186,25 @@ public class WebpagePanel : UserControl
         if (_webView == null)
             return;
 
-        _webView.Source = uri;
-        _currentUri = _webView.Source;
+        // 先记录目标地址，导航开始时据此放行
+        _currentUri = uri;
+        RunWhenReady(() => _webView.Source = uri);
     }
 
     public void NavigateToHtml(string htmlContentOrUrl)
     {
-        _webView?.EnsureCoreWebView2Async()
-            .ContinueWith(_ => SpinWait.SpinUntil(() => _initialized))
-            .ContinueWith(_ => Dispatcher.Invoke(() => 
-            {
-                // 检查是否是URL（以file:或http开头）
-                if (htmlContentOrUrl.StartsWith("file:") || htmlContentOrUrl.StartsWith("http"))
-                {
-                    // 如果是URL，使用Navigate方法
-                    _webView?.CoreWebView2?.Navigate(htmlContentOrUrl);
-                    _currentUri = new Uri(htmlContentOrUrl);
-                }
-                else
-                {
-                    // 如果是HTML内容，使用NavigateToString方法
-                    _webView?.NavigateToString(htmlContentOrUrl);
-                }
-            }));
+        // 检查是否是URL（以file:或http开头）
+        if (htmlContentOrUrl.StartsWith("file:") || htmlContentOrUrl.StartsWith("http"))
+        {
+            // 如果是URL，使用Navigate方法
+            _currentUri = new Uri(htmlContentOrUrl);
+            RunWhenReady(() => _webView.CoreWebView2.Navigate(htmlContentOrUrl));
+        }
+        else
+        {
+            // 如果是HTML内容，使用NavigateToString方法
+            RunWhenReady(() => _webView.NavigateToString(htmlContentOrUrl));
+        }
     }
 
     public void NavigateToMd(string md, string backgroundColor = "#2b2b2b")
@@ -199,12 +231,74 @@ public class WebpagePanel : UserControl
         if (newUri != _currentUri) e.Cancel = true;
     }
 
+    /// <summary>
+    /// 网页进程反复异常退出时替换显示说明；渲染进程退出时可以重新加载，浏览器进程退出后只能重新打开窗口
+    /// </summary>
+    private void ShowCrashNotice(CoreWebView2ProcessFailedKind kind)
+    {
+        if (kind == CoreWebView2ProcessFailedKind.BrowserProcessExited)
+        {
+            ShowNotice("网页进程已退出，请关闭此窗口后重新打开。", null);
+            return;
+        }
+
+        ShowNotice("网页进程异常退出。", () =>
+        {
+            HideNotice();
+            _webView?.CoreWebView2?.Reload();
+        });
+    }
+
+    /// <summary>
+    /// 隐藏 WebView，显示一段说明和可选的“重新加载”按钮
+    /// </summary>
+    private void ShowNotice(string message, Action? reload)
+    {
+        HideNotice();
+        var panel = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+        panel.Children.Add(new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 12) });
+        if (reload != null)
+        {
+            var button = new Button { Content = "重新加载", HorizontalAlignment = HorizontalAlignment.Center, Padding = new Thickness(16, 4, 16, 4) };
+            button.Click += (_, _) => reload();
+            panel.Children.Add(button);
+        }
+
+        _crashNotice = panel;
+        if (_webView != null)
+        {
+            _webView.Visibility = Visibility.Collapsed;
+        }
+
+        _host.Children.Add(panel);
+    }
+
+    /// <summary>
+    /// 移除说明，恢复显示 WebView
+    /// </summary>
+    private void HideNotice()
+    {
+        if (_crashNotice != null)
+        {
+            _host.Children.Remove(_crashNotice);
+            _crashNotice = null;
+        }
+
+        if (_webView != null)
+        {
+            _webView.Visibility = Visibility.Visible;
+        }
+    }
+
     public void Dispose()
     {
         _webView?.Dispose();
         _webView = null!;
     }
 
+    /// <summary>
+    /// 运行时缺失时的说明和下载入口
+    /// </summary>
     private Button CreateDownloadButton()
     {
         var button = new Button
@@ -214,23 +308,9 @@ public class WebpagePanel : UserControl
             VerticalAlignment = VerticalAlignment.Center,
             Padding = new Thickness(20, 6, 20, 6)
         };
-        button.Click += (sender, e) => Process.Start("https://go.microsoft.com/fwlink/p/?LinkId=2124703");
+        // 需要 UseShellExecute 才能用系统浏览器打开链接
+        button.Click += (sender, e) => WebViewRuntimePrompt.OpenDownloadPage();
 
         return button;
     }
-
-    private void EnsureWebView2DataFolder()
-    {
-        try
-        {
-            string folder = Path.Combine(new FileInfo(Environment.ProcessPath!).DirectoryName!, @"WebView2Data\\");
-            Directory.CreateDirectory(folder);
-            DirectoryInfo info = new DirectoryInfo(folder);
-            DirectorySecurity access = info.GetAccessControl();
-            access.AddAccessRule(new FileSystemAccessRule("Everyone", FileSystemRights.FullControl, AccessControlType.Allow));
-            info.SetAccessControl(access);
-        }
-        catch { }
-    }
-
 }

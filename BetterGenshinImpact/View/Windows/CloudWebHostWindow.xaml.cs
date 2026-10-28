@@ -1,6 +1,7 @@
 using BetterGenshinImpact.Core.Input.Backends.WebSdk;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.DpiAwareness;
+using BetterGenshinImpact.Infrastructure.WebView;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.Service.Interface;
 using Microsoft.Extensions.Logging;
@@ -47,24 +48,22 @@ public partial class CloudWebHostWindow : Window
     private const int DisconnectThreshold = 3;
 
     /// <summary>
-    /// 禁用 Chromium 的遮挡与后台降频，否则会影响自动化：
-    /// 前两项让窗口被遮挡时照常渲染（否则 WGC 一直拿到旧帧）；
-    /// 后两项让页面在后台不降优先级、不限流定时器（SDK 的 tapKey / click 用 setTimeout 控制按住时长）。
-    /// 每个实例的用户数据目录独立，这些参数不会与 HtmlMask 等功能的 WebView2 环境冲突
-    /// </summary>
-    private const string BrowserArguments =
-        "--disable-features=CalculateNativeWinOcclusion " +
-        "--disable-backgrounding-occluded-windows " +
-        "--disable-renderer-backgrounding " +
-        "--disable-background-timer-throttling";
-
-    /// <summary>
     /// 云原神网页版地址。autobegin=1 让页面加载后自动开始游戏（进入排队），不需要手动点"开始游戏"
     /// </summary>
     private const string CloudGameUrl = "https://ys.mihoyo.com/cloud/?autobegin=1";
 
     private readonly string _instanceName;
     private readonly ILogger<CloudWebHostWindow> _logger;
+
+    /// <summary>
+    /// WebView2 环境入口；云原神的浏览器参数（禁用遮挡检测和后台降频）定义在环境入口中
+    /// </summary>
+    private readonly IWebViewEnvironmentProvider _environmentProvider;
+
+    /// <summary>
+    /// 是否正在提示网页进程异常退出，避免连续崩溃时弹出多个对话框
+    /// </summary>
+    private bool _processFailedPromptShown;
     private readonly DispatcherTimer _statusTimer = new() { Interval = TimeSpan.FromSeconds(1) };
 
     /// <summary>
@@ -81,10 +80,12 @@ public partial class CloudWebHostWindow : Window
     private int _notReadyCount;
     private string? _lastNotReadyReason;
 
-    public CloudWebHostWindow(InstanceBootstrap bootstrap, ILogger<CloudWebHostWindow> logger)
+    public CloudWebHostWindow(InstanceBootstrap bootstrap, IWebViewEnvironmentProvider environmentProvider,
+        ILogger<CloudWebHostWindow> logger)
     {
         _instanceName = bootstrap.Context.InstanceName
                         ?? throw new InvalidOperationException("只有网页版实例可以打开云原神宿主窗口");
+        _environmentProvider = environmentProvider;
         _logger = logger;
 
         InitializeComponent();
@@ -318,9 +319,7 @@ public partial class CloudWebHostWindow : Window
     {
         try
         {
-            var options = new CoreWebView2EnvironmentOptions(BrowserArguments);
-            var environment = await CoreWebView2Environment.CreateAsync(
-                null, WebViewInstanceStore.GetDataFolder(_instanceName), options);
+            var environment = await _environmentProvider.CreateCloudGameAsync(_instanceName);
             if (_isClosed) return;
 
             var controller = await environment.CreateCoreWebView2ControllerAsync(Handle);
@@ -331,6 +330,7 @@ public partial class CloudWebHostWindow : Window
             }
 
             ConfigureController(controller);
+            controller.CoreWebView2.ProcessFailed += OnProcessFailed;
 
             Bridge = await WebView2InputBridge.InstallAsync(controller.CoreWebView2);
             if (_isClosed) return;
@@ -349,6 +349,48 @@ public partial class CloudWebHostWindow : Window
             _logger.LogError(ex, "云原神宿主窗口初始化失败");
             await ThemedMessageBox.ErrorAsync($"云原神页面初始化失败：{ex.Message}\n请确认已安装 Microsoft Edge WebView2 Runtime。");
             Close();
+        }
+    }
+
+    /// <summary>
+    /// 网页进程异常退出：立即标记为未就绪（截图器随之停止），不再只靠就绪轮询发现；
+    /// 渲染进程退出时询问是否重新加载，浏览器进程退出后只能关闭实例重新打开
+    /// </summary>
+    private async void OnProcessFailed(object? sender, CoreWebView2ProcessFailedEventArgs e)
+    {
+        _environmentProvider.ReportProcessFailed($"云原神 · {_instanceName}", e);
+        if (e.ProcessFailedKind is not (CoreWebView2ProcessFailedKind.RenderProcessExited
+            or CoreWebView2ProcessFailedKind.BrowserProcessExited))
+        {
+            return;
+        }
+
+        _isGameReady = false;
+        if (_isClosed || _processFailedPromptShown)
+        {
+            return;
+        }
+
+        _processFailedPromptShown = true;
+        try
+        {
+            if (e.ProcessFailedKind == CoreWebView2ProcessFailedKind.BrowserProcessExited)
+            {
+                await ThemedMessageBox.ErrorAsync($"云原神「{_instanceName}」的网页进程已退出，请关闭该实例后重新打开。");
+                return;
+            }
+
+            var result = await ThemedMessageBox.QuestionAsync(
+                $"云原神「{_instanceName}」的页面进程异常退出，截图已停止。\n是否重新加载页面？登录状态会保留。",
+                "云原神页面异常", MessageBoxButton.OKCancel, MessageBoxResult.OK);
+            if (result == MessageBoxResult.OK && !_isClosed)
+            {
+                _controller?.CoreWebView2.Navigate(CloudGameUrl);
+            }
+        }
+        finally
+        {
+            _processFailedPromptShown = false;
         }
     }
 

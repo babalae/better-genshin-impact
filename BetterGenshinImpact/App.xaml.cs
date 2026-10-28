@@ -29,6 +29,7 @@ using BetterGenshinImpact.Infrastructure.Network;
 using BetterGenshinImpact.Infrastructure.Network.Download;
 using BetterGenshinImpact.Infrastructure.Storage;
 using BetterGenshinImpact.Infrastructure.Temp;
+using BetterGenshinImpact.Infrastructure.WebView;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Remote;
 using BetterGenshinImpact.Pulonia.Services;
@@ -221,7 +222,12 @@ public partial class App : Application
                 services.AddSingleton<IStorageAreaProvider, ScriptUpdateBackupStorageAreaProvider>();
                 services.AddSingleton<IStorageAreaProvider, InferenceCacheStorageAreaProvider>();
                 services.AddSingleton<IStorageAreaProvider, AppStorageAreaProvider>();
-                services.AddSingleton<IStorageAreaProvider, LegacyStorageAreaProvider>();
+                // WebView2：环境入口是创建环境的唯一位置，同时登记软件内网页的 Profile；云原神实例的缓存由实例存储登记
+                services.AddSingleton(sp => new WebViewEnvironmentProvider(
+                    instanceContext.InstanceName, sp.GetRequiredService<ILogger<WebViewEnvironmentProvider>>()));
+                services.AddSingleton<IWebViewEnvironmentProvider>(sp => sp.GetRequiredService<WebViewEnvironmentProvider>());
+                services.AddSingleton<IStorageAreaProvider>(sp => sp.GetRequiredService<WebViewEnvironmentProvider>());
+                services.AddSingleton<IStorageAreaProvider, CloudGameStorageAreaProvider>();
                 services.AddTransient<NetworkSettingsViewModel>();
                 services.AddTransient<StorageManagementViewModel>();
                 services.AddTransient<StorageManagementWindow>();

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows;
 using System.Windows.Media;
 using BetterGenshinImpact.Helpers.Ui;
@@ -25,6 +25,15 @@ public class WebpageWindow : Window
     {
         base.OnSourceInitialized(e);
         WindowHelper.TryApplySystemBackdrop(this);
+    }
+
+    /// <summary>
+    /// 关闭窗口时释放网页，及时结束网页进程和媒体播放
+    /// </summary>
+    protected override void OnClosed(EventArgs e)
+    {
+        Panel?.Dispose();
+        base.OnClosed(e);
     }
 
     public void NavigateToUri(Uri uri)

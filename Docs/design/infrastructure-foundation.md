@@ -1,6 +1,6 @@
 # 基础设施统一：WebView2、网络与下载、缓存、临时文件
 
-状态：设计已确认（第 2 版），2026-10-28，基于 `refactor/20260930` 分支代码。阶段 1 至 5 已实施，阶段 6 待实施。
+状态：设计已确认（第 2 版），2026-10-28，基于 `refactor/20260930` 分支代码。阶段 1 至 6 已全部实施。
 
 第 2 版变更：程序生成的数据统一放到新目录 `Data/`；推理缓存、通用文件缓存、下载分目录存放；WebView2 支持多个普通环境并集中管理环境配置；旧目录每个版本清理一次，不再迁移；第 15 节的决策已确认。
 
@@ -329,7 +329,9 @@ public interface IStorageService
 | FileCache | 每个缓存分区一项 | 5 |
 | WebView | 每个普通环境的每个 Profile、已不再使用的环境目录、每个云原神实例 | 6 |
 
-阶段 2 先上线存储空间窗口时，尚未重构的部分（现有 `MemoryFileCache` 目录、运行库安装包目录、云原神实例整目录）以临时区域登记，到对应阶段再替换为正式区域。
+阶段 2 先上线存储空间窗口时，尚未重构的部分（现有 `MemoryFileCache` 目录、运行库安装包目录、云原神实例整目录）以临时区域登记，到对应阶段再替换为正式区域。阶段 6 完成后这些临时区域已全部替换，过渡用的 `LegacyStorageAreaProvider` 已删除。
+
+云原神实例的区域需要判断实例是否在运行（`WebViewInstanceStore` 的命名互斥体），按依赖规则不能放在 Infrastructure，因此由 Service 层的 `CloudGameStorageAreaProvider` 登记。
 
 ### 3.6 依赖注册
 
@@ -360,8 +362,12 @@ services.AddSingleton<IDownloadService>(sp => sp.GetRequiredService<DownloadServ
 services.AddSingleton<IDownloadMonitor>(sp => sp.GetRequiredService<DownloadService>());
 services.AddSingleton<IStorageAreaProvider>(sp => sp.GetRequiredService<DownloadService>());
 
-// WebView2
-services.AddSingleton<IWebViewEnvironmentProvider, WebViewEnvironmentProvider>();
+// WebView2：环境入口同时登记软件内网页的 Profile；云原神实例的缓存由 Service 层的 CloudGameStorageAreaProvider 登记
+services.AddSingleton(sp => new WebViewEnvironmentProvider(
+    instanceContext.InstanceName, sp.GetRequiredService<ILogger<WebViewEnvironmentProvider>>()));
+services.AddSingleton<IWebViewEnvironmentProvider>(sp => sp.GetRequiredService<WebViewEnvironmentProvider>());
+services.AddSingleton<IStorageAreaProvider>(sp => sp.GetRequiredService<WebViewEnvironmentProvider>());
+services.AddSingleton<IStorageAreaProvider, CloudGameStorageAreaProvider>();
 ```
 
 ## 4. 临时文件服务
@@ -951,6 +957,9 @@ public interface IWebViewEnvironmentProvider
 
     /// <summary>云原神实例的环境。只能在同名的网页版实例进程中调用，否则抛出异常。</summary>
     Task<CoreWebView2Environment> CreateCloudGameAsync(string instanceName);
+
+    /// <summary>记录网页进程异常退出，供 WebViewSetup 和云原神宿主窗口统一写日志。</summary>
+    void ReportProcessFailed(string source, CoreWebView2ProcessFailedEventArgs e);
 }
 ```
 
@@ -963,6 +972,9 @@ public sealed record WebViewOptions
 
     /// <summary>页面下载的保存目录；为空时拒绝页面发起的下载。</summary>
     public string? DownloadFolder { get; init; }
+
+    /// <summary>网页进程异常退出且自动恢复无效时调用，由界面显示说明和重新加载入口。Infrastructure 不创建界面。</summary>
+    public Action<CoreWebView2ProcessFailedKind>? ProcessCrashed { get; init; }
 }
 
 /// <summary>WPF WebView2 控件的统一初始化。</summary>
@@ -1010,6 +1022,12 @@ public static class WebViewSetup
 
 开发环境中已观察到云原神实例的缓存位于 `{实例目录}/EBWebView/Default/Cache/Cache_Data`。普通环境多 Profile 时各 Profile 子目录的位置、`Code Cache` 和 `GPUCache` 的位置，需要实测确认后再写入代码。删除实例（含登录状态）沿用现有流程。云原神实例的数据区域只在主实例中登记，与"子实例不操作其他实例"的边界一致。
 
+实施结果（阶段 6）：
+
+- 已实测确认目录：默认 Profile 为 `EBWebView/Default`，命名 Profile 为 `EBWebView/WV2Profile_{小写名称}`（与 `CoreWebView2Profile.ProfilePath` 一致）。缓存子目录为 `Cache`、`Code Cache`、`GPUCache`、`DawnGraphiteCache`、`DawnWebGPUCache`；登录状态在 `Network/Cookies`，网页存储在 `Local Storage`、`IndexedDB`，都不在清理范围内。
+- 软件内网页缓存和脚本遮罩数据都登记为"下次启动时清理"：网页进程长期占用这些文件，并且多个实例进程可能共用 `Data/WebView2/App`。没有实现"本进程有存活 WebView 时调用 `ClearBrowsingDataAsync`"，因此也不需要把 `CoreWebView2` 弱引用登记到环境入口。
+- 云原神实例在未运行时立即清理缓存目录；存储空间窗口和云原神实例管理窗口（"更多操作"菜单中的"清理缓存（保留登录）"）都提供入口。实例行没有增加数据大小，占用在存储空间窗口查看。
+
 ### 8.6 代理
 
 WebView2 页面第一版跟随系统代理，不接入自定义代理：
@@ -1025,6 +1043,8 @@ WebView2 页面第一版跟随系统代理，不接入自定义代理：
 - `EnsureWebView2DataFolder` 给 Everyone 授予完全控制权限，建议改为只授予当前用户。需要先确认当初要解决的场景（推测是程序装在 C 盘并以管理员身份运行）。
 - 桌面分身运行在另一个 Windows 会话，与主实例共用 `Data/WebView2/App/` 是否冲突需要实测。如果冲突，由环境入口为桌面分身改用 `Data/WebView2/App-Session{会话号}/`，调用方无需改动。
 - `WebpagePanel.Dispose` 没有调用方。需要确认所在窗口关闭时 WPF 控件是否自动释放；如果不会，由 `WebpageWindow` 在关闭时释放。
+
+实施结果（阶段 6）：数据目录统一为 `Data/WebView2/App` 与 `Data/WebView2/CloudGame`；`EnsureWebView2DataFolder` 的 Everyone 授权已删除（程序以管理员运行，网页进程与程序为同一用户，不需要额外授权），如有用户反馈目录无法写入再按"只授予当前用户"处理；`WebpageWindow` 关闭时释放面板；桌面分身仍与主实例共用 `Data/WebView2/App`，是否冲突留待实测。
 
 ## 9. 界面与交互
 
@@ -1162,6 +1182,8 @@ WebView2 页面第一版跟随系统代理，不接入自定义代理：
 
 实例列表每行增加数据大小和"清理缓存（保留登录）"按钮，实例运行时禁用并写明原因。删除实例的确认文字强调"会清除该实例的登录状态"。
 
+阶段 6 的实现：在每行的"更多操作"菜单中加入"清理缓存（保留登录）"，与删除相同只在实例未运行时可用，提示文字说明原因，完成后提示释放的空间；数据大小暂未加入行内，在存储空间窗口查看。
+
 ### 9.6 MVVM 落点
 
 | 视图 | ViewModel | 说明 |
@@ -1231,6 +1253,7 @@ dotnet msbuild BetterGenshinImpact.sln -restore -p:Configuration=Debug -nologo -
 | 5. 缓存 | `IFileCache`、`CachePartitions`、`CacheMaintenanceService`、`IRemoteImageService`；迁移 5.5 中的用法；删除 `MemoryFileCache`；旧目录清单加入 `User/Cache/MemoryFileCache`、`User/Music/Artwork`；缓存分区登记为存储区域 | 缓存超过上限后自动降到 80%；地图上大量图标滚动时，内存中的图片数量不超过上限；清理某个分区后功能正常并重新下载 |
 | 5 的实施说明（已完成） | 与上一行的差异：`IFileCache` 只实现有调用方的方法，内存层改用带总量上限（64 MB）的 `MemoryCache`，内存条目与磁盘条目同时到期（见 5.2）；`IRemoteImageService` 以 `GetBytesAsync` 取代 `GetLocalFileAsync`，单张上限 20 MB（见 5.4）；`MapIconImageCache` 的程序内置图标（pack 资源和程序目录文件）不再写入磁盘缓存，直接解码保存在内存；在存储空间窗口清理缓存分区时同时清空内存层；缓存维护还会删除超过 1 小时的残留临时文件，记录文件写入失败时本进程内也不会重复执行；`User/Cache` 在清理后为空时一并删除；存储空间窗口新增"自动清理"卡片，提供缓存上限下拉框 | 编译通过；临时验证测试覆盖了并发只调用一次 factory、跨实例读磁盘、过期重新获取、空结果不缓存、大条目不进内存、调用方取消不影响共享获取、`RetainOnly` 与 `Remove`、分区存储区域与清理、维护的过期删除和上限淘汰、远程图片的请求合并和 512 张上限，并实际加载存储空间窗口检查分区行和下拉框绑定，验证后删除；地图图标的实际显示需在真实环境验收 |
 | 6. WebView2 | 环境定义与 Profile、环境入口、`WebViewSetup`、运行时提示；迁移 `WebpagePanel`、`HtmlMaskWindow`、`CloudWebHostWindow`、`WebViewInstanceStore`、实例管理窗口；`ProcessFailed` 处理；网页数据存储区域；旧目录清单加入 `WebView2Data/` | 全仓库只有环境入口调用 `CoreWebView2Environment.CreateAsync`；未安装运行时能看到说明并跳转下载页；以 dotnet 宿主启动时数据目录仍在 `Data/WebView2/`；云原神实例清理缓存后登录状态保留；在 `WebViewEnvironments` 中临时增加一个测试环境，能在存储空间窗口看到对应行，删除定义后其目录显示为"已不再使用的网页数据" |
+| 6 的实施说明（已完成） | 与上一行的差异：网页数据清理统一推迟到下次启动，未实现存活 WebView 的即时清理（见 8.5）；云原神实例的存储区域由 Service 层的 `CloudGameStorageAreaProvider` 登记，`LegacyStorageAreaProvider` 已删除；`IWebViewEnvironmentProvider` 增加 `ReportProcessFailed` 统一记录网页进程退出，`WebViewOptions` 增加 `ProcessCrashed`，由 `WebpagePanel` 隐藏网页并显示说明和"重新加载"（网页是原生窗口，提示不能叠在上面）；`WebpagePanel` 改为第一次加载或导航时初始化，导航请求等初始化完成后执行，初始化 Action 在首次导航之前调用；脚本仓库自己的 `NewWindowRequested` 处理已删除，统一只把 http、https 交给系统浏览器；HtmlMask 与软件内网页一样只在 Debug 下开启开发者工具；云原神页面进程退出时立即标记未就绪，并询问是否重新加载；`.agents/code-review.md` 加入第 14 节的检查项 | 编译通过；临时验证测试覆盖了定义校验、Profile 与缓存目录的存储区域、已不再使用的环境目录、云原神环境只能在同名实例进程创建、清理实例缓存后 Cookie 保留，并用真实 WebView2 初始化两个 Profile，确认 `ProfilePath` 与代码中的目录一致、同一环境只创建一次，验证后删除；运行时缺失提示、崩溃恢复和云原神实例的实际运行需在真实环境验收 |
 
 建议补充的单元测试（`Test/BetterGenshinImpact.UnitTest`）：
 

@@ -3057,18 +3057,7 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
                 _webWindow.Panel!.WebView.CoreWebView2.AddHostObjectToScript("repoWebBridge", new RepoWebBridge(Config));
 
-                // 允许内部外链使用默认浏览器打开
-                _webWindow.Panel!.WebView.CoreWebView2.NewWindowRequested += (sender, e) =>
-                {
-                    var psi = new ProcessStartInfo
-                    {
-                        UseShellExecute = true,
-                        FileName = e.Uri
-                    };
-                    Process.Start(psi);
-
-                    e.Handled = true;
-                };
+                // 内部外链使用默认浏览器打开：由 WebViewSetup 统一处理，只放行 http、https 地址
             };
 
             _webWindow.NavigateToUri(new Uri("https://bettergi.local/index.html"));
