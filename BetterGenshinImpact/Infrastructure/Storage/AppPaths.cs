@@ -5,7 +5,7 @@ namespace BetterGenshinImpact.Infrastructure.Storage;
 
 /// <summary>
 /// 基础设施目录约定。程序生成的数据（缓存、下载、临时文件、网页数据）只从这里取路径，
-/// 见 Docs/design/infrastructure-foundation.md 第 3.3 节。缓存、下载与网页数据目录随后续阶段补充。
+/// 见 Docs/design/infrastructure-foundation.md 第 3.3 节。通用文件缓存与网页数据目录随后续阶段补充。
 /// </summary>
 public static class AppPaths
 {
@@ -23,6 +23,11 @@ public static class AppPaths
     /// ONNX Runtime 编译缓存目录（TensorRT engine/timing、OpenVINO），与通用文件缓存分开
     /// </summary>
     public static string InferenceCache => Path.Combine(Cache, "Inference");
+
+    /// <summary>
+    /// 下载目录，按下载分类分子目录；与缓存分开，不计入文件缓存上限
+    /// </summary>
+    public static string Downloads => Path.Combine(Root, "Downloads");
 
     /// <summary>
     /// 临时文件根目录，按进程分子目录

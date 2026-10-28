@@ -4,6 +4,7 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using BetterGenshinImpact.Core.Recognition.ONNX;
+using BetterGenshinImpact.Infrastructure.Network.Download;
 
 namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests;
 
@@ -19,8 +20,6 @@ public sealed class RuntimePackageDownloaderTests : IDisposable
     {
         var data = Encoding.UTF8.GetBytes("complete package");
         var package = Package(data);
-        var key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(package.Url.AbsoluteUri)));
-        await File.WriteAllBytesAsync(Path.Combine(_root, key + ".zip.part"), data[..4]);
         using var client = new HttpClient(new Handler(request =>
         {
             Assert.Equal(4, request.Headers.Range!.Ranges.Single().From);
@@ -32,8 +31,15 @@ public sealed class RuntimePackageDownloaderTests : IDisposable
             return response;
         }));
 
-        var path = await new RuntimePackageDownloader(client)
-            .DownloadAsync(package, _root, null, CancellationToken.None);
+        var downloads = new DownloadService(client, _root);
+        var directory = Directory.CreateDirectory(downloads.GetDirectory(DownloadCategories.OnnxRuntime)).FullName;
+        await File.WriteAllBytesAsync(Path.Combine(directory, DownloadService.GetFileName(package.Url) + ".part"), data[..4]);
+
+        var path = await downloads.Start(new DownloadRequest(package.Url, package.Name, DownloadCategories.OnnxRuntime)
+        {
+            ExpectedSize = data.Length,
+            ExpectedHash = new DownloadHash(package.HashAlgorithm, package.Hash!),
+        }).Completion;
 
         Assert.Equal(data, await File.ReadAllBytesAsync(path));
         Assert.False(File.Exists(path + ".part"));
@@ -68,7 +74,7 @@ public sealed class RuntimePackageDownloaderTests : IDisposable
         {
             Content = new ByteArrayContent(bytes)
         }));
-        using var installer = new OnnxRuntimeInstaller(_root, client);
+        using var installer = new OnnxRuntimeInstaller(_root, new DownloadService(client, Path.Combine(_root, "Downloads")), client);
 
         await installer.InstallAsync(InferenceDeviceType.CUDA,
             [Package(bytes) with { NugetId = "Microsoft.ML.OnnxRuntime.Gpu.Windows" }], null,

@@ -1,6 +1,6 @@
 # 基础设施统一：WebView2、网络与下载、缓存、临时文件
 
-状态：设计已确认（第 2 版），2026-10-28，基于 `refactor/20260930` 分支代码。阶段 1、2、3 已实施，其余阶段待实施。
+状态：设计已确认（第 2 版），2026-10-28，基于 `refactor/20260930` 分支代码。阶段 1、2、3、4 已实施，其余阶段待实施。
 
 第 2 版变更：程序生成的数据统一放到新目录 `Data/`；推理缓存、通用文件缓存、下载分目录存放；WebView2 支持多个普通环境并集中管理环境配置；旧目录每个版本清理一次，不再迁移；第 15 节的决策已确认。
 
@@ -127,7 +127,7 @@ BetterGenshinImpact/Infrastructure/
   Temp/      TempCategory（含 TempCategories）、ITempFileService、TempFileService、TempScope
   Cache/     CachePartition（含 CachePartitions）、IFileCache、FileCache、CacheMaintenanceService
   Network/   HttpClientNames、AppWebProxy、BgiHttpHandlers、BgiHttpDefaultsHandler、GitProxy、NetworkDiagnostics
-  Network/Download/  DownloadRequest、DownloadProgress、DownloadTask、IDownloadService、DownloadService、IDownloadMonitor
+  Network/Download/  DownloadCategory（含 DownloadCategories）、DownloadRequest、DownloadProgress、DownloadTask、IDownloadService、DownloadService、IDownloadMonitor
   WebView/   WebViewRuntime、WebViewEnvironmentDefinition（含 WebViewEnvironments）、WebViewProfile（含 WebViewProfiles）、IWebViewEnvironmentProvider、WebViewEnvironmentProvider、WebViewSetup
 ```
 
@@ -349,8 +349,12 @@ services.AddHostedService<CacheMaintenanceService>();
 services.AddSingleton<IRemoteImageService, RemoteImageService>();
 
 // 网络与下载（命名客户端注册见 6.3）
-services.AddSingleton<IDownloadService, DownloadService>();
-services.AddSingleton<IDownloadMonitor>(sp => (DownloadService)sp.GetRequiredService<IDownloadService>());
+services.AddSingleton(sp => new DownloadService(
+    sp.GetRequiredService<IHttpClientFactory>().CreateClient(HttpClientNames.Download), AppPaths.Downloads,
+    sp.GetRequiredService<ILogger<DownloadService>>()));
+services.AddSingleton<IDownloadService>(sp => sp.GetRequiredService<DownloadService>());
+services.AddSingleton<IDownloadMonitor>(sp => sp.GetRequiredService<DownloadService>());
+services.AddSingleton<IStorageAreaProvider>(sp => sp.GetRequiredService<DownloadService>());
 
 // WebView2
 services.AddSingleton<IWebViewEnvironmentProvider, WebViewEnvironmentProvider>();
@@ -707,8 +711,11 @@ services.AddHttpClient(HttpClientNames.Default, c => c.Timeout = TimeSpan.FromSe
 ### 7.2 接口
 
 ```csharp
-/// <summary>下载请求。Category 用于下载目录的子目录和下载中心分组。</summary>
-public sealed record DownloadRequest(Uri Url, string DisplayName, string Category)
+/// <summary>下载分类：子目录名、存储空间窗口中的名称和说明。新分类加入 DownloadCategories.All。</summary>
+public sealed record DownloadCategory(string Id, string DisplayName, string Description);
+
+/// <summary>下载请求。Category 用于下载目录的子目录和存储空间窗口中的分组。</summary>
+public sealed record DownloadRequest(Uri Url, string DisplayName, DownloadCategory Category)
 {
     /// <summary>完成后的目标路径，必须位于程序目录内。为空时保留在 Data/Downloads 中，并返回该路径。</summary>
     public string? DestinationPath { get; init; }
@@ -727,6 +734,10 @@ public sealed record DownloadRequest(Uri Url, string DisplayName, string Categor
 
     /// <summary>是否显示在下载中心。后台自动下载的小文件可以设为 false。</summary>
     public bool ShowInDownloadCenter { get; init; } = true;
+
+    /// <summary>发起下载的位置，例如"硬件加速设置"。设置后表示下载完成还要由发起方继续处理（解压、安装），
+    /// 下载中心不提供重试和打开文件夹，失败时提示用户回到这里重试。</summary>
+    public string? Origin { get; init; }
 }
 
 /// <summary>下载哈希。</summary>
@@ -774,6 +785,9 @@ public interface IDownloadService
 {
     /// <summary>开始下载并立即返回任务。ct 取消时取消下载。</summary>
     DownloadTask Start(DownloadRequest request, CancellationToken ct = default);
+
+    /// <summary>分类的下载目录，完成的文件和未完成的 .part 都在这里。</summary>
+    string GetDirectory(DownloadCategory category);
 }
 
 /// <summary>下载监视器：本次运行中显示在下载中心的任务。</summary>
@@ -795,10 +809,11 @@ public interface IDownloadMonitor
 调用示例（硬件加速页安装运行库）：
 
 ```csharp
-var task = _downloadService.Start(new DownloadRequest(package.Url, package.Name, "onnxruntime")
+var task = _downloadService.Start(new DownloadRequest(package.Url, package.Name, DownloadCategories.OnnxRuntime)
 {
     ExpectedSize = package.DownloadBytes,
     ExpectedHash = package.Hash is null ? null : new DownloadHash(package.HashAlgorithm, package.Hash),
+    Origin = "硬件加速设置",
 }, ct);
 // 页面继续显示自己的进度条，同一任务也出现在下载中心
 task.ProgressChanged += (_, p) =>
@@ -827,7 +842,7 @@ var archivePath = await task.Completion;
 
 ### 7.4 非 HTTP 传输（可选）
 
-脚本仓库的 Git 拉取不经过 HttpClient，但用户同样关心它的进度。`IDownloadMonitor.TrackExternal(displayName, category)` 返回一个可报告进度的句柄，让 `CloneRepository` 的 `OnTransferProgress` 也显示在下载中心。这一项放在阶段 4 末尾，视工作量决定是否纳入。
+脚本仓库的 Git 拉取不经过 HttpClient，但用户同样关心它的进度。`IDownloadMonitor.TrackExternal(displayName, category)` 返回一个可报告进度的句柄，让 `CloneRepository` 的 `OnTransferProgress` 也显示在下载中心。这一项放在阶段 4 末尾，视工作量决定是否纳入。阶段 4 未纳入：仓库的克隆、拉取和 Pulonia 更新各有进度入口，需要逐个接入，留到以后单独处理。
 
 ### 7.5 迁移清单
 
@@ -1205,6 +1220,7 @@ dotnet msbuild BetterGenshinImpact.sln -restore -p:Configuration=Debug -nologo -
 | 3. 网络与代理 | `NetworkConfig`、`AppWebProxy`、接管 `DefaultProxy`、命名客户端与公共处理器；迁移 6.4 的全部调用点；Git 与 WebSocket 代理；JS 重定向校验；网络设置子视图与连接测试；删除 `DownloadRepoAndUnzip`；修复灰度判定哈希 | 跟随系统模式下行为与改造前一致；切换为自定义代理后，新请求经过本地代理（以代理软件的连接记录确认）；除 Infrastructure、Telegram 独立代理和测试代码外，不再出现 `new HttpClient(`；同一设备多次启动的灰度判定结果相同 |
 | 3 的实施说明（已完成） | 与上一行的差异：`OnnxRuntimeInstaller` 仍自建客户端（跟随 `DefaultProxy`），阶段 4 改用下载服务；`ScriptRepoWindow` 中的 `new HttpClient()` 位于已注释的代码中，不处理；`KongyingTavernApiService` 需要设置登录后的 `Authorization` 默认请求头，因此长期持有一个 GameApi 客户端；获取远程分支列表（`ListReferences`）与克隆、拉取一样按网络设置决定是否走代理；Script 客户端逐跳校验重定向，最多 5 跳，不允许从 https 降级到 http；命名客户端不保存 Cookie，并关闭工厂默认的请求日志 | 编译通过；临时验证测试覆盖了三种代理模式与绕过列表、代理地址校验、Git 代理选择、重定向校验、灰度哈希稳定性，并实际加载网络设置视图，验证后删除；经本地代理转发的实际效果需在真实环境验收 |
 | 4. 下载服务与下载中心 | `DownloadService`、`IDownloadMonitor`、标题栏下载中心；迁移 `OnnxRuntimeInstaller`、`BannerImageService`；旧目录清单加入 `Plugins/OnnxRuntime/.downloads`；可选接入 Git 进度 | 下载 TensorRT 包中途断网，恢复后续传；取消后重试会续传；校验失败有明确提示；离开硬件加速页后仍能在下载中心看到进度 |
+| 4 的实施说明（已完成） | 与上一行的差异：下载分类改为 `DownloadCategory` 类型（与临时文件分类相同的写法），存储空间窗口按分类各一行，并标出未完成的下载数；`DownloadRequest` 增加 `Origin`，运行库安装包设为"硬件加速设置"，下载中心对这类任务不提供重试和打开文件夹，提示回到设置页（下载完成后还要解压安装，单独重试下载不会安装）；`IDownloadService` 增加 `GetDirectory`，安装器据此清理下载目录；同一地址的任务依次执行，后来的任务复用或续传；`RuntimePackageDownloader` 只保留解压与 CRC 校验；标题栏弹出层使用 WPF-UI `Flyout`，定位点放在按钮右下角并以 `Left` 方式展开，使右边缘与按钮对齐；退出确认覆盖主窗口关闭和托盘退出，确认一次后不再重复询问；Git 进度（7.4）本阶段不接入 | 编译通过；临时验证测试覆盖了 200 重写、206 续传、断线与提前关闭后续传、5xx 重试次数、4xx 换备用地址、哈希失败删除 `.part`、大小上限、取消后续传重试、最多 3 个并发、已完成文件复用、同一地址并发、目标路径校验、存储区域、行文字，并实际加载下载中心视图、检查弹出层位置，验证后删除；真实断网续传需在真实环境验收 |
 | 5. 缓存 | `IFileCache`、`CachePartitions`、`CacheMaintenanceService`、`IRemoteImageService`；迁移 5.5 中的用法；删除 `MemoryFileCache`；旧目录清单加入 `User/Cache/MemoryFileCache`、`User/Music/Artwork`；缓存分区登记为存储区域 | 缓存超过上限后自动降到 80%；地图上大量图标滚动时，内存中的图片数量不超过上限；清理某个分区后功能正常并重新下载 |
 | 6. WebView2 | 环境定义与 Profile、环境入口、`WebViewSetup`、运行时提示；迁移 `WebpagePanel`、`HtmlMaskWindow`、`CloudWebHostWindow`、`WebViewInstanceStore`、实例管理窗口；`ProcessFailed` 处理；网页数据存储区域；旧目录清单加入 `WebView2Data/` | 全仓库只有环境入口调用 `CoreWebView2Environment.CreateAsync`；未安装运行时能看到说明并跳转下载页；以 dotnet 宿主启动时数据目录仍在 `Data/WebView2/`；云原神实例清理缓存后登录状态保留；在 `WebViewEnvironments` 中临时增加一个测试环境，能在存储空间窗口看到对应行，删除定义后其目录显示为"已不再使用的网页数据" |
 
@@ -1224,7 +1240,7 @@ dotnet msbuild BetterGenshinImpact.sln -restore -p:Configuration=Debug -nologo -
 | 交给外部组件读取的临时文件 | `ITempFileService.CreateFilePath` | 写完不删 |
 | 缓存可再生的图片或接口数据 | 在 `CachePartitions` 新增分区，调用 `IFileCache` 或 `IRemoteImageService` | 新建缓存目录、用静态 `ConcurrentDictionary` 存图片 |
 | 发 HTTP 请求 | `IHttpClientFactory.CreateClient(HttpClientNames.X)` | `new HttpClient()`、静态 HttpClient 字段 |
-| 下载较大的文件，或需要进度 | `IDownloadService.Start` | 自己写下载循环、用 `ReadAsByteArrayAsync` 读整个文件 |
+| 下载较大的文件，或需要进度 | 在 `DownloadCategories` 新增分类，调用 `IDownloadService.Start`；下载后还要安装时设置 `Origin` | 自己写下载循环、用 `ReadAsByteArrayAsync` 读整个文件 |
 | 显示网页 | `WebpagePanel`，或 `WebViewSetup.InitializeAsync` 加 `WebViewProfiles` | 直接调用 `CoreWebView2Environment.CreateAsync`、自定数据目录 |
 | 需要独立的网页环境 | 在 `WebViewEnvironments` 新增定义，再为它定义 Profile | 从用户配置读取浏览器参数 |
 | 废弃旧目录 | 在使用它的代码切到新路径的同一版本，把旧目录加入 `LegacyDataCleaner` 的清单 | 写一次性的迁移代码，或保留旧目录 |

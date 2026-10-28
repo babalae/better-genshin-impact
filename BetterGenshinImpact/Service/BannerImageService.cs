@@ -1,11 +1,10 @@
 using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Infrastructure.Network;
+using BetterGenshinImpact.Infrastructure.Network.Download;
 using BetterGenshinImpact.Service.Interface;
 using SixLabors.ImageSharp;
 using System;
 using System.IO;
-using System.Net.Http;
-using System.Net.Http.Headers;
+using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,14 +17,14 @@ public sealed class BannerImageService : IBannerImageService
     private const long MaxPixelCount = 40_000_000;
     private static readonly TimeSpan DownloadTimeout = TimeSpan.FromSeconds(30);
 
-    // 下载客户端：不限总时长，由 DownloadTimeout 控制等待响应的时间
-    private readonly HttpClient _httpClient;
+    // 下载服务：限制大小、续传与重试；后台下载，不显示在下载中心
+    private readonly IDownloadService _downloads;
     private readonly object _fileCommitLock = new();
 
-    /// <param name="httpClientFactory">命名 HttpClient 工厂</param>
-    public BannerImageService(IHttpClientFactory httpClientFactory)
+    /// <param name="downloads">下载服务</param>
+    public BannerImageService(IDownloadService downloads)
     {
-        _httpClient = httpClientFactory.CreateClient(HttpClientNames.Download);
+        _downloads = downloads;
     }
     private long _latestOperationId;
 
@@ -87,51 +86,27 @@ public sealed class BannerImageService : IBannerImageService
 
         try
         {
-            // 下载图片
-            using var response = await _httpClient.GetAsync(
-                uri,
-                HttpCompletionOption.ResponseHeadersRead,
-                linkedCancellationToken).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
-
-            if (response.Content.Headers.ContentLength > MaxDownloadBytes)
+            // 下载图片到临时文件，校验通过后再替换正式图片
+            var task = _downloads.Start(new DownloadRequest(uri, "网络背景图片", DownloadCategories.BannerImage)
             {
-                throw new InvalidDataException($"图片大小超过 {MaxDownloadBytes / 1024 / 1024} MB 限制。");
+                DestinationPath = tempPath,
+                MaxBytes = MaxDownloadBytes,
+                ShowInDownloadCenter = false,
+            }, linkedCancellationToken);
+            try
+            {
+                await task.Completion.ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException && ex.InnerException is not null)
+            {
+                // 下载服务的错误信息带有下载名称，界面已说明是图片下载，只保留原因
+                ExceptionDispatchInfo.Throw(ex.InnerException);
+                throw;
             }
 
-            await using (var responseStream = await response.Content
-                             .ReadAsStreamAsync(linkedCancellationToken)
-                             .ConfigureAwait(false))
-            await using (var fileStream = new FileStream(
-                             tempPath,
-                             FileMode.CreateNew,
-                             FileAccess.Write,
-                             FileShare.None,
-                             81920,
-                             FileOptions.Asynchronous | FileOptions.SequentialScan))
+            if (new FileInfo(tempPath).Length == 0)
             {
-                var buffer = new byte[81920];
-                long totalBytes = 0;
-                int read;
-                while ((read = await responseStream
-                           .ReadAsync(buffer.AsMemory(), linkedCancellationToken)
-                           .ConfigureAwait(false)) > 0)
-                {
-                    totalBytes += read;
-                    if (totalBytes > MaxDownloadBytes)
-                    {
-                        throw new InvalidDataException($"图片大小超过 {MaxDownloadBytes / 1024 / 1024} MB 限制。");
-                    }
-
-                    await fileStream
-                        .WriteAsync(buffer.AsMemory(0, read), linkedCancellationToken)
-                        .ConfigureAwait(false);
-                }
-
-                if (totalBytes == 0)
-                {
-                    throw new InvalidDataException("下载的图片内容为空。");
-                }
+                throw new InvalidDataException("下载的图片内容为空。");
             }
 
             ValidateImage(tempPath);

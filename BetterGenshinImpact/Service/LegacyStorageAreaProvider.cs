@@ -1,7 +1,5 @@
 using System.Collections.Generic;
-using System.IO;
 using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Infrastructure.Storage;
 using BetterGenshinImpact.Service.Instance;
 
@@ -12,7 +10,6 @@ namespace BetterGenshinImpact.Service;
 /// 对应阶段完成迁移后，由正式的存储区域取代并删除这里的条目（见设计文档 3.5 节）
 /// </summary>
 public sealed class LegacyStorageAreaProvider(
-    IOnnxRuntimeInstaller onnxRuntimeInstaller,
     WebViewInstanceStore webViewInstanceStore,
     InstanceBootstrap instanceBootstrap) : IStorageAreaProvider
 {
@@ -32,14 +29,6 @@ public sealed class LegacyStorageAreaProvider(
         {
             Description = "自动演奏曲目的封面图片",
             CleanupEffect = "需要时重新下载",
-        };
-
-        // 阶段 4 迁移到下载服务
-        yield return new StorageArea("legacy:onnxruntime-downloads", "运行库安装包", StorageGroup.Download,
-            [Path.Combine(onnxRuntimeInstaller.PluginsDirectory, ".downloads")])
-        {
-            Description = "硬件加速运行库的下载包，安装成功后自动删除，留下的通常是未完成或失败的下载",
-            CleanupEffect = "未完成的下载需要从头重新下载",
         };
 
         // 阶段 6 迁移到 WebView2 环境入口，届时提供只清理缓存的选项

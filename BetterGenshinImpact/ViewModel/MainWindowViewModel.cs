@@ -193,6 +193,11 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
 
     public AllConfig Config { get; set; }
 
+    /// <summary>
+    /// 标题栏下载中心
+    /// </summary>
+    public DownloadCenterViewModel DownloadCenter { get; }
+
     public MainWindowViewModel(
         INavigationService navigationService,
         IConfigService configService,
@@ -200,8 +205,10 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
         InstanceService instanceService,
         InstanceVisualIdentity instanceVisualIdentity,
         IInferenceModelDiagnostics inferenceDiagnostics,
-        InferenceRuntimeService inferenceRuntime)
+        InferenceRuntimeService inferenceRuntime,
+        DownloadCenterViewModel downloadCenter)
     {
+        DownloadCenter = downloadCenter;
         _inferenceDiagnostics = inferenceDiagnostics;
         _inferenceRuntime = inferenceRuntime;
         _navigationService = navigationService;
@@ -585,6 +592,8 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
         // 子实例只负责自己的生命周期；只有主实例退出时需要保护其提供的共享能力。
         if (!_instanceVisualIdentity.IsPrimary)
         {
+            // 有下载正在进行时确认退出，已下载的部分保留供下次续传
+            e.Cancel = !DownloadCenter.ConfirmExit();
             return;
         }
 
@@ -607,6 +616,8 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
             return;
         }
 
+        // 有下载正在进行时确认退出，已下载的部分保留供下次续传
+        e.Cancel = !DownloadCenter.ConfirmExit();
     }
 
     [RelayCommand]

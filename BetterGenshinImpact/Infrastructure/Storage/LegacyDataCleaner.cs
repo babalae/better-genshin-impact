@@ -29,6 +29,8 @@ public sealed class LegacyDataCleaner(bool isRoot, ILogger<LegacyDataCleaner> lo
         @"Repos\Temp",
         // 阶段 2：推理编译缓存改到 Data/Cache/Inference，按版本号的空目录 Cache/{版本号}/Model 不再创建
         "Cache",
+        // 阶段 4：运行库安装包改由下载服务保存到 Data/Downloads/onnxruntime
+        @"Plugins\OnnxRuntime\.downloads",
     ];
 
     /// <summary>

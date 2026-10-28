@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
+using BetterGenshinImpact.Infrastructure.Network.Download;
 using Newtonsoft.Json.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,18 +23,33 @@ public interface IOnnxRuntimeInstaller
 
 public sealed class OnnxRuntimeInstaller : IOnnxRuntimeInstaller, IDisposable
 {
+    /// <summary>
+    /// 请求 NuGet、NVIDIA 元数据的客户端；registration5-gz 接口返回 gzip 内容，需要自动解压缩
+    /// </summary>
     private readonly HttpClient _client;
-    private readonly bool _ownsClient;
+
+    /// <summary>
+    /// 下载安装包：续传、重试、校验，进度同时显示在下载中心
+    /// </summary>
+    private readonly IDownloadService _downloads;
     private readonly SemaphoreSlim _installationLock = new(1, 1);
     private readonly CancellationTokenSource _lifetime = new();
     public string BaseDirectory { get; }
     public string PluginsDirectory => Path.Combine(BaseDirectory, "Plugins", "OnnxRuntime");
 
-    public OnnxRuntimeInstaller(string baseDirectory, HttpClient? client = null)
+    /// <summary>
+    /// 安装包下载目录 Data/Downloads/onnxruntime，由下载服务决定
+    /// </summary>
+    private string DownloadDirectory => _downloads.GetDirectory(DownloadCategories.OnnxRuntime);
+
+    /// <param name="baseDirectory">程序目录，运行库安装在其下的 Plugins/OnnxRuntime</param>
+    /// <param name="downloads">下载服务</param>
+    /// <param name="metadataClient">请求元数据的客户端，由调用方管理生命周期</param>
+    public OnnxRuntimeInstaller(string baseDirectory, IDownloadService downloads, HttpClient metadataClient)
     {
         BaseDirectory = Path.GetFullPath(baseDirectory);
-        _ownsClient = client == null;
-        _client = client ?? new HttpClient(new HttpClientHandler { AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate }) { Timeout = Timeout.InfiniteTimeSpan };
+        _downloads = downloads;
+        _client = metadataClient;
     }
 
     public RuntimeInstallation Inspect(InferenceDeviceType engine) => OnnxRuntimePackageCatalog.Inspect(BaseDirectory, engine);
@@ -105,10 +120,9 @@ public sealed class OnnxRuntimeInstaller : IOnnxRuntimeInstaller, IDisposable
                     if (Path.GetExtension(file).Equals(".dll", StringComparison.OrdinalIgnoreCase) || Path.GetExtension(file).Equals(".xml", StringComparison.OrdinalIgnoreCase))
                         File.Copy(file, Path.Combine(staging, Path.GetFileName(file)), true);
                 }
-            var downloader = new RuntimePackageDownloader(_client);
             foreach (var package in packages)
             {
-                var archive = await downloader.DownloadAsync(package, Path.Combine(PluginsDirectory, ".downloads"), progress, token);
+                var archive = await DownloadPackageAsync(package, progress, token);
                 completedArchives.Add(archive);
                 progress?.Report(new($"正在解压并校验 {package.Name}", 0, 0));
                 try { await RuntimePackageDownloader.ExtractAsync(archive, staging, path => IncludeFile(engine, package, path), token); }
@@ -162,13 +176,13 @@ public sealed class OnnxRuntimeInstaller : IOnnxRuntimeInstaller, IDisposable
                 CleanupAbandonedInstallationDirectories(engine);
             }
 
-            var cache = Path.Combine(PluginsDirectory, ".downloads");
+            var cache = DownloadDirectory;
             if (Directory.Exists(cache))
             {
-                foreach (var path in Directory.EnumerateFiles(cache, "*.zip"))
+                foreach (var path in Directory.EnumerateFiles(cache).Where(file => !file.EndsWith(".part", StringComparison.OrdinalIgnoreCase)))
                 {
                     linked.Token.ThrowIfCancellationRequested();
-                    // 兼容之前留下的已安装下载包，只清理与当前安装内容完全一致的包。
+                    // 安装后删除失败（文件被占用）留下的下载包，只清理与当前安装内容完全一致的包。
                     var key = Path.GetFileNameWithoutExtension(path);
                     if (key.Length != 64 || !key.All(Uri.IsHexDigit)) continue;
                     try
@@ -270,10 +284,37 @@ public sealed class OnnxRuntimeInstaller : IOnnxRuntimeInstaller, IDisposable
         return false;
     }
 
+    /// <summary>
+    /// 通过下载服务下载一个安装包，返回下载目录中的文件路径。页面继续显示自己的进度，同一任务也出现在下载中心
+    /// </summary>
+    private async Task<string> DownloadPackageAsync(RuntimeDownloadPackage package,
+        IProgress<RuntimeDownloadProgress>? progress, CancellationToken token)
+    {
+        var task = _downloads.Start(new DownloadRequest(package.Url, package.Name, DownloadCategories.OnnxRuntime)
+        {
+            ExpectedSize = package.DownloadBytes > 0 ? package.DownloadBytes : null,
+            ExpectedHash = package.Hash is null ? null : new DownloadHash(package.HashAlgorithm, package.Hash),
+            // 下载完成后还要解压和安装，重试需要回到设置页
+            Origin = "硬件加速设置",
+        }, token);
+        task.ProgressChanged += (_, p) =>
+        {
+            var message = p.State switch
+            {
+                DownloadState.Queued => $"等待其他下载完成：{package.Name}",
+                DownloadState.Downloading => $"正在下载 {package.Name}",
+                DownloadState.Verifying => $"正在校验 {package.Name}",
+                _ => null,
+            };
+            if (message != null) progress?.Report(new(message, p.ReceivedBytes, p.TotalBytes ?? 0));
+        };
+        return await task.Completion;
+    }
+
     private void TryDeleteDownload(string path)
     {
-        // 校验绝对路径后，仅删除下载缓存中的单个归档，不触及运行库目录或续传文件。
-        var cache = Path.GetFullPath(Path.Combine(PluginsDirectory, ".downloads"));
+        // 校验绝对路径后，仅删除下载目录中的单个安装包，不触及运行库目录或续传文件。
+        var cache = Path.GetFullPath(DownloadDirectory);
         if (!string.Equals(Path.GetDirectoryName(Path.GetFullPath(path)), cache, StringComparison.OrdinalIgnoreCase)) return;
         try { File.Delete(path); }
         catch (IOException) { }
@@ -282,8 +323,7 @@ public sealed class OnnxRuntimeInstaller : IOnnxRuntimeInstaller, IDisposable
 
     private void TryRemoveEmptyDownloadDirectory()
     {
-        var cache = Path.GetFullPath(Path.Combine(PluginsDirectory, ".downloads"));
-        if (!cache.StartsWith(Path.GetFullPath(PluginsDirectory) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) return;
+        var cache = Path.GetFullPath(DownloadDirectory);
         try { if (Directory.Exists(cache) && !Directory.EnumerateFileSystemEntries(cache).Any()) Directory.Delete(cache); }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
@@ -343,7 +383,6 @@ public sealed class OnnxRuntimeInstaller : IOnnxRuntimeInstaller, IDisposable
 
     public void Dispose()
     {
-        if (_ownsClient) _client.Dispose();
         _lifetime.Dispose();
         _installationLock.Dispose();
     }

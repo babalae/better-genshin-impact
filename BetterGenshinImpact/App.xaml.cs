@@ -25,6 +25,7 @@ using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Infrastructure.Network;
+using BetterGenshinImpact.Infrastructure.Network.Download;
 using BetterGenshinImpact.Infrastructure.Storage;
 using BetterGenshinImpact.Infrastructure.Temp;
 using BetterGenshinImpact.Pulonia.Executors;
@@ -159,9 +160,21 @@ public partial class App : Application
                 var onnxRuntimeLoader = new OnnxRuntimeLoader(all.HardwareAccelerationConfig, AppContext.BaseDirectory);
                 services.AddSingleton(onnxRuntimeLoader);
                 services.AddSingleton<IOnnxRuntimeSelection>(onnxRuntimeLoader);
-                var onnxRuntimeInstaller = new OnnxRuntimeInstaller(AppContext.BaseDirectory);
-                services.AddSingleton(onnxRuntimeInstaller);
-                services.AddSingleton<IOnnxRuntimeInstaller>(onnxRuntimeInstaller);
+                // 下载服务同时是下载中心的任务列表和下载目录的存储区域，见 Docs/design/infrastructure-foundation.md 第 7 节
+                services.AddSingleton(sp => new DownloadService(
+                    sp.GetRequiredService<IHttpClientFactory>().CreateClient(HttpClientNames.Download),
+                    AppPaths.Downloads,
+                    sp.GetRequiredService<ILogger<DownloadService>>()));
+                services.AddSingleton<IDownloadService>(sp => sp.GetRequiredService<DownloadService>());
+                services.AddSingleton<IDownloadMonitor>(sp => sp.GetRequiredService<DownloadService>());
+                services.AddSingleton<IStorageAreaProvider>(sp => sp.GetRequiredService<DownloadService>());
+                services.AddSingleton<DownloadCenterViewModel>();
+                // 运行库安装包经下载服务下载；NuGet、NVIDIA 元数据走 Default 客户端（自动解压缩 gzip）
+                services.AddSingleton(sp => new OnnxRuntimeInstaller(
+                    AppContext.BaseDirectory,
+                    sp.GetRequiredService<IDownloadService>(),
+                    sp.GetRequiredService<IHttpClientFactory>().CreateClient(HttpClientNames.Default)));
+                services.AddSingleton<IOnnxRuntimeInstaller>(sp => sp.GetRequiredService<OnnxRuntimeInstaller>());
                 services.AddSingleton<IInferenceDeviceDiscovery, InferenceDeviceDiscovery>();
                 services.AddSingleton<IInferenceBenchmarkLeaseProvider>(sp => new InferenceBenchmarkCoordinator(
                     BetterGenshinImpact.GameTask.Common.TaskControl.TaskSemaphore,
