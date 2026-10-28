@@ -124,7 +124,7 @@ public sealed class PuloniaTaskResultDisplayTests
             ["is_success"] = true, ["revive_count"] = 0, ["collected_items"] = new JObject { ["甜甜花"] = 3 },
             ["collection_material"] = "甜甜花"
         });
-        Assert.Equal(["路线完整执行", "成功战斗次数", "失败原因", "复活次数", "拾取物品", "采集物"],
+        Assert.Equal(["路线完整执行", "成功战斗次数", "失败原因", "复活次数", "拾取物品", "识别的材料或类别"],
             succeeded.ResultFields.Select(field => field.Label));
         Assert.Equal("未返回（可能在结果产生前失败或取消）", Field(succeeded, "成功战斗次数"));
         Assert.Equal("无", Field(succeeded, "失败原因"));

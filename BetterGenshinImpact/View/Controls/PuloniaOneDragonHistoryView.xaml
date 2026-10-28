@@ -1,6 +1,7 @@
 <UserControl x:Class="BetterGenshinImpact.View.Controls.PuloniaOneDragonHistoryView"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
- xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" xmlns:history="clr-namespace:BetterGenshinImpact.ViewModel.Pages.Pulonia">
+ xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" xmlns:history="clr-namespace:BetterGenshinImpact.ViewModel.Pages.Pulonia"
+ xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls">
  <UserControl.Resources><ResourceDictionary>
   <ResourceDictionary.MergedDictionaries><ResourceDictionary Source="PuloniaOneDragonResources.xaml"/></ResourceDictionary.MergedDictionaries>
   <DataTemplate DataType="{x:Type history:PuloniaTaskHistoryField}"><ui:Card Style="{StaticResource DragonCard}"><StackPanel><TextBlock Text="{Binding Label}" FontWeight="SemiBold"/><TextBox Text="{Binding Value, Mode=OneWay}" Margin="0,6,0,0" MaxHeight="180" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Background="Transparent" BorderThickness="0"/></StackPanel></ui:Card></DataTemplate>
@@ -31,7 +32,7 @@
      </StackPanel></ScrollViewer></TabItem>
      <TabItem Header="当次输入"><ScrollViewer VerticalScrollBarVisibility="Auto"><ItemsControl ItemsSource="{Binding SelectedRunNodeResult.InputFields}" Margin="0,10,8,0"/></ScrollViewer></TabItem>
      <TabItem Header="运行信息"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="0,10,8,0"><ItemsControl ItemsSource="{Binding SelectedRun.OverviewFields}"/><ItemsControl ItemsSource="{Binding SelectedRun.ConfirmedEffectFields}"/><Expander Header="完整快照"><TextBox Text="{Binding SelectedRun.Run.SnapshotJson, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="300" VerticalScrollBarVisibility="Auto"/></Expander></StackPanel></ScrollViewer></TabItem>
-     <TabItem Header="当前 CD"><ScrollViewer VerticalScrollBarVisibility="Auto"><ItemsControl ItemsSource="{Binding LedgerEntries}" Margin="0,10,8,0"><ItemsControl.ItemTemplate><DataTemplate><ui:Card Style="{StaticResource DragonCard}"><StackPanel><TextBlock Text="{Binding EffectKey}" FontWeight="SemiBold"/><TextBlock Text="{Binding ScopeKey}"/><TextBlock Text="{Binding EligibilityText}" TextWrapping="Wrap"/><TextBlock Text="{Binding EvidenceText}" TextWrapping="Wrap"/></StackPanel></ui:Card></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></ScrollViewer></TabItem>
+     <TabItem Header="路线 CD"><controls:PuloniaCollectionCooldownOverviewView Margin="0,10,8,0" DataContext="{Binding Cooldowns, Mode=OneWay}"/></TabItem>
     </TabControl>
     <TextBlock Grid.RowSpan="3" Text="选择一条运行记录查看步骤、结果和证据。" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" Background="{DynamicResource ApplicationBackgroundBrush}" Padding="20"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Visible"/><Style.Triggers><DataTrigger Binding="{Binding HasSelectedRun}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
    </Grid>

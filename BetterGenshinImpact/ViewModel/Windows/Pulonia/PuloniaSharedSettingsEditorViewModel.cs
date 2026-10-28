@@ -26,7 +26,7 @@ public partial class PuloniaSharedSettingsEditorViewModel : ObservableObject, ID
     /// <summary>编辑会话；为空时不提供方案选择与保存。</summary>
     private readonly PuloniaPlanEditingSession? _session;
 
-    /// <summary>窗口入口；为空时不提供采集 CD 与方案管理窗口。</summary>
+    /// <summary>窗口入口；为空时不提供路线 CD 与方案管理窗口。</summary>
     private readonly IPuloniaTaskSettingsDialogs? _dialogs;
 
     /// <summary>全部行，按目录顺序。</summary>
@@ -127,7 +127,7 @@ public partial class PuloniaSharedSettingsEditorViewModel : ObservableObject, ID
     public bool CanEditProfile => SelectedProfileOption?.Id is { } id && _session?.Profiles.Any(item => item.Id == id) == true;
 
     /// <summary>
-    /// 建立编辑器；节点模式需要会话以选择和保存方案，窗口入口用于采集 CD 和方案管理。
+    /// 建立编辑器；节点模式需要会话以选择和保存方案、显示路线 CD 状态，窗口入口用于路线 CD 和方案管理。
     /// </summary>
     public PuloniaSharedSettingsEditorViewModel(PuloniaSharedSettingsTarget target,
         PuloniaPlanEditingSession? session = null, IPuloniaTaskSettingsDialogs? dialogs = null)
@@ -186,7 +186,7 @@ public partial class PuloniaSharedSettingsEditorViewModel : ObservableObject, ID
         catch (InvalidOperationException ex) { Message = ex.Message; }
     }
 
-    /// <summary>打开采集 CD 表单；确认后整体写入这一项，选择恢复继承时移除覆盖。</summary>
+    /// <summary>打开路线 CD 表单；确认后整体写入这一项，选择恢复继承时移除覆盖。叶子节点另显示本账号状态并可清除记录。</summary>
     internal void EditCollectionCooldown(PuloniaSharedSettingRowViewModel row)
     {
         if (_dialogs is null || !IsEditable)
@@ -199,6 +199,8 @@ public partial class PuloniaSharedSettingsEditorViewModel : ObservableObject, ID
             {
                 draft = node.Document.CreateCollectionCooldownDraft(node.Node);
                 isLeaf = node.Node.IsLeaf;
+                // 任务计划中的叶子：显示当前登录账号下的 CD 状态、清除入口与跨计划规则差异
+                _session?.AttachCooldownStatus(draft, node.Node);
             }
             else
             {
@@ -216,7 +218,7 @@ public partial class PuloniaSharedSettingsEditorViewModel : ObservableObject, ID
         catch (Exception ex) when (ex is PuloniaTaskValidationException or FormatException or ArgumentException or OverflowException
                                        or InvalidOperationException)
         {
-            Message = "采集 CD 未生效：" + ex.Message;
+            Message = "路线 CD 未生效：" + ex.Message;
         }
     }
 

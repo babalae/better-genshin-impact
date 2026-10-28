@@ -22,7 +22,7 @@ public partial class PuloniaSettingsProfileManagerViewModel : ObservableObject, 
     /// <summary>编辑会话，负责方案存储与刷新全部文档。</summary>
     private readonly PuloniaPlanEditingSession _session;
 
-    /// <summary>窗口入口，供编辑器打开采集 CD 表单。</summary>
+    /// <summary>窗口入口，供编辑器打开路线 CD 表单。</summary>
     private readonly IPuloniaTaskSettingsDialogs _dialogs;
 
     /// <summary>读取当前全局配置并转换为共享设置；由视图层提供，视图模型不直接读取全局配置。</summary>

@@ -254,6 +254,8 @@ public partial class PuloniaPlanEditingSession : ObservableObject
         // 删除节点、修改路径或撤销后立即撤掉失效统计；磁盘版本由页面检查循环重新读取。
         UpdateResourceSummaries(GetResourceDocuments());
         NotifyResourceCommands();
+        // 结构或共享设置变化可能改变路线 CD 规则，防抖后重新计算任务树标记。
+        ScheduleCooldownRefresh();
         if (sender is PuloniaTaskPlanDocumentViewModel { IsDirty: true, LastSaveError: null } document)
             ScheduleAutoSave(document);
     }

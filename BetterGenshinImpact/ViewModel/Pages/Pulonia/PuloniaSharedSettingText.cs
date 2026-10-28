@@ -25,7 +25,7 @@ internal static class PuloniaSharedSettingText
         return definition.Editor switch
         {
             PuloniaSettingEditorKind.Boolean => value.Value<bool>() ? "开" : "关",
-            PuloniaSettingEditorKind.CollectionCooldown => "已自定义",
+            PuloniaSettingEditorKind.CollectionCooldown => PuloniaCollectionCooldown.DescribeSettings(value),
             _ when value.Type == JTokenType.String && string.IsNullOrEmpty(value.Value<string>()) => "空",
             _ when value.Type == JTokenType.String => value.Value<string>()!,
             _ => value.ToString(Formatting.None) + (definition.Unit is { } unit ? " " + unit : string.Empty)

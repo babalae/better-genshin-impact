@@ -21,7 +21,7 @@ public sealed class PuloniaTaskRequest
 
 
     /// <summary>
-    /// 服务器相对 UTC 的分钟偏移，用于计算采集 CD 的日、周重置窗口。
+    /// 服务器相对 UTC 的分钟偏移，用于计算路线 CD 的日、周重置窗口。
     /// 新运行入队时由任务服务按应用配置的服务器时区（ServerTimeHelper）统一填写，调用方的取值会被覆盖；续跑沿用原请求。
     /// </summary>
     public int ServerUtcOffsetMinutes { get; init; } = 8 * 60;

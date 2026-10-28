@@ -188,7 +188,7 @@
                     </ui:CardControl>
                 </StackPanel>
 
-                <!--  共享设置：队伍、战斗、拾取、行走、采集 CD 与 Shell，在独立窗口中逐项修改，立即生效并向下传播  -->
+                <!--  共享设置：队伍、战斗、拾取、行走、路线 CD 与 Shell，在独立窗口中逐项修改，立即生效并向下传播  -->
                 <StackPanel Visibility="{Binding Advanced.CanEditSharedSettings, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <ui:TextBlock Style="{StaticResource SectionTitle}" Text="共享设置" />
                     <ui:CardControl Margin="0,0,0,8" Icon="{ui:SymbolIcon Settings24}">

@@ -91,8 +91,16 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     /// </summary>
     public ObservableCollection<PuloniaTaskParameterFieldViewModel> ParameterFields { get; } = [];
 
-    /// <summary>地图追踪采集 CD 的独立创建草稿，不修改全局或旧配置组设置。</summary>
-    public PuloniaCollectionCooldownViewModel CollectionCooldown { get; } = new();
+    /// <summary>
+    /// 选中地图追踪资源的路线 CD 识别结果：文件显示刷新规则，目录显示识别与未识别的数量；其他类型为空。
+    /// 添加时不填写路线 CD，规则沿用所在分组，添加后在共享设置中修改。
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCooldownHint))]
+    private string? _cooldownHint;
+
+    /// <summary>是否显示路线 CD 识别结果。</summary>
+    public bool HasCooldownHint => !string.IsNullOrEmpty(CooldownHint);
 
     /// <summary>
     /// 当前 JS 项目从 manifest.settings_ui 解析出的自定义设置字段。
@@ -159,7 +167,7 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     /// </summary>
     public string RunSettingsHint => SelectedDefinition?.TaskType switch
     {
-        "pathing" => "队伍、拾取、战斗与采集 CD 等共享设置沿用所在分组或计划的设置，添加后可在“编辑配置 → 共享设置”中单独修改。",
+        "pathing" => "队伍、拾取、战斗与路线 CD 等共享设置沿用所在分组或计划的设置，添加后可在“编辑配置 → 共享设置”中单独修改。",
         "javascript" => (HasJavaScriptSettings
                             ? "此脚本提供自定义设置，点击“添加任务”后会弹出设置窗口。"
                             : JavaScriptSettingsMessage)
@@ -494,7 +502,7 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     /// </summary>
     partial void OnSelectedResourceChanged(PuloniaTaskResourceDescriptor? value)
     {
-        CollectionCooldown.SetResource(value?.FullPath, value?.Resource, value?.IsDirectory == true);
+        CooldownHint = DescribeCooldownRule(value);
         OnPropertyChanged(nameof(IsDirectoryImport));
         var generation = ++_previewGeneration;
         _previewCancellationTokenSource?.Cancel();
@@ -518,6 +526,52 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
         var cancellationTokenSource = new CancellationTokenSource();
         _previewCancellationTokenSource = cancellationTokenSource;
         _ = LoadResourcePreviewAsync(value, generation, cancellationTokenSource);
+    }
+
+    /// <summary>
+    /// 按目录自动识别选中地图追踪资源的刷新规则，只读取索引中的路径，不读取路线正文。
+    /// </summary>
+    /// <param name="resource">选中的资源。</param>
+    /// <returns>识别说明；不是地图追踪资源时为空。</returns>
+    private string? DescribeCooldownRule(PuloniaTaskResourceDescriptor? resource)
+    {
+        if (resource is null || SelectedDefinition?.TaskType != "pathing")
+            return null;
+        try
+        {
+            return DescribeCooldownRuleCore(resource);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            // 路径无法规范化时不显示识别结果，不影响添加。
+            return null;
+        }
+    }
+
+    /// <summary>按文件或目录生成识别说明。</summary>
+    private string? DescribeCooldownRuleCore(PuloniaTaskResourceDescriptor resource)
+    {
+        if (!resource.IsDirectory)
+        {
+            var policy = PuloniaCollectionCooldown.Resolve(resource.FullPath, resource.Resource, new JObject());
+            return policy.Source == PuloniaCollectionCooldownRuleSource.Unmatched
+                ? "路线 CD：未识别刷新规则，成功后不会跳过；添加后可在“共享设置 → 路线 CD”中选择自定义周期。"
+                : $"路线 CD：{policy.MaterialName} · {policy.Description}";
+        }
+        // 目录：统计索引中目录下的路线文件按自动识别的结果
+        var prefix = resource.RelativePath.TrimEnd('/', '\\') + "/";
+        var files = _allResources.Where(item => !item.IsDirectory
+            && item.RelativePath.Replace('\\', '/').StartsWith(prefix.Replace('\\', '/'), StringComparison.OrdinalIgnoreCase)).ToArray();
+        if (files.Length == 0)
+            return null;
+        var policies = files.Select(item => PuloniaCollectionCooldown.Resolve(item.FullPath, item.Resource, new JObject())).ToArray();
+        var unmatched = policies.Count(policy => policy.Source == PuloniaCollectionCooldownRuleSource.Unmatched);
+        var groups = policies.Where(policy => policy.MaterialName is not null).GroupBy(policy => policy.MaterialName!)
+            .OrderByDescending(group => group.Count()).ToArray();
+        var recognized = string.Join("、", groups.Take(4).Select(group => $"{group.Key} {group.Count()}")) + (groups.Length > 4 ? " 等" : "");
+        return $"路线 CD：{files.Length} 个路线文件，识别 {files.Length - unmatched} 个"
+               + (recognized.Length > 0 ? $"（{recognized}）" : string.Empty)
+               + (unmatched > 0 ? $"，{unmatched} 个未识别刷新规则（成功后不会跳过）" : string.Empty) + "。";
     }
 
     /// <summary>
@@ -634,12 +688,6 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
                 var scriptSettings = BuildJavaScriptSettings();
                 if (scriptSettings.Count > 0)
                     overrides["settings"] = scriptSettings;
-            }
-            if (SelectedDefinition.TaskType == "pathing")
-            {
-                var cooldown = CollectionCooldown.BuildValue();
-                if (!JToken.DeepEquals(cooldown, PuloniaCollectionCooldown.CreateDefaults()))
-                    overrides[PuloniaCollectionCooldown.ParameterName] = cooldown;
             }
 
             // 参数合并校验、资源版本固定和任务树建立由服务完成；服务先校验参数，失败时不会读取资源。

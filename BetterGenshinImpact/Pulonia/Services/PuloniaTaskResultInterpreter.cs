@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using BetterGenshinImpact.GameTask.Common.Resin;
 using BetterGenshinImpact.GameTask.ResinPlan;
@@ -36,7 +37,7 @@ public static class PuloniaTaskResultInterpreter
     ];
 
     /// <summary>
-    /// 地图追踪采集 CD 的结果字段；只在执行器实际写入时展示。
+    /// 地图追踪路线 CD 的结果字段；只在执行器实际写入时展示。
     /// </summary>
     private static readonly string[] CollectionKeys =
     [
@@ -44,12 +45,16 @@ public static class PuloniaTaskResultInterpreter
         "collection_next_eligible_at", "collection_basis"
     ];
 
+    /// <summary>路线 CD 结果中以 UTC ISO 字符串保存的时间字段，展示时转换为本机时间。</summary>
+    private static readonly HashSet<string> CollectionTimeKeys =
+        new(["collection_last_success_at", "collection_next_eligible_at"], StringComparer.Ordinal);
+
     /// <summary>
     /// 各类型结果的核验边界，避免把脚本返回或路线结束解释为已领取/采集成功。
     /// </summary>
     public static string GetVerificationNote(string taskType) => taskType switch
     {
-        "pathing" => "文件级 CD 按整份文件执行成功估算采集完成，不记录部分成功；不代表逐点采集数量或实际收益。",
+        "pathing" => "路线 CD 按整份文件执行成功估算采集完成，不记录部分成功；不代表逐点采集数量或实际收益。",
         "javascript" => "旧 JS 脚本正常返回不等于游戏副作用已核验；仅展示执行器实际返回的数据与证据。",
         "keymouse" => "宏回放结束不等于游戏目标完成；录制文件本身没有结构化收益证据。",
         "shell" => "退出码表示进程结果；标准输出/错误每路最多保留 65536 字符，截断会明确标记。",
@@ -196,7 +201,7 @@ public static class PuloniaTaskResultInterpreter
 
     /// <summary>
     /// 解释地图追踪结果：实际执行的路线按 is_success 展示完整执行、失败原因与拾取统计；
-    /// 没有执行结果的节点（执行器异常、因采集 CD 跳过）只标记“路线完整执行”未返回，并展示 CD 字段。
+    /// 没有执行结果的节点（执行器异常、因路线 CD 跳过）只标记“路线完整执行”未返回，并展示 CD 字段。
     /// </summary>
     private static void AddPathingFields(List<PuloniaTaskResultEntry> entries, HashSet<string> handled, JObject data)
     {
@@ -222,7 +227,19 @@ public static class PuloniaTaskResultInterpreter
             // 执行器异常或因 CD 跳过时没有执行结果，明确标记未返回，不推断成功或失败。
             AddKeyField(entries, handled, data, "is_success", "路线完整执行");
         foreach (var key in CollectionKeys.Where(data.ContainsKey))
-            AddKeyField(entries, handled, data, key, PuloniaTaskFieldNames.GetDisplayName(key));
+        {
+            if (!CollectionTimeKeys.Contains(key))
+            {
+                AddKeyField(entries, handled, data, key, PuloniaTaskFieldNames.GetDisplayName(key));
+                continue;
+            }
+            // 时间字段按本机时间展示，与跳过消息和 CD 总览一致；没有时间时显示为“无”。
+            handled.Add(key);
+            var text = data.Value<string>(key);
+            entries.Add(new PuloniaTaskResultEntry(PuloniaTaskFieldNames.GetDisplayName(key), PuloniaTaskResultEntryKind.Value,
+                new JValue(DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.None, out var time)
+                    ? time.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) : "无")));
+        }
     }
 
     /// <summary>

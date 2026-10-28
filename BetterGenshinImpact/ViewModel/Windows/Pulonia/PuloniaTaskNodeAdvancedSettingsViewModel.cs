@@ -21,7 +21,7 @@ namespace BetterGenshinImpact.ViewModel.Windows.Pulonia;
 /// </summary>
 public partial class PuloniaTaskNodeAdvancedSettingsViewModel : ObservableObject, IDisposable
 {
-    /// <summary>共享设置、采集 CD 与 JS 脚本设置窗口入口；为空时这些窗口不可用（例如测试）。</summary>
+    /// <summary>共享设置、路线 CD 与 JS 脚本设置窗口入口；为空时这些窗口不可用（例如测试）。</summary>
     private readonly IPuloniaTaskSettingsDialogs? _dialogs;
 
     /// <summary>编辑会话，共享设置窗口用它选择和保存方案；为空时窗口不提供方案。</summary>
@@ -102,7 +102,7 @@ public partial class PuloniaTaskNodeAdvancedSettingsViewModel : ObservableObject
     /// <summary>为指定节点建立设置状态，并在文档变化时重新读取。</summary>
     /// <param name="document">节点所属的计划文档。</param>
     /// <param name="node">被编辑的节点。</param>
-    /// <param name="dialogs">窗口入口；为空时共享设置、采集 CD 与脚本设置窗口不可用。</param>
+    /// <param name="dialogs">窗口入口；为空时共享设置、路线 CD 与脚本设置窗口不可用。</param>
     /// <param name="session">编辑会话；为空时共享设置窗口不提供方案。</param>
     public PuloniaTaskNodeAdvancedSettingsViewModel(PuloniaTaskPlanDocumentViewModel document, PuloniaTaskNodeViewModel node,
         IPuloniaTaskSettingsDialogs? dialogs, PuloniaPlanEditingSession? session = null)

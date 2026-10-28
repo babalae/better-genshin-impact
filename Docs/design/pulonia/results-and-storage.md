@@ -2,7 +2,7 @@
 
 [返回总览](README.md) · [用户故事](requirements.md) · [路线图](roadmap.md)
 
-明确什么时候算完成、什么时候可以重做，以及如何用 JSON 文件保存一致的进度和账本。2026-10-24 并入原 `collection-cooldown.md`（原文与路线返回值改造的影响评估见[归档](archive/collection-cooldown.md)），按当前代码核对。不引入 Quartz、SQLite 或 ORM。
+明确什么时候算完成、什么时候可以重做，以及如何用 JSON 文件保存一致的进度和账本。2026-10-24 并入原 `collection-cooldown.md`（原文与路线返回值改造的影响评估见[归档](archive/collection-cooldown.md)），按当前代码核对；文件级路线 CD 一节于 2026-10-28 按改造后的代码重写。不引入 Quartz、SQLite 或 ORM。
 
 ## 三个问题分别回答
 
@@ -10,18 +10,18 @@
 | --- | --- | --- |
 | 什么时候发起？ | 触发器 `PuloniaTaskTrigger` | 每天 04:00 |
 | 现在能不能开始？ | 请求准入与节点开关 | 触发器仍启用、未超过截止时间、节点已启用 |
-| 这个资源现在能不能再做？ | 文件级采集 CD 与账本 | 这份路线文件距上次成功还没到刷新时间 |
+| 这个资源现在能不能再做？ | 文件级路线 CD 与账本 | 这份路线文件距上次成功还没到刷新时间 |
 
 “每周跑一次”是执行偏好，“某奖励每周只能领一次”是游戏事实，两者分开处理。
 
 ## 完成合同
 
-执行器返回 `PuloniaTaskOutcome`，完成程度 `Kind` 为 Succeeded、ExecutedUnverified、PartiallySucceeded、Failed、Cancelled、Skipped、NeedsAttention，另带消息、结构化数据、证据和机器可读原因码 `ReasonCode`（如“树脂不足，未执行挑战”）。Succeeded 与 ExecutedUnverified 都让节点记为成功，但只有 Succeeded 能产生采集 CD，续跑时也只有 Succeeded 的节点视为已完成。
+执行器返回 `PuloniaTaskOutcome`，完成程度 `Kind` 为 Succeeded、ExecutedUnverified、PartiallySucceeded、Failed、Cancelled、Skipped、NeedsAttention，另带消息、结构化数据、证据和机器可读原因码 `ReasonCode`（如“树脂不足，未执行挑战”）。Succeeded 与 ExecutedUnverified 都让节点记为成功，但只有 Succeeded 能产生路线 CD，续跑时也只有 Succeeded 的节点视为已完成。
 
 | 场景 | 可以确认什么 | 处理 |
 | --- | --- | --- |
 | Shell 退出码为 0 | 进程按约定成功 | 节点成功，不推出任何游戏资源完成 |
-| 地图追踪整份文件执行成功 | 路线执行完毕 | 按文件估算采集完成，写入采集 CD |
+| 地图追踪整份文件执行成功 | 路线执行完毕 | 按文件估算采集完成，写入路线 CD |
 | 地图追踪中途放弃、重试耗尽、取消、超时 | 文件未完整执行 | 不写 CD，下次可整份重跑 |
 | 旧 JS、键鼠录制正常返回 | 脚本执行结束 | 默认“已执行、未核验”，不写 CD |
 | 独立任务返回结构化结果 | 按任务各自的结果合同 | 首领讨伐的累计领奖次数由编排层单独记录 |
@@ -30,16 +30,16 @@
 
 ### 防止重复执行与崩溃后的误判
 
-1. 采集 CD 在执行前判定，不预先写入占用；整份文件成功后，节点结果、确认事实和账本在同一次 state.json 替换中提交，成功落盘后才继续。
+1. 路线 CD 在执行前判定，不预先写入占用；整份文件成功后，节点结果、确认事实和账本在同一次 state.json 替换中提交，成功落盘后才继续。
 2. 同一事件键重复结算不会重复记账。
 3. 崩溃发生在成功提交前，按未成功处理，可重跑整份文件；提交后保留 CD。
 4. 程序崩溃后，遗留的活动运行在启动时转为“已中断”，不当作从未执行；关键状态写盘失败时熔断，停止自动运行并让运行进入待处理，不把采集成功当作普通失败自动重试。
 
 游戏操作与本地文件无法同时提交，因此不承诺任意任务严格只执行一次，只通过“成功后立即落盘”和中断态缩小重复窗口。遇到 CD 默认跳过当前节点并继续后续任务，不原地等待。
 
-## 文件级采集 CD
+## 文件级路线 CD
 
-当前唯一的执行前资源限制（US-03）。适用于 Pulonia 地图追踪节点，包括目录展开、计划引用、定时、手动和续跑入口；旧配置组和 JS 内部的路线调用不接入。
+当前唯一的执行前资源限制（US-03），界面称“路线 CD”（2026-10-28 前称“采集 CD”；代码与存储键 `collection_cd`、`collection.cooldown` 未改名）。适用于 Pulonia 地图追踪节点，包括目录展开、计划引用、定时、手动和续跑入口；旧配置组和 JS 内部的路线调用不接入。2026-10-28 按[路线 CD 提案](proposals/cooldown-visibility.md)改造，本节按改造后的代码核对。
 
 ### 成功的定义
 
@@ -61,18 +61,20 @@
 
 - **文件身份**：仓库文件为 `repository:<仓库 ID>/<小写相对路径>`；本地文件为 `local:<小写规范化绝对路径>`。身份不含计划、节点、版本或内容哈希。
 - 同一文件跨计划共享 CD，内容更新后保留 CD；移动、重命名或复制到新位置视为新文件。不同文件的点位重叠不去重。
-- **材料规则**：从文件所在目录向上，精确匹配最近的材料名或别名，使用代码中的集中规则表（来源为[采集物刷新文档](../../technical/genshin-collectable-respawn.md)，不在运行时解析 Markdown）：
+- **材料规则**：从文件所在目录向上，精确匹配最近的材料名、别名或类别目录名，最近一级命中即停止。规则表集中在 `PuloniaCollectionCooldownRules`（来源为[采集物刷新文档](../../technical/genshin-collectable-respawn.md)，不在运行时解析 Markdown）：
 
 | 类别 | 规则 |
 | --- | --- |
 | 特产（含石珀、夜泊石、清水玉）及明确的植物、食材、生物 | 滚动 12、24 或 46 小时，按文档分档 |
-| 钓鱼 | 滚动 72 小时 |
-| 晶核、晶蝶，以及明确的怪物类别 | 下一次服务器 04:00 |
-| 矿石 | 成功当天的服务器日期加 1、2 或 3 天的 00:00，显示“午夜保守估算” |
+| 钓鱼（含官方仓库目录 `提瓦特钓鱼指南`） | 滚动 72 小时 |
+| 晶核、晶蝶（参考规则）；魔物、怪物、普通怪、普通怪物、精英怪、精英怪物、地方传奇、地脉花、盗宝团 | 下一次服务器 04:00 |
+| 类别目录 `敌人与魔物`、`锄地专区` | 下一次服务器 04:00；位于材料目录之上，材料规则优先 |
+| 矿石（含官方仓库目录 `魔晶矿`） | 成功当天的服务器日期加 1、2 或 3 天的 00:00，显示“午夜保守估算” |
 | 宝箱、岩之印调查 | 一次性，成功后不再自动执行 |
-| 圣遗物、木材、摩拉盒等混合类别，以及未匹配的材料 | 不限制，可手动设置 |
+| 圣遗物、木材（含 `木材伐木点`）、摩拉盒等混合类别 | 识别为“混合类别”，不检查 CD |
+| 未匹配任何目录 | “未识别”，不检查 CD，界面单独提示 |
 
-不确定的数据在规则说明中标为参考规则。不实现木材循环刷新，也不实现调查、击杀、领奖的全局额度。
+不确定的数据在规则说明中标为参考规则。不实现木材循环刷新，也不实现调查、击杀（每日 400 只）、领奖的全局额度。按官方脚本仓库提交 `d775a4b` 的 5315 个路线文件统计，自动识别覆盖 3875 个（73%）；未识别的 1440 个中 1386 个在 `食材与炼金`，需先补刷新数据。统计方法见[提案 1.1 节](proposals/cooldown-visibility.md#11-魔物路线几乎没有-cd)，单元测试用一组真实目录样本防止规则表回退。
 
 ### 设置
 
@@ -80,19 +82,35 @@
 
 | `mode` | 字段 | 含义 |
 | --- | --- | --- |
-| `auto` | — | 按目录匹配上表；每日边界固定 4 点 |
-| `disabled` | — | 不限制 |
+| `auto` | — | 按目录匹配上表；忽略 `reset_hour`、`reset_weekday`，每日边界为 `PuloniaServerTime.DayResetHour`（4 点） |
+| `disabled` | — | 不检查 CD |
 | `rolling` | `hours` | 成功时刻加固定小时数 |
 | `daily` | `reset_hour`（0—23，默认 4） | 下一个服务器游戏日开始时 |
 | `calendar_days` | `days` | 服务器时区当天日期加若干天的 00:00 |
 | `weekly` | `reset_hour`、`reset_weekday`（1 为周一，7 为周日，默认周一 4 点） | 下一个游戏日后顺延到指定星期 |
 | `once` | — | 有成功记录后不再执行 |
 
-`auto` 模式下 `reset_hour` 固定为 4，`reset_weekday` 却仍读取用户设置，两者取值规则尚未统一。
+代码中模式为枚举 `PuloniaCollectionCooldownMode`，参数和快照仍写上表的字符串。规则对象 `PuloniaCollectionCooldownPolicy` 的来源为枚举 `PuloniaCollectionCooldownRuleSource`（Directory、Mixed、Unmatched、Manual），快照中写中文取值（“目录自动识别”“混合类别”“未匹配规则”“手动覆盖”），旧快照无需迁移。规则说明文字只由 `Policy.Description` 生成。Schema 只有 `PuloniaCollectionCooldown.CreateSchema` 一份，执行器和设置目录都引用它。
+
+表单只给三种选择：按材料自动识别（推荐）、不检查 CD、自定义周期；选择自定义后再选“每隔 N 小时”“每日”“每周”“日期间隔”“只执行一次”，存储格式不变。共享设置行显示规则摘要（“自动识别”“每日 04:00”“不检查”等）。
 
 日与周边界使用 `PuloniaServerTime.GetGameDate`（按服务器偏移减去日切小时取日期）。服务器偏移在入队时由 `PuloniaServerTime` 从 `ServerTimeHelper` 取得并写入请求的 `ServerUtcOffsetMinutes`，未初始化时按 UTC+8；续跑沿用原请求的偏移。
 
-准备快照固定本节点的规则，排队期间修改设置不影响本次运行。修改规则或关闭限制后，下一次判定从原成功时间按新规则重新计算，不改写历史；关闭限制及未匹配规则时，完整成功仍记录时间。节点设置提供独立的“采集 CD”表单，显示材料、有效规则和配置来源。
+准备快照固定本节点的规则，排队期间修改设置不影响本次运行。修改规则或关闭限制后，下一次判定从原成功时间按新规则重新计算，不改写历史；不检查及未识别时，完整成功仍记录时间。
+
+### 状态与判定
+
+唯一的判定函数是 `PuloniaCollectionCooldown.GetStatus(policy, latestEntry, now, serverOffset)`，运行判定、运行预览、任务树标记、CD 总览和 CD 表单都调用它：
+
+| 状态 `PuloniaCollectionCooldownState` | 条件 | 本次运行 |
+| --- | --- | --- |
+| Ready（可执行） | 没有成功记录，或已到下次可执行时间 | 执行 |
+| CoolingDown（CD 中） | 有记录，未到按当前规则重算的下次可执行时间 | 跳过，原因码 `pathing.cooldown_active` |
+| Completed（已完成） | 一次性规则且有记录 | 跳过，原因码 `pathing.cooldown_completed` |
+| Unmatched（未识别） | 自动识别没有命中 | 执行 |
+| NotChecked（不检查） | 用户关闭或混合类别 | 执行 |
+
+跳过的节点结果为 Skipped，带上述原因码与 collection_* 数据，消息形如“已跳过：仍在 CD，10-30 04:00 后可执行（落落莓 · 成功后 46 小时）”；同时更新运行的当前节点与消息（只在内存）。运行汇总按原因码把“路线 CD 跳过 N”与其他跳过分开。界面时间一律按本机时间显示；结果数据中的时间仍存 UTC ISO 字符串。成功后的下次可执行时间只计算一次，节点结果与账本共用。
 
 ### 作用域与键
 
@@ -107,11 +125,16 @@
 
 ### 账本
 
-账本是 state.json 中的 `ledger`，条目 `PuloniaTaskLedgerEntry` 字段为 `event_key`、`scope_key`、`effect_key`、`window_key`、`units`（固定 1）、`occurred_at`、`next_eligible_at`、`task_run_id`（`<运行 ID>:<节点地址>`）和 `evidence`（来源 `pathing.file`，数据含材料、规则、文件身份和当时的规则对象）。
+账本是 state.json 中的 `ledger`，条目 `PuloniaTaskLedgerEntry` 字段为 `event_key`、`scope_key`、`effect_key`、`window_key`（固定 `file_success`）、`units`（固定 1）、`occurred_at`、`next_eligible_at`（按记录时规则）、`task_run_id`（`<运行 ID>:<节点地址>`）和 `evidence`（来源 `pathing.file`，数据含材料、规则、文件身份和当时的规则对象）。`window_key` 与 `units` 是已删除额度框架的残留，不参与判定，下一次 state.json 格式变更时删除（D19）。
 
 - 每个（作用域，文件）只保留**最新一条**：成功时替换旧条目，判定也只看最新一条。
 - 每次成功的明细保存在对应运行历史的 `confirmed_effects` 中，账本不承担历史职责。
-- 执行记录页显示当前仍生效的账本条目，以及节点的材料、规则、最后成功时间、下次可执行时间和“按整份文件执行成功估算采集完成”的依据。人工校正“游戏外已经采过”尚未提供。
+- 不检查和未识别的文件成功后同样写入账本。账本没有过期清理，只受 10 万条上限约束。
+- **清除记录**：`IPuloniaTaskService.ClearCollectionCooldownAsync` 经 `PuloniaTaskRunStateStore.MutateAsync` 删除指定（作用域，文件）的条目，只在主实例执行；运行历史中的确认事件不变；不能撤销。“标记为已采集”不提供（D18）。
+- **账本变化通知**：新成功记录落盘或清除记录后触发 `LedgerChanged`，界面据此重新读取账本，不在每次 `RunChanged` 时重建。
+- **运行预览**：`IPuloniaTaskService.PreviewAsync` 与提交共用 `PrepareRunAsync` 准备快照（只读打开已保留归档），不写 state.json、不入队；按执行顺序对每个叶子调用 `GetStatus`，并预测“与前面同一文件，前一项成功后跳过”。一条龙绑定指定账号时按账号资料的 UID 预测，运行时以核验 UID 为准。
+
+界面呈现见[界面 · 路线 CD](user-interface.md#路线-cd)。
 
 ## 存储
 
@@ -153,7 +176,7 @@ ID 与文件命名规则见[标识与磁盘路径](identifiers-and-paths.md)；`
 | `pending_requests` | 已固定快照、尚未开始的运行记录 |
 | `active_run` | 唯一活动运行，主实例与子实例共用；`request.execution_target` 记录执行实例 |
 | `pending_archives` | 已结束但尚未确认写入历史的运行 |
-| `ledger` | 采集 CD 账本 |
+| `ledger` | 路线 CD 账本 |
 | `trigger_states` | 定时触发游标，见[触发与热键](scheduling.md#游标) |
 
 **唯一写入入口**是主实例的 `PuloniaTaskRunStateStore.MutateAsync`：在状态门内复制当前状态（只复制集合，写时复制）→ 应用修改 → 序列化一次并按读取规则自检 → 耐久替换 → 提交为新的当前状态。保存失败时内存保持上一版本并熔断，之后拒绝新提交、停止自动运行。只读查询直接读已提交的状态，不加锁，也不为每秒的调度检查克隆整份状态。子实例以非协调器模式构造服务，不读写 state.json。

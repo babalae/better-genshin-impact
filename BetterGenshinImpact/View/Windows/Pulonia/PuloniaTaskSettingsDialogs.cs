@@ -10,7 +10,7 @@ using Newtonsoft.Json.Linq;
 namespace BetterGenshinImpact.View.Windows.Pulonia;
 
 /// <summary>
-/// 共享设置、设置方案、采集 CD 与 JS 脚本设置窗口；在视图层创建窗口并读取软件配置，结果交回视图模型提交。
+/// 共享设置、设置方案、路线 CD、运行预览与 JS 脚本设置窗口；在视图层创建窗口并读取软件配置，结果交回视图模型提交。
 /// </summary>
 public sealed class PuloniaTaskSettingsDialogs : IPuloniaTaskSettingsDialogs
 {
@@ -63,14 +63,22 @@ public sealed class PuloniaTaskSettingsDialogs : IPuloniaTaskSettingsDialogs
             LeftButtonText = "恢复继承",
             LeftButtonClick = (_, _) => { restore = true; dialog!.DialogResult = true; }
         };
-        dialog = new PromptDialog(isLeaf ? "仅完整执行成功后记录采集时间；修改规则会重算已有 CD。"
+        dialog = new PromptDialog(isLeaf ? "仅整份路线执行成功后记录时间；修改规则会按新规则重算已有 CD。"
                 : "此配置由下级地图追踪任务整体继承，子任务可单独覆盖。",
-            "采集 CD", new PuloniaCollectionCooldownView { DataContext = draft }, null, config)
+            "路线 CD", new PuloniaCollectionCooldownView { DataContext = draft }, null, config)
         {
             Owner = GetOwner(),
-            Width = 560, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner
+            Width = 580, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner
         };
         return dialog.ShowDialog() == true ? new PuloniaTaskSettingsDialogResult(null, restore) : null;
+    }
+
+    /// <inheritdoc />
+    public bool ShowRunPreview(PuloniaTaskRunPreviewViewModel viewModel)
+    {
+        var window = new PuloniaTaskRunPreviewWindow(viewModel) { Owner = GetOwner() };
+        window.ShowDialog();
+        return viewModel.StartRequested;
     }
 
     /// <inheritdoc />

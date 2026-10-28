@@ -595,9 +595,15 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
-                            <TextBlock Margin="0,0,0,8"
-                                       FontWeight="SemiBold"
-                                       Text="{Binding ResourcePreviewTitle}" />
+                            <StackPanel Margin="0,0,0,8">
+                                <TextBlock FontWeight="SemiBold" Text="{Binding ResourcePreviewTitle, Mode=OneWay}" />
+                                <!-- 地图追踪资源按目录自动识别的刷新规则；未识别时提示成功后不会跳过。 -->
+                                <TextBlock Margin="0,4,0,0"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                           Text="{Binding CooldownHint, Mode=OneWay}"
+                                           TextWrapping="Wrap"
+                                           Visibility="{Binding HasCooldownHint, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            </StackPanel>
                             <TextBox Grid.Row="1"
                                      Padding="0"
                                      AcceptsReturn="True"
@@ -639,7 +645,7 @@
                     </Border>
                     <!--
                     添加时只保留无法事后修改的目录添加方式，以及暂无其他可视化入口的录制回放选项。
-                    地图追踪与 JS 的队伍、拾取、战斗和采集 CD 不在这里填写：新任务沿用所在分组或默认值，
+                    地图追踪与 JS 的队伍、拾取、战斗和路线 CD 不在这里填写（路线 CD 只在资源详情中显示识别结果）：新任务沿用所在分组或默认值，
                     添加后在“编辑配置”中修改（分组也可统一设置）；视图模型仍保留这些字段供新一条龙弹窗使用。
                     -->
                     <Border Grid.Row="1"

@@ -109,9 +109,19 @@ public sealed class PuloniaTaskRunItemViewModel : ObservableObject
     /// <summary>
     /// 已结束尝试的业务结果汇总，重试尝试不冒充已完成的不同节点数。
     /// </summary>
-    public string ResultSummary => $"{NodeResults.Count} 次尝试 · "
-        + string.Join(" · ", NodeResults.GroupBy(item => item.OutcomeKind)
-            .Select(group => $"{PuloniaTaskHistoryText.Outcome(group.Key)} {group.Count()}"));
+    public string ResultSummary
+    {
+        get
+        {
+            // 因路线 CD 跳过按原因码单独计数，与禁用、续跑已完成等其他跳过分开
+            var cooldownSkips = NodeResults.Count(PuloniaCollectionCooldown.IsCooldownSkip);
+            var parts = NodeResults.Where(item => !PuloniaCollectionCooldown.IsCooldownSkip(item))
+                .GroupBy(item => item.OutcomeKind)
+                .Select(group => $"{PuloniaTaskHistoryText.Outcome(group.Key)} {group.Count()}").ToList();
+            if (cooldownSkips > 0) parts.Add($"路线 CD 跳过 {cooldownSkips}");
+            return $"{NodeResults.Count} 次尝试 · " + string.Join(" · ", parts);
+        }
+    }
 
     /// <summary>
     /// 存在不确定业务结果时显示人工核验提示。
@@ -141,7 +151,7 @@ public sealed class PuloniaTaskRunItemViewModel : ObservableObject
     public bool CanResume => IsHistorical && Run.Status != PuloniaTaskRunStatus.Succeeded;
 
     /// <summary>
-    /// 运行账号摘要；世界拥有者字段已删除，采集 CD 按实际核验 UID 或默认账号隔离。
+    /// 运行账号摘要；世界拥有者字段已删除，路线 CD 按实际核验 UID 或默认账号隔离。
     /// </summary>
     public string ScopeText => $"账号：{Run.AccountId ?? "默认"}";
 

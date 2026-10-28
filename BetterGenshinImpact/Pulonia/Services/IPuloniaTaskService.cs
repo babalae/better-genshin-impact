@@ -58,9 +58,26 @@ public interface IPuloniaTaskService
         bool allowUncertainReplay = false, CancellationToken ct = default);
 
     /// <summary>
-    /// 读取当前仍约束执行的采集 CD 账本：每个（作用域，文件）只有最新一条；条目只读，不能修改。
+    /// 读取路线 CD 账本：每个（作用域，文件）只有最新一条，包括已过期的记录；条目只读，不能修改。
     /// </summary>
     Task<IReadOnlyList<PuloniaTaskLedgerEntry>> ListLedgerAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// 路线 CD 账本落盘变化（新成功记录或清除记录）后触发；在协调器线程上触发，订阅方负责切换到自己的 UI 线程。
+    /// </summary>
+    event EventHandler? LedgerChanged;
+
+    /// <summary>
+    /// 按已保存计划的当前配置预测一次运行：与提交相同地准备快照，但不入队、不写运行状态。
+    /// 每个叶子给出执行、禁用、因路线 CD 跳过或本次重复的预测，运行到节点时仍会重新判定。
+    /// </summary>
+    Task<PuloniaTaskRunPreview> PreviewAsync(PuloniaTaskRequest request, CancellationToken ct = default);
+
+    /// <summary>
+    /// 清除指定（作用域，文件）的路线 CD 记录，让路线下次照常执行；运行历史中的成功记录不受影响。
+    /// </summary>
+    /// <returns>实际删除的记录数。</returns>
+    Task<int> ClearCollectionCooldownAsync(IReadOnlyCollection<PuloniaCollectionCooldownKey> keys, CancellationToken ct = default);
 
     /// <summary>
     /// 按当前计划检查定时触发器并提交到点的请求；每次恢复只合并仍可延迟启动的最新一次，不补跑整段离线历史。

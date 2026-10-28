@@ -64,7 +64,7 @@ public static class PuloniaTaskCommonSettings
             };
         }
         var defaults = ToParameters(taskType, new ScriptGroupConfig());
-        // 采集 CD 只属于 Pulonia 地图追踪，不传给旧配置或 JS 的行走设置。
+        // 路线 CD 只属于 Pulonia 地图追踪，不传给旧配置或 JS 的行走设置。
         if (taskType == "pathing") defaults[PuloniaCollectionCooldown.ParameterName] = PuloniaCollectionCooldown.CreateDefaults();
         return defaults;
     }

@@ -89,11 +89,11 @@ public static class PuloniaTaskFieldNames
         { "units", "额度单位" }, { "event_key", "事件键" }, { "occurred_at", "事件发生时间" },
         { "report_twice", "重复报告事件（验收用）" },
 
-        // 5. 运行记录与采集 CD 结果字段
+        // 5. 运行记录与路线 CD 结果字段（时间字段按本机时间展示）
         { "resource_version", "执行资源版本" }, { "run_id", "运行 ID" },
-        { "collection_cd", "采集 CD 配置" }, { "collection_material", "采集物" },
+        { "collection_cd", "路线 CD 配置" }, { "collection_material", "识别的材料或类别" },
         { "collection_rule", "本次 CD 规则" }, { "collection_rule_source", "规则依据" },
-        { "collection_last_success_at", "最后成功时间（UTC）" }, { "collection_next_eligible_at", "下次可执行时间（UTC）" },
+        { "collection_last_success_at", "上次成功时间" }, { "collection_next_eligible_at", "下次可执行时间" },
         { "collection_basis", "采集完成依据" }
     };
 

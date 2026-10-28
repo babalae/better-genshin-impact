@@ -42,7 +42,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     private readonly SoloTaskRegistry _registry;
     /// <summary>调度宿主，为触发设置窗口提供运行反馈；测试直接构造时为空。</summary>
     private readonly PuloniaTaskTriggerHost? _triggerHost;
-    /// <summary>共享设置、方案与采集 CD 窗口入口；测试直接构造时为空。</summary>
+    /// <summary>共享设置、方案与路线 CD 窗口入口；测试直接构造时为空。</summary>
     private readonly IPuloniaTaskSettingsDialogs? _settingsDialogs;
     /// <summary>首次进入页面的加载任务；导航与 Loaded 并发进入时复用同一次加载，失败后下次进入重试。</summary>
     private Task? _pageLoad;
@@ -95,7 +95,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     /// <param name="registry">独立任务注册表</param>
     /// <param name="instances">多实例服务，提供运行实例选项</param>
     /// <param name="triggerHost">调度宿主，为触发设置窗口提供运行反馈</param>
-    /// <param name="settingsDialogs">共享设置、方案与采集 CD 窗口入口；测试直接构造时为空</param>
+    /// <param name="settingsDialogs">共享设置、方案与路线 CD 窗口入口；测试直接构造时为空</param>
     public PuloniaOneDragonViewModel(PuloniaPlanEditingSession session, IPuloniaTaskService service,
         PuloniaTaskResourceCatalog catalog, PuloniaTaskStore store, SoloTaskRegistry registry,
         InstanceService? instances = null, PuloniaTaskTriggerHost? triggerHost = null,
@@ -349,7 +349,13 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     [RelayCommand]
     private async Task ShowHistoryAsync()
     {
-        using var history = new PuloniaTaskHistoryViewModel(_service, _store) { PlanFilterId = SelectedConfiguration?.Id };
+        // 路线 CD 页签默认只看当前配置用到的路线，窗口关闭时解除订阅
+        using var cooldowns = new PuloniaCollectionCooldownOverviewViewModel(Session);
+        cooldowns.SetPlanFilter(SelectedConfiguration?.Id);
+        using var history = new PuloniaTaskHistoryViewModel(_service, _store)
+        {
+            PlanFilterId = SelectedConfiguration?.Id, Cooldowns = cooldowns
+        };
         await history.RefreshAsync();
         new PromptDialog("", "一条龙执行记录", new PuloniaOneDragonHistoryView { DataContext = history }, null)
         { Owner = Application.Current.MainWindow, Width = 1100, Height = 750, SizeToContent = SizeToContent.Manual }.ShowDialog();

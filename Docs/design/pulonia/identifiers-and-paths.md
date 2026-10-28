@@ -40,8 +40,8 @@
 | 导入报告 | `User/Pulonia/imports/<yyyyMMdd-HHmmss>.txt`，同秒重名追加 `-2`、`-3` |
 | 登录凭据 | Windows 凭据目标名 `BetterGenshinImpact.Pulonia.Account.<账号 ID>`，保存时覆盖，移除账号时删除 |
 | 第三方 clone | `Repos/Pulonia/<rep_…>/`；更新临时目录为同级 `~<8 位>.update`、`~<8 位>.backup` |
-| 采集 CD 资源键 | `pathing.file:` + 文件身份原文，例如 `pathing.file:repository:official/pathing/地方特产/蒙德/风车菊/风车菊-01.json` |
-| 采集 CD 事件键 | `pathing.file:<运行 ID>:<节点地址>:<尝试次数>`，不做哈希 |
+| 路线 CD 资源键 | `pathing.file:` + 文件身份原文，例如 `pathing.file:repository:official/pathing/地方特产/蒙德/风车菊/风车菊-01.json` |
+| 路线 CD 事件键 | `pathing.file:<运行 ID>:<节点地址>:<尝试次数>`，不做哈希 |
 | 准备快照的 `path` | 仓库资源不写 `path`，执行器只认 `resource`；本地资源保持原路径 |
 
 ## 资源存储布局
@@ -83,7 +83,7 @@ User\Pulonia\ScriptResources\                           29
 
 ### 仓库路线的逻辑路径
 
-`PathingTask.BuildFromJson(json, logicalPath)` 与 `BuildFromFilePath` 共用版本检查和 `EnableMonsterLootSplit` 传播。仓库路线的逻辑路径为 `MapPathingViewModel.PathJsonPath` 加去掉 `pathing/` 前缀的相对路径，只用于 `FileName`、日志和 `GetMaterialName()`，不读取该位置。这样仓库路线也能按材料目录选择队伍和采集 CD 规则。
+`PathingTask.BuildFromJson(json, logicalPath)` 与 `BuildFromFilePath` 共用版本检查和 `EnableMonsterLootSplit` 传播。仓库路线的逻辑路径为 `MapPathingViewModel.PathJsonPath` 加去掉 `pathing/` 前缀的相对路径，只用于 `FileName`、日志和 `GetMaterialName()`，不读取该位置。这样仓库路线也能按材料目录选择队伍和路线 CD 规则。
 
 ### JS 工作目录
 
