@@ -8,6 +8,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.Infrastructure.Temp;
 using BetterGenshinImpact.Service.Notification.Model;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 using BetterGenshinImpact.Service.Notifier;
@@ -36,17 +37,24 @@ public class NotificationService : IHostedService, IDisposable
     private readonly HttpClient _notifyHttpClient;
     private readonly CancellationTokenSource? _webSocketCts;
 
+    /// <summary>
+    ///     临时文件服务，Windows 通知的配图写入其中
+    /// </summary>
+    private readonly ITempFileService _tempFileService;
+
     // 缓存配置对象引用
     private NotificationConfig? _notificationConfig;
 
     /// <summary>
     ///     构造函数
     /// </summary>
-    public NotificationService(NotifierManager notifierManager, GameRuntimeService gameRuntimeService, AllConfig config)
+    public NotificationService(NotifierManager notifierManager, GameRuntimeService gameRuntimeService, AllConfig config,
+        ITempFileService tempFileService)
     {
         _notifierManager = notifierManager ?? throw new ArgumentNullException(nameof(notifierManager));
         _gameRuntimeService = gameRuntimeService;
         _config = config;
+        _tempFileService = tempFileService;
         _notifyHttpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
         _webSocketCts = new CancellationTokenSource();
     }
@@ -141,7 +149,7 @@ public class NotificationService : IHostedService, IDisposable
     {
         if (_notificationConfig?.WindowsUwpNotificationEnabled == true)
         {
-            _notifierManager.RegisterNotifier(new WindowsUwpNotifier());
+            _notifierManager.RegisterNotifier(new WindowsUwpNotifier(_tempFileService));
         }
     }
 

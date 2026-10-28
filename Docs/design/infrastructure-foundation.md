@@ -1,6 +1,6 @@
 # 基础设施统一：WebView2、网络与下载、缓存、临时文件
 
-状态：设计已确认（第 2 版），2026-10-28，基于 `refactor/20260930` 分支代码。
+状态：设计已确认（第 2 版），2026-10-28，基于 `refactor/20260930` 分支代码。阶段 1 已实施，其余阶段待实施。
 
 第 2 版变更：程序生成的数据统一放到新目录 `Data/`；推理缓存、通用文件缓存、下载分目录存放；WebView2 支持多个普通环境并集中管理环境配置；旧目录每个版本清理一次，不再迁移；第 15 节的决策已确认。
 
@@ -82,6 +82,8 @@
 | 脚本更新备份会被启动清理删除 | `ScriptRepoUpdater.BackupScriptFiles` / `RestoreScriptFiles` | 更新中途崩溃时丢失用户保存的脚本文件 | 1 |
 | 备份路径未校验 | 同上 | 订阅链接里带 `..` 的路径可以在 `User/Temp` 之外创建和覆盖文件 | 1 |
 | 多实例共用临时目录且整目录删除 | `TempManager` | 一个实例退出会删除另一实例的临时文件 | 1 |
+| 启动时的临时目录清理与订阅脚本自动更新同时进行 | `MainWindowViewModel.OnLoaded` 先调用 `StartAutoUpdate()`（后台执行），紧接着调用 `TempManager.CleanUp()` | 自动更新刚写入 `User/Temp` 的备份可能被立即删除 | 1 |
+| manifest 的 `savedFiles` 路径未校验 | `ScriptRepoUpdater.BackupScriptFiles` | 仓库中的 manifest 写入 `..` 可以把用户文件复制到备份目录之外 | 1 |
 | JS 脚本 HTTP 重定向绕过允许列表 | `Core/Script/Dependence/Http.cs` | 脚本可经重定向访问未授权地址 | 3 |
 | 灰度判定每次启动都变 | `UpdateService.UpdateFromOss` 中的 `deviceId.GetHashCode()` | .NET 的字符串哈希按进程随机，灰度结果不是按设备稳定分组。改为取 `SHA256(deviceId)` 前 4 字节对 10 取余，同一设备每次结果相同（已确认修复，灰度用户分布会随之变化） | 3 |
 | `DownloadRepoAndUnzip` 不安全且无调用方 | `ScriptRepoUpdater` | 文件名取自响应头，可越界写入；整包读入内存 | 3（删除） |
@@ -385,7 +387,9 @@ public static class TempCategories
 {
     public static readonly TempCategory ScriptRepository = new("script-repo", "脚本仓库导入与更新");
     public static readonly TempCategory Notification = new("notification", "通知图片");
-    public static readonly TempCategory General = new("general", "其他");
+
+    /// <summary>全部分类，供存储区域登记。</summary>
+    public static IReadOnlyList<TempCategory> All { get; } = [ScriptRepository, Notification];
 }
 
 /// <summary>临时文件服务。临时文件在进程退出时删除，进程异常结束后由下次启动回收。</summary>
@@ -1194,6 +1198,7 @@ dotnet msbuild BetterGenshinImpact.sln -restore -p:Configuration=Debug -nologo -
 | 阶段 | 内容 | 验收 |
 |---|---|---|
 | 1. 存储基础与临时文件 | `AppPaths`、`StorageArea` 与 `IStorageService`、`PendingCleanupStore`、`LegacyDataCleaner`、`AtomicFile`、`ITempFileService`；迁移 `TempManager` 的全部用法、脚本更新备份、仓库导入与克隆的临时目录、通知图片；旧目录清单加入 `User/Temp`、`Repos/Temp` | 主实例和云原神实例同时运行时，任一实例退出不影响另一实例的临时文件；结束进程后重启会回收残留；脚本更新中途结束进程后备份仍在，并有提示；带 `..` 的订阅路径被拒绝；旧目录清理每个版本只执行一次，有文件被占用时下次启动重试 |
+| 1 的实施说明（已完成） | 与上一行的差异：`DownloadRepoAndUnzip` 依赖被删除的 `Repos/Temp`，且没有活跃调用，提前在阶段 1 删除；脚本更新备份改为每个脚本一个时间戳目录，全部恢复成功才删除，未恢复的备份在下次启动时以对话框提示并可打开目录；订阅路径和 `savedFiles` 都校验为安全的相对路径；不定义"其他"临时分类，新功能按需新增 | 编译通过；临时验证测试覆盖了路径校验、租约与遗留目录回收、分类清理、存储区域清理和推迟清理，验证后删除；多实例同时运行与中途结束进程的场景需在真实环境验收 |
 | 2. 存储空间窗口与推理缓存 | 窗口、ViewModel、设置页入口；推理缓存改到 `Data/Cache/Inference`，删除 `BgiOnnxModel` 的按版本缓存目录；旧目录清单加入根目录 `Cache/`；登记推理缓存、日志与诊断、用户数据，以及尚未重构部分的临时区域（见 3.5） | 统计与清理不阻塞界面；被占用的文件被跳过并有提示；下次启动清理的区域在重启后被清理；启动后程序根目录不再出现 `Cache/` |
 | 3. 网络与代理 | `NetworkConfig`、`AppWebProxy`、接管 `DefaultProxy`、命名客户端与公共处理器；迁移 6.4 的全部调用点；Git 与 WebSocket 代理；JS 重定向校验；网络设置子视图与连接测试；删除 `DownloadRepoAndUnzip`；修复灰度判定哈希 | 跟随系统模式下行为与改造前一致；切换为自定义代理后，新请求经过本地代理（以代理软件的连接记录确认）；除 Infrastructure、Telegram 独立代理和测试代码外，不再出现 `new HttpClient(`；同一设备多次启动的灰度判定结果相同 |
 | 4. 下载服务与下载中心 | `DownloadService`、`IDownloadMonitor`、标题栏下载中心；迁移 `OnnxRuntimeInstaller`、`BannerImageService`；旧目录清单加入 `Plugins/OnnxRuntime/.downloads`；可选接入 Git 进度 | 下载 TensorRT 包中途断网，恢复后续传；取消后重试会续传；校验失败有明确提示；离开硬件加速页后仍能在下载中心看到进度 |

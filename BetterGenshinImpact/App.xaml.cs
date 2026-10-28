@@ -11,6 +11,7 @@ using BetterGenshinImpact.Core.Mask;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Monitor;
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.GameTask.SoloTask.Execution;
@@ -22,6 +23,8 @@ using BetterGenshinImpact.GameTask.Runtime.WebPage;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Win32;
+using BetterGenshinImpact.Infrastructure.Storage;
+using BetterGenshinImpact.Infrastructure.Temp;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Remote;
 using BetterGenshinImpact.Pulonia.Services;
@@ -182,6 +185,19 @@ public partial class App : Application
 
                 services.AddNavigationViewPageProvider();
                 services.AddSingleton(InstanceBootstrap.Current);
+                // 基础设施：存储区域、旧目录清理与临时文件，见 Docs/design/infrastructure-foundation.md
+                services.AddSingleton<PendingCleanupStore>();
+                services.AddSingleton<IStorageService, StorageService>();
+                services.AddHostedService(sp => new LegacyDataCleaner(
+                    instanceContext.IsRoot, sp.GetRequiredService<ILogger<LegacyDataCleaner>>()));
+                // 临时目录按“实例类型-进程号”命名，多个实例共用 Data/Temp 时互不影响
+                services.AddSingleton(sp => new TempFileService(
+                    $"{instanceContext.InstanceType.ToString().ToLowerInvariant()}-{instanceContext.ProcessId}",
+                    sp.GetRequiredService<ILogger<TempFileService>>()));
+                services.AddSingleton<ITempFileService>(sp => sp.GetRequiredService<TempFileService>());
+                services.AddSingleton<IStorageAreaProvider>(sp => sp.GetRequiredService<TempFileService>());
+                services.AddHostedService(sp => sp.GetRequiredService<TempFileService>());
+                services.AddSingleton<IStorageAreaProvider, ScriptUpdateBackupStorageAreaProvider>();
                 // 窗口、任务栏、Alt+Tab 与托盘共用同一份实例视觉身份。
                 services.AddSingleton(_ => InstanceVisualIdentity.Create(
                     instanceContext,
@@ -423,6 +439,12 @@ public partial class App : Application
             // 分配控制台窗口以支持控制台输出
             ConsoleHelper.AllocateConsole("BetterGI Console");
             RegisterEvents();
+            if (InstanceBootstrap.Current?.Context.IsRoot == true)
+            {
+                // 推迟到本次启动的清理（推理缓存、网页数据等）必须在使用方加载之前执行
+                TryExecutePendingCleanup();
+            }
+
             var inferenceRuntime = _host.Services.GetRequiredService<InferenceRuntimeService>();
             // 此处只准备设备配置；模型验证和提示由主实例的 MainWindowViewModel.OnLoaded 执行。
             await inferenceRuntime.InitializeAsync();
@@ -480,6 +502,19 @@ public partial class App : Application
 
     }
 
+    /// <summary>尽力执行上次登记、推迟到本次启动的存储清理；失败时只记录日志，不影响 BetterGI 启动。</summary>
+    private static void TryExecutePendingCleanup()
+    {
+        try
+        {
+            _host.Services.GetRequiredService<PendingCleanupStore>().ExecutePending();
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "执行推迟的存储清理失败，已跳过且不影响程序启动。");
+        }
+    }
+
     /// <summary>尽力清理 Pulonia 遗留锁；失败时只记录日志，不影响 BetterGI 启动。</summary>
     private static void TryCleanupPuloniaLockFiles()
     {
@@ -527,7 +562,7 @@ public partial class App : Application
             Debug.WriteLine(ex);
         }
 
-        TempManager.CleanUp();
+        // 临时文件由 TempFileService 在宿主停止时删除
 
         try
         {
