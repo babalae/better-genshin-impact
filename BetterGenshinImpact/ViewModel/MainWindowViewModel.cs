@@ -34,7 +34,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using BetterGenshinImpact.Helpers.Http;
+using BetterGenshinImpact.Infrastructure.Network;
 using BetterGenshinImpact.Service.ChildSession;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.ViewModel.Windows;
@@ -193,6 +193,11 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
 
     public AllConfig Config { get; set; }
 
+    /// <summary>
+    /// 标题栏下载中心
+    /// </summary>
+    public DownloadCenterViewModel DownloadCenter { get; }
+
     public MainWindowViewModel(
         INavigationService navigationService,
         IConfigService configService,
@@ -200,8 +205,10 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
         InstanceService instanceService,
         InstanceVisualIdentity instanceVisualIdentity,
         IInferenceModelDiagnostics inferenceDiagnostics,
-        InferenceRuntimeService inferenceRuntime)
+        InferenceRuntimeService inferenceRuntime,
+        DownloadCenterViewModel downloadCenter)
     {
+        DownloadCenter = downloadCenter;
         _inferenceDiagnostics = inferenceDiagnostics;
         _inferenceRuntime = inferenceRuntime;
         _navigationService = navigationService;
@@ -585,6 +592,8 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
         // 子实例只负责自己的生命周期；只有主实例退出时需要保护其提供的共享能力。
         if (!_instanceVisualIdentity.IsPrimary)
         {
+            // 有下载正在进行时确认退出，已下载的部分保留供下次续传
+            e.Cancel = !DownloadCenter.ConfirmExit();
             return;
         }
 
@@ -607,6 +616,8 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
             return;
         }
 
+        // 有下载正在进行时确认退出，已下载的部分保留供下次续传
+        e.Cancel = !DownloadCenter.ConfirmExit();
     }
 
     [RelayCommand]
@@ -740,11 +751,46 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
         // 更新仓库
         // ScriptRepoUpdater.Instance.AutoUpdate();
 
+        // 提示上次未恢复的脚本数据备份（更新中断等情况会保留备份），不阻塞后续启动流程
+        _ = PromptUnrestoredScriptBackupsAsync();
+
         // 自动更新已订阅的脚本 会先更新仓库；任务开始前会等待这次更新完成
         ScriptRepoUpdater.Instance.StartAutoUpdate();
 
-        // 清理临时目录
-        TempManager.CleanUp();
+        // 临时目录由 ITempFileService 在退出时清理，异常结束留下的目录在启动时回收
+    }
+
+    /// <summary>
+    /// 发现本次启动前留下、尚未恢复的脚本数据备份时提示用户，并可打开备份目录
+    /// </summary>
+    private async Task PromptUnrestoredScriptBackupsAsync()
+    {
+        try
+        {
+            var backups = ScriptRepoUpdater.FindUnrestoredBackups(InstanceBootstrap.Current.Context.StartedAt);
+            if (backups.Count == 0)
+            {
+                return;
+            }
+
+            var backupPath = ScriptRepoUpdater.ScriptUpdateBackupPath;
+            _logger.LogWarning("发现 {Count} 份未恢复的脚本数据备份：{Path}", backups.Count, backupPath);
+            var result = await ThemedMessageBox.WarningAsync(
+                $"发现 {backups.Count} 份未恢复的脚本数据备份。\n" +
+                "可能是上次订阅脚本更新中途中断，或新版本脚本不再保留这些文件。\n\n" +
+                $"备份位于：{backupPath}\n" +
+                "确认不再需要后删除该目录即可不再提示。\n\n是否打开备份目录？",
+                "脚本数据备份",
+                System.Windows.MessageBoxButton.YesNo);
+            if (result == System.Windows.MessageBoxResult.Yes)
+            {
+                Process.Start(new ProcessStartInfo("explorer.exe", $"\"{backupPath}\"") { UseShellExecute = true });
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "检查脚本数据备份失败");
+        }
     }
 
     private void ModifyFolderSecurity()
@@ -927,7 +973,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
         try
         {
             var request = new HttpRequestMessage(HttpMethod.Get, FeedWindowViewModel.CodesJsonUrl);
-            var response = await HttpClientFactory.GetCommonSendClient().SendAsync(request);
+            var response = await App.GetService<IHttpClientFactory>()!.CreateClient(HttpClientNames.Default).SendAsync(request);
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
             var items = JsonConvert.DeserializeObject<List<FeedItem>>(json) ?? [];

@@ -1,6 +1,6 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Helpers;
-using BetterGenshinImpact.Helpers.Http;
+using BetterGenshinImpact.Infrastructure.Network;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Windows;
@@ -32,12 +32,18 @@ public class UpdateService : IUpdateService
     private const string NoticeUrl = "https://hui-config.oss-cn-hangzhou.aliyuncs.com/bgi/notice.json";
     private const string DownloadPageUrl = "https://www.bettergi.com/download.html";
 
+    /// <summary>
+    /// 命名 HttpClient 工厂，版本检查与更新日志使用默认客户端
+    /// </summary>
+    private readonly IHttpClientFactory _httpClientFactory;
+
     public AllConfig Config { get; set; }
 
-    public UpdateService(IConfigService configService)
+    public UpdateService(IConfigService configService, IHttpClientFactory httpClientFactory)
     {
         _logger = App.GetLogger<UpdateService>();
         _configService = configService;
+        _httpClientFactory = httpClientFactory;
         Config = _configService.Get();
     }
 
@@ -193,7 +199,7 @@ public class UpdateService : IUpdateService
                 { "channel", "alpha" }
             };
 
-            using var httpClient = new HttpClient();
+            var httpClient = _httpClientFactory.CreateClient(HttpClientNames.Default);
 
             var finalUrl = $"{url}?{string.Join("&", queryParams.Select(x => $"{x.Key}={x.Value}"))}";
             var response = await httpClient.GetAsync(finalUrl);
@@ -270,15 +276,16 @@ public class UpdateService : IUpdateService
     {
         try
         {
-            using HttpClient httpClient = new();
+            var httpClient = _httpClientFactory.CreateClient(HttpClientNames.Default);
             Notice? notice = await httpClient.GetFromJsonAsync<Notice>(NoticeUrl);
             string deviceId = DeviceIdHelper.DeviceId;
 
             if (notice != null)
             {
-                // 灰度发布逻辑：deviceId做hash取余
-                int hash = deviceId.GetHashCode();
-                int mod = Math.Abs(hash % 10);
+                // 灰度发布逻辑：deviceId 做哈希取余。string.GetHashCode 每个进程随机，
+                // 改用 SHA256 前 4 字节，同一设备每次启动的灰度结果相同
+                var hash = BitConverter.ToUInt32(SHA256.HashData(Encoding.UTF8.GetBytes(deviceId)), 0);
+                var mod = (int)(hash % 10);
                 if (mod < notice.Gray)
                 {
                     return notice.Version;
@@ -297,8 +304,8 @@ public class UpdateService : IUpdateService
     {
         try
         {
-            using HttpClient httpClient = new();
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+            // GitHub API 要求带 UA，默认客户端会补上 BetterGI/{版本}
+            var httpClient = _httpClientFactory.CreateClient(HttpClientNames.Default);
             string jsonString =
                 await httpClient.GetStringAsync(
                     "https://api.github.com/repos/babalae/better-genshin-impact/releases/latest");

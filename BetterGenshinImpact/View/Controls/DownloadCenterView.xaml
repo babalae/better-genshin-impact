@@ -1,0 +1,123 @@
+<UserControl x:Class="BetterGenshinImpact.View.Controls.DownloadCenterView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:BetterGenshinImpact.View.Converters"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:vm="clr-namespace:BetterGenshinImpact.ViewModel"
+             Width="400"
+             d:DataContext="{d:DesignInstance Type=vm:DownloadCenterViewModel}"
+             mc:Ignorable="d">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="DownloadBooleanToVisibilityConverter" />
+        <converters:BooleanToVisibilityRevertConverter x:Key="DownloadBooleanToVisibilityRevertConverter" />
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- 标题与清除已完成 -->
+        <Grid Grid.Row="0" Margin="0,0,0,8">
+            <TextBlock VerticalAlignment="Center"
+                       FontSize="16"
+                       FontWeight="SemiBold"
+                       Text="下载" />
+            <ui:Button HorizontalAlignment="Right"
+                       Padding="10,4"
+                       Appearance="Transparent"
+                       Command="{Binding ClearFinishedCommand}"
+                       Content="清除已完成"
+                       FontSize="12" />
+        </Grid>
+
+        <!-- 任务列表：名称与操作按钮、进度条、状态文字 -->
+        <ScrollViewer Grid.Row="1"
+                      MaxHeight="360"
+                      HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Items, Mode=OneWay}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:DownloadItemViewModel}">
+                        <Border Padding="0,8"
+                                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                BorderThickness="0,1,0,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0"
+                                           Grid.Column="0"
+                                           VerticalAlignment="Center"
+                                           FontWeight="SemiBold"
+                                           Text="{Binding DisplayName, Mode=OneWay}"
+                                           TextTrimming="CharacterEllipsis"
+                                           ToolTip="{Binding DisplayName, Mode=OneWay}" />
+                                <StackPanel Grid.Row="0"
+                                            Grid.Column="1"
+                                            Margin="8,0,0,0"
+                                            Orientation="Horizontal">
+                                    <ui:Button Padding="10,3"
+                                               Command="{Binding DataContext.CancelCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                               CommandParameter="{Binding}"
+                                               Content="取消"
+                                               FontSize="12"
+                                               ToolTip="已下载的部分会保留，下次可以继续"
+                                               Visibility="{Binding IsActive, Mode=OneWay, Converter={StaticResource DownloadBooleanToVisibilityConverter}}" />
+                                    <ui:Button Padding="10,3"
+                                               Command="{Binding DataContext.RetryCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                               CommandParameter="{Binding}"
+                                               Content="重试"
+                                               FontSize="12"
+                                               ToolTip="从已下载的位置继续下载"
+                                               Visibility="{Binding CanRetry, Mode=OneWay, Converter={StaticResource DownloadBooleanToVisibilityConverter}}" />
+                                    <ui:Button Padding="10,3"
+                                               Command="{Binding DataContext.OpenFolderCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                               CommandParameter="{Binding}"
+                                               Content="打开所在文件夹"
+                                               FontSize="12"
+                                               Visibility="{Binding CanOpenFolder, Mode=OneWay, Converter={StaticResource DownloadBooleanToVisibilityConverter}}" />
+                                </StackPanel>
+                                <ProgressBar Grid.Row="1"
+                                             Grid.Column="0"
+                                             Grid.ColumnSpan="2"
+                                             Margin="0,8,0,0"
+                                             IsIndeterminate="{Binding IsIndeterminate, Mode=OneWay}"
+                                             Maximum="100"
+                                             Value="{Binding ProgressValue, Mode=OneWay}"
+                                             Visibility="{Binding IsActive, Mode=OneWay, Converter={StaticResource DownloadBooleanToVisibilityConverter}}" />
+                                <!-- 失败原因用错误色显示，其余状态用次要文字色 -->
+                                <TextBlock Grid.Row="2"
+                                           Grid.Column="0"
+                                           Grid.ColumnSpan="2"
+                                           Margin="0,4,0,0"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                           Text="{Binding StatusText, Mode=OneWay}"
+                                           TextWrapping="Wrap"
+                                           Visibility="{Binding IsFailed, Mode=OneWay, Converter={StaticResource DownloadBooleanToVisibilityRevertConverter}}" />
+                                <TextBlock Grid.Row="2"
+                                           Grid.Column="0"
+                                           Grid.ColumnSpan="2"
+                                           Margin="0,4,0,0"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                                           Text="{Binding StatusText, Mode=OneWay}"
+                                           TextWrapping="Wrap"
+                                           Visibility="{Binding IsFailed, Mode=OneWay, Converter={StaticResource DownloadBooleanToVisibilityConverter}}" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

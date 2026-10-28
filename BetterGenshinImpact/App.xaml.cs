@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -11,6 +12,7 @@ using BetterGenshinImpact.Core.Mask;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Monitor;
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.GameTask.SoloTask.Execution;
@@ -22,6 +24,12 @@ using BetterGenshinImpact.GameTask.Runtime.WebPage;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Win32;
+using BetterGenshinImpact.Infrastructure.Cache;
+using BetterGenshinImpact.Infrastructure.Network;
+using BetterGenshinImpact.Infrastructure.Network.Download;
+using BetterGenshinImpact.Infrastructure.Storage;
+using BetterGenshinImpact.Infrastructure.Temp;
+using BetterGenshinImpact.Infrastructure.WebView;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Remote;
 using BetterGenshinImpact.Pulonia.Services;
@@ -92,6 +100,11 @@ public partial class App : Application
                 // 只读的配置根，与 IConfigService.Get() 是同一个实例；需要保存的继续使用 IConfigService
                 services.AddSingleton(all);
 
+                // 网络：在任何请求发出前接管默认代理，第三方 SDK 和自建的 HttpClient 也跟随“网络与代理”设置
+                var appWebProxy = new AppWebProxy(all.NetworkConfig, HttpClient.DefaultProxy);
+                HttpClient.DefaultProxy = appWebProxy;
+                services.AddBgiHttpClients(appWebProxy);
+
                 var logFolder = Path.Combine(AppContext.BaseDirectory, "log");
                 Directory.CreateDirectory(logFolder);
                 var logFile = Path.Combine(logFolder, "better-genshin-impact.log");
@@ -151,9 +164,21 @@ public partial class App : Application
                 var onnxRuntimeLoader = new OnnxRuntimeLoader(all.HardwareAccelerationConfig, AppContext.BaseDirectory);
                 services.AddSingleton(onnxRuntimeLoader);
                 services.AddSingleton<IOnnxRuntimeSelection>(onnxRuntimeLoader);
-                var onnxRuntimeInstaller = new OnnxRuntimeInstaller(AppContext.BaseDirectory);
-                services.AddSingleton(onnxRuntimeInstaller);
-                services.AddSingleton<IOnnxRuntimeInstaller>(onnxRuntimeInstaller);
+                // 下载服务同时是下载中心的任务列表和下载目录的存储区域，见 Docs/design/infrastructure-foundation.md 第 7 节
+                services.AddSingleton(sp => new DownloadService(
+                    sp.GetRequiredService<IHttpClientFactory>().CreateClient(HttpClientNames.Download),
+                    AppPaths.Downloads,
+                    sp.GetRequiredService<ILogger<DownloadService>>()));
+                services.AddSingleton<IDownloadService>(sp => sp.GetRequiredService<DownloadService>());
+                services.AddSingleton<IDownloadMonitor>(sp => sp.GetRequiredService<DownloadService>());
+                services.AddSingleton<IStorageAreaProvider>(sp => sp.GetRequiredService<DownloadService>());
+                services.AddSingleton<DownloadCenterViewModel>();
+                // 运行库安装包经下载服务下载；NuGet、NVIDIA 元数据走 Default 客户端（自动解压缩 gzip）
+                services.AddSingleton(sp => new OnnxRuntimeInstaller(
+                    AppContext.BaseDirectory,
+                    sp.GetRequiredService<IDownloadService>(),
+                    sp.GetRequiredService<IHttpClientFactory>().CreateClient(HttpClientNames.Default)));
+                services.AddSingleton<IOnnxRuntimeInstaller>(sp => sp.GetRequiredService<OnnxRuntimeInstaller>());
                 services.AddSingleton<IInferenceDeviceDiscovery, InferenceDeviceDiscovery>();
                 services.AddSingleton<IInferenceBenchmarkLeaseProvider>(sp => new InferenceBenchmarkCoordinator(
                     BetterGenshinImpact.GameTask.Common.TaskControl.TaskSemaphore,
@@ -184,6 +209,31 @@ public partial class App : Application
 
                 services.AddNavigationViewPageProvider();
                 services.AddSingleton(InstanceBootstrap.Current);
+                // 基础设施：存储区域、旧目录清理与临时文件，见 Docs/design/infrastructure-foundation.md
+                services.AddSingleton<PendingCleanupStore>();
+                services.AddSingleton<IStorageService, StorageService>();
+                services.AddHostedService(sp => new LegacyDataCleaner(
+                    instanceContext.IsRoot, sp.GetRequiredService<ILogger<LegacyDataCleaner>>()));
+                // 临时目录按“实例类型-进程号”命名，多个实例共用 Data/Temp 时互不影响
+                services.AddSingleton(sp => new TempFileService(
+                    $"{instanceContext.InstanceType.ToString().ToLowerInvariant()}-{instanceContext.ProcessId}",
+                    sp.GetRequiredService<ILogger<TempFileService>>()));
+                services.AddSingleton<ITempFileService>(sp => sp.GetRequiredService<TempFileService>());
+                services.AddSingleton<IStorageAreaProvider>(sp => sp.GetRequiredService<TempFileService>());
+                services.AddHostedService(sp => sp.GetRequiredService<TempFileService>());
+                services.AddSingleton<IStorageAreaProvider, ScriptUpdateBackupStorageAreaProvider>();
+                services.AddSingleton<IStorageAreaProvider, InferenceCacheStorageAreaProvider>();
+                services.AddSingleton<IStorageAreaProvider, AppStorageAreaProvider>();
+                // WebView2：环境入口是创建环境的唯一位置，同时登记软件内网页的 Profile；云原神实例的缓存由实例存储登记
+                services.AddSingleton(sp => new WebViewEnvironmentProvider(
+                    instanceContext.InstanceName, sp.GetRequiredService<ILogger<WebViewEnvironmentProvider>>()));
+                services.AddSingleton<IWebViewEnvironmentProvider>(sp => sp.GetRequiredService<WebViewEnvironmentProvider>());
+                services.AddSingleton<IStorageAreaProvider>(sp => sp.GetRequiredService<WebViewEnvironmentProvider>());
+                services.AddSingleton<IStorageAreaProvider, CloudGameStorageAreaProvider>();
+                services.AddTransient<NetworkSettingsViewModel>();
+                services.AddTransient<StorageManagementViewModel>();
+                services.AddTransient<StorageManagementWindow>();
+                services.AddSingleton<Func<StorageManagementWindow>>(sp => () => sp.GetRequiredService<StorageManagementWindow>());
                 // 窗口、任务栏、Alt+Tab 与托盘共用同一份实例视觉身份。
                 services.AddSingleton(_ => InstanceVisualIdentity.Create(
                     instanceContext,
@@ -366,7 +416,15 @@ public partial class App : Application
                 services.AddSingleton<OcrFactory>();
                 services.AddMemoryCache();
                 services.AddSingleton<IAppCache, CachingService>();
-                services.AddSingleton<MemoryFileCache>();
+                // 文件缓存与远程图片，见 Docs/design/infrastructure-foundation.md 第 5 节
+                services.AddSingleton(sp => new FileCache(AppPaths.FileCache, sp.GetRequiredService<TimeProvider>(),
+                    sp.GetRequiredService<ILogger<FileCache>>()));
+                services.AddSingleton<IFileCache>(sp => sp.GetRequiredService<FileCache>());
+                services.AddSingleton<IStorageAreaProvider>(sp => sp.GetRequiredService<FileCache>());
+                services.AddHostedService(sp => new CacheMaintenanceService(
+                    sp.GetRequiredService<FileCache>(), all.StorageConfig, instanceContext.IsRoot,
+                    sp.GetRequiredService<TimeProvider>(), sp.GetRequiredService<ILogger<CacheMaintenanceService>>()));
+                services.AddSingleton<IRemoteImageService, RemoteImageService>();
                 services.AddSingleton<IMihoyoMapApiService, MihoyoMapApiService>();
                 services.AddSingleton<IKongyingTavernApiService, KongyingTavernApiService>();
                 services.AddSingleton<IHoYoLabMapApiService, HoYoLabMapApiService>();
@@ -430,6 +488,12 @@ public partial class App : Application
             // 分配控制台窗口以支持控制台输出
             ConsoleHelper.AllocateConsole("BetterGI Console");
             RegisterEvents();
+            if (InstanceBootstrap.Current?.Context.IsRoot == true)
+            {
+                // 推迟到本次启动的清理（推理缓存、网页数据等）必须在使用方加载之前执行
+                TryExecutePendingCleanup();
+            }
+
             var inferenceRuntime = _host.Services.GetRequiredService<InferenceRuntimeService>();
             // 此处只准备设备配置；模型验证和提示由主实例的 MainWindowViewModel.OnLoaded 执行。
             await inferenceRuntime.InitializeAsync();
@@ -487,6 +551,19 @@ public partial class App : Application
 
     }
 
+    /// <summary>尽力执行上次登记、推迟到本次启动的存储清理；失败时只记录日志，不影响 BetterGI 启动。</summary>
+    private static void TryExecutePendingCleanup()
+    {
+        try
+        {
+            _host.Services.GetRequiredService<PendingCleanupStore>().ExecutePending();
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "执行推迟的存储清理失败，已跳过且不影响程序启动。");
+        }
+    }
+
     /// <summary>尽力清理 Pulonia 遗留锁；失败时只记录日志，不影响 BetterGI 启动。</summary>
     private static void TryCleanupPuloniaLockFiles()
     {
@@ -534,7 +611,7 @@ public partial class App : Application
             Debug.WriteLine(ex);
         }
 
-        TempManager.CleanUp();
+        // 临时文件由 TempFileService 在宿主停止时删除
 
         try
         {

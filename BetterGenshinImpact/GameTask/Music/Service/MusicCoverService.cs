@@ -1,11 +1,10 @@
-using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Helpers.Http;
+using BetterGenshinImpact.Infrastructure.Cache;
+using BetterGenshinImpact.Infrastructure.Network;
 using BetterGenshinImpact.Service;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -17,21 +16,20 @@ namespace BetterGenshinImpact.GameTask.Music.Service;
 
 public sealed class MusicCoverService : IMusicCoverService
 {
-    private const string CacheType = "Artwork";
-    private static readonly string CacheRootDirectory = Global.Absolute(Path.Combine("User", "Music"));
-    private static readonly TimeSpan CacheTtl = TimeSpan.FromDays(180);
-
-    private readonly MemoryFileCache _fileCache;
+    /// <summary>
+    /// 封面缓存（Data/Cache/Files/music-artwork，180 天）
+    /// </summary>
+    private readonly IFileCache _fileCache;
     private readonly HttpClient _httpClient;
     private readonly ILogger<MusicCoverService> _logger = App.GetLogger<MusicCoverService>();
     private int _stopRemoteRequests;
 
-    public MusicCoverService(MemoryFileCache fileCache)
+    /// <param name="fileCache">文件缓存</param>
+    /// <param name="httpClientFactory">命名 HttpClient 工厂，搜索和封面下载都使用图片客户端</param>
+    public MusicCoverService(IFileCache fileCache, IHttpClientFactory httpClientFactory)
     {
         _fileCache = fileCache;
-        _httpClient = HttpClientFactory.GetClient(
-            "iTunesSearch",
-            () => new HttpClient { Timeout = TimeSpan.FromSeconds(20) });
+        _httpClient = httpClientFactory.CreateClient(HttpClientNames.Images);
     }
 
     public async Task<ImageSource?> GetCoverAsync(string songName, CancellationToken cancellationToken)
@@ -42,14 +40,10 @@ public sealed class MusicCoverService : IMusicCoverService
         }
 
         var normalizedSongName = NormalizeSongName(songName);
-        var bytes = await _fileCache.GetOrAddInDirectoryAsync<byte[]>(
-            CacheRootDirectory,
-            CacheType,
+        var bytes = await _fileCache.GetOrAddBytesAsync(
+            CachePartitions.MusicArtwork,
             $"v1:{normalizedSongName}",
-            CacheTtl,
             token => SearchAndDownloadArtworkAsync(songName.Trim(), token),
-            static value => value,
-            static payload => payload,
             cancellationToken);
 
         if (bytes is not { Length: > 0 })

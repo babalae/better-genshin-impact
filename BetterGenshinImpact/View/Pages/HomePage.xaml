@@ -52,11 +52,7 @@
                 </Border>
 
                 <Grid Margin="20,0,18,16" VerticalAlignment="Bottom">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0" VerticalAlignment="Bottom">
+                    <StackPanel VerticalAlignment="Bottom">
                         <TextBlock FontSize="16"
                                    FontWeight="SemiBold"
                                    Foreground="White"
@@ -91,15 +87,6 @@
                             </TextBlock>
                         </StackPanel>
                     </StackPanel>
-                    <ui:Button Grid.Column="1"
-                               MinWidth="116"
-                               Height="36"
-                               Padding="12,0"
-                               VerticalAlignment="Bottom"
-                               Appearance="Primary"
-                               Command="{Binding OpenCloudWebHostCommand, Mode=OneWay}"
-                               Content="进入云原神"
-                               Icon="{ui:SymbolIcon Games24}" />
                 </Grid>
             </Grid>
         </Border>

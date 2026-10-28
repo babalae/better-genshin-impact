@@ -33,6 +33,10 @@ public partial class NotifyIconViewModel : ObservableObject, IDisposable
     /// </summary>
     private readonly InstanceService _instanceService;
     /// <summary>
+    /// 退出前确认是否有下载正在进行。
+    /// </summary>
+    private readonly DownloadCenterViewModel _downloadCenter;
+    /// <summary>
     /// 标记 ViewModel 已释放，防止退出阶段处理迟到的实例事件。
     /// </summary>
     private bool _disposed;
@@ -66,8 +70,10 @@ public partial class NotifyIconViewModel : ObservableObject, IDisposable
     public NotifyIconViewModel(
         ChildSessionService childSessionService,
         InstanceService instanceService,
-        InstanceVisualIdentity instanceVisualIdentity)
+        InstanceVisualIdentity instanceVisualIdentity,
+        DownloadCenterViewModel downloadCenter)
     {
+        _downloadCenter = downloadCenter;
         _childSessionService = childSessionService;
         _instanceService = instanceService;
         _instanceVisualIdentity = instanceVisualIdentity;
@@ -154,7 +160,12 @@ public partial class NotifyIconViewModel : ObservableObject, IDisposable
         // 子实例只退出当前进程；主实例退出前需要保护由其提供的共享能力。
         if (!_instanceVisualIdentity.IsPrimary)
         {
-            SaveAndShutdown();
+            // 有下载正在进行时确认退出，已下载的部分保留供下次续传
+            if (_downloadCenter.ConfirmExit())
+            {
+                SaveAndShutdown();
+            }
+
             return;
         }
 
@@ -172,6 +183,12 @@ public partial class NotifyIconViewModel : ObservableObject, IDisposable
             ThemedMessageBox.Warning(
                 "桌面分身仍在运行，请先关闭桌面分身，再退出 BetterGI。",
                 "桌面分身未关闭");
+            return;
+        }
+
+        // 有下载正在进行时确认退出，已下载的部分保留供下次续传
+        if (!_downloadCenter.ConfirmExit())
+        {
             return;
         }
 

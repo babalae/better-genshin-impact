@@ -1,7 +1,6 @@
-﻿using System;
-using System.IO;
+using System;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Infrastructure.Temp;
 using BetterGenshinImpact.Service.Notification.Model;
 using BetterGenshinImpact.Service.Notifier.Interface;
 using Microsoft.Toolkit.Uwp.Notifications;
@@ -9,7 +8,8 @@ using SixLabors.ImageSharp;
 
 namespace BetterGenshinImpact.Service.Notifier;
 
-public class WindowsUwpNotifier : INotifier
+/// <param name="tempFileService">通知配图写入临时文件，随进程退出删除</param>
+public class WindowsUwpNotifier(ITempFileService tempFileService) : INotifier
 {
     public string Name => "Windows通知";
 
@@ -19,8 +19,7 @@ public class WindowsUwpNotifier : INotifier
 
         if (data.Screenshot != null)
         {
-            string uniqueFileName = $"notification_image_{Guid.NewGuid()}.png";
-            string imagePath = Path.Combine(TempManager.GetTempDirectory(), uniqueFileName);
+            string imagePath = tempFileService.CreateFilePath(TempCategories.Notification, ".png");
             data.Screenshot.SaveAsPng(imagePath);
             toastBuilder.AddHeroImage(new Uri(imagePath));
         }

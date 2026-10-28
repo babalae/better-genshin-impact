@@ -20,6 +20,8 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Runtime;
+// Newtonsoft.Json 与 System.Text.Json 都有 JsonSerializer，只引入需要的 JsonConvert
+using JsonConvert = Newtonsoft.Json.JsonConvert;
 
 namespace BetterGenshinImpact.GameTask.AutoPick;
 
@@ -63,6 +65,16 @@ public partial class AutoPickTrigger : ITaskTrigger
     /// 白名单模式最终需要拾取的列表
     /// </summary>
     private HashSet<string> _whitelistModeFinalPickList = [];
+
+    /// <summary>
+    /// 白名单模式的不拾取列表，OCR 原文命中时不做模糊匹配
+    /// </summary>
+    private HashSet<string> _whitelistModeDoNotPickList = [];
+
+    /// <summary>
+    /// 白名单模式的 OCR 单字模糊匹配器，只包含准确名称在最终拾取列表中的规则
+    /// </summary>
+    private AutoPickFuzzyMatcher _whitelistFuzzyMatcher = AutoPickFuzzyMatcher.Empty;
 
     private RecognitionObject _pickRo = null!;
 
@@ -134,6 +146,8 @@ public partial class AutoPickTrigger : ITaskTrigger
         var fuzzyBlackList = new List<string>();
         var whiteList = new HashSet<string>();
         var whitelistModeFinalPickList = new HashSet<string>();
+        var whitelistModeDoNotPickList = new HashSet<string>();
+        var whitelistFuzzyMatcher = AutoPickFuzzyMatcher.Empty;
 
         if (config.Mode == AutoPickMode.Blacklist)
         {
@@ -152,8 +166,12 @@ public partial class AutoPickTrigger : ITaskTrigger
             whitelistModeFinalPickList.UnionWith(ReadText(@"User\pick_whitelist_mode_pick_lists.txt"));
             if (config.WhitelistModeDoNotPickEnabled)
             {
-                whitelistModeFinalPickList.ExceptWith(ReadText(@"User\pick_whitelist_mode_do_not_pick_lists.txt"));
+                whitelistModeDoNotPickList = ReadText(@"User\pick_whitelist_mode_do_not_pick_lists.txt");
+                whitelistModeFinalPickList.ExceptWith(whitelistModeDoNotPickList);
             }
+
+            // 模糊匹配规则必须在最终拾取列表确定后读取，用它过滤规则
+            whitelistFuzzyMatcher = ReadFuzzyRules(@"Assets\Config\Pick\default_pick_fuzzy_white_lists.json", whitelistModeFinalPickList);
         }
 
         // 使用完整的新集合替换旧集合，防止关闭规则或切换模式后残留旧数据。
@@ -161,6 +179,58 @@ public partial class AutoPickTrigger : ITaskTrigger
         _fuzzyBlackList = fuzzyBlackList;
         _whiteList = whiteList;
         _whitelistModeFinalPickList = whitelistModeFinalPickList;
+        _whitelistModeDoNotPickList = whitelistModeDoNotPickList;
+        _whitelistFuzzyMatcher = whitelistFuzzyMatcher;
+    }
+
+    /// <summary>
+    /// 读取白名单模式的模糊匹配规则（内部配置，键为匹配模式，值为准确名称），文件不存在时视为没有规则。
+    /// 不合法的规则跳过并记录警告；准确名称不在最终拾取列表中的规则直接丢弃，使不拾取规则同样约束模糊匹配。
+    /// </summary>
+    /// <param name="jsonFilePath">规则文件的相对路径</param>
+    /// <param name="finalPickList">白名单模式最终拾取列表</param>
+    private AutoPickFuzzyMatcher ReadFuzzyRules(string jsonFilePath, HashSet<string> finalPickList)
+    {
+        try
+        {
+            var json = Global.ReadAllTextIfExist(jsonFilePath);
+            if (string.IsNullOrEmpty(json))
+            {
+                return AutoPickFuzzyMatcher.Empty;
+            }
+
+            // 新增的内部配置，按项目约定使用 Newtonsoft.Json
+            var ruleMap = JsonConvert.DeserializeObject<Dictionary<string, string?>>(json);
+            if (ruleMap is null || ruleMap.Count == 0)
+            {
+                return AutoPickFuzzyMatcher.Empty;
+            }
+
+            var rules = new List<AutoPickFuzzyRule>(ruleMap.Count);
+            foreach (var (pattern, text) in ruleMap)
+            {
+                var error = AutoPickFuzzyMatcher.Validate(pattern, text);
+                if (error is not null)
+                {
+                    _logger.LogWarning("自动拾取模糊匹配规则 {Pattern} 无效：{Reason}", pattern, error);
+                    continue;
+                }
+
+                if (finalPickList.Contains(text!))
+                {
+                    rules.Add(new AutoPickFuzzyRule(pattern, text!));
+                }
+            }
+
+            return rules.Count == 0 ? AutoPickFuzzyMatcher.Empty : new AutoPickFuzzyMatcher(rules);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "读取拾取名单配置失败");
+            ShowListReadError();
+        }
+
+        return AutoPickFuzzyMatcher.Empty;
     }
 
     /// <summary>
@@ -425,6 +495,13 @@ public partial class AutoPickTrigger : ITaskTrigger
                     LogPick(content, text);
                     InputHub.Foreground.Keyboard.KeyPress(_autoPickAssets.PickVk);
                 }
+                else if (_whitelistFuzzyMatcher.TryMatch(text, out var fuzzyRule)
+                         && !_whitelistModeDoNotPickList.Contains(text))
+                {
+                    // 精确未命中时才尝试模糊匹配；OCR 原文命中不拾取列表时以用户排除为准
+                    LogFuzzyPick(content, fuzzyRule, text);
+                    InputHub.Foreground.Keyboard.KeyPress(_autoPickAssets.PickVk);
+                }
 
                 return;
             }
@@ -555,13 +632,40 @@ public partial class AutoPickTrigger : ITaskTrigger
     /// <param name="text"></param>
     private void LogPick(CaptureContent content, string text)
     {
-        if (_lastText != text || (_lastText == text && Math.Abs(content.FrameIndex - _prevClickFrameIndex) >= 5))
+        if (ShouldLogPick(content, text))
         {
             _logger.LogInformation("交互或拾取：{Text}", text);
         }
+    }
 
+    /// <summary>
+    /// 模糊匹配拾取的日志，按准确名称去重，去重规则与 <see cref="LogPick"/> 相同。
+    /// 准确名称必须是第一个占位符：LogParse 按 交互或拾取："(.+?)" 统计拾取物品。
+    /// </summary>
+    /// <param name="content">截图内容</param>
+    /// <param name="rule">命中的模糊匹配规则</param>
+    /// <param name="ocrText">OCR 识别出的文字</param>
+    private void LogFuzzyPick(CaptureContent content, AutoPickFuzzyRule rule, string ocrText)
+    {
+        if (ShouldLogPick(content, rule.Text))
+        {
+            _logger.LogInformation("交互或拾取：{Text}", rule.Text);
+            _logger.LogInformation("模糊匹配成功，OCR 识别为 {OcrText}）",ocrText);
+        }
+    }
+
+    /// <summary>
+    /// 判断本次拾取是否需要输出日志，并记下本次拾取的文字和帧号
+    /// </summary>
+    /// <param name="content">截图内容</param>
+    /// <param name="text">用于去重的文字</param>
+    /// <returns>是否需要输出日志</returns>
+    private bool ShouldLogPick(CaptureContent content, string text)
+    {
+        var shouldLog = _lastText != text || (_lastText == text && Math.Abs(content.FrameIndex - _prevClickFrameIndex) >= 5);
         _lastText = text;
         _prevClickFrameIndex = content.FrameIndex;
+        return shouldLog;
     }
 
     /// <summary>

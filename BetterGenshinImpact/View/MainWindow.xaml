@@ -3,6 +3,7 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
                  xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+                 xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -446,6 +447,48 @@
                             </ui:DropDownButton>
                         </StackPanel>
                     </Border>
+                    <!-- 下载中心：本次运行有下载任务时显示；图标外圈为进行中任务的总进度，有失败任务时显示红点 -->
+                    <Grid DataContext="{Binding DownloadCenter, Mode=OneWay}"
+                          Visibility="{Binding HasItems, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <!-- 弹出层打开时按钮不响应点击，避免点击按钮关闭弹出层后又立即打开 -->
+                        <ui:Button Width="40"
+                                   Height="32"
+                                   Padding="0"
+                                   Background="Transparent"
+                                   BorderBrush="Transparent"
+                                   Command="{Binding OpenCommand}"
+                                   CornerRadius="0"
+                                   IsHitTestVisible="{Binding IsOpen, Mode=OneWay, Converter={StaticResource InverseBooleanConverter}}"
+                                   ToolTip="{Binding ButtonToolTip, Mode=OneWay}">
+                            <Grid Width="24" Height="24">
+                                <ui:ProgressRing Width="24"
+                                                 Height="24"
+                                                 IsIndeterminate="{Binding IsOverallIndeterminate, Mode=OneWay}"
+                                                 Progress="{Binding OverallProgress, Mode=OneWay}"
+                                                 Visibility="{Binding HasActive, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                <ui:SymbolIcon HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               FontSize="14"
+                                               Symbol="ArrowDownload24" />
+                                <Ellipse Width="8"
+                                         Height="8"
+                                         HorizontalAlignment="Right"
+                                         VerticalAlignment="Top"
+                                         Fill="{DynamicResource SystemFillColorCriticalBrush}"
+                                         IsHitTestVisible="False"
+                                         Visibility="{Binding HasFailed, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            </Grid>
+                        </ui:Button>
+                        <!-- 弹出层的定位点在按钮右下角，以 Left 方式展开：顶边对齐按钮底边，右边缘对齐按钮右边缘 -->
+                        <ui:Flyout MinWidth="0"
+                                   MinHeight="0"
+                                   HorizontalAlignment="Right"
+                                   VerticalAlignment="Bottom"
+                                   IsOpen="{Binding IsOpen, Mode=TwoWay}"
+                                   Placement="Left">
+                            <controls:DownloadCenterView />
+                        </ui:Flyout>
+                    </Grid>
                     <ui:Button Width="40"
                                Height="32"
                                Background="Transparent"

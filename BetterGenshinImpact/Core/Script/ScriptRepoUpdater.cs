@@ -4,8 +4,11 @@ using BetterGenshinImpact.Core.Script.WebView;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Http;
+using BetterGenshinImpact.Infrastructure.Network;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Helpers.Win32;
+using BetterGenshinImpact.Infrastructure.Storage;
+using BetterGenshinImpact.Infrastructure.Temp;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.View.Controls.Webview;
@@ -41,7 +44,16 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
     private readonly ILogger<ScriptRepoUpdater> _logger = App.GetLogger<ScriptRepoUpdater>();
 
-    private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(30) };
+    /// <summary>
+    /// 程序代理，用于 Git 拉取时按网络设置决定是否走代理。单例不经 DI 创建，从容器获取
+    /// </summary>
+    private static AppWebProxy? AppProxy => App.GetService<AppWebProxy>();
+
+    /// <summary>
+    /// 临时文件服务，用于仓库 ZIP 导入解压和更换仓库地址时的重新克隆。单例不经 DI 创建，从容器获取
+    /// </summary>
+    private static ITempFileService TempFiles => App.GetService<ITempFileService>()
+                                                 ?? throw new InvalidOperationException("临时文件服务尚未注册");
 
     /// <summary>
     /// 全局互斥锁，串行化所有对仓库目录和用户脚本目录的写操作，
@@ -78,8 +90,11 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     // 仓储位置
     public static readonly string ReposPath = Global.Absolute("Repos");
 
-    // 仓储临时目录 用于下载与解压
-    public static readonly string ReposTempPath = Path.Combine(ReposPath, "Temp");
+    /// <summary>
+    /// 订阅脚本更新前的用户文件备份目录。备份属于用户数据：全部恢复后删除；
+    /// 更新中断或未能恢复时保留，并在下次启动时提示用户
+    /// </summary>
+    public static readonly string ScriptUpdateBackupPath = Global.Absolute(Path.Combine("User", "Backup", "ScriptUpdate"));
 
     // // 中央仓库信息地址
     // public static readonly List<string> CenterRepoInfoUrls =
@@ -364,6 +379,14 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         {
             try
             {
+                // 订阅路径来自订阅链接或订阅文件，拒绝绝对路径和 ..，防止删除或覆盖脚本目录之外的文件
+                if (!SafePath.IsSafeRelativePath(path))
+                {
+                    failCount++;
+                    _logger.LogWarning("跳过不安全的订阅路径: {Path}", path);
+                    continue;
+                }
+
                 var (first, remainingPath) = GetFirstFolderAndRemainingPath(path);
                 if (!PathMapper.TryGetValue(first, out var userPath))
                 {
@@ -374,10 +397,10 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 var destPath = Path.Combine(userPath, remainingPath);
 
                 // 备份需要保存的文件（仅 JS 脚本）
-                List<string> backupFiles = new();
+                ScriptFileBackup? backup = null;
                 if (first == "js")
                 {
-                    backupFiles = BackupScriptFiles(path, repoPath);
+                    backup = BackupScriptFiles(path, repoPath);
                 }
 
                 // 删除旧文件/目录
@@ -400,9 +423,9 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 }
 
                 // 恢复备份的文件
-                if (first == "js" && backupFiles.Count > 0)
+                if (backup != null)
                 {
-                    RestoreScriptFiles(path, repoPath);
+                    RestoreScriptFiles(backup, path, repoPath);
                 }
 
                 // 解析 JS 脚本依赖
@@ -898,7 +921,9 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                         repo?.Dispose();
                         repo = null;
 
-                        var tempPath = repoPath + "_temp_" + Guid.NewGuid().ToString("N")[..8];
+                        // 克隆到独占的临时目录，作用域结束时删除残留；Data/Temp 与 Repos 同在程序目录，可直接移动
+                        using var cloneTemp = TempFiles.CreateScope(TempCategories.ScriptRepository);
+                        var tempPath = cloneTemp.GetPath("repo");
                         // Step 1: 克隆到临时文件夹
                         bool cloneSucceeded = false;
                         try
@@ -961,7 +986,7 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     }
 
                     // 直接获取远程分支的 Commit SHA
-                    var remoteReferences = repo.Network.ListReferences(repoUrl, CreateCredentialsHandler());
+                    var remoteReferences = repo.Network.ListReferences(repoUrl, CreateCredentialsHandler(), GitProxy.Create(AppProxy, repoUrl));
                     var remoteBranch = remoteReferences.FirstOrDefault(r => r.CanonicalName == "refs/heads/release");
 
                     if (remoteBranch == null)
@@ -1295,6 +1320,7 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         // options.FetchOptions.Depth = 1; // 浅克隆，只获取最新的提交
         // 设置凭据处理器
         options.FetchOptions.CredentialsProvider = Instance.CreateCredentialsHandler();
+        GitProxy.Apply(options.FetchOptions.ProxyOptions, AppProxy, repoUrl);
         options.FetchOptions.OnTransferProgress = progress =>
         {
             onCheckoutProgress?.Invoke($"拉取对象 {progress.ReceivedObjects}/{progress.TotalObjects}", progress.ReceivedObjects, progress.TotalObjects);
@@ -1307,7 +1333,7 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// <summary>
     /// 克隆Git仓库（只检出repo.json）
     /// 相当于 Repository.Clone(repoUrl, repoPath, options);
-    /// 用这个方法可以无视本地代理
+    /// 代理按“网络与代理”设置决定，默认直连（与原先无视本地代理的行为一致）
     /// </summary>
     /// <param name="repoUrl"></param>
     /// <param name="repoPath"></param>
@@ -1335,7 +1361,6 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             var fetchOptions = new FetchOptions
             {
                 TagFetchMode = TagFetchMode.None,
-                ProxyOptions = { ProxyType = ProxyType.None },
                 Depth = 1, // 浅拉取，只获取最新的提交
                 CredentialsProvider = CreateCredentialsHandler(), // 添加凭据处理器
                 OnTransferProgress = progress =>
@@ -1344,6 +1369,8 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     return !ct.IsCancellationRequested;
                 }
             };
+            // 代理按“网络与代理”设置：默认直连，与原先无视本地代理的行为一致；只有自定义代理时才经代理拉取
+            GitProxy.Apply(fetchOptions.ProxyOptions, AppProxy, repoUrl);
             string refSpec = $"+refs/heads/{branchName}:refs/remotes/origin/{branchName}";
             Commands.Fetch(repo, remote.Name, new[] { refSpec }, fetchOptions, "初始化拉取");
             ct.ThrowIfCancellationRequested();
@@ -1943,7 +1970,9 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
     private async Task<string> ImportLocalRepoZipCore(string zipFilePath, Action<int, string>? onProgress = null)
     {
-        var tempUnzipDir = Path.Combine(ReposTempPath, "importZipFile");
+        // 解压到独占的临时目录，在 finally 中删除
+        var importTemp = TempFiles.CreateScope(TempCategories.ScriptRepository);
+        var tempUnzipDir = importTemp.DirectoryPath;
         string targetFolderName = CenterRepoFolderName;
         // 目标仓库目录的来源锁；确定目标后取得，持有到发布更新通知之后，只阻塞读取该仓库的会话。
         FileStream? resourceAccess = null;
@@ -1952,8 +1981,6 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         {
             // 阶段1: 准备 (0-10%)
             onProgress?.Invoke(0, "正在准备导入环境...");
-            DirectoryHelper.DeleteReadOnlyDirectory(ReposTempPath);
-            Directory.CreateDirectory(tempUnzipDir);
             onProgress?.Invoke(10, "准备完成，开始解压文件...");
 
             // 阶段2: 解压 (10-50%)
@@ -2114,66 +2141,13 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         finally
         {
             resourceAccess?.Dispose();
-            // 阶段7: 清理 (95-100%)
-            DirectoryHelper.DeleteReadOnlyDirectory(ReposTempPath);
+            // 阶段7: 清理 (95-100%)：删除临时解压目录
+            importTemp.Dispose();
         }
 
         onProgress?.Invoke(100, "导入完成");
         _logger.LogInformation("Zip导入完成，目标文件夹: {Folder}", targetFolderName);
         return Path.Combine(ReposPath, targetFolderName);
-    }
-
-    public async Task DownloadRepoAndUnzip(string url)
-    {
-        await _repoWriteLock.WaitAsync();
-        try
-        {
-            // 与仓库版本保留共用按目录的跨进程锁，避免读取到更新过程中的混合来源；只锁官方仓库目录。
-            using var resourceAccess = await ScriptRepositoryStore.Shared.EnterSourceAccessAsync(CenterRepoPath);
-            await DownloadRepoAndUnzipCore(url);
-        }
-        finally
-        {
-            _repoWriteLock.Release();
-        }
-    }
-
-    private async Task DownloadRepoAndUnzipCore(string url)
-    {
-        // 下载
-        var res = await _httpClient.GetAsync(url);
-        if (!res.IsSuccessStatusCode)
-        {
-            throw new Exception("下载失败");
-        }
-
-        var bytes = await res.Content.ReadAsByteArrayAsync();
-
-        // 获取文件名
-        var contentDisposition = res.Content.Headers.ContentDisposition;
-        var fileName = contentDisposition is { FileName: not null }
-            ? contentDisposition.FileName.Trim('"')
-            : "temp.zip";
-
-        // 创建临时目录
-        if (!Directory.Exists(ReposTempPath))
-        {
-            Directory.CreateDirectory(ReposTempPath);
-        }
-
-        // 保存下载的文件
-        var zipPath = Path.Combine(ReposTempPath, fileName);
-        await File.WriteAllBytesAsync(zipPath, bytes);
-
-        // 删除旧文件夹
-        if (Directory.Exists(CenterRepoPath))
-        {
-            DirectoryHelper.DeleteReadOnlyDirectory(CenterRepoPath);
-        }
-
-        // 使用 System.IO.Compression 解压
-        ZipFile.ExtractToDirectory(zipPath, ReposPath, true);
-        ScriptRepositoryStore.Shared.NotifyUpdated(CenterRepoPath);
     }
 
     public async Task ImportScriptFromClipboard(string clipboardText)
@@ -2288,6 +2262,19 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             return;
         }
 
+        // 订阅链接来自剪贴板等外部输入，拒绝绝对路径和 ..，防止删除或覆盖脚本目录之外的文件
+        var unsafePaths = paths.Where(path => !SafePath.IsSafeRelativePath(path)).ToList();
+        if (unsafePaths.Count > 0)
+        {
+            _logger.LogWarning("订阅链接包含不安全的脚本路径，已忽略: {Paths}", string.Join(", ", unsafePaths));
+            Toast.Warning($"已忽略 {unsafePaths.Count} 个不安全的脚本路径");
+            paths = paths.Except(unsafePaths).ToList();
+            if (paths.Count == 0)
+            {
+                return;
+            }
+        }
+
         // 保存订阅信息（按当前仓库存储到文件）
         AddSubscribedPathsForCurrentRepo(paths);
 
@@ -2368,10 +2355,10 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 var destPath = Path.Combine(userPath, remainingPath);
 
                 // 备份需要保存的文件
-                List<string> backupFiles = new List<string>();
+                ScriptFileBackup? backup = null;
                 if (first == "js") // 只对JS脚本进行备份
                 {
-                    backupFiles = BackupScriptFiles(path, repoPath);
+                    backup = BackupScriptFiles(path, repoPath);
                 }
 
                 // 如果目标路径存在，先删除
@@ -2394,9 +2381,9 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 }
 
                 // 恢复备份的文件
-                if (first == "js" && backupFiles.Count > 0) // 只对JS脚本进行恢复
+                if (backup != null) // 只有JS脚本会产生备份
                 {
-                    RestoreScriptFiles(path, repoPath);
+                    RestoreScriptFiles(backup, path, repoPath);
                 }
 
                 // Resolving dependencies for JS scripts
@@ -3070,18 +3057,7 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
                 _webWindow.Panel!.WebView.CoreWebView2.AddHostObjectToScript("repoWebBridge", new RepoWebBridge(Config));
 
-                // 允许内部外链使用默认浏览器打开
-                _webWindow.Panel!.WebView.CoreWebView2.NewWindowRequested += (sender, e) =>
-                {
-                    var psi = new ProcessStartInfo
-                    {
-                        UseShellExecute = true,
-                        FileName = e.Uri
-                    };
-                    Process.Start(psi);
-
-                    e.Handled = true;
-                };
+                // 内部外链使用默认浏览器打开：由 WebViewSetup 统一处理，只放行 http、https 地址
             };
 
             _webWindow.NavigateToUri(new Uri("https://bettergi.local/index.html"));
@@ -3183,24 +3159,28 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     }
 
     /// <summary>
-    /// 备份脚本中需要保存的文件到Temp目录
+    /// 一次脚本更新前的用户文件备份
     /// </summary>
-    /// <param name="scriptPath">脚本在中央仓库中的路径</param>
+    /// <param name="SessionDirectory">本次备份的根目录，恢复完成后整体删除</param>
+    /// <param name="ScriptDirectory">该脚本的备份目录，即 SessionDirectory 下的脚本路径</param>
+    /// <param name="Files">已备份的文件或目录</param>
+    private sealed record ScriptFileBackup(string SessionDirectory, string ScriptDirectory, List<string> Files);
+
+    /// <summary>
+    /// 备份脚本中需要保存的文件到 <see cref="ScriptUpdateBackupPath"/>。
+    /// 每次备份使用独立目录，不会覆盖上次中断时留下的备份
+    /// </summary>
+    /// <param name="scriptPath">脚本在中央仓库中的路径，调用方已校验为安全的相对路径</param>
     /// <param name="repoPath">中央仓库路径</param>
-    /// <returns>备份的文件路径列表</returns>
-    private List<string> BackupScriptFiles(string scriptPath, string repoPath)
+    /// <returns>备份信息；没有需要备份的文件时为 null</returns>
+    private ScriptFileBackup? BackupScriptFiles(string scriptPath, string repoPath)
     {
         var backupFiles = new List<string>();
-        var tempBackupPath = Global.Absolute("User\\Temp");
-        var scriptPathSafe = scriptPath;
-        var backupScriptDir = Path.Combine(tempBackupPath, scriptPathSafe);
+        var sessionDir = Path.Combine(ScriptUpdateBackupPath, $"{DateTime.Now:yyyyMMdd-HHmmss}-{ShortId.Create(null, 8)}");
+        // 备份目录在实际复制文件时才创建，没有需要备份的文件时不留下空目录
+        var backupScriptDir = SafePath.Combine(sessionDir, scriptPath);
         try
         {
-            if (!Directory.Exists(backupScriptDir))
-            {
-                Directory.CreateDirectory(backupScriptDir);
-            }
-
             // 获取脚本的manifest文件内容
             string? manifestContent = null;
 
@@ -3214,7 +3194,7 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 if (manifestContent == null)
                 {
                     _logger.LogWarning($"脚本manifest文件不存在: {scriptPath}/manifest.json");
-                    return backupFiles;
+                    return null;
                 }
             }
             else
@@ -3224,7 +3204,7 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 if (!File.Exists(scriptManifestPath))
                 {
                     _logger.LogWarning($"脚本manifest文件不存在: {scriptManifestPath}");
-                    return backupFiles;
+                    return null;
                 }
                 manifestContent = File.ReadAllText(scriptManifestPath);
             }
@@ -3235,7 +3215,7 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             if (manifest.SavedFiles == null || manifest.SavedFiles.Length == 0)
             {
                 _logger.LogInformation($"脚本 {scriptPath} 没有需要保存的文件");
-                return backupFiles;
+                return null;
             }
 
             // 获取脚本在用户目录中的路径
@@ -3243,7 +3223,7 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             if (!PathMapper.TryGetValue(first, out var userPath))
             {
                 _logger.LogWarning($"未知的脚本路径映射: {scriptPath}");
-                return backupFiles;
+                return null;
             }
 
             var scriptUserPath = Path.Combine(userPath, remainingPath);
@@ -3251,8 +3231,15 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             // 备份每个需要保存的文件
             foreach (var savedFileRaw in manifest.SavedFiles)
             {
+                // savedFiles 来自仓库中的 manifest，拒绝越出脚本目录的路径
+                if (!SafePath.IsSafeRelativePath(savedFileRaw?.TrimEnd('/', '\\')))
+                {
+                    _logger.LogWarning("忽略不安全的 savedFiles 路径: {SavedFile}", savedFileRaw);
+                    continue;
+                }
+
                 // 自动补全所有目录路径为以/结尾
-                var savedFile = savedFileRaw;
+                var savedFile = savedFileRaw!;
                 var fullPath = Path.Combine(scriptUserPath, savedFile.TrimEnd('/', '\\'));
                 bool isDir = savedFile.EndsWith("/") || Directory.Exists(fullPath);
                 if (!savedFile.EndsWith("/") && Directory.Exists(fullPath))
@@ -3311,19 +3298,21 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             _logger.LogError(ex, $"备份脚本文件时发生错误: {scriptPath}");
         }
 
-        return backupFiles;
+        // 部分文件备份失败时仍返回已备份的部分，让更新后能恢复
+        return backupFiles.Count > 0 ? new ScriptFileBackup(sessionDir, backupScriptDir, backupFiles) : null;
     }
 
     /// <summary>
-    /// 恢复备份的文件到指定位置并清理Temp目录
+    /// 恢复备份的文件到指定位置。全部恢复成功才删除备份；
+    /// 其他情况保留备份，下次启动时由 <see cref="FindUnrestoredBackups"/> 发现并提示用户
     /// </summary>
+    /// <param name="backup">更新前的备份</param>
     /// <param name="scriptPath">脚本在中央仓库中的路径</param>
     /// <param name="repoPath">中央仓库路径</param>
-    private void RestoreScriptFiles(string scriptPath, string repoPath)
+    private void RestoreScriptFiles(ScriptFileBackup backup, string scriptPath, string repoPath)
     {
-        var tempBackupPath = Global.Absolute("User\\Temp");
-        var scriptPathSafe = scriptPath;
-        var backupScriptDir = Path.Combine(tempBackupPath, scriptPathSafe);
+        var backupScriptDir = backup.ScriptDirectory;
+        var restoredAll = false;
         try
         {
             // 获取脚本的manifest文件内容
@@ -3376,6 +3365,7 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             // 还原所有备份文件
             if (Directory.Exists(backupScriptDir))
             {
+                var failedCount = 0;
                 foreach (var file in Directory.GetFiles(backupScriptDir, "*", SearchOption.AllDirectories))
                 {
                     var relativePath = Path.GetRelativePath(backupScriptDir, file);
@@ -3392,31 +3382,61 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     }
                     catch (Exception ex)
                     {
+                        failedCount++;
                         _logger.LogError(ex, $"恢复文件失败: {file} -> {restorePath}");
                     }
                 }
+
+                restoredAll = failedCount == 0;
             }
             else
             {
                 _logger.LogWarning($"备份目录不存在: {backupScriptDir}");
             }
-
-            // 清理Temp目录下该脚本的备份
-            try
-            {
-                if (Directory.Exists(backupScriptDir))
-                {
-                    Directory.Delete(backupScriptDir, true);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "清理Temp脚本备份目录失败");
-            }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, $"恢复脚本文件时发生错误: {scriptPath}");
+        }
+        finally
+        {
+            // 清理该脚本的备份：只在全部恢复成功后删除，否则保留，避免用户数据随备份一起丢失
+            if (restoredAll)
+            {
+                var cleanup = StorageFileOperations.DeletePath(backup.SessionDirectory);
+                if (cleanup.SkippedFiles > 0)
+                {
+                    _logger.LogWarning("清理脚本备份目录失败: {Directory}", backup.SessionDirectory);
+                }
+            }
+            else if (Directory.Exists(backup.SessionDirectory))
+            {
+                _logger.LogWarning("脚本 {ScriptPath} 的数据备份未能全部恢复，已保留在 {Directory}", scriptPath, backup.SessionDirectory);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 查找本进程启动之前留下、尚未恢复的脚本数据备份目录。
+    /// 本进程启动之后创建的备份属于正在进行的更新，不计入
+    /// </summary>
+    /// <param name="startedAt">本进程的启动时间</param>
+    public static IReadOnlyList<string> FindUnrestoredBackups(DateTimeOffset startedAt)
+    {
+        try
+        {
+            if (!Directory.Exists(ScriptUpdateBackupPath))
+            {
+                return [];
+            }
+
+            return Directory.GetDirectories(ScriptUpdateBackupPath)
+                .Where(directory => Directory.GetCreationTimeUtc(directory) < startedAt.UtcDateTime)
+                .ToList();
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return [];
         }
     }
 }

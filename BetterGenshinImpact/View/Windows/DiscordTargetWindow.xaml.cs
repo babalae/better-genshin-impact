@@ -2,10 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using BetterGenshinImpact.Helpers.Http;
+using BetterGenshinImpact.Infrastructure.Network;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Notifier;
@@ -76,7 +77,7 @@ public partial class DiscordTargetWindow : FluentWindow
     {
         InitializeComponent();
 
-        _apiClient = new DiscordBotApiClient(HttpClientFactory.GetCommonSendClient(), botToken);
+        _apiClient = new DiscordBotApiClient(App.GetService<IHttpClientFactory>()!.CreateClient(HttpClientNames.Notification), botToken);
 
         foreach (var target in targets ?? [])
         {

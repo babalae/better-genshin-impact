@@ -182,6 +182,11 @@
                                                 <ui:MenuItem Header="关闭游戏" Icon="{ui:SymbolIcon Power24}"
                                                              Command="{Binding Tag.CloseInstanceCommand, Mode=OneWay}"
                                                              CommandParameter="{Binding DataContext, Mode=OneWay}" />
+                                                <ui:MenuItem Header="清理缓存（保留登录）" Icon="{ui:SymbolIcon Broom24}"
+                                                             Command="{Binding Tag.ClearCacheCommand, Mode=OneWay}"
+                                                             CommandParameter="{Binding DataContext, Mode=OneWay}"
+                                                             ToolTip="仅可清理未运行的实例，登录状态会保留。"
+                                                             ToolTipService.ShowOnDisabled="True" />
                                                 <Separator />
                                                 <ui:MenuItem Header="删除实例…" Icon="{ui:SymbolIcon Delete24}"
                                                              Command="{Binding Tag.DeleteInstanceCommand, Mode=OneWay}"

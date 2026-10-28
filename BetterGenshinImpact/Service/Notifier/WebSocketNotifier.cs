@@ -3,6 +3,7 @@ using System.Net.WebSockets;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Infrastructure.Network;
 using BetterGenshinImpact.Service.Notification.Model;
 using BetterGenshinImpact.Service.Notifier.Interface;
 
@@ -20,7 +21,21 @@ namespace BetterGenshinImpact.Service.Notifier
             _endpoint = endpoint;
             _jsonSerializerOptions = jsonSerializerOptions;
             _cts = cts;
-            _webSocket = new ClientWebSocket();
+            _webSocket = CreateSocket();
+        }
+
+        /// <summary>
+        /// 创建 WebSocket，代理跟随网络与代理设置
+        /// </summary>
+        private static ClientWebSocket CreateSocket()
+        {
+            var socket = new ClientWebSocket();
+            if (App.GetService<AppWebProxy>() is { } proxy)
+            {
+                socket.Options.Proxy = proxy;
+            }
+
+            return socket;
         }
 
         public string Name => "WebSocketNotifier";
@@ -31,7 +46,7 @@ namespace BetterGenshinImpact.Service.Notifier
                 return;
 
             _webSocket.Dispose();
-            _webSocket = new ClientWebSocket();
+            _webSocket = CreateSocket();
             
             try
             {
@@ -69,7 +84,7 @@ namespace BetterGenshinImpact.Service.Notifier
                 await _webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closing", _cts.Token);
             }
             _webSocket.Dispose();
-            _webSocket = new ClientWebSocket();
+            _webSocket = CreateSocket();
         }
 
         public void Dispose()

@@ -16,8 +16,10 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
+using BetterGenshinImpact.Infrastructure.WebView;
 using Microsoft.Extensions.Logging;
 using Microsoft.Web.WebView2.Core;
+using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.View;
 
@@ -28,11 +30,9 @@ public partial class HtmlMaskWindow : Window
 {
     private static readonly ConcurrentDictionary<string, HtmlMaskWindow> _windows = new();
     private const int MaxWindows = 5;
-    private const string HtmlMaskProfileName = "HtmlMask";
 
     private readonly string _id;
     private readonly string _workDir;
-    private readonly string _webView2DataPath;
     private readonly string? _virtualHostName;
     private readonly string _pageUrl;
     private bool _navigationCompleted;
@@ -57,7 +57,6 @@ public partial class HtmlMaskWindow : Window
     {
         _id = id ?? Guid.NewGuid().ToString("N");
         _workDir = Path.GetFullPath(workDir);
-        _webView2DataPath = Path.Combine(AppContext.BaseDirectory, "WebView2Data");
 
         var scriptName = Path.GetFileName(Path.TrimEndingDirectorySeparator(_workDir));
         var scriptKey = CreateScriptKey(scriptName);
@@ -118,6 +117,15 @@ public partial class HtmlMaskWindow : Window
     /// </summary>
     public static string Show(string url, string? id, string workDir)
     {
+        // 创建窗口前检查运行时，缺失时提示用户并让脚本收到明确的错误
+        if (!WebViewRuntime.IsAvailable)
+        {
+            TaskControl.Logger.LogWarning("未安装 Microsoft Edge WebView2 运行时，无法打开 HTML 遮罩");
+            Application.Current.Dispatcher.Invoke(() =>
+                Toast.Warning("脚本遮罩需要 Microsoft Edge WebView2 运行时，请安装后重试"));
+            throw new InvalidOperationException("未安装 Microsoft Edge WebView2 运行时，无法打开 HTML 遮罩");
+        }
+
         return Application.Current.Dispatcher.Invoke(() =>
         {
             // 指定ID时先关闭已有窗口
@@ -324,12 +332,11 @@ public partial class HtmlMaskWindow : Window
     {
         try
         {
-            var environment = await CoreWebView2Environment.CreateAsync(null, _webView2DataPath);
-            if (_isClosing) return;
-
-            var controllerOptions = environment.CreateCoreWebView2ControllerOptions();
-            controllerOptions.ProfileName = HtmlMaskProfileName;
-            await WebView.EnsureCoreWebView2Async(environment, controllerOptions);
+            // 环境与 Profile 由环境入口统一管理（Data/WebView2/App 的 HtmlMask Profile），与其他网页隔离；
+            // 遮罩页面不允许打开新窗口和下载
+            var provider = App.GetService<IWebViewEnvironmentProvider>()
+                           ?? throw new InvalidOperationException("WebView2 环境入口尚未初始化");
+            await WebView.InitializeAsync(provider, WebViewProfiles.HtmlMask, new WebViewOptions { OpenNewWindowInBrowser = false });
             if (_isClosing) return;
 
             WebView.DefaultBackgroundColor = System.Drawing.Color.Transparent;
@@ -453,6 +460,8 @@ public partial class HtmlMaskWindow : Window
         catch (Exception e)
         {
             TaskControl.Logger.LogError(e, "WebView2 初始化失败");
+            // 告诉用户遮罩为什么没有出现，不再静默关闭
+            Toast.Error($"脚本遮罩网页初始化失败：{e.Message}");
             if (!_isClosing)
             {
                 Close();

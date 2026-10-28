@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using BetterGenshinImpact.Infrastructure.Network;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -117,7 +118,8 @@ namespace BetterGenshinImpact.GameTask.LogParse
             return result;
         }
 
-        protected readonly HttpClient _httpClient = new HttpClient();
+        // 游戏接口客户端，跟随网络与代理设置
+        protected readonly HttpClient _httpClient = App.GetService<IHttpClientFactory>()!.CreateClient(HttpClientNames.GameApi);
 
         protected virtual async Task<ApiResponse<T>> CommonSendAsync<T>(HttpRequestMessage request,
             CancellationToken cancellationToken = default)

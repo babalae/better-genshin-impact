@@ -1,5 +1,6 @@
 using System;
 using System.Net.Http;
+using BetterGenshinImpact.Infrastructure.Network;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.GameTask.Runtime;
+using BetterGenshinImpact.Infrastructure.Temp;
 using BetterGenshinImpact.Service.Notification.Model;
 using BetterGenshinImpact.Service.Notification.Model.Enum;
 using BetterGenshinImpact.Service.Notifier;
@@ -36,18 +38,31 @@ public class NotificationService : IHostedService, IDisposable
     private readonly HttpClient _notifyHttpClient;
     private readonly CancellationTokenSource? _webSocketCts;
 
+    /// <summary>
+    ///     临时文件服务，Windows 通知的配图写入其中
+    /// </summary>
+    private readonly ITempFileService _tempFileService;
+
+    /// <summary>
+    ///     命名 HttpClient 工厂，各通知渠道的客户端跟随全局网络设置
+    /// </summary>
+    private readonly IHttpClientFactory _httpClientFactory;
+
     // 缓存配置对象引用
     private NotificationConfig? _notificationConfig;
 
     /// <summary>
     ///     构造函数
     /// </summary>
-    public NotificationService(NotifierManager notifierManager, GameRuntimeService gameRuntimeService, AllConfig config)
+    public NotificationService(NotifierManager notifierManager, GameRuntimeService gameRuntimeService, AllConfig config,
+        ITempFileService tempFileService, IHttpClientFactory httpClientFactory)
     {
         _notifierManager = notifierManager ?? throw new ArgumentNullException(nameof(notifierManager));
         _gameRuntimeService = gameRuntimeService;
         _config = config;
-        _notifyHttpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        _tempFileService = tempFileService;
+        _httpClientFactory = httpClientFactory;
+        _notifyHttpClient = httpClientFactory.CreateClient(HttpClientNames.Notification);
         _webSocketCts = new CancellationTokenSource();
     }
 
@@ -141,7 +156,7 @@ public class NotificationService : IHostedService, IDisposable
     {
         if (_notificationConfig?.WindowsUwpNotificationEnabled == true)
         {
-            _notifierManager.RegisterNotifier(new WindowsUwpNotifier());
+            _notifierManager.RegisterNotifier(new WindowsUwpNotifier(_tempFileService));
         }
     }
 
@@ -216,6 +231,7 @@ public class NotificationService : IHostedService, IDisposable
         if (_notificationConfig?.BarkNotificationEnabled == true)
         {
             _notifierManager.RegisterNotifier(new BarkNotifier(
+                _httpClientFactory.CreateClient(HttpClientNames.Notification),
                 _notificationConfig.BarkDeviceKeys,
                 _notificationConfig.BarkApiEndpoint,
                 _notificationConfig.BarkGroup,
@@ -268,8 +284,9 @@ public class NotificationService : IHostedService, IDisposable
     {
         if (_notificationConfig?.TelegramNotificationEnabled == true)
         {
+            // 启用 Telegram 独立代理时由通知器自建带代理的客户端，否则使用跟随全局网络设置的共享客户端
             _notifierManager.RegisterNotifier(new TelegramNotifier(
-                null,
+                _notificationConfig.TelegramProxyEnabled ? null : _notifyHttpClient,
                 _notificationConfig.TelegramBotToken,
                 _notificationConfig.TelegramChatId,
                 _notificationConfig.TelegramApiBaseUrl,
@@ -289,6 +306,7 @@ public class NotificationService : IHostedService, IDisposable
         var channels = ParseXxtuiChannels(_notificationConfig.XxtuiChannels);
 
         _notifierManager.RegisterNotifier(new XxtuiNotifier(
+            _httpClientFactory.CreateClient(HttpClientNames.Notification),
             _notificationConfig.XxtuiApiKey,
             _notificationConfig.XxtuiFrom,
             channels

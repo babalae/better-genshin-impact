@@ -1,5 +1,6 @@
 using System;
 using System.Net.Http;
+using BetterGenshinImpact.Infrastructure.Network;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
@@ -48,7 +49,7 @@ public class QqWebSocketHelper
 
         var verifyCode = GenerateVerifyCode();
 
-        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        using var httpClient = App.GetService<IHttpClientFactory>()!.CreateClient(HttpClientNames.Notification);
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCts.CancelAfter(TimeSpan.FromSeconds(BindTimeoutSeconds));
         var ct = timeoutCts.Token;
@@ -59,6 +60,12 @@ public class QqWebSocketHelper
         var gatewayUrl = await GetGatewayUrlAsync(httpClient, accessToken, ct);
 
         using var socket = new ClientWebSocket();
+        // 代理跟随网络与代理设置
+        if (App.GetService<AppWebProxy>() is { } proxy)
+        {
+            socket.Options.Proxy = proxy;
+        }
+
         // 3. 连接网关
         await socket.ConnectAsync(new Uri(gatewayUrl), ct);
 
@@ -123,7 +130,7 @@ public class QqWebSocketHelper
 
         var verifyCode = GenerateVerifyCode();
 
-        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        using var httpClient = App.GetService<IHttpClientFactory>()!.CreateClient(HttpClientNames.Notification);
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCts.CancelAfter(TimeSpan.FromSeconds(BindTimeoutSeconds));
         var ct = timeoutCts.Token;
@@ -137,6 +144,11 @@ public class QqWebSocketHelper
             var gatewayUrl = await GetGatewayUrlAsync(httpClient, accessToken, ct);
 
             using var socket = new ClientWebSocket();
+            // 代理跟随网络与代理设置
+            if (App.GetService<AppWebProxy>() is { } proxy)
+            {
+                socket.Options.Proxy = proxy;
+            }
             // 3. 连接网关
             await socket.ConnectAsync(new Uri(gatewayUrl), ct);
             Logger.LogInformation("QQ 群绑定已连接 WebSocket 网关");

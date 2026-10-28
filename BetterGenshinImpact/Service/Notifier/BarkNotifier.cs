@@ -117,10 +117,12 @@ namespace BetterGenshinImpact.Service.Notifier
         /// <summary>
         /// Bark通知器构造函数
         /// </summary>
+        /// <param name="httpClient">通知客户端，由调用方创建，本通知器在其上设置 10 秒超时</param>
         /// <param name="deviceKeys">设备密钥，多个设备使用逗号、分号或空格分隔</param>
         /// <param name="apiHost">Bark API基础URL</param>
         /// <param name="options">Bark通知默认选项</param>
         public BarkNotifier(
+            HttpClient httpClient,
             string deviceKeys,
             string apiHost,
             string group,
@@ -152,7 +154,7 @@ namespace BetterGenshinImpact.Service.Notifier
             _defaultOptions.Icon = icon;
 
             // 使用HttpClient进行API调用
-            _httpClient = new HttpClient();
+            _httpClient = httpClient;
             _httpClient.Timeout = TimeSpan.FromSeconds(10); // 设置合理的超时时间
         }
 

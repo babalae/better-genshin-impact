@@ -10,6 +10,7 @@
       xmlns:media="clr-namespace:System.Windows.Media;assembly=PresentationCore"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
+      xmlns:pageView="clr-namespace:BetterGenshinImpact.View.Pages.View"
       Title="CommonSettingsPage"
       d:DataContext="{d:DesignInstance Type=pages:CommonSettingsPageViewModel}"
       d:DesignHeight="2000"
@@ -261,6 +262,75 @@
                 </Grid>
             </StackPanel>
         </ui:CardExpander>
+
+        <!-- 网络与代理：卡片标题右侧显示当前模式，内容由 NetworkSettingsView 提供 -->
+        <ui:CardExpander Margin="0,0,0,12"
+                         ContentPadding="0"
+                         Icon="{ui:SymbolIcon Router24}">
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="{i18n:T 网络与代理}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 软件联网时使用的代理，修改后对新请求立即生效}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.RowSpan="2"
+                                  Grid.Column="1"
+                                  Margin="0,0,16,0"
+                                  VerticalAlignment="Center"
+                                  Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                  Text="{Binding NetworkSettings.ModeText, Mode=OneWay}" />
+                </Grid>
+            </ui:CardExpander.Header>
+            <pageView:NetworkSettingsView DataContext="{Binding NetworkSettings, Mode=OneWay}" />
+        </ui:CardExpander>
+
+        <!-- 存储空间：摘要在进入页面时后台统计，管理窗口集中展示和清理各类数据 -->
+        <ui:CardControl Margin="0,0,0,12" Icon="{ui:SymbolIcon Storage24}">
+            <ui:CardControl.Header>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="{i18n:T 存储空间}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{Binding StorageSummaryText, Mode=OneWay}"
+                                  TextWrapping="Wrap" />
+                    <ui:Button Grid.Row="0"
+                               Grid.RowSpan="2"
+                               Grid.Column="1"
+                               Margin="0,0,36,0"
+                               Command="{Binding OpenStorageManagementCommand}"
+                               Content="{i18n:T 管理}"
+                               Icon="{ui:SymbolIcon Broom24}" />
+                </Grid>
+            </ui:CardControl.Header>
+        </ui:CardControl>
 
 
         <ui:CardExpander Margin="0,0,0,12"
