@@ -3,6 +3,7 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Net.Http;
+using BetterGenshinImpact.Infrastructure.Network;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,7 +29,10 @@ public sealed class MarkdownImageLoader : IMarkdownImageLoader
     private const int MaxDownloadBytes = 20 * 1024 * 1024;
     private const long MaxPixelCount = 40_000_000;
 
-    private static readonly HttpClient HttpClient = CreateHttpClient();
+    /// <summary>
+    /// 图片客户端，每次下载时从工厂创建，跟随网络与代理设置
+    /// </summary>
+    private static HttpClient HttpClient => App.GetService<IHttpClientFactory>()!.CreateClient(HttpClientNames.Images);
     private readonly ConcurrentDictionary<string, WeakReference<MarkdownImageResult>> _cache = new(StringComparer.OrdinalIgnoreCase);
 
     public static MarkdownImageLoader Default { get; } = new();
@@ -124,21 +128,6 @@ public sealed class MarkdownImageLoader : IMarkdownImageLoader
         return result;
     }
 
-    private static HttpClient CreateHttpClient()
-    {
-        var client = new HttpClient(new HttpClientHandler
-        {
-            AllowAutoRedirect = true,
-            MaxAutomaticRedirections = 5,
-            UseCookies = false,
-            UseDefaultCredentials = false
-        })
-        {
-            Timeout = TimeSpan.FromSeconds(15)
-        };
-        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("BetterGI-Markdown", "1.0"));
-        return client;
-    }
 
     private static async Task<byte[]> ReadLimitedAsync(Stream stream, CancellationToken cancellationToken)
     {

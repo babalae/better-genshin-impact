@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -23,6 +24,7 @@ using BetterGenshinImpact.GameTask.Runtime.WebPage;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Win32;
+using BetterGenshinImpact.Infrastructure.Network;
 using BetterGenshinImpact.Infrastructure.Storage;
 using BetterGenshinImpact.Infrastructure.Temp;
 using BetterGenshinImpact.Pulonia.Executors;
@@ -92,6 +94,11 @@ public partial class App : Application
                 var all = configService.Get();
                 // 只读的配置根，与 IConfigService.Get() 是同一个实例；需要保存的继续使用 IConfigService
                 services.AddSingleton(all);
+
+                // 网络：在任何请求发出前接管默认代理，第三方 SDK 和自建的 HttpClient 也跟随“网络与代理”设置
+                var appWebProxy = new AppWebProxy(all.NetworkConfig, HttpClient.DefaultProxy);
+                HttpClient.DefaultProxy = appWebProxy;
+                services.AddBgiHttpClients(appWebProxy);
 
                 var logFolder = Path.Combine(AppContext.BaseDirectory, "log");
                 Directory.CreateDirectory(logFolder);
@@ -201,6 +208,7 @@ public partial class App : Application
                 services.AddSingleton<IStorageAreaProvider, InferenceCacheStorageAreaProvider>();
                 services.AddSingleton<IStorageAreaProvider, AppStorageAreaProvider>();
                 services.AddSingleton<IStorageAreaProvider, LegacyStorageAreaProvider>();
+                services.AddTransient<NetworkSettingsViewModel>();
                 services.AddTransient<StorageManagementViewModel>();
                 services.AddTransient<StorageManagementWindow>();
                 services.AddSingleton<Func<StorageManagementWindow>>(sp => () => sp.GetRequiredService<StorageManagementWindow>());

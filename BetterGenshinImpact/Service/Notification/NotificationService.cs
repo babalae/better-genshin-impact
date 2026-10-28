@@ -1,5 +1,6 @@
 using System;
 using System.Net.Http;
+using BetterGenshinImpact.Infrastructure.Network;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -42,6 +43,11 @@ public class NotificationService : IHostedService, IDisposable
     /// </summary>
     private readonly ITempFileService _tempFileService;
 
+    /// <summary>
+    ///     命名 HttpClient 工厂，各通知渠道的客户端跟随全局网络设置
+    /// </summary>
+    private readonly IHttpClientFactory _httpClientFactory;
+
     // 缓存配置对象引用
     private NotificationConfig? _notificationConfig;
 
@@ -49,13 +55,14 @@ public class NotificationService : IHostedService, IDisposable
     ///     构造函数
     /// </summary>
     public NotificationService(NotifierManager notifierManager, GameRuntimeService gameRuntimeService, AllConfig config,
-        ITempFileService tempFileService)
+        ITempFileService tempFileService, IHttpClientFactory httpClientFactory)
     {
         _notifierManager = notifierManager ?? throw new ArgumentNullException(nameof(notifierManager));
         _gameRuntimeService = gameRuntimeService;
         _config = config;
         _tempFileService = tempFileService;
-        _notifyHttpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+        _httpClientFactory = httpClientFactory;
+        _notifyHttpClient = httpClientFactory.CreateClient(HttpClientNames.Notification);
         _webSocketCts = new CancellationTokenSource();
     }
 
@@ -224,6 +231,7 @@ public class NotificationService : IHostedService, IDisposable
         if (_notificationConfig?.BarkNotificationEnabled == true)
         {
             _notifierManager.RegisterNotifier(new BarkNotifier(
+                _httpClientFactory.CreateClient(HttpClientNames.Notification),
                 _notificationConfig.BarkDeviceKeys,
                 _notificationConfig.BarkApiEndpoint,
                 _notificationConfig.BarkGroup,
@@ -276,8 +284,9 @@ public class NotificationService : IHostedService, IDisposable
     {
         if (_notificationConfig?.TelegramNotificationEnabled == true)
         {
+            // 启用 Telegram 独立代理时由通知器自建带代理的客户端，否则使用跟随全局网络设置的共享客户端
             _notifierManager.RegisterNotifier(new TelegramNotifier(
-                null,
+                _notificationConfig.TelegramProxyEnabled ? null : _notifyHttpClient,
                 _notificationConfig.TelegramBotToken,
                 _notificationConfig.TelegramChatId,
                 _notificationConfig.TelegramApiBaseUrl,
@@ -297,6 +306,7 @@ public class NotificationService : IHostedService, IDisposable
         var channels = ParseXxtuiChannels(_notificationConfig.XxtuiChannels);
 
         _notifierManager.RegisterNotifier(new XxtuiNotifier(
+            _httpClientFactory.CreateClient(HttpClientNames.Notification),
             _notificationConfig.XxtuiApiKey,
             _notificationConfig.XxtuiFrom,
             channels

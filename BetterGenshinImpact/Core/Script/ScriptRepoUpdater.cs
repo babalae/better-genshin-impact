@@ -4,6 +4,7 @@ using BetterGenshinImpact.Core.Script.WebView;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Http;
+using BetterGenshinImpact.Infrastructure.Network;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Helpers.Win32;
 using BetterGenshinImpact.Infrastructure.Storage;
@@ -42,6 +43,11 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     private static AllConfig Config => ConfigService.Config!;
 
     private readonly ILogger<ScriptRepoUpdater> _logger = App.GetLogger<ScriptRepoUpdater>();
+
+    /// <summary>
+    /// 程序代理，用于 Git 拉取时按网络设置决定是否走代理。单例不经 DI 创建，从容器获取
+    /// </summary>
+    private static AppWebProxy? AppProxy => App.GetService<AppWebProxy>();
 
     /// <summary>
     /// 临时文件服务，用于仓库 ZIP 导入解压和更换仓库地址时的重新克隆。单例不经 DI 创建，从容器获取
@@ -980,7 +986,7 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     }
 
                     // 直接获取远程分支的 Commit SHA
-                    var remoteReferences = repo.Network.ListReferences(repoUrl, CreateCredentialsHandler());
+                    var remoteReferences = repo.Network.ListReferences(repoUrl, CreateCredentialsHandler(), GitProxy.Create(AppProxy, repoUrl));
                     var remoteBranch = remoteReferences.FirstOrDefault(r => r.CanonicalName == "refs/heads/release");
 
                     if (remoteBranch == null)
@@ -1314,6 +1320,7 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         // options.FetchOptions.Depth = 1; // 浅克隆，只获取最新的提交
         // 设置凭据处理器
         options.FetchOptions.CredentialsProvider = Instance.CreateCredentialsHandler();
+        GitProxy.Apply(options.FetchOptions.ProxyOptions, AppProxy, repoUrl);
         options.FetchOptions.OnTransferProgress = progress =>
         {
             onCheckoutProgress?.Invoke($"拉取对象 {progress.ReceivedObjects}/{progress.TotalObjects}", progress.ReceivedObjects, progress.TotalObjects);
@@ -1326,7 +1333,7 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// <summary>
     /// 克隆Git仓库（只检出repo.json）
     /// 相当于 Repository.Clone(repoUrl, repoPath, options);
-    /// 用这个方法可以无视本地代理
+    /// 代理按“网络与代理”设置决定，默认直连（与原先无视本地代理的行为一致）
     /// </summary>
     /// <param name="repoUrl"></param>
     /// <param name="repoPath"></param>
@@ -1354,7 +1361,6 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             var fetchOptions = new FetchOptions
             {
                 TagFetchMode = TagFetchMode.None,
-                ProxyOptions = { ProxyType = ProxyType.None },
                 Depth = 1, // 浅拉取，只获取最新的提交
                 CredentialsProvider = CreateCredentialsHandler(), // 添加凭据处理器
                 OnTransferProgress = progress =>
@@ -1363,6 +1369,8 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                     return !ct.IsCancellationRequested;
                 }
             };
+            // 代理按“网络与代理”设置：默认直连，与原先无视本地代理的行为一致；只有自定义代理时才经代理拉取
+            GitProxy.Apply(fetchOptions.ProxyOptions, AppProxy, repoUrl);
             string refSpec = $"+refs/heads/{branchName}:refs/remotes/origin/{branchName}";
             Commands.Fetch(repo, remote.Name, new[] { refSpec }, fetchOptions, "初始化拉取");
             ct.ThrowIfCancellationRequested();

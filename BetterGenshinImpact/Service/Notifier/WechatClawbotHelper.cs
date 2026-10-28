@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using BetterGenshinImpact.Infrastructure.Network;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -23,6 +24,16 @@ namespace BetterGenshinImpact.Service.Notifier;
 /// </summary>
 public static class WechatClawbotHelper
 {
+    /// <summary>
+    /// 创建通知客户端并设置超时；客户端跟随网络与代理设置
+    /// </summary>
+    private static HttpClient CreateNotificationClient(TimeSpan timeout)
+    {
+        var client = App.GetService<IHttpClientFactory>()!.CreateClient(HttpClientNames.Notification);
+        client.Timeout = timeout;
+        return client;
+    }
+
     internal const string ApiBase = "https://ilinkai.weixin.qq.com";
     internal const string CdnBase = "https://novac2c.cdn.weixin.qq.com/c2c";
     internal const string ChannelVersion = "1.0.2";
@@ -47,7 +58,7 @@ public static class WechatClawbotHelper
         Action<string> onQrCodeUrl,
         CancellationToken cancellationToken)
     {
-        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
+        using var httpClient = CreateNotificationClient(TimeSpan.FromSeconds(60));
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCts.CancelAfter(TimeSpan.FromSeconds(LoginTimeoutSeconds));
         var ct = timeoutCts.Token;
@@ -151,7 +162,7 @@ public static class WechatClawbotHelper
 
         var normalizeBaseUrl = NormalizeBaseUrl(baseUrl);
         var verifyCode = GenerateVerifyCode();
-        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
+        using var httpClient = CreateNotificationClient(TimeSpan.FromSeconds(60));
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCts.CancelAfter(TimeSpan.FromSeconds(BindTimeoutSeconds));
         var ct = timeoutCts.Token;

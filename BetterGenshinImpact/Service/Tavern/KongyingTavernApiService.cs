@@ -9,7 +9,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Helpers.Http;
+using BetterGenshinImpact.Infrastructure.Network;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Model.Oauth;
 using BetterGenshinImpact.Service.Tavern.Model;
@@ -47,18 +47,26 @@ public class KongyingTavernApiService : IKongyingTavernApiService
     // 来自 https://cloud.yuanshen.site/api/area/get/list 列出地区
     internal static readonly IReadOnlySet<long> MaskMapItemTypeExcludedAreaIds = new HashSet<long> { 7, 25, 42, 16, 4, 8, 10, 26, 32, 43, 48, 53, 55, 56 };
 
+    /// <summary>
+    /// 不经 DI 创建（测试用），使用独立的缓存和客户端
+    /// </summary>
     public KongyingTavernApiService()
-        : this(CreateDefaultMemoryFileCache())
+        : this(CreateDefaultMemoryFileCache(), new HttpClient { Timeout = TimeSpan.FromSeconds(30) })
     {
     }
 
+    /// <summary>
+    /// DI 构造。服务会在客户端上保存 OAuth 令牌，因此创建一次并长期持有；主处理器设置了连接池寿命，DNS 变化仍会生效
+    /// </summary>
+    public KongyingTavernApiService(MemoryFileCache memoryFileCache, IHttpClientFactory httpClientFactory)
+        : this(memoryFileCache, httpClientFactory.CreateClient(HttpClientNames.GameApi))
+    {
+    }
 
-    public KongyingTavernApiService(MemoryFileCache memoryFileCache)
+    private KongyingTavernApiService(MemoryFileCache memoryFileCache, HttpClient httpClient)
     {
         _memoryFileCache = memoryFileCache;
-        _httpClient = HttpClientFactory.GetClient(
-            "KongyingTavern",
-            () => new HttpClient { Timeout = TimeSpan.FromSeconds(30) });
+        _httpClient = httpClient;
     }
 
     private static MemoryFileCache CreateDefaultMemoryFileCache()

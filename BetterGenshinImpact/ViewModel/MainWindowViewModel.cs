@@ -34,7 +34,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using BetterGenshinImpact.Helpers.Http;
+using BetterGenshinImpact.Infrastructure.Network;
 using BetterGenshinImpact.Service.ChildSession;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.ViewModel.Windows;
@@ -962,7 +962,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
         try
         {
             var request = new HttpRequestMessage(HttpMethod.Get, FeedWindowViewModel.CodesJsonUrl);
-            var response = await HttpClientFactory.GetCommonSendClient().SendAsync(request);
+            var response = await App.GetService<IHttpClientFactory>()!.CreateClient(HttpClientNames.Default).SendAsync(request);
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
             var items = JsonConvert.DeserializeObject<List<FeedItem>>(json) ?? [];

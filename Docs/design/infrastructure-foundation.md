@@ -1,6 +1,6 @@
 # 基础设施统一：WebView2、网络与下载、缓存、临时文件
 
-状态：设计已确认（第 2 版），2026-10-28，基于 `refactor/20260930` 分支代码。阶段 1、2 已实施，其余阶段待实施。
+状态：设计已确认（第 2 版），2026-10-28，基于 `refactor/20260930` 分支代码。阶段 1、2、3 已实施，其余阶段待实施。
 
 第 2 版变更：程序生成的数据统一放到新目录 `Data/`；推理缓存、通用文件缓存、下载分目录存放；WebView2 支持多个普通环境并集中管理环境配置；旧目录每个版本清理一次，不再迁移；第 15 节的决策已确认。
 
@@ -662,8 +662,9 @@ services.AddHttpClient(HttpClientNames.Default, c => c.Timeout = TimeSpan.FromSe
 使用规则：
 
 - 注入 `IHttpClientFactory`，每次操作调用 `CreateClient(name)`（开销很小），不把 HttpClient 存进静态字段。
-- 无法注入的静态类通过 `App.GetService<IHttpClientFactory>()` 获取。
-- 现有 `Helpers/Http/HttpClientFactory` 标记 `[Obsolete]`，迁移完成后删除。`ProxySpeedTester` 没有活跃调用，本次不处理。
+- 无法注入的静态类通过 `App.GetService<IHttpClientFactory>()!.CreateClient(name)` 获取。
+- 需要设置 `DefaultRequestHeaders`（例如登录后的 `Authorization`）的单例服务，可以在构造时创建一个客户端并长期持有。主处理器设置了 `PooledConnectionLifetime`，连接每 5 分钟重建，长期持有也能跟上 DNS 变化。
+- 原 `Helpers/Http/HttpClientFactory` 已在迁移完成后删除。`ProxySpeedTester` 改用 Default 客户端。
 
 ### 6.4 HTTP 调用点迁移
 
@@ -1202,6 +1203,7 @@ dotnet msbuild BetterGenshinImpact.sln -restore -p:Configuration=Debug -nologo -
 | 2. 存储空间窗口与推理缓存 | 窗口、ViewModel、设置页入口；推理缓存改到 `Data/Cache/Inference`，删除 `BgiOnnxModel` 的按版本缓存目录；旧目录清单加入根目录 `Cache/`；登记推理缓存、日志与诊断、用户数据，以及尚未重构部分的临时区域（见 3.5） | 统计与清理不阻塞界面；被占用的文件被跳过并有提示；下次启动清理的区域在重启后被清理；启动后程序根目录不再出现 `Cache/` |
 | 2 的实施说明（已完成） | 存储空间窗口为模态窗口，入口在设置页"本机外部访问服务"卡片之后；过渡区域由 `LegacyStorageAreaProvider` 登记（`MemoryFileCache` 目录、音乐封面、运行库安装包、软件内网页数据、云原神实例），网页数据与云原神实例暂只展示占用；推理编译缓存不参与一键清理（重新编译耗时长）；调试图片可单独清理但不参与一键清理；"文件缓存上限"设置随阶段 5 加入 | 编译通过；临时测试验证了分组、排序、一键清理金额、待清理标记，并实际加载窗口 XAML、实例化数据模板、完成布局，验证后删除 |
 | 3. 网络与代理 | `NetworkConfig`、`AppWebProxy`、接管 `DefaultProxy`、命名客户端与公共处理器；迁移 6.4 的全部调用点；Git 与 WebSocket 代理；JS 重定向校验；网络设置子视图与连接测试；删除 `DownloadRepoAndUnzip`；修复灰度判定哈希 | 跟随系统模式下行为与改造前一致；切换为自定义代理后，新请求经过本地代理（以代理软件的连接记录确认）；除 Infrastructure、Telegram 独立代理和测试代码外，不再出现 `new HttpClient(`；同一设备多次启动的灰度判定结果相同 |
+| 3 的实施说明（已完成） | 与上一行的差异：`OnnxRuntimeInstaller` 仍自建客户端（跟随 `DefaultProxy`），阶段 4 改用下载服务；`ScriptRepoWindow` 中的 `new HttpClient()` 位于已注释的代码中，不处理；`KongyingTavernApiService` 需要设置登录后的 `Authorization` 默认请求头，因此长期持有一个 GameApi 客户端；获取远程分支列表（`ListReferences`）与克隆、拉取一样按网络设置决定是否走代理；Script 客户端逐跳校验重定向，最多 5 跳，不允许从 https 降级到 http；命名客户端不保存 Cookie，并关闭工厂默认的请求日志 | 编译通过；临时验证测试覆盖了三种代理模式与绕过列表、代理地址校验、Git 代理选择、重定向校验、灰度哈希稳定性，并实际加载网络设置视图，验证后删除；经本地代理转发的实际效果需在真实环境验收 |
 | 4. 下载服务与下载中心 | `DownloadService`、`IDownloadMonitor`、标题栏下载中心；迁移 `OnnxRuntimeInstaller`、`BannerImageService`；旧目录清单加入 `Plugins/OnnxRuntime/.downloads`；可选接入 Git 进度 | 下载 TensorRT 包中途断网，恢复后续传；取消后重试会续传；校验失败有明确提示；离开硬件加速页后仍能在下载中心看到进度 |
 | 5. 缓存 | `IFileCache`、`CachePartitions`、`CacheMaintenanceService`、`IRemoteImageService`；迁移 5.5 中的用法；删除 `MemoryFileCache`；旧目录清单加入 `User/Cache/MemoryFileCache`、`User/Music/Artwork`；缓存分区登记为存储区域 | 缓存超过上限后自动降到 80%；地图上大量图标滚动时，内存中的图片数量不超过上限；清理某个分区后功能正常并重新下载 |
 | 6. WebView2 | 环境定义与 Profile、环境入口、`WebViewSetup`、运行时提示；迁移 `WebpagePanel`、`HtmlMaskWindow`、`CloudWebHostWindow`、`WebViewInstanceStore`、实例管理窗口；`ProcessFailed` 处理；网页数据存储区域；旧目录清单加入 `WebView2Data/` | 全仓库只有环境入口调用 `CoreWebView2Environment.CreateAsync`；未安装运行时能看到说明并跳转下载页；以 dotnet 宿主启动时数据目录仍在 `Data/WebView2/`；云原神实例清理缓存后登录状态保留；在 `WebViewEnvironments` 中临时增加一个测试环境，能在存储空间窗口看到对应行，删除定义后其目录显示为"已不再使用的网页数据" |

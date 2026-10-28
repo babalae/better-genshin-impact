@@ -12,7 +12,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.UseRedeemCode;
 using BetterGenshinImpact.Helpers;
-using BetterGenshinImpact.Helpers.Http;
+using BetterGenshinImpact.Infrastructure.Network;
 using BetterGenshinImpact.Service.Interface;
 using Newtonsoft.Json;
 using Wpf.Ui.Violeta.Controls;
@@ -31,7 +31,7 @@ public partial class FeedWindowViewModel : ViewModel
     [ObservableProperty] private bool _isCnServerSelected = true;
     [ObservableProperty] private bool _isGlobalServerSelected;
 
-    private readonly HttpClient _httpClient = HttpClientFactory.GetCommonSendClient();
+    private readonly HttpClient _httpClient = App.GetService<IHttpClientFactory>()!.CreateClient(HttpClientNames.Default);
     public CommonConfig CommonConfig { get; }
 
     public FeedWindowViewModel()

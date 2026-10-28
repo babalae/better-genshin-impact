@@ -1,5 +1,5 @@
 using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Helpers.Http;
+using BetterGenshinImpact.Infrastructure.Network;
 using BetterGenshinImpact.Service.Interface;
 using SixLabors.ImageSharp;
 using System;
@@ -18,11 +18,15 @@ public sealed class BannerImageService : IBannerImageService
     private const long MaxPixelCount = 40_000_000;
     private static readonly TimeSpan DownloadTimeout = TimeSpan.FromSeconds(30);
 
-    // 创建HTTPClient
-    private readonly HttpClient _httpClient = HttpClientFactory.GetClient(
-        "banner-image",
-        CreateHttpClient);
+    // 下载客户端：不限总时长，由 DownloadTimeout 控制等待响应的时间
+    private readonly HttpClient _httpClient;
     private readonly object _fileCommitLock = new();
+
+    /// <param name="httpClientFactory">命名 HttpClient 工厂</param>
+    public BannerImageService(IHttpClientFactory httpClientFactory)
+    {
+        _httpClient = httpClientFactory.CreateClient(HttpClientNames.Download);
+    }
     private long _latestOperationId;
 
     public string NetworkImagePath { get; } = Global.Absolute("User/Images/custom_banner_url.jpg");
@@ -178,22 +182,6 @@ public sealed class BannerImageService : IBannerImageService
                 File.Delete(NetworkImagePath);
             }
         }
-    }
-
-    private static HttpClient CreateHttpClient()
-    {
-        var client = new HttpClient(new HttpClientHandler
-        {
-            AllowAutoRedirect = true,
-            MaxAutomaticRedirections = 5,
-            UseCookies = false,
-            UseDefaultCredentials = false
-        })
-        {
-            Timeout = Timeout.InfiniteTimeSpan
-        };
-        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("BetterGI-Banner", "1.0"));
-        return client;
     }
 
     private static void ValidateImage(string path)

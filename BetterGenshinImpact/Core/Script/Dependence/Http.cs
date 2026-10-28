@@ -6,16 +6,50 @@ using OpenCvSharp;
 using System.Linq;
 using System.Text.Json;
 using System.Collections.Generic;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.Infrastructure.Network;
 using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Script.Dependence;
 
 public class Http
 {
+    /// <summary>
+    /// 最多跟随的重定向次数
+    /// </summary>
+    private const int MaxRedirects = 5;
+
     private readonly ILogger<Http> _logger = App.GetLogger<Http>();
+
+    /// <summary>
+    /// 是否为需要跟随的重定向状态码
+    /// </summary>
+    private static bool IsRedirect(HttpStatusCode statusCode) => statusCode is HttpStatusCode.MovedPermanently
+        or HttpStatusCode.Found or HttpStatusCode.SeeOther or HttpStatusCode.TemporaryRedirect or HttpStatusCode.PermanentRedirect;
+
+    /// <summary>
+    /// 构造一次请求。请求头写在请求上；内容相关的头（如 content-encoding）写在请求体上
+    /// </summary>
+    private static HttpRequestMessage CreateRequest(HttpMethod method, Uri uri, string? body, string contentType,
+        Dictionary<string, string> headers)
+    {
+        var request = new HttpRequestMessage(method, uri)
+        {
+            Content = body == null ? null : new StringContent(body, Encoding.UTF8, contentType),
+        };
+        foreach (var header in headers)
+        {
+            if (!request.Headers.TryAddWithoutValidation(header.Key, header.Value))
+            {
+                request.Content?.Headers.TryAddWithoutValidation(header.Key, header.Value);
+            }
+        }
+
+        return request;
+    }
 
     private void CheckHttpPermission(string url)
     {
@@ -92,16 +126,50 @@ public class Http
             dictHeaders.Remove("content-type");
         }
 
-        // 使用HttpClient发送请求
-        using var httpClient = new HttpClient();
-        httpClient.DefaultRequestHeaders.Clear();
-        foreach (var header in dictHeaders)
+        // 使用脚本专用客户端发送请求：跟随网络与代理设置，且不自动跟随重定向
+        var httpClient = App.GetService<IHttpClientFactory>()!.CreateClient(HttpClientNames.Script);
+        var currentUri = new Uri(url);
+        var currentMethod = new HttpMethod(method);
+        var currentBody = body;
+        HttpResponseMessage response;
+        for (var redirectCount = 0; ; redirectCount++)
         {
-            httpClient.DefaultRequestHeaders.Add(header.Key, header.Value);
+            using var request = CreateRequest(currentMethod, currentUri, currentBody, contentType, dictHeaders);
+            response = await httpClient.SendAsync(request);
+            if (!IsRedirect(response.StatusCode) || response.Headers.Location is not { } location)
+            {
+                break;
+            }
+
+            if (redirectCount >= MaxRedirects)
+            {
+                response.Dispose();
+                throw new HttpRequestException($"重定向次数超过 {MaxRedirects} 次：{url}");
+            }
+
+            var nextUri = location.IsAbsoluteUri ? location : new Uri(currentUri, location);
+            if (currentUri.Scheme == Uri.UriSchemeHttps && nextUri.Scheme != Uri.UriSchemeHttps)
+            {
+                response.Dispose();
+                throw new HttpRequestException($"拒绝从 HTTPS 重定向到非 HTTPS 地址：{nextUri}");
+            }
+
+            // 每一跳都按脚本的允许列表重新校验，防止经重定向访问未授权的地址
+            CheckHttpPermission(nextUri.AbsoluteUri);
+
+            // 301、302、303 按浏览器惯例改为不带请求体的 GET；307、308 保持原方法和请求体
+            if (response.StatusCode is HttpStatusCode.MovedPermanently or HttpStatusCode.Found or HttpStatusCode.SeeOther
+                && currentMethod != HttpMethod.Get && currentMethod != HttpMethod.Head)
+            {
+                currentMethod = HttpMethod.Get;
+                currentBody = null;
+            }
+
+            currentUri = nextUri;
+            response.Dispose();
         }
 
-        var content = body == null ? null : new StringContent(body, Encoding.UTF8, contentType);
-        var response = await httpClient.SendAsync(new HttpRequestMessage(new HttpMethod(method), url) { Content = content });
+        using var finalResponse = response;
 
         var responseCode = (int)response.StatusCode;
         var responseHeaders = response.Headers.ToDictionary(h => h.Key, h => h.Value.First()); // 只取第一个值

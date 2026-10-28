@@ -37,6 +37,7 @@ using BetterGenshinImpact.View.Controls.Webview;
 using BetterGenshinImpact.View.Converters;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.ViewModel.Pages.View;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -90,6 +91,11 @@ public partial class CommonSettingsPageViewModel : ViewModel
     private bool _isStorageSummaryRefreshing;
 
     /// <summary>
+    /// “网络与代理”卡片的状态。
+    /// </summary>
+    public NetworkSettingsViewModel NetworkSettings { get; }
+
+    /// <summary>
     /// 设置页“存储空间”卡片的说明文字。
     /// </summary>
     [ObservableProperty]
@@ -121,8 +127,10 @@ public partial class CommonSettingsPageViewModel : ViewModel
         NotificationService notificationService, CustomHtmlMaskService customHtmlMaskService,
         RecognitionTemplateEditorService recognitionTemplateEditorService, I18nService i18nService,
         ExternalAccessState externalAccessState, ExternalAccessTokenService externalAccessTokenService,
-        IStorageService storageService, Func<StorageManagementWindow> storageManagementWindowFactory)
+        IStorageService storageService, Func<StorageManagementWindow> storageManagementWindowFactory,
+        NetworkSettingsViewModel networkSettings)
     {
+        NetworkSettings = networkSettings;
         _storageService = storageService;
         _storageManagementWindowFactory = storageManagementWindowFactory;
         Config = configService.Get();

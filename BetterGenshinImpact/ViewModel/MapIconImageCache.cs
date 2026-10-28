@@ -7,6 +7,7 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Net.Http;
+using BetterGenshinImpact.Infrastructure.Network;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -17,7 +18,10 @@ namespace BetterGenshinImpact.ViewModel;
 internal static class MapIconImageCache
 {
     private const string CacheType = "map-icon-image";
-    private static readonly HttpClient _http = new();
+    /// <summary>
+    /// 图片客户端，每次下载时从工厂创建，跟随网络与代理设置
+    /// </summary>
+    private static HttpClient Http => App.GetService<IHttpClientFactory>()!.CreateClient(HttpClientNames.Images);
     private static readonly TimeSpan _ttl = TimeSpan.FromDays(20);
     private static readonly ConcurrentDictionary<string, CacheEntry> _decodedCache = new(StringComparer.Ordinal);
     private static readonly ConcurrentDictionary<string, Task<ImageSource?>> _inflight = new(StringComparer.Ordinal);
@@ -115,7 +119,7 @@ internal static class MapIconImageCache
         if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
             url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
         {
-            return await _http.GetByteArrayAsync(url, ct);
+            return await Http.GetByteArrayAsync(url, ct);
         }
 
         var uri = ToAbsoluteOrRelativeUri(url);

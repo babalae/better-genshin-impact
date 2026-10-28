@@ -5,7 +5,7 @@ using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.UseRedeemCode.Model;
-using BetterGenshinImpact.Helpers.Http;
+using BetterGenshinImpact.Infrastructure.Network;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.GameTask.UseRedeemCode;
@@ -16,7 +16,7 @@ namespace BetterGenshinImpact.GameTask.UseRedeemCode;
 public class GetLiveRedeemCode
 {
     private static readonly string BBS_URL = "https://bbs-api.mihoyo.com";
-    private readonly HttpClient _httpClient = HttpClientFactory.GetCommonSendClient();
+    private readonly HttpClient _httpClient = App.GetService<IHttpClientFactory>()!.CreateClient(HttpClientNames.GameApi);
 
     private readonly Dictionary<string, string> _url = new()
     {

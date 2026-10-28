@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
+using BetterGenshinImpact.Infrastructure.Network;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -20,7 +21,10 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
 {
     private readonly ILogger<MaskMapPointInfoPopupViewModel> _logger = App.GetLogger<MaskMapPointInfoPopupViewModel>();
     private CancellationTokenSource? _cts;
-    private static readonly HttpClient _http = new();
+    /// <summary>
+    /// 图片客户端，每次下载时从工厂创建，跟随网络与代理设置
+    /// </summary>
+    private static HttpClient Http => App.GetService<IHttpClientFactory>()!.CreateClient(HttpClientNames.Images);
     private MemoryStream? _imageStream;
 
     public event EventHandler<MaskMapPoint?>? ToggleHiddenRequested;
@@ -185,7 +189,7 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
             if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
                 url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             {
-                var bytes = await _http.GetByteArrayAsync(url, ct);
+                var bytes = await Http.GetByteArrayAsync(url, ct);
 
                 if (IsGifBytes(bytes))
                 {

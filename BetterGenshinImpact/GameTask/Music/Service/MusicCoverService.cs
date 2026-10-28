@@ -1,5 +1,5 @@
 using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Helpers.Http;
+using BetterGenshinImpact.Infrastructure.Network;
 using BetterGenshinImpact.Service;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -26,12 +26,12 @@ public sealed class MusicCoverService : IMusicCoverService
     private readonly ILogger<MusicCoverService> _logger = App.GetLogger<MusicCoverService>();
     private int _stopRemoteRequests;
 
-    public MusicCoverService(MemoryFileCache fileCache)
+    /// <param name="fileCache">封面缓存</param>
+    /// <param name="httpClientFactory">命名 HttpClient 工厂，搜索和封面下载都使用图片客户端</param>
+    public MusicCoverService(MemoryFileCache fileCache, IHttpClientFactory httpClientFactory)
     {
         _fileCache = fileCache;
-        _httpClient = HttpClientFactory.GetClient(
-            "iTunesSearch",
-            () => new HttpClient { Timeout = TimeSpan.FromSeconds(20) });
+        _httpClient = httpClientFactory.CreateClient(HttpClientNames.Images);
     }
 
     public async Task<ImageSource?> GetCoverAsync(string songName, CancellationToken cancellationToken)
