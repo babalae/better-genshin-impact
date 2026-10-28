@@ -30,6 +30,7 @@ public partial class AccountRecordsEventsViewModel : ObservableObject
         item.Name.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
         item.Source.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
         item.Message.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
+        AccountRecordsErrorMessages.ForDisplay(item.Message).Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
         item.Id.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
         item.AttemptId.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
         item.VerificationSource.Contains(keyword, StringComparison.OrdinalIgnoreCase) ||
@@ -75,7 +76,7 @@ public partial class AccountRecordsEventsViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            await ThemedMessageBox.ShowAsync(ex.Message, "事件记录", MessageBoxButton.OK, ThemedMessageBox.MessageBoxIcon.Error);
+            await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), "事件记录", MessageBoxButton.OK, ThemedMessageBox.MessageBoxIcon.Error);
         }
     }
     /// <summary>按创建顺序倒序展示。</summary>
@@ -89,12 +90,12 @@ public partial class AccountRecordsEventsViewModel : ObservableObject
         get
         {
             if (Selected is not { } item) return "请选择事件。";
-            var status = item.State;
+            var status = item.State == "Aborted" ? "已终止（由人工确认库存替代）" : item.State;
             var lines = new List<string>
             {
                 $"事件 ID：{item.Id}",
                 $"上报批次：{item.AttemptId}",
-                item.Message,
+                AccountRecordsErrorMessages.ForDisplay(item.Message),
                 $"状态：{status}    {(item.Archived ? "已归档" : "未归档")}",
                 "",
                 $"物品：{item.Name}",

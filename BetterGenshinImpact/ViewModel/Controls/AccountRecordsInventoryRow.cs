@@ -4,6 +4,7 @@ using System.Linq;
 using System.Windows.Media;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Service.AccountRecords.Model;
+using BetterGenshinImpact.Service.AccountRecords;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.ViewModel.Controls;
@@ -54,6 +55,8 @@ public sealed partial class AccountRecordsInventoryRow : ObservableObject
     }
     /// <summary>当前账号是否将此物品置顶；始终优先于用户选择的列排序。</summary>
     public bool Prior { get; set; }
+    /// <summary>当前可见分区内的行号；置顶标识由视图绘制，不受图标是否存在影响。</summary>
+    [ObservableProperty] private string _displayRowNumber = "";
     /// <summary>右键菜单根据当前置顶状态显示操作名称。</summary>
     public string PriorActionText => Prior ? "取消置顶" : "置顶";
     /// <summary>仅在可见置顶区与普通区之间显示分隔线。</summary>
@@ -64,7 +67,7 @@ public sealed partial class AccountRecordsInventoryRow : ObservableObject
     public int ErrorCount { get; set; }
     /// <summary>当前底部提示正在展示本行事件。</summary>
     [ObservableProperty] private bool _isNoticeActive;
-    /// <summary>最近一次可追溯扫描批次，包括失败上报。</summary>
+    /// <summary>最近一次可追溯上报批次，包括失败上报。</summary>
     public string? LastScanAttemptId { get; set; }
     /// <summary>状态优先级：红、橘、黄、绿、灰、无灯。</summary>
     public int StateRank => HasError ? 0 : Event?.State switch { "Error" => 0, "Warning" => 1, "Pending" => 2, "Completed" => 3, "Planned" => 4, _ => 5 };
@@ -72,9 +75,8 @@ public sealed partial class AccountRecordsInventoryRow : ObservableObject
     public bool HasStatusLight => StateRank < 5;
     /// <summary>当前物品为未受阻的绿灯，且账号内同类合法归档目标至少有两条。</summary>
     [ObservableProperty] private bool _canBatchArchive;
-    /// <summary>只能接受当前实际展示且对应待处理库存冲突的错误，不能借最新增量错误接受旧记录。</summary>
-    public bool CanAcceptDisplayedError => Error?.CanAccept == true && Event is { Kind: "Report", State: "Error", Archived: false } &&
-        Event.ErrorId == Error.Id;
+    /// <summary>错误记录不允许直接接受，旧库存错误标记也不能开启此操作。</summary>
+    public bool CanAcceptDisplayedError => false;
     /// <summary>累计待核实增量；为空表示没有待核实变动。</summary>
     public decimal? PendingDelta { get; set; }
     /// <summary>附在确认库存右侧，不参与主数量居中。</summary>
@@ -82,7 +84,7 @@ public sealed partial class AccountRecordsInventoryRow : ObservableObject
     /// <summary>两行提示的来源及变动摘要。</summary>
     public string StatusDetails { get; set; } = "";
     /// <summary>悬停同样显示两行摘要。</summary>
-    public string StatusText => (Event?.Message ?? Error?.Message ?? "") + "\n" + StatusDetails;
+    public string StatusText => AccountRecordsErrorMessages.ForDisplay(Event?.Message ?? Error?.Message ?? "") + "\n" + StatusDetails;
     /// <summary>标准名称或待修订名称。</summary>
     public string Name { get; set; } = "";
     /// <summary>由物品字典生成的名称排序文本，不用于展示或存储关联。</summary>
@@ -91,6 +93,20 @@ public sealed partial class AccountRecordsInventoryRow : ObservableObject
     public string Category { get; set; } = "";
     /// <summary>当前有效数量，未知保持空值。</summary>
     public long? Quantity { get; set; }
+    /// <summary>确认库存中已到期的批次数量，不混入待核实增量或实际扣减库存。</summary>
+    public decimal ExpiredQuantity
+    {
+        get
+        {
+            var now = DateTimeOffset.UtcNow;
+            return Quantity == null ? 0 : Recent.FirstOrDefault()?.Expirations
+                ?.Where(item => item.Time <= now).Sum(item => (decimal)item.Quantity) ?? 0;
+        }
+    }
+    /// <summary>数量旁的到期提示，无已到期批次时留空。</summary>
+    public string ExpiredQuantityText => ExpiredQuantity > 0 ? $"（-{ExpiredQuantity:0}）" : "";
+    /// <summary>说明到期标记尚未改变确认库存。</summary>
+    public string ExpiredQuantityDetails => ExpiredQuantity > 0 ? $"已有 {ExpiredQuantity:0} 个到期，待核实；尚未从当前库存中扣减。" : "";
     /// <summary>用于时间排序的 UTC 时间。</summary>
     public DateTimeOffset? RecordedAt { get; set; }
     /// <summary>按当前系统时区展示时间。</summary>
@@ -120,6 +136,9 @@ public sealed partial class AccountRecordsInventoryRow : ObservableObject
     /// <summary>刷新时间与事件展示，不重建行或触发图像重新加载。</summary>
     public void RefreshTimeAndStatus()
     {
+        OnPropertyChanged(nameof(ExpiredQuantity));
+        OnPropertyChanged(nameof(ExpiredQuantityText));
+        OnPropertyChanged(nameof(ExpiredQuantityDetails));
         OnPropertyChanged(nameof(ExpirationText));
         OnPropertyChanged(nameof(ExpirationDetails));
         OnPropertyChanged(nameof(Event));
@@ -171,7 +190,7 @@ public sealed partial class AccountRecordsInventoryRow : ObservableObject
     /// <summary>只有错误才显示红灯，不混入需求状态。</summary>
     public bool HasError => Error != null;
     /// <summary>悬停说明包含下一步操作提示。</summary>
-    public string ErrorText => Error == null ? "" : $"{Error.Message}\n请单击查看详情，或右键选择“修改数量 / 修订字典”手动订正。";
+    public string ErrorText => Error == null ? "" : $"{AccountRecordsErrorMessages.ForDisplay(Error.Message)}\n单击查看异常详情。如需核实数量，请查看游戏后，右键选择“修改数量 / 修订字典”填写当前实际库存总数；保存后将归档该物品已有异常，并终止尚未完成的库存核实。";
     /// <summary>有界最近来源记录。</summary>
     public IReadOnlyList<InventoryRecord> Recent { get; set; } = [];
 }

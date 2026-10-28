@@ -18,11 +18,11 @@ public sealed partial class InventoryStore
     public static async Task<JObject> ReadExchangeAsync(string path)
     {
         using var stream = File.OpenRead(path);
-        if (stream.Length > 8 * 1024 * 1024) throw new InvalidDataException("导入文件不能超过 8 MiB。");
+        if (stream.Length > 8 * 1024 * 1024) throw new InvalidDataException("导入文件超过 8 MiB，未载入。");
         using var reader = new StreamReader(stream, Encoding.UTF8);
         using var json = new JsonTextReader(new StringReader(await reader.ReadToEndAsync())) { DateParseHandling = DateParseHandling.None, MaxDepth = 16 };
         var package = JObject.Load(json, new JsonLoadSettings { DuplicatePropertyNameHandling = DuplicatePropertyNameHandling.Error });
-        if (json.Read()) throw new InvalidDataException("JSON 根对象后存在多余内容。");
+        if (json.Read()) throw new InvalidDataException("导入文件包含多个根对象或末尾多余内容，未载入。");
         ValidateExchange(package);
         return package;
     }
@@ -31,61 +31,65 @@ public sealed partial class InventoryStore
     private static void ValidateExchange(JObject package)
     {
         if ((string?)package["format"] != "BetterGI.AccountRecords" || package["version"]?.Type != JTokenType.Integer || (int)package["version"]! != 1)
-            throw new InvalidDataException("不是支持的 AccountRecords v1 文件。");
+            throw new InvalidDataException("文件格式或版本不受支持。仅支持狛荷屋库存 JSON（format=BetterGI.AccountRecords，version=1）。");
         if (package["accounts"] is not JObject accounts || accounts.Count != 1 ||
             package["sources"] is not JObject sources || package["itemDefinitions"] is not JObject definitions)
-            throw new InvalidDataException("当前仅支持单个账号，且必须包含 sources 和 itemDefinitions 对象。");
+            throw new InvalidDataException("导入文件必须只包含一个账号，并提供 sources（来源字典）和 itemDefinitions（补充字典）对象；字典无内容时可使用空对象。");
         var account = accounts.Properties().Single();
         // 先检查全部来源，避免导入部分库存后才发现后续来源无法保存。
         foreach (var entry in sources.Properties())
         {
             if (entry.Value is not JObject descriptor || entry.Name != entry.Name.Trim() ||
                 (string?)descriptor["reference"] != entry.Name || descriptor["displayName"]?.Type != JTokenType.String)
-                throw new InvalidDataException("来源字典结构无效。");
+                throw new InvalidDataException($"来源“{entry.Name}”结构不正确：条目须为对象，reference 须与来源键一致且无首尾空白，displayName 须为文本。");
             _ = ValidateSource(new AccountRecordSource { Reference = entry.Name, DisplayName = (string)descriptor["displayName"]! });
         }
-        if (!IsValidUid(account.Name) ||
-            account.Value is not JObject body || body["inventory"] is not JObject inventory || inventory.Count > 5000)
-            throw new InvalidDataException("账号或库存结构无效（最多 5000 项）。");
+        if (!IsValidUid(account.Name))
+            throw new InvalidDataException($"导入 UID“{account.Name}”无效，须为首位非零的 9～10 位数字。");
+        if (account.Value is not JObject body || body["inventory"] is not JObject inventory)
+            throw new InvalidDataException($"账号 {account.Name} 缺少有效库存对象。账号内容及 inventory 必须为 JSON 对象。");
+        if (inventory.Count > 5000)
+            throw new InvalidDataException($"账号 {account.Name} 包含 {inventory.Count} 项库存，超过 5000 项上限。");
         foreach (var item in inventory.Properties())
         {
             if (string.IsNullOrWhiteSpace(item.Name) || item.Name != item.Name.Trim() || item.Name.Length > 128 ||
                 item.Value is not JArray records || records.Count != 1 || records[0] is not JObject record ||
                 record["quantity"]?.Type != JTokenType.Integer || record["recordedAt"]?.Type != JTokenType.String ||
                 string.IsNullOrWhiteSpace((string?)record["recordedAt"]) || record["source"]?.Type != JTokenType.String)
-                throw new InvalidDataException($"{item.Name}：必须提供一条当前记录，包含整数 quantity、recordedAt 和 source。");
+                throw new InvalidDataException($"{item.Name}：物品名称须为 1～128 字符且无首尾空白；记录数组必须恰有一条，包含整数 quantity、非空时间文本 recordedAt 和来源文本 source。");
             _ = record["quantity"]!.Value<long>();
             if (record["expirations"] is { Type: not JTokenType.Null } expirations)
             {
                 if (expirations is not JArray batches || batches.Count > 100 || batches.Any(batch => batch is not JObject ||
                     batch["quantity"]?.Type != JTokenType.Integer || batch["expiresAt"]?.Type != JTokenType.String))
-                    throw new InvalidDataException($"{item.Name}：expirations 必须为包含整数 quantity 和带时区 expiresAt 的数组，最多 100 批。");
+                    throw new InvalidDataException($"{item.Name}：到期批次 expirations 必须为数组且不超过 100 批，每批须有整数 quantity 和时间文本 expiresAt（时间须注明时区）。");
             }
-            if (record["verifiedAt"] != null && record["verifiedAt"]!.Type != JTokenType.String)
-                throw new InvalidDataException($"{item.Name}：verifiedAt 必须是带时区的扫描时间字符串。");
+            // 严格采用单时间标准，不转换或忽略旧双时间字段，包括显式 null。
+            if (record.Property("verifiedAt") != null)
+                throw new InvalidDataException($"{item.Name}：不支持 verifiedAt 字段，库存记录仅使用 recordedAt。");
             var source = (string)record["source"]!;
             if (source.Length is 0 or > 1024 || source != source.Trim() || sources[source] is not JObject descriptor ||
                 (string?)descriptor["reference"] != source || descriptor["displayName"]?.Type != JTokenType.String)
-                throw new InvalidDataException($"{item.Name}：来源字典缺失或不匹配。");
+                throw new InvalidDataException($"{item.Name}：source 未对应有效来源。source 须为 1～1024 字符且无首尾空白，并对应 sources 中 reference 一致、displayName 为文本的条目。");
         }
         foreach (var item in definitions.Properties())
             if (inventory[item.Name] == null || item.Value is not JObject definition || definition["category"]?.Type != JTokenType.String ||
                 string.IsNullOrWhiteSpace((string?)definition["category"]) || ((string)definition["category"]!).Length > 128)
-                throw new InvalidDataException("物品补充字典必须对应本文件库存，并提供有效分类。");
+                throw new InvalidDataException($"补充字典条目“{item.Name}”无效：物品须存在于本文件库存中，且提供 1～128 字符的非空分类 category。");
         if (body["deltas"] != null)
         {
-            if (body["deltas"] is not JArray deltas || deltas.Count > 5000) throw new InvalidDataException("增量表必须为数组，最多 5000 项。");
+            if (body["deltas"] is not JArray deltas || deltas.Count > 5000) throw new InvalidDataException("导入文件的 deltas 必须为数组且不超过 5000 项。");
             foreach (var delta in deltas)
             {
                 if (delta is not JObject || delta["name"]?.Type != JTokenType.String || delta["delta"]?.Type != JTokenType.Integer ||
                     delta["recordedAt"]?.Type != JTokenType.String || delta["source"]?.Type != JTokenType.String ||
                     sources[(string)delta["source"]!] is not JObject descriptor || (string?)descriptor["reference"] != (string?)delta["source"] ||
-                    descriptor["displayName"]?.Type != JTokenType.String) throw new InvalidDataException("增量项必须包含 name、delta、recordedAt 及已登记的 source。");
+                    descriptor["displayName"]?.Type != JTokenType.String) throw new InvalidDataException($"变动条目 {delta.Path} 不完整：须包含文本 name、整数 delta、时间文本 recordedAt，以及在 sources 中登记的 source。");
                 _ = delta["delta"]!.Value<long>();
                 if (delta["expirations"] is { Type: not JTokenType.Null } expirationToken &&
                     (expirationToken is not JArray batches || batches.Count > 100 || batches.Any(batch => batch is not JObject ||
                         batch["quantity"]?.Type != JTokenType.Integer || batch["expiresAt"]?.Type != JTokenType.String)))
-                    throw new InvalidDataException("增量 expirations 必须为包含整数 quantity 和带时区 expiresAt 的数组，最多 100 批。");
+                    throw new InvalidDataException($"变动条目 {delta.Path} 的 expirations 须为数组且不超过 100 批，每批须提供整数 quantity 和带时区的时间文本 expiresAt。");
             }
         }
     }
@@ -130,7 +134,7 @@ public sealed partial class InventoryStore
         ValidateExchange(package);
         var body = ((JObject)package["accounts"]!).Properties().Single().Value;
         var deltas = body["deltas"] as JArray;
-        if (deltas is { Count: > 0 } && !allowDeveloperDeltas) throw new InvalidOperationException("增量导入仅供开发测试，需要明确确认。");
+        if (deltas is { Count: > 0 } && !allowDeveloperDeltas) throw new InvalidOperationException("文件包含开发测试用库存增量，尚未获得导入确认。");
         _ = AccountDirectory(uid);
         if (includeDefinitions)
             await Locked(() =>
@@ -155,7 +159,7 @@ public sealed partial class InventoryStore
             var batch = group.Select(item => new InventoryReport { Name = item.Name,
                 Category = (string?)package["itemDefinitions"]?[item.Name]?["category"],
                 Expirations = item.Value[0]!["expirations"]?.ToObject<List<InventoryExpiration>>(),
-                Quantity = (long)item.Value[0]!["quantity"]!, RecordedAt = (string)item.Value[0]!["recordedAt"]!, VerifiedAt = (string?)item.Value[0]!["verifiedAt"] });
+                Quantity = (long)item.Value[0]!["quantity"]!, RecordedAt = (string)item.Value[0]!["recordedAt"]! });
             var imported = await ReportAsync(uid, source, batch, preserveSourceName: true);
             result.Accepted.AddRange(imported.Accepted);
             foreach (var warning in imported.Warnings) result.Warnings[warning.Key] = warning.Value;

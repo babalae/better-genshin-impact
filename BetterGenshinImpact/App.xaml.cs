@@ -284,6 +284,8 @@ public partial class App : Application
                 services.AddSingleton<InventoryCatalog>();
                 services.AddSingleton<InventoryStore>();
                 services.AddSingleton<InventoryIconCache>();
+                // 图标需要重新扫描或上传才能补齐，独立登记并要求确认清理。
+                services.AddSingleton<IStorageAreaProvider>(sp => sp.GetRequiredService<InventoryIconCache>());
                 services.AddTransient<AccountRecordsInventoryViewModel>();
                 services.AddView<MusicPage, MusicPageViewModel>();
                 services.AddSingleton<PathingConfigViewModel>();

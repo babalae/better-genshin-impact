@@ -351,10 +351,6 @@
                                                         <Trigger Property="IsMouseOver" Value="True">
                                                             <Setter TargetName="FilterBackground" Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
                                                         </Trigger>
-                                                        <Trigger Property="IsKeyboardFocused" Value="True">
-                                                            <Setter TargetName="FilterBackground" Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
-                                                            <Setter TargetName="FilterBackground" Property="BorderThickness" Value="1" />
-                                                        </Trigger>
                                                         <Trigger Property="IsPressed" Value="True">
                                                             <Setter TargetName="FilterBackground" Property="Background" Value="{DynamicResource ControlFillColorTertiaryBrush}" />
                                                         </Trigger>

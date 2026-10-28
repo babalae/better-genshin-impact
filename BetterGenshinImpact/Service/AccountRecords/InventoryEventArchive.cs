@@ -82,7 +82,7 @@ public sealed partial class InventoryStore
         {
             var archived = Read<List<InventoryEvent>>(path, restoreBackup);
             if (archived.Any(item => item == null || item.History == null || !item.Archived))
-                throw new InvalidDataException($"事件归档结构损坏：{path}");
+                throw new InvalidDataException($"事件归档文件结构不正确，无法读取：{path}。");
             events.AddRange(archived.Where(item => !HasReceipt(data, item.Name, "Id:" + item.Id)));
         }
         data.Events = events.Concat(data.Events).GroupBy(item => item.Id).Select(items => items.Last()).OrderBy(item => item.Id, StringComparer.Ordinal).ToList();

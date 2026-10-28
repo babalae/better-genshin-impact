@@ -14,20 +14,18 @@ public sealed class InventoryRecord
     public string AttemptId { get; set; } = "";
     /// <summary>非负库存数量。</summary>
     public long Quantity { get; set; }
-    /// <summary>原始记录时间，统一保存为 UTC，导入时不刷新。</summary>
+    /// <summary>库存数量实际采集或确认的时间，统一保存为 UTC，导入时不刷新。</summary>
     public DateTimeOffset RecordedAt { get; set; }
     /// <summary>公共来源字典中的标识。</summary>
     public string Source { get; set; } = "";
 }
 
-/// <summary>批量上报的一项；时间缺省代表本次新采集，历史导入必须携带原时间。</summary>
+/// <summary>批量上报的一项；必须携带库存数量实际采集或确认的时间。</summary>
 public sealed class InventoryReport
 {
     /// <summary>可选的数量与到期时间列表，随本次记录保存，不沿用其他记录的到期信息。</summary>
     [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
     public List<InventoryExpiration>? Expirations { get; set; }
-    /// <summary>可信扫描时刻；历史导入需明确提供才能核实待确认增量。</summary>
-    public string? VerifiedAt { get; set; }
     /// <summary>标准物品名称。</summary>
     public string Name { get; set; } = "";
     /// <summary>可选的来源分类，仅用于与本地分类核对，不覆盖本地字典。</summary>
@@ -35,7 +33,7 @@ public sealed class InventoryReport
     public string? Category { get; set; }
     /// <summary>来源提交的数量。</summary>
     public long Quantity { get; set; }
-    /// <summary>带时区的原记录时间，无法解析的值作为异常保留。</summary>
+    /// <summary>必填的实际采集或确认时间，须带时区；不是发送、接收或导入时间，无效值作为异常保留。</summary>
     public string? RecordedAt { get; set; }
 }
 
@@ -56,7 +54,7 @@ public sealed class InventoryError
     public InventoryReport Incoming { get; set; } = new();
     /// <summary>冲突发生时的有效记录快照。</summary>
     public InventoryRecord? Current { get; set; }
-    /// <summary>是否仅为新旧冲突，允许明确接受。</summary>
+    /// <summary>历史接受标记；新错误固定为 false，服务端不再允许接受错误记录。</summary>
     public bool CanAccept { get; set; }
 }
 

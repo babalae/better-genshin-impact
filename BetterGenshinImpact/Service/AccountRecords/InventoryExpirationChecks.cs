@@ -22,7 +22,7 @@ public sealed partial class InventoryStore
             if (expired && pending == null)
             {
                 AddEvent(data, pair.Key, record.Source, "ExpirationCheck", "Pending", record.Quantity, now,
-                    "库存中存在已过期批次，请检查游戏内库存并重新上报或手动修订数量。");
+                    "记录中存在已到期批次，尚未自动扣减库存。请重新采集并上报到期信息，或查看游戏后手动填写当前实际库存总数。");
                 changed = true;
             }
             else if (!expired && pending != null)

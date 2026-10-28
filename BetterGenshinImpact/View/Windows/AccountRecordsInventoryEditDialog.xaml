@@ -17,11 +17,11 @@
                 <ui:TextBox Text="{Binding Category, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding CanEditCategory, Mode=OneWay}" MaxLength="128" />
                 <CheckBox Content="确认将此名称添加到补充字典" Margin="0,10,0,0" IsChecked="{Binding AddToDictionary, Mode=TwoWay}"
                           IsEnabled="{Binding NeedsDefinition, Mode=OneWay}" />
-                <TextBlock Text="数量" Margin="0,12,0,6" />
+                <TextBlock Text="游戏中当前实际库存数量" Margin="0,12,0,6" />
                 <ui:TextBox Text="{Binding QuantityText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MaxLength="19" />
-                <CheckBox Content="修改后，标记上次扫描有错误" Margin="0,12,0,0"
+                <CheckBox Content="修改后，标记上次上报有错误" Margin="0,12,0,0"
                           IsChecked="{Binding MarkScanIncorrect, Mode=TwoWay}" IsEnabled="{Binding CanMarkScanIncorrect, Mode=OneWay}" />
-                <TextBlock Text="编辑后，对应来源将显示为“狛荷屋-人工编辑”。" TextWrapping="Wrap" Margin="0,12,0,0"
+                <TextBlock Text="请填写游戏中当前实际库存总数，保存后将以此数量为准，并结束相关待处理异常与核实。" TextWrapping="Wrap" Margin="0,12,0,0"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                 <TextBlock Text="{Binding Message, Mode=OneWay}" TextWrapping="Wrap" Margin="0,8,0,0"
                            Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
@@ -29,7 +29,7 @@
         </ScrollViewer>
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="24,8,24,20">
             <ui:Button Content="取消" IsCancel="True" Margin="0,0,8,0" />
-            <ui:Button Content="保存" Appearance="Primary" Command="{Binding SaveCommand, Mode=OneWay}" IsDefault="True" />
+            <ui:Button Content="确认当前库存" Appearance="Primary" Command="{Binding SaveCommand, Mode=OneWay}" IsDefault="True" />
         </StackPanel>
     </Grid>
 </ui:FluentWindow>

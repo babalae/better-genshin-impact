@@ -52,13 +52,13 @@ public sealed partial class InventoryStore
     private static string? ValidateDeltaExpirations(InventoryDeltaReport report, InventoryRecord baseline, InventoryEvent[] pending)
     {
         if (report.Delta <= 0)
-            return report.Expirations is { Count: > 0 } ? "减少或零增量不能附带新增到期批次，消耗按最早到期优先推算。" : null;
+            return report.Expirations is { Count: > 0 } ? "本次变动未增加库存，却附带了新增到期批次。请来源移除新增批次后重新上报；减少数量由系统按最早到期批次优先推算。" : null;
         var tracked = baseline.Expirations is { Count: > 0 } || pending.Any(item => item.Expirations is { Count: > 0 });
         if (report.Expirations is not { Count: > 0 })
-            return tracked ? "该物品已有到期信息，增加库存必须提供新增数量对应的到期时间。" : null;
+            return tracked ? "该物品正在记录到期批次，本次增加缺少到期信息。请来源提供新增数量对应的到期时间后重新上报。" : null;
         var error = ValidateExpirations(report.Expirations, report.Delta);
         if (error != null) return error;
         return report.Expirations.Sum(item => (decimal)item.Quantity) != report.Delta
-            ? "新增到期批次数量合计必须等于本次增加数量。" : null;
+            ? "新增到期批次的数量合计与本次增加数量不一致。请来源核对两者后重新上报。" : null;
     }
 }

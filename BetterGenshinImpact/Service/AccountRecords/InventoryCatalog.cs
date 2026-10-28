@@ -51,10 +51,10 @@ public sealed class InventoryCatalog
     {
         using var parser = new TextFieldParser(path, Encoding.UTF8) { HasFieldsEnclosedInQuotes = true };
         parser.SetDelimiters(",");
-        var headers = parser.ReadFields() ?? throw new InvalidDataException("物品字典缺少表头。");
+        var headers = parser.ReadFields() ?? throw new InvalidDataException("内置物品字典缺少表头，无法识别名称和分类列。");
         var nameIndex = Array.IndexOf(headers, "item_name");
         var categoryIndex = Array.IndexOf(headers, "material_type");
-        if (nameIndex < 0 || categoryIndex < 0) throw new InvalidDataException("物品字典缺少名称或类型列。");
+        if (nameIndex < 0 || categoryIndex < 0) throw new InvalidDataException("内置物品字典缺少名称或类型列，无法校验物品。");
         var items = new Dictionary<string, string>(StringComparer.Ordinal);
         while (!parser.EndOfData)
         {
@@ -65,7 +65,7 @@ public sealed class InventoryCatalog
             var category = fields[categoryIndex].Trim();
             if (!items.TryGetValue(name, out var current) || current.Length == 0) items[name] = category;
         }
-        if (items.Count == 0) throw new InvalidDataException("物品字典为空，暂不能校验库存名称。");
+        if (items.Count == 0) throw new InvalidDataException("内置物品字典中没有可用条目，暂不能校验库存名称。");
         return items;
     }
 }

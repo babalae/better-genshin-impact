@@ -14,7 +14,7 @@ public sealed class InventoryEvent
     public string Id { get; set; } = DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmssfffffff") + "-" + Guid.NewGuid().ToString("N")[..8];
     /// <summary>物品名称。</summary>
     public string Name { get; set; } = "";
-    /// <summary>Error、Warning、Pending、Completed、Planned；Planned 留待需求模块。</summary>
+    /// <summary>Error、Warning、Pending、Completed、Aborted、Planned；Aborted 表示核实被人工库存替代，Planned 留待需求模块。</summary>
     public string State { get; set; } = "Pending";
     /// <summary>读取时兼容旧的颜色状态值。</summary>
     public static string NormalizeState(string state, string kind) => state switch

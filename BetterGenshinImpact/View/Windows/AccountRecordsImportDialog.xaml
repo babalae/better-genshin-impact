@@ -27,12 +27,12 @@
                 <TextBlock Text="{Binding Summary, Mode=OneWay}" TextWrapping="Wrap" Margin="0,12,0,12" />
                 <TextBlock Text="导入到 UID（可修改；不存在时创建）" />
                 <ui:TextBox Text="{Binding TargetUid, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,10" MaxLength="20" />
-                <TextBlock Text="保留文件中的记录时间，仅合并提供的物品。旧记录、非法数量等会进入库存异常，不直接覆盖当前有效值。" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <TextBlock Text="记录时间应为库存实际采集或确认的时间，导入时不会更新为当前时间。仅合并提供的物品，旧记录、非法数量等会进入库存异常。" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                 <CheckBox Content="使用下列分类补充本地字典空缺（不覆盖已有分类）" IsChecked="{Binding IncludeDefinitions, Mode=TwoWay}" Margin="0,12,0,4" />
                 <ItemsControl ItemsSource="{Binding Definitions, Mode=OneWay}" />
-                <ui:Button Content="导入当前库存" Appearance="Primary" Command="{Binding ImportCommand, Mode=OneWay}" IsEnabled="{Binding HasPackage, Mode=OneWay}" Margin="0,12,0,0" HorizontalAlignment="Right" />
                 <TextBlock TextWrapping="Wrap" Margin="0,12,0,0" Visibility="{Binding HasImportErrors, Converter={StaticResource BoolVisibility}, Mode=OneWay}"><Run Text="导入完成：接受 " /><Run Text="{Binding AcceptedCount, Mode=OneWay}" /><Run Text=" 项，忽略重复 " /><Run Text="{Binding DuplicateCount, Mode=OneWay}" /><Run Text=" 项（已有异常 " /><Run Text="{Binding DuplicateErrorCount, Mode=OneWay}" Foreground="#EA4335" FontWeight="SemiBold" /><Run Text=" 项），新增异常 " /><Run Text="{Binding RejectedCount, Mode=OneWay}" Foreground="#EA4335" FontWeight="SemiBold" /><Run Text=" 项。关闭窗口后可在目标 UID 的库存中查看，红灯异常需要手动处理。" /></TextBlock>
                 <TextBlock Text="{Binding Message, Mode=OneWay}" TextWrapping="Wrap" Margin="0,12,0,0" />
+                <ui:Button Content="导入当前库存" Appearance="Primary" Command="{Binding ImportCommand, Mode=OneWay}" IsEnabled="{Binding HasPackage, Mode=OneWay}" Margin="0,12,0,0" HorizontalAlignment="Right" />
             </StackPanel>
         </ScrollViewer>
     </Grid>

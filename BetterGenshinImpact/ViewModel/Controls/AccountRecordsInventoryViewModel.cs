@@ -101,7 +101,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
     /// <summary>是否显示提示区，不控制下方常驻项数区域。</summary>
     public bool HasStatus => !string.IsNullOrEmpty(Status);
     /// <summary>只为当前错误提示显示总数；独立布局保证说明截断时仍可见。</summary>
-    public string NoticeErrorCountText => NoticeRow is { ErrorCount: > 1, Event.State: "Error" } row && Status == row.Event.Message
+    public string NoticeErrorCountText => NoticeRow is { ErrorCount: > 1, Event.State: "Error" } row && Status == AccountRecordsErrorMessages.ForDisplay(row.Event.Message)
         ? $"（共{row.ErrorCount}个错误）" : "";
     /// <summary>当前底部提示对应行。</summary>
     [ObservableProperty]
@@ -127,7 +127,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
     [ObservableProperty] private string _noticeDetails = "";
     /// <summary>当前错误允许舍弃。</summary>
     public bool CanResolveNotice => NoticeRow?.Error != null;
-    /// <summary>只有普通记录冲突可主动接受，过期核实不能绕过。</summary>
+    /// <summary>错误记录不提供接受入口。</summary>
     public bool CanAcceptNotice => NoticeRow?.CanAcceptDisplayedError == true;
     /// <summary>Completed、Warning 及没有待处理库存错误的 Error 事件允许归档。</summary>
     public bool CanAcknowledgeNotice => NoticeRow?.Event != null && (NoticeRow.StateRank is 1 or 3 || NoticeRow.StateRank == 0 && NoticeRow.Error == null);
@@ -144,7 +144,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
                 using var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true });
             });
         }
-        catch (Exception ex) { await ThemedMessageBox.ShowAsync(ex.Message, "打开 Warning 规则", MessageBoxButton.OK); }
+        catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), "打开 Warning 规则", MessageBoxButton.OK); }
     }
 
     /// <summary>当前搜索词。</summary>
@@ -185,11 +185,16 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         Items.CollectionChanged += (_, _) => UpdatePriorSeparator();
     }
 
-    /// <summary>筛选、排序或重载后，将细线定位到最后一条可见置顶物品下方。</summary>
+    /// <summary>筛选、排序或重载后，分别编号两个可见分区，并更新置顶分隔线。</summary>
     private void UpdatePriorSeparator()
     {
         if (IsLoading) return;
         var visible = Items.Cast<AccountRecordsInventoryRow>().ToArray();
+        // 有图标的行同样计数，普通区编号不受置顶区数量影响。
+        var pinnedNumber = 0;
+        var regularNumber = 0;
+        foreach (var row in visible)
+            row.DisplayRowNumber = row.Prior ? $"{++pinnedNumber}" : $"{++regularNumber}.";
         var boundary = visible.Any(row => !row.Prior) ? visible.LastOrDefault(row => row.Prior) : null;
         if (ReferenceEquals(_priorBoundary, boundary)) return;
         if (_priorBoundary != null) _priorBoundary.ShowPriorSeparator = false;
@@ -221,7 +226,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
             await ResumeAsync(uid);
             foreach (var row in Rows) row.RefreshTimeAndStatus();
         }
-        catch (Exception ex) { Status = ex.Message; }
+        catch (Exception ex) { Status = AccountRecordsErrorMessages.Describe(ex); }
     }
     /// <summary>统一更新全选状态、漏斗颜色和过滤结果。</summary>
     private void CategoriesChanged()
@@ -338,7 +343,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            if (Uid == uid && version == _loadVersion) Status = $"库存检查失败：{ex.Message} 当前保留上次读取的内容。";
+            if (Uid == uid && version == _loadVersion) Status = $"库存检查失败：{AccountRecordsErrorMessages.Describe(ex)} 当前保留上次读取的内容。";
         }
     }
 
@@ -389,7 +394,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         catch (Exception ex)
         {
             if (version == _loadVersion)
-                Status = $"库存读取失败：{ex.Message}" + (Rows.Count > 0 ? " 当前保留上次读取的内容，请刷新重试。" : " 请刷新重试。");
+                Status = $"库存读取失败：{AccountRecordsErrorMessages.Describe(ex)}" + (Rows.Count > 0 ? " 当前保留上次读取的内容。" : "");
         }
         finally
         {
@@ -478,7 +483,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
     {
         if (IsLoading || !Rows.Contains(row)) return;
         NoticeRow = row; _noticeUid = Uid;
-        Status = row.Event?.Message ?? row.Error?.Message ?? "";
+        Status = AccountRecordsErrorMessages.ForDisplay(row.Event?.Message ?? row.Error?.Message ?? "");
         NoticeDetails = row.StatusDetails;
     }
 
@@ -501,7 +506,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
             }, notice?.Name))
             { Owner = Application.Current.MainWindow }.ShowDialog();
         }
-        catch (Exception ex) { Status = ex.Message; }
+        catch (Exception ex) { Status = AccountRecordsErrorMessages.Describe(ex); }
     }
 
     /// <summary>关闭仅收起提示和高亮；归档由独立操作执行，不改变事件状态。</summary>
@@ -518,7 +523,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         if (_noticeUid == null || NoticeRow?.Error == null) return;
         if (action == "accept" && !CanAcceptNotice)
         {
-            Status = "当前展示的错误不能接受，请查看事件记录或手动修订库存。";
+            Status = "当前显示的错误不支持直接接受。请查看事件详情并修正来源；如需核实库存，请查看游戏后手动填写当前实际库存总数；保存后将归档该物品已有异常。";
             return;
         }
         var uid = _noticeUid; var row = NoticeRow;
@@ -561,7 +566,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
             if (Uid == uid && version == _loadVersion) await RefreshRowsAsync(refresh);
             OnPropertyChanged(nameof(PreferReadableSource)); OnPropertyChanged(nameof(SnapshotsEnabled));
         }
-        catch (Exception ex) { await ThemedMessageBox.ShowAsync(ex.Message, "账号记录", MessageBoxButton.OK, ThemedMessageBox.MessageBoxIcon.Error); }
+        catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), "账号记录", MessageBoxButton.OK, ThemedMessageBox.MessageBoxIcon.Error); }
     }
 
     /// <summary>打开数量编辑；已收录名称与内置非空分类只读，用户补充分类允许修订。</summary>
@@ -574,7 +579,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         if (dialog.ShowDialog() == true && Uid == uid) await RefreshRowsAsync();
     }
 
-    /// <summary>无扫描数据时也可由用户显式新增，不创建演示数据。</summary>
+    /// <summary>无上报数据时也可由用户显式新增，不创建演示数据。</summary>
     [RelayCommand] private async Task Add()
     {
         if (Uid == null) return;
@@ -626,7 +631,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         var value = PromptDialog.Prompt(prompt, "保存设置", previous.ToString(CultureInfo.InvariantCulture));
         if (string.IsNullOrEmpty(value)) return;
         if (!int.TryParse(value, out var count) || count < (events ? 1000 : 1) || count > (events ? 50000 : snapshots ? 30 : 10))
-        { await ThemedMessageBox.ShowAsync("请输入范围内的整数。", "保存设置", MessageBoxButton.OK); return; }
+        { await ThemedMessageBox.ShowAsync($"保留数量须为 {(events ? "1000～50000" : snapshots ? "1～30" : "1～10")} 范围内的整数，设置尚未保存。", "保存设置", MessageBoxButton.OK); return; }
         if (count < previous)
         {
             var records = events ? "已结束事件" : snapshots ? "日期快照" : "每个物品的来源记录";
@@ -646,7 +651,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
     /// <summary>清理公共派生图片，不影响任何 UID 的库存。</summary>
     [RelayCommand] private async Task ClearIconCache()
     {
-        if (await ThemedMessageBox.ShowAsync("清理 AccountRecords 的所有图像缓存？包括所有 UID、子表共用的物品图标及活动图片，清理后等待重建。库存和活动记录不受影响。",
+        if (await ThemedMessageBox.ShowAsync("清理所有 UID 共用的物品图标？删除后需重新采集或手动上传，当前尚未接入图标自动重建。库存和事件记录不受影响。",
             "清理所有图像缓存", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             await RunManualAsync(() => Task.Run(_icons.Clear), AccountRecordsRefreshKind.Icons);
     }
@@ -659,12 +664,12 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
     private async Task DeleteIcon(AccountRecordsInventoryRow? row)
     {
         if (row == null || !CanDeleteIcon(row)) return;
-        if (await ThemedMessageBox.ShowAsync($"清理“{row.Name}”的图标缓存？所有 UID 共用此图标，清理后等待重建，库存记录不受影响。",
+        if (await ThemedMessageBox.ShowAsync($"清理“{row.Name}”的图标缓存？所有 UID 共用此图标，删除后需重新采集或手动上传，当前尚未接入图标自动重建。库存记录不受影响。",
             "清理物品图标缓存", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             await RunManualAsync(() => Task.Run(() => _icons.Delete(row.Name)), AccountRecordsRefreshKind.Icons);
     }
 
-    /// <summary>选择本地图片替换共享缓存；后续扫描可重新生成。</summary>
+    /// <summary>选择本地图片替换共享缓存；后续采集可重新生成。</summary>
     [RelayCommand]
     private async Task UploadIcon(AccountRecordsInventoryRow? row)
     {
@@ -677,7 +682,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         await RunManualAsync(() => Task.Run(() =>
         {
             using var stream = File.OpenRead(dialog.FileName);
-            if (stream.Length is <= 0 or > 4 * 1024 * 1024) throw new InvalidDataException("图片必须大于 0 字节且不超过 4 MiB。");
+            if (stream.Length is <= 0 or > 4 * 1024 * 1024) throw new InvalidDataException("选择的图片为空或超过 4 MiB，未保存。");
             var bytes = new byte[(int)stream.Length];
             stream.ReadExactly(bytes);
             _icons.Store(row.Name, bytes);

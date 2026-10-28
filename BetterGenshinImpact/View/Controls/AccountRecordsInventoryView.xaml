@@ -13,7 +13,6 @@
         <behavior:BindingProxy x:Key="InventoryProxy" Data="{Binding Mode=OneWay}" />
         <BooleanToVisibilityConverter x:Key="BoolVisibility" />
         <controls:AccountRecordsTimeConverter x:Key="InventoryTime" />
-        <controls:AccountRecordsRowNumberConverter x:Key="InventoryRowNumber" />
         <Style x:Key="InventoryText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
             <Setter Property="FontSize" Value="14" />
             <Setter Property="VerticalAlignment" Value="Center" />
@@ -115,7 +114,7 @@
                   CanUserAddRows="False" CanUserDeleteRows="False" CanUserResizeRows="False" CanUserReorderColumns="False" RowHeight="36" MinRowHeight="36"
                   FontSize="14" ColumnHeaderHeight="36" ColumnHeaderStyle="{StaticResource InventoryHeader}"
                   HeadersVisibility="Column" GridLinesVisibility="None" SelectionMode="Single"
-                  EnableRowVirtualization="True" EnableColumnVirtualization="True" AlternationCount="2147483647"
+                  EnableRowVirtualization="True" EnableColumnVirtualization="True"
                   ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
                   Background="Transparent" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                   RowBackground="{DynamicResource ApplicationBackgroundBrush}"
@@ -165,7 +164,7 @@
                     <Setter Property="Template">
                         <Setter.Value>
                             <ControlTemplate TargetType="DataGridRow">
-                                <!-- 行号借用交替索引；行底色统一由主题提供，不继承交替或选中背景。 -->
+                                <!-- 行号由可见分区提供；行底色统一由主题提供，不继承交替或选中背景。 -->
                                 <Grid Background="{DynamicResource ApplicationBackgroundBrush}">
                                     <Border x:Name="Highlight" Background="{DynamicResource AccentFillColorDefaultBrush}" Opacity="0" IsHitTestVisible="False" />
                                     <DataGridCellsPresenter />
@@ -284,15 +283,25 @@
                                         </Style.Triggers>
                                     </Style>
                                 </Viewbox.Style>
-                                <TextBlock FontSize="16" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                           Text="{Binding (ItemsControl.AlternationIndex), RelativeSource={RelativeSource AncestorType=DataGridRow}, Converter={StaticResource InventoryRowNumber}, Mode=OneWay}" />
+                                <!-- 与无行号占位共用 Star24，避免文本星号随字体改变外观。 -->
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:SymbolIcon Symbol="Star24" FontSize="16" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                   Visibility="{Binding Prior, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
+                                    <TextBlock FontSize="16" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                               Text="{Binding DisplayRowNumber, Mode=OneWay}" />
+                                </StackPanel>
                             </Viewbox>
-                            <ui:SymbolIcon Symbol="Box24" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Opacity="0.14"
+                            <ui:SymbolIcon Foreground="{DynamicResource TextFillColorPrimaryBrush}" Opacity="0.14"
                                            HorizontalAlignment="Center" VerticalAlignment="Center">
                                 <ui:SymbolIcon.Style>
                                     <Style TargetType="ui:SymbolIcon">
+                                        <Setter Property="Symbol" Value="Box24" />
                                         <Setter Property="Visibility" Value="Collapsed" />
                                         <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Prior, Mode=OneWay}" Value="True">
+                                                <Setter Property="Symbol" Value="Star24" />
+                                            </DataTrigger>
                                             <MultiDataTrigger>
                                                 <MultiDataTrigger.Conditions>
                                                     <Condition Binding="{Binding Icon, Mode=OneWay}" Value="{x:Null}" />
@@ -316,7 +325,13 @@
                         <Grid ClipToBounds="True">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="1" Text="{Binding Quantity, Mode=OneWay, TargetNullValue=未知}" VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="2" Text="{Binding DeltaText, Mode=OneWay}" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" ToolTip="{Binding DeltaText, Mode=OneWay}" />
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding ExpiredQuantityText, Mode=OneWay}" FontSize="11"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                           ToolTip="{Binding ExpiredQuantityDetails, Mode=OneWay}" />
+                                <TextBlock Text="{Binding DeltaText, Mode=OneWay}" FontSize="11"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" ToolTip="{Binding DeltaText, Mode=OneWay}" />
+                            </StackPanel>
                         </Grid>
                     </DataTemplate></DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
@@ -378,7 +393,6 @@
             <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center">
                     <ui:Button Width="32" Height="32" Padding="0" Margin="0,0,4,0" VerticalContentAlignment="Center" Icon="{ui:SymbolIcon DocumentBulletList20}" ToolTip="查看事件记录" AutomationProperties.Name="查看事件记录" Command="{Binding OpenEventsCommand, Mode=OneWay}" />
-                    <ui:Button Height="32" VerticalContentAlignment="Center" Content="接受" Command="{Binding ResolveNoticeCommand, Mode=OneWay}" CommandParameter="accept" Visibility="{Binding CanAcceptNotice, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
                     <ui:Button Height="32" VerticalContentAlignment="Center" Content="舍弃" Command="{Binding ResolveNoticeCommand, Mode=OneWay}" CommandParameter="discard" Visibility="{Binding CanResolveNotice, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
                     <ui:Button Height="32" VerticalContentAlignment="Center" Content="归档" Command="{Binding AcknowledgeNoticeCommand, Mode=OneWay}" Visibility="{Binding CanAcknowledgeNotice, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
                     <ui:Button Height="32" VerticalContentAlignment="Center" Content="批量归档" ToolTip="归档当前账号中与此提示同类型、且未被错误或待处理事件阻挡的完成事件。" Command="{Binding ArchiveCompletedEventsCommand, Mode=OneWay}" Visibility="{Binding ShowBatchArchive, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />

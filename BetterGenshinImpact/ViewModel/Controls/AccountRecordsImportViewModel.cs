@@ -83,7 +83,7 @@ public partial class AccountRecordsImportViewModel : ObservableObject
             if (_package["note"]?.Type == JTokenType.String) Summary += "\n" + (string?)_package["note"];
             HasPackage = true;
         }
-        catch (Exception ex) { Summary = "文件未载入。"; Message = ex.Message; }
+        catch (Exception ex) { Summary = "文件未载入。"; Message = AccountRecordsErrorMessages.Describe(ex); }
         finally { IsBusy = false; }
     }
 
@@ -116,7 +116,7 @@ public partial class AccountRecordsImportViewModel : ObservableObject
             HasPackage = false;
             _package = null;
         }
-        catch (Exception ex) { Message = $"导入未完成：{ex.Message}\n已经成功保存的批次会保留，请查看库存后重试。"; }
+        catch (Exception ex) { Message = $"导入未完成：{AccountRecordsErrorMessages.Describe(ex)}\n已经成功保存的批次会保留。"; }
         finally { IsBusy = false; }
         if (closeAfterImport) CloseRequested?.Invoke();
     }

@@ -1265,6 +1265,8 @@ dotnet msbuild BetterGenshinImpact.sln -restore -p:Configuration=Debug -nologo -
 
 ## 14. 后续开发接入规范
 
+狛荷屋物品图标暂为独立存储例外：扫描或人工上传的图标不能在缓存未命中时即时重建，保存在 `Data/Cache/AccountRecords/icons/{模型版本}`，由 `InventoryIconCache` 实现 `IStorageAreaProvider` 登记。该区域不按时间或容量自动淘汰、不参与一键清理，显式清理需要确认。待 OCR 接入及公共缓存支持相应保留和主动更新策略后，再评估接入 `IFileCache`；库存文件及其 `.bak` 恢复机制不变。旧 `Cache/AccountRecords` 沿用上游旧目录清理策略，不自动迁移，旧图标需重新提供。
+
 | 我需要 | 使用 | 不要 |
 |---|---|---|
 | 解压、克隆等一次性临时目录 | `ITempFileService.CreateScope(TempCategories.X)` | `Path.GetTempPath()`、自己拼 `User/Temp`、在业务目录旁建 `_temp` 目录 |

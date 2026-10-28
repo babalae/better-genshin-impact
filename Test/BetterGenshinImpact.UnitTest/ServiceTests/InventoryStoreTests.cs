@@ -20,6 +20,129 @@ public sealed class InventoryStoreTests : IDisposable
     /// <summary>固定测试账号，与实际账号无关。</summary>
     private const string Uid = "100000001";
 
+    /// <summary>人工确认归档积压错误并终止待核实增量，保留先前已完成核实的证据。</summary>
+    [Fact]
+    public async Task ManualConfirmation_ArchivesErrorsAndAbortsPendingButPreservesPreviousVerification()
+    {
+        await _store.ReportAsync(Uid, Source("scan"), [Report("摩拉", 100)]);
+        await _store.ReportDeltaAsync(Uid, Source("gain"), [new()
+        { Name = "摩拉", Delta = 20, RecordedAt = _time.AddMinutes(1).ToString("O") }]);
+        var verified = Report("摩拉", 120, 2);
+
+        await _store.ReportAsync(Uid, Source("scan"), [verified]);
+        var previous = (await _store.ReadAsync(Uid)).Inventory.Events.Single(item => item.Kind == "Delta");
+        await _store.ReportAsync(Uid, Source("bad-a"), [Report("摩拉", -1, 3)]);
+        await _store.ReportAsync(Uid, Source("bad-b"), [Report("摩拉", -2, 4)]);
+        // 红灯不阻断后续有效核实记录更新当前库存。
+        var later = Report("摩拉", 122, 4);
+
+        await _store.ReportAsync(Uid, Source("later-scan"), [later]);
+        Assert.Equal(122, (await _store.ReadAsync(Uid)).Inventory.Items["摩拉"][0].Quantity);
+        await _store.ReportDeltaAsync(Uid, Source("gain"), [new()
+        { Name = "摩拉", Delta = 5, RecordedAt = _time.AddMinutes(5).ToString("O") }]);
+        var before = (await _store.ReadAsync(Uid)).Inventory;
+        var errors = before.Events.Where(item => item.State == "Error").Select(item => item.Id).ToArray();
+        var pendingId = before.Events.Single(item => item.State == "Pending").Id;
+
+        await _store.SetLocalQuantityAsync(Uid, "摩拉", 124);
+        var after = (await _store.ReadAsync(Uid)).Inventory;
+        Assert.Equal(124, after.Items["摩拉"][0].Quantity);
+        Assert.Equal("AccountRecords.SetLocalQuantityAsync", after.Items["摩拉"][0].Source);
+        Assert.Empty(after.Errors);
+        Assert.Equal(2, errors.Length);
+        Assert.All(errors, id => Assert.Contains(after.Events, item => item.Id == id && item.State == "Error" && item.Archived));
+        var completed = after.Events.Single(item => item.Id == pendingId);
+        Assert.Equal("Aborted", completed.State);
+        Assert.True(completed.Archived);
+        Assert.Null(completed.VerifiedCorrect);
+        Assert.Empty(completed.VerificationSource);
+        Assert.Contains(completed.History, line => line.Contains("ManualConfirmation") && line.Contains("Quantity=124"));
+        var oldCompleted = after.Events.Single(item => item.Id == previous.Id);
+        Assert.Equal(previous.VerificationId, oldCompleted.VerificationId);
+        Assert.Equal(previous.VerifiedCorrect, oldCompleted.VerifiedCorrect);
+        Assert.Equal(previous.History, oldCompleted.History);
+        Assert.False(oldCompleted.Archived);
+        Assert.Equal("Completed", InventoryEventPolicy.SelectActive(after.Events.Where(item => item.Name == "摩拉"))!.State);
+
+        // 后续读取不能因为最近库存来自人工就清除新错误；再次人工提交才结束它。
+        await _store.ReportFailureAsync(Uid, Source("new-failure"), "摩拉", "新的采集失败");
+        Assert.Contains("摩拉", (await _store.ReadAsync(Uid)).Inventory.Errors.Keys);
+        await _store.SetLocalQuantityAsync(Uid, "摩拉", 130);
+        var repeated = (await _store.ReadAsync(Uid)).Inventory;
+        Assert.Equal(completed.VerificationId, repeated.Events.Single(item => item.Id == pendingId).VerificationId);
+        Assert.Null(repeated.Events.Single(item => item.Id == pendingId).VerifiedCorrect);
+        Assert.Equal(completed.History, repeated.Events.Single(item => item.Id == pendingId).History);
+        var resolved = (await _store.ReadAsync(Uid)).Inventory;
+        Assert.Empty(resolved.Errors);
+        Assert.Equal(130, resolved.Items["摩拉"][0].Quantity);
+    }
+
+    /// <summary>修订未知名称会处理全部积压错误，以人工总数覆盖目标，后续同名上报仍独立校验。</summary>
+    [Fact]
+    public async Task ManualRename_ArchivesAllOriginalNameErrorsWithoutCreatingAlias()
+    {
+        await _store.ReportAsync(Uid, Source("scan"), [Report("未知名称", 10)]);
+        await _store.ReportAsync(Uid, Source("scan-2"), [Report("未知名称", 20, 1)]);
+        await _store.ReportDeltaAsync(Uid, Source("delta"), [new()
+        { Name = "未知名称", Delta = 5, RecordedAt = _time.AddMinutes(2).ToString("O") }]);
+        await _store.ReportAsync(Uid, Source("scan"), [Report("摩拉", 100)]);
+        var workspace = await _store.ReadAsync(Uid);
+        var error = workspace.Inventory.Errors["未知名称"];
+        var editor = new AccountRecordsInventoryEditViewModel(_store, _catalog, Uid,
+            new AccountRecordsInventoryRow { Name = "未知名称", Error = error }, workspace.Definitions)
+        { Name = "摩拉", QuantityText = "12" };
+        await editor.SaveCommand.ExecuteAsync(null);
+        Assert.Empty(editor.Message);
+        var after = (await _store.ReadAsync(Uid)).Inventory;
+        Assert.Equal(12, after.Items["摩拉"][0].Quantity);
+        Assert.DoesNotContain("未知名称", after.Errors.Keys);
+        var archived = after.Events.Where(item => item.Name == "未知名称").ToArray();
+        Assert.Equal(3, archived.Length);
+        Assert.All(archived, item =>
+        {
+            Assert.True(item.Archived);
+            Assert.Equal("Error", item.State);
+            Assert.Contains(item.History, line => line.Contains("摩拉") && line.Contains("12"));
+        });
+        Assert.DoesNotContain("未知名称", after.Items.Keys);
+        await _store.ReportAsync(Uid, Source("new-scan"), [Report("未知名称", 30, 3)]);
+        var later = (await _store.ReadAsync(Uid)).Inventory;
+        Assert.Contains("未知名称", later.Errors.Keys);
+        Assert.Equal(12, later.Items["摩拉"][0].Quantity);
+    }
+
+    /// <summary>所有空名称形式均在批次写入前拒绝，不留下有效项的部分写入或空名称错误行。</summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" \t ")]
+    public async Task EmptyNames_RejectWholeBatchBeforeWriting(string? name)
+    {
+        await Assert.ThrowsAsync<ArgumentException>(() => _store.ReportAsync(Uid, Source("scan"),
+            [Report("摩拉", 100), Report(name!, 10)]));
+        await Assert.ThrowsAsync<ArgumentException>(() => _store.ReportDeltaAsync(Uid, Source("delta"),
+            [new() { Name = "摩拉", Delta = 1, RecordedAt = _time.ToString("O") },
+             new() { Name = name!, Delta = 1, RecordedAt = _time.ToString("O") }]));
+        var data = (await _store.ReadAsync(Uid)).Inventory;
+        Assert.Empty(data.Items);
+        Assert.Empty(data.Errors);
+        Assert.Empty(data.Events);
+    }
+
+    /// <summary>旧错误在详情中使用明确的人工核实指引，但不修改原始事件证据。</summary>
+    [Fact]
+    public void LegacyVerificationError_ExplainsTimeOrderWithoutRewritingEvidence()
+    {
+        const string original = "核实记录已过期，无法确认当前库存变动。";
+        var entry = new InventoryEvent { Name = "摩拉", State = "Error", Message = original, History = [original] };
+        var viewModel = new AccountRecordsEventsViewModel(new InventoryDocument { Events = [entry] }, entry.Id,
+            (_, _) => Task.FromResult(new InventoryDocument()));
+        Assert.Contains("早于待核实的库存变动", viewModel.Details);
+        Assert.Contains("当前实际库存总数", viewModel.Details);
+        Assert.Equal(original, entry.Message);
+        Assert.Contains(original, viewModel.HistoryDetails);
+    }
+
     /// <summary>仅事件变化也更新总表文件时间；轻量检查不依赖库存业务时间或读取内容。</summary>
     [Fact]
     public async Task SnapshotTimestamp_TracksEventOnlyChanges()
@@ -115,7 +238,7 @@ public sealed class InventoryStoreTests : IDisposable
         var item = data.Events.Single(value => value.State == "Error");
         Assert.Equal(error.Id, item.ErrorId);
         item.History.Clear();
-        Assert.True(new AccountRecordsInventoryRow { Error = error, Event = item }.CanAcceptDisplayedError);
+        Assert.False(new AccountRecordsInventoryRow { Error = error, Event = item }.CanAcceptDisplayedError);
 
         var path = Path.Combine(_root, "records", Uid, "inventory.json");
         var document = JObject.Parse(File.ReadAllText(path));
@@ -126,8 +249,8 @@ public sealed class InventoryStoreTests : IDisposable
         data = (await _store.ReadAsync(Uid)).Inventory;
         Assert.Equal(error.Id, data.Events.Single(value => value.Id == item.Id).ErrorId);
         Assert.Equal(legacy, File.ReadAllText(path));
-        await _store.ResolveAsync(Uid, "摩拉", error.Id, true, item.Id);
-        Assert.Equal(8, (await _store.ReadAsync(Uid)).Inventory.Items["摩拉"][0].Quantity);
+        await _store.ResolveAsync(Uid, "摩拉", error.Id, false, item.Id);
+        Assert.Equal(10, (await _store.ReadAsync(Uid)).Inventory.Items["摩拉"][0].Quantity);
     }
 
     /// <summary>先打开的编辑器在提交时仍受保护，而任务上报和查看库存不受锁影响。</summary>
@@ -238,7 +361,7 @@ public sealed class InventoryStoreTests : IDisposable
         var rows = await new AccountRecordsInventoryRowFactory(_catalog, new InventoryIconCache()).BuildAsync(workspace);
         var row = Assert.Single(rows);
         Assert.Equal(showsResult, row.StatusDetails.Contains("结果："));
-        if (showsResult) Assert.Contains("结果：正确", row.StatusDetails);
+        if (showsResult) Assert.Contains("累计推算与确认库存：一致", row.StatusDetails);
         if (showsResult && verificationSource != null) Assert.Contains("核实来源：测试扫描", row.StatusDetails);
     }
 
@@ -409,8 +532,8 @@ public sealed class InventoryStoreTests : IDisposable
         await _store.ReportAsync(Uid, Source("a"), [Report("甜甜花", 8)]);
         await _store.ReportFailureAsync(Uid, Source("a"), "甜甜花", "没有识别到数量");
         var document = (await _store.LoadAsync(Uid)).Inventory;
-        Assert.Equal(8L, document.Items["甜甜花"][0].Quantity);
-        Assert.Equal(_time, document.Items["甜甜花"][0].RecordedAt);
+        Assert.Equal(10L, document.Items["甜甜花"][0].Quantity);
+        Assert.Equal(_time.AddMinutes(2), document.Items["甜甜花"][0].RecordedAt);
         Assert.Equal("ReadFailed", document.Errors["甜甜花"].Code);
     }
 
@@ -426,9 +549,9 @@ public sealed class InventoryStoreTests : IDisposable
         Assert.DoesNotContain(Uid, await _store.ListUidsAsync());
     }
 
-    /// <summary>旧记录保留双方证据；接受时保留原时间，之后可丢弃其他错误。</summary>
+    /// <summary>冲突错误禁止接受；舍弃只清理异常，不覆盖确认库存。</summary>
     [Fact]
-    public async Task OlderRecord_RequiresExplicitAcceptance()
+    public async Task OlderRecord_CannotBeAccepted()
     {
         await _store.ReportAsync(Uid, Source("a"), [Report("甜甜花", 10, 2)]);
         await _store.ReportAsync(Uid, Source("b"), [Report("甜甜花", 8)]);
@@ -436,10 +559,11 @@ public sealed class InventoryStoreTests : IDisposable
         Assert.Equal(10L, document.Items["甜甜花"][0].Quantity);
         var error = document.Errors["甜甜花"];
         Assert.Equal(10L, error.Current!.Quantity);
-        await _store.ResolveAsync(Uid, "甜甜花", error.Id, true);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _store.ResolveAsync(Uid, "甜甜花", error.Id, true));
+        await _store.ResolveAsync(Uid, "甜甜花", error.Id, false);
         document = (await _store.LoadAsync(Uid)).Inventory;
-        Assert.Equal(8L, document.Items["甜甜花"][0].Quantity);
-        Assert.Equal(_time, document.Items["甜甜花"][0].RecordedAt);
+        Assert.Equal(10L, document.Items["甜甜花"][0].Quantity);
+        Assert.Equal(_time.AddMinutes(2), document.Items["甜甜花"][0].RecordedAt);
         Assert.Empty(document.Errors);
     }
 
@@ -688,19 +812,19 @@ public sealed class InventoryStoreTests : IDisposable
         Assert.Equal(0L, data.Events.Where(item => item.Kind == "Delta").Sum(item => item.Quantity));
     }
 
-    /// <summary>旧扫描拒绝且不消除增量；新扫描可核实，推算差异本身不计错。</summary>
+    /// <summary>仅凭记录时间拒绝旧库存并保留增量；新记录无需额外核实时间即可核实。</summary>
     [Fact]
     public async Task Verification_RejectsOldScanThenArchivesOnConfirmation()
     {
         await _store.ReportAsync(Uid, Source("scan"), [Report("摩拉", 80)]);
         await _store.ReportDeltaAsync(Uid, Source("delta"), [new InventoryDeltaReport
         { Name = "摩拉", Delta = -3, RecordedAt = _time.AddMinutes(2).ToString("O") }]);
-        var old = Report("摩拉", 80, 3); old.VerifiedAt = _time.AddMinutes(1).ToString("O");
+        var old = Report("摩拉", 80, 1);
         Assert.Single((await _store.ReportAsync(Uid, Source("scan"), [old])).Rejected);
         var pending = (await _store.LoadAsync(Uid)).Inventory;
         Assert.Equal(80L, pending.Items["摩拉"][0].Quantity);
         Assert.Contains(pending.Events, item => item.Kind == "Delta" && item.State == "Pending");
-        var fresh = Report("摩拉", 76, 4); fresh.VerifiedAt = fresh.RecordedAt;
+        var fresh = Report("摩拉", 76, 4);
         await _store.ReportAsync(Uid, Source("scan"), [fresh]);
         var workspace = await _store.LoadAsync(Uid);
         Assert.Equal("Completed", workspace.Inventory.Events.Last(item => item.Source == "scan").State);
@@ -712,6 +836,42 @@ public sealed class InventoryStoreTests : IDisposable
         Assert.True((await _store.LoadAsync(Uid)).Inventory.Events.Single(item => item.Id == verified.Id).KeepNotice);
         await _store.UpdateEventAsync(Uid, verified.Id, false, true);
         Assert.True((await _store.LoadAsync(Uid)).Inventory.Events.Single(item => item.Id == verified.Id).Archived);
+    }
+
+    /// <summary>缺少业务时间不能使用接收时间代替，已有库存及待核实增量保持不变。</summary>
+    [Fact]
+    public async Task Verification_MissingRecordedAtDoesNotVerifyPending()
+    {
+        await _store.ReportAsync(Uid, Source("scan"), [Report("摩拉", 80)]);
+        await _store.ReportDeltaAsync(Uid, Source("delta"), [new()
+        { Name = "摩拉", Delta = 5, RecordedAt = _time.AddMinutes(1).ToString("O") }]);
+        var report = Report("摩拉", 85);
+        report.RecordedAt = null;
+        var result = await _store.ReportAsync(Uid, Source("scan"), [report]);
+        Assert.Contains("缺少记录时间", result.Rejected["摩拉"]);
+        var data = (await _store.ReadAsync(Uid)).Inventory;
+        Assert.Equal(80, data.Items["摩拉"][0].Quantity);
+        Assert.Equal("Pending", data.Events.Single(item => item.Kind == "Delta").State);
+    }
+
+    /// <summary>严格拒绝双时间字段，包括显式 null，不改变库存或待核实增量。</summary>
+    [Fact]
+    public async Task Exchange_RejectsRemovedVerificationTime()
+    {
+        await _store.ReportAsync(Uid, Source("scan"), [Report("摩拉", 80)]);
+        var package = await _store.ExportInventoryAsync(Uid);
+        var record = (JObject)package["accounts"]![Uid]!["inventory"]!["摩拉"]![0]!;
+        record["recordedAt"] = _time.AddMinutes(3).ToString("O");
+        record["verifiedAt"] = _time.AddMinutes(1).ToString("O");
+        await _store.ReportDeltaAsync(Uid, Source("delta"), [new()
+        { Name = "摩拉", Delta = 5, RecordedAt = _time.AddMinutes(2).ToString("O") }]);
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() => _store.ImportInventoryAsync(package, Uid, false));
+        Assert.Contains("不支持 verifiedAt", error.Message);
+        Assert.Equal("Pending", (await _store.ReadAsync(Uid)).Inventory.Events.Single(item => item.Kind == "Delta").State);
+        Assert.NotNull(record["verifiedAt"]);
+        record["verifiedAt"] = JValue.CreateNull();
+        await Assert.ThrowsAsync<InvalidDataException>(() => _store.ImportInventoryAsync(package, Uid, false));
+        Assert.Equal(80, (await _store.ReadAsync(Uid)).Inventory.Items["摩拉"][0].Quantity);
     }
 
     /// <summary>保留扫描失败证据和重复批次去重，但不再生成来源错误提醒。</summary>
@@ -1023,6 +1183,8 @@ public sealed class InventoryStoreTests : IDisposable
         await _store.SetLocalQuantityAsync(Uid, "须臾树脂", 1);
         var final = await _store.LoadAsync(Uid);
         Assert.DoesNotContain(final.Inventory.Events, item => item.Kind == "ExpirationCheck" && !item.Archived);
+        Assert.Equal("Aborted", final.Inventory.Events.Single(item => item.Id == second.Id).State);
+        Assert.Equal("Completed", final.Inventory.Events.Single(item => item.Id == first.Id).State);
         Assert.Equal(1, final.Inventory.Items["须臾树脂"][0].Quantity);
     }
 
@@ -1110,7 +1272,7 @@ public sealed class InventoryStoreTests : IDisposable
         await _store.ReportAsync(Uid, Source("old"), [Report("摩拉", 8, -1)]);
         var data = (await _store.LoadAsync(Uid)).Inventory;
         var error = data.Errors["摩拉"];
-        Assert.True(error.CanAccept);
+        Assert.False(error.CanAccept);
         var shown = data.Events.Single(item => item.State == "Error");
         await _store.ReportDeltaAsync(Uid, Source("bad-delta"), [new()
         { Name = "摩拉", Delta = -100, RecordedAt = _time.AddMinutes(1).ToString("O") }]);

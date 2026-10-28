@@ -35,7 +35,7 @@ internal sealed class AccountRecordsInventoryRowFactory(InventoryCatalog catalog
             var firstOrigin = origins.FirstOrDefault() ?? Display(active?.Source ?? reference);
             if (firstOrigin.Length > 24) firstOrigin = firstOrigin[..24] + "…";
             var details = changes.Length > 0 ? $"变动来源：{firstOrigin}{(origins.Length > 1 ? $"，共 {origins.Length} 处" : "")}，累计变动：{changes.Sum(item => (decimal)item.Quantity):+0;-0;±0}" : $"核实来源：{firstOrigin}";
-            if (active is { State: "Completed", Kind: "Delta" }) details += $"，结果：{(active.VerifiedCorrect == true ? "正确" : "错误")}，核实来源：{Display(active.VerificationSource)}";
+            if (active is { State: "Completed", Kind: "Delta" }) details += $"，累计推算与确认库存：{(active.VerifiedCorrect == true ? "一致" : active.VerifiedCorrect == false ? "不一致" : "未记录比对结果")}，核实来源：{Display(active.VerificationSource)}";
             if (active?.Kind == "CategoryWarning")
                 details = $"上报来源：{Display(active.Source)}，分类采用本地值";
             if (active?.Kind == "ExpirationCheck")

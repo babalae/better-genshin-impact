@@ -52,7 +52,7 @@ public partial class AccountRecordsPageViewModel : ViewModel
             await Load();
             await ThemedMessageBox.ShowAsync("已重置为预设值，UID 列表已清空。", "重置完成", MessageBoxButton.OK);
         }
-        catch (Exception ex) { await ThemedMessageBox.ShowAsync(ex.Message, "重置失败", MessageBoxButton.OK, ThemedMessageBox.MessageBoxIcon.Error); }
+        catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), "重置失败", MessageBoxButton.OK, ThemedMessageBox.MessageBoxIcon.Error); }
     }
 
     /// <summary>注入公共存储与独立的库存分页模型。</summary>
@@ -131,7 +131,7 @@ public partial class AccountRecordsPageViewModel : ViewModel
             if (SelectedUid == null || !UidOptions.Contains(SelectedUid)) SelectedUid = uids.FirstOrDefault();
             else await Inventory.ResumeAsync(SelectedUid);
         }
-        catch (Exception ex) { await ThemedMessageBox.ShowAsync(ex.Message, "读取账号记录", MessageBoxButton.OK); }
+        catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), "读取账号记录", MessageBoxButton.OK); }
     }
 
     /// <summary>关闭 UID 列表并进入新增浮窗。</summary>
@@ -177,7 +177,7 @@ public partial class AccountRecordsPageViewModel : ViewModel
         var uid = SelectedUid;
         if (uid == null)
         {
-            await ThemedMessageBox.ShowAsync("请先选择一个 UID。", "导出库存", MessageBoxButton.OK);
+            await ThemedMessageBox.ShowAsync("尚未选择 UID。", "导出库存", MessageBoxButton.OK);
             return;
         }
         var dialog = new Microsoft.Win32.SaveFileDialog
@@ -195,7 +195,7 @@ public partial class AccountRecordsPageViewModel : ViewModel
             File.Move(temporary, dialog.FileName, true);
             await ThemedMessageBox.ShowAsync("当前库存已导出。文件保留原记录时间与来源，不包含异常、快照或图标。", "导出完成", MessageBoxButton.OK);
         }
-        catch (Exception ex) { await ThemedMessageBox.ShowAsync(ex.Message, "导出失败", MessageBoxButton.OK); }
+        catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), "导出失败", MessageBoxButton.OK); }
         finally { if (temporary != null && File.Exists(temporary)) File.Delete(temporary); }
     }
 
@@ -206,7 +206,7 @@ public partial class AccountRecordsPageViewModel : ViewModel
         var uid = PendingUid.Trim();
         if (uid.Length is 0 or > 20 || !uid.All(char.IsAsciiDigit))
         {
-            UidValidationMessage = "请输入仅包含数字的 UID。";
+            UidValidationMessage = "UID 必须为 9～10 位数字且首位非零。";
             return;
         }
 
@@ -217,7 +217,7 @@ public partial class AccountRecordsPageViewModel : ViewModel
             SelectedUid = uid;
             CancelAddUid();
         }
-        catch (Exception ex) { UidValidationMessage = ex.Message; }
+        catch (Exception ex) { UidValidationMessage = AccountRecordsErrorMessages.Describe(ex); }
     }
 
     /// <summary>区分清空库存和连同 UID 一并删除全部记录。</summary>
@@ -238,7 +238,7 @@ public partial class AccountRecordsPageViewModel : ViewModel
             await AccountRecordsInteractionGate.Instance.ExecuteManualAsync(() => _store.ClearAsync(uid, false, scope == "uid"));
             await Load();
         }
-        catch (Exception ex) { await ThemedMessageBox.ShowAsync(ex.Message, "清除账号记录失败", MessageBoxButton.OK); }
+        catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), "清除账号记录失败", MessageBoxButton.OK); }
     }
 
     /// <summary>关闭新增输入区，不修改已有 UID。</summary>

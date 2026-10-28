@@ -22,7 +22,7 @@ public partial class AccountRecordsInventoryEditViewModel : ObservableObject
     private readonly string _uid;
     /// <summary>待修订的原行。</summary>
     private readonly AccountRecordsInventoryRow? _original;
-    /// <summary>用户明确反馈原扫描错误，默认不选。</summary>
+    /// <summary>用户明确反馈原上报错误，默认不选。</summary>
     [ObservableProperty] private bool _markScanIncorrect;
     /// <summary>仅有可追溯的核实记录时允许反馈。</summary>
     public bool CanMarkScanIncorrect => _original?.LastScanAttemptId != null;
@@ -68,29 +68,28 @@ public partial class AccountRecordsInventoryEditViewModel : ObservableObject
     /// <summary>优先展示字典中的分类。</summary>
     private void RefreshCategory() => Category = _definitions.TryGetValue(Name.Trim(), out var category) ? category : "";
 
-    /// <summary>校验后保存用户补充与本地数量，并处理被修正的未知名称异常。</summary>
+    /// <summary>校验后提交当前库存，同时结束本次修正的未知名称下的积压事项。</summary>
     [RelayCommand]
     private async Task Save()
     {
         Message = "";
         var name = Name.Trim();
-        if (name.Length is 0 or > 128) { Message = "请输入不超过 128 字符的物品名称。"; return; }
+        if (name.Length is 0 or > 128) { Message = "物品名称不能为空且不能超过 128 字符。"; return; }
         if (!long.TryParse(QuantityText, NumberStyles.None, CultureInfo.InvariantCulture, out var quantity) || quantity < 0)
-        { Message = "数量必须为非负整数。"; return; }
+        { Message = "当前实际库存数量须为不带分隔符的非负整数，且不超过 9223372036854775807。"; return; }
         if (NeedsDefinition && (!AddToDictionary || string.IsNullOrWhiteSpace(Category)))
-        { Message = "名称未收录：请改为标准名称，或填写分类并勾选添加到补充字典。"; return; }
+        { Message = "物品名称未收录，且尚未填写分类或确认添加到补充字典。"; return; }
         try
         {
             await AccountRecordsInteractionGate.Instance.ExecuteManualAsync(async () =>
             {
                 if (CanEditCategory && !string.IsNullOrWhiteSpace(Category)) await _store.DefineAsync(name, Category);
                 await _store.SetLocalQuantityAsync(_uid, name, quantity,
-                    MarkScanIncorrect && CanMarkScanIncorrect ? _original!.LastScanAttemptId : null);
-                if (_original?.Error != null && _original.Name != name)
-                    await _store.ResolveAsync(_uid, _original.Name, _original.Error.Id, false);
+                    MarkScanIncorrect && CanMarkScanIncorrect ? _original!.LastScanAttemptId : null,
+                    _original != null && _original.Name != name ? _original.Name : null);
             });
             Saved?.Invoke();
         }
-        catch (Exception ex) { Message = ex.Message; }
+        catch (Exception ex) { Message = AccountRecordsErrorMessages.Describe(ex); }
     }
 }

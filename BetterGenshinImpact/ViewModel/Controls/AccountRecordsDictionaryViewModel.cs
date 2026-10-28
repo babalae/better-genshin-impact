@@ -65,7 +65,7 @@ public partial class AccountRecordsDictionaryViewModel : ObservableObject
             await AccountRecordsInteractionGate.Instance.ExecuteManualAsync(() => _restorePresetCategories());
             await Refresh();
         }
-        catch (Exception ex) { await ThemedMessageBox.ShowAsync(ex.Message, "恢复预置分类", MessageBoxButton.OK); }
+        catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), "恢复预置分类", MessageBoxButton.OK); }
     }
 
     /// <summary>查询变化时更新列表。</summary>
@@ -85,13 +85,13 @@ public partial class AccountRecordsDictionaryViewModel : ObservableObject
                     : []);
             _entries = entries.OrderBy(item => item.Name, StringComparer.CurrentCulture).ToArray();
             Filter();
-            Message = CanEdit && !File.Exists(_path) ? "字典尚未生成。" : $"共 {_entries.Length} 项。";
+            Message = CanEdit && !File.Exists(_path) ? "字典文件尚未生成。" : $"共 {_entries.Length} 项。";
         }
         catch (Exception ex)
         {
             _entries = [];
             Filter();
-            Message = $"读取失败：{ex.Message}";
+            Message = $"读取失败：{AccountRecordsErrorMessages.Describe(ex)}";
         }
     }
 
@@ -122,11 +122,11 @@ public partial class AccountRecordsDictionaryViewModel : ObservableObject
         {
             await AccountRecordsInteractionGate.Instance.ExecuteManualAsync(() =>
             {
-                if (!File.Exists(_path)) throw new FileNotFoundException("字典尚未生成。", _path);
+                if (!File.Exists(_path)) throw new FileNotFoundException("字典文件尚未生成。", _path);
                 using var process = Process.Start(new ProcessStartInfo(_path) { UseShellExecute = true });
                 return Task.CompletedTask;
             });
         }
-        catch (Exception ex) { await ThemedMessageBox.ShowAsync(ex.Message, "打开源文件", MessageBoxButton.OK); }
+        catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), "打开源文件", MessageBoxButton.OK); }
     }
 }

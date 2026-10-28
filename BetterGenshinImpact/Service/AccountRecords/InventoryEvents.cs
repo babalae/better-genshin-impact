@@ -76,7 +76,7 @@ public sealed partial class InventoryStore
         long quantity, DateTimeOffset time, string message, long? baseline = null)
     {
         if (state != "Completed" && data.Events.Count(value => !value.Archived && value.State != "Completed") >= 5000)
-            throw new InvalidDataException("未解决事件已达 5000 条，请先处理或归档事件后重试；已有记录未删除。");
+            throw new InvalidDataException("未归档且尚未完成的事件已达 5000 条，暂不能新增此类事件。请核实待确认变动、处理错误或归档可归档的提醒后重试；仅归档已完成事件不会释放此额度。");
         var item = new InventoryEvent { Name = name, Source = source, Kind = kind, State = state,
             Quantity = quantity, RecordedAt = time, Message = message, Baseline = baseline };
         item.History.Add($"{DateTimeOffset.UtcNow:O} EventCreated State={state}\nMessage={TraceMessage(message)}\nName={name}; Source={source}; Baseline={baseline}; Quantity={quantity}; RecordedAt={time:O}");
@@ -94,21 +94,17 @@ public sealed partial class InventoryStore
         item.History.Add($"{DateTimeOffset.UtcNow:O} EventUpdated State={state}; Archived={archived}\nMessage={TraceMessage(message)}");
     }
 
-    /// <summary>核实必须携带可信扫描时刻，且不得早于尚未核实的任何变动。</summary>
-    private static string? VerificationError(InventoryDocument data, InventoryReport report, InventoryRecord? candidate)
+    /// <summary>使用已校验的实际记录时间核实增量，不得早于尚未核实的任何变动。</summary>
+    private static string? VerificationError(InventoryDocument data, string name, InventoryRecord? candidate)
     {
-        var pending = Pending(data, report.Name);
-        if (pending.Length == 0 && report.VerifiedAt == null) return null;
-        if (string.IsNullOrWhiteSpace(report.VerifiedAt)) return "核实记录缺少可信扫描时间，无法确认当前库存变动。";
-        var proof = Parse(new InventoryReport { Quantity = 0, RecordedAt = report.VerifiedAt }, "", DateTimeOffset.UtcNow, out var error);
-        if (error != null || proof == null) return "核实扫描时间无效，待后续核实。";
-        if (pending.Length > 0 && proof.RecordedAt < pending.Max(item => item.RecordedAt)) return "核实记录已过期，无法确认当前库存变动。";
-        if (candidate != null && proof.RecordedAt > candidate.RecordedAt) return "扫描时间晚于库存记录时间，无法完成核实。";
+        if (candidate == null) return null;
+        var pending = Pending(data, name);
+        if (pending.Length > 0 && candidate.RecordedAt < pending.Max(item => item.RecordedAt)) return "本次上报的记录时间早于待核实的库存变动，不能确认变动后的数量。请重新采集并上报，或查看游戏后手动填写当前实际库存总数。";
         return null;
     }
 
-    /// <summary>正常扫描接收后核实所有已覆盖变动，推算不一致本身不是来源错误。</summary>
-    private static void VerifyPending(InventoryDocument data, string name, InventoryRecord record, bool manual = false)
+    /// <summary>有效库存上报接收后核实所有已覆盖变动，推算不一致本身不是来源错误。</summary>
+    private static void VerifyPending(InventoryDocument data, string name, InventoryRecord record)
     {
         var pending = Pending(data, name);
         if (pending.Length == 0) return;
@@ -119,7 +115,7 @@ public sealed partial class InventoryStore
             item.VerificationSource = record.Source;
             item.VerificationId = verificationId;
             item.VerifiedCorrect = expected == record.Quantity;
-            Transition(item, "Completed", "该材料曾有增减信息，已完成核实。" + (manual ? "人工确认。" : ""));
+            Transition(item, "Completed", "该材料曾有增减信息，已完成核实。");
             item.History.Add($"VerificationSource={record.Source}; Quantity={record.Quantity}; VerifiedCorrect={expected == record.Quantity}; RecordedAt={record.RecordedAt:O}");
         }
     }
@@ -135,8 +131,11 @@ public sealed partial class InventoryStore
             Report: new InventoryDeltaReport { Name = item.Report.Name, Delta = item.Report.Delta, RecordedAt = item.Report.RecordedAt,
                 Expirations = item.Report.Expirations?.Select(value => new InventoryExpiration { Quantity = value.Quantity, ExpiresAt = value.ExpiresAt }).ToList() }))
             .OrderBy(item => DateTimeOffset.TryParse(item.Report.RecordedAt, CultureInfo.InvariantCulture, DateTimeStyles.None, out var time) ? time : DateTimeOffset.MaxValue).ToArray();
+        // 与完整库存上报一致，空名称在持久化前拒绝，不能聚合成空名称错误行。
+        if (batch.Any(item => string.IsNullOrWhiteSpace(item.Report.Name)))
+            throw new ArgumentException("物品名称不能为空或仅包含空白字符，本批上报未保存。");
         if (batch.Any(item => item.Source.Reference == LocalQuantitySource || item.Source.Reference.Length is 0 or > 1024))
-            throw new ArgumentException("增量来源无效，人工编辑不能提交增量。");
+            throw new ArgumentException("人工编辑来源只能提交当前库存总数，不能提交增减数量。请自动上报方使用自己的来源标识。");
         return Locked(() =>
         {
             var origins = Sources();
@@ -149,7 +148,7 @@ public sealed partial class InventoryStore
                 if (!origins.ContainsKey(reference)) origins[reference] = entry.Source;
                 var name = report.Name.Trim();
                 var parsed = Parse(new InventoryReport { Quantity = 0, RecordedAt = report.RecordedAt }, reference, DateTimeOffset.UtcNow, out var reason);
-                if (string.IsNullOrWhiteSpace(report.RecordedAt)) reason = "增量必须携带时间戳。";
+                if (string.IsNullOrWhiteSpace(report.RecordedAt)) reason = "库存变动缺少发生时间，本次增减未纳入推算。请来源补充带时区的发生时间后重新上报。";
                 if (parsed != null && (HasReceipt(data, name, DeltaReceipt(reference, parsed.RecordedAt)) ||
                     data.Events.Any(item => !item.ItemDeleted && item.Kind == "Delta" && item.Name == name && item.Source == reference && item.RecordedAt == parsed.RecordedAt)))
                 {
@@ -165,13 +164,13 @@ public sealed partial class InventoryStore
                 }
                 data.Items.TryGetValue(name, out var records);
                 var baseline = records?.FirstOrDefault();
-                if (name.Length is 0 or > 128 || !Definitions().ContainsKey(name)) reason = "增量物品不在字典中。";
-                else if (baseline == null) reason = "没有确认库存基准，本次增量不可靠，已拒绝。";
-                else if (parsed != null && parsed.RecordedAt < baseline.RecordedAt) reason = "增量早于当前确认库存，已拒绝。";
+                if (name.Length is 0 or > 128 || !Definitions().ContainsKey(name)) reason = "库存变动的物品名称为空、超过 128 字符或未收录，本次增减未纳入推算。请修正名称或补充物品字典后重新上报。";
+                else if (baseline == null) reason = "该物品尚无已确认库存，本次增减未纳入推算。请先上报当前库存，或查看游戏后手动填写当前实际库存总数。";
+                else if (parsed != null && parsed.RecordedAt < baseline.RecordedAt) reason = "本次变动早于当前确认库存，可能已包含在该库存中，因此未纳入推算。请核对发生时间，勿重复累计；如数量存疑，请查看游戏后手动填写当前实际库存总数。";
                 var pending = Pending(data, name);
                 if (reason == null && baseline != null && parsed != null &&
                     !HasValidDeltaSequence(baseline, pending, report, parsed.RecordedAt))
-                    reason = "增量推算超出有效库存范围，已拒绝。";
+                    reason = "按发生时间累计变动后，数量超出有效库存范围（小于 0 或超过 64 位整数上限），本次增减未纳入推算。请核对变动记录，或查看游戏后手动填写当前实际库存总数。";
                 if (reason == null && baseline != null) reason = ValidateDeltaExpirations(report, baseline, pending);
                 var item = AddEvent(data, name, reference, "Delta", reason == null ? "Pending" : "Error", report.Delta,
                     parsed?.RecordedAt ?? DateTimeOffset.UtcNow, reason ?? "当前增减仅为推算，待后续核实。", baseline?.Quantity);
@@ -191,12 +190,12 @@ public sealed partial class InventoryStore
     public Task UpdateEventAsync(string uid, string id, bool keep, bool acknowledge) => Locked(() =>
     {
         var data = Load(uid);
-        var item = data.Events.SingleOrDefault(value => value.Id == id) ?? throw new InvalidOperationException("事件不存在。");
+        var item = data.Events.SingleOrDefault(value => value.Id == id) ?? throw new InvalidOperationException("该事件已不存在，可能已被清理。请刷新事件列表后重新选择。");
         if (keep) { item.KeepNotice = true; item.History.Add($"{DateTimeOffset.UtcNow:O} KeepNotice=True"); }
         else if (acknowledge && !item.Archived && item.State != "Pending")
         {
             if (data.Errors.TryGetValue(item.Name, out var error) && item.ErrorId == error.Id)
-                throw new InvalidOperationException("请先接受或舍弃当前库存错误，或手动修订库存。");
+                throw new InvalidOperationException("此异常尚未处理，不能直接归档。请舍弃异常上报；也可查看游戏后手动填写当前实际库存总数，保存后将归档该物品已有异常。");
             Transition(item, item.State, "用户已确认。", true);
         }
         PersistInventory(data);

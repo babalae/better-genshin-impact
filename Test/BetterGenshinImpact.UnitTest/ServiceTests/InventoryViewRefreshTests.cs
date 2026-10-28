@@ -65,8 +65,7 @@ public sealed class InventoryViewRefreshTests
             Assert.Equal(0, loadingTransitions);
             var verified = await store.ReportAsync(uid, scan, [new()
             {
-                Name = "摩拉", Quantity = 12, RecordedAt = time.AddMinutes(2).ToString("O"),
-                VerifiedAt = time.AddMinutes(2).ToString("O")
+                Name = "摩拉", Quantity = 12, RecordedAt = time.AddMinutes(2).ToString("O")
             }]);
             Assert.Single(verified.Accepted);
             await page.LoadCommand.ExecuteAsync(null);
@@ -82,7 +81,7 @@ public sealed class InventoryViewRefreshTests
             await store.ReportAsync(uid, old, [new() { Name = "摩拉", Quantity = 8, RecordedAt = time.ToString("O") }]);
             await vm.RefreshTimeWarningsCommand.ExecuteAsync(null);
             vm.ShowStatusCommand.Execute(row);
-            Assert.True(vm.CanAcceptNotice);
+            Assert.False(vm.CanAcceptNotice);
             await store.ReportDeltaAsync(uid, scan, [new() { Name = "摩拉", Delta = -100, RecordedAt = time.AddMinutes(3).ToString("O") }]);
             await vm.RefreshTimeWarningsCommand.ExecuteAsync(null);
             Assert.Equal("Delta", row.Event?.Kind);

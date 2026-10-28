@@ -44,7 +44,7 @@ public sealed partial class InventoryStore
     private static List<InventoryThresholdRule> CreateInventoryRuleExamples() =>
     [
         new() { Id = "resin-expiring", Name = "须臾树脂", Kind = "ExpiresWithinDays", Threshold = 1,
-            Message = "须臾树脂存在不足 1 天到期或已过期的批次，请及时检查。" }
+            Message = "须臾树脂存在不足 1 天到期或已过期的批次。" }
     ];
 
     /// <summary>首次生成多规则示例；配置覆写与订阅留给后续统一机制，本入口仅创建缺失文件。</summary>
@@ -64,21 +64,37 @@ public sealed partial class InventoryStore
         {
             using var reader = new JsonTextReader(new StringReader(File.ReadAllText(path)));
             var json = JObject.Load(reader, new JsonLoadSettings { DuplicatePropertyNameHandling = DuplicatePropertyNameHandling.Error });
-            if (reader.Read()) throw new InvalidDataException("规则根对象后存在多余内容。");
+            if (reader.Read()) throw new InvalidDataException("提醒规则 JSON 根对象后有多余内容。");
             // 兼容旧配置，仅忽略已移除的来源提醒字段；其他未知字段仍报错。
             foreach (var name in new[] { "Enabled", "Source", "WindowSize", "ErrorThreshold", "Message" }) json.Remove(name);
             var rule = json.ToObject<InventoryWarningRule>(JsonSerializer.Create(new JsonSerializerSettings { MissingMemberHandling = MissingMemberHandling.Error }))!;
-            if (rule.InventoryRules == null || rule.InventoryRules.Count > 100 || rule.InventoryRules.Any(item => item == null ||
-                string.IsNullOrWhiteSpace(item.Id) || item.Id.Length > 128 || string.IsNullOrWhiteSpace(item.Name) || item.Name.Length > 128 ||
-                item.Kind is not ("QuantityBelow" or "ExpiresWithinDays") || item.Threshold <= 0 || item.Threshold > long.MaxValue ||
-                item.Kind == "QuantityBelow" && decimal.Truncate(item.Threshold) != item.Threshold || item.Message == null || item.Message.Length > 200) ||
-                rule.InventoryRules.Select(item => item.Id).Distinct(StringComparer.Ordinal).Count() != rule.InventoryRules.Count)
-                throw new InvalidDataException("InventoryRules 最多 100 条，Id 必须唯一，Name 必填，Kind 为 QuantityBelow 或 ExpiresWithinDays，Threshold 为正数（库存阈值为整数）。");
+            if (rule.InventoryRules == null || rule.InventoryRules.Count > 100)
+                throw new InvalidDataException("InventoryRules 必须为数组，不能为 null，最多 100 条，允许空数组 []。");
+            // 逐项定位规则错误，避免将整份约束交给用户猜测。
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            for (var index = 0; index < rule.InventoryRules.Count; index++)
+            {
+                var item = rule.InventoryRules[index];
+                var location = $"InventoryRules 第 {index + 1} 条";
+                if (item == null) throw new InvalidDataException($"{location} 不能为 null。");
+                if (string.IsNullOrWhiteSpace(item.Id) || item.Id.Length > 128)
+                    throw new InvalidDataException($"{location}：Id 不能为空且不能超过 128 字符。");
+                if (!ids.Add(item.Id)) throw new InvalidDataException($"{location}：Id“{item.Id}”重复。");
+                if (string.IsNullOrWhiteSpace(item.Name) || item.Name.Length > 128)
+                    throw new InvalidDataException($"{location}（{item.Id}）：Name 须为 1～128 字符的物品名称。");
+                if (item.Kind is not ("QuantityBelow" or "ExpiresWithinDays"))
+                    throw new InvalidDataException($"{location}（{item.Id}）：Kind 只能为 QuantityBelow（库存不足）或 ExpiresWithinDays（临期）。");
+                if (item.Threshold <= 0 || item.Threshold > long.MaxValue ||
+                    item.Kind == "QuantityBelow" && decimal.Truncate(item.Threshold) != item.Threshold)
+                    throw new InvalidDataException($"{location}（{item.Id}）：Threshold 须大于 0 且不超过 9223372036854775807；库存阈值必须为整数，临期阈值以天为单位。");
+                if (item.Message == null || item.Message.Length > 200)
+                    throw new InvalidDataException($"{location}（{item.Id}）：Message 不能为 null 或超过 200 字符；使用空文本可自动生成提醒。");
+            }
             return rule;
         }
         catch (Exception ex) when (ex is JsonException or InvalidDataException)
         {
-            throw new InvalidDataException($"Warning 规则无效，请修订 {path}：{ex.Message}", ex);
+            throw new InvalidDataException($"提醒规则未能加载；库存仍可正常读取和上报。文件：{path}；原因：{ex.Message}", ex);
         }
     }
 
@@ -119,7 +135,7 @@ public sealed partial class InventoryStore
                 continue;
             }
             var message = string.IsNullOrWhiteSpace(rule.Message)
-                ? rule.Kind == "QuantityBelow" ? $"{rule.Name}的确认库存低于 {rule.Threshold}。" : $"{rule.Name}存在不足 {rule.Threshold} 天到期或已过期的批次，请检查。"
+                ? rule.Kind == "QuantityBelow" ? $"{rule.Name}的确认库存低于 {rule.Threshold}。" : $"{rule.Name}存在不足 {rule.Threshold} 天到期或已过期的批次。"
                 : rule.Message;
             var warning = AddEvent(data, rule.Name, record.Source, "ThresholdWarning", "Warning", record.Quantity, now, message);
             warning.History.Add("Rule=" + signature);
