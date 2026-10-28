@@ -15,6 +15,16 @@ public static class AppPaths
     public static string Root => Global.Absolute("Data");
 
     /// <summary>
+    /// 缓存根目录，下面只放按用途划分的子目录，不直接写文件
+    /// </summary>
+    public static string Cache => Path.Combine(Root, "Cache");
+
+    /// <summary>
+    /// ONNX Runtime 编译缓存目录（TensorRT engine/timing、OpenVINO），与通用文件缓存分开
+    /// </summary>
+    public static string InferenceCache => Path.Combine(Cache, "Inference");
+
+    /// <summary>
     /// 临时文件根目录，按进程分子目录
     /// </summary>
     public static string Temp => Path.Combine(Root, "Temp");

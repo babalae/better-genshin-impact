@@ -161,9 +161,8 @@ public sealed class ScriptYoloPredictor : IDisposable
 
     private BgiYoloPredictor CreateBgiPredictor()
     {
-        var cacheRelativePath = Path.Combine(BgiOnnxModel.ModelCacheRelativePath, "js",
-            Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(_modelPath))));
-        var model = new BgiOnnxModel(Path.GetFileNameWithoutExtension(_modelPath), _modelPath, cacheRelativePath);
+        // 编译缓存由推理运行时按模型内容统一放在 Data/Cache/Inference
+        var model = new BgiOnnxModel(Path.GetFileNameWithoutExtension(_modelPath), _modelPath);
         var predictor = App.ServiceProvider.GetRequiredService<BgiOnnxFactory>().CreateYoloPredictor(model);
         try
         {

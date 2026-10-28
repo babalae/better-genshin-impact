@@ -20,6 +20,11 @@ public interface IStorageService
     Task<long> MeasureAsync(StorageArea area, CancellationToken ct);
 
     /// <summary>
+    /// 区域是否已登记、等待下次启动清理
+    /// </summary>
+    bool IsCleanupPending(StorageArea area);
+
+    /// <summary>
     /// 按区域的清理时机立即清理，或登记到下次启动清理
     /// </summary>
     /// <exception cref="System.InvalidOperationException">区域当前不能清理，异常信息为原因</exception>

@@ -47,6 +47,22 @@ public sealed class PendingCleanupStore(ILogger<PendingCleanupStore> logger)
     }
 
     /// <summary>
+    /// 判断给定路径是否全部已登记、等待下次启动清理
+    /// </summary>
+    public bool ContainsAll(IEnumerable<string> paths)
+    {
+        lock (_lock)
+        {
+            var pending = Load();
+            var relativePaths = paths
+                .Where(path => SafePath.IsUnder(Global.StartUpPath, path))
+                .Select(path => Path.GetRelativePath(Global.StartUpPath, Path.GetFullPath(path)))
+                .ToList();
+            return relativePaths.Count > 0 && relativePaths.All(pending.Contains);
+        }
+    }
+
+    /// <summary>
     /// 执行全部登记的清理。只应由主实例在启动早期调用；
     /// 全部删除成功的条目会被移除，仍有文件被占用的条目保留到下次启动
     /// </summary>

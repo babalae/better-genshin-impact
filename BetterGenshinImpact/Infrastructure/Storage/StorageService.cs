@@ -41,6 +41,10 @@ public sealed class StorageService(
         Task.Run(() => area.Paths.Sum(path => StorageFileOperations.Measure(path, ct)), ct);
 
     /// <inheritdoc />
+    public bool IsCleanupPending(StorageArea area) =>
+        area.Timing == StorageCleanupTiming.NextStartup && pendingCleanupStore.ContainsAll(area.Paths);
+
+    /// <inheritdoc />
     public async Task<StorageCleanupResult> CleanupAsync(StorageArea area, CancellationToken ct)
     {
         if (area.GetBusyReason?.Invoke() is { } busyReason)

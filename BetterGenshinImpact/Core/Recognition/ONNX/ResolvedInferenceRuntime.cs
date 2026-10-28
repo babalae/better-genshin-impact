@@ -3,6 +3,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Infrastructure.Storage;
 
 namespace BetterGenshinImpact.Core.Recognition.ONNX;
 
@@ -19,7 +20,10 @@ public sealed record ResolvedInferenceRuntime(
 {
     public PaddleOcrCpuOptions PaddleOcrCpu { get; init; } = new();
     public static InferenceDeviceInfo CpuDevice { get; } = new("CPU", "处理器", 0, "CPU");
-    public static string ModelCacheDirectory => Global.Absolute(Path.Combine("Cache", "Inference"));
+    /// <summary>
+    /// TensorRT、OpenVINO 编译缓存的根目录，与通用文件缓存分开存放
+    /// </summary>
+    public static string ModelCacheDirectory => AppPaths.InferenceCache;
     public string Description => $"{(Engine == InferenceDeviceType.Cpu ? "CPU" : Engine.ToString())} · {Device.Name}";
     public string OcrDescription => (CpuOcr ? "CPU（强制 OCR 使用 CPU）" : Description)
         + (CpuOcr || Engine == InferenceDeviceType.Cpu ? " · " + PaddleOcrCpu.Describe(CpuThreads) : "");

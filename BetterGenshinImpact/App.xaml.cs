@@ -198,6 +198,12 @@ public partial class App : Application
                 services.AddSingleton<IStorageAreaProvider>(sp => sp.GetRequiredService<TempFileService>());
                 services.AddHostedService(sp => sp.GetRequiredService<TempFileService>());
                 services.AddSingleton<IStorageAreaProvider, ScriptUpdateBackupStorageAreaProvider>();
+                services.AddSingleton<IStorageAreaProvider, InferenceCacheStorageAreaProvider>();
+                services.AddSingleton<IStorageAreaProvider, AppStorageAreaProvider>();
+                services.AddSingleton<IStorageAreaProvider, LegacyStorageAreaProvider>();
+                services.AddTransient<StorageManagementViewModel>();
+                services.AddTransient<StorageManagementWindow>();
+                services.AddSingleton<Func<StorageManagementWindow>>(sp => () => sp.GetRequiredService<StorageManagementWindow>());
                 // 窗口、任务栏、Alt+Tab 与托盘共用同一份实例视觉身份。
                 services.AddSingleton(_ => InstanceVisualIdentity.Create(
                     instanceContext,

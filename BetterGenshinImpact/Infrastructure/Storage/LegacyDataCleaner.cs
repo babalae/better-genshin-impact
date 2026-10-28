@@ -27,6 +27,8 @@ public sealed class LegacyDataCleaner(bool isRoot, ILogger<LegacyDataCleaner> lo
         // 阶段 1：临时文件改到 Data/Temp
         @"User\Temp",
         @"Repos\Temp",
+        // 阶段 2：推理编译缓存改到 Data/Cache/Inference，按版本号的空目录 Cache/{版本号}/Model 不再创建
+        "Cache",
     ];
 
     /// <summary>

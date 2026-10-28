@@ -7,10 +7,12 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 using Windows.System;
+using BetterGenshinImpact.Infrastructure.Storage;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
@@ -61,6 +63,38 @@ public partial class CommonSettingsPageViewModel : ViewModel
     /// </summary>
     private readonly ExternalAccessTokenService _externalAccessTokenService;
 
+    /// <summary>
+    /// 存储区域的统计，用于设置页的存储空间摘要。
+    /// </summary>
+    private readonly IStorageService _storageService;
+
+    /// <summary>
+    /// 按需创建存储空间窗口。
+    /// </summary>
+    private readonly Func<StorageManagementWindow> _storageManagementWindowFactory;
+
+    /// <summary>
+    /// 计入摘要的分组：程序管理的缓存、下载、网页数据和临时文件。
+    /// </summary>
+    private static readonly StorageGroup[] StorageSummaryGroups =
+        [StorageGroup.Cache, StorageGroup.Download, StorageGroup.WebData, StorageGroup.Temp];
+
+    /// <summary>
+    /// 摘要上次统计的时间，短时间内反复进入页面时不重复统计。
+    /// </summary>
+    private DateTime _storageSummaryUpdatedAt = DateTime.MinValue;
+
+    /// <summary>
+    /// 是否正在统计摘要。
+    /// </summary>
+    private bool _isStorageSummaryRefreshing;
+
+    /// <summary>
+    /// 设置页“存储空间”卡片的说明文字。
+    /// </summary>
+    [ObservableProperty]
+    private string _storageSummaryText = "正在计算占用…";
+
     private readonly TpConfig _tpConfig;
 
     private string _selectedArea = string.Empty;
@@ -86,8 +120,11 @@ public partial class CommonSettingsPageViewModel : ViewModel
     public CommonSettingsPageViewModel(IConfigService configService, INavigationService navigationService,
         NotificationService notificationService, CustomHtmlMaskService customHtmlMaskService,
         RecognitionTemplateEditorService recognitionTemplateEditorService, I18nService i18nService,
-        ExternalAccessState externalAccessState, ExternalAccessTokenService externalAccessTokenService)
+        ExternalAccessState externalAccessState, ExternalAccessTokenService externalAccessTokenService,
+        IStorageService storageService, Func<StorageManagementWindow> storageManagementWindowFactory)
     {
+        _storageService = storageService;
+        _storageManagementWindowFactory = storageManagementWindowFactory;
         Config = configService.Get();
         _configService = configService;
         _tpConfig = Config.TpConfig;
@@ -403,6 +440,54 @@ public partial class CommonSettingsPageViewModel : ViewModel
         }
 
         Process.Start("explorer.exe", path);
+    }
+
+    /// <summary>
+    /// 进入设置页时在后台刷新存储空间摘要
+    /// </summary>
+    public override void OnNavigatedTo()
+    {
+        _ = RefreshStorageSummaryAsync(force: false);
+    }
+
+    /// <summary>
+    /// 打开存储空间窗口，关闭后刷新摘要
+    /// </summary>
+    [RelayCommand]
+    private async Task OpenStorageManagement()
+    {
+        var window = _storageManagementWindowFactory();
+        window.Owner = Application.Current.MainWindow;
+        window.ShowDialog();
+        await RefreshStorageSummaryAsync(force: true);
+    }
+
+    /// <summary>
+    /// 统计缓存、下载、网页数据和临时文件的总占用；一分钟内重复进入页面时沿用上次结果
+    /// </summary>
+    private async Task RefreshStorageSummaryAsync(bool force)
+    {
+        if (_isStorageSummaryRefreshing || (!force && DateTime.UtcNow - _storageSummaryUpdatedAt < TimeSpan.FromMinutes(1)))
+        {
+            return;
+        }
+
+        _isStorageSummaryRefreshing = true;
+        try
+        {
+            var areas = _storageService.GetAreas().Where(area => StorageSummaryGroups.Contains(area.Group)).ToList();
+            var sizes = await Task.WhenAll(areas.Select(area => _storageService.MeasureAsync(area, CancellationToken.None)));
+            StorageSummaryText = $"缓存、下载、网页数据和临时文件共占用 {ByteSizeFormatter.Format(sizes.Sum())}";
+            _storageSummaryUpdatedAt = DateTime.UtcNow;
+        }
+        catch (Exception)
+        {
+            StorageSummaryText = "查看和清理缓存、下载、网页数据与临时文件";
+        }
+        finally
+        {
+            _isStorageSummaryRefreshing = false;
+        }
     }
 
     [RelayCommand]
