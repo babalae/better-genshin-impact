@@ -58,14 +58,16 @@
 
 切号器（`PuloniaGenshinAccountSwitcher`，接口 `IPuloniaGenshinAccountSwitcher`）由 `AccountSwitchStateMachine` 的按钮模板与 `SwitchAccountMultipleMode` 的列表 OCR、密码和验证码识别移植而来，与业务共用输入所有权和取消令牌。只支持 PC 官服本机窗口；B 服不做专门检测，会在模板匹配阶段失败而不会误操作。子实例执行时，切号与核验在该子实例的游戏中完成。
 
-## 账号与采集 CD
+## 账号与路线 CD
 
-文件级采集 CD 的作用域键为 `cn/world/{身份}`：
+文件级路线 CD 的作用域键为 `cn/world/{身份}`：
 
 - 未切换账号（默认账号，以及所有普通计划）身份为 `default`，代表“当前登录账号”，普通计划与一条龙默认账号共享 CD；
 - 切换到指定账号时身份为核验后的 UID。
 
 身份不依赖计划名、节点 ID 或账号资料 ID。此前一条龙使用核验 UID、普通计划使用资料 ID 的旧账本键因此失效，相关路线文件可能多跑一次。详见[结果、CD 与存储](results-and-storage.md#作用域与键)。
+
+编辑时的任务树标记和运行预览按同一规则选作用域：普通计划与一条龙默认账号为当前登录账号；一条龙绑定指定账号时按账号资料的 UID 预测，运行时以核验后的 UID 为准。路线 CD 总览把 `default` 显示为“当前登录账号”，UID 显示为账号资料名。
 
 ## 界面
 

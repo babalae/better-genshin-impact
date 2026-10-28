@@ -35,9 +35,59 @@ public sealed class PuloniaCollectionCooldownTests : IDisposable
     public void DirectoryRules_AreExplicit(string material, string mode, double hours, int days)
     {
         var policy = Resolve(material);
-        Assert.Equal(mode, policy.Mode);
+        Assert.Equal(mode, PuloniaCollectionCooldown.FormatMode(policy.Mode));
         Assert.Equal(hours, policy.Hours);
         Assert.Equal(days, policy.Days);
+    }
+
+    /// <summary>
+    /// 官方脚本仓库的实际目录结构（2026-10-28 提交 d775a4b 抽样）：魔物与锄地路线由类别目录兜底为每日 04:00，
+    /// 材料目录仍优先；仓库目录名的别名与混合类别按规则表识别，不访问网络。
+    /// </summary>
+    [Theory]
+    [InlineData("pathing/敌人与魔物/丘丘人射手/丘丘人射手@曦/01.json", "daily", "敌人与魔物", PuloniaCollectionCooldownRuleSource.Directory)]
+    [InlineData("pathing/敌人与魔物/盗宝团/盗宝团@作者/01.json", "daily", "盗宝团", PuloniaCollectionCooldownRuleSource.Directory)]
+    [InlineData("pathing/锄地专区/精英400@汐/1-精英/01.json", "daily", "锄地专区", PuloniaCollectionCooldownRuleSource.Directory)]
+    [InlineData("pathing/矿物/魔晶矿/01.json", "calendar_days", "魔晶矿", PuloniaCollectionCooldownRuleSource.Directory)]
+    [InlineData("pathing/其他/提瓦特钓鱼指南/蒙德/01.json", "rolling", "提瓦特钓鱼指南", PuloniaCollectionCooldownRuleSource.Directory)]
+    [InlineData("pathing/其他/木材伐木点/01.json", "disabled", "木材伐木点", PuloniaCollectionCooldownRuleSource.Mixed)]
+    [InlineData("pathing/地方特产/蒙德/落落莓/01.json", "rolling", "落落莓", PuloniaCollectionCooldownRuleSource.Directory)]
+    [InlineData("pathing/食材与炼金/松茸/01.json", "disabled", null, PuloniaCollectionCooldownRuleSource.Unmatched)]
+    public void RepositoryDirectories_AreRecognized(string relativePath, string mode, string? material,
+        PuloniaCollectionCooldownRuleSource source)
+    {
+        var policy = PuloniaCollectionCooldown.Resolve(null,
+            new ScriptResourceReference { RepositoryId = "rep_aaaaaaaaaaaaaaaa", RelativePath = relativePath }, new JObject());
+        Assert.Equal(mode, PuloniaCollectionCooldown.FormatMode(policy.Mode));
+        Assert.Equal(material, policy.MaterialName);
+        Assert.Equal(source, policy.Source);
+        // 从账本中的小写文件身份重新识别得到同一规则，目录引用计数与运行时判定一致
+        Assert.Equal(policy.Description,
+            PuloniaCollectionCooldown.ResolveFromFileIdentity(policy.FileIdentity, null).Description);
+    }
+
+    /// <summary>状态判定：没有记录、CD 中、恰好到期、一次性完成、未识别与关闭限制各自得到不同状态。</summary>
+    [Fact]
+    public void Status_DistinguishesStates()
+    {
+        var success = new DateTimeOffset(2026, 10, 10, 0, 0, 0, TimeSpan.Zero);
+        var policy = Resolve("落落莓");
+        var entry = new PuloniaTaskLedgerEntry { EffectKey = PuloniaCollectionCooldown.GetEffectKey(policy),
+            ScopeKey = PuloniaCollectionCooldown.BuildScopeKey(), OccurredAt = success, NextEligibleAt = success.AddHours(46) };
+        Assert.Equal(PuloniaCollectionCooldownState.Ready, PuloniaCollectionCooldown.GetStatus(policy, null, success, 480).State);
+        var cooling = PuloniaCollectionCooldown.GetStatus(policy, entry, success.AddHours(1), 480);
+        Assert.Equal(PuloniaCollectionCooldownState.CoolingDown, cooling.State);
+        Assert.Equal(PuloniaCollectionCooldown.ReasonCooldownActive, PuloniaCollectionCooldown.GetReasonCode(cooling));
+        Assert.Equal(PuloniaCollectionCooldownState.Ready, PuloniaCollectionCooldown.GetStatus(policy, entry, success.AddHours(46), 480).State);
+        var once = PuloniaCollectionCooldown.GetStatus(Resolve("宝箱"), entry, success.AddYears(1), 480);
+        Assert.Equal(PuloniaCollectionCooldownState.Completed, once.State);
+        Assert.Equal(PuloniaCollectionCooldown.ReasonCooldownCompleted, PuloniaCollectionCooldown.GetReasonCode(once));
+        Assert.Equal(PuloniaCollectionCooldownState.Unmatched, PuloniaCollectionCooldown.GetStatus(Resolve("未知材料"), entry, success, 480).State);
+        Assert.Equal(PuloniaCollectionCooldownState.NotChecked,
+            PuloniaCollectionCooldown.GetStatus(Resolve("落落莓", new JObject { ["mode"] = "disabled" }), entry, success, 480).State);
+        Assert.Equal("不检查", PuloniaCollectionCooldown.DescribeSettings(new JObject { ["mode"] = "disabled" }));
+        Assert.Equal("每日 04:00", PuloniaCollectionCooldown.DescribeSettings(new JObject { ["mode"] = "daily" }));
+        Assert.Equal("自动识别", PuloniaCollectionCooldown.DescribeSettings(PuloniaCollectionCooldown.CreateDefaults()));
     }
 
     /// <summary>仓库材料从原始路径识别，版本变化和不同缓存位置不改变文件身份。</summary>
@@ -104,13 +154,14 @@ public sealed class PuloniaCollectionCooldownTests : IDisposable
         var entry = new PuloniaTaskLedgerEntry { EffectKey = PuloniaCollectionCooldown.GetEffectKey(original),
             ScopeKey = PuloniaCollectionCooldown.BuildScopeKey(), OccurredAt = success, NextEligibleAt = storedNext };
         var shortened = Resolve("落落莓", new JObject { ["mode"] = "rolling", ["hours"] = 12 });
-        var decision = PuloniaCollectionCooldown.Evaluate(shortened, request, [entry], success.AddHours(12), out var data);
-        Assert.True(decision.IsAllowed);
+        var status = PuloniaCollectionCooldown.GetStatus(shortened, entry, success.AddHours(12), request.ServerUtcOffsetMinutes);
+        Assert.False(status.IsSkipped);
+        var data = PuloniaCollectionCooldown.Describe(shortened, status.LastSuccessAt, status.NextEligibleAt);
         Assert.Equal(success.AddHours(12).ToString("O"), data.Value<string>("collection_next_eligible_at"));
         Assert.Equal(storedNext, entry.NextEligibleAt);
-        Assert.False(PuloniaCollectionCooldown.Evaluate(original, request, [entry], success.AddHours(12), out _).IsAllowed);
+        Assert.True(PuloniaCollectionCooldown.GetStatus(original, entry, success.AddHours(12), request.ServerUtcOffsetMinutes).IsSkipped);
         var once = Resolve("落落莓", new JObject { ["mode"] = "once" });
-        Assert.False(PuloniaCollectionCooldown.Evaluate(once, request, [entry], success.AddYears(10), out _).IsAllowed);
+        Assert.True(PuloniaCollectionCooldown.GetStatus(once, entry, success.AddYears(10), request.ServerUtcOffsetMinutes).IsSkipped);
     }
 
     /// <summary>不同文件独立，同文件跨计划和重复节点共享成功记录，重启后仍跳过。</summary>
@@ -130,8 +181,14 @@ public sealed class PuloniaCollectionCooldownTests : IDisposable
             Assert.Equal(2, executor.Executions);
             Assert.Equal(2, (await service.ListLedgerAsync()).Count);
             var snapshot = PuloniaTaskJson.ReadSnapshot(run.SnapshotJson);
-            Assert.Equal("rolling", snapshot.RootTask.Children[0].CollectionCooldown!.Mode);
+            Assert.Equal(PuloniaCollectionCooldownMode.Rolling, snapshot.RootTask.Children[0].CollectionCooldown!.Mode);
             Assert.Equal(46, snapshot.RootTask.Children[0].CollectionCooldown!.Hours);
+            // 规则对象的模式与来源仍按原有字符串写入快照
+            Assert.Contains("\"mode\": \"rolling\"", run.SnapshotJson);
+            Assert.Contains("\"source\": \"目录自动识别\"", run.SnapshotJson);
+            // 同一文件第二次出现时因 CD 跳过，原因码可区分其他跳过
+            Assert.Equal(PuloniaCollectionCooldown.ReasonCooldownActive, run.NodeResults[1].ReasonCode);
+            Assert.True(PuloniaCollectionCooldown.IsCooldownSkip(run.NodeResults[1]));
         }
         await using (var restarted = Service(store, executor))
         {
@@ -240,7 +297,7 @@ public sealed class PuloniaCollectionCooldownTests : IDisposable
         await Run(service, plan);
         var second = await Run(service, plan);
         Assert.Equal(2, executor.Executions);
-        Assert.Contains("未自动设置 CD", second.NodeResults[0].Data.Value<string>("collection_rule"));
+        Assert.Contains("未识别刷新规则", second.NodeResults[0].Data.Value<string>("collection_rule"));
         Assert.All(await service.ListLedgerAsync(), entry => Assert.Null(entry.NextEligibleAt));
     }
 
@@ -257,6 +314,42 @@ public sealed class PuloniaCollectionCooldownTests : IDisposable
         Assert.Equal(1, executor.Executions);
         Assert.Equal(PuloniaTaskNodeStatus.Skipped, second.NodeResults[0].Status);
         Assert.Contains("一次性", second.NodeResults[0].Message);
+    }
+
+    /// <summary>
+    /// 运行预览与实际运行一致：同一文件第二次出现预测为本次重复；成功后再次预览为 CD 中，清除记录后恢复可执行。
+    /// 预览不写账本，清除会通知账本变化。
+    /// </summary>
+    [Fact]
+    public async Task Preview_MatchesRunAndClearRestoresExecution()
+    {
+        using var store = new PuloniaTaskStore(Path.Combine(_directory, "state"));
+        var executor = new FileExecutor();
+        var a = CreateTask("落落莓", "A.json");
+        var plan = await store.SavePlanAsync(Plan(a, new PuloniaTask { Name = "重复 A", TaskType = "pathing", Path = a.Path },
+            CreateTask("未知材料", "B.json")));
+        await using var service = Service(store, executor);
+        var request = new PuloniaTaskRequest { PlanId = plan.Id };
+
+        var preview = await service.PreviewAsync(request);
+        Assert.Equal(new[] { PuloniaTaskPreviewOutcome.Execute, PuloniaTaskPreviewOutcome.RepeatedInRun, PuloniaTaskPreviewOutcome.Execute },
+            preview.Items.Select(item => item.Outcome));
+        Assert.Equal(1, preview.UnmatchedCount);
+        Assert.Empty(await service.ListLedgerAsync());
+
+        await Run(service, plan);
+        var after = await service.PreviewAsync(request);
+        Assert.Equal(PuloniaTaskPreviewOutcome.CoolingDown, after.Items[0].Outcome);
+        Assert.Equal(2, after.CooldownSkipCount);
+
+        var changed = 0;
+        service.LedgerChanged += (_, _) => changed++;
+        var key = new PuloniaCollectionCooldownKey(PuloniaCollectionCooldown.BuildScopeKey(),
+            PuloniaCollectionCooldown.GetEffectKey(after.Items[0].Policy!));
+        Assert.Equal(1, await service.ClearCollectionCooldownAsync([key]));
+        Assert.Equal(1, changed);
+        Assert.Single(await service.ListLedgerAsync());
+        Assert.Equal(PuloniaTaskPreviewOutcome.Execute, (await service.PreviewAsync(request)).Items[0].Outcome);
     }
 
     /// <summary>成功结果与账本在下一节点执行前已一起落盘，后续取消不会撤销成功文件。</summary>
@@ -453,13 +546,14 @@ public sealed class PuloniaCollectionCooldownTests : IDisposable
         var node = document.RootNode.Children[0];
         var draft = document.CreateCollectionCooldownDraft(node);
         Assert.Equal("5", draft.Hours);
-        var original = draft.BuildValue();
-        document.ApplyCollectionCooldown(node, original, new JObject { ["mode"] = "disabled" }, false);
-        Assert.Equal("disabled", document.CreateCollectionCooldownDraft(node).Mode);
-        document.ApplyCollectionCooldown(node, new JObject { ["mode"] = "disabled" }, null, true);
+        Assert.Equal(PuloniaCollectionCooldownMode.Rolling, draft.Mode);
+        // 表单确认与恢复继承走共享设置的单项写入和撤销
+        document.SetSetting(node, PuloniaSettingCatalog.CollectionCooldownKey, new JObject { ["mode"] = "disabled" });
+        Assert.Equal(PuloniaCollectionCooldownMode.Disabled, document.CreateCollectionCooldownDraft(node).Mode);
+        document.ResetSetting(node, PuloniaSettingCatalog.CollectionCooldownKey);
         Assert.Equal("5", document.CreateCollectionCooldownDraft(node).Hours);
         document.UndoCommand.Execute(null);
-        Assert.Equal("disabled", document.CreateCollectionCooldownDraft(document.RootNode.Children[0]).Mode);
+        Assert.Equal(PuloniaCollectionCooldownMode.Disabled, document.CreateCollectionCooldownDraft(document.RootNode.Children[0]).Mode);
     }
 
     /// <summary>模拟本测试状态文件写入失败，成功不能被当作可重试的普通节点失败。</summary>
@@ -515,7 +609,7 @@ public sealed class PuloniaCollectionCooldownTests : IDisposable
         new PuloniaTaskBuilder(store), [executor], new PuloniaGameTaskCoordinator(null!), new TaskStopService(NullLogger<TaskStopService>.Instance));
 
     /// <summary>把真实资源引用节点放入标准根分组。</summary>
-    private static PuloniaTaskPlan Plan(params PuloniaTask[] tasks) => new() { Name = "采集 CD 测试", RootTask = new PuloniaTask { Children = tasks.ToList() } };
+    private static PuloniaTaskPlan Plan(params PuloniaTask[] tasks) => new() { Name = "路线 CD 测试", RootTask = new PuloniaTask { Children = tasks.ToList() } };
 
     /// <summary>等待一次受控运行完成，避免无限等待。</summary>
     private static async Task<PuloniaTaskRunView> Run(PuloniaTaskService service, PuloniaTaskPlan plan)

@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
+using BetterGenshinImpact.ViewModel.Windows.Pulonia;
 using CommunityToolkit.Mvvm.Input;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
@@ -14,6 +15,24 @@ public partial class PuloniaTaskPlanViewModel
     /// 计划内与全局页面复用的执行记录模型，不依赖可编辑的计划内容。
     /// </summary>
     public PuloniaTaskHistoryViewModel History { get; }
+
+    /// <summary>“路线 CD”页签的总览，默认只看当前计划用到的路线。</summary>
+    public PuloniaCollectionCooldownOverviewViewModel Cooldowns { get; }
+
+    /// <summary>
+    /// 打开运行预览：按当前配置逐项预测本次执行或因路线 CD 跳过；在预览中选择“开始执行”后提交运行。
+    /// </summary>
+    /// <param name="document">要预览的计划；为空时使用当前计划。</param>
+    [RelayCommand(CanExecute = nameof(CanRunDocument))]
+    private async Task PreviewRunAsync(PuloniaTaskPlanDocumentViewModel? document)
+    {
+        document ??= SelectedDocument;
+        if (document is null || _settingsDialogs is null || !Session.CanRunDocument(document))
+            return;
+        var preview = new PuloniaTaskRunPreviewViewModel(Session, document);
+        if (_settingsDialogs.ShowRunPreview(preview))
+            await RunPlanAsync(document);
+    }
 
     /// <summary>
     /// 当前计划是否可以提交运行。

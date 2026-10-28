@@ -59,7 +59,7 @@ public sealed class PuloniaGenshinAccountTests : IDisposable
     [Fact] public void VerifiedUidControlsCooldownRatherThanProfileId()
     {
         var policy = PuloniaCollectionCooldown.Resolve(Path.Combine(_directory, "落落莓", "A.json"), null, new JObject());
-        var second = new PuloniaTaskRequest { AccountId = "profile_b" };
+        var offset = new PuloniaTaskRequest().ServerUtcOffsetMinutes;
         var now = DateTimeOffset.UtcNow;
         var entry = new PuloniaTaskLedgerEntry
         {
@@ -67,12 +67,17 @@ public sealed class PuloniaGenshinAccountTests : IDisposable
             ScopeKey = PuloniaCollectionCooldown.BuildScopeKey("100000001"),
             OccurredAt = now, NextEligibleAt = now.AddHours(46)
         };
-        Assert.False(PuloniaCollectionCooldown.Evaluate(policy, second, [entry], now.AddHours(1), out _, "100000001").IsAllowed);
-        Assert.True(PuloniaCollectionCooldown.Evaluate(policy, second, [entry], now.AddHours(1), out _, "100000002").IsAllowed);
+        Assert.True(Status("100000001").IsSkipped);
+        Assert.False(Status("100000002").IsSkipped);
         // 未切换账号（默认账号或没有账号准备）的运行不受指定账号记录影响
-        Assert.True(PuloniaCollectionCooldown.Evaluate(policy, second, [entry], now.AddHours(1), out _).IsAllowed);
+        Assert.False(Status(null).IsSkipped);
         Assert.Equal("cn/world/100000001", entry.ScopeKey);
         Assert.Equal("cn/world/default", PuloniaCollectionCooldown.BuildScopeKey());
+
+        // 按运行的作用域查找最新记录后判定，与任务服务的执行前判定一致。
+        PuloniaCollectionCooldownStatus Status(string? uid) => PuloniaCollectionCooldown.GetStatus(policy,
+            PuloniaCollectionCooldown.FindLatest([entry], PuloniaCollectionCooldown.BuildScopeKey(uid),
+                PuloniaCollectionCooldown.GetEffectKey(policy)), now.AddHours(1), offset);
     }
 
     /// <summary>

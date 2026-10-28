@@ -5,7 +5,7 @@ namespace BetterGenshinImpact.Pulonia.Services;
 
 /// <summary>
 /// Pulonia 统一使用的服务器时间：时区偏移取自应用配置（<see cref="ServerTimeHelper"/>），游戏日按服务器时间凌晨 4 点切换。
-/// 采集 CD 的日、周边界使用这里的游戏日计算。
+/// 路线 CD 的日、周边界使用这里的游戏日计算。
 /// </summary>
 public static class PuloniaServerTime
 {

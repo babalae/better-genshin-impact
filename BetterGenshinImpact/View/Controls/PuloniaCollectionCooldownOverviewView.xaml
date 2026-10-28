@@ -1,0 +1,166 @@
+<UserControl x:Class="BetterGenshinImpact.View.Controls.PuloniaCollectionCooldownOverviewView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+    <!--  路线 CD 总览：按账号、计划、状态与关键词筛选，按材料分组；显示时重新读取账本  -->
+    <b:Interaction.Triggers>
+        <b:EventTrigger EventName="Loaded">
+            <b:InvokeCommandAction Command="{Binding RefreshCommand, Mode=OneWay}" />
+        </b:EventTrigger>
+    </b:Interaction.Triggers>
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="OverviewBoolVisibility" />
+        <!--  每条记录的 Group 是同一材料共用的组头对象，按引用分组  -->
+        <CollectionViewSource x:Key="GroupedCooldownEntries" Source="{Binding Entries, Mode=OneWay}">
+            <CollectionViewSource.GroupDescriptions>
+                <PropertyGroupDescription PropertyName="Group" />
+            </CollectionViewSource.GroupDescriptions>
+        </CollectionViewSource>
+        <Style x:Key="CooldownStateText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSkipped, Mode=OneWay}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                    <Setter Property="FontWeight" Value="SemiBold" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <WrapPanel>
+            <ComboBox Width="190"
+                      Margin="0,0,8,6"
+                      DisplayMemberPath="Label"
+                      ItemsSource="{Binding AccountOptions, Mode=OneWay}"
+                      SelectedItem="{Binding SelectedAccount, Mode=TwoWay}"
+                      ToolTip="账号" />
+            <ComboBox Width="190"
+                      Margin="0,0,8,6"
+                      DisplayMemberPath="Label"
+                      ItemsSource="{Binding PlanOptions, Mode=OneWay}"
+                      SelectedItem="{Binding SelectedPlan, Mode=TwoWay}"
+                      ToolTip="只看所选计划用到的路线（含目录引用与计划引用）" />
+            <ComboBox Width="150"
+                      Margin="0,0,8,6"
+                      DisplayMemberPath="Label"
+                      ItemsSource="{Binding StateOptions, Mode=OneWay}"
+                      SelectedItem="{Binding SelectedState, Mode=TwoWay}" />
+            <ui:TextBox Width="220"
+                        Margin="0,0,8,6"
+                        PlaceholderText="搜索路线、目录或材料"
+                        Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+        </WrapPanel>
+        <TextBlock Grid.Row="1"
+                   Margin="0,0,0,8"
+                   FontSize="12"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                   Text="{Binding CountText, Mode=OneWay}"
+                   TextWrapping="Wrap" />
+        <Border Grid.Row="2"
+                Padding="10,6"
+                Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                CornerRadius="4">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" MinWidth="160" />
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="130" />
+                    <ColumnDefinition Width="190" />
+                </Grid.ColumnDefinitions>
+                <TextBlock FontWeight="SemiBold" Text="路线" />
+                <TextBlock Grid.Column="1" Margin="8,0" FontWeight="SemiBold" Text="规则（上次成功时）" />
+                <TextBlock Grid.Column="2" FontWeight="SemiBold" Text="上次成功" />
+                <TextBlock Grid.Column="3" FontWeight="SemiBold" Text="下次可执行" />
+            </Grid>
+        </Border>
+        <Grid Grid.Row="3" Margin="0,4,0,0">
+            <ListBox x:Name="CooldownList"
+                     ItemsSource="{Binding Source={StaticResource GroupedCooldownEntries}}"
+                     SelectionMode="Extended"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     VirtualizingPanel.IsVirtualizing="True"
+                     VirtualizingPanel.IsVirtualizingWhenGrouping="True"
+                     VirtualizingPanel.VirtualizationMode="Recycling"
+                     AutomationProperties.Name="路线 CD 记录列表">
+                <ListBox.GroupStyle>
+                    <GroupStyle>
+                        <GroupStyle.HeaderTemplate>
+                            <DataTemplate>
+                                <TextBlock Margin="4,10,0,4"
+                                           FontWeight="SemiBold"
+                                           Text="{Binding Name.HeaderText, Mode=OneWay}" />
+                            </DataTemplate>
+                        </GroupStyle.HeaderTemplate>
+                    </GroupStyle>
+                </ListBox.GroupStyle>
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid ToolTip="{Binding ToolTip, Mode=OneWay}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" MinWidth="160" />
+                                <ColumnDefinition Width="2*" />
+                                <ColumnDefinition Width="130" />
+                                <ColumnDefinition Width="190" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="{Binding RouteName, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
+                                <TextBlock FontSize="11"
+                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                           Text="{Binding Location, Mode=OneWay}"
+                                           TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Margin="8,0">
+                                <TextBlock Text="{Binding RuleText, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
+                                <TextBlock FontSize="11"
+                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                           Text="{Binding ScopeText, Mode=OneWay}" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="2" Text="{Binding LastSuccessText, Mode=OneWay}" />
+                            <StackPanel Grid.Column="3">
+                                <TextBlock Style="{StaticResource CooldownStateText}" Text="{Binding StateText, Mode=OneWay}" />
+                                <TextBlock FontSize="12"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                           Text="{Binding NextText, Mode=OneWay}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <TextBlock Margin="12"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       IsHitTestVisible="False"
+                       Text="{Binding EmptyText, Mode=OneWay}"
+                       TextAlignment="Center"
+                       TextWrapping="Wrap"
+                       Visibility="{Binding IsEmpty, Mode=OneWay, Converter={StaticResource OverviewBoolVisibility}}" />
+        </Grid>
+        <WrapPanel Grid.Row="4" Margin="0,8,0,0">
+            <ui:Button Margin="0,0,8,0"
+                       Command="{Binding ClearSelectedCommand, Mode=OneWay}"
+                       CommandParameter="{Binding SelectedItems, ElementName=CooldownList}"
+                       Content="清除选中记录"
+                       ToolTip="清除后这些路线下次运行会照常执行；运行历史中的成功记录不受影响" />
+            <ui:Button Margin="0,0,8,0"
+                       Command="{Binding ClearFilteredCommand, Mode=OneWay}"
+                       Content="清除当前列表全部记录"
+                       ToolTip="先按账号或搜索材料筛选，可一次清除某个账号或某种材料的记录" />
+            <ui:Button Command="{Binding RefreshCommand, Mode=OneWay}" Content="刷新" />
+        </WrapPanel>
+    </Grid>
+</UserControl>

@@ -36,6 +36,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
@@ -46,7 +47,27 @@
                      ShowMaximize="False"
                      ShowMinimize="False" />
 
-        <ScrollViewer Grid.Row="1"
+        <!--  计划自动保存失败提示：仅在 LastSaveError 有值时显示，固定在内容区顶部，不随滚动隐藏  -->
+        <ui:InfoBar Grid.Row="1"
+                    Margin="24,8,24,0"
+                    IsClosable="False"
+                    IsOpen="True"
+                    Message="{Binding Document.LastSaveError, Mode=OneWay, StringFormat='修改仍保留在当前计划中，下次编辑后会自动重试保存。原因：{0}'}"
+                    Severity="Error"
+                    Title="任务计划保存失败">
+            <ui:InfoBar.Style>
+                <Style TargetType="ui:InfoBar" BasedOn="{StaticResource {x:Type ui:InfoBar}}">
+                    <!--  没有保存错误时整体折叠，连同外边距一起不占位  -->
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Document.LastSaveError, Mode=OneWay}" Value="{x:Null}">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </ui:InfoBar.Style>
+        </ui:InfoBar>
+
+        <ScrollViewer Grid.Row="2"
                       HorizontalScrollBarVisibility="Disabled"
                       VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="24,8,24,20">
@@ -188,7 +209,7 @@
                     </ui:CardControl>
                 </StackPanel>
 
-                <!--  共享设置：队伍、战斗、拾取、行走、采集 CD 与 Shell，在独立窗口中逐项修改，立即生效并向下传播  -->
+                <!--  共享设置：队伍、战斗、拾取、行走、路线 CD 与 Shell，在独立窗口中逐项修改，立即生效并向下传播  -->
                 <StackPanel Visibility="{Binding Advanced.CanEditSharedSettings, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <ui:TextBlock Style="{StaticResource SectionTitle}" Text="共享设置" />
                     <ui:CardControl Margin="0,0,0,8" Icon="{ui:SymbolIcon Settings24}">
@@ -304,16 +325,11 @@
                                    TextWrapping="Wrap" />
                     </StackPanel>
                 </ui:CardExpander>
-
-                <TextBlock Margin="0,10,0,0"
-                           Foreground="{DynamicResource SystemFillColorCriticalBrush}"
-                           Text="{Binding Document.LastSaveError, Mode=OneWay, StringFormat=最近保存失败：{0}}"
-                           TextWrapping="Wrap" />
             </StackPanel>
         </ScrollViewer>
 
         <!--  底部操作栏  -->
-        <Border Grid.Row="2"
+        <Border Grid.Row="3"
                 Padding="24,12"
                 Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
                 BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"

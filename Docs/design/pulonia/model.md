@@ -44,11 +44,11 @@
 
 ### 设置目录、设置方案与能力说明
 
-**设置目录** `PuloniaSettingCatalog` 在代码中定义全部共享设置项，不持久化。设置项 ID 为 `<类别>.<名称>`，例如 `party.party_name`、`fight.strategy_name`；每项有显示名、值 Schema、默认值、编辑方式和可选的显示条件。类别：`party`、`fight`、`fight_end`、`fight_vision`、`pickup`、`travel`、`hurry`、`eat`、`collection`、`keymouse`、`shell`。设置项的值是原子单位，对象值（如采集 CD）整体替换。设计与界面见[共享设置与设置方案](proposals/shared-settings.md)。
+**设置目录** `PuloniaSettingCatalog` 在代码中定义全部共享设置项，不持久化。设置项 ID 为 `<类别>.<名称>`，例如 `party.party_name`、`fight.strategy_name`；每项有显示名、值 Schema、默认值、编辑方式和可选的显示条件。类别：`party`、`fight`、`fight_end`、`fight_vision`、`pickup`、`travel`、`hurry`、`eat`、`collection`、`keymouse`、`shell`。设置项的值是原子单位，对象值（如路线 CD）整体替换。设计与界面见[共享设置与设置方案](proposals/shared-settings.md)。
 
 **设置方案** `PuloniaSettingsProfile`（`prf_` 加 16 位，`profiles/<id>.json`）保存 `id`、`name`、`description`、`revision` 和稀疏的 `settings`。方案只复用设置，不包含结构、顺序或引用，可挂在任意计划的任意节点上；仍被已保存计划引用的方案不能删除。
 
-`PuloniaTaskDefinition` 是执行器在代码中注册的能力说明，不持久化：`TaskType`、可选 `ResourceId`、`SchemaVersion`、`DefaultParameters`、`ParameterSchema`、`SettingBindings`（设置项 ID → 参数路径）、`RequiresGameSession`、`ResourceBaseDirectory`，以及菜单元数据 `DisplayName`、`Description`、`Group`、`Order`、`OneDragonOrder`、`IsSoloTask`。绑定的参数路径上的默认值必须等于设置项默认值，由 `PuloniaTaskValidator.ValidateSettingBindings` 检查。当前绑定：地图追踪为宿主类别加采集 CD，JS 为宿主类别（队伍、战斗、战斗结束、战斗识别、拾取、行走、赶路、吃药），Shell 为 `shell`，录制回放为 `keymouse`；独立任务暂无绑定。
+`PuloniaTaskDefinition` 是执行器在代码中注册的能力说明，不持久化：`TaskType`、可选 `ResourceId`、`SchemaVersion`、`DefaultParameters`、`ParameterSchema`、`SettingBindings`（设置项 ID → 参数路径）、`RequiresGameSession`、`ResourceBaseDirectory`，以及菜单元数据 `DisplayName`、`Description`、`Group`、`Order`、`OneDragonOrder`、`IsSoloTask`。绑定的参数路径上的默认值必须等于设置项默认值，由 `PuloniaTaskValidator.ValidateSettingBindings` 检查。当前绑定：地图追踪为宿主类别加路线 CD，JS 为宿主类别（队伍、战斗、战斗结束、战斗识别、拾取、行走、赶路、吃药），Shell 为 `shell`，录制回放为 `keymouse`；独立任务暂无绑定。
 
 `PuloniaTaskAccountBinding` 保存 `account_id` 和 `enabled`。原先的按账号替换预设 `preset_selections` 已随共享设置删除，是否按账号区分设置随 D5 决定。
 
@@ -57,7 +57,7 @@
 | 类型 | 执行方式 |
 | --- | --- |
 | `group` | 由 `PuloniaTaskService` 按 `children` 顺序深度优先执行；`repeat_count` 大于 1 时完整重复全部子项；设置 `source` 时子项由引用提供 |
-| `pathing` | 地图追踪路线，`PuloniaPathingTaskExecutor`；唯一接入文件级采集 CD 的类型 |
+| `pathing` | 地图追踪路线，`PuloniaPathingTaskExecutor`；唯一接入文件级路线 CD 的类型 |
 | `javascript` | JS 项目，`PuloniaJavaScriptTaskExecutor` |
 | `keymouse` | 键鼠录制回放，`PuloniaKeyMouseTaskExecutor` |
 | `solo.<TaskId>` | 独立任务（秘境、首领、地脉花等），`PuloniaSoloTaskExecutor`，例如 `solo.auto_domain` |
@@ -109,9 +109,9 @@
 
 ### 地址、开关与失败行为
 
-- **节点地址**：准备树中每个节点的地址由计划 ID 和节点 ID 逐级拼接；分组多轮执行时追加 `/#<轮次>`，进入计划引用时追加 `/@<被引用计划 ID>`。节点结果、续跑起点和采集 CD 事件键都使用地址，不使用名称或数组下标。
+- **节点地址**：准备树中每个节点的地址由计划 ID 和节点 ID 逐级拼接；分组多轮执行时追加 `/#<轮次>`，进入计划引用时追加 `/@<被引用计划 ID>`。节点结果、续跑起点和路线 CD 事件键都使用地址，不使用名称或数组下标。
 - **开关**：父级关闭时整棵子树跳过，但不改写子节点自己的开关；重新开启后保留原选择。“启用全部子任务”是独立命令。
-- **失败行为**：`failure_behavior` 为 `stop_plan`（缺省）、`skip_group` 或 `continue`；`max_retries` 次重试耗尽后才按它编排。分组多轮执行不是重试，每一轮都重新判定采集 CD。
+- **失败行为**：`failure_behavior` 为 `stop_plan`（缺省）、`skip_group` 或 `continue`；`max_retries` 次重试耗尽后才按它编排。分组多轮执行不是重试，每一轮都重新判定路线 CD。
 - **限制**：最大深度 64、最多 10000 个准备节点；禁止计划自引用和间接循环；目录展开超过上限时整体拒绝。
 
 ## 有效参数解析规则
@@ -138,7 +138,7 @@
 ### 合并语义
 
 - **任务参数顶层字段整体替换。** 第 3、4 层按字段名覆盖，嵌套对象和数组不做深合并；`resin_usage` 等对象参数整体参与覆盖。
-- **共享设置按路径深写入。** 每个设置项只写其绑定路径的末端，例如 `auto_fight_config.FinishDetectConfig.FastCheckEnabled`，因此同一对象参数的不同子项可以来自不同层。设置项自身的值是原子单位，对象值（如采集 CD）整体替换。
+- **共享设置按路径深写入。** 每个设置项只写其绑定路径的末端，例如 `auto_fight_config.FinishDetectConfig.FastCheckEnabled`，因此同一对象参数的不同子项可以来自不同层。设置项自身的值是原子单位，对象值（如路线 CD）整体替换。
 - 显式写入的 `null`、`false`、`0` 和空集合都是有效值，与“未填写”不同。
 - 每个参数记录最后一次赋值的来源层，快照中保存为来源文本：`default/<类型>`、`settings`、节点地址、`call/<地址>`。每个绑定的设置项另记来源 `setting_sources`：`default`、`node/<地址>` 或 `profile/<方案 ID>@<地址>`。
 - 结果按能力 `ParameterSchema` 校验后进入快照。
@@ -169,7 +169,7 @@
 | --- | --- | --- |
 | 截图后端、窗口、日志等设备配置 | 程序全局配置 | 否 |
 | UID、登录方式、凭据 | 账号资料 | 否，作为运行上下文 |
-| 队伍、战斗、拾取、行走、吃药、采集 CD、Shell 运行方式 | 共享设置（节点 `settings` 与设置方案） | 是，向下传播 |
+| 队伍、战斗、拾取、行走、吃药、路线 CD、Shell 运行方式 | 共享设置（节点 `settings` 与设置方案） | 是，向下传播 |
 | 秘境名、JS 脚本 `settings`、Shell 命令等任务专属值 | 任务参数 `parameters` | 是，只属于本任务 |
 | 超时、重试、失败行为 | 节点 `policy` | 按字段继承 |
 | 定时、热键、截止窗口、忙碌策略 | 触发器 | 否 |

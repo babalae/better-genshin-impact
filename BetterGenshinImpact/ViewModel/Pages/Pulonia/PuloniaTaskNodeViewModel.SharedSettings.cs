@@ -23,6 +23,13 @@ public partial class PuloniaTaskNodeViewModel
         ? string.Empty
         : _document.FindProfile(id)?.Name ?? "方案缺失";
 
+    /// <summary>
+    /// 计划卡片上的方案文字（取计划根节点）：所挂方案名、方案缺失提示或未使用方案。
+    /// </summary>
+    public string ProfileDisplayText => _model.ProfileId is not { } id
+        ? "未使用设置方案"
+        : _document.FindProfile(id) is { } profile ? "方案：" + profile.Name : "⚠ 设置方案已不存在";
+
     /// <summary>是否显示任一共享设置标记。</summary>
     public bool HasSharedSettingsBadge => HasSharedSettings || HasProfile;
 
@@ -75,6 +82,7 @@ public partial class PuloniaTaskNodeViewModel
         OnPropertyChanged(nameof(HasProfile));
         OnPropertyChanged(nameof(IsProfileMissing));
         OnPropertyChanged(nameof(ProfileLabel));
+        OnPropertyChanged(nameof(ProfileDisplayText));
         OnPropertyChanged(nameof(HasSharedSettingsBadge));
         OnPropertyChanged(nameof(SharedSettingsToolTip));
         OnPropertyChanged(nameof(SharedSettingsSummary));

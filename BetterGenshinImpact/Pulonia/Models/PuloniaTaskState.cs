@@ -45,7 +45,7 @@ public sealed class PuloniaTaskState
     public List<PuloniaTaskRunRecord> PendingArchives { get; set; } = [];
 
     /// <summary>
-    /// 仍约束当前执行的采集 CD 事实：每个（作用域，文件）只保留最新一条，判定本来就只看最新一条；
+    /// 路线 CD 成功记录：每个（作用域，文件）只保留最新一条，判定本来就只看最新一条；可由用户清除；
     /// 每次成功的明细由运行历史中的确认事件保留。
     /// </summary>
     [JsonProperty("ledger", Required = Required.DisallowNull)]

@@ -4,7 +4,7 @@ using Newtonsoft.Json.Linq;
 namespace BetterGenshinImpact.ViewModel.Pages.Pulonia;
 
 /// <summary>
-/// 共享设置、设置方案、采集 CD 与 JS 脚本设置窗口的入口；由视图层实现并注入，视图模型不直接创建窗口或读取全局配置。
+/// 共享设置、设置方案、路线 CD、运行预览与 JS 脚本设置窗口的入口；由视图层实现并注入，视图模型不直接创建窗口或读取全局配置。
 /// </summary>
 public interface IPuloniaTaskSettingsDialogs
 {
@@ -22,12 +22,19 @@ public interface IPuloniaTaskSettingsDialogs
     void ManageProfiles(PuloniaPlanEditingSession session, string? selectProfileId);
 
     /// <summary>
-    /// 打开采集 CD 表单；草稿由调用方建立，确认后由调用方读取其中的值。
+    /// 打开路线 CD 表单；草稿由调用方建立，确认后由调用方读取其中的值。
     /// </summary>
-    /// <param name="draft">采集 CD 草稿。</param>
+    /// <param name="draft">路线 CD 草稿。</param>
     /// <param name="isLeaf">编辑对象是否为单个地图追踪任务，决定表单说明。</param>
     /// <returns>确认时返回结果（Value 为空）；取消返回 null。</returns>
     PuloniaTaskSettingsDialogResult? EditCollectionCooldown(PuloniaCollectionCooldownViewModel draft, bool isLeaf);
+
+    /// <summary>
+    /// 打开运行预览窗口；窗口关闭后返回用户是否选择了开始执行。
+    /// </summary>
+    /// <param name="viewModel">运行预览。</param>
+    /// <returns>选择“开始执行”时为 true。</returns>
+    bool ShowRunPreview(PuloniaTaskRunPreviewViewModel viewModel);
 
     /// <summary>
     /// 打开 JS 脚本自定义设置表单；字段由调用方按项目 settings_ui 建立。

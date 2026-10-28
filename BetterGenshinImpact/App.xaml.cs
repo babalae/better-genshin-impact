@@ -342,8 +342,10 @@ public partial class App : Application
                 services.AddSingleton(TimeProvider.System);
                 services.AddSingleton<PuloniaTaskTriggerHost>();
                 services.AddHostedService(sp => sp.GetRequiredService<PuloniaTaskTriggerHost>());
-                // Pulonia 任务计划页与新一条龙页共用同一编辑会话；高级设置的公共设置与采集 CD 表单由视图层提供。
+                // Pulonia 任务计划页与新一条龙页共用同一编辑会话；共享设置、路线 CD 与运行预览窗口由视图层提供。
                 services.AddSingleton<BetterGenshinImpact.ViewModel.Pages.Pulonia.PuloniaPlanEditingSession>();
+                // 路线 CD 总览：任务计划页与全局执行记录页各持一个实例，筛选状态互不影响。
+                services.AddTransient<BetterGenshinImpact.ViewModel.Pages.Pulonia.PuloniaCollectionCooldownOverviewViewModel>();
                 services.AddSingleton<BetterGenshinImpact.ViewModel.Pages.Pulonia.IPuloniaTaskSettingsDialogs,
                     BetterGenshinImpact.View.Windows.Pulonia.PuloniaTaskSettingsDialogs>();
                 // 树脂设置公共弹窗；各宿主页面在后续接入时只依赖视图模型层接口。

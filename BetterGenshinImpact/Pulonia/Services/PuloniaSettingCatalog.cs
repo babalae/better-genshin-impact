@@ -36,7 +36,7 @@ public static class PuloniaSettingCatalog
     /// <summary>食物类别。</summary>
     public const string EatCategory = "eat";
 
-    /// <summary>采集 CD 类别。</summary>
+    /// <summary>路线 CD 类别（ID 沿用 collection，界面名称为“路线 CD”）。</summary>
     public const string CollectionCategory = "collection";
 
     /// <summary>Shell 类别。</summary>
@@ -45,7 +45,7 @@ public static class PuloniaSettingCatalog
     /// <summary>录制回放类别。</summary>
     public const string KeyMouseCategory = "keymouse";
 
-    /// <summary>采集 CD 设置项 ID。</summary>
+    /// <summary>路线 CD 设置项 ID。</summary>
     public const string CollectionCooldownKey = "collection.cooldown";
 
     /// <summary>条件选队设置项 ID。</summary>
@@ -66,12 +66,12 @@ public static class PuloniaSettingCatalog
         new(TravelCategory, "行走", 60),
         new(HurryCategory, "赶路", 70),
         new(EatCategory, "食物", 80),
-        new(CollectionCategory, "采集 CD", 90),
+        new(CollectionCategory, "路线 CD", 90),
         new(KeyMouseCategory, "录制回放", 95),
         new(ShellCategory, "Shell", 100)
     ];
 
-    /// <summary>宿主参数 Schema：地图追踪公共参数加采集 CD；JS 使用其中除采集 CD 外的部分。</summary>
+    /// <summary>宿主参数 Schema：地图追踪公共参数加路线 CD；JS 使用其中除路线 CD 外的部分。</summary>
     private static readonly JObject HostSchema = CreateHostSchema();
 
     /// <summary>宿主参数默认值，与地图追踪能力默认值相同。</summary>
@@ -301,9 +301,10 @@ public static class PuloniaSettingCatalog
             Define(EatCategory, "def_dish", "auto_eat_config.DefaultDefBoostingDishName", "默认防御类料理",
                 "供 JS 按食物类型 3 调用。"),
 
-            // 采集 CD
-            Define(CollectionCategory, "cooldown", PuloniaCollectionCooldown.ParameterName, "采集 CD",
-                "按材料刷新规则跳过仍在 CD 中的路线。", editor: PuloniaSettingEditorKind.CollectionCooldown),
+            // 路线 CD
+            Define(CollectionCategory, "cooldown", PuloniaCollectionCooldown.ParameterName, "路线 CD",
+                "适用于采集、魔物、宝箱等地图追踪路线：按目录识别的刷新规则跳过仍在 CD 中的路线。",
+                editor: PuloniaSettingEditorKind.CollectionCooldown),
 
             // 录制回放
             Define(KeyMouseCategory, "with_delay", "with_delay", "按录制延时回放", "开启后按录制时的操作间隔回放；关闭时尽快连续回放。"),

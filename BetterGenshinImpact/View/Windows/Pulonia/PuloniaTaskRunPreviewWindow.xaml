@@ -1,0 +1,151 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.Pulonia.PuloniaTaskRunPreviewWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 Title="{Binding Title, Mode=OneWay}"
+                 Width="900"
+                 Height="640"
+                 MinWidth="640"
+                 MinHeight="420"
+                 Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ExtendsContentIntoTitleBar="True"
+                 FontFamily="{StaticResource TextThemeFontFamily}"
+                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                 WindowBackdropType="Mica"
+                 WindowStartupLocation="CenterOwner">
+    <!--  运行预览：按计划当前配置逐项预测本次执行或跳过；运行到每个节点时仍会重新判定  -->
+    <b:Interaction.Triggers>
+        <b:EventTrigger EventName="Loaded">
+            <b:InvokeCommandAction Command="{Binding LoadCommand, Mode=OneWay}" />
+        </b:EventTrigger>
+    </b:Interaction.Triggers>
+    <ui:FluentWindow.Resources>
+        <BooleanToVisibilityConverter x:Key="PreviewBoolVisibility" />
+        <!--  预测结果的颜色按语义区分：跳过为次要色，未识别为提示色，关闭为弱化  -->
+        <Style x:Key="OutcomeText" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSkipped, Mode=OneWay}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsCaution, Mode=OneWay}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsDisabled, Mode=OneWay}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </ui:FluentWindow.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0"
+                     Title="{Binding Title, Mode=OneWay}"
+                     Icon="{ui:SymbolIcon Eye24}"
+                     ShowMaximize="True"
+                     ShowMinimize="False" />
+
+        <StackPanel Grid.Row="1" Margin="24,8,24,8">
+            <TextBlock FontWeight="SemiBold" Text="{Binding SummaryText, Mode=OneWay}" TextWrapping="Wrap" />
+            <TextBlock Margin="0,4,0,0"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                       Text="按当前时间预测；运行到每个节点时会重新判定，执行失败和取消不记录路线 CD。"
+                       TextWrapping="Wrap" />
+            <Border Margin="0,8,0,0"
+                    Padding="10,6"
+                    Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
+                    CornerRadius="4"
+                    Visibility="{Binding HasError, Mode=OneWay, Converter={StaticResource PreviewBoolVisibility}}">
+                <TextBlock Text="{Binding ErrorText, Mode=OneWay}" TextWrapping="Wrap" />
+            </Border>
+            <CheckBox Margin="0,8,0,0" Content="只看会跳过的项" IsChecked="{Binding ShowSkippedOnly, Mode=TwoWay}" />
+        </StackPanel>
+
+        <Grid Grid.Row="2" Margin="24,0,24,12">
+            <ListBox x:Name="PreviewList"
+                     ItemsSource="{Binding Items, Mode=OneWay}"
+                     SelectionMode="Extended"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     VirtualizingPanel.IsVirtualizing="True"
+                     VirtualizingPanel.VirtualizationMode="Recycling"
+                     AutomationProperties.Name="运行预览列表">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="0,2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="40" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="130" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock VerticalAlignment="Top"
+                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                       Text="{Binding Index, Mode=OneWay}" />
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="{Binding Name, Mode=OneWay}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Name, Mode=OneWay}" />
+                                <TextBlock FontSize="12"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                           Text="{Binding DetailText, Mode=OneWay}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Margin="8,0,0,0">
+                                <TextBlock Style="{StaticResource OutcomeText}" Text="{Binding OutcomeText, Mode=OneWay}" />
+                                <TextBlock FontSize="11"
+                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                           Text="{Binding TypeText, Mode=OneWay}" />
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <ui:ProgressRing HorizontalAlignment="Center"
+                             VerticalAlignment="Center"
+                             IsIndeterminate="True"
+                             Visibility="{Binding IsLoading, Mode=OneWay, Converter={StaticResource PreviewBoolVisibility}}" />
+        </Grid>
+
+        <Border Grid.Row="3"
+                Padding="24,12"
+                Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
+                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                BorderThickness="0,1,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal">
+                    <ui:Button Command="{Binding ClearSelectedCommand, Mode=OneWay}"
+                               CommandParameter="{Binding SelectedItems, ElementName=PreviewList}"
+                               Content="清除选中项的 CD 记录"
+                               ToolTip="清除后这些路线本次会照常执行；运行历史中的成功记录不受影响" />
+                    <ui:Button Margin="8,0,0,0" Command="{Binding LoadCommand, Mode=OneWay}" Content="刷新" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <ui:Button MinWidth="96"
+                               Appearance="Primary"
+                               Command="{Binding StartCommand, Mode=OneWay}"
+                               Content="开始执行" />
+                    <ui:Button MinWidth="96"
+                               Margin="8,0,0,0"
+                               Click="OnCloseClick"
+                               Content="关闭"
+                               IsCancel="True" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</ui:FluentWindow>

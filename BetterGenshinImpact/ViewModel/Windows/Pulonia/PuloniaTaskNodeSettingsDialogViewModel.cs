@@ -93,7 +93,7 @@ public partial class PuloniaTaskNodeSettingsDialogViewModel : ObservableObject
     /// <param name="node">被编辑的节点。</param>
     /// <param name="definition">节点能力定义。</param>
     /// <param name="registry">独立任务注册表。</param>
-    /// <param name="dialogs">共享设置、采集 CD 与脚本设置窗口入口；为空时这些窗口不可用。</param>
+    /// <param name="dialogs">共享设置、路线 CD 与脚本设置窗口入口；为空时这些窗口不可用。</param>
     public PuloniaTaskNodeSettingsDialogViewModel(PuloniaPlanEditingSession session, PuloniaTaskNodeViewModel node,
         PuloniaTaskDefinition? definition, SoloTaskRegistry? registry, IPuloniaTaskSettingsDialogs? dialogs = null)
     {

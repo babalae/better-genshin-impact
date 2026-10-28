@@ -31,7 +31,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// <summary>独立任务注册表；新增与编辑弹窗据此优先使用独立任务的专属设置界面，为空时只使用通用设置卡片。</summary>
     private readonly SoloTaskRegistry? _soloTaskRegistry;
 
-    /// <summary>高级设置中公共设置与采集 CD 表单的入口；为空时这两类表单不可用。</summary>
+    /// <summary>共享设置、路线 CD 与运行预览窗口的入口；为空时这些窗口不可用。</summary>
     private readonly IPuloniaTaskSettingsDialogs? _settingsDialogs;
 
     /// <summary>首次加载结果是否已经显示，后续进入页面不再覆盖最近操作结果。</summary>
@@ -111,13 +111,15 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// <param name="history">计划内执行记录。</param>
     /// <param name="triggerHost">调度宿主；为空时只显示触发配置。</param>
     /// <param name="soloTaskRegistry">独立任务注册表。</param>
-    /// <param name="settingsDialogs">公共设置与采集 CD 表单入口。</param>
+    /// <param name="settingsDialogs">公共设置、路线 CD 与运行预览窗口入口。</param>
+    /// <param name="cooldowns">“路线 CD”页签的总览；为空时按会话新建。</param>
     public PuloniaTaskPlanViewModel(PuloniaPlanEditingSession session, PuloniaTaskHistoryViewModel history,
         PuloniaTaskTriggerHost? triggerHost = null, SoloTaskRegistry? soloTaskRegistry = null,
-        IPuloniaTaskSettingsDialogs? settingsDialogs = null)
+        IPuloniaTaskSettingsDialogs? settingsDialogs = null, PuloniaCollectionCooldownOverviewViewModel? cooldowns = null)
     {
         Session = session;
         History = history;
+        Cooldowns = cooldowns ?? new PuloniaCollectionCooldownOverviewViewModel(session);
         _soloTaskRegistry = soloTaskRegistry;
         _settingsDialogs = settingsDialogs;
         TriggerSettings = new PuloniaPlanTriggersViewModel(session, triggerHost);
@@ -137,12 +139,16 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     {
         // 在首次异步加载前登记资源检查，避免加载期间离开后又启动后台监控。
         var ct = Session.StartResourceMonitor(this);
+        // 任务树的路线 CD 标记只在本页可见时计算并每分钟刷新
+        Session.StartCooldownMonitor(this);
         try
         {
             await InitializeAsync();
             ct.ThrowIfCancellationRequested();
             History.PlanFilterId = SelectedDocument?.Id;
             await History.RefreshAsync();
+            // 计划加载完成后读取账本并计算任务树的路线 CD 标记
+            await Session.ReloadCooldownLedgerAsync();
             await Session.RefreshResourceVersionsAsync(ct);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -155,6 +161,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     public override Task OnNavigatedFromAsync()
     {
         Session.StopResourceMonitor(this);
+        Session.StopCooldownMonitor(this);
         return base.OnNavigatedFromAsync();
     }
 
@@ -188,18 +195,24 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     }
 
     /// <summary>
-    /// 新建计划并加入自动保存队列。
+    /// 弹窗填写名称并选择设置方案后新建计划，加入自动保存队列；取消时不创建。
     /// </summary>
     [RelayCommand]
     private void NewPlan()
     {
+        // 1. 预填不重名的默认名称，方案选项取当前已加载的设置方案
         var baseName = "新任务计划";
         var suffix = 1;
         var name = baseName;
         while (Documents.Any(document => document.Name == name))
             name = baseName + " " + ++suffix;
-        SelectedDocument = Session.CreatePlanDocument(name);
-        StatusMessage = "已新建计划。";
+        var viewModel = new PuloniaPlanCreationDialogViewModel(name, Session.Profiles);
+        if (PuloniaPlanCreationDialog.Show(viewModel, Application.Current.MainWindow) is not { } creation)
+            return;
+
+        // 2. 所选方案作为计划级共享设置挂在根节点上
+        SelectedDocument = Session.CreatePlanDocument(creation.Name, creation.ProfileId);
+        StatusMessage = $"已新建计划“{creation.Name}”。";
     }
 
     /// <summary>
@@ -559,6 +572,8 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     {
         RefreshReferencePlans();
         History.PlanFilterId = newValue?.Id;
+        // 路线 CD 页签默认只看当前计划用到的路线，用户可改为全部计划
+        Cooldowns.SetPlanFilter(newValue?.Id);
         NotifyCommandStates();
         TriggerSettings.Document = newValue;
         // 移动提示只针对当时的计划，切换计划后不再保留
@@ -667,6 +682,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         OnPropertyChanged(nameof(CanRunPlan));
         AddPlanReferenceCommand.NotifyCanExecuteChanged();
         RunPlanCommand.NotifyCanExecuteChanged();
+        PreviewRunCommand.NotifyCanExecuteChanged();
         CopyPlanCommand.NotifyCanExecuteChanged();
         DeletePlanCommand.NotifyCanExecuteChanged();
     }

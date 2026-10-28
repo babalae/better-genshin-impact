@@ -69,7 +69,7 @@ public partial class PuloniaSharedSettingRowViewModel : ObservableObject
     /// <summary>战斗策略选择器。</summary>
     public bool IsCombatStrategy => Definition.Editor == PuloniaSettingEditorKind.CombatStrategy;
 
-    /// <summary>采集 CD 专用编辑入口。</summary>
+    /// <summary>路线 CD 专用编辑入口。</summary>
     public bool IsCollectionCooldown => Definition.Editor == PuloniaSettingEditorKind.CollectionCooldown;
 
     /// <summary>固定选项。</summary>
@@ -90,10 +90,10 @@ public partial class PuloniaSharedSettingRowViewModel : ObservableObject
     /// <summary>战斗策略名。</summary>
     [ObservableProperty] private string _strategyValue = string.Empty;
 
-    /// <summary>当前值的简短文字，供采集 CD 等不内嵌编辑的项显示。</summary>
+    /// <summary>当前值的简短文字，供路线 CD 等不内嵌编辑的项显示（路线 CD 显示规则摘要，如“自动识别”“每日 04:00”）。</summary>
     [ObservableProperty] private string _valueText = string.Empty;
 
-    /// <summary>来源文字；界面只显示来源图标，文字放在悬停说明中，采集 CD 窗口也用它说明配置来源。</summary>
+    /// <summary>来源文字；界面只显示来源图标，文字放在悬停说明中，路线 CD 窗口也用它说明配置来源。</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SourceToolTip))]
     private string _sourceText = string.Empty;
@@ -244,7 +244,7 @@ public partial class PuloniaSharedSettingRowViewModel : ObservableObject
     [RelayCommand]
     private void Reset() => _owner.Reset(this);
 
-    /// <summary>打开采集 CD 编辑窗口。</summary>
+    /// <summary>打开路线 CD 编辑窗口。</summary>
     [RelayCommand]
     private void EditCollectionCooldown() => _owner.EditCollectionCooldown(this);
 

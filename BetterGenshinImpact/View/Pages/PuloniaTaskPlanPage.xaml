@@ -347,9 +347,28 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}" />
+                        <!-- 路线 CD 标记：CD 中显示剩余时间，分组显示汇总；未识别刷新规则用提示色，悬停查看规则与时间。 -->
                         <Border Grid.Column="1" Margin="8,0,0,0" Padding="5,1" CornerRadius="3"
+                                Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                                ToolTip="{Binding CooldownToolTip, Mode=OneWay}"
+                                Visibility="{Binding HasCooldownBadge, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBlock FontSize="11" Text="{Binding CooldownBadgeText, Mode=OneWay}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsCooldownBadgeCaution, Mode=OneWay}" Value="True">
+                                                <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Border>
+                        <Border Grid.Column="2" Margin="8,0,0,0" Padding="5,1" CornerRadius="3"
                                 Background="{DynamicResource SubtleFillColorSecondaryBrush}"
                                 Visibility="{Binding HasResourceNotice, Converter={StaticResource BooleanToVisibilityConverter}}"
                                 ToolTip="{Binding ResourceUpdateToolTip}">
@@ -357,7 +376,7 @@
                                        Foreground="{DynamicResource SystemFillColorCautionBrush}" />
                         </Border>
                         <!-- 共享设置标记：方案名与本节点覆盖数量，悬停列出覆盖的设置项。 -->
-                        <StackPanel Grid.Column="2" Margin="8,0,0,0" Orientation="Horizontal"
+                        <StackPanel Grid.Column="3" Margin="8,0,0,0" Orientation="Horizontal"
                                     ToolTip="{Binding SharedSettingsToolTip, Mode=OneWay}"
                                     Visibility="{Binding HasSharedSettingsBadge, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <Border Margin="0,0,4,0" Padding="5,1" CornerRadius="3"
@@ -480,6 +499,10 @@
                                           Command="{Binding Data.ViewModel.DeletePlanCommand, Source={StaticResource PageBindingProxy}}"
                                           CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
                                 <Separator />
+                                <MenuItem Header="预览本次执行…"
+                                          Command="{Binding Data.ViewModel.PreviewRunCommand, Source={StaticResource PageBindingProxy}}"
+                                          CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
+                                <Separator />
                                 <MenuItem Header="计划共享设置…"
                                           Command="{Binding Data.ViewModel.EditPlanSharedSettingsCommand, Source={StaticResource PageBindingProxy}}"
                                           CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
@@ -507,9 +530,22 @@
                                         </b:Interaction.Triggers>
                                         <StackPanel>
                                             <TextBlock FontWeight="SemiBold" Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}" />
+                                            <!-- 计划级设置方案（挂在计划根节点上）；方案缺失时用警示色。 -->
                                             <TextBlock FontSize="11"
-                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                       Text="{Binding Revision, StringFormat=修订 {0}}" />
+                                                       Text="{Binding RootNode.ProfileDisplayText, Mode=OneWay}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       ToolTip="{Binding RootNode.ProfileDisplayText, Mode=OneWay}">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding RootNode.IsProfileMissing, Mode=OneWay}" Value="True">
+                                                                <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
                                         </StackPanel>
                                     </ContentControl>
                                     <!-- 新运行入口位于每张计划卡片，不依赖历史选中状态；续跑仍使用记录视图中的独立命令。 -->
@@ -561,9 +597,39 @@
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
                                         <RowDefinition Height="*" />
                                     </Grid.RowDefinitions>
-                                    <Border Padding="22,6,4,6"
+                                    <!-- 开始前的路线 CD 摘要：本次会因 CD 跳过多少项、多少路线未识别刷新规则；逐项结果在运行预览中查看。 -->
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center"
+                                                    Orientation="Horizontal"
+                                                    ToolTip="{Binding ViewModel.SelectedDocument.CooldownSummaryToolTip, Mode=OneWay}"
+                                                    Visibility="{Binding ViewModel.SelectedDocument.HasCooldownSummary, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <ui:SymbolIcon Margin="2,0,6,0"
+                                                           FontSize="14"
+                                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                           Symbol="History24" />
+                                            <TextBlock VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       Text="{Binding ViewModel.SelectedDocument.CooldownSummaryText, Mode=OneWay}"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                        <ui:Button Grid.Column="1"
+                                                   Padding="10,4"
+                                                   Appearance="Transparent"
+                                                   Command="{Binding ViewModel.PreviewRunCommand, Mode=OneWay}"
+                                                   CommandParameter="{Binding ViewModel.SelectedDocument, Mode=OneWay}"
+                                                   Content="预览本次执行"
+                                                   Icon="{ui:SymbolIcon Eye24}"
+                                                   ToolTip="按当前配置逐项查看本次会执行还是因路线 CD 跳过，可在预览中清除记录后开始执行" />
+                                    </Grid>
+                                    <Border Grid.Row="1"
+                                             Padding="22,6,4,6"
                                              Background="{DynamicResource SubtleFillColorSecondaryBrush}"
                                              CornerRadius="4">
                                         <Grid>
@@ -578,7 +644,7 @@
                                          </Grid>
                                      </Border>
                                     <TreeView x:Name="TaskTree"
-                                              Grid.Row="1"
+                                              Grid.Row="2"
                                               Padding="2,6"
                                                Background="Transparent"
                                                BorderThickness="0"
@@ -673,7 +739,7 @@
                                             <behavior:TreeViewSelectedItemBehavior SelectedItem="{Binding ViewModel.SelectedDocument.SelectedNode, Mode=TwoWay}" />
                                         </b:Interaction.Behaviors>
                                     </TreeView>
-                                    <TextBlock Grid.Row="1"
+                                    <TextBlock Grid.Row="2"
                                                HorizontalAlignment="Center"
                                                VerticalAlignment="Center"
                                                Foreground="{DynamicResource TextFillColorTertiaryBrush}"
@@ -697,6 +763,9 @@
                     </TabItem>
                     <TabItem Header="执行记录">
                         <controls:PuloniaTaskHistoryView Margin="12" DataContext="{Binding ViewModel.History}" />
+                    </TabItem>
+                    <TabItem Header="路线 CD">
+                        <controls:PuloniaCollectionCooldownOverviewView Margin="12" DataContext="{Binding ViewModel.Cooldowns, Mode=OneWay}" />
                     </TabItem>
                     <TabItem Header="触发方式">
                         <controls:PuloniaTaskTriggerView DataContext="{Binding ViewModel.TriggerSettings, Mode=OneWay}" />

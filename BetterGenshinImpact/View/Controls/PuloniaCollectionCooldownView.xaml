@@ -6,28 +6,75 @@
         <BooleanToVisibilityConverter x:Key="CdVisibility" />
     </UserControl.Resources>
     <StackPanel>
-        <TextBlock Text="采集 CD" FontWeight="SemiBold" Margin="0,0,0,8" />
-        <TextBlock Text="{Binding ConfigurationSource, StringFormat=配置来源：{0}}" Margin="0,0,0,8" />
-        <ComboBox ItemsSource="{Binding Modes}" DisplayMemberPath="Value" SelectedValuePath="Key"
-                  SelectedValue="{Binding Mode}" HorizontalAlignment="Stretch" />
-        <StackPanel Margin="0,8,0,0" Visibility="{Binding ShowHours, Converter={StaticResource CdVisibility}}">
+        <!--  叶子节点：当前账号下的状态与清除记录  -->
+        <Border Margin="0,0,0,12"
+                Padding="10,8"
+                Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                CornerRadius="4"
+                Visibility="{Binding HasStatus, Mode=OneWay, Converter={StaticResource CdVisibility}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock VerticalAlignment="Center" Text="{Binding StatusText, Mode=OneWay}" TextWrapping="Wrap" />
+                <ui:Button Grid.Column="1"
+                           Margin="12,0,0,0"
+                           VerticalAlignment="Center"
+                           Command="{Binding ClearRecordCommand, Mode=OneWay}"
+                           Content="清除记录"
+                           ToolTip="清除后这条路线下次运行会照常执行；运行历史中的成功记录不受影响" />
+            </Grid>
+        </Border>
+        <TextBlock Margin="0,0,0,8" FontWeight="SemiBold" Text="路线 CD" />
+        <TextBlock Margin="0,0,0,8"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                   Text="{Binding ConfigurationSource, Mode=OneWay, StringFormat=配置来源：{0}}" />
+        <ComboBox HorizontalAlignment="Stretch"
+                  DisplayMemberPath="Value"
+                  ItemsSource="{Binding Choices, Mode=OneWay}"
+                  SelectedValue="{Binding Choice, Mode=TwoWay}"
+                  SelectedValuePath="Key" />
+        <StackPanel Margin="0,8,0,0" Visibility="{Binding ShowCustom, Mode=OneWay, Converter={StaticResource CdVisibility}}">
+            <TextBlock Text="周期" />
+            <ComboBox HorizontalAlignment="Stretch"
+                      DisplayMemberPath="Value"
+                      ItemsSource="{Binding CustomModes, Mode=OneWay}"
+                      SelectedValue="{Binding CustomMode, Mode=TwoWay}"
+                      SelectedValuePath="Key" />
+        </StackPanel>
+        <StackPanel Margin="0,8,0,0" Visibility="{Binding ShowHours, Mode=OneWay, Converter={StaticResource CdVisibility}}">
             <TextBlock Text="成功后等待（小时）" />
-            <ui:TextBox Text="{Binding Hours, UpdateSourceTrigger=PropertyChanged}" />
+            <ui:TextBox Text="{Binding Hours, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
         </StackPanel>
-        <StackPanel Margin="0,8,0,0" Visibility="{Binding ShowDays, Converter={StaticResource CdVisibility}}">
+        <StackPanel Margin="0,8,0,0" Visibility="{Binding ShowDays, Mode=OneWay, Converter={StaticResource CdVisibility}}">
             <TextBlock Text="成功日期后第几天的服务器 00:00" />
-            <ui:TextBox Text="{Binding Days, UpdateSourceTrigger=PropertyChanged}" />
+            <ui:TextBox Text="{Binding Days, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
         </StackPanel>
-        <StackPanel Margin="0,8,0,0" Visibility="{Binding ShowResetHour, Converter={StaticResource CdVisibility}}">
+        <StackPanel Margin="0,8,0,0" Visibility="{Binding ShowResetHour, Mode=OneWay, Converter={StaticResource CdVisibility}}">
             <TextBlock Text="服务器重置小时" />
-            <ComboBox ItemsSource="{Binding ResetHours}" SelectedItem="{Binding ResetHour}" />
+            <ComboBox ItemsSource="{Binding ResetHours, Mode=OneWay}" SelectedItem="{Binding ResetHour, Mode=TwoWay}" />
         </StackPanel>
-        <StackPanel Margin="0,8,0,0" Visibility="{Binding ShowWeekday, Converter={StaticResource CdVisibility}}">
+        <StackPanel Margin="0,8,0,0" Visibility="{Binding ShowWeekday, Mode=OneWay, Converter={StaticResource CdVisibility}}">
             <TextBlock Text="重置星期" />
-            <ComboBox ItemsSource="{Binding Weekdays}" DisplayMemberPath="Value" SelectedValuePath="Key"
-                      SelectedValue="{Binding ResetWeekday}" />
+            <ComboBox DisplayMemberPath="Value"
+                      ItemsSource="{Binding Weekdays, Mode=OneWay}"
+                      SelectedValue="{Binding ResetWeekday, Mode=TwoWay}"
+                      SelectedValuePath="Key" />
         </StackPanel>
-        <TextBlock Text="{Binding Preview}" TextWrapping="Wrap" Margin="0,12,0,0"
-                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+        <TextBlock Margin="0,12,0,0"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                   Text="{Binding Preview, Mode=OneWay}"
+                   TextWrapping="Wrap" />
+        <TextBlock Margin="0,8,0,0"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                   Text="{Binding DistributionText, Mode=OneWay}"
+                   TextWrapping="Wrap"
+                   Visibility="{Binding HasDistribution, Mode=OneWay, Converter={StaticResource CdVisibility}}" />
+        <TextBlock Margin="0,8,0,0"
+                   Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                   Text="{Binding ConflictText, Mode=OneWay}"
+                   TextWrapping="Wrap"
+                   Visibility="{Binding HasConflict, Mode=OneWay, Converter={StaticResource CdVisibility}}" />
     </StackPanel>
 </UserControl>
