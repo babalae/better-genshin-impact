@@ -7,8 +7,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Infrastructure.Storage;
+using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -42,11 +44,41 @@ public partial class StorageManagementViewModel : ObservableObject, IDisposable
     /// </summary>
     private CancellationTokenSource _measureCts = new();
 
-    public StorageManagementViewModel(IStorageService storageService, ILogger<StorageManagementViewModel> logger)
+    public StorageManagementViewModel(IStorageService storageService, IConfigService configService,
+        ILogger<StorageManagementViewModel> logger)
     {
         _storageService = storageService;
         _logger = logger;
+        StorageConfig = configService.Get().StorageConfig;
+
+        // 配置里是选项之外的值（手动修改过配置文件）时补进列表，避免下拉框显示为空
+        var limit = StorageConfig.FileCacheLimitMb;
+        CacheLimitOptions = CacheLimitPresets.Any(option => option.Key == limit)
+            ? CacheLimitPresets
+            : [.. CacheLimitPresets, new KeyValuePair<int, string>(limit, ByteSizeFormatter.Format(limit * 1024L * 1024))];
     }
+
+    /// <summary>
+    /// 文件缓存上限的预设选项（MB）
+    /// </summary>
+    private static readonly IReadOnlyList<KeyValuePair<int, string>> CacheLimitPresets =
+    [
+        new(256, "256 MB"),
+        new(512, "512 MB"),
+        new(1024, "1 GB"),
+        new(2048, "2 GB"),
+        new(5120, "5 GB"),
+    ];
+
+    /// <summary>
+    /// 存储空间设置，下拉框直接绑定其中的文件缓存上限，修改后自动保存
+    /// </summary>
+    public StorageConfig StorageConfig { get; }
+
+    /// <summary>
+    /// 文件缓存上限的下拉选项
+    /// </summary>
+    public IReadOnlyList<KeyValuePair<int, string>> CacheLimitOptions { get; }
 
     /// <summary>
     /// 请求关闭窗口

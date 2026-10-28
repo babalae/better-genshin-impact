@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
@@ -31,6 +32,17 @@ public sealed class LegacyDataCleaner(bool isRoot, ILogger<LegacyDataCleaner> lo
         "Cache",
         // 阶段 4：运行库安装包改由下载服务保存到 Data/Downloads/onnxruntime
         @"Plugins\OnnxRuntime\.downloads",
+        // 阶段 5：通用缓存和音乐封面改到 Data/Cache/Files
+        @"User\Cache\MemoryFileCache",
+        @"User\Music\Artwork",
+    ];
+
+    /// <summary>
+    /// 清理上面的目录后，若已为空则一并删除的父目录（相对程序目录）；不为空说明还有其他用途，保留
+    /// </summary>
+    private static readonly string[] LegacyParentsRemovedWhenEmpty =
+    [
+        @"User\Cache",
     ];
 
     /// <summary>
@@ -99,6 +111,24 @@ public sealed class LegacyDataCleaner(bool isRoot, ILogger<LegacyDataCleaner> lo
                 else
                 {
                     logger.LogInformation("已删除旧目录 {Path}，释放 {FreedMegabytes:F1} MB", relativePath, result.FreedBytes / 1024d / 1024d);
+                }
+            }
+
+            foreach (var relativePath in LegacyParentsRemovedWhenEmpty)
+            {
+                var fullPath = Path.GetFullPath(Path.Combine(Global.StartUpPath, relativePath));
+                try
+                {
+                    if (SafePath.IsUnder(Global.StartUpPath, fullPath) && Directory.Exists(fullPath)
+                                                                     && !Directory.EnumerateFileSystemEntries(fullPath).Any())
+                    {
+                        Directory.Delete(fullPath);
+                    }
+                }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+                {
+                    // 空目录删除失败不影响使用，也不阻止写入完成标记
+                    logger.LogDebug(e, "删除空的旧目录 {Path} 失败", relativePath);
                 }
             }
 

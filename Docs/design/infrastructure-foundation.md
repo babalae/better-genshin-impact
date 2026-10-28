@@ -1,6 +1,6 @@
 # 基础设施统一：WebView2、网络与下载、缓存、临时文件
 
-状态：设计已确认（第 2 版），2026-10-28，基于 `refactor/20260930` 分支代码。阶段 1、2、3、4 已实施，其余阶段待实施。
+状态：设计已确认（第 2 版），2026-10-28，基于 `refactor/20260930` 分支代码。阶段 1 至 5 已实施，阶段 6 待实施。
 
 第 2 版变更：程序生成的数据统一放到新目录 `Data/`；推理缓存、通用文件缓存、下载分目录存放；WebView2 支持多个普通环境并集中管理环境配置；旧目录每个版本清理一次，不再迁移；第 15 节的决策已确认。
 
@@ -343,9 +343,13 @@ services.AddSingleton<ITempFileService>(sp => new TempFileService(
     InstanceBootstrap.Current.Context, sp.GetRequiredService<ILogger<TempFileService>>()));
 services.AddSingleton<IStorageAreaProvider>(sp => (TempFileService)sp.GetRequiredService<ITempFileService>());
 
-// 缓存
-services.AddSingleton<IFileCache, FileCache>();
-services.AddHostedService<CacheMaintenanceService>();
+// 缓存：FileCache 同时登记各缓存分区为存储区域；维护服务只在主实例执行
+services.AddSingleton(sp => new FileCache(AppPaths.FileCache, sp.GetRequiredService<TimeProvider>(),
+    sp.GetRequiredService<ILogger<FileCache>>()));
+services.AddSingleton<IFileCache>(sp => sp.GetRequiredService<FileCache>());
+services.AddSingleton<IStorageAreaProvider>(sp => sp.GetRequiredService<FileCache>());
+services.AddHostedService(sp => new CacheMaintenanceService(sp.GetRequiredService<FileCache>(), all.StorageConfig,
+    instanceContext.IsRoot, sp.GetRequiredService<TimeProvider>(), sp.GetRequiredService<ILogger<CacheMaintenanceService>>()));
 services.AddSingleton<IRemoteImageService, RemoteImageService>();
 
 // 网络与下载（命名客户端注册见 6.3）
@@ -480,7 +484,9 @@ public static class CachePartitions
 
 ### 5.2 接口
 
-以 `MemoryFileCache` 为基础改造，保留它已经做对的部分：内存层用 LazyCache 保证同一 key 只调用一次 factory；磁盘写入先写临时文件再替换；按文件最后写入时间判断过期；factory 收到的是服务自身的令牌，一个调用方取消不会中断其他调用方共享的下载，调用方的 `ct` 只取消等待。
+以 `MemoryFileCache` 为基础改造，保留它已经做对的部分：同一 key 只调用一次 factory；磁盘写入先写临时文件再替换；按文件最后写入时间判断过期；factory 收到的是服务自身的令牌，一个调用方取消不会中断其他调用方共享的下载，调用方的 `ct` 只取消等待。
+
+实施时的调整：并发合并改用进行中任务的字典，内存层改用带总量上限的 `MemoryCache`（不再用 LazyCache，因为 LazyCache 的条目在调用 factory 之前就已创建，无法按内容大小决定是否放进内存）。接口只实现了目前有调用方的 `GetOrAddBytesAsync`、`Remove`、`RetainOnly`，下面的 JSON、自定义序列化和返回文件路径的版本等有需要时再加。
 
 ```csharp
 /// <summary>文件缓存：内存加磁盘两级，适合可再生的图片和接口数据。</summary>
@@ -537,12 +543,13 @@ public interface IRemoteImageService
     /// <summary>获取图片，失败返回 null。同一 URL 的并发请求只下载一次。</summary>
     Task<ImageSource?> GetAsync(CachePartition partition, string url, CancellationToken ct = default);
 
-    /// <summary>获取本地缓存文件路径，供 GIF 等需要文件的控件使用。</summary>
-    Task<string?> GetLocalFileAsync(CachePartition partition, string url, CancellationToken ct = default);
+    /// <summary>获取图片原始数据（经文件缓存），供 GIF 等需要自行解码的控件使用；下载失败时抛出异常，便于界面说明原因。</summary>
+    Task<byte[]?> GetBytesAsync(CachePartition partition, string url, CancellationToken ct = default);
 }
 ```
 
-- 下载使用 `HttpClientNames.Images` 客户端，单张上限 10 MB。
+- 下载使用 `HttpClientNames.Images` 客户端，单张上限 20 MB（与文档图片原有的限制一致）。
+- 点位详情的 GIF 原先用内存流播放，改为文件路径需要换播放方式，因此提供 `GetBytesAsync` 而不是返回文件路径。
 - 解码复用 `ImageSourceDecoder`，它已支持 WebP 并会冻结结果。
 - 解码后的图片按 LRU 保留，默认最多 512 张。
 - `MapIconImageCache` 保留为静态门面，因为画布控件依赖它的 `ImageUpdated` 事件；内部改为调用本服务，避免一次改动所有画布。
@@ -553,7 +560,7 @@ public interface IRemoteImageService
 |---|---|
 | `MemoryFileCache` | 删除，DI 注册改为 `IFileCache` |
 | `MapIconImageCache`：自建 HttpClient、无上限字典、下载不可取消 | 静态门面加 `IRemoteImageService(MapIcons)` |
-| `MaskMapPointInfoPopupViewModel`：静态 HttpClient | `IRemoteImageService(MapPointImages)`，GIF 走 `GetLocalFileAsync` |
+| `MaskMapPointInfoPopupViewModel`：静态 HttpClient | `IRemoteImageService(MapPointImages)`，原始数据走 `GetBytesAsync`，GIF 仍用内存流播放 |
 | `MarkdownImageLoader` | `IRemoteImageService(MarkdownImages)` |
 | `MusicCoverService` 的封面 | `IFileCache.GetOrAddBytesAsync(MusicArtwork)` |
 | `KongyingTavernApiService` | `IFileCache.GetOrAddAsync(KongyingTavern)` 加 `RetainOnly` |
@@ -1222,6 +1229,7 @@ dotnet msbuild BetterGenshinImpact.sln -restore -p:Configuration=Debug -nologo -
 | 4. 下载服务与下载中心 | `DownloadService`、`IDownloadMonitor`、标题栏下载中心；迁移 `OnnxRuntimeInstaller`、`BannerImageService`；旧目录清单加入 `Plugins/OnnxRuntime/.downloads`；可选接入 Git 进度 | 下载 TensorRT 包中途断网，恢复后续传；取消后重试会续传；校验失败有明确提示；离开硬件加速页后仍能在下载中心看到进度 |
 | 4 的实施说明（已完成） | 与上一行的差异：下载分类改为 `DownloadCategory` 类型（与临时文件分类相同的写法），存储空间窗口按分类各一行，并标出未完成的下载数；`DownloadRequest` 增加 `Origin`，运行库安装包设为"硬件加速设置"，下载中心对这类任务不提供重试和打开文件夹，提示回到设置页（下载完成后还要解压安装，单独重试下载不会安装）；`IDownloadService` 增加 `GetDirectory`，安装器据此清理下载目录；同一地址的任务依次执行，后来的任务复用或续传；`RuntimePackageDownloader` 只保留解压与 CRC 校验；标题栏弹出层使用 WPF-UI `Flyout`，定位点放在按钮右下角并以 `Left` 方式展开，使右边缘与按钮对齐；退出确认覆盖主窗口关闭和托盘退出，确认一次后不再重复询问；Git 进度（7.4）本阶段不接入 | 编译通过；临时验证测试覆盖了 200 重写、206 续传、断线与提前关闭后续传、5xx 重试次数、4xx 换备用地址、哈希失败删除 `.part`、大小上限、取消后续传重试、最多 3 个并发、已完成文件复用、同一地址并发、目标路径校验、存储区域、行文字，并实际加载下载中心视图、检查弹出层位置，验证后删除；真实断网续传需在真实环境验收 |
 | 5. 缓存 | `IFileCache`、`CachePartitions`、`CacheMaintenanceService`、`IRemoteImageService`；迁移 5.5 中的用法；删除 `MemoryFileCache`；旧目录清单加入 `User/Cache/MemoryFileCache`、`User/Music/Artwork`；缓存分区登记为存储区域 | 缓存超过上限后自动降到 80%；地图上大量图标滚动时，内存中的图片数量不超过上限；清理某个分区后功能正常并重新下载 |
+| 5 的实施说明（已完成） | 与上一行的差异：`IFileCache` 只实现有调用方的方法，内存层改用带总量上限（64 MB）的 `MemoryCache`，内存条目与磁盘条目同时到期（见 5.2）；`IRemoteImageService` 以 `GetBytesAsync` 取代 `GetLocalFileAsync`，单张上限 20 MB（见 5.4）；`MapIconImageCache` 的程序内置图标（pack 资源和程序目录文件）不再写入磁盘缓存，直接解码保存在内存；在存储空间窗口清理缓存分区时同时清空内存层；缓存维护还会删除超过 1 小时的残留临时文件，记录文件写入失败时本进程内也不会重复执行；`User/Cache` 在清理后为空时一并删除；存储空间窗口新增"自动清理"卡片，提供缓存上限下拉框 | 编译通过；临时验证测试覆盖了并发只调用一次 factory、跨实例读磁盘、过期重新获取、空结果不缓存、大条目不进内存、调用方取消不影响共享获取、`RetainOnly` 与 `Remove`、分区存储区域与清理、维护的过期删除和上限淘汰、远程图片的请求合并和 512 张上限，并实际加载存储空间窗口检查分区行和下拉框绑定，验证后删除；地图图标的实际显示需在真实环境验收 |
 | 6. WebView2 | 环境定义与 Profile、环境入口、`WebViewSetup`、运行时提示；迁移 `WebpagePanel`、`HtmlMaskWindow`、`CloudWebHostWindow`、`WebViewInstanceStore`、实例管理窗口；`ProcessFailed` 处理；网页数据存储区域；旧目录清单加入 `WebView2Data/` | 全仓库只有环境入口调用 `CoreWebView2Environment.CreateAsync`；未安装运行时能看到说明并跳转下载页；以 dotnet 宿主启动时数据目录仍在 `Data/WebView2/`；云原神实例清理缓存后登录状态保留；在 `WebViewEnvironments` 中临时增加一个测试环境，能在存储空间窗口看到对应行，删除定义后其目录显示为"已不再使用的网页数据" |
 
 建议补充的单元测试（`Test/BetterGenshinImpact.UnitTest`）：

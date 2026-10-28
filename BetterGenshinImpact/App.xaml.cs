@@ -24,6 +24,7 @@ using BetterGenshinImpact.GameTask.Runtime.WebPage;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Helpers.Win32;
+using BetterGenshinImpact.Infrastructure.Cache;
 using BetterGenshinImpact.Infrastructure.Network;
 using BetterGenshinImpact.Infrastructure.Network.Download;
 using BetterGenshinImpact.Infrastructure.Storage;
@@ -402,7 +403,15 @@ public partial class App : Application
                 services.AddSingleton<OcrFactory>();
                 services.AddMemoryCache();
                 services.AddSingleton<IAppCache, CachingService>();
-                services.AddSingleton<MemoryFileCache>();
+                // 文件缓存与远程图片，见 Docs/design/infrastructure-foundation.md 第 5 节
+                services.AddSingleton(sp => new FileCache(AppPaths.FileCache, sp.GetRequiredService<TimeProvider>(),
+                    sp.GetRequiredService<ILogger<FileCache>>()));
+                services.AddSingleton<IFileCache>(sp => sp.GetRequiredService<FileCache>());
+                services.AddSingleton<IStorageAreaProvider>(sp => sp.GetRequiredService<FileCache>());
+                services.AddHostedService(sp => new CacheMaintenanceService(
+                    sp.GetRequiredService<FileCache>(), all.StorageConfig, instanceContext.IsRoot,
+                    sp.GetRequiredService<TimeProvider>(), sp.GetRequiredService<ILogger<CacheMaintenanceService>>()));
+                services.AddSingleton<IRemoteImageService, RemoteImageService>();
                 services.AddSingleton<IMihoyoMapApiService, MihoyoMapApiService>();
                 services.AddSingleton<IKongyingTavernApiService, KongyingTavernApiService>();
                 services.AddSingleton<IHoYoLabMapApiService, HoYoLabMapApiService>();

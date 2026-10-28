@@ -134,64 +134,89 @@
             </StackPanel>
         </Border>
 
-        <!-- 分组列表：每行说明这是什么、清理后会怎样，再给出操作 -->
+        <!-- 分组列表：每行说明这是什么、清理后会怎样，再给出操作；最后是自动清理设置 -->
         <ScrollViewer Grid.Row="3" Padding="18,0,18,6" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-            <ItemsControl ItemsSource="{Binding Groups, Mode=OneWay}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="{x:Type vm:StorageGroupViewModel}">
-                        <StackPanel Margin="0,0,0,14">
-                            <StackPanel Margin="2,0,0,6" Orientation="Horizontal">
-                                <Ellipse Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center"
-                                         Fill="{Binding Color, Mode=OneWay, Converter={StaticResource StorageColorBrushConverter}}" />
-                                <TextBlock FontWeight="SemiBold" Text="{Binding Name, Mode=OneWay}" />
-                                <TextBlock Margin="8,0,0,0" VerticalAlignment="Center" FontSize="12" Text="{Binding Description, Mode=OneWay}"
-                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+            <StackPanel>
+                <ItemsControl ItemsSource="{Binding Groups, Mode=OneWay}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:StorageGroupViewModel}">
+                            <StackPanel Margin="0,0,0,14">
+                                <StackPanel Margin="2,0,0,6" Orientation="Horizontal">
+                                    <Ellipse Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center"
+                                             Fill="{Binding Color, Mode=OneWay, Converter={StaticResource StorageColorBrushConverter}}" />
+                                    <TextBlock FontWeight="SemiBold" Text="{Binding Name, Mode=OneWay}" />
+                                    <TextBlock Margin="8,0,0,0" VerticalAlignment="Center" FontSize="12" Text="{Binding Description, Mode=OneWay}"
+                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                </StackPanel>
+                                <Border CornerRadius="6" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                                    <ItemsControl ItemsSource="{Binding Items, Mode=OneWay}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type vm:StorageAreaItemViewModel}">
+                                                <StackPanel>
+                                                    <Border Height="1" Background="{DynamicResource CardStrokeColorDefaultBrush}"
+                                                            Visibility="{Binding IsFirst, Mode=OneWay, Converter={StaticResource StorageBooleanToCollapsedConverter}}" />
+                                                    <Grid Margin="14,10">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" MinWidth="96" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <StackPanel Margin="0,0,12,0" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding DisplayName, Mode=OneWay}" />
+                                                            <TextBlock Margin="0,3,0,0" FontSize="12" Text="{Binding DetailText, Mode=OneWay}" TextWrapping="Wrap"
+                                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Orientation="Horizontal">
+                                                            <ui:ProgressRing Width="12" Height="12" Margin="0,0,6,0" IsIndeterminate="True"
+                                                                             Visibility="{Binding IsWorking, Mode=OneWay, Converter={StaticResource StorageBooleanToVisibilityConverter}}" />
+                                                            <TextBlock Text="{Binding SizeText, Mode=OneWay}" />
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Column="2" Margin="12,0,0,0" VerticalAlignment="Center" Orientation="Horizontal">
+                                                            <ui:Button Content="打开" Style="{StaticResource StorageActionButtonStyle}"
+                                                                       Command="{Binding DataContext.OpenFolderCommand, Mode=OneWay, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
+                                                                       CommandParameter="{Binding Mode=OneWay}"
+                                                                       Visibility="{Binding CanOpenFolder, Mode=OneWay, Converter={StaticResource StorageBooleanToVisibilityConverter}}" />
+                                                            <ui:Button Content="{Binding CleanButtonText, Mode=OneWay}" Style="{StaticResource StorageActionButtonStyle}"
+                                                                       IsEnabled="{Binding CanClean, Mode=OneWay}"
+                                                                       Command="{Binding DataContext.CleanupCommand, Mode=OneWay, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
+                                                                       CommandParameter="{Binding Mode=OneWay}"
+                                                                       Visibility="{Binding IsCleanable, Mode=OneWay, Converter={StaticResource StorageBooleanToVisibilityConverter}}" />
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Border>
                             </StackPanel>
-                            <Border CornerRadius="6" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
-                                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
-                                <ItemsControl ItemsSource="{Binding Items, Mode=OneWay}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate DataType="{x:Type vm:StorageAreaItemViewModel}">
-                                            <StackPanel>
-                                                <Border Height="1" Background="{DynamicResource CardStrokeColorDefaultBrush}"
-                                                        Visibility="{Binding IsFirst, Mode=OneWay, Converter={StaticResource StorageBooleanToCollapsedConverter}}" />
-                                                <Grid Margin="14,10">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*" />
-                                                        <ColumnDefinition Width="Auto" MinWidth="96" />
-                                                        <ColumnDefinition Width="Auto" />
-                                                    </Grid.ColumnDefinitions>
-                                                    <StackPanel Margin="0,0,12,0" VerticalAlignment="Center">
-                                                        <TextBlock Text="{Binding DisplayName, Mode=OneWay}" />
-                                                        <TextBlock Margin="0,3,0,0" FontSize="12" Text="{Binding DetailText, Mode=OneWay}" TextWrapping="Wrap"
-                                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                                                    </StackPanel>
-                                                    <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Orientation="Horizontal">
-                                                        <ui:ProgressRing Width="12" Height="12" Margin="0,0,6,0" IsIndeterminate="True"
-                                                                         Visibility="{Binding IsWorking, Mode=OneWay, Converter={StaticResource StorageBooleanToVisibilityConverter}}" />
-                                                        <TextBlock Text="{Binding SizeText, Mode=OneWay}" />
-                                                    </StackPanel>
-                                                    <StackPanel Grid.Column="2" Margin="12,0,0,0" VerticalAlignment="Center" Orientation="Horizontal">
-                                                        <ui:Button Content="打开" Style="{StaticResource StorageActionButtonStyle}"
-                                                                   Command="{Binding DataContext.OpenFolderCommand, Mode=OneWay, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
-                                                                   CommandParameter="{Binding Mode=OneWay}"
-                                                                   Visibility="{Binding CanOpenFolder, Mode=OneWay, Converter={StaticResource StorageBooleanToVisibilityConverter}}" />
-                                                        <ui:Button Content="{Binding CleanButtonText, Mode=OneWay}" Style="{StaticResource StorageActionButtonStyle}"
-                                                                   IsEnabled="{Binding CanClean, Mode=OneWay}"
-                                                                   Command="{Binding DataContext.CleanupCommand, Mode=OneWay, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
-                                                                   CommandParameter="{Binding Mode=OneWay}"
-                                                                   Visibility="{Binding IsCleanable, Mode=OneWay, Converter={StaticResource StorageBooleanToVisibilityConverter}}" />
-                                                    </StackPanel>
-                                                </Grid>
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- 自动清理：文件缓存上限，由后台维护每天检查一次 -->
+                <TextBlock Margin="2,0,0,6" FontWeight="SemiBold" Text="自动清理" />
+                <Border Margin="0,0,0,14" Padding="14,10" CornerRadius="6"
+                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Margin="0,0,12,0" VerticalAlignment="Center">
+                            <TextBlock Text="文件缓存上限" />
+                            <TextBlock Margin="0,3,0,0" FontSize="12" TextWrapping="Wrap"
+                                       Text="超过后自动删除最早的缓存，每天检查一次。不包括识别模型编译缓存和下载。"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                         </StackPanel>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+                        <ComboBox Grid.Column="1" Width="140" VerticalAlignment="Center"
+                                  DisplayMemberPath="Value" SelectedValuePath="Key"
+                                  ItemsSource="{Binding CacheLimitOptions, Mode=OneWay}"
+                                  SelectedValue="{Binding StorageConfig.FileCacheLimitMb, Mode=TwoWay}" />
+                    </Grid>
+                </Border>
+            </StackPanel>
         </ScrollViewer>
 
         <Border Grid.Row="4" Padding="18,12" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">

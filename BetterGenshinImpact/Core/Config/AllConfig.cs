@@ -303,6 +303,11 @@ public partial class AllConfig : ObservableObject
     public NetworkConfig NetworkConfig { get; set; } = new();
 
     /// <summary>
+    /// 存储空间设置
+    /// </summary>
+    public StorageConfig StorageConfig { get; set; } = new();
+
+    /// <summary>
     /// 任意配置项变更后的回调（由 ConfigService 设置为防抖保存）
     /// </summary>
     [JsonIgnore]

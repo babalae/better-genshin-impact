@@ -16,21 +16,6 @@ public sealed class LegacyStorageAreaProvider(
     /// <inheritdoc />
     public IEnumerable<StorageArea> GetAreas()
     {
-        // 阶段 5 迁移到 IFileCache
-        yield return new StorageArea("legacy:memory-file-cache", "地图点位与图标缓存", StorageGroup.Cache,
-            [MemoryFileCache.CacheRootDirectory])
-        {
-            Description = "地图遮罩的点位图标和空荧酒馆点位数据",
-            CleanupEffect = "需要时重新下载",
-        };
-
-        yield return new StorageArea("legacy:music-artwork", "音乐封面", StorageGroup.Cache,
-            [Global.Absolute(@"User\Music\Artwork")])
-        {
-            Description = "自动演奏曲目的封面图片",
-            CleanupEffect = "需要时重新下载",
-        };
-
         // 阶段 6 迁移到 WebView2 环境入口，届时提供只清理缓存的选项
         yield return new StorageArea("legacy:webview-shared", "软件内网页数据", StorageGroup.WebData,
             [Global.Absolute(@"WebView2Data\EBWebView")])

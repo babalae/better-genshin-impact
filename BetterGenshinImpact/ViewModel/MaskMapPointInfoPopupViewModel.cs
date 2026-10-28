@@ -2,8 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Net.Http;
-using BetterGenshinImpact.Infrastructure.Network;
+using BetterGenshinImpact.Infrastructure.Cache;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -22,9 +21,9 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
     private readonly ILogger<MaskMapPointInfoPopupViewModel> _logger = App.GetLogger<MaskMapPointInfoPopupViewModel>();
     private CancellationTokenSource? _cts;
     /// <summary>
-    /// 图片客户端，每次下载时从工厂创建，跟随网络与代理设置
+    /// 远程图片服务：点位图片经文件缓存下载，跟随网络与代理设置
     /// </summary>
-    private static HttpClient Http => App.GetService<IHttpClientFactory>()!.CreateClient(HttpClientNames.Images);
+    private static IRemoteImageService? Remote => App.GetService<IRemoteImageService>();
     private MemoryStream? _imageStream;
 
     public event EventHandler<MaskMapPoint?>? ToggleHiddenRequested;
@@ -189,7 +188,12 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
             if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
                 url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             {
-                var bytes = await Http.GetByteArrayAsync(url, ct);
+                // 经文件缓存获取，7 天内再次查看同一点位不重复下载
+                var bytes = Remote is null ? null : await Remote.GetBytesAsync(CachePartitions.MapPointImages, url, ct);
+                if (bytes is not { Length: > 0 })
+                {
+                    return default;
+                }
 
                 if (IsGifBytes(bytes))
                 {

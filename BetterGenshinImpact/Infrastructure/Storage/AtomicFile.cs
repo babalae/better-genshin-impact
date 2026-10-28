@@ -19,7 +19,27 @@ public static class AtomicFile
     /// <summary>
     /// 以 UTF-8（无 BOM）原子写入文本，目标所在目录不存在时自动创建
     /// </summary>
-    public static void WriteAllText(string path, string contents)
+    public static void WriteAllText(string path, string contents) =>
+        Write(path, tempPath => File.WriteAllText(tempPath, contents, Utf8NoBom));
+
+    /// <summary>
+    /// 原子写入二进制内容，目标所在目录不存在时自动创建
+    /// </summary>
+    public static void WriteAllBytes(string path, byte[] bytes) =>
+        Write(path, tempPath => File.WriteAllBytes(tempPath, bytes));
+
+    /// <summary>
+    /// 判断文件名是否为本类生成的临时文件，供各存储方清理残留
+    /// </summary>
+    public static bool IsTempFile(string fileName) =>
+        fileName.StartsWith('.') && fileName.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// 写入同目录的临时文件后整体替换目标
+    /// </summary>
+    /// <param name="path">目标路径</param>
+    /// <param name="writeTemp">把内容写入给定临时文件路径</param>
+    private static void Write(string path, Action<string> writeTemp)
     {
         var fullPath = Path.GetFullPath(path);
         var directory = Path.GetDirectoryName(fullPath)
@@ -29,7 +49,7 @@ public static class AtomicFile
         var tempPath = Path.Combine(directory, $".{Path.GetFileName(fullPath)}.{ShortId.Create(null, 8)}.tmp");
         try
         {
-            File.WriteAllText(tempPath, contents, Utf8NoBom);
+            writeTemp(tempPath);
             File.Move(tempPath, fullPath, overwrite: true);
         }
         finally
