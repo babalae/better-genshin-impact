@@ -530,9 +530,22 @@
                                         </b:Interaction.Triggers>
                                         <StackPanel>
                                             <TextBlock FontWeight="SemiBold" Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}" />
+                                            <!-- 计划级设置方案（挂在计划根节点上）；方案缺失时用警示色。 -->
                                             <TextBlock FontSize="11"
-                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                                       Text="{Binding Revision, StringFormat=修订 {0}}" />
+                                                       Text="{Binding RootNode.ProfileDisplayText, Mode=OneWay}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       ToolTip="{Binding RootNode.ProfileDisplayText, Mode=OneWay}">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding RootNode.IsProfileMissing, Mode=OneWay}" Value="True">
+                                                                <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
                                         </StackPanel>
                                     </ContentControl>
                                     <!-- 新运行入口位于每张计划卡片，不依赖历史选中状态；续跑仍使用记录视图中的独立命令。 -->

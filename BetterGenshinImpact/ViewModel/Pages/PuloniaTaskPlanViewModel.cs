@@ -195,18 +195,24 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     }
 
     /// <summary>
-    /// 新建计划并加入自动保存队列。
+    /// 弹窗填写名称并选择设置方案后新建计划，加入自动保存队列；取消时不创建。
     /// </summary>
     [RelayCommand]
     private void NewPlan()
     {
+        // 1. 预填不重名的默认名称，方案选项取当前已加载的设置方案
         var baseName = "新任务计划";
         var suffix = 1;
         var name = baseName;
         while (Documents.Any(document => document.Name == name))
             name = baseName + " " + ++suffix;
-        SelectedDocument = Session.CreatePlanDocument(name);
-        StatusMessage = "已新建计划。";
+        var viewModel = new PuloniaPlanCreationDialogViewModel(name, Session.Profiles);
+        if (PuloniaPlanCreationDialog.Show(viewModel, Application.Current.MainWindow) is not { } creation)
+            return;
+
+        // 2. 所选方案作为计划级共享设置挂在根节点上
+        SelectedDocument = Session.CreatePlanDocument(creation.Name, creation.ProfileId);
+        StatusMessage = $"已新建计划“{creation.Name}”。";
     }
 
     /// <summary>

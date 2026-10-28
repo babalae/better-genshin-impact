@@ -188,13 +188,15 @@ public partial class PuloniaPlanEditingSession : ObservableObject
     /// 新建带根分组的普通计划并加入自动保存队列。
     /// </summary>
     /// <param name="name">计划名称。</param>
+    /// <param name="profileId">挂在计划根节点上的设置方案 ID；为空表示不使用方案。</param>
     /// <returns>新建的计划文档。</returns>
-    internal PuloniaTaskPlanDocumentViewModel CreatePlanDocument(string name)
+    internal PuloniaTaskPlanDocumentViewModel CreatePlanDocument(string name, string? profileId = null)
     {
+        // 计划级方案挂在根节点上，与“计划共享设置”中选择方案的效果相同
         var plan = new PuloniaTaskPlan
         {
             Name = name,
-            RootTask = new PuloniaTask { Name = name, TaskType = "group" }
+            RootTask = new PuloniaTask { Name = name, TaskType = "group", ProfileId = profileId }
         };
         var document = new PuloniaTaskPlanDocumentViewModel(plan, _profiles, Clipboard, isNew: true);
         AddDocument(document);
