@@ -50,10 +50,12 @@ public sealed class PuloniaPathingTaskExecutor : IPuloniaTaskExecutor
             ["properties"] = CreateParameterProperties(),
             ["additionalProperties"] = false
         },
-        PublicParameters = [.. PuloniaTaskCommonSettings.CreateDefaults("pathing").Properties().Select(property => property.Name)]
+        // 地图追踪使用全部宿主共享设置和路线 CD；这些参数只能经共享设置修改。
+        SettingBindings = PuloniaSettingCatalog.CreateBindings(
+            [.. PuloniaSettingCatalog.HostCategories, PuloniaSettingCatalog.CollectionCategory])
     }];
 
-    /// <summary>把文件级 CD 加入地图追踪 Schema，旧公共行走设置表单仍只处理自己的字段。</summary>
+    /// <summary>把路线 CD 加入地图追踪 Schema；Schema 本身只由 PuloniaCollectionCooldown.CreateSchema 一处定义。</summary>
     private static JObject CreateParameterProperties()
     {
         var properties = PuloniaTaskCommonSettings.CreateSchemaProperties("pathing");

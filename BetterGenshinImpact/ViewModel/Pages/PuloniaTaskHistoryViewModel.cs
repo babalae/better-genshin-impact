@@ -85,9 +85,9 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel, IDisposable
     public ObservableCollection<PuloniaTaskRunItemViewModel> Runs { get; } = [];
 
     /// <summary>
-    /// 当前仍约束执行的 CD 与周期额度事实，不是选中历史当时的全局账本。
+    /// 一条龙执行记录窗口附带的路线 CD 总览；任务计划页与全局记录页各自单独显示总览，这里为空。
     /// </summary>
-    public ObservableCollection<PuloniaTaskLedgerItemViewModel> LedgerEntries { get; } = [];
+    public PuloniaCollectionCooldownOverviewViewModel? Cooldowns { get; init; }
 
     /// <summary>
     /// 列表为空时的解释，不把计划过滤无结果误显示为历史丢失。
@@ -264,16 +264,12 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel, IDisposable
         try
         {
             var runs = await _taskService.ListRunsAsync();
-            var ledger = await _taskService.ListLedgerAsync();
             // 已归档历史不会改变，复用条目避免每个实时事件重建旧快照和滚动内容。
             var archived = _allRuns.Where(item => item.IsHistorical).ToDictionary(item => item.Run.RunId);
             _allRuns.Clear();
             foreach (var run in runs.OrderByDescending(item => item.SubmittedAt))
                 _allRuns.Add(run.IsHistorical && archived.TryGetValue(run.RunId, out var cached)
                     ? cached : new PuloniaTaskRunItemViewModel(run, _typeNames));
-            LedgerEntries.Clear();
-            foreach (var entry in ledger.OrderByDescending(item => item.OccurredAt))
-                LedgerEntries.Add(new PuloniaTaskLedgerItemViewModel(entry));
             ApplyPlanFilter(preferredRunId);
             StatusMessage = _taskService.RecoveryNotice ?? "记录已更新；所有时间按本地时区显示。";
         }

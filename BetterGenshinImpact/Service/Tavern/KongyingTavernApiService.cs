@@ -9,14 +9,12 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Helpers.Http;
+using BetterGenshinImpact.Infrastructure.Cache;
+using BetterGenshinImpact.Infrastructure.Network;
+using BetterGenshinImpact.Infrastructure.Storage;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Model.Oauth;
 using BetterGenshinImpact.Service.Tavern.Model;
-using LazyCache;
-using LazyCache.Providers;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json;
 
 namespace BetterGenshinImpact.Service.Tavern;
@@ -33,12 +31,14 @@ public class KongyingTavernApiService : IKongyingTavernApiService
     private const string MarkerDocListPageBinPathPrefix = "api/marker_doc/list_page_bin/";
     private const string IconDocAllBinPath = "api/icon_doc/all_bin";
 
-    private const string MarkerDocJsonCacheType = "kongying-tavern-marker-doc-json";
-    private static readonly TimeSpan MarkerDocJsonCacheTtl = TimeSpan.FromDays(30);
     private const int MarkerDocMaxConcurrency = 5;
 
     private readonly HttpClient _httpClient;
-    private readonly MemoryFileCache _memoryFileCache;
+
+    /// <summary>
+    /// 点位页缓存（Data/Cache/Files/kongying-tavern，30 天），加载时只保留最新的页
+    /// </summary>
+    private readonly IFileCache _fileCache;
     private readonly SemaphoreSlim _tokenGate = new(1, 1);
     private OauthTokenResponse? _cachedToken;
     private DateTimeOffset _cachedTokenExpiresAt = DateTimeOffset.MinValue;
@@ -47,26 +47,26 @@ public class KongyingTavernApiService : IKongyingTavernApiService
     // 来自 https://cloud.yuanshen.site/api/area/get/list 列出地区
     internal static readonly IReadOnlySet<long> MaskMapItemTypeExcludedAreaIds = new HashSet<long> { 7, 25, 42, 16, 4, 8, 10, 26, 32, 43, 48, 53, 55, 56 };
 
+    /// <summary>
+    /// 不经 DI 创建（测试用），使用独立的缓存和客户端
+    /// </summary>
     public KongyingTavernApiService()
-        : this(CreateDefaultMemoryFileCache())
+        : this(new FileCache(AppPaths.FileCache), new HttpClient { Timeout = TimeSpan.FromSeconds(30) })
     {
     }
 
-
-    public KongyingTavernApiService(MemoryFileCache memoryFileCache)
+    /// <summary>
+    /// DI 构造。服务会在客户端上保存 OAuth 令牌，因此创建一次并长期持有；主处理器设置了连接池寿命，DNS 变化仍会生效
+    /// </summary>
+    public KongyingTavernApiService(IFileCache fileCache, IHttpClientFactory httpClientFactory)
+        : this(fileCache, httpClientFactory.CreateClient(HttpClientNames.GameApi))
     {
-        _memoryFileCache = memoryFileCache;
-        _httpClient = HttpClientFactory.GetClient(
-            "KongyingTavern",
-            () => new HttpClient { Timeout = TimeSpan.FromSeconds(30) });
     }
 
-    private static MemoryFileCache CreateDefaultMemoryFileCache()
+    private KongyingTavernApiService(IFileCache fileCache, HttpClient httpClient)
     {
-        var memoryCache = new MemoryCache(new MemoryCacheOptions());
-        var provider = new MemoryCacheProvider(memoryCache);
-        var appCache = new CachingService(new Lazy<ICacheProvider>(() => provider));
-        return new MemoryFileCache(appCache, TimeProvider.System, NullLogger<MemoryFileCache>.Instance);
+        _fileCache = fileCache;
+        _httpClient = httpClient;
     }
 
 
@@ -175,7 +175,7 @@ public class KongyingTavernApiService : IKongyingTavernApiService
         var keepCacheKeys = distinctPages
             .Select(x => GetMarkerPageJsonCacheKey(x.Md5))
             .ToArray();
-        _memoryFileCache.PurgeCacheTypeByCacheKeys(MarkerDocJsonCacheType, keepCacheKeys);
+        _fileCache.RetainOnly(CachePartitions.KongyingTavern, keepCacheKeys);
 
         var result = new ConcurrentBag<MarkerVo>();
         await Parallel.ForEachAsync(
@@ -206,17 +206,14 @@ public class KongyingTavernApiService : IKongyingTavernApiService
     {
         ct.ThrowIfCancellationRequested();
         var cacheKey = GetMarkerPageJsonCacheKey(pageMd5);
-        var jsonBytes = await _memoryFileCache.GetOrAddAsync<byte[]>(
-            MarkerDocJsonCacheType,
+        var jsonBytes = await _fileCache.GetOrAddBytesAsync(
+            CachePartitions.KongyingTavern,
             cacheKey,
-            MarkerDocJsonCacheTtl,
             async _ =>
             {
                 var pageBytes = await GetMarkerDocPageBinAsync(pageMd5, ct);
                 return TryDecompressGzip(pageBytes, out var decompressed) ? decompressed : pageBytes;
             },
-            static x => x,
-            static x => x,
             ct);
 
         if (jsonBytes is not { Length: > 0 })

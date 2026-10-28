@@ -1,0 +1,81 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.Pulonia.PuloniaPlanCreationDialog"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 Title="新建任务计划"
+                 Width="480"
+                 MinWidth="400"
+                 SizeToContent="Height"
+                 ResizeMode="NoResize"
+                 WindowStartupLocation="CenterOwner"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowBackdropType="Mica"
+                 Background="{DynamicResource ApplicationBackgroundBrush}"
+                 FontFamily="{StaticResource TextThemeFontFamily}"
+                 Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0"
+                     Title="新建任务计划"
+                     Icon="{ui:SymbolIcon Add24}"
+                     ShowMaximize="False"
+                     ShowMinimize="False" />
+
+        <!--  计划名称与计划级设置方案  -->
+        <StackPanel Grid.Row="1" Margin="24,8,24,20">
+            <ui:TextBlock Margin="0,0,0,6"
+                          FontTypography="BodyStrong"
+                          Text="计划名称" />
+            <ui:TextBox x:Name="PlanNameTextBox"
+                        Text="{Binding PlanName, UpdateSourceTrigger=PropertyChanged}" />
+
+            <ui:TextBlock Margin="0,16,0,6"
+                          FontTypography="BodyStrong"
+                          Text="设置方案" />
+            <ComboBox HorizontalAlignment="Stretch"
+                      DisplayMemberPath="DisplayName"
+                      ItemsSource="{Binding ProfileOptions, Mode=OneWay}"
+                      SelectedItem="{Binding SelectedProfileOption, Mode=TwoWay}" />
+            <ui:TextBlock Margin="0,6,0,0"
+                          Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                          Text="{Binding ProfileHint, Mode=OneWay}"
+                          TextWrapping="Wrap" />
+        </StackPanel>
+
+        <!--  底部操作栏  -->
+        <Border Grid.Row="2"
+                Padding="24,12"
+                Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
+                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                BorderThickness="0,1,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Margin="0,0,12,0"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                           Text="{Binding StatusMessage, Mode=OneWay}"
+                           TextWrapping="Wrap" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <ui:Button MinWidth="96"
+                               Margin="0,0,8,0"
+                               Appearance="Primary"
+                               Command="{Binding ConfirmCommand}"
+                               Content="新建"
+                               IsDefault="True" />
+                    <ui:Button MinWidth="96"
+                               Command="{Binding CancelCommand}"
+                               Content="取消"
+                               IsCancel="True" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</ui:FluentWindow>

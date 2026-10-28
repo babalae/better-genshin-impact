@@ -322,117 +322,7 @@
             </StackPanel>
         </DataTemplate>
 
-        <!-- JS 自定义设置沿用现有 settings_ui 支持的六类字段，不回退到原始 JSON 输入。 -->
-        <DataTemplate x:Key="JavaScriptSettingFieldTemplate"
-                      DataType="{x:Type pulonia:PuloniaJsScriptSettingFieldViewModel}">
-            <StackPanel Margin="0,0,0,12">
-                <TextBlock Margin="0,0,0,5"
-                           FontWeight="SemiBold"
-                           Text="{Binding Label}"
-                           TextWrapping="Wrap" />
-                <Separator>
-                    <Separator.Style>
-                        <Style TargetType="Separator">
-                            <Setter Property="Visibility" Value="Collapsed" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsSeparator}" Value="True">
-                                    <Setter Property="Visibility" Value="Visible" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Separator.Style>
-                </Separator>
-                <TextBox Text="{Binding TextValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                    <TextBox.Style>
-                        <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
-                            <Setter Property="Visibility" Value="Collapsed" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsTextInput}" Value="True">
-                                    <Setter Property="Visibility" Value="Visible" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBox.Style>
-                </TextBox>
-                <ComboBox ItemsSource="{Binding Options}"
-                          SelectedItem="{Binding SelectedValue, Mode=TwoWay}">
-                    <ComboBox.Style>
-                        <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
-                            <Setter Property="Visibility" Value="Collapsed" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsSelect}" Value="True">
-                                    <Setter Property="Visibility" Value="Visible" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </ComboBox.Style>
-                </ComboBox>
-                <ui:ToggleSwitch IsChecked="{Binding BooleanValue, Mode=TwoWay}"
-                                 OnContent="已开启"
-                                 OffContent="已关闭">
-                    <ui:ToggleSwitch.Style>
-                        <Style TargetType="ui:ToggleSwitch" BasedOn="{StaticResource {x:Type ui:ToggleSwitch}}">
-                            <Setter Property="Visibility" Value="Collapsed" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsCheckbox}" Value="True">
-                                    <Setter Property="Visibility" Value="Visible" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </ui:ToggleSwitch.Style>
-                </ui:ToggleSwitch>
-                <ItemsControl ItemsSource="{Binding MultiOptions}">
-                    <ItemsControl.Style>
-                        <Style TargetType="ItemsControl">
-                            <Setter Property="Visibility" Value="Collapsed" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsMultiCheckbox}" Value="True">
-                                    <Setter Property="Visibility" Value="Visible" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </ItemsControl.Style>
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <WrapPanel />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <CheckBox Margin="0,0,14,7"
-                                      Content="{Binding Value}"
-                                      IsChecked="{Binding IsSelected, Mode=TwoWay}" />
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <controls:CascadeSelector CascadeOptions="{Binding CascadeOptions}"
-                                          SelectedValue="{Binding SelectedValue, Mode=TwoWay}">
-                    <controls:CascadeSelector.Style>
-                        <Style TargetType="controls:CascadeSelector">
-                            <Setter Property="Visibility" Value="Collapsed" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsCascadeSelect}" Value="True">
-                                    <Setter Property="Visibility" Value="Visible" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </controls:CascadeSelector.Style>
-                </controls:CascadeSelector>
-                <TextBlock Foreground="{DynamicResource SystemFillColorCriticalBrush}"
-                           Text="{Binding Type, StringFormat=不支持的脚本设置类型：{0}}">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Visibility" Value="Collapsed" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsSupported}" Value="False">
-                                    <Setter Property="Visibility" Value="Visible" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
-            </StackPanel>
-        </DataTemplate>
+        <!-- JS 自定义设置表单（JavaScriptSettingFieldTemplate）已移至添加后弹出的 PuloniaJsScriptSettingsDialog，避免挤占运行设置区。 -->
             </ResourceDictionary>
     </ui:FluentWindow.Resources>
 
@@ -692,9 +582,8 @@
 
                 <Grid Grid.Row="1" Grid.Column="2">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="3*" />
-                        <RowDefinition Height="12" />
-                        <RowDefinition Height="2*" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <Border Padding="12"
                             Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
@@ -706,9 +595,15 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
-                            <TextBlock Margin="0,0,0,8"
-                                       FontWeight="SemiBold"
-                                       Text="{Binding ResourcePreviewTitle}" />
+                            <StackPanel Margin="0,0,0,8">
+                                <TextBlock FontWeight="SemiBold" Text="{Binding ResourcePreviewTitle, Mode=OneWay}" />
+                                <!-- 地图追踪资源按目录自动识别的刷新规则；未识别时提示成功后不会跳过。 -->
+                                <TextBlock Margin="0,4,0,0"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                           Text="{Binding CooldownHint, Mode=OneWay}"
+                                           TextWrapping="Wrap"
+                                           Visibility="{Binding HasCooldownHint, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            </StackPanel>
                             <TextBox Grid.Row="1"
                                      Padding="0"
                                      AcceptsReturn="True"
@@ -748,17 +643,19 @@
                             </markdown:MarkdownView>
                         </Grid>
                     </Border>
-                    <Border Grid.Row="2"
+                    <!--
+                    添加时只保留无法事后修改的目录添加方式，以及暂无其他可视化入口的录制回放选项。
+                    地图追踪与 JS 的队伍、拾取、战斗和路线 CD 不在这里填写（路线 CD 只在资源详情中显示识别结果）：新任务沿用所在分组或默认值，
+                    添加后在“编辑配置”中修改（分组也可统一设置）；视图模型仍保留这些字段供新一条龙弹窗使用。
+                    -->
+                    <Border Grid.Row="1"
+                            Margin="0,12,0,0"
                             Padding="12"
                             Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                             BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                             BorderThickness="1"
                             CornerRadius="8">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
                             <StackPanel>
-                                <TextBlock Margin="0,0,0,8"
-                                           FontWeight="SemiBold"
-                                           Text="运行设置" />
                                 <Border Margin="0,0,0,12"
                                         Padding="10"
                                         Background="{DynamicResource SubtleFillColorSecondaryBrush}"
@@ -789,61 +686,46 @@
                                                   IsChecked="{Binding IncludeSubdirectories, Mode=TwoWay}" />
                                     </StackPanel>
                                 </Border>
-                                <StackPanel>
-                                    <StackPanel.Style>
-                                        <Style TargetType="StackPanel">
+                                <!-- 录制回放的“按录制延时回放”暂无其他可视化入口，仍在添加时设置。 -->
+                                <ItemsControl ItemsSource="{Binding ParameterFields, Mode=OneWay}"
+                                              ItemTemplate="{StaticResource ParameterFieldTemplate}">
+                                    <ItemsControl.Style>
+                                        <Style TargetType="ItemsControl">
                                             <Setter Property="Visibility" Value="Collapsed" />
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsJavaScriptTask}" Value="True">
+                                                <DataTrigger Binding="{Binding ShowCreationParameters, Mode=OneWay}" Value="True">
                                                     <Setter Property="Visibility" Value="Visible" />
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
-                                    </StackPanel.Style>
-                                    <TextBlock Margin="0,0,0,8"
-                                               FontWeight="SemiBold"
-                                               Text="脚本自定义设置" />
-                                    <ItemsControl ItemsSource="{Binding JavaScriptSettingFields}"
-                                                  ItemTemplate="{StaticResource JavaScriptSettingFieldTemplate}" />
-                                    <TextBlock Margin="0,0,0,10"
+                                    </ItemsControl.Style>
+                                </ItemsControl>
+                                <!-- 运行设置与 JS 脚本设置的去向提示；录制回放没有提示时折叠。 -->
+                                <Grid>
+                                    <Grid.Style>
+                                        <Style TargetType="Grid">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding RunSettingsHint, Mode=OneWay}" Value="">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Grid.Style>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <ui:SymbolIcon Margin="0,0,8,0"
+                                                   VerticalAlignment="Top"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   Symbol="Info24" />
+                                    <TextBlock Grid.Column="1"
+                                               VerticalAlignment="Center"
                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                               Text="{Binding JavaScriptSettingsMessage}"
+                                               Text="{Binding RunSettingsHint, Mode=OneWay}"
                                                TextWrapping="Wrap" />
-                                    <Separator Margin="0,0,0,12" />
-                                    <TextBlock Margin="0,0,0,10"
-                                               FontWeight="SemiBold"
-                                               Text="通用运行选项" />
-                                </StackPanel>
-                                <controls:PuloniaCollectionCooldownView DataContext="{Binding CollectionCooldown}"
-                                                                       Margin="0,0,0,16">
-                                    <controls:PuloniaCollectionCooldownView.Style>
-                                        <Style TargetType="controls:PuloniaCollectionCooldownView">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding DataContext.IsPathingResourceSelector, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </controls:PuloniaCollectionCooldownView.Style>
-                                </controls:PuloniaCollectionCooldownView>
-                                <ItemsControl ItemsSource="{Binding ParameterFields}"
-                                              ItemTemplate="{StaticResource ParameterFieldTemplate}" />
-                                <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                           Text="此任务使用能力默认设置，无需额外配置。">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding HasParameters}" Value="False">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
+                                </Grid>
                             </StackPanel>
-                        </ScrollViewer>
                     </Border>
                 </Grid>
             </Grid>

@@ -77,7 +77,7 @@ public enum StygianState
 /// 2. 子类只需实现 DetectCurrentState() 和注册各状态处理器
 /// 3. 运行时调用 RunStateMachineUntil() 自动驱动状态机
 /// </summary>
-[SoloTaskInfo(TaskId, "自动幽境危战", Group = "树脂与战斗", Order = 230, WaitForMainUi = false, OneDragonOrder = 5)]
+[SoloTaskInfo(TaskId, "自动幽境危战", Group = "树脂与战斗", Order = 230, WaitForMainUi = false)]
 [SoloTaskSettingsView(typeof(AutoStygianOnslaughtSettingsView), typeof(AutoStygianOnslaughtSettingsViewModel))]
 public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, ISoloTask<AutoStygianOnslaughtParam, ResinClaimData>
 {

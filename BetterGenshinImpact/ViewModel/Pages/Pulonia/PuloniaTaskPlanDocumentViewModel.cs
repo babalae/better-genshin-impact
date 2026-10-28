@@ -29,9 +29,9 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     private readonly PuloniaTaskClipboardService _clipboard;
 
     /// <summary>
-    /// 当前可用共享预设的只读副本。
+    /// 当前可用设置方案的只读副本，由编辑会话统一刷新。
     /// </summary>
-    private IReadOnlyList<PuloniaTaskPreset> _presets;
+    private IReadOnlyList<PuloniaSettingsProfile> _profiles;
 
     /// <summary>执行器的能力定义，用于与运行时一致的默认参数预览。</summary>
     private IReadOnlyList<PuloniaTaskDefinition> _definitions = [];
@@ -158,9 +158,12 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     internal event EventHandler? ViewStateChanged;
 
     /// <summary>
-    /// 共享预设列表刷新后通知打开中的高级设置窗口重新读取预设选项与来源。
+    /// 设置方案列表刷新后通知打开中的设置窗口重新读取方案选项与有效值。
     /// </summary>
-    internal event EventHandler? PresetsChanged;
+    internal event EventHandler? ProfilesChanged;
+
+    /// <summary>当前可用的设置方案（按名称排序）。</summary>
+    internal IReadOnlyList<PuloniaSettingsProfile> Profiles => _profiles;
 
     /// <summary>
     /// 本计划独立的保存门，确保同一计划的修订始终按顺序写入；删除后不释放，排队的保存通过 <see cref="IsDeleted"/> 退出。
@@ -239,15 +242,15 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     /// 建立一个已加载或新建的计划编辑会话。
     /// </summary>
     /// <param name="plan">计划模型。</param>
-    /// <param name="presets">可用共享预设。</param>
+    /// <param name="profiles">可用设置方案。</param>
     /// <param name="clipboard">跨计划剪贴板。</param>
     /// <param name="isNew">是否为尚未保存的新计划。</param>
     /// <param name="collapsedNodeIds">编辑器记录的已折叠节点；为空时全部展开。</param>
-    public PuloniaTaskPlanDocumentViewModel(PuloniaTaskPlan plan, IReadOnlyList<PuloniaTaskPreset> presets,
+    public PuloniaTaskPlanDocumentViewModel(PuloniaTaskPlan plan, IReadOnlyList<PuloniaSettingsProfile> profiles,
         PuloniaTaskClipboardService clipboard, bool isNew, IEnumerable<string>? collapsedNodeIds = null)
     {
         _plan = plan;
-        _presets = presets;
+        _profiles = profiles;
         _clipboard = clipboard;
         _savedSnapshot = isNew ? null : SerializeForHistory(plan);
         if (collapsedNodeIds is not null)
@@ -321,22 +324,28 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     /// <summary>
     /// 移动已有节点，保持节点 ID 和全部参数不变，并禁止形成树环路。
     /// </summary>
-    internal void MoveNode(PuloniaTaskNodeViewModel node, PuloniaTaskNodeViewModel targetParent, int targetIndex)
+    /// <param name="node">被移动的节点。</param>
+    /// <param name="targetParent">目标父节点。</param>
+    /// <param name="targetIndex">目标父节点中的插入位置（移动前的索引）。</param>
+    /// <param name="undoMergeKey">撤销合并标识；后续同标识的编辑（例如保留移动前设置）与本次移动合为一步撤销。</param>
+    /// <returns>是否实际发生了移动。</returns>
+    internal bool MoveNode(PuloniaTaskNodeViewModel node, PuloniaTaskNodeViewModel targetParent, int targetIndex,
+        string? undoMergeKey = null)
     {
         var sourceParent = node.Parent;
         if (sourceParent is null || ReferenceEquals(node, targetParent) || node.ContainsDescendant(targetParent))
-            return;
+            return false;
         if (!targetParent.CanAcceptChildren && !ReferenceEquals(sourceParent, targetParent))
-            return;
+            return false;
 
         var sourceIndex = sourceParent.Children.IndexOf(node);
         if (sourceIndex < 0)
-            return;
+            return false;
         var adjustedIndex = Math.Clamp(targetIndex, 0, targetParent.Children.Count);
         if (ReferenceEquals(sourceParent, targetParent) && sourceIndex < adjustedIndex)
             adjustedIndex--;
         if (ReferenceEquals(sourceParent, targetParent) && sourceIndex == adjustedIndex)
-            return;
+            return false;
 
         ApplyMutation(() =>
         {
@@ -348,7 +357,8 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
             node.SetParent(targetParent);
             sourceParent.NotifyCanAcceptChildrenChanged();
             targetParent.NotifyCanAcceptChildrenChanged();
-        }, node);
+        }, node, undoMergeKey);
+        return true;
     }
 
     /// <summary>
@@ -362,25 +372,20 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
         var index = parent.Children.IndexOf(node);
         if (index < 0)
             return;
-        var removedIds = Flatten(node).Select(item => item.Id).ToHashSet(StringComparer.Ordinal);
         ApplyMutation(() =>
         {
             parent.Children.RemoveAt(index);
             parent.Model.Children.RemoveAt(index);
-            // 账号预设选择属于计划内部引用，删除子树时同步清理，避免留下悬空节点 ID。
-            foreach (var account in _plan.Accounts)
-            foreach (var taskId in account.PresetSelections.Keys.Where(removedIds.Contains).ToArray())
-                account.PresetSelections.Remove(taskId);
             parent.NotifyCanAcceptChildrenChanged();
         }, parent);
     }
 
     /// <summary>
-    /// 将子树及复制时每个叶子的有效参数存入跨计划剪贴板。
+    /// 将子树、复制时每个叶子的有效参数和子树外层的有效共享设置存入跨计划剪贴板。
     /// </summary>
     internal void CopyNode(PuloniaTaskNodeViewModel node)
     {
-        _clipboard.Set(Name, node.Model, CaptureEffectiveLeafParameters(node));
+        _clipboard.Set(Name, node.Model, CaptureEffectiveLeafParameters(node), CaptureOuterSettings(node.Parent));
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
@@ -442,17 +447,26 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     }
 
     /// <summary>
-    /// 把复制来源的有效参数写成新叶子的显式参数，尽量隔离目标父组的继承差异。
+    /// 保留复制时的有效设置：子树内部的设置随节点复制，只需让子树外层的有效设置与复制时一致。
+    /// 把与复制来源外层不同的设置项写到粘贴的子树根节点上；根节点自身或其方案已设置的项本来就由内部提供，不写。
+    /// 叶子根节点只写其能力使用的设置项。
     /// </summary>
-    internal static void PreserveCopiedEffectiveParameters(PuloniaTask sourceSubtree, PuloniaTask pastedSubtree,
-        IReadOnlyDictionary<string, JObject> sourceEffectiveParameters)
+    /// <param name="pastedSubtree">待插入的子树（新 ID 副本）。</param>
+    /// <param name="sourceOuterSettings">复制来源子树外层的有效共享设置。</param>
+    /// <param name="targetParent">粘贴位置的父节点。</param>
+    internal void PreserveCopiedSettings(PuloniaTask pastedSubtree, JObject sourceOuterSettings, PuloniaTaskNodeViewModel targetParent)
     {
-        if (IsLeaf(pastedSubtree)
-            && sourceEffectiveParameters.TryGetValue(sourceSubtree.Id, out var effectiveParameters))
-            pastedSubtree.Parameters = (JObject)effectiveParameters.DeepClone();
-
-        for (var i = 0; i < Math.Min(sourceSubtree.Children.Count, pastedSubtree.Children.Count); i++)
-            PreserveCopiedEffectiveParameters(sourceSubtree.Children[i], pastedSubtree.Children[i], sourceEffectiveParameters);
+        var targetOuter = CaptureOuterSettings(targetParent);
+        var profile = pastedSubtree.ProfileId is { } profileId ? FindProfile(profileId) : null;
+        var allowed = IsLeaf(pastedSubtree) ? GetDefinition(pastedSubtree)?.SettingBindings.Keys.ToHashSet(StringComparer.Ordinal) : null;
+        foreach (var (key, sourceValue) in sourceOuterSettings)
+        {
+            if (sourceValue is null || JToken.DeepEquals(sourceValue, targetOuter[key])
+                || pastedSubtree.Settings.ContainsKey(key) || profile?.Settings.ContainsKey(key) == true
+                || allowed is not null && !allowed.Contains(key))
+                continue;
+            pastedSubtree.Settings[key] = sourceValue.DeepClone();
+        }
     }
 
     /// <summary>
@@ -489,13 +503,15 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
     }
 
     /// <summary>
-    /// 更新所有节点可用的共享预设，并立即刷新当前有效参数来源。
+    /// 更新可用的设置方案，并立即刷新树标记、摘要和打开中的设置窗口。
     /// </summary>
-    internal void SetPresets(IReadOnlyList<PuloniaTaskPreset> presets)
+    internal void SetProfiles(IReadOnlyList<PuloniaSettingsProfile> profiles)
     {
-        _presets = presets;
+        _profiles = profiles;
         RefreshConfigurationSummaries();
-        PresetsChanged?.Invoke(this, EventArgs.Empty);
+        foreach (var node in EnumerateNodes())
+            node.NotifySharedSettingsChanged();
+        ProfilesChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>更新能力定义并刷新有效设置，默认值不写入持久化草稿。</summary>
@@ -586,43 +602,51 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
 
 
     /// <summary>
-    /// 计算叶子节点的有效参数及每个字段的最后来源（界面展示文本）。
+    /// 计算叶子节点的有效参数及每个顶层字段的最后来源（界面展示文本）。
     /// </summary>
     private JObject ResolveEffectiveParameters(PuloniaTask task, IReadOnlyList<PuloniaTask> ancestors,
         out Dictionary<string, string> sources)
     {
         var resolution = ResolveParameters(task, ancestors);
-        sources = resolution.Sources.ToDictionary(item => item.Key,
-            item => DescribeParameterSource(item.Value, task, ancestors, resolution.Preset), StringComparer.Ordinal);
+        sources = resolution.Sources.ToDictionary(item => item.Key, item => item.Value switch
+        {
+            PuloniaParameterLayer.Default => "能力默认值",
+            PuloniaParameterLayer.Settings => "共享设置",
+            PuloniaParameterLayer.Node => "本任务",
+            _ => "本次调用覆盖"
+        }, StringComparer.Ordinal);
         return resolution.Parameters;
     }
 
     /// <summary>
-    /// 与运行准备共用 <see cref="PuloniaParameterResolver"/> 解析有效参数；预设缺失或不兼容时跳过该层而不抛异常，
-    /// 由结果中的预设判定提示。编辑界面不知道本次运行的账号和调用覆盖，这两层不参与预览。
+    /// 与运行准备共用 <see cref="PuloniaParameterResolver"/> 解析有效参数；方案缺失时跳过该层而不抛异常，
+    /// 由结果中的缺失列表提示。编辑界面不知道本次运行的调用覆盖，该层不参与预览。
     /// </summary>
     /// <param name="task">要预览的具体任务。</param>
     /// <param name="ancestors">由根到父节点的模型链。</param>
     private PuloniaParameterResolution ResolveParameters(PuloniaTask task, IReadOnlyList<PuloniaTask> ancestors)
-    {
-        var preset = task.PresetId is { } presetId ? _presets.FirstOrDefault(item => item.Id == presetId) : null;
-        return PuloniaParameterResolver.Resolve(task, GetDefinition(task), task.PresetId, preset,
-            ancestors.Select(ancestor => ancestor.ParameterOverrides));
-    }
+        => PuloniaParameterResolver.Resolve(task, GetDefinition(task), CreateChain([.. ancestors, task]));
 
     /// <summary>
-    /// 把解析来源转换为“有效参数与来源”中展示的文本。
+    /// 把由外到内的节点模型转换为设置链，并按 ID 关联当前已加载的方案；预览中找不到的方案视为缺失。
     /// </summary>
-    private static string DescribeParameterSource(PuloniaParameterSource source, PuloniaTask task,
-        IReadOnlyList<PuloniaTask> ancestors, PuloniaTaskPreset? preset) => source.Layer switch
+    private IReadOnlyList<PuloniaSettingLevel> CreateChain(IEnumerable<PuloniaTask> models)
+        => models.Select(model => new PuloniaSettingLevel(model, model.Id,
+            model.ProfileId is { } profileId ? FindProfile(profileId) : null)).ToArray();
+
+    /// <summary>按 ID 查找已加载的设置方案。</summary>
+    internal PuloniaSettingsProfile? FindProfile(string profileId)
+        => _profiles.FirstOrDefault(profile => profile.Id == profileId);
+
+    /// <summary>
+    /// 取得某个位置之下（不含任何子树内部设置）的有效共享设置：设置项 ID 到值。
+    /// </summary>
+    /// <param name="parent">外层的最近节点；为空时只有目录默认值。</param>
+    internal JObject CaptureOuterSettings(PuloniaTaskNodeViewModel? parent)
     {
-        PuloniaParameterLayer.Default => "能力默认值",
-        PuloniaParameterLayer.Preset => $"预设“{preset?.Name}”",
-        PuloniaParameterLayer.Group => $"分组“{ancestors.FirstOrDefault(ancestor => ancestor.ParameterOverrides.Contains(source.Override!))?.Name}”",
-        PuloniaParameterLayer.Node => $"节点“{task.Name}”",
-        PuloniaParameterLayer.ReferencePublic => "计划引用公共参数",
-        _ => "本次调用覆盖"
-    };
+        var resolution = PuloniaParameterResolver.ResolveSettings(CreateChain(GetAncestorModels(parent)));
+        return new JObject(resolution.Values.Select(item => new JProperty(item.Key, item.Value)));
+    }
 
     /// <summary>
     /// 取得从根节点到指定父节点的模型链。
@@ -650,27 +674,6 @@ public partial class PuloniaTaskPlanDocumentViewModel : ObservableObject
         foreach (var child in node.Children)
         foreach (var descendant in Flatten(child))
             yield return descendant;
-    }
-
-    /// <summary>
-    /// 读取分组公共参数数组，并拒绝重复键、尾随根值和未知字段。
-    /// </summary>
-    private static List<PuloniaTaskParameterOverride> ReadParameterOverrides(string json)
-    {
-        using var input = new StringReader(json);
-        using var reader = new JsonTextReader(input) { DateParseHandling = DateParseHandling.None, MaxDepth = 256 };
-        var array = JArray.Load(reader,
-            new JsonLoadSettings { DuplicatePropertyNameHandling = DuplicatePropertyNameHandling.Error });
-        if (reader.Read())
-            throw new JsonSerializationException("JSON 根数组后不能包含其他内容。");
-        var serializer = JsonSerializer.Create(new JsonSerializerSettings
-        {
-            DateParseHandling = DateParseHandling.None,
-            MissingMemberHandling = MissingMemberHandling.Error,
-            MaxDepth = 256
-        });
-        return array.ToObject<List<PuloniaTaskParameterOverride>>(serializer)
-               ?? throw new JsonSerializationException("公共参数覆盖不能为 null。");
     }
 
     /// <summary>

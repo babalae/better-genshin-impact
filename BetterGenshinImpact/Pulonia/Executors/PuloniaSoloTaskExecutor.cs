@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.GameTask.AutoBoss;
-using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
 using Newtonsoft.Json;
@@ -26,14 +25,6 @@ public sealed class PuloniaSoloTaskExecutor : IPuloniaTaskExecutor
     /// 独立任务在任务计划中的类型前缀。
     /// </summary>
     public const string TaskTypePrefix = "solo.";
-
-    /// <summary>
-    /// 每周安排参数名：按服务器时间凌晨四点切换日期，当天的字段覆盖任务参数，enabled=false 表示当天跳过。
-    /// </summary>
-    public const string WeekdayOverridesParameter = "weekday_overrides";
-
-    /// <summary>每周覆盖的独立开关；关闭时保留已配置日期，旧计划缺省时仍启用已有覆盖。</summary>
-    public const string WeekdayOverridesEnabledParameter = "weekday_overrides_enabled";
 
     /// <summary>首领讨伐累计成功领奖上限，由编排层维护，0 表示不限制。</summary>
     public const string BossTotalRunCountLimitParameter = "total_run_count_limit";
@@ -94,55 +85,32 @@ public sealed class PuloniaSoloTaskExecutor : IPuloniaTaskExecutor
     public static string? ToTaskId(string? taskType) => IsSoloTaskType(taskType) ? taskType![TaskTypePrefix.Length..] : null;
 
     /// <summary>
-    /// 判断能力是否有需要在创建时填写的参数；每周安排不算。没有参数的独立任务可以跳过创建对话框直接插入。
+    /// 判断能力是否有需要在创建时填写的参数。没有参数的独立任务可以跳过创建对话框直接插入。
     /// </summary>
     /// <param name="definition">能力定义。</param>
-    /// <returns>存在每周安排以外的参数时返回 true。</returns>
+    /// <returns>Schema 声明了至少一个参数时返回 true。</returns>
     public static bool HasEditableParameters(PuloniaTaskDefinition definition)
         => definition.ParameterSchema["properties"] is JObject properties
-           && properties.Properties().Any(p => p.Name != WeekdayOverridesParameter);
+           && properties.Properties().Any();
 
     /// <inheritdoc />
     public async Task<PuloniaTaskOutcome> ExecuteAsync(PuloniaTaskPreparedTask task, PuloniaTaskExecutionContext context,
         CancellationToken ct)
     {
         if (!_registry.TryGet(ToTaskId(task.TaskType), out var descriptor)
-            || !_definitions.TryGetValue(task.TaskType, out var definition))
+            || !_definitions.ContainsKey(task.TaskType))
         {
             return PuloniaTaskOutcome.Failure($"未注册独立任务 {task.TaskType}。");
         }
 
-        // 1. 每周安排：按服务器四点日切取当天配置，只合并本节点的参数，不修改计划
-        var values = (JObject)task.Parameters.DeepClone();
-        var gameDay = PuloniaServerTime.GetGameDate(DateTimeOffset.UtcNow, PuloniaServerTime.GetUtcOffset()).DayOfWeek;
-        if (values.Value<bool?>(WeekdayOverridesEnabledParameter) != false
-            && values[WeekdayOverridesParameter] is JObject weekly
-            && weekly[((int)gameDay).ToString()] is JObject today)
-        {
-            if (today.Value<bool?>("enabled") == false)
-            {
-                return new PuloniaTaskOutcome(PuloniaTaskOutcomeKind.Skipped, "今天不在此任务的运行日期内。",
-                    reasonCode: SoloTaskReasons.NotScheduledToday);
-            }
-
-            foreach (var field in today.Properties().Where(p => p.Name != "enabled"))
-            {
-                values[field.Name] = field.Value.DeepClone();
-            }
-
-            PuloniaTaskValidator.ValidateParameters(values, definition.ParameterSchema, task.TaskType);
-        }
-
-        values.Remove(WeekdayOverridesParameter);
-        values.Remove(WeekdayOverridesEnabledParameter);
-
-        // 2. 任务只使用本节点租约记录的运行环境；它已停止时当前节点失败
+        // 1. 任务只使用本节点租约记录的运行环境；它已停止时当前节点失败
         if (!context.TryGetRuntime(out var runtime, out var runtimeError))
         {
             return PuloniaTaskOutcome.Failure(runtimeError, reasonCode: SoloTaskReasons.RuntimeStopped);
         }
 
-        // 3. 节点 JSON → 强类型参数 → 运行任务
+        // 2. 节点 JSON → 强类型参数 → 运行任务；只修改副本，不改变快照中的参数
+        var values = (JObject)task.Parameters.DeepClone();
         // 累计统计属于编排层，不传入独立任务的业务参数。
         var totalLimit = values.Value<int?>(BossTotalRunCountLimitParameter) ?? 0;
         var resetId = values.Value<string>(BossRewardCountResetParameter) ?? string.Empty;
@@ -238,10 +206,6 @@ public sealed class PuloniaSoloTaskExecutor : IPuloniaTaskExecutor
 
         var schema = PuloniaSoloTaskSchema.Create(descriptor.ParamType);
         var properties = schema["properties"] as JObject ?? new JObject();
-        // 每周安排是任务计划的编排能力，所有独立任务都可以按星期覆盖参数或跳过
-        properties[WeekdayOverridesParameter] = new JObject { ["type"] = "object" };
-        if (descriptor.TaskId == AutoDomainTask.TaskId)
-            properties[WeekdayOverridesEnabledParameter] = new JObject { ["type"] = "boolean" };
         if (descriptor.TaskId == AutoBossTask.TaskId)
         {
             properties[BossTotalRunCountLimitParameter] = new JObject { ["type"] = "integer", ["minimum"] = 0 };
@@ -259,7 +223,7 @@ public sealed class PuloniaSoloTaskExecutor : IPuloniaTaskExecutor
             RequiresGameSession = true,
             DefaultParameters = defaults,
             ParameterSchema = schema,
-            PublicParameters = properties.Properties().Select(p => p.Name).ToArray(),
+            // 首批不让独立任务参与共享设置，参数都是只属于本任务的任务参数。
             IsSoloTask = true,
             Group = descriptor.Group,
             Order = descriptor.Order,

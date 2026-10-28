@@ -22,7 +22,7 @@ public sealed partial class PuloniaTaskService
 
     /// <summary>
     /// 判断快照固定的账号是否为需要切换的指定账号：没有账号准备或使用默认账号（当前登录账号）时为 false。
-    /// 采集 CD 据此决定作用域身份：指定账号用核验 UID，否则与普通计划共用默认身份。
+    /// 路线 CD 据此决定作用域身份：指定账号用核验 UID，否则与普通计划共用默认身份。
     /// </summary>
     /// <param name="snapshot">运行快照。</param>
     internal static bool IsSwitchedAccount(PuloniaTaskSnapshot snapshot)

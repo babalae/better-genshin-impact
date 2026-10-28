@@ -42,6 +42,8 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     private readonly SoloTaskRegistry _registry;
     /// <summary>调度宿主，为触发设置窗口提供运行反馈；测试直接构造时为空。</summary>
     private readonly PuloniaTaskTriggerHost? _triggerHost;
+    /// <summary>共享设置、方案与路线 CD 窗口入口；测试直接构造时为空。</summary>
+    private readonly IPuloniaTaskSettingsDialogs? _settingsDialogs;
     /// <summary>首次进入页面的加载任务；导航与 Loaded 并发进入时复用同一次加载，失败后下次进入重试。</summary>
     private Task? _pageLoad;
     /// <summary>合并高频进度查询，查询期间收到新事件后再读取一次。</summary>
@@ -93,12 +95,14 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     /// <param name="registry">独立任务注册表</param>
     /// <param name="instances">多实例服务，提供运行实例选项</param>
     /// <param name="triggerHost">调度宿主，为触发设置窗口提供运行反馈</param>
+    /// <param name="settingsDialogs">共享设置、方案与路线 CD 窗口入口；测试直接构造时为空</param>
     public PuloniaOneDragonViewModel(PuloniaPlanEditingSession session, IPuloniaTaskService service,
         PuloniaTaskResourceCatalog catalog, PuloniaTaskStore store, SoloTaskRegistry registry,
-        InstanceService? instances = null, PuloniaTaskTriggerHost? triggerHost = null)
+        InstanceService? instances = null, PuloniaTaskTriggerHost? triggerHost = null,
+        IPuloniaTaskSettingsDialogs? settingsDialogs = null)
     {
         Session = session; _service = service; _catalog = catalog; _store = store; _registry = registry;
-        _instances = instances; _triggerHost = triggerHost;
+        _instances = instances; _triggerHost = triggerHost; _settingsDialogs = settingsDialogs;
         AddTaskMenu = PuloniaTaskMenuBuilder.Build(service.Definitions);
         _statusRefresh = new PuloniaCoalescedRefresh(async () =>
         {
@@ -345,7 +349,13 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     [RelayCommand]
     private async Task ShowHistoryAsync()
     {
-        using var history = new PuloniaTaskHistoryViewModel(_service, _store) { PlanFilterId = SelectedConfiguration?.Id };
+        // 路线 CD 页签默认只看当前配置用到的路线，窗口关闭时解除订阅
+        using var cooldowns = new PuloniaCollectionCooldownOverviewViewModel(Session);
+        cooldowns.SetPlanFilter(SelectedConfiguration?.Id);
+        using var history = new PuloniaTaskHistoryViewModel(_service, _store)
+        {
+            PlanFilterId = SelectedConfiguration?.Id, Cooldowns = cooldowns
+        };
         await history.RefreshAsync();
         new PromptDialog("", "一条龙执行记录", new PuloniaOneDragonHistoryView { DataContext = history }, null)
         { Owner = Application.Current.MainWindow, Width = 1100, Height = 750, SizeToContent = SizeToContent.Manual }.ShowDialog();
@@ -356,13 +366,39 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     {
         if (node is null) return;
         SelectedTask = node;
-        using var viewModel = new PuloniaOneDragonSettingsDialogViewModel(Session, node);
+        using var viewModel = new PuloniaOneDragonSettingsDialogViewModel(Session, node, _settingsDialogs);
         try { new PuloniaOneDragonSettingsDialog(viewModel) { Owner = Application.Current.MainWindow }.ShowDialog(); }
         finally
         {
-            // 高级窗口可能改写参数 JSON、资源位置或预设；按最新有效参数重建，节点已被替换时由选择变化负责。
+            // 高级窗口可能改写参数 JSON、资源位置或共享设置；按最新有效参数重建，节点已被替换时由选择变化负责。
             if (ReferenceEquals(SelectedTask, node)) RefreshSettingsSurfaces(node);
         }
+    }
+    /// <summary>编辑选中步骤的共享设置；能力不使用共享设置时不打开。</summary>
+    [RelayCommand]
+    private void ConfigureNodeSharedSettings(PuloniaTaskNodeViewModel? node)
+    {
+        if (node is null || _settingsDialogs is null) return;
+        if (node.IsLeaf && node.Document.GetSharedSettingUsage(node).Keys is not { Count: > 0 }) return;
+        _settingsDialogs.EditSharedSettings(new PuloniaSharedSettingsEditorViewModel(
+            new PuloniaNodeSharedSettingsTarget(node), Session, _settingsDialogs));
+        if (ReferenceEquals(SelectedTask, node)) RefreshSettingsSurfaces(node);
+    }
+    /// <summary>编辑当前一条龙配置的配置级共享设置（根节点），会传给配置中的全部任务。</summary>
+    [RelayCommand]
+    private void ConfigurePlanSharedSettings()
+    {
+        if (SelectedConfiguration is not { } document || _settingsDialogs is null) return;
+        _settingsDialogs.EditSharedSettings(new PuloniaSharedSettingsEditorViewModel(
+            new PuloniaNodeSharedSettingsTarget(document.RootNode), Session, _settingsDialogs));
+        if (SelectedTask is { } selected) RefreshSettingsSurfaces(selected);
+    }
+    /// <summary>打开设置方案管理。</summary>
+    [RelayCommand]
+    private void ManageSettingsProfiles()
+    {
+        if (_settingsDialogs is null) return;
+        _settingsDialogs.ManageProfiles(Session, null);
     }
     /// <summary>后台状态事件只调度 UI 查询，不能直接跨线程修改绑定。</summary>
     private void OnRunChanged(object? sender, PuloniaTaskRunChangedEventArgs e) => QueueStatusRefresh();

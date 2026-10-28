@@ -48,7 +48,8 @@ internal static class PuloniaOneDragonSettingChoices
         }
         string[]? choices = key switch
         {
-            "domain_name" => ["", .. MapLazyAssets.Get().DomainNameList],
+            "domain_name" or "training_guide_fallback_domain_name" => ["", .. MapLazyAssets.Get().DomainNameList],
+            "training_guide_fallback_sunday_selected_value" => ["", "1", "2", "3"],
             "boss_name" => ["", .. AutoBossData.SupportedBossNames],
             "country" when taskType == LeyLineTaskType => [.. TaskSettingsPageViewModel.LeyLineOutcropCountryList],
             "ley_line_outcrop_type" => ["启示之花", "藏金之花"],
@@ -69,12 +70,18 @@ internal static class PuloniaOneDragonSettingChoices
             "country" => "选择任务前往的国家。",
             "party_name" or "team_name" or "team" or "fight_team_name" => "填写游戏内队伍名称，留空时使用当前队伍。",
             "strategy_name" or "combat_strategy_path" => "选择当前任务使用的战斗策略。",
-            "weekday_overrides" => "按周日到周六安排任务，服务器时间凌晨四点切换日期。",
             "boss_num" => "选择幽境危战中的首领序号（1—3）。",
             "fight_config" or "finish_detect_config" => "展开设置当前任务的战斗与结束检测方式。",
+            "training_guide_run_preference" => "0：适量刷取，依靠合成天赋收益补足材料；1：充分刷取，直到满足养成计划需求。",
+            "training_guide_crafting_bonus_reserve_percent" => "适量刷取时为合成额外收益预留的比例，范围 0–20。",
+            "training_guide_reward_recognition_enabled" => "每轮领奖后识别奖励并更新库存，减少多刷；需要 1920×1080 分辨率。",
+            "training_guide_reward_failure_budget_enabled" => "奖励识别失败时按首次估算的预算继续，关闭时识别失败即结束。",
+            "training_guide_low_ar_adaptation_enabled" => "冒险等阶较低时检查入口是否解锁，并自动降低难度。",
+            "training_guide_fallback_domain_name" => "养成需求全部满足后，用剩余树脂刷取的秘境；留空则保留剩余树脂。",
+            "training_guide_fallback_sunday_selected_value" => "备选秘境在周日或限时全开时领取的奖励序号。",
             _ => result.Value<string>("description") ?? "未修改的设置继续使用参数来源中的值。"
         };
-        if (value is JObject values && key is not ("weekday_overrides" or "settings"))
+        if (value is JObject values && key != "settings")
         {
             var properties = result["properties"] as JObject ?? new JObject(values.Properties()
                 .Select(p => new JProperty(p.Name, InferSchema(p.Value))));
@@ -82,34 +89,6 @@ internal static class PuloniaOneDragonSettingChoices
                 Decorate(p.Name, (JObject)p.Value, values[p.Name], taskType))));
         }
         return result;
-    }
-
-    /// <summary>以七个日期卡片编辑每周安排，未修改的日期不生成覆盖。</summary>
-    internal static JObject WeekdaySchema(JObject properties, JObject values, string taskType)
-    {
-        var days = new[] { "周日", "周一", "周二", "周三", "周四", "周五", "周六" };
-        // 只展示参数中存在的键；树脂设置按 resin_usage 对象整体覆盖。
-        var keys = new[]
-        {
-            "domain_name", "party_name", "sunday_selected_value", "strategy_name", "combat_strategy_path",
-            "round_count", "ley_line_outcrop_type", "country", "team", "count", "resin_usage"
-        };
-        return new JObject
-        {
-            ["type"] = "object", ["title"] = "每周安排", ["description"] = "按服务器时间凌晨四点切换日期，未设置的日期沿用当前任务设置。",
-            ["properties"] = new JObject(days.Select((day, index) => new JProperty(index.ToString(), new JObject
-            {
-                ["type"] = "object", ["title"] = day,
-                ["properties"] = new JObject(new[] { new JProperty("enabled", new JObject
-                    { ["type"] = "boolean", ["title"] = "当天执行", ["default"] = true }) }
-                    .Concat(keys.Where(properties.ContainsKey).Select(key =>
-                    {
-                        var schema = Decorate(key, (JObject)properties[key]!, values[key], taskType);
-                        if (values[key] is { } initial) schema["default"] = initial.DeepClone();
-                        return new JProperty(key, schema);
-                    })))
-            })))
-        };
     }
 
     /// <summary>只有值没有对象子 Schema 的额外参数，按现有 JSON 类型建立展示字段。</summary>

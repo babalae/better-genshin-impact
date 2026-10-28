@@ -3,6 +3,7 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
                  xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+                 xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:markup="clr-namespace:BetterGenshinImpact.Markup"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -11,7 +12,8 @@
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:viewModel="clr-namespace:BetterGenshinImpact.ViewModel"
                  xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
-                 Title="{i18n:T 更好的原神}"
+                 Title="{Binding WindowTitle, Mode=OneWay}"
+                 Icon="{Binding InstanceIconSource, Mode=OneWay}"
                  Width="1050"
                  Height="700"
                  d:Background="#D2D2D2"
@@ -317,7 +319,7 @@
 
         <ui:TitleBar Grid.Row="0" Grid.Column="0">
             <ui:TitleBar.Icon>
-                <ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" />
+                <ui:ImageIcon Source="{Binding InstanceIconSource, Mode=OneWay}" />
             </ui:TitleBar.Icon>
             <ui:TitleBar.Header>
                 <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
@@ -330,14 +332,14 @@
                             Margin="8,0,0,0"
                             Padding="8,0"
                             VerticalAlignment="Center"
-                            Background="{DynamicResource SystemAccentColorPrimaryBrush}"
+                            Background="{Binding InstanceAccentBrush, Mode=OneWay}"
                             CornerRadius="11"
-                            Visibility="{Binding IsChildInstance, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            Visibility="{Binding IsInstanceIdentityVisible, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <TextBlock VerticalAlignment="Center"
                                    FontSize="12"
                                    FontWeight="SemiBold"
                                    Foreground="White"
-                                   Text="{Binding ChildInstanceTagText, Mode=OneWay}" />
+                                   Text="{Binding InstanceTagText, Mode=OneWay}" />
                     </Border>
                 </StackPanel>
             </ui:TitleBar.Header>
@@ -464,6 +466,48 @@
                             </ui:DropDownButton>
                         </StackPanel>
                     </Border>
+                    <!-- 下载中心：本次运行有下载任务时显示；图标外圈为进行中任务的总进度，有失败任务时显示红点 -->
+                    <Grid DataContext="{Binding DownloadCenter, Mode=OneWay}"
+                          Visibility="{Binding HasItems, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <!-- 弹出层打开时按钮不响应点击，避免点击按钮关闭弹出层后又立即打开 -->
+                        <ui:Button Width="40"
+                                   Height="32"
+                                   Padding="0"
+                                   Background="Transparent"
+                                   BorderBrush="Transparent"
+                                   Command="{Binding OpenCommand}"
+                                   CornerRadius="0"
+                                   IsHitTestVisible="{Binding IsOpen, Mode=OneWay, Converter={StaticResource InverseBooleanConverter}}"
+                                   ToolTip="{Binding ButtonToolTip, Mode=OneWay}">
+                            <Grid Width="24" Height="24">
+                                <ui:ProgressRing Width="24"
+                                                 Height="24"
+                                                 IsIndeterminate="{Binding IsOverallIndeterminate, Mode=OneWay}"
+                                                 Progress="{Binding OverallProgress, Mode=OneWay}"
+                                                 Visibility="{Binding HasActive, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                <ui:SymbolIcon HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               FontSize="14"
+                                               Symbol="ArrowDownload24" />
+                                <Ellipse Width="8"
+                                         Height="8"
+                                         HorizontalAlignment="Right"
+                                         VerticalAlignment="Top"
+                                         Fill="{DynamicResource SystemFillColorCriticalBrush}"
+                                         IsHitTestVisible="False"
+                                         Visibility="{Binding HasFailed, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            </Grid>
+                        </ui:Button>
+                        <!-- 弹出层的定位点在按钮右下角，以 Left 方式展开：顶边对齐按钮底边，右边缘对齐按钮右边缘 -->
+                        <ui:Flyout MinWidth="0"
+                                   MinHeight="0"
+                                   HorizontalAlignment="Right"
+                                   VerticalAlignment="Bottom"
+                                   IsOpen="{Binding IsOpen, Mode=TwoWay}"
+                                   Placement="Left">
+                            <controls:DownloadCenterView />
+                        </ui:Flyout>
+                    </Grid>
                     <ui:Button Width="40"
                                Height="32"
                                Background="Transparent"
@@ -495,26 +539,41 @@
 
         <tray:NotifyIcon Grid.Row="0" Grid.Column="0"
                          FocusOnLeftClick="False"
-                         Icon="pack://application:,,,/Resources/Images/logo.ico"
+                         Icon="{Binding InstanceIconSource, Mode=OneWay}"
                          LeftDoubleClick="OnNotifyIconLeftDoubleClick"
                          MenuOnRightClick="True"
-                         TooltipText="BetterGI">
+                         TooltipText="{Binding TrayTooltipText, Mode=OneWay}">
             <tray:NotifyIcon.Menu>
                 <ContextMenu>
                     <ContextMenu.DataContext>
                         <markup:ServiceLocator Type="{x:Type viewModel:NotifyIconViewModel}" />
                     </ContextMenu.DataContext>
+                    <ui:MenuItem Header="{Binding InstanceDisplayName, Mode=OneWay}"
+                                 IsEnabled="False"
+                                 Visibility="{Binding IsInstanceIdentityVisible, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ui:MenuItem.Icon>
+                            <Ellipse Width="12"
+                                     Height="12"
+                                     Fill="{Binding InstanceAccentBrush, Mode=OneWay}" />
+                        </ui:MenuItem.Icon>
+                    </ui:MenuItem>
+                    <Separator Visibility="{Binding IsInstanceIdentityVisible, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <ui:MenuItem Command="{Binding ShowOrHideCommand}"
+                                 Header="{i18n:T 显示或隐藏此实例窗口}"
+                                 Icon="{ui:SymbolIcon Window24}" />
+                    <Separator />
                     <ui:MenuItem Command="{Binding OpenChildSessionWindowCommand}"
                                   Header="{i18n:T 桌面分身}"
                                   Icon="{ui:SymbolIcon DesktopCursor24}"
-                                  Visibility="{Binding IsChildSessionEntryVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                    <Separator Visibility="{Binding IsChildSessionEntryVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                  Visibility="{Binding IsPrimaryInstance, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <Separator Visibility="{Binding IsPrimaryInstance, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     <ui:MenuItem Command="{Binding CheckUpdateCommand}"
                                  Header="{i18n:T 检查更新}"
-                                 Icon="{ui:SymbolIcon ArrowAutofitUp24}" />
-                    <Separator />
+                                 Icon="{ui:SymbolIcon ArrowAutofitUp24}"
+                                 Visibility="{Binding IsPrimaryInstance, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <Separator Visibility="{Binding IsPrimaryInstance, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     <ui:MenuItem Command="{Binding ExitCommand}"
-                                 Header="{i18n:T 退出}"
+                                 Header="{Binding ExitMenuText, Mode=OneWay}"
                                  Icon="{ui:SymbolIcon Dismiss24}" />
                 </ContextMenu>
             </tray:NotifyIcon.Menu>

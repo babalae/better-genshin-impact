@@ -66,15 +66,17 @@ public class XxtuiNotifier : INotifier
     /// <summary>
     ///     初始化XxtuiNotifier实例
     /// </summary>
+    /// <param name="httpClient">通知客户端，由调用方创建</param>
     /// <param name="apiKey">xxtui.com的API密钥，必填</param>
     /// <param name="from">消息来源，默认为"Better原神"</param>
     /// <param name="channels">推送渠道，默认为微信公众号</param>
     public XxtuiNotifier(
+        HttpClient httpClient,
         string apiKey,
         string from = "Better原神",
         params XxtuiChannel[] channels)
     {
-        _httpClient = new HttpClient();
+        _httpClient = httpClient;
         _apiKey = apiKey;
         _baseUrl = "https://www.xxtui.com/xxtui/" + _apiKey;
         From = from.Length > 20 ? from.Substring(0, 20) : from;

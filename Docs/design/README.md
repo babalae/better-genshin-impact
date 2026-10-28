@@ -19,3 +19,4 @@
 - [独立任务合同重构：ISoloTask 泛型化](task-contract.md)（核心迁移已完成，统一会话租约待实施；2026-10-24 核对）
 - [自动战斗策略统一：策略模型、键鼠录制实现与策略选择控件](auto-fight-strategy.md)（第 3 版，已确认）
 - [树脂使用设置统一：弹窗界面、参数合同与任务适配](resin-usage-settings.md)（第 3 版，已实施，待界面与游戏内验收）
+- [基础设施统一：WebView2、网络与下载、缓存、临时文件](infrastructure-foundation.md)（第 2 版，已确认，待实施）

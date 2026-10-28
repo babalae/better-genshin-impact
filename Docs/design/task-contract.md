@@ -30,7 +30,7 @@
   - 运行层：`TaskRunner`、`SoloTaskExecutionService`、`PuloniaGameTaskCoordinator` / `PuloniaGameTaskLease`，以及共用的 `GameTaskSessionScope` 嵌套检测；
   - 入口层：独立任务页、热键、多实例、Pulonia、JS、旧一条龙和调度器。
 - **TaskRunner**：`RunSoloTaskAsync` 保留方法名，改为两个都返回 `SoloTaskRunResult` 的重载；删除 `RunSoloTaskWithResultAsync`。锁、取消、异常映射的语义保留，第 6.1 节逐条说明。
-- **Pulonia**：独立任务统一由 `PuloniaSoloTaskExecutor` 执行，把注册表接入 `PuloniaTaskService`，任务类型写作 `solo.{TaskId}`。执行器还负责星期覆盖和首领累计领奖次数等编排参数。
+- **Pulonia**：独立任务统一由 `PuloniaSoloTaskExecutor` 执行，把注册表接入 `PuloniaTaskService`，任务类型写作 `solo.{TaskId}`。执行器还负责首领累计领奖次数等编排参数。
 - **改名面小**：现有的 `SoloTask*` 名称大多保留，包括运行服务、请求与状态模型、按钮、实例窗口和 `ManageSoloTask`。这些地方只把枚举参数换成字符串 Id。
 
 ## 2. 命名
@@ -197,9 +197,8 @@ public interface ISoloTask<TParam, TData>
   - 它们直接充当 `TParam`。
   - 现有的构造函数和属性不删、不改名、不改语义，只允许新增无参构造函数和新属性。
   - 秘境、首领、幽境危战、地脉花的旧树脂属性保留为 `[JsonIgnore]` 兼容属性，实际读写新属性 `ResinUsage`；同时注册了宿主类型 `ResinUsage`、`ResinUsageMode`、`OriginalResinTier`、`ResinKind`，新脚本可以直接修改 `param.ResinUsage`。见[树脂使用设置统一](resin-usage-settings.md) 5.5 节。
-- **每周安排：** 属于 Pulonia 编排参数，不加入任务的强类型 `TParam`。
-  - `PuloniaSoloTaskExecutor` 为所有独立任务的 Schema 添加 `weekday_overrides`，按服务器时间（凌晨 4 点日切）合并当天覆盖，当天禁用则返回 `Skipped(not_scheduled_today)`。
-  - 秘境还提供 `weekday_overrides_enabled` 开关；执行器在反序列化为任务参数前移除这些编排字段。
+- **编排参数：** Pulonia 不提供按星期覆盖参数或跳过的每周安排（`weekday_overrides`、`weekday_overrides_enabled` 已于 2026-10-26 删除）。
+  - `PuloniaSoloTaskExecutor` 只为首领讨伐追加累计领奖参数，并在反序列化为任务参数前移除，不加入任务的强类型 `TParam`。
 - **战斗策略：** 任务使用共享的 `CombatStrategyResolver` 解析策略名或路径。
   - 参数继续沿用 `CombatStrategyPath` 等已公开的属性名。
   - JS 现有调用传的是路径，所以解析器也接受路径。
@@ -263,12 +262,12 @@ public sealed record SoloTaskResult(SoloTaskResultKind Kind, string Message, str
 | `Unverified` | 流程正常结束，但没有确认副作用 | 秘境因树脂不足提前结束；旧 JS 脚本正常返回 |
 | `Partial` | 只确认了部分副作用 | 预留 |
 | `Failed` | 业务失败，必须带原因码 | 未选择秘境；未装备王树瑞佑 |
-| `Skipped` | 条件不满足，没有执行 | 今天不在运行日期内 |
+| `Skipped` | 条件不满足，没有执行 | 开始时可用树脂不足一次领奖 |
 
 原因码：
 
 - 使用小写 snake_case，一旦发布就固定不变；`Message` 面向用户，可以随时改措辞。
-- 通用原因码放在 `SoloTaskReasons`：`invalid_parameter`、`not_scheduled_today`、`strategy_not_found`、`page_not_reached`、`runtime_stopped`。
+- 通用原因码放在 `SoloTaskReasons`：`resin_exhausted`、`invalid_parameter`、`strategy_not_found`、`page_not_reached`、`runtime_stopped`、`limit_reached`。`not_scheduled_today` 随每周安排删除，不再产生，旧历史记录中的该值原样保留。
 - 只属于某个任务的原因码，定义在该任务类旁边。
 
 奖励数据：
@@ -340,7 +339,7 @@ public sealed record SoloTaskResult(SoloTaskResultKind Kind, string Message, str
 
 **视图**
 
-- 视图绑定各设置 VM 的可编辑属性、选项和每周安排等辅助行；没有泛型的 `Value` 属性。
+- 视图绑定各设置 VM 的可编辑属性、选项和商品勾选等辅助行；没有泛型的 `Value` 属性。
 
 **模板注册**
 
@@ -366,7 +365,7 @@ public sealed record SoloTaskResult(SoloTaskResultKind Kind, string Message, str
 
 ### 5.9 示例
 
-以下是按当前接口与调用边界整理的流程示意，省略实际识别和操作代码；星期覆盖在 Pulonia 执行器中处理。
+以下是按当前接口与调用边界整理的流程示意，省略实际识别和操作代码。
 
 ```csharp
 /// <summary>自动秘境：按参数刷取秘境，返回识别到的掉落。</summary>
@@ -383,7 +382,7 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
     /// <inheritdoc />
     public async Task<SoloTaskResult<ResinClaimData>> RunAsync(AutoDomainParam param, CancellationToken ct)
     {
-        // 按服务器时间合并当天参数已由 Pulonia 完成；任务只处理本次收到的业务参数
+        // 任务只处理本次收到的业务参数
         if (string.IsNullOrWhiteSpace(param.DomainName))
             return SoloTaskResult.Failed(SoloTaskReasons.InvalidParameter, "请选择秘境。");
         var strategy = CombatStrategyResolver.Parse(param.CombatStrategyPath);
@@ -570,14 +569,14 @@ public sealed class SoloTaskRunResult
   - 默认参数和 Schema 都从参数类生成；
   - `RequiresGameSession` 固定为 `true`；
   - 公共参数为全部顶层字段。
-- 执行流程：`JObject` → 合并星期覆盖、处理首领累计次数 → 移除编排字段 → `TParam` → `InvokeAsync` → `PuloniaTaskOutcome`。
+- 执行流程：`JObject` → 处理首领累计次数 → 移除编排字段 → `TParam` → `InvokeAsync` → `PuloniaTaskOutcome`。
   - 结果映射为：`Succeeded` → `Succeeded`、`Unverified` → `ExecutedUnverified`、`Partial` → `PartiallySucceeded`、`Failed` → `Failed`、`Skipped` → `Skipped`；
   - `Data` 存放奖励等数据；
   - `ReasonCode` 原样带出。
 - 任务抛出 `NormalEndException`（运行环境停止）时，映射为 `Failure(runtime_stopped)`，下一个节点会重新获取运行环境，符合 Pulonia 现有约定。
 - `PuloniaTaskOutcome` 和 `PuloniaTaskNodeResult` 增加 `ReasonCode` 字段。
 - 删除 `PuloniaBuiltinTaskExecutor`、`PuloniaCombatTaskExecutor` 和 `PuloniaCombatTaskSettings`。
-- Schema 由独立的 `PuloniaSoloTaskSchema` 按 `SoloTaskJson.Options` 的类型元数据生成，支持公共字段、嵌套对象、数组和可空类型，枚举按字符串处理。执行器在此基础上添加星期覆盖、首领累计次数等编排字段。
+- Schema 由独立的 `PuloniaSoloTaskSchema` 按 `SoloTaskJson.Options` 的类型元数据生成，支持公共字段、嵌套对象、数组和可空类型，枚举按字符串处理。执行器在此基础上为首领讨伐添加累计次数编排字段。
 - 首领累计成功领奖上限和重置批次由编排层维护：执行器读取已完成次数并限制本次运行次数，每次确认领奖后立即持久化；取消不丢失已经记录的次数。
 
 **默认清单**
@@ -651,10 +650,10 @@ public sealed class SoloTaskRunResult
 | `OneDragonTask` | `one_dragon` | `OneDragonParam` | `NoData` | 独立 | 日常奖励 | — | 旧一条龙入口复用独立运行及跨实例下发，不加入计划清单 |
 | `ClaimMailRewardsTask` | `claim_mail` | `NoParam` | `NoData` | 独立、计划 | 日常奖励 | 1 | 原 `DoOnce` 逻辑成为 `RunAsync` |
 | `GoToCraftingBenchTask` | `craft_condensed_resin` | `CraftCondensedResinParam` | `CraftCondensedResinData` | 独立、计划 | 日常奖励 | 2 | 国家和保留树脂数由参数传入，不再读旧一条龙配置文件 |
-| `AutoDomainTask` | `auto_domain` | `AutoDomainParam` | `ResinClaimData` | 独立、计划 | 树脂与战斗 | 3 | 并入原 `AutoDomainConfig` 业务字段；树脂设置为 `resin_usage`；星期覆盖由 Pulonia 处理 |
+| `AutoDomainTask` | `auto_domain` | `AutoDomainParam` | `ResinClaimData` | 独立、计划 | 树脂与战斗 | 3 | 并入原 `AutoDomainConfig` 业务字段；树脂设置为 `resin_usage` |
 | `AutoBossTask` | `auto_boss` | `AutoBossParam` | `ResinClaimData` | 独立、计划 | 树脂与战斗 | 4 | 保留不序列化的内部领奖回调；战斗配置可随参数传入；树脂设置为 `resin_usage` |
 | `AutoStygianOnslaughtTask` | `auto_stygian_onslaught` | `AutoStygianOnslaughtParam` | `ResinClaimData` | 独立、计划 | 树脂与战斗 | 5 | 不等待主界面；树脂设置为 `resin_usage` |
-| `AutoLeyLineOutcropTask` | `auto_ley_line_outcrop` | `AutoLeyLineOutcropParam` | `ResinClaimData` | 独立、计划 | 树脂与战斗 | 6 | 参数携带本次业务设置；树脂设置为 `resin_usage`；星期覆盖由 Pulonia 处理 |
+| `AutoLeyLineOutcropTask` | `auto_ley_line_outcrop` | `AutoLeyLineOutcropParam` | `ResinClaimData` | 独立、计划 | 树脂与战斗 | 6 | 参数携带本次业务设置；树脂设置为 `resin_usage` |
 | `ClaimDailyRewardsTask` | `claim_daily_rewards` | `DailyRewardsParam` | `NoData` | 独立、计划 | 日常奖励 | 7 | 组合历练点、冒险家协会、纪行 |
 | `GoToSereniteaPotTask` | `serenitea_pot_rewards` | `SereniteaPotParam` | `NoData` | 独立、计划 | 日常奖励 | 8 | 参数携带进壶方式和购买商品；未完成时返回 `Failed(page_not_reached)` |
 | `ClaimBattlePassRewardsTask` | `claim_battle_pass` | `NoParam` | `NoData` | 独立、计划 | 日常奖励 | — | |
@@ -757,7 +756,7 @@ public sealed class SoloTaskRunResult
 | 泛型合同、结构化结果、注册与动态调用 | [`ISoloTask.cs`](../../BetterGenshinImpact/GameTask/SoloTask/ISoloTask.cs)、[`SoloTaskRegistry.cs`](../../BetterGenshinImpact/GameTask/SoloTask/SoloTaskRegistry.cs)、[`SoloTaskDescriptor.cs`](../../BetterGenshinImpact/GameTask/SoloTask/SoloTaskDescriptor.cs) |
 | 独立运行、取消及完成事件 | [`TaskRunner.cs`](../../BetterGenshinImpact/GameTask/TaskRunner.cs)、[`SoloTaskExecutionService.cs`](../../BetterGenshinImpact/GameTask/SoloTask/Execution/SoloTaskExecutionService.cs) |
 | 提前结束异常转结果 | [`SoloTaskAbortException.cs`](../../BetterGenshinImpact/GameTask/SoloTask/SoloTaskAbortException.cs)、[`SoloTaskExtensions.cs`](../../BetterGenshinImpact/GameTask/SoloTask/SoloTaskExtensions.cs) |
-| Pulonia 执行、星期覆盖、首领累计次数及 Schema | [`PuloniaSoloTaskExecutor.cs`](../../BetterGenshinImpact/Pulonia/Executors/PuloniaSoloTaskExecutor.cs)、[`PuloniaSoloTaskSchema.cs`](../../BetterGenshinImpact/Pulonia/Services/PuloniaSoloTaskSchema.cs) |
+| Pulonia 执行、首领累计次数及 Schema | [`PuloniaSoloTaskExecutor.cs`](../../BetterGenshinImpact/Pulonia/Executors/PuloniaSoloTaskExecutor.cs)、[`PuloniaSoloTaskSchema.cs`](../../BetterGenshinImpact/Pulonia/Services/PuloniaSoloTaskSchema.cs) |
 | 注册表驱动的默认清单与菜单 | [`PuloniaOneDragonDefaults.cs`](../../BetterGenshinImpact/ViewModel/Pages/Pulonia/PuloniaOneDragonDefaults.cs)、[`PuloniaTaskMenuBuilder.cs`](../../BetterGenshinImpact/ViewModel/Pages/Pulonia/PuloniaTaskMenuBuilder.cs) |
 | 非泛型设置 VM、工厂与全局模板 | [`SoloTaskSettingsViewModel.cs`](../../BetterGenshinImpact/ViewModel/SoloTaskSettings/SoloTaskSettingsViewModel.cs)、[`SoloTaskSettingsFactory.cs`](../../BetterGenshinImpact/ViewModel/SoloTaskSettings/SoloTaskSettingsFactory.cs)、[`SoloTaskSettingsTemplates.cs`](../../BetterGenshinImpact/ViewModel/SoloTaskSettings/SoloTaskSettingsTemplates.cs) |
 | 原 TXT 实现保留，新增统一入口 | [`AutoFightEntryTask.cs`](../../BetterGenshinImpact/GameTask/AutoFight/AutoFightEntryTask.cs) |

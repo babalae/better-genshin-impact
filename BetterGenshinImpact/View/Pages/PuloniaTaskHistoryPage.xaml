@@ -17,9 +17,16 @@
         </Grid.RowDefinitions>
         <StackPanel Margin="0,0,0,14">
             <TextBlock FontSize="26" FontWeight="SemiBold" Text="执行记录" />
-            <TextBlock Margin="0,4,0,0" Text="查看 Pulonia 任务计划的跨重启历史、节点尝试和真实证据。记录仅保存于本机。"
+            <TextBlock Margin="0,4,0,0" Text="查看 Pulonia 任务计划的跨重启历史、节点尝试和真实证据，以及当前的路线 CD。记录仅保存于本机。"
                        TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
         </StackPanel>
-        <controls:PuloniaTaskHistoryView Grid.Row="1" DataContext="{Binding ViewModel}" />
+        <TabControl Grid.Row="1" BorderThickness="0">
+            <TabItem Header="运行记录">
+                <controls:PuloniaTaskHistoryView Margin="0,12,0,0" DataContext="{Binding ViewModel, Mode=OneWay}" />
+            </TabItem>
+            <TabItem Header="路线 CD">
+                <controls:PuloniaCollectionCooldownOverviewView Margin="0,12,0,0" DataContext="{Binding Cooldowns, Mode=OneWay}" />
+            </TabItem>
+        </TabControl>
     </Grid>
 </UserControl>

@@ -3,6 +3,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using BetterGenshinImpact.Infrastructure.Network;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
@@ -33,18 +34,12 @@ public static class AutoComboModelListFetcher
     private const int MaxSameAuthorityRedirects = 3;
 
     /// <summary>
-    /// 拉取模型列表专用的 HttpClient：不跟随重定向。
+    /// 拉取模型列表专用的 HttpClient：不跟随重定向，超时 20 秒（见 HttpClientNames.AiProvider）。
     ///
     /// x-api-key 是自定义头，而 .NET 的自动重定向只会清理 Authorization、不会清理它，
     /// 服务端一旦返回 3xx 指向其他地址，密钥就会被一并转发过去。
     /// </summary>
-    private static readonly HttpClient HttpClient = new(new HttpClientHandler
-    {
-        AllowAutoRedirect = false,
-    })
-    {
-        Timeout = TimeSpan.FromSeconds(20),
-    };
+    private static HttpClient HttpClient => App.GetService<IHttpClientFactory>()!.CreateClient(HttpClientNames.AiProvider);
 
     /// <summary>
     /// 按服务商拉取模型名列表。失败时抛出带可读原因的异常，由调用方展示。

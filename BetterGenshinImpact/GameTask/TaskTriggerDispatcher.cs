@@ -722,6 +722,7 @@ namespace BetterGenshinImpact.GameTask
             if (_gameRect == RECT.Empty)
             {
                 _gameRect = new RECT(currentRect);
+                runtime.SystemInfo.CaptureAreaRect = currentRect;
             }
             else if (_gameRect != currentRect)
             {

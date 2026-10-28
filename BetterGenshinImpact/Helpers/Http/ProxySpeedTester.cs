@@ -1,16 +1,28 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Infrastructure.Network;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.Helpers.Http;
 
 public class ProxySpeedTester
 {
-    private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(15) };
+    /// <summary>
+    /// 测速客户端，每次请求时从工厂创建，超时 15 秒
+    /// </summary>
+    private static HttpClient HttpClient
+    {
+        get
+        {
+            var client = App.GetService<IHttpClientFactory>()!.CreateClient(HttpClientNames.Default);
+            client.Timeout = TimeSpan.FromSeconds(15);
+            return client;
+        }
+    }
 
     /// <summary>
     /// 代理地址已经无法使用在 babalae 的组织下
@@ -97,7 +109,7 @@ public class ProxySpeedTester
         try
         {
             // 模拟代理测试请求
-            var response = await _httpClient.GetAsync(url, cancellationToken);
+            var response = await HttpClient.GetAsync(url, cancellationToken);
             response.EnsureSuccessStatusCode();
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
             Debug.WriteLine("SpeedTester", $"Info: {url} - {response.StatusCode} - {content.Length} bytes");

@@ -4,6 +4,7 @@ using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.ResinPlan;
 using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
@@ -15,7 +16,7 @@ namespace BetterGenshinImpact.UnitTest.Pulonia;
 /// <summary>
 /// 单元测试使用的独立任务能力定义。真实的 <see cref="PuloniaSoloTaskExecutor"/> 要创建参数默认实例，
 /// 战斗类参数的基类会读取运行中应用的全局配置与本地化服务，测试进程里无法创建；
-/// 这里按执行器的同一规则建立定义：任务类型为 solo.{TaskId}，Schema 由参数类型生成并附带每周安排。
+/// 这里按执行器的同一规则建立定义：任务类型为 solo.{TaskId}，Schema 由参数类型生成，首领讨伐附带累计次数参数。
 /// </summary>
 internal static class PuloniaSoloTestDefinitions
 {
@@ -35,9 +36,6 @@ internal static class PuloniaSoloTestDefinitions
     {
         var schema = PuloniaSoloTaskSchema.Create(paramType);
         var properties = schema["properties"] as JObject ?? new JObject();
-        properties[PuloniaSoloTaskExecutor.WeekdayOverridesParameter] = new JObject { ["type"] = "object" };
-        if (taskId == AutoDomainTask.TaskId)
-            properties[PuloniaSoloTaskExecutor.WeekdayOverridesEnabledParameter] = new JObject { ["type"] = "boolean" };
         if (taskId == AutoBossTask.TaskId)
         {
             properties[PuloniaSoloTaskExecutor.BossTotalRunCountLimitParameter] = new JObject { ["type"] = "integer", ["minimum"] = 0 };
@@ -53,7 +51,6 @@ internal static class PuloniaSoloTestDefinitions
             RequiresGameSession = true,
             DefaultParameters = defaults,
             ParameterSchema = schema,
-            PublicParameters = properties.Properties().Select(p => p.Name).ToArray(),
             IsSoloTask = true,
             Group = group,
             Order = order,
@@ -77,10 +74,29 @@ internal static class PuloniaSoloTestDefinitions
         {
             ["boss_name"] = "", ["strategy_name"] = "根据队伍自动选择", ["combat_strategy_path"] = "根据队伍自动选择",
             ["team_name"] = "", ["resin_usage"] = Defaults(ResinCapabilities.Boss.Defaults), ["revive_retry_count"] = 3, ["timeout"] = 240
-        }, "树脂与战斗", 220, 4);
+        }, "树脂与战斗", 220);
 
     /// <summary>
-    /// 与注册表声明一致的一条龙候选任务：八个带 OneDragonOrder 的任务（故意打乱顺序），外加一个不进入默认清单的任务。
+    /// 体力计划的能力定义；子任务参数无法在测试中实例化，默认参数只给出常用字段。
+    /// </summary>
+    /// <returns>能力定义。</returns>
+    internal static PuloniaTaskDefinition ResinPlan() => Create(ResinPlanTask.TaskId, "体力计划", typeof(ResinPlanParam),
+        new JObject
+        {
+            ["max_resin"] = 0, ["craft_condensed_first"] = false,
+            ["domain"] = new JObject { ["enabled"] = true, ["param"] = new JObject
+                { ["resin_usage"] = Defaults(ResinCapabilities.Domain.Defaults), ["party_name"] = "", ["domain_name"] = "" } },
+            ["boss"] = new JObject { ["enabled"] = false, ["param"] = new JObject
+                { ["boss_name"] = "", ["resin_usage"] = Defaults(ResinPlanBudget.BossCapability.Defaults) } },
+            ["stygian"] = new JObject { ["enabled"] = true, ["param"] = new JObject { ["boss_num"] = 1 } },
+            ["ley_line"] = new JObject { ["enabled"] = true, ["param"] = new JObject
+                { ["country"] = "蒙德", ["ley_line_outcrop_type"] = "启示之花" } },
+            ["craft"] = Defaults(new CraftCondensedResinParam())
+        }, "树脂与战斗", 200, 2);
+
+    /// <summary>
+    /// 与注册表声明一致的一条龙候选任务：四个带 OneDragonOrder 的任务（故意打乱顺序），
+    /// 外加体力计划调度的五个任务及一个工具任务，它们不进入默认清单。
     /// </summary>
     /// <returns>能力定义数组。</returns>
     internal static PuloniaTaskDefinition[] OneDragonCandidates() =>
@@ -89,13 +105,14 @@ internal static class PuloniaSoloTestDefinitions
         Create(ReturnMainUiTask.TaskId, "返回主界面", typeof(NoParam), new JObject(), "工具", 430),
         Create(ClaimMailRewardsTask.TaskId, "领取邮件", typeof(NoParam), new JObject(), "日常奖励", 110, 1),
         Create(AutoDomainTask.TaskId, "自动秘境", typeof(AutoDomainParam),
-            new JObject { ["resin_usage"] = Defaults(ResinCapabilities.Domain.Defaults), ["party_name"] = "", ["domain_name"] = "" }, "树脂与战斗", 210, 3),
-        Create(GoToCraftingBenchTask.TaskId, "合成浓缩树脂", typeof(CraftCondensedResinParam), Defaults(new CraftCondensedResinParam()), "日常奖励", 120, 2),
+            new JObject { ["resin_usage"] = Defaults(ResinCapabilities.Domain.Defaults), ["party_name"] = "", ["domain_name"] = "" }, "树脂与战斗", 210),
+        Create(GoToCraftingBenchTask.TaskId, "合成浓缩树脂", typeof(CraftCondensedResinParam), Defaults(new CraftCondensedResinParam()), "日常奖励", 120),
         AutoBoss(),
+        ResinPlan(),
         Create(AutoStygianOnslaughtTask.TaskId, "自动幽境危战", typeof(AutoStygianOnslaughtParam),
-            new JObject { ["resin_usage"] = Defaults(ResinCapabilities.StygianOnslaught.Defaults), ["boss_num"] = 1, ["strategy_name"] = "根据队伍自动选择" }, "树脂与战斗", 230, 5),
+            new JObject { ["resin_usage"] = Defaults(ResinCapabilities.StygianOnslaught.Defaults), ["boss_num"] = 1, ["strategy_name"] = "根据队伍自动选择" }, "树脂与战斗", 230),
         Create(AutoLeyLineOutcropTask.TaskId, "自动地脉花", typeof(AutoLeyLineOutcropParam),
-            new JObject { ["resin_usage"] = Defaults(ResinCapabilities.LeyLineOutcrop.Defaults), ["country"] = "蒙德", ["ley_line_outcrop_type"] = "启示之花" }, "树脂与战斗", 240, 6),
+            new JObject { ["resin_usage"] = Defaults(ResinCapabilities.LeyLineOutcrop.Defaults), ["country"] = "蒙德", ["ley_line_outcrop_type"] = "启示之花" }, "树脂与战斗", 240),
         Create(ClaimDailyRewardsTask.TaskId, "领取每日奖励", typeof(DailyRewardsParam), Defaults(new DailyRewardsParam()), "日常奖励", 130, 7)
     ];
 }

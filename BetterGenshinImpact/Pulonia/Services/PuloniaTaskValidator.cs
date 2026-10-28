@@ -52,7 +52,7 @@ public static class PuloniaTaskValidator
             throw new PuloniaTaskValidationException(location, "修订号不能为负数，名称不能为空。");
         if (plan.RootTask is not { TaskType: "group", Source: null, RepeatCount: null })
             throw new PuloniaTaskValidationException(location, "根节点必须是无来源引用、无重复配置的 group。");
-        // 账号绑定、触发配置、预设选择等集合由 JSON 契约（Required.DisallowNull）和模型默认值保证非空，不再重复检查。
+        // 账号绑定、触发配置、共享设置等集合由 JSON 契约（Required.DisallowNull）和模型默认值保证非空，不再重复检查。
 
         // 相同 ID 不能出现在不同位置；同一对象挂在两个父节点下或形成循环时，第二次出现同样因 ID 重复被拒绝。
         var tasks = new Dictionary<string, PuloniaTask>(StringComparer.Ordinal);
@@ -65,14 +65,6 @@ public static class PuloniaTaskValidator
             ValidateId(account.AccountId, location + "/accounts");
             if (!accounts.Add(account.AccountId))
                 throw new PuloniaTaskValidationException(location, "账号不能重复绑定。");
-            foreach (var (taskId, presetId) in account.PresetSelections)
-            {
-                if (!tasks.TryGetValue(taskId, out var target))
-                    throw new PuloniaTaskValidationException(location, $"账号预设指向不存在的节点 {taskId}。");
-                if (!IsLeafType(target.TaskType))
-                    throw new PuloniaTaskValidationException(location, $"账号预设不能配置在控制节点 {taskId}。");
-                ValidateId(presetId, location + "/accounts/preset_selections");
-            }
         }
         var triggerIds = new HashSet<string>(StringComparer.Ordinal);
         foreach (var trigger in plan.Triggers)
@@ -134,42 +126,37 @@ public static class PuloniaTaskValidator
     }
 
     /// <summary>
-    /// 校验共享预设的身份和参数作用域。
+    /// 校验设置方案的身份和其中的共享设置。
     /// </summary>
-    public static void ValidatePreset(PuloniaTaskPreset preset)
+    public static void ValidateProfile(PuloniaSettingsProfile profile)
     {
-        ArgumentNullException.ThrowIfNull(preset);
-        ValidateId(preset.Id, "preset.id");
-        if (string.IsNullOrWhiteSpace(preset.Name) || preset.Revision < 0)
-            throw new PuloniaTaskValidationException(preset.Id, "预设名称不能为空，修订号不能为负数。");
-        ValidateScope(preset.TaskType, preset.ResourceId, preset.SchemaVersion, preset.Values, preset.Id);
+        ArgumentNullException.ThrowIfNull(profile);
+        ValidateId(profile.Id, "profile.id");
+        if (string.IsNullOrWhiteSpace(profile.Name) || profile.Revision < 0)
+            throw new PuloniaTaskValidationException(profile.Id, "方案名称不能为空，修订号不能为负数。");
+        ValidateSettings(profile.Settings, "profile/" + profile.Id + "/settings");
     }
 
     /// <summary>
-    /// 检查参数作用域；JS 自定义参数必须绑定资源，宿主公共设置可以跨资源复用。
+    /// 校验一组共享设置：每个键都必须是目录中的设置项，值符合设置项的值类型。
     /// </summary>
-    public static void ValidateScope(string type, string? resourceId, int version, JObject values, string location)
+    /// <param name="settings">节点或方案中的共享设置。</param>
+    /// <param name="location">报错位置。</param>
+    public static void ValidateSettings(JObject settings, string location)
     {
-        // values 由 JSON 契约（Required.DisallowNull）和模型默认值保证非空。
-        if (!IsLeafType(type) || version <= 0)
-            throw new PuloniaTaskValidationException(location, "参数作用域必须有具体能力类型和正整数版本。");
-        if (resourceId is not null && string.IsNullOrWhiteSpace(resourceId)
-            || type == "javascript" && resourceId is null
-                && (values.Count == 0 || values.Properties().Any(property => !PuloniaTaskCommonSettings.IsPathingParameter(property.Name))))
-            throw new PuloniaTaskValidationException(location, "资源标识不能为空；JS 自定义参数必须绑定具体资源。");
-        if (type == "javascript" && resourceId is null)
-            ValidateParameters(values, new JObject
-            {
-                ["type"] = "object",
-                ["properties"] = PuloniaTaskCommonSettings.CreateSchemaProperties("javascript"),
-                ["additionalProperties"] = false
-            }, location + "/values");
-        ValidateJsonValue(values, location + "/values");
-        if (type == "pathing") PuloniaCollectionCooldown.ValidateSettings(values[PuloniaCollectionCooldown.ParameterName], location + "/values/collection_cd");
+        ValidateJsonValue(settings, location);
+        foreach (var field in settings.Properties())
+        {
+            if (!PuloniaSettingCatalog.TryGet(field.Name, out var definition))
+                throw new PuloniaTaskValidationException(location + "/" + field.Name, "不存在的共享设置项。");
+            ValidateParameters(field.Value, definition.ValueSchema, location + "/" + field.Name);
+            if (definition.Key == PuloniaSettingCatalog.CollectionCooldownKey)
+                PuloniaCollectionCooldown.ValidateSettings(field.Value, location + "/" + field.Name);
+        }
     }
 
     /// <summary>
-    /// 检查执行器类型说明；通用 JS 能力可不绑定资源，具体预设仍由 <see cref="ValidateScope"/> 严格校验。
+    /// 检查执行器类型说明的作用域与默认参数。
     /// </summary>
     public static void ValidateDefinitionScope(string type, string? resourceId, int version, JObject? values, string location)
     {
@@ -190,7 +177,7 @@ public static class PuloniaTaskValidator
         var keys = new HashSet<(string, string?)>();
         foreach (var definition in definitions)
         {
-            if (definition is null || definition.ParameterSchema is null || definition.PublicParameters is null)
+            if (definition is null || definition.ParameterSchema is null || definition.SettingBindings is null)
                 throw new PuloniaTaskValidationException("definition", "类型说明不能为空。");
             var location = "definition/" + definition.TaskType;
             ValidateDefinitionScope(definition.TaskType, definition.ResourceId, definition.SchemaVersion,
@@ -198,6 +185,27 @@ public static class PuloniaTaskValidator
             if (!keys.Add((definition.TaskType, definition.ResourceId)))
                 throw new PuloniaTaskValidationException(location, "类型和资源说明重复注册。");
             ValidateParameterSchema(definition.ParameterSchema, location);
+            ValidateSettingBindings(definition, location);
+        }
+    }
+
+    /// <summary>
+    /// 检查能力的共享设置绑定：设置项存在，路径在默认参数中存在，且能力默认值等于设置项默认值，
+    /// 保证“未设置”与能力默认行为一致；默认值不同的设置项不能绑定。
+    /// </summary>
+    private static void ValidateSettingBindings(PuloniaTaskDefinition definition, string location)
+    {
+        foreach (var (key, path) in definition.SettingBindings)
+        {
+            if (!PuloniaSettingCatalog.TryGet(key, out var setting))
+                throw new PuloniaTaskValidationException(location, $"绑定了不存在的共享设置项 {key}。");
+            JToken? current = definition.DefaultParameters;
+            foreach (var segment in path.Split('.'))
+                current = (current as JObject)?[segment];
+            if (current is null)
+                throw new PuloniaTaskValidationException(location, $"共享设置项 {key} 的参数路径 {path} 不存在。");
+            if (!JToken.DeepEquals(current, setting.DefaultValue))
+                throw new PuloniaTaskValidationException(location, $"共享设置项 {key} 的默认值与能力默认值不一致。");
         }
     }
 
@@ -331,7 +339,7 @@ public static class PuloniaTaskValidator
     /// <summary>
     /// 递归检查编辑树；先登记节点 ID 再递归，同一对象挂在多处或形成循环时第二次出现即因 ID 重复被拒绝，不会栈溢出。
     /// </summary>
-    /// <param name="tasks">已检查的节点，按 ID 索引，供账号预设和触发目标查找。</param>
+    /// <param name="tasks">已检查的节点，按 ID 索引，供触发目标查找。</param>
     private static void ValidateTask(PuloniaTask task, string parent, Dictionary<string, PuloniaTask> tasks, int depth)
     {
         if (task is null || depth > MaxTreeDepth || tasks.Count >= MaxTreeNodes)
@@ -340,37 +348,23 @@ public static class PuloniaTaskValidator
         var location = parent + "/" + task.Id;
         if (!tasks.TryAdd(task.Id, task) || string.IsNullOrWhiteSpace(task.Name) || !IsTaskType(task.TaskType))
             throw new PuloniaTaskValidationException(location, "节点 ID 重复（含同一节点挂在多处或形成循环），或名称/类型无效。");
-        // 参数、子节点和公共参数集合由 JSON 契约（Required.DisallowNull）和模型默认值保证非空，不再重复检查。
+        // 参数、子节点和共享设置集合由 JSON 契约（Required.DisallowNull）和模型默认值保证非空，不再重复检查。
         ValidateJsonValue(task.Parameters, location + "/parameters");
-        if (task.TaskType == "pathing") PuloniaCollectionCooldown.ValidateSettings(task.Parameters[PuloniaCollectionCooldown.ParameterName], location + "/parameters/collection_cd");
+        // 叶子能否使用某个设置项取决于能力绑定，运行准备时检查；这里只检查设置项存在且值合法。
+        ValidateSettings(task.Settings, location + "/settings");
         ValidatePolicy(task.Policy, location);
-        if (task.PresetId is not null)
-            ValidateId(task.PresetId, location + "/preset_id");
+        if (task.ProfileId is not null)
+            ValidateId(task.ProfileId, location + "/profile_id");
         if (task.ResourceVersion is not null
             && (task.TaskType is not ("javascript" or "pathing" or "keymouse")
                 || !Regex.IsMatch(task.ResourceVersion, "^[0-9a-f]{64}\\z")))
             throw new PuloniaTaskValidationException(location,
                 "只有资源任务可以保存 64 位小写 SHA-256 资源版本。");
 
-        if (task.TaskType == "group")
-        {
-            if (task.Parameters.Count != 0 || task.PresetId is not null || task.Path is not null || task.Resource is not null
-                || task.ResourceVersion is not null)
-                throw new PuloniaTaskValidationException(location,
-                    "分组使用 parameter_overrides 提供公共参数，不使用叶子参数、预设、path 或资源版本。");
-        }
-        else if (task.ParameterOverrides.Count != 0)
-            throw new PuloniaTaskValidationException(location, "公共参数只能配置在 group 节点。");
-
-        var scopes = new HashSet<(string, string?, int)>();
-        foreach (var item in task.ParameterOverrides)
-        {
-            if (item is null)
-                throw new PuloniaTaskValidationException(location, "公共参数项不能为 null。");
-            ValidateScope(item.TaskType, item.ResourceId, item.SchemaVersion, item.Values, location);
-            if (!scopes.Add((item.TaskType, item.ResourceId, item.SchemaVersion)))
-                throw new PuloniaTaskValidationException(location, "同一节点不能重复配置相同参数作用域。");
-        }
+        if (task.TaskType == "group"
+            && (task.Parameters.Count != 0 || task.Path is not null || task.Resource is not null || task.ResourceVersion is not null))
+            throw new PuloniaTaskValidationException(location,
+                "分组通过共享设置向下传播配置，不使用任务参数、path 或资源版本。");
 
         if (task.Source is { } source)
         {

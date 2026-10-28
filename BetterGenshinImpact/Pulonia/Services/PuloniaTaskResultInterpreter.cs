@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using BetterGenshinImpact.GameTask.Common.Resin;
+using BetterGenshinImpact.GameTask.ResinPlan;
 using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
@@ -21,6 +23,11 @@ public static class PuloniaTaskResultInterpreter
     public const string RewardItemsKey = "rewards.items";
 
     /// <summary>
+    /// 体力计划的任务类型；结果按阶段展示。
+    /// </summary>
+    private static readonly string ResinPlanTaskType = PuloniaSoloTaskExecutor.ToTaskType(ResinPlanTask.TaskId);
+
+    /// <summary>
     /// Shell 执行器的关键结果字段；缺失时标记为未返回，不冒充退出码 0 或空输出。
     /// </summary>
     private static readonly (string Key, string Label)[] ShellKeyFields =
@@ -30,7 +37,7 @@ public static class PuloniaTaskResultInterpreter
     ];
 
     /// <summary>
-    /// 地图追踪采集 CD 的结果字段；只在执行器实际写入时展示。
+    /// 地图追踪路线 CD 的结果字段；只在执行器实际写入时展示。
     /// </summary>
     private static readonly string[] CollectionKeys =
     [
@@ -38,12 +45,16 @@ public static class PuloniaTaskResultInterpreter
         "collection_next_eligible_at", "collection_basis"
     ];
 
+    /// <summary>路线 CD 结果中以 UTC ISO 字符串保存的时间字段，展示时转换为本机时间。</summary>
+    private static readonly HashSet<string> CollectionTimeKeys =
+        new(["collection_last_success_at", "collection_next_eligible_at"], StringComparer.Ordinal);
+
     /// <summary>
     /// 各类型结果的核验边界，避免把脚本返回或路线结束解释为已领取/采集成功。
     /// </summary>
     public static string GetVerificationNote(string taskType) => taskType switch
     {
-        "pathing" => "文件级 CD 按整份文件执行成功估算采集完成，不记录部分成功；不代表逐点采集数量或实际收益。",
+        "pathing" => "路线 CD 按整份文件执行成功估算采集完成，不记录部分成功；不代表逐点采集数量或实际收益。",
         "javascript" => "旧 JS 脚本正常返回不等于游戏副作用已核验；仅展示执行器实际返回的数据与证据。",
         "keymouse" => "宏回放结束不等于游戏目标完成；录制文件本身没有结构化收益证据。",
         "shell" => "退出码表示进程结果；标准输出/错误每路最多保留 65536 字符，截断会明确标记。",
@@ -114,6 +125,8 @@ public static class PuloniaTaskResultInterpreter
                 }
                 break;
         }
+        if (result.TaskType == ResinPlanTaskType)
+            AddResinPlanFields(entries, handled, data);
         // 4. 其余字段全部保留，未登记的扩展键使用原字段名
         foreach (var property in data.Properties().Where(item => !handled.Contains(item.Name)))
             entries.Add(new PuloniaTaskResultEntry(PuloniaTaskFieldNames.GetDisplayName(property.Name),
@@ -122,8 +135,73 @@ public static class PuloniaTaskResultInterpreter
     }
 
     /// <summary>
+    /// 解释体力计划结果：预算一行，每个阶段一行“结果：说明”，奖励已在“奖励”项中合并展示。
+    /// </summary>
+    private static void AddResinPlanFields(List<PuloniaTaskResultEntry> entries, HashSet<string> handled, JObject data)
+    {
+        if (data["budget"] is JObject budget)
+        {
+            handled.Add("budget");
+            entries.Add(new PuloniaTaskResultEntry("体力预算", PuloniaTaskResultEntryKind.Value,
+                new JValue(FormatResinPlanBudget(budget))));
+        }
+
+        if (data["steps"] is not JArray steps)
+            return;
+        handled.Add("steps");
+        var index = 0;
+        foreach (var step in steps.OfType<JObject>())
+        {
+            index++;
+            entries.Add(new PuloniaTaskResultEntry($"第 {index} 步 · {step.Value<string>("name")}",
+                PuloniaTaskResultEntryKind.Value, new JValue(FormatResinPlanStep(step))));
+        }
+    }
+
+    /// <summary>格式化体力计划的预算行。</summary>
+    private static string FormatResinPlanBudget(JObject budget)
+    {
+        var max = budget.Value<int?>("max_resin") ?? 0;
+        var condensed = budget["start_condensed"] is { Type: JTokenType.Integer } value ? value.ToString() : "数量未识别";
+        var text = (max > 0 ? $"最多 {max} 点" : "全部可用树脂")
+                   + $"；开始时原粹 {budget.Value<int?>("start_original") ?? 0}、浓缩 {condensed}"
+                   + $"；领奖共消耗 {budget.Value<int?>("spent_points") ?? 0} 点";
+        var crafted = budget.Value<int?>("crafted_condensed") ?? 0;
+        return crafted > 0 ? text + $"；合成浓缩 {crafted} 个" : text;
+    }
+
+    /// <summary>格式化体力计划的一个阶段：结果、对象、说明与本步奖励。</summary>
+    private static string FormatResinPlanStep(JObject step)
+    {
+        var kind = step.Value<string>("kind") switch
+        {
+            nameof(SoloTaskResultKind.Succeeded) => "成功",
+            nameof(SoloTaskResultKind.Unverified) => "已执行，未核验",
+            nameof(SoloTaskResultKind.Partial) => "部分完成",
+            nameof(SoloTaskResultKind.Failed) => "失败",
+            _ => "跳过"
+        };
+        var target = step.Value<string>("target");
+        var text = string.IsNullOrWhiteSpace(target) ? kind : $"{kind}（{target}）";
+        var message = step.Value<string>("message");
+        if (!string.IsNullOrWhiteSpace(message))
+            text += "：" + message;
+        if (step.Value<bool?>("executed") != true)
+            return text;
+
+        // 只列出子任务实际识别到的奖励；不具备识别能力的任务明确标注，不推算收益
+        var rewards = (step.SelectToken("rewards.items") as JArray)?.OfType<JObject>()
+            .Select(item => $"{item.Value<string>("name")} ×{item.Value<int?>("count") ?? 0}").ToArray() ?? [];
+        if (rewards.Length > 0)
+            text += "；奖励：" + string.Join("、", rewards);
+        else if (step.Value<bool?>("rewards_recognized") != true && (step.SelectToken("resin.claim_count")?.Value<int?>() ?? 0) > 0)
+            text += "；此任务暂不识别奖励";
+        return text;
+    }
+
+    /// <summary>
     /// 解释地图追踪结果：实际执行的路线按 is_success 展示完整执行、失败原因与拾取统计；
-    /// 没有执行结果的节点（执行器异常、因采集 CD 跳过）只标记“路线完整执行”未返回，并展示 CD 字段。
+    /// 没有执行结果的节点（执行器异常、因路线 CD 跳过）只标记“路线完整执行”未返回，并展示 CD 字段。
     /// </summary>
     private static void AddPathingFields(List<PuloniaTaskResultEntry> entries, HashSet<string> handled, JObject data)
     {
@@ -149,7 +227,19 @@ public static class PuloniaTaskResultInterpreter
             // 执行器异常或因 CD 跳过时没有执行结果，明确标记未返回，不推断成功或失败。
             AddKeyField(entries, handled, data, "is_success", "路线完整执行");
         foreach (var key in CollectionKeys.Where(data.ContainsKey))
-            AddKeyField(entries, handled, data, key, PuloniaTaskFieldNames.GetDisplayName(key));
+        {
+            if (!CollectionTimeKeys.Contains(key))
+            {
+                AddKeyField(entries, handled, data, key, PuloniaTaskFieldNames.GetDisplayName(key));
+                continue;
+            }
+            // 时间字段按本机时间展示，与跳过消息和 CD 总览一致；没有时间时显示为“无”。
+            handled.Add(key);
+            var text = data.Value<string>(key);
+            entries.Add(new PuloniaTaskResultEntry(PuloniaTaskFieldNames.GetDisplayName(key), PuloniaTaskResultEntryKind.Value,
+                new JValue(DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.None, out var time)
+                    ? time.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) : "无")));
+        }
     }
 
     /// <summary>

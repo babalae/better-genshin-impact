@@ -30,7 +30,7 @@
 | `target_task_id` | 只运行计划中的某个子树；缺省运行整个计划 | 空 |
 | `account_id` | 普通计划的账号参数资料（不切号）；一条龙忽略此字段，使用配置绑定的运行账号 | 空 |
 
-时区只有上述三个固定偏移，不使用 `TimeZoneInfo`，也没有夏令时规则。触发器时区与采集 CD 使用的服务器时区（`PuloniaServerTime`）相互独立。`catch_up` 与 `window_minutes` 合并、界面以时间表单为主而把 Cron 收进高级，待定 D9。
+时区只有上述三个固定偏移，不使用 `TimeZoneInfo`，也没有夏令时规则。触发器时区与路线 CD 使用的服务器时区（`PuloniaServerTime`）相互独立。`catch_up` 与 `window_minutes` 合并、界面以时间表单为主而把 Cron 收进高级，待定 D9。
 
 ## Cron
 

@@ -132,14 +132,13 @@ public sealed class ResinHostIntegrationTests
         }
     }
 
-    /// <summary>通用工厂能转发服务，按日子字段变化只提交对应日期的 resin_usage，不固化其他默认值。</summary>
+    /// <summary>通用工厂能把弹窗服务转发给 resin_usage 卡片。</summary>
     [Fact]
-    public void GenericFactory_ForwardsDialogsAndKeepsSparseWeekdayOverrides()
+    public void GenericFactory_ForwardsDialogs()
     {
         var properties = new JObject
         {
-            ["resin_usage"] = PuloniaSoloTaskSchema.Create(typeof(ResinUsage)),
-            ["weekday_overrides"] = new JObject { ["type"] = "object" }
+            ["resin_usage"] = PuloniaSoloTaskSchema.Create(typeof(ResinUsage))
         };
         var definition = new PuloniaTaskDefinition
         {
@@ -147,19 +146,6 @@ public sealed class ResinHostIntegrationTests
         };
         var fields = PuloniaTaskSettingsEditorViewModel.CreateFields(definition, new(), new DialogStub());
         Assert.True(fields.Single(field => field.Name == "resin_usage").Resin!.CanEdit);
-        var week = fields.Single(field => field.Name == "weekday_overrides");
-        Assert.False(week.HasChanges());
-        var day = week.Children[1];
-        var resin = day.Children.Single(field => field.Name == "resin_usage");
-        var next = resin.Resin!.Value;
-        next.RunCount = 8;
-        resin.Resin.Reset(next);
-        Assert.True(week.HasChanges());
-        var value = Assert.IsType<JObject>(week.BuildValue());
-        Assert.Single(value);
-        var changedDay = Assert.IsType<JObject>(value["1"]);
-        Assert.Single(changedDay);
-        Assert.Equal(8, changedDay["resin_usage"]!.Value<int>("run_count"));
     }
 
     /// <summary>入口与配置只做整体替换，两个入口相互刷新，一次变化只产生一次配置通知，不会递归。</summary>

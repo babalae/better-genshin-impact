@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Infrastructure.Network;
 using System;
 using System.IO;
 using System.Linq;
@@ -121,7 +122,7 @@ public partial class ScriptRepoUpdater
                 {
                     // 版本和远端都一致时只查询分支 SHA，不重复下载同一内容。
                     var current = repository.Head.Tip?.Sha;
-                    var next = repository.Network.ListReferences(url, CreateCredentialsHandler())
+                    var next = repository.Network.ListReferences(url, CreateCredentialsHandler(), GitProxy.Create(AppProxy, url))
                         .FirstOrDefault(r => r.CanonicalName == "refs/heads/" + branch)?.TargetIdentifier;
                     ct.ThrowIfCancellationRequested();
                     if (next is null) throw new IOException("远端不存在分支：" + branch);

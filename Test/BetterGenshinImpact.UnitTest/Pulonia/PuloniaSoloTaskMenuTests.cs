@@ -30,7 +30,7 @@ public sealed class PuloniaSoloTaskMenuTests : IDisposable
         Assert.Equal(new[]
         {
             "领取邮件", "合成浓缩树脂", "领取每日奖励", "领取尘歌壶奖励", "-",
-            "自动秘境", "自动首领讨伐", "自动幽境危战", "自动地脉花", "-",
+            "体力计划", "自动秘境", "自动首领讨伐", "自动幽境危战", "自动地脉花", "-",
             "返回主界面"
         }, menu.Select(item => item.IsSeparator ? "-" : item.Header));
         Assert.All(menu.Where(item => item.IsSeparator), item => Assert.Null(item.TaskType));

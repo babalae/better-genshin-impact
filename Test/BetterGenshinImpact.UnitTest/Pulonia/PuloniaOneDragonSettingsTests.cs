@@ -105,62 +105,6 @@ public sealed class PuloniaOneDragonSettingsTests
         Assert.Equal(JTokenType.Null, field.BuildValue()!.Type);
     }
 
-    /// <summary>
-    /// weekday_overrides 打开设置不产生变更，仅被修改的日期生成覆盖项。
-    /// </summary>
-    [Fact]
-    public void WeekdayOverrides_OnlyModifiedDateProducesOverride()
-    {
-        // 生效值提供各日期的默认内容，空覆盖值表示尚未修改任何日期。
-        var allProperties = new JObject
-        {
-            ["domain_name"] = new JObject { ["type"] = "string" },
-            ["resin_usage"] = PuloniaSoloTaskSchema.Create(typeof(ResinUsage))
-        };
-        var effectiveValues = new JObject { ["domain_name"] = "测试秘境", ["resin_usage"] = JObject.Parse(SoloTaskJson.Serialize(new ResinUsage { Mode = ResinUsageMode.RunCount, RunCount = 2 })) };
-        var schema = PuloniaOneDragonSettingChoices.WeekdaySchema(allProperties, effectiveValues, DomainTaskType);
-
-        var field = new PuloniaOneDragonParameterFieldViewModel("weekday_overrides", schema, new JObject());
-        Assert.False(field.HasChanges());
-        Assert.True(JToken.DeepEquals(new JObject(), field.BuildValue()));
-
-        field.Children[1].Children.First(item => item.Name == "enabled").BooleanValue = false;
-
-        var built = Assert.IsType<JObject>(field.BuildValue());
-        var overrideItem = Assert.Single(built.Properties());
-        Assert.Equal("1", overrideItem.Name);
-        Assert.False(built["1"]!["enabled"]!.Value<bool>());
-        // 仅关闭当天不能把基础秘境和次数冻结为当天的显式覆盖。
-        Assert.Single(Assert.IsType<JObject>(built["1"]));
-    }
-
-    /// <summary>修改已有日期的一项参数时，保留原覆盖，但不写入未修改的基础默认值。</summary>
-    [Fact]
-    public void WeekdayOverrides_EditingOneFieldKeepsRemainingFieldsInherited()
-    {
-        var properties = new JObject
-        {
-            ["party_name"] = new JObject { ["type"] = "string" },
-            ["resin_usage"] = PuloniaSoloTaskSchema.Create(typeof(ResinUsage))
-        };
-        var values = new JObject { ["party_name"] = "基础队伍", ["resin_usage"] = JObject.Parse(SoloTaskJson.Serialize(new ResinUsage { Mode = ResinUsageMode.RunCount, RunCount = 2 })) };
-        var original = new JObject { ["1"] = new JObject { ["enabled"] = false } };
-        var field = new PuloniaOneDragonParameterFieldViewModel("weekday_overrides",
-            PuloniaOneDragonSettingChoices.WeekdaySchema(properties, values, DomainTaskType), original);
-        var resin = field.Children[1].Children.Single(item => item.Name == "resin_usage").Resin!;
-        var next = resin.Value;
-        next.RunCount = 3;
-        resin.Reset(next);
-
-        var built = Assert.IsType<JObject>(field.BuildValue());
-        var monday = Assert.IsType<JObject>(built["1"]);
-        Assert.Equal(2, monday.Count);
-        Assert.False(monday.Value<bool>("enabled"));
-        Assert.Equal(3, monday["resin_usage"]!.Value<int>("run_count"));
-        Assert.False(monday.ContainsKey("party_name"));
-        Assert.True(JToken.DeepEquals(new JObject { ["enabled"] = false }, original["1"]));
-    }
-
     /// <summary>旧优先级字段不再提供专用选项，使用顺序由公共模型固定。</summary>
     [Fact]
     public void ResinPriority_NoLongerHasSpecialChoices()

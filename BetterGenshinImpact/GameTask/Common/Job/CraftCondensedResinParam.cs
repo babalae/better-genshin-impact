@@ -18,6 +18,12 @@ public class CraftCondensedResinParam
     public int MinResinToKeep { get; set; }
 
     /// <summary>
+    /// 指定本次合成的份数；为 null 时按 <see cref="MinResinToKeep"/> 计算。
+    /// 指定时忽略保留量，实际份数不超过浓缩树脂持有上限的剩余空位和当前原粹树脂可合成的份数。
+    /// </summary>
+    public int? CraftCount { get; set; }
+
+    /// <summary>
     /// 按原逻辑读取当前选中一条龙配置中的保留树脂数，生成参数。供 JS 入口保持原有行为。
     /// </summary>
     /// <param name="config">配置根，提供当前选中的一条龙配置名</param>

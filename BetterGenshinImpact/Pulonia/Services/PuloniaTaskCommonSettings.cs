@@ -11,68 +11,72 @@ using Newtonsoft.Json.Linq;
 namespace BetterGenshinImpact.Pulonia.Services;
 
 /// <summary>
-/// 将现有配置组的运行设置映射为可继承的 Pulonia 参数，保留原配置模型的序列化约定。
+/// 地图追踪、JS 与 Shell 宿主参数和旧配置组模型之间的互转，保留原配置模型的序列化约定。
+/// 哪些参数可由共享设置覆盖由 <see cref="PuloniaSettingCatalog"/> 与能力绑定决定。
 /// </summary>
 public static class PuloniaTaskCommonSettings
 {
     /// <summary>
-    /// 旧调度器专属字段由 Pulonia 自己的调度与账本负责，不作为游戏执行参数传递。
+    /// 条件选队参数名：fixed 使用参数中的队伍与角色位，condition 按地图追踪条件配置选择。
     /// </summary>
-    private static readonly HashSet<string> LegacySchedulingProperties =
+    public const string PartySourceParameter = "party_source";
+
+    /// <summary>
+    /// 不作为 Pulonia 参数的旧字段：旧调度字段由 Pulonia 自己的调度与账本负责；
+    /// “启用本组配置”总开关在“未设置即继承”的模型中没有意义，执行时固定开启；两个开关字段没有读取方。
+    /// </summary>
+    private static readonly HashSet<string> ExcludedProperties =
     [
         nameof(PathingPartyConfig.SkipDuring), nameof(PathingPartyConfig.HideOnRepeat),
-        nameof(PathingPartyConfig.TaskCycleConfig), nameof(PathingPartyConfig.OnlyInTeleportRecover)
+        nameof(PathingPartyConfig.TaskCycleConfig), nameof(PathingPartyConfig.OnlyInTeleportRecover),
+        nameof(PathingPartyConfig.Enabled), nameof(PathingPartyConfig.AutoFightEnabled),
+        nameof(PathingPartyConfig.JsScriptUseEnabled), nameof(PathingPartyConfig.SoloTaskUseFightEnabled)
     ];
 
     /// <summary>
-    /// 可持久化的行走、战斗和食物设置；忽略运行标记、只读选项和旧调度字段。
+    /// 可持久化的行走、战斗和食物设置；忽略运行标记、只读选项、总开关和旧调度字段。
     /// </summary>
     private static readonly IReadOnlyDictionary<string, PropertyInfo> PathingProperties =
         GetSerializableProperties(typeof(PathingPartyConfig))
-            .Where(property => !LegacySchedulingProperties.Contains(property.Name))
-            .ToDictionary(property => property.Name == nameof(PathingPartyConfig.Enabled)
-                ? "pathing_enabled"
-                : JsonNamingPolicy.SnakeCaseLower.ConvertName(property.Name), StringComparer.Ordinal);
+            .Where(property => !ExcludedProperties.Contains(property.Name))
+            .ToDictionary(property => JsonNamingPolicy.SnakeCaseLower.ConvertName(property.Name), StringComparer.Ordinal);
 
     /// <summary>
-    /// Shell 公共参数名，与命令内容分开继承。
+    /// Shell 宿主参数名，与命令内容分开。
     /// </summary>
-    private static readonly HashSet<string> ShellParameterNames =
-        ["shell_config_enabled", "shell_disabled", "shell_timeout_seconds", "shell_no_window", "shell_output"];
-
-    /// <summary>
-    /// 判断字段是否属于跨 JS 资源安全复用的宿主设置；脚本 settings 不属于此集合。
-    /// </summary>
-    public static bool IsPathingParameter(string name)
-        => PathingProperties.ContainsKey(name) || name == "skip_party_switch";
-
-    /// <summary>
-    /// 判断字段是否属于指定任务类型的公共配置表单。
-    /// </summary>
-    public static bool IsCommonParameter(string taskType, string name)
-        => taskType == "shell" ? ShellParameterNames.Contains(name)
-            : taskType is "pathing" or "javascript" && IsPathingParameter(name);
+    private static readonly string[] ShellParameterNames =
+        ["shell_disabled", "shell_timeout_seconds", "shell_no_window", "shell_output"];
 
     /// <summary>
     /// 创建能力默认值；返回独立对象，避免定义、编辑器与执行实例共享可变配置。
     /// </summary>
     public static JObject CreateDefaults(string taskType)
     {
+        if (taskType == "shell")
+        {
+            // 默认值与改造前“未启用 Shell 配置”时的实际行为一致：不额外限时、隐藏窗口、不写实时日志、不跳过。
+            return new JObject
+            {
+                ["shell_disabled"] = false,
+                ["shell_timeout_seconds"] = 0,
+                ["shell_no_window"] = true,
+                ["shell_output"] = false
+            };
+        }
         var defaults = ToParameters(taskType, new ScriptGroupConfig());
-        // 采集 CD 只属于 Pulonia 地图追踪，不传给旧配置或 JS 的行走设置。
+        // 路线 CD 只属于 Pulonia 地图追踪，不传给旧配置或 JS 的行走设置。
         if (taskType == "pathing") defaults[PuloniaCollectionCooldown.ParameterName] = PuloniaCollectionCooldown.CreateDefaults();
         return defaults;
     }
 
     /// <summary>
-    /// 将强类型设置转为顶层字段，以便现有参数合并、来源展示及撤销直接复用。
+    /// 将强类型设置转为顶层字段，供导入和默认值生成复用。
     /// </summary>
     public static JObject ToParameters(string taskType, ScriptGroupConfig config)
     {
         if (taskType == "shell")
             return new JObject
             {
-                ["shell_config_enabled"] = config.EnableShellConfig,
                 ["shell_disabled"] = config.ShellConfig.Disable,
                 ["shell_timeout_seconds"] = config.ShellConfig.Timeout,
                 ["shell_no_window"] = config.ShellConfig.NoWindow,
@@ -85,24 +89,25 @@ public static class PuloniaTaskCommonSettings
         foreach (var (name, property) in PathingProperties)
             result[name] = serialized[property.Name]!.DeepClone();
         result["skip_party_switch"] = config.PathingConfig.SkipPartySwitch;
+        result[PartySourceParameter] = config.PathingConfig.PartyByCondition ? "condition" : "fixed";
         return result;
     }
 
     /// <summary>
-    /// 从有效参数恢复表单或执行器使用的独立配置，未提供的字段保留类型默认值。
+    /// 从有效参数恢复执行器使用的独立配置，未提供的字段保留类型默认值；总开关固定开启。
     /// </summary>
     public static ScriptGroupConfig FromParameters(string taskType, JObject parameters)
     {
         if (taskType == "shell")
             return new ScriptGroupConfig
             {
-                EnableShellConfig = parameters.Value<bool?>("shell_config_enabled") ?? false,
+                EnableShellConfig = true,
                 ShellConfig = new ShellConfig
                 {
                     Disable = parameters.Value<bool?>("shell_disabled") ?? false,
-                    Timeout = parameters.Value<int?>("shell_timeout_seconds") ?? 60,
+                    Timeout = parameters.Value<int?>("shell_timeout_seconds") ?? 0,
                     NoWindow = parameters.Value<bool?>("shell_no_window") ?? true,
-                    Output = parameters.Value<bool?>("shell_output") ?? true
+                    Output = parameters.Value<bool?>("shell_output") ?? false
                 }
             };
 
@@ -113,23 +118,29 @@ public static class PuloniaTaskCommonSettings
                 serialized[property.Name] = value.DeepClone();
         }
         var pathing = JsonSerializer.Deserialize<PathingPartyConfig>(serialized.ToString())!;
+        // 战斗与行走配置一律来自参数，不再因总开关回落全局配置；条件选队只决定队伍与角色位。
+        pathing.Enabled = true;
+        pathing.AutoFightEnabled = true;
         pathing.SkipPartySwitch = parameters.Value<bool?>("skip_party_switch") ?? false;
+        pathing.PartyByCondition = parameters.Value<string>(PartySourceParameter) == "condition";
         return new ScriptGroupConfig { PathingConfig = pathing };
     }
 
     /// <summary>
-    /// 为公共参数生成与现有强类型模型一致的 Schema，嵌套战斗设置同样接受类型检查。
+    /// 为宿主参数生成与现有强类型模型一致的 Schema，嵌套战斗设置同样接受类型检查。
     /// </summary>
     public static JObject CreateSchemaProperties(string taskType)
     {
         if (taskType == "shell")
-            return new JObject(ShellParameterNames.Select(name => new JProperty(name,
-                new JObject { ["type"] = name == "shell_timeout_seconds" ? "integer" : "boolean" })));
+            return new JObject(ShellParameterNames.Select(name => new JProperty(name, name == "shell_timeout_seconds"
+                ? new JObject { ["type"] = "integer", ["minimum"] = 0 }
+                : new JObject { ["type"] = "boolean" })));
 
         var properties = new JObject();
         foreach (var (name, property) in PathingProperties)
             properties[name] = CreatePropertySchema(property);
         properties["skip_party_switch"] = new JObject { ["type"] = "boolean" };
+        properties[PartySourceParameter] = new JObject { ["type"] = "string", ["enum"] = new JArray("fixed", "condition") };
         return properties;
     }
 

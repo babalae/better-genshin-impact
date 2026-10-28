@@ -42,7 +42,7 @@ public sealed partial class PuloniaTaskService
         public string SnapshotJson { get; }
 
         /// <summary>
-        /// 快照固定的账号是否为需要切换的指定账号（不是默认账号）；决定采集 CD 是否按核验 UID 隔离。
+        /// 快照固定的账号是否为需要切换的指定账号（不是默认账号）；决定路线 CD 是否按核验 UID 隔离。
         /// </summary>
         public bool UsesSwitchedAccount { get; }
 

@@ -54,9 +54,10 @@ public sealed class PuloniaTaskDefinition
     public JObject ParameterSchema { get; init; } = new() { ["type"] = "object" };
 
     /// <summary>
-    /// 允许由计划引用节点覆盖的公共参数名；其余参数只能在被引用计划内配置。
+    /// 本能力使用的共享设置：设置项 ID 到参数路径（点分隔）。未绑定的设置项对本能力不生效；
+    /// 被绑定覆盖的顶层参数不接受节点任务参数或调用覆盖直接写入。
     /// </summary>
-    public IReadOnlyList<string> PublicParameters { get; init; } = [];
+    public IReadOnlyDictionary<string, string> SettingBindings { get; init; } = new Dictionary<string, string>();
 
     /// <summary>
     /// 是否是由独立任务注册表提供的能力；添加菜单把它们收拢到“独立任务”子菜单。

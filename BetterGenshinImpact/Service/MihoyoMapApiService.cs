@@ -4,7 +4,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.Helpers.Http;
+using BetterGenshinImpact.Infrastructure.Network;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.Model.MihoyoMap.Requests;
 using BetterGenshinImpact.Service.Model.MihoyoMap.Responses;
@@ -14,15 +14,23 @@ namespace BetterGenshinImpact.Service
 {
     public class MihoyoMapApiService : IMihoyoMapApiService
     {
-        private readonly HttpClient _httpClient;
+        /// <summary>
+        /// 命名 HttpClient 工厂，每次请求创建游戏接口客户端
+        /// </summary>
+        private readonly IHttpClientFactory _httpClientFactory;
         private const string TreeEndpoint = "https://waf-api-takumi.mihoyo.com/common/map_user/ys_obc/v2/map/label/tree";
         private const string ListEndpoint = "https://waf-api-takumi.mihoyo.com/common/map_user/ys_obc/v3/map/point/list";
         private const string InfoEndpoint = "https://waf-api-takumi.mihoyo.com/common/map_user/ys_obc/v1/map/point/info";
 
-        public MihoyoMapApiService()
+        public MihoyoMapApiService(IHttpClientFactory httpClientFactory)
         {
-            _httpClient = HttpClientFactory.GetCommonSendClient();
+            _httpClientFactory = httpClientFactory;
         }
+
+        /// <summary>
+        /// 游戏接口客户端；浏览器 UA 与 Referer 在每个请求上设置
+        /// </summary>
+        private HttpClient HttpClient => _httpClientFactory.CreateClient(HttpClientNames.GameApi);
 
         private static HttpRequestMessage CreateRequest(HttpMethod method, string url)
         {
@@ -37,7 +45,7 @@ namespace BetterGenshinImpact.Service
         {
             var url = $"{TreeEndpoint}?map_id={request.MapId}&app_sn={Uri.EscapeDataString(request.AppSn)}&lang={Uri.EscapeDataString(request.Lang)}";
             using var httpRequest = CreateRequest(HttpMethod.Get, url);
-            using var resp = await _httpClient.SendAsync(httpRequest, ct);
+            using var resp = await HttpClient.SendAsync(httpRequest, ct);
             resp.EnsureSuccessStatusCode();
             var json = await resp.Content.ReadAsStringAsync(ct);
             return JsonConvert.DeserializeObject<ApiResponse<LabelTreeData>>(json)!;
@@ -48,7 +56,7 @@ namespace BetterGenshinImpact.Service
             var url = $"{InfoEndpoint}?map_id={request.MapId}&point_id={request.PointId}&app_sn={Uri.EscapeDataString(request.AppSn)}&lang={Uri.EscapeDataString(request.Lang)}";
             using var httpRequest = CreateRequest(HttpMethod.Get, url);
             httpRequest.Headers.Add("x-rpc-map_version", "4.5");
-            using var resp = await _httpClient.SendAsync(httpRequest, ct);
+            using var resp = await HttpClient.SendAsync(httpRequest, ct);
             resp.EnsureSuccessStatusCode();
             var json = await resp.Content.ReadAsStringAsync(ct);
             return JsonConvert.DeserializeObject<ApiResponse<PointInfoData>>(json)!;
@@ -61,7 +69,7 @@ namespace BetterGenshinImpact.Service
                 : string.Empty;
             var url = $"{ListEndpoint}?map_id={request.MapId}&app_sn={Uri.EscapeDataString(request.AppSn)}&lang={Uri.EscapeDataString(request.Lang)}&label_ids={Uri.EscapeDataString(labelIds)}";
             using var httpRequest = CreateRequest(HttpMethod.Get, url);
-            using var resp = await _httpClient.SendAsync(httpRequest, ct);
+            using var resp = await HttpClient.SendAsync(httpRequest, ct);
             resp.EnsureSuccessStatusCode();
             var json = await resp.Content.ReadAsStringAsync(ct);
             return JsonConvert.DeserializeObject<ApiResponse<PointListData>>(json)!;

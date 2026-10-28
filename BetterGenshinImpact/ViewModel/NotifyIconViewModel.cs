@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Media;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.ChildSession;
 using BetterGenshinImpact.Service.Instance;
@@ -21,22 +22,115 @@ using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.ViewModel;
 
-public partial class NotifyIconViewModel : ObservableObject
+public partial class NotifyIconViewModel : ObservableObject, IDisposable
 {
     private readonly ChildSessionService _childSessionService;
+    /// <summary>
+    /// 为当前托盘入口提供实例名称、角色和强调色。
+    /// </summary>
+    private readonly InstanceVisualIdentity _instanceVisualIdentity;
     /// <summary>
     /// 提供主实例当前连接的 WebView2 子实例状态。
     /// </summary>
     private readonly InstanceService _instanceService;
+    /// <summary>
+    /// 退出前确认是否有下载正在进行。
+    /// </summary>
+    private readonly DownloadCenterViewModel _downloadCenter;
+    /// <summary>
+    /// 标记 ViewModel 已释放，防止退出阶段处理迟到的实例事件。
+    /// </summary>
+    private bool _disposed;
 
-    public bool IsChildSessionEntryVisible => InstanceBootstrap.Current.Context.IsRoot;
+    /// <summary>
+    /// 子实例始终展示身份；主实例仅在至少一个子实例在线时展示身份。
+    /// </summary>
+    [ObservableProperty]
+    private bool _isInstanceIdentityVisible;
+
+    /// <summary>
+    /// 当前托盘菜单是否可以展示主实例专属的维护与实例管理入口。
+    /// </summary>
+    public bool IsPrimaryInstance => _instanceVisualIdentity.IsPrimary;
+
+    /// <summary>
+    /// 当前实例在托盘菜单顶部展示的名称。
+    /// </summary>
+    public string InstanceDisplayName => _instanceVisualIdentity.DisplayName;
+
+    /// <summary>
+    /// 根据实例角色明确退出动作的作用范围。
+    /// </summary>
+    public string ExitMenuText => _instanceVisualIdentity.IsPrimary ? "退出 BetterGI" : "退出此实例";
+
+    /// <summary>
+    /// 当前实例在托盘菜单中使用的强调色画刷。
+    /// </summary>
+    public Brush InstanceAccentBrush => _instanceVisualIdentity.AccentBrush;
 
     public NotifyIconViewModel(
         ChildSessionService childSessionService,
-        InstanceService instanceService)
+        InstanceService instanceService,
+        InstanceVisualIdentity instanceVisualIdentity,
+        DownloadCenterViewModel downloadCenter)
     {
+        _downloadCenter = downloadCenter;
         _childSessionService = childSessionService;
         _instanceService = instanceService;
+        _instanceVisualIdentity = instanceVisualIdentity;
+        IsInstanceIdentityVisible = !instanceVisualIdentity.IsPrimary
+                                    || instanceService.GetConnectedChildInstances().Length > 0;
+
+        if (instanceVisualIdentity.IsPrimary)
+        {
+            _instanceService.ConnectedInstancesChanged += OnConnectedInstancesChanged;
+        }
+    }
+
+    /// <summary>
+    /// 释放主实例托盘菜单持有的实例状态事件订阅。
+    /// </summary>
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _instanceService.ConnectedInstancesChanged -= OnConnectedInstancesChanged;
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// 在实例连接变化后刷新托盘菜单中的主实例身份入口。
+    /// </summary>
+    private void OnConnectedInstancesChanged(object? sender, EventArgs e)
+    {
+        var dispatcher = Application.Current?.Dispatcher;
+        if (_disposed || dispatcher is null || dispatcher.HasShutdownStarted)
+        {
+            return;
+        }
+
+        if (dispatcher.CheckAccess())
+        {
+            RefreshInstanceIdentityVisibility();
+            return;
+        }
+
+        _ = dispatcher.BeginInvoke(new Action(RefreshInstanceIdentityVisibility));
+    }
+
+    /// <summary>
+    /// 根据主实例当前的子实例连接快照刷新身份入口可见性。
+    /// </summary>
+    private void RefreshInstanceIdentityVisibility()
+    {
+        if (!_disposed)
+        {
+            IsInstanceIdentityVisible = _instanceService.GetConnectedChildInstances().Length > 0;
+        }
     }
 
     [RelayCommand]
@@ -64,6 +158,13 @@ public partial class NotifyIconViewModel : ObservableObject
     [RelayCommand]
     public async Task ExitAsync()
     {
+        // 子实例只退出当前进程；主实例退出前需要保护由其提供的共享能力。
+        if (!_instanceVisualIdentity.IsPrimary)
+        {
+            await SaveAndShutdownAsync();
+            return;
+        }
+
         // WebView2 实例依赖主实例提供 IPC 服务，应先关闭网页版实例再退出主实例。
         if (_instanceService.HasConnectedWebViewInstance())
         {
@@ -81,7 +182,22 @@ public partial class NotifyIconViewModel : ObservableObject
             return;
         }
 
+        await SaveAndShutdownAsync();
+    }
+
+    /// <summary>
+    /// 确认下载并保存配音草稿、共享配置后，关闭当前实例进程。
+    /// </summary>
+    private async Task SaveAndShutdownAsync()
+    {
         if (!await QuestVoiceSettingsExitGuard.PrepareAsync()) return;
+        // 有下载正在进行时确认退出，已下载的部分保留供下次续传。
+        // 不让尚未保存的配音草稿消耗本次下载退出确认。
+        if (!_downloadCenter.ConfirmExit())
+        {
+            return;
+        }
+
         App.GetService<IConfigService>()?.Save();
         Application.Current.Shutdown();
     }

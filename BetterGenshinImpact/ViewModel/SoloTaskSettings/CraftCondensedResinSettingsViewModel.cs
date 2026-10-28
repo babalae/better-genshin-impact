@@ -11,7 +11,8 @@ namespace BetterGenshinImpact.ViewModel.SoloTaskSettings;
 public partial class CraftCondensedResinSettingsViewModel : SoloTaskSettingsViewModel
 {
     /// <inheritdoc />
-    public override string[] EditedParameterNames => ["country", "min_resin_to_keep"];
+    /// <remarks>craft_count 由体力计划按预算计算，界面不提供编辑；列在这里使其不显示为通用卡片，并保持原值。</remarks>
+    public override string[] EditedParameterNames => ["country", "min_resin_to_keep", "craft_count"];
 
     /// <summary>可合成的国家选项，对应路线文件“合成台_{国家}.json”。</summary>
     public static readonly string[] CountryChoices = ["蒙德", "璃月", "稻妻", "枫丹"];

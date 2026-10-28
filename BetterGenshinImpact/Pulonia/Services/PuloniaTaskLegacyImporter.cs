@@ -52,7 +52,6 @@ public sealed class PuloniaTaskLegacyImporter
         foreach (var file in files.Distinct(StringComparer.OrdinalIgnoreCase))
         {
             ct.ThrowIfCancellationRequested();
-            var presetStart = result.Presets.Count;
             try
             {
                 var json = await ReadSourceAsync(file, result, ct).ConfigureAwait(false);
@@ -61,16 +60,16 @@ public sealed class PuloniaTaskLegacyImporter
                 var plan = new PuloniaTaskPlan { Name = name, RootTask = new PuloniaTask { Name = name }, Description = "导入自 " + Path.GetFullPath(file) };
                 if (Get(data, "root_task") is JObject root)
                 {
-                    plan.RootTask = ConvertGear(root, result, file + "/root_task", 0, refCount: new int[1]);
+                    plan.RootTask = ConvertGear(root, config, result, file + "/root_task", 0, refCount: new int[1]);
                     if (plan.RootTask.TaskType != "group" || plan.RootTask.Source is not null)
                         plan.RootTask = new PuloniaTask { Name = name, Children = [plan.RootTask] };
                     plan.RootTask.RepeatCount = null;
-                    ApplyGroupConfig(Get(data, "group_config") as JObject, plan.RootTask, result, file);
+                    ApplyGroupConfig(Get(data, "group_config") as JObject, plan.RootTask, config, result, file);
                     if (data.Properties().Any(p => Normalize(p.Name).Contains("trigger") || Normalize(p.Name).Contains("schedule")))
                         result.Differences.Add(file + "：d-v3 的 Quartz 调度不自动启用，请在触发方式中重建并核对。");
                 }
                 else if (Get(data, "projects") is JArray)
-                    plan.RootTask = ConvertGroup(data, result, file);
+                    plan.RootTask = ConvertGroup(data, config, result, file);
                 else if (Get(data, "task_enabled_list") is JObject)
                     await ConvertDragonAsync(json, plan, config, result, file, ct).ConfigureAwait(false);
                 else throw new InvalidOperationException("未识别为旧配置组、一条龙或 d-v3 root_task 格式。");
@@ -82,7 +81,6 @@ public sealed class PuloniaTaskLegacyImporter
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                result.Presets.RemoveRange(presetStart, result.Presets.Count - presetStart);
                 result.Differences.Add($"{file}：未导入，{ex.Message}");
             }
         }
@@ -99,10 +97,10 @@ public sealed class PuloniaTaskLegacyImporter
     }
 
     /// <summary>旧配置组转换为可编辑分组，项目顺序沿用旧 Index 排序。</summary>
-    private PuloniaTask ConvertGroup(JObject data, PuloniaTaskImportResult result, string location)
+    private PuloniaTask ConvertGroup(JObject data, AllConfig config, PuloniaTaskImportResult result, string location)
     {
         var group = new PuloniaTask { Name = Value<string>(data, "name") ?? "导入配置组" };
-        ApplyGroupConfig(Get(data, "config") as JObject, group, result, location);
+        ApplyGroupConfig(Get(data, "config") as JObject, group, config, result, location);
         var projects = Get(data, "projects") as JArray ?? throw new InvalidOperationException("缺少 projects。");
         if (projects.Count > 10000) throw new InvalidOperationException("配置组超过一万个节点。");
         if (projects.Any(p => p is not JObject)) throw new InvalidOperationException("projects 含非对象项，不能丢弃部分任务。");
@@ -139,18 +137,34 @@ public sealed class PuloniaTaskLegacyImporter
         return group;
     }
 
-    /// <summary>提取旧分组可表达的公共参数，旧调度字段单独列出。</summary>
-    private static void ApplyGroupConfig(JObject? data, PuloniaTask group, PuloniaTaskImportResult result, string location)
+    /// <summary>提取旧分组可表达的设置写入分组共享设置，旧调度字段单独列出。</summary>
+    private static void ApplyGroupConfig(JObject? data, PuloniaTask group, AllConfig global, PuloniaTaskImportResult result, string location)
     {
         if (data is null) return;
         var config = JsonSerializer.Deserialize<ScriptGroupConfig>(data.ToString(), LegacyOptions) ?? throw new InvalidOperationException("配置组设置无法解析。");
-        foreach (var type in new[] { "pathing", "javascript", "shell" })
-            group.ParameterOverrides.Add(new PuloniaTaskParameterOverride { TaskType = type, Values = PuloniaTaskCommonSettings.ToParameters(type, config) });
-        result.Differences.Add(location + "：行走、战斗、食物与 Shell 设置已转为分组公共配置；旧任务周期、完成跳过、执行优先级及断点不迁入。");
+        MergeSettings(group.Settings, ToSharedSettings(config, global, true, result, location));
+        result.Differences.Add(location + "：行走、战斗、食物与 Shell 设置已转为分组共享设置（只保留与默认值不同的项）；旧任务周期、完成跳过、执行优先级及断点不迁入。");
+    }
+
+    /// <summary>旧配置组设置转为共享设置，转换说明以位置前缀写入差异报告。</summary>
+    private static JObject ToSharedSettings(ScriptGroupConfig source, AllConfig global, bool includeShell,
+        PuloniaTaskImportResult result, string location)
+    {
+        var notes = new List<string>();
+        var settings = PuloniaLegacySettingsConverter.FromGroupConfig(source, global, includeShell, notes);
+        result.Differences.AddRange(notes.Select(note => location + "：" + note));
+        return settings;
+    }
+
+    /// <summary>把共享设置并入节点，已有同名项被覆盖。</summary>
+    private static void MergeSettings(JObject target, JObject values)
+    {
+        foreach (var property in values.Properties())
+            target[property.Name] = property.Value.DeepClone();
     }
 
     /// <summary>递归迁移 d-v3 树，保留父子开关和顺序；展开状态属于编辑器界面，不随计划导入。</summary>
-    private PuloniaTask ConvertGear(JObject data, PuloniaTaskImportResult result, string location, int depth, int[] refCount)
+    private PuloniaTask ConvertGear(JObject data, AllConfig global, PuloniaTaskImportResult result, string location, int depth, int[] refCount)
     {
         if (depth > 64 || ++refCount[0] > 10000) throw new InvalidOperationException("d-v3 树超过层级或数量限制。");
         var type = (Value<string>(data, "task_type") ?? "group").ToLowerInvariant();
@@ -177,23 +191,22 @@ public sealed class PuloniaTaskLegacyImporter
         else Unsupported(node, data, result, location, "反射方法或未知类型没有显式注册映射");
         if (type is "javascript" or "pathing" && Get(parameters, "pathing_party_config") is JObject party)
         {
+            // 行走设置写成节点共享设置；目录引用转为分组后，设置随节点保留在引用分组上。
             var config = JsonSerializer.Deserialize<PathingPartyConfig>(party.ToString(), LegacyOptions)!;
-            foreach (var field in PuloniaTaskCommonSettings.ToParameters(type, new ScriptGroupConfig { PathingConfig = config }).Properties())
-                node.Parameters[field.Name] = field.Value.DeepClone();
+            MergeSettings(node.Settings, ToSharedSettings(new ScriptGroupConfig { PathingConfig = config }, global, false, result, location));
         }
         if (Value<bool?>(data, "is_directory") == true && type is "pathing" or "keymouse")
         {
             var definition = _definitions.First(d => d.TaskType == type);
             node.TaskType = "group";
             node.Source = new PuloniaTaskSource { Kind = "directory", TaskType = type, Path = Path.GetFullPath(node.Path!, definition.ResourceBaseDirectory!) };
-            if (node.Parameters.Count > 0) node.ParameterOverrides.Add(new PuloniaTaskParameterOverride { TaskType = type, Values = node.Parameters });
             node.Parameters = new JObject(); node.Path = null;
         }
         if (Get(data, "children") is JArray children && children.Count > 0)
         {
             if (children.Any(child => child is not JObject)) throw new InvalidOperationException("children 含非对象项，不能只导入部分树。");
             if (node.TaskType != "group" || node.Source is not null) Unsupported(node, data, result, location, "叶子或目录引用含可编辑子项");
-            else foreach (var child in children.OfType<JObject>()) node.Children.Add(ConvertGear(child, result, location + "/" + node.Name, depth + 1, refCount));
+            else foreach (var child in children.OfType<JObject>()) node.Children.Add(ConvertGear(child, global, result, location + "/" + node.Name, depth + 1, refCount));
         }
         var known = new HashSet<string>(new[] { "foldername", "context", "pathingpartyconfig", "path", "filepath", "raw" });
         if (parameters.Properties().Any(p => !known.Contains(Normalize(p.Name))))
@@ -203,7 +216,7 @@ public sealed class PuloniaTaskLegacyImporter
         return node;
     }
 
-    /// <summary>将旧一条龙转成计划；被隐式借用的功能设置提取为稳定预设。</summary>
+    /// <summary>将旧一条龙转成计划；被隐式借用的功能设置按导入时的值写入任务参数。</summary>
     private async Task ConvertDragonAsync(string json, PuloniaTaskPlan plan, AllConfig config, PuloniaTaskImportResult result, string location, CancellationToken ct)
     {
         var dragon = PuloniaTaskJson.Read<OneDragonFlowConfig>(json);
@@ -215,7 +228,7 @@ public sealed class PuloniaTaskLegacyImporter
             if (!dragon.TaskEnabledList.TryGetValue(key, out var enabled)) continue;
             var name = dragon.TaskDefinitions.Count == 0 ? key : dragon.TaskDefinitions.GetValueOrDefault(key) ?? key;
             var node = new PuloniaTask { Name = name, IsEnabled = enabled };
-            // 战斗类任务借用了其他页面的全局配置，冻结为预设；一条龙自己的字段直接写入节点参数
+            // 战斗类任务借用了其他页面的全局配置，按导入时的值固定；一条龙自己的字段同样直接写入节点参数
             JObject? values = null;
             switch (name)
             {
@@ -237,7 +250,9 @@ public sealed class PuloniaTaskLegacyImporter
                 case "自动秘境":
                     node.TaskType = PuloniaSoloTaskExecutor.ToTaskType(AutoDomainTask.TaskId);
                     values = ToParameters(CreateDomainParam(config, dragon));
-                    if (dragon.WeeklyDomainEnabled) AddDragonWeek(values, JObject.FromObject(dragon), domain: true);
+                    // 新一条龙不支持按星期切换配置，旧的每周秘境配置不导入
+                    if (dragon.WeeklyDomainEnabled)
+                        result.Differences.Add(location + "/" + name + "：每周秘境配置未导入，新一条龙每天使用同一套秘境配置。");
                     break;
                 case "自动首领讨伐":
                     node.TaskType = PuloniaSoloTaskExecutor.ToTaskType(AutoBossTask.TaskId);
@@ -256,35 +271,31 @@ public sealed class PuloniaTaskLegacyImporter
                 case "自动地脉花":
                     node.TaskType = PuloniaSoloTaskExecutor.ToTaskType(AutoLeyLineOutcropTask.TaskId);
                     values = ToParameters(CreateLeyLineParam(config, dragon));
-                    AddDragonWeek(values, JObject.FromObject(dragon), domain: false);
+                    // 新一条龙不支持按星期运行，旧的运行日期、类型和国家安排不导入
+                    if (HasLeyLineWeekSettings(dragon))
+                        result.Differences.Add(location + "/" + name + "：每周运行安排未导入，新一条龙每天执行并使用同一套地脉花类型与国家。");
                     break;
                 default:
                     var directory = Global.Absolute("User/ScriptGroup");
                     var source = Path.GetFullPath(Path.Combine(directory, name + ".json"));
                     if (!source.StartsWith(Path.GetFullPath(directory) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) throw new IOException("配置组名称越过来源目录。");
-                    if (File.Exists(source)) { node = ConvertGroup(PuloniaTaskJson.Read<JObject>(await ReadSourceAsync(source, result, ct).ConfigureAwait(false)), result, source); node.IsEnabled = enabled; }
+                    if (File.Exists(source)) { node = ConvertGroup(PuloniaTaskJson.Read<JObject>(await ReadSourceAsync(source, result, ct).ConfigureAwait(false)), config, result, source); node.IsEnabled = enabled; }
                     else Unsupported(node, new JObject { ["name"] = name }, result, location + "/" + name, "旧配置组不存在");
                     break;
             }
             if (values is not null)
-            {
-                var preset = new PuloniaTaskPreset { Name = plan.Name + " · " + name, TaskType = node.TaskType, Values = values };
-                result.Presets.Add(preset); node.PresetId = preset.Id;
-            }
+                node.Parameters = values;
             plan.RootTask.Children.Add(node);
             nodeCount += CheckNodeCount(node);
             if (nodeCount > 10000) throw new InvalidOperationException("旧一条龙展开配置组后超过一万个节点。");
         }
         if (!string.IsNullOrEmpty(dragon.NextTaskId)) result.Differences.Add(location + "：旧从此执行标记未当作新历史断点导入。");
         if (!string.IsNullOrEmpty(dragon.CompletionAction)) result.Differences.Add(location + "：完成后操作“" + dragon.CompletionAction + "”未自动执行，请显式配置后处理步骤。");
-        result.Differences.Add(location + "：秘境、首领、幽境和地脉花的隐式业务配置已冻结为本次导入预设，战斗策略按名称保存并在运行时解析；旧领取流程结果仍需核验。");
+        result.Differences.Add(location + "：秘境、首领、幽境和地脉花的隐式业务配置已按导入时的全局配置写入各任务参数，战斗策略按名称保存并在运行时解析；旧领取流程结果仍需核验。");
     }
 
-    /// <summary>按独立任务参数合同（SoloTaskJson）把强类型参数转换为节点或预设使用的参数 JSON。</summary>
+    /// <summary>按独立任务参数合同（SoloTaskJson）把强类型参数转换为节点使用的参数 JSON。</summary>
     private static JObject ToParameters<T>(T param) => PuloniaTaskJson.Read<JObject>(SoloTaskJson.Serialize(param));
-
-    /// <summary>取参数属性按 SoloTaskJson 命名规则得到的参数键，周安排的当天覆盖与参数使用同一套键。</summary>
-    private static string ParamKey(string propertyName) => SoloTaskJson.Options.PropertyNamingPolicy!.ConvertName(propertyName);
 
     /// <summary>
     /// 自动秘境：业务设置来自导入时的秘境配置，队伍、秘境和周日奖励来自一条龙；
@@ -333,7 +344,7 @@ public sealed class PuloniaTaskLegacyImporter
         param.ReturnToStatueAfterEachRound = dragon.AutoBossReturnToStatueAfterEachRound;
         param.RewardRecognitionEnabled = dragon.AutoBossRewardRecognitionEnabled;
         param.Timeout = dragon.AutoBossTimeout;
-        // 随后立即序列化，引用全局对象不会被保存下来，预设里得到的是导入时的副本
+        // 随后立即序列化，引用全局对象不会被保存下来，任务参数里得到的是导入时的副本
         param.FightConfig = config.AutoFightConfig;
         return param;
     }
@@ -376,34 +387,22 @@ public sealed class PuloniaTaskLegacyImporter
         return param;
     }
 
-    /// <summary>转换周安排并保留四点日切及空值回退语义；当天对象中的键与独立任务参数名一致。</summary>
-    private static void AddDragonWeek(JObject values, JObject dragon, bool domain)
+    /// <summary>旧一条龙是否为地脉花设置了按星期的运行日期、类型或国家；用于提示这些设置未导入。</summary>
+    private static bool HasLeyLineWeekSettings(OneDragonFlowConfig dragon)
     {
-        var weekly = new JObject();
-        var days = new[] { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
-        var anyLeyDay = days.Any(d => dragon.Value<bool?>("LeyLineRun" + d) == true);
-        for (var i = 0; i < 7; i++)
-        {
-            var day = days[i]; var entry = new JObject();
-            if (domain)
-            {
-                // 秘境：当天队伍、秘境和周日奖励选择；未选择奖励时回退到每周设置
-                Copy(day + "PartyName", ParamKey(nameof(AutoDomainParam.PartyName)));
-                Copy(day + "DomainName", ParamKey(nameof(AutoDomainParam.DomainName)));
-                var selected = dragon.Value<string>(day + "SelectedValue");
-                entry[ParamKey(nameof(AutoDomainParam.SundaySelectedValue))] = string.IsNullOrWhiteSpace(selected) || selected == "0" ? dragon.Value<string>("SundayWeeklySelectedValue") : selected;
-            }
-            else
-            {
-                // 地脉花：一天都没勾选时视为每天运行；当天类型和国家为空时沿用任务设置
-                entry["enabled"] = !anyLeyDay || dragon.Value<bool?>("LeyLineRun" + day) == true;
-                Copy("LeyLine" + day + "Type", ParamKey(nameof(AutoLeyLineOutcropParam.LeyLineOutcropType)));
-                Copy("LeyLine" + day + "Country", ParamKey(nameof(AutoLeyLineOutcropParam.Country)));
-            }
-            weekly[i.ToString()] = entry;
-            void Copy(string source, string target) { var value = dragon.Value<string>(source); if (!string.IsNullOrWhiteSpace(value)) entry[target] = value; }
-        }
-        values[PuloniaSoloTaskExecutor.WeekdayOverridesParameter] = weekly;
+        bool[] runDays =
+        [
+            dragon.LeyLineRunMonday, dragon.LeyLineRunTuesday, dragon.LeyLineRunWednesday, dragon.LeyLineRunThursday,
+            dragon.LeyLineRunFriday, dragon.LeyLineRunSaturday, dragon.LeyLineRunSunday
+        ];
+        string[] dayValues =
+        [
+            dragon.LeyLineMondayType, dragon.LeyLineMondayCountry, dragon.LeyLineTuesdayType, dragon.LeyLineTuesdayCountry,
+            dragon.LeyLineWednesdayType, dragon.LeyLineWednesdayCountry, dragon.LeyLineThursdayType, dragon.LeyLineThursdayCountry,
+            dragon.LeyLineFridayType, dragon.LeyLineFridayCountry, dragon.LeyLineSaturdayType, dragon.LeyLineSaturdayCountry,
+            dragon.LeyLineSundayType, dragon.LeyLineSundayCountry
+        ];
+        return runDays.Any(run => run) || dayValues.Any(value => !string.IsNullOrWhiteSpace(value));
     }
 
     /// <summary>读取当前资源指纹，失败时保留节点和参数并禁用。</summary>
@@ -424,7 +423,8 @@ public sealed class PuloniaTaskLegacyImporter
     /// <summary>保留无法映射的原始数据，禁止误当作可执行能力。</summary>
     private static void Unsupported(PuloniaTask node, JObject raw, PuloniaTaskImportResult result, string location, string reason)
     {
-        node.TaskType = "legacy.unsupported"; node.IsEnabled = false; node.Source = null; node.Children.Clear(); node.ParameterOverrides.Clear();
+        node.TaskType = "legacy.unsupported"; node.IsEnabled = false; node.Source = null; node.Children.Clear();
+        node.Settings = new JObject(); node.ProfileId = null;
         node.Parameters = new JObject { ["legacy_data"] = raw.DeepClone() };
         result.Differences.Add(location + "：" + reason + "；原数据保留为禁用步骤。");
     }

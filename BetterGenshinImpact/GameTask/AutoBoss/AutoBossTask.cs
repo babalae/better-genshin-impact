@@ -44,7 +44,7 @@ namespace BetterGenshinImpact.GameTask.AutoBoss;
 /// <summary>
 /// 自动首领讨伐独立任务，负责按配置前往 Boss、执行战斗策略、领取征讨之花奖励并处理重定位。
 /// </summary>
-[SoloTaskInfo(TaskId, "自动首领讨伐", Group = "树脂与战斗", Order = 220, OneDragonOrder = 4)]
+[SoloTaskInfo(TaskId, "自动首领讨伐", Group = "树脂与战斗", Order = 220)]
 [SoloTaskSettingsView(typeof(AutoBossSettingsView), typeof(AutoBossSettingsViewModel))]
 public class AutoBossTask : ISoloTask<AutoBossParam, ResinClaimData>
 {

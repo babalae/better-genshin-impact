@@ -34,7 +34,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using BetterGenshinImpact.Helpers.Http;
+using BetterGenshinImpact.Infrastructure.Network;
 using BetterGenshinImpact.Service.ChildSession;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.ViewModel.Windows;
@@ -53,6 +53,10 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
     private readonly INavigationService _navigationService;
     private readonly ChildSessionService _childSessionService;
     /// <summary>
+    /// 为当前实例提供跨窗口与托盘一致的名称、颜色和图标。
+    /// </summary>
+    private readonly InstanceVisualIdentity _instanceVisualIdentity;
+    /// <summary>
     /// 提供在线子实例快照、状态变化通知与窗口激活能力。
     /// </summary>
     private readonly InstanceService _instanceService;
@@ -67,23 +71,47 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
     private bool _questVoiceCloseApproved;
     /// <summary>多个关闭请求共用一次排空，不重复弹出提示。</summary>
     private bool _questVoiceClosePending;
-    public string Title => $"BetterGI · 更好的原神 · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}";
+    /// <summary>
+    /// 不包含实例身份的应用标题和版本信息。
+    /// </summary>
+    public string Title => _instanceVisualIdentity.ApplicationTitle;
 
     /// <summary>
-    /// 当前进程是否为需要在标题栏标识的子实例。
+    /// 当前实例在 Windows 标题、任务栏和 Alt+Tab 中展示的完整标题。
     /// </summary>
-    public bool IsChildInstance =>
-        InstanceBootstrap.Current.Context.InstanceType != BetterGiInstanceType.Primary;
+    public string WindowTitle => IsInstanceIdentityVisible
+        ? _instanceVisualIdentity.WindowTitle
+        : _instanceVisualIdentity.ApplicationTitle;
 
     /// <summary>
-    /// 当前子实例在标题栏展示的稳定标识。
+    /// 子实例始终展示身份；主实例仅在至少一个子实例在线时展示身份。
     /// </summary>
-    public string ChildInstanceTagText => InstanceBootstrap.Current.Context.InstanceType switch
-    {
-        BetterGiInstanceType.ChildSession => "桌面分身",
-        BetterGiInstanceType.WebView => $"云原神 · {InstanceBootstrap.Current.Context.InstanceName}",
-        _ => string.Empty
-    };
+    public bool IsInstanceIdentityVisible =>
+        !_instanceVisualIdentity.IsPrimary || HasConnectedChildInstances;
+
+    /// <summary>
+    /// 当前实例在标题栏标签中展示的名称。
+    /// </summary>
+    public string InstanceTagText => _instanceVisualIdentity.DisplayName;
+
+    /// <summary>
+    /// 当前实例的稳定强调色画刷。
+    /// </summary>
+    public Brush InstanceAccentBrush => _instanceVisualIdentity.AccentBrush;
+
+    /// <summary>
+    /// 当前实例在窗口、标题栏和托盘中共用的图标。
+    /// </summary>
+    public ImageSource InstanceIconSource => IsInstanceIdentityVisible
+        ? _instanceVisualIdentity.IconSource
+        : _instanceVisualIdentity.DefaultIconSource;
+
+    /// <summary>
+    /// 当前实例的托盘提示文本。
+    /// </summary>
+    public string TrayTooltipText => IsInstanceIdentityVisible
+        ? _instanceVisualIdentity.TrayTooltipText
+        : "BetterGI";
 
     public bool IsChildSessionInstance =>
         InstanceBootstrap.Current.Context.InstanceType == BetterGiInstanceType.ChildSession;
@@ -98,6 +126,10 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
     [NotifyPropertyChangedFor(nameof(ConnectedInstanceOverflowCount))]
     [NotifyPropertyChangedFor(nameof(HasConnectedChildInstances))]
     [NotifyPropertyChangedFor(nameof(HasConnectedInstanceOverflow))]
+    [NotifyPropertyChangedFor(nameof(IsInstanceIdentityVisible))]
+    [NotifyPropertyChangedFor(nameof(WindowTitle))]
+    [NotifyPropertyChangedFor(nameof(InstanceIconSource))]
+    [NotifyPropertyChangedFor(nameof(TrayTooltipText))]
     private IReadOnlyList<ConnectedInstanceItem> _connectedChildInstances = [];
 
     /// <summary>
@@ -165,20 +197,29 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
 
     public AllConfig Config { get; set; }
 
+    /// <summary>
+    /// 标题栏下载中心
+    /// </summary>
+    public DownloadCenterViewModel DownloadCenter { get; }
+
     public MainWindowViewModel(
         INavigationService navigationService,
         IConfigService configService,
         ChildSessionService childSessionService,
         InstanceService instanceService,
+        InstanceVisualIdentity instanceVisualIdentity,
         IInferenceModelDiagnostics inferenceDiagnostics,
-        InferenceRuntimeService inferenceRuntime)
+        InferenceRuntimeService inferenceRuntime,
+        DownloadCenterViewModel downloadCenter)
     {
+        DownloadCenter = downloadCenter;
         _inferenceDiagnostics = inferenceDiagnostics;
         _inferenceRuntime = inferenceRuntime;
         _navigationService = navigationService;
         _configService = configService;
         _childSessionService = childSessionService;
         _instanceService = instanceService;
+        _instanceVisualIdentity = instanceVisualIdentity;
         Config = _configService.Get();
         _logger = App.GetLogger<MainWindowViewModel>();
         // 订阅通用配置变更：设置页修改背景图路径或开关后，主窗口背景实时刷新
@@ -544,8 +585,17 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
     [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task OnClosingAsync(CancelEventArgs e)
     {
+        // “关闭到托盘”只隐藏当前实例，不应因为其他实例仍在运行而阻止隐藏窗口。
+        if (Config.CommonConfig.ExitToTray)
+        {
+            e.Cancel = true;
+            OnHide();
+            return;
+        }
+
+        // 子实例只负责自己的生命周期；只有主实例退出时需要保护其提供的共享能力。
         // WebView2 实例依赖主实例提供 IPC 服务，应先关闭网页版实例再退出主实例。
-        if (_instanceService.HasConnectedWebViewInstance())
+        if (_instanceVisualIdentity.IsPrimary && _instanceService.HasConnectedWebViewInstance())
         {
             e.Cancel = true;
             ThemedMessageBox.Warning(
@@ -554,7 +604,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
             return;
         }
 
-        if (_childSessionService.HasActiveChildSession())
+        if (_instanceVisualIdentity.IsPrimary && _childSessionService.HasActiveChildSession())
         {
             e.Cancel = true;
             ThemedMessageBox.Warning(
@@ -563,12 +613,6 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
             return;
         }
 
-        if (Config.CommonConfig.ExitToTray)
-        {
-            e.Cancel = true;
-            OnHide();
-            return;
-        }
         if (_questVoiceCloseApproved) return;
         e.Cancel = true;
         if (_questVoiceClosePending) return;
@@ -576,6 +620,9 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
         try
         {
             if (!await QuestVoiceSettingsExitGuard.PrepareAsync()) return;
+            // 有下载正在进行时确认退出，已下载的部分保留供下次续传。
+            // 配音草稿保存成功后再确认，避免保存失败却保留下载退出授权。
+            if (!DownloadCenter.ConfirmExit()) return;
             _questVoiceCloseApproved = true;
             Application.Current.MainWindow.Close();
         }
@@ -713,11 +760,46 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
         // 更新仓库
         // ScriptRepoUpdater.Instance.AutoUpdate();
 
+        // 提示上次未恢复的脚本数据备份（更新中断等情况会保留备份），不阻塞后续启动流程
+        _ = PromptUnrestoredScriptBackupsAsync();
+
         // 自动更新已订阅的脚本 会先更新仓库；任务开始前会等待这次更新完成
         ScriptRepoUpdater.Instance.StartAutoUpdate();
 
-        // 清理临时目录
-        TempManager.CleanUp();
+        // 临时目录由 ITempFileService 在退出时清理，异常结束留下的目录在启动时回收
+    }
+
+    /// <summary>
+    /// 发现本次启动前留下、尚未恢复的脚本数据备份时提示用户，并可打开备份目录
+    /// </summary>
+    private async Task PromptUnrestoredScriptBackupsAsync()
+    {
+        try
+        {
+            var backups = ScriptRepoUpdater.FindUnrestoredBackups(InstanceBootstrap.Current.Context.StartedAt);
+            if (backups.Count == 0)
+            {
+                return;
+            }
+
+            var backupPath = ScriptRepoUpdater.ScriptUpdateBackupPath;
+            _logger.LogWarning("发现 {Count} 份未恢复的脚本数据备份：{Path}", backups.Count, backupPath);
+            var result = await ThemedMessageBox.WarningAsync(
+                $"发现 {backups.Count} 份未恢复的脚本数据备份。\n" +
+                "可能是上次订阅脚本更新中途中断，或新版本脚本不再保留这些文件。\n\n" +
+                $"备份位于：{backupPath}\n" +
+                "确认不再需要后删除该目录即可不再提示。\n\n是否打开备份目录？",
+                "脚本数据备份",
+                System.Windows.MessageBoxButton.YesNo);
+            if (result == System.Windows.MessageBoxResult.Yes)
+            {
+                Process.Start(new ProcessStartInfo("explorer.exe", $"\"{backupPath}\"") { UseShellExecute = true });
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "检查脚本数据备份失败");
+        }
     }
 
     private void ModifyFolderSecurity()
@@ -900,7 +982,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
         try
         {
             var request = new HttpRequestMessage(HttpMethod.Get, FeedWindowViewModel.CodesJsonUrl);
-            var response = await HttpClientFactory.GetCommonSendClient().SendAsync(request);
+            var response = await App.GetService<IHttpClientFactory>()!.CreateClient(HttpClientNames.Default).SendAsync(request);
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
             var items = JsonConvert.DeserializeObject<List<FeedItem>>(json) ?? [];

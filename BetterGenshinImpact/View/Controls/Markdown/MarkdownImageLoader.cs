@@ -3,7 +3,8 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Net.Http;
-using System.Net.Http.Headers;
+using BetterGenshinImpact.Infrastructure.Cache;
+using BetterGenshinImpact.Service.Interface;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -28,7 +29,11 @@ public sealed class MarkdownImageLoader : IMarkdownImageLoader
     private const int MaxDownloadBytes = 20 * 1024 * 1024;
     private const long MaxPixelCount = 40_000_000;
 
-    private static readonly HttpClient HttpClient = CreateHttpClient();
+    /// <summary>
+    /// 远程图片服务：网络图片经文件缓存下载，跟随网络与代理设置
+    /// </summary>
+    private static IRemoteImageService RemoteImages => App.GetService<IRemoteImageService>()
+                                                       ?? throw new InvalidOperationException("远程图片服务尚未初始化。");
     private readonly ConcurrentDictionary<string, WeakReference<MarkdownImageResult>> _cache = new(StringComparer.OrdinalIgnoreCase);
 
     public static MarkdownImageLoader Default { get; } = new();
@@ -103,15 +108,9 @@ public sealed class MarkdownImageLoader : IMarkdownImageLoader
         }
         else if (source.Scheme is "http" or "https")
         {
-            using var response = await HttpClient.GetAsync(source, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-            response.EnsureSuccessStatusCode();
-            if (response.Content.Headers.ContentLength > MaxDownloadBytes)
-            {
-                throw new InvalidDataException($"图片大小超过 {MaxDownloadBytes / 1024 / 1024} MB 限制。");
-            }
-
-            await using var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            bytes = await ReadLimitedAsync(responseStream, cancellationToken);
+            // 经文件缓存下载（7 天），大小上限与本地图片相同；下载失败抛出原始异常，用于显示具体原因
+            bytes = await RemoteImages.GetBytesAsync(CachePartitions.MarkdownImages, source.AbsoluteUri, cancellationToken)
+                    ?? throw new InvalidDataException("下载的图片内容为空。");
         }
         else
         {
@@ -124,21 +123,6 @@ public sealed class MarkdownImageLoader : IMarkdownImageLoader
         return result;
     }
 
-    private static HttpClient CreateHttpClient()
-    {
-        var client = new HttpClient(new HttpClientHandler
-        {
-            AllowAutoRedirect = true,
-            MaxAutomaticRedirections = 5,
-            UseCookies = false,
-            UseDefaultCredentials = false
-        })
-        {
-            Timeout = TimeSpan.FromSeconds(15)
-        };
-        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("BetterGI-Markdown", "1.0"));
-        return client;
-    }
 
     private static async Task<byte[]> ReadLimitedAsync(Stream stream, CancellationToken cancellationToken)
     {

@@ -1,5 +1,6 @@
 using System;
 using System.Net.Http;
+using BetterGenshinImpact.Infrastructure.Network;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -49,7 +50,8 @@ public sealed class WechatClawbotSession : IDisposable
         _contextToken = string.Empty;
         _getUpdatesBuf = string.Empty;
         // 长轮询专用 HttpClient：超时需大于服务端 hold 时间（35s），不能复用 30s 的共享客户端
-        _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
+        _httpClient = App.GetService<IHttpClientFactory>()!.CreateClient(HttpClientNames.Notification);
+        _httpClient.Timeout = TimeSpan.FromSeconds(60);
     }
 
     /// <summary>

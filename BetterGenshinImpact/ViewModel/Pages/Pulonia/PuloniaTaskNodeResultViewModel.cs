@@ -103,7 +103,7 @@ public sealed class PuloniaTaskNodeResultViewModel : ObservableObject
         evidence.AddRange(confirmedEffects.Where(item => item.TaskAddress == TaskAddress && item.Attempt == Attempt)
             .Select(item => CreateEffectField(item)));
         if (evidence.Count == 0)
-            evidence.Add(new PuloniaTaskHistoryField("核验记录", "本次尝试没有结构化证据或已确认的 CD/额度事件。"));
+            evidence.Add(new PuloniaTaskHistoryField("核验记录", "本次尝试没有结构化证据或已确认的路线 CD 记录。"));
         EvidenceFields = evidence;
     }
 
@@ -115,7 +115,8 @@ public sealed class PuloniaTaskNodeResultViewModel : ObservableObject
         var entry = effect.Entry;
         return new PuloniaTaskHistoryField($"已确认副作用 · {entry.EffectKey} · 尝试 {effect.Attempt}",
             $"节点：{effect.TaskAddress}\n事件：{entry.EventKey}\n作用域：{entry.ScopeKey}\n"
-            + $"确认时间：{PuloniaTaskHistoryText.Time(entry.OccurredAt)}\n周期：{entry.WindowKey} · 消耗 {entry.Units} 单位\n"
+            + $"确认时间：{PuloniaTaskHistoryText.Time(entry.OccurredAt)}\n"
+            + $"记录时规则：{entry.Evidence.Data.Value<string>("collection_rule") ?? "未记录"}\n"
             + $"下次可执行：{PuloniaTaskHistoryText.Time(entry.NextEligibleAt)}\n"
             + $"证据：{entry.Evidence.Kind} / {entry.Evidence.Source}\n{entry.Evidence.Data.ToString(Formatting.Indented)}");
     }

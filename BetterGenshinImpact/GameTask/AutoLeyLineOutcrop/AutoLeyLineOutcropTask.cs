@@ -54,7 +54,7 @@ namespace BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 /// <summary>
 /// 自动地脉花：按冒险之证定位地脉花，沿节点路线前往、战斗并领取奖励。
 /// </summary>
-[SoloTaskInfo(TaskId, "自动地脉花", Group = "树脂与战斗", Order = 240, OneDragonOrder = 6)]
+[SoloTaskInfo(TaskId, "自动地脉花", Group = "树脂与战斗", Order = 240)]
 [SoloTaskSettingsView(typeof(AutoLeyLineOutcropSettingsView), typeof(AutoLeyLineOutcropSettingsViewModel))]
 public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, ResinClaimData>
 {

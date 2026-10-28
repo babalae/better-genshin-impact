@@ -11,7 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace BetterGenshinImpact.UnitTest.Pulonia;
 
-/// <summary>新旧设置的参数保存、每周继承和首领累计行为回归，不启动应用或游戏。</summary>
+/// <summary>新旧设置的参数保存和首领累计行为回归，不启动应用或游戏。</summary>
 public sealed class PuloniaSoloSettingsParityTests
 {
     /// <summary>每个专属页与补充卡片共同覆盖整个能力 Schema，补充输入也必须真正提交。</summary>
@@ -47,53 +47,6 @@ public sealed class PuloniaSoloSettingsParityTests
         settings.CollectChanges(changes);
         Assert.Single(changes);
         Assert.Equal(80, changes.Value<int>("min_resin_to_keep"));
-    }
-
-    /// <summary>打开已有每周设置不生成覆盖；编辑一个字段保留不由专属页编辑的按日参数。</summary>
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void WeeklySettings_PreserveSparseOverridesAndUneditedFields(bool domain)
-    {
-        var originalDay = new JObject { ["enabled"] = false, ["resin_usage"] = JObject.Parse(SoloTaskJson.Serialize(new ResinUsage { Mode = ResinUsageMode.RunCount, RunCount = 2 })), ["party_name"] = "原队伍" };
-        var original = new JObject { ["weekday_overrides"] = new JObject { ["1"] = originalDay } };
-        SoloTaskSettingsViewModel settings = domain
-            ? new AutoDomainSettingsViewModel(original)
-            : new AutoLeyLineOutcropSettingsViewModel(original);
-        var changes = new JObject();
-        settings.CollectChanges(changes);
-        Assert.Empty(changes);
-
-        if (settings is AutoDomainSettingsViewModel domainSettings) domainSettings.Weekdays[1].PartyName = "新队伍";
-        if (settings is AutoLeyLineOutcropSettingsViewModel leySettings) leySettings.Weekdays[1].Country = "璃月";
-        settings.CollectChanges(changes);
-        var weekly = Assert.IsType<JObject>(changes["weekday_overrides"]);
-        Assert.Single(weekly);
-        Assert.False(weekly["1"]!.Value<bool>("enabled"));
-        Assert.Equal(2, weekly["1"]!["resin_usage"]!.Value<int>("run_count"));
-        Assert.Equal("原队伍", originalDay.Value<string>("party_name"));
-    }
-
-    /// <summary>关闭每周安排只修改开关，原配置继续保留，重新开启后恢复。</summary>
-    [Fact]
-    public void DomainWeekly_DisablingDoesNotDiscardConfiguredDays()
-    {
-        var original = new JObject { ["weekday_overrides"] = new JObject
-            { ["1"] = new JObject { ["domain_name"] = "测试秘境", ["party_name"] = "周一队伍" } } };
-        var settings = new AutoDomainSettingsViewModel(original) { WeeklyEnabled = false };
-        var changes = new JObject();
-        settings.CollectChanges(changes);
-        Assert.Single(changes);
-        Assert.False(changes.Value<bool>(PuloniaSoloTaskExecutor.WeekdayOverridesEnabledParameter));
-        original.Merge(changes);
-        var reopened = new AutoDomainSettingsViewModel(original);
-        Assert.False(reopened.WeeklyEnabled);
-        Assert.Equal("周一队伍", reopened.Weekdays[1].PartyName);
-        reopened.WeeklyEnabled = true;
-        changes = new JObject();
-        reopened.CollectChanges(changes);
-        Assert.Single(changes);
-        Assert.True(changes.Value<bool>(PuloniaSoloTaskExecutor.WeekdayOverridesEnabledParameter));
     }
 
     /// <summary>树脂使用卡片保持嵌套对象合同，未修改时不生成覆盖。</summary>

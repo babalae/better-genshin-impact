@@ -243,40 +243,7 @@
                             </StackPanel>
                         </ScrollViewer>
                     </TabItem>
-                    <TabItem Header="当前 CD">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                            <StackPanel Margin="10">
-                                <TextBlock Margin="0,0,0,12" Text="这是当前全部账号/世界的 CD 与额度账本，不是选中历史当时的账本快照。历史内的确认事件请在“运行信息”查看。" TextWrapping="Wrap" />
-                                <ItemsControl ItemsSource="{Binding LedgerEntries}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Style="{StaticResource Card}" Margin="0,0,0,8">
-                                                <StackPanel>
-                                                    <TextBlock FontWeight="SemiBold" Text="{Binding EffectKey}" />
-                                                    <TextBlock Text="{Binding ScopeKey}" TextWrapping="Wrap" />
-                                                    <TextBlock Text="{Binding OccurredAtText, StringFormat=确认时间：{0}}" />
-                                                    <TextBlock Text="{Binding EligibilityText}" TextWrapping="Wrap" />
-                                                    <TextBlock Text="{Binding EvidenceText}" TextWrapping="Wrap" />
-                                                </StackPanel>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                                <TextBlock Text="暂无已确认的 CD 或额度事件。">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding LedgerEntries.Count}" Value="0">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-                            </StackPanel>
-                        </ScrollViewer>
-                    </TabItem>
+                    <!-- 当前路线 CD 不属于单次运行，改在任务计划页与执行记录页的“路线 CD”页签查看。 -->
                 </TabControl>
             </Grid>
         </Grid>

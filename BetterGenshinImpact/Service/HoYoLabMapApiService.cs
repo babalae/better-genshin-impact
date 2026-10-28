@@ -5,7 +5,7 @@ using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Helpers.Http;
+using BetterGenshinImpact.Infrastructure.Network;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.MapMask;
 using BetterGenshinImpact.Service.Interface;
@@ -17,7 +17,10 @@ namespace BetterGenshinImpact.Service;
 
 public class HoYoLabMapApiService : IHoYoLabMapApiService
 {
-    private readonly HttpClient _httpClient;
+    /// <summary>
+    /// 命名 HttpClient 工厂，每次请求创建游戏接口客户端
+    /// </summary>
+    private readonly IHttpClientFactory _httpClientFactory;
     private const string TreeEndpoint = "https://sg-public-api-static.hoyolab.com/common/map_user/ys_obc/v2/map/label/tree";
     private const string ListEndpoint = "https://sg-public-api-static.hoyolab.com/common/map_user/ys_obc/v3/map/point/list";
     private const string InfoEndpoint = "https://sg-public-api-static.hoyolab.com/common/map_user/ys_obc/v1/map/point/info";
@@ -32,11 +35,17 @@ public class HoYoLabMapApiService : IHoYoLabMapApiService
     /// 创建 HoYoLAB 地图接口服务
     /// </summary>
     /// <param name="config">注入的配置根</param>
-    public HoYoLabMapApiService(AllConfig config)
+    /// <param name="httpClientFactory">命名 HttpClient 工厂</param>
+    public HoYoLabMapApiService(AllConfig config, IHttpClientFactory httpClientFactory)
     {
         _config = config;
-        _httpClient = HttpClientFactory.GetCommonSendClient();
+        _httpClientFactory = httpClientFactory;
     }
+
+    /// <summary>
+    /// 游戏接口客户端；浏览器 UA 与 Referer 在每个请求上设置
+    /// </summary>
+    private HttpClient HttpClient => _httpClientFactory.CreateClient(HttpClientNames.GameApi);
 
     private static HttpRequestMessage CreateRequest(HttpMethod method, string url)
     {
@@ -81,7 +90,7 @@ public class HoYoLabMapApiService : IHoYoLabMapApiService
         var lang = GetCurrentLanguage();
         var url = $"{TreeEndpoint}?map_id={request.MapId}&app_sn={Uri.EscapeDataString(request.AppSn)}&lang={lang}";
         using var httpRequest = CreateRequest(HttpMethod.Get, url);
-        using var resp = await _httpClient.SendAsync(httpRequest, ct);
+        using var resp = await HttpClient.SendAsync(httpRequest, ct);
         resp.EnsureSuccessStatusCode();
         var json = await resp.Content.ReadAsStringAsync(ct);
         return DeserializeRequired<ApiResponse<LabelTreeData>>(json);
@@ -93,7 +102,7 @@ public class HoYoLabMapApiService : IHoYoLabMapApiService
         var url = $"{InfoEndpoint}?map_id={request.MapId}&point_id={request.PointId}&app_sn={Uri.EscapeDataString(request.AppSn)}&lang={lang}";
         using var httpRequest = CreateRequest(HttpMethod.Get, url);
         httpRequest.Headers.Add("x-rpc-map_version", "4.5");
-        using var resp = await _httpClient.SendAsync(httpRequest, ct);
+        using var resp = await HttpClient.SendAsync(httpRequest, ct);
         resp.EnsureSuccessStatusCode();
         var json = await resp.Content.ReadAsStringAsync(ct);
         return DeserializeRequired<ApiResponse<PointInfoData>>(json);
@@ -107,7 +116,7 @@ public class HoYoLabMapApiService : IHoYoLabMapApiService
             : string.Empty;
         var url = $"{ListEndpoint}?map_id={request.MapId}&app_sn={Uri.EscapeDataString(request.AppSn)}&lang={lang}&label_ids={Uri.EscapeDataString(labelIds)}";
         using var httpRequest = CreateRequest(HttpMethod.Get, url);
-        using var resp = await _httpClient.SendAsync(httpRequest, ct);
+        using var resp = await HttpClient.SendAsync(httpRequest, ct);
         resp.EnsureSuccessStatusCode();
         var json = await resp.Content.ReadAsStringAsync(ct);
         return DeserializeRequired<ApiResponse<PointListData>>(json);

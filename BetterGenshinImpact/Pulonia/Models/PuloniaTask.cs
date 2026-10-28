@@ -39,7 +39,7 @@ public sealed class PuloniaTask
     [JsonProperty("resource", NullValueHandling = NullValueHandling.Ignore)]
     public ScriptResourceReference? Resource { get; set; }
 
-    /// <summary>参数与预设匹配使用的资源身份，远程来源包含仓库 ID。</summary>
+    /// <summary>能力说明匹配使用的资源身份，远程来源包含仓库 ID。</summary>
     [JsonIgnore]
     public string? ResourceKey => Resource?.ScopeKey ?? Path;
 
@@ -56,10 +56,22 @@ public sealed class PuloniaTask
     public bool IsEnabled { get; set; } = true;
 
     /// <summary>
-    /// 本节点参数；保留缺省、null、false、0 和集合的区别。
+    /// 只属于本任务、不向下传播的任务参数；保留缺省、null、false、0 和集合的区别。分组保持空对象。
     /// </summary>
     [JsonProperty("parameters", Required = Required.DisallowNull)]
     public JObject Parameters { get; set; } = new();
+
+    /// <summary>
+    /// 本节点的共享设置覆盖：设置项 ID 到值的稀疏集合，任意节点可写，向下传播；空对象表示全部继承。
+    /// </summary>
+    [JsonProperty("settings", Required = Required.DisallowNull)]
+    public JObject Settings { get; set; } = new();
+
+    /// <summary>
+    /// 本节点使用的设置方案 ID；方案在设置链中先于本节点自身的 <see cref="Settings"/> 生效。
+    /// </summary>
+    [JsonProperty("profile_id", NullValueHandling = NullValueHandling.Ignore)]
+    public string? ProfileId { get; set; }
 
     /// <summary>
     /// 子任务顺序即执行顺序，叶子任务必须为空。
@@ -74,12 +86,6 @@ public sealed class PuloniaTask
     public int? RepeatCount { get; set; }
 
     /// <summary>
-    /// 选用的共享预设 ID；账号绑定可以替换选择。
-    /// </summary>
-    [JsonProperty("preset_id")]
-    public string? PresetId { get; set; }
-
-    /// <summary>
     /// 可继承的执行策略，未填写字段继续继承。
     /// </summary>
     [JsonProperty("policy", Required = Required.DisallowNull)]
@@ -90,12 +96,6 @@ public sealed class PuloniaTask
     /// </summary>
     [JsonProperty("source")]
     public PuloniaTaskSource? Source { get; set; }
-
-    /// <summary>
-    /// 分组为指定类型和资源提供的公共参数，避免不同能力串用配置。
-    /// </summary>
-    [JsonProperty("parameter_overrides", Required = Required.DisallowNull)]
-    public List<PuloniaTaskParameterOverride> ParameterOverrides { get; set; } = [];
 
     // 树视图展开状态不属于计划，存于编辑器的 plan-view-state.json。
 }

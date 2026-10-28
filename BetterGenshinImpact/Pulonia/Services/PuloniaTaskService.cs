@@ -190,8 +190,44 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
         await _initialization.WaitAsync(ct).ConfigureAwait(false);
         _runState.ThrowIfFailed();
         // 服务器时区在入队时按应用配置固定（UI、定时、热键、命令行都经过这里），调用方的取值被覆盖；续跑沿用原请求。
-        var fixedRequest = CloneAndValidateRequest(request, serverUtcOffsetMinutes: PuloniaServerTime.GetUtcOffsetMinutes());
-        EnsureExecutionTargetAvailable(fixedRequest);
+        var validatedRequest = CloneAndValidateRequest(request, serverUtcOffsetMinutes: PuloniaServerTime.GetUtcOffsetMinutes());
+        EnsureExecutionTargetAvailable(validatedRequest);
+        var (plan, fixedRequest, snapshot, _) = await PrepareRunAsync(validatedRequest, ct).ConfigureAwait(false);
+
+        var state = new RunState(CreateRunId(), fixedRequest, plan.Name, snapshot);
+        var stopCurrent = fixedRequest.TriggerId is not null && fixedRequest.BusyPolicy == PuloniaTaskBusyPolicy.StopCurrent;
+        try
+        {
+            // 请求只在耐久写入成功后才加入运行集合，失败时不会被其他写入带进 state.json。
+            await PersistStateAsync(ct, candidate => updateTrigger?.Invoke(candidate, state.RunId), state, () =>
+            {
+                // 先停止当前运行，再让新请求对消费者可见：新请求不会在 StopAll 之前被挑中而被自己的停止信号取消。
+                // 此时仍持有状态门，被停止的运行要等本次提交结束才能收尾，消费者因此一定先看到新请求。
+                if (stopCurrent)
+                    _taskStopService.StopAll(TaskStopReason.UserRequested);
+                lock (_runsGate)
+                    _runs.Add(state.RunId, state);
+            }).ConfigureAwait(false);
+        }
+        catch
+        {
+            state.Cancellation.Dispose();
+            throw;
+        }
+        _queueSignal.Release();
+        RaiseRunChanged(state.RunId);
+        return state.RunId;
+    }
+
+    /// <summary>
+    /// 读取已保存计划、准备一条龙账号并固定运行快照；提交与运行预览共用，保证预览与实际运行使用同一份快照规则。
+    /// </summary>
+    /// <param name="fixedRequest">已校验并固定服务器时区的请求。</param>
+    /// <param name="ct">取消令牌。</param>
+    /// <returns>计划、补上账号绑定后的请求、快照和一条龙要准备的账号（没有时为空）。</returns>
+    private async Task<(PuloniaTaskPlan Plan, PuloniaTaskRequest Request, PuloniaTaskSnapshot Snapshot,
+        PuloniaGenshinAccountProfile? Account)> PrepareRunAsync(PuloniaTaskRequest fixedRequest, CancellationToken ct)
+    {
         var plan = await _store.LoadPlanAsync(fixedRequest.PlanId, ct).ConfigureAwait(false)
                    ?? throw new PuloniaTaskValidationException(fixedRequest.PlanId, "要运行的计划不存在。");
 
@@ -220,30 +256,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
             ParameterOverrides = fixedRequest.ParameterOverrides
         }, ct).ConfigureAwait(false);
         if (accountPreparation is not null) snapshot = snapshot.WithGenshinAccount(accountPreparation);
-
-        var state = new RunState(CreateRunId(), fixedRequest, plan.Name, snapshot);
-        var stopCurrent = fixedRequest.TriggerId is not null && fixedRequest.BusyPolicy == PuloniaTaskBusyPolicy.StopCurrent;
-        try
-        {
-            // 请求只在耐久写入成功后才加入运行集合，失败时不会被其他写入带进 state.json。
-            await PersistStateAsync(ct, candidate => updateTrigger?.Invoke(candidate, state.RunId), state, () =>
-            {
-                // 先停止当前运行，再让新请求对消费者可见：新请求不会在 StopAll 之前被挑中而被自己的停止信号取消。
-                // 此时仍持有状态门，被停止的运行要等本次提交结束才能收尾，消费者因此一定先看到新请求。
-                if (stopCurrent)
-                    _taskStopService.StopAll(TaskStopReason.UserRequested);
-                lock (_runsGate)
-                    _runs.Add(state.RunId, state);
-            }).ConfigureAwait(false);
-        }
-        catch
-        {
-            state.Cancellation.Dispose();
-            throw;
-        }
-        _queueSignal.Release();
-        RaiseRunChanged(state.RunId);
-        return state.RunId;
+        return (plan, fixedRequest, snapshot, accountPreparation);
     }
 
     /// <summary>
@@ -790,15 +803,20 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
         var requiresGameSession = _definitions[task.TaskType].RequiresGameSession;
         if (collectionPolicy is not null)
         {
-            // 文件级采集 CD 是唯一的执行前资源限制：仍在 CD 内时跳过本节点，继续后续任务。
+            // 路线 CD 是唯一的执行前资源限制：仍在 CD 内或一次性已完成时跳过本节点，继续后续任务。
             // 按本次运行已核验的身份读取；真正执行前每次尝试都会在取得输入后重新核验该 UID。
-            var decision = EvaluateCollectionCooldown(state, collectionPolicy, out collectionData);
-            if (!decision.IsAllowed)
+            var cooldown = GetCollectionCooldownStatus(state, collectionPolicy);
+            collectionData = PuloniaCollectionCooldown.Describe(collectionPolicy, cooldown.LastSuccessAt, cooldown.NextEligibleAt);
+            if (cooldown.IsSkipped)
             {
+                var reason = PuloniaCollectionCooldown.FormatSkipReason(collectionPolicy, cooldown);
+                // 跳过也更新当前节点与消息（只在内存），运行中能看到哪条路线因 CD 跳过
+                SetCurrentTask(state, task.TaskAddress, $"已跳过“{task.Name}”：{reason}");
                 var now = DateTimeOffset.UtcNow;
                 await AddNodeResultAsync(state, new PuloniaTaskNodeResult(task.TaskAddress, task.Name, task.TaskType, 0,
-                    PuloniaTaskNodeStatus.Skipped, decision.Message, now, now, collectionData,
-                    outcomeKind: PuloniaTaskOutcomeKind.Skipped)).ConfigureAwait(false);
+                    PuloniaTaskNodeStatus.Skipped, "已跳过：" + reason, now, now, collectionData,
+                    outcomeKind: PuloniaTaskOutcomeKind.Skipped,
+                    reasonCode: PuloniaCollectionCooldown.GetReasonCode(cooldown))).ConfigureAwait(false);
                 return ExecutionSignal.Continue;
             }
         }
@@ -880,20 +898,22 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
             var resultData = outcome is null ? new JObject() : (JObject)outcome.Data.DeepClone();
             if (collectionData is not null)
                 foreach (var property in collectionData.Properties()) resultData[property.Name] = property.Value.DeepClone();
+            // 成功时只算一次下次可执行时间：节点结果与账本记录共用同一结果
+            DateTimeOffset? nextEligible = null;
             if (succeeded && collectionPolicy is not null)
             {
-                var next = PuloniaCollectionCooldown.GetNextEligibleAt(collectionPolicy, finished, state.Request.ServerUtcOffsetMinutes);
-                foreach (var property in PuloniaCollectionCooldown.Describe(collectionPolicy, finished, next).Properties())
+                nextEligible = PuloniaCollectionCooldown.GetNextEligibleAt(collectionPolicy, finished, state.Request.ServerUtcOffsetMinutes);
+                foreach (var property in PuloniaCollectionCooldown.Describe(collectionPolicy, finished, nextEligible).Properties())
                     resultData[property.Name] = property.Value.DeepClone();
             }
             if (collectionPolicy is not null && !succeeded && !skipped && failure is null)
-                message = "地图追踪文件未完整执行成功，不记录采集 CD。";
+                message = "地图追踪文件未完整执行成功，不记录路线 CD。";
             var result = new PuloniaTaskNodeResult(task.TaskAddress, task.Name, task.TaskType, attempt,
                 status, message, startedAt, finished, resultData,
                 collectionPolicy is not null && !succeeded && !skipped ? PuloniaTaskOutcomeKind.Failed : outcome?.Kind, outcome?.Evidence,
                 outcome?.ReasonCode);
             if (succeeded && collectionPolicy is not null)
-                await CommitCollectionSuccessAsync(state, task, collectionPolicy, result, nodeCancellation.Token).ConfigureAwait(false);
+                await CommitCollectionSuccessAsync(state, task, collectionPolicy, result, nextEligible, nodeCancellation.Token).ConfigureAwait(false);
             else
                 await AddNodeResultAsync(state, result).ConfigureAwait(false);
             if (succeeded || skipped)

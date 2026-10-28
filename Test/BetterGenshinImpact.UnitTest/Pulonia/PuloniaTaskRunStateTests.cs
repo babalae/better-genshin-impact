@@ -155,7 +155,7 @@ public sealed class PuloniaTaskRunStateTests : IDisposable
         Assert.Equal(-300, history.Single(item => item.RunId == resumed.RunId).Request.ServerUtcOffsetMinutes);
     }
 
-    /// <summary>游戏日按服务器时区凌晨 4 点切换，采集 CD 与每周安排共用。</summary>
+    /// <summary>游戏日按服务器时区凌晨 4 点切换，供采集 CD 的日、周边界使用。</summary>
     [Theory]
     [InlineData("2026-10-12T03:59:59+08:00", 8, "2026-10-11")]
     [InlineData("2026-10-12T04:00:00+08:00", 8, "2026-10-12")]

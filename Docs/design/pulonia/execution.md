@@ -2,7 +2,7 @@
 
 [返回总览](README.md) · [用户故事](requirements.md) · [路线图](roadmap.md)
 
-说明一次运行如何排队、执行、取消、判定结果和续跑，以及如何从 C# 接入。采集 CD 和落盘语义见[结果、CD 与存储](results-and-storage.md)。2026-10-24 按当前代码核对。
+说明一次运行如何排队、执行、取消、判定结果和续跑，以及如何从 C# 接入。路线 CD 和落盘语义见[结果、CD 与存储](results-and-storage.md)。2026-10-24 按当前代码核对。
 
 ## 执行结构与资源生命周期
 
@@ -22,7 +22,7 @@ flowchart LR
 
 | 部分 | 职责 |
 | --- | --- |
-| `PuloniaTaskService` | 统一入口（实现 `IPuloniaTaskService`）、唯一串行队列、准入复核、账号准备、快照树编排、采集 CD 判定、重试、最终状态、归档、续跑、触发调度。由 `.Accounts`、`.CollectionCooldown`、`.Remote`、`.RunState`、`.Scheduling` 等 partial 组成；`RunState` 是其内部的可变运行状态 |
+| `PuloniaTaskService` | 统一入口（实现 `IPuloniaTaskService`）、唯一串行队列、准入复核、账号准备、快照树编排、路线 CD 判定与清除、运行预览、重试、最终状态、归档、续跑、触发调度。由 `.Accounts`、`.CollectionCooldown`、`.Remote`、`.RunState`、`.Scheduling` 等 partial 组成；`RunState` 是其内部的可变运行状态 |
 | `PuloniaTaskRunStateStore` | state.json 的内存副本与唯一写入入口，写入失败时熔断，见[存储](results-and-storage.md#statejson) |
 | `PuloniaLocalNodeRunner` | 本进程执行一次节点尝试或一次账号准备；主实例与子实例各持一个实例，代码相同 |
 | `PuloniaGameTaskCoordinator` | 发放游戏任务租约 `PuloniaGameTaskLease` |
@@ -53,9 +53,9 @@ flowchart LR
 2. **账号准备**（一条龙计划且含启用的游戏节点）：默认账号不切号，只读取并记录当前登录 UID；指定账号切号后核验 UID。核验结果与“切换账号”节点结果一起落盘后才执行业务节点；失败则整次运行进入待处理，见[多账号](accounts.md)。普通计划没有账号准备，也不核验 UID。
 3. **深度优先遍历快照树**，对每个叶子：
    1. 禁用、或续跑时已确认完成的节点记为跳过；
-   2. 地图追踪节点判定文件级采集 CD，仍在 CD 内则跳过并继续后续节点；
+   2. 地图追踪节点判定文件级路线 CD，仍在 CD 内或一次性已完成则跳过（原因码 `pathing.cooldown_active` / `pathing.cooldown_completed`，并更新当前节点消息）并继续后续节点；
    3. 每次尝试：需要游戏时由 `PuloniaLocalNodeRunner` 取游戏租约，核验本次运行的 UID，再调用执行器；指定子实例时改为派发；
-   4. 节点结果（地图追踪成功时连同采集 CD）在同一次 state.json 替换中落盘；
+   4. 节点结果（地图追踪成功时连同路线 CD 记录）在同一次 state.json 替换中落盘，之后触发 `LedgerChanged`；
    5. 失败按 `max_retries` 和 `retry_delay_seconds` 重试，耗尽后按 `failure_behavior` 编排。
 4. **最终状态**：执行器全部退出后由 `ResolveFinalStatus` 一次判定。
 5. **归档**：运行先进入 `pending_archives`，写入不可变历史后移出。
@@ -150,6 +150,10 @@ public interface IPuloniaTaskService
     Task<string> ResumeAsync(string runId, string? startTaskAddress = null,
         bool allowUncertainReplay = false, CancellationToken ct = default);
     Task<IReadOnlyList<PuloniaTaskLedgerEntry>> ListLedgerAsync(CancellationToken ct = default);
+    event EventHandler? LedgerChanged;
+    Task<PuloniaTaskRunPreview> PreviewAsync(PuloniaTaskRequest request, CancellationToken ct = default);
+    Task<int> ClearCollectionCooldownAsync(IReadOnlyCollection<PuloniaCollectionCooldownKey> keys,
+        CancellationToken ct = default);
 
     Task CheckTriggersAsync(IReadOnlyList<PuloniaTaskPlan> plans,
         IReadOnlyCollection<string>? unreadablePlanIds = null, CancellationToken ct = default);

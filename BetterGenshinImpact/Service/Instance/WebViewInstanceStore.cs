@@ -1,4 +1,5 @@
-using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Infrastructure.Storage;
+using BetterGenshinImpact.Infrastructure.WebView;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -29,10 +30,10 @@ public sealed class WebViewInstanceStore
         StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
-    /// 所有网页版实例的数据根目录 <c>WebView2Data/CloudGame</c>。
-    /// WebView2Data 本身是 HtmlMask 等功能共用的用户数据目录，子目录 CloudGame 不会被它们使用，各实例的用户数据互相独立
+    /// 所有网页版实例的数据根目录 <c>Data/WebView2/CloudGame</c>。
+    /// 与软件内网页的环境目录 <c>Data/WebView2/App</c> 分开，各实例的用户数据互相独立
     /// </summary>
-    public static string Root => Global.Absolute(Path.Combine("WebView2Data", "CloudGame"));
+    public static string Root => AppPaths.WebViewCloudGame;
 
     /// <summary>
     /// 已创建的实例名，按名称排序
@@ -98,6 +99,32 @@ public sealed class WebViewInstanceStore
     }
 
     /// <summary>
+    /// 清理实例的网页缓存，保留 Cookie 和登录状态。实例正在运行时抛出 <see cref="InvalidOperationException"/>
+    /// </summary>
+    /// <returns>释放的字节数和因被占用而跳过的文件数</returns>
+    public StorageCleanupResult ClearCache(string name)
+    {
+        if (!TryNormalizeName(name, out var normalized, out var error))
+        {
+            throw new ArgumentException(error, nameof(name));
+        }
+
+        if (IsRunning(normalized))
+        {
+            throw new InvalidOperationException($"实例「{normalized}」正在运行，请先关闭该实例");
+        }
+
+        return GetCacheFolders(normalized).Aggregate(StorageCleanupResult.Empty,
+            (total, folder) => total.Add(StorageFileOperations.Clear(folder)));
+    }
+
+    /// <summary>
+    /// 实例的网页缓存目录，不含登录状态和网页存储
+    /// </summary>
+    public static IReadOnlyList<string> GetCacheFolders(string name) =>
+        WebViewDataFolders.GetCacheFolders(WebViewDataFolders.GetCloudGameProfileFolder(name));
+
+    /// <summary>
     /// 实例是否正在运行：网页版实例进程启动后一直持有实例名互斥体
     /// </summary>
     public static bool IsRunning(string name)
@@ -114,7 +141,7 @@ public sealed class WebViewInstanceStore
     /// <summary>
     /// 该实例的 WebView2 用户数据目录
     /// </summary>
-    public static string GetDataFolder(string name) => Path.Combine(Root, name.Trim());
+    public static string GetDataFolder(string name) => WebViewDataFolders.GetCloudGameFolder(name);
 
     /// <summary>
     /// 实例名互斥体。用哈希避开非法字符和大小写差异；Local 命名空间与 Primary 同一 Windows Session

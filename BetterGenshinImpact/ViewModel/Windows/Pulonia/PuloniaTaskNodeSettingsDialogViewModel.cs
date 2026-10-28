@@ -22,13 +22,13 @@ public partial class PuloniaTaskNodeSettingsDialogViewModel : ObservableObject
     /// <summary>节点对应的能力定义；分组或未注册能力为空。</summary>
     private readonly PuloniaTaskDefinition? _definition;
 
-    /// <summary>编辑会话，提供刷新预设、更新资源等会话级命令。</summary>
+    /// <summary>编辑会话，提供更新资源、设置方案等会话级命令。</summary>
     public PuloniaPlanEditingSession Session { get; }
 
     /// <summary>节点所属的计划文档。</summary>
     public PuloniaTaskPlanDocumentViewModel Document { get; }
 
-    /// <summary>高级设置区的原始参数、策略、来源、预设与公共设置入口，只在本窗口打开期间存在。</summary>
+    /// <summary>共享设置入口、脚本设置入口与高级区的原始 JSON，只在本窗口打开期间存在。</summary>
     public PuloniaTaskNodeAdvancedSettingsViewModel Advanced { get; }
 
     /// <summary>被编辑的节点。</summary>
@@ -77,8 +77,8 @@ public partial class PuloniaTaskNodeSettingsDialogViewModel : ObservableObject
     /// <summary>是否展示“基本”区中的执行或资源设置。</summary>
     public bool HasBasicOptions => CanConfigureRepeat || CanEditPath || CanUpdateResourceVersion;
 
-    /// <summary>非独立任务是否提供行走、战斗、Shell 或采集 CD 等专用设置入口。</summary>
-    public bool HasTaskTools => !HasSettings && (Advanced.CanEditCommonSettings || Advanced.CanEditCollectionCooldown);
+    /// <summary>非独立任务是否提供脚本自定义设置入口。</summary>
+    public bool HasTaskTools => !HasSettings && Advanced.CanEditScriptSettings;
 
     /// <summary>节点是否为独立任务。</summary>
     private bool IsSoloTask => PuloniaSoloTaskExecutor.IsSoloTaskType(Node.TaskType);
@@ -93,14 +93,14 @@ public partial class PuloniaTaskNodeSettingsDialogViewModel : ObservableObject
     /// <param name="node">被编辑的节点。</param>
     /// <param name="definition">节点能力定义。</param>
     /// <param name="registry">独立任务注册表。</param>
-    /// <param name="dialogs">公共设置与采集 CD 表单入口；为空时这两类表单不可用。</param>
+    /// <param name="dialogs">共享设置、路线 CD 与脚本设置窗口入口；为空时这些窗口不可用。</param>
     public PuloniaTaskNodeSettingsDialogViewModel(PuloniaPlanEditingSession session, PuloniaTaskNodeViewModel node,
         PuloniaTaskDefinition? definition, SoloTaskRegistry? registry, IPuloniaTaskSettingsDialogs? dialogs = null)
     {
         Session = session;
         Node = node;
         Document = node.Document;
-        Advanced = new PuloniaTaskNodeAdvancedSettingsViewModel(node.Document, node, dialogs);
+        Advanced = new PuloniaTaskNodeAdvancedSettingsViewModel(node.Document, node, dialogs, session);
         _definition = definition;
         _registry = registry;
         _name = node.Name;

@@ -5,6 +5,7 @@ using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.ResinPlan;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
@@ -47,8 +48,8 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-" + BetterGenshinImpact.Helpers.ShortId.Create(null, 8));
 
     /// <summary>
-    /// 默认清单由能力定义的 OneDragonOrder 生成，按旧一条龙顺序包含八个独立任务，未声明顺序的任务不加入；
-    /// 两份配置的计划与全部任务 ID 互相独立。
+    /// 默认清单由能力定义的 OneDragonOrder 生成：邮件、体力计划、每日奖励、尘歌壶；
+    /// 体力计划调度的五个任务与未声明顺序的任务不加入；两份配置的计划与全部任务 ID 互相独立。
     /// </summary>
     [Fact]
     public void CreatePlan_KeepsDefaultOrderAndIndependentIds()
@@ -62,11 +63,7 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
         Assert.Equal(new[]
         {
             ("领取邮件", Solo(ClaimMailRewardsTask.TaskId)),
-            ("合成浓缩树脂", Solo(GoToCraftingBenchTask.TaskId)),
-            ("自动秘境", Solo(AutoDomainTask.TaskId)),
-            ("自动首领讨伐", Solo(AutoBossTask.TaskId)),
-            ("自动幽境危战", Solo(AutoStygianOnslaughtTask.TaskId)),
-            ("自动地脉花", Solo(AutoLeyLineOutcropTask.TaskId)),
+            ("体力计划", Solo(ResinPlanTask.TaskId)),
             ("领取每日奖励", Solo(ClaimDailyRewardsTask.TaskId)),
             ("领取尘歌壶奖励", Solo(GoToSereniteaPotTask.TaskId))
         }, first.RootTask.Children.Select(task => (task.Name, task.TaskType)).ToArray());
@@ -155,28 +152,28 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
             PuloniaOneDragonDefaults.CreatePlan("插入一条龙", PuloniaSoloTestDefinitions.OneDragonCandidates()), [],
             new PuloniaTaskClipboardService(), true);
         session.OneDragonDocuments.Add(document);
-        var original = document.RootNode.Children[2];
-        Assert.Equal(Solo(AutoDomainTask.TaskId), original.TaskType);
+        var original = document.RootNode.Children[1];
+        Assert.Equal(Solo(ResinPlanTask.TaskId), original.TaskType);
 
         session.InsertOneDragonTask(document, document.RootNode,
-            new PuloniaTask { Name = "自动秘境", TaskType = Solo(AutoDomainTask.TaskId) });
+            new PuloniaTask { Name = "体力计划", TaskType = Solo(ResinPlanTask.TaskId) });
 
         var inserted = document.RootNode.Children[^1];
         Assert.Same(document.RootNode, inserted.Parent);
-        Assert.Equal(9, document.RootNode.Children.Count);
+        Assert.Equal(5, document.RootNode.Children.Count);
         Assert.NotEqual(original.Id, inserted.Id);
-        document.ReplaceOneDragonParameters(inserted, new JObject { ["party_name"] = "副本专属队伍" });
+        document.ReplaceOneDragonParameters(inserted, new JObject { ["max_resin"] = 120 });
 
         // 移动只改变树位置：包装、稳定 ID 和已提交的参数都跟随着同一个节点。
         document.MoveNode(inserted, document.RootNode, 0);
 
         Assert.Same(inserted, document.RootNode.Children[0]);
-        Assert.Equal(9, document.RootNode.Children.Count);
-        Assert.Equal("副本专属队伍", document.GetOneDragonParameters(inserted)["party_name"]!.Value<string>());
-        var movedOriginal = document.RootNode.Children[3];
-        Assert.Equal("自动秘境", movedOriginal.Name);
+        Assert.Equal(5, document.RootNode.Children.Count);
+        Assert.Equal(120, document.GetOneDragonParameters(inserted)["max_resin"]!.Value<int>());
+        var movedOriginal = document.RootNode.Children[2];
+        Assert.Equal("体力计划", movedOriginal.Name);
         Assert.Equal(original.Id, movedOriginal.Id);
-        Assert.False(movedOriginal.Model.Parameters.ContainsKey("party_name"));
+        Assert.False(movedOriginal.Model.Parameters.ContainsKey("max_resin"));
     }
 
     /// <summary>
@@ -216,17 +213,13 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
     }
 
     /// <summary>
-    /// 卡片参数提交只把真实变化写入节点覆盖，默认值与预设继承不落盘，重复节点互不影响。
+    /// 卡片参数提交只把真实变化写入节点任务参数，默认值不落盘，重复节点互不影响。
     /// </summary>
     [Fact]
     public void ReplaceOneDragonParameters_PersistsOnlyChangedFieldsAndIsolatesDuplicates()
     {
         var definition = PuloniaSoloTestDefinitions.AutoBoss();
-        var preset = new PuloniaTaskPreset
-        {
-            Name = "首领预设", TaskType = definition.TaskType, SchemaVersion = definition.SchemaVersion,
-            Values = new JObject { ["resin_usage"] = JObject.Parse(SoloTaskJson.Serialize(ResinUsageLegacyMapper.FromBoss(true, 2, false, false))) }
-        };
+        var twoRuns = JObject.Parse(SoloTaskJson.Serialize(ResinUsageLegacyMapper.FromBoss(true, 2, false, false)));
         var document = new PuloniaTaskPlanDocumentViewModel(new PuloniaTaskPlan
         {
             Name = "参数一条龙",
@@ -235,25 +228,23 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
                 Name = "参数一条龙",
                 Children =
                 [
-                    new PuloniaTask { Name = "首领讨伐A", TaskType = definition.TaskType, PresetId = preset.Id },
+                    new PuloniaTask { Name = "首领讨伐A", TaskType = definition.TaskType, Parameters = new JObject { ["resin_usage"] = twoRuns.DeepClone() } },
                     new PuloniaTask { Name = "首领讨伐B", TaskType = definition.TaskType }
                 ]
             }
-        }, [preset], new PuloniaTaskClipboardService(), false);
+        }, [], new PuloniaTaskClipboardService(), false);
         document.SetDefinitions([definition]);
         var nodeA = document.RootNode.Children[0];
         var nodeB = document.RootNode.Children[1];
 
-        // 打开配置不产生草稿：预设次数只是继承结果，节点自身没有持久化任何参数。
+        // 打开配置不产生草稿：节点 B 只继承默认值，没有持久化任何参数。
         Assert.Equal(2, document.GetOneDragonParameters(nodeA)["resin_usage"]!["run_count"]!.Value<int>());
-        Assert.Empty(nodeA.Model.Parameters);
         Assert.Empty(nodeB.Model.Parameters);
 
-        document.ReplaceOneDragonParameters(nodeA, new JObject { ["team_name"] = "固定队伍" });
+        document.ReplaceOneDragonParameters(nodeA, new JObject { ["resin_usage"] = twoRuns.DeepClone(), ["team_name"] = "固定队伍" });
 
-        Assert.Single(nodeA.Model.Parameters);
+        Assert.Equal(2, nodeA.Model.Parameters.Count);
         Assert.Equal("固定队伍", nodeA.Model.Parameters["team_name"]!.Value<string>());
-        Assert.False(nodeA.Model.Parameters.ContainsKey("resin_usage"));
         Assert.Equal(2, document.GetOneDragonParameters(nodeA)["resin_usage"]!["run_count"]!.Value<int>());
         Assert.NotEqual("固定队伍", document.GetOneDragonParameters(nodeB)["team_name"]?.Value<string>());
 
@@ -261,7 +252,7 @@ public sealed class PuloniaOneDragonEditorTests : IDisposable
 
         Assert.Single(nodeB.Model.Parameters);
         Assert.Equal(5, nodeB.Model.Parameters["resin_usage"]!["run_count"]!.Value<int>());
-        Assert.Single(nodeA.Model.Parameters);
+        Assert.Equal(2, nodeA.Model.Parameters.Count);
         Assert.Equal("固定队伍", nodeA.Model.Parameters["team_name"]!.Value<string>());
         Assert.Equal(2, document.GetOneDragonParameters(nodeA)["resin_usage"]!["run_count"]!.Value<int>());
         Assert.NotEqual("固定队伍", document.GetOneDragonParameters(nodeB)["team_name"]?.Value<string>());

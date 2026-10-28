@@ -1,6 +1,8 @@
 using BetterGenshinImpact.GameTask.SoloTask;
+using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.Instance;
+using BetterGenshinImpact.View.Controls.Webview;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -15,6 +17,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 using Wpf.Ui;
+using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Windows;
 
@@ -147,6 +150,12 @@ public sealed partial class CloudWebInstanceWindowViewModel : ObservableObject, 
     {
         CreationError = null;
         ErrorMessage = null;
+        // 缺少运行时时先说明并引导安装，避免创建实例后启动一个注定失败的进程
+        if (!await WebViewRuntimePrompt.EnsureAvailableAsync())
+        {
+            return;
+        }
+
         string name;
         try
         {
@@ -192,6 +201,12 @@ public sealed partial class CloudWebInstanceWindowViewModel : ObservableObject, 
             }
             else
             {
+                // 启动新进程前检查运行时，缺失时说明并引导安装
+                if (!await WebViewRuntimePrompt.EnsureAvailableAsync())
+                {
+                    return;
+                }
+
                 _launcher.Launch(row.Name);
                 // 新进程获取实例名互斥体需要一点时间，稍后再刷新运行状态。
                 await Task.Delay(3000, _lifetimeCancellation.Token);
@@ -285,6 +300,37 @@ public sealed partial class CloudWebInstanceWindowViewModel : ObservableObject, 
         }
     }
 
+    /// <summary>与删除相同，只有实例完全退出后才允许清理缓存，避免删除浏览器正在使用的文件。</summary>
+    private bool CanClearCache(CloudWebInstanceRowViewModel? row) => CanDeleteInstance(row);
+
+    /// <summary>清理实例的网页缓存，保留登录状态；完成后说明释放了多少空间。</summary>
+    [RelayCommand(CanExecute = nameof(CanClearCache))]
+    private async Task ClearCacheAsync(CloudWebInstanceRowViewModel? row)
+    {
+        if (row is null || !CanClearCache(row))
+        {
+            return;
+        }
+
+        ErrorMessage = null;
+        OperationText = $"正在清理「{row.Name}」的缓存…";
+        IsOperationPending = true;
+        try
+        {
+            var result = await Task.Run(() => _store.ClearCache(row.Name));
+            var skipped = result.SkippedFiles > 0 ? $"，{result.SkippedFiles} 个文件正在使用，已跳过" : string.Empty;
+            Toast.Success($"已清理「{row.Name}」的缓存，释放 {ByteSizeFormatter.Format(result.FreedBytes)}{skipped}。登录状态已保留");
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or IOException or UnauthorizedAccessException)
+        {
+            ErrorMessage = $"清理缓存失败：{ex.Message}";
+        }
+        finally
+        {
+            IsOperationPending = false;
+        }
+    }
+
     /// <summary>先收起管理窗口，再通过现有任务页面选择执行实例和任务参数。</summary>
     [RelayCommand(CanExecute = nameof(CanEdit))]
     private void OpenTasks()
@@ -364,6 +410,7 @@ public sealed partial class CloudWebInstanceWindowViewModel : ObservableObject, 
             OpenInstanceCommand.NotifyCanExecuteChanged();
             CloseInstanceCommand.NotifyCanExecuteChanged();
             DeleteInstanceCommand.NotifyCanExecuteChanged();
+            ClearCacheCommand.NotifyCanExecuteChanged();
             OpenTasksCommand.NotifyCanExecuteChanged();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
