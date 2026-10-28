@@ -474,6 +474,9 @@ public sealed partial class InventoryStore
         {
             // 原始名称和输入保持不变；同一次库存保存结束原名称下全部积压错误。
             data.Errors.Remove(originalName!);
+            // 修正目标与人工确认值独立留证，不经文案转换，也不追加到此前已归档的事件。
+            foreach (var error in data.Events.Where(item => item.Name == originalName && item.State == "Error" && !item.Archived))
+                error.History.Add(FormattableString.Invariant($"ManualCorrection OriginalName={originalName}; Name={name}; Source={manual.Source}; Quantity={manual.Quantity}; RecordedAt={manual.RecordedAt:O}"));
             ArchiveErrors(data, originalName!, $"用户已将未知名称修正为“{name}”并确认当前库存 {quantity}，历史异常已归档。");
         }
         Save(data);
@@ -648,7 +651,7 @@ public sealed partial class InventoryStore
             {
                 var legacy = AddEvent(data, pair.Key, pair.Value.Source, "Report", "Error", pair.Value.Incoming.Quantity, pair.Value.OccurredAt,
                     pair.Value.Message, pair.Value.Current?.Quantity);
-                legacy.Id = pair.Value.OccurredAt.UtcDateTime.ToString("yyyyMMdd-HHmmssfffffff") + "-" + pair.Value.Id;
+                legacy.Id = pair.Value.OccurredAt.UtcDateTime.ToString("yyyyMMdd-HHmmssfffffff", CultureInfo.InvariantCulture) + "-" + pair.Value.Id;
                 legacy.ErrorId = pair.Value.Id;
                 legacy.History.Add("Id=" + pair.Value.Id);
             }

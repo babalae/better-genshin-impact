@@ -14,7 +14,7 @@
     </b:Interaction.Behaviors>
     <b:Interaction.Triggers>
         <b:EventTrigger EventName="Unloaded">
-            <b:InvokeCommandAction Command="{Binding CloseUidPopupsCommand}" />
+            <b:InvokeCommandAction Command="{Binding CloseUidPopupsCommand, Mode=OneWay}" />
         </b:EventTrigger>
     </b:Interaction.Triggers>
     <UserControl.Resources>
@@ -269,15 +269,15 @@
                         <ui:TextBox Text="{Binding PendingUid, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                     PlaceholderText="输入 UID" MaxLength="20">
                             <ui:TextBox.InputBindings>
-                                <KeyBinding Key="Enter" Command="{Binding AddUidCommand}" />
-                                <KeyBinding Key="Escape" Command="{Binding CancelAddUidCommand}" />
+                                <KeyBinding Key="Enter" Command="{Binding AddUidCommand, Mode=OneWay}" />
+                                <KeyBinding Key="Escape" Command="{Binding CancelAddUidCommand, Mode=OneWay}" />
                             </ui:TextBox.InputBindings>
                         </ui:TextBox>
                         <TextBlock Text="{Binding UidValidationMessage, Mode=OneWay}" TextWrapping="Wrap"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
-                            <ui:Button Content="取消" Command="{Binding CancelAddUidCommand}" Margin="0,0,8,0" />
-                            <ui:Button Content="添加" Command="{Binding AddUidCommand}" Appearance="Primary" />
+                            <ui:Button Content="取消" Command="{Binding CancelAddUidCommand, Mode=OneWay}" Margin="0,0,8,0" />
+                            <ui:Button Content="添加" Command="{Binding AddUidCommand, Mode=OneWay}" Appearance="Primary" />
                         </StackPanel>
                     </StackPanel>
                 </Border>

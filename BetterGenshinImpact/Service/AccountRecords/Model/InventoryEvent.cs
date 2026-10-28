@@ -11,7 +11,7 @@ public sealed class InventoryEvent
     /// <summary>正增量明确上报的新增到期批次；负增量按最早到期优先推算。</summary>
     public List<InventoryExpiration>? Expirations { get; set; }
     /// <summary>UTC 创建时间加随机后缀，创建后不变。</summary>
-    public string Id { get; set; } = DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmssfffffff") + "-" + Guid.NewGuid().ToString("N")[..8];
+    public string Id { get; set; } = DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmssfffffff", CultureInfo.InvariantCulture) + "-" + Guid.NewGuid().ToString("N")[..8];
     /// <summary>物品名称。</summary>
     public string Name { get; set; } = "";
     /// <summary>Error、Warning、Pending、Completed、Aborted、Planned；Aborted 表示核实被人工库存替代，Planned 留待需求模块。</summary>

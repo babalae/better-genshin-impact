@@ -110,7 +110,7 @@
     </UserControl.Resources>
     <Grid>
         <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-        <DataGrid x:Name="InventoryGrid" AutoGenerateColumns="False" IsReadOnly="True"
+        <DataGrid x:Name="InventoryGrid" AutoGenerateColumns="False" IsReadOnly="True" behavior:NativeScrolling.IsEnabled="True"
                   CanUserAddRows="False" CanUserDeleteRows="False" CanUserResizeRows="False" CanUserReorderColumns="False" RowHeight="36" MinRowHeight="36"
                   FontSize="14" ColumnHeaderHeight="36" ColumnHeaderStyle="{StaticResource InventoryHeader}"
                   HeadersVisibility="Column" GridLinesVisibility="None" SelectionMode="Single"
@@ -326,7 +326,7 @@
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="1" Text="{Binding Quantity, Mode=OneWay, TargetNullValue=未知}" VerticalAlignment="Center" />
                             <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding ExpiredQuantityText, Mode=OneWay}" FontSize="11"
+                                <TextBlock Text="{Binding ExpiredQuantityText, Mode=OneWay}" FontSize="11" Margin="4,0,0,0"
                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                            ToolTip="{Binding ExpiredQuantityDetails, Mode=OneWay}" />
                                 <TextBlock Text="{Binding DeltaText, Mode=OneWay}" FontSize="11"

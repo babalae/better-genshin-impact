@@ -20,6 +20,36 @@ public sealed class InventoryStoreTests : IDisposable
     /// <summary>固定测试账号，与实际账号无关。</summary>
     private const string Uid = "100000001";
 
+    /// <summary>非公历区域下，新事件及旧错误补建事件的 ID 仍使用可解析的公历 UTC 时间。</summary>
+    [Fact]
+    public async Task EventIds_UseInvariantCalendarForNewAndRestoredEvents()
+    {
+        var previousCulture = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("th-TH");
+            var before = DateTimeOffset.UtcNow;
+            var created = new InventoryEvent();
+            var after = DateTimeOffset.UtcNow;
+            var parsed = DateTimeOffset.ParseExact(created.Id[..22], "yyyyMMdd-HHmmssfffffff",
+                CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal);
+            Assert.InRange(parsed, before, after);
+
+            // 模拟只有错误对象、尚无关联事件的旧文件，触发补建路径。
+            await _store.ReportAsync(Uid, Source("scan"), [Report("摩拉", -1)]);
+            var path = Path.Combine(_root, "records", Uid, "inventory.json");
+            var document = JObject.Parse(File.ReadAllText(path));
+            var error = document["Errors"]!["摩拉"]!.ToObject<InventoryError>()!;
+            document["Events"] = new JArray();
+            File.WriteAllText(path, document.ToString());
+
+            var restored = Assert.Single((await _store.ReadAsync(Uid)).Inventory.Events);
+            Assert.Equal(error.OccurredAt.UtcDateTime.ToString("yyyyMMdd-HHmmssfffffff", CultureInfo.InvariantCulture) + "-" + error.Id, restored.Id);
+            Assert.Equal(error.Id, restored.ErrorId);
+        }
+        finally { CultureInfo.CurrentCulture = previousCulture; }
+    }
+
     /// <summary>人工确认归档积压错误并终止待核实增量，保留先前已完成核实的证据。</summary>
     [Fact]
     public async Task ManualConfirmation_ArchivesErrorsAndAbortsPendingButPreservesPreviousVerification()
@@ -88,6 +118,7 @@ public sealed class InventoryStoreTests : IDisposable
         await _store.ReportAsync(Uid, Source("scan"), [Report("摩拉", 100)]);
         var workspace = await _store.ReadAsync(Uid);
         var error = workspace.Inventory.Errors["未知名称"];
+        var originalEvents = workspace.Inventory.Events.Where(item => item.Name == "未知名称").ToDictionary(item => item.Id);
         var editor = new AccountRecordsInventoryEditViewModel(_store, _catalog, Uid,
             new AccountRecordsInventoryRow { Name = "未知名称", Error = error }, workspace.Definitions)
         { Name = "摩拉", QuantityText = "12" };
@@ -102,13 +133,21 @@ public sealed class InventoryStoreTests : IDisposable
         {
             Assert.True(item.Archived);
             Assert.Equal("Error", item.State);
-            Assert.Contains(item.History, line => line.Contains("摩拉") && line.Contains("12"));
+            var correction = Assert.Single(item.History.Where(line => line.StartsWith("ManualCorrection ", StringComparison.Ordinal)));
+            Assert.Equal($"ManualCorrection OriginalName=未知名称; Name=摩拉; Source=AccountRecords.SetLocalQuantityAsync; Quantity=12; RecordedAt={after.Items["摩拉"][0].RecordedAt.ToString("O", CultureInfo.InvariantCulture)}", correction);
+            Assert.Equal(originalEvents[item.Id].Message, item.Message);
+            Assert.Equal(originalEvents[item.Id].History, item.History.Take(originalEvents[item.Id].History.Count));
         });
         Assert.DoesNotContain("未知名称", after.Items.Keys);
         await _store.ReportAsync(Uid, Source("new-scan"), [Report("未知名称", 30, 3)]);
         var later = (await _store.ReadAsync(Uid)).Inventory;
         Assert.Contains("未知名称", later.Errors.Keys);
         Assert.Equal(12, later.Items["摩拉"][0].Quantity);
+        // 后续人工确认只处理新异常，不改写已经归档的修正证据。
+        await _store.SetLocalQuantityAsync(Uid, "摩拉", 13, originalName: "未知名称");
+        var confirmed = (await _store.ReadAsync(Uid)).Inventory;
+        foreach (var item in archived)
+            Assert.Equal(item.History, confirmed.Events.Single(value => value.Id == item.Id).History);
     }
 
     /// <summary>所有空名称形式均在批次写入前拒绝，不留下有效项的部分写入或空名称错误行。</summary>
@@ -360,7 +399,7 @@ public sealed class InventoryStoreTests : IDisposable
         }))!);
         var rows = await new AccountRecordsInventoryRowFactory(_catalog, new InventoryIconCache()).BuildAsync(workspace);
         var row = Assert.Single(rows);
-        Assert.Equal(showsResult, row.StatusDetails.Contains("结果："));
+        Assert.Equal(showsResult, row.StatusDetails.Contains("累计推算与确认库存："));
         if (showsResult) Assert.Contains("累计推算与确认库存：一致", row.StatusDetails);
         if (showsResult && verificationSource != null) Assert.Contains("核实来源：测试扫描", row.StatusDetails);
     }
@@ -532,8 +571,8 @@ public sealed class InventoryStoreTests : IDisposable
         await _store.ReportAsync(Uid, Source("a"), [Report("甜甜花", 8)]);
         await _store.ReportFailureAsync(Uid, Source("a"), "甜甜花", "没有识别到数量");
         var document = (await _store.LoadAsync(Uid)).Inventory;
-        Assert.Equal(10L, document.Items["甜甜花"][0].Quantity);
-        Assert.Equal(_time.AddMinutes(2), document.Items["甜甜花"][0].RecordedAt);
+        Assert.Equal(8L, document.Items["甜甜花"][0].Quantity);
+        Assert.Equal(_time, document.Items["甜甜花"][0].RecordedAt);
         Assert.Equal("ReadFailed", document.Errors["甜甜花"].Code);
     }
 
@@ -1338,7 +1377,7 @@ public sealed class InventoryStoreTests : IDisposable
             Name = "须臾树脂", Delta = 2, RecordedAt = _time.AddMinutes(2).ToString("O"),
             Expirations = [new() { Quantity = 1, ExpiresAt = DateTimeOffset.UtcNow.AddDays(5).ToString("O") }]
         }]);
-        Assert.Contains("必须等于", incomplete.Rejected["须臾树脂"]);
+        Assert.Contains("数量合计与本次增加数量不一致", incomplete.Rejected["须臾树脂"]);
         var package = await _store.ExportInventoryAsync(Uid);
         package["accounts"]![Uid]!["inventory"] = new JObject();
         package["itemDefinitions"] = new JObject();

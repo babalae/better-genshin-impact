@@ -104,7 +104,7 @@ public sealed partial class AccountRecordsInventoryRow : ObservableObject
         }
     }
     /// <summary>数量旁的到期提示，无已到期批次时留空。</summary>
-    public string ExpiredQuantityText => ExpiredQuantity > 0 ? $"（-{ExpiredQuantity:0}）" : "";
+    public string ExpiredQuantityText => ExpiredQuantity > 0 ? $"过期 {ExpiredQuantity:0}" : "";
     /// <summary>说明到期标记尚未改变确认库存。</summary>
     public string ExpiredQuantityDetails => ExpiredQuantity > 0 ? $"已有 {ExpiredQuantity:0} 个到期，待核实；尚未从当前库存中扣减。" : "";
     /// <summary>用于时间排序的 UTC 时间。</summary>
