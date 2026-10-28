@@ -16,8 +16,8 @@ public sealed partial class InventoryStore
         {
             var record = pair.Value.FirstOrDefault();
             if (record == null) continue;
-            var pending = data.Events.FirstOrDefault(item => item.Name == pair.Key && item.Kind == "ExpirationCheck" && !item.Archived);
             if (record.Quantity > 0 && record.Expirations == null) continue;
+            var pending = data.Events.FirstOrDefault(item => item.Name == pair.Key && item.Kind == "ExpirationCheck" && !item.Archived);
             var expired = record.Quantity > 0 && record.Expirations?.Any(batch => batch.Time <= now) == true;
             if (expired && pending == null)
             {

@@ -191,6 +191,57 @@ public sealed class InventoryStoreTests : IDisposable
         Assert.DoesNotContain("ArchivedEventLimit", File.ReadAllText(Path.Combine(directory, "settings.json")));
     }
 
+    /// <summary>旧字典中不支持的 UID 不阻塞合法账号迁移，重新打开后不会重复迁移。</summary>
+    [Theory]
+    [InlineData("1")]
+    [InlineData("012345678")]
+    [InlineData("12345678901234567890")]
+    public async Task SourceMigration_SkipsUnsupportedUidAndPersistsCleanup(string unsupportedUid)
+    {
+        var directory = Path.Combine(_root, "records");
+        Directory.CreateDirectory(directory);
+        var path = Path.Combine(directory, "sources.json");
+        File.WriteAllText(path, JsonConvert.SerializeObject(new
+        {
+            scan = new { Reference = "scan", DisplayName = "scan", Attempts = new[]
+            {
+                new { Id = "unsupported", Uid = unsupportedUid, CreatedAt = _time, Failed = false, Errors = Array.Empty<string>() },
+                new { Id = "supported", Uid, CreatedAt = _time, Failed = false, Errors = Array.Empty<string>() }
+            } }
+        }));
+        var workspace = await _store.LoadAsync(Uid);
+        Assert.Equal("supported", Assert.Single(workspace.Inventory.Events).AttemptId);
+        Assert.False(Directory.Exists(Path.Combine(directory, unsupportedUid)));
+        Assert.DoesNotContain("Attempts", File.ReadAllText(path));
+        var reopened = new InventoryStore(_catalog, directory);
+        Assert.Single((await reopened.LoadAsync(Uid)).Inventory.Events);
+        await reopened.ReportAsync(Uid, Source("scan"), [Report("摩拉", 10)]);
+        Assert.Equal(10, (await reopened.ReadAsync(Uid)).Inventory.Items["摩拉"][0].Quantity);
+    }
+
+    /// <summary>完成状态只为增量事件显示核实结果，显式空来源也不会阻断建行。</summary>
+    [Theory]
+    [InlineData("Report", null, false)]
+    [InlineData("Requirement", null, false)]
+    [InlineData("Delta", null, true)]
+    [InlineData("Delta", "scan", true)]
+    public async Task CompletedRow_OnlyDeltaShowsVerification(string kind, string? verificationSource, bool showsResult)
+    {
+        var workspace = await _store.ReadAsync(Uid);
+        workspace.Sources["scan"] = new AccountRecordSource { Reference = "scan", DisplayName = "测试扫描" };
+        workspace.Settings.PreferReadableSource = true;
+        workspace.Inventory.Events.Add(JsonConvert.DeserializeObject<InventoryEvent>(JsonConvert.SerializeObject(new
+        {
+            Name = "摩拉", Kind = kind, State = "Completed", Source = "scan",
+            VerificationSource = verificationSource, VerifiedCorrect = true
+        }))!);
+        var rows = await new AccountRecordsInventoryRowFactory(_catalog, new InventoryIconCache()).BuildAsync(workspace);
+        var row = Assert.Single(rows);
+        Assert.Equal(showsResult, row.StatusDetails.Contains("结果："));
+        if (showsResult) Assert.Contains("结果：正确", row.StatusDetails);
+        if (showsResult && verificationSource != null) Assert.Contains("核实来源：测试扫描", row.StatusDetails);
+    }
+
     /// <summary>软上限保护未解决事件，成功记录可淘汰；保存后不能复活已清理事件。</summary>
     [Fact]
     public async Task EventRetention_ProtectsUnresolvedEventsAboveLimit()

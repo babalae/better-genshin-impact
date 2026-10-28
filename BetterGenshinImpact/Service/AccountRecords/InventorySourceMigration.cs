@@ -16,7 +16,8 @@ public sealed partial class InventoryStore
     {
         var legacy = sources.Values.SelectMany(source => source.LegacyAttempts.Select(attempt => (source, attempt))).ToArray();
         if (legacy.Length == 0) return;
-        foreach (var group in legacy.GroupBy(pair => pair.attempt.Uid))
+        // 旧来源接受的 UID 范围更宽；仅迁移当前支持的账号，避免旧数据阻塞维护和写入。
+        foreach (var group in legacy.Where(pair => IsValidUid(pair.attempt.Uid)).GroupBy(pair => pair.attempt.Uid))
         {
             var data = Load(group.Key);
             foreach (var (source, attempt) in group)
@@ -34,7 +35,7 @@ public sealed partial class InventoryStore
             }
             PersistInventory(data);
         }
-        Write(Path.Combine(_root, "sources.json"), sources);
         foreach (var source in sources.Values) source.LegacyAttempts.Clear();
+        Write(Path.Combine(_root, "sources.json"), sources);
     }
 }
