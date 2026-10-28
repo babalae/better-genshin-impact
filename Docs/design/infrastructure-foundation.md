@@ -1,6 +1,8 @@
 # 基础设施统一：WebView2、网络与下载、缓存、临时文件
 
-状态：设计草案（第 1 版，待确认），2026-10-28，基于 `refactor/20260930` 分支代码。
+状态：设计已确认（第 2 版），2026-10-28，基于 `refactor/20260930` 分支代码。
+
+第 2 版变更：程序生成的数据统一放到新目录 `Data/`；推理缓存、通用文件缓存、下载分目录存放；WebView2 支持多个普通环境并集中管理环境配置；旧目录每个版本清理一次，不再迁移；第 15 节的决策已确认。
 
 相关文档：[三种实例的能力边界](instance-capability-boundaries.md)（多实例共享程序目录与 `User/`）、[配置持久化链路](config-persistence.md)、[GameRuntime 设计](game-runtime.md)（云原神运行环境）。
 
@@ -8,7 +10,7 @@
 
 本次重构把四类分散的基础能力收拢为统一的基础设施服务：
 
-1. **WebView2**：所有 WebView2 环境由一个入口创建。云原神网页版使用"隔离环境"，其他网页使用"共享环境"，二者在代码、数据目录和清理方式上明确区分。
+1. **WebView2**：所有 WebView2 环境由一个入口创建。云原神网页版使用"云原神环境"，其他网页使用"普通环境"，二者在代码、数据目录和清理方式上明确区分。普通环境目前只有一个，以后可以有多个，它们的配置集中定义、统一管理。
 2. **网络**：对外 HTTP 请求统一由命名 HttpClient 发出，代理在一处设置、全局生效。文件下载统一由下载服务完成，下载进度由下载监视器统一提供给界面。
 3. **缓存**：可再生的图片和数据缓存放在统一目录，由一个缓存服务读写，提供界面查看和清理。
 4. **临时文件**：统一的临时目录和临时文件服务，按实例隔离、按功能分类，可按功能清理。
@@ -55,10 +57,10 @@
 | 音乐封面 | `User/Music/Artwork` | 180 天 | 无 |
 | 点位详情图片、Markdown 图片 | 只在内存 | - | - |
 | 推理编译缓存 | `Cache/Inference/{指纹}` | 无 | 只能打开目录 |
-| 按版本的模型缓存 | `Cache/{版本号}/Model` | 无 | 升级后旧版本目录残留 |
+| 按版本的模型缓存 | `Cache/{版本号}/Model/{模型名}` | 无 | `BgiOnnxModel.Register` 每次启动为每个模型创建空目录，`CachePath` 没有任何读写方，每个版本都会留下一组空目录 |
 | ONNX 运行库安装包 | `Plugins/OnnxRuntime/.downloads` | 无 | 安装成功后删除；失败时保留供续传，TensorRT 包约 1.8 GB |
 
-问题：缓存分布在 `User/`、`Cache/`、`Plugins/` 三处。放在 `User/` 下的缓存会在用户迁移版本、复制 `User/` 时一起被复制。没有总量上限、过期扫描和界面。
+问题：缓存分布在 `User/`、`Cache/`、`Plugins/` 三处。程序根目录的 `Cache/` 下直接混放 ONNX Runtime 的编译缓存和按版本号命名的目录，没有按用途区分。放在 `User/` 下的缓存会在用户迁移版本、复制 `User/` 时一起被复制。没有总量上限、过期扫描和界面。
 
 ### 2.4 临时文件
 
@@ -81,8 +83,9 @@
 | 备份路径未校验 | 同上 | 订阅链接里带 `..` 的路径可以在 `User/Temp` 之外创建和覆盖文件 | 1 |
 | 多实例共用临时目录且整目录删除 | `TempManager` | 一个实例退出会删除另一实例的临时文件 | 1 |
 | JS 脚本 HTTP 重定向绕过允许列表 | `Core/Script/Dependence/Http.cs` | 脚本可经重定向访问未授权地址 | 3 |
-| 灰度判定每次启动都变 | `UpdateService.UpdateFromOss` 中的 `deviceId.GetHashCode()` | .NET 的字符串哈希按进程随机，灰度结果不是按设备稳定分组。修复会改变灰度用户分布，需确认 | 3 |
+| 灰度判定每次启动都变 | `UpdateService.UpdateFromOss` 中的 `deviceId.GetHashCode()` | .NET 的字符串哈希按进程随机，灰度结果不是按设备稳定分组。改为取 `SHA256(deviceId)` 前 4 字节对 10 取余，同一设备每次结果相同（已确认修复，灰度用户分布会随之变化） | 3 |
 | `DownloadRepoAndUnzip` 不安全且无调用方 | `ScriptRepoUpdater` | 文件名取自响应头，可越界写入；整包读入内存 | 3（删除） |
+| 每次启动创建无用的空目录 | `BgiOnnxModel.Register` | 每个版本在 `Cache/{版本号}/Model` 下留下一组空目录 | 2（删除） |
 | WebView2 下载按钮打不开链接 | `WebpagePanel.CreateDownloadButton` | 未安装运行时的用户无法跳转下载页 | 6 |
 | dotnet 宿主下网页数据目录错误 | `WebpagePanel` | 数据写进 dotnet 安装目录 | 6 |
 
@@ -118,12 +121,12 @@ Core/Config  NetworkConfig、StorageConfig 等配置模型
 
 ```text
 BetterGenshinImpact/Infrastructure/
-  Storage/   AppPaths、StorageArea、IStorageAreaProvider、IStorageService、StorageService、PendingCleanupStore、AtomicFile
+  Storage/   AppPaths、StorageArea、IStorageAreaProvider、IStorageService、StorageService、PendingCleanupStore、LegacyDataCleaner、AtomicFile
   Temp/      TempCategory（含 TempCategories）、ITempFileService、TempFileService、TempScope
   Cache/     CachePartition（含 CachePartitions）、IFileCache、FileCache、CacheMaintenanceService
   Network/   HttpClientNames、AppWebProxy、BgiHttpHandlers、BgiHttpDefaultsHandler、GitProxy、NetworkDiagnostics
   Network/Download/  DownloadRequest、DownloadProgress、DownloadTask、IDownloadService、DownloadService、IDownloadMonitor
-  WebView/   WebViewRuntime、WebViewProfile（含 WebViewProfiles）、IWebViewEnvironmentProvider、WebViewEnvironmentProvider、WebViewSetup
+  WebView/   WebViewRuntime、WebViewEnvironmentDefinition（含 WebViewEnvironments）、WebViewProfile（含 WebViewProfiles）、IWebViewEnvironmentProvider、WebViewEnvironmentProvider、WebViewSetup
 ```
 
 命名空间为 `BetterGenshinImpact.Infrastructure.*`。按项目约定，重要类一个文件一个类，小型 record 与对应的静态定义类可以合并。
@@ -134,26 +137,46 @@ BetterGenshinImpact/Infrastructure/
 
 ### 3.3 磁盘目录约定
 
-以下目录都在程序目录（`Global.StartUpPath`）下：
+程序自动生成的数据统一放在程序目录（`Global.StartUpPath`）下的新目录 `Data/`。`Data/` 下按用途分目录，每个目录只放一类内容；`Data/` 根目录只有这些子目录和两个清理用的状态文件：
+
+```text
+{程序目录}/
+  Data/                          程序生成的数据，由基础设施服务管理
+    Cache/
+      Files/{分区}/              通用文件缓存：图片、接口数据
+      Inference/{指纹}/          ONNX Runtime 的 TensorRT、OpenVINO 编译缓存
+    Downloads/{分类}/            下载的文件和未完成的 .part
+    Temp/{进程目录}/{分类}/       临时文件
+    WebView2/
+      App/                       软件内网页环境（Profile：Default、HtmlMask）
+      CloudGame/{实例名}/         云原神实例，一个实例一个目录
+      {以后新增的环境 Id}/
+    legacy-cleanup.json          旧目录清理标记（见 3.4）
+    pending-cleanup.json         推迟到下次启动的清理（见 3.5）
+  User/                          用户数据，基础设施不清理
+  log/                           日志、截图、调试图片（位置不变）
+```
 
 | 目录 | 内容 | 管理者 | 能否清理 |
 |---|---|---|---|
+| `Data/Cache/Files/{分区}/` | 可再生的图片和接口数据 | IFileCache | 随时可清；超过上限自动淘汰 |
+| `Data/Cache/Inference/{指纹}/` | 推理编译缓存，按引擎、设备、运行库版本指纹分目录 | 推理模块 | 下次启动时清理 |
+| `Data/Downloads/{分类}/` | 下载的安装包、未完成的 `.part` | IDownloadService | 可清，清理后需重新下载 |
+| `Data/Temp/{进程目录}/{分类}/` | 临时文件 | ITempFileService | 进程退出时删除，残留在下次启动回收 |
+| `Data/WebView2/{环境 Id}/` | 软件内网页数据 | IWebViewEnvironmentProvider | 清理缓存，或清除某个 Profile |
+| `Data/WebView2/CloudGame/{实例名}/` | 云原神实例数据 | WebViewInstanceStore | 实例未运行时清理缓存；删除实例清除全部 |
 | `User/` | 配置、脚本、录制、任务数据 | 各业务模块 | 不清理，存储空间窗口只展示占用 |
 | `User/Backup/ScriptUpdate/` | 脚本更新前的用户文件备份 | ScriptRepoUpdater | 需确认后清除 |
-| `Cache/Files/{分区}/` | 可再生的图片和接口数据 | IFileCache | 随时可清；超过上限自动淘汰 |
-| `Cache/Downloads/{分类}/` | 未完成的 `.part` 和保留的安装包 | IDownloadService | 可清，清理后需重新下载 |
-| `Cache/Inference/` | 推理编译缓存（现有，不动） | 推理模块 | 下次启动时清理 |
-| `Temp/{进程目录}/{分类}/` | 临时文件 | ITempFileService | 进程退出时删除，残留在下次启动回收 |
-| `WebView2Data/` | 共享网页数据（现有位置，不迁移） | IWebViewEnvironmentProvider | 清理缓存，或清除某个 Profile |
-| `WebView2Data/CloudGame/{实例名}/` | 云原神实例数据（现有，不动） | WebViewInstanceStore | 实例未运行时清理缓存；删除实例清除全部 |
 | `log/` | 日志、截图、调试图片 | Serilog 与各功能 | 日志自动保留；截图和调试图片手动清理 |
 
 取舍：
 
-- 缓存和临时文件放在程序目录，而不是 `%TEMP%` 或 `%LocalAppData%`。程序已经在这里写入 `Cache/`、`log/`、`WebView2Data/`；`Temp/` 与 `Repos/` 在同一分区，解压结果可以直接 `Directory.Move` 进仓库目录；用户删除程序目录时不会留下垃圾。
-- 缓存不放在 `User/` 下。`User/` 只放用户数据，用户迁移版本时复制 `User/` 不会带上可再生的缓存。
-- `WebView2Data/` 不迁移。迁移会丢失 HtmlMask 页面保存在 localStorage 里的数据，收益只是目录更整齐。
-- 更新包不得包含 `Cache/` 和 `Temp/`。
+- 用一个 `Data/` 目录收拢缓存、下载、临时文件和网页数据，与 `User/`（用户数据）、`Repos/`（脚本仓库）、`log/`（日志）分开，用户一眼能分清"程序生成的"和"自己的"。目录名只在 `AppPaths.Root` 定义一次，以后要改名只改一处。
+- 推理编译缓存与通用文件缓存分开。前者体积大、重建要重新编译，不参与文件缓存的容量淘汰；后者可以随时清。
+- 下载单独成目录，不归入缓存。下载的是安装包这类"要拿来用的文件"，并且有未完成的续传进度，清理影响与缓存不同；在存储空间窗口中也单独成组。
+- `Data/` 放在程序目录，而不是 `%TEMP%` 或 `%LocalAppData%`。`Data/Temp` 与 `Repos/` 在同一分区，解压结果可以直接 `Directory.Move` 进仓库目录；用户删除程序目录时不会留下垃圾。
+- 不放在 `User/` 下。`User/` 只放用户数据，用户迁移版本时复制 `User/` 不会带上可再生的数据。
+- 更新包不得包含 `Data/`。
 
 `AppPaths` 是这些目录的唯一来源。它只覆盖本次涉及的目录，不替换其他模块中已有的 `Global.Absolute("User/...")`。
 
@@ -163,36 +186,59 @@ BetterGenshinImpact/Infrastructure/
 /// </summary>
 public static class AppPaths
 {
-    /// <summary>可再生缓存根目录，删除后会按需重新生成。</summary>
-    public static string Cache => Global.Absolute("Cache");
+    /// <summary>程序生成数据的根目录。</summary>
+    public static string Root => Global.Absolute("Data");
 
-    /// <summary>文件缓存目录，按缓存分区分子目录。</summary>
+    /// <summary>缓存根目录，下面只放按用途划分的子目录。</summary>
+    public static string Cache => Path.Combine(Root, "Cache");
+
+    /// <summary>通用文件缓存目录，按缓存分区分子目录。</summary>
     public static string FileCache => Path.Combine(Cache, "Files");
 
-    /// <summary>下载缓存目录，存放未完成的 .part 与保留的安装包。</summary>
-    public static string Downloads => Path.Combine(Cache, "Downloads");
+    /// <summary>ONNX Runtime 编译缓存目录（TensorRT engine/timing、OpenVINO）。</summary>
+    public static string InferenceCache => Path.Combine(Cache, "Inference");
+
+    /// <summary>下载目录，按下载分类分子目录。</summary>
+    public static string Downloads => Path.Combine(Root, "Downloads");
 
     /// <summary>临时文件根目录，按进程分子目录。</summary>
-    public static string Temp => Global.Absolute("Temp");
+    public static string Temp => Path.Combine(Root, "Temp");
 
-    /// <summary>共享 WebView2 用户数据目录，沿用现有位置。</summary>
-    public static string WebViewShared => Global.Absolute("WebView2Data");
+    /// <summary>WebView2 用户数据根目录，按环境 Id 分子目录。</summary>
+    public static string WebView => Path.Combine(Root, "WebView2");
 
     /// <summary>云原神网页版实例数据根目录。</summary>
-    public static string WebViewCloudGame => Path.Combine(WebViewShared, "CloudGame");
+    public static string WebViewCloudGame => Path.Combine(WebView, "CloudGame");
 }
 ```
 
-旧目录迁移随对应阶段完成。迁移逻辑是幂等的，旧目录存在才处理，由主实例在启动时执行：
+### 3.4 旧目录清理
 
-| 旧位置 | 处理 | 阶段 |
+旧目录里的数据都可以重建，不做迁移，直接删除。由 `LegacyDataCleaner` 负责：
+
+- **触发**：主实例启动后在后台执行，不阻塞启动。新旧路径互不重叠，后台删除不会影响正在使用的新目录。
+- **每个版本只触发一次**：`Data/legacy-cleanup.json` 记录最近一次全部清理成功的版本号。记录的版本等于当前版本时直接跳过。
+- **成功才标记**：清单中每一项要么不存在，要么删除成功，才写入当前版本号。有文件被占用而删除失败时记录警告、不写标记，下次启动重试。
+- **清单随阶段增长**：每个阶段把自己不再使用的旧目录加入清单。某个旧目录必须在使用它的代码切换到新路径之后才能加入，否则旧代码会在下次启动时重新创建它。版本号变化后清理会重新触发，因此新加入的条目会在新版本首次启动时执行。
+- 删除时去掉只读属性，并校验路径位于程序目录内。
+
+| 旧位置 | 内容 | 加入清单的阶段 |
 |---|---|---|
-| `User/Temp` | 删除（现状每次启动也会删除，行为不变） | 1 |
-| `Repos/Temp` | 删除；扫描仓库时仍跳过名为 `Temp` 的目录，兼容旧数据 | 1 |
-| `Plugins/OnnxRuntime/.downloads` | 整体移动到 `Cache/Downloads/onnxruntime`，保留续传进度 | 4 |
-| `User/Cache/MemoryFileCache`、`User/Music/Artwork` | 删除（可再生） | 5 |
+| `User/Temp` | 旧临时目录 | 1 |
+| `Repos/Temp` | 旧仓库导入临时目录 | 1 |
+| `Cache/`（程序根目录） | 旧推理编译缓存 `Cache/Inference`、各版本的空目录 `Cache/{版本号}/Model` | 2 |
+| `Plugins/OnnxRuntime/.downloads` | 旧运行库安装包与未完成的下载 | 4 |
+| `User/Cache/MemoryFileCache`，删除后 `User/Cache` 为空时一并删除 | 旧通用缓存 | 5 |
+| `User/Music/Artwork` | 旧音乐封面缓存 | 5 |
+| `WebView2Data/` | 旧网页数据，包括 `WebView2Data/CloudGame` 下的云原神实例 | 6 |
 
-### 3.4 存储区域：统一的展示与清理登记
+用户可感知的影响，需要写进对应版本的更新说明：
+
+- 阶段 2：TensorRT、OpenVINO 的编译缓存被删除，升级后第一次识别需要重新编译，会变慢一次。
+- 阶段 4：运行库未完成的下载进度被删除，需要重新下载。
+- 阶段 6：旧的云原神网页版实例（含登录状态）和 HtmlMask 页面保存的网页数据被删除，需要重新创建实例并登录。
+
+### 3.5 存储区域：统一的展示与清理登记
 
 缓存、临时文件、下载、网页数据各有自己的服务，但界面需要一份统一的列表来展示占用和执行清理。各功能把自己的磁盘区域登记为"存储区域"，存储空间窗口只认这一种对象。新功能登记一个区域，就会自动出现在界面里。
 
@@ -265,7 +311,7 @@ public interface IStorageService
 
 - 默认清理逐个删除文件，被占用的文件跳过并计数，不抛异常。删除时去掉只读属性（Git 生成的对象文件是只读的），复用 `DirectoryHelper.DeleteReadOnlyDirectory` 的处理方式。
 - 删除前校验路径位于程序目录内，防止登记错误时删到程序目录之外。
-- `NextStartup` 区域的路径写入 `Cache/.pending-cleanup.json`。主实例启动时，在创建推理会话和任何 WebView 之前执行这些清理。
+- `NextStartup` 区域的路径写入 `Data/pending-cleanup.json`。主实例启动时，在创建推理会话和任何 WebView 之前执行这些清理。
 - 统计结果只在窗口打开期间保留，不落盘。
 
 各阶段登记的区域：
@@ -274,22 +320,23 @@ public interface IStorageService
 |---|---|---|
 | TempFileService | 每个临时文件分类一项 | 1 |
 | ScriptRepoUpdater | 脚本更新备份 `User/Backup/ScriptUpdate`（需确认，不参与一键清理） | 1 |
-| 推理模块 | 识别模型编译缓存 `Cache/Inference`（NextStartup）、旧版本模型缓存 | 2 |
+| 推理模块 | 识别模型编译缓存 `Data/Cache/Inference`（NextStartup） | 2 |
 | 日志与诊断 | 运行日志（只展示）、截图（需确认）、调试图片 `log/DebugMine`、`log/RewardRecognition`、`log/InventoryCountComparison` | 2 |
 | 用户数据 | `User/`（只展示） | 2 |
 | DownloadService | 每个下载分类一项 | 4 |
 | FileCache | 每个缓存分区一项 | 5 |
-| WebView | 软件内网页缓存、脚本遮罩网页数据、每个云原神实例 | 6 |
+| WebView | 每个普通环境的每个 Profile、已不再使用的环境目录、每个云原神实例 | 6 |
 
 阶段 2 先上线存储空间窗口时，尚未重构的部分（现有 `MemoryFileCache` 目录、运行库安装包目录、云原神实例整目录）以临时区域登记，到对应阶段再替换为正式区域。
 
-### 3.5 依赖注册
+### 3.6 依赖注册
 
 按项目约定在 `App.xaml.cs` 注册，均为单例：
 
 ```csharp
 // 存储与临时文件：临时目录按实例类型和进程号隔离
 services.AddSingleton<IStorageService, StorageService>();
+services.AddHostedService<LegacyDataCleaner>();
 services.AddSingleton<ITempFileService>(sp => new TempFileService(
     InstanceBootstrap.Current.Context, sp.GetRequiredService<ILogger<TempFileService>>()));
 services.AddSingleton<IStorageAreaProvider>(sp => (TempFileService)sp.GetRequiredService<ITempFileService>());
@@ -312,7 +359,7 @@ services.AddSingleton<IWebViewEnvironmentProvider, WebViewEnvironmentProvider>()
 ### 4.1 目录与进程隔离
 
 ```text
-Temp/
+Data/Temp/
   primary-12345/                         实例类型-进程号，一个进程一个目录
     .lease                               进程存活期间独占打开
     script-repo/20261028-153012-a1b2c3d4/   一次操作一个子目录
@@ -373,7 +420,7 @@ public sealed class TempScope : IDisposable
 ```csharp
 using var temp = _tempFileService.CreateScope(TempCategories.ScriptRepository);
 await Task.Run(() => ZipFile.ExtractToDirectory(zipFilePath, temp.DirectoryPath, true), ct);
-// 校验通过后移入仓库目录。Temp 与 Repos 在同一分区，Directory.Move 不会跨盘复制
+// 校验通过后移入仓库目录。Data/Temp 与 Repos 在同一分区，Directory.Move 不会跨盘复制
 Directory.Move(temp.GetPath(repoFolderName), targetPath);
 ```
 
@@ -457,7 +504,7 @@ public interface IFileCache
 
 存储细节：
 
-- 文件路径为 `Cache/Files/{分区Id}/{MD5(key)}.bin`。MD5 只用来生成文件名，不用于安全用途。
+- 文件路径为 `Data/Cache/Files/{分区Id}/{MD5(key)}.bin`。MD5 只用来生成文件名，不用于安全用途。
 - 内存层只保存小于 256 KB 的条目，滑动过期 10 分钟。更大的条目只走磁盘，避免大图常驻内存。
 - 多个实例共享该目录。写入通过 `AtomicFile` 完成；读取时遇到被占用或损坏的文件按未命中处理。
 
@@ -465,10 +512,10 @@ public interface IFileCache
 
 `CacheMaintenanceService` 是后台服务，只在主实例运行：
 
-- 启动 2 分钟后执行，每 24 小时最多一次。上次执行时间记在 `Cache/Files/.maintenance`，不写进 `config.json`，避免配置被频繁保存。
+- 启动 2 分钟后执行，每 24 小时最多一次。上次执行时间记在 `Data/Cache/Files/.maintenance`，不写进 `config.json`，避免配置被频繁保存。
 - 删除各分区中超过有效期的文件，以及代码里已不存在的分区目录（功能下线后的遗留）。
 - 文件缓存总量超过 `StorageConfig.FileCacheLimitMb`（默认 1024）时，按最后写入时间从旧到新删除，直到降到上限的 80%。
-- 推理编译缓存和下载缓存不计入这个上限。它们体积大、重建慢，由用户在存储空间窗口手动清理。
+- 推理编译缓存（`Data/Cache/Inference`）和下载目录（`Data/Downloads`）不计入这个上限。它们体积大、重建慢，由用户在存储空间窗口手动清理。
 
 ### 5.4 远程图片服务
 
@@ -504,7 +551,8 @@ public interface IRemoteImageService
 | `KongyingTavernApiService` | `IFileCache.GetOrAddAsync(KongyingTavern)` 加 `RetainOnly` |
 | `MaskMapPointService` 的 5 小时内存缓存 | 不变，纯内存且生命周期合理 |
 | `BannerImageService` 的网络背景图 | 它是用户设置的文件，不是缓存，保留在 `User/Images`；下载改用下载服务 |
-| 推理编译缓存、旧版本模型缓存 | 目录不变，只登记存储区域；旧版本目录由启动维护删除（需先确认 `Cache/{版本号}/Model` 是否还有写入方） |
+| 推理编译缓存 | 阶段 2 处理：`ResolvedInferenceRuntime.ModelCacheDirectory` 改为 `AppPaths.InferenceCache`，硬件加速页的"打开模型缓存目录"随之指向新目录；登记为存储区域 |
+| 按版本的模型缓存 `Cache/{版本号}/Model` | 阶段 2 删除：去掉 `BgiOnnxModel` 的 `ModelCacheRelativePath`、`CacheRelativePath`、`CachePath` 和 `Register` 中创建目录的代码，`YoloPredictorFactory` 不再传入缓存路径；旧目录由旧目录清理删除 |
 
 ## 6. 网络：HTTP 客户端与代理
 
@@ -634,7 +682,7 @@ services.AddHttpClient(HttpClientNames.Default, c => c.Timeout = TimeSpan.FromSe
 | LibGit2Sharp 克隆和拉取脚本仓库 | `GitProxy.Create(appWebProxy, repoUrl)` 生成 `ProxyOptions`：自定义代理模式且仓库地址不在绕过列表时使用代理；跟随系统和不使用代理两种模式保持 `ProxyType.None`，与现状一致 |
 | `ClientWebSocket`（WebSocket 通知、QQ 绑定） | 设置 `Options.Proxy = appWebProxy` |
 | MailKit SMTP | 不接入 |
-| WebView2 页面 | 跟随系统代理，原因见 8.5 |
+| WebView2 页面 | 跟随系统代理，原因见 8.6 |
 | `BetterGI.update.exe` | 独立进程，不受影响；如需支持，后续由更新程序增加代理参数 |
 
 ### 6.6 连接测试
@@ -654,10 +702,10 @@ services.AddHttpClient(HttpClientNames.Default, c => c.Timeout = TimeSpan.FromSe
 ### 7.2 接口
 
 ```csharp
-/// <summary>下载请求。Category 用于下载缓存子目录和下载中心分组。</summary>
+/// <summary>下载请求。Category 用于下载目录的子目录和下载中心分组。</summary>
 public sealed record DownloadRequest(Uri Url, string DisplayName, string Category)
 {
-    /// <summary>完成后的目标路径，必须位于程序目录内。为空时保留在下载缓存中，并返回缓存路径。</summary>
+    /// <summary>完成后的目标路径，必须位于程序目录内。为空时保留在 Data/Downloads 中，并返回该路径。</summary>
     public string? DestinationPath { get; init; }
 
     /// <summary>已知的文件大小，用于校验和提前检查磁盘空间。</summary>
@@ -759,13 +807,13 @@ var archivePath = await task.Completion;
 
 从 `RuntimePackageDownloader.DownloadAsync` 抽取并补充：
 
-1. 缓存文件为 `Cache/Downloads/{分类}/{SHA256(URL)}`。已有完整文件且校验通过时直接复用。
+1. 下载文件为 `Data/Downloads/{分类}/{SHA256(URL)}`。已有完整文件且校验通过时直接复用。
 2. 存在 `.part` 时发送 `Range` 续传。服务器返回 206 时校验 `Content-Range` 的起点；返回 200 时从头写。
 3. 等待响应头最多 30 秒。读取过程中 60 秒没有收到数据视为停滞，按可重试错误处理。现状是读取阶段不限时，网络卡住时会一直等待。
 4. 网络错误和 5xx 最多重试 3 次，间隔 2、5、15 秒，每次从已下载位置续传。4xx 不重试，直接换下一个镜像。
 5. 写入 `.part`，约每 150 毫秒报告一次进度，速度按最近 3 秒计算。
 6. 校验大小和哈希。失败时删除 `.part`，错误信息为"文件校验失败，请重新下载"。
-7. 指定了目标路径时移动到目标位置（同一分区用 `File.Move`，否则复制后删除），否则留在下载缓存。
+7. 指定了目标路径时移动到目标位置（同一分区用 `File.Move`，否则复制后删除），否则留在 `Data/Downloads`。
 8. 全局最多 3 个任务同时下载，其余排队。
 9. 已知大小时先检查磁盘剩余空间，复用 `OnnxRuntimeInstaller` 现有的检查。
 10. 取消或失败时保留 `.part`，下次可以续传。存储空间窗口会标出"含未完成的下载"。
@@ -781,52 +829,100 @@ var archivePath = await task.Completion;
 | 现状 | 改为 |
 |---|---|
 | `RuntimePackageDownloader.DownloadAsync` 与 `VerifyHashAsync` | 由 `DownloadService` 取代 |
-| `OnnxRuntimeInstaller` 自建 HttpClient | 注入 `IDownloadService`，缓存目录改为 `Cache/Downloads/onnxruntime` |
+| `OnnxRuntimeInstaller` 自建 HttpClient | 注入 `IDownloadService`，安装包目录改为 `Data/Downloads/onnxruntime`；旧的 `Plugins/OnnxRuntime/.downloads` 由旧目录清理删除 |
 | `BannerImageService` | `DownloadService`（`MaxBytes` 20 MB，`ShowInDownloadCenter = false`，目标为临时文件）；保留 ImageSharp 校验和丢弃过期操作的逻辑，校验通过后移入 `User/Images` |
 | `ScriptRepoUpdater.DownloadRepoAndUnzip` 与静态 `_httpClient` | 删除，没有活跃调用 |
 
 ## 8. WebView2 统一管理
 
-### 8.1 两类环境
+### 8.1 环境分类
 
-| | 共享环境 | 云原神隔离环境 |
+WebView2 的"环境"对应一个用户数据目录和一组固定的浏览器参数，同一环境下可以有多个 Profile 隔离 Cookie 和网页存储。本设计把环境分为两类：
+
+| | 普通环境 | 云原神环境 |
 |---|---|---|
 | 使用者 | 更新日志、脚本仓库、地图路径编辑器、脚本 HTML 遮罩，以及以后新增的普通网页 | 云原神网页版实例 |
-| 所在进程 | 任意实例进程，每个进程一个环境对象 | 只在同名的网页版实例进程中 |
-| 用户数据目录 | `WebView2Data/`（沿用） | `WebView2Data/CloudGame/{实例名}/`（沿用） |
-| 浏览器参数 | 无，且必须保持为常量 | 禁用遮挡检测和后台降频（现有 4 项） |
-| 数据隔离 | 按 Profile 隔离：`Default`、`HtmlMask` | 每个实例一个目录 |
+| 数量 | 目前 1 个（`App`），以后可以按需新增 | 每个实例一个 |
+| 定义位置 | `WebViewEnvironments` 中的静态定义 | 环境入口内部，按实例名生成 |
+| 所在进程 | 任意实例进程，每个进程每个环境一个对象 | 只在同名的网页版实例进程中 |
+| 用户数据目录 | `Data/WebView2/{环境 Id}/` | `Data/WebView2/CloudGame/{实例名}/` |
+| 浏览器参数 | 写在定义里的常量，`App` 环境为空 | 禁用遮挡检测和后台降频（现有 4 项） |
+| 数据隔离 | 环境之间目录隔离；环境内按 Profile 隔离 | 每个实例一个目录 |
 | 宿主方式 | WPF `WebView2` 控件 | 窗口句柄直接托管 `CoreWebView2Controller`，固定 1920x1080、缩放 1 |
 | 代理 | 跟随系统 | 跟随系统 |
 | 清理 | 清理缓存（保留网页数据），或清除某个 Profile 的全部数据 | 实例未运行时清理缓存（保留登录），或删除实例 |
 
-共享环境的浏览器参数必须是常量。WebView2 要求同一用户数据目录的所有环境参数一致，否则后创建的环境会初始化失败。主实例、桌面分身和云原神实例进程可能同时使用 `WebView2Data/`，所以这些参数不能随配置变化。
+浏览器参数必须是定义里的常量，不能读取用户配置。WebView2 要求同一用户数据目录的所有环境参数一致，否则后创建的环境会初始化失败。主实例、桌面分身和云原神实例进程可能同时使用同一个普通环境目录，参数随配置变化就会出现这种失败。
 
-"统一管理"落在三件事上：只有环境入口能创建环境；普通网页只通过 `WebViewSetup` 初始化，套用同一套安全设置和异常处理；网页数据统一登记为存储区域。
+"统一管理"落在四件事上：只有环境入口能创建环境；所有普通环境的配置集中写在一个定义类里；普通网页只通过 `WebViewSetup` 初始化，套用同一套安全设置和异常处理；网页数据统一登记为存储区域。
 
-### 8.2 接口
+### 8.2 普通环境的定义与配置管理
+
+所有普通环境的配置写在一个定义类里，这是查看和修改普通环境配置的唯一位置：
 
 ```csharp
-/// <summary>共享环境中的 Profile，用于隔离 Cookie 和网页存储。</summary>
-public sealed record WebViewProfile(string ProfileName, string DisplayName);
+/// <summary>普通 WebView2 环境的定义：一个用户数据目录和它固定不变的配置。</summary>
+public sealed record WebViewEnvironmentDefinition(string Id, string DisplayName)
+{
+    /// <summary>浏览器参数。必须是常量，不能读取用户配置，见 8.1。</summary>
+    public string BrowserArguments { get; init; } = "";
+
+    /// <summary>用户数据目录，由 Id 决定，不允许单独指定。</summary>
+    public string DataFolder => Path.Combine(AppPaths.WebView, Id);
+}
+
+/// <summary>已定义的普通环境。新增环境只在这里加一项。</summary>
+public static class WebViewEnvironments
+{
+    /// <summary>软件内网页的默认环境：更新日志、脚本仓库、地图路径编辑器、脚本遮罩。</summary>
+    public static readonly WebViewEnvironmentDefinition App = new("App", "软件内网页");
+
+    /// <summary>全部普通环境，供环境入口校验、存储区域登记和清理不再使用的目录。</summary>
+    public static IReadOnlyList<WebViewEnvironmentDefinition> All { get; } = [App];
+}
+
+/// <summary>普通环境中的 Profile，用于在同一环境内隔离 Cookie 和网页存储。</summary>
+public sealed record WebViewProfile(WebViewEnvironmentDefinition Environment, string ProfileName, string DisplayName);
 
 /// <summary>已定义的 Profile。需要独立登录态或存储的新功能在这里新增一项。</summary>
 public static class WebViewProfiles
 {
     /// <summary>软件内网页：更新日志、脚本仓库、地图路径编辑器。</summary>
-    public static readonly WebViewProfile Default = new("Default", "软件内网页");
+    public static readonly WebViewProfile Default = new(WebViewEnvironments.App, "Default", "软件内网页");
 
     /// <summary>脚本 HTML 遮罩，与其他网页隔离。</summary>
-    public static readonly WebViewProfile HtmlMask = new("HtmlMask", "脚本遮罩网页");
-}
+    public static readonly WebViewProfile HtmlMask = new(WebViewEnvironments.App, "HtmlMask", "脚本遮罩网页");
 
+    /// <summary>全部 Profile，供存储区域登记。</summary>
+    public static IReadOnlyList<WebViewProfile> All { get; } = [Default, HtmlMask];
+}
+```
+
+何时新增 Profile、何时新增环境：
+
+- 只需要隔离登录状态和网页存储时，新增 Profile。同一环境共用一个浏览器进程，占用更少。
+- 需要不同的浏览器参数，或者希望数据和浏览器进程完全分开时，新增环境。
+- 新增环境只需在 `WebViewEnvironments` 加一项并放进 `All`。调用方通过它的 Profile 使用，不需要改环境入口。
+
+环境入口对这些定义做统一管理：
+
+- 启动时校验：Id 唯一，且只能是字母、数字和短横线；Id 不能是 `CloudGame`。
+- 每个进程、每个环境只创建一次环境对象，之后复用。
+- 创建时在日志中记录环境 Id、数据目录、浏览器参数和运行时版本，排查问题时可以直接对照。
+- 存储空间窗口按 `WebViewProfiles.All` 为每个 Profile 生成一个存储区域，按所属环境分组显示。
+- 每个 Profile 都必须属于 `WebViewEnvironments.All` 中的环境，启动校验会检查这一点。
+- `Data/WebView2/` 下既不在 `All` 中、也不是 `CloudGame` 的目录，视为已删除环境的遗留数据，在存储空间窗口中显示为"已不再使用的网页数据"，可以直接清理。
+
+### 8.3 接口
+
+```csharp
 /// <summary>WebView2 环境的唯一创建入口。</summary>
 public interface IWebViewEnvironmentProvider
 {
-    /// <summary>共享环境，本进程只创建一次。除云原神外的所有 WebView 都使用它。</summary>
-    Task<CoreWebView2Environment> GetSharedAsync();
+    /// <summary>获取普通环境，每个进程每个环境只创建一次。</summary>
+    Task<CoreWebView2Environment> GetAsync(WebViewEnvironmentDefinition environment);
 
-    /// <summary>云原神实例的隔离环境。只能在同名的网页版实例进程中调用，否则抛出异常。</summary>
+    /// <summary>云原神实例的环境。只能在同名的网页版实例进程中调用，否则抛出异常。</summary>
     Task<CoreWebView2Environment> CreateCloudGameAsync(string instanceName);
 }
 ```
@@ -845,7 +941,7 @@ public sealed record WebViewOptions
 /// <summary>WPF WebView2 控件的统一初始化。</summary>
 public static class WebViewSetup
 {
-    /// <summary>用共享环境和指定 Profile 初始化控件，并套用通用设置和事件处理。</summary>
+    /// <summary>用 Profile 所属的普通环境初始化控件，并套用通用设置和事件处理。</summary>
     public static Task InitializeAsync(this WebView2 webView, IWebViewEnvironmentProvider provider,
         WebViewProfile profile, WebViewOptions? options = null);
 }
@@ -857,13 +953,13 @@ public static class WebViewSetup
 - `NewWindowRequested`：按 `OpenNewWindowInBrowser` 交给系统浏览器（`UseShellExecute = true`）或拒绝。现状只有脚本仓库页面处理了它。
 - `DownloadStarting`：没有下载目录时取消；有目录时保存到该目录。替代 `WebpagePanel` 中对 `DefaultDownloadFolderPath` 的设置。
 - `ProcessFailed`：记录日志。渲染进程崩溃时自动重新加载一次；再次崩溃时在页面位置显示"网页进程异常退出"和"重新加载"按钮。
-- 把 `CoreWebView2` 以弱引用登记到环境入口，供清理网页数据时使用（见 8.4）。
+- 把 `CoreWebView2` 以弱引用登记到环境入口，供清理网页数据时使用（见 8.5）。
 
 各使用方保留自己的特有逻辑：脚本仓库的虚拟主机映射和 HostObject、HtmlMask 的资源请求拦截和消息桥、地图编辑器的文件访问桥。`WebpagePanel` 改为内部调用 `WebViewSetup`，外部用法不变。
 
 云原神：`CloudWebHostWindow.OnLoaded` 改为调用 `CreateCloudGameAsync`，浏览器参数常量连同现有注释移入环境入口。Controller 的创建和固定尺寸配置仍由宿主窗口负责，它们属于云原神运行环境。宿主窗口另外处理 `ProcessFailed`：标记为未就绪、停止截图，并提示用户重新加载页面，不再只靠就绪轮询发现。
 
-### 8.3 运行时检测
+### 8.4 运行时检测
 
 - `WebViewRuntime.GetVersion()`（Infrastructure）：返回已安装的版本，未安装时返回 null。
 - `WebViewRuntimePrompt.EnsureAvailableAsync()`（View 层）：未安装时用 `ThemedMessageBox` 说明"该功能需要 Microsoft Edge WebView2 运行时"，提供"前往下载"（以 `UseShellExecute = true` 打开官方下载页）和"取消"。
@@ -875,30 +971,32 @@ public static class WebViewSetup
 | `CloudWebInstanceWindowViewModel` | 新建或打开实例前，避免启动一个注定失败的进程 |
 | `CloudWebHostWindow` | 保留现有的初始化失败提示 |
 
-### 8.4 网页数据清理
+### 8.5 网页数据清理
 
 | 存储区域 | 清理方式 | 确认 | 一键清理 |
 |---|---|---|---|
-| 软件内网页缓存 | 本进程有存活的 WebView 时调用 `Profile.ClearBrowsingDataAsync(DiskCache \| CacheStorage)`，同时登记下次启动删除缓存子目录 | 否 | 是 |
-| 脚本遮罩网页数据 | 清除 `HtmlMask` Profile 的全部数据，脚本保存在网页中的设置会丢失 | 是 | 否 |
-| 云原神 · {实例名} | 实例未运行时删除该实例目录下的缓存子目录（`Cache`、`Code Cache`、`GPUCache`），保留 Cookie 和登录状态；运行中时按钮不可用，并说明"请先关闭该实例" | 否 | 目录结构实测确认前不参与 |
+| 软件内网页缓存（`Default` Profile） | 本进程有存活的 WebView 时调用 `Profile.ClearBrowsingDataAsync(DiskCache \| CacheStorage)`，同时登记下次启动删除缓存子目录 | 否 | 是 |
+| 脚本遮罩网页数据（`HtmlMask` Profile） | 清除该 Profile 的全部数据，脚本保存在网页中的设置会丢失 | 是 | 否 |
+| 以后新增的 Profile | 由 Profile 定义说明清理影响，默认按"只清缓存"处理 | 按定义 | 按定义 |
+| 已不再使用的网页数据 | 删除不在定义中的环境目录 | 否 | 是 |
+| 云原神 · {实例名} | 实例未运行时删除该实例目录下的缓存子目录，保留 Cookie 和登录状态；运行中时按钮不可用，并说明"请先关闭该实例" | 否 | 否 |
 
-Chromium 缓存子目录在 `EBWebView/{Profile}/` 下的实际位置需要实测确认后再写入代码。删除实例（含登录状态）沿用现有流程。云原神实例的数据区域只在主实例中登记，与"子实例不操作其他实例"的边界一致。
+开发环境中已观察到云原神实例的缓存位于 `{实例目录}/EBWebView/Default/Cache/Cache_Data`。普通环境多 Profile 时各 Profile 子目录的位置、`Code Cache` 和 `GPUCache` 的位置，需要实测确认后再写入代码。删除实例（含登录状态）沿用现有流程。云原神实例的数据区域只在主实例中登记，与"子实例不操作其他实例"的边界一致。
 
-### 8.5 代理
+### 8.6 代理
 
 WebView2 页面第一版跟随系统代理，不接入自定义代理：
 
-- WebView2 的代理只能通过浏览器参数设置，而共享环境的参数必须在所有进程中保持一致。多实例运行时修改代理，会让后启动的进程初始化失败。
+- WebView2 的代理只能通过浏览器参数设置，而浏览器参数必须是定义里的常量，并在所有进程中保持一致。多实例运行时修改代理，会让后启动的进程初始化失败。
 - 云原神是实时串流，经代理会增加延迟。
 
 设置页会明确写出这一范围（见 9.2）。
 
-### 8.6 其他
+### 8.7 其他
 
-- 共享数据目录统一取自 `AppPaths.WebViewShared`，修复 dotnet 宿主下的目录错误。
+- 数据目录统一由 `WebViewEnvironmentDefinition.DataFolder` 和 `AppPaths.WebViewCloudGame` 提供，修复 dotnet 宿主下的目录错误。`WebViewInstanceStore.Root` 改为 `AppPaths.WebViewCloudGame`。
 - `EnsureWebView2DataFolder` 给 Everyone 授予完全控制权限，建议改为只授予当前用户。需要先确认当初要解决的场景（推测是程序装在 C 盘并以管理员身份运行）。
-- 桌面分身运行在另一个 Windows 会话，与主实例共用 `WebView2Data/` 是否冲突需要实测。如果冲突，由环境入口为桌面分身选择独立目录 `WebView2Data/Session{会话号}`，调用方无需改动。
+- 桌面分身运行在另一个 Windows 会话，与主实例共用 `Data/WebView2/App/` 是否冲突需要实测。如果冲突，由环境入口为桌面分身改用 `Data/WebView2/App-Session{会话号}/`，调用方无需改动。
 - `WebpagePanel.Dispose` 没有调用方。需要确认所在窗口关闭时 WPF 控件是否自动释放；如果不会，由 `WebpageWindow` 在关闭时释放。
 
 ## 9. 界面与交互
@@ -955,7 +1053,7 @@ WebView2 页面第一版跟随系统代理，不接入自定义代理：
 
 ```text
 存储空间
-程序目录 E:\BetterGI                                [打开目录]  [重新计算]
+数据目录 E:\BetterGI\Data                           [打开目录]  [重新计算]
 
   ████████████████▓▓▓▓▓▓▓▓▒▒▒▒░░                       共 4.8 GB
   ■ 缓存 1.2 GB   ■ 下载 2.1 GB   ■ 网页数据 0.9 GB
@@ -967,12 +1065,13 @@ WebView2 页面第一版跟随系统代理，不接入自定义代理：
   空荧酒馆点位数据    下次加载点位时重新获取               5 MB  [清理]
   识别模型编译缓存    下次启动后重新编译，首次识别会变慢  612 MB  [清理]
 
-下载
+下载 · 安装包和未完成的下载
   运行库安装包        含 1 个未完成的下载，可继续         1.9 GB  [清理]
 
 网页数据
-  软件内网页缓存      保留网页登录与设置                 120 MB  [清理]
-  脚本遮罩网页数据    会清除脚本保存在网页中的设置         8 MB  [清除…]
+  软件内网页 · 网页缓存      保留网页登录与设置          120 MB  [清理]
+  软件内网页 · 脚本遮罩数据  会清除脚本保存在网页中的设置   8 MB  [清除…]
+  已不再使用的网页数据       旧功能留下的网页目录          15 MB  [清理]
   云原神 · 小号A      保留登录状态。运行中，请先关闭该实例 340 MB  [清理]（禁用）
 
 临时文件
@@ -1002,6 +1101,8 @@ WebView2 页面第一版跟随系统代理，不接入自定义代理：
 - 不能清理时按钮禁用，原因直接显示在说明文字中。
 - 缓存上限下拉框：256 MB、512 MB、1 GB（默认）、2 GB、5 GB。
 - 每个分组按占用从大到小排序，帮助用户先看到大头。
+- 网页数据按"环境 · Profile"命名，以后新增普通环境时自动多出对应的行；"已不再使用的网页数据"只在存在遗留目录时显示。
+- 用户数据和日志不在 `Data/` 下，窗口顶部只显示数据目录，这两组的"打开"按钮各自打开对应目录。
 - 桌面分身和云原神实例也能打开这个窗口，统计的是同一个程序目录；云原神实例的数据行只在主实例中显示。
 
 ### 9.4 下载中心
@@ -1063,7 +1164,7 @@ WebView2 页面第一版跟随系统代理，不接入自定义代理：
 | LibGit2Sharp 传输 | 自带网络栈，只接入代理映射（6.5） |
 | MailKit SMTP | 代理需求少，且 MailKit 的代理配置方式不同 |
 | 外部访问服务（Kestrel） | 入站服务，不是对外请求 |
-| WebView2 页面流量 | 跟随系统代理（8.5） |
+| WebView2 页面流量 | 跟随系统代理（8.6） |
 | 识别模块的进程内缓存（`RecognitionAssets`、`AssetsCache`、模板 Mat 等） | 不占磁盘，生命周期由识别模块负责 |
 | `MaskMapPointService` 的 5 小时内存缓存 | 纯内存，生命周期合理 |
 | 同目录原子写入和同级发布暂存目录 | 必须与目标同目录才能原子替换（4.3） |
@@ -1092,16 +1193,17 @@ dotnet msbuild BetterGenshinImpact.sln -restore -p:Configuration=Debug -nologo -
 
 | 阶段 | 内容 | 验收 |
 |---|---|---|
-| 1. 存储基础与临时文件 | `AppPaths`、`StorageArea` 与 `IStorageService`、`PendingCleanupStore`、`AtomicFile`、`ITempFileService`；迁移 `TempManager` 的全部用法、脚本更新备份、仓库导入与克隆的临时目录、通知图片；删除 `User/Temp`、`Repos/Temp` | 主实例和云原神实例同时运行时，任一实例退出不影响另一实例的临时文件；结束进程后重启会回收残留；脚本更新中途结束进程后备份仍在，并有提示；带 `..` 的订阅路径被拒绝 |
-| 2. 存储空间窗口 | 窗口、ViewModel、设置页入口；登记推理缓存、日志与诊断、用户数据，以及尚未重构部分的临时区域（见 3.4） | 统计与清理不阻塞界面；被占用的文件被跳过并有提示；下次启动清理的区域在重启后被清理 |
-| 3. 网络与代理 | `NetworkConfig`、`AppWebProxy`、接管 `DefaultProxy`、命名客户端与公共处理器；迁移 6.4 的全部调用点；Git 与 WebSocket 代理；JS 重定向校验；网络设置子视图与连接测试；删除 `DownloadRepoAndUnzip` | 跟随系统模式下行为与改造前一致；切换为自定义代理后，新请求经过本地代理（以代理软件的连接记录确认）；除 Infrastructure、Telegram 独立代理和测试代码外，不再出现 `new HttpClient(` |
-| 4. 下载服务与下载中心 | `DownloadService`、`IDownloadMonitor`、标题栏下载中心；迁移 `OnnxRuntimeInstaller`、`BannerImageService`；移动 `.downloads`；可选接入 Git 进度 | 下载 TensorRT 包中途断网，恢复后续传；取消后重试会续传；校验失败有明确提示；离开硬件加速页后仍能在下载中心看到进度 |
-| 5. 缓存 | `IFileCache`、`CachePartitions`、`CacheMaintenanceService`、`IRemoteImageService`；迁移 5.5 中的用法；删除 `MemoryFileCache` 和旧缓存目录；缓存分区登记为存储区域 | 缓存超过上限后自动降到 80%；地图上大量图标滚动时，内存中的图片数量不超过上限；清理某个分区后功能正常并重新下载 |
-| 6. WebView2 | 环境入口、Profile、`WebViewSetup`、运行时提示；迁移 `WebpagePanel`、`HtmlMaskWindow`、`CloudWebHostWindow`、实例管理窗口；`ProcessFailed` 处理；网页数据存储区域 | 全仓库只有环境入口调用 `CoreWebView2Environment.CreateAsync`；未安装运行时能看到说明并跳转下载页；以 dotnet 宿主启动时数据目录仍在程序目录；云原神实例清理缓存后登录状态保留 |
+| 1. 存储基础与临时文件 | `AppPaths`、`StorageArea` 与 `IStorageService`、`PendingCleanupStore`、`LegacyDataCleaner`、`AtomicFile`、`ITempFileService`；迁移 `TempManager` 的全部用法、脚本更新备份、仓库导入与克隆的临时目录、通知图片；旧目录清单加入 `User/Temp`、`Repos/Temp` | 主实例和云原神实例同时运行时，任一实例退出不影响另一实例的临时文件；结束进程后重启会回收残留；脚本更新中途结束进程后备份仍在，并有提示；带 `..` 的订阅路径被拒绝；旧目录清理每个版本只执行一次，有文件被占用时下次启动重试 |
+| 2. 存储空间窗口与推理缓存 | 窗口、ViewModel、设置页入口；推理缓存改到 `Data/Cache/Inference`，删除 `BgiOnnxModel` 的按版本缓存目录；旧目录清单加入根目录 `Cache/`；登记推理缓存、日志与诊断、用户数据，以及尚未重构部分的临时区域（见 3.5） | 统计与清理不阻塞界面；被占用的文件被跳过并有提示；下次启动清理的区域在重启后被清理；启动后程序根目录不再出现 `Cache/` |
+| 3. 网络与代理 | `NetworkConfig`、`AppWebProxy`、接管 `DefaultProxy`、命名客户端与公共处理器；迁移 6.4 的全部调用点；Git 与 WebSocket 代理；JS 重定向校验；网络设置子视图与连接测试；删除 `DownloadRepoAndUnzip`；修复灰度判定哈希 | 跟随系统模式下行为与改造前一致；切换为自定义代理后，新请求经过本地代理（以代理软件的连接记录确认）；除 Infrastructure、Telegram 独立代理和测试代码外，不再出现 `new HttpClient(`；同一设备多次启动的灰度判定结果相同 |
+| 4. 下载服务与下载中心 | `DownloadService`、`IDownloadMonitor`、标题栏下载中心；迁移 `OnnxRuntimeInstaller`、`BannerImageService`；旧目录清单加入 `Plugins/OnnxRuntime/.downloads`；可选接入 Git 进度 | 下载 TensorRT 包中途断网，恢复后续传；取消后重试会续传；校验失败有明确提示；离开硬件加速页后仍能在下载中心看到进度 |
+| 5. 缓存 | `IFileCache`、`CachePartitions`、`CacheMaintenanceService`、`IRemoteImageService`；迁移 5.5 中的用法；删除 `MemoryFileCache`；旧目录清单加入 `User/Cache/MemoryFileCache`、`User/Music/Artwork`；缓存分区登记为存储区域 | 缓存超过上限后自动降到 80%；地图上大量图标滚动时，内存中的图片数量不超过上限；清理某个分区后功能正常并重新下载 |
+| 6. WebView2 | 环境定义与 Profile、环境入口、`WebViewSetup`、运行时提示；迁移 `WebpagePanel`、`HtmlMaskWindow`、`CloudWebHostWindow`、`WebViewInstanceStore`、实例管理窗口；`ProcessFailed` 处理；网页数据存储区域；旧目录清单加入 `WebView2Data/` | 全仓库只有环境入口调用 `CoreWebView2Environment.CreateAsync`；未安装运行时能看到说明并跳转下载页；以 dotnet 宿主启动时数据目录仍在 `Data/WebView2/`；云原神实例清理缓存后登录状态保留；在 `WebViewEnvironments` 中临时增加一个测试环境，能在存储空间窗口看到对应行，删除定义后其目录显示为"已不再使用的网页数据" |
 
 建议补充的单元测试（`Test/BetterGenshinImpact.UnitTest`）：
 
 - `TempFileService`：`.lease` 释放后残留目录被回收，持有 `.lease` 时不被回收，`GetPath` 拒绝越界路径。
+- `LegacyDataCleaner`：标记版本等于当前版本时跳过；全部成功才写标记；部分失败时不写标记。
 - `AppWebProxy`：三种模式和绕过列表的路由结果。
 - `DownloadService`：用假的 `HttpMessageHandler`（参照 `TelegramNotifierTests` 的写法）验证 206 续传、200 重新下载、哈希失败、重试次数。
 - `FileCache`：用 `TimeProvider` 验证过期和容量淘汰。
@@ -1116,25 +1218,34 @@ dotnet msbuild BetterGenshinImpact.sln -restore -p:Configuration=Debug -nologo -
 | 发 HTTP 请求 | `IHttpClientFactory.CreateClient(HttpClientNames.X)` | `new HttpClient()`、静态 HttpClient 字段 |
 | 下载较大的文件，或需要进度 | `IDownloadService.Start` | 自己写下载循环、用 `ReadAsByteArrayAsync` 读整个文件 |
 | 显示网页 | `WebpagePanel`，或 `WebViewSetup.InitializeAsync` 加 `WebViewProfiles` | 直接调用 `CoreWebView2Environment.CreateAsync`、自定数据目录 |
+| 需要独立的网页环境 | 在 `WebViewEnvironments` 新增定义，再为它定义 Profile | 从用户配置读取浏览器参数 |
+| 废弃旧目录 | 在使用它的代码切到新路径的同一版本，把旧目录加入 `LegacyDataCleaner` 的清单 | 写一次性的迁移代码，或保留旧目录 |
 | 新的会占用磁盘的目录 | 实现 `IStorageAreaProvider` 登记 | 只写不管、没有清理入口 |
 
 约束手段：
 
 - 在 `.agents/code-review.md` 中加入上表的检查项。
-- 可选：引入 `Microsoft.CodeAnalysis.BannedApiAnalyzers`，在 Infrastructure 之外禁止 `new HttpClient()`、`Path.GetTempPath()` 和 `CoreWebView2Environment.CreateAsync`。这会新增一个分析器包，需要确认。
+- 本期不引入 `Microsoft.CodeAnalysis.BannedApiAnalyzers`，规范靠代码审查清单执行。以后如果违规反复出现，再考虑用它在 Infrastructure 之外禁止 `new HttpClient()`、`Path.GetTempPath()` 和 `CoreWebView2Environment.CreateAsync`。
 
-## 15. 待确认
+## 15. 决策记录与待实测项
 
-1. 缓存和临时文件放在程序根目录的 `Cache/`、`Temp/`，不放在 `User/` 下。这样用户迁移版本时只复制 `User/` 不会带上缓存。是否认可？
-2. 默认"跟随系统代理"。Git 拉取只在"自定义代理"模式下走代理，另外两种模式保持现在的直连。是否认可？
-3. WebView2 页面（含云原神）第一版不接入自定义代理。是否认可？
-4. 存储空间使用独立窗口、入口在设置页；下载中心入口在标题栏。是否认可？
-5. 截图的处理：当前设计是可以清除但需确认，不参与一键清理，也不自动删除。是否认可？
-6. 灰度判定改为按设备稳定的哈希会改变灰度用户分布，是否在阶段 3 一并修复？
-7. `Cache/{版本号}/Model` 是否仍有写入方，旧版本目录能否在启动时删除？
-8. 是否引入 BannedApiAnalyzers？
-9. 需要实测的技术点：
-   - 桌面分身与主实例共用 `WebView2Data/` 是否冲突。
-   - Chromium 缓存子目录在 `EBWebView/` 下的实际位置。
-   - `WebpagePanel` 所在窗口关闭时，WebView2 控件是否自动释放。
-   - 运行期间修改 Windows 系统代理后，.NET 的系统代理是否即时生效（影响"跟随系统"模式，与现状相同）。
+### 15.1 已确认的决策（2026-10-28）
+
+1. 程序生成的数据放在程序目录下的 `Data/`，不放在 `User/` 下；`Data/` 内按缓存、下载、临时文件、网页数据分目录，推理缓存与通用文件缓存分开（3.3）。
+2. 默认"跟随系统代理"。Git 拉取只在"自定义代理"模式下走代理，另外两种模式保持现在的直连（6.5）。
+3. WebView2 页面（含云原神）第一版不接入自定义代理（8.6）。
+4. 存储空间使用独立窗口，入口在设置页；下载中心入口在标题栏（9.3、9.4）。
+5. 截图可以清除但需确认，不参与一键清理，也不自动删除（9.3）。
+6. 灰度判定改为按设备稳定的哈希，在阶段 3 修复（2.5）。
+7. `Cache/{版本号}/Model` 没有读写方，停止创建并删除（5.5）。
+8. 本期不引入 BannedApiAnalyzers（14）。
+9. 旧目录不迁移，每个版本启动时清理一次，全部成功才标记（3.4）。
+10. 普通 WebView2 环境可以有多个，配置集中在 `WebViewEnvironments` 定义（8.2）。
+
+### 15.2 需要实测的技术点
+
+- 桌面分身与主实例共用 `Data/WebView2/App/` 是否冲突（8.7）。
+- 普通环境多 Profile 时，各 Profile 缓存子目录在 `EBWebView/` 下的实际位置（8.5）。
+- `WebpagePanel` 所在窗口关闭时，WebView2 控件是否自动释放（8.7）。
+- WebView2 数据目录给 Everyone 授予完全控制权限是为了解决什么场景，改为只授予当前用户后该场景是否仍正常（8.7）。
+- 运行期间修改 Windows 系统代理后，.NET 的系统代理是否即时生效。这影响"跟随系统"模式，与现状相同。
