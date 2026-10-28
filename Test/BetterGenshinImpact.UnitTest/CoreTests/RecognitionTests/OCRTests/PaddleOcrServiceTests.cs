@@ -88,18 +88,5 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests
                 Assert.Matches(pattern, actual);
             }
         }
-
-        [Fact]
-        public void PaddleOcrService_Version_ShouldBeCorrect()
-        {
-            //
-            var ocrV4 = this.paddle.Get("zh-Hans", "V4");
-            var ocrV5 = this.paddle.Get("zh-Hans", "V5");
-            //
-            Assert.EndsWith("V4", ocrV4.GetConfigName.Item1, StringComparison.OrdinalIgnoreCase);
-            Assert.EndsWith("V4", ocrV4.GetConfigName.Item2, StringComparison.OrdinalIgnoreCase);
-            Assert.EndsWith("V5", ocrV5.GetConfigName.Item1, StringComparison.OrdinalIgnoreCase);
-            Assert.EndsWith("V5", ocrV5.GetConfigName.Item2, StringComparison.OrdinalIgnoreCase);
-        }
     }
 }

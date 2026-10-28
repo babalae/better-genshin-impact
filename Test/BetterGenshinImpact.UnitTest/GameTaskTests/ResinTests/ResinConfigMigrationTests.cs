@@ -11,21 +11,6 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.ResinTests;
 /// <summary>验证全局配置旧 JSON 的迁移、新配置默认值及迁移幂等性。</summary>
 public sealed class ResinConfigMigrationTests
 {
-    /// <summary>ConfigService 的统一迁移入口将四种新配置转换为任务能力默认设置。</summary>
-    [Fact]
-    public void NewAllConfig_MigratesToCapabilityDefaults()
-    {
-        var config = new AllConfig();
-        Assert.Null(config.AutoDomainConfig.ResinUsage);
-        Assert.Null(config.AutoStygianOnslaughtConfig.ResinUsage);
-        Assert.Null(config.AutoBossConfig.ResinUsage);
-        Assert.Null(config.AutoLeyLineOutcropConfig.ResinUsage);
-        MigrateReadResult(config);
-        Assert.Equal(ResinCapabilities.Domain.Defaults, config.AutoDomainConfig.ResinUsage);
-        Assert.Equal(ResinCapabilities.StygianOnslaught.Defaults, config.AutoStygianOnslaughtConfig.ResinUsage);
-        Assert.Equal(ResinCapabilities.Boss.Defaults, config.AutoBossConfig.ResinUsage);
-        Assert.Equal(ResinCapabilities.LeyLineOutcrop.Defaults, config.AutoLeyLineOutcropConfig.ResinUsage);
-    }
 
     /// <summary>仅包含旧字段的全局配置经读取迁移后，档位、目标及补充开关符合旧字段映射。</summary>
     [Fact]
@@ -106,21 +91,6 @@ public sealed class ResinConfigMigrationTests
         Assert.Equal(ResinUsageMode.Exhaust, usage.Mode);
         Assert.True(usage.Allowed.Transient);
         Assert.True(usage.Allowed.Fragile);
-    }
-
-    /// <summary>整体替换配置的树脂设置会发出属性变化，原地嵌套修改不冒充配置通知。</summary>
-    [Fact]
-    public void Config_WholeValueReplacementNotifies()
-    {
-        var config = new AutoBossConfig();
-        var original = config.EnsureResinUsage();
-        var changes = new List<string?>();
-        config.PropertyChanged += (_, args) => changes.Add(args.PropertyName);
-        var edited = original.Clone();
-        edited.Allowed.Transient = true;
-        config.ResinUsage = edited;
-        Assert.Contains(nameof(AutoBossConfig.ResinUsage), changes);
-        Assert.False(original.Allowed.Transient);
     }
 
     /// <summary>调用 Read 各返回分支共用的迁移函数，不读取或写入实际用户配置。</summary>

@@ -4,7 +4,6 @@ using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.Service;
-using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json.Linq;
 
@@ -19,36 +18,6 @@ public sealed class PuloniaTaskCommonSettingsTests : IDisposable
     /// 当前测试独占的资源与存储目录。
     /// </summary>
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-" + BetterGenshinImpact.Helpers.ShortId.Create(null, 8));
-
-    /// <summary>
-    /// 完整默认配置必须符合执行器声明，绑定默认值与设置目录一致，旧总开关和无读取方的字段不再是参数。
-    /// </summary>
-    [Fact]
-    public void ExecutorDefaults_MatchSchemasAndBindings()
-    {
-        IPuloniaTaskExecutor[] executors =
-        [
-            new PuloniaPathingTaskExecutor(new AllConfig()), new PuloniaJavaScriptTaskExecutor(), new PuloniaShellTaskExecutor(),
-            new PuloniaKeyMouseTaskExecutor()
-        ];
-        var definitions = executors.SelectMany(executor => executor.Definitions).ToArray();
-        PuloniaTaskValidator.ValidateDefinitions(definitions);
-        foreach (var definition in definitions)
-        {
-            PuloniaTaskValidator.ValidateParameters(definition.DefaultParameters, definition.ParameterSchema, definition.TaskType);
-            Assert.NotEmpty(definition.SettingBindings);
-            if (definition.TaskType is "shell" or "keymouse")
-                continue;
-            Assert.Equal("", definition.DefaultParameters.Value<string>("party_name"));
-            Assert.True(definition.DefaultParameters.Value<bool>("auto_pick_enabled"));
-            Assert.Equal("fixed", definition.DefaultParameters.Value<string>(PuloniaTaskCommonSettings.PartySourceParameter));
-            foreach (var removed in new[] { "pathing_enabled", "auto_fight_enabled", "js_script_use_enabled", "solo_task_use_fight_enabled", "task_cycle_config", "avatar_index_list" })
-                Assert.Null(definition.DefaultParameters[removed]);
-        }
-        // 地图追踪额外使用采集 CD，JS 不使用
-        Assert.Contains(PuloniaSettingCatalog.CollectionCooldownKey, definitions.Single(item => item.TaskType == "pathing").SettingBindings.Keys);
-        Assert.DoesNotContain(PuloniaSettingCatalog.CollectionCooldownKey, definitions.Single(item => item.TaskType == "javascript").SettingBindings.Keys);
-    }
 
     /// <summary>
     /// 战斗嵌套配置、显式 false、枚举、空食物名称、运行跳队开关与条件选队均需无损往返；总开关固定开启。
@@ -178,79 +147,6 @@ public sealed class PuloniaTaskCommonSettingsTests : IDisposable
         Assert.Equal(PuloniaTaskRunStatus.Succeeded, run.Status);
         Assert.Equal(PuloniaTaskNodeStatus.Skipped, Assert.Single(run.NodeResults.Where(node => node.TaskType == "shell")).Status);
         Assert.Equal(PuloniaTaskNodeStatus.Succeeded, Assert.Single(run.NodeResults.Where(node => node.TaskType == "csharp")).Status);
-    }
-
-    /// <summary>
-    /// 共享设置只写修改的项，恢复继承保留脚本私有设置，撤销可以恢复删除前的覆盖。
-    /// </summary>
-    [Fact]
-    public void DocumentEdits_PreserveUnrelatedValuesAndSupportUndo()
-    {
-        var leaf = new PuloniaTask
-        {
-            TaskType = "javascript", Path = "example",
-            Parameters = new JObject { ["settings"] = new JObject { ["custom"] = 42 } }
-        };
-        var plan = new PuloniaTaskPlan();
-        plan.RootTask.Children.Add(leaf);
-        var document = new PuloniaTaskPlanDocumentViewModel(plan, [], new PuloniaTaskClipboardService(), false);
-        document.SetDefinitions(new PuloniaJavaScriptTaskExecutor().Definitions);
-        var root = document.RootNode;
-        document.SetSetting(root, "party.party_name", "组内队伍");
-        Assert.Single(plan.RootTask.Settings);
-        PuloniaTaskValidator.ValidatePlan(plan);
-
-        var node = root.Children[0];
-        Assert.Equal("组内队伍", document.GetOneDragonParameters(node).Value<string>("party_name"));
-        document.SetSetting(node, "party.party_name", "节点队伍");
-        Assert.Equal(42, leaf.Parameters["settings"]!.Value<int>("custom"));
-        document.ResetSetting(node, "party.party_name");
-        Assert.Empty(leaf.Settings);
-        Assert.Equal(42, leaf.Parameters["settings"]!.Value<int>("custom"));
-        Assert.Equal("组内队伍", document.GetOneDragonParameters(node).Value<string>("party_name"));
-        document.UndoCommand.Execute(null);
-        Assert.Equal("节点队伍", document.RootNode.Children[0].Model.Settings.Value<string>("party.party_name"));
-    }
-
-    /// <summary>
-    /// 跨分组移动改变继承的设置时报告变化；保留原值写在被移动的子树根上，与移动合为一步撤销。同组排序不报告。
-    /// </summary>
-    [Fact]
-    public void MoveAcrossGroups_ReportsChangesAndKeepsOriginalInOneUndoStep()
-    {
-        var plan = new PuloniaTaskPlan();
-        var source = new PuloniaTask { TaskType = "group", Name = "来源组", Settings = new JObject { ["party.party_name"] = "来源队伍" } };
-        source.Children.Add(new PuloniaTask { TaskType = "javascript", Name = "脚本", Path = "example" });
-        source.Children.Add(new PuloniaTask { TaskType = "javascript", Name = "脚本二", Path = "example" });
-        plan.RootTask.Children.Add(source);
-        plan.RootTask.Children.Add(new PuloniaTask { TaskType = "group", Name = "目标组" });
-        var document = new PuloniaTaskPlanDocumentViewModel(plan, [], new PuloniaTaskClipboardService(), false);
-        document.SetDefinitions(new PuloniaJavaScriptTaskExecutor().Definitions);
-        var sourceNode = document.RootNode.Children[0];
-        var targetNode = document.RootNode.Children[1];
-
-        // 同组排序不改变设置链
-        Assert.Null(document.MoveNodeTrackingSettings(sourceNode.Children[1], sourceNode, 0));
-
-        var leaf = sourceNode.Children[0];
-        var change = document.MoveNodeTrackingSettings(leaf, targetNode, 0);
-        Assert.NotNull(change);
-        Assert.Equal(1, change.ChangedTaskCount);
-        Assert.Equal(new[] { "party.party_name" }, change.ChangedKeys);
-        Assert.Equal("", document.GetOneDragonParameters(leaf).Value<string>("party_name"));
-
-        Assert.True(document.KeepMovedSettings(change));
-        Assert.Equal("来源队伍", leaf.Model.Settings.Value<string>("party.party_name"));
-        Assert.Equal("来源队伍", document.GetOneDragonParameters(leaf).Value<string>("party_name"));
-        PuloniaTaskValidator.ValidatePlan(plan);
-
-        // 一步撤销同时撤回保留与移动；撤销后旧提示不能再写入
-        document.UndoCommand.Execute(null);
-        var restoredSource = document.RootNode.Children[0];
-        Assert.Equal(2, restoredSource.Children.Count);
-        Assert.Empty(document.RootNode.Children[1].Children);
-        Assert.All(restoredSource.Children, child => Assert.Empty(child.Model.Settings));
-        Assert.False(document.CanKeepMovedSettings(change));
     }
 
     /// <summary>

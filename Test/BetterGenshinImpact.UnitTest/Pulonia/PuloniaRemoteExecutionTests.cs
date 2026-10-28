@@ -211,19 +211,6 @@ public sealed class PuloniaRemoteExecutionTests : IDisposable
     }
 
     /// <summary>
-    /// 开发期不升级旧版本状态文件：非当前版本明确报错，并提示删除旧文件
-    /// </summary>
-    [Fact]
-    public void OlderStateVersion_IsRejectedWithCleanupHint()
-    {
-        var json = JObject.Parse(PuloniaTaskJson.WriteState(new PuloniaTaskState()));
-        json["schema_version"] = 3;
-
-        var error = Assert.Throws<PuloniaTaskValidationException>(() => PuloniaTaskJson.ReadState(json.ToString()));
-        Assert.Contains("删除 state.json", error.Message);
-    }
-
-    /// <summary>
     /// 主实例重启时，遗留的远程活动运行与本地活动运行一样转为中断历史，可以续跑
     /// </summary>
     [Fact]

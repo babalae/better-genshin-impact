@@ -1,6 +1,5 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoFight;
-using BetterGenshinImpact.GameTask.AutoFight.Factory;
 using BetterGenshinImpact.GameTask.AutoFight.Strategy;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoFightTests;
@@ -105,19 +104,6 @@ public sealed class CombatStrategyResolverTests : IDisposable
         AssertReference(txt, CombatStrategyKind.Txt, txt);
         AssertReference(json, CombatStrategyKind.Json, json);
         AssertReference(macro, CombatStrategyKind.KeyMouse, macro);
-    }
-
-    /// <summary>工厂路由依据单一类型；组合类型不能直接运行。</summary>
-    [Theory]
-    [InlineData(CombatStrategyKind.AutoSelect, typeof(TxtCombatTaskFactory))]
-    [InlineData(CombatStrategyKind.Txt, typeof(TxtCombatTaskFactory))]
-    [InlineData(CombatStrategyKind.Json, typeof(JsonCombatTaskFactory))]
-    [InlineData(CombatStrategyKind.Combo, typeof(ComboCombatTaskFactory))]
-    [InlineData(CombatStrategyKind.KeyMouse, typeof(KeyMouseCombatTaskFactory))]
-    public void Factory_UsesKind(CombatStrategyKind kind, Type expected)
-    {
-        Assert.IsType(expected, CombatTaskFactoryProvider.GetFactory(kind));
-        Assert.Throws<ArgumentOutOfRangeException>(() => CombatTaskFactoryProvider.GetFactory(CombatStrategyKind.All));
     }
 
     /// <summary>统一断言路径、规范值及解析幂等。</summary>

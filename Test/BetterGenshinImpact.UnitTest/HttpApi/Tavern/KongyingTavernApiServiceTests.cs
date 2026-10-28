@@ -6,6 +6,11 @@ namespace BetterGenshinImpact.UnitTest.HttpApi.Tavern;
 
 public class KongyingTavernApiServiceTests
 {
+    /// <summary>
+    /// 这些用例访问空荧酒馆真实网络接口，只在手动调试接口时去掉跳过后执行。
+    /// </summary>
+    private const string SkipReason = "依赖空荧酒馆真实网络接口，仅手动调试时执行。";
+
     private readonly ITestOutputHelper _output;
 
     public KongyingTavernApiServiceTests(ITestOutputHelper output)
@@ -13,7 +18,7 @@ public class KongyingTavernApiServiceTests
         _output = output;
     }
 
-    [Fact]
+    [Fact(Skip = SkipReason)]
     public async Task GetItemTypeListAsync_ShouldFetchAllLatestMd5Pages_AndPrint()
     {
         var service = new KongyingTavernApiService();
@@ -43,7 +48,7 @@ public class KongyingTavernApiServiceTests
         }
     }
 
-    [Fact]
+    [Fact(Skip = SkipReason)]
     public async Task GetMarkerListAsync_ShouldFetchAllLatestMd5Pages_AndPrint()
     {
         var service = new KongyingTavernApiService();
@@ -73,7 +78,7 @@ public class KongyingTavernApiServiceTests
         }
     }
 
-    [Fact]
+    [Fact(Skip = SkipReason)]
     public async Task GetIconListAsync_AndPrint()
     {
         var service = new KongyingTavernApiService();

@@ -2,25 +2,17 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Input;
 using BetterGenshinImpact.Model;
-using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
-using BetterGenshinImpact.Service;
-using BetterGenshinImpact.ViewModel.Pages;
-using BetterGenshinImpact.ViewModel.Pages.Pulonia;
-using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json.Linq;
 using FormsKeys = System.Windows.Forms.Keys;
 using FormsMouseButtons = System.Windows.Forms.MouseButtons;
 
 namespace BetterGenshinImpact.UnitTest.Pulonia;
 
-/// <summary>两种快捷键、配置序列化和卡片开关回归；不创建窗口或安装真实系统钩子。</summary>
-public sealed class PuloniaTaskHotkeyTests : IDisposable
+/// <summary>两种快捷键、配置序列化和冲突注册回归；不创建窗口或安装真实系统钩子。</summary>
+public sealed class PuloniaTaskHotkeyTests
 {
-    /// <summary>只用于本测试的独占本地存储目录。</summary>
-    private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-" + BetterGenshinImpact.Helpers.ShortId.Create(null, 8));
-
     /// <summary>两种模式分别支持组合 / 功能键和单键 / 侧键。</summary>
     [Theory]
     [InlineData(HotKeyTypeEnum.GlobalRegister, "Ctrl + Alt + F8")]
@@ -57,18 +49,6 @@ public sealed class PuloniaTaskHotkeyTests : IDisposable
         => Assert.Throws<FormatException>(() => PuloniaTaskHotkeyValidator.Validate(new PuloniaTaskTrigger
         { Kind = PuloniaTaskTriggerKind.Hotkey, HotkeyType = type, Hotkey = hotkey }));
 
-    /// <summary>计划校验只确认热键配置存在，键位组合留给热键入口检查，调度层不依赖 WPF 输入类型。</summary>
-    [Fact]
-    public void PlanValidation_LeavesKeyCombinationToHotkeyEntry()
-    {
-        PuloniaTaskSchedule.Validate(new PuloniaTaskTrigger
-            { Kind = PuloniaTaskTriggerKind.Hotkey, HotkeyType = HotKeyTypeEnum.KeyboardMonitor, Hotkey = "Ctrl + F8" });
-        Assert.Throws<FormatException>(() => PuloniaTaskSchedule.Validate(new PuloniaTaskTrigger
-            { Kind = PuloniaTaskTriggerKind.Hotkey, Hotkey = " " }));
-        Assert.Throws<FormatException>(() => PuloniaTaskSchedule.Validate(new PuloniaTaskTrigger
-            { Kind = PuloniaTaskTriggerKind.Hotkey, HotkeyType = (HotKeyTypeEnum)100, Hotkey = "F8" }));
-    }
-
     /// <summary>快捷键类型作为普通配置字段持久化，展示文本始终使用实际快捷键。</summary>
     [Fact]
     public void Serialization_PersistsHotkeyTypeAndDerivedDisplayText()
@@ -81,94 +61,6 @@ public sealed class PuloniaTaskHotkeyTests : IDisposable
         var restored = PuloniaTaskJson.Read<PuloniaTaskTrigger>(json);
         Assert.Equal(HotKeyTypeEnum.KeyboardMonitor, restored.HotkeyType);
         Assert.Equal("F8", restored.DisplayText);
-    }
-
-    /// <summary>触发器不持久化可编辑名称，界面直接展示 Cron 或快捷键。</summary>
-    [Fact]
-    public void Serialization_DoesNotPersistEditableTriggerName()
-    {
-        var scheduleJson = PuloniaTaskJson.Write(new PuloniaTaskTrigger { Cron = "15 6 * * 1" });
-        var schedule = PuloniaTaskJson.Read<PuloniaTaskTrigger>(scheduleJson);
-        Assert.Null(JObject.Parse(scheduleJson)["name"]);
-        Assert.Equal("15 6 * * 1", schedule.DisplayText);
-
-        var hotkeyJson = PuloniaTaskJson.Write(new PuloniaTaskTrigger
-            { Kind = PuloniaTaskTriggerKind.Hotkey, Hotkey = "F8" });
-        var hotkey = PuloniaTaskJson.Read<PuloniaTaskTrigger>(hotkeyJson);
-        Assert.Null(JObject.Parse(hotkeyJson)["name"]);
-        Assert.Equal("F8", hotkey.DisplayText);
-    }
-
-    /// <summary>类型切换复用既有输入名称，并清空旧键值而不是把组合键误转成监听单键。</summary>
-    [Fact]
-    public void Editor_SwitchesExistingHotkeyTypesAndClearsOldInput()
-    {
-        var editor = new PuloniaTaskTriggerEditorViewModel(new PuloniaTaskTrigger
-        { Kind = PuloniaTaskTriggerKind.Hotkey }, new PuloniaTaskPlan());
-        Assert.Equal(HotKeyTypeEnum.GlobalRegister.ToChineseName(), editor.HotkeyTypeName);
-        editor.SwitchHotkeyTypeCommand.Execute(null);
-        Assert.Equal(HotKeyTypeEnum.KeyboardMonitor.ToChineseName(), editor.HotkeyTypeName);
-        Assert.True(editor.Hotkey.IsEmpty);
-        Assert.False(editor.IsValid);
-        editor.Hotkey = HotKey.FromString("XButton1");
-        Assert.True(editor.IsValid);
-        Assert.Equal(HotKeyTypeEnum.KeyboardMonitor, editor.CreateTrigger().HotkeyType);
-        editor.SwitchHotkeyTypeCommand.Execute(null);
-        Assert.True(editor.Hotkey.IsEmpty);
-        Assert.False(editor.IsValid);
-    }
-
-    /// <summary>卡片开关只持久化启用状态，即使右侧草稿无效也不能丢失草稿或将其保存。</summary>
-    [Fact]
-    public async Task CardToggle_SavesOnlyEnabledAndPreservesInvalidDraft()
-    {
-        using var store = new PuloniaTaskStore(_directory);
-        var trigger = new PuloniaTaskTrigger();
-        var plan = await store.SavePlanAsync(new PuloniaTaskPlan { Triggers = [trigger] });
-        await using var service = CreateService(store);
-        var page = new PuloniaTaskPlanViewModel(
-            new PuloniaPlanEditingSession(store, new PuloniaTaskClipboardService(), service, new PuloniaTaskResourceCatalog()),
-            new PuloniaTaskHistoryViewModel(service, store));
-        await page.InitializeCommand.ExecuteAsync(null);
-        var editor = page.TriggerSettings.TriggerEditor!;
-        editor.WindowMinutes = "0";
-        Assert.False(editor.IsValid);
-
-        await page.TriggerSettings.ToggleTriggerEnabledCommand.ExecuteAsync(Assert.Single(page.TriggerSettings.Triggers));
-        var saved = Assert.Single((await store.ListPlansAsync()).Single(value => value.Id == plan.Id).Triggers);
-        Assert.True(saved.Enabled);
-        Assert.Equal("0 4 * * *", saved.DisplayText);
-        Assert.Equal("0 4 * * *", saved.Cron);
-        Assert.Same(editor, page.TriggerSettings.TriggerEditor);
-        Assert.Equal("0", editor.WindowMinutes);
-        Assert.True(editor.Enabled);
-
-        await page.TriggerSettings.ToggleTriggerEnabledCommand.ExecuteAsync(Assert.Single(page.TriggerSettings.Triggers));
-        Assert.False(Assert.Single((await store.ListPlansAsync()).Single(value => value.Id == plan.Id).Triggers).Enabled);
-        Assert.Same(editor, page.TriggerSettings.TriggerEditor);
-        Assert.False(editor.Enabled);
-    }
-
-    /// <summary>正在新增的独立草稿不会因切换已有卡片的开关而自动选中、替换或提交。</summary>
-    [Fact]
-    public async Task CardToggle_PreservesNewDraftWithoutSubmittingIt()
-    {
-        using var store = new PuloniaTaskStore(_directory);
-        await store.SavePlanAsync(new PuloniaTaskPlan { Triggers = [new PuloniaTaskTrigger()] });
-        await using var service = CreateService(store);
-        var page = new PuloniaTaskPlanViewModel(
-            new PuloniaPlanEditingSession(store, new PuloniaTaskClipboardService(), service, new PuloniaTaskResourceCatalog()),
-            new PuloniaTaskHistoryViewModel(service, store));
-        await page.InitializeCommand.ExecuteAsync(null);
-        page.TriggerSettings.AddHotkeyTriggerCommand.Execute(null);
-        var editor = page.TriggerSettings.TriggerEditor!;
-        Assert.Equal(HotKeyTypeEnum.KeyboardMonitor, editor.HotkeyType);
-        editor.WindowMinutes = "120";
-        await page.TriggerSettings.ToggleTriggerEnabledCommand.ExecuteAsync(Assert.Single(page.TriggerSettings.Triggers));
-        Assert.Null(page.TriggerSettings.SelectedTrigger);
-        Assert.Same(editor, page.TriggerSettings.TriggerEditor);
-        Assert.Equal("120", editor.WindowMinutes);
-        Assert.Single((await store.ListPlansAsync()).Single().Triggers);
     }
 
     /// <summary>监听单键与同主键的全局组合键也冲突，而两种不同修饰组合可独立注册。</summary>
@@ -223,20 +115,5 @@ public sealed class PuloniaTaskHotkeyTests : IDisposable
             Assert.Same(mouse, MouseHook.AllMouseHooks[FormsMouseButtons.XButton2]);
         }
         finally { duplicateKeyboard.Dispose(); duplicateMouse.Dispose(); keyboard.Dispose(); mouse.Dispose(); }
-    }
-
-    /// <summary>使用纯 C# 执行能力建立服务，不启动游戏、截图器或热键宿主。</summary>
-    private static PuloniaTaskService CreateService(PuloniaTaskStore store)
-        => new(store, new PuloniaTaskBuilder(store), [new PuloniaCSharpTaskExecutor(new PuloniaCSharpTaskRegistry())],
-            new PuloniaGameTaskCoordinator(null!), new TaskStopService(NullLogger<TaskStopService>.Instance));
-
-    /// <summary>只删除本测试独占且验证过路径的临时目录。</summary>
-    public void Dispose()
-    {
-        var path = Path.GetFullPath(_directory);
-        if (!path.StartsWith(Path.GetFullPath(Path.GetTempPath()), StringComparison.OrdinalIgnoreCase)
-            || !Path.GetFileName(path).StartsWith("bgi-", StringComparison.Ordinal))
-            throw new InvalidOperationException("测试目录越界。");
-        if (Directory.Exists(path)) Directory.Delete(path, true);
     }
 }

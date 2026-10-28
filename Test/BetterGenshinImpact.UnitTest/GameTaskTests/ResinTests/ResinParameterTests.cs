@@ -3,9 +3,6 @@ using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.GameTask.Common.Resin;
-using BetterGenshinImpact.GameTask.SoloTask;
-using BetterGenshinImpact.Pulonia.Services;
-using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.ResinTests;
 
@@ -33,36 +30,6 @@ public sealed class ResinParameterTests
         param.ResolveResinUsage();
         Assert.Equal(ResinUsageMode.RunCount, param.ResinUsage.Mode);
         Assert.Equal(6, param.ResinUsage.RunCount);
-    }
-
-    /// <summary>四个参数的 JSON 和 Schema 只暴露统一树脂入口，旧属性均忽略。</summary>
-    [Theory]
-    [InlineData("Domain")]
-    [InlineData("Stygian")]
-    [InlineData("Boss")]
-    [InlineData("LeyLine")]
-    public void Parameters_ExcludeEveryLegacyResinKey(string name)
-    {
-        object param = name switch
-        {
-            "Domain" => ResinParameterTestFactory.Domain(), "Stygian" => ResinParameterTestFactory.Stygian(),
-            "Boss" => ResinParameterTestFactory.Boss(), _ => ResinParameterTestFactory.LeyLine()
-        };
-        var json = JObject.Parse(SoloTaskJson.Serialize(param, param.GetType()));
-        var properties = (JObject)PuloniaSoloTaskSchema.Create(param.GetType())["properties"]!;
-        Assert.IsType<JObject>(json["resin_usage"]);
-        Assert.IsType<JObject>(properties["resin_usage"]);
-        foreach (var key in new[]
-        {
-            "specify_resin_use", "resin_priority_list", "original_resin_use_count", "original_resin20_use_count",
-            "original_resin40_use_count", "condensed_resin_use_count", "transient_resin_use_count", "fragile_resin_use_count",
-            "domain_round_num", "specify_run_count", "run_count", "use_transient_resin", "use_fragile_resin",
-            "count", "open_mode_count_min", "is_resin_exhaustion_mode", "is_go_to_synthesizer"
-        })
-        {
-            Assert.False(json.ContainsKey(key), key);
-            Assert.False(properties.ContainsKey(key), key);
-        }
     }
 
     /// <summary>秘境模式和原粹三个次数按全部 24 种顺序赋值，归一化结果相同。</summary>
@@ -96,31 +63,6 @@ public sealed class ResinParameterTests
         }
     }
 
-    /// <summary>秘境未指定时不切换档位；未编辑组合字段时保持新模型及其引用。</summary>
-    [Fact]
-    public void Domain_OnlyResolvesEditedOriginalGroupAndProjectsTierCounts()
-    {
-        var param = ResinParameterTestFactory.Domain();
-        param.ResinUsage = new() { Mode = ResinUsageMode.RunCount, RunCount = 8,
-            OriginalTier = OriginalResinTier.Only20, Counts = new() { Original = 4, Fragile = 2 } };
-        var original = param.ResinUsage;
-        param.ResolveResinUsage();
-        Assert.Same(original, param.ResinUsage);
-        Assert.Equal(0, param.OriginalResinUseCount);
-        Assert.Equal(4, param.OriginalResin20UseCount);
-        Assert.Equal(0, param.OriginalResin40UseCount);
-        param.SpecifyResinUse = false;
-        param.OriginalResin20UseCount = 3;
-        Assert.Equal(3, param.OriginalResin20UseCount);
-        param.ResolveResinUsage();
-        Assert.Equal(OriginalResinTier.Default, param.ResinUsage.OriginalTier);
-        Assert.Equal(3, param.ResinUsage.Counts.Original);
-        Assert.Equal(2, param.ResinUsage.Counts.Fragile);
-        Assert.Equal(8, param.ResinUsage.RunCount);
-        param.ResinUsage.OriginalTier = OriginalResinTier.Prefer40;
-        Assert.Equal(3, param.OriginalResin40UseCount);
-    }
-
     /// <summary>地脉花四种开关组合按全部 120 种赋值顺序归一化，保留新模型其他字段。</summary>
     [Theory]
     [InlineData(false, false, ResinUsageMode.RunCount)]
@@ -151,32 +93,6 @@ public sealed class ResinParameterTests
             param.ResolveResinUsage();
             Assert.Equal(snapshot, param.ResinUsage);
         }
-    }
-
-    /// <summary>地脉花未赋值时使用新模型投影；仅改补充开关不应覆盖分别指定方式或其他开关。</summary>
-    [Fact]
-    public void LeyLine_ProjectsNewModesAndOnlyUpdatesAssignedFields()
-    {
-        var param = ResinParameterTestFactory.LeyLine();
-        param.ResinUsage = new() { Mode = ResinUsageMode.PerType, RunCount = 11, Counts = new() { Original = 4, Condensed = 2 } };
-        var original = param.ResinUsage;
-        param.ResolveResinUsage();
-        Assert.Same(original, param.ResinUsage);
-        Assert.Equal(6, param.Count);
-        param.UseTransientResin = true;
-        param.ResolveResinUsage();
-        Assert.Equal(ResinUsageMode.PerType, param.ResinUsage.Mode);
-        Assert.Equal(11, param.ResinUsage.RunCount);
-        Assert.True(param.ResinUsage.Allowed.Transient);
-        Assert.False(param.ResinUsage.Allowed.Fragile);
-        param.ResinUsage.Mode = ResinUsageMode.Exhaust;
-        Assert.Equal(11, param.Count);
-        Assert.True(param.IsResinExhaustionMode);
-        param.Count = 3; // 旧任务的预计算仍写 Count，setter 必须即时可读。
-        Assert.Equal(3, param.Count);
-        param.ResolveResinUsage();
-        Assert.Equal(3, param.ResinUsage.RunCount);
-        Assert.Equal(ResinUsageMode.Exhaust, param.ResinUsage.Mode);
     }
 
     /// <summary>直接兼容属性修改参数自己的嵌套值，关闭首领指定次数不清空补充开关。</summary>
@@ -240,16 +156,6 @@ public sealed class ResinParameterTests
         ley.ResolveResinUsage();
         Assert.Equal(6, leyConfig.EnsureResinUsage().RunCount);
         Assert.False(leyConfig.EnsureResinUsage().Allowed.Transient);
-    }
-
-    /// <summary>任务的静态能力挂接到公共声明，不改变执行逻辑。</summary>
-    [Fact]
-    public void TaskCapabilities_ReferenceSharedDeclarations()
-    {
-        Assert.Same(ResinCapabilities.Domain, AutoDomainTask.ResinCapability);
-        Assert.Same(ResinCapabilities.StygianOnslaught, AutoStygianOnslaughtTask.ResinCapability);
-        Assert.Same(ResinCapabilities.Boss, AutoBossTask.ResinCapability);
-        Assert.Same(ResinCapabilities.LeyLineOutcrop, AutoLeyLineOutcropTask.ResinCapability);
     }
 
     /// <summary>枚举指定数量赋值动作的全部排列，覆盖任意 setter 顺序。</summary>

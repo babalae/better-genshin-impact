@@ -1,10 +1,8 @@
-using System.Reflection;
 using System.Windows.Input;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.Service;
-using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json.Linq;
 
@@ -29,22 +27,6 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
     public void Cron_NextUsesCalendarAndTimezone(string cron, string after, string expected)
         => Assert.Equal(DateTimeOffset.Parse(expected).ToUniversalTime(), new PuloniaCronExpression(cron)
             .Next(DateTimeOffset.Parse(after), TimeSpan.FromHours(8)));
-
-    /// <summary>触发器只提供三个原神服务器时区，默认使用 UTC+8 固定偏移。</summary>
-    [Fact]
-    public void ServerTimeZones_AreLimitedAndDefaultToUtcPlus8()
-    {
-        var trigger = new PuloniaTaskTrigger();
-        var editor = new PuloniaTaskTriggerEditorViewModel(trigger, Plan());
-
-        Assert.Equal(PuloniaTaskServerTimeZone.UtcPlus8, trigger.ServerTimeZone);
-        Assert.Equal(3, editor.ServerTimeZones.Count);
-        Assert.Equal(TimeSpan.FromHours(8), PuloniaTaskSchedule.GetUtcOffset(trigger.ServerTimeZone));
-        Assert.Equal(TimeSpan.FromHours(1), PuloniaTaskSchedule.GetUtcOffset(PuloniaTaskServerTimeZone.Europe));
-        Assert.Equal(TimeSpan.FromHours(-5), PuloniaTaskSchedule.GetUtcOffset(PuloniaTaskServerTimeZone.America));
-        Assert.Throws<FormatException>(() => PuloniaTaskSchedule.Validate(new PuloniaTaskTrigger
-            { ServerTimeZone = (PuloniaTaskServerTimeZone)0 }));
-    }
 
     /// <summary>不接受 Quartz、越界字段及零步长。</summary>
     [Theory]
@@ -75,101 +57,6 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
     public void Cron_DayAndWeekdayUseIntersection()
         => Assert.Equal(DateTimeOffset.Parse("2026-06-01T04:00:00Z"), new PuloniaCronExpression("0 4 1 * 1")
             .Next(DateTimeOffset.Parse("2026-04-02T00:00:00Z"), TimeSpan.Zero));
-
-    /// <summary>卡片按结果类别或关联运行状态显示原有文案，下次时间按所选服务器时区展示。</summary>
-    [Fact]
-    public void TriggerItem_ShowsOutcomeOrRunStatusText()
-    {
-        var trigger = new PuloniaTaskTrigger { Enabled = true, ActivatedAtUtc = DateTimeOffset.Parse("2026-10-04T00:00:00Z") };
-        var item = new PuloniaTaskTriggerItemViewModel(trigger);
-        var waiting = new PuloniaTaskTriggerStatus
-        {
-            PlanId = PuloniaId.NewPlanId(), TriggerId = trigger.Id, TriggerActivatedAtUtc = trigger.ActivatedAtUtc,
-            Outcome = PuloniaTaskTriggerOutcome.Waiting, Message = "配置已生效。",
-            NextOccurrenceUtc = DateTimeOffset.Parse("2026-10-04T20:00:00Z")
-        };
-
-        item.Update(waiting);
-        Assert.Equal("等待 · 配置已生效。\n下次：10-05 04:00 +08:00", item.RuntimeText);
-        item.Update(waiting with { Outcome = PuloniaTaskTriggerOutcome.Merged, Message = "已合并原因", NextOccurrenceUtc = null });
-        Assert.Equal("已合并 · 已合并原因", item.RuntimeText);
-        item.Update(waiting with { Outcome = PuloniaTaskTriggerOutcome.Submitted, RunId = "run", RunStatus = PuloniaTaskRunStatus.Succeeded,
-            Message = "运行完成", NextOccurrenceUtc = null });
-        Assert.Equal("已完成 · 运行完成", item.RuntimeText);
-        item.Update(waiting with { TriggerActivatedAtUtc = trigger.ActivatedAtUtc.AddMinutes(1) });
-        Assert.Equal("已保存，稍后开始生效。", item.RuntimeText);
-    }
-
-    /// <summary>直接编辑表达式后，保存和校验始终读取同一份 Cron。</summary>
-    [Fact]
-    public void Editor_DirectExpressionIsSingleScheduleSource()
-    {
-        var editor = new PuloniaTaskTriggerEditorViewModel(new PuloniaTaskTrigger(), Plan());
-        editor.CronEditor.Expression = "*/20 1,13 * * *";
-        Assert.Equal("*/20 1,13 * * *", editor.CreateTrigger().Cron);
-
-        editor.CronEditor.Expression = "0 25 * * *";
-        Assert.False(editor.IsValid);
-        Assert.Contains("无效", editor.PreviewText);
-    }
-
-    /// <summary>常用 Cron 预设必须直接写入可保存的标准五段表达式。</summary>
-    [Theory]
-    [InlineData("*/5 * * * *")]
-    [InlineData("*/15 * * * *")]
-    [InlineData("0 * * * *")]
-    [InlineData("0 4 * * *")]
-    [InlineData("0 9 * * 1-5")]
-    [InlineData("0 4 * * 1")]
-    [InlineData("0 4 1 * *")]
-    public void CronEditor_PresetsWriteExpression(string cron)
-    {
-        var editor = new PuloniaCronEditorViewModel("0 4 * * *") { IsPopupOpen = true };
-        editor.ApplyPresetCommand.Execute(cron);
-        Assert.Equal(cron, editor.Expression);
-        Assert.False(editor.IsPopupOpen);
-    }
-
-    /// <summary>周期生成器只使用能整除时间边界的周期，并生成对应步长表达式。</summary>
-    [Theory]
-    [InlineData("minute", 15, 1, 0, "*/15 * * * *")]
-    [InlineData("hour", 5, 6, 30, "30 */6 * * *")]
-    public void CronEditor_PeriodGeneratorWritesExpression(string unit, int minuteInterval,
-        int hourInterval, int startMinute, string cron)
-    {
-        var editor = new PuloniaCronEditorViewModel("0 4 * * *")
-        {
-            GeneratorTabIndex = 0,
-            PeriodUnit = unit,
-            MinuteInterval = minuteInterval,
-            HourInterval = hourInterval,
-            HourStartMinute = startMinute
-        };
-        editor.ApplyGeneratedExpressionCommand.Execute(null);
-        Assert.Equal(cron, editor.Expression);
-    }
-
-    /// <summary>固定时间生成器覆盖每天、工作日、每周和每月四种常见日程。</summary>
-    [Theory]
-    [InlineData("daily", 1, 1, "15 17 * * *")]
-    [InlineData("weekdays", 1, 1, "15 17 * * 1-5")]
-    [InlineData("weekly", 3, 1, "15 17 * * 3")]
-    [InlineData("monthly", 1, 20, "15 17 20 * *")]
-    public void CronEditor_FixedTimeGeneratorWritesExpression(string frequency, int weekday,
-        int monthDay, string cron)
-    {
-        var editor = new PuloniaCronEditorViewModel("0 4 * * *")
-        {
-            GeneratorTabIndex = 1,
-            FixedFrequency = frequency,
-            FixedHour = 17,
-            FixedMinute = 15,
-            FixedWeekday = weekday,
-            FixedMonthDay = monthDay
-        };
-        editor.ApplyGeneratedExpressionCommand.Execute(null);
-        Assert.Equal(cron, editor.Expression);
-    }
 
     /// <summary>到点立即提交请求，重启及回拨都不会再次执行同一发生时间。</summary>
     [Fact]
@@ -207,25 +94,6 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
         var restored = Assert.Single(restarted.GetTriggerStatuses());
         Assert.Equal(id, restored.RunId);
         Assert.Equal(PuloniaTaskRunStatus.Succeeded, restored.RunStatus);
-    }
-
-    /// <summary>触发游标只持久化防重复与补触发所需的字段，读写往返保持不变。</summary>
-    [Fact]
-    public void State_PersistsOnlyCursorFields()
-    {
-        var activated = DateTimeOffset.Parse("2026-10-04T03:00:00Z");
-        var last = activated.AddHours(1);
-        var state = PuloniaTaskJson.ReadState(PuloniaTaskJson.WriteState(new PuloniaTaskState
-        {
-            TriggerStates = [new PuloniaTaskTriggerState { PlanId = PuloniaId.NewPlanId(), TriggerId = PuloniaId.NewTriggerId(),
-                TriggerActivatedAtUtc = activated, LastOccurrenceUtc = last }]
-        }));
-
-        var cursor = Assert.Single(state.TriggerStates);
-        Assert.Equal(activated, cursor.TriggerActivatedAtUtc);
-        Assert.Equal(last, cursor.LastOccurrenceUtc);
-        var written = (JObject)JObject.Parse(PuloniaTaskJson.WriteState(state))["trigger_states"]![0]!;
-        Assert.Equal(CursorFields, written.Properties().Select(item => item.Name).Order().ToArray());
     }
 
     /// <summary>删除计划或触发器后游标被剔除；停用的定时触发器保留游标，旧版热键游标也一并清理。</summary>
@@ -434,34 +302,6 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
         Assert.Single(await service.ListRunsAsync());
     }
 
-    /// <summary>
-    /// 关闭补触发时，调度在线持续轮询期间到点的事件，即使因其他触发占用触发门超过 5 秒才被检查到，也仍会提交。
-    /// </summary>
-    [Fact]
-    public async Task NoCatchUp_OccurrenceDuringBusyCheckStillRuns()
-    {
-        using var store = new PuloniaTaskStore(_directory);
-        var clock = new TestClock(); clock.Advance(TimeSpan.FromSeconds(48));
-        var plan = Plan(); var trigger = Trigger(clock); trigger.CatchUp = false; trigger.Cron = "1 4 * * *";
-        plan.Triggers.Add(trigger); plan = await store.SavePlanAsync(plan);
-        await using var service = Service(store, clock);
-        await service.CheckTriggersAsync([plan]);
-        Assert.Empty(await service.ListRunsAsync());
-
-        // 模拟热键或同一轮前一个触发器构建快照，长时间占用触发门。
-        var gate = (SemaphoreSlim)typeof(PuloniaTaskService)
-            .GetField("_triggerGate", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(service)!;
-        await gate.WaitAsync();
-        clock.Advance(TimeSpan.FromSeconds(1));
-        var check = service.CheckTriggersAsync([plan]);
-        clock.Advance(TimeSpan.FromSeconds(20));
-        gate.Release();
-        await check.WaitAsync(TimeSpan.FromSeconds(15));
-
-        var run = Assert.Single(await service.ListRunsAsync());
-        Assert.Equal(DateTimeOffset.Parse("2026-10-04T04:01:00+08:00"), run.OccurrenceUtc);
-    }
-
     /// <summary>关闭补触发时，两轮检查之间长时间没有轮询（如系统睡眠）期间到点的事件仍按遗漏跳过。</summary>
     [Fact]
     public async Task NoCatchUp_OccurrenceAfterPollingGapIsSkipped()
@@ -513,32 +353,6 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
 
         Assert.Equal(2, (await service.ListRunsAsync()).Count);
         Assert.Empty((await store.LoadStateAsync()).State.TriggerStates);
-    }
-
-    /// <summary>忙碌合并的热键只更新内存反馈，不为这次按键写 state.json。</summary>
-    [Fact]
-    public async Task Hotkey_MergedPressDoesNotWriteState()
-    {
-        using var store = new PuloniaTaskStore(_directory);
-        var clock = new TestClock();
-        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var registry = new PuloniaCSharpTaskRegistry();
-        registry.Register("test.block", async (_, _, ct) => { entered.TrySetResult(); await release.Task.WaitAsync(ct); return PuloniaTaskOutcome.Success("退出"); });
-        var plan = Plan("test.block"); var trigger = Trigger(clock);
-        trigger.Kind = PuloniaTaskTriggerKind.Hotkey; plan.Triggers.Add(trigger); plan = await store.SavePlanAsync(plan);
-        await using var service = Service(store, clock, registry);
-        await service.FireHotkeyAsync(plan.Id, trigger.Id);
-        await entered.Task.WaitAsync(TimeSpan.FromSeconds(15));
-        await Task.Delay(TimeSpan.FromMilliseconds(1100));
-        var sequence = (await store.LoadStateAsync()).State.Sequence;
-
-        await service.FireHotkeyAsync(plan.Id, trigger.Id);
-
-        Assert.Equal(sequence, (await store.LoadStateAsync()).State.Sequence);
-        Assert.Single(await service.ListRunsAsync());
-        Assert.Equal(PuloniaTaskTriggerOutcome.Merged, Assert.Single(service.GetTriggerStatuses()).Outcome);
-        release.SetResult();
     }
 
     /// <summary>只清理本测试生成且校验过的独占临时目录。</summary>

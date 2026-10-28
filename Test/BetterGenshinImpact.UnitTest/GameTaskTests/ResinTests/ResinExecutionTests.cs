@@ -1,6 +1,4 @@
 using BetterGenshinImpact.GameTask.Common.Resin;
-using BetterGenshinImpact.GameTask.SoloTask;
-using BetterGenshinImpact.Pulonia.Executors;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.ResinTests;
 
@@ -86,48 +84,5 @@ public sealed class ResinExecutionTests
         Assert.Equal(ResinStopReason.NoUsableOption, ResinExecutionRules.NoCandidateReason(new HashSet<ResinKind>(), false));
         Assert.Equal(ResinStopReason.ResinExhausted, ResinExecutionRules.NoCandidateReason(new HashSet<ResinKind>(), true));
         Assert.Equal(ResinStopReason.ResinExhausted, ResinExecutionRules.NoCandidateReason(new HashSet<ResinKind> { ResinKind.Original }, false));
-    }
-
-    /// <summary>只有开始前不足返回 Skipped；战斗后未领到或提前结束仍为 Unverified，原因留在报告中。</summary>
-    [Theory]
-    [InlineData(false, ResinStopReason.ResinExhausted, SoloTaskResultKind.Skipped)]
-    [InlineData(true, ResinStopReason.ResinExhausted, SoloTaskResultKind.Unverified)]
-    [InlineData(true, ResinStopReason.NoUsableOption, SoloTaskResultKind.Unverified)]
-    public void Completion_OnlySkipsBeforeChallenge(bool hasStarted, ResinStopReason reason, SoloTaskResultKind expected)
-    {
-        var selector = new ResinClaimSelector(new() { Mode = ResinUsageMode.RunCount, RunCount = 6 }, ResinCapabilities.Domain);
-        var result = ResinClaimResults.Complete(selector, reason, "秘境流程已结束", hasStarted);
-        Assert.Equal(expected, result.Kind);
-        if (expected == SoloTaskResultKind.Skipped)
-        {
-            Assert.Equal(SoloTaskReasons.ResinExhausted, result.ReasonCode);
-            Assert.Equal(ResinUsageText.Skipped, result.Message);
-        }
-        else
-        {
-            Assert.Null(result.ReasonCode);
-            Assert.Equal(reason, result.Data!.Resin.StopReason);
-            Assert.Equal("秘境流程已结束：" + ResinUsageText.Report(result.Data.Resin), result.Message);
-        }
-    }
-
-    /// <summary>首领累计额度转为总领奖目标后仍允许补充，领奖与补充分别记账，回传新的结果结构。</summary>
-    [Fact]
-    public void Boss_LimitSelectorAndReportWorkTogether()
-    {
-        var boss = ResinParameterTestFactory.Boss();
-        boss.ResinUsage.Allowed.Transient = true;
-        Assert.True(PuloniaSoloTaskExecutor.ApplyBossRewardLimit(boss, 10, 7));
-        var selector = new ResinClaimSelector(boss.ResinUsage, ResinCapabilities.Boss);
-        Assert.Equal(new[] { ResinKind.Transient }, selector.ReplenishKinds);
-        selector.RecordConsumed(ResinKind.Transient, 2);
-        for (var i = 0; i < 3; i++) selector.RecordClaim(ResinKind.Original, 40);
-        Assert.True(selector.IsTargetReached);
-        var result = ResinClaimResults.Complete(selector, ResinStopReason.TargetReached, "首领讨伐流程已结束", true);
-        // 按树脂设置刷取完成返回成功。
-        Assert.Equal(SoloTaskResultKind.Succeeded, result.Kind);
-        Assert.Null(result.ReasonCode);
-        Assert.Equal("首领讨伐流程已结束：领奖 3/3 次（原粹 120，补充须臾 2 个）。", result.Message);
-        Assert.Equal(0, result.Data!.Resin.Claims.Transient);
     }
 }

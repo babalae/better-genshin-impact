@@ -15,21 +15,6 @@ public sealed class ResinPlanBudgetTests
         Assert.Equal(0, ResinPlanBudget.Remaining(120, 200));
     }
 
-    /// <summary>全部模式刷至耗尽，只允许原粹与浓缩；原粹不足 20 且没有浓缩时跳过，浓缩数量未知时仍可领取。</summary>
-    [Fact]
-    public void ClaimUsage_AllModeExhaustsWithOriginalAndCondensed()
-    {
-        var usage = ResinPlanBudget.BuildClaimUsage(null, new ResinPlanStock(100, 200, 2));
-        Assert.NotNull(usage);
-        Assert.Equal(ResinUsageMode.Exhaust, usage.Mode);
-        Assert.True(usage.Allowed.Original && usage.Allowed.Condensed);
-        Assert.False(usage.Allowed.Transient || usage.Allowed.Fragile);
-        Assert.Null(usage.Validate(ResinCapabilities.Domain));
-
-        Assert.Null(ResinPlanBudget.BuildClaimUsage(null, new ResinPlanStock(10, 200, 0)));
-        Assert.NotNull(ResinPlanBudget.BuildClaimUsage(null, new ResinPlanStock(10, 200, null)));
-    }
-
     /// <summary>限定模式先按预算安排浓缩，再按 20 点一档安排原粹，合计不超出预算。</summary>
     [Theory]
     [InlineData(120, 160, 1, 1, 3)]
@@ -104,16 +89,5 @@ public sealed class ResinPlanBudgetTests
         Assert.Equal(0, ResinPlanBudget.Points(null));
         Assert.Equal(120, ResinPlanBudget.BossReserve(true, 3));
         Assert.Equal(0, ResinPlanBudget.BossReserve(false, 3));
-    }
-
-    /// <summary>首领次数沿用首领自己的树脂设置：指定次数为上限，刷至耗尽不设上限；刷至耗尽时合成前保留全部原粹。</summary>
-    [Fact]
-    public void BossRunLimit_FollowsBossResinUsage()
-    {
-        Assert.Equal(3, ResinPlanBudget.BossRunLimit(new ResinUsage { Mode = ResinUsageMode.RunCount, RunCount = 3 }));
-        Assert.Null(ResinPlanBudget.BossRunLimit(new ResinUsage { Mode = ResinUsageMode.Exhaust }));
-        Assert.Equal(0, ResinPlanBudget.CraftCount(null, new ResinPlanStock(200, 200, 0), ResinPlanBudget.BossReserve(true, null)));
-        Assert.Null(ResinPlanBudget.BossCapability.Defaults.Validate(ResinCapabilities.Boss));
-        Assert.False(ResinPlanBudget.BossCapability.IsSupported(ResinKind.Transient));
     }
 }

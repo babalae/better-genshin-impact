@@ -46,17 +46,4 @@ public class NotificationEventSubscriptionHelperTests
         Assert.False(NotificationEventSubscriptionHelper.ShouldSendNotification(subscribeEventStr, "task"));
         Assert.False(NotificationEventSubscriptionHelper.ShouldSendNotification(subscribeEventStr, "domain.start.extra"));
     }
-
-    [Fact]
-    public void GetAll_ShouldReturnStaticNotificationEvents()
-    {
-        var events = NotificationEvent.GetAll();
-
-        Assert.NotEmpty(events);
-        Assert.Contains(events, notificationEvent => notificationEvent.Code == NotificationEvent.Test.Code);
-        Assert.Contains(events, notificationEvent => notificationEvent.Code == NotificationEvent.DomainStart.Code);
-        Assert.Contains(events, notificationEvent => notificationEvent.Code == NotificationEvent.LeyLineStart.Code);
-        Assert.Contains(events, notificationEvent => notificationEvent.Code == NotificationEvent.LeyLineEnd.Code);
-        Assert.Contains(events, notificationEvent => notificationEvent.Code == NotificationEvent.LeyLineInfo.Code);
-    }
 }

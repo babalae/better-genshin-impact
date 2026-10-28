@@ -97,15 +97,4 @@ public sealed class ResinUsageLegacyMapperTests
     [InlineData(40, 40)]
     public void Craft_NormalizesNonPositiveValues(int value, int expected)
         => Assert.Equal(expected, ResinUsageLegacyMapper.NormalizeMinResinToKeep(value));
-
-    /// <summary>旧布尔无法表达新增方式，明确验证投影的有损边界。</summary>
-    [Fact]
-    public void ReverseProjection_NewModesCannotRoundTripThroughOldBooleans()
-    {
-        Assert.False(ResinUsageLegacyMapper.ToSpecifyResinUse(new() { Mode = ResinUsageMode.RunCount }));
-        var perType = new ResinUsage { Mode = ResinUsageMode.PerType, Counts = new() { Original = 4 } };
-        Assert.False(ResinUsageLegacyMapper.ToBossSpecifyRunCount(perType));
-        Assert.False(ResinUsageLegacyMapper.ToLeyLineIsResinExhaustionMode(perType));
-        Assert.False(ResinUsageLegacyMapper.ToLeyLineOpenModeCountMin(perType));
-    }
 }

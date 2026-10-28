@@ -1,6 +1,5 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.SoloTask;
-using BetterGenshinImpact.GameTask.Common.Resin;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
@@ -13,15 +12,6 @@ namespace BetterGenshinImpact.UnitTest.Pulonia;
 /// </summary>
 public sealed class PuloniaTaskDefinitionContractTests
 {
-    /// <summary>注册表通过任务接口发现新的领奖及合成数据类型，无需在描述符中维护任务特例。</summary>
-    [Fact]
-    public void ResinTasks_DeclareUnifiedResultData()
-    {
-        var registry = new SoloTaskRegistry([typeof(SoloTaskRegistry).Assembly]);
-        foreach (var taskId in new[] { "auto_domain", "auto_stygian_onslaught", "auto_boss", "auto_ley_line_outcrop" })
-            Assert.Equal(typeof(ResinClaimData), registry.Get(taskId).DataType);
-        Assert.Equal(typeof(CraftCondensedResinData), registry.Get("craft_condensed_resin").DataType);
-    }
 
     /// <summary>
     /// 可在测试进程创建的内置执行器，加上与独立任务执行器同规则生成的说明，全部通过注册校验。

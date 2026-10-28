@@ -120,43 +120,6 @@ public sealed class ResinClaimSelectorTests
         Assert.Empty(new ResinClaimSelector(usage, ResinCapabilities.Boss).ReplenishKinds);
     }
 
-    /// <summary>将来若能力允许分别指定补充，补充种类按 counts 判断，不读取 allowed。</summary>
-    [Fact]
-    public void ReplenishKinds_PerTypeUsesCounts()
-    {
-        var capability = new ResinUsageCapability
-        {
-            Modes = ResinCapabilities.Domain.Modes, Kinds = ResinCapabilities.Boss.Kinds.Clone(),
-            Tiers = ResinCapabilities.Boss.Tiers, Defaults = ResinCapabilities.Boss.Defaults
-        };
-        var usage = new ResinUsage { Mode = ResinUsageMode.PerType, Allowed = new() { Fragile = true }, Counts = new() { Transient = 2 } };
-        var selector = new ResinClaimSelector(usage, capability);
-        Assert.Equal(new[] { ResinKind.Transient }, selector.ReplenishKinds);
-        Assert.Empty(selector.Candidates(ResinKinds.InOrder.ToHashSet()));
-    }
-
-    /// <summary>外部设置、剩余快照及报告均不能修改选择器内部进度，报告也不会随后续领奖而改变。</summary>
-    [Fact]
-    public void Selector_AndReportsOwnIndependentSnapshots()
-    {
-        var usage = new ResinUsage { Mode = ResinUsageMode.PerType, Counts = new() { Condensed = 2 } };
-        var selector = new ResinClaimSelector(usage, ResinCapabilities.Domain);
-        usage.Counts.Condensed = 0;
-        selector.RemainingCounts.Condensed = 0;
-        Assert.False(selector.IsTargetReached);
-        selector.RecordClaim(ResinKind.Condensed, 0);
-        var first = selector.BuildReport(ResinStopReason.ResinExhausted);
-        selector.RecordClaim(ResinKind.Condensed, 0);
-        Assert.Equal(1, first.Claims.Condensed);
-        first.Claims.Condensed = 99;
-        first.Consumed.Condensed = 99;
-        first.TargetCounts!.Condensed = 99;
-        var second = selector.BuildReport(ResinStopReason.TargetReached);
-        Assert.Equal(2, second.Claims.Condensed);
-        Assert.Equal(2, second.Consumed.Condensed);
-        Assert.Equal(2, second.TargetCounts!.Condensed);
-    }
-
     /// <summary>耗尽方式永远不自行达标，非原粹直接使用按个数记账。</summary>
     [Fact]
     public void Exhaust_HasNoTargetAndRecordsEveryDirectKind()

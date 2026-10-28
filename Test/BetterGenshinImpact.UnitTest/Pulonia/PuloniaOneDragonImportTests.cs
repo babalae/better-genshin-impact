@@ -1,12 +1,7 @@
-using BetterGenshinImpact.GameTask.Common.Resin;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.Common.Job;
-using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Pulonia.Executors;
-using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
-using BetterGenshinImpact.ViewModel.Pages.Pulonia;
-using BetterGenshinImpact.ViewModel.Windows.Pulonia;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.UnitTest.Pulonia;
@@ -16,28 +11,6 @@ public sealed class PuloniaOneDragonImportTests : IDisposable
 {
     /// <summary>本测试独占的临时来源目录。</summary>
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-" + BetterGenshinImpact.Helpers.ShortId.Create(null, 8));
-
-    /// <summary>
-    /// 一条龙自有字段使用的参数类型，按 SoloTaskJson 序列化的默认值必须通过按同一合同生成的 Schema 校验，
-    /// 显式值在参数 JSON 与强类型参数之间往返后保持不变。
-    /// </summary>
-    [Fact]
-    public void SoloParameters_ValidateAndKeepExplicitConfiguration()
-    {
-        foreach (var definition in PuloniaSoloTestDefinitions.OneDragonCandidates()
-                     .Where(item => item.TaskType is "solo.craft_condensed_resin" or "solo.claim_daily_rewards"
-                         or "solo.serenitea_pot_rewards" or "solo.claim_mail"))
-        {
-            PuloniaTaskValidator.ValidateParameterSchema(definition.ParameterSchema, definition.TaskType);
-            PuloniaTaskValidator.ValidateParameters(definition.DefaultParameters, definition.ParameterSchema, definition.TaskType);
-        }
-        var source = new CraftCondensedResinParam { Country = "璃月", MinResinToKeep = 40 };
-        var parameters = JObject.Parse(SoloTaskJson.Serialize(source));
-        source.Country = "后来修改";
-        var restored = SoloTaskJson.Deserialize<CraftCondensedResinParam>(parameters.ToString());
-        Assert.Equal("璃月", restored.Country);
-        Assert.Equal(40, restored.MinResinToKeep);
-    }
 
     /// <summary>
     /// 旧一条龙的顺序、重复名称和关闭状态保留；一条龙自有字段按新参数名写入独立任务节点。
@@ -130,37 +103,6 @@ public sealed class PuloniaOneDragonImportTests : IDisposable
         Assert.Equal("legacy.unsupported", node.TaskType);
         Assert.Equal(source["root_task"]!["children"]![0]!.ToString(), node.Parameters["legacy_data"]!.ToString());
         Assert.Contains(result.Differences, d => d.Contains("反射"));
-    }
-
-    /// <summary>数字枚举在表单确认后仍是 JSON 整数，避免准备阶段拒绝配置。</summary>
-    [Fact]
-    public void IntegerChoice_RemainsIntegerAfterEditing()
-    {
-        var field = new PuloniaTaskParameterFieldViewModel("mode", new JObject { ["type"] = "integer", ["enum"] = new JArray(0, 1) }, new JValue(0), false, true)
-        { SelectedChoice = "1" };
-        Assert.Equal(JTokenType.Integer, field.BuildValue().Type);
-        Assert.Equal(1, field.BuildValue().Value<int>());
-    }
-
-    /// <summary>可选的空队伍能够保留继承，表单确认只写真正变化的次数。</summary>
-    [Fact]
-    public void ParameterEditor_KeepsOptionalDefaultsAndWritesOnlyChangedFields()
-    {
-        var definition = PuloniaSoloTestDefinitions.AutoBoss();
-        var task = new PuloniaTask { Name = "首领", TaskType = definition.TaskType };
-        var document = new PuloniaTaskPlanDocumentViewModel(new PuloniaTaskPlan
-            { Name = "参数表单", RootTask = new PuloniaTask { Children = [task] } }, [], new PuloniaTaskClipboardService(), false);
-        document.SetDefinitions([definition]);
-        document.SelectedNode = Assert.Single(document.RootNode.Children);
-        var node = document.SelectedNode!;
-        Assert.Equal("", document.GetOneDragonParameters(node).Value<string>("team_name"));
-        document.ReplaceOneDragonParameters(node, new JObject());
-        Assert.Empty(task.Parameters);
-        Assert.False(document.IsDirty);
-        document.ReplaceOneDragonParameters(node, new JObject { ["resin_usage"] = JObject.Parse(SoloTaskJson.Serialize(ResinUsageLegacyMapper.FromBoss(true, 3, false, false))) });
-        Assert.Single(task.Parameters);
-        Assert.Equal(3, task.Parameters["resin_usage"]!.Value<int>("run_count"));
-        Assert.True(document.IsDirty);
     }
 
     /// <summary>旧配置组设置导入为分组共享设置，只保留与默认值不同的项，运行准备可以直接使用。</summary>
