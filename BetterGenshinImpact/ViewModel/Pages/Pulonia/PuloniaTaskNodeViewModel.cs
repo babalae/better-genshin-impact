@@ -5,6 +5,7 @@ using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Wpf.Ui.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages.Pulonia;
 
@@ -75,6 +76,26 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
             "csharp" => "进程内 C#",
             _ when PuloniaSoloTaskExecutor.IsSoloTaskType(_model.TaskType) => "独立任务",
             _ => _model.TaskType
+        }
+    };
+
+    /// <summary>
+    /// 任务树名称前与类型对应的图标，便于快速区分分组、引用与各类任务；分类与 <see cref="TypeDisplayName"/> 一致。
+    /// </summary>
+    public SymbolRegular TypeIcon => _model.Source?.Kind switch
+    {
+        "plan" => SymbolRegular.Link24,
+        "directory" => SymbolRegular.FolderLink24,
+        _ => _model.TaskType switch
+        {
+            "group" => SymbolRegular.Folder24,
+            "pathing" => SymbolRegular.Map24,
+            "javascript" => SymbolRegular.Code24,
+            "keymouse" => SymbolRegular.Record24,
+            "shell" => SymbolRegular.WindowConsole20,
+            "csharp" => SymbolRegular.CodeBlock24,
+            _ when PuloniaSoloTaskExecutor.IsSoloTaskType(_model.TaskType) => SymbolRegular.Apps24,
+            _ => SymbolRegular.TaskListLtr24
         }
     };
 
@@ -214,6 +235,8 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
         OnPropertyChanged(nameof(Name));
         OnPropertyChanged(nameof(Path));
         OnPropertyChanged(nameof(RepeatCount));
+        OnPropertyChanged(nameof(RepeatBadgeText));
+        OnPropertyChanged(nameof(HasRepeatBadge));
         NotifyEffectiveEnabledChangedRecursively();
     }
 
@@ -295,8 +318,20 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
                 return;
             _document.ApplyMutation(() => _model.RepeatCount = storedValue, this);
             OnPropertyChanged();
+            OnPropertyChanged(nameof(RepeatBadgeText));
+            OnPropertyChanged(nameof(HasRepeatBadge));
         }
     }
+
+    /// <summary>
+    /// 分组执行多次时在任务树名称后显示的次数标记，例如“×3”；只执行一次时为空。
+    /// </summary>
+    public string? RepeatBadgeText => CanConfigureRepeat && RepeatCount > 1 ? $"×{RepeatCount}" : null;
+
+    /// <summary>
+    /// 是否显示分组执行次数标记。
+    /// </summary>
+    public bool HasRepeatBadge => RepeatBadgeText is not null;
 
     /// <summary>
     /// 是否是具体能力节点。
@@ -335,6 +370,8 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
         OnPropertyChanged(nameof(Parent));
         OnPropertyChanged(nameof(IsRoot));
         OnPropertyChanged(nameof(CanConfigureRepeat));
+        OnPropertyChanged(nameof(RepeatBadgeText));
+        OnPropertyChanged(nameof(HasRepeatBadge));
         NotifyEffectiveEnabledChangedRecursively();
     }
 
@@ -372,6 +409,7 @@ public partial class PuloniaTaskNodeViewModel : ObservableObject
         ReferencedResourceUpdateCount = 0;
         NotifyResourceVersionChanged();
         OnPropertyChanged(nameof(TypeDisplayName));
+        OnPropertyChanged(nameof(TypeIcon));
         OnPropertyChanged(nameof(CanAcceptChildren));
     }
 

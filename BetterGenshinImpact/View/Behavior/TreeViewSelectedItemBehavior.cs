@@ -1,5 +1,9 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Media3D;
 using Microsoft.Xaml.Behaviors;
 
 namespace BetterGenshinImpact.View.Behavior;
@@ -17,6 +21,12 @@ public sealed class TreeViewSelectedItemBehavior : Behavior<TreeView>
         new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, OnSelectedItemChanged));
 
     /// <summary>
+    /// 点击树空白区域时是否取消选中的依赖属性；默认关闭，保持原有选择行为。
+    /// </summary>
+    public static readonly DependencyProperty ClearSelectionOnEmptyClickProperty = DependencyProperty.Register(
+        nameof(ClearSelectionOnEmptyClick), typeof(bool), typeof(TreeViewSelectedItemBehavior), new PropertyMetadata(false));
+
+    /// <summary>
     /// 当前树选中项。
     /// </summary>
     public object? SelectedItem
@@ -26,12 +36,22 @@ public sealed class TreeViewSelectedItemBehavior : Behavior<TreeView>
     }
 
     /// <summary>
-    /// 关联 TreeView 后订阅选中项事件。
+    /// 点击树空白区域时是否取消当前选中项，让“按选中位置添加”的工具栏可以回到“添加到末尾”。
+    /// </summary>
+    public bool ClearSelectionOnEmptyClick
+    {
+        get => (bool)GetValue(ClearSelectionOnEmptyClickProperty);
+        set => SetValue(ClearSelectionOnEmptyClickProperty, value);
+    }
+
+    /// <summary>
+    /// 关联 TreeView 后订阅选中项与空白点击事件。
     /// </summary>
     protected override void OnAttached()
     {
         base.OnAttached();
         AssociatedObject.SelectedItemChanged += OnTreeSelectedItemChanged;
+        AssociatedObject.PreviewMouseLeftButtonDown += OnTreePreviewMouseLeftButtonDown;
     }
 
     /// <summary>
@@ -40,6 +60,7 @@ public sealed class TreeViewSelectedItemBehavior : Behavior<TreeView>
     protected override void OnDetaching()
     {
         AssociatedObject.SelectedItemChanged -= OnTreeSelectedItemChanged;
+        AssociatedObject.PreviewMouseLeftButtonDown -= OnTreePreviewMouseLeftButtonDown;
         base.OnDetaching();
     }
 
@@ -50,6 +71,32 @@ public sealed class TreeViewSelectedItemBehavior : Behavior<TreeView>
     {
         if (!ReferenceEquals(SelectedItem, e.NewValue))
             SelectedItem = e.NewValue;
+    }
+
+    /// <summary>
+    /// 启用空白点击取消选中时，点在树项与滚动条之外即取消当前选中；选中项随 SelectedItemChanged 同步为 null。
+    /// </summary>
+    private void OnTreePreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (!ClearSelectionOnEmptyClick || AssociatedObject.SelectedItem is not { } selected
+            || IsInsideItemOrScrollBar(e.OriginalSource as DependencyObject))
+            return;
+        if (FindContainer(AssociatedObject, selected) is { } container)
+            container.IsSelected = false;
+    }
+
+    /// <summary>
+    /// 判断点击位置是否位于树项或滚动条内；文本等内容元素沿逻辑树向上查找。
+    /// </summary>
+    private static bool IsInsideItemOrScrollBar(DependencyObject? source)
+    {
+        for (var current = source; current is not null;
+             current = current is Visual or Visual3D ? VisualTreeHelper.GetParent(current) : LogicalTreeHelper.GetParent(current))
+        {
+            if (current is TreeViewItem or ScrollBar)
+                return true;
+        }
+        return false;
     }
 
     /// <summary>
