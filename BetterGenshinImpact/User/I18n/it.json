@@ -1424,7 +1424,7 @@
   "请先选择一个调度器配置组": "Seleziona prima un gruppo di pianificazione",
   "正在从在线资料加载角色、武器及突破材料...": "Caricamento online di personaggi, armi e materiali di ascensione...",
   "在线资料没有返回所选项目的突破材料": "I dati online non contengono materiali di ascensione per gli elementi selezionati",
-  "正在同步 GitHub 脚本仓库...": "Sincronizzazione del repository di script GitHub...",
+  "正在同步脚本仓库...": "Sincronizzazione del repository di script configurato...",
   "确认订阅材料路线": "Conferma iscrizione percorsi materiali",
   "所选项目 {0} 个，材料 {1} 种；新增路线 {2} 条。": "Elementi selezionati: {0}; materiali: {1}; percorsi aggiunti: {2}.",
   "未找到路线的材料 {0} 种：{1}{2}": "Nessun percorso trovato per {0} materiali: {1}{2}",
@@ -1438,6 +1438,6 @@
   "订阅并导入仓库中的 {0} 个材料路线文件夹？\n其中 {1} 个材料文件夹已存在本地，导入会用仓库版本替换这些文件夹。": "Iscrivere e importare {0} cartelle di percorsi materiali dal repository?\n{1} cartelle sono già presenti localmente e verranno sostituite con le versioni del repository.",
   "快速添加角色材料路线": "Aggiungi rapidamente materiali personaggi",
   "快速添加武器材料路线": "Aggiungi rapidamente materiali armi",
-  "搜索并选择一个{0}；列表按版本从新到旧排列。确认后会按在线突破材料和 GitHub 路线创建每日任务。": "Cerca e seleziona un elemento {0}; l’elenco è ordinato dal più recente al meno recente per versione. Conferma per creare attività giornaliere con materiali online e percorsi GitHub.",
+  "搜索并选择一个{0}；列表按版本从新到旧排列。确认后会按在线突破材料和脚本仓库路线创建每日任务。": "Cerca e seleziona un elemento {0}; l’elenco è ordinato dal più recente al meno recente per versione. Conferma per creare attività giornaliere con materiali online e percorsi del repository di script.",
   "请选择一个项目": "Seleziona un elemento."
 }

@@ -945,7 +945,7 @@ public partial class ScriptControlViewModel : ViewModel
             var entries = await Task.Run(LoadAscensionCatalogAsync);
             var picker = BuildAscensionCatalogPicker(entries, kind);
             var result = PromptDialog.Prompt(
-                string.Format(AscensionText("搜索并选择一个{0}；列表按版本从新到旧排列。确认后会按在线突破材料和 GitHub 路线创建每日任务。"), AscensionText(kind == "角色" ? "角色材料" : "武器材料")),
+                string.Format(AscensionText("搜索并选择一个{0}；列表按版本从新到旧排列。确认后会按在线突破材料和脚本仓库路线创建每日任务。"), AscensionText(kind == "角色" ? "角色材料" : "武器材料")),
                 AscensionText(kind == "角色" ? "快速添加角色材料路线" : "快速添加武器材料路线"),
                 picker,
                 new Size(650, 520));
@@ -967,9 +967,10 @@ public partial class ScriptControlViewModel : ViewModel
             }
 
             var materialSources = await Task.Run(LoadMaterialSourceCatalogAsync);
-            Toast.Information(AscensionText("正在同步 GitHub 脚本仓库..."));
-            var githubRepoUrl = ScriptRepoUpdater.RepoChannels["GitHub"];
-            var (scriptRepoPath, _) = await ScriptRepoUpdater.Instance.UpdateCenterRepoByGit(githubRepoUrl, null);
+            Toast.Information(AscensionText("正在同步脚本仓库..."));
+            var repoUrl = ScriptRepoUpdater.ResolveRepoUrl(TaskContext.Instance().Config.ScriptConfig)
+                ?? throw new InvalidOperationException("请先配置有效的脚本仓库 URL");
+            var (scriptRepoPath, _) = await ScriptRepoUpdater.Instance.UpdateCenterRepoByGit(repoUrl, null);
             var localRoot = MapPathingViewModel.PathJsonPath;
             var repoRoot = Path.Combine(scriptRepoPath, "repo", "pathing");
             var repositoryPathRoot = Path.Combine(scriptRepoPath, "pathing");

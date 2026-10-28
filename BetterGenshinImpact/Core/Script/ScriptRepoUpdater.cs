@@ -520,7 +520,7 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// <summary>
     /// 根据用户配置中的渠道名称解析仓库URL
     /// </summary>
-    private static string? ResolveRepoUrl(ScriptConfig scriptConfig)
+    internal static string? ResolveRepoUrl(ScriptConfig scriptConfig)
     {
         var channelName = scriptConfig.SelectedChannelName;
 
@@ -2209,8 +2209,9 @@ public class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         try
         {
             var checkoutPath = Path.GetFullPath(repoPath);
-            var contentPath = Directory.Exists(Path.Combine(checkoutPath, "repo"))
-                ? Path.Combine(checkoutPath, "repo")
+            var repoContentPath = Path.Combine(checkoutPath, "repo");
+            var contentPath = Directory.Exists(Path.Combine(repoContentPath, "pathing"))
+                ? repoContentPath
                 : checkoutPath;
             await ImportScriptFromPathJsonCore(pathJson, contentPath, Path.GetFileName(checkoutPath));
         }
