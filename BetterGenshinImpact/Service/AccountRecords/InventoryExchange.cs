@@ -86,6 +86,12 @@ public sealed partial class InventoryStore
                     sources[(string)delta["source"]!] is not JObject descriptor || (string?)descriptor["reference"] != (string?)delta["source"] ||
                     descriptor["displayName"]?.Type != JTokenType.String) throw new InvalidDataException($"变动条目 {delta.Path} 不完整：须包含文本 name、整数 delta、时间文本 recordedAt，以及在 sources 中登记的 source。");
                 _ = delta["delta"]!.Value<long>();
+                // 增量同样遵循单时间标准，旧字段即使为 null 也不能静默忽略。
+                if (((JObject)delta).Property("verifiedAt") != null)
+                    throw new InvalidDataException($"变动条目 {delta.Path} 不支持 verifiedAt 字段，库存变动仅使用 recordedAt。");
+                // 在任何库存或字典写入前拒绝空名称，避免增量阶段失败时已保存部分库存。
+                if (string.IsNullOrWhiteSpace((string?)delta["name"]))
+                    throw new InvalidDataException($"变动条目 {delta.Path} 的物品名称不能为空或仅包含空白字符，文件未导入。");
                 if (delta["expirations"] is { Type: not JTokenType.Null } expirationToken &&
                     (expirationToken is not JArray batches || batches.Count > 100 || batches.Any(batch => batch is not JObject ||
                         batch["quantity"]?.Type != JTokenType.Integer || batch["expiresAt"]?.Type != JTokenType.String)))

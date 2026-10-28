@@ -1006,6 +1006,48 @@ public sealed class InventoryStoreTests : IDisposable
             [new InventoryDeltaReport { Name = "摩拉", Delta = 1, RecordedAt = _time.ToString("O") }]); });
     }
 
+    /// <summary>混合导入中的空名称增量必须在保存普通库存前拒绝。</summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData(" \t ")]
+    public async Task Exchange_EmptyDeltaNameRejectedBeforeInventoryWrite(string name)
+    {
+        await _store.ReportAsync(Uid, Source("scan"), [Report("摩拉", 80)]);
+        var package = await _store.ExportInventoryAsync(Uid);
+        package["accounts"]![Uid]!["deltas"] = new JArray(new JObject
+        { ["name"] = name, ["delta"] = -3, ["recordedAt"] = _time.AddMinutes(1).ToString("O"), ["source"] = "scan" });
+
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() =>
+            _store.ImportInventoryAsync(package, "100000002", false, true));
+
+        Assert.Contains("物品名称不能为空", error.Message);
+        Assert.False(File.Exists(Path.Combine(_root, "records", "100000002", "inventory.json")));
+        Assert.Equal(80, (await _store.ReadAsync(Uid)).Inventory.Items["摩拉"][0].Quantity);
+    }
+
+    /// <summary>增量中的旧核实时间字段（包括 null）必须在任何库存写入前拒绝。</summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("2026-10-28T12:00:00+08:00")]
+    public async Task Exchange_DeltaVerificationTimeRejectedBeforeInventoryWrite(string? verifiedAt)
+    {
+        await _store.ReportAsync(Uid, Source("scan"), [Report("摩拉", 80)]);
+        var package = await _store.ExportInventoryAsync(Uid);
+        package["accounts"]![Uid]!["deltas"] = new JArray(new JObject
+        {
+            ["name"] = "摩拉", ["delta"] = -3,
+            ["recordedAt"] = _time.AddMinutes(1).ToString("O"), ["source"] = "scan",
+            ["verifiedAt"] = verifiedAt == null ? JValue.CreateNull() : new JValue(verifiedAt)
+        });
+
+        var error = await Assert.ThrowsAsync<InvalidDataException>(() =>
+            _store.ImportInventoryAsync(package, "100000002", false, true));
+
+        Assert.Contains("不支持 verifiedAt", error.Message);
+        Assert.False(File.Exists(Path.Combine(_root, "records", "100000002", "inventory.json")));
+        Assert.Equal(80, (await _store.ReadAsync(Uid)).Inventory.Items["摩拉"][0].Quantity);
+    }
+
     /// <summary>开发增量导入必须先确认，不能因为文件有基准就绕过授权。</summary>
     [Fact]
     public async Task Exchange_DeveloperDeltasRequireExplicitConfirmation()
