@@ -99,9 +99,6 @@ public sealed class GuideWindowService : IGuideWindowService, IHostedService, ID
     /// <summary>字幕浮窗，第一次需要显示时创建</summary>
     private IGuideSubtitleView? _subtitleView;
 
-    /// <summary>正在由服务主动关闭小窗</summary>
-    private bool _closingByService;
-
     /// <summary>被用户隐藏</summary>
     private bool _hiddenByUser;
 
@@ -234,8 +231,9 @@ public sealed class GuideWindowService : IGuideWindowService, IHostedService, ID
             _runtimeService.Stopped += OnRuntimeStopped;
             _dispatcher.TaskModeChanged += OnTaskModeChanged;
             _maskWindowHost.StateChanged += OnMaskWindowStateChanged;
-            _watcher.StateChanged += OnGameStateChanged;
-            _watcher.GameMoved += OnGameMoved;
+            // 这两个事件在系统事件钩子的回调里同步触发，异常一旦抛回系统会使整个进程崩溃，经 Invoke 只记录日志
+            _watcher.StateChanged += (s, e) => Invoke(() => OnGameStateChanged(s, e));
+            _watcher.GameMoved += (s, e) => Invoke(() => OnGameMoved(s, e));
 
             // 启动时截图器已经在运行（例如通过命令行启动）
             if (_runtimeService.Current is not null)
@@ -299,15 +297,10 @@ public sealed class GuideWindowService : IGuideWindowService, IHostedService, ID
         SaveProgress();
         _library.FlushInBackground();
         Config.WasOpen = false;
-        _closingByService = true;
-        try
-        {
-            view.CloseWindow();
-        }
-        finally
-        {
-            _closingByService = false;
-        }
+        // 先解除关联再关闭窗口：窗口销毁期间会处理积压的系统事件（例如前台窗口变化），重入的回调
+        // 此时已把小窗视为关闭，不会再去定位或显示正在销毁的窗口
+        ReleaseView();
+        view.CloseWindow();
     });
 
     /// <inheritdoc />
@@ -457,13 +450,28 @@ public sealed class GuideWindowService : IGuideWindowService, IHostedService, ID
     }
 
     /// <summary>
-    /// 小窗关闭（服务关闭或程序退出）后清理状态
+    /// 小窗不经服务关闭（程序退出）时清理状态；服务主动关闭时已在关闭前清理并取消了订阅
     /// </summary>
     private void OnViewClosed(object? sender, EventArgs e)
     {
-        if (sender is IGuideWindowView view && !ReferenceEquals(view, _view))
+        if (!ReferenceEquals(sender, _view))
         {
             return;
+        }
+
+        ReleaseView();
+        _logger.LogDebug("悬浮小窗随程序关闭");
+    }
+
+    /// <summary>
+    /// 解除服务与当前小窗的关联并清理状态，之后服务把小窗视为关闭，不再操作该窗口。
+    /// 窗口引用先于窗口关闭清空，关闭过程中重入的系统事件回调不会再操作这两个窗口
+    /// </summary>
+    private void ReleaseView()
+    {
+        if (_view is { } view)
+        {
+            view.Closed -= OnViewClosed;
         }
 
         if (_player is { } player)
@@ -485,8 +493,9 @@ public sealed class GuideWindowService : IGuideWindowService, IHostedService, ID
         _progressTimer?.Stop();
         _interactionExitTimer?.Stop();
         _focusRestoreTimer?.Stop();
-        _subtitleView?.CloseWindow();
+        var subtitleView = _subtitleView;
         _subtitleView = null;
+        subtitleView?.CloseWindow();
 
         State.IsOpen = false;
         State.IsShown = false;
@@ -499,10 +508,6 @@ public sealed class GuideWindowService : IGuideWindowService, IHostedService, ID
         State.Title = string.Empty;
         State.CurrentTime = 0;
         State.Duration = 0;
-        if (!_closingByService)
-        {
-            _logger.LogDebug("悬浮小窗随程序关闭");
-        }
     }
 
     #endregion
