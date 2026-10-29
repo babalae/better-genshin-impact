@@ -76,6 +76,10 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
     /// 标记 ViewModel 已释放，防止退出阶段处理迟到的实例事件。
     /// </summary>
     private bool _disposed;
+    /// <summary>正常关闭的异步保存守卫只放行一次，避免递归关闭。</summary>
+    private bool _questVoiceCloseApproved;
+    /// <summary>多个关闭请求共用一次排空，不重复弹出提示。</summary>
+    private bool _questVoiceClosePending;
     /// <summary>
     /// 不包含实例身份的应用标题和版本信息。
     /// </summary>
@@ -624,8 +628,8 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
         }
     }
 
-    [RelayCommand]
-    private void OnClosing(CancelEventArgs e)
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private async Task OnClosingAsync(CancelEventArgs e)
     {
         // “关闭到托盘”只隐藏当前实例，不应因为其他实例仍在运行而阻止隐藏窗口。
         if (Config.CommonConfig.ExitToTray)
@@ -636,15 +640,8 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
         }
 
         // 子实例只负责自己的生命周期；只有主实例退出时需要保护其提供的共享能力。
-        if (!_instanceVisualIdentity.IsPrimary)
-        {
-            // 有下载正在进行时确认退出，已下载的部分保留供下次续传
-            e.Cancel = !DownloadCenter.ConfirmExit();
-            return;
-        }
-
         // WebView2 实例依赖主实例提供 IPC 服务，应先关闭网页版实例再退出主实例。
-        if (_instanceService.HasConnectedWebViewInstance())
+        if (_instanceVisualIdentity.IsPrimary && _instanceService.HasConnectedWebViewInstance())
         {
             e.Cancel = true;
             ThemedMessageBox.Warning(
@@ -653,7 +650,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
             return;
         }
 
-        if (_childSessionService.HasActiveChildSession())
+        if (_instanceVisualIdentity.IsPrimary && _childSessionService.HasActiveChildSession())
         {
             e.Cancel = true;
             ThemedMessageBox.Warning(
@@ -662,8 +659,20 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
             return;
         }
 
-        // 有下载正在进行时确认退出，已下载的部分保留供下次续传
-        e.Cancel = !DownloadCenter.ConfirmExit();
+        if (_questVoiceCloseApproved) return;
+        e.Cancel = true;
+        if (_questVoiceClosePending) return;
+        _questVoiceClosePending = true;
+        try
+        {
+            if (!await QuestVoiceSettingsExitGuard.PrepareAsync()) return;
+            // 有下载正在进行时确认退出，已下载的部分保留供下次续传。
+            // 配音草稿保存成功后再确认，避免保存失败却保留下载退出授权。
+            if (!DownloadCenter.ConfirmExit()) return;
+            _questVoiceCloseApproved = true;
+            Application.Current.MainWindow.Close();
+        }
+        finally { _questVoiceClosePending = false; }
     }
 
     [RelayCommand]

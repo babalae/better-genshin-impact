@@ -1,0 +1,50 @@
+<UserControl x:Class="BetterGenshinImpact.View.Pages.QuestVoiceSettings.EnginePreviewView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+             xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages.QuestVoiceSettings"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             HorizontalContentAlignment="Stretch">
+    <StackPanel>
+        <ui:TextBlock Text="通用声线显示名（可选）" FontWeight="SemiBold" Margin="0,18,0,8" />
+        <ui:TextBox Text="{Binding VoiceDisplayName, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                    PlaceholderText="留空使用当前声音名称；加入后可供角色及默认规则选择" />
+        <ui:Button Content="加入通用声线库" Command="{Binding RegisterVoiceCommand, Mode=OneWay}" Margin="0,8,0,4" />
+        <ui:CardExpander IsExpanded="{Binding IsLibraryExpanded, Mode=TwoWay}" ContentPadding="16" Margin="0,12,0,8">
+            <ui:CardExpander.Header><ui:TextBlock Text="此引擎的通用声线" /></ui:CardExpander.Header>
+            <StackPanel>
+                <ui:TextBlock Text="选择已有声线以修改名称或声音 ID；有效修改自动保存。被默认规则或角色引用的声线需先解除引用才能删除。"
+                              TextWrapping="Wrap" Margin="0,0,0,8" />
+                <ComboBox ItemsSource="{Binding RegisteredProfiles, Mode=OneWay}" DisplayMemberPath="Name"
+                          SelectedItem="{Binding SelectedRegisteredProfile, Mode=TwoWay}" />
+                <ContentControl Content="{Binding SelectedRegisteredProfile, Mode=OneWay}"
+                                IsEnabled="{Binding Management.CanEditDraft, Mode=OneWay}"
+                                HorizontalContentAlignment="Stretch" Margin="0,10,0,4">
+                    <ContentControl.ContentTemplate>
+                        <DataTemplate>
+                            <StackPanel>
+                                <ui:TextBlock Text="显示名称" Margin="0,0,0,6" />
+                                <ui:TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                <ui:TextBlock Text="声音 ID" Margin="0,10,0,6" />
+                                <ui:TextBox Text="{Binding ProviderVoiceId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ContentControl.ContentTemplate>
+                </ContentControl>
+                <ui:Button Content="删除所选声线" Command="{Binding DeleteRegisteredProfileCommand, Mode=OneWay}" Margin="0,8,0,4" />
+                <ui:TextBlock Text="{Binding Management.EditStatus, Mode=OneWay}" TextWrapping="Wrap" Margin="0,6,0,0" />
+                <ui:TextBlock Text="{Binding Management.SaveStatus, Mode=OneWay}" TextWrapping="Wrap" Margin="0,4,0,0" />
+            </StackPanel>
+        </ui:CardExpander>
+        <ui:TextBlock Text="试听文本" FontWeight="SemiBold" Margin="0,18,0,8" />
+        <ui:TextBox Text="{Binding TestText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                    AcceptsReturn="True" TextWrapping="Wrap" MinHeight="70" />
+        <WrapPanel Margin="0,8,0,4">
+            <ui:Button Content="试听当前引擎声音" Command="{Binding TestVoiceCommand, Mode=OneWay}" Margin="0,0,8,4" />
+            <ui:Button Content="停止试听" Command="{Binding CancelTestVoiceCommand, Mode=OneWay}" Margin="0,0,0,4" />
+        </WrapPanel>
+        <ui:TextBlock Text="{Binding StatusMessage, Mode=OneWay}" TextWrapping="Wrap" Margin="0,4,0,8" />
+    </StackPanel>
+</UserControl>

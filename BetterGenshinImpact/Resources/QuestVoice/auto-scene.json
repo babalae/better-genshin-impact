@@ -1,0 +1,308 @@
+{
+  "AlgorithmVersion": "genshin-pixel-1",
+  "Width": 2560,
+  "Height": 1440,
+  "Transform": {
+    "MinScale": 0.5,
+    "MaxScale": 2,
+    "AspectTolerance": 0.003,
+    "MaximumPixels": 80000000,
+    "BorderDepth": 8,
+    "BorderDarkMaximum": 8,
+    "BorderDarkFraction": 0.985
+  },
+  "Colors": {
+    "NameGold": {
+      "MinRed": 175,
+      "MinGreen": 120,
+      "MinBlue": 0,
+      "MaxBlue": 160,
+      "MinRedGreen": 10,
+      "MinGreenBlue": 35,
+      "MinRedBlue": 75,
+      "MaxSpread": 255
+    },
+    "SeparatorGold": {
+      "MinRed": 65,
+      "MinGreen": 40,
+      "MinBlue": 0,
+      "MaxBlue": 200,
+      "MinRedGreen": 8,
+      "MinGreenBlue": 20,
+      "MinRedBlue": 45,
+      "MaxSpread": 255
+    },
+    "White": {
+      "MinRed": 210,
+      "MinGreen": 210,
+      "MinBlue": 210,
+      "MaxBlue": 255,
+      "MinRedGreen": -20,
+      "MinGreenBlue": -20,
+      "MinRedBlue": -20,
+      "MaxSpread": 20
+    }
+  },
+  "NameArea": {
+    "Left": 750,
+    "Top": 1135,
+    "Right": 1810,
+    "Bottom": 1187
+  },
+  "TitleArea": {
+    "Left": 850,
+    "Top": 1193,
+    "Right": 1710,
+    "Bottom": 1227
+  },
+  "TextArea": {
+    "Left": 400,
+    "Top": 1206,
+    "Right": 2160,
+    "Bottom": 1390
+  },
+  "Geometry": {
+    "ComponentMinimumPixels": 4,
+    "ComponentMaximumWidth": 65,
+    "ComponentMinimumHeight": 3,
+    "ComponentMaximumHeight": 45,
+    "NameMinimumPixels": 180,
+    "NameMinimumTallComponents": 1,
+    "NameTallHeight": 20,
+    "TitleMinimumPixels": 100,
+    "TitleMinimumTallComponents": 2,
+    "TitleTallHeight": 12,
+    "BodyMinimumPixels": 45,
+    "BodyMinimumComponents": 1,
+    "BodyTallHeight": 25,
+    "BodyMinimumTallComponents": 1,
+    "PunctuationMinimumComponents": 1,
+    "PunctuationMinimumPixels": 25,
+    "PunctuationBaselineDepth": 35,
+    "RubyMinimumPixels": 50,
+    "RubyMinimumComponents": 2,
+    "RubyMinimumHeight": 8,
+    "RubyMaximumHeight": 22,
+    "ExtraPixelAllowance": 70,
+    "ExtraPixelFraction": 0.035,
+    "ExtraMinimumAlignedComponents": 2,
+    "BodyCenterTolerance": 180,
+    "BandTolerance": 2
+  },
+  "Separators": [
+    {
+      "HasTitle": false,
+      "Bounds": {
+        "Left": 410,
+        "Top": 1195,
+        "Right": 2150,
+        "Bottom": 1204
+      },
+      "CenterGap": 0,
+      "MinimumSideRun": 110,
+      "MinimumRows": 2,
+      "MaximumThickness": 7,
+      "ContrastOffset": 5,
+      "MinimumContrast": 20
+    },
+    {
+      "HasTitle": true,
+      "Bounds": {
+        "Left": 410,
+        "Top": 1208,
+        "Right": 2150,
+        "Bottom": 1218
+      },
+      "CenterGap": 160,
+      "MinimumSideRun": 50,
+      "MinimumRows": 2,
+      "MaximumThickness": 7,
+      "ContrastOffset": 5,
+      "MinimumContrast": 20
+    }
+  ],
+  "Layouts": [
+    {
+      "Id": "genshin.standard.1",
+      "HasTitle": false,
+      "Speaker": {
+        "Left": 750,
+        "Top": 1135,
+        "Right": 1810,
+        "Bottom": 1187
+      },
+      "Bands": [
+        {
+          "Top": 1215,
+          "Bottom": 1257,
+          "Kind": "Body"
+        }
+      ],
+      "Dialogue": [
+        {
+          "Left": 400,
+          "Top": 1213,
+          "Right": 2160,
+          "Bottom": 1260
+        }
+      ]
+    },
+    {
+      "Id": "genshin.standard.2",
+      "HasTitle": false,
+      "Speaker": {
+        "Left": 750,
+        "Top": 1135,
+        "Right": 1810,
+        "Bottom": 1187
+      },
+      "Bands": [
+        {
+          "Top": 1215,
+          "Bottom": 1257,
+          "Kind": "Body"
+        },
+        {
+          "Top": 1265,
+          "Bottom": 1307,
+          "Kind": "Body"
+        }
+      ],
+      "Dialogue": [
+        {
+          "Left": 400,
+          "Top": 1213,
+          "Right": 2160,
+          "Bottom": 1260
+        },
+        {
+          "Left": 400,
+          "Top": 1263,
+          "Right": 2160,
+          "Bottom": 1310
+        }
+      ]
+    },
+    {
+      "Id": "genshin.title.1",
+      "HasTitle": true,
+      "Speaker": {
+        "Left": 750,
+        "Top": 1135,
+        "Right": 1810,
+        "Bottom": 1187
+      },
+      "Bands": [
+        {
+          "Top": 1241,
+          "Bottom": 1283,
+          "Kind": "Body"
+        }
+      ],
+      "Dialogue": [
+        {
+          "Left": 400,
+          "Top": 1239,
+          "Right": 2160,
+          "Bottom": 1286
+        }
+      ]
+    },
+    {
+      "Id": "genshin.title.2",
+      "HasTitle": true,
+      "Speaker": {
+        "Left": 750,
+        "Top": 1135,
+        "Right": 1810,
+        "Bottom": 1187
+      },
+      "Bands": [
+        {
+          "Top": 1241,
+          "Bottom": 1283,
+          "Kind": "Body"
+        },
+        {
+          "Top": 1291,
+          "Bottom": 1333,
+          "Kind": "Body"
+        }
+      ],
+      "Dialogue": [
+        {
+          "Left": 400,
+          "Top": 1239,
+          "Right": 2160,
+          "Bottom": 1286
+        },
+        {
+          "Left": 400,
+          "Top": 1289,
+          "Right": 2160,
+          "Bottom": 1336
+        }
+      ]
+    },
+    {
+      "Id": "genshin.ruby.1",
+      "HasTitle": false,
+      "Speaker": {
+        "Left": 750,
+        "Top": 1135,
+        "Right": 1810,
+        "Bottom": 1187
+      },
+      "Bands": [
+        {
+          "Top": 1215,
+          "Bottom": 1236,
+          "Kind": "Ruby"
+        },
+        {
+          "Top": 1239,
+          "Bottom": 1281,
+          "Kind": "Body"
+        }
+      ],
+      "Dialogue": [
+        {
+          "Left": 400,
+          "Top": 1237,
+          "Right": 2160,
+          "Bottom": 1284
+        }
+      ]
+    },
+    {
+      "Id": "genshin.title-ruby.1",
+      "HasTitle": true,
+      "Speaker": {
+        "Left": 750,
+        "Top": 1135,
+        "Right": 1810,
+        "Bottom": 1187
+      },
+      "Bands": [
+        {
+          "Top": 1241,
+          "Bottom": 1262,
+          "Kind": "Ruby"
+        },
+        {
+          "Top": 1265,
+          "Bottom": 1307,
+          "Kind": "Body"
+        }
+      ],
+      "Dialogue": [
+        {
+          "Left": 400,
+          "Top": 1263,
+          "Right": 2160,
+          "Bottom": 1310
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+<UserControl x:Class="BetterGenshinImpact.View.Pages.QuestVoiceSettings.OpenAiSpeechSettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+             xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages.QuestVoiceSettings"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             HorizontalContentAlignment="Stretch">
+    <StackPanel>
+        <ui:TextBlock Text="OpenAI 兼容语音 API" FontSize="18" FontWeight="SemiBold" />
+        <ui:TextBlock Text="请填写服务的完整 Base URL（例如 https://api.openai.com/v1/）。声音仅为本地建议，兼容服务可填写自定义 voice ID；模型改变会刷新建议并保留原 ID。" TextWrapping="Wrap" Margin="0,8,0,4" />
+        <local:EngineConnectionView />
+        <ui:TextBlock Text="API Key（可选，取决于服务要求）" Margin="0,8,0,6" />
+        <PasswordBox>
+            <i:Interaction.Behaviors>
+                <behavior:PasswordBoxBindingBehavior Password="{Binding EngineConfig.ApiKey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </i:Interaction.Behaviors>
+        </PasswordBox>
+        <ui:TextBlock Text="模型（例如 tts-1 / tts-1-hd / 兼容服务模型）" Margin="0,12,0,6" />
+        <ui:TextBox Text="{Binding EngineConfig.Model, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+        <ui:TextBlock Text="本地声音建议" Margin="0,12,0,6" />
+        <local:EngineVoiceListView />
+        <ui:TextBlock Text="Voice ID（可手填）" Margin="0,4,0,6" />
+        <ui:TextBox Text="{Binding VoiceId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+        <ui:TextBlock Text="响应格式（PCM 为 24 kHz 单声道 16 位）" Margin="0,12,0,6" />
+        <ComboBox ItemsSource="{Binding AudioFormats, Mode=OneWay}" SelectedItem="{Binding EngineConfig.Format, Mode=TwoWay}" />
+        <ui:TextBlock Text="速度倍率（0.25～4）" Margin="0,12,0,6" />
+        <Slider Minimum="0.25" Maximum="4" TickFrequency="0.25" Value="{Binding EngineConfig.Rate, Mode=TwoWay}" />
+        <ui:TextBlock Text="{Binding EngineConfig.Rate, Mode=OneWay, StringFormat={}{0:F2}}" />
+        <local:EnginePreviewView />
+    </StackPanel>
+</UserControl>

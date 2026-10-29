@@ -1,0 +1,5 @@
+<annotation>
+  <size><width>2560</width><height>1440</height></size>
+  <object><name>name</name><bndbox><xmin>994</xmin><ymin>1129</ymin><xmax>1590</xmax><ymax>1193</ymax></bndbox></object>
+  <object><name>dialogue_line1</name><bndbox><xmin>407</xmin><ymin>1197</ymin><xmax>2148</xmax><ymax>1268</ymax></bndbox></object>
+</annotation>

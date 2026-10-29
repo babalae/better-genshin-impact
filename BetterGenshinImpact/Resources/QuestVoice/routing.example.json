@@ -1,0 +1,18 @@
+{
+  "Version": 1,
+  "Game": "genshin",
+  "ProtagonistId": null,
+  "PlayerNames": [],
+  "NarratorVoiceId": null,
+  "FallbackVoiceId": null,
+  "MissingVoicePolicy": "Fallback",
+  "Speakers": [
+    { "Id": "genshin.ganyu", "Names": ["甘雨"], "Aliases": [], "Corrections": [], "VoiceId": null },
+    { "Id": "genshin.keqing", "Names": ["刻晴"], "Aliases": [], "Corrections": [], "VoiceId": null },
+    { "Id": "genshin.cyno", "Names": ["赛诺"], "Aliases": [], "Corrections": [], "VoiceId": null },
+    { "Id": "genshin.kaveh", "Names": ["卡维"], "Aliases": [], "Corrections": [], "VoiceId": null },
+    { "Id": "genshin.aether", "Names": ["空"], "Aliases": [], "Corrections": [], "VoiceId": null },
+    { "Id": "genshin.lumine", "Names": ["荧"], "Aliases": [], "Corrections": [], "VoiceId": null }
+  ],
+  "Voices": []
+}

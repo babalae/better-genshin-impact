@@ -1,0 +1,19 @@
+<UserControl x:Class="BetterGenshinImpact.View.Pages.QuestVoiceSettings.EngineConnectionView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+             xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages.QuestVoiceSettings"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             HorizontalContentAlignment="Stretch">
+    <StackPanel>
+        <ui:TextBlock Text="服务实例" FontWeight="SemiBold" Margin="0,12,0,8" />
+        <ui:ToggleSwitch Content="使用远程实例" IsChecked="{Binding EngineConfig.UseRemote, Mode=TwoWay}" />
+        <ui:TextBlock Text="本地 / 默认 Base URL" Margin="0,10,0,5" />
+        <ui:TextBox Text="{Binding LocalUrlDraft, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="http://127.0.0.1:端口/，保留反向代理路径" />
+        <ui:TextBlock Text="远程 Base URL（远程模式使用）" Margin="0,10,0,5" />
+        <ui:TextBox Text="{Binding RemoteUrlDraft, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="https://服务器/子路径/" />
+        <ui:TextBlock Text="{Binding UrlValidationMessage, Mode=OneWay}" TextWrapping="Wrap" Margin="0,6,0,6" />
+    </StackPanel>
+</UserControl>
