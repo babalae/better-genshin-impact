@@ -2,9 +2,11 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask;
+using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
+using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Pulonia.Services;
 
@@ -98,6 +100,8 @@ internal sealed class PuloniaLocalNodeRunner
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            // 运行结果只写入执行记录，这里同时写入日志窗口，避免停止后界面上没有任何说明
+            TaskControl.Logger.LogWarning("账号准备失败，未执行后续任务：{Message}", ex.Message);
             throw new PuloniaGenshinAccountException(ex.Message, ex);
         }
     }
