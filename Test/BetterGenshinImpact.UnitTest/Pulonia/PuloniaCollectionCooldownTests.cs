@@ -379,7 +379,7 @@ public sealed class PuloniaCollectionCooldownTests : IDisposable
         var path = Path.Combine(_directory, "state", "history", plan.Id, history.RunId + ".json");
         Assert.False((await File.ReadAllBytesAsync(path)).Take(3).SequenceEqual(new byte[] { 0xEF, 0xBB, 0xBF }));
         Assert.Contains(new PuloniaTaskRunItemViewModel(restored).ConfirmedEffectFields,
-            field => field.Label.StartsWith("已确认副作用 · pathing.file:"));
+            field => field.Label.StartsWith("路线 CD 记录") && field.Value.Contains("资源：pathing.file:"));
     }
 
     /// <summary>提交后修改计划不会改变已固定的采集规则，未成功的排队文件也没有提前占用。</summary>

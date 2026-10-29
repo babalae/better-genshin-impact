@@ -11,6 +11,12 @@ namespace BetterGenshinImpact.Pulonia.Services;
 /// </summary>
 public static class PuloniaTaskRunClassifier
 {
+    /// <summary>节点因自身或祖先关闭而未执行的原因码；界面据此把未启用的任务与真正的跳过分开展示。</summary>
+    public const string DisabledReason = "task.disabled";
+
+    /// <summary>续跑时节点已在原运行中完成或位于显式起点之前、因而未执行的原因码。</summary>
+    public const string ResumeSkippedReason = "task.resume_skipped";
+
     /// <summary>
     /// 业务结果是否不确定：已执行未核验、部分成功或待人工核对，都需要核对游戏状态。
     /// </summary>

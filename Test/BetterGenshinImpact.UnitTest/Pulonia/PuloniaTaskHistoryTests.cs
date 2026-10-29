@@ -255,7 +255,7 @@ public sealed class PuloniaTaskHistoryTests : IDisposable
     public void Duration_DoesNotRoundHoursUp()
     {
         var start = DateTimeOffset.UtcNow;
-        Assert.Equal("1 小时 40 分 0 秒", PuloniaTaskHistoryText.Duration(start, start.AddMinutes(100)));
+        Assert.Equal("1 小时 40 分", PuloniaTaskHistoryText.Duration(start, start.AddMinutes(100)));
     }
 
     /// <summary>

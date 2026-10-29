@@ -621,7 +621,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
                 return;
             state.Status = PuloniaTaskRunStatus.Running;
             state.StartedAt = DateTimeOffset.UtcNow;
-            state.Message = "正在串行执行运行快照。";
+            state.Message = "正在开始执行。";
         }
         try
         {
@@ -770,7 +770,8 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
         {
             var now = DateTimeOffset.UtcNow;
             await AddNodeResultAsync(state, new PuloniaTaskNodeResult(task.TaskAddress, task.Name, task.TaskType, 0,
-                PuloniaTaskNodeStatus.Skipped, "节点自身或祖先已关闭。", now, now)).ConfigureAwait(false);
+                PuloniaTaskNodeStatus.Skipped, "节点自身或祖先已关闭。", now, now,
+                reasonCode: PuloniaTaskRunClassifier.DisabledReason)).ConfigureAwait(false);
             return ExecutionSignal.Continue;
         }
 
@@ -781,8 +782,8 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
         {
             var now = DateTimeOffset.UtcNow;
             await AddNodeResultAsync(state, new PuloniaTaskNodeResult(task.TaskAddress, task.Name, task.TaskType, 0,
-                PuloniaTaskNodeStatus.Skipped, "续跑沿用原快照，已确认完成或位于显式起点之前。", now, now))
-                .ConfigureAwait(false);
+                PuloniaTaskNodeStatus.Skipped, "续跑沿用原快照，已确认完成或位于显式起点之前。", now, now,
+                reasonCode: PuloniaTaskRunClassifier.ResumeSkippedReason)).ConfigureAwait(false);
             return ExecutionSignal.Continue;
         }
 
@@ -826,7 +827,10 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
         for (var attempt = 1; ; attempt++)
         {
             runToken.ThrowIfCancellationRequested();
-            SetCurrentTask(state, task.TaskAddress, $"正在执行“{task.Name}”（第 {attempt}/{maxAttempts} 次）。");
+            // 不重试的任务不显示“第 1/1 次”，只在有重试机会时标出当前轮次
+            SetCurrentTask(state, task.TaskAddress, maxAttempts > 1
+                ? $"正在执行“{task.Name}”（第 {attempt}/{maxAttempts} 次）。"
+                : $"正在执行“{task.Name}”。");
             var startedAt = DateTimeOffset.UtcNow;
             PuloniaTaskOutcome? outcome = null;
             Exception? failure = null;
@@ -1005,7 +1009,7 @@ public sealed partial class PuloniaTaskService : IPuloniaTaskService, IAsyncDisp
     {
         lock (_runsGate)
         {
-            state.FailureMessage = $"节点“{task.Name}”失败：{message}";
+            state.FailureMessage = $"任务“{task.Name}”失败：{message}";
             state.Message = state.FailureMessage;
         }
         return task.Policy.FailureBehavior switch

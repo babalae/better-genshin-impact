@@ -68,16 +68,15 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel, IDisposable
     private string? _planFilterId;
 
     /// <summary>
-    /// 最近一次刷新或操作的结果，包括读取失败。
+    /// 最近一次操作的结果、读取失败或恢复提示；没有需要告知的内容时为空，界面隐藏。
     /// </summary>
     [ObservableProperty]
-    private string _statusMessage = "记录自动保存到本地，重新启动后仍可查看。";
+    private string _statusMessage = string.Empty;
 
     /// <summary>
-    /// 正在刷新本地历史。
+    /// 上一次刷新是否失败；刷新恢复后清除失败提示，但不覆盖用户操作的结果说明。
     /// </summary>
-    [ObservableProperty]
-    private bool _isRefreshing;
+    private bool _lastRefreshFailed;
 
     /// <summary>
     /// 当前队列、活动运行与已经落盘的不可变历史。
@@ -92,12 +91,14 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel, IDisposable
     /// <summary>
     /// 列表为空时的解释，不把计划过滤无结果误显示为历史丢失。
     /// </summary>
-    public string EmptyText => _allRuns.Count == 0 ? "暂无执行记录\n运行任务计划后，记录会自动保存在本地。" : "当前计划暂无执行记录。";
+    public string EmptyText => PlanFilterId is null
+        ? "暂无执行记录\n执行任务计划或一条龙后，结果会显示在这里。"
+        : "这个计划还没有执行记录\n开始执行后，结果会显示在这里。";
 
     /// <summary>
-    /// 当前显示的记录计数。
+    /// 当前显示的记录数，按时间从新到旧排列。
     /// </summary>
-    public string CountText => $"显示 {Runs.Count} / {_allRuns.Count} 条记录（新到旧）";
+    public string CountText => $"共 {Runs.Count} 条";
 
     /// <summary>
     /// 记录卡片是否展示计划名标题；计划页固定只看当前计划，标题与页面计划名重复，仅全局页跨计划展示时显示。
@@ -175,14 +176,14 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel, IDisposable
             return;
         try
         {
-            StatusMessage = "正在取消运行，并等待当前执行器释放资源……";
+            StatusMessage = "正在停止，等待当前任务退出……";
             await _taskService.CancelAsync(selected.RunId);
             await RefreshAsync(selected.RunId);
-            StatusMessage = "取消请求已处理；请以运行详情中的最终状态及核验提示为准。";
+            StatusMessage = "已停止。";
         }
         catch (Exception ex)
         {
-            await ShowOperationErrorAsync("取消运行失败：", ex);
+            await ShowOperationErrorAsync("停止失败：", ex);
         }
     }
 
@@ -199,11 +200,11 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel, IDisposable
         {
             var runId = await _taskService.ResumeAsync(selected.Run.RunId);
             await RevealRunAsync(runId);
-            StatusMessage = "已按这次运行当时的配置继续未完成的任务。";
+            StatusMessage = "已开始续跑：沿用这次运行当时的设置，继续未完成的任务。";
         }
         catch (Exception ex)
         {
-            await ShowOperationErrorAsync("继续历史运行失败：", ex);
+            await ShowOperationErrorAsync("续跑失败：", ex);
         }
     }
 
@@ -222,9 +223,9 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel, IDisposable
             selected.Run.NodeResults);
         // 显式起点会重放其后的节点，已确认成功也可能重复，普通历史同样需要确认。
         var result = await ThemedMessageBox.ShowAsync(
-            $"将从“{node.TaskName}”开始建立新运行，起点及之后的节点可能重复执行。"
-            + (allowUncertainReplay ? "\n此历史包含未核验结果，请先核对游戏状态。" : "")
-            + "\n是否确认？", "确认从节点开始", MessageBoxButton.YesNo,
+            $"将沿用这次运行当时的设置，从“{node.TaskName}”开始重新执行，它和之后的任务都会再执行一次。"
+            + (allowUncertainReplay ? "\n这次运行有结果无法确认的任务，请先在游戏中核对。" : "")
+            + "\n是否继续？", "从选中任务开始", MessageBoxButton.YesNo,
             ThemedMessageBox.MessageBoxIcon.Warning, MessageBoxResult.No);
         if (result != MessageBoxResult.Yes)
             return;
@@ -232,11 +233,11 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel, IDisposable
         {
             var runId = await _taskService.ResumeAsync(selected.Run.RunId, node.TaskAddress, allowUncertainReplay);
             await RevealRunAsync(runId);
-            StatusMessage = $"已按这次运行当时的配置，从“{node.TaskName}”开始重新运行。";
+            StatusMessage = $"已开始续跑：沿用这次运行当时的设置，从“{node.TaskName}”开始。";
         }
         catch (Exception ex)
         {
-            await ShowOperationErrorAsync("从节点继续失败：", ex);
+            await ShowOperationErrorAsync("从选中任务开始失败：", ex);
         }
     }
 
@@ -260,7 +261,6 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel, IDisposable
     public async Task RefreshAsync(string? preferredRunId = null)
     {
         await _runRefreshGate.WaitAsync();
-        IsRefreshing = true;
         try
         {
             var runs = await _taskService.ListRunsAsync();
@@ -271,15 +271,20 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel, IDisposable
                 _allRuns.Add(run.IsHistorical && archived.TryGetValue(run.RunId, out var cached)
                     ? cached : new PuloniaTaskRunItemViewModel(run, _typeNames));
             ApplyPlanFilter(preferredRunId);
-            StatusMessage = _taskService.RecoveryNotice ?? "记录已更新；所有时间按本地时区显示。";
+            // 成功刷新只在有恢复提示或需要清除上次失败时改写说明，保留用户操作的结果
+            if (_taskService.RecoveryNotice is { } notice)
+                StatusMessage = notice;
+            else if (_lastRefreshFailed)
+                StatusMessage = string.Empty;
+            _lastRefreshFailed = false;
         }
         catch (Exception ex)
         {
-            StatusMessage = "刷新运行状态失败：" + ex.Message;
+            StatusMessage = "刷新执行记录失败：" + ex.Message;
+            _lastRefreshFailed = true;
         }
         finally
         {
-            IsRefreshing = false;
             _runRefreshGate.Release();
         }
     }
@@ -337,11 +342,10 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel, IDisposable
     /// </summary>
     partial void OnSelectedRunChanged(PuloniaTaskRunItemViewModel? value)
     {
+        // 默认选中最近一个失败或需要核对的任务，其次是最后一个任务，打开记录即可看到问题所在
         SelectedRunNodeResult = value?.NodeDetails.LastOrDefault(item =>
-                                    item.Result.Status is PuloniaTaskNodeStatus.Failed
-                                        or PuloniaTaskNodeStatus.TimedOut
-                                        or PuloniaTaskNodeStatus.Cancelled
-                                        or PuloniaTaskNodeStatus.NeedsAttention)
+                                    item.StatusCategory is PuloniaTaskRunStatusCategory.Failed
+                                        or PuloniaTaskRunStatusCategory.Attention)
                                 ?? value?.NodeDetails.LastOrDefault();
         OnPropertyChanged(nameof(HasSelectedRun));
         OnPropertyChanged(nameof(CanCancelRun));
@@ -370,4 +374,14 @@ public partial class PuloniaTaskHistoryViewModel : ViewModel, IDisposable
         OnPropertyChanged(nameof(ShowPlanTitle));
         ApplyPlanFilter();
     }
+
+    /// <summary>
+    /// 说明文字变化后同步其显隐。
+    /// </summary>
+    partial void OnStatusMessageChanged(string value) => OnPropertyChanged(nameof(HasStatusMessage));
+
+    /// <summary>
+    /// 是否有需要显示的操作结果或错误说明。
+    /// </summary>
+    public bool HasStatusMessage => !string.IsNullOrWhiteSpace(StatusMessage);
 }

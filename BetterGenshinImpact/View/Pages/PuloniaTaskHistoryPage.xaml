@@ -17,7 +17,7 @@
         </Grid.RowDefinitions>
         <StackPanel Margin="0,0,0,14">
             <TextBlock FontSize="26" FontWeight="SemiBold" Text="执行记录" />
-            <TextBlock Margin="0,4,0,0" Text="查看 Pulonia 任务计划的跨重启历史、节点尝试和真实证据，以及当前的路线 CD。记录仅保存于本机。"
+            <TextBlock Margin="0,4,0,0" Text="查看任务计划和一条龙每次执行的结果，以及各条路线的 CD。记录只保存在本机，重启后仍可查看。"
                        TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
         </StackPanel>
         <TabControl Grid.Row="1" BorderThickness="0">

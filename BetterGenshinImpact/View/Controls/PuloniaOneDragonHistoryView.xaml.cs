@@ -2,7 +2,7 @@ using System.Windows.Controls;
 
 namespace BetterGenshinImpact.View.Controls;
 
-/// <summary>新一条龙的记录卡片视图，共用 Pulonia 历史模型和续跑命令。</summary>
+/// <summary>新一条龙的执行记录窗口内容：共用执行记录视图与路线 CD 总览，不维护第二份记录布局。</summary>
 public partial class PuloniaOneDragonHistoryView : UserControl
 {
     /// <summary>建立独立界面，不订阅或维护第二份执行状态。</summary>
