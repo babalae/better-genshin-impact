@@ -562,10 +562,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
     /// <summary>修改前读取最新公共设置，避免加载失败或旧页面快照覆盖其他设置及保留上限。</summary>
     private async Task UpdateSettingsAsync(Action<AccountRecordsSettings> update)
     {
-        var settings = await _store.GetSettingsAsync();
-        update(settings);
-        await _store.ConfigureAsync(settings);
-        _workspace.Settings = settings;
+        _workspace.Settings = await _store.UpdateSettingsAsync(update);
     }
 
     /// <summary>保存供各模块共用的来源显示偏好，当前仅库存分页消费该设置。</summary>
@@ -585,7 +582,13 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
     {
         var snapshots = kind == "snapshots";
         var events = kind == "events";
-        var previous = events ? _workspace.Settings.EventLimit : snapshots ? _workspace.Settings.SnapshotLimit : _workspace.Settings.RecentLimit;
+        int previous;
+        try { previous = InventoryStore.GetRetentionLimit(await _store.GetSettingsAsync(), kind); }
+        catch (Exception ex)
+        {
+            await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), "读取保存设置", MessageBoxButton.OK);
+            return;
+        }
         var prompt = events ? "每个 UID 保留多少条事件？（1000～50000，默认 5000）超限清理最旧的已结束记录；未解决事件保留，实际数量可能超过上限。"
             : snapshots ? "保留最近几个有记录的日期？（1～30）" : "每个物品保留几个最近来源？（1～10，含当前记录）";
         var value = PromptDialog.Prompt(prompt, "保存设置", previous.ToString(CultureInfo.InvariantCulture));
@@ -602,11 +605,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         }
         await RunManualAsync(async () =>
         {
-            await UpdateSettingsAsync(settings =>
-            {
-                if (events) settings.EventLimit = count;
-                else if (snapshots) settings.SnapshotLimit = count; else settings.RecentLimit = count;
-            });
+            _workspace.Settings = await _store.SetRetentionAsync(kind, count, previous);
         });
     }
 

@@ -36,6 +36,10 @@ public sealed partial class InventoryStore
     private static bool HasReceipt(InventoryDocument data, string name, string receipt) =>
         data.EventReceipts.TryGetValue(name, out var receipts) && receipts.Contains(receipt);
 
+    /// <summary>事件所属的 UTC 归档日期。</summary>
+    private static string ArchiveDate(InventoryEvent item) =>
+        (item.EndedAt ?? item.RecordedAt).UtcDateTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
     /// <summary>先可靠保存历史，再从主文件移出；中断后按事件 ID 去重。</summary>
     private void PersistInventory(InventoryDocument data)
     {
@@ -46,6 +50,7 @@ public sealed partial class InventoryStore
             .Take(Math.Max(0, data.Events.Count - Settings().EventLimit)).ToArray();
         foreach (var item in removed)
         {
+            if (item.Archived) data.PendingArchiveCleanupDates.Add(item.ArchiveFileDate ?? ArchiveDate(item));
             if (!data.EventReceipts.TryGetValue(item.Name, out var receipts)) data.EventReceipts[item.Name] = receipts = [];
             receipts.Add("Id:" + item.Id);
             if (!item.ItemDeleted)
@@ -60,8 +65,11 @@ public sealed partial class InventoryStore
             }
         }
         var directory = Path.Combine(AccountDirectory(data.Uid), "events");
-        foreach (var group in data.Events.Where(item => item.Archived).GroupBy(item =>
-                     (item.EndedAt ?? item.RecordedAt).UtcDateTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)))
+        var changed = data.Events.Where(item => item.Archived && item.ArchiveDirty).ToArray();
+        foreach (var item in changed.Where(item => item.ArchiveFileDate != null && item.ArchiveFileDate != ArchiveDate(item)))
+            data.PendingArchiveCleanupDates.Add(item.ArchiveFileDate!);
+        // 未变更日期不再读取或序列化；仅合并本次变更，保留该日期内的其他事件。
+        foreach (var group in changed.GroupBy(ArchiveDate))
         {
             var path = Path.Combine(directory, group.Key + ".json");
             var previous = Read<List<InventoryEvent>>(path);
@@ -77,18 +85,24 @@ public sealed partial class InventoryStore
         finally { data.Events = events; }
         // 凭证已写入主文件后才清理历史；中断重试不会重复接收已清理事件。
         data.Events = events.Where(item => !HasReceipt(data, item.Name, "Id:" + item.Id)).ToList();
-        if (Directory.Exists(directory))
-            foreach (var path in Directory.EnumerateFiles(directory, "*.json"))
+        var locations = data.Events.Where(item => item.Archived).ToDictionary(item => item.Id, ArchiveDate);
+        foreach (var date in data.PendingArchiveCleanupDates)
+        {
+            var path = Path.Combine(directory, date + ".json");
+            var previous = Read<List<InventoryEvent>>(path);
+            var retained = previous.Where(item => !HasReceipt(data, item.Name, "Id:" + item.Id) &&
+                (!locations.TryGetValue(item.Id, out var currentDate) || currentDate == date)).ToList();
+            if (retained.Count != previous.Count)
             {
-                var previous = Read<List<InventoryEvent>>(path);
-                var retained = previous.Where(item => !HasReceipt(data, item.Name, "Id:" + item.Id)).ToList();
-                if (retained.Count == previous.Count) continue;
                 if (retained.Count == 0) File.Delete(path);
                 else Write(path, retained);
-                File.Delete(path + ".bak");
             }
+            // 即使主文件清理已完成，上次中断留下的备份也必须清理后才能撤销墓碑。
+            File.Delete(path + ".bak");
+        }
         // 所有归档清理成功后才移除恢复用 ID；任何中途异常都会保留已落盘的墓碑。
-        var compacted = false;
+        var compacted = data.PendingArchiveCleanupDates.Count > 0;
+        data.PendingArchiveCleanupDates.Clear();
         foreach (var pair in data.EventReceipts.ToArray())
         {
             var baseline = data.Items.GetValueOrDefault(pair.Key)?.FirstOrDefault();
@@ -108,6 +122,11 @@ public sealed partial class InventoryStore
             }
             finally { data.Events = retainedEvents; }
         }
+        foreach (var item in data.Events.Where(item => item.Archived))
+        {
+            item.ArchiveDirty = false;
+            item.ArchiveFileDate = ArchiveDate(item);
+        }
     }
 
     /// <summary>历史用于追溯和跨归档去重，不因普通归档允许重复增量。</summary>
@@ -123,6 +142,14 @@ public sealed partial class InventoryStore
             var archived = Read<List<InventoryEvent>>(path, restoreBackup);
             if (archived.Any(item => item == null || item.History == null || !item.Archived))
                 throw new InvalidDataException($"事件归档文件结构不正确，无法读取：{path}。");
+            var date = Path.GetFileNameWithoutExtension(path);
+            foreach (var item in archived)
+            {
+                item.ArchiveDirty = false;
+                item.ArchiveFileDate = date;
+                // 兼容旧版本只落盘墓碑、尚未落盘待清理日期的中断状态。
+                if (HasReceipt(data, item.Name, "Id:" + item.Id)) data.PendingArchiveCleanupDates.Add(date);
+            }
             events.AddRange(archived.Where(item => !HasReceipt(data, item.Name, "Id:" + item.Id)));
         }
         data.Events = events.Concat(data.Events).GroupBy(item => item.Id).Select(items => items.Last()).OrderBy(item => item.Id, StringComparer.Ordinal).ToList();

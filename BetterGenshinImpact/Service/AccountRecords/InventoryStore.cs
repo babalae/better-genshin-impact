@@ -288,6 +288,7 @@ public sealed partial class InventoryStore
                     {
                         if (repeated.RepeatCount < long.MaxValue) repeated.RepeatCount++;
                         repeated.LastReceivedAt = now;
+                        repeated.ArchiveDirty = true;
                         result.DuplicateCount++;
                         if (!repeated.Archived && repeated.State == "Error") result.DuplicateErrorCount++;
                         continue;
@@ -541,6 +542,47 @@ public sealed partial class InventoryStore
     /// <summary>保存共享配置，并对所有合法 UID 应用来源记录、归档事件和快照保留上限。</summary>
     public Task ConfigureAsync(AccountRecordsSettings settings) => Locked(() =>
     {
+        Configure(settings);
+        return true;
+    });
+
+    /// <summary>锁内修改最新偏好；保留上限只能通过带确认依据的专用入口修改。</summary>
+    public Task<AccountRecordsSettings> UpdateSettingsAsync(Action<AccountRecordsSettings> update) => Locked(() =>
+    {
+        var settings = Settings();
+        var limits = (settings.RecentLimit, settings.SnapshotLimit, settings.EventLimit);
+        update(settings);
+        if (limits != (settings.RecentLimit, settings.SnapshotLimit, settings.EventLimit))
+            throw new InvalidOperationException("修改保留上限须重新确认当前设置。");
+        Configure(settings);
+        return settings;
+    });
+
+    /// <summary>界面确认和锁内比较共用的保留上限映射。</summary>
+    internal static int GetRetentionLimit(AccountRecordsSettings settings, string kind) => kind switch
+    {
+        "recent" => settings.RecentLimit, "snapshots" => settings.SnapshotLimit, "events" => settings.EventLimit,
+        _ => throw new ArgumentException("未知的保留设置。", nameof(kind))
+    };
+
+    /// <summary>确认期间上限若有变化则拒绝写入；比较、保存和裁剪在同一个锁内执行。</summary>
+    public Task<AccountRecordsSettings> SetRetentionAsync(string kind, int count, int expectedLimit) => Locked(() =>
+    {
+        var settings = Settings();
+        if (GetRetentionLimit(settings, kind) != expectedLimit)
+            throw new InvalidOperationException("保留上限已被其他操作修改，本次未保存或清理历史。请重新打开设置确认。");
+        if (count < (kind == "events" ? 1000 : 1) || count > (kind == "events" ? 50000 : kind == "snapshots" ? 30 : 10))
+            throw new ArgumentOutOfRangeException(nameof(count), "保留数量超出允许范围。");
+        if (kind == "events") settings.EventLimit = count;
+        else if (kind == "snapshots") settings.SnapshotLimit = count;
+        else settings.RecentLimit = count;
+        Configure(settings);
+        return settings;
+    });
+
+    /// <summary>仅由持有存储锁的入口调用，统一配置保存和必要的历史裁剪。</summary>
+    private void Configure(AccountRecordsSettings settings)
+    {
         var previous = Settings();
         settings.RecentLimit = Math.Clamp(settings.RecentLimit, 1, 10);
         settings.SnapshotLimit = Math.Clamp(settings.SnapshotLimit, 1, 30);
@@ -548,7 +590,7 @@ public sealed partial class InventoryStore
         Write(Path.Combine(_root, "settings.json"), settings);
         // 显示偏好只保存设置；只有降低保留上限才需要维护各账号历史。
         if (previous.RecentLimit <= settings.RecentLimit && previous.SnapshotLimit <= settings.SnapshotLimit &&
-            previous.EventLimit <= settings.EventLimit) return true;
+            previous.EventLimit <= settings.EventLimit) return;
         if (Directory.Exists(_root))
             foreach (var directory in Directory.EnumerateDirectories(_root).Where(path => IsValidUid(Path.GetFileName(path))))
             {
@@ -558,8 +600,7 @@ public sealed partial class InventoryStore
                 PersistInventory(data);
                 PruneSnapshots(directory, settings.SnapshotLimit);
             }
-        return true;
-    });
+    }
 
     /// <summary>设置当前账号物品的置顶标记，不修改数量、来源或记录时间。</summary>
     public Task SetPriorAsync(string uid, string name, bool prior) => Locked(() =>
@@ -678,11 +719,16 @@ public sealed partial class InventoryStore
             throw new InvalidDataException("库存文件中的到期批次不符合数量或时间要求，无法载入。");
         if (data.Events == null || data.Events.Any(item => item == null || item.History == null)) throw new InvalidDataException("库存文件的 Events 列表、事件或 History 历史字段为空，无法载入。");
         if (data.EventReceipts == null || data.EventReceipts.Values.Any(value => value == null)) throw new InvalidDataException("库存文件的 EventReceipts 去重信息为空或包含空条目，无法载入。");
+        if (data.PendingArchiveCleanupDates == null || data.PendingArchiveCleanupDates.Any(date =>
+            !DateTime.TryParseExact(date, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _)))
+            throw new InvalidDataException("库存文件的待清理归档日期无效。");
         if (includeHistory) LoadEventArchive(data, restoreBackup);
         foreach (var item in data.Events)
         {
+            var previous = (item.State, item.ErrorId);
             item.State = InventoryEvent.NormalizeState(item.State, item.Kind);
             InventoryEventCompatibility.RestoreErrorId(item);
+            if (previous != (item.State, item.ErrorId)) item.ArchiveDirty = true;
         }
         // 来源错误提醒已移除，旧事件归档保留证据，不再参与物品状态展示。
         foreach (var warning in data.Events.Where(item => item.Kind == "SourceWarning" && !item.Archived))

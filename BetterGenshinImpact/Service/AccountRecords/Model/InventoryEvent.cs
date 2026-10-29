@@ -10,6 +10,12 @@ namespace BetterGenshinImpact.Service.AccountRecords.Model;
 /// <summary>可追溯的库存事件；归档保留证据，超出保留上限时才清理旧归档。</summary>
 public sealed class InventoryEvent
 {
+    /// <summary>本次事务中是否需要保存归档变化；读取归档后清除，新事件默认需要保存。</summary>
+    [JsonIgnore]
+    internal bool ArchiveDirty { get; set; } = true;
+    /// <summary>读取归档时所在日期，用于兼容旧事件补齐终点后移动归档日期。</summary>
+    [JsonIgnore]
+    internal string? ArchiveFileDate { get; set; }
     /// <summary>展示时的内容版本；不落盘，兼容旧事件且能捕获原 ID 上的任何内容更新。</summary>
     [JsonIgnore]
     public string ContentVersion => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(this))));

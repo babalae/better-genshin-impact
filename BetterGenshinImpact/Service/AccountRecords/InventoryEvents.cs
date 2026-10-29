@@ -128,6 +128,7 @@ public sealed partial class InventoryStore
     /// <summary>附加状态历史；事件 ID 不变。</summary>
     private static void Transition(InventoryEvent item, string state, string message, bool archived = false)
     {
+        item.ArchiveDirty = true;
         item.State = state;
         if (!archived) item.Message = message;
         item.Archived = archived;
@@ -184,6 +185,7 @@ public sealed partial class InventoryStore
         {
             var origins = Sources();
             var data = Load(uid); var settings = Settings(); Snapshot(data, settings);
+            var definitions = Definitions();
             var result = new InventoryReportResult();
             foreach (var entry in batch)
             {
@@ -211,12 +213,13 @@ public sealed partial class InventoryStore
                     {
                         if (accepted.RepeatCount < long.MaxValue) accepted.RepeatCount++;
                         accepted.LastReceivedAt = DateTimeOffset.UtcNow;
+                        accepted.ArchiveDirty = true;
                     }
                     continue;
                 }
                 data.Items.TryGetValue(name, out var records);
                 var baseline = records?.FirstOrDefault();
-                if (name.Length is 0 or > 128 || !Definitions().ContainsKey(name)) reason = "库存变动的物品名称为空、超过 128 字符或未收录，本次增减未纳入推算。请修正名称或补充物品字典后重新上报。";
+                if (name.Length is 0 or > 128 || !definitions.ContainsKey(name)) reason = "库存变动的物品名称为空、超过 128 字符或未收录，本次增减未纳入推算。请修正名称或补充物品字典后重新上报。";
                 else if (baseline != null && parsed != null && parsed.RecordedAt == baseline.RecordedAt) reason = "库存变动与确认库存的记录时间相同，无法判断先后，本次增减未纳入推算。请来源保留实际发生时间及足够精度。";
                 else if (baseline != null && parsed != null && parsed.RecordedAt < baseline.RecordedAt) reason = "本次变动早于当前确认库存，可能已包含在该库存中，因此未纳入推算。请核对发生时间，勿重复累计；如数量存疑，请查看游戏后手动填写当前实际库存总数。";
                 var pending = Pending(data, name);
@@ -235,6 +238,7 @@ public sealed partial class InventoryStore
                 {
                     if (repeatedError.RepeatCount < long.MaxValue) repeatedError.RepeatCount++;
                     repeatedError.LastReceivedAt = DateTimeOffset.UtcNow;
+                    repeatedError.ArchiveDirty = true;
                     if (!repeatedError.Archived && repeatedError.Message != reason)
                         Transition(repeatedError, "Error", reason);
                     result.DuplicateCount++;
@@ -290,7 +294,7 @@ public sealed partial class InventoryStore
     {
         var data = Load(uid);
         var item = data.Events.SingleOrDefault(value => value.Id == id) ?? throw new InvalidOperationException("该事件已不存在，可能已被清理。请刷新事件列表后重新选择。");
-        if (keep) { item.KeepNotice = true; item.History.Add($"{DateTimeOffset.UtcNow:O} KeepNotice=True"); }
+        if (keep) { item.ArchiveDirty = true; item.KeepNotice = true; item.History.Add($"{DateTimeOffset.UtcNow:O} KeepNotice=True"); }
         else if (acknowledge && !item.Archived && item.State != "Pending")
         {
             if (data.Errors.TryGetValue(item.Name, out var error) && item.ErrorId == error.Id)

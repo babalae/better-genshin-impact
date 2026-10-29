@@ -79,6 +79,8 @@ public sealed class InventoryDocument
     /// <summary>本次读取是否已合并归档；保存前补齐，避免错误计算保留数量。</summary>
     [JsonIgnore]
     internal bool EventArchiveLoaded { get; set; }
+    /// <summary>已落盘但尚未完成清理的归档日期，供中断后重试；清理成功后清空。</summary>
+    public HashSet<string> PendingArchiveCleanupDates { get; set; } = new(StringComparer.Ordinal);
 
     /// <summary>当前 UID 置顶的物品名称；仅影响本地展示，不随来源上报覆盖。</summary>
     public HashSet<string> Prior { get; set; } = new(StringComparer.Ordinal);

@@ -11,6 +11,90 @@ namespace BetterGenshinImpact.UnitTest.ServiceTests;
 [Collection("AccountRecordsManualOperations")]
 public sealed class InventoryStoreTests : IDisposable
 {
+    /// <summary>偏好修改与保留上限并发提交时，均基于锁内最新设置，不覆盖另一项修改。</summary>
+    [Fact]
+    public async Task Settings_ConcurrentUpdatesPreserveBothChanges()
+    {
+        using var entered = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        var preference = _store.UpdateSettingsAsync(settings =>
+        {
+            entered.Set();
+            if (!release.Wait(TimeSpan.FromSeconds(5))) throw new TimeoutException();
+            settings.ShowExpirationColumn = true;
+        });
+        try
+        {
+            Assert.True(entered.Wait(TimeSpan.FromSeconds(5)));
+            var retention = _store.SetRetentionAsync("recent", 10, 5);
+            release.Set();
+            await Task.WhenAll(preference, retention);
+            var settings = await _store.GetSettingsAsync();
+            Assert.True(settings.ShowExpirationColumn);
+            Assert.Equal(10, settings.RecentLimit);
+            await _store.UpdateSettingsAsync(value => value.UseImageCache = false);
+            Assert.Equal(10, (await _store.GetSettingsAsync()).RecentLimit);
+        }
+        finally { release.Set(); }
+    }
+
+    /// <summary>确认期间上限改变后，旧确认不得保存设置或触发历史裁剪。</summary>
+    [Theory]
+    [InlineData("recent", 5, 10, 1)]
+    [InlineData("snapshots", 7, 20, 1)]
+    [InlineData("events", 5000, 10000, 1000)]
+    public async Task Retention_RejectsStaleConfirmation(string kind, int original, int raised, int lower)
+    {
+        await _store.SetRetentionAsync(kind, raised, original);
+        var path = Path.Combine(_root, "records", "settings.json");
+        var before = File.ReadAllText(path);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _store.SetRetentionAsync(kind, lower, original));
+        Assert.Equal(before, File.ReadAllText(path));
+        await _store.SetRetentionAsync(kind, lower, raised);
+    }
+
+    /// <summary>普通偏好入口不能绕过保留上限的确认依据。</summary>
+    [Fact]
+    public async Task Settings_PreferenceUpdateCannotChangeRetention()
+    {
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _store.UpdateSettingsAsync(settings => settings.RecentLimit = 1));
+        Assert.Equal(5, (await _store.GetSettingsAsync()).RecentLimit);
+    }
+
+    /// <summary>归档持久化只改动受影响日期，并能完成主文件已清理后的备份清理。</summary>
+    [Fact]
+    public async Task Archive_UnchangedDatesRemainUntouchedAndPendingCleanupResumes()
+    {
+        await _store.ReportAsync(Uid, Source("scan"), [Report("摩拉", 80)]);
+        var directory = Path.Combine(_root, "records", Uid, "events");
+        Directory.CreateDirectory(directory);
+        var archived = new InventoryEvent { Name = "摩拉", State = "Completed", Archived = true,
+            RecordedAt = _time, EndedAt = _time };
+        var date = _time.UtcDateTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var archivePath = Path.Combine(directory, date + ".json");
+        var text = JsonConvert.SerializeObject(new[] { archived });
+        File.WriteAllText(archivePath, text);
+        var stamp = File.GetLastWriteTimeUtc(archivePath);
+        await _store.SetPriorAsync(Uid, "摩拉", true);
+        Assert.Equal(text, File.ReadAllText(archivePath));
+        Assert.Equal(stamp, File.GetLastWriteTimeUtc(archivePath));
+        Assert.False(File.Exists(archivePath + ".bak"));
+
+        var path = Path.Combine(_root, "records", Uid, "inventory.json");
+        var data = JsonConvert.DeserializeObject<InventoryDocument>(File.ReadAllText(path))!;
+        data.PendingArchiveCleanupDates.Add(date);
+        data.EventReceipts["摩拉"] = ["Id:" + archived.Id];
+        File.WriteAllText(path, JsonConvert.SerializeObject(data));
+        File.WriteAllText(archivePath, "[]");
+        File.WriteAllText(archivePath + ".bak", text);
+        await _store.SetPriorAsync(Uid, "摩拉", false);
+        Assert.False(File.Exists(archivePath + ".bak"));
+        data = JsonConvert.DeserializeObject<InventoryDocument>(File.ReadAllText(path))!;
+        Assert.Empty(data.PendingArchiveCleanupDates);
+        Assert.DoesNotContain(data.EventReceipts.SelectMany(pair => pair.Value), value => value.StartsWith("Id:"));
+    }
+
     /// <summary>接受异常立即返回失败 Task，不同步抛错，也不进入 UID 校验和存储初始化。</summary>
     [Fact]
     public async Task Resolve_AcceptReturnsFaultedTaskBeforeStorageAccess()
