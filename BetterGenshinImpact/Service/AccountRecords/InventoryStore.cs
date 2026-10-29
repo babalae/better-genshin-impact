@@ -382,7 +382,7 @@ public sealed partial class InventoryStore
     }
 
     /// <summary>分批数量不超过总库存，时间必须显式带时区；允许已过期记录用于追溯。</summary>
-    private static string? ValidateExpirations(List<InventoryExpiration>? entries, long quantity)
+    internal static string? ValidateExpirations(List<InventoryExpiration>? entries, long quantity)
     {
         if (entries == null) return null;
         if (entries.Count > 100) return "单次上报的到期批次超过 100 条。请来源合并相同到期时间的批次，确保不超过 100 条后重新上报。";
@@ -413,19 +413,29 @@ public sealed partial class InventoryStore
     }
 
     /// <summary>舍弃异常并保留证据；接受请求一律拒绝，库存只能通过有效上报或人工确认更新。</summary>
-    public Task ResolveAsync(string uid, string name, string errorId, bool accept, string? displayedEventId = null) => Locked(() =>
+    public Task ResolveAsync(string uid, string name, string errorId, bool accept, string? displayedEventId = null,
+        IReadOnlyDictionary<string, string>? eventVersions = null)
     {
-        if (accept) throw new InvalidOperationException("异常记录不能直接接受。请舍弃异常上报，或手动确认当前实际库存总数。");
-        var data = Load(uid);
-        if (!data.Errors.TryGetValue(name, out var error) || error.Id != errorId)
-            throw new InvalidOperationException("此异常已被其他操作更新，当前操作未执行。请刷新后重新选择要处理的异常。");
-        var settings = Settings();
-        Snapshot(data, settings);
-        data.Errors.Remove(name);
-        ArchiveErrors(data, name, "用户舍弃异常上报。");
-        Save(data);
-        return true;
-    });
+        var versions = eventVersions?.ToDictionary(pair => pair.Key, pair => pair.Value);
+        return Locked(() =>
+        {
+            if (accept) throw new InvalidOperationException("异常记录不能直接接受。请舍弃异常上报，或手动确认当前实际库存总数。");
+            var data = Load(uid);
+            if (!data.Errors.TryGetValue(name, out var error) || error.Id != errorId)
+                throw new InvalidOperationException("此异常已被其他操作更新，当前操作未执行。请刷新后重新选择要处理的异常。");
+            // 卡片只处理展示时捕获的范围；旧调用没有快照时只处理关联的库存错误。
+            var selected = versions != null ? GetUnchangedNoticeEvents(data, name, versions) :
+                data.Events.Where(item => item.Name == name && item.ErrorId == errorId && !item.Archived).ToArray();
+            if (!selected.Any(item => item.ErrorId == errorId) || selected.Any(item => item.State != "Error"))
+                throw new InvalidOperationException("提示中的异常已变化，请刷新后重新选择。");
+            var settings = Settings();
+            Snapshot(data, settings);
+            data.Errors.Remove(name);
+            foreach (var item in selected) Transition(item, "Error", "用户舍弃异常上报。", true);
+            Save(data);
+            return true;
+            });
+    }
 
     /// <summary>用户提交当前实际库存，结束此前的待核实事项并归档积压错误；保留已完成核实的证据。</summary>
     /// <remarks>

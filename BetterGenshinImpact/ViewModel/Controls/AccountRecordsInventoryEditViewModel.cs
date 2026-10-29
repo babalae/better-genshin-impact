@@ -118,6 +118,9 @@ public partial class AccountRecordsInventoryEditViewModel : ObservableObject
             { Message = "每个到期批次的数量必须为正整数。"; return; }
             batches!.Add(new InventoryExpiration { Quantity = count, ExpiresAt = row.ExpiresAtText.Trim() });
         }
+        // 在任何字典写入前复用服务层校验，避免到期输入无效时分类已部分保存。
+        var expirationError = InventoryStore.ValidateExpirations(batches, quantity);
+        if (expirationError != null) { Message = expirationError; return; }
         try
         {
             await AccountRecordsInteractionGate.Instance.ExecuteManualAsync(async () =>

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using BetterGenshinImpact.Service.AccountRecords;
 using BetterGenshinImpact.Service.AccountRecords.Model;
@@ -21,6 +22,8 @@ public sealed class AccountRecordsNoticeCard : ObservableObject
     public string Kind { get; init; } = "";
     /// <summary>本张卡片所包含的事件 ID。</summary>
     public string[] EventIds { get; init; } = [];
+    /// <summary>卡片展示时各事件的内容版本，防止确认后台更新后的未知内容。</summary>
+    public IReadOnlyDictionary<string, string> EventVersions { get; init; } = new Dictionary<string, string>();
     /// <summary>关联当前库存错误；舍弃操作保留其并发校验。</summary>
     public string? ErrorId { get; init; }
     /// <summary>卡片标题。</summary>
@@ -70,6 +73,7 @@ public sealed class AccountRecordsNoticeCard : ObservableObject
                 {
                     Uid = data.Uid, Name = name, State = first.State, Kind = group.Key.Kind,
                     EventIds = items.Select(item => item.Id).ToArray(), ErrorId = first.State == "Error" ? error?.Id : null,
+                    EventVersions = items.ToDictionary(item => item.Id, item => item.ContentVersion),
                     Title = $"{name} · {label}（{items.Length} 条）",
                     Message = string.Join("\n", items.Select(item => AccountRecordsErrorMessages.ForDisplay(item.Message)).Distinct()),
                     Details = details,

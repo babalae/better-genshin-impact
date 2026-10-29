@@ -41,7 +41,8 @@ public partial class AccountRecordsInventoryViewModel
     private async Task ResolveNoticeCard(AccountRecordsNoticeCard? card)
     {
         if (!IsCurrentCard(card) || !card!.CanResolve) return;
-        await RunManualAsync(() => _store.ResolveAsync(card.Uid, card.Name, card.ErrorId!, false, card.EventIds.FirstOrDefault()));
+        await RunManualAsync(() => _store.ResolveAsync(card.Uid, card.Name, card.ErrorId!, false,
+            card.EventIds.FirstOrDefault(), card.EventVersions));
     }
 
     /// <summary>只归档展示时固定在本张卡片内的事件；待核实事项不能归档。</summary>
@@ -54,10 +55,7 @@ public partial class AccountRecordsInventoryViewModel
             await RunManualAsync(() => _store.ArchiveCompletedEventsAsync(card.Uid, card.Kind, card.EventIds));
             return;
         }
-        await RunManualAsync(async () =>
-        {
-            foreach (var id in card.EventIds) await _store.UpdateEventAsync(card.Uid, id, false, true);
-        });
+        await RunManualAsync(() => _store.ArchiveNoticeEventsAsync(card.Uid, card.Name, card.EventVersions));
     }
 
     /// <summary>批量归档仍使用服务端同类完成资格，不被卡片展开解除原有阻塞条件。</summary>

@@ -97,21 +97,13 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasStatus))]
     [NotifyPropertyChangedFor(nameof(ShowStatusMessage))]
-    [NotifyPropertyChangedFor(nameof(NoticeErrorCountText))]
     private string _status = "";
     /// <summary>是否显示提示区，不控制下方常驻项数区域。</summary>
     public bool HasStatus => !string.IsNullOrEmpty(Status) || HasNoticeCards;
-    /// <summary>只为当前错误提示显示总数；独立布局保证说明截断时仍可见。</summary>
-    public string NoticeErrorCountText => NoticeRow is { ErrorCount: > 1, Event.State: "Error" } row && Status == AccountRecordsErrorMessages.ForDisplay(row.Event.Message)
-        ? $"（共{row.ErrorCount}个错误）" : "";
     /// <summary>当前底部提示对应行。</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowBatchArchive))]
     [NotifyPropertyChangedFor(nameof(HasCompletedEvents))]
-    [NotifyPropertyChangedFor(nameof(CanResolveNotice))]
-    [NotifyPropertyChangedFor(nameof(CanAcceptNotice))]
-    [NotifyPropertyChangedFor(nameof(CanAcknowledgeNotice))]
-    [NotifyPropertyChangedFor(nameof(NoticeErrorCountText))]
     private AccountRecordsInventoryRow? _noticeRow;
     /// <summary>提示打开时固定账号。</summary>
     private string? _noticeUid;
@@ -125,15 +117,6 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         if (newValue != null) newValue.IsNoticeActive = true;
         if (newValue == null) RefreshNoticeCards();
     }
-    /// <summary>两行提示的第二行。</summary>
-    [ObservableProperty] private string _noticeDetails = "";
-    /// <summary>当前错误允许舍弃。</summary>
-    public bool CanResolveNotice => NoticeRow?.Error != null;
-    /// <summary>错误记录不提供接受入口。</summary>
-    public bool CanAcceptNotice => NoticeRow?.CanAcceptDisplayedError == true;
-    /// <summary>Completed、Warning 及没有待处理库存错误的 Error 事件允许归档。</summary>
-    public bool CanAcknowledgeNotice => NoticeRow?.Event != null && (NoticeRow.StateRank is 1 or 3 || NoticeRow.StateRank == 0 && NoticeRow.Error == null);
-
     /// <summary>打开阈值规则配置，首次创建禁用的示例；保存后刷新或等候分钟检查生效。</summary>
     [RelayCommand]
     private async Task EditWarningRules()
@@ -281,7 +264,6 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
     {
         foreach (var property in new[] { nameof(UseImageCache), nameof(ShowExpirationColumn), nameof(ShowMissingIconRowNumbers),
             nameof(PreferReadableSource), nameof(SnapshotsEnabled), nameof(HasCompletedEvents), nameof(ShowBatchArchive),
-            nameof(CanAcceptNotice), nameof(CanResolveNotice), nameof(CanAcknowledgeNotice), nameof(NoticeErrorCountText),
             nameof(IsEmpty), nameof(ShowPlaceholder), nameof(ItemCountText) })
             OnPropertyChanged(property);
         DeleteIconCommand.NotifyCanExecuteChanged();
@@ -361,7 +343,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         _hasSnapshot = false;
         IsLoading = uid != null;
         Status = "";
-        NoticeRow = null; NoticeDetails = ""; _noticeUid = null; _selectedNoticeRow = null;
+        NoticeRow = null; _noticeUid = null; _selectedNoticeRow = null;
         if (uid == null) { Rows.Clear(); OnPropertyChanged(nameof(ShowPlaceholder)); return; }
         try
         {
@@ -486,7 +468,6 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         if (IsLoading || !Rows.Contains(row)) return;
         NoticeRow = row; _noticeUid = Uid;
         Status = AccountRecordsErrorMessages.ForDisplay(row.Event?.Message ?? row.Error?.Message ?? "");
-        NoticeDetails = row.StatusDetails;
         RefreshNoticeCards();
     }
 
@@ -522,42 +503,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
     [RelayCommand]
     private void CloseNotice()
     {
-        Status = ""; NoticeDetails = ""; NoticeRow = null; _noticeUid = null; _selectedNoticeRow = null;
-    }
-
-    /// <summary>底部执行明确的错误处理，拒绝绕过核实条件。</summary>
-    [RelayCommand]
-    private async Task ResolveNotice(string action)
-    {
-        if (_noticeUid == null || NoticeRow?.Error == null) return;
-        if (action == "accept" && !CanAcceptNotice)
-        {
-            Status = "当前显示的错误不支持直接接受。请查看事件详情并修正来源；如需核实库存，请查看游戏后手动填写当前实际库存总数；保存后将归档该物品已有异常。";
-            return;
-        }
-        var uid = _noticeUid; var row = NoticeRow;
-        await RunManualAsync(() => _store.ResolveAsync(uid, row.Name, row.Error.Id, action == "accept", row.Event?.Id));
-    }
-
-    /// <summary>完成提示只归档本物品同类合法事件；其他状态保留原有确认逻辑。</summary>
-    [RelayCommand]
-    private async Task AcknowledgeNotice()
-    {
-        if (_noticeUid == null || NoticeRow?.Event == null || !CanAcknowledgeNotice) return;
-        var uid = _noticeUid; var row = NoticeRow;
-        if (row.Event.State == "Completed")
-        {
-            var kind = row.Event.Kind;
-            var ids = InventoryEventPolicy.GetCompletedArchiveCandidates(_workspace.Inventory, kind)
-                .Where(item => item.Name == row.Name).Select(item => item.Id).ToArray();
-            await RunManualAsync(() => _store.ArchiveCompletedEventsAsync(uid, kind, ids));
-            return;
-        }
-        await RunManualAsync(async () =>
-        {
-            foreach (var item in _workspace.Inventory.Events.Where(item => item.Name == row.Name && item.State == row.Event.State && !item.Archived))
-                await _store.UpdateEventAsync(uid, item.Id, false, true);
-        });
+        Status = ""; NoticeRow = null; _noticeUid = null; _selectedNoticeRow = null;
     }
 
     /// <summary>人工写入经统一执行入口检查；展示刷新不继续持有人工操作锁。</summary>

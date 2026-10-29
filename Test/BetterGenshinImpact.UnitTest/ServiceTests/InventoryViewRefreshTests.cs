@@ -217,19 +217,24 @@ public sealed class InventoryViewRefreshTests
             Assert.Equal(1, replacedContent);
             Assert.Equal(0, loadingTransitions);
 
-            // 最新增量错误与较早可接受的库存冲突不是同一个操作目标。
+            // 新增错误刷新卡片后，旧卡片不能继续舍弃，也不能改变库存。
             var old = new AccountRecordSource { Reference = "old", DisplayName = "old" };
             await store.ReportAsync(uid, old, [new() { Name = "摩拉", Quantity = 8, RecordedAt = time.ToString("O") }]);
             await vm.RefreshTimeWarningsCommand.ExecuteAsync(null);
             vm.ShowStatusCommand.Execute(row);
-            Assert.False(vm.CanAcceptNotice);
+            var previousErrorCard = Assert.Single(vm.NoticeCards.Where(card => card.State == "Error"));
+            Assert.True(previousErrorCard.CanResolve);
             await store.ReportDeltaAsync(uid, scan, [new() { Name = "摩拉", Delta = -100, RecordedAt = time.AddMinutes(3).ToString("O") }]);
             await vm.RefreshTimeWarningsCommand.ExecuteAsync(null);
             Assert.Equal("Delta", row.Event?.Kind);
-            Assert.False(vm.CanAcceptNotice);
-            Assert.True(vm.CanResolveNotice);
-            await vm.ResolveNoticeCommand.ExecuteAsync("accept");
-            Assert.Equal(12, (await store.LoadAsync(uid)).Inventory.Items["摩拉"][0].Quantity);
+            var currentErrorCard = Assert.Single(vm.NoticeCards.Where(card => card.State == "Error"));
+            Assert.True(currentErrorCard.CanResolve);
+            Assert.Equal(2, currentErrorCard.EventIds.Length);
+            await vm.ResolveNoticeCardCommand.ExecuteAsync(previousErrorCard);
+            var unchanged = (await store.LoadAsync(uid)).Inventory;
+            Assert.Equal(12, unchanged.Items["摩拉"][0].Quantity);
+            Assert.True(unchanged.Errors.ContainsKey("摩拉"));
+            Assert.All(unchanged.Events.Where(item => currentErrorCard.EventIds.Contains(item.Id)), item => Assert.False(item.Archived));
             Assert.Equal(0, collectionChanges);
 
             // 核实旧错误后再次叠加新错误和增量，归档提醒只能影响本卡片。

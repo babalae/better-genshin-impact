@@ -17,7 +17,8 @@ public sealed partial class InventoryStore
     /// <summary>新的有效总库存核实数量后，将历史错误归档，并合并为可确认的橘灯提醒。</summary>
     private static void ConfirmPreviousErrors(InventoryDocument data, string name, InventoryRecord record)
     {
-        var errors = data.Events.Where(item => item.Name == name && item.State == "Error" && !item.Archived).ToArray();
+        var errors = data.Events.Where(item => item.Name == name && item.State == "Error" && !item.Archived &&
+            (item.Kind != "Delta" || !HasReliableDeltaTime(item) || item.RecordedAt < record.RecordedAt)).ToArray();
         if (errors.Length == 0 && !data.Errors.ContainsKey(name)) return;
         data.Errors.Remove(name);
         foreach (var error in errors)
@@ -40,6 +41,18 @@ public sealed partial class InventoryStore
         warning.VerificationSource = record.Source;
         warning.VerificationId = record.AttemptId;
         warning.History.Add($"ConfirmedQuantity={record.Quantity}; RecordedAt={record.RecordedAt:O}; ErrorIds={string.Join(",", errors.Select(item => item.Id))}");
+    }
+
+    /// <summary>只有合法增量发生时间参与先后比较；缺失、非法或超前时间不能永久阻止重新核实。</summary>
+    private static bool HasReliableDeltaTime(InventoryEvent item)
+    {
+        if (item.HasValidRecordedAt is { } valid) return valid;
+        // 旧事件已有原始时间证据；解析结果必须与事件时间一致，不能误用失败时填入的接收时间。
+        var raw = item.History.FirstOrDefault(line => line.StartsWith("RecordedAt=", StringComparison.Ordinal));
+        if (raw == null) return false;
+        var parsed = Parse(new InventoryReport { Quantity = 0, RecordedAt = raw[11..] }, item.Source,
+            DateTimeOffset.UtcNow, out _);
+        return parsed != null && parsed.RecordedAt == item.RecordedAt;
     }
 
     /// <summary>按物品和来源更新分类橘灯；分类冲突不修改字典、不参与数量拒绝或增量核实。</summary>
@@ -235,12 +248,40 @@ public sealed partial class InventoryStore
                     parsed?.RecordedAt ?? DateTimeOffset.UtcNow, reason ?? "当前增减仅为推算，待后续核实。", baseline?.Quantity);
                 // 增量也保存稳定的上报标识，不改变原有按来源和时间去重的规则。
                 item.AttemptId = attemptId;
+                item.HasValidRecordedAt = parsed != null;
                 item.History.Add("RecordedAt=" + report.RecordedAt);
                 item.Expirations = report.Expirations;
                 item.History.Add("Current=" + Newtonsoft.Json.JsonConvert.SerializeObject(baseline));
                 if (reason == null) result.Accepted.Add(name); else result.Rejected[name] = reason;
             }
             Save(data); SaveSources(); return result;
+        });
+    }
+
+    /// <summary>锁内校验整组展示版本；任何一条变化都拒绝整次操作，避免部分归档。</summary>
+    private static InventoryEvent[] GetUnchangedNoticeEvents(InventoryDocument data, string name, IReadOnlyDictionary<string, string> versions)
+    {
+        var selected = data.Events.Where(item => versions.ContainsKey(item.Id)).ToArray();
+        if (selected.Length != versions.Count || selected.Any(item => item.Name != name || item.Archived || item.ItemDeleted ||
+            item.ContentVersion != versions[item.Id]))
+            throw new InvalidOperationException("提示内容已更新，当前操作未执行。请刷新后重新确认。");
+        return selected;
+    }
+
+    /// <summary>一次校验并归档卡片展示的提醒或独立错误，不处理后来新增或更新的事件。</summary>
+    public Task ArchiveNoticeEventsAsync(string uid, string name, IReadOnlyDictionary<string, string> eventVersions)
+    {
+        var versions = eventVersions.ToDictionary(pair => pair.Key, pair => pair.Value);
+        return Locked(() =>
+        {
+            var data = Load(uid);
+            var selected = GetUnchangedNoticeEvents(data, name, versions);
+            if (selected.Any(item => item.State is not ("Warning" or "Error") ||
+                data.Errors.TryGetValue(name, out var error) && item.ErrorId == error.Id))
+                throw new InvalidOperationException("当前事件不能直接归档，请刷新后处理对应异常或核实库存。");
+            foreach (var item in selected) Transition(item, item.State, "用户已确认。", true);
+            if (selected.Length > 0) PersistInventory(data);
+            return true;
         });
     }
 

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 using Newtonsoft.Json;
 
 namespace BetterGenshinImpact.Service.AccountRecords.Model;
@@ -8,6 +10,11 @@ namespace BetterGenshinImpact.Service.AccountRecords.Model;
 /// <summary>可追溯的库存事件；归档保留证据，超出保留上限时才清理旧归档。</summary>
 public sealed class InventoryEvent
 {
+    /// <summary>展示时的内容版本；不落盘，兼容旧事件且能捕获原 ID 上的任何内容更新。</summary>
+    [JsonIgnore]
+    public string ContentVersion => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(this))));
+    /// <summary>增量原始时间是否通过校验；旧事件为空，读取原始证据判断。</summary>
+    public bool? HasValidRecordedAt { get; set; }
     /// <summary>正增量明确上报的新增到期批次；负增量按最早到期优先推算。</summary>
     public List<InventoryExpiration>? Expirations { get; set; }
     /// <summary>UTC 创建时间加随机后缀，创建后不变。</summary>

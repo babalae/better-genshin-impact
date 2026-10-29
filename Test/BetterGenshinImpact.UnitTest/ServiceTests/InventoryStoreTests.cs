@@ -11,6 +11,39 @@ namespace BetterGenshinImpact.UnitTest.ServiceTests;
 [Collection("AccountRecordsManualOperations")]
 public sealed class InventoryStoreTests : IDisposable
 {
+    /// <summary>到期输入校验失败时不得提前创建字典；修正后分类和库存才一起提交。</summary>
+    [Theory]
+    [InlineData("bad-time", "1")]
+    [InlineData("2026-10-30T12:00:00", "1")]
+    [InlineData("2026-10-30T12:00:00Z", "3")]
+    public async Task Editor_InvalidExpirationsDoNotWriteDefinition(string expiresAt, string batchQuantity)
+    {
+        const string name = "测试新增物品";
+        var row = new AccountRecordsInventoryRow { Name = name, Quantity = 2,
+            Expirations = [new() { Quantity = 1, ExpiresAt = "2026-10-30T12:00:00Z" }] };
+        var editor = new AccountRecordsInventoryEditViewModel(_store, _catalog, Uid, row,
+            new Dictionary<string, string>()) { Category = "测试分类", AddToDictionary = true };
+        editor.ExpirationRows[0].QuantityText = batchQuantity;
+        editor.ExpirationRows[0].ExpiresAtText = expiresAt;
+        var saved = false;
+        editor.Saved += () => saved = true;
+        await editor.SaveCommand.ExecuteAsync(null);
+        Assert.False(saved);
+        Assert.NotEmpty(editor.Message);
+        Assert.False(File.Exists(Path.Combine(_root, "records", "item-overrides.json")));
+        var workspace = await _store.LoadAsync(Uid);
+        Assert.False(workspace.Definitions.ContainsKey(name));
+        Assert.False(workspace.Inventory.Items.ContainsKey(name));
+        editor.ExpirationRows[0].QuantityText = "1";
+        editor.ExpirationRows[0].ExpiresAtText = "2026-10-30T12:00:00Z";
+        await editor.SaveCommand.ExecuteAsync(null);
+        Assert.True(saved);
+        Assert.Empty(editor.Message);
+        workspace = await _store.LoadAsync(Uid);
+        Assert.Equal("测试分类", workspace.Definitions[name]);
+        Assert.Equal(2, workspace.Inventory.Items[name][0].Quantity);
+    }
+
     /// <summary>每个测试独立的数据根。</summary>
     private readonly string _root = Path.Combine(Path.GetTempPath(), "BetterGI.InventoryTests", Guid.NewGuid().ToString("N"));
     /// <summary>小型可控公共目录。</summary>
@@ -278,7 +311,8 @@ public sealed class InventoryStoreTests : IDisposable
         var item = data.Events.Single(value => value.State == "Error");
         Assert.Equal(error.Id, item.ErrorId);
         item.History.Clear();
-        Assert.False(new AccountRecordsInventoryRow { Error = error, Event = item }.CanAcceptDisplayedError);
+        Assert.Equal(error.Id, item.ErrorId);
+        Assert.False(error.CanAccept);
 
         var path = Path.Combine(_root, "records", Uid, "inventory.json");
         var document = JObject.Parse(File.ReadAllText(path));
@@ -1396,7 +1430,7 @@ public sealed class InventoryStoreTests : IDisposable
         foreach (var file in files) Assert.Equal(previous[file], File.GetLastWriteTimeUtc(file));
     }
 
-    /// <summary>底栏展示后出现新错误，不能通过旧事件目标接受旧库存；舍弃仍处理该物品全部错误。</summary>
+    /// <summary>底栏展示后出现新错误，不能接受旧库存；旧接口舍弃仅处理关联库存错误。</summary>
     [Fact]
     public async Task Resolve_RejectsStaleDisplayedErrorButAllowsDiscard()
     {
@@ -1411,7 +1445,8 @@ public sealed class InventoryStoreTests : IDisposable
         await Assert.ThrowsAsync<InvalidOperationException>(() => _store.ResolveAsync(Uid, "摩拉", error.Id, true, shown.Id));
         Assert.Equal(10, (await _store.LoadAsync(Uid)).Inventory.Items["摩拉"][0].Quantity);
         await _store.ResolveAsync(Uid, "摩拉", error.Id, false, shown.Id);
-        Assert.DoesNotContain((await _store.LoadAsync(Uid)).Inventory.Events, item => item.State == "Error" && !item.Archived);
+        var remaining = Assert.Single((await _store.LoadAsync(Uid)).Inventory.Events.Where(item => item.State == "Error" && !item.Archived));
+        Assert.Equal("Delta", remaining.Kind);
     }
 
     /// <summary>已有到期信息的新增库存拒绝缺失或不完整批次，导入携带有效批次后参与推算。</summary>
@@ -1441,6 +1476,78 @@ public sealed class InventoryStoreTests : IDisposable
         var data = (await _store.LoadAsync(Uid)).Inventory;
         Assert.Equal(3, InventoryStore.EstimateExpirations(data.Items["须臾树脂"][0], data.Events)!.Sum(item => item.Quantity));
         Assert.Equal(2, data.Items["须臾树脂"][0].Quantity);
+    }
+
+    /// <summary>舍弃卡片只处理展示范围，后台新增增量错误保持未处理。</summary>
+    [Fact]
+    public async Task NoticeDiscard_PreservesErrorsAddedAfterDisplay()
+    {
+        await _store.ReportAsync(Uid, Source("scan"), [Report("摩拉", 10)]);
+        await _store.ReportAsync(Uid, Source("scan"), [Report("摩拉", -1, 1)]);
+        var card = Assert.Single(AccountRecordsNoticeCard.Build(await _store.LoadAsync(Uid), "摩拉"));
+        await _store.ReportDeltaAsync(Uid, Source("delta"), [new() { Name = "摩拉", Delta = -100, RecordedAt = _time.AddMinutes(2).ToString("O") }]);
+        await _store.ResolveAsync(Uid, card.Name, card.ErrorId!, false, eventVersions: card.EventVersions);
+        var data = (await _store.LoadAsync(Uid)).Inventory;
+        Assert.Empty(data.Errors);
+        Assert.All(data.Events.Where(item => card.EventIds.Contains(item.Id)), item => Assert.True(item.Archived));
+        Assert.Equal("Delta", Assert.Single(data.Events.Where(item => item.State == "Error" && !item.Archived)).Kind);
+    }
+
+    /// <summary>同 ID 提醒更新后拒绝整张旧卡片，包括其中未变化的其他提醒。</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task NoticeArchive_RejectsUpdatedWarningWithoutPartialWrites(bool categoryChanged)
+    {
+        await _store.ReportAsync(Uid, Source("scan"), [Report("摩拉", -1)]);
+        await _store.ReportAsync(Uid, Source("scan"), [Report("摩拉", 10, 1)]);
+        await _store.ReportAsync(Uid, Source("category"), [new() { Name = "摩拉", Quantity = 10,
+            RecordedAt = _time.AddMinutes(2).ToString("O"), Category = "错误分类" }]);
+        var card = Assert.Single(AccountRecordsNoticeCard.Build(await _store.LoadAsync(Uid), "摩拉"));
+        Assert.Equal(2, card.EventIds.Length);
+        if (categoryChanged)
+            await _store.ReportAsync(Uid, Source("category"), [new() { Name = "摩拉", Quantity = 10,
+                RecordedAt = _time.AddMinutes(3).ToString("O"), Category = "另一错误分类" }]);
+        else
+        {
+            await _store.ReportAsync(Uid, Source("scan"), [Report("摩拉", -1, 3)]);
+            await _store.ReportAsync(Uid, Source("scan"), [Report("摩拉", 20, 4)]);
+        }
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _store.ArchiveNoticeEventsAsync(Uid, card.Name, card.EventVersions));
+        var data = (await _store.LoadAsync(Uid)).Inventory;
+        Assert.All(data.Events.Where(item => card.EventIds.Contains(item.Id)), item => Assert.False(item.Archived));
+        var refreshed = Assert.Single(AccountRecordsNoticeCard.Build(await _store.LoadAsync(Uid), "摩拉"));
+        await _store.ArchiveNoticeEventsAsync(Uid, refreshed.Name, refreshed.EventVersions);
+        Assert.DoesNotContain((await _store.LoadAsync(Uid)).Inventory.Events, item => item.State == "Warning" && !item.Archived);
+    }
+
+    /// <summary>合法的较晚增量错误不会被较早或同刻库存核实，严格更晚的库存才能解除。</summary>
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task Verification_PreservesLaterDeltaErrors(int minute)
+    {
+        await _store.ReportAsync(Uid, Source("scan"), [Report("摩拉", 10)]);
+        await _store.ReportDeltaAsync(Uid, Source("delta"), [new() { Name = "摩拉", Delta = -100, RecordedAt = _time.AddMinutes(2).ToString("O") }]);
+        await _store.ReportAsync(Uid, Source("scan"), [Report("摩拉", 20, minute)]);
+        var data = (await _store.LoadAsync(Uid)).Inventory;
+        Assert.Single(data.Events.Where(item => item.State == "Error" && !item.Archived));
+        Assert.DoesNotContain(data.Events, item => item.Kind == "VerifiedErrorWarning");
+        await _store.ReportAsync(Uid, Source("scan"), [Report("摩拉", 30, 3)]);
+        Assert.DoesNotContain((await _store.LoadAsync(Uid)).Inventory.Events, item => item.State == "Error" && !item.Archived);
+    }
+
+    /// <summary>非法或超前的增量时间不永久阻止有效库存解除错误。</summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData("bad-time")]
+    [InlineData("2999-01-01T00:00:00Z")]
+    public async Task Verification_CanResolveInvalidDeltaTimes(string recordedAt)
+    {
+        await _store.ReportAsync(Uid, Source("scan"), [Report("摩拉", 10)]);
+        await _store.ReportDeltaAsync(Uid, Source("delta"), [new() { Name = "摩拉", Delta = 1, RecordedAt = recordedAt }]);
+        await _store.ReportAsync(Uid, Source("scan"), [Report("摩拉", 20, 1)]);
+        Assert.DoesNotContain((await _store.LoadAsync(Uid)).Inventory.Events, item => item.State == "Error" && !item.Archived);
     }
 
     /// <summary>有效总库存将多条历史错误汇总为一条橘灯，保留错误证据并允许归档。</summary>

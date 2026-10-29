@@ -75,8 +75,6 @@ public sealed partial class AccountRecordsInventoryRow : ObservableObject
     public bool HasStatusLight => StateRank < 5;
     /// <summary>当前物品为未受阻的绿灯，且账号内同类合法归档目标至少有两条。</summary>
     [ObservableProperty] private bool _canBatchArchive;
-    /// <summary>错误记录不允许直接接受，旧库存错误标记也不能开启此操作。</summary>
-    public bool CanAcceptDisplayedError => false;
     /// <summary>累计待核实增量；为空表示没有待核实变动。</summary>
     public decimal? PendingDelta { get; set; }
     /// <summary>附在确认库存右侧，不参与主数量居中。</summary>
