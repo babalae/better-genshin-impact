@@ -241,6 +241,9 @@ public partial class AllConfig : ObservableObject
     /// </summary>
     public MusicConfig MusicConfig { get; set; } = new();
 
+    /// <summary>原神自动配音配置，与其他模块共用配置持久化机制。</summary>
+    public QuestVoiceConfig QuestVoiceConfig { get; set; } = new();
+
     /// <summary>
     /// 脚本配置
     /// </summary>

@@ -240,7 +240,7 @@ public partial class MainWindow : FluentWindow, INavigationWindow
         CompositionTarget.Rendering -= OnCompositionTargetRendering;
         RemoveHandler(PreviewMouseWheelEvent, new MouseWheelEventHandler(OnGlobalPreviewMouseWheel));
         base.OnClosed(e);
-        App.GetService<NotifyIconViewModel>()?.Exit();
+        _ = App.GetService<NotifyIconViewModel>()?.ExitAsync();
     }
 
     private void OnNotifyIconLeftDoubleClick(NotifyIcon sender, RoutedEventArgs e)

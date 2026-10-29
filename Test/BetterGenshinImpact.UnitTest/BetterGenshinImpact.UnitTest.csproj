@@ -29,6 +29,7 @@
 
     <ItemGroup>
       <Folder Include="Assets\AutoFight\" />
+      <None Include="..\..\BetterGenshinImpact\Resources\QuestVoice\auto-scene.json" Link="Resources\QuestVoice\auto-scene.json" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
 </Project>

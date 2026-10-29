@@ -19,6 +19,7 @@ using BetterGenshinImpact.Service.Guide;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.ViewModel.Pages;
 using System.ComponentModel;
 using Vanara.PInvoke;
 using Wpf.Ui;
@@ -232,17 +233,12 @@ public partial class NotifyIconViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
-    public void Exit()
+    public async Task ExitAsync()
     {
         // 子实例只退出当前进程；主实例退出前需要保护由其提供的共享能力。
         if (!_instanceVisualIdentity.IsPrimary)
         {
-            // 有下载正在进行时确认退出，已下载的部分保留供下次续传
-            if (_downloadCenter.ConfirmExit())
-            {
-                SaveAndShutdown();
-            }
-
+            await SaveAndShutdownAsync();
             return;
         }
 
@@ -263,20 +259,22 @@ public partial class NotifyIconViewModel : ObservableObject, IDisposable
             return;
         }
 
-        // 有下载正在进行时确认退出，已下载的部分保留供下次续传
+        await SaveAndShutdownAsync();
+    }
+
+    /// <summary>
+    /// 确认下载并保存配音草稿、共享配置后，关闭当前实例进程。
+    /// </summary>
+    private async Task SaveAndShutdownAsync()
+    {
+        if (!await QuestVoiceSettingsExitGuard.PrepareAsync()) return;
+        // 有下载正在进行时确认退出，已下载的部分保留供下次续传。
+        // 不让尚未保存的配音草稿消耗本次下载退出确认。
         if (!_downloadCenter.ConfirmExit())
         {
             return;
         }
 
-        SaveAndShutdown();
-    }
-
-    /// <summary>
-    /// 保存共享配置并关闭当前实例进程。
-    /// </summary>
-    private static void SaveAndShutdown()
-    {
         App.GetService<IConfigService>()?.Save();
         Application.Current.Shutdown();
     }

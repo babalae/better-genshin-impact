@@ -1,0 +1,136 @@
+<UserControl x:Class="BetterGenshinImpact.View.Pages.QuestVoiceSettingsPage"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
+ FontFamily="{DynamicResource TextThemeFontFamily}" Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+ <UserControl.Resources><BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" /></UserControl.Resources>
+ <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+  <StackPanel Margin="{DynamicResource PagePadding}">
+   <ui:TextBlock Text="配置与映射" FontTypography="Title" Margin="0,0,0,8" />
+   <ui:TextBlock Text="先在引擎页面准备声音，再绑定旅行者、未知 NPC 和旁白。有效修改自动保存，下次启动配音生效。" TextWrapping="Wrap" Margin="0,0,0,12" />
+   <ui:CardExpander IsExpanded="True" ContentPadding="16" Margin="0,0,0,12">
+    <ui:CardExpander.Header><ui:TextBlock Text="默认配音规则" /></ui:CardExpander.Header>
+    <StackPanel>
+     <ui:TextBlock Text="默认 TTS 引擎（单独绑定的声线仍按各自引擎播放）" TextWrapping="Wrap" Margin="0,0,0,6" />
+     <ComboBox ItemsSource="{Binding ViewModel.Providers, Mode=OneWay}" DisplayMemberPath="DisplayName" SelectedItem="{Binding ViewModel.SelectedProvider, Mode=TwoWay}" />
+     <ui:ToggleSwitch Content="启用角色声线路由" IsChecked="{Binding ViewModel.Config.RoutingEnabled, Mode=TwoWay}" Margin="0,12,0,0" />
+     <ui:TextBlock Text="关闭路由时使用所选引擎的默认声音；启用后，明确角色绑定优先于未知 NPC 回退。" TextWrapping="Wrap" Margin="0,6,0,0" />
+    </StackPanel>
+   </ui:CardExpander>
+   <local:QuestVoiceManagementView DataContext="{Binding ViewModel.Management, Mode=OneWay}" />
+            <!-- 5.4 OCR 设置 -->
+            <ui:CardExpander Margin="0,0,0,12"
+                             ContentPadding="0"
+                             IsExpanded="True"
+                             Icon="{ui:SymbolIcon BarcodeScanner24}">
+                <ui:CardExpander.Header>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <ui:TextBlock Grid.Row="0" FontTypography="Body" Text="OCR 设置" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                      Text="对白区域文字识别的模型路径、DirectML 设备序号与采样间隔设置"
+                                      TextWrapping="Wrap" />
+                    </Grid>
+                </ui:CardExpander.Header>
+                <StackPanel IsEnabled="{Binding ViewModel.IsConfigEditable, Mode=OneWay}">
+                    <Grid Margin="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="OCR 模型路径" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                      Text="带 18708 字 character 字典的 PP-OCRv6 Rec ONNX 模型路径"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBox Grid.Row="2"
+                                    Grid.Column="0"
+                                    Margin="0,8,8,0"
+                                    Text="{Binding ViewModel.Config.OcrModelPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <ui:Button Grid.Row="2"
+                                   Grid.Column="1"
+                                   Margin="0,8,24,0"
+                                   Command="{Binding ViewModel.BrowseOcrModelCommand, Mode=OneWay}"
+                                   Content="浏览"
+                                   Icon="{ui:SymbolIcon FolderOpen24}" />
+                    </Grid>
+                    <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                    <Grid Margin="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="DirectML 设备序号" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                      Text="专用 OCR 使用的 DirectML 设备序号，不修改全局 OCR 配置"
+                                      TextWrapping="Wrap" />
+                        <ui:NumberBox Grid.Row="0"
+                                      Grid.RowSpan="2"
+                                      Grid.Column="1"
+                                      Width="140"
+                                      Margin="16,0,24,0"
+                                      VerticalAlignment="Center"
+                                      MaxDecimalPlaces="0"
+                                      Maximum="16"
+                                      Minimum="0"
+                                      SpinButtonPlacementMode="Inline"
+                                      Value="{Binding ViewModel.Config.DeviceId, Mode=TwoWay}" />
+                    </Grid>
+                    <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+                    <Grid Margin="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="采样间隔（毫秒）" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="0"
+                                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                      Text="自动配音沿用 BetterGI 的全局截图与帧输入能力按此间隔取样（50～500 毫秒），不单独创建捕获器"
+                                      TextWrapping="Wrap" />
+                        <ui:NumberBox Grid.Row="0"
+                                      Grid.RowSpan="2"
+                                      Grid.Column="1"
+                                      Width="140"
+                                      Margin="16,0,24,0"
+                                      VerticalAlignment="Center"
+                                      MaxDecimalPlaces="0"
+                                      Maximum="500"
+                                      Minimum="50"
+                                      SpinButtonPlacementMode="Inline"
+                                      Value="{Binding ViewModel.Config.SampleIntervalMilliseconds, Mode=TwoWay}" />
+                    </Grid>
+                </StackPanel>
+            </ui:CardExpander>
+
+
+   <ui:CardExpander IsExpanded="False" ContentPadding="16" Margin="0,0,0,12">
+    <ui:CardExpander.Header><ui:TextBlock Text="路由文件路径" /></ui:CardExpander.Header>
+    <StackPanel><ui:TextBox Text="{Binding ViewModel.Config.RoutingCatalogPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=600}" />
+     <ui:Button Content="浏览路由 JSON" Command="{Binding ViewModel.BrowseRoutingCatalogCommand, Mode=OneWay}" HorizontalAlignment="Left" Margin="0,8,0,0" />
+     <ui:TextBlock Text="路径改变后先导出旧草稿或重新加载；不会把旧输入写入新文件。" TextWrapping="Wrap" Margin="0,8,0,0" />
+    </StackPanel>
+   </ui:CardExpander>
+   <ui:TextBlock Text="{Binding ViewModel.CommandError, Mode=OneWay}" Foreground="{DynamicResource SystemFillColorCriticalBrush}" TextWrapping="Wrap" />
+  </StackPanel>
+ </ScrollViewer>
+</UserControl>

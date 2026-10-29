@@ -1,0 +1,26 @@
+<UserControl x:Class="BetterGenshinImpact.View.Pages.QuestVoiceSettings.VoicevoxSettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+             xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages.QuestVoiceSettings"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             HorizontalContentAlignment="Stretch">
+    <StackPanel>
+        <ui:TextBlock Text="VOICEVOX" FontSize="18" FontWeight="SemiBold" />
+        <ui:TextBlock Text="连接自行启动的引擎；刷新读取 speaker / talk style。请遵守声音的使用条款与署名要求。" TextWrapping="Wrap" Margin="0,8,0,4" />
+        <local:EngineConnectionView />
+        <ui:TextBlock Text="声音 / 风格" Margin="0,12,0,6" />
+        <local:EngineVoiceListView />
+        <ui:TextBlock Text="Style ID（非负整数；刷新保留原值）" Margin="0,4,0,6" />
+        <ui:TextBox Text="{Binding VoiceId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+        <ui:TextBlock Text="速度倍率（0.5～2）" Margin="0,12,0,6" />
+        <Slider Minimum="0.5" Maximum="2" TickFrequency="0.1" Value="{Binding EngineConfig.Rate, Mode=TwoWay}" />
+        <ui:TextBlock Text="{Binding EngineConfig.Rate, Mode=OneWay, StringFormat={}{0:F2}}" />
+        <ui:TextBlock Text="音高（-0.15～0.15）" Margin="0,12,0,6" />
+        <Slider Minimum="-0.15" Maximum="0.15" TickFrequency="0.01" Value="{Binding EngineConfig.Pitch, Mode=TwoWay}" />
+        <ui:TextBlock Text="{Binding EngineConfig.Pitch, Mode=OneWay, StringFormat={}{0:F2}}" />
+        <local:EnginePreviewView />
+    </StackPanel>
+</UserControl>

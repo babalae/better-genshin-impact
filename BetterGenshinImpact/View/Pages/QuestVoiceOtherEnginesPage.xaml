@@ -1,0 +1,28 @@
+<UserControl x:Class="BetterGenshinImpact.View.Pages.QuestVoiceOtherEnginesPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:vm="clr-namespace:BetterGenshinImpact.ViewModel.Pages.QuestVoiceSettings"
+             xmlns:settings="clr-namespace:BetterGenshinImpact.View.Pages.QuestVoiceSettings"
+             FontFamily="{DynamicResource TextThemeFontFamily}"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+    <UserControl.Resources>
+        <DataTemplate DataType="{x:Type vm:HuoshanSettingsViewModel}"><settings:HuoshanSettingsView /></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:WindowsSapiSettingsViewModel}"><settings:WindowsSapiSettingsView /></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:VoicevoxSettingsViewModel}"><settings:VoicevoxSettingsView /></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:VitsSettingsViewModel}"><settings:VitsSettingsView /></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:OpenAiSpeechSettingsViewModel}"><settings:OpenAiSpeechSettingsView /></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:GoogleTtsSettingsViewModel}"><settings:GoogleTtsSettingsView /></DataTemplate>
+    </UserControl.Resources>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="{DynamicResource PagePadding}" HorizontalAlignment="Stretch">
+            <ui:TextBlock Text="其他 TTS 引擎" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8" />
+            <ui:TextBlock Text="各引擎独立保存参数，修改自动保存并在下次启动配音时生效；下拉仅选择编辑对象。默认配音引擎请在配置与映射页选择。试听使用当前编辑的引擎及实例。"
+                          TextWrapping="Wrap" Margin="0,0,0,12" />
+            <ComboBox ItemsSource="{Binding ViewModel.Engines, Mode=OneWay}" DisplayMemberPath="DisplayName"
+                      SelectedItem="{Binding ViewModel.SelectedEngine, Mode=TwoWay}" Margin="0,0,0,18" />
+            <ContentControl Content="{Binding ViewModel.CurrentSettings, Mode=OneWay}"
+                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Top" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -1,0 +1,20 @@
+<UserControl x:Class="BetterGenshinImpact.View.Pages.QuestVoiceSettings.GoogleTtsSettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+             xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages.QuestVoiceSettings"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             HorizontalContentAlignment="Stretch">
+    <StackPanel>
+        <ui:TextBlock Text="Google Translate TTS" FontSize="18" FontWeight="SemiBold" />
+        <ui:TextBlock Text="在线语音合成；使用网页 TTS 协议，需要网络可达，服务没有 Cloud API 的稳定性承诺。语言列表为本地预设。" TextWrapping="Wrap" Margin="0,8,0,12" />
+        <ui:TextBlock Text="语言" Margin="0,0,0,6" />
+        <ComboBox ItemsSource="{Binding Voices, Mode=OneWay}" DisplayMemberPath="DisplayName"
+                  SelectedItem="{Binding SelectedVoice, Mode=TwoWay}" />
+        <ui:TextBlock Text="速度（0.5 慢速 / 1 正常）" Margin="0,12,0,6" />
+        <ComboBox ItemsSource="{Binding Rates, Mode=OneWay}" SelectedItem="{Binding EngineConfig.Rate, Mode=TwoWay}" />
+        <local:EnginePreviewView />
+    </StackPanel>
+</UserControl>
