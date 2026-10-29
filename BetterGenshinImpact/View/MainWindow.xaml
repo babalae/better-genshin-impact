@@ -192,6 +192,14 @@
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
 
+                <ui:NavigationViewItem Content="{i18n:T 悬浮小窗}"
+                                       NavigationCacheMode="Enabled"
+                                       TargetPageType="{x:Type pages:GuideWindowSettingsPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="VideoClip24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+
                 <ui:NavigationViewItem Content="{i18n:T 快捷键}"
                                        NavigationCacheMode="Enabled"
                                        TargetPageType="{x:Type pages:HotKeyPage}">
@@ -538,6 +546,24 @@
                                   Header="{i18n:T 桌面分身}"
                                   Icon="{ui:SymbolIcon DesktopCursor24}"
                                   Visibility="{Binding IsPrimaryInstance, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <!--  悬浮小窗：只在主实例提供  -->
+                    <ui:MenuItem Header="{i18n:T 悬浮小窗}"
+                                 Icon="{ui:SymbolIcon VideoClip24}"
+                                 Visibility="{Binding IsGuideWindowAvailable, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ui:MenuItem Command="{Binding ToggleGuideWindowCommand}"
+                                     Header="{Binding GuideToggleText, Mode=OneWay}"
+                                     Icon="{ui:SymbolIcon PictureInPicture24}" />
+                        <ui:MenuItem Command="{Binding OpenGuideFromClipboardCommand}"
+                                     Header="{i18n:T 打开剪贴板中的链接}"
+                                     Icon="{ui:SymbolIcon ClipboardLink24}" />
+                        <ui:MenuItem Command="{Binding RestoreGuideWindowCommand}"
+                                     Header="{i18n:T 恢复小窗（关闭穿透、不透明）}"
+                                     Icon="{ui:SymbolIcon ArrowReset24}" />
+                        <Separator />
+                        <ui:MenuItem Command="{Binding OpenGuideSettingsCommand}"
+                                     Header="{i18n:T 小窗设置}"
+                                     Icon="{ui:SymbolIcon Settings24}" />
+                    </ui:MenuItem>
                     <Separator Visibility="{Binding IsPrimaryInstance, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     <ui:MenuItem Command="{Binding CheckUpdateCommand}"
                                  Header="{i18n:T 检查更新}"

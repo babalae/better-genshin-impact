@@ -17,11 +17,11 @@ public static class WebViewSetup
     /// <summary>
     /// 用 Profile 所属的普通环境初始化控件。必须在界面线程调用，且控件尚未初始化（未设置 Source）
     /// </summary>
-    /// <param name="webView">WPF WebView2 控件</param>
+    /// <param name="webView">WPF 网页控件：<see cref="WebView2"/> 或 <see cref="WebView2CompositionControl"/></param>
     /// <param name="provider">环境入口</param>
     /// <param name="profile">使用的 Profile</param>
     /// <param name="options">选项，为空时使用默认值</param>
-    public static async Task InitializeAsync(this WebView2 webView, IWebViewEnvironmentProvider provider,
+    public static async Task InitializeAsync(this IWebView2 webView, IWebViewEnvironmentProvider provider,
         WebViewProfile profile, WebViewOptions? options = null)
     {
         options ??= new WebViewOptions();
@@ -40,21 +40,35 @@ public static class WebViewSetup
         var core = webView.CoreWebView2;
         core.Settings.AreDevToolsEnabled = RuntimeHelper.IsDebug;
         core.Settings.IsStatusBarEnabled = false;
-        core.NewWindowRequested += (_, e) => OnNewWindowRequested(e, options);
+        core.NewWindowRequested += (_, e) => OnNewWindowRequested(core, e, options);
         core.DownloadStarting += (_, e) => OnDownloadStarting(e, options);
         AttachProcessFailedHandler(core, provider, profile.DisplayName, options);
     }
 
     /// <summary>
-    /// 新窗口只把 http、https 地址交给系统浏览器，其他一律拒绝，不在程序内弹出浏览器窗口
+    /// 新窗口只处理 http、https 地址：按选项交给系统浏览器或在当前网页中打开，其他一律拒绝，不在程序内弹出浏览器窗口
     /// </summary>
-    private static void OnNewWindowRequested(CoreWebView2NewWindowRequestedEventArgs e, WebViewOptions options)
+    private static void OnNewWindowRequested(CoreWebView2 core, CoreWebView2NewWindowRequestedEventArgs e, WebViewOptions options)
     {
         e.Handled = true;
-        if (!options.OpenNewWindowInBrowser
+        if (options.NewWindowPolicy == WebViewNewWindowPolicy.Reject
             || !Uri.TryCreate(e.Uri, UriKind.Absolute, out var uri)
             || uri.Scheme is not ("http" or "https"))
         {
+            return;
+        }
+
+        if (options.NewWindowPolicy == WebViewNewWindowPolicy.NavigateInPlace)
+        {
+            try
+            {
+                core.Navigate(uri.AbsoluteUri);
+            }
+            catch (Exception)
+            {
+                // 页面已关闭等情况下忽略
+            }
+
             return;
         }
 

@@ -37,6 +37,7 @@ using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.ChildSession;
 using BetterGenshinImpact.Service.ExternalAccess;
 using BetterGenshinImpact.Service.ExternalAccess.Logging;
+using BetterGenshinImpact.Service.Guide;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Interface;
@@ -284,6 +285,7 @@ public partial class App : Application
                 services.AddTransient<WebImageInputViewModel>();
                 // services.AddView<PathingConfigView, PathingConfigViewModel>();
                 services.AddView<KeyBindingsSettingsPage, KeyBindingsSettingsPageViewModel>();
+                services.AddView<GuideWindowSettingsPage, GuideWindowSettingsPageViewModel>();
 
                 // 一条龙 ViewModels
                 // services.AddSingleton<CraftViewModel>();
@@ -314,6 +316,17 @@ public partial class App : Application
                 services.AddTransient<MaskWindow>();
                 services.AddSingleton<Func<MaskWindow>>(sp => () => sp.GetRequiredService<MaskWindow>());
                 services.AddSingleton<IMaskWindowHost, MaskWindowHost>();
+                // 悬浮小窗：服务只依赖窗口接口，窗口按需创建，见 Docs/design/guide-window.md
+                services.AddSingleton<GuideLibraryStore>();
+                services.AddTransient<GuideWindowViewModel>();
+                services.AddTransient<GuideWindow>();
+                services.AddSingleton<Func<IGuideWindowView>>(sp => () => sp.GetRequiredService<GuideWindow>());
+                services.AddTransient<GuideSubtitleWindowViewModel>();
+                services.AddTransient<GuideSubtitleWindow>();
+                services.AddSingleton<Func<IGuideSubtitleView>>(sp => () => sp.GetRequiredService<GuideSubtitleWindow>());
+                services.AddSingleton<GuideWindowService>();
+                services.AddSingleton<IGuideWindowService>(sp => sp.GetRequiredService<GuideWindowService>());
+                services.AddHostedService(sp => sp.GetRequiredService<GuideWindowService>());
                 services.AddSingleton<DialogueOptionVoiceDiagnosticState>();
                 services.AddSingleton<DialogueOptionVoiceDiagnosticService>();
                 services.AddHostedService(sp => sp.GetRequiredService<DialogueOptionVoiceDiagnosticService>());

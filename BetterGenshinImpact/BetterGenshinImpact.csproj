@@ -41,6 +41,11 @@
 		<!-- 云原神网页版输入 SDK，由 WebView2InputBridge.InstallAsync 读取并注入页面 -->
 		<None Remove="Resources\JavaScript\ys-input-inject.js" />
 		<EmbeddedResource Include="Resources\JavaScript\ys-input-inject.js" LogicalName="BetterGenshinImpact.Resources.JavaScript.ys-input-inject.js" />
+		<!-- 悬浮小窗播放桥：B 站适配与通用播放桥，由 GuidePlayerBridge 按顺序注入页面 -->
+		<None Remove="Resources\JavaScript\guide-site-bilibili.js" />
+		<EmbeddedResource Include="Resources\JavaScript\guide-site-bilibili.js" LogicalName="BetterGenshinImpact.Resources.JavaScript.guide-site-bilibili.js" />
+		<None Remove="Resources\JavaScript\guide-bridge.js" />
+		<EmbeddedResource Include="Resources\JavaScript\guide-bridge.js" LogicalName="BetterGenshinImpact.Resources.JavaScript.guide-bridge.js" />
 		<None Remove="Resources\TargetItem\target-item-data.json" />
 		<EmbeddedResource Include="Resources\TargetItem\target-item-data.json" LogicalName="BetterGenshinImpact.Resources.TargetItem.target-item-data.json" />
 	</ItemGroup>
@@ -85,7 +90,7 @@
 		<PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.21.0" IncludeAssets="none" />
 		<PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.21.0" />
 		<PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
-		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2592.51" />
+		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
 		<PackageReference Include="MimeKit" Version="4.16.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 		<PackageReference Include="OpenccNetLib" Version="1.7.0" />

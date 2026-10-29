@@ -1,6 +1,6 @@
 # 悬浮小窗（攻略小窗）设计
 
-状态：提案，未实现（第 1 版，2026-10-29）。  
+状态：实施中（第 2 版，2026-10-29）。首版代码已完成并通过编译和视图加载检查，待游戏内验证（第 15 节验收场景、17.3 实测项）。第 2 版的变更见 17.4。  
 相关文档：[基础设施统一（WebView2 见第 8 节）](infrastructure-foundation.md) · [遮罩窗口](mask-window.md) · [实时触发器](realtime-trigger.md) · [独立任务合同](task-contract.md) · [配置持久化](config-persistence.md) · [GameRuntime](game-runtime.md) · [实例能力边界](instance-capability-boundaries.md)  
 参考项目：[随引 GuideMate](https://github.com/vibub/GuideMate)（MIT 许可，Windows 攻略视频跟随工具）。本文参考它的交互和已经验证过的技术路线，不复用代码。
 
@@ -44,7 +44,7 @@
 | 二.4 收藏 | 第 10 节、6.3 |
 | 二.5 复制 B 站链接后快捷打开 | 9.4 |
 | 二.6 自动隐藏控制栏 | 6.2 |
-| 二.7 智能透明 | 9.5 |
+| 二.7 智能透明 | 5.6 |
 | 二.8 多显示器、跟随游戏窗口 | 6.4 |
 | 三 遮罩地图联动 | 9.3 |
 | 三 任务状态联动 | 9.2 |
@@ -78,7 +78,7 @@
 | 自定义拖动，拖到屏幕边缘不触发 Windows 贴靠 | 采用：关闭系统缩放框，自定义八向缩放（6.4） | 同左 |
 | 沉浸时按视频比例缩放 | 采用（6.4） | 避免黑边 |
 | 小窗不出现在 Alt+Tab 中 | 采用（`WS_EX_TOOLWINDOW`） | 不干扰切换窗口 |
-| 字幕中出现战斗词时自动暂停或淡化 | 不采用，改为按游戏界面识别的智能透明（9.5） | BetterGI 已能识别对话、大地图等界面，比字幕关键词可靠 |
+| 字幕中出现战斗词时自动暂停或淡化 | 不采用，改为按鼠标指针的智能透明（5.6） | 原神只在需要点击界面时显示指针，按指针淡化不需要识图，比字幕关键词可靠 |
 | 独立资料目录、更新器、托盘 | 不适用；托盘复用 BetterGI 的 | 小窗是 BetterGI 的一项功能 |
 
 ## 4. 现状：可以复用的部分
@@ -92,9 +92,8 @@
 | 遮罩宿主 | `IMaskWindowHost.StateChanged`；游戏回到前台或移动时会 `BringWindowToTop` 遮罩 | 遮罩置顶后，小窗重新置顶一次（6.5） |
 | 置顶穿透窗口 | `HtmlMaskWindow`（`AllowsTransparency` + WebView2）；`MusicGuidedWindow`（`WS_EX_TRANSPARENT \| WS_EX_LAYERED \| WS_EX_TOOLWINDOW \| WS_EX_NOACTIVATE`）；`WindowClickThroughBehavior` | 参考与复用 |
 | 窗口位置 | `WindowResizeBehavior`：按物理像素保存，用 `SetWindowPos(SWP_NOACTIVATE)` 恢复，`EnsureVisiblePosition` 夹回可见工作区 | 复用位置修正规则 |
-| DPI | 进程级 Per-Monitor 感知，窗口调用 `InitializeDpiAwareness()`；`DpiHelper.GetScale(hwnd)` | 与其他窗口相同 |
+| DPI | 进程级 Per-Monitor 感知，窗口调用 `InitializeDpiAwareness()`；`DpiHelper.GetScale(hwnd)` | 小窗和字幕浮窗不调用 `InitializeDpiAwareness()`：位置和尺寸按物理像素保存、用 `SetWindowPos` 设置，界面单位换算取窗口的 `TransformToDevice.M11`（6.4） |
 | 任务模式 | `TaskRunner.Init/End` 和 Pulonia 协调器都调用 `TaskTriggerDispatcher.BeginTask/EndTask`，但没有事件 | 增加事件（9.2） |
-| 游戏界面识别 | 调度器在有触发器需要运行时计算本帧的 `CaptureContent.CurrentGameUiCategory`（对话、大地图、其他） | 新增一个只读取该结果的触发器（5.6） |
 | 地图点位详情 | `MaskMapPointInfoPopupViewModel.UrlList` 与 `OpenUrl`（用系统浏览器打开） | 增加“小窗播放”（9.3） |
 | 剪贴板 | `MainWindowViewModel.OnActivated`：主窗口激活时读取剪贴板，交给脚本导入和兑换码 | 增加第三个处理器（9.4） |
 | 用户数据 | `User/` 由业务模块管理；`AtomicFile.WriteAllText` 原子写入；`MusicStateStore` 是按目录存储的参考 | 收藏、历史放在 `User/GuideWindow/`（10.2） |
@@ -114,14 +113,14 @@
 | 悬停检测 | WPF 的 `MouseEnter/MouseLeave` | 网页区域收不到 WPF 鼠标事件，只能轮询光标 |
 | 帧率与占用 | 官方说明可能低于 HwndHost（内部用 GraphicsCapture 取帧） | 原生 |
 | DRM 视频 | 不能播放 | 可以 |
-| SDK | 需要从 1.0.2592.51 升级到 1.0.2957.106 或更高 | 不变 |
+| SDK | 需要从 1.0.2592.51 升级（实施时用 1.0.4258.31） | 不变 |
 | 参考项目 | 在相同场景中使用 | 无 |
 
 采用 A。B 站普通视频不使用 DRM。窗口栏叠加、悬停显示、整窗透明度在 A 中都是普通 WPF 能力，界面可以按 MVVM 写在一个窗口里。帧率和占用作为第 0 步技术验证的通过条件（17.3）。不达标时回退 B：窗口栏改为跟随小窗的独立窗口，透明度改用分层窗口属性。
 
 配套改动：
 
-- `Microsoft.Web.WebView2` 升级到实施时最新的稳定版（不低于 1.0.2957.106）。该版本要求 Evergreen 运行时 132 及以上。运行时会自动更新，过旧时沿用现有的初始化失败提示。
+- `Microsoft.Web.WebView2` 升级到 1.0.4258.31（与参考项目相同的稳定版，不低于 1.0.2957.106）。运行时会自动更新，过旧时沿用现有的初始化失败提示。
 - BetterGI 的目标框架已经是 `net10.0-windows10.0.22621.0`，包含该控件依赖的 Windows SDK 投影，不需要再改。
 - `WebViewSetup.InitializeAsync` 的参数类型从 `WebView2` 改为两种控件都实现的 `IWebView2`，现有调用方不用改。
 - 升级后回归软件内网页、脚本 HTML 遮罩和云原神宿主窗口（后者直接使用 `CoreWebView2Controller`）。
@@ -165,7 +164,7 @@ public static readonly WebViewProfile Guide = new(WebViewEnvironments.Guide, Web
 
 ### 5.3 状态集中在一个协调服务
 
-小窗的显示与输入状态受快捷键、窗口栏、游戏前台、任务、游戏界面、鼠标悬停等多方影响。所有输入都交给 `GuideWindowService`，由纯函数 `GuideWindowPresentation.Compute` 按固定优先级算出最终状态（6.2），窗口只负责呈现。这与遮罩宿主“业务只上报事实，由宿主决定”的做法一致，避免多处代码各自显示、隐藏小窗。
+小窗的显示与输入状态受快捷键、窗口栏、游戏前台、任务、鼠标悬停等多方影响。所有输入都交给 `GuideWindowService`，由纯函数 `GuideWindowPresentation.Compute` 按固定优先级算出最终状态（6.2），窗口只负责呈现。这与遮罩宿主“业务只上报事实，由宿主决定”的做法一致，避免多处代码各自显示、隐藏小窗。
 
 ### 5.4 游戏窗口状态的来源
 
@@ -186,12 +185,13 @@ public static readonly WebViewProfile Guide = new(WebViewEnvironments.Guide, Web
 
 采用 A。键鼠监听不拦截按键，按键会同时发给游戏，所以推荐鼠标侧键或游戏中没用到的键。现有的“与原神键位冲突”提醒会自动生效。组合键支持见 Q5。
 
-### 5.6 智能透明的场景来源
+### 5.6 智能透明
 
-调度器只要有触发器需要运行，就会计算本帧的 `CurrentGameUiCategory`：对话（`Talk`）、大地图（`BigMap`）、其他（`Unknown`）。新增触发器 `GameUiSceneTrigger`，只读取这个值，变化时发布到单例 `GameUiSceneState`；小窗服务订阅后按规则调整（9.5）。
+第 1 版提议的游戏界面场景触发器（`GameUiSceneTrigger`，按对话、大地图自动隐藏或淡化小窗）不采用：它要占用调度器的识别，规则也难以覆盖所有界面。改为只看鼠标指针：
 
-- 只在小窗打开、未被用户或任务隐藏、且开启了智能透明时启用（`IsEnabledByConfig` 读取 `GameUiSceneState.IsRequested`）。不改现有触发器。
-- 识别成本：开启自动拾取等触发器时，这个值本来就在计算。只有场景触发器在运行时，每帧多两次小区域模板匹配。
+- 只在鼠标穿透时生效。穿透时小窗收不到鼠标事件，由 `CursorInsideWindowBehavior` 每 80 ms 用 `GetCursorInfo` 检查指针。指针可见（`CURSOR_SHOWING`）且位于小窗上时，小窗淡化到“淡化后的不透明度”（默认 25%），露出下方的游戏按钮；指针离开或被游戏隐藏（战斗、跑图视角）时恢复。
+- 原神在需要点击界面（对话、地图、菜单）时才显示指针，所以这条规则自然覆盖了第 1 版想处理的场景，且不需要识图。
+- 设置页和 ⚙ 菜单都可以开关，默认开启。
 - 不采用参考项目的“字幕战斗词”方式。
 
 ### 5.7 收藏、历史与进度的存储
@@ -218,7 +218,7 @@ public static readonly WebViewProfile Guide = new(WebViewEnvironments.Guide, Web
 | 维度 | 取值 | 改变方式 |
 | --- | --- | --- |
 | 打开 | 关闭 / 打开 | 关闭会释放网页（停止播放、回收内存）；打开时恢复上次的页面 |
-| 显示 | 显示 / 隐藏 | 用户隐藏，或被游戏切后台、任务、场景规则自动隐藏。隐藏不释放网页 |
+| 显示 | 显示 / 隐藏 | 用户隐藏，或被游戏切后台、任务自动隐藏。隐藏不释放网页 |
 | 输入 | 悬停交互 / 鼠标穿透 / 交互模式 | 见下图 |
 | 形态 | 普通 / 沉浸 | 沉浸快捷键或窗口栏按钮 |
 
@@ -246,10 +246,10 @@ stateDiagram-v2
 
 | 优先级 | 条件 | 显示 | 鼠标穿透 | 可获得焦点 | 不透明度 | 窗口栏 |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 用户隐藏；任务运行中（9.2）；游戏最小化或切到后台（9.1）；场景规则为“隐藏”（9.5） | 否 | — | — | — | — |
+| 1 | 用户隐藏；任务运行中且用户未临时显示（9.2）；游戏最小化或切到后台（9.1） | 否 | — | — | — | — |
 | 2 | 交互模式 | 是 | 否 | 是 | 100% | 显示 |
-| 3 | 场景规则为“穿透并降低不透明度” | 是 | 是 | 否 | min(设置值, 规则值) | 隐藏 |
-| 4 | 开启了鼠标穿透 | 是 | 是 | 否 | 设置值 | 隐藏 |
+| 3 | 任务运行中被用户临时显示 | 是 | 是 | 否 | 设置值 | 隐藏 |
+| 4 | 开启了鼠标穿透 | 是 | 是 | 否 | 设置值；智能透明开启且可见指针在小窗上时为 min(设置值, 淡化值)（5.6） | 隐藏 |
 | 5 | 鼠标悬停在小窗上 | 是 | 否 | 否 | 100% | 显示；鼠标静止 2.5 秒后隐藏，移动时重新显示 |
 | 6 | 其他 | 是 | 否 | 否 | 设置值 | 隐藏 |
 
@@ -260,12 +260,12 @@ stateDiagram-v2
 
 ### 6.3 窗口栏
 
-窗口栏叠在网页顶部，高 24 DIP，图标 16 px，按钮 24×24 DIP，字号 12。背景用主题的卡片背景色（90% 不透明），跟随 BetterGI 的深浅主题。
+窗口栏叠在网页顶部，高 28 DIP，图标 15 px，按钮 26×24 DIP，字号 12。背景用主题的应用背景色（94% 不透明），跟随 BetterGI 的深浅主题。
 
 ```text
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│ ⠿ 【5.2】枫丹水下全宝箱 P3 ▾ │ ◀ ⟳ │ ⏯ 1.25x 🔊 CC ⛶ │ ★ ☰ │ ⌨ ◎ 📌 ⚙ │ — ✕ │
-└──────────────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────┐
+│ ⠿ 【5.2】枫丹水下全宝箱 P3 ▾ │ ◀ ⟳ │ ⏯ 1.25x 🔊 CC ⛶ │ ★ ☰ │ ⌨ ◎ ⚙ ⋯ │ — ✕ │
+└────────────────────────────────────────────────────────────────────────────┘
 ```
 
 | 区 | 元素 | 说明 |
@@ -274,12 +274,14 @@ stateDiagram-v2
 | 网页 | ◀、⟳ | 后退、刷新 |
 | 播放 | ⏯、倍速、🔊、CC、⛶ | 播放暂停；倍速点击弹出 0.5x–3x 列表，在其上滚动鼠标逐级调整；🔊 点击静音，滚动鼠标调音量；CC 开关字幕浮窗；⛶ 沉浸模式 |
 | 收藏 | ★、☰ | ★ 收藏或取消收藏当前视频（实心表示已收藏）；☰ 菜单列出最近 10 条收藏、最近 10 条观看记录（带进度）和“管理收藏…” |
-| 窗口 | ⌨、◎、📌、⚙ | ⌨ 交互模式（进入后显示为“完成”）；◎ 鼠标穿透；📌 始终置顶；⚙ 设置菜单 |
+| 窗口 | ⌨、◎、⚙、⋯ | ⌨ 交互模式（进入后显示为 ✓）；◎ 鼠标穿透；⚙ 设置菜单（含始终置顶）；⋯ 只在有按钮被收起时出现，列出被收起的按钮 |
 | 关闭 | —、✕ | — 隐藏（保留网页）；✕ 关闭（释放网页） |
 
 - 每个按钮的提示写出对应快捷键，例如“鼠标穿透（Ctrl+Alt+P）”；没绑定时不写。
 - 在窗口栏空白处滚动鼠标调整不透明度。
-- 宽度不够时按优先级把按钮收进 ⋯ 菜单：先收“网页”和“收藏”两区，再收倍速、🔊、CC；⏯、◎、⚙、—、✕ 始终保留。最小宽度 320 DIP 时也能放下。
+- 宽度不够时按优先级把按钮收进 ⋯ 菜单，每一档都给标题留出至少约 60 DIP：小于 640 收“网页”区，小于 560 收 ⌨ ◎，小于 500 收“收藏”区，小于 430 收倍速、🔊、CC、⛶。⏯、⚙、⋯、—、✕ 始终保留，最小宽度 320 DIP 时也能放下。默认宽度 480 DIP 时显示播放区全部按钮。
+- 编辑地址时收起标题以外的全部按钮，地址框占满整条窗口栏。
+- “始终置顶”不放在窗口栏上（很少切换），在 ⚙ 菜单中。
 
 ⚙ 设置菜单（快速设置，不需要打开主界面）：
 
@@ -312,7 +314,7 @@ stateDiagram-v2
 | 跟随游戏（默认） | 停靠角（拖动结束时取离小窗最近的游戏客户区角）和相对这个角的偏移，单位为物理像素 | 按停靠角和偏移重新计算；游戏窗口变小放不下时，夹在游戏客户区内 |
 | 自由 | 屏幕绝对位置，单位为物理像素 | 不动 |
 
-- 两种模式都保存尺寸（DIP）。位置用 `SetWindowPos(SWP_NOACTIVATE | SWP_NOZORDER)` 按物理像素应用，与 `WindowResizeBehavior` 一致，避开混合 DPI 下 DIP 换算的问题。
+- 两种模式都保存尺寸，单位也是物理像素（未保存时按所在显示器的 DPI 换算默认值）。位置和尺寸用 `SetWindowPos(SWP_NOACTIVATE | SWP_NOZORDER)` 按物理像素应用，与 `WindowResizeBehavior` 一致，避开混合 DPI 下 DIP 换算的问题。缩放时按光标的物理像素位移计算新矩形。
 - 恢复时沿用 `EnsureVisiblePosition` 的规则：窗口栏区域至少有 120×24 像素落在某个工作区内，否则夹到最近的工作区。拔掉显示器后小窗不会跑到屏幕外。
 - 多显示器：自由模式下可以拖到任意显示器，也可以用 ⚙ → “移到显示器”。小窗与游戏不在同一显示器时，默认不随游戏切后台而隐藏（9.1）。
 - 拖动、缩放结束时保存一次，过程中不保存。
@@ -326,7 +328,7 @@ stateDiagram-v2
 - 需要键盘输入时进入交互模式：移除 `WS_EX_NOACTIVATE` 并激活小窗；结束时恢复样式，把焦点还给游戏。点击网页中的输入框（B 站搜索框、评论框）时，播放桥上报 `editFocus`，自动进入交互模式。
 - 兜底：不在交互模式时，如果小窗意外成为前台（例如网页内部抢了焦点），鼠标松开后把焦点还给游戏。
 - 显示、隐藏、置顶、切换穿透、快捷键控制都不调用 `Activate`。
-- 在原神中需要按住 Alt（默认的“呼出鼠标”键）才能把鼠标移到小窗上。窗口栏第一次出现时用一行提示说明这一点，只提示一次。
+- 在原神中需要按住 Alt（默认的“呼出鼠标”键）才能把鼠标移到小窗上。第一次打开小窗时用热键反馈提示这一点，只提示一次（`AltHintShown`）。
 
 置顶：遮罩宿主在游戏回到前台或移动时会把遮罩 `BringWindowToTop`。小窗订阅 `IMaskWindowHost.StateChanged` 和游戏前台事件，之后用 `SetWindowPos(HWND_TOPMOST, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE)` 重新置顶，保证小窗在遮罩之上、字幕浮窗在小窗之上。关闭“始终置顶”后小窗是普通窗口，适合放在副屏。
 
@@ -444,11 +446,11 @@ sequenceDiagram
 | 倍速降低 | `GuideSpeedDownHotkey` | Ctrl+Alt+Down | 全局热键 |
 | 倍速重置为 1x | `GuideSpeedResetHotkey` | Ctrl+Alt+0 | 全局热键 |
 | 按住临时加速 | `GuideBoostHotkey` | 鼠标侧键（前进键） | 键鼠监听（按住） |
-| 音量增加 | `GuideVolumeUpHotkey` | Ctrl+Alt+= | 全局热键 |
-| 音量降低 | `GuideVolumeDownHotkey` | Ctrl+Alt+- | 全局热键 |
+| 音量增加 | `GuideVolumeUpHotkey` | Ctrl+Alt+PageUp | 全局热键 |
+| 音量降低 | `GuideVolumeDownHotkey` | Ctrl+Alt+PageDown | 全局热键 |
 | 静音 | `GuideMuteHotkey` | Ctrl+Alt+M | 全局热键 |
-| 上一集 | `GuidePrevEpisodeHotkey` | Ctrl+Alt+PageUp | 全局热键 |
-| 下一集 | `GuideNextEpisodeHotkey` | Ctrl+Alt+PageDown | 全局热键 |
+| 上一集 | `GuidePrevEpisodeHotkey` | Ctrl+Alt+[ | 全局热键 |
+| 下一集 | `GuideNextEpisodeHotkey` | Ctrl+Alt+] | 全局热键 |
 | 不透明度增加 | `GuideOpacityUpHotkey` | Ctrl+Alt+Shift+Up | 全局热键 |
 | 不透明度降低 | `GuideOpacityDownHotkey` | Ctrl+Alt+Shift+Down | 全局热键 |
 | 鼠标穿透开关 | `GuideClickThroughHotkey` | Ctrl+Alt+P | 全局热键 |
@@ -459,6 +461,7 @@ sequenceDiagram
 | 紧急恢复 | `GuideRestoreHotkey` | Ctrl+Alt+F10 | 全局热键 |
 
 - 按 `HotKeyConfig` 的约定，每项是两个属性：`XxxHotkey` 默认 `""`；`XxxHotkeyType` 默认 `GlobalRegister`，按住临时加速为 `KeyboardMonitor`。
+- 推荐方案不用 `=`、`-`：全局热键按 WinForms `Keys` 的名称解析按键，WPF 的 `OemPlus` 在 `Keys` 中叫 `Oemplus`，无法注册。音量改用 PageUp/PageDown，上一集、下一集改用 `[`、`]`。
 - 推荐方案使用 Ctrl+Alt 组合，原神默认键位不使用这些组合。部分 Intel 显卡驱动用 Ctrl+Alt+方向键旋转屏幕，遇到时在驱动设置中关闭该功能，或改用其他组合。设置页在推荐方案旁写明这一点。
 - 一键填入只填当前为空的项，并跳过已被其他功能占用的组合（用 `HotKeySettingModel.AreConflicting` 与全部已注册项比较）。原因：快捷键页发现新值与其他项相同时会清空其他项（`RemoveDuplicateHotKey`），直接填入可能清掉用户已有的绑定。被其他程序占用而注册失败的项，在对应行显示 `RegistrationError`。完成后提示“已填入 N 项，M 项因冲突跳过”。
 
@@ -537,40 +540,28 @@ sequenceDiagram
 
 ### 9.3 遮罩地图点位
 
-地图点位详情中，每个能识别为视频网站的链接按钮右侧增加“▶ 小窗”按钮：
+地图点位详情中，每个链接是一个胶囊按钮，右侧附一个“换一种方式打开”的小图标（只在主实例显示）：
 
 ```text
 ┌ 宝箱 · 枫丹廷 ──────────────────── [隐藏] ✕ ┐
 │ 位于水下洞穴入口……                            │
-│ [视频攻略 ▶小窗]  [图文攻略]                   │
+│ ( 视频攻略 │ ⧉ )  ( 图文攻略 │ ⧉ )           │
 └─────────────────────────────────────────────┘
 ```
 
-- 链接识别规则同 7.3。不能识别的链接保持原样。
-- 设置“地图点位视频默认用小窗打开”默认开：开启时点击链接本身也用小窗打开，“▶ 小窗”换成“在浏览器打开”的图标。
-- `MaskMapPointInfoPopupViewModel` 新增 `[RelayCommand] OpenInGuideWindow(string? url)`，复用 `NormalizeUrl`，调用 `IGuideWindowService.Open(new GuideOpenRequest(url, GuideOpenSource.MapPoint, Title))`。
-- 从地图打开时用户正在大地图界面。智能透明的“大地图”规则对这次打开不生效，直到场景变化。
+- 设置“地图点位视频默认用小窗打开”默认开：点击链接本身时，能识别为视频页（`GuideLinkResolver.IsVideoUrl`）的链接用小窗打开，其他链接用浏览器打开；右侧图标为“在浏览器打开”。关闭该设置时，点击链接用浏览器打开，右侧图标为“在悬浮小窗打开”。
+- `MaskMapPointInfoPopupViewModel` 新增 `IsGuideWindowAvailable`、`IsGuideWindowPreferred`（每次打开详情时读取设置）和 `OpenUrlAlternateCommand`；`OpenUrl` 按上面的规则选择打开方式，调用 `IGuideWindowService.Open(new GuideOpenRequest(url, GuideOpenSource.MapPoint))`。
 
 ### 9.4 剪贴板快捷打开
 
 识别规则（`GuideLinkResolver`）：文本长度不超过 1000，取第一个匹配。B 站视频、番剧、短链接和纯文本 BV 号按 7.3 识别；快捷键和地址框粘贴另外接受任意 http、https 网址。
 
 - 快捷键：在界面线程读取剪贴板（失败时忽略），识别成功就在小窗中打开。识别失败时在小窗中提示“剪贴板中没有可打开的链接”；小窗未打开时用 Toast 提示。
-- 主窗口激活：在 `MainWindowViewModel.OnActivated` 的脚本导入、兑换码之后增加第三个处理器。只识别 B 站链接；与上次提示过的链接或小窗当前的视频相同时不提示。提示为非模态通知，带“用小窗打开”按钮，不自动打开。设置“主界面激活时识别剪贴板中的 B 站链接”默认开。
+- 主窗口激活：在 `MainWindowViewModel.OnActivated` 的脚本导入、兑换码之后增加第三个处理器。只识别 B 站链接；与上次询问过的链接或小窗当前的视频相同时不询问。询问使用 `ThemedMessageBox.QuestionAsync`（“是”在小窗打开，“否”不处理），与兑换码识别的交互一致；提示中说明可以在设置页关闭。设置“识别剪贴板中的 B 站链接”默认开。
 
 ### 9.5 智能透明
 
-| 场景 | 默认动作 | 可选动作 |
-| --- | --- | --- |
-| 对话 | 穿透并降低不透明度至 30% | 不变 / 降低不透明度 / 穿透并降低不透明度 / 隐藏 |
-| 大地图 | 不变 | 同上 |
-| 其他 | 不变 | 同上 |
-
-- 对话选项多在画面右侧，与小窗的默认位置重合；自动剧情也会点击选项。穿透可以避免误点。
-- 场景连续 2 帧一致才生效，避免闪烁；离开场景后恢复。
-- 规则叠加在显示规则上（6.2 第 1、3 行），不修改用户设置。交互模式优先于场景规则。
-- 总开关“智能透明”默认开。场景来源见 5.6。
-- 战斗等场景目前没有可靠的识别，不提供。
+按鼠标指针淡化，见 5.6 和 6.2 第 4 行。第 1 版的场景规则（对话、大地图）不采用。
 
 ## 10. 收藏、历史与进度记忆
 
@@ -706,8 +697,10 @@ public sealed class GuideWatchRecord
     位置                                          [跟随游戏 ▾]
     沉浸模式下按视频比例缩放                                     [开]
     显示底部进度线                                               [开]
-▸ 鼠标与焦点        穿透关 · 交互模式在离开 2 秒后结束
+▸ 鼠标穿透与交互
     鼠标穿透                                                     [关]
+    智能透明（穿透时指针经过自动淡化）                           [开]
+    淡化后的不透明度（开启智能透明时显示）        [──●──────] 25%
     交互模式自动结束                             [离开小窗 2 秒后 ▾]
 ▸ 自动显示隐藏      进入游戏时恢复上次状态 · 任务时隐藏
     （9.1、9.2 中的各项）
@@ -716,8 +709,6 @@ public sealed class GuideWatchRecord
     自动开启中文字幕、记住沉浸模式
 ▸ 字幕浮窗          关
     开关、字号、背景不透明度、隐藏网页内字幕、小窗隐藏时继续显示、[调整字幕位置…]
-▸ 智能透明          开 · 对话时穿透并降低至 30%
-    总开关，每个场景的动作和不透明度
 ▸ 快捷键            已绑定 12 / 21                    [一键填入推荐快捷键]
     （“悬浮小窗”分组的快捷键列表；冲突和注册失败直接显示在对应行）
     ⓘ 推荐方案使用 Ctrl+Alt 组合；部分 Intel 显卡驱动会用 Ctrl+Alt+方向键旋转屏幕。
@@ -732,7 +723,7 @@ public sealed class GuideWatchRecord
     主界面激活时识别剪贴板中的 B 站链接                          [开]
 ```
 
-- 使用 `ui:CardExpander`，标题右侧显示当前设置的摘要，折叠时也能看到。
+- 使用 `ui:CardExpander`，标题下方是该组的说明；“小窗”卡片显示当前状态（正在显示、已隐藏及原因），快捷键和收藏两组显示实时摘要，折叠时也能看到。“外观与窗口”默认展开，其余折叠。
 - 只读的摘要文本绑定写 `Mode=OneWay`。
 - 子实例中页面顶部显示“悬浮小窗只能在主实例中使用”，其余控件禁用（Q3）。
 
@@ -757,7 +748,7 @@ public sealed class GuideWatchRecord
 | `FollowAnchor` | `GuideAnchor` | `TopRight` | 跟随模式的停靠角 |
 | `FollowOffsetX`、`FollowOffsetY` | int? | null | 相对停靠角的距离，物理像素；为空时按游戏所在显示器的 DPI 把 16 DIP 换算后使用 |
 | `FreeLeft`、`FreeTop` | int? | null | 自由模式的位置，物理像素 |
-| `Width`、`Height` | double | 480、270 | DIP |
+| `WindowWidth`、`WindowHeight` | int? | null | 物理像素；为空时按所在显示器的 DPI 把 480×270 DIP 换算后使用，最小 320×180 DIP |
 | `Immersive`、`RememberImmersive` | bool | false、true | 沉浸状态与是否记住 |
 | `LockAspectInImmersive` | bool | true | 6.4 |
 | `ShowProgressLine` | bool | true | 6.7 |
@@ -774,15 +765,16 @@ public sealed class GuideWatchRecord
 | `SubtitleBackgroundOpacity` | double | 0.4 | 0–0.8 |
 | `HidePageSubtitle` | bool | true | 第 11 节 |
 | `ShowSubtitleWhenHidden` | bool | true | 待实测 |
-| 字幕浮窗位置 | 与小窗的位置字段相同 | 居中、距底部 22% | 前缀 `Subtitle` |
-| `SmartOpacityEnabled` | bool | true | 9.5 |
-| `SceneRules` | `ObservableCollection<GuideSceneRule>` | 对话：穿透并降低至 0.3 | `GuideSceneRule { Scene, Action, Opacity }` |
+| `SubtitleCenterXRatio`、`SubtitleBottomRatio`、`SubtitleWidthRatio` | double | 0.5、0.22、0.6 | 字幕浮窗在游戏画面中的水平中心、距底部、最大宽度，均为比例，换分辨率后仍在相同位置 |
+| `SmartFadeEnabled` | bool | true | 5.6 |
+| `SmartFadeOpacity` | double | 0.25 | 0.1–0.8 |
 | `OpenMapVideoInWindow` | bool | true | 9.3 |
 | `ClipboardPromptEnabled` | bool | true | 9.4 |
+| `AltHintShown` | bool | false | 第一次打开小窗时提示“按住 Alt 把鼠标移到小窗上即可操作”，只提示一次 |
 
 - 窗口几何只在拖动、缩放结束时写入；配置保存链路有 500 ms 防抖，不会频繁写盘。
 - 数值在读取时夹到合法范围，非法枚举值回退默认值。
-- 枚举和 `GuideSceneRule` 用途单一，与 `GuideWindowConfig` 放在同一文件中。
+- 枚举用途单一，与 `GuideWindowConfig` 放在同一文件中，序列化为字符串（`JsonStringEnumConverter<T>`）。
 
 ## 13. 分层与类设计
 
@@ -791,8 +783,10 @@ View           GuideWindow：透明置顶窗口、WebView2CompositionControl、�
                GuidePlayerBridge：注入脚本、收发消息、执行命令，实现 IGuidePlayer
                GuideSubtitleWindow：字幕浮窗
                GuideWindowSettingsPage：设置页
-               WindowNoActivateBehavior：切换 WS_EX_NOACTIVATE；鼠标穿透复用 WindowClickThroughBehavior
-               MaskWindow.xaml：点位链接增加“小窗”按钮
+               WindowInputStyleBehavior：切换 WS_EX_TRANSPARENT、WS_EX_NOACTIVATE、WS_EX_TOOLWINDOW
+               CursorInsideWindowBehavior：穿透时轮询可见指针是否在窗口上（智能透明）
+               ButtonContextMenuBehavior、MenuOptionsBehavior：按钮左键打开菜单；按选项列表生成菜单项
+               MaskWindow.xaml：点位链接增加“换一种方式打开”按钮
 ViewModel      GuideWindowViewModel、GuideSubtitleWindowViewModel、GuideWindowSettingsPageViewModel
                接入点：MaskMapPointInfoPopupViewModel、MainWindowViewModel、HotKeyPageViewModel、NotifyIconViewModel
 Service        GuideWindowService（IGuideWindowService）：唯一的状态协调者；打开关闭、显示规则、命令、联动
@@ -802,13 +796,14 @@ Service        GuideWindowService（IGuideWindowService）：唯一的状态协�
                GuideLibraryStore：收藏、历史、进度
                GuideLinkResolver：链接识别、规范化、视频标识
                IGuidePlayer、GuidePlayerState、GuidePlayerCommand：播放器抽象
-GameTask       TaskTriggerDispatcher.TaskModeChanged；GameUiSceneState、GameUiSceneTrigger
+               IGuideWindowView、IGuideSubtitleView：窗口抽象，服务通过 Func 工厂创建，不引用 View 类型
+GameTask       TaskTriggerDispatcher.TaskModeChanged、IsInTask
 Core/Config    GuideWindowConfig；HotKeyConfig 新增 21 组属性；AllConfig 新增配置节
 Infrastructure WebViewEnvironments.Guide、WebViewProfiles.Guide；WebViewSetup 支持 IWebView2；WebViewOptions.NewWindowPolicy
 Resources      JavaScript/guide-bridge.js、JavaScript/guide-site-bilibili.js（嵌入资源）
 ```
 
-依赖方向：View → ViewModel → Service → GameTask / Core / Infrastructure。`IGuidePlayer` 定义在 Service 层，View 层的 `GuidePlayerBridge` 实现它，在窗口初始化完成后交给服务，服务不引用 WebView2 控件。GameTask 只发布事件和场景状态，不引用小窗服务。
+依赖方向：View → ViewModel → Service → GameTask / Core / Infrastructure。`IGuidePlayer`、`IGuideWindowView`、`IGuideSubtitleView` 定义在 Service 层，View 层的 `GuidePlayerBridge`、`GuideWindow`、`GuideSubtitleWindow` 实现它们；服务通过 `Func<IGuideWindowView>` 创建窗口，不引用 WebView2 控件和窗口类型。GameTask 只发布事件，不引用小窗服务。命名空间为 `BetterGenshinImpact.Service.Guide` 和 `BetterGenshinImpact.View.Controls.Guide`（不用 `GuideWindow`，避免与类名冲突）。
 
 ```mermaid
 classDiagram
@@ -875,16 +870,16 @@ classDiagram
     }
     class TaskTriggerDispatcher {
         <<existing_extension>>
+        +bool IsInTask
         +event TaskModeChanged
     }
-    class GameUiSceneState {
-        <<planned>>
-        +GameUiCategory Current
-        +bool IsRequested
-        +event Changed
-    }
-    class GameUiSceneTrigger {
-        <<planned>>
+    class IGuideWindowView {
+        <<interface>>
+        +IGuidePlayer Player
+        +ShowWithoutActivation()
+        +HideWindow()
+        +SetBounds(rect)
+        +ActivateForInput()
     }
     class GuideWindow {
         <<planned>>
@@ -903,8 +898,8 @@ classDiagram
     GuideWindowService --> GuideLibraryStore
     GuideWindowService ..> GuideLinkResolver
     GuideWindowService ..> TaskTriggerDispatcher : 订阅 TaskModeChanged
-    GuideWindowService ..> GameUiSceneState : 订阅 Changed
-    GameUiSceneTrigger --> GameUiSceneState
+    GuideWindowService --> IGuideWindowView
+    GuideWindow ..|> IGuideWindowView
     GuidePlayerBridge ..|> IGuidePlayer
     GuideWindow --> GuideWindowViewModel
     GuideWindow --> GuidePlayerBridge
@@ -914,10 +909,10 @@ classDiagram
 
 `GuideWindowService` 的职责：
 
-- 持有小窗：通过 `Func<GuideWindow>` 创建，关闭时释放，同一时刻只有一个小窗；字幕浮窗也由它创建和关闭。
-- 汇总输入：配置中的用户偏好、窗口 ViewModel 上报的悬停与交互状态、`GuideGameWatcher`、`TaskModeChanged`、`GameUiSceneState`。任一输入变化就调用 `GuideWindowPresentation.Compute`，结果写入 `GuideWindowState`（`ObservableObject`），窗口绑定它。
+- 持有小窗：通过 `Func<IGuideWindowView>` 创建，关闭时释放，同一时刻只有一个小窗；字幕浮窗也由它通过 `Func<IGuideSubtitleView>` 创建和关闭。
+- 汇总输入：配置中的用户偏好、窗口 ViewModel 上报的悬停、指针与交互状态、`GuideGameWatcher`、`TaskModeChanged`。任一输入变化就调用 `GuideWindowPresentation.Compute`，结果写入 `GuideWindowState`（`ObservableObject`），窗口绑定它。
 - 命令：快捷键、窗口栏、地图、剪贴板、托盘都调用同一组方法。需要播放器时通过 `IGuidePlayer`；小窗未打开时直接返回。
-- 生命周期：实现 `IHostedService`，启动时订阅 `GameRuntimeService.Started/Stopped` 和 `TaskModeChanged`；停止时保存视频记录并关闭小窗。
+- 生命周期：实现 `IHostedService`，启动时订阅 `GameRuntimeService.Started/Stopped`、`TaskModeChanged` 和遮罩宿主的 `StateChanged`；停止时保存视频记录、写入收藏与历史文件。子实例中不订阅（`IsAvailable` 为 false）。
 - 线程：公开方法可以在任意线程调用，内部用 `BeginInvoke` 切到界面线程，不使用 `Dispatcher.Invoke`。
 
 新增与修改的文件：
@@ -929,46 +924,50 @@ classDiagram
 | `Infrastructure/WebView/WebViewOptions.cs` | Infrastructure | `NewWindowPolicy` 枚举和属性，替代 `OpenNewWindowInBrowser` |
 | `Infrastructure/WebView/WebViewSetup.cs` | Infrastructure | 参数改为 `IWebView2`；实现 `NavigateInPlace` |
 | `BetterGenshinImpact.csproj` | — | 升级 `Microsoft.Web.WebView2`；两个脚本作为嵌入资源 |
-| `Core/Config/GuideWindowConfig.cs` | Core | 配置、枚举、`GuideSceneRule` |
+| `Core/Config/GuideWindowConfig.cs` | Core | 配置与枚举 |
 | `Core/Config/AllConfig.cs` | Core | 新增 `GuideWindowConfig` |
 | `Core/Config/HotKeyConfig.cs` | Core | 21 组快捷键属性 |
-| `GameTask/TaskTriggerDispatcher.cs` | GameTask | `TaskModeChanged`；创建触发器时传入场景状态 |
-| `GameTask/Common/GameUiSceneState.cs` | GameTask | 场景状态单例 |
-| `GameTask/Common/GameUiSceneTrigger.cs` | GameTask | 场景触发器 |
-| `GameTask/GameTaskManager.cs` | GameTask | 登记场景触发器 |
-| `Service/GuideWindow/IGuideWindowService.cs` | Service | 接口、`GuideOpenRequest`、`GuideOpenSource` |
-| `Service/GuideWindow/GuideWindowService.cs` | Service | 协调服务 |
-| `Service/GuideWindow/GuideWindowState.cs` | Service | 供窗口绑定的状态 |
-| `Service/GuideWindow/GuideWindowPresentation.cs` | Service | 显示规则 |
-| `Service/GuideWindow/GuideGameWatcher.cs` | Service | 系统事件监听 |
-| `Service/GuideWindow/GuideLibraryStore.cs` | Service | 收藏与历史的存储 |
-| `Service/GuideWindow/GuideLibraryModels.cs` | Service | `GuideFavorite`、`GuideWatchRecord` |
-| `Service/GuideWindow/GuideLinkResolver.cs` | Service | 链接识别 |
-| `Service/GuideWindow/IGuidePlayer.cs` | Service | 播放器接口、`GuidePlayerState`、`GuidePlayerCommand`、`GuideCommandResult` |
+| `GameTask/TaskTriggerDispatcher.cs` | GameTask | `TaskModeChanged`、`IsInTask` |
+| `Service/Guide/IGuideWindowService.cs` | Service | 接口、`GuideOpenRequest`、`GuideOpenSource` |
+| `Service/Guide/IGuideWindowView.cs` | Service | 小窗与字幕浮窗的窗口接口 |
+| `Service/Guide/GuideWindowService.cs` | Service | 协调服务 |
+| `Service/Guide/GuideWindowState.cs` | Service | 供窗口绑定的状态 |
+| `Service/Guide/GuideWindowPresentation.cs` | Service | 显示规则 |
+| `Service/Guide/GuideGameWatcher.cs` | Service | 系统事件监听 |
+| `Service/Guide/GuideLibraryStore.cs` | Service | 收藏与历史的存储 |
+| `Service/Guide/GuideLibraryModels.cs` | Service | `GuideFavorite`、`GuideWatchRecord` |
+| `Service/Guide/GuideLinkResolver.cs` | Service | 链接识别 |
+| `Service/Guide/IGuidePlayer.cs` | Service | 播放器接口、`GuidePlayerState`、`GuidePlayerCommand`、`GuideCommandResult` |
 | `Resources/JavaScript/guide-bridge.js` | Resources | 通用播放桥 |
 | `Resources/JavaScript/guide-site-bilibili.js` | Resources | B 站适配 |
 | `View/Windows/GuideWindow.xaml(.cs)` | View | 小窗 |
 | `View/Windows/GuideSubtitleWindow.xaml(.cs)` | View | 字幕浮窗 |
-| `View/Controls/GuideWindow/GuidePlayerBridge.cs` | View | 播放桥的宿主侧 |
-| `View/Behavior/WindowNoActivateBehavior.cs` | View | 不激活样式 |
+| `View/Controls/Guide/GuidePlayerBridge.cs` | View | 播放桥的宿主侧 |
+| `View/Behavior/WindowInputStyleBehavior.cs` | View | 穿透、不激活、不出现在 Alt+Tab |
+| `View/Behavior/CursorInsideWindowBehavior.cs` | View | 智能透明的指针检测 |
+| `View/Behavior/ButtonContextMenuBehavior.cs` | View | 按钮左键打开菜单，打开前、关闭后执行命令 |
+| `View/Behavior/MenuOptionsBehavior.cs` | View | 按 `GuideMenuOption` 列表生成菜单项 |
 | `View/Pages/GuideWindowSettingsPage.xaml(.cs)` | View | 设置页 |
-| `ViewModel/Windows/GuideWindowViewModel.cs` | ViewModel | 小窗 |
+| `ViewModel/Windows/GuideWindowViewModel.cs` | ViewModel | 小窗；`GuideMenuOption` |
 | `ViewModel/Windows/GuideSubtitleWindowViewModel.cs` | ViewModel | 字幕浮窗 |
 | `ViewModel/Pages/GuideWindowSettingsPageViewModel.cs` | ViewModel | 设置页 |
+| `ViewModel/Pages/GuideLibraryItemViewModels.cs` | ViewModel | 设置页的收藏、观看记录列表项与下拉选项 |
 | 已有文件 | 各层 | `HotKeyPageViewModel`（分组与 `GuideHotKeyDirectory`）、`MaskMapPointInfoPopupViewModel`、`MaskWindow.xaml`、`MainWindowViewModel`、`MainWindow.xaml`（导航与托盘菜单）、`NotifyIconViewModel`、`HtmlMaskWindow.xaml.cs`（改为 `NewWindowPolicy.Reject`）、`App.xaml.cs` |
 
 依赖注册（`App.xaml.cs`）：
 
 ```csharp
-// 悬浮小窗：协调服务随宿主启动，订阅游戏运行环境与任务模式
+// 悬浮小窗：服务只依赖窗口接口，窗口按需创建
 services.AddSingleton<GuideLibraryStore>();
-services.AddSingleton<GameUiSceneState>();
+services.AddTransient<GuideWindowViewModel>();
+services.AddTransient<GuideWindow>();
+services.AddSingleton<Func<IGuideWindowView>>(sp => () => sp.GetRequiredService<GuideWindow>());
+services.AddTransient<GuideSubtitleWindowViewModel>();
+services.AddTransient<GuideSubtitleWindow>();
+services.AddSingleton<Func<IGuideSubtitleView>>(sp => () => sp.GetRequiredService<GuideSubtitleWindow>());
 services.AddSingleton<GuideWindowService>();
 services.AddSingleton<IGuideWindowService>(sp => sp.GetRequiredService<GuideWindowService>());
 services.AddHostedService(sp => sp.GetRequiredService<GuideWindowService>());
-services.AddTransient<GuideWindowViewModel>();
-services.AddTransient<GuideWindow>();
-services.AddSingleton<Func<GuideWindow>>(sp => () => sp.GetRequiredService<GuideWindow>());
 services.AddView<GuideWindowSettingsPage, GuideWindowSettingsPageViewModel>();
 ```
 
@@ -997,7 +996,7 @@ services.AddView<GuideWindowSettingsPage, GuideWindowSettingsPageViewModel>();
 | 3 联动 | `GuideGameWatcher`、自动显示隐藏、跟随游戏、多显示器、`TaskModeChanged`、地图点位、剪贴板 | 9.1–9.4 |
 | 4 收藏与进度 | `GuideLibraryStore`、☰ 菜单、设置页收藏管理 | 10.3 的续播规则；损坏的文件被保留 |
 | 5 字幕浮窗 | `GuideSubtitleWindow`、字幕读取、自动开启中文字幕 | 第 11 节 |
-| 6 智能透明 | `GameUiSceneState`、`GameUiSceneTrigger`、规则 | 对话时穿透，离开后恢复 |
+| 6 智能透明 | `CursorInsideWindowBehavior`、显示规则第 4 行 | 穿透时可见指针经过小窗会淡化，指针离开或被游戏隐藏时恢复 |
 | 7 文档 | 第 18 节 | — |
 
 验收场景：
@@ -1015,12 +1014,12 @@ services.AddView<GuideWindowSettingsPage, GuideWindowSettingsPageViewModel>();
 11. 拖动游戏窗口：跟随模式下小窗同步移动；自由模式下不动。
 12. 拔掉副屏后重启：小窗出现在可见区域内。
 13. 启动一条龙：小窗暂停并隐藏，任务的点击不受影响；任务结束后小窗恢复，视频保持暂停。
-14. 在地图点位详情点击“▶ 小窗”：视频在小窗中打开。
-15. 复制 B 站链接后在游戏中按“打开剪贴板链接”：小窗打开该视频。切到主窗口：出现提示，不自动打开。
+14. 在地图点位详情点击视频链接（默认设置）：视频在小窗中打开；点链接右侧的图标：用浏览器打开。
+15. 复制 B 站链接后在游戏中按“打开剪贴板链接”：小窗打开该视频。复制另一个链接后切到主窗口：弹出确认框，选“是”才在小窗打开；同一链接不再询问。
 16. 收藏一个视频，看到 12:34 后关闭小窗；从 ☰ 打开：从 12:34 继续，倍速恢复。在地址框直接打开同一视频：沿用 B 站自己的进度。
 17. 手动改坏 `history.json` 后启动：收藏不受影响，坏文件被保留。
 18. 字幕浮窗：B 站视频自动开启中文字幕，浮窗显示字幕，网页内字幕隐藏；调整位置后重启，浮窗仍在原处。
-19. 进入对话：小窗穿透并降到 30%；对话结束后恢复。
+19. 开启鼠标穿透和智能透明，在对话界面把指针移到小窗上：小窗淡化到 25%，可以点到下方的对话选项；移开指针或回到跑图（指针隐藏）后恢复。
 20. 一键填入推荐快捷键：已被其他功能使用的组合被跳过，原有绑定不变。
 21. 在存储空间窗口清理“悬浮小窗 · 网页缓存”后重启：B 站仍是登录状态。
 22. SDK 升级后，软件内网页、脚本 HTML 遮罩、云原神网页版都正常工作。
@@ -1034,7 +1033,7 @@ services.AddView<GuideWindowSettingsPage, GuideWindowSettingsPageViewModel>();
 | B 站页面或播放器改版 | 沉浸、切集、字幕失效 | 适配集中在一个文件，失败时回退通用控制并提示 |
 | 键鼠监听的按住键会同时传给游戏 | 游戏也执行该键的动作 | 推荐鼠标侧键；现有冲突提醒 |
 | Ctrl+Alt+方向键被显卡驱动占用 | 屏幕旋转 | 设置页提示；可以改键 |
-| 未穿透时小窗挡住 BetterGI 的点击 | 实时触发器点错位置 | 任务期间隐藏；对话场景默认穿透；建议把小窗放在画面边角 |
+| 未穿透时小窗挡住 BetterGI 的点击 | 实时触发器点错位置 | 任务期间隐藏；建议把小窗放在画面边角，需要时开启鼠标穿透 |
 | 网页进程占用 200–400 MB 内存 | 低内存机器卡顿 | 隐藏保留网页，关闭释放；设置页说明 |
 | 网页内容不可信 | 安全 | 7.4 |
 | B 站未登录时的登录弹窗、清晰度限制 | 体验 | 提示在小窗内扫码登录 |
@@ -1042,7 +1041,7 @@ services.AddView<GuideWindowSettingsPage, GuideWindowSettingsPageViewModel>();
 
 识图不受小窗影响：BetterGI 按游戏窗口截图，现有的遮罩窗口同样盖在游戏上而不会进入截图。第 0 步对每种截图方式各确认一次。
 
-## 17. 决策记录与待确认
+## 17. 决策记录与确认
 
 ### 17.1 决策
 
@@ -1055,15 +1054,17 @@ services.AddView<GuideWindowSettingsPage, GuideWindowSettingsPageViewModel>();
 | D5 | 快捷键默认不绑定，提供推荐方案一键填入 | 与现有约定一致，升级不占用用户的组合键 | 第一次使用多一步 |
 | D6 | 按住加速复用键鼠监听的按住键，不支持组合键 | 已有按下、松开事件，改动最小 | 按键会传给游戏 |
 | D7 | 任务开始时隐藏并暂停，而不是关闭 | 保留页面和进度，任务结束后接着看 | 任务期间网页进程仍占内存 |
-| D8 | 小窗与字幕浮窗不启用 Mica/Acrylic，窗口栏用主题资源 | 透明叠加窗口与系统背景冲突，与现有遮罩类窗口一致 | 偏离“新增窗口启用主题背景”的约定，需要确认 |
+| D8 | 小窗与字幕浮窗不启用 Mica/Acrylic，窗口栏用主题资源 | 透明叠加窗口与系统背景冲突，与现有遮罩类窗口一致 | 偏离“新增窗口启用主题背景”的约定（已确认） |
 | D9 | 收藏和历史放在 `User/GuideWindow/`，不放进 `AllConfig` | 进度频繁变化，避免整份配置反复序列化 | 多两个文件 |
 | D10 | 不做系统剪贴板监听 | 隐私；快捷键和主窗口激活提示已覆盖常见场景 | 需要用户按键或切到主界面 |
-| D11 | 智能透明复用调度器的界面识别结果 | 其他触发器开启时几乎没有额外开销 | 只能识别对话和大地图 |
+| D11 | 智能透明只看鼠标指针（第 2 版，替代第 1 版的场景触发器） | 不占用调度器和识图；原神只在需要点击界面时显示指针 | 只在鼠标穿透时生效 |
 | D12 | 只有从收藏或历史打开时才续播 | 不与 B 站自己的进度冲突 | 直接打开网页时依赖网站的进度 |
 
-### 17.2 待确认
+### 17.2 已确认的问题
 
-| 编号 | 问题 | 本设计的默认做法 |
+以下问题于 2026-10-29 确认，全部按“本设计的做法”一列实施。
+
+| 编号 | 问题 | 本设计的做法 |
 | --- | --- | --- |
 | Q1 | 默认是否开启鼠标穿透 | 关闭，使用悬停交互 |
 | Q2 | 默认不透明度 | 85% |
@@ -1071,7 +1072,7 @@ services.AddView<GuideWindowSettingsPage, GuideWindowSettingsPageViewModel>();
 | Q4 | 导航菜单中的位置和名称 | “自动演奏”之后，名称“悬浮小窗” |
 | Q5 | 按住加速是否需要支持组合键 | 首版不支持，5.5 方案 B 作为后续 |
 | Q6 | 是否提供“清除小窗登录数据” | 首版不提供 |
-| Q7 | 智能透明是否默认开启 | 开启，只有“对话”规则生效 |
+| Q7 | 智能透明是否默认开启 | 开启；第 2 版改为按鼠标指针淡化（5.6），只在鼠标穿透时生效 |
 | Q8 | 小窗隐藏时是否暂停 | 不暂停（任务导致的隐藏除外） |
 | Q9 | 需求中“执行任务时自动关闭小窗”是否接受改为“隐藏并暂停” | 隐藏并暂停（D7） |
 | Q10 | 推荐快捷键方案是否合适；是否还需要“收藏当前视频”“始终置顶”等快捷键 | 按 8.1，不增加 |
@@ -1082,10 +1083,11 @@ services.AddView<GuideWindowSettingsPage, GuideWindowSettingsPageViewModel>();
 
 - `WebView2CompositionControl` 在 `AllowsTransparency` 窗口中正常绘制，`Window.Opacity` 对网页生效；改变尺寸、进入沉浸模式时没有白屏（参考项目遇到过，做法是切换前临时隐藏控件，布局完成后再显示）。
 - 帧率与占用：小窗 480×270 与 960×540 两种尺寸播放 B 站 1080P 60 帧视频，记录小窗帧率、CPU、GPU 以及原神帧率的变化。建议的通过条件：小窗稳定在 30 帧以上，原神帧率下降不超过 5%。
-- `DpiAwarenessController` 施加 LayoutTransform 时，控件的清晰度和鼠标坐标是否正确；150% 缩放、跨不同 DPI 的显示器移动。
+- 小窗不使用 `DpiAwarenessController`：150% 缩放、跨不同 DPI 的显示器移动时，网页清晰度、鼠标坐标、拖动缩放的物理像素换算是否正确。
 - `WS_EX_TRANSPARENT` 下整窗（包括网页区域）都能穿透。
 - `WS_EX_NOACTIVATE` 下点击网页、拖动 B 站进度条时原神保持前台；窗口栏的菜单（Popup、ContextMenu）能正常打开和点击。
-- 交互模式下键盘能输入到网页；结束后 `FocusWindow` 能把焦点还给以管理员身份运行的原神。
+- 交互模式下键盘能输入到网页；结束后 `GuideGameWatcher.FocusGame` 能把焦点还给以管理员身份运行的原神（不使用 `SystemControl.FocusWindow`，它含有忙等循环）。
+- 智能透明：`GetCursorInfo` 在原神隐藏指针（跑图、战斗）时返回不可见，在对话、地图、菜单中返回可见。
 - 小窗隐藏后视频继续播放，播放桥的媒体事件和字幕文本是否继续上报。结论决定 `ShowSubtitleWhenHidden` 的默认值。
 - 置顶层级：小窗在 MaskWindow 之上；原神窗口化、无边框、全屏三种模式下的表现。
 - `--autoplay-policy=no-user-gesture-required` 下，快捷键触发的 `play()` 不被拒绝。
@@ -1093,9 +1095,20 @@ services.AddView<GuideWindowSettingsPage, GuideWindowSettingsPageViewModel>();
 - 小窗不出现在 BetterGI 的识图截图中（每种截图方式各确认一次）。
 - 窗口 `ResizeMode=NoResize` 时，拖到屏幕边缘不会触发贴靠。
 
+实施时已在开发机上用独立的验证程序（不启动主程序）加载小窗、字幕浮窗、设置页和地图点位链接模板，确认资源能解析、绑定没有错误、各宽度下窗口栏的按钮布局正确、图标名称有效。上面的各项仍需在游戏中实测。
+
+### 17.4 第 2 版变更
+
+- 不采用 `GameUiSceneTrigger` 和场景规则，智能透明改为按鼠标指针淡化（5.6、6.2、9.5、D11）。
+- 17.2 的问题全部按默认做法确认。
+- 推荐快捷键：音量改为 Ctrl+Alt+PageUp/PageDown，上一集、下一集改为 Ctrl+Alt+[ / ]（8.1）。
+- 窗口栏：始终置顶移到 ⚙ 菜单；按宽度分四档收起按钮；编辑地址时地址框占满窗口栏（6.3）。
+- 窗口几何改为物理像素，小窗与字幕浮窗不调用 `InitializeDpiAwareness()`（第 4 节、12.2）。
+- 服务通过 `IGuideWindowView`、`IGuideSubtitleView` 使用窗口；命名空间为 `Service.Guide`、`View.Controls.Guide`（第 13 节）。
+- 剪贴板识别改为确认框（9.4）；地图点位链接改为“链接 + 换一种方式打开”的胶囊按钮（9.3）。
+
 ## 18. 文档维护
 
 - 实施后更新 [infrastructure-foundation.md](infrastructure-foundation.md)：8.1、8.2 的普通环境列表加入 `Guide`；8.3 中 `WebViewSetup` 支持 `IWebView2`、`NewWindowPolicy` 替代 `OpenNewWindowInBrowser`；3.3 目录表加入 `Data/WebView2/Guide/`。
-- 更新 [realtime-trigger.md](realtime-trigger.md) 的触发器列表，加入 `GameUiSceneTrigger`。
 - 更新 [mask-window.md](mask-window.md)：点位详情增加小窗入口。
 - 实现状态写在 [设计文档索引](README.md) 的条目上，本文只描述设计。

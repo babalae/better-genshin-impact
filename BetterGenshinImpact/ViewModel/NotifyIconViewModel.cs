@@ -15,9 +15,13 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service.ChildSession;
+using BetterGenshinImpact.Service.Guide;
 using BetterGenshinImpact.Service.Instance;
+using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
+using System.ComponentModel;
 using Vanara.PInvoke;
+using Wpf.Ui;
 
 namespace BetterGenshinImpact.ViewModel;
 
@@ -36,6 +40,14 @@ public partial class NotifyIconViewModel : ObservableObject, IDisposable
     /// 退出前确认是否有下载正在进行。
     /// </summary>
     private readonly DownloadCenterViewModel _downloadCenter;
+    /// <summary>
+    /// 悬浮小窗服务，托盘菜单提供显示/隐藏、恢复与打开剪贴板链接。
+    /// </summary>
+    private readonly IGuideWindowService _guideWindowService;
+    /// <summary>
+    /// 主窗口导航，用于打开悬浮小窗设置页。
+    /// </summary>
+    private readonly INavigationService _navigationService;
     /// <summary>
     /// 标记 ViewModel 已释放，防止退出阶段处理迟到的实例事件。
     /// </summary>
@@ -67,16 +79,30 @@ public partial class NotifyIconViewModel : ObservableObject, IDisposable
     /// </summary>
     public Brush InstanceAccentBrush => _instanceVisualIdentity.AccentBrush;
 
+    /// <summary>
+    /// 托盘菜单是否展示悬浮小窗入口（只有主实例可用）。
+    /// </summary>
+    public bool IsGuideWindowAvailable => _guideWindowService.IsAvailable;
+
+    /// <summary>
+    /// 悬浮小窗显示/隐藏菜单项的文字，随小窗当前状态变化。
+    /// </summary>
+    public string GuideToggleText => _guideWindowService.State.IsShown ? "隐藏悬浮小窗" : "显示悬浮小窗";
+
     public NotifyIconViewModel(
         ChildSessionService childSessionService,
         InstanceService instanceService,
         InstanceVisualIdentity instanceVisualIdentity,
-        DownloadCenterViewModel downloadCenter)
+        DownloadCenterViewModel downloadCenter,
+        IGuideWindowService guideWindowService,
+        INavigationService navigationService)
     {
         _downloadCenter = downloadCenter;
         _childSessionService = childSessionService;
         _instanceService = instanceService;
         _instanceVisualIdentity = instanceVisualIdentity;
+        _guideWindowService = guideWindowService;
+        _navigationService = navigationService;
         IsInstanceIdentityVisible = !instanceVisualIdentity.IsPrimary
                                     || instanceService.GetConnectedChildInstances().Length > 0;
 
@@ -84,6 +110,9 @@ public partial class NotifyIconViewModel : ObservableObject, IDisposable
         {
             _instanceService.ConnectedInstancesChanged += OnConnectedInstancesChanged;
         }
+
+        // 小窗显示状态变化时刷新托盘菜单文字
+        _guideWindowService.State.PropertyChanged += OnGuideStateChanged;
     }
 
     /// <summary>
@@ -98,7 +127,19 @@ public partial class NotifyIconViewModel : ObservableObject, IDisposable
 
         _disposed = true;
         _instanceService.ConnectedInstancesChanged -= OnConnectedInstancesChanged;
+        _guideWindowService.State.PropertyChanged -= OnGuideStateChanged;
         GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// 小窗显示状态变化时通知托盘菜单文字更新（状态只在界面线程写入）。
+    /// </summary>
+    private void OnGuideStateChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(GuideWindowState.IsShown))
+        {
+            OnPropertyChanged(nameof(GuideToggleText));
+        }
     }
 
     /// <summary>
@@ -136,6 +177,42 @@ public partial class NotifyIconViewModel : ObservableObject, IDisposable
     private void OpenChildSessionWindow()
     {
         _childSessionService.ShowWindow();
+    }
+
+    /// <summary>
+    /// 显示或隐藏悬浮小窗，未打开时打开。
+    /// </summary>
+    [RelayCommand]
+    private void ToggleGuideWindow() => _guideWindowService.ToggleVisible();
+
+    /// <summary>
+    /// 一键恢复小窗：关闭鼠标穿透、不透明度 100% 并移回可见位置。
+    /// </summary>
+    [RelayCommand]
+    private void RestoreGuideWindow() => _guideWindowService.RestoreEmergency();
+
+    /// <summary>
+    /// 在小窗中打开剪贴板里的视频链接。
+    /// </summary>
+    [RelayCommand]
+    private void OpenGuideFromClipboard() => _guideWindowService.OpenFromClipboard();
+
+    /// <summary>
+    /// 显示主窗口并打开悬浮小窗设置页。
+    /// </summary>
+    [RelayCommand]
+    private void OpenGuideSettings()
+    {
+        var main = Application.Current.MainWindow;
+        if (main is null)
+        {
+            return;
+        }
+
+        main.Show();
+        WindowBacktray.Show(main);
+        main.Activate();
+        _navigationService.Navigate(typeof(GuideWindowSettingsPage));
     }
 
     [RelayCommand]

@@ -1,0 +1,734 @@
+<Window x:Class="BetterGenshinImpact.View.Windows.GuideWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+        xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        xmlns:vm="clr-namespace:BetterGenshinImpact.ViewModel.Windows"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        Title="{i18n:T 悬浮小窗}"
+        Width="480"
+        Height="270"
+        d:DataContext="{d:DesignInstance Type=vm:GuideWindowViewModel}"
+        AllowsTransparency="True"
+        Background="Transparent"
+        FontFamily="{StaticResource TextThemeFontFamily}"
+        Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+        Opacity="{Binding State.Opacity, Mode=OneWay}"
+        ResizeMode="NoResize"
+        ShowActivated="False"
+        ShowInTaskbar="False"
+        Topmost="{Binding State.IsTopmost, Mode=OneWay}"
+        WindowStartupLocation="Manual"
+        WindowStyle="None"
+        mc:Ignorable="d">
+
+    <!--  小窗：透明置顶、默认不获得焦点。鼠标穿透、焦点、不透明度都由 GuideWindowService 计算后绑定到这里  -->
+    <b:Interaction.Behaviors>
+        <behavior:WindowInputStyleBehavior HideFromAltTab="True"
+                                           IsActivatable="{Binding State.IsActivatable, Mode=OneWay}"
+                                           IsClickThrough="{Binding State.IsClickThrough, Mode=OneWay}" />
+        <behavior:CursorInsideWindowBehavior IsActive="{Binding State.IsClickThrough, Mode=OneWay}"
+                                             IsCursorInside="{Binding IsCursorInside, Mode=OneWayToSource}" />
+    </b:Interaction.Behaviors>
+    <b:Interaction.Triggers>
+        <b:EventTrigger EventName="MouseEnter">
+            <b:InvokeCommandAction Command="{Binding PointerEnterCommand}" />
+        </b:EventTrigger>
+        <b:EventTrigger EventName="MouseLeave">
+            <b:InvokeCommandAction Command="{Binding PointerLeaveCommand}" />
+        </b:EventTrigger>
+        <b:EventTrigger EventName="MouseMove">
+            <b:InvokeCommandAction Command="{Binding PointerMoveCommand}" />
+        </b:EventTrigger>
+    </b:Interaction.Triggers>
+
+    <Window.Resources>
+        <!--  窗口栏图标统一字号  -->
+        <Style TargetType="ui:SymbolIcon">
+            <Setter Property="FontSize" Value="15" />
+        </Style>
+
+        <!--  窗口栏按钮：24 DIP 高的透明图标按钮，不抢键盘焦点  -->
+        <Style x:Key="GuideBarButton"
+               BasedOn="{StaticResource {x:Type ui:Button}}"
+               TargetType="ui:Button">
+            <Setter Property="Width" Value="26" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Appearance" Value="Transparent" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="ToolTipService.InitialShowDelay" Value="500" />
+        </Style>
+
+        <!--  分组之间的细分隔线  -->
+        <Style x:Key="GuideBarSeparator" TargetType="Rectangle">
+            <Setter Property="Width" Value="1" />
+            <Setter Property="Height" Value="14" />
+            <Setter Property="Margin" Value="3,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Fill" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+        </Style>
+
+        <!--  缩放区：透明，只改变光标  -->
+        <Style x:Key="GuideResizeThumb" TargetType="Thumb">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border Background="Transparent" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!--  开关类按钮处于开启状态时，图标使用强调色  -->
+        <Style x:Key="ActiveIconBase"
+               BasedOn="{StaticResource {x:Type ui:SymbolIcon}}"
+               TargetType="ui:SymbolIcon">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        </Style>
+    </Window.Resources>
+
+    <Grid x:Name="RootGrid" Background="Black">
+        <!--  网页  -->
+        <wv2:WebView2CompositionControl x:Name="WebView" DefaultBackgroundColor="Black" />
+
+        <!--  交互模式：强调色边框，提示键盘输入会进入小窗  -->
+        <Border BorderBrush="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                BorderThickness="2"
+                CornerRadius="8"
+                IsHitTestVisible="False"
+                Visibility="{Binding State.IsInteraction, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+        <!--  外框细线，让小窗在明亮的游戏画面上也有边界  -->
+        <Border BorderBrush="#40FFFFFF"
+                BorderThickness="1"
+                CornerRadius="8"
+                IsHitTestVisible="False" />
+
+        <!--  底部进度线：窗口栏隐藏时显示  -->
+        <Grid Height="3"
+              VerticalAlignment="Bottom"
+              IsHitTestVisible="False">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                    <Style.Triggers>
+                        <MultiDataTrigger>
+                            <MultiDataTrigger.Conditions>
+                                <Condition Binding="{Binding Config.ShowProgressLine, Mode=OneWay}" Value="True" />
+                                <Condition Binding="{Binding State.HasProgress, Mode=OneWay}" Value="True" />
+                                <Condition Binding="{Binding IsBarVisible, Mode=OneWay}" Value="False" />
+                            </MultiDataTrigger.Conditions>
+                            <Setter Property="Visibility" Value="Visible" />
+                        </MultiDataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+            <Rectangle Fill="#40FFFFFF" />
+            <Rectangle HorizontalAlignment="Stretch"
+                       Fill="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                       RenderTransformOrigin="0,0.5">
+                <Rectangle.RenderTransform>
+                    <ScaleTransform ScaleX="{Binding State.Progress, Mode=OneWay}" />
+                </Rectangle.RenderTransform>
+            </Rectangle>
+        </Grid>
+
+        <!--  网页异常说明：替换网页显示，提供重新加载  -->
+        <Grid Background="#E6101010" Visibility="{Binding State.HasNotice, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Margin="16,0,16,12"
+                           HorizontalAlignment="Center"
+                           Foreground="White"
+                           Text="{Binding State.NoticeText, Mode=OneWay}"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap" />
+                <ui:Button HorizontalAlignment="Center"
+                           Command="{Binding ReloadAfterCrashCommand}"
+                           Content="{i18n:T 重新加载}"
+                           Icon="{ui:SymbolIcon ArrowClockwise24}"
+                           Visibility="{Binding State.CanReloadNotice, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+            </StackPanel>
+        </Grid>
+
+        <!--  热键反馈：叠在网页和异常说明之上  -->
+        <Border Margin="10,34,10,0"
+                Padding="10,4"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Background="#D91C1C1C"
+                CornerRadius="6"
+                IsHitTestVisible="False">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Opacity" Value="0" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsOsdVisible, Mode=OneWay}" Value="True">
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                         To="1"
+                                                         Duration="0:0:0.1" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.EnterActions>
+                            <DataTrigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                         To="0"
+                                                         Duration="0:0:0.3" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.ExitActions>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <TextBlock FontSize="13"
+                       Foreground="White"
+                       Text="{Binding State.OsdText, Mode=OneWay}"
+                       TextWrapping="Wrap" />
+        </Border>
+
+        <!--  窗口栏：悬停或交互模式时显示，叠在网页顶部  -->
+        <Grid x:Name="BarRoot"
+              Height="28"
+              VerticalAlignment="Top"
+              IsHitTestVisible="{Binding IsBarVisible, Mode=OneWay}"
+              MouseLeftButtonDown="OnBarMouseLeftButtonDown"
+              MouseWheel="OnBarMouseWheel">
+            <b:Interaction.Triggers>
+                <b:EventTrigger EventName="MouseEnter">
+                    <b:InvokeCommandAction Command="{Binding BarEnterCommand}" />
+                </b:EventTrigger>
+                <b:EventTrigger EventName="MouseLeave">
+                    <b:InvokeCommandAction Command="{Binding BarLeaveCommand}" />
+                </b:EventTrigger>
+            </b:Interaction.Triggers>
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Setter Property="Opacity" Value="0" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsBarVisible, Mode=OneWay}" Value="True">
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                         To="1"
+                                                         Duration="0:0:0.12" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.EnterActions>
+                            <DataTrigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                         To="0"
+                                                         Duration="0:0:0.2" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.ExitActions>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+
+            <Border Background="{DynamicResource ApplicationBackgroundBrush}"
+                    CornerRadius="8,8,0,0"
+                    Opacity="0.94" />
+            <Border BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                    BorderThickness="0,0,0,1"
+                    CornerRadius="8,8,0,0" />
+
+            <Grid Margin="2,0,2,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!--  拖动把手  -->
+                <Border Grid.Column="0"
+                        Width="18"
+                        Background="Transparent"
+                        Cursor="SizeAll"
+                        MouseLeftButtonDown="OnDragHandleMouseLeftButtonDown"
+                        ToolTip="{i18n:T 按住拖动小窗}">
+                    <ui:SymbolIcon HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   FontSize="14"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Symbol="ReOrderDotsVertical24" />
+                </Border>
+
+                <!--  标题：点击输入网址、BV 号或搜索词，按住拖动小窗  -->
+                <Grid Grid.Column="1" Margin="2,0,2,0">
+                    <Border x:Name="TitleArea"
+                            Background="Transparent"
+                            Cursor="Hand"
+                            MouseLeftButtonDown="OnTitleMouseLeftButtonDown"
+                            ToolTip="{i18n:T 点击输入网址、BV 号或搜索词；按住可拖动小窗}"
+                            Visibility="{Binding IsEditingAddress, Mode=OneWay, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
+                        <TextBlock VerticalAlignment="Center"
+                                   FontSize="12"
+                                   TextTrimming="CharacterEllipsis">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="{Binding State.Title, Mode=OneWay}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding State.Title, Mode=OneWay}" Value="">
+                                            <Setter Property="Text" Value="{i18n:T 点击输入网址或搜索 B 站}" />
+                                            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Border>
+                    <ui:TextBox x:Name="AddressBox"
+                                Height="22"
+                                MinHeight="0"
+                                Padding="6,1"
+                                VerticalAlignment="Center"
+                                VerticalContentAlignment="Center"
+                                ClearButtonEnabled="False"
+                                FontSize="12"
+                                IsVisibleChanged="OnAddressBoxIsVisibleChanged"
+                                LostKeyboardFocus="OnAddressBoxLostKeyboardFocus"
+                                PlaceholderText="{i18n:T 输入网址、BV 号或搜索词，回车打开}"
+                                Text="{Binding AddressText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                Visibility="{Binding IsEditingAddress, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ui:TextBox.InputBindings>
+                            <KeyBinding Key="Enter" Command="{Binding CommitAddressCommand}" />
+                            <KeyBinding Key="Escape" Command="{Binding CancelEditAddressCommand}" />
+                        </ui:TextBox.InputBindings>
+                    </ui:TextBox>
+                </Grid>
+
+                <!--  分集与链接菜单；编辑地址时收起，把整条窗口栏留给地址框  -->
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal"
+                            Visibility="{Binding IsEditingAddress, Mode=OneWay, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
+                    <TextBlock Margin="0,0,2,0"
+                               VerticalAlignment="Center"
+                               FontSize="11"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Text="{Binding State.EpisodeText, Mode=OneWay}" />
+                    <ui:Button Width="18"
+                               Style="{StaticResource GuideBarButton}"
+                               ToolTip="{i18n:T 粘贴并打开、复制链接、在浏览器中打开}">
+                        <ui:SymbolIcon FontSize="12" Symbol="ChevronDown16" />
+                        <b:Interaction.Behaviors>
+                            <behavior:ButtonContextMenuBehavior ClosedCommand="{Binding MenuClosedCommand}" OpeningCommand="{Binding MenuOpenedCommand}" />
+                        </b:Interaction.Behaviors>
+                        <ui:Button.ContextMenu>
+                            <ContextMenu>
+                                <ui:MenuItem Command="{Binding PasteAndOpenCommand}"
+                                             Header="{i18n:T 粘贴并打开剪贴板中的链接}"
+                                             Icon="{ui:SymbolIcon ClipboardPaste24}" />
+                                <ui:MenuItem Command="{Binding CopyLinkCommand}"
+                                             Header="{i18n:T 复制当前链接}"
+                                             Icon="{ui:SymbolIcon Copy24}" />
+                                <ui:MenuItem Command="{Binding OpenInBrowserCommand}"
+                                             Header="{i18n:T 在浏览器中打开}"
+                                             Icon="{ui:SymbolIcon Open24}" />
+                            </ContextMenu>
+                        </ui:Button.ContextMenu>
+                    </ui:Button>
+                </StackPanel>
+
+                <!--  按钮区；编辑地址时收起（回车打开，Esc 取消）  -->
+                <StackPanel Grid.Column="3"
+                            Orientation="Horizontal"
+                            Visibility="{Binding IsEditingAddress, Mode=OneWay, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
+                    <!--  网页：后退、刷新  -->
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding ShowNavigationGroup, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Rectangle Style="{StaticResource GuideBarSeparator}" />
+                        <ui:Button Command="{Binding GoBackCommand}"
+                                   IsEnabled="{Binding State.CanGoBack, Mode=OneWay}"
+                                   Style="{StaticResource GuideBarButton}"
+                                   ToolTip="{i18n:T 后退}">
+                            <ui:SymbolIcon Symbol="ArrowLeft24" />
+                        </ui:Button>
+                        <ui:Button Command="{Binding ReloadCommand}"
+                                   Style="{StaticResource GuideBarButton}"
+                                   ToolTip="{i18n:T 刷新}">
+                            <ui:SymbolIcon Symbol="ArrowClockwise24" />
+                        </ui:Button>
+                    </StackPanel>
+
+                    <!--  播放  -->
+                    <Rectangle Style="{StaticResource GuideBarSeparator}" />
+                    <ui:Button Command="{Binding TogglePlayCommand}"
+                               Style="{StaticResource GuideBarButton}"
+                               ToolTip="{Binding PlayToolTip, Mode=OneWay}">
+                        <ui:SymbolIcon>
+                            <ui:SymbolIcon.Style>
+                                <Style BasedOn="{StaticResource {x:Type ui:SymbolIcon}}" TargetType="ui:SymbolIcon">
+                                    <Setter Property="Symbol" Value="Play24" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding State.IsPlaying, Mode=OneWay}" Value="True">
+                                            <Setter Property="Symbol" Value="Pause24" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ui:SymbolIcon.Style>
+                        </ui:SymbolIcon>
+                    </ui:Button>
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding ShowPlayExtras, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ui:Button Width="40"
+                                   PreviewMouseWheel="OnRateMouseWheel"
+                                   Style="{StaticResource GuideBarButton}"
+                                   ToolTip="{Binding RateToolTip, Mode=OneWay}">
+                            <TextBlock FontSize="11"
+                                       FontWeight="SemiBold"
+                                       Text="{Binding State.RateText, Mode=OneWay}" />
+                            <b:Interaction.Behaviors>
+                                <behavior:ButtonContextMenuBehavior ClosedCommand="{Binding MenuClosedCommand}" OpeningCommand="{Binding PrepareRateMenuCommand}" />
+                            </b:Interaction.Behaviors>
+                            <ui:Button.ContextMenu>
+                                <ContextMenu>
+                                    <b:Interaction.Behaviors>
+                                        <behavior:MenuOptionsBehavior Options="{Binding RateOptions}" />
+                                    </b:Interaction.Behaviors>
+                                </ContextMenu>
+                            </ui:Button.ContextMenu>
+                        </ui:Button>
+                        <ui:Button Command="{Binding ToggleMuteCommand}"
+                                   PreviewMouseWheel="OnVolumeMouseWheel"
+                                   Style="{StaticResource GuideBarButton}"
+                                   ToolTip="{Binding VolumeToolTip, Mode=OneWay}">
+                            <ui:SymbolIcon>
+                                <ui:SymbolIcon.Style>
+                                    <Style BasedOn="{StaticResource {x:Type ui:SymbolIcon}}" TargetType="ui:SymbolIcon">
+                                        <Setter Property="Symbol" Value="Speaker224" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding State.IsMuted, Mode=OneWay}" Value="True">
+                                                <Setter Property="Symbol" Value="SpeakerMute24" />
+                                                <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ui:SymbolIcon.Style>
+                            </ui:SymbolIcon>
+                        </ui:Button>
+                        <ui:Button Command="{Binding ToggleSubtitleCommand}"
+                                   Style="{StaticResource GuideBarButton}"
+                                   ToolTip="{Binding SubtitleToolTip, Mode=OneWay}">
+                            <ui:SymbolIcon Symbol="ClosedCaption24">
+                                <ui:SymbolIcon.Style>
+                                    <Style BasedOn="{StaticResource ActiveIconBase}" TargetType="ui:SymbolIcon">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Config.SubtitleWindowEnabled, Mode=OneWay}" Value="True">
+                                                <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ui:SymbolIcon.Style>
+                            </ui:SymbolIcon>
+                        </ui:Button>
+                        <ui:Button Command="{Binding ToggleImmersiveCommand}"
+                                   Style="{StaticResource GuideBarButton}"
+                                   ToolTip="{Binding ImmersiveToolTip, Mode=OneWay}">
+                            <ui:SymbolIcon>
+                                <ui:SymbolIcon.Style>
+                                    <Style BasedOn="{StaticResource {x:Type ui:SymbolIcon}}" TargetType="ui:SymbolIcon">
+                                        <Setter Property="Symbol" Value="FullScreenMaximize24" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding State.IsImmersive, Mode=OneWay}" Value="True">
+                                                <Setter Property="Symbol" Value="FullScreenMinimize24" />
+                                                <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ui:SymbolIcon.Style>
+                            </ui:SymbolIcon>
+                        </ui:Button>
+                    </StackPanel>
+
+                    <!--  收藏  -->
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding ShowLibraryGroup, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Rectangle Style="{StaticResource GuideBarSeparator}" />
+                        <ui:Button Command="{Binding ToggleFavoriteCommand}"
+                                   Style="{StaticResource GuideBarButton}"
+                                   ToolTip="{i18n:T 收藏当前视频}">
+                            <ui:SymbolIcon Symbol="Star24">
+                                <ui:SymbolIcon.Style>
+                                    <Style BasedOn="{StaticResource ActiveIconBase}" TargetType="ui:SymbolIcon">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding State.IsFavorite, Mode=OneWay}" Value="True">
+                                                <Setter Property="Filled" Value="True" />
+                                                <Setter Property="Foreground" Value="#FFFFC83D" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ui:SymbolIcon.Style>
+                            </ui:SymbolIcon>
+                        </ui:Button>
+                        <ui:Button Style="{StaticResource GuideBarButton}" ToolTip="{i18n:T 收藏与最近观看}">
+                            <ui:SymbolIcon Symbol="TextBulletListLtr24" />
+                            <b:Interaction.Behaviors>
+                                <behavior:ButtonContextMenuBehavior ClosedCommand="{Binding MenuClosedCommand}" OpeningCommand="{Binding PrepareLibraryMenuCommand}" />
+                            </b:Interaction.Behaviors>
+                            <ui:Button.ContextMenu>
+                                <ContextMenu>
+                                    <ui:MenuItem Header="{i18n:T 收藏}" Icon="{ui:SymbolIcon Star24}">
+                                        <b:Interaction.Behaviors>
+                                            <behavior:MenuOptionsBehavior Options="{Binding FavoriteOptions}" />
+                                        </b:Interaction.Behaviors>
+                                    </ui:MenuItem>
+                                    <ui:MenuItem Header="{i18n:T 最近观看}" Icon="{ui:SymbolIcon History24}">
+                                        <b:Interaction.Behaviors>
+                                            <behavior:MenuOptionsBehavior Options="{Binding HistoryOptions}" />
+                                        </b:Interaction.Behaviors>
+                                    </ui:MenuItem>
+                                    <Separator />
+                                    <ui:MenuItem Command="{Binding OpenSettingsCommand}"
+                                                 Header="{i18n:T 管理收藏与观看记录…}"
+                                                 Icon="{ui:SymbolIcon Library24}" />
+                                </ContextMenu>
+                            </ui:Button.ContextMenu>
+                        </ui:Button>
+                    </StackPanel>
+
+                    <!--  窗口：交互模式、鼠标穿透；始终置顶在设置菜单中  -->
+                    <Rectangle Style="{StaticResource GuideBarSeparator}" />
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding ShowWindowGroup, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ui:Button Command="{Binding ToggleInteractionCommand}"
+                                   Style="{StaticResource GuideBarButton}"
+                                   ToolTip="{Binding InteractionToolTip, Mode=OneWay}">
+                            <ui:SymbolIcon>
+                                <ui:SymbolIcon.Style>
+                                    <Style BasedOn="{StaticResource {x:Type ui:SymbolIcon}}" TargetType="ui:SymbolIcon">
+                                        <Setter Property="Symbol" Value="Keyboard24" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding State.IsInteraction, Mode=OneWay}" Value="True">
+                                                <Setter Property="Symbol" Value="Checkmark24" />
+                                                <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ui:SymbolIcon.Style>
+                            </ui:SymbolIcon>
+                        </ui:Button>
+                        <ui:Button Command="{Binding ToggleClickThroughCommand}"
+                                   Style="{StaticResource GuideBarButton}"
+                                   ToolTip="{Binding ClickThroughToolTip, Mode=OneWay}">
+                            <ui:SymbolIcon Symbol="CursorClick24" />
+                        </ui:Button>
+                    </StackPanel>
+
+                    <!--  设置菜单  -->
+                    <ui:Button Style="{StaticResource GuideBarButton}" ToolTip="{i18n:T 小窗设置}">
+                        <ui:SymbolIcon Symbol="Settings24" />
+                        <b:Interaction.Behaviors>
+                            <behavior:ButtonContextMenuBehavior ClosedCommand="{Binding MenuClosedCommand}" OpeningCommand="{Binding PrepareSettingsMenuCommand}" />
+                        </b:Interaction.Behaviors>
+                        <ui:Button.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem StaysOpenOnClick="True">
+                                    <MenuItem.Header>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Width="64"
+                                                       VerticalAlignment="Center"
+                                                       Text="{i18n:T 不透明度}" />
+                                            <Slider Width="140"
+                                                    VerticalAlignment="Center"
+                                                    IsSnapToTickEnabled="True"
+                                                    Maximum="1"
+                                                    Minimum="0.2"
+                                                    TickFrequency="0.05"
+                                                    Value="{Binding Config.Opacity, Mode=TwoWay}" />
+                                            <TextBlock Width="40"
+                                                       Margin="8,0,0,0"
+                                                       VerticalAlignment="Center"
+                                                       Text="{Binding Config.Opacity, Mode=OneWay, StringFormat={}{0:P0}}" />
+                                        </StackPanel>
+                                    </MenuItem.Header>
+                                </MenuItem>
+                                <Separator />
+                                <ui:MenuItem Command="{Binding ToggleClickThroughCommand}"
+                                             Header="{i18n:T 鼠标穿透}"
+                                             IsChecked="{Binding Config.IsClickThrough, Mode=OneWay}" />
+                                <ui:MenuItem Command="{Binding ToggleTopmostCommand}"
+                                             Header="{i18n:T 始终置顶}"
+                                             IsChecked="{Binding Config.Topmost, Mode=OneWay}" />
+                                <ui:MenuItem Command="{Binding ToggleSmartFadeCommand}"
+                                             Header="{i18n:T 智能透明（穿透时鼠标经过自动淡化）}"
+                                             IsChecked="{Binding Config.SmartFadeEnabled, Mode=OneWay}" />
+                                <ui:MenuItem Header="{i18n:T 位置}" Icon="{ui:SymbolIcon Window24}">
+                                    <ui:MenuItem Command="{Binding SetPositionModeCommand}"
+                                                 CommandParameter="FollowGame"
+                                                 Header="{i18n:T 跟随游戏窗口}"
+                                                 IsChecked="{Binding IsFollowGameMode, Mode=OneWay}" />
+                                    <ui:MenuItem Command="{Binding SetPositionModeCommand}"
+                                                 CommandParameter="Free"
+                                                 Header="{i18n:T 自由放置}"
+                                                 IsChecked="{Binding IsFreeMode, Mode=OneWay}" />
+                                    <Separator />
+                                    <ui:MenuItem Command="{Binding DockCommand}"
+                                                 CommandParameter="TopRight"
+                                                 Header="{i18n:T 停靠到右上角}" />
+                                    <ui:MenuItem Command="{Binding DockCommand}"
+                                                 CommandParameter="BottomRight"
+                                                 Header="{i18n:T 停靠到右下角}" />
+                                    <ui:MenuItem Command="{Binding DockCommand}"
+                                                 CommandParameter="TopLeft"
+                                                 Header="{i18n:T 停靠到左上角}" />
+                                    <ui:MenuItem Command="{Binding DockCommand}"
+                                                 CommandParameter="BottomLeft"
+                                                 Header="{i18n:T 停靠到左下角}" />
+                                </ui:MenuItem>
+                                <ui:MenuItem Header="{i18n:T 移到显示器}" Icon="{ui:SymbolIcon DesktopCursor24}">
+                                    <b:Interaction.Behaviors>
+                                        <behavior:MenuOptionsBehavior Options="{Binding MonitorOptions}" />
+                                    </b:Interaction.Behaviors>
+                                </ui:MenuItem>
+                                <Separator />
+                                <ui:MenuItem Command="{Binding ToggleSubtitleCommand}"
+                                             Header="{i18n:T 字幕浮窗}"
+                                             IsChecked="{Binding Config.SubtitleWindowEnabled, Mode=OneWay}" />
+                                <ui:MenuItem Command="{Binding AdjustSubtitleCommand}" Header="{i18n:T 调整字幕位置…}" />
+                                <ui:MenuItem Command="{Binding ToggleDanmakuCommand}"
+                                             Header="{i18n:T 弹幕（B 站）}"
+                                             IsChecked="{Binding State.Danmaku, Mode=OneWay, TargetNullValue=False}" />
+                                <ui:MenuItem Header="{i18n:T 网页缩放}" Icon="{ui:SymbolIcon Search24}">
+                                    <b:Interaction.Behaviors>
+                                        <behavior:MenuOptionsBehavior Options="{Binding ZoomOptions}" />
+                                    </b:Interaction.Behaviors>
+                                </ui:MenuItem>
+                                <ui:MenuItem Command="{Binding PrevEpisodeCommand}"
+                                             Header="{i18n:T 上一集}"
+                                             Icon="{ui:SymbolIcon Previous24}"
+                                             IsEnabled="{Binding State.HasPrevEpisode, Mode=OneWay}" />
+                                <ui:MenuItem Command="{Binding NextEpisodeCommand}"
+                                             Header="{i18n:T 下一集}"
+                                             Icon="{ui:SymbolIcon Next24}"
+                                             IsEnabled="{Binding State.HasNextEpisode, Mode=OneWay}" />
+                                <Separator />
+                                <ui:MenuItem Command="{Binding OpenSettingsCommand}"
+                                             Header="{i18n:T 全部设置…}"
+                                             Icon="{ui:SymbolIcon Settings24}" />
+                            </ContextMenu>
+                        </ui:Button.ContextMenu>
+                    </ui:Button>
+
+                    <!--  更多：被收起的按钮  -->
+                    <ui:Button Style="{StaticResource GuideBarButton}"
+                               ToolTip="{i18n:T 更多}"
+                               Visibility="{Binding ShowOverflow, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ui:SymbolIcon Symbol="MoreHorizontal24" />
+                        <b:Interaction.Behaviors>
+                            <behavior:ButtonContextMenuBehavior ClosedCommand="{Binding MenuClosedCommand}" OpeningCommand="{Binding PrepareOverflowMenuCommand}" />
+                        </b:Interaction.Behaviors>
+                        <ui:Button.ContextMenu>
+                            <ContextMenu>
+                                <!--  只列出窗口栏上被收起的按钮  -->
+                                <ui:MenuItem Command="{Binding ToggleImmersiveCommand}"
+                                             Header="{i18n:T 沉浸模式}"
+                                             Icon="{ui:SymbolIcon FullScreenMaximize24}"
+                                             IsChecked="{Binding State.IsImmersive, Mode=OneWay}"
+                                             Visibility="{Binding ShowPlayExtras, Mode=OneWay, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                                <ui:MenuItem Header="{i18n:T 倍速}"
+                                             Icon="{ui:SymbolIcon TopSpeed24}"
+                                             Visibility="{Binding ShowPlayExtras, Mode=OneWay, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
+                                    <b:Interaction.Behaviors>
+                                        <behavior:MenuOptionsBehavior Options="{Binding RateOptions}" />
+                                    </b:Interaction.Behaviors>
+                                </ui:MenuItem>
+                                <ui:MenuItem Command="{Binding ToggleMuteCommand}"
+                                             Header="{i18n:T 静音}"
+                                             Icon="{ui:SymbolIcon SpeakerMute24}"
+                                             IsChecked="{Binding State.IsMuted, Mode=OneWay}"
+                                             Visibility="{Binding ShowPlayExtras, Mode=OneWay, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                                <ui:MenuItem Command="{Binding ToggleSubtitleCommand}"
+                                             Header="{i18n:T 字幕浮窗}"
+                                             Icon="{ui:SymbolIcon ClosedCaption24}"
+                                             IsChecked="{Binding Config.SubtitleWindowEnabled, Mode=OneWay}"
+                                             Visibility="{Binding ShowPlayExtras, Mode=OneWay, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                                <ui:MenuItem Command="{Binding ToggleInteractionCommand}"
+                                             Header="{i18n:T 交互模式（在网页中输入文字）}"
+                                             Icon="{ui:SymbolIcon Keyboard24}"
+                                             IsChecked="{Binding State.IsInteraction, Mode=OneWay}"
+                                             Visibility="{Binding ShowWindowGroup, Mode=OneWay, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                                <ui:MenuItem Command="{Binding GoBackCommand}"
+                                             Header="{i18n:T 后退}"
+                                             Icon="{ui:SymbolIcon ArrowLeft24}"
+                                             IsEnabled="{Binding State.CanGoBack, Mode=OneWay}"
+                                             Visibility="{Binding ShowNavigationGroup, Mode=OneWay, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                                <ui:MenuItem Command="{Binding ReloadCommand}"
+                                             Header="{i18n:T 刷新}"
+                                             Icon="{ui:SymbolIcon ArrowClockwise24}"
+                                             Visibility="{Binding ShowNavigationGroup, Mode=OneWay, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                                <Separator Visibility="{Binding ShowLibraryGroup, Mode=OneWay, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                                <ui:MenuItem Command="{Binding ToggleFavoriteCommand}"
+                                             Header="{i18n:T 收藏当前视频}"
+                                             IsChecked="{Binding State.IsFavorite, Mode=OneWay}"
+                                             Visibility="{Binding ShowLibraryGroup, Mode=OneWay, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                                <ui:MenuItem Header="{i18n:T 收藏}"
+                                             Icon="{ui:SymbolIcon Star24}"
+                                             Visibility="{Binding ShowLibraryGroup, Mode=OneWay, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
+                                    <b:Interaction.Behaviors>
+                                        <behavior:MenuOptionsBehavior Options="{Binding FavoriteOptions}" />
+                                    </b:Interaction.Behaviors>
+                                </ui:MenuItem>
+                                <ui:MenuItem Header="{i18n:T 最近观看}"
+                                             Icon="{ui:SymbolIcon History24}"
+                                             Visibility="{Binding ShowLibraryGroup, Mode=OneWay, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
+                                    <b:Interaction.Behaviors>
+                                        <behavior:MenuOptionsBehavior Options="{Binding HistoryOptions}" />
+                                    </b:Interaction.Behaviors>
+                                </ui:MenuItem>
+                            </ContextMenu>
+                        </ui:Button.ContextMenu>
+                    </ui:Button>
+
+                    <!--  隐藏、关闭  -->
+                    <Rectangle Style="{StaticResource GuideBarSeparator}" />
+                    <ui:Button Command="{Binding HideWindowCommand}"
+                               Style="{StaticResource GuideBarButton}"
+                               ToolTip="{Binding HideToolTip, Mode=OneWay}">
+                        <ui:SymbolIcon Symbol="Subtract24" />
+                    </ui:Button>
+                    <ui:Button Command="{Binding CloseWindowCommand}"
+                               Style="{StaticResource GuideBarButton}"
+                               ToolTip="{i18n:T 关闭小窗（停止播放）}">
+                        <ui:SymbolIcon Symbol="Dismiss24" />
+                    </ui:Button>
+                </StackPanel>
+            </Grid>
+        </Grid>
+
+        <!--  缩放区：四边 6 DIP、四角 12 DIP，只在悬停或交互模式下可用  -->
+        <Grid IsHitTestVisible="{Binding State.IsBarAllowed, Mode=OneWay}">
+            <Thumb Width="6" HorizontalAlignment="Left" Cursor="SizeWE" Margin="0,28,0,12" Style="{StaticResource GuideResizeThumb}" Tag="L"
+                   DragCompleted="OnResizeCompleted" DragDelta="OnResizeDelta" DragStarted="OnResizeStarted" />
+            <Thumb Width="6" HorizontalAlignment="Right" Cursor="SizeWE" Margin="0,28,0,12" Style="{StaticResource GuideResizeThumb}" Tag="R"
+                   DragCompleted="OnResizeCompleted" DragDelta="OnResizeDelta" DragStarted="OnResizeStarted" />
+            <Thumb Height="6" VerticalAlignment="Bottom" Cursor="SizeNS" Margin="12,0" Style="{StaticResource GuideResizeThumb}" Tag="B"
+                   DragCompleted="OnResizeCompleted" DragDelta="OnResizeDelta" DragStarted="OnResizeStarted" />
+            <Thumb Height="4" VerticalAlignment="Top" Cursor="SizeNS" Margin="12,0" Style="{StaticResource GuideResizeThumb}" Tag="T"
+                   DragCompleted="OnResizeCompleted" DragDelta="OnResizeDelta" DragStarted="OnResizeStarted" />
+            <Thumb Width="12" Height="12" HorizontalAlignment="Left" VerticalAlignment="Bottom" Cursor="SizeNESW" Style="{StaticResource GuideResizeThumb}" Tag="BL"
+                   DragCompleted="OnResizeCompleted" DragDelta="OnResizeDelta" DragStarted="OnResizeStarted" />
+            <Thumb Width="12" Height="12" HorizontalAlignment="Right" VerticalAlignment="Bottom" Cursor="SizeNWSE" Style="{StaticResource GuideResizeThumb}" Tag="BR"
+                   DragCompleted="OnResizeCompleted" DragDelta="OnResizeDelta" DragStarted="OnResizeStarted" />
+            <Thumb Width="8" Height="8" HorizontalAlignment="Left" VerticalAlignment="Top" Cursor="SizeNWSE" Style="{StaticResource GuideResizeThumb}" Tag="TL"
+                   DragCompleted="OnResizeCompleted" DragDelta="OnResizeDelta" DragStarted="OnResizeStarted" />
+            <Thumb Width="8" Height="8" HorizontalAlignment="Right" VerticalAlignment="Top" Cursor="SizeNESW" Style="{StaticResource GuideResizeThumb}" Tag="TR"
+                   DragCompleted="OnResizeCompleted" DragDelta="OnResizeDelta" DragStarted="OnResizeStarted" />
+        </Grid>
+    </Grid>
+</Window>

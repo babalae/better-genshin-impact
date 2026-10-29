@@ -9,6 +9,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using BetterGenshinImpact.Model.MaskMap;
+using BetterGenshinImpact.Service.Guide;
 using BetterGenshinImpact.Service.Interface;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -47,6 +48,21 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
     [ObservableProperty] private Uri? _gifSourceUri;
     [ObservableProperty] private Stream? _gifSourceStream;
 
+    /// <summary>
+    /// 悬浮小窗服务；子实例中不可用
+    /// </summary>
+    private static IGuideWindowService? GuideWindow => App.GetService<IGuideWindowService>();
+
+    /// <summary>
+    /// 链接旁是否显示“换一种方式打开”的小按钮（悬浮小窗可用时）
+    /// </summary>
+    [ObservableProperty] private bool _isGuideWindowAvailable;
+
+    /// <summary>
+    /// 点击视频链接时是否默认在悬浮小窗打开（取自小窗设置“地图点位视频在小窗打开”）
+    /// </summary>
+    [ObservableProperty] private bool _isGuideWindowPreferred;
+
     partial void OnUrlListChanged(IReadOnlyList<MaskMapLink> value)
     {
         HasUrlList = value is { Count: > 0 };
@@ -69,6 +85,10 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
         CurrentPoint = point;
         SetHiddenState(isHidden);
         Text = string.Empty;
+        // 每次打开时读取小窗设置，设置页修改后立即生效
+        var guide = GuideWindow;
+        IsGuideWindowAvailable = guide is { IsAvailable: true };
+        IsGuideWindowPreferred = IsGuideWindowAvailable && guide!.Config.OpenMapVideoInWindow;
         UrlList = point.VideoUrls;
         TextError = string.Empty;
         IsTextLoading = true;
@@ -310,6 +330,9 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
         DisposeImageStream();
     }
 
+    /// <summary>
+    /// 点击链接：开启“地图点位视频在小窗打开”且是视频链接时在悬浮小窗打开，否则用系统浏览器打开
+    /// </summary>
     [RelayCommand]
     private void OpenUrl(string? url)
     {
@@ -319,6 +342,55 @@ public partial class MaskMapPointInfoPopupViewModel : ObservableObject
             return;
         }
 
+        if (IsGuideWindowPreferred && GuideLinkResolver.IsVideoUrl(url))
+        {
+            OpenInGuideWindow(url);
+            return;
+        }
+
+        OpenInBrowser(url);
+    }
+
+    /// <summary>
+    /// 链接旁的小按钮：默认在小窗打开时改用浏览器，默认用浏览器时改在小窗打开
+    /// </summary>
+    [RelayCommand]
+    private void OpenUrlAlternate(string? url)
+    {
+        url = NormalizeUrl(url);
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return;
+        }
+
+        if (IsGuideWindowPreferred || !IsGuideWindowAvailable)
+        {
+            OpenInBrowser(url);
+            return;
+        }
+
+        OpenInGuideWindow(url);
+    }
+
+    /// <summary>
+    /// 在悬浮小窗中打开链接
+    /// </summary>
+    private void OpenInGuideWindow(string url)
+    {
+        if (GuideWindow is not { IsAvailable: true } guide)
+        {
+            OpenInBrowser(url);
+            return;
+        }
+
+        guide.Open(new GuideOpenRequest(url, GuideOpenSource.MapPoint));
+    }
+
+    /// <summary>
+    /// 用系统默认浏览器打开链接
+    /// </summary>
+    private void OpenInBrowser(string url)
+    {
         try
         {
             Process.Start(new ProcessStartInfo

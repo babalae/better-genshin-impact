@@ -33,7 +33,16 @@ public static class WebViewEnvironments
     public static readonly WebViewEnvironmentDefinition App = new("App", "软件内网页");
 
     /// <summary>
+    /// 悬浮小窗：独立浏览器进程，视频解码或崩溃不影响其他软件内网页。
+    /// 允许没有用户手势的媒体播放，快捷键播放、切集后续播不会被自动播放策略拦截
+    /// </summary>
+    public static readonly WebViewEnvironmentDefinition Guide = new("Guide", "悬浮小窗")
+    {
+        BrowserArguments = "--autoplay-policy=no-user-gesture-required",
+    };
+
+    /// <summary>
     /// 全部普通环境，供环境入口校验、存储区域登记和识别不再使用的目录
     /// </summary>
-    public static IReadOnlyList<WebViewEnvironmentDefinition> All { get; } = [App];
+    public static IReadOnlyList<WebViewEnvironmentDefinition> All { get; } = [App, Guide];
 }

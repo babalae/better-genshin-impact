@@ -1,0 +1,97 @@
+<Window x:Class="BetterGenshinImpact.View.Windows.GuideSubtitleWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+        xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        xmlns:vm="clr-namespace:BetterGenshinImpact.ViewModel.Windows"
+        Title="{i18n:T 字幕浮窗}"
+        d:DataContext="{d:DesignInstance Type=vm:GuideSubtitleWindowViewModel}"
+        AllowsTransparency="True"
+        Background="Transparent"
+        FontFamily="{StaticResource TextThemeFontFamily}"
+        ResizeMode="NoResize"
+        ShowActivated="False"
+        ShowInTaskbar="False"
+        SizeToContent="WidthAndHeight"
+        Topmost="True"
+        WindowStartupLocation="Manual"
+        WindowStyle="None"
+        mc:Ignorable="d">
+
+    <!--  字幕浮窗：默认鼠标穿透、不获得焦点；调整位置时可以拖动  -->
+    <b:Interaction.Behaviors>
+        <behavior:WindowInputStyleBehavior HideFromAltTab="True"
+                                           IsActivatable="False"
+                                           IsClickThrough="{Binding IsClickThrough, Mode=OneWay}" />
+    </b:Interaction.Behaviors>
+
+    <Grid x:Name="Root"
+          MaxWidth="{Binding MaxTextWidth, Mode=OneWay}"
+          MouseLeftButtonDown="OnRootMouseLeftButtonDown"
+          MouseWheel="OnRootMouseWheel">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!--  调整位置时的完成按钮，放在字幕上方  -->
+        <ui:Button Grid.Row="0"
+                   Margin="0,0,0,4"
+                   Padding="12,3"
+                   HorizontalAlignment="Center"
+                   Appearance="Primary"
+                   Command="{Binding FinishAdjustCommand}"
+                   Content="{i18n:T 完成调整}"
+                   Visibility="{Binding IsAdjusting, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+        <Border Grid.Row="1"
+                Padding="16,6"
+                CornerRadius="8">
+            <Border.Background>
+                <SolidColorBrush Opacity="{Binding Config.SubtitleBackgroundOpacity, Mode=OneWay}" Color="Black" />
+            </Border.Background>
+            <TextBlock FontSize="{Binding Config.SubtitleFontSize, Mode=OneWay}"
+                       Foreground="White"
+                       LineStackingStrategy="BlockLineHeight"
+                       Text="{Binding DisplayText, Mode=OneWay}"
+                       TextAlignment="Center"
+                       TextTrimming="CharacterEllipsis"
+                       TextWrapping="Wrap">
+                <TextBlock.Effect>
+                    <DropShadowEffect BlurRadius="5"
+                                      Opacity="1"
+                                      ShadowDepth="0"
+                                      Color="Black" />
+                </TextBlock.Effect>
+            </TextBlock>
+        </Border>
+
+        <!--  调整位置：虚线边框（带浅色填充，便于按住拖动）、宽度手柄  -->
+        <Rectangle Grid.Row="1"
+                   Cursor="SizeAll"
+                   Fill="#30000000"
+                   RadiusX="8"
+                   RadiusY="8"
+                   Stroke="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                   StrokeDashArray="4 3"
+                   StrokeThickness="2"
+                   Visibility="{Binding IsAdjusting, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+        <Thumb Grid.Row="1"
+               Width="8"
+               HorizontalAlignment="Right"
+               Cursor="SizeWE"
+               DragCompleted="OnWidthDragCompleted"
+               DragDelta="OnWidthDragDelta"
+               Visibility="{Binding IsAdjusting, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Thumb.Template>
+                <ControlTemplate TargetType="Thumb">
+                    <Border Background="#01000000" />
+                </ControlTemplate>
+            </Thumb.Template>
+        </Thumb>
+    </Grid>
+</Window>

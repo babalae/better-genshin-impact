@@ -63,7 +63,15 @@ public static class WebViewProfiles
     };
 
     /// <summary>
+    /// 悬浮小窗网页：清理时只清缓存，保留 B 站等网站的登录
+    /// </summary>
+    public static readonly WebViewProfile Guide = new(WebViewEnvironments.Guide, WebViewProfile.DefaultProfileName, "悬浮小窗 · 网页缓存")
+    {
+        Description = "悬浮小窗中网页的缓存，保留 B 站等网站的登录和网页设置",
+    };
+
+    /// <summary>
     /// 全部 Profile，供存储区域登记
     /// </summary>
-    public static IReadOnlyList<WebViewProfile> All { get; } = [Default, HtmlMask];
+    public static IReadOnlyList<WebViewProfile> All { get; } = [Default, HtmlMask, Guide];
 }
