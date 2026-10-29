@@ -28,7 +28,7 @@ internal static class PuloniaOneDragonSettingChoices
     /// </summary>
     private static readonly string LeyLineTaskType = PuloniaSoloTaskExecutor.ToTaskType(AutoLeyLineOutcropTask.TaskId);
 
-    /// <summary>为秘境、首领补充展示选项，为战斗策略标记专用选择器，并展开战斗对象。</summary>
+    /// <summary>为秘境、首领补充展示选项，为战斗策略与备选秘境标记专用选择器，并展开战斗对象。</summary>
     internal static JObject Decorate(string name, JObject schema, JToken? value, string taskType)
     {
         var result = (JObject)schema.DeepClone();
@@ -46,9 +46,15 @@ internal static class PuloniaOneDragonSettingChoices
                 || taskType == PuloniaSoloTaskExecutor.ToTaskType(AutoFightEntryTask.TaskId)
                 ? CombatStrategyKind.All : CombatStrategyKind.WithoutCombo);
         }
+        // 备选秘境与自动秘境设置页一致，使用按国家分组的秘境选择框，且不提供“根据提升指南选择”。
+        if (key == "training_guide_fallback_domain_name")
+        {
+            result.Remove("enum");
+            result["x-domain-picker"] = true;
+        }
         string[]? choices = key switch
         {
-            "domain_name" or "training_guide_fallback_domain_name" => ["", .. MapLazyAssets.Get().DomainNameList],
+            "domain_name" => ["", .. MapLazyAssets.Get().DomainNameList],
             "training_guide_fallback_sunday_selected_value" => ["", "1", "2", "3"],
             "boss_name" => ["", .. AutoBossData.SupportedBossNames],
             "country" when taskType == LeyLineTaskType => [.. TaskSettingsPageViewModel.LeyLineOutcropCountryList],

@@ -53,6 +53,8 @@ public partial class PuloniaOneDragonParameterFieldViewModel : ObservableObject
     public bool IsChoice => _scalar.IsChoiceEditor;
     /// <summary>是否为战斗策略选择器。</summary>
     public bool IsCombatStrategy => _scalar.IsCombatStrategyEditor;
+    /// <summary>是否为秘境选择框。</summary>
+    public bool IsDomain => _scalar.IsDomainEditor;
     /// <summary>当前任务允许的策略类型。</summary>
     public CombatStrategyKind AllowedStrategyKinds => _scalar.AllowedStrategyKinds;
     /// <summary>是否为数字输入框。</summary>

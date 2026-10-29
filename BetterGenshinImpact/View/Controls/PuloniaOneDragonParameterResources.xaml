@@ -2,7 +2,11 @@
                     xmlns:combat="clr-namespace:BetterGenshinImpact.View.Controls.CombatStrategy"
                     
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+                    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                    xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta"
+                    xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+                    xmlns:converters="clr-namespace:BetterGenshinImpact.View.Converters"
+                    xmlns:training="clr-namespace:BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide">
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="/BetterGI;component/View/Controls/Resin/ResinUsageResources.xaml" />
     </ResourceDictionary.MergedDictionaries>
@@ -19,6 +23,9 @@
     <!--  布尔→可见性转换器：保证每个字段只渲染与其类型匹配的编辑器（键名按契约固定）  -->
     <BooleanToVisibilityConverter x:Key="FieldVisibility" />
 
+    <!--  秘境名称与级联选项互转；放在本字典内，保证使用方窗口无需额外合并资源  -->
+    <converters:DomainNameToCascadingItemConverter x:Key="FieldDomainNameConverter" />
+
     <!--
         参数字段递归模板。
         说明：子字段 ItemsControl 的 ItemTemplate 通过 DynamicResource 引用本模板自身，
@@ -27,8 +34,8 @@
     <DataTemplate x:Key="OneDragonParameterFieldTemplate">
 
         <!--
-            根容器同时承载八种字段形态，由各形态的 Visibility 保证同一时刻只显示一种：
-            IsBoolean / IsChoice / IsCombatStrategy / IsResinUsage / IsText / IsNumber / IsObject / IsAdvancedJson 互斥为 True。
+            根容器同时承载九种字段形态，由各形态的 Visibility 保证同一时刻只显示一种：
+            IsBoolean / IsChoice / IsCombatStrategy / IsDomain / IsResinUsage / IsText / IsNumber / IsObject / IsAdvancedJson 互斥为 True。
         -->
         <Grid>
             <!-- 树脂使用保持嵌套对象合同，只通过公共弹窗整体编辑。 -->
@@ -118,6 +125,34 @@
                     </Grid>
                 </ui:CardControl.Header>
                 <combat:CombatStrategyPicker Width="288" VerticalAlignment="Center" Margin="0" HorizontalAlignment="Right" Strategy="{Binding TextValue, Mode=TwoWay}" AllowedKinds="{Binding AllowedStrategyKinds, Mode=OneWay}" />
+            </ui:CardControl>
+
+            <!--  秘境字段：与自动秘境设置一致的按国家分组选择框，只列出可手动刷取的秘境；清空按钮写回空字符串  -->
+            <ui:CardControl Margin="0,0,0,8"
+                            Visibility="{Binding IsDomain, Converter={StaticResource FieldVisibility}, Mode=OneWay}">
+                <ui:CardControl.Header>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <ui:TextBlock Grid.Row="0"
+                                      FontTypography="Body"
+                                      Text="{Binding DisplayName, Mode=OneWay}"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                      Text="{Binding Description, Mode=OneWay}"
+                                      TextWrapping="Wrap" />
+                    </Grid>
+                </ui:CardControl.Header>
+                <vio:CascadingComboBox Width="210"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Right"
+                                       behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding TextValue, Mode=TwoWay}"
+                                       behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
+                                       ItemsSource="{x:Static training:TrainingGuideDomainOptions.Items}"
+                                       SelectedCascadingItem="{Binding TextValue, Mode=TwoWay, Converter={StaticResource FieldDomainNameConverter}}" />
             </ui:CardControl>
 
             <!--  文本字段：右侧文本框  -->
