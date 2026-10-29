@@ -245,7 +245,8 @@ public class AutoLeyLineOutcropTask : ISoloTask
 
         _ocrRo1 = RecognitionObject.Ocr(ScaleTo1080(800), ScaleTo1080(200), ScaleTo1080(300), ScaleTo1080(100));
         _ocrRo2 = RecognitionObject.Ocr(ScaleTo1080(0), ScaleTo1080(200), ScaleTo1080(300), ScaleTo1080(300));
-        _ocrRo3 = RecognitionObject.Ocr(ScaleTo1080(1200), ScaleTo1080(520), ScaleTo1080(300), ScaleTo1080(300));
+        // 其他玩家放置的造物会额外增加“拆除”等选项，将“接触地脉溢口”向上顶出原识别区。
+        _ocrRo3 = RecognitionObject.Ocr(ScaleTo1080(1200), ScaleTo1080(300), ScaleTo1080(300), ScaleTo1080(520));
     }
 
     private static int ScaleTo1080(int value)

@@ -100,7 +100,8 @@
     "name": "神里绫华",
     "nameEn": "Ayaka",
     "skillCD": 10,
-    "weapon": "1"
+    "weapon": "1",
+    "elementalType": "Cryo"
   },
   {
     "alias": [
@@ -116,7 +117,10 @@
     "name": "琴",
     "nameEn": "Qin",
     "skillCD": 6,
-    "weapon": "1"
+    "weapon": "1",
+    "elementalType": "Anemo",
+    "normalAttack": false,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -133,7 +137,10 @@
     "nameEn": "Lisa",
     "skillCD": 1,
     "skillHoldCD": 16,
-    "weapon": "10"
+    "weapon": "10",
+    "elementalType": "Electro",
+    "normalAttack": true,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -152,7 +159,10 @@
     "name": "芭芭拉",
     "nameEn": "Barbara",
     "skillCD": 32,
-    "weapon": "10"
+    "weapon": "10",
+    "elementalType": "Hydro",
+    "normalAttack": true,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -172,7 +182,8 @@
     "name": "凯亚",
     "nameEn": "Kaeya",
     "skillCD": 6,
-    "weapon": "1"
+    "weapon": "1",
+    "elementalType": "Cryo"
   },
   {
     "alias": [
@@ -196,7 +207,10 @@
     "name": "迪卢克",
     "nameEn": "Diluc",
     "skillCD": 10,
-    "weapon": "11"
+    "weapon": "11",
+    "elementalType": "Pyro",
+    "normalAttack": false,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -216,7 +230,10 @@
     "nameEn": "Razor",
     "skillCD": 6,
     "skillHoldCD": 10,
-    "weapon": "11"
+    "weapon": "11",
+    "elementalType": "Electro",
+    "normalAttack": false,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -236,7 +253,8 @@
     "name": "安柏",
     "nameEn": "Ambor",
     "skillCD": 15,
-    "weapon": "12"
+    "weapon": "12",
+    "elementalType": "Pyro"
   },
   {
     "alias": [
@@ -262,7 +280,10 @@
     "nameEn": "Venti",
     "skillCD": 6,
     "skillHoldCD": 15,
-    "weapon": "12"
+    "weapon": "12",
+    "elementalType": "Anemo",
+    "normalAttack": false,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -279,7 +300,10 @@
     "name": "香菱",
     "nameEn": "Xiangling",
     "skillCD": 12,
-    "weapon": "13"
+    "weapon": "13",
+    "elementalType": "Pyro",
+    "normalAttack": false,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -294,7 +318,10 @@
     "name": "北斗",
     "nameEn": "Beidou",
     "skillCD": 7.5,
-    "weapon": "11"
+    "weapon": "11",
+    "elementalType": "Electro",
+    "normalAttack": false,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -311,7 +338,10 @@
     "name": "行秋",
     "nameEn": "Xingqiu",
     "skillCD": 21,
-    "weapon": "1"
+    "weapon": "1",
+    "elementalType": "Hydro",
+    "normalAttack": false,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -336,7 +366,8 @@
     "name": "魈",
     "nameEn": "Xiao",
     "skillCD": 10,
-    "weapon": "13"
+    "weapon": "13",
+    "elementalType": "Anemo"
   },
   {
     "alias": [
@@ -351,7 +382,8 @@
     "name": "凝光",
     "nameEn": "Ningguang",
     "skillCD": 12,
-    "weapon": "10"
+    "weapon": "10",
+    "elementalType": "Geo"
   },
   {
     "alias": [
@@ -378,7 +410,10 @@
     "name": "可莉",
     "nameEn": "Klee",
     "skillCD": 20,
-    "weapon": "10"
+    "weapon": "10",
+    "elementalType": "Pyro",
+    "normalAttack": true,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -400,7 +435,8 @@
     "nameEn": "Zhongli",
     "skillCD": 4,
     "skillHoldCD": 12,
-    "weapon": "13"
+    "weapon": "13",
+    "elementalType": "Geo"
   },
   {
     "alias": [
@@ -421,7 +457,10 @@
     "name": "菲谢尔",
     "nameEn": "Fischl",
     "skillCD": 25,
-    "weapon": "12"
+    "weapon": "12",
+    "elementalType": "Electro",
+    "normalAttack": false,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -443,7 +482,10 @@
     "name": "班尼特",
     "nameEn": "Bennett",
     "skillCD": 5,
-    "weapon": "1"
+    "weapon": "1",
+    "elementalType": "Pyro",
+    "normalAttack": false,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -466,7 +508,8 @@
     "nameEn": "Tartaglia",
     "skillCD": 6,
     "skillHoldCD": 45,
-    "weapon": "12"
+    "weapon": "12",
+    "elementalType": "Hydro"
   },
   {
     "alias": [
@@ -481,7 +524,8 @@
     "name": "诺艾尔",
     "nameEn": "Noel",
     "skillCD": 24,
-    "weapon": "11"
+    "weapon": "11",
+    "elementalType": "Geo"
   },
   {
     "alias": [
@@ -497,7 +541,8 @@
     "name": "七七",
     "nameEn": "Qiqi",
     "skillCD": 30,
-    "weapon": "1"
+    "weapon": "1",
+    "elementalType": "Cryo"
   },
   {
     "alias": [
@@ -511,7 +556,8 @@
     "name": "重云",
     "nameEn": "Chongyun",
     "skillCD": 15,
-    "weapon": "11"
+    "weapon": "11",
+    "elementalType": "Cryo"
   },
   {
     "alias": [
@@ -526,7 +572,8 @@
     "name": "甘雨",
     "nameEn": "Ganyu",
     "skillCD": 10,
-    "weapon": "12"
+    "weapon": "12",
+    "elementalType": "Cryo"
   },
   {
     "alias": [
@@ -549,7 +596,8 @@
     "name": "阿贝多",
     "nameEn": "Albedo",
     "skillCD": 4,
-    "weapon": "1"
+    "weapon": "1",
+    "elementalType": "Geo"
   },
   {
     "alias": [
@@ -569,7 +617,8 @@
     "nameEn": "Diona",
     "skillCD": 6,
     "skillHoldCD": 15,
-    "weapon": "12"
+    "weapon": "12",
+    "elementalType": "Cryo"
   },
   {
     "alias": [
@@ -592,7 +641,10 @@
     "name": "莫娜",
     "nameEn": "Mona",
     "skillCD": 12,
-    "weapon": "10"
+    "weapon": "10",
+    "elementalType": "Hydro",
+    "normalAttack": true,
+    "elementalSkill": false
   },
   {
     "alias": [
@@ -618,7 +670,8 @@
     "name": "刻晴",
     "nameEn": "Keqing",
     "skillCD": 7.5,
-    "weapon": "1"
+    "weapon": "1",
+    "elementalType": "Electro"
   },
   {
     "alias": [
@@ -631,7 +684,10 @@
     "name": "砂糖",
     "nameEn": "Sucrose",
     "skillCD": 15,
-    "weapon": "10"
+    "weapon": "10",
+    "elementalType": "Anemo",
+    "normalAttack": true,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -646,7 +702,10 @@
     "name": "辛焱",
     "nameEn": "Xinyan",
     "skillCD": 18,
-    "weapon": "11"
+    "weapon": "11",
+    "elementalType": "Pyro",
+    "normalAttack": false,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -676,7 +735,8 @@
     "name": "罗莎莉亚",
     "nameEn": "Rosaria",
     "skillCD": 6,
-    "weapon": "13"
+    "weapon": "13",
+    "elementalType": "Cryo"
   },
   {
     "alias": [
@@ -701,7 +761,10 @@
     "name": "胡桃",
     "nameEn": "Hutao",
     "skillCD": 16,
-    "weapon": "13"
+    "weapon": "13",
+    "elementalType": "Pyro",
+    "normalAttack": false,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -719,7 +782,10 @@
     "nameEn": "Kazuha",
     "skillCD": 6,
     "skillHoldCD": 9,
-    "weapon": "1"
+    "weapon": "1",
+    "elementalType": "Anemo",
+    "normalAttack": false,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -734,7 +800,10 @@
     "name": "烟绯",
     "nameEn": "Feiyan",
     "skillCD": 9,
-    "weapon": "10"
+    "weapon": "10",
+    "elementalType": "Pyro",
+    "normalAttack": true,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -751,7 +820,10 @@
     "name": "宵宫",
     "nameEn": "Yoimiya",
     "skillCD": 18,
-    "weapon": "12"
+    "weapon": "12",
+    "elementalType": "Pyro",
+    "normalAttack": false,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -768,7 +840,10 @@
     "name": "托马",
     "nameEn": "Tohma",
     "skillCD": 15,
-    "weapon": "13"
+    "weapon": "13",
+    "elementalType": "Pyro",
+    "normalAttack": false,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -787,7 +862,8 @@
     "nameEn": "Eula",
     "skillCD": 4,
     "skillHoldCD": 10,
-    "weapon": "11"
+    "weapon": "11",
+    "elementalType": "Cryo"
   },
   {
     "alias": [
@@ -811,7 +887,10 @@
     "name": "雷电将军",
     "nameEn": "Shougun",
     "skillCD": 10,
-    "weapon": "13"
+    "weapon": "13",
+    "elementalType": "Electro",
+    "normalAttack": false,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -827,7 +906,10 @@
     "name": "早柚",
     "nameEn": "Sayu",
     "skillCD": 6,
-    "weapon": "11"
+    "weapon": "11",
+    "elementalType": "Anemo",
+    "normalAttack": false,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -848,7 +930,10 @@
     "name": "珊瑚宫心海",
     "nameEn": "Kokomi",
     "skillCD": 20,
-    "weapon": "10"
+    "weapon": "10",
+    "elementalType": "Hydro",
+    "normalAttack": true,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -864,7 +949,8 @@
     "name": "五郎",
     "nameEn": "Gorou",
     "skillCD": 10,
-    "weapon": "12"
+    "weapon": "12",
+    "elementalType": "Geo"
   },
   {
     "alias": [
@@ -882,7 +968,8 @@
     "name": "九条裟罗",
     "nameEn": "Sara",
     "skillCD": 10,
-    "weapon": "12"
+    "weapon": "12",
+    "elementalType": "Electro"
   },
   {
     "alias": [
@@ -911,7 +998,8 @@
     "name": "荒泷一斗",
     "nameEn": "Itto",
     "skillCD": 10,
-    "weapon": "11"
+    "weapon": "11",
+    "elementalType": "Geo"
   },
   {
     "alias": [
@@ -938,7 +1026,10 @@
     "name": "八重神子",
     "nameEn": "Yae",
     "skillCD": 4,
-    "weapon": "10"
+    "weapon": "10",
+    "elementalType": "Electro",
+    "normalAttack": true,
+    "elementalSkill": false
   },
   {
     "alias": [
@@ -956,7 +1047,10 @@
     "name": "鹿野院平藏",
     "nameEn": "Heizo",
     "skillCD": 10,
-    "weapon": "10"
+    "weapon": "10",
+    "elementalType": "Anemo",
+    "normalAttack": true,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -973,7 +1067,8 @@
     "nameEn": "Yelan",
     "skillCD": 10,
     "skillHoldCD": 10,
-    "weapon": "12"
+    "weapon": "12",
+    "elementalType": "Hydro"
   },
   {
     "alias": [
@@ -997,7 +1092,8 @@
     "name": "绮良良",
     "nameEn": "Momoka",
     "skillCD": 8,
-    "weapon": "1"
+    "weapon": "1",
+    "elementalType": "Dendro"
   },
   {
     "alias": [
@@ -1009,7 +1105,8 @@
     "name": "埃洛伊",
     "nameEn": "Aloy",
     "skillCD": 20,
-    "weapon": "12"
+    "weapon": "12",
+    "elementalType": "Cryo"
   },
   {
     "alias": [
@@ -1026,7 +1123,8 @@
     "nameEn": "Shenhe",
     "skillCD": 10,
     "skillHoldCD": 15,
-    "weapon": "13"
+    "weapon": "13",
+    "elementalType": "Cryo"
   },
   {
     "alias": [
@@ -1043,7 +1141,8 @@
     "name": "云堇",
     "nameEn": "Yunjin",
     "skillCD": 9,
-    "weapon": "13"
+    "weapon": "13",
+    "elementalType": "Geo"
   },
   {
     "alias": [
@@ -1066,7 +1165,10 @@
     "name": "久岐忍",
     "nameEn": "Shinobu",
     "skillCD": 15,
-    "weapon": "1"
+    "weapon": "1",
+    "elementalType": "Electro",
+    "normalAttack": false,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -1086,7 +1188,10 @@
     "name": "神里绫人",
     "nameEn": "Ayato",
     "skillCD": 12,
-    "weapon": "1"
+    "weapon": "1",
+    "elementalType": "Hydro",
+    "normalAttack": false,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -1105,7 +1210,8 @@
     "name": "柯莱",
     "nameEn": "Collei",
     "skillCD": 12,
-    "weapon": "12"
+    "weapon": "12",
+    "elementalType": "Dendro"
   },
   {
     "alias": [
@@ -1120,7 +1226,8 @@
     "name": "多莉",
     "nameEn": "Dori",
     "skillCD": 9,
-    "weapon": "11"
+    "weapon": "11",
+    "elementalType": "Electro"
   },
   {
     "alias": [
@@ -1135,7 +1242,8 @@
     "name": "提纳里",
     "nameEn": "Tighnari",
     "skillCD": 12,
-    "weapon": "12"
+    "weapon": "12",
+    "elementalType": "Dendro"
   },
   {
     "alias": [
@@ -1151,7 +1259,10 @@
     "name": "妮露",
     "nameEn": "Nilou",
     "skillCD": 18,
-    "weapon": "1"
+    "weapon": "1",
+    "elementalType": "Hydro",
+    "normalAttack": false,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -1168,7 +1279,8 @@
     "nameEn": "Cyno",
     "skillCD": 7.5,
     "skillHoldCD": 3,
-    "weapon": "13"
+    "weapon": "13",
+    "elementalType": "Electro"
   },
   {
     "alias": [
@@ -1182,7 +1294,10 @@
     "nameEn": "Candace",
     "skillCD": 6,
     "skillHoldCD": 9,
-    "weapon": "13"
+    "weapon": "13",
+    "elementalType": "Hydro",
+    "normalAttack": false,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -1207,7 +1322,8 @@
     "nameEn": "Nahida",
     "skillCD": 5,
     "skillHoldCD": 6,
-    "weapon": "10"
+    "weapon": "10",
+    "elementalType": "Dendro"
   },
   {
     "alias": [
@@ -1222,7 +1338,8 @@
     "name": "莱依拉",
     "nameEn": "Layla",
     "skillCD": 12,
-    "weapon": "1"
+    "weapon": "1",
+    "elementalType": "Cryo"
   },
   {
     "alias": [
@@ -1242,7 +1359,10 @@
     "name": "流浪者",
     "nameEn": "Wanderer",
     "skillCD": 6,
-    "weapon": "10"
+    "weapon": "10",
+    "elementalType": "Anemo",
+    "normalAttack": true,
+    "elementalSkill": false
   },
   {
     "alias": [
@@ -1264,7 +1384,10 @@
     "name": "珐露珊",
     "nameEn": "Faruzan",
     "skillCD": 6,
-    "weapon": "12"
+    "weapon": "12",
+    "elementalType": "Anemo",
+    "normalAttack": false,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -1279,7 +1402,8 @@
     "name": "瑶瑶",
     "nameEn": "Yaoyao",
     "skillCD": 15,
-    "weapon": "13"
+    "weapon": "13",
+    "elementalType": "Dendro"
   },
   {
     "alias": [
@@ -1296,7 +1420,8 @@
     "name": "艾尔海森",
     "nameEn": "Alhatham",
     "skillCD": 18,
-    "weapon": "1"
+    "weapon": "1",
+    "elementalType": "Dendro"
   },
   {
     "alias": [
@@ -1312,7 +1437,10 @@
     "name": "迪希雅",
     "nameEn": "Dehya",
     "skillCD": 20,
-    "weapon": "11"
+    "weapon": "11",
+    "elementalType": "Pyro",
+    "normalAttack": false,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -1327,7 +1455,8 @@
     "name": "米卡",
     "nameEn": "Mika",
     "skillCD": 15,
-    "weapon": "13"
+    "weapon": "13",
+    "elementalType": "Cryo"
   },
   {
     "alias": [
@@ -1340,7 +1469,8 @@
     "name": "卡维",
     "nameEn": "Kaveh",
     "skillCD": 6,
-    "weapon": "11"
+    "weapon": "11",
+    "elementalType": "Dendro"
   },
   {
     "alias": [
@@ -1354,7 +1484,8 @@
     "name": "白术",
     "nameEn": "Baizhuer",
     "skillCD": 10,
-    "weapon": "10"
+    "weapon": "10",
+    "elementalType": "Dendro"
   },
   {
     "alias": [
@@ -1373,7 +1504,10 @@
     "name": "琳妮特",
     "nameEn": "Linette",
     "skillCD": 12,
-    "weapon": "1"
+    "weapon": "1",
+    "elementalType": "Anemo",
+    "normalAttack": false,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -1390,7 +1524,10 @@
     "name": "林尼",
     "nameEn": "Liney",
     "skillCD": 15,
-    "weapon": "12"
+    "weapon": "12",
+    "elementalType": "Pyro",
+    "normalAttack": false,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -1404,7 +1541,8 @@
     "name": "菲米尼",
     "nameEn": "Freminet",
     "skillCD": 10,
-    "weapon": "11"
+    "weapon": "11",
+    "elementalType": "Cryo"
   },
   {
     "alias": [
@@ -1421,7 +1559,8 @@
     "name": "莱欧斯利",
     "nameEn": "Wriothesley",
     "skillCD": 16,
-    "weapon": "10"
+    "weapon": "10",
+    "elementalType": "Cryo"
   },
   {
     "alias": [
@@ -1441,7 +1580,10 @@
     "name": "那维莱特",
     "nameEn": "Neuvillette",
     "skillCD": 12,
-    "weapon": "10"
+    "weapon": "10",
+    "elementalType": "Hydro",
+    "normalAttack": true,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -1460,7 +1602,8 @@
     "nameEn": "Charlotte",
     "skillCD": 12,
     "skillHoldCD": 18,
-    "weapon": "10"
+    "weapon": "10",
+    "elementalType": "Cryo"
   },
   {
     "alias": [
@@ -1477,7 +1620,10 @@
     "name": "芙宁娜",
     "nameEn": "Furina",
     "skillCD": 20,
-    "weapon": "1"
+    "weapon": "1",
+    "elementalType": "Hydro",
+    "normalAttack": true,
+    "elementalSkill": false
   },
   {
     "alias": [
@@ -1490,7 +1636,10 @@
     "name": "夏沃蕾",
     "nameEn": "Chevreuse",
     "skillCD": 15,
-    "weapon": "13"
+    "weapon": "13",
+    "elementalType": "Pyro",
+    "normalAttack": false,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -1510,7 +1659,8 @@
     "name": "娜维娅",
     "nameEn": "Navia",
     "skillCD": 9,
-    "weapon": "11"
+    "weapon": "11",
+    "elementalType": "Geo"
   },
   {
     "alias": [
@@ -1529,7 +1679,8 @@
     "name": "嘉明",
     "nameEn": "Gaming",
     "skillCD": 6,
-    "weapon": "11"
+    "weapon": "11",
+    "elementalType": "Pyro"
   },
   {
     "alias": [
@@ -1550,7 +1701,10 @@
     "name": "闲云",
     "nameEn": "Liuyun",
     "skillCD": 12,
-    "weapon": "10"
+    "weapon": "10",
+    "elementalType": "Anemo",
+    "normalAttack": true,
+    "elementalSkill": false
   },
   {
     "alias": [
@@ -1566,7 +1720,8 @@
     "name": "千织",
     "nameEn": "Chiori",
     "skillCD": 16,
-    "weapon": "1"
+    "weapon": "1",
+    "elementalType": "Geo"
   },
   {
     "alias": [
@@ -1581,7 +1736,8 @@
     "name": "希格雯",
     "nameEn": "Sigewinne",
     "skillCD": 18,
-    "weapon": "12"
+    "weapon": "12",
+    "elementalType": "Hydro"
   },
   {
     "alias": [
@@ -1599,7 +1755,8 @@
     "name": "阿蕾奇诺",
     "nameEn": "Arlecchino",
     "skillCD": 30,
-    "weapon": "13"
+    "weapon": "13",
+    "elementalType": "Pyro"
   },
   {
     "alias": [
@@ -1614,7 +1771,8 @@
     "name": "赛索斯",
     "nameEn": "Sethos",
     "skillCD": 8,
-    "weapon": "12"
+    "weapon": "12",
+    "elementalType": "Electro"
   },
   {
     "alias": [
@@ -1631,7 +1789,8 @@
     "name": "克洛琳德",
     "nameEn": "Clorinde",
     "skillCD": 16,
-    "weapon": "1"
+    "weapon": "1",
+    "elementalType": "Electro"
   },
   {
     "alias": [
@@ -1648,7 +1807,8 @@
     "nameEn": "Emilie",
     "skillCD": 10,
     "skillHoldCD": 14,
-    "weapon": "13"
+    "weapon": "13",
+    "elementalType": "Dendro"
   },
   {
     "alias": [
@@ -1666,7 +1826,8 @@
     "name": "卡齐娜",
     "nameEn": "Kachina",
     "skillCD": 20,
-    "weapon": "13"
+    "weapon": "13",
+    "elementalType": "Geo"
   },
   {
     "alias": [
@@ -1681,7 +1842,8 @@
     "name": "基尼奇",
     "nameEn": "Kinich",
     "skillCD": 18,
-    "weapon": "11"
+    "weapon": "11",
+    "elementalType": "Dendro"
   },
   {
     "alias": [
@@ -1700,7 +1862,10 @@
     "nameEn": "Mualani",
     "skillCD": 1.8,
     "skillHoldCD": 6,
-    "weapon": "10"
+    "weapon": "10",
+    "elementalType": "Hydro",
+    "normalAttack": true,
+    "elementalSkill": false
   },
   {
     "alias": [
@@ -1718,7 +1883,8 @@
     "name": "希诺宁",
     "nameEn": "Xilonen",
     "skillCD": 7,
-    "weapon": "1"
+    "weapon": "1",
+    "elementalType": "Geo"
   },
   {
     "alias": [
@@ -1733,7 +1899,8 @@
     "name": "恰斯卡",
     "nameEn": "Chasca",
     "skillCD": 6.5,
-    "weapon": "12"
+    "weapon": "12",
+    "elementalType": "Anemo"
   },
   {
     "alias": [
@@ -1749,7 +1916,8 @@
     "name": "欧洛伦",
     "nameEn": "Olorun",
     "skillCD": 15,
-    "weapon": "12"
+    "weapon": "12",
+    "elementalType": "Electro"
   },
   {
     "alias": [
@@ -1767,7 +1935,8 @@
     "name": "玛薇卡",
     "nameEn": "Mavuika",
     "skillCD": 15,
-    "weapon": "11"
+    "weapon": "11",
+    "elementalType": "Pyro"
   },
   {
     "alias": [
@@ -1786,7 +1955,8 @@
     "name": "茜特菈莉",
     "nameEn": "Citlali",
     "skillCD": 16,
-    "weapon": "10"
+    "weapon": "10",
+    "elementalType": "Cryo"
   },
   {
     "alias": [
@@ -1806,7 +1976,10 @@
     "name": "蓝砚",
     "nameEn": "Lanyan",
     "skillCD": 16,
-    "weapon": "10"
+    "weapon": "10",
+    "elementalType": "Anemo",
+    "normalAttack": true,
+    "elementalSkill": false
   },
   {
     "alias": [
@@ -1830,7 +2003,10 @@
     "name": "梦见月瑞希",
     "nameEn": "Mizuki",
     "skillCD": 15,
-    "weapon": "10"
+    "weapon": "10",
+    "elementalType": "Anemo",
+    "normalAttack": true,
+    "elementalSkill": false
   },
   {
     "alias": [
@@ -1846,7 +2022,8 @@
     "name": "伊安珊",
     "nameEn": "Iansan",
     "skillCD": 16,
-    "weapon": "13"
+    "weapon": "13",
+    "elementalType": "Electro"
   },
   {
     "alias": [
@@ -1869,7 +2046,10 @@
     "name": "瓦雷莎",
     "nameEn": "Varesa",
     "skillCD": 9,
-    "weapon": "10"
+    "weapon": "10",
+    "elementalType": "Electro",
+    "normalAttack": true,
+    "elementalSkill": false
   },
   {
     "alias": [
@@ -1886,7 +2066,8 @@
     "nameEn": "Escoffier",
     "skillCD": 15,
     "skillHoldCD": 6,
-    "weapon": "13"
+    "weapon": "13",
+    "elementalType": "Cryo"
   },
   {
     "alias": [
@@ -1900,7 +2081,10 @@
     "name": "伊法",
     "nameEn": "Ifa",
     "skillCD": 7.5,
-    "weapon": "10"
+    "weapon": "10",
+    "elementalType": "Anemo",
+    "normalAttack": true,
+    "elementalSkill": false
   },
   {
     "alias": [
@@ -1914,7 +2098,8 @@
     "name": "丝柯克",
     "nameEn": "SkirkNew",
     "skillCD": 8,
-    "weapon": "1"
+    "weapon": "1",
+    "elementalType": "Cryo"
   },
   {
     "alias": [
@@ -1930,7 +2115,8 @@
     "name": "塔利雅",
     "nameEn": "Dahlia",
     "skillCD": 9,
-    "weapon": "1"
+    "weapon": "1",
+    "elementalType": "Hydro"
   },
   {
     "alias": [
@@ -1944,7 +2130,10 @@
     "name": "伊涅芙",
     "nameEn": "Ineffa",
     "skillCD": 16,
-    "weapon": "13"
+    "weapon": "13",
+    "elementalType": "Electro",
+    "normalAttack": false,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -1956,7 +2145,8 @@
     "name": "菈乌玛",
     "nameEn": "Lauma",
     "skillCD": 12,
-    "weapon": "10"
+    "weapon": "10",
+    "elementalType": "Dendro"
   },
   {
     "alias": [
@@ -1969,7 +2159,8 @@
     "nameEn": "Flins",
     "skillCD": 6,
     "skillHoldCD": 16,
-    "weapon": "13"
+    "weapon": "13",
+    "elementalType": "Electro"
   },
   {
     "alias": [
@@ -1981,7 +2172,10 @@
     "name": "爱诺",
     "nameEn": "Aino",
     "skillCD": 10,
-    "weapon": "11"
+    "weapon": "11",
+    "elementalType": "Hydro",
+    "normalAttack": false,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -1993,7 +2187,8 @@
     "name": "奈芙尔",
     "nameEn": "Nefer",
     "skillCD": 9,
-    "weapon": "10"
+    "weapon": "10",
+    "elementalType": "Dendro"
   },
   {
     "alias": [
@@ -2005,7 +2200,8 @@
     "name": "杜林",
     "nameEn": "Durin",
     "skillCD": 12,
-    "weapon": "10"
+    "weapon": "1",
+    "elementalType": "Pyro"
   },
   {
     "alias": [
@@ -2017,7 +2213,8 @@
     "name": "雅珂达",
     "nameEn": "Jahoda",
     "skillCD": 15,
-    "weapon": "10"
+    "weapon": "12",
+    "elementalType": "Anemo"
   },
   {
     "alias": [
@@ -2033,7 +2230,10 @@
     "name": "哥伦比娅",
     "nameEn": "Columbina",
     "skillCD": 17,
-    "weapon": "10"
+    "weapon": "10",
+    "elementalType": "Hydro",
+    "normalAttack": true,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -2047,7 +2247,8 @@
     "name": "兹白",
     "nameEn": "Zibai",
     "skillCD": 18,
-    "weapon": "10"
+    "weapon": "1",
+    "elementalType": "Geo"
   },
   {
     "alias": [
@@ -2061,7 +2262,8 @@
     "name": "叶洛亚",
     "nameEn": "Illuga",
     "skillCD": 15,
-    "weapon": "10"
+    "weapon": "13",
+    "elementalType": "Geo"
   },
   {
     "alias": [
@@ -2076,7 +2278,8 @@
     "nameEn": "Varka",
     "skillCD": 12,
     "skillHoldCD": 8,
-    "weapon": "10"
+    "weapon": "11",
+    "elementalType": "Anemo"
   },
   {
     "alias": [
@@ -2088,7 +2291,8 @@
     "name": "莉奈娅",
     "nameEn": "Linnea",
     "skillCD": 18,
-    "weapon": "10"
+    "weapon": "12",
+    "elementalType": "Geo"
   },
   {
     "alias": [
@@ -2100,7 +2304,8 @@
     "name": "洛恩",
     "nameEn": "Lohen",
     "skillCD": 18,
-    "weapon": "10"
+    "weapon": "13",
+    "elementalType": "Cryo"
   },
   {
     "alias": [
@@ -2112,7 +2317,10 @@
     "name": "尼可",
     "nameEn": "Nicole",
     "skillCD": 16,
-    "weapon": "10"
+    "weapon": "10",
+    "elementalType": "Pyro",
+    "normalAttack": true,
+    "elementalSkill": true
   },
   {
     "alias": [
@@ -2124,7 +2332,8 @@
     "name": "布伦妮",
     "nameEn": "Prune",
     "skillCD": 15,
-    "weapon": "10"
+    "weapon": "10",
+    "elementalType": "Anemo"
   },
   {
     "alias": [
@@ -2137,7 +2346,8 @@
     "name": "桑多涅",
     "nameEn": "Marionette",
     "skillCD": 4,
-    "weapon": "10"
+    "weapon": "11",
+    "elementalType": "Cryo"
   },
   {
     "alias": [
@@ -2149,7 +2359,8 @@
     "name": "阿罗夏",
     "nameEn": "Alyosha",
     "skillCD": 15,
-    "weapon": "10"
+    "weapon": "13",
+    "elementalType": "Electro"
   },
   {
     "alias": [
@@ -2161,7 +2372,8 @@
     "name": "奥黛塔",
     "nameEn": "Odette",
     "skillCD": 15,
-    "weapon": "10"
+    "weapon": "1",
+    "elementalType": "Cryo"
   },
   {
     "id": "10000140",
@@ -2175,7 +2387,10 @@
       "沃",
       "水妖",
       "Vodyanitsa"
-    ]
+    ],
+    "elementalType": "Hydro",
+    "normalAttack": true,
+    "elementalSkill": true
   },
   {
     "id": "10000143",
@@ -2201,6 +2416,18 @@
     "alias": [
       "瓦列里",
       "Valeriy"
+    ]
+  },
+  {
+    "id": "10000136",
+    "name": "米提亚",
+    "nameEn": "Mitya",
+    "weapon": "10",
+    "skillCD": 18,
+    "burstCD": 15,
+    "alias": [
+      "米提亚",
+      "Mitya"
     ]
   }
 ]

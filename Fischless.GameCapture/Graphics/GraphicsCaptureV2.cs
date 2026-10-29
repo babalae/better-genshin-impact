@@ -150,6 +150,101 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
     private long _diagFrames;
     private long _diagCacheHits;
     private long _diagRecreates;
+
+    // Recreate 连续失败计数（消费线程 _captureGate 内访问）：失败时用于作废缓存与日志告警
+    private int _recreateFailures;
+
+    // Capture 返回空的节流日志时间点（Environment.TickCount64 毫秒）
+    private long _lastNullLogMs;
+
+    // 帧到达信号计数（仅回调线程递增，诊断用；实际取帧由消费线程在 Capture 内完成）
+    private long _arrivalSeq;
+
+    // WGC WinRT 对象（帧池/会话/捕获项）具有线程亲和性：Win10 上跨线程 Recreate 抛
+    // RPC_E_WRONG_THREAD。建池/Recreate/销毁统一路由到本实例专属泵线程执行
+    // （ffmpeg gfxcapture 的 wgc_thread 同款方案）。
+    // 泵线程是会话级资源：CompleteAdding 后下次派发时整个重建（FFmpeg 每次 config_props
+    // stop_wgc_thread + start_wgc_thread 同款语义），绝不退化为在调用线程内联执行
+    private Thread? _wgcPumpThread;
+    private BlockingCollection<Action> _wgcActions = new();
+
+    // 泵线程同步派发的等待上限（FFmpeg run_on_wgc_thread 为 1s，此处略放宽以覆盖冷启动建设备/会话）
+    private const int WgcDispatchTimeoutSeconds = 2;
+
+    private void EnsureWgcPumpThread()
+    {
+        if (_wgcPumpThread is not null && _wgcPumpThread.IsAlive && !_wgcActions.IsAddingCompleted)
+        {
+            return;
+        }
+
+        // 旧集合不 Dispose：旧泵线程可能仍在排干最后的动作，对使用中的集合 Dispose
+        // 会让其枚举抛 ObjectDisposedException 击穿泵循环（未处理异常会崩进程）
+        _wgcActions = new BlockingCollection<Action>();
+        _wgcPumpThread = new Thread(WgcPumpLoop)
+        {
+            IsBackground = true,
+            Name = "BGI-WgcCaptureV2"
+        };
+        _wgcPumpThread.Start();
+    }
+
+    private void WgcPumpLoop()
+    {
+        foreach (var action in _wgcActions.GetConsumingEnumerable())
+        {
+            action();
+        }
+    }
+
+    /// <summary>
+    /// 在 WGC 专属泵线程上同步执行动作（FFmpeg run_on_wgc_thread 同款）。
+    /// 仅泵线程重入时内联执行；其余一律排队派发，等待超时则放弃并抛出，
+    /// 绝不退化为在调用线程上执行 WinRT 调用（跨线程抛 RPC_E_WRONG_THREAD）。
+    /// 所有调用方都持 <see cref="_lock"/>，泵动作不取任何锁。
+    /// </summary>
+    private void RunOnWgcThread(Action action)
+    {
+        if (Thread.CurrentThread == _wgcPumpThread)
+        {
+            action();
+            return;
+        }
+
+        EnsureWgcPumpThread();
+        // 不能 using：超时放弃后回调仍可能被泵执行并 Set 此事件，交给 GC 回收
+        var done = new ManualResetEventSlim(false);
+        var cancelled = false;
+        Exception? error = null;
+        _wgcActions.Add(() =>
+        {
+            try
+            {
+                if (!cancelled)
+                {
+                    action();
+                }
+            }
+            catch (Exception e)
+            {
+                error = e;
+            }
+            finally
+            {
+                done.Set();
+            }
+        });
+        if (!done.Wait(TimeSpan.FromSeconds(WgcDispatchTimeoutSeconds)))
+        {
+            cancelled = true;
+            throw new TimeoutException($"[WGC V2] 泵线程执行超时（{WgcDispatchTimeoutSeconds}s），放弃本次操作");
+        }
+
+        if (error != null)
+        {
+            throw error;
+        }
+    }
     private double _sumPackMs;
     private double _sumCopyMs;
     private double _sumStageMs;
@@ -159,7 +254,15 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
 
     public void Dispose()
     {
-        Stop();
+        // CompleteAdding 必须与 RunOnWgcThread 的「IsAddingCompleted 检查 → Add」序列（均在 _lock 内）
+        // 互斥：否则 Closed 回调触发的 Stop 可能在检查通过后 Add 抛 InvalidOperationException，
+        // 异常从 WinRT 回调线程逃出导致进程崩溃
+        lock (_lock)
+        {
+            Stop();
+            _wgcActions.CompleteAdding();
+        }
+
         GC.SuppressFinalize(this);
     }
 
@@ -178,6 +281,12 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
         try
         {
             _hWnd = hWnd;
+
+            // 最小化窗口 DWM 不合成内容，WGC 不会推帧；不阻止启动（还原窗口后自动恢复），仅提示便于定位
+            if (User32.IsIconic(_hWnd))
+            {
+                Debug.WriteLine("[WGC V2] 目标窗口处于最小化状态，恢复窗口后截图才会生效");
+            }
 
             // 识别节拍可通过 settings 传入（键 MinUpdateIntervalMs，毫秒）；0 = 不启用限流
             if (settings?.TryGetValue("MinUpdateIntervalMs", out var intervalObj) == true)
@@ -223,72 +332,78 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
 
             IsCapturing = true;
 
-            try
+            // WGC WinRT 对象具有线程亲和性（Win10 上跨线程 Recreate 抛 RPC_E_WRONG_THREAD），
+            // 建池/Recreate/销毁统一路由到本实例专属泵线程执行（ffmpeg wgc_thread 同款方案）
+            RunOnWgcThread(() =>
             {
-                _captureItem = CaptureHelper.CreateItemForWindow(_hWnd);
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException(
-                    $"创建 WGC 捕获器失败，hWnd=0x{_hWnd.ToInt64():X8}，可能原因：窗口句柄失效、游戏窗口被最小化/未启动、或被其他应用/系统不支持图形捕获", e);
-            }
-
-            if (_captureItem == null)
-            {
-                throw new InvalidOperationException("Failed to create capture item.");
-            }
-
-            _capSize = _captureItem.Size;
-
-            _d3dDevice = Direct3D11Helper.CreateDevice();
-
-            // CreateFreeThreaded 契约：帧池对象可跨线程访问，不依赖 DispatcherQueue/消息泵；
-            // TryGetNextFrame/Recreate 由消费线程在 _lock 内调用（FFmpeg gfxcapture 同款需求驱动模型）
-            try
-            {
-                if (!_isHdrEnabled)
+                try
                 {
-                    throw new Exception();
+                    _captureItem = CaptureHelper.CreateItemForWindow(_hWnd);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException(
+                        $"创建 WGC 捕获器失败，hWnd=0x{_hWnd.ToInt64():X8}，可能原因：窗口句柄失效、游戏窗口被最小化/未启动、或被其他应用/系统不支持图形捕获", e);
                 }
 
-                _pixelFormat = DirectXPixelFormat.R16G16B16A16Float;
-                _captureFramePool = Direct3D11CaptureFramePool.CreateFreeThreaded(
-                    _d3dDevice,
-                    _pixelFormat,
-                    2,
-                    _captureItem.Size);
-            }
-            catch (Exception)
-            {
-                _pixelFormat = DirectXPixelFormat.B8G8R8A8UIntNormalized;
-                _captureFramePool = Direct3D11CaptureFramePool.CreateFreeThreaded(
-                    _d3dDevice,
-                    _pixelFormat,
-                    2,
-                    _captureItem.Size);
-                _isHdrEnabled = false;
-            }
+                if (_captureItem == null)
+                {
+                    throw new InvalidOperationException("Failed to create capture item.");
+                }
 
-            _captureItem.Closed += CaptureItemOnClosed;
-            _captureFramePool.FrameArrived += OnFrameArrived;
+                _capSize = _captureItem.Size;
 
-            _captureSession = _captureFramePool.CreateCaptureSession(_captureItem);
-            if (ApiInformation.IsPropertyPresent("Windows.Graphics.Capture.GraphicsCaptureSession",
-                    nameof(GraphicsCaptureSession.IsCursorCaptureEnabled)))
-            {
-                _captureSession.IsCursorCaptureEnabled = false;
-            }
+                _d3dDevice = Direct3D11Helper.CreateDevice();
 
-            if (ApiInformation.IsWriteablePropertyPresent("Windows.Graphics.Capture.GraphicsCaptureSession",
-                    nameof(GraphicsCaptureSession.IsBorderRequired)))
-            {
-                _captureSession.IsBorderRequired = false;
-            }
+                // CreateFreeThreaded 契约：帧池对象可跨线程访问，不依赖 DispatcherQueue/消息泵；
+                // TryGetNextFrame 由消费线程调用（FFmpeg gfxcapture 同款需求驱动模型），
+                // Recreate/销毁则必须回到本泵线程执行
+                try
+                {
+                    if (!_isHdrEnabled)
+                    {
+                        throw new Exception();
+                    }
 
-            // FFmpeg gfxcapture 同款：StartCapture 前设置最小更新间隔，把推帧率限到消费需求率
-            TryApplyMinUpdateInterval(_captureSession);
+                    _pixelFormat = DirectXPixelFormat.R16G16B16A16Float;
+                    _captureFramePool = Direct3D11CaptureFramePool.CreateFreeThreaded(
+                        _d3dDevice,
+                        _pixelFormat,
+                        2,
+                        _captureItem.Size);
+                }
+                catch (Exception)
+                {
+                    _pixelFormat = DirectXPixelFormat.B8G8R8A8UIntNormalized;
+                    _captureFramePool = Direct3D11CaptureFramePool.CreateFreeThreaded(
+                        _d3dDevice,
+                        _pixelFormat,
+                        2,
+                        _captureItem.Size);
+                    _isHdrEnabled = false;
+                }
 
-            _captureSession.StartCapture();
+                _captureItem.Closed += CaptureItemOnClosed;
+                _captureFramePool.FrameArrived += OnFrameArrived;
+
+                _captureSession = _captureFramePool.CreateCaptureSession(_captureItem);
+                if (ApiInformation.IsPropertyPresent("Windows.Graphics.Capture.GraphicsCaptureSession",
+                        nameof(GraphicsCaptureSession.IsCursorCaptureEnabled)))
+                {
+                    _captureSession.IsCursorCaptureEnabled = false;
+                }
+
+                if (ApiInformation.IsWriteablePropertyPresent("Windows.Graphics.Capture.GraphicsCaptureSession",
+                        nameof(GraphicsCaptureSession.IsBorderRequired)))
+                {
+                    _captureSession.IsBorderRequired = false;
+                }
+
+                // FFmpeg gfxcapture 同款：StartCapture 前设置最小更新间隔，把推帧率限到消费需求率
+                TryApplyMinUpdateInterval(_captureSession);
+
+                _captureSession.StartCapture();
+            });
             Debug.WriteLine($"[WGC V2] Start 完成: hdr={_isHdrEnabled}, fmt={_pixelFormat}, minUpdateInterval={(_minUpdateIntervalHns > 0 ? $"{_minUpdateIntervalHns / 10000.0:0.##}ms" : "off")}, capSize={_capSize.Width}x{_capSize.Height}");
             IsCapturing = true;
             lock (_lock)
@@ -465,65 +580,101 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
 
     private void OnFrameArrived(Direct3D11CaptureFramePool sender, object args)
     {
+        // ffmpeg gfxcapture 同款需求驱动模型：到达回调只做计数信号，绝不在此线程触碰 D3D11。
+        // 取帧、Recreate、绘制、回读全部由消费线程在 Capture() 内按需完成，
+        // 从根上消除"回调线程持设备锁阻塞、冻结其他线程"的通路
+        Interlocked.Increment(ref _arrivalSeq);
+    }
+
+    /// <summary>
+    /// 主动取出一帧并绘制到广播纹理（消费线程调用，必须持 <see cref="_lock"/>）。
+    /// 返回 false 表示无新帧或本帧被跳过（缓存帧仍有效）；true 表示已绘制并更新 <see cref="_gpuFrameTs"/>。
+    /// </summary>
+    private bool TryRenderNewFrameLocked()
+    {
+        using var frame = _captureFramePool?.TryGetNextFrame();
+        if (frame == null)
+        {
+            return false;
+        }
+
+        var frameTs = frame.SystemRelativeTime.Ticks;
+
+        // ContentSize 变化 → Recreate + 刷新客户区（FFmpeg gfxcapture 同款，在消费侧执行）
+        var contentSize = frame.ContentSize;
+        if (contentSize.Width != _capSize.Width || contentSize.Height != _capSize.Height)
+        {
+            // 最小化窗口的 ContentSize 会缩成图标尺寸，此时不 Recreate（对齐 V1 的 IsIconic 保护）：
+            // 保留现有资源与缓存帧继续供图，窗口还原后尺寸再变化时自然恢复
+            if (User32.IsIconic(_hWnd))
+            {
+                return false;
+            }
+
+            _diagRecreates++;
+            Debug.WriteLine($"[WGC V2] Recreate: {_capSize.Width}x{_capSize.Height} -> {contentSize.Width}x{contentSize.Height}");
+
+            // Recreate 必须在帧池的创建线程上执行（跨线程抛 RPC_E_WRONG_THREAD）；
+            // 失败异常交由 Capture() 的阶段0兜底记录并跳过本帧
+            // 此处池必然存在：上方 TryGetNextFrame 即在其上成功取帧（且与 Stop 持 _lock 互斥）
+            var framePool = _captureFramePool!;
+            try
+            {
+                RunOnWgcThread(() => framePool.Recreate(_d3dDevice, _pixelFormat, 2, contentSize));
+                _recreateFailures = 0;
+            }
+            catch (Exception e)
+            {
+                // FFmpeg gfxcapture 同款哲学：Recreate 失败必须响亮。池未建成时 _capSize 保持旧值，
+                // 后续帧继续重试；同时作废广播帧与缓存时间戳，让 Capture 返回空（上层按截图失败处理），
+                // 而不是持续输出变尺寸前的旧画面（静默冻结）
+                _recreateFailures++;
+                _gpuFrameTs = 0;
+                _cachedFrameTs = 0;
+                Debug.WriteLine($"[WGC V2] Recreate 失败（连续 {_recreateFailures} 次）: {e.GetType().Name}: {e.Message}");
+                return false;
+            }
+
+            _capSize = contentSize;
+            (_region, _captureRect) = GetGameScreenInfo(_hWnd);
+
+            // 单飞闸门保证同一时刻只有一个 Capture 在执行，Recreate 时不存在在途阶段2消费，
+            // 可直接销毁旧尺寸资源（ Ensure* 会按新尺寸惰性重建）
+            _packUav?.Dispose();
+            _packUav = null;
+            _packGpuBuf?.Dispose();
+            _packGpuBuf = null;
+            _packStagingBuf?.Dispose();
+            _packStagingBuf = null;
+            _stagingTexture?.Dispose();
+            _stagingTexture = null;
+            _gpuTexture?.Dispose();
+            _gpuTexture = null;
+            _cachedBgr?.Dispose();
+            _cachedBgr = null;
+            _cachedFrameTs = 0;
+            _gpuFrameTs = 0;
+            _hdrOutputTexture?.Dispose();
+            _hdrOutputTexture = null;
+            _hdrOutputUav?.Dispose();
+            _hdrOutputUav = null;
+
+            // 本帧 surface 仍是 Recreate 前的旧尺寸，与刚按新窗口几何刷新的 _region 不匹配：
+            // 变大时 CopySubresourceRegion 源越界（E_INVALIDARG）/ draw 采样 UV 越界。
+            // 跳过本帧，待 Recreate 后的新尺寸帧到达再渲染
+            return false;
+        }
+
         try
         {
-            // 到达时机 = DWM 写完该帧、所有权刚释放——此时拷贝无跨进程同步等待
-            lock (_lock)
+            using var surface = Direct3D11Helper.CreateSharpDXTexture2D(frame.Surface);
+            var source = _isHdrEnabled ? ProcessHdrTexture(surface) : surface;
+            var d3dDevice = source.Device;
+            EnsureGpuTexture(d3dDevice, contentSize.Width, contentSize.Height, _region);
+            var context = d3dDevice.ImmediateContext;
+
+            if (_useDrawWrite)
             {
-                if (!IsCapturing || _captureFramePool == null || _d3dDevice == null) return;
-
-                using var frame = sender.TryGetNextFrame();
-                if (frame == null) return;
-
-                var frameTs = frame.SystemRelativeTime.Ticks;
-
-                // ContentSize 变化 → Recreate + 刷新客户区（FFmpeg gfxcapture 同款）
-                var contentSize = frame.ContentSize;
-                if (contentSize.Width != _capSize.Width || contentSize.Height != _capSize.Height)
-                {
-                    _diagRecreates++;
-                    Debug.WriteLine($"[WGC V2] Recreate: {_capSize.Width}x{_capSize.Height} -> {contentSize.Width}x{contentSize.Height}");
-                    _captureFramePool.Recreate(_d3dDevice, _pixelFormat, 2, contentSize);
-                    _capSize = contentSize;
-                    (_region, _captureRect) = GetGameScreenInfo(_hWnd);
-
-                    // 先挡住新的 Capture()，再等在途捕获退出（其可能正在锁外 Map staging/读缓存），
-                    // 之后才允许销毁资源，否则会踩到已释放纹理
-                    while (_activeCaptures > 0)
-                    {
-                        Monitor.Wait(_lock);
-                    }
-
-                    _packUav?.Dispose();
-                    _packUav = null;
-                    _packGpuBuf?.Dispose();
-                    _packGpuBuf = null;
-                    _packStagingBuf?.Dispose();
-                    _packStagingBuf = null;
-                    _stagingTexture?.Dispose();
-                    _stagingTexture = null;
-                    _gpuTexture?.Dispose();
-                    _gpuTexture = null;
-                    _cachedBgr?.Dispose();
-                    _cachedBgr = null;
-                    _cachedFrameTs = 0;
-                    _gpuFrameTs = 0;
-                    _hdrOutputTexture?.Dispose();
-                    _hdrOutputTexture = null;
-                    _hdrOutputUav?.Dispose();
-                    _hdrOutputUav = null;
-                    return;
-                }
-
-                using var surface = Direct3D11Helper.CreateSharpDXTexture2D(frame.Surface);
-                var source = _isHdrEnabled ? ProcessHdrTexture(surface) : surface;
-                var d3dDevice = source.Device;
-                EnsureGpuTexture(d3dDevice, contentSize.Width, contentSize.Height, _region);
-                EnsureDrawResources(d3dDevice);
-                var context = d3dDevice.ImmediateContext;
-
-                if (_useDrawWrite)
-                {
                 // FFmpeg gfxcapture 式 draw 写入：客户区裁剪折进 UV 窗口，一次 draw 渲染进自有纹理
                 var drawStage = "EnsureDrawResources";
                 try
@@ -539,7 +690,9 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
                     var uvMaxY = region == null ? 1f : region.Value.Bottom / (float)srcH;
 
                     drawStage = "MapConstantBuffer";
-                    // 必须 WriteDiscard：cb 仍绑定在上一帧 draw 的 PS 槽上，普通 Write 会 E_INVALIDARG
+                    // 必须 WriteDiscard：cb 仍绑定在上一帧 draw 的 PS 槽上，普通 Write 会 E_INVALIDARG。
+                    // 注意 WriteDiscard 不能与 DoNotWait 组合（运行时校验直接 E_INVALIDARG）；
+                    // GPU 积压时的阻塞由需求驱动模型收束在消费线程自身，无跨线程冻结
                     var cbMap = context.MapSubresource(_drawCb, 0, MapMode.WriteDiscard, SharpDX.Direct3D11.MapFlags.None);
                     Marshal.WriteInt32(cbMap.DataPointer, 0, BitConverter.SingleToInt32Bits(uvMinX));
                     Marshal.WriteInt32(cbMap.DataPointer, 4, BitConverter.SingleToInt32Bits(uvMinY));
@@ -569,36 +722,43 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
                     context.PixelShader.SetShaderResource(0, null);
                     context.OutputMerger.SetTargets((RenderTargetView)null!);
                 }
+                catch (SharpDXException e)
+                {
+                    HandleSharpDxError(e);
+                    return false;
+                }
                 catch (Exception e)
                 {
                     Debug.WriteLine($"[WGC V2][draw] 失败于 {drawStage}: {e.Message}");
-                    throw;
+                    return false;
                 }
+            }
+            else
+            {
+                // 旧版拷贝路径（A/B 对比用）
+                if (_region != null)
+                {
+                    context.CopySubresourceRegion(source, 0, _region, _gpuTexture, 0);
                 }
                 else
                 {
-                    // 旧版拷贝路径（A/B 对比用）
-                    if (_region != null)
-                    {
-                        context.CopySubresourceRegion(source, 0, _region, _gpuTexture, 0);
-                    }
-                    else
-                    {
-                        context.CopyResource(source, _gpuTexture);
-                    }
+                    context.CopyResource(source, _gpuTexture);
                 }
-
-                _gpuFrameTs = frameTs;
-                _diagFrames++;
             }
+
+            _gpuFrameTs = frameTs;
+            _diagFrames++;
+            return true;
         }
         catch (SharpDXException e)
         {
             HandleSharpDxError(e);
+            return false;
         }
         catch (Exception e)
         {
-            Debug.WriteLine($"[WGC V2] FrameArrived 异常: {e.Message}");
+            Debug.WriteLine($"[WGC V2] 渲染新帧失败: {e.Message}");
+            return false;
         }
     }
 
@@ -617,7 +777,46 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
             var isCacheHit = false;
             lock (_lock)
             {
-                if (!IsCapturing || _gpuTexture == null || _gpuFrameTs == 0) return null;
+                if (!IsCapturing)
+                {
+                    // 按秒级节流输出原因，避免静默返回导致"持续截图失败"无从定位
+                    var nowMs = Environment.TickCount64;
+                    if (nowMs - _lastNullLogMs >= 1000)
+                    {
+                        _lastNullLogMs = nowMs;
+                        Debug.WriteLine("[WGC V2] Capture 返回空: 会话未启动或已停止");
+                    }
+
+                    return null;
+                }
+
+                // 阶段0（需求驱动）：消费线程主动取帧并绘制，回调线程只做信号计数。
+                // 任何异常都不允许逃出 Capture——触发器线程会因此整个停摆
+                try
+                {
+                    TryRenderNewFrameLocked();
+                }
+                catch (Exception e)
+                {
+                    var nowMs = Environment.TickCount64;
+                    if (nowMs - _lastNullLogMs >= 1000)
+                    {
+                        _lastNullLogMs = nowMs;
+                        Debug.WriteLine($"[WGC V2] 取帧/绘制异常: {e.GetType().Name}: {e.Message}");
+                    }
+                }
+
+                if (_gpuTexture == null || _gpuFrameTs == 0)
+                {
+                    var nowMs = Environment.TickCount64;
+                    if (nowMs - _lastNullLogMs >= 1000)
+                    {
+                        _lastNullLogMs = nowMs;
+                        Debug.WriteLine("[WGC V2] Capture 返回空: 尚未收到任何帧（DWM 未推帧，目标窗口可能最小化或尚未渲染）");
+                    }
+
+                    return null;
+                }
 
                 rect = _captureRect;
                 frameTs = _gpuFrameTs;
@@ -683,7 +882,7 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
                 if (_diagTicks % 100 == 0)
                 {
                     Debug.WriteLine(
-                        $"[WGC V2][diag] ticks={_diagTicks} arrivals={_diagFrames} cacheHits={_diagCacheHits} recreates={_diagRecreates} " +
+                        $"[WGC V2][diag] ticks={_diagTicks} frames={_diagFrames} arrivals={Interlocked.Read(ref _arrivalSeq)} cacheHits={_diagCacheHits} recreates={_diagRecreates} " +
                         $"avgMs: pack={_sumPackMs / 100:0.00} copy={_sumCopyMs / 100:0.00} stage={_sumStageMs / 100:0.00} cvt={_sumCvtMs / 100:0.00} map={_sumMapMs / 100:0.00} clone={_sumCloneMs / 100:0.00}");
                     _sumPackMs = _sumCopyMs = _sumStageMs = _sumCvtMs = _sumMapMs = _sumCloneMs = 0;
                 }
@@ -702,7 +901,8 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
                 }
                 else if (_useCpuConvert)
                 {
-                    // 阶段2（锁外，CPU 转换回退路径）：Map BGRA staging 纹理 → CvtColor 写缓存 → 克隆给消费者
+                    // 阶段2（锁外，CPU 转换回退路径）：Map BGRA staging 纹理 → CvtColor 写缓存 → 克隆给消费者。
+                    // 普通阻塞 MAP_READ（ffmpeg hwcontext 同款）：等的是自己刚提交的按序拷贝，只阻塞消费线程自身
                     var context = d3dDevice!.ImmediateContext;
                     var stagingDesc = _stagingTexture!.Description;
                     var ts2 = Stopwatch.GetTimestamp();
@@ -730,7 +930,8 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
                 else
                 {
                     // 阶段2（锁外）：Map staging buffer——内容已是 GPU 打包好的 BGR24（= CV_8UC3 内存布局），
-                    // 直接包装读取并写入缓存 + 克隆给消费者（CPU 零转换）
+                    // 直接包装读取并写入缓存 + 克隆给消费者（CPU 零转换）。
+                    // 普通阻塞 MAP_READ（ffmpeg hwcontext 同款）
                     var context = d3dDevice!.ImmediateContext;
                     var ts2 = Stopwatch.GetTimestamp();
                     var dataBox = context.MapSubresource(_packStagingBuf, 0, MapMode.Read, SharpDX.Direct3D11.MapFlags.None);
@@ -882,16 +1083,30 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
         {
             IsCapturing = false;
             _hWnd = 0;
-            if (_captureItem != null)
-            {
-                _captureItem.Closed -= CaptureItemOnClosed;
-            }
 
-            _captureSession?.Dispose();
-            _captureSession = null;
-            _captureFramePool?.Dispose();
-            _captureFramePool = null;
-            _captureItem = null;
+            // WinRT 对象销毁同样必须回到泵线程（与创建同线程）。
+            // 失败/超时也必须继续本地清理（FFmpeg wgc_stop_capture_session 同款：CHECK_HR_LOG 后照常 Reset）；
+            // Stop 可能由 Closed 事件回调线程触发，异常逃出会击穿 WinRT 回调导致进程崩溃
+            try
+            {
+                RunOnWgcThread(() =>
+                {
+                    if (_captureItem != null)
+                    {
+                        _captureItem.Closed -= CaptureItemOnClosed;
+                    }
+
+                    _captureSession?.Dispose();
+                    _captureSession = null;
+                    _captureFramePool?.Dispose();
+                    _captureFramePool = null;
+                    _captureItem = null;
+                });
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine($"[WGC V2] Stop 时泵线程清理失败（继续本地清理）: {e.GetType().Name}: {e.Message}");
+            }
 
             // IsCapturing=false 已挡住新的 Capture()；等待在途捕获（正锁外 Map/CvtColor）退出，
             // 才能销毁其正在使用的 staging/纹理/设备。Monitor.Wait 原子放锁，捕获 finally 归零时唤醒

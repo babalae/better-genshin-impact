@@ -390,8 +390,8 @@ public partial class AutoPickTrigger : ITaskTrigger
                 return;
             }
 
-            // 单个字符不拾取
-            if (text.Length <= 1)
+            // 单个字符不拾取，盐、糖除外
+            if (text.Length <= 1 && text != "盐" && text != "糖")
             {
                 return;
             }

@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<AssemblyName>BetterGI</AssemblyName>
-		<Version>0.66.2-alpha.4</Version>
+		<Version>0.66.3-alpha.1</Version>
 		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
@@ -50,13 +50,13 @@
 		<PackageReference Include="AvalonEdit" Version="6.3.1.120" />
 
 		<PackageReference Include="BetterGI.VCRuntime" Version="14.44.35208" />
-		<PackageReference Include="BetterGI.Assets.Map" Version="1.0.24" />
+		<PackageReference Include="BetterGI.Assets.Map" Version="1.0.25" />
         <PackageReference Include="BetterGI.Assets.Model" Version="1.0.40" />
         <!-- ncnn Vulkan 胶水层原生库：源与产物见 ../bettergi-ncnn-shim 独立仓库；
              dll 位于包内 runtimes/win-x64/native/，由 NuGet 原生包标准布局随构建复制、
              运行时经 NativeLibrary 裸名解析（不再使用自定义 targets 部署） -->
         <PackageReference Include="Guamian.BetterGI.NcnnShim" Version="0.1.2" />
-		<PackageReference Include="BetterGI.Assets.Other" Version="1.0.27" />
+		<PackageReference Include="BetterGI.Assets.Other" Version="1.0.28" />
 
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
 		<PackageReference Include="Clipper2" Version="2.0.0" />
