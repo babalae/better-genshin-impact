@@ -3,12 +3,14 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.ViewModel.Windows.Pulonia;
 using BetterGenshinImpact.ViewModel.Resin;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.ViewModel.Pages.Pulonia;
 
@@ -55,6 +57,21 @@ public partial class PuloniaOneDragonParameterFieldViewModel : ObservableObject
     public bool IsCombatStrategy => _scalar.IsCombatStrategyEditor;
     /// <summary>是否为秘境选择框。</summary>
     public bool IsDomain => _scalar.IsDomainEditor;
+    /// <summary>秘境选择框的选项，按字段类型筛选（备选秘境、盛材移涌、祝圣移涌）；非秘境字段为空。</summary>
+    public IReadOnlyList<ICascadingItem> DomainItems { get; }
+    /// <summary>
+    /// 秘境选择框的选中项，与 <see cref="TextValue"/> 互转：移涌活动秘境的空值显示为“跟随培养计划”，选中它时保存为空字符串。
+    /// 选择框给出空选项时不改写，清空由选择框的清空按钮直接写回 <see cref="TextValue"/>。
+    /// </summary>
+    public ICascadingItem? SelectedDomainItem
+    {
+        get => IsDomain ? TrainingGuideDomainOptions.Find(DomainItems, TextValue) : null;
+        set
+        {
+            if (value?.Tag is not string tag || string.IsNullOrWhiteSpace(tag)) return;
+            TextValue = tag == TrainingGuideDomainOptions.FollowTrainingPlanOption ? string.Empty : tag;
+        }
+    }
     /// <summary>当前任务允许的策略类型。</summary>
     public CombatStrategyKind AllowedStrategyKinds => _scalar.AllowedStrategyKinds;
     /// <summary>是否为数字输入框。</summary>
@@ -68,7 +85,17 @@ public partial class PuloniaOneDragonParameterFieldViewModel : ObservableObject
     /// <summary>数值编辑草稿。</summary>
     [ObservableProperty] private double _numberValue;
     /// <summary>文本或高级 JSON 草稿。</summary>
-    public string TextValue { get => _scalar.TextValue; set { _scalar.TextValue = value; OnPropertyChanged(); } }
+    public string TextValue
+    {
+        get => _scalar.TextValue;
+        set
+        {
+            _scalar.TextValue = value;
+            OnPropertyChanged();
+            // 秘境选择框的选中项由文本换算，清空或选择后同步刷新
+            if (IsDomain) OnPropertyChanged(nameof(SelectedDomainItem));
+        }
+    }
     /// <summary>开关草稿。</summary>
     public bool BooleanValue { get => _scalar.BooleanValue; set { _scalar.BooleanValue = value; OnPropertyChanged(); } }
     /// <summary>下拉选项草稿。</summary>
@@ -92,6 +119,7 @@ public partial class PuloniaOneDragonParameterFieldViewModel : ObservableObject
         DisplayName = schema.Value<string>("title") ?? PuloniaTaskFieldNames.GetDisplayName(displayKey);
         _original = value?.DeepClone();
         _scalar = new(name, schema, value, value is not null, required, dialogs);
+        DomainItems = IsDomain ? TrainingGuideDomainOptions.ForPicker(_scalar.DomainPicker) : [];
         if (Resin is not null)
             Resin.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(Resin.Value)) OnPropertyChanged(nameof(Resin)); };
         Description = schema.Value<string>("description") ?? (required ? "请选择或填写此项设置。" : "未修改的设置继续使用参数来源中的值。");

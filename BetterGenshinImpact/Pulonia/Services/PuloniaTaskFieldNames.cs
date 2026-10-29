@@ -48,6 +48,7 @@ public static class PuloniaTaskFieldNames
         { "training_guide_low_ar_adaptation_enabled", "低冒险等阶适配" },
         { "training_guide_fallback_domain_name", "备选秘境" },
         { "training_guide_fallback_sunday_selected_value", "备选秘境周日奖励序号" },
+        { "material_overflow_domain_name", "盛材移涌秘境" }, { "blessing_overflow_domain_name", "祝圣移涌秘境" },
         { "training_targets_json", "自定义培养目标" },
 
         // 1.2 体力计划参数与结果

@@ -41,12 +41,17 @@ public sealed record ResinPlanSubTaskSpec(
     /// <summary>体力计划内首领树脂编辑器的能力键：只用原粹，不提供须臾、脆弱补充。</summary>
     public const string BossResinTaskKey = "resin_plan.boss";
 
-    /// <summary>自动秘境：根据提升指南养成；树脂、秘境与奖励识别由体力计划决定，备选秘境用于剩余树脂。</summary>
+    /// <summary>
+    /// 自动秘境：根据提升指南养成；树脂、秘境与奖励识别由体力计划决定，备选秘境用于剩余树脂，
+    /// 盛材移涌与祝圣移涌的秘境单独选择（默认跟随培养计划）。
+    /// </summary>
     public static ResinPlanSubTaskSpec Domain { get; } = new("domain", AutoDomainTask.TaskId, "自动秘境",
-        "按游戏内养成计划（冒险之证 → 提升指南）选择秘境，可连续刷多个秘境；剩余树脂可刷备选秘境。",
+        "按游戏内养成计划（冒险之证 → 提升指南）选择秘境，可连续刷多个秘境；剩余树脂可刷备选秘境；移涌活动的秘境在设置中选择，默认跟随培养计划。",
         ["resin_usage", "domain_name", "sunday_selected_value", "training_guide_calculate_runs_enabled",
             "reward_recognition_enabled", "target_items", "training_targets_json"],
-        [("party_name", "队伍"), ("training_guide_fallback_domain_name", "备选秘境")]);
+        // 移涌活动秘境为空表示跟随培养计划，摘要只显示手动指定的秘境
+        [("party_name", "队伍"), ("training_guide_fallback_domain_name", "备选秘境"),
+            ("material_overflow_domain_name", "盛材移涌"), ("blessing_overflow_domain_name", "祝圣移涌")]);
 
     /// <summary>
     /// 自动首领讨伐：次数沿用首领自己的树脂使用设置（指定次数或刷至耗尽），在体力计划中只用原粹，不使用须臾、脆弱补充。

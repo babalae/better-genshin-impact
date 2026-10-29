@@ -13,9 +13,14 @@ namespace BetterGenshinImpact.ViewModel.SoloTaskSettings;
 public partial class AutoDomainSettingsViewModel : SoloTaskSettingsViewModel
 {
     /// <inheritdoc />
+    /// <remarks>
+    /// 移涌活动秘境只在体力计划中生效，界面不提供编辑；列在这里使其在普通自动秘境节点中不显示为通用卡片，并保持原值。
+    /// 体力计划的子任务设置弹窗直接按 Schema 生成卡片，不受此影响。
+    /// </remarks>
     public override string[] EditedParameterNames =>
     [
-        "party_name", "domain_name", "sunday_selected_value", "combat_strategy_path", "auto_artifact_salvage", "max_artifact_star", "reward_recognition_enabled", "resin_usage"
+        "party_name", "domain_name", "sunday_selected_value", "combat_strategy_path", "auto_artifact_salvage", "max_artifact_star", "reward_recognition_enabled", "resin_usage",
+        "material_overflow_domain_name", "blessing_overflow_domain_name"
     ];
 
     /// <summary>周日或限时秘境的奖励序号选项；与旧一条龙的下拉一致。</summary>

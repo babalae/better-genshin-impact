@@ -4,9 +4,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                     xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta"
-                    xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
-                    xmlns:converters="clr-namespace:BetterGenshinImpact.View.Converters"
-                    xmlns:training="clr-namespace:BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide">
+                    xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior">
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="/BetterGI;component/View/Controls/Resin/ResinUsageResources.xaml" />
     </ResourceDictionary.MergedDictionaries>
@@ -22,9 +20,6 @@
 
     <!--  布尔→可见性转换器：保证每个字段只渲染与其类型匹配的编辑器（键名按契约固定）  -->
     <BooleanToVisibilityConverter x:Key="FieldVisibility" />
-
-    <!--  秘境名称与级联选项互转；放在本字典内，保证使用方窗口无需额外合并资源  -->
-    <converters:DomainNameToCascadingItemConverter x:Key="FieldDomainNameConverter" />
 
     <!--
         参数字段递归模板。
@@ -127,7 +122,10 @@
                 <combat:CombatStrategyPicker Width="288" VerticalAlignment="Center" Margin="0" HorizontalAlignment="Right" Strategy="{Binding TextValue, Mode=TwoWay}" AllowedKinds="{Binding AllowedStrategyKinds, Mode=OneWay}" />
             </ui:CardControl>
 
-            <!--  秘境字段：与自动秘境设置一致的按国家分组选择框，只列出可手动刷取的秘境；清空按钮写回空字符串  -->
+            <!--
+                秘境字段：与自动秘境设置一致的按国家分组选择框，只列出可手动刷取的秘境；清空按钮写回空字符串。
+                选项按字段类型由 VM 提供：体力计划的移涌活动秘境只列出对应类型，首项为“跟随培养计划”（保存为空字符串）。
+            -->
             <ui:CardControl Margin="0,0,0,8"
                             Visibility="{Binding IsDomain, Converter={StaticResource FieldVisibility}, Mode=OneWay}">
                 <ui:CardControl.Header>
@@ -151,8 +149,8 @@
                                        HorizontalAlignment="Right"
                                        behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding TextValue, Mode=TwoWay}"
                                        behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
-                                       ItemsSource="{x:Static training:TrainingGuideDomainOptions.Items}"
-                                       SelectedCascadingItem="{Binding TextValue, Mode=TwoWay, Converter={StaticResource FieldDomainNameConverter}}" />
+                                       ItemsSource="{Binding DomainItems, Mode=OneWay}"
+                                       SelectedCascadingItem="{Binding SelectedDomainItem, Mode=TwoWay}" />
             </ui:CardControl>
 
             <!--  文本字段：右侧文本框  -->

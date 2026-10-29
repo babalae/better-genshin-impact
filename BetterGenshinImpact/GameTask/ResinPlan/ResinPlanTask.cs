@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoBoss;
 using BetterGenshinImpact.GameTask.AutoDomain;
+using BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
@@ -334,7 +335,7 @@ public sealed class ResinPlanTask : ISoloTask<ResinPlanParam, ResinPlanData>
             return;
         }
 
-        var domain = BuildFallbackDomainParam(domainParam, fallback, usage);
+        var domain = BuildManualDomainParam(domainParam, fallback, domainParam.TrainingGuideFallbackSundaySelectedValue, usage);
         await ExecuteAsync(run, step, async () => await new AutoDomainTask(_runtime, _config).ExecuteAsync(domain, ct), ct);
     }
 
@@ -373,14 +374,24 @@ public sealed class ResinPlanTask : ISoloTask<ResinPlanParam, ResinPlanData>
                 return;
             }
 
-            // 2. 盛材移涌：按提升指南选择秘境，参数改写与秘境养成相同，只有树脂设置不同
+            // 2. 盛材移涌：跟随培养计划时按提升指南选择秘境（参数改写与秘境养成相同，只有树脂设置不同）；也可指定精通或炼武秘境
             case ResinPlanOverflowEvent.MaterialOverflow:
             {
-                var step = run.AddStep(ResinPlanStage.Event, $"{name}·秘境养成", AutoDomainTask.TaskId, AutoDomainTask.TrainingGuideOption);
+                var chosen = OverflowDomainName(param.Domain.Param.MaterialOverflowDomainName);
+                var follow = chosen.Length == 0;
+                var step = run.AddStep(ResinPlanStage.Event, follow ? $"{name}·秘境养成" : $"{name}·指定秘境", AutoDomainTask.TaskId,
+                    follow ? AutoDomainTask.TrainingGuideOption : chosen);
                 step.RewardsRecognized = true;
                 if (!param.Domain.Enabled)
                 {
                     Skip(step, ResinPlanReasons.EventTaskDisabled, $"{name}需要开启自动秘境，本次不单独领取。");
+                    return;
+                }
+
+                if (!follow && !IsMaterialDomain(chosen))
+                {
+                    Skip(step, ResinPlanReasons.EventDomainMissing,
+                        $"{name}只对精通秘境和炼武秘境生效，自动秘境设置中的盛材移涌秘境“{chosen}”不是这两类秘境。");
                     return;
                 }
 
@@ -389,16 +400,21 @@ public sealed class ResinPlanTask : ISoloTask<ResinPlanParam, ResinPlanData>
                     return;
                 }
 
-                var domain = BuildTrainingDomainParam(param.Domain.Param, usage);
+                // 指定秘境时由游戏决定周日入口，奖励序号不另设
+                var domain = follow
+                    ? BuildTrainingDomainParam(param.Domain.Param, usage)
+                    : BuildManualDomainParam(param.Domain.Param, chosen, string.Empty, usage);
                 await ExecuteAsync(run, step, async () => await new AutoDomainTask(_runtime, _config).ExecuteAsync(domain, ct), ct);
                 return;
             }
 
-            // 3. 祝圣移涌：只在祝圣秘境生效，使用自动秘境设置中的备选秘境
+            // 3. 祝圣移涌：只在祝圣秘境生效；跟随培养计划时刷提升指南中养成角色推荐圣遗物所在的秘境，也可指定祝圣秘境
             case ResinPlanOverflowEvent.BlessingOverflow:
             {
-                var fallback = FallbackDomainName(param.Domain.Param);
-                var step = run.AddStep(ResinPlanStage.Event, $"{name}·备选秘境", AutoDomainTask.TaskId, fallback);
+                var chosen = OverflowDomainName(param.Domain.Param.BlessingOverflowDomainName);
+                var follow = chosen.Length == 0;
+                var step = run.AddStep(ResinPlanStage.Event, $"{name}·祝圣秘境", AutoDomainTask.TaskId,
+                    follow ? TrainingGuideDomainOptions.FollowTrainingPlanOption : chosen);
                 step.RewardsRecognized = true;
                 if (!param.Domain.Enabled)
                 {
@@ -406,11 +422,10 @@ public sealed class ResinPlanTask : ISoloTask<ResinPlanParam, ResinPlanData>
                     return;
                 }
 
-                if (!IsBlessDomain(fallback))
+                if (!follow && !IsBlessDomain(chosen))
                 {
-                    Skip(step, ResinPlanReasons.EventDomainMissing, fallback.Length == 0
-                        ? $"{name}需要在自动秘境设置中把备选秘境设为祝圣秘境（圣遗物秘境），当前未设置。"
-                        : $"{name}需要在自动秘境设置中把备选秘境设为祝圣秘境（圣遗物秘境），当前的“{fallback}”不是祝圣秘境。");
+                    Skip(step, ResinPlanReasons.EventDomainMissing,
+                        $"{name}只对祝圣秘境（圣遗物秘境）生效，自动秘境设置中的祝圣移涌秘境“{chosen}”不是祝圣秘境。");
                     return;
                 }
 
@@ -419,7 +434,21 @@ public sealed class ResinPlanTask : ISoloTask<ResinPlanParam, ResinPlanData>
                     return;
                 }
 
-                var domain = BuildFallbackDomainParam(param.Domain.Param, fallback, usage);
+                // 跟随培养计划：确认有树脂可领后再读取提升指南，避免树脂不足时白跑一趟
+                if (follow)
+                {
+                    chosen = await FindTrainingPlanArtifactDomainAsync(ct);
+                    if (chosen.Length == 0)
+                    {
+                        Skip(step, ResinPlanReasons.EventDomainMissing,
+                            $"{name}跟随培养计划，但提升指南中没有圣遗物秘境：请先在游戏内把要培养圣遗物的角色加入养成计划，或在自动秘境设置中指定祝圣移涌秘境。");
+                        return;
+                    }
+
+                    step.Target = chosen;
+                }
+
+                var domain = BuildManualDomainParam(param.Domain.Param, chosen, string.Empty, usage);
                 await ExecuteAsync(run, step, async () => await new AutoDomainTask(_runtime, _config).ExecuteAsync(domain, ct), ct);
                 return;
             }
@@ -521,17 +550,61 @@ public sealed class ResinPlanTask : ISoloTask<ResinPlanParam, ResinPlanData>
             .Sum(overflow => ResinPlanBudget.OverflowReserve(OverflowDoubles(overflow), param.EventStrictResin));
     }
 
-    /// <summary>移涌领取的前提是否满足：对应子任务已开启；祝圣移涌另需备选秘境是祝圣秘境。</summary>
+    /// <summary>
+    /// 移涌领取的前提是否满足：对应子任务已开启；指定了移涌活动秘境时，秘境类型须与活动一致。
+    /// 祝圣移涌跟随培养计划时，提升指南中有没有圣遗物秘境要到领取时才知道，这里按会领取预留。
+    /// </summary>
     /// <param name="param">体力计划参数。</param>
     /// <param name="kind">移涌活动。</param>
     /// <returns>前提满足时返回 true。</returns>
-    private static bool CanClaimOverflow(ResinPlanParam param, ResinPlanOverflowEvent kind) => kind switch
+    private static bool CanClaimOverflow(ResinPlanParam param, ResinPlanOverflowEvent kind)
     {
-        ResinPlanOverflowEvent.LeyLineOverflow => param.LeyLine.Enabled,
-        ResinPlanOverflowEvent.MaterialOverflow => param.Domain.Enabled,
-        ResinPlanOverflowEvent.BlessingOverflow => param.Domain.Enabled && IsBlessDomain(FallbackDomainName(param.Domain.Param)),
-        _ => false
-    };
+        var domain = param.Domain.Param;
+        return kind switch
+        {
+            ResinPlanOverflowEvent.LeyLineOverflow => param.LeyLine.Enabled,
+            ResinPlanOverflowEvent.MaterialOverflow => param.Domain.Enabled
+                && OverflowDomainName(domain.MaterialOverflowDomainName) is var material
+                && (material.Length == 0 || IsMaterialDomain(material)),
+            ResinPlanOverflowEvent.BlessingOverflow => param.Domain.Enabled
+                && OverflowDomainName(domain.BlessingOverflowDomainName) is var blessing
+                && (blessing.Length == 0 || IsBlessDomain(blessing)),
+            _ => false
+        };
+    }
+
+    /// <summary>
+    /// 读取提升指南，取列表中第一个祝圣秘境（养成计划角色推荐圣遗物所在的秘境）；没有或读取失败时返回空字符串。
+    /// </summary>
+    /// <param name="ct">取消令牌。</param>
+    /// <returns>祝圣秘境名；没有时为空字符串。</returns>
+    private async Task<string> FindTrainingPlanArtifactDomainAsync(CancellationToken ct)
+    {
+        try
+        {
+            var domains = await new AutoDomainTask(_runtime, _config).ScanTrainingGuideArtifactDomainsAsync(ct);
+            return domains.FirstOrDefault(IsBlessDomain) ?? string.Empty;
+        }
+        catch (Exception e) when (e is not NormalEndException and not OperationCanceledException)
+        {
+            // 提升指南识别失败按“没有圣遗物秘境”处理，只跳过本次祝圣移涌
+            Logger.LogWarning("{Name}：读取提升指南中的圣遗物秘境失败：{Message}", TaskName, e.Message);
+            await SafeReturnMainUiAsync(ct);
+            return string.Empty;
+        }
+    }
+
+    /// <summary>
+    /// 自动秘境设置中的移涌活动秘境；空字符串、“跟随培养计划”或“根据提升指南选择秘境”都表示跟随培养计划，返回空字符串。
+    /// </summary>
+    /// <param name="value">参数中保存的秘境名。</param>
+    /// <returns>指定的秘境名；跟随培养计划时为空字符串。</returns>
+    private static string OverflowDomainName(string? value)
+        => string.IsNullOrWhiteSpace(value)
+           || value == TrainingGuideDomainOptions.FollowTrainingPlanOption
+           || value == AutoDomainTask.TrainingGuideOption
+            ? string.Empty
+            : value;
 
     /// <summary>今日剩余双倍次数；读不到时按每日次数安排，多出的领取按普通奖励结算，树脂不会浪费。</summary>
     /// <param name="overflow">识别到的移涌活动。</param>
@@ -551,10 +624,21 @@ public sealed class ResinPlanTask : ISoloTask<ResinPlanParam, ResinPlanData>
     /// <summary>判断秘境是否为祝圣秘境（圣遗物秘境）；祝圣移涌只在祝圣秘境中生效。</summary>
     /// <param name="name">秘境名。</param>
     /// <returns>是祝圣秘境时返回 true。</returns>
-    private static bool IsBlessDomain(string name)
+    private static bool IsBlessDomain(string name) => HasDomainType(name, "BlessDomain");
+
+    /// <summary>判断秘境是否为精通秘境或炼武秘境；盛材移涌只在这两类秘境中生效。</summary>
+    /// <param name="name">秘境名。</param>
+    /// <returns>是精通或炼武秘境时返回 true。</returns>
+    private static bool IsMaterialDomain(string name) => HasDomainType(name, "MasteryDomain", "ForgeryDomain");
+
+    /// <summary>按 tp.json 的秘境类型判断。</summary>
+    /// <param name="name">秘境名。</param>
+    /// <param name="types">允许的秘境类型。</param>
+    /// <returns>秘境存在且类型匹配时返回 true。</returns>
+    private static bool HasDomainType(string name, params string[] types)
         => name.Length > 0
            && MapLazyAssets.Get().DomainPositionMap.TryGetValue(name, out var position)
-           && position.Type == "BlessDomain";
+           && position.Type is { } type && types.Contains(type);
 
     /// <summary>生成提升指南养成的秘境参数：活动阶段的盛材移涌与秘境养成共用，只有树脂设置不同。</summary>
     /// <param name="source">节点中的自动秘境参数。</param>
@@ -575,16 +659,18 @@ public sealed class ResinPlanTask : ISoloTask<ResinPlanParam, ResinPlanData>
         return domain;
     }
 
-    /// <summary>生成备选秘境参数：活动阶段的祝圣移涌与剩余树脂的备选秘境共用，只有树脂设置不同。</summary>
+    /// <summary>生成指定秘境的参数：活动阶段指定的移涌活动秘境与剩余树脂的备选秘境共用，只有秘境与树脂设置不同。</summary>
     /// <param name="source">节点中的自动秘境参数。</param>
-    /// <param name="fallback">备选秘境名。</param>
+    /// <param name="domainName">要刷取的秘境名。</param>
+    /// <param name="sundaySelectedValue">周日或限时全开时的奖励序号；空字符串表示使用游戏默认入口。</param>
     /// <param name="usage">本步树脂设置。</param>
     /// <returns>改写后的独立副本。</returns>
-    private static AutoDomainParam BuildFallbackDomainParam(AutoDomainParam source, string fallback, ResinUsage usage)
+    private static AutoDomainParam BuildManualDomainParam(AutoDomainParam source, string domainName, string sundaySelectedValue,
+        ResinUsage usage)
     {
         var domain = Clone(source);
-        domain.DomainName = fallback;
-        domain.SundaySelectedValue = source.TrainingGuideFallbackSundaySelectedValue;
+        domain.DomainName = domainName;
+        domain.SundaySelectedValue = sundaySelectedValue;
         domain.TrainingGuideCalculateRunsEnabled = false;
         domain.TrainingTargetsJson = null;
         domain.TrainingGuideFallbackDomainName = string.Empty;

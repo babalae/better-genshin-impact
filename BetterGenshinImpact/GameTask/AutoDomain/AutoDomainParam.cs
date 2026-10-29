@@ -243,6 +243,18 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
     public string TrainingGuideFallbackSundaySelectedValue { get; set; } = string.Empty;
 
     /// <summary>
+    /// 体力计划盛材移涌期间领取双倍的精通或炼武秘境；空字符串表示跟随培养计划（按提升指南选择秘境）。
+    /// 只在体力计划中生效，普通自动秘境不读取。
+    /// </summary>
+    public string MaterialOverflowDomainName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 体力计划祝圣移涌期间领取双倍的祝圣秘境；空字符串表示跟随培养计划（提升指南中养成角色推荐圣遗物所在的秘境）。
+    /// 只在体力计划中生效，普通自动秘境不读取。
+    /// </summary>
+    public string BlessingOverflowDomainName { get; set; } = string.Empty;
+
+    /// <summary>
     /// 本次运行是否需要识别奖励：常规奖励识别、材料目标或培养计划奖励识别任一需要即识别。
     /// </summary>
     /// <returns>需要识别奖励时返回 true。</returns>

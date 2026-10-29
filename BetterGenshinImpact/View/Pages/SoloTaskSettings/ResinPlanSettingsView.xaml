@@ -117,7 +117,7 @@
                         <TextBlock Style="{StaticResource SoloDescription}"
                                    Text="识别到移涌活动时，先在活动对应的内容里用原粹领取当天的双倍；紊乱爆发期进行中时，幽境危战优先使用树脂，并暂停首领与秘境养成。"/>
                         <TextBlock Style="{StaticResource SoloDescription}"
-                                   Text="祝圣移涌在自动秘境设置的“备选秘境”中领取，需要选择祝圣秘境（圣遗物秘境）。"/>
+                                   Text="盛材移涌与祝圣移涌的秘境在自动秘境的“设置”中选择，默认跟随培养计划：盛材移涌按提升指南选择秘境，祝圣移涌刷养成角色推荐圣遗物所在的秘境。地脉移涌使用自动地脉花的国家与类型。"/>
                     </StackPanel>
                     <ui:ToggleSwitch Grid.Column="1" Margin="12,0,16,0" IsChecked="{Binding EventPriority, Mode=TwoWay}"
                                      AutomationProperties.Name="优先满足活动"/>

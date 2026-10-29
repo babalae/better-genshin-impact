@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Input;
 using Microsoft.Xaml.Behaviors;
 
@@ -92,6 +93,7 @@ public sealed class ButtonContextMenuBehavior : Behavior<ButtonBase>
             return;
         }
 
+        EnsureMenuDataContext(menu);
         if (OpeningCommand is { } opening && opening.CanExecute(null))
         {
             opening.Execute(null);
@@ -103,6 +105,23 @@ public sealed class ButtonContextMenuBehavior : Behavior<ButtonBase>
         menu.PlacementTarget = AssociatedObject;
         menu.Placement = PlacementMode.Bottom;
         menu.IsOpen = true;
+    }
+
+    /// <summary>
+    /// 把菜单的 DataContext 固定绑定到按钮的 DataContext。
+    /// ContextMenu 默认只在打开期间继承 DataContext，关闭时变为 null；菜单项列表随之清空，
+    /// 下次打开时在弹出过程中重建的菜单项继承不到菜单的文字颜色，显示为默认的黑色。
+    /// 固定后菜单项只在打开前由准备命令更新，不在弹出过程中重建
+    /// </summary>
+    private void EnsureMenuDataContext(ContextMenu menu)
+    {
+        if (BindingOperations.GetBindingExpression(menu, FrameworkElement.DataContextProperty) is not null)
+        {
+            return;
+        }
+
+        BindingOperations.SetBinding(menu, FrameworkElement.DataContextProperty,
+            new Binding(nameof(FrameworkElement.DataContext)) { Source = AssociatedObject });
     }
 
     /// <summary>

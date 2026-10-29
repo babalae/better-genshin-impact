@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Input;
@@ -172,7 +173,29 @@ public partial class AutoDomainTask
         return next;
     }
 
-    private async Task<List<string>> ScanGuideDomains(bool firstOnly = false)
+    /// <summary>
+    /// 只读扫描提升指南，按列表从上到下返回其中的祝圣秘境（养成计划角色推荐圣遗物所在的秘境）；不进入材料规划，结束后回到主界面。
+    /// 供体力计划在祝圣移涌期间“跟随培养计划”选择秘境；提升指南提示暂无培养素材或列表中没有祝圣秘境时返回空列表。
+    /// </summary>
+    /// <param name="ct">取消令牌。</param>
+    /// <returns>祝圣秘境名，按提升指南列表顺序。</returns>
+    /// <exception cref="InvalidOperationException">提升指南页面或列表识别失败。</exception>
+    public async Task<IReadOnlyList<string>> ScanTrainingGuideArtifactDomainsAsync(CancellationToken ct)
+    {
+        _ct = ct;
+        var artifactDomains = new List<string>();
+        await ScanGuideDomains(artifactDomains: artifactDomains);
+        Logger.LogInformation("提升指南：圣遗物秘境 {Domains}", artifactDomains.Count == 0 ? "无" : string.Join("、", artifactDomains));
+        return artifactDomains;
+    }
+
+    /// <summary>
+    /// 扫描提升指南中的材料秘境，按列表顺序返回可进入材料规划的候选。
+    /// </summary>
+    /// <param name="firstOnly">找到第一个材料秘境后即停止。</param>
+    /// <param name="artifactDomains">需要时按列表顺序收集其中的祝圣秘境；为 null 时不收集。</param>
+    /// <returns>材料秘境候选。</returns>
+    private async Task<List<string>> ScanGuideDomains(bool firstOnly = false, List<string>? artifactDomains = null)
     {
         await OpenTrainingGuide();
         bool noTargets;
@@ -238,6 +261,8 @@ public partial class AutoDomainTask
                         domains.Add(match.Value.Name);
                         if (firstOnly) break;
                     }
+                    // 祝圣秘境不进入材料规划；需要时按列表顺序收集，供体力计划的祝圣移涌选择
+                    else if (artifactDomains != null && IsBlessDomain(match.Value.Name)) artifactDomains.Add(match.Value.Name);
                     else Logger.LogInformation("培养计划：忽略不支持材料规划的目标 {Domain}", match.Value.Name);
                 }
             }
@@ -273,7 +298,9 @@ public partial class AutoDomainTask
                         throw new InvalidOperationException("提升指南未识别到秘境，也未确认无目标提示；停止，不能将OCR失败当作目标完成");
                 }
                 await new ReturnMainUiTask(_runtime).Start(_ct);
-                Logger.LogInformation("培养计划：首次扫描缓存 {Count} 个候选秘境：{Domains}", domains.Count, string.Join("、", domains));
+                // 只读扫描圣遗物秘境时由调用方输出结果，不提示“缓存候选”
+                if (artifactDomains == null)
+                    Logger.LogInformation("培养计划：首次扫描缓存 {Count} 个候选秘境：{Domains}", domains.Count, string.Join("、", domains));
                 return domains;
             }
             previous = current;
@@ -296,6 +323,12 @@ public partial class AutoDomainTask
         }
         throw new InvalidOperationException("提升指南名称扫描达到上限，停止以避免遗漏目标");
     }
+
+    /// <summary>判断秘境是否为祝圣秘境（圣遗物秘境）。</summary>
+    /// <param name="name">秘境名。</param>
+    /// <returns>是祝圣秘境时返回 true。</returns>
+    private static bool IsBlessDomain(string name)
+        => MapLazyAssets.Get().DomainPositionMap.TryGetValue(name, out var position) && position.Type == "BlessDomain";
 
     private async Task RunGuideFallback()
     {
