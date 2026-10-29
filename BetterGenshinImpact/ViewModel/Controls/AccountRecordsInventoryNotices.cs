@@ -42,7 +42,7 @@ public partial class AccountRecordsInventoryViewModel
     {
         if (!IsCurrentCard(card) || !card!.CanResolve) return;
         await RunManualAsync(() => _store.ResolveAsync(card.Uid, card.Name, card.ErrorId!, false,
-            card.EventIds.FirstOrDefault(), card.EventVersions));
+            card.EventVersions));
     }
 
     /// <summary>只归档展示时固定在本张卡片内的事件；待核实事项不能归档。</summary>

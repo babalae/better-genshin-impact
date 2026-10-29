@@ -17,6 +17,54 @@ namespace BetterGenshinImpact.UnitTest.ServiceTests;
 /// <summary>用独立 STA 消息循环验证账号切换和原位刷新，不启动主程序或显示窗口。</summary>
 public sealed class InventoryViewRefreshTests
 {
+    /// <summary>切换加载中或读取失败后保存显示偏好，不得覆盖最新保留上限。</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public Task Preferences_PreserveRetentionDuringFailedUidSwitch(bool duringLoading) => RunSta(async () =>
+    {
+        var root = Path.Combine(Path.GetTempPath(), "BetterGI.InventoryViewTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var catalog = new InventoryCatalog();
+            var store = new InventoryStore(catalog, root);
+            var vm = new AccountRecordsInventoryViewModel(store, catalog, new InventoryIconCache());
+            await vm.LoadPreferencesAsync();
+            // 模拟其他入口更新设置，使本页缓存也落后于磁盘。
+            await store.ConfigureAsync(new() { RecentLimit = 10, SnapshotLimit = 30, EventLimit = 50000 });
+            var loading = vm.SelectUidAsync("invalid-uid");
+            if (!duringLoading) await loading;
+            await vm.ToggleExpirationColumnCommand.ExecuteAsync(null);
+            await loading;
+            await vm.ToggleImageCacheCommand.ExecuteAsync(null);
+            await vm.ToggleMissingIconRowNumbersCommand.ExecuteAsync(null);
+            await vm.ToggleSourceNamesCommand.ExecuteAsync(null);
+            await vm.ToggleSnapshotsCommand.ExecuteAsync(null);
+            var settings = await store.GetSettingsAsync();
+            Assert.Equal(10, settings.RecentLimit);
+            Assert.Equal(30, settings.SnapshotLimit);
+            Assert.Equal(50000, settings.EventLimit);
+        }
+        finally { Directory.Delete(root, true); }
+    });
+
+    /// <summary>界面直接拒绝不符合服务层规则的 UID，不进入添加账号的写入流程。</summary>
+    [Theory]
+    [InlineData("1")]
+    [InlineData("012345678")]
+    [InlineData("12345678901")]
+    public Task AddUid_RejectsInvalidShape(string uid) => RunSta(async () =>
+    {
+        var catalog = new InventoryCatalog();
+        var store = new InventoryStore(catalog);
+        var vm = new AccountRecordsPageViewModel(store,
+            new AccountRecordsInventoryViewModel(store, catalog, new InventoryIconCache())) { PendingUid = uid };
+        await vm.AddUidCommand.ExecuteAsync(null);
+        Assert.Equal("UID 必须为 9～10 位数字且首位非零。", vm.UidValidationMessage);
+        Assert.DoesNotContain(uid, vm.UidOptions);
+    });
+
     /// <summary>实际布局底部多卡片，验证模板按钮绑定到各自卡片及当前视图模型。</summary>
     [Fact]
     public Task NoticeCards_InstantiateAndBindIndependentActions() => RunSta(async () =>

@@ -11,6 +11,36 @@ namespace BetterGenshinImpact.UnitTest.ServiceTests;
 [Collection("AccountRecordsManualOperations")]
 public sealed class InventoryStoreTests : IDisposable
 {
+    /// <summary>接受异常立即返回失败 Task，不同步抛错，也不进入 UID 校验和存储初始化。</summary>
+    [Fact]
+    public async Task Resolve_AcceptReturnsFaultedTaskBeforeStorageAccess()
+    {
+        var task = _store.ResolveAsync("invalid-uid", "摩拉", "unknown", true);
+        Assert.True(task.IsFaulted);
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => task);
+        Assert.Contains("异常记录不能直接接受", error.Message);
+        Assert.False(Directory.Exists(Path.Combine(_root, "records")));
+    }
+
+    /// <summary>反复采集失败合并事件，跨来源交替后仍保留当前错误关联和归档保护。</summary>
+    [Fact]
+    public async Task ReadFailure_RepeatsMergeAndPreserveErrorAssociation()
+    {
+        await _store.ReportFailureAsync(Uid, Source("a"), "摩拉", "识别失败");
+        var first = Assert.Single((await _store.LoadAsync(Uid)).Inventory.Events);
+        await _store.ReportFailureAsync(Uid, Source("b"), "摩拉", "识别失败");
+        for (var i = 0; i < 5; i++) await _store.ReportFailureAsync(Uid, Source("a"), "摩拉", "识别失败");
+        var data = (await _store.LoadAsync(Uid)).Inventory;
+        Assert.Equal(2, data.Events.Count);
+        var repeated = data.Events.Single(item => item.Id == first.Id);
+        Assert.Equal(6, repeated.RepeatCount);
+        Assert.NotNull(repeated.LastReceivedAt);
+        Assert.Equal(first.ErrorId, data.Errors["摩拉"].Id);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _store.UpdateEventAsync(Uid, repeated.Id, false, true));
+        await _store.ReportFailureAsync(Uid, Source("a"), "摩拉", "另一种失败");
+        Assert.Equal(3, (await _store.LoadAsync(Uid)).Inventory.Events.Count);
+    }
+
     /// <summary>到期输入校验失败时不得提前创建字典；修正后分类和库存才一起提交。</summary>
     [Theory]
     [InlineData("bad-time", "1")]
@@ -323,7 +353,7 @@ public sealed class InventoryStoreTests : IDisposable
         data = (await _store.ReadAsync(Uid)).Inventory;
         Assert.Equal(error.Id, data.Events.Single(value => value.Id == item.Id).ErrorId);
         Assert.Equal(legacy, File.ReadAllText(path));
-        await _store.ResolveAsync(Uid, "摩拉", error.Id, false, item.Id);
+        await _store.ResolveAsync(Uid, "摩拉", error.Id, false);
         Assert.Equal(10, (await _store.ReadAsync(Uid)).Inventory.Items["摩拉"][0].Quantity);
     }
 
@@ -1432,19 +1462,18 @@ public sealed class InventoryStoreTests : IDisposable
 
     /// <summary>底栏展示后出现新错误，不能接受旧库存；旧接口舍弃仅处理关联库存错误。</summary>
     [Fact]
-    public async Task Resolve_RejectsStaleDisplayedErrorButAllowsDiscard()
+    public async Task Resolve_RejectsAcceptAndDiscardsOnlyAssociatedError()
     {
         await _store.ReportAsync(Uid, Source("scan"), [Report("摩拉", 10)]);
         await _store.ReportAsync(Uid, Source("old"), [Report("摩拉", 8, -1)]);
         var data = (await _store.LoadAsync(Uid)).Inventory;
         var error = data.Errors["摩拉"];
         Assert.False(error.CanAccept);
-        var shown = data.Events.Single(item => item.State == "Error");
         await _store.ReportDeltaAsync(Uid, Source("bad-delta"), [new()
         { Name = "摩拉", Delta = -100, RecordedAt = _time.AddMinutes(1).ToString("O") }]);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _store.ResolveAsync(Uid, "摩拉", error.Id, true, shown.Id));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _store.ResolveAsync(Uid, "摩拉", error.Id, true));
         Assert.Equal(10, (await _store.LoadAsync(Uid)).Inventory.Items["摩拉"][0].Quantity);
-        await _store.ResolveAsync(Uid, "摩拉", error.Id, false, shown.Id);
+        await _store.ResolveAsync(Uid, "摩拉", error.Id, false);
         var remaining = Assert.Single((await _store.LoadAsync(Uid)).Inventory.Events.Where(item => item.State == "Error" && !item.Archived));
         Assert.Equal("Delta", remaining.Kind);
     }

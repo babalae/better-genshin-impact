@@ -346,14 +346,30 @@ public sealed partial class InventoryStore
         _sourceStamp = File.GetLastWriteTimeUtc(Path.Combine(_root, "sources.json"));
         data.Items.TryGetValue(name, out var records);
         Snapshot(data, Settings());
-        data.Errors[name] = new InventoryError
+        var failure = new InventoryError
         {
             Code = "ReadFailed", Source = source.Reference, Current = records?.FirstOrDefault(),
             Incoming = new InventoryReport { Name = name },
             Message = $"采集失败：{message}。{(records?.Count > 0 ? "已有确认库存保持不变。" : "当前尚无确认库存，未将失败结果记为零。")}" +
                 "请重新采集，或查看游戏后手动填写当前实际库存总数；人工确认后将归档该物品已有异常。"
         };
-        var failureEvent = AddEvent(data, name, source.Reference, "Report", "Error", 0, DateTimeOffset.UtcNow, data.Errors[name].Message, records?.FirstOrDefault()?.Quantity);
+        // 相同来源和说明的未处理采集失败合并，保留错误关联，避免反复失败耗尽活动事件额度。
+        var repeated = data.Events.FirstOrDefault(item => item.Name == name && item.Source == source.Reference &&
+            item.Kind == "Report" && item.State == "Error" && !item.Archived && !item.ItemDeleted &&
+            item.Message == failure.Message);
+        if (repeated != null)
+        {
+            if (repeated.RepeatCount < long.MaxValue) repeated.RepeatCount++;
+            repeated.LastReceivedAt = DateTimeOffset.UtcNow;
+            failure.Id = repeated.ErrorId.Length > 0 ? repeated.ErrorId : failure.Id;
+            repeated.ErrorId = failure.Id;
+            data.Errors[name] = failure;
+            Save(data);
+            return true;
+        }
+        data.Errors[name] = failure;
+        var failureEvent = AddEvent(data, name, source.Reference, "Report", "Error", 0, DateTimeOffset.UtcNow, failure.Message, records?.FirstOrDefault()?.Quantity);
+        failureEvent.LastReceivedAt = DateTimeOffset.UtcNow;
         failureEvent.ErrorId = data.Errors[name].Id;
         failureEvent.History.Add($"Id={data.Errors[name].Id}；AttemptId={attemptId}");
         failureEvent.AttemptId = attemptId;
@@ -413,13 +429,14 @@ public sealed partial class InventoryStore
     }
 
     /// <summary>舍弃异常并保留证据；接受请求一律拒绝，库存只能通过有效上报或人工确认更新。</summary>
-    public Task ResolveAsync(string uid, string name, string errorId, bool accept, string? displayedEventId = null,
+    public Task ResolveAsync(string uid, string name, string errorId, bool accept,
         IReadOnlyDictionary<string, string>? eventVersions = null)
     {
+        // 无效接受请求无需等待存储锁或初始化，仍通过返回的 Task 传递异常。
+        if (accept) return Task.FromException(new InvalidOperationException("异常记录不能直接接受。请舍弃异常上报，或手动确认当前实际库存总数。"));
         var versions = eventVersions?.ToDictionary(pair => pair.Key, pair => pair.Value);
         return Locked(() =>
         {
-            if (accept) throw new InvalidOperationException("异常记录不能直接接受。请舍弃异常上报，或手动确认当前实际库存总数。");
             var data = Load(uid);
             if (!data.Errors.TryGetValue(name, out var error) || error.Id != errorId)
                 throw new InvalidOperationException("此异常已被其他操作更新，当前操作未执行。请刷新后重新选择要处理的异常。");
@@ -434,7 +451,7 @@ public sealed partial class InventoryStore
             foreach (var item in selected) Transition(item, "Error", "用户舍弃异常上报。", true);
             Save(data);
             return true;
-            });
+        });
     }
 
     /// <summary>用户提交当前实际库存，结束此前的待核实事项并归档积压错误；保留已完成核实的证据。</summary>

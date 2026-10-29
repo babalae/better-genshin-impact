@@ -59,8 +59,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
     [RelayCommand]
     private Task ToggleImageCache() => RunDisplayAsync(async () =>
     {
-        _workspace.Settings.UseImageCache = !UseImageCache;
-        await _store.ConfigureAsync(_workspace.Settings);
+        await UpdateSettingsAsync(settings => settings.UseImageCache = !settings.UseImageCache);
         OnPropertyChanged(nameof(UseImageCache));
     });
     /// <summary>无图标行的占位显示偏好。</summary>
@@ -72,8 +71,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
     [RelayCommand]
     private Task ToggleExpirationColumn() => RunDisplayAsync(async () =>
     {
-        _workspace.Settings.ShowExpirationColumn = !ShowExpirationColumn;
-        await _store.ConfigureAsync(_workspace.Settings);
+        await UpdateSettingsAsync(settings => settings.ShowExpirationColumn = !settings.ShowExpirationColumn);
         OnPropertyChanged(nameof(ShowExpirationColumn));
     });
 
@@ -81,8 +79,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
     [RelayCommand]
     private Task ToggleMissingIconRowNumbers() => RunDisplayAsync(async () =>
     {
-        _workspace.Settings.ShowMissingIconRowNumbers = !ShowMissingIconRowNumbers;
-        await _store.ConfigureAsync(_workspace.Settings);
+        await UpdateSettingsAsync(settings => settings.ShowMissingIconRowNumbers = !settings.ShowMissingIconRowNumbers);
         OnPropertyChanged(nameof(ShowMissingIconRowNumbers));
     });
     /// <summary>当前账号的总项数与搜索、分类筛选后可见的项数。</summary>
@@ -335,7 +332,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
     public async Task SelectUidAsync(string? uid)
     {
         var changedUid = Uid != uid;
-        if (changedUid) { Rows.Clear(); _workspace = new InventoryWorkspace(); }
+        if (changedUid) { Rows.Clear(); _workspace = new InventoryWorkspace { Settings = _workspace.Settings }; }
         Uid = uid; OnPropertyChanged(nameof(HasUid));
         OnPropertyChanged(nameof(HasCompletedEvents));
         OnPropertyChanged(nameof(ShowBatchArchive));
@@ -518,7 +515,8 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         try
         {
             await action();
-            if (Uid == uid && version == _loadVersion) await RefreshRowsAsync(refresh);
+            // 账号尚未加载成功时仍可保存公共偏好，但不重复读取失败的账号。
+            if (Uid == uid && version == _loadVersion && _hasSnapshot) await RefreshRowsAsync(refresh);
             OnPropertyChanged(nameof(PreferReadableSource)); OnPropertyChanged(nameof(SnapshotsEnabled));
         }
         catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), "账号记录", MessageBoxButton.OK, ThemedMessageBox.MessageBoxIcon.Error); }
@@ -561,18 +559,25 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
             await RunManualAsync(() => _store.DeleteItemAsync(uid, row.Name));
     }
 
+    /// <summary>修改前读取最新公共设置，避免加载失败或旧页面快照覆盖其他设置及保留上限。</summary>
+    private async Task UpdateSettingsAsync(Action<AccountRecordsSettings> update)
+    {
+        var settings = await _store.GetSettingsAsync();
+        update(settings);
+        await _store.ConfigureAsync(settings);
+        _workspace.Settings = settings;
+    }
+
     /// <summary>保存供各模块共用的来源显示偏好，当前仅库存分页消费该设置。</summary>
     [RelayCommand] private Task ToggleSourceNames() => RunDisplayAsync(async () =>
     {
-        _workspace.Settings.PreferReadableSource = !_workspace.Settings.PreferReadableSource;
-        await _store.ConfigureAsync(_workspace.Settings);
+        await UpdateSettingsAsync(settings => settings.PreferReadableSource = !settings.PreferReadableSource);
     });
 
     /// <summary>开关日期快照，不删除已有快照。</summary>
     [RelayCommand] private Task ToggleSnapshots() => RunManualAsync(async () =>
     {
-        _workspace.Settings.SnapshotsEnabled = !_workspace.Settings.SnapshotsEnabled;
-        await _store.ConfigureAsync(_workspace.Settings);
+        await UpdateSettingsAsync(settings => settings.SnapshotsEnabled = !settings.SnapshotsEnabled);
     });
 
     /// <summary>编辑有明确上限的保存数量。</summary>
@@ -597,9 +602,11 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         }
         await RunManualAsync(async () =>
         {
-            if (events) _workspace.Settings.EventLimit = count;
-            else if (snapshots) _workspace.Settings.SnapshotLimit = count; else _workspace.Settings.RecentLimit = count;
-            await _store.ConfigureAsync(_workspace.Settings);
+            await UpdateSettingsAsync(settings =>
+            {
+                if (events) settings.EventLimit = count;
+                else if (snapshots) settings.SnapshotLimit = count; else settings.RecentLimit = count;
+            });
         });
     }
 

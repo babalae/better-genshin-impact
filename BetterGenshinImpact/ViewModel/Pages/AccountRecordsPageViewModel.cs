@@ -212,7 +212,7 @@ public partial class AccountRecordsPageViewModel : ViewModel
     private async Task AddUid()
     {
         var uid = PendingUid.Trim();
-        if (uid.Length is 0 or > 20 || !uid.All(char.IsAsciiDigit))
+        if (uid.Length is < 9 or > 10 || uid[0] == '0' || !uid.All(char.IsAsciiDigit))
         {
             UidValidationMessage = "UID 必须为 9～10 位数字且首位非零。";
             return;
