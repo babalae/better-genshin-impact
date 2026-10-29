@@ -55,3 +55,6 @@ __pycache__/
 
 # Claude
 .claude/*
+
+# 本地 NuGet 源配置（指向 bettergi-ncnn-shim / bettergi-libraries 的本地 artifacts，仅供本机还原未发布包，不入库）
+nuget.config
