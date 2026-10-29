@@ -115,6 +115,18 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
     private ObservableCollection<HotKeySettingModel> _hotKeySettingModels = [];
 
     /// <summary>
+    /// 快捷键页的筛选关键字，按功能名称或分组名称匹配，忽略大小写；为空时显示全部
+    /// </summary>
+    [ObservableProperty]
+    private string _filterText = string.Empty;
+
+    /// <summary>
+    /// 当前筛选关键字没有匹配任何功能，页面据此显示空结果提示
+    /// </summary>
+    [ObservableProperty]
+    private bool _isFilterResultEmpty;
+
+    /// <summary>
     /// 网页版实例不响应任何热键（全局热键与键鼠监听都不注册）：
     /// 同一 Windows Session 中全局热键只能被先启动的实例注册，键鼠监听也会与 Primary 重复响应。
     /// 网页版实例虽然显示主界面，但热键页只展示共享配置，不应在当前进程重复注册。
@@ -371,6 +383,70 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 hotKeySettingModel.HotKey = HotKey.None;
             }
         }
+    }
+
+    /// <summary>
+    /// 筛选关键字变化时重新计算各行的显示状态
+    /// </summary>
+    partial void OnFilterTextChanged(string value)
+    {
+        ApplyFilter(value);
+    }
+
+    /// <summary>
+    /// 按关键字设置每个节点的显示状态：分组名称匹配时显示整组，功能名称匹配时显示该项及其所在分组。
+    /// 只修改显示状态，不增删集合，热键注册和悬浮小窗设置页都不受影响。
+    /// 切换界面语言后不会自动重新筛选，修改关键字时按新语言重新计算
+    /// </summary>
+    /// <param name="keyword">用户输入的关键字</param>
+    private void ApplyFilter(string? keyword)
+    {
+        var trimmedKeyword = keyword?.Trim() ?? string.Empty;
+        var anyVisible = false;
+        foreach (var model in HotKeySettingModels)
+        {
+            // 用 | 而不是 ||，保证每个顶层节点都会被计算
+            anyVisible |= ApplyFilter(model, trimmedKeyword, false);
+        }
+
+        IsFilterResultEmpty = !anyVisible;
+    }
+
+    /// <summary>
+    /// 递归计算节点及其子节点的显示状态
+    /// </summary>
+    /// <param name="model">当前节点</param>
+    /// <param name="keyword">已去除首尾空白的关键字，空字符串表示不筛选</param>
+    /// <param name="ancestorMatched">上级分组名称已匹配，此时整组显示</param>
+    /// <returns>当前节点是否显示</returns>
+    private static bool ApplyFilter(HotKeySettingModel model, string keyword, bool ancestorMatched)
+    {
+        var matched = ancestorMatched || keyword.Length == 0 || IsFilterMatch(model, keyword);
+        var anyChildVisible = false;
+        foreach (var child in model.Children)
+        {
+            anyChildVisible |= ApplyFilter(child, keyword, matched);
+        }
+
+        var visible = matched || anyChildVisible;
+        model.IsFilterVisible = visible;
+
+        // 有关键字时展开含显示项的分组，避免匹配项藏在用户折叠的分组里；清空关键字时保留当前的展开状态
+        if (keyword.Length > 0 && visible && model.IsDirectory)
+        {
+            model.IsExpanded = true;
+        }
+
+        return visible;
+    }
+
+    /// <summary>
+    /// 当前界面语言的名称或中文原名包含关键字即为匹配，忽略大小写
+    /// </summary>
+    private static bool IsFilterMatch(HotKeySettingModel model, string keyword)
+    {
+        return model.LocalizedFunctionName.Contains(keyword, StringComparison.OrdinalIgnoreCase)
+               || model.FunctionName.Contains(keyword, StringComparison.OrdinalIgnoreCase);
     }
 
     public static List<HotKeySettingModel> GetAllNonDirectoryHotkey(IEnumerable<HotKeySettingModel> modelList)
