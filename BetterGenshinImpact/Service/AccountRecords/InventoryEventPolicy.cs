@@ -8,10 +8,14 @@ namespace BetterGenshinImpact.Service.AccountRecords;
 /// <summary>统一物品当前提示的优先级及完成事件的批量归档资格。</summary>
 public static class InventoryEventPolicy
 {
+    /// <summary>状态灯与底部卡片共用优先级。</summary>
+    internal static int Priority(InventoryEvent item) => item.State == "Error" ? 0 :
+        item.Kind == "ExpirationCheck" && item.State == "Pending" ? 1 :
+        item.State == "Warning" ? 2 : item.State == "Pending" ? 3 : item.State == "Completed" ? 4 : 5;
+
     /// <summary>从未归档事件中选取当前提示，同优先级显示最新事件。</summary>
     public static InventoryEvent? SelectActive(IEnumerable<InventoryEvent> events) => events.Where(item => !item.Archived)
-        .OrderBy(item => item.State == "Error" ? 0 : item.Kind == "ExpirationCheck" && item.State == "Pending" ? 1 :
-            item.State == "Warning" ? 2 : item.State == "Pending" ? 3 : item.State == "Completed" ? 4 : 5)
+        .OrderBy(Priority)
         .ThenByDescending(item => item.Id, StringComparer.Ordinal).FirstOrDefault();
 
     /// <summary>仅选择当前显示同类绿灯且没有库存错误的物品；被其他提示遮挡的完成事件保留。</summary>

@@ -96,10 +96,11 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
     /// <summary>底部事件说明、导入摘要或操作错误；空文本时隐藏提示区。</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasStatus))]
+    [NotifyPropertyChangedFor(nameof(ShowStatusMessage))]
     [NotifyPropertyChangedFor(nameof(NoticeErrorCountText))]
     private string _status = "";
     /// <summary>是否显示提示区，不控制下方常驻项数区域。</summary>
-    public bool HasStatus => !string.IsNullOrEmpty(Status);
+    public bool HasStatus => !string.IsNullOrEmpty(Status) || HasNoticeCards;
     /// <summary>只为当前错误提示显示总数；独立布局保证说明截断时仍可见。</summary>
     public string NoticeErrorCountText => NoticeRow is { ErrorCount: > 1, Event.State: "Error" } row && Status == AccountRecordsErrorMessages.ForDisplay(row.Event.Message)
         ? $"（共{row.ErrorCount}个错误）" : "";
@@ -122,6 +123,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
     {
         if (oldValue != null) oldValue.IsNoticeActive = false;
         if (newValue != null) newValue.IsNoticeActive = true;
+        if (newValue == null) RefreshNoticeCards();
     }
     /// <summary>两行提示的第二行。</summary>
     [ObservableProperty] private string _noticeDetails = "";
@@ -485,6 +487,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         NoticeRow = row; _noticeUid = Uid;
         Status = AccountRecordsErrorMessages.ForDisplay(row.Event?.Message ?? row.Error?.Message ?? "");
         NoticeDetails = row.StatusDetails;
+        RefreshNoticeCards();
     }
 
     /// <summary>打开事件集合，跳转本身不归档；窗口内可执行已完成事件批量归档。</summary>
@@ -495,15 +498,21 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
         if (uid == null) return;
         // 读取前固定提示目标，避免异步期间悬停变化导致定位到其他物品。
         var notice = scope == "all" ? null : NoticeRow;
+        await OpenEventRecordsAsync(uid, notice?.Name, notice?.Event?.Id);
+    }
+
+    /// <summary>读取前固定账号、物品和定位事件，避免悬停变化串到另一张卡片。</summary>
+    private async Task OpenEventRecordsAsync(string uid, string? name, string? eventId)
+    {
         try
         {
             var workspace = await _store.ReadAsync(uid);
-            new AccountRecordsEventsDialog(new AccountRecordsEventsViewModel(workspace.Inventory, notice?.Event?.Id, async (kind, ids) =>
+            new AccountRecordsEventsDialog(new AccountRecordsEventsViewModel(workspace.Inventory, eventId, async (kind, ids) =>
             {
                 await _store.ArchiveCompletedEventsAsync(uid, kind, ids);
                 if (Uid == uid) await RefreshRowsAsync();
                 return (await _store.ReadAsync(uid)).Inventory;
-            }, notice?.Name))
+            }, name))
             { Owner = Application.Current.MainWindow }.ShowDialog();
         }
         catch (Exception ex) { Status = AccountRecordsErrorMessages.Describe(ex); }

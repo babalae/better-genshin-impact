@@ -14,6 +14,34 @@ namespace BetterGenshinImpact.Service.AccountRecords;
 /// <summary>增量、核实和事件归档；所有操作通过同一存储锁串行化。</summary>
 public sealed partial class InventoryStore
 {
+    /// <summary>新的有效总库存核实数量后，将历史错误归档，并合并为可确认的橘灯提醒。</summary>
+    private static void ConfirmPreviousErrors(InventoryDocument data, string name, InventoryRecord record)
+    {
+        var errors = data.Events.Where(item => item.Name == name && item.State == "Error" && !item.Archived).ToArray();
+        if (errors.Length == 0 && !data.Errors.ContainsKey(name)) return;
+        data.Errors.Remove(name);
+        foreach (var error in errors)
+        {
+            error.VerificationSource = record.Source;
+            error.VerificationId = record.AttemptId;
+            Transition(error, "Error", "当前数量已由新的库存上报核实，原错误转为历史提醒。", true);
+        }
+        const string message = "该材料曾有一条或多条错误，当前库存数量已核实。原始错误已保留在历史记录中，请确认后归档此提醒。";
+        var warning = data.Events.FirstOrDefault(item => item.Name == name && item.Kind == "VerifiedErrorWarning" && !item.Archived);
+        if (warning == null)
+            warning = AddEvent(data, name, record.Source, "VerifiedErrorWarning", "Warning", record.Quantity, record.RecordedAt, message);
+        else
+        {
+            warning.Source = record.Source;
+            warning.Quantity = record.Quantity;
+            warning.RecordedAt = record.RecordedAt;
+            Transition(warning, "Warning", message);
+        }
+        warning.VerificationSource = record.Source;
+        warning.VerificationId = record.AttemptId;
+        warning.History.Add($"ConfirmedQuantity={record.Quantity}; RecordedAt={record.RecordedAt:O}; ErrorIds={string.Join(",", errors.Select(item => item.Id))}");
+    }
+
     /// <summary>按物品和来源更新分类橘灯；分类冲突不修改字典、不参与数量拒绝或增量核实。</summary>
     private static void CheckReportedCategories(InventoryDocument data, string name, string source,
         IEnumerable<string?> categories, string localCategory, DateTimeOffset now, InventoryReportResult result)
@@ -99,6 +127,7 @@ public sealed partial class InventoryStore
     {
         if (candidate == null) return null;
         var pending = Pending(data, name);
+        if (pending.Length > 0 && candidate.RecordedAt == pending.Max(item => item.RecordedAt)) return "库存与待核实变动的记录时间相同，无法判断先后。请上报实际采集时间更晚的库存，并保留时间精度。";
         if (pending.Length > 0 && candidate.RecordedAt < pending.Max(item => item.RecordedAt)) return "本次上报的记录时间早于待核实的库存变动，不能确认变动后的数量。请重新采集并上报，或查看游戏后手动填写当前实际库存总数。";
         return null;
     }
@@ -108,15 +137,17 @@ public sealed partial class InventoryStore
     {
         var pending = Pending(data, name);
         if (pending.Length == 0) return;
-        var expected = (decimal)(pending[0].Baseline ?? 0) + pending.Sum(item => (decimal)item.Quantity);
+        // 无基准的变动由本次总库存覆盖，不能假设原库存为零来比对。
+        decimal? expected = pending[0].Baseline is { } baseline
+            ? (decimal)baseline + pending.Sum(item => (decimal)item.Quantity) : null;
         var verificationId = record.AttemptId.Length > 0 ? record.AttemptId : Guid.NewGuid().ToString("N");
         foreach (var item in pending)
         {
             item.VerificationSource = record.Source;
             item.VerificationId = verificationId;
-            item.VerifiedCorrect = expected == record.Quantity;
+            item.VerifiedCorrect = expected.HasValue ? expected.Value == record.Quantity : null;
             Transition(item, "Completed", "该材料曾有增减信息，已完成核实。");
-            item.History.Add($"VerificationSource={record.Source}; Quantity={record.Quantity}; VerifiedCorrect={expected == record.Quantity}; RecordedAt={record.RecordedAt:O}");
+            item.History.Add($"VerificationSource={record.Source}; Quantity={record.Quantity}; VerifiedCorrect={item.VerifiedCorrect}; RecordedAt={record.RecordedAt:O}");
         }
     }
 
@@ -129,7 +160,7 @@ public sealed partial class InventoryStore
     {
         var batch = reports.Select(item => (Source: ValidateSource(item.Source),
             Report: new InventoryDeltaReport { Name = item.Report.Name, Delta = item.Report.Delta, RecordedAt = item.Report.RecordedAt,
-                Expirations = item.Report.Expirations?.Select(value => new InventoryExpiration { Quantity = value.Quantity, ExpiresAt = value.ExpiresAt }).ToList() }))
+                Expirations = item.Report.Expirations?.Select(value => value == null ? null! : new InventoryExpiration { Quantity = value.Quantity, ExpiresAt = value.ExpiresAt }).ToList() }))
             .OrderBy(item => DateTimeOffset.TryParse(item.Report.RecordedAt, CultureInfo.InvariantCulture, DateTimeStyles.None, out var time) ? time : DateTimeOffset.MaxValue).ToArray();
         // 与完整库存上报一致，空名称在持久化前拒绝，不能聚合成空名称错误行。
         if (batch.Any(item => string.IsNullOrWhiteSpace(item.Report.Name)))
@@ -147,36 +178,63 @@ public sealed partial class InventoryStore
                 var reference = entry.Source.Reference;
                 if (!origins.ContainsKey(reference)) origins[reference] = entry.Source;
                 var name = report.Name.Trim();
+                var attemptId = Convert.ToHexString(SHA256.HashData(
+                    Encoding.UTF8.GetBytes(uid + "\n" + reference + "\n" + JsonConvert.SerializeObject(report))));
                 var parsed = Parse(new InventoryReport { Quantity = 0, RecordedAt = report.RecordedAt }, reference, DateTimeOffset.UtcNow, out var reason);
                 if (string.IsNullOrWhiteSpace(report.RecordedAt)) reason = "库存变动缺少发生时间，本次增减未纳入推算。请来源补充带时区的发生时间后重新上报。";
-                if (parsed != null && (HasReceipt(data, name, DeltaReceipt(reference, parsed.RecordedAt)) ||
-                    data.Events.Any(item => !item.ItemDeleted && item.Kind == "Delta" && item.Name == name && item.Source == reference && item.RecordedAt == parsed.RecordedAt)))
+                // 只有已接收事件约束再次累加；失败事件必须重新校验，支持修正输入和补充字典后重试。
+                var related = data.Events.Where(item => !item.ItemDeleted && item.Kind == "Delta" && item.Name == name &&
+                    item.Source == reference && (parsed != null ? item.RecordedAt == parsed.RecordedAt : item.AttemptId == attemptId)).ToArray();
+                var accepted = related.FirstOrDefault(item => item.State != "Error");
+                var receiptPrefix = parsed == null ? "" : DeltaReceiptPrefix(reference, parsed.RecordedAt);
+                var savedReceipt = parsed == null ? null : data.EventReceipts.GetValueOrDefault(name)?.FirstOrDefault(value => value.StartsWith(receiptPrefix, StringComparison.Ordinal));
+                var legacyReceipt = parsed != null && HasReceipt(data, name, DeltaReceipt(reference, parsed.RecordedAt));
+                var sameAccepted = accepted != null && accepted.Quantity == report.Delta && SameExpirations(accepted.Expirations, report.Expirations);
+                if (sameAccepted || savedReceipt == receiptPrefix + DeltaContentKey(report.Delta, report.Expirations) ||
+                    legacyReceipt && related.Length == 0 && savedReceipt == null)
                 {
                     result.DuplicateCount++;
-                    var repeated = data.Events.FirstOrDefault(item => !item.ItemDeleted && item.Kind == "Delta" && item.Name == name && item.Source == reference && item.RecordedAt == parsed.RecordedAt);
-                    if (repeated != null)
+                    if (accepted != null)
                     {
-                        if (repeated.RepeatCount < long.MaxValue) repeated.RepeatCount++;
-                        repeated.LastReceivedAt = DateTimeOffset.UtcNow;
-                        if (!repeated.Archived && repeated.State == "Error") result.DuplicateErrorCount++;
+                        if (accepted.RepeatCount < long.MaxValue) accepted.RepeatCount++;
+                        accepted.LastReceivedAt = DateTimeOffset.UtcNow;
                     }
                     continue;
                 }
                 data.Items.TryGetValue(name, out var records);
                 var baseline = records?.FirstOrDefault();
                 if (name.Length is 0 or > 128 || !Definitions().ContainsKey(name)) reason = "库存变动的物品名称为空、超过 128 字符或未收录，本次增减未纳入推算。请修正名称或补充物品字典后重新上报。";
-                else if (baseline == null) reason = "该物品尚无已确认库存，本次增减未纳入推算。请先上报当前库存，或查看游戏后手动填写当前实际库存总数。";
-                else if (parsed != null && parsed.RecordedAt < baseline.RecordedAt) reason = "本次变动早于当前确认库存，可能已包含在该库存中，因此未纳入推算。请核对发生时间，勿重复累计；如数量存疑，请查看游戏后手动填写当前实际库存总数。";
+                else if (baseline != null && parsed != null && parsed.RecordedAt == baseline.RecordedAt) reason = "库存变动与确认库存的记录时间相同，无法判断先后，本次增减未纳入推算。请来源保留实际发生时间及足够精度。";
+                else if (baseline != null && parsed != null && parsed.RecordedAt < baseline.RecordedAt) reason = "本次变动早于当前确认库存，可能已包含在该库存中，因此未纳入推算。请核对发生时间，勿重复累计；如数量存疑，请查看游戏后手动填写当前实际库存总数。";
                 var pending = Pending(data, name);
+                // 无确认库存时保留有符号变动，不创建零库存基准；范围校验仅适用于已有基准。
+                // TODO：需求验证可依据增量判断达标（如 +5）；涉及负数时应报错，留待需求模块实现。
                 if (reason == null && baseline != null && parsed != null &&
                     !HasValidDeltaSequence(baseline, pending, report, parsed.RecordedAt))
                     reason = "按发生时间累计变动后，数量超出有效库存范围（小于 0 或超过 64 位整数上限），本次增减未纳入推算。请核对变动记录，或查看游戏后手动填写当前实际库存总数。";
-                if (reason == null && baseline != null) reason = ValidateDeltaExpirations(report, baseline, pending);
+                if (reason == null) reason = ValidateDeltaExpirations(report, baseline, pending);
+                if (accepted != null || savedReceipt != null)
+                    reason = "同一物品、来源和发生时间的增量已接收，但本次内容不同。请核对来源；如需修正库存，请上报新的实际库存总数，不能重复累加或覆盖已接收增量。";
+                // 完全相同的失败合并次数；成功重试只结束同一事件的错误，不清除其他库存异常。
+                var repeatedError = related.FirstOrDefault(item => item.State == "Error" && item.Quantity == report.Delta &&
+                    SameExpirations(item.Expirations, report.Expirations));
+                if (reason != null && repeatedError != null)
+                {
+                    if (repeatedError.RepeatCount < long.MaxValue) repeatedError.RepeatCount++;
+                    repeatedError.LastReceivedAt = DateTimeOffset.UtcNow;
+                    if (!repeatedError.Archived && repeatedError.Message != reason)
+                        Transition(repeatedError, "Error", reason);
+                    result.DuplicateCount++;
+                    if (!repeatedError.Archived) result.DuplicateErrorCount++;
+                    continue;
+                }
+                if (reason == null)
+                    foreach (var error in related.Where(item => item.State == "Error" && !item.Archived))
+                        Transition(error, "Error", "同一增量已重新校验并接收，原错误已修正。", true);
                 var item = AddEvent(data, name, reference, "Delta", reason == null ? "Pending" : "Error", report.Delta,
                     parsed?.RecordedAt ?? DateTimeOffset.UtcNow, reason ?? "当前增减仅为推算，待后续核实。", baseline?.Quantity);
                 // 增量也保存稳定的上报标识，不改变原有按来源和时间去重的规则。
-                item.AttemptId = Convert.ToHexString(SHA256.HashData(
-                    Encoding.UTF8.GetBytes(uid + "\n" + reference + "\n" + JsonConvert.SerializeObject(report))));
+                item.AttemptId = attemptId;
                 item.History.Add("RecordedAt=" + report.RecordedAt);
                 item.Expirations = report.Expirations;
                 item.History.Add("Current=" + Newtonsoft.Json.JsonConvert.SerializeObject(baseline));

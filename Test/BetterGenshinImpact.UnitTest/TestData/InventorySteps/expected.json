@@ -1,0 +1,32 @@
+{
+  "uid": "990280168",
+  "baselineCount": 168,
+  "finalQuantities": {
+    "「抗争」的哲学": 4,
+    "「抗争」的指引": 17,
+    "「抗争」的教导": 15,
+    "须臾树脂": 2,
+    "摩拉": 120
+  },
+  "step2Pending": 6,
+  "step3ErrorEvents": 12,
+  "step4CompletedDeltas": 6,
+  "step5Pending": 5,
+  "finalCompletedDeltas": 11,
+  "step7Pending": 4,
+  "step7Duplicates": 1,
+  "step7WithoutRecords": {
+    "甜甜花": 5,
+    "薄荷": -3,
+    "日落果": 0
+  },
+  "step8Quantities": {
+    "甜甜花": 5,
+    "薄荷": 10,
+    "日落果": 20
+  },
+  "step8CompletedDeltas": 15,
+  "step11Item": "须臾树脂",
+  "step11CardCount": 5,
+  "step11PendingDelta": 1
+}

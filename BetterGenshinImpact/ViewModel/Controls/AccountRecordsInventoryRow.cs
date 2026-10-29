@@ -81,6 +81,10 @@ public sealed partial class AccountRecordsInventoryRow : ObservableObject
     public decimal? PendingDelta { get; set; }
     /// <summary>附在确认库存右侧，不参与主数量居中。</summary>
     public string DeltaText => PendingDelta is { } value ? $"（{(value > 0 ? "+" : value == 0 ? "±" : "")}{value}）" : "";
+    /// <summary>无确认库存但有变动时，仅居中显示增减量，不将未知库存视为零。</summary>
+    public string QuantityText => Quantity?.ToString() ?? (PendingDelta.HasValue ? DeltaText : "未知");
+    /// <summary>已有确认库存时，在主数量右侧附加增减量。</summary>
+    public string AdditionalDeltaText => Quantity.HasValue ? DeltaText : "";
     /// <summary>两行提示的来源及变动摘要。</summary>
     public string StatusDetails { get; set; } = "";
     /// <summary>悬停同样显示两行摘要。</summary>

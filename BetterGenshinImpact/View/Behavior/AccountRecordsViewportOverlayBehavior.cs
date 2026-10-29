@@ -6,9 +6,11 @@ using Microsoft.Xaml.Behaviors;
 
 namespace BetterGenshinImpact.View.Behavior;
 
-/// <summary>使加载层跟随表体视口，避开表头以及水平、垂直滚动条。</summary>
+/// <summary>使加载层或底部通知跟随表体视口，避开滚动条占用的区域。</summary>
 public sealed class AccountRecordsViewportOverlayBehavior : Behavior<FrameworkElement>
 {
+    /// <summary>仅对齐横向边界，保留底部通知自身的行位置和高度。</summary>
+    public bool HorizontalOnly { get; set; }
     /// <summary>需要覆盖表体的表格。</summary>
     public static readonly DependencyProperty TargetProperty = DependencyProperty.Register(
         nameof(Target), typeof(DataGrid), typeof(AccountRecordsViewportOverlayBehavior));
@@ -40,10 +42,12 @@ public sealed class AccountRecordsViewportOverlayBehavior : Behavior<FrameworkEl
         var presenter = FindViewport(Target);
         if (presenter == null) return;
         var origin = presenter.TranslatePoint(new Point(), parent as UIElement);
-        var margin = new Thickness(origin.X, origin.Y, 0, 0);
+        var margin = HorizontalOnly
+            ? new Thickness(origin.X, AssociatedObject.Margin.Top, 0, AssociatedObject.Margin.Bottom)
+            : new Thickness(origin.X, origin.Y, 0, 0);
         if (AssociatedObject.Margin != margin) AssociatedObject.Margin = margin;
         if (AssociatedObject.Width != presenter.ActualWidth) AssociatedObject.Width = presenter.ActualWidth;
-        if (AssociatedObject.Height != presenter.ActualHeight) AssociatedObject.Height = presenter.ActualHeight;
+        if (!HorizontalOnly && AssociatedObject.Height != presenter.ActualHeight) AssociatedObject.Height = presenter.ActualHeight;
     }
 
     /// <summary>优先查找表格滚动容器的视口，避免误用单元格内部控件。</summary>

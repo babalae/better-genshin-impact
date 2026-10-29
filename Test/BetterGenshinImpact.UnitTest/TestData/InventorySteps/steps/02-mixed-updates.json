@@ -1,0 +1,103 @@
+{
+  "format": "BetterGI.AccountRecords",
+  "version": 1,
+  "exportedAt": "2026-10-29T21:29:35.418056+00:00",
+  "note": "6条有效增量+1条重复；正常库存更新、分类冲突、数量阈值、先到期消耗及多批新增同时发生。不要勾选导入补充字典。",
+  "sources": {
+    "Test.Ocr168.Scan": {
+      "reference": "Test.Ocr168.Scan",
+      "displayName": "综合测试核实"
+    },
+    "Test.Ocr168.Gain": {
+      "reference": "Test.Ocr168.Gain",
+      "displayName": "综合测试获得"
+    },
+    "Test.Ocr168.Spend": {
+      "reference": "Test.Ocr168.Spend",
+      "displayName": "综合测试消耗"
+    },
+    "AutoDomain.TrainingGuide/RecursiveLogReconstruction": {
+      "reference": "AutoDomain.TrainingGuide/RecursiveLogReconstruction",
+      "displayName": "培养指南递归日志重建"
+    }
+  },
+  "itemDefinitions": {
+    "摩拉": {
+      "category": "故意冲突分类"
+    }
+  },
+  "accounts": {
+    "990280168": {
+      "inventory": {
+        "摩拉": [
+          {
+            "quantity": 90,
+            "recordedAt": "2026-10-29T19:33:35.418056+00:00",
+            "source": "Test.Ocr168.Scan"
+          }
+        ],
+        "凛风奔狼的怀乡": [
+          {
+            "quantity": 1,
+            "recordedAt": "2026-10-29T19:33:35.418056+00:00",
+            "source": "Test.Ocr168.Scan"
+          }
+        ]
+      },
+      "deltas": [
+        {
+          "name": "「抗争」的哲学",
+          "delta": 3,
+          "recordedAt": "2026-10-29T19:31:35.418056+00:00",
+          "source": "Test.Ocr168.Gain"
+        },
+        {
+          "name": "「抗争」的指引",
+          "delta": -2,
+          "recordedAt": "2026-10-29T19:31:35.418056+00:00",
+          "source": "Test.Ocr168.Spend"
+        },
+        {
+          "name": "「抗争」的教导",
+          "delta": 1,
+          "recordedAt": "2026-10-29T19:31:35.418056+00:00",
+          "source": "Test.Ocr168.Gain"
+        },
+        {
+          "name": "「抗争」的教导",
+          "delta": -1,
+          "recordedAt": "2026-10-29T19:32:35.418056+00:00",
+          "source": "Test.Ocr168.Spend"
+        },
+        {
+          "name": "须臾树脂",
+          "delta": -1,
+          "recordedAt": "2026-10-29T19:31:35.418056+00:00",
+          "source": "Test.Ocr168.Spend"
+        },
+        {
+          "name": "须臾树脂",
+          "delta": 2,
+          "recordedAt": "2026-10-29T19:32:35.418056+00:00",
+          "source": "Test.Ocr168.Gain",
+          "expirations": [
+            {
+              "quantity": 1,
+              "expiresAt": "2026-11-04T21:29:35.418056+00:00"
+            },
+            {
+              "quantity": 1,
+              "expiresAt": "2026-11-07T21:29:35.418056+00:00"
+            }
+          ]
+        },
+        {
+          "name": "「抗争」的哲学",
+          "delta": 3,
+          "recordedAt": "2026-10-29T19:31:35.418056+00:00",
+          "source": "Test.Ocr168.Gain"
+        }
+      ]
+    }
+  }
+}

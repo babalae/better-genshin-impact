@@ -254,7 +254,7 @@
                         <Grid Width="36" Height="36" ToolTip="物品图标">
                         <Rectangle Width="22" Height="22" HorizontalAlignment="Center" VerticalAlignment="Center" Fill="{DynamicResource TextFillColorPrimaryBrush}" Opacity="0.15">
                             <Rectangle.OpacityMask>
-                                <ImageBrush ImageSource="pack://application:,,,/Resources/Images/account-records-watermark.png" Stretch="Uniform" />
+                                <ImageBrush ImageSource="pack://application:,,,/BetterGI;component/Resources/Images/account-records-watermark.png" Stretch="Uniform" />
                             </Rectangle.OpacityMask>
                         </Rectangle>
                         </Grid>
@@ -324,12 +324,12 @@
                     <DataGridTemplateColumn.CellTemplate><DataTemplate>
                         <Grid ClipToBounds="True">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="1" Text="{Binding Quantity, Mode=OneWay, TargetNullValue=未知}" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Text="{Binding QuantityText, Mode=OneWay}" VerticalAlignment="Center" />
                             <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding ExpiredQuantityText, Mode=OneWay}" FontSize="11" Margin="4,0,0,0"
                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                            ToolTip="{Binding ExpiredQuantityDetails, Mode=OneWay}" />
-                                <TextBlock Text="{Binding DeltaText, Mode=OneWay}" FontSize="11"
+                                <TextBlock Text="{Binding AdditionalDeltaText, Mode=OneWay}" FontSize="11"
                                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" ToolTip="{Binding DeltaText, Mode=OneWay}" />
                             </StackPanel>
                         </Grid>
@@ -387,27 +387,54 @@
             <controls:AccountRecordsEmptyState IsHitTestVisible="False" IsLoading="{Binding IsLoading, Mode=OneWay}" />
         </Grid>
         <!-- 异常提示只占底部局部区域，不覆盖表格或拦截表格交互。 -->
-        <Border Grid.Row="1" Margin="0,8,0,0" Padding="12,8" CornerRadius="6"
+        <Border Grid.Row="1" Margin="0,4,0,0" Padding="10,4" CornerRadius="6" HorizontalAlignment="Left"
                 Background="{DynamicResource ControlFillColorSecondaryBrush}"
                 Visibility="{Binding HasStatus, Converter={StaticResource BoolVisibility}, Mode=OneWay}">
-            <DockPanel>
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center">
-                    <ui:Button Width="32" Height="32" Padding="0" Margin="0,0,4,0" VerticalContentAlignment="Center" Icon="{ui:SymbolIcon DocumentBulletList20}" ToolTip="查看事件记录" AutomationProperties.Name="查看事件记录" Command="{Binding OpenEventsCommand, Mode=OneWay}" />
-                    <ui:Button Height="32" VerticalContentAlignment="Center" Content="舍弃" Command="{Binding ResolveNoticeCommand, Mode=OneWay}" CommandParameter="discard" Visibility="{Binding CanResolveNotice, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
-                    <ui:Button Height="32" VerticalContentAlignment="Center" Content="归档" Command="{Binding AcknowledgeNoticeCommand, Mode=OneWay}" Visibility="{Binding CanAcknowledgeNotice, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
-                    <ui:Button Height="32" VerticalContentAlignment="Center" Content="批量归档" ToolTip="归档当前账号中与此提示同类型、且未被错误或待处理事件阻挡的完成事件。" Command="{Binding ArchiveCompletedEventsCommand, Mode=OneWay}" Visibility="{Binding ShowBatchArchive, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
-                    <ui:Button Height="32" VerticalContentAlignment="Center" Content="关闭" ToolTip="收起提示，不归档事件" Command="{Binding CloseNoticeCommand, Mode=OneWay}" />
+            <b:Interaction.Behaviors>
+                <behavior:AccountRecordsViewportOverlayBehavior Target="{Binding ElementName=InventoryGrid, Mode=OneWay}" HorizontalOnly="True" />
+            </b:Interaction.Behaviors>
+            <Grid>
+                <!-- 关闭入口与首张卡片标题顶端对齐，不再单独占用一行。 -->
+                <StackPanel Margin="0,0,28,0">
+                    <TextBlock Text="{Binding Status, Mode=OneWay}" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,2,0,2"
+                               Visibility="{Binding ShowStatusMessage, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
+                <!-- 错误与提醒数量放在卡片标题；底部限高滚动，完整说明不再被最高优先级事项覆盖。 -->
+                <ScrollViewer MaxHeight="260" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                              Visibility="{Binding HasNoticeCards, Converter={StaticResource BoolVisibility}, Mode=OneWay}">
+                    <b:Interaction.Behaviors>
+                        <behavior:AccountRecordsNoticeHeightBehavior NoticeTarget="{Binding NoticeRow, Mode=OneWay}" />
+                    </b:Interaction.Behaviors>
+                    <ItemsControl ItemsSource="{Binding NoticeCards, Mode=OneWay}" HorizontalContentAlignment="Stretch">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="{Binding AccentColor, Mode=OneWay}" BorderThickness="3,0,0,0" Padding="8,2" Margin="0,0,4,4">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Title, Mode=OneWay}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding Message, Mode=OneWay}" TextWrapping="Wrap" Margin="0,2,0,0" />
+                                        <Grid Margin="0,3,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding Details, Mode=OneWay}" TextWrapping="Wrap" Margin="0,0,8,0" VerticalAlignment="Bottom" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                            <WrapPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Bottom">
+                                            <ui:Button Padding="8,2" MinHeight="24" Content="打开 log" Margin="0,0,6,0" Command="{Binding Data.OpenNoticeCardEventsCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" />
+                                            <ui:Button Padding="8,2" MinHeight="24" Content="舍弃" Margin="0,0,6,0" Command="{Binding Data.ResolveNoticeCardCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" Visibility="{Binding CanResolve, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
+                                            <ui:Button Padding="8,2" MinHeight="24" Content="归档" Margin="0,0,6,0" Command="{Binding Data.ArchiveNoticeCardCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" Visibility="{Binding CanArchive, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
+                                            <ui:Button Padding="8,2" MinHeight="24" Content="批量归档" Command="{Binding Data.ArchiveNoticeCardBatchCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" Visibility="{Binding CanBatchArchive, Converter={StaticResource BoolVisibility}, Mode=OneWay}" ToolTip="归档本账号中未受阻的同类完成事件。" />
+                                            </WrapPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
                 </StackPanel>
-                <StackPanel VerticalAlignment="Center">
-                    <!-- 错误总数优先保留宽度，空间不足时只截断前面的说明。 -->
-                    <Grid>
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding Status, Mode=OneWay}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Status, Mode=OneWay}" />
-                        <TextBlock Grid.Column="1" Text="{Binding NoticeErrorCountText, Mode=OneWay}" />
-                    </Grid>
-                    <TextBlock Text="{Binding NoticeDetails, Mode=OneWay}" TextTrimming="CharacterEllipsis" ToolTip="{Binding NoticeDetails, Mode=OneWay}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                </StackPanel>
-            </DockPanel>
+                <ui:Button HorizontalAlignment="Right" VerticalAlignment="Top" Width="24" Height="24" MinWidth="0" MinHeight="0" Padding="0"
+                           Icon="{ui:SymbolIcon Dismiss16}" Appearance="Transparent" ToolTip="收起全部提示，不归档事件"
+                           AutomationProperties.Name="关闭通知" Command="{Binding CloseNoticeCommand, Mode=OneWay}" />
+            </Grid>
         </Border>
         <TextBlock Grid.Row="2" Margin="4,6,4,0" FontSize="11"
                    Text="{Binding ItemCountText, Mode=OneWay}"

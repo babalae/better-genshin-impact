@@ -7,6 +7,9 @@
                  ShowInTaskbar="False" Background="{DynamicResource ApplicationBackgroundBrush}"
                  Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <Grid>
+        <Grid.Resources>
+            <BooleanToVisibilityConverter x:Key="ExpirationVisibility" />
+        </Grid.Resources>
         <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
         <ui:TitleBar Title="编辑库存记录" ShowMaximize="False" ShowMinimize="False" />
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
@@ -19,6 +22,29 @@
                           IsEnabled="{Binding NeedsDefinition, Mode=OneWay}" />
                 <TextBlock Text="游戏中当前实际库存数量" Margin="0,12,0,6" />
                 <ui:TextBox Text="{Binding QuantityText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MaxLength="19" />
+                <StackPanel Margin="0,12,0,0" Visibility="{Binding ShowExpirationEditor, Mode=OneWay, Converter={StaticResource ExpirationVisibility}}">
+                    <TextBlock Text="到期批次" FontWeight="SemiBold" />
+                    <TextBlock Text="请核对实际批次（可能包含增量推算）。数量合计不得超过总库存；差额表示未注明到期时间的数量。删除全部批次表示不再保留已知到期信息。" TextWrapping="Wrap" Margin="0,6,0,8" />
+                    <TextBlock Text="到期时间格式：2026-11-02T04:00:00+08:00（须带时区）" TextWrapping="Wrap" />
+                    <ItemsControl ItemsSource="{Binding ExpirationRows, Mode=OneWay}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,8,0,0">
+                                    <TextBlock Text="批次数量" Margin="0,0,0,4" />
+                                    <DockPanel>
+                                        <ui:Button DockPanel.Dock="Right" Content="删除" Margin="8,0,0,0"
+                                                   Command="{Binding DataContext.RemoveExpirationCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}, Mode=OneWay}"
+                                                   CommandParameter="{Binding Mode=OneWay}" />
+                                        <ui:TextBox Text="{Binding QuantityText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MaxLength="19" />
+                                    </DockPanel>
+                                    <TextBlock Text="到期时间" Margin="0,4,0,4" />
+                                    <ui:TextBox Text="{Binding ExpiresAtText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <ui:Button Content="添加批次" Margin="0,8,0,0" HorizontalAlignment="Left" Command="{Binding AddExpirationCommand, Mode=OneWay}" />
+                </StackPanel>
                 <CheckBox Content="修改后，标记上次上报有错误" Margin="0,12,0,0"
                           IsChecked="{Binding MarkScanIncorrect, Mode=TwoWay}" IsEnabled="{Binding CanMarkScanIncorrect, Mode=OneWay}" />
                 <TextBlock Text="请填写游戏中当前实际库存总数，保存后将以此数量为准，并结束相关待处理异常与核实。" TextWrapping="Wrap" Margin="0,12,0,0"

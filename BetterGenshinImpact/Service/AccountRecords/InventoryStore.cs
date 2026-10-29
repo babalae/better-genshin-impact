@@ -314,6 +314,7 @@ public sealed partial class InventoryStore
                 candidate!.AttemptId = origin.Reference == LocalQuantitySource ? "" : attemptId;
                 VerifyPending(data, group.Key, candidate);
                 Accept(data, group.Key, candidate!, settings.RecentLimit);
+                ConfirmPreviousErrors(data, group.Key, candidate);
                 var accepted = AddEvent(data, group.Key, origin.Reference, "Report", "Completed", candidate.Quantity,
                     candidate.RecordedAt, "库存上报已接收。", current?.Quantity);
                 accepted.AttemptId = attemptId;
@@ -322,7 +323,7 @@ public sealed partial class InventoryStore
                 accepted.EndedAt = now;
                 accepted.History.Add("Incoming=" + JsonConvert.SerializeObject(report));
                 result.Accepted.Add(group.Key);
-                // 已有异常需要用户主动处理，正常后台上报不静默清除红灯。
+                // 原错误已转为历史橘灯，保留用户确认入口，不将旧错误判为正确。
             }
             Save(data); SaveSources();
             return result;
@@ -432,56 +433,69 @@ public sealed partial class InventoryStore
     /// 后续自动计算、推断、修正库存不得复用此入口，应通过 ReportAsync 显式传入各自来源，避免误标为人工核实。
     /// </remarks>
     /// <param name="originalName">本次明确修正的未知名称；只结束已有事项，不建立名称映射。</param>
-    public Task SetLocalQuantityAsync(string uid, string name, long quantity, string? incorrectAttemptId = null, string? originalName = null) => Locked(() =>
+    public Task SetLocalQuantityAsync(string uid, string name, long quantity, string? incorrectAttemptId = null, string? originalName = null,
+        List<InventoryExpiration>? expirations = null)
     {
-        if (quantity < 0 || !Definitions().ContainsKey(name)) throw new ArgumentException("无法提交人工核实：物品名称须已收录，当前实际库存总数须为非负整数。");
-        var sources = Sources();
-        var data = Load(uid);
-        // 已收录名称不能借人工修订合并；编辑期间原名称被收录时也必须重新确认。
-        var renamed = originalName != null && originalName != name;
-        if (renamed && Definitions().ContainsKey(originalName!))
-            throw new InvalidOperationException("原物品名称已收录，不能按未知名称合并，当前操作未执行。");
-        var settings = Settings();
-        Snapshot(data, settings);
-        if (incorrectAttemptId != null)
+        // 等待存储锁期间不得引用界面仍可修改的批次对象。
+        var batches = expirations?.Select(item => item == null ? null! : new InventoryExpiration { Quantity = item.Quantity, ExpiresAt = item.ExpiresAt }).ToList();
+        return Locked(() =>
         {
-            var feedbackName = renamed ? originalName! : name;
-            data.Items.TryGetValue(feedbackName, out var previousRecords);
-            var original = previousRecords?.FirstOrDefault(record => record.AttemptId == incorrectAttemptId);
-            var originalEvent = data.Events.LastOrDefault(item => item.Name == feedbackName && item.AttemptId == incorrectAttemptId);
-            var originalSource = original?.Source ?? originalEvent?.Source;
-            if (originalSource == null) throw new InvalidOperationException("要标记错误的原上报记录已不存在或超出保留范围。请刷新后重试；也可取消“标记上次上报有错误”，再提交当前实际库存总数。");
-            var feedback = AddEvent(data, feedbackName, originalSource, "Report", "Error", quantity, DateTimeOffset.UtcNow, "用户标记上次上报有错误。");
-            feedback.History.Add("AttemptId=" + incorrectAttemptId);
-            feedback.AttemptId = incorrectAttemptId;
-            feedback.History.Add("Current=" + JsonConvert.SerializeObject(previousRecords?.FirstOrDefault()));
-        }
-        sources[LocalQuantitySource] = new AccountRecordSource { Reference = LocalQuantitySource, DisplayName = "狛荷屋-人工编辑" };
-        Write(Path.Combine(_root, "sources.json"), sources);
-        _sourceStamp = File.GetLastWriteTimeUtc(Path.Combine(_root, "sources.json"));
-        var manual = new InventoryRecord { Quantity = quantity, RecordedAt = DateTimeOffset.UtcNow, Source = LocalQuantitySource };
-        Accept(data, name, manual, settings.RecentLimit);
-        // 人工总数替代旧推算，不将尚未完成的核实判为成功或失败；同锁内只结束本次提交前的事件。
-        foreach (var pending in data.Events.Where(item => (item.Name == name || renamed && item.Name == originalName) && !item.Archived &&
-                     item.State == "Pending" && (item.Kind == "Delta" || item.Kind == "ExpirationCheck")))
-        {
-            Transition(pending, "Aborted", "用户已提交当前实际库存，原待核实事项已终止。", true);
-            pending.History.Add($"ManualConfirmation Name={name}; Source={manual.Source}; Quantity={manual.Quantity}; RecordedAt={manual.RecordedAt:O}");
-        }
-        data.Errors.Remove(name);
-        ArchiveErrors(data, name, "用户已提交当前实际库存，历史异常已归档；不代表原上报正确。");
-        if (renamed)
-        {
-            // 原始名称和输入保持不变；同一次库存保存结束原名称下全部积压错误。
-            data.Errors.Remove(originalName!);
-            // 修正目标与人工确认值独立留证，不经文案转换，也不追加到此前已归档的事件。
-            foreach (var error in data.Events.Where(item => item.Name == originalName && item.State == "Error" && !item.Archived))
-                error.History.Add(FormattableString.Invariant($"ManualCorrection OriginalName={originalName}; Name={name}; Source={manual.Source}; Quantity={manual.Quantity}; RecordedAt={manual.RecordedAt:O}"));
-            ArchiveErrors(data, originalName!, $"用户已将未知名称修正为“{name}”并确认当前库存 {quantity}，历史异常已归档。");
-        }
-        Save(data);
-        return true;
-    });
+            if (quantity < 0 || !Definitions().ContainsKey(name)) throw new ArgumentException("无法提交人工核实：物品名称须已收录，当前实际库存总数须为非负整数。");
+            var sources = Sources();
+            var data = Load(uid);
+            var expirationError = ValidateExpirations(batches, quantity);
+            if (expirationError != null) throw new ArgumentException(expirationError);
+            if (quantity > 0 && batches == null && (data.Items.GetValueOrDefault(name)?.FirstOrDefault()?.Expirations != null ||
+                Pending(data, name).Any(item => item.Expirations != null)))
+                throw new ArgumentException("该物品已有到期信息，请同时核对并提交到期批次；没有剩余已知批次时请明确提交空批次列表。");
+            // 已收录名称不能借人工修订合并；编辑期间原名称被收录时也必须重新确认。
+            var renamed = originalName != null && originalName != name;
+            if (renamed && Definitions().ContainsKey(originalName!))
+                throw new InvalidOperationException("原物品名称已收录，不能按未知名称合并，当前操作未执行。");
+            var settings = Settings();
+            Snapshot(data, settings);
+            if (incorrectAttemptId != null)
+            {
+                var feedbackName = renamed ? originalName! : name;
+                data.Items.TryGetValue(feedbackName, out var previousRecords);
+                var original = previousRecords?.FirstOrDefault(record => record.AttemptId == incorrectAttemptId);
+                var originalEvent = data.Events.LastOrDefault(item => item.Name == feedbackName && item.AttemptId == incorrectAttemptId);
+                var originalSource = original?.Source ?? originalEvent?.Source;
+                if (originalSource == null) throw new InvalidOperationException("要标记错误的原上报记录已不存在或超出保留范围。请刷新后重试；也可取消“标记上次上报有错误”，再提交当前实际库存总数。");
+                var feedback = AddEvent(data, feedbackName, originalSource, "Report", "Error", quantity, DateTimeOffset.UtcNow, "用户标记上次上报有错误。");
+                feedback.History.Add("AttemptId=" + incorrectAttemptId);
+                feedback.AttemptId = incorrectAttemptId;
+                feedback.History.Add("Current=" + JsonConvert.SerializeObject(previousRecords?.FirstOrDefault()));
+            }
+            sources[LocalQuantitySource] = new AccountRecordSource { Reference = LocalQuantitySource, DisplayName = "狛荷屋-人工编辑" };
+            Write(Path.Combine(_root, "sources.json"), sources);
+            _sourceStamp = File.GetLastWriteTimeUtc(Path.Combine(_root, "sources.json"));
+            var manual = new InventoryRecord { Quantity = quantity, RecordedAt = DateTimeOffset.UtcNow, Source = LocalQuantitySource,
+                Expirations = batches?.Select(item => new InventoryExpiration { Quantity = item.Quantity,
+                    ExpiresAt = item.Time.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture) }).OrderBy(item => item.Time).ToList() };
+            Accept(data, name, manual, settings.RecentLimit);
+            // 人工总数替代旧推算，不将尚未完成的核实判为成功或失败；同锁内只结束本次提交前的事件。
+            foreach (var pending in data.Events.Where(item => (item.Name == name || renamed && item.Name == originalName) && !item.Archived &&
+                         item.State == "Pending" && (item.Kind == "Delta" || item.Kind == "ExpirationCheck")))
+            {
+                Transition(pending, "Aborted", "用户已提交当前实际库存，原待核实事项已终止。", true);
+                pending.History.Add($"ManualConfirmation Name={name}; Source={manual.Source}; Quantity={manual.Quantity}; RecordedAt={manual.RecordedAt:O}");
+            }
+            data.Errors.Remove(name);
+            ArchiveErrors(data, name, "用户已提交当前实际库存，历史异常已归档；不代表原上报正确。");
+            if (renamed)
+            {
+                // 原始名称和输入保持不变；同一次库存保存结束原名称下全部积压错误。
+                data.Errors.Remove(originalName!);
+                // 修正目标与人工确认值独立留证，不经文案转换，也不追加到此前已归档的事件。
+                foreach (var error in data.Events.Where(item => item.Name == originalName && item.State == "Error" && !item.Archived))
+                    error.History.Add(FormattableString.Invariant($"ManualCorrection OriginalName={originalName}; Name={name}; Source={manual.Source}; Quantity={manual.Quantity}; RecordedAt={manual.RecordedAt:O}"));
+                ArchiveErrors(data, originalName!, $"用户已将未知名称修正为“{name}”并确认当前库存 {quantity}，历史异常已归档。");
+            }
+            Save(data);
+            return true;
+        });
+    }
 
     /// <summary>单独保存用户确认的名称或缺失分类，不覆盖模型已有分类。</summary>
     public Task DefineAsync(string name, string category) => Locked(() =>

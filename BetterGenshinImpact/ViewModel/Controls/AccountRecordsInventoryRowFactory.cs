@@ -51,7 +51,8 @@ internal sealed class AccountRecordsInventoryRowFactory(InventoryCatalog catalog
                 Name = name, ItemNameSortKey = catalog.GetItemNameSortKey(name), Prior = workspace.Inventory.Prior.Contains(name),
                 Category = string.IsNullOrEmpty(category) ? "未分类" : category,
                 Quantity = current?.Quantity, RecordedAt = current?.RecordedAt,
-                Expirations = current == null ? null : InventoryStore.EstimateExpirations(current, pending),
+                // 无总库存时仍展示增量中已知的到期批次；空记录仅用于批次重放，不作为确认数量。
+                Expirations = InventoryStore.EstimateExpirations(current ?? new InventoryRecord(), pending),
                 ExpirationsEstimated = pending.Length > 0,
                 SourceReference = reference,
                 SourceName = workspace.Settings.PreferReadableSource && !string.IsNullOrWhiteSpace(source?.DisplayName) ? source.DisplayName : reference,

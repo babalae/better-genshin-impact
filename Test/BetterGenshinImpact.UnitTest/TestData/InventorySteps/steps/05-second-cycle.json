@@ -1,0 +1,76 @@
+{
+  "format": "BetterGI.AccountRecords",
+  "version": 1,
+  "exportedAt": "2026-10-29T21:29:35.418056+00:00",
+  "note": "第二轮5条增量；树脂先消耗已过期和较早批次，再增加5天批次。推算只剩5/9天各1；过期检查仍依据确认库存，不能靠增量解除。",
+  "sources": {
+    "Test.Ocr168.Scan": {
+      "reference": "Test.Ocr168.Scan",
+      "displayName": "综合测试核实"
+    },
+    "Test.Ocr168.Gain": {
+      "reference": "Test.Ocr168.Gain",
+      "displayName": "综合测试获得"
+    },
+    "Test.Ocr168.Spend": {
+      "reference": "Test.Ocr168.Spend",
+      "displayName": "综合测试消耗"
+    },
+    "AutoDomain.TrainingGuide/RecursiveLogReconstruction": {
+      "reference": "AutoDomain.TrainingGuide/RecursiveLogReconstruction",
+      "displayName": "培养指南递归日志重建"
+    }
+  },
+  "itemDefinitions": {},
+  "accounts": {
+    "990280168": {
+      "inventory": {
+        "摩拉": [
+          {
+            "quantity": 80,
+            "recordedAt": "2026-10-29T19:59:35.418056+00:00",
+            "source": "Test.Ocr168.Scan"
+          }
+        ]
+      },
+      "deltas": [
+        {
+          "name": "须臾树脂",
+          "delta": -2,
+          "recordedAt": "2026-10-29T20:00:35.418056+00:00",
+          "source": "Test.Ocr168.Spend"
+        },
+        {
+          "name": "须臾树脂",
+          "delta": 1,
+          "recordedAt": "2026-10-29T20:01:35.418056+00:00",
+          "source": "Test.Ocr168.Gain",
+          "expirations": [
+            {
+              "quantity": 1,
+              "expiresAt": "2026-11-03T21:29:35.418056+00:00"
+            }
+          ]
+        },
+        {
+          "name": "「抗争」的哲学",
+          "delta": -1,
+          "recordedAt": "2026-10-29T20:00:35.418056+00:00",
+          "source": "Test.Ocr168.Spend"
+        },
+        {
+          "name": "「抗争」的指引",
+          "delta": 2,
+          "recordedAt": "2026-10-29T20:00:35.418056+00:00",
+          "source": "Test.Ocr168.Gain"
+        },
+        {
+          "name": "「抗争」的教导",
+          "delta": 1,
+          "recordedAt": "2026-10-29T20:00:35.418056+00:00",
+          "source": "Test.Ocr168.Gain"
+        }
+      ]
+    }
+  }
+}

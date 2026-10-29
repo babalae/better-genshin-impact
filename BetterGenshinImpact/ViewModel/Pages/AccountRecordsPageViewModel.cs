@@ -161,13 +161,21 @@ public partial class AccountRecordsPageViewModel : ViewModel
             Owner = Application.Current.MainWindow
         };
         dialog.ShowDialog();
-        await Load();
-        if (import.ImportedUid != null && UidOptions.Contains(import.ImportedUid)) SelectedUid = import.ImportedUid;
+        await RefreshAfterImportAsync(import.ImportedUid);
         if (import.CompletionSummary != null && !import.HasImportErrors)
         {
-            await Inventory.SelectUidAsync(SelectedUid);
             _ = Inventory.ShowImportSummaryAsync(import.CompletionSummary);
         }
+    }
+
+    /// <summary>导入可能部分成功；无论是否有异常，均完整读取目标账号，淘汰导入前尚在加载的快照。</summary>
+    internal async Task RefreshAfterImportAsync(string? importedUid)
+    {
+        await Load();
+        if (importedUid == null) return;
+        if (UidOptions.Contains(importedUid)) SelectedUid = importedUid;
+        // 同一 UID 赋值不会触发属性回调，ResumeAsync 也可能因正在加载而跳过，必须显式刷新。
+        await Inventory.SelectUidAsync(SelectedUid);
     }
 
     /// <summary>从标题菜单导出所选 UID 的当前库存；完整写入临时文件后替换目标。</summary>

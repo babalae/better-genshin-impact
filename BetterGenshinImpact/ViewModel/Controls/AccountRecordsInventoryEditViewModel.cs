@@ -4,6 +4,8 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Service.AccountRecords;
+using BetterGenshinImpact.Service.AccountRecords.Model;
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -45,6 +47,26 @@ public partial class AccountRecordsInventoryEditViewModel : ObservableObject
     /// <summary>验证或存储错误。</summary>
     [ObservableProperty] private string _message = "";
 
+    /// <summary>已有到期信息时展开编辑，不由补充字典控制。</summary>
+    public bool ShowExpirationEditor { get; }
+    /// <summary>本次人工确认的到期批次，可增删；未注明到期的数量仍由总数保留。</summary>
+    public ObservableCollection<AccountRecordsExpirationEditRow> ExpirationRows { get; } = [];
+
+    /// <summary>新增空批次，要求用户填写实际到期时间，不猜测时间。</summary>
+    [RelayCommand]
+    private void AddExpiration()
+    {
+        if (ExpirationRows.Count >= 100) { Message = "到期批次最多 100 条。"; return; }
+        ExpirationRows.Add(new AccountRecordsExpirationEditRow());
+    }
+
+    /// <summary>移除本次确认中不再存在的批次。</summary>
+    [RelayCommand]
+    private void RemoveExpiration(AccountRecordsExpirationEditRow? row)
+    {
+        if (row != null) ExpirationRows.Remove(row);
+    }
+
     /// <summary>从当前行初始化编辑数据。</summary>
     public AccountRecordsInventoryEditViewModel(InventoryStore store, InventoryCatalog catalog, string uid,
         AccountRecordsInventoryRow? row, IReadOnlyDictionary<string, string> definitions)
@@ -54,6 +76,16 @@ public partial class AccountRecordsInventoryEditViewModel : ObservableObject
         Name = row?.Name ?? "";
         var quantity = row?.Quantity ?? (row?.Error?.Code == "ReadFailed" ? null : row?.Error?.Incoming.Quantity);
         QuantityText = quantity?.ToString(CultureInfo.InvariantCulture) ?? "";
+        // 优先使用当前展示的推算批次，仍要求用户按游戏实际情况核对。
+        var batches = row?.Expirations ?? row?.Recent.FirstOrDefault()?.Expirations ??
+            (row?.Event?.State == "Pending" ? row.Event.Expirations : null);
+        ShowExpirationEditor = batches != null;
+        foreach (var batch in batches ?? [])
+            ExpirationRows.Add(new AccountRecordsExpirationEditRow
+            {
+                QuantityText = batch.Quantity.ToString(CultureInfo.InvariantCulture),
+                ExpiresAtText = batch.Time.ToLocalTime().ToString("O", CultureInfo.InvariantCulture)
+            });
         RefreshCategory();
     }
 
@@ -79,6 +111,13 @@ public partial class AccountRecordsInventoryEditViewModel : ObservableObject
         { Message = "当前实际库存数量须为不带分隔符的非负整数，且不超过 9223372036854775807。"; return; }
         if (NeedsDefinition && (!AddToDictionary || string.IsNullOrWhiteSpace(Category)))
         { Message = "物品名称未收录，且尚未填写分类或确认添加到补充字典。"; return; }
+        List<InventoryExpiration>? batches = ShowExpirationEditor ? [] : null;
+        foreach (var row in ExpirationRows)
+        {
+            if (!long.TryParse(row.QuantityText, NumberStyles.None, CultureInfo.InvariantCulture, out var count) || count <= 0)
+            { Message = "每个到期批次的数量必须为正整数。"; return; }
+            batches!.Add(new InventoryExpiration { Quantity = count, ExpiresAt = row.ExpiresAtText.Trim() });
+        }
         try
         {
             await AccountRecordsInteractionGate.Instance.ExecuteManualAsync(async () =>
@@ -86,7 +125,7 @@ public partial class AccountRecordsInventoryEditViewModel : ObservableObject
                 if (CanEditCategory && !string.IsNullOrWhiteSpace(Category)) await _store.DefineAsync(name, Category);
                 await _store.SetLocalQuantityAsync(_uid, name, quantity,
                     MarkScanIncorrect && CanMarkScanIncorrect ? _original!.LastScanAttemptId : null,
-                    _original != null && _original.Name != name ? _original.Name : null);
+                    _original != null && _original.Name != name ? _original.Name : null, batches);
             });
             Saved?.Invoke();
         }

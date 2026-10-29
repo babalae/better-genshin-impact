@@ -20,7 +20,7 @@
                 <Rectangle Width="240" Height="240" Opacity="0.14"
                            Fill="{DynamicResource TextFillColorPrimaryBrush}">
                     <Rectangle.OpacityMask>
-                        <ImageBrush ImageSource="pack://application:,,,/Resources/Images/account-records-watermark.png"
+                        <ImageBrush ImageSource="pack://application:,,,/BetterGI;component/Resources/Images/account-records-watermark.png"
                                     Stretch="Uniform" />
                     </Rectangle.OpacityMask>
                 </Rectangle>

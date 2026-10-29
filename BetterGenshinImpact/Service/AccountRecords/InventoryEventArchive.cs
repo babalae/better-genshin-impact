@@ -17,8 +17,22 @@ public sealed partial class InventoryStore
     private static string DeltaReceipt(string source, DateTimeOffset time) => "Delta:" + Convert.ToHexString(
         SHA256.HashData(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new { Source = source, RecordedAt = time.UtcDateTime }))));
 
+    /// <summary>新凭证显式保存 UTC 时间，便于确认库存覆盖后清理；来源仍使用哈希。</summary>
+    private static string DeltaReceiptPrefix(string source, DateTimeOffset time) =>
+        "DeltaV2:" + time.UtcTicks.ToString(CultureInfo.InvariantCulture) + ":" +
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(source))) + ":";
+
+    /// <summary>增量内容摘要忽略到期批次顺序和等价时区表示。</summary>
+    private static string DeltaContentKey(long quantity, List<InventoryExpiration>? expirations) => Convert.ToHexString(
+        SHA256.HashData(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new
+        {
+            Quantity = quantity,
+            Expirations = expirations?.Select(item => item == null ? "null" : $"{item.Quantity}:{NormalizeReportTime(item.ExpiresAt)}")
+                .OrderBy(value => value, StringComparer.Ordinal).ToArray()
+        }))));
+
     /// <summary>被清理历史的稳定去重凭证。</summary>
-    /// <remarks>凭证不随归档数量上限淘汰；当前未设置独立容量上限。</remarks>
+    /// <remarks>未被确认库存覆盖的有效增量保留凭证；旧版无时间元数据的凭证保守保留。</remarks>
     private static bool HasReceipt(InventoryDocument data, string name, string receipt) =>
         data.EventReceipts.TryGetValue(name, out var receipts) && receipts.Contains(receipt);
 
@@ -36,7 +50,12 @@ public sealed partial class InventoryStore
             receipts.Add("Id:" + item.Id);
             if (!item.ItemDeleted)
             {
-                if (item.Kind == "Delta") receipts.Add(DeltaReceipt(item.Source, item.RecordedAt));
+                if (item.Kind == "Delta")
+                {
+                    // 有原事件可安全迁移旧凭证；错误事件不再占据已接收事件的去重键。
+                    receipts.Remove(DeltaReceipt(item.Source, item.RecordedAt));
+                    if (item.State != "Error") receipts.Add(DeltaReceiptPrefix(item.Source, item.RecordedAt) + DeltaContentKey(item.Quantity, item.Expirations));
+                }
                 if (item.ReportFingerprint.Length > 0) receipts.Add("Report:" + item.ReportFingerprint);
             }
         }
@@ -68,6 +87,27 @@ public sealed partial class InventoryStore
                 else Write(path, retained);
                 File.Delete(path + ".bak");
             }
+        // 所有归档清理成功后才移除恢复用 ID；任何中途异常都会保留已落盘的墓碑。
+        var compacted = false;
+        foreach (var pair in data.EventReceipts.ToArray())
+        {
+            var baseline = data.Items.GetValueOrDefault(pair.Key)?.FirstOrDefault();
+            compacted |= pair.Value.RemoveWhere(value => value.StartsWith("Id:", StringComparison.Ordinal) ||
+                baseline != null && value.StartsWith("DeltaV2:", StringComparison.Ordinal) &&
+                long.TryParse(value.Split(':')[1], NumberStyles.None, CultureInfo.InvariantCulture, out var ticks) &&
+                ticks < baseline.RecordedAt.UtcTicks) > 0;
+            if (pair.Value.Count == 0) data.EventReceipts.Remove(pair.Key);
+        }
+        if (compacted)
+        {
+            var retainedEvents = data.Events;
+            try
+            {
+                data.Events = retainedEvents.Where(item => !item.Archived).ToList();
+                Write(Path.Combine(AccountDirectory(data.Uid), "inventory.json"), data);
+            }
+            finally { data.Events = retainedEvents; }
+        }
     }
 
     /// <summary>历史用于追溯和跨归档去重，不因普通归档允许重复增量。</summary>

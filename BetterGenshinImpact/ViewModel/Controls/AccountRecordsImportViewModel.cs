@@ -50,7 +50,7 @@ public partial class AccountRecordsImportViewModel : ObservableObject
     [ObservableProperty] private bool _hasPackage;
     /// <summary>操作进行期间禁用输入。</summary>
     public bool CanInteract => !IsBusy;
-    /// <summary>最后成功导入的账号，供主页面关闭窗口后选中。</summary>
+    /// <summary>最后进入导入写入阶段的账号；部分批次失败时也需要刷新其已保存内容。</summary>
     public string? ImportedUid { get; private set; }
 
     /// <summary>由页面提供同一个库存服务。</summary>
@@ -102,8 +102,11 @@ public partial class AccountRecordsImportViewModel : ObservableObject
             var hasDeltas = ((JObject)_package["accounts"]!).Properties().Any(account => account.Value["deltas"] is JArray { Count: > 0 });
             if (hasDeltas && await ThemedMessageBox.ShowAsync("此文件包含库存增量测试数据，仅供开发调试与报错验证，不代表正式开放。是否继续导入？",
                 "开发测试操作", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
-            var result = await AccountRecordsInteractionGate.Instance.ExecuteManualAsync(() => _store.ImportInventoryAsync(_package, TargetUid.Trim(), IncludeDefinitions, hasDeltas));
-            ImportedUid = TargetUid.Trim();
+            var uid = TargetUid.Trim();
+            if (!InventoryStore.IsValidUid(uid)) throw new ArgumentException("目标 UID 须为首位非零的 9～10 位数字。");
+            // 导入按批次保存，异常不代表没有写入；关闭后必须刷新这次实际操作的目标。
+            ImportedUid = uid;
+            var result = await AccountRecordsInteractionGate.Instance.ExecuteManualAsync(() => _store.ImportInventoryAsync(_package, uid, IncludeDefinitions, hasDeltas));
             AcceptedCount = result.Accepted.Count;
             RejectedCount = result.Rejected.Count;
             DuplicateCount = result.DuplicateCount;

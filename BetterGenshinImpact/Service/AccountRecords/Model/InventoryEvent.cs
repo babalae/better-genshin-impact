@@ -21,7 +21,7 @@ public sealed class InventoryEvent
     {
         "Red" => "Error", "Yellow" => kind == "SourceWarning" ? "Warning" : "Pending", "Warning" when kind == "Delta" => "Pending", "Green" or "Complete" => "Completed", "Gray" => "Planned", _ => state
     };
-    /// <summary>事件种类 Delta、Report、CategoryWarning、ThresholdWarning、ExpirationCheck；SourceWarning 仅兼容历史记录。</summary>
+    /// <summary>事件种类 Delta、Report、CategoryWarning、ThresholdWarning、ExpirationCheck、VerifiedErrorWarning；SourceWarning 仅兼容历史记录。</summary>
     public string Kind { get; set; } = "Report";
     /// <summary>核实上报批次，用于用户反馈去重。</summary>
     public string AttemptId { get; set; } = "";
@@ -81,7 +81,7 @@ public sealed class InventoryEvent
     public string VerificationSource { get; set; } = "";
     /// <summary>同一轮核实标识，避免把先前已完成的变动加入本轮摘要。</summary>
     public string VerificationId { get; set; } = "";
-    /// <summary>累计推算是否与核实数量相符，空值代表尚未核实。</summary>
+    /// <summary>累计推算是否与核实数量相符；空值代表尚未核实或缺少原库存基准、无法比对。</summary>
     public bool? VerifiedCorrect { get; set; }
     /// <summary>两行提示的第一行。</summary>
     public string Message { get; set; } = "";

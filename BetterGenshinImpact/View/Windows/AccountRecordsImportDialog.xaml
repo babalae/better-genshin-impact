@@ -23,7 +23,10 @@
                      Icon="{ui:SymbolIcon ArrowDownload24}" ShowMaximize="False" ShowMinimize="False" />
         <ScrollViewer Grid.Row="1" Margin="24" VerticalScrollBarVisibility="Auto">
             <StackPanel IsEnabled="{Binding CanInteract, Mode=OneWay}">
-                <ui:Button Content="选择 JSON 文件…" Command="{Binding ChooseFileCommand, Mode=OneWay}" HorizontalAlignment="Left" />
+                <StackPanel Orientation="Horizontal">
+                    <ui:Button Content="选择 JSON 文件…" Command="{Binding ChooseFileCommand, Mode=OneWay}" />
+                    <ui:Button Content="导入当前库存" Appearance="Primary" Command="{Binding ImportCommand, Mode=OneWay}" IsEnabled="{Binding HasPackage, Mode=OneWay}" Margin="12,0,0,0" />
+                </StackPanel>
                 <TextBlock Text="{Binding Summary, Mode=OneWay}" TextWrapping="Wrap" Margin="0,12,0,12" />
                 <TextBlock Text="导入到 UID（可修改；不存在时创建）" />
                 <ui:TextBox Text="{Binding TargetUid, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,10" MaxLength="20" />
@@ -32,7 +35,6 @@
                 <ItemsControl ItemsSource="{Binding Definitions, Mode=OneWay}" />
                 <TextBlock TextWrapping="Wrap" Margin="0,12,0,0" Visibility="{Binding HasImportErrors, Converter={StaticResource BoolVisibility}, Mode=OneWay}"><Run Text="导入完成：接受 " /><Run Text="{Binding AcceptedCount, Mode=OneWay}" /><Run Text=" 项，忽略重复 " /><Run Text="{Binding DuplicateCount, Mode=OneWay}" /><Run Text=" 项（已有异常 " /><Run Text="{Binding DuplicateErrorCount, Mode=OneWay}" Foreground="#EA4335" FontWeight="SemiBold" /><Run Text=" 项），新增异常 " /><Run Text="{Binding RejectedCount, Mode=OneWay}" Foreground="#EA4335" FontWeight="SemiBold" /><Run Text=" 项。关闭窗口后可在目标 UID 的库存中查看，红灯异常需要手动处理。" /></TextBlock>
                 <TextBlock Text="{Binding Message, Mode=OneWay}" TextWrapping="Wrap" Margin="0,12,0,0" />
-                <ui:Button Content="导入当前库存" Appearance="Primary" Command="{Binding ImportCommand, Mode=OneWay}" IsEnabled="{Binding HasPackage, Mode=OneWay}" Margin="0,12,0,0" HorizontalAlignment="Right" />
             </StackPanel>
         </ScrollViewer>
     </Grid>

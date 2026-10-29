@@ -49,11 +49,11 @@ public sealed partial class InventoryStore
     }
 
     /// <summary>新增批次数量必须与增量一致；减少时由系统推算，不接收新增到期批次。</summary>
-    private static string? ValidateDeltaExpirations(InventoryDeltaReport report, InventoryRecord baseline, InventoryEvent[] pending)
+    private static string? ValidateDeltaExpirations(InventoryDeltaReport report, InventoryRecord? baseline, InventoryEvent[] pending)
     {
         if (report.Delta <= 0)
             return report.Expirations is { Count: > 0 } ? "本次变动未增加库存，却附带了新增到期批次。请来源移除新增批次后重新上报；减少数量由系统按最早到期批次优先推算。" : null;
-        var tracked = baseline.Expirations is { Count: > 0 } || pending.Any(item => item.Expirations is { Count: > 0 });
+        var tracked = baseline?.Expirations is { Count: > 0 } || pending.Any(item => item.Expirations is { Count: > 0 });
         if (report.Expirations is not { Count: > 0 })
             return tracked ? "该物品正在记录到期批次，本次增加缺少到期信息。请来源提供新增数量对应的到期时间后重新上报。" : null;
         var error = ValidateExpirations(report.Expirations, report.Delta);
