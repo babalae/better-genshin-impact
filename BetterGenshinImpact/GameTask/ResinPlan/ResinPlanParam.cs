@@ -19,6 +19,18 @@ public class ResinPlanParam
     /// <summary>刷取前是否先把可用的原粹树脂合成浓缩树脂。</summary>
     public bool CraftCondensedFirst { get; set; }
 
+    /// <summary>
+    /// 是否优先满足活动：识别到移涌活动时先在活动适用的内容里用原粹领取当天的双倍；
+    /// 紊乱爆发期进行中时幽境危战优先使用树脂，并暂停首领与秘境养成。默认开启。
+    /// </summary>
+    public bool EventPriority { get; set; } = true;
+
+    /// <summary>
+    /// 移涌领取是否严格使用 20 档：开启时剩余 3 次双倍用 20 档领取 3 次（60 原粹）；
+    /// 关闭时用 40 档领取 2 次（80 原粹），少打一次。
+    /// </summary>
+    public bool EventStrictResin { get; set; }
+
     /// <summary>自动秘境：根据提升指南选择秘境养成，设置中的备选秘境用于消耗剩余树脂。</summary>
     public ResinPlanSubTask<AutoDomainParam> Domain { get; set; } = new();
 

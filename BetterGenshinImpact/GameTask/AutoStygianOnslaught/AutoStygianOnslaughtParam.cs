@@ -33,6 +33,14 @@ public class AutoStygianOnslaughtParam:BaseTaskParam<AutoStygianOnslaughtTask>
     private static AllConfig Config => ConfigService.Config!;
    
     public int BossNum { get; set; }
+
+    /// <summary>
+    /// 危战勋望目标：每次领奖前读到勋望达到该值时停止，结束原因为达到目标；0 表示不限制。
+    /// 体力计划在紊乱爆发期优先时传入 <see cref="StygianDirePrestigeReader.CommendationPrestige"/>。
+    /// 勋望识别尚未实现（<see cref="StygianDirePrestigeReader.ReadAsync"/> 返回未识别），目前不会因此提前停止。
+    /// </summary>
+    public int DirePrestigeTarget { get; set; }
+
     // 结束后是否自动分解圣遗物
     public bool AutoArtifactSalvage { get; set; }
 

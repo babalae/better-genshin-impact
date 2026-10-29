@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
@@ -9,6 +10,7 @@ using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using BetterGenshinImpact.GameTask.Common.Job;
 using BetterGenshinImpact.GameTask.Common.Resin;
 using BetterGenshinImpact.GameTask.Runtime;
@@ -23,7 +25,8 @@ namespace BetterGenshinImpact.GameTask.ResinPlan;
 /// <summary>
 /// 体力计划：在一次运行中按固定顺序调度合成浓缩树脂、首领、秘境养成与剩余树脂承接，并汇总本次全部奖励。
 /// 秘境养成沿用自动秘境的“根据提升指南选择秘境”，需求以游戏内养成计划为准；账号由一条龙负责。
-/// 顺序：读取树脂 → 识别活动 → 合成浓缩（可选）→ 首领 → 秘境养成 → 剩余树脂（幽境危战 → 地脉花 → 备选秘境）。
+/// 顺序：读取树脂 → 识别活动 → 合成浓缩（可选）→ 活动（移涌领取 → 紊乱爆发期，开启优先满足活动时）
+/// → 首领 → 秘境养成 → 剩余树脂（幽境危战 → 地脉花 → 备选秘境）。
 /// </summary>
 [SoloTaskInfo(TaskId, "体力计划", Description = "按体力用量依次调度合成浓缩、首领、提升指南养成与剩余树脂任务，并汇总本次全部奖励。",
     Group = "树脂与战斗", Order = 200, Scopes = SoloTaskScopes.Plan, OneDragonOrder = 2)]
@@ -80,30 +83,72 @@ public sealed class ResinPlanTask : ISoloTask<ResinPlanParam, ResinPlanData>
         run.Start(stock);
 
         // 1.1 识别活动：移涌活动与幽境危战紊乱爆发期；识别失败按没有活动处理，结束后回到主界面
-        // 活动优先的调度（移涌领取、爆发期暂停养成）尚未实现，目前只记录结果，并在爆发期已结束时跳过危战
-        run.Data.Events = await new ResinPlanEventDetector(_runtime).DetectAsync(ct);
-        await SafeReturnMainUiAsync(ct);
+        // 开启优先满足活动时用于调度；危战开启时用于判断紊乱爆发期是否已结束。两者都关闭时不打开活动页
+        if (param.EventPriority || param.Stygian.Enabled)
+        {
+            run.Data.Events = await new ResinPlanEventDetector(_runtime).DetectAsync(ct);
+            await SafeReturnMainUiAsync(ct);
+        }
 
-        // 2. 合成浓缩树脂（可选），为首领预留原粹
+        var events = run.Data.Events is { Recognized: true } recognized ? recognized : null;
+        // 爆发期优先时危战会暂停首领，合成时不再为首领预留原粹
+        var burstPriority = param.EventPriority && param.Stygian.Enabled && events?.StygianBurst == StygianBurstState.Active;
+        if (!param.EventPriority && events?.Overflows.Count > 0)
+        {
+            Logger.LogInformation("{Name}：未开启优先满足活动，移涌活动不单独领取", TaskName);
+        }
+
+        // 2. 合成浓缩树脂（可选），为首领与移涌领取预留原粹
         if (param.CraftCondensedFirst)
         {
-            await RunCraftAsync(param, run, ct);
+            await RunCraftAsync(param, run, burstPriority, ct);
         }
 
-        // 3. 首领讨伐：固定次数，只用原粹
+        // 3. 活动优先：按地脉移涌 → 盛材移涌 → 祝圣移涌领取双倍，再处理紊乱爆发期
+        var stygianHandled = false;
+        var pauseTraining = false;
+        if (param.EventPriority && events is not null)
+        {
+            foreach (var overflow in events.Overflows.OrderBy(item => item.Event))
+            {
+                await RunOverflowAsync(param, run, overflow, ct);
+            }
+
+            if (events.StygianBurst == StygianBurstState.Active)
+            {
+                stygianHandled = true;
+                pauseTraining = await RunStygianBurstAsync(param, run, ct);
+            }
+        }
+
+        // 4. 首领讨伐：固定次数，只用原粹；爆发期危战已用掉树脂时暂停
         if (param.Boss.Enabled)
         {
-            await RunBossAsync(param, run, ct);
+            if (pauseTraining)
+            {
+                SkipForBurst(run, ResinPlanStage.Boss, "首领讨伐", AutoBossTask.TaskId, param.Boss.Param.BossName);
+            }
+            else
+            {
+                await RunBossAsync(param, run, ct);
+            }
         }
 
-        // 4. 秘境养成：根据提升指南选择秘境，可连续刷多个候选秘境
+        // 5. 秘境养成：根据提升指南选择秘境，可连续刷多个候选秘境；爆发期危战已用掉树脂时暂停
         if (param.Domain.Enabled)
         {
-            await RunTrainingDomainAsync(param, run, ct);
+            if (pauseTraining)
+            {
+                SkipForBurst(run, ResinPlanStage.TrainingDomain, "秘境养成", AutoDomainTask.TaskId, AutoDomainTask.TrainingGuideOption);
+            }
+            else
+            {
+                await RunTrainingDomainAsync(param, run, ct);
+            }
         }
 
-        // 5. 剩余树脂依次承接：幽境危战（紊乱爆发期结束时由任务自行跳过）→ 地脉花 → 备选秘境
-        if (param.Stygian.Enabled)
+        // 6. 剩余树脂依次承接：幽境危战（紊乱爆发期结束时跳过；活动阶段已执行时不再执行）→ 地脉花 → 备选秘境
+        if (param.Stygian.Enabled && !stygianHandled)
         {
             await RunStygianAsync(param, run, ct);
         }
@@ -118,7 +163,7 @@ public sealed class ResinPlanTask : ISoloTask<ResinPlanParam, ResinPlanData>
             await RunFallbackDomainAsync(param, run, ct);
         }
 
-        // 6. 汇总奖励与消耗
+        // 7. 汇总奖励与消耗
         var result = ResinPlanResults.Complete(run.Data);
         Logger.LogInformation("→ {Name} 结束：{Message}", TaskName, result.Message);
         return result;
@@ -143,7 +188,11 @@ public sealed class ResinPlanTask : ISoloTask<ResinPlanParam, ResinPlanData>
     }
 
     /// <summary>按预算计算合成份数并合成浓缩树脂；合成是转换，不计入领奖消耗。</summary>
-    private async Task RunCraftAsync(ResinPlanParam param, ResinPlanRun run, CancellationToken ct)
+    /// <param name="param">体力计划参数。</param>
+    /// <param name="run">运行状态。</param>
+    /// <param name="burstPriority">紊乱爆发期优先：首领会被暂停，不为其预留原粹。</param>
+    /// <param name="ct">取消令牌。</param>
+    private async Task RunCraftAsync(ResinPlanParam param, ResinPlanRun run, bool burstPriority, CancellationToken ct)
     {
         var step = run.AddStep(ResinPlanStage.Craft, "合成浓缩树脂", GoToCraftingBenchTask.TaskId, param.Craft.Country);
         var stock = await GetStockAsync(run, ct);
@@ -159,8 +208,11 @@ public sealed class ResinPlanTask : ISoloTask<ResinPlanParam, ResinPlanData>
             return;
         }
 
-        // 首领只能使用原粹，合成前先为其留出原粹；首领刷至耗尽时不合成
-        var reserve = ResinPlanBudget.BossReserve(param.Boss.Enabled, ResinPlanBudget.BossRunLimit(param.Boss.Param.ResinUsage));
+        // 首领只能使用原粹，移涌领取只有原粹享受双倍，合成前先为它们留出原粹；首领刷至耗尽时不合成
+        var bossReserve = burstPriority
+            ? 0
+            : ResinPlanBudget.BossReserve(param.Boss.Enabled, ResinPlanBudget.BossRunLimit(param.Boss.Param.ResinUsage));
+        var reserve = ResinPlanBudget.SaturatingAdd(bossReserve, PlannedOverflowReserve(param, run));
         var count = ResinPlanBudget.CraftCount(run.Remaining, stock, reserve);
         if (count == 0)
         {
@@ -211,15 +263,7 @@ public sealed class ResinPlanTask : ISoloTask<ResinPlanParam, ResinPlanData>
             return;
         }
 
-        var domain = Clone(param.Domain.Param);
-        domain.DomainName = AutoDomainTask.TrainingGuideOption;
-        domain.TrainingGuideCalculateRunsEnabled = true;
-        domain.TrainingTargetsJson = null;
-        domain.TrainingGuideFallbackDomainName = string.Empty;
-        domain.TrainingGuideFallbackSundaySelectedValue = string.Empty;
-        domain.RewardRecognitionEnabled = true;
-        domain.TargetItems = [];
-        domain.ResinUsage = usage;
+        var domain = BuildTrainingDomainParam(param.Domain.Param, usage);
         await ExecuteAsync(run, step, async () => await new AutoDomainTask(_runtime, _config).ExecuteAsync(domain, ct), ct);
     }
 
@@ -242,8 +286,7 @@ public sealed class ResinPlanTask : ISoloTask<ResinPlanParam, ResinPlanData>
             return;
         }
 
-        var stygian = Clone(stygianParam);
-        stygian.ResinUsage = usage;
+        var stygian = BuildStygianParam(stygianParam, usage);
         await ExecuteAsync(run, step, async () => await new AutoStygianOnslaughtTask(_runtime, _config).ExecuteAsync(stygian, ct), ct);
     }
 
@@ -260,9 +303,7 @@ public sealed class ResinPlanTask : ISoloTask<ResinPlanParam, ResinPlanData>
             return;
         }
 
-        var leyLine = Clone(leyLineParam);
-        leyLine.ResinUsage = usage;
-        leyLine.TargetItems = [];
+        var leyLine = BuildLeyLineParam(leyLineParam, usage);
         await ExecuteAsync(run, step, async () => await new AutoLeyLineOutcropTask(_runtime, _config).ExecuteAsync(leyLine, ct), ct);
     }
 
@@ -270,8 +311,8 @@ public sealed class ResinPlanTask : ISoloTask<ResinPlanParam, ResinPlanData>
     private async Task RunFallbackDomainAsync(ResinPlanParam param, ResinPlanRun run, CancellationToken ct)
     {
         var domainParam = param.Domain.Param;
-        var fallback = domainParam.TrainingGuideFallbackDomainName;
-        if (string.IsNullOrWhiteSpace(fallback) || fallback == AutoDomainTask.TrainingGuideOption)
+        var fallback = FallbackDomainName(domainParam);
+        if (fallback.Length == 0)
         {
             // 只有预算未用完且最近一次读取仍能领奖时才提示保留，树脂用完后不追加多余说明
             var budgetLeft = run.Remaining is not { } remaining || remaining >= ResinPlanBudget.MinClaimPoints;
@@ -293,16 +334,287 @@ public sealed class ResinPlanTask : ISoloTask<ResinPlanParam, ResinPlanData>
             return;
         }
 
-        var domain = Clone(domainParam);
+        var domain = BuildFallbackDomainParam(domainParam, fallback, usage);
+        await ExecuteAsync(run, step, async () => await new AutoDomainTask(_runtime, _config).ExecuteAsync(domain, ct), ct);
+    }
+
+    /// <summary>
+    /// 移涌领取：在活动适用的内容里先用原粹领取，把当天的双倍次数用掉；领取完成后后续阶段照常执行。
+    /// 前提不满足（对应子任务未开启、没有可用的祝圣秘境、双倍已用完）时记为跳过并写明原因。
+    /// </summary>
+    /// <param name="param">体力计划参数。</param>
+    /// <param name="run">运行状态。</param>
+    /// <param name="overflow">识别到的移涌活动。</param>
+    /// <param name="ct">取消令牌。</param>
+    private async Task RunOverflowAsync(ResinPlanParam param, ResinPlanRun run, ResinPlanOverflowStatus overflow, CancellationToken ct)
+    {
+        var name = ResinPlanEventDetector.DisplayName(overflow.Event);
+        switch (overflow.Event)
+        {
+            // 1. 地脉移涌：按地脉花子设置的国家与类型领取
+            case ResinPlanOverflowEvent.LeyLineOverflow:
+            {
+                var leyLineParam = param.LeyLine.Param;
+                var step = run.AddStep(ResinPlanStage.Event, $"{name}·地脉花", AutoLeyLineOutcropTask.TaskId,
+                    $"{leyLineParam.Country}·{leyLineParam.LeyLineOutcropType}");
+                if (!param.LeyLine.Enabled)
+                {
+                    Skip(step, ResinPlanReasons.EventTaskDisabled, $"{name}需要开启自动地脉花，本次不单独领取。");
+                    return;
+                }
+
+                if (await PlanOverflowUsageAsync(param, run, step, overflow, ct) is not { } usage)
+                {
+                    return;
+                }
+
+                var leyLine = BuildLeyLineParam(leyLineParam, usage);
+                await ExecuteAsync(run, step, async () => await new AutoLeyLineOutcropTask(_runtime, _config).ExecuteAsync(leyLine, ct), ct);
+                return;
+            }
+
+            // 2. 盛材移涌：按提升指南选择秘境，参数改写与秘境养成相同，只有树脂设置不同
+            case ResinPlanOverflowEvent.MaterialOverflow:
+            {
+                var step = run.AddStep(ResinPlanStage.Event, $"{name}·秘境养成", AutoDomainTask.TaskId, AutoDomainTask.TrainingGuideOption);
+                step.RewardsRecognized = true;
+                if (!param.Domain.Enabled)
+                {
+                    Skip(step, ResinPlanReasons.EventTaskDisabled, $"{name}需要开启自动秘境，本次不单独领取。");
+                    return;
+                }
+
+                if (await PlanOverflowUsageAsync(param, run, step, overflow, ct) is not { } usage)
+                {
+                    return;
+                }
+
+                var domain = BuildTrainingDomainParam(param.Domain.Param, usage);
+                await ExecuteAsync(run, step, async () => await new AutoDomainTask(_runtime, _config).ExecuteAsync(domain, ct), ct);
+                return;
+            }
+
+            // 3. 祝圣移涌：只在祝圣秘境生效，使用自动秘境设置中的备选秘境
+            case ResinPlanOverflowEvent.BlessingOverflow:
+            {
+                var fallback = FallbackDomainName(param.Domain.Param);
+                var step = run.AddStep(ResinPlanStage.Event, $"{name}·备选秘境", AutoDomainTask.TaskId, fallback);
+                step.RewardsRecognized = true;
+                if (!param.Domain.Enabled)
+                {
+                    Skip(step, ResinPlanReasons.EventTaskDisabled, $"{name}需要开启自动秘境，本次不单独领取。");
+                    return;
+                }
+
+                if (!IsBlessDomain(fallback))
+                {
+                    Skip(step, ResinPlanReasons.EventDomainMissing, fallback.Length == 0
+                        ? $"{name}需要在自动秘境设置中把备选秘境设为祝圣秘境（圣遗物秘境），当前未设置。"
+                        : $"{name}需要在自动秘境设置中把备选秘境设为祝圣秘境（圣遗物秘境），当前的“{fallback}”不是祝圣秘境。");
+                    return;
+                }
+
+                if (await PlanOverflowUsageAsync(param, run, step, overflow, ct) is not { } usage)
+                {
+                    return;
+                }
+
+                var domain = BuildFallbackDomainParam(param.Domain.Param, fallback, usage);
+                await ExecuteAsync(run, step, async () => await new AutoDomainTask(_runtime, _config).ExecuteAsync(domain, ct), ct);
+                return;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 生成移涌领取的树脂设置：今日双倍已用完时跳过；否则按剩余预算与最新持有量计算次数与档位。
+    /// </summary>
+    /// <param name="param">体力计划参数。</param>
+    /// <param name="run">运行状态。</param>
+    /// <param name="step">本步记录。</param>
+    /// <param name="overflow">识别到的移涌活动。</param>
+    /// <param name="ct">取消令牌。</param>
+    /// <returns>树脂设置；本步跳过时为 null。</returns>
+    private async Task<ResinUsage?> PlanOverflowUsageAsync(ResinPlanParam param, ResinPlanRun run, ResinPlanStep step,
+        ResinPlanOverflowStatus overflow, CancellationToken ct)
+    {
+        var name = ResinPlanEventDetector.DisplayName(overflow.Event);
+        var doubles = OverflowDoubles(overflow);
+        if (doubles == 0)
+        {
+            Skip(step, ResinPlanReasons.EventClaimsUsedUp, $"{name}今日双倍次数已用完，不再单独领取。");
+            return null;
+        }
+
+        var usage = await PlanUsageAsync(run, step, ResinPlanBudget.MinClaimPoints,
+            stock => ResinPlanBudget.BuildOverflowUsage(run.Remaining, stock, doubles, param.EventStrictResin), ct);
+        if (usage is not null)
+        {
+            Logger.LogInformation("{Name}：{Event}今日剩余双倍 {Doubles} 次，原粹 {Tier} 档领取 {Count} 次", TaskName, name, doubles,
+                usage.OriginalTier == OriginalResinTier.Only20 ? ResinPlanBudget.MinClaimPoints : ResinPlanBudget.OriginalHighTierPoints,
+                usage.Counts.Original);
+        }
+
+        return usage;
+    }
+
+    /// <summary>
+    /// 紊乱爆发期进行中：危战用掉剩余预算。危战发现爆发期已结束、失败，或勋望达到目标时，首领与秘境养成照常执行；
+    /// 其余情况暂停这两个阶段。
+    /// </summary>
+    /// <param name="param">体力计划参数。</param>
+    /// <param name="run">运行状态。</param>
+    /// <param name="ct">取消令牌。</param>
+    /// <returns>是否暂停首领与秘境养成。</returns>
+    private async Task<bool> RunStygianBurstAsync(ResinPlanParam param, ResinPlanRun run, CancellationToken ct)
+    {
+        var stygianParam = param.Stygian.Param;
+        var step = run.AddStep(ResinPlanStage.Event, "紊乱爆发期·幽境危战", AutoStygianOnslaughtTask.TaskId, $"首领 {stygianParam.BossNum}");
+        if (!param.Stygian.Enabled)
+        {
+            Skip(step, ResinPlanReasons.EventTaskDisabled, "紊乱爆发期需要开启自动幽境危战，本次不优先使用树脂。");
+            return false;
+        }
+
+        var usage = await PlanUsageAsync(run, step, ResinPlanBudget.MinClaimPoints,
+            stock => ResinPlanBudget.BuildClaimUsage(run.Remaining, stock), ct);
+        if (usage is null)
+        {
+            return false;
+        }
+
+        // 勋望达到目标即停止，剩余预算回到首领与秘境养成；识别实现前不会提前停止
+        var stygian = BuildStygianParam(stygianParam, usage);
+        stygian.DirePrestigeTarget = StygianDirePrestigeReader.CommendationPrestige;
+        await ExecuteAsync(run, step, async () => await new AutoStygianOnslaughtTask(_runtime, _config).ExecuteAsync(stygian, ct), ct);
+
+        var resume = step.Kind == SoloTaskResultKind.Failed
+                     || step is { Kind: SoloTaskResultKind.Skipped, ReasonCode: AutoStygianOnslaughtTask.EventEndedReason }
+                     || step.Resin?.StopReason == ResinStopReason.TargetReached;
+        return !resume;
+    }
+
+    /// <summary>紊乱爆发期优先使用树脂时，记录首领或秘境养成被跳过。</summary>
+    /// <param name="run">运行状态。</param>
+    /// <param name="stage">被暂停的阶段。</param>
+    /// <param name="name">阶段中文名称。</param>
+    /// <param name="taskId">子任务标识。</param>
+    /// <param name="target">本步对象。</param>
+    private static void SkipForBurst(ResinPlanRun run, ResinPlanStage stage, string name, string taskId, string target)
+        => Skip(run.AddStep(stage, name, taskId, target), ResinPlanReasons.StygianBurst, $"紊乱爆发期优先使用树脂，跳过{name}。");
+
+    /// <summary>
+    /// 合成浓缩前为移涌领取预留的原粹：只计开启优先满足活动时会执行的领取（前提满足且今日还有双倍）。
+    /// </summary>
+    /// <param name="param">体力计划参数。</param>
+    /// <param name="run">运行状态。</param>
+    /// <returns>预留点数。</returns>
+    private static int PlannedOverflowReserve(ResinPlanParam param, ResinPlanRun run)
+    {
+        if (!param.EventPriority || run.Data.Events is not { Recognized: true } events)
+        {
+            return 0;
+        }
+
+        return events.Overflows
+            .Where(overflow => CanClaimOverflow(param, overflow.Event))
+            .Sum(overflow => ResinPlanBudget.OverflowReserve(OverflowDoubles(overflow), param.EventStrictResin));
+    }
+
+    /// <summary>移涌领取的前提是否满足：对应子任务已开启；祝圣移涌另需备选秘境是祝圣秘境。</summary>
+    /// <param name="param">体力计划参数。</param>
+    /// <param name="kind">移涌活动。</param>
+    /// <returns>前提满足时返回 true。</returns>
+    private static bool CanClaimOverflow(ResinPlanParam param, ResinPlanOverflowEvent kind) => kind switch
+    {
+        ResinPlanOverflowEvent.LeyLineOverflow => param.LeyLine.Enabled,
+        ResinPlanOverflowEvent.MaterialOverflow => param.Domain.Enabled,
+        ResinPlanOverflowEvent.BlessingOverflow => param.Domain.Enabled && IsBlessDomain(FallbackDomainName(param.Domain.Param)),
+        _ => false
+    };
+
+    /// <summary>今日剩余双倍次数；读不到时按每日次数安排，多出的领取按普通奖励结算，树脂不会浪费。</summary>
+    /// <param name="overflow">识别到的移涌活动。</param>
+    /// <returns>剩余双倍次数。</returns>
+    private static int OverflowDoubles(ResinPlanOverflowStatus overflow)
+        => Math.Max(0, overflow.RemainingClaims ?? ResinPlanBudget.OverflowDailyClaims);
+
+    /// <summary>自动秘境设置中的备选秘境；未设置或误选为“根据提升指南选择秘境”时为空字符串。</summary>
+    /// <param name="domain">自动秘境参数。</param>
+    /// <returns>备选秘境名。</returns>
+    private static string FallbackDomainName(AutoDomainParam domain)
+    {
+        var name = domain.TrainingGuideFallbackDomainName;
+        return string.IsNullOrWhiteSpace(name) || name == AutoDomainTask.TrainingGuideOption ? string.Empty : name;
+    }
+
+    /// <summary>判断秘境是否为祝圣秘境（圣遗物秘境）；祝圣移涌只在祝圣秘境中生效。</summary>
+    /// <param name="name">秘境名。</param>
+    /// <returns>是祝圣秘境时返回 true。</returns>
+    private static bool IsBlessDomain(string name)
+        => name.Length > 0
+           && MapLazyAssets.Get().DomainPositionMap.TryGetValue(name, out var position)
+           && position.Type == "BlessDomain";
+
+    /// <summary>生成提升指南养成的秘境参数：活动阶段的盛材移涌与秘境养成共用，只有树脂设置不同。</summary>
+    /// <param name="source">节点中的自动秘境参数。</param>
+    /// <param name="usage">本步树脂设置。</param>
+    /// <returns>改写后的独立副本。</returns>
+    private static AutoDomainParam BuildTrainingDomainParam(AutoDomainParam source, ResinUsage usage)
+    {
+        var domain = Clone(source);
+        domain.DomainName = AutoDomainTask.TrainingGuideOption;
+        domain.TrainingGuideCalculateRunsEnabled = true;
+        domain.TrainingTargetsJson = null;
+        // 备选秘境改到剩余树脂阶段执行，保证承接顺序固定
+        domain.TrainingGuideFallbackDomainName = string.Empty;
+        domain.TrainingGuideFallbackSundaySelectedValue = string.Empty;
+        domain.RewardRecognitionEnabled = true;
+        domain.TargetItems = [];
+        domain.ResinUsage = usage;
+        return domain;
+    }
+
+    /// <summary>生成备选秘境参数：活动阶段的祝圣移涌与剩余树脂的备选秘境共用，只有树脂设置不同。</summary>
+    /// <param name="source">节点中的自动秘境参数。</param>
+    /// <param name="fallback">备选秘境名。</param>
+    /// <param name="usage">本步树脂设置。</param>
+    /// <returns>改写后的独立副本。</returns>
+    private static AutoDomainParam BuildFallbackDomainParam(AutoDomainParam source, string fallback, ResinUsage usage)
+    {
+        var domain = Clone(source);
         domain.DomainName = fallback;
-        domain.SundaySelectedValue = domainParam.TrainingGuideFallbackSundaySelectedValue;
+        domain.SundaySelectedValue = source.TrainingGuideFallbackSundaySelectedValue;
         domain.TrainingGuideCalculateRunsEnabled = false;
         domain.TrainingTargetsJson = null;
         domain.TrainingGuideFallbackDomainName = string.Empty;
         domain.RewardRecognitionEnabled = true;
         domain.TargetItems = [];
         domain.ResinUsage = usage;
-        await ExecuteAsync(run, step, async () => await new AutoDomainTask(_runtime, _config).ExecuteAsync(domain, ct), ct);
+        return domain;
+    }
+
+    /// <summary>生成地脉花参数：活动阶段的地脉移涌与剩余树脂的地脉花共用。</summary>
+    /// <param name="source">节点中的地脉花参数。</param>
+    /// <param name="usage">本步树脂设置。</param>
+    /// <returns>改写后的独立副本。</returns>
+    private static AutoLeyLineOutcropParam BuildLeyLineParam(AutoLeyLineOutcropParam source, ResinUsage usage)
+    {
+        var leyLine = Clone(source);
+        leyLine.ResinUsage = usage;
+        leyLine.TargetItems = [];
+        return leyLine;
+    }
+
+    /// <summary>生成幽境危战参数：活动阶段的紊乱爆发期与剩余树脂的危战共用。</summary>
+    /// <param name="source">节点中的幽境危战参数。</param>
+    /// <param name="usage">本步树脂设置。</param>
+    /// <returns>改写后的独立副本。</returns>
+    private static AutoStygianOnslaughtParam BuildStygianParam(AutoStygianOnslaughtParam source, ResinUsage usage)
+    {
+        var stygian = Clone(source);
+        stygian.ResinUsage = usage;
+        return stygian;
     }
 
     /// <summary>

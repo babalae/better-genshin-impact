@@ -846,6 +846,18 @@ public class AutoStygianOnslaughtTask : StateMachineBase<StygianState, BvPage>, 
     /// <summary>使用统一候选并在成功点击后记账，保存本轮的结束判断供状态机共用。</summary>
     private async Task<bool> UseResinAndCheckLast(ImageRegion ra)
     {
+        // 设置了勋望目标时，领奖前先读取进度；读到已达标则不再领奖。未识别（null）按未知继续，不能当作 0
+        if (_taskParam.DirePrestigeTarget > 0
+            && await StygianDirePrestigeReader.ReadAsync(_runtime, _ct) is { } prestige
+            && prestige.Current >= _taskParam.DirePrestigeTarget)
+        {
+            Logger.LogInformation("{TaskName}：危战勋望 {Current}/{Target} 已达到目标，停止领奖", TaskName,
+                prestige.Current, _taskParam.DirePrestigeTarget);
+            _stopReason = ResinStopReason.TargetReached;
+            _rewardStopped = true;
+            return _isLastRound = true;
+        }
+
         var regions = ra.FindMulti(RecognitionObject.Ocr(ra.Width * 0.25, ra.Height * 0.2, ra.Width * 0.5, ra.Height * 0.6));
         var offered = ResinRewardPrompt.DetectOffered(regions, ra.Width / 2d, _taskParam.GameCultureInfo);
         var candidates = _selector.Candidates(offered);

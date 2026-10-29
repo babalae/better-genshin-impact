@@ -61,7 +61,7 @@ public sealed record ResinPlanSubTaskSpec(
     /// <summary>自动幽境危战：剩余树脂的第一项，紊乱爆发期结束后自动跳过。</summary>
     public static ResinPlanSubTaskSpec Stygian { get; } = new("stygian", AutoStygianOnslaughtTask.TaskId, "自动幽境危战",
         "消耗剩余树脂；只有紊乱爆发期能领取，爆发期结束后自动跳过。",
-        ["resin_usage", "combat_script_bag_path"],
+        ["resin_usage", "combat_script_bag_path", "dire_prestige_target"],
         [("boss_num", "首领序号"), ("fight_team_name", "队伍")],
         "strategy_name", "combat_script_bag_path", ClearMirror: true);
 

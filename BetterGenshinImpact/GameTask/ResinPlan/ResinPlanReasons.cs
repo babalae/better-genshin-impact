@@ -22,4 +22,16 @@ public static class ResinPlanReasons
 
     /// <summary>有树脂但本次没有任何领奖，例如养成计划没有需求且其余任务都未开启。</summary>
     public const string NothingClaimed = "nothing_claimed";
+
+    /// <summary>移涌活动今日双倍次数已用完，不再单独领取。</summary>
+    public const string EventClaimsUsedUp = "event_claims_used_up";
+
+    /// <summary>活动对应的子任务未开启，例如地脉移涌需要开启自动地脉花。</summary>
+    public const string EventTaskDisabled = "event_task_disabled";
+
+    /// <summary>祝圣移涌没有可用的祝圣秘境：备选秘境为空或不是祝圣秘境。</summary>
+    public const string EventDomainMissing = "event_domain_missing";
+
+    /// <summary>紊乱爆发期优先使用树脂，本阶段不执行。</summary>
+    public const string StygianBurst = "stygian_burst";
 }
