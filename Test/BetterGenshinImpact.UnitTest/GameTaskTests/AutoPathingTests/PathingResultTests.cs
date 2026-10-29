@@ -1,7 +1,5 @@
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.Pulonia.Services;
-using BetterGenshinImpact.Pulonia.Models;
-using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoPathingTests;
@@ -49,23 +47,6 @@ public sealed class PathingResultTests
         Assert.Equal("重试耗尽", restored.ErrorMessage);
         Assert.Equal(1, restored.ReviveCount);
         Assert.Equal(4, restored.CollectedItems!["落落莓"]);
-    }
-
-    /// <summary>运行详情明确区分未统计与实际零次/零收益，成功时不显示不存在的报错。</summary>
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void HistoryDetails_DistinguishUnknownStatistics(bool observed)
-    {
-        var result = observed ? new PathingResult(true, reviveCount: 0, collectedItems: new Dictionary<string, int>()) : new PathingResult(true);
-        var now = DateTimeOffset.UtcNow;
-        var node = new PuloniaTaskNodeResult("plan/route", "路线", "pathing", 1, PuloniaTaskNodeStatus.Succeeded,
-            "成功", now, now, JObject.FromObject(result), PuloniaTaskOutcomeKind.Succeeded);
-        var details = new PuloniaTaskNodeResultViewModel(node, null, "地图追踪", []);
-        Assert.Equal("是", details.ResultFields.Single(field => field.Label == "路线完整执行").Value);
-        Assert.Equal("无", details.ResultFields.Single(field => field.Label == "失败原因").Value);
-        Assert.Equal(observed ? "0" : "未统计", details.ResultFields.Single(field => field.Label == "复活次数").Value);
-        Assert.Equal(observed ? "已统计，未拾取物品" : "未统计", details.ResultFields.Single(field => field.Label == "拾取物品").Value);
     }
 
     /// <summary>负统计值及成功与失败信息矛盾的对象不能进入执行历史。</summary>

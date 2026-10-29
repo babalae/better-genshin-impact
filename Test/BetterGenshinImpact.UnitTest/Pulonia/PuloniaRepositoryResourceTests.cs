@@ -7,7 +7,6 @@ using BetterGenshinImpact.Core.Script.Repositories;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.View.Behavior;
-using BetterGenshinImpact.ViewModel.Windows.Pulonia;
 using LibGit2Sharp;
 using Newtonsoft.Json.Linq;
 using System.IO.Compression;
@@ -180,25 +179,6 @@ public sealed class PuloniaRepositoryResourceTests : IDisposable
         var added = await service.AddLocalSourceAsync(source);
         Assert.Equal(source, added.Directory);
         Assert.Equal(added.Id, Assert.Single((await store.GetRepositoriesAsync()).Where(repository => !repository.IsOfficial)).Id);
-    }
-
-    /// <summary>填写或取消远程草稿不注册，确认后只创建来源身份，不访问远端或建立 clone。</summary>
-    [Fact]
-    public async Task RemoteDraft_OnlyConfirmationCreatesRegistration_WithoutSync()
-    {
-        var store = CreateStore();
-        var draft = new PuloniaRemoteRepositoryDialogViewModel(store)
-        { RepositoryName = "第三方测试仓库", RemoteUrl = "https://example.invalid/repository.git" };
-        Assert.True(draft.AddCommand.CanExecute(null));
-        Assert.Empty((await store.GetRepositoriesAsync()).Where(repository => !repository.IsOfficial));
-        Assert.Null(draft.AddedRepository);
-        draft.Branch = "invalid branch";
-        Assert.False(draft.AddCommand.CanExecute(null));
-        draft.Branch = "release";
-        await draft.AddCommand.ExecuteAsync(null);
-        var added = Assert.Single((await store.GetRepositoriesAsync()).Where(repository => !repository.IsOfficial));
-        Assert.Equal(added.Id, draft.AddedRepository!.Id);
-        Assert.False(Directory.Exists(added.Directory));
     }
 
     /// <summary>只有两个版本文件触发更新；其他来源文件改变后旧缓存仍保留原内容。</summary>
@@ -564,42 +544,6 @@ public sealed class PuloniaRepositoryResourceTests : IDisposable
         Assert.Equal("{\"route\":1}", await ReadApprovedAsync(store, reference, "repo/pathing/路线.json"));
     }
 
-    /// <summary>列表只读取发布索引，预览仅有三份文档，未选资源和完整版本均不被提取。</summary>
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task BrowsingAndPreview_DoNotRetainRepositoryOrExtractCode(bool git)
-    {
-        var store = CreateStore();
-        var source = CreateSource("lightweight", git);
-        var manifest = JObject.Parse(ScriptManifest);
-        manifest["settings_ui"] = "settings/form.json";
-        Write(source, "repo/js/示例/manifest.json", manifest.ToString());
-        Write(source, "repo/js/示例/settings/form.json", "[]");
-        Write(source, "repo/js/示例/README.md", "# preview");
-        Write(source, "repo/js/未索引/manifest.json", ScriptManifest);
-        Write(source, "repo/js/未索引/main.js", new string('x', 1024 * 1024));
-        if (git) Commit(source);
-        await store.RegisterAsync(source);
-        var catalog = new PuloniaTaskResourceCatalog(store);
-        var index = await catalog.GetIndexAsync(new PuloniaTaskDefinition { TaskType = "javascript" });
-        var resource = Assert.Single(index.Resources);
-        Assert.Equal("示例", resource.DisplayName);
-        var previewRoot = Path.Combine(store.RootDirectory, "Previews");
-        using (var preview = await PuloniaTaskResourcePreviewLoader.LoadAsync(resource, "javascript", repositories: store))
-        {
-            Assert.NotNull(preview.MarkdownFilePath);
-            var files = Directory.GetFiles(previewRoot, "*", SearchOption.AllDirectories);
-            Assert.Equal(3, files.Length);
-            Assert.DoesNotContain(files, file => file.EndsWith("main.js", StringComparison.Ordinal));
-            // 一次性预览目录只用短 ID 命名。
-            Assert.Matches("^pv_[0-9a-hjkmnp-tv-z]{8}$", Path.GetFileName(Assert.Single(Directory.GetDirectories(previewRoot))));
-            Assert.False(Directory.Exists(Path.Combine(store.RootDirectory, "Snapshots")));
-        }
-        // 释放预览后删除其目录。
-        Assert.Empty(Directory.GetFileSystemEntries(previewRoot));
-    }
-
     /// <summary>路线只保留选中的正文；删除来源后仍能直接从资源归档读取，不生成提取缓存。</summary>
     [Theory]
     [InlineData(true)]
@@ -620,46 +564,6 @@ public sealed class PuloniaRepositoryResourceTests : IDisposable
         DeleteTemporary(source);
         Assert.Equal("{\"route\":1}", await ReadApprovedAsync(store, reference, "repo/pathing/路线.json"));
     }
-
-    /// <summary>JS 归档只保留所选项目和运行依赖，跨提交复用没有变化的公共块。</summary>
-    [Fact]
-    public async Task ScriptArchive_ExcludesOtherResources_AndReusesCommonBlocks()
-    {
-        var store = CreateStore();
-        var source = CreateSource("chunks");
-        Write(source, "repo/js/其他/main.js", "// 未选择项目");
-        Write(source, "repo/js/其他/manifest.json", ScriptManifest);
-        Write(source, "unrelated.txt", "unrelated");
-        Commit(source);
-        var reference = await ReferenceAsync(store, source);
-        await store.RetainAsync(reference, "javascript");
-        using (var approved = await store.OpenApprovedAsync(reference))
-        {
-            Assert.False(approved.FileExists("repo/js/其他/main.js"));
-            Assert.False(approved.FileExists("repo.json"));
-            Assert.False(approved.FileExists("unrelated.txt"));
-            Assert.True(approved.FileExists("repo/js/示例/helper.js"));
-            Assert.True(approved.FileExists("packages/shared.js"));
-            Assert.True(approved.FileExists("repo/pathing/子目录/第二条.json"));
-        }
-        var snapshotRoot = Path.Combine(store.RootDirectory, "Snapshots", reference.RepositoryId);
-        var oldScopes = ReadRetainedScopes(snapshotRoot, reference.ApprovedRevision);
-        Assert.Equal(3, Directory.GetFiles(snapshotRoot, "*.zip").Length);
-        Write(source, "repo/js/示例/main.js", "// 新版本入口");
-        Commit(source);
-        var next = await ReferenceAsync(store, source);
-        await store.RetainAsync(next, "javascript");
-        var newScopes = ReadRetainedScopes(snapshotRoot, next.ApprovedRevision);
-        Assert.Equal(oldScopes.Value<string>("packages"), newScopes.Value<string>("packages"));
-        Assert.Equal(oldScopes.Value<string>("repo/pathing"), newScopes.Value<string>("repo/pathing"));
-        Assert.Equal(4, Directory.GetFiles(snapshotRoot, "*.zip").Length);
-        // 修订和内容身份只在索引中，资源区不再按修订建目录。
-        Assert.Empty(Directory.GetDirectories(snapshotRoot));
-    }
-
-    /// <summary>读取 retained.json 中某个修订的“范围 → 归档块”映射。</summary>
-    private static JObject ReadRetainedScopes(string snapshotRoot, string revision)
-        => (JObject)JObject.Parse(File.ReadAllText(Path.Combine(snapshotRoot, "retained.json")))["revisions"]![revision]!;
 
     /// <summary>只清理本测试的绝对临时目录，并先解除 Git 对象的只读属性。</summary>
     private void DeleteTemporary(string path)

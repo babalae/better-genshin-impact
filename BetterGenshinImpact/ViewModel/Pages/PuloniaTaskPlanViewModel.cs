@@ -64,7 +64,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// 页面底部的最近操作结果。
     /// </summary>
     [ObservableProperty]
-    private string _statusMessage = "在任务列表中右键添加任务；所有修改都会自动保存。";
+    private string _statusMessage = "使用工具栏“添加”或在任务列表中右键添加任务；所有修改都会自动保存。";
 
     /// <summary>
     /// 普通任务计划列表，即编辑会话中的普通计划集合。
@@ -677,6 +677,8 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// </summary>
     private void NotifyCommandStates()
     {
+        // 文档的选中变化也经由此处通知，工具栏目标随之刷新
+        NotifyToolbarTargets();
         OnPropertyChanged(nameof(CanPaste));
         OnPropertyChanged(nameof(CanAddPlanReference));
         OnPropertyChanged(nameof(CanRunPlan));

@@ -146,6 +146,15 @@ public static class PuloniaTaskResultInterpreter
                 new JValue(FormatResinPlanBudget(budget))));
         }
 
+        // 活动识别结果一行；未执行识别（旧记录或 null）时不展示
+        if (data.ContainsKey("events"))
+        {
+            handled.Add("events");
+            if (data["events"] is JObject events)
+                entries.Add(new PuloniaTaskResultEntry("活动识别", PuloniaTaskResultEntryKind.Value,
+                    new JValue(FormatResinPlanEvents(events))));
+        }
+
         if (data["steps"] is not JArray steps)
             return;
         handled.Add("steps");
@@ -168,6 +177,36 @@ public static class PuloniaTaskResultInterpreter
                    + $"；领奖共消耗 {budget.Value<int?>("spent_points") ?? 0} 点";
         var crafted = budget.Value<int?>("crafted_condensed") ?? 0;
         return crafted > 0 ? text + $"；合成浓缩 {crafted} 个" : text;
+    }
+
+    /// <summary>格式化体力计划的活动识别：移涌活动与紊乱爆发期状态。</summary>
+    private static string FormatResinPlanEvents(JObject events)
+    {
+        if (events.Value<bool?>("recognized") != true)
+        {
+            var message = events.Value<string>("message");
+            return string.IsNullOrWhiteSpace(message) ? "未能识别活动页，按没有活动处理" : $"未能识别活动页（{message}），按没有活动处理";
+        }
+
+        // 每个移涌活动显示为“名称（今日剩余双倍 3/3）”；未知的活动值（例如后续版本新增）按原文展示
+        var overflows = (events["overflows"] as JArray)?.OfType<JObject>()
+            .Select(item =>
+            {
+                var text = item.Value<string>("event") ?? string.Empty;
+                var name = Enum.TryParse<ResinPlanOverflowEvent>(text, out var value) ? ResinPlanEventDetector.DisplayName(value) : text;
+                var remaining = ResinPlanEventDetector.FormatRemaining(new ResinPlanOverflowStatus
+                {
+                    RemainingClaims = item.Value<int?>("remaining_claims"),
+                    DailyClaims = item.Value<int?>("daily_claims")
+                });
+                return $"{name}（今日剩余双倍 {remaining}）";
+            })
+            .ToArray() ?? [];
+        var burst = Enum.TryParse<StygianBurstState>(events.Value<string>("stygian_burst"), out var state)
+            ? ResinPlanEventDetector.DisplayName(state)
+            : "未识别";
+        return (overflows.Length > 0 ? "移涌活动：" + string.Join("、", overflows) : "没有移涌活动")
+               + "；幽境危战紊乱爆发期：" + burst;
     }
 
     /// <summary>格式化体力计划的一个阶段：结果、对象、说明与本步奖励。</summary>

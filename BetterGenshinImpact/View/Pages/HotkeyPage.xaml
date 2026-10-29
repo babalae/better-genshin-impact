@@ -23,6 +23,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <ui:TextBlock Grid.Row="0"
@@ -35,7 +36,15 @@
                       Text="{i18n:T 全局热键：只支持组合键和功能键，软件启动直接生效。键鼠监听：支持任意键盘单键、鼠标侧键，功能启动后才生效（推荐）。点击类型按钮可以切换快捷键类型。其中存在长按需求的功能不能使用全局热键。}"
                       TextWrapping="Wrap" />
 
-        <ui:Border Grid.Row="2"
+        <!--  按功能名称或分组名称筛选，输入时即时生效  -->
+        <ui:TextBox Grid.Row="2"
+                    Margin="0,0,0,8"
+                    ClearButtonEnabled="True"
+                    Icon="{ui:SymbolIcon Search24}"
+                    PlaceholderText="{i18n:T 按功能名称筛选}"
+                    Text="{Binding FilterText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+        <ui:Border Grid.Row="3"
                    Background="{DynamicResource CardBackground}"
                    BorderBrush="{DynamicResource CardBorderBrush}"
                    BorderThickness="1"
@@ -45,6 +54,16 @@
                     <Grid x:Name="TreeColumnStar" Grid.Column="0" />
                 </ui:Grid>
                 <ui:TreeListView BorderThickness="0" ItemsSource="{Binding HotKeySettingModels}">
+                    <ui:TreeListView.Resources>
+                        <!--
+                            隐式样式作用于所有层级的行，继承 Violeta 默认行样式。
+                            展开状态改为双向绑定，筛选时才能展开用户折叠过的分组；不匹配的行直接折叠隐藏。
+                        -->
+                        <Style BasedOn="{StaticResource {x:Type ui:TreeListViewItem}}" TargetType="ui:TreeListViewItem">
+                            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                            <Setter Property="Visibility" Value="{Binding IsFilterVisible, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        </Style>
+                    </ui:TreeListView.Resources>
                     <ui:TreeListView.Columns>
                         <GridViewColumnCollection>
                             <ui:GridViewColumn Width="{Binding ActualWidth, ElementName=TreeColumnStar}" Header="{i18n:T 功能}">
@@ -85,6 +104,13 @@
                         <HierarchicalDataTemplate ItemsSource="{Binding Children}" />
                     </ui:TreeListView.ItemTemplate>
                 </ui:TreeListView>
+                <!--  筛选无结果时的提示，不拦截鼠标，列表表头仍可正常操作  -->
+                <ui:TextBlock HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              IsHitTestVisible="False"
+                              Text="{i18n:T 没有匹配的功能}"
+                              Visibility="{Binding IsFilterResultEmpty, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
             </Grid>
         </ui:Border>
     </Grid>

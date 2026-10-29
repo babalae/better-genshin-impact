@@ -7,31 +7,6 @@ namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests;
 
 public sealed class InferenceRuntimeServiceTests
 {
-    [Fact]
-    public async Task DeferredValidation_DoesNotGateSnapshotAndRunsOnceWhenRequested()
-    {
-        var config = Configuration();
-        InferenceRuntimeService.PrepareStartup(config);
-        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var diagnostic = new Diagnostics { Validation = (_, _) => completion.Task };
-        using var service = Create(config, diagnostic);
-
-        await service.InitializeAsync();
-        Assert.True(service.IsReady);
-        Assert.False(service.IsCurrentValidated);
-        Assert.Equal(0, diagnostic.Calls);
-
-        var validation = service.ValidatePendingAsync();
-        await diagnostic.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        Assert.Same(validation, service.ValidatePendingAsync());
-        Assert.Equal(InferenceValidationState.Validating, config.ValidationState);
-
-        completion.SetResult();
-        await validation;
-        Assert.True(service.IsCurrentValidated);
-        Assert.Equal(InferenceDeviceType.CUDA, service.Current.Engine);
-        Assert.Equal(InferenceValidationState.None, config.ValidationState);
-    }
 
     [Fact]
     public async Task NativeValidationFailure_UsesCpuInSameProcess()

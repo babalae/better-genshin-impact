@@ -36,12 +36,15 @@ using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Extensions;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.Guide;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Fischless.HotkeyCapture;
+using System.Linq;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using CommunityToolkit.Mvvm.Messaging.Messages;
@@ -93,12 +96,35 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
     /// 把热键产生的外部停止信号转发给当前运行。
     /// </summary>
     private readonly TaskStopService _taskStopService;
+
+    /// <summary>
+    /// 悬浮小窗服务，“悬浮小窗”分组的快捷键调用它
+    /// </summary>
+    private readonly IGuideWindowService _guideWindowService;
+
+    /// <summary>
+    /// “悬浮小窗”分组，悬浮小窗设置页直接绑定其中的快捷键对象，与快捷键页共用同一份注册
+    /// </summary>
+    public HotKeySettingModel GuideHotKeyDirectory { get; private set; } = null!;
+
     private readonly Dictionary<string, HotKey> _acceptedHotKeys = [];
     private readonly HashSet<string> _rollingBackHotKeyProperties = [];
     public AllConfig Config { get; set; }
 
     [ObservableProperty]
     private ObservableCollection<HotKeySettingModel> _hotKeySettingModels = [];
+
+    /// <summary>
+    /// 快捷键页的筛选关键字，按功能名称或分组名称匹配，忽略大小写；为空时显示全部
+    /// </summary>
+    [ObservableProperty]
+    private string _filterText = string.Empty;
+
+    /// <summary>
+    /// 当前筛选关键字没有匹配任何功能，页面据此显示空结果提示
+    /// </summary>
+    [ObservableProperty]
+    private bool _isFilterResultEmpty;
 
     /// <summary>
     /// 网页版实例不响应任何热键（全局热键与键鼠监听都不注册）：
@@ -114,9 +140,11 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         RecognitionTemplateEditorService recognitionTemplateEditorService,
         GameRuntimeService runtimeService,
         GameScreenshotService screenshots,
-        TaskStopService taskStopService)
+        TaskStopService taskStopService,
+        IGuideWindowService guideWindowService)
     {
         _logger = logger;
+        _guideWindowService = guideWindowService;
         _taskSettingsPageViewModel = taskSettingsPageViewModel;
         _recognitionTemplateEditorService = recognitionTemplateEditorService;
         _runtimeService = runtimeService;
@@ -357,6 +385,70 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         }
     }
 
+    /// <summary>
+    /// 筛选关键字变化时重新计算各行的显示状态
+    /// </summary>
+    partial void OnFilterTextChanged(string value)
+    {
+        ApplyFilter(value);
+    }
+
+    /// <summary>
+    /// 按关键字设置每个节点的显示状态：分组名称匹配时显示整组，功能名称匹配时显示该项及其所在分组。
+    /// 只修改显示状态，不增删集合，热键注册和悬浮小窗设置页都不受影响。
+    /// 切换界面语言后不会自动重新筛选，修改关键字时按新语言重新计算
+    /// </summary>
+    /// <param name="keyword">用户输入的关键字</param>
+    private void ApplyFilter(string? keyword)
+    {
+        var trimmedKeyword = keyword?.Trim() ?? string.Empty;
+        var anyVisible = false;
+        foreach (var model in HotKeySettingModels)
+        {
+            // 用 | 而不是 ||，保证每个顶层节点都会被计算
+            anyVisible |= ApplyFilter(model, trimmedKeyword, false);
+        }
+
+        IsFilterResultEmpty = !anyVisible;
+    }
+
+    /// <summary>
+    /// 递归计算节点及其子节点的显示状态
+    /// </summary>
+    /// <param name="model">当前节点</param>
+    /// <param name="keyword">已去除首尾空白的关键字，空字符串表示不筛选</param>
+    /// <param name="ancestorMatched">上级分组名称已匹配，此时整组显示</param>
+    /// <returns>当前节点是否显示</returns>
+    private static bool ApplyFilter(HotKeySettingModel model, string keyword, bool ancestorMatched)
+    {
+        var matched = ancestorMatched || keyword.Length == 0 || IsFilterMatch(model, keyword);
+        var anyChildVisible = false;
+        foreach (var child in model.Children)
+        {
+            anyChildVisible |= ApplyFilter(child, keyword, matched);
+        }
+
+        var visible = matched || anyChildVisible;
+        model.IsFilterVisible = visible;
+
+        // 有关键字时展开含显示项的分组，避免匹配项藏在用户折叠的分组里；清空关键字时保留当前的展开状态
+        if (keyword.Length > 0 && visible && model.IsDirectory)
+        {
+            model.IsExpanded = true;
+        }
+
+        return visible;
+    }
+
+    /// <summary>
+    /// 当前界面语言的名称或中文原名包含关键字即为匹配，忽略大小写
+    /// </summary>
+    private static bool IsFilterMatch(HotKeySettingModel model, string keyword)
+    {
+        return model.LocalizedFunctionName.Contains(keyword, StringComparison.OrdinalIgnoreCase)
+               || model.FunctionName.Contains(keyword, StringComparison.OrdinalIgnoreCase);
+    }
+
     public static List<HotKeySettingModel> GetAllNonDirectoryHotkey(IEnumerable<HotKeySettingModel> modelList)
     {
         var list = new List<HotKeySettingModel>();
@@ -427,6 +519,13 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             "操控辅助"
         );
         HotKeySettingModels.Add(macroDirectory);
+
+        var guideDirectory = new HotKeySettingModel(
+            "悬浮小窗"
+        );
+        HotKeySettingModels.Add(guideDirectory);
+        GuideHotKeyDirectory = guideDirectory;
+        BuildGuideHotKeys(guideDirectory);
 
         var devDirectory = new HotKeySettingModel(
             "开发者"
@@ -994,6 +1093,129 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 }
             ));
         }
+    }
+
+    /// <summary>
+    /// “悬浮小窗”分组的快捷键与推荐方案（见 Docs/design/guide-window.md 8.1 节）。
+    /// 推荐方案只在用户点击“一键填入”时使用，默认不绑定
+    /// </summary>
+    private static readonly (string Property, HotKey Recommended)[] GuideRecommendedHotKeys =
+    [
+        (nameof(HotKeyConfig.GuideToggleHotkey), new HotKey(Key.H, ModifierKeys.Control | ModifierKeys.Alt)),
+        (nameof(HotKeyConfig.GuidePlayPauseHotkey), new HotKey(Key.Space, ModifierKeys.Control | ModifierKeys.Alt)),
+        (nameof(HotKeyConfig.GuideSeekBackwardHotkey), new HotKey(Key.Left, ModifierKeys.Control | ModifierKeys.Alt)),
+        (nameof(HotKeyConfig.GuideSeekForwardHotkey), new HotKey(Key.Right, ModifierKeys.Control | ModifierKeys.Alt)),
+        (nameof(HotKeyConfig.GuideSpeedUpHotkey), new HotKey(Key.Up, ModifierKeys.Control | ModifierKeys.Alt)),
+        (nameof(HotKeyConfig.GuideSpeedDownHotkey), new HotKey(Key.Down, ModifierKeys.Control | ModifierKeys.Alt)),
+        (nameof(HotKeyConfig.GuideSpeedResetHotkey), new HotKey(Key.D0, ModifierKeys.Control | ModifierKeys.Alt)),
+        (nameof(HotKeyConfig.GuideBoostHotkey), new HotKey(Key.None, ModifierKeys.None, MouseButton.XButton2)),
+        (nameof(HotKeyConfig.GuideVolumeUpHotkey), new HotKey(Key.PageUp, ModifierKeys.Control | ModifierKeys.Alt)),
+        (nameof(HotKeyConfig.GuideVolumeDownHotkey), new HotKey(Key.PageDown, ModifierKeys.Control | ModifierKeys.Alt)),
+        (nameof(HotKeyConfig.GuideMuteHotkey), new HotKey(Key.M, ModifierKeys.Control | ModifierKeys.Alt)),
+        (nameof(HotKeyConfig.GuidePrevEpisodeHotkey), new HotKey(Key.OemOpenBrackets, ModifierKeys.Control | ModifierKeys.Alt)),
+        (nameof(HotKeyConfig.GuideNextEpisodeHotkey), new HotKey(Key.OemCloseBrackets, ModifierKeys.Control | ModifierKeys.Alt)),
+        (nameof(HotKeyConfig.GuideOpacityUpHotkey), new HotKey(Key.Up, ModifierKeys.Control | ModifierKeys.Alt | ModifierKeys.Shift)),
+        (nameof(HotKeyConfig.GuideOpacityDownHotkey), new HotKey(Key.Down, ModifierKeys.Control | ModifierKeys.Alt | ModifierKeys.Shift)),
+        (nameof(HotKeyConfig.GuideClickThroughHotkey), new HotKey(Key.P, ModifierKeys.Control | ModifierKeys.Alt)),
+        (nameof(HotKeyConfig.GuideInteractHotkey), new HotKey(Key.I, ModifierKeys.Control | ModifierKeys.Alt)),
+        (nameof(HotKeyConfig.GuideImmersiveHotkey), new HotKey(Key.F, ModifierKeys.Control | ModifierKeys.Alt)),
+        (nameof(HotKeyConfig.GuideSubtitleHotkey), new HotKey(Key.C, ModifierKeys.Control | ModifierKeys.Alt)),
+        (nameof(HotKeyConfig.GuideOpenClipboardHotkey), new HotKey(Key.V, ModifierKeys.Control | ModifierKeys.Alt)),
+        (nameof(HotKeyConfig.GuideRestoreHotkey), new HotKey(Key.F10, ModifierKeys.Control | ModifierKeys.Alt)),
+    ];
+
+    /// <summary>
+    /// 构建“悬浮小窗”分组。开关类快捷键禁止按住时系统重复触发；快进、倍速、音量允许按住连续调整
+    /// </summary>
+    private void BuildGuideHotKeys(HotKeySettingModel directory)
+    {
+        var guide = _guideWindowService;
+
+        void Add(string functionName, string property, Action<object?, KeyPressedEventArgs> action, bool suppressRepeat)
+        {
+            var value = (string)typeof(HotKeyConfig).GetProperty(property)!.GetValue(Config.HotKeyConfig)!;
+            var type = (string)typeof(HotKeyConfig).GetProperty(property + "Type")!.GetValue(Config.HotKeyConfig)!;
+            directory.Children.Add(new HotKeySettingModel(functionName, property, value, type, action)
+            {
+                SuppressRepeat = suppressRepeat,
+            });
+        }
+
+        Add("显示/隐藏小窗", nameof(HotKeyConfig.GuideToggleHotkey), (_, _) => guide.ToggleVisible(), true);
+        Add("播放/暂停", nameof(HotKeyConfig.GuidePlayPauseHotkey), (_, _) => guide.TogglePlay(), true);
+        Add("快退", nameof(HotKeyConfig.GuideSeekBackwardHotkey), (_, _) => guide.SeekBy(-1), false);
+        Add("快进", nameof(HotKeyConfig.GuideSeekForwardHotkey), (_, _) => guide.SeekBy(1), false);
+        Add("倍速增加", nameof(HotKeyConfig.GuideSpeedUpHotkey), (_, _) => guide.ChangeRate(1), false);
+        Add("倍速降低", nameof(HotKeyConfig.GuideSpeedDownHotkey), (_, _) => guide.ChangeRate(-1), false);
+        Add("倍速重置为 1x", nameof(HotKeyConfig.GuideSpeedResetHotkey), (_, _) => guide.SetRate(1), true);
+
+        // 按住临时加速需要松开事件，只能使用键鼠监听（单键或鼠标侧键）
+        directory.Children.Add(new HotKeySettingModel(
+            "按住临时加速",
+            nameof(HotKeyConfig.GuideBoostHotkey),
+            Config.HotKeyConfig.GuideBoostHotkey,
+            Config.HotKeyConfig.GuideBoostHotkeyType,
+            null,
+            true)
+        {
+            OnKeyDownAction = (_, _) => guide.BeginBoost(),
+            OnKeyUpAction = (_, _) => guide.EndBoost(),
+        });
+
+        Add("音量增加", nameof(HotKeyConfig.GuideVolumeUpHotkey), (_, _) => guide.ChangeVolume(1), false);
+        Add("音量降低", nameof(HotKeyConfig.GuideVolumeDownHotkey), (_, _) => guide.ChangeVolume(-1), false);
+        Add("静音", nameof(HotKeyConfig.GuideMuteHotkey), (_, _) => guide.ToggleMute(), true);
+        Add("上一集", nameof(HotKeyConfig.GuidePrevEpisodeHotkey), (_, _) => guide.SwitchEpisode(-1), true);
+        Add("下一集", nameof(HotKeyConfig.GuideNextEpisodeHotkey), (_, _) => guide.SwitchEpisode(1), true);
+        Add("不透明度增加", nameof(HotKeyConfig.GuideOpacityUpHotkey), (_, _) => guide.ChangeOpacity(1), false);
+        Add("不透明度降低", nameof(HotKeyConfig.GuideOpacityDownHotkey), (_, _) => guide.ChangeOpacity(-1), false);
+        Add("鼠标穿透开关", nameof(HotKeyConfig.GuideClickThroughHotkey), (_, _) => guide.ToggleClickThrough(), true);
+        Add("交互模式（临时操作网页）", nameof(HotKeyConfig.GuideInteractHotkey), (_, _) => guide.ToggleInteraction(), true);
+        Add("沉浸模式", nameof(HotKeyConfig.GuideImmersiveHotkey), (_, _) => guide.ToggleImmersive(), true);
+        Add("字幕浮窗开关", nameof(HotKeyConfig.GuideSubtitleHotkey), (_, _) => guide.ToggleSubtitle(), true);
+        Add("用小窗打开剪贴板链接", nameof(HotKeyConfig.GuideOpenClipboardHotkey), (_, _) => guide.OpenFromClipboard(), true);
+        Add("紧急恢复小窗", nameof(HotKeyConfig.GuideRestoreHotkey), (_, _) => guide.RestoreEmergency(), true);
+    }
+
+    /// <summary>
+    /// 一键填入“悬浮小窗”分组的推荐快捷键：只填当前为空的项，跳过已被其他功能占用的组合，不清除用户已有的绑定
+    /// </summary>
+    /// <returns>填入的数量、因冲突或注册失败跳过的数量</returns>
+    public (int Filled, int Skipped) ApplyGuideRecommendedHotKeys()
+    {
+        var filled = 0;
+        var skipped = 0;
+        var all = GetAllNonDirectoryHotkey(HotKeySettingModels);
+        foreach (var (property, recommended) in GuideRecommendedHotKeys)
+        {
+            var model = GuideHotKeyDirectory.Children.FirstOrDefault(child => child.ConfigPropertyName == property);
+            if (model is null || !model.HotKey.IsEmpty)
+            {
+                continue;
+            }
+
+            // 侧键只能用键鼠监听，组合键只能用全局热键；用户改过类型时不覆盖
+            var expectedType = recommended.MouseButton != MouseButton.Left ? HotKeyTypeEnum.KeyboardMonitor : HotKeyTypeEnum.GlobalRegister;
+            if (model.HotKeyType != expectedType
+                || all.Any(other => !ReferenceEquals(other, model)
+                                    && HotKeySettingModel.AreConflicting(other.HotKey, other.HotKeyType, recommended, expectedType)))
+            {
+                skipped++;
+                continue;
+            }
+
+            model.HotKey = recommended;
+            if (model.HotKey.IsEmpty)
+            {
+                // 被其他程序占用，注册失败后已被清空
+                skipped++;
+                continue;
+            }
+
+            filled++;
+        }
+
+        return (filled, skipped);
     }
 
     /// <summary>

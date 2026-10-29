@@ -16,20 +16,6 @@ internal static class ImageRegionReferenceSearchHelper
 {
     private const int DefaultSearchExpandSize = 10;
 
-    private enum HorizontalSearchAnchor
-    {
-        Left,
-        Center,
-        Right
-    }
-
-    private enum VerticalSearchAnchor
-    {
-        Top,
-        Center,
-        Bottom
-    }
-
     /// <summary>
     /// 判断识别对象是否启用了参考画布搜索。
     /// 显式 RegionOfInterest 优先级最高，存在时不再使用 ReferenceImageSize/ReferenceBoundingBox 推导 ROI。
@@ -126,44 +112,23 @@ internal static class ImageRegionReferenceSearchHelper
         }
 
         // 取较小缩放比，保持参考画布宽高比不变；多出来的边按锚点计算偏移。
-        var scale = Math.Min(
-            imageRegion.SrcMat.Width / (double)referenceImageSize.Width,
-            imageRegion.SrcMat.Height / (double)referenceImageSize.Height);
-        if (scale <= 0)
+        // 输入图和参考图宽高比不一致时，锚点决定参考画布贴向哪一侧。计算与手动 ROI 共用 ReferenceRect。
+        if (!ReferenceRect.TryResolve(referenceImageSize, imageRegion.SrcMat.Size(), options.AnchorMode, referenceBoundingBox,
+                out var scale, out var offsetX, out var offsetY))
         {
             LogReferenceSearchInvalid(ro);
             return false;
         }
 
-        var (horizontalAnchor, verticalAnchor) = ResolveSearchAnchor(options.AnchorMode, referenceBoundingBox, referenceImageSize);
-
-        var scaledReferenceWidth = referenceImageSize.Width * scale;
-        var scaledReferenceHeight = referenceImageSize.Height * scale;
-
-        // 输入图和参考图宽高比不一致时，锚点决定参考画布贴向哪一侧。
-        var offsetX = horizontalAnchor switch
-        {
-            HorizontalSearchAnchor.Right => imageRegion.SrcMat.Width - scaledReferenceWidth,
-            HorizontalSearchAnchor.Center => (imageRegion.SrcMat.Width - scaledReferenceWidth) / 2d,
-            _ => 0d
-        };
-
-        var offsetY = verticalAnchor switch
-        {
-            VerticalSearchAnchor.Bottom => imageRegion.SrcMat.Height - scaledReferenceHeight,
-            VerticalSearchAnchor.Center => (imageRegion.SrcMat.Height - scaledReferenceHeight) / 2d,
-            _ => 0d
-        };
-
         // 模板框和独立搜索框共用同一个参考矩形转换；模板尺寸继续按原有的“宽高直接缩放后取整”
         // 规则计算，保证未使用新字段时的模板缩放结果完全兼容。
-        var transformedReferenceBoundingBox = TransformReferenceRect(referenceBoundingBox, scale, offsetX, offsetY);
+        var transformedReferenceBoundingBox = ReferenceRect.Transform(referenceBoundingBox, scale, offsetX, offsetY);
         effectiveReferenceBoundingBoxSize = new Size(
             Math.Max(1, (int)Math.Round(referenceBoundingBox.Width * scale)),
             Math.Max(1, (int)Math.Round(referenceBoundingBox.Height * scale)));
         // 独立搜索框与模板位置共用参考画布的缩放和锚定偏移，避免宽高比变化时发生相对位置漂移。
         var baseSearchRegion = options.ReferenceSearchBox is { } referenceSearchBox
-            ? TransformReferenceRect(referenceSearchBox, scale, offsetX, offsetY)
+            ? ReferenceRect.Transform(referenceSearchBox, scale, offsetX, offsetY)
             : transformedReferenceBoundingBox;
 
         // 百分比扩展按当前截图宽高计算，并优先于像素扩展；最终统一裁剪到截图边界。
@@ -205,24 +170,6 @@ internal static class ImageRegionReferenceSearchHelper
         Cv2.Resize(template, resized, new Size(targetWidth, targetHeight));
         shouldDispose = true;
         return resized;
-    }
-
-    /// <summary>
-    /// 将参考画布中的矩形转换到当前截图坐标系。
-    /// 分别转换左右、上下边界后再计算宽高，避免位置和尺寸独立舍入导致一像素偏差。
-    /// </summary>
-    private static Rect TransformReferenceRect(Rect referenceRect, double scale, double offsetX, double offsetY)
-    {
-        var left = (int)Math.Round(offsetX + referenceRect.Left * scale);
-        var top = (int)Math.Round(offsetY + referenceRect.Top * scale);
-        var right = (int)Math.Round(offsetX + referenceRect.Right * scale);
-        var bottom = (int)Math.Round(offsetY + referenceRect.Bottom * scale);
-
-        return new Rect(
-            left,
-            top,
-            Math.Max(1, right - left),
-            Math.Max(1, bottom - top));
     }
 
     /// <summary>
@@ -278,49 +225,5 @@ internal static class ImageRegionReferenceSearchHelper
         Cv2.Resize(maskMat, resized, new Size(effectiveTemplate.Width, effectiveTemplate.Height), 0, 0, InterpolationFlags.Nearest);
         shouldDispose = true;
         return resized;
-    }
-
-    private static (HorizontalSearchAnchor horizontal, VerticalSearchAnchor vertical) ResolveSearchAnchor(
-        SearchAnchorMode anchorMode,
-        Rect referenceBoundingBox,
-        Size referenceImageSize)
-    {
-        return anchorMode switch
-        {
-            SearchAnchorMode.TopLeft => (HorizontalSearchAnchor.Left, VerticalSearchAnchor.Top),
-            SearchAnchorMode.TopRight => (HorizontalSearchAnchor.Right, VerticalSearchAnchor.Top),
-            SearchAnchorMode.BottomLeft => (HorizontalSearchAnchor.Left, VerticalSearchAnchor.Bottom),
-            SearchAnchorMode.BottomRight => (HorizontalSearchAnchor.Right, VerticalSearchAnchor.Bottom),
-            SearchAnchorMode.Center => (HorizontalSearchAnchor.Center, VerticalSearchAnchor.Center),
-            _ => ResolveAutoSearchAnchor(referenceBoundingBox, referenceImageSize)
-        };
-    }
-
-    /// <summary>
-    /// Auto 模式模拟游戏 UI 的响应式布局：按参考框中心所在区域分别选择水平和垂直锚定，
-    /// 靠边元素跟随对应边缘，中部元素跟随画布中心。0.4/0.6 分界用于保留中部响应区域。
-    /// </summary>
-    private static (HorizontalSearchAnchor horizontal, VerticalSearchAnchor vertical) ResolveAutoSearchAnchor(
-        Rect referenceBoundingBox,
-        Size referenceImageSize)
-    {
-        var centerX = referenceBoundingBox.X + referenceBoundingBox.Width / 2d;
-        var centerY = referenceBoundingBox.Y + referenceBoundingBox.Height / 2d;
-
-        var horizontal = centerX switch
-        {
-            var x when x < referenceImageSize.Width * 0.4 => HorizontalSearchAnchor.Left,
-            var x when x > referenceImageSize.Width * 0.6 => HorizontalSearchAnchor.Right,
-            _ => HorizontalSearchAnchor.Center
-        };
-
-        var vertical = centerY switch
-        {
-            var y when y < referenceImageSize.Height * 0.4 => VerticalSearchAnchor.Top,
-            var y when y > referenceImageSize.Height * 0.6 => VerticalSearchAnchor.Bottom,
-            _ => VerticalSearchAnchor.Center
-        };
-
-        return (horizontal, vertical);
     }
 }

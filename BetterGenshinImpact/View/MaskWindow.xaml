@@ -838,30 +838,82 @@
                                         <WrapPanel />
                                     </ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Button Margin="0,0,8,8"
-                                                Padding="10,4"
-                                                Background="#2FFFFFFF"
-                                                BorderBrush="#26FFFFFF"
-                                                BorderThickness="1"
-                                                Cursor="Hand"
-                                                ToolTip="{Binding Url}"
-                                                Command="{Binding DataContext.OpenUrlCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                CommandParameter="{Binding Url}">
-                                            <Button.Template>
+                                <ItemsControl.Resources>
+                                    <!--  链接胶囊内的按钮：透明底，悬停时提亮  -->
+                                    <Style x:Key="MapLinkPartButtonStyle"
+                                           BasedOn="{StaticResource {x:Type Button}}"
+                                           TargetType="{x:Type Button}">
+                                        <Setter Property="Background" Value="Transparent" />
+                                        <Setter Property="BorderThickness" Value="0" />
+                                        <Setter Property="Cursor" Value="Hand" />
+                                        <Setter Property="Template">
+                                            <Setter.Value>
                                                 <ControlTemplate TargetType="{x:Type Button}">
-                                                    <Border Background="{TemplateBinding Background}"
-                                                            BorderBrush="{TemplateBinding BorderBrush}"
-                                                            BorderThickness="{TemplateBinding BorderThickness}"
+                                                    <Border x:Name="PartBorder"
+                                                            Background="{TemplateBinding Background}"
                                                             CornerRadius="10"
                                                             Padding="{TemplateBinding Padding}">
                                                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                                                     </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="PartBorder" Property="Background" Value="#1FFFFFFF" />
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
                                                 </ControlTemplate>
-                                            </Button.Template>
-                                            <TextBlock Foreground="White" FontSize="12" Text="{Binding DisplayText}" />
-                                        </Button>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ItemsControl.Resources>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <!--  链接胶囊：左侧按设置打开，右侧小按钮换一种方式打开（悬浮小窗 / 浏览器）  -->
+                                        <Border Margin="0,0,8,8"
+                                                Background="#2FFFFFFF"
+                                                BorderBrush="#26FFFFFF"
+                                                BorderThickness="1"
+                                                CornerRadius="10">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Button Padding="10,4"
+                                                        Style="{StaticResource MapLinkPartButtonStyle}"
+                                                        ToolTip="{Binding Url}"
+                                                        Command="{Binding DataContext.OpenUrlCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                        CommandParameter="{Binding Url}">
+                                                    <TextBlock Foreground="White" FontSize="12" Text="{Binding DisplayText}" />
+                                                </Button>
+                                                <Border Width="1"
+                                                        Margin="0,5"
+                                                        Background="#26FFFFFF"
+                                                        Visibility="{Binding DataContext.IsGuideWindowAvailable, RelativeSource={RelativeSource AncestorType=ItemsControl}, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                                <Button Padding="7,4"
+                                                        Command="{Binding DataContext.OpenUrlAlternateCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                        CommandParameter="{Binding Url}"
+                                                        Visibility="{Binding DataContext.IsGuideWindowAvailable, RelativeSource={RelativeSource AncestorType=ItemsControl}, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                    <Button.Style>
+                                                        <Style BasedOn="{StaticResource MapLinkPartButtonStyle}" TargetType="{x:Type Button}">
+                                                            <Setter Property="ToolTip" Value="{i18n:T 在悬浮小窗打开}" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding DataContext.IsGuideWindowPreferred, RelativeSource={RelativeSource AncestorType=ItemsControl}, Mode=OneWay}" Value="True">
+                                                                    <Setter Property="ToolTip" Value="{i18n:T 在浏览器打开}" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Button.Style>
+                                                    <ui:SymbolIcon FontSize="14" Foreground="White">
+                                                        <ui:SymbolIcon.Style>
+                                                            <Style TargetType="{x:Type ui:SymbolIcon}">
+                                                                <Setter Property="Symbol" Value="PictureInPicture24" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding DataContext.IsGuideWindowPreferred, RelativeSource={RelativeSource AncestorType=ItemsControl}, Mode=OneWay}" Value="True">
+                                                                        <Setter Property="Symbol" Value="Open24" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </ui:SymbolIcon.Style>
+                                                    </ui:SymbolIcon>
+                                                </Button>
+                                            </StackPanel>
+                                        </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>

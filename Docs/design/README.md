@@ -20,3 +20,5 @@
 - [自动战斗策略统一：策略模型、键鼠录制实现与策略选择控件](auto-fight-strategy.md)（第 3 版，已确认）
 - [树脂使用设置统一：弹窗界面、参数合同与任务适配](resin-usage-settings.md)（第 3 版，已实施，待界面与游戏内验收）
 - [基础设施统一：WebView2、网络与下载、缓存、临时文件](infrastructure-foundation.md)（第 2 版，已确认，待实施）
+- [JS 脚本自定义 HTML 设置页](js-script-html-settings.md)（第 3 版，提案，待确认）
+- [悬浮小窗（攻略小窗）](guide-window.md)（第 2 版，已确认，实施中；首版代码已完成，待游戏内验证）

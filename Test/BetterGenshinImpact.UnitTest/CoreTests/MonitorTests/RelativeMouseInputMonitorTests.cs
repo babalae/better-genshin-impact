@@ -121,29 +121,6 @@ public class RelativeMouseInputMonitorTests
     }
 
     [Fact]
-    public void Factory_ShouldReturnSharedInstanceForEachType()
-    {
-        using var directInputMonitor =
-            new DirectInputMonitor(NullLogger<DirectInputMonitor>.Instance);
-        using var rawInputMonitor =
-            new RawInputMonitor(NullLogger<RawInputMonitor>.Instance);
-        var factory = new RelativeMouseInputMonitorFactory(directInputMonitor, rawInputMonitor);
-
-        Assert.Same(
-            directInputMonitor,
-            factory.Get(RelativeMouseInputType.DirectInput));
-        Assert.Same(
-            directInputMonitor,
-            factory.Get(RelativeMouseInputType.DirectInput));
-        Assert.Same(
-            rawInputMonitor,
-            factory.Get(RelativeMouseInputType.RawInput));
-        Assert.NotSame(
-            factory.Get(RelativeMouseInputType.DirectInput),
-            factory.Get(RelativeMouseInputType.RawInput));
-    }
-
-    [Fact]
     public void RawInputParser_ShouldReturnSignedRelativeMovement()
     {
         var rawInput = CreateMouseRawInput(

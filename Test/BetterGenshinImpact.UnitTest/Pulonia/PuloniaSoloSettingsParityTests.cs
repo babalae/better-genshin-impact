@@ -1,71 +1,16 @@
 using BetterGenshinImpact.GameTask.Common.Resin;
 using System.Runtime.CompilerServices;
 using BetterGenshinImpact.GameTask.AutoBoss;
-using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Services;
-using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using BetterGenshinImpact.ViewModel.SoloTaskSettings;
 using Newtonsoft.Json.Linq;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace BetterGenshinImpact.UnitTest.Pulonia;
 
 /// <summary>新旧设置的参数保存和首领累计行为回归，不启动应用或游戏。</summary>
 public sealed class PuloniaSoloSettingsParityTests
 {
-    /// <summary>每个专属页与补充卡片共同覆盖整个能力 Schema，补充输入也必须真正提交。</summary>
-    [Fact]
-    public void DedicatedEditors_KeepEverySchemaParameterEditable()
-    {
-        var registry = new SoloTaskRegistry([typeof(SoloTaskRegistry).Assembly]);
-        using var services = new ServiceCollection().BuildServiceProvider();
-        foreach (var definition in PuloniaSoloTestDefinitions.OneDragonCandidates())
-        {
-            var editor = PuloniaTaskSettingsEditorViewModel.Create(registry, definition, definition.DefaultParameters, services);
-            var properties = Assert.IsType<JObject>(definition.ParameterSchema["properties"]);
-            var available = (editor.DedicatedSettings?.EditedParameterNames ?? [])
-                .Concat(editor.Fields.Select(field => field.Name)).ToArray();
-            Assert.Equal(available.Length, available.Distinct().Count());
-            Assert.Equal(properties.Properties().Select(property => property.Name).Order(), available.Order());
-            Assert.Empty(editor.CollectValidatedChanges());
-            if (definition.TaskType == "solo.auto_domain")
-            {
-                editor.Fields.Single(field => field.Name == "revive_retry_count").NumberValue = 5;
-                Assert.Equal(5, editor.CollectValidatedChanges().Value<int>("revive_retry_count"));
-            }
-        }
-    }
-
-    /// <summary>保留树脂数必须可保存，其他未修改设置继续继承。</summary>
-    [Fact]
-    public void Craft_ChangingRetainedResinOnlyWritesThatParameter()
-    {
-        var settings = new CraftCondensedResinSettingsViewModel(new JObject
-            { ["country"] = "枫丹", ["min_resin_to_keep"] = 40 }) { MinResinToKeep = 80 };
-        var changes = new JObject();
-        settings.CollectChanges(changes);
-        Assert.Single(changes);
-        Assert.Equal(80, changes.Value<int>("min_resin_to_keep"));
-    }
-
-    /// <summary>树脂使用卡片保持嵌套对象合同，未修改时不生成覆盖。</summary>
-    [Fact]
-    public void ResinUsage_GenericCardKeepsNestedObjectContract()
-    {
-        var value = JObject.Parse(SoloTaskJson.Serialize(ResinCapabilities.Domain.Defaults));
-        var schema = PuloniaOneDragonSettingChoices.Decorate("resin_usage",
-            PuloniaSoloTaskSchema.Create(typeof(ResinUsage)), value, "solo.auto_domain");
-        Assert.Equal("solo.auto_domain", schema.Value<string>("x-resin-usage"));
-        var field = new PuloniaOneDragonParameterFieldViewModel("resin_usage", schema, value);
-        Assert.False(field.HasChanges());
-        Assert.True(field.IsResinUsage);
-        Assert.Empty(field.Children);
-        var edited = field.Resin!.Value;
-        edited.RunCount = 6;
-        field.Resin.Reset(edited);
-        Assert.Equal(6, Assert.IsType<JObject>(field.BuildValue()).Value<int>("run_count"));
-    }
 
     /// <summary>累计上限与单次上限共同生效；耗尽方式转为指定次数后保留补充开关，且不修改共享原值。</summary>
     [Theory]

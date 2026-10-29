@@ -48,7 +48,18 @@ public partial class HotKeySettingModel : ObservableObject
 
     public string LocalizedFunctionName => I18nService.Instance.Translate(FunctionName);
 
-    public bool IsExpanded => true;
+    /// <summary>
+    /// 分组是否展开，默认展开。与树节点双向绑定，筛选时会展开含显示项的分组
+    /// </summary>
+    [ObservableProperty]
+    private bool _isExpanded = true;
+
+    /// <summary>
+    /// 当前筛选条件下是否在快捷键页显示，由快捷键页 ViewModel 按筛选关键字设置。
+    /// 只影响快捷键页的行显示，不影响注册，也不影响共用这些对象的其他页面
+    /// </summary>
+    [ObservableProperty]
+    private bool _isFilterVisible = true;
 
     /// <summary>
     /// 界面上显示是文件夹而不是快捷键

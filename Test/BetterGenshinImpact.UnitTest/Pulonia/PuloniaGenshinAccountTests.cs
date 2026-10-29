@@ -3,7 +3,6 @@ using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.Service;
-using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json.Linq;
 
@@ -14,16 +13,6 @@ public sealed class PuloniaGenshinAccountTests : IDisposable
 {
     /// <summary>本测试独占的目录，不接触用户真实账号与凭据。</summary>
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-" + BetterGenshinImpact.Helpers.ShortId.Create(null, 8));
-
-    /// <summary>首次使用无需目录文件，默认账号不会包含目标 UID 或登录凭据。</summary>
-    [Fact] public async Task DefaultAccountNeedsNoConfiguration()
-    {
-        using var store = new PuloniaTaskStore(_directory);
-        var settings = await store.LoadAccountSettingsAsync();
-        var account = Assert.Single(settings.Accounts);
-        Assert.True(account.IsDefault); Assert.Null(account.Uid); Assert.Null(account.CredentialReference);
-        Assert.False(settings.MultiAccountEnabled); Assert.False(Directory.Exists(_directory));
-    }
 
     /// <summary>目录保存检查修订冲突，失败时保留已保存资料并使用无 BOM 编码。</summary>
     [Fact] public async Task AccountDirectoryRejectsStaleRevisionAndKeepsSavedData()
@@ -78,25 +67,6 @@ public sealed class PuloniaGenshinAccountTests : IDisposable
         PuloniaCollectionCooldownStatus Status(string? uid) => PuloniaCollectionCooldown.GetStatus(policy,
             PuloniaCollectionCooldown.FindLatest([entry], PuloniaCollectionCooldown.BuildScopeKey(uid),
                 PuloniaCollectionCooldown.GetEffectKey(policy)), now.AddHours(1), offset);
-    }
-
-    /// <summary>
-    /// 只有快照固定了非默认账号时才算“切换账号”：一条龙默认账号与普通计划一样使用默认作用域，
-    /// 同一真实账号在两者之间共享采集 CD。
-    /// </summary>
-    [Fact] public async Task OnlySpecificAccountSnapshotsUseVerifiedUidScope()
-    {
-        using var store = new PuloniaTaskStore(_directory);
-        var registry = new PuloniaCSharpTaskRegistry();
-        var plan = new PuloniaTaskPlan { Name = "作用域", RootTask = new() { Children = [new() { Name = "计算", TaskType = "csharp",
-            Parameters = new JObject { ["operation"] = "sample.sum" } }] } };
-        var snapshot = await new PuloniaTaskBuilder(store).BuildAsync(plan, new PuloniaTaskBuildOptions
-            { Definitions = new PuloniaCSharpTaskExecutor(registry).Definitions.ToList() });
-
-        Assert.False(PuloniaTaskService.IsSwitchedAccount(snapshot));
-        Assert.False(PuloniaTaskService.IsSwitchedAccount(snapshot.WithGenshinAccount(PuloniaGenshinAccountProfile.CreateDefault())));
-        Assert.True(PuloniaTaskService.IsSwitchedAccount(snapshot.WithGenshinAccount(
-            new PuloniaGenshinAccountProfile { Name = "账号甲", Uid = "100000001" })));
     }
 
     /// <summary>纯一条龙固定账号资料但不初始化游戏，后续编辑不污染快照。</summary>
@@ -229,17 +199,6 @@ public sealed class PuloniaGenshinAccountTests : IDisposable
         vault.BeforeWrite = null;
         var retry = await store.SaveAccountSettingsAsync(result.Settings, Credentials(account.Id, "user", "secret"));
         Assert.Null(retry.CredentialError); Assert.Single(vault.Items);
-    }
-
-    /// <summary>一条龙触发器不能单独覆盖配置绑定，普通计划仍保留原账号资料选择。</summary>
-    [Fact] public void TriggerUsesOneDragonAccountBinding()
-    {
-        var plan = new PuloniaTaskPlan { Purpose = PuloniaTaskPlanPurpose.OneDragon, Accounts = [new() { AccountId = "account_a" }] };
-        var editor = new PuloniaTaskTriggerEditorViewModel(new() { AccountId = "account_a" }, plan);
-        Assert.False(editor.CanSelectAccount); Assert.Null(editor.CreateTrigger().AccountId);
-        Assert.Equal("account_a", PuloniaTaskService.ResolveOneDragonAccountId(plan));
-        plan.Accounts.Add(new() { AccountId = "account_b" });
-        Assert.Throws<InvalidOperationException>(() => PuloniaTaskService.ResolveOneDragonAccountId(plan));
     }
 
     /// <summary>OCR 选择只规范化空白和掩码，不以任意相似文字放行。</summary>

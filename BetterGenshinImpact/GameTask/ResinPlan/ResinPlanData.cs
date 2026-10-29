@@ -18,6 +18,9 @@ public sealed class ResinPlanData
     /// <summary>预算与开始时的持有量。</summary>
     public ResinPlanBudgetReport Budget { get; set; } = new();
 
+    /// <summary>准备阶段识别到的活动；未执行活动识别时为 null。</summary>
+    public ResinPlanEventReport? Events { get; set; }
+
     /// <summary>按执行顺序排列的阶段记录。</summary>
     public List<ResinPlanStep> Steps { get; set; } = [];
 }

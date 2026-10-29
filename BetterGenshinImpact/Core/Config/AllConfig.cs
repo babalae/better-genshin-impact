@@ -311,6 +311,11 @@ public partial class AllConfig : ObservableObject
     public StorageConfig StorageConfig { get; set; } = new();
 
     /// <summary>
+    /// 悬浮小窗配置
+    /// </summary>
+    public GuideWindowConfig GuideWindowConfig { get; set; } = new();
+
+    /// <summary>
     /// 任意配置项变更后的回调（由 ConfigService 设置为防抖保存）
     /// </summary>
     [JsonIgnore]

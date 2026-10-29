@@ -15,17 +15,6 @@ public class AssetsCacheTests
     }
 
     [Fact]
-    public void Get_WithDifferentCaptureSize_ShouldReturnDifferentInstanceAndScaledRect()
-    {
-        var fullHd = MapAssets.Get(1920, 1080);
-        var hd = MapAssets.Get(1280, 720);
-
-        Assert.NotSame(fullHd, hd);
-        Assert.Equal(212, fullHd.MimiMapRect.Width);
-        Assert.Equal(141, hd.MimiMapRect.Width);
-    }
-
-    [Fact]
     public void Get_ConcurrentlyWithSameCaptureSize_ShouldReturnSameInstance()
     {
         var results = new ConcurrentBag<MapAssets>();

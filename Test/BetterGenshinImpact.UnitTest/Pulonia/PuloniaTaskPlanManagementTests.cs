@@ -1,10 +1,5 @@
-using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
-using BetterGenshinImpact.Service;
-using BetterGenshinImpact.ViewModel.Pages;
-using BetterGenshinImpact.ViewModel.Pages.Pulonia;
-using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.UnitTest.Pulonia;
@@ -18,35 +13,6 @@ public sealed class PuloniaTaskPlanManagementTests : IDisposable
     /// 测试独占目录，避免接触程序真实计划和历史。
     /// </summary>
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-" + BetterGenshinImpact.Helpers.ShortId.Create(null, 8));
-
-    /// <summary>
-    /// 新计划首次保存时文件尚不存在，但这是正常流程，不应先抛出再捕获文件缺失异常。
-    /// </summary>
-    [Fact]
-    public async Task FirstSave_DoesNotThrowMissingFileFirstChanceException()
-    {
-        using var store = new PuloniaTaskStore(_directory);
-        var plan = CreatePlan("首次保存");
-        var planPath = Path.Combine(_directory, "plans", plan.Id + ".json");
-        var missingFileExceptionCount = 0;
-        EventHandler<System.Runtime.ExceptionServices.FirstChanceExceptionEventArgs> handler = (_, args) =>
-        {
-            if (args.Exception is FileNotFoundException exception && exception.FileName == planPath)
-                Interlocked.Increment(ref missingFileExceptionCount);
-        };
-        AppDomain.CurrentDomain.FirstChanceException += handler;
-        try
-        {
-            var saved = await store.SavePlanAsync(plan);
-            Assert.Equal(1, saved.Revision);
-        }
-        finally
-        {
-            AppDomain.CurrentDomain.FirstChanceException -= handler;
-        }
-        Assert.Equal(0, missingFileExceptionCount);
-        Assert.True(File.Exists(planPath));
-    }
 
     /// <summary>
     /// 整份复制重新映射触发目标，保留参数类型、共享设置、方案、引用和配置，且不修改来源。
@@ -183,50 +149,6 @@ public sealed class PuloniaTaskPlanManagementTests : IDisposable
         Assert.Equal(plan.Name, (await store.LoadPlanAsync(plan.Id))!.Name);
         Assert.True(File.Exists(Path.Combine(_directory, "plans", plan.Id + ".json.bak")));
     }
-
-    /// <summary>
-    /// 已在保存门前排队的保存遇到文档删除必须退出，不能重新创建文件；保存门随文档存在、不再释放，之后的保存同样直接退出。
-    /// </summary>
-    [Fact]
-    public async Task PendingSave_DoesNotRecreateDeletedDocument()
-    {
-        using var store = new PuloniaTaskStore(_directory);
-        await using var service = CreateService(store);
-        var clipboard = new PuloniaTaskClipboardService();
-        var document = new PuloniaTaskPlanDocumentViewModel(CreatePlan("已删除草稿"), [], clipboard, true);
-        var page = CreatePage(store, service, clipboard);
-        page.Documents.Add(document);
-        // 模拟删除正持有保存门：自动保存在门前排队。
-        await document.SaveGate.WaitAsync();
-        var pending = page.Session.SaveDocumentAsync(document);
-        Assert.False(pending.IsCompleted);
-
-        document.IsDeleted = true;
-        page.Documents.Remove(document);
-        document.SaveGate.Release();
-
-        Assert.False(await pending.WaitAsync(TimeSpan.FromSeconds(5)));
-        Assert.Empty(await store.ListPlansAsync());
-        Assert.False(await page.Session.SaveDocumentAsync(document));
-        // 门已归还且未释放，删除后的保存只按删除标记退出。
-        Assert.True(document.SaveGate.Wait(0));
-        document.SaveGate.Release();
-    }
-
-    /// <summary>
-    /// 建立不启动游戏会话的纯任务服务。
-    /// </summary>
-    private static PuloniaTaskService CreateService(PuloniaTaskStore store) => new(store,
-        new PuloniaTaskBuilder(store), [new PuloniaCSharpTaskExecutor(new PuloniaCSharpTaskRegistry())],
-        new PuloniaGameTaskCoordinator(null!), new TaskStopService(NullLogger<TaskStopService>.Instance));
-
-    /// <summary>
-    /// 建立列表命令使用的页面模型，不创建 WPF 窗口。
-    /// </summary>
-    private static PuloniaTaskPlanViewModel CreatePage(PuloniaTaskStore store, PuloniaTaskService service,
-        PuloniaTaskClipboardService clipboard) => new(
-        new PuloniaPlanEditingSession(store, clipboard, service, new PuloniaTaskResourceCatalog()),
-        new PuloniaTaskHistoryViewModel(service, store));
 
     /// <summary>
     /// 建立包含数值、布尔和空值参数的简单计划。

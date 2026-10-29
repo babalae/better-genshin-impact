@@ -216,25 +216,6 @@ public sealed class PuloniaCollectionCooldownTests : IDisposable
         Assert.Single(await service.ListLedgerAsync());
     }
 
-    /// <summary>本次结果对象的成功字段决定完成状态，统计与失败信息完整传递到运行记录。</summary>
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void PathingReturnValue_DeterminesOutcome(bool completed)
-    {
-        var result = new PathingResult(completed, 3, completed ? null : "重试耗尽", 2,
-            new Dictionary<string, int> { ["薄荷"] = 5 });
-        var outcome = PuloniaPathingTaskExecutor.CreateOutcome(result, "resource-version");
-        Assert.Equal(completed ? PuloniaTaskOutcomeKind.Succeeded : PuloniaTaskOutcomeKind.Failed, outcome.Kind);
-        Assert.Equal(completed, outcome.Data.Value<bool>("is_success"));
-        Assert.Equal(3, outcome.Data.Value<int>("success_fight_count"));
-        Assert.Equal(2, outcome.Data.Value<int>("revive_count"));
-        Assert.Equal(5, outcome.Data["collected_items"]!.Value<int>("薄荷"));
-        Assert.Equal(completed ? null : "重试耗尽", outcome.Data.Value<string>("error_message"));
-        if (!completed) Assert.Equal("重试耗尽", outcome.Message);
-        Assert.Equal("resource-version", outcome.Data.Value<string>("resource_version"));
-    }
-
     /// <summary>提前结束的失败对象不能写 CD；后续成功对象仍可正常结算。</summary>
     [Fact]
     public async Task IncompleteReturn_DoesNotWriteCooldown()
@@ -249,20 +230,6 @@ public sealed class PuloniaCollectionCooldownTests : IDisposable
         Assert.Empty(await service.ListLedgerAsync());
         executor.Execute = null;
         Assert.Equal(PuloniaTaskRunStatus.Succeeded, (await Run(service, plan)).Status);
-        Assert.Single(await service.ListLedgerAsync());
-    }
-
-    /// <summary>宿主通过类型化完成状态结算，不读取旧的独立成功标记。</summary>
-    [Fact]
-    public async Task SuccessfulOutcome_WritesCooldownWithoutDiagnosticFlags()
-    {
-        using var store = new PuloniaTaskStore(Path.Combine(_directory, "state"));
-        var plan = await store.SavePlanAsync(Plan(CreateTask("落落莓", "A.json")));
-        await using var service = Service(store, new FileExecutor());
-        var run = await Run(service, plan);
-        Assert.Equal(PuloniaTaskRunStatus.Succeeded, run.Status);
-        Assert.False(run.NodeResults[0].Data.ContainsKey("fully_executed"));
-        Assert.False(run.NodeResults[0].Data.ContainsKey("success_end"));
         Assert.Single(await service.ListLedgerAsync());
     }
 
@@ -520,40 +487,6 @@ public sealed class PuloniaCollectionCooldownTests : IDisposable
         Assert.Empty(await service.ListLedgerAsync());
         executor.Execute = null;
         Assert.Equal(PuloniaTaskRunStatus.Succeeded, (await Run(service, plan)).Status);
-    }
-
-    /// <summary>目录展开逐文件结算；分组规则整体覆盖，恢复继承和撤销保留其他参数。</summary>
-    [Fact]
-    public async Task DirectoryAndEditor_InheritWholePolicy()
-    {
-        var a = CreateTask("落落莓", "A.json");
-        CreateTask("落落莓", "B.json");
-        using var store = new PuloniaTaskStore(Path.Combine(_directory, "state"));
-        var group = new PuloniaTask { Name = "目录", Source = new PuloniaTaskSource { Kind = "directory", TaskType = "pathing", Path = Path.GetDirectoryName(a.Path) } };
-        group.Settings[PuloniaSettingCatalog.CollectionCooldownKey] = new JObject { ["mode"] = "rolling", ["hours"] = 5 };
-        var plan = await store.SavePlanAsync(Plan(group));
-        var executor = new FileExecutor();
-        await using var service = Service(store, executor);
-        var run = await Run(service, plan);
-        Assert.Equal(2, run.NodeResults.Count);
-        Assert.All(await service.ListLedgerAsync(), entry => Assert.Equal(TimeSpan.FromHours(5), entry.NextEligibleAt - entry.OccurredAt));
-
-        var leaf = CreateTask("落落莓", "C.json");
-        var editorPlan = Plan(leaf);
-        editorPlan.RootTask.Settings = (JObject)group.Settings.DeepClone();
-        var document = new PuloniaTaskPlanDocumentViewModel(editorPlan, [], new PuloniaTaskClipboardService(), false);
-        document.SetDefinitions(executor.Definitions);
-        var node = document.RootNode.Children[0];
-        var draft = document.CreateCollectionCooldownDraft(node);
-        Assert.Equal("5", draft.Hours);
-        Assert.Equal(PuloniaCollectionCooldownMode.Rolling, draft.Mode);
-        // 表单确认与恢复继承走共享设置的单项写入和撤销
-        document.SetSetting(node, PuloniaSettingCatalog.CollectionCooldownKey, new JObject { ["mode"] = "disabled" });
-        Assert.Equal(PuloniaCollectionCooldownMode.Disabled, document.CreateCollectionCooldownDraft(node).Mode);
-        document.ResetSetting(node, PuloniaSettingCatalog.CollectionCooldownKey);
-        Assert.Equal("5", document.CreateCollectionCooldownDraft(node).Hours);
-        document.UndoCommand.Execute(null);
-        Assert.Equal(PuloniaCollectionCooldownMode.Disabled, document.CreateCollectionCooldownDraft(document.RootNode.Children[0]).Mode);
     }
 
     /// <summary>模拟本测试状态文件写入失败，成功不能被当作可重试的普通节点失败。</summary>

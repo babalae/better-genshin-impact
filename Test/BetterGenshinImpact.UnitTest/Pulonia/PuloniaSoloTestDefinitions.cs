@@ -83,7 +83,7 @@ internal static class PuloniaSoloTestDefinitions
     internal static PuloniaTaskDefinition ResinPlan() => Create(ResinPlanTask.TaskId, "体力计划", typeof(ResinPlanParam),
         new JObject
         {
-            ["max_resin"] = 0, ["craft_condensed_first"] = false,
+            ["max_resin"] = 0, ["craft_condensed_first"] = false, ["event_priority"] = true, ["event_strict_resin"] = false,
             ["domain"] = new JObject { ["enabled"] = true, ["param"] = new JObject
                 { ["resin_usage"] = Defaults(ResinCapabilities.Domain.Defaults), ["party_name"] = "", ["domain_name"] = "" } },
             ["boss"] = new JObject { ["enabled"] = false, ["param"] = new JObject

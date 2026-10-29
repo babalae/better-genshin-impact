@@ -7,6 +7,7 @@ using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.View;
+using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Pulonia.Services;
 
@@ -40,7 +41,12 @@ public sealed class PuloniaGameTaskCoordinator
         if (GameTaskSessionScope.IsActive)
             throw new InvalidOperationException("当前已在任务会话中，不能再次获取游戏任务租约，请直接使用已持有的运行环境。");
 
-        await TaskControl.TaskSemaphore.WaitAsync(ct).ConfigureAwait(false);
+        // 先尝试立即取得任务锁；被独立任务或脚本占用时先提示再等待，避免日志窗口没有输出、看起来像卡住
+        if (!await TaskControl.TaskSemaphore.WaitAsync(0, ct).ConfigureAwait(false))
+        {
+            TaskControl.Logger.LogInformation("一条龙：当前有其他任务正在运行，等待它结束后继续");
+            await TaskControl.TaskSemaphore.WaitAsync(ct).ConfigureAwait(false);
+        }
         GameRuntime? runtime = null;
         try
         {

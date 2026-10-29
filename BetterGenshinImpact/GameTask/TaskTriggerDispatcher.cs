@@ -162,10 +162,17 @@ namespace BetterGenshinImpact.GameTask
         /// </summary>
         public void BeginTask()
         {
+            bool changed;
             lock (_leaseLock)
             {
+                changed = !_inTask;
                 _inTask = true;
                 _leases.Clear();
+            }
+
+            if (changed)
+            {
+                RaiseTaskModeChanged(true);
             }
         }
 
@@ -174,10 +181,52 @@ namespace BetterGenshinImpact.GameTask
         /// </summary>
         public void EndTask()
         {
+            bool changed;
             lock (_leaseLock)
             {
+                changed = _inTask;
                 _inTask = false;
                 _leases.Clear();
+            }
+
+            if (changed)
+            {
+                RaiseTaskModeChanged(false);
+            }
+        }
+
+        /// <summary>
+        /// 进入或退出任务模式时触发，参数为是否在任务中。
+        /// 在调用 <see cref="BeginTask"/> / <see cref="EndTask"/> 的线程上、锁外触发，订阅方自行切换线程
+        /// </summary>
+        public event EventHandler<bool>? TaskModeChanged;
+
+        /// <summary>
+        /// 是否处于任务模式
+        /// </summary>
+        public bool IsInTask
+        {
+            get
+            {
+                lock (_leaseLock)
+                {
+                    return _inTask;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 通知任务模式变化；订阅方的异常只记录日志，不影响任务的进入和收尾
+        /// </summary>
+        private void RaiseTaskModeChanged(bool inTask)
+        {
+            try
+            {
+                TaskModeChanged?.Invoke(this, inTask);
+            }
+            catch (Exception e)
+            {
+                _logger.LogWarning(e, "处理任务模式变化通知时出错");
             }
         }
 

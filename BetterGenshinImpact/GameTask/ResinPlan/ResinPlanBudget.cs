@@ -22,6 +22,12 @@ public static class ResinPlanBudget
     /// <summary>浓缩树脂持有上限。</summary>
     public const int CondensedCapacity = 5;
 
+    /// <summary>原粹 40 档领取一次的点数；一次 40 档领取用掉 2 次移涌双倍。</summary>
+    public const int OriginalHighTierPoints = 40;
+
+    /// <summary>每个移涌活动每天的双倍次数；今日剩余次数读不到时按此安排。</summary>
+    public const int OverflowDailyClaims = 3;
+
     /// <summary>计算剩余预算。</summary>
     /// <param name="maxResin">本次最多消耗的点数；0 或负数表示全部。</param>
     /// <param name="spentPoints">已经消耗的点数。</param>
@@ -142,14 +148,74 @@ public static class ResinPlanBudget
         var original = remaining is { } budget
             ? Math.Min(stock.Original, budget - condensed * CondensedPoints)
             : stock.Original;
-        var available = original - originalReserve;
+        // 预留可能为“全部保留”（int.MaxValue），按 long 相减避免溢出
+        var available = (long)original - originalReserve;
         if (available < CondensedPoints)
         {
             return 0;
         }
 
-        return Math.Max(0, Math.Min(CondensedCapacity - condensed, available / CondensedPoints));
+        return (int)Math.Max(0, Math.Min(CondensedCapacity - condensed, available / CondensedPoints));
     }
+
+    /// <summary>
+    /// 生成移涌领取的树脂设置：只用原粹，因为浓缩既不享受也不消耗双倍。
+    /// 严格关闭时用 40 档领取 ⌈r/2⌉ 次，少打几次；严格开启，或原粹、预算不够 40 档时，用 20 档领取 min(r, ⌊P/20⌋) 次，
+    /// 尽量多用双倍。P 为可用于本次领取的原粹：全部模式为持有量，限定模式再受剩余预算限制。
+    /// </summary>
+    /// <param name="remaining">剩余预算；null 表示全部模式。</param>
+    /// <param name="stock">当前持有量。</param>
+    /// <param name="doubles">今日剩余双倍次数 r。</param>
+    /// <param name="strict">是否严格使用 20 档。</param>
+    /// <returns>树脂设置；一次也领不了时返回 null。</returns>
+    public static ResinUsage? BuildOverflowUsage(int? remaining, ResinPlanStock stock, int doubles, bool strict)
+    {
+        if (doubles <= 0)
+        {
+            return null;
+        }
+
+        var points = remaining is { } budget ? Math.Min(stock.Original, budget) : stock.Original;
+
+        // 1. 严格关闭：40 档领取；原粹足够时直接使用，切不到 40 档时子任务会改用 20 档，只会更少
+        if (!strict)
+        {
+            var highTierClaims = (doubles + 1) / 2;
+            if (points >= highTierClaims * OriginalHighTierPoints)
+            {
+                return OriginalOnly(highTierClaims, OriginalResinTier.Prefer40);
+            }
+        }
+
+        // 2. 严格开启，或原粹不够 40 档：20 档领取，每次用掉 1 次双倍
+        var claims = Math.Min(doubles, points / MinClaimPoints);
+        return claims > 0 ? OriginalOnly(claims, OriginalResinTier.Only20) : null;
+    }
+
+    /// <summary>合成浓缩前为一次移涌领取预留的原粹点数：严格关闭为 40 × ⌈r/2⌉，严格开启为 20 × r。</summary>
+    /// <param name="doubles">今日剩余双倍次数 r。</param>
+    /// <param name="strict">是否严格使用 20 档。</param>
+    /// <returns>预留点数。</returns>
+    public static int OverflowReserve(int doubles, bool strict)
+        => doubles <= 0 ? 0 : strict ? doubles * MinClaimPoints : (doubles + 1) / 2 * OriginalHighTierPoints;
+
+    /// <summary>饱和加法：两项预留相加超过 int 范围时返回 int.MaxValue（全部保留）。</summary>
+    /// <param name="left">第一项。</param>
+    /// <param name="right">第二项。</param>
+    /// <returns>和；溢出时为 int.MaxValue。</returns>
+    public static int SaturatingAdd(int left, int right)
+        => (int)Math.Min(int.MaxValue, (long)left + right);
+
+    /// <summary>只用原粹、按指定档位领取若干次的树脂设置。</summary>
+    /// <param name="claims">领奖次数。</param>
+    /// <param name="tier">原粹档位。</param>
+    /// <returns>树脂设置。</returns>
+    private static ResinUsage OriginalOnly(int claims, OriginalResinTier tier) => new()
+    {
+        Mode = ResinUsageMode.PerType,
+        Counts = new() { Original = claims },
+        OriginalTier = tier
+    };
 
     /// <summary>首领阶段需要预留的原粹点数；首领刷至耗尽时保留全部原粹，不再合成。</summary>
     /// <param name="enabled">首领是否参与。</param>

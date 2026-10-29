@@ -21,5 +21,8 @@ public enum ResinPlanStage
     LeyLine,
 
     /// <summary>剩余树脂：备选秘境。</summary>
-    FallbackDomain
+    FallbackDomain,
+
+    /// <summary>活动优先：移涌领取与紊乱爆发期的幽境危战。追加在末尾，旧记录按枚举名读取不受影响。</summary>
+    Event
 }

@@ -336,7 +336,7 @@ public partial class HtmlMaskWindow : Window
             // 遮罩页面不允许打开新窗口和下载
             var provider = App.GetService<IWebViewEnvironmentProvider>()
                            ?? throw new InvalidOperationException("WebView2 环境入口尚未初始化");
-            await WebView.InitializeAsync(provider, WebViewProfiles.HtmlMask, new WebViewOptions { OpenNewWindowInBrowser = false });
+            await WebView.InitializeAsync(provider, WebViewProfiles.HtmlMask, new WebViewOptions { NewWindowPolicy = WebViewNewWindowPolicy.Reject });
             if (_isClosing) return;
 
             WebView.DefaultBackgroundColor = System.Drawing.Color.Transparent;

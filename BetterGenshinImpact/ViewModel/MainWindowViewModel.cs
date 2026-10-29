@@ -36,6 +36,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using BetterGenshinImpact.Infrastructure.Network;
 using BetterGenshinImpact.Service.ChildSession;
+using BetterGenshinImpact.Service.Guide;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.ViewModel.Windows;
 using Newtonsoft.Json;
@@ -62,6 +63,14 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
     private readonly InstanceService _instanceService;
     private readonly IInferenceModelDiagnostics _inferenceDiagnostics;
     private readonly InferenceRuntimeService _inferenceRuntime;
+    /// <summary>
+    /// 悬浮小窗服务，主窗口激活时询问是否在小窗打开剪贴板中的视频链接。
+    /// </summary>
+    private readonly IGuideWindowService _guideWindowService;
+    /// <summary>
+    /// 上一次询问过的剪贴板视频链接，同一链接只询问一次。
+    /// </summary>
+    private string? _lastGuideClipboardUrl;
     private bool _inferenceStartupHandled;
     /// <summary>
     /// 标记 ViewModel 已释放，防止退出阶段处理迟到的实例事件。
@@ -210,9 +219,11 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
         InstanceVisualIdentity instanceVisualIdentity,
         IInferenceModelDiagnostics inferenceDiagnostics,
         InferenceRuntimeService inferenceRuntime,
-        DownloadCenterViewModel downloadCenter)
+        DownloadCenterViewModel downloadCenter,
+        IGuideWindowService guideWindowService)
     {
         DownloadCenter = downloadCenter;
+        _guideWindowService = guideWindowService;
         _inferenceDiagnostics = inferenceDiagnostics;
         _inferenceRuntime = inferenceRuntime;
         _navigationService = navigationService;
@@ -460,11 +471,46 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
                 await ScriptRepoUpdater.Instance.ImportScriptFromClipboard(clipboardText);
                 // 2. 自动兑换码
                 await RedeemCodeManager.ImportFromClipboard(clipboardText);
+                // 3. B 站视频链接：询问是否在悬浮小窗打开
+                await PromptOpenGuideFromClipboardAsync(clipboardText);
             }
         }
         catch
         {
             // 忽略异常，可能是因为没有权限访问剪切板
+        }
+    }
+
+    /// <summary>
+    /// 剪贴板中有 B 站视频链接时询问是否在悬浮小窗打开；同一链接只询问一次，小窗正在播放该视频时不询问。
+    /// </summary>
+    private async Task PromptOpenGuideFromClipboardAsync(string clipboardText)
+    {
+        if (!_guideWindowService.IsAvailable || !_guideWindowService.Config.ClipboardPromptEnabled)
+        {
+            return;
+        }
+
+        if (!GuideLinkResolver.TryResolve(clipboardText, allowAnyUrl: false, out var link)
+            || string.Equals(link.Url, _lastGuideClipboardUrl, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _lastGuideClipboardUrl = link.Url;
+        var videoKey = GuideLinkResolver.GetVideoKey(link.Url);
+        var state = _guideWindowService.State;
+        if (videoKey is not null && state.IsOpen && videoKey == GuideLinkResolver.GetVideoKey(state.Url))
+        {
+            return;
+        }
+
+        var result = await ThemedMessageBox.QuestionAsync(
+            $"剪贴板中有 B 站视频链接：\n{link.Url}\n\n要在悬浮小窗中打开吗？\n\n可以在“悬浮小窗”设置页关闭这个提示。",
+            "悬浮小窗");
+        if (result == System.Windows.MessageBoxResult.Yes)
+        {
+            _guideWindowService.Open(new GuideOpenRequest(link.Url, GuideOpenSource.Clipboard));
         }
     }
 

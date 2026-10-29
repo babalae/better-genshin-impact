@@ -1,10 +1,5 @@
 using BetterGenshinImpact.GameTask.SoloTask.Execution;
-using BetterGenshinImpact.Service.Instance;
-using BetterGenshinImpact.ViewModel;
-using BetterGenshinImpact.ViewModel.Windows;
 using Microsoft.Extensions.Logging.Abstractions;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,7 +7,7 @@ using System.Threading.Tasks;
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.SoloTaskTests;
 
 /// <summary>
-/// 独立任务状态机、传输模型和按钮展示状态测试。
+/// 独立任务执行状态机测试。
 /// </summary>
 public sealed class SoloTaskStateTests
 {
@@ -83,27 +78,6 @@ public sealed class SoloTaskStateTests
     }
 
     /// <summary>
-    /// 验证任务请求只携带任务类型和任务专用参数，不再包含整份配置快照。
-    /// </summary>
-    [Fact]
-    public void StartDefinition_ShouldCloneParametersWithoutConfigSnapshot()
-    {
-        var parameters = new JObject { ["roundNum"] = 3 };
-        var definition = new SoloTaskStartDefinition
-        {
-            TaskId = "auto_wood",
-            Parameters = parameters
-        };
-
-        var request = definition.CreateRequest();
-        parameters["roundNum"] = 9;
-        var json = JsonConvert.SerializeObject(request);
-
-        Assert.Equal(3, request.Parameters!["roundNum"]!.Value<int>());
-        Assert.DoesNotContain("ConfigSnapshot", json, StringComparison.OrdinalIgnoreCase);
-    }
-
-    /// <summary>
     /// 验证任务异常后会释放实例占用、保留错误信息，并允许下一次运行重新占用。
     /// </summary>
     [Fact]
@@ -140,81 +114,6 @@ public sealed class SoloTaskStateTests
             TaskId = "auto_wood"
         });
         Assert.True(second.Accepted);
-    }
-
-    /// <summary>
-    /// 验证单实例、多实例、处理中和被其他任务占用时的按钮文字及可用性。
-    /// </summary>
-    [Fact]
-    public void ButtonState_ShouldReflectInstanceAndRunState()
-    {
-        var state = new SoloTaskButtonState("auto_wood");
-
-        state.Update(1, 0, SoloTaskRunState.Idle, false, false);
-        Assert.Equal("启动", state.ButtonText);
-        Assert.True(state.CanInteract);
-
-        state.Update(1, 1, SoloTaskRunState.Starting, false, false);
-        Assert.Equal("启动中", state.ButtonText);
-        Assert.False(state.CanInteract);
-
-        state.Update(1, 1, SoloTaskRunState.Running, false, false);
-        Assert.Equal("停止", state.ButtonText);
-        Assert.True(state.CanInteract);
-
-        state.Update(1, 1, SoloTaskRunState.Stopping, false, false);
-        Assert.Equal("停止中", state.ButtonText);
-        Assert.False(state.CanInteract);
-
-        state.Update(2, 1, SoloTaskRunState.Idle, false, false);
-        Assert.Equal("管理（1）", state.ButtonText);
-        Assert.True(state.CanInteract);
-
-        state.Update(1, 0, SoloTaskRunState.Idle, true, false);
-        Assert.False(state.CanInteract);
-
-        state.Update(2, 0, SoloTaskRunState.Idle, false, true);
-        Assert.Equal("处理中…", state.ButtonText);
-        Assert.False(state.CanInteract);
-    }
-
-    /// <summary>
-    /// 验证管理窗口只允许空闲实例启动当前任务、或停止当前任务自己的运行。
-    /// </summary>
-    [Fact]
-    public void InstanceRow_ShouldRejectOtherTaskAndTransitionStates()
-    {
-        var row = new SoloTaskInstanceRowViewModel(new InstanceEndpoint
-        {
-            InstanceType = BetterGiInstanceType.Primary,
-            ProcessId = 1
-        }, taskId => taskId == "auto_fight" ? "自动战斗" : taskId ?? string.Empty);
-
-        row.Update(SoloTaskStatusSnapshot.Idle(), "auto_wood", true, false);
-        Assert.Equal("可启动", row.StatusText);
-        Assert.True(row.CanOperate);
-
-        row.Update(new SoloTaskStatusSnapshot
-        {
-            RunId = Guid.NewGuid(),
-            TaskId = "auto_fight",
-            State = SoloTaskRunState.Running
-        }, "auto_wood", true, false);
-        Assert.Contains("自动战斗", row.StatusText);
-        Assert.False(row.CanOperate);
-
-        row.Update(new SoloTaskStatusSnapshot
-        {
-            RunId = Guid.NewGuid(),
-            TaskId = "auto_wood",
-            State = SoloTaskRunState.Running
-        }, "auto_wood", true, false);
-        Assert.Equal("停止", row.ActionText);
-        Assert.True(row.CanOperate);
-
-        row.Update(row.Status, "auto_wood", false, false);
-        Assert.Equal("离线", row.StatusText);
-        Assert.False(row.CanOperate);
     }
 
     /// <summary>

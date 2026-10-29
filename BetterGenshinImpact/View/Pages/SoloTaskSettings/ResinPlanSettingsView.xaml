@@ -28,7 +28,7 @@
             </DataTemplate>
         </ResourceDictionary>
     </UserControl.Resources>
-    <!-- 体力计划：体力用量、优先合成与四个消耗树脂任务；子任务设置在弹窗中编辑。 -->
+    <!-- 体力计划：体力用量、优先合成、四个消耗树脂任务与优先满足活动；子任务设置在弹窗中编辑。 -->
     <StackPanel>
         <!-- 1. 体力用量 -->
         <ui:CardExpander Style="{StaticResource SoloExpander}">
@@ -104,13 +104,47 @@
         <ContentControl Content="{Binding LeyLine, Mode=OneWay}" ContentTemplate="{StaticResource ResinPlanSubTaskTemplate}"
                         HorizontalContentAlignment="Stretch" Focusable="False"/>
 
-        <!-- 4. 执行顺序说明 -->
+        <!-- 4. 优先满足活动：移涌领取与紊乱爆发期；严格用量只在开启时可改 -->
+        <ui:CardExpander Style="{StaticResource SoloExpander}">
+            <ui:CardExpander.Header>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Margin="0,0,16,0">
+                        <ui:TextBlock FontTypography="Body" Text="优先满足活动" TextWrapping="Wrap"/>
+                        <TextBlock Style="{StaticResource SoloDescription}"
+                                   Text="识别到移涌活动时，先在活动对应的内容里用原粹领取当天的双倍；紊乱爆发期进行中时，幽境危战优先使用树脂，并暂停首领与秘境养成。"/>
+                        <TextBlock Style="{StaticResource SoloDescription}"
+                                   Text="祝圣移涌在自动秘境设置的“备选秘境”中领取，需要选择祝圣秘境（圣遗物秘境）。"/>
+                    </StackPanel>
+                    <ui:ToggleSwitch Grid.Column="1" Margin="12,0,16,0" IsChecked="{Binding EventPriority, Mode=TwoWay}"
+                                     AutomationProperties.Name="优先满足活动"/>
+                </Grid>
+            </ui:CardExpander.Header>
+            <Grid Style="{StaticResource SoloRow}" IsEnabled="{Binding EventPriority, Mode=OneWay}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Margin="0,0,16,0">
+                    <ui:TextBlock FontTypography="Body" Text="严格使用 60 树脂" TextWrapping="Wrap"/>
+                    <TextBlock Style="{StaticResource SoloDescription}"
+                               Text="开启：剩余 3 次双倍时用 20 档领取 3 次，共 60 原粹，每点都享受双倍。关闭：用 40 档领取 2 次，共 80 原粹，少打一次。"/>
+                </StackPanel>
+                <ui:ToggleSwitch Grid.Column="1" VerticalAlignment="Center" IsChecked="{Binding EventStrictResin, Mode=TwoWay}"
+                                 AutomationProperties.Name="严格使用 60 树脂"/>
+            </Grid>
+        </ui:CardExpander>
+
+        <!-- 5. 执行顺序说明 -->
         <ui:CardControl Style="{StaticResource SoloCard}" Icon="{ui:SymbolIcon Info24}">
             <ui:CardControl.Header>
                 <StackPanel>
                     <ui:TextBlock FontTypography="Body" Text="执行顺序" TextWrapping="Wrap"/>
                     <TextBlock Style="{StaticResource SoloDescription}"
-                               Text="读取树脂 → 合成浓缩 → 首领讨伐 → 秘境养成 → 剩余树脂：幽境危战 → 地脉花 → 备选秘境。"/>
+                               Text="读取树脂 → 识别活动 → 合成浓缩 → 活动（移涌领取 → 紊乱爆发期）→ 首领讨伐 → 秘境养成 → 剩余树脂：幽境危战 → 地脉花 → 备选秘境。"/>
                     <TextBlock Style="{StaticResource SoloDescription}"
                                Text="秘境养成按游戏内养成计划（冒险之证 → 提升指南）选择秘境，请先在游戏内把要培养的角色加入养成计划；备选秘境在自动秘境的设置中选择。"/>
                 </StackPanel>
