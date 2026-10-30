@@ -124,6 +124,15 @@
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
 
+                <!-- 账号记录页面暂用「狛荷屋」展示名，待定案后再接入翻译。 -->
+                <ui:NavigationViewItem Content="狛荷屋(test)"
+                                       NavigationCacheMode="Enabled"
+                                       TargetPageType="{x:Type pages:AccountRecordsPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="Box24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+
                 <!--<ui:NavigationViewItemSeparator />-->
 
                 <ui:NavigationViewItem Content="{i18n:T 一条龙}"

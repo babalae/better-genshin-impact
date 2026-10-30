@@ -9,6 +9,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.Helpers.Ui;
+using BetterGenshinImpact.View.Behavior;
 using Wpf.Ui;
 using Wpf.Ui.Abstractions;
 using Wpf.Ui.Controls;
@@ -60,17 +61,21 @@ public partial class MainWindow : FluentWindow, INavigationWindow
         if (scrollViewer == null)
             return;
 
+        // 仅显式选择原生滚动的控件退出接管，保留库存表格虚拟化。
+        if (NativeScrolling.GetIsEnabled(scrollViewer))
+            return;
+
         e.Handled = true;
 
         if (_currentScrollViewer != scrollViewer)
         {
             _currentScrollViewer = scrollViewer;
+            // 其他页面沿用原有物理滚动，更新布局后再读取像素偏移。
             if (scrollViewer.CanContentScroll)
             {
                 scrollViewer.CanContentScroll = false;
                 scrollViewer.UpdateLayout();
             }
-
             _targetOffset = scrollViewer.VerticalOffset;
         }
 

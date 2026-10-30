@@ -1,0 +1,43 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.AccountRecordsPlaceholderDialog"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 Title="导入数据" Width="640" Height="460" MinWidth="480" MinHeight="360"
+                 WindowStartupLocation="CenterOwner" ExtendsContentIntoTitleBar="True"
+                 WindowBackdropType="Mica" ShowInTaskbar="False"
+                 Background="{DynamicResource ApplicationBackgroundBrush}"
+                 Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+    <ui:FluentWindow.InputBindings>
+        <KeyBinding Key="Escape" Command="{x:Static ApplicationCommands.Close}" />
+    </ui:FluentWindow.InputBindings>
+    <ui:FluentWindow.CommandBindings>
+        <CommandBinding Command="{x:Static ApplicationCommands.Close}" Executed="CloseWindow" />
+    </ui:FluentWindow.CommandBindings>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <ui:TitleBar Title="{Binding Title, RelativeSource={RelativeSource AncestorType=Window}, Mode=OneWay}"
+                     ShowMaximize="False" ShowMinimize="False">
+            <ui:TitleBar.Icon>
+                <ui:SymbolIcon Symbol="ArrowEnter20" RenderTransformOrigin="0.5,0.5">
+                    <ui:SymbolIcon.RenderTransform><RotateTransform Angle="90" /></ui:SymbolIcon.RenderTransform>
+                </ui:SymbolIcon>
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
+        <StackPanel Grid.Row="1" Margin="24" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Rectangle Width="180" Height="180" Opacity="0.14" Fill="{DynamicResource TextFillColorPrimaryBrush}">
+                <Rectangle.OpacityMask>
+                    <ImageBrush ImageSource="pack://application:,,,/Resources/Images/account-records-watermark.png" Stretch="Uniform" />
+                </Rectangle.OpacityMask>
+            </Rectangle>
+            <TextBlock Text="导入数据" FontSize="20" TextAlignment="Center" Margin="0,16,0,8" />
+            <TextBlock Text="这里是数据接入功能的预留页面。" TextAlignment="Center" TextWrapping="Wrap"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            <TextBlock Text="后续用于接入相关插件；JSON 导入导出可从标题右侧菜单使用。"
+                       Margin="0,6,0,0" TextAlignment="Center" TextWrapping="Wrap"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+        </StackPanel>
+    </Grid>
+</ui:FluentWindow>
