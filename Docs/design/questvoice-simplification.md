@@ -6,7 +6,7 @@
 第 4 版变更：
 
 - OCR 从“自建一个 PP-OCRv6 识别组件”改为“直接调用全局 OCR 服务 `OcrFactory.PaddleOcr`”。模型跟随“设置 → OCR 配置 → PaddleOCR模型”和游戏语言，设备跟随“硬件加速”，与 BetterGI 其他功能完全一致（第 6 节）。
-- `IOcrService` 新增 `OcrResultWithoutDetector(Mat)`：不经过检测识别一张已裁剪的单行图像，返回文字和置信度。命名与已有的 `Ocr` / `OcrResult` / `OcrWithoutDetector` 对应。
+- `IOcrService` 新增两个不经过检测的方法：`OcrResultWithoutDetector(Mat)` 识别一张已裁剪的单行图像，`OcrResultLinesWithoutDetector(Mat[])` 批量识别多行；都返回文字和置信度。命名与已有的 `Ocr` / `OcrResult` / `OcrWithoutDetector` 对应。配音使用批量方法。
 
 第 3 版变更：
 
@@ -424,8 +424,10 @@ flowchart LR
 
 场景识别和预处理保留，识别本身直接调用 BetterGI 全局 OCR 服务，配音不再有自己的 OCR 模型、设备或会话：
 
-1. `IOcrService` 新增 `OcrResultWithoutDetector(Mat mat)`，返回 `OcrRecognizerResult`（文字和置信度）。原有的 `OcrWithoutDetector` 只返回文字，不能满足配音按置信度接受结果的需要。命名补齐原接口的组合：带检测的 `Ocr` → 文字、`OcrResult` → 带置信度的结果；不带检测的 `OcrWithoutDetector` → 文字、`OcrResultWithoutDetector` → 带置信度的结果。`PaddleOcrService` 的实现在全局推理锁内调用 `Rec.Run(Mat)`，`OcrWithoutDetector` 改为取它的 `Text`，与 `Ocr` 取 `OcrResult(mat).Text` 的写法一致。
-   配音每帧的 2～4 行逐行调用，不做批量推理。逐行时每行单独占用锁，其他功能可以在行间插入；也不会像批量推理那样把短行补齐到最长行的宽度，与其他功能调用 `OcrWithoutDetector` 的方式一致。
+1. `IOcrService` 新增两个不经过检测、返回文字和置信度的方法。原有的 `OcrWithoutDetector` 只返回文字，不能满足配音按置信度接受结果的需要。
+   - `OcrRecognizerResult OcrResultWithoutDetector(Mat mat)`：识别一张单行图像。命名补齐原接口的组合：带检测的 `Ocr` → 文字、`OcrResult` → 带置信度的结果；不带检测的 `OcrWithoutDetector` → 文字、`OcrResultWithoutDetector` → 带置信度的结果。`OcrWithoutDetector` 改为取它的 `Text`，与 `Ocr` 取 `OcrResult(mat).Text` 的写法一致。
+   - `OcrRecognizerResult[] OcrResultLinesWithoutDetector(Mat[] lines)`：按输入顺序批量识别多行，整批在同一次加锁内调用 `Rec.Run(Mat[])`。
+   配音每帧的 2～4 行使用批量方法，一次推理完成；`Rec.Run` 内部按宽度分批并补齐到同批最长行的宽度，再按输入顺序返回结果。
 2. `QuestVoiceOcrEngine` 注入 `OcrFactory` 和 `InferenceRuntimeService`。每次识别都通过 `OcrFactory.PaddleOcr` 取当前实例，所以模型跟随“PaddleOCR模型”设置和游戏语言，设备跟随“硬件加速”和“OCR 使用 CPU”。识别结果附带的 `OcrModelInfo` 记录 `ActiveModelType.RecognitionModel.Name` 和 `Runtime.OcrDescription`，目前界面不显示。
 3. 切换模型或游戏语言时，设置页调用 `OcrFactory.Unload()` 卸载旧实例。识别时遇到旧实例已释放（`ObjectDisposedException`），换用新实例重试一次。下一次识别即使用新模型，不需要重新开关配音。
 4. `QuestVoiceOcrEngine` 不拥有全局实例，释放时只等待本轮在途识别结束。全局实例首次使用时由 `OcrFactory` 加载并预热；加载失败转换为 `OcrException(ModelInitialization)`，推理失败转换为 `OcrException(Inference)`。
@@ -447,8 +449,7 @@ flowchart LR
 - **默认模型变为 PP-OCRv4**：全局默认 `V4Auto`，简体中文下解析为 PP-OCRv4（alpha 版升级时会改成 V6）。V4 中文字典约 6,600 字，比 V6 的 18,708 字少，生僻的人名用字可能识别不出。需要更好效果的用户可以在全局设置中选 V6，这会同时影响其他功能。
 - **置信度阈值**：姓名 0.9、正文 0.8 是按 PP-OCRv6 标定的。V4、V5 及多语言模型的置信度分布不同，可能出现更多“低置信度”拒绝，需在游戏内确认。全局内置 `slim.onnx` 与原先使用的 `PP-OCRv6_rec_small.onnx` 是否为同一份权重也未核实。
 - **推理锁排队**：全局 OCR 由多个功能共用一把锁。对话中如有其他功能同时识别，配音会排队等待；`NativeRun` 指标包含排队时间，可据此判断。
-- **逐行推理耗时**：每帧 2～4 次单行推理，替代原来的 1 次批量推理。行图很小，预计差别不大，需在 CPU 上实测。
-- **同一帧跨模型**：运行中切换全局模型时，同一帧的姓名和正文可能分别由新旧模型识别。只影响切换瞬间的一帧，不做处理。
+- **批量推理占锁时长**：整帧 2～4 行在同一次加锁内完成，期间其他功能的 OCR 需要等待整批结束。行图很小，预计影响不大，需在 CPU 上实测。
 - **CPU 耗时**：“OCR 使用 CPU”默认开启，配音 OCR 默认从 GPU 改到 CPU。每个稳定画面识别 2～4 行，另有每 2 秒一次复查，需要实测单次耗时；如偏慢，提示用户关闭“OCR 使用 CPU”。
 - **OpenVINO**：宽度可变的输入是否触发重编译、性能如何，未验证。CPU、DirectML、CUDA 没有问题。
 
@@ -514,7 +515,7 @@ UI（View / ViewModel）测试不持久化；只测试生产中无调用方的�
 - 单元测试：`QuestVoiceTests` 共 442 个用例全部通过。第 2 版后为 452 个；本次删除 `DirectMlOcrEngineTests.cs`（只测已删除的自带会话）和 `OcrAlgorithmTests` 中 2 个自带 CTC 解码用例，路由配置错误的用例收缩为 `No_routing_uses_configured_voice`（对应的 `*ConfigurationError` 字段已删除）。
 - 代码规模见 1.1 节：生产代码减少 948 行，比第 2 版估计的约 1,600 行少。原因是第 9 项未实施、新增的卡片、设置窗口和 GPT-SoVITS 子视图（含 VM）共 765 行、状态投影保留在 Service 的 partial 文件中。
 - 未运行主程序，界面和游戏内行为待 7.3 验收。
-- 第 4 版（OCR 改用全局服务，接口方法为 `OcrResultWithoutDetector`）：解决方案编译退出码 0，`QuestVoiceTests` 442 个用例全部通过。测试只通过 `IOcrEngine` 替身接入 OCR，全局 OCR 的实际识别待 7.3 验收。
+- 第 4 版（OCR 改用全局服务，新增 `OcrResultWithoutDetector` 和 `OcrResultLinesWithoutDetector`，配音使用后者）：解决方案编译退出码 0，`QuestVoiceTests` 442 个用例全部通过。测试只通过 `IOcrEngine` 替身接入 OCR，全局 OCR 的实际识别待 7.3 验收。
 
 ## 8. 已确认事项
 
