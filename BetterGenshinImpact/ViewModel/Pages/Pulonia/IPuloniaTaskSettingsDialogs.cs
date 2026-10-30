@@ -1,3 +1,4 @@
+using BetterGenshinImpact.Core.Script.Settings;
 using BetterGenshinImpact.ViewModel.Windows.Pulonia;
 using Newtonsoft.Json.Linq;
 
@@ -42,6 +43,13 @@ public interface IPuloniaTaskSettingsDialogs
     /// <param name="viewModel">脚本设置草稿。</param>
     /// <returns>确认时返回完整的 settings 对象；取消返回 null。</returns>
     JObject? EditJavaScriptSettings(PuloniaJsScriptSettingsDialogViewModel viewModel);
+
+    /// <summary>
+    /// 打开脚本作者实现的 HTML 设置页；页面每次保存都经请求中的保存方法立即生效，窗口关闭后返回。
+    /// </summary>
+    /// <param name="request">设置页与读写方法。</param>
+    /// <returns>无法打开时的原因；正常打开并关闭后为 null。</returns>
+    string? EditJavaScriptHtmlSettings(ScriptSettingsEditRequest request);
 }
 
 /// <summary>设置表单的确认结果。</summary>

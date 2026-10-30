@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using BetterGenshinImpact.Core.Script.Settings;
 using BetterGenshinImpact.Model;
 
 namespace BetterGenshinImpact.Pulonia.Models;
@@ -41,18 +42,40 @@ public sealed class PuloniaTaskResourcePreview : IDisposable
     public string? JavaScriptSettingsError { get; }
 
     /// <summary>
+    /// JS 项目是否通过 manifest.settings_html 声明了 HTML 设置页。
+    /// </summary>
+    public bool HasSettingsHtml { get; }
+
+    /// <summary>
+    /// 已准备好的 HTML 设置页；只在读取时要求准备设置页且解析成功时存在，随预览释放后不能再打开。
+    /// </summary>
+    public ScriptSettingsHtmlPage? SettingsPage { get; }
+
+    /// <summary>
+    /// 要求准备设置页但无法打开时的原因。
+    /// </summary>
+    public string? SettingsPageError { get; }
+
+    /// <summary>
     /// 建立不可变资源预览。
     /// </summary>
     /// <param name="lease">预览目录租约，随本对象释放</param>
+    /// <param name="hasSettingsHtml">是否声明了 HTML 设置页</param>
+    /// <param name="settingsPage">已准备好的 HTML 设置页</param>
+    /// <param name="settingsPageError">HTML 设置页无法打开的原因</param>
     public PuloniaTaskResourcePreview(string text, string? suggestedName, string? markdownFilePath = null,
         IReadOnlyList<SettingItem>? javaScriptSettingItems = null, string? javaScriptSettingsError = null,
-        IDisposable? lease = null)
+        IDisposable? lease = null, bool hasSettingsHtml = false, ScriptSettingsHtmlPage? settingsPage = null,
+        string? settingsPageError = null)
     {
         Text = text;
         SuggestedName = suggestedName;
         MarkdownFilePath = markdownFilePath;
         JavaScriptSettingItems = javaScriptSettingItems ?? [];
         JavaScriptSettingsError = javaScriptSettingsError;
+        HasSettingsHtml = hasSettingsHtml;
+        SettingsPage = settingsPage;
+        SettingsPageError = settingsPageError;
         _lease = lease;
     }
 

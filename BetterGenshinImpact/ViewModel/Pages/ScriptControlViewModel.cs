@@ -2,6 +2,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.Core.Script.Group;
 using BetterGenshinImpact.Core.Script.Project;
+using BetterGenshinImpact.Core.Script.Settings;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.LogParse;
@@ -1620,6 +1621,23 @@ public partial class ScriptControlViewModel : ViewModel
 
         if (item.Type == "Javascript")
         {
+            // 声明了 HTML 设置页时优先打开；打不开时提示原因，脚本还提供了 settings_ui 则改用基础表单
+            if (!string.IsNullOrWhiteSpace(item.Project.Manifest.SettingsHtml))
+            {
+                if (OpenJsScriptHtmlSettings(item, item.Project) is not { } reason)
+                {
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(item.Project.Manifest.SettingsUi))
+                {
+                    Toast.Warning("无法打开脚本设置页面：" + reason);
+                    return;
+                }
+
+                Toast.Warning($"无法打开脚本设置页面：{reason}，已改用基础设置表单");
+            }
+
             if (item.JsScriptSettingsObject == null)
             {
                 item.JsScriptSettingsObject = new ExpandoObject();
@@ -1653,6 +1671,35 @@ public partial class ScriptControlViewModel : ViewModel
         {
             Toast.Warning("只有JS脚本才有自定义配置");
         }
+    }
+
+    /// <summary>
+    /// 打开脚本作者实现的 HTML 设置页；页面每次保存都立即替换设置值并写入所属配置组文件。
+    /// </summary>
+    /// <param name="item">配置组中的 JS 脚本。</param>
+    /// <param name="project">脚本项目。</param>
+    /// <returns>无法打开时的原因；正常打开并关闭后为 null。</returns>
+    private string? OpenJsScriptHtmlSettings(ScriptGroupProject item, ScriptProject project)
+    {
+        ScriptSettingsHtmlPage page;
+        try
+        {
+            page = ScriptSettingsHtmlPage.Resolve(project.ProjectPath, project.Manifest);
+        }
+        catch (Exception e) when (e is ArgumentException or IOException or UnauthorizedAccessException)
+        {
+            return e.Message;
+        }
+
+        return JsScriptHtmlSettingsWindow.Show(new ScriptSettingsEditRequest(page, "scheduler", false,
+            () => ScriptSettingsJson.FromExpando(item.JsScriptSettingsObject),
+            settings =>
+            {
+                // 写入失败时异常交给页面显示，不只弹出提示
+                var group = item.GroupInfo ?? throw new InvalidOperationException("找不到脚本所在的配置组，无法保存。");
+                item.JsScriptSettingsObject = ScriptSettingsJson.ToExpando(settings);
+                SaveScriptGroupFile(group);
+            }), Application.Current.MainWindow);
     }
 
     [RelayCommand]
@@ -1810,17 +1857,25 @@ public partial class ScriptControlViewModel : ViewModel
     }
 
 
+    /// <summary>
+    /// 把配置组写入文件，失败时抛出异常。
+    /// </summary>
+    private void SaveScriptGroupFile(ScriptGroup scriptGroup)
+    {
+        if (!Directory.Exists(ScriptGroupPath))
+        {
+            Directory.CreateDirectory(ScriptGroupPath);
+        }
+
+        var file = Path.Combine(ScriptGroupPath, $"{scriptGroup.Name}.json");
+        scriptGroup.WriteToFileAtomically(file);
+    }
+
     private void WriteScriptGroup(ScriptGroup scriptGroup)
     {
         try
         {
-            if (!Directory.Exists(ScriptGroupPath))
-            {
-                Directory.CreateDirectory(ScriptGroupPath);
-            }
-
-            var file = Path.Combine(ScriptGroupPath, $"{scriptGroup.Name}.json");
-            scriptGroup.WriteToFileAtomically(file);
+            SaveScriptGroupFile(scriptGroup);
         }
         catch (Exception e)
         {

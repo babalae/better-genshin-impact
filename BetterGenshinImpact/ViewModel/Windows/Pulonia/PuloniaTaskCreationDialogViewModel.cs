@@ -705,8 +705,9 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
                 (current, total) => StatusMessage = $"正在固定资源版本（{current}/{total}）…");
             if (_isClosed) return;
             // 设置定义只是内存对象，不依赖随弹窗释放的预览目录；任务计划据此在添加后弹出脚本设置窗口。
-            Result = new PuloniaTaskCreationResult(task,
-                SelectedDefinition.TaskType == "javascript" ? _currentPreview?.JavaScriptSettingItems : null);
+            var isJavaScript = SelectedDefinition.TaskType == "javascript";
+            Result = new PuloniaTaskCreationResult(task, isJavaScript ? _currentPreview?.JavaScriptSettingItems : null,
+                isJavaScript && _currentPreview?.HasSettingsHtml == true);
             StatusMessage = string.Empty;
             IsBusy = false;
             RequestClose?.Invoke(this, true);
@@ -822,12 +823,18 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
             _currentPreview = preview;
             ResourcePreview = preview.Text;
             ReadmeFilePath = preview.MarkdownFilePath;
-            foreach (var item in preview.JavaScriptSettingItems)
-                JavaScriptSettingFields.Add(new PuloniaJsScriptSettingFieldViewModel(item));
+            // 声明了 HTML 设置页时不显示基础表单，点击“添加任务”后打开设置页面
+            if (!preview.HasSettingsHtml)
+            {
+                foreach (var item in preview.JavaScriptSettingItems)
+                    JavaScriptSettingFields.Add(new PuloniaJsScriptSettingFieldViewModel(item));
+            }
             JavaScriptSettingsMessage = preview.JavaScriptSettingsError
-                                        ?? (JavaScriptSettingFields.Count == 0
-                                            ? "此脚本未提供自定义设置。"
-                                            : string.Empty);
+                                        ?? (preview.HasSettingsHtml
+                                            ? "此脚本提供设置页面，点击“添加任务”后会打开。"
+                                            : JavaScriptSettingFields.Count == 0
+                                                ? "此脚本未提供自定义设置。"
+                                                : string.Empty);
             _javaScriptSettingsLoadFailed = !string.IsNullOrWhiteSpace(preview.JavaScriptSettingsError);
             OnPropertyChanged(nameof(HasParameters));
             OnPropertyChanged(nameof(HasJavaScriptSettings));

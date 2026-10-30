@@ -23,6 +23,13 @@ public class Manifest
     public List<Author> Authors { get; set; } = [];
     public string Main { get; set; } = string.Empty;
     public string SettingsUi { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 脚本作者自己实现的 HTML 设置页入口（manifest 中的 settings_html），相对项目根目录；为空表示没有 HTML 设置页。
+    /// 路径只在打开设置和仓库确认添加时校验，不影响脚本运行。
+    /// </summary>
+    public string SettingsHtml { get; set; } = string.Empty;
+
     public string[] Scripts { get; set; } = [];
     public string[] Library { get; set; } = [];
     public string[] SavedFiles { get; set; } = [];

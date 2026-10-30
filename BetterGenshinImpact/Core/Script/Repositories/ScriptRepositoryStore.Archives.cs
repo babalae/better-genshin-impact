@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Script.Settings;
 using BetterGenshinImpact.Helpers;
 using Newtonsoft.Json;
 
@@ -195,9 +196,11 @@ public sealed partial class ScriptRepositoryStore
 
     /// <summary>
     /// 预览仅提取清单、设置和 README 到一次性目录 <c>Previews\pv_xxxxxxxx</c>，不保留来源版本或提取完整项目。
-    /// 调用方持有返回的租约，直到界面不再读取 README；进程崩溃残留的预览目录暂不清理。
+    /// 打开 HTML 设置页时再提取整个设置页目录，并检查文件数与大小上限。
+    /// 调用方持有返回的租约，直到界面不再读取 README 或设置页；进程崩溃残留的预览目录暂不清理。
     /// </summary>
-    public async Task<ScriptPreviewLease> PreparePreviewAsync(ScriptResourceReference reference, CancellationToken ct = default)
+    public async Task<ScriptPreviewLease> PreparePreviewAsync(ScriptResourceReference reference, CancellationToken ct = default,
+        bool includeSettingsPage = false)
     {
         reference.Validate();
         using var snapshot = await OpenResourceReadAsync(reference, ct).ConfigureAwait(false);
@@ -213,6 +216,14 @@ public sealed partial class ScriptRepositoryStore
                 var manifest = Project.Manifest.FromJson(File.ReadAllText(Path.Combine(directory, "manifest.json")));
                 if (!string.IsNullOrWhiteSpace(manifest.SettingsUi)) WritePreview(manifest.SettingsUi);
                 if (snapshot.FileExists(root + "/README.md")) WritePreview("README.md");
+                if (includeSettingsPage && !string.IsNullOrWhiteSpace(manifest.SettingsHtml))
+                {
+                    var entry = ScriptSettingsHtmlPage.NormalizeEntry(manifest.SettingsHtml);
+                    var slash = entry.LastIndexOf('/');
+                    var files = snapshot.EnumerateFiles(slash < 0 ? root : root + "/" + entry[..slash]);
+                    ScriptSettingsHtmlPage.CheckLimits(files.Select(file => file.Length).ToArray());
+                    foreach (var file in files) WritePreview(file.Path[(root.Length + 1)..]);
+                }
                 ct.ThrowIfCancellationRequested();
                 return new ScriptPreviewLease(directory, () => TryDeleteOwnedDirectory(directory));
             }

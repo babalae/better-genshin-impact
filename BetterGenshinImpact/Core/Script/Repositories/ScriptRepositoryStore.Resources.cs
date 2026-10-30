@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Script.Project;
+using BetterGenshinImpact.Core.Script.Settings;
 using BetterGenshinImpact.Helpers;
 
 namespace BetterGenshinImpact.Core.Script.Repositories;
@@ -80,6 +81,14 @@ public sealed partial class ScriptRepositoryStore
                 && !File.Exists(SafeCombine(content, manifest.SettingsUi)))
                 throw new FileNotFoundException("manifest 指定的设置文件不存在。");
             manifest.LoadSettingItems(content);
+            // HTML 设置页同样在确认时校验入口和目录上限，打开设置时才能按同样的规则提取。
+            if (!string.IsNullOrWhiteSpace(manifest.SettingsHtml))
+            {
+                var page = ScriptSettingsHtmlPage.Resolve(content, manifest);
+                ScriptSettingsHtmlPage.CheckLimits(Directory
+                    .EnumerateFiles(page.PageDirectory, "*", SearchOption.AllDirectories)
+                    .Select(file => new FileInfo(file).Length).ToArray());
+            }
             return manifest;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

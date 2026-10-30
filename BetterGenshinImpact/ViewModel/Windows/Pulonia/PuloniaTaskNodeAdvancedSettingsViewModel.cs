@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Script.Settings;
 using BetterGenshinImpact.Model;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
@@ -237,6 +238,7 @@ public partial class PuloniaTaskNodeAdvancedSettingsViewModel : ObservableObject
 
     /// <summary>
     /// 按节点固定的项目读取 settings_ui，在独立窗口中编辑脚本自定义设置；确认后作为一次可撤销编辑立即生效，取消不写入。
+    /// 项目声明了 settings_html 时优先打开脚本作者实现的 HTML 设置页，页面每次保存都立即生效。
     /// 本地项目按已保存的路径读取，基本区中尚未保存的路径修改不参与。
     /// </summary>
     [RelayCommand]
@@ -244,49 +246,84 @@ public partial class PuloniaTaskNodeAdvancedSettingsViewModel : ObservableObject
     {
         if (_dialogs is null || !CanEditScriptSettings) return;
         var node = Node;
-        IReadOnlyList<SettingItem> items;
-        string? error;
+        PuloniaTaskResourcePreview preview;
         IsLoadingScriptSettings = true;
         try
         {
-            // 1. 只需要设置定义：读取后立即释放仓库预览目录
-            using var preview = await PuloniaTaskResourcePreviewLoader.LoadJavaScriptTaskAsync(node.Model,
-                Document.GetResourceBaseDirectory(node));
-            items = preview.JavaScriptSettingItems;
-            error = preview.JavaScriptSettingsError;
+            // 1. 读取设置定义；声明了 HTML 设置页时一并准备页面文件。仓库预览目录在编辑结束后释放
+            preview = await PuloniaTaskResourcePreviewLoader.LoadJavaScriptTaskAsync(node.Model,
+                Document.GetResourceBaseDirectory(node), includeSettingsPage: true);
         }
         catch (Exception ex)
         {
             // 清单缺失、仓库版本不可用或路径无效时只提示，不修改任务
-            items = [];
-            error = "无法读取脚本设置：" + ex.Message;
+            ThemedMessageBox.Error("无法读取脚本设置：" + ex.Message, "脚本自定义设置");
+            return;
         }
         finally
         {
             IsLoadingScriptSettings = false;
         }
-        if (error is not null)
-        {
-            ThemedMessageBox.Error(error, "脚本自定义设置");
-            return;
-        }
-        if (items.Count == 0)
-        {
-            ThemedMessageBox.Information("此脚本未提供自定义设置。", "脚本自定义设置");
-            return;
-        }
 
-        // 2. 以当前有效值为初值编辑草稿，确认后整体替换本任务的 settings
+        using (preview)
+        {
+            // 2. HTML 设置页：页面每次保存都是一次可撤销编辑；打不开时脚本还提供了 settings_ui 则改用基础表单
+            if (preview.HasSettingsHtml)
+            {
+                var reason = preview.SettingsPage is { } page
+                    ? _dialogs.EditJavaScriptHtmlSettings(new ScriptSettingsEditRequest(page, "pulonia", false,
+                        () => Document.GetOneDragonParameters(Node)["settings"] as JObject ?? new JObject(),
+                        ApplyHtmlScriptSettings))
+                    : preview.SettingsPageError;
+                if (reason is null) return;
+                if (preview.JavaScriptSettingItems.Count == 0)
+                {
+                    ThemedMessageBox.Error("无法打开脚本设置页面：" + reason, "脚本自定义设置");
+                    return;
+                }
+                ThemedMessageBox.Warning($"无法打开脚本设置页面：{reason}\n将改用基础设置表单。", "脚本自定义设置");
+            }
+
+            var items = preview.JavaScriptSettingItems;
+            if (preview.JavaScriptSettingsError is { } error)
+            {
+                ThemedMessageBox.Error(error, "脚本自定义设置");
+                return;
+            }
+            if (items.Count == 0)
+            {
+                ThemedMessageBox.Information("此脚本未提供自定义设置。", "脚本自定义设置");
+                return;
+            }
+
+            // 3. 基础表单：以当前有效值为初值编辑草稿，确认后整体替换本任务的 settings
+            try
+            {
+                var current = Document.GetOneDragonParameters(node)["settings"] as JObject;
+                var viewModel = new PuloniaJsScriptSettingsDialogViewModel(node.Name, items, current, isCreation: false);
+                if (_dialogs.EditJavaScriptSettings(viewModel) is not { } settings) return;
+                Message = Document.ApplyJavaScriptSettings(node, settings) ? "脚本设置已应用，将自动保存。" : "脚本设置没有变化。";
+            }
+            catch (Exception ex) when (ex is PuloniaTaskValidationException or InvalidOperationException)
+            {
+                ThemedMessageBox.Error("脚本设置未应用：" + ex.Message, "脚本自定义设置");
+            }
+        }
+    }
+
+    /// <summary>
+    /// HTML 设置页的一次保存：整体替换本任务的 settings，作为一次可撤销编辑立即生效。
+    /// 撤销等操作会重建节点包装，因此每次都使用当前的 <see cref="Node"/>；校验失败的原因返回给页面。
+    /// </summary>
+    private void ApplyHtmlScriptSettings(JObject settings)
+    {
         try
         {
-            var current = Document.GetOneDragonParameters(node)["settings"] as JObject;
-            var viewModel = new PuloniaJsScriptSettingsDialogViewModel(node.Name, items, current, isCreation: false);
-            if (_dialogs.EditJavaScriptSettings(viewModel) is not { } settings) return;
-            Message = Document.ApplyJavaScriptSettings(node, settings) ? "脚本设置已应用，将自动保存。" : "脚本设置没有变化。";
+            Message = Document.ApplyJavaScriptSettings(Node, settings) ? "脚本设置已应用，将自动保存。" : "脚本设置没有变化。";
         }
-        catch (Exception ex) when (ex is PuloniaTaskValidationException or InvalidOperationException)
+        catch (PuloniaTaskValidationException ex)
         {
-            ThemedMessageBox.Error("脚本设置未应用：" + ex.Message, "脚本自定义设置");
+            throw new InvalidOperationException(ex.Message, ex);
         }
     }
 

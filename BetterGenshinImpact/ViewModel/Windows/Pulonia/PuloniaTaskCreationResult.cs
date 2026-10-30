@@ -20,13 +20,21 @@ public sealed class PuloniaTaskCreationResult
     public IReadOnlyList<SettingItem> JavaScriptSettingItems { get; }
 
     /// <summary>
+    /// 所选 JS 项目是否声明了 HTML 设置页；添加流程据此在插入任务树前打开设置页面。
+    /// </summary>
+    public bool HasSettingsHtml { get; }
+
+    /// <summary>
     /// 建立不可变的任务创建结果。
     /// </summary>
     /// <param name="task">待插入的任务根节点。</param>
     /// <param name="javaScriptSettingItems">JS 项目声明的设置项；非 JS 任务为空。</param>
-    public PuloniaTaskCreationResult(PuloniaTask task, IReadOnlyList<SettingItem>? javaScriptSettingItems = null)
+    /// <param name="hasSettingsHtml">JS 项目是否声明了 HTML 设置页。</param>
+    public PuloniaTaskCreationResult(PuloniaTask task, IReadOnlyList<SettingItem>? javaScriptSettingItems = null,
+        bool hasSettingsHtml = false)
     {
         Task = task;
         JavaScriptSettingItems = javaScriptSettingItems ?? [];
+        HasSettingsHtml = hasSettingsHtml;
     }
 }

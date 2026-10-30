@@ -258,7 +258,7 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
     }
     /// <summary>从能力创建窗口添加任务，允许同一类型与资源重复出现。</summary>
     [RelayCommand]
-    private void AddTask(string taskType)
+    private async Task AddTask(string taskType)
     {
         if (SelectedConfiguration is not { } document) return;
         try
@@ -279,8 +279,13 @@ public partial class PuloniaOneDragonViewModel : ViewModel, IDropTarget
                 return;
             }
             var dialog = new PuloniaOneDragonCreationDialog(_service.Definitions, _catalog, taskType) { Owner = Application.Current.MainWindow };
-            if (dialog.ShowDialog() == true && dialog.ViewModel.Result is { } result)
-            { Session.InsertOneDragonTask(document, SelectedTask, result.Task); SelectedTask = document.SelectedNode; }
+            if (dialog.ShowDialog() != true || dialog.ViewModel.Result is not { } result) return;
+            // 基础表单已内嵌在添加弹窗中；声明了 HTML 设置页的 JS 项目在插入前打开设置页面
+            var resourceBaseDirectory = _service.Definitions.FirstOrDefault(d => d.TaskType == taskType)?.ResourceBaseDirectory;
+            if (!await PuloniaJavaScriptTaskCreationSettings.EditAsync(result, resourceBaseDirectory,
+                    basicFormEdited: true, Application.Current.MainWindow)) return;
+            Session.InsertOneDragonTask(document, SelectedTask, result.Task);
+            SelectedTask = document.SelectedNode;
         }
         catch (Exception ex) { ThemedMessageBox.Error("无法添加任务：" + ex.Message, "一条龙"); }
     }

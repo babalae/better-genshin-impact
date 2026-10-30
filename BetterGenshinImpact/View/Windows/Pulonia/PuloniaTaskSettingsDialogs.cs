@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Windows;
+using BetterGenshinImpact.Core.Script.Settings;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Controls;
@@ -84,6 +85,10 @@ public sealed class PuloniaTaskSettingsDialogs : IPuloniaTaskSettingsDialogs
     /// <inheritdoc />
     public JObject? EditJavaScriptSettings(PuloniaJsScriptSettingsDialogViewModel viewModel)
         => PuloniaJsScriptSettingsDialog.Show(viewModel, GetOwner());
+
+    /// <inheritdoc />
+    public string? EditJavaScriptHtmlSettings(ScriptSettingsEditRequest request)
+        => JsScriptHtmlSettingsWindow.Show(request, GetOwner());
 
     /// <summary>以当前活动窗口为所有者，使窗口显示在打开它的窗口之上。</summary>
     private static Window GetOwner()

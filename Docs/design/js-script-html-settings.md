@@ -1,6 +1,6 @@
 # JS 脚本自定义 HTML 设置页设计
 
-状态：提案，未实现（第 3 版，2026-10-29）。  
+状态：第 3 版，2026-10-30 在 `feat/js-html-settings` 分支实现第 14 节步骤 1—3，已编译，待界面验收。实现与原设计的差异记在 [15.4](#154-实现时的调整)。  
 相关文档：[基础设施统一（WebView2 见第 8 节）](infrastructure-foundation.md) · [外部访问服务](external-access.md) · [脚本仓库与任务资源](pulonia/repository-resources.md) · [Pulonia 界面](pulonia/user-interface.md)
 
 版本说明：第 1 版由 BetterGI 注入 JS 接口并提供确定按钮；第 2 版把保存接口放在外部访问服务（Kestrel）上。第 3 版改为页面完全由作者实现，保存接口由 WebView2 在进程内提供，不监听端口。各方案的对比见[第 5 节](#5-方案对比为什么不经过-http-服务器)。
@@ -11,7 +11,7 @@
 
 1. 在 `manifest.json` 中写 `"settings_html": "settings.html"`；
 2. `GET /__bgi/settings` 读取设置，`POST /__bgi/settings` 保存设置，请求体就是设置对象；
-3. 想关闭窗口时调用 `window.close()`。
+3. 想关闭窗口时调用 `window.close()`；页面做过站内跳转时改用 `fetch("/__bgi/close", { method: "POST" })`。
 
 不需要引入 SDK、配置令牌、处理跨域，也不需要了解 `settings_ui`。普通的 `fetch` 就够用，最小示例见[第 7 节](#7-示例与调试)。
 
@@ -77,7 +77,7 @@
 | 需要用户开启或重启 | 否 | 需要开关，修改后重启 | 否 | 否 | 否 |
 | 子实例（桌面分身等） | 可用 | 不可用，服务只在主实例运行 | 可用 | 可用 | 可用 |
 | 保存在哪个线程执行 | 界面线程（WebView2 事件本身在界面线程） | Kestrel 线程池，需要投递到界面线程 | 界面线程 | 界面线程 | COM 调用线程 |
-| 额外风险 | 依赖 WebView2 拦截 POST 请求体，需实测（15.3） | 默认监听端口；同源的日志 WebSocket 要额外拒绝；与 `/api` 共用服务 | 无 | 要修改共享的 `App` 环境参数，所有进程必须一致，否则环境创建失败（[基础设施 8.1](infrastructure-foundation.md)） | 每个方法都暴露给页面，参数校验分散 |
+| 额外风险 | 依赖 WebView2 拦截 POST 请求体，已实测可行（15.3） | 默认监听端口；同源的日志 WebSocket 要额外拒绝；与 `/api` 共用服务 | 无 | 要修改共享的 `App` 环境参数，所有进程必须一致，否则环境创建失败（[基础设施 8.1](infrastructure-foundation.md)） | 每个方法都暴露给页面，参数校验分散 |
 
 采用方案 A：
 
@@ -108,7 +108,8 @@
 - 入口所在目录就是设置页目录，也是页面网站的根目录：页面中的 `/style.css` 对应设置页目录下的 `style.css`。
 - 不能是绝对路径，不能含 `..` 段，扩展名必须是 `.html` 或 `.htm`，路径上不能有重解析点。分隔符可以是 `/` 或 `\`。
 - 设置页目录中的 `__bgi` 子目录被保留地址占用，其中的文件不会提供给页面。
-- 设置页目录上限（暂定，Q4）：最多 500 个文件，总大小 20 MB，单个文件 10 MB。项目根目录很大（例如带大量识别素材）时，把设置页放进子目录即可。
+- 单个文件不超过 10 MB，超过时返回 404。
+- 仓库资源的设置页目录还有整体上限（暂定，Q4）：最多 500 个文件，总大小 20 MB。打开设置时要把这个目录提取到预览目录，确认添加时也按它校验。本地脚本直接读用户目录，不检查整体上限。入口放在项目根目录时，整个项目都算设置页目录，项目较大（例如带大量识别素材）时把设置页放进子目录即可。
 - 校验只在打开设置和仓库确认添加时进行，不放进 `Manifest.Validate`。`Manifest.Validate` 在 `ScriptProject` 构造时执行，在那里失败会导致脚本无法运行。
 
 | `settings_ui` | `settings_html` | 打开设置时 |
@@ -118,7 +119,7 @@
 | 无 | 有 | HTML 设置页；不可用时提示原因 |
 | 有 | 有 | HTML 设置页；不可用时提示原因，然后打开基础表单 |
 
-HTML 设置页不可用只有两种情况：未安装 WebView2 运行时；`settings_html` 路径不合法或设置页目录超出上限。
+HTML 设置页不可用只有两种情况：未安装 WebView2 运行时；`settings_html` 路径不合法、入口不存在，或仓库资源的设置页目录超出上限。
 
 ### 6.2 读取设置
 
@@ -155,7 +156,7 @@ POST /__bgi/settings
 
 | 能力 | 用法 |
 | --- | --- |
-| 关闭窗口 | `window.close()`。用户也可以点标题栏的关闭按钮 |
+| 关闭窗口 | `window.close()`，或 `POST /__bgi/close`。浏览器只允许没有跳转历史的页面用 `window.close()` 关闭自己，页面做过站内跳转后它会被忽略（已实测），这时用关闭接口。用户也可以点标题栏的关闭按钮 |
 | 深色、浅色主题 | 直接写 CSS `@media (prefers-color-scheme: dark)`。BetterGI 按当前主题设置 WebView2 的首选配色 |
 | 上下文（可选） | `GET /__bgi/context`，见下表 |
 | 弹窗 | `alert`、`confirm` 可以使用 |
@@ -263,20 +264,21 @@ sequenceDiagram
     W-->>E: 窗口关闭
 ```
 
-所有请求都在 WebView2 内部被拦截，不经过网络，也不打开任何端口。读取请求体时使用 `e.GetDeferral()`，响应由 `CoreWebView2.Environment.CreateWebResourceResponse` 生成。
+所有请求都在 WebView2 内部被拦截，不经过网络，也不打开任何端口。请求体在事件中从 `e.Request.Content` 同步读取（设置值很小），响应由 `CoreWebView2.Environment.CreateWebResourceResponse` 生成。
 
 ## 9. 设置值写入
 
 | 入口 | 每次保存成功时 | 窗口关闭后 |
 | --- | --- | --- |
-| 调度器 | 把设置对象用 Newtonsoft 默认设置转成 `ExpandoObject`，替换 `JsScriptSettingsObject`，再保存配置组文件 | 无额外操作 |
+| 调度器 | 用 Newtonsoft 的 `ExpandoObjectConverter` 把设置对象转成 `ExpandoObject`，替换 `JsScriptSettingsObject`，再写入所属配置组文件；写入失败时页面收到 500 | 无额外操作 |
 | Pulonia 节点编辑 | `Document.ApplyJavaScriptSettings(node, settings)`，每次保存是一次可撤销编辑，随后自动保存 | 无额外操作 |
-| 任务计划添加任务 | 写入添加流程的草稿 | 保存过：用最后一次保存的值添加任务。从未保存：询问“设置尚未保存，仍然添加任务吗？”，选择“不添加”时与现在取消一样不留节点（Q3） |
-| 新一条龙添加弹窗 | 写入弹窗 ViewModel 的草稿，卡片显示“已保存 N 项设置” | 弹窗确认时使用草稿 |
+| 任务计划添加任务 | 写入添加流程的草稿 | 保存过：用最后一次保存的值添加任务。从未保存：询问“设置页没有保存设置，仍然添加任务吗？”，选择“否”时与现在取消一样不留节点（Q3） |
+| 新一条龙添加弹窗 | 与任务计划相同：添加弹窗确认后打开设置页面，写入草稿 | 同上 |
 
-- 调度器的转换方式与 `ScriptGroup.FromJson` 读取文件时相同，保存后不重启和重启后重新读文件，脚本拿到的值类型一致。
+- 调度器转换后，嵌套对象是 `ExpandoObject`，数组是 `List<object>`，配置组用 System.Text.Json 保存时能正确写出。字符串、数字、布尔在保存后不重启和重启后由 `ScriptGroup.FromJson` 读回时类型一致；数组和嵌套对象重启后的 .NET 类型可能不同。
 - 替换对象后，正在运行的脚本继续使用旧对象，下次运行读到新值。
-- Newtonsoft 转换后，嵌套对象是 `ExpandoObject`，数组是 `List<object>`，在 V8 中都是 .NET 宿主对象，`length`、`JSON.stringify` 等 JS 写法不可用。这就是 7.2 建议复杂结构存成 JSON 字符串的原因。
+- 数组和嵌套对象在 V8 中都是 .NET 宿主对象，`length`、`JSON.stringify` 等 JS 写法不可用。这就是 7.2 建议复杂结构存成 JSON 字符串的原因。
+- 页面提交的字符串不按日期解析，ISO 时间字符串保存后仍是字符串。
 
 ## 10. 安全
 
@@ -323,58 +325,60 @@ Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' '
 
 ### 11.1 调度器
 
-`ScriptControlViewModel.OnEditJsScriptSettings` 改为返回 `Task` 的异步命令：
+`ScriptControlViewModel.OnEditJsScriptSettings`（保持同步命令，设置窗口是模态的）：
 
 1. 沿用现有的 `BuildScriptProjectRelation` 与类型判断。
-2. 声明了 `settings_html` 时解析设置页。可用则打开设置窗口，保存目标见第 9 节。
-3. 不可用时提示原因；声明了 `settings_ui` 则接着走现有基础表单流程。
+2. 声明了 `settings_html` 时由 `OpenJsScriptHtmlSettings` 解析设置页并打开设置窗口，保存目标见第 9 节。
+3. 打不开时用 Toast 提示原因；声明了 `settings_ui` 则接着走现有基础表单流程。
 4. 只声明 `settings_ui` 时，现有流程不变。
+
+原 `WriteScriptGroup` 拆出会抛出异常的 `SaveScriptGroupFile`，页面保存失败时能收到 500；原有调用仍然只弹出提示。
 
 ### 11.2 Pulonia 节点编辑
 
 `PuloniaTaskNodeAdvancedSettingsViewModel.EditScriptSettingsAsync`：
 
-- `PuloniaTaskResourcePreview` 增加 `SettingsHtml`，只表示清单是否声明了设置页，不提取页面文件。
-- 声明了设置页时，经 `PuloniaJavaScriptSettingsPageLoader`（11.5）准备设置页目录，窗口关闭后释放。
-- `IPuloniaTaskSettingsDialogs` 增加 `ShowJavaScriptHtmlSettings(...)`，由 `PuloniaTaskSettingsDialogs` 创建窗口；文档 ViewModel 不创建窗口。
-- “此脚本未提供自定义设置”的条件改为既没有 `settings_ui` 也没有 `settings_html`。
+- 用 `LoadJavaScriptTaskAsync(..., includeSettingsPage: true)` 读取设置定义并准备设置页，预览在编辑结束后释放。
+- `PuloniaTaskResourcePreview` 增加 `HasSettingsHtml`（是否声明）、`SettingsPage`（准备好的设置页）和 `SettingsPageError`（打不开的原因）。
+- `IPuloniaTaskSettingsDialogs` 增加 `EditJavaScriptHtmlSettings(request)`，由 `PuloniaTaskSettingsDialogs` 创建窗口，返回打不开的原因；文档 ViewModel 不创建窗口。
+- 页面每次保存调用 `ApplyHtmlScriptSettings`：用当前的 `Node`（撤销会重建节点包装）调用 `Document.ApplyJavaScriptSettings`，校验失败转成 409 返回页面。
+- 打不开设置页且声明了 `settings_ui` 时提示后打开基础表单；“此脚本未提供自定义设置”只在两者都没有时出现。
 
-### 11.3 任务计划添加任务
+### 11.3 添加任务（任务计划与新一条龙共用）
 
-`PuloniaTaskPlanViewModel.AddTask`：`PuloniaTaskCreationResult` 增加是否声明了设置页，以及项目定位（仓库资源引用或本地项目路径）。声明了设置页时，在添加后打开设置窗口（`mode` 为 `create`），关闭后按第 9 节决定是否添加。
+- `PuloniaTaskCreationResult` 增加 `HasSettingsHtml`。创建弹窗预览到声明了设置页的项目时，不显示内嵌基础表单，提示“此脚本提供设置页面，点击“添加任务”后会打开。”
+- 新增 `PuloniaJavaScriptTaskCreationSettings.EditAsync`（View 层）：添加弹窗确认后、插入任务树前调用。声明了设置页时打开设置页面（`mode` 为 `create`），按第 9 节写入或询问；打不开时有基础表单则改用基础表单，没有则询问是否仍然添加。没有设置页时，任务计划沿用原来的基础表单弹窗，新一条龙已在添加弹窗内嵌基础表单，不再弹出。
+- `PuloniaTaskPlanViewModel.AddTask` 改为 `AddTaskAsync`，五个添加命令改为返回 `Task`；`PuloniaOneDragonViewModel.AddTask` 改为异步。资源根目录按任务类型从能力定义读取。
 
-### 11.4 新一条龙添加弹窗
+### 11.4 仓库资源
 
-`PuloniaOneDragonCreationDialog` 的脚本设置卡片：声明了设置页时隐藏内嵌字段，显示“打开脚本设置页面…”按钮和“已保存 N 项设置”。HTML 设置页不可用且声明了 `settings_ui` 时，显示原有内嵌字段。
-
-### 11.5 仓库资源
-
-- 新增 `ScriptRepositoryStore.PrepareSettingsPageAsync(reference, ct)`：把 `manifest.json` 和整个设置页目录提取到 `Previews/pv_…`，用 `snapshot.EnumerateFiles` 列出文件并按 6.1 的上限校验，返回 `ScriptPreviewLease`。不在窗口打开期间一直持有仓库读取会话，因为 Git 来源的读取会话会占用来源锁。
-- 现有 `PreparePreviewAsync` 不变，切换资源选择时不会提取页面文件。
-- 新增 `PuloniaJavaScriptSettingsPageLoader`：仓库资源调用上面的方法；本地资源直接使用项目目录，释放时不做任何事。
-- 确认添加时（`ScriptRepositoryStore.Resources.cs` 的清单校验），声明了 `settings_html` 就校验路径规则、入口存在和目录上限，失败则拒绝确认，与现有 `settings_ui` 的校验一致。
+- `ScriptRepositoryStore.PreparePreviewAsync` 增加参数 `includeSettingsPage`：为 true 且清单声明了设置页时，用 `snapshot.EnumerateFiles` 列出设置页目录、按 6.1 的上限校验，再提取到同一个预览目录。默认 false，创建弹窗切换资源时不提取页面文件。预览目录提取完成后就释放仓库读取会话，不在窗口打开期间占用 Git 来源锁。
+- `PuloniaTaskResourcePreviewLoader.LoadAsync` 与 `LoadJavaScriptTaskAsync` 透传该参数，并按 `repo:{仓库 ID}:{相对路径}` 计算仓库资源的主机名。
+- 确认添加时（`ScriptRepositoryStore.Resources.cs` 的 `ValidateJavaScriptProject`），声明了 `settings_html` 就校验路径规则、入口存在和目录上限，失败则拒绝确认，与现有 `settings_ui` 的校验一致。
 - 资源指纹仍只计算 `manifest.json` 和 `main.js`（[Pulonia 界面](pulonia/user-interface.md)中的待定项 D11 不受影响）。
+- 在本功能之前已确认、但清单里的 `settings_html` 路径不合法的旧版本，打开设置时读取会失败并提示原因，基础表单也打不开，需要更新资源版本。
 
-### 11.6 脚本列表页
+### 11.5 脚本列表页
 
 `JsListViewModel` 中“此脚本存在配置…建议添加至【调度器】”的提示，条件改为声明了 `settings_ui` 或 `settings_html`。
 
 ## 12. 分层与类设计
 
 ```text
-View           JsScriptHtmlSettingsWindow：FluentWindow、WebView2
-               ScriptSettingsWebViewHost：把 WebView2 的请求、导航、关闭事件转给处理器和 ViewModel
-ViewModel      JsScriptHtmlSettingsWindowViewModel：标题、上次保存时间、加载与错误状态、关闭请求
-               各入口 ViewModel：判断可用性、提供保存目标
+View           JsScriptHtmlSettingsWindow：FluentWindow、WebView2 初始化、请求拦截、导航放行、关闭
+               PuloniaJavaScriptTaskCreationSettings：添加任务时选择设置页或基础表单
+ViewModel      JsScriptHtmlSettingsWindowViewModel：标题（含保存时间）、错误提示
+               各入口 ViewModel：判断可用性、提供读写方法
 Core/Script    Manifest.SettingsHtml
-               ScriptSettingsHtmlPage：路径规则、文件解析、主机名
-               ScriptSettingsRequestHandler：保留地址与文件请求的处理，不依赖 WebView2
-               IScriptSettingsTarget、ScriptSettingsContext
-               ScriptRepositoryStore.PrepareSettingsPageAsync
+               ScriptSettingsHtmlPage：路径规则、文件解析、主机名、目录上限
+               ScriptSettingsRequestHandler（含 ScriptSettingsResponse）：保留地址与文件请求，不依赖 WebView2
+               ScriptSettingsEditRequest：页面、入口与读写委托
+               ScriptSettingsJson：调度器 ExpandoObject 与 JObject 的转换
+               ScriptRepositoryStore.PreparePreviewAsync(includeSettingsPage)
 Infrastructure WebViewProfiles.ScriptSettings
 ```
 
-依赖方向：View → ViewModel → Core。请求处理器只接收方法、路径和请求体，返回状态码、响应头和内容，不引用 WebView2 和 WPF，可以单独测试。WebView2 相关代码只在 `ScriptSettingsWebViewHost`。
+依赖方向：View → ViewModel → Core。请求处理器只接收方法、路径和请求体，返回状态码、Content-Type 和正文，不引用 WebView2、WPF 和 `App`（日志由窗口传入），可以单独测试。WebView2 相关代码只在设置窗口的代码后置中，做法与 `HtmlMaskWindow` 相同。
 
 ```mermaid
 classDiagram
@@ -384,41 +388,41 @@ classDiagram
         +string SettingsHtml
     }
     class ScriptSettingsHtmlPage {
-        <<planned>>
         +string PageDirectory
-        +string EntryPath
+        +string EntryFile
         +string HostName
-        +TryResolve(manifest, projectDirectory, identity, page, error)$ bool
-        +TryResolveFile(urlPath, fullPath) bool
+        +Uri EntryUri
+        +Resolve(projectDirectory, manifest, identity)$ ScriptSettingsHtmlPage
+        +NormalizeEntry(settingsHtml)$ string
+        +CheckLimits(fileSizes)$
+        +ResolveFile(urlPath) string?
     }
-    class IScriptSettingsTarget {
-        <<interface>>
-        +GetCurrent() JObject
-        +Save(settings) ScriptSettingsSaveResult
+    class ScriptSettingsEditRequest {
+        <<record>>
+        +ScriptSettingsHtmlPage Page
+        +string Host
+        +bool IsCreation
+        +Func~JObject~ Load
+        +Action~JObject~ Save
     }
     class ScriptSettingsRequestHandler {
-        <<planned>>
         +Handle(method, path, body) ScriptSettingsResponse
+        +Blocked$ ScriptSettingsResponse
     }
     class ScriptSettingsResponse {
-        <<planned>>
+        <<record>>
         +int StatusCode
+        +string ContentType
+        +byte[] Body
         +string Headers
-        +Stream? Content
-    }
-    class ScriptSettingsWebViewHost {
-        <<planned>>
-        +AttachAsync(webView, page, handler)
-        +event CloseRequested
-    }
-    class JsScriptHtmlSettingsWindowViewModel {
-        <<planned>>
-        +string Title
-        +string LastSavedText
     }
     class JsScriptHtmlSettingsWindow {
-        <<planned>>
-        +ShowDialog(page, context, target, owner)$
+        +Show(request, owner)$ string?
+    }
+    class JsScriptHtmlSettingsWindowViewModel {
+        +string Title
+        +DateTime? LastSavedTime
+        +string? ErrorMessage
     }
     class ScriptControlViewModel {
         <<existing_extension>>
@@ -426,16 +430,19 @@ classDiagram
     class PuloniaTaskSettingsDialogs {
         <<existing_extension>>
     }
+    class PuloniaJavaScriptTaskCreationSettings {
+        +EditAsync(creation, resourceBaseDirectory, basicFormEdited, owner)$ Task~bool~
+    }
 
     ScriptSettingsHtmlPage ..> Manifest
-    ScriptSettingsRequestHandler --> ScriptSettingsHtmlPage
-    ScriptSettingsRequestHandler --> IScriptSettingsTarget
+    ScriptSettingsEditRequest --> ScriptSettingsHtmlPage
+    ScriptSettingsRequestHandler --> ScriptSettingsEditRequest
     ScriptSettingsRequestHandler ..> ScriptSettingsResponse
-    ScriptSettingsWebViewHost --> ScriptSettingsRequestHandler
-    JsScriptHtmlSettingsWindow --> ScriptSettingsWebViewHost
+    JsScriptHtmlSettingsWindow --> ScriptSettingsRequestHandler
     JsScriptHtmlSettingsWindow --> JsScriptHtmlSettingsWindowViewModel
     ScriptControlViewModel --> JsScriptHtmlSettingsWindow : 打开
     PuloniaTaskSettingsDialogs --> JsScriptHtmlSettingsWindow : 打开
+    PuloniaJavaScriptTaskCreationSettings --> JsScriptHtmlSettingsWindow : 打开
 ```
 
 新增与修改的文件：
@@ -443,26 +450,25 @@ classDiagram
 | 文件 | 层 | 内容 |
 | --- | --- | --- |
 | `Core/Script/Project/Manifest.cs` | Core | 新增 `SettingsHtml` |
-| `Core/Script/Settings/ScriptSettingsHtmlPage.cs` | Core | 路径规则、设置页目录、文件解析、主机名 |
-| `Core/Script/Settings/ScriptSettingsRequestHandler.cs` | Core | 保留地址路由、请求体解析与上限、文件响应、MIME 白名单、响应头 |
-| `Core/Script/Settings/ScriptSettingsResponse.cs` | Core | 处理结果 |
-| `Core/Script/Settings/IScriptSettingsTarget.cs` | Core | 保存目标接口、保存结果，以及委托实现 `DelegateScriptSettingsTarget`（用途单一，合并存放） |
-| `Core/Script/Settings/ScriptSettingsContext.cs` | Core | 上下文模型与 `mode`、`host` 枚举 |
-| `Core/Script/Repositories/ScriptRepositoryStore.Archives.cs` | Core | `PrepareSettingsPageAsync` |
+| `Core/Script/Settings/ScriptSettingsHtmlPage.cs` | Core | 路径规则、设置页目录、文件解析、主机名、目录上限、MIME 白名单 |
+| `Core/Script/Settings/ScriptSettingsRequestHandler.cs` | Core | 保留地址路由、请求体解析与上限、文件响应；同文件的 `ScriptSettingsResponse` 生成响应头 |
+| `Core/Script/Settings/ScriptSettingsEditRequest.cs` | Core | 打开一次设置页的请求 |
+| `Core/Script/Settings/ScriptSettingsJson.cs` | Core | 调度器设置值的转换 |
+| `Core/Script/Repositories/ScriptRepositoryStore.Archives.cs` | Core | `PreparePreviewAsync` 增加 `includeSettingsPage` |
 | `Core/Script/Repositories/ScriptRepositoryStore.Resources.cs` | Core | 确认添加时校验 `settings_html` |
-| `Pulonia/Services/PuloniaJavaScriptSettingsPageLoader.cs` | Core | 按仓库或本地来源准备设置页 |
+| `Pulonia/Models/PuloniaTaskResourcePreview.cs`、`Pulonia/Services/PuloniaTaskResourcePreviewLoader.cs` | Core | 预览携带设置页 |
 | `Infrastructure/WebView/WebViewProfile.cs` | Infrastructure | `ScriptSettings` Profile，加入 `All` |
 | `ViewModel/Windows/JsScriptHtmlSettingsWindowViewModel.cs` | ViewModel | 窗口状态 |
-| `View/Controls/Webview/ScriptSettingsWebViewHost.cs` | View | WebView2 设置、请求拦截、导航放行、关闭请求 |
-| `View/Windows/JsScriptHtmlSettingsWindow.xaml(.cs)` | View | 窗口 |
-| 其他已有文件 | 各层 | `ScriptControlViewModel`、`PuloniaTaskNodeAdvancedSettingsViewModel`、`PuloniaTaskPlanViewModel`、`PuloniaTaskCreationDialogViewModel`、`PuloniaOneDragonCreationDialog.xaml`、`IPuloniaTaskSettingsDialogs`、`PuloniaTaskSettingsDialogs`、`PuloniaTaskResourcePreview`、`PuloniaTaskResourcePreviewLoader`、`PuloniaTaskCreationResult`、`JsListViewModel` |
+| `View/Windows/JsScriptHtmlSettingsWindow.xaml(.cs)` | View | 窗口与 WebView2 |
+| `View/Windows/Pulonia/PuloniaJavaScriptTaskCreationSettings.cs` | View | 添加任务时的设置编辑 |
+| 其他已有文件 | 各层 | `ScriptControlViewModel`、`PuloniaTaskNodeAdvancedSettingsViewModel`、`PuloniaTaskPlanViewModel`、`PuloniaOneDragonViewModel`、`PuloniaTaskCreationDialogViewModel`、`PuloniaTaskCreationResult`、`IPuloniaTaskSettingsDialogs`、`PuloniaTaskSettingsDialogs`、`JsListViewModel` |
 
-`ScriptSettingsWebViewHost` 的 WebView2 设置：
+设置窗口的 WebView2 设置：
 
 | 设置 | 值 | 原因 |
 | --- | --- | --- |
 | Profile | `WebViewProfiles.ScriptSettings` | 与脚本仓库、HTML 遮罩隔离 |
-| `WebViewOptions.OpenNewWindowInBrowser` | `true` | 外链交给系统浏览器 |
+| `WebViewOptions.OpenNewWindowInBrowser` | 默认 `true` | `target=_blank` 的外链交给系统浏览器 |
 | `WebViewOptions.DownloadFolder` | 空 | 禁止下载 |
 | `AreDevToolsEnabled` | `true` | 方便作者调试（Q1） |
 | `AreBrowserAcceleratorKeysEnabled` | 默认 `true` | F5 重新加载 |
@@ -470,13 +476,14 @@ classDiagram
 | `IsPasswordAutosaveEnabled`、`IsGeneralAutofillEnabled` | `false` | 不保存表单数据 |
 | `Profile.PreferredColorScheme` | 按 BetterGI 主题 | `prefers-color-scheme` 生效 |
 | `AddWebResourceRequestedFilter` | `"*"`，`All` | 所有请求交给处理器，本页主机以外返回 403 |
+| `NavigationStarting` | 只放行本页主机 | 不带 `target=_blank` 的外链被取消 |
 | `WindowCloseRequested` | 关闭窗口 | 支持 `window.close()` |
 
 新 Profile：
 
 ```csharp
 /// <summary>
-/// 脚本 HTML 设置页，与其他网页隔离；每个脚本使用独立主机名
+/// 脚本 HTML 设置页，与其他网页隔离；每个脚本使用独立主机名，网页存储互不可见
 /// </summary>
 public static readonly WebViewProfile ScriptSettings = new(WebViewEnvironments.App, "ScriptSettings", "软件内网页 · 脚本设置页数据")
 {
@@ -490,28 +497,27 @@ public static readonly WebViewProfile ScriptSettings = new(WebViewEnvironments.A
 ## 13. 界面
 
 ```text
-┌ 脚本设置：自动采集示例 1.3.0 · 页面由脚本作者提供 · 已保存 14:32 ── □ × ┐
+┌ 脚本设置：自动采集示例 1.3.0 · 页面由脚本作者提供 · 已保存 14:32:05 ─ □ × ┐
+│ [错误提示条：只在页面加载失败或网页进程退出时显示]                      │
 │                                                                    │
-│                                                                    │
-│                  作者实现的 HTML 设置页（整个区域）                   │
-│                                                                    │
+│                  作者实现的 HTML 设置页（其余区域）                   │
 │                                                                    │
 └────────────────────────────────────────────────────────────────────┘
 ```
 
 - `FluentWindow`，启用主题背景，模态，Owner 为打开它的窗口。默认 760×640，最小 480×360，可调整大小。
-- 窗口内只有 WebView2，BetterGI 不加按钮。WebView2 是原生窗口，WPF 内容不能叠在它上面，所以保存状态写在标题栏：每次保存成功后显示“已保存 HH:mm”，作者没做保存提示时用户也能确认。
-- 加载时显示“正在加载设置页…”。入口文件读取失败或网页进程反复崩溃时，替换显示原因和“重新加载”按钮。
-- `DefaultBackgroundColor` 设为窗口背景色，避免加载时白屏闪烁。
-- MVVM：标题、保存时间、加载与错误状态在 ViewModel，只读绑定写 `Mode=OneWay`；WebView2 的事件处理在 `ScriptSettingsWebViewHost`，窗口代码后置只负责组装；提示框使用 `ThemedMessageBox`。
+- 窗口内只有 WebView2，BetterGI 不加按钮。WebView2 是原生窗口，WPF 内容不能叠在它上面，所以保存状态写在标题栏：每次保存成功后显示“已保存 HH:mm:ss”，作者没做保存提示时用户也能确认。
+- 页面加载失败（例如入口 404）或网页进程退出时，在页面上方的独立行显示 `ui:InfoBar`，说明可以在页面中按 F5 重新加载。被拦截的跳转不算失败。没有单独的加载提示，本地文件加载很快。
+- `DefaultBackgroundColor` 按主题设为深色或浅色底色，避免加载时白屏闪烁。
+- MVVM：标题、保存时间、错误提示在 ViewModel，只读绑定写 `Mode=OneWay`；WebView2 的初始化和事件属于控件交互，放在窗口代码后置；提示框使用 `ThemedMessageBox`。
 
 ## 14. 分步交付与验收
 
 | 步骤 | 交付 | 验收重点 |
 | --- | --- | --- |
-| 1 核心 | `Manifest.SettingsHtml`、`ScriptSettingsHtmlPage`、`ScriptSettingsRequestHandler`、保存目标与上下文 | 6.1 每条路径规则的拒绝场景；6.3 每个状态码；文件越界与白名单 |
-| 2 窗口与调度器 | `ScriptSettings` Profile、`ScriptSettingsWebViewHost`、窗口、调度器接入 | 第 7.1 节示例原样可用；多次保存；保存后不重启和重启后脚本读到的值一致；F5、F12；不可用时回退基础表单 |
-| 3 Pulonia | `PrepareSettingsPageAsync`、确认校验、节点编辑、任务计划添加、新一条龙弹窗 | 每次保存可撤销；未保存时的添加询问；仓库与本地资源；预览目录在窗口关闭后删除 |
+| 1 核心（已实现） | `Manifest.SettingsHtml`、`ScriptSettingsHtmlPage`、`ScriptSettingsRequestHandler`、`ScriptSettingsEditRequest`、`ScriptSettingsJson` | 6.1 每条路径规则的拒绝场景；6.3 每个状态码；文件越界与白名单 |
+| 2 窗口与调度器（已实现） | `ScriptSettings` Profile、设置窗口、调度器接入 | 第 7.1 节示例原样可用；多次保存；保存后不重启和重启后脚本读到的值一致；F5、F12；不可用时回退基础表单 |
+| 3 Pulonia（已实现） | `PreparePreviewAsync(includeSettingsPage)`、确认校验、节点编辑、任务计划添加、新一条龙添加 | 每次保存可撤销；未保存时的添加询问；仓库与本地资源；预览目录在窗口关闭后删除 |
 | 4 文档与示例 | 作者文档、示例脚本 | 示例脚本在旧版本 BetterGI 中仍能用基础表单 |
 
 验收场景：
@@ -525,8 +531,8 @@ public static readonly WebViewProfile ScriptSettings = new(WebViewEnvironments.A
 7. 在桌面分身中打开 HTML 设置页，功能与主实例相同。
 8. 未安装 WebView2 运行时：声明了 `settings_ui` 的脚本提示后打开基础表单，否则提示安装运行时。
 9. Pulonia 节点编辑中保存两次，撤销两次后恢复原值。
-10. 任务计划添加任务时从未保存就关闭：询问是否仍添加，选“不添加”后任务树不变。
-11. 页面多次站内跳转后调用 `window.close()`，窗口仍能关闭。
+10. 任务计划和新一条龙添加任务时从未保存就关闭：询问是否仍添加，选“否”后任务树不变。
+11. 页面站内跳转后调用 `POST /__bgi/close`，窗口关闭；没有跳转时 `window.close()` 能关闭窗口。
 12. 仓库中的 `settings_html` 指向不存在的文件或超限目录：确认添加被拒绝并写明原因。
 13. 旧版本 BetterGI 打开同一脚本：只显示基础表单，不报错。
 14. 深色和浅色主题下打开，页面的 `prefers-color-scheme` 与 BetterGI 主题一致。
@@ -540,7 +546,7 @@ public static readonly WebViewProfile ScriptSettings = new(WebViewEnvironments.A
 | 编号 | 决策 | 理由 | 代价 |
 | --- | --- | --- | --- |
 | H1 | 页面完全由作者实现，BetterGI 只展示，保存由页面 POST | 作者可以自由实现任何界面；BetterGI 不维护控件 | 作者自己处理默认值、校验和保存提示 |
-| H2 | 保存接口由 WebView2 在进程内提供，不经过外部访问服务 | 不监听端口，其他程序无法访问；不需要开关和重启；所有实例可用 | 依赖 WebView2 能读取 POST 请求体（15.3） |
+| H2 | 保存接口由 WebView2 在进程内提供，不经过外部访问服务 | 不监听端口，其他程序无法访问；不需要开关和重启；所有实例可用 | 依赖 WebView2 能读取 POST 请求体（已实测可行，15.3） |
 | H3 | 接口用固定的绝对地址 `/__bgi/settings`，请求体就是设置对象，不要求请求头 | 作者写法最短，页面放在任何子目录都不用改地址 | 设置页目录中不能用 `__bgi` 作为目录名 |
 | H4 | 每次 POST 立即写入，整体替换 | 与“页面自己负责保存”一致，可以实现自动保存 | Pulonia 节点编辑中多次保存会产生多条撤销记录；页面忘记带上旧值会删除未展示的键 |
 | H5 | 入口可以在项目根目录，网站根目录为入口所在目录 | 最简单的设置页只有一个文件 | 入口在根目录时，页面能读到项目中的其他文件；这些文件本来就由同一作者提供，且页面无法外传 |
@@ -554,19 +560,44 @@ public static readonly WebViewProfile ScriptSettings = new(WebViewEnvironments.A
 | Q1 | 设置窗口在发布版中是否允许 F12 开发者工具。只影响这个窗口，页面本身没有额外权限 | 允许 |
 | Q2 | 两者都声明时，是否另外提供打开基础表单的入口 | 不提供，只在 HTML 设置页不可用时回退 |
 | Q3 | 任务计划添加任务时从未保存就关闭窗口的处理 | 询问是否仍添加 |
-| Q4 | 设置页目录上限 | 500 个文件、20 MB、单文件 10 MB |
+| Q4 | 仓库资源设置页目录上限 | 500 个文件、20 MB；所有来源单文件 10 MB |
 | Q5 | 是否允许设置页按 `http_allowed_urls` 访问外网 | 不允许 |
 
-### 15.3 需要实测的技术点
+### 15.3 技术点实测
 
-- `fetch` 发起的 POST 在 `WebResourceRequested` 中能否通过 `Request.Content` 读到完整请求体。若某些情况读不到，备选方案是由 BetterGI 注入一段很短的脚本，把对 `/__bgi/settings` 的 POST 改用 WebMessage 发送，作者写法不变。
-- WebSocket 连接是否触发 `WebResourceRequested`；自定义响应中的 CSP 能否阻止页面连接 `ws://127.0.0.1`。
-- 站内跳转后 `window.close()` 是否仍会触发 `WindowCloseRequested`。若不会，增加 `POST /__bgi/close` 作为替代。
+2026-10-30 用独立的 WinForms 探测程序（WebView2 SDK 1.0.2592.51，运行时 155.0.4283.62，与第 10 节相同的拦截方式和 CSP）实测：
+
+| 技术点 | 结果 |
+| --- | --- |
+| `fetch` POST 在 `WebResourceRequested` 中能否读到请求体 | 可以。`Request.Content` 不为空，UTF-8 中文完整；请求上下文为 `XmlHttpRequest` |
+| 没有文件夹映射的虚拟主机能否只靠自定义响应加载 | 可以，入口、子资源和站内跳转都正常，`NavigationCompleted` 成功 |
+| 页面访问外网和 `127.0.0.1` | `fetch("https://example.com")` 与 `fetch("http://127.0.0.1:30648/...")` 都以 `Failed to fetch` 失败，请求被 CSP 拦下，没有到达拦截器 |
+| 页面连接 `ws://127.0.0.1:30648/ws/v1/logs` | 触发 `onerror`，连接没有建立 |
+| 没有站内跳转时 `window.close()` | 触发 `WindowCloseRequested` |
+| 站内跳转后 `window.close()` | 不触发（浏览器只允许没有跳转历史的页面关闭自己），因此增加了 `POST /__bgi/close` |
+
+仍需在 BetterGI 中实测：
+
 - 自定义响应中的 CSP 对 ES module 和 Worker 是否生效。
 - 设置页目录较大时，首次加载和仓库提取的耗时。
 
+### 15.4 实现时的调整
+
+为了让代码更简洁，实现与第 3 版初稿有以下差异，上文各节已按实现更新：
+
+| 初稿 | 实现 | 原因 |
+| --- | --- | --- |
+| WebView2 逻辑放在独立的 `ScriptSettingsWebViewHost` | 放在设置窗口代码后置 | 只有一个使用方，做法与 `HtmlMaskWindow` 一致 |
+| 保存目标接口 `IScriptSettingsTarget` 与上下文类型 `ScriptSettingsContext` | `ScriptSettingsEditRequest` 记录读写委托；上下文由处理器直接生成 | 少两个类型，调用方用 lambda 即可 |
+| 新增 `PrepareSettingsPageAsync` 与 `PuloniaJavaScriptSettingsPageLoader` | `PreparePreviewAsync`、`LoadAsync`、`LoadJavaScriptTaskAsync` 增加 `includeSettingsPage` 参数 | 复用现有预览目录与租约 |
+| 新一条龙在设置卡片放“打开脚本设置页面…”按钮 | 与任务计划相同，添加弹窗确认后打开设置页面 | 两个入口共用 `PuloniaJavaScriptTaskCreationSettings`，添加弹窗不用新增命令和窗口依赖 |
+| 设置页目录上限对所有来源生效 | 只对仓库资源生效 | 本地脚本直接读用户目录，入口在根目录时项目素材会误触上限 |
+| 加载时显示“正在加载设置页…”，失败时替换显示并提供“重新加载” | 只在失败时显示错误提示条，用页面内 F5 重新加载 | WebView2 在折叠状态下初始化有风险，且本地文件加载很快 |
+| 只用 `window.close()` 关闭 | 增加 `POST /__bgi/close` | 实测站内跳转后 `window.close()` 无效 |
+| 调度器命令改为异步 | 保持同步 | 设置窗口是模态的 |
+
 ## 16. 文档维护
 
-- 实施后更新 [infrastructure-foundation.md](infrastructure-foundation.md) 8.2 节的 Profile 列表、[pulonia/repository-resources.md](pulonia/repository-resources.md) 中预览与确认校验的描述、[pulonia/user-interface.md](pulonia/user-interface.md) 的节点配置与新增任务两节。
+- 合并后更新 [infrastructure-foundation.md](infrastructure-foundation.md) 8.2 节的 Profile 列表、[pulonia/repository-resources.md](pulonia/repository-resources.md) 中预览与确认校验的描述、[pulonia/user-interface.md](pulonia/user-interface.md) 的节点配置与新增任务两节。
 - 第 6、7 节同步到脚本仓库的开发文档，供脚本作者查阅。
 - 实现状态写在[设计文档索引](README.md)的条目上，本文只描述设计。
