@@ -38,7 +38,7 @@ public sealed class QuestVoiceOcrEngine : IOcrEngine, IDisposable
         _metrics = metrics ?? new();
     }
 
-    /// <summary>按输入顺序识别每一行；置信度为每个输出字符最大概率的平均值。</summary>
+    /// <summary>按输入顺序逐行识别；置信度为每个输出字符最大概率的平均值。每行单独占用全局推理锁，行间检查取消。</summary>
     public async Task<(IReadOnlyList<OcrText> Texts, OcrModelInfo Model)> RecognizeAsync(
         IReadOnlyList<Mat> lines, CancellationToken cancellationToken)
     {
@@ -54,7 +54,12 @@ public sealed class QuestVoiceOcrEngine : IOcrEngine, IDisposable
                 OcrText[] texts;
                 try
                 {
-                    texts = Recognize(lines.ToArray()).Select(result => new OcrText(result.Text, result.Score)).ToArray();
+                    texts = lines.Select(line =>
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var result = Recognize(line);
+                        return new OcrText(result.Text, result.Score);
+                    }).ToArray();
                 }
                 catch (Exception exception) when (exception is not (OperationCanceledException or OcrException))
                 {
@@ -71,10 +76,10 @@ public sealed class QuestVoiceOcrEngine : IOcrEngine, IDisposable
     }
 
     /// <summary>用当前全局 OCR 识别；全局服务因切换模型或游戏语言被卸载时，换用新实例重试一次。</summary>
-    private OcrRecognizerResult[] Recognize(Mat[] lines)
+    private OcrRecognizerResult Recognize(Mat line)
     {
-        try { return Service().OcrLinesWithoutDetector(lines); }
-        catch (ObjectDisposedException) { return Service().OcrLinesWithoutDetector(lines); }
+        try { return Service().OcrResultWithoutDetector(line); }
+        catch (ObjectDisposedException) { return Service().OcrResultWithoutDetector(line); }
     }
 
     /// <summary>取得全局 OCR 实例；首次使用时由全局工厂加载模型，失败时转换为模型初始化错误。</summary>

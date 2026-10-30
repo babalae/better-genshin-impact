@@ -311,27 +311,23 @@ public class PaddleOcrService : IOcrService, IDisposable
     /// </summary>
     public string OcrWithoutDetector(Mat mat)
     {
-        lock (_inferenceLock)
-        {
-            ObjectDisposedException.ThrowIf(_disposed, this);
-            var startTime = Stopwatch.GetTimestamp();
-            var str = _localRecModel.Run(mat).Text;
-            var time = Stopwatch.GetElapsedTime(startTime);
-            // Debug.WriteLine($"PaddleOcrWithoutDetector 耗时 {time.TotalMilliseconds}ms 结果: {str}");
-            return str;
-        }
+        var startTime = Stopwatch.GetTimestamp();
+        var str = OcrResultWithoutDetector(mat).Text;
+        var time = Stopwatch.GetElapsedTime(startTime);
+        // Debug.WriteLine($"PaddleOcrWithoutDetector 耗时 {time.TotalMilliseconds}ms 结果: {str}");
+        return str;
     }
 
     /// <summary>
-    ///     不经过检测模型，按输入顺序批量识别已裁剪好的单行文字图像，保留每行的置信度。
-    ///     与其他识别共用同一把推理锁。
+    ///     不经过检测模型，识别一张已裁剪好的单行文字图像，返回文字和置信度。
+    ///     推荐传入三通道BGR mat，虽然四通道和单通道也做了兼容，但是三通道最快
     /// </summary>
-    public OcrRecognizerResult[] OcrLinesWithoutDetector(Mat[] lines)
+    public OcrRecognizerResult OcrResultWithoutDetector(Mat mat)
     {
         lock (_inferenceLock)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
-            return _localRecModel.Run(lines);
+            return _localRecModel.Run(mat);
         }
     }
 
