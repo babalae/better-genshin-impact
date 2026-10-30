@@ -322,6 +322,19 @@ public class PaddleOcrService : IOcrService, IDisposable
         }
     }
 
+    /// <summary>
+    ///     不经过检测模型，按输入顺序批量识别已裁剪好的单行文字图像，保留每行的置信度。
+    ///     与其他识别共用同一把推理锁。
+    /// </summary>
+    public OcrRecognizerResult[] OcrLinesWithoutDetector(Mat[] lines)
+    {
+        lock (_inferenceLock)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            return _localRecModel.Run(lines);
+        }
+    }
+
     private OcrResult _OcrResult(Mat mat)
     {
         var startTime = Stopwatch.GetTimestamp();

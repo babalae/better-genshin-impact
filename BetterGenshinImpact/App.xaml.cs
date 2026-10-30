@@ -298,7 +298,8 @@ public partial class App : Application
                 services.AddSingleton<RoutingCatalogStore>();
                 services.AddSingleton<QuestVoiceSettingsViewModel>();
                 services.AddSingleton<QuestVoiceCardViewModel>();
-                services.AddSingleton(sp => new QuestVoiceSessionFactory(all.QuestVoiceConfig, Core.Config.Global.StartUpPath, sp.GetRequiredService<BgiOnnxFactory>()));
+                services.AddSingleton(sp => new QuestVoiceSessionFactory(all.QuestVoiceConfig, Core.Config.Global.StartUpPath,
+                    sp.GetRequiredService<OcrFactory>(), sp.GetRequiredService<InferenceRuntimeService>()));
                 services.AddSingleton<IQuestVoiceSessionFactory>(sp => sp.GetRequiredService<QuestVoiceSessionFactory>());
                 services.AddSingleton<QuestVoiceSessionController>();
                 services.AddSingleton<QuestVoiceService>();

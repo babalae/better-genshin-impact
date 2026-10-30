@@ -108,14 +108,14 @@
                 </ScrollViewer>
             </TabItem>
 
-            <!-- 识别：OCR 使用内置模型，设备跟随硬件加速设置 -->
+            <!-- 识别：OCR 直接使用全局 OCR，模型跟随 OCR 配置，设备跟随硬件加速设置 -->
             <TabItem Header="识别">
                 <ScrollViewer Margin="0,12,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Margin="0,0,12,12" IsEnabled="{Binding IsConfigEditable, Mode=OneWay}">
                         <Border Style="{StaticResource QuestVoiceSectionStyle}">
                             <StackPanel>
                                 <ui:TextBlock Text="OCR" FontWeight="SemiBold" />
-                                <ui:TextBlock Text="使用 BetterGI 内置的 PP-OCRv6 识别模型，不需要另外准备模型；推理设备跟随“设置 → 硬件加速”，开启“OCR 使用 CPU”时固定使用 CPU。"
+                                <ui:TextBlock Text="直接使用 BetterGI 全局 OCR，不需要另外准备模型：模型跟随“设置 → OCR 配置 → PaddleOCR模型”（自动选项按游戏语言选择），推理设备跟随“设置 → 硬件加速”，开启“OCR 使用 CPU”时固定使用 CPU。修改模型或游戏语言后，下一次识别即使用新模型。"
                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" Margin="0,6,0,0" />
                             </StackPanel>
                         </Border>

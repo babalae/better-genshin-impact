@@ -1,7 +1,12 @@
 # 自动配音优化设计
 
-> 状态：第 3 版，已实施，待游戏内验收 · 2026-10-30  
-> 关联：[实时触发器生命周期](realtime-trigger.md) · [TaskTriggerDispatcher 依赖注入](task-trigger-dispatcher-di.md) · [配置持久化](config-persistence.md) · 用户文档 [questvoice.md](../technical/questvoice.md)
+> 状态：第 4 版，已实施，待游戏内验收 · 2026-10-30  
+> 关联：[实时触发器生命周期](realtime-trigger.md) · [TaskTriggerDispatcher 依赖注入](task-trigger-dispatcher-di.md) · [配置持久化](config-persistence.md) · [插件系统与 OCR 模型插件化](plugin-system.md) · 用户文档 [questvoice.md](../technical/questvoice.md)
+
+第 4 版变更：
+
+- OCR 从“自建一个 PP-OCRv6 识别组件”改为“直接调用全局 OCR 服务 `OcrFactory.PaddleOcr`”。模型跟随“设置 → OCR 配置 → PaddleOCR模型”和游戏语言，设备跟随“硬件加速”，与 BetterGI 其他功能完全一致（第 6 节）。
+- `IOcrService` 新增 `OcrLinesWithoutDetector`：不经过检测、批量识别已裁剪的单行图像并返回置信度。
 
 第 3 版变更：
 
@@ -19,7 +24,7 @@
 | 1. 菜单太多，界面是否友好 | 不够友好：一次配置要跨 3 个页面，“默认引擎”和“正在编辑的引擎”分在两页，同一概念有多个名字 | 导航“自动配音”及 4 个子页面合并为实时触发页的一张卡片和一个设置窗口（引擎与声线、角色、识别、高级）。设置项和运行信息都保留，只调整组织方式和文字 | 第 3 节 |
 | 2. 能否放进实时任务 | 可以，启停周期与实时触发器一致 | 开关在卡片上；截图器启动时开始，独立任务和脚本期间停止、结束后恢复，截图器停止时停止，设置窗口打开期间暂停。实现上订阅调度器已有的任务模式事件，不注册为 `ITaskTrigger` | 第 4 节 |
 | 3. 逻辑能否精简，是否符合分层标准 | 不完全符合：有死代码、未绑定的 VM 成员、重复的过期判定、跨层调用 | 清理死代码和未绑定成员、合并重复逻辑、修正跨层调用，不删功能。生产代码从 11,821 行降到 10,873 行（减少 948 行，约 8%） | 第 5 节 |
-| 4. OCR 为什么强制 DML | 用的是 ONNX Runtime，和主程序同一个运行库；只是会话没走主程序的工厂，自己写死了 DirectML | 改为直接调用 BetterGI 内置 OCR 的识别组件 `Rec`（PP-OCRv6），会话由 `BgiOnnxFactory` 创建，跟随“硬件加速”设置；用户不再需要准备模型 | 第 6 节 |
+| 4. OCR 为什么强制 DML | 用的是 ONNX Runtime，和主程序同一个运行库；只是会话没走主程序的工厂，自己写死了 DirectML | 改为直接调用 BetterGI 全局 OCR 服务。模型跟随全局“OCR 配置”和游戏语言，设备跟随“硬件加速”；用户不再需要准备模型，配音也不再有自己的 OCR 设置 | 第 6 节 |
 
 ## 1. 优化前的状态
 
@@ -73,7 +78,7 @@
 
 原则：
 
-- **保留全部现有功能。** 第 5.1 节逐项列出。设置项只删除“OCR 模型路径”和“DirectML 设备序号”两项：OCR 改用内置模型，设备跟随全局“硬件加速”（第 6 节）。其余设置全部保留。
+- **保留全部现有功能。** 第 5.1 节逐项列出。设置项只删除“OCR 模型路径”和“DirectML 设备序号”两项：OCR 直接使用全局 OCR，模型和设备都跟随全局设置（第 6 节）。其余设置全部保留。
 - 第 8 节的 4 项按确认结果处理：流式合成、现有场景识别、旧句接替方式、7 个引擎都不改。
 - 只删除三类代码：生产中没有调用方的死代码、没有绑定的 VM 成员、重复实现的同一逻辑。
 - 依赖方向为 View → ViewModel → Service → GameTask。
@@ -86,8 +91,9 @@
 | 独立任务和脚本期间 | 照常配音 | 停止，结束后恢复 | 4 |
 | 暂停热键、战斗、传送、选 F 选项期间 | 照常识别 | 不处理帧，会话保留，结束后继续 | 4 |
 | 运行中修改设置 | 编辑被锁定 | 打开设置窗口时暂停配音，关闭后按新设置继续 | 3.5 |
-| OCR 模型 | 必须自备 `PP-OCRv6_rec_small.onnx` | 使用内置 PP-OCRv6 识别模型，“OCR 模型路径”设置删除 | 6 |
+| OCR 模型 | 必须自备 `PP-OCRv6_rec_small.onnx` | 跟随全局“PaddleOCR模型”设置（默认 `V4Auto`，简体中文下为 PP-OCRv4；alpha 版默认 V6），“OCR 模型路径”设置删除 | 6 |
 | OCR 设备 | 固定 DirectML，单独的设备序号 | 跟随“硬件加速”；“OCR 使用 CPU”默认开启，因此默认在 CPU 上识别 | 6 |
+| 运行中修改全局 OCR 模型或游戏语言 | — | 下一次识别使用新模型，不需要重新开关配音 | 6 |
 | 硬件加速选 CUDA 或 OpenVINO | 配音拒绝启动 | 可以使用 | 6 |
 | 后端状态未知 | 只能重启 BetterGI | 卡片上出现“确认后端已重启”按钮 | 3.2 |
 
@@ -192,7 +198,7 @@
 - 列表显示正式名称（`QuestVoiceManagementSpeaker.DisplayName`），不再显示内部 ID；角色 ID 留在详情里。
 - 角色、旅行者、默认 NPC、旁白都使用同一个声线选择控件 `QuestVoiceVoiceSelector`。
 
-**识别**：说明文字“使用 BetterGI 内置的 PP-OCRv6 识别模型，不需要另外准备模型；推理设备跟随‘设置 → 硬件加速’，开启‘OCR 使用 CPU’时固定使用 CPU”；采样间隔（毫秒，50～500）。原“OCR 模型路径”和“DirectML 设备序号”删除（第 6 节）。
+**识别**：说明文字“直接使用 BetterGI 全局 OCR：模型跟随‘设置 → OCR 配置 → PaddleOCR模型’（自动选项按游戏语言选择），推理设备跟随‘设置 → 硬件加速’”；采样间隔（毫秒，50～500）。原“OCR 模型路径”和“DirectML 设备序号”删除，配音不设自己的 OCR 选项（第 6 节）。
 
 **高级**：
 
@@ -210,7 +216,7 @@
 | 配置与映射 | 启用角色声线路由、旅行者、未知 NPC 与旁白、角色管理 | 设置窗口 · 角色 |
 | 配置与映射 | 缺失声线策略、6 个文件操作按钮、路由文件路径 | 设置窗口 · 高级（文件操作合并为 5 个） |
 | 配置与映射 | 采样间隔 | 设置窗口 · 识别 |
-| 配置与映射 | OCR 模型路径 | 删除，改用内置模型（第 6 节） |
+| 配置与映射 | OCR 模型路径 | 删除，跟随全局“PaddleOCR模型”（第 6 节） |
 | 配置与映射 | DirectML 设备序号 | 删除，跟随全局“硬件加速”（第 6 节） |
 | GPT-SoVITS 配置 | 服务连接、测试连接、流式开关、声线库与试听 | 设置窗口 · 引擎与声线 · GPT-SoVITS |
 | GPT-SoVITS 配置 | 三项超时 | 设置窗口 · 高级（这三项本来就对所有引擎生效） |
@@ -309,7 +315,7 @@ private async Task ApplyDesiredStateAsync()
 ### 5.1 保留的功能
 
 - 场景识别：6 种对白布局的像素识别、墨迹签名稳定判定、姓名金色墨迹隔离。
-- 识别预处理（裁剪、墨迹隔离、按行切分）；识别本身改用内置 OCR（第 6 节）。
+- 识别预处理（裁剪、墨迹隔离、按行切分）；识别本身改用全局 OCR（第 6 节）。
 - 对白跟踪：定向复核、正文清空判定话轮、同一句不重复朗读、离开对话停止播放、新句音频准备好后再接替旧句。
 - 7 个引擎，本地 / 远程两套地址；不同角色可用不同引擎（`RoutedTtsProvider`）。
 - GPT-SoVITS：串行切换权重、已发出的请求排空、后端状态未知保护、流式合成与增量播放。
@@ -337,7 +343,7 @@ flowchart LR
         Ctrl["QuestVoiceSessionController<br/>会话所有权 · 同时一帧"]
         Factory["QuestVoiceSessionFactory<br/>校验 · 组装"]
         Core["FrameSession / VoiceSession<br/>场景 · OCR · 路由 · TTS · 播放"]
-        Ocr["QuestVoiceOcrEngine → 内置 Rec"]
+        Ocr["QuestVoiceOcrEngine → 全局 OcrFactory.PaddleOcr"]
         Exit["DialogueExitDetector"]
         Tracker["DialogueVersionTracker<br/>唯一一份过期判定"]
         Overlay["QuestVoiceOverlayPresenter"]
@@ -374,7 +380,7 @@ flowchart LR
 | 8 | 跨层 | 按 5.2 的约束移动；`ExtraConfig` 改为只读，引擎字典的缺省值由 `QuestVoiceConfig.OnExtraProvidersChanged` 在加载后补齐 | 已完成 |
 | 9 | 配置两种存法 | GPT-SoVITS 和火山翻译的参数并入引擎字典；合并 `CreateTtsSettings` / `CreateProviderSettings` | **未实施**，移到第 9 节。它改动持久化字段，并牵涉 4 个测试文件，收益约 60 行，本次不做 |
 | 10 | 单实现接口 | 删除 `ISceneSelector`、`ISceneProfileLoader`、`ISpeakerRouter`、`IReferenceAudioSelector`、`IImageOcrService`、`IImageProcessingService`；其余 12 个保留作测试替身 | 已完成 |
-| 11 | OCR | 改用内置 `Rec`（第 6 节）；删除 `DirectMlOcrEngine`、`DirectMlOcrSession`、`IDirectMlOcrSession`、`OcrExecutionProfile`、`CtcDecoder`、`ImageSnapshot`、`ImageOcrService.Frames.cs`（连续帧识别并入 `ImageOcrService` 和 `ContinuousFrameRecognizer`）、工厂中的运行库 DML 检查；删除 `OcrModelPath`、`DeviceId` 两项配置 | 已完成 |
+| 11 | OCR | 改用全局 OCR 服务（第 6 节）；删除 `DirectMlOcrEngine`、`DirectMlOcrSession`、`IDirectMlOcrSession`、`OcrExecutionProfile`、`CtcDecoder`、`ImageSnapshot`、`ImageOcrService.Frames.cs`（连续帧识别并入 `ImageOcrService` 和 `ContinuousFrameRecognizer`）、工厂中的运行库 DML 检查；删除 `OcrModelPath`、`DeviceId` 两项配置 | 已完成 |
 | 12 | 界面 | 卡片 + 设置窗口，子视图复用；删除 4 个页面和导航项 | 已完成 |
 
 主体算法、并发模型（两个会话的泵、版本号、观察租约）和 7 个 Provider 没有改动。
@@ -390,11 +396,11 @@ flowchart LR
 
 配音的 OCR 用的就是 ONNX Runtime（ORT），和 BetterGI 其他模型是同一个运行库。区别只在会话怎么创建、模型从哪来。
 
-| | 自动配音 OCR（优化前） | BetterGI 内置 OCR |
+| | 自动配音 OCR（优化前） | BetterGI 全局 OCR（`OcrFactory.PaddleOcr`） |
 | --- | --- | --- |
 | 运行库 | ONNX Runtime 1.21.0（NuGet `Microsoft.ML.OnnxRuntime.DirectML`，自带 CPU 和 DirectML 两种执行方式），进程里只有这一份 `onnxruntime.dll` | 同左 |
 | 会话创建 | `DirectMlOcrSession` 自己 `new SessionOptions()`，只调用 `AppendExecutionProvider_DML(DeviceId)` | `BgiOnnxFactory` 按“硬件加速”设置选择 CPU / DirectML / CUDA / OpenVINO；“OCR 使用 CPU”开启时 OCR 固定走 CPU |
-| 模型 | PP-OCRv6 small 识别模型（ONNX），默认路径 `User/QuestVoice/ocr/PP-OCRv6_rec_small.onnx`。仓库和发行包都不带，用户要自己放 | 内置 PP-OCR V4 / V5 / V6，其中 V6 识别模型为 `Assets/Model/PaddleOCR/Rec/V6/PP-OCRv6_small_rec_infer/slim.onnx`（约 21 MB） |
+| 模型 | PP-OCRv6 small 识别模型（ONNX），默认路径 `User/QuestVoice/ocr/PP-OCRv6_rec_small.onnx`。仓库和发行包都不带，用户要自己放 | 内置 PP-OCR V4 / V5 / V6 及多语言变体，由“设置 → OCR 配置 → PaddleOCR模型”选择（默认 `V4Auto`，自动选项按游戏语言选择）。V6 识别模型为 `Assets/Model/PaddleOCR/Rec/V6/PP-OCRv6_small_rec_infer/slim.onnx`（约 21 MB） |
 | 字典 | 18,708 字，写在模型文件元数据 `character` 里 | 同一套 18,708 字，放在模型同目录的 `inference.yml` |
 | 文字检测 | 不用检测模型。6 种布局的场景识别已经算出姓名和每行正文的位置，逐行送进识别模型 | 检测模型加识别模型 |
 | 解码 | 自带 CTC 解码；置信度为每个输出字符最大概率的平均值 | `Rec` 内置 CTC 解码，置信度算法相同 |
@@ -416,18 +422,31 @@ flowchart LR
 
 ### 6.3 实施方案
 
-场景识别和预处理保留，识别本身直接调用 BetterGI 内置 OCR 的识别组件：
+场景识别和预处理保留，识别本身直接调用 BetterGI 全局 OCR 服务，配音不再有自己的 OCR 模型、设备或会话：
 
-1. `QuestVoiceOcrEngine` 包装 `BetterGenshinImpact.Core.Recognition.OCR.Paddle.Rec`，参数为 `BgiOnnxModel.PaddleOcrRecV6`、`PaddleOcrService.PaddleOcrModelType.V6.RecLabel()`、`OcrVersionConfig.PpOcrV6`，会话来自 `BgiOnnxFactory.ForCurrentRuntime()`。推理设备因此跟随“硬件加速”和“OCR 使用 CPU”设置，诊断显示 `Runtime.OcrDescription`。
-2. 每轮配音会话独占一个 `Rec` 实例，首次识别时才创建，与全局 OCR 不共用推理锁。`QuestVoiceOcrEngine` 保留原来的串行识别、关闭标记和释放前排空。
-3. `ImagePreprocessor` 改为输出 BGR `Mat` 行图，交给 `Rec.Run`，由 `Rec` 统一缩放到高 48。`IOcrEngine.RecognizeAsync` 的入参改为 `IReadOnlyList<Mat>`。
-4. 删除“OCR 模型路径”和“DirectML 设备序号”两项设置、工厂中的运行库检查、profiling 校验、自带 CTC 解码和张量路径。模型初始化或推理失败时转换为 `OcrException`，界面据此提示检查 OCR。
-5. `OcrSettings` 只保留姓名 0.9、正文 0.8 两个置信度阈值。
+1. `IOcrService` 新增 `OcrLinesWithoutDetector(Mat[] lines)`。`PaddleOcrService` 的实现在全局推理锁内调用自身的识别组件 `Rec.Run`，不经过检测模型，返回每行的文字和置信度。原有的 `OcrWithoutDetector` 只返回文字，不能满足配音按置信度接受结果的需要。
+2. `QuestVoiceOcrEngine` 注入 `OcrFactory` 和 `InferenceRuntimeService`。每次识别都通过 `OcrFactory.PaddleOcr` 取当前实例，所以模型跟随“PaddleOCR模型”设置和游戏语言，设备跟随“硬件加速”和“OCR 使用 CPU”。识别结果附带的 `OcrModelInfo` 记录 `ActiveModelType.RecognitionModel.Name` 和 `Runtime.OcrDescription`，目前界面不显示。
+3. 切换模型或游戏语言时，设置页调用 `OcrFactory.Unload()` 卸载旧实例。识别时遇到旧实例已释放（`ObjectDisposedException`），换用新实例重试一次。下一次识别即使用新模型，不需要重新开关配音。
+4. `QuestVoiceOcrEngine` 不拥有全局实例，释放时只等待本轮在途识别结束。全局实例首次使用时由 `OcrFactory` 加载并预热；加载失败转换为 `OcrException(ModelInitialization)`，推理失败转换为 `OcrException(Inference)`。
+5. `ImagePreprocessor` 输出 BGR `Mat` 行图，由 `Rec` 统一缩放到模型输入高度。`IOcrEngine.RecognizeAsync` 的入参为 `IReadOnlyList<Mat>`。
+6. 删除“OCR 模型路径”和“DirectML 设备序号”两项设置、工厂中的运行库检查、profiling 校验、自带 CTC 解码和张量路径。指标中的“识别组件初始化”一项随之删除；`NativeRun` 现在包含等待全局推理锁的时间。
+7. `OcrSettings` 只保留姓名 0.9、正文 0.8 两个置信度阈值。阈值属于配音自己的接受规则，不是 OCR 配置。
+
+与“每轮自建一个识别组件”相比，直接使用全局服务的取舍：
+
+| | 每轮自建识别组件（第 3 版） | 直接使用全局 OCR 服务（采用） |
+| --- | --- | --- |
+| 模型选择 | 固定 PP-OCRv6，与全局设置无关 | 与全局设置一致；插件系统等后续调整也会自动生效 |
+| 内存 | 多一份识别模型和推理会话 | 不额外加载 |
+| 推理锁 | 独占，不与其他功能排队 | 与自动拾取等功能共用一把锁，可能排队 |
+| 运行中切换模型 | 下次开启配音才生效 | 下一次识别生效 |
 
 ### 6.4 风险
 
+- **默认模型变为 PP-OCRv4**：全局默认 `V4Auto`，简体中文下解析为 PP-OCRv4（alpha 版升级时会改成 V6）。V4 中文字典约 6,600 字，比 V6 的 18,708 字少，生僻的人名用字可能识别不出。需要更好效果的用户可以在全局设置中选 V6，这会同时影响其他功能。
+- **置信度阈值**：姓名 0.9、正文 0.8 是按 PP-OCRv6 标定的。V4、V5 及多语言模型的置信度分布不同，可能出现更多“低置信度”拒绝，需在游戏内确认。全局内置 `slim.onnx` 与原先使用的 `PP-OCRv6_rec_small.onnx` 是否为同一份权重也未核实。
+- **推理锁排队**：全局 OCR 由多个功能共用一把锁。对话中如有其他功能同时识别，配音会排队等待；`NativeRun` 指标包含排队时间，可据此判断。
 - **CPU 耗时**：“OCR 使用 CPU”默认开启，配音 OCR 默认从 GPU 改到 CPU。每个稳定画面识别 2～4 行，另有每 2 秒一次复查，需要实测单次耗时；如偏慢，提示用户关闭“OCR 使用 CPU”。
-- **置信度阈值**：内置 `slim.onnx` 与原先使用的 `PP-OCRv6_rec_small.onnx` 是否为同一份权重未核实。姓名 0.9、正文 0.8 的阈值需在游戏内确认。
 - **OpenVINO**：宽度可变的输入是否触发重编译、性能如何，未验证。CPU、DirectML、CUDA 没有问题。
 
 ## 7. 实施与验收
@@ -457,7 +476,7 @@ UI（View / ViewModel）测试不持久化；只测试生产中无调用方的�
 | 步骤 | 内容 | 状态 |
 | --- | --- | --- |
 | 1 | 5.3 第 1、2、10 项：死代码、未绑定成员、无替身的单实现接口 | 已完成 |
-| 2 | 第 6 节：OCR 改用内置 `Rec` | 已完成 |
+| 2 | 第 6 节：OCR 改用全局 OCR 服务（第 3 版为自建 `Rec`，第 4 版改为全局服务） | 已完成 |
 | 3 | 第 4 节与 5.3 第 4、5、6 项：启停周期、状态投影、启停与帧路径去重 | 已完成（第 5 项部分完成） |
 | 4 | 5.3 第 3、7、8 项：VM 去重、路由加载一次、跨层修正 | 已完成；第 9 项未实施 |
 | 5 | 第 3 节：卡片、设置窗口，删除 4 个页面和导航项 | 已完成 |
@@ -478,8 +497,11 @@ UI（View / ViewModel）测试不持久化；只测试生产中无调用方的�
 | 普通停止时 GPT-SoVITS 正在合成 | 等待已发出的请求结束再停止 |
 | 后端状态未知后关闭开关、重启后端、点击“确认后端已重启”、打开开关 | 正常恢复配音，不需要重启 BetterGI |
 | 硬件加速为 CPU、DirectML、CUDA、OpenVINO | 都能识别；选 CPU 或开启“OCR 使用 CPU”时不占用 GPU |
-| 不放置任何 OCR 模型 | 使用内置模型正常识别 |
-| 姓名、正文的识别置信度 | 阈值 0.9 / 0.8 下不出现明显漏识别或误识别 |
+| 不放置任何 OCR 模型 | 使用全局 OCR 正常识别 |
+| 全局“PaddleOCR模型”为 `V4Auto`（默认）和 `V6` | 都能识别姓名和台词 |
+| 配音运行中切换全局“PaddleOCR模型”或游戏语言 | 下一次识别使用新模型，配音不中断 |
+| 姓名、正文的识别置信度 | 在 V4 和 V6 下，阈值 0.9 / 0.8 都不出现明显漏识别或误识别 |
+| 对话中同时开启自动拾取、自动剧情等使用 OCR 的功能 | 配音识别延迟可接受，其他功能不受明显影响 |
 | 现有对白场景（单行、多行、称号、注音、快速连点、选项） | 与优化前行为一致 |
 | 设置窗口各页、深浅色主题、窗口缩小到最小尺寸 | 内容不挤缩，控件状态颜色正常 |
 
@@ -489,11 +511,12 @@ UI（View / ViewModel）测试不持久化；只测试生产中无调用方的�
 - 单元测试：`QuestVoiceTests` 共 442 个用例全部通过。第 2 版后为 452 个；本次删除 `DirectMlOcrEngineTests.cs`（只测已删除的自带会话）和 `OcrAlgorithmTests` 中 2 个自带 CTC 解码用例，路由配置错误的用例收缩为 `No_routing_uses_configured_voice`（对应的 `*ConfigurationError` 字段已删除）。
 - 代码规模见 1.1 节：生产代码减少 948 行，比第 2 版估计的约 1,600 行少。原因是第 9 项未实施、新增的卡片、设置窗口和 GPT-SoVITS 子视图（含 VM）共 765 行、状态投影保留在 Service 的 partial 文件中。
 - 未运行主程序，界面和游戏内行为待 7.3 验收。
+- 第 4 版（OCR 改用全局服务）：主项目编译通过；复制输出文件时因 `BetterGI.exe` 正在运行、文件被占用而失败，测试项目未重新编译，单元测试未重新运行。改动没有触及测试代码使用的类型（测试只通过 `IOcrEngine` 替身接入 OCR，工厂构造只用前两个参数）。
 
 ## 8. 已确认事项
 
 1. **流式合成**：保留，不移除。记为可能的后续优化点（第 9 节）。
-2. **识别方式**：不改，保留现有 6 种布局的场景识别和识别预处理；OCR 直接使用 BetterGI 内置 OCR（第 6 节）。
+2. **识别方式**：不改，保留现有 6 种布局的场景识别和识别预处理；OCR 直接使用 BetterGI 全局 OCR，配置也完全跟随全局 OCR 配置（第 6 节）。
 3. **新旧句接替**：不改，原方式合理：旧句继续播放，直到新句音频准备好再接替。
 4. **引擎**：7 个引擎全部保留，不移除。
 
