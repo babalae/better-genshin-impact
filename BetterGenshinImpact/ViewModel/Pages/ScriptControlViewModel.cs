@@ -1981,6 +1981,13 @@ public partial class ScriptControlViewModel : ViewModel
             return;
         }
 
+        using var cancellationScope = CancellationContext.Instance.TryBeginScope();
+        if (cancellationScope == null)
+        {
+            _logger.LogWarning("当前存在正在执行的任务，请勿重复启动");
+            return;
+        }
+
         RunnerContext.Instance.Reset();
 
         TaskProgress taskProgress = new()
@@ -2436,6 +2443,19 @@ public partial class ScriptControlViewModel : ViewModel
 
     public async Task StartGroups(List<ScriptGroup> scriptGroups, TaskProgress? taskProgress = null, bool loop = false)
     {
+        if (scriptGroups.Count == 0)
+        {
+            return;
+        }
+
+        using var cancellationScope = CancellationContext.Instance.TryBeginScope();
+        if (cancellationScope == null)
+        {
+            _logger.LogWarning("当前存在正在执行的任务，请勿重复启动");
+            return;
+        }
+
+        var cancellationToken = cancellationScope.Token;
         _logger.LogInformation("开始连续执行选中配置组:{Names}", string.Join(",", scriptGroups.Select(x => x.Name)));
         try
         {
@@ -2451,40 +2471,50 @@ public partial class ScriptControlViewModel : ViewModel
             }
 
             RunnerContext.Instance.taskProgress = taskProgress;
-            var sg = GetNextScriptGroups(scriptGroups);
-            foreach (var scriptGroup in sg)
+            while (true)
             {
-                if (taskProgress.Next != null)
+                cancellationToken.ThrowIfCancellationRequested();
+                var sg = GetNextScriptGroups(scriptGroups);
+                foreach (var scriptGroup in sg)
                 {
-                    if (scriptGroup.Name != taskProgress.Next.GroupName)
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (taskProgress.Next != null)
                     {
-                        continue;
+                        if (scriptGroup.Name != taskProgress.Next.GroupName)
+                        {
+                            continue;
+                        }
                     }
+                    taskProgress.CurrentScriptGroupName = scriptGroup.Name;
+                    TaskProgressManager.SaveTaskProgress(taskProgress);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    await _scriptService.RunMulti(GetNextProjects(scriptGroup), scriptGroup.Name, taskProgress);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    await Task.Delay(2000, cancellationToken);
                 }
-                taskProgress.CurrentScriptGroupName = scriptGroup.Name;
-                TaskProgressManager.SaveTaskProgress(taskProgress);
-                await _scriptService.RunMulti(GetNextProjects(scriptGroup), scriptGroup.Name, taskProgress);
-                await Task.Delay(2000);
-            }
 
-            taskProgress.LoopCount++;
-            if (taskProgress is { Loop: true })
-            {
+                cancellationToken.ThrowIfCancellationRequested();
+                taskProgress.LoopCount++;
+                if (!taskProgress.Loop)
+                {
+                    //只有最后一次成功才算
+                    if (taskProgress.ConsecutiveFailureCount == 0)
+                    {
+                        taskProgress.EndTime = DateTime.Now;
+                        TaskProgressManager.SaveTaskProgress(taskProgress);
+                    }
+
+                    break;
+                }
+
                 taskProgress.LastScriptGroupName = null;
                 taskProgress.LastSuccessScriptGroupProjectInfo = null;
                 taskProgress.Next = null;
-                await StartGroups(scriptGroups, taskProgress);
             }
-            else
-            {
-                //只有最后一次成功才算
-                if (taskProgress.ConsecutiveFailureCount == 0)
-                {
-                    taskProgress.EndTime = DateTime.Now;
-                    TaskProgressManager.SaveTaskProgress(taskProgress);
-                }
-
-            }
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("连续执行配置组已取消");
         }
         catch (Exception e)
         {
