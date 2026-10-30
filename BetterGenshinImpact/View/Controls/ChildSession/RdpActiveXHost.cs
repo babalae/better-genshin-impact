@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using BetterGenshinImpact.Service.ChildSession;
+using Microsoft.Extensions.Logging;
 using DrawingSize = System.Drawing.Size;
 
 namespace BetterGenshinImpact.View.Controls.ChildSession;
@@ -17,6 +18,7 @@ internal sealed class RdpActiveXHost : AxHost
     private const short VariantTrue = -1;
     private const int RedirectAudioToClient = 0;
     private const int DisableRemoteAudio = 2;
+    private static readonly ILogger Logger = App.GetLogger<RdpActiveXHost>();
     private static readonly TimeSpan ReconnectDelay = TimeSpan.FromSeconds(1);
 
     private static readonly RemoteKey LeftWindowsKey = new(0x5B, IsExtended: true);
@@ -30,6 +32,10 @@ internal sealed class RdpActiveXHost : AxHost
     private bool _disconnectRequested;
     private bool _sendSystemShortcutsToRemote = true;
     private bool _audioMuted;
+    private bool _ignoreRemotePointerUpdates = true;
+    private RemotePointerIsolationState _pointerIsolationState =
+        RemotePointerIsolationState.Disabled;
+
     private DrawingSize? _pendingReconnectDesktopSize;
     private bool _smartSizingEnabled = true;
     private bool _inputBlocked;
@@ -38,8 +44,19 @@ internal sealed class RdpActiveXHost : AxHost
 
     internal event EventHandler? LoginCompleted;
 
+    internal enum RemotePointerIsolationState
+    {
+        Disabled,
+        Applied,
+        Unsupported,
+        Failed
+    }
+
     internal ChildSessionConnectionFailedEventArgs? LastConnectionDiagnostic =>
         _lastConnectionDiagnostic;
+
+    internal RemotePointerIsolationState PointerIsolationState =>
+        _pointerIsolationState;
 
     internal RdpActiveXHost()
         : base(RdpClientClsid)
@@ -114,7 +131,22 @@ internal sealed class RdpActiveXHost : AxHost
             var extendedSettings = (IMsRdpExtendedSettings)client;
             TrySetExtendedProperty(extendedSettings, "EnableZoom", true);
             extendedSettings.set_Property("ConnectToChildSession", ref connectToChildSession);
+            ApplyIgnoreRemotePointerUpdates(extendedSettings);
         });
+
+        Logger.Log(
+            _pointerIsolationState is RemotePointerIsolationState.Unsupported or RemotePointerIsolationState.Failed
+                ? LogLevel.Warning
+                : LogLevel.Information,
+            "桌面分身鼠标指针隔离：{State}（IgnoreRemotePointerUpdates={Enabled}）",
+            _pointerIsolationState switch
+            {
+                RemotePointerIsolationState.Applied => "已生效",
+                RemotePointerIsolationState.Unsupported => "系统不支持",
+                RemotePointerIsolationState.Failed => "设置失败",
+                _ => "已关闭"
+            },
+            _ignoreRemotePointerUpdates);
 
         _connectionAttemptInProgress = true;
         _connectionFailureReported = false;
@@ -259,8 +291,14 @@ internal sealed class RdpActiveXHost : AxHost
 
     internal bool IsInputWindowFocused()
     {
-        return ConnectedState == 1
+        return !_inputBlocked
+               && ConnectedState == 1
                && ChildSessionNativeMethods.IsRdpInputWindowFocused(Handle);
+    }
+
+    internal void SetIgnoreRemotePointerUpdates(bool enabled)
+    {
+        _ignoreRemotePointerUpdates = enabled;
     }
 
     protected override void OnHandleDestroyed(EventArgs e)
@@ -623,6 +661,51 @@ internal sealed class RdpActiveXHost : AxHost
             target,
             [value],
             CultureInfo.InvariantCulture);
+    }
+
+    private void ApplyIgnoreRemotePointerUpdates(
+        IMsRdpExtendedSettings extendedSettings)
+    {
+        const string propertyName = "IgnoreServerGeneratedMouseMoves";
+        // 同一个 ActiveX 控件会跨连接复用；关闭时也必须显式写入 false，不能沿用上次的 true。
+        object requestedValue = _ignoreRemotePointerUpdates;
+        _pointerIsolationState = RemotePointerIsolationState.Failed;
+        try
+        {
+            extendedSettings.set_Property(propertyName, ref requestedValue);
+        }
+        catch (COMException exception)
+        {
+            _pointerIsolationState = RemotePointerIsolationState.Unsupported;
+            Logger.LogWarning(exception, "设置桌面分身鼠标指针隔离失败，当前 RDP 控件可能不支持 {PropertyName}", propertyName);
+            return;
+        }
+
+        try
+        {
+            bool? actualValue = extendedSettings.get_Property(propertyName) switch
+            {
+                bool value => value,
+                short value => value != 0,
+                int value => value != 0,
+                _ => null
+            };
+            if (actualValue == _ignoreRemotePointerUpdates)
+            {
+                _pointerIsolationState = _ignoreRemotePointerUpdates
+                    ? RemotePointerIsolationState.Applied
+                    : RemotePointerIsolationState.Disabled;
+            }
+            else
+            {
+                Logger.LogWarning("桌面分身鼠标指针隔离读回不匹配：期望 {Expected}，实际 {Actual}",
+                    _ignoreRemotePointerUpdates, actualValue);
+            }
+        }
+        catch (COMException exception)
+        {
+            Logger.LogWarning(exception, "无法确认桌面分身鼠标指针隔离是否生效");
+        }
     }
 
     private static void TrySetExtendedProperty(
