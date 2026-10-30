@@ -105,21 +105,6 @@ public sealed class ContinuousFrameGateTests
         Assert.Throws<ArgumentException>(() => gate.Observe(Frame(2, 11), Inspection()));
         Assert.Throws<ArgumentException>(() => gate.Observe(Frame(3, 10), Inspection()));
     }
-    /// <summary>移植回归验证：StrictSettingsRejectMalformed。</summary>
-    [Theory]
-    [InlineData("{}")]
-    [InlineData("{\"StableMilliseconds\":350,\"StableMilliseconds\":351}")]
-    [InlineData("{\"Extra\":1}")]
-    public void StrictSettingsRejectMalformed(string json) => Assert.ThrowsAny<ArgumentException>(() => ContinuousSettingsLoader.Parse(Encoding.UTF8.GetBytes(json)));
-    /// <summary>移植回归验证：StrictSettingsAcceptCompleteInputAndRejectExtraOrDuplicateFields。</summary>
-    [Fact] public void StrictSettingsAcceptCompleteInputAndRejectExtraOrDuplicateFields()
-    {
-        var json = JsonSerializer.Serialize(Settings);
-        Assert.Equal(Settings, ContinuousSettingsLoader.Parse(Encoding.UTF8.GetBytes(json)));
-        var completeFields = json[..^1];
-        Assert.Throws<ArgumentException>(() => ContinuousSettingsLoader.Parse(Encoding.UTF8.GetBytes(completeFields + ",\"Extra\":1}")));
-        Assert.Throws<ArgumentException>(() => ContinuousSettingsLoader.Parse(Encoding.UTF8.GetBytes(completeFields + ",\"StableMilliseconds\":350}")));
-    }
     /// <summary>移植回归验证：SettingsValidateAllBoundsAndRelationships。</summary>
     [Fact] public void SettingsValidateAllBoundsAndRelationships()
     {

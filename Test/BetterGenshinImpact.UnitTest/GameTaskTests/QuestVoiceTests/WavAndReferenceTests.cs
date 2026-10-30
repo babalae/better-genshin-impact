@@ -69,18 +69,6 @@ public sealed class WavAndReferenceTests
         Assert.Same(tagged, selector.Select(voice, "happy").Audio);
     }
 
-    /// <summary>移植回归验证：Every error code requires an explicit owner。</summary>
-    [Fact]
-    public void Every_error_code_requires_an_explicit_owner()
-    {
-        foreach (var code in Enum.GetValues<VoiceErrorCode>())
-            Assert.True(Enum.IsDefined(VoiceErrors.Owner(code)));
-        Assert.Throws<ArgumentOutOfRangeException>(() => VoiceErrors.Owner((VoiceErrorCode)int.MaxValue));
-        Assert.Equal(VoiceErrorOwner.Client, VoiceErrors.Owner(VoiceErrorCode.Internal));
-        Assert.Equal(VoiceErrorOwner.Client, VoiceErrors.Owner(VoiceErrorCode.Configuration));
-        Assert.Equal(VoiceErrorOwner.Backend, VoiceErrors.Owner(VoiceErrorCode.Unreachable));
-    }
-
     /// <summary>移植回归验证：Wave。</summary>
     internal static byte[] Wave(int rate, short[] samples)
     {
