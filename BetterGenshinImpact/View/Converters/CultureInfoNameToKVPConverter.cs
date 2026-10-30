@@ -18,6 +18,7 @@ class CultureInfoNameToKVPConverter : IValueConverter
             "ja" => "日本語",
             "ru" => "Русский",
             "it" => "Italiano",
+            "vi" => "Tiếng Việt",
             _ => cultureInfoName
         };
     }
