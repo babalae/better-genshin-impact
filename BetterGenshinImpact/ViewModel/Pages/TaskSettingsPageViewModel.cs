@@ -78,6 +78,16 @@ public partial class TaskSettingsPageViewModel : ViewModel
     public TargetItemListEditorViewModel AutoDomainTargetItems { get; }
 
     /// <summary>
+    /// 自动秘境的秘境来源：跟随培养计划或指定秘境，读写全局秘境配置的秘境名。
+    /// </summary>
+    public DomainSourceViewModel AutoDomainSource { get; }
+
+    /// <summary>
+    /// 合成收益预留率是否可编辑：刷取偏好为“充分刷取”时任务固定按 0% 计算，此项不生效。
+    /// </summary>
+    public bool IsTrainingGuideReservePercentEditable => Config.AutoDomainConfig.TrainingGuideRunPreference == 0;
+
+    /// <summary>
     /// 自动地脉花的材料目标编辑器。
     /// </summary>
     public TargetItemListEditorViewModel AutoLeyLineTargetItems { get; }
@@ -276,6 +286,9 @@ public partial class TaskSettingsPageViewModel : ViewModel
         AutoBossTargetItems = new TargetItemListEditorViewModel(Config.AutoBossConfig.TargetItems);
         AutoDomainTargetItems = new TargetItemListEditorViewModel(Config.AutoDomainConfig.TargetItems);
         AutoLeyLineTargetItems = new TargetItemListEditorViewModel(Config.AutoLeyLineOutcropConfig.TargetItems);
+        // 秘境来源只拆分界面选项，跟随培养计划仍保存为 domain_name 的提升指南选项值
+        AutoDomainSource = new DomainSourceViewModel(() => Config.AutoDomainConfig.DomainName,
+            value => Config.AutoDomainConfig.DomainName = value);
         RefreshAutoBossTargetItems();
         RefreshAutoDomainTargetItems();
         RefreshAutoLeyLineTargetItems();
@@ -378,13 +391,21 @@ public partial class TaskSettingsPageViewModel : ViewModel
     }
 
     /// <summary>
-    /// 秘境变化后刷新自动秘境的材料目标候选物品。
+    /// 秘境变化后刷新自动秘境的材料目标候选物品与秘境来源；刷取偏好变化后刷新合成收益预留率的可编辑状态。
     /// </summary>
     private void OnAutoDomainConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(AutoDomainConfig.DomainName))
         {
-            UIDispatcherHelper.Invoke(RefreshAutoDomainTargetItems);
+            UIDispatcherHelper.Invoke(() =>
+            {
+                RefreshAutoDomainTargetItems();
+                AutoDomainSource.Refresh();
+            });
+        }
+        else if (e.PropertyName == nameof(AutoDomainConfig.TrainingGuideRunPreference))
+        {
+            UIDispatcherHelper.Invoke(() => OnPropertyChanged(nameof(IsTrainingGuideReservePercentEditable)));
         }
     }
 

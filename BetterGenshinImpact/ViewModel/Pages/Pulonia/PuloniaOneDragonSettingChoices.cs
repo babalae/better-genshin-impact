@@ -47,8 +47,8 @@ internal static class PuloniaOneDragonSettingChoices
                 || taskType == PuloniaSoloTaskExecutor.ToTaskType(AutoFightEntryTask.TaskId)
                 ? CombatStrategyKind.All : CombatStrategyKind.WithoutCombo);
         }
-        // 备选秘境与自动秘境设置页一致，使用按国家分组的秘境选择框，且不提供“根据提升指南选择”。
-        // 体力计划的移涌活动秘境同样使用秘境选择框，只列出对应类型，首项为“跟随培养计划”；标记值为选项列表类型。
+        // 备选秘境与自动秘境设置页一致，使用按国家分组的秘境选择框，只列出真实秘境。
+        // 体力计划的移涌活动秘境同样使用秘境选择框，只列出对应类型，并带“跟随培养计划 / 指定秘境”来源单选项；标记值为选项列表类型。
         var domainPicker = key switch
         {
             "training_guide_fallback_domain_name" => TrainingGuideDomainOptions.FallbackPicker,
@@ -94,8 +94,9 @@ internal static class PuloniaOneDragonSettingChoices
             "training_guide_low_ar_adaptation_enabled" => "冒险等阶较低时检查入口是否解锁，并自动降低难度。",
             "training_guide_fallback_domain_name" => "养成需求全部满足后，用剩余树脂刷取的秘境；留空则保留剩余树脂。",
             "training_guide_fallback_sunday_selected_value" => "备选秘境在周日或限时全开时领取的奖励序号。",
-            "material_overflow_domain_name" => "盛材移涌期间用原粹领取双倍的精通或炼武秘境。跟随培养计划时按提升指南选择；清空即恢复跟随。",
-            "blessing_overflow_domain_name" => "祝圣移涌期间用原粹领取双倍的祝圣秘境。跟随培养计划时刷提升指南中养成角色推荐圣遗物所在的秘境；清空即恢复跟随。",
+            // 移涌活动秘境的来源说明随单选项变化，见 PuloniaOneDragonParameterFieldViewModel.DomainSourceDescription
+            "material_overflow_domain_name" => "盛材移涌期间用原粹领取当天的双倍。",
+            "blessing_overflow_domain_name" => "祝圣移涌期间用原粹领取当天的双倍。",
             _ => result.Value<string>("description") ?? "未修改的设置继续使用参数来源中的值。"
         };
         if (value is JObject values && key != "settings")

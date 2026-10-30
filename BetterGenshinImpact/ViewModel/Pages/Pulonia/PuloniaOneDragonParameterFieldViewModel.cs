@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.ViewModel.Windows.Pulonia;
@@ -57,10 +58,16 @@ public partial class PuloniaOneDragonParameterFieldViewModel : ObservableObject
     public bool IsCombatStrategy => _scalar.IsCombatStrategyEditor;
     /// <summary>是否为秘境选择框。</summary>
     public bool IsDomain => _scalar.IsDomainEditor;
+    /// <summary>是否为普通秘境选择框（备选秘境），不带秘境来源。</summary>
+    public bool IsPlainDomain => IsDomain && !HasDomainSource;
+    /// <summary>是否为带“秘境来源”的秘境字段（体力计划的移涌活动秘境）：空值表示跟随培养计划。</summary>
+    public bool IsSourcedDomain => IsDomain && HasDomainSource;
+    /// <summary>秘境选择框类型是否带秘境来源，由字段的选择框类型决定。</summary>
+    private bool HasDomainSource { get; }
     /// <summary>秘境选择框的选项，按字段类型筛选（备选秘境、盛材移涌、祝圣移涌）；非秘境字段为空。</summary>
     public IReadOnlyList<ICascadingItem> DomainItems { get; }
     /// <summary>
-    /// 秘境选择框的选中项，与 <see cref="TextValue"/> 互转：移涌活动秘境的空值显示为“跟随培养计划”，选中它时保存为空字符串。
+    /// 秘境选择框的选中项，与 <see cref="TextValue"/> 互转；选项只含真实秘境，跟随培养计划由秘境来源单选项选择。
     /// 选择框给出空选项时不改写，清空由选择框的清空按钮直接写回 <see cref="TextValue"/>。
     /// </summary>
     public ICascadingItem? SelectedDomainItem
@@ -69,9 +76,52 @@ public partial class PuloniaOneDragonParameterFieldViewModel : ObservableObject
         set
         {
             if (value?.Tag is not string tag || string.IsNullOrWhiteSpace(tag)) return;
-            TextValue = tag == TrainingGuideDomainOptions.FollowTrainingPlanOption ? string.Empty : tag;
+            TextValue = tag;
         }
     }
+    /// <summary>
+    /// 带秘境来源时是否选择了“指定秘境”。空值既可能是跟随培养计划，也可能是刚切到指定秘境还没选，
+    /// 所以选择单独保存，不从文本推断。
+    /// </summary>
+    private bool _isManualDomain;
+    /// <summary>切到跟随培养计划前指定的秘境，切回指定秘境时恢复。</summary>
+    private string _lastManualDomainName = string.Empty;
+    /// <summary>
+    /// 秘境来源为跟随培养计划：保存为空字符串。只处理选中，单选按钮在另一项被选中时写回的 false 忽略。
+    /// </summary>
+    public bool IsFollowTrainingPlan
+    {
+        get => !_isManualDomain;
+        set
+        {
+            if (!value || !_isManualDomain) return;
+            _lastManualDomainName = TextValue;
+            _isManualDomain = false;
+            TextValue = string.Empty;
+            NotifyDomainSourceChanged();
+        }
+    }
+    /// <summary>秘境来源为指定秘境：恢复上一次指定的秘境；未选择秘境时确认会提示选择。</summary>
+    public bool IsManualDomain
+    {
+        get => _isManualDomain;
+        set
+        {
+            if (!value || _isManualDomain) return;
+            _isManualDomain = true;
+            TextValue = _lastManualDomainName;
+            NotifyDomainSourceChanged();
+        }
+    }
+    /// <summary>秘境来源的说明：跟随时说明程序怎么选秘境，指定时说明选择框列出哪类秘境。</summary>
+    public string DomainSourceDescription => (_scalar.DomainPicker, _isManualDomain) switch
+    {
+        (TrainingGuideDomainOptions.MaterialOverflowPicker, false) => "跟随培养计划：按提升指南选择精通或炼武秘境。",
+        (TrainingGuideDomainOptions.MaterialOverflowPicker, true) => "只列出精通秘境与炼武秘境。",
+        (TrainingGuideDomainOptions.BlessingOverflowPicker, false) => "跟随培养计划：刷提升指南中养成角色推荐圣遗物所在的祝圣秘境。",
+        (TrainingGuideDomainOptions.BlessingOverflowPicker, true) => "只列出祝圣秘境。",
+        _ => string.Empty
+    };
     /// <summary>当前任务允许的策略类型。</summary>
     public CombatStrategyKind AllowedStrategyKinds => _scalar.AllowedStrategyKinds;
     /// <summary>是否为数字输入框。</summary>
@@ -120,6 +170,9 @@ public partial class PuloniaOneDragonParameterFieldViewModel : ObservableObject
         _original = value?.DeepClone();
         _scalar = new(name, schema, value, value is not null, required, dialogs);
         DomainItems = IsDomain ? TrainingGuideDomainOptions.ForPicker(_scalar.DomainPicker) : [];
+        // 移涌活动秘境：空值或旧版本的“跟随”选项值表示跟随培养计划，其余为指定秘境
+        HasDomainSource = IsDomain && TrainingGuideDomainOptions.HasTrainingPlanSource(_scalar.DomainPicker);
+        _isManualDomain = HasDomainSource && !IsFollowTrainingPlanValue(TextValue);
         if (Resin is not null)
             Resin.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(Resin.Value)) OnPropertyChanged(nameof(Resin)); };
         Description = schema.Value<string>("description") ?? (required ? "请选择或填写此项设置。" : "未修改的设置继续使用参数来源中的值。");
@@ -140,9 +193,31 @@ public partial class PuloniaOneDragonParameterFieldViewModel : ObservableObject
         _initialChoice = SelectedChoice;
     }
 
+    /// <summary>秘境来源变化后刷新两个单选项与说明。</summary>
+    private void NotifyDomainSourceChanged()
+    {
+        OnPropertyChanged(nameof(IsFollowTrainingPlan));
+        OnPropertyChanged(nameof(IsManualDomain));
+        OnPropertyChanged(nameof(DomainSourceDescription));
+    }
+
+    /// <summary>
+    /// 移涌活动秘境的保存值是否表示跟随培养计划：空值，或旧版本选择框保存过的“跟随”选项值（与体力计划的读取规则一致）。
+    /// </summary>
+    /// <param name="value">保存的秘境名。</param>
+    /// <returns>跟随培养计划时返回 true。</returns>
+    private static bool IsFollowTrainingPlanValue(string? value)
+        => string.IsNullOrWhiteSpace(value)
+           || value == TrainingGuideDomainOptions.FollowTrainingPlanOption
+           || value == AutoDomainTask.TrainingGuideOption;
+
     /// <summary>返回变化后的值；未编辑字段保留原始 null、缺失字段和 JSON 类型。</summary>
+    /// <exception cref="FormatException">输入无效，例如移涌活动秘境选了“指定秘境”但没有选择秘境。</exception>
     public JToken? BuildValue()
     {
+        // 指定秘境但未选择时不能保存为空字符串，否则会被当作跟随培养计划
+        if (IsSourcedDomain && _isManualDomain && string.IsNullOrWhiteSpace(TextValue))
+            throw new FormatException($"请选择“{DisplayName}”，或改为跟随培养计划。");
         if (IsResinUsage) return _scalar.HasResinChanges ? _scalar.BuildValue() : _original?.DeepClone();
         if (IsObject)
         {

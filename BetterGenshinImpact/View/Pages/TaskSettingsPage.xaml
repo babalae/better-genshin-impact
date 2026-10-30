@@ -27,7 +27,7 @@
       FontFamily="{StaticResource TextThemeFontFamily}"
       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
       mc:Ignorable="d">
-    <Page.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceDictionary Source="/BetterGI;component/View/Controls/Resin/ResinUsageResources.xaml" /></ResourceDictionary.MergedDictionaries></ResourceDictionary></Page.Resources>
+    <Page.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceDictionary Source="/BetterGI;component/View/Controls/Resin/ResinUsageResources.xaml" /><ResourceDictionary Source="/BetterGI;component/View/Controls/DomainSourceResources.xaml" /></ResourceDictionary.MergedDictionaries></ResourceDictionary></Page.Resources>
 
     <StackPanel Margin="{StaticResource PagePadding}">
         <TextBlock Margin="0,0,0,12"
@@ -1394,58 +1394,56 @@
                                 Text="{Binding Config.AutoDomainConfig.PartyName, Mode=TwoWay}" />
                 </Grid>
 
+                <!--  秘境来源：跟随培养计划与指定秘境二选一，下方只显示所选来源下生效的设置；跟随培养计划仍保存为秘境名的提升指南选项值  -->
                 <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="{i18n:T 指定要前往的秘境}"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="{i18n:T 自动传送到刷取的秘境}"
-                                  TextWrapping="Wrap" />
-                    <vio:CascadingComboBox Grid.Row="0"
-                              Grid.RowSpan="2"
-                              Grid.Column="1"
-                              Width="180"
-                              Margin="0,0,36,0"
-                              behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding Config.AutoDomainConfig.DomainName, Mode=TwoWay}"
-                              behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
-                              ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
-                              SelectedCascadingItem="{Binding Config.AutoDomainConfig.DomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
+                    <StackPanel Grid.Column="0"
+                                Margin="0,0,16,0"
+                                VerticalAlignment="Center">
+                        <ui:TextBlock FontTypography="Body"
+                                      Text="{i18n:T 秘境来源}"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="{i18n:T 按游戏内养成计划，从提升指南中选择秘境}"
+                                      TextWrapping="Wrap"
+                                      Visibility="{Binding AutoDomainSource.IsTrainingPlan, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="{i18n:T 传送到选定的秘境刷取；未选择时从当前秘境门口开始}"
+                                      TextWrapping="Wrap"
+                                      Visibility="{Binding AutoDomainSource.IsManualDomain, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1"
+                                Margin="0,0,36,0"
+                                VerticalAlignment="Center"
+                                Orientation="Horizontal">
+                        <RadioButton Margin="0"
+                                     Content="{i18n:T 跟随培养计划}"
+                                     IsChecked="{Binding AutoDomainSource.IsTrainingPlan, Mode=TwoWay}"
+                                     Style="{StaticResource DomainSourceRadio}" />
+                        <RadioButton Content="{i18n:T 指定秘境}"
+                                     IsChecked="{Binding AutoDomainSource.IsManualDomain, Mode=TwoWay}"
+                                     Style="{StaticResource DomainSourceRadio}" />
+                    </StackPanel>
                 </Grid>
 
-                <ui:CardExpander Margin="16,8,16,16" ContentPadding="0">
-                    <ui:CardExpander.Icon>
-                        <ui:FontIcon Glyph="&#xf3e0;" Style="{StaticResource FaFontIconStyle}" />
-                    </ui:CardExpander.Icon>
-                    <ui:CardExpander.Header>
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-                            <ui:TextBlock Grid.Row="0"
-                                          FontTypography="Body"
-                                          FontWeight="SemiBold"
-                                          Text="{i18n:T 培养计划刷取设置}"
-                                          TextWrapping="Wrap" />
-                            <ui:TextBlock Grid.Row="1"
-                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="{i18n:T 仅在选择“自动选择-提升指南”时启用}"
-                                          TextWrapping="Wrap" />
-                        </Grid>
-                    </ui:CardExpander.Header>
+                <!--  跟随培养计划：培养计划设置。“自动计算今日刷取次数”关闭时只刷提升指南中的第一个秘境，缩进的设置不生效  -->
+                <Border Margin="16,0,16,8"
+                        Style="{StaticResource DomainSourceGroup}"
+                        Visibility="{Binding AutoDomainSource.IsTrainingPlan, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <StackPanel>
+                        <StackPanel Margin="16,12,16,4">
+                            <ui:TextBlock FontTypography="Body"
+                                          FontWeight="SemiBold"
+                                          Text="{i18n:T 培养计划设置}"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="{i18n:T 需求以游戏内养成计划为准，请先把要培养的角色加入养成计划}"
+                                          TextWrapping="Wrap" />
+                        </StackPanel>
+
                         <Grid Margin="16">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -1463,7 +1461,7 @@
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="{i18n:T 在秘境入口读取培养材料并自动刷取，完成后使用备选秘境}"
+                                          Text="{i18n:T 在秘境入口读取培养材料并计算次数，可连续刷多个秘境；关闭时只刷提升指南中的第一个秘境，下方缩进的设置不生效}"
                                           TextWrapping="Wrap" />
                             <ui:ToggleSwitch Grid.Row="0"
                                              Grid.RowSpan="2"
@@ -1472,144 +1470,151 @@
                                              IsChecked="{Binding Config.AutoDomainConfig.TrainingGuideCalculateRunsEnabled, Mode=TwoWay}" />
                         </Grid>
 
-                        <Separator Margin="16,0" BorderThickness="0,1,0,0" />
-
-                        <Grid Margin="16">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <ui:TextBlock Grid.Row="0"
-                                          Grid.Column="0"
-                                          FontTypography="Body"
-                                          Text="{i18n:T 启用奖励识别}"
-                                          TextWrapping="Wrap" />
-                            <ui:TextBlock Grid.Row="1"
-                                          Grid.Column="0"
-                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="{i18n:T 默认开启，用于动态调整刷取次数；关闭后不更新库存，按初始预计体力刷取，实际材料可能有偏差}"
-                                          TextWrapping="Wrap" />
-                            <ui:ToggleSwitch Grid.Row="0"
-                                             Grid.RowSpan="2"
-                                             Grid.Column="1"
-                                             Margin="16,0,20,0"
-                                             IsChecked="{Binding Config.AutoDomainConfig.TrainingGuideRewardRecognitionEnabled, Mode=TwoWay}" />
-                        </Grid>
-
-                        <Grid Margin="32,0,16,16"
-                              IsEnabled="{Binding Config.AutoDomainConfig.TrainingGuideRewardRecognitionEnabled}">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
+                        <!--  以下设置只在自动计算次数时使用  -->
+                        <Border IsEnabled="{Binding Config.AutoDomainConfig.TrainingGuideCalculateRunsEnabled, Mode=OneWay}"
+                                Style="{StaticResource DomainSourceDependent}">
                             <StackPanel>
-                                <ui:TextBlock FontTypography="Body" Text="{i18n:T 识别失败时按固定预算继续}" />
-                                <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="{i18n:T 默认关闭，奖励识别失败即结束任务。开启后，当前材料按原预规划树脂预算继续，不再动态估算}"
-                                              TextWrapping="Wrap" />
-                            </StackPanel>
-                            <ui:ToggleSwitch Grid.Column="1" Margin="16,0,20,0"
-                                             IsChecked="{Binding Config.AutoDomainConfig.TrainingGuideRewardFailureBudgetEnabled, Mode=TwoWay}" />
-                        </Grid>
-
-                        <Separator Margin="16,0" BorderThickness="0,1,0,0" />
-
-                        <StackPanel Margin="16">
-                            <ui:TextBlock FontTypography="Body"
-                                          Text="{i18n:T 刷取偏好}"
-                                          TextWrapping="Wrap" />
-                            <ComboBox Margin="0,8,20,0"
-                                      HorizontalAlignment="Stretch"
-                                      SelectedIndex="{Binding Config.AutoDomainConfig.TrainingGuideRunPreference, Mode=TwoWay}">
-                                <ComboBoxItem Content="{i18n:T 适量刷取，依靠合成天赋收益补足材料}" />
-                                <ComboBoxItem Content="{i18n:T 充分刷取，直到满足培养计划需求}" />
-                            </ComboBox>
-                        </StackPanel>
-
-                        <Separator Margin="16,0" BorderThickness="0,1,0,0" />
-
-                        <Grid Margin="16">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <ui:TextBlock Grid.Row="0"
-                                          Grid.Column="0"
-                                          FontTypography="Body"
-                                          Text="{i18n:T 合成收益预留率}"
-                                          TextWrapping="Wrap" />
-                            <ui:TextBlock Grid.Row="1"
-                                          Grid.Column="0"
-                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="{i18n:T 默认 7%，可设置 0%～20%；0% 最保守；数值越高越依赖合成天赋收益，预计刷取次数越少，但也更可能需要补刷}"
-                                          TextWrapping="Wrap" />
-                            <StackPanel Grid.Row="0"
-                                        Grid.RowSpan="2"
-                                        Grid.Column="1"
-                                        Margin="16,0,20,0"
-                                        VerticalAlignment="Center"
-                                        Orientation="Horizontal">
-                                <ui:NumberBox Width="130"
-                                              Minimum="0"
-                                              Maximum="20"
-                                              MaxDecimalPlaces="0"
-                                              SmallChange="1"
-                                              LargeChange="5"
-                                              ClearButtonEnabled="False"
-                                              SpinButtonPlacementMode="Compact"
-                                              ValidationMode="InvalidInputOverwritten"
-                                              Value="{Binding Config.AutoDomainConfig.TrainingGuideCraftingBonusReservePercent, Mode=TwoWay}" />
-                                <ui:TextBlock Margin="8,0,0,0"
-                                              VerticalAlignment="Center"
-                                              Text="%" />
-                            </StackPanel>
-                        </Grid>
-
-                        <Separator Margin="16,0" BorderThickness="0,1,0,0" />
-
-                        <StackPanel Margin="16">
-                            <ui:TextBlock FontTypography="Body"
-                                          Text="{i18n:T 备选秘境}"
-                                          TextWrapping="Wrap" />
-                            <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="{i18n:T 培养计划完成或无可刷秘境时使用}"
-                                          TextWrapping="Wrap" />
-                            <Grid Margin="0,8,20,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <vio:CascadingComboBox Grid.Column="0"
-                                                       MinWidth="180"
-                                                       HorizontalAlignment="Stretch"
-                                                       behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding Config.AutoDomainConfig.TrainingGuideFallbackDomainName, Mode=TwoWay}"
-                                                       behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
-                                                       ItemsSource="{x:Static training:TrainingGuideDomainOptions.Items}"
-                                                       SelectedCascadingItem="{Binding Config.AutoDomainConfig.TrainingGuideFallbackDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
-                                <StackPanel Grid.Column="1" Margin="16,0,12,0">
+                                <StackPanel Margin="16,8,16,16">
                                     <ui:TextBlock FontTypography="Body"
-                                                  Text="{i18n:T 周日或限时}"
+                                                  Text="{i18n:T 刷取偏好}"
+                                                  TextWrapping="Wrap" />
+                                    <ComboBox Margin="0,8,20,0"
+                                              HorizontalAlignment="Stretch"
+                                              SelectedIndex="{Binding Config.AutoDomainConfig.TrainingGuideRunPreference, Mode=TwoWay}">
+                                        <ComboBoxItem Content="{i18n:T 适量刷取，依靠合成天赋收益补足材料}" />
+                                        <ComboBoxItem Content="{i18n:T 充分刷取，直到满足培养计划需求}" />
+                                    </ComboBox>
+                                </StackPanel>
+
+                                <Separator Margin="16,0" BorderThickness="0,1,0,0" />
+
+                                <!--  充分刷取时任务固定按 0% 预留，此项不生效  -->
+                                <Grid Margin="16"
+                                      IsEnabled="{Binding IsTrainingGuideReservePercentEditable, Mode=OneWay}">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ui:TextBlock Grid.Row="0"
+                                                  Grid.Column="0"
+                                                  FontTypography="Body"
+                                                  Text="{i18n:T 合成收益预留率}"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Grid.Row="1"
+                                                  Grid.Column="0"
+                                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="{i18n:T 默认 7%，可设置 0%～20%；0% 最保守；数值越高越依赖合成天赋收益，预计刷取次数越少，但也更可能需要补刷}"
+                                                  TextWrapping="Wrap" />
+                                    <StackPanel Grid.Row="0"
+                                                Grid.RowSpan="2"
+                                                Grid.Column="1"
+                                                Margin="16,0,20,0"
+                                                VerticalAlignment="Center"
+                                                Orientation="Horizontal">
+                                        <ui:NumberBox Width="130"
+                                                      Minimum="0"
+                                                      Maximum="20"
+                                                      MaxDecimalPlaces="0"
+                                                      SmallChange="1"
+                                                      LargeChange="5"
+                                                      ClearButtonEnabled="False"
+                                                      SpinButtonPlacementMode="Compact"
+                                                      ValidationMode="InvalidInputOverwritten"
+                                                      Value="{Binding Config.AutoDomainConfig.TrainingGuideCraftingBonusReservePercent, Mode=TwoWay}" />
+                                        <ui:TextBlock Margin="8,0,0,0"
+                                                      VerticalAlignment="Center"
+                                                      Text="%" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <Separator Margin="16,0" BorderThickness="0,1,0,0" />
+
+                                <Grid Margin="16">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ui:TextBlock Grid.Row="0"
+                                                  Grid.Column="0"
+                                                  FontTypography="Body"
+                                                  Text="{i18n:T 按领奖结果更新养成库存}"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Grid.Row="1"
+                                                  Grid.Column="0"
+                                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="{i18n:T 默认开启，用于动态调整刷取次数；关闭后不更新库存，按初始预计体力刷取，实际材料可能有偏差}"
+                                                  TextWrapping="Wrap" />
+                                    <ui:ToggleSwitch Grid.Row="0"
+                                                     Grid.RowSpan="2"
+                                                     Grid.Column="1"
+                                                     Margin="16,0,20,0"
+                                                     IsChecked="{Binding Config.AutoDomainConfig.TrainingGuideRewardRecognitionEnabled, Mode=TwoWay}" />
+                                </Grid>
+
+                                <Grid Margin="32,0,16,16"
+                                      IsEnabled="{Binding Config.AutoDomainConfig.TrainingGuideRewardRecognitionEnabled, Mode=OneWay}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <ui:TextBlock FontTypography="Body" Text="{i18n:T 识别失败时按固定预算继续}" />
+                                        <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                      Text="{i18n:T 默认关闭，奖励识别失败即结束任务。开启后，当前材料按原预规划树脂预算继续，不再动态估算}"
+                                                      TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <ui:ToggleSwitch Grid.Column="1" Margin="16,0,20,0"
+                                                     IsChecked="{Binding Config.AutoDomainConfig.TrainingGuideRewardFailureBudgetEnabled, Mode=TwoWay}" />
+                                </Grid>
+
+                                <Separator Margin="16,0" BorderThickness="0,1,0,0" />
+
+                                <StackPanel Margin="16">
+                                    <ui:TextBlock FontTypography="Body"
+                                                  Text="{i18n:T 备选秘境}"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="{i18n:T 选择序号}"
+                                                  Text="{i18n:T 培养计划完成或无可刷秘境时使用}"
                                                   TextWrapping="Wrap" />
+                                    <Grid Margin="0,8,20,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <vio:CascadingComboBox Grid.Column="0"
+                                                               MinWidth="180"
+                                                               HorizontalAlignment="Stretch"
+                                                               behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding Config.AutoDomainConfig.TrainingGuideFallbackDomainName, Mode=TwoWay}"
+                                                               behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
+                                                               ItemsSource="{x:Static training:TrainingGuideDomainOptions.Items}"
+                                                               SelectedCascadingItem="{Binding Config.AutoDomainConfig.TrainingGuideFallbackDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
+                                        <StackPanel Grid.Column="1" Margin="16,0,12,0">
+                                            <ui:TextBlock FontTypography="Body"
+                                                          Text="{i18n:T 周日或限时}"
+                                                          TextWrapping="Wrap" />
+                                            <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                          Text="{i18n:T 选择序号}"
+                                                          TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <ComboBox Grid.Column="2"
+                                                  Width="72"
+                                                  HorizontalContentAlignment="Center"
+                                                  ItemsSource="{x:Static training:TrainingGuideDomainOptions.RewardSelectionIndices}"
+                                                  SelectedItem="{Binding Config.AutoDomainConfig.TrainingGuideFallbackSundaySelectedValue, Mode=TwoWay}" />
+                                    </Grid>
                                 </StackPanel>
-                                <ComboBox Grid.Column="2"
-                                          Width="72"
-                                          HorizontalContentAlignment="Center"
-                                          ItemsSource="{x:Static training:TrainingGuideDomainOptions.RewardSelectionIndices}"
-                                          SelectedItem="{Binding Config.AutoDomainConfig.TrainingGuideFallbackSundaySelectedValue, Mode=TwoWay}" />
-                            </Grid>
-                        </StackPanel>
+                            </StackPanel>
+                        </Border>
+
                         <Separator Margin="16,0" BorderThickness="0,1,0,0" />
                         <Grid Margin="16">
                             <Grid.ColumnDefinitions>
@@ -1617,7 +1622,7 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <StackPanel>
-                                <ui:TextBlock FontTypography="Body" Text="{i18n:T 低世界等级适配}" />
+                                <ui:TextBlock FontTypography="Body" Text="{i18n:T 低冒险等阶适配}" />
                                 <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                               Text="{i18n:T 默认关闭，适用于秘境难度未解锁时自动选择可用难度}"
                                               TextWrapping="Wrap" />
@@ -1626,7 +1631,11 @@
                                              IsChecked="{Binding Config.AutoDomainConfig.TrainingGuideLowARAdaptationEnabled, Mode=TwoWay}" />
                         </Grid>
                         <Separator Margin="16,0" BorderThickness="0,1,0,0" />
-                        <ui:CardExpander Margin="16" ContentPadding="0" IsExpanded="False">
+                        <!--  诊断只记录自动计算次数的过程  -->
+                        <ui:CardExpander Margin="16"
+                                         ContentPadding="0"
+                                         IsEnabled="{Binding Config.AutoDomainConfig.TrainingGuideCalculateRunsEnabled, Mode=OneWay}"
+                                         IsExpanded="False">
                             <ui:CardExpander.Header>
                                 <ui:TextBlock Text="{i18n:T 开发者工具}" FontTypography="Body" />
                             </ui:CardExpander.Header>
@@ -1648,7 +1657,86 @@
                             </StackPanel>
                         </ui:CardExpander>
                     </StackPanel>
-                </ui:CardExpander>
+                </Border>
+
+                <!--  指定秘境：只列出秘境的选择框，以及依赖所选秘境掉落表的材料目标  -->
+                <Border Margin="16,0,16,8"
+                        Style="{StaticResource DomainSourceGroup}"
+                        Visibility="{Binding AutoDomainSource.IsManualDomain, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel>
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="{i18n:T 秘境}"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="{i18n:T 自动传送到刷取的秘境}"
+                                          TextWrapping="Wrap" />
+                            <vio:CascadingComboBox Grid.Row="0"
+                                                   Grid.RowSpan="2"
+                                                   Grid.Column="1"
+                                                   Width="220"
+                                                   Margin="16,0,20,0"
+                                                   behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding Config.AutoDomainConfig.DomainName, Mode=TwoWay}"
+                                                   behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
+                                                   ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
+                                                   SelectedCascadingItem="{Binding Config.AutoDomainConfig.DomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
+                        </Grid>
+
+                        <Separator Margin="16,0" BorderThickness="0,1,0,0" />
+
+                        <Grid Margin="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Row="0"
+                                          Grid.Column="0"
+                                          FontTypography="Body"
+                                          Text="{i18n:T 按材料数量提前结束}"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Grid.Row="1"
+                                          Grid.Column="0"
+                                          Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                          Text="{i18n:T 达到全部目标后停止任务}"
+                                          TextWrapping="Wrap" />
+                            <ui:ToggleSwitch Grid.Row="0"
+                                             Grid.RowSpan="2"
+                                             Grid.Column="1"
+                                             Margin="16,0,20,0"
+                                             IsEnabled="{Binding AutoDomainTargetItems.HasChoices, Mode=OneWay}"
+                                             IsChecked="{Binding AutoDomainTargetItems.IsTargetModeEnabled, Mode=TwoWay}" />
+                        </Grid>
+                        <ui:TextBlock Margin="16,0,16,12"
+                                      Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                      Text="{i18n:T 当前秘境没有可用的奖励材料，请先选择秘境}"
+                                      TextWrapping="Wrap"
+                                      Visibility="{Binding AutoDomainTargetItems.IsUnavailable, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        <Border Margin="16,0,16,16"
+                                BorderThickness="1"
+                                BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
+                                Background="{ui:ThemeResource ControlFillColorSecondaryBrush}"
+                                CornerRadius="8"
+                                Visibility="{Binding AutoDomainTargetItems.IsTargetModeEnabled, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <controls:TargetItemListEditorView Margin="12" DataContext="{Binding AutoDomainTargetItems, Mode=OneWay}" />
+                        </Border>
+                    </StackPanel>
+                </Border>
 
                 <Grid Margin="16">
                     <Grid.ColumnDefinitions>
@@ -1665,45 +1753,6 @@
                                Command="{Binding DomainResin.EditCommand, Mode=OneWay}" AutomationProperties.Name="设置树脂使用"
                                ToolTip="{Binding DomainResin.Summary, Mode=OneWay}" />
                 </Grid>
-                <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Row="0"
-                                  Grid.Column="0"
-                                  FontTypography="Body"
-                                  Text="{i18n:T 按材料数量提前结束}"
-                                  TextWrapping="Wrap" />
-                    <ui:TextBlock Grid.Row="1"
-                                  Grid.Column="0"
-                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                  Text="{i18n:T 达到全部目标后停止任务}"
-                                  TextWrapping="Wrap" />
-                    <ui:ToggleSwitch Grid.Row="0"
-                                     Grid.RowSpan="2"
-                                     Grid.Column="1"
-                                     Margin="0,0,36,0"
-                                     IsEnabled="{Binding AutoDomainTargetItems.HasChoices, Mode=OneWay}"
-                                     IsChecked="{Binding AutoDomainTargetItems.IsTargetModeEnabled, Mode=TwoWay}" />
-                </Grid>
-                <ui:TextBlock Margin="16,0,16,8"
-                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                              Text="{i18n:T 当前秘境没有可用的奖励材料，请先选择秘境}"
-                              TextWrapping="Wrap"
-                              Visibility="{Binding AutoDomainTargetItems.IsUnavailable, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                <Border Margin="16,8,16,16"
-                        BorderThickness="1"
-                        BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
-                        Background="{ui:ThemeResource ControlFillColorSecondaryBrush}"
-                        CornerRadius="8"
-                        Visibility="{Binding AutoDomainTargetItems.IsTargetModeEnabled, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <controls:TargetItemListEditorView Margin="12" DataContext="{Binding AutoDomainTargetItems, Mode=OneWay}" />
-                </Border>
 
                 <Grid Margin="16">
                     <Grid.RowDefinitions>

@@ -24,7 +24,7 @@
              FontFamily="{StaticResource TextThemeFontFamily}"
              Foreground="{DynamicResource TextFillColorPrimaryBrush}"
              mc:Ignorable="d">
-    <UserControl.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceDictionary Source="/BetterGI;component/View/Controls/Resin/ResinUsageResources.xaml" /></ResourceDictionary.MergedDictionaries></ResourceDictionary></UserControl.Resources>
+    <UserControl.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceDictionary Source="/BetterGI;component/View/Controls/Resin/ResinUsageResources.xaml" /><ResourceDictionary Source="/BetterGI;component/View/Controls/DomainSourceResources.xaml" /></ResourceDictionary.MergedDictionaries></ResourceDictionary></UserControl.Resources>
 
     <b:Interaction.Triggers>
         <b:EventTrigger EventName="Loaded">
@@ -492,7 +492,40 @@
                                             TextWrapping="Wrap" />
                             </Grid>
 
+                            <!--  秘境来源：跟随培养计划仍保存为秘境名的提升指南选项值；切回指定秘境时秘境为空，需要重新选择  -->
                             <Grid Margin="16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0"
+                                            Margin="0,0,16,0"
+                                            VerticalAlignment="Center">
+                                    <ui:TextBlock FontTypography="Body"
+                                                  Text="{i18n:T 秘境来源}"
+                                                  TextWrapping="Wrap" />
+                                    <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                                  Text="{i18n:T 跟随培养计划时按提升指南选择秘境，设置见下方“培养计划刷取设置”}"
+                                                  TextWrapping="Wrap" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1"
+                                            Margin="0,0,36,0"
+                                            VerticalAlignment="Center"
+                                            Orientation="Horizontal">
+                                    <RadioButton Margin="0"
+                                                 Content="{i18n:T 跟随培养计划}"
+                                                 IsChecked="{Binding SelectedConfig.DomainName, Mode=TwoWay, Converter={StaticResource TrainingPlanSourceConverter}}"
+                                                 Style="{StaticResource DomainSourceRadio}" />
+                                    <RadioButton x:Name="DailyManualDomainRadio"
+                                                 Content="{i18n:T 指定秘境}"
+                                                 IsChecked="{Binding SelectedConfig.DomainName, Mode=TwoWay, Converter={StaticResource ManualDomainSourceConverter}}"
+                                                 Style="{StaticResource DomainSourceRadio}" />
+                                </StackPanel>
+                            </Grid>
+
+                            <!--  指定秘境：只列出秘境的选择框与周日奖励序号  -->
+                            <Grid Margin="16"
+                                  Visibility="{Binding IsChecked, ElementName=DailyManualDomainRadio, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="*" />
@@ -520,7 +553,7 @@
                                 <vio:CascadingComboBox Grid.Row="0"
                                           Grid.RowSpan="2"
                                           Grid.Column="1"
-                                          Width="100"
+                                          Width="200"
                                           HorizontalAlignment="Left"
                                           Margin="10,0,10,0"
                                           behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding SelectedConfig.DomainName, Mode=TwoWay}"
@@ -576,7 +609,7 @@
                                               TextWrapping="Wrap" />
                                 <ui:TextBlock Grid.Row="1"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                              Text="{i18n:T 仅在选择“自动选择-提升指南”时启用}"
+                                              Text="{i18n:T 秘境来源为跟随培养计划时生效，与独立任务页的自动秘境共用}"
                                               TextWrapping="Wrap" />
                             </Grid>
                         </ui:CardExpander.Header>
@@ -609,7 +642,9 @@
 
                             <Separator Margin="16,0" BorderThickness="0,1,0,0" />
 
-                            <StackPanel Margin="16">
+                            <!--  刷取偏好与备选秘境只在自动计算次数时使用  -->
+                            <StackPanel Margin="16"
+                                        IsEnabled="{Binding Config.AutoDomainConfig.TrainingGuideCalculateRunsEnabled, Mode=OneWay}">
                                 <ui:TextBlock FontTypography="Body"
                                               Text="{i18n:T 刷取偏好}"
                                               TextWrapping="Wrap" />
@@ -623,7 +658,8 @@
 
                             <Separator Margin="16,0" BorderThickness="0,1,0,0" />
 
-                            <StackPanel Margin="16">
+                            <StackPanel Margin="16"
+                                        IsEnabled="{Binding Config.AutoDomainConfig.TrainingGuideCalculateRunsEnabled, Mode=OneWay}">
                                 <ui:TextBlock FontTypography="Body"
                                               Text="{i18n:T 备选秘境}"
                                               TextWrapping="Wrap" />
@@ -711,6 +747,7 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="56" />
                                     <ColumnDefinition Width="2*" />
+                                    <ColumnDefinition Width="72" />
                                     <ColumnDefinition Width="3*" />
                                     <ColumnDefinition Width="80" />
                                 </Grid.ColumnDefinitions>
@@ -724,12 +761,17 @@
                                               HorizontalAlignment="Center"
                                               Text="{i18n:T 队伍}"
                                               TextAlignment="Center" />
+                                <!--  勾选后该行跟随培养计划，秘境与奖励不生效；取消勾选回到“留空使用默认”  -->
                                 <ui:TextBlock Grid.Column="2"
+                                              Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                              Text="{i18n:T 培养计划}"
+                                              TextAlignment="Center" />
+                                <ui:TextBlock Grid.Column="3"
                                               Margin="8,0,8,0"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                               Text="{i18n:T 秘境}"
                                               TextAlignment="Center" />
-                                <ui:TextBlock Grid.Column="3"
+                                <ui:TextBlock Grid.Column="4"
                                               Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                               Text="{i18n:T 奖励}"
                                               TextAlignment="Center" />
@@ -739,6 +781,7 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="56" />
                                     <ColumnDefinition Width="2*" />
+                                    <ColumnDefinition Width="72" />
                                     <ColumnDefinition Width="3*" />
                                     <ColumnDefinition Width="80" />
                                 </Grid.ColumnDefinitions>
@@ -753,17 +796,34 @@
                                             TextAlignment="Center"
                                             TextWrapping="Wrap"
                                             PlaceholderText="{i18n:T 留空则不切换队伍}" />
-                                <vio:CascadingComboBox Grid.Column="2"
+                                <CheckBox x:Name="WeeklyDefaultTrainingPlanCheckBox"
+                                          Grid.Column="2"
+                                          MinWidth="0"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          IsChecked="{Binding SelectedConfig.DomainName, Mode=TwoWay, Converter={StaticResource TrainingPlanCheckConverter}}"
+                                          ToolTip="{i18n:T 跟随培养计划}" />
+                                <vio:CascadingComboBox Grid.Column="3"
                                           MinWidth="0"
                                           Margin="8,0,8,0"
                                           HorizontalAlignment="Stretch"
+                                          Visibility="{Binding IsChecked, ElementName=WeeklyDefaultTrainingPlanCheckBox, Mode=OneWay, Converter={StaticResource BooleanToVisibilityRevertConverter}}"
                                           behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding SelectedConfig.DomainName, Mode=TwoWay}"
                                           behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                           ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
                                           SelectedCascadingItem="{Binding SelectedConfig.DomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
-                                <ComboBox Grid.Column="3"
+                                <ui:TextBox Grid.Column="3"
+                                            MinWidth="0"
+                                            Margin="8,0,8,0"
+                                            IsEnabled="False"
+                                            IsReadOnly="True"
+                                            Text="{i18n:T 跟随培养计划}"
+                                            TextAlignment="Center"
+                                            Visibility="{Binding IsChecked, ElementName=WeeklyDefaultTrainingPlanCheckBox, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                <ComboBox Grid.Column="4"
                                           MinWidth="56"
                                           HorizontalContentAlignment="Center"
+                                          IsEnabled="{Binding IsChecked, ElementName=WeeklyDefaultTrainingPlanCheckBox, Mode=OneWay, Converter={StaticResource InverseBooleanConverter}}"
                                           ItemsSource="{Binding SundaySelectedValueList}"
                                           SelectedItem="{Binding SelectedConfig.SundayWeeklySelectedValue, Mode=TwoWay}" />
                             </Grid>
@@ -772,6 +832,7 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="56" />
                                     <ColumnDefinition Width="2*" />
+                                    <ColumnDefinition Width="72" />
                                     <ColumnDefinition Width="3*" />
                                     <ColumnDefinition Width="80" />
                                 </Grid.ColumnDefinitions>
@@ -789,19 +850,36 @@
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
                                             PlaceholderText="{i18n:T 留空使用默认队伍}" />
-                                <vio:CascadingComboBox Grid.Row="0"
+                                <CheckBox x:Name="MondayTrainingPlanCheckBox"
                                           Grid.Column="2"
+                                          MinWidth="0"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          IsChecked="{Binding SelectedConfig.MondayDomainName, Mode=TwoWay, Converter={StaticResource TrainingPlanCheckConverter}}"
+                                          ToolTip="{i18n:T 跟随培养计划}" />
+                                <vio:CascadingComboBox Grid.Row="0"
+                                          Grid.Column="3"
                                           MinWidth="0"
                                           Margin="8,0,8,0"
                                           HorizontalAlignment="Stretch"
+                                          Visibility="{Binding IsChecked, ElementName=MondayTrainingPlanCheckBox, Mode=OneWay, Converter={StaticResource BooleanToVisibilityRevertConverter}}"
                                           behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding SelectedConfig.MondayDomainName, Mode=TwoWay}"
                                           behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                           ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
                                           SelectedCascadingItem="{Binding SelectedConfig.MondayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
+                                <ui:TextBox Grid.Column="3"
+                                            MinWidth="0"
+                                            Margin="8,0,8,0"
+                                            IsEnabled="False"
+                                            IsReadOnly="True"
+                                            Text="{i18n:T 跟随培养计划}"
+                                            TextAlignment="Center"
+                                            Visibility="{Binding IsChecked, ElementName=MondayTrainingPlanCheckBox, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                 <ComboBox Grid.Row="0"
-                                          Grid.Column="3"
+                                          Grid.Column="4"
                                           MinWidth="56"
                                           HorizontalContentAlignment="Center"
+                                          IsEnabled="{Binding IsChecked, ElementName=MondayTrainingPlanCheckBox, Mode=OneWay, Converter={StaticResource InverseBooleanConverter}}"
                                           ItemsSource="{Binding SundaySelectedValueList}"
                                           SelectedItem="{Binding SelectedConfig.MondaySelectedValue, Mode=TwoWay}" />
                             </Grid>
@@ -809,6 +887,7 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="56" />
                                     <ColumnDefinition Width="2*" />
+                                    <ColumnDefinition Width="72" />
                                     <ColumnDefinition Width="3*" />
                                     <ColumnDefinition Width="80" />
                                 </Grid.ColumnDefinitions>
@@ -827,19 +906,36 @@
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
                                             PlaceholderText="{i18n:T 留空使用默认队伍}" />
-                                <vio:CascadingComboBox Grid.Row="0"
+                                <CheckBox x:Name="TuesdayTrainingPlanCheckBox"
                                           Grid.Column="2"
+                                          MinWidth="0"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          IsChecked="{Binding SelectedConfig.TuesdayDomainName, Mode=TwoWay, Converter={StaticResource TrainingPlanCheckConverter}}"
+                                          ToolTip="{i18n:T 跟随培养计划}" />
+                                <vio:CascadingComboBox Grid.Row="0"
+                                          Grid.Column="3"
                                           MinWidth="0"
                                           Margin="8,0,8,0"
                                           HorizontalAlignment="Stretch"
+                                          Visibility="{Binding IsChecked, ElementName=TuesdayTrainingPlanCheckBox, Mode=OneWay, Converter={StaticResource BooleanToVisibilityRevertConverter}}"
                                           behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding SelectedConfig.TuesdayDomainName, Mode=TwoWay}"
                                           behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                           ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
                                           SelectedCascadingItem="{Binding SelectedConfig.TuesdayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
+                                <ui:TextBox Grid.Column="3"
+                                            MinWidth="0"
+                                            Margin="8,0,8,0"
+                                            IsEnabled="False"
+                                            IsReadOnly="True"
+                                            Text="{i18n:T 跟随培养计划}"
+                                            TextAlignment="Center"
+                                            Visibility="{Binding IsChecked, ElementName=TuesdayTrainingPlanCheckBox, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                 <ComboBox Grid.Row="0"
-                                          Grid.Column="3"
+                                          Grid.Column="4"
                                           MinWidth="56"
                                           HorizontalContentAlignment="Center"
+                                          IsEnabled="{Binding IsChecked, ElementName=TuesdayTrainingPlanCheckBox, Mode=OneWay, Converter={StaticResource InverseBooleanConverter}}"
                                           ItemsSource="{Binding SundaySelectedValueList}"
                                           SelectedItem="{Binding SelectedConfig.TuesdaySelectedValue, Mode=TwoWay}" />
                             </Grid>
@@ -847,6 +943,7 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="56" />
                                     <ColumnDefinition Width="2*" />
+                                    <ColumnDefinition Width="72" />
                                     <ColumnDefinition Width="3*" />
                                     <ColumnDefinition Width="80" />
                                 </Grid.ColumnDefinitions>
@@ -864,19 +961,36 @@
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
                                             PlaceholderText="{i18n:T 留空使用默认队伍}" />
-                                <vio:CascadingComboBox Grid.Row="0"
+                                <CheckBox x:Name="WednesdayTrainingPlanCheckBox"
                                           Grid.Column="2"
+                                          MinWidth="0"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          IsChecked="{Binding SelectedConfig.WednesdayDomainName, Mode=TwoWay, Converter={StaticResource TrainingPlanCheckConverter}}"
+                                          ToolTip="{i18n:T 跟随培养计划}" />
+                                <vio:CascadingComboBox Grid.Row="0"
+                                          Grid.Column="3"
                                           MinWidth="0"
                                           Margin="8,0,8,0"
                                           HorizontalAlignment="Stretch"
+                                          Visibility="{Binding IsChecked, ElementName=WednesdayTrainingPlanCheckBox, Mode=OneWay, Converter={StaticResource BooleanToVisibilityRevertConverter}}"
                                           behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding SelectedConfig.WednesdayDomainName, Mode=TwoWay}"
                                           behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                           ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
                                           SelectedCascadingItem="{Binding SelectedConfig.WednesdayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
+                                <ui:TextBox Grid.Column="3"
+                                            MinWidth="0"
+                                            Margin="8,0,8,0"
+                                            IsEnabled="False"
+                                            IsReadOnly="True"
+                                            Text="{i18n:T 跟随培养计划}"
+                                            TextAlignment="Center"
+                                            Visibility="{Binding IsChecked, ElementName=WednesdayTrainingPlanCheckBox, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                 <ComboBox Grid.Row="0"
-                                          Grid.Column="3"
+                                          Grid.Column="4"
                                           MinWidth="56"
                                           HorizontalContentAlignment="Center"
+                                          IsEnabled="{Binding IsChecked, ElementName=WednesdayTrainingPlanCheckBox, Mode=OneWay, Converter={StaticResource InverseBooleanConverter}}"
                                           ItemsSource="{Binding SundaySelectedValueList}"
                                           SelectedItem="{Binding SelectedConfig.WednesdaySelectedValue, Mode=TwoWay}" />
 
@@ -885,6 +999,7 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="56" />
                                     <ColumnDefinition Width="2*" />
+                                    <ColumnDefinition Width="72" />
                                     <ColumnDefinition Width="3*" />
                                     <ColumnDefinition Width="80" />
                                 </Grid.ColumnDefinitions>
@@ -902,19 +1017,36 @@
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
                                             PlaceholderText="{i18n:T 留空使用默认队伍}" />
-                                <vio:CascadingComboBox Grid.Row="0"
+                                <CheckBox x:Name="ThursdayTrainingPlanCheckBox"
                                           Grid.Column="2"
+                                          MinWidth="0"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          IsChecked="{Binding SelectedConfig.ThursdayDomainName, Mode=TwoWay, Converter={StaticResource TrainingPlanCheckConverter}}"
+                                          ToolTip="{i18n:T 跟随培养计划}" />
+                                <vio:CascadingComboBox Grid.Row="0"
+                                          Grid.Column="3"
                                           MinWidth="0"
                                           Margin="8,0,8,0"
                                           HorizontalAlignment="Stretch"
+                                          Visibility="{Binding IsChecked, ElementName=ThursdayTrainingPlanCheckBox, Mode=OneWay, Converter={StaticResource BooleanToVisibilityRevertConverter}}"
                                           behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding SelectedConfig.ThursdayDomainName, Mode=TwoWay}"
                                           behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                           ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
                                           SelectedCascadingItem="{Binding SelectedConfig.ThursdayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
+                                <ui:TextBox Grid.Column="3"
+                                            MinWidth="0"
+                                            Margin="8,0,8,0"
+                                            IsEnabled="False"
+                                            IsReadOnly="True"
+                                            Text="{i18n:T 跟随培养计划}"
+                                            TextAlignment="Center"
+                                            Visibility="{Binding IsChecked, ElementName=ThursdayTrainingPlanCheckBox, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                 <ComboBox Grid.Row="0"
-                                          Grid.Column="3"
+                                          Grid.Column="4"
                                           MinWidth="56"
                                           HorizontalContentAlignment="Center"
+                                          IsEnabled="{Binding IsChecked, ElementName=ThursdayTrainingPlanCheckBox, Mode=OneWay, Converter={StaticResource InverseBooleanConverter}}"
                                           ItemsSource="{Binding SundaySelectedValueList}"
                                           SelectedItem="{Binding SelectedConfig.ThursdaySelectedValue, Mode=TwoWay}" />
 
@@ -923,6 +1055,7 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="56" />
                                     <ColumnDefinition Width="2*" />
+                                    <ColumnDefinition Width="72" />
                                     <ColumnDefinition Width="3*" />
                                     <ColumnDefinition Width="80" />
                                 </Grid.ColumnDefinitions>
@@ -940,19 +1073,36 @@
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
                                             PlaceholderText="{i18n:T 留空使用默认队伍}" />
-                                <vio:CascadingComboBox Grid.Row="0"
+                                <CheckBox x:Name="FridayTrainingPlanCheckBox"
                                           Grid.Column="2"
+                                          MinWidth="0"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          IsChecked="{Binding SelectedConfig.FridayDomainName, Mode=TwoWay, Converter={StaticResource TrainingPlanCheckConverter}}"
+                                          ToolTip="{i18n:T 跟随培养计划}" />
+                                <vio:CascadingComboBox Grid.Row="0"
+                                          Grid.Column="3"
                                           MinWidth="0"
                                           Margin="8,0,8,0"
                                           HorizontalAlignment="Stretch"
+                                          Visibility="{Binding IsChecked, ElementName=FridayTrainingPlanCheckBox, Mode=OneWay, Converter={StaticResource BooleanToVisibilityRevertConverter}}"
                                           behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding SelectedConfig.FridayDomainName, Mode=TwoWay}"
                                           behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                           ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
                                           SelectedCascadingItem="{Binding SelectedConfig.FridayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
+                                <ui:TextBox Grid.Column="3"
+                                            MinWidth="0"
+                                            Margin="8,0,8,0"
+                                            IsEnabled="False"
+                                            IsReadOnly="True"
+                                            Text="{i18n:T 跟随培养计划}"
+                                            TextAlignment="Center"
+                                            Visibility="{Binding IsChecked, ElementName=FridayTrainingPlanCheckBox, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                 <ComboBox Grid.Row="0"
-                                          Grid.Column="3"
+                                          Grid.Column="4"
                                           MinWidth="56"
                                           HorizontalContentAlignment="Center"
+                                          IsEnabled="{Binding IsChecked, ElementName=FridayTrainingPlanCheckBox, Mode=OneWay, Converter={StaticResource InverseBooleanConverter}}"
                                           ItemsSource="{Binding SundaySelectedValueList}"
                                           SelectedItem="{Binding SelectedConfig.FridaySelectedValue, Mode=TwoWay}" />
 
@@ -962,6 +1112,7 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="56" />
                                     <ColumnDefinition Width="2*" />
+                                    <ColumnDefinition Width="72" />
                                     <ColumnDefinition Width="3*" />
                                     <ColumnDefinition Width="80" />
                                 </Grid.ColumnDefinitions>
@@ -979,19 +1130,36 @@
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
                                             PlaceholderText="{i18n:T 留空使用默认队伍}" />
-                                <vio:CascadingComboBox Grid.Row="0"
+                                <CheckBox x:Name="SaturdayTrainingPlanCheckBox"
                                           Grid.Column="2"
+                                          MinWidth="0"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          IsChecked="{Binding SelectedConfig.SaturdayDomainName, Mode=TwoWay, Converter={StaticResource TrainingPlanCheckConverter}}"
+                                          ToolTip="{i18n:T 跟随培养计划}" />
+                                <vio:CascadingComboBox Grid.Row="0"
+                                          Grid.Column="3"
                                           MinWidth="0"
                                           Margin="8,0,8,0"
                                           HorizontalAlignment="Stretch"
+                                          Visibility="{Binding IsChecked, ElementName=SaturdayTrainingPlanCheckBox, Mode=OneWay, Converter={StaticResource BooleanToVisibilityRevertConverter}}"
                                           behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding SelectedConfig.SaturdayDomainName, Mode=TwoWay}"
                                           behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                           ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
                                           SelectedCascadingItem="{Binding SelectedConfig.SaturdayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
+                                <ui:TextBox Grid.Column="3"
+                                            MinWidth="0"
+                                            Margin="8,0,8,0"
+                                            IsEnabled="False"
+                                            IsReadOnly="True"
+                                            Text="{i18n:T 跟随培养计划}"
+                                            TextAlignment="Center"
+                                            Visibility="{Binding IsChecked, ElementName=SaturdayTrainingPlanCheckBox, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                 <ComboBox Grid.Row="0"
-                                          Grid.Column="3"
+                                          Grid.Column="4"
                                           MinWidth="56"
                                           HorizontalContentAlignment="Center"
+                                          IsEnabled="{Binding IsChecked, ElementName=SaturdayTrainingPlanCheckBox, Mode=OneWay, Converter={StaticResource InverseBooleanConverter}}"
                                           ItemsSource="{Binding SundaySelectedValueList}"
                                           SelectedItem="{Binding SelectedConfig.SaturdaySelectedValue, Mode=TwoWay}" />
 
@@ -1000,6 +1168,7 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="56" />
                                     <ColumnDefinition Width="2*" />
+                                    <ColumnDefinition Width="72" />
                                     <ColumnDefinition Width="3*" />
                                     <ColumnDefinition Width="80" />
                                 </Grid.ColumnDefinitions>
@@ -1017,20 +1186,37 @@
                                             VerticalAlignment="Center"
                                             TextAlignment="Center"
                                             PlaceholderText="{i18n:T 留空使用默认队伍}" />
-                                <vio:CascadingComboBox Grid.Row="0"
+                                <CheckBox x:Name="SundayTrainingPlanCheckBox"
                                           Grid.Column="2"
+                                          MinWidth="0"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          IsChecked="{Binding SelectedConfig.SundayDomainName, Mode=TwoWay, Converter={StaticResource TrainingPlanCheckConverter}}"
+                                          ToolTip="{i18n:T 跟随培养计划}" />
+                                <vio:CascadingComboBox Grid.Row="0"
+                                          Grid.Column="3"
                                           MinWidth="0"
                                           Margin="8,0,8,0"
                                           HorizontalAlignment="Stretch"
+                                          Visibility="{Binding IsChecked, ElementName=SundayTrainingPlanCheckBox, Mode=OneWay, Converter={StaticResource BooleanToVisibilityRevertConverter}}"
                                           behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding SelectedConfig.SundayDomainName, Mode=TwoWay}"
                                           behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                           ItemsSource="{x:Static helpers:DomainCascadingItems.Items}"
                                           SelectedCascadingItem="{Binding SelectedConfig.SundayDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}" />
+                                <ui:TextBox Grid.Column="3"
+                                            MinWidth="0"
+                                            Margin="8,0,8,0"
+                                            IsEnabled="False"
+                                            IsReadOnly="True"
+                                            Text="{i18n:T 跟随培养计划}"
+                                            TextAlignment="Center"
+                                            Visibility="{Binding IsChecked, ElementName=SundayTrainingPlanCheckBox, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                 <ComboBox Grid.Row="0"
-                                          Grid.Column="3"
+                                          Grid.Column="4"
                                           MinWidth="56"
                                           HorizontalContentAlignment="Center"
                                           VerticalAlignment="Center"
+                                          IsEnabled="{Binding IsChecked, ElementName=SundayTrainingPlanCheckBox, Mode=OneWay, Converter={StaticResource InverseBooleanConverter}}"
                                           ItemsSource="{Binding SundaySelectedValueList}"
                                           SelectedItem="{Binding SelectedConfig.SundaySelectedValue, Mode=TwoWay}" />
                             </Grid>

@@ -1,11 +1,14 @@
 using System.Collections.Generic;
 using System.Linq;
-using BetterGenshinImpact.GameTask.AutoDomain;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
 using Wpf.Ui.Violeta.Controls;
 
 namespace BetterGenshinImpact.Helpers;
 
+/// <summary>
+/// 秘境级联选择框的选项：第一级为国家，第二级为该国家的秘境（显示“秘境名 | 奖励”，Tag 为秘境名）。
+/// 只列出真实的秘境；“跟随培养计划”属于秘境来源，由界面的单选项单独选择，不放在这里。
+/// </summary>
 public static class DomainCascadingItems
 {
     private static IReadOnlyList<ICascadingItem>? _items;
@@ -57,13 +60,6 @@ public static class DomainCascadingItems
                     })
             ))
             .ToList();
-        items.Insert(0, new CascadingItem("自动选择", new ICascadingItem[]
-        {
-            new CascadingItem(AutoDomainTask.TrainingGuideOption)
-            {
-                Tag = AutoDomainTask.TrainingGuideOption
-            }
-        }));
         return items;
     }
 

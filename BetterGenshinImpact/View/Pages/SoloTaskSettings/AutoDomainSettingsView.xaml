@@ -1,14 +1,20 @@
-<UserControl xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" xmlns:combat="clr-namespace:BetterGenshinImpact.View.Controls.CombatStrategy" xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta" xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior" xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers" xmlns:tasksVm="clr-namespace:BetterGenshinImpact.ViewModel.SoloTaskSettings" x:Class="BetterGenshinImpact.View.Pages.SoloTaskSettings.AutoDomainSettingsView">
+<UserControl xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" xmlns:combat="clr-namespace:BetterGenshinImpact.View.Controls.CombatStrategy" xmlns:vio="http://schemas.lepo.co/wpfui/2022/xaml/violeta" xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior" xmlns:helpers="clr-namespace:BetterGenshinImpact.Helpers" xmlns:training="clr-namespace:BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide" xmlns:tasksVm="clr-namespace:BetterGenshinImpact.ViewModel.SoloTaskSettings" x:Class="BetterGenshinImpact.View.Pages.SoloTaskSettings.AutoDomainSettingsView">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="SoloTaskSettingsResources.xaml"/>
+                <ResourceDictionary Source="/BetterGI;component/View/Controls/DomainSourceResources.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+            <!-- 来源分组内的设置行：比外层设置行略紧凑。 -->
+            <Style x:Key="SourceRow" TargetType="Grid" BasedOn="{StaticResource SoloRow}">
+                <Setter Property="Margin" Value="16,8"/>
+            </Style>
         </ResourceDictionary>
     </UserControl.Resources>
     <!-- 自动秘境：沿用旧一条龙的秘境/树脂/分解卡片，字段绑定 auto_domain 参数；新一条龙不提供每周安排。 -->
     <!-- 树脂设置已归入 resin_usage，入口卡片在第四层接入。 -->
     <!-- Fluent 设置布局：单项设置独立成卡，强关联设置使用展开卡片及带分隔线的设置行。 -->
+    <!-- 秘境来源分为“跟随培养计划”和“指定秘境”，下方只显示所选来源下生效的设置。 -->
     <StackPanel>
         <ui:CardControl Style="{StaticResource SoloCard}">
             <ui:CardControl.Header>
@@ -41,33 +47,212 @@
                     </ContentControl>
                 </Grid>
                 <Separator Margin="20,0"/>
+                <!-- 秘境来源：跟随培养计划仍保存为 domain_name 的提升指南选项值 -->
                 <Grid Style="{StaticResource SoloRow}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Margin="0,0,16,0">
-                        <ui:TextBlock FontTypography="Body" Text="秘境" TextWrapping="Wrap"/>
-                        <TextBlock Style="{StaticResource SoloDescription}" Text="选择要刷取的秘境。"/>
+                        <ui:TextBlock FontTypography="Body" Text="秘境来源" TextWrapping="Wrap"/>
+                        <TextBlock Style="{StaticResource SoloDescription}" Text="按游戏内养成计划，从提升指南中选择秘境。"
+                                   Visibility="{Binding DomainSource.IsTrainingPlan, Mode=OneWay, Converter={StaticResource SoloVisibility}}"/>
+                        <TextBlock Style="{StaticResource SoloDescription}" Text="传送到选定的秘境刷取。"
+                                   Visibility="{Binding DomainSource.IsManualDomain, Mode=OneWay, Converter={StaticResource SoloVisibility}}"/>
                     </StackPanel>
-                    <ContentControl Grid.Column="1" VerticalAlignment="Center" HorizontalContentAlignment="Right">
-                        <vio:CascadingComboBox Width="210" behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding DomainName, Mode=TwoWay}" behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True" ItemsSource="{x:Static helpers:DomainCascadingItems.Items}" SelectedCascadingItem="{Binding DomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}"/>
-                    </ContentControl>
-                </Grid>
-                <Separator Margin="20,0"/>
-                <Grid Style="{StaticResource SoloRow}">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Margin="0,0,16,0">
-                        <ui:TextBlock FontTypography="Body" Text="周日或限时奖励" TextWrapping="Wrap"/>
-                        <TextBlock Style="{StaticResource SoloDescription}" Text="按游戏内从左到右的顺序选择奖励。"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <RadioButton Style="{StaticResource DomainSourceRadio}" Margin="0" Content="跟随培养计划"
+                                     IsChecked="{Binding DomainSource.IsTrainingPlan, Mode=TwoWay}" AutomationProperties.Name="秘境来源：跟随培养计划"/>
+                        <RadioButton Style="{StaticResource DomainSourceRadio}" Content="指定秘境"
+                                     IsChecked="{Binding DomainSource.IsManualDomain, Mode=TwoWay}" AutomationProperties.Name="秘境来源：指定秘境"/>
                     </StackPanel>
-                    <ContentControl Grid.Column="1" VerticalAlignment="Center" HorizontalContentAlignment="Right">
-                        <ComboBox Width="100" ItemsSource="{x:Static tasksVm:AutoDomainSettingsViewModel.SundayChoices}" SelectedItem="{Binding SundayValue, Mode=TwoWay}"/>
-                    </ContentControl>
                 </Grid>
+
+                <!-- 指定秘境：只列出秘境的选择框与周日奖励序号 -->
+                <Border Margin="20,0,20,12" Style="{StaticResource DomainSourceGroup}"
+                        Visibility="{Binding DomainSource.IsManualDomain, Mode=OneWay, Converter={StaticResource SoloVisibility}}">
+                    <StackPanel>
+                        <Grid Style="{StaticResource SourceRow}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,16,0">
+                                <ui:TextBlock FontTypography="Body" Text="秘境" TextWrapping="Wrap"/>
+                                <TextBlock Style="{StaticResource SoloDescription}" Text="选择要刷取的秘境。"/>
+                            </StackPanel>
+                            <ContentControl Grid.Column="1" VerticalAlignment="Center" HorizontalContentAlignment="Right">
+                                <vio:CascadingComboBox Width="210" behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding DomainName, Mode=TwoWay}" behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True" ItemsSource="{x:Static helpers:DomainCascadingItems.Items}" SelectedCascadingItem="{Binding DomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}"/>
+                            </ContentControl>
+                        </Grid>
+                        <Separator Margin="16,0"/>
+                        <Grid Style="{StaticResource SourceRow}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,16,0">
+                                <ui:TextBlock FontTypography="Body" Text="周日或限时奖励" TextWrapping="Wrap"/>
+                                <TextBlock Style="{StaticResource SoloDescription}" Text="按游戏内从左到右的顺序选择奖励。"/>
+                            </StackPanel>
+                            <ContentControl Grid.Column="1" VerticalAlignment="Center" HorizontalContentAlignment="Right">
+                                <ComboBox Width="100" ItemsSource="{x:Static tasksVm:AutoDomainSettingsViewModel.SundayChoices}" SelectedItem="{Binding SundayValue, Mode=TwoWay}"/>
+                            </ContentControl>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 跟随培养计划：培养计划设置；缩进的设置只在按培养计划规划次数时生效 -->
+                <Border Margin="20,0,20,12" Style="{StaticResource DomainSourceGroup}"
+                        Visibility="{Binding DomainSource.IsTrainingPlan, Mode=OneWay, Converter={StaticResource SoloVisibility}}">
+                    <StackPanel>
+                        <StackPanel Margin="16,12,16,0">
+                            <ui:TextBlock FontTypography="BodyStrong" Text="培养计划设置" TextWrapping="Wrap"/>
+                            <TextBlock Style="{StaticResource SoloDescription}" Text="需求以游戏内养成计划为准，请先把要培养的角色加入养成计划。"/>
+                        </StackPanel>
+                        <Grid Style="{StaticResource SourceRow}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,16,0">
+                                <ui:TextBlock FontTypography="Body" Text="自动计算今日刷取次数" TextWrapping="Wrap"/>
+                                <TextBlock Style="{StaticResource SoloDescription}" Text="在秘境入口读取培养材料并计算次数，可连续刷多个秘境；关闭时只刷提升指南中的第一个秘境，下方缩进的设置不生效。"/>
+                            </StackPanel>
+                            <ui:ToggleSwitch Grid.Column="1" VerticalAlignment="Center" IsChecked="{Binding TrainingGuideCalculateRunsEnabled, Mode=TwoWay}"
+                                             AutomationProperties.Name="自动计算今日刷取次数"/>
+                        </Grid>
+
+                        <!-- 只在按培养计划规划次数时使用的设置 -->
+                        <Border Style="{StaticResource DomainSourceDependent}" IsEnabled="{Binding IsTrainingGuidePlanning, Mode=OneWay}">
+                            <StackPanel>
+                                <Grid Style="{StaticResource SourceRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Margin="0,0,16,0">
+                                        <ui:TextBlock FontTypography="Body" Text="刷取偏好" TextWrapping="Wrap"/>
+                                        <TextBlock Style="{StaticResource SoloDescription}" Text="适量刷取依靠合成天赋收益补足材料；充分刷取直到满足养成计划需求。"/>
+                                    </StackPanel>
+                                    <ComboBox Grid.Column="1" Width="210" VerticalAlignment="Center" SelectedIndex="{Binding TrainingGuideRunPreference, Mode=TwoWay}"
+                                              AutomationProperties.Name="刷取偏好">
+                                        <ComboBoxItem Content="适量刷取"/>
+                                        <ComboBoxItem Content="充分刷取"/>
+                                    </ComboBox>
+                                </Grid>
+                                <Separator Margin="16,0"/>
+                                <!-- 充分刷取时任务固定按 0% 预留，此项不生效 -->
+                                <Grid Style="{StaticResource SourceRow}" IsEnabled="{Binding IsTrainingGuideReservePercentEditable, Mode=OneWay}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Margin="0,0,16,0">
+                                        <ui:TextBlock FontTypography="Body" Text="合成收益预留率" TextWrapping="Wrap"/>
+                                        <TextBlock Style="{StaticResource SoloDescription}" Text="适量刷取时为合成额外收益预留的比例，默认 7%，范围 0%～20%；数值越高刷取次数越少，也更可能需要补刷。"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <ui:NumberBox Width="130" Minimum="0" Maximum="20" MaxDecimalPlaces="0" SmallChange="1" LargeChange="5"
+                                                      ClearButtonEnabled="False" SpinButtonPlacementMode="Inline" ValidationMode="InvalidInputOverwritten"
+                                                      Value="{Binding TrainingGuideCraftingBonusReservePercent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                      AutomationProperties.Name="合成收益预留率"/>
+                                        <TextBlock Margin="8,0,0,0" VerticalAlignment="Center" Text="%"/>
+                                    </StackPanel>
+                                </Grid>
+                                <Separator Margin="16,0"/>
+                                <Grid Style="{StaticResource SourceRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Margin="0,0,16,0">
+                                        <ui:TextBlock FontTypography="Body" Text="按领奖结果更新养成库存" TextWrapping="Wrap"/>
+                                        <TextBlock Style="{StaticResource SoloDescription}" Text="每轮领奖后识别奖励并更新库存，动态调整刷取次数；需要 1920×1080 分辨率。"/>
+                                    </StackPanel>
+                                    <ui:ToggleSwitch Grid.Column="1" VerticalAlignment="Center" IsChecked="{Binding TrainingGuideRewardRecognitionEnabled, Mode=TwoWay}"
+                                                     AutomationProperties.Name="按领奖结果更新养成库存"/>
+                                </Grid>
+                                <Grid Style="{StaticResource SourceRow}" Margin="32,0,16,8" IsEnabled="{Binding TrainingGuideRewardRecognitionEnabled, Mode=OneWay}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Margin="0,0,16,0">
+                                        <ui:TextBlock FontTypography="Body" Text="识别失败时按固定预算继续" TextWrapping="Wrap"/>
+                                        <TextBlock Style="{StaticResource SoloDescription}" Text="关闭时奖励识别失败即结束任务；开启后当前材料按首次估算的树脂预算继续。"/>
+                                    </StackPanel>
+                                    <ui:ToggleSwitch Grid.Column="1" VerticalAlignment="Center" IsChecked="{Binding TrainingGuideRewardFailureBudgetEnabled, Mode=TwoWay}"
+                                                     AutomationProperties.Name="识别失败时按固定预算继续"/>
+                                </Grid>
+                                <Separator Margin="16,0"/>
+                                <Grid Style="{StaticResource SourceRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Margin="0,0,16,0">
+                                        <ui:TextBlock FontTypography="Body" Text="备选秘境" TextWrapping="Wrap"/>
+                                        <TextBlock Style="{StaticResource SoloDescription}" Text="养成需求全部完成或没有可刷秘境时，用剩余树脂刷取；留空则保留剩余树脂。"/>
+                                    </StackPanel>
+                                    <ContentControl Grid.Column="1" VerticalAlignment="Center" HorizontalContentAlignment="Right">
+                                        <vio:CascadingComboBox Width="210" behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding TrainingGuideFallbackDomainName, Mode=TwoWay}" behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True" ItemsSource="{x:Static training:TrainingGuideDomainOptions.Items}" SelectedCascadingItem="{Binding TrainingGuideFallbackDomainName, Mode=TwoWay, Converter={StaticResource DomainNameConverter}}"/>
+                                    </ContentControl>
+                                </Grid>
+                                <Grid Style="{StaticResource SourceRow}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Margin="0,0,16,0">
+                                        <ui:TextBlock FontTypography="Body" Text="备选秘境的周日或限时奖励" TextWrapping="Wrap"/>
+                                        <TextBlock Style="{StaticResource SoloDescription}" Text="备选秘境在周日或限时全开时领取的奖励序号。"/>
+                                    </StackPanel>
+                                    <ContentControl Grid.Column="1" VerticalAlignment="Center" HorizontalContentAlignment="Right">
+                                        <ComboBox Width="100" ItemsSource="{x:Static tasksVm:AutoDomainSettingsViewModel.SundayChoices}" SelectedItem="{Binding TrainingGuideFallbackSundayValue, Mode=TwoWay}"/>
+                                    </ContentControl>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <Separator Margin="16,0"/>
+                        <Grid Style="{StaticResource SourceRow}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,16,0">
+                                <ui:TextBlock FontTypography="Body" Text="低冒险等阶适配" TextWrapping="Wrap"/>
+                                <TextBlock Style="{StaticResource SoloDescription}" Text="冒险等阶较低时检查入口是否解锁，并自动降低难度。"/>
+                            </StackPanel>
+                            <ui:ToggleSwitch Grid.Column="1" VerticalAlignment="Center" IsChecked="{Binding TrainingGuideLowArAdaptationEnabled, Mode=TwoWay}"
+                                             AutomationProperties.Name="低冒险等阶适配"/>
+                        </Grid>
+
+                        <!-- 开发者工具：诊断记录与供脚本调试的自定义培养目标 -->
+                        <Separator Margin="16,0"/>
+                        <ui:TextBlock Margin="16,12,16,0" FontTypography="BodyStrong" Text="开发者工具"/>
+                        <Grid Style="{StaticResource SourceRow}" IsEnabled="{Binding IsTrainingGuidePlanning, Mode=OneWay}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,16,0">
+                                <ui:TextBlock FontTypography="Body" Text="培养计划详细诊断" TextWrapping="Wrap"/>
+                                <TextBlock Style="{StaticResource SoloDescription}" Text="排查问题时开启，下次任务生效；保存 OCR 原文、匹配分数、判断过程及诊断截图至 User/Diagnostics。"/>
+                            </StackPanel>
+                            <ui:ToggleSwitch Grid.Column="1" VerticalAlignment="Center" IsChecked="{Binding TrainingGuideDiagnosticsEnabled, Mode=TwoWay}"
+                                             AutomationProperties.Name="培养计划详细诊断"/>
+                        </Grid>
+                        <StackPanel Margin="16,8,16,16">
+                            <ui:TextBlock FontTypography="Body" Text="自定义培养目标" TextWrapping="Wrap"/>
+                            <TextBlock Style="{StaticResource SoloDescription}"
+                                       Text="填写后按这里的目标库存刷取，不读取游戏内养成计划；留空则跟随养成计划。格式：[{&quot;material&quot;:&quot;材料完整名称&quot;,&quot;target&quot;:28}]"/>
+                            <ui:TextBox Margin="0,8,0,0" MinHeight="60" AcceptsReturn="True" TextWrapping="Wrap" PlaceholderText="留空则跟随养成计划"
+                                        Text="{Binding TrainingTargetsJson, Mode=TwoWay}" AutomationProperties.Name="自定义培养目标"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
             </StackPanel>
         </ui:CardExpander>
         <ui:CardControl Style="{StaticResource SoloCard}">

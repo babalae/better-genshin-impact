@@ -29,8 +29,8 @@
     <DataTemplate x:Key="OneDragonParameterFieldTemplate">
 
         <!--
-            根容器同时承载九种字段形态，由各形态的 Visibility 保证同一时刻只显示一种：
-            IsBoolean / IsChoice / IsCombatStrategy / IsDomain / IsResinUsage / IsText / IsNumber / IsObject / IsAdvancedJson 互斥为 True。
+            根容器同时承载十种字段形态，由各形态的 Visibility 保证同一时刻只显示一种：
+            IsBoolean / IsChoice / IsCombatStrategy / IsPlainDomain / IsSourcedDomain / IsResinUsage / IsText / IsNumber / IsObject / IsAdvancedJson 互斥为 True。
         -->
         <Grid>
             <!-- 树脂使用保持嵌套对象合同，只通过公共弹窗整体编辑。 -->
@@ -124,10 +124,10 @@
 
             <!--
                 秘境字段：与自动秘境设置一致的按国家分组选择框，只列出可手动刷取的秘境；清空按钮写回空字符串。
-                选项按字段类型由 VM 提供：体力计划的移涌活动秘境只列出对应类型，首项为“跟随培养计划”（保存为空字符串）。
+                普通秘境字段（备选秘境）直接显示选择框；体力计划的移涌活动秘境使用下方带秘境来源的卡片。
             -->
             <ui:CardControl Margin="0,0,0,8"
-                            Visibility="{Binding IsDomain, Converter={StaticResource FieldVisibility}, Mode=OneWay}">
+                            Visibility="{Binding IsPlainDomain, Converter={StaticResource FieldVisibility}, Mode=OneWay}">
                 <ui:CardControl.Header>
                     <Grid>
                         <Grid.RowDefinitions>
@@ -151,6 +151,51 @@
                                        behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
                                        ItemsSource="{Binding DomainItems, Mode=OneWay}"
                                        SelectedCascadingItem="{Binding SelectedDomainItem, Mode=TwoWay}" />
+            </ui:CardControl>
+
+            <!--
+                带秘境来源的秘境字段（体力计划的移涌活动秘境）：先选“跟随培养计划”或“指定秘境”，选指定秘境后才显示选择框。
+                跟随培养计划保存为空字符串；选择框只列出活动对应类型的秘境。单选项不设 GroupName，按所在面板分组，避免不同卡片互相影响。
+            -->
+            <ui:CardControl Margin="0,0,0,8"
+                            Visibility="{Binding IsSourcedDomain, Converter={StaticResource FieldVisibility}, Mode=OneWay}">
+                <ui:CardControl.Header>
+                    <StackPanel Margin="0,0,16,0">
+                        <ui:TextBlock FontTypography="Body"
+                                      Text="{Binding DisplayName, Mode=OneWay}"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                      Text="{Binding Description, Mode=OneWay}"
+                                      TextWrapping="Wrap" />
+                        <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                      Text="{Binding DomainSourceDescription, Mode=OneWay}"
+                                      TextWrapping="Wrap" />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <StackPanel VerticalAlignment="Center">
+                    <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+                        <RadioButton MinWidth="0"
+                                     Margin="0"
+                                     VerticalAlignment="Center"
+                                     Content="跟随培养计划"
+                                     IsChecked="{Binding IsFollowTrainingPlan, Mode=TwoWay}"
+                                     AutomationProperties.Name="{Binding DisplayName, Mode=OneWay, StringFormat={}{0}：跟随培养计划}" />
+                        <RadioButton MinWidth="0"
+                                     Margin="16,0,0,0"
+                                     VerticalAlignment="Center"
+                                     Content="指定秘境"
+                                     IsChecked="{Binding IsManualDomain, Mode=TwoWay}"
+                                     AutomationProperties.Name="{Binding DisplayName, Mode=OneWay, StringFormat={}{0}：指定秘境}" />
+                    </StackPanel>
+                    <vio:CascadingComboBox Width="210"
+                                           Margin="0,8,0,0"
+                                           HorizontalAlignment="Right"
+                                           Visibility="{Binding IsManualDomain, Converter={StaticResource FieldVisibility}, Mode=OneWay}"
+                                           behavior:DomainCascadingComboBoxBehavior.ClearValue="{Binding TextValue, Mode=TwoWay}"
+                                           behavior:DomainCascadingComboBoxBehavior.UseFullLabelsWhenOpen="True"
+                                           ItemsSource="{Binding DomainItems, Mode=OneWay}"
+                                           SelectedCascadingItem="{Binding SelectedDomainItem, Mode=TwoWay}" />
+                </StackPanel>
             </ui:CardControl>
 
             <!--  文本字段：右侧文本框  -->

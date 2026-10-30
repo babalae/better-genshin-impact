@@ -1,0 +1,35 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:converters="clr-namespace:BetterGenshinImpact.View.Converters">
+    <!--
+        自动秘境“秘境来源”的共用资源：所选来源下的设置分组框与单选项样式，以及旧一条龙直接绑定秘境名用的转换器。
+        各视图显式合并本字典，构造时不依赖父视图资源。
+    -->
+
+    <!-- 所选来源的设置分组：浅底与左侧强调色细条，表示这些设置从属于上方选中的来源。 -->
+    <Style x:Key="DomainSourceGroup" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorSecondaryBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+        <Setter Property="BorderThickness" Value="3,0,0,0" />
+        <Setter Property="CornerRadius" Value="4" />
+    </Style>
+
+    <!-- 依赖上一项开关的设置：左侧分隔线加缩进。 -->
+    <Style x:Key="DomainSourceDependent" TargetType="Border">
+        <Setter Property="Margin" Value="28,0,0,0" />
+        <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
+        <Setter Property="BorderThickness" Value="1,0,0,0" />
+    </Style>
+
+    <!-- 秘境来源单选项：横排紧凑显示，沿用 WPF-UI 默认样式。 -->
+    <Style x:Key="DomainSourceRadio" TargetType="RadioButton" BasedOn="{StaticResource {x:Type RadioButton}}">
+        <Setter Property="MinWidth" Value="0" />
+        <Setter Property="Margin" Value="16,0,0,0" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <!-- 旧一条龙：单选项与复选框直接绑定配置中的秘境名。 -->
+    <converters:TrainingGuideDomainSourceConverter x:Key="TrainingPlanSourceConverter" />
+    <converters:TrainingGuideDomainSourceConverter x:Key="ManualDomainSourceConverter" IsManualOption="True" />
+    <converters:TrainingGuideDomainSourceConverter x:Key="TrainingPlanCheckConverter" ClearWhenUnchecked="True" />
+</ResourceDictionary>

@@ -1,5 +1,6 @@
 using BetterGenshinImpact.GameTask.AutoBoss;
 using BetterGenshinImpact.GameTask.AutoDomain;
+using BetterGenshinImpact.GameTask.AutoDomain.TrainingGuide;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.GameTask.Common.Job;
@@ -84,10 +85,13 @@ public partial class PuloniaTaskPlanDocumentViewModel
         if (sharedSettings is not null) summary.Add(sharedSettings);
         return string.Join(" · ", summary);
 
-        // 树脂次数及方式由公共摘要解释，其余字段保留原始显示值。
+        // 树脂次数及方式由公共摘要解释，其余字段保留原始显示值；秘境为提升指南选项值时按秘境来源显示“跟随培养计划”。
         string DisplayValue(string key)
         {
-            return values[key]?.Type == JTokenType.Null ? "默认" : values[key]!.ToString();
+            if (values[key]?.Type == JTokenType.Null) return "默认";
+            var text = values[key]!.ToString();
+            return key == "domain_name" && text == AutoDomainTask.TrainingGuideOption
+                ? TrainingGuideDomainOptions.FollowTrainingPlanOption : text;
         }
     }
 
