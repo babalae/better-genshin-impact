@@ -141,7 +141,7 @@ public sealed class StreamingTransportTests
 
     /// <summary>所有测试使用现有小型资产夹具与隔离输出目录。</summary>
     internal static AppSettings Settings(RoutingFixture fixture) => new(fixture.Root, new("http://localhost:19001/"),
-        new(1, 3, 20), fixture.LegacyVoice, new(fixture.Root, fixture.Root), new(0, 0));
+        new(1, 3, 20), fixture.LegacyVoice, new(fixture.Root));
     /// <summary>请求仅引用夹具资产。</summary>
     internal static TtsRequest Request(RoutingFixture fixture) => new("测试对白", new("测试声线",
         fixture.LegacyVoice.GptWeightsPath, fixture.LegacyVoice.SovitsWeightsPath,

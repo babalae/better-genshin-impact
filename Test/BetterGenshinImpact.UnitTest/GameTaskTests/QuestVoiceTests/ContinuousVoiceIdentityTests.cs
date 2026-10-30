@@ -126,16 +126,12 @@ public sealed class ContinuousVoiceIdentityTests
         var reentry = await f.PlayAsync(3, "A"); Assert.Equal("A", reentry.Text); Assert.Equal(2, f.Engine.All.Count);
     }
 
-    /// <summary>移植回归验证：No routing uses configured voice and routing configuration error fails。</summary>
+    /// <summary>移植回归验证：未启用路由时使用配置的固定声线，不调用路由服务。</summary>
     [Fact]
-    public async Task No_routing_uses_configured_voice_and_routing_configuration_error_fails()
+    public async Task No_routing_uses_configured_voice()
     {
         await using var f = new ContinuousVoiceFixture(); await f.StartAsync(settings: f.Settings with { Routing = null });
         f.Offer(1, "A"); var call = await f.Engine.NextAsync();
         Assert.Equal(f.Settings.Voice.Name, call.Request.Voice.Name); Assert.Empty(f.Routing.All);
-        await using var bad = new ContinuousVoiceFixture();
-        await bad.StartAsync(settings: bad.Settings with { Routing = null, RoutingConfigurationError = "bad routing" });
-        bad.Offer(1, "A"); await bad.EventAsync(ContinuousVoiceEventKind.CandidateFailed, 1);
-        Assert.Empty(bad.Engine.All);
     }
 }

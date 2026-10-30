@@ -16,7 +16,7 @@ public sealed class HuoshanTtsProviderTests
 {
     /// <summary>完全不含 GPT 文件的有效配置。</summary>
     private static AppSettings Settings => new(".", HuoshanTtsProvider.Endpoint, new(1, 1, 1),
-        new("预设", "", "", "", ""), new(".", "."), new(0, 0), Provider: new("huoshan", VoiceId: "zh_female_qingxin"));
+        new("预设", "", "", "", ""), new("."), Provider: new("huoshan", VoiceId: "zh_female_qingxin"));
     /// <summary>普通预设不需要参考音频。</summary>
     private static TtsRequest Request => new("你好，旅行者。", new("预设", "", "", []));
 

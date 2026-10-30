@@ -25,7 +25,7 @@ public sealed class RoutingTransportTests
         using var fixture = new RoutingFixture();
         var voice = fixture.LegacyVoice;
         var settings = new AppSettings(fixture.Root, new("http://localhost:19001/"), new(1, 2, 3),
-            voice, new(fixture.Root, fixture.Root), new(900, 800));
+            voice, new(fixture.Root));
         var request = new TtsRequest("未经改写。", new(voice.Name, voice.GptWeightsPath, voice.SovitsWeightsPath,
             [new(voice.ReferenceAudioPath, voice.PromptText)]));
         var gets = 0;

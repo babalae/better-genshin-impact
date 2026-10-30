@@ -21,6 +21,13 @@ public sealed class RoutingCatalogStore
     /// <summary>只验证结构和引用，资源可用性由运行与试听入口检查。</summary>
     public void Validate(RoutingCatalog catalog) => RoutingCatalogValidation.Validate(catalog);
 
+    /// <summary>目标目录文件是否已经存在。</summary>
+    public bool Exists(string path) => File.Exists(path);
+
+    /// <summary>读取现有文件摘要，供保存时检测外部修改；文件不存在时返回空。</summary>
+    public async Task<string?> ReadSha256Async(string path) => File.Exists(path)
+        ? Convert.ToHexString(SHA256.HashData(await File.ReadAllBytesAsync(path).ConfigureAwait(false))) : null;
+
     /// <summary>仅在原内容仍匹配时保存，原文件作为备份保留。</summary>
     public async Task<RoutingCatalogSnapshot> SaveAsync(string path, RoutingCatalog catalog, string? expectedSha256,
         CancellationToken token = default, bool serverSidePaths = false)

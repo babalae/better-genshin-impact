@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Tts;
 namespace BetterGenshinImpact.GameTask.QuestVoice.Features.Tts;
 /// <summary>ReferenceAudioSelector：原神自动配音的业务类型。</summary>
-public sealed class ReferenceAudioSelector : IReferenceAudioSelector
+public sealed class ReferenceAudioSelector
 {
     /// <summary>依据颜色、分隔线和字形几何证据选择对白布局。</summary>
     public ReferenceSelection Select(VoiceBinding voice, string? emotion)

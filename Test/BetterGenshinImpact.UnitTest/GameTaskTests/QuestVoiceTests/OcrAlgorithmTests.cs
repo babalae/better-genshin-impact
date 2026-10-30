@@ -14,25 +14,6 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.QuestVoiceTests;
 /// <summary>移植回归验证：OcrAlgorithmTests。</summary>
 public sealed class OcrAlgorithmTests
 {
-    /// <summary>移植回归验证：Ctc collapses adjacent tokens before blanks and keeps unicode tokens。</summary>
-    [Fact]
-    public void Ctc_collapses_adjacent_tokens_before_blanks_and_keeps_unicode_tokens()
-    {
-        string[] tokens = ["", "𠮷", "好", " "];
-        float[] probabilities = [.1f,.9f,0,0, 0,.8f,.2f,0, .9f,.1f,0,0, 0,.7f,.3f,0, 0,0,.6f,.4f];
-        var result = CtcDecoder.Decode(probabilities, 5, tokens);
-        Assert.Equal("𠮷𠮷好", result.Text);
-        Assert.Equal((.9+.7+.6)/3, result.Confidence, 6);
-    }
-
-    /// <summary>移植回归验证：Ctc empty blanks and invalid shape are explicit。</summary>
-    [Fact]
-    public void Ctc_empty_blanks_and_invalid_shape_are_explicit()
-    {
-        Assert.Equal(new OcrText("", 0), CtcDecoder.Decode([1,0,1,0], 2, ["", "字"]));
-        Assert.Throws<OcrException>(() => CtcDecoder.Decode([1], 2, ["", "字"]));
-    }
-
     /// <summary>移植回归验证：Scaling uses floor left ceil right and preserves image edges。</summary>
     [Fact]
     public void Scaling_uses_floor_left_ceil_right_and_preserves_image_edges()

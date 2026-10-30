@@ -1,34 +1,25 @@
 // 移植自 QuestVoice 1fc59d9c；保留原神业务算法，宿主适配见 QuestVoiceSessionFactory。
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Ocr;
+using OpenCvSharp;
 using SkiaSharp;
 
 namespace BetterGenshinImpact.GameTask.QuestVoice.Features.Ocr;
 
-/// <summary>ImagePreprocessor：原神自动配音的业务类型。</summary>
+/// <summary>按选中布局裁剪姓名和正文行，输出交给内置 OCR 的三通道图像。</summary>
 public sealed class ImagePreprocessor
 {
-    /// <summary>在可取消后台流程中准备候选音频或图像张量。</summary>
-    public async Task<(int Width, int Height, IReadOnlyList<PixelRect> Bounds, IReadOnlyList<OcrTensor> Tensors)> PrepareAsync(
-        string path, SceneProfile profile, CancellationToken cancellationToken)
-    {
-        var snapshot = await ImageSnapshot.ReadAsync(path, cancellationToken).ConfigureAwait(false);
-        return await PrepareAsync(snapshot.Bytes, profile, cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <summary>在可取消后台流程中准备候选音频或图像张量。</summary>
-    internal Task<(int Width, int Height, IReadOnlyList<PixelRect> Bounds, IReadOnlyList<OcrTensor> Tensors)> PrepareAsync(
+    /// <summary>在后台解码同一帧并裁剪布局区域；返回的 Mat 由调用方释放。</summary>
+    internal Task<(int Width, int Height, IReadOnlyList<PixelRect> Bounds, IReadOnlyList<Mat> Lines)> PrepareAsync(
         ReadOnlyMemory<byte> bytes, SceneProfile profile, CancellationToken cancellationToken, SpeakerInkPolicy? speakerInk = null) =>
         Task.Run(() => Prepare(bytes, profile, cancellationToken, speakerInk), cancellationToken);
 
-    /// <summary>裁剪选定区域并生成推理张量。</summary>
-    private static (int, int, IReadOnlyList<PixelRect>, IReadOnlyList<OcrTensor>) Prepare(ReadOnlyMemory<byte> bytes,
+    /// <summary>裁剪选定区域；姓名区可按场景给出的金色墨迹策略去掉背景。</summary>
+    private static (int, int, IReadOnlyList<PixelRect>, IReadOnlyList<Mat>) Prepare(ReadOnlyMemory<byte> bytes,
         SceneProfile profile, CancellationToken token, SpeakerInkPolicy? speakerInk)
     {
         using var stream = SKData.CreateCopy(bytes.Span);
@@ -41,19 +32,27 @@ public sealed class ImagePreprocessor
         if (codec.GetPixels(bitmap.Info, bitmap.GetPixels()) != SKCodecResult.Success)
             throw new OcrException(OcrErrorCode.Image, "图片数据不完整。");
         var bounds = profile.Regions.Select(r=>Scale(r.Bounds,profile.Width,profile.Height,bitmap.Width,bitmap.Height)).ToArray();
-        var tensors = new List<OcrTensor>();
-        for (var index = 0; index < bounds.Length; index++)
+        var lines = new List<Mat>();
+        try
         {
-            token.ThrowIfCancellationRequested();
-            var rectangle = bounds[index];
-            using var crop = new SKBitmap();
-            if (!bitmap.ExtractSubset(crop,new SKRectI(rectangle.Left,rectangle.Top,rectangle.Right,rectangle.Bottom)))
-                throw new OcrException(OcrErrorCode.Image,"无法裁剪布局区域。");
-            using var foreground = speakerInk is not null && profile.Regions[index].Kind == OcrRegionKind.Speaker
-                ? IsolateSpeaker(crop, speakerInk, token) : null;
-            tensors.Add(ToTensor(foreground ?? crop));
+            for (var index = 0; index < bounds.Length; index++)
+            {
+                token.ThrowIfCancellationRequested();
+                var rectangle = bounds[index];
+                using var crop = new SKBitmap();
+                if (!bitmap.ExtractSubset(crop,new SKRectI(rectangle.Left,rectangle.Top,rectangle.Right,rectangle.Bottom)))
+                    throw new OcrException(OcrErrorCode.Image,"无法裁剪布局区域。");
+                using var foreground = speakerInk is not null && profile.Regions[index].Kind == OcrRegionKind.Speaker
+                    ? IsolateSpeaker(crop, speakerInk, token) : null;
+                lines.Add(ToMat(foreground ?? crop));
+            }
+            return (bitmap.Width,bitmap.Height,bounds,lines);
         }
-        return (bitmap.Width,bitmap.Height,bounds,tensors);
+        catch
+        {
+            foreach (var line in lines) line.Dispose();
+            throw;
+        }
     }
 
     /// <summary>只保留指定金色姓名墨迹，减少背景对姓名识别的干扰。</summary>
@@ -85,31 +84,12 @@ public sealed class ImagePreprocessor
             (int)Math.Ceiling((double)box.Right*width/referenceWidth),(int)Math.Ceiling((double)box.Bottom*height/referenceHeight));
     }
 
-    /// <summary>将裁剪图像转为 BGR、NCHW、48 高度的归一化张量。</summary>
-    public static OcrTensor ToTensor(SKBitmap crop)
+    /// <summary>把 BGRA 位图（可以是父图的子区域）复制为独立的 BGR Mat。</summary>
+    public static Mat ToMat(SKBitmap bitmap)
     {
-        var ratio = (double)crop.Width / crop.Height;
-        if (!double.IsFinite(ratio) || crop.Width <= 0 || crop.Height <= 0 || 48 * ratio > 32768)
-            throw new OcrException(OcrErrorCode.Image,"区域为空或宽高比过大。");
-        var width = (int)(48 * Math.Max(320.0 / 48, ratio));
-        var resizedWidth = Math.Min(width,(int)Math.Ceiling(48 * ratio));
-        using var resized = new SKBitmap(resizedWidth,48,SKColorType.Bgra8888,SKAlphaType.Premul);
-        using (var canvas = new SKCanvas(resized))
-        {
-            canvas.Clear(SKColors.White);
-            using var image = SKImage.FromBitmap(crop);
-            canvas.DrawImage(image,new SKRect(0,0,resizedWidth,48),new SKSamplingOptions(SKFilterMode.Linear));
-        }
-        var data = new float[3*48*width];
-        for (var y=0;y<48;y++)
-            for (var x=0;x<resizedWidth;x++)
-            {
-                var pixel = resized.GetPixel(x,y);
-                var index = y*width+x;
-                data[index] = (pixel.Blue/255f-.5f)/.5f;
-                data[48*width+index] = (pixel.Green/255f-.5f)/.5f;
-                data[96*width+index] = (pixel.Red/255f-.5f)/.5f;
-            }
-        return new(data,width);
+        if (bitmap.Width <= 0 || bitmap.Height <= 0)
+            throw new OcrException(OcrErrorCode.Image, "区域为空。");
+        using var bgra = Mat.FromPixelData(bitmap.Height, bitmap.Width, MatType.CV_8UC4, bitmap.GetPixels(), bitmap.RowBytes);
+        return bgra.CvtColor(ColorConversionCodes.BGRA2BGR);
     }
 }

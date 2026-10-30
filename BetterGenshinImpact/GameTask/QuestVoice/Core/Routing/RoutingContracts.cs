@@ -29,12 +29,6 @@ public sealed record VoiceRoutingResult(SpeakerRoutingInput Input, SpeakerRoute 
     string? RequestedVoiceId, string VoiceId, VoiceBinding Voice, string? RequestedEmotion, string? FallbackReason,
     string? CanonicalName = null);
 
-/// <summary>ISpeakerRouter：原神自动配音的业务类型。</summary>
-public interface ISpeakerRouter
-{
-    /// <summary>依次按主角、旁白、规范姓名、别名、纠错与默认 NPC 解析声线。</summary>
-    SpeakerRoute Route(SpeakerRoutingInput input, RoutingCatalog catalog);
-}
 
 /// <summary>IVoiceRoutingService：原神自动配音的业务类型。</summary>
 public interface IVoiceRoutingService

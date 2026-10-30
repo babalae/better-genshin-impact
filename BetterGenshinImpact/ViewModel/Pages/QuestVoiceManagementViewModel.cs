@@ -26,7 +26,7 @@ namespace BetterGenshinImpact.ViewModel.Pages;
 public partial class QuestVoiceManagementViewModel : ObservableObject
 {
     /// <summary>页面共享状态和配置的所有者。</summary>
-    private readonly QuestVoicePageViewModel _owner;
+    private readonly QuestVoiceSettingsViewModel _owner;
     /// <summary>解析当前配置文件路径和 Provider 设置。</summary>
     private readonly QuestVoiceSessionFactory _factory;
     /// <summary>生产试听及取消入口。</summary>
@@ -39,20 +39,15 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
     private string? _expectedSha256;
     /// <summary>填充草稿时抑制脏状态和旅行者自动补齐。</summary>
     private bool _loading;
-    /// <summary>区分声音刷新代次，实例切换后旧结果不能回写。</summary>
-    private int _presetRequestGeneration;
-    /// <summary>跟踪独立引擎实例地址变更。</summary>
-    private readonly HashSet<QuestVoiceEngineConfig> _observedPresetConfigs = new();
     /// <summary>是否已经加载或明确新建了目录。</summary>
     [ObservableProperty] private bool _isLoaded;
     /// <summary>编辑器自身文件操作期间也禁止写入。</summary>
     [ObservableProperty] private bool _isWorking;
     /// <summary>未保存的任何输入都会明确标记。</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(DraftNotice))]
     private bool _hasChanges;
     /// <summary>编辑器最近操作的可读结果。</summary>
-    [ObservableProperty] private string _editStatus = "正在准备角色目录；有效修改自动保存，下次启动配音生效。";
+    [ObservableProperty] private string _editStatus = "正在准备角色目录；有效修改自动保存，关闭设置窗口后生效。";
     /// <summary>角色列表过滤文本，不修改目录。</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(FilteredSpeakers))]
@@ -67,7 +62,6 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
     [ObservableProperty] private string _playerNames = "";
     /// <summary>旅行者角色引用，空表示未指定。</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(SelectedTravelerId))]
     private string _travelerId = "";
     /// <summary>普通 NPC 兜底声线引用。</summary>
     [ObservableProperty]
@@ -81,18 +75,6 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
     [ObservableProperty] private MissingVoicePolicy _missingVoicePolicy;
     /// <summary>独立声线试听文本。</summary>
     [ObservableProperty] private string _previewText = "你好，旅行者。欢迎来到提瓦特。";
-    /// <summary>预设下拉只传递明确非空选择，列表重置不会清空 profile 的音色。</summary>
-    public TtsVoiceInfo? SelectedPresetVoice
-    {
-        get => PresetVoices.FirstOrDefault(x => x.Id == SelectedProfile?.ProviderVoiceId);
-        set
-        {
-            if (CanEditDraft && value is not null && SelectedProfile is not null)
-                SelectedProfile.ProviderVoiceId = value.Id;
-        }
-    }
-    /// <summary>忽略选择列表更新引发的暂时空值；用户通过空字符串条目明确清空。</summary>
-    public string? SelectedTravelerId { get => TravelerId; set { if (CanEditDraft && value is not null) TravelerId = value; } }
     /// <summary>兜底列表的暂时空选择不能覆盖已有草稿。</summary>
     public string? SelectedFallbackVoiceId { get => FallbackVoiceId; set { if (CanEditDraft && value is not null) FallbackVoiceId = value; } }
     /// <summary>旁白列表的暂时空选择不能覆盖已有草稿。</summary>
@@ -103,49 +85,34 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
         get => SelectedSpeaker?.VoiceId;
         set { if (CanEditDraft && SelectedSpeaker is not null && value is not null) { SelectedSpeaker.VoiceId = value; OnPropertyChanged(); } }
     }
-    /// <summary>当前 profile 的 Provider 预设音色。</summary>
-    public ObservableCollection<TtsVoiceInfo> PresetVoices { get; } = new();
     /// <summary>全部角色草稿，不随搜索过滤丢失。</summary>
     public ObservableCollection<QuestVoiceManagementSpeaker> Speakers { get; } = new();
     /// <summary>独立声线草稿，可被多个角色共享。</summary>
     public ObservableCollection<QuestVoiceManagementProfile> Profiles { get; } = new();
     /// <summary>只读注册表决定可选择的 Provider。</summary>
     public IReadOnlyList<TtsProviderInfo> Providers => TtsProviderRegistry.Providers;
-    /// <summary>与生产实例身份保持一致。</summary>
-    public IReadOnlyList<string> Instances { get; } = new[] { "", "local", "remote" };
-    /// <summary>缺失声线可用策略。</summary>
-    public IReadOnlyList<MissingVoicePolicy> MissingPolicies { get; } = Enum.GetValues<MissingVoicePolicy>();
+    /// <summary>声线的服务实例选项；空表示跟随该引擎当前选择的实例。</summary>
+    public IReadOnlyList<KeyValuePair<string, string>> InstanceChoices { get; } =
+        [new("", "跟随当前实例"), new("local", "本地"), new("remote", "远程")];
+    /// <summary>找不到角色声线时的处理方式。</summary>
+    public IReadOnlyList<KeyValuePair<MissingVoicePolicy, string>> MissingPolicyChoices { get; } =
+        [new(MissingVoicePolicy.Fallback, "改用默认 NPC 声线"), new(MissingVoicePolicy.Fail, "报错")];
     /// <summary>搜索同时匹配身份、正式名称、别名和 OCR 纠错名。</summary>
     public IEnumerable<QuestVoiceManagementSpeaker> FilteredSpeakers => Speakers.Where(x =>
         string.IsNullOrWhiteSpace(SpeakerSearch) || string.Join("\n", x.Id, x.Names, x.Aliases, x.Corrections)
             .Contains(SpeakerSearch.Trim(), StringComparison.OrdinalIgnoreCase));
-    /// <summary>可选声线包括清空引用；保存时还会执行严格引用校验。</summary>
-    public IEnumerable<string> VoiceIds => new[] { "" }.Concat(Profiles.Select(x => x.OriginalId));
-    /// <summary>旅行者可选空、荧和已有角色；只有用户选择预设才补齐角色。</summary>
-    public IEnumerable<KeyValuePair<string, string>> TravelerChoices => new[]
-        {
-            new KeyValuePair<string, string>("", "未指定旅行者"),
-            new KeyValuePair<string, string>(FindTraveler("空", "aether"), "空"),
-            new KeyValuePair<string, string>(FindTraveler("荧", "lumine"), "荧")
-        }.Concat(Speakers.Where(x => !Lines(x.Names).Any(n => n is "空" or "荧"))
-            .Select(x => new KeyValuePair<string, string>(x.OriginalId, $"{Lines(x.Names).FirstOrDefault() ?? x.Id}（{x.Id}）")))
-        .DistinctBy(x => x.Key, StringComparer.OrdinalIgnoreCase);
     /// <summary>运行、试听和编辑器 IO 任一繁忙都冻结写入。</summary>
     public bool IsEditingAllowed => _owner.IsConfigEditable && !IsWorking;
     /// <summary>有实际草稿才允许编辑内容。</summary>
     public bool CanEditDraft => IsEditingAllowed && IsLoaded;
-    /// <summary>未保存提示始终保留在编辑器顶部。</summary>
-    public string DraftNotice => HasChanges ? "有未保存草稿：有效输入会自动保存，切换页面保留输入。" : "已保存。修改在下次启动配音时生效；原文件保留备份。";
-
     /// <summary>绑定共享页面状态，不创建或销毁生产服务。</summary>
-    public QuestVoiceManagementViewModel(QuestVoicePageViewModel owner, QuestVoiceSessionFactory factory,
+    public QuestVoiceManagementViewModel(QuestVoiceSettingsViewModel owner, QuestVoiceSessionFactory factory,
         QuestVoiceService service, RoutingCatalogStore store)
     {
         _owner = owner; _factory = factory; _service = service; _store = store;
-        PresetVoices.CollectionChanged += (_, _) => OnPropertyChanged(nameof(SelectedPresetVoice));
         owner.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName is nameof(QuestVoicePageViewModel.IsConfigEditable) or nameof(QuestVoicePageViewModel.Status)) RefreshAvailability();
+            if (e.PropertyName is nameof(QuestVoiceSettingsViewModel.IsConfigEditable) or nameof(QuestVoiceSettingsViewModel.Status)) RefreshAvailability();
         };
         owner.Config.PropertyChanged += (_, e) =>
         {
@@ -155,11 +122,7 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
                 NotifyVoiceChoices();
                 return;
             }
-            if (e.PropertyName != nameof(QuestVoiceConfig.ExtraProviders)) return;
-            ObservePresetConfigs();
-            ResetPresetVoicesForSelection();
         };
-        ObservePresetConfigs();
         InitializeAutoSave();
     }
 
@@ -178,9 +141,9 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
         OnPropertyChanged(nameof(IsEditingAllowed)); OnPropertyChanged(nameof(CanEditDraft));
         LoadCommand.NotifyCanExecuteChanged(); DiscardAndReloadCommand.NotifyCanExecuteChanged();
         NewCatalogCommand.NotifyCanExecuteChanged(); ImportCommand.NotifyCanExecuteChanged();
-        SaveCommand.NotifyCanExecuteChanged(); ExportCommand.NotifyCanExecuteChanged(); ValidateDraftCommand.NotifyCanExecuteChanged();
+        ExportCommand.NotifyCanExecuteChanged(); ValidateDraftCommand.NotifyCanExecuteChanged();
         AddSpeakerCommand.NotifyCanExecuteChanged(); DeleteSpeakerCommand.NotifyCanExecuteChanged();
-        AddProfileCommand.NotifyCanExecuteChanged(); DeleteProfileCommand.NotifyCanExecuteChanged(); PreviewProfileCommand.NotifyCanExecuteChanged();
+        DeleteProfileCommand.NotifyCanExecuteChanged(); PreviewProfileCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>所有写命令都在执行入口再次检查冻结状态。</summary>
@@ -247,7 +210,7 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
         {
             RequireEditable(false); RequireCleanDraft();
             var path = _factory.RoutingCatalogPath;
-            if (File.Exists(path)) throw new InvalidOperationException("目标文件已存在，请先加载，不能直接覆盖新建。");
+            if (_store.Exists(path)) throw new InvalidOperationException("目标文件已存在，请先加载，不能直接覆盖新建。");
             Apply(new(2, "genshin", null, Array.Empty<string>(), null, null, MissingVoicePolicy.Fallback,
                 Array.Empty<SpeakerDefinition>(), Array.Empty<RoutingVoice>()));
             _loadedPath = path; _expectedSha256 = null; MarkDraftChanged(); EditStatus = "已新建空目录草稿，请添加角色和声线后保存。";
@@ -263,16 +226,12 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
         var dialog = new OpenFileDialog { Title = "导入角色路由草稿", Filter = "JSON 文件 (*.json)|*.json", Multiselect = false };
         if (dialog.ShowDialog() != true) return;
         var target = _factory.RoutingCatalogPath;
-        var targetHash = File.Exists(target) ? Convert.ToHexString(SHA256.HashData(await File.ReadAllBytesAsync(target))) : null;
+        var targetHash = await _store.ReadSha256Async(target);
         var imported = await _store.LoadAsync(dialog.FileName, serverSidePaths: _factory.RoutingServerSidePaths);
         if (!ConfirmChange("导入后有效内容将自动保存到当前路由目录并保留备份，确定继续吗？")) return;
         Apply(imported.Catalog); _loadedPath = target; _expectedSha256 = targetHash; MarkDraftChanged();
         EditStatus = "已导入草稿；校验通过后自动保存并保留备份。";
     });
-
-    /// <summary>只保存当前真正加载的路径；存储层校验并保留旧文件备份。</summary>
-    [RelayCommand(CanExecute = nameof(CanEditDraft))]
-    private async Task SaveAsync() => await FlushAutoSaveAsync();
 
     /// <summary>导出独立文件，不清除当前目录未保存提示。</summary>
     [RelayCommand(CanExecute = nameof(CanEditDraft))]
@@ -282,7 +241,7 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
         if (dialog.ShowDialog() != true) return;
         if (string.Equals(Path.GetFullPath(dialog.FileName), Path.GetFullPath(_factory.RoutingCatalogPath), StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("导出目标不能是当前配置文件，请使用保存命令。");
-        var hash = File.Exists(dialog.FileName) ? Convert.ToHexString(SHA256.HashData(await File.ReadAllBytesAsync(dialog.FileName))) : null;
+        var hash = await _store.ReadSha256Async(dialog.FileName);
         await _store.SaveAsync(dialog.FileName, BuildCatalog(), hash, serverSidePaths: _factory.RoutingServerSidePaths);
         EditStatus = "已导出草稿；当前配置的有效修改继续自动保存。";
     });
@@ -309,17 +268,6 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
         if (Same(TravelerId, item.Id) || Same(TravelerId, item.OriginalId)) throw new InvalidOperationException("当前角色是旅行者，请先更改旅行者选择。");
         if (!ConfirmChange("确定删除角色“" + item.Names + "”吗？")) return;
         item.PropertyChanged -= OnSpeakerChanged; Speakers.Remove(item); SelectedSpeaker = null; MarkDraftChanged(); NotifyLists();
-    });
-
-    /// <summary>新增普通 profile，从当前注册引擎和实例开始填写。</summary>
-    [RelayCommand(CanExecute = nameof(CanEditDraft))]
-    private void AddProfile() => Edit(() =>
-    {
-        // 预留草稿旧身份，避免重命名后新增的 profile 抢占同一个引用键。
-        var id = UniqueId("voice", Profiles.SelectMany(x => new[] { x.Id, x.OriginalId }));
-        var item = new QuestVoiceManagementProfile(new(id, id, "", "", "", "", ProviderId: _owner.Config.ProviderId,
-            InstanceId: null));
-        AddProfileItem(item); SelectedProfile = item; MarkDraftChanged(); NotifyLists();
     });
 
     /// <summary>任何角色、NPC 兜底或旁白引用都阻止删除 profile。</summary>
@@ -372,88 +320,6 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
         OnPropertyChanged(nameof(HasSelectedGptProfile));
         OnPropertyChanged(nameof(SelectedProfileDiagnostic));
         OnPropertyChanged(nameof(CanBrowseSelectedProfileAssets));
-        OnPropertyChanged(nameof(SelectedPresetVoice));
-        ResetPresetVoicesForSelection();
-    }
-
-    /// <summary>字典补齐后重挂嵌套通知，支持profile与全局默认引擎不同。</summary>
-    private void ObservePresetConfigs()
-    {
-        if (_owner.Config.ExtraProviders is null) _factory.ExtraConfig("windows-sapi");
-        var configurations = _owner.Config.ExtraProviders!;
-        var current = configurations.Values.Where(x => x is not null).ToHashSet();
-        foreach (var item in _observedPresetConfigs.Except(current).ToArray())
-        {
-            item.PropertyChanged -= OnPresetInstanceChanged;
-            _observedPresetConfigs.Remove(item);
-        }
-        foreach (var item in current.Except(_observedPresetConfigs))
-        {
-            item.PropertyChanged += OnPresetInstanceChanged;
-            _observedPresetConfigs.Add(item);
-        }
-    }
-
-    /// <summary>连接输入改变立即废弃旧结果，但不会自动查询服务。</summary>
-    private void OnPresetInstanceChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (SelectedProfile is null || sender != _factory.ExtraConfig(SelectedProfile.ProviderId)) return;
-        // 同Provider的管理声线也同步模型对应的静态建议，不改变自定义VoiceId。
-        if (SelectedProfile.ProviderId == "openai-speech" && e.PropertyName == nameof(QuestVoiceEngineConfig.Model))
-            ResetPresetVoicesForSelection();
-        if (e.PropertyName is nameof(QuestVoiceEngineConfig.LocalUrl) or nameof(QuestVoiceEngineConfig.RemoteUrl)
-            or nameof(QuestVoiceEngineConfig.UseRemote)) ResetPresetVoicesForSelection();
-    }
-
-    /// <summary>自动枚举仅用于无需联网的列表，VOICEVOX与VITS由刷新按钮触发。</summary>
-    private void ResetPresetVoicesForSelection()
-    {
-        Interlocked.Increment(ref _presetRequestGeneration);
-        PresetVoices.Clear();
-        if (SelectedProfile is { } item && QuestVoicePageViewModel.CanEnumerateVoicesOffline(item.ProviderId))
-            _ = RefreshPresetVoicesAsync();
-    }
-
-    /// <summary>按当前 profile 的注册 Provider 获取预设，而非依赖全局默认引擎。</summary>
-    [RelayCommand(AllowConcurrentExecutions = true)]
-    private async Task RefreshPresetVoicesAsync()
-    {
-        var generation = Interlocked.Increment(ref _presetRequestGeneration);
-        var item = SelectedProfile; PresetVoices.Clear();
-        if (item is null) return;
-        var id = item.ProviderId;
-        var instance = item.InstanceId;
-        Uri? address = null;
-        string? resolvedInstance = null;
-        // 草稿对象、刷新代次和生产解析出的实例URL共同确定查询身份。
-        bool IsCurrent()
-        {
-            if (generation != Volatile.Read(ref _presetRequestGeneration) || SelectedProfile != item || item.ProviderId != id || item.InstanceId != instance) return false;
-            if (address is null) return true;
-            try
-            {
-                var current = _factory.CreateVoiceSettings(BuildProfile(item), validateProvider: false);
-                return current.TtsServiceUrl == address && current.Provider?.InstanceId == resolvedInstance;
-            }
-            catch { return false; }
-        }
-        try
-        {
-            using var provider = TtsProviderRegistry.Create(id);
-            if (!provider.Info.Capabilities.PresetVoices) return;
-            // 预设只依赖选中 profile 的引擎和实例，不能被全局默认 GPT 地址阻断。
-            var settings = _factory.CreateVoiceSettings(BuildProfile(item), validateProvider: false);
-            address = settings.TtsServiceUrl;
-            resolvedInstance = settings.Provider?.InstanceId;
-            var voices = await provider.GetVoicesAsync(settings, default);
-            if (!IsCurrent()) return;
-            foreach (var voice in voices) PresetVoices.Add(voice);
-        }
-        catch (Exception exception)
-        {
-            // 切换角色或引擎后，旧查询的失败也不能覆盖当前选择的状态。
-            if (IsCurrent()) Report(exception);
-        }
     }
 
     /// <summary>用各自草稿构造 v2 目录，并迁移用户重命名的身份引用。</summary>
@@ -510,22 +376,15 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
     {
         if (!_loading) MarkDraftChanged();
         OnPropertyChanged(nameof(TravelerVoiceId));
-        if (e.PropertyName is nameof(QuestVoiceManagementSpeaker.Id) or nameof(QuestVoiceManagementSpeaker.Names))
-            OnPropertyChanged(nameof(TravelerChoices));
     }
     /// <summary>Provider 改动刷新独立预设，其他字段也保持未保存提示。</summary>
     private void OnProfileChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (!_loading) MarkDraftChanged();
         NotifyVoiceChoices();
-        if (sender == SelectedProfile && e.PropertyName == nameof(QuestVoiceManagementProfile.ProviderVoiceId)) OnPropertyChanged(nameof(SelectedPresetVoice));
-        if (sender == SelectedProfile && e.PropertyName is nameof(QuestVoiceManagementProfile.ProviderId)
-            or nameof(QuestVoiceManagementProfile.InstanceId)) ResetPresetVoicesForSelection();
     }
     /// <summary>通知计算列表，避免创建第二份会丢编辑的角色集合。</summary>
-    private void NotifyLists() { NotifyVoiceChoices(); OnPropertyChanged(nameof(FilteredSpeakers)); OnPropertyChanged(nameof(VoiceIds)); OnPropertyChanged(nameof(TravelerChoices)); }
-    /// <summary>复用已存在的空或荧角色身份。</summary>
-    private string FindTraveler(string name, string fallback) => Speakers.FirstOrDefault(x => Lines(x.Names).Contains(name))?.OriginalId ?? fallback;
+    private void NotifyLists() { NotifyVoiceChoices(); OnPropertyChanged(nameof(FilteredSpeakers)); }
     /// <summary>新行使用不会冲突的短身份。</summary>
     private static string UniqueId(string prefix, IEnumerable<string> existing)
     {

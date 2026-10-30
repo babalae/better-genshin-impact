@@ -15,7 +15,7 @@ using SkiaSharp;
 namespace BetterGenshinImpact.GameTask.QuestVoice.Features.Ocr;
 
 /// <summary>GenshinSceneSelector：原神自动配音的业务类型。</summary>
-public sealed class GenshinSceneSelector(SceneCatalog catalog) : ISceneSelector
+public sealed class GenshinSceneSelector(SceneCatalog catalog)
 {
     /// <summary>在后台判断当前画面是否满足受支持的原神对白布局。</summary>
     public async Task<SceneSelection> SelectAsync(ReadOnlyMemory<byte> image, SceneSettings settings, CancellationToken cancellationToken)

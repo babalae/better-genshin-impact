@@ -65,7 +65,7 @@ public sealed class RoutedTtsProviderTests
 
     /// <summary>构造不依赖文件或网络的启动快照。</summary>
     private static AppSettings Settings(TtsProviderSettings provider) => new("", new("http://localhost/"), new(1, 1, 1),
-        new("voice", "", "", "", ""), new("", ""), new(0, 0), Provider: provider);
+        new("voice", "", "", "", ""), new(""), Provider: provider);
 
     /// <summary>记录实际收到的快照，不模拟分派器自身行为。</summary>
     private class RecordingProvider(string id) : ITtsProvider

@@ -6,19 +6,27 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.Configuration;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Routing;
 using Serilog;
 
 namespace BetterGenshinImpact.GameTask.QuestVoice.Features.Routing;
 
 /// <summary>VoiceRoutingService：原神自动配音的业务类型。</summary>
-public sealed class VoiceRoutingService(SpeakerCatalogLoader loader, ISpeakerRouter router, ILogger? logger = null) : IVoiceRoutingService
+public sealed class VoiceRoutingService(SpeakerCatalogLoader loader, SpeakerRouter router, ILogger? logger = null) : IVoiceRoutingService
 {
+    /// <summary>保护本轮目录缓存。</summary>
+    private readonly object _cacheGate = new();
+    /// <summary>本轮已读取并校验的目录；修改在下次启动配音时生效，不再每句读盘。</summary>
+    private Task<RoutingCatalogSnapshot>? _snapshot;
+    /// <summary>缓存对应的目录路径与路径解释方式。</summary>
+    private RoutingSettings? _snapshotSettings;
+
     /// <summary>按接受姓名解析角色和实际声线，保留兜底原因。</summary>
     public async Task<VoiceRoutingResult> ResolveAsync(VoiceRoutingRequest request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var snapshot = await loader.LoadAsync(request.Settings.CatalogPath, cancellationToken, request.Settings.ServerSidePaths).ConfigureAwait(false);
+        var snapshot = await LoadOnceAsync(request.Settings, cancellationToken).ConfigureAwait(false);
         var catalog = snapshot.Catalog;
         var speaker = router.Route(request.Input, catalog);
         cancellationToken.ThrowIfCancellationRequested();
@@ -55,6 +63,19 @@ public sealed class VoiceRoutingService(SpeakerCatalogLoader loader, ISpeakerRou
             speaker.Layer, speaker.CanonicalId, speaker.VoiceId, voice.Id, fallbackReason, snapshot.CatalogSha256);
         cancellationToken.ThrowIfCancellationRequested();
         return result;
+    }
+
+    /// <summary>同一会话只读取一次目录；读取失败或被取消时下次重新读取，不缓存失败结果。</summary>
+    private Task<RoutingCatalogSnapshot> LoadOnceAsync(RoutingSettings settings, CancellationToken cancellationToken)
+    {
+        lock (_cacheGate)
+        {
+            if (_snapshot is { IsFaulted: false, IsCanceled: false } cached && _snapshotSettings == settings) return cached.WaitAsync(cancellationToken);
+            _snapshotSettings = settings;
+            // 读取本身不随单句取消，避免一次打断让后续句子反复读盘。
+            _snapshot = loader.LoadAsync(settings.CatalogPath, CancellationToken.None, settings.ServerSidePaths);
+            return _snapshot.WaitAsync(cancellationToken);
+        }
     }
 
     /// <summary>Find：执行VoiceRoutingService中的对应校验或计算步骤。</summary>

@@ -105,7 +105,7 @@ internal sealed class ContinuousFrameFixture : IAsyncDisposable
         public TaskCompletionSource<ImageOcrResult> Result { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         /// <summary>移植回归验证：Complete。</summary>
         public void Complete(string text = "hello", string? name = "甘雨") => Result.TrySetResult(new(1920, 1080,
-            new(1920, 1080, []), [], name, text, new("model", "hash", "controlled", 0, null), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow));
+            new(1920, 1080, []), [], name, text, new("model", "controlled"), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow));
     }
     /// <summary>移植回归验证：Recognizer。</summary>
     public sealed class Recognizer : ContinuousVoiceFixture.Calls<Recognition>, IContinuousFrameRecognizer

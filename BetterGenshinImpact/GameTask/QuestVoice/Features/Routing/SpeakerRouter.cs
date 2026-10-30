@@ -11,7 +11,7 @@ using BetterGenshinImpact.GameTask.QuestVoice.Core.Routing;
 namespace BetterGenshinImpact.GameTask.QuestVoice.Features.Routing;
 
 /// <summary>SpeakerRouter：原神自动配音的业务类型。</summary>
-public sealed class SpeakerRouter : ISpeakerRouter
+public sealed class SpeakerRouter
 {
     /// <summary>依次按主角、旁白、规范姓名、别名、纠错与默认 NPC 解析声线。</summary>
     public SpeakerRoute Route(SpeakerRoutingInput input, RoutingCatalog catalog)

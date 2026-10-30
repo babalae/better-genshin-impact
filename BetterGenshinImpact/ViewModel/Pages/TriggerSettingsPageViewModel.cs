@@ -50,12 +50,17 @@ public partial class TriggerSettingsPageViewModel : ViewModel
 
     [ObservableProperty] private List<string> _hangoutBranches;
 
+    /// <summary>自动配音卡片的模型：开关、运行状态与设置入口。</summary>
+    public QuestVoiceCardViewModel QuestVoice { get; }
+
     public TriggerSettingsPageViewModel(
         IConfigService configService,
         INavigationService navigationService,
-        DialogueOptionVoiceDiagnosticState voiceDiagnosticState)
+        DialogueOptionVoiceDiagnosticState voiceDiagnosticState,
+        QuestVoiceCardViewModel questVoice)
     {
         Config = configService.Get();
+        QuestVoice = questVoice;
         VoiceDiagnosticState = voiceDiagnosticState;
         _navigationService = navigationService;
         _hangoutBranches = HangoutConfig.Instance.HangoutOptionsTitleList;

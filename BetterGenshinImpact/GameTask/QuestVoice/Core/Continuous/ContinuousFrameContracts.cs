@@ -24,8 +24,8 @@ public sealed class ContinuousFrameSnapshot
     public string Sha256 { get; }
     /// <summary>宿主在同一帧正向识别主界面且排除对白 UI；仍需门禁多帧确认。</summary>
     public bool DialogueExitConfirmed { get; }
-    /// <summary>Bytes：当前业务对象的配置、身份或状态值。</summary>
-    public ReadOnlyMemory<byte> Bytes => new((byte[])_bytes.Clone());
+    /// <summary>构造时已复制的帧数据；以只读视图提供，读取时不再整块克隆。</summary>
+    public ReadOnlyMemory<byte> Bytes => _bytes;
     /// <summary>建立 ContinuousFrameSnapshot 的业务依赖与初始状态。</summary>
     public ContinuousFrameSnapshot(long sequence, TimeSpan observedAt, ReadOnlyMemory<byte> bytes, bool dialogueExitConfirmed = false)
     {

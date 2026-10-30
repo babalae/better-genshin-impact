@@ -29,7 +29,7 @@ public partial class QuestVoiceManagementViewModel
     public async Task EnsureLoadedAsync()
     {
         if (IsLoaded || IsWorking) return;
-        if (!File.Exists(_factory.RoutingCatalogPath))
+        if (!_store.Exists(_factory.RoutingCatalogPath))
         {
             try { await _factory.EnsureResourcesAsync(default); }
             catch (Exception exception) { Report(exception); SaveStatus = "加载失败，配置保留"; return; }
@@ -99,7 +99,7 @@ public partial class QuestVoiceManagementViewModel
             {
                 HasChanges = false;
                 _savedProfiles = Profiles.ToDictionary(x => x.OriginalId, x => x.Build());
-                SaveStatus = "已保存 · 下次启动配音生效";
+                SaveStatus = "已保存 · 关闭设置窗口后生效";
                 EditStatus = "有效配置已自动保存，旧文件备份已保留。";
                 _owner.CommandError = "";
             }

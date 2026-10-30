@@ -8,7 +8,7 @@ namespace BetterGenshinImpact.ViewModel.Pages.QuestVoiceSettings;
 public sealed partial class GoogleTtsSettingsViewModel : EngineSettingsViewModel
 {
     /// <summary>沿用宿主配置与生产服务，不创建其他引擎的配置副本。</summary>
-    public GoogleTtsSettingsViewModel(QuestVoicePageViewModel host, QuestVoiceSessionFactory factory, QuestVoiceService service)
+    public GoogleTtsSettingsViewModel(QuestVoiceSettingsViewModel host, QuestVoiceSessionFactory factory, QuestVoiceService service)
         : base("google-translate", host, factory, service) { }
     /// <summary>上游协议实际支持的慢速及正常速度。</summary>
     public IReadOnlyList<double> Rates { get; } = new[] { .5, 1d };

@@ -20,7 +20,7 @@ using BetterGenshinImpact.GameTask.AutoSkip.Audio;
 using BetterGenshinImpact.GameTask.Music.Service;
 using BetterGenshinImpact.GameTask.QuestVoice;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Diagnostics;
-using BetterGenshinImpact.ViewModel.Pages.QuestVoiceSettings;
+using BetterGenshinImpact.GameTask.QuestVoice.Features.Routing;
 using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.GameTask.Runtime.Win32;
 using BetterGenshinImpact.GameTask.Runtime.WebPage;
@@ -294,13 +294,11 @@ public partial class App : Application
                 services.AddSingleton<IStorageAreaProvider>(sp => sp.GetRequiredService<InventoryIconCache>());
                 services.AddTransient<AccountRecordsInventoryViewModel>();
                 services.AddView<MusicPage, MusicPageViewModel>();
-                services.AddView<QuestVoicePage, QuestVoicePageViewModel>();
-                services.AddSingleton<QuestVoiceSettingsPage>();
-                services.AddSingleton<GptSovitsSettingsViewModel>();
-                services.AddSingleton<QuestVoiceGptSettingsPage>();
-                services.AddSingleton<OtherEnginesSettingsViewModel>();
-                services.AddSingleton<QuestVoiceOtherEnginesPage>();
-                services.AddSingleton(sp => new QuestVoiceSessionFactory(all.QuestVoiceConfig, Core.Config.Global.StartUpPath));
+                // 自动配音：入口为实时触发页卡片，设置在独立窗口；设置模型为单例以保留草稿。
+                services.AddSingleton<RoutingCatalogStore>();
+                services.AddSingleton<QuestVoiceSettingsViewModel>();
+                services.AddSingleton<QuestVoiceCardViewModel>();
+                services.AddSingleton(sp => new QuestVoiceSessionFactory(all.QuestVoiceConfig, Core.Config.Global.StartUpPath, sp.GetRequiredService<BgiOnnxFactory>()));
                 services.AddSingleton<IQuestVoiceSessionFactory>(sp => sp.GetRequiredService<QuestVoiceSessionFactory>());
                 services.AddSingleton<QuestVoiceSessionController>();
                 services.AddSingleton<QuestVoiceService>();
@@ -531,6 +529,8 @@ public partial class App : Application
             SoloTaskSettingsTemplates.Register(Current.Resources, App.GetService<SoloTaskRegistry>()!);
             await _host.StartAsync();
             ServerTimeHelper.Initialize(_host.Services.GetRequiredService<IServerTimeProvider>());
+            // 自动配音随截图器和开关自动启停，启动时创建服务以订阅运行环境、任务模式和开关。
+            _host.Services.GetRequiredService<QuestVoiceService>();
             if (InstanceBootstrap.Current?.Context.IsRoot == true)
             {
                 // 宿主启动完成后实例上下文已初始化；主实例尽力清理遗留锁，失败也不影响启动。

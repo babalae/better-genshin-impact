@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Routing;
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -9,9 +11,15 @@ public partial class QuestVoiceManagementSpeaker : ObservableObject
     /// <summary>载入时的身份，用于显式保存时迁移引用。</summary>
     public string OriginalId { get; }
     /// <summary>角色身份。</summary>
-    [ObservableProperty] private string _id;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DisplayName))]
+    private string _id;
     /// <summary>角色正式名称，一行一项。</summary>
-    [ObservableProperty] private string _names;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DisplayName))]
+    private string _names;
+    /// <summary>列表显示用的名称：第一条正式名称，没有时显示角色 ID。</summary>
+    public string DisplayName => Names.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault() ?? Id;
     /// <summary>角色别名，一行一项。</summary>
     [ObservableProperty] private string _aliases;
     /// <summary>OCR 易错名称，一行一项。</summary>

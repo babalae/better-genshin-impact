@@ -14,6 +14,7 @@ using BetterGenshinImpact.GameTask.QuestVoice.Features.Continuous;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Ocr;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Routing;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Tts;
+using OpenCvSharp;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.QuestVoiceTests;
 
@@ -27,8 +28,8 @@ public sealed class SyntheticFramePipelineTests
         using var fixture = new RoutingFixture();
         await fixture.WriteAsync();
         var settings = new AppSettings(fixture.Root, new("http://localhost:19001/"), new(1, 2, 2), fixture.LegacyVoice,
-            new(fixture.Root, Path.Combine(fixture.Root, "audio")), new(0, 0),
-            Ocr: new("controlled.onnx", "unused.xml"), Scene: new(SceneSelectionTests.CatalogPath), Routing: new(fixture.CatalogPath));
+            new(Path.Combine(fixture.Root, "audio")),
+            Ocr: new(), Scene: new(SceneSelectionTests.CatalogPath), Routing: new(fixture.CatalogPath));
         var requests = new List<string>();
         using var engine = new GptSovitsEngine(_ => new HttpClient(new RoutingTransportTests.Handler((request, _) =>
         {
@@ -41,7 +42,7 @@ public sealed class SyntheticFramePipelineTests
         var catalog = new SceneCatalog();
         var selector = new GenshinSceneSelector(catalog);
         var ocr = new ControlledOcr();
-        var images = new ImageOcrService(new SceneProfileLoader(), new ImagePreprocessor(), ocr, selector);
+        var images = new ImageOcrService(new ImagePreprocessor(), ocr);
         await using var frames = new ContinuousFrameSession(QuestVoiceSessionFactory.ContinuousDefaults,
             new ContinuousFrameInspector(QuestVoiceSessionFactory.ContinuousDefaults, settings.Scene!, catalog, selector),
             new ContinuousFrameRecognizer(images, settings), voice);
@@ -61,20 +62,20 @@ public sealed class SyntheticFramePipelineTests
         Assert.Single(Directory.GetFiles(settings.Output.AudioDirectory, "*.wav"));
     }
 
-    /// <summary>明确标记的外部推理替身，检查生产预处理确实提供了两块张量。</summary>
+    /// <summary>明确标记的外部推理替身，检查生产预处理确实提供了姓名和正文两行图像。</summary>
     private sealed class ControlledOcr : IOcrEngine
     {
         /// <summary>实际推理调用次数。</summary>
         public int Calls { get; private set; }
         /// <summary>返回可接受的中文角色与正文，不宣称运行过真实模型。</summary>
-        public Task<(IReadOnlyList<OcrText> Texts, OcrModelInfo Model)> RecognizeAsync(IReadOnlyList<OcrTensor> tensors,
-            OcrSettings settings, string directory, CancellationToken token)
+        public Task<(IReadOnlyList<OcrText> Texts, OcrModelInfo Model)> RecognizeAsync(IReadOnlyList<Mat> lines,
+            CancellationToken token)
         {
             token.ThrowIfCancellationRequested(); Calls++;
-            Assert.Equal(2, tensors.Count);
-            Assert.All(tensors, tensor => Assert.True(tensor.Data.Length > 0));
+            Assert.Equal(2, lines.Count);
+            Assert.All(lines, line => Assert.False(line.Empty()));
             return Task.FromResult<(IReadOnlyList<OcrText>, OcrModelInfo)>((new[] { new OcrText("甘雨", .99),
-                new OcrText("你好，旅行者。", .99) }, new("controlled", "controlled", "TestDouble", 0, null)));
+                new OcrText("你好，旅行者。", .99) }, new("controlled", "TestDouble")));
         }
     }
     /// <summary>接收真实校验后的 WAV，避免打开物理设备。</summary>

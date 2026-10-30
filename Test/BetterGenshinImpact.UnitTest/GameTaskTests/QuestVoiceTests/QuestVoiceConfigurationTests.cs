@@ -41,7 +41,7 @@ public sealed class QuestVoiceConfigurationTests : IDisposable
         foreach (var name in new[] { "ocr.onnx", "voice.ckpt", "voice.pth", "ref.wav" })
             await File.WriteAllBytesAsync(Path.Combine(_root, name), [1]);
         var config = JsonConvert.DeserializeObject<QuestVoiceConfig>("{\"StreamingEnabled\":" + (enabled ? "true" : "false") + "}")!;
-        config.OcrModelPath = "ocr.onnx"; config.GptWeightsPath = "voice.ckpt";
+        config.GptWeightsPath = "voice.ckpt";
         config.SovitsWeightsPath = "voice.pth"; config.ReferenceAudioPath = "ref.wav"; config.PromptText = "参考原文";
         var validated = await new QuestVoiceSessionFactory(config, _root).ValidateAsync(default);
         Assert.True(validated.IsValid, validated.Detail);
@@ -60,7 +60,7 @@ public sealed class QuestVoiceConfigurationTests : IDisposable
         var factory = new QuestVoiceSessionFactory(new QuestVoiceConfig(), _root);
         var result = await factory.ValidateAsync(default);
         Assert.False(result.IsValid);
-        Assert.Contains("OCR", result.Detail);
+
         Assert.Contains("GPT", result.Detail);
     }
 
@@ -71,12 +71,12 @@ public sealed class QuestVoiceConfigurationTests : IDisposable
         Directory.CreateDirectory(_root);
         foreach (var name in new[] { "ocr.onnx", "voice.ckpt", "voice.pth", "ref.wav" })
             await File.WriteAllBytesAsync(Path.Combine(_root, name), [1]);
-        var config = new QuestVoiceConfig { OcrModelPath = "ocr.onnx", GptWeightsPath = "voice.ckpt",
+        var config = new QuestVoiceConfig { GptWeightsPath = "voice.ckpt",
             SovitsWeightsPath = "voice.pth", ReferenceAudioPath = "ref.wav", PromptText = "参考原文" };
         var factory = new QuestVoiceSessionFactory(config, _root);
         var first = await factory.ValidateAsync(default);
         Assert.True(first.IsValid, first.Detail);
-        Assert.Equal(Path.Combine(_root, "ocr.onnx"), first.Settings!.Ocr!.ModelPath);
+        Assert.NotNull(first.Settings!.Ocr);
         var routing = Path.Combine(_root, "User", "QuestVoice", "routing.json");
         await File.WriteAllTextAsync(routing, "user-owned");
         var second = await factory.ValidateAsync(default);

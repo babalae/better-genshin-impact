@@ -1,16 +1,18 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.QuestVoice.Core.Tts;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.Configuration;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Routing;
-using BetterGenshinImpact.GameTask.QuestVoice.Features.Routing;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.Tts;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Audio;
+using BetterGenshinImpact.GameTask.QuestVoice.Features.Routing;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Tts;
 using NAudio.Wave;
 
 namespace BetterGenshinImpact.Service;
 
-/// <summary>用户主动触发的独立 TTS 测试，沿用服务操作锁和生产播放器。</summary>
+/// <summary>设置界面使用的试听、声音列表和连接测试；ViewModel 只调用这里，不直接访问引擎。</summary>
 public sealed partial class QuestVoiceService
 {
     /// <summary>只在操作锁内创建/释放，停止命令在捕获锁内请求取消。</summary>
@@ -18,27 +20,17 @@ public sealed partial class QuestVoiceService
     /// <summary>退出可以关闭测试请求；普通取消仅请求丢弃并保留 GPT 排空。</summary>
     private ITtsProvider? _testProvider;
 
-    /// <summary>无需游戏或 OCR 即可测试当前默认声线；与正式会话互斥。</summary>
-    public Task TestSpeechAsync(string text, CancellationToken token = default) => TestSpeechCoreAsync(text, null, token);
-
-    /// <summary>试听选中声线草稿，复用正式测试的互斥、取消、排空与播放器。</summary>
-    public Task TestVoiceAsync(string text, RoutingVoice profile, CancellationToken token = default)
-        => TestSpeechCoreAsync(text, profile, token);
-
-    /// <summary>两个测试入口共享唯一的播放与后端资源所有权。</summary>
-    private async Task TestSpeechCoreAsync(string text, RoutingVoice? profile, CancellationToken token)
+    /// <summary>试听指定声线（可以是未保存的草稿），与正式会话互斥并共用取消与排空。</summary>
+    public async Task TestVoiceAsync(string text, RoutingVoice profile, CancellationToken token = default)
     {
         await _operations.WaitAsync(token).ConfigureAwait(false);
         try
         {
             if (Status.IsRunning || Status.IsBusy) throw new InvalidOperationException("请先停止自动配音再测试语音。");
             if (Status.BackendUnknown) throw new InvalidOperationException("后端状态未知，请先手动恢复并确认。");
-            var settings = profile is null ? _factory.CreateTtsSettings() : _factory.CreateVoiceSettings(profile);
-            if (profile is not null)
-            {
-                var reason = await RoutingVoiceAssets.UnavailableAsync(profile, token, _factory.RoutingServerSidePaths).ConfigureAwait(false);
-                if (reason is not null) throw new VoiceException(VoiceErrorCode.Configuration, reason);
-            }
+            var settings = _factory.CreateVoiceSettings(profile);
+            var reason = await RoutingVoiceAssets.UnavailableAsync(profile, token, _factory.RoutingServerSidePaths).ConfigureAwait(false);
+            if (reason is not null) throw new VoiceException(VoiceErrorCode.Configuration, reason);
             settings = settings with { Protocol = settings.Protocol! with { StreamingMode = false, StreamPlayback = false } };
             using var provider = TtsProviderRegistry.Create(settings.Provider!.ProviderId);
             using var player = new WasapiAudioPlayer(() => new WasapiOut());
@@ -82,4 +74,19 @@ public sealed partial class QuestVoiceService
     /// <summary>立即取消测试播放；GPT 已发请求仍由 Provider 排空。</summary>
     public void CancelTestSpeech()
     { lock (_captureGate) _testCancellation?.Cancel(); }
+
+    /// <summary>读取指定引擎实例的声音列表；只有 VOICEVOX、VITS 等服务端引擎会联网。</summary>
+    public async Task<IReadOnlyList<TtsVoiceInfo>> GetVoicesAsync(AppSettings settings, CancellationToken token = default)
+    {
+        using var provider = TtsProviderRegistry.Create(settings.Provider!.ProviderId);
+        if (!provider.Info.Capabilities.PresetVoices) return Array.Empty<TtsVoiceInfo>();
+        return await provider.GetVoicesAsync(settings, token).ConfigureAwait(false);
+    }
+
+    /// <summary>只读探测服务可达性，不合成、不切换权重，成功也不代表后端空闲。</summary>
+    public async Task<string> ProbeAsync(AppSettings settings, CancellationToken token = default)
+    {
+        using var provider = TtsProviderRegistry.Create(settings.Provider!.ProviderId);
+        return await provider.ProbeAsync(settings, token).ConfigureAwait(false);
+    }
 }

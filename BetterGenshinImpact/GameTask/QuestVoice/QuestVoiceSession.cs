@@ -15,7 +15,7 @@ namespace BetterGenshinImpact.GameTask.QuestVoice;
 
 /// <summary>一轮管线资源的所有者，先排空核心，再释放 OCR/音频和本轮临时文件。</summary>
 public sealed class QuestVoiceSession(ContinuousFrameSession frames, ContinuousVoiceSession voice,
-    ITtsProvider engine, DirectMlOcrEngine ocr, WasapiAudioPlayer player, string scratch) : IQuestVoiceSession
+    ITtsProvider engine, QuestVoiceOcrEngine ocr, WasapiAudioPlayer player, string scratch) : IQuestVoiceSession
 {
     /// <summary>订阅已经排好序的识别事件。</summary>
     public event Action<ContinuousFrameEvent>? FrameEvent { add => frames.Event += value; remove => frames.Event -= value; }

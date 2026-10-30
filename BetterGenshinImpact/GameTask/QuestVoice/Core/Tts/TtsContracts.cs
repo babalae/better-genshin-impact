@@ -33,12 +33,6 @@ public sealed record TtsResult(byte[] Wav, double SynthesisSeconds, double TimeT
 public sealed record VoiceStatus(VoiceState State, string? Detail = null, string? ArtifactPath = null,
     VoiceErrorCode? Error = null);
 
-/// <summary>IReferenceAudioSelector：原神自动配音的业务类型。</summary>
-public interface IReferenceAudioSelector
-{
-    /// <summary>依据颜色、分隔线和字形几何证据选择对白布局。</summary>
-    ReferenceSelection Select(VoiceBinding voice, string? emotion);
-}
 /// <summary>IWavProcessor：原神自动配音的业务类型。</summary>
 public interface IWavProcessor
 {

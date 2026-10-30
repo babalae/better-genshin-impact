@@ -21,7 +21,7 @@ namespace BetterGenshinImpact.ViewModel.Pages.QuestVoiceSettings;
 public abstract partial class EngineSettingsViewModel : ObservableObject
 {
     /// <summary>与运行页面共用的配置宿主。</summary>
-    private readonly QuestVoicePageViewModel _host;
+    private readonly QuestVoiceSettingsViewModel _host;
     /// <summary>生产配置快照工厂。</summary>
     private readonly QuestVoiceSessionFactory _factory;
     /// <summary>拥有播放器及试听互斥的生产服务。</summary>
@@ -120,7 +120,7 @@ public abstract partial class EngineSettingsViewModel : ObservableObject
     public bool CanTest => !_host.Status.IsRunning && !_host.Status.IsBusy && !_host.Status.BackendUnknown && !IsTesting;
 
     /// <summary>建立独立配置订阅；构造期间不访问网络。</summary>
-    protected EngineSettingsViewModel(string providerId, QuestVoicePageViewModel host,
+    protected EngineSettingsViewModel(string providerId, QuestVoiceSettingsViewModel host,
         QuestVoiceSessionFactory factory, QuestVoiceService service)
     {
         ProviderId = providerId;
@@ -170,7 +170,7 @@ public abstract partial class EngineSettingsViewModel : ObservableObject
     /// <summary>运行状态由宿主投递到 UI 线程，只更新试听可用性。</summary>
     private void OnHostStatusChanged(object? sender, PropertyChangedEventArgs args)
     {
-        if (args.PropertyName != nameof(QuestVoicePageViewModel.Status)) return;
+        if (args.PropertyName != nameof(QuestVoiceSettingsViewModel.Status)) return;
         OnPropertyChanged(nameof(CanTest));
         TestVoiceCommand.NotifyCanExecuteChanged();
     }
@@ -258,9 +258,9 @@ public abstract partial class EngineSettingsViewModel : ObservableObject
             ? "请填写 HTTP/HTTPS 根地址，不含凭据、查询或片段；非法输入仅保留为草稿。" : "";
     }
 
-    /// <summary>与生产 HTTP Provider 的根路径规则保持一致。</summary>
-    private static bool IsValidUrl(string value) => Uri.TryCreate(value.Trim(), UriKind.Absolute, out var uri)
-        && uri.Scheme is "http" or "https" && string.IsNullOrEmpty(uri.UserInfo)
+    /// <summary>与生产 HTTP Provider 的根路径规则保持一致；GPT-SoVITS 设置共用同一规则。</summary>
+    internal static bool IsValidUrl(string value) => Uri.TryCreate(value.Trim(), UriKind.Absolute, out var uri)
+        && uri.Scheme is "http" or "https" && !string.IsNullOrEmpty(uri.Host) && string.IsNullOrEmpty(uri.UserInfo)
         && string.IsNullOrEmpty(uri.Query) && string.IsNullOrEmpty(uri.Fragment);
 
     /// <summary>地址草稿尚未有效时，避免拿旧地址冒充当前输入进行请求。</summary>
@@ -303,15 +303,15 @@ public abstract partial class EngineSettingsViewModel : ObservableObject
             var displayName = string.IsNullOrWhiteSpace(VoiceDisplayName)
                 ? SelectedVoice?.DisplayName ?? VoiceId : VoiceDisplayName.Trim();
             await _host.Management.RegisterProviderVoiceAsync(ProviderId, profile.InstanceId!, VoiceId, displayName);
-            if (IsCurrent(generation, identity)) StatusMessage = "已加入通用声线库，可在角色与默认声音规则中选择。";
+            if (IsCurrent(generation, identity)) StatusMessage = "已添加为声线，可在“角色”页分配给角色或默认 NPC。";
         }
         catch (Exception)
         {
-            if (IsCurrent(generation, identity)) StatusMessage = "加入声线库失败，请检查声音与实例参数，以及映射目录是否可写。";
+            if (IsCurrent(generation, identity)) StatusMessage = "添加声线失败，请检查声音与实例参数，以及角色目录是否可写。";
         }
     }
 
-    /// <summary>复用现有 Provider 枚举能力；不在视图模型编写 HTTP。</summary>
+    /// <summary>经服务层读取声音列表；视图模型不直接访问引擎。</summary>
     [RelayCommand(AllowConcurrentExecutions = true)]
     private async Task RefreshVoicesAsync()
     {
@@ -324,8 +324,7 @@ public abstract partial class EngineSettingsViewModel : ObservableObject
         try
         {
             var settings = _factory.CreateVoiceSettings(CreateProfile(), validateProvider: false);
-            using var provider = TtsProviderRegistry.Create(ProviderId);
-            var voices = await provider.GetVoicesAsync(settings, default);
+            var voices = await _service.GetVoicesAsync(settings);
             if (!IsCurrent(generation, identity)) return;
             Voices.Clear();
             foreach (var voice in voices) Voices.Add(voice);

@@ -1,42 +1,47 @@
 # 自动配音优化设计
 
-> 状态：提案（第 2 版）· 2026-10-30  
+> 状态：第 3 版，已实施，待游戏内验收 · 2026-10-30  
 > 关联：[实时触发器生命周期](realtime-trigger.md) · [TaskTriggerDispatcher 依赖注入](task-trigger-dispatcher-di.md) · [配置持久化](config-persistence.md) · 用户文档 [questvoice.md](../technical/questvoice.md)
 
-第 2 版变更：
+第 3 版变更：
 
-- 原则改为**保留全部现有功能，只做结构和实现上的优化**。第 1 版中删除功能的方案（固定区域识别、移除流式、角色目录改存到 `AllConfig`、去掉草稿与备份、立即打断旧句等）全部撤回。
-- 第 8 节的 4 项已确认，全部保持现状。
-- 启停周期改为与实时触发器一致：独立任务和脚本运行期间停止配音。
-- 第 6 节重写，说明 OCR 实际使用的运行库和模型。
-- 新增第 7.1 节：已删除的 UI 测试和只测死代码的测试。
+- 第 8 节按确认结果更新：流式合成保留，并记为可能的后续优化点；场景识别不改，OCR 直接使用 BetterGI 内置 OCR；新旧句接替不改；7 个引擎全部保留。
+- 第 6 节的方案从“自带会话改由 `BgiOnnxFactory` 创建”改为“直接调用内置识别组件 `Rec`”。自带的 ONNX 会话、CTC 解码以及“OCR 模型路径”“DirectML 设备序号”两项设置一并删除。
+- 第 3～5 节按实际实现更新。5.3 节逐项记录实施结果；第 9 项（配置两种存法合并）本次未做，移到第 9 节。
+- 新增 7.4 节：实施结果与验证。
+
+第 2 版撤回了第 1 版中删除功能的方案，启停周期改为与实时触发器一致，并删除了 UI 测试和只测死代码的测试（7.1 节）。
 
 ## 0. 结论
 
-| 问题 | 结论 | 方案摘要 | 章节 |
+| 问题 | 结论 | 实施结果 | 章节 |
 | --- | --- | --- | --- |
-| 1. 菜单太多，界面是否友好 | 不够友好：一次配置要跨 3 个页面，“默认引擎”和“正在编辑的引擎”分在两页，同一概念有多个名字 | 4 个子页面合并为实时触发页的一张卡片和一个设置窗口。所有设置项和运行信息都保留，只调整组织方式和文字 | 第 3 节 |
-| 2. 能否放进实时任务 | 可以。启停周期与实时触发器一致 | 开关在实时触发页；截图器启动时开始，独立任务开始时停止、结束后恢复，截图器停止时停止。实现上订阅调度器已有的任务模式事件，不注册为 `ITaskTrigger` | 第 4 节 |
-| 3. 逻辑能否精简，是否符合分层标准 | 不完全符合：有死代码、未绑定的 VM 成员、重复的过期判定、跨层调用 | 在不删除功能的前提下清理死代码、合并重复逻辑、修正跨层调用。预计减少约 1,600 行（约 14%） | 第 5 节 |
-| 4. OCR 为什么强制 DML | 用的是 ONNX Runtime，和主程序同一个运行库；只是会话没走主程序的工厂，自己写死了 DirectML | 会话改由 `BgiOnnxFactory` 创建，跟随“硬件加速”设置；默认改用内置的 PP-OCRv6 识别模型，仍可指定自己的模型 | 第 6 节 |
+| 1. 菜单太多，界面是否友好 | 不够友好：一次配置要跨 3 个页面，“默认引擎”和“正在编辑的引擎”分在两页，同一概念有多个名字 | 导航“自动配音”及 4 个子页面合并为实时触发页的一张卡片和一个设置窗口（引擎与声线、角色、识别、高级）。设置项和运行信息都保留，只调整组织方式和文字 | 第 3 节 |
+| 2. 能否放进实时任务 | 可以，启停周期与实时触发器一致 | 开关在卡片上；截图器启动时开始，独立任务和脚本期间停止、结束后恢复，截图器停止时停止，设置窗口打开期间暂停。实现上订阅调度器已有的任务模式事件，不注册为 `ITaskTrigger` | 第 4 节 |
+| 3. 逻辑能否精简，是否符合分层标准 | 不完全符合：有死代码、未绑定的 VM 成员、重复的过期判定、跨层调用 | 清理死代码和未绑定成员、合并重复逻辑、修正跨层调用，不删功能。生产代码从 11,821 行降到 10,873 行（减少 948 行，约 8%） | 第 5 节 |
+| 4. OCR 为什么强制 DML | 用的是 ONNX Runtime，和主程序同一个运行库；只是会话没走主程序的工厂，自己写死了 DirectML | 改为直接调用 BetterGI 内置 OCR 的识别组件 `Rec`（PP-OCRv6），会话由 `BgiOnnxFactory` 创建，跟随“硬件加速”设置；用户不再需要准备模型 | 第 6 节 |
 
-## 1. 现状
+## 1. 优化前的状态
+
+本节记录优化前的状态，作为对照保留。
 
 ### 1.1 规模
 
 功能由提交 `ac117193a`（#3871）一次合入，尚未进入发行版本：没有 tag 包含该提交，ReleaseNotes 中也没有记录。配置结构调整时不需要兼容旧版本。
 
-| 区域 | 行数 | 内容 |
-| --- | ---: | --- |
-| `GameTask/QuestVoice/Features/Continuous` | 1,765 | 帧会话、配音会话两个状态机 |
-| `GameTask/QuestVoice/Features/Tts` | 1,607 | 7 个引擎、流式协议、路由分派 |
-| `GameTask/QuestVoice/Features/Ocr` | 1,418 | 自带 OCR 会话，6 种布局的像素场景识别 |
-| `GameTask/QuestVoice` 其余（Core、Routing、Diagnostics、Audio、根目录） | 2,685 | 契约、路由目录、指标、悬浮摘要、会话包装 |
-| `Service/QuestVoiceService*.cs` | 983 | 启停、采样、状态投影、试听 |
-| `ViewModel/Pages`（19 个文件） | 2,016 | 4 个页面的 VM、路由草稿编辑器、6 个引擎 VM |
-| `View/Pages`（30 个文件，含代码后置） | 1,251 | 4 个页面、9 个引擎子视图 |
-| `Core/Config` | 96 | |
-| **合计** | **11,821** | 单元测试原有 49 个文件、7,723 行；本次删除后剩 44 个文件、6,256 行（第 7.1 节） |
+| 区域 | 优化前 | 优化后 | 内容 |
+| --- | ---: | ---: | --- |
+| `GameTask/QuestVoice/Features/Continuous` | 1,765 | 1,745 | 帧会话、配音会话两个状态机 |
+| `GameTask/QuestVoice/Features/Tts` | 1,607 | 1,607 | 7 个引擎、流式协议、路由分派 |
+| `GameTask/QuestVoice/Features/Ocr` | 1,418 | 945 | 6 种布局的像素场景识别、预处理；优化前还有自带的 OCR 会话和 CTC 解码 |
+| `GameTask/QuestVoice` 其余（Core、Routing、Diagnostics、Audio、根目录） | 2,685 | 2,657 | 契约、路由目录、指标、悬浮摘要、会话包装 |
+| `Service/QuestVoiceService*.cs` | 983 | 1,080 | 启停、采样、状态投影、试听；优化后多了按触发器周期自动启停 |
+| `ViewModel/Pages`（19 个文件） | 2,016 | 1,680 | 设置窗口和卡片的 VM、路由草稿编辑器、7 个引擎 VM |
+| `View/Pages`、`View/Windows`（优化前 30 个文件，优化后 28 个） | 1,251 | 1,051 | 优化前 4 个页面；优化后为卡片、设置窗口和引擎子视图 |
+| `Core/Config` | 96 | 108 | |
+| **合计** | **11,821** | **10,873** | 单元测试原有 49 个文件、7,723 行；第 2 版删除后 44 个文件、6,256 行；本次实施后 43 个文件、6,079 行 |
+
+行数统计口径：`.cs` 和 `.xaml` 文件的全部行，含注释和空行。
 
 ### 1.2 界面问题
 
@@ -68,20 +73,22 @@
 
 原则：
 
-- **保留全部现有功能。** 第 5.1 节逐项列出。设置项只有“DirectML 设备序号”合并到全局“硬件加速”（第 6 节），其余全部保留。
-- 第 8 节的 4 项保持现状：流式合成、现有场景识别、旧句接替方式、7 个引擎。
+- **保留全部现有功能。** 第 5.1 节逐项列出。设置项只删除“OCR 模型路径”和“DirectML 设备序号”两项：OCR 改用内置模型，设备跟随全局“硬件加速”（第 6 节）。其余设置全部保留。
+- 第 8 节的 4 项按确认结果处理：流式合成、现有场景识别、旧句接替方式、7 个引擎都不改。
 - 只删除三类代码：生产中没有调用方的死代码、没有绑定的 VM 成员、重复实现的同一逻辑。
 - 依赖方向为 View → ViewModel → Service → GameTask。
 
-用户可感知的行为变化只有以下几项，均在对应章节说明：
+用户可感知的行为变化：
 
 | 变化 | 原来 | 现在 | 章节 |
 | --- | --- | --- | --- |
 | 启停方式 | 手动点启动 / 停止 | 实时触发页开关，随截图器自动启停 | 4 |
 | 独立任务和脚本期间 | 照常配音 | 停止，结束后恢复 | 4 |
+| 暂停热键、战斗、传送、选 F 选项期间 | 照常识别 | 不处理帧，会话保留，结束后继续 | 4 |
 | 运行中修改设置 | 编辑被锁定 | 打开设置窗口时暂停配音，关闭后按新设置继续 | 3.5 |
-| OCR 设备 | 固定 DirectML，单独的设备序号 | 跟随“硬件加速”设置 | 6 |
-| OCR 模型 | 必须自备 `PP-OCRv6_rec_small.onnx` | 默认用内置模型，仍可指定 | 6 |
+| OCR 模型 | 必须自备 `PP-OCRv6_rec_small.onnx` | 使用内置 PP-OCRv6 识别模型，“OCR 模型路径”设置删除 | 6 |
+| OCR 设备 | 固定 DirectML，单独的设备序号 | 跟随“硬件加速”；“OCR 使用 CPU”默认开启，因此默认在 CPU 上识别 | 6 |
+| 硬件加速选 CUDA 或 OpenVINO | 配音拒绝启动 | 可以使用 | 6 |
 | 后端状态未知 | 只能重启 BetterGI | 卡片上出现“确认后端已重启”按钮 | 3.2 |
 
 非目标：不改 `TaskTriggerDispatcher` 的调度规则；不新增引擎；不接通旁白路由（第 9 节）。
@@ -104,20 +111,24 @@
 
 ### 3.2 入口：实时触发页的卡片
 
-放在“自动剧情”卡片之后。卡片作为独立 UserControl `QuestVoiceCard`，`DataContext` 绑定 `TriggerSettingsPageViewModel.QuestVoice`（注入的 `QuestVoiceCardViewModel`）。标题、说明、开关的结构与其他实时任务卡片相同，文本走 `i18n:T`。
+放在“自动剧情”之后、“自动邀约”之前。卡片是独立的 UserControl `QuestVoiceCard`，`DataContext` 绑定 `TriggerSettingsPageViewModel.QuestVoice`（注入的 `QuestVoiceCardViewModel`）。标题、说明、开关的结构与其他实时任务卡片相同，文本走 `i18n:T`。卡片的样式都定义在卡片自身的资源中，不依赖父页面资源。
 
 ```text
 ┌──────────────────────────────────────────────────────────────────┐
 │ 🔊 自动配音（实验性）                                       [ ● ] │
-│    识别剧情对白的人物和台词，用语音朗读；独立任务运行时暂停             │
+│    识别剧情对白的人物和台词，用语音朗读；截图器启动后自动开始，         │
+│    独立任务运行时暂停                                                │
 ├──────────────────────────────────────────────────────────────────┤
-│ 状态     ● 运行中 · 默认引擎 GPT-SoVITS · 角色声线已启用               │
-│          （后端状态未知时：红字说明 + [确认后端已重启]）                 │
+│ 状态     ● 等待对白                              [确认后端已重启]   │
+│          运行中 · 已绑定 · PID 12345              （仅后端状态未知时）│
+│          （错误说明、校验结果）                                       │
 ├──────────────────────────────────────────────────────────────────┤
 │ 进度     对话界面 ✓ ─ OCR ✓ ─ 角色 ✓ ─ 声线 ✓ ─ 合成 ● ─ 播放 ○       │
+│          当前阶段：正在请求 GPT-SoVITS 合成语音                        │
 ├──────────────────────────────────────────────────────────────────┤
-│ 当前     派蒙 · 声线「派蒙」 · 合成中                                  │
+│ 当前     派蒙 · 声线「派蒙」                                          │
 │          “前面好像有人，我们过去看看吧！”                               │
+│          对白已稳定 · 合成：合成中 · 播放：等待播放音频                  │
 ├──────────────────────────────────────────────────────────────────┤
 │ 最近事件  12:01:03 识别角色：派蒙                                      │
 │          12:01:02 OCR 识别成功                    （最多 8 条）        │
@@ -126,67 +137,68 @@
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-- 卡片标题行只放开关；展开后显示状态、6 节点进度、当前处理内容、最近事件和操作按钮，内容与现在的运行页一致。
-- 状态行增加两种情况：“等待启动截图器”（开关打开、截图器未启动）、“独立任务运行中，已暂停”。
-- 后端状态未知时显示“确认后端已重启”按钮，绑定现有的 `ConfirmBackendRestartedCommand`。
+- 标题行只放开关；展开后显示状态、6 节点进度、当前处理内容、最近事件和操作按钮，内容与原运行页一致。
+- 未运行时状态行说明原因：“已关闭”“等待启动截图器”“独立任务运行中，已暂停”“设置窗口打开中，已暂停”。
+- 后端状态未知时显示“确认后端已重启”按钮，绑定 `ConfirmBackendRestartedCommand`。会话运行中按钮不可用，需要先关闭开关；确认后按开关自动恢复。
 
 ### 3.3 设置窗口
 
-`QuestVoiceSettingsWindow`：`ui:FluentWindow`，Mica 背景，`SourceInitialized` 中调用 `WindowHelper.TryApplySystemBackdrop`，`Owner` 为主窗口，`ShowDialog` 打开（与 `MusicSettingsWindow` 相同）。窗口分 4 页。
+`QuestVoiceSettingsWindow`：`ui:FluentWindow`，Mica 背景，`SourceInitialized` 中调用 `WindowHelper.TryApplySystemBackdrop`，`Owner` 为主窗口，`ShowDialog` 打开（与 `MusicSettingsWindow` 相同）。窗口分 4 页，底部固定一行状态。
 
-**引擎与声线**：左侧列出 7 个引擎，★ 标记默认引擎；右侧是所选引擎的全部设置。默认引擎和正在编辑的引擎在同一页可见，解决 1.2 第 2 条。
+**引擎与声线**：左侧列出 7 个引擎，★ 标记默认引擎；右侧是所选引擎的全部设置，上方有“设为默认引擎”按钮。默认引擎和正在编辑的引擎在同一页可见，解决 1.2 第 2 条。
 
 ```text
 ┌ [引擎与声线]  角色  识别  高级 ─────────────────────────────────────────┐
-│ ┌────────────────────┐ │ GPT-SoVITS                      [设为默认引擎]  │
-│ │★ GPT-SoVITS         │ │ ── 服务 ───────────────────────────────────── │
-│ │  火山翻译            │ │ [ ] 使用远程实例                               │
-│ │  Windows 系统语音    │ │ 本地地址 [http://127.0.0.1:9880/ ]             │
-│ │  VOICEVOX           │ │ 远程地址 [                        ] [测试连接]   │
-│ │  vits-simple-api    │ │ [ ] 按句流式合成（实验性）                       │
-│ │  OpenAI 兼容语音     │ │ ── 声线 ───────────────────────────────────── │
-│ │  Google 翻译语音     │ │ [派蒙                ▼] [+ 新增] [删除]         │
-│ └────────────────────┘ │ 名称 [派蒙]   服务实例 [跟随当前实例 ▼]            │
+│ ┌────────────────────┐ │ ★ 为正式配音使用的默认引擎……       [设为默认引擎]  │
+│ │★ GPT-SoVITS         │ │ GPT-SoVITS                                     │
+│ │  火山翻译            │ │ ── 服务 ───────────────────────────────────── │
+│ │  Windows 系统语音    │ │ [ ] 使用远程实例（本地与远程地址分别保留）         │
+│ │  VOICEVOX           │ │ 服务地址 [http://127.0.0.1:9880/          ]     │
+│ │  vits-simple-api    │ │ [测试连接] 尚未检测连接                          │
+│ │  OpenAI 兼容语音     │ │ [ ] 按句流式合成与增量播放（实验性）               │
+│ │  Google 翻译语音     │ │ ── 声线 ───────────────────────────────────── │
+│ └────────────────────┘ │ [派蒙                ▼] [+ 新增] [删除]         │
+│                        │ 名称 [派蒙]   服务实例 [跟随当前实例 ▼]            │
 │                        │ GPT 权重     [D:\gsv\paimon.ckpt ] [浏览]       │
 │                        │ SoVITS 权重  [D:\gsv\paimon.pth  ] [浏览]       │
 │                        │ 参考音频     [D:\gsv\ref.wav     ] [浏览]       │
 │                        │ 参考台词     [前面好像有人……              ]       │
 │                        │ ── 试听 ───────────────────────────────────── │
-│                        │ [你好，旅行者。          ] [试听] [停止]          │
+│                        │ [你好，旅行者。     ] [试听选中声线] [停止试听]     │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
-- 其他 6 个引擎沿用现有子视图（`EngineConnectionView`、`EngineVoiceListView`、各引擎参数视图），布局统一为：服务 → 默认声音和参数 → 声线 → 试听。
+- GPT-SoVITS 的设置改为一个新的子视图 `GptSovitsSettingsView`；地址输入框按“使用远程实例”切换本地或远程地址，两者分别保存。
+- 其他 6 个引擎沿用现有子视图（`EngineConnectionView`、`EngineVoiceListView`、`EnginePreviewView` 及各引擎参数视图）。
 - “加入通用声线库”改名为“添加为声线”；“此引擎的通用声线”改名为“本引擎的声线”。
-- 状态文字合并为一行，放在窗口底部（见 3.5）。
 
 **角色**：
 
 ```text
 [✓] 启用角色声线      关闭时所有台词使用默认引擎的默认声音
 默认 NPC 声线  [系统语音 ▼]   有姓名但没有匹配到角色时使用
-旁白声线      [未设置   ▼]   （保留现有设置；旁白识别尚未接通，见第 9 节）
+旁白声线      [未设置   ▼]   旁白识别尚未接通：设置会保存，但暂不生效
 旅行者        游戏内昵称 [我的昵称          ]  声线 [派蒙 ▼]  一行一个
-角色          [搜索名称或别名…          ]                    [+ 添加角色]
+角色          [搜索名称、别名或识别纠错…   ]          [+ 添加角色] [删除]
 ┌──────────────┬────────────────────────────────────────────────────┐
 │ 派蒙          │ 正式名称  [派蒙                    ]                  │
 │ 钟离          │ 别名      [应急食品                ]                  │
 │ 旅行者（空）   │ 识别纠错  [派萌                    ]  OCR 常见误识别   │
 │              │ 声线      [派蒙                  ▼]                  │
-│              │ 角色 ID   [paimon] （其他规则引用它，一般不用改）         │
+│              │ 角色 ID   [paimon] （旅行者等规则引用它，一般不用改）     │
 └──────────────┴────────────────────────────────────────────────────┘
 ```
 
-- 列表显示正式名称，不再显示内部 ID；角色 ID 留在详情里。
-- “角色声线”改用与旅行者、默认 NPC 相同的声线选择控件。
+- 列表显示正式名称（`QuestVoiceManagementSpeaker.DisplayName`），不再显示内部 ID；角色 ID 留在详情里。
+- 角色、旅行者、默认 NPC、旁白都使用同一个声线选择控件 `QuestVoiceVoiceSelector`。
 
-**识别**：OCR 模型（留空使用内置模型，见第 6 节）、采样间隔（毫秒，50～500）。原“DirectML 设备序号”改为说明文字“推理设备跟随‘硬件加速’设置”。
+**识别**：说明文字“使用 BetterGI 内置的 PP-OCRv6 识别模型，不需要另外准备模型；推理设备跟随‘设置 → 硬件加速’，开启‘OCR 使用 CPU’时固定使用 CPU”；采样间隔（毫秒，50～500）。原“OCR 模型路径”和“DirectML 设备序号”删除（第 6 节）。
 
 **高级**：
 
-- 网络超时：连接、请求、合成三项，各自带标签，注明对所有引擎生效。
-- 找不到声线时：改用默认 NPC 声线 / 报错（原 Fallback / Fail）。
-- 角色目录文件：路径与“浏览”；文件操作收进一个“更多”菜单：重新加载、新建空目录、校验、导入、导出。“加载配置”和“放弃草稿并重新加载”合并为“重新加载”，有未保存修改时先确认放弃。
+- 网络超时：连接（1～120 秒）、请求（1～600 秒）、合成（1～600 秒）三项，各自带标签，注明对所有引擎生效。
+- 找不到角色声线时：改用默认 NPC 声线 / 报错（原 Fallback / Fail）。
+- 角色目录文件：路径与“浏览”；下方一行 5 个操作：重新加载、校验、导入…、导出…、新建空目录。“加载配置”和“放弃草稿并重新加载”合并为“重新加载”，有未保存修改时先确认放弃。
 
 ### 3.4 原有内容去向
 
@@ -196,22 +208,24 @@
 | 运行与日志 | 校验配置、当前状态、6 节点进度、当前处理内容、最近事件、打开日志、打开日志目录 | 卡片展开内容 |
 | 配置与映射 | 默认 TTS 引擎 | 设置窗口 · 引擎与声线（★ 设为默认引擎） |
 | 配置与映射 | 启用角色声线路由、旅行者、未知 NPC 与旁白、角色管理 | 设置窗口 · 角色 |
-| 配置与映射 | 缺失声线策略、6 个文件操作按钮、路由文件路径 | 设置窗口 · 高级 |
-| 配置与映射 | OCR 模型路径、采样间隔 | 设置窗口 · 识别 |
-| 配置与映射 | DirectML 设备序号 | 合并到全局“硬件加速”（第 6 节） |
+| 配置与映射 | 缺失声线策略、6 个文件操作按钮、路由文件路径 | 设置窗口 · 高级（文件操作合并为 5 个） |
+| 配置与映射 | 采样间隔 | 设置窗口 · 识别 |
+| 配置与映射 | OCR 模型路径 | 删除，改用内置模型（第 6 节） |
+| 配置与映射 | DirectML 设备序号 | 删除，跟随全局“硬件加速”（第 6 节） |
 | GPT-SoVITS 配置 | 服务连接、测试连接、流式开关、声线库与试听 | 设置窗口 · 引擎与声线 · GPT-SoVITS |
 | GPT-SoVITS 配置 | 三项超时 | 设置窗口 · 高级（这三项本来就对所有引擎生效） |
 | 其他引擎设置 | 6 个引擎的连接、声音、参数、加入声线、本引擎声线、试听 | 设置窗口 · 引擎与声线 |
 | 未绑定 | 确认后端已重启 | 卡片状态行（后端状态未知时） |
 
-删除的界面只有导航“自动配音”及 4 个子页面本身：`QuestVoicePage`、`QuestVoiceSettingsPage`、`QuestVoiceGptSettingsPage`、`QuestVoiceOtherEnginesPage`。`QuestVoiceManagementView`、`QuestVoiceVoiceSelector` 和 `View/Pages/QuestVoiceSettings/*` 移入窗口继续使用。
+删除的界面只有导航“自动配音”及 4 个子页面：`QuestVoicePage`、`QuestVoiceSettingsPage`、`QuestVoiceGptSettingsPage`、`QuestVoiceOtherEnginesPage`。`QuestVoiceManagementView`、`QuestVoiceVoiceSelector` 和 `View/Pages/QuestVoiceSettings/*` 移入窗口继续使用。
 
 ### 3.5 保存与生效
 
-- 保存方式不变：普通设置由 `AllConfig` 自动保存；角色目录仍是 `routing.json`，保留“校验通过才保存”、文件冲突检测、`.bak` 备份和退出前保存。
-- 设置窗口打开时暂停配音（停止会话，开关保持打开），关闭后按新设置重新启动。替代原来的“运行中锁定编辑”：试听不再要求先停止配音，`IsConfigEditable` 及其在各 VM 中的检查可以去掉，修改关闭窗口后立即生效。
-- 窗口底部固定一行状态，合并原来的 `SaveStatus`、`EditStatus`、`ConnectionStatus`、`StatusMessage`：“已保存 · 关闭窗口后生效”或“有未保存修改：{原因}”。
-- 状态由 `QuestVoiceSettingsViewModel` 统一生成，子 VM 只上报事件。
+- 保存方式不变：普通设置由 `AllConfig` 自动保存；角色目录仍是 `routing.json`，保留“校验通过才保存”、文件冲突检测、`.bak` 备份和退出前保存（`QuestVoiceSettingsExitGuard`）。
+- 设置窗口打开时暂停配音（`QuestVoiceService.BeginSettingsEdit()`，停止会话，开关保持打开）。窗口关闭后先保存角色目录草稿（`FlushSettingsAsync`），再按新设置重新启动；草稿保存失败时卡片显示原因。试听不再要求先停止配音。
+- `IsConfigEditable` 保留：试听或停止排空期间仍暂时冻结受保护的编辑。
+- `QuestVoiceSettingsViewModel` 保持单例：关闭窗口不丢弃未保存的草稿，退出守卫也通过它排空草稿。
+- 窗口底部固定显示角色目录的保存状态（`SaveStatus` · `EditStatus`）、命令错误，以及“修改自动保存，窗口打开期间配音暂停”的说明。试听结果和连接测试结果仍显示在各自按钮旁边。
 
 ## 4. 放入实时任务（问题 2）
 
@@ -225,71 +239,77 @@
 | 独立任务或脚本结束 | 按开关恢复 | 开关打开时重新启动会话 |
 | 暂停（暂停热键、战斗、传送、选 F 选项） | 不调用 `OnCapture`，状态保留 | 丢弃帧，会话保留 |
 | 截图器停止 | 丢弃实例 | 停止会话 |
-| 游戏不在前台 | 只运行可后台运行的触发器 | 跟随调度器：调度器截图时照常处理，与现在一致 |
+| 游戏不在前台 | 只运行可后台运行的触发器 | 跟随调度器：调度器截图时照常处理，与优化前一致 |
 | 设置窗口打开 | — | 停止会话，关闭后恢复 |
+| 应用退出 | — | 中止采样和后端请求，不再启动新会话 |
 
 ### 4.2 实现方式
 
 | | A. 注册为 `ITaskTrigger` | B. 订阅调度器状态（采用） |
 | --- | --- | --- |
 | 生命周期 | 由调度器决定 | 与 A 相同，见 4.1 |
-| 取帧 | `OnCapture` | `TaskTriggerDispatcher.FrameCaptured` 旁路，与现在相同 |
+| 取帧 | `OnCapture` | `TaskTriggerDispatcher.FrameCaptured` 旁路，与优化前相同 |
 | 异步启停 | `OnEnabled` / `OnDisabled` 在 Tick 中同步执行，不能等待；校验、加载模型、排空 GPT 请求都要另起任务 | Service 中一个串行方法统一处理 |
 | 长对话中的帧 | 受“UI 变化后 30 秒内才全部执行”规则限制：声明 `Talk` 时完全依赖 `DisabledUiButton` 模板命中，6 种布局是否都有这个按钮未核实 | 不受影响 |
 | 依赖注入 | `GameTaskManager.CreateTriggers(runtime, config)` 拿不到 `QuestVoiceService`，要改签名或用服务定位 | 不需要 |
 | 截图器停止 | `Dispatcher.Stop` 不回调 `OnDisabled`（realtime-trigger.md 4.4 规则 6），仍要订阅 `GameRuntimeService.Stopped` | 订阅 `Stopped` |
 | 改动调度器 | 需要 | 不需要，`TaskModeChanged` 和 `IsInTask` 已公开，`GuideWindowService` 已经这样用 |
 
-采用 B：生命周期与触发器一致，同时避开 A 的 30 秒规则和异步问题，比现在的手动启停更简单。
+采用 B：生命周期与触发器一致，同时避开 A 的 30 秒规则和异步问题，比原来的手动启停更简单。
 
 ### 4.3 启停规则
 
 ```text
-应运行 = Config.Enabled
+应运行 = 应用未退出
+      && Config.Enabled
       && GameRuntimeService.Current 存在且未停止
       && !TaskTriggerDispatcher.IsInTask
-      && 设置窗口未打开
+      && 没有打开的设置窗口
 ```
 
-触发检查的事件：`QuestVoiceConfig.Enabled` 变化、`GameRuntimeService.Started` / `Stopped`、`TaskTriggerDispatcher.TaskModeChanged`、设置窗口打开或关闭、应用退出。暂停计数 `RunnerContext.Instance.AutoPickTriggerStopCount > 0` 时，取帧回调直接返回。
+触发检查的事件：`QuestVoiceConfig.Enabled` 变化、`GameRuntimeService.Started` / `Stopped`、`TaskTriggerDispatcher.TaskModeChanged`、设置窗口打开或关闭、确认后端已重启。应用退出时调用 `StopAsync(applicationExit: true)`。暂停计数 `RunnerContext.Instance.AutoPickTriggerStopCount > 0` 时，取帧回调直接返回。
 
 ```csharp
 /// <summary>按期望状态串行启停会话；等待期间状态再次变化则继续处理。</summary>
 private async Task ApplyDesiredStateAsync()
 {
-    await _operations.WaitAsync();
     try
     {
-        while (ShouldRun != _controller.IsRunning)
+        await _operations.WaitAsync().ConfigureAwait(false);
+        try
         {
-            if (_controller.IsRunning)
+            while (ShouldRun != _controller.IsRunning)
             {
-                await StopCoreAsync();
+                if (_controller.IsRunning)
+                {
+                    await FinishStopAsync(BeginStop(applicationExit: false)).ConfigureAwait(false);
+                }
+                else if (!await TryStartCoreAsync().ConfigureAwait(false))
+                {
+                    // 启动失败只显示错误，等下一次事件再试，避免反复重试。
+                    break;
+                }
             }
-            else if (!await TryStartCoreAsync())
-            {
-                // 启动失败只显示错误，等下一次事件再试，避免反复重试
-                break;
-            }
+            UpdateIdleStatus();
         }
+        finally { _operations.Release(); }
     }
-    finally
-    {
-        _operations.Release();
-    }
+    catch (Exception exception) { _logger.LogError(exception, "QuestVoice 启停处理失败"); }
 }
 ```
 
-- 现有 `StartAsync` / `StopAsync` 的主体（冻结配置、创建会话、订阅取帧、排空 GPT、更新状态）保留，改为私有的 `TryStartCoreAsync` / `StopCoreAsync`。
+- 原 `StartAsync` / `StopAsync` 的主体（冻结配置、创建会话、订阅取帧、排空 GPT、更新状态）保留，拆为私有的 `TryStartCoreAsync`、`BeginStop`、`FinishStopAsync`。`BeginStop` 在拿到 `_operations` 之前就拒绝新帧并取消启动和试听。
+- `RequestApply()` 在不应运行时先取消正在进行的启动，再排入 `ApplyDesiredStateAsync()`。
 - 删除：启动和停止按钮及命令、“请先启动截图”前置检查。
-- 新增：`QuestVoiceConfig.Enabled`；上面的方法和 4 个事件订阅；卡片 XAML。
+- 新增：`QuestVoiceConfig.Enabled`；上面的方法和事件订阅；`BeginSettingsEdit()` 暂停租约；`UpdateIdleStatus()` 未运行原因；卡片 XAML。
+- `QuestVoiceService` 在 `App.xaml.cs` 中于 `ServerTimeHelper.Initialize` 之后通过 `GetRequiredService` 创建，保证开关已打开时截图器一启动就能开始。
 
 ## 5. 结构优化（问题 3）
 
 ### 5.1 保留的功能
 
 - 场景识别：6 种对白布局的像素识别、墨迹签名稳定判定、姓名金色墨迹隔离。
-- 自带的识别预处理和 CTC 解码；只改会话的创建方式（第 6 节）。
+- 识别预处理（裁剪、墨迹隔离、按行切分）；识别本身改用内置 OCR（第 6 节）。
 - 对白跟踪：定向复核、正文清空判定话轮、同一句不重复朗读、离开对话停止播放、新句音频准备好后再接替旧句。
 - 7 个引擎，本地 / 远程两套地址；不同角色可用不同引擎（`RoutedTtsProvider`）。
 - GPT-SoVITS：串行切换权重、已发出的请求排空、后端状态未知保护、流式合成与增量播放。
@@ -297,34 +317,39 @@ private async Task ApplyDesiredStateAsync()
 - 运行信息：6 节点进度、当前处理内容、最近事件、悬浮摘要、日志分流、Debug 指标。
 - 试听：引擎默认声音、声线草稿。
 
-### 5.2 目标分层
+### 5.2 分层
 
 ```mermaid
 flowchart LR
     subgraph View
         Card["QuestVoiceCard<br/>实时触发页卡片"]
-        Win["QuestVoiceSettingsWindow<br/>沿用现有子视图"]
+        Win["QuestVoiceSettingsWindow<br/>GptSovitsSettingsView + 沿用的子视图"]
     end
     subgraph ViewModel
         CardVm["QuestVoiceCardViewModel"]
-        WinVm["QuestVoiceSettingsViewModel<br/>QuestVoiceManagementViewModel<br/>EngineSettingsViewModel × 7"]
+        WinVm["QuestVoiceSettingsViewModel<br/>QuestVoiceManagementViewModel<br/>GptSovitsSettingsViewModel + EngineSettingsViewModel × 6"]
     end
     subgraph Service
         Svc["QuestVoiceService<br/>启停 · 取帧 · 试听 · 声音列表 · 连接测试"]
-        Proj["QuestVoiceStatusProjector<br/>事件 → 状态快照（唯一一份过期判定）"]
+        Status["QuestVoiceService.Status.cs<br/>事件 → 状态快照"]
     end
     subgraph GameTask_QuestVoice["GameTask/QuestVoice"]
         Ctrl["QuestVoiceSessionController<br/>会话所有权 · 同时一帧"]
         Factory["QuestVoiceSessionFactory<br/>校验 · 组装"]
         Core["FrameSession / VoiceSession<br/>场景 · OCR · 路由 · TTS · 播放"]
+        Ocr["QuestVoiceOcrEngine → 内置 Rec"]
         Exit["DialogueExitDetector"]
+        Tracker["DialogueVersionTracker<br/>唯一一份过期判定"]
+        Overlay["QuestVoiceOverlayPresenter"]
         Store["RoutingCatalogStore"]
     end
     Card --> CardVm --> Svc
     Win --> WinVm --> Svc
     WinVm --> Store
-    Svc --> Proj
-    Svc --> Ctrl --> Factory --> Core
+    Svc --> Status --> Tracker
+    Overlay --> Tracker
+    Svc --> Overlay
+    Svc --> Ctrl --> Factory --> Core --> Ocr
     Svc --> Exit
 ```
 
@@ -332,26 +357,27 @@ flowchart LR
 
 - GameTask 不依赖 Service 和 ViewModel。
 - Service 不做图像识别：`HasConfirmedExitEvidence` 移到 `GameTask/QuestVoice/DialogueExitDetector`。
-- ViewModel 不直接发 HTTP，也不直接读写文件：声音列表、连接测试、试听都通过 Service；角色目录通过 DI 注入的 `RoutingCatalogStore`，文件存在检查和 SHA 计算移进 Store。
+- ViewModel 不直接发 HTTP：声音列表、连接测试、试听都通过 `QuestVoiceService`（`GetVoicesAsync`、`ProbeAsync`、`TestVoiceAsync`）。
+- ViewModel 不直接读写角色目录文件：`RoutingCatalogStore` 由 DI 注入，文件存在检查和 SHA 计算移进 Store（`Exists`、`ReadSha256Async`）。
 
-### 5.3 优化清单
+### 5.3 优化清单与实施结果
 
-| # | 项目 | 现状 | 优化 | 行为变化 | 约减行数 |
-| --- | --- | --- | --- | --- | ---: |
-| 1 | 死代码 | 见 1.3 第 1 行 | 删除显式模板 OCR 路径（含 `SceneProfileLoader`、`ImageProcessingContracts`、`OcrSettings.DefaultTemplatePath` 和 `dialogue-one-line.xml` 的部署）、`ContinuousSettingsLoader.Parse`、`VoiceErrors.Owner` 与 `VoiceErrorOwner`、`ConfigurationLoadResult`、3 个从不赋值的 `*ConfigurationError` 字段及其读取分支 | 无 | 270 |
-| 2 | 未绑定的 VM 成员 | 见 1.3 第 2 行 | 删除；`ConfirmBackendRestartedCommand` 改为绑定到卡片 | 恢复一个缺失的入口 | 350 |
-| 3 | VM 重复逻辑 | 见 1.3 第 3 行 | 声音列表、试听、新增 / 删除声线、URL 校验、文件选择各保留一份；保存状态由设置窗口 VM 统一生成；`EnsureLoadedAsync` 只在窗口打开时调用一次 | 无 | 300 |
-| 4 | 过期判定写了 3 遍 | 见 1.3 第 4 行 | 抽出 `QuestVoiceStatusProjector`：输入核心事件，只做一次过期判定，输出状态快照；页面状态和悬浮摘要都从快照生成 | 无 | 300 |
-| 5 | 启停防护重复 | 见 1.3 第 5 行 | 启停只由 Service 的 `_operations` 串行（4.3），删除 Controller 的 `_stopVersion`；“同时一帧”只由 Controller 负责，BMP 编码移进 `TryObserve`，删除 Service 的 `_encoding` | 无 | 40 |
-| 6 | 帧多余复制 | 见 1.3 第 6 行 | 编码结果的所有权直接交给 `ContinuousFrameSnapshot`，去掉 Controller 和 Snapshot 两次 `ToArray`；`Bytes` 返回只读视图，不再每次克隆 | 无，每帧少 3～4 次整帧复制（每次约 11 MB） | 5 |
-| 7 | 路由每句读盘 | 见 1.3 第 7 行 | 会话启动时加载并校验一次目录，`VoiceRoutingService` 和 `MatchesCurrentDialogueAsync` 只读内存 | 运行中外部修改 `routing.json` 改为下次启动生效，与用户文档一致 | 10 |
-| 8 | 跨层 | 见 1.3 第 8 行 | 按 5.2 的约束移动；`ExtraConfig` 不再写配置，字典缺省值在配置加载后补齐一次 | 无 | 30 |
-| 9 | 配置两种存法 | 见 1.3 第 9 行 | GPT-SoVITS 和火山翻译的参数并入引擎字典，与其他 5 个引擎相同；合并 `CreateTtsSettings` / `CreateProviderSettings` | 无（功能未发布，不需迁移） | 60 |
-| 10 | 单实现接口 | 见 1.3 第 10 行 | 删除 6 个既无第二实现又无测试替身的接口，其余 12 个保留作测试替身 | 无 | 50 |
-| 11 | OCR 会话 | 见第 6 节 | 会话改由 `BgiOnnxFactory` 创建；删除运行库 DML 检查和 profiling 中的 DML 校验 | 见第 6 节 | 45 |
-| 12 | 界面 | 4 个页面 | 卡片 + 设置窗口，子视图复用 | 见第 3 节 | 150 |
+| # | 项目 | 优化 | 结果 |
+| --- | --- | --- | --- |
+| 1 | 死代码 | 删除显式模板 OCR 路径（`ImageOcrService.Processing.cs`、`SceneProfileLoader`、`Core/Ocr/ImageProcessingContracts.cs`、`dialogue-one-line.xml` 及其部署）、`ContinuousSettingsLoader.Parse`、`VoiceErrors.cs`（含 `Owner` 与 `VoiceErrorOwner`）、`ConfigurationLoadResult`、`WindowSettings`、3 个从不赋值的 `*ConfigurationError` 字段及其读取分支 | 已完成 |
+| 2 | 未绑定的 VM 成员 | 删除 1.3 第 2 行所列成员；`ConfirmBackendRestartedCommand` 绑定到卡片 | 已完成，恢复了一个缺失的入口 |
+| 3 | VM 重复逻辑 | URL 校验只保留 `EngineSettingsViewModel.IsValidUrl`；文件选择只保留 `QuestVoiceSettingsViewModel.PickFile`；声音列表和试听都经 Service；删除 `PresetVoices` 整条链和 `OtherEnginesSettingsViewModel`；`EnsureLoadedAsync` 在打开窗口时调用一次（进入 GPT-SoVITS 时的调用是幂等的） | 已完成。保存状态合并到窗口底部；试听和连接状态仍在各自按钮旁 |
+| 4 | 过期判定写了 3 遍 | 抽出 `DialogueVersionTracker`，状态投影和悬浮摘要共用；状态投影移到 partial 文件 `QuestVoiceService.Status.cs` | 已完成。没有另建 `QuestVoiceStatusProjector` 类：投影与 Service 的状态和锁紧密相关，拆成独立类要多传一套状态，partial 文件已能分开职责 |
+| 5 | 启停防护重复 | 启停只由 Service 的 `_operations` 串行（4.3），删除 Controller 的 `_stopVersion` | 部分完成。Service 的 `_encoding` 保留：它限制的是 Service 后台任务中的克隆、BMP 编码和离开对话检测这一段，Controller 的 `_observing` 只覆盖 `TryObserve` 之后。把这一段移进 Controller 收益小，本次不做 |
+| 6 | 帧多余复制 | 编码结果直接交给 Controller，`TryObserve(byte[] owned, …)` 不再复制；`ContinuousFrameSnapshot.Bytes` 不再克隆 | 已完成，每帧少 3～4 次整帧复制（每次约 11 MB） |
+| 7 | 路由每句读盘 | `VoiceRoutingService.LoadOnceAsync` 在同一会话内只读取并校验一次目录；读取失败或取消不缓存。`MatchesCurrentDialogueAsync` 走同一缓存 | 已完成。运行中外部修改 `routing.json` 改为下次启动生效，与用户文档一致 |
+| 8 | 跨层 | 按 5.2 的约束移动；`ExtraConfig` 改为只读，引擎字典的缺省值由 `QuestVoiceConfig.OnExtraProvidersChanged` 在加载后补齐 | 已完成 |
+| 9 | 配置两种存法 | GPT-SoVITS 和火山翻译的参数并入引擎字典；合并 `CreateTtsSettings` / `CreateProviderSettings` | **未实施**，移到第 9 节。它改动持久化字段，并牵涉 4 个测试文件，收益约 60 行，本次不做 |
+| 10 | 单实现接口 | 删除 `ISceneSelector`、`ISceneProfileLoader`、`ISpeakerRouter`、`IReferenceAudioSelector`、`IImageOcrService`、`IImageProcessingService`；其余 12 个保留作测试替身 | 已完成 |
+| 11 | OCR | 改用内置 `Rec`（第 6 节）；删除 `DirectMlOcrEngine`、`DirectMlOcrSession`、`IDirectMlOcrSession`、`OcrExecutionProfile`、`CtcDecoder`、`ImageSnapshot`、`ImageOcrService.Frames.cs`（连续帧识别并入 `ImageOcrService` 和 `ContinuousFrameRecognizer`）、工厂中的运行库 DML 检查；删除 `OcrModelPath`、`DeviceId` 两项配置 | 已完成 |
+| 12 | 界面 | 卡片 + 设置窗口，子视图复用；删除 4 个页面和导航项 | 已完成 |
 
-合计约减少 1,600 行，总量从 11,821 行降到约 10,200 行。主体算法、并发模型（两个会话的泵、版本号、观察租约）和 7 个 Provider 不动。
+主体算法、并发模型（两个会话的泵、版本号、观察租约）和 7 个 Provider 没有改动。
 
 保留并在设计中注明的两处：
 
@@ -360,55 +386,55 @@ flowchart LR
 
 ## 6. OCR（问题 4）
 
-### 6.1 现在用的是什么
+### 6.1 优化前用的是什么
 
-是的，配音的 OCR 用的就是 ONNX Runtime（ORT），和 BetterGI 其他模型是同一个运行库。区别只在会话怎么创建、模型从哪来。
+配音的 OCR 用的就是 ONNX Runtime（ORT），和 BetterGI 其他模型是同一个运行库。区别只在会话怎么创建、模型从哪来。
 
-| | 自动配音 OCR（现在） | BetterGI 全局 OCR |
+| | 自动配音 OCR（优化前） | BetterGI 内置 OCR |
 | --- | --- | --- |
 | 运行库 | ONNX Runtime 1.21.0（NuGet `Microsoft.ML.OnnxRuntime.DirectML`，自带 CPU 和 DirectML 两种执行方式），进程里只有这一份 `onnxruntime.dll` | 同左 |
 | 会话创建 | `DirectMlOcrSession` 自己 `new SessionOptions()`，只调用 `AppendExecutionProvider_DML(DeviceId)` | `BgiOnnxFactory` 按“硬件加速”设置选择 CPU / DirectML / CUDA / OpenVINO；“OCR 使用 CPU”开启时 OCR 固定走 CPU |
 | 模型 | PP-OCRv6 small 识别模型（ONNX），默认路径 `User/QuestVoice/ocr/PP-OCRv6_rec_small.onnx`。仓库和发行包都不带，用户要自己放 | 内置 PP-OCR V4 / V5 / V6，其中 V6 识别模型为 `Assets/Model/PaddleOCR/Rec/V6/PP-OCRv6_small_rec_infer/slim.onnx`（约 21 MB） |
 | 字典 | 18,708 字，写在模型文件元数据 `character` 里 | 同一套 18,708 字，放在模型同目录的 `inference.yml` |
 | 文字检测 | 不用检测模型。6 种布局的场景识别已经算出姓名和每行正文的位置，逐行送进识别模型 | 检测模型加识别模型 |
-| 输入 | `x: N×3×48×W`，高 48，宽度可变 | 同一系列模型，格式相同 |
+| 解码 | 自带 CTC 解码；置信度为每个输出字符最大概率的平均值 | `Rec` 内置 CTC 解码，置信度算法相同 |
 
 ### 6.2 为什么说“强制 DML”
 
 - `DirectMlOcrSession` 只加了 DirectML 执行方式，初始化失败直接报错，错误文本写明“没有 CPU 回退”。
 - 首次推理后读取 ORT 的 profiling 记录，如果没有任何算子跑在 DirectML 上就报错（`OcrExecutionProfile`：“拒绝将全 CPU 执行报告为 DirectML”）。
-- `QuestVoiceSessionFactory.cs:263` 检查进程里的运行库是否带 `DmlExecutionProvider`，没有就拒绝启动。
+- `QuestVoiceSessionFactory` 检查进程里的运行库是否带 `DmlExecutionProvider`，没有就拒绝启动。
 
 代码、测试和用户文档都没有给出必须用 DirectML 的理由。文件头注明移植自外部 QuestVoice 项目，原项目大概率是独立程序，自己决定用哪种设备。
 
 进程只能加载一个 `onnxruntime.dll` 是真实限制：`OnnxRuntimeLoader` 按“硬件加速”设置加载一次，之后不能更换。用户选 CUDA 或 OpenVINO 时加载的运行库不含 DirectML，所以配音只能报错。这条限制说明“不能为配音另换运行库”，并不要求“配音必须用 DirectML”。
 
-现状带来两个问题：
+优化前的两个问题：
 
 - 选 CPU 的用户，内置运行库仍带 DirectML，检查能通过，配音会绕过用户的选择用 GPU。
 - 选 CUDA 或 OpenVINO 的用户完全不能用配音。
 
-### 6.3 方案
+### 6.3 实施方案
 
-保留场景识别、预处理和 CTC 解码，只改会话来源和模型默认值：
+场景识别和预处理保留，识别本身直接调用 BetterGI 内置 OCR 的识别组件：
 
-1. `DirectMlOcrSession` 改名为 `QuestVoiceOcrSession`，会话改由 `BgiOnnxFactory.CreateInferenceSession(model, ocr: true)` 创建，跟随“硬件加速”和“OCR 使用 CPU”设置。`DirectMlOcrEngine` 的串行、冻结、失败废弃逻辑不变，同步改名为 `QuestVoiceOcrEngine`。
-2. “OCR 模型路径”默认留空，表示使用内置的 V6 识别模型；用户仍可指定自己的 PP-OCRv6 识别模型。
-3. 字典先读模型元数据 `character`，没有就读模型同目录的 `inference.yml`。字数（18,708）、输入高度（48）、输出维度的校验保留。输入名实施时核实：内置模型若不叫 `x`，改为读取 `InputNames[0]`。
-4. 删除 `Factory.cs:263` 的运行库检查；`OcrExecutionProfile` 改为只记录实际使用的执行方式，不再拒绝 CPU。
-5. “DirectML 设备序号”合并到全局“硬件加速”的设备选择（`BgiOnnxFactory` 使用 `Runtime.Device.Index`）。
+1. `QuestVoiceOcrEngine` 包装 `BetterGenshinImpact.Core.Recognition.OCR.Paddle.Rec`，参数为 `BgiOnnxModel.PaddleOcrRecV6`、`PaddleOcrService.PaddleOcrModelType.V6.RecLabel()`、`OcrVersionConfig.PpOcrV6`，会话来自 `BgiOnnxFactory.ForCurrentRuntime()`。推理设备因此跟随“硬件加速”和“OCR 使用 CPU”设置，诊断显示 `Runtime.OcrDescription`。
+2. 每轮配音会话独占一个 `Rec` 实例，首次识别时才创建，与全局 OCR 不共用推理锁。`QuestVoiceOcrEngine` 保留原来的串行识别、关闭标记和释放前排空。
+3. `ImagePreprocessor` 改为输出 BGR `Mat` 行图，交给 `Rec.Run`，由 `Rec` 统一缩放到高 48。`IOcrEngine.RecognizeAsync` 的入参改为 `IReadOnlyList<Mat>`。
+4. 删除“OCR 模型路径”和“DirectML 设备序号”两项设置、工厂中的运行库检查、profiling 校验、自带 CTC 解码和张量路径。模型初始化或推理失败时转换为 `OcrException`，界面据此提示检查 OCR。
+5. `OcrSettings` 只保留姓名 0.9、正文 0.8 两个置信度阈值。
 
 ### 6.4 风险
 
-- **CPU 耗时**：“OCR 使用 CPU”默认开启，配音 OCR 默认会从 GPU 改到 CPU。每个稳定画面识别 2～4 行，另有每 2 秒一次复查，需要实测单次耗时；如偏慢，提示用户关闭“OCR 使用 CPU”。
-- **置信度阈值**：内置 `slim.onnx` 与 `PP-OCRv6_rec_small.onnx` 是否为同一份权重未核实。姓名 0.9、正文 0.8 的阈值需在游戏内确认。
+- **CPU 耗时**：“OCR 使用 CPU”默认开启，配音 OCR 默认从 GPU 改到 CPU。每个稳定画面识别 2～4 行，另有每 2 秒一次复查，需要实测单次耗时；如偏慢，提示用户关闭“OCR 使用 CPU”。
+- **置信度阈值**：内置 `slim.onnx` 与原先使用的 `PP-OCRv6_rec_small.onnx` 是否为同一份权重未核实。姓名 0.9、正文 0.8 的阈值需在游戏内确认。
 - **OpenVINO**：宽度可变的输入是否触发重编译、性能如何，未验证。CPU、DirectML、CUDA 没有问题。
 
 ## 7. 实施与验收
 
-### 7.1 已删除的测试（本次已执行）
+### 7.1 已删除的测试（第 2 版执行）
 
-UI（View / ViewModel）测试不持久化；只测试生产中无调用方的死代码的用例没有价值。共删除 5 个文件和另外 4 个用例，1,467 行。解决方案编译通过，剩余 452 个用例全部通过。
+UI（View / ViewModel）测试不持久化；只测试生产中无调用方的死代码的用例没有价值。共删除 5 个文件和另外 4 个用例，1,467 行。
 
 | 文件或用例 | 原因 |
 | --- | --- |
@@ -421,24 +447,22 @@ UI（View / ViewModel）测试不持久化；只测试生产中无调用方的�
 | `ContinuousFrameGateTests.StrictSettingsRejectMalformed`、`StrictSettingsAcceptCompleteInputAndRejectExtraOrDuplicateFields` | 只测 `ContinuousSettingsLoader.Parse`，生产无调用方；`Validate` 的用例保留 |
 | `WavAndReferenceTests.Every_error_code_requires_an_explicit_owner` | 只测 `VoiceErrors.Owner`，生产无调用方 |
 
-后续规则：
+规则：
 
 - 界面改动用编译、窗口和卡片实例化检查、人工验收验证，不写持久化的 UI 测试。
 - 删除死代码时同步删除只测它的用例；行为不变的重构只调整测试中的构造方式。
 
 ### 7.2 实施步骤
 
-每步可以单独编译和提交。
-
-| 步骤 | 内容 | 验证 |
+| 步骤 | 内容 | 状态 |
 | --- | --- | --- |
-| 1 | 5.3 第 1、2、10 项：死代码、未绑定成员、无替身的单实现接口 | 编译；单元测试 |
-| 2 | 第 6 节：OCR 会话与模型 | 编译；单元测试；7.3 中硬件加速一项 |
-| 3 | 第 4 节与 5.3 第 4、5、6 项：启停周期、状态投影、启停与帧路径去重 | 编译；单元测试 |
-| 4 | 5.3 第 3、7、8、9 项：VM 去重、路由加载一次、跨层修正、配置合并 | 编译；单元测试 |
-| 5 | 第 3 节：卡片、设置窗口，删除 4 个页面和导航项 | 编译；确认卡片和窗口能实例化、布局不挤缩；卡片只引用自身或 `App.xaml` 已合并的资源（如 `FaFontIconStyle`）；只读绑定均为 `OneWay` |
-| 6 | 更新 `Docs/technical/questvoice.md` | 文档与界面一致 |
-| 7 | 7.3 游戏内验收 | 由维护者执行 |
+| 1 | 5.3 第 1、2、10 项：死代码、未绑定成员、无替身的单实现接口 | 已完成 |
+| 2 | 第 6 节：OCR 改用内置 `Rec` | 已完成 |
+| 3 | 第 4 节与 5.3 第 4、5、6 项：启停周期、状态投影、启停与帧路径去重 | 已完成（第 5 项部分完成） |
+| 4 | 5.3 第 3、7、8 项：VM 去重、路由加载一次、跨层修正 | 已完成；第 9 项未实施 |
+| 5 | 第 3 节：卡片、设置窗口，删除 4 个页面和导航项 | 已完成 |
+| 6 | 更新 `Docs/technical/questvoice.md` | 已完成 |
+| 7 | 7.3 游戏内验收 | 待维护者执行 |
 
 ### 7.3 游戏内验收
 
@@ -449,23 +473,40 @@ UI（View / ViewModel）测试不持久化；只测试生产中无调用方的�
 | 暂停热键、战斗、传送期间 | 不识别，结束后继续 |
 | 截图器停止、游戏退出 | 卡片显示“等待启动截图器”，没有残留播放 |
 | 打开设置窗口 | 暂停，可以试听；关闭后按新设置继续 |
+| 设置窗口中留下无效的角色目录草稿后关闭 | 卡片提示角色目录有未保存的修改 |
 | 退出 BetterGI 时正在试听 GPT-SoVITS | 试听请求被中止，程序正常退出 |
 | 普通停止时 GPT-SoVITS 正在合成 | 等待已发出的请求结束再停止 |
-| 硬件加速为 CPU、DirectML、CUDA、OpenVINO | 都能识别；选 CPU 时不占用 GPU |
+| 后端状态未知后关闭开关、重启后端、点击“确认后端已重启”、打开开关 | 正常恢复配音，不需要重启 BetterGI |
+| 硬件加速为 CPU、DirectML、CUDA、OpenVINO | 都能识别；选 CPU 或开启“OCR 使用 CPU”时不占用 GPU |
 | 不放置任何 OCR 模型 | 使用内置模型正常识别 |
+| 姓名、正文的识别置信度 | 阈值 0.9 / 0.8 下不出现明显漏识别或误识别 |
 | 现有对白场景（单行、多行、称号、注音、快速连点、选项） | 与优化前行为一致 |
+| 设置窗口各页、深浅色主题、窗口缩小到最小尺寸 | 内容不挤缩，控件状态颜色正常 |
+
+### 7.4 实施结果与验证
+
+- 编译：`dotnet msbuild BetterGenshinImpact.sln -restore -p:Configuration=Debug -nologo -tl:off -clp:ErrorsOnly` 退出码 0。
+- 单元测试：`QuestVoiceTests` 共 442 个用例全部通过。第 2 版后为 452 个；本次删除 `DirectMlOcrEngineTests.cs`（只测已删除的自带会话）和 `OcrAlgorithmTests` 中 2 个自带 CTC 解码用例，路由配置错误的用例收缩为 `No_routing_uses_configured_voice`（对应的 `*ConfigurationError` 字段已删除）。
+- 代码规模见 1.1 节：生产代码减少 948 行，比第 2 版估计的约 1,600 行少。原因是第 9 项未实施、新增的卡片、设置窗口和 GPT-SoVITS 子视图（含 VM）共 765 行、状态投影保留在 Service 的 partial 文件中。
+- 未运行主程序，界面和游戏内行为待 7.3 验收。
 
 ## 8. 已确认事项
 
-以下 4 项保持现状，不做改动：
+1. **流式合成**：保留，不移除。记为可能的后续优化点（第 9 节）。
+2. **识别方式**：不改，保留现有 6 种布局的场景识别和识别预处理；OCR 直接使用 BetterGI 内置 OCR（第 6 节）。
+3. **新旧句接替**：不改，原方式合理：旧句继续播放，直到新句音频准备好再接替。
+4. **引擎**：7 个引擎全部保留，不移除。
 
-1. **流式合成**：保留。
-2. **识别方式**：保留现有 6 种布局的场景识别和自带的识别预处理；OCR 只改会话来源和默认模型（第 6 节）。
-3. **新旧句接替**：保留现状，旧句继续播放，直到新句音频准备好再接替。
-4. **引擎**：7 个引擎全部保留。
+## 9. 不在本次范围与后续优化点
 
-## 9. 不在本次范围
+不在本次范围：
 
 - 接通旁白路由：旁白声线可以设置，但实时链路从未传入旁白上下文。本次保留设置并在界面注明，接通需要单独设计。
 - 判断台词是否已有官方配音、自动关闭游戏原声。
 - 云原神网页版等子实例。
+
+可能的后续优化点：
+
+- **流式合成**：按句流式与增量播放的状态机（Ready / EOF、缺料、安全排空）是 TTS 部分最复杂的代码，只对 GPT-SoVITS 生效且默认关闭。积累使用反馈后，再评估是否简化或移除。
+- **配置两种存法合并**（原 5.3 第 9 项）：GPT-SoVITS 和火山翻译的参数并入引擎字典，合并 `CreateTtsSettings` / `CreateProviderSettings`。需要同步调整持久化字段和 4 个测试文件。
+- **`_encoding` 去重**（原 5.3 第 5 项的剩余部分）：把克隆、编码和离开对话检测移进 Controller，由 `_observing` 统一限制同时一帧。

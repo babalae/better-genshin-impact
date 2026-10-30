@@ -8,7 +8,7 @@ namespace BetterGenshinImpact.ViewModel.Pages.QuestVoiceSettings;
 public sealed partial class OpenAiSpeechSettingsViewModel : EngineSettingsViewModel
 {
     /// <summary>沿用宿主配置与生产服务，不创建其他引擎的配置副本。</summary>
-    public OpenAiSpeechSettingsViewModel(QuestVoicePageViewModel host, QuestVoiceSessionFactory factory, QuestVoiceService service)
+    public OpenAiSpeechSettingsViewModel(QuestVoiceSettingsViewModel host, QuestVoiceSessionFactory factory, QuestVoiceService service)
         : base("openai-speech", host, factory, service) { }
     /// <summary>当前播放器具备解码能力的格式。</summary>
     public IReadOnlyList<string> AudioFormats { get; } = new[] { "mp3", "wav", "pcm" };

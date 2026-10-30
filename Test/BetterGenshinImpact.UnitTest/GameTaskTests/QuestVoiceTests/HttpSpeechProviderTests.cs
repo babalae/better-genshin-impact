@@ -21,7 +21,7 @@ public sealed class HttpSpeechProviderTests
     private static TtsRequest Request => new("你好，A&B？", new("普通声线", "", "", []));
     /// <summary>反向代理子路径和独立参数。</summary>
     private static AppSettings Settings(string id) => new(".", new("https://service.test/proxy/"), new(1, 1, 4),
-        new("普通", "", "", "", ""), new(".", "."), new(0, 0), Provider: new(id, "remote", id switch
+        new("普通", "", "", "", ""), new("."), Provider: new(id, "remote", id switch
         { "voicevox" => "4", "vits-simple-api" => "BERT-VITS2:7", "google-translate" => "zh-CN", _ => "custom" }),
         Extra: new(Language: "zh", Model: "custom-model", ApiKey: "test-secret", Rate: 1.25, Pitch: .05));
     /// <summary>有界非静音PCM16样本，协议测试不依赖私有音频。</summary>

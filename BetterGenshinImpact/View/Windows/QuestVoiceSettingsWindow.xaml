@@ -1,0 +1,221 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.QuestVoiceSettingsWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
+                 xmlns:pages="clr-namespace:BetterGenshinImpact.View.Pages"
+                 xmlns:settings="clr-namespace:BetterGenshinImpact.View.Pages.QuestVoiceSettings"
+                 xmlns:vm="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
+                 xmlns:enginevm="clr-namespace:BetterGenshinImpact.ViewModel.Pages.QuestVoiceSettings"
+                 Title="{i18n:T 自动配音设置}"
+                 Width="980"
+                 Height="780"
+                 MinWidth="760"
+                 MinHeight="560"
+                 d:DataContext="{d:DesignInstance Type=vm:QuestVoiceSettingsViewModel}"
+                 ExtendsContentIntoTitleBar="True"
+                 FontFamily="{StaticResource TextThemeFontFamily}"
+                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                 WindowBackdropType="Mica"
+                 WindowCornerPreference="Round"
+                 WindowStartupLocation="CenterOwner"
+                 mc:Ignorable="d">
+    <ui:FluentWindow.Resources>
+        <BooleanToVisibilityConverter x:Key="QuestVoiceBoolVisibility" />
+        <!-- 引擎设置按模型类型选择模板 -->
+        <DataTemplate DataType="{x:Type vm:GptSovitsSettingsViewModel}"><settings:GptSovitsSettingsView /></DataTemplate>
+        <DataTemplate DataType="{x:Type enginevm:HuoshanSettingsViewModel}"><settings:HuoshanSettingsView /></DataTemplate>
+        <DataTemplate DataType="{x:Type enginevm:WindowsSapiSettingsViewModel}"><settings:WindowsSapiSettingsView /></DataTemplate>
+        <DataTemplate DataType="{x:Type enginevm:VoicevoxSettingsViewModel}"><settings:VoicevoxSettingsView /></DataTemplate>
+        <DataTemplate DataType="{x:Type enginevm:VitsSettingsViewModel}"><settings:VitsSettingsView /></DataTemplate>
+        <DataTemplate DataType="{x:Type enginevm:OpenAiSpeechSettingsViewModel}"><settings:OpenAiSpeechSettingsView /></DataTemplate>
+        <DataTemplate DataType="{x:Type enginevm:GoogleTtsSettingsViewModel}"><settings:GoogleTtsSettingsView /></DataTemplate>
+        <Style x:Key="QuestVoiceSectionStyle" TargetType="Border">
+            <Setter Property="Padding" Value="16" />
+            <Setter Property="Margin" Value="0,0,0,12" />
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+        </Style>
+    </ui:FluentWindow.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <ui:TitleBar Grid.Row="0" Title="{i18n:T 自动配音设置}" Icon="{ui:SymbolIcon Speaker224}" />
+
+        <TabControl Grid.Row="1" Margin="16,4,16,0" BorderThickness="0">
+            <!-- 引擎与声线：左侧 7 个引擎，★ 为默认引擎；右侧为所选引擎的全部设置 -->
+            <TabItem Header="引擎与声线">
+                <Grid Margin="0,12,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="210" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <ListBox Grid.Column="0" ItemsSource="{Binding Engines, Mode=OneWay}" SelectedItem="{Binding SelectedEngine, Mode=TwoWay}" Margin="0,0,12,0">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:TextBlock Text="★" Width="18" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                                  Visibility="{Binding IsDefault, Mode=OneWay, Converter={StaticResource QuestVoiceBoolVisibility}}" />
+                                    <ui:TextBlock Text="{Binding Provider.DisplayName, Mode=OneWay}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <Grid Grid.Column="1">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock VerticalAlignment="Center" TextWrapping="Wrap"
+                                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                          Text="★ 为正式配音使用的默认引擎；已分配给角色的声线仍按各自引擎播放。" />
+                            <ui:Button Grid.Column="1" Margin="12,0,0,0" Content="设为默认引擎" Icon="{ui:SymbolIcon Star24}"
+                                       Command="{Binding SetDefaultEngineCommand, Mode=OneWay}" />
+                        </Grid>
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <ContentControl Margin="0,0,12,12" Content="{Binding SelectedEngine.Settings, Mode=OneWay}"
+                                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Top" />
+                        </ScrollViewer>
+                    </Grid>
+                </Grid>
+            </TabItem>
+
+            <!-- 角色：角色声线开关、旅行者、默认 NPC 与旁白、角色列表 -->
+            <TabItem Header="角色">
+                <ScrollViewer Margin="0,12,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="0,0,12,12">
+                        <Border Style="{StaticResource QuestVoiceSectionStyle}" IsEnabled="{Binding IsConfigEditable, Mode=OneWay}">
+                            <StackPanel>
+                                <ui:ToggleSwitch Content="启用角色声线" IsChecked="{Binding Config.RoutingEnabled, Mode=TwoWay}" />
+                                <ui:TextBlock Text="关闭时所有台词使用默认引擎的默认声音；开启后按角色分配的声线朗读，未匹配的角色使用默认 NPC 声线。"
+                                              Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" Margin="0,6,0,0" />
+                            </StackPanel>
+                        </Border>
+                        <pages:QuestVoiceManagementView DataContext="{Binding Management, Mode=OneWay}" />
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- 识别：OCR 使用内置模型，设备跟随硬件加速设置 -->
+            <TabItem Header="识别">
+                <ScrollViewer Margin="0,12,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="0,0,12,12" IsEnabled="{Binding IsConfigEditable, Mode=OneWay}">
+                        <Border Style="{StaticResource QuestVoiceSectionStyle}">
+                            <StackPanel>
+                                <ui:TextBlock Text="OCR" FontWeight="SemiBold" />
+                                <ui:TextBlock Text="使用 BetterGI 内置的 PP-OCRv6 识别模型，不需要另外准备模型；推理设备跟随“设置 → 硬件加速”，开启“OCR 使用 CPU”时固定使用 CPU。"
+                                              Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" Margin="0,6,0,0" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource QuestVoiceSectionStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <ui:TextBlock Text="采样间隔（毫秒）" FontWeight="SemiBold" />
+                                    <ui:TextBlock Text="从截图器已有的画面中按此间隔取样（50～500 毫秒），不另外截图。"
+                                                  Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" Margin="0,6,0,0" />
+                                </StackPanel>
+                                <ui:NumberBox Grid.Column="1" Width="140" Margin="16,0,0,0" VerticalAlignment="Center" MaxDecimalPlaces="0"
+                                              Minimum="50" Maximum="500" SpinButtonPlacementMode="Inline"
+                                              Value="{Binding Config.SampleIntervalMilliseconds, Mode=TwoWay}" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- 高级：超时、缺失策略、角色目录文件 -->
+            <TabItem Header="高级">
+                <ScrollViewer Margin="0,12,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="0,0,12,12">
+                        <Border Style="{StaticResource QuestVoiceSectionStyle}" IsEnabled="{Binding IsConfigEditable, Mode=OneWay}">
+                            <StackPanel>
+                                <ui:TextBlock Text="网络超时（秒，对所有引擎生效）" FontWeight="SemiBold" Margin="0,0,0,8" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                        <ui:TextBlock Text="连接（1～120）" Margin="0,0,0,6" />
+                                        <ui:NumberBox Minimum="1" Maximum="120" MaxDecimalPlaces="0" Value="{Binding Config.ConnectTimeoutSeconds, Mode=TwoWay}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Margin="0,0,8,0">
+                                        <ui:TextBlock Text="请求（1～600）" Margin="0,0,0,6" />
+                                        <ui:NumberBox Minimum="1" Maximum="600" MaxDecimalPlaces="0" Value="{Binding Config.RequestTimeoutSeconds, Mode=TwoWay}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <ui:TextBlock Text="合成（1～600）" Margin="0,0,0,6" />
+                                        <ui:NumberBox Minimum="1" Maximum="600" MaxDecimalPlaces="0" Value="{Binding Config.SynthesisTimeoutSeconds, Mode=TwoWay}" />
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource QuestVoiceSectionStyle}" DataContext="{Binding Management, Mode=OneWay}">
+                            <StackPanel IsEnabled="{Binding CanEditDraft, Mode=OneWay}">
+                                <ui:TextBlock Text="找不到角色声线时" FontWeight="SemiBold" Margin="0,0,0,6" />
+                                <ComboBox ItemsSource="{Binding MissingPolicyChoices, Mode=OneWay}" DisplayMemberPath="Value" SelectedValuePath="Key"
+                                          SelectedValue="{Binding MissingVoicePolicy, Mode=TwoWay}" />
+                                <ui:TextBlock Text="角色没有绑定声线或声线资源不可用时的处理方式；普通 NPC 总是使用默认 NPC 声线。"
+                                              Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" Margin="0,6,0,0" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource QuestVoiceSectionStyle}">
+                            <StackPanel>
+                                <ui:TextBlock Text="角色目录文件" FontWeight="SemiBold" Margin="0,0,0,6" />
+                                <Grid IsEnabled="{Binding IsConfigEditable, Mode=OneWay}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ui:TextBox Text="{Binding Config.RoutingCatalogPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=600}" />
+                                    <ui:Button Grid.Column="1" Margin="8,0,0,0" Content="浏览" Icon="{ui:SymbolIcon FolderOpen24}" Command="{Binding BrowseRoutingCatalogCommand, Mode=OneWay}" />
+                                </Grid>
+                                <ui:TextBlock Text="角色、旅行者和声线保存在这个 JSON 文件中，便于分享；更换路径前请先导出或处理当前未保存的修改。"
+                                              Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" Margin="0,6,0,8" />
+                                <WrapPanel DataContext="{Binding Management, Mode=OneWay}" IsEnabled="{Binding IsEditingAllowed, Mode=OneWay}">
+                                    <ui:Button Content="重新加载" Command="{Binding DiscardAndReloadCommand, Mode=OneWay}" Margin="0,0,8,8" />
+                                    <ui:Button Content="校验" Command="{Binding ValidateDraftCommand, Mode=OneWay}" Margin="0,0,8,8" />
+                                    <ui:Button Content="导入…" Command="{Binding ImportCommand, Mode=OneWay}" Margin="0,0,8,8" />
+                                    <ui:Button Content="导出…" Command="{Binding ExportCommand, Mode=OneWay}" Margin="0,0,8,8" />
+                                    <ui:Button Content="新建空目录" Command="{Binding NewCatalogCommand, Mode=OneWay}" Margin="0,0,8,8" />
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+
+        <!-- 底部固定状态：保存状态、最近操作结果与错误 -->
+        <Border Grid.Row="2" Padding="16,10" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}">
+            <StackPanel>
+                <ui:TextBlock DataContext="{Binding Management, Mode=OneWay}" TextWrapping="Wrap">
+                    <Run Text="{Binding SaveStatus, Mode=OneWay}" />
+                    <Run Text=" · " Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                    <Run Text="{Binding EditStatus, Mode=OneWay}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                </ui:TextBlock>
+                <ui:TextBlock Text="{Binding CommandError, Mode=OneWay}" Foreground="{DynamicResource SystemFillColorCriticalBrush}" TextWrapping="Wrap"
+                              Visibility="{Binding HasCommandError, Mode=OneWay, Converter={StaticResource QuestVoiceBoolVisibility}}" />
+                <ui:TextBlock Text="修改自动保存。设置窗口打开期间自动配音暂停，关闭窗口后按新设置继续。"
+                              Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" Margin="0,4,0,0" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</ui:FluentWindow>

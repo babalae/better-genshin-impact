@@ -14,8 +14,6 @@ public enum VoiceErrorCode
     Configuration, Internal, Unreachable, Timeout, WeightRejected, SynthesisRejected,
     InterruptedResponse, InvalidAudio, SaveFailed, PlaybackDevice, Cancelled, BackendUnknown
 }
-/// <summary>VoiceErrorOwner：原神自动配音的业务类型。</summary>
-public enum VoiceErrorOwner { Client, Backend, Storage, Playback, User }
 /// <summary>VoiceException：原神自动配音的业务类型。</summary>
 public sealed class VoiceException(VoiceErrorCode code, string message, bool backendUnknown = false,
     Exception? innerException = null) : Exception(message, innerException)

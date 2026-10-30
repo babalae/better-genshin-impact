@@ -62,22 +62,12 @@ public enum QuestVoiceMetric
     OcrQueue,
     /// <summary>整批OCR。</summary>
     OcrBatch,
-    /// <summary>裁剪和张量前处理。</summary>
+    /// <summary>解码和裁剪前处理。</summary>
     Preprocess,
-    /// <summary>模型/字典/原生会话初始化尝试。</summary>
+    /// <summary>内置 OCR 识别组件初始化尝试。</summary>
     Initialization,
-    /// <summary>进入原生Run。</summary>
-    NativeRunStarted,
-    /// <summary>原生Run墙钟，包括CPU和EP调度。</summary>
+    /// <summary>内置 OCR 推理墙钟，包括 CPU 和执行提供程序调度。</summary>
     NativeRun,
-    /// <summary>输出复制和CTC。</summary>
-    Ctc,
-    /// <summary>拥有原生资源后的取消。</summary>
-    Cancelled,
-    /// <summary>废弃不可信原生资源。</summary>
-    Retired,
-    /// <summary>引擎关闭请求，后续调用将被拒绝。</summary>
-    Closing,
-    /// <summary>引擎等待在途调用并释放资源的耗时。</summary>
-    Disposal
+    /// <summary>OCR 排队或推理期间的取消。</summary>
+    Cancelled
 }

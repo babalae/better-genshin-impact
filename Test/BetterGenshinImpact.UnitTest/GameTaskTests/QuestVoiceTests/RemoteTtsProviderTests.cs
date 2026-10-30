@@ -24,7 +24,7 @@ public sealed class RemoteTtsProviderTests
         var paths = new List<string>();
         var settings = new AppSettings(".", new("https://tts.example.com/proxy/"), new(1, 2, 3),
             new("远程", "/models/甘雨 & test.ckpt", "/models/ganyu.pth", "/audio/ref.wav", "参考原文", ServerSidePaths: true),
-            new(".", "."), new(0, 0));
+            new("."));
         using var provider = new GptSovitsEngine(_ => new HttpClient(new Handler(async (message, token) =>
         {
             paths.Add(message.RequestUri!.PathAndQuery);

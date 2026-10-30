@@ -8,7 +8,7 @@ namespace BetterGenshinImpact.ViewModel.Pages.QuestVoiceSettings;
 public sealed partial class VitsSettingsViewModel : EngineSettingsViewModel
 {
     /// <summary>沿用宿主配置与生产服务，不创建其他引擎的配置副本。</summary>
-    public VitsSettingsViewModel(QuestVoicePageViewModel host, QuestVoiceSessionFactory factory, QuestVoiceService service)
+    public VitsSettingsViewModel(QuestVoiceSettingsViewModel host, QuestVoiceSessionFactory factory, QuestVoiceService service)
         : base("vits-simple-api", host, factory, service) { }
     /// <summary>当前生产适配器支持的语言，不推测其他模型的参数。</summary>
     public IReadOnlyList<string> Languages { get; } = new[] { "auto", "zh", "ja", "en" };

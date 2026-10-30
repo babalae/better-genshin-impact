@@ -7,6 +7,7 @@
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
+      xmlns:views="clr-namespace:BetterGenshinImpact.View.Pages"
       xmlns:system="clr-namespace:System;assembly=System.Runtime"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
@@ -992,6 +993,9 @@
             </StackPanel>
         </ui:CardExpander>
 
+
+        <!--  自动配音：开关、运行状态与设置入口  -->
+        <views:QuestVoiceCard DataContext="{Binding QuestVoice, Mode=OneWay}" />
 
         <!--  自动邀约  -->
         <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">

@@ -22,6 +22,10 @@ internal static class RoutingVoiceAssets
         voice.Provider?.InstanceId, voice.Provider?.VoiceId);
 
     /// <summary>读取当前不可变状态快照。</summary>
+    /// <summary>本机 GPT 资源是否有缺失文件，只用于界面诊断，不代替启动时的完整校验。</summary>
+    public static bool HasMissingLocalFiles(RoutingVoice voice) =>
+        new[] { voice.GptWeightsPath, voice.SovitsWeightsPath, voice.ReferenceAudioPath }.Any(path => !File.Exists(path));
+
     public static VoiceBinding Snapshot(RoutingVoice voice) => new(voice.Name, voice.GptWeightsPath, voice.SovitsWeightsPath,
         Array.AsReadOnly(new[] { new ReferenceAudio(voice.ReferenceAudioPath, voice.PromptText, voice.ReferenceEmotion) }),
         new(voice.ProviderId, voice.InstanceId ?? "", voice.ProviderVoiceId ?? ""));

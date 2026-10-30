@@ -15,10 +15,10 @@ public sealed class QuestVoiceOverlayPresenter(Action<LogEventLevel, string> pub
     private readonly object _gate = new();
     /// <summary>集中展示选项，不依赖悬浮窗口或页面生命周期。</summary>
     private readonly QuestVoiceOverlayOptions _options = options ?? new();
-    /// <summary>独立事件流的最后序号，以及当前视觉版本和周期。</summary>
-    private long _frameSequence, _voiceSequence, _revision, _epoch;
-    /// <summary>语音代际独立于视觉版本，只有语义更新才清理已接受的工作身份。</summary>
-    private long _semanticGeneration;
+    /// <summary>两个独立事件流各自的最后序号。</summary>
+    private long _frameSequence, _voiceSequence;
+    /// <summary>与页面状态共用的周期、视觉版本与语音代际判定；只有语义更新才清理已接受的工作身份。</summary>
+    private readonly DialogueVersionTracker _versions = new();
     /// <summary>单轮展示生命周期，停止意图立即屏蔽迟到事件。</summary>
     private bool _open, _accepting, _started, _inDialogue;
     /// <summary>当前版本已显示阶段；稳定图像的复查不能使阶段倒退。</summary>
@@ -35,8 +35,8 @@ public sealed class QuestVoiceOverlayPresenter(Action<LogEventLevel, string> pub
     {
         lock (_gate)
         {
-            _frameSequence = _voiceSequence = _revision = _epoch = 0;
-            _semanticGeneration = 0;
+            _frameSequence = _voiceSequence = 0;
+            _versions.Reset();
             _open = _accepting = true;
             _started = _inDialogue = false;
             _stage = 0; _accepted = null; _lastError = _lastStage = null;
@@ -114,14 +114,14 @@ public sealed class QuestVoiceOverlayPresenter(Action<LogEventLevel, string> pub
             if (value.Kind == ContinuousVoiceEventKind.LeftDialogue)
             {
                 // 无Work的Revision属于语音代际，不能拿它推进视觉版本。
-                if (!Advance(_revision, value.Epoch, value.Revision)) return;
+                if (!Advance(_versions.Revision, value.Epoch, value.Revision)) return;
                 _inDialogue = false;
                 Stage(1, "等待对白");
                 return;
             }
-            if (candidate is null || candidate.Epoch != _epoch
+            if (candidate is null || candidate.Epoch != _versions.Epoch
                 || _accepted != (candidate.Revision, candidate.Epoch, candidate.SourceSequence)
-                || candidate.SemanticGeneration is { } generation && generation != _semanticGeneration) return;
+                || candidate.SemanticGeneration is { } generation && generation != _versions.SemanticGeneration) return;
             switch (value.Kind)
             {
                 case ContinuousVoiceEventKind.SynthesisStarted: Stage(6, "正在合成语音"); break;
@@ -199,13 +199,8 @@ public sealed class QuestVoiceOverlayPresenter(Action<LogEventLevel, string> pub
     /// <summary>周期和版本单调推进；每个新身份允许相同文本重新显示。</summary>
     private bool Advance(long revision, long epoch, long semanticGeneration = 0)
     {
-        if (epoch < _epoch || epoch == _epoch && revision < _revision) return false;
-        if (epoch != _epoch || semanticGeneration > _semanticGeneration)
-        {
-            _semanticGeneration = semanticGeneration;
-            _accepted = null; _stage = 0; _lastError = null;
-        }
-        _epoch = epoch; _revision = revision;
+        if (!_versions.TryAdvance(epoch, revision, semanticGeneration, out var newIdentity)) return false;
+        if (newIdentity) { _accepted = null; _stage = 0; _lastError = null; }
         return true;
     }
 

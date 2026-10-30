@@ -7,7 +7,7 @@ namespace BetterGenshinImpact.ViewModel.Pages.QuestVoiceSettings;
 public sealed partial class VoicevoxSettingsViewModel : EngineSettingsViewModel
 {
     /// <summary>沿用宿主配置与生产服务，不创建其他引擎的配置副本。</summary>
-    public VoicevoxSettingsViewModel(QuestVoicePageViewModel host, QuestVoiceSessionFactory factory, QuestVoiceService service)
+    public VoicevoxSettingsViewModel(QuestVoiceSettingsViewModel host, QuestVoiceSessionFactory factory, QuestVoiceService service)
         : base("voicevox", host, factory, service) { }
 
 }

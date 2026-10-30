@@ -9,6 +9,7 @@ using BetterGenshinImpact.GameTask.QuestVoice.Core.Configuration;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Continuous;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Ocr;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Ocr;
+using OpenCvSharp;
 using SkiaSharp;
 using Xunit;
 
@@ -32,15 +33,33 @@ public sealed class SpeakerInkPreprocessingTests
         var preprocessor = new ImagePreprocessor();
         var original = await preprocessor.PrepareAsync(bytes, Profile, default);
         var masked = await preprocessor.PrepareAsync(bytes, Profile, default, Policy);
-        using var expected = new SKBitmap(20, 5);
-        expected.Erase(SKColors.White);
-        for (var y = 1; y < 4; y++) for (var x = 7; x < 10; x++) expected.SetPixel(x, y, SKColors.Black);
-        Assert.Equal(ImagePreprocessor.ToTensor(expected).Data, masked.Tensors[0].Data);
-        Assert.Equal(original.Tensors[1].Data, masked.Tensors[1].Data);
-        Assert.Equal(original.Bounds, masked.Bounds);
-        Assert.Equal(original.Width, masked.Width); Assert.Equal(original.Height, masked.Height);
-        Assert.NotEqual(original.Tensors[0].Data, masked.Tensors[0].Data);
-        Assert.Equal(bytes, Encode(bitmap));
+        try
+        {
+            using var expected = new SKBitmap(20, 5);
+            expected.Erase(SKColors.White);
+            for (var y = 1; y < 4; y++) for (var x = 7; x < 10; x++) expected.SetPixel(x, y, SKColors.Black);
+            using var expectedLine = ImagePreprocessor.ToMat(expected);
+            Assert.True(SameImage(expectedLine, masked.Lines[0]));
+            Assert.True(SameImage(original.Lines[1], masked.Lines[1]));
+            Assert.Equal(original.Bounds, masked.Bounds);
+            Assert.Equal(original.Width, masked.Width); Assert.Equal(original.Height, masked.Height);
+            Assert.False(SameImage(original.Lines[0], masked.Lines[0]));
+            Assert.Equal(bytes, Encode(bitmap));
+        }
+        finally
+        {
+            foreach (var line in original.Lines.Concat(masked.Lines)) line.Dispose();
+        }
+    }
+
+    /// <summary>两张图像尺寸、类型和每个像素都相同。</summary>
+    private static bool SameImage(Mat first, Mat second)
+    {
+        if (first.Size() != second.Size() || first.Type() != second.Type()) return false;
+        using var difference = new Mat();
+        Cv2.Absdiff(first, second, difference);
+        using var singleChannel = difference.Reshape(1);
+        return Cv2.CountNonZero(singleChannel) == 0;
     }
 
     /// <summary>移植回归验证：RealSelectorAttachesConfiguredPolicyOnlyToSelectedLayout。</summary>

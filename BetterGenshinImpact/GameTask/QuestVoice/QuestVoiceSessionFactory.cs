@@ -15,7 +15,9 @@ using BetterGenshinImpact.GameTask.QuestVoice.Features.Ocr;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Routing;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Tts;
 using NAudio.Wave;
-using Microsoft.ML.OnnxRuntime;
+using BetterGenshinImpact.Core.Recognition.OCR.Engine;
+using BetterGenshinImpact.Core.Recognition.OCR.Paddle;
+using BetterGenshinImpact.Core.Recognition.ONNX;
 using Serilog;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Diagnostics;
 using Newtonsoft.Json;
@@ -23,8 +25,10 @@ using Newtonsoft.Json;
 namespace BetterGenshinImpact.GameTask.QuestVoice;
 
 /// <summary>把 BetterGI 持久化配置转换为原业务核心快照，不依赖 WinUI 或源仓库。</summary>
-public sealed class QuestVoiceSessionFactory(QuestVoiceConfig config, string programDirectory) : IQuestVoiceSessionFactory
+public sealed class QuestVoiceSessionFactory(QuestVoiceConfig config, string programDirectory, BgiOnnxFactory? onnx = null) : IQuestVoiceSessionFactory
 {
+    /// <summary>内置 OCR 的会话工厂，按当前“硬件加速”设置创建推理会话；只有组件测试可以为空。</summary>
+    private readonly BgiOnnxFactory? _onnx = onnx;
     /// <summary>沿用来源项目经过验证的稳定窗口和差分参数。</summary>
     public static ContinuousSettings ContinuousDefaults { get; } = new(350, 3, 1500, 600, 2000, 256, 32, .01);
     /// <summary>每次Create生成独立计数器，Service仅观察当前运行会话。</summary>
@@ -47,8 +51,7 @@ public sealed class QuestVoiceSessionFactory(QuestVoiceConfig config, string pro
         try
         {
             Directory.CreateDirectory(ConfigurationDirectory);
-            foreach (var (resource, name) in new[] { ("auto-scene.json", "auto-scene.json"),
-                         ("dialogue-one-line.xml", "dialogue-one-line.xml"), ("routing.example.json", "routing.json") })
+            foreach (var (resource, name) in new[] { ("auto-scene.json", "auto-scene.json"), ("routing.example.json", "routing.json") })
             {
                 var path = Path.Combine(ConfigurationDirectory, name);
                 if (File.Exists(path)) continue;
@@ -84,13 +87,11 @@ public sealed class QuestVoiceSessionFactory(QuestVoiceConfig config, string pro
             var capabilities = TtsProviderRegistry.GetInfo(settings.Provider!.ProviderId).Capabilities;
             if (config.SampleIntervalMilliseconds is < 50 or > 500)
                 errors.Add("捕获采样间隔必须为 50～500 毫秒。");
-            if (config.DeviceId < 0) errors.Add("OCR DirectML 设备序号必须为非负整数。");
 
             // 启动时创建不可变快照，运行中编辑配置不会改变某一轮的声线或布局。
             var voice = settings.Voice;
-            var ocr = new OcrSettings(ResolveOptional(config.OcrModelPath),
-                Path.Combine(ConfigurationDirectory, "dialogue-one-line.xml"), config.DeviceId);
-            CheckFile(ocr.ModelPath, "OCR PP-OCRv6 模型", errors);
+            // OCR 使用 BetterGI 内置的 PP-OCRv6 识别模型，不需要用户准备模型文件。
+            var ocr = new OcrSettings();
             var scene = new SceneSettings(Path.Combine(ConfigurationDirectory, "auto-scene.json"));
             await new SceneCatalog().LoadAsync(scene.CatalogPath, token).ConfigureAwait(false);
             RoutingSettings? routing = null;
@@ -146,18 +147,11 @@ public sealed class QuestVoiceSessionFactory(QuestVoiceConfig config, string pro
     /// <summary>资源草稿验证使用与运行时一致的相对路径基准。</summary>
     public string ProgramDirectory => programDirectory;
 
-    /// <summary>新增引擎独立配置；旧配置缺失字典条目时补齐缺省，不触碰旧引擎。</summary>
+    /// <summary>读取新增引擎的独立配置；GPT-SoVITS 与火山翻译使用顶层字段，返回空。</summary>
     public QuestVoiceEngineConfig? ExtraConfig(string providerId)
     {
-        var defaults = QuestVoiceEngineConfig.Defaults();
-        if (!defaults.TryGetValue(providerId, out var fallback)) return null;
-        config.ExtraProviders ??= defaults;
-        if (!config.ExtraProviders.TryGetValue(providerId, out var selected) || selected is null)
-        {
-            selected = fallback;
-            config.ExtraProviders = new(config.ExtraProviders) { [providerId] = selected };
-        }
-        return selected;
+        // 缺省条目在配置加载时由 QuestVoiceConfig 补齐，这里只读取，不改写配置。
+        return config.ExtraProviders.GetValueOrDefault(providerId);
     }
 
     /// <summary>为一个明确 Provider/实例构造快照，不改写用户配置或另一实例的路径。</summary>
@@ -189,7 +183,7 @@ public sealed class QuestVoiceSessionFactory(QuestVoiceConfig config, string pro
         voice = voice with { Provider = providerReference };
         var settings = new AppSettings(programDirectory, endpoint,
             new(config.ConnectTimeoutSeconds, config.RequestTimeoutSeconds, config.SynthesisTimeoutSeconds), voice,
-            new(ConfigurationDirectory, ConfigurationDirectory), new(0, 0),
+            new(ConfigurationDirectory),
             Protocol: new(StreamingMode: streaming, StreamPlayback: streaming),
             Provider: providerReference,
             Extra: extra is null ? null : new(extra.Language, extra.Model, extra.Format, extra.ApiKey, extra.Rate, extra.Pitch));
@@ -259,20 +253,20 @@ public sealed class QuestVoiceSessionFactory(QuestVoiceConfig config, string pro
     {
         var validation = await ValidateAsync(token).ConfigureAwait(false);
         if (!validation.IsValid || validation.Settings is null) throw new InvalidOperationException(validation.Detail);
-        // 绝不为配音替换全进程 ONNX DLL；CUDA/OpenVINO 等可选运行库可能没有 DirectML。
-        if (!OrtEnv.Instance().GetAvailableProviders().Contains("DmlExecutionProvider", StringComparer.Ordinal))
-            throw new InvalidOperationException("当前 BetterGI 原生 ONNX 运行库不包含 DirectML。QuestVoice OCR 需要 DirectML；请在硬件加速设置选择内置 CPU / DirectML 并重启 BetterGI。不会为配音替换正在使用的运行库。");
+        // 内置 OCR 会话跟随“硬件加速”设置；进程只加载一个 ONNX 运行库，这里不替换也不另选设备。
+        var onnxSessions = (_onnx ?? throw new InvalidOperationException("内置 OCR 不可用：推理运行时尚未初始化。")).ForCurrentRuntime();
         var scratch = Path.Combine(ConfigurationDirectory, "cache", Guid.NewGuid().ToString("N"));
-        var settings = validation.Settings with { Output = new(scratch, Path.Combine(scratch, "audio")) };
+        var settings = validation.Settings with { Output = new(Path.Combine(scratch, "audio")) };
         var engine = settings.Routing is not null ? CreateRoutingProvider() : TtsProviderRegistry.Create(settings.Provider!.ProviderId);
         var metrics = Metrics = new QuestVoiceMetrics();
-        var ocr = new DirectMlOcrEngine(metrics);
+        var ocr = new QuestVoiceOcrEngine(() => new Rec(BgiOnnxModel.PaddleOcrRecV6, PaddleOcrService.PaddleOcrModelType.V6.RecLabel(),
+            OcrVersionConfig.PpOcrV6, onnxSessions), onnxSessions.Runtime.OcrDescription, metrics);
         var player = new WasapiAudioPlayer(() => new WasapiOut());
         try
         {
             var catalog = new SceneCatalog();
             var selector = new GenshinSceneSelector(catalog);
-            var images = new ImageOcrService(new SceneProfileLoader(), new ImagePreprocessor(), ocr, selector, metrics);
+            var images = new ImageOcrService(new ImagePreprocessor(), ocr, metrics);
             var logger = QuestVoiceLog.Diagnostic.ForContext("SourceContext", "QuestVoice");
             var routing = new VoiceRoutingService(new SpeakerCatalogLoader(), new SpeakerRouter(), logger);
             var voice = new ContinuousVoiceSession(settings, engine, new WavProcessor(), new AudioArtifactStore(), player, routing, logger);

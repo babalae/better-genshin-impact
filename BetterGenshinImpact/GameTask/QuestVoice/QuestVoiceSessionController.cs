@@ -20,8 +20,8 @@ public sealed class QuestVoiceSessionController(IQuestVoiceSessionFactory factor
     private Task _observation = Task.CompletedTask;
     /// <summary>接收帧和在途帧标记。</summary>
     private bool _accepting, _observing, _disposed;
-    /// <summary>单调帧序号和停止版本，避免排队启动越过停止。</summary>
-    private long _sequence, _stopVersion;
+    /// <summary>单调帧序号。启停已由 QuestVoiceService 串行化，并在停止时取消启动令牌。</summary>
+    private long _sequence;
 
     /// <summary>是否已经接受采样。</summary>
     public bool IsRunning { get { lock (_gate) return _accepting; } }
@@ -34,10 +34,9 @@ public sealed class QuestVoiceSessionController(IQuestVoiceSessionFactory factor
     /// <summary>捕获单帧异常；不会终止后续观察。</summary>
     public event Action<Exception>? ObservationFailed;
 
-    /// <summary>重复启动只保留一个会话；停止过程中到达的旧启动会被取消。</summary>
+    /// <summary>重复启动只保留一个会话；停止通过取消启动令牌中止尚未完成的启动。</summary>
     public async Task StartAsync(CancellationToken token = default)
     {
-        var version = Interlocked.Read(ref _stopVersion);
         await _lifecycle.WaitAsync(token).ConfigureAwait(false);
         try
         {
@@ -45,7 +44,7 @@ public sealed class QuestVoiceSessionController(IQuestVoiceSessionFactory factor
             {
                 ObjectDisposedException.ThrowIf(_disposed, this);
                 if (_accepting) return;
-                if (version != Interlocked.Read(ref _stopVersion)) throw new OperationCanceledException();
+                token.ThrowIfCancellationRequested();
                 _lifetime = CancellationTokenSource.CreateLinkedTokenSource(token);
             }
             try
@@ -58,7 +57,6 @@ public sealed class QuestVoiceSessionController(IQuestVoiceSessionFactory factor
                 lock (_gate)
                 {
                     _lifetime.Token.ThrowIfCancellationRequested();
-                    if (version != Interlocked.Read(ref _stopVersion)) throw new OperationCanceledException();
                     _sequence = 0;
                     _accepting = true;
                 }
@@ -72,13 +70,12 @@ public sealed class QuestVoiceSessionController(IQuestVoiceSessionFactory factor
         finally { _lifecycle.Release(); }
     }
 
-    /// <summary>最多一帧在途，忙时直接丢帧；同步复制缓冲区后才跨越线程。</summary>
-    public bool TryObserve(ReadOnlyMemory<byte> bytes, TimeSpan at, bool dialogueExitConfirmed = false)
+    /// <summary>最多一帧在途，忙时直接丢帧；调用方移交编码结果的所有权，不再复制。</summary>
+    public bool TryObserve(byte[] owned, TimeSpan at, bool dialogueExitConfirmed = false)
     {
         lock (_gate)
         {
             if (!_accepting || _observing || _session is null) return false;
-            var owned = bytes.ToArray();
             var session = _session;
             var token = _lifetime!.Token;
             var sequence = ++_sequence;
@@ -97,7 +94,6 @@ public sealed class QuestVoiceSessionController(IQuestVoiceSessionFactory factor
     /// <summary>立即阻止采样并取消观察；等待后端串行排空，随后释放依赖。</summary>
     public async Task StopAsync(bool abortBackend = false)
     {
-        Interlocked.Increment(ref _stopVersion);
         lock (_gate)
         {
             _accepting = false;

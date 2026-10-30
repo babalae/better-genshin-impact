@@ -39,7 +39,7 @@ internal sealed class ContinuousVoiceFixture : IAsyncDisposable
     public ContinuousVoiceSession Session { get; private set; } = null!;
     /// <summary>移植回归验证：Settings。</summary>
     public AppSettings Settings => new(Catalog.Root, new("http://localhost:19001/"), new(1, 20, 20), Catalog.LegacyVoice,
-        new(Path.Combine(Catalog.Root, "logs"), Path.Combine(Catalog.Root, "audio")), new(900, 800), Routing: new(Catalog.CatalogPath));
+        new(Path.Combine(Catalog.Root, "audio")), Routing: new(Catalog.CatalogPath));
 
     /// <summary>启动当前单轮管线；重复调用沿用既有启动任务。</summary>
     public async Task StartAsync(ITtsEngine? engine = null, IWavProcessor? wav = null, AppSettings? settings = null,

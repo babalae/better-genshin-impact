@@ -16,10 +16,9 @@ public sealed record AppSettings(
     TimeoutSettings Timeouts,
     VoiceSettings Voice,
     OutputSettings Output,
-    WindowSettings Window,
-    TtsProtocolSettings? Protocol = null, OcrSettings? Ocr = null, string? OcrConfigurationError = null,
-    SceneSettings? Scene = null, string? SceneConfigurationError = null,
-    RoutingSettings? Routing = null, string? RoutingConfigurationError = null, TtsProviderSettings? Provider = null,
+    TtsProtocolSettings? Protocol = null, OcrSettings? Ocr = null,
+    SceneSettings? Scene = null,
+    RoutingSettings? Routing = null, TtsProviderSettings? Provider = null,
     ExtraTtsSettings? Extra = null);
 
 /// <summary>普通引擎的不可变参数快照，连接与角色引用仍各自独立。</summary>
@@ -43,15 +42,7 @@ public sealed record VoiceSettings(
     string ReferenceAudioPath, string PromptText, string? RequestedEmotion = null, string? ReferenceEmotion = null,
     bool ServerSidePaths = false, TtsProviderSettings? Provider = null);
 
-/// <summary>OutputSettings：原神自动配音的业务类型。</summary>
-public sealed record OutputSettings(string LogsDirectory, string AudioDirectory);
+/// <summary>本轮会话的临时音频目录。</summary>
+public sealed record OutputSettings(string AudioDirectory);
 
-/// <summary>WindowSettings：原神自动配音的业务类型。</summary>
-public sealed record WindowSettings(int Width, int Height);
 
-/// <summary>ConfigurationLoadResult：原神自动配音的业务类型。</summary>
-public sealed record ConfigurationLoadResult(AppSettings? Settings, string? Error)
-{
-    /// <summary>IsSuccess：当前业务对象的配置、身份或状态值。</summary>
-    public bool IsSuccess => Settings is not null && Error is null;
-}

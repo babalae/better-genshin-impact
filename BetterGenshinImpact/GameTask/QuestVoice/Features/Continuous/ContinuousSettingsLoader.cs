@@ -12,25 +12,6 @@ namespace BetterGenshinImpact.GameTask.QuestVoice.Features.Continuous;
 /// <summary>ContinuousSettingsLoader：原神自动配音的业务类型。</summary>
 public sealed class ContinuousSettingsLoader
 {
-    /// <summary>解析并拒绝未知、缺失或重复的配置字段。</summary>
-    public static ContinuousSettings Parse(ReadOnlyMemory<byte> bytes)
-    {
-        try
-        {
-            if (bytes.Length > 16384) throw new ArgumentException("Continuous settings exceed 16 KiB.");
-            using var json = JsonDocument.Parse(bytes, new JsonDocumentOptions { MaxDepth = 4 });
-            var root = json.RootElement;
-            var names = typeof(ContinuousSettings).GetProperties().Select(p => p.Name).ToHashSet(StringComparer.Ordinal);
-            if (root.ValueKind != JsonValueKind.Object) throw new ArgumentException("Settings must be an object.");
-            foreach (var property in root.EnumerateObject())
-                if (!names.Remove(property.Name)) throw new ArgumentException($"Unknown or duplicate setting: {property.Name}");
-            if (names.Count != 0) throw new ArgumentException("Missing continuous settings: " + string.Join(", ", names));
-            var settings = JsonSerializer.Deserialize<ContinuousSettings>(bytes.Span) ?? throw new ArgumentException("Empty settings.");
-            Validate(settings);
-            return settings;
-        }
-        catch (JsonException exception) { throw new ArgumentException("Invalid continuous settings JSON.", exception); }
-    }
     /// <summary>校验配置的边界、引用和参数关系。</summary>
     public static void Validate(ContinuousSettings settings)
     {

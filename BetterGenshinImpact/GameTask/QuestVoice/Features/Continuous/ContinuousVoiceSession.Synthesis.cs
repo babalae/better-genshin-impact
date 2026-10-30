@@ -177,7 +177,6 @@ public sealed partial class ContinuousVoiceSession
         var candidate = work.Candidate;
         if (settings.Routing is not { } routingSettings)
         {
-            if (settings.RoutingConfigurationError is { } error) throw new VoiceException(VoiceErrorCode.Configuration, error);
             var configured = settings.Voice;
             var identity = new ContinuousVoiceIdentity(ContinuousVoiceIdentityKind.FixedVoice, acceptedName: AcceptedName(candidate));
             return (work with { Identity = identity }, new(candidate.Dialogue,

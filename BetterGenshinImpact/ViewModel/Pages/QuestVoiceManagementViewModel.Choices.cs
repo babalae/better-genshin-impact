@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Routing;
+using BetterGenshinImpact.GameTask.QuestVoice.Features.Routing;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Tts;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -20,12 +21,12 @@ public partial class QuestVoiceManagementViewModel
         RequireEditable();
             if (string.IsNullOrWhiteSpace(voiceId) || string.IsNullOrWhiteSpace(displayName)) throw new InvalidOperationException("请先填写声音与显示名称。");
             var existing = Profiles.FirstOrDefault(x => x.ProviderId == providerId && x.InstanceId == instanceId && x.ProviderVoiceId == voiceId);
-            if (existing is not null) { EditStatus = "此声音已在通用声线库中：" + existing.Name; return; }
+            if (existing is not null) { EditStatus = "此声音已经是声线：" + existing.Name; return; }
             var id = UniqueId("voice", Profiles.SelectMany(x => new[] { x.Id, x.OriginalId }));
             var item = new QuestVoiceManagementProfile(new(id, displayName.Trim(), "", "", "", "", ProviderId: providerId,
                 InstanceId: Optional(instanceId), ProviderVoiceId: voiceId.Trim()));
             AddProfileItem(item); MarkDraftChanged(); NotifyLists();
-            EditStatus = "已加入通用声线库，可在配置与映射中选择。";
+            EditStatus = "已添加为声线，可在“角色”页选择。";
     }
     /// <summary>远程资源只接受服务器路径，浏览入口仅对本机可用。</summary>
     public bool CanBrowseSelectedProfileAssets => SelectedProfile is { } item && item.InstanceId != "remote"
@@ -49,7 +50,7 @@ public partial class QuestVoiceManagementViewModel
     {
         get
         {
-            var choices = new List<QuestVoiceVoiceChoice> { new("", "使用默认配音规则") };
+            var choices = new List<QuestVoiceVoiceChoice> { new("", "未单独指定（使用默认规则）") };
             foreach (var item in Profiles)
             {
                 var info = TtsProviderRegistry.Providers.FirstOrDefault(x => x.Id == item.ProviderId);
@@ -59,7 +60,7 @@ public partial class QuestVoiceManagementViewModel
                     try
                     {
                         var voice = BuildProfile(item);
-                        if (new[] { voice.GptWeightsPath, voice.SovitsWeightsPath, voice.ReferenceAudioPath }.Any(p => !File.Exists(p))) diagnostic = " · 资源缺失";
+                        if (RoutingVoiceAssets.HasMissingLocalFiles(voice)) diagnostic = " · 资源缺失";
                     }
                     catch { diagnostic = " · 路径待修正"; }
                 }
@@ -119,15 +120,17 @@ public partial class QuestVoiceManagementViewModel
             if (SelectedProfile is not { } item) return;
             if (item.InstanceId == "remote" || item.InstanceId == "" && _factory.RoutingServerSidePaths)
                 throw new InvalidOperationException("远程实例请填写服务器已有路径。");
-            var dialog = new Microsoft.Win32.OpenFileDialog
+            var (title, filter, current) = kind switch
             {
-                Filter = kind == "gpt" ? "GPT 权重 (*.ckpt)|*.ckpt" : kind == "sovits" ? "SoVITS 权重 (*.pth)|*.pth"
-                    : "参考音频 (*.wav;*.mp3;*.flac;*.ogg)|*.wav;*.mp3;*.flac;*.ogg"
+                "gpt" => ("选择 GPT 权重文件", "GPT 权重 (*.ckpt)|*.ckpt", item.GptWeightsPath),
+                "sovits" => ("选择 SoVITS 权重文件", "SoVITS 权重 (*.pth)|*.pth", item.SovitsWeightsPath),
+                _ => ("选择参考音频", "参考音频 (*.wav;*.mp3;*.flac;*.ogg)|*.wav;*.mp3;*.flac;*.ogg", item.ReferenceAudioPath)
             };
-            if (dialog.ShowDialog() != true) return;
-            if (kind == "gpt") item.GptWeightsPath = dialog.FileName;
-            else if (kind == "sovits") item.SovitsWeightsPath = dialog.FileName;
-            else item.ReferenceAudioPath = dialog.FileName;
+            // 与设置窗口其他浏览按钮共用同一文件选择逻辑；资源保留完整路径。
+            if (QuestVoiceSettingsViewModel.PickFile(title, filter, current, useRelativeIfUnderStartup: false) is not { } selected) return;
+            if (kind == "gpt") item.GptWeightsPath = selected;
+            else if (kind == "sovits") item.SovitsWeightsPath = selected;
+            else item.ReferenceAudioPath = selected;
         });
     }
 }

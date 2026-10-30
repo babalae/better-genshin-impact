@@ -22,5 +22,5 @@
 - [基础设施统一：WebView2、网络与下载、缓存、临时文件](infrastructure-foundation.md)（第 2 版，已确认，待实施）
 - [JS 脚本自定义 HTML 设置页](js-script-html-settings.md)（第 3 版，已在 `feat/js-html-settings` 分支实现，待界面验收）
 - [悬浮小窗（攻略小窗）](guide-window.md)（第 2 版，已确认，实施中；首版代码已完成，待游戏内验证）
-- [自动配音优化](questvoice-simplification.md)（第 2 版，提案；保留全部现有功能，只做结构优化）
+- [自动配音优化](questvoice-simplification.md)（第 3 版，已实施，待游戏内验收；入口并入实时触发页，OCR 改用内置模型）
 - [插件系统与 OCR 模型插件化](plugin-system.md)（第 1 版，提案；主程序只保留 PP-OCRv6，V4、V5 迁移为官方插件）

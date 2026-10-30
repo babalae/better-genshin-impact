@@ -1,73 +1,78 @@
 <UserControl x:Class="BetterGenshinImpact.View.Pages.QuestVoiceManagementView"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
- xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages">
- <StackPanel>
-  <ui:TextBlock Text="{Binding SaveStatus, Mode=OneWay}" TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,0,0,8" />
-  <ui:TextBlock Text="{Binding EditStatus, Mode=OneWay}" TextWrapping="Wrap" Margin="0,0,0,12" />
-  <StackPanel IsEnabled="{Binding CanEditDraft, Mode=OneWay}">
-   <ui:CardExpander IsExpanded="True" ContentPadding="16" Margin="0,0,0,12">
-    <ui:CardExpander.Header><ui:TextBlock Text="旅行者" /></ui:CardExpander.Header>
-    <StackPanel>
-     <ui:TextBlock Text="游戏内名称（OCR 匹配；如有历史昵称，一行一个）" TextWrapping="Wrap" />
-     <ui:TextBox Text="{Binding PlayerNames, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" MinHeight="40" MaxHeight="100" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Margin="0,6,0,12" />
-     <ui:TextBlock Text="使用声线" Margin="0,0,0,6" />
-     <local:QuestVoiceVoiceSelector ItemsSource="{Binding VoiceChoices, Mode=OneWay}" SelectedVoiceId="{Binding TravelerVoiceId, Mode=TwoWay}" />
-    </StackPanel>
-   </ui:CardExpander>
-   <ui:CardExpander IsExpanded="True" ContentPadding="16" Margin="0,0,0,12">
-    <ui:CardExpander.Header><ui:TextBlock Text="未知 NPC 与旁白" /></ui:CardExpander.Header>
-    <StackPanel>
-     <ui:TextBlock Text="默认 NPC 声线" Margin="0,0,0,6" />
-     <local:QuestVoiceVoiceSelector ItemsSource="{Binding VoiceChoices, Mode=OneWay}" SelectedVoiceId="{Binding SelectedFallbackVoiceId, Mode=TwoWay}" />
-     <ui:TextBlock Text="有姓名栏，但未匹配专属声音时使用；不会覆盖已知角色的明确绑定。" TextWrapping="Wrap" Margin="0,6,0,12" />
-     <ui:TextBlock Text="旁白声线" Margin="0,0,0,6" />
-     <local:QuestVoiceVoiceSelector ItemsSource="{Binding VoiceChoices, Mode=OneWay}" SelectedVoiceId="{Binding SelectedNarratorVoiceId, Mode=TwoWay}" />
-     <ui:TextBlock Text="只按已有场景结构识别无姓名栏旁白；姓名 OCR 失败仍遵循原 NPC 回退。" TextWrapping="Wrap" Margin="0,6,0,0" />
-    </StackPanel>
-   </ui:CardExpander>
-            <ui:CardExpander IsExpanded="False" Margin="0,0,0,12" ContentPadding="16">
-                <ui:CardExpander.Header>
-                    <ui:TextBlock Text="角色管理" />
-                </ui:CardExpander.Header>
-                <StackPanel Margin="0,8,0,0">
-                    <ui:TextBox PlaceholderText="搜索角色 ID、名称、别名或 OCR 纠错名" Text="{Binding SpeakerSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,8" />
-                    <ListBox ItemsSource="{Binding FilteredSpeakers, Mode=OneWay}" SelectedItem="{Binding SelectedSpeaker, Mode=TwoWay}"
-                             DisplayMemberPath="Id" Height="150" ScrollViewer.VerticalScrollBarVisibility="Auto" />
-                    <WrapPanel Margin="0,8,0,8">
-                        <ui:Button Content="新增角色" Command="{Binding AddSpeakerCommand, Mode=OneWay}" Margin="0,0,8,0" />
-                        <ui:Button Content="删除选中角色" Command="{Binding DeleteSpeakerCommand, Mode=OneWay}" />
-                    </WrapPanel>
-                    <ui:TextBlock Text="选中角色后在下方编辑；每个角色的输入独立保留，切换选择不会清空。" TextWrapping="Wrap" Margin="0,0,0,8" />
-                    <StackPanel DataContext="{Binding SelectedSpeaker, Mode=OneWay}">
-                        <ui:TextBlock Text="角色 ID" />
-                        <ui:TextBox Text="{Binding Id, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,8" />
-                        <ui:TextBlock Text="正式名称（Names，一行一个，至少一项）" />
-                        <ui:TextBox Text="{Binding Names, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" MinHeight="48" MaxHeight="120" VerticalScrollBarVisibility="Auto" Margin="0,6,0,8" />
-                        <ui:TextBlock Text="别名（Aliases，一行一个）" />
-                        <ui:TextBox Text="{Binding Aliases, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" MinHeight="48" MaxHeight="120" VerticalScrollBarVisibility="Auto" Margin="0,6,0,8" />
-                        <ui:TextBlock Text="OCR 纠错名（Corrections，一行一个）" />
-                        <ui:TextBox Text="{Binding Corrections, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" MinHeight="48" MaxHeight="120" VerticalScrollBarVisibility="Auto" Margin="0,6,0,8" />
-                    </StackPanel>
-                    <ui:TextBlock Text="角色声线（VoiceId，空值表示无专用声线）" />
-                    <ComboBox ItemsSource="{Binding VoiceChoices, Mode=OneWay}" DisplayMemberPath="DisplayName" SelectedValuePath="Id" SelectedValue="{Binding SelectedSpeakerVoiceId, Mode=TwoWay}" HorizontalAlignment="Stretch" Margin="0,6,0,0" />
-                </StackPanel>
-            </ui:CardExpander>
-
-  </StackPanel>
-  <ui:CardExpander IsExpanded="False" ContentPadding="16" Margin="0,0,0,12">
-   <ui:CardExpander.Header><ui:TextBlock Text="高级路由目录与缺失策略" /></ui:CardExpander.Header>
+ xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
+ Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+ <UserControl.Resources>
+  <!-- 子视图构造时尚未加入父窗口资源树，样式在本视图内定义。 -->
+  <Style x:Key="ManagementSectionStyle" TargetType="Border">
+   <Setter Property="Padding" Value="16" />
+   <Setter Property="Margin" Value="0,0,0,12" />
+   <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+   <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+   <Setter Property="BorderThickness" Value="1" />
+   <Setter Property="CornerRadius" Value="8" />
+  </Style>
+ </UserControl.Resources>
+ <StackPanel IsEnabled="{Binding CanEditDraft, Mode=OneWay}">
+  <!-- 默认 NPC 与旁白 -->
+  <Border Style="{StaticResource ManagementSectionStyle}">
    <StackPanel>
-    <ui:TextBlock Text="缺失声线策略：Fallback 回退，Fail 报错" TextWrapping="Wrap" Margin="0,0,0,6" />
-    <ComboBox ItemsSource="{Binding MissingPolicies, Mode=OneWay}" SelectedItem="{Binding MissingVoicePolicy, Mode=TwoWay}" />
-    <WrapPanel Margin="0,12,0,0" IsEnabled="{Binding IsEditingAllowed, Mode=OneWay}">
-     <ui:Button Content="加载配置" Command="{Binding LoadCommand, Mode=OneWay}" Margin="0,0,8,8" />
-     <ui:Button Content="新建空目录" Command="{Binding NewCatalogCommand, Mode=OneWay}" Margin="0,0,8,8" />
-     <ui:Button Content="校验草稿" Command="{Binding ValidateDraftCommand, Mode=OneWay}" Margin="0,0,8,8" />
-     <ui:Button Content="导入配置" Command="{Binding ImportCommand, Mode=OneWay}" Margin="0,0,8,8" />
-     <ui:Button Content="导出草稿" Command="{Binding ExportCommand, Mode=OneWay}" Margin="0,0,8,8" />
-     <ui:Button Content="放弃草稿并重新加载" Command="{Binding DiscardAndReloadCommand, Mode=OneWay}" Margin="0,0,8,8" />
-    </WrapPanel>
+    <ui:TextBlock Text="默认 NPC 声线" FontWeight="SemiBold" Margin="0,0,0,6" />
+    <local:QuestVoiceVoiceSelector ItemsSource="{Binding VoiceChoices, Mode=OneWay}" SelectedVoiceId="{Binding SelectedFallbackVoiceId, Mode=TwoWay}" />
+    <ui:TextBlock Text="有姓名但没有匹配到角色时使用；不会覆盖已分配给角色的声线。" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" Margin="0,6,0,12" />
+    <ui:TextBlock Text="旁白声线" FontWeight="SemiBold" Margin="0,0,0,6" />
+    <local:QuestVoiceVoiceSelector ItemsSource="{Binding VoiceChoices, Mode=OneWay}" SelectedVoiceId="{Binding SelectedNarratorVoiceId, Mode=TwoWay}" />
+    <ui:TextBlock Text="旁白识别尚未接通：设置会保存，但暂不生效；姓名识别失败时仍使用默认 NPC 声线。" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" Margin="0,6,0,0" />
    </StackPanel>
-  </ui:CardExpander>
+  </Border>
+  <!-- 旅行者 -->
+  <Border Style="{StaticResource ManagementSectionStyle}">
+   <StackPanel>
+    <ui:TextBlock Text="旅行者" FontWeight="SemiBold" Margin="0,0,0,6" />
+    <ui:TextBlock Text="游戏内昵称（用于识别，有多个历史昵称时一行一个）" Margin="0,0,0,6" />
+    <ui:TextBox Text="{Binding PlayerNames, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" MinHeight="40" MaxHeight="100" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Margin="0,0,0,12" />
+    <ui:TextBlock Text="声线" Margin="0,0,0,6" />
+    <local:QuestVoiceVoiceSelector ItemsSource="{Binding VoiceChoices, Mode=OneWay}" SelectedVoiceId="{Binding TravelerVoiceId, Mode=TwoWay}" />
+   </StackPanel>
+  </Border>
+  <!-- 角色：左侧列表显示正式名称，右侧编辑选中角色 -->
+  <Border Style="{StaticResource ManagementSectionStyle}">
+   <StackPanel>
+    <Grid Margin="0,0,0,8">
+     <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="*" />
+      <ColumnDefinition Width="Auto" />
+      <ColumnDefinition Width="Auto" />
+     </Grid.ColumnDefinitions>
+     <ui:TextBox PlaceholderText="搜索名称、别名或识别纠错" Text="{Binding SpeakerSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+     <ui:Button Grid.Column="1" Content="添加角色" Icon="{ui:SymbolIcon Add24}" Command="{Binding AddSpeakerCommand, Mode=OneWay}" Margin="8,0,0,0" />
+     <ui:Button Grid.Column="2" Content="删除" Icon="{ui:SymbolIcon Delete24}" Command="{Binding DeleteSpeakerCommand, Mode=OneWay}" Margin="8,0,0,0" />
+    </Grid>
+    <Grid>
+     <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="180" />
+      <ColumnDefinition Width="*" />
+     </Grid.ColumnDefinitions>
+     <ListBox ItemsSource="{Binding FilteredSpeakers, Mode=OneWay}" SelectedItem="{Binding SelectedSpeaker, Mode=TwoWay}"
+              DisplayMemberPath="DisplayName" Height="300" ScrollViewer.VerticalScrollBarVisibility="Auto" Margin="0,0,12,0" />
+     <StackPanel Grid.Column="1">
+      <StackPanel DataContext="{Binding SelectedSpeaker, Mode=OneWay}">
+       <ui:TextBlock Text="正式名称（一行一个，至少一项）" />
+       <ui:TextBox Text="{Binding Names, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" MinHeight="40" MaxHeight="100" VerticalScrollBarVisibility="Auto" Margin="0,6,0,8" />
+       <ui:TextBlock Text="别名（一行一个）" />
+       <ui:TextBox Text="{Binding Aliases, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" MinHeight="40" MaxHeight="100" VerticalScrollBarVisibility="Auto" Margin="0,6,0,8" />
+       <ui:TextBlock Text="识别纠错（OCR 常见误识别的姓名，一行一个）" />
+       <ui:TextBox Text="{Binding Corrections, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" MinHeight="40" MaxHeight="100" VerticalScrollBarVisibility="Auto" Margin="0,6,0,8" />
+      </StackPanel>
+      <ui:TextBlock Text="声线（未单独指定时使用默认规则）" />
+      <local:QuestVoiceVoiceSelector ItemsSource="{Binding VoiceChoices, Mode=OneWay}" SelectedVoiceId="{Binding SelectedSpeakerVoiceId, Mode=TwoWay}" Margin="0,6,0,8" />
+      <StackPanel DataContext="{Binding SelectedSpeaker, Mode=OneWay}">
+       <ui:TextBlock Text="角色 ID（旅行者等规则引用它，一般不用改）" />
+       <ui:TextBox Text="{Binding Id, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,0" />
+      </StackPanel>
+     </StackPanel>
+    </Grid>
+   </StackPanel>
+  </Border>
  </StackPanel>
 </UserControl>

@@ -13,7 +13,7 @@ public sealed class WindowsSapiTtsProviderTests
 {
     /// <summary>不依赖网络、GPT 权重或参考音频的系统声音配置。</summary>
     private static AppSettings Settings => new(".", new Uri("http://127.0.0.1/"), new(1, 1, 10),
-        new("系统", "", "", "", ""), new(".", "."), new(0, 0), Provider: new("windows-sapi"));
+        new("系统", "", "", "", ""), new("."), Provider: new("windows-sapi"));
     /// <summary>与系统语音引擎交互的短句，不含 SSML。</summary>
     private static TtsRequest Request => new("你好，旅行者。Hello traveler.", new("系统", "", "", []));
     /// <summary>内置离线声音应独立于服务器、参考资产及流式协议。</summary>

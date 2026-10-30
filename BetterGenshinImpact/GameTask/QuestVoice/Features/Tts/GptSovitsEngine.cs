@@ -16,7 +16,7 @@ using System.Text.Json;
 namespace BetterGenshinImpact.GameTask.QuestVoice.Features.Tts;
 /// <summary>GptSovitsEngine：原神自动配音的业务类型。</summary>
 public sealed partial class GptSovitsEngine(Func<TimeoutSettings, HttpClient> clientFactory,
-    IReferenceAudioSelector selector, IWavProcessor wavProcessor) : IStreamingTtsEngine, ITtsProvider
+    ReferenceAudioSelector selector, IWavProcessor wavProcessor) : IStreamingTtsEngine, ITtsProvider
 {
     /// <summary>保护异步操作所有权，确保停止等待已发出的工作。</summary>
     private readonly SemaphoreSlim _ownership = new(1, 1);

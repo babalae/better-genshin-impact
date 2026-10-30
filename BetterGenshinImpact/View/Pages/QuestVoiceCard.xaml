@@ -1,0 +1,265 @@
+<UserControl x:Class="BetterGenshinImpact.View.Pages.QuestVoiceCard"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:qv="clr-namespace:BetterGenshinImpact.GameTask.QuestVoice"
+             xmlns:vm="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
+             d:DataContext="{d:DesignInstance Type=vm:QuestVoiceCardViewModel}"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             mc:Ignorable="d">
+    <!-- 卡片作为子视图嵌入实时触发页：构造时尚未加入父页面资源树，样式在本视图内定义。 -->
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="QuestVoiceCardBoolVisibility" />
+        <Style x:Key="OverallStatusDotStyle" TargetType="Ellipse">
+            <Setter Property="Width" Value="10" />
+            <Setter Property="Height" Value="10" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Fill" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="{x:Static qv:QuestVoiceStageState.InProgress}">
+                    <Setter Property="Fill" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="{x:Static qv:QuestVoiceStageState.Completed}">
+                    <Setter Property="Fill" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="{x:Static qv:QuestVoiceStageState.Failed}">
+                    <Setter Property="Fill" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="OverallStatusTextStyle" TargetType="ui:TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="FontTypography" Value="BodyStrong" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="{x:Static qv:QuestVoiceStageState.InProgress}">
+                    <Setter Property="Foreground" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="{x:Static qv:QuestVoiceStageState.Completed}">
+                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="{x:Static qv:QuestVoiceStageState.Failed}">
+                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="StageNodeCircleStyle" TargetType="Ellipse">
+            <Setter Property="Width" Value="16" />
+            <Setter Property="Height" Value="16" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="StrokeThickness" Value="2.5" />
+            <Setter Property="Stroke" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+            <Setter Property="Fill" Value="Transparent" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="{x:Static qv:QuestVoiceStageState.InProgress}">
+                    <Setter Property="Stroke" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                    <Setter Property="Fill" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="{x:Static qv:QuestVoiceStageState.Completed}">
+                    <Setter Property="Stroke" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                    <Setter Property="Fill" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="{x:Static qv:QuestVoiceStageState.Failed}">
+                    <Setter Property="Stroke" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                    <Setter Property="Fill" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="StageConnectorStyle" TargetType="Border">
+            <Setter Property="Height" Value="2" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Background" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="{x:Static qv:QuestVoiceStageState.InProgress}">
+                    <Setter Property="Background" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="{x:Static qv:QuestVoiceStageState.Completed}">
+                    <Setter Property="Background" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="{x:Static qv:QuestVoiceStageState.Failed}">
+                    <Setter Property="Background" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="StageLabelStyle" TargetType="ui:TextBlock">
+            <Setter Property="Margin" Value="0,4,0,0" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="{x:Static qv:QuestVoiceStageState.InProgress}">
+                    <Setter Property="Foreground" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="{x:Static qv:QuestVoiceStageState.Completed}">
+                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="{x:Static qv:QuestVoiceStageState.Failed}">
+                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+    <ui:CardExpander Margin="0,0,0,12" ContentPadding="0">
+        <ui:CardExpander.Icon>
+            <ui:SymbolIcon Symbol="Speaker224" />
+        </ui:CardExpander.Icon>
+        <ui:CardExpander.Header>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Row="0" Grid.Column="0" FontTypography="Body" Text="{i18n:T 自动配音（实验性）}" TextWrapping="Wrap" />
+                <ui:TextBlock Grid.Row="1" Grid.Column="0" Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                              Text="{i18n:T 识别剧情对白的人物和台词，用语音朗读；截图器启动后自动开始，独立任务运行时暂停}" TextWrapping="Wrap" />
+                <ui:ToggleSwitch Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Margin="0,0,24,0"
+                                 IsChecked="{Binding Config.Enabled, Mode=TwoWay}" />
+            </Grid>
+        </ui:CardExpander.Header>
+        <StackPanel>
+            <!-- 状态 -->
+            <Grid Margin="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="88" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Column="0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="状态" />
+                <StackPanel Grid.Column="1">
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Style="{StaticResource OverallStatusDotStyle}" Tag="{Binding Status.OverallStatusState, Mode=OneWay}" />
+                        <ui:TextBlock Style="{StaticResource OverallStatusTextStyle}" Tag="{Binding Status.OverallStatusState, Mode=OneWay}"
+                                      Text="{Binding Status.OverallStatus, Mode=OneWay}" />
+                    </StackPanel>
+                    <ui:TextBlock Margin="0,4,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap">
+                        <Run Text="{Binding Status.Session, Mode=OneWay}" />
+                        <Run Text=" · " />
+                        <Run Text="{Binding Status.Game, Mode=OneWay}" />
+                    </ui:TextBlock>
+                    <ui:TextBlock Margin="0,4,0,0" Foreground="{DynamicResource SystemFillColorCriticalBrush}" TextWrapping="Wrap"
+                                  Text="{Binding Status.Error, Mode=OneWay}"
+                                  Visibility="{Binding Status.HasError, Mode=OneWay, Converter={StaticResource QuestVoiceCardBoolVisibility}}" />
+                    <ui:TextBlock Margin="0,4,0,0" Foreground="{DynamicResource SystemFillColorCriticalBrush}" TextWrapping="Wrap"
+                                  Text="{Binding CommandError, Mode=OneWay}"
+                                  Visibility="{Binding HasCommandError, Mode=OneWay, Converter={StaticResource QuestVoiceCardBoolVisibility}}" />
+                    <ui:TextBlock Margin="0,4,0,0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap"
+                                  Text="{Binding Status.Validation, Mode=OneWay}" />
+                </StackPanel>
+                <ui:Button Grid.Column="2" Margin="12,0,8,0" VerticalAlignment="Top" Content="确认后端已重启"
+                           Command="{Binding ConfirmBackendRestartedCommand, Mode=OneWay}"
+                           Visibility="{Binding Status.BackendUnknown, Mode=OneWay, Converter={StaticResource QuestVoiceCardBoolVisibility}}" />
+            </Grid>
+            <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+            <!-- 进度：对话界面 → OCR → 角色 → 声线 → 合成 → 播放 -->
+            <Grid Margin="16,12,16,8">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Margin="40,0" Style="{StaticResource StageConnectorStyle}" Tag="{Binding Status.SceneStage, Mode=OneWay}" />
+                <Border Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Margin="40,0" Style="{StaticResource StageConnectorStyle}" Tag="{Binding Status.OcrStage, Mode=OneWay}" />
+                <Border Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="2" Margin="40,0" Style="{StaticResource StageConnectorStyle}" Tag="{Binding Status.SpeakerStage, Mode=OneWay}" />
+                <Border Grid.Row="0" Grid.Column="3" Grid.ColumnSpan="2" Margin="40,0" Style="{StaticResource StageConnectorStyle}" Tag="{Binding Status.RoutingStage, Mode=OneWay}" />
+                <Border Grid.Row="0" Grid.Column="4" Grid.ColumnSpan="2" Margin="40,0" Style="{StaticResource StageConnectorStyle}" Tag="{Binding Status.TtsStage, Mode=OneWay}" />
+                <Ellipse Grid.Row="0" Grid.Column="0" Style="{StaticResource StageNodeCircleStyle}" Tag="{Binding Status.SceneStage, Mode=OneWay}" />
+                <Ellipse Grid.Row="0" Grid.Column="1" Style="{StaticResource StageNodeCircleStyle}" Tag="{Binding Status.OcrStage, Mode=OneWay}" />
+                <Ellipse Grid.Row="0" Grid.Column="2" Style="{StaticResource StageNodeCircleStyle}" Tag="{Binding Status.SpeakerStage, Mode=OneWay}" />
+                <Ellipse Grid.Row="0" Grid.Column="3" Style="{StaticResource StageNodeCircleStyle}" Tag="{Binding Status.RoutingStage, Mode=OneWay}" />
+                <Ellipse Grid.Row="0" Grid.Column="4" Style="{StaticResource StageNodeCircleStyle}" Tag="{Binding Status.TtsStage, Mode=OneWay}" />
+                <Ellipse Grid.Row="0" Grid.Column="5" Style="{StaticResource StageNodeCircleStyle}" Tag="{Binding Status.PlaybackStage, Mode=OneWay}" />
+                <ui:TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource StageLabelStyle}" Tag="{Binding Status.SceneStage, Mode=OneWay}" Text="对话界面" />
+                <ui:TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource StageLabelStyle}" Tag="{Binding Status.OcrStage, Mode=OneWay}" Text="OCR" />
+                <ui:TextBlock Grid.Row="1" Grid.Column="2" Style="{StaticResource StageLabelStyle}" Tag="{Binding Status.SpeakerStage, Mode=OneWay}" Text="角色" />
+                <ui:TextBlock Grid.Row="1" Grid.Column="3" Style="{StaticResource StageLabelStyle}" Tag="{Binding Status.RoutingStage, Mode=OneWay}" Text="声线" />
+                <ui:TextBlock Grid.Row="1" Grid.Column="4" Style="{StaticResource StageLabelStyle}" Tag="{Binding Status.TtsStage, Mode=OneWay}" Text="合成" />
+                <ui:TextBlock Grid.Row="1" Grid.Column="5" Style="{StaticResource StageLabelStyle}" Tag="{Binding Status.PlaybackStage, Mode=OneWay}" Text="播放" />
+            </Grid>
+            <ui:TextBlock Margin="16,0,16,12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"
+                          Text="{Binding Status.StageSummary, Mode=OneWay}" />
+            <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+            <!-- 当前处理内容 -->
+            <Grid Margin="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="88" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Column="0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="当前" />
+                <StackPanel Grid.Column="1">
+                    <ui:TextBlock TextWrapping="Wrap">
+                        <Run Text="{Binding Status.Character, Mode=OneWay}" FontWeight="SemiBold" />
+                        <Run Text=" · " />
+                        <Run Text="{Binding Status.Voice, Mode=OneWay}" />
+                    </ui:TextBlock>
+                    <ui:TextBlock Margin="0,4,0,0" Text="{Binding Status.Dialogue, Mode=OneWay}" TextWrapping="Wrap" />
+                    <ui:TextBlock Margin="0,4,0,0" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap">
+                        <Run Text="{Binding Status.DialogueState, Mode=OneWay}" />
+                        <Run Text=" · 合成：" />
+                        <Run Text="{Binding Status.Tts, Mode=OneWay}" />
+                        <Run Text=" · 播放：" />
+                        <Run Text="{Binding Status.Playback, Mode=OneWay}" />
+                    </ui:TextBlock>
+                </StackPanel>
+            </Grid>
+            <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+            <!-- 最近事件 -->
+            <Grid Margin="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="88" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <ui:TextBlock Grid.Column="0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="最近事件" />
+                <StackPanel Grid.Column="1">
+                    <ItemsControl ItemsSource="{Binding Status.RecentEvents, Mode=OneWay}"
+                                  Visibility="{Binding Status.HasRecentEvents, Mode=OneWay, Converter={StaticResource QuestVoiceCardBoolVisibility}}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <ui:TextBlock Margin="0,2" Text="{Binding Mode=OneWay}" TextWrapping="Wrap" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <ui:TextBlock Foreground="{DynamicResource TextFillColorTertiaryBrush}" Text="暂无最近运行事件（最多保留 8 条）。" TextWrapping="Wrap">
+                        <ui:TextBlock.Style>
+                            <Style TargetType="ui:TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Status.HasRecentEvents, Mode=OneWay}" Value="False">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ui:TextBlock.Style>
+                    </ui:TextBlock>
+                </StackPanel>
+            </Grid>
+            <Separator Margin="-18,0" BorderThickness="0,1,0,0" />
+            <!-- 操作 -->
+            <WrapPanel Margin="16,12">
+                <ui:Button Margin="0,0,8,4" Appearance="Primary" Content="设置…" Icon="{ui:SymbolIcon Settings24}" Command="{Binding OpenSettingsCommand, Mode=OneWay}" />
+                <ui:Button Margin="0,0,8,4" Content="校验配置" Icon="{ui:SymbolIcon CheckmarkCircle24}" Command="{Binding ValidateCommand, Mode=OneWay}" />
+                <ui:Button Margin="0,0,8,4" Content="打开日志" Icon="{ui:SymbolIcon Document24}" Command="{Binding OpenLogFileCommand, Mode=OneWay}" />
+                <ui:Button Margin="0,0,8,4" Content="打开日志目录" Icon="{ui:SymbolIcon FolderOpen24}" Command="{Binding OpenLogFolderCommand, Mode=OneWay}" />
+            </WrapPanel>
+        </StackPanel>
+    </ui:CardExpander>
+</UserControl>

@@ -34,7 +34,7 @@ public sealed class TtsTransportTests : IDisposable
         var reference = Path.Combine(_directory, "reference.wav");
         File.WriteAllBytes(reference, WavAndReferenceTests.Wave(48000, [100, -100]));
         _settings = new(_directory, new Uri("http://localhost:19001/"), new(1, 2, 2),
-            new("甘雨", model, model, reference, "你好。"), new(_directory, _directory), new(900, 800));
+            new("甘雨", model, model, reference, "你好。"), new(_directory));
         _request = new("你好，旅行者。", new("甘雨", model, model, [new(reference, "你好。") ]));
     }
 

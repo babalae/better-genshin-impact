@@ -33,7 +33,7 @@ public sealed class TtsProviderConfigurationTests : IDisposable
         await File.WriteAllBytesAsync(Path.Combine(_root, "ocr.onnx"), [1]);
         var config = JsonConvert.DeserializeObject<QuestVoiceConfig>(
             "{\"ProviderId\":\"huoshan\",\"HuoshanVoiceId\":\"zh_female_qingxin\",\"RoutingEnabled\":true,\"StreamingEnabled\":true,\"ServiceUrl\":\"invalid\"}")!;
-        config.OcrModelPath = "ocr.onnx";
+
         var result = await new QuestVoiceSessionFactory(config, _root).ValidateAsync(default);
         Assert.True(result.IsValid, result.Detail);
         var snapshot = JObject.FromObject(result.Settings!);
@@ -52,7 +52,7 @@ public sealed class TtsProviderConfigurationTests : IDisposable
         await File.WriteAllBytesAsync(Path.Combine(_root, "ocr.onnx"), [1]);
         var config = JsonConvert.DeserializeObject<QuestVoiceConfig>(
             "{\"UseRemoteService\":true,\"RemoteServiceUrl\":\"https://tts.example.com/api/\",\"RemoteGptWeightsPath\":\"/models/ganyu.ckpt\",\"RemoteSovitsWeightsPath\":\"/models/ganyu.pth\",\"RemoteReferenceAudioPath\":\"/audio/ref.wav\",\"RemotePromptText\":\"你好\",\"GptWeightsPath\":\"local.ckpt\"}")!;
-        config.OcrModelPath = "ocr.onnx";
+
         var result = await new QuestVoiceSessionFactory(config, _root).ValidateAsync(default);
         Assert.True(result.IsValid, result.Detail);
         Assert.Equal("/models/ganyu.ckpt", result.Settings!.Voice.GptWeightsPath);

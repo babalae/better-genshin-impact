@@ -306,7 +306,7 @@ public sealed class QuestVoiceOverlayTests
         long epoch = 0, long source = 10, string? text = null, ContinuousFrameInspection? inspection = null)
         => new(sequence, TimeSpan.Zero, kind, revision, epoch, source, TimeSpan.Zero, "hash",
             Inspection: inspection, Ocr: text is null ? null : new ImageOcrResult(1, 1, new(1, 1, []), [], "派蒙", text,
-                new("model", "hash", "DML", 0, null), DateTimeOffset.Now, DateTimeOffset.Now));
+                new("model", "CPU"), DateTimeOffset.Now, DateTimeOffset.Now));
 
     /// <summary>配音事件携带正式候选身份和只应进入文件的详细故障。</summary>
     private static ContinuousVoiceEvent Voice(long sequence, ContinuousVoiceEventKind kind, long revision = 1,

@@ -86,7 +86,7 @@ public sealed class ManagedVoiceRoutingTests
         await fixture.WriteAsync();
         await File.WriteAllBytesAsync(Path.Combine(fixture.Root, "ocr.onnx"), [1]);
         var config = new QuestVoiceConfig { ProviderId = "huoshan", RoutingEnabled = true, RoutingCatalogPath = fixture.CatalogPath,
-            OcrModelPath = "ocr.onnx", UseRemoteService = true, RemoteServiceUrl = "https://remote.example.com/api/",
+            UseRemoteService = true, RemoteServiceUrl = "https://remote.example.com/api/",
             RemoteGptWeightsPath = "/unused", ServiceUrl = "http://localhost:9880/" };
         var factory = new QuestVoiceSessionFactory(config, fixture.Root);
         var validation = await factory.ValidateAsync(default);

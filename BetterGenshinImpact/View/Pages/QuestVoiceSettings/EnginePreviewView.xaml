@@ -8,14 +8,14 @@
              Foreground="{DynamicResource TextFillColorPrimaryBrush}"
              HorizontalContentAlignment="Stretch">
     <StackPanel>
-        <ui:TextBlock Text="通用声线显示名（可选）" FontWeight="SemiBold" Margin="0,18,0,8" />
+        <ui:TextBlock Text="声线名称（可选）" FontWeight="SemiBold" Margin="0,18,0,8" />
         <ui:TextBox Text="{Binding VoiceDisplayName, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
-                    PlaceholderText="留空使用当前声音名称；加入后可供角色及默认规则选择" />
-        <ui:Button Content="加入通用声线库" Command="{Binding RegisterVoiceCommand, Mode=OneWay}" Margin="0,8,0,4" />
+                    PlaceholderText="留空使用当前声音名称；添加后可在“角色”页分配" />
+        <ui:Button Content="添加为声线" Command="{Binding RegisterVoiceCommand, Mode=OneWay}" Margin="0,8,0,4" />
         <ui:CardExpander IsExpanded="{Binding IsLibraryExpanded, Mode=TwoWay}" ContentPadding="16" Margin="0,12,0,8">
-            <ui:CardExpander.Header><ui:TextBlock Text="此引擎的通用声线" /></ui:CardExpander.Header>
+            <ui:CardExpander.Header><ui:TextBlock Text="本引擎的声线" /></ui:CardExpander.Header>
             <StackPanel>
-                <ui:TextBlock Text="选择已有声线以修改名称或声音 ID；有效修改自动保存。被默认规则或角色引用的声线需先解除引用才能删除。"
+                <ui:TextBlock Text="选择已有声线可修改名称或声音 ID；仍被角色或默认规则引用的声线需先解除引用才能删除。"
                               TextWrapping="Wrap" Margin="0,0,0,8" />
                 <ComboBox ItemsSource="{Binding RegisteredProfiles, Mode=OneWay}" DisplayMemberPath="Name"
                           SelectedItem="{Binding SelectedRegisteredProfile, Mode=TwoWay}" />
@@ -34,8 +34,6 @@
                     </ContentControl.ContentTemplate>
                 </ContentControl>
                 <ui:Button Content="删除所选声线" Command="{Binding DeleteRegisteredProfileCommand, Mode=OneWay}" Margin="0,8,0,4" />
-                <ui:TextBlock Text="{Binding Management.EditStatus, Mode=OneWay}" TextWrapping="Wrap" Margin="0,6,0,0" />
-                <ui:TextBlock Text="{Binding Management.SaveStatus, Mode=OneWay}" TextWrapping="Wrap" Margin="0,4,0,0" />
             </StackPanel>
         </ui:CardExpander>
         <ui:TextBlock Text="试听文本" FontWeight="SemiBold" Margin="0,18,0,8" />
