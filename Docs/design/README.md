@@ -23,4 +23,4 @@
 - [JS 脚本自定义 HTML 设置页](js-script-html-settings.md)（第 3 版，已在 `feat/js-html-settings` 分支实现，待界面验收）
 - [悬浮小窗（攻略小窗）](guide-window.md)（第 2 版，已确认，实施中；首版代码已完成，待游戏内验证）
 - [自动配音优化](questvoice-simplification.md)（第 4 版，已实施，待游戏内验收；入口并入实时触发页，OCR 直接使用全局 OCR 及其配置）
-- [插件系统与 OCR 模型插件化](plugin-system.md)（第 1 版，提案；主程序只保留 PP-OCRv6，V4、V5 迁移为官方插件）
+- [插件系统与 OCR 模型插件化](plugin-system.md)（第 2 版，部分实施；可插拔机制、插件宿主、插件页、插件设置界面已实现，主程序只保留 PP-OCRv6，其他模型作为 6 个插件在 `bettergi-plugins` 仓库中；传送任务抽出接口 `ITpTask`，经可插拔能力 `ITpTaskFactory` 创建，PR #3697 的实验传送作为插件提供完整实现；待界面与游戏内验收）
