@@ -12,7 +12,9 @@
         Width="450"
         WindowStartupLocation="CenterOwner"
         WindowBackdropType="Auto"
-        ExtendsContentIntoTitleBar="True">
+        ExtendsContentIntoTitleBar="True"
+        ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+        ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
 
     <ui:FluentWindow.Resources>
         <Style TargetType="ui:TextBox" BasedOn="{StaticResource DefaultTextBoxStyle}">

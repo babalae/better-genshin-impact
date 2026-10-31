@@ -7,7 +7,9 @@
                  Title="{Binding Title, Mode=OneWay}" Width="480" SizeToContent="Height" ResizeMode="NoResize"
                  WindowStartupLocation="CenterOwner" WindowBackdropType="Auto" ExtendsContentIntoTitleBar="True"
                  Background="{DynamicResource ApplicationBackgroundBrush}" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                 FontFamily="{DynamicResource TextThemeFontFamily}" FontSize="14" UseLayoutRounding="True">
+                 FontFamily="{DynamicResource TextThemeFontFamily}" FontSize="14" UseLayoutRounding="True"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <ui:FluentWindow.Resources>
         <DataTemplate DataType="{x:Type vm:ResinUsageEditorViewModel}"><resin:ResinUsageEditorView /></DataTemplate>
         <DataTemplate DataType="{x:Type vm:CraftResinEditorViewModel}"><resin:CraftResinEditorView /></DataTemplate>

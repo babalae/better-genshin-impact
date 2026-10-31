@@ -4,7 +4,9 @@
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:converters="clr-namespace:BetterGenshinImpact.View.Converters"
              xmlns:pulonia="clr-namespace:BetterGenshinImpact.ViewModel.Pages.Pulonia"
-             Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <!--
         任务计划页“执行记录”页签、全局执行记录页与一条龙执行记录窗口共用此视图，DataContext 为 PuloniaTaskHistoryViewModel。
         布局：左侧记录列表；右侧为所选记录的概要与操作、任务列表，以及“任务详情 / 运行信息”。

@@ -27,7 +27,9 @@
         Topmost="True"
         WindowStyle="None"
         d:DataContext="{d:DesignInstance Type=viewModel:MaskWindowViewModel}"
-        mc:Ignorable="d">
+        mc:Ignorable="d"
+        ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+        ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>

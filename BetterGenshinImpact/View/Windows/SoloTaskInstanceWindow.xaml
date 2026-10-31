@@ -13,7 +13,9 @@
                  WindowBackdropType="Auto"
                  Background="{DynamicResource ApplicationBackgroundBrush}"
                  FontFamily="{DynamicResource TextThemeFontFamily}"
-                 UseLayoutRounding="True">
+                 UseLayoutRounding="True"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />

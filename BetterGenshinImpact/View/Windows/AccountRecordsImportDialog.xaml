@@ -6,7 +6,9 @@
                  WindowStartupLocation="CenterOwner" ExtendsContentIntoTitleBar="True"
                  WindowBackdropType="Mica" ShowInTaskbar="False"
                  Background="{DynamicResource ApplicationBackgroundBrush}"
-                 Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <ui:FluentWindow.Resources><BooleanToVisibilityConverter x:Key="BoolVisibility" /></ui:FluentWindow.Resources>
     <ui:FluentWindow.InputBindings>
         <KeyBinding Key="Escape" Command="{x:Static ApplicationCommands.Close}" />

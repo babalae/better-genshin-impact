@@ -3,7 +3,9 @@
  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
  xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
  Title="原神账号管理" Width="830" Height="750" MinWidth="700" MinHeight="560" WindowStartupLocation="CenterOwner"
- ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica" Background="{DynamicResource ApplicationBackgroundBrush}">
+ ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica" Background="{DynamicResource ApplicationBackgroundBrush}"
+ ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+ ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
  <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
   <ui:TitleBar Title="原神账号管理" ShowMinimize="False"/>
   <Grid Grid.Row="1" Margin="18,12,18,12" IsEnabled="{Binding CanEdit}">

@@ -18,7 +18,9 @@
                  FontFamily="{StaticResource TextThemeFontFamily}"
                  Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  mc:Ignorable="d"
-                 d:DataContext="{d:DesignInstance Type=vm:JsScriptHtmlSettingsWindowViewModel}">
+                 d:DataContext="{d:DesignInstance Type=vm:JsScriptHtmlSettingsWindowViewModel}"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />

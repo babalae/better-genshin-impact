@@ -18,7 +18,9 @@
                  FontFamily="{StaticResource TextThemeFontFamily}"
                  Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  mc:Ignorable="d"
-                 d:DataContext="{d:DesignInstance Type=pulonia:PuloniaJsScriptSettingsDialogViewModel}">
+                 d:DataContext="{d:DesignInstance Type=pulonia:PuloniaJsScriptSettingsDialogViewModel}"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <ui:FluentWindow.Resources>
         <!-- JS 自定义设置沿用现有 settings_ui 支持的六类字段，不回退到原始 JSON 输入。 -->
         <DataTemplate x:Key="JavaScriptSettingFieldTemplate"

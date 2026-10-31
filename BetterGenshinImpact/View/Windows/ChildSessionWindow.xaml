@@ -21,7 +21,9 @@
                  Topmost="{Binding IsTopmost, Mode=OneWay}"
                  WindowBackdropType="Auto"
                  WindowStartupLocation="CenterScreen"
-                 mc:Ignorable="d">
+                 mc:Ignorable="d"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <Grid x:Name="RootGrid"
           Background="Black">
         <Grid.RowDefinitions>

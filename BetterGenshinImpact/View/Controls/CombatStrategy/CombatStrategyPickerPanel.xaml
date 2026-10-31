@@ -5,7 +5,9 @@
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:local="clr-namespace:BetterGenshinImpact.View.Controls.CombatStrategy"
              KeyboardNavigation.TabNavigation="Cycle" UseLayoutRounding="True" Foreground="{DynamicResource TextFillColorPrimaryBrush}" FontSize="14"
-             FontFamily="{DynamicResource TextThemeFontFamily}">
+             FontFamily="{DynamicResource TextThemeFontFamily}"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>

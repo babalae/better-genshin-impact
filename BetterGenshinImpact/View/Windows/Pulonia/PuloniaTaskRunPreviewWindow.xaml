@@ -13,7 +13,9 @@
                  FontFamily="{StaticResource TextThemeFontFamily}"
                  Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  WindowBackdropType="Mica"
-                 WindowStartupLocation="CenterOwner">
+                 WindowStartupLocation="CenterOwner"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <!--  运行预览：按计划当前配置逐项预测本次执行或跳过；运行到每个节点时仍会重新判定  -->
     <b:Interaction.Triggers>
         <b:EventTrigger EventName="Loaded">

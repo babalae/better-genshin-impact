@@ -6,7 +6,9 @@
                  xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
                  Title="添加本地仓库" Width="540" SizeToContent="Height" ResizeMode="NoResize"
                  WindowStartupLocation="CenterOwner" ExtendsContentIntoTitleBar="True"
-                 WindowBackdropType="Mica" Background="{DynamicResource ApplicationBackgroundBrush}">
+                 WindowBackdropType="Mica" Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />

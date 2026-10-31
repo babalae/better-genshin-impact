@@ -3,7 +3,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:combat="clr-namespace:BetterGenshinImpact.View.Controls.CombatStrategy"
              xmlns:pulonia="clr-namespace:BetterGenshinImpact.ViewModel.Windows.Pulonia"
-             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <!--
         共享设置编辑器（DataContext 为 PuloniaSharedSettingsEditorViewModel），节点设置窗口与方案管理窗口共用：
         1. 顶部：说明、方案选择（仅节点）、搜索与筛选

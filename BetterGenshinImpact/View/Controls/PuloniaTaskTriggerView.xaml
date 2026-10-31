@@ -5,7 +5,9 @@
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:hotkey="clr-namespace:BetterGenshinImpact.View.Controls.HotKey"
              xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
-             Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <!--
         任务计划页“触发方式”页签与一条龙“定时与热键”窗口共用此视图，DataContext 为 PuloniaPlanTriggersViewModel。
         启用只通过列表卡片上的开关（立即保存）；右侧编辑区只保存配置字段。

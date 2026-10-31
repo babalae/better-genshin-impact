@@ -2,7 +2,9 @@
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
    xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior" xmlns:dd="urn:gong-wpf-dragdrop"
- FontFamily="{StaticResource TextThemeFontFamily}" Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+ FontFamily="{StaticResource TextThemeFontFamily}" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+ ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+ ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
  <b:Interaction.Triggers>
   <b:EventTrigger EventName="Loaded"><b:InvokeCommandAction Command="{Binding ViewModel.OpenPageCommand, Mode=OneWay}"/></b:EventTrigger>
   <b:EventTrigger EventName="Unloaded"><b:InvokeCommandAction Command="{Binding ViewModel.ClosePageCommand, Mode=OneWay}"/></b:EventTrigger>

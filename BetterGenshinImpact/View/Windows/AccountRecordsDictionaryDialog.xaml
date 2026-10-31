@@ -3,7 +3,9 @@
  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
  Title="{Binding Title, Mode=OneWay}" Width="860" Height="640" MinWidth="620" MinHeight="400"
  WindowStartupLocation="CenterOwner" ShowInTaskbar="False" ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica"
- Background="{DynamicResource ApplicationBackgroundBrush}" Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+ Background="{DynamicResource ApplicationBackgroundBrush}" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+ ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+ ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
  <ui:FluentWindow.Resources><BooleanToVisibilityConverter x:Key="BoolVisibility" /></ui:FluentWindow.Resources>
  <b:Interaction.Triggers><b:EventTrigger EventName="Loaded"><b:InvokeCommandAction Command="{Binding RefreshCommand, Mode=OneWay}" /></b:EventTrigger></b:Interaction.Triggers>
  <ui:FluentWindow.InputBindings><KeyBinding Key="Escape" Command="{x:Static ApplicationCommands.Close}" /></ui:FluentWindow.InputBindings>

@@ -6,7 +6,9 @@
              xmlns:pages="clr-namespace:BetterGenshinImpact.View.Pages"
              xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
              xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
-             Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <UserControl.Resources>
         <SolidColorBrush x:Key="InventoryErrorBrush" Color="#EA4335" />
         <SolidColorBrush x:Key="InventoryWarningBrush" Color="#F28C28" />

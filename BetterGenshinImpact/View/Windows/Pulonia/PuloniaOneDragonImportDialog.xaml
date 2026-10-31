@@ -1,7 +1,9 @@
 <ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.Pulonia.PuloniaOneDragonImportDialog"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" Title="旧数据导入预览" Width="850" Height="700" MinWidth="650" MinHeight="450" WindowStartupLocation="CenterOwner" ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica" FontFamily="{StaticResource TextThemeFontFamily}"
- Background="{DynamicResource ApplicationBackgroundBrush}" Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+ Background="{DynamicResource ApplicationBackgroundBrush}" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+ ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+ ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
  <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
   <ui:TitleBar Title="旧数据导入预览" ShowMinimize="False" ShowMaximize="False"/>
   <ui:Card Grid.Row="1" Margin="20,12"><TextBox Text="{Binding Report, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" BorderThickness="0" Background="Transparent"/></ui:Card>

@@ -3,7 +3,9 @@
  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
  xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior" xmlns:markdown="clr-namespace:BetterGenshinImpact.View.Controls.Markdown"
  Title="{Binding WindowTitle}" Width="1050" Height="760" MinWidth="850" MinHeight="550" WindowStartupLocation="CenterOwner" ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica" FontFamily="{StaticResource TextThemeFontFamily}"
- Background="{DynamicResource ApplicationBackgroundBrush}" Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+ Background="{DynamicResource ApplicationBackgroundBrush}" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+ ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+ ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
  <ui:FluentWindow.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceDictionary Source="../../Controls/PuloniaOneDragonResources.xaml"/></ResourceDictionary.MergedDictionaries></ResourceDictionary></ui:FluentWindow.Resources>
  <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
   <ui:TitleBar Title="{Binding WindowTitle}" ShowMaximize="False" ShowMinimize="False"/>

@@ -1,7 +1,9 @@
 <ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.Pulonia.PuloniaOneDragonSettingsDialog"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" Title="一条龙步骤配置" Width="850" Height="750" MinWidth="650" MinHeight="500"
- WindowStartupLocation="CenterOwner" ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica" FontFamily="{StaticResource TextThemeFontFamily}" Background="{DynamicResource ApplicationBackgroundBrush}" Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+ WindowStartupLocation="CenterOwner" ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica" FontFamily="{StaticResource TextThemeFontFamily}" Background="{DynamicResource ApplicationBackgroundBrush}" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+ ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+ ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
  <ui:FluentWindow.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceDictionary Source="../../Controls/PuloniaOneDragonResources.xaml"/></ResourceDictionary.MergedDictionaries></ResourceDictionary></ui:FluentWindow.Resources>
  <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
   <ui:TitleBar Title="一条龙步骤配置" ShowMinimize="False" ShowMaximize="False"/>

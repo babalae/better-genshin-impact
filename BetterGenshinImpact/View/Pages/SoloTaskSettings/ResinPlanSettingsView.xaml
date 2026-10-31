@@ -2,7 +2,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:tasksVm="clr-namespace:BetterGenshinImpact.ViewModel.SoloTaskSettings"
-             x:Class="BetterGenshinImpact.View.Pages.SoloTaskSettings.ResinPlanSettingsView">
+             x:Class="BetterGenshinImpact.View.Pages.SoloTaskSettings.ResinPlanSettingsView"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>

@@ -8,7 +8,9 @@
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              HorizontalContentAlignment="Stretch"
              VerticalContentAlignment="Stretch"
-             Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <b:Interaction.Behaviors>
         <behavior:AccountRecordsDeferredLoadBehavior Command="{Binding LoadCommand, Mode=OneWay}" />
     </b:Interaction.Behaviors>

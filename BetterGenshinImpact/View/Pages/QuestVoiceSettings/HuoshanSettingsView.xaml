@@ -6,7 +6,9 @@
              xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
              xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages.QuestVoiceSettings"
              Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-             HorizontalContentAlignment="Stretch">
+             HorizontalContentAlignment="Stretch"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <StackPanel>
         <ui:TextBlock Text="火山翻译 · 三种中文预设音色" FontSize="18" FontWeight="SemiBold" />
         <ui:TextBlock Text="在线完整合成；只发送试听文本，无需模型或账号。公开端点可能变更或限流。" TextWrapping="Wrap" Margin="0,8,0,12" />

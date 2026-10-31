@@ -13,7 +13,9 @@
                  WindowBackdropType="Mica"
                  Background="{DynamicResource ApplicationBackgroundBrush}"
                  FontFamily="{StaticResource TextThemeFontFamily}"
-                 Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />

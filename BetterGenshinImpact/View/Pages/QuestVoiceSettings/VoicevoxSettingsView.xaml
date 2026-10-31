@@ -6,7 +6,9 @@
              xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
              xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages.QuestVoiceSettings"
              Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-             HorizontalContentAlignment="Stretch">
+             HorizontalContentAlignment="Stretch"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <StackPanel>
         <ui:TextBlock Text="VOICEVOX" FontSize="18" FontWeight="SemiBold" />
         <ui:TextBlock Text="连接自行启动的引擎；刷新读取 speaker / talk style。请遵守声音的使用条款与署名要求。" TextWrapping="Wrap" Margin="0,8,0,4" />

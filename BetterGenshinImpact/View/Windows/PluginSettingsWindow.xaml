@@ -16,7 +16,9 @@
                  Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  FontFamily="{DynamicResource TextThemeFontFamily}"
                  FontSize="14"
-                 UseLayoutRounding="True">
+                 UseLayoutRounding="True"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <ui:FluentWindow.Resources>
         <!--  底部按钮  -->
         <Style x:Key="PluginSettingsDialogButton"

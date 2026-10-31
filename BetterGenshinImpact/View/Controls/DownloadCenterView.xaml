@@ -8,7 +8,9 @@
              xmlns:vm="clr-namespace:BetterGenshinImpact.ViewModel"
              Width="400"
              d:DataContext="{d:DesignInstance Type=vm:DownloadCenterViewModel}"
-             mc:Ignorable="d">
+             mc:Ignorable="d"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="DownloadBooleanToVisibilityConverter" />
         <converters:BooleanToVisibilityRevertConverter x:Key="DownloadBooleanToVisibilityRevertConverter" />

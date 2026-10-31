@@ -1,7 +1,9 @@
 <UserControl x:Class="BetterGenshinImpact.View.Controls.CombatStrategy.ComboView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" Foreground="{DynamicResource TextFillColorPrimaryBrush}" FontSize="14"
-             FontFamily="{DynamicResource TextThemeFontFamily}">
+             FontFamily="{DynamicResource TextThemeFontFamily}"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <UserControl.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><ResourceDictionary Source="CombatStrategyStyles.xaml" /></ResourceDictionary.MergedDictionaries></ResourceDictionary></UserControl.Resources>
     <StackPanel>
         <TextBlock Text="自动连招（实验）" FontSize="18" FontWeight="SemiBold" Margin="0,6,0,8" />

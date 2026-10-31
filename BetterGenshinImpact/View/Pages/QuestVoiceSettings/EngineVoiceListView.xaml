@@ -6,7 +6,9 @@
              xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
              xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages.QuestVoiceSettings"
              Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-             HorizontalContentAlignment="Stretch">
+             HorizontalContentAlignment="Stretch"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <StackPanel>
         <ComboBox ItemsSource="{Binding Voices, Mode=OneWay}" DisplayMemberPath="DisplayName"
                   SelectedItem="{Binding SelectedVoice, Mode=TwoWay}" HorizontalAlignment="Stretch" />

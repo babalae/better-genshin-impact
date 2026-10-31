@@ -1,7 +1,9 @@
 <UserControl x:Class="BetterGenshinImpact.View.Controls.PuloniaTaskSettingsEditorView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <!--
         任务设置编辑器（DataContext 为 PuloniaTaskSettingsEditorViewModel），新增与编辑弹窗共用：
         1. 独立任务声明了专属设置界面：ContentControl 通过启动时全局注册的隐式模板渲染专属视图
