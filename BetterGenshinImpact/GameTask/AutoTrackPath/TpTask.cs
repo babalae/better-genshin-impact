@@ -37,9 +37,9 @@ using static BetterGenshinImpact.GameTask.Common.TaskControl;
 namespace BetterGenshinImpact.GameTask.AutoTrackPath;
 
 /// <summary>
-/// 传送任务
+/// 传送任务，是 <see cref="ITpTask"/> 的内置实现。调用方通过 <see cref="ITpTaskFactory"/> 创建，不直接 new
 /// </summary>
-public class TpTask
+public class TpTask : ITpTask
 {
     /// <summary>
     /// 本次运行使用的运行环境
@@ -246,7 +246,7 @@ public class TpTask
     /// <param name="runtime">本次运行使用的运行环境</param>
     /// <param name="config">配置根</param>
     /// <param name="ct">取消令牌</param>
-    public TpTask(GameRuntime runtime, AllConfig config, CancellationToken ct)
+    internal TpTask(GameRuntime runtime, AllConfig config, CancellationToken ct)
     {
         _runtime = runtime;
         _config = config;
@@ -2434,7 +2434,7 @@ public class TpTask
         return false;
     }
 
-    internal async Task SwitchArea(string areaName)
+    public async Task SwitchArea(string areaName)
     {
         if (await TrySwitchArea(areaName))
         {

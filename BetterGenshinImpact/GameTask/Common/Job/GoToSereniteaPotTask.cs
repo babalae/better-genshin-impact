@@ -106,7 +106,7 @@ public class GoToSereniteaPotTask : ISoloTask<SereniteaPotParam, NoData>
         await _runtime.Delay(900, ct);
 
         // 进入 壶
-        TpTask tpTask = new TpTask(_runtime, _config, ct);
+        var tpTask = Pluggable.Get<ITpTaskFactory>().Create(_runtime, _config, ct);
         await tpTask.SwitchArea("尘歌壶");
         
         // 若未找到 ElementAssets.Instance.SereniteaPotRo 就是已经在尘歌壶了
@@ -643,7 +643,7 @@ public class GoToSereniteaPotTask : ISoloTask<SereniteaPotParam, NoData>
         await _runtime.Delay(500, ct);
 
         // TP回主世界
-        var tp = new TpTask(_runtime, _config, ct);
+        var tp = Pluggable.Get<ITpTaskFactory>().Create(_runtime, _config, ct);
         await tp.Tp(4508.97509765625, 3630.557373046875); // TP到枫丹
     }
 

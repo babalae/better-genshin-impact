@@ -542,7 +542,7 @@ public sealed class SwitchCharacterStateMachineTask : StateMachineBase<SwitchCha
     private async Task<StateHandlerResult> HandlePartyConfigUnavailablePrompt(BvPage page)
     {
         _logger.LogWarning("切换角色：当前状态不可进行队伍配置，传送到七天神像后重试");
-        await new TpTask(_runtime, _config, _ct).TpToStatueOfTheSeven();
+        await Pluggable.Get<ITpTaskFactory>().Create(_runtime, _config, _ct).TpToStatueOfTheSeven();
         return StateHandlerResult.Success;
     }
 

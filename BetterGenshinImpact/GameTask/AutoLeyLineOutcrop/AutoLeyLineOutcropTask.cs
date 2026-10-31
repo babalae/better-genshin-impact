@@ -107,7 +107,7 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, ResinCl
     /// 本次运行中是否出现过“未找到对应的地脉花策略”。
     /// </summary>
     private bool _routeStrategyNotFound;
-    private TpTask _tpTask = null!;
+    private ITpTask _tpTask = null!;
 
     /// <summary>
     /// 背包摩拉扫描器
@@ -301,7 +301,7 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, ResinCl
     private void Initialize()
     {
         _systemInfo = _runtime.SystemInfo;
-        _tpTask = new TpTask(_runtime, _config, _ct);
+        _tpTask = Pluggable.Get<ITpTaskFactory>().Create(_runtime, _config, _ct);
         _moraFromInventoryScanner = new MoraFromInventoryScanner(_runtime, _logger);
         NormalizeSettings();
         LoadConfigData();

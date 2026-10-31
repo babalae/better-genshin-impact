@@ -589,7 +589,7 @@ public partial class AutoDomainTask : ISoloTask<AutoDomainParam, ResinClaimData>
             if (MapLazyAssets.Get().DomainPositionMap.TryGetValue(_guideDomainName ?? _taskParam.DomainName, out var domainPosition))
             {
                 Logger.LogInformation("自动秘境：传送到秘境{Text}", _guideDomainName ?? _taskParam.DomainName);
-                await new TpTask(_runtime, _allConfig, _ct).Tp(domainPosition.X, domainPosition.Y);
+                await Pluggable.Get<ITpTaskFactory>().Create(_runtime, _allConfig, _ct).Tp(domainPosition.X, domainPosition.Y);
                 await _runtime.Delay(1000, _ct);
                 if (!await Bv.WaitForMainUi(_runtime, _ct) && _guidePlanning)
                     throw new InvalidOperationException("传送后未确认回到主界面，停止接近秘境入口");

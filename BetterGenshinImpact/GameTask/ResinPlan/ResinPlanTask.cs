@@ -825,7 +825,7 @@ public sealed class ResinPlanTask : ISoloTask<ResinPlanParam, ResinPlanData>
         try
         {
             await new ReturnMainUiTask(_runtime).Start(ct);
-            await new TpTask(_runtime, _config, ct).OpenBigMapUi();
+            await Pluggable.Get<ITpTaskFactory>().Create(_runtime, _config, ct).OpenBigMapUi();
             // 打开地图后等待界面稳定再截图，避免读到切换过程中的旧帧
             await _runtime.Delay(300, ct);
             using var capture = _runtime.CaptureToRectArea();

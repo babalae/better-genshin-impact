@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Input;
 using System;
 using System.Globalization;
@@ -147,7 +147,7 @@ public class CheckRewardsTask
             var resinText = "体力识别失败";
             try
             {
-                await new TpTask(_runtime, _config, ct).OpenBigMapUi();
+                await Pluggable.Get<ITpTaskFactory>().Create(_runtime, _config, ct).OpenBigMapUi();
                 await _runtime.Delay(300, ct);
                 using var capture = _runtime.CaptureToRectArea();
                 var resin = ResinRecognition.RecognizeInBigMapTopBar(capture);

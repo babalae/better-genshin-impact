@@ -129,7 +129,7 @@ public class AutoTrackPathTask
     {
         // 1. 传送到最近的传送点
         var first = _way.WayPointList[0]; // 解析路线，第一个点为起点
-        await new TpTask(_runtime, _config, _ct).Tp(first.Pt.X, first.Pt.Y);
+        await Pluggable.Get<ITpTaskFactory>().Create(_runtime, _config, _ct).Tp(first.Pt.X, first.Pt.Y);
 
         // 2. 等待传送完成
         _runtime.Sleep(1000);

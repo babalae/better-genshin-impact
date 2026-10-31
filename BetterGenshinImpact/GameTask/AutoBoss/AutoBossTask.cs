@@ -337,7 +337,7 @@ public class AutoBossTask : ISoloTask<AutoBossParam, ResinClaimData>
             if (_taskParam.ReturnToStatueAfterEachRound)
             {
                 _logger.LogInformation("{Name}：返回七天神像", TaskName);
-                await new TpTask(_runtime, _config, _ct).TpToStatueOfTheSeven();
+                await Pluggable.Get<ITpTaskFactory>().Create(_runtime, _config, _ct).TpToStatueOfTheSeven();
                 await _runtime.Delay(3000, _ct);
                 shouldNavigateToBoss = true;
             }
