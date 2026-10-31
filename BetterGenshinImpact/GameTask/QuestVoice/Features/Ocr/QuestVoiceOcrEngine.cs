@@ -14,7 +14,7 @@ namespace BetterGenshinImpact.GameTask.QuestVoice.Features.Ocr;
 
 /// <summary>
 /// 自动配音使用的 OCR：直接调用 BetterGI 全局 OCR 服务（<see cref="OcrFactory.PaddleOcr"/>）的无检测逐行识别。
-/// 模型跟随“设置 → OCR 配置 → PaddleOCR模型”和游戏语言，推理设备跟随“硬件加速”与“OCR 使用 CPU”；
+/// 模型跟随“设置 → OCR 配置 → OCR 模型”，推理设备跟随“硬件加速”与“OCR 使用 CPU”；
 /// 不另建模型实例，全局设置变化后下一次识别即使用新模型。
 /// </summary>
 public sealed class QuestVoiceOcrEngine : IOcrEngine, IDisposable
@@ -70,7 +70,10 @@ public sealed class QuestVoiceOcrEngine : IOcrEngine, IDisposable
         finally { _gate.Release(); }
     }
 
-    /// <summary>用当前全局 OCR 识别；全局服务因切换模型或游戏语言被卸载时，换用新实例重试一次。</summary>
+    /// <summary>
+    /// 用当前全局 OCR 识别。全局 OCR 现为可插拔能力的代理，切换模型不会再抛出 ObjectDisposedException；
+    /// 重试一次只作为兜底保留。
+    /// </summary>
     private OcrRecognizerResult[] Recognize(Mat[] lines)
     {
         try { return Service().OcrResultLinesWithoutDetector(lines); }
@@ -88,7 +91,7 @@ public sealed class QuestVoiceOcrEngine : IOcrEngine, IDisposable
     }
 
     /// <summary>诊断显示当前全局 OCR 的识别模型和推理设备。</summary>
-    private OcrModelInfo Describe() => new(_ocr.ActiveModelType.RecognitionModel.Name, _runtime.Current.OcrDescription);
+    private OcrModelInfo Describe() => new(_ocr.ActiveModelName, _runtime.Current.OcrDescription);
 
     /// <summary>重复释放无副作用；只等待本轮在途识别结束，不释放全局 OCR。</summary>
     public void Dispose()

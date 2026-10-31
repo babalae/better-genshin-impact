@@ -62,8 +62,9 @@ public sealed class InferenceModelDiagnostics(
                 try
                 {
                     _lifetime.Token.ThrowIfCancellationRequested();
+                    // 首次调用时按选择的 OCR 模型创建实例，实例创建时已经预热一次
                     var service = ocr.PaddleOcr;
-                    using var image = new Mat(ocr.ActiveModelType.PreHeatImagePath);
+                    using var image = new Mat(PaddleOcrService.PaddleOcrModelType.TestImagePath);
                     if (image.Empty()) throw new InvalidDataException("OCR 预热图片无法读取。");
                     Debug.WriteLine("PaddleOcr预热结果:" + service.Ocr(image));
                 }
@@ -86,10 +87,11 @@ public sealed class InferenceModelDiagnostics(
     public Task ValidateOcrAsync(BgiOnnxSessionFactory factory, CancellationToken token)
         => ValidateAsync(factory, "OCR", validationToken =>
         {
-            var model = ocr.ActiveModelType;
-            using var image = new Mat(model.PreHeatImagePath);
+            using var image = new Mat(PaddleOcrService.PaddleOcrModelType.TestImagePath);
             if (image.Empty()) throw new InvalidDataException("OCR 验证图片无法读取。");
-            using var service = new PaddleOcrService(factory.ForOcrValidation(), model);
+            // 按当前选择的 OCR 模型创建独立实例，不影响全局 OCR
+            var service = ocr.CreateDetached(factory.ForOcrValidation());
+            using var disposable = service as IDisposable;
             validationToken.ThrowIfCancellationRequested();
             _ = service.Ocr(image);
             logger.LogInformation("[ONNX]OCR 验证完整推理已执行");
@@ -169,11 +171,11 @@ public sealed class InferenceModelDiagnostics(
             {
                 if (scene == InferenceBenchmarkScene.Ocr)
                 {
-                    var type = ocr.ActiveModelType;
-                    using var service = new PaddleOcrService(factory, type);
-                    using var image = new Mat(ocr.ActiveModelType.PreHeatImagePath);
+                    var service = ocr.CreateDetached(factory);
+                    using var disposable = service as IDisposable;
+                    using var image = new Mat(PaddleOcrService.PaddleOcrModelType.TestImagePath);
                     if (image.Empty()) throw new InvalidDataException("OCR 测试图片无法读取。");
-                    return Measure("OCR", $"{factory.Runtime.OcrDescription} · {type.DetectionModel.Name}/{type.RecognitionModel.Name}",
+                    return Measure("OCR", $"{factory.Runtime.OcrDescription} · {ocr.ActiveModelName}",
                         () => _ = service.Ocr(image), progress, linked.Token);
                 }
                 using var treeImage = Image.Load<Rgb24>(InferenceTestImages.DomainTreePath);

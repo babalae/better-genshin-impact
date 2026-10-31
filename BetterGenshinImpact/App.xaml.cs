@@ -12,6 +12,8 @@ using BetterGenshinImpact.Core.Mask;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Monitor;
+using BetterGenshinImpact.Core.Plugins.Hosting;
+using BetterGenshinImpact.Core.Plugins.Pluggables;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.SoloTask;
@@ -54,6 +56,7 @@ using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel;
 using BetterGenshinImpact.ViewModel.Controls;
 using BetterGenshinImpact.ViewModel.Pages;
+using BetterGenshinImpact.ViewModel.Pages.Plugins;
 using BetterGenshinImpact.ViewModel.Pages.View;
 using BetterGenshinImpact.ViewModel.SoloTaskSettings;
 using BetterGenshinImpact.ViewModel.Windows;
@@ -246,6 +249,14 @@ public partial class App : Application
                     $"BetterGI · 更好的原神 · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}"));
                 // 独立任务：启动时扫描主程序集中带 [SoloTaskInfo] 的任务类
                 services.AddSingleton(_ => new SoloTaskRegistry([typeof(App).Assembly]));
+                // 可插拔机制：扫描主程序集中的可插拔能力和内置实现，把每个可插拔能力接口注册为代理；
+                // 插件宿主在启动时发现、启用插件，见 Docs/design/plugin-system.md
+                all.PluginConfig ??= new();
+                var pluggables = new PluggableRegistry([typeof(App).Assembly], all.PluginConfig);
+                services.AddSingleton(pluggables);
+                pluggables.RegisterProxies(services);
+                services.AddSingleton<PluginManager>();
+                services.AddSingleton<IPluginSettingsDialogs, PluginSettingsDialogs>();
                 services.AddSingleton<SoloTaskExecutionService>();
                 services.AddSingleton<InstanceService>();
                 services.AddHostedService(sp => sp.GetRequiredService<InstanceService>());
@@ -309,6 +320,7 @@ public partial class App : Application
                 // services.AddView<PathingConfigView, PathingConfigViewModel>();
                 services.AddView<KeyBindingsSettingsPage, KeyBindingsSettingsPageViewModel>();
                 services.AddView<GuideWindowSettingsPage, GuideWindowSettingsPageViewModel>();
+                services.AddView<PluginsPage, PluginsPageViewModel>();
 
                 // 一条龙 ViewModels
                 // services.AddSingleton<CraftViewModel>();
@@ -442,6 +454,8 @@ public partial class App : Application
                 services.AddSingleton<IKeyInputTransport, SendInputKeyInputTransport>();
                 services.AddSingleton<IMusicPlaybackService, MusicPlaybackService>();
                 services.AddSingleton<BgiOnnxFactory>();
+                // 绑定当前推理运行时的会话工厂，供可插拔实现（如各 OCR 模型）在构造函数中注入
+                services.AddTransient(sp => sp.GetRequiredService<BgiOnnxFactory>().ForCurrentRuntime());
                 services.AddSingleton<OcrFactory>();
                 services.AddMemoryCache();
                 services.AddSingleton<IAppCache, CachingService>();
@@ -526,6 +540,8 @@ public partial class App : Application
             var inferenceRuntime = _host.Services.GetRequiredService<InferenceRuntimeService>();
             // 此处只准备设备配置；模型验证和提示由主实例的 MainWindowViewModel.OnLoaded 执行。
             await inferenceRuntime.InitializeAsync();
+            // 插件：主窗口创建前发现并启用插件。OCR 预热在主窗口加载后执行，届时插件提供的模型已经可用
+            _host.Services.GetRequiredService<PluginManager>().Initialize();
             // 主窗口在宿主启动时创建；先在 UI 线程注册独立任务设置界面的隐式模板
             SoloTaskSettingsTemplates.Register(Current.Resources, App.GetService<SoloTaskRegistry>()!);
             await _host.StartAsync();

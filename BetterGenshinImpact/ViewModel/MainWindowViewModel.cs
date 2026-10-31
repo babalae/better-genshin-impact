@@ -744,12 +744,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
         {
             ModifyFolderSecurity();
 
-            // alpha 版本用户每次升级后默认切换到 V6 OCR 模型
-            if (Global.Version.Contains("alpha", StringComparison.OrdinalIgnoreCase)
-                && Config.OtherConfig.OcrConfig.PaddleOcrModelConfig != PaddleOcrModelConfig.V6)
-            {
-                Config.OtherConfig.OcrConfig.PaddleOcrModelConfig = PaddleOcrModelConfig.V6;
-            }
+            // 主程序只内置 PP-OCRv6，默认即使用它，不再需要升级时强制切换 OCR 模型
 
             Config.CommonConfig.RunForVersion = Global.Version;
         }

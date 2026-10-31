@@ -42,10 +42,10 @@ public class PaddleOcrService : IOcrService, IDisposable
         String PreHeatImagePath
     )
     {
+        /// <summary>
+        /// 默认预热图，也用于推理验证和测速。V4、V5 等其他版本的模型已移入插件（见 Docs/design/plugin-system.md 第 17 节）。
+        /// </summary>
         public static string TestImagePath = Global.Absolute(@"Assets\Model\PaddleOCR\test_pp_ocr.png");
-
-        public static string TestNumberImagePath =
-            Global.Absolute(@"Assets\Model\PaddleOCR\test_pp_ocr_number.png");
 
         private static readonly Func<BgiOnnxModel, IReadOnlyList<string>> DefaultRecLabelFunc =
             recModel =>
@@ -91,7 +91,11 @@ public class PaddleOcrService : IOcrService, IDisposable
             };
 
 
-        private static PaddleOcrModelType Create(
+        /// <summary>
+        /// 组合检测与识别模型。字典默认读取识别模型同目录的 inference.yml，预热图默认为 <see cref="TestImagePath"/>。
+        /// 插件用它组合自己目录中的模型。
+        /// </summary>
+        public static PaddleOcrModelType Create(
             BgiOnnxModel detectionModel,
             OcrVersionConfig detectionVersion,
             BgiOnnxModel recognitionModel,
@@ -116,139 +120,15 @@ public class PaddleOcrService : IOcrService, IDisposable
             catch { detection.Dispose(); throw; }
         }
 
-        public static readonly PaddleOcrModelType V4 = Create(
-            BgiOnnxModel.PaddleOcrDetV4,
-            OcrVersionConfig.PpOcrV4,
-            BgiOnnxModel.PaddleOcrRecV4,
-            OcrVersionConfig.PpOcrV4);
-
-        public static readonly PaddleOcrModelType V4En = Create(
-            BgiOnnxModel.PaddleOcrDetV4,
-            OcrVersionConfig.PpOcrV4,
-            BgiOnnxModel.PaddleOcrRecV4En,
-            OcrVersionConfig.PpOcrV4,
-            TestNumberImagePath);
-
-        public static readonly PaddleOcrModelType V5 = Create(
-            BgiOnnxModel.PaddleOcrDetV5,
-            OcrVersionConfig.PpOcrV5,
-            BgiOnnxModel.PaddleOcrRecV5,
-            OcrVersionConfig.PpOcrV5);
-
+        /// <summary>
+        /// 主程序内置的 PP-OCRv6 模型组合。
+        /// </summary>
         public static readonly PaddleOcrModelType V6 = Create(
             BgiOnnxModel.PaddleOcrDetV6,
             OcrVersionConfig.PpOcrV6,
             BgiOnnxModel.PaddleOcrRecV6,
             OcrVersionConfig.PpOcrV6);
 
-        public static readonly PaddleOcrModelType V5Latin = Create(
-            BgiOnnxModel.PaddleOcrDetV5,
-            OcrVersionConfig.PpOcrV5,
-            BgiOnnxModel.PaddleOcrRecV5Latin,
-            OcrVersionConfig.PpOcrV5);
-
-        public static readonly PaddleOcrModelType V5Eslav = Create(
-            BgiOnnxModel.PaddleOcrDetV5,
-            OcrVersionConfig.PpOcrV5,
-            BgiOnnxModel.PaddleOcrRecV5Eslav,
-            OcrVersionConfig.PpOcrV5);
-
-        public static readonly PaddleOcrModelType V5Korean = Create(
-            BgiOnnxModel.PaddleOcrDetV5,
-            OcrVersionConfig.PpOcrV5,
-            BgiOnnxModel.PaddleOcrRecV5Korean,
-            OcrVersionConfig.PpOcrV5);
-
-        /// <summary>
-        /// 这边多语言部分写的比较丑陋，但是能跑。可以根据PP-OCR的语言列表来优化。
-        /// </summary>
-        /// <param name="cultureInfo"></param>
-        /// <returns></returns>
-        public static PaddleOcrModelType? FromCultureInfo(CultureInfo cultureInfo)
-        {
-            HashSet<string> eslavLangs = new(StringComparer.OrdinalIgnoreCase)
-                { "ru", "be", "uk" };
-            HashSet<string> latinLangs = new(StringComparer.OrdinalIgnoreCase)
-            {
-                "af", "az", "bs", "cs", "cy", "da", "de", "es", "et", "fr", "ga", "hr", "hu", "id", "is", "it", "ku",
-                "la",
-                "lt", "lv", "mi", "ms", "mt", "nl", "no", "oc", "pi", "pl", "pt", "ro", "rs_latin", "sk", "sl", "sq",
-                "sv",
-                "sw", "tl", "tr", "uz", "vi", "french", "german"
-            };
-            HashSet<string> ocrV5Langs = new(StringComparer.OrdinalIgnoreCase)
-                { "zh", "chi", "zho", "en", "japan", "jp" };
-            // HashSet<string> SPECIAL_LANGS = new(StringComparer.OrdinalIgnoreCase)
-            //     { "ch", "chinese_cht", "en", "japan", "korean" };
-
-            List<string> names =
-            [
-                cultureInfo.EnglishName.ToLowerInvariant(), cultureInfo.Name.ToLowerInvariant(),
-                cultureInfo.ThreeLetterISOLanguageName.ToLowerInvariant(),
-                cultureInfo.TwoLetterISOLanguageName.ToLowerInvariant()
-            ];
-            foreach (var name in names)
-            {
-                if (name.Equals("korean") || name.Equals("ko"))
-                {
-                    return V5Korean;
-                }
-
-                if (eslavLangs.Contains(name))
-                {
-                    return V5Eslav;
-                }
-
-                if (latinLangs.Contains(name))
-                {
-                    return V5Latin;
-                }
-
-                if (ocrV5Langs.Contains(name))
-                {
-                    return V5;
-                }
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// 中英文优先使用V4模型，其他语言使用V5模型
-        /// </summary>
-        /// <param name="cultureInfo"></param>
-        /// <returns></returns>
-        public static PaddleOcrModelType? FromCultureInfoV4(CultureInfo cultureInfo)
-        {
-            var v5 = FromCultureInfo(cultureInfo);
-            // 如果用的是v5, 那么优先用V4的细分模型
-            if (v5 == V5)
-            {
-                List<string> names =
-                [
-                    cultureInfo.EnglishName.ToLowerInvariant(), cultureInfo.Name.ToLowerInvariant(),
-                    cultureInfo.ThreeLetterISOLanguageName.ToLowerInvariant(),
-                    cultureInfo.TwoLetterISOLanguageName.ToLowerInvariant()
-                ];
-                foreach (var name in names)
-                {
-                    if (name.Equals("en"))
-                    {
-                        return V4En;
-                    }
-                    else if (name.Equals("zh-hant") || name.Equals("zh-tw") || name.Equals("zh-hk"))
-                    {
-                        return V5;
-                    }
-                }
-
-                return V4;
-            }
-            else
-            {
-                return v5;
-            }
-        }
     }
 
     public PaddleOcrService(BgiOnnxFactory bgiOnnxFactory, PaddleOcrModelType modelType)
@@ -256,7 +136,12 @@ public class PaddleOcrService : IOcrService, IDisposable
     {
     }
 
-    internal PaddleOcrService(BgiOnnxSessionFactory bgiOnnxFactory, PaddleOcrModelType modelType)
+    /// <summary>
+    /// 用指定的会话工厂加载模型并预热。可插拔实现（内置 PP-OCRv6 和插件中的模型）通过它创建。
+    /// </summary>
+    /// <param name="bgiOnnxFactory">绑定推理运行时的会话工厂。</param>
+    /// <param name="modelType">检测与识别模型组合。</param>
+    public PaddleOcrService(BgiOnnxSessionFactory bgiOnnxFactory, PaddleOcrModelType modelType)
     {
         var (modelsDet, modelsRec) = modelType.Build(bgiOnnxFactory);
         _localDetModel = modelsDet;

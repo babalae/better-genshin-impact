@@ -1,0 +1,74 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.PluginSettingsWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 Width="640"
+                 MinWidth="480"
+                 MinHeight="240"
+                 MaxHeight="800"
+                 SizeToContent="Height"
+                 WindowStartupLocation="CenterOwner"
+                 WindowBackdropType="Auto"
+                 ExtendsContentIntoTitleBar="True"
+                 ShowInTaskbar="False"
+                 Background="{DynamicResource ApplicationBackgroundBrush}"
+                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                 FontFamily="{DynamicResource TextThemeFontFamily}"
+                 FontSize="14"
+                 UseLayoutRounding="True">
+    <ui:FluentWindow.Resources>
+        <!--  底部按钮  -->
+        <Style x:Key="PluginSettingsDialogButton"
+               BasedOn="{StaticResource {x:Type ui:Button}}"
+               TargetType="ui:Button">
+            <Setter Property="MinWidth" Value="72" />
+            <Setter Property="Padding" Value="12,6" />
+        </Style>
+    </ui:FluentWindow.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <ui:TitleBar Title="{Binding Title, Mode=OneWay, RelativeSource={RelativeSource AncestorType=Window}}"
+                     Icon="{ui:SymbolIcon Settings24}"
+                     ShowMaximize="False"
+                     ShowMinimize="False" />
+
+        <!--  插件提供的设置视图：隐式模板在插件加载时注册到应用资源  -->
+        <ScrollViewer Grid.Row="1"
+                      Padding="20,4,20,16"
+                      VerticalScrollBarVisibility="Auto">
+            <ContentControl HorizontalContentAlignment="Stretch"
+                            VerticalContentAlignment="Stretch"
+                            Content="{Binding Mode=OneWay}"
+                            Focusable="False"
+                            IsTabStop="False" />
+        </ScrollViewer>
+
+        <!--  底部：修改即时保存，只需要关闭按钮  -->
+        <Border Grid.Row="2"
+                Padding="20,12"
+                Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                           Text="{i18n:T 修改后自动保存。}"
+                           TextWrapping="Wrap" />
+                <ui:Button Grid.Column="1"
+                           Appearance="Primary"
+                           Click="Close_Click"
+                           Content="{i18n:T 关闭}"
+                           IsCancel="True"
+                           IsDefault="True"
+                           Style="{StaticResource PluginSettingsDialogButton}" />
+            </Grid>
+        </Border>
+    </Grid>
+</ui:FluentWindow>

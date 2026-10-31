@@ -232,6 +232,14 @@
                 </ui:NavigationViewItem>
             </ui:NavigationView.MenuItems>
             <ui:NavigationView.FooterMenuItems>
+                <!--  插件：功能选择与插件管理，见 Docs/design/plugin-system.md 第 13 节  -->
+                <ui:NavigationViewItem Content="{i18n:T 插件}"
+                                       NavigationCacheMode="Enabled"
+                                       TargetPageType="{x:Type pages:PluginsPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="PuzzlePiece24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
                 <ui:NavigationViewItem Content="{i18n:T 设置}"
                                        NavigationCacheMode="Enabled"
                                        TargetPageType="{x:Type pages:CommonSettingsPage}">

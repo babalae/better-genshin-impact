@@ -316,6 +316,11 @@ public partial class AllConfig : ObservableObject
     public GuideWindowConfig GuideWindowConfig { get; set; } = new();
 
     /// <summary>
+    /// 插件与可插拔能力配置：启用的插件、各可插拔能力选中的实现
+    /// </summary>
+    public PluginConfig PluginConfig { get; set; } = new();
+
+    /// <summary>
     /// 任意配置项变更后的回调（由 ConfigService 设置为防抖保存）
     /// </summary>
     [JsonIgnore]
