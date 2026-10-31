@@ -9,6 +9,7 @@ using System.Security.Cryptography;
 using Newtonsoft.Json.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace BetterGenshinImpact.Core.Recognition.ONNX;
 
@@ -308,13 +309,37 @@ public sealed class OnnxRuntimeInstaller : IOnnxRuntimeInstaller, IDisposable
         var registration = await ReadJsonAsync($"https://api.nuget.org/v3/registration5-gz-semver2/{lower}/{version}.json", token);
         var catalogUrl = new Uri(registration.Value<string>("catalogEntry")!);
         if (catalogUrl.Scheme != "https" || catalogUrl.Host != "api.nuget.org") throw new InvalidDataException("NuGet 元数据地址无效。");
-        var catalog = await ReadJsonAsync(catalogUrl.AbsoluteUri, token);
-        var entry = catalog;
+        JObject entry;
+        try
+        {
+            entry = await ReadJsonAsync(catalogUrl.AbsoluteUri, token);
+        }
+        catch (HttpRequestException e) when (e.StatusCode == HttpStatusCode.NotFound)
+        {
+            // NuGet 的 Catalog 在中国不可用，但包内容仍可下载；通过 V2 获取同一版本的大小和摘要。
+            var metadata = XDocument.Parse(await ReadTextAsync(
+                $"https://www.nuget.org/api/v2/Packages(Id='{Uri.EscapeDataString(id)}',Version='{Uri.EscapeDataString(version)}')",
+                token, "application/atom+xml"));
+            XNamespace metadataNamespace = "http://schemas.microsoft.com/ado/2007/08/dataservices/metadata";
+            XNamespace dataNamespace = "http://schemas.microsoft.com/ado/2007/08/dataservices";
+            var package = metadata.Root?.Element(metadataNamespace + "properties")
+                ?? throw new InvalidDataException("NuGet V2 包元数据无效。");
+            entry = new JObject
+            {
+                ["packageSize"] = (string?)package.Element(dataNamespace + "PackageSize"),
+                ["packageHashAlgorithm"] = (string?)package.Element(dataNamespace + "PackageHashAlgorithm"),
+                ["packageHash"] = (string?)package.Element(dataNamespace + "PackageHash")
+            };
+        }
         var size = entry.Value<long>("packageSize");
+        if (size <= 0 || size > long.MaxValue / 4) throw new InvalidDataException("NuGet 包大小无效。");
         var algorithm = entry.Value<string>("packageHashAlgorithm")!;
         if (algorithm != "SHA512") throw new InvalidDataException("NuGet 包摘要算法不符合预期。");
+        var hash = entry.Value<string>("packageHash");
+        if (hash == null || !Convert.TryFromBase64String(hash, new byte[64], out var hashLength) || hashLength != 64)
+            throw new InvalidDataException("NuGet 包 SHA512 摘要无效。");
         return new($"{id} {version}", new($"https://api.nuget.org/v3-flatcontainer/{lower}/{version}/{lower}.{version}.nupkg"), size, size * 4,
-            entry.Value<string>("packageHash"), algorithm, id);
+            hash, algorithm, id);
     }
 
     private static RuntimeDownloadPackage GetNvidiaPackage(string product, string component, string version, JToken entry)
@@ -326,12 +351,17 @@ public sealed class OnnxRuntimeInstaller : IOnnxRuntimeInstaller, IDisposable
     }
 
     private async Task<JObject> ReadJsonAsync(string url, CancellationToken token)
+        => JObject.Parse(await ReadTextAsync(url, token));
+
+    private async Task<string> ReadTextAsync(string url, CancellationToken token, string? accept = null)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token, _lifetime.Token);
         timeout.CancelAfter(TimeSpan.FromSeconds(30));
-        using var response = await _client.GetAsync(url, timeout.Token);
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        if (accept != null) request.Headers.Accept.ParseAdd(accept);
+        using var response = await _client.SendAsync(request, timeout.Token);
         response.EnsureSuccessStatusCode();
-        return JObject.Parse(await response.Content.ReadAsStringAsync(timeout.Token));
+        return await response.Content.ReadAsStringAsync(timeout.Token);
     }
 
     public async Task StopAsync()
