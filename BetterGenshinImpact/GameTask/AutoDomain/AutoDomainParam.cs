@@ -66,6 +66,12 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
     /// </summary>
     public bool RewardRecognitionEnabled { get; set; } = false;
 
+    /// <summary>自动秘境战斗超时时间（秒）。</summary>
+    public int FightTimeout { get; set; } = 300;
+
+    /// <summary>寻找石化古树超时时间（秒）。</summary>
+    public int FindTreeTimeout { get; set; } = 60;
+
     /// <summary>Training guide options inherit task settings at construction; JS may override any subset for this run.</summary>
     public bool TrainingGuideCalculateRunsEnabled { get; set; }
 
@@ -135,6 +141,8 @@ public class AutoDomainParam : BaseTaskParam<AutoDomainTask>
         OriginalResin20UseCount = config.OriginalResin20UseCount;
         OriginalResin40UseCount = config.OriginalResin40UseCount;
         RewardRecognitionEnabled = config.RewardRecognitionEnabled;
+        FightTimeout = config.FightTimeout;
+        FindTreeTimeout = config.FindTreeTimeout;
         TrainingGuideCalculateRunsEnabled = config.TrainingGuideCalculateRunsEnabled;
         TrainingGuideRunPreference = config.TrainingGuideRunPreference;
         TrainingGuideCraftingBonusReservePercent = config.TrainingGuideCraftingBonusReservePercent;
