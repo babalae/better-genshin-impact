@@ -6030,6 +6030,75 @@
         ]
     },
     {
+        "id": 1517,
+        "nameEn": "varka",
+        "type": "character",
+        "name": "法尔伽",
+        "hp": 12,
+        "energy": 3,
+        "element": "风元素",
+        "weapon": "双手剑",
+        "skills": [
+            {
+                "nameEn": "favonius_bladework_dancing_radiance",
+                "name": "西风剑术·流光之舞",
+                "skillTag": [
+                    "普通攻击"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 1
+                    },
+                    {
+                        "id": 1109,
+                        "nameEn": "unaligned_element",
+                        "type": "无色元素",
+                        "count": 2
+                    }
+                ]
+            },
+            {
+                "nameEn": "windbound_execution",
+                "name": "烈风终坠",
+                "skillTag": [
+                    "元素战技"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 3
+                    }
+                ]
+            },
+            {
+                "nameEn": "northwind_avatar",
+                "name": "我即朔风",
+                "skillTag": [
+                    "元素爆发"
+                ],
+                "cost": [
+                    {
+                        "id": 1105,
+                        "nameEn": "anemo",
+                        "type": "风元素",
+                        "count": 3
+                    },
+                    {
+                        "id": 1110,
+                        "nameEn": "energy",
+                        "type": "充能",
+                        "count": 3
+                    }
+                ]
+            }
+        ]
+    },
+    {
         "id": 1601,
         "nameEn": "ningguang",
         "type": "character",
@@ -9913,7 +9982,7 @@
         "nameEn": "black_serpent_knight_windcutter",
         "type": "character",
         "name": "黑蛇骑士·斩风之剑",
-        "hp": 10,
+        "hp": 12,
         "energy": 2,
         "element": "风元素",
         "weapon": "其他武器",
