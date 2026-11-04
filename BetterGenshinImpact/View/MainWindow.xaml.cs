@@ -52,6 +52,14 @@ public partial class MainWindow : FluentWindow, INavigationWindow
         AddHandler(PreviewMouseWheelEvent, new MouseWheelEventHandler(OnGlobalPreviewMouseWheel), true);
 
         Loaded += (s, e) => Activate();
+
+        StateChanged += (_, _) =>
+        {
+            if (WindowState != WindowState.Minimized)
+            {
+                _lastNonMinimizedWindowState = WindowState;
+            }
+        };
     }
 
     private void OnGlobalPreviewMouseWheel(object sender, MouseWheelEventArgs e)
@@ -228,19 +236,111 @@ public partial class MainWindow : FluentWindow, INavigationWindow
         return null;
     }
 
+    private bool _windowPositionRestored;
+    private WindowState _lastNonMinimizedWindowState;
+
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
         WindowHelper.TryApplySystemBackdrop(this);
+        RestoreWindowPosition();
+    }
+
+    private void RestoreWindowPosition()
+    {
+        if (_windowPositionRestored)
+        {
+            return;
+        }
+
+        var config = ViewModel.Config.CommonConfig;
+        if (!config.RestoreWindowPositionAndSize)
+        {
+            return;
+        }
+
+        if (config.WindowWidth > 0 && config.WindowHeight > 0)
+        {
+            Width = config.WindowWidth;
+            Height = config.WindowHeight;
+        }
+
+        ClampWindowToScreen(config.WindowLeft, config.WindowTop);
+
+        if (config.WindowState == 2)
+        {
+            Loaded += (_, _) => WindowState = WindowState.Maximized;
+        }
+
+        _windowPositionRestored = true;
     }
 
     protected override void OnClosed(EventArgs e)
     {
+        SaveWindowPosition();
         _logger.LogDebug("主窗体退出");
         CompositionTarget.Rendering -= OnCompositionTargetRendering;
         RemoveHandler(PreviewMouseWheelEvent, new MouseWheelEventHandler(OnGlobalPreviewMouseWheel));
         base.OnClosed(e);
         App.GetService<NotifyIconViewModel>()?.Exit();
+    }
+
+    private void SaveWindowPosition()
+    {
+        var config = ViewModel.Config.CommonConfig;
+
+        // Determine the correct state: if the window is minimized (e.g. hidden to tray),
+        // use the last non-minimized state so a previously maximized window is restored correctly.
+        var effectiveState = WindowState == WindowState.Minimized
+            ? _lastNonMinimizedWindowState
+            : WindowState;
+
+        if (effectiveState == WindowState.Maximized)
+        {
+            config.WindowState = 2;
+        }
+        else
+        {
+            config.WindowState = 0;
+        }
+
+        if (WindowState == WindowState.Normal)
+        {
+            config.WindowLeft = Left;
+            config.WindowTop = Top;
+            config.WindowWidth = Width;
+            config.WindowHeight = Height;
+        }
+        else
+        {
+            // Maximized or Minimized: save RestoreBounds (the normal bounds before the state change)
+            config.WindowLeft = RestoreBounds.Left;
+            config.WindowTop = RestoreBounds.Top;
+            config.WindowWidth = RestoreBounds.Width;
+            config.WindowHeight = RestoreBounds.Height;
+        }
+    }
+
+    /// <summary>
+    /// Clamp the window position so it lands within an actual monitor's working area.
+    /// Validates against each physical monitor rather than the VirtualScreen bounding box,
+    /// avoiding unreachable positions in non-rectangular multi-monitor layouts.
+    /// </summary>
+    private void ClampWindowToScreen(double left, double top)
+    {
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var testX = (int)((left + Width / 2) * dpi.DpiScaleX);
+        var testY = (int)((top + 15) * dpi.DpiScaleY);
+        var screen = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point(testX, testY));
+        var work = screen.WorkingArea;
+        var workLeft = work.Left / dpi.DpiScaleX;
+        var workTop = work.Top / dpi.DpiScaleY;
+        var workRight = work.Right / dpi.DpiScaleX;
+        var workBottom = work.Bottom / dpi.DpiScaleY;
+
+        Left = Math.Max(workLeft, Math.Min(left, workRight - Width));
+        Top = Math.Max(workTop, Math.Min(top, workBottom - 30));
+        WindowStartupLocation = WindowStartupLocation.Manual;
     }
 
     private void OnNotifyIconLeftDoubleClick(NotifyIcon sender, RoutedEventArgs e)
