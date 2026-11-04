@@ -37,8 +37,8 @@ public partial class AutoDomainTask
     }
 
     /// <summary>
-    /// 按从上到下的位置确定目标难度所在行，因为 OCR 常把罗马数字读错（如把 III 读成 1）。
-    /// 能读出的难度必须与位置一致，否则列表并非从 I 开始，返回 -1 以免选错。
+    /// 按从上到下的位置确定目标难度所在行，因为 OCR 常把罗马数字读错（如把 III 读成 II 或 1）。
+    /// OCR 通常是漏读笔画，所以读出的难度不应高于位置；若高于位置，说明列表并非从 I 开始，返回 -1 以免选错。
     /// </summary>
     internal static int FindDomainTierRow(IReadOnlyList<string> rowTexts, string targetTier)
     {
@@ -52,7 +52,7 @@ public partial class AutoDomainTask
         for (var i = 0; i < rowTexts.Count; i++)
         {
             var tier = ParseDomainTier(rowTexts[i]);
-            if (tier != null && tier != KnownDomainTiers[i])
+            if (tier != null && Array.IndexOf(KnownDomainTiers, tier) > i)
             {
                 return -1;
             }

@@ -38,6 +38,17 @@ namespace BetterGenshinImpact.UnitTest.GameTaskTests.AutoDomainTests
             Assert.Equal(expected, AutoDomainTask.FindDomainTierRow(RealOcrRows, target));
         }
 
+        [Theory]
+        [InlineData("II", 1)]
+        [InlineData("III", 2)]
+        public void FindDomainTierRow_AcceptsTierReadLowerThanItsPosition(string target, int expected)
+        {
+            // Real OCR output where the third row, III, came back as Ⅱ.
+            string[] rows =
+                ["祝圣秘境：深火的构筑Ι", "祝圣秘境：深火的构筑Ⅱ", "祝圣秘境：深火的构筑Ⅱ", "祝圣秘境： 深火的构筑 IV"];
+            Assert.Equal(expected, AutoDomainTask.FindDomainTierRow(rows, target));
+        }
+
         [Fact]
         public void FindDomainTierRow_RefusesListThatDoesNotStartAtTierOne()
         {
