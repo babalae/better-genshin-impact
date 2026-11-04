@@ -59,9 +59,9 @@ public static class DomainCascadingItems
             .ToList();
         items.Insert(0, new CascadingItem("自动选择", new ICascadingItem[]
         {
-            new CascadingItem(AutoDomainTask.DevelopmentGuideOption)
+            new CascadingItem(AutoDomainTask.TrainingGuideOption)
             {
-                Tag = AutoDomainTask.DevelopmentGuideOption
+                Tag = AutoDomainTask.TrainingGuideOption
             }
         }));
         return items;
