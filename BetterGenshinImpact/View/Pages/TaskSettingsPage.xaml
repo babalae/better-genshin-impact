@@ -2054,6 +2054,40 @@
                                 MinWidth="90"
                                 Margin="0,0,36,0" />
                 </Grid>
+                <Grid Margin="16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock Grid.Row="0"
+                                  Grid.Column="0"
+                                  FontTypography="Body"
+                                  Text="{i18n:T 秘境难度}"
+                                  TextWrapping="Wrap" />
+                    <ui:TextBlock Grid.Row="1"
+                                  Grid.Column="0"
+                                  Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
+                                  Text="{i18n:T 进入秘境时选择的难度，留空则使用游戏默认选中的难度，同样作用于一条龙}"
+                                  TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0"
+                              Grid.RowSpan="2"
+                              Grid.Column="1"
+                              MinWidth="90"
+                              Margin="0,0,36,0"
+                              SelectedItem="{Binding Config.AutoDomainConfig.DomainLevel, Mode=TwoWay}">
+                        <x:Static Member="sys:String.Empty" />
+                        <sys:String>I</sys:String>
+                        <sys:String>II</sys:String>
+                        <sys:String>III</sys:String>
+                        <sys:String>IV</sys:String>
+                        <sys:String>V</sys:String>
+                        <sys:String>VI</sys:String>
+                    </ComboBox>
+                </Grid>
             </StackPanel>
         </ui:CardExpander>
 
