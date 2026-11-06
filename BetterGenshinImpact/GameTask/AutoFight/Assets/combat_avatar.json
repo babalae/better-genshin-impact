@@ -2404,7 +2404,8 @@
       "没头脑",
       "风仙",
       "Vesna"
-    ]
+    ],
+    "elementalType": "Anemo"
   },
   {
     "id": "10000137",
@@ -2416,7 +2417,8 @@
     "alias": [
       "瓦列里",
       "Valeriy"
-    ]
+    ],
+    "elementalType": "Electro"
   },
   {
     "id": "10000136",
@@ -2428,6 +2430,7 @@
     "alias": [
       "米提亚",
       "Mitya"
-    ]
+    ],
+    "elementalType": "Electro"
   }
 ]
