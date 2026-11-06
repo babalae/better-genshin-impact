@@ -1081,6 +1081,8 @@
   "秘境": "Domain",
   "秘境名称": "Domain Name",
   "秘境战斗中，发生角色死亡重试的次数": "Retry count when a character dies in Domain combat",
+  "秘境难度": "Domain Level",
+  "进入秘境时选择的难度，留空则使用游戏默认选中的难度，同样作用于一条龙": "Level to select when entering a Domain. Leave blank to use the game's default selection. Also applies to One Dragon",
   "移动鼠标距离": "Mouse Move Distance",
   "移动鼠标间隔（毫秒）": "Mouse Move Interval (ms)",
   "移除": "Remove",
