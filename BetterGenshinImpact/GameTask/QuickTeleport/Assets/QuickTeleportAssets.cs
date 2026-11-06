@@ -33,6 +33,11 @@ public sealed class QuickTeleportAssets
             BuildMapChooseIconRo("NodKraiMeetingPoint.png", captureSize),
             BuildMapChooseIconRo("TabletOfTona.png", captureSize),
             BuildMapChooseIconRo("MarkTransPointMoonTower.png", captureSize),
+            // 新增：7.x 及历史版本的地图标记图标
+            BuildMapChooseIconRo("SnezhnayaMeetingPoint.png", captureSize),
+            BuildMapChooseIconRo("StygianOnslaught.png", captureSize),
+            BuildMapChooseIconRo("TheCatsTail.png", captureSize),
+            BuildMapChooseIconRo("Train.png", captureSize),
         ];
         MapChooseIconRoList = mapChooseIconRoList.AsReadOnly();
         MapChooseIconGreyMatList = mapChooseIconRoList.ConvertAll(x => x.TemplateImageGreyMat ?? new Mat()).AsReadOnly();
