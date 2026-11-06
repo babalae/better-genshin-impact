@@ -482,6 +482,10 @@ public class TpTask
             "TrounceDomain" => "征讨领域",
             "NatlanObsidianTotemPole" => "曜石图腾柱",
             "NodKraiMeetingPoint" => "挪德卡莱集会所",
+            "SnezhnayaMeetingPoint" => "至冬聚所",
+            "Train" => "列车",
+            "TheCatsTail" => "猫尾酒馆",
+            "StygianOnslaught" => "幽境危战",
             "Other" => "特殊点位",
             null or "" => "传送点",
             _ => type
@@ -3458,6 +3462,10 @@ public class TpTask
             "Domain.png" or "Domain2.png" => "Domain",
             "ObsidianTotemPole.png" => "NatlanObsidianTotemPole",
             "NodKraiMeetingPoint.png" => "NodKraiMeetingPoint",
+            "SnezhnayaMeetingPoint.png" => "SnezhnayaMeetingPoint",
+            "Train.png" => "Train",
+            "TheCatsTail.png" => "TheCatsTail",
+            "StygianOnslaught.png" => "StygianOnslaught",
             _ => iconFileName.Replace(".png", string.Empty)
         };
     }
