@@ -3880,11 +3880,14 @@
                               SelectedValuePath="Tag">
                         <ComboBoxItem Tag="{x:Static combobuild:AutoComboLlmProvider.OpenAiCompatible}"
                                       Content="{i18n:T OpenAI 兼容}" />
+                        <ComboBoxItem Tag="{x:Static combobuild:AutoComboLlmProvider.FishRelief}"
+                                      Content="FishRelief 发鱼站" />
                         <ComboBoxItem Tag="{x:Static combobuild:AutoComboLlmProvider.Anthropic}"
                                       Content="Anthropic" />
                     </ComboBox>
                 </Grid>
-                <Grid Margin="16">
+                <Grid Margin="16"
+                      Visibility="{Binding IsAutoComboFishRelief, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -3955,7 +3958,8 @@
                                    Command="{Binding FetchAutoComboModelListCommand}" />
                     </Grid>
                 </Grid>
-                <Grid Margin="16">
+                <Grid Margin="16"
+                      Visibility="{Binding IsAutoComboFishRelief, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -3983,7 +3987,8 @@
                                     Margin="0,0,36,0"
                                     Password="{Binding Config.AutoComboBuildConfig.ApiKey, Mode=TwoWay}" />
                 </Grid>
-                <Grid Margin="16">
+                <Grid Margin="16"
+                      Visibility="{Binding IsAutoComboFishRelief, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -4016,7 +4021,8 @@
                                 VerticalContentAlignment="Top"
                                 VerticalScrollBarVisibility="Auto" />
                 </Grid>
-                <Grid Margin="16">
+                <Grid Margin="16"
+                      Visibility="{Binding IsAutoComboFishRelief, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -4049,7 +4055,8 @@
                                 VerticalContentAlignment="Top"
                                 VerticalScrollBarVisibility="Auto" />
                 </Grid>
-                <Grid Margin="16">
+                <Grid Margin="16"
+                      Visibility="{Binding IsAutoComboFishRelief, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -4082,7 +4089,8 @@
                                 VerticalContentAlignment="Top"
                                 VerticalScrollBarVisibility="Auto" />
                 </Grid>
-                <Grid Margin="16,0,16,8">
+                <Grid Margin="16,0,16,8"
+                      Visibility="{Binding IsAutoComboFishRelief, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
@@ -4104,6 +4112,7 @@
                                Content="添加角色" />
                 </Grid>
                 <ItemsControl Margin="16,0,36,16"
+                              Visibility="{Binding IsAutoComboFishRelief, Converter={StaticResource BooleanToVisibilityRevertConverter}}"
                               ItemsSource="{Binding Config.AutoComboBuildConfig.AvatarDescriptionOverrides}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
