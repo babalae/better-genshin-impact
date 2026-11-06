@@ -11,6 +11,7 @@
 - [实例、账户、配置与路线 CD 统筹设计](instance-account-model.md)（第 3 版，方向已确认；第 13 节的 7 个步骤已于 2026-11-01 实施，待用户验收；账户归入 Pulonia，用户设置实例当前账户，切换时严格核验 UID、跟随当前账户时只比对提示；账本改为按账户存放的完成记录；各实例自己协调运行，主实例一步下发；触发器按执行实例触发）
 - [BetterGI 多实例命名管道协议](multi-instance-ipc.md)
 - [BetterGI 输入层 InputHub 设计](input-hub.md)
+- [键鼠监听与热键重构](input-monitor-hotkey.md)（第 1 版，待确认；全局钩子收归 `GlobalInputMonitor`，热键收归 `HotkeyService`，键鼠监听支持组合键，热键输入控件改造）
 - [遮罩窗口（MaskWindow）统一设计](mask-window.md)
 - [配置持久化链路（AllConfig 保存）优化](config-persistence.md)
 - [实时触发器生命周期与启停设计](realtime-trigger.md)
