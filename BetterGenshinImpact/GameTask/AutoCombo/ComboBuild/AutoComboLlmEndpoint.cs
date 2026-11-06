@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.AutoCombo.ComboBuild.FishRelief;
 using System;
 
 namespace BetterGenshinImpact.GameTask.AutoCombo.ComboBuild;
@@ -18,12 +19,18 @@ public static class AutoComboLlmEndpoint
 
     /// <summary>
     /// 解析并校验服务地址。
+    /// 发鱼站始终使用内置网关地址（忽略配置中可能残留的地址，含历史本机联调地址）；
     /// OpenAI 兼容端点必填；Anthropic 允许留空（返回 null，表示使用官方地址）。
-    /// 地址非 HTTPS 且不是本机回环时直接报错：密钥会随每个请求明文发出。
+    /// 地址非 HTTPS 且不是本机回环时直接报错：密钥会随每个请求明文发出；发鱼站不携带客户端密钥，因此内置地址不受此限制。
     /// </summary>
     public static Uri? Resolve(string endpointText, string provider, out bool isLoopback)
     {
-        isLoopback = false;
+        if (provider == AutoComboLlmProvider.FishRelief)
+        {
+            // 发鱼站由客户端内置地址，用户无需填写；配置里的旧值保留但不再生效
+            return ValidateUri(FishReliefGateway.DefaultEndpoint, out isLoopback, allowInsecure: true);
+        }
+
         if (string.IsNullOrWhiteSpace(endpointText))
         {
             if (provider == AutoComboLlmProvider.OpenAiCompatible)
@@ -31,9 +38,24 @@ public static class AutoComboLlmEndpoint
                 throw new Exception("请先在任务设置页的“自动连招”卡片中配置 LLM 服务地址");
             }
 
+            isLoopback = false;
             return null;
         }
 
+        return ValidateUri(endpointText, out isLoopback);
+    }
+
+    /// <summary>
+    /// 是否需要配置密钥：发鱼站由网关统一鉴权，客户端密钥可留空；本机回环地址同样豁免（本地中转/本地模型）。
+    /// </summary>
+    public static bool RequiresApiKey(string provider, bool isLoopback)
+    {
+        return provider != AutoComboLlmProvider.FishRelief && !isLoopback;
+    }
+
+    private static Uri ValidateUri(string endpointText, out bool isLoopback, bool allowInsecure = false)
+    {
+        isLoopback = false;
         Uri endpoint;
         try
         {
@@ -45,7 +67,7 @@ public static class AutoComboLlmEndpoint
         }
 
         isLoopback = endpoint.Host is "localhost" or "127.0.0.1" or "::1" || endpoint.Host.StartsWith("[::1]");
-        if (endpoint.Scheme != Uri.UriSchemeHttps && !isLoopback)
+        if (!allowInsecure && endpoint.Scheme != Uri.UriSchemeHttps && !isLoopback)
         {
             throw new Exception($"LLM 服务地址必须使用 HTTPS（否则密钥将明文传输），本机回环地址除外：{endpointText}");
         }

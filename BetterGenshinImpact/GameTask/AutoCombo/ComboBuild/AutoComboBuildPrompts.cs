@@ -139,26 +139,7 @@ internal static class AutoComboBuildPrompts
     /// </summary>
     private static string BuildTagPairSection(List<string> avatarNames)
     {
-        var tags = avatarNames
-            .Select(name => AvatarProfiles.TryGet(name)?.Tags)
-            .Where(t => t != null)
-            .SelectMany(t => t!)
-            .Distinct()
-            .ToList();
-
-        var lines = new List<string>();
-        for (var i = 0; i < tags.Count; i++)
-        {
-            for (var j = i + 1; j < tags.Count; j++)
-            {
-                var desc = AvatarProfiles.TryGetTagPair(tags[i], tags[j]);
-                if (desc != null)
-                {
-                    lines.Add($"- {tags[i].Replace("元素", "")} × {tags[j].Replace("元素", "")}：{desc}");
-                }
-            }
-        }
-
+        var lines = AvatarProfiles.GetTeamTagPairs(avatarNames).Select(pair => $"- {pair.Key}：{pair.Description}");
         return string.Join("\n", lines);
     }
 }
