@@ -1,4 +1,4 @@
-﻿using Fischless.WindowsInput;
+using Fischless.WindowsInput;
 using System;
 using BetterGenshinImpact.GameTask.Common;
 using Microsoft.Extensions.Logging;
@@ -28,9 +28,29 @@ public class Simulation
                 SendInput.Keyboard.KeyUp(key);
             }
         }
-		SendInput.Mouse.LeftButtonUp();
-        SendInput.Mouse.RightButtonUp();
-        SendInput.Mouse.MiddleButtonUp();
+
+        // 鼠标键同样只在确实处于按下状态时才抬起。
+        // 无条件发送抬起会产生一条没有对应按下的 WM_*BUTTONUP，DefWindowProc 会把它转成 WM_CONTEXTMENU，
+        // 在游戏/程序未处于前台时表现为在光标处“右键一下”弹出菜单。
+        ReleaseMouseButtonIfPressed(User32.VK.VK_LBUTTON, () => SendInput.Mouse.LeftButtonUp());
+        ReleaseMouseButtonIfPressed(User32.VK.VK_RBUTTON, () => SendInput.Mouse.RightButtonUp());
+        ReleaseMouseButtonIfPressed(User32.VK.VK_MBUTTON, () => SendInput.Mouse.MiddleButtonUp());
+    }
+
+    /// <summary>
+    /// 鼠标键处于按下状态时才发送抬起，避免产生脱离按下事件的孤立抬起消息。
+    /// </summary>
+    /// <param name="mouseButton">待检查的鼠标键虚拟键码。</param>
+    /// <param name="release">实际发送抬起动作的方法。</param>
+    private static void ReleaseMouseButtonIfPressed(User32.VK mouseButton, Action release)
+    {
+        if (!IsKeyDown(mouseButton))
+        {
+            return;
+        }
+
+        TaskControl.Logger.LogDebug($"解除{mouseButton}的按下状态.");
+        release();
     }
 
     public static bool IsKeyDown(User32.VK key)
