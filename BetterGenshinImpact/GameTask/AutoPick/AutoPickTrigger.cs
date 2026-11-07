@@ -32,6 +32,7 @@ public partial class AutoPickTrigger : ITaskTrigger
     public bool IsExclusive => false;
 
     private AutoPickAssets _autoPickAssets = null!;
+    private readonly ArtifactTemplatePickHandler _artifactTemplatePickHandler = new();
 
     /// <summary>
     /// 黑名单模式的不拾取列表
@@ -83,11 +84,13 @@ public partial class AutoPickTrigger : ITaskTrigger
         _externalConfig = options as AutoPickExternalConfig;
         _lastText = string.Empty;
         _prevClickFrameIndex = -1;
+        _artifactTemplatePickHandler.Reset();
     }
 
     public void OnDisabled()
     {
         _externalConfig = null;
+        _artifactTemplatePickHandler.Reset();
     }
 
     /// <summary>
@@ -229,9 +232,16 @@ public partial class AutoPickTrigger : ITaskTrigger
         var speedTimer = new SpeedTimer();
 
         using var foundRectArea = content.CaptureRectArea.Find(_pickRo);
+        var artifactTemplateMode = _externalConfig is { RuntimeMode: AutoPickRuntimeMode.ArtifactTemplate };
 
         if (foundRectArea.IsEmpty())
         {
+            if (artifactTemplateMode)
+            {
+                _artifactTemplatePickHandler.OnNoPickKey(content, HasScrollIcon);
+                return;
+            }
+
             // 没有识别到F键，先判断是否有滚轮图标信息
             if (HasScrollIcon(content.CaptureRectArea))
             {
@@ -244,6 +254,19 @@ public partial class AutoPickTrigger : ITaskTrigger
         }
 
         speedTimer.Record($"识别到拾取键");
+
+        if (artifactTemplateMode)
+        {
+            if (_externalConfig is { ForceInteraction: true })
+            {
+                LogPick(content, "直接拾取");
+                InputHub.Foreground.Keyboard.KeyPress(_autoPickAssets.PickVk);
+                return;
+            }
+
+            _artifactTemplatePickHandler.OnPickKeyFound(content, _autoPickAssets, foundRectArea, LogPick);
+            return;
+        }
 
         if (_externalConfig is { ForceInteraction: true })
         {
