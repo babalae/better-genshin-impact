@@ -3,7 +3,6 @@ using System.Collections.ObjectModel;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Threading;
 using BetterGenshinImpact.Service.ChildSession;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -22,13 +21,28 @@ namespace BetterGenshinImpact.ViewModel.Windows;
 /// </summary>
 public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
 {
-    private readonly DispatcherTimer _pendingRefreshTimer;
+    /// <summary>等待 termsrv.dll 校验出结论的上限。sfc 单文件校验通常 1~3 秒。</summary>
+    private static readonly TimeSpan TermsrvWaitTimeout = TimeSpan.FromSeconds(20);
+
+    /// <summary>上一次检测是否抛出了异常。失败时不要把空列表当成「一切正常」。</summary>
+    private bool _checkFailed;
 
     [ObservableProperty]
-    private string _statusText = "正在检查…";
+    private string _statusText = "正在检测…";
 
     [ObservableProperty]
     private bool _isBusy;
+
+    /// <summary>
+    /// 是否还在检测。检测期间不展示任何结论：termsrv.dll 的校验在后台跑，
+    /// 先按旧结论渲染会亮出一条「文件不一致」，等校验完成又撤掉，看起来像假警报。
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowResults))]
+    private bool _isChecking = true;
+
+    /// <summary>检测结束后才展示结论区域。</summary>
+    public bool ShowResults => !IsChecking;
 
     /// <summary>需要处理的检查项（会阻塞或明显影响启动）。</summary>
     public ObservableCollection<ChildSessionDiagnosticItem> Warnings { get; } = [];
@@ -48,26 +62,24 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
     /// <summary>是否有未触发的项。</summary>
     public bool HasNormalItems => NormalItems.Count > 0;
 
-    /// <summary>是否一切正常（没有任何需要处理或建议处理的项）。</summary>
-    public bool IsAllGood => Warnings.Count == 0 && Notices.Count == 0;
+    /// <summary>是否一切正常（检测已结束且成功，没有任何需要处理或建议处理的项）。</summary>
+    public bool IsAllGood => !IsChecking && !_checkFailed && Warnings.Count == 0 && Notices.Count == 0;
+
+    partial void OnIsCheckingChanged(bool value)
+    {
+        OnPropertyChanged(nameof(IsAllGood));
+    }
 
     /// <summary>
-    /// 构造函数：打开时先跑一次检查。termsrv.dll 的 sfc 校验在后台进行，
-    /// 所以这里再安排一次延迟刷新，把校验结果取回来。
+    /// 构造函数：打开时先跑一次检查。
     /// </summary>
     public ChildSessionDiagnosticsWindowViewModel()
     {
-        _pendingRefreshTimer = new DispatcherTimer
-        {
-            Interval = TimeSpan.FromSeconds(2.5)
-        };
-        _pendingRefreshTimer.Tick += OnPendingRefreshTick;
-
         _ = RecheckAsync();
     }
 
     /// <summary>
-    /// 重新检查一次环境。
+    /// 重新检查一次环境。检测全部出结论后才把结果交给界面。
     /// </summary>
     [RelayCommand]
     private async Task RecheckAsync()
@@ -78,12 +90,39 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
         }
 
         IsBusy = true;
-        StatusText = "正在检查…";
+        IsChecking = true;
+        _checkFailed = false;
+        StatusText = "正在检测…";
 
         try
         {
             // 检查本身是读注册表 + 扫任务，放到线程池，避免面板卡住。
             var issues = await Task.Run(() => ChildSessionEnvironmentCheck.CollectAll());
+
+            // termsrv.dll 只能靠 sfc 校验，几秒钟才出结论。这里等它跑完再渲染：
+            // 否则会先按上一次的结论亮一条「与系统组件库不一致」，等新结论回来又撤掉，
+            // 用户看到的就是一次莫名其妙的假警报。等不到（超时或没提权）就按「未验证」渲染，
+            // 由检查项自己决定不出结论，而不是拿旧值凑数。
+            if (ChildSessionEnvironmentCheck.IsElevated()
+                && !ChildSessionEnvironmentCheck.GetTermsrvState().Verified)
+            {
+                var deadline = DateTime.UtcNow + TermsrvWaitTimeout;
+                var noticeShown = false;
+
+                while (ChildSessionEnvironmentCheck.IsTermsrvVerifying
+                       && DateTime.UtcNow < deadline)
+                {
+                    if (!noticeShown)
+                    {
+                        noticeShown = true;
+                        StatusText = "正在校验系统组件库（termsrv.dll）…";
+                    }
+
+                    await Task.Delay(200);
+                }
+
+                issues = await Task.Run(() => ChildSessionEnvironmentCheck.CollectAll());
+            }
 
             Warnings.Clear();
             Notices.Clear();
@@ -123,18 +162,14 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
         }
         catch (Exception exception)
         {
+            _checkFailed = true;
+            OnPropertyChanged(nameof(IsAllGood));
             StatusText = $"检查失败：{exception.Message}";
         }
         finally
         {
+            IsChecking = false;
             IsBusy = false;
-        }
-
-        // termsrv.dll 的校验在后台跑，稍后再取一次结果。
-        if (ChildSessionEnvironmentCheck.GetTermsrvState().Verified == false)
-        {
-            _pendingRefreshTimer.Stop();
-            _pendingRefreshTimer.Start();
         }
     }
 
@@ -235,22 +270,6 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
         }
 
         builder.AppendLine();
-    }
-
-    /// <summary>
-    /// 延迟刷新：只用来把 termsrv.dll 的后台校验结果取回来，跑一次就停。
-    /// </summary>
-    private void OnPendingRefreshTick(object? sender, EventArgs e)
-    {
-        _pendingRefreshTimer.Stop();
-        if (ChildSessionEnvironmentCheck.GetTermsrvState().Verified)
-        {
-            _ = RecheckAsync();
-        }
-        else
-        {
-            _pendingRefreshTimer.Start();
-        }
     }
 }
 

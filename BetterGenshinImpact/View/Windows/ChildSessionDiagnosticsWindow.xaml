@@ -62,7 +62,8 @@
                           TextWrapping="Wrap" />
             <ScrollViewer Grid.Row="1"
                           Padding="12,0,12,0"
-                          VerticalScrollBarVisibility="Auto">
+                          VerticalScrollBarVisibility="Auto"
+                          Visibility="{Binding ShowResults, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <StackPanel>
                     <StackPanel Visibility="{Binding HasWarnings, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <ui:TextBlock Margin="4,8,0,4"
@@ -99,6 +100,20 @@
                     </Expander>
                 </StackPanel>
             </ScrollViewer>
+            <!-- 检测期间只显示这一块：结论要等 termsrv.dll 的 sfc 校验也出结果后才渲染 -->
+            <StackPanel Grid.Row="1"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Orientation="Horizontal"
+                        Visibility="{Binding IsChecking, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <ui:ProgressRing Width="20"
+                                 Height="20"
+                                 Margin="0,0,10,0"
+                                 IsIndeterminate="True" />
+                <ui:TextBlock VerticalAlignment="Center"
+                              Opacity="0.8"
+                              Text="{i18n:T 正在检测系统环境…}" />
+            </StackPanel>
             <ui:Grid Grid.Row="2"
                      Margin="16,8,16,12"
                      ColumnDefinitions="*,Auto">

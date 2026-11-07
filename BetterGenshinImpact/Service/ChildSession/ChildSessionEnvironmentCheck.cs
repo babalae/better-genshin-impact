@@ -1028,6 +1028,20 @@ internal static class ChildSessionEnvironmentCheck
     private static readonly TimeSpan TermsrvUnverifiedTtl = TimeSpan.FromSeconds(30);
 
     /// <summary>
+    /// 是否正在校验 termsrv.dll。界面靠它决定「检测中」什么时候结束。
+    /// </summary>
+    internal static bool IsTermsrvVerifying
+    {
+        get
+        {
+            lock (TermsrvGate)
+            {
+                return _termsrvVerifyRunning;
+            }
+        }
+    }
+
+    /// <summary>
     /// 取 termsrv.dll 的状态。第一次调用会返回「未验证」并在后台开始校验，
     /// 面板下一次刷新就能拿到结果。
     /// </summary>
@@ -1044,22 +1058,23 @@ internal static class ChildSessionEnvironmentCheck
             if (stale && !_termsrvVerifyRunning)
             {
                 _termsrvVerifyRunning = true;
-                var backups = CollectTermsrvBackups(system32);
+                var pendingBackups = CollectTermsrvBackups(system32);
 
                 _ = Task.Run(() =>
                 {
                     TermsrvFileState result;
                     try
                     {
-                        result = VerifyTermsrv(termsrvPath, backups);
+                        result = VerifyTermsrv(termsrvPath, pendingBackups);
                     }
                     catch (Exception exception) when (exception is IOException
                                                           or UnauthorizedAccessException
+                                                          or SecurityException
                                                           or InvalidOperationException
                                                           or System.ComponentModel.Win32Exception)
                     {
                         Logger.LogWarning(exception, "校验 termsrv.dll 失败。");
-                        result = new TermsrvFileState(File.Exists(termsrvPath), false, false, backups);
+                        result = new TermsrvFileState(File.Exists(termsrvPath), false, false, pendingBackups);
                     }
 
                     lock (TermsrvGate)
@@ -1069,6 +1084,14 @@ internal static class ChildSessionEnvironmentCheck
                         _termsrvVerifyRunning = false;
                     }
                 });
+            }
+
+            if (_termsrvVerifyRunning)
+            {
+                // 正在校验（首次校验或旧结论过期后的重新校验）：手上这份结论已经不是
+                // 当前系统的事实了，不能当成新结论交出去——否则界面会先亮一条旧问题，
+                // 等校验完成再撤掉，用户看到的就是一次假警报。
+                return new TermsrvFileState(File.Exists(termsrvPath), false, false, CollectTermsrvBackups(system32));
             }
 
             if (_termsrvState.Exists || _termsrvState.Verified)
