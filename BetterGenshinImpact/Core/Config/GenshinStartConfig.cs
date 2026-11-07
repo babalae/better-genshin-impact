@@ -49,7 +49,7 @@ public partial class GenshinStartConfig : ObservableObject
     private bool _startGameWithCmd = false;
 
     /// <summary>
-    ///     启动前自动关闭原神 HDR（删除原神 HDR 对应注册表键）
+    ///     启动本地原神时关闭原生 HDR，并在启动完成后恢复临时禁用的 Windows Auto HDR 配置
     /// </summary>
     [ObservableProperty]
     private bool _autoDisableGenshinHdrEnabled = true;
