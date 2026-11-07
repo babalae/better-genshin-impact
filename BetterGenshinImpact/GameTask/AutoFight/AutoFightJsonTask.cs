@@ -252,9 +252,9 @@ public class AutoFightJsonTask : ISoloTask
 
                     while (!cts2.Token.IsCancellationRequested)
                     {
-                        if (timeoutStopwatch.Elapsed > fightTimeout)
+                        if (timeoutStopwatch.Elapsed > fightTimeout || AutoFightSeek.RotationCount >= 6)
                         {
-                            Logger.LogInformation("战斗超时结束");
+                            Logger.LogInformation(AutoFightSeek.RotationCount >= 6 ? "旋转次数达到上限，战斗结束" : "战斗超时结束");
                             fightEndFlag = true;
                             timeOutFlag = true;
                             break;
