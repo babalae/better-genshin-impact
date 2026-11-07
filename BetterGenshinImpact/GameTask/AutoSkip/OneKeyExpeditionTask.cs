@@ -25,15 +25,15 @@ public class OneKeyExpeditionTask
 
             if (dailyClaimed)
             {
-                // 从凯瑟琳对话进入派遣页后,先给界面 500ms 稳定时间
-                Sleep(500);
+                // 从凯瑟琳对话进入派遣页后,先给界面 300ms 稳定时间
+                Sleep(300);
                 // 进入派遣页面后可能先弹出"是否使用历练点领取每日委托"的提示框,
                 // 且每日委托需先领。由 NewRetry 立即检测,失败后按 1s 重试。
                 PollAndClickDailyConfirm(3, "进入派遣页面");
             }
 
             // 1.全部领取:同页面检测
-            Sleep(1000);
+            Sleep(800);
             if (!TryClickCollect())
             {
                 // 没有可领取/可再次派遣的内容时,退出派遣页面,避免停留在派遣界面
@@ -43,7 +43,7 @@ public class OneKeyExpeditionTask
             }
 
             // 2.重新派遣:点击"全部领取"后先等动画,再由 NewRetry 立即检测
-            Sleep(1000);
+            Sleep(800);
             NewRetry.Do(() =>
             {
                 using var reRegion = CaptureToRectArea(true);
@@ -64,8 +64,8 @@ public class OneKeyExpeditionTask
 
             if (dailyClaimed)
             {
-                // 按下 ESC 后先等 1000ms,再检测可能残留的历练点确认框
-                Sleep(1000);
+                // 按下 ESC 后先等 800ms,再检测可能残留的历练点确认框
+                Sleep(800);
                 PollAndClickDailyConfirm(2, "退出派遣页面");
             }
         }
