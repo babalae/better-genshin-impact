@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -10,7 +10,9 @@ using BetterGenshinImpact.Service.Notification.Model;
 using BetterGenshinImpact.Service.Notifier.Exception;
 using BetterGenshinImpact.Service.Notifier.Interface;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace BetterGenshinImpact.Service.Notifier;
 
@@ -18,6 +20,11 @@ public class TelegramNotifier : INotifier, IDisposable
 {
     // 默认Telegram API的标准URL前缀
     private const string DefaultApiUrl = "https://api.telegram.org/bot";
+
+    /// <summary>
+    /// Telegram sendPhoto 对上传图片的大小限制（10 MiB）。
+    /// </summary>
+    private const int MaxPhotoSize = 10 * 1024 * 1024;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
         { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
@@ -144,11 +151,38 @@ public class TelegramNotifier : INotifier, IDisposable
         var endpoint = $"{TelegramApiBaseUrl}{TelegramBotToken}/sendPhoto";
         using var memoryStream = new MemoryStream();
         await image.SaveAsPngAsync(memoryStream);
+        var fileName = "image.png";
+        var mediaType = "image/png";
+
+        // 普通截图保留 PNG；超限时转为 JPEG，并按实际编码长度决定是否继续缩小。
+        if (memoryStream.Length > MaxPhotoSize)
+        {
+            // 通知截图可能被多个渠道共享，只处理副本，避免改变其他通知器收到的原图。
+            using var photo = image.Clone();
+            var encoder = new JpegEncoder { Quality = 85, SkipMetadata = true };
+            while (true)
+            {
+                memoryStream.SetLength(0);
+                memoryStream.Position = 0;
+                await photo.SaveAsJpegAsync(memoryStream, encoder);
+                if (memoryStream.Length <= MaxPhotoSize) break;
+
+                // 更高分辨率的截图在 JPEG 编码后仍可能超限，保持比例逐步降低尺寸。
+                photo.Mutate(context => context.Resize(
+                    Math.Max(1, (int)(photo.Width * 0.8)), Math.Max(1, (int)(photo.Height * 0.8))));
+            }
+
+            fileName = "image.jpg";
+            mediaType = "image/jpeg";
+        }
+
         memoryStream.Position = 0;
 
-        var content = new MultipartFormDataContent
+        var photoContent = new StreamContent(memoryStream);
+        photoContent.Headers.ContentType = new MediaTypeHeaderValue(mediaType);
+        using var content = new MultipartFormDataContent
         {
-            { new StreamContent(memoryStream), "photo", "image.png" },
+            { photoContent, "photo", fileName },
             { new StringContent(TelegramChatId), "chat_id" }
         };
         if (!string.IsNullOrEmpty(caption)) content.Add(new StringContent(caption), "caption");

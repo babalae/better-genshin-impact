@@ -23,6 +23,7 @@
 
     <UserControl.Resources>
         <converter:MillisecondsToTimeConverter x:Key="MillisecondsToTimeConverter" />
+        <converter:MusicPlayModeIndexConverter x:Key="BoolToPlayModeIndexConverter" />
 
         <Style x:Key="MusicCardStyle" TargetType="Border">
             <Setter Property="Padding" Value="18" />
@@ -226,6 +227,7 @@
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <TextBlock VerticalAlignment="Center"
                                    FontSize="17"
@@ -266,6 +268,30 @@
                                    Command="{Binding ViewModel.OpenSettingsCommand}"
                                    Content="{i18n:T 设置}"
                                    Icon="{ui:SymbolIcon Settings24}" />
+
+                        <StackPanel Grid.Column="6"
+                                    Margin="16,0,0,0"
+                                    VerticalAlignment="Center"
+                                    Orientation="Horizontal">
+                            <TextBlock VerticalAlignment="Center"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       Text="{i18n:T 演奏方式}" />
+                            <ComboBox Width="140"
+                                      Margin="8,0,0,0"
+                                      VerticalAlignment="Center"
+                                      SelectedIndex="{Binding ViewModel.IsGuidedPlayMode, Converter={StaticResource BoolToPlayModeIndexConverter}}"
+                                      ToolTip="{i18n:T 选择自动演奏或引导式跟弹}">
+                                <ComboBoxItem Content="{i18n:T 自动演奏}" />
+                                <ComboBoxItem Content="{i18n:T 引导式跟弹}" />
+                            </ComboBox>
+                            <TextBlock Margin="12,0,0,0"
+                                       VerticalAlignment="Center"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                       Text="{Binding ViewModel.GuidedStatusText}"
+                                       Visibility="{Binding ViewModel.IsGuidedPlaying, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        </StackPanel>
                     </Grid>
 
                     <Grid Grid.Row="1" Margin="10,0,10,8">

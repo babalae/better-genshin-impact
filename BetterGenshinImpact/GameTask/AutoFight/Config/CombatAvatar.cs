@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Model;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace BetterGenshinImpact.GameTask.AutoFight.Config;
 
@@ -25,6 +28,22 @@ public class CombatAvatar
     /// 武器类型
     /// </summary>
     public string Weapon { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 角色元素。未知角色和无法确定当前元素的旅行者可以不配置。
+    /// </summary>
+    [JsonConverter(typeof(StringEnumConverter))]
+    public ElementalType? ElementalType { get; set; }
+
+    /// <summary>
+    /// 是否支持通过普通攻击进行元素采集。
+    /// </summary>
+    public bool NormalAttack { get; set; }
+
+    /// <summary>
+    /// 是否支持通过元素战技进行元素采集。
+    /// </summary>
+    public bool ElementalSkill { get; set; }
 
     /// <summary>
     /// 元素战技CD
