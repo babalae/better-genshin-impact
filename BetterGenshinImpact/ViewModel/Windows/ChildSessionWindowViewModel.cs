@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
@@ -26,6 +27,8 @@ public partial class ChildSessionWindowViewModel : ViewModel
     private readonly ChildSessionService _childSessionService;
     private readonly DispatcherTimer _notificationTimer;
     private bool _startRequested;
+    private ChildSessionDiagnosticsWindow? _diagnosticsWindow;
+    private DateTime _lastDiagnosticsAutoOpenAt = DateTime.MinValue;
 
     [ObservableProperty]
     private Brush _connectionStatusBrush = Brushes.Red;
@@ -556,6 +559,49 @@ public partial class ChildSessionWindowViewModel : ViewModel
         _ = Application.Current.Dispatcher.BeginInvoke(UpdateConnectionStatus);
     }
 
+    /// <summary>
+    /// 打开诊断与修复面板。已经打开时把它叫到前面，不重复创建。
+    /// </summary>
+    [RelayCommand]
+    private void OpenDiagnostics()
+    {
+        if (_diagnosticsWindow is { IsLoaded: true } existing)
+        {
+            existing.Activate();
+            return;
+        }
+
+        var window = App.GetService<ChildSessionDiagnosticsWindow>();
+        if (window is null)
+        {
+            return;
+        }
+
+        // 面板属于桌面分身窗口，挂上去后跟随它一起关闭。
+        window.Owner = Application.Current.Windows.OfType<ChildSessionWindow>().FirstOrDefault()
+                       ?? Application.Current.MainWindow;
+        window.Closed += (_, _) => _diagnosticsWindow = null;
+        _diagnosticsWindow = window;
+        window.Show();
+    }
+
+    /// <summary>
+    /// 启动失败时自动弹出诊断面板。
+    ///
+    /// 失败会被重试流程触发多次，这里按时间做一次节流：30 秒内只自动弹一次，
+    /// 之后的失败仍然可以通过菜单打开，不会反复抢焦点。
+    /// </summary>
+    private void MaybeOpenDiagnosticsOnFailure()
+    {
+        if ((DateTime.Now - _lastDiagnosticsAutoOpenAt).TotalSeconds < 30)
+        {
+            return;
+        }
+
+        _lastDiagnosticsAutoOpenAt = DateTime.Now;
+        OpenDiagnostics();
+    }
+
     private void OnChildSessionConnectionFailed(
         object? sender,
         ChildSessionConnectionFailedEventArgs e)
@@ -572,6 +618,10 @@ public partial class ChildSessionWindowViewModel : ViewModel
                     e.Message,
                     InfoBarSeverity.Error,
                     TimeSpan.FromSeconds(10));
+
+                // 失败原因往往在环境里（服务被禁用、被补丁接管等），
+                // 直接打开诊断面板比让用户自己去翻日志有效。
+                MaybeOpenDiagnosticsOnFailure();
             }));
     }
 

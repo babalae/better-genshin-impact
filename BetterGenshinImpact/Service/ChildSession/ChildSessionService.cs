@@ -97,7 +97,10 @@ public sealed class ChildSessionService : IDisposable
     /// </summary>
     public bool IsRdpWrapperEnabled()
     {
-        return ChildSessionNativeMethods.IsRdpWrapperEnabled();
+        // 不能只匹配 rdpwrap.dll：SuperRDP 等改版用的是别的 DLL 名。
+        // 判定统一为「ServiceDll 不等于原生 termsrv.dll 就算被接管」。
+        return ChildSessionEnvironmentCheck.IsServiceDllHijacked(
+            ChildSessionEnvironmentCheck.ReadServiceDll());
     }
 
     /// <summary>
@@ -591,9 +594,9 @@ public sealed class ChildSessionService : IDisposable
         foreach (var issue in _environmentIssues)
         {
             _logger.LogWarning(
-                "桌面分身环境预检：{IssueTitle}。{IssueMessage}",
+                "桌面分身环境预检：{IssueTitle}。{IssueSummary}",
                 issue.Title,
-                issue.Message);
+                issue.Summary);
         }
     }
 
