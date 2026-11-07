@@ -22,6 +22,7 @@ using BetterGenshinImpact.GameTask.AutoTrackPath;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.AutoStygianOnslaught;
 using BetterGenshinImpact.GameTask.GetGridIcons;
+using BetterGenshinImpact.GameTask.InventoryMaterialStats;
 using BetterGenshinImpact.GameTask.AutoEat;
 using BetterGenshinImpact.GameTask.AutoLeyLineOutcrop;
 using BetterGenshinImpact.GameTask.AutoCook;
@@ -228,6 +229,11 @@ public partial class AllConfig : ObservableObject
     ///     截取物品图标配置
     /// </summary>
     public GetGridIconsConfig GetGridIconsConfig { get; set; } = new();
+
+    /// <summary>
+    ///     背包材料统计
+    /// </summary>
+    public InventoryMaterialStatsConfig InventoryMaterialStatsConfig { get; set; } = new();
 
     /// <summary>
     ///     宏配置
