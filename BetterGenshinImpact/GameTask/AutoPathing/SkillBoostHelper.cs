@@ -52,6 +52,12 @@ public partial class PathExecutor
     private static readonly HashSet<string> HurryOnBlacklist = ["玛薇卡", "希诺宁", "瓦雷莎", "茜特菈莉", "伊法", "恰斯卡", "玛拉妮", "基尼奇"];
 
     /// <summary>
+    /// 瓦雷莎技能赶路的最低启用距离（米）。路段剩余距离低于该值时不进夜魂疾冲，
+    /// 交还通用逻辑用普通速度接近并刹车——夜魂疾冲惯性滑行距离长，短路段用技能必冲过头。
+    /// </summary>
+    private const double HurryOnMinEntryDistance = 60;
+
+    /// <summary>
     /// 各角色在连续赶路模式下的转向夹角阈值（度）。
     /// 当路径转向角 ≥ 该角色的阈值时，视为急转弯，提前下车步行接近防止冲过头。
     /// 未显式列出的角色使用默认值 120°（几乎只有掉头才下车）。
@@ -420,138 +426,166 @@ public partial class PathExecutor
 
                 break;
 
-            // case "瓦雷莎":
-            //     if (state.PendingApproach)
-            //     {
-            //         var shouldApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
-            //
-            //         if (shouldApproach)
-            //         {
-            //             InputHub.ReleaseAll();
-            //             state.PendingApproach = false;
-            //             if (PartyConfig.SwitchToWalkEnabled)
-            //             {
-            //                 var nextIdx = GetSwitchToWalkIndex();
-            //                 Logger.LogInformation("自动赶路：瓦雷莎接近节点，切人步行 {t}", nextIdx);
-            //                 Task.Run(async () =>
-            //                 {
-            //                     await SwitchAvatar(nextIdx);
-            //                 }, ct);
-            //             }
-            //             else
-            //             {
-            //                 if (await AutoFightSkill.AvatarSkillAsync(Logger, avatar, false, 2, ct))
-            //                 {
-            //                     InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
-            //                     await Delay(300, ct);
-            //                 }
-            //
-            //                 var lower = new Scalar(220, 150, 150);
-            //                 var higher = new Scalar(230, 160, 180);
-            //                 using var mask = OpenCvCommonHelper.Threshold(screen2.DeriveCrop(948, 410, 26, 30).SrcMat, lower, higher);
-            //                 using var labels = new Mat();
-            //                 using var stats = new Mat();
-            //                 using var centroids = new Mat();
-            //
-            //                 var numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
-            //                     connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
-            //
-            //                 if (numLabels > 3 && numLabels < 40)
-            //                 {
-            //                     state.MavikaFlyCount++;
-            //                     if (state.MavikaFlyCount > 2 && avatar.IsActive(screen2))
-            //                     {
-            //                         Task.Run(async () =>
-            //                         {
-            //                             await Delay(1000, ct);
-            //                             using var region3 = CaptureToRectArea();
-            //                             if (avatar.IsActive(region3))
-            //                             {
-            //                                 InputHub.Foreground.SimulateAction(GIActions.Jump);
-            //                                 await Delay(100, ct);
-            //                                 using var region4 = CaptureToRectArea();
-            //                                 var isFlying = Bv.GetMotionStatus(region4) == MotionStatus.Fly;
-            //                                 if (isFlying)
-            //                                 {
-            //                                     InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
-            //                                     Logger.LogInformation("自动赶路：{t} 下落攻击...", "瓦蕾莎");
-            //                                 }
-            //                             }
-            //                             state.MavikaFlyCount = 0;
-            //                         }, ct);
-            //                     }
-            //                 }
-            //             }
-            //             return false;
-            //         }
-            //     }
-            //
-            //     if (distance > PartyConfig.Distance)
-            //     {
-            //         await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
-            //
-            //         waypoint.MoveMode = MoveModeEnum.Run.Code;
-            //
-            //         await Delay(300, ct);
-            //         if (!await AutoFightSkill.AvatarSkillAsync(Logger, avatar, false, 2, ct))
-            //         {
-            //             InputHub.Foreground.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
-            //             await Delay(300, ct);
-            //             InputHub.Foreground.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
-            //             await Delay(200, ct);
-            //             avatar.LastSkillTime = DateTime.UtcNow;
-            //
-            //             if (!await AutoFightSkill.AvatarSkillAsync(Logger, avatar, false, 2, ct))
-            //             {
-            //                 if (distance > 20)
-            //                 {
-            //                     if (waypoint.MoveMode == MoveModeEnum.Dash.Code)
-            //                     {
-            //                         InputHub.Foreground.SimulateAction(GIActions.SprintMouse);
-            //                     }
-            //                     else if (waypoint.MoveMode == MoveModeEnum.Run.Code)
-            //                     {
-            //                         if (state.RunCount < 2)
-            //                         {
-            //                             InputHub.Foreground.SimulateAction(GIActions.SprintMouse);
-            //                         }
-            //                     }
-            //                 }
-            //             }
-            //             else
-            //             {
-            //                 var higher = new Scalar(0, 221, 250);
-            //                 using var region2 = CaptureToRectArea();
-            //                 using var mask = OpenCvCommonHelper.Threshold(region2.DeriveCrop(1686, 949, 10, 10).SrcMat, higher);
-            //                 using var labels = new Mat();
-            //                 using var stats = new Mat();
-            //                 using var centroids = new Mat();
-            //                 var numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
-            //                     connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
-            //
-            //                 if (numLabels > 1)
-            //                 {
-            //                     if (distance > 20)
-            //                     {
-            //                         if (waypoint.MoveMode == MoveModeEnum.Dash.Code)
-            //                         {
-            //                             InputHub.Foreground.SimulateAction(GIActions.SprintMouse);
-            //                         }
-            //                         else if (waypoint.MoveMode == MoveModeEnum.Run.Code)
-            //                         {
-            //                             if (state.RunCount < 2)
-            //                             {
-            //                                 InputHub.Foreground.SimulateAction(GIActions.SprintMouse);
-            //                             }
-            //                         }
-            //                     }
-            //                 }
-            //             }
-            //         }
-            //     }
-            //
-            //     return true;
-            // break;
+            case "瓦雷莎":
+                if (state.PendingApproach)
+                {
+                    var shouldApproach = ShouldApproach(distance, nextDistance, waypoint, nextWaypoint, avatar.Name);
+
+                    if (shouldApproach)
+                    {
+                        InputHub.ReleaseAll();
+                        state.PendingApproach = false;
+                        if (PartyConfig.SwitchToWalkEnabled)
+                        {
+                            var nextIdx = GetSwitchToWalkIndex();
+                            Logger.LogInformation("自动赶路：瓦雷莎接近节点，切人步行 {t}", nextIdx);
+                            Task.Run(async () =>
+                            {
+                                await SwitchAvatar(nextIdx);
+                            }, ct);
+                        }
+                        else
+                        {
+                            var approachEOnCd = await AutoFightSkill.AvatarSkillAsync(Logger, avatar, false, 2, ct);
+                            if (approachEOnCd)
+                            {
+                                InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyUp);
+                                await Delay(300, ct);
+                            }
+
+                            var lower = new Scalar(220, 150, 150);
+                            var higher = new Scalar(230, 160, 180);
+                            using var mask = OpenCvCommonHelper.Threshold(screen2.DeriveCrop(948, 410, 26, 30).SrcMat, lower, higher);
+                            using var labels = new Mat();
+                            using var stats = new Mat();
+                            using var centroids = new Mat();
+
+                            var numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
+                                connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
+
+                            if (numLabels > 3 && numLabels < 40)
+                            {
+                                state.MavikaFlyCount++;
+                                if (state.MavikaFlyCount > 2 && avatar.IsActive(screen2))
+                                {
+                                    Task.Run(async () =>
+                                    {
+                                        await Delay(1000, ct);
+                                        using var region3 = CaptureToRectArea();
+                                        if (avatar.IsActive(region3))
+                                        {
+                                            InputHub.Foreground.SimulateAction(GIActions.Jump);
+                                            await Delay(100, ct);
+                                            using var region4 = CaptureToRectArea();
+                                            var isFlying = Bv.GetMotionStatus(region4) == MotionStatus.Fly;
+                                            if (isFlying)
+                                            {
+                                                InputHub.Foreground.SimulateAction(GIActions.NormalAttack);
+                                                Logger.LogInformation("自动赶路：{t} 下落攻击...", "瓦雷莎");
+                                            }
+                                        }
+                                        state.MavikaFlyCount = 0;
+                                    }, ct);
+                                }
+                            }
+                        }
+                        return false;
+                    }
+                }
+
+                // 前方（当前或下一个航点）有跳跃动作时停用技能赶路：
+                // 跳跃路段大概率是要起跳起飞，瓦雷莎的E夜魂态/冲刺会干扰正常起跳，
+                // 且本分支会强制路段为Run，会吞掉Jump路段的跳跃动作
+                if (waypoint?.MoveMode == MoveModeEnum.Jump.Code
+                    || nextWaypoint?.MoveMode == MoveModeEnum.Jump.Code)
+                {
+                    return true;
+                }
+
+                // 路段守卫：只在 Run/Dash 路段用技能赶路。
+                // 入口的路段过滤对终点（nextWaypoint == null）放行，而 "fly 路段 + 终点" 意味着
+                // 前方是悬崖/高空、需要走到边缘跳下开飞——此时用E夜魂疾冲会直接冲下悬崖摔死，
+                // 且强制 MoveMode=Run 会破坏 fly 路段的起飞处理。
+                if (waypoint?.MoveMode != MoveModeEnum.Run.Code
+                    && waypoint?.MoveMode != MoveModeEnum.Dash.Code)
+                {
+                    return false;
+                }
+
+                // 技能赶路只在路段足够长时启用：夜魂疾冲速度约 17m/s，松键后靠惯性滑行减速，
+                // 滑行距离可达 15m+。若在近距离（如 46m 的短路段）仍触发长按E，
+                // 刹车时的惯性会直接冲过航点（实测阿如村路线冲进河里，日志 13:58:49 dist=46.1 技能赶路 → 13:58:55 游泳中）。
+                // 因此离航点 60m 以内不再进技能赶路，交还通用逻辑用普通速度跑完并正常刹车。
+                if (distance > Math.Max(PartyConfig.Distance, HurryOnMinEntryDistance))
+                {
+                    await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);
+
+                    waypoint.MoveMode = MoveModeEnum.Run.Code;
+
+                    await Delay(300, ct);
+                    var hurryEOnCd = await AutoFightSkill.AvatarSkillAsync(Logger, avatar, false, 2, ct);
+                    if (!hurryEOnCd)
+                    {
+                        InputHub.Foreground.SimulateAction(GIActions.ElementalSkill, KeyType.KeyDown);
+                        await Delay(300, ct);
+                        InputHub.Foreground.SimulateAction(GIActions.ElementalSkill, KeyType.KeyUp);
+                        await Delay(200, ct);
+                        avatar.LastSkillTime = DateTime.UtcNow;
+
+                        var hurryEOnCd2 = await AutoFightSkill.AvatarSkillAsync(Logger, avatar, false, 2, ct);
+                        if (!hurryEOnCd2)
+                        {
+                            if (distance > 20)
+                            {
+                                if (waypoint.MoveMode == MoveModeEnum.Dash.Code)
+                                {
+                                    InputHub.Foreground.SimulateAction(GIActions.SprintMouse);
+                                }
+                                else if (waypoint.MoveMode == MoveModeEnum.Run.Code)
+                                {
+                                    if (state.RunCount < 2)
+                                    {
+                                        InputHub.Foreground.SimulateAction(GIActions.SprintMouse);
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            var higher = new Scalar(0, 221, 250);
+                            using var region2 = CaptureToRectArea();
+                            using var mask = OpenCvCommonHelper.Threshold(region2.DeriveCrop(1686, 949, 10, 10).SrcMat, higher);
+                            using var labels = new Mat();
+                            using var stats = new Mat();
+                            using var centroids = new Mat();
+                            var numLabels = Cv2.ConnectedComponentsWithStats(mask, labels, stats, centroids,
+                                connectivity: PixelConnectivity.Connectivity4, ltype: MatType.CV_32S);
+
+                            if (numLabels > 1)
+                            {
+                                if (distance > 20)
+                                {
+                                    if (waypoint.MoveMode == MoveModeEnum.Dash.Code)
+                                    {
+                                        InputHub.Foreground.SimulateAction(GIActions.SprintMouse);
+                                    }
+                                    else if (waypoint.MoveMode == MoveModeEnum.Run.Code)
+                                    {
+                                        if (state.RunCount < 2)
+                                        {
+                                            InputHub.Foreground.SimulateAction(GIActions.SprintMouse);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                    }
+                }
+
+                return true;
 
             case "希诺宁":
                 if (state.PendingApproach)
@@ -1088,6 +1122,9 @@ public partial class PathExecutor
                 }
                 break;
             }
+
+            default:
+                break;
         }
 
         if ((waypoint?.MoveMode == MoveModeEnum.Fly.Code && PartyConfig.TravelMode == "连续赶路"
@@ -1706,6 +1743,10 @@ public partial class PathExecutor
                 {
                     Logger.LogWarning("手动指定的赶路角色 {Name} 不在当前队伍中，不启用赶路", _hurryOnAvatar);
                     _hurryOnAvatar = "";
+                }
+                else
+                {
+                    Logger.LogInformation("自动赶路角色：手动指定 {Name}", _hurryOnAvatar);
                 }
             }
         }
