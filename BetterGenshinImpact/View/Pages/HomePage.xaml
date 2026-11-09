@@ -591,7 +591,7 @@
                        Icon="{ui:SymbolIcon Open24}" />
         </ui:CardControl>
 
-        <!--  云原神网页版：每个实例是一个独立的 BetterGI 进程，按实例名保存 WebView 数据（仅 Primary 显示）  -->
+        <!--  云原神网页版：每个实例是一个独立的 BetterGI 进程，按实例名保存 WebView 数据（仅 Debug 构建且已附加调试器的 Primary 显示）  -->
         <ui:CardControl Margin="0,0,0,12"
                         Icon="{ui:SymbolIcon Globe24}"
                         Visibility="{Binding IsCloudWebEntryVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
