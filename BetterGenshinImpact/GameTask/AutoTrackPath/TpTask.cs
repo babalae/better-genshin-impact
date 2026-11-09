@@ -89,9 +89,33 @@ public class TpTask
     private const int TeleportTimeoutMs = 120_000;
     private const double MapPositionRecognitionRecoveryZoomStep = 1.0;
     private static string? s_lastSuccessfulTeleportMapName;
+
+    // 大地图区域选择列表中可能出现的全部区域名（国家名 + 独立地图名 + 尘歌壶），用于后缀匹配的歧义排除
+    private static readonly Lazy<HashSet<string>> s_knownAreaNames = new(() =>
+    {
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var country in MapLazyAssets.Get().CountryPositions.Keys)
+        {
+            names.Add(country);
+        }
+
+        foreach (var field in typeof(MapTypes).GetFields())
+        {
+            if (Attribute.GetCustomAttribute(field, typeof(System.ComponentModel.DescriptionAttribute)) is System.ComponentModel.DescriptionAttribute attribute &&
+                !string.IsNullOrEmpty(attribute.Description))
+            {
+                names.Add(attribute.Description);
+            }
+        }
+
+        names.Add("尘歌壶");
+        return names;
+    });
+
     private double _mapZoomLevelPerWheelNotch = DefaultMapZoomLevelPerWheelNotch;
     private Point2f? _lastAreaSwitchCenterPoint;
     private string? _lastAreaSwitchCenterMapName;
+    private HashSet<string>? _knownAreaNameVariants;
 
     private sealed class MapChooseCandidate
     {
@@ -2484,8 +2508,9 @@ public class TpTask
         {
             ct.ThrowIfCancellationRequested();
             using var capture = CaptureToRectArea();
+            // 校验与查找用同一判定：后缀兜底命中的行点击后首字可能仍被裁，只用完整匹配会把还挂着的行误判成已消失
             var clickedCandidateStillVisible = FindSwitchAreaCandidates(capture).Any(candidate =>
-                IsSwitchAreaCandidateMatch(candidate.Text, localizedAreaName, areaName) &&
+                IsSwitchAreaCandidateHit(candidate.Text, localizedAreaName, areaName) &&
                 IsSameSwitchAreaCandidatePosition(clickedCandidateRect, candidate));
 
             if (!clickedCandidateStillVisible &&
@@ -2574,9 +2599,9 @@ public class TpTask
 
     /// <summary>
     /// 区域行的首字被 OCR 检测框裁掉时的兜底匹配：候选是区域名去掉前面若干字（区域名以候选结尾）即视为命中。
-    /// 现有区域名的末字互不相同，不会因此点错行。
+    /// 注意区域名的末字并非互不相同（璃月/霜月都以"月"结尾），候选同时是其他区域名的后缀时无法唯一确定行，放弃兜底。
     /// </summary>
-    private static bool IsSwitchAreaCandidateSuffixMatch(string candidateText, string localizedAreaName, string areaName)
+    private bool IsSwitchAreaCandidateSuffixMatch(string candidateText, string localizedAreaName, string areaName)
     {
         var normalizedCandidate = NormalizeSwitchAreaCandidateText(candidateText);
         if (normalizedCandidate.Length == 0)
@@ -2588,13 +2613,64 @@ public class TpTask
         {
             var normalizedArea = NormalizeSwitchAreaCandidateText(name);
             if (normalizedArea.Length > normalizedCandidate.Length &&
-                normalizedArea.EndsWith(normalizedCandidate, StringComparison.Ordinal))
+                normalizedArea.EndsWith(normalizedCandidate, StringComparison.Ordinal) &&
+                !IsSwitchAreaSuffixAmbiguous(normalizedCandidate, normalizedArea))
             {
                 return true;
             }
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// 候选同时是目标以外的区域名（或其本地化名）的后缀（含恰好等于该名字）时无法唯一确定点击的行。
+    /// </summary>
+    private bool IsSwitchAreaSuffixAmbiguous(string normalizedCandidate, string normalizedTargetArea)
+    {
+        foreach (var variant in GetKnownAreaNameVariants())
+        {
+            if (!string.Equals(variant, normalizedTargetArea, StringComparison.Ordinal) &&
+                variant.EndsWith(normalizedCandidate, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 已知区域名及其当前语言的本地化名（均已归一化），随实例缓存一次。
+    /// </summary>
+    private HashSet<string> GetKnownAreaNameVariants()
+    {
+        if (_knownAreaNameVariants != null)
+        {
+            return _knownAreaNameVariants;
+        }
+
+        var variants = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var name in s_knownAreaNames.Value)
+        {
+            variants.Add(NormalizeSwitchAreaCandidateText(name));
+            var localized = this.stringLocalizer.WithCultureGet(this.cultureInfo, name);
+            if (!string.Equals(localized, name, StringComparison.Ordinal))
+            {
+                variants.Add(NormalizeSwitchAreaCandidateText(localized));
+            }
+        }
+
+        return _knownAreaNameVariants = variants;
+    }
+
+    /// <summary>
+    /// 区域行的完整匹配加首字被裁时的后缀兜底，点击后的行消失校验与查找共用同一判定。
+    /// </summary>
+    private bool IsSwitchAreaCandidateHit(string candidateText, string localizedAreaName, string areaName)
+    {
+        return IsSwitchAreaCandidateMatch(candidateText, localizedAreaName, areaName) ||
+               IsSwitchAreaCandidateSuffixMatch(candidateText, localizedAreaName, areaName);
     }
 
     /// <summary>
@@ -2606,7 +2682,9 @@ public class TpTask
         {
             var dir = BetterGenshinImpact.Core.Config.Global.Absolute(@"log\switch_area_debug");
             System.IO.Directory.CreateDirectory(dir);
-            imageRegion.SrcMat.SaveImage(System.IO.Path.Combine(dir, $"{DateTime.Now:HHmmss_fff}_{areaName}.png"));
+            // areaName 可能来自脚本传入的 forceCountry 等外部字符串，清洗非法字符，避免保存失败被静默吞掉
+            var safeAreaName = string.Join("_", areaName.Split(System.IO.Path.GetInvalidFileNameChars()));
+            imageRegion.SrcMat.SaveImage(System.IO.Path.Combine(dir, $"{DateTime.Now:HHmmss_fff}_{safeAreaName}.png"));
         }
         catch
         {
