@@ -1,7 +1,7 @@
 <!--
 感谢你的贡献！提交前请先阅读以下说明 / Thanks for contributing! Please read this before submitting:
 1. 请按模板逐项填写，请勿删除模板中的标题，否则内容无法被正确识别 / Fill in every section and do not delete the headings.
-2. 未填写关键信息（解决的需求、是否在游戏内实际运行、代码是否纯手工编写）的 PR 可能会被直接关闭 / PRs missing key information may be closed directly.
+2. 未填写关键信息（解决的需求、是否在游戏内实际运行、代码是否纯手工编写、使用的 AI 模型名称）的 PR 可能会被直接关闭 / PRs missing key information may be closed directly.
 3. 请保持改动聚焦，避免在一次 PR 中混入与需求无关的大规模改动 / Keep the change focused.
 -->
 
@@ -53,19 +53,16 @@
 - [ ] 部分代码由 AI 辅助生成，我已逐行阅读、理解并验证 / Partly AI-assisted; I have read, understood and verified it line by line
 - [ ] 本次代码完全由 AI 生成，我已逐行阅读、理解并验证 / Fully AI-generated; I have read, understood and verified it line by line
 
+**使用的 AI 具体模型名称（未使用 AI 请填“无”；使用多个模型请逐一列出）/ Specific AI model names (write "None" if no AI was used; list all models used):**
+
+<!-- 例：GPT 6.1 Sol、Claude Opus 5.5；请填写实际使用的具体模型，不要仅填写“GPT”或“Claude” / Examples: GPT 6.1 Sol, Claude Opus 5.5. Specify the actual models used, not just "GPT" or "Claude". -->
+
 **AI 参与的部分及我的验证方式（未使用 AI 请填“无”）/ AI-involved parts and how I verified them (write "None" if no AI was used):**
 
 **我确认 / I confirm:**
 
 - [ ] 我理解本次改动的全部逻辑，能够解释每一处修改的原因 / I understand the entire change and can explain every modification
 - [ ] 提交的代码不包含来源不明、我无法解释的代码片段 / No unexplained code from unknown sources is included
-
-## 改动类型 / Type of Change
-
-- [ ] 新功能 / New feature
-- [ ] 问题修复 / Bug fix
-- [ ] 重构或性能优化 / Refactor or performance
-- [ ] 文档或其他杂项 / Docs or chores
 
 ## 影响范围 / Impact
 

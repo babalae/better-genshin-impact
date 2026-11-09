@@ -104,9 +104,11 @@ public partial class HomePageViewModel : ViewModel, IDisposable
             : "等待连接 · 1080P";
 
     /// <summary>
-    /// 「云原神网页版」卡片只在 Primary 显示
+    /// 「云原神网页版」卡片只在 Debug 构建且已附加调试器的 Primary 显示
     /// </summary>
-    public bool IsCloudWebEntryVisible => InstanceBootstrap.Current.Context.IsRoot;
+    public bool IsCloudWebEntryVisible => RuntimeHelper.IsDebug
+                                         && RuntimeHelper.IsDebuggerAttached
+                                         && InstanceBootstrap.Current.Context.IsRoot;
 
     [ObservableProperty] [NotifyCanExecuteChangedFor(nameof(StartTriggerCommand))]
     private bool _startButtonEnabled = true;

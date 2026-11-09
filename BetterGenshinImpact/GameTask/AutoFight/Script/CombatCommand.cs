@@ -3,6 +3,7 @@ using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.Helpers;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Threading;
 using TimeSpan = System.TimeSpan;
 using Vanara.PInvoke;
@@ -44,7 +45,7 @@ public class CombatCommand
         if (Method == Method.Walk)
         {
             AssertUtils.IsTrue(Args.Count == 2, "walk方法必须有两个入参，第一个参数是方向，第二个参数是行走时间。例：walk(s, 0.2)");
-            var s = double.Parse(Args[1]);
+            var s = ParseSeconds(Args[1]);
             AssertUtils.IsTrue(s > 0, "行走时间必须大于0");
         }
         else if (Method == Method.W || Method == Method.A || Method == Method.S || Method == Method.D)
@@ -74,6 +75,15 @@ public class CombatCommand
         }
     }
     
+    /// <summary>
+    /// 解析以秒为单位的参数。策略文本里的小数点固定为 '.'，不能跟随系统区域设置，
+    /// 否则在以 ',' 为小数点、'.' 为千分位的区域（如 pt-BR、de-DE）里 "0.85" 会被读成 85。
+    /// </summary>
+    internal static double ParseSeconds(string value)
+    {
+        return double.Parse(value, CultureInfo.InvariantCulture);
+    }
+
     public override string ToString()
     {
         return $"<CombatCommand {Name}, {Method}({Args}) (rounds {ActivatingRound})>";
@@ -153,7 +163,7 @@ public class CombatCommand
         {
             if (Args is { Count: > 0 })
             {
-                var s = double.Parse(Args![0]);
+                var s = ParseSeconds(Args![0]);
                 avatar.Attack((int)TimeSpan.FromSeconds(s).TotalMilliseconds);
             }
             else
@@ -165,7 +175,7 @@ public class CombatCommand
         {
             if (Args is { Count: > 0 })
             {
-                var s = double.Parse(Args![0]);
+                var s = ParseSeconds(Args![0]);
                 avatar.Charge((int)TimeSpan.FromSeconds(s).TotalMilliseconds);
             }
             else
@@ -175,32 +185,32 @@ public class CombatCommand
         }
         else if (Method == Method.Walk)
         {
-            var s = double.Parse(Args![1]);
+            var s = ParseSeconds(Args![1]);
             avatar.Walk(Args![0], (int)TimeSpan.FromSeconds(s).TotalMilliseconds);
         }
         else if (Method == Method.W)
         {
-            var s = double.Parse(Args![0]);
+            var s = ParseSeconds(Args![0]);
             avatar.Walk("w", (int)TimeSpan.FromSeconds(s).TotalMilliseconds);
         }
         else if (Method == Method.A)
         {
-            var s = double.Parse(Args![0]);
+            var s = ParseSeconds(Args![0]);
             avatar.Walk("a", (int)TimeSpan.FromSeconds(s).TotalMilliseconds);
         }
         else if (Method == Method.S)
         {
-            var s = double.Parse(Args![0]);
+            var s = ParseSeconds(Args![0]);
             avatar.Walk("s", (int)TimeSpan.FromSeconds(s).TotalMilliseconds);
         }
         else if (Method == Method.D)
         {
-            var s = double.Parse(Args![0]);
+            var s = ParseSeconds(Args![0]);
             avatar.Walk("d", (int)TimeSpan.FromSeconds(s).TotalMilliseconds);
         }
         else if (Method == Method.Wait)
         {
-            var s = double.Parse(Args![0]);
+            var s = ParseSeconds(Args![0]);
             avatar.Wait((int)TimeSpan.FromSeconds(s).TotalMilliseconds);
         }
         else if (Method == Method.Ready)
@@ -219,7 +229,7 @@ public class CombatCommand
         {
             if (Args is { Count: > 0 })
             {
-                var s = double.Parse(Args![0]);
+                var s = ParseSeconds(Args![0]);
                 avatar.Dash((int)TimeSpan.FromSeconds(s).TotalMilliseconds);
             }
             else
