@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -18,8 +19,11 @@ internal static class ChildSessionServiceNativeMethods
     private const uint ServiceStart = 0x0010;
     private const uint ServiceStop = 0x0020;
     private const uint ServiceChangeConfig = 0x0002;
+    private const uint ServiceEnumerateDependents = 0x0008;
 
     private const uint ServiceControlStop = 0x00000001;
+    private const uint ServiceActive = 0x00000001;
+    private const int ErrorMoreData = 234;
 
     private const uint ServiceNoChange = 0xFFFFFFFF;
     private const uint ServiceDemandStart = 0x00000003;
@@ -196,6 +200,122 @@ internal static class ChildSessionServiceNativeMethods
     }
 
     /// <summary>
+    /// 列出当前处于运行状态、依赖指定服务的服务名。
+    ///
+    /// 停一个还有运行中依赖的服务时，SCM 会直接拒绝（错误 1051），所以重启 TermService
+    /// 之前必须先把这些依赖停下来——`UmRdpService` 就依赖 TermService，而且平时是在跑的。
+    /// 读不到依赖列表时返回空集合：调用方仍会尝试停止，失败时按 1051 给出可执行的提示。
+    /// </summary>
+    internal static IReadOnlyList<string> GetRunningDependents(string serviceName)
+    {
+        var dependents = new List<string>();
+
+        using var handle = ServiceHandle.Open(
+            serviceName,
+            ServiceQueryStatus | ServiceEnumerateDependents);
+        if (!handle.IsValid)
+        {
+            return dependents;
+        }
+
+        if (EnumDependentServicesW(handle.Value, ServiceActive, IntPtr.Zero, 0, out var needed, out _))
+        {
+            // 没有依赖时直接返回 true。
+            return dependents;
+        }
+
+        if (Marshal.GetLastWin32Error() != ErrorMoreData || needed == 0)
+        {
+            return dependents;
+        }
+
+        var buffer = Marshal.AllocHGlobal((int)needed);
+        try
+        {
+            if (!EnumDependentServicesW(
+                    handle.Value,
+                    ServiceActive,
+                    buffer,
+                    needed,
+                    out _,
+                    out var returned))
+            {
+                return dependents;
+            }
+
+            var size = Marshal.SizeOf<EnumServiceStatus>();
+            for (var index = 0; index < returned; index++)
+            {
+                var item = Marshal.PtrToStructure<EnumServiceStatus>(buffer + (index * size));
+                var name = Marshal.PtrToStringUni(item.ServiceName);
+                if (!string.IsNullOrWhiteSpace(name))
+                {
+                    dependents.Add(name);
+                }
+            }
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(buffer);
+        }
+
+        return dependents;
+    }
+
+    /// <summary>
+    /// 通过 SCM 更新服务配置。
+    ///
+    /// 直接写注册表时 SCM 内存里仍是旧配置，要重启系统才会重新读取；改完再回读注册表
+    /// 当然是新值，于是「修复成功」但服务照样起不来。走这个 API 才会立刻生效。
+    /// </summary>
+    /// <param name="serviceName">服务名。</param>
+    /// <param name="binaryPath">新的可执行映像路径；null 表示不改。</param>
+    /// <param name="startName">新的运行账户；null 表示不改。</param>
+    /// <param name="dependencies">完整的依赖列表；null 表示不改。</param>
+    /// <param name="error">失败原因。</param>
+    internal static bool TryChangeServiceConfig(
+        string serviceName,
+        string? binaryPath,
+        string? startName,
+        string[]? dependencies,
+        out string error)
+    {
+        error = string.Empty;
+
+        using var handle = ServiceHandle.Open(serviceName, ServiceChangeConfig);
+        if (!handle.IsValid)
+        {
+            error = $"无法打开服务 {serviceName} 以修改配置（错误 {Marshal.GetLastWin32Error()}）。";
+            return false;
+        }
+
+        // 多字符串要以两个 \0 结尾：这里补一个，封送时还会再加一个。
+        var dependencyString = dependencies is { Length: > 0 }
+            ? string.Join("\0", dependencies) + "\0"
+            : null;
+
+        if (!ChangeServiceConfig(
+                handle.Value,
+                ServiceNoChange,
+                ServiceNoChange,
+                ServiceNoChange,
+                binaryPath,
+                null,
+                IntPtr.Zero,
+                dependencyString,
+                startName,
+                null,
+                null))
+        {
+            var code = Marshal.GetLastWin32Error();
+            error = $"修改 {serviceName} 服务配置失败（错误 {code}：{new Win32Exception(code).Message}）。";
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// 打开服务句柄并在 Dispose 时关闭。
     /// </summary>
     private sealed class ServiceHandle : IDisposable
@@ -220,15 +340,24 @@ internal static class ChildSessionServiceNativeMethods
                 return new ServiceHandle(IntPtr.Zero);
             }
 
+            var service = IntPtr.Zero;
+            var error = 0;
+
             try
             {
-                var service = OpenServiceW(manager, serviceName, access);
-                return new ServiceHandle(service);
+                service = OpenServiceW(manager, serviceName, access);
+                error = Marshal.GetLastWin32Error();
             }
             finally
             {
                 _ = CloseServiceHandle(manager);
+
+                // CloseServiceHandle 成功会把 GetLastError 清成 0，调用方随后读到的
+                // 就是「没有错误」。这里把 OpenServiceW 的错误码放回去再返回。
+                Marshal.SetLastPInvokeError(error);
             }
+
+            return new ServiceHandle(service);
         }
 
         public void Dispose()
@@ -252,6 +381,15 @@ internal static class ChildSessionServiceNativeMethods
         internal uint WaitHint;
     }
 
+    /// <summary>EnumDependentServices 返回的数组元素。</summary>
+    [StructLayout(LayoutKind.Sequential)]
+    private struct EnumServiceStatus
+    {
+        internal IntPtr ServiceName;
+        internal IntPtr DisplayName;
+        internal ServiceStatus Status;
+    }
+
     [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern IntPtr OpenSCManagerW(string? machineName, string? databaseName, uint access);
 
@@ -273,6 +411,16 @@ internal static class ChildSessionServiceNativeMethods
     [DllImport("advapi32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool ControlService(IntPtr service, uint control, out ServiceStatus status);
+
+    [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool EnumDependentServicesW(
+        IntPtr service,
+        uint serviceState,
+        IntPtr services,
+        uint bufferSize,
+        out uint bytesNeeded,
+        out uint servicesReturned);
 
     [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]

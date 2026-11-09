@@ -10,7 +10,7 @@
                  Height="640"
                  MinWidth="620"
                  MinHeight="460"
-                 Background="#202020"
+                 Background="{DynamicResource ApplicationBackgroundBrush}"
                  ExtendsContentIntoTitleBar="True"
                  FontFamily="{DynamicResource TextThemeFontFamily}"
                  WindowBackdropType="Auto"
@@ -117,11 +117,17 @@
             <ui:Grid Grid.Row="2"
                      Margin="16,8,16,12"
                      ColumnDefinitions="*,Auto">
-                <ui:TextBlock Grid.Column="0"
-                              VerticalAlignment="Center"
-                              Text="{Binding StatusText, Mode=OneWay}"
-                              TextWrapping="Wrap" />
-                <StackPanel Grid.Column="1"
+                <StackPanel Grid.Column="0"
+                            VerticalAlignment="Center">
+                    <ui:TextBlock Text="{Binding StatusText, Mode=OneWay}"
+                                  TextWrapping="Wrap" />
+                    <!-- 修复结论单独留一行：重新检测会立刻改写上面那行状态，失败原因不能就这么没了 -->
+                    <ui:TextBlock Margin="0,4,0,0"
+                                  Opacity="0.75"
+                                  TextWrapping="Wrap"
+                                  Text="{Binding LastFixResult, Mode=OneWay}"
+                                  Visibility="{Binding HasLastFixResult, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                </StackPanel>                <StackPanel Grid.Column="1"
                             Orientation="Horizontal">
                     <ui:Button Command="{Binding CopyEnvironmentCommand}"
                                Content="{i18n:T 复制环境信息}" />

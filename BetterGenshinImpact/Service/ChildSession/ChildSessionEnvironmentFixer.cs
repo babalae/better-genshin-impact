@@ -33,6 +33,9 @@ internal static class ChildSessionEnvironmentFixer
 {
     private static readonly ILogger Logger = ChildSessionDiagnosticsLog.Instance;
 
+    /// <summary>要修复的服务名。桌面分身只跟 TermService 打交道。</summary>
+    private const string TermServiceName = "TermService";
+
     /// <summary>
     /// 按检查项标识执行修复。
     /// </summary>
@@ -173,8 +176,20 @@ internal static class ChildSessionEnvironmentFixer
     private static ChildSessionFixResult FixServiceDll(CancellationToken cancellationToken)
     {
         var entry = ChildSessionEnvironmentCheck.GetServiceDllEntry();
+
+        // 读不到当前值就没法备份、也没法判断要不要修。这时候硬写等于盲改，
+        // 直接告诉用户需要提权比「修复成功」的假象好。
+        if (entry.Unreadable)
+        {
+            return new ChildSessionFixResult(
+                false,
+                "无法读取 TermService 的 Parameters 键（权限不足）。请以管理员身份运行后再试。");
+        }
+
         var hijacked = entry.Exists && ChildSessionEnvironmentCheck.IsServiceDllHijacked(entry.Value);
-        var typeBroken = !entry.Exists || entry.Kind != RegistryValueKind.ExpandString;
+        var emptyValue = entry.Exists && string.IsNullOrWhiteSpace(entry.Value);
+        var typeBroken = !entry.Exists || emptyValue
+                         || entry.Kind != RegistryValueKind.ExpandString;
 
         if (!hijacked && !typeBroken)
         {
@@ -195,6 +210,7 @@ internal static class ChildSessionEnvironmentFixer
 
         var after = ChildSessionEnvironmentCheck.GetServiceDllEntry();
         if (!after.Exists || after.Kind != RegistryValueKind.ExpandString
+            || string.IsNullOrWhiteSpace(after.Value)
             || ChildSessionEnvironmentCheck.IsServiceDllHijacked(after.Value))
         {
             return new ChildSessionFixResult(false, "注册表写入后回读仍是旧值，修复未生效。");
@@ -235,26 +251,17 @@ internal static class ChildSessionEnvironmentFixer
         var backupPath = WriteServiceKeyBackup(deviations);
         var failures = new List<string>();
 
+        // 通过注册表写下去时，SCM 内存里还是旧配置，要重启系统才重新读取。
+        // 记一下有没有走到这条退路，收尾时如实告诉用户。
+        var needsReboot = false;
+
         foreach (var deviation in deviations)
         {
             var ok = deviation.Field switch
             {
-                "ImagePath" => TryWriteString(
-                    ChildSessionEnvironmentCheck.TermServiceKeyPath,
-                    "ImagePath",
-                    @"%SystemRoot%\System32\svchost.exe -k NetworkService",
-                    RegistryValueKind.ExpandString,
-                    out _),
-
-                "ObjectName" => TryWriteString(
-                    ChildSessionEnvironmentCheck.TermServiceKeyPath,
-                    "ObjectName",
-                    @"NT AUTHORITY\NetworkService",
-                    RegistryValueKind.ExpandString,
-                    out _),
-
-                "DependOnService" => TryAppendServiceDependencies(out _),
-
+                "ImagePath" => TrySetImagePath(ref needsReboot),
+                "ObjectName" => TrySetObjectName(ref needsReboot),
+                "DependOnService" => TrySetDependencies(ref needsReboot),
                 _ => true
             };
 
@@ -278,12 +285,139 @@ internal static class ChildSessionEnvironmentFixer
         }
 
         var message = "TermService 服务键已恢复默认值（依赖只做了追加）。";
+        if (needsReboot)
+        {
+            message += "其中部分字段是通过注册表写入的，需要重启电脑后服务才会读取新配置。";
+        }
+
         if (backupPath is not null)
         {
             message += $"原值已备份到 {backupPath}。";
         }
 
         return new ChildSessionFixResult(true, message);
+    }
+
+    /// <summary>
+    /// 改 TermService 的可执行映像。
+    ///
+    /// 优先走 <c>ChangeServiceConfig</c>：SCM 会立刻用上新配置。直接写注册表时
+    /// SCM 内存里仍是旧值，回读注册表却是新值——「修复成功」但服务照样起不来。
+    /// </summary>
+    private static bool TrySetImagePath(ref bool needsReboot)
+    {
+        var systemDirectory = Environment.GetFolderPath(Environment.SpecialFolder.System);
+        var imagePath = Path.Combine(systemDirectory, "svchost.exe") + " -k NetworkService";
+
+        if (ChildSessionServiceNativeMethods.TryChangeServiceConfig(
+                TermServiceName, imagePath, null, null, out _))
+        {
+            return true;
+        }
+
+        if (!TryWriteString(
+                ChildSessionEnvironmentCheck.TermServiceKeyPath,
+                "ImagePath",
+                @"%SystemRoot%\System32\svchost.exe -k NetworkService",
+                RegistryValueKind.ExpandString,
+                out _))
+        {
+            return false;
+        }
+
+        needsReboot = true;
+        return true;
+    }
+
+    /// <summary>
+    /// 改 TermService 的运行账户。优先走 SCM，失败时退回注册表。
+    /// </summary>
+    private static bool TrySetObjectName(ref bool needsReboot)
+    {
+        if (ChildSessionServiceNativeMethods.TryChangeServiceConfig(
+                TermServiceName, null, @"NT AUTHORITY\NetworkService", null, out _))
+        {
+            return true;
+        }
+
+        if (!TryWriteString(
+                ChildSessionEnvironmentCheck.TermServiceKeyPath,
+                "ObjectName",
+                @"NT AUTHORITY\NetworkService",
+                RegistryValueKind.ExpandString,
+                out _))
+        {
+            return false;
+        }
+
+        needsReboot = true;
+        return true;
+    }
+
+    /// <summary>
+    /// 补齐缺失的服务依赖（只追加，不删本机已有的其它依赖）。
+    /// </summary>
+    private static bool TrySetDependencies(ref bool needsReboot)
+    {
+        var merged = MergeServiceDependencies();
+        if (merged is { Length: > 0 }
+            && ChildSessionServiceNativeMethods.TryChangeServiceConfig(
+                TermServiceName, null, null, merged, out _))
+        {
+            return true;
+        }
+
+        if (!TryAppendServiceDependencies(out _))
+        {
+            return false;
+        }
+
+        needsReboot = true;
+        return true;
+    }
+
+    /// <summary>
+    /// 当前依赖 + RPCSS（+ 系统存在 StateRepository 时补上它），保持原有顺序。
+    /// </summary>
+    private static string[]? MergeServiceDependencies()
+    {
+        try
+        {
+            using var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
+            using var serviceKey = baseKey.OpenSubKey(ChildSessionEnvironmentCheck.TermServiceKeyPath);
+            if (serviceKey is null)
+            {
+                return null;
+            }
+
+            var current = serviceKey.GetValue("DependOnService") as string[] ?? [];
+            var merged = new List<string>(current);
+
+            void Ensure(string name)
+            {
+                if (!merged.Exists(x => string.Equals(x, name, StringComparison.OrdinalIgnoreCase)))
+                {
+                    merged.Add(name);
+                }
+            }
+
+            Ensure("RPCSS");
+
+            using var stateRepositoryKey =
+                baseKey.OpenSubKey(@"SYSTEM\CurrentControlSet\Services\StateRepository");
+            if (stateRepositoryKey is not null)
+            {
+                Ensure("StateRepository");
+            }
+
+            return merged.ToArray();
+        }
+        catch (Exception exception) when (exception is SecurityException
+                                              or UnauthorizedAccessException
+                                              or IOException)
+        {
+            return null;
+        }
     }
 
     /// <summary>
@@ -356,6 +490,13 @@ internal static class ChildSessionEnvironmentFixer
             return new ChildSessionFixResult(true, "termsrv.dll 与系统组件库一致，无需修复。");
         }
 
+        // 文件被改过，就把「把补丁写回去」的开机任务一起清掉，否则还原完重启又变回去。
+        // 必须在还原之前取：文件一致之后，「是否深扫」的条件就不成立了，
+        // 藏在系统子树里的任务会被漏掉。
+        var persistence = ChildSessionEnvironmentCheck.GetToolPersistenceHits().Count > 0
+            ? FixToolPersistence()
+            : (ChildSessionFixResult?)null;
+
         var system32 = Environment.GetFolderPath(Environment.SpecialFolder.System);
         var termsrvPath = Path.Combine(system32, "termsrv.dll");
 
@@ -371,7 +512,7 @@ internal static class ChildSessionEnvironmentFixer
             var restore = TryRestoreTermsrvFromBackup(termsrvPath, backupPath, cancellationToken);
             if (restore is not null)
             {
-                return restore.Value;
+                return AppendNote(restore.Value, persistence);
             }
         }
 
@@ -381,12 +522,29 @@ internal static class ChildSessionEnvironmentFixer
         var sfcResult = RunSfcScannow(cancellationToken);
         var after = ChildSessionEnvironmentCheck.VerifyTermsrvNow();
 
-        return after.Exists && after.Verified && after.Intact
+        var result = after.Exists && after.Verified && after.Intact
             ? new ChildSessionFixResult(true, $"已用 sfc 修复 termsrv.dll（{sfcResult}）。")
             : new ChildSessionFixResult(
                 false,
                 $"sfc 已运行（{sfcResult}），但文件仍与系统组件库不一致。"
                 + "文件被远程桌面服务占用时，sfc 往往要到重启后才真正替换，请重启后再检测一次。");
+
+        return AppendNote(result, persistence);
+    }
+
+    /// <summary>
+    /// 把「顺带清理持久化项」的结论并进主结果，避免用户只看到「已修复」却不知道还清了任务。
+    /// </summary>
+    private static ChildSessionFixResult AppendNote(
+        ChildSessionFixResult result,
+        ChildSessionFixResult? persistence)
+    {
+        if (persistence is not { } note || string.IsNullOrWhiteSpace(note.Message))
+        {
+            return result;
+        }
+
+        return result with { Message = result.Message + " " + note.Message };
     }
 
     /// <summary>
@@ -536,19 +694,61 @@ internal static class ChildSessionEnvironmentFixer
                 + "否则重启服务会把里面的程序一起关掉。");
         }
 
-        if (!ChildSessionServiceNativeMethods.TryStop("TermService", out var stopError))
+        // TermService 平时带着依赖在跑（UmRdpService 就依赖它）。有依赖在运行时
+        // SCM 会直接拒绝停止（错误 1051），所以先把它们停掉，重启完再按原样拉回来。
+        var dependents = ChildSessionServiceNativeMethods.GetRunningDependents(TermServiceName);
+        var stoppedDependents = new List<string>();
+
+        foreach (var dependent in dependents)
         {
-            return new ChildSessionFixResult(false, $"停止远程桌面服务失败：{stopError}");
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (ChildSessionServiceNativeMethods.TryStop(dependent, out _))
+            {
+                stoppedDependents.Add(dependent);
+            }
         }
 
-        cancellationToken.ThrowIfCancellationRequested();
-
-        if (!ChildSessionServiceNativeMethods.TryStart("TermService", out var startError))
+        try
         {
-            return new ChildSessionFixResult(false, $"服务已停止但重新启动失败：{startError}");
+            if (!ChildSessionServiceNativeMethods.TryStop(TermServiceName, out var stopError))
+            {
+                // 依赖没停干净是最常见的原因，这里把话说明白，别让用户对着 1051 猜。
+                return new ChildSessionFixResult(
+                    false,
+                    $"{stopError}如果反复失败，重启电脑后再试一次。");
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (!ChildSessionServiceNativeMethods.TryStart(TermServiceName, out var startError))
+            {
+                return new ChildSessionFixResult(false, $"服务已停止但重新启动失败：{startError}");
+            }
+        }
+        finally
+        {
+            RestoreDependents(stoppedDependents);
         }
 
         return new ChildSessionFixResult(true, "远程桌面服务已重启。");
+    }
+
+    /// <summary>
+    /// 把刚才为了停服务而停掉的依赖服务拉回来。
+    ///
+    /// 顺序反过来启动：后停的通常是更外层的服务。启动失败只记日志——
+    /// 这些都是按需启动的服务，真正需要时系统会自己拉起来，没必要因此判定修复失败。
+    /// </summary>
+    private static void RestoreDependents(IReadOnlyList<string> dependents)
+    {
+        for (var index = dependents.Count - 1; index >= 0; index--)
+        {
+            if (!ChildSessionServiceNativeMethods.TryStart(dependents[index], out var error))
+            {
+                Logger.LogWarning("恢复依赖服务 {Service} 失败：{Error}", dependents[index], error);
+            }
+        }
     }
 
     /// <summary>
@@ -661,7 +861,10 @@ internal static class ChildSessionEnvironmentFixer
         try
         {
             using var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
-            using var key = baseKey.OpenSubKey(path, writable: true);
+
+            // 用 CreateSubKey 而不是 OpenSubKey：Parameters 子键被整键删掉时，
+            // OpenSubKey 只会返回 null，修复就以「路径不存在」失败——而这时恰恰最需要写回去。
+            using var key = baseKey.CreateSubKey(path, writable: true);
             if (key is null)
             {
                 error = $"无法打开注册表项 HKLM\\{path}（权限不足或路径不存在）。";
@@ -852,6 +1055,11 @@ internal static class ChildSessionEnvironmentFixer
 
     /// <summary>
     /// 把带非法字符的显示文本转成安全文件名。
+    ///
+    /// 长度也要限制：自启项的显示文本是「注册表位置 → 值名」，值名可以很长，
+    /// 拼出来的文件名一旦超过文件系统上限，备份就写不进去——而「备份失败就不删」
+    /// 意味着这条永远修不好。超长时截断并补一个短哈希，既不重复也能对照回原值
+    /// （完整内容就写在文件里）。
     /// </summary>
     private static string MakeSafeFileName(string text)
     {
@@ -861,7 +1069,34 @@ internal static class ChildSessionEnvironmentFixer
             builder.Append(Array.IndexOf(Path.GetInvalidFileNameChars(), ch) >= 0 ? '_' : ch);
         }
 
-        return builder.ToString();
+        var safe = builder.ToString();
+        if (safe.Length <= MaxBackupNameLength)
+        {
+            return safe;
+        }
+
+        return string.Concat(safe.AsSpan(0, MaxBackupNameLength), "_", StableSuffix(safe));
+    }
+
+    /// <summary>备份文件名里正文部分的最大长度，留出目录路径的余量。</summary>
+    private const int MaxBackupNameLength = 80;
+
+    /// <summary>
+    /// 确定性的短哈希（FNV-1a）。用 string.GetHashCode 不行：那个每个进程都不一样，
+    /// 重启一次就会在备份目录里多出一份同名文件。
+    /// </summary>
+    private static string StableSuffix(string text)
+    {
+        unchecked
+        {
+            var hash = 2166136261u;
+            foreach (var ch in text)
+            {
+                hash = (hash ^ ch) * 16777619u;
+            }
+
+            return hash.ToString("x8");
+        }
     }
 
     /// <summary>

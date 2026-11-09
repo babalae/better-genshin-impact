@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.Text;
 using System.Threading.Tasks;
@@ -32,6 +32,19 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isBusy;
+
+    /// <summary>
+    /// 最近一次修复的结论。
+    ///
+    /// 单独占一行，不和 <see cref="StatusText"/> 抢：修完会立刻重新检测，
+    /// 状态栏马上变成「检查完成：…」，修复失败的原因就再也看不到了。
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasLastFixResult))]
+    private string _lastFixResult = string.Empty;
+
+    /// <summary>是否有可展示的修复结论。</summary>
+    public bool HasLastFixResult => !string.IsNullOrWhiteSpace(LastFixResult);
 
     /// <summary>
     /// 是否还在检测。检测期间不展示任何结论：termsrv.dll 的校验在后台跑，
@@ -103,24 +116,28 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
             // 否则会先按上一次的结论亮一条「与系统组件库不一致」，等新结论回来又撤掉，
             // 用户看到的就是一次莫名其妙的假警报。等不到（超时或没提权）就按「未验证」渲染，
             // 由检查项自己决定不出结论，而不是拿旧值凑数。
-            if (ChildSessionEnvironmentCheck.IsElevated()
-                && !ChildSessionEnvironmentCheck.GetTermsrvState().Verified)
+            if (ChildSessionEnvironmentCheck.IsElevated())
             {
-                var deadline = DateTime.UtcNow + TermsrvWaitTimeout;
-                var noticeShown = false;
-
-                while (ChildSessionEnvironmentCheck.IsTermsrvVerifying
-                       && DateTime.UtcNow < deadline)
+                if (!ChildSessionEnvironmentCheck.GetTermsrvState().Verified)
                 {
-                    if (!noticeShown)
-                    {
-                        noticeShown = true;
-                        StatusText = "正在校验系统组件库（termsrv.dll）…";
-                    }
+                    var deadline = DateTime.UtcNow + TermsrvWaitTimeout;
+                    var noticeShown = false;
 
-                    await Task.Delay(200);
+                    while (ChildSessionEnvironmentCheck.IsTermsrvVerifying
+                           && DateTime.UtcNow < deadline)
+                    {
+                        if (!noticeShown)
+                        {
+                            noticeShown = true;
+                            StatusText = "正在校验系统组件库（termsrv.dll）…";
+                        }
+
+                        await Task.Delay(200);
+                    }
                 }
 
+                // 不管有没有等过都重收一次：校验可能恰好在「收集之后、判断之前」完成，
+                // 那份结论里就缺了完整性这一项，而这时界面已经没有机会再刷新了。
                 issues = await Task.Run(() => ChildSessionEnvironmentCheck.CollectAll());
             }
 
@@ -156,9 +173,20 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
             OnPropertyChanged(nameof(HasNormalItems));
             OnPropertyChanged(nameof(IsAllGood));
 
-            StatusText = warningCount == 0 && noticeCount == 0
+            var status = warningCount == 0 && noticeCount == 0
                 ? "检查完成：没有发现问题。"
                 : $"检查完成：{warningCount} 个需要处理，{noticeCount} 个建议处理。";
+
+            // 没验证过 termsrv.dll 时别把话说满：非管理员跑 sfc 只会返回 1，
+            // 这一项按「不下结论」处理——那就得在状态栏说清楚，别让用户以为全查过了。
+            if (!ChildSessionEnvironmentCheck.GetTermsrvState().Verified)
+            {
+                status += ChildSessionEnvironmentCheck.IsElevated()
+                    ? "（termsrv.dll 完整性本次未能校验，可重新检测）"
+                    : "（未以管理员身份运行，termsrv.dll 完整性未校验）";
+            }
+
+            StatusText = status;
         }
         catch (Exception exception)
         {
@@ -197,12 +225,16 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
         }
 
         item.IsFixing = true;
+
+        // 修复期间禁掉「重新检测」：两者并发会互相覆盖对方的结论。
+        IsBusy = true;
         StatusText = $"正在修复：{item.Title}…";
 
         try
         {
             var result = await Task.Run(() => ChildSessionEnvironmentFixer.Fix(item.Id));
             StatusText = result.Message;
+            LastFixResult = result.Message;
 
             if (result.Success)
             {
@@ -212,14 +244,15 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
         catch (Exception exception)
         {
             StatusText = $"修复失败：{exception.Message}";
+            LastFixResult = StatusText;
         }
         finally
         {
             item.IsFixing = false;
+            IsBusy = false;
         }
 
         // 修复结果落在系统里，重新读一遍比「改本地列表」更可信。
-        IsBusy = false;
         await RecheckAsync();
     }
 

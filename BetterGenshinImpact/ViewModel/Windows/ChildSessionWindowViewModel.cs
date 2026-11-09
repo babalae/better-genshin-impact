@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -235,10 +235,13 @@ public partial class ChildSessionWindowViewModel : ViewModel
             && _childSessionService.IsRdpWrapperEnabled())
         {
             var result = await ThemedMessageBox.WarningAsync(
-                "检测到系统已安装并启用 RDP Wrapper。\n\n"
-                + "RDP Wrapper 提供了更强大的远程多用户支持，但与当前的桌面分身功能不兼容，"
-                + "可能导致桌面分身无法正常启动。\n\n是否仍要继续？",
-                "RDP Wrapper 兼容性提醒",
+                "检测到远程桌面服务的加载模块不是系统原生文件。\n\n"
+                + "RDP Wrapper、SuperRDP 这类工具会替换它来解锁多用户远程桌面，"
+                + "与桌面分身依赖的原生 termsrv.dll 互斥，可能导致分身无法启动；"
+                + "模块损坏或路径失效也会有同样的表现。\n\n"
+                + "可以在「更多 → 诊断与修复…」里查看具体指向并还原。"
+                + "\n\n是否仍要继续？",
+                "远程桌面服务模块异常",
                 MessageBoxButton.YesNo,
                 MessageBoxResult.No);
             if (result != MessageBoxResult.Yes)
@@ -270,7 +273,7 @@ public partial class ChildSessionWindowViewModel : ViewModel
         try
         {
             await Dispatcher.Yield(DispatcherPriority.Background);
-            await ExecuteAsync(_childSessionService.StartAsync);
+            await ExecuteAsync(_childSessionService.StartAsync, openDiagnosticsOnError: true);
         }
         finally
         {
@@ -514,7 +517,7 @@ public partial class ChildSessionWindowViewModel : ViewModel
         });
     }
 
-    private async Task ExecuteAsync(Func<Task> action)
+    private async Task ExecuteAsync(Func<Task> action, bool openDiagnosticsOnError = false)
     {
         try
         {
@@ -523,6 +526,13 @@ public partial class ChildSessionWindowViewModel : ViewModel
         catch (Exception exception)
         {
             ShowError(exception);
+
+            // 启动直接抛异常（例如系统缺少 Child Session API）时也要弹面板：
+            // 那是唯一能告诉用户「缺什么」的地方，只弹一句错误信息等于让他自己猜。
+            if (openDiagnosticsOnError)
+            {
+                MaybeOpenDiagnosticsOnFailure();
+            }
         }
         finally
         {
@@ -567,6 +577,12 @@ public partial class ChildSessionWindowViewModel : ViewModel
     {
         if (_diagnosticsWindow is { IsLoaded: true } existing)
         {
+            // 最小化时 Activate() 不会把窗口还原，用户点菜单会以为没反应。
+            if (existing.WindowState == WindowState.Minimized)
+            {
+                existing.WindowState = WindowState.Normal;
+            }
+
             existing.Activate();
             return;
         }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -102,6 +102,17 @@ internal static class ChildSessionEnvironmentCheck
     ];
 
     /// <summary>
+    /// 太通用的关键词：只能当作「任务内容指向破解工具」的证据。
+    ///
+    /// 拿它去匹配 Run 自启项的名称或命令行，会误删别人的更新脚本——
+    /// 而删除是有副作用的操作，宁可少命中。
+    /// </summary>
+    private static readonly string[] GenericToolKeywords =
+    [
+        "autoupdate.bat"
+    ];
+
+    /// <summary>
     /// 直接改过 termsrv.dll 的工具会留下的备份文件。
     /// </summary>
     private static readonly string[] TermsrvBackupNames =
@@ -121,7 +132,12 @@ internal static class ChildSessionEnvironmentCheck
     /// <param name="Exists">值是否存在。</param>
     /// <param name="Kind">值类型。</param>
     /// <param name="Value">原始字符串值（REG_SZ / REG_EXPAND_SZ 才有）。</param>
-    internal readonly record struct ServiceDllEntry(bool Exists, RegistryValueKind Kind, string? Value);
+    /// <param name="Unreadable">读取本身失败（权限 / I/O），无法判断值是否存在。</param>
+    internal readonly record struct ServiceDllEntry(
+        bool Exists,
+        RegistryValueKind Kind,
+        string? Value,
+        bool Unreadable = false);
 
     /// <summary>TermService 服务键里与系统默认不符的字段。</summary>
     internal sealed record ServiceKeyDeviation(string Field, string Current, string Expect);
@@ -482,29 +498,42 @@ internal static class ChildSessionEnvironmentCheck
     {
         var entry = GetServiceDllEntry();
 
+        // 读不到就别下结论：既不能说「值缺失」，也不该给一个同样读不到注册表的修复按钮。
+        if (entry.Unreadable)
+        {
+            return;
+        }
+
         // 路径指向第三方 DLL 的情况交给 rdp-wrapper：那边修完同样是 REG_EXPAND_SZ。
         if (entry.Exists && IsServiceDllHijacked(entry.Value))
         {
             return;
         }
 
-        if (entry.Exists && entry.Kind == RegistryValueKind.ExpandString)
+        // 空值同样是坏的：类型对、值却是空串时，服务照样不知道该加载哪个模块。
+        var emptyValue = entry.Exists && string.IsNullOrWhiteSpace(entry.Value);
+        if (entry.Exists && !emptyValue && entry.Kind == RegistryValueKind.ExpandString)
         {
             return;
         }
 
-        var detail = entry.Exists
-            ? $"ServiceDll 的值是 {entry.Value}，但类型为 {entry.Kind}。"
-              + "写成 REG_SZ 时 %SystemRoot% 不会被展开，服务加载模块时会拿到字面量路径并失败，"
-              + "表现出来只是「服务起不来」，而 DLL 名字看起来完全正常。"
-            : "TermService 的 Parameters 子键里没有 ServiceDll 值，服务不知道该加载哪个模块。";
+        var detail = !entry.Exists
+            ? "TermService 的 Parameters 子键里没有 ServiceDll 值，服务不知道该加载哪个模块。"
+            : emptyValue
+                ? "ServiceDll 的值是空字符串。类型虽然是 REG_EXPAND_SZ，但服务加载模块时拿到的是空路径，"
+                  + "表现同样是「服务起不来」。"
+                : $"ServiceDll 的值是 {entry.Value}，但类型为 {entry.Kind}。"
+                  + "写成 REG_SZ 时 %SystemRoot% 不会被展开，服务加载模块时会拿到字面量路径并失败，"
+                  + "表现出来只是「服务起不来」，而 DLL 名字看起来完全正常。";
 
         issues.Add(new Issue(
             "termservice-dll-type",
             "ServiceDll 的值已损坏",
-            entry.Exists
-                ? $"ServiceDll 的类型是 {entry.Kind}，应为 REG_EXPAND_SZ。"
-                : "ServiceDll 值缺失。",
+            !entry.Exists
+                ? "ServiceDll 值缺失。"
+                : emptyValue
+                    ? "ServiceDll 的值是空字符串。"
+                    : $"ServiceDll 的类型是 {entry.Kind}，应为 REG_EXPAND_SZ。",
             detail + Environment.NewLine + Environment.NewLine
                      + "处理：诊断面板可以写回原生路径与正确类型，然后重启服务。",
             ChildSessionIssueSeverity.Warning,
@@ -645,7 +674,10 @@ internal static class ChildSessionEnvironmentCheck
                                               or UnauthorizedAccessException
                                               or IOException)
         {
-            return new ServiceDllEntry(false, RegistryValueKind.Unknown, null);
+            // 读不到和「没有这个值」是两件事：前者不能报「值缺失」，
+            // 否则非管理员打开面板就会看到一条假问题和一个注定失败的修复。
+            return new ServiceDllEntry(
+                false, RegistryValueKind.Unknown, null, Unreadable: true);
         }
     }
 
@@ -717,7 +749,16 @@ internal static class ChildSessionEnvironmentCheck
             }
 
             var imagePath = serviceKey.GetValue("ImagePath") as string;
-            if (!string.IsNullOrWhiteSpace(imagePath) && !LooksLikeSvchostNetworkService(imagePath))
+            if (string.IsNullOrWhiteSpace(imagePath))
+            {
+                // 缺值同样算坏：服务没有可执行映像，SCM 连启动都做不到，
+                // 而「跳过空值」会让整条检查显示正常。
+                deviations.Add(new ServiceKeyDeviation(
+                    "ImagePath",
+                    "（缺失）",
+                    @"%SystemRoot%\System32\svchost.exe -k NetworkService"));
+            }
+            else if (!LooksLikeSvchostNetworkService(imagePath))
             {
                 deviations.Add(new ServiceKeyDeviation(
                     "ImagePath",
@@ -726,8 +767,14 @@ internal static class ChildSessionEnvironmentCheck
             }
 
             var objectName = serviceKey.GetValue("ObjectName") as string;
-            if (!string.IsNullOrWhiteSpace(objectName)
-                && objectName.IndexOf("NetworkService", StringComparison.OrdinalIgnoreCase) < 0)
+            if (string.IsNullOrWhiteSpace(objectName))
+            {
+                deviations.Add(new ServiceKeyDeviation(
+                    "ObjectName",
+                    "（缺失）",
+                    @"NT AUTHORITY\NetworkService"));
+            }
+            else if (!IsNetworkServiceAccount(objectName))
             {
                 deviations.Add(new ServiceKeyDeviation(
                     "ObjectName",
@@ -809,6 +856,9 @@ internal static class ChildSessionEnvironmentCheck
     private static DateTime _taskScanAt = DateTime.MinValue;
     private static IReadOnlyList<ToolPersistenceHit> _taskScanCache = [];
 
+    /// <summary>当前缓存是不是深扫的结果（含 Microsoft 子树的任务内容）。</summary>
+    private static bool _taskScanDeep;
+
     /// <summary>任务扫描结果缓存 30 秒：面板不能每次刷新都读几百个 XML。</summary>
     private static readonly TimeSpan TaskScanTtl = TimeSpan.FromSeconds(30);
 
@@ -818,9 +868,24 @@ internal static class ChildSessionEnvironmentCheck
     internal static IReadOnlyList<ToolPersistenceHit> GetToolPersistenceHits()
     {
         var hits = new List<ToolPersistenceHit>();
-        hits.AddRange(GetCachedTaskHits());
+        hits.AddRange(GetCachedTaskHits(ShouldDeepScanPersistence()));
         hits.AddRange(GetRunKeyHits());
         return hits;
+    }
+
+    /// <summary>
+    /// 是否需要连 Microsoft 子树里的任务一起读内容。
+    ///
+    /// 判据是 termsrv.dll 被 sfc 判定为「与组件库不一致」：这类工具把补丁写回去的唯一
+    /// 手段就是开机任务，文件真被改过时才值得为它多读一千多个系统任务（面板每次打开
+    /// 都会跑一遍）。没被改过时深扫只是白等，而破解工具也不会无缘无故藏在系统子树里。
+    ///
+    /// 检测和修复共用这一个判断：修复前会重新取一次命中项，天然带上同样的深度。
+    /// </summary>
+    private static bool ShouldDeepScanPersistence()
+    {
+        var state = GetTermsrvState();
+        return state.Exists && state.Verified && !state.Intact;
     }
 
     /// <summary>
@@ -831,6 +896,7 @@ internal static class ChildSessionEnvironmentCheck
         lock (ScanGate)
         {
             _taskScanAt = DateTime.MinValue;
+            _taskScanDeep = false;
         }
 
         InvalidateTermsrvCache();
@@ -839,17 +905,19 @@ internal static class ChildSessionEnvironmentCheck
     /// <summary>
     /// 取计划任务命中（带 30 秒缓存）。
     /// </summary>
-    private static IReadOnlyList<ToolPersistenceHit> GetCachedTaskHits()
+    private static IReadOnlyList<ToolPersistenceHit> GetCachedTaskHits(bool deep)
     {
         lock (ScanGate)
         {
-            if (DateTime.UtcNow - _taskScanAt < TaskScanTtl)
+            // 浅扫的缓存不能拿去回答深扫：那正是「文件被改过但任务藏在系统子树里」的场景。
+            if (DateTime.UtcNow - _taskScanAt < TaskScanTtl && (!deep || _taskScanDeep))
             {
                 return _taskScanCache;
             }
 
-            _taskScanCache = ScanScheduledTasks();
+            _taskScanCache = ScanScheduledTasks(deep);
             _taskScanAt = DateTime.UtcNow;
+            _taskScanDeep = deep;
             return _taskScanCache;
         }
     }
@@ -862,25 +930,53 @@ internal static class ChildSessionEnvironmentCheck
     /// 1. 任务名含关键词；
     /// 2. 任务 XML 内容含关键词（覆盖「改名但还指向 autoupdate.bat」的情况）。
     ///
-    /// 内容只读 Microsoft 子树以外的文件：系统自带任务有一千多个，
-    /// 全套读一遍会明显变慢，而破解工具不会把任务藏在 Microsoft 子树里。
+    /// 内容默认只读 Microsoft 子树以外的文件：系统自带任务有一千多个，全套读一遍会明显变慢。
+    /// 但 <paramref name="includeMicrosoftSubtree"/> 为 true 时会一并读——只有 termsrv.dll
+    /// 被确认篡改时才这么做，那时才值得为「藏在系统子树里的还原任务」付这个代价。
     /// </summary>
-    private static IReadOnlyList<ToolPersistenceHit> ScanScheduledTasks()
+    private static IReadOnlyList<ToolPersistenceHit> ScanScheduledTasks(bool includeMicrosoftSubtree)
     {
         var hits = new List<ToolPersistenceHit>();
 
-        try
-        {
-            var tasksRoot = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.System),
-                "Tasks");
+        var tasksRoot = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.System),
+            "Tasks");
 
-            if (!Directory.Exists(tasksRoot))
+        if (!Directory.Exists(tasksRoot))
+        {
+            return hits;
+        }
+
+        // 逐目录遍历，不用 EnumerateFiles(AllDirectories)：后者在第一个无权限的
+        // 子目录上就整体抛出，后面的任务全部漏掉，而且外面只看到一句「扫描失败」。
+        var pending = new Stack<string>();
+        pending.Push(tasksRoot);
+
+        while (pending.Count > 0)
+        {
+            var directory = pending.Pop();
+
+            string[] files;
+            string[] subdirectories;
+            try
             {
-                return hits;
+                files = Directory.GetFiles(directory);
+                subdirectories = Directory.GetDirectories(directory);
+            }
+            catch (Exception exception) when (exception is IOException
+                                                  or UnauthorizedAccessException
+                                                  or SecurityException)
+            {
+                Logger.LogDebug(exception, "跳过无法读取的任务目录 {Directory}。", directory);
+                continue;
             }
 
-            foreach (var file in Directory.EnumerateFiles(tasksRoot, "*", SearchOption.AllDirectories))
+            foreach (var subdirectory in subdirectories)
+            {
+                pending.Push(subdirectory);
+            }
+
+            foreach (var file in files)
             {
                 var relative = Path.GetRelativePath(tasksRoot, file);
                 var taskName = Path.GetFileName(file);
@@ -896,7 +992,10 @@ internal static class ChildSessionEnvironmentCheck
                     continue;
                 }
 
-                if (relative.StartsWith("Microsoft" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                if (!includeMicrosoftSubtree
+                    && relative.StartsWith(
+                        "Microsoft" + Path.DirectorySeparatorChar,
+                        StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -913,12 +1012,6 @@ internal static class ChildSessionEnvironmentCheck
                     "任务内容指向破解工具",
                     TaskPath: taskPath));
             }
-        }
-        catch (Exception exception) when (exception is IOException
-                                              or UnauthorizedAccessException
-                                              or SecurityException)
-        {
-            Logger.LogWarning(exception, "扫描计划任务失败。");
         }
 
         return hits;
@@ -987,7 +1080,10 @@ internal static class ChildSessionEnvironmentCheck
                         continue;
                     }
 
-                    if (!ContainsKeyword(name) && !ContainsKeyword(data))
+                    // 自启项按名称/命令行匹配时排除过于通用的关键词：
+                    // 「autoupdate.bat」这类名字别的软件也会用，删错了没法自动恢复。
+                    if (!ContainsKeyword(name, includeGeneric: false)
+                        && !ContainsKeyword(data, includeGeneric: false))
                     {
                         continue;
                     }
@@ -1021,6 +1117,14 @@ internal static class ChildSessionEnvironmentCheck
     private static TermsrvFileState _termsrvState = new(false, false, false, []);
     private static DateTime _termsrvStateAt = DateTime.MinValue;
     private static bool _termsrvVerifyRunning;
+
+    /// <summary>
+    /// 校验世代号。修复会同步重新校验并让旧结果作废，
+    /// 后台任务完成时如果世代号已经变了，就把自己的结果丢掉——
+    /// 否则「修复前开始、修复后才结束」的那次校验会把旧结论覆盖回去，
+    /// 面板会连续五分钟报一个已经被修好的问题。
+    /// </summary>
+    private static int _termsrvTaskId;
 
     /// <summary>已验证结果缓存 5 分钟；未验证的 30 秒后重试。</summary>
     private static readonly TimeSpan TermsrvVerifiedTtl = TimeSpan.FromMinutes(5);
@@ -1059,6 +1163,7 @@ internal static class ChildSessionEnvironmentCheck
             {
                 _termsrvVerifyRunning = true;
                 var pendingBackups = CollectTermsrvBackups(system32);
+                var taskId = ++_termsrvTaskId;
 
                 _ = Task.Run(() =>
                 {
@@ -1079,6 +1184,14 @@ internal static class ChildSessionEnvironmentCheck
 
                     lock (TermsrvGate)
                     {
+                        if (taskId != _termsrvTaskId)
+                        {
+                            // 这轮已经被更新的校验取代（修复后的复核）：结果作废，
+                            // 也不能动「正在校验」标志——那个标志归最新的那轮负责。
+                            Logger.LogDebug("丢弃过期的 termsrv.dll 校验结果。");
+                            return;
+                        }
+
                         _termsrvState = result;
                         _termsrvStateAt = DateTime.UtcNow;
                         _termsrvVerifyRunning = false;
@@ -1119,8 +1232,11 @@ internal static class ChildSessionEnvironmentCheck
 
         lock (TermsrvGate)
         {
+            // 这次是权威结论：作废在此之前启动的所有后台校验。
+            _termsrvTaskId++;
             _termsrvState = result;
             _termsrvStateAt = DateTime.UtcNow;
+            _termsrvVerifyRunning = false;
         }
 
         return result;
@@ -1134,6 +1250,11 @@ internal static class ChildSessionEnvironmentCheck
         lock (TermsrvGate)
         {
             _termsrvStateAt = DateTime.MinValue;
+
+            // 作废正在跑的那轮：它的结论可能是修复前的，完成后不许再写回来。
+            // 同时放下标志，让下一次读取能立刻发起新的校验。
+            _termsrvTaskId++;
+            _termsrvVerifyRunning = false;
         }
     }
 
@@ -1299,10 +1420,15 @@ internal static class ChildSessionEnvironmentCheck
         }
     }
 
-    private static bool ContainsKeyword(string text)
+    private static bool ContainsKeyword(string text, bool includeGeneric = true)
     {
         foreach (var keyword in ToolKeywords)
         {
+            if (!includeGeneric && Array.IndexOf(GenericToolKeywords, keyword) >= 0)
+            {
+                continue;
+            }
+
             if (text.Contains(keyword, StringComparison.OrdinalIgnoreCase))
             {
                 return true;
@@ -1339,16 +1465,68 @@ internal static class ChildSessionEnvironmentCheck
         }
     }
 
+    /// <summary>
+    /// 判断 ImagePath 是否还是系统默认的 <c>svchost.exe -k NetworkService</c>。
+    ///
+    /// 不能只查子串：<c>C:\Missing\svchost.exe -k NotNetworkService</c> 同时包含
+    /// "svchost.exe"、"-k" 和 "NetworkService"，子串匹配会把它当成正常。这里拆成
+    /// 「可执行文件」和「参数」两部分，要求文件名正确、文件存在、<c>-k</c> 后面
+    /// 紧跟的就是 NetworkService。
+    /// </summary>
     private static bool LooksLikeSvchostNetworkService(string imagePath)
     {
-        var expanded = Environment.ExpandEnvironmentVariables(imagePath);
-        if (expanded.IndexOf("svchost.exe", StringComparison.OrdinalIgnoreCase) < 0)
+        var expanded = Environment.ExpandEnvironmentVariables(imagePath).Trim();
+        if (expanded.Length == 0)
         {
             return false;
         }
 
-        return expanded.IndexOf("-k", StringComparison.OrdinalIgnoreCase) >= 0
-               && expanded.IndexOf("NetworkService", StringComparison.OrdinalIgnoreCase) >= 0;
+        var firstSpace = expanded.IndexOf(' ');
+        var executable = (firstSpace < 0 ? expanded : expanded[..firstSpace]).Trim('"');
+        var arguments = firstSpace < 0 ? string.Empty : expanded[(firstSpace + 1)..];
+
+        if (!string.Equals(Path.GetFileName(executable), "svchost.exe", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (!File.Exists(executable))
+        {
+            return false;
+        }
+
+        var tokens = arguments.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        for (var index = 0; index < tokens.Length; index++)
+        {
+            // 两种写法都认：「-k NetworkService」和「-kNetworkService」。
+            if (tokens[index].Equals("-k", StringComparison.OrdinalIgnoreCase)
+                && index + 1 < tokens.Length
+                && tokens[index + 1].Equals("NetworkService", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (tokens[index].Equals("-kNetworkService", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// ObjectName 是否为系统默认的 NetworkService。
+    ///
+    /// 用完整名称比较：子串匹配会放过 <c>NT AUTHORITY\NotNetworkService</c>，
+    /// 而那个账户根本不存在，服务照样起不来。
+    /// </summary>
+    private static bool IsNetworkServiceAccount(string objectName)
+    {
+        var trimmed = objectName.Trim();
+
+        return string.Equals(trimmed, @"NT AUTHORITY\NetworkService", StringComparison.OrdinalIgnoreCase)
+               || string.Equals(trimmed, "NetworkService", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool Contains(string[] values, string expected)

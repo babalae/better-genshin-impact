@@ -21,6 +21,27 @@ public class ChildSessionEnvironmentCheckTests
         Assert.NotEmpty(all);
         Assert.Equal(all.Count, all.Select(issue => issue.Id).Distinct().Count());
 
+        // 新增/删除检查项时这里会直接红，比只对个数更容易看出漏了谁。
+        string[] expectedIds =
+        [
+            "child-session-api-missing",
+            "termservice-disabled",
+            "termservice-stopped",
+            "rdp-disabled",
+            "hello-only",
+            "rdp-wrapper",
+            "termservice-dll-type",
+            "termservice-key-broken",
+            "rdp-tool-persistence",
+            "termsrv-dll-tampered"
+        ];
+
+        var actualIds = all.Select(issue => issue.Id).ToHashSet(StringComparer.Ordinal);
+        Assert.True(
+            actualIds.SetEquals(expectedIds),
+            "检查项集合与预期不一致。多出来：" + string.Join("、", actualIds.Except(expectedIds))
+            + "；缺了：" + string.Join("、", expectedIds.Except(actualIds)));
+
         foreach (var issue in all)
         {
             Assert.False(string.IsNullOrWhiteSpace(issue.Id));
