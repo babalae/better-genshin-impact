@@ -15,6 +15,7 @@ using BetterGenshinImpact.GameTask.AutoFight.Script;
 using BetterGenshinImpact.GameTask.AutoPathing.Model;
 using BetterGenshinImpact.GameTask.AutoPathing.Model.Enum;
 using BetterGenshinImpact.GameTask.Common;
+using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Exception;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
 using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.Area;
@@ -765,7 +766,11 @@ public partial class PathExecutor
                         return false;
                     }
                 }
-                catch (Exception e)
+                catch (Exception e) when (e is not RetryException
+                    and not RetryNoCountException
+                    and not NormalEndException
+                    and not HandledException
+                    and not OperationCanceledException)
                 {
                     Logger.LogError(e, $"[{avatar.Name}] 赶路逻辑异常");
                     return false;
@@ -863,7 +868,11 @@ public partial class PathExecutor
                         return false;
                     }
                 }
-                catch (Exception e)
+                catch (Exception e) when (e is not RetryException
+                    and not RetryNoCountException
+                    and not NormalEndException
+                    and not HandledException
+                    and not OperationCanceledException)
                 {
                     Logger.LogError(e, $"[{avatar.Name}] 赶路逻辑异常");
                     state.FlyingState = false;
@@ -1114,7 +1123,11 @@ public partial class PathExecutor
                         return false;
                     }
                 }
-                catch (Exception e)
+                catch (Exception e) when (e is not RetryException
+                    and not RetryNoCountException
+                    and not NormalEndException
+                    and not HandledException
+                    and not OperationCanceledException)
                 {
                     Logger.LogError(e, $"[{avatar.Name}] 赶路逻辑异常");
                     state.FlyingState = false;
@@ -1690,7 +1703,11 @@ public partial class PathExecutor
             // Logger.LogInformation("[赶路调试] TryHurryOnAsync  exit: result={r}", result);
             return result;
         }
-        catch (Exception e)
+        catch (Exception e) when (e is not RetryException
+            and not RetryNoCountException
+            and not NormalEndException
+            and not HandledException
+            and not OperationCanceledException)
         {
             Logger.LogError(e, "赶路逻辑执行异常");
             return false;
