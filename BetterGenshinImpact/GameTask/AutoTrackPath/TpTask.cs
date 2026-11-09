@@ -84,7 +84,9 @@ public class TpTask
     private const int TeleportClickableAreaRetryCount = 5;
     private const int TeleportClickableAreaRetryDelayMs = 80;
     private const int BigMapRectRetryIntervalMs = 150;
-    private const int TeleportTimeoutMs = 60_000;
+    // GPU 忙时一次大图 OCR 可能要十几秒甚至更久，位置识别加重试很容易把 60 秒耗尽，
+    // 超时后会以 NormalEndException 的形式表现为"任务中断:取消自动任务"，放宽到 120 秒
+    private const int TeleportTimeoutMs = 120_000;
     private const double MapPositionRecognitionRecoveryZoomStep = 1.0;
     private static string? s_lastSuccessfulTeleportMapName;
     private double _mapZoomLevelPerWheelNotch = DefaultMapZoomLevelPerWheelNotch;
@@ -2098,8 +2100,10 @@ public class TpTask
         {
             return GetBigMapCenterPoint(mapName);
         }
-        catch
+        catch (Exception e)
         {
+            // 位置识别失败会静默退化为按最近区域切换地图，这里留一条日志方便排查退化原因
+            Logger.LogDebug(e, "大地图位置识别失败(忽略)：{MapName}", mapName);
             return null;
         }
     }
@@ -2434,6 +2438,13 @@ public class TpTask
             var matchRect = list
                 .OrderByDescending(r => r.Y)
                 .FirstOrDefault(r => IsSwitchAreaCandidateMatch(r.Text, minCountryLocalized, areaName));
+            if (matchRect == null)
+            {
+                // 当前所在区域的行有时整行样式不同，首字会被检测框裁掉（枫丹读成"丹"），再按后缀匹配找一次
+                matchRect = list
+                    .OrderByDescending(r => r.Y)
+                    .FirstOrDefault(r => IsSwitchAreaCandidateSuffixMatch(r.Text, minCountryLocalized, areaName));
+            }
             if (matchRect != null)
             {
                 var clickedCandidateRect = new Rect(matchRect.X, matchRect.Y, matchRect.Width, matchRect.Height);
@@ -2449,6 +2460,11 @@ public class TpTask
             {
                 await Delay(80, ct);
             }
+        }
+
+        using (var lastCapture = CaptureToRectArea())
+        {
+            SaveSwitchAreaDebugCapture(lastCapture, areaName);
         }
 
         Logger.LogWarning(
@@ -2511,7 +2527,9 @@ public class TpTask
         return imageRegion.FindMulti(new RecognitionObject
         {
             RecognitionType = RecognitionTypes.Ocr,
-            RegionOfInterest = new Rect(imageRegion.Width * 2 / 3, 0, imageRegion.Width / 3, imageRegion.Height),
+            // 列表展开动画的早期帧里条目会比静止时偏左一个字左右，右 1/3 的左边界贴着面板容易把行首字裁掉，
+            // 放宽到右 2/5 留出余量；再宽会把左半屏的地名圈进来，OCR 候选和耗时都会明显增加
+            RegionOfInterest = new Rect(imageRegion.Width * 3 / 5, 0, imageRegion.Width * 2 / 5, imageRegion.Height),
             ReplaceDictionary = GetSwitchAreaOcrReplaceDictionary(),
         });
     }
@@ -2552,6 +2570,48 @@ public class TpTask
                 .Where(text => !string.IsNullOrWhiteSpace(text))
                 .Distinct()
                 .Take(12));
+    }
+
+    /// <summary>
+    /// 区域行的首字被 OCR 检测框裁掉时的兜底匹配：候选是区域名去掉前面若干字（区域名以候选结尾）即视为命中。
+    /// 现有区域名的末字互不相同，不会因此点错行。
+    /// </summary>
+    private static bool IsSwitchAreaCandidateSuffixMatch(string candidateText, string localizedAreaName, string areaName)
+    {
+        var normalizedCandidate = NormalizeSwitchAreaCandidateText(candidateText);
+        if (normalizedCandidate.Length == 0)
+        {
+            return false;
+        }
+
+        foreach (var name in new[] { localizedAreaName, areaName })
+        {
+            var normalizedArea = NormalizeSwitchAreaCandidateText(name);
+            if (normalizedArea.Length > normalizedCandidate.Length &&
+                normalizedArea.EndsWith(normalizedCandidate, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 切换区域失败时把最后一次识别截图存到 log\switch_area_debug，方便定位 OCR 读错的原因。失败不影响主流程。
+    /// </summary>
+    private static void SaveSwitchAreaDebugCapture(ImageRegion imageRegion, string areaName)
+    {
+        try
+        {
+            var dir = BetterGenshinImpact.Core.Config.Global.Absolute(@"log\switch_area_debug");
+            System.IO.Directory.CreateDirectory(dir);
+            imageRegion.SrcMat.SaveImage(System.IO.Path.Combine(dir, $"{DateTime.Now:HHmmss_fff}_{areaName}.png"));
+        }
+        catch
+        {
+            // 忽略调试截图的异常
+        }
     }
 
     private async Task SwitchToGroundMapLayerIfNeeded()
