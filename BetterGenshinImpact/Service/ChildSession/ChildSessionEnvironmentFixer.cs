@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Security;
 using System.Text;
 using System.Threading;
@@ -393,6 +394,17 @@ internal static class ChildSessionEnvironmentFixer
             var current = serviceKey.GetValue("DependOnService") as string[] ?? [];
             var merged = new List<string>(current);
 
+            // ChangeServiceConfig 的依赖列表是整表替换，只送服务名会把 DependOnGroup
+            // 一起抹掉。组依赖在列表里用「+组名」表示，原样带回去。
+            foreach (var group in serviceKey.GetValue("DependOnGroup") as string[] ?? [])
+            {
+                var entry = "+" + group.TrimStart('+');
+                if (!merged.Exists(x => string.Equals(x, entry, StringComparison.OrdinalIgnoreCase)))
+                {
+                    merged.Add(entry);
+                }
+            }
+
             void Ensure(string name)
             {
                 if (!merged.Exists(x => string.Equals(x, name, StringComparison.OrdinalIgnoreCase)))
@@ -431,12 +443,28 @@ internal static class ChildSessionEnvironmentFixer
             return new ChildSessionFixResult(true, "没有发现需要清理的开机项。");
         }
 
+        // 只凭通用特征（autoupdate.bat 之类）命中的项不自动删：别的软件也有同名脚本，
+        // 删掉等于替用户停掉别人的自动更新。这类项留在面板上由用户自己确认。
+        var weak = hits.Where(hit => hit.IsWeakMatch).ToList();
+        var removable = hits.Where(hit => !hit.IsWeakMatch).ToList();
+        var weakNote = weak.Count > 0
+            ? $"{string.Join("；", weak.Select(hit => hit.Target))}（特征不够明确，可能是别的软件，未自动删除）"
+            : null;
+
+        if (removable.Count == 0)
+        {
+            return new ChildSessionFixResult(
+                false,
+                $"发现 {weak.Count} 个疑似开机项，但没有足够明确的证据，未自动删除：{weakNote}。"
+                + "请确认后手动在「任务计划程序」或注册表里处理。");
+        }
+
         var backupDirectory = CreateToolBackupDirectory();
         var removedTasks = 0;
         var removedValues = 0;
         var failures = new List<string>();
 
-        foreach (var hit in hits)
+        foreach (var hit in removable)
         {
             if (hit.Kind == "task")
             {
@@ -466,14 +494,19 @@ internal static class ChildSessionEnvironmentFixer
 
         if (failures.Count > 0)
         {
+            var failureMessage = $"部分开机项清理失败：{string.Join("；", failures)}";
             return new ChildSessionFixResult(
                 false,
-                $"部分开机项清理失败：{string.Join("；", failures)}");
+                weakNote is null ? failureMessage : $"{failureMessage}（另有疑似项未处理：{weakNote}）");
         }
 
-        return new ChildSessionFixResult(
-            true,
-            $"已清理 {removedTasks} 个计划任务、{removedValues} 个自启项，备份在 {backupDirectory}。");
+        var message = $"已清理 {removedTasks} 个计划任务、{removedValues} 个自启项，备份在 {backupDirectory}。";
+        if (weakNote is not null)
+        {
+            message += $"另有疑似项未处理：{weakNote}。";
+        }
+
+        return new ChildSessionFixResult(true, message);
     }
 
     /// <summary>
@@ -544,7 +577,12 @@ internal static class ChildSessionEnvironmentFixer
             return result;
         }
 
-        return result with { Message = result.Message + " " + note.Message };
+        return result with
+        {
+            // 开机项没清干净不能算整体成功：文件还原了、任务还在，下次开机照样把补丁写回去。
+            Success = result.Success && note.Success,
+            Message = result.Message + " " + note.Message
+        };
     }
 
     /// <summary>

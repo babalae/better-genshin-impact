@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Security;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -150,6 +151,10 @@ internal static class ChildSessionEnvironmentCheck
     /// <param name="RegistryRoot">注册表根：HKCU / HKU / HKLM（Kind=run）。</param>
     /// <param name="RegistryPath">注册表子键路径（Kind=run；HKU 时含 SID）。</param>
     /// <param name="ValueName">值名（Kind=run）。</param>
+    /// <param name="IsWeakMatch">
+    /// 只凭通用特征（<see cref="GenericToolKeywords"/>）命中：可能属于别的软件，
+    /// 只展示、不自动删除。
+    /// </param>
     internal sealed record ToolPersistenceHit(
         string Kind,
         string Target,
@@ -157,7 +162,8 @@ internal static class ChildSessionEnvironmentCheck
         string TaskPath = "",
         string RegistryRoot = "",
         string RegistryPath = "",
-        string ValueName = "");
+        string ValueName = "",
+        bool IsWeakMatch = false);
 
     /// <summary>termsrv.dll 的完整性状态。</summary>
     /// <param name="Exists">文件是否存在。</param>
@@ -586,22 +592,37 @@ internal static class ChildSessionEnvironmentCheck
             return;
         }
 
+        var strongCount = hits.Count(hit => !hit.IsWeakMatch);
+        var weakCount = hits.Count - strongCount;
+
         var builder = new StringBuilder();
         foreach (var hit in hits)
         {
             builder.Append("· ").Append(hit.Target).Append(" — ").AppendLine(hit.Reason);
         }
 
+        var summary = weakCount == 0
+            ? $"{hits.Count} 个开机任务或自启项指向 RDP 破解工具。"
+            : strongCount == 0
+                ? $"{weakCount} 个开机项只匹配到通用特征，需要你自己确认。"
+                : $"{strongCount} 个开机任务或自启项指向 RDP 破解工具，另有 {weakCount} 个只匹配到通用特征。";
+
+        // 只匹配到通用特征时不提供一键删除：名字太通用，删错了是别人的自动更新。
+        var action = strongCount > 0
+            ? "处理：诊断面板可以导出备份后删除这些项。"
+            : "处理：这类项特征不明确（别的软件也会用同样的脚本名），面板不会自动删除。"
+              + "确认无用后可在「任务计划程序」里手动删除。";
+
         issues.Add(new Issue(
             "rdp-tool-persistence",
-            "存在破解工具的开机自启项",
-            $"{hits.Count} 个开机任务或自启项指向 RDP 破解工具。",
+            strongCount == 0 ? "存在可疑的开机自启项（特征不明确）" : "存在破解工具的开机自启项",
+            summary,
             "这些任务会在开机时把补丁写回系统。只还原 ServiceDll 而不清理它们，"
             + "用户重启后问题会再次出现，看起来就像「修了没用」。"
             + Environment.NewLine + Environment.NewLine + builder
-            + Environment.NewLine + "处理：诊断面板可以导出备份后删除这些项。",
+            + Environment.NewLine + action,
             ChildSessionIssueSeverity.Notice,
-            CanAutoFix: true));
+            CanAutoFix: strongCount > 0));
     }
 
     /// <summary>
@@ -782,24 +803,28 @@ internal static class ChildSessionEnvironmentCheck
                     @"NT AUTHORITY\NetworkService"));
             }
 
-            if (serviceKey.GetValue("DependOnService") is string[] dependencies && dependencies.Length > 0)
+            var dependencies = serviceKey.GetValue("DependOnService") as string[] ?? [];
+
+            // Win11 的 TermService 依赖 StateRepository；整键覆盖的 .reg 会把它冲掉。
+            var expectsStateRepository = HasServiceKey(baseKey, "StateRepository");
+            var expectedDependencies = expectsStateRepository ? "RPCSS,StateRepository" : "RPCSS";
+
+            if (dependencies.Length == 0)
             {
-                if (!Contains(dependencies, "RPCSS"))
-                {
-                    deviations.Add(new ServiceKeyDeviation(
-                        "DependOnService",
-                        string.Join(",", dependencies),
-                        "RPCSS"));
-                }
-                else if (HasServiceKey(baseKey, "StateRepository")
-                         && !Contains(dependencies, "StateRepository"))
-                {
-                    // Win11 的 TermService 依赖 StateRepository；整键覆盖的 .reg 会把它冲掉。
-                    deviations.Add(new ServiceKeyDeviation(
-                        "DependOnService",
-                        string.Join(",", dependencies),
-                        "RPCSS,StateRepository"));
-                }
+                // 值被整个删掉也算坏：SCM 不会替服务补回依赖，服务崩了就不再自愈。
+                // 「跳过空值」会让整条检查显示「异常字段：无」，还连修复按钮都不给。
+                deviations.Add(new ServiceKeyDeviation(
+                    "DependOnService",
+                    "（缺失）",
+                    expectedDependencies));
+            }
+            else if (!Contains(dependencies, "RPCSS")
+                     || (expectsStateRepository && !Contains(dependencies, "StateRepository")))
+            {
+                deviations.Add(new ServiceKeyDeviation(
+                    "DependOnService",
+                    string.Join(",", dependencies),
+                    expectedDependencies));
             }
         }
         catch (Exception exception) when (exception is SecurityException
@@ -859,6 +884,15 @@ internal static class ChildSessionEnvironmentCheck
     /// <summary>当前缓存是不是深扫的结果（含 Microsoft 子树的任务内容）。</summary>
     private static bool _taskScanDeep;
 
+    /// <summary>
+    /// 一旦确认 termsrv.dll 被篡改，就把「深扫」黏住，直到深扫一次全清干净为止。
+    ///
+    /// 只按「当前是否被篡改」判断会有两个坑：修复时完整性缓存刚好过期，会降级成浅扫，
+    /// 漏掉系统子树里的任务；文件被还原之后条件不再成立，修复时没删掉的任务就再也
+    /// 报不出来，用户以为已经清干净了。
+    /// </summary>
+    private static bool _persistenceDeepScanSticky;
+
     /// <summary>任务扫描结果缓存 30 秒：面板不能每次刷新都读几百个 XML。</summary>
     private static readonly TimeSpan TaskScanTtl = TimeSpan.FromSeconds(30);
 
@@ -867,9 +901,9 @@ internal static class ChildSessionEnvironmentCheck
     /// </summary>
     internal static IReadOnlyList<ToolPersistenceHit> GetToolPersistenceHits()
     {
-        var hits = new List<ToolPersistenceHit>();
-        hits.AddRange(GetCachedTaskHits(ShouldDeepScanPersistence()));
+        var hits = new List<ToolPersistenceHit>(GetCachedTaskHits(ShouldDeepScanPersistence()));
         hits.AddRange(GetRunKeyHits());
+        ReleaseStickyDeepScanIfClean(hits);
         return hits;
     }
 
@@ -885,7 +919,33 @@ internal static class ChildSessionEnvironmentCheck
     private static bool ShouldDeepScanPersistence()
     {
         var state = GetTermsrvState();
-        return state.Exists && state.Verified && !state.Intact;
+        if (state.Exists && state.Verified && !state.Intact)
+        {
+            // 确认被篡改：从现在起深扫，直到深扫确认全清。
+            _persistenceDeepScanSticky = true;
+        }
+
+        return _persistenceDeepScanSticky;
+    }
+
+    /// <summary>
+    /// 文件已经还原、且深扫一次没再发现任何命中，才允许退回浅扫。
+    ///
+    /// 只要还留着命中项（例如修复时删不掉的那个任务），就继续深扫——否则提示会随着
+    /// 文件被还原一起消失，而任务在下次开机时会把补丁再写回去。
+    /// </summary>
+    private static void ReleaseStickyDeepScanIfClean(IReadOnlyList<ToolPersistenceHit> hits)
+    {
+        if (!_persistenceDeepScanSticky || hits.Count > 0)
+        {
+            return;
+        }
+
+        var state = GetTermsrvState();
+        if (state.Exists && state.Verified && state.Intact)
+        {
+            _persistenceDeepScanSticky = false;
+        }
     }
 
     /// <summary>
@@ -984,11 +1044,13 @@ internal static class ChildSessionEnvironmentCheck
 
                 if (ContainsKeyword(taskName))
                 {
+                    var strongName = ContainsKeyword(taskName, includeGeneric: false);
                     hits.Add(new ToolPersistenceHit(
                         "task",
                         taskPath,
-                        "任务名包含破解工具特征",
-                        TaskPath: taskPath));
+                        strongName ? "任务名包含破解工具特征" : "任务名含通用更新脚本名，可能是别的软件",
+                        TaskPath: taskPath,
+                        IsWeakMatch: !strongName));
                     continue;
                 }
 
@@ -1001,7 +1063,15 @@ internal static class ChildSessionEnvironmentCheck
                 }
 
                 var content = TryReadTextFile(file);
-                if (content is null || !ContainsKeyword(content))
+                if (content is null)
+                {
+                    continue;
+                }
+
+                // 通用特征（autoupdate.bat 之类）单独命中时只作疑似：别的软件也有
+                // 同名脚本，误删会停掉它的自动更新。证不了是破解工具就不动它。
+                var strong = ContainsKeyword(content, includeGeneric: false);
+                if (!strong && !ContainsKeyword(content))
                 {
                     continue;
                 }
@@ -1009,8 +1079,9 @@ internal static class ChildSessionEnvironmentCheck
                 hits.Add(new ToolPersistenceHit(
                     "task",
                     taskPath,
-                    "任务内容指向破解工具",
-                    TaskPath: taskPath));
+                    strong ? "任务内容指向破解工具" : "任务内容含通用更新脚本名，可能是别的软件",
+                    TaskPath: taskPath,
+                    IsWeakMatch: !strong));
             }
         }
 
@@ -1114,6 +1185,15 @@ internal static class ChildSessionEnvironmentCheck
     // ---------------- termsrv.dll 完整性 ----------------
 
     private static readonly object TermsrvGate = new();
+
+    /// <summary>
+    /// sfc /verifyfile 同一时刻只跑一个。
+    ///
+    /// 修复完成后的同步复核很容易和后台校验撞上：两个进程读同一个文件，只是白烧
+    /// CPU 和磁盘，而且慢的那个还会拖住界面上的「检测中」。
+    /// </summary>
+    private static readonly SemaphoreSlim SfcGate = new(1, 1);
+
     private static TermsrvFileState _termsrvState = new(false, false, false, []);
     private static DateTime _termsrvStateAt = DateTime.MinValue;
     private static bool _termsrvVerifyRunning;
@@ -1304,6 +1384,30 @@ internal static class ChildSessionEnvironmentCheck
     /// 运行 <c>sfc /verifyfile=</c>，返回退出码；跑不起来返回 -1。
     /// </summary>
     private static int RunSfcVerifyFile(string path)
+    {
+        // 排队等前一个跑完，而不是同时起两个。等不到（前一个卡住）就照跑：
+        // 校验本身不该因为排队而失败，多一个进程也比拿不到结论强。
+        var acquired = false;
+        try
+        {
+            acquired = SfcGate.Wait(TimeSpan.FromSeconds(20));
+            if (!acquired)
+            {
+                Logger.LogDebug("等待上一次 sfc 校验超时，直接开始本次校验。");
+            }
+
+            return RunSfcVerifyFileCore(path);
+        }
+        finally
+        {
+            if (acquired)
+            {
+                SfcGate.Release();
+            }
+        }
+    }
+
+    private static int RunSfcVerifyFileCore(string path)
     {
         try
         {

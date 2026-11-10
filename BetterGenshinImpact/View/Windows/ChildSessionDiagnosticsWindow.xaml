@@ -133,6 +133,7 @@
                                Content="{i18n:T 复制环境信息}" />
                     <ui:Button Margin="8,0,0,0"
                                Command="{Binding RecheckCommand}"
+                               IsEnabled="{Binding IsBusy, Mode=OneWay, Converter={StaticResource InverseBooleanConverter}}"
                                Content="{i18n:T 重新检测}" />
                     <ui:Button Margin="8,0,0,0"
                                Appearance="Primary"
