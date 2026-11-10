@@ -82,6 +82,12 @@ internal static class ChildSessionEnvironmentCheck
     /// 破解工具的特征关键词（任务名、任务内容、自启项命令行）。
     ///
     /// 只认「RDP Wrapper Autoupdate」一个名字是不够的：换名版本、SuperRDP、EndpWrap 都存在。
+    ///
+    /// autoupdate.bat 看着通用，其实是 RDP Wrapper Autoupdate 的专用脚本名——它注册的
+    /// 任务就是 <c>cmd.exe /C "...\autoupdate.bat" -log</c>，而改名后的任务名不再含
+    /// rdp 字样，只剩内容里的这个文件名可认。检索这个文件名只会命中 RDP 破解相关项目，
+    /// 没见过别的软件用它建自动更新任务。即使真有误判，代价也只是别人的更新任务被删，
+    /// 程序本身打开时仍会主动更新，不影响使用。
     /// </summary>
     private static readonly string[] ToolKeywords =
     [
@@ -100,17 +106,6 @@ internal static class ChildSessionEnvironmentCheck
         "rdp-cnc",
         "autoupdate.bat",
         "rdpwrap.ini"
-    ];
-
-    /// <summary>
-    /// 太通用的关键词：只能当作「任务内容指向破解工具」的证据。
-    ///
-    /// 拿它去匹配 Run 自启项的名称或命令行，会误删别人的更新脚本——
-    /// 而删除是有副作用的操作，宁可少命中。
-    /// </summary>
-    private static readonly string[] GenericToolKeywords =
-    [
-        "autoupdate.bat"
     ];
 
     /// <summary>
@@ -151,10 +146,6 @@ internal static class ChildSessionEnvironmentCheck
     /// <param name="RegistryRoot">注册表根：HKCU / HKU / HKLM（Kind=run）。</param>
     /// <param name="RegistryPath">注册表子键路径（Kind=run；HKU 时含 SID）。</param>
     /// <param name="ValueName">值名（Kind=run）。</param>
-    /// <param name="IsWeakMatch">
-    /// 只凭通用特征（<see cref="GenericToolKeywords"/>）命中：可能属于别的软件，
-    /// 只展示、不自动删除。
-    /// </param>
     internal sealed record ToolPersistenceHit(
         string Kind,
         string Target,
@@ -162,8 +153,7 @@ internal static class ChildSessionEnvironmentCheck
         string TaskPath = "",
         string RegistryRoot = "",
         string RegistryPath = "",
-        string ValueName = "",
-        bool IsWeakMatch = false);
+        string ValueName = "");
 
     /// <summary>termsrv.dll 的完整性状态。</summary>
     /// <param name="Exists">文件是否存在。</param>
@@ -592,37 +582,22 @@ internal static class ChildSessionEnvironmentCheck
             return;
         }
 
-        var strongCount = hits.Count(hit => !hit.IsWeakMatch);
-        var weakCount = hits.Count - strongCount;
-
         var builder = new StringBuilder();
         foreach (var hit in hits)
         {
             builder.Append("· ").Append(hit.Target).Append(" — ").AppendLine(hit.Reason);
         }
 
-        var summary = weakCount == 0
-            ? $"{hits.Count} 个开机任务或自启项指向 RDP 破解工具。"
-            : strongCount == 0
-                ? $"{weakCount} 个开机项只匹配到通用特征，需要你自己确认。"
-                : $"{strongCount} 个开机任务或自启项指向 RDP 破解工具，另有 {weakCount} 个只匹配到通用特征。";
-
-        // 只匹配到通用特征时不提供一键删除：名字太通用，删错了是别人的自动更新。
-        var action = strongCount > 0
-            ? "处理：诊断面板可以导出备份后删除这些项。"
-            : "处理：这类项特征不明确（别的软件也会用同样的脚本名），面板不会自动删除。"
-              + "确认无用后可在「任务计划程序」里手动删除。";
-
         issues.Add(new Issue(
             "rdp-tool-persistence",
-            strongCount == 0 ? "存在可疑的开机自启项（特征不明确）" : "存在破解工具的开机自启项",
-            summary,
+            "存在破解工具的开机自启项",
+            $"{hits.Count} 个开机任务或自启项指向 RDP 破解工具。",
             "这些任务会在开机时把补丁写回系统。只还原 ServiceDll 而不清理它们，"
             + "用户重启后问题会再次出现，看起来就像「修了没用」。"
             + Environment.NewLine + Environment.NewLine + builder
-            + Environment.NewLine + action,
+            + Environment.NewLine + "处理：诊断面板可以导出备份后删除这些项。",
             ChildSessionIssueSeverity.Notice,
-            CanAutoFix: strongCount > 0));
+            CanAutoFix: true));
     }
 
     /// <summary>
@@ -1044,13 +1019,11 @@ internal static class ChildSessionEnvironmentCheck
 
                 if (ContainsKeyword(taskName))
                 {
-                    var strongName = ContainsKeyword(taskName, includeGeneric: false);
                     hits.Add(new ToolPersistenceHit(
                         "task",
                         taskPath,
-                        strongName ? "任务名包含破解工具特征" : "任务名含通用更新脚本名，可能是别的软件",
-                        TaskPath: taskPath,
-                        IsWeakMatch: !strongName));
+                        "任务名包含破解工具特征",
+                        TaskPath: taskPath));
                     continue;
                 }
 
@@ -1063,15 +1036,7 @@ internal static class ChildSessionEnvironmentCheck
                 }
 
                 var content = TryReadTextFile(file);
-                if (content is null)
-                {
-                    continue;
-                }
-
-                // 通用特征（autoupdate.bat 之类）单独命中时只作疑似：别的软件也有
-                // 同名脚本，误删会停掉它的自动更新。证不了是破解工具就不动它。
-                var strong = ContainsKeyword(content, includeGeneric: false);
-                if (!strong && !ContainsKeyword(content))
+                if (content is null || !ContainsKeyword(content))
                 {
                     continue;
                 }
@@ -1079,9 +1044,8 @@ internal static class ChildSessionEnvironmentCheck
                 hits.Add(new ToolPersistenceHit(
                     "task",
                     taskPath,
-                    strong ? "任务内容指向破解工具" : "任务内容含通用更新脚本名，可能是别的软件",
-                    TaskPath: taskPath,
-                    IsWeakMatch: !strong));
+                    "任务内容指向破解工具",
+                    TaskPath: taskPath));
             }
         }
 
@@ -1151,10 +1115,7 @@ internal static class ChildSessionEnvironmentCheck
                         continue;
                     }
 
-                    // 自启项按名称/命令行匹配时排除过于通用的关键词：
-                    // 「autoupdate.bat」这类名字别的软件也会用，删错了没法自动恢复。
-                    if (!ContainsKeyword(name, includeGeneric: false)
-                        && !ContainsKeyword(data, includeGeneric: false))
+                    if (!ContainsKeyword(name) && !ContainsKeyword(data))
                     {
                         continue;
                     }
@@ -1524,15 +1485,10 @@ internal static class ChildSessionEnvironmentCheck
         }
     }
 
-    private static bool ContainsKeyword(string text, bool includeGeneric = true)
+    private static bool ContainsKeyword(string text)
     {
         foreach (var keyword in ToolKeywords)
         {
-            if (!includeGeneric && Array.IndexOf(GenericToolKeywords, keyword) >= 0)
-            {
-                continue;
-            }
-
             if (text.Contains(keyword, StringComparison.OrdinalIgnoreCase))
             {
                 return true;
