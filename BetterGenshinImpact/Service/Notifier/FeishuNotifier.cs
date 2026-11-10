@@ -290,7 +290,9 @@ public class FeishuNotifier : INotifier, IDisposable
 
     private static async Task<string> EnsureFeishuSuccessAsync(HttpResponseMessage response, string operation)
     {
-        var responseBody = await response.Content.ReadAsStringAsync();
+        var responseBody = response.Content == null
+            ? string.Empty
+            : await response.Content.ReadAsStringAsync();
         if (!response.IsSuccessStatusCode)
         {
             throw new NotifierException($"{operation} failed with status code {(int)response.StatusCode}: {responseBody}");
