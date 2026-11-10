@@ -7,6 +7,7 @@ using System.Security;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Win32;
@@ -781,8 +782,11 @@ internal static class ChildSessionEnvironmentCheck
 
             var dependencies = serviceKey.GetValue("DependOnService") as string[] ?? [];
 
-            // Win11 的 TermService 依赖 StateRepository；整键覆盖的 .reg 会把它冲掉。
-            var expectsStateRepository = HasServiceKey(baseKey, "StateRepository");
+            // 依赖集按系统版本分野：Win10 全系列 TermService 只依赖 RPCSS，
+            // Win11 起才加上 StateRepository。不能拿「StateRepository 服务键存在」当版本代理——
+            // 那个键从 Win10 1507 就存在，会让健康的 Win10 一律被判异常，修复还会写进一条
+            // 系统出厂就没有的依赖（本类只加不删，写进去就再也回不去）。
+            var expectsStateRepository = OsVersionHelper.IsWindows11_OrGreater;
             var expectedDependencies = expectsStateRepository ? "RPCSS,StateRepository" : "RPCSS";
 
             if (dependencies.Length == 0)
@@ -1657,21 +1661,6 @@ internal static class ChildSessionEnvironmentCheck
         }
 
         return false;
-    }
-
-    private static bool HasServiceKey(RegistryKey baseKey, string serviceName)
-    {
-        try
-        {
-            using var key = baseKey.OpenSubKey(@"SYSTEM\CurrentControlSet\Services\" + serviceName);
-            return key is not null;
-        }
-        catch (Exception exception) when (exception is SecurityException
-                                              or UnauthorizedAccessException
-                                              or IOException)
-        {
-            return false;
-        }
     }
 
     // ---------------- 「未触发」时展示的当前值 ----------------

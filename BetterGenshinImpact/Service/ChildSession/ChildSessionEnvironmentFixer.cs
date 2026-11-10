@@ -5,6 +5,7 @@ using System.IO;
 using System.Security;
 using System.Text;
 using System.Threading;
+using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 
@@ -378,7 +379,7 @@ internal static class ChildSessionEnvironmentFixer
     }
 
     /// <summary>
-    /// 当前依赖 + RPCSS（+ 系统存在 StateRepository 时补上它），保持原有顺序。
+    /// 当前依赖 + RPCSS（Win11 上再补 StateRepository），保持原有顺序。
     /// </summary>
     private static string[]? MergeServiceDependencies()
     {
@@ -415,9 +416,10 @@ internal static class ChildSessionEnvironmentFixer
 
             Ensure("RPCSS");
 
-            using var stateRepositoryKey =
-                baseKey.OpenSubKey(@"SYSTEM\CurrentControlSet\Services\StateRepository");
-            if (stateRepositoryKey is not null)
+            // 和检查侧同一个判据：Win10 的 TermService 出厂只依赖 RPCSS，
+            // 补上 StateRepository 会写进一条系统本来没有的依赖（本类只加不删，回不去），
+            // 而用户一旦把 StateRepository 设为禁用，TermService 就会 1075 起不来。
+            if (OsVersionHelper.IsWindows11_OrGreater)
             {
                 Ensure("StateRepository");
             }
@@ -858,7 +860,7 @@ internal static class ChildSessionEnvironmentFixer
     private static bool HasActiveChildSession() => ChildSessionNativeMethods.TryGetChildSessionId() is not null;
 
     /// <summary>
-    /// 追加缺失的服务依赖（RPCSS / StateRepository），保留本机已有的其它依赖。
+    /// 追加缺失的服务依赖（RPCSS；Win11 上还有 StateRepository），保留本机已有的其它依赖。
     /// </summary>
     private static bool TryAppendServiceDependencies(out string error)
     {
@@ -892,13 +894,10 @@ internal static class ChildSessionEnvironmentFixer
 
             Ensure("RPCSS");
 
-            using (var stateRepository = baseKey.OpenSubKey(
-                       @"SYSTEM\CurrentControlSet\Services\StateRepository"))
+            // 与 MergeServiceDependencies、检查侧保持同一判据，别在 Win10 上凭空造依赖。
+            if (OsVersionHelper.IsWindows11_OrGreater)
             {
-                if (stateRepository is not null)
-                {
-                    Ensure("StateRepository");
-                }
+                Ensure("StateRepository");
             }
 
             if (wanted.Count == current.Length)
