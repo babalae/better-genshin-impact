@@ -27,6 +27,9 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
     /// <summary>上一次检测是否抛出了异常。失败时不要把空列表当成「一切正常」。</summary>
     private bool _checkFailed;
 
+    /// <summary>是否已经安排了「等后台校验结束再刷一次」，避免重复挂等待。</summary>
+    private bool _refreshAfterVerificationPending;
+
     [ObservableProperty]
     private string _statusText = "正在检测…";
 
@@ -187,6 +190,14 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
             }
 
             StatusText = status;
+
+            // 等超时了、但后台校验还在跑：先照实渲染「暂时无法验证」，等它出结果再自动刷一次。
+            // 否则那个「未验证」会一直挂着，除非用户自己想起来点「重新检测」。
+            if (ChildSessionEnvironmentCheck.IsElevated()
+                && ChildSessionEnvironmentCheck.IsTermsrvVerifying)
+            {
+                _ = RefreshAfterVerificationAsync();
+            }
         }
         catch (Exception exception)
         {
@@ -198,6 +209,45 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
         {
             IsChecking = false;
             IsBusy = false;
+        }
+    }
+
+    /// <summary>
+    /// 后台校验结束后补刷一次结论。
+    ///
+    /// 面板最多等 <see cref="TermsrvWaitTimeout"/>，sfc 偶尔会超过；那之后校验结果不会再有人
+    /// 渲染，面板上就留着一句「暂时无法验证」。这里等它跑完补一次，只补一次：
+    /// 修复期间（IsBusy）不刷——修复流程结束时会自己重新检查；已经在检测也不重复进。
+    /// </summary>
+    private async Task RefreshAfterVerificationAsync()
+    {
+        if (_refreshAfterVerificationPending)
+        {
+            return;
+        }
+
+        _refreshAfterVerificationPending = true;
+
+        try
+        {
+            // 上限比单次 sfc 的超时（3 分钟）短一点，卡住就不等了，别在后台一直转。
+            var deadline = DateTime.UtcNow + TimeSpan.FromMinutes(2);
+            while (ChildSessionEnvironmentCheck.IsTermsrvVerifying && DateTime.UtcNow < deadline)
+            {
+                // 这里没有 ConfigureAwait(false)：延时后要回到 UI 线程继续，才碰得到界面状态。
+                await Task.Delay(500);
+            }
+
+            if (ChildSessionEnvironmentCheck.IsTermsrvVerifying || IsBusy || IsChecking)
+            {
+                return;
+            }
+
+            await RecheckAsync();
+        }
+        finally
+        {
+            _refreshAfterVerificationPending = false;
         }
     }
 

@@ -305,9 +305,7 @@ internal static class ChildSessionEnvironmentCheck
             new IssueSpec(
                 "rdp-tool-persistence",
                 "存在破解工具的开机自启项",
-                () => IsTaskScanReadable()
-                    ? $"命中项：{GetToolPersistenceHits().Count}"
-                    : "未读取（需要管理员权限）",
+                () => DescribeToolPersistenceSummary(),
                 () => "检查项：计划任务与 Run 自启项中是否留有 RDP 破解工具"
                       + "（计划任务需要管理员权限才能读取）。"),
             new IssueSpec(
@@ -863,6 +861,14 @@ internal static class ChildSessionEnvironmentCheck
     private static bool _taskScanDeep;
 
     /// <summary>
+    /// 这次扫描是否有目录被系统拒绝访问。
+    ///
+    /// 逐目录 try/catch 之后，某个子目录读不到只是跳过，命中列表看起来和「查过、确实没有」
+    /// 一模一样。留一个标记，让面板能说清这一趟没扫全。
+    /// </summary>
+    private static bool _taskScanIncomplete;
+
+    /// <summary>
     /// 一旦确认 termsrv.dll 被篡改，就把「深扫」黏住，直到深扫一次全清干净为止。
     ///
     /// 只按「当前是否被篡改」判断会有两个坑：修复时完整性缓存刚好过期，会降级成浅扫，
@@ -898,6 +904,20 @@ internal static class ChildSessionEnvironmentCheck
                                               or SecurityException)
         {
             return false;
+        }
+    }
+
+    /// <summary>
+    /// 上一次计划任务扫描有没有目录被系统拒绝访问。
+    ///
+    /// 标记跟着扫描结果一起缓存，所以要先取一次命中项（<see cref="GetToolPersistenceHits"/>）
+    /// 再读它，否则拿到的可能还是上一轮的状态。
+    /// </summary>
+    internal static bool IsTaskScanIncomplete()
+    {
+        lock (ScanGate)
+        {
+            return _taskScanIncomplete;
         }
     }
 
@@ -962,6 +982,7 @@ internal static class ChildSessionEnvironmentCheck
         {
             _taskScanAt = DateTime.MinValue;
             _taskScanDeep = false;
+            _taskScanIncomplete = false;
         }
 
         InvalidateTermsrvCache();
@@ -980,7 +1001,8 @@ internal static class ChildSessionEnvironmentCheck
                 return _taskScanCache;
             }
 
-            _taskScanCache = ScanScheduledTasks(deep);
+            _taskScanCache = ScanScheduledTasks(deep, out var incomplete);
+            _taskScanIncomplete = incomplete;
             _taskScanAt = DateTime.UtcNow;
             _taskScanDeep = deep;
             return _taskScanCache;
@@ -999,9 +1021,12 @@ internal static class ChildSessionEnvironmentCheck
     /// 但 <paramref name="includeMicrosoftSubtree"/> 为 true 时会一并读——只有 termsrv.dll
     /// 被确认篡改时才这么做，那时才值得为「藏在系统子树里的还原任务」付这个代价。
     /// </summary>
-    private static IReadOnlyList<ToolPersistenceHit> ScanScheduledTasks(bool includeMicrosoftSubtree)
+    private static IReadOnlyList<ToolPersistenceHit> ScanScheduledTasks(
+        bool includeMicrosoftSubtree,
+        out bool incomplete)
     {
         var hits = new List<ToolPersistenceHit>();
+        incomplete = false;
 
         var tasksRoot = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.System),
@@ -1032,6 +1057,8 @@ internal static class ChildSessionEnvironmentCheck
                                                   or UnauthorizedAccessException
                                                   or SecurityException)
             {
+                // 跳过这个目录，但要把「没扫全」记下来：否则结果和「扫过、确实没有」一样。
+                incomplete = true;
                 Logger.LogDebug(exception, "跳过无法读取的任务目录 {Directory}。", directory);
                 continue;
             }
@@ -1682,6 +1709,25 @@ internal static class ChildSessionEnvironmentCheck
     {
         var count = GetServiceKeyDeviations().Count;
         return count == 0 ? "无" : $"{count} 个字段异常";
+    }
+
+    /// <summary>
+    /// 「全部检查项」里持久化项的实际值。
+    ///
+    /// 三种状态要分开：读不到目录（没提权）、扫了但有目录被拒（不完整）、扫全了没有。
+    /// 前两种都不等于「干净」，不能用「命中项：0」含糊过去。
+    /// </summary>
+    private static string DescribeToolPersistenceSummary()
+    {
+        if (!IsTaskScanReadable())
+        {
+            return "计划任务未读取（需要管理员权限）";
+        }
+
+        var count = GetToolPersistenceHits().Count;
+        return IsTaskScanIncomplete()
+            ? $"命中项：{count}；部分路径系统拒绝访问，扫描不完整"
+            : $"命中项：{count}";
     }
 
     private static string DescribeTermsrvState(TermsrvFileState state)
