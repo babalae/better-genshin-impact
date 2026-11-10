@@ -56,7 +56,7 @@ public partial class PathExecutor
     /// 瓦雷莎技能赶路的最低启用距离（米）。路段剩余距离低于该值时不进夜魂疾冲，
     /// 交还通用逻辑用普通速度接近并刹车——夜魂疾冲惯性滑行距离长，短路段用技能必冲过头。
     /// </summary>
-    private const double HurryOnMinEntryDistance = 60;
+    private const double HurryOnMinEntryDistance = 50;
 
     /// <summary>
     /// 各角色在连续赶路模式下的转向夹角阈值（度）。
@@ -516,7 +516,7 @@ public partial class PathExecutor
                 // 技能赶路只在路段足够长时启用：夜魂疾冲速度约 17m/s，松键后靠惯性滑行减速，
                 // 滑行距离可达 15m+。若在近距离（如 46m 的短路段）仍触发长按E，
                 // 刹车时的惯性会直接冲过航点（实测阿如村路线冲进河里，日志 13:58:49 dist=46.1 技能赶路 → 13:58:55 游泳中）。
-                // 因此离航点 60m 以内不再进技能赶路，交还通用逻辑用普通速度跑完并正常刹车。
+                // 因此离航点 50m 以内不再进技能赶路，交还通用逻辑用普通速度跑完并正常刹车。
                 if (distance > Math.Max(PartyConfig.Distance, HurryOnMinEntryDistance))
                 {
                     await SwitchToHurryAvatarAsync(screen2, avatar, distance, num, ct);

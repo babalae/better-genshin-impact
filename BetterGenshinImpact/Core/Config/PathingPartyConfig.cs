@@ -217,6 +217,7 @@ public partial class PathingPartyConfig : ObservableObject
 
     /// <summary>
     /// 覆写赶路帧间隔（ms），默认 100。存在有效赶路角色时生效，有效范围 1-150，超出自动钳制。
+    /// 赶路角色为瓦雷莎时上限强制 50ms（夜魂疾冲的 E 窗口检测依赖高频帧，更大值不生效）。
     /// </summary>
     [ObservableProperty]
     private int _hurryOnFrameInterval = 100;
