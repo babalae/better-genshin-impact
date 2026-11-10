@@ -1,6 +1,8 @@
 using System.Windows;
+using System.Windows.Media;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.ViewModel.Windows;
+using Wpf.Ui.Appearance;
 
 namespace BetterGenshinImpact.View.Windows;
 
@@ -20,7 +22,36 @@ public partial class ChildSessionDiagnosticsWindow
     {
         InitializeComponent();
         DataContext = viewModel;
+
         SourceInitialized += (_, _) => WindowHelper.TryApplySystemBackdrop(this);
+
+        // TryApplySystemBackdrop 会按「当时」的主题把 XAML 里的 DynamicResource 换成固定画刷，
+        // 之后 Background 就不再跟着主题走了。面板可以一直开着（用户去改设置、切主题），
+        // 所以主题一变就按新主题再刷一次，关窗时取消订阅。
+        ApplicationThemeManager.Changed += OnApplicationThemeChanged;
+        Closed += OnClosed;
+    }
+
+    private void OnClosed(object? sender, System.EventArgs e)
+    {
+        ApplicationThemeManager.Changed -= OnApplicationThemeChanged;
+        Closed -= OnClosed;
+    }
+
+    /// <summary>
+    /// 主题变了：重新套一遍背景与背景材质，否则浅色主题下会是深底深字。
+    /// </summary>
+    private void OnApplicationThemeChanged(
+        ApplicationTheme currentApplicationTheme,
+        Color systemAccent)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.Invoke(() => WindowHelper.TryApplySystemBackdrop(this));
+            return;
+        }
+
+        WindowHelper.TryApplySystemBackdrop(this);
     }
 
     /// <summary>

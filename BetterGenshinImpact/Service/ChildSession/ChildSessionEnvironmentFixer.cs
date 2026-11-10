@@ -439,7 +439,14 @@ internal static class ChildSessionEnvironmentFixer
         var hits = ChildSessionEnvironmentCheck.GetToolPersistenceHits();
         if (hits.Count == 0)
         {
-            return new ChildSessionFixResult(true, "没有发现需要清理的开机项。");
+            // 扫不完整时「没有命中」不等于「没有」：任务藏在读不到的目录里时，
+            // 报「没有发现需要清理的开机项」会让用户以为已经干净了。
+            return ChildSessionEnvironmentCheck.IsTaskScanIncomplete()
+                ? new ChildSessionFixResult(
+                    false,
+                    "部分任务目录系统拒绝访问，扫描不完整，无法确认是否还有残留。"
+                    + "请以管理员身份重新检测后再试。")
+                : new ChildSessionFixResult(true, "没有发现需要清理的开机项。");
         }
 
         var backupDirectory = CreateToolBackupDirectory();
@@ -1076,10 +1083,14 @@ internal static class ChildSessionEnvironmentFixer
     /// <summary>
     /// 把带非法字符的显示文本转成安全文件名。
     ///
-    /// 长度也要限制：自启项的显示文本是「注册表位置 → 值名」，值名可以很长，
+    /// 长度要限制：自启项的显示文本是「注册表位置 → 值名」，值名可以很长，
     /// 拼出来的文件名一旦超过文件系统上限，备份就写不进去——而「备份失败就不删」
-    /// 意味着这条永远修不好。超长时截断并补一个短哈希，既不重复也能对照回原值
-    /// （完整内容就写在文件里）。
+    /// 意味着这条永远修不好。
+    ///
+    /// 哈希必须按**原文**算，并且无条件拼上去：非法字符是先被替换成 <c>_</c> 的，
+    /// 只对替换后的文本求哈希时，<c>rdpwrap:a</c> 和 <c>rdpwrap?a</c> 会得到同一个名字，
+    /// 第二个备份直接覆盖第一个，而两项都会被删掉——等于丢了一份备份。
+    /// 完整内容仍写在文件正文里，名字只用于区分和对照。
     /// </summary>
     private static string MakeSafeFileName(string text)
     {
@@ -1089,13 +1100,11 @@ internal static class ChildSessionEnvironmentFixer
             builder.Append(Array.IndexOf(Path.GetInvalidFileNameChars(), ch) >= 0 ? '_' : ch);
         }
 
+        var suffix = "_" + StableSuffix(text);
+        var limit = MaxBackupNameLength - suffix.Length;
         var safe = builder.ToString();
-        if (safe.Length <= MaxBackupNameLength)
-        {
-            return safe;
-        }
 
-        return string.Concat(safe.AsSpan(0, MaxBackupNameLength), "_", StableSuffix(safe));
+        return string.Concat(safe.AsSpan(0, Math.Min(safe.Length, limit)), suffix);
     }
 
     /// <summary>备份文件名里正文部分的最大长度，留出目录路径的余量。</summary>

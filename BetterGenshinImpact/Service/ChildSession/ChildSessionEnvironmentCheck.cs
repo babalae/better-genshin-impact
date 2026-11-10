@@ -592,7 +592,7 @@ internal static class ChildSessionEnvironmentCheck
         issues.Add(new Issue(
             "rdp-tool-persistence",
             "存在破解工具的开机自启项",
-            $"{hits.Count} 个开机任务或自启项指向 RDP 破解工具。",
+            DescribeHitCount(hits.Count),
             "这些任务会在开机时把补丁写回系统。只还原 ServiceDll 而不清理它们，"
             + "用户重启后问题会再次出现，看起来就像「修了没用」。"
             + Environment.NewLine + Environment.NewLine + builder
@@ -1709,6 +1709,20 @@ internal static class ChildSessionEnvironmentCheck
     {
         var count = GetServiceKeyDeviations().Count;
         return count == 0 ? "无" : $"{count} 个字段异常";
+    }
+
+    /// <summary>
+    /// 已触发时的结论：命中几个，以及这一趟扫全了没有。
+    ///
+    /// 有命中同样要说「扫描不完整」——否则清理掉这几项之后，没扫到的那些永远不出现，
+    /// 用户会以为已经清干净了。
+    /// </summary>
+    private static string DescribeHitCount(int count)
+    {
+        var summary = $"{count} 个开机任务或自启项指向 RDP 破解工具。";
+        return IsTaskScanIncomplete()
+            ? summary + "部分路径系统拒绝访问，扫描不完整。"
+            : summary;
     }
 
     /// <summary>
