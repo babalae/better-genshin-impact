@@ -1008,8 +1008,12 @@ internal static class ChildSessionEnvironmentFixer
             var query = RunProcess(schtasks, $"/Query /TN \"{taskPath}\" /XML");
             if (query.Output is not null)
             {
-                var fileName = taskPath.Trim('\\').Replace('\\', '_') + ".xml";
-                File.WriteAllText(Path.Combine(backupDirectory, fileName), query.Output, Encoding.UTF8);
+                // 备份要能直接喂回 `schtasks /Create /XML`，所以编码必须和文件里的
+                // 声明一致：schtasks 输出的 XML 头写的是 UTF-16，字节却是本地代码页，
+                // 按 UTF-8 存回去会对不上（中文任务名、描述会乱码）。
+                // 文件名同样要走截断：任务可以藏在很深的子树里，拼出来的路径会超长。
+                var fileName = MakeSafeFileName(taskPath.Trim('\\')) + ".xml";
+                File.WriteAllText(Path.Combine(backupDirectory, fileName), query.Output, Encoding.Unicode);
             }
 
             // 删除必须看退出码：不看的话删失败也报「已清理」，面板刷新后问题还在。

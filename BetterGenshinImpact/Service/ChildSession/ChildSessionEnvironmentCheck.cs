@@ -305,8 +305,11 @@ internal static class ChildSessionEnvironmentCheck
             new IssueSpec(
                 "rdp-tool-persistence",
                 "存在破解工具的开机自启项",
-                () => $"命中项：{GetToolPersistenceHits().Count}",
-                () => "检查项：计划任务与 Run 自启项中是否留有 RDP 破解工具。"),
+                () => IsTaskScanReadable()
+                    ? $"命中项：{GetToolPersistenceHits().Count}"
+                    : "未读取（需要管理员权限）",
+                () => "检查项：计划任务与 Run 自启项中是否留有 RDP 破解工具"
+                      + "（计划任务需要管理员权限才能读取）。"),
             new IssueSpec(
                 "termsrv-dll-tampered",
                 "termsrv.dll 与系统组件库不一致",
@@ -870,6 +873,33 @@ internal static class ChildSessionEnvironmentCheck
 
     /// <summary>任务扫描结果缓存 30 秒：面板不能每次刷新都读几百个 XML。</summary>
     private static readonly TimeSpan TaskScanTtl = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// 计划任务目录能不能读。
+    ///
+    /// 非管理员时 <c>%SystemRoot%\System32\Tasks</c> 直接拒绝访问，扫描会静默返回空，
+    /// 面板上就成了「命中项：0」——看起来像查过了。这一项必须能把「没查」和「查了没有」
+    /// 区分开，只挑一个目录项试读，代价可以忽略。
+    /// </summary>
+    internal static bool IsTaskScanReadable()
+    {
+        try
+        {
+            var tasksRoot = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.System),
+                "Tasks");
+
+            using var entries = Directory.EnumerateFileSystemEntries(tasksRoot).GetEnumerator();
+            _ = entries.MoveNext();
+            return true;
+        }
+        catch (Exception exception) when (exception is IOException
+                                              or UnauthorizedAccessException
+                                              or SecurityException)
+        {
+            return false;
+        }
+    }
 
     /// <summary>
     /// 扫描 RDP 破解工具留下的持久化项。
