@@ -228,13 +228,14 @@ internal static class ChildSessionEnvironmentFixer
 
         var message = "已还原为原生 termsrv.dll 并重启远程桌面服务。"
                       + "注意：多用户并发远程桌面的能力已随之失效。";
-        message += " " + persistence.Message;
         if (backupPath is not null)
         {
             message += $"原值已备份到 {backupPath}。";
         }
 
-        return new ChildSessionFixResult(true, message);
+        // 开机项没清干净就不算整体成功：任务还在的话，下次开机照样把补丁写回去。
+        // 合并逻辑交给 AppendNote，和 FixTermsrvDll 保持同一条规则。
+        return AppendNote(new ChildSessionFixResult(true, message), persistence);
     }
 
     /// <summary>
@@ -502,10 +503,22 @@ internal static class ChildSessionEnvironmentFixer
     /// </summary>
     private static ChildSessionFixResult FixTermsrvDll(CancellationToken cancellationToken)
     {
-        var state = ChildSessionEnvironmentCheck.GetTermsrvState();
+        // 这里必须现验一次，不能读缓存。缓存过期或后台校验还没跑完时，
+        // GetTermsrvState() 返回的是 Verified=false 的「未校验」状态，守卫拦不住，
+        // 后面的流程照样会停服务、覆盖系统 DLL，还可能一路跑到 sfc /scannow。
+        // 为一个本来完好的文件付这些代价不划算，所以先拿到权威结论再动手。
+        var state = ChildSessionEnvironmentCheck.VerifyTermsrvNow();
         if (state.Exists && state.Verified && state.Intact)
         {
             return new ChildSessionFixResult(true, "termsrv.dll 与系统组件库一致，无需修复。");
+        }
+
+        if (state.Exists && !state.Verified)
+        {
+            // 非提权时 sfc 必然失败。把「没验成」当成「被改过」去修会误伤系统文件。
+            return new ChildSessionFixResult(
+                false,
+                "无法校验 termsrv.dll（通常是没有以管理员身份运行）。为免误改系统文件，本次未做任何修改，请提权后重试。");
         }
 
         // 文件被改过，就把「把补丁写回去」的开机任务一起清掉，否则还原完重启又变回去。
@@ -591,6 +604,11 @@ internal static class ChildSessionEnvironmentFixer
             GetDataDirectory(),
             "termsrv.dll.replaced-" + DateTime.Now.ToString("yyyyMMdd-HHmmss"));
 
+        var stoppedDependents = new List<string>();
+        var termServiceStopped = false;
+        // 回滚失败时磁盘上会留一个未通过校验的 DLL，这时候不能把服务拉起来。
+        var restoreSafeToStart = true;
+
         try
         {
             if (File.Exists(termsrvPath))
@@ -598,11 +616,24 @@ internal static class ChildSessionEnvironmentFixer
                 File.Copy(termsrvPath, safetyCopy, overwrite: true);
             }
 
-            ChildSessionServiceNativeMethods.TryStop("TermService", out _);
+            // 依赖服务在跑时 SCM 会拒绝停止 TermService（错误 1051），必须先连带停掉：
+            // 服务没停就覆盖一个正被加载的 DLL，复制会失败，还白白退回耗时的 sfc /scannow。
+            //
+            // 标志位要提前置位：TryStop 发出停止请求后是在等状态收敛，等待超时会返回 false，
+            // 可服务此刻可能已经停了或正在停。这时候跳过 TryStart 就等于把远程桌面关掉不还。
+            // TryStart 对运行中的服务直接返回成功，多调一次没有副作用。
+            termServiceStopped = true;
+            if (!TryStopTermService(stoppedDependents, out var stopError, cancellationToken))
+            {
+                Logger.LogWarning("停止 TermService 失败，跳过备份还原：{Error}", stopError);
+                return null;
+            }
+
             cancellationToken.ThrowIfCancellationRequested();
             File.Copy(backupPath, termsrvPath, overwrite: true);
-            ChildSessionServiceNativeMethods.TryStart("TermService", out _);
 
+            // 校验只看文件哈希，服务停着也能做。先验完再决定要不要重启，
+            // 免得为了回滚多折腾一次服务。
             var after = ChildSessionEnvironmentCheck.VerifyTermsrvNow();
             if (after.Exists && after.Verified && after.Intact)
             {
@@ -612,14 +643,30 @@ internal static class ChildSessionEnvironmentFixer
             }
 
             // 这个备份不是原版：回滚，别把系统留在更糟的状态。
+            // 服务此刻还停着，直接覆盖回去即可，不需要再停一次。
             if (File.Exists(safetyCopy))
             {
-                ChildSessionServiceNativeMethods.TryStop("TermService", out _);
-                File.Copy(safetyCopy, termsrvPath, overwrite: true);
-                ChildSessionServiceNativeMethods.TryStart("TermService", out _);
+                try
+                {
+                    File.Copy(safetyCopy, termsrvPath, overwrite: true);
+                }
+                catch (Exception rollbackException) when (rollbackException is IOException
+                                                              or UnauthorizedAccessException
+                                                              or SecurityException)
+                {
+                    // 回滚也失败了：磁盘上仍是不合格的 DLL，交给 finally 记住别重启服务。
+                    restoreSafeToStart = false;
+                    Logger.LogError(
+                        rollbackException,
+                        "回滚 termsrv.dll 失败，当前文件未通过校验，远程桌面服务将保持停止状态，请运行 sfc /scannow 修复后重启电脑。");
+                }
             }
 
-            Logger.LogWarning("备份 {Backup} 未通过 sfc 校验，已回滚。", Path.GetFileName(backupPath));
+            if (restoreSafeToStart)
+            {
+                Logger.LogWarning("备份 {Backup} 未通过 sfc 校验，已回滚。", Path.GetFileName(backupPath));
+            }
+
             return null;
         }
         catch (Exception exception) when (exception is IOException
@@ -627,8 +674,25 @@ internal static class ChildSessionEnvironmentFixer
                                               or SecurityException)
         {
             Logger.LogWarning(exception, "从备份还原 termsrv.dll 失败。");
-            ChildSessionServiceNativeMethods.TryStart("TermService", out _);
             return null;
+        }
+        finally
+        {
+            // 回滚失败时磁盘上留的是未通过校验的文件：这时候既不能重启 TermService，
+            // 也不能恢复依赖服务——SCM 启动 UmRdpService 这类服务时会把它的依赖
+            // TermService 一起拉起来，同样会加载坏 DLL。所以整块跳过，等 sfc 修完再说。
+            //
+            // 其余情况一律把服务拉回来，否则用户会剩下一个停着的远程桌面服务。
+            if (restoreSafeToStart)
+            {
+                if (termServiceStopped
+                    && !ChildSessionServiceNativeMethods.TryStart(TermServiceName, out var startError))
+                {
+                    Logger.LogWarning("还原流程结束后重启 TermService 失败：{Error}", startError);
+                }
+
+                RestoreDependents(stoppedDependents);
+            }
         }
     }
 
@@ -719,22 +783,11 @@ internal static class ChildSessionEnvironmentFixer
 
         // TermService 平时带着依赖在跑（UmRdpService 就依赖它）。有依赖在运行时
         // SCM 会直接拒绝停止（错误 1051），所以先把它们停掉，重启完再按原样拉回来。
-        var dependents = ChildSessionServiceNativeMethods.GetRunningDependents(TermServiceName);
         var stoppedDependents = new List<string>();
-
-        foreach (var dependent in dependents)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            if (ChildSessionServiceNativeMethods.TryStop(dependent, out _))
-            {
-                stoppedDependents.Add(dependent);
-            }
-        }
 
         try
         {
-            if (!ChildSessionServiceNativeMethods.TryStop(TermServiceName, out var stopError))
+            if (!TryStopTermService(stoppedDependents, out var stopError, cancellationToken))
             {
                 // 依赖没停干净是最常见的原因，这里把话说明白，别让用户对着 1051 猜。
                 return new ChildSessionFixResult(
@@ -755,6 +808,31 @@ internal static class ChildSessionEnvironmentFixer
         }
 
         return new ChildSessionFixResult(true, "远程桌面服务已重启。");
+    }
+
+    /// <summary>
+    /// 连同正在运行的依赖服务一起停掉 TermService。
+    ///
+    /// 依赖服务在跑时 SCM 会拒绝停止主服务（错误 1051），所以要先把它们逐个停下。
+    /// 被停掉的服务名写进 <paramref name="stoppedDependents"/>，调用方收尾时
+    /// 交给 <see cref="RestoreDependents"/> 按相反顺序拉回来。
+    /// </summary>
+    private static bool TryStopTermService(
+        List<string> stoppedDependents,
+        out string error,
+        CancellationToken cancellationToken)
+    {
+        foreach (var dependent in ChildSessionServiceNativeMethods.GetRunningDependents(TermServiceName))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (ChildSessionServiceNativeMethods.TryStop(dependent, out _))
+            {
+                stoppedDependents.Add(dependent);
+            }
+        }
+
+        return ChildSessionServiceNativeMethods.TryStop(TermServiceName, out error);
     }
 
     /// <summary>
