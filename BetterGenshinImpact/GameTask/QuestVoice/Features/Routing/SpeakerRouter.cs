@@ -21,7 +21,10 @@ public sealed class SpeakerRouter
         RoutingCatalogValidation.Validate(catalog);
         var name = input.NameStatus == SpeakerNameStatus.Accepted && !string.IsNullOrWhiteSpace(input.AcceptedName)
             ? RoutingCatalogValidation.Normalize(input.AcceptedName, "Input.AcceptedName") : null;
-        var playerName = name is not null && catalog.PlayerNames.Any(player => RoutingCatalogValidation.Same(player, name));
+        // Generic Yatta/Project Amber labels are all the currently selected Traveler,
+        // never a new NPC or a voice chosen by an automatically generated story role.
+        var playerName = name is not null && (TravelerSpeakerNames.IsGeneric(name) ||
+            catalog.PlayerNames.Any(player => RoutingCatalogValidation.Same(player, name)));
         if (input.Context == DialogueContext.Protagonist || playerName)
         {
             if (catalog.ProtagonistId is null)

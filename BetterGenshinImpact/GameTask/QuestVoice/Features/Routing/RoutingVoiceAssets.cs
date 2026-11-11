@@ -36,7 +36,7 @@ internal static class RoutingVoiceAssets
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (string.IsNullOrWhiteSpace(voice.Name)) return "Voice.Name: Nonempty text is required.";
-        if (!Tts.TtsProviderRegistry.GetInfo(voice.ProviderId).Capabilities.VoiceAssets)
+        if (!TTS.TtsProviderRegistry.GetInfo(voice.ProviderId).Capabilities.VoiceAssets)
             return string.IsNullOrWhiteSpace(voice.ProviderVoiceId) ? "ProviderVoiceId: A voice ID is required." : null;
         if (voice.InstanceId is not null) serverSidePaths = voice.InstanceId == "remote";
         if (string.IsNullOrWhiteSpace(voice.PromptText)) return "Voice.PromptText: Nonempty reference text is required.";

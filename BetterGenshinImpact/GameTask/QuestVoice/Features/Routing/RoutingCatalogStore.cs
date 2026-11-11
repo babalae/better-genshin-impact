@@ -77,7 +77,7 @@ public sealed class RoutingCatalogStore
         var voices = catalog.Voices.Select(voice =>
         {
             var remote = voice.InstanceId is null ? serverSidePaths : voice.InstanceId == "remote";
-            var assets = Tts.TtsProviderRegistry.GetInfo(voice.ProviderId).Capabilities.VoiceAssets;
+            var assets = TTS.TtsProviderRegistry.GetInfo(voice.ProviderId).Capabilities.VoiceAssets;
             string? Asset(string value) => !assets ? null : remote ? value
                 : Path.GetRelativePath(directory, Path.GetFullPath(value, directory)).Replace('\\', '/');
             return new
