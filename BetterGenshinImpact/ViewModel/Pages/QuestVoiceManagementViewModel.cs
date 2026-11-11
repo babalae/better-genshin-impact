@@ -60,6 +60,21 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
     [ObservableProperty] private QuestVoiceManagementProfile? _selectedProfile;
     /// <summary>玩家多个昵称，一行一项。</summary>
     [ObservableProperty] private string _playerNames = "";
+    /// <summary>旅者昵称的唯一可编辑来源是前置剧情配置；此处只展示，声线仍由 routing.json 管理。</summary>
+    public string TravelerDisplayLabel => string.IsNullOrWhiteSpace(_owner.Config.TravelerNickname)
+        ? "旅行者：未指定" : "旅行者：" + _owner.Config.TravelerNickname.Trim();
+
+    /// <summary>变更主昵称时只替换 PlayerNames 的第一项，保留路由里原有的其他别名。</summary>
+    private bool SynchronizeTravelerNickname()
+    {
+        var name = _owner.Config.TravelerNickname?.Trim() ?? "";
+        var saved = Lines(PlayerNames);
+        var extras = saved.Skip(1).Where(alias => !Same(alias, name)).ToArray();
+        var updated = string.Join("\n", (name.Length > 0 ? new[] { name } : Array.Empty<string>()).Concat(extras));
+        if (PlayerNames == updated) return false;
+        PlayerNames = updated;
+        return true;
+    }
     /// <summary>旅行者角色引用，空表示未指定。</summary>
     [ObservableProperty]
     private string _travelerId = "";
@@ -99,8 +114,10 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
         [new(MissingVoicePolicy.Fallback, "改用默认 NPC 声线"), new(MissingVoicePolicy.Fail, "报错")];
     /// <summary>搜索同时匹配身份、正式名称、别名和 OCR 纠错名。</summary>
     public IEnumerable<QuestVoiceManagementSpeaker> FilteredSpeakers => Speakers.Where(x =>
-        string.IsNullOrWhiteSpace(SpeakerSearch) || string.Join("\n", x.Id, x.Names, x.Aliases, x.Corrections)
-            .Contains(SpeakerSearch.Trim(), StringComparison.OrdinalIgnoreCase));
+        !IsTravelerSpeakerRow(x) &&
+        (!ShowCurrentStoryOnly || IsStorySpeaker(x)) &&
+        (string.IsNullOrWhiteSpace(SpeakerSearch) || string.Join("\n", x.Id, x.Names, x.Aliases, x.Corrections)
+            .Contains(SpeakerSearch.Trim(), StringComparison.OrdinalIgnoreCase)));
     /// <summary>运行、试听和编辑器 IO 任一繁忙都冻结写入。</summary>
     public bool IsEditingAllowed => _owner.IsConfigEditable && !IsWorking;
     /// <summary>有实际草稿才允许编辑内容。</summary>
@@ -116,6 +133,13 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
         };
         owner.Config.PropertyChanged += (_, e) =>
         {
+            if (e.PropertyName == nameof(QuestVoiceConfig.TravelerNickname))
+            {
+                OnPropertyChanged(nameof(TravelerDisplayLabel));
+                if (!_loading && IsLoaded && IsEditingAllowed)
+                    SynchronizeTravelerNickname();
+                return;
+            }
             if (e.PropertyName == nameof(QuestVoiceConfig.UseRemoteService))
             {
                 // 继承实例的旧 Profile 也需立即更新本机浏览及资源状态，但不改绑定。
@@ -133,6 +157,11 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
         if (!_loading && IsLoaded && e.PropertyName is nameof(PlayerNames) or nameof(TravelerId)
             or nameof(FallbackVoiceId) or nameof(NarratorVoiceId) or nameof(MissingVoicePolicy)) MarkDraftChanged();
         if (e.PropertyName is nameof(IsWorking) or nameof(IsLoaded)) RefreshAvailability();
+        if (e.PropertyName == nameof(TravelerId))
+        {
+            OnPropertyChanged(nameof(FilteredSpeakers));
+            OnPropertyChanged(nameof(TravelerVoiceId));
+        }
     }
 
     /// <summary>同步所有命令以及内容冻结状态。</summary>
@@ -351,6 +380,9 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
     /// <summary>成功读取后整体替换草稿；文件失败前不触碰旧输入。</summary>
     private void Apply(RoutingCatalog catalog)
     {
+        var nicknameNeedsSave = false;
+        var obsoleteTravelerRows = catalog.Speakers.Count(speaker =>
+            IsSafeObsoleteTravelerAutoRow(speaker, catalog.ProtagonistId));
         _loading = true;
         try
         {
@@ -358,13 +390,21 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
             foreach (var item in Speakers) item.PropertyChanged -= OnSpeakerChanged;
             foreach (var item in Profiles) item.PropertyChanged -= OnProfileChanged;
             Speakers.Clear(); Profiles.Clear();
-            foreach (var item in catalog.Speakers) AddSpeakerItem(new(item));
+            foreach (var item in catalog.Speakers.Where(speaker =>
+                !IsSafeObsoleteTravelerAutoRow(speaker, catalog.ProtagonistId)))
+                AddSpeakerItem(new(item));
             foreach (var item in catalog.Voices) AddProfileItem(new(item));
             PlayerNames = string.Join("\n", catalog.PlayerNames); TravelerId = catalog.ProtagonistId ?? "";
+            // 旧文件的昵称迁移到唯一入口，已填写的新昵称则优先同步到路由草稿。
+            if (string.IsNullOrWhiteSpace(_owner.Config.TravelerNickname) && catalog.PlayerNames.Count > 0)
+                _owner.Config.TravelerNickname = catalog.PlayerNames[0];
+            nicknameNeedsSave = SynchronizeTravelerNickname();
+            OnPropertyChanged(nameof(TravelerDisplayLabel));
             FallbackVoiceId = catalog.FallbackVoiceId ?? ""; NarratorVoiceId = catalog.NarratorVoiceId ?? "";
             MissingVoicePolicy = catalog.MissingVoicePolicy; IsLoaded = true; HasChanges = false; _savedProfiles = Profiles.ToDictionary(x => x.OriginalId, x => x.Build()); NotifyLists();
         }
         finally { _loading = false; }
+        if (nicknameNeedsSave || obsoleteTravelerRows > 0) MarkDraftChanged();
     }
 
     /// <summary>挂接角色行级草稿通知。</summary>
@@ -376,6 +416,7 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
     {
         if (!_loading) MarkDraftChanged();
         OnPropertyChanged(nameof(TravelerVoiceId));
+        NotifyStorySpeakersChanged();
     }
     /// <summary>Provider 改动刷新独立预设，其他字段也保持未保存提示。</summary>
     private void OnProfileChanged(object? sender, PropertyChangedEventArgs e)
@@ -384,7 +425,7 @@ public partial class QuestVoiceManagementViewModel : ObservableObject
         NotifyVoiceChoices();
     }
     /// <summary>通知计算列表，避免创建第二份会丢编辑的角色集合。</summary>
-    private void NotifyLists() { NotifyVoiceChoices(); OnPropertyChanged(nameof(FilteredSpeakers)); }
+    private void NotifyLists() { NotifyVoiceChoices(); NotifyStorySpeakersChanged(); }
     /// <summary>新行使用不会冲突的短身份。</summary>
     private static string UniqueId(string prefix, IEnumerable<string> existing)
     {

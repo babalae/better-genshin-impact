@@ -47,8 +47,12 @@ public partial class QuestVoiceSettingsViewModel : ViewModel
     public bool HasCommandError => !string.IsNullOrWhiteSpace(CommandError);
     /// <summary>GPT-SoVITS 的连接与声线库设置。</summary>
     public GptSovitsSettingsViewModel Gpt { get; }
+    /// <summary>全局 Yatta 剧情和预合成状态。</summary>
+    public QuestVoiceStoryWorkspace Story { get; }
     /// <summary>4 个引擎：GPT-SoVITS 在前，其余引擎随后；★ 表示默认引擎。</summary>
     public IReadOnlyList<QuestVoiceEngineEntry> Engines { get; }
+    /// <summary>仅选中 GPT-SoVITS 时显示独立声线列表。</summary>
+    public bool IsGptSelected => SelectedEngine?.Provider.Id == "gpt-sovits";
     /// <summary>正在编辑的引擎；与默认引擎在同一页可见。</summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SetDefaultEngineCommand))]
@@ -64,6 +68,7 @@ public partial class QuestVoiceSettingsViewModel : ViewModel
         _status = service.Status;
         service.Changed += OnServiceChanged;
         Gpt = new GptSovitsSettingsViewModel(this, factory, service);
+        Story = new QuestVoiceStoryWorkspace(factory, Config, service) { Management = Management };
         EngineSettingsViewModel[] others =
         [
             new VoicevoxSettingsViewModel(this, factory, service),
@@ -93,12 +98,13 @@ public partial class QuestVoiceSettingsViewModel : ViewModel
         }));
     }
 
-    /// <summary>切换编辑对象只使旧请求失效；进入 GPT-SoVITS 时选中第一条声线。</summary>
+    /// <summary>切换引擎只切换连接设置；声线库选中项由「角色映射 → 声线注册」独立管理。</summary>
     partial void OnSelectedEngineChanged(QuestVoiceEngineEntry? oldValue, QuestVoiceEngineEntry? newValue)
     {
+        OnPropertyChanged(nameof(IsGptSelected));
         (oldValue?.Settings as EngineSettingsViewModel)?.SetActive(false);
         (newValue?.Settings as EngineSettingsViewModel)?.SetActive(true);
-        if (newValue?.Settings is GptSovitsSettingsViewModel) _ = Gpt.SelectFirstProfileAsync();
+        // 不再因查看 GPT 连接设置而重置全局声线编辑器当前选中项。
     }
 
     /// <summary>把正在编辑的引擎设为正式配音使用的默认引擎。</summary>
