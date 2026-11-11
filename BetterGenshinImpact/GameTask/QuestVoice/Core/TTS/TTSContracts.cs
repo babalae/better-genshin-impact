@@ -24,7 +24,8 @@ public sealed record VoiceBinding(string Name, string GptWeightsPath, string Sov
 /// <summary>ReferenceSelection：原神自动配音的业务类型。</summary>
 public sealed record ReferenceSelection(ReferenceAudio Audio, ReferenceFallback Fallback);
 /// <summary>TtsRequest：原神自动配音的业务类型。</summary>
-public sealed record TtsRequest(string Text, VoiceBinding Voice, string? Emotion = null);
+public sealed record TtsRequest(string Text, VoiceBinding Voice, string? Emotion = null,
+    string? TextLanguage = null, string? ScriptNodeKey = null, string? ScriptSpeaker = null);
 /// <summary>TtsResult：原神自动配音的业务类型。</summary>
 public sealed record TtsResult(byte[] Wav, double SynthesisSeconds, double TimeToFirstByteSeconds,
     double AudioSeconds, int SampleRate, int Channels, ReferenceFallback ReferenceFallback,

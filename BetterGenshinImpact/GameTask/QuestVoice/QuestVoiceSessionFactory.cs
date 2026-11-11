@@ -275,7 +275,9 @@ public sealed class QuestVoiceSessionFactory(QuestVoiceConfig config, string pro
             var images = new ImageOcrService(new ImagePreprocessor(), ocr, metrics);
             var logger = QuestVoiceLog.Diagnostic.ForContext("SourceContext", "QuestVoice");
             var routing = new VoiceRoutingService(new SpeakerCatalogLoader(), new SpeakerRouter(), logger);
-            var voice = new ContinuousVoiceSession(settings, engine, new WavProcessor(), new AudioArtifactStore(), player, routing, logger);
+            QuestVoiceScriptMapper? scriptMapper = null; // 原文精确路由暂时停用；保留接口兼容旧配置。
+            var voice = new ContinuousVoiceSession(settings, engine, new WavProcessor(), new AudioArtifactStore(), player, routing, logger,
+                scriptMapper, Path.Combine(ConfigurationDirectory, "cache", "pre-synthesis"));
             var frames = new ContinuousFrameSession(ContinuousDefaults,
                 new ContinuousFrameInspector(ContinuousDefaults, settings.Scene!, catalog, selector),
                 new ContinuousFrameRecognizer(images, settings), voice, logger, metrics);
