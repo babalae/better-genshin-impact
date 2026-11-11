@@ -30,6 +30,14 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
     /// <summary>是否已经安排了「等后台校验结束再刷一次」，避免重复挂等待。</summary>
     private bool _refreshAfterVerificationPending;
 
+    /// <summary>
+    /// 确认框是否开着。
+    ///
+    /// 模态对话框只是挡住输入，消息照泵：后台补刷会在这期间把列表清空重建，
+    /// 用户点「是」之后修的是一条已经不在列表里的旧项。这里做个闸门，让补刷等一等。
+    /// </summary>
+    private bool _confirmDialogOpen;
+
     [ObservableProperty]
     private string _statusText = "正在检测…";
 
@@ -257,6 +265,21 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
                 await Task.Delay(500);
             }
 
+            // 确认框开着就先别动列表：等它关掉再决定刷不刷。
+            // 这也顺带覆盖了「用户正在确认修复时，补刷把这一项从列表里换掉」的情况。
+            var dialogDeadline = DateTime.UtcNow + TimeSpan.FromMinutes(5);
+            while (_confirmDialogOpen && DateTime.UtcNow < dialogDeadline)
+            {
+                await Task.Delay(200);
+            }
+
+            if (_confirmDialogOpen)
+            {
+                // 等超时了框还开着：这次补刷直接放弃。宁可不刷，也不能在用户确认期间把列表换掉。
+                // 关框之后要么走修复流程（它自己会重检），要么由取消分支补一次。
+                return;
+            }
+
             if (ChildSessionEnvironmentCheck.IsTermsrvVerifying || IsBusy || IsChecking)
             {
                 return;
@@ -283,14 +306,33 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
             return;
         }
 
-        var confirm = ThemedMessageBox.Question(
-            $"即将修复：{item.Title}{Environment.NewLine}{Environment.NewLine}{item.FixHint}"
-            + $"{Environment.NewLine}{Environment.NewLine}是否继续？",
-            "确认修复",
-            MessageBoxButton.YesNo,
-            MessageBoxResult.No);
+        var confirm = MessageBoxResult.No;
+        _confirmDialogOpen = true;
+        try
+        {
+            confirm = ThemedMessageBox.Question(
+                $"即将修复：{item.Title}{Environment.NewLine}{Environment.NewLine}{item.FixHint}"
+                + $"{Environment.NewLine}{Environment.NewLine}是否继续？",
+                "确认修复",
+                MessageBoxButton.YesNo,
+                MessageBoxResult.No);
+        }
+        finally
+        {
+            _confirmDialogOpen = false;
+        }
+
         if (confirm != MessageBoxResult.Yes)
         {
+            // 确认框开着的这段时间把补刷挡掉了：用户选择不修，就没有修复流程来重检，
+            // 这里补一次，免得「校验已经出结论但界面还是未验证」一直挂着。
+            if (ChildSessionEnvironmentCheck.IsElevated()
+                && !ChildSessionEnvironmentCheck.IsTermsrvVerifying
+                && !IsBusy)
+            {
+                _ = RefreshAfterVerificationAsync();
+            }
+
             return;
         }
 
