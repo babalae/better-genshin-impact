@@ -38,6 +38,14 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
     /// </summary>
     private bool _confirmDialogOpen;
 
+    /// <summary>
+    /// 补刷被确认框的超时闸门挡掉了，需要等框关掉后补一次。
+    ///
+    /// 只有这一种情况要补：其余时候补刷要么还在排队（框一关自己就走），
+    /// 要么早就刷完了——无条件补刷会让结果区闪一下并把用户展开的行全折叠。
+    /// </summary>
+    private bool _refreshAbandonedByDialog;
+
     [ObservableProperty]
     private string _statusText = "正在检测…";
 
@@ -276,7 +284,8 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
             if (_confirmDialogOpen)
             {
                 // 等超时了框还开着：这次补刷直接放弃。宁可不刷，也不能在用户确认期间把列表换掉。
-                // 关框之后要么走修复流程（它自己会重检），要么由取消分支补一次。
+                // 关框之后要么走修复流程（它自己会重检），要么由取消分支补这一次。
+                _refreshAbandonedByDialog = true;
                 return;
             }
 
@@ -324,17 +333,22 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
 
         if (confirm != MessageBoxResult.Yes)
         {
-            // 确认框开着的这段时间把补刷挡掉了：用户选择不修，就没有修复流程来重检，
-            // 这里补一次，免得「校验已经出结论但界面还是未验证」一直挂着。
-            if (ChildSessionEnvironmentCheck.IsElevated()
+            // 只在补刷确实被框挡掉（超时放弃）时才补。排队中的那轮框一关自己就会继续，
+            // 无条件补反而会让结果区闪一下、把用户展开的行全折叠回默认状态。
+            if (_refreshAbandonedByDialog
+                && ChildSessionEnvironmentCheck.IsElevated()
                 && !ChildSessionEnvironmentCheck.IsTermsrvVerifying
                 && !IsBusy)
             {
+                _refreshAbandonedByDialog = false;
                 _ = RefreshAfterVerificationAsync();
             }
 
             return;
         }
+
+        // 用户确认修复：结束时会自己重检，别再补一次。
+        _refreshAbandonedByDialog = false;
 
         item.IsFixing = true;
 
