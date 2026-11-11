@@ -135,6 +135,9 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
             return;
         }
 
+        // 这次重检本身就是一次刷新：把「等框关了再补」的意图消费掉，免得它一直挂在那里。
+        _refreshAbandonedByDialog = false;
+
         if (forceVerify)
         {
             ChildSessionEnvironmentCheck.InvalidateScanCache();
@@ -335,9 +338,10 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
         {
             // 只在补刷确实被框挡掉（超时放弃）时才补。排队中的那轮框一关自己就会继续，
             // 无条件补反而会让结果区闪一下、把用户展开的行全折叠回默认状态。
+            // 不再要求「校验已经结束」：补刷自己会等 sfc 出结论再渲染。
+            // 否则校验还在跑时会跳过，标志留着没人消费，面板就一直是「未验证」。
             if (_refreshAbandonedByDialog
                 && ChildSessionEnvironmentCheck.IsElevated()
-                && !ChildSessionEnvironmentCheck.IsTermsrvVerifying
                 && !IsBusy)
             {
                 _refreshAbandonedByDialog = false;
