@@ -631,8 +631,10 @@ internal static class ChildSessionEnvironmentCheck
             + "判定方式：用 sfc 与该文件的系统组件库副本比对（termsrv.dll 只有目录签名，"
             + "数字签名校验在这里不可靠）。"
             + Environment.NewLine
-            + "处理：诊断面板先用工具留下的备份还原（复制后会用 sfc 复核，不通过自动回滚），"
-            + "没有可用备份时运行 sfc /scannow（通常 5~15 分钟）。",
+            + "处理：点「修复」即可——它先用工具留下的备份还原（还原后复核，不通过自动回滚），"
+            + "还原不出来时自己继续处理，不需要你干预。"
+            + "如果要手动修，以管理员身份运行 sfc /scannow（通常 5~15 分钟），"
+            + "完成后重新检测；提示需要重启的话，重启后再检测一次。",
             ChildSessionIssueSeverity.Warning,
             CanAutoFix: true));
     }
@@ -1209,12 +1211,13 @@ internal static class ChildSessionEnvironmentCheck
     private static readonly object TermsrvGate = new();
 
     /// <summary>
-    /// sfc /verifyfile 同一时刻只跑一个。
+    /// sfc 同一时刻只跑一个进程（校验 /verifyfile 与修复 /scanfile 共用）。
     ///
     /// 修复完成后的同步复核很容易和后台校验撞上：两个进程读同一个文件，只是白烧
     /// CPU 和磁盘，而且慢的那个还会拖住界面上的「检测中」。
+    /// 修复侧也要过这把闸：两个 sfc 同时改同一个文件，CBS 会互相打架。
     /// </summary>
-    private static readonly SemaphoreSlim SfcGate = new(1, 1);
+    internal static readonly SemaphoreSlim SfcGate = new(1, 1);
 
     private static TermsrvFileState _termsrvState = new(false, false, false, []);
     private static DateTime _termsrvStateAt = DateTime.MinValue;

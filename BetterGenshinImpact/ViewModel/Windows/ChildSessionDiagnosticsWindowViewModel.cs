@@ -416,7 +416,8 @@ public partial class ChildSessionDiagnosticItem : ObservableObject
         "hello-only" => "这会关闭「仅允许 Windows Hello 登录」。改完需要你自己注销或重启才会生效。",
         "rdp-tool-persistence" => "这会导出备份后删除这些开机任务与自启项。",
         "termsrv-dll-tampered" => "这会先用工具留下的备份还原 termsrv.dll（还原后会复核，不通过自动回滚）；"
-                                  + "没有可用备份时运行 sfc /scannow，可能需要 5~15 分钟。",
+                                  + "没有可用备份时，在服务停止的状态下用 sfc 只修这一个文件，几秒到几十秒、"
+                                  + "当场生效、不需要重启；连它都修不好才会弹出命令行窗口跑完整扫描（5~15 分钟）。",
         _ => "这会修改系统设置。"
     };
 
