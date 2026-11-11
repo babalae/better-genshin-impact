@@ -6,7 +6,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.QuestVoice.Core.Tts;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.TTS;
 namespace BetterGenshinImpact.GameTask.QuestVoice.Core.Configuration;
 
 /// <summary>AppSettings：原神自动配音的业务类型。</summary>

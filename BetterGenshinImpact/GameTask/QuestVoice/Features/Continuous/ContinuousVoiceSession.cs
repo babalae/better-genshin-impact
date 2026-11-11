@@ -11,7 +11,7 @@ using BetterGenshinImpact.GameTask.QuestVoice.Core.Audio;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Configuration;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Continuous;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Routing;
-using BetterGenshinImpact.GameTask.QuestVoice.Core.Tts;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.TTS;
 using Serilog;
 
 namespace BetterGenshinImpact.GameTask.QuestVoice.Features.Continuous;

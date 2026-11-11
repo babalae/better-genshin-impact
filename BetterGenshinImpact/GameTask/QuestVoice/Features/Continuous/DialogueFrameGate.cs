@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Configuration;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Continuous;
-using BetterGenshinImpact.GameTask.QuestVoice.Core.Ocr;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.OCR;
 namespace BetterGenshinImpact.GameTask.QuestVoice.Features.Continuous;
 /// <summary>FrameGateDecision：原神自动配音的业务类型。</summary>
 public sealed record FrameGateDecision(bool Invalidate, bool Leave, bool Recognize, string Reason);
