@@ -91,18 +91,37 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
     /// </summary>
     public ChildSessionDiagnosticsWindowViewModel()
     {
-        _ = RecheckAsync();
+        // 打开窗口走缓存路径：五分钟内的结论直接复用，不必每次开面板都重跑一趟 sfc。
+        _ = RecheckCoreAsync(forceVerify: false);
     }
+
+    /// <summary>
+    /// 「重新检测」按钮：用户主动要求重查，缓存一律作废。
+    ///
+    /// 尤其是 termsrv.dll 的完整性结论会缓存 5 分钟——用户如果在别处把文件修好了，
+    /// 不清缓存的话再点一次还是旧警告，还带着一个点了也修不动的「修复」按钮。
+    /// </summary>
+    [RelayCommand]
+    private Task RecheckAsync() => RecheckCoreAsync(forceVerify: true);
 
     /// <summary>
     /// 重新检查一次环境。检测全部出结论后才把结果交给界面。
     /// </summary>
-    [RelayCommand]
-    private async Task RecheckAsync()
+    /// <param name="forceVerify">
+    /// true 表示用户主动点「重新检测」：先清缓存，强制重新校验 termsrv.dll。
+    /// false 用于内部刷新（修复后、后台校验结束后）：那些时刻缓存刚被校验本身写过，
+    /// 再清一次只会多跑一趟 sfc。
+    /// </param>
+    private async Task RecheckCoreAsync(bool forceVerify)
     {
         if (IsBusy)
         {
             return;
+        }
+
+        if (forceVerify)
+        {
+            ChildSessionEnvironmentCheck.InvalidateScanCache();
         }
 
         IsBusy = true;
@@ -243,7 +262,8 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
                 return;
             }
 
-            await RecheckAsync();
+            // 校验刚写进缓存，这里再清一次只会立刻又跑一遍 sfc。
+            await RecheckCoreAsync(forceVerify: false);
         }
         finally
         {
@@ -286,6 +306,9 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
             StatusText = result.Message;
             LastFixResult = result.Message;
 
+            // 只在成功时作废缓存。失败分支里有一类是「已在新窗口启动 sfc /scannow」：
+            // 那时清缓存会让下面的重检立刻起一个 sfc /verifyfile，两个 sfc 撞在一起，
+            // 而 SfcGate 只管得住我们自己起的进程，管不到那个独立窗口。
             if (result.Success)
             {
                 ChildSessionEnvironmentCheck.InvalidateScanCache();
@@ -303,7 +326,8 @@ public partial class ChildSessionDiagnosticsWindowViewModel : ObservableObject
         }
 
         // 修复结果落在系统里，重新读一遍比「改本地列表」更可信。
-        await RecheckAsync();
+        // 缓存刚才已作废，这里不必再清一次。
+        await RecheckCoreAsync(forceVerify: false);
     }
 
     /// <summary>

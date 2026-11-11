@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -544,6 +544,7 @@ internal static class ChildSessionEnvironmentFixer
         var termsrvPath = Path.Combine(system32, "termsrv.dll");
 
         // 1) 用工具自己的备份还原，但必须复核通过
+        string? backupStopFailure = null;
         foreach (var backupName in state.Backups)
         {
             var backupPath = Path.Combine(system32, backupName);
@@ -552,10 +553,20 @@ internal static class ChildSessionEnvironmentFixer
                 continue;
             }
 
-            var restore = TryRestoreTermsrvFromBackup(termsrvPath, backupPath, cancellationToken);
+            var restore = TryRestoreTermsrvFromBackup(
+                termsrvPath, backupPath, cancellationToken, out var restoreStopError);
+            backupStopFailure ??= restoreStopError;
+
             if (restore is not null)
             {
                 return AppendNote(restore.Value, persistence);
+            }
+
+            // 服务停不下来时，换下一个备份也是同样的结局：DLL 还被映射着，复制必然失败。
+            // 跳出循环，留给下面的 sfc 去给结论——那里同样要停服务，失败原因更具体。
+            if (restoreStopError is not null)
+            {
+                break;
             }
         }
 
@@ -564,7 +575,8 @@ internal static class ChildSessionEnvironmentFixer
         //    不像 /scannow 那样被占用、只能登记到重启后。
         cancellationToken.ThrowIfCancellationRequested();
 
-        var scanfileRepair = TryRepairTermsrvWithSfcScanfile(termsrvPath, cancellationToken);
+        var scanfileRepair = TryRepairTermsrvWithSfcScanfile(
+            termsrvPath, cancellationToken, out var scanfileStopError);
         if (scanfileRepair is not null)
         {
             return AppendNote(scanfileRepair.Value, persistence);
@@ -576,8 +588,7 @@ internal static class ChildSessionEnvironmentFixer
         //    用户下次开机被塞进「更新并重启」，比多等几分钟糟得多。
         var launch = LaunchSfcScannowInConsole();
 
-        return AppendNote(
-            launch switch
+        var launchResult = launch switch
             {
                 SfcLaunch.Launched => new ChildSessionFixResult(
                     false,
@@ -594,8 +605,25 @@ internal static class ChildSessionEnvironmentFixer
                 _ => new ChildSessionFixResult(
                     false,
                     "无法自动启动 sfc /scannow，请以管理员身份打开命令行，手动执行 sfc /scannow。")
-            },
-            persistence);
+            };
+
+        if (backupStopFailure is not null || scanfileStopError is not null)
+        {
+            // 根因要跟着结论一起给用户看：只留在日志里，用户只会看到「sfc 跑过了但还是不一致」。
+            // 两步分开说——备份停不下服务、就地修复却停下来了，这种情况不能混成一句「都没进行」。
+            launchResult = launchResult with
+            {
+                Message = (backupStopFailure is not null
+                              ? $"备份还原时无法停止远程桌面服务（{backupStopFailure}）。"
+                              : string.Empty)
+                          + (scanfileStopError is not null
+                              ? $"就地修复时无法停止远程桌面服务（{scanfileStopError}）。"
+                              : string.Empty)
+                          + launchResult.Message
+            };
+        }
+
+        return AppendNote(launchResult, persistence);
     }
 
     /// <summary>
@@ -624,8 +652,11 @@ internal static class ChildSessionEnvironmentFixer
     private static ChildSessionFixResult? TryRestoreTermsrvFromBackup(
         string termsrvPath,
         string backupPath,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        out string? stopFailure)
     {
+        stopFailure = null;
+
         if (HasActiveChildSession())
         {
             // 覆盖正在被服务使用的 DLL 要停服务；有活动会话时宁可不动。
@@ -660,7 +691,10 @@ internal static class ChildSessionEnvironmentFixer
             termServiceStopped = true;
             if (!TryStopTermService(stoppedDependents, out var stopError, cancellationToken))
             {
+                // 返回 null 让调用方继续走 sfc，但要把原因带出去：
+                // 只写日志的话，用户最后只看得到「sfc 跑过了还是不一致」。
                 Logger.LogWarning("停止 TermService 失败，跳过备份还原：{Error}", stopError);
+                stopFailure = stopError;
                 return null;
             }
 
@@ -749,8 +783,11 @@ internal static class ChildSessionEnvironmentFixer
     /// <returns>修好返回结果；没修好返回 null，由调用方交给兜底。</returns>
     private static ChildSessionFixResult? TryRepairTermsrvWithSfcScanfile(
         string termsrvPath,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        out string? stopFailure)
     {
+        stopFailure = null;
+
         if (HasActiveChildSession())
         {
             return new ChildSessionFixResult(
@@ -770,6 +807,7 @@ internal static class ChildSessionEnvironmentFixer
             if (!TryStopTermService(stoppedDependents, out var stopError, cancellationToken))
             {
                 Logger.LogWarning("停止 TermService 失败，跳过 sfc /scanfile 修复：{Error}", stopError);
+                stopFailure = stopError;
                 return null;
             }
 
