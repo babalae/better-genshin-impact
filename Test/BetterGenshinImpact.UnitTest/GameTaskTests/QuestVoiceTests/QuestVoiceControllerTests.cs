@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.QuestVoice;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Continuous;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Routing;
-using BetterGenshinImpact.GameTask.QuestVoice.Core.Tts;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.TTS;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.QuestVoiceTests;
 

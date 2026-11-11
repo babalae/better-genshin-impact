@@ -3,7 +3,7 @@ using System.Linq;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.QuestVoice;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Routing;
-using BetterGenshinImpact.GameTask.QuestVoice.Features.Tts;
+using BetterGenshinImpact.GameTask.QuestVoice.Features.TTS;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 

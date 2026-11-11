@@ -6,7 +6,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Continuous;
-using BetterGenshinImpact.GameTask.QuestVoice.Core.Tts;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.TTS;
 using Xunit;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.QuestVoiceTests;
