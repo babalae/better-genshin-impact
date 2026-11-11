@@ -28,7 +28,7 @@ public interface IPuloniaTaskSettingsDialogs
     /// <param name="draft">路线 CD 草稿。</param>
     /// <param name="isLeaf">编辑对象是否为单个地图追踪任务，决定表单说明。</param>
     /// <returns>确认时返回结果（Value 为空）；取消返回 null。</returns>
-    PuloniaTaskSettingsDialogResult? EditCollectionCooldown(PuloniaCollectionCooldownViewModel draft, bool isLeaf);
+    PuloniaTaskSettingsDialogResult? EditRouteCooldown(PuloniaRouteCooldownViewModel draft, bool isLeaf);
 
     /// <summary>
     /// 打开运行预览窗口；窗口关闭后返回用户是否选择了开始执行。

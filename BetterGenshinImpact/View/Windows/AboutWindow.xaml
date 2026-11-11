@@ -13,7 +13,9 @@
                  FontFamily="{DynamicResource TextThemeFontFamily}"
                  WindowBackdropType="Auto"
                  WindowStartupLocation="CenterOwner"
-                 mc:Ignorable="d">
+                 mc:Ignorable="d"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <Grid>
         <ui:Grid Margin="0,48,0,0" RowDefinitions="Auto,*,Auto">
             <ui:TextBlock Grid.Row="0" Margin="16,0,16,0" FontSize="16" FontWeight="Bold" Text="{i18n:T BetterGI 更好的原神}" />

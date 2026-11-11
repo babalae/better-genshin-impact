@@ -45,7 +45,7 @@ public sealed record ImageOcrResult(int ImageWidth, int ImageHeight, SceneProfil
     IReadOnlyList<OcrRegionResult> Regions, string? Speaker, string Dialogue, OcrModelInfo Model,
     DateTimeOffset StartedAt, DateTimeOffset CompletedAt);
 
-/// <summary>逐行识别已裁剪图像的 OCR 边界；生产实现为 BetterGI 内置 OCR，测试可替换。</summary>
+/// <summary>逐行识别已裁剪图像的 OCR 边界；生产实现直接调用 BetterGI 全局 OCR，测试可替换。</summary>
 public interface IOcrEngine
 {
     /// <summary>按输入顺序识别每一行图像；调用方保留图像所有权。</summary>

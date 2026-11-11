@@ -70,7 +70,9 @@ public partial class AutoBossSettingsViewModel : SoloTaskSettingsViewModel
     private string? _progressPlanId;
     /// <summary>所属节点的稳定 ID。</summary>
     private string? _progressTaskId;
-    /// <summary>展示各账号累计次数，读取错误保留在界面上。</summary>
+    /// <summary>按统筹设计 5.6 选出的账户（界面显示路线 CD 的账户）；为空时不区分主次，只列出有记录的账户。</summary>
+    private string? _progressAccountId;
+    /// <summary>展示各账户累计次数，读取错误保留在界面上。</summary>
     [ObservableProperty] private string _completedRunCountText = "新任务的累计次数为 0。";
 
     /// <summary>从当前有效参数读取首领讨伐配置。</summary>
@@ -134,15 +136,22 @@ public partial class AutoBossSettingsViewModel : SoloTaskSettingsViewModel
             ReadString(Original, PuloniaSoloTaskExecutor.BossRewardCountResetParameter), _rewardCountResetId);
     }
 
-    /// <summary>宿主提供稳定节点身份后异步读取累计；运行统计与设置草稿分别保存。</summary>
-    public Task SetProgressScopeAsync(string planId, string taskId)
+    /// <summary>宿主提供稳定节点身份与显示账户后异步读取累计；运行统计与设置草稿分别保存。</summary>
+    /// <param name="planId">所属计划的稳定 ID。</param>
+    /// <param name="taskId">所属节点的稳定 ID。</param>
+    /// <param name="accountId">按统筹设计 5.6 选出的账户 ID（界面显示路线 CD 的账户）；为空时只列出有记录的账户。</param>
+    public Task SetProgressScopeAsync(string planId, string taskId, string? accountId)
     {
         _progressPlanId = planId;
         _progressTaskId = taskId;
+        _progressAccountId = accountId;
         return RefreshProgress();
     }
 
-    /// <summary>重新读取各账号累计；草稿已清空时继续显示待保存状态。</summary>
+    /// <summary>
+    /// 重新读取各账户累计：只有一个账户时只显示一行；有多个账户时第一行是按 5.6 选出的账户（写明账户名，0 次也显示），
+    /// 其他有记录的账户另列一行。草稿已清空时继续显示待保存状态。
+    /// </summary>
     [RelayCommand]
     private async Task RefreshProgress()
     {
@@ -154,14 +163,18 @@ public partial class AutoBossSettingsViewModel : SoloTaskSettingsViewModel
         if (_progressStore is null || _progressPlanId is null || _progressTaskId is null) return;
         try
         {
-            var counts = await _progressStore.ReadBossRewardCountsAsync(_progressPlanId, _progressTaskId, _rewardCountResetId);
+            // 1. 次数按运行账户存放在各账户的 boss-rewards.json：按账户目录顺序逐个读取本节点当前批次的次数
             var accounts = await _progressStore.LoadAccountSettingsAsync();
-            var names = accounts.Accounts.ToDictionary(account => account.Id, account => account.Name);
+            var counts = new List<(string Id, string Name, int Count)>();
+            foreach (var account in accounts.Accounts)
+            {
+                var count = await _progressStore.ReadBossRewardCountAsync(account.Id, _progressPlanId, _progressTaskId,
+                    _rewardCountResetId);
+                counts.Add((account.Id, account.Name, count));
+            }
             // 读取期间可能点击清空，不能让旧读取结果覆盖清空提示。
             if (_rewardCountResetId != ReadString(Original, PuloniaSoloTaskExecutor.BossRewardCountResetParameter)) return;
-            CompletedRunCountText = counts.Count == 0 ? "累计成功领奖：0 次。"
-                : string.Join(Environment.NewLine, counts.OrderBy(pair => pair.Key).Select(pair =>
-                    $"{(pair.Key.Length == 0 ? "当前游戏" : names.GetValueOrDefault(pair.Key, "账号 " + pair.Key))}：{pair.Value} 次"));
+            CompletedRunCountText = DescribeCounts(counts, _progressAccountId);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or Newtonsoft.Json.JsonException
                                        or PuloniaTaskValidationException or InvalidOperationException)
@@ -170,7 +183,32 @@ public partial class AutoBossSettingsViewModel : SoloTaskSettingsViewModel
         }
     }
 
-    /// <summary>清空全部账号的当前累计，仅改变草稿，取消弹窗不会修改已保存累计。</summary>
+    /// <summary>
+    /// 累计次数的显示文字：只有一个账户时为“累计成功领奖：N 次。”；有多个账户时第一行为主账户“乙：N 次”，
+    /// 其他有记录的账户另列为“其他账户：甲 2 次、丙 1 次”。主账户未知或已不在目录中时，只按目录顺序列出有记录的账户。
+    /// </summary>
+    /// <param name="counts">按账户目录顺序排列的各账户次数。</param>
+    /// <param name="primaryAccountId">按 5.6 选出的账户 ID。</param>
+    private static string DescribeCounts(IReadOnlyList<(string Id, string Name, int Count)> counts, string? primaryAccountId)
+    {
+        // 1. 只有一个账户：不出现账户名，只显示一行
+        if (counts.Count == 1)
+            return $"累计成功领奖：{counts[0].Count} 次。";
+        // 2. 主账户未知：沿用按账户列出有记录的次数
+        if (counts.FirstOrDefault(item => item.Id == primaryAccountId) is not { Id: not null } primary)
+        {
+            var recorded = counts.Where(item => item.Count > 0).ToArray();
+            return recorded.Length == 0 ? "累计成功领奖：0 次。"
+                : string.Join(Environment.NewLine, recorded.Select(item => $"{item.Name}：{item.Count} 次"));
+        }
+        // 3. 主账户在第一行，其他有记录的账户合并为第二行
+        var others = counts.Where(item => item.Id != primary.Id && item.Count > 0).ToArray();
+        var text = $"{primary.Name}：{primary.Count} 次";
+        return others.Length == 0 ? text
+            : text + Environment.NewLine + "其他账户：" + string.Join("、", others.Select(item => $"{item.Name} {item.Count} 次"));
+    }
+
+    /// <summary>清空全部账户的当前累计，仅改变草稿，取消弹窗不会修改已保存累计。</summary>
     [RelayCommand]
     private void ResetProgress()
     {

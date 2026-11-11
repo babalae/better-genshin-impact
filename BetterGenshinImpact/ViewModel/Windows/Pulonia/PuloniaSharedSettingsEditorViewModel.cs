@@ -187,28 +187,28 @@ public partial class PuloniaSharedSettingsEditorViewModel : ObservableObject, ID
     }
 
     /// <summary>打开路线 CD 表单；确认后整体写入这一项，选择恢复继承时移除覆盖。叶子节点另显示本账号状态并可清除记录。</summary>
-    internal void EditCollectionCooldown(PuloniaSharedSettingRowViewModel row)
+    internal void EditRouteCooldown(PuloniaSharedSettingRowViewModel row)
     {
         if (_dialogs is null || !IsEditable)
             return;
         try
         {
-            PuloniaCollectionCooldownViewModel draft;
+            PuloniaRouteCooldownViewModel draft;
             var isLeaf = false;
             if (_target is PuloniaNodeSharedSettingsTarget node)
             {
-                draft = node.Document.CreateCollectionCooldownDraft(node.Node);
+                draft = node.Document.CreateRouteCooldownDraft(node.Node);
                 isLeaf = node.Node.IsLeaf;
-                // 任务计划中的叶子：显示当前登录账号下的 CD 状态、清除入口与跨计划规则差异
+                // 任务计划中的叶子：按计划所选账户显示 CD 状态、清除入口与跨计划规则差异
                 _session?.AttachCooldownStatus(draft, node.Node);
             }
             else
             {
-                draft = new PuloniaCollectionCooldownViewModel();
+                draft = new PuloniaRouteCooldownViewModel();
                 draft.Load(row.LoadedValue, row.SourceText);
             }
             var original = draft.BuildValue();
-            if (_dialogs.EditCollectionCooldown(draft, isLeaf) is not { } result)
+            if (_dialogs.EditRouteCooldown(draft, isLeaf) is not { } result)
                 return;
             if (result.RestoreInheritance)
                 _target.Reset(row.Key);

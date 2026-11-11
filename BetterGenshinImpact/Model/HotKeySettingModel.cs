@@ -127,7 +127,7 @@ public partial class HotKeySettingModel : ObservableObject
             lock (_registrationLock)
             {
                 if (_registeredHotkeys.Any(model => AreConflicting(model.HotKey, model.HotKeyType, HotKey, HotKeyType)))
-                    throw new InvalidOperationException("此快捷键已由其他功能或任务计划使用。");
+                    throw new InvalidOperationException("此快捷键已由其他功能、任务计划或按键宏使用。");
                 if (HotKeyType == HotKeyTypeEnum.GlobalRegister)
                 {
                     Hotkey hotkey = new(HotKey.ToString());
@@ -223,6 +223,36 @@ public partial class HotKeySettingModel : ObservableObject
             return first.MouseButton == second.MouseButton;
         return first.Key == second.Key && (first.Modifiers == second.Modifiers
             || firstType == HotKeyTypeEnum.KeyboardMonitor || secondType == HotKeyTypeEnum.KeyboardMonitor);
+    }
+
+    /// <summary>
+    /// 按快捷键配置预先检查冲突。应用热键由快捷键页 ViewModel 构造时才注册，
+    /// 动态注册的热键（任务计划、按键宏）可能先于它注册，按共享注册表先到先得会让应用热键注册失败，所以按配置预先检查。
+    /// </summary>
+    /// <param name="hotKey">待注册的快捷键</param>
+    /// <param name="hotKeyType">待注册的快捷键类型</param>
+    /// <param name="config">应用快捷键配置</param>
+    /// <returns>与任意一项应用快捷键冲突时返回 true</returns>
+    public static bool ConflictsWithHotKeyConfig(HotKey hotKey, HotKeyTypeEnum hotKeyType, HotKeyConfig config)
+    {
+        var configType = config.GetType();
+        foreach (var property in configType.GetProperties().Where(property => property.PropertyType == typeof(string)
+                     && property.Name.EndsWith("Hotkey", StringComparison.Ordinal)))
+        {
+            if (!Enum.TryParse<HotKeyTypeEnum>(configType.GetProperty(property.Name + "Type")?.GetValue(config) as string, out var type))
+                continue;
+            try
+            {
+                if (AreConflicting(hotKey, hotKeyType, HotKey.FromString(property.GetValue(config) as string ?? ""), type))
+                    return true;
+            }
+            catch (ArgumentException)
+            {
+                // 原设置中的非法键值不是一个可注册热键，不因它阻断其他有效配置。
+            }
+        }
+
+        return false;
     }
 
     private void OnKeyPressed(object? sender, KeyPressedEventArgs e)

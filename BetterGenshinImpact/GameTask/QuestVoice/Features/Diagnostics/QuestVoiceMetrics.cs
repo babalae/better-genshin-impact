@@ -64,9 +64,7 @@ public enum QuestVoiceMetric
     OcrBatch,
     /// <summary>解码和裁剪前处理。</summary>
     Preprocess,
-    /// <summary>内置 OCR 识别组件初始化尝试。</summary>
-    Initialization,
-    /// <summary>内置 OCR 推理墙钟，包括 CPU 和执行提供程序调度。</summary>
+    /// <summary>全局 OCR 推理墙钟，包括等待全局推理锁、CPU 和执行提供程序调度。</summary>
     NativeRun,
     /// <summary>OCR 排队或推理期间的取消。</summary>
     Cancelled

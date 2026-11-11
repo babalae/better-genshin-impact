@@ -11,6 +11,7 @@ using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.View.Windows.Pulonia;
 using BetterGenshinImpact.ViewModel.Pages.Pulonia;
@@ -19,6 +20,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GongSolutions.Wpf.DragDrop;
 using Newtonsoft.Json.Linq;
+using Wpf.Ui;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
@@ -112,17 +114,24 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     /// <param name="triggerHost">调度宿主；为空时只显示触发配置。</param>
     /// <param name="soloTaskRegistry">独立任务注册表。</param>
     /// <param name="settingsDialogs">公共设置、路线 CD 与运行预览窗口入口。</param>
-    /// <param name="cooldowns">“路线 CD”页签的总览；为空时按会话新建。</param>
+    /// <param name="accountsPage">账户页视图模型：“查看路线 CD”在导航前记下要查看的账户与计划；为空时入口不可用。</param>
+    /// <param name="navigation">页面导航，用于跳转到账户页；测试直接构造时为空。</param>
+    /// <param name="instances">多实例服务，为“运行于”列出在线子实例；为空时只在本实例运行。</param>
+    /// <param name="triggerInstances">触发设置的实例目录（执行实例选项与其他实例的游标）；测试直接构造时为空。</param>
     public PuloniaTaskPlanViewModel(PuloniaPlanEditingSession session, PuloniaTaskHistoryViewModel history,
         PuloniaTaskTriggerHost? triggerHost = null, SoloTaskRegistry? soloTaskRegistry = null,
-        IPuloniaTaskSettingsDialogs? settingsDialogs = null, PuloniaCollectionCooldownOverviewViewModel? cooldowns = null)
+        IPuloniaTaskSettingsDialogs? settingsDialogs = null, PuloniaAccountsPageViewModel? accountsPage = null,
+        INavigationService? navigation = null, InstanceService? instances = null,
+        PuloniaTriggerInstanceCatalog? triggerInstances = null)
     {
         Session = session;
         History = history;
-        Cooldowns = cooldowns ?? new PuloniaCollectionCooldownOverviewViewModel(session);
+        RunTargets = new PuloniaRunTargetsViewModel(session, instances);
         _soloTaskRegistry = soloTaskRegistry;
         _settingsDialogs = settingsDialogs;
-        TriggerSettings = new PuloniaPlanTriggersViewModel(session, triggerHost);
+        _accountsPage = accountsPage;
+        _navigation = navigation;
+        TriggerSettings = new PuloniaPlanTriggersViewModel(session, triggerHost, triggerInstances);
         // 能力定义在服务建立后不再变化，菜单只需生成一次
         AddTaskMenu = PuloniaTaskMenuBuilder.Build(session.TaskService.Definitions);
         SoloTaskMenu = PuloniaTaskMenuBuilder.BuildSoloTaskMenu(session.TaskService.Definitions);
@@ -130,6 +139,8 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         Session.DocumentChanged += OnSessionDocumentChanged;
         Session.PropertyChanged += OnSessionPropertyChanged;
         Session.Documents.CollectionChanged += (_, _) => RefreshReferencePlans();
+        // 账户目录、当前账户、完成记录或临时查看的账户变化后，刷新“CD 按账户”的选项与选中值
+        Session.CooldownsChanged += OnSessionCooldownsChanged;
     }
 
     /// <summary>
@@ -141,14 +152,22 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         var ct = Session.StartResourceMonitor(this);
         // 任务树的路线 CD 标记只在本页可见时计算并每分钟刷新
         Session.StartCooldownMonitor(this);
+        // “运行于”订阅子实例上下线与账户变化，并重读各实例的当前账户（可能刚在其他实例中修改）
+        var runTargetsRefresh = RunTargets.ActivateAsync();
         try
         {
             await InitializeAsync();
+            // 账户页等其他页面请求打开的计划：加载完成后选中
+            if (Session.TakeOpenPlanRequest(Session.Documents) is { } requested)
+                SelectedDocument = requested;
+            await runTargetsRefresh;
             ct.ThrowIfCancellationRequested();
+            // 每次进入都重新读取账户目录：账户可能刚在账户页或其他实例中修改
+            await RefreshRunAccountsAsync();
             History.PlanFilterId = SelectedDocument?.Id;
             await History.RefreshAsync();
-            // 计划加载完成后读取账本并计算任务树的路线 CD 标记
-            await Session.ReloadCooldownLedgerAsync();
+            // 计划加载完成后读取各账户的完成记录并计算任务树的路线 CD 标记
+            await Session.ReloadCooldownsAsync();
             await Session.RefreshResourceVersionsAsync(ct);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -162,6 +181,9 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     {
         Session.StopResourceMonitor(this);
         Session.StopCooldownMonitor(this);
+        RunTargets.Deactivate();
+        // “CD 按账户”的临时选择只属于本页；会话与新一条龙页共用，离开时恢复按计划设置
+        ResetCooldownViewAccount();
         return base.OnNavigatedFromAsync();
     }
 
@@ -566,18 +588,25 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
     {
         RefreshReferencePlans();
         History.PlanFilterId = newValue?.Id;
-        // 路线 CD 页签默认只看当前计划用到的路线，用户可改为全部计划
-        Cooldowns.SetPlanFilter(newValue?.Id);
+        // “CD 按账户”的临时选择只对当时的计划有效，切换计划后恢复按计划设置
+        ResetCooldownViewAccount();
+        NotifyCooldownAccountChanged();
         NotifyCommandStates();
+        NotifyRunAccountChanged();
         TriggerSettings.Document = newValue;
         // 移动提示只针对当时的计划，切换计划后不再保留
         ShowMoveSettingsNotice(null);
     }
 
     /// <summary>
-    /// 会话内文档变化时刷新粘贴与列表命令。
+    /// 会话内文档变化时刷新粘贴与列表命令；当前计划被撤销或重新读取时同步运行账户显示。
     /// </summary>
-    private void OnSessionDocumentChanged(object? sender, EventArgs e) => NotifyCommandStates();
+    private void OnSessionDocumentChanged(object? sender, EventArgs e)
+    {
+        NotifyCommandStates();
+        if (ReferenceEquals(sender, SelectedDocument))
+            NotifyRunAccountChanged();
+    }
 
     /// <summary>
     /// 会话忙碌状态变化后同步页面属性和命令。
@@ -679,6 +708,7 @@ public partial class PuloniaTaskPlanViewModel : ViewModel, IDropTarget
         AddPlanReferenceCommand.NotifyCanExecuteChanged();
         RunPlanCommand.NotifyCanExecuteChanged();
         PreviewRunCommand.NotifyCanExecuteChanged();
+        ShowRouteCooldownsCommand.NotifyCanExecuteChanged();
         CopyPlanCommand.NotifyCanExecuteChanged();
         DeletePlanCommand.NotifyCanExecuteChanged();
     }

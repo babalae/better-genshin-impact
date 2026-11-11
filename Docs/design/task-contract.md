@@ -274,7 +274,7 @@ public sealed record SoloTaskResult(SoloTaskResultKind Kind, string Message, str
 
 - 奖励统一为 `RewardSummary { Items: [{ Name, Count }] }`。
 - 秘境、首领、幽境危战、地脉花四个领奖任务的 `TData` 统一为 `ResinClaimData { Rewards, Resin }`：`Rewards` 是奖励汇总，`Resin` 是树脂使用报告（领奖次数、各类用量、结束原因）。Pulonia 结果 `Data` 中对应 `rewards.items` 与 `resin`，JS 入口把 `Rewards` 转换回原来的字典返回形状。合成浓缩树脂返回 `CraftCondensedResinData { CraftedCount }`。详见[树脂使用设置统一](resin-usage-settings.md)第 6 节。
-- 奖励是本次观测到的产出，不等于 Pulonia 账本中“已确认的副作用”。首领累计领奖次数由独立的内部回调逐次保存，不能从奖励物品数量推算。
+- 奖励是本次观测到的产出，不等于 Pulonia 账户进度中的完成记录（原“账本”，见[统筹设计 5.2](instance-account-model.md#52-完成记录)）。首领累计领奖次数由独立的内部回调逐次保存，不能从奖励物品数量推算。
 - JS 专用任务 `AutoEatTask`、`CountInventoryItem` 分别返回 `AutoEatData`、`InventoryCountData`；其他任务使用 `NoData`。
 
 ### 5.5 异常约定

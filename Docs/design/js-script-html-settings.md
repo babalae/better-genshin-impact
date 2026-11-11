@@ -599,5 +599,5 @@ public static readonly WebViewProfile ScriptSettings = new(WebViewEnvironments.A
 ## 16. 文档维护
 
 - 合并后更新 [infrastructure-foundation.md](infrastructure-foundation.md) 8.2 节的 Profile 列表、[pulonia/repository-resources.md](pulonia/repository-resources.md) 中预览与确认校验的描述、[pulonia/user-interface.md](pulonia/user-interface.md) 的节点配置与新增任务两节。
-- 第 6、7 节同步到脚本仓库的开发文档，供脚本作者查阅。
+- 第 6、7 节同步到脚本仓库的开发文档，供脚本作者查阅。面向作者的完整说明见 [JS 脚本 HTML 设置页开发指南](../technical/js-script-html-settings.md)，接口变化时两份文档一起更新。
 - 实现状态写在[设计文档索引](README.md)的条目上，本文只描述设计。

@@ -1,174 +1,54 @@
-using System;
-using System.Globalization;
-using System.Threading.Tasks;
-using BetterGenshinImpact.Core.Config;
-using BetterGenshinImpact.Core.Recognition.OCR.Paddle;
+using BetterGenshinImpact.Core.Plugins.Pluggables;
 using BetterGenshinImpact.Core.Recognition.ONNX;
-using BetterGenshinImpact.GameTask;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR;
 
-public class OcrFactory : IDisposable
+/// <summary>
+/// 全局 OCR 的门面。OCR 已改为可插拔能力（见 Docs/design/plugin-system.md 第 17 节）：
+/// 实际使用的模型由设置页“OCR 配置”中的选择决定（插件页“功能选择”显示同一个选择），
+/// 默认是内置的 PP-OCRv6，切换后下一次调用即使用新模型。
+/// </summary>
+/// <remarks>
+/// OCR 工厂不可以直接实例化，请使用 App.ServiceProvider 获取实例或直接使用 <see cref="Paddle"/>。
+/// </remarks>
+public class OcrFactory
 {
     // public static IOcrService Media = Create(OcrEngineTypes.Media);
 
-
-    public static IOcrService Paddle => App.ServiceProvider.GetRequiredService<OcrFactory>().PaddleOcr;
-    public IOcrService PaddleOcr
-    {
-        get
-        {
-            lock (_serviceLock)
-            {
-                ObjectDisposedException.ThrowIf(_disposed, this);
-                return _paddleOcrService ??= Create(OcrEngineTypes.Paddle);
-            }
-        }
-    }
-    private readonly object _serviceLock = new();
-    private bool _disposed;
-    private PaddleOcrService.PaddleOcrModelType? _activeModelType;
-    public PaddleOcrService.PaddleOcrModelType ActiveModelType
-    {
-        get { lock (_serviceLock) return _activeModelType ?? ResolveModelType(); }
-    }
-
-    private IOcrService? _paddleOcrService;
-    private readonly ILogger<BgiOnnxFactory> _logger;
+    /// <summary>
+    /// 可插拔能力注册表，用于读取当前选择和创建独立实例。
+    /// </summary>
+    private readonly PluggableRegistry _registry;
 
     /// <summary>
-    /// 注入的配置根，用于读取 OCR 配置与游戏文化信息
+    /// 创建 OCR 门面。
     /// </summary>
-    private readonly AllConfig _allConfig;
-
-    private readonly OtherConfig.Ocr _config;
-
-    /// <summary>
-    ///  OCR 工厂,不可以直接实例化,请使用 App.ServiceProvider获取实例
-    /// </summary>
-    /// <param name="logger"></param>
-    /// <param name="allConfig">注入的配置根</param>
-    public OcrFactory(ILogger<BgiOnnxFactory> logger, AllConfig allConfig)
+    /// <param name="ocr">OCR 可插拔能力的代理。</param>
+    /// <param name="registry">可插拔能力注册表。</param>
+    public OcrFactory(IOcrService ocr, PluggableRegistry registry)
     {
-        _logger = logger;
-        _allConfig = allConfig;
-        _config = GetConfig();
+        PaddleOcr = ocr;
+        _registry = registry;
     }
 
     /// <summary>
-    /// 创建
+    /// 全局 OCR。名称沿用旧版本，实际模型按“OCR 配置”中的选择决定。
     /// </summary>
-    private IOcrService Create(OcrEngineTypes type)
-    {
-        var result = type switch
-        {
-            OcrEngineTypes.Paddle => CreatePaddleOcrInstance(),
-            _ => throw new ArgumentOutOfRangeException(Enum.GetName(type), type, "不支持的 OCR 引擎类型")
-        };
-        _logger.LogDebug("创建了类型为 {Type} 的 OCR服务", Enum.GetName(type));
-        return result;
-    }
+    public static IOcrService Paddle => Pluggable.Get<IOcrService>();
 
     /// <summary>
-    /// 获取 OCR 配置
-    /// 为了单元测试
+    /// 全局 OCR 的代理，长期不变。调用方可以把它保存在字段中，切换模型时也不会拿到已释放的实例。
     /// </summary>
-    /// <returns></returns>
-    private OtherConfig.Ocr GetConfig()
-    {
-        try
-        {
-            // 直接使用配置
-            return _allConfig.OtherConfig.OcrConfig;
-        }
-        catch (Exception e)
-        {
-            // 如果配置获取失败，使用默认配置
-            _logger.LogWarning(e, "获取 OCR 配置失败，使用默认配置");
-            return new OtherConfig.Ocr();
-        }
-    }
+    public IOcrService PaddleOcr { get; }
 
     /// <summary>
-    /// 若果配置中没有设置文化信息，则使用默认的文化信息
-    /// 为了单元测试
+    /// 当前实际使用的 OCR 模型名称，供诊断显示。
     /// </summary>
-    /// <returns></returns>
-    private CultureInfo GetCultureInfo()
-    {
-        try
-        {
-            return new CultureInfo(_allConfig.OtherConfig.GameCultureInfoName);
-        }
-        catch (Exception e)
-        {
-            var result = new CultureInfo(new OtherConfig().GameCultureInfoName);
-            _logger.LogInformation("获取游戏文化信息失败，使用默认文化信息: {CultureInfo}", result.Name);
-            return result;
-        }
-    }
+    public string ActiveModelName => _registry.GetSelection<IOcrService>().Effective.DisplayName;
 
-    private PaddleOcrService CreatePaddleOcrInstance()
-    {
-        _activeModelType = ResolveModelType();
-        return new PaddleOcrService(App.ServiceProvider.GetRequiredService<BgiOnnxFactory>(), _activeModelType);
-    }
-
-    private PaddleOcrService.PaddleOcrModelType ResolveModelType()
-    {
-        return _config.PaddleOcrModelConfig switch
-        {
-            PaddleOcrModelConfig.V4Auto =>
-                PaddleOcrService.PaddleOcrModelType.FromCultureInfoV4(GetCultureInfo()) ??
-                    PaddleOcrService.PaddleOcrModelType.V4,
-            PaddleOcrModelConfig.V5Auto =>
-                PaddleOcrService.PaddleOcrModelType.FromCultureInfo(GetCultureInfo()) ??
-                    PaddleOcrService.PaddleOcrModelType.V5,
-            PaddleOcrModelConfig.V5 =>
-                PaddleOcrService.PaddleOcrModelType.V5,
-            PaddleOcrModelConfig.V6 =>
-                PaddleOcrService.PaddleOcrModelType.V6,
-            PaddleOcrModelConfig.V4 =>
-                PaddleOcrService.PaddleOcrModelType.V4,
-            PaddleOcrModelConfig.V4En =>
-                PaddleOcrService.PaddleOcrModelType.V4En,
-            PaddleOcrModelConfig.V5Korean =>
-                PaddleOcrService.PaddleOcrModelType.V5Korean,
-            PaddleOcrModelConfig.V5Latin =>
-                PaddleOcrService.PaddleOcrModelType.V5Latin,
-            PaddleOcrModelConfig.V5Eslav =>
-                PaddleOcrService.PaddleOcrModelType.V5Eslav,
-            _ => throw new ArgumentOutOfRangeException(nameof(_config.PaddleOcrModelConfig),
-                _config.PaddleOcrModelConfig, "不支持的 Paddle OCR 模型配置")
-        };
-    }
-
-    public Task Unload()
-    {
-        lock (_serviceLock)
-        {
-            if (_paddleOcrService is IDisposable disposable) disposable.Dispose();
-            _paddleOcrService = null;
-            _activeModelType = null;
-        }
-        return Task.CompletedTask;
-    }
-
-    public void Dispose()
-    {
-        lock (_serviceLock)
-        {
-            if (_disposed) return;
-            _disposed = true;
-            Unload().GetAwaiter().GetResult();
-        }
-        GC.SuppressFinalize(this);
-    }
-
-    ~OcrFactory()
-    {
-        Dispose();
-    }
+    /// <summary>
+    /// 按当前选择创建一个独立的 OCR 实例，不影响全局 OCR，供推理验证和测速使用。调用方负责释放。
+    /// </summary>
+    /// <param name="sessions">绑定待验证推理运行时的会话工厂。</param>
+    public IOcrService CreateDetached(BgiOnnxSessionFactory sessions) => _registry.CreateDetached<IOcrService>([sessions]);
 }

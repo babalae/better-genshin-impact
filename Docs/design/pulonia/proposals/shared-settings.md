@@ -1,6 +1,7 @@
 # Pulonia 共享设置与设置方案
 
 状态：步骤 1—3 与步骤 4 的一条龙入口已实现（2026-10-27），独立任务绑定未做；与本文的差异见[第 14 节](#14-实施记录)。已取代共享参数预设（`PuloniaTaskPreset`）和分组公共参数（`parameter_overrides`）。需求来源 US-04、US-09、US-12，社区 [#3168](https://github.com/babalae/better-genshin-impact/issues/3168)、[#3235](https://github.com/babalae/better-genshin-impact/issues/3235)、[#3323](https://github.com/babalae/better-genshin-impact/issues/3323)。  
+命名与存储已由[实例、账户与路线 CD 统筹设计](../../instance-account-model.md)更新：账本改称完成记录并按账户存放，作用域键删除。与本文相关的是：参数 `collection_cd` 改名为 `route_cd`，界面称“路线 CD”；普通计划触发器的“账号参数资料”删除（S6、D5）。  
 [返回总览](../README.md) · [模型与配置](../model.md) · [界面](../user-interface.md) · [用户故事](../requirements.md)
 
 ## 1. 背景

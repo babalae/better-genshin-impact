@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Service.AccountRecords.Model;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.Service.AccountRecords;
 
@@ -63,7 +64,7 @@ public sealed partial class InventoryStore
         {
             try { acquired = mutex.WaitOne(TimeSpan.FromSeconds(10)); }
             catch (AbandonedMutexException) { acquired = true; }
-            if (!acquired) throw new IOException("账号记录正在被其他操作占用，等待十秒仍未取得访问权限。");
+            if (!acquired) throw new IOException("狛荷屋记录正在被其他操作占用，等待十秒仍未取得访问权限。");
             if (initialize) EnsureSupplementaryDictionary();
             return action();
         }
@@ -143,7 +144,10 @@ public sealed partial class InventoryStore
         return Path.Combine(_root, uid);
     }
 
-    /// <summary>按最近记录变动列出 UID；空账号排在后面，读取页面不改变排序。</summary>
+    /// <summary>
+    /// 按最近记录变动列出已有数据目录的 UID；空账号排在后面。页面的 UID 列表改由 Pulonia 账户目录提供，
+    /// 这里只列出磁盘上的数据目录（如重置与测试）。
+    /// </summary>
     public Task<string[]> ListUidsAsync() => Task.Run(() => !Directory.Exists(_root) ? [] :
         Directory.EnumerateDirectories(_root).Select(Path.GetFileName)
             .Where(name => name != null && IsValidUid(name)).Cast<string>()
@@ -169,7 +173,7 @@ public sealed partial class InventoryStore
     public Task<DateTime> GetInventoryUpdatedAtAsync(string uid) =>
         Task.Run(() => File.GetLastWriteTimeUtc(Path.Combine(AccountDirectory(uid), "inventory.json")));
 
-    /// <summary>显式创建空账号，不生成虚构库存。</summary>
+    /// <summary>显式创建空账号，不生成虚构库存；页面不再手动新增 UID，导入空库存时仍用它建立数据目录。</summary>
     public Task AddUidAsync(string uid) => Locked(() =>
     {
         if (!IsValidUid(uid)) throw new ArgumentException("UID 必须为 9～10 位数字且首位非零。");
@@ -177,6 +181,63 @@ public sealed partial class InventoryStore
         if (!File.Exists(path)) Write(path, new InventoryDocument { Uid = uid });
         return true;
     });
+
+    /// <summary>该 UID 是否已有狛荷屋数据目录；不能用于狛荷屋的 UID（如首位为 0）不可能有数据，直接返回 false。</summary>
+    public Task<bool> HasUidDataAsync(string uid) => !IsValidUid(uid)
+        ? Task.FromResult(false)
+        : Task.Run(() => Directory.Exists(AccountDirectory(uid)));
+
+    /// <summary>
+    /// 账户 UID 修改后，把数据目录从旧 UID 改名为新 UID，并改写库存文件中记录的 UID（读取时会校验）。
+    /// 在跨进程存储锁内执行；旧 UID 没有数据时不做任何事，新 UID 已有数据时拒绝，不合并两份记录。
+    /// </summary>
+    /// <remarks>
+    /// 日期快照中的 UID 只作记录、读取时不校验，保持原样。目录移动后改写文件失败时不回滚，异常交由调用方提示。
+    /// </remarks>
+    /// <param name="oldUid">修改前的 UID</param>
+    /// <param name="newUid">修改后的 UID</param>
+    /// <exception cref="InvalidOperationException">新 UID 已有狛荷屋数据</exception>
+    public Task RenameUidAsync(string oldUid, string newUid) => Locked(() =>
+    {
+        var source = AccountDirectory(oldUid);
+        var target = AccountDirectory(newUid);
+        if (!Directory.Exists(source) || source == target) return false;
+        if (Directory.Exists(target))
+            throw new InvalidOperationException($"UID {newUid} 已有狛荷屋记录，不能把 UID {oldUid} 的记录移到这里。");
+        // 1. 同一数据根内整体改名目录，事件归档与快照随之移动
+        Directory.Move(source, target);
+        // 2. 主库存文件及其备份记录了所属 UID，改写为新 UID，备份恢复时同样能通过校验
+        foreach (var name in new[] { "inventory.json", "inventory.json.bak" })
+            RewriteDocumentUid(Path.Combine(target, name), newUid);
+        return true;
+    }, initialize: false);
+
+    /// <summary>
+    /// 只改写库存文件的 UID 字段，其他内容按原文保留（时间文本不做解析）；文件不存在或无法解析时不改，
+    /// 损坏的主文件仍按现有规则在读取时从备份恢复。
+    /// </summary>
+    /// <param name="path">库存文件路径</param>
+    /// <param name="uid">新 UID</param>
+    private static void RewriteDocumentUid(string path, string uid)
+    {
+        if (!File.Exists(path)) return;
+        JObject document;
+        try
+        {
+            using var reader = new JsonTextReader(new StringReader(File.ReadAllText(path))) { DateParseHandling = DateParseHandling.None };
+            document = JObject.Load(reader);
+        }
+        catch (JsonException) { return; }
+        document[nameof(InventoryDocument.Uid)] = uid;
+        // 临时文件写完后整体替换，不另留备份：备份文件本身也在这里改写
+        var temporary = path + ".tmp";
+        try
+        {
+            File.WriteAllText(temporary, document.ToString(Formatting.Indented), new UTF8Encoding(false));
+            File.Move(temporary, path, true);
+        }
+        finally { if (File.Exists(temporary)) File.Delete(temporary); }
+    }
 
     /// <summary>没有账号时也能读取共享显示和保存偏好。</summary>
     public Task<AccountRecordsSettings> GetSettingsAsync() => Locked(() => Settings());
@@ -709,7 +770,7 @@ public sealed partial class InventoryStore
         if (data.SchemaVersion != 1 || data.Items == null || data.Errors == null || data.Uid == null || data.Uid.Length > 0 && data.Uid != uid ||
             data.Items.Values.Any(records => records == null || records.Any(record => record == null || record.Quantity < 0 || string.IsNullOrEmpty(record.Source))) ||
             data.Errors.Values.Any(error => error == null || error.Incoming == null))
-            throw new InvalidDataException("库存文件的版本、账号或记录结构不符合要求：schemaVersion 须为 1，UID 须与所选账号一致，数量、来源等字段须有效。");
+            throw new InvalidDataException("库存文件的版本、UID 或记录结构不符合要求：schemaVersion 须为 1，UID 须与所选账户一致，数量、来源等字段须有效。");
         data.Uid = uid;
         if (data.Prior == null || data.Prior.Any(string.IsNullOrWhiteSpace))
             throw new InvalidDataException("库存文件的 Prior 置顶列表为 null 或包含空物品名，无法载入。");

@@ -20,11 +20,11 @@ public sealed class RoutedTtsProviderTests
     {
         var root = Path.Combine(Path.GetTempPath(), "RoutedStream", Guid.NewGuid().ToString("N"));
         var backend = new StreamingProvider(root);
-        using var routed = new RoutedTtsProvider(binding => Settings(binding.Provider!), TtsProviderRegistry.GetInfo("huoshan"), _ => backend);
+        using var routed = new RoutedTtsProvider(binding => Settings(binding.Provider!), TtsProviderRegistry.GetInfo("voicevox"), _ => backend);
         var request = new TtsRequest("流式", new("GPT角色", "", "", [], new("gpt-sovits", "remote", "")));
         StreamingPcmAudio? retained = null;
         Assert.True(routed.CanStream(request));
-        var pending = routed.SynthesizeStreamingAsync(Settings(new("huoshan")), request,
+        var pending = routed.SynthesizeStreamingAsync(Settings(new("voicevox")), request,
             source => { source.Retain(); retained = source; }, null, default);
         await backend.Ready.Task;
         Assert.False(pending.IsCompleted);
@@ -42,18 +42,18 @@ public sealed class RoutedTtsProviderTests
     public async Task Dispatch_preserves_voice_instance_cancellation_and_unknown()
     {
         var made = new List<RecordingProvider>();
-        var defaults = Settings(new("huoshan", "local", "default"));
-        using var routed = new RoutedTtsProvider(binding => Settings(binding.Provider!), TtsProviderRegistry.GetInfo("huoshan"),
+        var defaults = Settings(new("voicevox", "local", "default"));
+        using var routed = new RoutedTtsProvider(binding => Settings(binding.Provider!), TtsProviderRegistry.GetInfo("voicevox"),
             id => { var provider = new RecordingProvider(id); made.Add(provider); return provider; });
         TtsRequest Request(string id, string instance, string voice) => new("你好", new("角色声线", "", "", [], new(id, instance, voice)));
-        await routed.SynthesizeAsync(defaults, Request("huoshan", "local", "one"), null, default);
+        await routed.SynthesizeAsync(defaults, Request("voicevox", "local", "one"), null, default);
         await routed.SynthesizeAsync(defaults, Request("gpt-sovits", "remote", "two"), null, default);
-        await routed.SynthesizeAsync(defaults, Request("huoshan", "local", "three"), null, default);
+        await routed.SynthesizeAsync(defaults, Request("voicevox", "local", "three"), null, default);
         Assert.Equal(2, made.Count);
         Assert.Equal(new[] { "one", "three" }, made[0].VoiceIds);
         Assert.Equal("remote", made[1].LastSettings!.Provider!.InstanceId);
-        Assert.False(routed.CanStream(Request("huoshan", "local", "one")));
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => routed.SynthesizeAsync(defaults, Request("huoshan", "local", "one"), null, new(true)));
+        Assert.False(routed.CanStream(Request("voicevox", "local", "one")));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => routed.SynthesizeAsync(defaults, Request("voicevox", "local", "one"), null, new(true)));
         made[1].Failure = new VoiceException(VoiceErrorCode.BackendUnknown, "unknown", backendUnknown: true);
         var error = await Assert.ThrowsAsync<VoiceException>(() => routed.SynthesizeAsync(defaults, Request("gpt-sovits", "remote", "two"), null, default));
         Assert.Same(made[1].Failure, error);

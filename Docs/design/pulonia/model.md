@@ -4,6 +4,8 @@
 
 本文是计划、节点、共享设置与设置方案、运行准备的模型基线，也是**有效参数解析规则唯一的维护位置**，其他文档只链接到[有效参数解析规则](#有效参数解析规则)。2026-10-24 由原 `task-model.md` 改写，按当前代码核对；原文与步骤 1 的类型清单见[归档](archive/task-model.md)。
 
+实施状态：按[实例、账户与路线 CD 统筹设计](../instance-account-model.md)改写，代码已于 2026-11-01 实施，待用户验收，见[统筹设计第 15 节](../instance-account-model.md#15-实施记录)。本文只有账户与路线 CD 相关内容受影响。
+
 ## 配置模型
 
 所有 Pulonia 文件都由 `PuloniaTaskJson` 用 Newtonsoft.Json 读写：属性名 snake_case，UTF-8 无 BOM，拒绝重复键、未知属性（`MissingMemberHandling.Error`）和超过 256 层的 JSON。开发期不兼容旧格式：删除字段后，带该字段的旧文件读取失败，需要删除或手工修正。
@@ -13,13 +15,13 @@
 | 字段 | 说明 |
 | --- | --- |
 | `id` | `pln_` 加 16 位短 ID，同时是文件名 `plans/<id>.json` |
-| `schema_version` | 计划格式版本，当前为 3（2026-10-27 引入共享设置）；其他版本拒绝读取，schema 2 的计划不做转换 |
+| `schema_version` | 计划格式版本，当前为 4（`accounts` 改为 `account_id`，`collection_cd` 改为 `route_cd`）；其他版本拒绝读取，不做转换，见[统筹设计第 11 节](../instance-account-model.md#11-迁移) |
 | `revision` | 保存修订号，新建为 0；保存旧修订会报冲突 |
 | `name`、`description` | 展示用，重命名不影响引用和历史 |
 | `purpose` | `PuloniaTaskPlanPurpose`：General=0（任务计划页）、OneDragon=1（新一条龙页）；只决定界面归属，执行器没有用途分支 |
 | `root_task` | 根节点，固定为 `group`；界面不显示根节点，直接展示其子项 |
 | `triggers` | `List<PuloniaTaskTrigger>`，见[触发与热键](scheduling.md) |
-| `accounts` | `List<PuloniaTaskAccountBinding>`；一条龙只允许一个启用的绑定（单值化待定 D5），见[多账号](accounts.md) |
+| `account_id` | 运行账户设置：空（默认）表示跟随当前账户，不切换；`acc_…` 表示指定账户，必要时切换。普通计划和一条龙都支持，取代原 `accounts` 列表，见[多账户](accounts.md#运行账户设置) |
 
 计划列表顺序保存在 `plan-order.json`，节点折叠状态保存在 `plan-view-state.json`（`schema_version` 1，`collapsed_task_ids` 为“计划 ID → 已折叠节点 ID 列表”）。两者都是编辑器元数据，不进入计划修订、快照和历史；`plan-view-state.json` 不存在时全部展开。
 
@@ -44,13 +46,13 @@
 
 ### 设置目录、设置方案与能力说明
 
-**设置目录** `PuloniaSettingCatalog` 在代码中定义全部共享设置项，不持久化。设置项 ID 为 `<类别>.<名称>`，例如 `party.party_name`、`fight.strategy_name`；每项有显示名、值 Schema、默认值、编辑方式和可选的显示条件。类别：`party`、`fight`、`fight_end`、`fight_vision`、`pickup`、`travel`、`hurry`、`eat`、`collection`、`keymouse`、`shell`。设置项的值是原子单位，对象值（如路线 CD）整体替换。设计与界面见[共享设置与设置方案](proposals/shared-settings.md)。
+**设置目录** `PuloniaSettingCatalog` 在代码中定义全部共享设置项，不持久化。设置项 ID 为 `<类别>.<名称>`，例如 `party.party_name`、`fight.strategy_name`；每项有显示名、值 Schema、默认值、编辑方式和可选的显示条件。类别：`party`、`fight`、`fight_end`、`fight_vision`、`pickup`、`travel`、`hurry`、`eat`、`route`、`keymouse`、`shell`。设置项的值是原子单位，对象值（如路线 CD）整体替换。设计与界面见[共享设置与设置方案](proposals/shared-settings.md)。
 
 **设置方案** `PuloniaSettingsProfile`（`prf_` 加 16 位，`profiles/<id>.json`）保存 `id`、`name`、`description`、`revision` 和稀疏的 `settings`。方案只复用设置，不包含结构、顺序或引用，可挂在任意计划的任意节点上；仍被已保存计划引用的方案不能删除。
 
 `PuloniaTaskDefinition` 是执行器在代码中注册的能力说明，不持久化：`TaskType`、可选 `ResourceId`、`SchemaVersion`、`DefaultParameters`、`ParameterSchema`、`SettingBindings`（设置项 ID → 参数路径）、`RequiresGameSession`、`ResourceBaseDirectory`，以及菜单元数据 `DisplayName`、`Description`、`Group`、`Order`、`OneDragonOrder`、`IsSoloTask`。绑定的参数路径上的默认值必须等于设置项默认值，由 `PuloniaTaskValidator.ValidateSettingBindings` 检查。当前绑定：地图追踪为宿主类别加路线 CD，JS 为宿主类别（队伍、战斗、战斗结束、战斗识别、拾取、行走、赶路、吃药），Shell 为 `shell`，录制回放为 `keymouse`；独立任务暂无绑定。
 
-`PuloniaTaskAccountBinding` 保存 `account_id` 和 `enabled`。原先的按账号替换预设 `preset_selections` 已随共享设置删除，是否按账号区分设置随 D5 决定。
+`PuloniaTaskAccountBinding`（`account_id`、`enabled`）随计划的 `accounts` 列表删除，运行账户改由计划的单值 `account_id` 表达（D5 已决定）。原先的按账户替换预设 `preset_selections` 已随共享设置删除；需要按账户区分设置时，用不同的计划或设置方案表达，不做按账户保存的配置。
 
 ## 任务树语义
 
@@ -72,7 +74,7 @@
 ```json
 {
   "id": "pln_7k2m9q4x8c1v5b3n",
-  "schema_version": 3,
+  "schema_version": 4,
   "revision": 3,
   "name": "每日计划",
   "purpose": 0,
@@ -97,19 +99,18 @@
         "resource_version": "<资源指纹>",
         "is_enabled": true,
         "parameters": {},
-        "settings": { "collection.cooldown": { "mode": "disabled" } },
+        "settings": { "route.cooldown": { "mode": "disabled" } },
         "children": []
       }
     ]
   },
-  "triggers": [],
-  "accounts": []
+  "triggers": []
 }
 ```
 
 ### 地址、开关与失败行为
 
-- **节点地址**：准备树中每个节点的地址由计划 ID 和节点 ID 逐级拼接；分组多轮执行时追加 `/#<轮次>`，进入计划引用时追加 `/@<被引用计划 ID>`。节点结果、续跑起点和路线 CD 事件键都使用地址，不使用名称或数组下标。
+- **节点地址**：准备树中每个节点的地址由计划 ID 和节点 ID 逐级拼接；分组多轮执行时追加 `/#<轮次>`，进入计划引用时追加 `/@<被引用计划 ID>`。节点结果、续跑起点和完成记录的幂等判断（`run_id`、`task_address`、`attempt`）都使用地址，不使用名称或数组下标。
 - **开关**：父级关闭时整棵子树跳过，但不改写子节点自己的开关；重新开启后保留原选择。“启用全部子任务”是独立命令。
 - **失败行为**：`failure_behavior` 为 `stop_plan`（缺省）、`skip_group` 或 `continue`；`max_retries` 次重试耗尽后才按它编排。分组多轮执行不是重试，每一轮都重新判定路线 CD。
 - **限制**：最大深度 64、最多 10000 个准备节点；禁止计划自引用和间接循环；目录展开超过上限时整体拒绝。
@@ -127,7 +128,7 @@
 3. **任务参数**：节点自身的 `parameters`。
 4. **本次调用覆盖**：`PuloniaTaskRequest.ParameterOverrides`，以节点地址为键；指向不存在或未启用叶子的覆盖会被拒绝。
 
-第 3、4 层不能写共享设置绑定的顶层参数（例如 `party_name`、`auto_fight_config`、`collection_cd`），运行准备报错并提示改用共享设置。叶子自身的 `settings` 中有能力不使用的设置项时同样报错；分组和计划根上的这类设置项只是不生效。
+第 3、4 层不能写共享设置绑定的顶层参数（例如 `party_name`、`auto_fight_config`、`route_cd`），运行准备报错并提示改用共享设置。叶子自身的 `settings` 中有能力不使用的设置项时同样报错；分组和计划根上的这类设置项只是不生效。
 
 ### 设置链
 
@@ -168,24 +169,29 @@
 | 配置 | 归属 | 是否参与上述解析 |
 | --- | --- | --- |
 | 截图后端、窗口、日志等设备配置 | 程序全局配置 | 否 |
-| UID、登录方式、凭据 | 账号资料 | 否，作为运行上下文 |
-| 队伍、战斗、拾取、行走、吃药、路线 CD、Shell 运行方式 | 共享设置（节点 `settings` 与设置方案） | 是，向下传播 |
+| UID、服务器、登录方式、凭据 | 账户（运行上下文），账户目录 `accounts.json` | 否 |
+| 实例当前账户 | 实例设置 `instances/<目录名>/settings.json`，不进快照 | 否，运行开始时读取 |
+| 运行账户设置 | 计划的 `account_id` | 否 |
+| 完成记录、首领领奖次数 | 账户进度，不是配置，不进计划和快照 | 否，判定时读取运行账户的进度 |
+| 队伍、战斗、拾取、行走、吃药、路线 CD（刷新规则）、Shell 运行方式 | 共享设置（节点 `settings` 与设置方案） | 是，向下传播 |
 | 秘境名、JS 脚本 `settings`、Shell 命令等任务专属值 | 任务参数 `parameters` | 是，只属于本任务 |
 | 超时、重试、失败行为 | 节点 `policy` | 按字段继承 |
-| 定时、热键、截止窗口、忙碌策略 | 触发器 | 否 |
+| 定时、热键、截止窗口、忙碌策略、执行实例 | 触发器 | 否 |
 
 ## 运行准备与快照
 
-`PuloniaTaskBuilder.BuildAsync(plan, options, ct)` 是唯一的准备入口。它先复制计划和选项，再在后台完成：校验所选账号已绑定且启用 → 加载并检查计划引用图 → 递归展开分组轮次、计划引用和目录引用 → 对每个启用叶子解析有效参数并按 Schema 校验 → 计算资源指纹并与 `resource_version` 比对 → 输出 `PuloniaTaskSnapshot`。能力说明的合法性由 `PuloniaTaskValidator.ValidateDefinitions` 和单元测试保证，Builder 不再每次复验。
+`PuloniaTaskBuilder.BuildAsync(plan, options, ct)` 是唯一的准备入口。它先复制计划和选项，再在后台完成：计划指定了账户时校验该账户存在且填写了 UID → 加载并检查计划引用图 → 递归展开分组轮次、计划引用和目录引用 → 对每个启用叶子解析有效参数并按 Schema 校验 → 计算资源指纹并与 `resource_version` 比对 → 输出 `PuloniaTaskSnapshot`。能力说明的合法性由 `PuloniaTaskValidator.ValidateDefinitions` 和单元测试保证，Builder 不再每次复验。
 
 定向运行（触发器或请求的 `TargetTaskId`）会把目标子树之外的兄弟节点设为禁用后再准备，快照留档的是这份改写后的计划。
 
 | 类型 | 内容 |
 | --- | --- |
-| `PuloniaTaskSnapshot` | `plan_id`、`revision`、`prepared_at`、`account_id`、`genshin_account_json`（运行账号资料）、`root_task`、`plan_json_by_id`、`profile_json_by_id`（本次用到的设置方案原文）、`preset_json_by_id`（只为旧快照保留，新快照为空） |
-| `PuloniaTaskPreparedTask` | `task_address`、`task_id`、`source_task_id`（目录展开时指向原引用分组）、`task_type`、`is_enabled`、`path`（仓库资源为空）、`resource`、`resource_version`、`parameters`、`parameter_sources`、`setting_sources`、`policy`、`collection_cooldown`、`children` |
+| `PuloniaTaskSnapshot` | `plan_id`、`revision`、`prepared_at`、`account_id`、`genshin_account_json`（指定账户时的账户资料）、`root_task`、`plan_json_by_id`、`profile_json_by_id`（本次用到的设置方案原文）、`preset_json_by_id`（只为旧快照保留，新快照为空） |
+| `PuloniaTaskPreparedTask` | `task_address`、`task_id`、`source_task_id`（目录展开时指向原引用分组）、`task_type`、`is_enabled`、`path`（仓库资源为空）、`resource`、`resource_version`、`parameters`、`parameter_sources`、`setting_sources`、`policy`、`refresh_rule`（路线刷新规则）、`children` |
 
-`PuloniaTaskPreparedTask` 在构造时保存参数与策略的冻结副本，读取时返回新副本，修改编辑模型或取出的值都不会改写快照。方案原文固定在快照中，修改方案不影响已排队和正在运行的请求，续跑沿用原快照。`profile_json_by_id` 和 `setting_sources` 为空时不写出，旧快照往返不变。快照 JSON 的形状不变：`plan_json_by_id`、`profile_json_by_id` 和运行账号仍是嵌套的 JSON 字符串，整个快照又以 `snapshot_json` 字符串存进运行记录，因此计划原文被二次转义。改为内嵌对象需要迁移旧历史，尚未排期。
+**快照中的账户。** 计划指定了账户时，`account_id` 和 `genshin_account_json` 在准备时固定为该账户，排队期间修改计划的运行账户设置不影响本次运行。跟随当前账户时两者为空，运行账户在运行开始时按实例当前账户确定，写入运行记录的 `account_id`、`account_source`、`uid_check`；服务器偏移也在这时按运行账户的服务器写入运行记录。实例当前账户是实例设置，不进快照；不含游戏节点的运行不确定运行账户。规则见[多账户](accounts.md#运行开始时确定运行账户)。
+
+`PuloniaTaskPreparedTask` 在构造时保存参数与策略的冻结副本，读取时返回新副本，修改编辑模型或取出的值都不会改写快照。方案原文固定在快照中，修改方案不影响已排队和正在运行的请求，续跑沿用原快照。`profile_json_by_id` 和 `setting_sources` 为空时不写出，旧快照往返不变。快照 JSON 的形状不变：`plan_json_by_id`、`profile_json_by_id` 和账户资料仍是嵌套的 JSON 字符串，整个快照又以 `snapshot_json` 字符串存进运行记录，因此计划原文被二次转义。改为内嵌对象需要迁移旧历史，尚未排期。
 
 ## 对象关系
 
@@ -196,20 +202,27 @@ erDiagram
     PuloniaSettingsProfile o|--o{ PuloniaTask : profile_id
     PuloniaTaskPlan o|--o{ PuloniaTask : "source.plan_id"
     PuloniaTaskPlan ||--o{ PuloniaTaskTrigger : triggers
-    PuloniaTaskPlan ||--o{ PuloniaTaskAccountBinding : accounts
-    PuloniaGenshinAccountProfile ||--o{ PuloniaTaskAccountBinding : account_id
+    PuloniaGenshinAccountProfile o|--o{ PuloniaTaskPlan : account_id
+    PuloniaGenshinAccountProfile ||--o{ PuloniaRouteCompletion : "route-completions.json"
+    PuloniaGenshinAccountProfile ||--o{ "首领领奖次数" : "boss-rewards.json"
+    "实例" ||--|| "实例设置" : "settings.json"
+    PuloniaGenshinAccountProfile o|--o{ "实例设置" : current_account_id
+    "实例" ||--|| PuloniaTaskState : "state.json"
     PuloniaTaskState ||--o{ PuloniaTaskRunRecord : "pending / active / archive"
-    PuloniaTaskState ||--o{ PuloniaTaskLedgerEntry : ledger
-    PuloniaTaskState ||--o{ PuloniaTaskTriggerState : trigger_states
+    PuloniaTaskState ||--o{ PuloniaTaskTriggerState : "trigger_states（本实例负责的定时游标）"
+    PuloniaGenshinAccountProfile o|--o{ PuloniaTaskRunRecord : account_id
     PuloniaTaskRunRecord ||--|| PuloniaTaskRequest : request
     PuloniaTaskRunRecord ||--|| PuloniaTaskSnapshot : snapshot_json
     PuloniaTaskSnapshot ||--|| PuloniaTaskPreparedTask : root_task
     PuloniaTaskPreparedTask ||--o{ PuloniaTaskPreparedTask : children
     PuloniaTaskRunRecord ||--o{ PuloniaTaskNodeResult : node_results
-    PuloniaTaskRunRecord ||--o{ PuloniaTaskConfirmedEffect : confirmed_effects
+    PuloniaTaskRunRecord ||--o{ PuloniaRouteCompletion : route_completions
 ```
 
-`PuloniaTaskConfirmedEffect` 是一次运行确认的采集成功事实，内含完整的账本条目；账本只保留每个（作用域，文件）的最新一条，明细留在运行历史中。
+- 计划通过 `account_id` 指向账户；为空时跟随实例当前账户，运行账户在运行开始时确定，记在运行记录的 `account_id` 中。
+- `PuloniaRouteCompletion`（完成记录，取代 `PuloniaTaskLedgerEntry` 和 `PuloniaTaskConfirmedEffect`）是某个账户完整执行成功某份路线的记录。账户进度中每份路线只保留最新一条；运行记录的 `route_completions` 保存本次完成的路线，明细留在运行历史中。
+- `PuloniaTaskState` 是实例运行状态，每个实例一份，存在 `instances/<目录名>/state.json`，只由本实例写入，不再包含完成记录。每个实例的状态里各有本实例负责的定时触发器的游标，按（计划、触发器）记录。
+- 实例设置只有实例当前账户一项，见[多账户 · 实例当前账户](accounts.md#实例当前账户)。存储布局见[统筹设计第 8 节](../instance-account-model.md#8-存储布局)。
 
 ## 校验
 
@@ -220,11 +233,12 @@ erDiagram
 - **参数 Schema 子集**：`type`、`properties`、`required`、`additionalProperties`、`items`、`enum`、`minimum`；其他关键字拒绝。
 - **共享设置**：节点和方案的 `settings` 只能含设置目录中的设置项，值符合设置项的值 Schema；方案名称不能为空。叶子能否使用某个设置项取决于能力绑定，在运行准备时检查。
 - **策略**：超时有限且大于 0，重试间隔不小于 0，失败行为只能是三种取值之一。
-- **触发器**：ID 不重复，日程可解析，目标节点和账号存在；热键键位只在保存前和注册前检查，见[触发与热键](scheduling.md#热键)。
+- **运行账户**：`account_id` 为空，或是账户目录中填写了 UID 的账户 ID。
+- **触发器**：ID 不重复，日程可解析，目标节点存在；定时触发器的 `instances` 是执行实例键的列表（为空表示只在主实例执行），计划指定了账户时最多一项；热键触发器的 `instances` 必须为空；触发器不再有 `account_id`。热键键位只在保存前和注册前检查，见[触发与热键](scheduling.md#热键)。
 
 ## 待定
 
-- D5：`accounts` 改为单个 `account_id`，普通计划是否保留账号资料标签。
+- D5（已决定）：`accounts` 改为单个 `account_id`，空表示跟随当前账户；普通计划和一条龙都支持；删除触发器的 `account_id`（账号参数资料）。见[统筹设计 4.3 节](../instance-account-model.md#43-运行账户设置)。
 - 快照嵌套 JSON 字符串迁移为内嵌对象。
 - `PuloniaTaskNodeStatus` 与 `PuloniaTaskOutcomeKind` 合并为一个枚举。
 - R2：`csharp` 类型与 `sample.sum` 样例的去留。

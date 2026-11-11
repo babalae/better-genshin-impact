@@ -3,7 +3,9 @@
  xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" Title="事件记录" Width="860" Height="640" MinWidth="620" MinHeight="400"
  WindowStartupLocation="CenterOwner" ShowInTaskbar="False" ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica"
- Background="{DynamicResource ApplicationBackgroundBrush}" Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+ Background="{DynamicResource ApplicationBackgroundBrush}" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+ ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+ ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
  <ui:FluentWindow.Resources>
   <BooleanToVisibilityConverter x:Key="BoolVisibility" />
   <controls:AccountRecordsMessageConverter x:Key="EventMessage" />

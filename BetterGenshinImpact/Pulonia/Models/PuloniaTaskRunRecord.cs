@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Serialization;
 
 namespace BetterGenshinImpact.Pulonia.Models;
 
@@ -9,12 +11,40 @@ namespace BetterGenshinImpact.Pulonia.Models;
 /// </summary>
 public sealed class PuloniaTaskRunRecord
 {
-    /// <summary>执行前完整核验的实际 UID，续跑与账本使用此身份。</summary>
+    /// <summary>
+    /// 执行实例键（<c>primary</c>、<c>child_session</c>、<c>webview:&lt;小写实例名&gt;</c>）：提交时取执行本运行的实例，续跑取发起续跑的实例。
+    /// 本运行的状态与历史只由该实例写入；执行记录据此标明运行在哪个实例。
+    /// </summary>
+    [JsonProperty("instance", Required = Required.Always)]
+    public string Instance { get; set; } = PuloniaInstanceKey.Primary;
+
+    /// <summary>指定账户的运行在执行前完整核验的实际 UID，续跑时按它再次核验；跟随当前账户的运行为空。</summary>
     [JsonProperty("verified_uid")]
     public string? VerifiedUid { get; set; }
 
     /// <summary>
-    /// 运行 ID，形如 <c>run_yyyyMMdd-HHmmss-xxxx</c>；提交、查询、取消、历史文件名和账本键都使用此身份。
+    /// 运行账户 ID，含游戏节点的运行在执行第一个节点前确定；不含游戏节点或尚未开始时为空。
+    /// 续跑时先沿用原运行的值，开始时按续跑规则核对。路线 CD 判定和完成记录、首领领奖次数都按它读写。
+    /// </summary>
+    [JsonProperty("account_id")]
+    public string? AccountId { get; set; }
+
+    /// <summary>运行账户的来源：实例当前账户或计划指定；未确定运行账户时为空。</summary>
+    [JsonProperty("account_source")]
+    [JsonConverter(typeof(StringEnumConverter), typeof(SnakeCaseNamingStrategy))]
+    public PuloniaTaskAccountSource? AccountSource { get; set; }
+
+    /// <summary>跟随当前账户的运行开始时的 UID 比对结果；指定账户或未确定运行账户时为空。</summary>
+    [JsonProperty("uid_check")]
+    [JsonConverter(typeof(StringEnumConverter), typeof(SnakeCaseNamingStrategy))]
+    public PuloniaTaskUidCheck? UidCheck { get; set; }
+
+    /// <summary>UID 比对不一致时游戏中读到的 UID；其他情况为空。</summary>
+    [JsonProperty("observed_uid")]
+    public string? ObservedUid { get; set; }
+
+    /// <summary>
+    /// 运行 ID，形如 <c>run_yyyyMMdd-HHmmss-xxxx</c>；提交、查询、取消、历史文件名和完成记录的幂等键都使用此身份。
     /// </summary>
     [JsonProperty("run_id", Required = Required.Always)]
     public string RunId { get; set; } = string.Empty;
@@ -80,10 +110,11 @@ public sealed class PuloniaTaskRunRecord
     public List<PuloniaTaskNodeResult> NodeResults { get; set; } = [];
 
     /// <summary>
-    /// 已确认的副作用；没有确认事件时为空集合，不凭执行状态补造事件。
+    /// 本次完成的路线：每份地图追踪路线整份成功后，先写入运行账户的完成记录，再随节点结果写入这里；
+    /// 与完成记录同一结构，保存每次成功的明细。没有时为空集合，不凭执行状态补造。
     /// </summary>
-    [JsonProperty("confirmed_effects", Required = Required.Always)]
-    public List<PuloniaTaskConfirmedEffect> ConfirmedEffects { get; set; } = [];
+    [JsonProperty("route_completions", Required = Required.Always)]
+    public List<PuloniaRouteCompletion> RouteCompletions { get; set; } = [];
 
     /// <summary>
     /// 本次运行执行前已经确认完成、因续跑而跳过的地址。
@@ -111,7 +142,12 @@ public sealed class PuloniaTaskRunRecord
     /// <returns>新的记录对象。</returns>
     internal PuloniaTaskRunRecord WithSnapshotJson(string snapshotJson) => new()
     {
+        Instance = Instance,
         VerifiedUid = VerifiedUid,
+        AccountId = AccountId,
+        AccountSource = AccountSource,
+        UidCheck = UidCheck,
+        ObservedUid = ObservedUid,
         RunId = RunId,
         Request = Request,
         PlanName = PlanName,
@@ -123,7 +159,7 @@ public sealed class PuloniaTaskRunRecord
         StartedAt = StartedAt,
         FinishedAt = FinishedAt,
         NodeResults = NodeResults,
-        ConfirmedEffects = ConfirmedEffects,
+        RouteCompletions = RouteCompletions,
         CompletedTaskAddresses = CompletedTaskAddresses,
         ResumeFromTaskAddress = ResumeFromTaskAddress,
         ResumedFromRunId = ResumedFromRunId

@@ -13,5 +13,10 @@
     <Style BasedOn="{StaticResource DefaultTextEditorStyle}" TargetType="{x:Type ava:TextEditor}" />
     <Style BasedOn="{StaticResource DefaultTextEditorStyle}" TargetType="{x:Type codeEditor:CodeBox}" />
     <Style BasedOn="{StaticResource DefaultTextEditorStyle}" TargetType="{x:Type codeEditor:JsonCodeBox}" />
+    <!--  按键宏编辑器：跟随主题前景色，深浅主题下都能看清  -->
+    <Style BasedOn="{StaticResource DefaultTextEditorStyle}" TargetType="{x:Type codeEditor:KeyMacroCodeBox}">
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        <Setter Property="LineNumbersForeground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+    </Style>
 
 </ResourceDictionary>

@@ -1,139 +1,110 @@
-using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows;
 using BetterGenshinImpact.Pulonia.Models;
-using BetterGenshinImpact.Pulonia.Services;
-using BetterGenshinImpact.View.Windows;
-using BetterGenshinImpact.View.Windows.Pulonia;
-using BetterGenshinImpact.ViewModel.Windows.Pulonia;
+using BetterGenshinImpact.View.Pages;
+using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 namespace BetterGenshinImpact.ViewModel.Pages;
 
 /// <summary>
-/// 一条龙可选账号准备项，始终编辑同一计划的账号绑定。
-/// “显示账号切换步骤”只控制清单中准备项的显示；绑定非默认账号时，配置下拉框旁常驻显示运行账号。
+/// 一条龙的运行账户设置，始终编辑同一计划的 <see cref="PuloniaTaskPlan.AccountId"/>：
+/// 跟随当前账户（默认，不切换）或指定账户（运行前切换并核验 UID）。指定账户时清单首位显示“切换账户”准备项。
+/// 入口规则与文案和任务计划页共用 <see cref="PuloniaRunAccountText"/>。
 /// </summary>
 public partial class PuloniaOneDragonViewModel
 {
-    /// <summary>当前已保存的账号资料选择。</summary>
+    /// <summary>当前已保存的账户目录，用于显示名称。</summary>
     public ObservableCollection<PuloniaGenshinAccountProfile> GenshinAccounts { get; } = [];
-    /// <summary>清单中的账号准备项默认隐藏；不影响账号绑定是否生效。</summary>
-    [ObservableProperty] private bool _showAccountPreparation;
+    /// <summary>运行账户下拉框的选项：“跟随当前账户”加填写了 UID 的账户；键为账户 ID，跟随当前账户为空字符串。</summary>
+    public ObservableCollection<KeyValuePair<string, string>> RunAccountOptions { get; } = [];
     /// <summary>是否正在查看固定首位的系统准备项。</summary>
     [ObservableProperty] private bool _isAccountPreparationSelected;
-    /// <summary>账号绑定保存或读取的反馈。</summary>
+    /// <summary>运行账户保存或读取的反馈。</summary>
     [ObservableProperty] private string _accountMessage = "";
-    /// <summary>当前配置的绑定身份，缺省为默认账号。</summary>
+    /// <summary>账户页视图模型；“查看路线 CD”在导航前记下要查看的账户和配置。测试直接构造时为空。</summary>
+    private readonly PuloniaAccountsPageViewModel? _accountsPage;
+
+    /// <summary>当前配置的运行账户设置：空字符串表示跟随当前账户，否则为指定账户 ID。</summary>
     public string SelectedGenshinAccountId
     {
-        get => SelectedConfiguration is { } document ? PuloniaTaskService.ResolveOneDragonAccountId(document.Plan) : PuloniaGenshinAccountProfile.DefaultId;
+        get => SelectedConfiguration?.Plan.AccountId ?? PuloniaRunAccountText.FollowCurrentKey;
         set
         {
-            if (SelectedConfiguration is not { } document || !GenshinAccounts.Any(account => account.Id == value)
-                || value == SelectedGenshinAccountId) return;
-            // 账号变更保留同一账号已有的预设选择，不把登录资料写入计划。
-            var binding = document.Plan.Accounts.FirstOrDefault(account => account.AccountId == value)
-                          ?? new PuloniaTaskAccountBinding { AccountId = value };
-            document.ApplyMutation(() => { binding.Enabled = true; document.Plan.Accounts = [binding]; }, document.SelectedNode);
+            // 下拉框重建选项时会先写回 null，不能据此把指定账户改成跟随当前账户。
+            if (value is null || SelectedConfiguration is not { } document) return;
+            var accountId = value.Length == 0 ? null : value;
+            if (accountId == document.Plan.AccountId) return;
+            // 只能指定填写了 UID 的账户，因为切换和核验都要按 UID 找到目标。
+            if (accountId is not null && !PuloniaRunAccountText.CanSpecify(accountId, GenshinAccounts))
+                return;
+            document.ApplyMutation(() => document.Plan.AccountId = accountId, document.SelectedNode);
             NotifyAccountBindingChanged();
-            AccountMessage = "账号绑定已更改，将随当前配置自动保存。";
+            AccountMessage = accountId is null
+                ? "已改为跟随当前账户，将随当前配置自动保存。"
+                : "运行账户已更改，将随当前配置自动保存。";
         }
     }
 
-    /// <summary>当前配置是否绑定了非默认账号；运行时会切换账号，因此始终在配置下拉框旁提示。</summary>
-    public bool HasRunAccount => TryGetBoundAccountId() is var id && id != PuloniaGenshinAccountProfile.DefaultId;
+    /// <summary>当前配置是否指定了账户；运行前会切换到该账户，因此清单首位显示“切换账户”准备项。</summary>
+    public bool HasRunAccount => SelectedConfiguration?.Plan.AccountId is not null;
 
-    /// <summary>配置下拉框旁显示的运行账号；账号资料缺失或绑定无效时明确说明。</summary>
-    public string RunAccountText
-    {
-        get
-        {
-            if (TryGetBoundAccountId() is not { } id)
-                return "运行账号：绑定无效，请重新选择";
-            if (id == PuloniaGenshinAccountProfile.DefaultId)
-                return "运行账号：当前登录账号";
-            return GenshinAccounts.FirstOrDefault(account => account.Id == id) is { } account
-                ? "运行账号：" + account.Name
-                : "运行账号：账号资料已删除，请重新选择";
-        }
-    }
+    /// <summary>配置标题旁是否显示“运行账户”：计划指定了账户，或账户目录有多个账户时；只有一个账户且跟随当前账户时不显示。</summary>
+    public bool ShowRunAccountEntry => PuloniaRunAccountText.ShouldShow(SelectedConfiguration?.Plan.AccountId, GenshinAccounts.Count);
 
-    /// <summary>读取当前配置绑定的账号；绑定不合法（多个账号）时返回 null，不让显示属性抛出异常。</summary>
-    private string? TryGetBoundAccountId()
-    {
-        try { return SelectedGenshinAccountId; }
-        catch (InvalidOperationException) { return null; }
-    }
+    /// <summary>配置标题旁显示的运行账户；指定的账户已删除或没有 UID 时明确说明。</summary>
+    public string RunAccountText => PuloniaRunAccountText.Describe(SelectedConfiguration?.Plan.AccountId, GenshinAccounts);
 
-    /// <summary>账号绑定、配置切换、撤销或账号目录刷新后同步所有账号相关显示。</summary>
+    /// <summary>指定的运行账户不可用时的提示（账户已删除或没有 UID），显示在运行账户设置区；可用时为 null。</summary>
+    public string? RunAccountProblem => PuloniaRunAccountText.GetProblem(SelectedConfiguration?.Plan.AccountId, GenshinAccounts);
+
+    /// <summary>是否需要显示运行账户不可用的提示。</summary>
+    public bool HasRunAccountProblem => RunAccountProblem is not null;
+
+    /// <summary>运行账户、配置切换、撤销或账户目录刷新后同步所有账户相关显示。</summary>
     private void NotifyAccountBindingChanged()
     {
         OnPropertyChanged(nameof(SelectedGenshinAccountId));
         OnPropertyChanged(nameof(HasRunAccount));
+        OnPropertyChanged(nameof(ShowRunAccountEntry));
         OnPropertyChanged(nameof(RunAccountText));
+        OnPropertyChanged(nameof(RunAccountProblem));
+        OnPropertyChanged(nameof(HasRunAccountProblem));
+        // 运行账户设置决定“运行于”单选还是多选与默认实例；换配置或改设置后恢复默认选择
+        RunTargets.SetPlan(SelectedConfiguration?.Id, SelectedConfiguration?.Plan.AccountId);
     }
 
-    /// <summary>加载成功保存的账号目录，默认账号不要求用户完成设置。</summary>
+    /// <summary>加载成功保存的账户目录（首次使用时建立“我的账户”），并重建运行账户选项。</summary>
     private async Task RefreshGenshinAccountsAsync()
     {
         var settings = await _store.LoadAccountSettingsAsync();
         GenshinAccounts.Clear(); foreach (var account in settings.Accounts) GenshinAccounts.Add(account);
-        ApplyAccountPreparationVisibility(settings.MultiAccountEnabled);
+        RunAccountOptions.Clear();
+        foreach (var option in PuloniaRunAccountText.BuildOptions(settings.Accounts)) RunAccountOptions.Add(option);
         NotifyAccountBindingChanged();
     }
 
-    /// <summary>应用多账号步骤的显示状态；隐藏当前选中的准备项时回到首个普通任务。</summary>
-    private void ApplyAccountPreparationVisibility(bool isVisible)
-    {
-        ShowAccountPreparation = isVisible;
-        if (isVisible || !IsAccountPreparationSelected) return;
-        IsAccountPreparationSelected = false;
-        SelectedTask = TaskList.FirstOrDefault();
-    }
-
-    /// <summary>从一条龙“更多”菜单切换清单中账号准备项的显示，并立即保存到全局账号设置；账号绑定不受影响。</summary>
-    [RelayCommand]
-    private async Task ToggleAccountPreparationAsync()
-    {
-        var isVisible = !ShowAccountPreparation;
-        try
-        {
-            // 每次基于最新账号目录修改显示标记，避免覆盖账号管理窗口已保存的资料。
-            var settings = await _store.LoadAccountSettingsAsync();
-            settings.MultiAccountEnabled = isVisible;
-            await _store.SaveAccountSettingsAsync(settings);
-            ApplyAccountPreparationVisibility(isVisible);
-            AccountMessage = isVisible
-                ? "已在清单中显示“切换账号”步骤。"
-                : "已隐藏清单中的“切换账号”步骤；绑定的运行账号仍然生效，并显示在配置旁。";
-        }
-        catch (Exception ex)
-        {
-            // MenuItem 会先切换自身勾选状态；保存失败时主动刷新绑定以恢复已保存状态。
-            OnPropertyChanged(nameof(ShowAccountPreparation));
-            await ThemedMessageBox.ErrorAsync("切换账号步骤显示失败：" + ex.Message, "一条龙");
-        }
-    }
-
-    /// <summary>选中固定的账号准备项，任务表仍保持原来的八个默认任务；运行账号提示也从这里进入。</summary>
+    /// <summary>选中固定的账户准备项，任务表仍保持原来的默认任务；运行账户入口也从这里进入。</summary>
     [RelayCommand] private void SelectAccountPreparation()
     { SelectedTask = null; IsAccountPreparationSelected = true; }
 
-    /// <summary>打开独立账号管理，成功保存的设置在关闭后重新读取。</summary>
-    [RelayCommand] private async Task ManageGenshinAccountsAsync()
+    /// <summary>跳转到账户页管理账户与登录资料；返回本页时重新读取账户目录。</summary>
+    [RelayCommand] private void ManageGenshinAccounts() => _navigation?.Navigate(typeof(PuloniaAccountsPage));
+
+    /// <summary>
+    /// “更多 → 查看路线 CD”：跳到账户页的“路线 CD”，选中这份配置按统筹设计 5.6 选出的账户（指定账户或本实例当前账户），
+    /// 并按这份配置筛选。本页不显示路线 CD 标记，因此没有“CD 按账户”选择器。
+    /// </summary>
+    [RelayCommand]
+    private async Task ShowRouteCooldownsAsync()
     {
-        try
-        {
-            using var viewModel = new PuloniaGenshinAccountsViewModel(_store,
-                App.GetService<PuloniaGameTaskCoordinator>()!, App.GetService<IPuloniaGenshinAccountSwitcher>()!);
-            await viewModel.LoadAsync();
-            new PuloniaGenshinAccountsWindow(viewModel) { Owner = Application.Current.MainWindow }.ShowDialog();
-            await RefreshGenshinAccountsAsync();
-        }
-        catch (Exception ex) { await ThemedMessageBox.ErrorAsync("账号管理未完成：" + ex.Message, "账号管理"); }
+        if (SelectedConfiguration is not { } document || _navigation is null) return;
+        // 账户目录可能尚未读取（本页不计算路线 CD），先确保读取后再选账户
+        await Session.EnsureCooldownAccountsAsync();
+        _accountsPage?.RequestShowRouteCooldowns(Session.GetDefaultCooldownAccount(document)?.Id, document.Id);
+        _navigation.Navigate(typeof(PuloniaAccountsPage));
     }
 }

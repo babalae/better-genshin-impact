@@ -2,7 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.ViewModel.Pages.Pulonia;
 
-/// <summary>任务树行尾的路线 CD 标记：由编辑会话按账本与当前规则计算，不持久化、不参与执行判断。</summary>
+/// <summary>任务树行尾的路线 CD 标记：由编辑会话按所选账户的完成记录与当前规则计算，不持久化、不参与执行判断。</summary>
 public partial class PuloniaTaskNodeViewModel
 {
     /// <summary>标记文字，例如“CD 中 · 剩 5 小时”“5/20 CD 中”“未识别 CD”；为空时不显示。</summary>

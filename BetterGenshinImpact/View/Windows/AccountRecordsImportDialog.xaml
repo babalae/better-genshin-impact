@@ -6,7 +6,9 @@
                  WindowStartupLocation="CenterOwner" ExtendsContentIntoTitleBar="True"
                  WindowBackdropType="Mica" ShowInTaskbar="False"
                  Background="{DynamicResource ApplicationBackgroundBrush}"
-                 Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <ui:FluentWindow.Resources><BooleanToVisibilityConverter x:Key="BoolVisibility" /></ui:FluentWindow.Resources>
     <ui:FluentWindow.InputBindings>
         <KeyBinding Key="Escape" Command="{x:Static ApplicationCommands.Close}" />
@@ -28,7 +30,7 @@
                     <ui:Button Content="导入当前库存" Appearance="Primary" Command="{Binding ImportCommand, Mode=OneWay}" IsEnabled="{Binding HasPackage, Mode=OneWay}" Margin="12,0,0,0" />
                 </StackPanel>
                 <TextBlock Text="{Binding Summary, Mode=OneWay}" TextWrapping="Wrap" Margin="0,12,0,12" />
-                <TextBlock Text="导入到 UID（可修改；不存在时创建）" />
+                <TextBlock Text="导入到 UID（可修改；不在账户目录中时，确认后新建账户再导入）" TextWrapping="Wrap" />
                 <ui:TextBox Text="{Binding TargetUid, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,10" MaxLength="20" />
                 <TextBlock Text="记录时间应为库存实际采集或确认的时间，导入时不会更新为当前时间。仅合并提供的物品，旧记录、非法数量等会进入库存异常。" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                 <CheckBox Content="使用下列分类补充本地字典空缺（不覆盖已有分类）" IsChecked="{Binding IncludeDefinitions, Mode=TwoWay}" Margin="0,12,0,4" />

@@ -1,13 +1,16 @@
-﻿using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.GameTask.AutoFight;
 using BetterGenshinImpact.GameTask.QuickClaimReward;
+using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Windows;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 
@@ -61,8 +64,44 @@ public partial class MacroSettingsPageViewModel : ViewModel
         _navigationService.Navigate(typeof(HotKeyPage));
     }
 
+    /// <summary>
+    /// 打开按键宏页面
+    /// </summary>
+    [RelayCommand]
+    public void OnGoToKeyMacroPage()
+    {
+        _navigationService.Navigate(typeof(KeyMacroPage));
+    }
+
+    /// <summary>
+    /// 打开一键宏配置窗口；配置文件无法解析时提示并改用 JSON 编辑器打开
+    /// </summary>
     [RelayCommand]
     public void OnEditAvatarMacro()
+    {
+        AvatarMacroConfigWindow window;
+        try
+        {
+            window = new AvatarMacroConfigWindow
+            {
+                Owner = Application.Current.MainWindow
+            };
+        }
+        catch (Exception e)
+        {
+            ThemedMessageBox.Error(I18nService.Instance.Translate("读取一键宏配置失败，请在 JSON 编辑器中修正：") + e.Message);
+            OnEditAvatarMacroJson();
+            return;
+        }
+
+        window.ShowDialog();
+    }
+
+    /// <summary>
+    /// 直接编辑一键宏 JSON 配置文件
+    /// </summary>
+    [RelayCommand]
+    public void OnEditAvatarMacroJson()
     {
         JsonMonoDialog.Show(OneKeyFightTask.GetAvatarMacroJsonPath());
     }

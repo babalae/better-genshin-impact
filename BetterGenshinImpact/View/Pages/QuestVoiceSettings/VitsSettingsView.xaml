@@ -6,7 +6,9 @@
              xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
              xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages.QuestVoiceSettings"
              Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-             HorizontalContentAlignment="Stretch">
+             HorizontalContentAlignment="Stretch"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <StackPanel>
         <ui:TextBlock Text="vits-simple-api" FontSize="18" FontWeight="SemiBold" />
         <ui:TextBlock Text="支持 VITS 与 BERT-VITS2 文本合成；刷新声音只在点击后连接服务，不会自动安装模型。" TextWrapping="Wrap" Margin="0,8,0,4" />

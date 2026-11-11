@@ -18,8 +18,6 @@ public static class PuloniaTaskSchedule
             throw new FormatException("触发器类型或允许延迟启动时间无效。");
         if (trigger.TargetTaskId is not null)
             PuloniaTaskValidator.ValidateId(trigger.TargetTaskId, "trigger/target_task_id");
-        if (trigger.AccountId is not null)
-            PuloniaTaskValidator.ValidateId(trigger.AccountId, "trigger/account_id");
         if (trigger.Kind == PuloniaTaskTriggerKind.Hotkey)
         {
             // 计划校验只确认热键配置存在；键位是否可注册由编辑器保存前和宿主注册前检查，失败时在界面提示。

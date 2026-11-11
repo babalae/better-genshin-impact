@@ -1,0 +1,119 @@
+<UserControl x:Class="BetterGenshinImpact.View.Controls.PuloniaRunTargetsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:converters="clr-namespace:BetterGenshinImpact.View.Converters"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+    <!--
+        任务计划页与新一条龙页共用的“运行于”，DataContext 为 PuloniaRunTargetsViewModel。
+        只在主实例且有在线子实例时显示：收起时按钮概括所选实例；展开后勾选实例（指定账户的计划只能选一个），
+        每项显示“实例名 — 当前账户”，账户目录有多个账户时可在下拉框中就地修改该实例的当前账户（立即保存）。
+        本视图只使用本地声明的资源，构造时不依赖父视图的资源树。
+    -->
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="RunTargetsVisibility" />
+        <converters:BooleanToVisibilityRevertConverter x:Key="RunTargetsVisibilityRevert" />
+        <converters:InverseBooleanConverter x:Key="RunTargetsInverse" />
+    </UserControl.Resources>
+
+    <Grid Visibility="{Binding IsChoiceVisible, Mode=OneWay, Converter={StaticResource RunTargetsVisibility}}">
+        <!-- 弹出层打开时按钮不响应点击，避免点击按钮关闭弹出层后又立即打开。 -->
+        <ui:Button HorizontalAlignment="Stretch"
+                   HorizontalContentAlignment="Stretch"
+                   Command="{Binding OpenCommand, Mode=OneWay}"
+                   IsHitTestVisible="{Binding IsOpen, Mode=OneWay, Converter={StaticResource RunTargetsInverse}}"
+                   ToolTip="选择执行这份计划的实例；子实例使用它自己的当前账户运行，运行记录在执行记录页查看"
+                   AutomationProperties.Name="运行于">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ui:SymbolIcon Margin="0,0,6,0"
+                               VerticalAlignment="Center"
+                               FontSize="14"
+                               Symbol="Desktop24" />
+                <TextBlock Grid.Column="1"
+                           VerticalAlignment="Center"
+                           Text="{Binding SummaryText, Mode=OneWay}"
+                           TextTrimming="CharacterEllipsis" />
+                <ui:SymbolIcon Grid.Column="2"
+                               Margin="6,0,0,0"
+                               VerticalAlignment="Center"
+                               FontSize="10"
+                               Symbol="ChevronDown16" />
+            </Grid>
+        </ui:Button>
+        <!-- 弹出层的定位点在按钮左下角，向下展开。 -->
+        <ui:Flyout MinWidth="0"
+                   MinHeight="0"
+                   HorizontalAlignment="Left"
+                   VerticalAlignment="Bottom"
+                   IsOpen="{Binding IsOpen, Mode=TwoWay}"
+                   Placement="Bottom">
+            <StackPanel MinWidth="300" MaxWidth="460">
+                <TextBlock Margin="0,0,0,4"
+                           FontWeight="SemiBold"
+                           Text="运行于" />
+                <TextBlock Margin="0,0,0,8"
+                           FontSize="12"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Text="{Binding HintText, Mode=OneWay}"
+                           TextWrapping="Wrap" />
+                <ItemsControl ItemsSource="{Binding Options, Mode=OneWay}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,2">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <!-- 跟随当前账户的计划可多选；指定账户的计划只能选一个实例。 -->
+                                <CheckBox VerticalAlignment="Center"
+                                          Content="{Binding InstanceName, Mode=OneWay}"
+                                          IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                          ToolTip="{Binding Display, Mode=OneWay}"
+                                          Visibility="{Binding IsMultiSelect, Mode=OneWay, Converter={StaticResource RunTargetsVisibility}}" />
+                                <RadioButton VerticalAlignment="Center"
+                                             Content="{Binding InstanceName, Mode=OneWay}"
+                                             IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                             ToolTip="{Binding Display, Mode=OneWay}"
+                                             Visibility="{Binding IsMultiSelect, Mode=OneWay, Converter={StaticResource RunTargetsVisibilityRevert}}" />
+                                <!-- 当前账户：多个账户时可就地修改，只有一个账户时只显示名称。 -->
+                                <StackPanel Grid.Column="1"
+                                            Margin="12,0,0,0"
+                                            VerticalAlignment="Center"
+                                            Orientation="Horizontal">
+                                    <TextBlock Margin="0,0,8,0"
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Text="—" />
+                                    <ComboBox MinWidth="150"
+                                              MaxWidth="220"
+                                              VerticalAlignment="Center"
+                                              DisplayMemberPath="Value"
+                                              ItemsSource="{Binding AccountChoices, Mode=OneWay}"
+                                              SelectedValue="{Binding SelectedAccountId, Mode=TwoWay}"
+                                              SelectedValuePath="Key"
+                                              ToolTip="该实例的当前账户：修改立即保存，正在运行的任务不受影响，下一次运行开始时生效"
+                                              Visibility="{Binding CanChangeAccount, Mode=OneWay, Converter={StaticResource RunTargetsVisibility}}"
+                                              AutomationProperties.Name="{Binding InstanceName, Mode=OneWay, StringFormat={}{0} 的当前账户}" />
+                                    <TextBlock VerticalAlignment="Center"
+                                               Text="{Binding AccountName, Mode=OneWay}"
+                                               Visibility="{Binding CanChangeAccount, Mode=OneWay, Converter={StaticResource RunTargetsVisibilityRevert}}" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Margin="0,8,0,0"
+                           FontSize="12"
+                           Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                           Text="{Binding Message, Mode=OneWay}"
+                           TextWrapping="Wrap"
+                           Visibility="{Binding HasMessage, Mode=OneWay, Converter={StaticResource RunTargetsVisibility}}" />
+            </StackPanel>
+        </ui:Flyout>
+    </Grid>
+</UserControl>

@@ -138,6 +138,11 @@ public sealed class PuloniaGameTaskLease : IDisposable
     private int _disposed;
 
     /// <summary>
+    /// 替代默认释放流程的动作；只用于不触碰游戏的测试租约，生产租约为空。
+    /// </summary>
+    private readonly Action? _release;
+
+    /// <summary>
     /// 获取租约时绑定的运行环境。节点内的任务只使用它；它停止后本租约下的节点失败，不切换到新的运行环境。
     /// </summary>
     public GameRuntime Runtime { get; }
@@ -152,12 +157,28 @@ public sealed class PuloniaGameTaskLease : IDisposable
     }
 
     /// <summary>
+    /// 创建不持有任务锁、也不进入任务模式的租约，释放时只调用给定动作；供单元测试替换游戏会话，不触碰游戏。
+    /// </summary>
+    /// <param name="runtime">交给执行器和切号器的运行环境，测试中可为假对象</param>
+    /// <param name="release">释放时调用的动作</param>
+    internal PuloniaGameTaskLease(GameRuntime runtime, Action release)
+    {
+        Runtime = runtime;
+        _release = release;
+    }
+
+    /// <summary>
     /// 释放所有按键、退出任务模式并归还全局任务锁；游戏会话保留以供后续节点复用。
     /// </summary>
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
             return;
+        if (_release is not null)
+        {
+            _release();
+            return;
+        }
         try
         {
             PuloniaGameTaskCoordinator.CleanupTaskState(Runtime);

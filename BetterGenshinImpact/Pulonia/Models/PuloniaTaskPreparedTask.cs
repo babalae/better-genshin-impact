@@ -81,9 +81,9 @@ public sealed class PuloniaTaskPreparedTask
     [JsonProperty("resource_version")]
     public string? ResourceVersion { get; }
 
-    /// <summary>准备时固定的文件级采集规则；旧快照缺省时由原始资源定位恢复。</summary>
-    [JsonProperty("collection_cooldown", NullValueHandling = NullValueHandling.Ignore)]
-    public PuloniaCollectionCooldownPolicy? CollectionCooldown { get; }
+    /// <summary>准备时固定的路线刷新规则（只用于地图追踪节点）；快照缺省时由原始资源定位恢复。</summary>
+    [JsonProperty("refresh_rule", NullValueHandling = NullValueHandling.Ignore)]
+    public PuloniaRouteRefreshRule? RefreshRule { get; }
 
     /// <summary>
     /// 有效参数的防御性副本；修改返回值不影响运行树。
@@ -126,7 +126,7 @@ public sealed class PuloniaTaskPreparedTask
         string name, string taskType, bool isEnabled, string? path, string? resourceVersion, JObject parameters,
         IDictionary<string, string> parameterSources, PuloniaTaskPolicy policy,
         IEnumerable<PuloniaTaskPreparedTask> children, ScriptResourceReference? resource = null,
-        PuloniaCollectionCooldownPolicy? collectionCooldown = null, IDictionary<string, string>? settingSources = null)
+        PuloniaRouteRefreshRule? refreshRule = null, IDictionary<string, string>? settingSources = null)
     {
         PlanId = planId;
         TaskId = taskId;
@@ -138,7 +138,7 @@ public sealed class PuloniaTaskPreparedTask
         Path = path;
         Resource = resource;
         ResourceVersion = resourceVersion;
-        CollectionCooldown = collectionCooldown;
+        RefreshRule = refreshRule;
         _parameters = (JObject)parameters.DeepClone();
         _policy = policy.Clone();
         ParameterSources = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(parameterSources));

@@ -160,8 +160,9 @@ public partial class PuloniaTaskNodeSettingsDialogViewModel : ObservableObject
         var settings = _definition is not null && Node.IsLeaf && IsSoloTask
             ? PuloniaTaskSettingsEditorViewModel.Create(_registry, _definition, Document.GetOneDragonParameters(Node))
             : null;
+        // 累计次数以本页显示路线 CD 的账户为主（统筹设计 5.6，含“CD 按账户”的临时选择）
         if (settings?.DedicatedSettings is AutoBossSettingsViewModel boss)
-            _ = boss.SetProgressScopeAsync(Document.Id, Node.Id);
+            _ = boss.SetProgressScopeAsync(Document.Id, Node.Id, Session.GetCooldownAccount(Document)?.Id);
         return settings;
     }
 

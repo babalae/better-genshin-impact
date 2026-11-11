@@ -30,12 +30,13 @@ public sealed class PuloniaTaskSnapshot
     public DateTimeOffset PreparedAt { get; }
 
     /// <summary>
-    /// 本次选择的账号资料 ID，不代表已经核验游戏 UID。
+    /// 计划指定的账户 ID，准备时固定；跟随当前账户时为空（运行账户在运行开始时确定，写入运行记录）。
+    /// 不代表已经核验游戏 UID。
     /// </summary>
     [JsonProperty("account_id")]
     public string? AccountId { get; }
 
-    /// <summary>提交时固定的原神账号准备资料 JSON；为空表示普通计划未启用账号准备。</summary>
+    /// <summary>计划指定账户时准备时固定的账户资料 JSON；跟随当前账户时为空。</summary>
     [JsonProperty("genshin_account_json")]
     public string? GenshinAccountJson { get; }
 
@@ -69,13 +70,20 @@ public sealed class PuloniaTaskSnapshot
     /// <summary>
     /// 复制来源记录并建立只读快照。
     /// </summary>
-    internal PuloniaTaskSnapshot(PuloniaTaskPlan plan, string? accountId, PuloniaTaskPreparedTask root,
+    /// <param name="plan">入口计划副本</param>
+    /// <param name="account">计划指定的账户资料；跟随当前账户时为空</param>
+    /// <param name="root">准备好的根节点</param>
+    /// <param name="plans">入口及引用计划的原始 JSON</param>
+    /// <param name="profiles">本次用到的设置方案 JSON</param>
+    internal PuloniaTaskSnapshot(PuloniaTaskPlan plan, PuloniaGenshinAccountProfile? account, PuloniaTaskPreparedTask root,
         Dictionary<string, string> plans, Dictionary<string, string> profiles)
     {
         PlanId = plan.Id;
         Revision = plan.Revision;
         PreparedAt = DateTimeOffset.UtcNow;
-        AccountId = accountId;
+        AccountId = account?.Id;
+        // 用独立的不可变 JSON 固定账户资料，不暴露可被编辑的模型对象。
+        GenshinAccountJson = account is null ? null : PuloniaTaskJson.Write(account);
         RootTask = root;
         PlanJsonById = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>(plans));
         PresetJsonById = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>());
@@ -110,10 +118,4 @@ public sealed class PuloniaTaskSnapshot
     /// 输出运行快照供持久化和续跑。
     /// </summary>
     public string ToJson() => PuloniaTaskJson.Write(this);
-
-    /// <summary>用独立的不可变 JSON 固定账号资料，不暴露可被编辑的模型对象。</summary>
-    internal PuloniaTaskSnapshot WithGenshinAccount(PuloniaGenshinAccountProfile account)
-        => new(PlanId, Revision, PreparedAt, AccountId, RootTask,
-            new Dictionary<string, string>(PlanJsonById), new Dictionary<string, string>(PresetJsonById),
-            PuloniaTaskJson.Write(account), new Dictionary<string, string>(ProfileJsonById));
 }

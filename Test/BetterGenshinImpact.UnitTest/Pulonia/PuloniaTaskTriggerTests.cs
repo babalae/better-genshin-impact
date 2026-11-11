@@ -74,11 +74,11 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
             Assert.Equal(PuloniaTaskRunStatus.Succeeded, (await service.WaitForCompletionAsync(id).WaitAsync(TimeSpan.FromSeconds(15))).Status);
             await service.CheckTriggersAsync([plan]);
             Assert.Single(await service.ListRunsAsync());
-            var persisted = await store.LoadStateAsync();
+            var persisted = await store.LoadStateAsync(PuloniaInstanceKey.Primary);
             Assert.Equal(DateTimeOffset.Parse("2026-10-04T04:00:00+08:00"),
                 Assert.Single(persisted.State.TriggerStates).LastOccurrenceUtc);
             // 游标只持久化防重复字段，最近结果由服务从运行记录读取。
-            var stateJson = JObject.Parse(await File.ReadAllTextAsync(Path.Combine(_directory, "state.json")));
+            var stateJson = JObject.Parse(await File.ReadAllTextAsync(store.GetStatePath(PuloniaInstanceKey.Primary)));
             Assert.Equal(CursorFields,
                 ((JObject)stateJson["trigger_states"]![0]!).Properties().Select(item => item.Name).Order().ToArray());
             var status = Assert.Single(service.GetTriggerStatuses());
@@ -111,7 +111,7 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
         var occurrence = clock.GetUtcNow().AddDays(-1);
         PuloniaTaskTriggerState Cursor(string planId, string triggerId) => new()
             { PlanId = planId, TriggerId = triggerId, TriggerActivatedAtUtc = active.ActivatedAtUtc, LastOccurrenceUtc = occurrence };
-        await store.SaveStateAsync(new PuloniaTaskState
+        await store.SaveStateAsync(PuloniaInstanceKey.Primary, new PuloniaTaskState
         {
             TriggerStates = [Cursor(plan.Id, disabled.Id), Cursor(plan.Id, hotkey.Id),
                 Cursor(PuloniaId.NewPlanId(), PuloniaId.NewTriggerId()), Cursor(plan.Id, PuloniaId.NewTriggerId())]
@@ -120,13 +120,13 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
 
         await service.CheckTriggersAsync([plan]);
 
-        var cursors = (await store.LoadStateAsync()).State.TriggerStates;
+        var cursors = (await store.LoadStateAsync(PuloniaInstanceKey.Primary)).State.TriggerStates;
         Assert.Equal(new[] { active.Id, disabled.Id }.Order(), cursors.Select(item => item.TriggerId).Order());
         plan.Triggers.RemoveAll(item => item.Id == active.Id);
         await service.CheckTriggersAsync([plan]);
-        Assert.Equal(disabled.Id, Assert.Single((await store.LoadStateAsync()).State.TriggerStates).TriggerId);
+        Assert.Equal(disabled.Id, Assert.Single((await store.LoadStateAsync(PuloniaInstanceKey.Primary)).State.TriggerStates).TriggerId);
         await service.CheckTriggersAsync([]);
-        Assert.Empty((await store.LoadStateAsync()).State.TriggerStates);
+        Assert.Empty((await store.LoadStateAsync(PuloniaInstanceKey.Primary)).State.TriggerStates);
     }
 
     /// <summary>离线多日只合并窗口内最新一次，关闭补触发时不会运行旧时间。</summary>
@@ -166,7 +166,7 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
         await service.CheckTriggersAsync([plan]);
         var queued = (await service.ListRunsAsync()).Single(item => item.PlanId == plan.Id);
         var id = queued.RunId;
-        var durable = (await store.LoadStateAsync()).State;
+        var durable = (await store.LoadStateAsync(PuloniaInstanceKey.Primary)).State;
         // 请求与游标在同一次状态替换中提交。
         Assert.Equal(queued.OccurrenceUtc, durable.TriggerStates.Single(item => item.TriggerId == plan.Triggers[0].Id).LastOccurrenceUtc);
         Assert.Contains(durable.PendingRequests, item => item.RunId == id);
@@ -204,7 +204,7 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
         var id = PuloniaId.NewRunId(clock.GetUtcNow()); var occurrence = clock.GetUtcNow().AddSeconds(-2);
         var snapshot = await new PuloniaTaskBuilder(store).BuildAsync(plan, new PuloniaTaskBuildOptions
         { Definitions = new PuloniaCSharpTaskExecutor(new PuloniaCSharpTaskRegistry()).Definitions.ToList() });
-        await store.SaveStateAsync(new PuloniaTaskState
+        await store.SaveStateAsync(PuloniaInstanceKey.Primary, new PuloniaTaskState
         {
             PendingRequests = [new PuloniaTaskRunRecord
             {
@@ -318,7 +318,7 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
         Assert.Empty(await service.ListRunsAsync());
         Assert.Equal(PuloniaTaskTriggerOutcome.Missed, Assert.Single(service.GetTriggerStatuses()).Outcome);
         Assert.Equal(DateTimeOffset.Parse("2026-10-04T04:01:00+08:00"),
-            Assert.Single((await store.LoadStateAsync()).State.TriggerStates).LastOccurrenceUtc);
+            Assert.Single((await store.LoadStateAsync(PuloniaInstanceKey.Primary)).State.TriggerStates).LastOccurrenceUtc);
     }
 
     /// <summary>迟到判定：容差内准点；持续轮询时上一轮检查之后到点的不算遗漏；首轮或空档后超过容差算遗漏。</summary>
@@ -352,7 +352,7 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
         await service.FireHotkeyAsync(plan.Id, trigger.Id);
 
         Assert.Equal(2, (await service.ListRunsAsync()).Count);
-        Assert.Empty((await store.LoadStateAsync()).State.TriggerStates);
+        Assert.Empty((await store.LoadStateAsync(PuloniaInstanceKey.Primary)).State.TriggerStates);
     }
 
     /// <summary>只清理本测试生成且校验过的独占临时目录。</summary>

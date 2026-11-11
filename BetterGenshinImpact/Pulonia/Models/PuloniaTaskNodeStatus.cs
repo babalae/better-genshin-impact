@@ -31,7 +31,7 @@ public enum PuloniaTaskNodeStatus
     TimedOut,
 
     /// <summary>
-    /// 节点可能已产生副作用，但状态文件中没有确认事件。
+    /// 节点可能已产生副作用，但状态文件中没有可确认的结果。
     /// </summary>
     NeedsAttention
 }

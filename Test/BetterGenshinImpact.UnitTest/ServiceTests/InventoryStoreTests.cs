@@ -737,6 +737,38 @@ public sealed class InventoryStoreTests : IDisposable
         Assert.DoesNotContain(Uid, await _store.ListUidsAsync());
     }
 
+    /// <summary>
+    /// 账户 UID 修改时数据目录改名：主库存文件及备份中的 UID 改写为新值，按新 UID 能读出原库存和事件；
+    /// 新 UID 已有数据时拒绝且两边不变；旧 UID 没有数据时不建立目录。
+    /// </summary>
+    [Fact]
+    public async Task RenameUid_MovesRecordsAndRejectsExistingTarget()
+    {
+        await _store.ReportAsync(Uid, Source("a"), [Report("摩拉", 8)]);
+        await _store.ReportAsync(Uid, Source("a"), [Report("摩拉", 9, 1)]);
+        const string renamed = "100000002";
+
+        await _store.RenameUidAsync(Uid, renamed);
+
+        Assert.False(await _store.HasUidDataAsync(Uid));
+        Assert.True(await _store.HasUidDataAsync(renamed));
+        Assert.Equal(9, (await _store.LoadAsync(renamed)).Inventory.Items["摩拉"][0].Quantity);
+        var directory = Path.Combine(_root, "records", renamed);
+        Assert.Equal(renamed, (string?)JObject.Parse(File.ReadAllText(Path.Combine(directory, "inventory.json")))["Uid"]);
+        Assert.Equal(renamed, (string?)JObject.Parse(File.ReadAllText(Path.Combine(directory, "inventory.json.bak")))["Uid"]);
+
+        // 目标已有数据：拒绝，不合并两份记录
+        await _store.ReportAsync("100000003", Source("a"), [Report("摩拉", 3)]);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _store.RenameUidAsync(renamed, "100000003"));
+        Assert.Equal(9, (await _store.LoadAsync(renamed)).Inventory.Items["摩拉"][0].Quantity);
+        Assert.Equal(3, (await _store.LoadAsync("100000003")).Inventory.Items["摩拉"][0].Quantity);
+
+        // 旧 UID 没有数据：不做任何事；首位为 0 的 UID 不可能有数据
+        await _store.RenameUidAsync("100000009", "100000010");
+        Assert.False(await _store.HasUidDataAsync("100000010"));
+        Assert.False(await _store.HasUidDataAsync("012345678"));
+    }
+
     /// <summary>冲突错误禁止接受；舍弃只清理异常，不覆盖确认库存。</summary>
     [Fact]
     public async Task OlderRecord_CannotBeAccepted()

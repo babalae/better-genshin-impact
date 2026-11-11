@@ -117,19 +117,19 @@ public class Genshin
     public async Task Tp(double x, double y)
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        await new TpTask(_runtime, _config, _ct).Tp(x, y);
+        await Pluggable.Get<ITpTaskFactory>().Create(_runtime, _config, _ct).Tp(x, y);
     }
 
     public async Task Tp(double x, double y, string mapName, bool force)
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        await new TpTask(_runtime, _config, _ct).Tp(x, y, mapName, force);
+        await Pluggable.Get<ITpTaskFactory>().Create(_runtime, _config, _ct).Tp(x, y, mapName, force);
     }
 
     public async Task Tp(double x, double y, bool force)
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        await new TpTask(_runtime, _config, _ct).Tp(x, y, MapTypes.Teyvat.ToString(), force);
+        await Pluggable.Get<ITpTaskFactory>().Create(_runtime, _config, _ct).Tp(x, y, MapTypes.Teyvat.ToString(), force);
     }
 
     /// <summary>
@@ -170,7 +170,7 @@ public class Genshin
     public async Task MoveMapTo(double x, double y, string? forceCountry = null)
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        TpTask tpTask = new TpTask(_runtime, _config, _ct);
+        var tpTask = Pluggable.Get<ITpTaskFactory>().Create(_runtime, _config, _ct);
         await tpTask.CheckInBigMapUi();
         await tpTask.SwitchRecentlyCountryMap(x, y, forceCountry);
         await tpTask.MoveMapTo(x, y, MapTypes.Teyvat.ToString());
@@ -188,7 +188,7 @@ public class Genshin
     public async Task ClickMapPoint(double x, double y, string? forceCountry = null)
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        TpTask tpTask = new TpTask(_runtime, _config, _ct);
+        var tpTask = Pluggable.Get<ITpTaskFactory>().Create(_runtime, _config, _ct);
         await tpTask.CheckInBigMapUi();
         await tpTask.SwitchRecentlyCountryMap(x, y, forceCountry);
         await tpTask.ClickMapPoint(x, y, MapTypes.Teyvat.ToString());
@@ -207,7 +207,7 @@ public class Genshin
     public async Task MoveIndependentMapTo(int x, int y, string mapName, string? forceCountry = null)
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        TpTask tpTask = new TpTask(_runtime, _config, _ct);
+        var tpTask = Pluggable.Get<ITpTaskFactory>().Create(_runtime, _config, _ct);
         await tpTask.CheckInBigMapUi();
         // 切换地区
         if (mapName == MapTypes.Teyvat.ToString())
@@ -229,7 +229,7 @@ public class Genshin
     /// <returns>当前大地图缩放等级，范围1.0-6.0</returns>
     public double GetBigMapZoomLevel()
     {
-        TpTask tpTask = new(_runtime, _config, _ct);
+        var tpTask = Pluggable.Get<ITpTaskFactory>().Create(_runtime, _config, _ct);
         using var capture = _runtime.CaptureToRectArea();
         return tpTask.GetBigMapZoomLevel(capture);
     }
@@ -248,7 +248,7 @@ public class Genshin
     public async Task SetBigMapZoomLevel(double zoomLevel)
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        TpTask tpTask = new(_runtime, _config, _ct);
+        var tpTask = Pluggable.Get<ITpTaskFactory>().Create(_runtime, _config, _ct);
         double currentZoomLevel = GetBigMapZoomLevel();
         await tpTask.AdjustMapZoomLevel(currentZoomLevel, zoomLevel);
     }
@@ -259,7 +259,7 @@ public class Genshin
     public async Task TpToStatueOfTheSeven()
     {
         using var scriptOperation = ScriptHostOperations.Enter();
-        TpTask tpTask = new TpTask(_runtime, _config, _ct);
+        var tpTask = Pluggable.Get<ITpTaskFactory>().Create(_runtime, _config, _ct);
         await tpTask.TpToStatueOfTheSeven();
     }
 
@@ -269,7 +269,7 @@ public class Genshin
     /// <returns>包含X和Y坐标的Point2f结构体</returns>
     public Point2f? GetPositionFromBigMap()
     {
-        TpTask tpTask = new TpTask(_runtime, _config, _ct);
+        var tpTask = Pluggable.Get<ITpTaskFactory>().Create(_runtime, _config, _ct);
         return tpTask.GetPositionFromBigMap(MapTypes.Teyvat.ToString());
     }
 
@@ -280,7 +280,7 @@ public class Genshin
     /// <returns>包含X和Y坐标的Point2f结构体</returns>
     public Point2f? GetPositionFromBigMap(string mapName)
     {
-        TpTask tpTask = new TpTask(_runtime, _config, _ct);
+        var tpTask = Pluggable.Get<ITpTaskFactory>().Create(_runtime, _config, _ct);
         return tpTask.GetPositionFromBigMap(mapName);
     }
 

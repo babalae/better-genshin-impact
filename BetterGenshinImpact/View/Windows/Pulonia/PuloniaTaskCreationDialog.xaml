@@ -21,7 +21,9 @@
                  WindowBackdropType="Mica"
                  Background="{DynamicResource ApplicationBackgroundBrush}"
                  mc:Ignorable="d"
-                 d:DataContext="{d:DesignInstance Type=pulonia:PuloniaTaskCreationDialogViewModel}">
+                 d:DataContext="{d:DesignInstance Type=pulonia:PuloniaTaskCreationDialogViewModel}"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
 
     <ui:FluentWindow.Resources>
         <ResourceDictionary>

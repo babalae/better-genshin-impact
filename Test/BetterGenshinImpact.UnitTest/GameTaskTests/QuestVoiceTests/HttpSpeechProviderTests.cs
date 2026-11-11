@@ -22,7 +22,7 @@ public sealed class HttpSpeechProviderTests
     /// <summary>反向代理子路径和独立参数。</summary>
     private static AppSettings Settings(string id) => new(".", new("https://service.test/proxy/"), new(1, 1, 4),
         new("普通", "", "", "", ""), new("."), Provider: new(id, "remote", id switch
-        { "voicevox" => "4", "vits-simple-api" => "BERT-VITS2:7", "google-translate" => "zh-CN", _ => "custom" }),
+        { "voicevox" => "4", "vits-simple-api" => "BERT-VITS2:7", _ => "custom" }),
         Extra: new(Language: "zh", Model: "custom-model", ApiKey: "test-secret", Rate: 1.25, Pitch: .05));
     /// <summary>有界非静音PCM16样本，协议测试不依赖私有音频。</summary>
     private static byte[] Wav()
@@ -50,7 +50,7 @@ public sealed class HttpSpeechProviderTests
     {
         HttpClient Client(TimeoutSettings _) => new(new Handler(send));
         return id switch { "voicevox" => new VoicevoxTtsProvider(Client), "vits-simple-api" => new VitsSimpleApiTtsProvider(Client),
-            "google-translate" => new GoogleTranslateTtsProvider(Client), _ => new OpenAiSpeechTtsProvider(Client) };
+            _ => new OpenAiSpeechTtsProvider(Client) };
     }
 
     /// <summary>VOICEVOX保留查询的accent数据，并以style ID合成，不误用speaker UUID。</summary>
@@ -214,34 +214,6 @@ public sealed class HttpSpeechProviderTests
         Assert.Equal(VoiceErrorCode.InvalidAudio, (await Assert.ThrowsAsync<VoiceException>(() => provider.SynthesizeAsync(Settings("openai-speech"), Request, null, default))).Code);
     }
 
-    /// <summary>Google分段保留完整文本，包含非BMP字符且不拆代理对。</summary>
-    [Fact]
-    public void GoogleSplitsWithoutLosingUnicodeOrPunctuation()
-    {
-        var text = string.Concat(Enumerable.Repeat("你好😀。 ", 50));
-        var parts = GoogleTranslateTtsProvider.SplitText(text);
-        Assert.Equal(text, string.Concat(parts));
-        Assert.All(parts, x => { Assert.InRange(x.Length, 1, 100); Assert.False(char.IsLowSurrogate(x[0])); Assert.False(char.IsHighSurrogate(x[^1])); });
-    }
-
-    /// <summary>Google不能把空白或标点分段当成必须返回语音的请求。</summary>
-    [Fact]
-    public async Task GoogleDoesNotSendUnspeakableSegments()
-    {
-        using var provider = Create("google-translate", async (message, token) =>
-        {
-            var encoded = await message.Content!.ReadAsStringAsync(token);
-            using var rpc = JsonDocument.Parse(Uri.UnescapeDataString(encoded[6..].Replace("+", " ")));
-            using var parameters = JsonDocument.Parse(rpc.RootElement[0][0][1].GetString()!);
-            Assert.Equal("你好", parameters.RootElement[0].GetString());
-            return new(HttpStatusCode.Forbidden);
-        });
-        var settings = Settings("google-translate") with { Extra = new(Rate: 1) };
-        var error = await Assert.ThrowsAsync<VoiceException>(() => provider.SynthesizeAsync(settings,
-            Request with { Text = new string(' ', 100) + "你好" }, null, default));
-        Assert.Equal(VoiceErrorCode.SynthesisRejected, error.Code);
-    }
-
     /// <summary>官方旧模型的建议列表不能提供仅新模型支持的声音，兼容服务仍可手输。</summary>
     [Fact]
     public async Task OpenAiKnownModelRecommendationsMatchItsVoices()
@@ -251,19 +223,6 @@ public sealed class HttpSpeechProviderTests
         var voices = await provider.GetVoicesAsync(settings, default);
         Assert.Equal(9, voices.Count);
         Assert.DoesNotContain(voices, x => x.Id == "marin" || x.Id == "cedar" || x.Id == "ballad" || x.Id == "verse");
-    }
-
-    /// <summary>RPC成功但无音频必须报告格式错误，而非泄露未处理的数组异常。</summary>
-    [Theory]
-    [InlineData("[]")]
-    [InlineData("null")]
-    [InlineData("[\"invalid-base64\"]")]
-    public async Task GoogleMissingAudioIsInvalidAudio(string embedded)
-    {
-        using var provider = Create("google-translate", (_, _) => Task.FromResult(Json(
-            JsonSerializer.Serialize(new object[] { new object[] { "wrb.fr", "jQ1olc", embedded } }))));
-        var settings = Settings("google-translate") with { Extra = new(Rate: 1) };
-        Assert.Equal(VoiceErrorCode.InvalidAudio, (await Assert.ThrowsAsync<VoiceException>(() => provider.SynthesizeAsync(settings, Request, null, default))).Code);
     }
 
     /// <summary>完整音频耗时与首响应字节不是同一指标。</summary>

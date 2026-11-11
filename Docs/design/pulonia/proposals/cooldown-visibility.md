@@ -1,6 +1,7 @@
 # Pulonia 路线 CD：识别、可见性与简化
 
-状态：已实现，待用户验收（2026-10-28）；D16—D19 按建议决定，与本文的差异见[第 9 节](#9-实施记录)。现行规则已写入[结果、CD 与存储](../results-and-storage.md#文件级路线-cd)和[界面](../user-interface.md#路线-cd)。需求来源 US-03（显示完成依据、剩余 CD、下次可运行时间）、US-09（有效值与来源可见）、US-11（账号之间不串 CD）。现行规则见[结果、CD 与存储](../results-and-storage.md#文件级采集-cd)，本文只写改动。  
+状态：已实现，待用户验收（2026-10-28）；D16—D19 按建议决定，与本文的差异见[第 9 节](#9-实施记录)。现行规则已写入[结果、CD 与存储](../results-and-storage.md#文件级路线-cd)和[界面](../user-interface.md#路线-cd)。需求来源 US-03（显示完成依据、剩余 CD、下次可运行时间）、US-09（有效值与来源可见）、US-11（账号之间不串 CD）。现行规则见[结果、CD 与存储](../results-and-storage.md#文件级路线-cd)，本文只写改动。  
+命名与存储已由[实例、账户与路线 CD 统筹设计](../../instance-account-model.md)更新：账本改称完成记录并按账户存放，作用域键删除。代码与参数改名见该设计 5.7，例如 `collection_cd` 改为 `route_cd`。  
 [返回总览](../README.md) · [结果、CD 与存储](../results-and-storage.md) · [界面](../user-interface.md) · [路线图](../roadmap.md)
 
 ## 1. 现状问题

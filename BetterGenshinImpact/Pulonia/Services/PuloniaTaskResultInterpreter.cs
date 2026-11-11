@@ -39,20 +39,20 @@ public static class PuloniaTaskResultInterpreter
     /// <summary>
     /// 地图追踪路线 CD 的结果字段；只在执行器实际写入时展示。
     /// </summary>
-    private static readonly string[] CollectionKeys =
+    private static readonly string[] RouteKeys =
     [
-        "collection_material", "collection_rule", "collection_rule_source", "collection_last_success_at",
-        "collection_next_eligible_at"
+        "route_material", "route_rule", "route_rule_source", "route_last_success_at",
+        "route_next_eligible_at"
     ];
 
     /// <summary>
     /// 每个地图追踪结果都相同的固定说明（采集完成依据），核验边界已在提示中说明，不逐条展示。
     /// </summary>
-    private const string CollectionBasisKey = "collection_basis";
+    private const string RouteBasisKey = "route_basis";
 
     /// <summary>路线 CD 结果中以 UTC ISO 字符串保存的时间字段，展示时转换为本机时间。</summary>
-    private static readonly HashSet<string> CollectionTimeKeys =
-        new(["collection_last_success_at", "collection_next_eligible_at"], StringComparer.Ordinal);
+    private static readonly HashSet<string> RouteTimeKeys =
+        new(["route_last_success_at", "route_next_eligible_at"], StringComparer.Ordinal);
 
     /// <summary>
     /// 各类型结果的核验边界，避免把脚本返回或路线结束解释为已领取/采集成功。
@@ -63,7 +63,7 @@ public static class PuloniaTaskResultInterpreter
         "javascript" => "旧 JS 脚本正常返回不等于游戏副作用已核验；仅展示执行器实际返回的数据与证据。",
         "keymouse" => "宏回放结束不等于游戏目标完成；录制文件本身没有结构化收益证据。",
         "shell" => "退出码表示进程结果；标准输出/错误每路最多保留 65536 字符，截断会明确标记。",
-        "csharp" => "返回值与确认事件来自注册的 C# 能力；局部确认不等于整个节点成功。",
+        "csharp" => "返回值来自注册的 C# 能力；局部确认不等于整个节点成功。",
         _ when PuloniaSoloTaskExecutor.IsSoloTaskType(taskType) =>
             "独立任务的结果种类与原因码由任务本身给出；“已执行，未核验”表示任务没有确认手段，需要核对游戏状态。奖励只列出任务识别到的物品，未识别时不推算收益。",
         _ => "没有返回领取/合成数量时不推算收益；“已执行，未核验”需要核对游戏状态。"
@@ -118,7 +118,7 @@ public static class PuloniaTaskResultInterpreter
                     AddKeyField(entries, handled, data, key, label);
                 break;
             case "pathing":
-                AddPathingFields(entries, handled, data, PuloniaCollectionCooldown.IsCooldownSkip(result));
+                AddPathingFields(entries, handled, data, PuloniaRouteCooldown.IsCooldownSkip(result));
                 break;
             case "csharp":
                 if (data.ContainsKey("sum"))
@@ -275,10 +275,10 @@ public static class PuloniaTaskResultInterpreter
             AddKeyField(entries, handled, data, "is_success", "路线完整执行");
         else
             handled.Add("is_success");
-        handled.Add(CollectionBasisKey);
-        foreach (var key in CollectionKeys.Where(data.ContainsKey))
+        handled.Add(RouteBasisKey);
+        foreach (var key in RouteKeys.Where(data.ContainsKey))
         {
-            if (!CollectionTimeKeys.Contains(key))
+            if (!RouteTimeKeys.Contains(key))
             {
                 AddKeyField(entries, handled, data, key, PuloniaTaskFieldNames.GetDisplayName(key));
                 continue;

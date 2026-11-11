@@ -65,8 +65,9 @@ public partial class PuloniaOneDragonViewModel
             fixedSettings.Edited += (_, _) => OnSettingsEdited(generation);
         foreach (var field in fields)
             TrackSettingsField(field, generation);
+        // 累计次数以按 5.6 选出的账户为主；本页没有“CD 按账户”选择器，因此不考虑任务计划页的临时选择
         if (fixedSettings is AutoBossSettingsViewModel boss)
-            _ = boss.SetProgressScopeAsync(node.Document.Id, node.Id);
+            _ = boss.SetProgressScopeAsync(node.Document.Id, node.Id, Session.GetDefaultCooldownAccount(node.Document)?.Id);
     }
 
     /// <summary>清空设置区，未选择任务时不保留任何输入。</summary>

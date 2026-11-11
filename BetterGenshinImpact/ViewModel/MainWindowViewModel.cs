@@ -8,6 +8,8 @@ using BetterGenshinImpact.GameTask.UseRedeemCode;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Helpers.Ui;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Pulonia.Remote;
+using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.Service.Interface;
 using BetterGenshinImpact.View;
 using BetterGenshinImpact.View.Pages;
@@ -220,10 +222,17 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
         IInferenceModelDiagnostics inferenceDiagnostics,
         InferenceRuntimeService inferenceRuntime,
         DownloadCenterViewModel downloadCenter,
-        IGuideWindowService guideWindowService)
+        IGuideWindowService guideWindowService,
+        IPuloniaAccountService puloniaAccounts,
+        PuloniaRunOverview? puloniaRunOverview = null,
+        PuloniaRunDispatcher? puloniaRunDispatcher = null)
     {
         DownloadCenter = downloadCenter;
         _guideWindowService = guideWindowService;
+        _puloniaAccounts = puloniaAccounts;
+        // 标题栏子实例正在运行的计划，见 MainWindowViewModel.Runs.cs
+        _puloniaRunOverview = puloniaRunOverview;
+        _puloniaRunDispatcher = puloniaRunDispatcher;
         _inferenceDiagnostics = inferenceDiagnostics;
         _inferenceRuntime = inferenceRuntime;
         _navigationService = navigationService;
@@ -240,8 +249,12 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
         if (_instanceService.Context.IsRoot)
         {
             _instanceService.ConnectedInstancesChanged += OnConnectedInstancesChanged;
+            InitializeChildInstanceRuns();
             RefreshConnectedChildInstances();
         }
+
+        // 标题栏 Pulonia 账户徽标与子实例账户，见 MainWindowViewModel.Accounts.cs
+        InitializeAccountBadge();
     }
 
     /// <summary>
@@ -257,6 +270,8 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
         _disposed = true;
         Config.CommonConfig.PropertyChanged -= OnCommonConfigPropertyChanged;
         _instanceService.ConnectedInstancesChanged -= OnConnectedInstancesChanged;
+        DisposeAccountBadge();
+        DisposeChildInstanceRuns();
         _redeemCodeDismissCts?.Cancel();
         _redeemCodeDismissCts?.Dispose();
         _redeemCodeDismissCts = null;
@@ -446,6 +461,9 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
     [RelayCommand]
     private async Task OnActivated()
     {
+        // 其他实例修改的账户设置不经过 IPC，窗口激活时重新读取标题栏账户
+        _ = RefreshAccountBadgeAsync();
+
         // 首次激活时不处理
         if (_firstActivated)
         {
@@ -744,12 +762,7 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
         {
             ModifyFolderSecurity();
 
-            // alpha 版本用户每次升级后默认切换到 V6 OCR 模型
-            if (Global.Version.Contains("alpha", StringComparison.OrdinalIgnoreCase)
-                && Config.OtherConfig.OcrConfig.PaddleOcrModelConfig != PaddleOcrModelConfig.V6)
-            {
-                Config.OtherConfig.OcrConfig.PaddleOcrModelConfig = PaddleOcrModelConfig.V6;
-            }
+            // 主程序只内置 PP-OCRv6，默认即使用它，不再需要升级时强制切换 OCR 模型
 
             Config.CommonConfig.RunForVersion = Global.Version;
         }

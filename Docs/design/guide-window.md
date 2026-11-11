@@ -67,10 +67,10 @@
 | 随引的做法 | 本设计 | 原因 |
 | --- | --- | --- |
 | 用 `WebView2CompositionControl` 承载网页，WPF 元素可以叠在网页上 | 采用（5.1） | 窗口栏叠加、整窗透明度、悬停检测都依赖它 |
-| 默认热键为 `Ctrl+Alt+…` 组合 | 作为“推荐方案”一键填入，默认不绑定（8.1） | BetterGI 现有快捷键默认都为空，升级后不应占用用户已有的组合键 |
+| 默认热键为 `Ctrl+Alt+…` 组合 | 四项常用操作默认使用方向键的键鼠监听，其余不绑定（8.1） | 与游戏内边看攻略边控制播放的操作习惯一致 |
 | 按住临时倍速，可与一个普通操作共用一个键，按 400 ms 区分长短按 | 独立的按住键，复用现有的“按住”快捷键（8.3） | 现有键鼠监听已有按下、松开事件；长短按共用会增加状态和误触，首版不做 |
 | 支持鼠标侧键 | 沿用现有快捷键对侧键的支持 | 已有 |
-| 固定的紧急恢复键，不能删除 | 紧急恢复快捷键、托盘菜单、设置页按钮三条路径（6.1） | 开启鼠标穿透后必须有不依赖鼠标的恢复方式；托盘和设置页保证没绑定快捷键时也能恢复 |
+| 固定的紧急恢复键，不能删除 | 不采用快捷键，保留托盘菜单和设置页按钮两条路径（6.1） | 托盘和设置页均可在鼠标穿透时恢复小窗 |
 | 沉浸模式用自己的 CSS 把视频铺满 | B 站直接触发网页全屏，其他网站回退为 CSS 聚焦（6.6） | 需求指定使用 B 站网页全屏，播放器控件和弹幕行为与网站保持一致 |
 | 从收藏或历史打开时恢复进度，直接打开网页时沿用网站自己的进度 | 采用（10.3） | 避免和 B 站的“上次看到”互相覆盖 |
 | 自动开启中文字幕，字幕同步到独立浮窗 | 采用（第 11 节） | 对应“独立字幕” |
@@ -140,7 +140,7 @@
 ```csharp
 // WebViewEnvironmentDefinition.cs 的 WebViewEnvironments 中
 /// <summary>
-/// 悬浮小窗：独立浏览器进程。允许没有用户手势的媒体播放，快捷键播放、切集后续播不会被自动播放策略拦截
+/// 悬浮小窗：独立浏览器进程。允许没有用户手势的媒体播放，快捷键播放、按钮切集后续播不会被自动播放策略拦截
 /// </summary>
 public static readonly WebViewEnvironmentDefinition Guide = new("Guide", "悬浮小窗")
 {
@@ -202,14 +202,14 @@ public static readonly WebViewProfile Guide = new(WebViewEnvironments.Guide, Web
 
 | 方式 | 采用 | 说明 |
 | --- | --- | --- |
-| 快捷键“用小窗打开剪贴板链接” | 是 | 在游戏中复制链接后直接按键，不用切窗口 |
+| 快捷键“用小窗打开剪贴板链接” | 否 | 通过托盘菜单、主窗口识别或窗口栏地址框打开 |
 | 主窗口激活时识别 | 是 | 沿用现有的剪贴板读取时机，只提示，不自动打开 |
 | 窗口栏地址框粘贴 | 是 | 普通浏览器的习惯 |
-| 系统剪贴板监听（`AddClipboardFormatListener`） | 否 | 会在后台读取用户的每一次复制，隐私顾虑大；上面三种已覆盖常见场景 |
+| 系统剪贴板监听（`AddClipboardFormatListener`） | 否 | 会在后台读取用户的每一次复制，隐私顾虑大；上面的入口已覆盖常见场景 |
 
 ## 6. 交互设计
 
-原则：常用操作一键完成，所有按钮的提示里写出对应快捷键；状态变化都有可见反馈；任何状态下都能用快捷键、托盘或设置页恢复到可操作的小窗。
+原则：常用操作一键完成，有可配置快捷键的按钮在提示里写出对应快捷键；状态变化都有可见反馈；任何状态下都能用托盘或设置页恢复到可操作的小窗。
 
 ### 6.1 状态
 
@@ -220,7 +220,7 @@ public static readonly WebViewProfile Guide = new(WebViewEnvironments.Guide, Web
 | 打开 | 关闭 / 打开 | 关闭会释放网页（停止播放、回收内存）；打开时恢复上次的页面 |
 | 显示 | 显示 / 隐藏 | 用户隐藏，或被游戏切后台、任务自动隐藏。隐藏不释放网页 |
 | 输入 | 悬停交互 / 鼠标穿透 / 交互模式 | 见下图 |
-| 形态 | 普通 / 沉浸 | 沉浸快捷键或窗口栏按钮 |
+| 形态 | 普通 / 沉浸 | 窗口栏按钮 |
 
 ```mermaid
 stateDiagram-v2
@@ -230,15 +230,15 @@ stateDiagram-v2
     [*] --> Hover
     Hover --> Through: 穿透快捷键 / 窗口栏穿透按钮
     Through --> Hover: 穿透快捷键 / 紧急恢复 / 托盘
-    Hover --> Interact: 交互快捷键 / 编辑地址 / 点击网页输入框
-    Through --> Interact: 交互快捷键
+    Hover --> Interact: 窗口栏交互按钮 / 编辑地址 / 点击网页输入框
+    Through --> Interact: 窗口栏交互按钮
     Interact --> Hover: 结束（进入前是悬停交互）
     Interact --> Through: 结束（进入前是鼠标穿透）
 ```
 
-交互模式在满足任一条件时结束：再次按交互快捷键；点窗口栏的“完成”；地址框回车或 Esc；鼠标离开小窗超过 2 秒（可设置，0 表示不自动结束）；游戏窗口重新成为前台（用户点了游戏）。结束时，如果进入前游戏在前台，就把焦点还给游戏（`SystemControl.FocusWindow`）。
+交互模式在满足任一条件时结束：再次点击窗口栏的交互按钮；点窗口栏的“完成”；地址框回车或 Esc；鼠标离开小窗超过 2 秒（可设置，0 表示不自动结束）；游戏窗口重新成为前台（用户点了游戏）。结束时，如果进入前游戏在前台，就把焦点还给游戏（`SystemControl.FocusWindow`）。
 
-紧急恢复：显示小窗，退出交互模式和沉浸模式，关闭鼠标穿透，不透明度恢复 100%，把小窗移回可见工作区并重新置顶。入口有三处：紧急恢复快捷键、托盘菜单“悬浮小窗 → 恢复小窗”、设置页顶部的“恢复小窗”按钮。即使没有绑定快捷键，开启鼠标穿透后也不会无法操作小窗。
+紧急恢复：显示小窗，退出交互模式和沉浸模式，关闭鼠标穿透，不透明度恢复 100%，把小窗移回可见工作区并重新置顶。入口有两处：托盘菜单“悬浮小窗 → 恢复小窗”、设置页顶部的“恢复小窗”按钮。开启鼠标穿透后仍可从这两处恢复操作。
 
 ### 6.2 显示规则
 
@@ -277,7 +277,7 @@ stateDiagram-v2
 | 窗口 | ⌨、◎、⚙、⋯ | ⌨ 交互模式（进入后显示为 ✓）；◎ 鼠标穿透；⚙ 设置菜单（含始终置顶）；⋯ 只在有按钮被收起时出现，列出被收起的按钮 |
 | 关闭 | —、✕ | — 隐藏（保留网页）；✕ 关闭（释放网页） |
 
-- 每个按钮的提示写出对应快捷键，例如“鼠标穿透（Ctrl+Alt+P）”；没绑定时不写。
+- 有可配置快捷键的按钮在提示中写出对应快捷键，例如“鼠标穿透（Ctrl+Alt+P）”；没绑定时不写。
 - 在窗口栏空白处滚动鼠标调整不透明度。
 - 宽度不够时按优先级把按钮收进 ⋯ 菜单，每一档都给标题留出至少约 60 DIP：小于 640 收“网页”区，小于 560 收 ⌨ ◎，小于 500 收“收藏”区，小于 430 收倍速、🔊、CC、⛶。⏯、⚙、⋯、—、✕ 始终保留，最小宽度 320 DIP 时也能放下。默认宽度 480 DIP 时显示播放区全部按钮。
 - 编辑地址时收起标题以外的全部按钮，地址框占满整条窗口栏。
@@ -305,7 +305,7 @@ stateDiagram-v2
 - 窗口设置为 `WindowStyle=None`、`ResizeMode=NoResize`、`AllowsTransparency=True`。没有系统缩放框，拖到屏幕边缘不会触发 Windows 贴靠和分屏。
 - 拖动：在窗口栏的 ⠿ 或空白处按住，调用 `DragMove`。
 - 缩放：四边 6 DIP、四角 12 DIP 的透明缩放区，只在悬停或交互模式下可用。默认 480×270 DIP，最小 320×180 DIP。沉浸模式下按视频宽高比缩放（比例来自播放桥上报的 `videoWidth`、`videoHeight`，没有时用 16:9）。
-- 默认位置：游戏窗口右上角，边距 16 DIP。没有游戏窗口时放在主显示器工作区的右上角。
+- 默认位置模式为自由放置，首次打开时位于主显示器工作区右上角，边距 16 DIP。
 
 位置模式：
 
@@ -341,7 +341,7 @@ stateDiagram-v2
 
 ### 6.7 热键反馈与进度线
 
-- 热键反馈：快捷键改变播放或窗口状态时，在小窗左上角显示 1.2 秒的提示，例如“快进 5 秒 · 12:35 / 20:10”“倍速 1.5x”“音量 60%”“鼠标穿透：开（Ctrl+Alt+P 关闭）”“没有下一集”。小窗隐藏时不显示。
+- 热键反馈：快捷键改变播放或窗口状态时，在小窗左上角显示 1.2 秒的提示，例如“快进 5 秒 · 12:35 / 20:10”“倍速 1.5x”“不透明度 85%”“鼠标穿透：开（Ctrl+Alt+P 关闭）”。小窗隐藏时不显示。
 - 底部进度线：窗口栏隐藏时，在小窗底边显示 3 DIP 高的进度线，已播放部分用主题强调色。只显示，不响应点击。直播或时长未知时不显示。可在设置中关闭。
 
 ### 6.8 打开入口
@@ -352,7 +352,7 @@ stateDiagram-v2
 | 设置页“打开小窗”按钮 | 同上 |
 | 托盘菜单“悬浮小窗” | 显示/隐藏、恢复小窗、打开剪贴板链接、设置 |
 | 地图点位详情的“小窗”按钮 | 在小窗中打开该视频（9.3） |
-| 快捷键“打开剪贴板链接”、主窗口激活时的提示 | 在小窗中打开剪贴板里的链接（9.4） |
+| 托盘菜单“打开剪贴板链接”、主窗口激活时的提示 | 在小窗中打开剪贴板里的链接（9.4） |
 | 进入游戏 | 按设置自动打开（9.1） |
 
 ## 7. 播放控制与 B 站适配
@@ -432,43 +432,33 @@ sequenceDiagram
 
 ## 8. 快捷键
 
-### 8.1 列表与推荐方案
+### 8.1 列表与默认方案
 
-快捷键页新增一级分组“悬浮小窗”。所有项默认不绑定，设置页提供“一键填入推荐快捷键”。
+快捷键页新增一级分组“悬浮小窗”。显示/隐藏、播放/暂停、快退、快进默认使用四个方向键的键鼠监听，其余项默认不绑定。设置页提供“一键填入默认快捷键”，只恢复这四项中的空值。
 
-| 功能 | 配置属性 | 推荐方案 | 类型 |
+| 功能 | 配置属性 | 默认值 | 默认类型 |
 | --- | --- | --- | --- |
-| 显示/隐藏小窗 | `GuideToggleHotkey` | Ctrl+Alt+H | 全局热键 |
-| 播放/暂停 | `GuidePlayPauseHotkey` | Ctrl+Alt+Space | 全局热键 |
-| 快退 | `GuideSeekBackwardHotkey` | Ctrl+Alt+Left | 全局热键 |
-| 快进 | `GuideSeekForwardHotkey` | Ctrl+Alt+Right | 全局热键 |
-| 倍速增加 | `GuideSpeedUpHotkey` | Ctrl+Alt+Up | 全局热键 |
-| 倍速降低 | `GuideSpeedDownHotkey` | Ctrl+Alt+Down | 全局热键 |
-| 倍速重置为 1x | `GuideSpeedResetHotkey` | Ctrl+Alt+0 | 全局热键 |
-| 按住临时加速 | `GuideBoostHotkey` | 鼠标侧键（前进键） | 键鼠监听（按住） |
-| 音量增加 | `GuideVolumeUpHotkey` | Ctrl+Alt+PageUp | 全局热键 |
-| 音量降低 | `GuideVolumeDownHotkey` | Ctrl+Alt+PageDown | 全局热键 |
-| 静音 | `GuideMuteHotkey` | Ctrl+Alt+M | 全局热键 |
-| 上一集 | `GuidePrevEpisodeHotkey` | Ctrl+Alt+[ | 全局热键 |
-| 下一集 | `GuideNextEpisodeHotkey` | Ctrl+Alt+] | 全局热键 |
-| 不透明度增加 | `GuideOpacityUpHotkey` | Ctrl+Alt+Shift+Up | 全局热键 |
-| 不透明度降低 | `GuideOpacityDownHotkey` | Ctrl+Alt+Shift+Down | 全局热键 |
-| 鼠标穿透开关 | `GuideClickThroughHotkey` | Ctrl+Alt+P | 全局热键 |
-| 交互模式 | `GuideInteractHotkey` | Ctrl+Alt+I | 全局热键 |
-| 沉浸模式 | `GuideImmersiveHotkey` | Ctrl+Alt+F | 全局热键 |
-| 字幕浮窗开关 | `GuideSubtitleHotkey` | Ctrl+Alt+C | 全局热键 |
-| 用小窗打开剪贴板链接 | `GuideOpenClipboardHotkey` | Ctrl+Alt+V | 全局热键 |
-| 紧急恢复 | `GuideRestoreHotkey` | Ctrl+Alt+F10 | 全局热键 |
+| 显示/隐藏小窗 | `GuideToggleHotkey` | Down | 键鼠监听 |
+| 播放/暂停 | `GuidePlayPauseHotkey` | Up | 键鼠监听 |
+| 快退 | `GuideSeekBackwardHotkey` | Left | 键鼠监听 |
+| 快进 | `GuideSeekForwardHotkey` | Right | 键鼠监听 |
+| 倍速增加 | `GuideSpeedUpHotkey` | 空 | 全局热键 |
+| 倍速降低 | `GuideSpeedDownHotkey` | 空 | 全局热键 |
+| 倍速重置为 1x | `GuideSpeedResetHotkey` | 空 | 全局热键 |
+| 按住临时加速 | `GuideBoostHotkey` | 空 | 键鼠监听（按住） |
+| 不透明度增加 | `GuideOpacityUpHotkey` | 空 | 全局热键 |
+| 不透明度降低 | `GuideOpacityDownHotkey` | 空 | 全局热键 |
+| 鼠标穿透开关 | `GuideClickThroughHotkey` | 空 | 全局热键 |
+| 字幕浮窗开关 | `GuideSubtitleHotkey` | 空 | 全局热键 |
 
-- 按 `HotKeyConfig` 的约定，每项是两个属性：`XxxHotkey` 默认 `""`；`XxxHotkeyType` 默认 `GlobalRegister`，按住临时加速为 `KeyboardMonitor`。
-- 推荐方案不用 `=`、`-`：全局热键按 WinForms `Keys` 的名称解析按键，WPF 的 `OemPlus` 在 `Keys` 中叫 `Oemplus`，无法注册。音量改用 PageUp/PageDown，上一集、下一集改用 `[`、`]`。
-- 推荐方案使用 Ctrl+Alt 组合，原神默认键位不使用这些组合。部分 Intel 显卡驱动用 Ctrl+Alt+方向键旋转屏幕，遇到时在驱动设置中关闭该功能，或改用其他组合。设置页在推荐方案旁写明这一点。
-- 一键填入只填当前为空的项，并跳过已被其他功能占用的组合（用 `HotKeySettingModel.AreConflicting` 与全部已注册项比较）。原因：快捷键页发现新值与其他项相同时会清空其他项（`RemoveDuplicateHotKey`），直接填入可能清掉用户已有的绑定。被其他程序占用而注册失败的项，在对应行显示 `RegistrationError`。完成后提示“已填入 N 项，M 项因冲突跳过”。
+- 每项仍按 `HotKeyConfig` 的约定保存“快捷键 + 类型”两个属性；除表中四项外，其余快捷键值均为 `""`。
+- 四个方向键均使用键鼠监听，按键会同时传给游戏。
+- 一键填入只恢复四项默认快捷键中当前为空的项，并跳过已被其他功能占用的按键（用 `HotKeySettingModel.AreConflicting` 与全部已注册项比较），不会填充其余八项，也不会清除用户已有的绑定。
 
 ### 8.2 行为
 
 - 快捷键回调直接调用 `IGuideWindowService`，服务内部切换到界面线程。
-- 小窗未打开时，只有“显示/隐藏小窗”和“打开剪贴板链接”会打开小窗，其他快捷键不做任何事。
+- 小窗未打开时，只有“显示/隐藏小窗”快捷键会打开小窗，其他快捷键不做任何事。
 - 小窗已打开但隐藏时，播放类快捷键仍然生效，可以只听声音。
 - 游戏聊天框打开时，全局热键由 `ChatUiHotkeyGuard` 屏蔽，与其他功能一致。
 - 云原神网页版实例不注册任何热键（现有规则）。首版小窗只在主实例可用，子实例中这组快捷键的回调直接返回（Q3）。
@@ -552,11 +542,11 @@ sequenceDiagram
 - 设置“地图点位视频默认用小窗打开”默认开：点击链接本身时，能识别为视频页（`GuideLinkResolver.IsVideoUrl`）的链接用小窗打开，其他链接用浏览器打开；右侧图标为“在浏览器打开”。关闭该设置时，点击链接用浏览器打开，右侧图标为“在悬浮小窗打开”。
 - `MaskMapPointInfoPopupViewModel` 新增 `IsGuideWindowAvailable`、`IsGuideWindowPreferred`（每次打开详情时读取设置）和 `OpenUrlAlternateCommand`；`OpenUrl` 按上面的规则选择打开方式，调用 `IGuideWindowService.Open(new GuideOpenRequest(url, GuideOpenSource.MapPoint))`。
 
-### 9.4 剪贴板快捷打开
+### 9.4 打开剪贴板链接
 
-识别规则（`GuideLinkResolver`）：文本长度不超过 1000，取第一个匹配。B 站视频、番剧、短链接和纯文本 BV 号按 7.3 识别；快捷键和地址框粘贴另外接受任意 http、https 网址。
+识别规则（`GuideLinkResolver`）：文本长度不超过 1000，取第一个匹配。B 站视频、番剧、短链接和纯文本 BV 号按 7.3 识别；托盘菜单和地址框粘贴另外接受任意 http、https 网址。
 
-- 快捷键：在界面线程读取剪贴板（失败时忽略），识别成功就在小窗中打开。识别失败时在小窗中提示“剪贴板中没有可打开的链接”；小窗未打开时用 Toast 提示。
+- 托盘菜单：在界面线程读取剪贴板（失败时忽略），识别成功就在小窗中打开。识别失败时在小窗中提示“剪贴板中没有可打开的链接”；小窗未打开时用 Toast 提示。
 - 主窗口激活：在 `MainWindowViewModel.OnActivated` 的脚本导入、兑换码之后增加第三个处理器。只识别 B 站链接；与上次询问过的链接或小窗当前的视频相同时不询问。询问使用 `ThemedMessageBox.QuestionAsync`（“是”在小窗打开，“否”不处理），与兑换码识别的交互一致；提示中说明可以在设置页关闭。设置“识别剪贴板中的 B 站链接”默认开。
 
 ### 9.5 智能透明
@@ -677,7 +667,7 @@ public sealed class GuideWatchRecord
 - 调整：小窗 ⚙ → “调整字幕位置…”，或设置页的按钮，进入调整模式：取消穿透，显示虚线边框和“完成”按钮；拖动移动位置，拖右下角调整宽度，Ctrl+滚轮调整字号；点“完成”或按 Esc 结束并保存。
 - 字幕来源：播放桥上报的文本。B 站读取播放器字幕层，其他网站读取处于显示状态的 HTML5 字幕轨道的当前字幕。没有字幕时浮窗隐藏。
 - 开启浮窗时默认隐藏网页内的字幕（设置“开启字幕浮窗时隐藏网页内字幕”）。隐藏只改可见性，播放桥仍能读到文本。
-- 显示条件：开关已开、小窗已打开、当前有字幕文本、没有被任务或游戏切后台自动隐藏。设置“小窗隐藏时继续显示字幕”（默认开）用于“只听声音、看字幕”，它依赖隐藏状态下网页仍更新字幕，需要实测（17.3）。
+- 显示条件：开关已开、小窗已打开且正在显示、当前有字幕文本。小窗无论因用户操作、任务还是游戏切到后台而隐藏，字幕浮窗都同步隐藏；小窗恢复显示时，若仍有字幕文本则同步恢复。
 
 ## 12. 设置
 
@@ -708,11 +698,11 @@ public sealed class GuideWatchRecord
     快进/快退步长、倍速步长、临时加速倍率、音量步长、续播、恢复倍速、
     自动开启中文字幕、记住沉浸模式
 ▸ 字幕浮窗          关
-    开关、字号、背景不透明度、隐藏网页内字幕、小窗隐藏时继续显示、[调整字幕位置…]
-▸ 快捷键            已绑定 12 / 21                    [一键填入推荐快捷键]
+    开关、字号、背景不透明度、隐藏网页内字幕、[调整字幕位置…]
+▸ 快捷键            已绑定 4 / 12                     [一键填入默认快捷键]
     （“悬浮小窗”分组的快捷键列表；冲突和注册失败直接显示在对应行）
-    ⓘ 推荐方案使用 Ctrl+Alt 组合；部分 Intel 显卡驱动会用 Ctrl+Alt+方向键旋转屏幕。
-      按住临时加速只能用单键或鼠标侧键，按键会同时传给游戏。
+    ⓘ 默认使用键鼠监听：Down 显示或隐藏、Up 播放或暂停、Left 快退、Right 快进。
+      其余快捷键默认留空；方向键会同时传给游戏。
 ▸ 收藏与历史        收藏 18 · 历史 76
     收藏列表：标题、网站、上次进度  [打开] [重命名] [删除]
     [清空观看记录]
@@ -744,7 +734,7 @@ public sealed class GuideWatchRecord
 | `IsClickThrough` | bool | false | 鼠标穿透 |
 | `InteractionAutoExitSeconds` | int | 2 | 0 表示不自动结束 |
 | `Topmost` | bool | true | 始终置顶 |
-| `PositionMode` | `GuidePositionMode` | `FollowGame` | `FollowGame` / `Free` |
+| `PositionMode` | `GuidePositionMode` | `Free` | `FollowGame` / `Free` |
 | `FollowAnchor` | `GuideAnchor` | `TopRight` | 跟随模式的停靠角 |
 | `FollowOffsetX`、`FollowOffsetY` | int? | null | 相对停靠角的距离，物理像素；为空时按游戏所在显示器的 DPI 把 16 DIP 换算后使用 |
 | `FreeLeft`、`FreeTop` | int? | null | 自由模式的位置，物理像素 |
@@ -764,7 +754,6 @@ public sealed class GuideWatchRecord
 | `SubtitleFontSize` | double | 22 | 12–48 |
 | `SubtitleBackgroundOpacity` | double | 0.4 | 0–0.8 |
 | `HidePageSubtitle` | bool | true | 第 11 节 |
-| `ShowSubtitleWhenHidden` | bool | true | 待实测 |
 | `SubtitleCenterXRatio`、`SubtitleBottomRatio`、`SubtitleWidthRatio` | double | 0.5、0.22、0.6 | 字幕浮窗在游戏画面中的水平中心、距底部、最大宽度，均为比例，换分辨率后仍在相同位置 |
 | `SmartFadeEnabled` | bool | true | 5.6 |
 | `SmartFadeOpacity` | double | 0.25 | 0.1–0.8 |
@@ -926,7 +915,7 @@ classDiagram
 | `BetterGenshinImpact.csproj` | — | 升级 `Microsoft.Web.WebView2`；两个脚本作为嵌入资源 |
 | `Core/Config/GuideWindowConfig.cs` | Core | 配置与枚举 |
 | `Core/Config/AllConfig.cs` | Core | 新增 `GuideWindowConfig` |
-| `Core/Config/HotKeyConfig.cs` | Core | 21 组快捷键属性 |
+| `Core/Config/HotKeyConfig.cs` | Core | 12 组快捷键属性 |
 | `GameTask/TaskTriggerDispatcher.cs` | GameTask | `TaskModeChanged`、`IsInTask` |
 | `Service/Guide/IGuideWindowService.cs` | Service | 接口、`GuideOpenRequest`、`GuideOpenSource` |
 | `Service/Guide/IGuideWindowView.cs` | Service | 小窗与字幕浮窗的窗口接口 |
@@ -992,7 +981,7 @@ services.AddView<GuideWindowSettingsPage, GuideWindowSettingsPageViewModel>();
 | --- | --- | --- |
 | 0 技术验证 | 最小原型：透明置顶窗口 + `WebView2CompositionControl` + B 站视频 | 17.3 的每一项；决定 5.1 采用 A 还是回退 B |
 | 1 基础设施与小窗骨架 | SDK 升级、`Guide` 环境与 Profile、`WebViewSetup` 与 `NewWindowPolicy`；小窗（窗口栏、拖动、缩放、透明度、置顶、穿透、悬停、交互模式、不激活、紧急恢复）、位置保存、设置页骨架、托盘入口 | 存储空间窗口出现“悬浮小窗 · 网页缓存”；6.2 每一行；游戏前台时点击小窗，游戏仍在前台 |
-| 2 播放桥与快捷键 | 两个脚本、`IGuidePlayer`、全部快捷键、推荐方案、热键反馈、临时加速、沉浸模式 | 8.1 每一项；推荐方案不清除已有绑定；B 站分 P、合集、番剧切集 |
+| 2 播放桥与快捷键 | 两个脚本、`IGuidePlayer`、保留的快捷键、默认方案、热键反馈、临时加速、沉浸模式 | 8.1 每一项；默认方案不清除已有绑定；B 站分 P、合集、番剧切集 |
 | 3 联动 | `GuideGameWatcher`、自动显示隐藏、跟随游戏、多显示器、`TaskModeChanged`、地图点位、剪贴板 | 9.1–9.4 |
 | 4 收藏与进度 | `GuideLibraryStore`、☰ 菜单、设置页收藏管理 | 10.3 的续播规则；损坏的文件被保留 |
 | 5 字幕浮窗 | `GuideSubtitleWindow`、字幕读取、自动开启中文字幕 | 第 11 节 |
@@ -1005,7 +994,7 @@ services.AddView<GuideWindowSettingsPage, GuideWindowSettingsPageViewModel>();
 2. 原神窗口化运行，按住 Alt 把鼠标移到小窗：窗口栏出现，不透明度 100%；移开 600 ms 后窗口栏隐藏，不透明度回到设置值。
 3. 悬停时点击播放器暂停：原神仍在前台，松开 Alt 后可以立即移动角色。
 4. 开启鼠标穿透后点击小窗所在位置：游戏收到点击，窗口栏不出现。
-5. 穿透中按交互快捷键：可以在 B 站搜索框中输入；鼠标离开 2 秒后恢复穿透，游戏回到前台。
+5. 穿透中点击窗口栏的交互按钮：可以在 B 站搜索框中输入；鼠标离开 2 秒后恢复穿透，游戏回到前台。
 6. 没有绑定任何快捷键时开启穿透：可以通过托盘菜单“恢复小窗”恢复。
 7. 游戏在前台时逐个按播放类快捷键：每次都有热键反馈，游戏不失去焦点。
 8. 按住临时加速：倍速变为 2x，松开后恢复；按住期间切到下一集，倍速恢复且不覆盖。
@@ -1015,12 +1004,12 @@ services.AddView<GuideWindowSettingsPage, GuideWindowSettingsPageViewModel>();
 12. 拔掉副屏后重启：小窗出现在可见区域内。
 13. 启动一条龙：小窗暂停并隐藏，任务的点击不受影响；任务结束后小窗恢复，视频保持暂停。
 14. 在地图点位详情点击视频链接（默认设置）：视频在小窗中打开；点链接右侧的图标：用浏览器打开。
-15. 复制 B 站链接后在游戏中按“打开剪贴板链接”：小窗打开该视频。复制另一个链接后切到主窗口：弹出确认框，选“是”才在小窗打开；同一链接不再询问。
+15. 复制 B 站链接后从托盘菜单选择“打开剪贴板链接”：小窗打开该视频。复制另一个链接后切到主窗口：弹出确认框，选“是”才在小窗打开；同一链接不再询问。
 16. 收藏一个视频，看到 12:34 后关闭小窗；从 ☰ 打开：从 12:34 继续，倍速恢复。在地址框直接打开同一视频：沿用 B 站自己的进度。
 17. 手动改坏 `history.json` 后启动：收藏不受影响，坏文件被保留。
-18. 字幕浮窗：B 站视频自动开启中文字幕，浮窗显示字幕，网页内字幕隐藏；调整位置后重启，浮窗仍在原处。
+18. 字幕浮窗：B 站视频自动开启中文字幕，浮窗显示字幕，网页内字幕隐藏；隐藏小窗时字幕同步隐藏，重新显示小窗时字幕同步恢复；调整位置后重启，浮窗仍在原处。
 19. 开启鼠标穿透和智能透明，在对话界面把指针移到小窗上：小窗淡化到 25%，可以点到下方的对话选项；移开指针或回到跑图（指针隐藏）后恢复。
-20. 一键填入推荐快捷键：已被其他功能使用的组合被跳过，原有绑定不变。
+20. 一键填入默认快捷键：只恢复四个方向键中的空值，已被其他功能使用的按键被跳过，其余八项保持空值，原有绑定不变。
 21. 在存储空间窗口清理“悬浮小窗 · 网页缓存”后重启：B 站仍是登录状态。
 22. SDK 升级后，软件内网页、脚本 HTML 遮罩、云原神网页版都正常工作。
 23. 在子实例中：设置页提示只能在主实例使用，这组快捷键不响应。
@@ -1051,12 +1040,12 @@ services.AddView<GuideWindowSettingsPage, GuideWindowSettingsPageViewModel>();
 | D2 | 新增独立的 WebView2 环境 `Guide` | 独立的浏览器进程和数据目录，可以设置自动播放参数，自动纳入存储管理 | 多一组浏览器进程 |
 | D3 | 状态集中在 `GuideWindowService`，显示规则用纯函数计算 | 输入来源多，集中后行为可预测，规则可以单独检查 | 服务体量较大 |
 | D4 | 游戏前台和最小化由小窗服务自己监听系统事件 | 与调度器 Tick 解耦；遮罩宿主的语义不同 | 多一个系统事件钩子 |
-| D5 | 快捷键默认不绑定，提供推荐方案一键填入 | 与现有约定一致，升级不占用用户的组合键 | 第一次使用多一步 |
+| D5 | 四项常用快捷键默认使用方向键的键鼠监听，其余不绑定 | 开箱即可控制小窗与播放，其他操作由用户按需设置 | 方向键会同时传给游戏 |
 | D6 | 按住加速复用键鼠监听的按住键，不支持组合键 | 已有按下、松开事件，改动最小 | 按键会传给游戏 |
 | D7 | 任务开始时隐藏并暂停，而不是关闭 | 保留页面和进度，任务结束后接着看 | 任务期间网页进程仍占内存 |
 | D8 | 小窗与字幕浮窗不启用 Mica/Acrylic，窗口栏用主题资源 | 透明叠加窗口与系统背景冲突，与现有遮罩类窗口一致 | 偏离“新增窗口启用主题背景”的约定（已确认） |
 | D9 | 收藏和历史放在 `User/GuideWindow/`，不放进 `AllConfig` | 进度频繁变化，避免整份配置反复序列化 | 多两个文件 |
-| D10 | 不做系统剪贴板监听 | 隐私；快捷键和主窗口激活提示已覆盖常见场景 | 需要用户按键或切到主界面 |
+| D10 | 不做系统剪贴板监听 | 隐私；托盘菜单和主窗口激活提示已覆盖常见场景 | 需要用户操作托盘或切到主界面 |
 | D11 | 智能透明只看鼠标指针（第 2 版，替代第 1 版的场景触发器） | 不占用调度器和识图；原神只在需要点击界面时显示指针 | 只在鼠标穿透时生效 |
 | D12 | 只有从收藏或历史打开时才续播 | 不与 B 站自己的进度冲突 | 直接打开网页时依赖网站的进度 |
 
@@ -1075,7 +1064,7 @@ services.AddView<GuideWindowSettingsPage, GuideWindowSettingsPageViewModel>();
 | Q7 | 智能透明是否默认开启 | 开启；第 2 版改为按鼠标指针淡化（5.6），只在鼠标穿透时生效 |
 | Q8 | 小窗隐藏时是否暂停 | 不暂停（任务导致的隐藏除外） |
 | Q9 | 需求中“执行任务时自动关闭小窗”是否接受改为“隐藏并暂停” | 隐藏并暂停（D7） |
-| Q10 | 推荐快捷键方案是否合适；是否还需要“收藏当前视频”“始终置顶”等快捷键 | 按 8.1，不增加 |
+| Q10 | 默认快捷键方案是否合适；是否还需要“收藏当前视频”“始终置顶”等快捷键 | 按 8.1，不增加 |
 
 ### 17.3 需要实测的技术点
 
@@ -1088,7 +1077,6 @@ services.AddView<GuideWindowSettingsPage, GuideWindowSettingsPageViewModel>();
 - `WS_EX_NOACTIVATE` 下点击网页、拖动 B 站进度条时原神保持前台；窗口栏的菜单（Popup、ContextMenu）能正常打开和点击。
 - 交互模式下键盘能输入到网页；结束后 `GuideGameWatcher.FocusGame` 能把焦点还给以管理员身份运行的原神（不使用 `SystemControl.FocusWindow`，它含有忙等循环）。
 - 智能透明：`GetCursorInfo` 在原神隐藏指针（跑图、战斗）时返回不可见，在对话、地图、菜单中返回可见。
-- 小窗隐藏后视频继续播放，播放桥的媒体事件和字幕文本是否继续上报。结论决定 `ShowSubtitleWhenHidden` 的默认值。
 - 置顶层级：小窗在 MaskWindow 之上；原神窗口化、无边框、全屏三种模式下的表现。
 - `--autoplay-policy=no-user-gesture-required` 下，快捷键触发的 `play()` 不被拒绝。
 - SDK 升级后，云原神宿主窗口、软件内网页、脚本 HTML 遮罩的回归。
@@ -1101,7 +1089,7 @@ services.AddView<GuideWindowSettingsPage, GuideWindowSettingsPageViewModel>();
 
 - 不采用 `GameUiSceneTrigger` 和场景规则，智能透明改为按鼠标指针淡化（5.6、6.2、9.5、D11）。
 - 17.2 的问题全部按默认做法确认。
-- 推荐快捷键：音量改为 Ctrl+Alt+PageUp/PageDown，上一集、下一集改为 Ctrl+Alt+[ / ]（8.1）。
+- 悬浮小窗快捷键的默认方案集中在 8.1 节维护。
 - 窗口栏：始终置顶移到 ⚙ 菜单；按宽度分四档收起按钮；编辑地址时地址框占满窗口栏（6.3）。
 - 窗口几何改为物理像素，小窗与字幕浮窗不调用 `InitializeDpiAwareness()`（第 4 节、12.2）。
 - 服务通过 `IGuideWindowView`、`IGuideSubtitleView` 使用窗口；命名空间为 `Service.Guide`、`View.Controls.Guide`（第 13 节）。

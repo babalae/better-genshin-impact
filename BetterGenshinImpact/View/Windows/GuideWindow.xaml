@@ -24,7 +24,9 @@
         Topmost="{Binding State.IsTopmost, Mode=OneWay}"
         WindowStartupLocation="Manual"
         WindowStyle="None"
-        mc:Ignorable="d">
+        mc:Ignorable="d"
+        ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+        ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
 
     <!--  小窗：透明置顶、默认不获得焦点。鼠标穿透、焦点、不透明度都由 GuideWindowService 计算后绑定到这里  -->
     <b:Interaction.Behaviors>

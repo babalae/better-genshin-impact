@@ -14,6 +14,7 @@ using System.Windows.Media;
 using Windows.System;
 using BetterGenshinImpact.Infrastructure.Storage;
 using BetterGenshinImpact.Core.Config;
+using BetterGenshinImpact.Core.Plugins.Pluggables;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OCR.Paddle;
@@ -37,6 +38,7 @@ using BetterGenshinImpact.View.Controls.Webview;
 using BetterGenshinImpact.View.Converters;
 using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
+using BetterGenshinImpact.ViewModel.Pages.Plugins;
 using BetterGenshinImpact.ViewModel.Pages.View;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -128,9 +130,11 @@ public partial class CommonSettingsPageViewModel : ViewModel
         RecognitionTemplateEditorService recognitionTemplateEditorService, I18nService i18nService,
         ExternalAccessState externalAccessState, ExternalAccessTokenService externalAccessTokenService,
         IStorageService storageService, Func<StorageManagementWindow> storageManagementWindowFactory,
-        NetworkSettingsViewModel networkSettings)
+        NetworkSettingsViewModel networkSettings, PluggableRegistry pluggables)
     {
         NetworkSettings = networkSettings;
+        // OCR 模型是可插拔能力：可选项为内置的 PP-OCRv6 和已启用的 OCR 插件，与插件页“功能选择”保持同步
+        OcrModel = new PluggableItemViewModel(pluggables, pluggables.GetDescriptor<IOcrService>());
         _storageService = storageService;
         _storageManagementWindowFactory = storageManagementWindowFactory;
         Config = configService.Get();
@@ -158,11 +162,14 @@ public partial class CommonSettingsPageViewModel : ViewModel
         OverlayStyleSettingGroups = OverlayStyleSettingGroup.Create(Config.MaskWindowConfig, OnOverlayStyleChanged);
         InitializeCountries();
         InitializeMiyousheCookie();
-        // 初始化OCR模型选择
-        SelectedPaddleOcrModelConfig = Config.OtherConfig.OcrConfig.PaddleOcrModelConfig;
     }
 
     public AllConfig Config { get; set; }
+
+    /// <summary>
+    /// “OCR 配置”中的模型选择。选择保存在插件配置中，插件页的“功能选择”显示同一个选择。
+    /// </summary>
+    public PluggableItemViewModel OcrModel { get; }
     public ObservableCollection<OverlayMetricSettingItem> OverlayMetricItems { get; }
     public ObservableCollection<OverlayStyleSettingGroup> OverlayStyleSettingGroups { get; }
     public ObservableCollection<string> CountryList { get; } = new();
@@ -222,11 +229,6 @@ public partial class CommonSettingsPageViewModel : ViewModel
             }
         }
     }
-
-    public ObservableCollection<PaddleOcrModelConfig> PaddleOcrModelConfigs { get; } =
-        new(Enum.GetValues(typeof(PaddleOcrModelConfig)).Cast<PaddleOcrModelConfig>());
-
-    [ObservableProperty] private PaddleOcrModelConfig _selectedPaddleOcrModelConfig;
 
     [RelayCommand]
     public void OnQuestionButtonOnClick()
@@ -415,6 +417,15 @@ public partial class CommonSettingsPageViewModel : ViewModel
         _navigationService.Navigate(typeof(HotKeyPage));
     }
 
+    /// <summary>
+    /// 打开插件页，安装或启用其他 OCR 模型插件。
+    /// </summary>
+    [RelayCommand]
+    private void GoToPluginsPage()
+    {
+        _navigationService.Navigate(typeof(PluginsPage));
+    }
+
     [RelayCommand]
     private async Task OpenRecognitionTemplateEditorFromImageAsync()
     {
@@ -456,6 +467,8 @@ public partial class CommonSettingsPageViewModel : ViewModel
     public override void OnNavigatedTo()
     {
         _ = RefreshStorageSummaryAsync(force: false);
+        // 插件可能刚在插件页启用或停用，按注册表的当前状态刷新 OCR 模型列表
+        OcrModel.Refresh();
     }
 
     /// <summary>
@@ -599,18 +612,7 @@ public partial class CommonSettingsPageViewModel : ViewModel
         _configService.Save();
     }
 
-    [RelayCommand]
-    private async Task OnGameLangSelectionChanged(KeyValuePair<string, string> type)
-    {
-        await App.ServiceProvider.GetRequiredService<OcrFactory>().Unload();
-    }
-
-    [RelayCommand]
-    private async Task OnPaddleOcrModelConfigChanged(PaddleOcrModelConfig value)
-    {
-        Config.OtherConfig.OcrConfig.PaddleOcrModelConfig = value;
-        await App.ServiceProvider.GetRequiredService<OcrFactory>().Unload();
-    }
+    // 切换游戏语言不再重建 OCR：OCR 模型与游戏语言无关，由“OCR 配置”中的模型选择决定
 
     [RelayCommand]
     private void SelectCrosshairImage()

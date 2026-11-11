@@ -22,9 +22,15 @@ public sealed partial class PuloniaTaskService
         public string RunId { get; }
 
         /// <summary>
-        /// 固定后的调用请求；构造后不再修改，持久记录和视图直接共用。
+        /// 固定后的调用请求；请求对象本身不再修改，持久记录和视图直接共用。
+        /// 运行开始确定运行账户后，整体替换为服务器偏移改为账户服务器时区的副本（见 <see cref="UseServerUtcOffset"/>）。
         /// </summary>
-        public PuloniaTaskRequest Request { get; }
+        public PuloniaTaskRequest Request { get; private set; }
+
+        /// <summary>
+        /// 执行实例键：提交或续跑时取本实例，写入运行记录的 <c>instance</c>。
+        /// </summary>
+        public required string Instance { get; init; }
 
         /// <summary>
         /// 提交时的计划名称。
@@ -40,11 +46,6 @@ public sealed partial class PuloniaTaskService
         /// 已序列化的快照，写入状态和历史时无需重复序列化。
         /// </summary>
         public string SnapshotJson { get; }
-
-        /// <summary>
-        /// 快照固定的账号是否为需要切换的指定账号（不是默认账号）；决定路线 CD 是否按核验 UID 隔离。
-        /// </summary>
-        public bool UsesSwitchedAccount { get; }
 
         /// <summary>
         /// 显式取消当前运行的令牌源。
@@ -63,9 +64,9 @@ public sealed partial class PuloniaTaskService
         public List<PuloniaTaskNodeResult> NodeResults { get; } = [];
 
         /// <summary>
-        /// 每次节点尝试已落盘的确认事件，随运行写入不可变历史。
+        /// 本次完成的路线：完成记录已写入账户目录后，随节点结果一起落盘到运行状态，再随运行写入不可变历史。
         /// </summary>
-        public List<PuloniaTaskConfirmedEffect> ConfirmedEffects { get; } = [];
+        public List<PuloniaRouteCompletion> RouteCompletions { get; } = [];
 
         /// <summary>
         /// 续跑时无需再次执行的节点地址。
@@ -117,8 +118,28 @@ public sealed partial class PuloniaTaskService
         /// </summary>
         public string? FailureMessage { get; set; }
 
-        /// <summary>当前运行已耐久保存的实际 UID，编辑资料不能改写此身份。</summary>
+        /// <summary>指定账户的运行已耐久保存的实际 UID，编辑资料不能改写此身份；跟随当前账户时为空。</summary>
         public string? VerifiedUid { get; set; }
+
+        /// <summary>
+        /// 运行账户 ID，运行开始时确定；续跑的运行在开始前保存原运行的运行账户，用于核对实例当前账户。
+        /// </summary>
+        public string? AccountId { get; set; }
+
+        /// <summary>运行账户的来源；未确定时为空。</summary>
+        public PuloniaTaskAccountSource? AccountSource { get; set; }
+
+        /// <summary>跟随当前账户时的 UID 比对结果；指定账户时为空。</summary>
+        public PuloniaTaskUidCheck? UidCheck { get; set; }
+
+        /// <summary>UID 比对不一致时游戏中读到的 UID。</summary>
+        public string? ObservedUid { get; set; }
+
+        /// <summary>
+        /// 运行账户的占用句柄（统筹设计 4.5）：确定运行账户后取得，运行执行流程结束时释放；只在内存中，不落盘。
+        /// 只由本运行的执行流程读写。
+        /// </summary>
+        public IDisposable? AccountOccupancy { get; set; }
 
         /// <summary>
         /// 建立排队状态。
@@ -140,7 +161,6 @@ public sealed partial class PuloniaTaskService
             PlanName = planName;
             Snapshot = snapshot;
             SnapshotJson = snapshotJson ?? snapshot.ToJson();
-            UsesSwitchedAccount = IsSwitchedAccount(snapshot);
             foreach (var address in completedTaskAddresses ?? [])
                 CompletedTaskAddresses.Add(address);
             ResumeFromTaskAddress = resumeFromTaskAddress;
@@ -157,17 +177,49 @@ public sealed partial class PuloniaTaskService
                 PuloniaTaskJson.ReadSnapshot(record.SnapshotJson), record.SnapshotJson, record.CompletedTaskAddresses,
                 record.ResumeFromTaskAddress, record.ResumedFromRunId)
             {
+                Instance = record.Instance,
                 Status = record.Status,
                 CurrentTaskAddress = record.CurrentTaskAddress,
                 Message = record.Message,
                 SubmittedAt = record.SubmittedAt,
                 StartedAt = record.StartedAt,
                 FinishedAt = record.FinishedAt,
-                VerifiedUid = record.VerifiedUid
+                VerifiedUid = record.VerifiedUid,
+                AccountId = record.AccountId,
+                AccountSource = record.AccountSource,
+                UidCheck = record.UidCheck,
+                ObservedUid = record.ObservedUid
             };
             state.NodeResults.AddRange(record.NodeResults);
-            state.ConfirmedEffects.AddRange(record.ConfirmedEffects);
+            state.RouteCompletions.AddRange(record.RouteCompletions);
             return state;
+        }
+
+        /// <summary>
+        /// 把请求换成服务器偏移为指定值的副本；其余字段与原请求共用同一对象（参数覆盖不再修改）。
+        /// 调用方必须持有 <see cref="_runsGate"/>。
+        /// </summary>
+        /// <param name="serverUtcOffsetMinutes">运行账户服务器时区的分钟偏移。</param>
+        public void UseServerUtcOffset(int serverUtcOffsetMinutes)
+        {
+            if (Request.ServerUtcOffsetMinutes == serverUtcOffsetMinutes)
+                return;
+            var request = Request;
+            Request = new PuloniaTaskRequest
+            {
+                PlanId = request.PlanId,
+                ServerUtcOffsetMinutes = serverUtcOffsetMinutes,
+                TimeoutSeconds = request.TimeoutSeconds,
+                ParameterOverrides = request.ParameterOverrides,
+                Source = request.Source,
+                TargetTaskId = request.TargetTaskId,
+                TriggerId = request.TriggerId,
+                OccurrenceUtc = request.OccurrenceUtc,
+                DeadlineUtc = request.DeadlineUtc,
+                TriggerActivatedAtUtc = request.TriggerActivatedAtUtc,
+                BusyPolicy = request.BusyPolicy,
+                AllowDisplaceOnlineInstance = request.AllowDisplaceOnlineInstance
+            };
         }
 
         /// <summary>
@@ -176,7 +228,12 @@ public sealed partial class PuloniaTaskService
         /// </summary>
         public PuloniaTaskRunRecord ToRecord() => new()
         {
+            Instance = Instance,
             VerifiedUid = VerifiedUid,
+            AccountId = AccountId,
+            AccountSource = AccountSource,
+            UidCheck = UidCheck,
+            ObservedUid = ObservedUid,
             RunId = RunId,
             Request = Request,
             PlanName = PlanName,
@@ -188,7 +245,7 @@ public sealed partial class PuloniaTaskService
             StartedAt = StartedAt,
             FinishedAt = FinishedAt,
             NodeResults = [.. NodeResults],
-            ConfirmedEffects = [.. ConfirmedEffects],
+            RouteCompletions = [.. RouteCompletions],
             CompletedTaskAddresses = [.. CompletedTaskAddresses],
             ResumeFromTaskAddress = ResumeFromTaskAddress,
             ResumedFromRunId = ResumedFromRunId

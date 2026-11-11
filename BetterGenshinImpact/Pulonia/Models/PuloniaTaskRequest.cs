@@ -10,15 +10,17 @@ namespace BetterGenshinImpact.Pulonia.Models;
 public sealed class PuloniaTaskRequest
 {
     /// <summary>
+    /// 主实例一步下发（<c>pulonia.run.submit</c>）到本实例的请求来源。子实例只向主实例回报、只允许主实例取消这一来源的运行，
+    /// 重新连上主实例后也按它补发尚未结束的运行状态。
+    /// </summary>
+    public const string DispatchSource = "dispatch";
+
+    /// <summary>
     /// 要运行的已保存计划 ID。
     /// </summary>
     public string PlanId { get; init; } = string.Empty;
 
-    /// <summary>
-    /// 可选账号资料 ID；步骤 3 只固定到快照，不启动或核验游戏账号。
-    /// </summary>
-    public string? AccountId { get; init; }
-
+    // 请求不再携带账户 ID：运行账户只由计划的运行账户设置和实例当前账户在运行开始时决定，续跑按原运行确定。
 
     /// <summary>
     /// 服务器相对 UTC 的分钟偏移，用于计算路线 CD 的日、周重置窗口。
@@ -53,6 +55,14 @@ public sealed class PuloniaTaskRequest
     public DateTimeOffset? TriggerActivatedAtUtc { get; init; }
     /// <summary>本次自动请求的繁忙策略。</summary>
     public PuloniaTaskBusyPolicy BusyPolicy { get; init; }
-    /// <summary>执行实例；为空时在主实例本地执行，否则由主实例编排、子实例执行叶子节点。</summary>
-    public PuloniaTaskExecutionTarget? ExecutionTarget { get; init; }
+
+    /// <summary>
+    /// 切换前检查（统筹设计 4.6）的人工确认：指定账户的运行需要切换到某个账户，而另一个在线实例的当前账户就是它时，
+    /// 切换会把那个实例挤下线。只有在本实例界面手动运行、并在提交前确认过时为 true；触发器、命令行、主实例下发与续跑总为 false，
+    /// 这时不切换，运行进入待处理。
+    /// </summary>
+    public bool AllowDisplaceOnlineInstance { get; init; }
+
+    // 请求不再携带执行实例：运行总在提交它的实例执行，执行实例记在运行记录的 instance；
+    // 主实例要在子实例运行时经 pulonia.run.submit 整次下发，由子实例在本地提交。
 }

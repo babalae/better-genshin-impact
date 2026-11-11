@@ -461,7 +461,7 @@ public partial class PathExecutor
 
             if (forceTp) // 强制传送模式
             {
-                await new TpTask(_runtime, _config, ct).TpToStatueOfTheSeven(); // fix typos
+                await Pluggable.Get<ITpTaskFactory>().Create(_runtime, _config, ct).TpToStatueOfTheSeven(); // fix typos
                 success = await new SwitchPartyTask(_runtime).Start(partyName, ct);
             }
             else // 优先原地切换模式
@@ -472,7 +472,7 @@ public partial class PathExecutor
                 }
                 catch (PartySetupFailedException)
                 {
-                    await new TpTask(_runtime, _config, ct).TpToStatueOfTheSeven();
+                    await Pluggable.Get<ITpTaskFactory>().Create(_runtime, _config, ct).TpToStatueOfTheSeven();
                     success = await new SwitchPartyTask(_runtime).Start(partyName, ct);
                 }
             }
@@ -712,7 +712,7 @@ public partial class PathExecutor
     private async Task TpStatueOfTheSeven()
     {
         // tp 到七天神像回血
-        var tpTask = new TpTask(_runtime, _config, ct);
+        var tpTask = Pluggable.Get<ITpTaskFactory>().Create(_runtime, _config, ct);
         await RunnerContext.Instance.StopAutoPickRunTask(async () => await tpTask.TpToStatueOfTheSeven(), 5);
         Logger.LogInformation("血量恢复完成。【设置】-【七天神像设置】可以修改回血相关配置。");
     }
@@ -721,11 +721,11 @@ public partial class PathExecutor
     /// 尝试自动领取派遣奖励，
     /// </summary>
     /// <returns>是否可以领取派遣奖励</returns>
-    private async Task<bool> TryGetExpeditionRewardsDispatch(TpTask? tpTask = null)
+    private async Task<bool> TryGetExpeditionRewardsDispatch(ITpTask? tpTask = null)
     {
         if (tpTask == null)
         {
-            tpTask = new TpTask(_runtime, _config, ct);
+            tpTask = Pluggable.Get<ITpTaskFactory>().Create(_runtime, _config, ct);
         }
         
         // 最小5分钟间隔
@@ -775,7 +775,7 @@ public partial class PathExecutor
     private async Task HandleTeleportWaypoint(WaypointForTrack waypoint)
     {
         var forceTp = waypoint.Action == ActionEnum.ForceTp.Code;
-        TpTask tpTask = new TpTask(_runtime, _config, ct);
+        var tpTask = Pluggable.Get<ITpTaskFactory>().Create(_runtime, _config, ct);
         await TryGetExpeditionRewardsDispatch(tpTask);
         var (tpX, tpY) = await tpTask.Tp(waypoint.GameX, waypoint.GameY, waypoint.MapName, forceTp);
         var (tprX, tprY) = MapManager.GetMap(waypoint.MapName, waypoint.MapMatchMethod)
@@ -1352,7 +1352,7 @@ public partial class PathExecutor
             }else if (waypoint.Misidentification.HandlingMode == "mapRecognition"){
                 //大地图识别坐标
                 DateTime start = DateTime.Now;
-                TpTask tpTask = new TpTask(_runtime, _config, ct);
+                var tpTask = Pluggable.Get<ITpTaskFactory>().Create(_runtime, _config, ct);
                 await tpTask.OpenBigMapUi(mapName: waypoint.MapName);
                 try
                 {

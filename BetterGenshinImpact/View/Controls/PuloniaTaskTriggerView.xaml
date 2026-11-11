@@ -5,7 +5,10 @@
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:hotkey="clr-namespace:BetterGenshinImpact.View.Controls.HotKey"
              xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
-             Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+             xmlns:converters="clr-namespace:BetterGenshinImpact.View.Converters"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <!--
         任务计划页“触发方式”页签与一条龙“定时与热键”窗口共用此视图，DataContext 为 PuloniaPlanTriggersViewModel。
         启用只通过列表卡片上的开关（立即保存）；右侧编辑区只保存配置字段。
@@ -13,6 +16,7 @@
     <UserControl.Resources>
         <behavior:BindingProxy x:Key="TriggerPageProxy" Data="{Binding}" />
         <BooleanToVisibilityConverter x:Key="BoolVisibility" />
+        <converters:BooleanToVisibilityRevertConverter x:Key="BoolVisibilityRevert" />
         <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap" /></Style>
         <Style x:Key="Label" TargetType="TextBlock"><Setter Property="Margin" Value="0,14,0,6" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
         <Style TargetType="ui:TextBox" BasedOn="{StaticResource DefaultTextBoxStyle}"><Setter Property="MinWidth" Value="56" /><Setter Property="VerticalContentAlignment" Value="Center" /></Style>
@@ -110,6 +114,27 @@
                             <TextBlock Style="{StaticResource Label}" Text="服务器时区（Cron 按此时区计算）" />
                             <ComboBox ItemsSource="{Binding ServerTimeZones, Mode=OneWay}" DisplayMemberPath="Value" SelectedValuePath="Key"
                                       SelectedValue="{Binding ServerTimeZone, Mode=TwoWay}" />
+                            <!--
+                                执行实例（统筹设计 9.5）：列出主实例、桌面分身与已建立的云原神实例，不要求在线。
+                                计划跟随当前账户时可多选，指定账户时只能选一个（单选按钮，互斥由视图模型处理）。
+                            -->
+                            <TextBlock Style="{StaticResource Label}" Text="执行实例" />
+                            <ItemsControl ItemsSource="{Binding InstanceOptions, Mode=OneWay}" AutomationProperties.Name="执行实例">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,2">
+                                            <CheckBox Content="{Binding InstanceName, Mode=OneWay}"
+                                                      IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                      Visibility="{Binding IsMultiSelect, Mode=OneWay, Converter={StaticResource BoolVisibility}}" />
+                                            <RadioButton Content="{Binding InstanceName, Mode=OneWay}"
+                                                         IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                         Visibility="{Binding IsMultiSelect, Mode=OneWay, Converter={StaticResource BoolVisibilityRevert}}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Margin="0,6,0,0" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       Text="{Binding InstanceHint, Mode=OneWay}" />
                         </StackPanel>
                         <StackPanel Visibility="{Binding IsHotkey, Mode=OneWay, Converter={StaticResource BoolVisibility}}">
                             <TextBlock Style="{StaticResource Label}" Text="快捷键（点击类型按钮可切换模式）" />
@@ -124,16 +149,14 @@
                                                       ToolTip="点击后按下快捷键；Delete / Backspace / Esc 清空。键鼠监听支持鼠标侧键。" />
                             </Grid>
                             <TextBlock Margin="0,8,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12" Text="{Binding HotkeyHelp, Mode=OneWay}" />
+                            <!-- 热键触发器没有执行实例：计划热键只在主实例注册和执行。 -->
+                            <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource TextFillColorSecondaryBrush}" FontSize="12" Text="{Binding InstanceHint, Mode=OneWay}" />
                         </StackPanel>
                         <Border Margin="0,12,0,0" Padding="12" CornerRadius="6" Background="{DynamicResource SubtleFillColorSecondaryBrush}"><TextBlock Text="{Binding PreviewText, Mode=OneWay}" /></Border>
                         <TextBlock Style="{StaticResource Label}" Text="运行范围" />
                         <ComboBox ItemsSource="{Binding Targets, Mode=OneWay}" DisplayMemberPath="Value" SelectedValuePath="Key" SelectedValue="{Binding TargetTaskId, Mode=TwoWay}" />
-                        <!-- 一条龙按配置绑定的账号运行（会切换账号），不提供下拉框；普通计划只选参数用的账号资料。 -->
-                        <TextBlock Style="{StaticResource Label}" Text="{Binding AccountSelectionTitle, Mode=OneWay}" />
-                        <TextBlock Margin="0,0,0,6" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding AccountSelectionDescription, Mode=OneWay}" />
-                        <ComboBox ItemsSource="{Binding Accounts, Mode=OneWay}" DisplayMemberPath="Value" SelectedValuePath="Key" SelectedValue="{Binding AccountId, Mode=TwoWay}"
-                                  Visibility="{Binding CanSelectAccount, Mode=OneWay, Converter={StaticResource BoolVisibility}}" />
-                        <TextBlock Style="{StaticResource Label}" Text="同一计划 / 账号已忙碌时" />
+                        <!-- 触发器不再选择账户：运行账户由计划的运行账户设置和实例当前账户决定。 -->
+                        <TextBlock Style="{StaticResource Label}" Text="同一计划已忙碌时" />
                         <ComboBox ItemsSource="{Binding BusyPolicies, Mode=OneWay}" DisplayMemberPath="Value" SelectedValuePath="Key" SelectedValue="{Binding BusyPolicy, Mode=TwoWay}" />
                         <TextBlock Margin="0,6,0,0" FontSize="12" Text="不同计划自动排队依次执行，不会同时操作游戏。选择“停止当前任务”时，保存或启用前会再次确认。" />
                         <TextBlock Style="{StaticResource Label}" Text="允许延迟启动（分钟）" />

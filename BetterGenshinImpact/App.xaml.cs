@@ -12,6 +12,8 @@ using BetterGenshinImpact.Core.Mask;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.Core.Monitor;
+using BetterGenshinImpact.Core.Plugins.Hosting;
+using BetterGenshinImpact.Core.Plugins.Pluggables;
 using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask;
 using BetterGenshinImpact.GameTask.SoloTask;
@@ -45,6 +47,7 @@ using BetterGenshinImpact.Service.Guide;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.Service.I18n;
 using BetterGenshinImpact.Service.Interface;
+using BetterGenshinImpact.Service.KeyMacro;
 using BetterGenshinImpact.Service.Notification;
 using BetterGenshinImpact.Service.Notifier;
 using BetterGenshinImpact.View;
@@ -54,6 +57,7 @@ using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel;
 using BetterGenshinImpact.ViewModel.Controls;
 using BetterGenshinImpact.ViewModel.Pages;
+using BetterGenshinImpact.ViewModel.Pages.Plugins;
 using BetterGenshinImpact.ViewModel.Pages.View;
 using BetterGenshinImpact.ViewModel.SoloTaskSettings;
 using BetterGenshinImpact.ViewModel.Windows;
@@ -246,6 +250,14 @@ public partial class App : Application
                     $"BetterGI · 更好的原神 · {Global.Version}{(RuntimeHelper.IsDebug ? " · Dev" : string.Empty)}"));
                 // 独立任务：启动时扫描主程序集中带 [SoloTaskInfo] 的任务类
                 services.AddSingleton(_ => new SoloTaskRegistry([typeof(App).Assembly]));
+                // 可插拔机制：扫描主程序集中的可插拔能力和内置实现，把每个可插拔能力接口注册为代理；
+                // 插件宿主在启动时发现、启用插件，见 Docs/design/plugin-system.md
+                all.PluginConfig ??= new();
+                var pluggables = new PluggableRegistry([typeof(App).Assembly], all.PluginConfig);
+                services.AddSingleton(pluggables);
+                pluggables.RegisterProxies(services);
+                services.AddSingleton<PluginManager>();
+                services.AddSingleton<IPluginSettingsDialogs, PluginSettingsDialogs>();
                 services.AddSingleton<SoloTaskExecutionService>();
                 services.AddSingleton<InstanceService>();
                 services.AddHostedService(sp => sp.GetRequiredService<InstanceService>());
@@ -275,6 +287,7 @@ public partial class App : Application
                 services.AddView<ScriptControlPage, ScriptControlViewModel>();
                 services.AddView<TriggerSettingsPage, TriggerSettingsPageViewModel>();
                 services.AddView<MacroSettingsPage, MacroSettingsPageViewModel>();
+                services.AddView<KeyMacroPage, KeyMacroPageViewModel>();
                 services.AddView<CommonSettingsPage, CommonSettingsPageViewModel>();
                 services.AddView<TaskSettingsPage, TaskSettingsPageViewModel>();
                 services.AddView<HotKeyPage, HotKeyPageViewModel>();
@@ -286,9 +299,13 @@ public partial class App : Application
                 services.AddView<PuloniaTaskPlanPage, PuloniaTaskPlanViewModel>();
                 services.AddView<PuloniaOneDragonPage, PuloniaOneDragonViewModel>();
                 services.AddView<PuloniaTaskHistoryPage, PuloniaTaskHistoryViewModel>();
+                // Pulonia 账户页：本实例当前账户、账户列表与详情，取代原账户管理窗口
+                services.AddView<PuloniaAccountsPage, PuloniaAccountsPageViewModel>();
                 services.AddView<AccountRecordsPage, AccountRecordsPageViewModel>();
                 services.AddSingleton<InventoryCatalog>();
                 services.AddSingleton<InventoryStore>();
+                // 狛荷屋接入 Pulonia 账户目录：账户 UID 修改时数据目录随之改名，删除账户时一并删除狛荷屋记录。
+                services.AddSingleton<IPuloniaAccountDataHandler, AccountRecordsAccountDataHandler>();
                 services.AddSingleton<InventoryIconCache>();
                 // 图标需要重新扫描或上传才能补齐，独立登记并要求确认清理。
                 services.AddSingleton<IStorageAreaProvider>(sp => sp.GetRequiredService<InventoryIconCache>());
@@ -298,7 +315,8 @@ public partial class App : Application
                 services.AddSingleton<RoutingCatalogStore>();
                 services.AddSingleton<QuestVoiceSettingsViewModel>();
                 services.AddSingleton<QuestVoiceCardViewModel>();
-                services.AddSingleton(sp => new QuestVoiceSessionFactory(all.QuestVoiceConfig, Core.Config.Global.StartUpPath, sp.GetRequiredService<BgiOnnxFactory>()));
+                services.AddSingleton(sp => new QuestVoiceSessionFactory(all.QuestVoiceConfig, Core.Config.Global.StartUpPath,
+                    sp.GetRequiredService<OcrFactory>(), sp.GetRequiredService<InferenceRuntimeService>()));
                 services.AddSingleton<IQuestVoiceSessionFactory>(sp => sp.GetRequiredService<QuestVoiceSessionFactory>());
                 services.AddSingleton<QuestVoiceSessionController>();
                 services.AddSingleton<QuestVoiceService>();
@@ -308,6 +326,7 @@ public partial class App : Application
                 // services.AddView<PathingConfigView, PathingConfigViewModel>();
                 services.AddView<KeyBindingsSettingsPage, KeyBindingsSettingsPageViewModel>();
                 services.AddView<GuideWindowSettingsPage, GuideWindowSettingsPageViewModel>();
+                services.AddView<PluginsPage, PluginsPageViewModel>();
 
                 // 一条龙 ViewModels
                 // services.AddSingleton<CraftViewModel>();
@@ -365,6 +384,10 @@ public partial class App : Application
                 services.AddSingleton<Func<CloudWebHostWindow>>(sp => () => sp.GetRequiredService<CloudWebHostWindow>());
                 services.AddSingleton<GameRuntimeService>();
                 services.AddSingleton<BetterGenshinImpact.Core.Recorder.KeyMouseRecordService>();
+                // 按键宏：宏目录存储与热键宿主，宿主随应用启动注册热键，见 Docs/design/key-macro.md
+                services.AddSingleton<KeyMacroStore>();
+                services.AddSingleton<KeyMacroHotkeyHost>();
+                services.AddHostedService(sp => sp.GetRequiredService<KeyMacroHotkeyHost>());
                 // 云原神网页版实例：实例名存储与启动器（Primary 首页的管理窗口使用）
                 services.AddSingleton<WebViewInstanceStore>();
                 services.AddSingleton<WebViewInstanceLauncher>();
@@ -379,6 +402,14 @@ public partial class App : Application
                 services.AddSingleton<IScriptService, ScriptService>();
                 // Pulonia：纯任务保持无游戏依赖；游戏能力通过统一协调器按需准备会话和输入所有权。
                 services.AddSingleton<PuloniaTaskStore>();
+                // Pulonia 账户：实例键由实例上下文映射，账户服务负责账户目录与各实例当前账户。
+                // 开发期不做数据迁移：旧格式的 User/Pulonia 数据直接删除后重建。
+                services.AddSingleton<IPuloniaInstanceKeyProvider>(sp =>
+                    PuloniaInstanceKeyProvider.FromContext(sp.GetRequiredService<InstanceBootstrap>().Context));
+                services.AddSingleton<IPuloniaAccountService, PuloniaAccountService>();
+                // 本实例的在线标记 online.lock：所有实例启动时打开并保持到退出，供其他实例做切换前检查
+                services.AddSingleton<PuloniaInstancePresence>();
+                services.AddHostedService(sp => sp.GetRequiredService<PuloniaInstancePresence>());
                 services.AddSingleton<PuloniaTaskBuilder>();
                 services.AddSingleton<PuloniaTaskClipboardService>();
                 services.AddSingleton<PuloniaCSharpTaskRegistry>();
@@ -393,18 +424,7 @@ public partial class App : Application
                 services.AddSingleton<PuloniaTaskResourceCatalog>();
                 services.AddSingleton(_ => BetterGenshinImpact.Core.Script.Repositories.ScriptRepositoryStore.Shared);
                 services.AddSingleton<PuloniaRepositoryManagementService>();
-                // Pulonia 跨实例派发：主实例经派发代理把节点交给子实例，子实例用节点宿主执行。
-                // 两者都在首次使用时才取得多实例服务，避免与其构造互相依赖
-                services.AddSingleton(sp => new PuloniaRemoteExecutionBroker(() => sp.GetRequiredService<InstanceService>()));
-                services.AddSingleton<IPuloniaRemoteNodeDispatcher>(sp => sp.GetRequiredService<PuloniaRemoteExecutionBroker>());
-                services.AddSingleton(sp => new PuloniaRemoteNodeHost(
-                    () => sp.GetRequiredService<InstanceService>(),
-                    sp.GetServices<IPuloniaTaskExecutor>(),
-                    sp.GetRequiredService<PuloniaGameTaskCoordinator>(),
-                    sp.GetRequiredService<TaskStopService>(),
-                    sp.GetRequiredService<ILogger<PuloniaRemoteNodeHost>>(),
-                    sp.GetService<IPuloniaGenshinAccountSwitcher>()));
-                // 只有主实例是协调器：子实例不读写共享的 User/Pulonia/state.json，也不消费队列。
+                // 每个实例都是协调器：读写本实例的 User/Pulonia/instances/<实例目录名>/state.json，消费本实例的队列。
                 // 调度宿主与页面都依赖接口，只注册这一份单例；容器关闭时释放它（IAsyncDisposable）。
                 services.AddSingleton<IPuloniaTaskService>(sp => new PuloniaTaskService(
                     sp.GetRequiredService<PuloniaTaskStore>(),
@@ -414,16 +434,38 @@ public partial class App : Application
                     sp.GetRequiredService<TaskStopService>(),
                     sp.GetRequiredService<TimeProvider>(),
                     sp.GetService<IPuloniaGenshinAccountSwitcher>(),
-                    sp.GetRequiredService<IPuloniaRemoteNodeDispatcher>(),
-                    sp.GetRequiredService<InstanceBootstrap>().Context.IsRoot,
-                    sp.GetRequiredService<ILogger<PuloniaTaskService>>()));
+                    sp.GetRequiredService<ILogger<PuloniaTaskService>>(),
+                    sp.GetRequiredService<IPuloniaAccountService>()));
+                // Pulonia 一步下发（pulonia.run.*）：主实例用下发客户端提交、停止并跟踪下发到子实例的运行；
+                // 子实例用下发宿主接受下发并回报状态（随宿主启动订阅，主实例上不启用）。
+                // 两者都在首次使用时才取得多实例服务，避免与其构造互相依赖
+                services.AddSingleton(sp => new PuloniaRunDispatcher(
+                    () => sp.GetRequiredService<InstanceService>(),
+                    sp.GetRequiredService<TimeProvider>(),
+                    sp.GetRequiredService<ILogger<PuloniaRunDispatcher>>()));
+                services.AddSingleton(sp => new PuloniaRunDispatchHost(
+                    sp.GetRequiredService<IPuloniaTaskService>(),
+                    sp.GetRequiredService<IPuloniaInstanceKeyProvider>(),
+                    () => sp.GetRequiredService<InstanceService>(),
+                    sp.GetRequiredService<ILogger<PuloniaRunDispatchHost>>()));
+                services.AddHostedService(sp => sp.GetRequiredService<PuloniaRunDispatchHost>());
+                // 执行记录跨实例显示：合并本实例运行、其他实例 state.json 与共享历史，按修改标记缓存；执行记录页、新一条龙页与标题栏共用
+                services.AddSingleton(sp => new PuloniaRunOverview(
+                    sp.GetRequiredService<IPuloniaTaskService>(),
+                    sp.GetRequiredService<PuloniaTaskStore>(),
+                    sp.GetRequiredService<IPuloniaAccountService>().CurrentInstanceKey));
                 services.AddSingleton(TimeProvider.System);
                 services.AddSingleton<PuloniaTaskTriggerHost>();
                 services.AddHostedService(sp => sp.GetRequiredService<PuloniaTaskTriggerHost>());
-                // Pulonia 任务计划页与新一条龙页共用同一编辑会话；共享设置、路线 CD 与运行预览窗口由视图层提供。
+                // Pulonia 任务计划页、新一条龙页与账户页共用同一编辑会话；共享设置、路线 CD 与运行预览窗口由视图层提供。
+                // 路线 CD 总览只在账户页使用，由账户页视图模型按会话创建，不再单独注册。
                 services.AddSingleton<BetterGenshinImpact.ViewModel.Pages.Pulonia.PuloniaPlanEditingSession>();
-                // 路线 CD 总览：任务计划页与全局执行记录页各持一个实例，筛选状态互不影响。
-                services.AddTransient<BetterGenshinImpact.ViewModel.Pages.Pulonia.PuloniaCollectionCooldownOverviewViewModel>();
+                // 触发设置的实例目录：执行实例选项（含未在线的云原神实例）、在线判断与其他实例的触发游标
+                services.AddSingleton(sp => new BetterGenshinImpact.ViewModel.Pages.Pulonia.PuloniaTriggerInstanceCatalog(
+                    sp.GetRequiredService<PuloniaTaskStore>(),
+                    sp.GetRequiredService<IPuloniaAccountService>(),
+                    sp.GetRequiredService<PuloniaRunOverview>(),
+                    sp.GetRequiredService<WebViewInstanceStore>()));
                 services.AddSingleton<BetterGenshinImpact.ViewModel.Pages.Pulonia.IPuloniaTaskSettingsDialogs,
                     BetterGenshinImpact.View.Windows.Pulonia.PuloniaTaskSettingsDialogs>();
                 // 树脂设置公共弹窗；各宿主页面在后续接入时只依赖视图模型层接口。
@@ -441,6 +483,8 @@ public partial class App : Application
                 services.AddSingleton<IKeyInputTransport, SendInputKeyInputTransport>();
                 services.AddSingleton<IMusicPlaybackService, MusicPlaybackService>();
                 services.AddSingleton<BgiOnnxFactory>();
+                // 绑定当前推理运行时的会话工厂，供可插拔实现（如各 OCR 模型）在构造函数中注入
+                services.AddTransient(sp => sp.GetRequiredService<BgiOnnxFactory>().ForCurrentRuntime());
                 services.AddSingleton<OcrFactory>();
                 services.AddMemoryCache();
                 services.AddSingleton<IAppCache, CachingService>();
@@ -525,6 +569,8 @@ public partial class App : Application
             var inferenceRuntime = _host.Services.GetRequiredService<InferenceRuntimeService>();
             // 此处只准备设备配置；模型验证和提示由主实例的 MainWindowViewModel.OnLoaded 执行。
             await inferenceRuntime.InitializeAsync();
+            // 插件：主窗口创建前发现并启用插件。OCR 预热在主窗口加载后执行，届时插件提供的模型已经可用
+            _host.Services.GetRequiredService<PluginManager>().Initialize();
             // 主窗口在宿主启动时创建；先在 UI 线程注册独立任务设置界面的隐式模板
             SoloTaskSettingsTemplates.Register(Current.Resources, App.GetService<SoloTaskRegistry>()!);
             await _host.StartAsync();

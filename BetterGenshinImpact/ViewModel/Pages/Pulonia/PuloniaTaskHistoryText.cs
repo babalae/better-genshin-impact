@@ -25,7 +25,7 @@ public static class PuloniaTaskHistoryText
             return ("未启用", "未启用", PuloniaTaskRunStatusCategory.Neutral);
         if (result.ReasonCode == PuloniaTaskRunClassifier.ResumeSkippedReason)
             return ("之前已完成", "之前已完成", PuloniaTaskRunStatusCategory.Neutral);
-        if (PuloniaCollectionCooldown.IsCooldownSkip(result))
+        if (PuloniaRouteCooldown.IsCooldownSkip(result))
             return ("路线 CD 中", "路线 CD 跳过", PuloniaTaskRunStatusCategory.Neutral);
 
         // 2. 调度状态本身已说明结果的情况
@@ -95,7 +95,27 @@ public static class PuloniaTaskHistoryText
         "resume" => "续跑",
         "cli" => "命令行启动",
         "csharp" => "程序调用",
+        PuloniaTaskRequest.DispatchSource => "主实例下发",
         _ => source
+    };
+
+    /// <summary>
+    /// 运行状态的中文显示文本；运行列表与主实例显示下发运行时共用。
+    /// </summary>
+    /// <param name="status">运行状态</param>
+    public static string Status(PuloniaTaskRunStatus status) => status switch
+    {
+        PuloniaTaskRunStatus.Queued => "排队中",
+        PuloniaTaskRunStatus.Running => "运行中",
+        PuloniaTaskRunStatus.Cancelling => "停止中",
+        PuloniaTaskRunStatus.Succeeded => "已完成",
+        PuloniaTaskRunStatus.Failed => "已失败",
+        PuloniaTaskRunStatus.Cancelled => "已停止",
+        PuloniaTaskRunStatus.TimedOut => "已超时",
+        PuloniaTaskRunStatus.Interrupted => "已中断",
+        PuloniaTaskRunStatus.NeedsAttention => "待处理",
+        PuloniaTaskRunStatus.Expired => "已过期（未执行）",
+        _ => status.ToString()
     };
 
     /// <summary>

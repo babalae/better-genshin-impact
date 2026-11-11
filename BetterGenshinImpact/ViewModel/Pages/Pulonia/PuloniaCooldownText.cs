@@ -1,22 +1,20 @@
 using System;
-using System.Collections.Generic;
 using BetterGenshinImpact.Pulonia.Models;
-using BetterGenshinImpact.Pulonia.Services;
 
 namespace BetterGenshinImpact.ViewModel.Pages.Pulonia;
 
 /// <summary>
-/// 路线 CD 在界面上的统一文字：状态名称、时间格式与作用域名称；任务树标记、CD 总览、运行预览和设置表单共用。
+/// 路线 CD 在界面上的统一文字：状态名称、时间格式与账户说明；任务树标记、CD 总览、运行预览和设置表单共用。
 /// </summary>
 internal static class PuloniaCooldownText
 {
     /// <summary>状态的中文名称。</summary>
-    public static string State(PuloniaCollectionCooldownState state) => state switch
+    public static string State(PuloniaRouteCooldownState state) => state switch
     {
-        PuloniaCollectionCooldownState.CoolingDown => "CD 中",
-        PuloniaCollectionCooldownState.Completed => "已完成（一次性）",
-        PuloniaCollectionCooldownState.Unmatched => "未识别刷新规则",
-        PuloniaCollectionCooldownState.NotChecked => "不检查 CD",
+        PuloniaRouteCooldownState.CoolingDown => "CD 中",
+        PuloniaRouteCooldownState.Completed => "已完成（一次性）",
+        PuloniaRouteCooldownState.Unmatched => "未识别刷新规则",
+        PuloniaRouteCooldownState.NotChecked => "不检查 CD",
         _ => "可执行"
     };
 
@@ -52,16 +50,8 @@ internal static class PuloniaCooldownText
             : Time(next);
 
     /// <summary>
-    /// 作用域的显示名：默认作用域为“当前登录账号”，指定账号显示账号资料名与 UID。
+    /// 路线 CD 所按账户的说明，例如“CD 按账户：小号”。完成记录按账户存放，界面始终说明按哪个账户显示。
     /// </summary>
-    /// <param name="scopeKey">作用域键。</param>
-    /// <param name="accountNamesByUid">UID → 账号资料名称。</param>
-    public static string Scope(string scopeKey, IReadOnlyDictionary<string, string> accountNamesByUid)
-    {
-        var identity = scopeKey.StartsWith(PuloniaCollectionCooldown.ScopeKeyPrefix, StringComparison.Ordinal)
-            ? scopeKey[PuloniaCollectionCooldown.ScopeKeyPrefix.Length..] : scopeKey;
-        if (identity == PuloniaCollectionCooldown.DefaultScopeIdentity)
-            return "当前登录账号";
-        return accountNamesByUid.TryGetValue(identity, out var name) ? $"{name}（UID {identity}）" : $"UID {identity}";
-    }
+    /// <param name="accountName">账户名称。</param>
+    public static string Account(string accountName) => "CD 按账户：" + accountName;
 }

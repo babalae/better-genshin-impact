@@ -47,7 +47,7 @@ public partial class QuestVoiceSettingsViewModel : ViewModel
     public bool HasCommandError => !string.IsNullOrWhiteSpace(CommandError);
     /// <summary>GPT-SoVITS 的连接与声线库设置。</summary>
     public GptSovitsSettingsViewModel Gpt { get; }
-    /// <summary>7 个引擎：GPT-SoVITS 在前，其余引擎随后；★ 表示默认引擎。</summary>
+    /// <summary>4 个引擎：GPT-SoVITS 在前，其余引擎随后；★ 表示默认引擎。</summary>
     public IReadOnlyList<QuestVoiceEngineEntry> Engines { get; }
     /// <summary>正在编辑的引擎；与默认引擎在同一页可见。</summary>
     [ObservableProperty]
@@ -66,15 +66,14 @@ public partial class QuestVoiceSettingsViewModel : ViewModel
         Gpt = new GptSovitsSettingsViewModel(this, factory, service);
         EngineSettingsViewModel[] others =
         [
-            new HuoshanSettingsViewModel(this, factory, service),
-            new WindowsSapiSettingsViewModel(this, factory, service),
             new VoicevoxSettingsViewModel(this, factory, service),
             new VitsSettingsViewModel(this, factory, service),
-            new OpenAiSpeechSettingsViewModel(this, factory, service),
-            new GoogleTtsSettingsViewModel(this, factory, service)
+            new OpenAiSpeechSettingsViewModel(this, factory, service)
         ];
         Engines = new[] { new QuestVoiceEngineEntry(TtsProviderRegistry.GetInfo("gpt-sovits"), Gpt) }
             .Concat(others.Select(x => new QuestVoiceEngineEntry(x.Provider, x))).ToArray();
+        // 旧配置可能仍选中已移除的引擎；打开设置时持久化为安全默认值。
+        if (!TtsProviderRegistry.IsRegistered(Config.ProviderId)) Config.ProviderId = "gpt-sovits";
         Config.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(QuestVoiceConfig.ProviderId)) RefreshDefaultEngine();

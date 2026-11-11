@@ -51,7 +51,7 @@ public sealed partial class PuloniaTaskStore
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            using var writerLock = AcquireWriterLock();
+            using var writerLock = await AcquireWriterLockAsync(ct).ConfigureAwait(false);
             await WriteAtomicallyAsync(Path.Combine(RootDirectory, PlanViewStateFileName), json, ct).ConfigureAwait(false);
         }
         finally

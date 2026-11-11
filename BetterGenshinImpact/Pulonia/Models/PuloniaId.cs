@@ -9,7 +9,7 @@ namespace BetterGenshinImpact.Pulonia.Models;
 public static class PuloniaId
 {
     /// <summary>
-    /// 运行 ID 末尾随机部分的字符数；同一秒内另由单写入者查重。
+    /// 运行 ID 末尾随机部分的字符数；同一秒内另由生成它的实例查重（本实例的运行、已加载历史与共享历史目录）。
     /// </summary>
     private const int RunRandomLength = 4;
 

@@ -30,10 +30,8 @@ public partial class QuestVoiceEngineConfig : ObservableObject
     /// <summary>完整缺省值不要求额外安装，不覆盖旧配置。</summary>
     public static Dictionary<string, QuestVoiceEngineConfig> Defaults() => new()
     {
-        ["windows-sapi"] = new(),
         ["voicevox"] = new() { LocalUrl = "http://127.0.0.1:50021/", VoiceId = "0", Language = "ja" },
         ["vits-simple-api"] = new() { LocalUrl = "http://127.0.0.1:23456/", VoiceId = "VITS:0", Language = "auto" },
-        ["openai-speech"] = new() { LocalUrl = "https://api.openai.com/v1/", VoiceId = "alloy", Format = "mp3" },
-        ["google-translate"] = new() { VoiceId = "zh-CN", Language = "zh-CN" }
+        ["openai-speech"] = new() { LocalUrl = "https://api.openai.com/v1/", VoiceId = "alloy", Format = "mp3" }
     };
 }

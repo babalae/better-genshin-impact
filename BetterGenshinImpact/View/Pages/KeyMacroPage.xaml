@@ -1,0 +1,892 @@
+<UserControl x:Class="BetterGenshinImpact.View.Pages.KeyMacroPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
+             xmlns:codeEditor="clr-namespace:BetterGenshinImpact.View.Controls.CodeEditor"
+             xmlns:converters="clr-namespace:BetterGenshinImpact.View.Converters"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:dd="urn:gong-wpf-dragdrop"
+             xmlns:hotKey="clr-namespace:BetterGenshinImpact.View.Controls.HotKey"
+             xmlns:km="clr-namespace:BetterGenshinImpact.ViewModel.Pages.KeyMacro"
+             xmlns:kmc="clr-namespace:BetterGenshinImpact.View.Controls.KeyMacro"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:pages="clr-namespace:BetterGenshinImpact.ViewModel.Pages"
+             xmlns:script="clr-namespace:BetterGenshinImpact.GameTask.KeyMacro.Script"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             d:DataContext="{d:DesignInstance Type=pages:KeyMacroPageViewModel}"
+             d:DesignHeight="800"
+             d:DesignWidth="1100"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             FontFamily="{StaticResource TextThemeFontFamily}"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             mc:Ignorable="d">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/BetterGI;component/View/Controls/CodeEditor/CodeBox.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <BooleanToVisibilityConverter x:Key="KeyMacroBoolVisibility" />
+            <converters:BooleanToVisibilityRevertConverter x:Key="KeyMacroBoolCollapsed" />
+
+            <!--  ContextMenu 位于独立可视树，通过 Freezable 代理访问页面 ViewModel  -->
+            <behavior:BindingProxy x:Key="KeyMacroPageProxy" Data="{Binding}" />
+
+            <!--  卡片容器  -->
+            <Style x:Key="KeyMacroCard" TargetType="Border">
+                <Setter Property="Background" Value="{DynamicResource CardBackground}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="{DynamicResource ControlCornerRadius}" />
+                <Setter Property="Padding" Value="16,12" />
+            </Style>
+
+            <!--  说明文字  -->
+            <Style x:Key="KeyMacroDescription" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+            </Style>
+
+            <!--  快捷键状态：错误为红色，提醒为黄色  -->
+            <Style x:Key="KeyMacroStatusText" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding HotkeyStatusIsWarning, Mode=OneWay}" Value="True">
+                        <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding HotkeyStatusIsError, Mode=OneWay}" Value="True">
+                        <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <!--  步骤行右侧的图标按钮  -->
+            <Style x:Key="KeyMacroIconButton" BasedOn="{StaticResource {x:Type ui:Button}}" TargetType="ui:Button">
+                <Setter Property="Appearance" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Width" Value="30" />
+                <Setter Property="Height" Value="30" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="Margin" Value="2,0,0,0" />
+            </Style>
+
+            <!--  工具栏按钮  -->
+            <Style x:Key="KeyMacroToolButton" BasedOn="{StaticResource {x:Type ui:Button}}" TargetType="ui:Button">
+                <Setter Property="Margin" Value="0,0,6,6" />
+                <Setter Property="Padding" Value="10,4" />
+            </Style>
+
+            <!--  数字输入框：整数，不显示清空和加减按钮  -->
+            <Style x:Key="KeyMacroNumberBox" BasedOn="{StaticResource {x:Type ui:NumberBox}}" TargetType="ui:NumberBox">
+                <Setter Property="MaxDecimalPlaces" Value="0" />
+                <Setter Property="ClearButtonEnabled" Value="False" />
+                <Setter Property="SpinButtonPlacementMode" Value="Hidden" />
+                <Setter Property="AcceptsExpression" Value="False" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <!--  列表 + 编辑区的全高页面，边距比设置类页面的 PagePadding 小，与 Pulonia 管理页一致  -->
+    <Grid Margin="16,12,16,16">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="260" />
+            <ColumnDefinition Width="12" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!--  ===================== 左栏：宏列表 =====================  -->
+        <Border Grid.Column="0" Padding="12" Style="{StaticResource KeyMacroCard}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBlock VerticalAlignment="Center"
+                                  FontTypography="BodyStrong"
+                                  Text="按键宏" />
+                    <ui:ToggleSwitch Grid.Column="1"
+                                     IsChecked="{Binding Config.KeyMacroConfig.Enabled, Mode=TwoWay}"
+                                     ToolTip="按键宏总开关：关闭后全部按键宏的快捷键失效" />
+                </Grid>
+                <TextBlock Grid.Row="1"
+                           Margin="0,4,0,10"
+                           Style="{StaticResource KeyMacroDescription}"
+                           Text="不识图，按快捷键直接执行键鼠序列。每个宏保存为 User\BgiMacro 下的一个 txt 文件。" />
+
+                <WrapPanel Grid.Row="2" Margin="0,0,0,6">
+                    <ui:DropDownButton Margin="0,0,6,6"
+                                       Appearance="Primary"
+                                       Content="新建"
+                                       Icon="{ui:SymbolIcon Add24}">
+                        <ui:DropDownButton.Flyout>
+                            <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}" ItemsSource="{Binding Templates, Mode=OneWay}">
+                                <ContextMenu.ItemContainerStyle>
+                                    <Style BasedOn="{StaticResource {x:Type MenuItem}}" TargetType="{x:Type MenuItem}">
+                                        <Setter Property="Header" Value="{Binding Title, Mode=OneWay}" />
+                                        <Setter Property="Command" Value="{Binding DataContext.CreateCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}" />
+                                        <Setter Property="CommandParameter" Value="{Binding}" />
+                                    </Style>
+                                </ContextMenu.ItemContainerStyle>
+                            </ContextMenu>
+                        </ui:DropDownButton.Flyout>
+                    </ui:DropDownButton>
+                    <ui:Button Margin="0,0,6,6"
+                               Command="{Binding ImportCommand}"
+                               Content="导入"
+                               Icon="{ui:SymbolIcon ArrowImport24}"
+                               ToolTip="导入别人分享的 txt 宏文件（快捷键需要重新设置）" />
+                    <ui:Button Margin="0,0,0,6"
+                               Command="{Binding OpenFolderCommand}"
+                               Icon="{ui:SymbolIcon FolderOpen24}"
+                               ToolTip="打开宏目录 User\BgiMacro" />
+                </WrapPanel>
+
+                <ui:ListView Grid.Row="3"
+                             behavior:RightClickSelectBehavior.Enabled="True"
+                             ItemsSource="{Binding Items, Mode=OneWay}"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+                             SelectionMode="Single">
+                    <!--  右键菜单：右键先选中所在的宏，复制、删除作用于选中的宏；新建按模板创建  -->
+                    <ui:ListView.ContextMenu>
+                        <ContextMenu>
+                            <ui:MenuItem Header="新建"
+                                         Icon="{ui:SymbolIcon Add24}"
+                                         ItemsSource="{Binding Data.Templates, Source={StaticResource KeyMacroPageProxy}, Mode=OneWay}">
+                                <ui:MenuItem.ItemContainerStyle>
+                                    <Style BasedOn="{StaticResource {x:Type MenuItem}}" TargetType="{x:Type MenuItem}">
+                                        <Setter Property="Header" Value="{Binding Title, Mode=OneWay}" />
+                                        <Setter Property="Command" Value="{Binding Data.CreateCommand, Source={StaticResource KeyMacroPageProxy}}" />
+                                        <Setter Property="CommandParameter" Value="{Binding}" />
+                                    </Style>
+                                </ui:MenuItem.ItemContainerStyle>
+                            </ui:MenuItem>
+                            <ui:MenuItem Command="{Binding Data.DuplicateCommand, Source={StaticResource KeyMacroPageProxy}}"
+                                         CommandParameter="{Binding Data.SelectedItem, Source={StaticResource KeyMacroPageProxy}, Mode=OneWay}"
+                                         Header="复制"
+                                         Icon="{ui:SymbolIcon Copy24}"
+                                         IsEnabled="{Binding Data.HasSelection, Source={StaticResource KeyMacroPageProxy}, Mode=OneWay}" />
+                            <ui:MenuItem Command="{Binding Data.DeleteCommand, Source={StaticResource KeyMacroPageProxy}}"
+                                         CommandParameter="{Binding Data.SelectedItem, Source={StaticResource KeyMacroPageProxy}, Mode=OneWay}"
+                                         Header="删除"
+                                         Icon="{ui:SymbolIcon Delete24}"
+                                         IsEnabled="{Binding Data.HasSelection, Source={StaticResource KeyMacroPageProxy}, Mode=OneWay}" />
+                        </ContextMenu>
+                    </ui:ListView.ContextMenu>
+                    <ui:ListView.ItemTemplate>
+                        <DataTemplate DataType="{x:Type km:KeyMacroItemViewModel}">
+                            <Grid Margin="4,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock MaxWidth="150"
+                                                   FontWeight="SemiBold"
+                                                   Text="{Binding Name, Mode=OneWay}"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <Ellipse Width="8"
+                                                 Height="8"
+                                                 Margin="6,0,0,0"
+                                                 VerticalAlignment="Center"
+                                                 Fill="{DynamicResource SystemFillColorSuccessBrush}"
+                                                 ToolTip="运行中"
+                                                 Visibility="{Binding IsRunning, Mode=OneWay, Converter={StaticResource KeyMacroBoolVisibility}}" />
+                                    </StackPanel>
+                                    <TextBlock Margin="0,2,0,0" Style="{StaticResource KeyMacroStatusText}">
+                                        <Run Text="{Binding ListHotkeyText, Mode=OneWay}" /><Run Text=" · " /><Run Text="{Binding ModeName, Mode=OneWay}" />
+                                    </TextBlock>
+                                </StackPanel>
+                                <ui:ToggleSwitch Grid.Column="1"
+                                                 Margin="8,0,0,0"
+                                                 VerticalAlignment="Center"
+                                                 IsChecked="{Binding Enabled, Mode=TwoWay}"
+                                                 ToolTip="启用 / 停用此宏" />
+                            </Grid>
+                        </DataTemplate>
+                    </ui:ListView.ItemTemplate>
+                </ui:ListView>
+
+                <TextBlock Grid.Row="3"
+                           Margin="4,8"
+                           VerticalAlignment="Top"
+                           IsHitTestVisible="False"
+                           Style="{StaticResource KeyMacroDescription}"
+                           Text="还没有按键宏。点击「新建」从模板开始，或导入别人分享的 txt 文件。"
+                           Visibility="{Binding HasItems, Mode=OneWay, Converter={StaticResource KeyMacroBoolCollapsed}}" />
+
+                <TextBlock Grid.Row="4"
+                           Margin="0,8,0,0"
+                           Style="{StaticResource KeyMacroDescription}"
+                           Text="停止当前脚本/独立任务的快捷键也会停止正在运行的按键宏。" />
+            </Grid>
+        </Border>
+
+        <!--  ===================== 右栏：未选中时的提示 =====================  -->
+        <Border Grid.Column="2"
+                Style="{StaticResource KeyMacroCard}"
+                Visibility="{Binding HasSelection, Mode=OneWay, Converter={StaticResource KeyMacroBoolCollapsed}}">
+            <StackPanel MaxWidth="420"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                <ui:SymbolIcon HorizontalAlignment="Center"
+                               FontSize="40"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                               Symbol="KeyboardLayoutFloat24" />
+                <TextBlock Margin="0,12,0,0"
+                           HorizontalAlignment="Center"
+                           Style="{StaticResource KeyMacroDescription}"
+                           Text="选择左侧的宏进行编辑，或点击「新建」。按键宏只发送键盘和鼠标操作，不识别游戏画面。"
+                           TextAlignment="Center" />
+            </StackPanel>
+        </Border>
+
+        <!--  ===================== 右栏：编辑选中的宏 =====================  -->
+        <Grid Grid.Column="2"
+              DataContext="{Binding SelectedItem, Mode=OneWay}"
+              Visibility="{Binding DataContext.HasSelection, Mode=OneWay, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource KeyMacroBoolVisibility}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" MinHeight="440" />
+            </Grid.RowDefinitions>
+
+            <!--  标题行：名称、启用、复制、删除  -->
+            <Border Grid.Row="0" Style="{StaticResource KeyMacroCard}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" MaxWidth="360" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBox VerticalAlignment="Center"
+                                FontSize="15"
+                                MaxLength="64"
+                                PlaceholderText="宏名称"
+                                Text="{Binding EditingName, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                ToolTip="宏名称就是文件名，修改后点击其他位置生效" />
+                    <ui:ToggleSwitch Grid.Column="2"
+                                     Margin="12,0"
+                                     VerticalAlignment="Center"
+                                     Content="启用"
+                                     IsChecked="{Binding Enabled, Mode=TwoWay}" />
+                    <ui:Button Grid.Column="3"
+                               Margin="0,0,6,0"
+                               Command="{Binding DataContext.DuplicateCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                               CommandParameter="{Binding}"
+                               Content="复制"
+                               Icon="{ui:SymbolIcon Copy24}" />
+                    <ui:Button Grid.Column="4"
+                               Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                               CommandParameter="{Binding}"
+                               Content="删除"
+                               Icon="{ui:SymbolIcon Delete24}" />
+                </Grid>
+            </Border>
+
+            <!--  触发设置：快捷键、触发方式  -->
+            <Border Grid.Row="1"
+                    Margin="0,8,0,0"
+                    Style="{StaticResource KeyMacroCard}">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Margin="0,0,12,0" VerticalAlignment="Center">
+                            <ui:TextBlock FontTypography="Body" Text="快捷键" />
+                            <TextBlock Style="{StaticResource KeyMacroDescription}" Text="全局热键可用组合键，按键不会传给游戏；键鼠监听只能用单键或鼠标侧键，按键会同时传给游戏。" />
+                        </StackPanel>
+                        <ui:Button Grid.Column="1"
+                                   Width="104"
+                                   Height="34"
+                                   Margin="0,0,8,0"
+                                   VerticalAlignment="Center"
+                                   Command="{Binding SwitchHotKeyTypeCommand}"
+                                   Content="{Binding LocalizedHotKeyTypeName, Mode=OneWay}"
+                                   IsEnabled="{Binding CanSwitchHotKeyType, Mode=OneWay}"
+                                   ToolTip="切换全局热键 / 键鼠监听；切换后需要重新设置键值。按住循环只能使用键鼠监听" />
+                        <hotKey:HotKeyTextBox Grid.Column="2"
+                                              Width="180"
+                                              Padding="12,6"
+                                              VerticalAlignment="Center"
+                                              HotKeyTypeName="{Binding HotKeyTypeName, Mode=OneWay}"
+                                              Hotkey="{Binding HotKey, Mode=TwoWay}"
+                                              Style="{StaticResource DefaultTextBoxStyle}"
+                                              TextAlignment="Center"
+                                              ToolTip="点击后按下快捷键；Delete / Backspace / Esc 清空。键鼠监听支持鼠标侧键" />
+                    </Grid>
+                    <TextBlock Margin="0,6,0,0"
+                               Style="{StaticResource KeyMacroStatusText}"
+                               Text="{Binding HotkeyStatus, Mode=OneWay}" />
+
+                    <Separator Margin="0,12" />
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Margin="0,0,12,0" VerticalAlignment="Center">
+                            <ui:TextBlock FontTypography="Body" Text="触发方式" />
+                            <TextBlock Style="{StaticResource KeyMacroDescription}" Text="{Binding ModeDescription, Mode=OneWay}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    Orientation="Horizontal">
+                            <RadioButton MinWidth="0"
+                                         Margin="0,0,12,0"
+                                         Content="单次"
+                                         IsChecked="{Binding IsOnceMode, Mode=TwoWay}" />
+                            <RadioButton MinWidth="0"
+                                         Margin="0,0,12,0"
+                                         Content="按住循环"
+                                         IsChecked="{Binding IsHoldMode, Mode=TwoWay}" />
+                            <RadioButton MinWidth="0"
+                                         Content="切换循环"
+                                         IsChecked="{Binding IsToggleMode, Mode=TwoWay}" />
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!--  内容：步骤视图 / 脚本视图  -->
+            <Border Grid.Row="2"
+                    Margin="0,8,0,0"
+                    Padding="12,8,12,12"
+                    Style="{StaticResource KeyMacroCard}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TabControl Grid.Row="0" SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}">
+                        <!--  ===== 步骤视图 =====  -->
+                        <TabItem Header="步骤">
+                            <Grid Margin="0,8,0,0">
+                                <Grid.InputBindings>
+                                    <KeyBinding Key="Z"
+                                                Command="{Binding UndoCommand}"
+                                                Modifiers="Control" />
+                                    <KeyBinding Key="Y"
+                                                Command="{Binding RedoCommand}"
+                                                Modifiers="Control" />
+                                </Grid.InputBindings>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+
+                                <!--  工具栏  -->
+                                <Grid Grid.Row="0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <WrapPanel IsEnabled="{Binding IsStepEditable, Mode=OneWay}">
+                                        <ui:Button Command="{Binding AddStepCommand}"
+                                                   CommandParameter="{x:Static script:KeyMacroCommandKind.KeyPress}"
+                                                   Content="＋ 按键"
+                                                   Style="{StaticResource KeyMacroToolButton}"
+                                                   ToolTip="按一下键盘键" />
+                                        <ui:Button Command="{Binding AddStepCommand}"
+                                                   CommandParameter="{x:Static script:KeyMacroCommandKind.KeyDown}"
+                                                   Content="＋ 按下键"
+                                                   Style="{StaticResource KeyMacroToolButton}"
+                                                   ToolTip="按下键盘键并保持，之后用「松开键」松开" />
+                                        <ui:Button Command="{Binding AddStepCommand}"
+                                                   CommandParameter="{x:Static script:KeyMacroCommandKind.KeyUp}"
+                                                   Content="＋ 松开键"
+                                                   Style="{StaticResource KeyMacroToolButton}" />
+                                        <ui:Button Command="{Binding AddStepCommand}"
+                                                   CommandParameter="{x:Static script:KeyMacroCommandKind.Wait}"
+                                                   Content="＋ 等待"
+                                                   Style="{StaticResource KeyMacroToolButton}" />
+                                        <ui:DropDownButton Margin="0,0,6,6"
+                                                           Padding="10,4"
+                                                           Content="＋ 鼠标">
+                                            <ui:DropDownButton.Flyout>
+                                                <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                                    <MenuItem Command="{Binding AddStepCommand}"
+                                                              CommandParameter="{x:Static script:KeyMacroCommandKind.Click}"
+                                                              Header="鼠标点击" />
+                                                    <MenuItem Command="{Binding AddStepCommand}"
+                                                              CommandParameter="{x:Static script:KeyMacroCommandKind.MouseDown}"
+                                                              Header="鼠标按下" />
+                                                    <MenuItem Command="{Binding AddStepCommand}"
+                                                              CommandParameter="{x:Static script:KeyMacroCommandKind.MouseUp}"
+                                                              Header="鼠标松开" />
+                                                    <Separator />
+                                                    <MenuItem Command="{Binding AddStepCommand}"
+                                                              CommandParameter="{x:Static script:KeyMacroCommandKind.MoveBy}"
+                                                              Header="相对移动"
+                                                              ToolTip="从当前位置移动指定像素" />
+                                                    <MenuItem Command="{Binding AddStepCommand}"
+                                                              CommandParameter="{x:Static script:KeyMacroCommandKind.MoveTo}"
+                                                              Header="绝对移动"
+                                                              ToolTip="移到游戏画面坐标，以 1920×1080 为准" />
+                                                    <MenuItem Command="{Binding AddStepCommand}"
+                                                              CommandParameter="{x:Static script:KeyMacroCommandKind.Scroll}"
+                                                              Header="滚轮" />
+                                                </ContextMenu>
+                                            </ui:DropDownButton.Flyout>
+                                        </ui:DropDownButton>
+                                        <ui:Button Command="{Binding AddStepCommand}"
+                                                   CommandParameter="{x:Static script:KeyMacroCommandKind.Comment}"
+                                                   Content="＋ 注释"
+                                                   Style="{StaticResource KeyMacroToolButton}" />
+                                        <ui:Button Command="{Binding UndoCommand}"
+                                                   Icon="{ui:SymbolIcon ArrowUndo24}"
+                                                   Style="{StaticResource KeyMacroToolButton}"
+                                                   ToolTip="撤销（Ctrl+Z）" />
+                                        <ui:Button Command="{Binding RedoCommand}"
+                                                   Icon="{ui:SymbolIcon ArrowRedo24}"
+                                                   Style="{StaticResource KeyMacroToolButton}"
+                                                   ToolTip="重做（Ctrl+Y）" />
+                                    </WrapPanel>
+                                    <TextBlock Grid.Column="1"
+                                               Margin="8,6,0,0"
+                                               VerticalAlignment="Top"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Text="{Binding SummaryText, Mode=OneWay}" />
+                                </Grid>
+
+                                <!--  脚本有错误时步骤视图只读  -->
+                                <Border Grid.Row="1"
+                                        Margin="0,0,0,8"
+                                        Padding="12,8"
+                                        BorderBrush="{DynamicResource SystemFillColorCriticalBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="{DynamicResource ControlCornerRadius}"
+                                        Visibility="{Binding HasErrors, Mode=OneWay, Converter={StaticResource KeyMacroBoolVisibility}}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock VerticalAlignment="Center"
+                                                   Text="{Binding StepsReadOnlyMessage, Mode=OneWay}"
+                                                   TextWrapping="Wrap" />
+                                        <ui:Button Grid.Column="1"
+                                                   Margin="8,0,0,0"
+                                                   Command="{Binding ShowDiagnosticsCommand}"
+                                                   Content="去修正" />
+                                    </Grid>
+                                </Border>
+
+                                <ListBox Grid.Row="2"
+                                         dd:DragDrop.IsDragSource="True"
+                                         dd:DragDrop.IsDropTarget="True"
+                                         dd:DragDrop.UseDefaultDragAdorner="True"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         HorizontalContentAlignment="Stretch"
+                                         IsEnabled="{Binding IsStepEditable, Mode=OneWay}"
+                                         ItemsSource="{Binding Steps, Mode=OneWay}"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                         SelectedItem="{Binding SelectedStep, Mode=TwoWay}">
+                                    <ListBox.InputBindings>
+                                        <KeyBinding Key="Delete" Command="{Binding DeleteStepCommand}" />
+                                        <KeyBinding Key="D"
+                                                    Command="{Binding DuplicateStepCommand}"
+                                                    Modifiers="Control" />
+                                    </ListBox.InputBindings>
+                                    <ListBox.ItemContainerStyle>
+                                        <Style BasedOn="{StaticResource {x:Type ListBoxItem}}" TargetType="{x:Type ListBoxItem}">
+                                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                            <Setter Property="Padding" Value="6,3" />
+                                        </Style>
+                                    </ListBox.ItemContainerStyle>
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type km:KeyMacroStepViewModel}">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="22" />
+                                                    <ColumnDefinition Width="28" />
+                                                    <ColumnDefinition Width="112" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <ui:SymbolIcon VerticalAlignment="Center"
+                                                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                               Symbol="ReOrderDotsVertical24"
+                                                               ToolTip="拖动调整顺序" />
+                                                <TextBlock Grid.Column="1"
+                                                           VerticalAlignment="Center"
+                                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                           Text="{Binding Index, Mode=OneWay}" />
+                                                <ComboBox Grid.Column="2"
+                                                          dd:DragDrop.DragSourceIgnore="True"
+                                                          DisplayMemberPath="Name"
+                                                          ItemsSource="{x:Static km:KeyMacroStepViewModel.KindOptions}"
+                                                          SelectedValue="{Binding Kind, Mode=TwoWay}"
+                                                          SelectedValuePath="Value" />
+
+                                                <!--  参数区：按步骤类型显示对应的输入控件  -->
+                                                <Grid Grid.Column="3"
+                                                      Margin="8,0"
+                                                      dd:DragDrop.DragSourceIgnore="True">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                                                        <kmc:KeyCaptureBox Width="120"
+                                                                           Padding="8,5"
+                                                                           KeyName="{Binding KeyName, Mode=TwoWay}"
+                                                                           Style="{StaticResource DefaultTextBoxStyle}"
+                                                                           TextAlignment="Center"
+                                                                           ToolTip="点击后按下要发送的键"
+                                                                           Visibility="{Binding IsKeyKind, Mode=OneWay, Converter={StaticResource KeyMacroBoolVisibility}}" />
+                                                        <ComboBox Width="110"
+                                                                  DisplayMemberPath="Name"
+                                                                  ItemsSource="{x:Static km:KeyMacroStepViewModel.ButtonOptions}"
+                                                                  SelectedValue="{Binding Button, Mode=TwoWay}"
+                                                                  SelectedValuePath="Value"
+                                                                  Visibility="{Binding IsButtonKind, Mode=OneWay, Converter={StaticResource KeyMacroBoolVisibility}}" />
+                                                        <!--  鼠标点击可选坐标：勾选后先移到坐标再点击  -->
+                                                        <CheckBox MinWidth="0"
+                                                                  Margin="8,0,8,0"
+                                                                  VerticalAlignment="Center"
+                                                                  Content="指定坐标"
+                                                                  IsChecked="{Binding HasPosition, Mode=TwoWay}"
+                                                                  ToolTip="先移到游戏画面坐标再点击，坐标以 1920×1080 为准"
+                                                                  Visibility="{Binding IsClickKind, Mode=OneWay, Converter={StaticResource KeyMacroBoolVisibility}}" />
+                                                        <!--  游戏画面坐标：绝对移动、指定坐标的鼠标点击  -->
+                                                        <StackPanel Orientation="Horizontal" Visibility="{Binding IsPositionVisible, Mode=OneWay, Converter={StaticResource KeyMacroBoolVisibility}}">
+                                                            <TextBlock Margin="0,0,4,0"
+                                                                       VerticalAlignment="Center"
+                                                                       Text="X" />
+                                                            <ui:NumberBox Width="80"
+                                                                          Maximum="1920"
+                                                                          Minimum="0"
+                                                                          Style="{StaticResource KeyMacroNumberBox}"
+                                                                          Value="{Binding PositionX, Mode=TwoWay}" />
+                                                            <TextBlock Margin="8,0,4,0"
+                                                                       VerticalAlignment="Center"
+                                                                       Text="Y" />
+                                                            <ui:NumberBox Width="80"
+                                                                          Maximum="1080"
+                                                                          Minimum="0"
+                                                                          Style="{StaticResource KeyMacroNumberBox}"
+                                                                          Value="{Binding PositionY, Mode=TwoWay}" />
+                                                            <TextBlock Margin="6,0,0,0"
+                                                                       VerticalAlignment="Center"
+                                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                                       Text="按 1920×1080"
+                                                                       ToolTip="游戏画面坐标，左上角为 (0, 0)，以 1920×1080 为准；其他分辨率按比例换算" />
+                                                        </StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Visibility="{Binding IsMoveKind, Mode=OneWay, Converter={StaticResource KeyMacroBoolVisibility}}">
+                                                            <TextBlock Margin="0,0,4,0"
+                                                                       VerticalAlignment="Center"
+                                                                       Text="X" />
+                                                            <ui:NumberBox Width="90"
+                                                                          Maximum="100000"
+                                                                          Minimum="-100000"
+                                                                          Style="{StaticResource KeyMacroNumberBox}"
+                                                                          Value="{Binding X, Mode=TwoWay}" />
+                                                            <TextBlock Margin="8,0,4,0"
+                                                                       VerticalAlignment="Center"
+                                                                       Text="Y" />
+                                                            <ui:NumberBox Width="90"
+                                                                          Maximum="100000"
+                                                                          Minimum="-100000"
+                                                                          Style="{StaticResource KeyMacroNumberBox}"
+                                                                          Value="{Binding Y, Mode=TwoWay}" />
+                                                        </StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Visibility="{Binding IsScrollKind, Mode=OneWay, Converter={StaticResource KeyMacroBoolVisibility}}">
+                                                            <ui:NumberBox Width="90"
+                                                                          Maximum="100"
+                                                                          Minimum="-100"
+                                                                          Style="{StaticResource KeyMacroNumberBox}"
+                                                                          Value="{Binding Amount, Mode=TwoWay}" />
+                                                            <TextBlock Margin="6,0,0,0"
+                                                                       VerticalAlignment="Center"
+                                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                                       Text="格，正数向上" />
+                                                        </StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Visibility="{Binding IsWaitKind, Mode=OneWay, Converter={StaticResource KeyMacroBoolVisibility}}">
+                                                            <ui:NumberBox Width="110"
+                                                                          LargeChange="100"
+                                                                          Maximum="3600000"
+                                                                          Minimum="0"
+                                                                          SmallChange="10"
+                                                                          Style="{StaticResource KeyMacroNumberBox}"
+                                                                          Value="{Binding WaitMs, Mode=TwoWay}" />
+                                                            <TextBlock Margin="6,0,0,0"
+                                                                       VerticalAlignment="Center"
+                                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                                       Text="毫秒" />
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                    <ui:TextBox Grid.Column="1"
+                                                                Margin="8,0,0,0"
+                                                                VerticalAlignment="Center"
+                                                                PlaceholderText="备注（可选）"
+                                                                Text="{Binding Note, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                                Visibility="{Binding IsCommand, Mode=OneWay, Converter={StaticResource KeyMacroBoolVisibility}}" />
+                                                    <ui:TextBox Grid.Column="0"
+                                                                Grid.ColumnSpan="2"
+                                                                VerticalAlignment="Center"
+                                                                PlaceholderText="注释文字，只用于说明，不会执行"
+                                                                Text="{Binding Text, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                                Visibility="{Binding IsComment, Mode=OneWay, Converter={StaticResource KeyMacroBoolVisibility}}" />
+                                                </Grid>
+
+                                                <StackPanel Grid.Column="4"
+                                                            VerticalAlignment="Center"
+                                                            Orientation="Horizontal">
+                                                    <ui:Button Command="{Binding DataContext.MoveStepUpCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                               CommandParameter="{Binding}"
+                                                               Content="↑"
+                                                               Style="{StaticResource KeyMacroIconButton}"
+                                                               ToolTip="上移" />
+                                                    <ui:Button Command="{Binding DataContext.MoveStepDownCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                               CommandParameter="{Binding}"
+                                                               Content="↓"
+                                                               Style="{StaticResource KeyMacroIconButton}"
+                                                               ToolTip="下移" />
+                                                    <ui:Button Command="{Binding DataContext.DuplicateStepCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                               CommandParameter="{Binding}"
+                                                               Icon="{ui:SymbolIcon Copy24}"
+                                                               Style="{StaticResource KeyMacroIconButton}"
+                                                               ToolTip="复制（Ctrl+D）" />
+                                                    <ui:Button Command="{Binding DataContext.DeleteStepCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                               CommandParameter="{Binding}"
+                                                               Icon="{ui:SymbolIcon Delete24}"
+                                                               Style="{StaticResource KeyMacroIconButton}"
+                                                               ToolTip="删除（Delete）" />
+                                                </StackPanel>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+
+                                <TextBlock Grid.Row="2"
+                                           Margin="8,12"
+                                           VerticalAlignment="Top"
+                                           IsHitTestVisible="False"
+                                           Style="{StaticResource KeyMacroDescription}"
+                                           Text="还没有步骤。用上方的按钮添加按键、等待或鼠标操作，也可以切换到「脚本」直接书写。"
+                                           Visibility="{Binding ShowEmptyStepsHint, Mode=OneWay, Converter={StaticResource KeyMacroBoolVisibility}}" />
+                            </Grid>
+                        </TabItem>
+
+                        <!--  ===== 脚本视图 =====  -->
+                        <TabItem Header="脚本">
+                            <Grid Margin="0,8,0,0">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="12" />
+                                    <ColumnDefinition Width="250" />
+                                </Grid.ColumnDefinitions>
+
+                                <!--  工具栏  -->
+                                <StackPanel Grid.Row="0"
+                                            Grid.Column="0"
+                                            Margin="0,0,0,8"
+                                            Orientation="Horizontal">
+                                    <TextBlock Margin="0,0,8,0"
+                                               VerticalAlignment="Center"
+                                               Text="插入按键" />
+                                    <kmc:KeyCaptureBox Width="120"
+                                                       Padding="8,5"
+                                                       KeyName="{Binding InsertKeyName, Mode=TwoWay}"
+                                                       Style="{StaticResource DefaultTextBoxStyle}"
+                                                       TextAlignment="Center"
+                                                       ToolTip="点击后按下一个键，在光标处插入 keypress(键名)" />
+                                    <TextBlock Margin="12,0,0,0"
+                                               VerticalAlignment="Center"
+                                               Style="{StaticResource KeyMacroDescription}"
+                                               Text="输入时自动补全，Ctrl+Space 手动打开补全" />
+                                </StackPanel>
+                                <TextBlock Grid.Row="0"
+                                           Grid.Column="2"
+                                           Margin="0,0,0,8"
+                                           HorizontalAlignment="Right"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                           Text="{Binding SummaryText, Mode=OneWay}" />
+
+                                <!--  编辑器。Request 用双向绑定：编辑器执行请求后写回 null，切换宏时不会重复执行旧请求  -->
+                                <Border Grid.Row="1"
+                                        Grid.Column="0"
+                                        Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="{DynamicResource ControlCornerRadius}">
+                                    <codeEditor:KeyMacroCodeBox MinHeight="260"
+                                                                Padding="4"
+                                                                Code="{Binding Script, Mode=TwoWay}"
+                                                                Diagnostics="{Binding Diagnostics, Mode=OneWay}"
+                                                                FontFamily="Cascadia Mono, Consolas, Microsoft YaHei UI"
+                                                                FontSize="14"
+                                                                HorizontalScrollBarVisibility="Auto"
+                                                                Request="{Binding EditorRequest, Mode=TwoWay}"
+                                                                VerticalScrollBarVisibility="Auto" />
+                                </Border>
+
+                                <!--  语法速查  -->
+                                <Border Grid.Row="1"
+                                        Grid.RowSpan="2"
+                                        Grid.Column="2"
+                                        Padding="10"
+                                        BorderBrush="{DynamicResource CardBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="{DynamicResource ControlCornerRadius}">
+                                    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                                        <StackPanel>
+                                            <ui:TextBlock Margin="0,0,0,6"
+                                                          FontTypography="BodyStrong"
+                                                          Text="语法速查（点击插入）" />
+                                            <ItemsControl ItemsSource="{Binding CommandHelp, Mode=OneWay}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate DataType="{x:Type script:KeyMacroCommandInfo}">
+                                                        <ui:Button Margin="0,0,0,2"
+                                                                   Padding="6,4"
+                                                                   HorizontalAlignment="Stretch"
+                                                                   HorizontalContentAlignment="Left"
+                                                                   Appearance="Transparent"
+                                                                   BorderThickness="0"
+                                                                   Command="{Binding DataContext.InsertExampleCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                                   CommandParameter="{Binding}">
+                                                            <StackPanel>
+                                                                <TextBlock FontFamily="Cascadia Mono, Consolas"
+                                                                           Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                                                                           Text="{Binding Example, Mode=OneWay}" />
+                                                                <TextBlock Style="{StaticResource KeyMacroDescription}" Text="{Binding Description, Mode=OneWay}" />
+                                                            </StackPanel>
+                                                        </ui:Button>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <TextBlock Margin="6,8,0,0"
+                                                       Style="{StaticResource KeyMacroDescription}"
+                                                       Text="多条指令可以写在一行，用逗号分隔。整行 // 或 # 为注释，行尾 // 为备注。不区分大小写。" />
+                                            <TextBlock Margin="6,6,0,0"
+                                                       Style="{StaticResource KeyMacroDescription}"
+                                                       Text="按键名：a–z、0–9、f1–f24、space、enter、tab、esc、backspace、shift / lshift / rshift、ctrl / lctrl、alt / lalt、up / down / left / right、numpad0–9。" />
+                                            <TextBlock Margin="6,6,0,0"
+                                                       Style="{StaticResource KeyMacroDescription}"
+                                                       Text="鼠标键：left、right、middle、x1、x2。按键原样发送，不经过游戏键位映射。" />
+                                            <TextBlock Margin="6,6,0,0"
+                                                       Style="{StaticResource KeyMacroDescription}"
+                                                       Text="坐标：moveto 和 click 的坐标是游戏画面坐标，左上角为 (0, 0)，以 1920×1080 为准，其他分辨率按比例换算；moveby 是相对当前位置的像素位移。" />
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </Border>
+
+                                <!--  问题列表  -->
+                                <ItemsControl Grid.Row="2"
+                                              Grid.Column="0"
+                                              MaxHeight="140"
+                                              Margin="0,8,0,0"
+                                              ItemsSource="{Binding Diagnostics, Mode=OneWay}"
+                                              Visibility="{Binding HasDiagnostics, Mode=OneWay, Converter={StaticResource KeyMacroBoolVisibility}}">
+                                    <ItemsControl.Template>
+                                        <ControlTemplate TargetType="ItemsControl">
+                                            <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                                                <ItemsPresenter />
+                                            </ScrollViewer>
+                                        </ControlTemplate>
+                                    </ItemsControl.Template>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type script:KeyMacroDiagnostic}">
+                                            <ui:Button Padding="6,3"
+                                                       HorizontalAlignment="Stretch"
+                                                       HorizontalContentAlignment="Left"
+                                                       Appearance="Transparent"
+                                                       BorderThickness="0"
+                                                       Command="{Binding DataContext.JumpToDiagnosticCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                       CommandParameter="{Binding}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <ui:SymbolIcon Margin="0,0,6,0" VerticalAlignment="Center">
+                                                        <ui:SymbolIcon.Style>
+                                                            <Style TargetType="ui:SymbolIcon">
+                                                                <Setter Property="FontSize" Value="16" />
+                                                                <Setter Property="Symbol" Value="Warning24" />
+                                                                <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsError, Mode=OneWay}" Value="True">
+                                                                        <Setter Property="Symbol" Value="ErrorCircle24" />
+                                                                        <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </ui:SymbolIcon.Style>
+                                                    </ui:SymbolIcon>
+                                                    <TextBlock VerticalAlignment="Center"
+                                                               Text="{Binding DisplayText, Mode=OneWay}"
+                                                               TextWrapping="Wrap" />
+                                                </StackPanel>
+                                            </ui:Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Grid>
+                        </TabItem>
+                    </TabControl>
+
+                    <!--  状态栏  -->
+                    <Grid Grid.Row="1" Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:SymbolIcon Margin="0,0,6,0" VerticalAlignment="Center">
+                            <ui:SymbolIcon.Style>
+                                <Style TargetType="ui:SymbolIcon">
+                                    <Setter Property="FontSize" Value="16" />
+                                    <Setter Property="Symbol" Value="CheckmarkCircle24" />
+                                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasErrors, Mode=OneWay}" Value="True">
+                                            <Setter Property="Symbol" Value="ErrorCircle24" />
+                                            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ui:SymbolIcon.Style>
+                        </ui:SymbolIcon>
+                        <TextBlock Grid.Column="1"
+                                   VerticalAlignment="Center"
+                                   Text="{Binding StatusText, Mode=OneWay}"
+                                   TextWrapping="Wrap" />
+                        <TextBlock Grid.Column="2"
+                                   Margin="12,0,0,0"
+                                   VerticalAlignment="Center"
+                                   Style="{StaticResource KeyMacroDescription}"
+                                   Text="停止时会自动松开宏里按下的键和鼠标" />
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

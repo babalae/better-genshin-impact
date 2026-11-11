@@ -25,23 +25,23 @@ public sealed class TtsProviderConfigurationTests : IDisposable
         Assert.False(json["UseRemoteService"]!.Value<bool>());
     }
 
-    /// <summary>第二引擎不读取 GPT 资产，运行中不受配置编辑影响。</summary>
+    /// <summary>普通引擎不读取 GPT 资产，运行中不受配置编辑影响。</summary>
     [Fact]
     public async Task PresetProviderNeedsNoGptAssetsAndFreezesSnapshot()
     {
         Directory.CreateDirectory(_root);
         await File.WriteAllBytesAsync(Path.Combine(_root, "ocr.onnx"), [1]);
         var config = JsonConvert.DeserializeObject<QuestVoiceConfig>(
-            "{\"ProviderId\":\"huoshan\",\"HuoshanVoiceId\":\"zh_female_qingxin\",\"RoutingEnabled\":true,\"StreamingEnabled\":true,\"ServiceUrl\":\"invalid\"}")!;
+            "{\"ProviderId\":\"openai-speech\",\"ExtraProviders\":{\"openai-speech\":{\"LocalUrl\":\"https://api.example/v1/\",\"VoiceId\":\"alloy\",\"Format\":\"mp3\"}},\"RoutingEnabled\":true,\"StreamingEnabled\":true,\"ServiceUrl\":\"invalid\"}")!;
 
         var result = await new QuestVoiceSessionFactory(config, _root).ValidateAsync(default);
         Assert.True(result.IsValid, result.Detail);
         var snapshot = JObject.FromObject(result.Settings!);
-        Assert.Equal("huoshan", (string?)snapshot["Provider"]?["ProviderId"]);
+        Assert.Equal("openai-speech", (string?)snapshot["Provider"]?["ProviderId"]);
         Assert.Null(result.Settings!.Routing);
         Assert.False(result.Settings.Protocol!.StreamPlayback);
         JsonConvert.PopulateObject("{\"ProviderId\":\"gpt-sovits\"}", config);
-        Assert.Equal("huoshan", (string?)JObject.FromObject(result.Settings)["Provider"]?["ProviderId"]);
+        Assert.Equal("openai-speech", (string?)JObject.FromObject(result.Settings)["Provider"]?["ProviderId"]);
     }
 
     /// <summary>远程资源保持服务器原文，不能要求客户端存在这些文件。</summary>

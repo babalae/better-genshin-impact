@@ -19,7 +19,9 @@
                  FontFamily="{DynamicResource TextThemeFontFamily}"
                  UseLayoutRounding="True"
                  d:DataContext="{d:DesignInstance Type=vm:CloudWebInstanceWindowViewModel}"
-                 mc:Ignorable="d">
+                 mc:Ignorable="d"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <ui:FluentWindow.Resources>
         <BooleanToVisibilityConverter x:Key="CloudBooleanToVisibilityConverter" />
         <Style x:Key="CloudActionButtonStyle" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
@@ -87,7 +89,7 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <ui:TextBox Text="{Binding NewInstanceName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                PlaceholderText="例如：主账号、日常号" MaxLength="32" MinHeight="32"
+                                PlaceholderText="例如：小号A、日常号" MaxLength="32" MinHeight="32"
                                 AutomationProperties.Name="实例名称">
                         <ui:TextBox.InputBindings>
                             <KeyBinding Key="Enter" Command="{Binding CreateAndLaunchCommand, Mode=OneWay}" />
@@ -101,6 +103,19 @@
                                Command="{Binding CancelCreateCommand, Mode=OneWay}"
                                ToolTip="取消新建" AutomationProperties.Name="取消新建" />
                 </Grid>
+                <!-- 账户目录有多个账户时选择新实例的 Pulonia 当前账户，默认第一个；只有一个账户时不显示。 -->
+                <StackPanel Margin="0,10,0,0"
+                            Visibility="{Binding ShowAccountChoice, Mode=OneWay, Converter={StaticResource CloudBooleanToVisibilityConverter}}">
+                    <TextBlock Text="当前账户" FontSize="12" Margin="0,0,0,7" />
+                    <ComboBox MinHeight="32"
+                              HorizontalAlignment="Stretch"
+                              AutomationProperties.Name="新实例的当前账户"
+                              DisplayMemberPath="DisplayText"
+                              ItemsSource="{Binding AccountOptions, Mode=OneWay}"
+                              SelectedValue="{Binding NewInstanceAccountId, Mode=TwoWay}"
+                              SelectedValuePath="Id"
+                              ToolTip="这个云原神实例的游戏将登录的账户；云原神实例不能自动切换账户" />
+                </StackPanel>
                 <TextBlock Text="{Binding CreationError, Mode=OneWay}" Style="{StaticResource CloudErrorTextStyle}" />
             </StackPanel>
         </Border>

@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
-using BetterGenshinImpact.Pulonia.Services;
 
 namespace BetterGenshinImpact.Pulonia.Models;
 
@@ -22,13 +20,20 @@ public sealed class PuloniaTaskRunView
     /// </summary>
     private readonly Lazy<string>? _snapshotJson;
 
-    /// <summary>
-    /// 首次读取时深复制确认事件：其中的账本条目与运行内部共用，调用方修改返回对象不能污染已落盘的事实。
-    /// </summary>
-    private readonly Lazy<IReadOnlyList<PuloniaTaskConfirmedEffect>> _confirmedEffects;
-
-    /// <summary>执行前核验的实际 UID，未准备账号或纯计算运行时为空。</summary>
+    /// <summary>指定账户的运行在执行前核验的实际 UID；跟随当前账户、未确定运行账户或纯计算运行时为空。</summary>
     public string? VerifiedUid => _record.VerifiedUid;
+
+    /// <summary>运行账户 ID；不含游戏节点或尚未确定时为空。</summary>
+    public string? AccountId => _record.AccountId;
+
+    /// <summary>运行账户的来源：实例当前账户或计划指定；未确定时为空。</summary>
+    public PuloniaTaskAccountSource? AccountSource => _record.AccountSource;
+
+    /// <summary>跟随当前账户的运行开始时的 UID 比对结果；指定账户或未确定时为空。</summary>
+    public PuloniaTaskUidCheck? UidCheck => _record.UidCheck;
+
+    /// <summary>UID 比对不一致时游戏中读到的 UID；其他情况为空。</summary>
+    public string? ObservedUid => _record.ObservedUid;
 
     /// <summary>
     /// 本次运行 ID，提交时生成；查询、取消、历史和续跑都使用此身份关联。
@@ -100,14 +105,10 @@ public sealed class PuloniaTaskRunView
     public IReadOnlyList<PuloniaTaskNodeResult> NodeResults { get; }
 
     /// <summary>
-    /// 本次运行逐次确认的副作用，包括执行器随后异常或进程中断前已提交的事实。
+    /// 本次完成的路线，包括执行器随后异常或进程中断前已落盘的记录。完成记录的属性只能在初始化时设置，
+    /// 与运行内部共用同一对象也不会被调用方修改。
     /// </summary>
-    public IReadOnlyList<PuloniaTaskConfirmedEffect> ConfirmedEffects => _confirmedEffects.Value;
-
-    /// <summary>
-    /// 本次运行使用的账号资料 ID。
-    /// </summary>
-    public string? AccountId => _record.Request.AccountId;
+    public IReadOnlyList<PuloniaRouteCompletion> RouteCompletions { get; }
 
     /// <summary>
     /// 来源历史运行 ID。
@@ -125,9 +126,14 @@ public sealed class PuloniaTaskRunView
     public bool IsHistorical { get; }
 
     /// <summary>
-    /// 执行实例；为空表示在主实例本地执行。
+    /// 执行实例键（<c>primary</c>、<c>child_session</c>、<c>webview:&lt;小写实例名&gt;</c>），界面用 <see cref="PuloniaInstanceKey.Describe"/> 显示。
     /// </summary>
-    public PuloniaTaskExecutionTarget? ExecutionTarget => _record.Request.ExecutionTarget;
+    public string Instance => _record.Instance;
+
+    /// <summary>
+    /// 是否为主实例一步下发到本实例的运行（来源为 <see cref="PuloniaTaskRequest.DispatchSource"/>）。
+    /// </summary>
+    public bool IsDispatched => _record.Request.Source == PuloniaTaskRequest.DispatchSource;
 
     /// <summary>
     /// 固定后的调用请求，供服务内部（触发反馈、续跑）读取；调用方不能修改。
@@ -147,8 +153,6 @@ public sealed class PuloniaTaskRunView
         // 只读包装：调用方不能增删节点结果；节点结果本身构造后不可变。
         NodeResults = new ReadOnlyCollection<PuloniaTaskNodeResult>(record.NodeResults);
         _snapshotJson = loadSnapshotJson is null ? null : new Lazy<string>(loadSnapshotJson);
-        _confirmedEffects = new Lazy<IReadOnlyList<PuloniaTaskConfirmedEffect>>(() =>
-            new ReadOnlyCollection<PuloniaTaskConfirmedEffect>(record.ConfirmedEffects
-                .Select(item => PuloniaTaskJson.Read<PuloniaTaskConfirmedEffect>(PuloniaTaskJson.Write(item))).ToArray()));
+        RouteCompletions = new ReadOnlyCollection<PuloniaRouteCompletion>(record.RouteCompletions);
     }
 }

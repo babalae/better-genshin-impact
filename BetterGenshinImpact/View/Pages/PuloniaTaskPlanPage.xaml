@@ -899,6 +899,75 @@
                                         </TextBlock>
                                     </StackPanel>
                                 </ui:Button>
+                                <!-- 运行账户：跟随当前账户或指定填写了 UID 的账户；账户目录只有一个账户且计划跟随当前账户时不显示，规则与新一条龙相同。 -->
+                                <StackPanel Margin="0,0,10,0"
+                                            VerticalAlignment="Center"
+                                            Orientation="Horizontal"
+                                            Visibility="{Binding ViewModel.ShowRunAccountEntry, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <ui:SymbolIcon Margin="0,0,5,0"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="14"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   Symbol="PeopleSwap24" />
+                                    <TextBlock Margin="0,0,6,0"
+                                               VerticalAlignment="Center"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Text="运行账户" />
+                                    <ComboBox MinWidth="170"
+                                              MaxWidth="280"
+                                              VerticalAlignment="Center"
+                                              FontSize="12"
+                                              DisplayMemberPath="Value"
+                                              SelectedValuePath="Key"
+                                              ItemsSource="{Binding ViewModel.RunAccountOptions, Mode=OneWay}"
+                                              SelectedValue="{Binding ViewModel.SelectedRunAccountId, Mode=TwoWay}"
+                                              ToolTip="跟随当前账户：不切换，为本实例当前账户执行。指定账户：运行前切换到该账户并核验 UID，只能选择填写了 UID 的账户。"
+                                              AutomationProperties.Name="运行账户" />
+                                    <TextBlock MaxWidth="320"
+                                               Margin="8,0,0,0"
+                                               VerticalAlignment="Center"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                               Text="{Binding ViewModel.RunAccountProblem, Mode=OneWay}"
+                                               TextWrapping="Wrap"
+                                               Visibility="{Binding ViewModel.HasRunAccountProblem, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                </StackPanel>
+                                <!--
+                                    CD 按账户（统筹设计 5.6）：账户目录有多个账户时显示，默认按计划的运行账户（指定账户或本实例当前账户）。
+                                    临时改选只改变本页的任务树标记、摘要和路线 CD 表单，不修改计划和实例设置，切换计划或离开本页后恢复。
+                                -->
+                                <StackPanel Margin="0,0,10,0"
+                                            VerticalAlignment="Center"
+                                            Orientation="Horizontal"
+                                            Visibility="{Binding ViewModel.ShowCooldownAccountSelector, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <ui:SymbolIcon Margin="0,0,5,0"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="14"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   Symbol="Timer24" />
+                                    <TextBlock Margin="0,0,6,0"
+                                               VerticalAlignment="Center"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Text="CD 按账户" />
+                                    <ComboBox MinWidth="120"
+                                              MaxWidth="220"
+                                              VerticalAlignment="Center"
+                                              FontSize="12"
+                                              DisplayMemberPath="Label"
+                                              SelectedValuePath="Key"
+                                              ItemsSource="{Binding ViewModel.CooldownAccountOptions, Mode=OneWay}"
+                                              SelectedValue="{Binding ViewModel.SelectedCooldownAccountId, Mode=TwoWay}"
+                                              ToolTip="任务树的路线 CD 标记、计划摘要和路线 CD 表单按这个账户的完成记录显示。默认按计划的运行账户：指定账户的计划为该账户，跟随当前账户的计划为本实例当前账户。临时改选只影响本页显示，不修改计划和实例设置，切换计划后恢复。"
+                                              AutomationProperties.Name="CD 按账户" />
+                                    <TextBlock Margin="8,0,0,0"
+                                               VerticalAlignment="Center"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Text="{Binding ViewModel.CooldownAccountNotice, Mode=OneWay}"
+                                               Visibility="{Binding ViewModel.HasCooldownAccountNotice, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                </StackPanel>
                                 <!-- 开始前的路线 CD 摘要：本次会因 CD 跳过多少项、多少路线未识别刷新规则；逐项结果在运行预览中查看。 -->
                                 <StackPanel VerticalAlignment="Center"
                                             Orientation="Horizontal"
@@ -927,12 +996,27 @@
                                        ToolTip="{Binding ViewModel.SelectedDocument.ResourceUpdateSummary, Mode=OneWay}"
                                        ToolTipService.ShowOnDisabled="True"
                                        Visibility="{Binding ViewModel.SelectedDocument.HasResourceUpdates, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            <!-- 查看路线 CD：跳到账户页的“路线 CD”，选中“CD 按账户”显示的账户，并按当前计划筛选。 -->
+                            <ui:Button Margin="0,0,8,0"
+                                       Command="{Binding ViewModel.ShowRouteCooldownsCommand, Mode=OneWay}"
+                                       Content="查看路线 CD"
+                                       Icon="{ui:SymbolIcon Timer24}"
+                                       ToolTip="到账户页查看当前显示账户的路线 CD 记录（按本计划筛选），可在那里清除记录" />
                             <ui:Button Margin="0,0,8,0"
                                        Command="{Binding ViewModel.PreviewRunCommand, Mode=OneWay}"
                                        CommandParameter="{Binding ViewModel.SelectedDocument, Mode=OneWay}"
                                        Content="预览"
                                        Icon="{ui:SymbolIcon Eye24}"
                                        ToolTip="按当前配置逐项查看本次会执行还是因路线 CD 跳过，可在预览中清除记录后开始执行" />
+                            <!--
+                                运行于：主实例且有在线子实例时显示，与新一条龙页共用；跟随当前账户的计划可多选，每个实例各运行一次，
+                                指定账户的计划只能选一个。子实例不显示，运行提交到本实例。
+                            -->
+                            <controls:PuloniaRunTargetsView MaxWidth="280"
+                                                            Margin="0,0,8,0"
+                                                            VerticalAlignment="Center"
+                                                            DataContext="{Binding ViewModel.RunTargets, Mode=OneWay}"
+                                                            Visibility="{Binding IsChoiceVisible, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
                             <ui:Button Appearance="Primary"
                                        Command="{Binding ViewModel.RunPlanCommand, Mode=OneWay}"
                                        CommandParameter="{Binding ViewModel.SelectedDocument, Mode=OneWay}"
@@ -1204,15 +1288,6 @@
                                 </StackPanel>
                             </TabItem.Header>
                             <controls:PuloniaTaskHistoryView Margin="12" DataContext="{Binding ViewModel.History}" />
-                        </TabItem>
-                        <TabItem>
-                            <TabItem.Header>
-                                <StackPanel Orientation="Horizontal">
-                                    <ui:SymbolIcon Margin="0,0,6,0" FontSize="16" Symbol="Timer24" />
-                                    <TextBlock VerticalAlignment="Center" Text="路线 CD" />
-                                </StackPanel>
-                            </TabItem.Header>
-                            <controls:PuloniaCollectionCooldownOverviewView Margin="12" DataContext="{Binding ViewModel.Cooldowns, Mode=OneWay}" />
                         </TabItem>
                         <TabItem>
                             <TabItem.Header>

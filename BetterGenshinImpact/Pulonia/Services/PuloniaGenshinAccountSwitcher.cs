@@ -37,60 +37,76 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
     private static readonly TimeSpan WaitingHintInterval = TimeSpan.FromSeconds(15);
 
     /// <inheritdoc />
-    public async Task<string> PrepareAsync(GameRuntime runtime, PuloniaGenshinAccountProfile account, CancellationToken ct)
+    public async Task<string> PrepareAsync(GameRuntime runtime, PuloniaGenshinAccountProfile account, Action switchStarted,
+        CancellationToken ct)
     {
-        if (!account.IsDefault && !Regex.IsMatch(account.Uid ?? "", "^[0-9]{9,10}$"))
-            throw new InvalidOperationException("指定账号需要填写完整 UID，不能按未指定目标切换。");
-        if (!account.IsDefault) EnsureSupportedRuntime(runtime);
+        // 原默认账号“读到任意 UID 即返回”的分支已删除：只有填写了 UID 的指定账户才会进入账户准备。
+        if (!Regex.IsMatch(account.Uid ?? "", "^[0-9]{9,10}$"))
+            throw new InvalidOperationException("指定账户需要填写完整 UID，不能按未指定目标切换。");
+        // 不能切换的运行环境（云原神等）仍可以只读核验：游戏中已登录目标账户时照常运行（统筹设计 4.4）
+        var unsupportedReason = GetUnsupportedRuntimeReason(runtime);
         using var budget = CancellationTokenSource.CreateLinkedTokenSource(ct);
         budget.CancelAfter(PreparationBudget);
         try
         {
             using var recognition = new PuloniaGenshinAccountRecognition();
-            // 1. 核验当前账号：停在派蒙菜单或可关闭的游戏内界面时先返回主界面，登录界面不按 Esc
-            TaskControl.Logger.LogInformation("账号准备：正在核验当前登录的账号");
-            await ReturnFromGameMenuAsync(runtime, recognition, budget.Token).ConfigureAwait(false);
+            // 1. 核验当前账户：可以切换的环境停在派蒙菜单或可关闭的游戏内界面时先返回主界面，登录界面不按 Esc；
+            //    不能切换的环境不按键，只截图读取
+            TaskControl.Logger.LogInformation("账户准备：正在核验当前登录的账户");
+            if (unsupportedReason is null)
+                await ReturnFromGameMenuAsync(runtime, recognition, budget.Token).ConfigureAwait(false);
             var current = await ReadStableUidAsync(runtime, null, budget.Token).ConfigureAwait(false);
-            if (current is not null && (account.IsDefault || current == account.Uid))
+            if (current is not null && current == account.Uid)
             {
-                TaskControl.Logger.LogInformation("账号准备：账号已核验");
+                TaskControl.Logger.LogInformation("账户准备：账户已核验");
                 return current;
             }
-            if (!account.IsDefault)
+            // 2. 需要切换但本实例不能切换：不登出当前账户，运行进入待处理
+            if (unsupportedReason is not null)
+                throw new InvalidOperationException($"游戏中登录的不是“{account.Name}”，本实例不能切换到“{account.Name}”（{unsupportedReason}）。");
+            var hasLoginSelection = account.LoginMode switch
             {
-                var hasLoginSelection = account.LoginMode switch
-                {
-                    PuloniaGenshinAccountLoginMode.Image => account.ImagePath is not null,
-                    PuloniaGenshinAccountLoginMode.ListText => !string.IsNullOrWhiteSpace(account.ListText),
-                    PuloniaGenshinAccountLoginMode.Password => account.CredentialReference is not null,
-                    PuloniaGenshinAccountLoginMode.Automatic => account.ImagePath is not null
-                        || !string.IsNullOrWhiteSpace(account.ListText) || account.CredentialReference is not null,
-                    _ => false
-                };
-                if (!hasLoginSelection) throw new InvalidOperationException("目标账号尚未配置图片、列表文字或密码，未登出当前账号。");
-                TaskControl.Logger.LogInformation("账号准备：正在切换到账号“{Name}”", account.Name);
-            }
-            // 2. 指定账号时先切换，再进入主界面重新核验 UID
+                PuloniaGenshinAccountLoginMode.Image => account.ImagePath is not null,
+                PuloniaGenshinAccountLoginMode.ListText => !string.IsNullOrWhiteSpace(account.ListText),
+                PuloniaGenshinAccountLoginMode.Password => account.CredentialReference is not null,
+                PuloniaGenshinAccountLoginMode.Automatic => account.ImagePath is not null
+                    || !string.IsNullOrWhiteSpace(account.ListText) || account.CredentialReference is not null,
+                _ => false
+            };
+            if (!hasLoginSelection)
+                throw new InvalidOperationException($"游戏中登录的不是“{account.Name}”，且该账户尚未配置图片、列表文字或密码，未登出当前账户。");
+            TaskControl.Logger.LogInformation("账户准备：正在切换到账户“{Name}”", account.Name);
+            // 3. 先切换，再进入主界面重新核验 UID；离开主界面前通知调用方切换已经开始
+            switchStarted();
             for (var attempt = 0; attempt < 2; attempt++)
             {
-                if (!account.IsDefault)
-                {
-                    await GoToAccountSelectionAsync(runtime, recognition, budget.Token).ConfigureAwait(false);
-                    await SelectAccountAsync(runtime, account, recognition, budget.Token).ConfigureAwait(false);
-                }
+                await GoToAccountSelectionAsync(runtime, recognition, budget.Token).ConfigureAwait(false);
+                await SelectAccountAsync(runtime, account, recognition, budget.Token).ConfigureAwait(false);
                 await EnterMainUiAsync(runtime, recognition, budget.Token).ConfigureAwait(false);
                 current = await ReadStableUidAsync(runtime, account.Uid, budget.Token).ConfigureAwait(false);
                 if (current is not null)
                 {
-                    TaskControl.Logger.LogInformation("账号准备：账号已核验");
+                    TaskControl.Logger.LogInformation("账户准备：账户已核验");
                     return current;
                 }
             }
-            throw new InvalidOperationException("切号后无法完整核验目标 UID，未执行任何业务任务。");
+            throw new InvalidOperationException("切换后无法完整核验目标 UID，未执行任何业务任务。");
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
-            throw new InvalidOperationException("账号准备超过 180 秒，已停止并等待人工处理。");
+            throw new InvalidOperationException("账户准备超过 180 秒，已停止并等待人工处理。");
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<string?> TryReadUidAsync(GameRuntime runtime, CancellationToken ct)
+    {
+        // 只截图识别，不按 Esc 或点击：不在主界面时每帧都读不到，约 3 秒后返回 null。
+        try { return await ReadStableUidAsync(runtime, null, ct).ConfigureAwait(false); }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            TaskControl.Logger.LogDebug(ex, "Pulonia 读取当前 UID 失败，按未比对处理");
+            return null;
         }
     }
 
@@ -98,20 +114,32 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
     public async Task VerifyAsync(GameRuntime runtime, string expectedUid, CancellationToken ct)
     {
         if (await ReadStableUidAsync(runtime, expectedUid, ct).ConfigureAwait(false) is null)
-            throw new InvalidOperationException("当前 UID 与本次已核验的账号不一致，已停止后续游戏任务。");
+            throw new InvalidOperationException("当前 UID 与本次已核验的账户不一致，已停止后续游戏任务。");
     }
 
-    /// <summary>要求当前租约绑定 PC 官服本机窗口，避免把官服模板用于其他登录渠道。</summary>
+    /// <summary>
+    /// 当前租约绑定的运行环境能否自动切换账户：只支持 PC 官服本机窗口与键鼠输入，避免把官服模板用于其他登录渠道。
+    /// </summary>
     /// <param name="runtime">调用方租约持有的运行环境</param>
-    private static void EnsureSupportedRuntime(GameRuntime runtime)
+    /// <returns>不能切换的原因；可以切换时为 null</returns>
+    private static string? GetUnsupportedRuntimeReason(GameRuntime runtime)
     {
         if (InputHub.Backend is not Win32InputBackend)
-            throw new InvalidOperationException("自动切号首版仅支持 PC 官服的键鼠输入。");
+            return "自动切换账户只支持本机 PC 官服窗口，云原神实例不能切换账户";
         User32.GetWindowThreadProcessId(runtime.Window.Handle, out var processId);
         using var process = Process.GetProcessById((int)processId);
         // B 服同为 YuanShen 进程，但登录界面与官服模板不同，会在模板匹配阶段停止而不会误操作，因此不再读取 config.ini 区分渠道。
-        if (!string.Equals(process.ProcessName, "YuanShen", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("自动切号首版仅支持本机 PC 官服。");
+        return string.Equals(process.ProcessName, "YuanShen", StringComparison.OrdinalIgnoreCase)
+            ? null
+            : "自动切换账户只支持本机 PC 官服";
+    }
+
+    /// <summary>要求当前租约绑定 PC 官服本机窗口，供采集账户图片等必须操作登录界面的功能使用。</summary>
+    /// <param name="runtime">调用方租约持有的运行环境</param>
+    private static void EnsureSupportedRuntime(GameRuntime runtime)
+    {
+        if (GetUnsupportedRuntimeReason(runtime) is { } reason)
+            throw new InvalidOperationException(reason + "。");
     }
 
     /// <summary>在独立的新截图中连续读取两次完整 UID，识别失败不当作 UID 为零。</summary>
@@ -155,6 +183,7 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
         var ocr = RecognitionObject.Ocr(PuloniaGenshinAccountRecognition.Scale(frame, new Rect(450, 160, 1020, 780)));
         using var pen = ocr.DrawOnWindowPen;
         using var text = frame.Find(ocr);
+        // 正则匹配游戏登录界面上的原文（“账号或密码错误”等），不能随界面用词改为“账户”。
         if (Regex.IsMatch(text.Text, "密码错误|账号或密码错误|账号不存在|账号被冻结|登录失败|安全验证|人机验证|验证码"))
             throw new InvalidOperationException("登录出现验证码、安全验证或账号密码错误，请人工处理。");
     }
@@ -185,7 +214,7 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
             }
             await Task.Delay(ResponseDelayMilliseconds, ct).ConfigureAwait(false);
         }
-        throw new InvalidOperationException("无法到达账号选择界面，请人工检查登录状态。");
+        throw new InvalidOperationException("无法到达账户选择界面，请人工检查登录状态。");
     }
 
     /// <summary>按配置选择账号；只有目标未找到时才使用可选的密码备用。</summary>
@@ -209,7 +238,7 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
         }
         if (account.LoginMode is not (PuloniaGenshinAccountLoginMode.Automatic or PuloniaGenshinAccountLoginMode.Password)
             || account.CredentialReference is null)
-            throw new InvalidOperationException("未找到目标账号，请更新账号图片或登录列表文字。");
+            throw new InvalidOperationException("未找到目标账户，请在账户页更新账户图片或登录列表文字。");
         await LoginWithPasswordAsync(runtime, account, recognition, ct).ConfigureAwait(false);
     }
 
@@ -234,7 +263,7 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
                 var matches = frame.FindMulti(template);
                 try
                 {
-                    if (matches.Count > 1) throw new InvalidOperationException("账号图片匹配到多个候选，请重新采集更明确的账号标识。");
+                    if (matches.Count > 1) throw new InvalidOperationException("账户图片匹配到多个候选，请重新采集更明确的账户标识。");
                     if (matches.Count == 1)
                     {
                         matches[0].Click();
@@ -272,7 +301,7 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
             try
             {
                 var matches = results.Where(result => MatchesListText(result.Text, target)).ToArray();
-                if (matches.Length > 1) throw new InvalidOperationException("登录列表中存在多个匹配账号，请改用账号图片或密码登录。");
+                if (matches.Length > 1) throw new InvalidOperationException("登录列表中有多个匹配项，请改用账户图片或密码登录。");
                 if (matches.Length == 1)
                 {
                     matches[0].Click();
@@ -291,7 +320,7 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
         PuloniaGenshinAccountRecognition recognition, CancellationToken ct)
     {
         var credential = CredentialManagerHelper.ReadCredential(account.CredentialReference!)
-                         ?? throw new InvalidOperationException("登录凭据不存在，请在账号管理中重新保存。");
+                         ?? throw new InvalidOperationException("登录凭据不存在，请在账户页重新填写账号和密码并保存。");
         var alreadyInForm = false;
         using (var frame = runtime.CaptureToRectArea())
         {
@@ -354,10 +383,10 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
             if (waited.Elapsed >= nextHintAt)
             {
                 if (nextHintAt == TimeSpan.Zero)
-                    TaskControl.Logger.LogInformation("账号准备：当前不在游戏主界面，正在等待进入主界面（账号准备最长 {Seconds} 秒）。如果游戏停在对话、过场等界面，请手动返回主界面",
+                    TaskControl.Logger.LogInformation("账户准备：当前不在游戏主界面，正在等待进入主界面（账户准备最长 {Seconds} 秒）。如果游戏停在对话、过场等界面，请手动返回主界面",
                         (int)PreparationBudget.TotalSeconds);
                 else
-                    TaskControl.Logger.LogInformation("账号准备：仍在等待进入游戏主界面，已等待 {Seconds} 秒", (int)waited.Elapsed.TotalSeconds);
+                    TaskControl.Logger.LogInformation("账户准备：仍在等待进入游戏主界面，已等待 {Seconds} 秒", (int)waited.Elapsed.TotalSeconds);
                 nextHintAt += WaitingHintInterval;
             }
             await Task.Delay(ResponseDelayMilliseconds, ct).ConfigureAwait(false);
@@ -389,7 +418,7 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
     /// <summary>提示并按 Esc 返回主界面；返回主界面任务自带按键后的等待，是否成功由调用方重新识别。</summary>
     private static async Task ReturnMainUiFromMenuAsync(GameRuntime runtime, CancellationToken ct)
     {
-        TaskControl.Logger.LogInformation("账号准备：当前在游戏内菜单，正在按 Esc 返回主界面");
+        TaskControl.Logger.LogInformation("账户准备：当前在游戏内菜单，正在按 Esc 返回主界面");
         await new ReturnMainUiTask(runtime).Start(ct).ConfigureAwait(false);
     }
 
@@ -462,7 +491,7 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
         budget.CancelAfter(PreparationBudget);
         using var recognition = new PuloniaGenshinAccountRecognition();
         var uid = await ReadStableUidAsync(runtime, null, budget.Token).ConfigureAwait(false)
-                  ?? throw new InvalidOperationException("请先登录待采集的账号并返回主界面。");
+                  ?? throw new InvalidOperationException("请先登录待采集的账户并返回主界面。");
         await GoToAccountSelectionAsync(runtime, recognition, budget.Token).ConfigureAwait(false);
         using (var frame = runtime.CaptureToRectArea())
             if (Exists(frame, recognition, "SelectAccount")) ClickReference(frame, 957, 404);
@@ -470,7 +499,7 @@ public sealed class PuloniaGenshinAccountSwitcher(PuloniaTaskStore store) : IPul
         using (var frame = runtime.CaptureToRectArea())
         {
             if (!Exists(frame, recognition, "EnterGame") || !Exists(frame, recognition, "LoginOther"))
-                throw new InvalidOperationException("账号标识采集需要收起账号列表并显示进入游戏按钮，请返回主界面后重试。");
+                throw new InvalidOperationException("采集账户标识需要收起登录列表并显示进入游戏按钮，请返回主界面后重试。");
         }
         // 账号图片统一为 1080p 参考尺寸，运行时按实际截图宽度缩放。
         byte[] png;

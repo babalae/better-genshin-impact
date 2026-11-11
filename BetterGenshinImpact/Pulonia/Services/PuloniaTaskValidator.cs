@@ -39,7 +39,7 @@ public static class PuloniaTaskValidator
     }
 
     /// <summary>
-    /// 校验计划格式、树所有权、稳定身份、账号绑定和类型结构。
+    /// 校验计划格式、树所有权、稳定身份、运行账户设置和类型结构。
     /// </summary>
     public static void ValidatePlan(PuloniaTaskPlan plan)
     {
@@ -52,20 +52,14 @@ public static class PuloniaTaskValidator
             throw new PuloniaTaskValidationException(location, "修订号不能为负数，名称不能为空。");
         if (plan.RootTask is not { TaskType: "group", Source: null, RepeatCount: null })
             throw new PuloniaTaskValidationException(location, "根节点必须是无来源引用、无重复配置的 group。");
-        // 账号绑定、触发配置、共享设置等集合由 JSON 契约（Required.DisallowNull）和模型默认值保证非空，不再重复检查。
+        // 触发配置、共享设置等集合由 JSON 契约（Required.DisallowNull）和模型默认值保证非空，不再重复检查。
 
         // 相同 ID 不能出现在不同位置；同一对象挂在两个父节点下或形成循环时，第二次出现同样因 ID 重复被拒绝。
         var tasks = new Dictionary<string, PuloniaTask>(StringComparer.Ordinal);
         ValidateTask(plan.RootTask, location, tasks, 0);
-        var accounts = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var account in plan.Accounts)
-        {
-            if (account is null)
-                throw new PuloniaTaskValidationException(location, "账号绑定不能为 null。");
-            ValidateId(account.AccountId, location + "/accounts");
-            if (!accounts.Add(account.AccountId))
-                throw new PuloniaTaskValidationException(location, "账号不能重复绑定。");
-        }
+        // 运行账户设置：为空表示跟随当前账户；指定账户是否存在且填写了 UID 由运行准备读取账户目录检查。
+        if (plan.AccountId is not null)
+            ValidateId(plan.AccountId, location + "/account_id");
         var triggerIds = new HashSet<string>(StringComparer.Ordinal);
         foreach (var trigger in plan.Triggers)
         {
@@ -73,9 +67,20 @@ public static class PuloniaTaskValidator
                 throw new PuloniaTaskValidationException(location, "触发器不能为空或重复。");
             try { PuloniaTaskSchedule.Validate(trigger); }
             catch (Exception ex) { throw new PuloniaTaskValidationException(location + "/triggers", ex.Message); }
-            if (trigger.TargetTaskId is { } target && !tasks.ContainsKey(target)
-                || trigger.AccountId is { } accountId && !accounts.Contains(accountId))
-                throw new PuloniaTaskValidationException(location, "触发器指向不存在的节点或未绑定的账号。");
+            if (trigger.TargetTaskId is { } target && !tasks.ContainsKey(target))
+                throw new PuloniaTaskValidationException(location, "触发器指向不存在的节点。");
+            // 执行实例：只对定时触发器有效，热键只在主实例生效；实例键格式有效且不重复
+            if (trigger.Instances is null)
+                throw new PuloniaTaskValidationException(location + "/triggers", "触发器的执行实例不能为空引用。");
+            if (trigger.Kind == PuloniaTaskTriggerKind.Hotkey && trigger.Instances.Count > 0)
+                throw new PuloniaTaskValidationException(location + "/triggers", "热键触发器不能选择执行实例，计划热键只在主实例生效。");
+            var instanceKeys = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var instanceKey in trigger.Instances)
+            {
+                PuloniaInstanceKey.Validate(instanceKey);
+                if (!instanceKeys.Add(instanceKey))
+                    throw new PuloniaTaskValidationException(location + "/triggers", "触发器的执行实例重复。");
+            }
         }
     }
 
@@ -150,8 +155,8 @@ public static class PuloniaTaskValidator
             if (!PuloniaSettingCatalog.TryGet(field.Name, out var definition))
                 throw new PuloniaTaskValidationException(location + "/" + field.Name, "不存在的共享设置项。");
             ValidateParameters(field.Value, definition.ValueSchema, location + "/" + field.Name);
-            if (definition.Key == PuloniaSettingCatalog.CollectionCooldownKey)
-                PuloniaCollectionCooldown.ValidateSettings(field.Value, location + "/" + field.Name);
+            if (definition.Key == PuloniaSettingCatalog.RouteCooldownKey)
+                PuloniaRouteCooldown.ValidateSettings(field.Value, location + "/" + field.Name);
         }
     }
 

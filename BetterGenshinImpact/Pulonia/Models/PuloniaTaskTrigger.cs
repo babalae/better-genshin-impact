@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using BetterGenshinImpact.Model;
 using Newtonsoft.Json;
 
@@ -31,14 +32,27 @@ public sealed class PuloniaTaskTrigger
     public HotKeyTypeEnum HotkeyType { get; set; } = HotKeyTypeEnum.GlobalRegister;
     /// <summary>可选编辑树节点 ID；为空运行整个计划，祖先配置仍生效。</summary>
     public string? TargetTaskId { get; set; }
-    /// <summary>当前已登录账号资料引用；不执行账号切换。</summary>
-    public string? AccountId { get; set; }
+    // 原“账号参数资料”（account_id）已删除：运行账户只由计划的运行账户设置和实例当前账户决定，触发器不能覆盖。
     /// <summary>到期后还能开始的时间窗，分钟。</summary>
     public int WindowMinutes { get; set; } = 360;
     /// <summary>错过触发时刻时，是否在允许延迟启动的范围内合并补一次。</summary>
     public bool CatchUp { get; set; } = true;
-    /// <summary>同计划同账号繁忙时的行为。</summary>
+    /// <summary>同一计划繁忙时的行为。</summary>
     public PuloniaTaskBusyPolicy BusyPolicy { get; set; }
+
+    /// <summary>
+    /// 定时触发器的执行实例（实例键列表，统筹设计 6.4.2）：到点时由这些实例各自检查并在本地提交，游标存在各自的 state.json。
+    /// 为空表示只在主实例执行。热键触发器必须为空：计划热键只在主实例注册和执行。
+    /// </summary>
+    public List<string> Instances { get; set; } = [];
+
+    /// <summary>
+    /// 本实例是否负责这个定时触发器：执行实例为空时只有主实例负责，否则执行实例包含本实例时负责。热键触发器总返回 false。
+    /// </summary>
+    /// <param name="instanceKey">本实例的实例键</param>
+    public bool IsScheduledOn(string instanceKey)
+        => Kind == PuloniaTaskTriggerKind.Schedule
+           && (Instances.Count == 0 ? instanceKey == PuloniaInstanceKey.Primary : Instances.Contains(instanceKey));
 
     /// <summary>建立不依赖 JSON 序列化的独立配置副本。</summary>
     public PuloniaTaskTrigger Clone() => new()
@@ -52,10 +66,10 @@ public sealed class PuloniaTaskTrigger
         Hotkey = Hotkey,
         HotkeyType = HotkeyType,
         TargetTaskId = TargetTaskId,
-        AccountId = AccountId,
         WindowMinutes = WindowMinutes,
         CatchUp = CatchUp,
-        BusyPolicy = BusyPolicy
+        BusyPolicy = BusyPolicy,
+        Instances = [.. Instances]
     };
 }
 
@@ -82,7 +96,7 @@ public enum PuloniaTaskServerTimeZone
 /// <summary>自动触发的忙碌处理方式。</summary>
 public enum PuloniaTaskBusyPolicy
 {
-    /// <summary>同计划同账号已有未结束请求时跳过，其他计划仍串行排队。</summary>
+    /// <summary>同一计划已有未结束请求时跳过，其他计划仍串行排队。</summary>
     Skip,
     /// <summary>允许活动请求之后再排一次，不无界累积。</summary>
     QueueOnce,

@@ -24,8 +24,6 @@ public partial class QuestVoiceConfig : ObservableObject
     [ObservableProperty] private string _remoteReferenceAudioPath = "";
     /// <summary>远程参考音频的逐字文本。</summary>
     [ObservableProperty] private string _remotePromptText = "";
-    /// <summary>火山预设 voice ID，不修改现有 GPT 声线。</summary>
-    [ObservableProperty] private string _huoshanVoiceId = "zh_female_qingxin";
     /// <summary>连接超时，秒。</summary>
     [ObservableProperty] private int _connectTimeoutSeconds = 10;
     /// <summary>探测/切权请求超时，秒。</summary>

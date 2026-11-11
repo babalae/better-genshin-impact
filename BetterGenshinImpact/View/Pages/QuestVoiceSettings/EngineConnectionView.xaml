@@ -6,7 +6,9 @@
              xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
              xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages.QuestVoiceSettings"
              Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-             HorizontalContentAlignment="Stretch">
+             HorizontalContentAlignment="Stretch"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <StackPanel>
         <ui:TextBlock Text="服务实例" FontWeight="SemiBold" Margin="0,12,0,8" />
         <ui:ToggleSwitch Content="使用远程实例" IsChecked="{Binding EngineConfig.UseRemote, Mode=TwoWay}" />

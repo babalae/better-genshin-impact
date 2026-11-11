@@ -1,0 +1,291 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1340" height="830" viewBox="0 0 1340 830">
+  <style>
+    text { font-family: "Microsoft YaHei UI", "Segoe UI", sans-serif; }
+    .cap { font-size: 15px; font-weight: 600; fill: #1A1A1A; }
+    .h { font-size: 13px; fill: #1A1A1A; }
+    .hb { font-size: 13px; font-weight: 600; fill: #1A1A1A; }
+    .hg { font-size: 13px; fill: #6B6B6B; }
+    .d { font-size: 11.5px; fill: #6B6B6B; }
+    .sum { font-size: 12px; fill: #5F5F5F; }
+    .val { font-size: 13px; fill: #1A1A1A; }
+    .btn { font-size: 13px; fill: #1A1A1A; }
+    .btnp { font-size: 13px; fill: #FFFFFF; }
+    .off { font-size: 13px; fill: #A3A3A3; }
+    .glyph { font-size: 14px; fill: #5F5F5F; }
+    .handle { font-size: 13px; fill: #B0B0B0; }
+    .badge { font-size: 11.5px; fill: #9D5D00; }
+    .ok { font-size: 12.5px; fill: #0F7B0F; }
+    .err { font-size: 12px; fill: #C42B1C; }
+    .wt { font-size: 12px; fill: #1A1A1A; }
+    .code { font-family: "Cascadia Mono", Consolas, monospace; font-size: 12.5px; fill: #1A1A1A; }
+    .codes { font-family: "Cascadia Mono", Consolas, monospace; font-size: 12px; fill: #1A1A1A; }
+    .ln { font-family: "Cascadia Mono", Consolas, monospace; font-size: 12px; fill: #9A9A9A; }
+    .kw { fill: #795E26; }
+    .num { fill: #098658; }
+    .arg { fill: #A31515; }
+    .cm { fill: #008000; }
+    .card { fill: #FFFFFF; stroke: #E3E3E3; }
+    .box { fill: #FFFFFF; stroke: #D0D0D0; }
+    .row { fill: #FFFFFF; stroke: #EBEBEB; }
+    .line { stroke: #EBEBEB; }
+    .sep { stroke: #F2F2F2; }
+  </style>
+  <rect width="1340" height="830" fill="#F3F3F3"/>
+
+  <!-- ===================== A：按键宏页面（步骤视图） ===================== -->
+  <text class="cap" x="20" y="40">按键宏页面：左侧宏列表，右侧编辑（步骤视图）</text>
+  <rect x="20" y="56" width="880" height="756" rx="8" fill="#FAFAFA" stroke="#E3E3E3"/>
+
+  <!-- 左栏：宏列表 -->
+  <rect class="card" x="32" y="72" width="236" height="728" rx="6"/>
+  <text class="cap" x="48" y="100">按键宏</text>
+  <rect x="216" y="86" width="40" height="20" rx="10" fill="#005FB8"/>
+  <circle cx="246" cy="96" r="6" fill="#FFFFFF"/>
+  <text class="d" x="48" y="120">不识图，按快捷键直接执行键鼠序列</text>
+  <rect x="48" y="134" width="92" height="30" rx="4" fill="#005FB8"/>
+  <text class="btnp" x="64" y="154">＋ 新建宏</text>
+  <rect class="box" x="148" y="134" width="104" height="30" rx="4"/>
+  <text class="btn" x="164" y="154">从文本导入</text>
+  <line class="line" x1="40" y1="176" x2="260" y2="176"/>
+
+  <!-- 列表项 1：选中、运行中 -->
+  <rect x="40" y="188" width="220" height="62" rx="6" fill="#EAF3FC" stroke="#9CC3EA"/>
+  <rect x="40" y="198" width="3" height="42" rx="1.5" fill="#005FB8"/>
+  <text class="h" x="56" y="210">胡桃 重击跳</text>
+  <circle cx="140" cy="205" r="4" fill="#0F7B0F"/>
+  <text x="148" y="209" font-size="11" fill="#0F7B0F">运行中</text>
+  <rect class="box" x="56" y="220" width="66" height="20" rx="4"/>
+  <text class="d" x="64" y="234">XButton1</text>
+  <text class="d" x="130" y="234">按住循环</text>
+  <rect x="212" y="204" width="36" height="18" rx="9" fill="#005FB8"/>
+  <circle cx="239" cy="213" r="5" fill="#FFFFFF"/>
+
+  <!-- 列表项 2 -->
+  <rect class="card" x="40" y="258" width="220" height="62" rx="6"/>
+  <text class="h" x="56" y="280">连点左键</text>
+  <rect class="box" x="56" y="290" width="30" height="20" rx="4"/>
+  <text class="d" x="63" y="304">F6</text>
+  <text class="d" x="94" y="304">切换循环</text>
+  <rect x="212" y="274" width="36" height="18" rx="9" fill="#005FB8"/>
+  <circle cx="239" cy="283" r="5" fill="#FFFFFF"/>
+
+  <!-- 列表项 3 -->
+  <rect class="card" x="40" y="328" width="220" height="62" rx="6"/>
+  <text class="h" x="56" y="350">快速吃药</text>
+  <rect class="box" x="56" y="360" width="52" height="20" rx="4"/>
+  <text class="d" x="63" y="374">Ctrl+1</text>
+  <text class="d" x="116" y="374">单次</text>
+  <rect x="212" y="344" width="36" height="18" rx="9" fill="#005FB8"/>
+  <circle cx="239" cy="353" r="5" fill="#FFFFFF"/>
+
+  <!-- 列表项 4：未设置快捷键、已禁用 -->
+  <rect class="card" x="40" y="398" width="220" height="62" rx="6"/>
+  <text class="hg" x="56" y="420">钓鱼收杆</text>
+  <rect x="56" y="430" width="52" height="20" rx="4" fill="#FFF4CE" stroke="#F0D58C"/>
+  <text class="badge" x="64" y="444">未设置</text>
+  <text class="d" x="116" y="444">单次</text>
+  <rect x="212" y="414" width="36" height="18" rx="9" fill="#FFFFFF" stroke="#8A8A8A"/>
+  <circle cx="221" cy="423" r="5" fill="#5F5F5F"/>
+
+  <text class="d" x="48" y="780">每个宏是 User/BgiMacro 下的一个 txt</text>
+
+  <!-- 右栏：标题行 -->
+  <rect class="card" x="280" y="72" width="608" height="56" rx="6"/>
+  <rect class="box" x="296" y="86" width="240" height="28" rx="4"/>
+  <text class="val" x="306" y="105">胡桃 重击跳</text>
+  <text class="h" x="770" y="105">启用</text>
+  <rect x="806" y="91" width="40" height="20" rx="10" fill="#005FB8"/>
+  <circle cx="836" cy="101" r="6" fill="#FFFFFF"/>
+  <rect class="box" x="852" y="86" width="28" height="28" rx="4"/>
+  <text class="glyph" x="859" y="105">⋯</text>
+
+  <!-- 右栏：触发设置 -->
+  <rect class="card" x="280" y="136" width="608" height="116" rx="6"/>
+  <text class="h" x="296" y="162">快捷键</text>
+  <text class="d" x="296" y="180">全局热键可用组合键；按住循环只能用单键或鼠标侧键</text>
+  <rect x="636" y="152" width="96" height="30" rx="4" fill="#F5F5F5" stroke="#E0E0E0"/>
+  <text class="off" x="658" y="172">键盘监听</text>
+  <rect class="box" x="740" y="152" width="132" height="30" rx="4"/>
+  <text class="val" x="776" y="172">XButton1</text>
+  <line class="sep" x1="296" y1="194" x2="872" y2="194"/>
+  <text class="h" x="296" y="218">触发方式</text>
+  <text class="d" x="296" y="236">按住时重复执行，松开立即停止并松开宏里按下的键</text>
+  <rect class="box" x="600" y="206" width="272" height="30" rx="4"/>
+  <text class="btn" x="626" y="226">单次</text>
+  <rect x="682" y="208" width="100" height="26" rx="3" fill="#005FB8"/>
+  <text class="btnp" x="705" y="226">按住循环</text>
+  <text class="btn" x="800" y="226">切换循环</text>
+
+  <!-- 右栏：内容 -->
+  <rect class="card" x="280" y="260" width="608" height="540" rx="6"/>
+  <text class="hb" x="300" y="288">步骤</text>
+  <rect x="298" y="296" width="30" height="3" rx="1.5" fill="#005FB8"/>
+  <text class="hg" x="348" y="288">脚本</text>
+  <text class="sum" x="700" y="288">6 条指令 · 每轮约 0.75 秒</text>
+  <line class="line" x1="280" y1="304" x2="888" y2="304"/>
+
+  <!-- 工具栏 -->
+  <rect class="box" x="296" y="314" width="64" height="28" rx="4"/>
+  <text class="btn" x="306" y="333">＋ 按键</text>
+  <rect class="box" x="366" y="314" width="64" height="28" rx="4"/>
+  <text class="btn" x="376" y="333">＋ 等待</text>
+  <rect class="box" x="436" y="314" width="78" height="28" rx="4"/>
+  <text class="btn" x="446" y="333">＋ 鼠标 ▾</text>
+  <rect class="box" x="520" y="314" width="88" height="28" rx="4"/>
+  <text class="btn" x="530" y="333">＋ 移动/滚轮</text>
+  <rect class="box" x="614" y="314" width="64" height="28" rx="4"/>
+  <text class="btn" x="624" y="333">＋ 注释</text>
+  <rect x="770" y="314" width="102" height="28" rx="4" fill="#FFFFFF" stroke="#D0D0D0" stroke-dasharray="4 3"/>
+  <circle cx="785" cy="328" r="4" fill="#C42B1C"/>
+  <text class="off" x="795" y="333">录制（二期）</text>
+
+  <!-- 步骤 1：注释 -->
+  <rect x="296" y="352" width="576" height="38" rx="6" fill="#FBFBFB" stroke="#EBEBEB"/>
+  <text class="handle" x="304" y="376">⋮⋮</text>
+  <text class="d" x="324" y="376">1</text>
+  <text x="348" y="376" font-size="13" font-style="italic" fill="#3A7D44">// 重击后接跳跃取消后摇</text>
+
+  <!-- 步骤 2：按键 E，只在第 1 轮 -->
+  <rect class="row" x="296" y="396" width="576" height="38" rx="6"/>
+  <text class="handle" x="304" y="420">⋮⋮</text>
+  <text class="d" x="324" y="420">2</text>
+  <text class="h" x="348" y="420">按键</text>
+  <rect class="box" x="440" y="402" width="64" height="26" rx="4"/>
+  <text class="val" x="467" y="420">E</text>
+  <text class="d" x="516" y="420">备注：先放一次 E</text>
+
+  <!-- 步骤 3：按下鼠标 -->
+  <rect class="row" x="296" y="440" width="576" height="38" rx="6"/>
+  <text class="handle" x="304" y="464">⋮⋮</text>
+  <text class="d" x="324" y="464">3</text>
+  <text class="h" x="348" y="464">按下鼠标</text>
+  <rect class="box" x="440" y="446" width="80" height="26" rx="4"/>
+  <text class="val" x="452" y="464">左键</text>
+  <text class="d" x="504" y="463">▾</text>
+
+  <!-- 步骤 4：等待（选中） -->
+  <rect x="296" y="484" width="576" height="38" rx="6" fill="#F3F8FD" stroke="#9CC3EA"/>
+  <text class="handle" x="304" y="508">⋮⋮</text>
+  <text class="d" x="324" y="508">4</text>
+  <text class="h" x="348" y="508">等待</text>
+  <rect class="box" x="440" y="490" width="72" height="26" rx="4"/>
+  <text class="val" x="452" y="508">350</text>
+  <text class="d" x="520" y="508">毫秒</text>
+  <text class="glyph" x="780" y="508">⧉</text>
+  <text class="glyph" x="806" y="508">↑</text>
+  <text class="glyph" x="830" y="508">↓</text>
+  <text class="glyph" x="854" y="508">✕</text>
+
+  <!-- 步骤 5：松开鼠标 -->
+  <rect class="row" x="296" y="528" width="576" height="38" rx="6"/>
+  <text class="handle" x="304" y="552">⋮⋮</text>
+  <text class="d" x="324" y="552">5</text>
+  <text class="h" x="348" y="552">松开鼠标</text>
+  <rect class="box" x="440" y="534" width="80" height="26" rx="4"/>
+  <text class="val" x="452" y="552">左键</text>
+  <text class="d" x="504" y="551">▾</text>
+
+  <!-- 步骤 6：按键 Space -->
+  <rect class="row" x="296" y="572" width="576" height="38" rx="6"/>
+  <text class="handle" x="304" y="596">⋮⋮</text>
+  <text class="d" x="324" y="596">6</text>
+  <text class="h" x="348" y="596">按键</text>
+  <rect class="box" x="440" y="578" width="72" height="26" rx="4"/>
+  <text class="val" x="455" y="596">Space</text>
+  <text class="d" x="524" y="596">备注：跳跃取消</text>
+
+  <!-- 步骤 7：等待 -->
+  <rect class="row" x="296" y="616" width="576" height="38" rx="6"/>
+  <text class="handle" x="304" y="640">⋮⋮</text>
+  <text class="d" x="324" y="640">7</text>
+  <text class="h" x="348" y="640">等待</text>
+  <rect class="box" x="440" y="622" width="72" height="26" rx="4"/>
+  <text class="val" x="452" y="640">400</text>
+  <text class="d" x="520" y="640">毫秒</text>
+
+  <!-- 添加步骤 -->
+  <rect x="296" y="662" width="576" height="34" rx="6" fill="none" stroke="#C8C8C8" stroke-dasharray="5 4"/>
+  <text class="d" x="532" y="684">＋ 在末尾添加步骤</text>
+
+  <!-- 状态栏 -->
+  <line class="line" x1="280" y1="756" x2="888" y2="756"/>
+  <text class="ok" x="296" y="782">✓ 语法正确</text>
+  <text class="d" x="640" y="782">停止时会自动松开宏里按下的键和鼠标</text>
+
+  <!-- ===================== B：脚本视图 ===================== -->
+  <text class="cap" x="920" y="40">同一个宏的脚本视图：高亮、补全、实时报错</text>
+  <rect x="920" y="56" width="400" height="756" rx="8" fill="#FAFAFA" stroke="#E3E3E3"/>
+  <rect class="card" x="932" y="72" width="376" height="728" rx="6"/>
+  <text class="hg" x="952" y="100">步骤</text>
+  <text class="hb" x="1000" y="100">脚本</text>
+  <rect x="998" y="108" width="30" height="3" rx="1.5" fill="#005FB8"/>
+  <line class="line" x1="932" y1="116" x2="1308" y2="116"/>
+
+  <rect class="box" x="948" y="126" width="100" height="28" rx="4"/>
+  <text class="btn" x="960" y="145">插入按键…</text>
+  <rect x="1054" y="126" width="84" height="28" rx="4" fill="#EAF3FC" stroke="#9CC3EA"/>
+  <text class="btn" x="1066" y="145">语法速查</text>
+
+  <!-- 编辑器 -->
+  <rect class="box" x="948" y="166" width="344" height="232" rx="4"/>
+  <rect x="949" y="167" width="30" height="230" fill="#F7F7F7"/>
+  <rect x="979" y="283" width="312" height="21" fill="#FDE7E9"/>
+
+  <text class="ln" x="958" y="188">1</text>
+  <text class="ln" x="958" y="210">2</text>
+  <text class="ln" x="958" y="232">3</text>
+  <text class="ln" x="958" y="254">4</text>
+  <text class="ln" x="958" y="276">5</text>
+  <text class="ln" x="958" y="298">6</text>
+  <text class="ln" x="958" y="320">7</text>
+  <text class="ln" x="958" y="342">8</text>
+
+  <text class="code" x="986" y="188"><tspan class="cm">// 重击后接跳跃取消后摇</tspan></text>
+  <text class="code" x="986" y="210"><tspan class="kw">keypress</tspan>(<tspan class="arg">e</tspan>)<tspan class="cm">  // 先放一次 E</tspan></text>
+  <text class="code" x="986" y="232"><tspan class="kw">mousedown</tspan>(<tspan class="arg">left</tspan>)</text>
+  <text class="code" x="986" y="254"><tspan class="kw">wait</tspan>(<tspan class="num">0.35</tspan>)</text>
+  <text class="code" x="986" y="276"><tspan class="kw">mouseup</tspan>(<tspan class="arg">left</tspan>)</text>
+  <text class="code" x="986" y="298">keypres(<tspan class="arg">space</tspan>)<tspan class="cm">  // 跳跃取消</tspan></text>
+  <path d="M986 302 q1.75 -2.5 3.5 0 t3.5 0 t3.5 0 t3.5 0 t3.5 0 t3.5 0 t3.5 0 t3.5 0 t3.5 0 t3.5 0 t3.5 0 t3.5 0 t3.5 0 t3.5 0 t3.5 0" fill="none" stroke="#C42B1C" stroke-width="1.2"/>
+  <text class="code" x="986" y="320"><tspan class="kw">wait</tspan>(<tspan class="num">0.4</tspan>)</text>
+  <text class="code" x="986" y="342">ke</text>
+  <rect x="1001" y="330" width="1.5" height="15" fill="#1A1A1A"/>
+
+  <!-- 补全弹窗 -->
+  <rect x="1003" y="353" width="236" height="86" rx="4" fill="#000000" opacity="0.06"/>
+  <rect x="1000" y="350" width="236" height="86" rx="4" fill="#FFFFFF" stroke="#C8C8C8"/>
+  <rect x="1004" y="354" width="228" height="24" rx="3" fill="#EAF3FC"/>
+  <text class="codes" x="1012" y="371"><tspan class="kw">keydown</tspan>(键)</text>
+  <text class="d" x="1124" y="371">按下并保持</text>
+  <text class="codes" x="1012" y="395"><tspan class="kw">keypress</tspan>(键)</text>
+  <text class="d" x="1124" y="395">按一下</text>
+  <text class="codes" x="1012" y="419"><tspan class="kw">keyup</tspan>(键)</text>
+  <text class="d" x="1124" y="419">松开</text>
+
+  <!-- 问题列表 -->
+  <rect class="card" x="948" y="448" width="344" height="70" rx="4"/>
+  <text class="hb" x="960" y="470">问题 (1)</text>
+  <text class="err" x="960" y="495">✕</text>
+  <text class="wt" x="976" y="495">第 6 行：未知指令 keypres，是否要写 keypress？</text>
+  <text class="d" x="976" y="511">点击跳到对应位置；修正前步骤视图为只读</text>
+
+  <!-- 语法速查 -->
+  <rect class="card" x="948" y="530" width="344" height="258" rx="4"/>
+  <text class="hb" x="960" y="552">语法速查（点击插入）</text>
+  <text class="codes" x="960" y="578"><tspan class="kw">keypress</tspan>(<tspan class="arg">e</tspan>)</text>
+  <text class="d" x="1130" y="578">按一下</text>
+  <text class="codes" x="960" y="602"><tspan class="kw">keydown</tspan>(<tspan class="arg">e</tspan>) <tspan class="kw">keyup</tspan>(<tspan class="arg">e</tspan>)</text>
+  <text class="d" x="1130" y="602">按下 / 松开</text>
+  <text class="codes" x="960" y="626"><tspan class="kw">click</tspan>(<tspan class="arg">left</tspan>)</text>
+  <text class="d" x="1130" y="626">鼠标点击</text>
+  <text class="codes" x="960" y="650"><tspan class="kw">mousedown</tspan> / <tspan class="kw">mouseup</tspan></text>
+  <text class="d" x="1130" y="650">鼠标按下 / 松开</text>
+  <text class="codes" x="960" y="674"><tspan class="kw">moveby</tspan>(<tspan class="num">100</tspan>, <tspan class="num">0</tspan>)</text>
+  <text class="d" x="1130" y="674">鼠标相对移动</text>
+  <text class="codes" x="960" y="698"><tspan class="kw">scroll</tspan>(<tspan class="num">-1</tspan>)</text>
+  <text class="d" x="1130" y="698">滚轮，正数向上</text>
+  <text class="codes" x="960" y="722"><tspan class="kw">wait</tspan>(<tspan class="num">0.1</tspan>)</text>
+  <text class="d" x="1130" y="722">等待，单位秒</text>
+  <text class="codes" x="960" y="746"><tspan class="cm">// 注释</tspan></text>
+  <text class="d" x="1130" y="746">整行或行尾</text>
+</svg>

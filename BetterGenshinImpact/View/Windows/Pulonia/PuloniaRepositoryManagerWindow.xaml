@@ -6,7 +6,9 @@
                  xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
                  Title="Pulonia 仓库管理" Width="560" MinWidth="500" Height="640" MinHeight="480"
                  WindowStartupLocation="CenterOwner" ExtendsContentIntoTitleBar="True"
-                 WindowBackdropType="Mica" Background="{DynamicResource ApplicationBackgroundBrush}">
+                 WindowBackdropType="Mica" Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <ui:FluentWindow.Resources>
         <!-- 仓库级操作共用尺寸，主题图标和文本始终同时可见。 -->
         <Style x:Key="RepositoryOperationButton" TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">

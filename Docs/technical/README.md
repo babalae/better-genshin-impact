@@ -7,3 +7,4 @@
 - [Recognition.json 编写说明](recognition-json.md)
 - [原神采集物素材刷新（CD）清单](genshin-collectable-respawn.md)
 - [自动配音使用说明（QuestVoice）](questvoice.md)
+- [JS 脚本 HTML 设置页开发指南](js-script-html-settings.md)：面向脚本作者，说明 `settings_html`、`/__bgi/` 接口与页面运行环境

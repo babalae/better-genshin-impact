@@ -203,16 +203,16 @@ public partial class GuideWindowViewModel : ObservableObject, IViewModel
     public string RateToolTip => WithHotkey("倍速（点击选择，滚轮调整）", _hotKeyConfig.GuideSpeedUpHotkey);
 
     /// <summary>音量按钮提示</summary>
-    public string VolumeToolTip => WithHotkey("静音（滚轮调整音量）", _hotKeyConfig.GuideMuteHotkey);
+    public string VolumeToolTip => "静音（滚轮调整音量）";
 
     /// <summary>字幕按钮提示</summary>
     public string SubtitleToolTip => WithHotkey("字幕浮窗", _hotKeyConfig.GuideSubtitleHotkey);
 
     /// <summary>沉浸按钮提示</summary>
-    public string ImmersiveToolTip => WithHotkey("沉浸模式（B 站网页全屏）", _hotKeyConfig.GuideImmersiveHotkey);
+    public string ImmersiveToolTip => "沉浸模式（B 站网页全屏）";
 
     /// <summary>交互按钮提示</summary>
-    public string InteractionToolTip => WithHotkey("交互模式：可以在网页中输入文字，移开鼠标后自动回到游戏", _hotKeyConfig.GuideInteractHotkey);
+    public string InteractionToolTip => "交互模式：可以在网页中输入文字，移开鼠标后自动回到游戏";
 
     /// <summary>穿透按钮提示</summary>
     public string ClickThroughToolTip => WithHotkey("鼠标穿透：点击直接落到游戏上", _hotKeyConfig.GuideClickThroughHotkey);

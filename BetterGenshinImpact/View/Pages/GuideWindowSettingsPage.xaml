@@ -538,7 +538,7 @@
                         </Grid.ColumnDefinitions>
                         <StackPanel>
                             <ui:TextBlock Style="{StaticResource GuideItemTitle}" Text="{i18n:T 字幕浮窗}" />
-                            <ui:TextBlock Style="{StaticResource GuideItemDescription}" Text="{i18n:T 把视频字幕单独显示在游戏画面上，小窗可以缩小或隐藏}" />
+                            <ui:TextBlock Style="{StaticResource GuideItemDescription}" Text="{i18n:T 把视频字幕单独显示在游戏画面上，并随小窗显示或隐藏}" />
                         </StackPanel>
                         <ui:ToggleSwitch Grid.Column="1"
                                          Margin="0,0,24,0"
@@ -619,19 +619,6 @@
                                          Margin="0,0,36,0"
                                          IsChecked="{Binding Config.HidePageSubtitle, Mode=TwoWay}" />
                     </Grid>
-                    <Grid Margin="16,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel>
-                            <ui:TextBlock Style="{StaticResource GuideItemTitle}" Text="{i18n:T 小窗隐藏时继续显示字幕}" />
-                            <ui:TextBlock Style="{StaticResource GuideItemDescription}" Text="{i18n:T 隐藏小窗后只听声音、看字幕}" />
-                        </StackPanel>
-                        <ui:ToggleSwitch Grid.Column="1"
-                                         Margin="0,0,36,0"
-                                         IsChecked="{Binding Config.ShowSubtitleWhenHidden, Mode=TwoWay}" />
-                    </Grid>
                 </StackPanel>
             </ui:CardExpander>
 
@@ -652,15 +639,15 @@
                         <ui:Button Grid.Column="1"
                                    Margin="0,0,24,0"
                                    Appearance="Primary"
-                                   Command="{Binding ApplyRecommendedHotKeysCommand}"
-                                   Content="{i18n:T 一键填入推荐快捷键}"
+                                   Command="{Binding ApplyDefaultHotKeysCommand}"
+                                   Content="{i18n:T 一键填入默认快捷键}"
                                    Icon="{ui:SymbolIcon Flash24}" />
                     </Grid>
                 </ui:CardExpander.Header>
                 <StackPanel>
                     <ui:TextBlock Margin="16,12,16,4"
                                   Style="{StaticResource GuideItemDescription}"
-                                  Text="{i18n:T 推荐方案使用 Ctrl+Alt 组合，只填入还没有绑定的项，并跳过已被其他功能占用的组合。部分 Intel 显卡驱动会用 Ctrl+Alt+方向键旋转屏幕，遇到时请在驱动设置中关闭或改用其他组合。按住临时加速只能使用单键或鼠标侧键，按键会同时传给游戏。}" />
+                                  Text="{i18n:T 默认使用键鼠监听：Down 显示或隐藏小窗、Up 播放或暂停、Left 快退、Right 快进。其余快捷键默认留空。方向键会同时传给游戏。}" />
                     <ItemsControl Margin="0,4,0,8" ItemsSource="{Binding HotKeys}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="{x:Type model:HotKeySettingModel}">
@@ -848,7 +835,7 @@
                         </Grid.ColumnDefinitions>
                         <StackPanel>
                             <ui:TextBlock Style="{StaticResource GuideItemTitle}" Text="{i18n:T 识别剪贴板中的 B 站链接}" />
-                            <ui:TextBlock Style="{StaticResource GuideItemDescription}" Text="{i18n:T 复制 B 站视频链接后切到 BetterGI 主界面时，询问是否用小窗打开。也可以在游戏中按“用小窗打开剪贴板链接”快捷键}" />
+                            <ui:TextBlock Style="{StaticResource GuideItemDescription}" Text="{i18n:T 复制 B 站视频链接后切到 BetterGI 主界面时，询问是否用小窗打开}" />
                         </StackPanel>
                         <ui:ToggleSwitch Grid.Column="1"
                                          Margin="0,0,36,0"

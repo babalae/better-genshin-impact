@@ -29,6 +29,14 @@
                  mc:Ignorable="d">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <!-- 子实例“当前账户”子菜单的账户项：显示名称与 UID 尾号，勾选当前账户，选择即修改。 -->
+        <Style x:Key="ChildInstanceAccountMenuItemStyle"
+               BasedOn="{StaticResource {x:Type MenuItem}}"
+               TargetType="{x:Type MenuItem}">
+            <Setter Property="Header" Value="{Binding DisplayText, Mode=OneWay}" />
+            <Setter Property="IsChecked" Value="{Binding IsCurrent, Mode=OneWay}" />
+            <Setter Property="Command" Value="{Binding SelectCommand, Mode=OneWay}" />
+        </Style>
 
     </Window.Resources>
     <b:Interaction.Triggers>
@@ -124,6 +132,15 @@
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
 
+                <!-- Pulonia 账户页：所有实例都显示。 -->
+                <ui:NavigationViewItem Content="账户"
+                                       NavigationCacheMode="Enabled"
+                                       TargetPageType="{x:Type pages:PuloniaAccountsPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="PersonAccounts24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+
                 <!-- 账号记录页面暂用「狛荷屋」展示名，待定案后再接入翻译。 -->
                 <ui:NavigationViewItem Content="狛荷屋(test)"
                                        NavigationCacheMode="Enabled"
@@ -193,6 +210,15 @@
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
 
+                <!--  按键宏：不识图的键鼠宏，见 Docs/design/key-macro.md  -->
+                <ui:NavigationViewItem Content="{i18n:T 按键宏}"
+                                       NavigationCacheMode="Enabled"
+                                       TargetPageType="{x:Type pages:KeyMacroPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="KeyboardLayoutFloat24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+
                 <ui:NavigationViewItem Content="{i18n:T 自动演奏}"
                                        NavigationCacheMode="Enabled"
                                        TargetPageType="{x:Type pages:MusicPage}">
@@ -232,6 +258,14 @@
                 </ui:NavigationViewItem>
             </ui:NavigationView.MenuItems>
             <ui:NavigationView.FooterMenuItems>
+                <!--  插件：功能选择与插件管理，见 Docs/design/plugin-system.md 第 13 节  -->
+                <ui:NavigationViewItem Content="{i18n:T 插件}"
+                                       NavigationCacheMode="Enabled"
+                                       TargetPageType="{x:Type pages:PluginsPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="PuzzlePiece24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
                 <ui:NavigationViewItem Content="{i18n:T 设置}"
                                        NavigationCacheMode="Enabled"
                                        TargetPageType="{x:Type pages:CommonSettingsPage}">
@@ -301,6 +335,60 @@
                             </Border>
                         </Grid>
                     </Border>
+                    <!--
+                        UID 不一致提示（统筹设计 4.4）：跟随当前账户的运行开始时游戏中读到的 UID 与本实例当前账户不一致。
+                        目录中有读到的 UID 对应的账户时提供“改为该账户”，修改从下一次运行开始生效；关闭或修改当前账户后消失。
+                    -->
+                    <Border MaxWidth="420"
+                            Margin="0,8,12,0"
+                            Padding="14,12"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Top"
+                            Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+                            BorderBrush="{DynamicResource SystemFillColorCautionBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Visibility="{Binding IsUidMismatchNoticeOpen, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}, FallbackValue=Collapsed}">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="16" Opacity="0.2" ShadowDepth="2" Color="Black" />
+                        </Border.Effect>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock FontSize="13"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                           Text="游戏中的 UID 与当前账户不一致" />
+                                <TextBlock Margin="0,4,0,0"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                           Text="{Binding UidMismatchNoticeText, Mode=OneWay}"
+                                           TextWrapping="Wrap" />
+                                <ui:Button Margin="0,8,0,0"
+                                           Appearance="Caution"
+                                           Command="{Binding ApplyAccountSuggestionCommand, Mode=OneWay}"
+                                           Content="{Binding AccountSuggestionButtonText, Mode=OneWay}"
+                                           Icon="{ui:SymbolIcon PersonSwap24}"
+                                           ToolTip="把本实例当前账户改为游戏中读到的 UID 对应的账户，下一次运行开始时生效"
+                                           Visibility="{Binding HasAccountSuggestion, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            </StackPanel>
+                            <ui:Button Grid.Column="1"
+                                       Width="28"
+                                       Height="28"
+                                       Margin="8,0,0,0"
+                                       Padding="0"
+                                       VerticalAlignment="Top"
+                                       Background="Transparent"
+                                       BorderBrush="Transparent"
+                                       Command="{Binding DismissUidMismatchNoticeCommand, Mode=OneWay}"
+                                       Icon="{ui:SymbolIcon Dismiss16}"
+                                       ToolTip="关闭"
+                                       AutomationProperties.Name="关闭 UID 不一致提示" />
+                        </Grid>
+                    </Border>
                     <ui:SnackbarPresenter x:Name="SnackbarPresenter" />
                 </Grid>
             </ui:NavigationView.ContentOverlay>
@@ -334,6 +422,109 @@
             </ui:TitleBar.Header>
             <ui:TitleBar.TrailingContent>
                 <StackPanel VerticalAlignment="Top" Orientation="Horizontal">
+                    <!-- Pulonia 账户徽标：账户目录有多个账户时显示本实例当前账户，点击改为其他账户或管理账户；
+                         当前账户未确定或最近一次 UID 比对不一致时显示提示色，悬停说明原因。 -->
+                    <Grid Margin="0,0,6,0"
+                          VerticalAlignment="Top"
+                          Visibility="{Binding IsAccountBadgeVisible, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <!-- 下拉打开时按钮不响应点击，避免点击按钮关闭下拉后又立即打开 -->
+                        <ui:Button Height="32"
+                                   Padding="8,0"
+                                   Background="Transparent"
+                                   BorderBrush="Transparent"
+                                   Command="{Binding OpenAccountMenuCommand, Mode=OneWay}"
+                                   CornerRadius="0"
+                                   IsHitTestVisible="{Binding IsAccountMenuOpen, Mode=OneWay, Converter={StaticResource InverseBooleanConverter}}"
+                                   ToolTip="{Binding AccountBadgeToolTip, Mode=OneWay}"
+                                   AutomationProperties.Name="{Binding AccountBadgeText, Mode=OneWay}">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Margin="0,0,6,0"
+                                               VerticalAlignment="Center"
+                                               FontSize="16"
+                                               Symbol="PersonAccounts24"
+                                               Visibility="{Binding IsAccountBadgeWarning, Mode=OneWay, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                                <ui:SymbolIcon Margin="0,0,6,0"
+                                               VerticalAlignment="Center"
+                                               FontSize="16"
+                                               Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                               Symbol="PersonWarning24"
+                                               Visibility="{Binding IsAccountBadgeWarning, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                <TextBlock MaxWidth="160"
+                                           VerticalAlignment="Center"
+                                           FontSize="12"
+                                           Text="{Binding AccountBadgeText, Mode=OneWay}"
+                                           TextTrimming="CharacterEllipsis">
+                                    <TextBlock.Style>
+                                        <Style BasedOn="{StaticResource {x:Type TextBlock}}" TargetType="{x:Type TextBlock}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsAccountBadgeWarning, Mode=OneWay}" Value="True">
+                                                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <ui:SymbolIcon Margin="4,0,0,0"
+                                               VerticalAlignment="Center"
+                                               FontSize="10"
+                                               Symbol="ChevronDown16" />
+                            </StackPanel>
+                        </ui:Button>
+                        <!-- 下拉的定位点在按钮右下角，以 Left 方式展开：顶边对齐按钮底边，右边缘对齐按钮右边缘 -->
+                        <ui:Flyout MinWidth="0"
+                                   MinHeight="0"
+                                   HorizontalAlignment="Right"
+                                   VerticalAlignment="Bottom"
+                                   IsOpen="{Binding IsAccountMenuOpen, Mode=TwoWay}"
+                                   Placement="Left">
+                            <StackPanel MinWidth="240" MaxWidth="360">
+                                <!-- UID 比对不一致且目录中有读到的 UID 对应的账户时，一键改为该账户 -->
+                                <ui:Button Margin="0,0,0,6"
+                                           HorizontalAlignment="Stretch"
+                                           HorizontalContentAlignment="Left"
+                                           Appearance="Caution"
+                                           Command="{Binding ApplyAccountSuggestionCommand, Mode=OneWay}"
+                                           Icon="{ui:SymbolIcon PersonWarning24}"
+                                           Visibility="{Binding HasAccountSuggestion, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                    <TextBlock Text="{Binding AccountSuggestionText, Mode=OneWay}" TextWrapping="Wrap" />
+                                </ui:Button>
+                                <TextBlock Margin="8,0,0,4"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                           Text="本实例当前账户" />
+                                <ItemsControl ItemsSource="{Binding BadgeAccounts, Mode=OneWay}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <ui:Button HorizontalAlignment="Stretch"
+                                                       HorizontalContentAlignment="Left"
+                                                       Appearance="Transparent"
+                                                       BorderThickness="0"
+                                                       Command="{Binding SelectCommand, Mode=OneWay}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Grid Width="16" Margin="0,0,8,0">
+                                                        <ui:SymbolIcon FontSize="14"
+                                                                       Symbol="Checkmark16"
+                                                                       Visibility="{Binding IsCurrent, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                                    </Grid>
+                                                    <TextBlock VerticalAlignment="Center"
+                                                               Text="{Binding DisplayText, Mode=OneWay}"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                </StackPanel>
+                                            </ui:Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <Separator Margin="0,6" />
+                                <ui:Button HorizontalAlignment="Stretch"
+                                           HorizontalContentAlignment="Left"
+                                           Appearance="Transparent"
+                                           BorderThickness="0"
+                                           Command="{Binding ManageAccountsCommand, Mode=OneWay}"
+                                           Content="管理账户"
+                                           Icon="{ui:SymbolIcon Settings24}" />
+                            </StackPanel>
+                        </ui:Flyout>
+                    </Grid>
                     <!-- 主实例在线子实例入口：直接展示前三个，其余实例收进“+N”菜单。 -->
                     <Border Margin="0,2,8,0"
                             Padding="4,0"
@@ -367,6 +558,12 @@
                                                                  Command="{Binding PlacementTarget.Tag.ActivateConnectedInstanceCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
                                                                  CommandParameter="{Binding}"
                                                                  Icon="{ui:SymbolIcon Open24}" />
+                                                    <!-- 子实例的 Pulonia 当前账户：只在账户目录有多个账户时显示，选择即写入共享设置文件。 -->
+                                                    <ui:MenuItem Header="{Binding AccountMenuHeader, Mode=OneWay}"
+                                                                 Icon="{ui:SymbolIcon PersonAccounts24}"
+                                                                 ItemContainerStyle="{StaticResource ChildInstanceAccountMenuItemStyle}"
+                                                                 ItemsSource="{Binding AccountOptions, Mode=OneWay}"
+                                                                 Visibility="{Binding HasAccount, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                                     <Separator />
                                                     <ui:MenuItem Header="{i18n:T 关闭实例}"
                                                                  Command="{Binding PlacementTarget.Tag.CloseConnectedInstanceCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
@@ -420,7 +617,8 @@
                                             <DataTemplate>
                                                 <StackPanel Orientation="Horizontal">
                                                     <ui:SymbolIcon Margin="0,0,8,0" Symbol="{Binding Icon}" />
-                                                    <TextBlock VerticalAlignment="Center" Text="{Binding DisplayName}" />
+                                                    <!-- 账户目录有多个账户时显示“实例名 — 当前账户”。 -->
+                                                    <TextBlock VerticalAlignment="Center" Text="{Binding MenuText, Mode=OneWay}" />
                                                 </StackPanel>
                                             </DataTemplate>
                                         </ContextMenu.ItemTemplate>
@@ -440,6 +638,11 @@
                                                                          Command="{Binding PlacementTarget.Tag.ActivateConnectedInstanceCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"
                                                                          CommandParameter="{Binding}"
                                                                          Icon="{ui:SymbolIcon Open24}" />
+                                                            <ui:MenuItem Header="{Binding AccountMenuHeader, Mode=OneWay}"
+                                                                         Icon="{ui:SymbolIcon PersonAccounts24}"
+                                                                         ItemContainerStyle="{StaticResource ChildInstanceAccountMenuItemStyle}"
+                                                                         ItemsSource="{Binding AccountOptions, Mode=OneWay}"
+                                                                         Visibility="{Binding HasAccount, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                                             <Separator />
                                                             <ui:MenuItem Header="{i18n:T 关闭实例}"
                                                                          Command="{Binding PlacementTarget.Tag.CloseConnectedInstanceCommand, RelativeSource={RelativeSource AncestorType={x:Type ContextMenu}}}"

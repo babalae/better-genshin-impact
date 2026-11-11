@@ -261,7 +261,7 @@ public sealed class PuloniaTaskLegacyImporter
                     {
                         values[PuloniaSoloTaskExecutor.BossTotalRunCountLimitParameter] = dragon.AutoBossTotalRunCountLimit;
                         node.IsEnabled = false;
-                        result.Differences.Add(location + "/" + name + "：累计上限已迁入；旧已完成次数无账号证据，未迁入，节点暂时禁用，请核对后启用。");
+                        result.Differences.Add(location + "/" + name + "：累计上限已迁入；旧已完成次数无账户证据，未迁入，节点暂时禁用，请核对后启用。");
                     }
                     break;
                 case "自动幽境危战":

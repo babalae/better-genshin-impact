@@ -14,11 +14,9 @@ public sealed class ExtraTtsConfigurationTests
 {
     /// <summary>每个注册条目必须有真实实现及普通完整音频能力。</summary>
     [Theory]
-    [InlineData("windows-sapi")]
     [InlineData("voicevox")]
     [InlineData("vits-simple-api")]
     [InlineData("openai-speech")]
-    [InlineData("google-translate")]
     public void RegisteredProviderHasImplementation(string id)
     {
         using var provider = TtsProviderRegistry.Create(id);
@@ -53,15 +51,17 @@ public sealed class ExtraTtsConfigurationTests
         Assert.False(selected.Protocol!.StreamingMode);
     }
 
-    /// <summary>旧配置完全保留，读取新增配置不要求网络或GPT地址有效。</summary>
-    [Fact]
-    public void LegacySettingsRemainIntact()
+    /// <summary>旧配置选中已移除引擎时安全回退，不让自动配音在升级后无法启动。</summary>
+    [Theory]
+    [InlineData("huoshan")]
+    [InlineData("windows-sapi")]
+    [InlineData("google-translate")]
+    public void RemovedProviderFallsBackToGpt(string providerId)
     {
-        var config = JsonConvert.DeserializeObject<QuestVoiceConfig>("{\"HuoshanVoiceId\":\"zh_male_zhubo\",\"RemoteServiceUrl\":\"https://old/\"}")!;
-        Assert.Equal("gpt-sovits", config.ProviderId);
-        Assert.Equal("zh_male_zhubo", config.HuoshanVoiceId);
-        Assert.Equal("https://old/", config.RemoteServiceUrl);
-        Assert.Contains(TtsProviderRegistry.Providers, x => x.Id == "voicevox");
+        var config = new QuestVoiceConfig { ProviderId = providerId };
+        var settings = new QuestVoiceSessionFactory(config, AppContext.BaseDirectory).CreateTtsSettings(validateProvider: false);
+        Assert.Equal("gpt-sovits", settings.Provider!.ProviderId);
+        Assert.DoesNotContain(TtsProviderRegistry.Providers, x => x.Id == providerId);
     }
 
     /// <summary>生产宿主的STJ序列化与递归追踪必须识别新增的嵌套字典设置。</summary>

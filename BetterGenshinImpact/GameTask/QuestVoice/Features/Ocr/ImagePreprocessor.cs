@@ -10,7 +10,7 @@ using SkiaSharp;
 
 namespace BetterGenshinImpact.GameTask.QuestVoice.Features.Ocr;
 
-/// <summary>按选中布局裁剪姓名和正文行，输出交给内置 OCR 的三通道图像。</summary>
+/// <summary>按选中布局裁剪姓名和正文行，输出交给全局 OCR 的三通道图像。</summary>
 public sealed class ImagePreprocessor
 {
     /// <summary>在后台解码同一帧并裁剪布局区域；返回的 Mat 由调用方释放。</summary>

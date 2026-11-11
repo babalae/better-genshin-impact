@@ -2,7 +2,10 @@
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
    xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior" xmlns:dd="urn:gong-wpf-dragdrop"
- FontFamily="{StaticResource TextThemeFontFamily}" Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+   xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
+ FontFamily="{StaticResource TextThemeFontFamily}" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+ ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+ ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
  <b:Interaction.Triggers>
   <b:EventTrigger EventName="Loaded"><b:InvokeCommandAction Command="{Binding ViewModel.OpenPageCommand, Mode=OneWay}"/></b:EventTrigger>
   <b:EventTrigger EventName="Unloaded"><b:InvokeCommandAction Command="{Binding ViewModel.ClosePageCommand, Mode=OneWay}"/></b:EventTrigger>
@@ -63,10 +66,10 @@
                 ItemContainerStyle="{StaticResource AddTaskMenuItemStyle}"/>
       <Separator/>
       <MenuItem Header="执行记录" Command="{Binding Data.ShowHistoryCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
-      <MenuItem Header="账号管理" Command="{Binding Data.ManageGenshinAccountsCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
-      <MenuItem Header="显示账号切换步骤" IsCheckable="True" ToolTip="只控制清单中是否显示“切换账号”步骤；绑定的运行账号始终生效，并显示在配置旁"
-       IsChecked="{Binding Data.ShowAccountPreparation, Source={StaticResource DragonProxy}, Mode=OneWay}"
-       Command="{Binding Data.ToggleAccountPreparationCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
+      <!-- 跳到账户页的“路线 CD”，选中这份配置按运行账户设置选出的账户，并按这份配置筛选。 -->
+      <MenuItem Header="查看路线 CD" Command="{Binding Data.ShowRouteCooldownsCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"
+                ToolTip="到账户页查看这份配置用到的路线 CD 记录，可在那里清除记录"/>
+      <MenuItem Header="账户管理" Command="{Binding Data.ManageGenshinAccountsCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
       <MenuItem Header="定时与热键" Command="{Binding Data.ShowTriggersCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
       <MenuItem Header="撤销最近编辑" Command="{Binding Data.UndoConfigurationCommand, Source={StaticResource DragonProxy}, Mode=OneWay}"/>
       <Separator/>
@@ -81,35 +84,24 @@
      </ContextMenu></ui:DropDownButton.Flyout>
     </ui:DropDownButton>
    </Grid>
-   <!-- 运行实例：主实例或在线子实例；运行记录与账本仍保存在主实例。只有主实例时隐藏。 -->
-   <Grid DockPanel.Dock="Top" Margin="0,0,10,8">
-    <Grid.Style>
-     <Style TargetType="Grid">
-      <Style.Triggers>
-       <DataTrigger Binding="{Binding ViewModel.HasExecutionTargetChoice, Mode=OneWay}" Value="False">
-        <Setter Property="Visibility" Value="Collapsed"/>
-       </DataTrigger>
-      </Style.Triggers>
-     </Style>
-    </Grid.Style>
-    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-    <TextBlock Text="运行于" VerticalAlignment="Center" Margin="0,0,8,0"/>
-    <ComboBox Grid.Column="1" ItemsSource="{Binding ViewModel.ExecutionTargets, Mode=OneWay}"
-              SelectedItem="{Binding ViewModel.SelectedExecutionTarget, Mode=TwoWay}"
-              DisplayMemberPath="Display" AutomationProperties.Name="运行实例"
-              ToolTip="选择执行这份配置的实例；同一配置同时只能在一个实例上运行"/>
-   </Grid>
+   <!--
+    运行于：主实例与在线子实例，与任务计划页共用；跟随当前账户的配置可多选，每个实例各运行一次，指定账户的配置只能选一个。
+    子实例使用它自己的当前账户运行，运行状态与完成记录由执行它的实例保存。只有主实例且有在线子实例时显示。
+   -->
+   <controls:PuloniaRunTargetsView DockPanel.Dock="Top" Margin="0,0,10,8"
+    DataContext="{Binding ViewModel.RunTargets, Mode=OneWay}"
+    Visibility="{Binding IsChoiceVisible, Mode=OneWay, Converter={StaticResource DragonBoolVisibility}}"/>
    <Separator DockPanel.Dock="Top" Margin="0,0,10,8"/>
    <TextBlock DockPanel.Dock="Bottom" Margin="0,10,10,0" Text="{Binding ViewModel.ExecutionStatusText, Mode=OneWay}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
    <TextBlock DockPanel.Dock="Bottom" Margin="0,6,10,0" Text="{Binding ViewModel.AccountMessage, Mode=OneWay}" TextWrapping="Wrap" FontSize="12">
     <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><DataTrigger Binding="{Binding ViewModel.AccountMessage, Mode=OneWay}" Value=""><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
    </TextBlock>
    <!-- 平面清单直接包装同一组根节点，不转换、不保存另一份任务树。 -->
-   <!-- 系统准备项不参与任务树、拖拽和删除，默认隐藏。 -->
+   <!-- 系统准备项不参与任务树、拖拽和删除；只在计划指定了账户时显示（运行前会切换到该账户）。 -->
    <ui:CardAction DockPanel.Dock="Top" Padding="12,14" Margin="0,2,8,2" HorizontalContentAlignment="Stretch"
     IsChevronVisible="False" Command="{Binding ViewModel.SelectAccountPreparationCommand, Mode=OneWay}"
-    Visibility="{Binding ViewModel.ShowAccountPreparation, Converter={StaticResource DragonBoolVisibility}, Mode=OneWay}"
-    ToolTip="配置当前一条龙运行前使用的账号">
+    Visibility="{Binding ViewModel.HasRunAccount, Converter={StaticResource DragonBoolVisibility}, Mode=OneWay}"
+    ToolTip="运行前切换到计划指定的账户并核验 UID">
     <ui:CardAction.Style><Style TargetType="ui:CardAction" BasedOn="{StaticResource {x:Type ui:CardAction}}">
      <Style.Triggers><DataTrigger Binding="{Binding ViewModel.IsAccountPreparationSelected, Mode=OneWay}" Value="True">
       <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}"/>
@@ -117,9 +109,9 @@
      </DataTrigger></Style.Triggers>
     </Style></ui:CardAction.Style>
     <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-     <ui:SymbolIcon Symbol="PeopleSwap24" ToolTip="运行前账号准备步骤"/>
+     <ui:SymbolIcon Symbol="PeopleSwap24" ToolTip="运行前账户准备步骤"/>
      <Ellipse Grid.Column="1" Width="9" Height="9" Margin="10,0" Fill="{DynamicResource SystemAccentColorPrimaryBrush}" ToolTip="系统准备步骤"/>
-     <TextBlock Grid.Column="2" Text="切换账号" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,8,0"/>
+     <TextBlock Grid.Column="2" Text="切换账户" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,8,0"/>
      <ui:SymbolIcon Grid.Column="3" Symbol="ChevronRight24" Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
     </Grid>
    </ui:CardAction>
@@ -183,11 +175,11 @@
      <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
      <DockPanel LastChildFill="False">
       <TextBlock DockPanel.Dock="Left" Text="配置" FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
-      <!-- 绑定非默认账号时常驻显示运行账号，与“显示账号切换步骤”无关：运行前会切换到该账号并核验 UID。 -->
+      <!-- 计划指定了账户，或账户目录有多个账户时显示运行账户；只有一个账户且跟随当前账户时不显示。 -->
       <ui:Button DockPanel.Dock="Right" Margin="10,0,0,0" Padding="8,4" Appearance="Transparent"
                  Command="{Binding ViewModel.SelectAccountPreparationCommand, Mode=OneWay}"
-                 Visibility="{Binding ViewModel.HasRunAccount, Mode=OneWay, Converter={StaticResource DragonBoolVisibility}}"
-                 ToolTip="这份配置运行前会切换到该账号并核验 UID；点击查看或修改。"
+                 Visibility="{Binding ViewModel.ShowRunAccountEntry, Mode=OneWay, Converter={StaticResource DragonBoolVisibility}}"
+                 ToolTip="这份配置为哪个账户运行：跟随本实例当前账户，或运行前切换到指定账户并核验 UID；点击查看或修改。"
                  AutomationProperties.Name="{Binding ViewModel.RunAccountText, Mode=OneWay}">
        <StackPanel Orientation="Horizontal">
         <ui:SymbolIcon Symbol="PeopleSwap24" Margin="0,0,6,0"/>
@@ -206,11 +198,14 @@
    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
     <StackPanel Margin="0,0,18,0">
      <StackPanel Visibility="{Binding ViewModel.IsAccountPreparationSelected, Converter={StaticResource DragonBoolVisibility}, Mode=OneWay}">
-      <TextBlock Text="切换账号" FontSize="16" FontWeight="SemiBold" Margin="4,0,0,12"/>
-      <ui:CardControl Margin="0,0,0,12"><ui:CardControl.Header><StackPanel><TextBlock Text="本配置使用的账号"/><TextBlock Text="默认账号使用当前登录状态；指定账号在任务前切换并核验 UID。" TextWrapping="Wrap" FontSize="12"/></StackPanel></ui:CardControl.Header>
-       <ComboBox MinWidth="200" DisplayMemberPath="Name" SelectedValuePath="Id" ItemsSource="{Binding ViewModel.GenshinAccounts, Mode=OneWay}" SelectedValue="{Binding ViewModel.SelectedGenshinAccountId, Mode=TwoWay}"/>
+      <TextBlock Text="运行账户" FontSize="16" FontWeight="SemiBold" Margin="4,0,0,12"/>
+      <ui:CardControl Margin="0,0,0,12"><ui:CardControl.Header><StackPanel><TextBlock Text="本配置的运行账户"/><TextBlock Text="跟随当前账户：不切换，为本实例当前账户执行。指定账户：运行前切换到该账户并核验 UID，只能选择填写了 UID 的账户。" TextWrapping="Wrap" FontSize="12"/></StackPanel></ui:CardControl.Header>
+       <ComboBox MinWidth="200" DisplayMemberPath="Value" SelectedValuePath="Key" ItemsSource="{Binding ViewModel.RunAccountOptions, Mode=OneWay}" SelectedValue="{Binding ViewModel.SelectedGenshinAccountId, Mode=TwoWay}"/>
       </ui:CardControl>
-      <ui:Button Content="管理账号与登录资料" Command="{Binding ViewModel.ManageGenshinAccountsCommand, Mode=OneWay}"/>
+      <!-- 指定的账户已删除或没有 UID 时提示重新选择，与任务计划页一致。 -->
+      <TextBlock Text="{Binding ViewModel.RunAccountProblem, Mode=OneWay}" TextWrapping="Wrap" Margin="4,0,0,12" Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                 Visibility="{Binding ViewModel.HasRunAccountProblem, Converter={StaticResource DragonBoolVisibility}, Mode=OneWay}"/>
+      <ui:Button Content="管理账户与登录资料" Command="{Binding ViewModel.ManageGenshinAccountsCommand, Mode=OneWay}" ToolTip="跳转到账户页"/>
       <TextBlock Text="{Binding ViewModel.AccountMessage, Mode=OneWay}" TextWrapping="Wrap" Margin="0,12,0,0"/>
      </StackPanel>
      <TextBlock Text="选择左侧任务查看配置。" Margin="4,10"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding ViewModel.SelectedTask, Mode=OneWay}" Value="{x:Null}"><Setter Property="Visibility" Value="Visible"/></DataTrigger><DataTrigger Binding="{Binding ViewModel.IsAccountPreparationSelected, Mode=OneWay}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>

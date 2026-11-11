@@ -6,7 +6,9 @@
              xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
              xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages.QuestVoiceSettings"
              Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-             HorizontalContentAlignment="Stretch">
+             HorizontalContentAlignment="Stretch"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <StackPanel>
         <ui:TextBlock Text="OpenAI 兼容语音 API" FontSize="18" FontWeight="SemiBold" />
         <ui:TextBlock Text="请填写服务的完整 Base URL（例如 https://api.openai.com/v1/）。声音仅为本地建议，兼容服务可填写自定义 voice ID；模型改变会刷新建议并保留原 ID。" TextWrapping="Wrap" Margin="0,8,0,4" />

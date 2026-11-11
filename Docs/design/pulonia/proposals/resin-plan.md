@@ -1,6 +1,7 @@
 # Pulonia 体力计划设计
 
 状态：提案，未实现（[路线图](../roadmap.md)步骤 11.1—11.3）。需求来源 [#3396](https://github.com/babalae/better-genshin-impact/issues/3396)、[#3716](https://github.com/babalae/better-genshin-impact/issues/3716)。  
+命名与存储已由[实例、账户与路线 CD 统筹设计](../../instance-account-model.md)更新：账本改称完成记录并按账户存放，作用域键删除。  
 [返回总览](../README.md) · [模型与配置](../model.md) · [多账号](../accounts.md) · [目标托管提案](managed-hosting.md)
 
 ## 1. 定位

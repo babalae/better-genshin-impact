@@ -37,9 +37,9 @@ internal sealed class InstanceRequestHandler
     /// </summary>
     private readonly Action _connectedInstancesChanged;
     /// <summary>
-    /// pulonia.node.* 跨实例节点派发请求的处理器。
+    /// pulonia.run.* 一步下发请求的处理器。
     /// </summary>
-    private readonly PuloniaRemoteMessageHandler _puloniaRemoteMessageHandler;
+    private readonly PuloniaRunMessageHandler _puloniaRunMessageHandler;
     private readonly ILogger _logger;
     private readonly ConcurrentDictionary<Guid, InstanceIpcEnvelope> _activationResponses = new();
 
@@ -52,10 +52,10 @@ internal sealed class InstanceRequestHandler
         SoloTaskExecutionService soloTaskExecutionService,
         Action<InstanceConnection, SoloTaskStatusSnapshot> receiveSoloTaskStatus,
         Action connectedInstancesChanged,
-        PuloniaRemoteMessageHandler puloniaRemoteMessageHandler,
+        PuloniaRunMessageHandler puloniaRunMessageHandler,
         ILogger logger)
     {
-        _puloniaRemoteMessageHandler = puloniaRemoteMessageHandler;
+        _puloniaRunMessageHandler = puloniaRunMessageHandler;
         _context = context;
         _state = state;
         _relativeMouseMessageHandler = relativeMouseMessageHandler;
@@ -112,12 +112,20 @@ internal sealed class InstanceRequestHandler
                     request).ConfigureAwait(false),
                 InstanceOperations.TaskStatusGet => HandleTaskStatusGet(connection, request),
                 InstanceOperations.TaskStatusChanged => HandleTaskStatusChanged(connection, request),
-                InstanceOperations.PuloniaNodeStart =>
-                    _puloniaRemoteMessageHandler.HandleNodeStart(connection, request),
-                InstanceOperations.PuloniaNodeCancel =>
-                    _puloniaRemoteMessageHandler.HandleNodeCancel(connection, request),
-                InstanceOperations.PuloniaNodeFinished =>
-                    _puloniaRemoteMessageHandler.HandleNodeFinished(connection, request),
+                // 子实例处理 submit 时要固定快照、入队后才响应，期间本连接的接收循环等待；
+                // 运行状态上报由后台发送，不依赖本次响应，不会互相等待。
+                InstanceOperations.PuloniaRunSubmit =>
+                    await _puloniaRunMessageHandler.HandleSubmitAsync(
+                        connection.RemoteEndpoint,
+                        request,
+                        cancellationToken).ConfigureAwait(false),
+                InstanceOperations.PuloniaRunCancel =>
+                    await _puloniaRunMessageHandler.HandleCancelAsync(
+                        connection.RemoteEndpoint,
+                        request,
+                        cancellationToken).ConfigureAwait(false),
+                InstanceOperations.PuloniaRunChanged =>
+                    _puloniaRunMessageHandler.HandleChanged(connection.RemoteEndpoint, request),
                 _ => InstanceIpcEnvelope.Failure(
                     request,
                     "unsupported_operation",

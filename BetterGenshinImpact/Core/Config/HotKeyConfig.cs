@@ -279,35 +279,35 @@ public partial class HotKeyConfig : ObservableObject
     [ObservableProperty]
     private string _mapMaskEnabledHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 
-    // ===== 悬浮小窗（默认不绑定，设置页可一键填入推荐方案） =====
+    // ===== 悬浮小窗（四项常用操作默认绑定方向键，其余默认不绑定） =====
 
     // 显示/隐藏小窗
     [ObservableProperty]
-    private string _guideToggleHotkey = "";
+    private string _guideToggleHotkey = "Down";
 
     [ObservableProperty]
-    private string _guideToggleHotkeyType = HotKeyTypeEnum.GlobalRegister.ToString();
+    private string _guideToggleHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 
     // 播放/暂停
     [ObservableProperty]
-    private string _guidePlayPauseHotkey = "";
+    private string _guidePlayPauseHotkey = "Up";
 
     [ObservableProperty]
-    private string _guidePlayPauseHotkeyType = HotKeyTypeEnum.GlobalRegister.ToString();
+    private string _guidePlayPauseHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 
     // 快退
     [ObservableProperty]
-    private string _guideSeekBackwardHotkey = "";
+    private string _guideSeekBackwardHotkey = "Left";
 
     [ObservableProperty]
-    private string _guideSeekBackwardHotkeyType = HotKeyTypeEnum.GlobalRegister.ToString();
+    private string _guideSeekBackwardHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 
     // 快进
     [ObservableProperty]
-    private string _guideSeekForwardHotkey = "";
+    private string _guideSeekForwardHotkey = "Right";
 
     [ObservableProperty]
-    private string _guideSeekForwardHotkeyType = HotKeyTypeEnum.GlobalRegister.ToString();
+    private string _guideSeekForwardHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 
     // 倍速增加
     [ObservableProperty]
@@ -337,41 +337,6 @@ public partial class HotKeyConfig : ObservableObject
     [ObservableProperty]
     private string _guideBoostHotkeyType = HotKeyTypeEnum.KeyboardMonitor.ToString();
 
-    // 音量增加
-    [ObservableProperty]
-    private string _guideVolumeUpHotkey = "";
-
-    [ObservableProperty]
-    private string _guideVolumeUpHotkeyType = HotKeyTypeEnum.GlobalRegister.ToString();
-
-    // 音量降低
-    [ObservableProperty]
-    private string _guideVolumeDownHotkey = "";
-
-    [ObservableProperty]
-    private string _guideVolumeDownHotkeyType = HotKeyTypeEnum.GlobalRegister.ToString();
-
-    // 静音
-    [ObservableProperty]
-    private string _guideMuteHotkey = "";
-
-    [ObservableProperty]
-    private string _guideMuteHotkeyType = HotKeyTypeEnum.GlobalRegister.ToString();
-
-    // 上一集
-    [ObservableProperty]
-    private string _guidePrevEpisodeHotkey = "";
-
-    [ObservableProperty]
-    private string _guidePrevEpisodeHotkeyType = HotKeyTypeEnum.GlobalRegister.ToString();
-
-    // 下一集
-    [ObservableProperty]
-    private string _guideNextEpisodeHotkey = "";
-
-    [ObservableProperty]
-    private string _guideNextEpisodeHotkeyType = HotKeyTypeEnum.GlobalRegister.ToString();
-
     // 不透明度增加
     [ObservableProperty]
     private string _guideOpacityUpHotkey = "";
@@ -393,38 +358,10 @@ public partial class HotKeyConfig : ObservableObject
     [ObservableProperty]
     private string _guideClickThroughHotkeyType = HotKeyTypeEnum.GlobalRegister.ToString();
 
-    // 交互模式
-    [ObservableProperty]
-    private string _guideInteractHotkey = "";
-
-    [ObservableProperty]
-    private string _guideInteractHotkeyType = HotKeyTypeEnum.GlobalRegister.ToString();
-
-    // 沉浸模式
-    [ObservableProperty]
-    private string _guideImmersiveHotkey = "";
-
-    [ObservableProperty]
-    private string _guideImmersiveHotkeyType = HotKeyTypeEnum.GlobalRegister.ToString();
-
     // 字幕浮窗开关
     [ObservableProperty]
     private string _guideSubtitleHotkey = "";
 
     [ObservableProperty]
     private string _guideSubtitleHotkeyType = HotKeyTypeEnum.GlobalRegister.ToString();
-
-    // 用小窗打开剪贴板链接
-    [ObservableProperty]
-    private string _guideOpenClipboardHotkey = "";
-
-    [ObservableProperty]
-    private string _guideOpenClipboardHotkeyType = HotKeyTypeEnum.GlobalRegister.ToString();
-
-    // 紧急恢复：显示小窗、解除穿透与沉浸、不透明度 100%
-    [ObservableProperty]
-    private string _guideRestoreHotkey = "";
-
-    [ObservableProperty]
-    private string _guideRestoreHotkeyType = HotKeyTypeEnum.GlobalRegister.ToString();
 }

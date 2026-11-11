@@ -4,7 +4,10 @@ using System.Windows.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.View.Controls;
+using BetterGenshinImpact.View.Pages;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.Service.AccountRecords;
 using BetterGenshinImpact.Service.AccountRecords.Model;
@@ -49,20 +52,108 @@ public sealed class InventoryViewRefreshTests
         finally { Directory.Delete(root, true); }
     });
 
-    /// <summary>界面直接拒绝不符合服务层规则的 UID，不进入添加账号的写入流程。</summary>
-    [Theory]
-    [InlineData("1")]
-    [InlineData("012345678")]
-    [InlineData("12345678901")]
-    public Task AddUid_RejectsInvalidShape(string uid) => RunSta(async () =>
+    /// <summary>
+    /// UID 下拉框来自 Pulonia 账户目录：只列出填写了狛荷屋可用 UID 的账户，显示“名称（UID）”、顺序与账户列表一致；
+    /// 首次打开选中本实例当前账户；账户改名原位更新，UID 修改后仍选中同一账户；账户页的选中请求优先；没有账户时提示。
+    /// </summary>
+    [Fact]
+    public Task UidOptions_FollowAccountDirectory() => RunSta(async () =>
     {
-        var catalog = new InventoryCatalog();
-        var store = new InventoryStore(catalog);
-        var vm = new AccountRecordsPageViewModel(store,
-            new AccountRecordsInventoryViewModel(store, catalog, new InventoryIconCache())) { PendingUid = uid };
-        await vm.AddUidCommand.ExecuteAsync(null);
-        Assert.Equal("UID 必须为 9～10 位数字且首位非零。", vm.UidValidationMessage);
-        Assert.DoesNotContain(uid, vm.UidOptions);
+        var root = Path.Combine(Path.GetTempPath(), "BetterGI.InventoryViewTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var csv = Path.Combine(root, "items.csv");
+            File.WriteAllText(csv, "item_name,material_type\n摩拉,货币\n");
+            var catalog = new InventoryCatalog(csv);
+            var store = new InventoryStore(catalog, Path.Combine(root, "records"));
+            using var puloniaStore = new PuloniaTaskStore(Path.Combine(root, "pulonia"));
+            var accounts = new PuloniaAccountService(puloniaStore, new PuloniaInstanceKeyProvider(PuloniaInstanceKey.Primary));
+            // 测试数据：我的账户（无 UID）、乙、首位为 0 的丙（狛荷屋不支持）、丁；本实例当前账户为丁
+            var settings = await accounts.LoadAccountsAsync();
+            settings.Accounts.Add(new PuloniaGenshinAccountProfile { Name = "乙", Uid = "100000002" });
+            settings.Accounts.Add(new PuloniaGenshinAccountProfile { Name = "丙", Uid = "012345678" });
+            settings.Accounts.Add(new PuloniaGenshinAccountProfile { Name = "丁", Uid = "100000004" });
+            settings = (await accounts.SaveAccountsAsync(settings, new Dictionary<string, (string, string)>())).Settings;
+            await accounts.SetCurrentAccountAsync(PuloniaInstanceKey.Primary, settings.Accounts[3].Id);
+            var page = new AccountRecordsPageViewModel(store, new AccountRecordsInventoryViewModel(store, catalog, new InventoryIconCache()), accounts);
+
+            await page.LoadCommand.ExecuteAsync(null);
+            Assert.Equal(["乙（100000002）", "丁（100000004）"], page.UidOptions.Select(option => option.DisplayText));
+            Assert.Equal("100000004", page.SelectedUid);
+            Assert.False(page.HasNoAccounts);
+
+            // 账户页改名乙、修改丁的 UID：乙的选项原位改名，丁仍被选中并改为新 UID
+            var first = page.UidOptions[0];
+            settings = await accounts.LoadAccountsAsync();
+            settings.Accounts[1].Name = "戊";
+            settings.Accounts[3].Uid = "100000005";
+            await accounts.SaveAccountsAsync(settings, new Dictionary<string, (string, string)>());
+            await page.LoadCommand.ExecuteAsync(null);
+            Assert.Same(first, page.UidOptions[0]);
+            Assert.Equal(["戊（100000002）", "丁（100000005）"], page.UidOptions.Select(option => option.DisplayText));
+            Assert.Equal("100000005", page.SelectedUid);
+
+            // 账户页“打开狛荷屋”的请求优先于原来的选择
+            page.RequestSelectUid("100000002");
+            await page.LoadCommand.ExecuteAsync(null);
+            Assert.Equal("100000002", page.SelectedUid);
+
+            // 只剩没有 UID 的“我的账户”时列表为空，提示到账户页填写 UID
+            settings = await accounts.LoadAccountsAsync();
+            await accounts.SetCurrentAccountAsync(PuloniaInstanceKey.Primary, settings.Accounts[0].Id);
+            settings.Accounts.RemoveRange(1, settings.Accounts.Count - 1);
+            await accounts.SaveAccountsAsync(settings, new Dictionary<string, (string, string)>());
+            await page.LoadCommand.ExecuteAsync(null);
+            Assert.Empty(page.UidOptions);
+            Assert.Null(page.SelectedUid);
+            Assert.True(page.HasNoAccounts);
+        }
+        finally { Directory.Delete(root, true); }
+    });
+
+    /// <summary>实际实例化并布局狛荷屋页面：UID 下拉框绑定账户选项并显示“名称（UID）”；有账户时不显示“管理账户”提示，没有时显示。</summary>
+    [Fact]
+    public Task Page_InstantiatesAndLaysOutAccountSelector() => RunSta(async () =>
+    {
+        var root = Path.Combine(Path.GetTempPath(), "BetterGI.InventoryViewTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            var csv = Path.Combine(root, "items.csv");
+            File.WriteAllText(csv, "item_name,material_type\n摩拉,货币\n");
+            var catalog = new InventoryCatalog(csv);
+            var store = new InventoryStore(catalog, Path.Combine(root, "records"));
+            using var puloniaStore = new PuloniaTaskStore(Path.Combine(root, "pulonia"));
+            var accounts = await CreateAccountsAsync(puloniaStore, "100000002");
+            var vm = new AccountRecordsPageViewModel(store, new AccountRecordsInventoryViewModel(store, catalog, new InventoryIconCache()), accounts);
+            await vm.LoadCommand.ExecuteAsync(null);
+            var page = new AccountRecordsPage(vm);
+            // 页签模板里的局部样式 BasedOn WPF-UI 默认样式，需要 App.xaml 合并的字典，测试中无法布局整页；
+            // 这里只布局本次修改的 UID 选择器与“管理账户”提示，它们在页面构造时已经实例化。
+            var selector = Assert.IsType<ComboBox>(page.FindName("UidSelector"));
+            Layout(selector, 220, 34);
+            Assert.Same(vm.UidOptions, selector.ItemsSource);
+            Assert.Same(vm.UidOptions[0], selector.SelectedItem);
+            Assert.Contains(VisualChildren(selector).OfType<TextBlock>(), text => text.Text == "账户 100000002（100000002）");
+            var notice = Assert.Single(LogicalChildren(page).OfType<Border>()
+                .Where(border => border.Child is DockPanel panel && panel.Children.OfType<TextBlock>().Any(text => text.Text.StartsWith("账户目录中还没有"))));
+            Assert.Equal(Visibility.Collapsed, notice.Visibility);
+            var manage = Assert.Single(((DockPanel)notice.Child).Children.OfType<Button>());
+            Assert.Same(vm.ManageAccountsCommand, manage.Command);
+
+            // 删除唯一有 UID 的账户后重新读取：选项清空，提示可见并能布局
+            var settings = await accounts.LoadAccountsAsync();
+            settings.Accounts.RemoveAt(1);
+            await accounts.SaveAccountsAsync(settings, new Dictionary<string, (string, string)>());
+            await vm.LoadCommand.ExecuteAsync(null);
+            Layout(selector, 220, 34);
+            Assert.Null(selector.SelectedItem);
+            Assert.Equal(Visibility.Visible, notice.Visibility);
+            Layout(notice, 800, 60);
+            Assert.True(manage.ActualWidth > 0);
+        }
+        finally { Directory.Delete(root, true); }
     });
 
     /// <summary>实际布局底部多卡片，验证模板按钮绑定到各自卡片及当前视图模型。</summary>
@@ -124,7 +215,8 @@ public sealed class InventoryViewRefreshTests
             var time = DateTimeOffset.UtcNow.AddHours(-1);
             await store.ReportAsync(uid, source, [new() { Name = "摩拉", Quantity = 10, RecordedAt = time.ToString("O") }]);
             var inventory = new AccountRecordsInventoryViewModel(store, catalog, new InventoryIconCache());
-            var page = new AccountRecordsPageViewModel(store, inventory) { SelectedUid = uid };
+            using var puloniaStore = new PuloniaTaskStore(Path.Combine(root, "pulonia"));
+            var page = new AccountRecordsPageViewModel(store, inventory, await CreateAccountsAsync(puloniaStore, uid)) { SelectedUid = uid };
             await inventory.SelectUidAsync(uid);
             var stamp = await store.GetInventoryUpdatedAtAsync(uid);
             var package = await store.ExportInventoryAsync(uid);
@@ -189,6 +281,24 @@ public sealed class InventoryViewRefreshTests
         await Task.CompletedTask;
     });
 
+    /// <summary>按给定尺寸测量与排列单个控件，并完成一次布局。</summary>
+    private static void Layout(FrameworkElement element, double width, double height)
+    {
+        element.Measure(new Size(width, height));
+        element.Arrange(new Rect(0, 0, width, height));
+        element.UpdateLayout();
+    }
+
+    /// <summary>遍历页面构造时建立的逻辑树，不触发模板应用。</summary>
+    private static IEnumerable<DependencyObject> LogicalChildren(DependencyObject parent)
+    {
+        foreach (var child in LogicalTreeHelper.GetChildren(parent).OfType<DependencyObject>())
+        {
+            yield return child;
+            foreach (var descendant in LogicalChildren(child)) yield return descendant;
+        }
+    }
+
     /// <summary>遍历实际模板生成的控件，验证模板内部绑定而非仅验证外层窗口尺寸。</summary>
     private static IEnumerable<DependencyObject> VisualChildren(DependencyObject parent)
     {
@@ -217,7 +327,8 @@ public sealed class InventoryViewRefreshTests
             var scan = new AccountRecordSource { Reference = "scan", DisplayName = "scan" };
             await store.ReportAsync(uid, scan, [new() { Name = "摩拉", Quantity = 10, RecordedAt = time.ToString("O") }]);
             var vm = new AccountRecordsInventoryViewModel(store, catalog, new InventoryIconCache());
-            var page = new AccountRecordsPageViewModel(store, vm) { SelectedUid = uid };
+            using var puloniaStore = new PuloniaTaskStore(Path.Combine(root, "pulonia"));
+            var page = new AccountRecordsPageViewModel(store, vm, await CreateAccountsAsync(puloniaStore, uid)) { SelectedUid = uid };
             await vm.SelectUidAsync(uid);
             var row = Assert.Single(vm.Rows);
             var keys = row.SortValues;
@@ -317,6 +428,17 @@ public sealed class InventoryViewRefreshTests
         }
         finally { Directory.Delete(root, true); }
     });
+
+    /// <summary>在给定的临时 Pulonia 存储中建立账户目录：“我的账户”加给定 UID 的账户，供狛荷屋页面读取 UID 列表。</summary>
+    private static async Task<PuloniaAccountService> CreateAccountsAsync(PuloniaTaskStore store, params string[] uids)
+    {
+        var accounts = new PuloniaAccountService(store, new PuloniaInstanceKeyProvider(PuloniaInstanceKey.Primary));
+        var settings = await accounts.LoadAccountsAsync();
+        foreach (var uid in uids)
+            settings.Accounts.Add(new PuloniaGenshinAccountProfile { Name = "账户 " + uid, Uid = uid });
+        await accounts.SaveAccountsAsync(settings, new Dictionary<string, (string, string)>());
+        return accounts;
+    }
 
     /// <summary>给异步 ViewModel 提供 WPF 调度上下文，完成后结束线程。</summary>
     private static Task RunSta(Func<Task> action)

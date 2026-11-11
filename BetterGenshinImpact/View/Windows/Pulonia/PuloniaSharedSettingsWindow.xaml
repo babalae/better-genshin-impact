@@ -13,7 +13,9 @@
                  FontFamily="{StaticResource TextThemeFontFamily}"
                  Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  WindowBackdropType="Mica"
-                 WindowStartupLocation="CenterOwner">
+                 WindowStartupLocation="CenterOwner"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <!--  节点共享设置窗口：修改即时生效并进入计划的撤销历史，没有保存或取消  -->
     <Grid>
         <Grid.RowDefinitions>

@@ -2,14 +2,29 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
              xmlns:converters="clr-namespace:BetterGenshinImpact.View.Converters"
              xmlns:pulonia="clr-namespace:BetterGenshinImpact.ViewModel.Pages.Pulonia"
-             Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+             x:Name="HistoryViewRoot"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <!--
         任务计划页“执行记录”页签、全局执行记录页与一条龙执行记录窗口共用此视图，DataContext 为 PuloniaTaskHistoryViewModel。
         布局：左侧记录列表；右侧为所选记录的概要与操作、任务列表，以及“任务详情 / 运行信息”。
         内部标识、原始 JSON 等排查信息统一收进“技术详情”，默认收起。
+        列表显示所有实例的运行；视图加载期间每 5 秒比较其他实例运行状态与共享历史的修改标记，卸载后停止。
     -->
+    <b:Interaction.Triggers>
+        <b:EventTrigger EventName="Loaded">
+            <b:InvokeCommandAction Command="{Binding StartWatchingCommand, Mode=OneWay}"
+                                   CommandParameter="{Binding ElementName=HistoryViewRoot, Mode=OneWay}" />
+        </b:EventTrigger>
+        <b:EventTrigger EventName="Unloaded">
+            <b:InvokeCommandAction Command="{Binding StopWatchingCommand, Mode=OneWay}"
+                                   CommandParameter="{Binding ElementName=HistoryViewRoot, Mode=OneWay}" />
+        </b:EventTrigger>
+    </b:Interaction.Triggers>
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolVisibility" />
         <converters:BooleanToVisibilityRevertConverter x:Key="BoolVisibilityRevert" />
@@ -297,20 +312,40 @@
                                                        Foreground="{DynamicResource SystemFillColorCautionBrush}"
                                                        Text="需核对" />
                                         </Border>
-                                        <!-- 使用当前登录账号时不显示，切换账号时显示核验的 UID。 -->
-                                        <Border ToolTip="运行前切换到的账号">
+                                        <!-- 执行实例：列表中有子实例的运行记录时每条都显示，只有主实例的运行时不显示。 -->
+                                        <Border Style="{StaticResource Badge}"
+                                                ToolTip="执行这次运行的实例"
+                                                Visibility="{Binding DataContext.ShowInstanceBadges, Mode=OneWay, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource BoolVisibility}}">
+                                            <TextBlock FontSize="11"
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       Text="{Binding InstanceText, Mode=OneWay}" />
+                                        </Border>
+                                        <!-- 显示运行账户；只有一个账户且按本实例当前账户正常运行时不显示，UID 比对不一致时附上读到的 UID 并用提示色。 -->
+                                        <Border ToolTip="{Binding AccountToolTip, Mode=OneWay}">
                                             <Border.Style>
                                                 <Style BasedOn="{StaticResource Badge}" TargetType="Border">
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding AccountText, Mode=OneWay}" Value="{x:Null}">
                                                             <Setter Property="Visibility" Value="Collapsed" />
                                                         </DataTrigger>
+                                                        <DataTrigger Binding="{Binding HasUidMismatch, Mode=OneWay}" Value="True">
+                                                            <Setter Property="Background" Value="{DynamicResource SystemFillColorCautionBackgroundBrush}" />
+                                                        </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
                                             </Border.Style>
-                                            <TextBlock FontSize="11"
-                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                       Text="{Binding AccountText, Mode=OneWay}" />
+                                            <TextBlock FontSize="11" Text="{Binding AccountText, Mode=OneWay}">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding HasUidMismatch, Mode=OneWay}" Value="True">
+                                                                <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
                                         </Border>
                                     </WrapPanel>
                                 </StackPanel>
@@ -438,13 +473,15 @@
                         <StackPanel Grid.Column="1"
                                     Margin="12,0,0,0"
                                     VerticalAlignment="Top">
+                            <!-- 未结束的运行都显示“停止”：其他实例自己的运行或连接已断开的下发运行不可用，悬停说明去哪里停止。 -->
                             <ui:Button Margin="0,0,0,6"
                                        HorizontalAlignment="Stretch"
                                        Command="{Binding CancelRunCommand, Mode=OneWay}"
                                        Content="停止"
                                        Icon="{ui:SymbolIcon Stop24}"
-                                       ToolTip="停止这次运行，并等待当前任务退出"
-                                       Visibility="{Binding SelectedRun.CanCancel, Mode=OneWay, Converter={StaticResource BoolVisibility}, FallbackValue=Collapsed}" />
+                                       ToolTip="{Binding SelectedRun.StopToolTip, Mode=OneWay}"
+                                       ToolTipService.ShowOnDisabled="True"
+                                       Visibility="{Binding SelectedRun.IsActive, Mode=OneWay, Converter={StaticResource BoolVisibility}, FallbackValue=Collapsed}" />
                             <ui:Button Margin="0,0,0,6"
                                        HorizontalAlignment="Stretch"
                                        Appearance="Primary"

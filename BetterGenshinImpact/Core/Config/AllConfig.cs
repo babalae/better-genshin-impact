@@ -234,6 +234,11 @@ public partial class AllConfig : ObservableObject
     /// </summary>
     public MacroConfig MacroConfig { get; set; } = new();
 
+    /// <summary>
+    ///     按键宏全局设置（宏内容保存在 User/BgiMacro）
+    /// </summary>
+    public KeyMacroConfig KeyMacroConfig { get; set; } = new();
+
     public RecordConfig RecordConfig { get; set; } = new();
 
     /// <summary>
@@ -314,6 +319,11 @@ public partial class AllConfig : ObservableObject
     /// 悬浮小窗配置
     /// </summary>
     public GuideWindowConfig GuideWindowConfig { get; set; } = new();
+
+    /// <summary>
+    /// 插件与可插拔能力配置：启用的插件、各可插拔能力选中的实现
+    /// </summary>
+    public PluginConfig PluginConfig { get; set; } = new();
 
     /// <summary>
     /// 任意配置项变更后的回调（由 ConfigService 设置为防抖保存）

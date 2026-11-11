@@ -94,10 +94,10 @@ public static class PuloniaTaskFieldNames
 
         // 5. 运行记录与路线 CD 结果字段（时间字段按本机时间展示）
         { "resource_version", "执行资源版本" }, { "run_id", "运行 ID" },
-        { "collection_cd", "路线 CD 配置" }, { "collection_material", "识别的材料或类别" },
-        { "collection_rule", "本次 CD 规则" }, { "collection_rule_source", "规则依据" },
-        { "collection_last_success_at", "上次成功时间" }, { "collection_next_eligible_at", "下次可执行时间" },
-        { "collection_basis", "采集完成依据" }
+        { "route_cd", "路线 CD 配置" }, { "route_material", "识别的材料或类别" },
+        { "route_rule", "本次 CD 规则" }, { "route_rule_source", "规则依据" },
+        { "route_last_success_at", "上次成功时间" }, { "route_next_eligible_at", "下次可执行时间" },
+        { "route_basis", "采集完成依据" }
     };
 
     /// <summary>

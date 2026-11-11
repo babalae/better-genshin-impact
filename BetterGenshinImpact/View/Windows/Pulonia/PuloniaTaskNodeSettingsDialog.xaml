@@ -15,7 +15,9 @@
                  WindowBackdropType="Mica"
                  Background="{DynamicResource ApplicationBackgroundBrush}"
                  FontFamily="{StaticResource TextThemeFontFamily}"
-                 Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <ui:FluentWindow.Resources>
         <!--  分区标题  -->
         <Style x:Key="SectionTitle" TargetType="ui:TextBlock">

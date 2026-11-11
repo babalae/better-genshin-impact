@@ -13,7 +13,9 @@
                  FontFamily="{StaticResource TextThemeFontFamily}"
                  Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  WindowBackdropType="Mica"
-                 WindowStartupLocation="CenterOwner">
+                 WindowStartupLocation="CenterOwner"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <!--  设置方案管理：左侧列表，右侧方案编辑器；方案修改是草稿，显式保存  -->
     <Grid>
         <Grid.RowDefinitions>

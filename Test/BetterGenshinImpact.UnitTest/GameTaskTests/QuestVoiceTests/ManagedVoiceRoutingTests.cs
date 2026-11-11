@@ -85,7 +85,7 @@ public sealed class ManagedVoiceRoutingTests
         MakePresetCatalog(fixture);
         await fixture.WriteAsync();
         await File.WriteAllBytesAsync(Path.Combine(fixture.Root, "ocr.onnx"), [1]);
-        var config = new QuestVoiceConfig { ProviderId = "huoshan", RoutingEnabled = true, RoutingCatalogPath = fixture.CatalogPath,
+        var config = new QuestVoiceConfig { ProviderId = "voicevox", RoutingEnabled = true, RoutingCatalogPath = fixture.CatalogPath,
             UseRemoteService = true, RemoteServiceUrl = "https://remote.example.com/api/",
             RemoteGptWeightsPath = "/unused", ServiceUrl = "http://localhost:9880/" };
         var factory = new QuestVoiceSessionFactory(config, fixture.Root);
@@ -100,7 +100,7 @@ public sealed class ManagedVoiceRoutingTests
         Assert.True(remote.Voice.ServerSidePaths);
         Assert.Equal("/a.wav", remote.Voice.ReferenceAudioPath);
         Assert.Equal("https://remote.example.com/api/", remote.TtsServiceUrl.AbsoluteUri);
-        Assert.Equal("huoshan", config.ProviderId);
+        Assert.Equal("voicevox", config.ProviderId);
     }
 
     /// <summary>制作无需本地模型的真实版本二目录输入。</summary>
@@ -111,9 +111,9 @@ public sealed class ManagedVoiceRoutingTests
         {
             var profile = voice!.AsObject();
             foreach (var field in new[] { "GptWeightsPath", "SovitsWeightsPath", "ReferenceAudioPath", "PromptText" }) profile.Remove(field);
-            profile["ProviderId"] = "huoshan";
+            profile["ProviderId"] = "voicevox";
             profile["InstanceId"] = "local";
-            profile["ProviderVoiceId"] = "zh_female_qingxin";
+            profile["ProviderVoiceId"] = "4";
         }
     }
 }

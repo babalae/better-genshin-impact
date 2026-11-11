@@ -80,16 +80,11 @@ public abstract partial class EngineSettingsViewModel : ObservableObject
     /// <summary>声音 ID 可独立于建议列表保存。</summary>
     public string VoiceId
     {
-        get => EngineConfig?.VoiceId ?? _host.Config.HuoshanVoiceId;
+        get => EngineConfig?.VoiceId ?? "";
         set
         {
             if (value is null) return;
-            if (EngineConfig is { } config)
-            {
-                config.VoiceId = value;
-                if (ProviderId == "google-translate") config.Language = value;
-            }
-            else if (!string.IsNullOrWhiteSpace(value)) _host.Config.HuoshanVoiceId = value;
+            if (EngineConfig is { } config) config.VoiceId = value;
         }
     }
     /// <summary>忽略刷新产生的暂时空选择，保留已有声音 ID。</summary>
@@ -132,15 +127,14 @@ public abstract partial class EngineSettingsViewModel : ObservableObject
         ObserveConfig();
     }
 
-    /// <summary>切换仅使旧结果失效；静态列表和系统声音允许本机读取。</summary>
+    /// <summary>切换仅使旧结果失效；OpenAI 本地建议在进入页面时读取。</summary>
     public void SetActive(bool active)
     {
         _active = active;
         Invalidate();
         OnPropertyChanged(nameof(SelectedRegisteredProfile));
         if (active && IsLibraryExpanded) _ = EnsureRegisteredProfilesAsync();
-        if (active && ProviderId is "huoshan" or "windows-sapi" or "openai-speech" or "google-translate")
-            _ = RefreshVoicesAsync();
+        if (active && ProviderId == "openai-speech") _ = RefreshVoicesAsync();
     }
 
     /// <summary>替换配置字典时重新订阅，保留对新实例的身份判断。</summary>
@@ -163,8 +157,6 @@ public abstract partial class EngineSettingsViewModel : ObservableObject
     private void OnHostConfigChanged(object? sender, PropertyChangedEventArgs args)
     {
         if (args.PropertyName == nameof(QuestVoiceConfig.ExtraProviders)) ObserveConfig();
-        if (ProviderId == "huoshan" && args.PropertyName == nameof(QuestVoiceConfig.HuoshanVoiceId))
-        { Invalidate(); NotifyVoice(); }
     }
 
     /// <summary>运行状态由宿主投递到 UI 线程，只更新试听可用性。</summary>

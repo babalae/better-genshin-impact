@@ -7,7 +7,7 @@ using BetterGenshinImpact.Pulonia.Models;
 
 namespace BetterGenshinImpact.Pulonia.Services;
 
-/// <summary>与执行队列共享 state.json 的触发准入与游标推进。</summary>
+/// <summary>与本实例的执行队列共享本实例 state.json 的触发准入与游标推进。</summary>
 public sealed partial class PuloniaTaskService
 {
     /// <summary>首轮检查（程序刚启动或调度中断后）仍按准点处理的最大迟到。</summary>
@@ -54,7 +54,8 @@ public sealed partial class PuloniaTaskService
     public async Task CheckTriggersAsync(IReadOnlyList<PuloniaTaskPlan> plans,
         IReadOnlyCollection<string>? unreadablePlanIds = null, CancellationToken ct = default)
     {
-        ThrowIfNotCoordinator();
+        // 每个实例的调度宿主都调用这里，只处理本实例负责的定时触发器（统筹设计 6.4.2）：
+        // 执行实例包含本实例，或执行实例为空且本实例是主实例。一个（触发器，执行实例）组合只有这一个检查者。
         await _initialization.WaitAsync(ct).ConfigureAwait(false);
         _runState.ThrowIfFailed();
         var unreadable = unreadablePlanIds is null
@@ -74,7 +75,7 @@ public sealed partial class PuloniaTaskService
             await PruneOrphanCursorsAsync(plans, unreadable, cursors, ct).ConfigureAwait(false);
             SyncTriggerStatuses(plans, unreadable);
             foreach (var plan in plans)
-            foreach (var trigger in plan.Triggers.Where(item => item.Enabled && item.Kind == PuloniaTaskTriggerKind.Schedule))
+            foreach (var trigger in plan.Triggers.Where(item => item.Enabled && item.IsScheduledOn(LocalInstanceKey)))
             {
                 // 生成游标或在配置变更时重置；禁用前的等待不能误用于新配置。
                 // 新游标只在处理了发生时刻后才写盘，重启时会按同一生效时间重建出相同的起点。
@@ -116,10 +117,10 @@ public sealed partial class PuloniaTaskService
         finally { _triggerGate.Release(); }
     }
 
-    /// <summary>热键仍使用相同准入和忙碌策略，不旁路快照、账本或单消费者；热键不写调度游标。</summary>
+    /// <summary>热键仍使用相同准入和忙碌策略，不旁路快照、路线 CD 或单消费者；热键不写调度游标。</summary>
     public async Task FireHotkeyAsync(string planId, string triggerId, CancellationToken ct = default)
     {
-        ThrowIfNotCoordinator();
+        // 计划热键只在主实例注册（见 PuloniaTaskTriggerHost），按下后提交到主实例本实例的队列。
         // 1 秒去抖只在内存里按单调计时判断：时钟回拨不会吞掉热键，也不为去抖写 state.json。
         var pressedAt = Environment.TickCount64;
         await _initialization.WaitAsync(ct).ConfigureAwait(false);
@@ -155,15 +156,18 @@ public sealed partial class PuloniaTaskService
     private Dictionary<(string PlanId, string TriggerId), PuloniaTaskTriggerState> ReadTriggerCursors()
         => _runState.Current.TriggerStates.ToDictionary(item => (item.PlanId, item.TriggerId), item => item.Clone());
 
+    /// <summary>本实例的实例键：定时触发器按它判断是否由本实例负责。</summary>
+    private string LocalInstanceKey => _accounts.CurrentInstanceKey;
+
     /// <summary>
-    /// 剔除已删除计划或触发器（含旧版写下的热键游标）的游标，避免长期使用后超过上限；只在确有孤儿时写盘。
-    /// 停用的定时触发器保留游标：撤销编辑恢复旧配置版本时仍能防止重放。
+    /// 剔除已删除计划或触发器（含旧版写下的热键游标）的游标，以及执行实例已去掉本实例的触发器的游标，避免长期使用后超过上限；
+    /// 只在确有孤儿时写盘。停用的定时触发器保留游标：撤销编辑恢复旧配置版本时仍能防止重放。
     /// 本轮读取失败的计划无法判断其触发器是否还在，游标一律保留。
     /// </summary>
     private async Task PruneOrphanCursorsAsync(IReadOnlyList<PuloniaTaskPlan> plans, IReadOnlySet<string> unreadablePlanIds,
         Dictionary<(string PlanId, string TriggerId), PuloniaTaskTriggerState> cursors, CancellationToken ct)
     {
-        var valid = plans.SelectMany(plan => plan.Triggers.Where(trigger => trigger.Kind == PuloniaTaskTriggerKind.Schedule)
+        var valid = plans.SelectMany(plan => plan.Triggers.Where(trigger => trigger.IsScheduledOn(LocalInstanceKey))
             .Select(trigger => (plan.Id, trigger.Id))).ToHashSet();
         bool IsOrphan((string PlanId, string TriggerId) key) => !valid.Contains(key) && !unreadablePlanIds.Contains(key.PlanId);
         var orphans = cursors.Keys.Where(IsOrphan).ToArray();
@@ -179,7 +183,10 @@ public sealed partial class PuloniaTaskService
     /// </summary>
     private void SyncTriggerStatuses(IReadOnlyList<PuloniaTaskPlan> plans, IReadOnlySet<string> unreadablePlanIds)
     {
-        var enabled = plans.SelectMany(plan => plan.Triggers.Where(trigger => trigger.Enabled)
+        // 只反馈本实例负责的触发器：本实例负责的定时，以及主实例上的热键
+        var enabled = plans.SelectMany(plan => plan.Triggers.Where(trigger => trigger.Enabled
+                && (trigger.IsScheduledOn(LocalInstanceKey)
+                    || trigger.Kind == PuloniaTaskTriggerKind.Hotkey && LocalInstanceKey == PuloniaInstanceKey.Primary))
             .Select(trigger => (Plan: plan, Trigger: trigger))).ToArray();
         var keys = enabled.Select(item => (item.Plan.Id, item.Trigger.Id)).ToHashSet();
         bool IsStale((string PlanId, string TriggerId) key) => !keys.Contains(key) && !unreadablePlanIds.Contains(key.PlanId);
@@ -300,16 +307,13 @@ public sealed partial class PuloniaTaskService
     private async Task SubmitTriggerAsync(PuloniaTaskPlan plan, PuloniaTaskTrigger trigger,
         PuloniaTaskTriggerState? cursor, DateTimeOffset occurrence, CancellationToken ct)
     {
-        // 一条龙的触发器遵循配置绑定，避免手动运行与定时使用不同账号。
-        var triggerAccountId = plan.Purpose == PuloniaTaskPlanPurpose.OneDragon && _accountSwitcher is not null
-            ? plan.Accounts.FirstOrDefault(account => account.Enabled)?.AccountId : trigger.AccountId;
+        // 触发器不再有账户参数：运行账户由计划的运行账户设置和实例当前账户在运行开始时决定，忙碌只按计划判断。
         var next = PuloniaTaskSchedule.Next(trigger, occurrence);
         bool isBusy;
         bool hasQueued;
         lock (_runsGate)
         {
-            var busy = _runs.Values.Where(item => !IsTerminal(item.Status)
-                && item.Request.PlanId == plan.Id && item.Request.AccountId == triggerAccountId).ToArray();
+            var busy = _runs.Values.Where(item => !IsTerminal(item.Status) && item.Request.PlanId == plan.Id).ToArray();
             isBusy = busy.Length > 0;
             hasQueued = busy.Any(item => item.Status == PuloniaTaskRunStatus.Queued);
         }
@@ -317,14 +321,14 @@ public sealed partial class PuloniaTaskService
         {
             await AdvanceCursorAsync(cursor, occurrence, ct).ConfigureAwait(false);
             SetTriggerStatus(plan, trigger, PuloniaTaskTriggerOutcome.Merged,
-                "同一计划/账号已有请求，按忙碌策略跳过重复触发。", next);
+                "同一计划已有请求，按忙碌策略跳过重复触发。", next);
             return;
         }
         try
         {
             var request = new PuloniaTaskRequest
             {
-                PlanId = plan.Id, TargetTaskId = trigger.TargetTaskId, AccountId = triggerAccountId,
+                PlanId = plan.Id, TargetTaskId = trigger.TargetTaskId,
                 Source = trigger.Kind == PuloniaTaskTriggerKind.Hotkey ? "hotkey" : "schedule",
                 TriggerId = trigger.Id, TriggerActivatedAtUtc = trigger.ActivatedAtUtc, OccurrenceUtc = occurrence,
                 DeadlineUtc = occurrence.AddMinutes(trigger.WindowMinutes),
@@ -370,13 +374,10 @@ public sealed partial class PuloniaTaskService
             return false;
         }
         var trigger = plan?.Triggers.FirstOrDefault(item => item.Id == state.Request.TriggerId && item.Enabled);
-        var invalid = trigger is null || trigger.ActivatedAtUtc != state.Request.TriggerActivatedAtUtc;
-        if (plan?.Purpose == PuloniaTaskPlanPurpose.OneDragon && _accountSwitcher is not null)
-        {
-            var bindings = plan.Accounts.Where(account => account.Enabled).ToArray();
-            invalid |= bindings.Length > 1 || (bindings.FirstOrDefault()?.AccountId ?? PuloniaGenshinAccountProfile.DefaultId)
-                != (state.Request.AccountId ?? PuloniaGenshinAccountProfile.DefaultId);
-        }
+        // 计划指定的账户已在准备时固定进快照，排队期间修改计划的运行账户设置不影响本次运行，这里不再复核账户。
+        // 定时触发器的执行实例已去掉本实例时，旧排队请求同样不再启动。
+        var invalid = trigger is null || trigger.ActivatedAtUtc != state.Request.TriggerActivatedAtUtc
+                      || trigger.Kind == PuloniaTaskTriggerKind.Schedule && !trigger.IsScheduledOn(LocalInstanceKey);
         if (invalid || state.Request.DeadlineUtc <= now)
         {
             lock (_runsGate)

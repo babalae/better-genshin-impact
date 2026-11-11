@@ -88,17 +88,7 @@ public class BgiOnnxModel
     public static readonly BgiOnnxModel SileroVad =
         Register("SileroVad", @"Assets\Model\Vad\silero_vad.onnx");
 
-    /// <summary>
-    /// paddleOCR V4 检测模型
-    /// </summary>
-    public static readonly BgiOnnxModel PaddleOcrDetV4 =
-        Register("PpOcrDetV4", @"Assets\Model\PaddleOCR\Det\V4\PP-OCRv4_mobile_det_infer\slim.onnx");
-
-    /// <summary>
-    /// paddleOCR V5 检测模型
-    /// </summary>
-    public static readonly BgiOnnxModel PaddleOcrDetV5 =
-        Register("PpOcrDetV5", @"Assets\Model\PaddleOCR\Det\V5\PP-OCRv5_mobile_det_infer\slim.onnx");
+    // PaddleOCR V4、V5 及多语言模型已移入插件（bettergi-plugins 仓库），主程序只内置 V6
 
     /// <summary>
     /// paddleOCR V6 检测模型
@@ -107,46 +97,10 @@ public class BgiOnnxModel
         Register("PpOcrDetV6", @"Assets\Model\PaddleOCR\Det\V6\PP-OCRv6_small_det_infer\slim.onnx");
 
     /// <summary>
-    /// paddleOCR V4 识别模型
-    /// </summary>
-    public static readonly BgiOnnxModel PaddleOcrRecV4 =
-        Register("PpOcrRecV4", @"Assets\Model\PaddleOCR\Rec\V4\PP-OCRv4_mobile_rec_infer\slim.onnx");
-
-    /// <summary>
-    /// paddleOCR V4 英文/数字 识别模型
-    /// </summary>
-    public static readonly BgiOnnxModel PaddleOcrRecV4En =
-        Register("PpOcrRecV4En", @"Assets\Model\PaddleOCR\Rec\V4\en_PP-OCRv4_mobile_rec_infer\slim.onnx");
-
-    /// <summary>
-    /// paddleOCR V5 识别模型
-    /// </summary>
-    public static readonly BgiOnnxModel PaddleOcrRecV5 =
-        Register("PpOcrRecV5", @"Assets\Model\PaddleOCR\Rec\V5\PP-OCRv5_mobile_rec_infer\slim.onnx");
-
-    /// <summary>
     /// paddleOCR V6 识别模型
     /// </summary>
     public static readonly BgiOnnxModel PaddleOcrRecV6 =
         Register("PpOcrRecV6", @"Assets\Model\PaddleOCR\Rec\V6\PP-OCRv6_small_rec_infer\slim.onnx");
-
-    /// <summary>
-    /// paddleOCR V5 拉丁文 识别模型
-    /// </summary>
-    public static readonly BgiOnnxModel PaddleOcrRecV5Latin =
-        Register("PpOcrRecV5Latin", @"Assets\Model\PaddleOCR\Rec\V5\latin_PP-OCRv5_mobile_rec_infer\slim.onnx");
-
-    /// <summary>
-    /// paddleOCR V5 斯拉夫文 识别模型
-    /// </summary>
-    public static readonly BgiOnnxModel PaddleOcrRecV5Eslav =
-        Register("PpOcrRecV5Eslav", @"Assets\Model\PaddleOCR\Rec\V5\eslav_PP-OCRv5_mobile_rec_infer\slim.onnx");
-
-    /// <summary>
-    /// paddleOCR V5 韩文 识别模型
-    /// </summary>
-    public static readonly BgiOnnxModel PaddleOcrRecV5Korean =
-        Register("PpOcrRecV5Korean", @"Assets\Model\PaddleOCR\Rec\V5\korean_PP-OCRv5_mobile_rec_infer\slim.onnx");
 
     #endregion
 

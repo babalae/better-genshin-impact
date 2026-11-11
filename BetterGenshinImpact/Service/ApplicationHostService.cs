@@ -102,9 +102,14 @@ public class ApplicationHostService(
                 }
 
                 HandleWebViewActivation(cmdOptions);
+                // 云原神实例同样是本地 Pulonia 协调器：截图器启动之后把 --pulonia-run 提交到本实例的队列。
+                // 停留在首页（云原神画面预览），不导航到执行记录页；游戏节点取得运行环境时会等待截图器就绪。
+                if (cmdOptions.IsPuloniaAction)
+                    await serviceProvider.GetRequiredService<Pulonia.Services.PuloniaTaskTriggerHost>().HandleActivationAsync(cmdOptions);
                 return;
             }
 
+            // 主实例与桌面分身：--pulonia-run 同样提交到本实例的队列，打开执行记录页查看进度
             if (cmdOptions.IsPuloniaAction)
             {
                 _ = _navigationWindow.Navigate(typeof(PuloniaTaskHistoryPage));

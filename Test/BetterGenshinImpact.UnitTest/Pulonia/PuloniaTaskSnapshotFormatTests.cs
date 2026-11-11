@@ -11,7 +11,7 @@ public sealed class PuloniaTaskSnapshotFormatTests
 {
     /// <summary>
     /// 按旧实现输出格式写成的运行快照：覆盖空值、false、0、整数与浮点、超长整数、类日期字符串、转义、
-    /// 嵌套对象和空集合，以及仓库资源、采集 CD 规则和继承后的执行策略。
+    /// 嵌套对象和空集合，以及仓库资源、路线刷新规则和继承后的执行策略。
     /// </summary>
     private const string LegacySnapshotJson = """
         {
@@ -54,7 +54,7 @@ public sealed class PuloniaTaskSnapshotFormatTests
                   "approved_revision": "0123456789abcdef0123456789abcdef01234567"
                 },
                 "resource_version": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-                "collection_cooldown": {
+                "refresh_rule": {
                   "file_identity": "official/pathing/示例/路线.json",
                   "material_name": "清心",
                   "mode": "rolling",

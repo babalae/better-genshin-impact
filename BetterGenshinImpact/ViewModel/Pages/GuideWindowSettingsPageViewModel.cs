@@ -40,7 +40,7 @@ public partial class GuideWindowSettingsPageViewModel : ViewModel
     private string _statusText = string.Empty;
 
     /// <summary>
-    /// 快捷键摘要，例如“已绑定 12 / 21”
+    /// 快捷键摘要，例如“已绑定 4 / 12”
     /// </summary>
     [ObservableProperty]
     private string _hotKeySummary = string.Empty;
@@ -277,22 +277,22 @@ public partial class GuideWindowSettingsPageViewModel : ViewModel
     private void OpenHotKeyPage() => _navigationService.Navigate(typeof(HotKeyPage));
 
     /// <summary>
-    /// 一键填入推荐快捷键
+    /// 一键填入四项默认快捷键
     /// </summary>
     [RelayCommand]
-    private void ApplyRecommendedHotKeys()
+    private void ApplyDefaultHotKeys()
     {
-        var (filled, skipped) = _hotKeyPage.ApplyGuideRecommendedHotKeys();
+        var (filled, skipped) = _hotKeyPage.ApplyGuideDefaultHotKeys();
         UpdateHotKeySummary();
         if (filled == 0 && skipped == 0)
         {
-            Toast.Information(I18nService.Instance.Translate("悬浮小窗的快捷键都已绑定"));
+            Toast.Information(I18nService.Instance.Translate("悬浮小窗的默认快捷键均已绑定"));
             return;
         }
 
         var message = skipped > 0
-            ? string.Format(I18nService.Instance.Translate("已填入 {0} 项推荐快捷键，{1} 项因与其他功能或程序冲突已跳过"), filled, skipped)
-            : string.Format(I18nService.Instance.Translate("已填入 {0} 项推荐快捷键"), filled);
+            ? string.Format(I18nService.Instance.Translate("已填入 {0} 项默认快捷键，{1} 项因与其他功能冲突已跳过"), filled, skipped)
+            : string.Format(I18nService.Instance.Translate("已填入 {0} 项默认快捷键"), filled);
         if (skipped > 0)
         {
             Toast.Warning(message);

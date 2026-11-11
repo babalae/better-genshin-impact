@@ -5,7 +5,9 @@
                  Title="{Binding Title, Mode=OneWay}" Width="600" Height="680" MinWidth="480" MinHeight="360"
                  WindowStartupLocation="CenterOwner" WindowBackdropType="Auto" ExtendsContentIntoTitleBar="True"
                  Background="{DynamicResource ApplicationBackgroundBrush}" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                 FontFamily="{DynamicResource TextThemeFontFamily}" FontSize="14" UseLayoutRounding="True">
+                 FontFamily="{DynamicResource TextThemeFontFamily}" FontSize="14" UseLayoutRounding="True"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <ui:FluentWindow.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>

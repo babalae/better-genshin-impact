@@ -2,6 +2,7 @@ using BetterGenshinImpact.GameTask.Common.Resin;
 using System.Runtime.CompilerServices;
 using BetterGenshinImpact.GameTask.AutoBoss;
 using BetterGenshinImpact.Pulonia.Executors;
+using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.ViewModel.SoloTaskSettings;
 using Newtonsoft.Json.Linq;
@@ -40,33 +41,54 @@ public sealed class PuloniaSoloSettingsParityTests
 
     }
 
-    /// <summary>累计跨存储实例持久化，并按任务、账号与清空批次分别统计；清空仅生成草稿。</summary>
+    /// <summary>
+    /// 累计按账户存放在各账户的 boss-rewards.json，跨存储实例持久化，并按任务与清空批次分别统计；清空仅生成草稿。
+    /// 新写入的条目带计划、节点与批次，键与旧文件名的哈希算法相同。
+    /// </summary>
     [Fact]
     public async Task BossProgress_PersistsAndSeparatesTasksAccountsAndResetDrafts()
     {
         var directory = Path.Combine(Path.GetTempPath(), "bgi-" + BetterGenshinImpact.Helpers.ShortId.Create(null, 8));
         try
         {
+            const string accountA = "acc_aaaaaaaaaaaaaaaa";
+            const string accountB = "acc_bbbbbbbbbbbbbbbb";
             using (var store = new PuloniaTaskStore(directory))
             {
-                await store.IncrementBossRewardCountAsync("plan", "task", "", "account-a");
-                await store.IncrementBossRewardCountAsync("plan", "task", "", "account-a");
-                await store.IncrementBossRewardCountAsync("plan", "task", "", "account-b");
+                var settingsFile = await store.LoadAccountSettingsAsync();
+                settingsFile.Accounts = [new PuloniaGenshinAccountProfile { Id = accountA, Name = "主号" },
+                    new PuloniaGenshinAccountProfile { Id = accountB, Name = "小号", Uid = "100000002" }];
+                await store.SaveAccountSettingsAsync(settingsFile);
+                await store.IncrementBossRewardCountAsync(accountA, "plan", "task", "");
+                await store.IncrementBossRewardCountAsync(accountA, "plan", "task", "");
+                await store.IncrementBossRewardCountAsync(accountB, "plan", "task", "");
             }
             using var reopened = new PuloniaTaskStore(directory);
-            var counts = await reopened.ReadBossRewardCountsAsync("plan", "task", "");
-            Assert.Equal(2, counts["account-a"]);
-            Assert.Equal(1, counts["account-b"]);
-            Assert.Empty(await reopened.ReadBossRewardCountsAsync("plan", "other-task", ""));
-            Assert.Empty(await reopened.ReadBossRewardCountsAsync("plan", "task", "new-generation"));
+            Assert.Equal(2, await reopened.ReadBossRewardCountAsync(accountA, "plan", "task", ""));
+            Assert.Equal(1, await reopened.ReadBossRewardCountAsync(accountB, "plan", "task", ""));
+            Assert.Equal(0, await reopened.ReadBossRewardCountAsync(accountA, "plan", "other-task", ""));
+            Assert.Equal(0, await reopened.ReadBossRewardCountAsync(accountA, "plan", "task", "new-generation"));
+            var file = JObject.Parse(await File.ReadAllTextAsync(Path.Combine(directory, "accounts", accountA, "boss-rewards.json")));
+            var entry = (JObject)Assert.Single((JArray)file["rewards"]!);
+            Assert.Equal(PuloniaTaskStore.GetBossRewardKey("plan", "task", ""), entry.Value<string>("key"));
+            Assert.Equal(("plan", "task", ""), (entry.Value<string>("plan_id"), entry.Value<string>("task_id"), entry.Value<string>("reset_id")));
+
+            // 以界面显示路线 CD 的账户为主：第一行写明该账户（0 次也显示），其他有记录的账户另列
             var settings = new AutoBossSettingsViewModel(new JObject(), reopened);
-            await settings.SetProgressScopeAsync("plan", "task");
-            Assert.Contains("account-a：2 次", settings.CompletedRunCountText);
+            await settings.SetProgressScopeAsync("plan", "task", accountB);
+            Assert.Equal($"小号：1 次{Environment.NewLine}其他账户：主号 2 次", settings.CompletedRunCountText);
+            await settings.SetProgressScopeAsync("plan", "other-task", accountB);
+            Assert.Equal("小号：0 次", settings.CompletedRunCountText);
+            // 主账户未知时按账户目录顺序列出有记录的账户
+            await settings.SetProgressScopeAsync("plan", "task", null);
+            Assert.Equal($"主号：2 次{Environment.NewLine}小号：1 次", settings.CompletedRunCountText);
+            await settings.SetProgressScopeAsync("plan", "task", accountA);
+            Assert.Equal($"主号：2 次{Environment.NewLine}其他账户：小号 1 次", settings.CompletedRunCountText);
             settings.ResetProgressCommand.Execute(null);
             var changes = new JObject();
             settings.CollectChanges(changes);
             Assert.NotEmpty(changes.Value<string>(PuloniaSoloTaskExecutor.BossRewardCountResetParameter)!);
-            Assert.Equal(2, (await reopened.ReadBossRewardCountsAsync("plan", "task", ""))["account-a"]);
+            Assert.Equal(2, await reopened.ReadBossRewardCountAsync(accountA, "plan", "task", ""));
         }
         finally { Directory.Delete(directory, recursive: true); }
     }

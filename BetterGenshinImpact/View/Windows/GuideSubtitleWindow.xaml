@@ -20,7 +20,9 @@
         Topmost="True"
         WindowStartupLocation="Manual"
         WindowStyle="None"
-        mc:Ignorable="d">
+        mc:Ignorable="d"
+        ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+        ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
 
     <!--  字幕浮窗：默认鼠标穿透、不获得焦点；调整位置时可以拖动  -->
     <b:Interaction.Behaviors>

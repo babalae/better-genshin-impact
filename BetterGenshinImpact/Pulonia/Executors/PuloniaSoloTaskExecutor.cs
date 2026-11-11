@@ -119,15 +119,18 @@ public sealed class PuloniaSoloTaskExecutor : IPuloniaTaskExecutor
         var param = descriptor.DeserializeParam(values.ToString(Formatting.None));
         if (param is AutoBossParam boss)
         {
-            var store = _services.GetRequiredService<PuloniaTaskStore>();
-            var counts = await store.ReadBossRewardCountsAsync(task.PlanId, task.SourceTaskId, resetId, ct).ConfigureAwait(false);
-            var completed = counts.GetValueOrDefault(context.Snapshot.AccountId ?? string.Empty);
+            // 领奖次数属于运行账户的进度（accounts/<账户 ID>/boss-rewards.json）；游戏节点的运行一定已确定运行账户。
+            if (context.AccountId is not { } accountId)
+                return PuloniaTaskOutcome.Failure("本次运行没有确定运行账户，无法按账户记录首领领奖次数，未开始讨伐。");
+            var accounts = _services.GetRequiredService<IPuloniaAccountService>();
+            var completed = await accounts.GetBossRewardCountAsync(accountId, task.PlanId, task.SourceTaskId, resetId, ct)
+                .ConfigureAwait(false);
             if (!ApplyBossRewardLimit(boss, totalLimit, completed))
                 return new PuloniaTaskOutcome(PuloniaTaskOutcomeKind.Skipped,
                     $"首领累计成功领奖已达上限（{completed}/{totalLimit}）。");
             // 回调来自任务线程，每次成功领奖立即持久化；取消时也必须保留刚刚确认的次数。
-            boss.RewardClaimedCallback = () => store.IncrementBossRewardCountAsync(task.PlanId, task.SourceTaskId,
-                resetId, context.Snapshot.AccountId).GetAwaiter().GetResult();
+            boss.RewardClaimedCallback = () => accounts.IncrementBossRewardCountAsync(accountId, task.PlanId, task.SourceTaskId,
+                resetId).GetAwaiter().GetResult();
         }
         ISoloTaskResult result;
         try

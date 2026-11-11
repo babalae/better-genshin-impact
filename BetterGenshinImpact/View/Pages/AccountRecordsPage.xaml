@@ -8,7 +8,9 @@
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              HorizontalContentAlignment="Stretch"
              VerticalContentAlignment="Stretch"
-             Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <b:Interaction.Behaviors>
         <behavior:AccountRecordsDeferredLoadBehavior Command="{Binding LoadCommand, Mode=OneWay}" />
     </b:Interaction.Behaviors>
@@ -19,6 +21,7 @@
     </b:Interaction.Triggers>
     <UserControl.Resources>
         <behavior:BindingProxy x:Key="AccountRecordsProxy" Data="{Binding Mode=OneWay}" />
+        <BooleanToVisibilityConverter x:Key="AccountRecordsBoolVisibility" />
     </UserControl.Resources>
     <Grid Margin="22,16,16,12" Grid.IsSharedSizeScope="True">
         <Grid.RowDefinitions>
@@ -26,19 +29,34 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <TextBlock Grid.Row="1" Margin="0,0,0,8" TextWrapping="Wrap"
-                   Text="任务运行中：人工数据修改已锁定，任务上报及查看、搜索、排序不受影响。">
-            <TextBlock.Style>
-                <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
-                    <Setter Property="Visibility" Value="Collapsed" />
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding IsLocked, Source={x:Static records:AccountRecordsInteractionGate.Instance}, Mode=OneWay}" Value="True">
-                            <Setter Property="Visibility" Value="Visible" />
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </TextBlock.Style>
-        </TextBlock>
+        <StackPanel Grid.Row="1">
+            <TextBlock Margin="0,0,0,8" TextWrapping="Wrap"
+                       Text="任务运行中：人工数据修改已锁定，任务上报及查看、搜索、排序不受影响。">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsLocked, Source={x:Static records:AccountRecordsInteractionGate.Instance}, Mode=OneWay}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+            <!-- UID 列表来自 Pulonia 账户目录；没有填写 UID 的账户时提示到账户页填写。 -->
+            <Border Margin="0,0,0,8" Padding="12,8" CornerRadius="6"
+                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                    Visibility="{Binding HasNoAccounts, Converter={StaticResource AccountRecordsBoolVisibility}, Mode=OneWay}">
+                <DockPanel>
+                    <ui:Button DockPanel.Dock="Right" Margin="12,0,0,0" VerticalAlignment="Center"
+                               Content="管理账户" Icon="{ui:SymbolIcon PersonAccounts24}"
+                               Command="{Binding ManageAccountsCommand, Mode=OneWay}" />
+                    <TextBlock VerticalAlignment="Center" TextWrapping="Wrap"
+                               Text="账户目录中还没有填写 UID 的账户，请先在账户页填写 UID。" />
+                </DockPanel>
+            </Border>
+        </StackPanel>
         <Grid Margin="0,0,0,12">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -112,7 +130,7 @@
             </StackPanel>
             <ui:DropDownButton Grid.Column="2" Icon="{ui:SymbolIcon MoreVertical24}" Height="34" Width="20" MinWidth="0"
                                Padding="0" Background="Transparent" BorderThickness="0" BorderBrush="Transparent"
-                               Margin="4,0,0,0" VerticalAlignment="Top" ToolTip="账号菜单">
+                               Margin="4,0,0,0" VerticalAlignment="Top" ToolTip="账户菜单">
                 <!-- 账号菜单仅显示竖向省略号，不占用 UID 与搜索框的宽度。 -->
                 <ui:DropDownButton.Template>
                     <ControlTemplate TargetType="ui:DropDownButton">
@@ -133,9 +151,8 @@
                 </ui:DropDownButton.Template>
                 <ui:DropDownButton.Flyout>
                     <ContextMenu>
+                        <!-- 只保留清空库存；删除账户及其全部狛荷屋记录在 Pulonia 账户页进行。 -->
                         <MenuItem Header="清空库存记录…" Command="{Binding Data.ClearAccountCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" CommandParameter="inventory" />
-                        <Separator />
-                        <MenuItem Header="删除 UID 及全部账号数据…" Command="{Binding Data.ClearAccountCommand, Source={StaticResource AccountRecordsProxy}, Mode=OneWay}" CommandParameter="uid" />
                     </ContextMenu>
                 </ui:DropDownButton.Flyout>
             </ui:DropDownButton>
@@ -146,14 +163,15 @@
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="UID" Margin="0,0,8,0" VerticalAlignment="Center"
                            Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                <!-- 标准选择控件管理展开和选择；新增入口独立于 UID 集合，删除通过账号菜单执行。 -->
-                <ComboBox x:Name="UidSelector" Grid.Column="1" Width="132" MinHeight="34" FontSize="14"
+                <!-- 标准选择控件管理展开和选择；选项来自账户目录中填写了 UID 的账户，选中值为 UID。新增、删除账户在账户页进行。 -->
+                <ComboBox x:Name="UidSelector" Grid.Column="1" Width="200" MinHeight="34" FontSize="14"
                           ItemsSource="{Binding UidOptions, Mode=OneWay}"
-                          SelectedItem="{Binding SelectedUid, Mode=TwoWay}"
+                          SelectedValuePath="Uid"
+                          SelectedValue="{Binding SelectedUid, Mode=TwoWay}"
                           IsDropDownOpen="{Binding IsUidDropDownOpen, Mode=TwoWay}"
                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                           HorizontalContentAlignment="Stretch"
-                          ToolTip="选择 UID，或通过下拉列表中的＋新增">
+                          ToolTip="选择账户；列出账户页中填写了 UID 的账户">
                     <ComboBox.ItemContainerStyle>
                         <Style TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -168,7 +186,8 @@
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="16" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="{Binding Mode=OneWay}" VerticalAlignment="Center"
+                                <TextBlock Text="{Binding DisplayText, Mode=OneWay}" VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis" ToolTip="{Binding DisplayText, Mode=OneWay}"
                                            Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                                 <ui:SymbolIcon x:Name="SelectionMark" Grid.Column="1" Symbol="Checkmark16"
                                                FontSize="12" Visibility="Collapsed"
@@ -193,6 +212,12 @@
                                               Background="{DynamicResource ControlFillColorDefaultBrush}"
                                               BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                                               Content="{TemplateBinding SelectionBoxItem}">
+                                    <!-- 选中项显示“名称（UID）”，过长时省略，不撑开工具栏。 -->
+                                    <ToggleButton.ContentTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding DisplayText, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
+                                        </DataTemplate>
+                                    </ToggleButton.ContentTemplate>
                                     <ToggleButton.Template>
                                         <ControlTemplate TargetType="ToggleButton">
                                             <Border x:Name="SelectorBorder" Padding="8,4" BorderThickness="1" CornerRadius="6"
@@ -227,12 +252,12 @@
                                             Background="{DynamicResource ApplicationBackgroundBrush}"
                                             BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
                                         <DockPanel>
-                                            <!-- 新增按钮固定在下拉框底部，不参与账号选择或排序。 -->
-                                            <ui:Button DockPanel.Dock="Bottom" Content="＋" Padding="0" Width="32" MinWidth="0" Height="32"
-                                                       HorizontalAlignment="Right" HorizontalContentAlignment="Center" Appearance="Transparent"
+                                            <!-- “管理账户”固定在下拉框底部，不参与账户选择或排序；跳转到 Pulonia 账户页新增账户或填写 UID。 -->
+                                            <ui:Button DockPanel.Dock="Bottom" Content="管理账户…" Padding="8,4" MinWidth="0" Height="32"
+                                                       HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Appearance="Transparent"
                                                        BorderThickness="0" BorderBrush="Transparent"
-                                                       ToolTip="新增 UID"
-                                                       Command="{Binding DataContext.BeginAddUidCommand, RelativeSource={RelativeSource TemplatedParent}, Mode=OneWay}" />
+                                                       ToolTip="在账户页新增账户、填写或修改 UID"
+                                                       Command="{Binding DataContext.ManageAccountsCommand, RelativeSource={RelativeSource TemplatedParent}, Mode=OneWay}" />
                                             <ScrollViewer MaxHeight="256" CanContentScroll="True"
                                                           HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                                                 <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
@@ -253,35 +278,6 @@
                     </ComboBox.Template>
                 </ComboBox>
             </Grid>
-            <!-- 浮窗锚点覆盖 UID 工具栏与账号菜单，右边缘随菜单按钮对齐。 -->
-            <Border x:Name="UidPopupAnchor" Grid.Column="1" Grid.ColumnSpan="2" IsHitTestVisible="False" />
-            <Popup PlacementTarget="{Binding ElementName=UidPopupAnchor}" Placement="Bottom" VerticalOffset="4"
-                   IsOpen="{Binding IsAddingUid, Mode=TwoWay}"
-                   StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade"
-                   DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}, Mode=OneWay}">
-                <Border Width="{Binding ActualWidth, ElementName=UidPopupAnchor, Mode=OneWay}" Padding="12"
-                        CornerRadius="8" BorderThickness="1"
-                        Background="{DynamicResource ApplicationBackgroundBrush}"
-                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
-                    <StackPanel>
-                        <TextBlock Text="新增 UID" Margin="0,0,0,8" FontWeight="SemiBold"
-                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                        <ui:TextBox Text="{Binding PendingUid, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                    PlaceholderText="输入 UID" MaxLength="20">
-                            <ui:TextBox.InputBindings>
-                                <KeyBinding Key="Enter" Command="{Binding AddUidCommand, Mode=OneWay}" />
-                                <KeyBinding Key="Escape" Command="{Binding CancelAddUidCommand, Mode=OneWay}" />
-                            </ui:TextBox.InputBindings>
-                        </ui:TextBox>
-                        <TextBlock Text="{Binding UidValidationMessage, Mode=OneWay}" TextWrapping="Wrap"
-                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
-                            <ui:Button Content="取消" Command="{Binding CancelAddUidCommand, Mode=OneWay}" Margin="0,0,8,0" />
-                            <ui:Button Content="添加" Command="{Binding AddUidCommand, Mode=OneWay}" Appearance="Primary" />
-                        </StackPanel>
-                    </StackPanel>
-                </Border>
-            </Popup>
         </Grid>
         <!-- 库存分页已接入数据与筛选；材料需求、活动日历暂保留独立占位。 -->
         <TabControl Grid.Row="2" SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}"

@@ -33,19 +33,19 @@ public static class InstanceOperations
     public const string TaskStatusChanged = "task.status.changed";
 
     /// <summary>
-    /// 主实例请求子实例执行一个 Pulonia 节点；子实例立即确认，在后台执行
+    /// 主实例请求子实例运行一个 Pulonia 计划（计划 ID、修订号、执行范围）；子实例核对修订号、放入本实例队列后回复运行 ID
     /// </summary>
-    public const string PuloniaNodeStart = "pulonia.node.start";
+    public const string PuloniaRunSubmit = "pulonia.run.submit";
 
     /// <summary>
-    /// 主实例请求子实例取消一个 Pulonia 节点
+    /// 主实例请求子实例停止一个由主实例下发的 Pulonia 运行；子实例只发出取消，不等待运行结束
     /// </summary>
-    public const string PuloniaNodeCancel = "pulonia.node.cancel";
+    public const string PuloniaRunCancel = "pulonia.run.cancel";
 
     /// <summary>
-    /// 子实例回报 Pulonia 节点结束
+    /// 子实例回报主实例下发的 Pulonia 运行的状态，只用于主实例显示；重新连上主实例后补发尚未结束的运行
     /// </summary>
-    public const string PuloniaNodeFinished = "pulonia.node.finished";
+    public const string PuloniaRunChanged = "pulonia.run.changed";
 }
 
 public sealed class InstanceIpcEnvelope

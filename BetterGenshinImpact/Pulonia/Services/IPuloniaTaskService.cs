@@ -32,6 +32,19 @@ public interface IPuloniaTaskService
     Task<string> EnqueueAsync(PuloniaTaskRequest request, CancellationToken ct = default);
 
     /// <summary>
+    /// 接受主实例一步下发（<c>pulonia.run.submit</c>）的运行：读取共享计划，修订号与 <paramref name="planRevision"/> 不一致时拒绝；
+    /// 一致时与本地提交相同地固定快照、放入本实例队列，来源记为 <see cref="PuloniaTaskRequest.DispatchSource"/>。
+    /// 运行账户在运行开始时按本实例的当前账户或计划指定账户确定。
+    /// </summary>
+    /// <param name="planId">计划 ID。</param>
+    /// <param name="planRevision">主实例保存后的计划修订号。</param>
+    /// <param name="targetTaskId">执行范围；为空表示整个计划。</param>
+    /// <param name="ct">取消令牌。</param>
+    /// <returns>新运行 ID。</returns>
+    /// <exception cref="InvalidOperationException">计划已变更（“计划已变更，请重新运行。”）。</exception>
+    Task<string> EnqueueDispatchedAsync(string planId, long planRevision, string? targetTaskId, CancellationToken ct = default);
+
+    /// <summary>
     /// 查询指定运行的最新不可变状态。
     /// </summary>
     Task<PuloniaTaskRunView> GetRunAsync(string runId, CancellationToken ct = default);
@@ -52,32 +65,32 @@ public interface IPuloniaTaskService
     Task CancelAsync(string runId, CancellationToken ct = default);
 
     /// <summary>
+    /// 只发出取消、不等待执行器退出：排队请求直接转为已取消并归档，执行中的运行转为停止中；已结束的运行忽略。
+    /// 供跨实例取消（<c>pulonia.run.cancel</c>）使用，避免实例通信的响应等待运行结束。
+    /// </summary>
+    /// <param name="runId">运行 ID。</param>
+    /// <param name="ct">取消令牌。</param>
+    /// <exception cref="KeyNotFoundException">运行不存在。</exception>
+    Task RequestCancelAsync(string runId, CancellationToken ct = default);
+
+    /// <summary>
     /// 沿用历史运行的固定快照继续未完成节点，或明确从指定节点开始；返回新运行 ID。
     /// </summary>
     Task<string> ResumeAsync(string runId, string? startTaskAddress = null,
         bool allowUncertainReplay = false, CancellationToken ct = default);
 
-    /// <summary>
-    /// 读取路线 CD 账本：每个（作用域，文件）只有最新一条，包括已过期的记录；条目只读，不能修改。
-    /// </summary>
-    Task<IReadOnlyList<PuloniaTaskLedgerEntry>> ListLedgerAsync(CancellationToken ct = default);
-
-    /// <summary>
-    /// 路线 CD 账本落盘变化（新成功记录或清除记录）后触发；在协调器线程上触发，订阅方负责切换到自己的 UI 线程。
-    /// </summary>
-    event EventHandler? LedgerChanged;
+    // 完成记录属于账户进度：读取、清除与变化通知见 IPuloniaAccountService。
 
     /// <summary>
     /// 按已保存计划的当前配置预测一次运行：与提交相同地准备快照，但不入队、不写运行状态。
     /// 每个叶子给出执行、禁用、因路线 CD 跳过或本次重复的预测，运行到节点时仍会重新判定。
+    /// 读取哪个账户的完成记录：<paramref name="accountId"/> 不为空时为该账户；否则计划指定账户时为该账户，
+    /// 跟随当前账户时为本实例的当前账户，未确定时退回账户列表第一个并在结果中说明。日切按该账户的服务器时区。
     /// </summary>
-    Task<PuloniaTaskRunPreview> PreviewAsync(PuloniaTaskRequest request, CancellationToken ct = default);
-
-    /// <summary>
-    /// 清除指定（作用域，文件）的路线 CD 记录，让路线下次照常执行；运行历史中的成功记录不受影响。
-    /// </summary>
-    /// <returns>实际删除的记录数。</returns>
-    Task<int> ClearCollectionCooldownAsync(IReadOnlyCollection<PuloniaCollectionCooldownKey> keys, CancellationToken ct = default);
+    /// <param name="request">运行请求。</param>
+    /// <param name="accountId">界面临时切换查看的账户 ID；为空时按计划的运行账户设置选择。</param>
+    /// <param name="ct">取消令牌。</param>
+    Task<PuloniaTaskRunPreview> PreviewAsync(PuloniaTaskRequest request, string? accountId = null, CancellationToken ct = default);
 
     /// <summary>
     /// 按当前计划检查定时触发器并提交到点的请求；每次恢复只合并仍可延迟启动的最新一次，不补跑整段离线历史。

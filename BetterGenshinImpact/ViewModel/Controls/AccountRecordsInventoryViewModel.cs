@@ -519,7 +519,7 @@ public partial class AccountRecordsInventoryViewModel : ObservableObject
             if (Uid == uid && version == _loadVersion && _hasSnapshot) await RefreshRowsAsync(refresh);
             OnPropertyChanged(nameof(PreferReadableSource)); OnPropertyChanged(nameof(SnapshotsEnabled));
         }
-        catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), "账号记录", MessageBoxButton.OK, ThemedMessageBox.MessageBoxIcon.Error); }
+        catch (Exception ex) { await ThemedMessageBox.ShowAsync(AccountRecordsErrorMessages.Describe(ex), "狛荷屋记录", MessageBoxButton.OK, ThemedMessageBox.MessageBoxIcon.Error); }
     }
 
     /// <summary>打开数量编辑；已收录名称与内置非空分类只读，用户补充分类允许修订。</summary>

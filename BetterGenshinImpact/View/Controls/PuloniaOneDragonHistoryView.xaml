@@ -5,14 +5,7 @@
              Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <!--
         一条龙执行记录窗口：运行记录与任务计划页、全局执行记录页共用同一个执行记录视图，不再维护单独的一份布局；
-        DataContext 为窗口专属的 PuloniaTaskHistoryViewModel，路线 CD 总览取其 Cooldowns。
+        DataContext 为窗口专属的 PuloniaTaskHistoryViewModel。路线 CD 统一在账户页查看，本窗口不再有“路线 CD”页签。
     -->
-    <TabControl BorderThickness="0">
-        <TabItem Header="运行记录">
-            <controls:PuloniaTaskHistoryView Margin="0,12,0,0" />
-        </TabItem>
-        <TabItem Header="路线 CD">
-            <controls:PuloniaCollectionCooldownOverviewView Margin="0,12,0,0" DataContext="{Binding Cooldowns, Mode=OneWay}" />
-        </TabItem>
-    </TabControl>
+    <controls:PuloniaTaskHistoryView />
 </UserControl>

@@ -135,7 +135,7 @@ public sealed class PuloniaTaskNodeResultViewModel : ObservableObject
     /// 从固定快照建立类型专属展示，旧历史缺少输入时明确说明。
     /// </summary>
     public PuloniaTaskNodeResultViewModel(PuloniaTaskNodeResult result, PuloniaTaskPreparedTask? task,
-        string typeText, IEnumerable<PuloniaTaskConfirmedEffect> confirmedEffects)
+        string typeText, IEnumerable<PuloniaRouteCompletion> routeCompletions)
     {
         Result = result;
         TypeText = typeText;
@@ -149,21 +149,18 @@ public sealed class PuloniaTaskNodeResultViewModel : ObservableObject
             .ToArray();
         SettingsFields = CreateSettingsFields(task);
         TechnicalFields = CreateTechnicalFields(result, task,
-            confirmedEffects.Where(item => item.TaskAddress == TaskAddress && item.Attempt == Attempt));
+            routeCompletions.Where(item => item.TaskAddress == TaskAddress && item.Attempt == Attempt));
     }
 
     /// <summary>
-    /// 把一条路线 CD 记录展示为完整可复制内容，保留事件键以便核对幂等性。
+    /// 把一条本次完成的路线展示为完整可复制内容，保留运行、节点与尝试次数以便核对幂等性。
     /// </summary>
-    public static PuloniaTaskHistoryField CreateEffectField(PuloniaTaskConfirmedEffect effect)
-    {
-        var entry = effect.Entry;
-        return new PuloniaTaskHistoryField($"路线 CD 记录 · 第 {effect.Attempt} 次尝试",
-            $"资源：{entry.EffectKey}\n节点：{effect.TaskAddress}\n事件：{entry.EventKey}\n作用域：{entry.ScopeKey}\n"
-            + $"记录时间：{PuloniaTaskHistoryText.Time(entry.OccurredAt)}\n"
-            + $"记录时规则：{entry.Evidence.Data.Value<string>("collection_rule") ?? "未记录"}\n"
-            + $"下次可执行：{PuloniaTaskHistoryText.Time(entry.NextEligibleAt)}");
-    }
+    public static PuloniaTaskHistoryField CreateCompletionField(PuloniaRouteCompletion completion)
+        => new($"本次完成的路线 · 第 {completion.Attempt} 次尝试",
+            $"路线：{completion.Route}\n节点：{completion.TaskAddress}\n"
+            + $"执行实例：{PuloniaInstanceKey.DescribeDirectory(completion.Instance.Replace(':', '-'))}\n"
+            + $"完成时间：{PuloniaTaskHistoryText.Time(completion.CompletedAt)}\n"
+            + $"记录时规则：{completion.Rule.ToRefreshRule(completion.Route).Description}");
 
     /// <summary>
     /// 把一项结果解释转换为展示文本；缺失的关键结果明确说明，不把缺失 bool 或退出码显示为 false 或 0。
@@ -249,7 +246,7 @@ public sealed class PuloniaTaskNodeResultViewModel : ObservableObject
     /// 收集排查问题用的内部信息；结构化证据和路线 CD 记录只在存在时列出。
     /// </summary>
     private static IReadOnlyList<PuloniaTaskHistoryField> CreateTechnicalFields(PuloniaTaskNodeResult result,
-        PuloniaTaskPreparedTask? task, IEnumerable<PuloniaTaskConfirmedEffect> effects)
+        PuloniaTaskPreparedTask? task, IEnumerable<PuloniaRouteCompletion> completions)
     {
         var fields = new List<PuloniaTaskHistoryField>
         {
@@ -261,8 +258,8 @@ public sealed class PuloniaTaskNodeResultViewModel : ObservableObject
             fields.Add(new PuloniaTaskHistoryField("原因码", result.ReasonCode));
         if (task?.ResourceVersion is { } version)
             fields.Add(new PuloniaTaskHistoryField("固定资源版本（SHA-256）", version));
-        // 确认事件与节点结果在同一次写盘中提交，这里保留完整记录，便于核对事件键与作用域。
-        fields.AddRange(effects.Select(CreateEffectField));
+        // 本次完成的路线与节点结果在同一次写盘中提交（完成记录已先写入账户目录），这里保留完整内容便于核对。
+        fields.AddRange(completions.Select(CreateCompletionField));
         fields.AddRange(result.Evidence.Select((item, index) => new PuloniaTaskHistoryField(
             $"证据 {index + 1} · {item.Kind} · {item.Source}",
             $"发生时间：{PuloniaTaskHistoryText.Time(item.OccurredAt)}\n{item.Data.ToString(Formatting.Indented)}")));

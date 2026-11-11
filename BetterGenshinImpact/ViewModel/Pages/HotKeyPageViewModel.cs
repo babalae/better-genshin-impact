@@ -253,6 +253,16 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
         });
     }
 
+    /// <summary>
+    /// 快捷键与原神键位冲突的说明行，没有冲突时返回空列表。按键宏编辑页与快捷键页共用这条规则
+    /// </summary>
+    /// <param name="hotKey">快捷键</param>
+    /// <param name="keyBindings">原神键位配置</param>
+    internal static List<string> GetGameKeyBindingConflictLines(HotKey hotKey, KeyBindingsConfig keyBindings)
+    {
+        return TryConvertToGameKeyId(hotKey, out var hotKeyId) ? GetGameKeyBindingConflictLines(keyBindings, hotKeyId) : [];
+    }
+
     private static bool TryConvertToGameKeyId(HotKey hotKey, out KeyId keyId)
     {
         keyId = KeyId.Unknown;
@@ -279,6 +289,11 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
 
     private List<string> GetGameKeyBindingConflictLines(KeyId hotKeyId)
     {
+        return GetGameKeyBindingConflictLines(Config.KeyBindingsConfig, hotKeyId);
+    }
+
+    private static List<string> GetGameKeyBindingConflictLines(KeyBindingsConfig keyBindings, KeyId hotKeyId)
+    {
         var lines = new List<string>();
         foreach (var pi in typeof(KeyBindingsConfig).GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
@@ -287,7 +302,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 continue;
             }
 
-            if (pi.GetValue(Config.KeyBindingsConfig) is KeyId gameKeyId && gameKeyId == hotKeyId)
+            if (pi.GetValue(keyBindings) is KeyId gameKeyId && gameKeyId == hotKeyId)
             {
                 lines.Add($"- {GetGameKeyBindingActionName(pi.Name)}（{gameKeyId.ToName()}）");
             }
@@ -940,7 +955,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
 
                 try
                 {
-                    var p = new TpTask(runtime, Config, runtime.Stopping).GetPositionFromBigMap(MapTypes.Teyvat.ToString());
+                    var p = Pluggable.Get<ITpTaskFactory>().Create(runtime, Config, runtime.Stopping).GetPositionFromBigMap(MapTypes.Teyvat.ToString());
                     _logger.LogInformation("大地图位置：{Position}", p);
                 }
                 catch (Exception e)
@@ -1047,7 +1062,7 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                     {
                         try
                         {
-                            await new TpTask(runtime, Config, runtime.Stopping).Tp(7001.6416, -569.6846, nameof(MapTypes.Teyvat));
+                            await Pluggable.Get<ITpTaskFactory>().Create(runtime, Config, runtime.Stopping).Tp(7001.6416, -569.6846, nameof(MapTypes.Teyvat));
                         }
                         catch (Exception e)
                         {
@@ -1096,36 +1111,19 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
     }
 
     /// <summary>
-    /// “悬浮小窗”分组的快捷键与推荐方案（见 Docs/design/guide-window.md 8.1 节）。
-    /// 推荐方案只在用户点击“一键填入”时使用，默认不绑定
+    /// “悬浮小窗”分组的默认快捷键（见 Docs/design/guide-window.md 8.1 节）。
+    /// 新配置直接使用这些值，用户清空后也可从设置页一键恢复
     /// </summary>
-    private static readonly (string Property, HotKey Recommended)[] GuideRecommendedHotKeys =
+    private static readonly (string Property, HotKey DefaultHotKey, HotKeyTypeEnum Type)[] GuideDefaultHotKeys =
     [
-        (nameof(HotKeyConfig.GuideToggleHotkey), new HotKey(Key.H, ModifierKeys.Control | ModifierKeys.Alt)),
-        (nameof(HotKeyConfig.GuidePlayPauseHotkey), new HotKey(Key.Space, ModifierKeys.Control | ModifierKeys.Alt)),
-        (nameof(HotKeyConfig.GuideSeekBackwardHotkey), new HotKey(Key.Left, ModifierKeys.Control | ModifierKeys.Alt)),
-        (nameof(HotKeyConfig.GuideSeekForwardHotkey), new HotKey(Key.Right, ModifierKeys.Control | ModifierKeys.Alt)),
-        (nameof(HotKeyConfig.GuideSpeedUpHotkey), new HotKey(Key.Up, ModifierKeys.Control | ModifierKeys.Alt)),
-        (nameof(HotKeyConfig.GuideSpeedDownHotkey), new HotKey(Key.Down, ModifierKeys.Control | ModifierKeys.Alt)),
-        (nameof(HotKeyConfig.GuideSpeedResetHotkey), new HotKey(Key.D0, ModifierKeys.Control | ModifierKeys.Alt)),
-        (nameof(HotKeyConfig.GuideBoostHotkey), new HotKey(Key.None, ModifierKeys.None, MouseButton.XButton2)),
-        (nameof(HotKeyConfig.GuideVolumeUpHotkey), new HotKey(Key.PageUp, ModifierKeys.Control | ModifierKeys.Alt)),
-        (nameof(HotKeyConfig.GuideVolumeDownHotkey), new HotKey(Key.PageDown, ModifierKeys.Control | ModifierKeys.Alt)),
-        (nameof(HotKeyConfig.GuideMuteHotkey), new HotKey(Key.M, ModifierKeys.Control | ModifierKeys.Alt)),
-        (nameof(HotKeyConfig.GuidePrevEpisodeHotkey), new HotKey(Key.OemOpenBrackets, ModifierKeys.Control | ModifierKeys.Alt)),
-        (nameof(HotKeyConfig.GuideNextEpisodeHotkey), new HotKey(Key.OemCloseBrackets, ModifierKeys.Control | ModifierKeys.Alt)),
-        (nameof(HotKeyConfig.GuideOpacityUpHotkey), new HotKey(Key.Up, ModifierKeys.Control | ModifierKeys.Alt | ModifierKeys.Shift)),
-        (nameof(HotKeyConfig.GuideOpacityDownHotkey), new HotKey(Key.Down, ModifierKeys.Control | ModifierKeys.Alt | ModifierKeys.Shift)),
-        (nameof(HotKeyConfig.GuideClickThroughHotkey), new HotKey(Key.P, ModifierKeys.Control | ModifierKeys.Alt)),
-        (nameof(HotKeyConfig.GuideInteractHotkey), new HotKey(Key.I, ModifierKeys.Control | ModifierKeys.Alt)),
-        (nameof(HotKeyConfig.GuideImmersiveHotkey), new HotKey(Key.F, ModifierKeys.Control | ModifierKeys.Alt)),
-        (nameof(HotKeyConfig.GuideSubtitleHotkey), new HotKey(Key.C, ModifierKeys.Control | ModifierKeys.Alt)),
-        (nameof(HotKeyConfig.GuideOpenClipboardHotkey), new HotKey(Key.V, ModifierKeys.Control | ModifierKeys.Alt)),
-        (nameof(HotKeyConfig.GuideRestoreHotkey), new HotKey(Key.F10, ModifierKeys.Control | ModifierKeys.Alt)),
+        (nameof(HotKeyConfig.GuideToggleHotkey), new HotKey(Key.Down, ModifierKeys.None), HotKeyTypeEnum.KeyboardMonitor),
+        (nameof(HotKeyConfig.GuidePlayPauseHotkey), new HotKey(Key.Up, ModifierKeys.None), HotKeyTypeEnum.KeyboardMonitor),
+        (nameof(HotKeyConfig.GuideSeekBackwardHotkey), new HotKey(Key.Left, ModifierKeys.None), HotKeyTypeEnum.KeyboardMonitor),
+        (nameof(HotKeyConfig.GuideSeekForwardHotkey), new HotKey(Key.Right, ModifierKeys.None), HotKeyTypeEnum.KeyboardMonitor),
     ];
 
     /// <summary>
-    /// 构建“悬浮小窗”分组。开关类快捷键禁止按住时系统重复触发；快进、倍速、音量允许按住连续调整
+    /// 构建“悬浮小窗”分组。开关类快捷键禁止按住时系统重复触发；快进和倍速允许按住连续调整
     /// </summary>
     private void BuildGuideHotKeys(HotKeySettingModel directory)
     {
@@ -1162,31 +1160,22 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
             OnKeyUpAction = (_, _) => guide.EndBoost(),
         });
 
-        Add("音量增加", nameof(HotKeyConfig.GuideVolumeUpHotkey), (_, _) => guide.ChangeVolume(1), false);
-        Add("音量降低", nameof(HotKeyConfig.GuideVolumeDownHotkey), (_, _) => guide.ChangeVolume(-1), false);
-        Add("静音", nameof(HotKeyConfig.GuideMuteHotkey), (_, _) => guide.ToggleMute(), true);
-        Add("上一集", nameof(HotKeyConfig.GuidePrevEpisodeHotkey), (_, _) => guide.SwitchEpisode(-1), true);
-        Add("下一集", nameof(HotKeyConfig.GuideNextEpisodeHotkey), (_, _) => guide.SwitchEpisode(1), true);
         Add("不透明度增加", nameof(HotKeyConfig.GuideOpacityUpHotkey), (_, _) => guide.ChangeOpacity(1), false);
         Add("不透明度降低", nameof(HotKeyConfig.GuideOpacityDownHotkey), (_, _) => guide.ChangeOpacity(-1), false);
         Add("鼠标穿透开关", nameof(HotKeyConfig.GuideClickThroughHotkey), (_, _) => guide.ToggleClickThrough(), true);
-        Add("交互模式（临时操作网页）", nameof(HotKeyConfig.GuideInteractHotkey), (_, _) => guide.ToggleInteraction(), true);
-        Add("沉浸模式", nameof(HotKeyConfig.GuideImmersiveHotkey), (_, _) => guide.ToggleImmersive(), true);
         Add("字幕浮窗开关", nameof(HotKeyConfig.GuideSubtitleHotkey), (_, _) => guide.ToggleSubtitle(), true);
-        Add("用小窗打开剪贴板链接", nameof(HotKeyConfig.GuideOpenClipboardHotkey), (_, _) => guide.OpenFromClipboard(), true);
-        Add("紧急恢复小窗", nameof(HotKeyConfig.GuideRestoreHotkey), (_, _) => guide.RestoreEmergency(), true);
     }
 
     /// <summary>
-    /// 一键填入“悬浮小窗”分组的推荐快捷键：只填当前为空的项，跳过已被其他功能占用的组合，不清除用户已有的绑定
+    /// 一键填入“悬浮小窗”分组的四项默认快捷键：只填当前为空的项，不清除用户已有的绑定
     /// </summary>
     /// <returns>填入的数量、因冲突或注册失败跳过的数量</returns>
-    public (int Filled, int Skipped) ApplyGuideRecommendedHotKeys()
+    public (int Filled, int Skipped) ApplyGuideDefaultHotKeys()
     {
         var filled = 0;
         var skipped = 0;
         var all = GetAllNonDirectoryHotkey(HotKeySettingModels);
-        foreach (var (property, recommended) in GuideRecommendedHotKeys)
+        foreach (var (property, defaultHotKey, expectedType) in GuideDefaultHotKeys)
         {
             var model = GuideHotKeyDirectory.Children.FirstOrDefault(child => child.ConfigPropertyName == property);
             if (model is null || !model.HotKey.IsEmpty)
@@ -1194,20 +1183,23 @@ public partial class HotKeyPageViewModel : ObservableObject, IViewModel
                 continue;
             }
 
-            // 侧键只能用键鼠监听，组合键只能用全局热键；用户改过类型时不覆盖
-            var expectedType = recommended.MouseButton != MouseButton.Left ? HotKeyTypeEnum.KeyboardMonitor : HotKeyTypeEnum.GlobalRegister;
-            if (model.HotKeyType != expectedType
-                || all.Any(other => !ReferenceEquals(other, model)
-                                    && HotKeySettingModel.AreConflicting(other.HotKey, other.HotKeyType, recommended, expectedType)))
+            // 四个默认方向键都使用键鼠监听；已被其他功能占用时跳过，不清除原绑定
+            if (all.Any(other => !ReferenceEquals(other, model)
+                                 && HotKeySettingModel.AreConflicting(other.HotKey, other.HotKeyType, defaultHotKey, expectedType)))
             {
                 skipped++;
                 continue;
             }
 
-            model.HotKey = recommended;
+            if (model.HotKeyType != expectedType)
+            {
+                model.OnSwitchHotKeyType();
+            }
+
+            model.HotKey = defaultHotKey;
             if (model.HotKey.IsEmpty)
             {
-                // 被其他程序占用，注册失败后已被清空
+                // 注册失败后模型会清空快捷键，保留跳过计数供界面提示
                 skipped++;
                 continue;
             }

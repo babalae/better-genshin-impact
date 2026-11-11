@@ -25,10 +25,7 @@ public sealed class PuloniaTaskBuildOptions
     /// </summary>
     public Dictionary<string, string> PathVariables { get; init; } = new();
 
-    /// <summary>
-    /// 可选账号绑定；仅替换当前计划内的预设选择。
-    /// </summary>
-    public string? AccountId { get; init; }
+    // 运行账户来自计划的 account_id，由准备入口读取账户目录固定到快照，不再作为准备选项传入。
 
     /// <summary>
     /// 本次调用覆盖，以运行节点地址为键；不改写计划。

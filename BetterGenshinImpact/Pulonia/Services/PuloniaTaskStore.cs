@@ -33,10 +33,20 @@ public sealed partial class PuloniaTaskStore : IDisposable
     private readonly SemaphoreSlim _gate = new(1, 1);
 
     /// <summary>
-    /// 加载 state.json 时正式文件已损坏、状态取自备份；下一次保存不能把损坏的正式文件挪成备份覆盖有效备份。
-    /// 只在 <see cref="_gate"/> 内读写；保存成功后清除。
+    /// 加载时正式文件已损坏、状态取自备份的实例运行状态文件（完整路径）；这些文件下一次保存不能把损坏的正式文件挪成备份覆盖有效备份。
+    /// 各实例的 state.json 按路径分别记录；只在 <see cref="_gate"/> 内读写，对应文件保存成功后移除。
     /// </summary>
-    private bool _preserveStateBackup;
+    private readonly HashSet<string> _preserveStateBackups = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// 跨进程写锁 <c>.writer.lock</c> 被占用时的重试间隔（毫秒），依次使用，用完后重复最后一项。
+    /// </summary>
+    private static readonly int[] WriterLockRetryDelaysMilliseconds = [10, 20, 50, 100, 200, 400, 500];
+
+    /// <summary>
+    /// 等待跨进程写锁的总时长上限；超过后放弃本次写入并抛出 <see cref="IOException"/>。
+    /// </summary>
+    private static readonly TimeSpan WriterLockTimeout = TimeSpan.FromSeconds(10);
 
     /// <summary>
     /// 存储根目录，默认位于程序的 User/Pulonia。
@@ -91,7 +101,7 @@ public sealed partial class PuloniaTaskStore : IDisposable
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            using var writerLock = AcquireWriterLock();
+            using var writerLock = await AcquireWriterLockAsync(ct).ConfigureAwait(false);
             var current = await ReadPlanAsync(path, candidate.Id, ct).ConfigureAwait(false);
             CheckRevision(candidate.Revision, current?.Revision, candidate.Id);
             // 已持有存储门和文件写锁，直接读文件，不能再调用会重入 _gate 的公开读取方法。
@@ -117,7 +127,7 @@ public sealed partial class PuloniaTaskStore : IDisposable
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            using var writerLock = AcquireWriterLock();
+            using var writerLock = await AcquireWriterLockAsync(ct).ConfigureAwait(false);
             var current = await ReadPlanAsync(path, id, ct).ConfigureAwait(false);
             CheckRevision(expectedRevision, current?.Revision, id);
 
@@ -164,7 +174,7 @@ public sealed partial class PuloniaTaskStore : IDisposable
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            using var writerLock = AcquireWriterLock();
+            using var writerLock = await AcquireWriterLockAsync(ct).ConfigureAwait(false);
             var current = await ReadProfileAsync(path, candidate.Id, ct).ConfigureAwait(false);
             CheckRevision(candidate.Revision, current?.Revision, candidate.Id);
             candidate.Revision = checked(candidate.Revision + 1);
@@ -186,7 +196,7 @@ public sealed partial class PuloniaTaskStore : IDisposable
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            using var writerLock = AcquireWriterLock();
+            using var writerLock = await AcquireWriterLockAsync(ct).ConfigureAwait(false);
             var current = await ReadProfileAsync(path, id, ct).ConfigureAwait(false);
             CheckRevision(expectedRevision, current?.Revision, id);
 
@@ -300,7 +310,7 @@ public sealed partial class PuloniaTaskStore : IDisposable
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            using var writerLock = AcquireWriterLock();
+            using var writerLock = await AcquireWriterLockAsync(ct).ConfigureAwait(false);
             var path = Path.Combine(RootDirectory, "plan-order.json");
             await WriteAtomicallyAsync(path, PuloniaTaskJson.Write(catalog), ct).ConfigureAwait(false);
         }
@@ -350,15 +360,18 @@ public sealed partial class PuloniaTaskStore : IDisposable
     }
 
     /// <summary>
-    /// 读取唯一当前运行状态；正式文件损坏时仅允许从有效备份显式恢复，并记住下一次保存要保留该备份。
+    /// 读取一个实例的运行状态 <c>instances/&lt;实例目录名&gt;/state.json</c>；正式文件损坏时仅允许从有效备份显式恢复，
+    /// 并记住该文件下一次保存要保留这份备份。
     /// </summary>
-    public async Task<PuloniaTaskStateLoadResult> LoadStateAsync(CancellationToken ct = default)
+    /// <param name="instanceKey">实例键；每个实例只读写自己的运行状态</param>
+    /// <param name="ct">取消令牌</param>
+    public async Task<PuloniaTaskStateLoadResult> LoadStateAsync(string instanceKey, CancellationToken ct = default)
     {
+        var path = GetStatePath(instanceKey);
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            var path = Path.Combine(RootDirectory, "state.json");
-            _preserveStateBackup = false;
+            _preserveStateBackups.Remove(path);
             var json = await ReadIfExistsAsync(path, ct).ConfigureAwait(false);
             if (json is null)
             {
@@ -384,7 +397,7 @@ public sealed partial class PuloniaTaskStore : IDisposable
                 {
                     var recovered = new PuloniaTaskStateLoadResult(PuloniaTaskJson.ReadState(backupJson), true);
                     // 正式文件已损坏：下一次保存直接替换正式文件，不能把它挪成备份覆盖这份有效备份。
-                    _preserveStateBackup = true;
+                    _preserveStateBackups.Add(path);
                     return recovered;
                 }
                 catch (Exception backupError) when (backupError is Newtonsoft.Json.JsonException
@@ -403,24 +416,30 @@ public sealed partial class PuloniaTaskStore : IDisposable
     }
 
     /// <summary>
-    /// 用刷新到底层存储的完整文件替换保存当前运行状态。
+    /// 用刷新到底层存储的完整文件替换保存一个实例的运行状态。
     /// 是否保留现有备份由 <see cref="LoadStateAsync"/> 记录的标志决定，不再回读旧文件；
     /// 因此正式文件损坏时必须先经本存储加载（任务服务启动时总是如此），再保存。
     /// </summary>
-    public async Task SaveStateAsync(PuloniaTaskState state, CancellationToken ct = default)
+    /// <remarks>
+    /// 实例运行状态只由本实例写入，实例键在同一 Windows 用户下同时只有一个进程，因此不取跨进程的 <c>.writer.lock</c>，
+    /// 只用进程内存储门串行化；其他实例不会因为本实例频繁保存状态而等待写锁。
+    /// </remarks>
+    /// <param name="instanceKey">实例键；只能是本实例</param>
+    /// <param name="state">要保存的完整状态</param>
+    /// <param name="ct">取消令牌</param>
+    public async Task SaveStateAsync(string instanceKey, PuloniaTaskState state, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(state);
+        var path = GetStatePath(instanceKey);
         // 只序列化一次，并按读取规则校验这份文本，保证写下的文件下次一定能加载。
         var json = PuloniaTaskJson.WriteState(state);
         _ = PuloniaTaskJson.ReadState(json);
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            using var writerLock = AcquireWriterLock();
-            var path = Path.Combine(RootDirectory, "state.json");
-            await WriteAtomicallyAsync(path, json, ct, _preserveStateBackup).ConfigureAwait(false);
+            await WriteAtomicallyAsync(path, json, ct, _preserveStateBackups.Contains(path)).ConfigureAwait(false);
             // 正式文件已是有效版本，此后恢复正常的“上一版作为备份”替换。
-            _preserveStateBackup = false;
+            _preserveStateBackups.Remove(path);
         }
         finally
         {
@@ -429,7 +448,8 @@ public sealed partial class PuloniaTaskStore : IDisposable
     }
 
     /// <summary>
-    /// 幂等写入一份运行历史；已经存在的同一运行不会被覆盖。
+    /// 幂等写入一份运行历史；已经存在的同一运行不会被覆盖。历史目录由所有实例共用，检查与写入在 <c>.writer.lock</c> 内完成，
+    /// 万一两个实例生成了同一运行 ID，后写者因内容不同被拒绝，不会覆盖前者。
     /// </summary>
     public async Task ArchiveRunAsync(PuloniaTaskRunRecord record, CancellationToken ct = default)
     {
@@ -442,7 +462,7 @@ public sealed partial class PuloniaTaskStore : IDisposable
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            using var writerLock = AcquireWriterLock();
+            using var writerLock = await AcquireWriterLockAsync(ct).ConfigureAwait(false);
             var existingJson = await ReadIfExistsAsync(path, ct).ConfigureAwait(false);
             if (existingJson is not null)
             {
@@ -513,6 +533,15 @@ public sealed partial class PuloniaTaskStore : IDisposable
     }
 
     /// <summary>
+    /// 共享历史目录中是否已有这份历史文件 <c>history/&lt;计划ID&gt;/&lt;运行ID&gt;.json</c>；只检查文件是否存在，不读取内容、不等待写入门。
+    /// 各实例生成运行 ID 时据此避开其他实例已经写入的运行。
+    /// </summary>
+    /// <param name="planId">历史所属计划 ID。</param>
+    /// <param name="runId">运行 ID。</param>
+    /// <returns>文件存在时为 true。</returns>
+    public bool HistoryExists(string planId, string runId) => File.Exists(GetHistoryPath(planId, runId));
+
+    /// <summary>
     /// 同步读取一份完整历史，供运行视图首次访问快照时按需加载；与 <see cref="LoadHistoryRecordAsync"/> 读取同一文件。
     /// </summary>
     /// <param name="planId">历史所属计划 ID。</param>
@@ -580,13 +609,55 @@ public sealed partial class PuloniaTaskStore : IDisposable
     }
 
     /// <summary>
-    /// 跨存储对象或进程排斥同时写入；占用时直接向调用端报告 IOException。
+    /// 跨存储对象或进程排斥同时写入共享文件（计划、设置方案、账户目录与账户进度、实例设置、运行历史、迁移）。
+    /// 多个实例可能同时写入，锁被其他存储对象或进程占用时按递增间隔短时重试，总等待不超过 <see cref="WriterLockTimeout"/>；
+    /// 超时仍占用时抛出 <see cref="IOException"/>，其他打开失败（权限、磁盘错误等）立即抛出。
     /// </summary>
-    private FileStream AcquireWriterLock()
+    /// <remarks>
+    /// 锁以 <see cref="FileShare.None"/> 打开，同一进程内也不可重入：调用方持有锁期间不能再调用会取锁的方法，
+    /// 否则会等满时限后失败。等待期间调用方通常仍持有 <see cref="_gate"/>，本进程的其他写入随之排队。
+    /// </remarks>
+    /// <param name="ct">取消令牌；取消时停止等待</param>
+    /// <returns>持有写锁的文件流，释放即解锁</returns>
+    internal async Task<FileStream> AcquireWriterLockAsync(CancellationToken ct = default)
     {
         Directory.CreateDirectory(RootDirectory);
-        return new FileStream(Path.Combine(RootDirectory, ".writer.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+        var path = Path.Combine(RootDirectory, ".writer.lock");
+        var startedAt = Environment.TickCount64;
+        for (var attempt = 0; ; attempt++)
+        {
+            // 1. 尝试独占打开；成功即取得写锁
+            IOException busy;
+            try
+            {
+                return new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+            }
+            catch (IOException ex) when (IsSharingViolation(ex))
+            {
+                busy = ex;
+            }
+
+            // 2. 被占用：按递增间隔等待后重试，剩余时间不够下一次等待时按超时报告
+            var delay = WriterLockRetryDelaysMilliseconds[Math.Min(attempt, WriterLockRetryDelaysMilliseconds.Length - 1)];
+            if (Environment.TickCount64 - startedAt + delay > WriterLockTimeout.TotalMilliseconds)
+                throw new IOException(
+                    $"Pulonia 存储写锁被其他实例或程序占用超过 {WriterLockTimeout.TotalSeconds:0} 秒，本次写入未执行，请稍后重试。", busy);
+            await Task.Delay(delay, ct).ConfigureAwait(false);
+        }
     }
+
+    /// <summary>
+    /// 判断打开文件失败是否因为文件正被其他句柄独占（共享冲突或锁冲突），只有这类失败值得重试。
+    /// </summary>
+    /// <param name="exception">打开文件时的异常</param>
+    private static bool IsSharingViolation(IOException exception)
+        => (exception.HResult & 0xFFFF) is ErrorSharingViolation or ErrorLockViolation;
+
+    /// <summary>Win32 错误码 ERROR_SHARING_VIOLATION：文件正被其他进程使用。</summary>
+    private const int ErrorSharingViolation = 32;
+
+    /// <summary>Win32 错误码 ERROR_LOCK_VIOLATION：文件的一部分已被其他进程锁定。</summary>
+    private const int ErrorLockViolation = 33;
 
     /// <summary>
     /// 拒绝旧修订覆盖及误把已保存对象当作新文件。
@@ -677,7 +748,7 @@ public sealed partial class PuloniaTaskStore : IDisposable
     /// <summary>
     /// 常规文件缺失直接返回 null；检查后文件恰好消失时同样返回 null，已有文件的权限或编码错误必须保留。
     /// </summary>
-    private static async Task<string?> ReadIfExistsAsync(string path, CancellationToken ct)
+    internal static async Task<string?> ReadIfExistsAsync(string path, CancellationToken ct)
     {
         // 文件允许尚未创建，先做无异常检查，避免正常流程触发调试器的 first-chance 异常断点。
         if (!File.Exists(path))
@@ -702,7 +773,7 @@ public sealed partial class PuloniaTaskStore : IDisposable
     /// <summary>
     /// 写同目录临时文件、刷新到底层存储，再替换并保留上一版。
     /// </summary>
-    private static async Task WriteAtomicallyAsync(string path, string json, CancellationToken ct,
+    internal static async Task WriteAtomicallyAsync(string path, string json, CancellationToken ct,
         bool preserveExistingBackup = false)
     {
         var directory = Path.GetDirectoryName(path)!;

@@ -15,7 +15,9 @@
                  FontFamily="{DynamicResource TextThemeFontFamily}"
                  WindowBackdropType="Auto"
                  WindowStartupLocation="CenterOwner"
-                 mc:Ignorable="d">
+                 mc:Ignorable="d"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <!--
       背景图片编辑对话框：
       - 左右旋转 90°（TransformedBitmap 实现）

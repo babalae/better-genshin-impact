@@ -31,13 +31,10 @@ public sealed class PuloniaTaskPlanManagementTests : IDisposable
         {
             Name = "引用计划", Source = new PuloniaTaskSource { Kind = "plan", PlanId = "other-plan" }
         });
-        plan.Accounts.Add(new PuloniaTaskAccountBinding
-        {
-            AccountId = "account"
-        });
+        plan.AccountId = "account";
         plan.Triggers.Add(new PuloniaTaskTrigger
         {
-            Enabled = true, TargetTaskId = leaf.Id, AccountId = "account", Kind = PuloniaTaskTriggerKind.Hotkey
+            Enabled = true, TargetTaskId = leaf.Id, Kind = PuloniaTaskTriggerKind.Hotkey
         });
         plan.Triggers.Add(new PuloniaTaskTrigger { Enabled = true });
         plan.Revision = 7;
@@ -57,7 +54,7 @@ public sealed class PuloniaTaskPlanManagementTests : IDisposable
         Assert.Equal(2, copiedLeaf.Policy.MaxRetries);
         Assert.True(JToken.DeepEquals(leaf.Parameters, copiedLeaf.Parameters));
         Assert.Equal("other-plan", copy.RootTask.Children[1].Source!.PlanId);
-        Assert.Equal("account", Assert.Single(copy.Accounts).AccountId);
+        Assert.Equal("account", copy.AccountId);
         Assert.Equal(copiedLeaf.Id, copy.Triggers[0].TargetTaskId);
         Assert.Null(copy.Triggers[1].TargetTaskId);
         Assert.All(copy.Triggers, trigger => Assert.False(trigger.Enabled));
@@ -86,8 +83,8 @@ public sealed class PuloniaTaskPlanManagementTests : IDisposable
             Message = "完成", SubmittedAt = DateTimeOffset.UtcNow
         };
         await store.ArchiveRunAsync(record);
-        await store.SaveStateAsync(new PuloniaTaskState());
-        var statePath = Path.Combine(_directory, "state.json");
+        await store.SaveStateAsync(PuloniaInstanceKey.Primary, new PuloniaTaskState());
+        var statePath = store.GetStatePath(PuloniaInstanceKey.Primary);
         var stateJson = await File.ReadAllTextAsync(statePath);
         var path = Path.Combine(_directory, "plans", plan.Id + ".json");
         Assert.True(File.Exists(path + ".bak"));

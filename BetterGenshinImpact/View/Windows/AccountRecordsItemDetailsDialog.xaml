@@ -2,7 +2,9 @@
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" Title="物品详情" Width="620" Height="540" MinWidth="440" MinHeight="340"
  WindowStartupLocation="CenterOwner" ShowInTaskbar="False" ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica"
- Background="{DynamicResource ApplicationBackgroundBrush}" Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+ Background="{DynamicResource ApplicationBackgroundBrush}" Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+ ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+ ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
  <ui:FluentWindow.Resources><BooleanToVisibilityConverter x:Key="BoolVisibility" /></ui:FluentWindow.Resources>
  <ui:FluentWindow.InputBindings><KeyBinding Key="Escape" Command="{x:Static ApplicationCommands.Close}" /></ui:FluentWindow.InputBindings>
  <ui:FluentWindow.CommandBindings><CommandBinding Command="{x:Static ApplicationCommands.Close}" Executed="CloseWindow" /></ui:FluentWindow.CommandBindings>

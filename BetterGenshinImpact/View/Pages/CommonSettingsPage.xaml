@@ -96,13 +96,7 @@
                               DisplayMemberPath="Value"
                               ItemsSource="{Binding LanguageDict}"
                               SelectedItem="{Binding Config.OtherConfig.GameCultureInfoName, Converter={StaticResource CultureInfoNameToKVPConverter}, Mode=TwoWay}"
-                              SelectedValuePath="Key">
-                        <b:Interaction.Triggers>
-                            <b:EventTrigger EventName="SelectionChanged">
-                                <b:InvokeCommandAction Command="{Binding GameLangSelectionChangedCommand}" CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ComboBox}}}" />
-                            </b:EventTrigger>
-                        </b:Interaction.Triggers>
-                    </ComboBox>
+                              SelectedValuePath="Key" />
                 </Grid>
 
             </ui:CardControl.Header>
@@ -2173,8 +2167,7 @@
 
                     </StackPanel>
                 </ui:CardExpander>
-                <!--  OCR PaddleOCR模型配置  -->
-
+                <!--  OCR 配置：OCR 模型是可插拔能力，可选项为内置的 PP-OCRv6 和已启用的 OCR 插件，见 Docs/design/plugin-system.md 第 13.2 节  -->
                 <ui:CardExpander Margin="16,0,52,12"
                                  ContentPadding="0"
                                  Icon="{ui:SymbolIcon SquareHintSparkles24}">
@@ -2205,6 +2198,7 @@
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -2213,29 +2207,37 @@
                             <ui:TextBlock Grid.Row="0"
                                           Grid.Column="0"
                                           FontTypography="Body"
-                                          Text="{i18n:T PaddleOCR模型}"
+                                          Text="{i18n:T OCR 模型}"
                                           TextWrapping="Wrap" />
                             <ui:TextBlock Grid.Row="1"
                                           Grid.Column="0"
                                           Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                          Text="{i18n:T 如果需要使用其他模型，请在此处选择。}"
+                                          Text="{i18n:T 主程序内置 PP-OCRv6。需要其他版本或语言的模型时，请在插件页安装并启用对应的 OCR 插件。}"
                                           TextWrapping="Wrap" />
-                            <ComboBox Grid.Row="0"
-                                      Grid.RowSpan="2"
-                                      Grid.Column="1"
-                                      MinWidth="90"
-                                      Margin="0,0,36,0"
-                                      ItemsSource="{Binding PaddleOcrModelConfigs}"
-                                      SelectedItem="{Binding SelectedPaddleOcrModelConfig, Mode=TwoWay}">
-                                <b:Interaction.Triggers>
-                                    <b:EventTrigger EventName="SelectionChanged">
-                                        <b:InvokeCommandAction Command="{Binding PaddleOcrModelConfigChangedCommand}" CommandParameter="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType={x:Type ComboBox}}}" />
-                                    </b:EventTrigger>
-                                </b:Interaction.Triggers>
-                            </ComboBox>
+                            <!--  保存的模型来自未启用的插件或加载失败时，说明当前实际使用的模型  -->
+                            <ui:TextBlock Grid.Row="2"
+                                          Grid.Column="0"
+                                          Margin="0,4,0,0"
+                                          Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                          Text="{Binding OcrModel.FallbackText, Mode=OneWay}"
+                                          TextWrapping="Wrap"
+                                          Visibility="{Binding OcrModel.HasFallback, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            <StackPanel Grid.Row="0"
+                                        Grid.RowSpan="3"
+                                        Grid.Column="1"
+                                        Margin="0,0,36,0"
+                                        VerticalAlignment="Center"
+                                        Orientation="Horizontal">
+                                <ComboBox MinWidth="240"
+                                          Margin="0,0,8,0"
+                                          DisplayMemberPath="Text"
+                                          ItemsSource="{Binding OcrModel.Options, Mode=OneWay}"
+                                          SelectedItem="{Binding OcrModel.SelectedOption, Mode=TwoWay}" />
+                                <ui:Button Command="{Binding GoToPluginsPageCommand}"
+                                           Content="{i18n:T 管理插件}"
+                                           Icon="{ui:SymbolIcon PuzzlePiece24}" />
+                            </StackPanel>
                         </Grid>
-
-
                     </StackPanel>
                 </ui:CardExpander>
 

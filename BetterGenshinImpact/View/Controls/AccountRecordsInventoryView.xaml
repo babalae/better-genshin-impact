@@ -6,7 +6,9 @@
              xmlns:pages="clr-namespace:BetterGenshinImpact.View.Pages"
              xmlns:behavior="clr-namespace:BetterGenshinImpact.View.Behavior"
              xmlns:controls="clr-namespace:BetterGenshinImpact.View.Controls"
-             Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <UserControl.Resources>
         <SolidColorBrush x:Key="InventoryErrorBrush" Color="#EA4335" />
         <SolidColorBrush x:Key="InventoryWarningBrush" Color="#F28C28" />
@@ -421,7 +423,7 @@
                                             <ui:Button Padding="8,2" MinHeight="24" Content="打开 log" Margin="0,0,6,0" Command="{Binding Data.OpenNoticeCardEventsCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" />
                                             <ui:Button Padding="8,2" MinHeight="24" Content="舍弃" Margin="0,0,6,0" Command="{Binding Data.ResolveNoticeCardCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" Visibility="{Binding CanResolve, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
                                             <ui:Button Padding="8,2" MinHeight="24" Content="归档" Margin="0,0,6,0" Command="{Binding Data.ArchiveNoticeCardCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" Visibility="{Binding CanArchive, Converter={StaticResource BoolVisibility}, Mode=OneWay}" />
-                                            <ui:Button Padding="8,2" MinHeight="24" Content="批量归档" Command="{Binding Data.ArchiveNoticeCardBatchCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" Visibility="{Binding CanBatchArchive, Converter={StaticResource BoolVisibility}, Mode=OneWay}" ToolTip="归档本账号中未受阻的同类完成事件。" />
+                                            <ui:Button Padding="8,2" MinHeight="24" Content="批量归档" Command="{Binding Data.ArchiveNoticeCardBatchCommand, Source={StaticResource InventoryProxy}, Mode=OneWay}" CommandParameter="{Binding Mode=OneWay}" Visibility="{Binding CanBatchArchive, Converter={StaticResource BoolVisibility}, Mode=OneWay}" ToolTip="归档本账户中未受阻的同类完成事件。" />
                                             </WrapPanel>
                                         </Grid>
                                     </StackPanel>

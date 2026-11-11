@@ -27,7 +27,7 @@ public enum PuloniaSettingEditorKind
     CombatStrategy,
 
     /// <summary>路线 CD 专用编辑器。</summary>
-    CollectionCooldown
+    RouteCooldown
 }
 
 /// <summary>

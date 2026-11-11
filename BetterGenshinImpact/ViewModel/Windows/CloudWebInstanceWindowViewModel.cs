@@ -1,6 +1,9 @@
 using BetterGenshinImpact.GameTask.SoloTask;
 using BetterGenshinImpact.Helpers;
 using BetterGenshinImpact.Model;
+using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.ViewModel.Pages.Pulonia;
 using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.View.Controls.Webview;
 using BetterGenshinImpact.View.Pages;
@@ -40,6 +43,9 @@ public sealed partial class CloudWebInstanceWindowViewModel : ObservableObject, 
 
     /// <summary>返回主界面后打开任务页面。</summary>
     private readonly INavigationService _navigationService;
+
+    /// <summary>Pulonia 账户服务：新建实例时写入它的当前账户。</summary>
+    private readonly IPuloniaAccountService _accounts;
 
     /// <summary>只在窗口存续期间检查实例进程与目录变化。</summary>
     private readonly DispatcherTimer _refreshTimer;
@@ -87,6 +93,16 @@ public sealed partial class CloudWebInstanceWindowViewModel : ObservableObject, 
     [NotifyCanExecuteChangedFor(nameof(CreateAndLaunchCommand))]
     private bool _isOperationPending;
 
+    /// <summary>新建实例时可选的当前账户：账户目录中的全部账户，默认第一个。</summary>
+    public ObservableCollection<PuloniaAccountChoiceViewModel> AccountOptions { get; } = [];
+
+    /// <summary>新建实例的当前账户 ID；账户目录读取失败时为 null，新实例首次使用时自己取第一个账户。</summary>
+    [ObservableProperty]
+    private string? _newInstanceAccountId;
+
+    /// <summary>账户目录有多个账户时才显示“当前账户”下拉框；只有一个账户时新实例的当前账户就是它。</summary>
+    public bool ShowAccountChoice => AccountOptions.Count > 1;
+
     /// <summary>由窗口响应关闭请求；ViewModel 不直接操作窗口控件。</summary>
     public event EventHandler? CloseRequested;
 
@@ -96,13 +112,15 @@ public sealed partial class CloudWebInstanceWindowViewModel : ObservableObject, 
         WebViewInstanceLauncher launcher,
         InstanceService instanceService,
         SoloTaskRegistry registry,
-        INavigationService navigationService)
+        INavigationService navigationService,
+        IPuloniaAccountService accounts)
     {
         _store = store;
         _launcher = launcher;
         _instanceService = instanceService;
         _registry = registry;
         _navigationService = navigationService;
+        _accounts = accounts;
         _refreshTimer = new DispatcherTimer(DispatcherPriority.Background)
         {
             Interval = TimeSpan.FromSeconds(1)
@@ -128,11 +146,69 @@ public sealed partial class CloudWebInstanceWindowViewModel : ObservableObject, 
 
     /// <summary>展开内联新建表单，保留尚未提交的名称。</summary>
     [RelayCommand(CanExecute = nameof(CanEdit))]
-    private void BeginCreate()
+    private async Task BeginCreateAsync()
     {
         CreationError = null;
         ErrorMessage = null;
         IsCreating = true;
+        await LoadAccountOptionsAsync();
+    }
+
+    /// <summary>读取账户目录作为新实例“当前账户”的选项，默认第一个账户；读取失败时不显示下拉框。</summary>
+    private async Task LoadAccountOptionsAsync()
+    {
+        try
+        {
+            var settings = await _accounts.LoadAccountsAsync(_lifetimeCancellation.Token);
+            if (_disposed)
+            {
+                return;
+            }
+
+            var selected = settings.Accounts.Any(account => account.Id == NewInstanceAccountId)
+                ? NewInstanceAccountId
+                : settings.Accounts.FirstOrDefault()?.Id;
+            AccountOptions.Clear();
+            foreach (var account in settings.Accounts)
+            {
+                AccountOptions.Add(new PuloniaAccountChoiceViewModel(account));
+            }
+
+            NewInstanceAccountId = selected;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            AccountOptions.Clear();
+            NewInstanceAccountId = null;
+            CreationError = "账户目录读取失败，新实例首次使用时将取账户列表的第一个账户：" + ex.Message;
+        }
+        catch (OperationCanceledException) when (_disposed)
+        {
+            // 窗口已关闭，不再更新界面。
+        }
+
+        OnPropertyChanged(nameof(ShowAccountChoice));
+    }
+
+    /// <summary>
+    /// 把所选账户写入新实例（实例键 <c>webview:&lt;小写实例名&gt;</c>）的设置；写入失败只提示，新实例首次使用时自己取第一个账户。
+    /// </summary>
+    /// <param name="name">已创建的实例名</param>
+    private async Task SaveNewInstanceAccountAsync(string name)
+    {
+        if (NewInstanceAccountId is not { } accountId)
+        {
+            return;
+        }
+
+        try
+        {
+            await _accounts.SetCurrentAccountAsync(PuloniaInstanceKey.ForWebView(name), accountId);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            ErrorMessage = $"实例已创建，但未能设置它的当前账户：{ex.Message}。可以稍后在主窗口标题栏的实例菜单中修改。";
+        }
     }
 
     /// <summary>收起表单，不创建任何实例或浏览器数据。</summary>
@@ -167,6 +243,8 @@ public sealed partial class CloudWebInstanceWindowViewModel : ObservableObject, 
             return;
         }
 
+        // 新实例进程启动前写入当前账户，进程首次读取设置时就是所选账户
+        await SaveNewInstanceAccountAsync(name);
         IsCreating = false;
         NewInstanceName = string.Empty;
         RefreshInstances();

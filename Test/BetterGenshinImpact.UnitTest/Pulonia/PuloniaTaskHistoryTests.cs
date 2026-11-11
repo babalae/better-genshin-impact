@@ -22,7 +22,7 @@ public sealed class PuloniaTaskHistoryTests : IDisposable
     /// </summary>
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "bgi-" + BetterGenshinImpact.Helpers.ShortId.Create(null, 8));
 
-    // 确认事实的归档与重启回归随通用额度框架移除，改由 PuloniaCollectionCooldownTests 以文件级 CD 覆盖。
+    // 本次完成的路线的归档与重启回归由 PuloniaRouteCooldownTests 以文件级 CD 覆盖。
 
     /// <summary>
     /// 重新打开存储后，类型专属返回值、多行中文日志与结构化证据仍完整保留。
@@ -48,13 +48,21 @@ public sealed class PuloniaTaskHistoryTests : IDisposable
     }
 
     /// <summary>
-    /// 损坏确认事件不得绕过运行历史身份校验。
+    /// 损坏或不属于本次运行的“本次完成的路线”不得绕过运行历史身份校验。
     /// </summary>
     [Fact]
-    public void History_RejectsInvalidConfirmedEffect()
+    public void History_RejectsInvalidRouteCompletion()
     {
         var record = CreateRecord();
-        record.ConfirmedEffects.Add(new PuloniaTaskConfirmedEffect { Attempt = 0, TaskAddress = "wrong" });
+        record.RouteCompletions.Add(new PuloniaRouteCompletion { Attempt = 0, TaskAddress = "wrong" });
+        Assert.Throws<PuloniaTaskValidationException>(() => PuloniaTaskJson.ReadRunRecord(PuloniaTaskJson.WriteRunRecord(record)));
+        // 字段完整但运行 ID 不是本次运行
+        record.RouteCompletions[0] = new PuloniaRouteCompletion
+        {
+            Route = "local:c:/a.json", CompletedAt = DateTimeOffset.UtcNow, RunId = PuloniaId.NewRunId(DateTimeOffset.Now.AddDays(-1)),
+            TaskAddress = "history-test/a", Attempt = 1, Instance = PuloniaInstanceKey.Primary,
+            Rule = new PuloniaRouteCompletionRule { Mode = PuloniaRouteRefreshMode.Disabled }
+        };
         Assert.Throws<PuloniaTaskValidationException>(() => PuloniaTaskJson.ReadRunRecord(PuloniaTaskJson.WriteRunRecord(record)));
     }
 
@@ -135,7 +143,7 @@ public sealed class PuloniaTaskHistoryTests : IDisposable
                 Assert.Equal(PuloniaTaskNodeStatus.Cancelled, Assert.Single(finished.NodeResults).Status);
                 Assert.Equal(PuloniaTaskRunStatus.Succeeded,
                     (await service.WaitForCompletionAsync(nextId).WaitAsync(TimeSpan.FromSeconds(15))).Status);
-                var savedState = (await store.LoadStateAsync()).State;
+                var savedState = (await store.LoadStateAsync(PuloniaInstanceKey.Primary)).State;
                 Assert.Null(savedState.ActiveRun);
                 Assert.Empty(savedState.PendingRequests);
                 Assert.Empty(savedState.PendingArchives);

@@ -15,7 +15,9 @@
                  Tag="JsonMonoDialog"
                  WindowBackdropType="Mica"
                  WindowStartupLocation="CenterOwner"
-                 mc:Ignorable="d">
+                 mc:Ignorable="d"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>

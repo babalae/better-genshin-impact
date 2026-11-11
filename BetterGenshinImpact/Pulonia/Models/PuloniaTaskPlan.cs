@@ -13,8 +13,12 @@ public sealed class PuloniaTaskPlan
     /// <summary>
     /// 当前支持的文件格式版本。
     /// </summary>
-    /// <remarks>版本 3 以共享设置（settings、profile_id）取代预设和分组公共参数；开发期不读取旧版本。</remarks>
-    public const int CurrentSchemaVersion = 3;
+    /// <remarks>
+    /// 版本 3 以共享设置（settings、profile_id）取代预设和分组公共参数；
+    /// 版本 4 以单值运行账户设置 <c>account_id</c> 取代账号绑定列表 <c>accounts</c>，并删除触发器的 <c>account_id</c>。
+    /// 开发期不转换也不读取旧版本，旧计划文件需要删除后重建。
+    /// </remarks>
+    public const int CurrentSchemaVersion = 4;
 
     /// <summary>
     /// 稳定计划 ID，同时作为存储文件名。
@@ -65,8 +69,9 @@ public sealed class PuloniaTaskPlan
     public List<PuloniaTaskTrigger> Triggers { get; set; } = [];
 
     /// <summary>
-    /// 账号绑定，列表顺序就是将来的账号执行顺序。
+    /// 运行账户设置：为空（默认）表示跟随实例当前账户，不切换；<c>acc_…</c> 表示指定账户，必要时先切换到该账户。
+    /// 普通计划和一条龙都支持；只能指定填写了 UID 的账户，由运行准备检查。
     /// </summary>
-    [JsonProperty("accounts", Required = Required.DisallowNull)]
-    public List<PuloniaTaskAccountBinding> Accounts { get; set; } = [];
+    [JsonProperty("account_id")]
+    public string? AccountId { get; set; }
 }

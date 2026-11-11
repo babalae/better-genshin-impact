@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
@@ -28,8 +29,7 @@ public partial class PuloniaTaskTriggerEditorViewModel : ObservableObject
     [ObservableProperty] private HotKeyTypeEnum _hotkeyType;
     /// <summary>运行范围，空字符串表示整个计划。</summary>
     [ObservableProperty] private string _targetTaskId = "";
-    /// <summary>账号参数资料引用，不执行切号。</summary>
-    [ObservableProperty] private string _accountId = "";
+    // 原“账号参数资料”下拉框已删除：运行账户由计划的运行账户设置和实例当前账户决定，触发器不能覆盖。
     /// <summary>触发后允许延迟启动的分钟数。</summary>
     [ObservableProperty] private string _windowMinutes = "360";
     /// <summary>是否补触发。</summary>
@@ -73,44 +73,99 @@ public partial class PuloniaTaskTriggerEditorViewModel : ObservableObject
     };
     /// <summary>完整计划或编辑树内可选子树。</summary>
     public IReadOnlyDictionary<string, string> Targets { get; }
-    /// <summary>当前计划绑定的账号参数资料。</summary>
-    public IReadOnlyDictionary<string, string> Accounts { get; }
 
-    /// <summary>一条龙始终使用自身账号绑定，不能由触发器建立第二套选择。</summary>
-    public bool UsesPlanAccountBinding { get; }
-    /// <summary>普通计划仍允许选择原有账号参数资料；一条龙不显示账号下拉框。</summary>
-    public bool CanSelectAccount => !UsesPlanAccountBinding;
-    /// <summary>账号区域的标题：一条龙表示实际运行账号，普通计划表示只提供参数的账号资料。</summary>
-    public string AccountSelectionTitle => UsesPlanAccountBinding ? "运行账号" : "账号参数资料（不会自动切换账号）";
-    /// <summary>当前入口的账号选择语义。</summary>
-    public string AccountSelectionDescription => UsesPlanAccountBinding
-        ? "使用这份一条龙配置绑定的账号：运行前切换到该账号并核验 UID。可在一条龙页面的“切换账号”中修改。"
-        : "只选择参数使用的账号资料；运行时使用当前登录的账号，不会自动切换。";
+    /// <summary>计划的运行账户设置；指定账户时执行实例只能选一个（同一账户不能同时运行）。</summary>
+    private readonly string? _planAccountId;
+
+    /// <summary>正在由编辑器批量设置执行实例的选择，选项回调不重复处理。</summary>
+    private bool _applyingInstanceSelection;
+
+    /// <summary>
+    /// 定时触发器的执行实例选项（统筹设计 9.5）：主实例、桌面分身与已建立的云原神实例，不要求在线；热键触发器不使用。
+    /// </summary>
+    public ObservableCollection<PuloniaTriggerInstanceOptionViewModel> InstanceOptions { get; } = [];
+
+    /// <summary>执行实例是否可多选：计划跟随当前账户时可选多个，指定账户时只能选一个。</summary>
+    public bool IsInstanceMultiSelect => _planAccountId is null;
+
+    /// <summary>执行实例的说明文字。</summary>
+    public string InstanceHint => IsHotkey
+        ? "计划热键只在主实例生效。"
+        : (IsInstanceMultiSelect ? "" : "计划指定了运行账户，同一账户不能同时在多个实例运行，只能选一个执行实例。")
+          + "到点时由执行实例自己检查并运行，实例需要开着；没开时，启动后按补触发规则处理。";
 
     /// <summary>从计划和触发器建立独立草稿。</summary>
-    public PuloniaTaskTriggerEditorViewModel(PuloniaTaskTrigger trigger, PuloniaTaskPlan plan)
+    /// <param name="trigger">要编辑的触发器</param>
+    /// <param name="plan">触发器所属计划</param>
+    /// <param name="instances">可选为执行实例的实例；为空时只有主实例</param>
+    public PuloniaTaskTriggerEditorViewModel(PuloniaTaskTrigger trigger, PuloniaTaskPlan plan,
+        IReadOnlyList<(string Key, string Name)>? instances = null)
     {
         _original = trigger.Clone();
+        _planAccountId = plan.AccountId;
+        BuildInstanceOptions(instances ?? [(PuloniaInstanceKey.Primary, PuloniaInstanceKey.Describe(PuloniaInstanceKey.Primary))]);
         CronEditor = new PuloniaCronEditorViewModel(trigger.Cron);
         CronEditor.PropertyChanged += OnCronEditorPropertyChanged;
-        UsesPlanAccountBinding = plan.Purpose == PuloniaTaskPlanPurpose.OneDragon;
         Enabled = trigger.Enabled; ServerTimeZone = trigger.ServerTimeZone;
         HotkeyType = trigger.HotkeyType; Hotkey = HotKey.FromString(trigger.Hotkey);
-        TargetTaskId = trigger.TargetTaskId ?? ""; AccountId = trigger.AccountId ?? "";
+        TargetTaskId = trigger.TargetTaskId ?? "";
         WindowMinutes = trigger.WindowMinutes.ToString(CultureInfo.InvariantCulture);
         CatchUp = trigger.CatchUp; BusyPolicy = trigger.BusyPolicy;
         var targets = new Dictionary<string, string> { [""] = "整个计划" };
         AddTargets(plan.RootTask, targets, 0);
         Targets = targets;
-        var accounts = new Dictionary<string, string>
-        {
-            [""] = UsesPlanAccountBinding ? "使用本配置绑定的账号" : "不指定资料（当前登录账号）"
-        };
-        foreach (var account in plan.Accounts.Where(item => item.Enabled)) accounts[account.AccountId] = account.AccountId;
-        Accounts = accounts;
-        if (UsesPlanAccountBinding) AccountId = "";
         _initializing = false;
         RefreshPreview();
+    }
+
+    /// <summary>
+    /// 建立执行实例选项并按已保存的配置选中：执行实例为空表示只在主实例执行；指定账户的计划只保留第一个。
+    /// 已保存但不在列表中的实例也加入，便于看到并取消。
+    /// </summary>
+    /// <param name="instances">可选的实例</param>
+    private void BuildInstanceOptions(IReadOnlyList<(string Key, string Name)> instances)
+    {
+        var saved = _original.Instances.Count == 0 ? [PuloniaInstanceKey.Primary] : _original.Instances.ToList();
+        if (!IsInstanceMultiSelect && saved.Count > 1)
+            saved = [saved[0]];
+        var rows = instances.ToList();
+        foreach (var key in saved.Where(key => rows.All(row => row.Key != key)))
+            rows.Add((key, PuloniaInstanceKey.Describe(key)));
+        _applyingInstanceSelection = true;
+        try
+        {
+            foreach (var (key, name) in rows)
+                InstanceOptions.Add(new PuloniaTriggerInstanceOptionViewModel(key, name, OnInstanceSelectionChanged)
+                {
+                    IsMultiSelect = IsInstanceMultiSelect, IsSelected = saved.Contains(key)
+                });
+        }
+        finally
+        {
+            _applyingInstanceSelection = false;
+        }
+    }
+
+    /// <summary>用户勾选或取消执行实例：只能单选时选中一个即取消其他；然后重新校验。</summary>
+    /// <param name="option">变化的选项</param>
+    private void OnInstanceSelectionChanged(PuloniaTriggerInstanceOptionViewModel option)
+    {
+        if (_applyingInstanceSelection)
+            return;
+        if (!IsInstanceMultiSelect && option.IsSelected)
+        {
+            _applyingInstanceSelection = true;
+            try
+            {
+                foreach (var other in InstanceOptions.Where(other => !ReferenceEquals(other, option)))
+                    other.IsSelected = false;
+            }
+            finally
+            {
+                _applyingInstanceSelection = false;
+            }
+        }
+        if (!_initializing) RefreshPreview();
     }
 
     /// <summary>以稳定节点 ID 建立范围选项，不把运行地址或外部引用展开节点写回计划。</summary>
@@ -179,11 +234,20 @@ public partial class PuloniaTaskTriggerEditorViewModel : ObservableObject
         result.Enabled = Enabled; result.ServerTimeZone = ServerTimeZone;
         result.Hotkey = Hotkey.ToString(); result.HotkeyType = HotkeyType;
         result.TargetTaskId = string.IsNullOrEmpty(TargetTaskId) ? null : TargetTaskId;
-        result.AccountId = UsesPlanAccountBinding || string.IsNullOrEmpty(AccountId) ? null : AccountId;
         result.WindowMinutes = Number(WindowMinutes, "允许延迟启动（分钟）", 1, 10080);
         result.CatchUp = CatchUp; result.BusyPolicy = BusyPolicy;
         if (IsSchedule)
+        {
             result.Cron = CronEditor.Expression.Trim();
+            // 执行实例：只选主实例时保存为空（只在主实例执行），否则按列表顺序保存所选实例键
+            var selected = InstanceOptions.Where(option => option.IsSelected).Select(option => option.InstanceKey).ToList();
+            if (selected.Count == 0)
+                throw new FormatException("请至少选择一个执行实例。");
+            result.Instances = selected is [PuloniaInstanceKey.Primary] ? [] : selected;
+        }
+        else
+            // 计划热键只在主实例生效，热键触发器没有执行实例
+            result.Instances = [];
         PuloniaTaskSchedule.Validate(result);
         // 计划校验不检查键位组合，保存前由热键规则拦截当前模式不支持的键。
         if (IsHotkey)
@@ -214,7 +278,9 @@ public partial class PuloniaTaskTriggerEditorViewModel : ObservableObject
                 lines.Add(next.Value.ToOffset(utcOffset).ToString("yyyy-MM-dd ddd HH:mm zzz", CultureInfo.GetCultureInfo("zh-CN")));
                 after = next.Value;
             }
-            PreviewText = lines.Count > 0 ? "接下来执行（所选时区）：\n" + string.Join("\n", lines) : "未来八年没有可执行时间。";
+            var instances = string.Join("、", InstanceOptions.Where(option => option.IsSelected).Select(option => option.InstanceName));
+            PreviewText = (lines.Count > 0 ? "接下来执行（所选时区）：\n" + string.Join("\n", lines) : "未来八年没有可执行时间。")
+                          + "\n执行实例：" + instances;
             IsValid = true;
         }
         catch (Exception ex) { PreviewText = "配置无效：" + ex.Message; IsValid = false; }

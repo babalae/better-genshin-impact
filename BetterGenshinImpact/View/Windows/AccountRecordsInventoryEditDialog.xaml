@@ -5,7 +5,9 @@
                  Title="编辑库存记录" Width="460" Height="480" ResizeMode="NoResize"
                  WindowStartupLocation="CenterOwner" ExtendsContentIntoTitleBar="True" WindowBackdropType="Mica"
                  ShowInTaskbar="False" Background="{DynamicResource ApplicationBackgroundBrush}"
-                 Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+                 Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <Grid>
         <Grid.Resources>
             <BooleanToVisibilityConverter x:Key="ExpirationVisibility" />

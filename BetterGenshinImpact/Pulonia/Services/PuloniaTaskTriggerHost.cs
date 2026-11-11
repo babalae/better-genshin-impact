@@ -15,7 +15,10 @@ using Microsoft.Extensions.Logging;
 
 namespace BetterGenshinImpact.Pulonia.Services;
 
-/// <summary>主实例的唯一异步调度循环，负责程序内定时、两种快捷键与手动命令行入口。</summary>
+/// <summary>
+/// 每个实例都运行的 Pulonia 触发入口：命令行 <c>--pulonia-run</c>（含二次启动转发来的参数）提交到本实例的队列；
+/// 每个实例检查执行实例包含本实例的定时触发器（游标存在本实例的 state.json），两种计划热键只在主实例注册。
+/// </summary>
 public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, IPuloniaTaskService tasks,
     InstanceService instances,
     ILogger<PuloniaTaskTriggerHost> logger, TimeProvider clock, IConfigService? configService = null) : BackgroundService
@@ -42,15 +45,14 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, IPuloniaTaskS
     /// <summary>平台状态或游标变化通知；订阅者负责切换 UI 线程。</summary>
     public event EventHandler? Changed;
 
-    /// <summary>只在主实例调度；读取失败时停本次自动动作而不是继续使用过期配置。</summary>
+    /// <summary>
+    /// 每个实例都调度：检查执行实例包含本实例的定时触发器（执行实例为空的只由主实例处理），游标存在本实例的 state.json；
+    /// 计划热键只在主实例注册（统筹设计 6.4.3）。读取失败时停本次自动动作而不是继续使用过期配置。
+    /// </summary>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (!instances.Context.IsRoot)
-        {
-            Status = "自动触发仅在主实例中生效，子实例不会重复调度。";
-            Changed?.Invoke(this, EventArgs.Empty);
-            return;
-        }
+        // 子实例不注册计划热键：同一组合键只能被一个进程全局注册，键鼠监听也会在每个进程重复响应
+        var registersHotkeys = instances.Context.IsRoot;
         var dispatcher = _dispatcher;
         if (dispatcher is null)
         {
@@ -91,7 +93,7 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, IPuloniaTaskS
                         // 上次有计划文件读取失败（可能只是被其他程序暂时独占）时，按这一周期重试，不必等到文件再被修改。
                         reload = store.GetPlanFilesStamp() != planStamp || planLoadError.Length > 0;
                         // 注册冲突可能已由用户在快捷键页解除，热键注册失败时随这一周期重试。
-                        if (!reload && _hotkeyError.Length > 0)
+                        if (!reload && _hotkeyError.Length > 0 && registersHotkeys)
                             await RefreshHotkeysAsync(dispatcher, plans, token).ConfigureAwait(false);
                     }
                     if (reload)
@@ -112,11 +114,16 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, IPuloniaTaskS
                                 logger.LogWarning("Pulonia 调度跳过无法读取的计划文件 {Path}：{Message}", failure.Path, failure.Message);
                         planLoadError = loadError;
                         lastPoll = now;
-                        await RefreshHotkeysAsync(dispatcher, plans, token).ConfigureAwait(false);
+                        if (registersHotkeys)
+                            await RefreshHotkeysAsync(dispatcher, plans, token).ConfigureAwait(false);
                     }
+                    // 任务服务只处理本实例负责的定时触发器
                     await tasks.CheckTriggersAsync(plans, unreadablePlanIds, token).ConfigureAwait(false);
                     Statuses = tasks.GetTriggerStatuses();
-                    Status = "主实例调度运行中（仅在程序运行时生效）。" + planLoadError + _hotkeyError;
+                    Status = (registersHotkeys
+                                 ? "本实例调度运行中：检查本实例负责的定时，并注册计划热键（仅在程序运行时生效）。"
+                                 : "本实例调度运行中：检查执行实例包含本实例的定时；计划热键只在主实例生效。")
+                             + planLoadError + _hotkeyError;
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
@@ -214,23 +221,8 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, IPuloniaTaskS
     {
         var config = configService?.Get().HotKeyConfig;
         if (config is null) return false;
-        var key = HotKey.FromString(trigger.Hotkey);
-        foreach (var property in config.GetType().GetProperties().Where(property => property.PropertyType == typeof(string)
-            && property.Name.EndsWith("Hotkey", StringComparison.Ordinal)))
-        {
-            if (!Enum.TryParse<HotKeyTypeEnum>(config.GetType().GetProperty(property.Name + "Type")?.GetValue(config) as string, out var type))
-                continue;
-            try
-            {
-                if (HotKeySettingModel.AreConflicting(key, trigger.HotkeyType,
-                    HotKey.FromString(property.GetValue(config) as string ?? ""), type)) return true;
-            }
-            catch (ArgumentException)
-            {
-                // 原设置中的非法键值不是一个可注册热键，不因它阻断其他有效配置。
-            }
-        }
-        return false;
+        // 预检查规则与按键宏共用，见 HotKeySettingModel.ConflictsWithHotKeyConfig。
+        return HotKeySettingModel.ConflictsWithHotKeyConfig(HotKey.FromString(trigger.Hotkey), trigger.HotkeyType, config);
     }
 
     /// <summary>观察热键异步异常，避免 async void 异常穿过系统消息循环。</summary>
@@ -241,10 +233,12 @@ public sealed class PuloniaTaskTriggerHost(PuloniaTaskStore store, IPuloniaTaskS
         catch (Exception ex) { logger.LogError(ex, "Pulonia 热键触发失败"); Status = "热键触发失败：" + ex.Message; }
     }
 
-    /// <summary>命令行和单实例 IPC 共用入口，不经旧任务页、不主动启动游戏截图器。</summary>
+    /// <summary>
+    /// 命令行和单实例 IPC 共用入口，不经旧任务页、不主动启动游戏截图器。
+    /// 所有实例都处理：<c>--pulonia-run</c> 提交到本实例的队列，在本实例执行，不经过 IPC。
+    /// </summary>
     public async Task HandleActivationAsync(CommandLineOptions options)
     {
-        if (!instances.Context.IsRoot) return;
         try
         {
             if (options.Action == CommandLineAction.PuloniaRun && options.PuloniaPlanId is { } planId)

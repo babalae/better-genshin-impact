@@ -34,9 +34,7 @@ public partial class OtherConfig : ObservableObject
     private ItemIconRecognitionMode _itemIconRecognitionMode = ItemIconRecognitionMode.Item;
     [ObservableProperty]
     private Miyoushe _miyousheConfig = new();
-    //OCR配置
-    [ObservableProperty]
-    private Ocr _ocrConfig = new();
+    // OCR 模型改为可插拔能力，选择保存在 PluginConfig.Selections；旧的 ocrConfig 字段不再读取，所有用户使用 PP-OCRv6
     
 
     public partial class Miyoushe : ObservableObject
@@ -51,15 +49,7 @@ public partial class OtherConfig : ObservableObject
         private bool _logSyncCookie = true;
         
     }
-    public partial class Ocr : ObservableObject
-    {
-        /// <summary>
-        ///     PaddleOCR模型配置
-        /// </summary>
-        [ObservableProperty]
-        private PaddleOcrModelConfig _paddleOcrModelConfig = PaddleOcrModelConfig.V4Auto;
-    }
-    
+
     //public partial class OtherConfig : ObservableObject
     
     /// <summary>

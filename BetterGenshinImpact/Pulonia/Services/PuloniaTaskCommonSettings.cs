@@ -22,7 +22,7 @@ public static class PuloniaTaskCommonSettings
     public const string PartySourceParameter = "party_source";
 
     /// <summary>
-    /// 不作为 Pulonia 参数的旧字段：旧调度字段由 Pulonia 自己的调度与账本负责；
+    /// 不作为 Pulonia 参数的旧字段：旧调度字段由 Pulonia 自己的调度与路线 CD 负责；
     /// “启用本组配置”总开关在“未设置即继承”的模型中没有意义，执行时固定开启；两个开关字段没有读取方。
     /// </summary>
     private static readonly HashSet<string> ExcludedProperties =
@@ -65,7 +65,7 @@ public static class PuloniaTaskCommonSettings
         }
         var defaults = ToParameters(taskType, new ScriptGroupConfig());
         // 路线 CD 只属于 Pulonia 地图追踪，不传给旧配置或 JS 的行走设置。
-        if (taskType == "pathing") defaults[PuloniaCollectionCooldown.ParameterName] = PuloniaCollectionCooldown.CreateDefaults();
+        if (taskType == "pathing") defaults[PuloniaRouteCooldown.ParameterName] = PuloniaRouteCooldown.CreateDefaults();
         return defaults;
     }
 

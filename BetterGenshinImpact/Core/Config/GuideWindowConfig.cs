@@ -98,7 +98,7 @@ public partial class GuideWindowConfig : ObservableObject
     /// 位置模式：跟随游戏窗口或自由放置
     /// </summary>
     [ObservableProperty]
-    private GuidePositionMode _positionMode = GuidePositionMode.FollowGame;
+    private GuidePositionMode _positionMode = GuidePositionMode.Free;
 
     /// <summary>
     /// 跟随游戏时停靠的游戏客户区角
@@ -237,12 +237,6 @@ public partial class GuideWindowConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _hidePageSubtitle = true;
-
-    /// <summary>
-    /// 小窗被用户隐藏时继续显示字幕（只听声音、看字幕）
-    /// </summary>
-    [ObservableProperty]
-    private bool _showSubtitleWhenHidden = true;
 
     /// <summary>
     /// 字幕浮窗中心相对游戏画面宽度的位置，0–1

@@ -34,7 +34,7 @@ public sealed partial class InventoryStore
             throw new InvalidDataException("文件格式或版本不受支持。仅支持狛荷屋库存 JSON（format=BetterGI.AccountRecords，version=1）。");
         if (package["accounts"] is not JObject accounts || accounts.Count != 1 ||
             package["sources"] is not JObject sources || package["itemDefinitions"] is not JObject definitions)
-            throw new InvalidDataException("导入文件必须只包含一个账号，并提供 sources（来源字典）和 itemDefinitions（补充字典）对象；字典无内容时可使用空对象。");
+            throw new InvalidDataException("导入文件必须只包含一个账户，并提供 sources（来源字典）和 itemDefinitions（补充字典）对象；字典无内容时可使用空对象。");
         var account = accounts.Properties().Single();
         // 先检查全部来源，避免导入部分库存后才发现后续来源无法保存。
         foreach (var entry in sources.Properties())
@@ -47,9 +47,9 @@ public sealed partial class InventoryStore
         if (!IsValidUid(account.Name))
             throw new InvalidDataException($"导入 UID“{account.Name}”无效，须为首位非零的 9～10 位数字。");
         if (account.Value is not JObject body || body["inventory"] is not JObject inventory)
-            throw new InvalidDataException($"账号 {account.Name} 缺少有效库存对象。账号内容及 inventory 必须为 JSON 对象。");
+            throw new InvalidDataException($"UID {account.Name} 缺少有效库存对象。账户内容及 inventory 必须为 JSON 对象。");
         if (inventory.Count > 5000)
-            throw new InvalidDataException($"账号 {account.Name} 包含 {inventory.Count} 项库存，超过 5000 项上限。");
+            throw new InvalidDataException($"UID {account.Name} 包含 {inventory.Count} 项库存，超过 5000 项上限。");
         foreach (var item in inventory.Properties())
         {
             if (string.IsNullOrWhiteSpace(item.Name) || item.Name != item.Name.Trim() || item.Name.Length > 128 ||

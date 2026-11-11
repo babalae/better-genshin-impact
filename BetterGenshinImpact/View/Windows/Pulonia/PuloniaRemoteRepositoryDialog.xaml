@@ -4,7 +4,9 @@
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  Title="添加远程仓库" Width="500" SizeToContent="Height" ResizeMode="NoResize"
                  WindowStartupLocation="CenterOwner" ExtendsContentIntoTitleBar="True"
-                 WindowBackdropType="Mica" Background="{DynamicResource ApplicationBackgroundBrush}">
+                 WindowBackdropType="Mica" Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />

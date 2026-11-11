@@ -104,12 +104,13 @@ public static class PuloniaTaskJson
         var state = Read<PuloniaTaskState>(json);
         if (state.SchemaVersion != PuloniaTaskState.CurrentSchemaVersion)
             throw new PuloniaTaskValidationException("state.json",
-                $"不支持运行状态格式版本 {state.SchemaVersion}，请删除 state.json 与 state.json.bak 后重新启动。");
+                $"不支持运行状态格式版本 {state.SchemaVersion}，开发期不转换旧格式。请删除本实例目录 "
+                + "User/Pulonia/instances/<实例目录名>/ 下的 state.json 与 state.json.bak 后重新启动（主实例为 instances/primary）。");
         if (state.Sequence < 0 || state.PendingRequests is null || state.PendingArchives is null
-            || state.Ledger is null || state.TriggerStates is null)
+            || state.TriggerStates is null)
             throw new PuloniaTaskValidationException("state.json", "运行状态内容不完整或序列无效。");
         if (state.PendingRequests.Count > 10000 || state.PendingArchives.Count > 10000
-            || state.Ledger.Count > 100000 || state.TriggerStates.Count > 10000)
+            || state.TriggerStates.Count > 10000)
             throw new PuloniaTaskValidationException("state.json", "运行状态集合超过支持上限。");
         var triggerKeys = new HashSet<string>(StringComparer.Ordinal);
         foreach (var trigger in state.TriggerStates)
@@ -144,15 +145,6 @@ public static class PuloniaTaskJson
                 throw new PuloniaTaskValidationException("state.json", "待归档运行尚未结束。");
             AddRunIdentity(record, runIds, "state.json");
         }
-        var eventKeys = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var entry in state.Ledger)
-        {
-            if (string.IsNullOrWhiteSpace(entry.EventKey) || !eventKeys.Add(entry.EventKey)
-                || string.IsNullOrWhiteSpace(entry.ScopeKey) || string.IsNullOrWhiteSpace(entry.EffectKey)
-                || string.IsNullOrWhiteSpace(entry.WindowKey) || entry.Units <= 0
-                || string.IsNullOrWhiteSpace(entry.TaskRunId) || entry.Evidence is null)
-                throw new PuloniaTaskValidationException("state.json/ledger", "账本项字段无效或事件键重复。");
-        }
         return state;
     }
 
@@ -184,25 +176,24 @@ public static class PuloniaTaskJson
         if (record.Request is null
             || string.IsNullOrWhiteSpace(record.PlanName) || string.IsNullOrWhiteSpace(record.SnapshotJson)
             || string.IsNullOrWhiteSpace(record.Message) || record.NodeResults is null
-            || record.CompletedTaskAddresses is null || record.ConfirmedEffects is null)
+            || record.CompletedTaskAddresses is null || record.RouteCompletions is null)
             throw new PuloniaTaskValidationException(path, "运行记录必要字段缺失。");
         PuloniaTaskValidator.ValidateId(record.RunId, path + "/run_id");
+        PuloniaInstanceKey.Validate(record.Instance);
         if (record.ResumedFromRunId is { } resumedFrom)
             PuloniaTaskValidator.ValidateId(resumedFrom, path + "/resumed_from_run_id");
         PuloniaTaskValidator.ValidateId(record.Request.PlanId, path + "/plan_id");
+        if (record.AccountId is not null)
+            PuloniaTaskValidator.ValidateId(record.AccountId, path + "/account_id");
         if (record.Request.ParameterOverrides is null)
             throw new PuloniaTaskValidationException(path, "运行请求参数覆盖不能为空。");
-        var eventKeys = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var effect in record.ConfirmedEffects)
+        var attempts = new HashSet<(string, int)>();
+        foreach (var completion in record.RouteCompletions)
         {
-            // 已保存的确认事实不能缺失身份或证据。
-            if (effect is null || string.IsNullOrWhiteSpace(effect.TaskAddress) || effect.Attempt <= 0
-                || effect.Entry is null || string.IsNullOrWhiteSpace(effect.Entry.EventKey)
-                || string.IsNullOrWhiteSpace(effect.Entry.EffectKey) || string.IsNullOrWhiteSpace(effect.Entry.ScopeKey)
-                || effect.Entry.Units <= 0 || effect.Entry.Evidence is null
-                || effect.Entry.TaskRunId != $"{record.RunId}:{effect.TaskAddress}"
-                || !eventKeys.Add(effect.Entry.EventKey))
-                throw new PuloniaTaskValidationException(path, "运行确认事件身份、额度或证据无效。");
+            // 本次完成的路线必须属于本次运行，同一节点同一次尝试只有一条。
+            PuloniaTaskStore.ValidateRouteCompletion(completion, path + "/route_completions");
+            if (completion.RunId != record.RunId || !attempts.Add((completion.TaskAddress, completion.Attempt)))
+                throw new PuloniaTaskValidationException(path, "本次完成的路线不属于本次运行，或同一节点同一次尝试重复。");
         }
     }
 

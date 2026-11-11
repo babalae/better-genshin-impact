@@ -107,7 +107,7 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, ResinCl
     /// 本次运行中是否出现过“未找到对应的地脉花策略”。
     /// </summary>
     private bool _routeStrategyNotFound;
-    private TpTask _tpTask = null!;
+    private ITpTask _tpTask = null!;
 
     /// <summary>
     /// 背包摩拉扫描器
@@ -301,7 +301,7 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, ResinCl
     private void Initialize()
     {
         _systemInfo = _runtime.SystemInfo;
-        _tpTask = new TpTask(_runtime, _config, _ct);
+        _tpTask = Pluggable.Get<ITpTaskFactory>().Create(_runtime, _config, _ct);
         _moraFromInventoryScanner = new MoraFromInventoryScanner(_runtime, _logger);
         NormalizeSettings();
         LoadConfigData();
@@ -403,7 +403,8 @@ public class AutoLeyLineOutcropTask : ISoloTask<AutoLeyLineOutcropParam, ResinCl
 
         _ocrRo1 = RecognitionObject.Ocr(ScaleTo1080(800), ScaleTo1080(200), ScaleTo1080(300), ScaleTo1080(100));
         _ocrRo2 = RecognitionObject.Ocr(ScaleTo1080(0), ScaleTo1080(200), ScaleTo1080(300), ScaleTo1080(300));
-        _ocrRo3 = RecognitionObject.Ocr(ScaleTo1080(1200), ScaleTo1080(520), ScaleTo1080(300), ScaleTo1080(300));
+        // 其他玩家放置的造物会额外增加“拆除”等选项，将“接触地脉溢口”向上顶出原识别区。
+        _ocrRo3 = RecognitionObject.Ocr(ScaleTo1080(1200), ScaleTo1080(300), ScaleTo1080(300), ScaleTo1080(520));
     }
 
     private static int ScaleTo1080(int value)

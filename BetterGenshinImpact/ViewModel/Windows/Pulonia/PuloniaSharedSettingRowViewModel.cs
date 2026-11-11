@@ -70,7 +70,7 @@ public partial class PuloniaSharedSettingRowViewModel : ObservableObject
     public bool IsCombatStrategy => Definition.Editor == PuloniaSettingEditorKind.CombatStrategy;
 
     /// <summary>路线 CD 专用编辑入口。</summary>
-    public bool IsCollectionCooldown => Definition.Editor == PuloniaSettingEditorKind.CollectionCooldown;
+    public bool IsRouteCooldown => Definition.Editor == PuloniaSettingEditorKind.RouteCooldown;
 
     /// <summary>固定选项。</summary>
     public IReadOnlyList<PuloniaSettingChoice> Choices => Definition.Choices;
@@ -246,7 +246,7 @@ public partial class PuloniaSharedSettingRowViewModel : ObservableObject
 
     /// <summary>打开路线 CD 编辑窗口。</summary>
     [RelayCommand]
-    private void EditCollectionCooldown() => _owner.EditCollectionCooldown(this);
+    private void EditRouteCooldown() => _owner.EditRouteCooldown(this);
 
     /// <summary>值类型是否允许 null。</summary>
     private bool AllowsNull()

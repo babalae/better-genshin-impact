@@ -853,7 +853,7 @@ public sealed class GuideWindowService : IGuideWindowService, IHostedService, ID
         _interaction = true;
         Recompute();
         view.ActivateForInput();
-        // 用快捷键进入时鼠标可能还不在小窗上，多给一些时间移过来
+        // 进入交互模式时鼠标可能还不在小窗上，多给一些时间移过来
         RestartInteractionExitTimer(_pointerOver ? 0 : Math.Max(5, Config.InteractionAutoExitSeconds));
         return true;
     }
@@ -1355,9 +1355,8 @@ public sealed class GuideWindowService : IGuideWindowService, IHostedService, ID
     /// </summary>
     private void UpdateSubtitleWindow()
     {
-        var shouldShow = IsOpen && (State.IsSubtitleAdjusting
-                                    || Config.SubtitleWindowEnabled && State.HasSubtitle && !_hiddenByTask && !_hiddenByGame
-                                    && (State.IsShown || _hiddenByUser && Config.ShowSubtitleWhenHidden));
+        var shouldShow = IsOpen && State.IsShown
+                                && (State.IsSubtitleAdjusting || Config.SubtitleWindowEnabled && State.HasSubtitle);
         if (shouldShow)
         {
             _subtitleView ??= _subtitleFactory();
@@ -1508,9 +1507,6 @@ public sealed class GuideWindowService : IGuideWindowService, IHostedService, ID
                 case nameof(GuideWindowConfig.HidePageSubtitle):
                     _ = ExecuteAsync(GuidePlayerCommand.SetPageSubtitleHidden,
                         Config.SubtitleWindowEnabled && Config.HidePageSubtitle ? 1 : 0);
-                    UpdateSubtitleWindow();
-                    break;
-                case nameof(GuideWindowConfig.ShowSubtitleWhenHidden):
                     UpdateSubtitleWindow();
                     break;
                 case nameof(GuideWindowConfig.AutoEnableChineseSubtitle):

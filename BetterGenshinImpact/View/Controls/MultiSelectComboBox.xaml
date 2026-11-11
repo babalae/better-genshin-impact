@@ -8,7 +8,9 @@
              d:DesignHeight="32"
              d:DesignWidth="300"
              mc:Ignorable="d"
-             PreviewKeyDown="Root_PreviewKeyDown">
+             PreviewKeyDown="Root_PreviewKeyDown"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <Grid>
         <ToggleButton x:Name="DropDownToggle"
                       Height="32"

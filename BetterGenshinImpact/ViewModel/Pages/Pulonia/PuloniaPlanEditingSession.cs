@@ -6,7 +6,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using BetterGenshinImpact.Pulonia.Models;
+using BetterGenshinImpact.Pulonia.Remote;
 using BetterGenshinImpact.Pulonia.Services;
+using BetterGenshinImpact.Service.Instance;
 using BetterGenshinImpact.View.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -28,6 +30,9 @@ public partial class PuloniaPlanEditingSession : ObservableObject
     /// 计划、设置方案与编辑器元数据的文件存储服务。
     /// </summary>
     private readonly PuloniaTaskStore _store;
+
+    /// <summary>Pulonia 存储，供触发设置在没有注入实例目录时列出实例目录。</summary>
+    internal PuloniaTaskStore Store => _store;
 
     /// <summary>
     /// 当前从存储加载的设置方案，按名称排序。
@@ -72,6 +77,16 @@ public partial class PuloniaPlanEditingSession : ObservableObject
     public PuloniaTaskResourceCatalog ResourceCatalog { get; }
 
     /// <summary>
+    /// 主实例把运行整次下发到子实例（“运行于”）并跟踪其状态的客户端；未注册时为空，只能在本实例运行。
+    /// </summary>
+    public PuloniaRunDispatcher? RunDispatcher { get; }
+
+    /// <summary>
+    /// 账户目录、实例当前账户与账户进度（完成记录）的应用服务；路线 CD 标记、总览与清除记录都经过它。
+    /// </summary>
+    public IPuloniaAccountService AccountService { get; }
+
+    /// <summary>
     /// 普通任务计划，任务计划页的列表直接绑定此集合。
     /// </summary>
     public ObservableCollection<PuloniaTaskPlanDocumentViewModel> Documents { get; } = [];
@@ -85,6 +100,29 @@ public partial class PuloniaPlanEditingSession : ObservableObject
     /// 完整编辑会话，用于保存、引用校验和资源检查。
     /// </summary>
     internal IEnumerable<PuloniaTaskPlanDocumentViewModel> AllDocuments => Documents.Concat(OneDragonDocuments);
+
+    /// <summary>
+    /// 其他页面（例如账户页概况中的“指定了该账户的计划”）请求打开的计划 ID；任务计划页或新一条龙页进入时取走并选中。
+    /// 会话是单例，请求只保留最后一次。
+    /// </summary>
+    private string? _pendingOpenPlanId;
+
+    /// <summary>记下要打开的计划，调用方随后导航到对应页面。</summary>
+    /// <param name="planId">计划 ID</param>
+    internal void RequestOpenPlan(string planId) => _pendingOpenPlanId = planId;
+
+    /// <summary>
+    /// 取走打开计划的请求：请求的计划在 <paramref name="documents"/> 中时返回它并清除请求，否则保留请求（属于另一个页面）。
+    /// </summary>
+    /// <param name="documents">调用页面显示的计划集合</param>
+    /// <returns>要选中的计划；没有属于本页的请求时为 null</returns>
+    internal PuloniaTaskPlanDocumentViewModel? TakeOpenPlanRequest(IEnumerable<PuloniaTaskPlanDocumentViewModel> documents)
+    {
+        if (_pendingOpenPlanId is not { } planId || documents.FirstOrDefault(document => document.Id == planId) is not { } target)
+            return null;
+        _pendingOpenPlanId = null;
+        return target;
+    }
 
     /// <summary>
     /// 最近一次加载的结果说明，供首次进入的页面显示。
@@ -108,13 +146,19 @@ public partial class PuloniaPlanEditingSession : ObservableObject
     /// <param name="clipboard">跨计划剪贴板。</param>
     /// <param name="taskService">任务服务。</param>
     /// <param name="resourceCatalog">资源索引。</param>
+    /// <param name="accountService">账户目录、实例当前账户与账户进度；为空时按主实例使用同一存储建立（测试用）。</param>
+    /// <param name="runDispatcher">主实例把运行整次下发到子实例的客户端；为空时只能在本实例运行（测试用）。</param>
     public PuloniaPlanEditingSession(PuloniaTaskStore store, PuloniaTaskClipboardService clipboard,
-        IPuloniaTaskService taskService, PuloniaTaskResourceCatalog resourceCatalog)
+        IPuloniaTaskService taskService, PuloniaTaskResourceCatalog resourceCatalog,
+        IPuloniaAccountService? accountService = null, PuloniaRunDispatcher? runDispatcher = null)
     {
         _store = store;
         Clipboard = clipboard;
         TaskService = taskService;
         ResourceCatalog = resourceCatalog;
+        RunDispatcher = runDispatcher;
+        AccountService = accountService
+                         ?? new PuloniaAccountService(store, new PuloniaInstanceKeyProvider(PuloniaInstanceKey.Primary));
         _repositoryManagementService = new PuloniaRepositoryManagementService(resourceCatalog.Repositories);
         _resourceVersionService = new PuloniaTaskResourceVersionService(resourceCatalog);
     }
@@ -183,6 +227,12 @@ public partial class PuloniaPlanEditingSession : ObservableObject
     /// </summary>
     /// <param name="message">面向用户的说明。</param>
     internal void ReportStatus(string message) => StatusReported?.Invoke(this, message);
+
+    /// <summary>
+    /// 读取已保存的账户目录（首次使用时建立“我的账户”），供页面的运行账户入口使用。
+    /// </summary>
+    /// <returns>账户目录的独立副本。</returns>
+    internal Task<PuloniaGenshinAccountSettings> LoadAccountDirectoryAsync() => _store.LoadAccountSettingsAsync();
 
     /// <summary>
     /// 新建带根分组的普通计划并加入自动保存队列。
@@ -646,48 +696,121 @@ public partial class PuloniaPlanEditingSession : ObservableObject
     internal bool CanRunDocument(PuloniaTaskPlanDocumentViewModel? document) => !IsBusy && document is not null;
 
     /// <summary>
-    /// 保存后在指定执行实例上提交运行；执行实例为空时在主实例本地执行。
+    /// 保存后按“运行于”逐个实例提交一次运行：本实例本地提交（子实例界面提交的运行同样在本实例执行）；
+    /// 子实例用保存后的修订号经一步下发整次交给该实例，由它读取共享计划、固定快照并在它自己的队列中执行。
+    /// 计划只保存一次、资源只检查一次，多个子实例共用同一修订号；某个实例提交失败不影响其余实例，结果按实例汇总显示。
     /// 提交时固定快照，随后编辑不会影响本次运行；页面执行入口默认不限时。
     /// </summary>
     /// <param name="document">要运行的计划。</param>
-    /// <param name="executionTarget">执行实例；为空表示本机。</param>
-    /// <returns>新运行 ID；未提交时返回 null。</returns>
-    internal async Task<string?> RunPlanOnAsync(PuloniaTaskPlanDocumentViewModel document,
-        PuloniaTaskExecutionTarget? executionTarget)
+    /// <param name="targets">执行实例：null 表示本实例，其余为在线子实例。</param>
+    /// <param name="allowDisplaceOnlineInstance">用户已确认本实例的运行切换账户时可以把其他在线实例挤下线（统筹设计 4.6）；只用于本地提交。</param>
+    /// <returns>每个实例的提交结果；保存或资源检查未通过时为空。</returns>
+    internal async Task<IReadOnlyList<PuloniaRunSubmitResult>> RunPlanOnTargetsAsync(PuloniaTaskPlanDocumentViewModel document,
+        IReadOnlyList<InstanceEndpoint?> targets, bool allowDisplaceOnlineInstance = false)
     {
-        if (!CanRunDocument(document))
-            return null;
-        if (document.IsDirty && !await SaveDocumentAsync(document))
-            return null;
+        if (!CanRunDocument(document) || targets.Count == 0)
+            return [];
+        // 1. 未保存的修改先写盘；下发要按磁盘上的修订号核对，即使没有修改也经保存门等待进行中的自动保存完成
+        if ((targets.Any(target => target is not null) || document.IsDirty) && !await SaveDocumentAsync(document))
+            return [];
 
+        // 2. 资源检查只做一次：有启用中的资源更新未确认时不提交到任何实例
         try
         {
-            await RefreshResourceVersionsCoreAsync(null, CancellationToken.None, document);
-            // 禁用资源仍显示更新标签，但不会阻止其他已启用任务执行。
-            var pendingUpdates = GetReferencedDocuments(document, GetResourceDocuments(document), enabledOnly: true)
-                .SelectMany(target => target.EnumerateNodes())
-                .Count(node => node.IsEffectivelyEnabled && node.CanUpdateResourceVersion && node.HasResourceUpdate
-                    && node.Model.Resource is null && node.Model.Source?.Resource is null);
-            if (pendingUpdates > 0)
-                throw new InvalidOperationException($"“{document.Name}”有 {pendingUpdates} 项启用中的资源更新，请先点击计划卡片的更新任务资源按钮。");
-            var runId = await TaskService.EnqueueAsync(new PuloniaTaskRequest
-            {
-                PlanId = document.Id,
-                Source = "ui",
-                ExecutionTarget = executionTarget
-            });
-            ReportStatus(executionTarget is null
-                ? $"已提交“{document.Name}”，将按提交顺序执行；之后的修改不影响本次运行。"
-                : $"已提交“{document.Name}”到“{executionTarget.DisplayName}”执行；之后的修改不影响本次运行。");
-            return runId;
+            await EnsureNoPendingResourceUpdatesAsync(document);
         }
         catch (Exception ex)
         {
             var message = "提交运行失败：" + ex.Message;
             ReportStatus(message);
             await ThemedMessageBox.ErrorAsync(message, "无法运行任务计划");
-            return null;
+            return [];
         }
+
+        // 3. 逐个实例提交；子实例共用保存后的修订号，子实例发现计划已变更时拒绝
+        var revision = document.Revision;
+        var results = new List<PuloniaRunSubmitResult>();
+        foreach (var target in targets)
+        {
+            var instanceName = target is null
+                ? PuloniaInstanceKey.Describe(AccountService.CurrentInstanceKey)
+                : PuloniaRunDispatcher.Describe(target);
+            try
+            {
+                var runId = target is null
+                    // 本实例：本地提交，进入本实例队列
+                    ? await TaskService.EnqueueAsync(new PuloniaTaskRequest
+                    {
+                        PlanId = document.Id,
+                        Source = "ui",
+                        AllowDisplaceOnlineInstance = allowDisplaceOnlineInstance
+                    })
+                    : await (RunDispatcher ?? throw new InvalidOperationException("当前实例不支持把计划下发到子实例。"))
+                        .SubmitAsync(target, document.Id, revision);
+                results.Add(new PuloniaRunSubmitResult(instanceName, target is null, runId, null));
+            }
+            catch (Exception ex)
+            {
+                results.Add(new PuloniaRunSubmitResult(instanceName, target is null, null, ex.Message));
+            }
+        }
+
+        // 4. 汇总：全部成功只更新状态说明；有失败时按实例列出结果
+        await ReportSubmitResultsAsync(document, results);
+        return results;
+    }
+
+    /// <summary>
+    /// 提交前刷新本计划的资源版本，并拒绝仍有启用中的资源更新未确认的计划。
+    /// </summary>
+    /// <param name="document">要运行的计划。</param>
+    /// <exception cref="InvalidOperationException">有启用中的资源更新。</exception>
+    private async Task EnsureNoPendingResourceUpdatesAsync(PuloniaTaskPlanDocumentViewModel document)
+    {
+        await RefreshResourceVersionsCoreAsync(null, CancellationToken.None, document);
+        // 禁用资源仍显示更新标签，但不会阻止其他已启用任务执行。
+        var pendingUpdates = GetReferencedDocuments(document, GetResourceDocuments(document), enabledOnly: true)
+            .SelectMany(target => target.EnumerateNodes())
+            .Count(node => node.IsEffectivelyEnabled && node.CanUpdateResourceVersion && node.HasResourceUpdate
+                && node.Model.Resource is null && node.Model.Source?.Resource is null);
+        if (pendingUpdates > 0)
+            throw new InvalidOperationException($"“{document.Name}”有 {pendingUpdates} 项启用中的资源更新，请先点击计划卡片的更新任务资源按钮。");
+    }
+
+    /// <summary>
+    /// 报告逐个实例的提交结果：全部成功时只更新状态说明；只有一个实例且失败时沿用原错误提示；
+    /// 多个实例中有失败时列出每个实例的结果。
+    /// </summary>
+    /// <param name="document">运行的计划。</param>
+    /// <param name="results">每个实例的提交结果。</param>
+    private async Task ReportSubmitResultsAsync(PuloniaTaskPlanDocumentViewModel document,
+        IReadOnlyList<PuloniaRunSubmitResult> results)
+    {
+        var failed = results.Where(result => !result.IsSuccess).ToArray();
+        if (failed.Length == 0)
+        {
+            ReportStatus(results is [{ IsLocal: true }]
+                ? $"已提交“{document.Name}”，将按提交顺序执行；之后的修改不影响本次运行。"
+                : $"已提交“{document.Name}”到{string.Join("、", results.Select(result => "“" + result.InstanceName + "”"))}执行；之后的修改不影响本次运行。");
+            return;
+        }
+        if (results.Count == 1)
+        {
+            var message = "提交运行失败：" + failed[0].Error;
+            ReportStatus(message);
+            await ThemedMessageBox.ErrorAsync(message, "无法运行任务计划");
+            return;
+        }
+        var allFailed = failed.Length == results.Count;
+        var summary = allFailed
+            ? $"“{document.Name}”未能提交到任何实例："
+            : $"“{document.Name}”只提交到了部分实例：";
+        var lines = results.Select(result => result.IsSuccess
+            ? $"{result.InstanceName}：已提交"
+            : $"{result.InstanceName}：未提交，{result.Error}").ToArray();
+        ReportStatus(summary + string.Join("；", lines));
+        await ThemedMessageBox.WarningAsync(summary + "\n" + string.Join("\n", lines),
+            allFailed ? "无法运行任务计划" : "部分实例未能提交");
     }
 
 

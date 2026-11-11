@@ -61,12 +61,8 @@ public sealed class PuloniaTaskBuilder
             using var context = new BuildContext(fixedOptions, ct);
             // 能力说明来自执行器代码，合法性由 PuloniaTaskValidator.ValidateDefinitions 在单元测试（或注册时）保证，
             // 不在每次准备时复验全部说明。
-            if (fixedOptions.AccountId is { } accountId)
-            {
-                PuloniaTaskValidator.ValidateId(accountId, "account_id");
-                if (!fixedPlan.Accounts.Any(a => a.AccountId == accountId && a.Enabled))
-                    throw new PuloniaTaskValidationException(fixedPlan.Id, "所选账号未启用或未绑定该计划。");
-            }
+            // 计划指定了账户时先固定账户资料：账户必须存在且填写了 UID，因为切换和核验都按 UID 找到目标。
+            var account = await ResolveSpecifiedAccountAsync(fixedPlan, ct).ConfigureAwait(false);
             var planGraph = await PuloniaTaskValidator.ValidatePlanReferencesAsync(fixedPlan,
                 _store.LoadPlanAsync, ct).ConfigureAwait(false);
             foreach (var referencedPlan in planGraph.Values)
@@ -79,8 +75,29 @@ public sealed class PuloniaTaskBuilder
                     throw new PuloniaTaskValidationException(address, "调用覆盖未指向启用的具体任务。");
             }
             ct.ThrowIfCancellationRequested();
-            return new PuloniaTaskSnapshot(fixedPlan, fixedOptions.AccountId, root, context.PlanJson, context.ProfileJson);
+            return new PuloniaTaskSnapshot(fixedPlan, account, root, context.PlanJson, context.ProfileJson);
         }, ct);
+    }
+
+    /// <summary>
+    /// 读取计划指定的账户资料并复制一份，排队期间修改账户目录或计划不影响本次运行；跟随当前账户时返回 null。
+    /// 账户图片每次采集或导入都新建、不覆盖，快照记录图片路径即可固定内容。
+    /// </summary>
+    /// <param name="plan">已固定的计划副本</param>
+    /// <param name="ct">取消令牌</param>
+    /// <returns>账户资料副本；跟随当前账户时为 null</returns>
+    /// <exception cref="PuloniaTaskValidationException">指定的账户不存在或没有 UID</exception>
+    private async Task<PuloniaGenshinAccountProfile?> ResolveSpecifiedAccountAsync(PuloniaTaskPlan plan, CancellationToken ct)
+    {
+        if (plan.AccountId is not { } accountId)
+            return null;
+        var accounts = await _store.LoadAccountSettingsAsync(ct).ConfigureAwait(false);
+        var account = accounts.Accounts.SingleOrDefault(item => item.Id == accountId)
+                      ?? throw new PuloniaTaskValidationException(plan.Id + "/account_id", "计划指定的账户不存在，请重新选择运行账户。");
+        if (string.IsNullOrEmpty(account.Uid))
+            throw new PuloniaTaskValidationException(plan.Id + "/account_id",
+                $"计划指定的账户“{account.Name}”没有填写 UID，不能按 UID 切换和核验；请先填写 UID 或改为跟随当前账户。");
+        return PuloniaTaskJson.Read<PuloniaGenshinAccountProfile>(PuloniaTaskJson.Write(account));
     }
 
     /// <summary>只允许目标子树及其祖先参与准备；范围外节点保留但不会读取资源。</summary>
@@ -289,7 +306,7 @@ public sealed class PuloniaTaskBuilder
         return new PuloniaTaskPreparedTask(plan.Id, task.Id, sourceTaskId ?? task.Id, address, task.Name,
             task.TaskType, enabled, path, version, parameters, sources, policy, children, task.Resource ?? task.Source?.Resource,
             task.TaskType == "pathing" && enabled
-                ? PuloniaCollectionCooldown.Resolve(path, task.Resource, parameters) : null, settingSources);
+                ? PuloniaRouteCooldown.Resolve(path, task.Resource, parameters) : null, settingSources);
     }
 
     /// <summary>

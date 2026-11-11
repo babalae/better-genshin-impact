@@ -17,5 +17,5 @@ public sealed class PuloniaTaskImportResult
         + string.Join("\n", Plans.Select(p => $"计划：{p.Name}（{p.RootTask.Children.Count} 个顶层步骤）"))
         + "\n\n兼容差异：\n" + (Differences.Count == 0 ? "无已知参数转换差异。" : string.Join("\n", Differences.Select(d => "• " + d)))
         + "\n\n来源（原文件保留）：\n" + string.Join("\n", Sources)
-        + "\n\n旧执行记录、CD、排队请求和断点不会导入新账本。缺失资源及无法映射的节点保留为禁用步骤，需修改后再启用。";
+        + "\n\n旧执行记录、CD、排队请求和断点不会导入。缺失资源及无法映射的节点保留为禁用步骤，需修改后再启用。";
 }

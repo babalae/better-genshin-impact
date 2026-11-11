@@ -13,7 +13,9 @@
                  FontFamily="{StaticResource TextThemeFontFamily}"
                  Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                  WindowBackdropType="Mica"
-                 WindowStartupLocation="CenterOwner">
+                 WindowStartupLocation="CenterOwner"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <!--  运行预览：按计划当前配置逐项预测本次执行或跳过；运行到每个节点时仍会重新判定  -->
     <b:Interaction.Triggers>
         <b:EventTrigger EventName="Loaded">
@@ -54,6 +56,30 @@
                      ShowMinimize="False" />
 
         <StackPanel Grid.Row="1" Margin="24,8,24,8">
+            <!--  CD 按账户：账户目录有多个账户时显示，默认是任务计划页当前显示的账户；改选后重新预测，只影响本窗口  -->
+            <WrapPanel Margin="0,0,0,8"
+                       Orientation="Horizontal"
+                       Visibility="{Binding ShowAccountSelector, Mode=OneWay, Converter={StaticResource PreviewBoolVisibility}}">
+                <TextBlock Margin="0,0,8,0"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Text="CD 按账户" />
+                <ComboBox MinWidth="140"
+                          MaxWidth="240"
+                          VerticalAlignment="Center"
+                          DisplayMemberPath="Label"
+                          SelectedValuePath="Key"
+                          ItemsSource="{Binding AccountOptions, Mode=OneWay}"
+                          SelectedValue="{Binding SelectedAccountId, Mode=TwoWay}"
+                          ToolTip="按这个账户的完成记录预测本次会执行还是因路线 CD 跳过。改选只影响本窗口，开始执行后仍按计划的运行账户判定。"
+                          AutomationProperties.Name="CD 按账户" />
+                <TextBlock Margin="8,0,0,0"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Text="{Binding AccountNotice, Mode=OneWay}"
+                           TextWrapping="Wrap"
+                           Visibility="{Binding HasAccountNotice, Mode=OneWay, Converter={StaticResource PreviewBoolVisibility}}" />
+            </WrapPanel>
             <TextBlock FontWeight="SemiBold" Text="{Binding SummaryText, Mode=OneWay}" TextWrapping="Wrap" />
             <TextBlock Margin="0,4,0,0"
                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"

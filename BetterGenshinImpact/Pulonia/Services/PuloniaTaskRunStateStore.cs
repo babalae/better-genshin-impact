@@ -6,12 +6,12 @@ using BetterGenshinImpact.Pulonia.Models;
 namespace BetterGenshinImpact.Pulonia.Services;
 
 /// <summary>
-/// 持有唯一的当前运行状态（state.json）并提供唯一写入入口：克隆 → 修改 → 保存 → 提交。
+/// 持有本实例的运行状态（<c>instances/&lt;实例目录名&gt;/state.json</c>）并提供唯一写入入口：克隆 → 修改 → 保存 → 提交。
 /// 已提交的状态对象此后不再修改（写时复制），只读查询可以不加锁直接读取 <see cref="Current"/>；
-/// 关键状态写入失败时熔断，任务服务据此停止自动运行。
+/// 关键状态写入失败时熔断，任务服务据此停止本实例的自动运行。
 /// </summary>
 /// <remarks>
-/// 克隆只复制各集合，元素（运行记录、账本条目、触发游标）由新旧状态共用，因此修改候选状态时只能整项增删替换，
+/// 克隆只复制各集合，元素（运行记录、触发游标）由新旧状态共用，因此修改候选状态时只能整项增删替换，
 /// 不能原地修改已有元素；服务内所有写入都遵守这一约定。
 /// </remarks>
 internal sealed class PuloniaTaskRunStateStore : IDisposable
@@ -20,6 +20,11 @@ internal sealed class PuloniaTaskRunStateStore : IDisposable
     /// state.json 的文件读写。
     /// </summary>
     private readonly PuloniaTaskStore _store;
+
+    /// <summary>
+    /// 本实例的实例键，决定读写哪个实例目录下的 state.json；运行状态只由本实例写入。
+    /// </summary>
+    private readonly string _instanceKey;
 
     /// <summary>
     /// 串行化候选状态生成、耐久写入和内存提交。
@@ -32,7 +37,7 @@ internal sealed class PuloniaTaskRunStateStore : IDisposable
     private PuloniaTaskState _persistentState = new();
 
     /// <summary>
-    /// 关键状态写入失败后阻止后续自动动作，避免使用过期账本继续执行。
+    /// 关键状态写入失败后阻止后续自动动作，避免在状态不确定时继续执行。
     /// </summary>
     private Exception? _persistenceFailure;
 
@@ -40,9 +45,12 @@ internal sealed class PuloniaTaskRunStateStore : IDisposable
     /// 建立运行状态存储；构造不读写文件。
     /// </summary>
     /// <param name="store">state.json 所在的文件存储。</param>
-    public PuloniaTaskRunStateStore(PuloniaTaskStore store)
+    /// <param name="instanceKey">本实例的实例键。</param>
+    public PuloniaTaskRunStateStore(PuloniaTaskStore store, string instanceKey)
     {
+        PuloniaInstanceKey.Validate(instanceKey);
         _store = store;
+        _instanceKey = instanceKey;
     }
 
     /// <summary>
@@ -56,13 +64,13 @@ internal sealed class PuloniaTaskRunStateStore : IDisposable
     public Exception? Failure => Volatile.Read(ref _persistenceFailure);
 
     /// <summary>
-    /// 从文件加载当前状态（含备份回退与旧格式升级），作为后续写入的起点。只在服务初始化时调用一次。
+    /// 从文件加载本实例的状态（含备份回退），作为后续写入的起点。只在服务初始化时调用一次。
     /// </summary>
     /// <param name="ct">取消令牌。</param>
     /// <returns>是否因正式文件缺失或损坏而从备份恢复。</returns>
     public async Task<bool> LoadAsync(CancellationToken ct)
     {
-        var loaded = await _store.LoadStateAsync(ct).ConfigureAwait(false);
+        var loaded = await _store.LoadStateAsync(_instanceKey, ct).ConfigureAwait(false);
         Volatile.Write(ref _persistentState, loaded.State);
         return loaded.RecoveredFromBackup;
     }
@@ -87,7 +95,7 @@ internal sealed class PuloniaTaskRunStateStore : IDisposable
             // 3. 保存：失败时内存状态保持上一版本
             try
             {
-                await _store.SaveStateAsync(candidate, ct).ConfigureAwait(false);
+                await _store.SaveStateAsync(_instanceKey, candidate, ct).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -137,7 +145,6 @@ internal sealed class PuloniaTaskRunStateStore : IDisposable
         PendingRequests = [.. state.PendingRequests],
         ActiveRun = state.ActiveRun,
         PendingArchives = [.. state.PendingArchives],
-        Ledger = [.. state.Ledger],
         TriggerStates = [.. state.TriggerStates]
     };
 }

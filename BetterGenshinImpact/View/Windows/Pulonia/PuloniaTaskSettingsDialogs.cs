@@ -54,7 +54,7 @@ public sealed class PuloniaTaskSettingsDialogs : IPuloniaTaskSettingsDialogs
     }
 
     /// <inheritdoc />
-    public PuloniaTaskSettingsDialogResult? EditCollectionCooldown(PuloniaCollectionCooldownViewModel draft, bool isLeaf)
+    public PuloniaTaskSettingsDialogResult? EditRouteCooldown(PuloniaRouteCooldownViewModel draft, bool isLeaf)
     {
         var restore = false;
         PromptDialog? dialog = null;
@@ -66,7 +66,7 @@ public sealed class PuloniaTaskSettingsDialogs : IPuloniaTaskSettingsDialogs
         };
         dialog = new PromptDialog(isLeaf ? "仅整份路线执行成功后记录时间；修改规则会按新规则重算已有 CD。"
                 : "此配置由下级地图追踪任务整体继承，子任务可单独覆盖。",
-            "路线 CD", new PuloniaCollectionCooldownView { DataContext = draft }, null, config)
+            "路线 CD", new PuloniaRouteCooldownView { DataContext = draft }, null, config)
         {
             Owner = GetOwner(),
             Width = 580, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner

@@ -544,7 +544,7 @@ public sealed class GameScreenshotService(AllConfig config, ILogger<GameScreensh
 | # | 问题 | 现状 | 建议 |
 | --- | --- | --- | --- |
 | 11 | 配置对象反过来调用服务 | `AllConfig.OnNotificationPropertyChanged` 仍调用 `NotificationService.Instance().RefreshNotifiers()`；第 4 项只是把静态入口改为容器转发，没有移除配置对服务的反向调用。`OnConfigChanged` 清空遮罩的逻辑已移出（见 6.2） | 由服务订阅自己关心的配置段，`AllConfig` 只负责"有变更就保存"；订阅放在服务启动阶段，停止或释放时解除 |
-| 12 | 多账号拆分配置的前提 | 所有实例共用一份 `User/config.json`（game-runtime.md 第 15 节） | 等所有配置读取都改为通过 DI 获取 `AllConfig` 后，按实例拆分配置只需要改注册的地方。这也是第 5 节第三行（静态代码读取配置）值得继续收敛的原因 |
+| 12 | 多账号拆分配置的前提 | 所有实例共用一份 `User/config.json`（game-runtime.md 第 15 节） | 等所有配置读取都改为通过 DI 获取 `AllConfig` 后，按实例拆分配置只需要改注册的地方。这也是第 5 节第三行（静态代码读取配置）值得继续收敛的原因。注：[实例、账户与路线 CD 统筹设计第 7 节](instance-account-model.md#7-配置)已决定不按实例或账户拆分 `config.json`，按账户区分的设置改用 Pulonia 计划和设置方案 |
 
 ### 14.6 建议顺序
 

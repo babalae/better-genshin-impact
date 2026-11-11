@@ -21,7 +21,9 @@
                  FontFamily="{DynamicResource TextThemeFontFamily}"
                  UseLayoutRounding="True"
                  d:DataContext="{d:DesignInstance Type=vm:StorageManagementViewModel}"
-                 mc:Ignorable="d">
+                 mc:Ignorable="d"
+                 ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <ui:FluentWindow.Resources>
         <BooleanToVisibilityConverter x:Key="StorageBooleanToVisibilityConverter" />
         <converters:BooleanToVisibilityRevertConverter x:Key="StorageBooleanToCollapsedConverter" />

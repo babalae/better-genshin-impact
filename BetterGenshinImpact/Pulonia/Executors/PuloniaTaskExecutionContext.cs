@@ -35,16 +35,23 @@ public sealed class PuloniaTaskExecutionContext
     public GameRuntime? Runtime { get; }
 
     /// <summary>
+    /// 本次运行的运行账户 ID（运行记录的 <c>account_id</c>），运行开始时确定；不含游戏节点或尚未确定时为 null。
+    /// 首领领奖次数等按账户区分的统计使用此 ID。
+    /// </summary>
+    public string? AccountId { get; }
+
+    /// <summary>
     /// 建立一个节点执行上下文。
     /// </summary>
     internal PuloniaTaskExecutionContext(string runId, PuloniaTaskSnapshot snapshot, int attempt,
-        string taskAddress, GameRuntime? runtime)
+        string taskAddress, GameRuntime? runtime, string? accountId = null)
     {
         RunId = runId;
         Snapshot = snapshot;
         Attempt = attempt;
         TaskAddress = taskAddress;
         Runtime = runtime;
+        AccountId = accountId;
     }
 
     /// <summary>

@@ -36,8 +36,8 @@ public static class PuloniaSettingCatalog
     /// <summary>食物类别。</summary>
     public const string EatCategory = "eat";
 
-    /// <summary>路线 CD 类别（ID 沿用 collection，界面名称为“路线 CD”）。</summary>
-    public const string CollectionCategory = "collection";
+    /// <summary>路线 CD 类别；设置项 ID 为 <c>route.cooldown</c>。</summary>
+    public const string RouteCategory = "route";
 
     /// <summary>Shell 类别。</summary>
     public const string ShellCategory = "shell";
@@ -46,7 +46,7 @@ public static class PuloniaSettingCatalog
     public const string KeyMouseCategory = "keymouse";
 
     /// <summary>路线 CD 设置项 ID。</summary>
-    public const string CollectionCooldownKey = "collection.cooldown";
+    public const string RouteCooldownKey = "route.cooldown";
 
     /// <summary>条件选队设置项 ID。</summary>
     public const string PartySourceKey = "party.source";
@@ -66,7 +66,7 @@ public static class PuloniaSettingCatalog
         new(TravelCategory, "行走", 60),
         new(HurryCategory, "赶路", 70),
         new(EatCategory, "食物", 80),
-        new(CollectionCategory, "路线 CD", 90),
+        new(RouteCategory, "路线 CD", 90),
         new(KeyMouseCategory, "录制回放", 95),
         new(ShellCategory, "Shell", 100)
     ];
@@ -302,9 +302,9 @@ public static class PuloniaSettingCatalog
                 "供 JS 按食物类型 3 调用。"),
 
             // 路线 CD
-            Define(CollectionCategory, "cooldown", PuloniaCollectionCooldown.ParameterName, "路线 CD",
+            Define(RouteCategory, "cooldown", PuloniaRouteCooldown.ParameterName, "路线 CD",
                 "适用于采集、魔物、宝箱等地图追踪路线：按目录识别的刷新规则跳过仍在 CD 中的路线。",
-                editor: PuloniaSettingEditorKind.CollectionCooldown),
+                editor: PuloniaSettingEditorKind.RouteCooldown),
 
             // 录制回放
             Define(KeyMouseCategory, "with_delay", "with_delay", "按录制延时回放", "开启后按录制时的操作间隔回放；关闭时尽快连续回放。"),
@@ -399,7 +399,7 @@ public static class PuloniaSettingCatalog
     private static JObject CreateHostSchema()
     {
         var properties = PuloniaTaskCommonSettings.CreateSchemaProperties("pathing");
-        properties[PuloniaCollectionCooldown.ParameterName] = PuloniaCollectionCooldown.CreateSchema();
+        properties[PuloniaRouteCooldown.ParameterName] = PuloniaRouteCooldown.CreateSchema();
         return properties;
     }
 

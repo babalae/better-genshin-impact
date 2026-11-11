@@ -442,7 +442,7 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
             {
                 if (property.Value is not JObject fieldSchema)
                     continue;
-                if (value.TaskType == "pathing" && property.Name == PuloniaCollectionCooldown.ParameterName)
+                if (value.TaskType == "pathing" && property.Name == PuloniaRouteCooldown.ParameterName)
                     continue;
                 // JS 的 settings 对象由所选项目自己的 settings_ui 表单生成，不显示通用 JSON 编辑框。
                 if (value.TaskType == "javascript" && property.Name == "settings")
@@ -553,8 +553,8 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
     {
         if (!resource.IsDirectory)
         {
-            var policy = PuloniaCollectionCooldown.Resolve(resource.FullPath, resource.Resource, new JObject());
-            return policy.Source == PuloniaCollectionCooldownRuleSource.Unmatched
+            var policy = PuloniaRouteCooldown.Resolve(resource.FullPath, resource.Resource, new JObject());
+            return policy.Source == PuloniaRouteRefreshRuleSource.Unmatched
                 ? "路线 CD：未识别刷新规则，成功后不会跳过；添加后可在“共享设置 → 路线 CD”中选择自定义周期。"
                 : $"路线 CD：{policy.MaterialName} · {policy.Description}";
         }
@@ -564,8 +564,8 @@ public partial class PuloniaTaskCreationDialogViewModel : ViewModel
             && item.RelativePath.Replace('\\', '/').StartsWith(prefix.Replace('\\', '/'), StringComparison.OrdinalIgnoreCase)).ToArray();
         if (files.Length == 0)
             return null;
-        var policies = files.Select(item => PuloniaCollectionCooldown.Resolve(item.FullPath, item.Resource, new JObject())).ToArray();
-        var unmatched = policies.Count(policy => policy.Source == PuloniaCollectionCooldownRuleSource.Unmatched);
+        var policies = files.Select(item => PuloniaRouteCooldown.Resolve(item.FullPath, item.Resource, new JObject())).ToArray();
+        var unmatched = policies.Count(policy => policy.Source == PuloniaRouteRefreshRuleSource.Unmatched);
         var groups = policies.Where(policy => policy.MaterialName is not null).GroupBy(policy => policy.MaterialName!)
             .OrderByDescending(group => group.Count()).ToArray();
         var recognized = string.Join("、", groups.Take(4).Select(group => $"{group.Key} {group.Count()}")) + (groups.Length > 4 ? " 等" : "");

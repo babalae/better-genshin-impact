@@ -15,8 +15,7 @@ using BetterGenshinImpact.GameTask.QuestVoice.Features.Ocr;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Routing;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Tts;
 using NAudio.Wave;
-using BetterGenshinImpact.Core.Recognition.OCR.Engine;
-using BetterGenshinImpact.Core.Recognition.OCR.Paddle;
+using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using Serilog;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Diagnostics;
@@ -25,10 +24,13 @@ using Newtonsoft.Json;
 namespace BetterGenshinImpact.GameTask.QuestVoice;
 
 /// <summary>把 BetterGI 持久化配置转换为原业务核心快照，不依赖 WinUI 或源仓库。</summary>
-public sealed class QuestVoiceSessionFactory(QuestVoiceConfig config, string programDirectory, BgiOnnxFactory? onnx = null) : IQuestVoiceSessionFactory
+public sealed class QuestVoiceSessionFactory(QuestVoiceConfig config, string programDirectory,
+    OcrFactory? ocr = null, InferenceRuntimeService? runtime = null) : IQuestVoiceSessionFactory
 {
-    /// <summary>内置 OCR 的会话工厂，按当前“硬件加速”设置创建推理会话；只有组件测试可以为空。</summary>
-    private readonly BgiOnnxFactory? _onnx = onnx;
+    /// <summary>全局 OCR 工厂，自动配音直接使用它的模型和推理设置；只有组件测试可以为空。</summary>
+    private readonly OcrFactory? _ocr = ocr;
+    /// <summary>全局推理运行时，用于诊断显示 OCR 实际设备；只有组件测试可以为空。</summary>
+    private readonly InferenceRuntimeService? _runtime = runtime;
     /// <summary>沿用来源项目经过验证的稳定窗口和差分参数。</summary>
     public static ContinuousSettings ContinuousDefaults { get; } = new(350, 3, 1500, 600, 2000, 256, 32, .01);
     /// <summary>每次Create生成独立计数器，Service仅观察当前运行会话。</summary>
@@ -43,6 +45,8 @@ public sealed class QuestVoiceSessionFactory(QuestVoiceConfig config, string pro
     private readonly SemaphoreSlim _resourceGate = new(1, 1);
     /// <summary>本次设置的规范化路径，不依赖进程工作目录。</summary>
     private string Resolve(string path) => Path.GetFullPath(path, programDirectory);
+    /// <summary>旧配置仍引用已移除引擎时回退到 GPT-SoVITS，避免升级后无法启动。</summary>
+    private string SelectedProviderId => TtsProviderRegistry.IsRegistered(config.ProviderId) ? config.ProviderId : "gpt-sovits";
 
     /// <summary>只创建缺失的示例，不覆盖用户编辑的外置映射或布局。</summary>
     public async Task EnsureResourcesAsync(CancellationToken token)
@@ -90,7 +94,7 @@ public sealed class QuestVoiceSessionFactory(QuestVoiceConfig config, string pro
 
             // 启动时创建不可变快照，运行中编辑配置不会改变某一轮的声线或布局。
             var voice = settings.Voice;
-            // OCR 使用 BetterGI 内置的 PP-OCRv6 识别模型，不需要用户准备模型文件。
+            // OCR 直接使用 BetterGI 全局 OCR 的模型设置，不需要用户准备模型文件；这里只保留配音自己的接受阈值。
             var ocr = new OcrSettings();
             var scene = new SceneSettings(Path.Combine(ConfigurationDirectory, "auto-scene.json"));
             await new SceneCatalog().LoadAsync(scene.CatalogPath, token).ConfigureAwait(false);
@@ -135,19 +139,22 @@ public sealed class QuestVoiceSessionFactory(QuestVoiceConfig config, string pro
 
     /// <summary>仅构造 TTS 快照，测试语音不要求 OCR 模型或截图环境。</summary>
     public AppSettings CreateTtsSettings(bool validateProvider = true)
-        => CreateTtsSettings(config.ProviderId,
-            (ExtraConfig(config.ProviderId)?.UseRemote ?? config.UseRemoteService) && TtsProviderRegistry.GetInfo(config.ProviderId).Capabilities.ServerConnection ? "remote" : "local",
-            ExtraConfig(config.ProviderId)?.VoiceId ?? config.HuoshanVoiceId, validateProvider);
+    {
+        var providerId = SelectedProviderId;
+        return CreateTtsSettings(providerId,
+            (ExtraConfig(providerId)?.UseRemote ?? config.UseRemoteService) && TtsProviderRegistry.GetInfo(providerId).Capabilities.ServerConnection ? "remote" : "local",
+            ExtraConfig(providerId)?.VoiceId ?? "", validateProvider);
+    }
 
     /// <summary>设置页指定引擎的旧默认声线快照，沿用生产路径与实例解析，不改变全局引擎。</summary>
     public AppSettings CreateProviderSettings(string providerId, bool validateProvider = true) => CreateTtsSettings(providerId,
         TtsProviderRegistry.GetInfo(providerId).Capabilities.ServerConnection && (ExtraConfig(providerId)?.UseRemote ?? config.UseRemoteService) ? "remote" : "local",
-        ExtraConfig(providerId)?.VoiceId ?? config.HuoshanVoiceId, validateProvider);
+        ExtraConfig(providerId)?.VoiceId ?? "", validateProvider);
 
     /// <summary>资源草稿验证使用与运行时一致的相对路径基准。</summary>
     public string ProgramDirectory => programDirectory;
 
-    /// <summary>读取新增引擎的独立配置；GPT-SoVITS 与火山翻译使用顶层字段，返回空。</summary>
+    /// <summary>读取新增引擎的独立配置；GPT-SoVITS 使用顶层字段，返回空。</summary>
     public QuestVoiceEngineConfig? ExtraConfig(string providerId)
     {
         // 缺省条目在配置加载时由 QuestVoiceConfig 补齐，这里只读取，不改写配置。
@@ -165,7 +172,6 @@ public sealed class QuestVoiceSessionFactory(QuestVoiceConfig config, string pro
         var extra = ExtraConfig(providerId);
         var address = extra is null ? remote ? config.RemoteServiceUrl : config.ServiceUrl
             : remote ? extra.RemoteUrl : extra.LocalUrl;
-        if (!info.Capabilities.ServerConnection) address = "https://translate.volcengine.com/";
         if (!Uri.TryCreate(address?.Trim(), UriKind.Absolute, out var endpoint))
             throw new VoiceException(VoiceErrorCode.Configuration, "请填写有效的 HTTP/HTTPS 服务地址。");
         endpoint = new Uri(endpoint.AbsoluteUri.TrimEnd('/') + "/");
@@ -200,11 +206,11 @@ public sealed class QuestVoiceSessionFactory(QuestVoiceConfig config, string pro
     private AppSettings ResolveVoiceSettings(VoiceBinding binding, bool validateProvider = true)
     {
         var reference = binding.Provider;
-        var providerId = reference?.ProviderId ?? config.ProviderId;
+        var providerId = reference?.ProviderId ?? SelectedProviderId;
         var capabilities = TtsProviderRegistry.GetInfo(providerId).Capabilities;
         var instance = string.IsNullOrWhiteSpace(reference?.InstanceId)
             ? capabilities.ServerConnection && (ExtraConfig(providerId)?.UseRemote ?? config.UseRemoteService) ? "remote" : "local" : reference.InstanceId;
-        var settings = CreateTtsSettings(providerId, instance!, reference?.VoiceId ?? ExtraConfig(providerId)?.VoiceId ?? config.HuoshanVoiceId, validateProvider, binding);
+        var settings = CreateTtsSettings(providerId, instance!, reference?.VoiceId ?? ExtraConfig(providerId)?.VoiceId ?? "", validateProvider, binding);
         if (!capabilities.VoiceAssets) return settings;
         var audio = binding.References.FirstOrDefault();
         return settings with { Voice = settings.Voice with
@@ -219,7 +225,7 @@ public sealed class QuestVoiceSessionFactory(QuestVoiceConfig config, string pro
     {
         var frozenConfig = JsonConvert.DeserializeObject<QuestVoiceConfig>(JsonConvert.SerializeObject(config))!;
         var frozen = new QuestVoiceSessionFactory(frozenConfig, programDirectory);
-        return new RoutedTtsProvider(binding => frozen.ResolveVoiceSettings(binding), TtsProviderRegistry.GetInfo(frozenConfig.ProviderId));
+        return new RoutedTtsProvider(binding => frozen.ResolveVoiceSettings(binding), TtsProviderRegistry.GetInfo(frozen.SelectedProviderId));
     }
 
     /// <summary>空路径保留为缺失，避免把程序目录当成文件。</summary>
@@ -253,14 +259,14 @@ public sealed class QuestVoiceSessionFactory(QuestVoiceConfig config, string pro
     {
         var validation = await ValidateAsync(token).ConfigureAwait(false);
         if (!validation.IsValid || validation.Settings is null) throw new InvalidOperationException(validation.Detail);
-        // 内置 OCR 会话跟随“硬件加速”设置；进程只加载一个 ONNX 运行库，这里不替换也不另选设备。
-        var onnxSessions = (_onnx ?? throw new InvalidOperationException("内置 OCR 不可用：推理运行时尚未初始化。")).ForCurrentRuntime();
+        // 直接使用全局 OCR：模型跟随“OCR 配置”和游戏语言，设备跟随“硬件加速”；这里不另建模型，也不另选设备。
+        var globalOcr = _ocr ?? throw new InvalidOperationException("全局 OCR 不可用：OCR 服务尚未初始化。");
+        var inferenceRuntime = _runtime ?? throw new InvalidOperationException("全局 OCR 不可用：推理运行时尚未初始化。");
         var scratch = Path.Combine(ConfigurationDirectory, "cache", Guid.NewGuid().ToString("N"));
         var settings = validation.Settings with { Output = new(Path.Combine(scratch, "audio")) };
         var engine = settings.Routing is not null ? CreateRoutingProvider() : TtsProviderRegistry.Create(settings.Provider!.ProviderId);
         var metrics = Metrics = new QuestVoiceMetrics();
-        var ocr = new QuestVoiceOcrEngine(() => new Rec(BgiOnnxModel.PaddleOcrRecV6, PaddleOcrService.PaddleOcrModelType.V6.RecLabel(),
-            OcrVersionConfig.PpOcrV6, onnxSessions), onnxSessions.Runtime.OcrDescription, metrics);
+        var ocr = new QuestVoiceOcrEngine(globalOcr, inferenceRuntime, metrics);
         var player = new WasapiAudioPlayer(() => new WasapiOut());
         try
         {

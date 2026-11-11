@@ -2404,7 +2404,8 @@
       "没头脑",
       "风仙",
       "Vesna"
-    ]
+    ],
+    "elementalType": "Anemo"
   },
   {
     "id": "10000137",
@@ -2416,7 +2417,8 @@
     "alias": [
       "瓦列里",
       "Valeriy"
-    ]
+    ],
+    "elementalType": "Electro"
   },
   {
     "id": "10000136",
@@ -2428,6 +2430,34 @@
     "alias": [
       "米提亚",
       "Mitya"
-    ]
+    ],
+    "elementalType": "Electro"
+  },
+  {
+    "id": "10000147",
+    "name": "达妮卡",
+    "nameEn": "Danica",
+    "weapon": "11",
+    "skillCD": 18,
+    "burstCD": 15,
+    "alias": [
+      "达妮卡",
+      "Danica"
+    ],
+    "elementalType": "Electro"
+  },
+  {
+    "id": "10000149",
+    "name": "安娜丝塔夏",
+    "nameEn": "Anastasya",
+    "weapon": "12",
+    "skillCD": 15,
+    "skillHoldCD": 15,
+    "burstCD": 15,
+    "alias": [
+      "安娜丝塔夏",
+      "Anastasya"
+    ],
+    "elementalType": "Cryo"
   }
 ]

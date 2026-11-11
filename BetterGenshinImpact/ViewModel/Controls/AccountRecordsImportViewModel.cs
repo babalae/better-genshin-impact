@@ -13,7 +13,10 @@ using BetterGenshinImpact.View.Windows;
 
 namespace BetterGenshinImpact.ViewModel.Controls;
 
-/// <summary>统一导入入口：选择文件、确认目标账号及字典补充，再局部合并库存。</summary>
+/// <summary>
+/// 统一导入入口：选择文件、确认目标账号及字典补充，再局部合并库存。
+/// 目标 UID 不在 Pulonia 账户目录中时，由页面询问并先建账户，取消则不导入。
+/// </summary>
 public partial class AccountRecordsImportViewModel : ObservableObject
 {
     /// <summary>无异常导入完成后请求关闭窗口。</summary>
@@ -32,6 +35,8 @@ public partial class AccountRecordsImportViewModel : ObservableObject
     [ObservableProperty] private bool _hasImportErrors;
     /// <summary>库存持久化入口。</summary>
     private readonly InventoryStore _store;
+    /// <summary>确认目标 UID 在账户目录中，不在时询问并新建账户；返回 false 表示用户取消导入。</summary>
+    private readonly Func<string, Task<bool>> _ensureAccountAsync;
     /// <summary>预览通过的文件快照，避免导入时文件已被替换。</summary>
     private JObject? _package;
     /// <summary>文件内补充字典的预览行。</summary>
@@ -39,7 +44,7 @@ public partial class AccountRecordsImportViewModel : ObservableObject
     /// <summary>用户可编辑的目标 UID；默认沿用文件中的 UID。</summary>
     [ObservableProperty] private string _targetUid = "";
     /// <summary>当前文件摘要。</summary>
-    [ObservableProperty] private string _summary = "请选择 AccountRecords JSON 文件。目前支持单个账号的当前库存。";
+    [ObservableProperty] private string _summary = "请选择 AccountRecords JSON 文件。目前支持单个账户的当前库存。";
     /// <summary>导入反馈或读取错误。</summary>
     [ObservableProperty] private string _message = "";
     /// <summary>是否允许用文件中的分类补充本地字典空缺。</summary>
@@ -53,14 +58,20 @@ public partial class AccountRecordsImportViewModel : ObservableObject
     /// <summary>最后进入导入写入阶段的账号；部分批次失败时也需要刷新其已保存内容。</summary>
     public string? ImportedUid { get; private set; }
 
-    /// <summary>由页面提供同一个库存服务。</summary>
-    public AccountRecordsImportViewModel(InventoryStore store) => _store = store;
+    /// <summary>由页面提供同一个库存服务，以及导入前确认目标账户的方法。</summary>
+    /// <param name="store">库存服务</param>
+    /// <param name="ensureAccountAsync">确认目标 UID 在账户目录中，不在时询问并新建账户；返回 false 表示取消导入</param>
+    public AccountRecordsImportViewModel(InventoryStore store, Func<string, Task<bool>> ensureAccountAsync)
+    {
+        _store = store;
+        _ensureAccountAsync = ensureAccountAsync;
+    }
 
     /// <summary>读取并预览，失败时清除旧包以避免误导入。</summary>
     [RelayCommand]
     private async Task ChooseFile()
     {
-        var dialog = new OpenFileDialog { Filter = "账号记录 JSON|*.json", Title = "选择账号记录", CheckFileExists = true };
+        var dialog = new OpenFileDialog { Filter = "狛荷屋库存 JSON|*.json", Title = "选择狛荷屋库存文件", CheckFileExists = true };
         if (dialog.ShowDialog() != true) return;
         IsBusy = true;
         _package = null;
@@ -104,6 +115,20 @@ public partial class AccountRecordsImportViewModel : ObservableObject
                 "开发测试操作", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
             var uid = TargetUid.Trim();
             if (!InventoryStore.IsValidUid(uid)) throw new ArgumentException("目标 UID 须为首位非零的 9～10 位数字。");
+            // 狛荷屋只显示账户目录中的 UID：目标不在目录中时先确认并建账户（在人工操作门禁外进行），取消则不导入。
+            try
+            {
+                if (!await _ensureAccountAsync(uid))
+                {
+                    Message = "已取消导入，没有创建账户。";
+                    return;
+                }
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                Message = $"未能创建账户，没有导入：{AccountRecordsErrorMessages.Describe(ex)}";
+                return;
+            }
             // 导入按批次保存，异常不代表没有写入；关闭后必须刷新这次实际操作的目标。
             ImportedUid = uid;
             var result = await AccountRecordsInteractionGate.Instance.ExecuteManualAsync(() => _store.ImportInventoryAsync(_package, uid, IncludeDefinitions, hasDeltas));
