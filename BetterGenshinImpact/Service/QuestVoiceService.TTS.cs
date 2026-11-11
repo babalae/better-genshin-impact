@@ -23,52 +23,59 @@ public sealed partial class QuestVoiceService
     /// <summary>试听指定声线（可以是未保存的草稿），与正式会话互斥并共用取消与排空。</summary>
     public async Task TestVoiceAsync(string text, RoutingVoice profile, CancellationToken token = default)
     {
-        await _operations.WaitAsync(token).ConfigureAwait(false);
+        if (Volatile.Read(ref _backgroundSynthesisRequests) != 0)
+            throw new InvalidOperationException("P1 预合成正在切换或使用声线，请等当前请求完成再试听。");
+        await _ttsBackendGate.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            if (Status.IsRunning || Status.IsBusy) throw new InvalidOperationException("请先停止自动配音再测试语音。");
-            if (Status.BackendUnknown) throw new InvalidOperationException("后端状态未知，请先手动恢复并确认。");
-            var settings = _factory.CreateVoiceSettings(profile);
-            var reason = await RoutingVoiceAssets.UnavailableAsync(profile, token, _factory.RoutingServerSidePaths).ConfigureAwait(false);
-            if (reason is not null) throw new VoiceException(VoiceErrorCode.Configuration, reason);
-            settings = settings with { Protocol = settings.Protocol! with { StreamingMode = false, StreamPlayback = false } };
-            using var provider = TtsProviderRegistry.Create(settings.Provider!.ProviderId);
-            using var player = new WasapiAudioPlayer(() => new WasapiOut());
-            lock (_captureGate)
-            {
-                _testCancellation = CancellationTokenSource.CreateLinkedTokenSource(token);
-                _testProvider = provider;
-            }
-            Update(s => s with { IsBusy = true, Tts = "正在测试合成", Error = "" });
+            await _operations.WaitAsync(token).ConfigureAwait(false);
             try
             {
-                var voice = settings.Voice;
-                var request = new TtsRequest(text, new(voice.Name, voice.GptWeightsPath, voice.SovitsWeightsPath,
-                    [new(voice.ReferenceAudioPath, voice.PromptText)], settings.Provider));
-                // 测试入口完整接收后播放；正式流式能力仍由原会话及其 Ready 机制验收。
-                var result = await provider.SynthesizeAsync(settings, request, null, _testCancellation.Token).ConfigureAwait(false);
-                Update(s => s with { Tts = $"合成完成：{result.AudioSeconds:F2}s · {result.SampleRate} Hz · {result.SourceEncoding}", Playback = "正在播放测试语音" });
-                await player.PlayAsync(result.Wav, _testCancellation.Token).ConfigureAwait(false);
-                Update(s => s with { Playback = "测试语音播放完成" });
+                if (Status.IsRunning || Status.IsBusy) throw new InvalidOperationException("请先停止自动配音再测试语音。");
+                if (Status.BackendUnknown) throw new InvalidOperationException("后端状态未知，请先手动恢复并确认。");
+                var settings = _factory.CreateVoiceSettings(profile);
+                var reason = await RoutingVoiceAssets.UnavailableAsync(profile, token, _factory.RoutingServerSidePaths).ConfigureAwait(false);
+                if (reason is not null) throw new VoiceException(VoiceErrorCode.Configuration, reason);
+                settings = settings with { Protocol = settings.Protocol! with { StreamingMode = false, StreamPlayback = false } };
+                using var provider = TtsProviderRegistry.Create(settings.Provider!.ProviderId);
+                using var player = new WasapiAudioPlayer(() => new WasapiOut());
+                lock (_captureGate)
+                {
+                    _testCancellation = CancellationTokenSource.CreateLinkedTokenSource(token);
+                    _testProvider = provider;
+                }
+                Update(s => s with { IsBusy = true, Tts = "正在测试合成", Error = "" });
+                try
+                {
+                    var voice = settings.Voice;
+                    var request = new TtsRequest(text, new(voice.Name, voice.GptWeightsPath, voice.SovitsWeightsPath,
+                        [new(voice.ReferenceAudioPath, voice.PromptText)], settings.Provider));
+                    // 测试入口完整接收后播放；正式流式能力仍由原会话及其 Ready 机制验收。
+                    var result = await provider.SynthesizeAsync(settings, request, null, _testCancellation.Token).ConfigureAwait(false);
+                    Update(s => s with { Tts = $"合成完成：{result.AudioSeconds:F2}s · {result.SampleRate} Hz · {result.SourceEncoding}", Playback = "正在播放测试语音" });
+                    await player.PlayAsync(result.Wav, _testCancellation.Token).ConfigureAwait(false);
+                    Update(s => s with { Playback = "测试语音播放完成" });
+                }
+                catch (VoiceException exception)
+                {
+                    Update(s => s with { BackendUnknown = s.BackendUnknown || exception.BackendUnknown,
+                        Tts = "测试合成或播放失败", Error = exception.Message });
+                    throw;
+                }
+                catch (OperationCanceledException)
+                {
+                    Update(s => s with { Tts = "测试已取消；在途请求已收尾", Playback = "已停止" });
+                    throw;
+                }
+                finally
+                {
+                    lock (_captureGate) { _testProvider = null; _testCancellation.Dispose(); _testCancellation = null; }
+                    Update(s => s with { IsBusy = false });
+                }
             }
-            catch (VoiceException exception)
-            {
-                Update(s => s with { BackendUnknown = s.BackendUnknown || exception.BackendUnknown,
-                    Tts = "测试合成或播放失败", Error = exception.Message });
-                throw;
-            }
-            catch (OperationCanceledException)
-            {
-                Update(s => s with { Tts = "测试已取消；在途请求已收尾", Playback = "已停止" });
-                throw;
-            }
-            finally
-            {
-                lock (_captureGate) { _testProvider = null; _testCancellation.Dispose(); _testCancellation = null; }
-                Update(s => s with { IsBusy = false });
-            }
+            finally { _operations.Release(); }
         }
-        finally { _operations.Release(); }
+        finally { _ttsBackendGate.Release(); }
     }
 
     /// <summary>立即取消测试播放；GPT 已发请求仍由 Provider 排空。</summary>

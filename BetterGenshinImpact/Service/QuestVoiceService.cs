@@ -37,6 +37,8 @@ public sealed partial class QuestVoiceService : IDisposable
     private readonly QuestVoiceOverlayPresenter _overlay = new(QuestVoiceLog.WriteSummary);
     /// <summary>串行启停与试听，不用于同步阻塞 UI。</summary>
     private readonly SemaphoreSlim _operations = new(1, 1);
+    /// <summary>P1 在途合成与设置页声线试听共用的独占后端锁，禁止双请求同时切权。</summary>
+    private readonly SemaphoreSlim _ttsBackendGate = new(1, 1);
     /// <summary>保护订阅、编码任务和单调采样时刻。</summary>
     private readonly object _captureGate = new();
     /// <summary>本轮启动与观察取消源。</summary>
@@ -59,6 +61,8 @@ public sealed partial class QuestVoiceService : IDisposable
     private long _nextMetricsAt;
     /// <summary>正在打开的设置窗口数量；大于 0 时暂停配音。</summary>
     private int _settingsEditors;
+    /// <summary>P1 单条在途请求计数，与设置窗口租约分开，防止误判 P0 用户需求。</summary>
+    private int _backgroundSynthesisRequests;
     /// <summary>应用退出后不再启动新会话。</summary>
     private volatile bool _exiting;
 
@@ -79,11 +83,13 @@ public sealed partial class QuestVoiceService : IDisposable
         RequestApply();
     }
 
-    /// <summary>
-    /// 是否应当运行：开关打开、截图器运行中、不在独立任务中、设置窗口未打开且应用未退出。
-    /// </summary>
-    private bool ShouldRun => !_exiting && _config.QuestVoiceConfig.Enabled
-        && _runtime.Current is { IsStopping: false } && !_dispatcher.IsInTask && Volatile.Read(ref _settingsEditors) == 0;
+    /// <summary>P0 是否需要占用语音后端；设置窗口主动暂停 P0 时允许用户执行 P1。</summary>
+    public bool IsRealtimeRequested => !_exiting && _config.QuestVoiceConfig.Enabled
+        && _runtime.Current is { IsStopping: false } && !_dispatcher.IsInTask
+        && Volatile.Read(ref _settingsEditors) == 0;
+
+    /// <summary>仅 P1 单条 HTTP 请求和原有设置编辑租约会临时阻止启动新 P0 会话。</summary>
+    private bool ShouldRun => IsRealtimeRequested && Volatile.Read(ref _backgroundSynthesisRequests) == 0;
 
     /// <summary>打开设置窗口时调用；释放返回值后按新设置恢复。窗口打开期间停止配音，便于试听和修改。</summary>
     public IDisposable BeginSettingsEdit()
@@ -91,6 +97,15 @@ public sealed partial class QuestVoiceService : IDisposable
         Interlocked.Increment(ref _settingsEditors);
         RequestApply();
         return new SettingsEditLease(this);
+    }
+
+    /// <summary>P1 只在单条合成请求中持有的后端租约；不视作用户主动编辑设置。</summary>
+    public async Task<IDisposable> BeginBackgroundSynthesisRequestAsync(CancellationToken token)
+    {
+        await _ttsBackendGate.WaitAsync(token).ConfigureAwait(false);
+        Interlocked.Increment(ref _backgroundSynthesisRequests);
+        RequestApply();
+        return new BackgroundSynthesisLease(this);
     }
 
     /// <summary>应用退出时调用：立即中止采样和后端请求，并等待本地资源释放。</summary>
@@ -423,6 +438,19 @@ public sealed partial class QuestVoiceService : IDisposable
         _controller.FrameEvent -= OnFrameEvent;
         _controller.VoiceEvent -= OnVoiceEvent;
         _controller.ObservationFailed -= OnObservationFailed;
+    }
+
+    /// <summary>本条 P1 排空后归还语音引擎，重新检查 P0 请求，避免阻塞整个章节。</summary>
+    private sealed class BackgroundSynthesisLease(QuestVoiceService owner) : IDisposable
+    {
+        private int _disposed;
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+            Interlocked.Decrement(ref owner._backgroundSynthesisRequests);
+            owner.RequestApply();
+            owner._ttsBackendGate.Release();
+        }
     }
 
     /// <summary>设置窗口的暂停租约；释放后恢复，重复释放无副作用。</summary>
