@@ -79,10 +79,14 @@ public sealed partial class ContinuousVoiceSession
                 if (phase != TtsPhase.Draining) return;
                 lock (_gate) Emit(ContinuousVoiceEventKind.SynthesisDraining, work);
             });
-            // 只有 Yatta 唯一匹配时，当前请求才替换为 JP 原文及对应的 TTS 目标语言。
-            var synthesisSettings = resolved.Request.TextLanguage is { Length: > 0 } localizedLanguage
-                ? settings with { Protocol = (settings.Protocol ?? new TtsProtocolSettings()) with { TextLanguage = localizedLanguage } }
-                : settings;
+            // 目标语言来自 Yatta 匹配；参考语言必须独立按参考文本检测，不能把日语参考误标成中文。
+            var protocol = settings.Protocol ?? new TtsProtocolSettings();
+            var synthesisSettings = settings with { Protocol = protocol with
+            {
+                TextLanguage = resolved.Request.TextLanguage is { Length: > 0 } localizedLanguage
+                    ? localizedLanguage : protocol.TextLanguage,
+                PromptLanguage = TtsLanguageDetector.DetectFromText(resolved.Request.Voice.References.FirstOrDefault()?.PromptText)
+            } };
             var cachedResult = await TryLoadCachedAudioAsync(resolved.Request, synthesisSettings, token).ConfigureAwait(false);
             var streaming = cachedResult is null && synthesisSettings.Protocol?.StreamPlayback == true
                 && (engine is not IStreamingTtsEngine selectable || selectable.CanStream(resolved.Request));

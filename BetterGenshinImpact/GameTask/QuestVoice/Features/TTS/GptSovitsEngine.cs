@@ -1,6 +1,7 @@
 // 移植自 QuestVoice 1fc59d9c；保留原神业务算法，宿主适配见 QuestVoiceSessionFactory。
 using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -13,17 +14,23 @@ using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Net.Sockets;
 using System.Text.Json;
+using Serilog;
 namespace BetterGenshinImpact.GameTask.QuestVoice.Features.TTS;
 /// <summary>GptSovitsEngine：原神自动配音的业务类型。</summary>
 public sealed partial class GptSovitsEngine(Func<TimeoutSettings, HttpClient> clientFactory,
     ReferenceAudioSelector selector, IWavProcessor wavProcessor) : IStreamingTtsEngine, ITtsProvider
 {
-    /// <summary>保护异步操作所有权，确保停止等待已发出的工作。</summary>
-    private readonly SemaphoreSlim _ownership = new(1, 1);
-    /// <summary>关闭本地 HTTP 连接的取消源。</summary>
+    /// <summary>关闭本 Provider 的 HTTP 连接取消源。</summary>
     private readonly CancellationTokenSource _shutdown = new();
-    /// <summary>标记远端请求状态未知，禁止继续覆盖后端权重。</summary>
-    private bool _backendUnknown;
+    /// <summary>同一 GPT-SoVITS 服务的多个 Provider 共用状态，避免 P0/P1 互相覆盖后仍使用过期缓存。</summary>
+    private sealed class BackendState
+    {
+        public readonly SemaphoreSlim Ownership = new(1, 1);
+        public bool Unknown;
+        public string? GptWeightsPath;
+        public string? SovitsWeightsPath;
+    }
+    private static readonly ConcurrentDictionary<string, BackendState> Backends = new(StringComparer.Ordinal);
 
     /// <summary>串行切换声线权重并读取完整语音响应，取消后丢弃结果。</summary>
     public Task<TtsResult> SynthesizeAsync(AppSettings settings, TtsRequest request, IProgress<TtsPhase>? progress,
@@ -34,10 +41,11 @@ public sealed partial class GptSovitsEngine(Func<TimeoutSettings, HttpClient> cl
         CancellationToken cancellationToken, Action<StreamingPcmAudio>? ready)
     {
         using var queueToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _shutdown.Token);
-        await _ownership.WaitAsync(queueToken.Token).ConfigureAwait(false);
+        var backend = GetBackendState(settings.TtsServiceUrl);
+        await backend.Ownership.WaitAsync(queueToken.Token).ConfigureAwait(false);
         try
         {
-            if (_backendUnknown)
+            if (backend.Unknown)
                 throw new VoiceException(VoiceErrorCode.BackendUnknown, "后端状态未知。请先重启 GPT-SoVITS，再重启本程序。", true);
             if (string.IsNullOrWhiteSpace(request.Text))
                 throw new VoiceException(VoiceErrorCode.Configuration, "请输入台词。");
@@ -51,11 +59,26 @@ public sealed partial class GptSovitsEngine(Func<TimeoutSettings, HttpClient> cl
             // User cancellation discards output, but never cancels an issued HTTP request.
             // This registration lives inside the serial ownership, including body drainage.
             using var registration = cancellationToken.Register(() => progress?.Report(TtsPhase.Draining));
-            progress?.Report(TtsPhase.SwitchingWeights);
+            var comparison = settings.Voice.ServerSidePaths ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+            var switchGpt = !SameWeightPath(backend.GptWeightsPath, request.Voice.GptWeightsPath, comparison);
+            var switchSovits = !SameWeightPath(backend.SovitsWeightsPath, request.Voice.SovitsWeightsPath, comparison);
+            if (switchGpt || switchSovits) progress?.Report(TtsPhase.SwitchingWeights);
             queueToken.Token.ThrowIfCancellationRequested();
-            await SetWeightsAsync(client, "set_gpt_weights", request.Voice.GptWeightsPath, settings.Timeouts).ConfigureAwait(false);
+            if (switchGpt)
+            {
+                backend.GptWeightsPath = null;
+                await SetWeightsAsync(client, "set_gpt_weights", request.Voice.GptWeightsPath, settings.Timeouts).ConfigureAwait(false);
+                backend.GptWeightsPath = request.Voice.GptWeightsPath;
+            }
+            else Log.Logger.Debug("QuestVoice GPT weights unchanged; skipping switch path={WeightsPath}", request.Voice.GptWeightsPath);
             queueToken.Token.ThrowIfCancellationRequested();
-            await SetWeightsAsync(client, "set_sovits_weights", request.Voice.SovitsWeightsPath, settings.Timeouts).ConfigureAwait(false);
+            if (switchSovits)
+            {
+                backend.SovitsWeightsPath = null;
+                await SetWeightsAsync(client, "set_sovits_weights", request.Voice.SovitsWeightsPath, settings.Timeouts).ConfigureAwait(false);
+                backend.SovitsWeightsPath = request.Voice.SovitsWeightsPath;
+            }
+            else Log.Logger.Debug("QuestVoice SoVITS weights unchanged; skipping switch path={WeightsPath}", request.Voice.SovitsWeightsPath);
             queueToken.Token.ThrowIfCancellationRequested();
             progress?.Report(TtsPhase.Synthesizing);
             queueToken.Token.ThrowIfCancellationRequested();
@@ -67,13 +90,35 @@ public sealed partial class GptSovitsEngine(Func<TimeoutSettings, HttpClient> cl
             return new(audio.Bytes, result.Elapsed, result.FirstByte, audio.DurationSeconds,
                 audio.SampleRate, audio.Channels, reference.Fallback);
         }
-        catch (VoiceException exception) when (exception.BackendUnknown)
+        catch (VoiceException exception) when (exception.Code == VoiceErrorCode.InvalidAudio)
         {
-            _backendUnknown = true;
+            // GPT-SoVITS 推理异常时可能返回一秒静音占位音频，并在服务端重置 VITS 模型。
+            // 下次请求必须重新确认两组权重，不能继续相信本地缓存。
+            backend.GptWeightsPath = null;
+            backend.SovitsWeightsPath = null;
+            Log.Logger.Warning(exception, "QuestVoice received invalid audio; cached GPT-SoVITS weights were invalidated");
             throw;
         }
-        finally { _ownership.Release(); }
+        catch (VoiceException exception) when (exception.BackendUnknown)
+        {
+            backend.GptWeightsPath = null;
+            backend.SovitsWeightsPath = null;
+            backend.Unknown = true;
+            throw;
+        }
+        finally { backend.Ownership.Release(); }
     }
+
+    /// <summary>以服务地址共享后端权重状态，P0、P1 和设置页实例不会互相使用过期缓存。</summary>
+    private static BackendState GetBackendState(Uri serviceUrl)
+    {
+        var key = serviceUrl.GetLeftPart(UriPartial.Path).TrimEnd('/');
+        return Backends.GetOrAdd(key, static _ => new BackendState());
+    }
+
+    /// <summary>按本地 Windows 路径或远端路径的大小写规则比较权重路径。</summary>
+    private static bool SameWeightPath(string? activePath, string requestedPath, StringComparison comparison) =>
+        !string.IsNullOrWhiteSpace(activePath) && string.Equals(activePath, requestedPath, comparison);
 
     /// <summary>请求 GPT-SoVITS 切换权重，必须收到 success 确认。</summary>
     private async Task SetWeightsAsync(HttpClient client, string endpoint, string path, TimeoutSettings timeouts)

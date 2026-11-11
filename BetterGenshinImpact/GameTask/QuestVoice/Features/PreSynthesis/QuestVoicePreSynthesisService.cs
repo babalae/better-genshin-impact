@@ -121,7 +121,7 @@ public sealed class QuestVoicePreSynthesisService(
                 settings = settings with
                 {
                     Protocol = (settings.Protocol ?? new TtsProtocolSettings()) with
-                    { TextLanguage = language, StreamingMode = false, StreamPlayback = false }
+                    { TextLanguage = language, PromptLanguage = TtsLanguageDetector.DetectFromText(settings.Voice.PromptText), StreamingMode = false, StreamPlayback = false }
                 };
                 var binding = new VoiceBinding(settings.Voice.Name, settings.Voice.GptWeightsPath,
                     settings.Voice.SovitsWeightsPath,

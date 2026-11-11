@@ -17,9 +17,14 @@ public static class QuestVoiceCacheIdentity
     public static string ComputeHash(AppSettings settings, VoiceBinding binding,
         string speaker, string text, string speechLanguage)
     {
+        // Preserve existing CHS cache keys (the previous default was zh), but invalidate
+        // JP caches generated with the old, incorrect zh reference-prompt language.
+        var promptLanguage = settings.Protocol?.PromptLanguage ?? "zh";
+        var cacheLanguage = string.Equals(promptLanguage, "zh", StringComparison.Ordinal)
+            ? speechLanguage : speechLanguage + "|prompt:" + promptLanguage;
         var fingerprint = string.Join("\n", new[]
         {
-            speechLanguage, speaker, text, settings.TtsServiceUrl.AbsoluteUri,
+            cacheLanguage, speaker, text, settings.TtsServiceUrl.AbsoluteUri,
             settings.Provider?.ProviderId ?? "", settings.Provider?.InstanceId ?? "",
             settings.Provider?.VoiceId ?? "", settings.Extra?.Model ?? "",
             settings.Extra?.Language ?? "", settings.Extra?.Format ?? "",

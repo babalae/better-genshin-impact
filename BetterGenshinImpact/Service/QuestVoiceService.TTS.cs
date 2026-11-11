@@ -36,7 +36,12 @@ public sealed partial class QuestVoiceService
                 var settings = _factory.CreateVoiceSettings(profile);
                 var reason = await RoutingVoiceAssets.UnavailableAsync(profile, token, _factory.RoutingServerSidePaths).ConfigureAwait(false);
                 if (reason is not null) throw new VoiceException(VoiceErrorCode.Configuration, reason);
-                settings = settings with { Protocol = settings.Protocol! with { StreamingMode = false, StreamPlayback = false } };
+                settings = settings with { Protocol = (settings.Protocol ?? new TtsProtocolSettings()) with
+                {
+                    TextLanguage = TtsLanguageDetector.DetectFromText(text),
+                    PromptLanguage = TtsLanguageDetector.DetectFromText(settings.Voice.PromptText),
+                    StreamingMode = false, StreamPlayback = false
+                } };
                 using var provider = TtsProviderRegistry.Create(settings.Provider!.ProviderId);
                 using var player = new WasapiAudioPlayer(() => new WasapiOut());
                 lock (_captureGate)

@@ -275,7 +275,11 @@ public sealed class QuestVoiceSessionFactory(QuestVoiceConfig config, string pro
             var images = new ImageOcrService(new ImagePreprocessor(), ocr, metrics);
             var logger = QuestVoiceLog.Diagnostic.ForContext("SourceContext", "QuestVoice");
             var routing = new VoiceRoutingService(new SpeakerCatalogLoader(), new SpeakerRouter(), logger);
-            QuestVoiceScriptMapper? scriptMapper = null; // 原文精确路由暂时停用；保留接口兼容旧配置。
+            // P0 与 P1 必须共享当前选中章节的严格 CHS/JP 节点映射，否则实时 OCR 永远拿不到
+            // ScriptNodeKey，既无法切换到日语原文，也无法命中 P1 已生成的 WAV。
+            var scriptMapper = await QuestVoiceScriptMapper.TryLoadAsync(config, programDirectory, token).ConfigureAwait(false);
+            if (config.ScriptLanguageRoutingEnabled && config.SpeechLanguage == "jpn" && scriptMapper is null)
+                logger.Warning("QuestVoice P0 CHS→JP script mapper unavailable; live synthesis will fall back to OCR text");
             var voice = new ContinuousVoiceSession(settings, engine, new WavProcessor(), new AudioArtifactStore(), player, routing, logger,
                 scriptMapper, Path.Combine(ConfigurationDirectory, "cache", "pre-synthesis"));
             var frames = new ContinuousFrameSession(ContinuousDefaults,
