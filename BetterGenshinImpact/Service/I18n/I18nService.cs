@@ -24,7 +24,10 @@ public sealed class I18nService : INotifyPropertyChanged
     private static readonly Opencc TraditionalChineseConverter = new(OpenccConfig.S2Twp);
     private readonly string _i18nDirectory = Global.Absolute(Path.Combine("User", "I18n"));
     private IReadOnlyDictionary<string, string> _translations = new Dictionary<string, string>();
+    private IReadOnlyDictionary<string, string> _fallbackTranslations = new Dictionary<string, string>();
     private bool _useTraditionalChinese;
+    private bool _useSourceLanguage;
+    private bool _useRightToLeft;
     private long _revision;
 
     private I18nService()
@@ -40,10 +43,18 @@ public sealed class I18nService : INotifyPropertyChanged
     /// </summary>
     public long Revision => _revision;
 
+    /// <summary>اتجاه الواجهة حسب لغة العرض؛ العربية من اليمين إلى اليسار.</summary>
+    public System.Windows.FlowDirection UiFlowDirection => _useRightToLeft
+        ? System.Windows.FlowDirection.RightToLeft
+        : System.Windows.FlowDirection.LeftToRight;
+
     public void ChangeLanguage(string? language)
     {
         language = string.IsNullOrWhiteSpace(language) ? DefaultLanguage : language;
         _useTraditionalChinese = string.Equals(language, TraditionalLanguage, StringComparison.OrdinalIgnoreCase);
+        _useSourceLanguage = string.Equals(language, DefaultLanguage, StringComparison.OrdinalIgnoreCase);
+        _useRightToLeft = string.Equals(language, "ar", StringComparison.OrdinalIgnoreCase);
+        _fallbackTranslations = LoadTranslations("en");
         _translations = _useTraditionalChinese
             ? new Dictionary<string, string>()
             : LoadTranslations(language);
@@ -61,6 +72,7 @@ public sealed class I18nService : INotifyPropertyChanged
 
         _revision++;
         OnPropertyChanged(nameof(Revision));
+        OnPropertyChanged(nameof(UiFlowDirection));
     }
 
     public string Translate(string key)
@@ -70,9 +82,23 @@ public sealed class I18nService : INotifyPropertyChanged
             return TraditionalChineseConverter.Convert(key);
         }
 
-        return _translations.TryGetValue(key, out var translation) && !string.IsNullOrWhiteSpace(translation)
-            ? translation
-            : key;
+        if (_useSourceLanguage)
+        {
+            return key;
+        }
+
+        if (_translations.TryGetValue(key, out var translation) && !string.IsNullOrWhiteSpace(translation))
+        {
+            return translation;
+        }
+
+        // Never expose the Chinese source key in a non-Chinese UI when a translation is missing.
+        if (_fallbackTranslations.TryGetValue(key, out var fallback) && !string.IsNullOrWhiteSpace(fallback))
+        {
+            return fallback;
+        }
+
+        return "[Untranslated]";
     }
 
     private IReadOnlyDictionary<string, string> LoadTranslations(string language)
