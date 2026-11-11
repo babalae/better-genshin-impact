@@ -1,80 +1,184 @@
 <UserControl x:Class="BetterGenshinImpact.View.Pages.QuestVoiceManagementView"
- xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
- xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml" xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
- Foreground="{DynamicResource TextFillColorPrimaryBrush}"
- ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
- ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
- <UserControl.Resources>
-  <!-- 子视图构造时尚未加入父窗口资源树，样式在本视图内定义。 -->
-  <Style x:Key="ManagementSectionStyle" TargetType="Border">
-   <Setter Property="Padding" Value="16" />
-   <Setter Property="Margin" Value="0,0,0,12" />
-   <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
-   <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
-   <Setter Property="BorderThickness" Value="1" />
-   <Setter Property="CornerRadius" Value="8" />
-  </Style>
- </UserControl.Resources>
- <StackPanel IsEnabled="{Binding CanEditDraft, Mode=OneWay}">
-  <!-- 默认 NPC 与旁白 -->
-  <Border Style="{StaticResource ManagementSectionStyle}">
-   <StackPanel>
-    <ui:TextBlock Text="默认 NPC 声线" FontWeight="SemiBold" Margin="0,0,0,6" />
-    <local:QuestVoiceVoiceSelector ItemsSource="{Binding VoiceChoices, Mode=OneWay}" SelectedVoiceId="{Binding SelectedFallbackVoiceId, Mode=TwoWay}" />
-    <ui:TextBlock Text="有姓名但没有匹配到角色时使用；不会覆盖已分配给角色的声线。" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" Margin="0,6,0,12" />
-    <ui:TextBlock Text="旁白声线" FontWeight="SemiBold" Margin="0,0,0,6" />
-    <local:QuestVoiceVoiceSelector ItemsSource="{Binding VoiceChoices, Mode=OneWay}" SelectedVoiceId="{Binding SelectedNarratorVoiceId, Mode=TwoWay}" />
-    <ui:TextBlock Text="旁白识别尚未接通：设置会保存，但暂不生效；姓名识别失败时仍使用默认 NPC 声线。" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" Margin="0,6,0,0" />
-   </StackPanel>
-  </Border>
-  <!-- 旅行者 -->
-  <Border Style="{StaticResource ManagementSectionStyle}">
-   <StackPanel>
-    <ui:TextBlock Text="旅行者" FontWeight="SemiBold" Margin="0,0,0,6" />
-    <ui:TextBlock Text="游戏内昵称（用于识别，有多个历史昵称时一行一个）" Margin="0,0,0,6" />
-    <ui:TextBox Text="{Binding PlayerNames, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" MinHeight="40" MaxHeight="100" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Margin="0,0,0,12" />
-    <ui:TextBlock Text="声线" Margin="0,0,0,6" />
-    <local:QuestVoiceVoiceSelector ItemsSource="{Binding VoiceChoices, Mode=OneWay}" SelectedVoiceId="{Binding TravelerVoiceId, Mode=TwoWay}" />
-   </StackPanel>
-  </Border>
-  <!-- 角色：左侧列表显示正式名称，右侧编辑选中角色 -->
-  <Border Style="{StaticResource ManagementSectionStyle}">
-   <StackPanel>
-    <Grid Margin="0,0,0,8">
-     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="*" />
-      <ColumnDefinition Width="Auto" />
-      <ColumnDefinition Width="Auto" />
-     </Grid.ColumnDefinitions>
-     <ui:TextBox PlaceholderText="搜索名称、别名或识别纠错" Text="{Binding SpeakerSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-     <ui:Button Grid.Column="1" Content="添加角色" Icon="{ui:SymbolIcon Add24}" Command="{Binding AddSpeakerCommand, Mode=OneWay}" Margin="8,0,0,0" />
-     <ui:Button Grid.Column="2" Content="删除" Icon="{ui:SymbolIcon Delete24}" Command="{Binding DeleteSpeakerCommand, Mode=OneWay}" Margin="8,0,0,0" />
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:local="clr-namespace:BetterGenshinImpact.View.Pages"
+             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+             ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
+             ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+    <UserControl.Resources>
+        <Style x:Key="ManagementSectionStyle" TargetType="Border">
+            <Setter Property="Padding" Value="12" />
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+        </Style>
+        <!-- 独立的特殊声线规则始终固定在上方。使用主题 Secondary 而不是固定深色。 -->
+        <Style x:Key="ManagementPinnedStyle" TargetType="Border" BasedOn="{StaticResource ManagementSectionStyle}">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorSecondaryBrush}" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="0,8,0,0" IsEnabled="{Binding CanEditDraft, Mode=OneWay}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- 特殊配置不参与普通角色搜索，不存在 OCR 别名/纠错或角色 ID 编辑。 -->
+        <Border Grid.Row="0" Style="{StaticResource ManagementPinnedStyle}" Margin="0,0,0,10">
+            <StackPanel>
+                <ui:TextBlock Text="特殊声线规则" FontWeight="SemiBold" Margin="0,0,0,8" />
+                <WrapPanel>
+                    <Grid Width="350" Margin="0,0,12,8" VerticalAlignment="Center">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="145" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Column="0" Text="{Binding TravelerDisplayLabel, Mode=OneWay}"
+                                      TextTrimming="CharacterEllipsis"
+                                      ToolTip="{Binding TravelerDisplayLabel, Mode=OneWay}"
+                                      VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <local:QuestVoiceVoiceSelector Grid.Column="1"
+                            ItemsSource="{Binding VoiceChoices, Mode=OneWay}"
+                            SelectedVoiceId="{Binding TravelerVoiceId, Mode=TwoWay}" />
+                    </Grid>
+
+                    <Grid Width="350" Margin="0,0,12,8" VerticalAlignment="Center">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="145" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Column="0" Text="默认 NPC" VerticalAlignment="Center" />
+                        <local:QuestVoiceVoiceSelector Grid.Column="1"
+                            ItemsSource="{Binding VoiceChoices, Mode=OneWay}"
+                            SelectedVoiceId="{Binding SelectedFallbackVoiceId, Mode=TwoWay}" />
+                    </Grid>
+
+                    <Grid Width="350" Margin="0,0,12,0" VerticalAlignment="Center">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="145" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Column="0" Text="旁白" VerticalAlignment="Center" />
+                        <local:QuestVoiceVoiceSelector Grid.Column="1"
+                            ItemsSource="{Binding VoiceChoices, Mode=OneWay}"
+                            SelectedVoiceId="{Binding SelectedNarratorVoiceId, Mode=TwoWay}" />
+                    </Grid>
+
+                    <Grid Width="350" Margin="0,0,12,0" VerticalAlignment="Center">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="145" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBlock Grid.Column="0" Text="找不到角色声线时"
+                                      VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <ComboBox Grid.Column="1" ItemsSource="{Binding MissingPolicyChoices, Mode=OneWay}"
+                                  DisplayMemberPath="Value" SelectedValuePath="Key"
+                                  SelectedValue="{Binding MissingVoicePolicy, Mode=TwoWay}" />
+                    </Grid>
+                </WrapPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- 全部普通角色共享一个工作区；左侧搜索与列表，右侧声线/OCR 详情。 -->
+        <Border Grid.Row="1" Style="{StaticResource ManagementSectionStyle}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*" MinWidth="200" />
+                    <ColumnDefinition Width="3*" MinWidth="290" />
+                </Grid.ColumnDefinitions>
+
+                <Grid Grid.Column="0" Margin="0,0,12,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <ui:TextBlock Grid.Row="0" Text="原神角色与识别名称" FontWeight="SemiBold"
+                                  Margin="0,0,0,8" />
+                    <StackPanel Grid.Row="1" Margin="0,0,0,8">
+                        <ui:TextBox PlaceholderText="搜索角色、别名或 OCR 纠错"
+                                    Text="{Binding SpeakerSearch, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    Margin="0,0,0,6" />
+                        <CheckBox Content="仅显示当前剧情角色"
+                                  IsChecked="{Binding ShowCurrentStoryOnly, Mode=TwoWay}" />
+                    </StackPanel>
+                    <ListBox Grid.Row="2"
+                             ItemsSource="{Binding FilteredSpeakers, Mode=OneWay}"
+                             SelectedItem="{Binding SelectedSpeaker, Mode=TwoWay}"
+                             DisplayMemberPath="DisplayName"
+                             Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                             BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             VirtualizingStackPanel.IsVirtualizing="True"
+                             VirtualizingStackPanel.VirtualizationMode="Recycling">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                <Setter Property="Padding" Value="7,8" />
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                    </ListBox>
+                </Grid>
+
+                <Border Grid.Column="1" BorderThickness="1,0,0,0"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                        Padding="12,0,0,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Grid Grid.Row="0" Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBlock Grid.Column="0" Text="角色声线与 OCR 识别纠错"
+                                          FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <ui:Button Grid.Column="1" Content="添加" Margin="8,0,0,0"
+                                       Command="{Binding AddSpeakerCommand, Mode=OneWay}" />
+                            <ui:Button Grid.Column="2" Content="删除" Margin="8,0,0,0"
+                                       Command="{Binding DeleteSpeakerCommand, Mode=OneWay}" />
+                        </Grid>
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel Margin="0,0,12,0">
+                                <ui:TextBlock Text="专属声线" Margin="0,0,0,6" />
+                                <local:QuestVoiceVoiceSelector ItemsSource="{Binding VoiceChoices, Mode=OneWay}"
+                                                               SelectedVoiceId="{Binding SelectedSpeakerVoiceId, Mode=TwoWay}"
+                                                               Margin="0,0,0,12" />
+                                <StackPanel DataContext="{Binding SelectedSpeaker, Mode=OneWay}">
+                                    <ui:TextBlock Text="正式名称（一行一个）" />
+                                    <ui:TextBox Text="{Binding Names, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                AcceptsReturn="True" TextWrapping="Wrap"
+                                                MinHeight="42" MaxHeight="100" VerticalScrollBarVisibility="Auto"
+                                                Margin="0,6,0,9" />
+                                    <ui:TextBlock Text="识别别名（一行一个）" />
+                                    <ui:TextBox Text="{Binding Aliases, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                AcceptsReturn="True" TextWrapping="Wrap"
+                                                MinHeight="42" MaxHeight="100" VerticalScrollBarVisibility="Auto"
+                                                Margin="0,6,0,9" />
+                                    <ui:TextBlock Text="OCR 易误识别名称（一行一个）" />
+                                    <ui:TextBox Text="{Binding Corrections, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                AcceptsReturn="True" TextWrapping="Wrap"
+                                                MinHeight="42" MaxHeight="100" VerticalScrollBarVisibility="Auto"
+                                                Margin="0,6,0,9" />
+                                    <ui:TextBlock Text="角色 ID（通常无需修改）" />
+                                    <ui:TextBox Text="{Binding Id, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                Margin="0,6,0,8" />
+                                </StackPanel>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
     </Grid>
-    <Grid>
-     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="180" />
-      <ColumnDefinition Width="*" />
-     </Grid.ColumnDefinitions>
-     <ListBox ItemsSource="{Binding FilteredSpeakers, Mode=OneWay}" SelectedItem="{Binding SelectedSpeaker, Mode=TwoWay}"
-              DisplayMemberPath="DisplayName" Height="300" ScrollViewer.VerticalScrollBarVisibility="Auto" Margin="0,0,12,0" />
-     <StackPanel Grid.Column="1">
-      <StackPanel DataContext="{Binding SelectedSpeaker, Mode=OneWay}">
-       <ui:TextBlock Text="正式名称（一行一个，至少一项）" />
-       <ui:TextBox Text="{Binding Names, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" MinHeight="40" MaxHeight="100" VerticalScrollBarVisibility="Auto" Margin="0,6,0,8" />
-       <ui:TextBlock Text="别名（一行一个）" />
-       <ui:TextBox Text="{Binding Aliases, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" MinHeight="40" MaxHeight="100" VerticalScrollBarVisibility="Auto" Margin="0,6,0,8" />
-       <ui:TextBlock Text="识别纠错（OCR 常见误识别的姓名，一行一个）" />
-       <ui:TextBox Text="{Binding Corrections, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" MinHeight="40" MaxHeight="100" VerticalScrollBarVisibility="Auto" Margin="0,6,0,8" />
-      </StackPanel>
-      <ui:TextBlock Text="声线（未单独指定时使用默认规则）" />
-      <local:QuestVoiceVoiceSelector ItemsSource="{Binding VoiceChoices, Mode=OneWay}" SelectedVoiceId="{Binding SelectedSpeakerVoiceId, Mode=TwoWay}" Margin="0,6,0,8" />
-      <StackPanel DataContext="{Binding SelectedSpeaker, Mode=OneWay}">
-       <ui:TextBlock Text="角色 ID（旅行者等规则引用它，一般不用改）" />
-       <ui:TextBox Text="{Binding Id, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,0" />
-      </StackPanel>
-     </StackPanel>
-    </Grid>
-   </StackPanel>
-  </Border>
- </StackPanel>
 </UserControl>
