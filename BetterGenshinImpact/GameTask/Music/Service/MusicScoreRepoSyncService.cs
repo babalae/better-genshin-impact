@@ -13,17 +13,25 @@ using System.Threading.Tasks;
 
 namespace BetterGenshinImpact.GameTask.Music.Service;
 
-/// <summary>提供曲谱统计和仓库曲谱同步。</summary>
+/// <summary>
+/// 提供曲谱统计和仓库曲谱同步。
+/// </summary>
 public interface IMusicScoreRepoSyncService
 {
-    /// <summary>读取索引统计；旧仓库缺少索引时返回空。</summary>
+    /// <summary>
+    /// 读取索引统计；旧仓库缺少索引时返回空。
+    /// </summary>
     MusicScoreRepoStatistics? ReadStatistics();
 
-    /// <summary>同步脚本仓库 assets/music/scores 到曲谱目录的「仓库曲谱」子目录，返回新增数量。</summary>
+    /// <summary>
+    /// 同步脚本仓库 assets/music/scores 到曲谱目录的「仓库曲谱」子目录，返回新增数量。
+    /// </summary>
     Task<int> SyncAsync(string musicFolder, CancellationToken cancellationToken);
 }
 
-/// <summary>仓库乐谱数量及格式和乐器分布。</summary>
+/// <summary>
+/// 仓库乐谱数量及格式和乐器分布。
+/// </summary>
 public sealed record MusicScoreRepoStatistics(
     [property: JsonProperty(Required = Required.Always)] int Count,
     IReadOnlyDictionary<string, int>? ByType,
@@ -34,16 +42,26 @@ public sealed record MusicScoreRepoStatistics(
 /// </summary>
 public sealed class MusicScoreRepoSyncService : IMusicScoreRepoSyncService
 {
-    /// <summary>曲库中存放仓库副本的目录名称。</summary>
+    /// <summary>
+    /// 曲库中存放仓库副本的目录名称。
+    /// </summary>
     private const string RepoScoreDirName = "仓库曲谱";
-    /// <summary>曲谱在资源索引中的目录。</summary>
+    /// <summary>
+    /// 曲谱在资源索引中的目录。
+    /// </summary>
     private const string RepoScoreRelativeDir = "music/scores";
-    /// <summary>记录程序创建的曲谱副本及其摘要的文件。</summary>
+    /// <summary>
+    /// 记录程序创建的曲谱副本及其摘要的文件。
+    /// </summary>
     private const string ManifestName = ".bettergi-repo-scores.manifest";
 
-    /// <summary>记录资源读取及同步结果。</summary>
+    /// <summary>
+    /// 记录资源读取及同步结果。
+    /// </summary>
     private readonly ILogger<MusicScoreRepoSyncService> _logger = App.GetLogger<MusicScoreRepoSyncService>();
-    /// <summary>串行执行对曲库目录的同步写入。</summary>
+    /// <summary>
+    /// 串行执行对曲库目录的同步写入。
+    /// </summary>
     private readonly SemaphoreSlim _syncGate = new(1, 1);
 
     /// <inheritdoc/>
@@ -87,7 +105,9 @@ public sealed class MusicScoreRepoSyncService : IMusicScoreRepoSyncService
         }
     }
 
-    /// <summary>将索引中的曲谱同步到选定目录。</summary>
+    /// <summary>
+    /// 将索引中的曲谱同步到选定目录。
+    /// </summary>
     private int SyncCore(string musicFolder, CancellationToken cancellationToken)
     {
         var repoFiles = ScriptRepoUpdater.Instance.ReadAssetFiles(RepoScoreRelativeDir, ".json");
@@ -237,20 +257,26 @@ public sealed class MusicScoreRepoSyncService : IMusicScoreRepoSyncService
         return added;
     }
 
-    /// <summary>判断资源能否作为本地 JSON 曲谱文件保存。</summary>
+    /// <summary>
+    /// 判断资源能否作为本地 JSON 曲谱文件保存。
+    /// </summary>
     private static bool IsScoreFileName(string fileName)
     {
         return fileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase)
                && fileName.IndexOfAny(Path.GetInvalidFileNameChars()) < 0;
     }
 
-    /// <summary>检查路径是否为链接或目录联接。</summary>
+    /// <summary>
+    /// 检查路径是否为链接或目录联接。
+    /// </summary>
     private static bool IsReparsePoint(string path)
     {
         return GetAttributes(path) is { } attributes && (attributes & FileAttributes.ReparsePoint) != 0;
     }
 
-    /// <summary>读取路径属性，路径不存在时返回空。</summary>
+    /// <summary>
+    /// 读取路径属性，路径不存在时返回空。
+    /// </summary>
     private static FileAttributes? GetAttributes(string path)
     {
         try
@@ -267,7 +293,9 @@ public sealed class MusicScoreRepoSyncService : IMusicScoreRepoSyncService
         }
     }
 
-    /// <summary>读取普通文件的 SHA-256，文件不可读时返回空。</summary>
+    /// <summary>
+    /// 读取普通文件的 SHA-256，文件不可读时返回空。
+    /// </summary>
     private static string? TryGetFileHash(string path)
     {
         try
@@ -287,7 +315,9 @@ public sealed class MusicScoreRepoSyncService : IMusicScoreRepoSyncService
         }
     }
 
-    /// <summary>先写入同目录的临时文件，再替换目标。</summary>
+    /// <summary>
+    /// 先写入同目录的临时文件，再替换目标。
+    /// </summary>
     private static void WriteAtomically(string path, byte[] content, bool overwrite)
     {
         var stagingPath = Path.Combine(Path.GetDirectoryName(path)!, $".bettergi-{Guid.NewGuid():N}.part");

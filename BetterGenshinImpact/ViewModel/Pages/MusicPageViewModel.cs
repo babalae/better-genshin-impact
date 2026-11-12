@@ -38,7 +38,9 @@ public partial class MusicPageViewModel : ViewModel
     private readonly IInstrumentProfileService _profileService;
     private readonly IMusicTimelineBuilder _timelineBuilder;
     private readonly IMusicStateStore _stateStore;
-    /// <summary>读取仓库统计并同步仓库曲谱。</summary>
+    /// <summary>
+    /// 读取仓库统计并同步仓库曲谱。
+    /// </summary>
     private readonly IMusicScoreRepoSyncService _scoreRepoSyncService;
     private readonly ISnackbarService _snackbarService;
 
@@ -211,20 +213,28 @@ public partial class MusicPageViewModel : ViewModel
     [ObservableProperty]
     private string _libraryStatusText = "尚未扫描曲谱目录";
 
-    /// <summary>当前仓库索引中的曲谱统计。</summary>
+    /// <summary>
+    /// 当前仓库索引中的曲谱统计。
+    /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasRepoScoreStatistics))]
     [NotifyPropertyChangedFor(nameof(RepoScoreSummary))]
     [NotifyPropertyChangedFor(nameof(RepoScoreDetails))]
     private MusicScoreRepoStatistics? _repoScoreStatistics;
 
-    /// <summary>当前仓库是否提供曲谱统计。</summary>
+    /// <summary>
+    /// 当前仓库是否提供曲谱统计。
+    /// </summary>
     public bool HasRepoScoreStatistics => RepoScoreStatistics != null;
 
-    /// <summary>曲库标题下的仓库曲谱数量。</summary>
+    /// <summary>
+    /// 曲库标题下的仓库曲谱数量。
+    /// </summary>
     public string RepoScoreSummary => RepoScoreStatistics is { } stats ? $"仓库曲谱 · {stats.Count} 首" : "";
 
-    /// <summary>提示中的格式与乐器分布。</summary>
+    /// <summary>
+    /// 提示中的格式与乐器分布。
+    /// </summary>
     public string RepoScoreDetails
     {
         get
@@ -250,7 +260,9 @@ public partial class MusicPageViewModel : ViewModel
         }
     }
 
-    /// <summary>将索引格式键转换为曲库显示名称。</summary>
+    /// <summary>
+    /// 将索引格式键转换为曲库显示名称。
+    /// </summary>
     private static string GetRepoScoreFormatName(string format) => format switch
     {
         "yuanqin" => "原琴",
@@ -316,7 +328,9 @@ public partial class MusicPageViewModel : ViewModel
         }
     }
 
-    /// <summary>同步仓库曲谱，读取失败时仍可扫描本地曲库。</summary>
+    /// <summary>
+    /// 同步仓库曲谱，读取失败时仍可扫描本地曲库。
+    /// </summary>
     private async Task SyncRepoScoresAsync()
     {
         await RefreshRepoScoreStatisticsAsync();
@@ -330,7 +344,9 @@ public partial class MusicPageViewModel : ViewModel
         }
     }
 
-    /// <summary>在后台读取索引并更新界面中的统计。</summary>
+    /// <summary>
+    /// 在后台读取索引并更新界面中的统计。
+    /// </summary>
     private async Task RefreshRepoScoreStatisticsAsync()
     {
         RepoScoreStatistics = await Task.Run(_scoreRepoSyncService.ReadStatistics);

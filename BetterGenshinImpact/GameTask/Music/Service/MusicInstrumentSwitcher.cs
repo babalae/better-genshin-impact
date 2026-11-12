@@ -3,9 +3,11 @@ using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
 using BetterGenshinImpact.Core.Simulator.Extensions;
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask.AutoArtifactSalvage;
 using BetterGenshinImpact.GameTask.Common;
 using BetterGenshinImpact.GameTask.Common.Job;
+using BetterGenshinImpact.GameTask.Model;
 using BetterGenshinImpact.GameTask.Model.GameUI;
 using BetterGenshinImpact.GameTask.Runtime;
 using Microsoft.Extensions.Logging;
@@ -56,10 +58,7 @@ public sealed class MusicInstrumentSwitcher : IMusicInstrumentSwitcher
         var uiInteractionStarted = false;
         try
         {
-            using var instrumentTemplate = GameTaskManager.LoadAssetImage(
-                "Music",
-                Path.Combine("Instruments", $"{instrumentName}.png"),
-                runtime.SystemInfo);
+            using var instrumentTemplate = LoadInstrumentTemplate(instrumentName, runtime.SystemInfo);
             uiInteractionStarted = true;
             await new ReturnMainUiTask(runtime).Start(cancellationToken);
             await AutoArtifactSalvageTask.OpenInventory(
@@ -121,6 +120,48 @@ public sealed class MusicInstrumentSwitcher : IMusicInstrumentSwitcher
                 await new ReturnMainUiTask(runtime).Start(cancellationToken);
             }
         }
+    }
+
+    /// <summary>
+    /// 优先读取仓库的乐器模板，缺失或损坏时使用随本体分发的模板。
+    /// </summary>
+    private static Mat LoadInstrumentTemplate(string instrumentName, ISystemInfo systemInfo)
+    {
+        var fileName = instrumentName + ".png";
+        var bytes = ScriptRepoUpdater.Instance.ReadAssetFile($"music/instruments/{fileName}");
+        if (bytes is { Length: > 0 })
+        {
+            Mat? template = null;
+            try
+            {
+                template = Mat.ImDecode(bytes, ImreadModes.Color);
+            }
+            catch (OpenCVException)
+            {
+                // 无法解码的仓库模板使用内置素材回退。
+            }
+
+            if (template != null)
+            {
+                if (template.Empty())
+                {
+                    template.Dispose();
+                }
+                else if (systemInfo.AssetScale == 1 || systemInfo.GameScreenSize.Width == 1920)
+                {
+                    return template;
+                }
+                else
+                {
+                    using (template)
+                    {
+                        return ResizeHelper.Resize(template, systemInfo.AssetScale);
+                    }
+                }
+            }
+        }
+
+        return GameTaskManager.LoadAssetImage("Music", Path.Combine("Instruments", fileName), systemInfo);
     }
 
     /// <summary>

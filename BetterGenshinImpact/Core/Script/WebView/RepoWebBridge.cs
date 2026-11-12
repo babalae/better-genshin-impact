@@ -82,10 +82,14 @@ public sealed class RepoWebBridge
         }
     }
 
-    /// <summary>返回公共资源索引 asset.json，旧仓库没有索引时返回空字符串。</summary>
+    /// <summary>
+    /// 返回公共资源索引 asset.json，旧仓库没有索引时返回空字符串。
+    /// </summary>
     public string GetAssetJson() => ScriptRepoUpdater.Instance.GetAssetIndexJson();
 
-    /// <summary>按 asset.json 中的相对路径读取资源。JSON 返回文本，图片返回 Base64。</summary>
+    /// <summary>
+    /// 按 asset.json 中的相对路径读取资源。JSON 返回文本，图片返回 Base64。
+    /// </summary>
     public string GetAssetFile(string relPath)
     {
         if (string.IsNullOrWhiteSpace(relPath))
