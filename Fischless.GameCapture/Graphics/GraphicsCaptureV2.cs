@@ -21,6 +21,11 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
 {
     // BGR Mat 池：有界 ConcurrentQueue，FIFO 回收
     private const int MaxPoolSize = 16;
+
+    // 帧池容量：到达即取模式（FrameArrived 内排干留最新 + stash）下池不攒帧，恒为 2 即够——
+    // 1 个 buffer 被 stash 中的最新帧检出占用，1 个始终留给 DWM 写下一帧合成，与刷新率/消费节拍无关
+    // （Sunshine display_wgc.cpp 同款取值）。容量 1 会让 DWM 推帧等消费释放，不可取
+    private const int FramePoolCapacity = 2;
     private readonly ConcurrentQueue<Mat> _bgrQueue = new();
     private bool _bgrPoolClosed = true;
     private readonly HashSet<Mat> _bgrBorrowed = new();
@@ -46,6 +51,19 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
 
     private readonly object _lock = new();
 
+    // 到达即取（Sunshine on_frame_arrived / 官方 sample BasicCapture 同款）：
+    // FrameArrived 回调内立即排干帧池、只保留最新一帧挂到 _stashedFrame，消费线程 Capture() 时
+    // 取走渲染、读完立即检入归还。回调只做帧检出/检入（WinRT 轻量操作），不触碰 D3D11 设备上下文，
+    // 渲染/回读仍在消费线程——不重开"回调线程持设备锁冻结其他线程"的通路。
+    // _frameLock 仅保护 stash 本身；锁序：消费方 _lock → _frameLock，回调/泵线程只取 _frameLock，无反向路径
+    private readonly object _frameLock = new();
+    private Direct3D11CaptureFrame? _stashedFrame; // 到达线程写入的最新帧（已检出）；消费取走后由消费方归还
+    private long _stashedFrameGeneration;          // stash 帧所属帧池代数（与 _stashedFrame 成对读写）
+
+    // 帧池代数：每次 Recreate 自增。stash 中可能残留 Recreate 前旧尺寸的帧，
+    // 消费时按代数丢弃，避免旧尺寸帧再次触发反向 Recreate（把新池建回旧尺寸）
+    private long _poolGeneration;
+
     // FFmpeg gfxcapture 式限流：MinUpdateInterval 把 DWM 推帧率限到消费需求率（26100+，接口 QI 调用，见 TryApplyMinUpdateInterval）
     private Windows.Graphics.SizeInt32 _capSize;
     private long _minUpdateIntervalHns;   // 默认 0 = 不启用限流，WinRT TimeSpan（100ns 单位）
@@ -67,7 +85,7 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
     // 在途捕获数（正持锁外 Map/读回）。Stop 与尺寸 Recreate 销毁 staging 前必须等其归零；仅锁内访问
     private int _activeCaptures;
 
-    // 无新帧跳过读回：消费时 TryGetNextFrame 为空（池已排空，无新内容），克隆缓存直接返回，
+    // 无新帧跳过读回：消费时 stash 为空（到达回调已排干、无更新的帧），克隆缓存直接返回，
     // 避免对旧内容重复 GPU/PCIe 回读空转。缓存常建：每次消费新帧时写入缓存 + 克隆给消费者
     private Mat? _cachedBgr;
     private long _cachedFrameTs;         // 缓存内容对应的帧时间戳
@@ -157,7 +175,7 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
     // Capture 返回空的节流日志时间点（Environment.TickCount64 毫秒）
     private long _lastNullLogMs;
 
-    // 帧到达信号计数（仅回调线程递增，诊断用；实际取帧由消费线程在 Capture 内完成）
+    // 帧到达/排干计数（仅回调线程递增，诊断用）
     private long _arrivalSeq;
 
     // WGC WinRT 对象（帧池/会话/捕获项）具有线程亲和性：Win10 上跨线程 Recreate 抛
@@ -356,7 +374,7 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
                 _d3dDevice = Direct3D11Helper.CreateDevice();
 
                 // CreateFreeThreaded 契约：帧池对象可跨线程访问，不依赖 DispatcherQueue/消息泵；
-                // TryGetNextFrame 由消费线程调用（FFmpeg gfxcapture 同款需求驱动模型），
+                // TryGetNextFrame 由到达回调线程调用（Sunshine/官方 sample 同款到达即取模型），
                 // Recreate/销毁则必须回到本泵线程执行
                 try
                 {
@@ -369,7 +387,7 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
                     _captureFramePool = Direct3D11CaptureFramePool.CreateFreeThreaded(
                         _d3dDevice,
                         _pixelFormat,
-                        2,
+                        FramePoolCapacity,
                         _captureItem.Size);
                 }
                 catch (Exception)
@@ -378,7 +396,7 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
                     _captureFramePool = Direct3D11CaptureFramePool.CreateFreeThreaded(
                         _d3dDevice,
                         _pixelFormat,
-                        2,
+                        FramePoolCapacity,
                         _captureItem.Size);
                     _isHdrEnabled = false;
                 }
@@ -580,20 +598,60 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
 
     private void OnFrameArrived(Direct3D11CaptureFramePool sender, object args)
     {
-        // ffmpeg gfxcapture 同款需求驱动模型：到达回调只做计数信号，绝不在此线程触碰 D3D11。
-        // 取帧、Recreate、绘制、回读全部由消费线程在 Capture() 内按需完成，
-        // 从根上消除"回调线程持设备锁阻塞、冻结其他线程"的通路
+        if (!IsCapturing)
+        {
+            return;
+        }
+
+        // 到达即取（Sunshine on_frame_arrived / 官方 sample BasicCapture 同款）：
+        // 立即排干帧池、只保留最新一帧，被替换的旧帧立即检入归还——
+        // DWM 以合成节拍（~60fps）连续推帧且与内容变化无关（实测到达间隔恒定 ~16.7ms），
+        // 攒帧会让小容量池打满、DWM 等空闲 buffer，消费方读到的永远是几帧前的画面
+        // （三方同屏实测：取最旧 p50 122ms/p95 147ms，到达即取 p50 40ms/p95 65ms）。
+        // 此处只做帧检出/检入（WinRT 轻量操作），不触碰 D3D11 设备上下文；
+        // Recreate、绘制、回读仍由消费线程/泵线程完成，不重开"回调线程持设备锁冻结"的通路
         Interlocked.Increment(ref _arrivalSeq);
+        try
+        {
+            while (true)
+            {
+                // 代数必须在取帧前读：Recreate 与本回调并发时，横跨 Recreate 的取帧
+                // 会盖上旧代数而被消费侧丢弃（至多损失一帧，下一帧即恢复），不会反向 Recreate
+                var generation = Interlocked.Read(ref _poolGeneration);
+                var next = sender.TryGetNextFrame();
+                if (next == null)
+                {
+                    break;
+                }
+
+                Direct3D11CaptureFrame? replaced;
+                lock (_frameLock)
+                {
+                    replaced = _stashedFrame;
+                    _stashedFrame = next;
+                    _stashedFrameGeneration = generation;
+                }
+
+                replaced?.Dispose();
+            }
+        }
+        catch (Exception e)
+        {
+            // 会话/池关闭瞬间 TryGetNextFrame 可能抛异常：stash 保留上一帧，消费侧照常工作
+            Debug.WriteLine($"[WGC V2] 到达取帧异常（保留已有 stash）: {e.GetType().Name}: {e.Message}");
+        }
     }
 
     /// <summary>
-    /// 主动取出一帧并绘制到广播纹理（消费线程调用，必须持 <see cref="_lock"/>）。
+    /// 把 stash 中的最新帧绘制到广播纹理（消费线程调用，必须持 <see cref="_lock"/>）。
+    /// stash 由到达回调排干帧池维持恒为最新（到达即取模型）；帧的检入归还在调用方完成。
     /// 返回 false 表示无新帧或本帧被跳过（缓存帧仍有效）；true 表示已绘制并更新 <see cref="_gpuFrameTs"/>。
     /// </summary>
-    private bool TryRenderNewFrameLocked()
+    private bool TryRenderNewFrameLocked(Direct3D11CaptureFrame frame, long frameGeneration)
     {
-        using var frame = _captureFramePool?.TryGetNextFrame();
-        if (frame == null)
+        // Recreate 竞态守卫：旧帧池（Recreate 前）的遗留帧直接丢弃——
+        // 新生代帧随后续到达补上，避免旧尺寸帧触发反向 Recreate 把新池建回旧尺寸
+        if (frameGeneration != Interlocked.Read(ref _poolGeneration))
         {
             return false;
         }
@@ -616,11 +674,16 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
 
             // Recreate 必须在帧池的创建线程上执行（跨线程抛 RPC_E_WRONG_THREAD）；
             // 失败异常交由 Capture() 的阶段0兜底记录并跳过本帧
-            // 此处池必然存在：上方 TryGetNextFrame 即在其上成功取帧（且与 Stop 持 _lock 互斥）
+            // 此处池必然存在：本帧即从当前池取出（且与 Stop 持 _lock 互斥）
             var framePool = _captureFramePool!;
             try
             {
-                RunOnWgcThread(() => framePool.Recreate(_d3dDevice, _pixelFormat, 2, contentSize));
+                RunOnWgcThread(() =>
+                {
+                    framePool.Recreate(_d3dDevice, _pixelFormat, FramePoolCapacity, contentSize);
+                    // 池代数自增：此后到达的帧属于新池；stash 中旧池遗留帧由消费侧按代数丢弃
+                    Interlocked.Increment(ref _poolGeneration);
+                });
                 _recreateFailures = 0;
             }
             catch (Exception e)
@@ -692,7 +755,7 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
                     drawStage = "MapConstantBuffer";
                     // 必须 WriteDiscard：cb 仍绑定在上一帧 draw 的 PS 槽上，普通 Write 会 E_INVALIDARG。
                     // 注意 WriteDiscard 不能与 DoNotWait 组合（运行时校验直接 E_INVALIDARG）；
-                    // GPU 积压时的阻塞由需求驱动模型收束在消费线程自身，无跨线程冻结
+                    // GPU 积压时的阻塞只落在消费线程自身（回调线程不碰设备），无跨线程冻结
                     var cbMap = context.MapSubresource(_drawCb, 0, MapMode.WriteDiscard, SharpDX.Direct3D11.MapFlags.None);
                     Marshal.WriteInt32(cbMap.DataPointer, 0, BitConverter.SingleToInt32Bits(uvMinX));
                     Marshal.WriteInt32(cbMap.DataPointer, 4, BitConverter.SingleToInt32Bits(uvMinY));
@@ -790,11 +853,24 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
                     return null;
                 }
 
-                // 阶段0（需求驱动）：消费线程主动取帧并绘制，回调线程只做信号计数。
+                // 阶段0（到达驱动）：从到达线程的 stash 取最新帧渲染，渲染完立即检入归还池——
+                // buffer 归还与消费节拍解耦，DWM 永远有空闲 buffer 写下一帧合成
                 // 任何异常都不允许逃出 Capture——触发器线程会因此整个停摆
+                Direct3D11CaptureFrame? stashedFrame = null;
+                long stashedGeneration = 0;
+                lock (_frameLock)
+                {
+                    stashedFrame = _stashedFrame;
+                    _stashedFrame = null;
+                    stashedGeneration = _stashedFrameGeneration;
+                }
+
                 try
                 {
-                    TryRenderNewFrameLocked();
+                    if (stashedFrame != null)
+                    {
+                        TryRenderNewFrameLocked(stashedFrame, stashedGeneration);
+                    }
                 }
                 catch (Exception e)
                 {
@@ -804,6 +880,10 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
                         _lastNullLogMs = nowMs;
                         Debug.WriteLine($"[WGC V2] 取帧/绘制异常: {e.GetType().Name}: {e.Message}");
                     }
+                }
+                finally
+                {
+                    stashedFrame?.Dispose(); // 检入归还池（渲染已完成，buffer 交还 DWM）
                 }
 
                 if (_gpuTexture == null || _gpuFrameTs == 0)
@@ -1106,6 +1186,13 @@ public class GraphicsCaptureV2(bool captureHdr = false) : IGameCapture
             catch (Exception e)
             {
                 Debug.WriteLine($"[WGC V2] Stop 时泵线程清理失败（继续本地清理）: {e.GetType().Name}: {e.Message}");
+            }
+
+            // 清空 stash（池已销毁，帧对象只剩 COM 释放；IsCapturing=false 已挡住新 stash 写入）
+            lock (_frameLock)
+            {
+                _stashedFrame?.Dispose();
+                _stashedFrame = null;
             }
 
             // IsCapturing=false 已挡住新的 Capture()；等待在途捕获（正锁外 Map/CvtColor）退出，
