@@ -38,6 +38,10 @@ public partial class MusicPageViewModel : ViewModel
     private readonly IInstrumentProfileService _profileService;
     private readonly IMusicTimelineBuilder _timelineBuilder;
     private readonly IMusicStateStore _stateStore;
+    /// <summary>
+    /// 读取仓库统计并同步仓库曲谱。
+    /// </summary>
+    private readonly IMusicScoreRepoSyncService _scoreRepoSyncService;
     private readonly ISnackbarService _snackbarService;
 
     /// <summary>游戏运行环境服务；引导式跟弹每次读取 Current，不持有运行环境</summary>
@@ -63,6 +67,7 @@ public partial class MusicPageViewModel : ViewModel
         IInstrumentProfileService profileService,
         IMusicTimelineBuilder timelineBuilder,
         IMusicStateStore stateStore,
+        IMusicScoreRepoSyncService scoreRepoSyncService,
         IConfigService configService,
         ISnackbarService snackbarService,
         GameRuntimeService runtimeService)
@@ -74,6 +79,7 @@ public partial class MusicPageViewModel : ViewModel
         _profileService = profileService;
         _timelineBuilder = timelineBuilder;
         _stateStore = stateStore;
+        _scoreRepoSyncService = scoreRepoSyncService;
         _snackbarService = snackbarService;
         Config = configService.Get();
         MusicFolderDisplayText = string.IsNullOrWhiteSpace(Config.MusicConfig.MusicFolder)
@@ -207,6 +213,64 @@ public partial class MusicPageViewModel : ViewModel
     [ObservableProperty]
     private string _libraryStatusText = "尚未扫描曲谱目录";
 
+    /// <summary>
+    /// 当前仓库索引中的曲谱统计。
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasRepoScoreStatistics))]
+    [NotifyPropertyChangedFor(nameof(RepoScoreSummary))]
+    [NotifyPropertyChangedFor(nameof(RepoScoreDetails))]
+    private MusicScoreRepoStatistics? _repoScoreStatistics;
+
+    /// <summary>
+    /// 当前仓库是否提供曲谱统计。
+    /// </summary>
+    public bool HasRepoScoreStatistics => RepoScoreStatistics != null;
+
+    /// <summary>
+    /// 曲库标题下的仓库曲谱数量。
+    /// </summary>
+    public string RepoScoreSummary => RepoScoreStatistics is { } stats ? $"仓库曲谱 · {stats.Count} 首" : "";
+
+    /// <summary>
+    /// 提示中的格式与乐器分布。
+    /// </summary>
+    public string RepoScoreDetails
+    {
+        get
+        {
+            if (RepoScoreStatistics is not { } stats)
+            {
+                return "";
+            }
+
+            var lines = new List<string>();
+            if (stats.ByType is { Count: > 0 } formats)
+            {
+                lines.Add("格式：" + string.Join("、", formats.Select(entry =>
+                    $"{GetRepoScoreFormatName(entry.Key)} {entry.Value}")));
+            }
+            if (stats.ByInstrument is { Count: > 0 } instruments)
+            {
+                lines.Add("乐器：" + string.Join("、", instruments.OrderByDescending(entry => entry.Value)
+                    .Select(entry => $"{entry.Key} {entry.Value}")));
+            }
+
+            return string.Join(Environment.NewLine, lines);
+        }
+    }
+
+    /// <summary>
+    /// 将索引格式键转换为曲库显示名称。
+    /// </summary>
+    private static string GetRepoScoreFormatName(string format) => format switch
+    {
+        "yuanqin" => "原琴",
+        "keyboard" => "键盘",
+        "midi" => "MIDI",
+        _ => format
+    };
+
     [ObservableProperty]
     private string _lastRefreshText = "等待刷新";
 
@@ -239,7 +303,7 @@ public partial class MusicPageViewModel : ViewModel
 
     public override Task OnNavigatedToAsync()
     {
-        return InitializeAsync();
+        return _isInitialized ? RefreshRepoScoreStatisticsAsync() : InitializeAsync();
     }
 
     public override void OnNavigatedFrom()
@@ -259,8 +323,33 @@ public partial class MusicPageViewModel : ViewModel
             await Application.Current.Dispatcher.InvokeAsync(
                 static () => { },
                 DispatcherPriority.ContextIdle);
+            await SyncRepoScoresAsync();
             await RefreshLibraryAsync();
         }
+    }
+
+    /// <summary>
+    /// 同步仓库曲谱，读取失败时仍可扫描本地曲库。
+    /// </summary>
+    private async Task SyncRepoScoresAsync()
+    {
+        await RefreshRepoScoreStatisticsAsync();
+        try
+        {
+            await _scoreRepoSyncService.SyncAsync(Config.MusicConfig.MusicFolder, CancellationToken.None);
+        }
+        catch (Exception e)
+        {
+            _logger.LogDebug(e, "同步仓库乐谱失败");
+        }
+    }
+
+    /// <summary>
+    /// 在后台读取索引并更新界面中的统计。
+    /// </summary>
+    private async Task RefreshRepoScoreStatisticsAsync()
+    {
+        RepoScoreStatistics = await Task.Run(_scoreRepoSyncService.ReadStatistics);
     }
 
     partial void OnSelectedMusicItemChanged(PerformanceScore? value)
@@ -436,6 +525,7 @@ public partial class MusicPageViewModel : ViewModel
         Config.MusicConfig.MusicFolder = normalizedFolder;
         MusicFolderDisplayText = GetFolderDisplayName(normalizedFolder);
         _libraryService.Watch(normalizedFolder);
+        await SyncRepoScoresAsync();
         await RefreshLibraryAsync();
     }
 
@@ -503,6 +593,7 @@ public partial class MusicPageViewModel : ViewModel
     private async Task RefreshAsync()
     {
         _libraryService.Watch(Config.MusicConfig.MusicFolder);
+        await SyncRepoScoresAsync();
         await RefreshLibraryAsync();
     }
 

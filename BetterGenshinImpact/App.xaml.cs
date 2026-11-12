@@ -477,6 +477,7 @@ public partial class App : Application
                 services.AddSingleton<IInstrumentProfileService, InstrumentProfileService>();
                 services.AddSingleton<IMusicTimelineBuilder, MusicTimelineBuilder>();
                 services.AddSingleton<IMusicLibraryService, MusicLibraryService>();
+                services.AddSingleton<IMusicScoreRepoSyncService, MusicScoreRepoSyncService>();
                 services.AddSingleton<IMusicCoverService, MusicCoverService>();
                 services.AddSingleton<IMusicInstrumentSwitcher, MusicInstrumentSwitcher>();
                 services.AddSingleton<IKeyInputTransport, PostMessageKeyInputTransport>();

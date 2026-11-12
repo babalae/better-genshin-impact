@@ -23,6 +23,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -1651,6 +1653,206 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             _logger.LogError(ex, $"从Git仓库读取二进制文件失败: {filePath}");
             return null;
         }
+    }
+
+    /// <summary>
+    /// 单个公共资源的最大字节数，与脚本仓库构建校验一致。
+    /// </summary>
+    private const int MaxAssetFileSize = 5 * 1024 * 1024;
+
+    /// <summary>
+    /// 公共资源索引中的文件路径、字节数和摘要。
+    /// </summary>
+    private sealed record AssetEntry(string Path, int Size, string Sha256);
+
+    /// <summary>
+    /// 读取仓库根目录的公共资源索引。
+    /// </summary>
+    internal string GetAssetIndexJson() => ReadAssetSnapshot(read =>
+    {
+        var bytes = read("asset.json", null);
+        return bytes == null ? null : Encoding.UTF8.GetString(bytes);
+    }) ?? string.Empty;
+
+    /// <summary>
+    /// 读取资源索引中指定的文件，路径相对于 assets/。
+    /// </summary>
+    internal byte[]? ReadAssetFile(string relPath) => ReadAssetSnapshot(read =>
+    {
+        var entry = ReadAssetEntries(read)?.Find(file =>
+            string.Equals(file.Path, relPath, StringComparison.OrdinalIgnoreCase));
+        return entry == null ? null : ReadIndexedAsset(read, entry);
+    });
+
+    /// <summary>
+    /// 从同一个仓库快照按索引读取指定类型的资源。
+    /// </summary>
+    internal List<(string Path, byte[] Content)>? ReadAssetFiles(string directory, string extension)
+        => ReadAssetSnapshot(read =>
+        {
+            var entries = ReadAssetEntries(read);
+            if (entries == null)
+            {
+                return null;
+            }
+
+            var prefix = directory + "/";
+            var files = new List<(string Path, byte[] Content)>();
+            foreach (var entry in entries)
+            {
+                if (!entry.Path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                    || !entry.Path.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var bytes = ReadIndexedAsset(read, entry);
+                if (bytes == null)
+                {
+                    // 不用不完整的快照更新用户曲库。
+                    return null;
+                }
+                files.Add((entry.Path, bytes));
+            }
+
+            return files;
+        });
+
+    /// <summary>
+    /// 解析资源索引中的逐文件记录。
+    /// </summary>
+    private static List<AssetEntry>? ReadAssetEntries(Func<string, int?, byte[]?> read)
+    {
+        var bytes = read("asset.json", null);
+        if (bytes is not { Length: > 0 })
+        {
+            return null;
+        }
+
+        return JObject.Parse(Encoding.UTF8.GetString(bytes))["files"] is JArray files
+            ? files.ToObject<List<AssetEntry>>()
+            : null;
+    }
+
+    /// <summary>
+    /// 读取资源并核对索引记录的大小与摘要。
+    /// </summary>
+    private static byte[]? ReadIndexedAsset(Func<string, int?, byte[]?> read, AssetEntry entry)
+    {
+        if (entry.Size is < 0 or > MaxAssetFileSize || entry.Sha256?.Length != 64)
+        {
+            return null;
+        }
+
+        var bytes = read($"assets/{entry.Path}", entry.Size);
+        return bytes != null && bytes.Length == entry.Size
+            && string.Equals(Convert.ToHexString(SHA256.HashData(bytes)), entry.Sha256, StringComparison.OrdinalIgnoreCase)
+            ? bytes
+            : null;
+    }
+
+    /// <summary>
+    /// 让索引与文件读取共用同一个 Git 提交。
+    /// </summary>
+    private T? ReadAssetSnapshot<T>(Func<Func<string, int?, byte[]?>, T?> read) where T : class
+    {
+        try
+        {
+            var repoPath = CenterRepoPath;
+            if (!Directory.Exists(repoPath))
+            {
+                return null;
+            }
+
+            if (IsGitRepository(repoPath))
+            {
+                using var repo = new Repository(repoPath);
+                var tree = repo.Head.Tip?.Tree;
+                return tree == null ? null : read((path, size) => ReadAssetSnapshotFile(repoPath, tree, path, size));
+            }
+
+            return read((path, size) => ReadAssetSnapshotFile(repoPath, null, path, size));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "从中央仓库读取公共资源失败");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// 从 Git 树或解压目录读取资源，拒绝路径逃逸及链接。
+    /// </summary>
+    private static byte[]? ReadAssetSnapshotFile(string repoPath, Tree? tree, string path, int? expectedSize)
+    {
+        var parts = path.Split('/');
+        var invalidChars = Path.GetInvalidFileNameChars();
+        if (parts.Any(part => part.Length == 0 || part.EndsWith('.') || part.EndsWith(' ')
+                              || part.IndexOfAny(invalidChars) >= 0))
+        {
+            return null;
+        }
+
+        if (tree != null)
+        {
+            var entry = tree[path];
+            if (entry is not { TargetType: TreeEntryTargetType.Blob } || entry.Mode == Mode.SymbolicLink)
+            {
+                return null;
+            }
+
+            var blob = (Blob)entry.Target;
+            if (expectedSize.HasValue && blob.Size != expectedSize.Value)
+            {
+                return null;
+            }
+
+            using var content = blob.GetContentStream();
+            if (expectedSize is { } blobSize)
+            {
+                return ReadAssetContent(content, blobSize);
+            }
+
+            using var buffer = new MemoryStream();
+            content.CopyTo(buffer);
+            return buffer.ToArray();
+        }
+
+        var filePath = Path.Combine(repoPath, Path.Combine(parts));
+        if (!File.Exists(filePath))
+        {
+            return null;
+        }
+
+        var current = repoPath;
+        foreach (var part in parts)
+        {
+            current = Path.Combine(current, part);
+            if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+            {
+                return null;
+            }
+        }
+
+        if (expectedSize is not { } fileSize)
+        {
+            return File.ReadAllBytes(filePath);
+        }
+
+        using var file = File.OpenRead(filePath);
+        return file.Length == fileSize ? ReadAssetContent(file, fileSize) : null;
+    }
+
+    /// <summary>
+    /// 只读取预期大小，再检查流中是否还有多余字节。
+    /// </summary>
+    private static byte[]? ReadAssetContent(Stream stream, int expectedSize)
+    {
+        var bytes = new byte[expectedSize];
+        return stream.ReadAtLeast(bytes, expectedSize, throwOnEndOfStream: false) == expectedSize
+               && stream.ReadByte() == -1
+            ? bytes
+            : null;
     }
 
     /// <summary>

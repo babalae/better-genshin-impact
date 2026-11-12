@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading.Tasks;
 using BetterGenshinImpact.View.Windows;
 using BetterGenshinImpact.ViewModel.Message;
@@ -79,6 +80,37 @@ public sealed class RepoWebBridge
         {
             await ThemedMessageBox.ErrorAsync(e.Message, "订阅脚本链接失败！");
         }
+    }
+
+    /// <summary>
+    /// 返回公共资源索引 asset.json，旧仓库没有索引时返回空字符串。
+    /// </summary>
+    public string GetAssetJson() => ScriptRepoUpdater.Instance.GetAssetIndexJson();
+
+    /// <summary>
+    /// 按 asset.json 中的相对路径读取资源。JSON 返回文本，图片返回 Base64。
+    /// </summary>
+    public string GetAssetFile(string relPath)
+    {
+        if (string.IsNullOrWhiteSpace(relPath))
+        {
+            return "404";
+        }
+
+        var path = relPath.Replace('\\', '/');
+        var extension = Path.GetExtension(path).ToLowerInvariant();
+        if (extension is not (".json" or ".png" or ".jpg" or ".jpeg" or ".webp"))
+        {
+            return "404";
+        }
+
+        var bytes = ScriptRepoUpdater.Instance.ReadAssetFile(path);
+        if (bytes is not { Length: > 0 })
+        {
+            return "404";
+        }
+
+        return extension == ".json" ? Encoding.UTF8.GetString(bytes) : Convert.ToBase64String(bytes);
     }
 
     public async Task<string> GetUserConfigJson()

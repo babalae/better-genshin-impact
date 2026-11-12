@@ -229,10 +229,21 @@
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock VerticalAlignment="Center"
-                                   FontSize="17"
-                                   FontWeight="SemiBold"
-                                   Text="{i18n:T 我的曲库}" />
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock FontSize="17"
+                                       FontWeight="SemiBold"
+                                       Text="{i18n:T 我的曲库}" />
+                            <TextBlock FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       Text="{Binding ViewModel.RepoScoreSummary, Mode=OneWay}"
+                                       Visibility="{Binding ViewModel.HasRepoScoreStatistics, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <TextBlock.ToolTip>
+                                    <TextBlock MaxWidth="340"
+                                               Text="{Binding ViewModel.RepoScoreDetails, Mode=OneWay}"
+                                               TextWrapping="Wrap" />
+                                </TextBlock.ToolTip>
+                            </TextBlock>
+                        </StackPanel>
                         <TextBlock Grid.Column="1"
                                    Margin="14,0"
                                    VerticalAlignment="Center"
