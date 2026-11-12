@@ -1,4 +1,4 @@
-﻿<Page x:Class="BetterGenshinImpact.View.Pages.TaskSettingsPage"
+<Page x:Class="BetterGenshinImpact.View.Pages.TaskSettingsPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
@@ -677,7 +677,7 @@
                                                   Text="{i18n:T 派蒙辅助检测}"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="{i18n:T 按L后当派蒙头像可见时提前跳出战斗结束检测。默认开启。}"
+                                                  Text="{i18n:T 按L后若派蒙头像仍可见，判定按L未生效并重按一次后复检。默认开启。}"
                                                   TextWrapping="Wrap" />
                                 </StackPanel>
                                 <ui:ToggleSwitch Grid.Column="1"
@@ -697,7 +697,7 @@
                                                   Text="{i18n:T 派蒙检测延时（秒）}"
                                                   TextWrapping="Wrap" />
                                     <ui:TextBlock Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
-                                                  Text="{i18n:T 按L后等待该时间再检测派蒙头像，默认为0.1秒}"
+                                                  Text="{i18n:T 按L后等待该时间再检测派蒙头像，默认为0.2秒，最小0.15秒}"
                                                   TextWrapping="Wrap" />
                                 </StackPanel>
                                 <ui:NumberBox Grid.Column="1"
@@ -705,7 +705,7 @@
                                               Margin="0,0,36,0"
                                               Value="{Binding Config.AutoFightConfig.FinishDetectConfig.PaimonEndCheckDelay, Mode=TwoWay}"
                                               ValidationMode="InvalidInputOverwritten"
-                                              Minimum="0.05"
+                                              Minimum="0.15"
                                               Maximum="0.4"
                                               SpinButtonPlacementMode="Hidden" />
                             </Grid>

@@ -104,8 +104,11 @@ public class AutoFightTask : ISoloTask
             // 开战阻断时间（秒）限制在 0-10 之间，超出范围时修饰到对应上下限
             BlockCheckBeforeBattleSeconds = Math.Clamp(finishDetectConfig.BlockCheckBeforeBattleSeconds, 0, 10);
             PaimonEndCheckEnabled = finishDetectConfig.PaimonEndCheckEnabled;
-            // 派蒙检测延时（秒）限制在 0.05-0.4 之间，超出范围时修饰到对应上下限
-            PaimonEndCheckDelayMs = (int)(Math.Clamp(finishDetectConfig.PaimonEndCheckDelay, 0.05, 0.4) * 1000);
+            // 派蒙检测延时（秒）限制在 0.15-0.4 之间，超出范围时修饰到对应上下限。
+            // 下限不能取得更小：游戏内键鼠响应有 30~60ms 延迟、截图来源图本身也有延迟，
+            // 等待过短会取到按 L 之前的旧帧而误判"派蒙可见"（下拉值参见 PaimonEndCheckPolicy）
+            PaimonEndCheckDelayMs = (int)Math.Clamp(finishDetectConfig.PaimonEndCheckDelay * 1000,
+                PaimonEndCheckPolicy.MinDelayMs, PaimonEndCheckPolicy.MaxDelayMs);
         }
 
         public TaskFightFinishDetectConfig(AutoFightParam taskParam)
@@ -925,23 +928,44 @@ public class AutoFightTask : ISoloTask
 
             if (finishDetectConfig.PaimonEndCheckEnabled)
             {
-                // 派蒙辅助检测：按L后等待PaimonEndCheckDelayMs，检测左上角派蒙头像是否可见
-                await Delay(finishDetectConfig.PaimonEndCheckDelayMs, ct);
-                using var paimonRa = CaptureToRectArea();
-                // 复用 Bv 的派蒙头像检测：左上四分之一 ROI 内模板匹配 PaimonMenu（派蒙头像），
-                // 命中即视为派蒙可见 → 按L未生效、编队界面未打开、战斗未结束
-                var paimonVisible = Bv.IsInMainUi(paimonRa);
-                if (paimonVisible)
+                // 派蒙辅助检测：按L后等待一段时间，检测左上角派蒙头像是否可见。
+                // 注意：等待时间不能低于按键生效的延迟（游戏内键鼠响应 30~60ms + 截图延迟），
+                // 否则会取到按 L 之前的旧帧，把"界面还没打开"误判成"派蒙可见"。
+                var paimonDelayMs = PaimonEndCheckPolicy.NormalizeDelayMs(finishDetectConfig.PaimonEndCheckDelayMs);
+                // 累计本分支已经等待的时长，保证重按 L 复检后总等待仍不超过 detectDelayTime
+                var waitedMs = 0;
+                var reopenAttempts = 0;
+                while (true)
                 {
-                    // 派蒙头像可见 → 编队界面未打开（按L未生效），战斗未结束，按X取消后提前跳出战斗结束检查
-                    Logger.LogInformation("派蒙头像可见，提前跳出战斗结束检查");
-                    // 按X取消编队界面（走统一按键配置，默认X，支持用户改键）
-                    InputHub.Foreground.SimulateAction(GIActions.Drop);
-                    return false;
+                    await Delay(paimonDelayMs, ct);
+                    waitedMs += paimonDelayMs;
+                    using var paimonRa = CaptureToRectArea();
+                    // 复用 Bv 的派蒙头像检测：左上四分之一 ROI 内模板匹配 PaimonMenu（派蒙头像）。
+                    // 命中只能说明"按 L 未生效、编队界面没打开"，不能直接断定战斗未结束。
+                    var paimonVisible = Bv.IsInMainUi(paimonRa);
+                    var decision = PaimonEndCheckPolicy.Decide(paimonVisible, reopenAttempts);
+                    if (decision == PaimonCheckDecision.ProceedToBarCheck)
+                    {
+                        if (paimonVisible)
+                        {
+                            // 重按 L 复检后派蒙头像仍可见：说明这次按 L 确实没打开编队界面，
+                            // 但也不能就此放弃战斗结束检测，否则检测会被无限次拦截。
+                            // 此时回退到引入派蒙检测之前就一直在用的进度条判定，
+                            // 并且不再按 X（避免战斗中反复触发下落键）
+                            Logger.LogInformation("派蒙头像可见且重按L后仍可见，改由进度条判定战斗是否结束");
+                        }
+
+                        break;
+                    }
+
+                    // 派蒙可见 → 按 L 未生效，重按一次 L 后复检，而不是直接放弃本次检查
+                    reopenAttempts++;
+                    Logger.LogInformation("派蒙头像可见，按L疑似未生效，重按L后复检（第{Count}次）", reopenAttempts);
+                    InputHub.Foreground.SimulateAction(GIActions.OpenPartySetupScreen);
                 }
 
-                // 派蒙头像已消失 → 战斗可能结束，等待剩余时间后检查黄条
-                await Delay(Math.Max(0, detectDelayTime - finishDetectConfig.PaimonEndCheckDelayMs), ct);
+                // 等待剩余时间后检查黄条（等待总时长仍由 detectDelayTime 控制）
+                await Delay(PaimonEndCheckPolicy.RemainingDelayMs(detectDelayTime, waitedMs), ct);
             }
             else
             {

@@ -13,3 +13,4 @@
 - [配置持久化链路（AllConfig 保存）优化](config-persistence.md)
 - [实时触发器生命周期与启停设计](realtime-trigger.md)
 - [TaskTriggerDispatcher 依赖注入改造设计](task-trigger-dispatcher-di.md)
+- [战斗结束检测：派蒙辅助检测的语义修正](paimon-end-check.md)

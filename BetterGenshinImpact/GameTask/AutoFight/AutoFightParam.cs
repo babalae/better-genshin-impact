@@ -27,7 +27,9 @@ public class AutoFightParam : BaseTaskParam<AutoFightTask>
         public bool SkipFightEndCheckWhenEnemyVisible = false;
         public double BlockCheckBeforeBattleSeconds = 0;
         public bool PaimonEndCheckEnabled = true;
-        public double PaimonEndCheckDelay = 0.075;
+        // 派蒙检测延时（秒）。不能取 0.05~0.1 这类小值：游戏内键鼠响应有 30~60ms 延迟，
+        // 截图来源图本身也有延迟，等待过短会取到按 L 之前的旧帧而误判"派蒙可见"
+        public double PaimonEndCheckDelay = 0.2;
     }
 
     public AutoFightParam(string path, AutoFightConfig autoFightConfig) : base(null, null)
