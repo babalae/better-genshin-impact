@@ -66,8 +66,8 @@ public sealed class FightPickupHelper
         if (_taskParam.KazuhaPickupEnabled)
         {
             // 队伍中存在万叶的时候使用一次长E
-            var picker = combatScenes.SelectAvatar("枫原万叶") ?? combatScenes.SelectAvatar("琴");
-
+            var useCombatScenes = combatScenes; // 新增行
+    	    var picker = useCombatScenes.SelectAvatar("枫原万叶") ?? useCombatScenes.SelectAvatar("琴");
             string? oldPartyName = null;
             if (RunnerContext.Instance.PartyName is not null)
             {
@@ -168,8 +168,8 @@ public sealed class FightPickupHelper
                         switchPartyFlag = true;
                         RunnerContext.Instance.PartyName = _taskParam.KazuhaPartyName;
                         RunnerContext.Instance.ClearCombatScenes();
-                        var cs = await RunnerContext.Instance.GetCombatScenes(_runtime, _config, ct);
-                        picker = cs.SelectAvatar("枫原万叶") ?? cs.SelectAvatar("琴");
+                        useCombatScenes = await RunnerContext.Instance.GetCombatScenes(_runtime, _config, ct);
+                        picker = useCombatScenes.SelectAvatar("枫原万叶") ?? useCombatScenes.SelectAvatar("琴");
                     }
                 }
                 catch (Exception e)
@@ -241,7 +241,7 @@ public sealed class FightPickupHelper
                                 await picker.WaitSkillCd(ct);
                                 foreach (var command in pickUpAction.CombatCommands)
                                 {
-                                    command.Execute(combatScenes);
+                                    command.Execute(useCombatScenes);
                                     //异步执行，防止卡顿
                                     Task.Run(() =>
                                     {
