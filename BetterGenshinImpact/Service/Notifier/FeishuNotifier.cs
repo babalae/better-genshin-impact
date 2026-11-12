@@ -69,7 +69,9 @@ public class FeishuNotifier : INotifier, IDisposable
         {
             throw;
         }
-        catch (Exception ex)
+        // 这里必须写 System.Exception：本文件所在命名空间下还有个同级的 Notifier.Exception 子命名空间，
+        // 裸写 Exception 会先绑定到命名空间上，编译报 CS0118。
+        catch (System.Exception ex)
         {
             throw new NotifierException($"Error sending Feishu webhook: {ex.Message}");
         }
