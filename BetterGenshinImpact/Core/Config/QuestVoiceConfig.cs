@@ -52,6 +52,18 @@ public partial class QuestVoiceConfig : ObservableObject
     [ObservableProperty] private int _sampleIntervalMilliseconds = 150;
 
     /// <summary>旧配置或手动编辑可能缺少某些引擎条目，加载时补齐缺省值，读取方不再改写配置。</summary>
+    /// <summary>所有预合成页面共用一个原神剧情章选择。</summary>
+    [ObservableProperty] private string _selectedChapterId = "";
+    /// <summary>Entire selected Yatta series or chapter; persisted for P0 and P1, empty falls back to legacy chapter ID.</summary>
+    [ObservableProperty] private string[] _selectedChapterIds = [];
+    /// <summary>识别使用简中原文，目标配音允许日文或简中。</summary>
+    [ObservableProperty] private string _speechLanguage = "jpn";
+    /// <summary>使用当前 Yatta 章节的严格双语原文匹配 P0 OCR，失败时回退原来的实时文本。</summary>
+    [ObservableProperty] private bool _scriptLanguageRoutingEnabled;
+    /// <summary>旅行者自定义称呼，用于原文模板变量替换。</summary>
+    [ObservableProperty] private string _travelerNickname = "";
+    /// <summary>选择荧时使用女性旅行者原文。</summary>
+    [ObservableProperty] private bool _femaleTraveler;
     partial void OnExtraProvidersChanged(Dictionary<string, QuestVoiceEngineConfig> value)
     {
         if (value is null)

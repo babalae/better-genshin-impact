@@ -10,8 +10,10 @@ using System.Text;
 using Serilog;
 using Newtonsoft.Json;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Continuous;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.Configuration;
+using BetterGenshinImpact.GameTask.QuestVoice.Features.PreSynthesis;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Routing;
-using BetterGenshinImpact.GameTask.QuestVoice.Core.Tts;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.TTS;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Audio;
 
 namespace BetterGenshinImpact.GameTask.QuestVoice.Features.Continuous;
@@ -77,7 +79,16 @@ public sealed partial class ContinuousVoiceSession
                 if (phase != TtsPhase.Draining) return;
                 lock (_gate) Emit(ContinuousVoiceEventKind.SynthesisDraining, work);
             });
-            var streaming = settings.Protocol?.StreamPlayback == true
+            // 目标语言来自 Yatta 匹配；参考语言必须独立按参考文本检测，不能把日语参考误标成中文。
+            var protocol = settings.Protocol ?? new TtsProtocolSettings();
+            var synthesisSettings = settings with { Protocol = protocol with
+            {
+                TextLanguage = resolved.Request.TextLanguage is { Length: > 0 } localizedLanguage
+                    ? localizedLanguage : protocol.TextLanguage,
+                PromptLanguage = TtsLanguageDetector.DetectFromText(resolved.Request.Voice.References.FirstOrDefault()?.PromptText)
+            } };
+            var cachedResult = await TryLoadCachedAudioAsync(resolved.Request, synthesisSettings, token).ConfigureAwait(false);
+            var streaming = cachedResult is null && synthesisSettings.Protocol?.StreamPlayback == true
                 && (engine is not IStreamingTtsEngine selectable || selectable.CanStream(resolved.Request));
             if (streaming && (engine is not IStreamingTtsEngine || player is not IStreamingAudioPlayer))
                 throw new VoiceException(VoiceErrorCode.Configuration, "当前配音引擎或播放器不支持流式，请关闭流式开关。");
@@ -95,13 +106,14 @@ public sealed partial class ContinuousVoiceSession
                     Pulse();
                 }
             }
-            var result = streaming
-                ? await ((IStreamingTtsEngine)engine).SynthesizeStreamingAsync(settings, resolved.Request, StreamingReady, progress, token).ConfigureAwait(false)
-                : await engine.SynthesizeAsync(settings, resolved.Request, progress, token).ConfigureAwait(false);
+            var result = cachedResult ?? (streaming
+                ? await ((IStreamingTtsEngine)engine).SynthesizeStreamingAsync(synthesisSettings, resolved.Request, StreamingReady, progress, token).ConfigureAwait(false)
+                : await engine.SynthesizeAsync(synthesisSettings, resolved.Request, progress, token).ConfigureAwait(false));
             lock (_gate)
             {
                 CheckCurrent(work, token);
-                Emit(ContinuousVoiceEventKind.SynthesisCompleted, work, streaming ? "流式音频已全部接收" : null);
+                Emit(ContinuousVoiceEventKind.SynthesisCompleted, work, cachedResult is not null
+                    ? "P1 WAV 严格指纹缓存命中" : streaming ? "流式音频已全部接收" : null);
                 CheckCurrent(work, token);
             }
             var audio = wav.ValidateCompletedResponse(result.Wav);
@@ -164,6 +176,41 @@ public sealed partial class ContinuousVoiceSession
         }
     }
 
+    /// <summary>
+    /// 仅当当前 Yatta 节点、目标原文、角色和实际 TTS 模型配置的指纹全部吻合时，
+    /// P0 才直接播放 P1 已生成的 WAV；文件损坏则安全回退实时合成。
+    /// </summary>
+    private async Task<TtsResult?> TryLoadCachedAudioAsync(
+        TtsRequest request, AppSettings actualSettings, CancellationToken token)
+    {
+        if (_scriptMapper is null || string.IsNullOrWhiteSpace(_preSynthesisCacheDirectory) ||
+            request.ScriptNodeKey is null || request.ScriptSpeaker is null ||
+            request.TextLanguage != "ja") return null;
+
+        var hash = QuestVoiceCacheIdentity.ComputeHash(actualSettings, request.Voice,
+            request.ScriptSpeaker, request.Text, "jpn");
+        var path = Path.Combine(_preSynthesisCacheDirectory, hash + ".wav");
+        if (!File.Exists(path)) return null;
+        try
+        {
+            var file = new FileInfo(path);
+            if (file.Length > 64L * 1024 * 1024 || file.Length < 44)
+                throw new InvalidDataException("Cached WAV size is invalid.");
+            var audio = wav.ValidateCompletedResponse(await File.ReadAllBytesAsync(path, token).ConfigureAwait(false));
+            (logger ?? Log.Logger).Information("QuestVoice P0 reused exact P1 WAV node={NodeKey}",
+                request.ScriptNodeKey);
+            return new TtsResult(audio.Bytes, 0, 0, audio.DurationSeconds,
+                audio.SampleRate, audio.Channels, ReferenceFallback.None);
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException or VoiceException)
+        {
+            (logger ?? Log.Logger).Warning(error, "QuestVoice P1 cache invalid, synthesizing live node={NodeKey}",
+                request.ScriptNodeKey);
+            return null;
+        }
+    }
+
     /// <summary>判断当前工作是否已取消或过期。</summary>
     private bool IsDiscarded(ContinuousVoiceWork work, CancellationToken token)
     {
@@ -175,13 +222,19 @@ public sealed partial class ContinuousVoiceSession
     {
         lock (_gate) { CheckCurrent(work, token); if (notify) Emit(ContinuousVoiceEventKind.RoutingStarted, work); CheckCurrent(work, token); }
         var candidate = work.Candidate;
+        var scripted = _scriptMapper?.TryMatch(candidate.Dialogue, candidate.AcceptedName);
+        if (scripted is not null && notify)
+            (logger ?? Log.Logger).Debug("QuestVoice trusted script match node={NodeKey} language={Language}",
+                scripted.NodeKey, scripted.Language);
+        var targetText = scripted?.TargetText ?? candidate.Dialogue;
         if (settings.Routing is not { } routingSettings)
         {
             var configured = settings.Voice;
             var identity = new ContinuousVoiceIdentity(ContinuousVoiceIdentityKind.FixedVoice, acceptedName: AcceptedName(candidate));
-            return (work with { Identity = identity }, new(candidate.Dialogue,
+            return (work with { Identity = identity }, new(targetText,
                 new(configured.Name, configured.GptWeightsPath, configured.SovitsWeightsPath,
-                    [new(configured.ReferenceAudioPath, configured.PromptText, configured.ReferenceEmotion)]), configured.RequestedEmotion));
+                    [new(configured.ReferenceAudioPath, configured.PromptText, configured.ReferenceEmotion)]),
+                configured.RequestedEmotion, scripted?.Language, scripted?.NodeKey, scripted?.Speaker));
         }
         if (routing is null) throw new VoiceException(VoiceErrorCode.Configuration, "Routing service unavailable.");
         var result = await routing.ResolveAsync(new(routingSettings,
@@ -191,7 +244,8 @@ public sealed partial class ContinuousVoiceSession
         var identityKey = StringComparer.OrdinalIgnoreCase.Equals(canonical, "default_npc")
             ? new ContinuousVoiceIdentity(ContinuousVoiceIdentityKind.UnknownSpeaker, canonical, AcceptedName(candidate))
             : new ContinuousVoiceIdentity(ContinuousVoiceIdentityKind.Canonical, canonical);
-        return (work with { Identity = identityKey, Routing = result }, new(candidate.Dialogue, result.Voice, result.RequestedEmotion));
+        return (work with { Identity = identityKey, Routing = result },
+            new TtsRequest(targetText, result.Voice, result.RequestedEmotion, scripted?.Language, scripted?.NodeKey, scripted?.Speaker));
     }
 
     /// <summary>比较当前语义所有权的真实路由；新名字不会先取消仍有效的合成或Ready。</summary>

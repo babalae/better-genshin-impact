@@ -1,7 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Continuous;
-using BetterGenshinImpact.GameTask.QuestVoice.Core.Ocr;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.OCR;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Continuous;
 using Xunit;
 

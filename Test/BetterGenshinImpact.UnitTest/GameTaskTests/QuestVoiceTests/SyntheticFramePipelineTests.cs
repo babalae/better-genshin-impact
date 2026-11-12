@@ -8,12 +8,12 @@ using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.QuestVoice;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Audio;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Continuous;
-using BetterGenshinImpact.GameTask.QuestVoice.Core.Ocr;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.OCR;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Configuration;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Continuous;
-using BetterGenshinImpact.GameTask.QuestVoice.Features.Ocr;
+using BetterGenshinImpact.GameTask.QuestVoice.Features.OCR;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Routing;
-using BetterGenshinImpact.GameTask.QuestVoice.Features.Tts;
+using BetterGenshinImpact.GameTask.QuestVoice.Features.TTS;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.QuestVoiceTests;

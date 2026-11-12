@@ -52,7 +52,7 @@ internal static class RoutingCatalogValidation
             if (Same(voice.Id, RoutingCatalog.ConfiguredVoiceId))
                 throw RoutingPath.Invalid(field + ".Id", "The configured voice ID is reserved.");
             Text(voice.Name, field + ".Name");
-            var capabilities = Tts.TtsProviderRegistry.GetInfo(voice.ProviderId).Capabilities;
+            var capabilities = TTS.TtsProviderRegistry.GetInfo(voice.ProviderId).Capabilities;
             if (voice.InstanceId is not (null or "local" or "remote") || (!capabilities.ServerConnection && voice.InstanceId == "remote"))
                 throw RoutingPath.Invalid(field + ".InstanceId", "Unknown or unavailable service instance.");
             if (catalog.Version == 1 && (voice.ProviderId != "gpt-sovits" || voice.InstanceId is not null || voice.ProviderVoiceId is not null))

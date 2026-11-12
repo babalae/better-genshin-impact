@@ -22,6 +22,8 @@ public partial class QuestVoiceCardViewModel : ObservableObject
     private readonly QuestVoiceService _service;
     /// <summary>设置窗口的单例模型，关闭窗口后保留草稿。</summary>
     private readonly QuestVoiceSettingsViewModel _settings;
+    /// <summary>与设置窗口共享全局剧情和预合成进度。</summary>
+    public QuestVoiceStoryWorkspace Story => _settings.Story;
     /// <summary>WPF 调度器只异步投递，避免与核心同步通知互锁。</summary>
     private readonly Dispatcher _dispatcher;
     /// <summary>合并高频采样状态，UI 最多一个待处理通知。</summary>
@@ -76,6 +78,26 @@ public partial class QuestVoiceCardViewModel : ObservableObject
                 CommandError = "角色目录有未保存的修改：请在设置窗口修正输入或处理文件冲突。";
         }
         catch (Exception exception) { CommandError = exception.Message; }
+    }
+
+    /// <summary>复用全局已选剧情，跳过已有 WAV，只补完未命中缓存的台词。</summary>
+    [RelayCommand]
+    private async Task PreSynthesizeRemainingAsync()
+    {
+        CommandError = "";
+        try
+        {
+            var story = _settings.Story;
+            if (story.IsGenerating) { CommandError = "后台预合成已经运行中。"; return; }
+            await story.EnsureLoadedAsync();
+            if (story.SelectedChapter is null)
+            {
+                CommandError = "请先在「设置与预合成工作台」选定全局剧情。";
+                return;
+            }
+            await story.StartPreSynthesisCommand.ExecuteAsync(null);
+        }
+        catch (Exception error) { CommandError = "启动预合成失败：" + error.Message; }
     }
 
     /// <summary>执行静态配置校验，结果显示在卡片中。</summary>

@@ -11,7 +11,7 @@ using BetterGenshinImpact.GameTask.QuestVoice.Core.Audio;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Configuration;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Continuous;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Routing;
-using BetterGenshinImpact.GameTask.QuestVoice.Core.Tts;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.TTS;
 using Serilog;
 
 namespace BetterGenshinImpact.GameTask.QuestVoice.Features.Continuous;
@@ -20,10 +20,14 @@ namespace BetterGenshinImpact.GameTask.QuestVoice.Features.Continuous;
 /// before releasing the engine/player/logger. Ordinary cancellation never shuts down the backend.</summary>
 public sealed partial class ContinuousVoiceSession(AppSettings settings, ITtsEngine engine, IWavProcessor wav,
     IAudioArtifactStore artifacts, IAudioPlayer player, IVoiceRoutingService? routing = null,
-    ILogger? logger = null) : IContinuousVoiceSession
+    ILogger? logger = null, QuestVoiceScriptMapper? scriptMapper = null, string? preSynthesisCacheDirectory = null) : IContinuousVoiceSession
 {
     /// <summary>保护会话状态的同步锁。</summary>
     private readonly object _gate = new();
+    /// <summary>当前会话的只读严格 Yatta 双语映射；未配置时继续原生 P0 TTS。</summary>
+    private readonly QuestVoiceScriptMapper? _scriptMapper = scriptMapper;
+    /// <summary>只有匹配严格指纹的 P1 WAV 才可作为 P0 缓存复用。</summary>
+    private readonly string? _preSynthesisCacheDirectory = preSynthesisCacheDirectory;
     /// <summary>本轮单调时钟，不受系统时间调整影响。</summary>
     private readonly Stopwatch _clock = new();
     /// <summary>全部拥有的工作完成信号。</summary>

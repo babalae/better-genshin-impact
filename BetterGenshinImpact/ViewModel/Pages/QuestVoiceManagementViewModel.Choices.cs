@@ -5,7 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Routing;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Routing;
-using BetterGenshinImpact.GameTask.QuestVoice.Features.Tts;
+using BetterGenshinImpact.GameTask.QuestVoice.Features.TTS;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 

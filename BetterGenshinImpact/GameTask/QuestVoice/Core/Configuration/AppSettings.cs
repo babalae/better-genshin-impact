@@ -6,7 +6,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using BetterGenshinImpact.GameTask.QuestVoice.Core.Tts;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.TTS;
 namespace BetterGenshinImpact.GameTask.QuestVoice.Core.Configuration;
 
 /// <summary>AppSettings：原神自动配音的业务类型。</summary>
@@ -32,6 +32,18 @@ public sealed record ExtraTtsSettings(string Language = "zh", string Model = "",
 /// <summary>TtsProtocolSettings：原神自动配音的业务类型。</summary>
 public sealed record TtsProtocolSettings(string TextLanguage = "zh", string PromptLanguage = "zh",
     string MediaType = "wav", string TextSplitMethod = "cut5", bool StreamingMode = true, bool StreamPlayback = false);
+
+/// <summary>当前仅支持简中与日语；参考语言按实际提示文本检测，不跟随目标文本语言。</summary>
+public static class TtsLanguageDetector
+{
+    public static string DetectFromText(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return "zh";
+        foreach (var character in text)
+            if (character is >= '\u3040' and <= '\u30FF' or >= '\u31F0' and <= '\u31FF') return "ja";
+        return "zh";
+    }
+}
 
 /// <summary>TimeoutSettings：原神自动配音的业务类型。</summary>
 public sealed record TimeoutSettings(int ConnectSeconds, int RequestSeconds, int SynthesisSeconds);

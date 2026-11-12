@@ -57,7 +57,7 @@ internal static class RoutingCatalogJson
         Object(element, field, version == 2 ? [.. legacyFields, "ProviderId", "InstanceId", "ProviderVoiceId"] : legacyFields);
         var provider = version == 2 ? Optional(element, "ProviderId", field + ".ProviderId") ?? "gpt-sovits" : "gpt-sovits";
         var instance = version == 2 ? Optional(element, "InstanceId", field + ".InstanceId") : null;
-        var hasAssets = Tts.TtsProviderRegistry.GetInfo(provider).Capabilities.VoiceAssets;
+        var hasAssets = TTS.TtsProviderRegistry.GetInfo(provider).Capabilities.VoiceAssets;
         var remote = instance is null ? serverSidePaths : instance == "remote";
         string PathField(string key)
         {

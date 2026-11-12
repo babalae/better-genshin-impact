@@ -40,7 +40,7 @@ public sealed class ContinuousVoiceReentryTests
         try
         {
             var stop = f.Session.StopAsync();
-            Assert.False(stop.IsCompleted); Assert.Equal(BetterGenshinImpact.GameTask.QuestVoice.Core.Tts.VoiceErrorCode.PlaybackDevice, f.Session.Snapshot.Error);
+            Assert.False(stop.IsCompleted); Assert.Equal(BetterGenshinImpact.GameTask.QuestVoice.Core.TTS.VoiceErrorCode.PlaybackDevice, f.Session.Snapshot.Error);
             player.Exit.TrySetResult(true); await stop.WaitAsync(TimeSpan.FromSeconds(10));
         }
         finally { player.Exit.TrySetResult(true); }

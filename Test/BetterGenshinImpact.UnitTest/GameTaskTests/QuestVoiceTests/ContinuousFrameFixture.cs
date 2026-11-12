@@ -7,7 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Continuous;
-using BetterGenshinImpact.GameTask.QuestVoice.Core.Ocr;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.OCR;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Continuous;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.QuestVoiceTests;

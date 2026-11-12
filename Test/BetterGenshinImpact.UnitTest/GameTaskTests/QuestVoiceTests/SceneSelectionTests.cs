@@ -6,8 +6,8 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Configuration;
-using BetterGenshinImpact.GameTask.QuestVoice.Core.Ocr;
-using BetterGenshinImpact.GameTask.QuestVoice.Features.Ocr;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.OCR;
+using BetterGenshinImpact.GameTask.QuestVoice.Features.OCR;
 using SkiaSharp;
 using Xunit;
 

@@ -7,8 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Net;
 using BetterGenshinImpact.GameTask.QuestVoice.Core.Configuration;
-using BetterGenshinImpact.GameTask.QuestVoice.Core.Tts;
-using BetterGenshinImpact.GameTask.QuestVoice.Features.Tts;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.TTS;
+using BetterGenshinImpact.GameTask.QuestVoice.Features.TTS;
 using Xunit;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.QuestVoiceTests;
