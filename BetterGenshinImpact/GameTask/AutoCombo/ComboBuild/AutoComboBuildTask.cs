@@ -1,3 +1,4 @@
+using BetterGenshinImpact.GameTask.AutoCombo.ComboBuild.FishRelief;
 using BetterGenshinImpact.GameTask.AutoCombo.ComboRun;
 using BetterGenshinImpact.GameTask.AutoFight.Model;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
@@ -131,7 +132,7 @@ public class AutoComboBuildTask : ISoloTask
 
             var messages = new List<ChatMessage>
             {
-                new(ChatRole.System, AutoComboBuildPrompts.BuildMain(avatarNames, config, logger)),
+                new(ChatRole.System, BuildSystemMessage(config, avatarNames, logger, isFallback: false)),
                 new(ChatRole.User, $"请为当前队伍构建战斗策略行为树"),
             };
             var options = new ChatOptions { Tools = aiFunctions };
@@ -237,7 +238,7 @@ public class AutoComboBuildTask : ISoloTask
 
         var messages = new List<ChatMessage>
         {
-            new(ChatRole.System, AutoComboBuildPrompts.BuildFallback(avatarNames, config, logger)),
+            new(ChatRole.System, BuildSystemMessage(config, avatarNames, logger, isFallback: true)),
             new(ChatRole.User, $"请为当前队伍构建兜底攻击行为树"),
         };
         var options = new ChatOptions { Tools = aiFunctions };
@@ -265,29 +266,42 @@ public class AutoComboBuildTask : ISoloTask
     }
 
     /// <summary>
+    /// 系统消息：走发鱼站时发送渲染信封（提示词与工具由网关按清单重建），其余服务商发送内置/自定义提示词
+    /// </summary>
+    private static string BuildSystemMessage(AutoComboBuildConfig config, List<string> avatarNames, ILogger logger, bool isFallback)
+    {
+        if (AutoComboLlmProvider.Normalize(config.Provider) == AutoComboLlmProvider.FishRelief)
+        {
+            return FishReliefEnvelope.Build(
+                isFallback ? FishReliefEnvelope.TaskFallback : FishReliefEnvelope.TaskMain,
+                avatarNames);
+        }
+
+        return isFallback
+            ? AutoComboBuildPrompts.BuildFallback(avatarNames, config, logger)
+            : AutoComboBuildPrompts.BuildMain(avatarNames, config, logger);
+    }
+
+    /// <summary>
     /// 根据 LLM 配置创建带工具调用循环的 IChatClient
     /// </summary>
     private static IChatClient CreateChatClient(AutoComboBuildConfig config, ILogger logger, IBuildToolsState buildTools, AutoComboBuildBuilder? mainBuilder, AutoComboBuildFallbackBuilder? fallbackBuilder = null)
     {
         var provider = AutoComboLlmProvider.Normalize(config.Provider);
+        var modelName = ResolveModelName(config.ModelName);
 
-        if (string.IsNullOrWhiteSpace(config.ModelName))
-        {
-            throw new Exception("请先在任务设置页的“自动连招”卡片中配置 LLM 模型名");
-        }
-
-        // OpenAI 兼容端点必须由用户提供；Anthropic 允许留空，由 SDK 使用官方地址
+        // OpenAI 兼容端点必须由用户提供（发鱼站使用内置网关地址）；Anthropic 允许留空，由 SDK 使用官方地址
         var endpoint = AutoComboLlmEndpoint.Resolve(config.PlanningLlmEndpoint, provider, out var isLoopback);
 
-        // 密钥随每个请求发送，非 HTTPS 传输时会在网络中明文暴露；仅豁免本机回环地址（本地中转/本地模型）
-        if (string.IsNullOrWhiteSpace(config.ApiKey) && !isLoopback)
+        // 密钥随每个请求发送，非 HTTPS 传输时会在网络中明文暴露；发鱼站由网关统一鉴权，本机回环地址（本地中转/本地模型）同样豁免
+        if (string.IsNullOrWhiteSpace(config.ApiKey) && AutoComboLlmEndpoint.RequiresApiKey(provider, isLoopback))
         {
-            throw new Exception("请先在任务设置页的“自动连招”卡片中配置 LLM 密钥（本机回环地址除外）");
+            throw new Exception("请先在任务设置页的“自动连招”卡片中配置 LLM 密钥（本机回环地址与发鱼站除外）");
         }
 
         IChatClient client = provider == AutoComboLlmProvider.Anthropic
-            ? CreateAnthropicChatClient(config, endpoint)
-            : CreateOpenAiCompatibleChatClient(config, endpoint!);
+            ? CreateAnthropicChatClient(config, endpoint, modelName)
+            : CreateOpenAiCompatibleChatClient(config, endpoint!, modelName);
 
         // CsTrees.MEAI 自带 tree 字段裁剪装饰：每次请求前移除历史中旧的树预览（只保留最后一个），降低多轮 token 消耗
         client = new CompactResultChatClient(client);
@@ -317,9 +331,22 @@ public class AutoComboBuildTask : ISoloTask
     }
 
     /// <summary>
+    /// 取实际请求的模型名：必须由用户明确选择，不做任何内置兜底
+    /// </summary>
+    private static string ResolveModelName(string modelName)
+    {
+        if (string.IsNullOrWhiteSpace(modelName))
+        {
+            throw new Exception("未选择 LLM 模型：请在任务设置页的“自动连招”卡片中填写或选择");
+        }
+
+        return modelName;
+    }
+
+    /// <summary>
     /// 创建 OpenAI 兼容端点的 IChatClient。
     /// </summary>
-    private static IChatClient CreateOpenAiCompatibleChatClient(AutoComboBuildConfig config, Uri endpoint)
+    private static IChatClient CreateOpenAiCompatibleChatClient(AutoComboBuildConfig config, Uri endpoint, string modelName)
     {
         // 在 HTTP 传输层前注入原生 JSON 请求/响应日志，用于查验最终发送给 API 及 API 返回的原始内容
         var openAiOptions = new OpenAIClientOptions
@@ -331,7 +358,7 @@ public class AutoComboBuildTask : ISoloTask
         // 密钥为空时传占位符：OpenAI 客户端拒绝空密钥，而本地服务不校验该头的值
         var apiKey = string.IsNullOrWhiteSpace(config.ApiKey) ? "missing-api-key" : config.ApiKey;
         var openAiClient = new OpenAIClient(new ApiKeyCredential(apiKey), openAiOptions);
-        return openAiClient.GetChatClient(config.ModelName).AsIChatClient();
+        return openAiClient.GetChatClient(modelName).AsIChatClient();
     }
 
     /// <summary>
@@ -339,7 +366,7 @@ public class AutoComboBuildTask : ISoloTask
     /// 返回的客户端会把 stop_reason 映射到 ChatFinishReason（max_tokens → Length），
     /// 因此外层的截断检查装饰对两个服务商同样生效。
     /// </summary>
-    private static IChatClient CreateAnthropicChatClient(AutoComboBuildConfig config, Uri? endpoint)
+    private static IChatClient CreateAnthropicChatClient(AutoComboBuildConfig config, Uri? endpoint, string modelName)
     {
         var anthropicClient = new AnthropicClient
         {
@@ -350,6 +377,6 @@ public class AutoComboBuildTask : ISoloTask
             BaseUrl = AutoComboLlmEndpoint.ResolveAnthropicBaseUrl(endpoint),
         };
 
-        return anthropicClient.AsIChatClient(config.ModelName, AnthropicDefaultMaxOutputTokens);
+        return anthropicClient.AsIChatClient(modelName, AnthropicDefaultMaxOutputTokens);
     }
 }
