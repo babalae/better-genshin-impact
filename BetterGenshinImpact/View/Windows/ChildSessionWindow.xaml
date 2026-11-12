@@ -241,6 +241,11 @@
                                     <ui:MenuItem Header="{i18n:T 以管理员权限启动…}"
                                                  Command="{Binding LaunchExecutableCommand}"
                                                  Icon="{ui:SymbolIcon Shield24}" />
+                                    <Separator />
+                                    <ui:MenuItem Header="{i18n:T 诊断与修复…}"
+                                                 Command="{Binding OpenDiagnosticsCommand}"
+                                                 Icon="{ui:SymbolIcon Stethoscope24}"
+                                                 ToolTip="{i18n:T 检查并修复影响桌面分身启动的系统设置（远程桌面服务、RDP 补丁残留等）}" />
                                 </ui:MenuItem>
                             </ContextMenu>
                         </ui:DropDownButton.Flyout>
