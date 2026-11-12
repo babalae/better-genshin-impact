@@ -1656,6 +1656,11 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     }
 
     /// <summary>
+    /// 单个公共资源的最大字节数，与脚本仓库构建校验一致。
+    /// </summary>
+    private const int MaxAssetFileSize = 3 * 1024 * 1024;
+
+    /// <summary>
     /// 公共资源索引中的文件路径、字节数和摘要。
     /// </summary>
     private sealed record AssetEntry(string Path, int Size, string Sha256);
@@ -1665,7 +1670,7 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// </summary>
     internal string GetAssetIndexJson() => ReadAssetSnapshot(read =>
     {
-        var bytes = read("asset.json");
+        var bytes = read("asset.json", null);
         return bytes == null ? null : Encoding.UTF8.GetString(bytes);
     }) ?? string.Empty;
 
@@ -1716,9 +1721,9 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// <summary>
     /// 解析资源索引中的逐文件记录。
     /// </summary>
-    private static List<AssetEntry>? ReadAssetEntries(Func<string, byte[]?> read)
+    private static List<AssetEntry>? ReadAssetEntries(Func<string, int?, byte[]?> read)
     {
-        var bytes = read("asset.json");
+        var bytes = read("asset.json", null);
         if (bytes is not { Length: > 0 })
         {
             return null;
@@ -1732,14 +1737,14 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// <summary>
     /// 读取资源并核对索引记录的大小与摘要。
     /// </summary>
-    private static byte[]? ReadIndexedAsset(Func<string, byte[]?> read, AssetEntry entry)
+    private static byte[]? ReadIndexedAsset(Func<string, int?, byte[]?> read, AssetEntry entry)
     {
-        if (entry.Size is < 0 or > 2 * 1024 * 1024 || entry.Sha256?.Length != 64)
+        if (entry.Size is < 0 or > MaxAssetFileSize || entry.Sha256?.Length != 64)
         {
             return null;
         }
 
-        var bytes = read($"assets/{entry.Path}");
+        var bytes = read($"assets/{entry.Path}", entry.Size);
         return bytes != null && bytes.Length == entry.Size
             && string.Equals(Convert.ToHexString(SHA256.HashData(bytes)), entry.Sha256, StringComparison.OrdinalIgnoreCase)
             ? bytes
@@ -1749,7 +1754,7 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// <summary>
     /// 让索引与文件读取共用同一个 Git 提交。
     /// </summary>
-    private T? ReadAssetSnapshot<T>(Func<Func<string, byte[]?>, T?> read) where T : class
+    private T? ReadAssetSnapshot<T>(Func<Func<string, int?, byte[]?>, T?> read) where T : class
     {
         try
         {
@@ -1763,10 +1768,10 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             {
                 using var repo = new Repository(repoPath);
                 var tree = repo.Head.Tip?.Tree;
-                return tree == null ? null : read(path => ReadAssetSnapshotFile(repoPath, tree, path));
+                return tree == null ? null : read((path, size) => ReadAssetSnapshotFile(repoPath, tree, path, size));
             }
 
-            return read(path => ReadAssetSnapshotFile(repoPath, null, path));
+            return read((path, size) => ReadAssetSnapshotFile(repoPath, null, path, size));
         }
         catch (Exception ex)
         {
@@ -1778,7 +1783,7 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// <summary>
     /// 从 Git 树或解压目录读取资源，拒绝路径逃逸及链接。
     /// </summary>
-    private static byte[]? ReadAssetSnapshotFile(string repoPath, Tree? tree, string path)
+    private static byte[]? ReadAssetSnapshotFile(string repoPath, Tree? tree, string path, int? expectedSize)
     {
         var parts = path.Split('/');
         var invalidChars = Path.GetInvalidFileNameChars();
@@ -1796,7 +1801,18 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
                 return null;
             }
 
-            using var content = ((Blob)entry.Target).GetContentStream();
+            var blob = (Blob)entry.Target;
+            if (expectedSize.HasValue && blob.Size != expectedSize.Value)
+            {
+                return null;
+            }
+
+            using var content = blob.GetContentStream();
+            if (expectedSize is { } blobSize)
+            {
+                return ReadAssetContent(content, blobSize);
+            }
+
             using var buffer = new MemoryStream();
             content.CopyTo(buffer);
             return buffer.ToArray();
@@ -1818,7 +1834,25 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             }
         }
 
-        return File.ReadAllBytes(filePath);
+        if (expectedSize is not { } fileSize)
+        {
+            return File.ReadAllBytes(filePath);
+        }
+
+        using var file = File.OpenRead(filePath);
+        return file.Length == fileSize ? ReadAssetContent(file, fileSize) : null;
+    }
+
+    /// <summary>
+    /// 只读取预期大小，再检查流中是否还有多余字节。
+    /// </summary>
+    private static byte[]? ReadAssetContent(Stream stream, int expectedSize)
+    {
+        var bytes = new byte[expectedSize];
+        return stream.ReadAtLeast(bytes, expectedSize, throwOnEndOfStream: false) == expectedSize
+               && stream.ReadByte() == -1
+            ? bytes
+            : null;
     }
 
     /// <summary>
