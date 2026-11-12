@@ -9,7 +9,8 @@ namespace BetterGenshinImpact.View.Windows;
 /// <summary>
 /// 桌面分身的诊断与修复面板。
 ///
-/// 入口有两个：控制中心 → 更多 → 诊断与修复…，以及启动失败后自动弹出。
+/// 入口有两个：控制中心 → 更多 → 诊断与修复…，以及启动失败后的诊断按钮。
+/// 仅在用户主动打开面板后进行环境检查。
 /// 检查与修复都在服务层完成，这里只负责显示。
 /// </summary>
 public partial class ChildSessionDiagnosticsWindow

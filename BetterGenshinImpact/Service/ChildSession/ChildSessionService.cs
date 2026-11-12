@@ -93,7 +93,7 @@ public sealed class ChildSessionService : IDisposable
     }
 
     /// <summary>
-    /// 系统是否已安装并启用 RDP Wrapper。它与桌面分身功能不兼容，界面会在启动前据此提示用户。
+    /// 系统是否已安装并启用 RDP Wrapper，供用户主动诊断时查询，不参与启动流程。
     /// </summary>
     public bool IsRdpWrapperEnabled()
     {
@@ -104,12 +104,12 @@ public sealed class ChildSessionService : IDisposable
     }
 
     /// <summary>
-    /// 最近一次启动前环境预检是否发现了可能影响桌面分身的环境设置。
+    /// 最近一次主动环境检查是否发现了可能影响桌面分身的环境设置。
     /// </summary>
     public bool HasEnvironmentIssue => _environmentIssues.Count > 0;
 
     /// <summary>
-    /// 最近一次启动前环境预检的结论文本，供界面提示与问题排查使用。
+    /// 最近一次主动环境检查的结论文本，供界面提示与问题排查使用。
     /// </summary>
     public string EnvironmentIssueSummary =>
         ChildSessionEnvironmentCheck.BuildSummary(_environmentIssues);
@@ -146,13 +146,13 @@ public sealed class ChildSessionService : IDisposable
     }
 
     /// <summary>
-    /// 启动桌面分身：先做一次环境预检，确保 Child Sessions 已启用，然后建立 RDP 连接并等待登录完成。
+    /// 启动桌面分身：确保 Child Sessions 已启用，然后建立 RDP 连接并等待登录完成。
+    /// 启动过程不做环境检查，由用户主动打开诊断面板后再检查。
     /// 已经处于已连接状态时直接返回。
     /// </summary>
     public async Task StartAsync()
     {
         ThrowIfDisposed();
-        RefreshEnvironmentCheck();
         EnsureChildSessionsEnabled();
         RefreshState();
 
@@ -583,7 +583,7 @@ public sealed class ChildSessionService : IDisposable
     }
 
     /// <summary>
-    /// 收集 Windows 环境结论，供界面在启动前提示用户，也供失败诊断使用。
+    /// 用户主动请求检查时收集 Windows 环境结论，供问题诊断使用。
     /// 这些检查全部是只读的，不会修改系统设置。
     /// </summary>
     public void RefreshEnvironmentCheck()
@@ -594,7 +594,7 @@ public sealed class ChildSessionService : IDisposable
         foreach (var issue in _environmentIssues)
         {
             _logger.LogWarning(
-                "桌面分身环境预检：{IssueTitle}。{IssueSummary}",
+                "桌面分身环境检查：{IssueTitle}。{IssueSummary}",
                 issue.Title,
                 issue.Summary);
         }
@@ -880,7 +880,8 @@ public sealed class ChildSessionService : IDisposable
     }
 
     /// <summary>
-    /// 连接失败后的补充诊断：报告是否存在桌面分身会话，并附上环境预检结论。
+    /// 连接失败后的补充诊断：报告是否存在桌面分身会话，并附上已有的主动检查结论。
+    /// 此处只读取缓存，不触发环境检查。
     /// RDP ActiveX 自身只回报「发生内部错误」和断开原因，单独看这些信息无法定位问题。
     /// </summary>
     private string BuildFailureDiagnosis()

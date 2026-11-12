@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -30,12 +30,12 @@ public enum ChildSessionIssueSeverity
 }
 
 /// <summary>
-/// 桌面分身的 Windows 环境预检。
+/// 桌面分身的 Windows 环境检查，由用户主动打开诊断面板后执行。
 ///
 /// 桌面分身完全依赖 Windows 自身的 RDP / Child Session 能力（WTSEnableChildSessions +
 /// RDP ActiveX 的 ConnectToChildSession），BetterGI 只是唤起这个功能。
 /// 当系统缺少前置条件时，RDP ActiveX 只会回报「发生内部错误」以及一个无法定位的断开原因，
-/// 用户和日志都无法判断真实原因，因此在这里提前收集可读的环境结论。
+/// 用户和日志都无法判断真实原因，因此在用户请求诊断时收集可读的环境结论。
 ///
 /// 除了「能不能建立会话」之外，还覆盖 RDP 破解工具（RDP Wrapper / SuperRDP 等）留下的痕迹：
 /// 它们会把 TermService 的 ServiceDll 换成自己的 DLL，卸载不干净时会让桌面分身一直失败；

@@ -310,12 +310,19 @@
                         HorizontalAlignment="Center"
                         Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
                         CornerRadius="8">
-                    <ui:InfoBar Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
-                                IsClosable="True"
-                                IsOpen="{Binding IsNotificationOpen, Mode=TwoWay}"
-                                Message="{Binding NotificationMessage}"
-                                Severity="{Binding NotificationSeverity}"
-                                Title="{Binding NotificationTitle}" />
+                    <StackPanel>
+                        <ui:InfoBar Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+                                    IsClosable="True"
+                                    IsOpen="{Binding IsNotificationOpen, Mode=TwoWay}"
+                                    Message="{Binding NotificationMessage}"
+                                    Severity="{Binding NotificationSeverity}"
+                                    Title="{Binding NotificationTitle}" />
+                        <ui:Button Margin="16,0,16,12"
+                                   HorizontalAlignment="Left"
+                                   Command="{Binding OpenDiagnosticsCommand}"
+                                   Content="{i18n:T 诊断与修复…}"
+                                   Visibility="{Binding IsDiagnosticsSuggested, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    </StackPanel>
                 </Border>
             </Grid>
         </Popup>
@@ -444,6 +451,21 @@
                                                 Command="{Binding OpenDesktopHelpCommand}"
                                                 Content="{i18n:T 查看帮助文档}"
                                                 Cursor="Hand" />
+                        </StackPanel>
+
+                        <StackPanel Visibility="{Binding IsSessionClosing, Converter={StaticResource BooleanToVisibilityRevertConverter}}">
+                            <StackPanel Margin="0,16,0,0"
+                                        Visibility="{Binding IsDiagnosticsSuggested, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <TextBlock HorizontalAlignment="Center"
+                                           Foreground="#BFFFFFFF"
+                                           Text="{i18n:T 连接遇到问题，可点击下方按钮检查环境。}"
+                                           TextAlignment="Center"
+                                           TextWrapping="Wrap" />
+                                <ui:Button Margin="0,10,0,0"
+                                           HorizontalAlignment="Center"
+                                           Command="{Binding OpenDiagnosticsCommand}"
+                                           Content="{i18n:T 诊断与修复…}" />
+                            </StackPanel>
                         </StackPanel>
 
                         <TextBlock Margin="0,24,0,0"
