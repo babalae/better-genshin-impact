@@ -23,6 +23,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -1507,37 +1509,172 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// <summary>
     /// 从中央仓库读取二进制文件
     /// </summary>
-    /// <param name="relPath">相对于仓库根目录的路径</param>
+    /// <param name="relPath">相对于仓库 repo/ 目录的路径</param>
     /// <returns>文件字节数组，如果文件不存在则返回null</returns>
     public byte[]? ReadBinaryFileFromCenterRepo(string relPath)
     {
         try
         {
             var repoPath = CenterRepoPath;
-
-            // 判断是否为 Git 仓库
-            bool isGitRepo = IsGitRepository(repoPath);
-
-            if (isGitRepo)
+            if (IsGitRepository(repoPath))
             {
-                return ReadBinaryFileFromGitRepository(repoPath, relPath);
+                using var repo = new Repository(repoPath);
+                var entry = FindGitEntry(repo.Head.Tip?.Tree, $"repo/{relPath}");
+                return entry is { TargetType: TreeEntryTargetType.Blob } ? ReadGitBlob((Blob)entry.Target) : null;
             }
-            else
-            {
-                // 文件式仓库：从文件系统读取
-                var filePath = Path.Combine(repoPath, "repo", relPath);
-                if (File.Exists(filePath))
-                {
-                    return File.ReadAllBytes(filePath);
-                }
-                return null;
-            }
+
+            var filePath = Path.Combine(repoPath, "repo", relPath);
+            return File.Exists(filePath) ? File.ReadAllBytes(filePath) : null;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, $"从中央仓库读取二进制文件失败: {relPath}");
             return null;
         }
+    }
+
+    /// <summary>公共资源索引中的文件路径、字节数和摘要。</summary>
+    private sealed record AssetEntry(string Path, int Size, string Sha256);
+
+    /// <summary>读取仓库根目录的公共资源索引。</summary>
+    internal string GetAssetIndexJson() => ReadAssetSnapshot(read =>
+    {
+        var bytes = read("asset.json");
+        return bytes == null ? null : Encoding.UTF8.GetString(bytes);
+    }) ?? string.Empty;
+
+    /// <summary>读取资源索引中指定的文件，路径相对于 assets/。</summary>
+    internal byte[]? ReadAssetFile(string relPath) => ReadAssetSnapshot(read =>
+    {
+        var entry = ReadAssetEntries(read)?.Find(file =>
+            string.Equals(file.Path, relPath, StringComparison.OrdinalIgnoreCase));
+        return entry == null ? null : ReadIndexedAsset(read, entry);
+    });
+
+    /// <summary>从同一个仓库快照按索引读取指定类型的资源。</summary>
+    internal List<(string Path, byte[] Content)>? ReadAssetFiles(string directory, string extension)
+        => ReadAssetSnapshot(read =>
+        {
+            var entries = ReadAssetEntries(read);
+            if (entries == null)
+            {
+                return null;
+            }
+
+            var prefix = directory + "/";
+            var files = new List<(string Path, byte[] Content)>();
+            foreach (var entry in entries)
+            {
+                if (!entry.Path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                    || !entry.Path.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var bytes = ReadIndexedAsset(read, entry);
+                if (bytes == null)
+                {
+                    // 不用不完整的快照更新用户曲库。
+                    return null;
+                }
+                files.Add((entry.Path, bytes));
+            }
+
+            return files;
+        });
+
+    /// <summary>解析资源索引中的逐文件记录。</summary>
+    private static List<AssetEntry>? ReadAssetEntries(Func<string, byte[]?> read)
+    {
+        var bytes = read("asset.json");
+        if (bytes is not { Length: > 0 })
+        {
+            return null;
+        }
+
+        return JObject.Parse(Encoding.UTF8.GetString(bytes))["files"] is JArray files
+            ? files.ToObject<List<AssetEntry>>()
+            : null;
+    }
+
+    /// <summary>读取资源并核对索引记录的大小与摘要。</summary>
+    private static byte[]? ReadIndexedAsset(Func<string, byte[]?> read, AssetEntry entry)
+    {
+        if (entry.Size is < 0 or > 2 * 1024 * 1024 || entry.Sha256?.Length != 64)
+        {
+            return null;
+        }
+
+        var bytes = read($"assets/{entry.Path}");
+        return bytes != null && bytes.Length == entry.Size
+            && string.Equals(Convert.ToHexString(SHA256.HashData(bytes)), entry.Sha256, StringComparison.OrdinalIgnoreCase)
+            ? bytes
+            : null;
+    }
+
+    /// <summary>让索引与文件读取共用同一个 Git 提交。</summary>
+    private T? ReadAssetSnapshot<T>(Func<Func<string, byte[]?>, T?> read) where T : class
+    {
+        try
+        {
+            var repoPath = CenterRepoPath;
+            if (!Directory.Exists(repoPath))
+            {
+                return null;
+            }
+
+            if (IsGitRepository(repoPath))
+            {
+                using var repo = new Repository(repoPath);
+                var tree = repo.Head.Tip?.Tree;
+                return tree == null ? null : read(path => ReadAssetSnapshotFile(repoPath, tree, path));
+            }
+
+            return read(path => ReadAssetSnapshotFile(repoPath, null, path));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "从中央仓库读取公共资源失败");
+            return null;
+        }
+    }
+
+    /// <summary>从 Git 树或解压目录读取资源，拒绝路径逃逸及链接。</summary>
+    private static byte[]? ReadAssetSnapshotFile(string repoPath, Tree? tree, string path)
+    {
+        var parts = path.Split('/');
+        var invalidChars = Path.GetInvalidFileNameChars();
+        if (parts.Any(part => part.Length == 0 || part.EndsWith('.') || part.EndsWith(' ')
+                              || part.IndexOfAny(invalidChars) >= 0))
+        {
+            return null;
+        }
+
+        if (tree != null)
+        {
+            var entry = FindGitEntry(tree, path, ignoreCase: true);
+            return entry is { TargetType: TreeEntryTargetType.Blob } && entry.Mode != LibGit2Sharp.Mode.SymbolicLink
+                ? ReadGitBlob((Blob)entry.Target)
+                : null;
+        }
+
+        var filePath = Path.Combine(repoPath, Path.Combine(parts));
+        if (!File.Exists(filePath))
+        {
+            return null;
+        }
+
+        var current = repoPath;
+        foreach (var part in parts)
+        {
+            current = Path.Combine(current, part);
+            if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+            {
+                return null;
+            }
+        }
+
+        return File.ReadAllBytes(filePath);
     }
 
     /// <summary>
@@ -1556,29 +1693,7 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
             using var repo = new Repository(repoPath);
 
-            var manifestPath = $"repo/{filePath}";
-            var pathParts = manifestPath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
-            Tree currentTree = repo.Head.Tip!.Tree;
-            TreeEntry? entry = null;
-
-            for (int i = 0; i < pathParts.Length; i++)
-            {
-                entry = currentTree[pathParts[i]];
-                if (entry == null)
-                {
-                    return null;
-                }
-
-                if (i < pathParts.Length - 1)
-                {
-                    if (entry.TargetType != TreeEntryTargetType.Tree)
-                    {
-                        return null;
-                    }
-                    currentTree = (Tree)entry.Target;
-                }
-            }
-
+            var entry = FindGitEntry(repo.Head.Tip?.Tree, $"repo/{filePath}");
             if (entry == null || entry.TargetType != TreeEntryTargetType.Blob)
             {
                 return null;
@@ -1596,61 +1711,37 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
         }
     }
 
-    /// <summary>
-    /// 从Git仓库读取二进制文件内容
-    /// </summary>
-    private byte[]? ReadBinaryFileFromGitRepository(string repoPath, string filePath)
+    /// <summary>按路径在同一个 Git 树中定位条目。</summary>
+    private static TreeEntry? FindGitEntry(Tree? tree, string path, bool ignoreCase = false)
     {
-        try
+        var parts = path.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
+        TreeEntry? entry = null;
+        foreach (var part in parts)
         {
-            // 判断是否为 Git 仓库
-            bool isGitRepo = IsGitRepository(repoPath);
-            if (!isGitRepo)
+            if (tree == null)
             {
                 return null;
             }
 
-            using var repo = new Repository(repoPath);
-
-            var manifestPath = $"repo/{filePath}";
-            var pathParts = manifestPath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
-            Tree currentTree = repo.Head.Tip!.Tree;
-            TreeEntry? entry = null;
-
-            for (int i = 0; i < pathParts.Length; i++)
+            entry = tree[part];
+            if (entry == null && ignoreCase)
             {
-                entry = currentTree[pathParts[i]];
-                if (entry == null)
-                {
-                    return null;
-                }
-
-                if (i < pathParts.Length - 1)
-                {
-                    if (entry.TargetType != TreeEntryTargetType.Tree)
-                    {
-                        return null;
-                    }
-                    currentTree = (Tree)entry.Target;
-                }
+                entry = tree.FirstOrDefault(item => string.Equals(item.Name, part, StringComparison.OrdinalIgnoreCase));
             }
 
-            if (entry == null || entry.TargetType != TreeEntryTargetType.Blob)
-            {
-                return null;
-            }
+            tree = entry is { TargetType: TreeEntryTargetType.Tree } ? (Tree)entry.Target : null;
+        }
 
-            var blob = (Blob)entry.Target;
-            using var contentStream = blob.GetContentStream();
-            using var memoryStream = new MemoryStream();
-            contentStream.CopyTo(memoryStream);
-            return memoryStream.ToArray();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, $"从Git仓库读取二进制文件失败: {filePath}");
-            return null;
-        }
+        return entry;
+    }
+
+    /// <summary>读取 Git 文件对象的原始字节。</summary>
+    private static byte[] ReadGitBlob(Blob blob)
+    {
+        using var contentStream = blob.GetContentStream();
+        using var memoryStream = new MemoryStream();
+        contentStream.CopyTo(memoryStream);
+        return memoryStream.ToArray();
     }
 
     /// <summary>
@@ -1733,7 +1824,7 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             {
                 // 检出目录
                 var tree = (Tree)entry.Target;
-                CheckoutTree(tree, destPath, sourcePath);
+                CheckoutTree(tree, destPath);
             }
         }
         else
@@ -1766,17 +1857,12 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// <summary>
     /// 递归检出树对象
     /// </summary>
-    private void CheckoutTree(Tree tree, string destPath, string currentPath)
+    private static void CheckoutTree(Tree tree, string destPath)
     {
-        if (!Directory.Exists(destPath))
+        Directory.CreateDirectory(destPath);
+        foreach (var (relativePath, entry) in EnumerateGitTree(tree))
         {
-            Directory.CreateDirectory(destPath);
-        }
-
-        foreach (var entry in tree)
-        {
-            var entryDestPath = Path.Combine(destPath, entry.Name);
-            var entrySourcePath = $"{currentPath}/{entry.Name}";
+            var entryDestPath = Path.Combine(destPath, relativePath);
 
             if (entry.TargetType == TreeEntryTargetType.Blob)
             {
@@ -1787,8 +1873,24 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             }
             else if (entry.TargetType == TreeEntryTargetType.Tree)
             {
-                var subTree = (Tree)entry.Target;
-                CheckoutTree(subTree, entryDestPath, entrySourcePath);
+                Directory.CreateDirectory(entryDestPath);
+            }
+        }
+    }
+
+    /// <summary>按相对路径枚举 Git 树，供检出目录使用。</summary>
+    private static IEnumerable<(string Path, TreeEntry Entry)> EnumerateGitTree(Tree tree, string prefix = "")
+    {
+        foreach (var entry in tree)
+        {
+            var relativePath = $"{prefix}{entry.Name}";
+            yield return (relativePath, entry);
+            if (entry.TargetType == TreeEntryTargetType.Tree)
+            {
+                foreach (var child in EnumerateGitTree((Tree)entry.Target, relativePath + "/"))
+                {
+                    yield return child;
+                }
             }
         }
     }
@@ -2895,24 +2997,7 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
 
             if (commit == null) throw new Exception("仓库HEAD未指向任何提交");
 
-            TreeEntry? entry = null;
-            var pathParts = sourcePath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
-            Tree currentTree = commit.Tree; // Start from ROOT tree
-
-            for (int i = 0; i < pathParts.Length; i++)
-            {
-                entry = currentTree[pathParts[i]];
-                if (entry == null) return false; // Path not found
-
-                if (i < pathParts.Length - 1)
-                {
-                    if (entry.TargetType != TreeEntryTargetType.Tree)
-                         // 路径中间部分不是目录，说明路径错误
-                         return false;
-                    currentTree = (Tree)entry.Target;
-                }
-            }
-
+            var entry = FindGitEntry(commit.Tree, sourcePath);
             if (entry == null) return false;
 
             if (entry.TargetType == TreeEntryTargetType.Blob)
@@ -2929,7 +3014,7 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
             else if (entry.TargetType == TreeEntryTargetType.Tree)
             {
                 var tree = (Tree)entry.Target;
-                CheckoutTree(tree, destPath, sourcePath);
+                CheckoutTree(tree, destPath);
                 return true;
             }
             return false;

@@ -40,7 +40,7 @@ public sealed class MusicInstrumentSwitcher : IMusicInstrumentSwitcher
     public async Task<bool> SwitchToAsync(string instrumentName, CancellationToken cancellationToken)
     {
         instrumentName = NormalizeInstrumentName(instrumentName);
-        if (string.IsNullOrWhiteSpace(instrumentName))
+        if (string.IsNullOrWhiteSpace(instrumentName) || instrumentName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
         {
             return false;
         }

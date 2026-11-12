@@ -1,6 +1,7 @@
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition;
 using BetterGenshinImpact.Core.Recognition.OpenCv;
+using BetterGenshinImpact.Core.Script;
 using BetterGenshinImpact.GameTask.AutoFight.Assets;
 using BetterGenshinImpact.GameTask.AutoGeniusInvokation.Assets;
 using BetterGenshinImpact.GameTask.AutoPick.Assets;
@@ -58,21 +59,18 @@ internal class GameTaskManager
             assetsFolder = Global.Absolute($@"GameTask\{featName}\Assets\1920x1080");
         }
 
-        if (!Directory.Exists(assetsFolder))
+        var mat = LoadRepoAssetMat(featName, assertName, flags);
+        if (mat == null)
         {
-            throw new FileNotFoundException($"未找到{featName}的素材文件夹");
+            mat = LoadBundledAssetMat(assetsFolder, featName, assertName, flags);
         }
 
-        var filePath = Path.Combine(assetsFolder, assertName);
-        if (!File.Exists(filePath))
+        if (systemInfo.GameScreenSize.Width != 1920 && systemInfo.AssetScale != 1)
         {
-            throw new FileNotFoundException($"未找到{featName}中的{assertName}文件");
-        }
-
-        var mat = Mat.FromStream(File.OpenRead(filePath), flags);
-        if (systemInfo.GameScreenSize.Width != 1920)
-        {
-            mat = ResizeHelper.Resize(mat, systemInfo.AssetScale);
+            using (mat)
+            {
+                return ResizeHelper.Resize(mat, systemInfo.AssetScale);
+            }
         }
 
         return mat;
@@ -94,6 +92,23 @@ internal class GameTaskManager
             assetsFolder = Global.Absolute($@"GameTask\{featName}\Assets\1920x1080");
         }
 
+        var mat = LoadRepoAssetMat(featName, assertName, flags)
+                  ?? LoadBundledAssetMat(assetsFolder, featName, assertName, flags);
+
+        if (captureWidth < 1920)
+        {
+            using (mat)
+            {
+                return ResizeHelper.Resize(mat, captureWidth / 1920d);
+            }
+        }
+
+        return mat;
+    }
+
+    /// <summary>读取随本体分发的素材。</summary>
+    private static Mat LoadBundledAssetMat(string assetsFolder, string featName, string assertName, ImreadModes flags)
+    {
         if (!Directory.Exists(assetsFolder))
         {
             throw new FileNotFoundException($"未找到{featName}的素材文件夹");
@@ -106,15 +121,51 @@ internal class GameTaskManager
         }
 
         using var stream = File.OpenRead(filePath);
-        var mat = Mat.FromStream(stream, flags);
-        if (captureWidth < 1920)
+        return Mat.FromStream(stream, flags);
+    }
+
+    /// <summary>乐器模板优先使用仓库版本，离线时仍可使用内置素材。</summary>
+    private static Mat? LoadRepoAssetMat(string featName, string assertName, ImreadModes flags)
+    {
+        if (featName != "Music")
         {
-            using (mat)
-            {
-                return ResizeHelper.Resize(mat, captureWidth / 1920d);
-            }
+            return null;
         }
 
-        return mat;
+        const string prefix = "Instruments/";
+        var assetPath = assertName.Replace('\\', '/');
+        if (!assetPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var fileName = assetPath[prefix.Length..];
+        if (fileName.Length == 0 || fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            return null;
+        }
+
+        var bytes = ScriptRepoUpdater.Instance.ReadAssetFile($"music/instruments/{fileName}");
+        if (bytes is not { Length: > 0 })
+        {
+            return null;
+        }
+
+        try
+        {
+            var mat = Mat.ImDecode(bytes, flags);
+            if (!mat.Empty())
+            {
+                return mat;
+            }
+
+            mat.Dispose();
+        }
+        catch (OpenCVException)
+        {
+            // 仓库图片损坏时，继续使用内置素材。
+        }
+
+        return null;
     }
 }
