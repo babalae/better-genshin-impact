@@ -1658,7 +1658,7 @@ public partial class ScriptRepoUpdater : Singleton<ScriptRepoUpdater>
     /// <summary>
     /// 单个公共资源的最大字节数，与脚本仓库构建校验一致。
     /// </summary>
-    private const int MaxAssetFileSize = 3 * 1024 * 1024;
+    private const int MaxAssetFileSize = 5 * 1024 * 1024;
 
     /// <summary>
     /// 公共资源索引中的文件路径、字节数和摘要。
