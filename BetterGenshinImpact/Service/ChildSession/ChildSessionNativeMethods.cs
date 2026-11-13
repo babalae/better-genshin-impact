@@ -19,6 +19,13 @@ internal static class ChildSessionNativeMethods
         @"SYSTEM\CurrentControlSet\Services\TermService\Parameters";
     private const string RdpWrapperLibraryName = "rdpwrap.dll";
     private const uint NoChildSessionId = uint.MaxValue;
+
+    /// <summary>WTS_INFO_CLASS.WTSConnectState。</summary>
+    private const int WtsConnectState = 8;
+
+    /// <summary>WTS_CONNECTSTATE_CLASS.WTSActive。</summary>
+    private const int WtsActive = 0;
+
     private static readonly IntPtr CurrentServerHandle = IntPtr.Zero;
     private static readonly ConcurrentDictionary<IntPtr, IntPtr> RdpInputWindows = new();
 
@@ -42,6 +49,18 @@ internal static class ChildSessionNativeMethods
         IntPtr serverHandle,
         uint sessionId,
         [MarshalAs(UnmanagedType.Bool)] bool wait);
+
+    [DllImport("wtsapi32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool WTSQuerySessionInformationW(
+        IntPtr serverHandle,
+        uint sessionId,
+        int wtsInfoClass,
+        out IntPtr buffer,
+        out int bytesReturned);
+
+    [DllImport("wtsapi32.dll")]
+    private static extern void WTSFreeMemory(IntPtr memory);
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -143,6 +162,52 @@ internal static class ChildSessionNativeMethods
         return WTSGetChildSessionId(out var sessionId) && sessionId != NoChildSessionId
             ? sessionId
             : null;
+    }
+
+    /// <summary>
+    /// 指定会话是否处于 Active。
+    ///
+    /// 用来判断「上一次连接在系统里是否真的收尾了」：RDP 控件回到已断开，
+    /// 不代表会话已经从 Active 退出来，这时立刻重连会被服务端用「访问被拒绝」顶回来。
+    /// 读不到状态时按「不活跃」处理——调用方只是在重连前等一下，等不到还有超时兜底。
+    /// </summary>
+    internal static bool IsSessionActive(uint sessionId)
+    {
+        var buffer = IntPtr.Zero;
+
+        try
+        {
+            if (!WTSQuerySessionInformationW(
+                    CurrentServerHandle,
+                    sessionId,
+                    WtsConnectState,
+                    out buffer,
+                    out var bytesReturned)
+                || buffer == IntPtr.Zero)
+            {
+                return false;
+            }
+
+            return bytesReturned >= sizeof(int) && Marshal.ReadInt32(buffer) == WtsActive;
+        }
+        catch (Exception exception) when (exception is DllNotFoundException
+                                              or EntryPointNotFoundException)
+        {
+            return false;
+        }
+        finally
+        {
+            if (buffer != IntPtr.Zero)
+            {
+                try
+                {
+                    WTSFreeMemory(buffer);
+                }
+                catch (DllNotFoundException)
+                {
+                }
+            }
+        }
     }
 
     internal static uint? TerminateChildSession()

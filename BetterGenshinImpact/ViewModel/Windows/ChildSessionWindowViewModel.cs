@@ -26,6 +26,8 @@ public partial class ChildSessionWindowViewModel : ViewModel
     private readonly DispatcherTimer _notificationTimer;
     private bool _startRequested;
     private ChildSessionDiagnosticsWindow? _diagnosticsWindow;
+    private ChildSessionAutoLoginWindow? _autoLoginWindow;
+    private bool _autoSwitchedToGameMouse;
 
     [ObservableProperty]
     private bool _isDiagnosticsSuggested;
@@ -89,18 +91,22 @@ public partial class ChildSessionWindowViewModel : ViewModel
     private bool _sendSystemShortcutsToRemote = true;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(GameMouseModeButtonText))]
-    [NotifyPropertyChangedFor(nameof(GameMouseModeButtonToolTip))]
-    private bool _isGameMouseModeEnabled;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(WatchModeMenuHeader))]
-    [NotifyPropertyChangedFor(nameof(WatchModeMenuToolTip))]
-    private bool _isWatchModeEnabled;
+    [NotifyPropertyChangedFor(nameof(InputModeButtonText))]
+    [NotifyPropertyChangedFor(nameof(InputModeButtonToolTip))]
+    [NotifyPropertyChangedFor(nameof(IsWatching))]
+    [NotifyPropertyChangedFor(nameof(FullscreenInputModeText))]
+    [NotifyPropertyChangedFor(nameof(FullscreenInputModeToolTip))]
+    private ChildSessionInputMode _inputMode = ChildSessionInputMode.Normal;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(AudioButtonToolTip))]
     private bool _isAudioMuted;
+
+    /// <summary>
+    /// 全屏时浮层工具栏是否固定显示。写入设置，与窗口置顶无关。
+    /// </summary>
+    [ObservableProperty]
+    private bool _isFullscreenBarPinned;
 
     [ObservableProperty]
     private bool _isNotificationOpen;
@@ -126,12 +132,42 @@ public partial class ChildSessionWindowViewModel : ViewModel
 
     public string TopmostButtonToolTip => IsTopmost ? "取消置顶" : "置顶";
 
-    public string GameMouseModeButtonText =>
-        IsGameMouseModeEnabled ? "游戏鼠标" : "普通鼠标";
+    /// <summary>
+    /// 观看模式下键鼠不进分身。
+    /// </summary>
+    public bool IsWatching => InputMode == ChildSessionInputMode.Watch;
 
-    public string GameMouseModeButtonToolTip => IsGameMouseModeEnabled
-        ? "桌面分身内的 BetterGI 打开时生效；当前窗口处于焦点时，鼠标将会被锁定在窗口内；按住 Alt 可临时释放鼠标。"
-        : "切换至游戏鼠标模式。桌面分身内的 BetterGI 打开时生效；当前窗口处于前台时，鼠标将会被锁定在窗口内；按住 Alt 可临时释放鼠标。";
+    /// <summary>
+    /// 工具栏上那个输入模式按钮当前显示的状态。
+    /// </summary>
+    public string InputModeButtonText => InputMode switch
+    {
+        ChildSessionInputMode.Watch => "观看模式",
+        ChildSessionInputMode.GameMouse => "游戏鼠标",
+        _ => "普通鼠标"
+    };
+
+    public string InputModeButtonToolTip => InputMode switch
+    {
+        ChildSessionInputMode.Watch =>
+            "当前处于观看模式：本机键鼠不会进入桌面分身。点击切换为普通鼠标。",
+        ChildSessionInputMode.GameMouse =>
+            "当前处于游戏鼠标模式：按住 Alt 可临时释放鼠标。点击切换为观看模式。",
+        _ => "当前处于普通鼠标模式。点击切换为游戏鼠标；再点一次进入观看模式。"
+    };
+
+    /// <summary>
+    /// 全屏浮层上那个开关的文字：只有「游戏模式 / 观看模式」两态。
+    /// 全屏是为了玩游戏，普通鼠标这一档在这里没有意义，所以不参与。
+    /// </summary>
+    public string FullscreenInputModeText => IsWatching ? "观看模式" : "游戏模式";
+
+    /// <summary>
+    /// 全屏浮层开关的提示：只讲两态，不讲三态循环。
+    /// </summary>
+    public string FullscreenInputModeToolTip => IsWatching
+        ? "当前处于观看模式：本机键鼠不会进入桌面分身。点击切换为游戏模式。"
+        : "当前处于游戏模式：按住 Alt 可临时释放鼠标。点击切换为观看模式。";
 
     public string AudioButtonToolTip => IsAudioMuted
         ? "开启桌面分身声音，不影响主桌面的其他程序；切换时会自动重新连接 RDP"
@@ -142,12 +178,6 @@ public partial class ChildSessionWindowViewModel : ViewModel
     public string WindowSizeModeMenuToolTip => IsSmallWindowMode
         ? "将桌面分身窗口还原至默认大小"
         : "将桌面分身窗口缩放至宽 750，并按 16:9 比例同步缩小高度";
-
-    public string WatchModeMenuHeader => IsWatchModeEnabled ? "控制模式" : "观看模式";
-
-    public string WatchModeMenuToolTip => IsWatchModeEnabled
-        ? "退出观看模式"
-        : "桌面分身画面仅可观看，键鼠不会生效";
 
     public double WindowResizeTargetWidth => IsSmallWindowMode
         ? SmallWindowWidth
@@ -167,8 +197,9 @@ public partial class ChildSessionWindowViewModel : ViewModel
         _normalWindowPosition = _childSessionService.NormalWindowPosition;
         _smallWindowPosition = _childSessionService.SmallWindowPosition;
         _sendSystemShortcutsToRemote = _childSessionService.SendSystemShortcutsToRemote;
-        _isGameMouseModeEnabled = _childSessionService.IsGameMouseModeEnabled;
+        _inputMode = _childSessionService.InputMode;
         _isAudioMuted = _childSessionService.AudioMuted;
+        _isFullscreenBarPinned = _childSessionService.FullscreenBarPinned;
         _notificationTimer = new DispatcherTimer(DispatcherPriority.Background)
         {
             Interval = TimeSpan.FromSeconds(5)
@@ -354,42 +385,135 @@ public partial class ChildSessionWindowViewModel : ViewModel
         return !IsSystemShortcutsReconnectPending;
     }
 
+    /// <summary>
+    /// 工具栏上的输入模式按钮：按「观看模式 → 普通鼠标 → 游戏鼠标」循环切换。
+    /// </summary>
     [RelayCommand]
-    private void ToggleGameMouseMode()
+    private void CycleInputMode()
     {
-        var enabled = !IsGameMouseModeEnabled;
-        if (!Execute(() => _childSessionService.SetGameMouseModeEnabled(enabled)))
+        if (!Execute(() => _childSessionService.CycleInputMode()))
         {
-            IsGameMouseModeEnabled = _childSessionService.IsGameMouseModeEnabled;
+            InputMode = _childSessionService.InputMode;
             return;
         }
 
-        IsGameMouseModeEnabled = _childSessionService.IsGameMouseModeEnabled;
+        InputMode = _childSessionService.InputMode;
+
+        // 用户自己选过模式了：退出全屏时按他的选择来，别再还原成普通鼠标。
+        _autoSwitchedToGameMouse = false;
+
         ShowNotification(
-            enabled ? "游戏鼠标已开启" : "普通鼠标已开启",
-            enabled
-                ? "桌面分身内的 BetterGI 打开时生效。当前窗口处于焦点时，鼠标将会被锁定在窗口内，按住 Alt 临时释放鼠标。"
-                : "BetterGI 不再向桌面分身转发相对鼠标信息。",
-            enabled ? InfoBarSeverity.Informational : InfoBarSeverity.Success);
+            InputModeButtonText,
+            InputModeButtonToolTip,
+            InputMode == ChildSessionInputMode.Watch
+                ? InfoBarSeverity.Informational
+                : InfoBarSeverity.Success);
     }
 
+    /// <summary>
+    /// 全屏浮层上的「游戏模式 / 观看模式」开关。
+    ///
+    /// 全屏时不显示标题栏，那个按钮够不着，所以在浮层上给一个两态入口：
+    /// 观看模式 ⇄ 游戏模式（游戏模式即游戏鼠标，玩游戏时需要的那个）。
+    /// </summary>
     [RelayCommand]
-    private void ToggleWatchMode()
+    private void ToggleFullscreenWatchMode()
     {
-        var enabled = !IsWatchModeEnabled;
-        if (!Execute(() => _childSessionService.SetWatchModeEnabled(enabled)))
+        var target = IsWatching ? ChildSessionInputMode.GameMouse : ChildSessionInputMode.Watch;
+        if (!Execute(() => _childSessionService.SetInputMode(target)))
         {
-            IsWatchModeEnabled = _childSessionService.WatchModeEnabled;
+            InputMode = _childSessionService.InputMode;
             return;
         }
 
-        IsWatchModeEnabled = _childSessionService.WatchModeEnabled;
-        ShowNotification(
-            enabled ? "观看模式已开启" : "观看模式已关闭",
-            enabled
-                ? "本机键鼠不会对分身生效，但控制中心的组合键仍然生效。"
-                : "本机键鼠恢复操作桌面分身。",
-            enabled ? InfoBarSeverity.Informational : InfoBarSeverity.Success);
+        InputMode = _childSessionService.InputMode;
+
+        // 同 CycleInputMode：这次是用户的选择，退出全屏时不再还原。
+        _autoSwitchedToGameMouse = false;
+    }
+
+    /// <summary>
+    /// 切换全屏浮层工具栏的固定状态：固定后它不再随鼠标离开自动收起。写入设置。
+    /// </summary>
+    [RelayCommand]
+    private void ToggleFullscreenBarPinned()
+    {
+        if (!Execute(() => { _childSessionService.FullscreenBarPinned = !IsFullscreenBarPinned; }))
+        {
+            return;
+        }
+
+        IsFullscreenBarPinned = _childSessionService.FullscreenBarPinned;
+    }
+
+    /// <summary>
+    /// 进入全屏时把「普通鼠标」自动切成「游戏鼠标」——全屏就是为了玩游戏。
+    /// 观看模式与游戏鼠标保持不变，并把「是不是我们切的」记下来，退出时据此还原。
+    /// </summary>
+    internal void ApplyInputModeForFullscreen()
+    {
+        _autoSwitchedToGameMouse = _childSessionService.InputMode == ChildSessionInputMode.Normal;
+        if (!_autoSwitchedToGameMouse)
+        {
+            InputMode = _childSessionService.InputMode;
+            return;
+        }
+
+        Execute(() => _childSessionService.SetInputMode(ChildSessionInputMode.GameMouse));
+        InputMode = _childSessionService.InputMode;
+    }
+
+    /// <summary>
+    /// 退出全屏时还原进入前的输入模式。
+    ///
+    /// 只还原「进入全屏时被我们改成游戏鼠标、且之后用户没动过」的那一次；
+    /// 用户在全屏里自己切过模式的话，标记已被清掉，按他的选择继续。
+    /// </summary>
+    internal void RestoreInputModeAfterFullscreen()
+    {
+        if (!_autoSwitchedToGameMouse)
+        {
+            return;
+        }
+
+        _autoSwitchedToGameMouse = false;
+        Execute(() => _childSessionService.SetInputMode(ChildSessionInputMode.Normal));
+        InputMode = _childSessionService.InputMode;
+    }
+
+    /// <summary>
+    /// 打开自动登录设置。已经打开时把它叫到前面，不重复创建。
+    /// </summary>
+    [RelayCommand]
+    private void OpenAutoLoginSettings()
+    {
+        if (_autoLoginWindow is { IsLoaded: true } existing)
+        {
+            if (existing.WindowState == WindowState.Minimized)
+            {
+                existing.WindowState = WindowState.Normal;
+            }
+
+            existing.Activate();
+            return;
+        }
+
+        var window = App.GetService<ChildSessionAutoLoginWindow>();
+        if (window is null)
+        {
+            return;
+        }
+
+        window.Owner = Application.Current.Windows.OfType<ChildSessionWindow>().FirstOrDefault();
+        window.Closed += (_, _) =>
+        {
+            _autoLoginWindow = null;
+
+            // 对话框里可能改了自动登录开关，回来时把界面同步一次。
+            UpdateConnectionStatus();
+        };
+        _autoLoginWindow = window;
+        window.Show();
     }
 
     [RelayCommand(CanExecute = nameof(CanToggleAudioMuted))]
@@ -666,8 +790,7 @@ public partial class ChildSessionWindowViewModel : ViewModel
         IsOneToOne = !IsAdaptive;
         KeepAspectRatio = _childSessionService.KeepAspectRatio;
         SendSystemShortcutsToRemote = _childSessionService.SendSystemShortcutsToRemote;
-        IsGameMouseModeEnabled = _childSessionService.IsGameMouseModeEnabled;
-        IsWatchModeEnabled = _childSessionService.WatchModeEnabled;
+        InputMode = _childSessionService.InputMode;
         IsAudioMuted = _childSessionService.AudioMuted;
         IsRdpConnected = connectedState == 1;
         IsConnectionPromptVisible = IsSessionClosing || connectedState == 0 && !_startRequested;
@@ -722,6 +845,7 @@ public partial class ChildSessionWindowViewModel : ViewModel
         ChildSessionStatusText = childSessionId is null
             ? "桌面分身会话未创建"
             : $"桌面分身会话 {childSessionId.Value}";
+
         ConnectionStatusToolTip = _childSessionService.StatusText;
         OnPropertyChanged(nameof(HasChildSession));
     }

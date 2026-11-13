@@ -92,25 +92,31 @@
                                CornerRadius="0"
                                Icon="{ui:SymbolIcon ArrowSwap24}"
                                ToolTip="{i18n:T 向桌面分身发送 Win+Tab}" />
-                    <ui:Button x:Name="GameMouseButton"
+                    <ui:Button x:Name="InputModeButton"
                                Width="110"
                                Height="32"
                                Background="Transparent"
                                BorderBrush="Transparent"
                                behavior:ResponsiveTitleBarBehavior.CollapseOrder="4"
-                               Command="{Binding ToggleGameMouseModeCommand}"
-                               Content="{Binding GameMouseModeButtonText}"
+                               Command="{Binding CycleInputModeCommand}"
+                               Content="{Binding InputModeButtonText}"
                                CornerRadius="0"
-                               ToolTip="{Binding GameMouseModeButtonToolTip}">
+                               ToolTip="{Binding InputModeButtonToolTip}">
                         <ui:Button.Icon>
+                            <!-- 三态：观看模式（眼睛）→ 普通鼠标 → 游戏鼠标（准星） -->
                             <ui:SymbolIcon>
                                 <ui:SymbolIcon.Style>
                                     <Style TargetType="{x:Type ui:SymbolIcon}">
                                         <Setter Property="Symbol"
                                                 Value="Cursor24" />
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsGameMouseModeEnabled}"
-                                                         Value="True">
+                                            <DataTrigger Binding="{Binding InputMode}"
+                                                         Value="Watch">
+                                                <Setter Property="Symbol"
+                                                        Value="Eye24" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding InputMode}"
+                                                         Value="GameMouse">
                                                 <Setter Property="Symbol"
                                                         Value="Target24" />
                                             </DataTrigger>
@@ -178,11 +184,10 @@
                                              Command="{Binding SwitchWindowCommand}"
                                              Icon="{ui:SymbolIcon ArrowSwap24}"
                                              Visibility="{Binding Source={x:Reference SwitchWindowButton}, Path=IsVisible, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
-                                <ui:MenuItem Header="{Binding GameMouseModeButtonText}"
-                                             Command="{Binding ToggleGameMouseModeCommand}"
-                                             Icon="{ui:SymbolIcon Cursor24}"
-                                             ToolTip="{Binding GameMouseModeButtonToolTip}"
-                                             Visibility="{Binding Source={x:Reference GameMouseButton}, Path=IsVisible, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
+                                <ui:MenuItem Header="{Binding InputModeButtonText}"
+                                             Command="{Binding CycleInputModeCommand}"
+                                             ToolTip="{Binding InputModeButtonToolTip}"
+                                             Visibility="{Binding Source={x:Reference InputModeButton}, Path=IsVisible, Converter={StaticResource BooleanToVisibilityRevertConverter}}" />
                             </ContextMenu>
                         </ui:DropDownButton.Flyout>
                     </ui:DropDownButton>
@@ -200,9 +205,6 @@
                                 <ui:MenuItem Header="{Binding WindowSizeModeMenuHeader}"
                                              Command="{Binding ToggleSmallWindowModeCommand}"
                                              ToolTip="{Binding WindowSizeModeMenuToolTip}" />
-                                <ui:MenuItem Header="{Binding WatchModeMenuHeader}"
-                                             Command="{Binding ToggleWatchModeCommand}"
-                                             ToolTip="{Binding WatchModeMenuToolTip}" />
                                 <Separator />
                                 <ui:MenuItem Header="{i18n:T 桌面分辨率}">
                                     <ui:MenuItem Header="1920 × 1080"
@@ -241,6 +243,10 @@
                                     <ui:MenuItem Header="{i18n:T 以管理员权限启动…}"
                                                  Command="{Binding LaunchExecutableCommand}"
                                                  Icon="{ui:SymbolIcon Shield24}" />
+                                    <ui:MenuItem Header="{i18n:T 自动登录…}"
+                                                 Command="{Binding OpenAutoLoginSettingsCommand}"
+                                                 Icon="{ui:SymbolIcon Password24}"
+                                                 ToolTip="{i18n:T 保存 Windows 登录密码，连接桌面分身时自动填写}" />
                                     <Separator />
                                     <ui:MenuItem Header="{i18n:T 诊断与修复…}"
                                                  Command="{Binding OpenDiagnosticsCommand}"
@@ -501,5 +507,65 @@
                 </Border>
             </Grid>
         </Grid>
+
+        <!-- 全屏浮层工具栏（样式与 DesktopTwin 一致）。
+             必须是 Popup：全屏时客户区被 RDP 的 WinForms 子窗口占着，
+             WPF 的普通元素会被那个 HWND 盖住（airspace），只有独立窗口能浮在上面。 -->
+        <Popup x:Name="FullscreenBarPopup"
+               AllowsTransparency="True"
+               IsOpen="False"
+               Placement="Relative"
+               PlacementTarget="{Binding ElementName=RootGrid}"
+               PopupAnimation="Fade"
+               StaysOpen="True">
+            <Border Padding="10,6"
+                    Background="#E61F1F1F"
+                    BorderBrush="#40FFFFFF"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                <StackPanel IsEnabled="{Binding IsSessionInteractionEnabled}"
+                            Orientation="Horizontal">
+                    <ui:Button Width="36"
+                               Height="30"
+                               Click="OnFullscreenSwitchWindowClicked"
+                               Icon="{ui:SymbolIcon ArrowSwap24}"
+                               ToolTip="{i18n:T 向桌面分身发送 Win+Tab}" />
+                    <!-- 标题位置换成输入模式开关：显示当前状态（游戏模式 / 观看模式），点一下切换。 -->
+                    <ui:Button MinWidth="88"
+                               Height="30"
+                               Margin="6,0,0,0"
+                               Command="{Binding ToggleFullscreenWatchModeCommand}"
+                               Content="{Binding FullscreenInputModeText}"
+                               ToolTip="{Binding FullscreenInputModeToolTip}" />
+                    <ui:Button Width="36"
+                               Height="30"
+                               Margin="10,0,0,0"
+                               Click="OnFullscreenMinimizeClicked"
+                               Content="—"
+                               ToolTip="{i18n:T 最小化到任务栏}" />
+                    <ui:Button Width="52"
+                               Height="30"
+                               Margin="6,0,0,0"
+                               Click="OnFullscreenRestoreClicked"
+                               Content="{i18n:T 还原}"
+                               ToolTip="{i18n:T 退出全屏，回到窗口模式}" />
+                    <ui:Button Width="36"
+                               Height="30"
+                               Margin="6,0,0,0"
+                               Click="OnFullscreenCloseClicked"
+                               Content="✕"
+                               ToolTip="{i18n:T 关闭桌面分身}" />
+                    <Border Width="1"
+                            Margin="10,4"
+                            Background="#33FFFFFF" />
+                    <ui:Button x:Name="FullscreenPinButton"
+                               Width="36"
+                               Height="30"
+                               Click="OnFullscreenTogglePinClicked"
+                               Icon="{ui:SymbolIcon PinOff24}"
+                               ToolTip="{i18n:T 固定工具栏}" />
+                </StackPanel>
+            </Border>
+        </Popup>
     </Grid>
 </ui:FluentWindow>
