@@ -60,8 +60,24 @@ public class NavigationInstance
         // 如果局部匹配失败或者点位跳跃过大，再尝试全地图匹配
         if (p == default || (_prevX > 0 && _prevY >0 && p.DistanceTo(new Point2f(_prevX,_prevY)) > 150))
         {
-            Reset();
-            p = MapManager.GetMap(mapName, mapMatchMethod).GetMiniMapPosition(colorMat, _prevX, _prevY);
+            // 关键：全局匹配【必须保留 prev】。
+            //
+            // 历史 bug：这里原先先 Reset()（把 _prevX/_prevY 清成 -1）再调用
+            // GetMiniMapPosition(colorMat, -1, -1)。而该方法在 prev<=0 时会转到
+            // 无 prev 的 GetMiniMapPosition(colorMat)，其模板匹配失败后的兜底是
+            // TrySiftFallback(mat, -1, -1) —— 一个【完全没有跳跃约束】的 SIFT。
+            //
+            // 后果正是「识别出的地点错误，偏离非常遥远」：局部匹配一旦失败（换图层、
+            // 落点略偏、小地图边缘），就会拿到 SIFT 在纹理重复地形上给出的
+            // “能过阈值但位置全错”的坐标，几帧之间跳动上万个世界单位，
+            // 而录制端每帧都把它当成真实位置写进去。
+            //
+            // 现在改为：保留 prev 做全局匹配。带 prev 的路径分三级降级
+            // （局部 → 全局模板匹配 → 带跳跃上限的 SIFT），每一级都有约束。
+            // 若确实需要冷启动（prev 未知），上面的分支本身就会走无 prev 入口。
+            var keepX = _prevX;
+            var keepY = _prevY;
+            p = sceneMap.GetMiniMapPosition(colorMat, keepX, keepY);
         }
         if (p != default && captureTime > _captureTime)
         {

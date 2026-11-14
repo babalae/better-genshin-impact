@@ -763,7 +763,10 @@ public partial class PathExecutor
             (position, additionalTimeInMs) = await GetPositionAndTime(initialScreen, waypoint);
         }
         var targetOrientation = Navigation.GetTargetOrientation(waypoint, position);
-        Logger.LogDebug("粗略接近途经点，位置({x2},{y2})", $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}");
+        // 注意：这里必须同时打印「目标世界坐标」与「当前识别到的图像坐标」。
+        // 旧版只打印 waypoint.GameX/GameY 却写成"位置"，排查时极易被误读成"当前所在位置"。
+        Logger.LogDebug("粗略接近途经点：目标世界坐标({x1},{y1})，当前识别位置/图像坐标({x2},{y2})",
+            $"{waypoint.GameX:F1}", $"{waypoint.GameY:F1}", $"{position.X:F1}", $"{position.Y:F1}");
         await WaitUntilRotatedTo(targetOrientation, 5);
         moveToStartTime = DateTime.UtcNow;
         var lastPositionRecord = DateTime.UtcNow;
@@ -1244,6 +1247,18 @@ public partial class PathExecutor
     
     private  Point2f prePosition;
     private  DateTime preTime;
+
+    /// <summary>
+    /// 允许写入 prePosition 的最大可信距离（图像坐标单位，与世界坐标 1:1）。
+    /// 识别出的位置离当前目标点超过这个距离，说明多半是误匹配，不能拿来当"上次点位"。
+    /// 取 500 与 MoveTo 里判定 pathTooFar 的阈值保持一致。
+    /// </summary>
+    private const double PositionTrustDistance = 500;
+
+    /// <summary>
+    /// 连续"定位失败且无历史点位"的计数，用于把无限刷屏降频为可读的告警。
+    /// </summary>
+    private int UnexpectedPositionCount;
     //自动构造点位的最大时间
     private int maxAutoPositionTime=10000; 
     private async Task WaitForCloseMap(int maxAttempts, int delayMs)
@@ -1299,6 +1314,21 @@ public partial class PathExecutor
                     position = prePosition;
                     Logger.LogInformation(@$"未识别到具体路径，取上次点位");
                 }
+                else
+                {
+                    // prePosition 从未成功建立（典型场景：传送落地后第一次定位就失败）。
+                    // 此时"取上次点位"无点可取，若继续静默循环只会刷屏到超时，
+                    // 用户完全看不出原因。这里改为明确报警，并给出可操作的建议。
+                    UnexpectedPositionCount++;
+                    if (UnexpectedPositionCount == 1 || UnexpectedPositionCount % 10 == 0)
+                    {
+                        Logger.LogWarning(
+                            "定位失败且没有可用的历史点位（第 {Count} 次）。" +
+                            "若持续出现，请检查：1) 当前区域是否有地图图层覆盖；" +
+                            "2) 小地图是否被遮挡或处于特殊视角；3) 匹配方式是否为 TemplateMatch。",
+                            UnexpectedPositionCount);
+                    }
+                }
             }else if (waypoint.Misidentification.HandlingMode == "mapRecognition"){
                 //大地图识别坐标
                 DateTime start = DateTime.Now;
@@ -1334,8 +1364,20 @@ public partial class PathExecutor
         }
         else
         {
-            prePosition = position;
-            preTime = DateTime.Now;
+            // 只有「识别结果可信」时才更新 prePosition，否则会把错误坐标固化成"上次点位"。
+            //
+            // 踩坑记录：else 分支的条件只是"不满足 unrecognized / pathTooFar 两种异常"，
+            // 并不保证坐标正确。当 waypoint.Misidentification.Type 未配置这两项时，
+            // 一次 SIFT 误匹配（例如在纹理重复地形上给出偏离数千世界单位的坐标）
+            // 也会走到这里并把 prePosition 写成错值；此后每次真实识别失败（0,0）
+            // 都会被替换成这个错值，形成"取上次点位"无限刷屏直到超时。
+            //
+            // 因此这里要求 position 非零，且与目标点距离在合理范围内才采纳。
+            if (position != default && distance <= PositionTrustDistance)
+            {
+                prePosition = position;
+                preTime = DateTime.Now;
+            }
         }
 
         //Logger.LogDebug("识别到路径："+position.X+","+position.Y);

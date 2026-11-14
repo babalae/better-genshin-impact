@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using BetterGenshinImpact.Core.Recognition.OpenCv.Model;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
@@ -185,6 +186,27 @@ public static class Feature2DExtensions
         }
 
         speedTimer.Record("FindHomography");
+
+        // RANSAC 内点校验。
+        //
+        // 历史问题：这里原先只要 goodMatches >= 7 就直接采信 RANSAC 结果，完全不看内点比例。
+        // 在雪原/沙漠这类"颜色单一、纹理高度重复"的地形上，7 个比例测试通过的匹配
+        // 完全可以全部是错的，RANSAC 仍然能拟合出一个"形式上合法"的单应矩阵，
+        // 于是返回一个置信度看起来正常、位置却完全错误的坐标。
+        // 上层拿到这种坐标后既不会报错也不会退回，最终表现为：
+        //   - 录制：把完全不相干的坐标写进路径文件（如至冬录出 GameY=1249 这种点）
+        //   - 播放：识别位置严重偏移，触发"距离过远"后刷"未取上次点位"
+        // 因此这里强制要求内点数量与内点比例双达标，否则按匹配失败处理。
+        using (mask)
+        {
+            var inlierCount = Cv2.CountNonZero(mask);
+            var minInliers = Math.Max(8, (int)Math.Ceiling(goodMatches.Count * 0.5));
+            if (inlierCount < minInliers)
+            {
+                Debug.WriteLine($"[SIFT]内点校验未通过：内点 {inlierCount}/{goodMatches.Count}，要求至少 {minInliers}，丢弃本次结果");
+                return new Point2f();
+            }
+        }
 
         // 计算小地图的中心点
         var h = queryMat.Rows;
