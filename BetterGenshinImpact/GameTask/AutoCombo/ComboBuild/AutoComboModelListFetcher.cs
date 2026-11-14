@@ -3,6 +3,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
@@ -47,10 +48,26 @@ public static class AutoComboModelListFetcher
         Timeout = TimeSpan.FromSeconds(20),
     };
 
+    /// <summary>鉴权失败（401/403）：密钥不对，换候选地址没有意义，应直接停。</summary>
+    private sealed class ModelListAuthException : Exception
+    {
+        public ModelListAuthException(string message)
+            : base(message)
+        {
+        }
+    }
+
     /// <summary>
     /// 按服务商拉取模型名列表。失败时抛出带可读原因的异常，由调用方展示。
+    ///
+    /// 返回的 <c>CorrectedEndpoint</c>：OpenAI 兼容地址成功命中后给出的规范服务地址
+    /// （已去掉 /models 后缀），供设置页回写输入框；Anthropic / 发鱼站为 null（不回写）。
     /// </summary>
-    public static async Task<List<string>> FetchAsync(string provider, string endpointText, string apiKey, CancellationToken ct)
+    public static async Task<(List<string> Models, string? CorrectedEndpoint)> FetchAsync(
+        string provider,
+        string endpointText,
+        string apiKey,
+        CancellationToken ct)
     {
         var normalized = AutoComboLlmProvider.Normalize(provider);
 
@@ -71,14 +88,99 @@ public static class AutoComboModelListFetcher
             throw new Exception("配置错误：请先在任务设置页的“自动连招”卡片中配置 LLM 密钥（本机回环地址与发鱼站除外）");
         }
 
-        var uri = BuildModelListUri(normalized, endpoint);
+        if (normalized == AutoComboLlmProvider.Anthropic)
+        {
+            // Anthropic 的模型列表固定在服务根地址 /v1/models，无需候选尝试，也不回写地址。
+            var anthropicUri = BuildAnthropicModelListUri(endpoint);
+            var (anthropicModels, _) = await FetchModelsAsync(anthropicUri, normalized, apiKey, ct);
+            if (anthropicModels.Count == 0)
+            {
+                throw new Exception($"服务端未返回任何模型：GET {DescribeUri(anthropicUri)}。");
+            }
+
+            return (anthropicModels, null);
+        }
+
+        if (normalized == AutoComboLlmProvider.FishRelief)
+        {
+            // 发鱼站用内置网关地址，模型列表固定在 /models，同样不回写地址。
+            var fishReliefUri = new Uri($"{endpoint!.ToString().TrimEnd('/')}/models");
+            var (fishReliefModels, _) = await FetchModelsAsync(fishReliefUri, normalized, apiKey, ct);
+            if (fishReliefModels.Count == 0)
+            {
+                throw new Exception($"服务端未返回任何模型：GET {DescribeUri(fishReliefUri)}。");
+            }
+
+            return (fishReliefModels, null);
+        }
+
+        // OpenAI 兼容：用户填的地址可能只是纯域名，也可能已经带了 /v1 甚至 /models。
+        // 逐个候选尝试，直到某个地址返回非空模型列表；成功后把规范地址（不含 /models）回写。
+        var inputHasPath = endpoint!.AbsolutePath.Trim('/').Length > 0;
+        var candidates = BuildOpenAiCandidates(endpoint);
+        Exception? lastError = null;
+        string? authError = null;
+        foreach (var (candidate, isInputDerived) in candidates)
+        {
+            try
+            {
+                var (models, effectiveUri) = await FetchModelsAsync(candidate, normalized, apiKey, ct);
+                if (models.Count > 0)
+                {
+                    // 只有「输入派生的候选」或「纯域名输入」才回写规范地址：
+                    // 带子路径的输入若靠根级候选才拉到列表，说明用户配的路径没命中，不回写以免覆盖他的路径。
+                    // 用实际生效的地址反推：候选地址可能被同源重定向改写，不能用候选地址本身。
+                    var correctedEndpoint = isInputDerived || !inputHasPath ? ToBaseUrl(effectiveUri) : null;
+                    return (models, correctedEndpoint);
+                }
+
+                lastError = new Exception($"该地址未返回任何模型：GET {DescribeUri(candidate)}");
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                // 取消要原样抛给调用方，不能当成「这个候选失败、换下一个」。
+                throw;
+            }
+            catch (ModelListAuthException e)
+            {
+                // 鉴权失败也可能只是「这个地址不做校验、换到 /models 就正常」，所以继续试下一个；
+                // 但鉴权原因是最有用的线索，单独记下，全部失败时优先报它。所有候选同源，不会把密钥发往别处。
+                authError ??= e.Message;
+                lastError = e;
+            }
+            catch (Exception e)
+            {
+                lastError = e;
+            }
+        }
+
+        throw new Exception(
+            $"已尝试 {candidates.Count} 个候选地址，均未获取到模型列表。原因：{authError ?? lastError?.Message ?? "未知"}");
+    }
+
+    /// <summary>
+    /// 从单个模型列表地址拉取全部模型（含分页）。返回模型列表与**第一页实际生效的地址**（重定向可能改写地址）。
+    /// 列表可能为空：「空」由调用方判断，单地址服务商算失败，OpenAI 兼容的候选尝试则换下一个。
+    /// </summary>
+    private static async Task<(List<string> Ids, Uri EffectiveUri)> FetchModelsAsync(
+        Uri uri,
+        string provider,
+        string apiKey,
+        CancellationToken ct)
+    {
         var ids = new List<string>();
+        var firstPageUri = uri;
 
         // 地址里已经把 limit 设到上限，正常情况下第一页就取完；这里再按 last_id 兜底翻页。
         // OpenAI 兼容端点不返回 has_more，会被当作只有一页。
         for (var page = 0; page < MaxModelListPages; page++)
         {
-            var (effectiveUri, body) = await GetAsync(uri, normalized, apiKey, ct);
+            var (effectiveUri, body) = await GetAsync(uri, provider, apiKey, ct);
+            if (page == 0)
+            {
+                firstPageUri = effectiveUri;
+            }
+
             var (pageIds, hasMore, lastId) = ParseModelPage(uri, body);
 
             foreach (var id in pageIds)
@@ -91,12 +193,7 @@ public static class AutoComboModelListFetcher
 
             if (!hasMore)
             {
-                if (ids.Count == 0)
-                {
-                    throw new Exception($"服务端未返回任何模型：GET {DescribeUri(uri)}。请确认“LLM服务地址”指向模型列表接口（OpenAI 兼容地址通常需要包含 /v1）");
-                }
-
-                return ids;
+                return (ids, firstPageUri);
             }
 
             if (string.IsNullOrWhiteSpace(lastId))
@@ -105,10 +202,71 @@ public static class AutoComboModelListFetcher
             }
 
             // 以实际生效的地址为基准翻页：重定向可能改写地址，甚至把查询串整个丢掉
-            uri = BuildPageUri(effectiveUri, normalized, lastId);
+            uri = BuildPageUri(effectiveUri, provider, lastId);
         }
 
         throw new Exception($"模型列表分页超过 {MaxModelListPages} 页仍未取完，已停止：GET {DescribeUri(uri)}");
+    }
+
+    /// <summary>Anthropic 的模型列表地址：固定在服务根地址下的 /v1/models。</summary>
+    private static Uri BuildAnthropicModelListUri(Uri? endpoint)
+    {
+        return new Uri($"{AutoComboLlmEndpoint.ResolveAnthropicBaseUrl(endpoint)}/v1/models?limit={AnthropicModelListPageSize}");
+    }
+
+    /// <summary>
+    /// 生成 OpenAI 兼容端点的候选模型列表地址，顺序：输入原文 → 输入（去尾斜杠）/models → 域名/models → 域名/v1/models。
+    /// 「输入 + /models」排在域名级候选之前：用户配置了子路径（如 /team/v1）时先按他的路径试，
+    /// 避免域名级路由碰巧能返回列表时把用户配置的路径覆盖掉。逐项去重。
+    /// 前两项为「输入派生」，后两项为「根级回退」——调用方据此决定是否回写服务地址。
+    /// </summary>
+    private static List<(Uri Uri, bool IsInputDerived)> BuildOpenAiCandidates(Uri endpoint)
+    {
+        var origin = new Uri($"{endpoint.Scheme}://{endpoint.Authority}");
+
+        // 把 /models 接到路径上而不是整串地址上：端点可能带查询参数（如 api-version），
+        // 直接拼字符串会把 /models 拼到查询串后面，产生畸形地址。
+        var inputWithModels = new UriBuilder(endpoint)
+        {
+            Path = endpoint.AbsolutePath.TrimEnd('/') + "/models",
+        }.Uri;
+
+        var candidates = new List<(Uri Value, bool IsInputDerived)>();
+        void Add(Uri value, bool isInputDerived)
+        {
+            var key = value.ToString();
+            if (!candidates.Any(c => c.Value.ToString() == key))
+            {
+                candidates.Add((value, isInputDerived));
+            }
+        }
+
+        Add(endpoint, true);
+        Add(inputWithModels, true);
+        Add(new Uri($"{origin.ToString().TrimEnd('/')}/models"), false);
+        Add(new Uri($"{origin.ToString().TrimEnd('/')}/v1/models"), false);
+
+        return candidates;
+    }
+
+    /// <summary>
+    /// 把命中模型列表的地址还原成规范服务地址：只去掉路径结尾的 /models，
+    /// 查询串与片段原样保留——带查询参数的服务地址（如 api-version）在后续请求里同样需要。
+    /// </summary>
+    private static string ToBaseUrl(Uri modelsUri)
+    {
+        var path = modelsUri.AbsolutePath.TrimEnd('/');
+        if (path.EndsWith("/models", StringComparison.OrdinalIgnoreCase))
+        {
+            path = path[..^"/models".Length];
+        }
+
+        var builder = new UriBuilder(modelsUri)
+        {
+            Path = path,
+        };
+
+        return builder.Uri.ToString();
     }
 
     /// <summary>
@@ -157,23 +315,20 @@ public static class AutoComboModelListFetcher
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    throw new Exception(BuildHttpFailureMessage(uri, response, body));
+                    var failureMessage = BuildHttpFailureMessage(uri, response, body);
+
+                    // 鉴权失败是密钥不对，换地址没有意义：用专用异常让候选循环直接停。
+                    if ((int)response.StatusCode is 401 or 403)
+                    {
+                        throw new ModelListAuthException(failureMessage);
+                    }
+
+                    throw new Exception(failureMessage);
                 }
 
                 return (uri, body);
             }
         }
-    }
-
-    /// <summary>
-    /// 拼出模型列表请求地址。
-    /// OpenAI 兼容端点通常已含 /v1，这里只追加 /models；Anthropic 的列表固定在服务根地址下的 /v1/models。
-    /// </summary>
-    private static Uri BuildModelListUri(string provider, Uri? endpoint)
-    {
-        return provider == AutoComboLlmProvider.Anthropic
-            ? new Uri($"{AutoComboLlmEndpoint.ResolveAnthropicBaseUrl(endpoint)}/v1/models?limit={AnthropicModelListPageSize}")
-            : new Uri($"{endpoint!.ToString().TrimEnd('/')}/models");
     }
 
     /// <summary>
