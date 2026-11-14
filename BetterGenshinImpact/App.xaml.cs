@@ -219,6 +219,7 @@ public partial class App : Application
 
                 services.AddNavigationViewPageProvider();
                 services.AddSingleton(InstanceBootstrap.Current);
+                services.AddSingleton(instanceContext);
                 // 基础设施：存储区域、旧目录清理与临时文件，见 Docs/design/infrastructure-foundation.md
                 services.AddSingleton<PendingCleanupStore>();
                 services.AddSingleton<IStorageService, StorageService>();

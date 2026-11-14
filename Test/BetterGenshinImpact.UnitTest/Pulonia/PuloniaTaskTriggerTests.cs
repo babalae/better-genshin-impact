@@ -1,9 +1,12 @@
+using System.Windows;
 using System.Windows.Input;
 using BetterGenshinImpact.Pulonia.Executors;
 using BetterGenshinImpact.Pulonia.Models;
 using BetterGenshinImpact.Pulonia.Services;
 using BetterGenshinImpact.Service;
+using BetterGenshinImpact.Service.Instance;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Newtonsoft.Json.Linq;
 
 namespace BetterGenshinImpact.UnitTest.Pulonia;
@@ -16,6 +19,50 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
 
     /// <summary>触发游标持久化的全部字段（按名称排序）。</summary>
     private static readonly string[] CursorFields = ["last_occurrence_utc", "plan_id", "trigger_activated_at_utc", "trigger_id"];
+
+    /// <summary>A due plan runs through the hosted scheduler before any WPF application is available.</summary>
+    [Fact]
+    public async Task Host_RunsDueScheduleWithoutDispatcher()
+    {
+        Assert.Null(Application.Current);
+        using var store = new PuloniaTaskStore(_directory);
+        var due = DateTimeOffset.Parse("2026-10-04T04:00:00+08:00");
+        var clock = new FakeTimeProvider(due.AddSeconds(-1));
+        const string operation = "test.host.schedule";
+        var plan = Plan(operation);
+        plan.Triggers.Add(new PuloniaTaskTrigger { Enabled = true, ActivatedAtUtc = clock.GetUtcNow() });
+        plan = await store.SavePlanAsync(plan);
+        var executed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var registry = new PuloniaCSharpTaskRegistry();
+        registry.Register(operation, (_, _, _) =>
+        {
+            executed.TrySetResult();
+            return Task.FromResult(PuloniaTaskOutcome.Success("Test operation completed."));
+        });
+        await using var service = Service(store, clock, registry);
+        var instance = new InstanceContext(BetterGiInstanceType.Primary, "test", null);
+        using var host = new PuloniaTaskTriggerHost(store, service, instance,
+            NullLogger<PuloniaTaskTriggerHost>.Instance, clock);
+        var initialCheck = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        host.Changed += (_, _) => initialCheck.TrySetResult();
+        await host.StartAsync(CancellationToken.None);
+        try
+        {
+            Assert.Same(initialCheck.Task,
+                await Task.WhenAny(initialCheck.Task, host.ExecuteTask!).WaitAsync(TimeSpan.FromSeconds(15)));
+            Assert.Empty(await service.ListRunsAsync());
+            clock.Advance(TimeSpan.FromSeconds(1));
+            var completed = await Task.WhenAny(executed.Task, host.ExecuteTask!).WaitAsync(TimeSpan.FromSeconds(15));
+            Assert.Same(executed.Task, completed);
+            var run = Assert.Single(await service.ListRunsAsync());
+            Assert.Equal(plan.Id, run.PlanId);
+            Assert.Equal(due, run.OccurrenceUtc);
+        }
+        finally
+        {
+            await host.StopAsync(CancellationToken.None);
+        }
+    }
 
     /// <summary>常见日周月和数字 Cron 的下次发生采用明确时区。</summary>
     [Theory]
@@ -375,7 +422,7 @@ public sealed class PuloniaTaskTriggerTests : IDisposable
     { Enabled = true, ActivatedAtUtc = clock.GetUtcNow().AddHours(-1) };
 
     /// <summary>建立仅使用受控 C# 执行器的调度服务。</summary>
-    private static PuloniaTaskService Service(PuloniaTaskStore store, TestClock clock,
+    private static PuloniaTaskService Service(PuloniaTaskStore store, TimeProvider clock,
         PuloniaCSharpTaskRegistry? registry = null) => new(store, new PuloniaTaskBuilder(store),
         [new PuloniaCSharpTaskExecutor(registry ?? new PuloniaCSharpTaskRegistry())],
         new PuloniaGameTaskCoordinator(null!), new TaskStopService(NullLogger<TaskStopService>.Instance), clock);
