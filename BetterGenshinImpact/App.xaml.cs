@@ -177,6 +177,7 @@ public partial class App : Application
                 services.AddTransient<ChildSessionWindow>();
                 services.AddTransient<ChildSessionDiagnosticsWindowViewModel>();
                 services.AddTransient<ChildSessionDiagnosticsWindow>();
+                services.AddTransient<ChildSessionAutoLoginWindow>();
 
                 // Views
                 services.AddView<HomePage, HomePageViewModel>();
