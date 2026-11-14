@@ -53,6 +53,10 @@ public partial class AutoDomainConfig : ObservableObject
     // 周日奖励序号
     [ObservableProperty]
     private string _sundaySelectedValue = string.Empty;
+
+    // 进入秘境时选择的难度（I~VI），留空则使用游戏默认选中的难度
+    [ObservableProperty]
+    private string _domainLevel = string.Empty;
     
     // 指定树脂的使用次数
     [ObservableProperty]

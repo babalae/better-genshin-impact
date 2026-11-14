@@ -1081,6 +1081,8 @@
   "秘境": "Dominio",
   "秘境名称": "Nome del Dominio",
   "秘境战斗中，发生角色死亡重试的次数": "Numero di tentativi in caso di morte del personaggio durante il combattimento nel Dominio",
+  "秘境难度": "Livello del Dominio",
+  "进入秘境时选择的难度，留空则使用游戏默认选中的难度，同样作用于一条龙": "Livello da selezionare all'ingresso del Dominio. Lascia vuoto per usare la selezione predefinita del gioco. Si applica anche a One Dragon",
   "移动鼠标距离": "Distanza di movimento del mouse",
   "移动鼠标间隔（毫秒）": "Intervallo di movimento del mouse (ms)",
   "移除": "Rimuovi",
