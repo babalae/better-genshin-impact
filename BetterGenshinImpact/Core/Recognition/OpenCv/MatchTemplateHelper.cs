@@ -209,6 +209,12 @@ public class MatchTemplateHelper
             var isLowerBetter = matchMode is TemplateMatchModes.SqDiff or TemplateMatchModes.SqDiffNormed;
             var scoreThreshold = isLowerBetter ? 1 - threshold : threshold;
 
+            // 带遮罩匹配在遮罩内像素全同时会得到 NaN / ±Inf，会被当成候选点，需先替换成最差分数。
+            if (mask != null)
+            {
+                ReplaceNonFiniteScores(result, isLowerBetter);
+            }
+
             // 将通过阈值的位置标记为候选点；后续 NMS 只修改该掩码，不修改原始匹配分数。
             using var candidateMask = new Mat();
             Cv2.Compare(result, new Scalar(scoreThreshold), candidateMask,
@@ -219,7 +225,7 @@ public class MatchTemplateHelper
             if (result.Width == 1 && result.Height == 1)
             {
                 var rawScore = result.At<float>(0, 0);
-                var passed = !float.IsNaN(rawScore)
+                var passed = float.IsFinite(rawScore)
                              && (isLowerBetter ? rawScore <= scoreThreshold : rawScore >= scoreThreshold);
                 if (passed)
                 {
@@ -245,7 +251,7 @@ public class MatchTemplateHelper
                 }
 
                 var rawScore = isLowerBetter ? minScore : maxScore;
-                if (double.IsNaN(rawScore))
+                if (!double.IsFinite(rawScore))
                 {
                     // 忽略异常分数并移除该候选，避免下一轮重复选中。
                     candidateMask.Set(location.Y, location.X, (byte)0);
@@ -267,6 +273,29 @@ public class MatchTemplateHelper
         }
 
         return matches;
+    }
+
+    /// <summary>
+    ///     把响应矩阵中的 NaN / ±Inf 替换成最差分数，避免它们被选为候选点。
+    /// </summary>
+    /// <param name="result">MatchTemplate 的响应矩阵，就地修改。</param>
+    /// <param name="isLowerBetter">平方差模式为 true，此时最差分数取最大有限值；否则取 -1。</param>
+    private static void ReplaceNonFiniteScores(Mat result, bool isLowerBetter)
+    {
+        // 有限值减自身得 0，非有限值得 NaN，因此 EQ 取反即为非有限值掩码。
+        using var selfSubtract = new Mat();
+        Cv2.Subtract(result, result, selfSubtract);
+        using var finiteMask = new Mat();
+        Cv2.Compare(selfSubtract, new Scalar(0), finiteMask, CmpType.EQ);
+        using var nonFiniteMask = new Mat();
+        Cv2.BitwiseNot(finiteMask, nonFiniteMask);
+
+        if (Cv2.CountNonZero(nonFiniteMask) == 0)
+        {
+            return;
+        }
+
+        result.SetTo(new Scalar(isLowerBetter ? float.MaxValue : -1f), nonFiniteMask);
     }
 
     /// <summary>

@@ -110,11 +110,15 @@
     "HangoutSelected": {
       "type": "TemplateMatch",
       "template": "hangout_selected.png",
+      "useMask": true,
+      "maskColor": "#000000",
       "draw": true
     },
     "HangoutUnselected": {
       "type": "TemplateMatch",
       "template": "hangout_unselected.png",
+      "useMask": true,
+      "maskColor": "#000000",
       "draw": true
     },
     "HangoutSkip": {
