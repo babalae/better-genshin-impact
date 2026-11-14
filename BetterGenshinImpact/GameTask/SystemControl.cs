@@ -232,8 +232,9 @@ public class SystemControl
         return sb.ToString();
     }
 
-    public static async Task<nint> StartFromLocalAsync(string path)
+    public static async Task<nint> StartFromLocalAsync(string path, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (!File.Exists(path))
         {
             await ThemedMessageBox.ErrorAsync($"原神启动路径 {path} 不存在，请前往 启动——同时启动原神——原神安装路径 重新进行配置！");
@@ -246,6 +247,7 @@ public class SystemControl
             cfg.GenshinStartArgs,
             InstanceBootstrap.Current.Context.InstanceType == BetterGiInstanceType.ChildSession);
 
+        cancellationToken.ThrowIfCancellationRequested();
         if (cfg.StartGameWithCmd)
         {
             var psi = new ProcessStartInfo
@@ -272,13 +274,13 @@ public class SystemControl
             var handle = FindGenshinImpactHandle();
             if (handle != 0)
             {
-                await Task.Delay(2333);
+                await Task.Delay(2333, cancellationToken);
                 handle = FindGenshinImpactHandle();
-                await Task.Delay(2577);
+                await Task.Delay(2577, cancellationToken);
                 return handle;
             }
 
-            await Task.Delay(5577);
+            await Task.Delay(5577, cancellationToken);
         }
 
         return FindGenshinImpactHandle();
