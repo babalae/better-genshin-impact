@@ -779,7 +779,9 @@ public partial class PathExecutor
         // 按下w，一直走
         InputHub.Foreground.SimulateAction(GIActions.MoveForward, KeyType.KeyDown);
         // 赶路帧间隔：始终使用配置值（5-150 钳制），不依赖是否配置赶路角色（空选也可用）
-        var hurryFrameInterval = Math.Clamp(PartyConfig.HurryOnFrameInterval, 5, 150);
+        // 选瓦雷莎时钳制上限 50ms：夜魂疾冲的 E 窗口检测依赖高频帧，间隔再大也不生效
+        var hurryFrameIntervalUpper = _hurryOnAvatar == "瓦雷莎" ? 50 : 150;
+        var hurryFrameInterval = Math.Clamp(PartyConfig.HurryOnFrameInterval, 5, hurryFrameIntervalUpper);
         while (!ct.IsCancellationRequested)
         {
             if (!InputHub.Foreground.IsKeyDown(GIActions.MoveForward.ToActionKey().ToVK()))

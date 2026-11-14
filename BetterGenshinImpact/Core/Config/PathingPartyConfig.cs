@@ -204,10 +204,10 @@ public partial class PathingPartyConfig : ObservableObject
     /// - 空选（""）：不进行赶路动作，仅普通跑图
     /// - 选择具体角色：仅使用该角色的赶路逻辑
     /// - 选择"自动"：优先使用行走位（MainAvatarIndex）角色跑图，行走位不支持赶路时，按支持列表顺序尝试使用队伍中其他角色
-    /// 支持的角色列表：玛薇卡、闲云、桑多涅、恰斯卡、流浪者、伊法、希诺宁、法尔伽、夜兰
+    /// 支持的角色列表：玛薇卡、瓦雷莎、闲云、桑多涅、恰斯卡、流浪者、伊法、希诺宁、法尔伽、夜兰
     /// </summary>
     [JsonIgnore]
-    public List<string> HurryOnAvatarList { get; } = ["","自动","玛薇卡","闲云","桑多涅","恰斯卡","流浪者","伊法","希诺宁","法尔伽","夜兰"];
+    public List<string> HurryOnAvatarList { get; } = ["","自动","玛薇卡","瓦雷莎","闲云","桑多涅","恰斯卡","流浪者","伊法","希诺宁","法尔伽","夜兰"];
 
     [JsonIgnore]
     public List<string> TravelModeList { get; } = ["精准靠近","连续赶路"];
@@ -217,6 +217,7 @@ public partial class PathingPartyConfig : ObservableObject
 
     /// <summary>
     /// 覆写赶路帧间隔（ms），默认 100。存在有效赶路角色时生效，有效范围 1-150，超出自动钳制。
+    /// 赶路角色为瓦雷莎时上限强制 50ms（夜魂疾冲的 E 窗口检测依赖高频帧，更大值不生效）。
     /// </summary>
     [ObservableProperty]
     private int _hurryOnFrameInterval = 100;
