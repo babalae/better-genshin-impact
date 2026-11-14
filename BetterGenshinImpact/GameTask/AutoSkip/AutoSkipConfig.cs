@@ -106,6 +106,12 @@ public partial class AutoSkipConfig : ObservableObject
     private bool _autoHangoutEventEnabled = false;
 
     /// <summary>
+    /// 自动邀约分支角色
+    /// </summary>
+    [ObservableProperty]
+    private string _autoHangoutCharacterChoose = string.Empty;
+
+    /// <summary>
     /// 自动邀约分支选择
     /// </summary>
     [ObservableProperty]
