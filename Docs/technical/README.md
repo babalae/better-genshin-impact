@@ -4,6 +4,7 @@
 
 ## 文档列表
 
+- [地图遮罩模块](map-mask.md)：定位流程、组件职责、复用关系、消费方及线程与资源生命周期
 - [Recognition.json 编写说明](recognition-json.md)
 - [原神采集物素材刷新（CD）清单](genshin-collectable-respawn.md)
 - [自动配音使用说明（QuestVoice）](questvoice.md)

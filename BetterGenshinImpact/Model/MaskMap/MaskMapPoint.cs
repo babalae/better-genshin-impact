@@ -1,10 +1,14 @@
 using System.Collections.Generic;
+using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 
 namespace BetterGenshinImpact.Model.MaskMap;
 
 public class MaskMapPoint
 {
     public string Id { get; set; } = string.Empty;
+
+    /// <summary>点位所属场景，详情请求与图像投影必须使用同一地图。</summary>
+    public MapTypes MapType { get; set; } = MapTypes.Teyvat;
     public double X { get; set; }
     public double Y { get; set; }
     

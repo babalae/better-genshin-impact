@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -79,12 +78,13 @@ public sealed class MaskMapPointService : IMaskMapPointService
         };
     }
 
-    public Task<MaskMapPointsResult> GetPointsAsync(IReadOnlyList<MaskMapPointLabel> selectedItems, CancellationToken ct = default)
+    public Task<MaskMapPointsResult> GetPointsAsync(IReadOnlyList<MaskMapPointLabel> selectedItems, CancellationToken ct = default,
+        MapTypes mapType = MapTypes.Teyvat)
     {
         return GetProvider() switch
         {
-            MapPointApiProvider.KongyingTavern => GetKongyingPointsAsync(selectedItems, ct),
-            _ => GetMihoyoPointsAsync(selectedItems, ct)
+            MapPointApiProvider.KongyingTavern => GetKongyingPointsAsync(selectedItems, mapType, ct),
+            _ => GetMihoyoPointsAsync(selectedItems, mapType, ct)
         };
     }
 
@@ -163,7 +163,7 @@ public sealed class MaskMapPointService : IMaskMapPointService
         return categories;
     }
 
-    private async Task<MaskMapPointsResult> GetMihoyoPointsAsync(IReadOnlyList<MaskMapPointLabel> selectedItems, CancellationToken ct)
+    private async Task<MaskMapPointsResult> GetMihoyoPointsAsync(IReadOnlyList<MaskMapPointLabel> selectedItems, MapTypes mapType, CancellationToken ct)
     {
         if (selectedItems.Count == 0)
         {
@@ -202,7 +202,7 @@ public sealed class MaskMapPointService : IMaskMapPointService
         ApiResponse<PointListData> resp;
         try
         {
-            resp = await GetMihoyoPointListCacheAsync(parentLabelIds, ct);
+            resp = await GetMihoyoPointListCacheAsync(parentLabelIds, mapType, ct);
         }
         catch (Exception ex)
         {
@@ -216,7 +216,7 @@ public sealed class MaskMapPointService : IMaskMapPointService
             return new MaskMapPointsResult { Labels = labels, Points = Array.Empty<MaskMapPoint>() };
         }
 
-        var map = MapManager.GetMap(MapTypes.Teyvat, _config.PathingConditionConfig.MapMatchingMethod);
+        var map = MapManager.GetMap(mapType, "SIFT");
         var points = resp.Data.PointList
             .Where(x => selectedSecondLevelIds.Contains(x.LabelId.ToString(CultureInfo.InvariantCulture)))
             .Select(x =>
@@ -224,12 +224,13 @@ public sealed class MaskMapPointService : IMaskMapPointService
                 var m = new MaskMapPoint
                 {
                     Id = x.Id.ToString(CultureInfo.InvariantCulture),
+                    MapType = mapType,
                     X = x.XPos,
                     Y = x.YPos,
                     LabelId = x.LabelId.ToString(CultureInfo.InvariantCulture)
                 };
 
-                (m.GameX, m.GameY) = GameWebMapCoordinateConverter.MysWebToGame(m.X, m.Y);
+                (m.GameX, m.GameY) = GameWebMapCoordinateConverter.MysWebToGame(m.X, m.Y, mapType);
                 var imageCoordinates = map.ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f((float)m.GameX, (float)m.GameY));
                 (m.ImageX, m.ImageY) = (imageCoordinates.X, imageCoordinates.Y);
                 return m;
@@ -243,7 +244,7 @@ public sealed class MaskMapPointService : IMaskMapPointService
         };
     }
 
-    private Task<ApiResponse<PointListData>> GetMihoyoPointListCacheAsync(IReadOnlyList<int> parentLabelIds, CancellationToken ct)
+    private Task<ApiResponse<PointListData>> GetMihoyoPointListCacheAsync(IReadOnlyList<int> parentLabelIds, MapTypes mapType, CancellationToken ct)
     {
         var labelIds = parentLabelIds?.Distinct().OrderBy(x => x).ToArray() ?? Array.Empty<int>();
         var provider = GetProvider();
@@ -251,9 +252,11 @@ public sealed class MaskMapPointService : IMaskMapPointService
         var langSegment = provider == MapPointApiProvider.HoYoLab
             ? $":lang:{HoYoLabMapApiService.NormalizeLanguage(_config.MapMaskConfig.HoYoLabLanguage)}"
             : string.Empty;
-        var key = $"{providerKey}:point-list:2:ys_obc{langSegment}:{string.Join(",", labelIds)}";
+        var mapId = GameWebMapCoordinateConverter.GetMysMapId(mapType);
+        var key = $"{providerKey}:point-list:{mapId}:ys_obc{langSegment}:{string.Join(",", labelIds)}";
         var request = new PointListRequest
         {
+            MapId = mapId,
             LabelIds = labelIds.ToList()
         };
         var api = GetMihoyoCompatibleApi();
@@ -277,7 +280,8 @@ public sealed class MaskMapPointService : IMaskMapPointService
 
         try
         {
-            var resp = await GetMihoyoCompatibleApi().GetPointInfoAsync(new PointInfoRequest { PointId = pointId }, ct);
+            var resp = await GetMihoyoCompatibleApi().GetPointInfoAsync(new PointInfoRequest
+                { PointId = pointId, MapId = GameWebMapCoordinateConverter.GetMysMapId(point.MapType) }, ct);
             if (resp.Retcode != 0 || resp.Data == null)
             {
                 return new MaskMapPointInfo { Text = $"查询失败: {resp.Retcode} {resp.Message}" };
@@ -423,12 +427,15 @@ public sealed class MaskMapPointService : IMaskMapPointService
             .WaitAsync(ct);
     }
 
-    private async Task<MaskMapPointsResult> GetKongyingPointsAsync(IReadOnlyList<MaskMapPointLabel> selectedItems, CancellationToken ct)
+    private async Task<MaskMapPointsResult> GetKongyingPointsAsync(IReadOnlyList<MaskMapPointLabel> selectedItems, MapTypes mapType, CancellationToken ct)
     {
         if (selectedItems.Count == 0)
         {
             return new MaskMapPointsResult();
         }
+
+        // 旧的选中项只保存大陆 ID；按类别和名称补齐当前场景 ID，并排除其它坐标系的同名物品。
+        selectedItems = ResolveKongyingSceneLabels(selectedItems, await GetKongyingItemTypeListCachedAsync(ct), mapType);
 
         IEnumerable<string> GetEffectiveIds(MaskMapPointLabel item) =>
             item.LabelIds is { Count: > 0 } ? item.LabelIds : new[] { item.LabelId };
@@ -481,7 +488,7 @@ public sealed class MaskMapPointService : IMaskMapPointService
         }
 
         var markersByItemId = await GetKongyingMarkersByItemIdCachedAsync(ct);
-        var map = MapManager.GetMap(MapTypes.Teyvat, _config.PathingConditionConfig.MapMatchingMethod);
+        var map = MapManager.GetMap(mapType, "SIFT");
 
         var markerById = new Dictionary<long, (MarkerVo Marker, long LabelItemId)>();
         foreach (var selectedItemId in selectedItemIdsInOrder)
@@ -530,6 +537,7 @@ public sealed class MaskMapPointService : IMaskMapPointService
             var m = new MaskMapPoint
             {
                 Id = markerId.ToString(CultureInfo.InvariantCulture),
+                MapType = mapType,
                 X = x,
                 Y = y,
                 LabelId = labelItemId.ToString(CultureInfo.InvariantCulture),
@@ -545,7 +553,7 @@ public sealed class MaskMapPointService : IMaskMapPointService
                     }
             };
             
-            (m.GameX, m.GameY) = GameWebMapCoordinateConverter.KongyingTavernToGame(m.X, m.Y);
+            (m.GameX, m.GameY) = GameWebMapCoordinateConverter.KongyingTavernToGame(m.X, m.Y, mapType);
             var imageCoordinates = map.ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f((float)m.GameX, (float)m.GameY));
             (m.ImageX, m.ImageY) = (imageCoordinates.X, imageCoordinates.Y);
             points.Add(m);
@@ -596,7 +604,7 @@ public sealed class MaskMapPointService : IMaskMapPointService
 
     private Task<IReadOnlyList<ItemTypeVo>> GetKongyingItemTypeListCachedAsync(CancellationToken ct)
     {
-        const string cacheKey = "kongying-tavern:item-types:area-filter-v1";
+        const string cacheKey = "kongying-tavern:item-types:scene-filter-v2";
         return _cache.GetOrAddAsync<IReadOnlyList<ItemTypeVo>>(
                 cacheKey,
                 async entry =>
@@ -604,10 +612,47 @@ public sealed class MaskMapPointService : IMaskMapPointService
                     entry.AbsoluteExpirationRelativeToNow = CacheDuration;
                     var list = await _kongyingTavernApi.GetItemTypeListAsync(CancellationToken.None);
                     return list
-                        .Where(x => x.AreaId == null || !KongyingTavernApiService.MaskMapItemTypeExcludedAreaIds.Contains(x.AreaId.Value))
+                        .Where(x => GetKongyingScene(x.AreaId) != null)
                         .ToList();
                 })
             .WaitAsync(ct);
+    }
+
+    /// <summary>酒馆地区与独立坐标系的对应关系，活动地图仍维持原来的排除规则。</summary>
+    internal static MapTypes? GetKongyingScene(long? areaId) => areaId switch
+    {
+        15 => MapTypes.Enkanomiya,
+        4 => MapTypes.TheChasm,
+        32 => MapTypes.SeaOfBygoneEras,
+        48 => MapTypes.AncientSacredMountain,
+        55 => MapTypes.TempleOfSpace,
+        56 => MapTypes.MoonCanon,
+        { } id when KongyingTavernApiService.MaskMapItemTypeExcludedAreaIds.Contains(id) => null,
+        _ => MapTypes.Teyvat
+    };
+
+    /// <summary>在同一类别内把选中物品映射到当前场景，保留用户选择而不混入其它地图的点位。</summary>
+    internal static IReadOnlyList<MaskMapPointLabel> ResolveKongyingSceneLabels(
+        IReadOnlyList<MaskMapPointLabel> selected, IReadOnlyList<ItemTypeVo> items, MapTypes mapType)
+    {
+        var result = new List<MaskMapPointLabel>();
+        foreach (var label in selected)
+        {
+            var originalIds = (label.LabelIds.Count > 0 ? label.LabelIds : [label.LabelId]).ToHashSet(StringComparer.Ordinal);
+            var hasCategory = long.TryParse(label.ParentId, out var categoryId);
+            var ids = items.Where(item => item.Id != null && GetKongyingScene(item.AreaId) == mapType &&
+                    (originalIds.Contains(item.Id.Value.ToString(CultureInfo.InvariantCulture)) ||
+                     hasCategory && item.TypeIdList?.Contains(categoryId) == true &&
+                     string.Equals(item.Name?.Trim(), label.Name.Trim(), StringComparison.Ordinal)))
+                .Select(item => item.Id!.Value.ToString(CultureInfo.InvariantCulture)).Distinct().ToArray();
+            if (ids.Length == 0) continue;
+            result.Add(new MaskMapPointLabel
+            {
+                LabelId = ids[0], LabelIds = ids, ParentId = label.ParentId, Name = label.Name,
+                IconUrl = label.IconUrl, PointCount = label.PointCount
+            });
+        }
+        return result;
     }
 
     private Task<IReadOnlyList<MarkerVo>> GetKongyingMarkerListCachedAsync(CancellationToken ct)
@@ -647,11 +692,9 @@ public sealed class MaskMapPointService : IMaskMapPointService
                 async entry =>
                 {
                     entry.AbsoluteExpirationRelativeToNow = CacheDuration;
-                    var apiStart = Stopwatch.GetTimestamp();
                     var markers = await GetKongyingMarkerListCachedAsync(CancellationToken.None);
-                    var apiElapsed = Stopwatch.GetElapsedTime(apiStart);
 
-                    var responseStart = Stopwatch.GetTimestamp();
+                    // 按物品建立反向索引，同一标记内的重复物品只计入一次。
                     var markerListByItemId = new Dictionary<long, List<MarkerVo>>(capacity: 4096);
 
                     foreach (var marker in markers)
@@ -684,19 +727,9 @@ public sealed class MaskMapPointService : IMaskMapPointService
                         }
                     }
 
-                    var result = markerListByItemId.ToDictionary(
+                    return markerListByItemId.ToDictionary(
                         x => x.Key,
                         x => (IReadOnlyList<MarkerVo>)x.Value);
-                    var responseElapsed = Stopwatch.GetElapsedTime(responseStart);
-
-                    // _logger.LogInformation(
-                    //     "空荧酒馆 markers-by-item-id: API {ApiMs}ms, 响应处理 {ResponseMs}ms, markers {MarkerCount}, itemIds {ItemIdCount}",
-                    //     apiElapsed.TotalMilliseconds,
-                    //     responseElapsed.TotalMilliseconds,
-                    //     markers.Count,
-                    //     result.Count);
-
-                    return result;
                 })
             .WaitAsync(ct);
     }
