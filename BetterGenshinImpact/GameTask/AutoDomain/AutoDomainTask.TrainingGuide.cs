@@ -312,6 +312,11 @@ public partial class AutoDomainTask
                 await _runtime.Delay(800, _ct);
                 continue;
             }
+            // 每批滚动前将鼠标复位到秘境列表区域。
+            _runtime.GameRegion1080PPosMove(
+                (int)(capture.Width * .52),
+                (int)(capture.Height * .45));
+
             // 首次滚动三次避开标题影响，之后每轮八次；每批完成后再 OCR。
             var scrollSteps = page == 0 ? 3 : 8;
             for (var step = 0; step < scrollSteps; step++)
