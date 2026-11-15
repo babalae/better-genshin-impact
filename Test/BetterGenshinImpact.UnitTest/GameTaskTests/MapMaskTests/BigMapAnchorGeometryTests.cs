@@ -1,4 +1,7 @@
 using BetterGenshinImpact.GameTask.MapMask;
+using BetterGenshinImpact.Infrastructure.Temp;
+using Microsoft.Extensions.Logging.Abstractions;
+using Newtonsoft.Json;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.UnitTest.GameTaskTests.MapMaskTests;
@@ -8,6 +11,32 @@ public class BigMapAnchorGeometryTests
 {
     /// <summary>不规则且分散的独立锚点，避免对称排列本身造成歧义。</summary>
     private static Point2f[] Points() => [new(100, 100), new(400, 120), new(130, 350), new(600, 400), new(750, 180)];
+
+    /// <summary>损坏缓存中的 null 帧不阻塞启动，也不丢弃同一文件内仍有效的几何参考。</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Atlas_NullCachedFrames_PreservesValidReference(bool includeValidFrame)
+    {
+        using var temp = new TempFileService($"map-atlas-test-{Guid.NewGuid():N}", NullLogger<TempFileService>.Instance);
+        using var scope = temp.CreateScope(new TempCategory("map-test", "地图锚点回归"));
+        var path = scope.GetPath("anchors.json");
+        var source = Points();
+        var world = source.Select(p => new[] { p.X * 4 + 2000, p.Y * 4 + 5000 }).ToArray();
+        File.WriteAllText(path, includeValidFrame ? "[null," + JsonConvert.SerializeObject(world) + ",null]" : "[null]");
+        var atlas = new BigMapAnchorAtlas(new Size(50000, 50000), path);
+        var result = atlas.Match(source, new Size(960, 540), null);
+        if (includeValidFrame)
+        {
+            Assert.NotNull(result);
+            Assert.Equal(2000, result.Viewport.X, 3);
+            Assert.Equal(5000, result.Viewport.Y, 3);
+        }
+        else
+        {
+            Assert.Null(result);
+        }
+    }
 
     /// <summary>锚点坐标加上无关检测和无关参考点后，仍必须独立求出正确的整个视口。</summary>
     [Fact]

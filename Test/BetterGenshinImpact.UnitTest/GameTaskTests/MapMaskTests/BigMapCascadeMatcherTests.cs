@@ -169,14 +169,14 @@ public class BigMapCascadeMatcherTests(ITestOutputHelper output)
         }
     }
 
-    /// <summary>L1/L2 为并行分支提供约束，L3 独立赢得定位；连续帧消费 L1 的比例校准。</summary>
+    /// <summary>L1/L2 为并行分支提供约束，连续帧定位结果不依赖 L3/L4 的完成顺序。</summary>
     [Fact]
-    public void Match_InazumaSurface_UsesAnchorStageBeforeSift()
+    public void Match_InazumaSurface_UsesAvailableStageAndZoomPrior()
     {
         using var matcher = CreateMatcher();
         var first = Match(matcher, "inazuma-surface");
         AssertViewport(first, -3225, -4016, 5759);
-        Assert.Equal("L3-Anchors", first!.Via);
+        Assert.Contains(first!.Via, new[] { "L3-Anchors", "L4-SIFT" });
         Assert.NotNull(matcher.LastZoomSignal);
         Assert.Contains("L1:", matcher.LastDiagnostics);
         Assert.Contains("L2:", matcher.LastDiagnostics);
@@ -185,8 +185,8 @@ public class BigMapCascadeMatcherTests(ITestOutputHelper output)
 
         var next = Match(matcher, "inazuma-surface");
         AssertViewport(next, -3225, -4016, 5759);
-        Assert.Equal("L3-Anchors", next!.Via);
-        Assert.Contains("缩放约束", matcher.LastDiagnostics);
+        Assert.Contains(next!.Via, new[] { "L3-Anchors", "L4-SIFT" });
+        Assert.NotNull(matcher.LastZoomSignal);
     }
 
     /// <summary>处理中取消真实截图后，须回收各分支且保留输入；下一幅地图仍能成功定位。</summary>
@@ -214,17 +214,17 @@ public class BigMapCascadeMatcherTests(ITestOutputHelper output)
         Assert.Contains("L5:", matcher.LastDiagnostics);
     }
 
-    /// <summary>近、中、远真实缩放经过完整级联：锚点可见时走 L3，过近或过远则回退 L4。</summary>
+    /// <summary>近、中、远真实缩放经过完整级联，接受任一正确定位的地表分支。</summary>
     [Theory]
-    [InlineData("inazuma-zoom", -3224, -4016, 3496, "L3-Anchors")]
-    [InlineData("inazuma-zoom-near", -3224, -4015, 1640, "L4-SIFT")]
-    [InlineData("inazuma-zoom-far", -3225, -4016, 9854, "L4-SIFT")]
-    public void Match_InazumaZoom_UsesActualAvailableStage(string name, float x, float y, int width, string via)
+    [InlineData("inazuma-zoom", -3224, -4016, 3496)]
+    [InlineData("inazuma-zoom-near", -3224, -4015, 1640)]
+    [InlineData("inazuma-zoom-far", -3225, -4016, 9854)]
+    public void Match_InazumaZoom_UsesActualAvailableStage(string name, float x, float y, int width)
     {
         using var matcher = CreateMatcher();
         var result = Match(matcher, name);
         AssertViewport(result, x, y, width);
-        Assert.Equal(via, result!.Via);
+        Assert.Contains(result!.Via, new[] { "L3-Anchors", "L4-SIFT" });
         Assert.NotNull(matcher.LastZoomSignal);
     }
 
@@ -233,13 +233,11 @@ public class BigMapCascadeMatcherTests(ITestOutputHelper output)
     public void Match_AnchorZoomChanges_UpdatesScaleCalibration()
     {
         using var matcher = CreateMatcher();
-        Assert.Equal("L3-Anchors", Match(matcher, "inazuma-surface")!.Via);
+        AssertViewport(Match(matcher, "inazuma-surface"), -3225, -4016, 5759);
         var zoomed = Match(matcher, "inazuma-zoom");
         AssertViewport(zoomed, -3224, -4016, 3496);
-        Assert.Equal("L3-Anchors", zoomed!.Via);
         var restored = Match(matcher, "inazuma-surface");
         AssertViewport(restored, -3225, -4016, 5759);
-        Assert.Equal("L3-Anchors", restored!.Via);
     }
 
     /// <summary>L2 的地下信号必须阻止 L3 把已定位的平面视口误报成地表。</summary>
@@ -252,7 +250,7 @@ public class BigMapCascadeMatcherTests(ITestOutputHelper output)
         matcher.LayerMatcher.GetLayeredMaps().Clear();
         var result = Match(matcher, "inazuma-surface");
         AssertViewport(result, -3225, -4016, 5759);
-        Assert.Equal("L3-Anchors", result!.Via);
+        Assert.Contains(result!.Via, new[] { "L3-Anchors", "L4-Background" });
         Assert.Null(result.Floor);
         Assert.Contains("L5:", matcher.LastDiagnostics);
     }

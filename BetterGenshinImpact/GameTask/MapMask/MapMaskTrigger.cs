@@ -162,7 +162,10 @@ public class MapMaskTrigger : ITaskTrigger
 
     public void OnEnabled(object? options)
     {
-        _active = true;
+        lock (_bigMapCancellationLock)
+        {
+            _active = true;
+        }
     }
 
     /// <summary>
@@ -170,23 +173,27 @@ public class MapMaskTrigger : ITaskTrigger
     /// </summary>
     public void OnDisabled()
     {
-        _active = false;
-        Interlocked.Increment(ref _bigMapGeneration);
-        CancelBigMapCompute();
-        _frameTracker.Reset();
-        _motionTracker.Reset();
+        lock (_bigMapCancellationLock)
+        {
+            _active = false;
+            Interlocked.Increment(ref _bigMapGeneration);
+            CancelBigMapCompute();
+            _frameTracker.Reset();
+            _motionTracker.Reset();
 
-        var pendingBigMapCompute = Interlocked.Exchange(ref _pendingBigMapCompute, null);
-        pendingBigMapCompute?.Dispose();
-        var pendingMiniMapCompute = Interlocked.Exchange(ref _pendingMiniMapCompute, null);
-        pendingMiniMapCompute?.Dispose();
+            var pendingBigMapCompute = Interlocked.Exchange(ref _pendingBigMapCompute, null);
+            pendingBigMapCompute?.Dispose();
+            var pendingMiniMapCompute = Interlocked.Exchange(ref _pendingMiniMapCompute, null);
+            pendingMiniMapCompute?.Dispose();
+
+            // 清空状态和使任务失效必须原子完成，防止旧结果在停用后重新写入。
+            // 退役的触发器可能在下一会话的第一帧才收到停用回调，这里只清理借用的地图状态单例，
+            // 不使用截图器、输入或窗口；解绑时 GameRuntimeService 也会重置一次
+            _runtime.MaskWindowMapState.Reset();
+        }
 
         // 由计算 worker 释放匹配器，避免 UI 线程等待或释放仍在使用的 Mat。
         EnsureBigMapWorkerRunning();
-
-        // 退役的触发器可能在下一会话的第一帧才收到停用回调，这里只清理借用的地图状态单例，
-        // 不使用截图器、输入或窗口；解绑时 GameRuntimeService 也会重置一次
-        _runtime.MaskWindowMapState.Reset();
     }
 
     /// <summary>
@@ -209,14 +216,17 @@ public class MapMaskTrigger : ITaskTrigger
             var inBigMapUi = content.CurrentGameUiCategory == GameUiCategory.BigMap || Bv.IsInBigMapUi(region);
             if (inBigMapUi != _inBigMap)
             {
-                _inBigMap = inBigMapUi;
-                Interlocked.Increment(ref _bigMapGeneration);
-                CancelBigMapCompute();
-                _frameTracker.Reset();
-                _motionTracker.Reset();
-                Interlocked.Exchange(ref _locateStartedTick, 0);
-                Interlocked.Exchange(ref _pendingBigMapCompute, null)?.Dispose();
-                PublishMapState(isInBigMap: inBigMapUi, bigMapViewport: new Rect(0, 0, 0, 0), bigMapDebugText: string.Empty);
+                lock (_bigMapCancellationLock)
+                {
+                    _inBigMap = inBigMapUi;
+                    Interlocked.Increment(ref _bigMapGeneration);
+                    CancelBigMapCompute();
+                    _frameTracker.Reset();
+                    _motionTracker.Reset();
+                    Interlocked.Exchange(ref _locateStartedTick, 0);
+                    Interlocked.Exchange(ref _pendingBigMapCompute, null)?.Dispose();
+                    PublishMapState(isInBigMap: inBigMapUi, bigMapViewport: new Rect(0, 0, 0, 0), bigMapDebugText: string.Empty);
+                }
             }
             var mapMatchingMethod = _config.PathingConditionConfig.MapMatchingMethod;
             Rect? miniMapViewport = null;
@@ -282,6 +292,7 @@ public class MapMaskTrigger : ITaskTrigger
                         {
                             MapMatchingMethod = mapMatchingMethod,
                             MapType = (MapTypes)Volatile.Read(ref _currentMapType),
+                            BigMapGeneration = Volatile.Read(ref _bigMapGeneration),
                             Mat = srcMat
                         });
                     }
@@ -492,6 +503,8 @@ public class MapMaskTrigger : ITaskTrigger
                 // 切换坐标系时先清理旧视口和光流，点位请求由 UI 根据快照取消并重发。
                 Volatile.Write(ref _currentMapType, (int)mapType);
                 _motionTracker.Reset();
+                // 当前帧已通过修订校验；重建观察状态，使本次绝对定位可立即成为拖动参考。
+                _motionTracker.TryTrack(workItem.Mat, workItem.BigMapRevision, out _);
                 PublishMapState(bigMapViewport: new Rect(), miniMapViewport: new Rect(), mapType: mapType);
             }
         }
@@ -595,10 +608,10 @@ public class MapMaskTrigger : ITaskTrigger
             {
                 if (result != null)
                 {
-                    _motionTracker.SetReference(workItem.Mat!,
+                    var referenceSaved = _motionTracker.SetReference(workItem.Mat!,
                         new Rect2d(rect2048.X, rect2048.Y, rect2048.Width, rect2048.Height), workItem.BigMapRevision);
                     // 提前坐标不能关闭后续确认的重试；只有完整收尾成功才认为本修订处理完成。
-                    if (cleanupMilliseconds.HasValue)
+                    if (cleanupMilliseconds.HasValue && referenceSaved)
                     {
                         Volatile.Write(ref _lastMatchedRevision, workItem.BigMapRevision);
                         Interlocked.Exchange(ref _locateStartedTick, 0);
@@ -632,15 +645,25 @@ public class MapMaskTrigger : ITaskTrigger
             _miniMapScene = workItem.MapType;
         }
         var miniPoint = _navigationInstance.GetPositionStable(imageRegion, workItem.MapType.ToString(), workItem.MapMatchingMethod, out var result);
-        if (!_active || _inBigMap || workItem.MapType != (MapTypes)Volatile.Read(ref _currentMapType)) return;
+        var viewport = new Rect();
         if (miniPoint != default && result != null)
         {
             var sceneMap = MapManager.GetMap(workItem.MapType, workItem.MapMatchingMethod);
-            PublishMapState(miniMapViewport: CreateMiniMapViewport(result, sceneMap));
+            viewport = CreateMiniMapViewport(result, sceneMap);
         }
-        else
+        PublishMiniMapComputeResult(workItem.MapType, workItem.BigMapGeneration, viewport);
+    }
+
+    /// <summary>与场景切换共用临界区，原子校验并发布同一任务的地图类型及小地图视口。</summary>
+    internal bool PublishMiniMapComputeResult(MapTypes mapType, int generation, Rect viewport)
+    {
+        lock (_bigMapCancellationLock)
         {
-            PublishMapState(miniMapViewport: new Rect(0, 0, 0, 0));
+            if (!_active || _runtime.IsStopping || _inBigMap ||
+                generation != Volatile.Read(ref _bigMapGeneration) ||
+                mapType != (MapTypes)Volatile.Read(ref _currentMapType)) return false;
+            PublishMapState(miniMapViewport: viewport, mapType: mapType);
+            return true;
         }
     }
 

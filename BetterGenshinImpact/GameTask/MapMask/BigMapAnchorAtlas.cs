@@ -38,9 +38,11 @@ internal sealed class BigMapAnchorAtlas
         }
         try
         {
-            var frames = JsonConvert.DeserializeObject<List<float[][]>>(File.ReadAllText(path));
+            var frames = JsonConvert.DeserializeObject<List<float[][]?>>(File.ReadAllText(path));
             foreach (var frame in frames?.Take(MaxFrames) ?? [])
             {
+                // JSON 中的 null 帧不是有效参考，但不能阻止其余参考加载或后续重新采集。
+                if (frame == null) continue;
                 Add(frame.Where(p => p is { Length: 2 }).Select(p => new Point2f(p[0], p[1])), false);
             }
         }
