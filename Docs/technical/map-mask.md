@@ -58,6 +58,8 @@ L5 优先验证上一成功层，其次使用粗检索、按钮层序和最近�
 
 大小地图共用公共地图层的 `MapMatchResult`（由原 L1～L5 的 `BigMapMatchResult` 下移并改名），没有单独的小地图 Info 类型。`ISceneMap.GetMiniMapPosition` 各重载返回 `MapMatchResult?`，失败为 null；结果中的 `ImagePosition` 保留原生图像坐标的亚像素精度，`GenshinPosition` 为游戏坐标，`LayerScale` 为同一次成功匹配的层图标定值。模板匹配同时返回层名、楼层及归一化得分，SIFT 未使用层图标定时 `LayerScale` 为 null。大地图 L5 也在同一结果字段中提供层比例。导航保留原有只返回点的调用方式，通过 `GetPositionStable` 的 `out MapMatchResult?` 重载向遮罩透传结果；全图重试后整体替换，调用方无需读取匹配器内部状态。
 
+`MapMaskTrigger.CreateMiniMapViewport` 使用返回结果的 `LayerScale`，按 `MapAssets.MimiMapRect1080P.Width × MiniMapMatchConfig.ExactSize / OriginalSize / LayerScale` 及场景坐标转换生成视口。新基捷城地下层 `Scale=3`，忽略它会让显示范围扩大三倍，点位向中心挤缩。SIFT 保留原有普通地图比例。通用场景坐标转换不变，没有额外的小地图显示比例接口。
+
 ## 复用的其他模块
 
 | 上游能力 | 本模块的使用位置与用途 | 依赖方向 |
@@ -133,7 +135,7 @@ L5 优先验证上一成功层，其次使用粗检索、按钮层序和最近�
 
 ## 回归测试与资源
 
-测试代码位于 [`MapMaskTests`](../../Test/BetterGenshinImpact.UnitTest/GameTaskTests/MapMaskTests)，35 张截图、12 份坐标 JSON 及来源说明统一保存在资源子模块 [`Assets/MapMask`](../../Test/BetterGenshinImpact.UnitTest/Assets/MapMask)。资源仓库为 [BetterGI.UnitTest.Assets](https://github.com/huiyadanli/BetterGI.UnitTest.Assets)。
+测试代码位于 [`MapMaskTests`](../../Test/BetterGenshinImpact.UnitTest/GameTaskTests/MapMaskTests)，37 张截图、12 份坐标 JSON 及来源说明统一保存在资源子模块 [`Assets/MapMask`](../../Test/BetterGenshinImpact.UnitTest/Assets/MapMask)。资源仓库为 [BetterGI.UnitTest.Assets](https://github.com/huiyadanli/BetterGI.UnitTest.Assets)。
 
 在主仓库根目录初始化指定版本的子模块，再编译与测试：
 
@@ -146,3 +148,5 @@ dotnet test Test/BetterGenshinImpact.UnitTest/BetterGenshinImpact.UnitTest.cspro
 编译时资源统一复制到测试输出 `TestData/MapMask`，测试从 `AppContext.BaseDirectory` 读取；缺失样本必须失败。更新资源先提交、发布子模块，再更新主仓库指针，不使用 `--remote` 自动漂移资源版本。
 
 现有回归覆盖真实截图的全屏坐标、楼层、独立地图 OCR、缩放、弹框和日志遮挡，以及几何负例、拖动跟踪、取消、提前发布、图像生命周期和长时间静止后的截图调度。单元测试无需游戏运行。当前测试初始化日志会涉及程序单实例初始化，运行中的 BetterGI 可能导致测试宿主退出，执行测试前需关闭对应实例。
+
+`MiniMapViewportTests` 使用用户 2026-11-15 20:14:12 的新基捷城地下截图，保留 1080P 和原始 4K 两份脱敏样本。两者均经过生产的 1080P 归一化与 `NavigationInstance.GetPositionStable`，覆盖冷启动和后续局部匹配；同时验证中心、成功层和最终遮罩视口。期望来自独立地形配准：原生图像中心约 `(24356.2, 4730.1)`、完整小地图范围宽约 `235.5`，不能用生产匹配结果生成期望。

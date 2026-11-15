@@ -10,6 +10,7 @@ using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.GameTask.Model.Area;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Mask;
+using BetterGenshinImpact.Core.Recognition.OpenCv.TemplateMatch;
 using BetterGenshinImpact.GameTask.Runtime;
 using BetterGenshinImpact.Helpers;
 using Microsoft.Extensions.Logging;
@@ -630,21 +631,32 @@ public class MapMaskTrigger : ITaskTrigger
             _navigationInstance.Reset();
             _miniMapScene = workItem.MapType;
         }
-        var miniPoint = _navigationInstance.GetPositionStable(imageRegion, workItem.MapType.ToString(), workItem.MapMatchingMethod);
+        var miniPoint = _navigationInstance.GetPositionStable(imageRegion, workItem.MapType.ToString(), workItem.MapMatchingMethod, out var result);
         if (!_active || _inBigMap || workItem.MapType != (MapTypes)Volatile.Read(ref _currentMapType)) return;
-        if (miniPoint != default)
+        if (miniPoint != default && result != null)
         {
-            double viewportSize = MapAssets.MimiMapRect1080P.Width / 3.0 * 10 * (workItem.MapType == MapTypes.Teyvat ? 1 : 0.5);
-            PublishMapState(miniMapViewport: new Rect(
-                miniPoint.X - viewportSize / 2.0,
-                miniPoint.Y - viewportSize / 2.0,
-                viewportSize,
-                viewportSize));
+            var sceneMap = MapManager.GetMap(workItem.MapType, workItem.MapMatchingMethod);
+            PublishMapState(miniMapViewport: CreateMiniMapViewport(result, sceneMap));
         }
         else
         {
             PublishMapState(miniMapViewport: new Rect(0, 0, 0, 0));
         }
+    }
+
+    /// <summary>将小地图定位中心及其显示范围转换为当前场景的原生图像视口。</summary>
+    internal static Rect CreateMiniMapViewport(MapMatchResult result, ISceneMap map)
+    {
+        // 模板预处理把中心裁剪放大到精匹配尺寸；成功层的 Scale 再将层图像素还原为游戏单位。
+        // SIFT 接口目前只返回中心，沿用其原有的普通地图比例。
+        var layerScale = result.LayerScale ?? 1;
+        var mapPixelsPerScreenPixel = (double)MiniMapMatchConfig.ExactSize / MiniMapMatchConfig.OriginalSize / layerScale;
+
+        // 复用场景坐标转换得到原生图像比例，兼容提瓦特及独立地图不同的底图分辨率。
+        var origin = map.ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f(0, 0));
+        var unit = map.ConvertGenshinMapCoordinatesToImageCoordinates(new Point2f(1, 0));
+        var viewportSize = MapAssets.MimiMapRect1080P.Width * mapPixelsPerScreenPixel * Math.Abs(unit.X - origin.X);
+        return new Rect(result.ImagePosition.X - viewportSize / 2, result.ImagePosition.Y - viewportSize / 2, viewportSize, viewportSize);
     }
 
     /// <summary>
