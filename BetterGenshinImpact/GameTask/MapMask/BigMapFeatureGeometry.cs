@@ -117,7 +117,7 @@ internal static class BigMapFeatureGeometry
     public static BigMapFeatureMatch? Match(BigMapImageFeatures query, KeyPoint[] trainPoints, FlannBasedMatcher matcher,
         double minimumInlierRatio = 0.4, Size? trainImageSize = null, CancellationToken cancellationToken = default)
     {
-        var accepted = new List<DMatch>();
+        var accepted = new List<(DMatch Match, double Ratio)>();
         // 分批调用原生近邻检索，使地图移动后能在一小批描述子完成时退出。
         for (var offset = 0; offset < query.Descriptors.Rows; offset += 128)
         {
@@ -125,17 +125,26 @@ internal static class BigMapFeatureGeometry
             using var batch = query.Descriptors.RowRange(offset, Math.Min(offset + 128, query.Descriptors.Rows));
             foreach (var neighbors in matcher.KnnMatch(batch, 2))
             {
-                if (neighbors.Length == 2 && neighbors[0].Distance < 0.7 * neighbors[1].Distance)
+                if (neighbors.Length == 2 && neighbors[0].Distance < 0.75 * neighbors[1].Distance)
                 {
                     var match = neighbors[0];
-                    accepted.Add(new DMatch(match.QueryIdx + offset, match.TrainIdx, match.Distance));
+                    accepted.Add((new DMatch(match.QueryIdx + offset, match.TrainIdx, match.Distance),
+                        (double)match.Distance / neighbors[1].Distance));
                 }
             }
         }
         cancellationToken.ThrowIfCancellationRequested();
-        var matches = accepted.GroupBy(m => m.TrainIdx).Select(g => g.MinBy(m => m.Distance)).ToArray();
-        return Fit(matches.Select(m => query.KeyPoints[m.QueryIdx].Pt).ToArray(),
-            matches.Select(m => trainPoints[m.TrainIdx].Pt).ToArray(), query.Size, minimumInlierRatio, trainImageSize, cancellationToken);
+        // 先沿用严格比例测试；稀疏地形缺少足够支持时，复用同一次近邻结果逐步补充候选。
+        // 每轮仍须通过相同的八内点、内点比例、空间覆盖和几何残差校验，不重复检索描述子。
+        foreach (var ratio in new[] { 0.7, 0.725, 0.75 })
+        {
+            var matches = accepted.Where(m => m.Ratio < ratio).Select(m => m.Match)
+                .GroupBy(m => m.TrainIdx).Select(g => g.MinBy(m => m.Distance)).ToArray();
+            var result = Fit(matches.Select(m => query.KeyPoints[m.QueryIdx].Pt).ToArray(),
+                matches.Select(m => trainPoints[m.TrainIdx].Pt).ToArray(), query.Size, minimumInlierRatio, trainImageSize, cancellationToken);
+            if (result != null) return result;
+        }
+        return null;
     }
 
     /// <summary>先估计相似变换，再验证独立内点数、空间覆盖及轴对齐残差。</summary>

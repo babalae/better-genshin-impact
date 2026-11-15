@@ -38,6 +38,29 @@ public class BigMapAnchorGeometryTests
         }
     }
 
+    /// <summary>缓存满载后连续重载和采集新参考，始终保留最新组并淘汰最旧组。</summary>
+    [Fact]
+    public void Atlas_ReloadFullCache_PreservesRecencyAndEvictsOldestFrame()
+    {
+        using var temp = new TempFileService($"map-atlas-test-{Guid.NewGuid():N}", NullLogger<TempFileService>.Instance);
+        using var scope = temp.CreateScope(new TempCategory("map-test", "地图锚点回归"));
+        var path = scope.GetPath("anchors.json");
+        var frames = Enumerable.Range(0, 16).Select(i => Points()
+            .Select(p => new[] { p.X + 1000 + i * 2000, p.Y + 1000 }).ToArray()).ToArray();
+        File.WriteAllText(path, JsonConvert.SerializeObject(frames));
+
+        for (var reload = 1; reload <= 2; reload++)
+        {
+            var atlas = new BigMapAnchorAtlas(new Size(100000, 100000), path);
+            atlas.Observe(Points().Select(p => new Point2f(p.X + 50000 + reload * 2000, p.Y + 1000)));
+            var saved = JsonConvert.DeserializeObject<float[][][]>(File.ReadAllText(path))!;
+            Assert.Equal(16, saved.Length);
+            var newest = Enumerable.Range(1, reload).Reverse().Select(i => 50100f + i * 2000);
+            var retained = frames.Take(16 - reload).Select(frame => frame[0][0]);
+            Assert.Equal(newest.Concat(retained), saved.Select(frame => frame[0][0]));
+        }
+    }
+
     /// <summary>锚点坐标加上无关检测和无关参考点后，仍必须独立求出正确的整个视口。</summary>
     [Fact]
     public void Match_IndependentAnchorsWithOutliers_ReturnsViewport()

@@ -39,7 +39,8 @@ internal sealed class BigMapAnchorAtlas
         try
         {
             var frames = JsonConvert.DeserializeObject<List<float[][]?>>(File.ReadAllText(path));
-            foreach (var frame in frames?.Take(MaxFrames) ?? [])
+            // 文件按最新到最旧保存，AddFirst 要从最旧组开始，才能保持最近参考优先及正确淘汰顺序。
+            foreach (var frame in (frames?.Take(MaxFrames) ?? []).Reverse())
             {
                 // JSON 中的 null 帧不是有效参考，但不能阻止其余参考加载或后续重新采集。
                 if (frame == null) continue;

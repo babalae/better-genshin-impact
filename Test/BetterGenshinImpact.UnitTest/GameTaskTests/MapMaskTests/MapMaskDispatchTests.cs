@@ -46,7 +46,7 @@ public class MapMaskDispatchTests
 
     /// <summary>等待场景提交锁的小地图结果，取得锁后必须重新校验，不能覆盖新场景的空视口。</summary>
     [Fact]
-    public async Task MiniMap_SceneChangesBeforePublication_RejectsStaleViewport()
+    public void MiniMap_SceneChangesBeforePublication_RejectsStaleViewport()
     {
         using var runtime = TestGameRuntime.Create(new FakeSystemInfo(new RECT(0, 0, 1920, 1080), 1));
         var state = (MaskWindowMapState)runtime.MaskWindowMapState;
@@ -54,20 +54,35 @@ public class MapMaskDispatchTests
         trigger.OnEnabled(null);
         SetField(trigger, "_currentMapType", (int)MapTypes.Enkanomiya);
         var gate = typeof(MapMaskTrigger).GetField("_bigMapCancellationLock", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(trigger)!;
-        using var started = new ManualResetEventSlim();
-        Task<bool> publication;
+        bool? published = null;
+        Exception? publicationError = null;
+        var publication = new Thread(() =>
+        {
+            try
+            {
+                published = trigger.PublishMiniMapComputeResult(MapTypes.Enkanomiya, 0, new Rect(10, 20, 30, 40));
+            }
+            catch (Exception error)
+            {
+                publicationError = error;
+            }
+        }) { IsBackground = true };
+        bool waitingForLock;
         lock (gate)
         {
-            publication = Task.Run(() =>
-            {
-                started.Set();
-                return trigger.PublishMiniMapComputeResult(MapTypes.Enkanomiya, 0, new Rect(10, 20, 30, 40));
-            });
-            Assert.True(started.Wait(TimeSpan.FromSeconds(5)));
+            publication.Start();
+            // 专用线程只有取得场景锁这一处会等待；确认它已被 Monitor 阻塞后再切场景。
+            // 若校验被移到锁前，此时它必已读过旧场景，后续陈旧发布就一定会使断言失败。
+            SpinWait.SpinUntil(() => (publication.ThreadState & ThreadState.WaitSleepJoin) != 0 || !publication.IsAlive,
+                TimeSpan.FromSeconds(5));
+            waitingForLock = (publication.ThreadState & ThreadState.WaitSleepJoin) != 0;
             SetField(trigger, "_currentMapType", (int)MapTypes.MoonCanon);
             runtime.MaskWindowMapState.Update(mapType: MapTypes.MoonCanon, miniMapViewport: new Rect());
         }
-        Assert.False(await publication.WaitAsync(TimeSpan.FromSeconds(5)));
+        Assert.True(publication.Join(TimeSpan.FromSeconds(5)));
+        Assert.True(waitingForLock);
+        Assert.Null(publicationError);
+        Assert.False(published);
         Assert.Equal(MapTypes.MoonCanon, state.Current.MapType);
         Assert.Equal(new Rect(), state.Current.MiniMapViewport);
     }
@@ -100,7 +115,7 @@ public class MapMaskDispatchTests
         {
             var compute = (Task)typeof(MapMaskTrigger)
                 .GetMethod("ProcessBigMapComputeAsync", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(trigger, [work])!;
-            await compute.WaitAsync(TimeSpan.FromSeconds(20));
+            await compute;
             Assert.Equal(MapTypes.MoonCanon, ((MaskWindowMapState)runtime.MaskWindowMapState).Current.MapType);
             Assert.True(tracker.TryTrack(gray, 2, out _));
         }

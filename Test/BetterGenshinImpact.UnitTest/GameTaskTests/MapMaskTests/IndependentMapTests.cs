@@ -10,6 +10,7 @@ using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Service.Tavern.Model;
 using BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests.OCRTests;
 using OpenCvSharp;
+using OpenCvSharp.Features2D;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit.Abstractions;
 
@@ -23,6 +24,54 @@ public class IndependentMapTests(PaddleFixture paddle, ITestOutputHelper output)
 
     /// <summary>记录各分支诊断及实际耗时。</summary>
     private readonly ITestOutputHelper _output = output;
+
+    /// <summary>固定曾漏掉有效对应的近邻索引种子，稀疏海域必须补足几何支持而非放宽验收。</summary>
+    [Theory]
+    [InlineData(2)]
+    [InlineData(5)]
+    [InlineData(6)]
+    [InlineData(7)]
+    [InlineData(11)]
+    public void Match_SparseSeaWithDifferentIndexes_ReturnsSameViewport(int seed)
+    {
+        using var color = MapMaskTestImages.Load("moon-sea");
+        using var gray = color.CvtColor(ColorConversionCodes.BGR2GRAY);
+        using var sift = SIFT.Create(6000);
+        using var query = BigMapImageFeatures.Prepare(gray, 960, BigMapUiLayout.GetMapArea(gray));
+        query.EnsureFeatures(sift, CancellationToken.None);
+        var map = (SceneBaseMap)MapManager.GetMap(MapTypes.MoonCanon, "SIFT");
+        var surface = map.Layers.First(l => l.Floor == 0);
+        var random = Cv2.GetTheRNG();
+        try
+        {
+            Cv2.SetTheRNG((ulong)seed);
+            var match = BigMapFeatureGeometry.Match(query, surface.TrainKeyPoints, surface.TrainDescriptors);
+            Assert.NotNull(match);
+            AssertViewport(MapMatchResult.FromViewport(map, match.Viewport, 0, null, match.Confidence, "L4-SIFT"),
+                318, 1280, 2516);
+        }
+        finally
+        {
+            // OpenCV 随机状态属于当前线程，测试不能影响复用该线程的后续索引构建。
+            Cv2.SetTheRNG(random.State);
+        }
+    }
+
+    /// <summary>补充弱描述子候选不能让海域截图在其他场景的相似画风底图上产生假定位。</summary>
+    [Theory]
+    [InlineData(MapTypes.Enkanomiya)]
+    [InlineData(MapTypes.Teyvat)]
+    public void Match_SparseSeaAgainstUnrelatedMap_ReturnsNull(MapTypes scene)
+    {
+        using var color = MapMaskTestImages.Load("moon-sea");
+        using var gray = color.CvtColor(ColorConversionCodes.BGR2GRAY);
+        using var sift = SIFT.Create(6000);
+        using var query = BigMapImageFeatures.Prepare(gray, 960, BigMapUiLayout.GetMapArea(gray));
+        query.EnsureFeatures(sift, CancellationToken.None);
+        var map = (SceneBaseMap)MapManager.GetMap(scene, "SIFT");
+        var surface = map.Layers.First(l => l.Floor == 0);
+        Assert.Null(BigMapFeatureGeometry.Match(query, surface.TrainKeyPoints, surface.TrainDescriptors));
+    }
 
     /// <summary>同名底图更新后必须重新生成特征，不能继续返回旧底图中的位置。</summary>
     [Fact]
