@@ -55,6 +55,15 @@ public partial class ScriptControlViewModel : ViewModel
     private readonly IScriptService _scriptService;
 
     /// <summary>
+    /// 批量加载配置组期间为 true。
+    /// ReadScriptGroup 逐个 Add 会触发 ScriptGroupsCollectionChanged，而该事件和
+    /// ScriptProjectsPChanged 都会把所有配置组重新写盘，配置组较多时会产生
+    /// n(n+1)/2 次同步 File.WriteAllText。加载期间置位，仅跳过写盘，
+    /// 内存中的 Index 重排和事件订阅仍然执行。
+    /// </summary>
+    private bool _suppressPersist;
+
+    /// <summary>
     /// 配置组配置
     /// </summary>
     [ObservableProperty]
@@ -1801,6 +1810,13 @@ public partial class ScriptControlViewModel : ViewModel
             group.Index = i++;
         }
 
+        // 批量加载期间不写盘：读取到的内容与磁盘一致，无需回写；
+        // 日常增删、拖拽排序时仍会走下面的保存逻辑。
+        if (_suppressPersist)
+        {
+            return;
+        }
+
         // 保存配置组配置
         foreach (var group in ScriptGroups)
         {
@@ -1810,9 +1826,24 @@ public partial class ScriptControlViewModel : ViewModel
 
     private void ScriptProjectsPChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (_suppressPersist)
+        {
+            return;
+        }
+
+        if (sender is not ScriptGroupProject project)
+        {
+            return;
+        }
+
+        // 只保存该 project 所属的配置组，避免任一项目变化都全量写盘
         foreach (var group in ScriptGroups)
         {
-            WriteScriptGroup(group);
+            if (group.Projects.Contains(project))
+            {
+                WriteScriptGroup(group);
+                return;
+            }
         }
     }
 
@@ -1917,9 +1948,20 @@ public partial class ScriptControlViewModel : ViewModel
 
             // 按index排序
             groups.Sort((a, b) => a.Index.CompareTo(b.Index));
-            foreach (var group in groups)
+
+            // 批量加载期间抑制逐项写盘：ScriptGroups.Add 会触发
+            // ScriptGroupsCollectionChanged，若不抑制将产生 n(n+1)/2 次写盘。
+            _suppressPersist = true;
+            try
             {
-                ScriptGroups.Add(group);
+                foreach (var group in groups)
+                {
+                    ScriptGroups.Add(group);
+                }
+            }
+            finally
+            {
+                _suppressPersist = false;
             }
         }
         catch (Exception e)
