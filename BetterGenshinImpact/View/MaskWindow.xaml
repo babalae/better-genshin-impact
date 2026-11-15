@@ -43,6 +43,7 @@
             <converters:OverlayScaledSizeConverter x:Key="OverlayScaledSizeConverter" />
             <converters:DoubleToGridLengthConverter x:Key="DoubleToGridLengthConverter" />
             <sys:Double x:Key="FpsBaseFontSize">16</sys:Double>
+            <sys:Double x:Key="BigMapDebugBaseFontSize">14</sys:Double>
             <sys:Double x:Key="MapPointPickerHeightRatio">0.62</sys:Double>
             <sys:Double x:Key="MapPointPickerVerticalOffset">-12</sys:Double>
         </ResourceDictionary>
@@ -721,6 +722,42 @@
                     </b:EventTrigger>
                 </b:Interaction.Triggers>
             </controls:PointsCanvas>
+
+            <!-- 大地图调试信息保留左下角位置，在比例布局中避开底部地球按钮。 -->
+            <Grid Grid.Row="0"
+                    Grid.RowSpan="4"
+                    Grid.Column="0"
+                    Grid.ColumnSpan="6"
+                    IsHitTestVisible="False"
+                    Visibility="{Binding IsBigMapDebugVisible, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="970*" />
+                    <RowDefinition Height="110*" />
+                </Grid.RowDefinitions>
+                <Border Grid.Row="0"
+                        Margin="16,0,0,8"
+                        Padding="8,4"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Bottom"
+                        Background="#B31F232A"
+                        CornerRadius="4"
+                        IsHitTestVisible="False">
+                    <TextBlock Foreground="Lime"
+                               LineStackingStrategy="BlockLineHeight"
+                               Text="{Binding BigMapDebugText, Mode=OneWay}"
+                               TextWrapping="NoWrap">
+                        <TextBlock.FontSize>
+                            <MultiBinding Converter="{StaticResource OverlayScaledSizeConverter}">
+                                <Binding Source="{StaticResource BigMapDebugBaseFontSize}" Mode="OneWay" />
+                                <Binding Path="Config.MaskWindowConfig.LogFontScale" Mode="OneWay" />
+                                <Binding Path="ScaleTo1080PRatio" Mode="OneWay" />
+                                <Binding Path="DisplayDpiScale" Mode="OneWay" />
+                                <Binding Path="Config.MaskWindowConfig.OverlayScalingEnabled" Mode="OneWay" />
+                            </MultiBinding>
+                        </TextBlock.FontSize>
+                    </TextBlock>
+                </Border>
+            </Grid>
 
             <Grid Grid.Row="0"
                   Grid.Column="0"

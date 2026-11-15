@@ -100,7 +100,11 @@ public abstract class SceneBaseMap : ISceneMap
         string trainKeyPointsPath = Path.Combine(folder, $"{fileName}_SIFT.kp.bin");
         string trainDescriptorsPath = Path.Combine(folder, $"{fileName}_SIFT.mat.png");
 
-        if (File.Exists(trainKeyPointsPath) && File.Exists(trainDescriptorsPath))
+        // 资源包升级可能替换同名底图；仅检查特征文件存在会继续使用旧地图，遗漏新增区域。
+        var imageLastWriteTime = File.GetLastWriteTimeUtc(basePath);
+        if (File.Exists(trainKeyPointsPath) && File.Exists(trainDescriptorsPath) &&
+            File.GetLastWriteTimeUtc(trainKeyPointsPath) >= imageLastWriteTime &&
+            File.GetLastWriteTimeUtc(trainDescriptorsPath) >= imageLastWriteTime)
         {
             return;
         }

@@ -1,4 +1,4 @@
-﻿using BetterGenshinImpact.GameTask.Common.BgiVision;
+using BetterGenshinImpact.GameTask.Common.BgiVision;
 
 namespace BetterGenshinImpact.GameTask;
 
@@ -42,7 +42,11 @@ public interface ITaskTrigger
     /// </summary>
     bool IsBackgroundRunning => false;
 
+    /// <summary>默认支持的单一界面类别，Unknown 表示未分类界面，不表示任意界面。</summary>
     GameUiCategory SupportedGameUiCategory => GameUiCategory.Unknown;
+
+    /// <summary>判断是否需要持续接收该界面的截图；跨界面触发器可覆盖此方法。</summary>
+    bool SupportsGameUi(GameUiCategory category) => SupportedGameUiCategory == category;
 
     /// <summary>
     /// 停用 → 启用时调用，用于重置运行状态、加载派生数据

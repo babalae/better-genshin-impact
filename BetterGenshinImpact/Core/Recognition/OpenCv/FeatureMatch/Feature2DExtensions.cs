@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using BetterGenshinImpact.Core.Recognition.OpenCv.Model;
@@ -23,10 +23,11 @@ public static class Feature2DExtensions
 
     #region 生成并保存特征
 
+    /// <summary>提取并保存底图特征，在写入完成后释放临时图像和描述子。</summary>
     public static void SaveFeatures(this Feature2D feature2D, string trainImagePath, string trainKeyPointsPath, string trainDescriptorsPath)
     {
-        Mat trainDescriptors = new();
-        var img = Bv.ImRead(trainImagePath, ImreadModes.Grayscale);
+        using var trainDescriptors = new Mat();
+        using var img = Bv.ImRead(trainImagePath, ImreadModes.Grayscale);
 
         feature2D.DetectAndCompute(img, null, out var trainKeyPoints, trainDescriptors);
 

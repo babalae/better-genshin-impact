@@ -576,8 +576,8 @@ namespace BetterGenshinImpact.GameTask
 
                     foreach (var trigger in needRunTriggers)
                     {
-                        if ((PrevGameUiCategory != content.CurrentGameUiCategory || (DateTime.Now - PrevGameUiChangeTime).TotalSeconds <= 30) // UI变化了后的30s内则所有触发器执行一遍
-                            || trigger.SupportedGameUiCategory == content.CurrentGameUiCategory)
+                        if (ShouldRunForGameUi(trigger, content.CurrentGameUiCategory, PrevGameUiCategory,
+                                DateTime.Now - PrevGameUiChangeTime))
                         {
                             // 触发器耗时只累计触发器执行本体，便于和截图耗时、总处理耗时拆开观察。
                             var triggerStart = Stopwatch.GetTimestamp();
@@ -613,6 +613,13 @@ namespace BetterGenshinImpact.GameTask
                     tickMetrics.Publish(_metricsService);
                 }
             }
+        }
+
+        /// <summary>UI 变化后的 30 秒内所有触发器执行一遍；稳定后按各触发器声明的界面范围持续投递。</summary>
+        internal static bool ShouldRunForGameUi(ITaskTrigger trigger, GameUiCategory current,
+            GameUiCategory previous, TimeSpan timeSinceUiChange)
+        {
+            return previous != current || timeSinceUiChange.TotalSeconds <= 30 || trigger.SupportsGameUi(current);
         }
 
         /// <summary>

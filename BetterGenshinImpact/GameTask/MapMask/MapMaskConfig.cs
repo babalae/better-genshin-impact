@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 namespace BetterGenshinImpact.GameTask.MapMask;
 
 /// <summary>
-/// 自动吃药配置
+/// 地图遮罩配置
 /// </summary>
 [Serializable]
 public partial class MapMaskConfig : ObservableObject
@@ -27,10 +27,10 @@ public partial class MapMaskConfig : ObservableObject
     private bool _miniMapMaskEnabled = false;
     
     /// <summary>
-    /// 自动记录路径功能是否启用
+    /// 是否显示大地图调试信息
     /// </summary>
     [ObservableProperty]
-    private bool _pathAutoRecordEnabled = false;
+    private bool _showBigMapDebugInfo = false;
 
     private MapPointApiProvider _mapPointApiProvider = MapPointApiProvider.MihoyoMap;
 

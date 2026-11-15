@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Recognition;
@@ -14,9 +14,11 @@ namespace BetterGenshinImpact.GameTask.Common.BgiVision;
 public static partial class Bv
 {
     
+    /// <summary>读取图像并释放输入流，避免阻止同名地图资源更新。</summary>
     public static Mat ImRead(string fileName, ImreadModes flags = ImreadModes.Color)
     {
-        return Mat.FromStream(File.OpenRead(fileName), flags);
+        using var stream = File.OpenRead(fileName);
+        return Mat.FromStream(stream, flags);
     }
     
     /// <summary>

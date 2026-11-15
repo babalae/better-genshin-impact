@@ -25,6 +25,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
 using BetterGenshinImpact.GameTask.Common.Element.Assets;
+using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 using BetterGenshinImpact.Service;
 using BetterGenshinImpact.Model.MaskMap;
 using BetterGenshinImpact.Service.Model;
@@ -79,6 +80,16 @@ namespace BetterGenshinImpact.ViewModel
         /// 小地图点位视口
         /// </summary>
         [ObservableProperty] private Rect _miniMapViewport;
+
+        /// <summary>
+        /// 大地图调试信息文本，由地图遮罩触发器在后台识别时产出
+        /// </summary>
+        [ObservableProperty] private string? _bigMapDebugText;
+
+        /// <summary>
+        /// 大地图界面且开启调试开关且有内容时显示
+        /// </summary>
+        public bool IsBigMapDebugVisible => IsInBigMapUi && Config.MapMaskConfig.ShowBigMapDebugInfo && !string.IsNullOrEmpty(BigMapDebugText);
 
         /// <summary>
         /// 布局编辑模式或大地图界面需要交互，其余时候鼠标穿透到游戏
@@ -250,6 +261,7 @@ namespace BetterGenshinImpact.ViewModel
             _drawingSource.Changed += _drawingCoalescer.Request;
             _mapSource.Changed += _mapCoalescer.Request;
             Config.MaskWindowConfig.PropertyChanged += OnMaskWindowConfigPropertyChanged;
+            Config.MapMaskConfig.PropertyChanged += OnMapMaskConfigPropertyChanged;
             DrawingStyle = CreateDrawingStyle();
 
             PointInfoPopup.ToggleHiddenRequested += (_, point) => ToggleMapPointHidden(point);
@@ -267,12 +279,35 @@ namespace BetterGenshinImpact.ViewModel
             _mapCoalescer.Request();
         }
 
+        /// <summary>当前点位请求和两个视口共同使用的坐标系。</summary>
+        private MapTypes _mapType = MapTypes.Teyvat;
+
         private void ApplyMapSnapshot()
         {
             var snapshot = _mapSource.Current;
+            if (snapshot.MapType != _mapType)
+            {
+                _mapType = snapshot.MapType;
+                // 先移除旧地图图标，再重取相同选中类别；版本与取消令牌阻止旧请求回填。
+                ReplaceMapPoints(Array.Empty<MaskMapPoint>());
+                StartRefreshSelectedMapPoints();
+            }
             IsInBigMapUi = snapshot.IsInBigMap;
             BigMapViewport = snapshot.BigMapViewport;
             MiniMapViewport = snapshot.MiniMapViewport;
+            BigMapDebugText = FormatBigMapDebugText(snapshot, Environment.TickCount64);
+        }
+
+        /// <summary>在 UI 实际应用快照时统计延迟，覆盖后台排队、初始化、匹配及 Dispatcher 等待。</summary>
+        internal static string? FormatBigMapDebugText(MaskWindowMapSnapshot snapshot, long displayTick)
+        {
+            if (string.IsNullOrEmpty(snapshot.BigMapDebugText) || snapshot.BigMapFrameTick == 0)
+            {
+                return snapshot.BigMapDebugText;
+            }
+            var text = $"{snapshot.BigMapDebugText}\n截图到UI: {Math.Max(0, displayTick - snapshot.BigMapFrameTick)}ms";
+            return snapshot.BigMapRequestTick == 0 ? text :
+                $"{text}  本次重定位: {Math.Max(0, displayTick - snapshot.BigMapRequestTick)}ms";
         }
 
         private void OnMaskWindowConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -298,6 +333,20 @@ namespace BetterGenshinImpact.ViewModel
                 case nameof(MaskWindowConfig.RecognitionTextFontSize):
                     DrawingStyle = CreateDrawingStyle();
                     break;
+            }
+        }
+
+        /// <summary>调试开关变化后刷新展示状态，关闭时清除上一轮诊断文本。</summary>
+        private void OnMapMaskConfigPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(MapMaskConfig.ShowBigMapDebugInfo))
+            {
+                if (!Config.MapMaskConfig.ShowBigMapDebugInfo)
+                {
+                    BigMapDebugText = null;
+                }
+
+                OnPropertyChanged(nameof(IsBigMapDebugVisible));
             }
         }
 
@@ -800,6 +849,7 @@ namespace BetterGenshinImpact.ViewModel
         {
             OnPropertyChanged(nameof(IsClickThrough));
             OnPropertyChanged(nameof(IsCrosshairVisible));
+            OnPropertyChanged(nameof(IsBigMapDebugVisible));
 
             if (!value)
             {
@@ -812,6 +862,12 @@ namespace BetterGenshinImpact.ViewModel
             {
                 _ = EnsureLabelTreeLoadedAsync();
             }
+        }
+
+        /// <summary>诊断文本变化时同步调试区域的可见性。</summary>
+        partial void OnBigMapDebugTextChanged(string? value)
+        {
+            OnPropertyChanged(nameof(IsBigMapDebugVisible));
         }
 
         partial void OnMapLabelSearchTextChanged(string value)
@@ -959,12 +1015,13 @@ namespace BetterGenshinImpact.ViewModel
         {
             var loadVersion = Interlocked.Increment(ref _mapPointsLoadVersion);
             _mapPointListCts?.Cancel();
+            _mapPointListCts?.Dispose();
             _mapPointListCts = new CancellationTokenSource();
             var ct = _mapPointListCts.Token;
-            _ = RefreshSelectedMapPointsAsync(loadVersion, ct);
+            _ = RefreshSelectedMapPointsAsync(loadVersion, _mapType, ct);
         }
 
-        private async Task RefreshSelectedMapPointsAsync(int loadVersion, CancellationToken ct)
+        private async Task RefreshSelectedMapPointsAsync(int loadVersion, MapTypes mapType, CancellationToken ct)
         {
             try
             {
@@ -981,6 +1038,7 @@ namespace BetterGenshinImpact.ViewModel
                 {
                     await Application.Current.Dispatcher.InvokeAsync(() =>
                     {
+                        if (ct.IsCancellationRequested || loadVersion != _mapPointsLoadVersion || mapType != _mapType) return;
                         MapPointLabels = [];
                         ReplaceMapPoints(Array.Empty<MaskMapPoint>());
                     }, DispatcherPriority.Background);
@@ -994,11 +1052,12 @@ namespace BetterGenshinImpact.ViewModel
                 }
 
                 var selectedModels = selectedItems.Select(x => x.ToModel()).ToList();
-                var result = await service.GetPointsAsync(selectedModels, ct);
+                var result = await service.GetPointsAsync(selectedModels, ct, mapType);
                 ct.ThrowIfCancellationRequested();
 
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
+                    if (ct.IsCancellationRequested || loadVersion != _mapPointsLoadVersion || mapType != _mapType) return;
                     MapPointLabels = new ObservableCollection<MaskMapPointLabel>(result.Labels);
                     ReplaceMapPoints(result.Points);
                 }, DispatcherPriority.Background);

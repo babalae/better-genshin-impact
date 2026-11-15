@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Windows;
+using BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 
 namespace BetterGenshinImpact.Core.Mask;
 
@@ -16,14 +17,20 @@ public sealed class MaskWindowMapState : IMaskWindowMapState, IMaskWindowSnapsho
 
     public event Action? Changed;
 
-    public void Update(bool? isInBigMap = null, Rect? bigMapViewport = null, Rect? miniMapViewport = null)
+    public void Update(bool? isInBigMap = null, Rect? bigMapViewport = null, Rect? miniMapViewport = null,
+        string? bigMapDebugText = null, long? bigMapFrameTick = null, long? bigMapRequestTick = null,
+        MapTypes? mapType = null)
     {
         lock (_lock)
         {
             var next = new MaskWindowMapSnapshot(
                 isInBigMap ?? _current.IsInBigMap,
                 bigMapViewport ?? _current.BigMapViewport,
-                miniMapViewport ?? _current.MiniMapViewport);
+                miniMapViewport ?? _current.MiniMapViewport,
+                bigMapDebugText ?? _current.BigMapDebugText,
+                bigMapFrameTick ?? _current.BigMapFrameTick,
+                bigMapRequestTick ?? _current.BigMapRequestTick,
+                mapType ?? _current.MapType);
             if (next == _current)
             {
                 return;
