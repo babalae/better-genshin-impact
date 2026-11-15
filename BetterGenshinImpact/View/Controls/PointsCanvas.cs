@@ -8,11 +8,16 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Threading;
 using BetterGenshinImpact.Model.MaskMap;
 using BetterGenshinImpact.ViewModel;
 using CommunityToolkit.Mvvm.Input;
+using Vanara.PInvoke;
 
 namespace BetterGenshinImpact.View.Controls;
 
@@ -26,6 +31,12 @@ public class PointsCanvas : FrameworkElement
     private readonly Dictionary<string, Brush> _colorBrushCache;
     private readonly Random _random;
     private int _refreshQueued;
+
+    /// <summary>点击圆比图标圆半径内缩 1 DIP，避免边框和阴影扩大点击范围。</summary>
+    private const double HitRadiusInset = 1;
+
+    /// <summary>当前展开的重叠点位菜单，视口或点位变化时关闭。</summary>
+    private ContextMenu? _selectionMenu;
 
     // 私有字段
     private ObservableCollection<MaskMapPoint>? _points;
@@ -90,8 +101,7 @@ public class PointsCanvas : FrameworkElement
 
     private static void OnViewportChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        var rect = (Rect)e.NewValue;
-        ((PointsCanvas)d).UpdateViewport(rect.X, rect.Y, rect.Width, rect.Height);
+        ((PointsCanvas)d).UpdateViewport((Rect)e.NewValue);
     }
 
     /// <summary>
@@ -159,6 +169,8 @@ public class PointsCanvas : FrameworkElement
         MouseLeftButtonDown += OnMouseLeftButtonDown;
         MouseRightButtonDown += OnMouseRightButtonDown;
         MouseMove += OnMouseMove;
+        IsVisibleChanged += (_, _) => CloseSelectionMenu();
+        Unloaded += (_, _) => CloseSelectionMenu();
         
         // 启用命中测试
         IsHitTestVisible = true;
@@ -193,6 +205,7 @@ public class PointsCanvas : FrameworkElement
 
     private void OnPointsCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
     {
+        CloseSelectionMenu();
         if (e.OldItems != null)
         {
             foreach (MaskMapPoint point in e.OldItems)
@@ -228,6 +241,7 @@ public class PointsCanvas : FrameworkElement
 
     private void OnPointPropertyChanged(object sender, PropertyChangedEventArgs e)
     {
+        CloseSelectionMenu();
         // 点位属性变化时重绘
         // 可以根据 e.PropertyName 做更细粒度的优化
         Refresh();
@@ -250,6 +264,22 @@ public class PointsCanvas : FrameworkElement
 
     #region 渲染逻辑
 
+    /// <summary>隐藏图标置底，同一隐藏状态保持来源顺序；命中与菜单按绘制的反序遍历。</summary>
+    private IEnumerable<MaskMapPoint> EnumeratePointsByStackingOrder(bool topFirst)
+    {
+        var start = topFirst ? _allPoints.Count - 1 : 0;
+        var step = topFirst ? -1 : 1;
+        for (var layer = 0; layer < 2; layer++)
+        {
+            var hiddenLayer = topFirst ? layer == 1 : layer == 0;
+            for (var i = start; i >= 0 && i < _allPoints.Count; i += step)
+            {
+                var point = _allPoints[i];
+                if (point.IsHidden == hiddenLayer) yield return point;
+            }
+        }
+    }
+
     /// <summary>
     /// 渲染所有点位
     /// </summary>
@@ -261,30 +291,12 @@ public class PointsCanvas : FrameworkElement
             return;
         }
 
-        if (!_viewportRect.IsEmpty)
+        // 绘制与命中共用屏幕投影；边缘只露出一部分的圆也保留，图标尺寸不随地图缩放。
+        foreach (var point in EnumeratePointsByStackingOrder(topFirst: false))
         {
-            // 扩展可视区域，避免边缘闪烁
-            var expandedViewport = _viewportRect;
-            expandedViewport.Inflate(MaskMapPointStatic.Width, MaskMapPointStatic.Height);
-
-            var aw = ActualWidth;
-            var ah = ActualHeight;
-            if (aw <= 0 || ah <= 0)
+            if (TryGetVisiblePointCenter(point, out var center))
             {
-                return;
-            }
-
-            var scaleX = aw / _viewportRect.Width;
-            var scaleY = ah / _viewportRect.Height;
-
-            foreach (var point in _allPoints)
-            {
-                if (expandedViewport.Contains(point.ImageX, point.ImageY))
-                {
-                    var localX = (point.ImageX - _viewportRect.X) * scaleX;
-                    var localY = (point.ImageY - _viewportRect.Y) * scaleY;
-                    DrawPoint(dc, point, localX, localY, MaskMapPointStatic.Width, MaskMapPointStatic.Height);
-                }
+                DrawPoint(dc, point, center.X, center.Y, MaskMapPointStatic.Width, MaskMapPointStatic.Height);
             }
         }
     }
@@ -424,11 +436,12 @@ public class PointsCanvas : FrameworkElement
         }
     }
 
+    /// <summary>将地图坐标投影到控件的 DIP 坐标；未定位时不保留旧坐标命中。</summary>
     private bool TryGetPointCenterPosition(MaskMapPoint point, out Point center)
     {
         center = default;
 
-        if (_viewportRect.IsEmpty)
+        if (_viewportRect.IsEmpty || _viewportRect.Width <= 0 || _viewportRect.Height <= 0)
         {
             return false;
         }
@@ -448,54 +461,174 @@ public class PointsCanvas : FrameworkElement
         return true;
     }
 
+    /// <summary>左键先判定重叠点位，需要消歧时展开菜单，再复用原有详情命令。</summary>
     private async void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         var position = e.GetPosition(this);
-        var point = HitTest(position);
-
-        if (point != null)
-        {
-            var anchor = TryGetPointCenterPosition(point, out var center) ? center : position;
-            var args = new MaskMapPointClickArgs(point, anchor);
-            if (PointClickCommand is IAsyncRelayCommand asyncCommand)
-            {
-                if (asyncCommand.CanExecute(args))
-                {
-                    e.Handled = true;
-                    await ExecuteAsyncRelayCommandSafe(asyncCommand, args);
-                }
-            }
-            else if (PointClickCommand?.CanExecute(args) == true)
-            {
-                PointClickCommand.Execute(args);
-                e.Handled = true;
-            }
-        }
+        if (HitTest(position) == null) return;
+        // 在异步详情请求开始前标记已处理，避免同一次点击继续向外传播。
+        e.Handled = true;
+        await HandlePointClickAsync(position, false);
     }
 
+    /// <summary>右键也允许选择被遮挡点位，选定后执行原有隐藏切换命令。</summary>
     private async void OnMouseRightButtonDown(object sender, MouseButtonEventArgs e)
     {
         var position = e.GetPosition(this);
-        var point = HitTest(position);
+        if (HitTest(position) == null) return;
+        e.Handled = true;
+        await HandlePointClickAsync(position, true);
+    }
 
-        if (point == null)
+    /// <summary>统一点击入口；单点直接执行，多点菜单保持由用户决定具体目标。</summary>
+    internal async Task<bool> HandlePointClickAsync(Point position, bool rightClick)
+    {
+        CloseSelectionMenu();
+        var points = GetPointsAt(position.X, position.Y);
+        if (points.Count == 0)
         {
-            return;
+            return false;
         }
 
-        if (PointRightClickCommand is IAsyncRelayCommand asyncCommand)
+        var command = rightClick ? PointRightClickCommand : PointClickCommand;
+        if (points.Count > 1)
         {
-            if (asyncCommand.CanExecute(point))
+            _selectionMenu = CreateSelectionMenu(points, rightClick);
+            _selectionMenu.Closed += OnSelectionMenuClosed;
+            _selectionMenu.IsOpen = true;
+            return true;
+        }
+
+        var parameter = GetClickParameter(points[0], rightClick);
+        return await ExecutePointCommandAsync(command, parameter);
+    }
+
+    /// <summary>保持左右键现有命令参数协议，详情弹窗锚定最终选中图标而非列表位置。</summary>
+    private object GetClickParameter(MaskMapPoint point, bool rightClick)
+    {
+        TryGetPointCenterPosition(point, out var center);
+        return rightClick ? point : new MaskMapPointClickArgs(point, center);
+    }
+
+    /// <summary>命令仍由 ViewModel 处理，控件只负责输入消歧和异步异常隔离。</summary>
+    private static async Task<bool> ExecutePointCommandAsync(ICommand? command, object parameter)
+    {
+        if (command?.CanExecute(parameter) != true)
+        {
+            return false;
+        }
+
+        if (command is IAsyncRelayCommand asyncCommand)
+            await ExecuteAsyncRelayCommandSafe(asyncCommand, parameter);
+        else
+            command.Execute(parameter);
+        return true;
+    }
+
+    /// <summary>沿用 WPF-UI 的菜单样式、键盘导航、菜单外点击关闭和长列表滚动。</summary>
+    internal ContextMenu CreateSelectionMenu(IReadOnlyList<MaskMapPoint> points, bool rightClick)
+    {
+        TryGetPointCenterPosition(points[0], out var center);
+        var radius = MaskMapPointStatic.Width / 2d;
+        var menu = new ContextMenu
+        {
+            PlacementTarget = this,
+            Placement = PlacementMode.Right,
+            PlacementRectangle = new Rect(center.X - radius, center.Y - radius, radius * 2, radius * 2),
+            HorizontalOffset = 8,
+            MinWidth = 220,
+            MaxHeight = 360,
+            StaysOpen = false
+        };
+        // 关闭动画可能晚于 IsOpen=false；用真实 Closed 事件确认原生弹窗已完成焦点恢复。
+        TaskCompletionSource? menuClosed = null;
+        menu.Opened += (_, _) => menuClosed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        menu.Closed += (_, _) => menuClosed?.TrySetResult();
+
+        foreach (var point in points)
+        {
+            _labelMap.TryGetValue(point.LabelId, out var label);
+            var title = string.IsNullOrWhiteSpace(label?.Name) ? "点位" : label.Name;
+            var header = new StackPanel { Margin = new Thickness(0, 2, 0, 2) };
+            header.Children.Add(new TextBlock { Text = title, MaxWidth = 260, TextTrimming = TextTrimming.CharacterEllipsis });
+            // 同类点位也要可区分；隐藏点位仍能选中，以便恢复显示。
+            header.Children.Add(new TextBlock
             {
-                e.Handled = true;
-                await ExecuteAsyncRelayCommandSafe(asyncCommand, point);
+                Text = $"#{point.Id}" + (point.IsHidden ? " · 已隐藏" : string.Empty),
+                FontSize = 11,
+                Opacity = 0.65,
+                MaxWidth = 260,
+                TextTrimming = TextTrimming.CharacterEllipsis
+            });
+            var command = rightClick ? PointRightClickCommand : PointClickCommand;
+            var parameter = GetClickParameter(point, rightClick);
+            var item = new MenuItem
+            {
+                Header = header,
+                ToolTip = $"{title} #{point.Id}",
+                Command = new AsyncRelayCommand(() => ExecuteSelectionAsync(menu,
+                        menuClosed?.Task ?? Task.CompletedTask, command, parameter),
+                    () => command?.CanExecute(parameter) == true)
+            };
+            var icon = label == null ? null : MapIconImageCache.TryGet(label.IconUrl);
+            if (icon != null)
+            {
+                item.Icon = new Image
+                {
+                    Source = icon,
+                    Width = 24,
+                    Height = 24,
+                    Clip = new EllipseGeometry(new Point(12, 12), 12, 12)
+                };
             }
+            menu.Items.Add(item);
         }
-        else if (PointRightClickCommand?.CanExecute(point) == true)
+
+        return menu;
+    }
+
+    /// <summary>先完成原生菜单关闭和焦点恢复，再将交互交回遮罩，保持与直接点击图标相同的前台状态。</summary>
+    private async Task ExecuteSelectionAsync(ContextMenu menu, Task menuClosed, ICommand? command, object parameter)
+    {
+        menu.IsOpen = false;
+        await menuClosed;
+        // ContextMenu 关闭会恢复此前窗口的焦点。延后到输入事件处理结束，避免它再次把前台交给游戏。
+        await Dispatcher.InvokeAsync(ActivateInteractionWindow, DispatcherPriority.Background);
+        await ExecutePointCommandAsync(command, parameter);
+    }
+
+    /// <summary>让遮罩接续菜单交互；游戏失去前台后，调度器沿用直接点击点位时的暂停行为。</summary>
+    protected virtual void ActivateInteractionWindow()
+    {
+        var window = Window.GetWindow(this);
+        if (window?.IsVisible != true) return;
+        window.Activate();
+        _ = User32.SetForegroundWindow(new WindowInteropHelper(window).Handle);
+        window.Focus();
+    }
+
+    /// <summary>菜单关闭后释放候选快照，不跨地图视口保留引用。</summary>
+    private void OnSelectionMenuClosed(object sender, RoutedEventArgs e)
+    {
+        if (sender is ContextMenu menu)
         {
-            PointRightClickCommand.Execute(point);
-            e.Handled = true;
+            menu.Closed -= OnSelectionMenuClosed;
+            if (ReferenceEquals(_selectionMenu, menu)) _selectionMenu = null;
         }
+    }
+
+    /// <summary>地图、候选或布局变化时撤销尚未确认的点位选择。</summary>
+    private void CloseSelectionMenu()
+    {
+        if (_selectionMenu != null) _selectionMenu.IsOpen = false;
+    }
+
+    /// <summary>控件尺寸影响屏幕投影，调整窗口后重绘并关闭旧位置的菜单。</summary>
+    protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
+    {
+        base.OnRenderSizeChanged(sizeInfo);
+        CloseSelectionMenu();
+        Refresh();
     }
 
     private void OnMouseMove(object sender, MouseEventArgs e)
@@ -528,47 +661,46 @@ public class PointsCanvas : FrameworkElement
     /// <summary>
     /// 命中测试 - 查找被点击的点位
     /// </summary>
-    private MaskMapPoint HitTest(Point position)
+    private MaskMapPoint? HitTest(Point position)
     {
-        // TODO 有问题，需要继续优化实现
-        if (_allPoints == null || _allPoints.Count == 0)
-            return null;
-
-        for (int i = _allPoints.Count - 1; i >= 0; i--)
+        var radius = Math.Min(MaskMapPointStatic.Width, MaskMapPointStatic.Height) / 2d - HitRadiusInset;
+        foreach (var point in EnumeratePointsByStackingOrder(topFirst: true))
         {
-            var point = _allPoints[i];
-
-            if (_viewportRect.IsEmpty)
-            {
-                if (point.Contains(position.X, position.Y))
-                    return point;
-                continue;
-            }
-
-            if (!_viewportRect.Contains(point.ImageX, point.ImageY))
-                continue;
-
-            var aw = ActualWidth;
-            var ah = ActualHeight;
-            if (aw <= 0 || ah <= 0)
-            {
-                if (point.Contains(position.X, position.Y))
-                    return point;
-                continue;
-            }
-
-            var scaleX = aw / _viewportRect.Width;
-            var scaleY = ah / _viewportRect.Height;
-            var localX = (point.ImageX - _viewportRect.X) * scaleX;
-            var localY = (point.ImageY - _viewportRect.Y) * scaleY;
-            var localW = MaskMapPointStatic.Width * scaleX;
-            var localH = MaskMapPointStatic.Height * scaleY;
-            var rect = new Rect(localX - localW / 2.0, localY - localH / 2.0, localW, localH);
-            if (rect.Contains(position))
+            if (TryGetVisiblePointCenter(point, out var center) && (position - center).LengthSquared <= radius * radius)
                 return point;
         }
 
         return null;
+    }
+
+    /// <summary>绘制与命中使用相同可见范围，包含控件边缘部分露出的图标。</summary>
+    private bool TryGetVisiblePointCenter(MaskMapPoint point, out Point center)
+    {
+        return TryGetPointCenterPosition(point, out center) &&
+               center.X >= -MaskMapPointStatic.Width / 2d && center.X <= ActualWidth + MaskMapPointStatic.Width / 2d &&
+               center.Y >= -MaskMapPointStatic.Height / 2d && center.Y <= ActualHeight + MaskMapPointStatic.Height / 2d;
+    }
+
+    /// <summary>命中后仅收集与该图标点击圆交叠超过一半的点位，不沿相邻点无限扩展。</summary>
+    internal IReadOnlyList<MaskMapPoint> GetPointsAt(double x, double y)
+    {
+        var point = HitTest(new Point(x, y));
+        if (point == null) return Array.Empty<MaskMapPoint>();
+        TryGetPointCenterPosition(point, out var center);
+        var radius = Math.Min(MaskMapPointStatic.Width, MaskMapPointStatic.Height) / 2d - HitRadiusInset;
+        var points = new List<MaskMapPoint> { point };
+        foreach (var candidate in EnumeratePointsByStackingOrder(topFirst: true))
+        {
+            if (ReferenceEquals(candidate, point) || !TryGetVisiblePointCenter(candidate, out var other)) continue;
+            var distance = (other - center).Length;
+            if (distance >= radius * 2) continue;
+
+            // 等半径两圆交叠面积：2r²acos(d/2r) - d/2√(4r²-d²)，以单圆面积为分母。
+            var overlap = 2 * radius * radius * Math.Acos(distance / (2 * radius)) -
+                          distance / 2 * Math.Sqrt(4 * radius * radius - distance * distance);
+            if (overlap > Math.PI * radius * radius / 2) points.Add(candidate);
+        }
+        return points;
     }
 
     #endregion
@@ -580,6 +712,7 @@ public class PointsCanvas : FrameworkElement
     /// </summary>
     public void UpdatePoints(ObservableCollection<MaskMapPoint>? points)
     {
+        CloseSelectionMenu();
         // 取消订阅旧集合
         if (_points != null)
         {
@@ -613,6 +746,7 @@ public class PointsCanvas : FrameworkElement
     /// </summary>
     public void UpdateLabels(IEnumerable<MaskMapPointLabel>? labels)
     {
+        CloseSelectionMenu();
         if (labels != null)
         {
             _labelMap = labels.ToDictionary(l => l.LabelId, l => l);
@@ -630,14 +764,14 @@ public class PointsCanvas : FrameworkElement
     /// <summary>
     /// 更新可视区域
     /// </summary>
-    private void UpdateViewport(double x, double y, double width, double height)
+    private void UpdateViewport(Rect newRect)
     {
-        var newRect = new Rect(x, y, width, height);
         if (newRect.Equals(_viewportRect))
         {
             return;
         }
         _viewportRect = newRect;
+        CloseSelectionMenu();
         Debug.WriteLine($"Viewport updated: {_viewportRect}");
         ViewportChanged?.Invoke(this, EventArgs.Empty);
         Refresh();
@@ -654,7 +788,7 @@ public class PointsCanvas : FrameworkElement
     /// <summary>
     /// 获取指定位置的点位
     /// </summary>
-    public MaskMapPoint GetPointAt(double x, double y)
+    public MaskMapPoint? GetPointAt(double x, double y)
     {
         return HitTest(new Point(x, y));
     }
