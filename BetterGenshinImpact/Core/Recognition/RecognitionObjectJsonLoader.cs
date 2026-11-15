@@ -29,7 +29,7 @@ public static class RecognitionObjectJsonLoader
 {
     private sealed class LoggerTag;
 
-    private static readonly ILogger Logger = App.GetLogger<LoggerTag>();
+    private static Serilog.ILogger Logger => Serilog.Log.ForContext<LoggerTag>();
 
     public static RecognitionObject LoadFromFile(string filePath, string objectName, RecognitionObjectJsonLoadContext context)
     {
@@ -47,7 +47,7 @@ public static class RecognitionObjectJsonLoader
         }
         catch (Exception ex)
         {
-            Logger?.LogError(ex,
+            Logger?.Error(ex,
                 "Recognition 加载失败: {ObjectName} @ {CaptureWidth}x{CaptureHeight}, file={FilePath}",
                 objectName,
                 context.CaptureWidth,
@@ -74,7 +74,7 @@ public static class RecognitionObjectJsonLoader
         }
         catch (Exception ex)
         {
-            Logger?.LogError(ex,
+            Logger?.Error(ex,
                 "Recognition 构建失败: {ObjectName} @ {CaptureWidth}x{CaptureHeight}",
                 objectName,
                 context.CaptureWidth,
