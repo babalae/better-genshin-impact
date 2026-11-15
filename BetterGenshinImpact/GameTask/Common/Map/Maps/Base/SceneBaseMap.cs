@@ -158,7 +158,7 @@ public abstract class SceneBaseMap : ISceneMap
         return new Rect(x, y, rectWidth, rectHeight);
     }
 
-    public virtual Point2f GetMiniMapPosition(Mat greyMiniMapMat)
+    public virtual MapMatchResult? GetMiniMapPosition(Mat greyMiniMapMat)
     {
         // 从表到里逐层匹配
         foreach (var layer in Layers)
@@ -168,7 +168,7 @@ public abstract class SceneBaseMap : ISceneMap
                 var result = SiftMatcher.KnnMatch(layer.TrainKeyPoints, layer.TrainDescriptors, greyMiniMapMat);
                 if (result != default)
                 {
-                    return result;
+                    return MapMatchResult.FromPosition(this, result, layer.Floor, "MiniMap-SIFT");
                 }
             }
             catch (Exception e)
@@ -180,7 +180,7 @@ public abstract class SceneBaseMap : ISceneMap
         return default;
     }
 
-    public virtual Point2f GetMiniMapPosition(Mat greyMiniMapMat, float prevX, float prevY)
+    public virtual MapMatchResult? GetMiniMapPosition(Mat greyMiniMapMat, float prevX, float prevY)
     {
         if (prevX <= 0 && prevY <= 0)
         {
@@ -200,7 +200,7 @@ public abstract class SceneBaseMap : ISceneMap
                 var result = SiftMatcher.KnnMatch(keyPoints, descriptors, greyMiniMapMat, null, DescriptorMatcherType.BruteForce);
                 if (result != default)
                 {
-                    return result;
+                    return MapMatchResult.FromPosition(this, result, layer.Floor, "MiniMap-SIFT");
                 }
             }
             catch (Exception e)

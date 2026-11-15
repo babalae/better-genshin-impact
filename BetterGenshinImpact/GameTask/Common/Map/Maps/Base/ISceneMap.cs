@@ -1,4 +1,4 @@
-﻿using OpenCvSharp;
+using OpenCvSharp;
 
 namespace BetterGenshinImpact.GameTask.Common.Map.Maps.Base;
 
@@ -34,8 +34,8 @@ public interface ISceneMap
     /// 获取小地图在整张地图上的位置
     /// </summary>
     /// <param name="greyMiniMapMat"></param>
-    /// <returns></returns>
-    Point2f GetMiniMapPosition(Mat greyMiniMapMat);
+    /// <returns>公共匹配结果，包含坐标、层信息和原始层比例；失败时返回 null。</returns>
+    MapMatchResult? GetMiniMapPosition(Mat greyMiniMapMat);
 
     /// <summary>
     /// 获取小地图在整张地图上的位置
@@ -44,8 +44,8 @@ public interface ISceneMap
     /// <param name="greyMiniMapMat"></param>
     /// <param name="prevX"></param>
     /// <param name="prevY"></param>
-    /// <returns></returns>
-    Point2f GetMiniMapPosition(Mat greyMiniMapMat, float prevX, float prevY);
+    /// <returns>公共匹配结果，包含坐标、层信息和原始层比例；失败时返回 null。</returns>
+    MapMatchResult? GetMiniMapPosition(Mat greyMiniMapMat, float prevX, float prevY);
 
     #region 坐标系转换
 

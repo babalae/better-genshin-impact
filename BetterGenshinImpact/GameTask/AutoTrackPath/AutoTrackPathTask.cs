@@ -232,7 +232,7 @@ public class AutoTrackPathTask
 
                 // 注意游戏坐标系的角度是顺时针的
                 var matchingMethod = _config.PathingConditionConfig.MapMatchingMethod;
-                var currMapImageAvatarPos = MapManager.GetMap(MapTypes.Teyvat, matchingMethod).GetMiniMapPosition(miniMapMat);
+                var currMapImageAvatarPos = MapManager.GetMap(MapTypes.Teyvat, matchingMethod).GetMiniMapPosition(miniMapMat)?.ImagePosition ?? default;
                 if (currMapImageAvatarPos.IsEmpty())
                 {
                     Debug.WriteLine("识别小地图位置失败");

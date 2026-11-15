@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -71,7 +71,7 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
         Console.WriteLine("提前加载地图，层数：" + Layers.Count);
     }
     
-    public override Point2f GetMiniMapPosition(Mat colorMiniMapMat)
+    public override MapMatchResult? GetMiniMapPosition(Mat colorMiniMapMat)
     {
         var result= new MatchResult();
         var (miniMap, mask) = _miniMapPreprocessor.GetMiniMapAndMask(colorMiniMapMat);
@@ -90,12 +90,12 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
     /// <param name="prevX"></param>
     /// <param name="prevY"></param>
     /// <returns></returns>
-    public override Point2f GetMiniMapPosition(Mat colorMiniMapMat, float prevX, float prevY)
+    public override MapMatchResult? GetMiniMapPosition(Mat colorMiniMapMat, float prevX, float prevY)
     {
         return GetMiniMapPosition(colorMiniMapMat, prevX, prevY, 2);
     }
 
-    public Point2f GetMiniMapPosition(Mat colorMiniMapMat, float prevX, float prevY, int rank)
+    public MapMatchResult? GetMiniMapPosition(Mat colorMiniMapMat, float prevX, float prevY, int rank)
     {
         if (prevX <= 0 || prevY <= 0)
         {
@@ -111,11 +111,17 @@ public abstract class SceneBaseMapByTemplateMatch : SceneBaseMap
         }
     }
     
-    private Point2f UpdateResult(in MatchResult result, int rank)
+    private MapMatchResult? UpdateResult(in MatchResult result, int rank)
     {
         if (!result.IsSuccess(rank)) return default;
         PrevSuccessResult = result;
-        return ConvertGenshinMapCoordinatesToImageCoordinates(PrevSuccessResult.MapPos);
+        // 坐标和层比例取自同一次成功结果，调用方无需回读可变的 PrevSuccessResult。
+        return new MapMatchResult(default, result.MapPos, result.Layer?.Floor, result.Layer?.Name,
+            result.Confidence, "MiniMap-Template")
+        {
+            ImagePosition = ConvertGenshinMapCoordinatesToImageCoordinates(result.MapPos),
+            LayerScale = result.Layer?.Scale
+        };
     }
     
     [Conditional("DEBUG")]

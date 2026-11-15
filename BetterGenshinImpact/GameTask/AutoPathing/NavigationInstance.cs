@@ -28,7 +28,7 @@ public class NavigationInstance
     {
         using var colorMat = new Mat(imageRegion.SrcMat, MapAssets.Get(imageRegion).MimiMapRect);
         var captureTime = DateTime.UtcNow;
-        var p = MapManager.GetMap(mapName, mapMatchMethod).GetMiniMapPosition(colorMat, _prevX, _prevY);
+        var p = MapManager.GetMap(mapName, mapMatchMethod).GetMiniMapPosition(colorMat, _prevX, _prevY)?.ImagePosition ?? default;
         if (p != default && captureTime > _captureTime)
         {
             (_prevX, _prevY) = (p.X, p.Y);
@@ -48,21 +48,30 @@ public class NavigationInstance
     /// <returns>当前位置坐标</returns>
     public Point2f GetPositionStable(ImageRegion imageRegion, string mapName, string mapMatchMethod)
     {
+        return GetPositionStable(imageRegion, mapName, mapMatchMethod, out _);
+    }
+
+    /// <summary>稳定定位并透传同一次公共匹配结果，重试成功时以重试结果为准。</summary>
+    public Point2f GetPositionStable(ImageRegion imageRegion, string mapName, string mapMatchMethod, out MapMatchResult? matchResult)
+    {
         using var colorMat = new Mat(imageRegion.SrcMat, MapAssets.Get(imageRegion).MimiMapRect);
         var captureTime = DateTime.UtcNow;
 
         // 先尝试使用局部匹配
         var sceneMap = MapManager.GetMap(mapName, mapMatchMethod);
         //提高局部匹配的阈值，以解决在沙漠录制点位时，移动过远不会触发全局匹配的情况
-        var p = (sceneMap as SceneBaseMapByTemplateMatch)?.GetMiniMapPosition(colorMat, _prevX, _prevY, 0)
-                ?? sceneMap.GetMiniMapPosition(colorMat, _prevX, _prevY);
+        var result = sceneMap is SceneBaseMapByTemplateMatch templateMap
+            ? templateMap.GetMiniMapPosition(colorMat, _prevX, _prevY, 0)
+            : sceneMap.GetMiniMapPosition(colorMat, _prevX, _prevY);
 
         // 如果局部匹配失败或者点位跳跃过大，再尝试全地图匹配
-        if (p == default || (_prevX > 0 && _prevY >0 && p.DistanceTo(new Point2f(_prevX,_prevY)) > 150))
+        if (result == null || (_prevX > 0 && _prevY >0 && result.ImagePosition.DistanceTo(new Point2f(_prevX,_prevY)) > 150))
         {
             Reset();
-            p = MapManager.GetMap(mapName, mapMatchMethod).GetMiniMapPosition(colorMat, _prevX, _prevY);
+            result = sceneMap.GetMiniMapPosition(colorMat, _prevX, _prevY);
         }
+        var p = result?.ImagePosition ?? default;
+        matchResult = result;
         if (p != default && captureTime > _captureTime)
         {
             (_prevX, _prevY) = (p.X, p.Y);
