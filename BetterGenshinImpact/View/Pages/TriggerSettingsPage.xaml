@@ -1070,19 +1070,33 @@
                                   Foreground="{ui:ThemeResource TextFillColorTertiaryBrush}"
                                   Text="{i18n:T 会按照选择分支的关键词进行选项选择}"
                                   TextWrapping="Wrap" />
-                    <ComboBox Grid.Row="0"
-                              Grid.RowSpan="2"
-                              Grid.Column="1"
-                              Margin="0,0,8,0"
-                              MaxDropDownHeight="360"
-                              ScrollViewer.CanContentScroll="False"
-                              ScrollViewer.VerticalScrollBarVisibility="Auto"
-                              ItemsSource="{Binding HangoutBranches, Mode=OneWay}"
-                              SelectedItem="{Binding Config.AutoSkipConfig.AutoHangoutEndChoose, Mode=TwoWay}">
-                        <b:Interaction.Behaviors>
-                            <behavior:ComboBoxPopupScrollBehavior />
-                        </b:Interaction.Behaviors>
-                    </ComboBox>
+                    <StackPanel Grid.Row="0"
+                                Grid.RowSpan="2"
+                                Grid.Column="1"
+                                Margin="0,0,8,0"
+                                Orientation="Horizontal">
+                        <ComboBox Width="120"
+                                  MaxDropDownHeight="360"
+                                  ScrollViewer.CanContentScroll="False"
+                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                  ItemsSource="{Binding HangoutCharacters, Mode=OneWay}"
+                                  SelectedItem="{Binding HangoutCharacter, Mode=TwoWay}">
+                            <b:Interaction.Behaviors>
+                                <behavior:ComboBoxPopupScrollBehavior />
+                            </b:Interaction.Behaviors>
+                        </ComboBox>
+                        <ComboBox Width="220"
+                                  Margin="8,0,0,0"
+                                  MaxDropDownHeight="360"
+                                  ScrollViewer.CanContentScroll="False"
+                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                  ItemsSource="{Binding HangoutEndings, Mode=OneWay}"
+                                  SelectedItem="{Binding Config.AutoSkipConfig.AutoHangoutEndChoose, Mode=TwoWay}">
+                            <b:Interaction.Behaviors>
+                                <behavior:ComboBoxPopupScrollBehavior />
+                            </b:Interaction.Behaviors>
+                        </ComboBox>
+                    </StackPanel>
                 </Grid>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>

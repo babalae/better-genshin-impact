@@ -48,7 +48,11 @@ public partial class TriggerSettingsPageViewModel : ViewModel
 
     private readonly INavigationService _navigationService;
 
-    [ObservableProperty] private List<string> _hangoutBranches;
+    [ObservableProperty] private List<string> _hangoutCharacters;
+
+    [ObservableProperty] private List<string> _hangoutEndings = [];
+
+    [ObservableProperty] private string? _hangoutCharacter;
 
     public TriggerSettingsPageViewModel(
         IConfigService configService,
@@ -58,7 +62,9 @@ public partial class TriggerSettingsPageViewModel : ViewModel
         Config = configService.Get();
         VoiceDiagnosticState = voiceDiagnosticState;
         _navigationService = navigationService;
-        _hangoutBranches = HangoutConfig.Instance.HangoutOptionsTitleList;
+        _hangoutCharacters = HangoutConfig.Instance.HangoutCharacters;
+        _hangoutCharacter = Config.AutoSkipConfig.AutoHangoutCharacterChoose;
+        UpdateHangoutEndings();
         UpdateAutoPickModeVisibility();
 
         _pickButtonNames = new List<string> { "F", "E", "G" };
@@ -68,6 +74,26 @@ public partial class TriggerSettingsPageViewModel : ViewModel
             && !_pickButtonNames.Contains(Config.AutoPickConfig.PickKey))
         {
             _pickButtonNames.Add(Config.AutoPickConfig.PickKey);
+        }
+    }
+
+    partial void OnHangoutCharacterChanged(string? value)
+    {
+        Config.AutoSkipConfig.AutoHangoutCharacterChoose = value ?? string.Empty;
+        UpdateHangoutEndings();
+    }
+
+    private void UpdateHangoutEndings()
+    {
+        var character = Config.AutoSkipConfig.AutoHangoutCharacterChoose;
+        HangoutEndings = !string.IsNullOrEmpty(character)
+                         && HangoutConfig.Instance.HangoutEndings.TryGetValue(character, out var endings)
+            ? endings
+            : [];
+
+        if (!HangoutEndings.Contains(Config.AutoSkipConfig.AutoHangoutEndChoose))
+        {
+            Config.AutoSkipConfig.AutoHangoutEndChoose = HangoutEndings.Count > 0 ? HangoutEndings[0] : string.Empty;
         }
     }
 

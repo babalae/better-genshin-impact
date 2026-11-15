@@ -434,14 +434,15 @@ public partial class AutoSkipTrigger : ITaskTrigger
                 }
 
                 // 历史已选状态不影响当前路线，目标分支仍需优先匹配全部选项。
-                if (!string.IsNullOrEmpty(_config.AutoHangoutEndChoose)
-                    && HangoutConfig.Instance.HangoutOptions.TryGetValue(_config.AutoHangoutEndChoose, out var chooseList))
+                var chooseList = HangoutConfig.Instance.GetOptions(_config.AutoHangoutCharacterChoose, _config.AutoHangoutEndChoose);
+                if (chooseList != null)
                 {
                     var target = FindHangoutTargetOption(hangoutOptionList, chooseList);
                     if (target != null)
                     {
                         HangoutOptionClick(target);
-                        _logger.LogInformation("邀约分支[{Text}]关键词命中，选择[{Option}]", _config.AutoHangoutEndChoose, target.OptionTextSrc);
+                        _logger.LogInformation("邀约分支[{Character} - {Text}]关键词命中，选择[{Option}]",
+                            _config.AutoHangoutCharacterChoose, _config.AutoHangoutEndChoose, target.OptionTextSrc);
                         AutoHangoutSkipLog(target.OptionTextSrc);
                         captureRegion.DrawingBoard.Clear("HangoutSelected");
                         captureRegion.DrawingBoard.Clear("HangoutUnselected");
