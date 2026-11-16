@@ -165,6 +165,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         /// </summary>
         private void DisableAfterAutoAbort()
         {
+            // 拉条等流程可能按住了左键，中止后必须抬起，否则左键会一直保持按下
+            input.Mouse.LeftButtonUp();
             if (!IsEnabledByConfig)
             {
                 return;
