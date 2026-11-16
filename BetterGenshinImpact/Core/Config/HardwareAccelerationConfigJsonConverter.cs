@@ -18,6 +18,8 @@ public sealed class HardwareAccelerationConfigJsonConverter : JsonConverter<Hard
             return new()
             {
                 FormatVersion = data.FormatVersion, InferenceDevice = data.InferenceDevice, CpuOcr = data.CpuOcr,
+                // 全局后端意图：越界值由 PreferredBackend 的属性兜底回落 Onnx（对象初始化器走生成属性）。
+                PreferredBackend = data.PreferredBackend,
                 // 后端子配置独立读取：优先嵌套节点，缺失时回落默认（细节见 NcnnConfigJson / OpenVinoConfigJson）。
                 Ncnn = NcnnConfigJson.Read(document.RootElement, options),
                 OpenVino = OpenVinoConfigJson.Read(document.RootElement, options),

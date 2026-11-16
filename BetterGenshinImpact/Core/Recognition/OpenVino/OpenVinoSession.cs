@@ -3,6 +3,7 @@ using System.Linq;
 using BetterGenshinImpact.Core.Recognition.OCR.Paddle;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using OpenVinoSharp;
+using OvTensor = OpenVinoSharp.Tensor;
 
 namespace BetterGenshinImpact.Core.Recognition.OpenVino;
 
@@ -49,7 +50,7 @@ internal sealed class OpenVinoSession : IOcrInferenceSession
         if (input is not DenseTensor<float> dense)
             throw new InvalidOperationException("OCR 输入张量应为 DenseTensor<float>");
         var dims = input.Dimensions.ToArray();
-        using var tensor = new OpenVinoSharp.Tensor(new Shape(dims.Select(d => (long)d).ToArray()), ElementType.F32);
+        using var tensor = new OvTensor(new Shape(dims.Select(d => (long)d).ToArray()), ElementType.F32);
         // 归一化张量（池化缓冲）→ 原生张量的一次拷贝；与 ncnn 路线的 Buffer.CopyTo 语义一致。
         dense.Buffer.Span.CopyTo(tensor.get_span<float>());
         _inferRequest.set_input_tensor(tensor);

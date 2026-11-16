@@ -174,14 +174,15 @@ public sealed class InferenceModelDiagnostics(
                 {
                     using var image = new Mat(PaddleOcrService.PaddleOcrModelType.TestImagePath);
                     if (image.Empty()) throw new InvalidDataException("OCR 测试图片无法读取。");
-                    // 测速与业务共用同一条链路：独立后端（ncnn / OpenVINO）生效时复用懒加载全局单例，
-                    // 不再每次点击重建后端（ncnn 的着色器缓存挂在 Net 上，每次重建意味着全量重新编译）。
+                    // 测速与业务共用同一条链路：全局单例的后端在其构造时已按当前模型路由。
+                    // 独立后端（ncnn / OpenVINO）生效时必须复用懒加载全局单例——重建 ncnn 意味着全量重编着色器；
                     // 绝不能 Dispose 这个单例：它属于业务路径，Dispose 会连带销毁所有任务在用的会话。
-                    var backend = InferenceBackendRouter.ResolveOcr(PaddleOcrService.PaddleOcrModelType.V6);
-                    if (backend != InferenceBackendRouter.OcrBackend.Onnx)
+                    // ONNX 时创建独立实例，绑定待验证的推理运行时。
+                    if (ocr.PaddleOcr is PaddleOcrService { BackendName: not "ONNX Runtime" } standalone)
                     {
-                        return Measure("OCR", OcrBackendDescription(backend),
-                            () => _ = ocr.PaddleOcr.Ocr(image), progress, linked.Token);
+                        var (detName, recName) = standalone.GetConfigName;
+                        return Measure("OCR", $"{standalone.BackendName} · {detName}/{recName}（与业务同一会话）",
+                            () => _ = standalone.Ocr(image), progress, linked.Token);
                     }
 
                     var service = ocr.CreateDetached(factory);
@@ -201,14 +202,6 @@ public sealed class InferenceModelDiagnostics(
         }
         finally { _gate.Release(); }
     }
-
-    /// <summary>独立后端生效时 OCR 测速的执行描述（与业务同一会话）。</summary>
-    private static string OcrBackendDescription(InferenceBackendRouter.OcrBackend backend) => backend switch
-    {
-        InferenceBackendRouter.OcrBackend.Ncnn => "ncnn · PP-OCRv6 det (ncnn)/PP-OCRv6 (ncnn)（与业务同一会话）",
-        InferenceBackendRouter.OcrBackend.OpenVino => $"OpenVINO · {(Service.ConfigService.Config?.HardwareAccelerationConfig.OpenVino.DeviceId ?? "CPU")}（与业务同一会话）",
-        _ => "ONNX Runtime",
-    };
 
     public static InferenceBenchmarkResult Measure(string scene, string execution, Action inference,
         IProgress<InferenceBenchmarkProgress>? progress, CancellationToken token)

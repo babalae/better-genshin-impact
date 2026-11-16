@@ -19,16 +19,16 @@ public sealed record NcnnComputeModeChoice(NcnnComputeMode Mode, string Name, st
 public sealed record NcnnDetailRow(string Label, string Value);
 
 /// <summary>
-///     「硬件加速设置 → ncnn」的全部设置状态：引擎分配（全局后端与逐用途开关）、计算模式、
-///     真实设备、三套调优草稿、设备详情与显存、产物自检。
+///     「硬件加速设置 → ncnn」的全部设置状态：全局后端意图（<see cref="IInferencePageContext.SelectedBackendDraft" />）、
+///     逐用途开关、计算模式、真实设备、三套调优草稿、设备详情与显存、产物自检。
 ///     <para>
-///         与 <see cref="HardwareAccelerationViewModel" /> 的关系：本类通过构造注入的 owner 只读访问页面级状态
+///         与宿主页面的关系：本类通过构造注入的 <see cref="IInferencePageContext" /> 只读访问页面级状态
 ///         （所选 ONNX 引擎、待重启标记等）用于文案；ncnn 草稿经 <see cref="BuildDraft" /> 交由页面统一 Apply。
 ///     </para>
 /// </summary>
 public sealed partial class NcnnSettingsViewModel : ObservableObject
 {
-    private readonly HardwareAccelerationViewModel? _owner;
+    private readonly IInferencePageContext? _owner;
     private NcnnBackendSettings _baseline;
 
     /// <summary>设备枚举的过期令牌：丢弃慢查询返回时的过期结果，避免旧数据覆盖新选择。</summary>
@@ -44,8 +44,8 @@ public sealed partial class NcnnSettingsViewModel : ObservableObject
     /// <summary>已查询详情的设备索引；-1 表示尚未查询或已失效（避免高频刷新时重复 P/Invoke）。</summary>
     private int _detailsIndex = -1;
 
-    /// <param name="owner">宿主页面 ViewModel；单元测试等无页面场景可传 null，相关文案自动降级。</param>
-    public NcnnSettingsViewModel(NcnnConfig saved, HardwareAccelerationViewModel? owner = null)
+    /// <param name="owner">宿主页面的交互面；单元测试等无页面场景可传 null，相关文案自动降级。</param>
+    public NcnnSettingsViewModel(NcnnConfig saved, IInferencePageContext? owner = null)
     {
         ArgumentNullException.ThrowIfNull(saved);
         _owner = owner;

@@ -204,7 +204,7 @@ public sealed class OpenVinoRuntimeInstaller : IOpenVinoRuntimeInstaller, IDispo
     private async Task<string> DownloadPackageAsync(RuntimeDownloadPackage package,
         IProgress<RuntimeDownloadProgress>? progress, CancellationToken token)
     {
-        var task = _downloads.Start(new DownloadRequest(package.Url, package.Name, DownloadCategories.OnnxRuntime)
+        var task = _downloads.Start(new DownloadRequest(package.Url, package.Name, DownloadCategories.OpenVinoRuntime)
         {
             ExpectedSize = package.DownloadBytes > 0 ? package.DownloadBytes : null,
             ExpectedHash = package.Hash is null ? null : new DownloadHash(package.HashAlgorithm, package.Hash),
@@ -226,7 +226,7 @@ public sealed class OpenVinoRuntimeInstaller : IOpenVinoRuntimeInstaller, IDispo
 
     private void TryDeleteDownload(string path)
     {
-        var cache = Path.GetFullPath(_downloads.GetDirectory(DownloadCategories.OnnxRuntime));
+        var cache = Path.GetFullPath(_downloads.GetDirectory(DownloadCategories.OpenVinoRuntime));
         if (!string.Equals(Path.GetDirectoryName(Path.GetFullPath(path)), cache, StringComparison.OrdinalIgnoreCase)) return;
         try { File.Delete(path); }
         catch (IOException) { }
@@ -237,11 +237,21 @@ public sealed class OpenVinoRuntimeInstaller : IOpenVinoRuntimeInstaller, IDispo
     private async Task<RuntimeDownloadPackage> GetNugetPackageAsync(string id, string version, CancellationToken token)
     {
         var lower = id.ToLowerInvariant();
-        var registration = JObject.Parse(await ReadTextAsync(
-            $"https://api.nuget.org/v3/registration5-gz-semver2/{lower}/{version}.json", token));
-        var catalogUrl = new Uri(registration.Value<string>("catalogEntry")!);
-        if (catalogUrl.Scheme != "https" || catalogUrl.Host != "api.nuget.org") throw new InvalidDataException("NuGet 元数据地址无效。");
-        var entry = JObject.Parse(await ReadTextAsync(catalogUrl.AbsoluteUri, token));
+        string catalogUrlText;
+        try
+        {
+            var registration = JObject.Parse(await ReadTextAsync(
+                $"https://api.nuget.org/v3/registration5-gz-semver2/{lower}/{version}.json", token));
+            var catalogUrl = new Uri(registration.Value<string>("catalogEntry")!);
+            if (catalogUrl.Scheme != "https" || catalogUrl.Host != "api.nuget.org") throw new InvalidDataException("NuGet 元数据地址无效。");
+            catalogUrlText = catalogUrl.AbsoluteUri;
+        }
+        catch (HttpRequestException e) when (e.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            // NuGet 的 Catalog 在中国不可用，但包内容仍可下载；通过 V2 获取同一版本的大小和摘要。
+            catalogUrlText = await GetNugetV2FallbackAsync(id, version, token);
+        }
+        var entry = JObject.Parse(await ReadTextAsync(catalogUrlText, token));
         var size = entry.Value<long>("packageSize");
         if (size <= 0) throw new InvalidDataException("NuGet 包大小无效。");
         var algorithm = entry.Value<string>("packageHashAlgorithm")!;
@@ -251,6 +261,29 @@ public sealed class OpenVinoRuntimeInstaller : IOpenVinoRuntimeInstaller, IDispo
             throw new InvalidDataException("NuGet 包 SHA512 摘要无效。");
         return new($"{id} {version}", new($"https://api.nuget.org/v3-flatcontainer/{lower}/{version}/{lower}.{version}.nupkg"),
             size, size * 4, hash, algorithm, id);
+    }
+
+    /// <summary>NuGet V2 元数据回退（Catalog 404 时），解析出同一 catalogEntry 形状的大小与摘要。</summary>
+    private async Task<string> GetNugetV2FallbackAsync(string id, string version, CancellationToken token)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token, _lifetime.Token);
+        timeout.CancelAfter(TimeSpan.FromSeconds(30));
+        using var request = new HttpRequestMessage(HttpMethod.Get,
+            $"https://www.nuget.org/api/v2/Packages(Id='{Uri.EscapeDataString(id)}',Version='{Uri.EscapeDataString(version)}')");
+        request.Headers.Accept.ParseAdd("application/atom+xml");
+        using var response = await _client.SendAsync(request, timeout.Token);
+        response.EnsureSuccessStatusCode();
+        var metadata = System.Xml.Linq.XDocument.Parse(await response.Content.ReadAsStringAsync(timeout.Token));
+        System.Xml.Linq.XNamespace metadataNamespace = "http://schemas.microsoft.com/ado/2007/08/dataservices/metadata";
+        System.Xml.Linq.XNamespace dataNamespace = "http://schemas.microsoft.com/ado/2007/08/dataservices";
+        var package = metadata.Root?.Element(metadataNamespace + "properties")
+            ?? throw new InvalidDataException("NuGet V2 包元数据无效。");
+        return JObject.FromObject(new
+        {
+            packageSize = (string?)package.Element(dataNamespace + "PackageSize"),
+            packageHashAlgorithm = (string?)package.Element(dataNamespace + "PackageHashAlgorithm"),
+            packageHash = (string?)package.Element(dataNamespace + "PackageHash"),
+        }).ToString();
     }
 
     private async Task<string> ReadTextAsync(string url, CancellationToken token)

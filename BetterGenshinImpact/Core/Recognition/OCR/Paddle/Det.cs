@@ -2,7 +2,6 @@ using System;
 using System.Linq;
 using BetterGenshinImpact.Core.Recognition.OCR.Engine;
 using BetterGenshinImpact.Core.Recognition.ONNX;
-using Microsoft.ML.OnnxRuntime;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR.Paddle;
@@ -10,21 +9,19 @@ namespace BetterGenshinImpact.Core.Recognition.OCR.Paddle;
 public class Det : IOcrDetector
 {
     public Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxSessionFactory bgiOnnxFactory)
-        : this(model, config, new OrtOcrInferenceSession(bgiOnnxFactory.CreateInferenceSession(model, true)))
+        : this(config, new OrtOcrInferenceSession(bgiOnnxFactory.CreateInferenceSession(model, true)))
     {
     }
 
     /// <summary>注入任意推理会话（ONNX Runtime 或 OpenVINO）的构造入口，预处理与后处理完全共用。</summary>
-    internal Det(BgiOnnxModel model, OcrVersionConfig config, IOcrInferenceSession session)
+    internal Det(OcrVersionConfig config, IOcrInferenceSession session)
     {
-        _model = model;
         Config = config;
         _session = session;
     }
 
-    private readonly BgiOnnxModel _model;
     private readonly IOcrInferenceSession _session;
-    protected internal readonly OcrVersionConfig Config;
+    private readonly OcrVersionConfig Config;
 
     private readonly object _sessionLock = new();
     private bool _disposed;

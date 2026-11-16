@@ -24,7 +24,7 @@ namespace BetterGenshinImpact.ViewModel.Pages.View;
 public sealed record InferenceThreadChoice(int Count, string Name);
 public sealed record PaddleOcrCpuModeChoice(PaddleOcrCpuMode Mode, string Name, string Description);
 
-public partial class HardwareAccelerationViewModel : ObservableObject, IViewModel, IDisposable
+public partial class HardwareAccelerationViewModel : ObservableObject, IViewModel, IInferencePageContext, IDisposable
 {
     private readonly InferenceRuntimeService _runtime;
     private readonly IOnnxRuntimeInstaller _installer;
@@ -377,13 +377,13 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
         }
     }
 
-    /// <summary>供 OpenVINO 子 ViewModel 复用的操作壳（IsBusy / 进度 / 取消语义与页面一致）。</summary>
-    internal Task RunOperationAsync(Func<CancellationToken, Task> action) => RunAsync(action);
+    /// <summary>供后端子 ViewModel 复用的操作壳（IsBusy / 进度 / 取消语义与页面一致）。</summary>
+    public Task RunOperationAsync(Func<CancellationToken, Task> action) => RunAsync(action);
 
-    internal async Task<bool> ConfirmDownloadAsync(IReadOnlyList<RuntimeDownloadPackage> packages)
+    public async Task<bool> ConfirmDownloadAsync(IReadOnlyList<RuntimeDownloadPackage> packages)
         => await _interaction.ConfirmDownloadAsync(packages, false);
 
-    internal void ReportProgress(string message, double percentage, bool indeterminate)
+    public void ReportProgress(string message, double percentage, bool indeterminate)
     {
         ProgressText = message;
         ProgressValue = percentage;
@@ -391,7 +391,7 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
     }
 
     /// <summary>OpenVINO 运行库安装器（DI 单例；宿主未就绪时为 null，下载入口自动置灰）。</summary>
-    internal IOpenVinoRuntimeInstaller? OpenVinoInstaller { get; init; }
+    public IOpenVinoRuntimeInstaller? OpenVinoInstaller { get; init; }
 
 
     [RelayCommand]

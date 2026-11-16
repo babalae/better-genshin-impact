@@ -14,16 +14,7 @@ public static class NcnnStartup
     ///     OCR / YOLO 的 ncnn 分流按关闭处理，保持 ONNX-only 路径可用。
     /// </summary>
     public static NcnnConfig? TryGetActiveConfig()
-    {
-        try
-        {
-            return Service.ConfigService.Config?.HardwareAccelerationConfig?.Ncnn;
-        }
-        catch (Exception)
-        {
-            return null;
-        }
-    }
+        => ONNX.InferenceBackendRouter.TryGetConfig()?.Ncnn;
 
     /// <summary>
     ///     规范 ncnn 配置（enum 越界回落、调优参数空值补齐与 Normalize 写回）。

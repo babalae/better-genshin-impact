@@ -141,12 +141,14 @@ public class HardwareAccelerationViewRenderTests : IDisposable
 
     private sealed class BindingErrorListener : TraceListener, IDisposable
     {
-        private readonly TextWriterTraceListener? _unused = null;
         public List<string> Errors { get; } = [];
 
         public BindingErrorListener()
         {
             PresentationTraceSources.DataBindingSource.Listeners.Add(this);
+            // Refresh 使已存在的绑定表达式重新套用监听器配置；Error 级别覆盖
+            // 「BindingExpression path error」等常见绑定路径问题。
+            PresentationTraceSources.Refresh();
             PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Error;
         }
 
@@ -154,13 +156,14 @@ public class HardwareAccelerationViewRenderTests : IDisposable
 
         public override void WriteLine(string? message)
         {
-            if (message != null && message.Contains("System.Windows.Data Error", StringComparison.Ordinal))
+            if (message != null && message.Contains("BindingExpression", StringComparison.OrdinalIgnoreCase))
                 Errors.Add(message);
         }
 
         public void Dispose()
         {
             PresentationTraceSources.DataBindingSource.Listeners.Remove(this);
+            PresentationTraceSources.Refresh();
         }
     }
 

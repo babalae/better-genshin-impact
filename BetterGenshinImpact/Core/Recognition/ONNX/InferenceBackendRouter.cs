@@ -1,10 +1,10 @@
 using System;
-using System.Linq;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.Ncnn;
 using BetterGenshinImpact.Core.Recognition.OpenVino;
 using BetterGenshinImpact.Core.Recognition.OCR.Paddle;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace BetterGenshinImpact.Core.Recognition.ONNX;
 
@@ -37,8 +37,8 @@ public static class InferenceBackendRouter
     }
 
     /// <summary>
-    ///     读取当前硬件加速配置；宿主环境（如单元测试）尚未初始化全局配置时返回 null，
-    ///     所有路由按 ONNX 处理，保持 ONNX-only 路径可用。
+    ///     读取当前硬件加速配置（全局配置的单一读取入口，ncnn / OpenVINO 的 Startup 也经由这里）；
+    ///     宿主环境（如单元测试）尚未初始化全局配置时返回 null，所有路由按 ONNX 处理，保持 ONNX-only 路径可用。
     /// </summary>
     public static HardwareAccelerationConfig? TryGetConfig()
     {
@@ -94,46 +94,47 @@ public static class InferenceBackendRouter
         return YoloBackend.Onnx;
     }
 
-    /// <summary>装配 OCR 后端组合（Det + Rec）。ONNX 时返回 null，调用方走模型自身的 Build。</summary>
-    internal static (IOcrDetector Det, IOcrRecognizer Rec)? CreateOcrBackends(BgiOnnxSessionFactory factory,
-        PaddleOcrService.PaddleOcrModelType modelType)
+    /// <summary>
+    ///     装配 OCR 后端组合（Det + Rec + 后端名）。ONNX 时返回 null，调用方走模型自身的 Build。
+    ///     后端创建失败按约定抛出，不由本层静默回退。
+    /// </summary>
+    internal static (IOcrDetector Det, IOcrRecognizer Rec, string BackendName)? CreateOcrBackends(
+        PaddleOcrService.PaddleOcrModelType modelType, ILogger logger)
     {
-        var logger = ResolveLogger();
+        var config = TryGetConfig();
+        if (config == null) return null;
         switch (ResolveOcr(modelType))
         {
             case OcrBackend.OpenVino:
-                return OpenVino.OpenVinoOcrBackend.Create(logger, modelType, OpenVinoBackendSettings.FromConfig(TryGetConfig()!.OpenVino));
+                return WithName(OpenVinoOcrBackend.Create(logger, modelType, OpenVinoBackendSettings.FromConfig(config.OpenVino)),
+                    "OpenVINO");
             case OcrBackend.Ncnn:
-                return NcnnOcrBackend.Create(logger, modelType, NcnnBackendSettings.FromConfig(TryGetConfig()!.Ncnn));
+                return WithName(NcnnOcrBackend.Create(logger, modelType, NcnnBackendSettings.FromConfig(config.Ncnn)), "ncnn");
             default:
                 return null;
         }
     }
 
-    /// <summary>装配 YOLO 后端；ONNX（或模型未登记）时返回 null，调用方走 YoloSharp。</summary>
+    private static (IOcrDetector Det, IOcrRecognizer Rec, string BackendName) WithName(
+        (IOcrDetector Det, IOcrRecognizer Rec) backends, string backendName)
+        => (backends.Det, backends.Rec, backendName);
+
+    /// <summary>
+    ///     装配 YOLO 后端；ONNX（或模型未登记）时返回 null，调用方走 YoloSharp。
+    ///     后端创建失败按约定抛出，不由本层静默回退。
+    /// </summary>
     internal static IYoloPredictorBackend? CreateYoloBackend(BgiOnnxModel model, ILogger logger)
     {
+        var config = TryGetConfig();
+        if (config == null) return null;
         switch (ResolveYolo(model))
         {
             case YoloBackend.OpenVino:
-                return OpenVino.OpenVinoYoloBackend.Create(model, logger, OpenVinoBackendSettings.FromConfig(TryGetConfig()!.OpenVino));
+                return OpenVinoYoloBackend.Create(model, logger, OpenVinoBackendSettings.FromConfig(config.OpenVino));
             case YoloBackend.Ncnn:
-                return NcnnYoloBackend.Create(model, logger, NcnnBackendSettings.FromConfig(TryGetConfig()!.Ncnn));
+                return NcnnYoloBackend.Create(model, logger, NcnnBackendSettings.FromConfig(config.Ncnn));
             default:
                 return null;
-        }
-    }
-
-    /// <summary>路由日志：DI 未就绪（如单元测试宿主）时退回 NullLogger，不影响推理装配。</summary>
-    private static ILogger ResolveLogger()
-    {
-        try
-        {
-            return BetterGenshinImpact.App.GetLogger<BgiOnnxFactory>();
-        }
-        catch (Exception)
-        {
-            return Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
         }
     }
 

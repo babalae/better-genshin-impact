@@ -48,11 +48,8 @@ public sealed class InferenceRuntimeService(
         config.ValidatedEngines ??= [];
         // 新增 OCR 参数单独修正，避免无效比例或换用核心数较少的处理器时丢失其他引擎设置。
         config.PaddleOcrCpu = PaddleOcrCpuConfig.FromOptions((config.PaddleOcrCpu ?? new()).ToOptions().Normalize());
-        // 后端子配置的越界修正、运行库校验与默认值对齐都在各自的 Startup 中完成。
-        var ncnnMessage = NcnnStartup.Prepare(config.Ncnn ??= new());
-        fallbackMessage = JoinStartupMessages(fallbackMessage, ncnnMessage);
-        fallbackMessage = JoinStartupMessages(fallbackMessage, OpenVinoStartup.Prepare(config.OpenVino ??= new()));
         // 旧版「OpenVINO 执行提供程序」用户迁移：生效引擎 OpenVINO → 独立 OpenVINO 后端意图，OCR 开关跟随旧的强制 OCR 设置。
+        // 必须在后端 Prepare 之前完成：迁移后用途开关已开启，Prepare 才能对运行库做有效校验并给出提示。
         if (config.InferenceDevice == InferenceDeviceType.OpenVINO && config.IsExpectedConfiguration)
         {
             config.PreferredBackend = InferenceBackend.OpenVino;
@@ -60,7 +57,14 @@ public sealed class InferenceRuntimeService(
             config.OpenVino.UseYolo = true;
             config.OpenVino.DeviceId = config.GetEngineSettings(InferenceDeviceType.OpenVINO).DeviceId is { Length: > 0 } deviceId
                 && deviceId.StartsWith("GPU", StringComparison.Ordinal) ? deviceId : "CPU";
+            config.InferenceDevice = InferenceDeviceType.Cpu;
+            fallbackMessage = "OpenVINO 已改为独立推理后端（不再经 ONNX Runtime），本次迁移已完成。\r\n\r\n"
+                              + "如需 Intel 设备加速，请在“硬件加速设置”的 OpenVINO 卡片中确认设备并下载运行库。";
         }
+        // 后端子配置的越界修正、运行库校验与默认值对齐都在各自的 Startup 中完成。
+        var ncnnMessage = NcnnStartup.Prepare(config.Ncnn ??= new());
+        fallbackMessage = JoinStartupMessages(fallbackMessage, ncnnMessage);
+        fallbackMessage = JoinStartupMessages(fallbackMessage, OpenVinoStartup.Prepare(config.OpenVino ??= new()));
         if (config.IsExpectedConfiguration && !string.IsNullOrWhiteSpace(config.VerifiedSignature))
         {
             // 兼容已有的单份验证签名：只恢复能与保存参数匹配的历史成功记录。

@@ -1,5 +1,4 @@
 using System;
-using System.Text.Json.Serialization;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace BetterGenshinImpact.Core.Config;
@@ -45,8 +44,4 @@ public partial class OpenVinoConfig : ObservableObject
         DeviceId = normalized.DeviceId;
         EnableModelCache = normalized.EnableModelCache;
     }
-
-    /// <summary>只比较是否变化用的稳定签名（设备与开关；缓存开关参与设置变更判定）。</summary>
-    [JsonIgnore]
-    public string SignatureSuffix => OpenVinoBackendSettings.FromConfig(this).SignatureSuffix;
 }

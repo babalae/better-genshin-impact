@@ -1,6 +1,5 @@
 using System;
 using System.Buffers;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using BetterGenshinImpact.Core.Recognition.ONNX;
@@ -9,7 +8,6 @@ using Compunet.YoloSharp.Metadata;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using OpenVinoSharp;
 using Size = SixLabors.ImageSharp.Size;
 
 namespace BetterGenshinImpact.Core.Recognition.OpenVino;
@@ -175,14 +173,12 @@ internal sealed class OpenVinoYoloPredictor : IYoloPredictorBackend
         return YoloBackendShared.ResolveOutputLayout(w, h, null, output.Length, _names.Length);
     }
 
-    /// <summary>拷出到池化缓冲的输出张量。</summary>
-    private readonly struct PooledOutput(float[] data, int length, int[] shape) : IDisposable
+    /// <summary>拷出到池化缓冲的输出张量；缓冲由调用方在 finally 中归还（DecodeAndNmsCore 之外不持有引用）。</summary>
+    private readonly struct PooledOutput(float[] data, int length, int[] shape)
     {
         public float[] Data { get; } = data;
         public int Length { get; } = length;
         public int[] Shape { get; } = shape;
-
-        public void Dispose() => ArrayPool<float>.Shared.Return(Data);
     }
 
     public void Dispose()

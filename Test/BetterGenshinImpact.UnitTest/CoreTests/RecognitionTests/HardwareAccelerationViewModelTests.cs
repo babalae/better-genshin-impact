@@ -114,13 +114,15 @@ public class HardwareAccelerationViewModelTests
             CpuOcr = false,
             ValidationState = InferenceValidationState.None,
         };
-        InferenceRuntimeService.PrepareStartup(config);
+        var status = InferenceRuntimeService.PrepareStartup(config);
 
         Assert.Equal(InferenceDeviceType.Cpu, config.InferenceDevice);
         Assert.Equal(InferenceBackend.OpenVino, config.PreferredBackend);
         Assert.True(config.OpenVino.UseYolo);
         Assert.True(config.OpenVino.UseOcr, "旧版未强制 OCR CPU 的用户应当默认 OpenVINO 跑 OCR");
         Assert.Equal("GPU.0", config.OpenVino.DeviceId);
+        // 迁移必须告知用户（横幅），且迁移后开关已开启 → 运行库缺失提示会出现（本机未装运行库时）
+        Assert.Contains("独立推理后端", status.FallbackMessage);
     }
 
     [Fact]

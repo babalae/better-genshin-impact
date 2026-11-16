@@ -6,7 +6,6 @@ using System.Text;
 using BetterGenshinImpact.Core.Recognition.OCR.Engine;
 using BetterGenshinImpact.Core.Recognition.OCR.Engine.data;
 using BetterGenshinImpact.Core.Recognition.ONNX;
-using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using OpenCvSharp;
 
@@ -19,27 +18,24 @@ public class Rec : IOcrRecognizer
         IReadOnlyList<string> labels,
         OcrVersionConfig config,
         BgiOnnxSessionFactory bgiOnnxFactory)
-        : this(model, labels, config, new OrtOcrInferenceSession(bgiOnnxFactory.CreateInferenceSession(model, true)))
+        : this(labels, config, new OrtOcrInferenceSession(bgiOnnxFactory.CreateInferenceSession(model, true)))
     {
     }
 
     /// <summary>注入任意推理会话（ONNX Runtime 或 OpenVINO）的构造入口，预处理与解码完全共用。</summary>
     internal Rec(
-        BgiOnnxModel model,
         IReadOnlyList<string> labels,
         OcrVersionConfig config,
         IOcrInferenceSession session)
     {
-        _model = model;
         _labels = labels;
         Config = config;
         _session = session;
     }
 
-    private readonly BgiOnnxModel _model;
     private readonly IOcrInferenceSession _session;
     private readonly IReadOnlyList<string> _labels;
-    protected internal readonly OcrVersionConfig Config;
+    private readonly OcrVersionConfig Config;
 
     private readonly object _sessionLock = new();
     private bool _disposed;

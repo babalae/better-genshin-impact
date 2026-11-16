@@ -8,6 +8,7 @@ using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR.Engine;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using BetterGenshinImpact.GameTask.Common.BgiVision;
+using Microsoft.Extensions.Logging;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
 using YamlDotNet.Core;
@@ -29,6 +30,9 @@ public class PaddleOcrService : IOcrService, IDisposable
     private readonly IOcrRecognizer _localRecModel;
     private readonly object _inferenceLock = new();
     private bool _disposed;
+
+    /// <summary>本实例的推理后端名（ONNX Runtime / OpenVINO / ncnn），由路由结果确定；诊断与测速描述用。</summary>
+    public string BackendName { get; }
 
     /// <summary>Gets or sets the official recognition score threshold used to discard low-confidence results.</summary>
     public float DropScore { get; set; } = 0.5f;
@@ -142,31 +146,41 @@ public class PaddleOcrService : IOcrService, IDisposable
     /// </summary>
     /// <param name="bgiOnnxFactory">绑定推理运行时的会话工厂。</param>
     /// <param name="modelType">检测与识别模型组合。</param>
-    public PaddleOcrService(BgiOnnxSessionFactory bgiOnnxFactory, PaddleOcrModelType modelType)
-        : this(ResolveBackends(bgiOnnxFactory, modelType), modelType)
+    /// <param name="logger">路由与后端装配日志；DI 未就绪时为 null，由路由器退回 NullLogger。</param>
+    public PaddleOcrService(BgiOnnxSessionFactory bgiOnnxFactory, PaddleOcrModelType modelType, ILogger? logger = null)
     {
+        var standalone = ResolveStandaloneBackends(modelType, logger);
+        var (det, rec, backendName) = standalone ?? WithName(ModelBackends(bgiOnnxFactory, modelType));
+        BackendName = backendName;
+        _localDetModel = det;
+        _localRecModel = rec;
+        Warmup(modelType);
     }
 
-    /// <summary>后端路由：ONNX 时走模型自身的 Build；OpenVINO / ncnn 由路由器装配（失败按约定抛出，不静默回退）。</summary>
-    private static (IOcrDetector Det, IOcrRecognizer Rec) ResolveBackends(BgiOnnxSessionFactory bgiOnnxFactory,
+    /// <summary>ONNX 路线：模型自身的 Det/Rec 组合。</summary>
+    private static (IOcrDetector Det, IOcrRecognizer Rec) ModelBackends(BgiOnnxSessionFactory bgiOnnxFactory,
         PaddleOcrModelType modelType)
+        => modelType.Build(bgiOnnxFactory);
+
+    private static (IOcrDetector Det, IOcrRecognizer Rec, string BackendName) WithName(
+        (IOcrDetector Det, IOcrRecognizer Rec) backends, string backendName = "ONNX Runtime")
+        => (backends.Det, backends.Rec, backendName);
+
+    /// <summary>后端路由：独立后端（OpenVINO / ncnn）装配结果；ONNX 时返回 null（走模型自身的 Build）。</summary>
+    private static (IOcrDetector Det, IOcrRecognizer Rec, string BackendName)? ResolveStandaloneBackends(
+        PaddleOcrModelType modelType, ILogger? logger)
     {
-        var backends = ONNX.InferenceBackendRouter.CreateOcrBackends(bgiOnnxFactory, modelType);
-        return backends ?? modelType.Build(bgiOnnxFactory);
+        return ONNX.InferenceBackendRouter.CreateOcrBackends(modelType,
+            logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance);
     }
 
-    /// <summary>注入任意后端组合（ONNX Runtime、OpenVINO 或 ncnn）。后端所有权转移给本实例，Dispose 时一并释放。</summary>
-    internal PaddleOcrService((IOcrDetector Det, IOcrRecognizer Rec) backends, PaddleOcrModelType modelType)
+    /// <summary>加载后预热一次（所有构造路径共用）。</summary>
+    private void Warmup(PaddleOcrModelType modelType)
     {
-        _localDetModel = backends.Det;
-        _localRecModel = backends.Rec;
-
         try
         {
-            // 预热模型
             using var preHeatImageMat = Bv.ImRead(modelType.PreHeatImagePath) ??
                                         throw new FileNotFoundException($"预热图片未找到: {modelType.PreHeatImagePath}");
-            // Debug输出结果
             var preHeatResult = RunAll(preHeatImageMat, 1);
             Debug.WriteLine(
                 $"PaddleOcrService 预热完成，使用模型: {modelType.DetectionModel.Name} 和 {modelType.RecognitionModel.Name}，结果: {preHeatResult.Text}");
@@ -177,6 +191,16 @@ public class PaddleOcrService : IOcrService, IDisposable
             _localRecModel.Dispose();
             throw;
         }
+    }
+
+    /// <summary>注入任意后端组合（ONNX Runtime、OpenVINO 或 ncnn）。后端所有权转移给本实例，Dispose 时一并释放。</summary>
+    internal PaddleOcrService((IOcrDetector Det, IOcrRecognizer Rec) backends, PaddleOcrModelType modelType,
+        string backendName = "ONNX Runtime")
+    {
+        BackendName = backendName;
+        _localDetModel = backends.Det;
+        _localRecModel = backends.Rec;
+        Warmup(modelType);
     }
 
     /// <summary>

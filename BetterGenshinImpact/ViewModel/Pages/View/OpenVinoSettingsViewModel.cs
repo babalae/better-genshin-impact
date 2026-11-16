@@ -14,12 +14,12 @@ namespace BetterGenshinImpact.ViewModel.Pages.View;
 /// <summary>
 ///     「硬件加速设置 → OpenVINO」的全部设置状态：逐用途开关、设备选择、编译缓存与运行库安装。
 ///     OpenVINO 直接推理现有 ONNX 模型文件，无转换产物自检；运行库由 OpenVinoRuntimeInstaller 按需下载。
-///     与 <see cref="HardwareAccelerationViewModel" /> 的关系同 ncnn 子 ViewModel：只读访问页面级状态用于文案，
+///     与宿主页面的关系同 ncnn 子 ViewModel：经 <see cref="IInferencePageContext" /> 只读访问页面级状态用于文案，
 ///     草稿经 <see cref="BuildDraft" /> 交由页面统一 Apply。
 /// </summary>
 public sealed partial class OpenVinoSettingsViewModel : ObservableObject
 {
-    private readonly HardwareAccelerationViewModel? _owner;
+    private readonly IInferencePageContext? _owner;
     private OpenVinoBackendSettings _baseline;
 
     /// <summary>设备枚举的过期令牌：丢弃慢查询返回时的过期结果。</summary>
@@ -29,8 +29,8 @@ public sealed partial class OpenVinoSettingsViewModel : ObservableObject
     private bool _devicesLoaded;
     private bool _disposed;
 
-    /// <param name="owner">宿主页面 ViewModel；单元测试等无页面场景可传 null，相关文案自动降级。</param>
-    public OpenVinoSettingsViewModel(OpenVinoConfig saved, HardwareAccelerationViewModel? owner = null)
+    /// <param name="owner">宿主页面的交互面；单元测试等无页面场景可传 null，相关文案自动降级。</param>
+    public OpenVinoSettingsViewModel(OpenVinoConfig saved, IInferencePageContext? owner = null)
     {
         ArgumentNullException.ThrowIfNull(saved);
         _owner = owner;

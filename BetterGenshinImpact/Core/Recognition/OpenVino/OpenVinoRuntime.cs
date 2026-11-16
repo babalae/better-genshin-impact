@@ -10,7 +10,7 @@ using OvCore = OpenVinoSharp.Core;
 namespace BetterGenshinImpact.Core.Recognition.OpenVino;
 
 /// <summary>
-///     OpenVINO（C# API）后端的运行时承载：运行库目录约定、安装检测与进程级 <see cref="Core" /> 单例。
+///     OpenVINO（C# API）后端的运行时承载：运行库目录约定、安装检测与进程级 Core 单例。
 ///     运行库由 NuGet 包 OpenVINO.runtime.win 按需下载安装到 Plugins/OpenVINO（见 OpenVinoRuntimeInstaller），
 ///     经 <c>Ov.Initialize</c> 以显式路径加载，不污染进程 PATH（单 onnxruntime.dll 约束同样适用于本目录隔离）。
 /// </summary>
@@ -38,15 +38,7 @@ public static class OpenVinoRuntime
     private static string? _sharedCoreLoadError;
 
     /// <summary>运行库是否已安装齐备（只查文件，不加载原生库）。</summary>
-    public static bool IsInstalled()
-    {
-        foreach (var file in RequiredFiles)
-        {
-            if (!File.Exists(Path.Combine(RuntimeDirectory, file))) return false;
-        }
-
-        return true;
-    }
+    public static bool IsInstalled() => FirstMissingFile() == null;
 
     /// <summary>首个缺失的必需文件名；已齐备时返回 null。</summary>
     public static string? FirstMissingFile()
@@ -59,17 +51,10 @@ public static class OpenVinoRuntime
         return null;
     }
 
-    /// <summary>是否支持指定设备（按 OpenVINO 设备名前缀：CPU / GPU / NPU / AUTO 族）。</summary>
-    public static bool IsSupportedDevice(string deviceId)
-        => deviceId.StartsWith("CPU", StringComparison.OrdinalIgnoreCase)
-           || deviceId.StartsWith("GPU", StringComparison.OrdinalIgnoreCase)
-           || deviceId.StartsWith("NPU", StringComparison.OrdinalIgnoreCase)
-           || deviceId.StartsWith("AUTO", StringComparison.OrdinalIgnoreCase)
-           || deviceId.StartsWith("HETERO", StringComparison.OrdinalIgnoreCase);
-
     /// <summary>
     ///     获取进程共享的 OpenVINO Core（首次访问时加载运行库并创建，失败时抛出可读异常）。
     ///     OpenVINO 官方推荐单 Core 复用；编译缓存等属性在 compile_model 调用时按需传入。
+    ///     首次加载失败会被缓存并直接抛出（修复手段是下载/重装运行库后重启，因此无需重试语义）。
     /// </summary>
     public static OvCore GetSharedCore()
     {
@@ -119,7 +104,7 @@ internal static class OpenVinoCompiledModelCache
     public static CompiledModel GetOrCompile(string modelPath, string deviceId, bool enableCache,
         string? cacheDirectory = null)
     {
-        var key = $"{modelPath.Length}:{modelPath}|{deviceId}|{enableCache}";
+        var key = $"{modelPath}|{deviceId}|{enableCache}";
         return Cache.GetOrAdd(key, _ => new CachedModel(modelPath, deviceId, enableCache, cacheDirectory)).Model;
     }
 

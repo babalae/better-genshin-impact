@@ -20,9 +20,9 @@ internal static class OpenVinoOcrBackend
         Rec? rec = null;
         try
         {
-            det = new Det(modelType.DetectionModel, modelType.DetectionVersion,
+            det = new Det(modelType.DetectionVersion,
                 new OpenVinoSession(modelType.DetectionModel.ModalPath, settings.DeviceId, settings.EnableModelCache));
-            rec = new Rec(modelType.RecognitionModel, modelType.RecLabel(), modelType.RecognitionVersion,
+            rec = new Rec(modelType.RecLabel(), modelType.RecognitionVersion,
                 new OpenVinoSession(modelType.RecognitionModel.ModalPath, settings.DeviceId, settings.EnableModelCache));
             logger.LogInformation(
                 "[OCR] OpenVINO 后端已启用（{Det} / {Rec}），设备 {Device}，缓存 {Cache}",

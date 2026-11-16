@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using BetterGenshinImpact.Core.Config;
 using Microsoft.Extensions.Logging;
 
@@ -17,24 +16,18 @@ public static class OpenVinoStartup
     ///     OCR / YOLO 的 OpenVINO 分流按关闭处理，保持 ONNX-only 路径可用。
     /// </summary>
     public static OpenVinoConfig? TryGetActiveConfig()
-    {
-        try
-        {
-            return Service.ConfigService.Config?.HardwareAccelerationConfig?.OpenVino;
-        }
-        catch (Exception)
-        {
-            return null;
-        }
-    }
+        => ONNX.InferenceBackendRouter.TryGetConfig()?.OpenVino;
 
-    /// <summary>规范 OpenVINO 配置（设备名越界回落、空值补齐）。返回用户可读的问题提示（空串表示通过）。</summary>
+    /// <summary>
+    ///     规范 OpenVINO 配置（设备名越界回落、空值补齐）。返回用户可读的问题提示（空串表示通过）。
+    ///     与 ncnn 后端一致：只在确实启用时校验运行库——未启用 OpenVINO 的用户不应在启动横幅看到提示。
+    /// </summary>
     public static string Prepare(OpenVinoConfig config)
     {
         var settings = OpenVinoBackendSettings.FromConfig(config);
         if (!settings.IsValid) settings = settings with { DeviceId = "CPU" };
         config.DeviceId = settings.DeviceId;
-        return ValidateRuntime();
+        return settings.UseOcr || settings.UseYolo ? ValidateRuntime() : "";
     }
 
     /// <summary>
@@ -67,3 +60,4 @@ public static class OpenVinoStartup
 
 /// <summary>OpenVINO 设备信息（设置页展示与保存）。</summary>
 public sealed record OpenVinoDeviceInfo(string DeviceId, string DisplayName);
+
