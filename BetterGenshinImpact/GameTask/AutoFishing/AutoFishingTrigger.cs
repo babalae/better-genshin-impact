@@ -112,6 +112,8 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
 
         private DateTime _prevExecute = DateTime.MinValue;
 
+        private Task<Status>? _lastTickTask;
+
         public void OnCapture(CaptureContent content)
         {
             if ((DateTime.Now - _prevExecute).TotalMilliseconds <= 67)
@@ -129,8 +131,38 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
             else
             {
-                BehaviourTreeLaTiao.TickOnce();
+                // TickOnce 是异步的，异常落在返回的 Task 里：在这里落地观察，
+                // 避免中止异常静默丢失导致触发器带着坏掉的截图器继续空转
+                if (_lastTickTask is { } last)
+                {
+                    if (last.IsCanceled)
+                    {
+                        DisableAfterAutoAbort();
+                    }
+                    else if (last.IsFaulted)
+                    {
+                        _logger.LogWarning(last.Exception?.GetBaseException(), "半自动钓鱼行为树执行异常");
+                    }
+                }
+
+                _lastTickTask = BehaviourTreeLaTiao.TickOnce();
             }
+        }
+
+        /// <summary>
+        /// 行为树自动中止（如连续截图失败、运行环境停止）后，
+        /// 通过配置开关走触发器生命周期停止半自动钓鱼，与快捷键关闭同一机制
+        /// </summary>
+        private void DisableAfterAutoAbort()
+        {
+            if (!IsEnabledByConfig)
+            {
+                return;
+            }
+
+            _config.AutoFishingConfig.Enabled = false;
+            IsExclusive = false;
+            _logger.LogWarning("半自动钓鱼已自动中止：截图持续失败或运行环境已停止，已关闭半自动钓鱼开关");
         }
 
         // /// <summary>
