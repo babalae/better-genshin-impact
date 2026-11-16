@@ -80,7 +80,7 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <ui:TitleBar Title="推理引擎设置">
-            <ui:TitleBar.Icon><ui:ImageIcon Source="pack://application:,,,/Resources/Images/logo.png" /></ui:TitleBar.Icon>
+            <ui:TitleBar.Icon><ui:ImageIcon Source="pack://application:,,,/BetterGI;component/Resources/Images/logo.png" /></ui:TitleBar.Icon>
         </ui:TitleBar>
         <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Margin="24,12,24,24">
