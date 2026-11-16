@@ -74,6 +74,7 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             IsExclusive = false;
             _prevExecute = DateTime.MinValue;
+            _lastTickTask = null;
             BuildBehaviourTree();
         }
 
@@ -131,6 +132,12 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
             }
             else
             {
+                // 上一轮 tick 仍在运行（如截图失败退避等待中）时不叠加新 tick
+                if (_lastTickTask is { IsCompleted: false })
+                {
+                    return;
+                }
+
                 // TickOnce 是异步的，异常落在返回的 Task 里：在这里落地观察，
                 // 避免中止异常静默丢失导致触发器带着坏掉的截图器继续空转
                 if (_lastTickTask is { } last)
@@ -145,7 +152,10 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
                     }
                 }
 
-                _lastTickTask = BehaviourTreeLaTiao.TickOnce();
+                if (IsExclusive)
+                {
+                    _lastTickTask = BehaviourTreeLaTiao.TickOnce();
+                }
             }
         }
 
