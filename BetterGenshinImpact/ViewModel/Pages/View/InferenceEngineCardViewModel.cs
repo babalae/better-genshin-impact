@@ -14,15 +14,13 @@ public partial class InferenceEngineCardViewModel(InferenceDeviceType engine, In
     {
         InferenceDeviceType.Cpu => "内置处理器推理，兼容性最好。",
         InferenceDeviceType.DirectML => "使用支持 DirectML 的显卡，无需额外计算库。",
-        InferenceDeviceType.OpenVINO => "使用 Intel CPU、显卡或 NPU。",
         InferenceDeviceType.CUDA => "使用 NVIDIA 显卡执行推理。",
         _ => "使用 NVIDIA TensorRT 优化推理，首次构建模型可能较慢。"
     };
     public InferenceEngineSettings Settings { get; } = settings.Copy();
     [ObservableProperty] private ObservableCollection<InferenceDeviceInfo> _devices = [];
-    public bool SupportsCache => Engine is InferenceDeviceType.OpenVINO or InferenceDeviceType.TensorRT;
+    public bool SupportsCache => Engine is InferenceDeviceType.TensorRT;
     public bool IsCpu => Engine == InferenceDeviceType.Cpu;
-    public bool IsRecommended => Engine == InferenceDeviceType.OpenVINO;
     [ObservableProperty] private InferenceDeviceInfo? _selectedDevice;
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private bool _isCurrent;

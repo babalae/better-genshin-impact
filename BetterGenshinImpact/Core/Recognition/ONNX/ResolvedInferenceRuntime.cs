@@ -21,7 +21,7 @@ public sealed record ResolvedInferenceRuntime(
     public PaddleOcrCpuOptions PaddleOcrCpu { get; init; } = new();
     public static InferenceDeviceInfo CpuDevice { get; } = new("CPU", "处理器", 0, "CPU");
     /// <summary>
-    /// TensorRT、OpenVINO 编译缓存的根目录，与通用文件缓存分开存放
+    /// TensorRT 编译缓存与 OpenVINO 独立后端编译缓存的根目录，与通用文件缓存分开存放
     /// </summary>
     public static string ModelCacheDirectory => AppPaths.InferenceCache;
     public string Description => $"{(Engine == InferenceDeviceType.Cpu ? "CPU" : Engine.ToString())} · {Device.Name}";
@@ -51,7 +51,7 @@ public sealed record ResolvedInferenceRuntime(
     {
         var engine = config.InferenceDevice;
         return new(engine, device, config.CpuOcr, config.Cpu.CpuThreads,
-            engine is InferenceDeviceType.OpenVINO or InferenceDeviceType.TensorRT
+            engine is InferenceDeviceType.TensorRT
             && config.GetEngineSettings(engine).EnableModelCache,
             runtimeDirectory) { PaddleOcrCpu = config.PaddleOcrCpu.ToOptions() };
     }
@@ -67,7 +67,7 @@ public static class InferenceRuntimeFingerprint
     public static string Compute(HardwareAccelerationConfig config, InferenceDeviceType engine)
     {
         var settings = config.GetEngineSettings(engine);
-        var enableModelCache = engine is InferenceDeviceType.OpenVINO or InferenceDeviceType.TensorRT
+        var enableModelCache = engine is InferenceDeviceType.TensorRT
                                && settings.EnableModelCache;
         return Compute(engine, settings.DeviceId, config.CpuOcr, config.Cpu.CpuThreads, enableModelCache,
             config.PaddleOcrCpu.ToOptions());

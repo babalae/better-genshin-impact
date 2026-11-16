@@ -21,7 +21,6 @@ public sealed class InferenceDeviceDiscovery : IInferenceDeviceDiscovery
         InferenceDeviceType.Cpu => [ResolvedInferenceRuntime.CpuDevice],
         InferenceDeviceType.DirectML => GetDirectMlDevices(),
         InferenceDeviceType.CUDA or InferenceDeviceType.TensorRT => GetNvidiaDevices(engine),
-        InferenceDeviceType.OpenVINO => GetOpenVinoDevices(runtimeDirectory),
         _ => []
     };
 
@@ -120,62 +119,17 @@ public sealed class InferenceDeviceDiscovery : IInferenceDeviceDiscovery
         finally { NativeLibrary.Free(library); }
     }
 
-    private static IReadOnlyList<InferenceDeviceInfo> GetOpenVinoDevices(string directory)
-    {
-        var path = Path.Combine(directory, "openvino_c.dll");
-        if (!File.Exists(path)) return [];
-        var library = LoadLibraryEx(path, IntPtr.Zero, 0x00001100);
-        if (library == IntPtr.Zero) throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error(), "OpenVINO 设备探测库加载失败");
-        IntPtr core = IntPtr.Zero;
-        var available = new OpenVinoDevices();
-        try
-        {
-            var create = Get<OvCreate>(library, "ov_core_create");
-            var get = Get<OvDevices>(library, "ov_core_get_available_devices");
-            var property = Get<OvProperty>(library, "ov_core_get_property");
-            var free = Get<OvFree>(library, "ov_free");
-            if (create(out core) != 0 || get(core, ref available) != 0)
-                throw new InvalidOperationException("无法枚举 OpenVINO 设备，请检查设备驱动。");
-            var devices = new List<InferenceDeviceInfo>();
-            for (var i = 0; i < checked((int)available.Size); i++)
-            {
-                var id = Marshal.PtrToStringUTF8(Marshal.ReadIntPtr(available.Devices, i * IntPtr.Size));
-                if (id == null || !(id == "CPU" || id.StartsWith("GPU", StringComparison.Ordinal) || id.StartsWith("NPU", StringComparison.Ordinal))) continue;
-                string display = id;
-                if (property(core, id, "FULL_DEVICE_NAME", out var value) == 0 && value != IntPtr.Zero)
-                {
-                    try { display = $"{id} · {Marshal.PtrToStringUTF8(value)}"; }
-                    finally { free(value); }
-                }
-                devices.Add(new(id, display, i, id));
-            }
-            return devices;
-        }
-        finally
-        {
-            if (available.Devices != IntPtr.Zero) Get<OvDevicesFree>(library, "ov_available_devices_free")(ref available);
-            if (core != IntPtr.Zero) Get<OvFree>(library, "ov_core_free")(core);
-            NativeLibrary.Free(library);
-        }
-    }
-
     private static T Get<T>(IntPtr library, string name) where T : Delegate => Marshal.GetDelegateForFunctionPointer<T>(NativeLibrary.GetExport(library, name));
     [StructLayout(LayoutKind.Sequential)] private struct DeviceUuid { public uint A, B, C, D; }
     [StructLayout(LayoutKind.Sequential)] private struct KernelAdapter { public long Luid; public uint Handle; }
     [StructLayout(LayoutKind.Sequential)] private struct AdapterAddress { public uint Bus, Device, Function; }
     [StructLayout(LayoutKind.Sequential)] private struct AdapterQuery { public uint Handle; public int Type; public IntPtr Data; public uint Size; }
-    [StructLayout(LayoutKind.Sequential)] private struct OpenVinoDevices { public IntPtr Devices; public nuint Size; }
     [UnmanagedFunctionPointer(CallingConvention.Winapi)] private delegate int CudaInit(uint flags);
     [UnmanagedFunctionPointer(CallingConvention.Winapi)] private delegate int CudaCount(out int count);
     [UnmanagedFunctionPointer(CallingConvention.Winapi)] private delegate int CudaDevice(out int device, int ordinal);
     [UnmanagedFunctionPointer(CallingConvention.Winapi, CharSet = CharSet.Ansi)] private delegate int CudaName(StringBuilder name, int length, int device);
     [UnmanagedFunctionPointer(CallingConvention.Winapi)] private delegate int CudaUuid(out DeviceUuid uuid, int device);
     [UnmanagedFunctionPointer(CallingConvention.Winapi)] private delegate int CudaAttribute(out int value, int attribute, int device);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int OvCreate(out IntPtr core);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int OvDevices(IntPtr core, ref OpenVinoDevices devices);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate void OvDevicesFree(ref OpenVinoDevices devices);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate int OvProperty(IntPtr core, [MarshalAs(UnmanagedType.LPUTF8Str)] string device, [MarshalAs(UnmanagedType.LPUTF8Str)] string key, out IntPtr value);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)] private delegate void OvFree(IntPtr value);
     [DllImport("d3d12.dll")] private static extern int D3D12CreateDevice(IntPtr adapter, int level, ref Guid iid, out IntPtr device);
     [DllImport("gdi32.dll")] private static extern int D3DKMTOpenAdapterFromLuid(ref KernelAdapter adapter);
     [DllImport("gdi32.dll")] private static extern int D3DKMTQueryAdapterInfo(ref AdapterQuery query);

@@ -24,9 +24,9 @@ public class PaddleOcrService : IOcrService, IDisposable
     ///     模型列表:
     ///     https://github.com/PaddlePaddle/PaddleOCR/blob/release/2.5/doc/doc_ch/models_list.md
     /// </summary>
-    private readonly Det _localDetModel;
+    private readonly IOcrDetector _localDetModel;
 
-    private readonly Rec _localRecModel;
+    private readonly IOcrRecognizer _localRecModel;
     private readonly object _inferenceLock = new();
     private bool _disposed;
 
@@ -113,7 +113,7 @@ public class PaddleOcrService : IOcrService, IDisposable
                 preHeatImagePath ?? TestImagePath);
         }
 
-        public (Det, Rec) Build(BgiOnnxSessionFactory onnxFactory)
+        internal (IOcrDetector Det, IOcrRecognizer Rec) Build(BgiOnnxSessionFactory onnxFactory)
         {
             var detection = new Det(DetectionModel, DetectionVersion, onnxFactory);
             try { return (detection, new Rec(RecognitionModel, RecLabel(), RecognitionVersion, onnxFactory)); }
@@ -138,14 +138,28 @@ public class PaddleOcrService : IOcrService, IDisposable
 
     /// <summary>
     /// 用指定的会话工厂加载模型并预热。可插拔实现（内置 PP-OCRv6 和插件中的模型）通过它创建。
+    /// 推理后端按设置页的逐用途开关路由（ONNX Runtime / OpenVINO / ncnn），路由细节见 <see cref="InferenceBackendRouter" />。
     /// </summary>
     /// <param name="bgiOnnxFactory">绑定推理运行时的会话工厂。</param>
     /// <param name="modelType">检测与识别模型组合。</param>
     public PaddleOcrService(BgiOnnxSessionFactory bgiOnnxFactory, PaddleOcrModelType modelType)
+        : this(ResolveBackends(bgiOnnxFactory, modelType), modelType)
     {
-        var (modelsDet, modelsRec) = modelType.Build(bgiOnnxFactory);
-        _localDetModel = modelsDet;
-        _localRecModel = modelsRec;
+    }
+
+    /// <summary>后端路由：ONNX 时走模型自身的 Build；OpenVINO / ncnn 由路由器装配（失败按约定抛出，不静默回退）。</summary>
+    private static (IOcrDetector Det, IOcrRecognizer Rec) ResolveBackends(BgiOnnxSessionFactory bgiOnnxFactory,
+        PaddleOcrModelType modelType)
+    {
+        var backends = ONNX.InferenceBackendRouter.CreateOcrBackends(bgiOnnxFactory, modelType);
+        return backends ?? modelType.Build(bgiOnnxFactory);
+    }
+
+    /// <summary>注入任意后端组合（ONNX Runtime、OpenVINO 或 ncnn）。后端所有权转移给本实例，Dispose 时一并释放。</summary>
+    internal PaddleOcrService((IOcrDetector Det, IOcrRecognizer Rec) backends, PaddleOcrModelType modelType)
+    {
+        _localDetModel = backends.Det;
+        _localRecModel = backends.Rec;
 
         try
         {

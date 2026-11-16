@@ -6,7 +6,7 @@ using BetterGenshinImpact.Core.Config;
 namespace BetterGenshinImpact.Core.Recognition.ONNX;
 
 /// <summary>
-/// 已注册的 ONNX 模型。编译缓存（TensorRT、OpenVINO）由 <see cref="ResolvedInferenceRuntime.GetCachePath"/>
+/// 已注册的 ONNX 模型。编译缓存（TensorRT / OpenVINO 后端）由 <see cref="ResolvedInferenceRuntime.GetCachePath"/>
 /// 按模型内容和运行库指纹统一放在 Data/Cache/Inference，模型本身不再持有缓存目录
 /// </summary>
 public class BgiOnnxModel

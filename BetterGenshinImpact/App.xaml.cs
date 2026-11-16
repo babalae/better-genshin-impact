@@ -195,6 +195,13 @@ public partial class App : Application
                     () => sp.GetRequiredService<TaskTriggerDispatcher>().PauseForInference()));
                 services.AddSingleton<InferenceModelDiagnostics>();
                 services.AddSingleton<IInferenceModelDiagnostics>(sp => sp.GetRequiredService<InferenceModelDiagnostics>());
+                // OpenVINO 独立后端的运行库安装器（设置页下载入口）
+                services.AddSingleton(sp => new BetterGenshinImpact.Core.Recognition.OpenVino.OpenVinoRuntimeInstaller(
+                    AppContext.BaseDirectory,
+                    sp.GetRequiredService<IDownloadService>(),
+                    sp.GetRequiredService<IHttpClientFactory>().CreateClient(HttpClientNames.Default)));
+                services.AddSingleton<BetterGenshinImpact.Core.Recognition.OpenVino.IOpenVinoRuntimeInstaller>(sp =>
+                    sp.GetRequiredService<BetterGenshinImpact.Core.Recognition.OpenVino.OpenVinoRuntimeInstaller>());
                 services.AddSingleton<InferenceRuntimeService>();
                 services.AddSingleton<HardwareAccelerationViewModelFactory>();
                 services.AddSingleton<IInferenceSettingsInteraction, InferenceSettingsInteraction>();
@@ -733,6 +740,11 @@ public partial class App : Application
                 }
                 finally
                 {
+                    // 运行期销毁 ncnn Vulkan 全局实例（ncnn 官方要求的退出前调用）。
+                    // 仅在 shim 已加载过时执行；导出缺失视为运行库版本错配，记调试日志后跳过。
+                    try { Core.Recognition.Ncnn.NcnnShim.TryDestroyGpuInstance(); }
+                    catch (Exception ex) { Debug.WriteLine(ex); }
+
                     // 释放控制台窗口
                     ConsoleHelper.FreeConsoleWindow();
                 }

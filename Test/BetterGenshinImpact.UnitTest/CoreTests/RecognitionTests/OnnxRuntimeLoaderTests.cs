@@ -16,7 +16,6 @@ public sealed class OnnxRuntimeLoaderTests : IDisposable
     }
 
     [Theory]
-    [InlineData(InferenceDeviceType.OpenVINO, "OpenVINO")]
     [InlineData(InferenceDeviceType.CUDA, "CUDA")]
     public void MissingSelectedRuntime_FallsBackToCpuWithoutChangingSavedSettings(
         InferenceDeviceType device, string directoryName)

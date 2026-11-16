@@ -4,6 +4,7 @@
              xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
              xmlns:onnx="clr-namespace:BetterGenshinImpact.Core.Recognition.ONNX"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:views="clr-namespace:BetterGenshinImpact.View.Pages.View"
              ui:Design.Background="{DynamicResource ApplicationBackgroundBrush}"
              ui:Design.Foreground="{DynamicResource TextFillColorPrimaryBrush}">
     <UserControl.Resources>
@@ -29,6 +30,42 @@
                 </Expander>
             </StackPanel>
         </DataTemplate>
+        <!-- 顶部「推理后端」三选一卡片：切换 ONNX Runtime / OpenVINO / ncnn，各自设置区在下方独立显示 -->
+        <Style x:Key="BackendCardStyle" TargetType="ListBoxItem">
+            <Setter Property="Width" Value="336" />
+            <Setter Property="Margin" Value="0,0,12,8" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+            <Setter Property="AutomationProperties.Name" Value="{Binding Name}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="BackendCard" CornerRadius="8" BorderThickness="1.5"
+                                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
+                            <Grid>
+                                <Border x:Name="BackendSelectionFill" Background="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                        CornerRadius="6" Opacity="0.07" Visibility="Collapsed" />
+                                <ContentPresenter Margin="14,10" HorizontalAlignment="Stretch" />
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="BackendCard" Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="BackendCard" Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                                <Setter TargetName="BackendSelectionFill" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                <Setter TargetName="BackendCard" Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
     <b:Interaction.Triggers>
         <b:EventTrigger EventName="Loaded">
@@ -49,9 +86,55 @@
             <StackPanel Margin="24,12,24,24">
                 <DockPanel Margin="0,12,0,4">
                     <ui:Button DockPanel.Dock="Right" Content="重新检测" Appearance="Transparent" Command="{Binding RefreshCommand}" IsEnabled="{Binding CanInteract}" />
-                    <TextBlock Text="选择推理引擎" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <TextBlock Text="推理后端" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
                 </DockPanel>
-                <TextBlock Text="点击卡片选择，再直接调整该引擎的设备和设置。应用并重启后生效。" TextWrapping="Wrap" Margin="0,0,0,14" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <TextBlock Text="选择推理后端，各后端设置互相独立；切换只改草稿，点击底部「应用并重启」后生效。" TextWrapping="Wrap" Margin="0,0,0,10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <ListBox ItemsSource="{Binding BackendOptions}" SelectedValue="{Binding SelectedBackendDraft, Mode=TwoWay}"
+                         SelectedValuePath="Backend" IsEnabled="{Binding CanInteract}"
+                         Background="Transparent" BorderThickness="0" Padding="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                         ScrollViewer.CanContentScroll="False" AutomationProperties.Name="推理后端选择"
+                         ItemContainerStyle="{StaticResource BackendCardStyle}">
+                    <ListBox.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel ToolTip="{Binding Description}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
+                                        <Border CornerRadius="9" BorderThickness="1" BorderBrush="{DynamicResource SystemFillColorSuccessBrush}"
+                                                Background="{DynamicResource ControlFillColorSecondaryBrush}" Padding="8,1" Margin="0,0,6,0"
+                                                Visibility="{Binding IsCurrent, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <TextBlock Text="当前使用" FontSize="11" Foreground="{DynamicResource SystemFillColorSuccessBrush}" />
+                                        </Border>
+                                        <Border CornerRadius="9" BorderThickness="1" BorderBrush="{DynamicResource SystemFillColorCriticalBrush}"
+                                                Background="{DynamicResource ControlFillColorSecondaryBrush}" Padding="8,1"
+                                                Visibility="{Binding IsBlocked, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <TextBlock Text="运行库缺失" FontSize="11" Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
+                                        </Border>
+                                    </StackPanel>
+                                </Grid>
+                                <TextBlock Text="{Binding Tagline}" FontSize="11" Margin="0,2,0,0"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                <TextBlock Text="{Binding StatusText}" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"
+                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                           Visibility="{Binding HasStatus, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <!-- ONNX Runtime 侧设置：仅在后端切换选中 ONNX Runtime 时显示 -->
+                <StackPanel Visibility="{Binding IsOnnxBackend, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <DockPanel Margin="0,8,0,4">
+                    <TextBlock Text="执行引擎" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                </DockPanel>
+                <TextBlock Text="点击卡片选择执行设备，再直接调整该引擎的设备和设置。应用并重启后生效。" TextWrapping="Wrap" Margin="0,0,0,14" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                 <ListBox ItemsSource="{Binding Engines}" SelectedItem="{Binding SelectedEngine, Mode=TwoWay}" IsEnabled="{Binding CanInteract}"
                          Background="Transparent" BorderThickness="0" Padding="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="False" AutomationProperties.Name="推理引擎选择">
@@ -100,7 +183,6 @@
                                                 <Setter Property="Glyph" Value="&#xf2db;" />
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding Engine}" Value="{x:Static onnx:InferenceDeviceType.DirectML}"><Setter Property="Glyph" Value="&#xe1ec;" /></DataTrigger>
-                                                    <DataTrigger Binding="{Binding Engine}" Value="{x:Static onnx:InferenceDeviceType.OpenVINO}"><Setter Property="Glyph" Value="&#xe1ec;" /></DataTrigger>
                                                     <DataTrigger Binding="{Binding Engine}" Value="{x:Static onnx:InferenceDeviceType.CUDA}"><Setter Property="Glyph" Value="&#xe1ec;" /></DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -109,11 +191,6 @@
                                     <TextBlock Text="{Binding Name}" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
                                 </DockPanel>
                                 <WrapPanel Height="28" Margin="0,8,0,0">
-                                    <Border CornerRadius="10" BorderThickness="1" BorderBrush="{DynamicResource SystemAccentColorPrimaryBrush}"
-                                            Background="{DynamicResource ControlFillColorSecondaryBrush}" Padding="8,2" Margin="0,0,6,0"
-                                            Visibility="{Binding IsRecommended, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <TextBlock Text="Intel 设备推荐" FontSize="11" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" />
-                                    </Border>
                                     <Border CornerRadius="10" BorderThickness="1" BorderBrush="{DynamicResource SystemFillColorSuccessBrush}"
                                             Background="{DynamicResource ControlFillColorSecondaryBrush}" Padding="8,2"
                                             Visibility="{Binding IsCurrent, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -162,7 +239,7 @@
                         Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" Margin="0,12,0,0">
                     <StackPanel>
                         <DockPanel>
-                            <ui:ToggleSwitch DockPanel.Dock="Right" IsChecked="{Binding ForceCpuOcr, Mode=TwoWay}" IsEnabled="{Binding CanInteract}"
+                            <ui:ToggleSwitch DockPanel.Dock="Right" IsChecked="{Binding ForceCpuOcr, Mode=TwoWay}" IsEnabled="{Binding IsOcrCpuSwitchEnabled}"
                                              Margin="16,0,0,0" VerticalAlignment="Center" AutomationProperties.Name="强制 OCR 使用 CPU" />
                             <StackPanel>
                                 <TextBlock Text="OCR 使用 CPU" FontWeight="SemiBold" />
@@ -293,6 +370,18 @@
                         </StackPanel>
                     </StackPanel>
                 </ui:CardExpander>
+                </StackPanel>
+
+                <!-- OpenVINO 侧设置：仅在后端切换选中 OpenVINO 时显示；切换即触发运行库检测与设备枚举（异步，不卡 UI） -->
+                <StackPanel Visibility="{Binding IsOpenVinoBackend, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <views:OpenVinoSettingsView DataContext="{Binding OpenVinoSettings}" Margin="0,12,0,0" />
+                </StackPanel>
+
+                <!-- ncnn 侧设置：仅在后端切换选中 ncnn 时显示；切换即激活资产探测与 Vulkan 设备枚举（异步，不卡 UI） -->
+                <StackPanel Visibility="{Binding IsNcnnBackend, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <views:NcnnSettingsView DataContext="{Binding NcnnSettings}" Margin="0,12,0,0" />
+                </StackPanel>
+
                 <Border Margin="0,10,0,0" Padding="12" CornerRadius="8" Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}">
                     <DockPanel>
                         <ui:SymbolIcon Symbol="Info24" FontSize="18" Margin="0,0,8,0" VerticalAlignment="Top" />
@@ -361,7 +450,7 @@
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="16,0,0,0" VerticalAlignment="Center">
                         <ui:Button Content="取消" Command="{Binding CancelCommand}" Margin="0,0,8,0" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
                         <ui:Button Content="恢复默认并保存" Command="{Binding UseCpuCommand}" IsEnabled="{Binding CanInteract}" Margin="0,0,8,0"
-                                   ToolTip="将推理引擎、强制 OCR、全局线程数与 OCR CPU 线程策略恢复为默认设置（CPU 推理）" />
+                                   ToolTip="将推理后端、执行引擎、强制 OCR、全局线程数与 OCR CPU 线程策略恢复为默认设置（CPU 推理）" />
                         <ui:Button Content="{Binding ApplyButtonText}" Appearance="Primary" Command="{Binding ApplyCommand}" IsEnabled="{Binding CanApply}" MinWidth="128" />
                     </StackPanel>
                     <StackPanel>
@@ -388,7 +477,4 @@
     <!--  TensorRT配置  -->
     <!--  Enable Cache  -->
     <!--  Embed Mode  -->
-    <!--  OpenVino配置  -->
-    <!--  OpenVinoDevice  -->
-    <!--  _enableOpenVinoCache  -->
 </UserControl>

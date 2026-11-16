@@ -29,7 +29,6 @@ public static class OnnxRuntimePackageCatalog
         InferenceDeviceType.CUDA => ["onnxruntime.dll", "onnxruntime_providers_shared.dll", "onnxruntime_providers_cuda.dll"],
         // ORT 的 TensorRT provider 通过 CUDA provider bridge 取得 GPU 基础设施；这里只部署 DLL，不会把 CUDA EP 加入会话。
         InferenceDeviceType.TensorRT => ["onnxruntime.dll", "onnxruntime_providers_shared.dll", "onnxruntime_providers_cuda.dll", "onnxruntime_providers_tensorrt.dll"],
-        InferenceDeviceType.OpenVINO => ["onnxruntime.dll", "onnxruntime_providers_shared.dll", "onnxruntime_providers_openvino.dll", "openvino.dll", "openvino_c.dll", "tbb12.dll", "openvino_intel_cpu_plugin.dll"],
         InferenceDeviceType.DirectML => ["onnxruntime.dll", "DirectML.dll"],
         _ => []
     };

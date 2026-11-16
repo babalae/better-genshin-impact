@@ -3,16 +3,30 @@ using System.Linq;
 using BetterGenshinImpact.Core.Recognition.OCR.Engine;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using Microsoft.ML.OnnxRuntime;
-using Microsoft.ML.OnnxRuntime.Tensors;
 using OpenCvSharp;
 
 namespace BetterGenshinImpact.Core.Recognition.OCR.Paddle;
 
-public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxSessionFactory bgiOnnxFactory)
-    : IDisposable
+public class Det : IOcrDetector
 {
+    public Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxSessionFactory bgiOnnxFactory)
+        : this(model, config, new OrtOcrInferenceSession(bgiOnnxFactory.CreateInferenceSession(model, true)))
+    {
+    }
+
+    /// <summary>注入任意推理会话（ONNX Runtime 或 OpenVINO）的构造入口，预处理与后处理完全共用。</summary>
+    internal Det(BgiOnnxModel model, OcrVersionConfig config, IOcrInferenceSession session)
+    {
+        _model = model;
+        Config = config;
+        _session = session;
+    }
+
+    private readonly BgiOnnxModel _model;
+    private readonly IOcrInferenceSession _session;
+    protected internal readonly OcrVersionConfig Config;
+
     private readonly object _sessionLock = new();
-    private readonly InferenceSession _session = bgiOnnxFactory.CreateInferenceSession(model, true);
     private bool _disposed;
 
     /// <summary>Gets or sets the detection side length limit used by the Python det preprocess.</summary>
@@ -57,6 +71,8 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxSessionFact
         return RunBoxes(src).Select(box => box.Rect).ToArray();
     }
 
+    PaddleOcrDetectionBox[] IOcrDetector.RunBoxes(Mat src) => RunBoxes(src);
+
     internal PaddleOcrDetectionBox[] RunBoxes(Mat src)
     {
         using var pred = RunRaw(src, out var resizedSize);
@@ -89,25 +105,21 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxSessionFact
             // 2. 按 limit_type 规则缩放，并将宽高分别对齐到 32 的倍数
             using var resized = MatResizeForDetection(input);
             resizedSize = new Size(resized.Width, resized.Height);
-            var inputTensor = OcrUtils.NormalizeToTensorDnn(resized, config.NormalizeImage.Scale,
-                config.NormalizeImage.Mean, config.NormalizeImage.Std, out var owner);
+            var inputTensor = OcrUtils.NormalizeToTensorDnn(resized, Config.NormalizeImage.Scale,
+                Config.NormalizeImage.Mean, Config.NormalizeImage.Std, out var owner);
             using (owner)
             {
                 lock (_sessionLock)
                 {
                     ObjectDisposedException.ThrowIf(_disposed, this);
-                    using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = _session.Run([
-                        NamedOnnxValue.CreateFromTensor(_session.InputNames[0], inputTensor)
-                    ]);
-                    var output = results[0];
-                    if (output.ElementType is not TensorElementType.Float)
-                        throw new Exception($"Unexpected output tensor type: {output.ElementType}");
-
-                    if (output.ValueType is not OnnxValueType.ONNX_TYPE_TENSOR)
-                        throw new Exception($"Unexpected output tensor value type: {output.ValueType}");
-                    var outputTensor = output.AsTensor<float>();
-                    return OcrUtils.Tensor2Mat(outputTensor);
-                    // 因为一个已知bug,tensor中内存在dml下使用完后会被释放掉,锁之外的代码会报错
+                    var output = _session.Run(inputTensor)[0];
+                    // 输出 [1,1,H,W] 概率图；DML 等后端的输出内存在 Run 返回后即失效，
+                    // 因此数据在会话锁内拷出（OcrInferenceResult 为副本）。
+                    var height = output.Shape[2];
+                    var width = output.Shape[3];
+                    var mat = new Mat(height, width, MatType.CV_32FC1);
+                    output.Data.AsSpan(0, height * width).CopyTo(mat.AsSpan<float>());
+                    return mat;
                 }
             }
         }
@@ -125,13 +137,13 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxSessionFact
     /// <returns></returns>
     private Mat MatResizeForDetection(Mat src)
     {
-        using var preprocessed = PrepareTinyImage(src);
+        using var preprocessed = OcrUtils.PrepareTinyImage(src);
 
         var size = preprocessed.Size();
         var height = size.Height;
         var width = size.Width;
 
-        var ratio = CalculateResizeRatio(width, height, LimitSideLen, LimitType);
+        var ratio = OcrUtils.CalculateResizeRatio(width, height, LimitSideLen, LimitType);
         var resizeHeight = (int)(height * ratio);
         var resizeWidth = (int)(width * ratio);
 
@@ -154,36 +166,5 @@ public class Det(BgiOnnxModel model, OcrVersionConfig config, BgiOnnxSessionFact
         return preprocessed.Resize(new Size(resizeWidth, resizeHeight));
     }
 
-    private static Mat PrepareTinyImage(Mat src)
-    {
-        if (src.Width + src.Height >= 64)
-        {
-            return src.Clone();
-        }
-
-        var newHeight = Math.Max(32, src.Height);
-        var newWidth = Math.Max(32, src.Width);
-        var padded = new Mat(newHeight, newWidth, src.Type(), Scalar.Black);
-        using var roi = padded[new Rect(0, 0, src.Width, src.Height)];
-        src.CopyTo(roi);
-        return padded;
-    }
-
-    private static double CalculateResizeRatio(int width, int height, int limitSideLen, string limitType)
-    {
-        return limitType switch
-        {
-            "max" => Math.Max(height, width) > limitSideLen
-                ? 1.0 * limitSideLen / Math.Max(height, width)
-                : 1.0,
-            "min" => Math.Min(height, width) < limitSideLen
-                ? 1.0 * limitSideLen / Math.Min(height, width)
-                : 1.0,
-            "resize_long" => 1.0 * limitSideLen / Math.Max(height, width),
-            _ => throw new ArgumentOutOfRangeException(nameof(limitType), limitType,
-                "limitType only supports max/min/resize_long")
-        };
-    }
-
-    public string GetConfigName => config.Name;
+    public string GetConfigName => Config.Name;
 }

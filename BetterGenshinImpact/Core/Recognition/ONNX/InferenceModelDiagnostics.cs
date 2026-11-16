@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.OCR;
 using BetterGenshinImpact.Core.Recognition.OCR.Paddle;
 using Compunet.YoloSharp;
@@ -171,21 +172,43 @@ public sealed class InferenceModelDiagnostics(
             {
                 if (scene == InferenceBenchmarkScene.Ocr)
                 {
-                    var service = ocr.CreateDetached(factory);
-                    using var disposable = service as IDisposable;
                     using var image = new Mat(PaddleOcrService.PaddleOcrModelType.TestImagePath);
                     if (image.Empty()) throw new InvalidDataException("OCR 测试图片无法读取。");
+                    // 测速与业务共用同一条链路：独立后端（ncnn / OpenVINO）生效时复用懒加载全局单例，
+                    // 不再每次点击重建后端（ncnn 的着色器缓存挂在 Net 上，每次重建意味着全量重新编译）。
+                    // 绝不能 Dispose 这个单例：它属于业务路径，Dispose 会连带销毁所有任务在用的会话。
+                    var backend = InferenceBackendRouter.ResolveOcr(PaddleOcrService.PaddleOcrModelType.V6);
+                    if (backend != InferenceBackendRouter.OcrBackend.Onnx)
+                    {
+                        return Measure("OCR", OcrBackendDescription(backend),
+                            () => _ = ocr.PaddleOcr.Ocr(image), progress, linked.Token);
+                    }
+
+                    var service = ocr.CreateDetached(factory);
+                    using var disposable = service as IDisposable;
                     return Measure("OCR", $"{factory.Runtime.OcrDescription} · {ocr.ActiveModelName}",
                         () => _ = service.Ocr(image), progress, linked.Token);
                 }
                 using var treeImage = Image.Load<Rgb24>(InferenceTestImages.DomainTreePath);
                 using var predictor = factory.CreateYoloPredictor(BgiOnnxModel.BgiTree);
-                return Measure("古树检测", factory.Runtime.Description,
-                    () => _ = predictor.Predictor.Detect(treeImage), progress, linked.Token);
+                // 测速应与业务一致：后端开关生效时 Detect 走对应后端，否则测出的是 ONNX 引擎的数字
+                var treeExecution = predictor.IsBackendDetection
+                    ? predictor.BackendConfigName
+                    : factory.Runtime.Description;
+                return Measure("古树检测", treeExecution,
+                    () => _ = predictor.Detect(treeImage), progress, linked.Token);
             }, linked.Token);
         }
         finally { _gate.Release(); }
     }
+
+    /// <summary>独立后端生效时 OCR 测速的执行描述（与业务同一会话）。</summary>
+    private static string OcrBackendDescription(InferenceBackendRouter.OcrBackend backend) => backend switch
+    {
+        InferenceBackendRouter.OcrBackend.Ncnn => "ncnn · PP-OCRv6 det (ncnn)/PP-OCRv6 (ncnn)（与业务同一会话）",
+        InferenceBackendRouter.OcrBackend.OpenVino => $"OpenVINO · {(Service.ConfigService.Config?.HardwareAccelerationConfig.OpenVino.DeviceId ?? "CPU")}（与业务同一会话）",
+        _ => "ONNX Runtime",
+    };
 
     public static InferenceBenchmarkResult Measure(string scene, string execution, Action inference,
         IProgress<InferenceBenchmarkProgress>? progress, CancellationToken token)
