@@ -684,6 +684,15 @@ public partial class App : Application
         // 先通知当前运行退出，再停止宿主服务，避免任务在依赖项释放后继续执行。
         _host.Services.GetService<TaskStopService>()?.StopAll(TaskStopReason.ApplicationShutdown);
 
+        // 排空触发器在途 tick：本方法 finally 末尾会运行期销毁 ncnn Vulkan 全局实例，
+        // 若此时仍有 ncnn 推理在跑，拆卸期 atexit 的 destroy_gpu_instance 会进入 Intel ICD（igvk64）
+        // 的 loader-lock 路径并 fail-fast（0xc0000409）。TaskTriggerDispatcher 不是 hosted service，
+        // _host.StopAsync() 不会停它的 timer，必须显式同步停表并借同一把 _locker 等待上一帧识别结束。
+        // 必须在第一个 await 之前同步完成（async void 的续体排回已停止的 Dispatcher 会死锁）。
+        var triggerDispatcher = _host.Services.GetService<TaskTriggerDispatcher>();
+        try { triggerDispatcher?.StopTimer(); } catch { /* 退出路径不抛 */ }
+        try { triggerDispatcher?.PauseForInference().Dispose(); } catch { }
+
         // 在推理运行时、日志和临时文件清理之前排空配音任务；退出可以关闭本地 HTTP。
         try
         {
