@@ -1963,6 +1963,13 @@ public partial class ScriptControlViewModel : ViewModel
             {
                 _suppressPersist = false;
             }
+
+            // 批量加载结束后统一写一次，把 Index 重排结果落盘。
+            // 这样才能保证磁盘上的编号与内存一致，避免下次加载时顺序变化。
+            foreach (var group in groups)
+            {
+                WriteScriptGroup(group);
+            }
         }
         catch (Exception e)
         {
