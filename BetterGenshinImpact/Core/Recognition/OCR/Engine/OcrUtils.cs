@@ -194,7 +194,7 @@ public static class OcrUtils
 
     /// <summary>
     ///     超小图（宽高和不足 64）先补黑边到至少 32x32，与 PaddleOCR Python 的 DetResizeForTest 一致。
-    ///     ONNX / ncnn / OpenVINO 三条 det 预处理路径共用。
+    ///     ONNX 与 ncnn 两条 det 预处理路径共用。
     /// </summary>
     public static Mat PrepareTinyImage(Mat src)
     {
