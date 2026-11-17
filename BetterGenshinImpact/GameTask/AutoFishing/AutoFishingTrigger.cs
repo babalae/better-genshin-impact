@@ -74,7 +74,10 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             IsExclusive = false;
             _prevExecute = DateTime.MinValue;
-            _lastTickTask = null;
+            if (_lastTickTask?.IsCompleted == true)
+            {
+                _lastTickTask = null;
+            }
             BuildBehaviourTree();
         }
 
