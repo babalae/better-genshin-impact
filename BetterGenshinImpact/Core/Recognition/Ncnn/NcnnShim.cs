@@ -355,10 +355,16 @@ public sealed class NcnnShim : INcnnShim
             lock (LibraryLock)
             {
                 if (Libraries.Count == 0) return false; // 本进程从未用过 ncnn：连库都不加载
-                var library = GetLibrary(ShimLibraryName);
-                var address = NativeLibrary.GetExport(library, "shim_destroy_gpu_instance");
-                Marshal.GetDelegateForFunctionPointer<DestroyGpuInstanceDelegate>(address)();
-                return true;
+                // 逐个已加载的模块调用：显式路径加载与裸名加载可能同时存在缓存条目，
+                // 只要任一模块带该导出就说明是同一份 ncnn 全局状态（同路径重复 Load 不会产生第二份）。
+                var destroyed = false;
+                foreach (var library in Libraries.Values)
+                {
+                    if (!NativeLibrary.TryGetExport(library, "shim_destroy_gpu_instance", out var address)) continue;
+                    Marshal.GetDelegateForFunctionPointer<DestroyGpuInstanceDelegate>(address)();
+                    destroyed = true;
+                }
+                return destroyed;
             }
         }
         catch (Exception ex)

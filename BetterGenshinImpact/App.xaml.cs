@@ -767,6 +767,36 @@ public partial class App : Application
 
         //非UI线程未捕获异常处理事件(例如自己创建的一个子线程)
         AppDomain.CurrentDomain.UnhandledException += CurrentDomainUnhandledException;
+
+        //进程退出兜底：销毁 ncnn Vulkan 全局实例。
+        //OnExit 是 async void，首个 await 之后主线程立即返回、CLR 关停不等待续体，
+        //收尾段落可能整段跑不到（实测 g_shutdown 仍为 false）；ProcessExit 在 CLR 关停阶段、
+        //早于任何 DLL 卸载时同步执行，是唯一可靠的退出点。
+        AppDomain.CurrentDomain.ProcessExit += OnProcessExitDestroyNcnn;
+    }
+
+    /// <summary>
+    ///     退出阶段兜底：销毁 ncnn Vulkan 全局实例，让 ncnn 注册的 atexit 钩子在
+    ///     <c>DLL_PROCESS_DETACH</c> 时走 <c>created == 0</c> 早退，不再进驱动拆卸路径。
+    ///     <para>
+    ///         Vulkan ICD（igvk64.dll）比 ncnn_shim.dll 后加载，因此在 <c>LdrShutdownProcess</c>
+    ///         中先卸载；此后 ncnn 的 atexit 钩子再调 vkDestroyInstance 会打到已被拆除的驱动状态，
+    ///         驱动抛 C++ 异常而拆卸期没有可用的异常处理器，最终 __fastfail(7)
+    ///         （0xc0000409，表现为关闭时"闪退"并留下 CrashDumps）。
+    ///     </para>
+    ///     <see cref="Core.Recognition.Ncnn.NcnnShim.TryDestroyGpuInstance" /> 幂等且不抛异常，
+    ///     与 OnExit 末尾的调用重复无害（ncnn 侧 created==0 早退）。
+    /// </summary>
+    private static void OnProcessExitDestroyNcnn(object? sender, EventArgs e)
+    {
+        try
+        {
+            Core.Recognition.Ncnn.NcnnShim.TryDestroyGpuInstance();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(ex);
+        }
     }
 
     private static void TaskSchedulerUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
