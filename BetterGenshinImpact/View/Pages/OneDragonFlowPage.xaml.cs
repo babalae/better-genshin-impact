@@ -1,9 +1,8 @@
 using BetterGenshinImpact.ViewModel.Pages;
-using BetterGenshinImpact.ViewModel.Pages;
 using System.Windows;
 using System.Windows.Controls;
 using Wpf.Ui.Violeta.Controls;
-using System.Linq; 
+using System.Linq;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using BetterGenshinImpact.Core.Script.Group;
@@ -14,16 +13,16 @@ namespace BetterGenshinImpact.View.Pages;
 public partial class OneDragonFlowPage
 {
     public OneDragonFlowViewModel ViewModel { get; }
-    
+
     private readonly Dictionary<CheckBox, string> _checkBoxMappings;
-    
+
     public static readonly List<string> SereniteaPotSchedule = new List<string> { "每天重复", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日" };
 
     public OneDragonFlowPage(OneDragonFlowViewModel viewModel)
     {
         DataContext = ViewModel = viewModel;
         InitializeComponent();
-        
+
         _checkBoxMappings = new Dictionary<CheckBox, string>
         {
             { ClothCheckBox, "布匹" },
@@ -35,9 +34,10 @@ public partial class OneDragonFlowPage
             { ExpBottleBigCheckBox, "祝圣精华" },
             { ExpBottleSmallCheckBox, "祝圣油膏" }
         };
-        
+
         // 监听ViewModel的属性变化
         ViewModel.PropertyChanged += ViewModel_PropertyChanged;
+        // 页面 Loaded/Unloaded 生命周期通过 XAML 中的 b:EventTrigger 绑定命令处理
     }
     
     private void ViewModel_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -153,31 +153,7 @@ public partial class OneDragonFlowPage
         }
         return null;
     }
-    
-    private void DockPanel_ContextMenuOpening(object sender, ContextMenuEventArgs e)
-    {
-        var dockPanel = sender as DockPanel;
-        if (dockPanel == null) return;
-        
-        var hitTest = System.Windows.Media.VisualTreeHelper.HitTest(dockPanel, System.Windows.Input.Mouse.GetPosition(dockPanel));
-        if (hitTest != null)
-        {
-            var listViewItem = FindVisualParent<ListViewItem>(hitTest.VisualHit);
-            if (listViewItem != null)
-            {
-                listViewItem.IsSelected = true;
-            }
-        }
-    }
-    
-    private static T FindVisualParent<T>(DependencyObject child) where T : DependencyObject
-    {
-        var parent = System.Windows.Media.VisualTreeHelper.GetParent(child);
-        if (parent == null) return null;
-        if (parent is T result) return result;
-        return FindVisualParent<T>(parent);
-    }
-    
+
     private async void SereniteaPotTpType_Clicked(object sender, RoutedEventArgs e)
     {
         if (ViewModel.SelectedConfig == null)

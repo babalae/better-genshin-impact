@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -22,15 +22,28 @@ public static class RightClickSelectBehavior
 
     private static void OnEnabledChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-        if (d is TreeView treeView)
+        if ((bool)e.NewValue)
         {
-            if ((bool)e.NewValue)
-            {
-                treeView.PreviewMouseRightButtonDown += OnPreviewMouseRightButtonDown;
-            }
-            else
+            if (d is TreeView treeView)
             {
                 treeView.PreviewMouseRightButtonDown -= OnPreviewMouseRightButtonDown;
+                treeView.PreviewMouseRightButtonDown += OnPreviewMouseRightButtonDown;
+            }
+            else if (d is ListView listView)
+            {
+                listView.PreviewMouseRightButtonDown -= OnPreviewMouseRightButtonDown;
+                listView.PreviewMouseRightButtonDown += OnPreviewMouseRightButtonDown;
+            }
+        }
+        else
+        {
+            if (d is TreeView treeView)
+            {
+                treeView.PreviewMouseRightButtonDown -= OnPreviewMouseRightButtonDown;
+            }
+            else if (d is ListView listView)
+            {
+                listView.PreviewMouseRightButtonDown -= OnPreviewMouseRightButtonDown;
             }
         }
     }
@@ -40,6 +53,15 @@ public static class RightClickSelectBehavior
         if (sender is TreeView treeView)
         {
             var item = VisualUpwardSearch<TreeViewItem>(e.OriginalSource as DependencyObject);
+            if (item != null)
+            {
+                item.Focus();
+                item.IsSelected = true;
+            }
+        }
+        else if (sender is ListView listView)
+        {
+            var item = VisualUpwardSearch<ListViewItem>(e.OriginalSource as DependencyObject);
             if (item != null)
             {
                 item.Focus();
