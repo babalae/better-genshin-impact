@@ -167,4 +167,63 @@ public class PaddleOcrBackendIntegrationTests
 
         Assert.True(compared > 0, "测试图未产生可对比的文本行");
     }
+
+    [Fact]
+    public void OpenVinoBackend_StaticCanvasDet_MapsBoxesBackToSource()
+    {
+        if (!OpenVinoReady || !File.Exists(TestImagePath)) return;
+        var modelType = PaddleOcrService.PaddleOcrModelType.V6;
+
+        // 动态 Det 作为基准（CPU 原生动态形状）
+        using var dynamicSession = new OpenVinoSession(modelType.DetectionModel.ModalPath, "CPU", enableCache: false);
+        var dynamicDet = new Det(modelType.DetectionVersion, dynamicSession);
+        using var image = new Mat(TestImagePath);
+        var dynamicBoxes = dynamicDet.Run(image);
+        Assert.NotEmpty(dynamicBoxes);
+
+        // 静态画布 Det：固定 [1,3,640,640]，等比缩放 + 右下补零 + 框坐标反映射。
+        // 在 CPU 上编译固定形状以验证路径（GPU/NPU 走同一会话逻辑）。
+        const int side = 640;
+        using var staticSession = new OpenVinoSession(modelType.DetectionModel.ModalPath, "CPU", enableCache: false,
+            fixedInputShape: [1, 3, side, side]);
+        var staticDet = new Det(modelType.DetectionVersion, staticSession);
+        var staticBoxes = staticDet.Run(image);
+
+        Assert.NotEmpty(staticBoxes);
+        // 所有框中心必须落在原图范围内（证明坐标已从画布比例映射回原图像素）
+        foreach (var box in staticBoxes)
+        {
+            var center = box.Center;
+            Assert.InRange(center.X, 0, image.Cols);
+            Assert.InRange(center.Y, 0, image.Rows);
+        }
+
+        // 静态画布与动态检测的文本区域数量应接近（缩放会丢失极少极小框，容差放 2 个）
+        Assert.True(Math.Abs(dynamicBoxes.Length - staticBoxes.Length) <= 2,
+            $"动态检测 {dynamicBoxes.Length} 框，静态画布检测 {staticBoxes.Length} 框，差异过大");
+    }
+
+    [Fact]
+    public void OpenVinoBackend_StaticCanvasDet_AcceptsVaryingInputSizes()
+    {
+        if (!OpenVinoReady || !File.Exists(TestImagePath)) return;
+        var modelType = PaddleOcrService.PaddleOcrModelType.V6;
+        const int side = 640;
+        using var staticSession = new OpenVinoSession(modelType.DetectionModel.ModalPath, "CPU", enableCache: false,
+            fixedInputShape: [1, 3, side, side]);
+        var staticDet = new Det(modelType.DetectionVersion, staticSession);
+        using var image = new Mat(TestImagePath);
+
+        // 同一固定形状会话处理多种尺寸输入（模拟不同截屏区域），均不得抛异常、均产出画布范围内的框
+        foreach (var scale in new[] { 1.0, 0.5, 1.5 })
+        {
+            using var resized = image.Resize(new Size((int)(image.Cols * scale), (int)(image.Rows * scale)));
+            var boxes = staticDet.Run(resized);
+            foreach (var box in boxes)
+            {
+                Assert.InRange(box.Center.X, 0, resized.Cols);
+                Assert.InRange(box.Center.Y, 0, resized.Rows);
+            }
+        }
+    }
 }

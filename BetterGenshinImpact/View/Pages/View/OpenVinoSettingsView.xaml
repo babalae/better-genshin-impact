@@ -69,12 +69,26 @@
                 </DockPanel>
                 <DockPanel Margin="0,10,0,0">
                     <ComboBox DockPanel.Dock="Right" Width="220" VerticalAlignment="Center"
-                              ItemsSource="{Binding DetFallbackDevices}" SelectedItem="{Binding SelectedDetFallbackDevice}"
+                              ItemsSource="{Binding DetDevices}" SelectedItem="{Binding SelectedDetDevice}"
                               DisplayMemberPath="DisplayName" IsEnabled="{Binding CanInteract}"
-                              AutomationProperties.Name="NPU 检测回落设备" />
+                              AutomationProperties.Name="检测运行设备" />
                     <StackPanel Margin="0,0,16,0">
-                        <TextBlock Text="检测回落设备" FontWeight="SemiBold" />
-                        <TextBlock Text="检测模型在 NPU 上无法运行（动态形状），改由该设备承担；识别仍在 NPU。"
+                        <TextBlock Text="检测运行设备" FontWeight="SemiBold" />
+                        <TextBlock Text="静态画布后检测模型默认留在 NPU；长截图担心小字召回时可改回 CPU（动态形状）。"
+                                   TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </DockPanel>
+                <DockPanel Margin="0,10,0,0">
+                    <ui:NumberBox DockPanel.Dock="Right" Width="140" VerticalAlignment="Center"
+                                  Minimum="0" Maximum="2048" SmallChange="64" LargeChange="128"
+                                  AcceptsExpression="False" ClearButtonEnabled="False" SpinButtonPlacementMode="Inline"
+                                  ValidationMode="InvalidInputOverwritten"
+                                  Value="{Binding DetStaticSide, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  IsEnabled="{Binding CanInteract}" AutomationProperties.Name="检测静态画布边长" />
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="检测静态画布边长" FontWeight="SemiBold" />
+                        <TextBlock Text="检测图长边等比缩放到该值、右下补零（框坐标自动映射回原图），消除编译卡顿；0=动态。截图偏大可调到 960。"
                                    TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
@@ -98,6 +112,20 @@
                     <StackPanel Margin="0,0,16,0">
                         <TextBlock Text="识别宽度桶" FontWeight="SemiBold" />
                         <TextBlock Text="逗号分隔的宽度列表（32–1024），应用时自动去重排序；桶越多编译与显存占用越高，默认 320,640,960。"
+                                   TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </DockPanel>
+                <DockPanel Margin="0,10,0,0">
+                    <ui:NumberBox DockPanel.Dock="Right" Width="140" VerticalAlignment="Center"
+                                  Minimum="0" Maximum="2048" SmallChange="64" LargeChange="128"
+                                  AcceptsExpression="False" ClearButtonEnabled="False" SpinButtonPlacementMode="Inline"
+                                  ValidationMode="InvalidInputOverwritten"
+                                  Value="{Binding DetStaticSide, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  IsEnabled="{Binding CanInteract}" AutomationProperties.Name="检测静态画布边长" />
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="检测静态画布边长" FontWeight="SemiBold" />
+                        <TextBlock Text="检测图长边等比缩放到该值、右下补零（框坐标自动映射回原图），消除 GPU 逐尺寸编译卡顿；0=动态。截图偏大可调到 960。"
                                    TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                     </StackPanel>

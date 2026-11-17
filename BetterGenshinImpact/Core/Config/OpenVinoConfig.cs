@@ -37,11 +37,19 @@ public partial class OpenVinoConfig : ObservableObject
     private int _npuRecWidth = OpenVinoBackendSettings.DefaultNpuRecWidth;
 
     /// <summary>
-    ///     设备为 NPU 时检测（Det）模型的运行设备。Det 输入尺寸随截图变化（动态形状），
-    ///     NPU 不支持，故回落到该设备（CPU / GPU.0…）；识别仍留在 NPU。
+    ///     设备为 NPU 时检测（Det）模型的运行设备。Det 改为静态画布后可留在 NPU（出厂值）；
+    ///     长截图担心小字召回下降时，可改为回落到 CPU（动态形状）或其它设备。
     /// </summary>
     [ObservableProperty]
     private string _npuDetDevice = OpenVinoBackendSettings.DefaultNpuDetDevice;
+
+    /// <summary>
+    ///     Det 静态画布边长（正方形边长）。GPU/NPU 上 Det 等比缩放长边到该值并右下补零，
+    ///     消除动态形状的逐尺寸编译卡顿；0 表示强制动态。CPU 路线恒动态，不受此值影响。
+    ///     BetterGI 截屏区域常大于 640，担心小字召回时可调到 960。
+    /// </summary>
+    [ObservableProperty]
+    private int _detStaticSide = OpenVinoBackendSettings.DefaultDetStaticSide;
 
     /// <summary>
     ///     GPU 识别（Rec）模型的静态宽度桶（逗号分隔，如 "320,640,960"）。
@@ -76,5 +84,6 @@ public partial class OpenVinoConfig : ObservableObject
         NpuRecWidth = normalized.NpuRecWidth;
         NpuDetDevice = normalized.NpuDetDevice;
         GpuRecWidthBuckets = normalized.GpuRecWidthBuckets;
+        DetStaticSide = normalized.DetStaticSide;
     }
 }

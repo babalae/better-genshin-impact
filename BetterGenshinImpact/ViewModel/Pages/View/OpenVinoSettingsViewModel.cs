@@ -42,6 +42,7 @@ public sealed partial class OpenVinoSettingsViewModel : ObservableObject
         _deviceId = normalized.DeviceId;
         _npuRecWidth = normalized.NpuRecWidth;
         _npuDetDevice = normalized.NpuDetDevice;
+        _detStaticSide = normalized.DetStaticSide;
         _gpuRecWidthBuckets = normalized.GpuRecWidthBuckets;
     }
 
@@ -128,37 +129,42 @@ public sealed partial class OpenVinoSettingsViewModel : ObservableObject
 
     /// <summary>NPU 策略区的说明文案（静态形状约束与分流规则）。</summary>
     public string NpuStrategyHint =>
-        "NPU 要求静态输入形状：识别模型按固定宽度推理（不足补零，超宽文本压缩到固定宽度）；检测模型输入尺寸随截图变化，回落到下方设备运行。";
+        "NPU 要求静态输入形状：识别模型按固定宽度推理（不足补零，超宽文本压缩到固定宽度）；检测模型按固定画布推理（等比缩放+补零+框坐标反映射），默认也留在 NPU。";
 
     /// <summary>NPU 识别固定宽度草稿（应用后写入 OpenVinoConfig.NpuRecWidth）。</summary>
     [ObservableProperty] private int _npuRecWidth = OpenVinoBackendSettings.DefaultNpuRecWidth;
 
-    /// <summary>NPU 时检测模型的回落设备草稿（应用后写入 OpenVinoConfig.NpuDetDevice）。</summary>
+    /// <summary>Det 静态画布边长草稿（应用后写入 OpenVinoConfig.DetStaticSide；0=动态）。GPU/NPU 生效，CPU 恒动态。</summary>
+    [ObservableProperty] private int _detStaticSide = OpenVinoBackendSettings.DefaultDetStaticSide;
+
+    partial void OnDetStaticSideChanged(int value) => Changed?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>NPU 时检测模型的运行设备草稿（应用后写入 OpenVinoConfig.NpuDetDevice）。</summary>
     [ObservableProperty] private string _npuDetDevice = OpenVinoBackendSettings.DefaultNpuDetDevice;
 
-    /// <summary>回落设备候选：枚举到的非 NPU 设备（NPU 不能承载动态形状的 det）。</summary>
-    public ObservableCollection<OpenVinoDeviceInfo> DetFallbackDevices { get; } = [];
+    /// <summary>检测模型候选设备：枚举到的全部设备（含 NPU 自身，默认留 NPU）。</summary>
+    public ObservableCollection<OpenVinoDeviceInfo> DetDevices { get; } = [];
 
-    /// <summary>回落设备下拉的选中项（与 NpuDetDevice 字符串双向对齐）。</summary>
-    [ObservableProperty] private OpenVinoDeviceInfo? _selectedDetFallbackDevice;
+    /// <summary>检测设备下拉的选中项（与 NpuDetDevice 字符串双向对齐）。</summary>
+    [ObservableProperty] private OpenVinoDeviceInfo? _selectedDetDevice;
 
-    partial void OnSelectedDetFallbackDeviceChanged(OpenVinoDeviceInfo? value)
+    partial void OnSelectedDetDeviceChanged(OpenVinoDeviceInfo? value)
     {
         if (value != null && NpuDetDevice != value.DeviceId) NpuDetDevice = value.DeviceId;
     }
 
     partial void OnNpuDetDeviceChanged(string value)
     {
-        SyncSelectedDetFallbackDevice();
+        SyncSelectedDetDevice();
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>按草稿回落设备名对齐选中项；候选为空（未枚举）时不动选中。</summary>
-    private void SyncSelectedDetFallbackDevice()
+    /// <summary>按草稿设备名对齐选中项；候选为空（未枚举）时不动选中。</summary>
+    private void SyncSelectedDetDevice()
     {
-        if (DetFallbackDevices.Count == 0) return;
-        var current = DetFallbackDevices.FirstOrDefault(device => device.DeviceId == NpuDetDevice) ?? DetFallbackDevices[0];
-        if (SelectedDetFallbackDevice?.DeviceId != current.DeviceId) SelectedDetFallbackDevice = current;
+        if (DetDevices.Count == 0) return;
+        var current = DetDevices.FirstOrDefault(device => device.DeviceId == NpuDetDevice) ?? DetDevices[0];
+        if (SelectedDetDevice?.DeviceId != current.DeviceId) SelectedDetDevice = current;
     }
 
     partial void OnNpuRecWidthChanged(int value) => Changed?.Invoke(this, EventArgs.Empty);
@@ -222,7 +228,8 @@ public sealed partial class OpenVinoSettingsViewModel : ObservableObject
 
     /// <summary>把本区草稿合成一份完整设置，供页面 Apply 使用。</summary>
     public OpenVinoBackendSettings BuildDraft()
-        => new(UseOpenVinoOcr, UseOpenVinoYolo, DeviceId, EnableModelCache, NpuRecWidth, NpuDetDevice, GpuRecWidthBuckets);
+        => new(UseOpenVinoOcr, UseOpenVinoYolo, DeviceId, EnableModelCache, NpuRecWidth, NpuDetDevice, GpuRecWidthBuckets,
+            DetStaticSide);
 
     /// <summary>草稿与已保存基线是否存在差异（页面「尚未应用」判断的 OpenVINO 部分）。</summary>
     public bool HasDraftChanges => !BuildDraft().Normalize().Equals(_baseline);
@@ -242,6 +249,7 @@ public sealed partial class OpenVinoSettingsViewModel : ObservableObject
         EnableModelCache = false;
         NpuRecWidth = OpenVinoBackendSettings.DefaultNpuRecWidth;
         NpuDetDevice = OpenVinoBackendSettings.DefaultNpuDetDevice;
+        DetStaticSide = OpenVinoBackendSettings.DefaultDetStaticSide;
         GpuRecWidthBuckets = OpenVinoBackendSettings.DefaultGpuRecWidthBuckets;
     }
 
@@ -310,23 +318,22 @@ public sealed partial class OpenVinoSettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(HasDevices));
         OnPropertyChanged(nameof(DeviceHint));
         SyncSelectedDevice();
-        SyncDetFallbackDevices(devices);
+        SyncDetDevices(devices);
     }
 
-    /// <summary>同步 NPU 回落设备候选（非 NPU 设备），比较规则与主设备列表一致。</summary>
-    private void SyncDetFallbackDevices(OpenVinoDeviceInfo[] devices)
+    /// <summary>同步检测设备候选（全部设备，含 NPU 自身——静态画布后 NPU 可承载 det），比较规则与主设备列表一致。</summary>
+    private void SyncDetDevices(OpenVinoDeviceInfo[] devices)
     {
-        var fallbacks = devices.Where(device => !OpenVinoBackendSettings.IsNpuDevice(device.DeviceId)).ToArray();
-        var changed = DetFallbackDevices.Count != fallbacks.Length
-                      || !fallbacks.Zip(DetFallbackDevices).All(pair => pair.First.DeviceId == pair.Second.DeviceId
-                                                                        && pair.First.DisplayName == pair.Second.DisplayName);
+        var changed = DetDevices.Count != devices.Length
+                      || !devices.Zip(DetDevices).All(pair => pair.First.DeviceId == pair.Second.DeviceId
+                                                                  && pair.First.DisplayName == pair.Second.DisplayName);
         if (changed)
         {
-            DetFallbackDevices.Clear();
-            foreach (var device in fallbacks) DetFallbackDevices.Add(device);
+            DetDevices.Clear();
+            foreach (var device in devices) DetDevices.Add(device);
         }
 
-        SyncSelectedDetFallbackDevice();
+        SyncSelectedDetDevice();
     }
 
     /// <summary>按草稿设备名对齐选中项；仅在当前选中与期望不一致时才写。</summary>

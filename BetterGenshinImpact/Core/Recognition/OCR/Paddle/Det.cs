@@ -100,8 +100,9 @@ public class Det : IOcrDetector
             // 与 PaddleOCR Python DetResizeForTest 保持一致：
             // 1. h + w < 64 时先将图像补全到至少 32x32
             // 2. 按 limit_type 规则缩放，并将宽高分别对齐到 32 的倍数
-            using var resized = MatResizeForDetection(input);
-            resizedSize = new Size(resized.Width, resized.Height);
+            // 静态画布（Intel 官方 GPU/NPU 方案）：等比缩放后右下补零到固定正方形，
+            // resizedSize 返回的是「内容区尺寸」而非画布尺寸，供后处理裁剪概率图并反映射回原图。
+            using var resized = MatResizeForDetection(input, out resizedSize);
             var inputTensor = OcrUtils.NormalizeToTensorDnn(resized, Config.NormalizeImage.Scale,
                 Config.NormalizeImage.Mean, Config.NormalizeImage.Std, out var owner);
             using (owner)
@@ -132,9 +133,18 @@ public class Det : IOcrDetector
     /// </summary>
     /// <param name="src"></param>
     /// <returns></returns>
-    private Mat MatResizeForDetection(Mat src)
+    private Mat MatResizeForDetection(Mat src, out Size contentSize)
     {
         using var preprocessed = OcrUtils.PrepareTinyImage(src);
+
+        // 静态画布分支（Intel PP-OCRv6 官方 GPU/NPU 方案）：
+        // 会话被编译为固定正方形输入时，长边等比缩放到边长，短边按比例，
+        // 再右下补零填满画布。返回内容区尺寸（非画布尺寸），后处理据此裁剪概率图、
+        // 并按 src.Size()/内容尺寸 把框坐标映射回原图（padding 区无文本，不产生框）。
+        if (_session.FixedInputHeight is int side && _session.FixedInputWidth == side)
+        {
+            return ResizeToStaticCanvas(preprocessed, side, out contentSize);
+        }
 
         var size = preprocessed.Size();
         var height = size.Height;
@@ -160,7 +170,39 @@ public class Det : IOcrDetector
                 $"Invalid det resize target size: {resizeWidth}x{resizeHeight}, src={width}x{height}");
         }
 
-        return preprocessed.Resize(new Size(resizeWidth, resizeHeight));
+        contentSize = new Size(resizeWidth, resizeHeight);
+        return preprocessed.Resize(contentSize);
+    }
+
+    /// <summary>
+    ///     静态画布：长边等比缩放到 side，短边按比例，右下补零到 side×side。
+    ///     <paramref name="contentSize" /> 返回缩放后的内容区尺寸（对应概率图中的有效区域），
+    ///     供 Det.RunBoxes 裁剪 ROI 并由 DbPostProcessor 映射回原图。
+    /// </summary>
+    private static Mat ResizeToStaticCanvas(Mat src, int side, out Size contentSize)
+    {
+        var height = src.Height;
+        var width = src.Width;
+        // 等比缩放：长边恰好 = side，短边按比例（向上取整避免内容被截），且不超过画布。
+        var scale = (double)side / Math.Max(height, width);
+        var contentHeight = Math.Min(side, Math.Max(1, (int)Math.Ceiling(height * scale)));
+        var contentWidth = Math.Min(side, Math.Max(1, (int)Math.Ceiling(width * scale)));
+
+        // 补零画布：标量 0（BGR 三通道全 0），与 PaddleOCR 静态 padding 一致。
+        var canvas = new Mat(side, side, src.Type(), Scalar.All(0));
+        if (contentWidth == width && contentHeight == height)
+        {
+            src.CopyTo(canvas);
+        }
+        else
+        {
+            using var resized = src.Resize(new Size(contentWidth, contentHeight));
+            using var roi = canvas[new Rect(0, 0, contentWidth, contentHeight)];
+            resized.CopyTo(roi);
+        }
+
+        contentSize = new Size(contentWidth, contentHeight);
+        return canvas;
     }
 
     public string GetConfigName => Config.Name;

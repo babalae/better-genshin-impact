@@ -147,11 +147,11 @@ public class InferenceBackendConfigTests
         var valid = new OpenVinoBackendSettings(true, false, "NPU", false, NpuRecWidth: 640).Normalize();
         Assert.Equal(640, valid.NpuRecWidth);
 
-        // 回落设备空值补 CPU、去空白
+        // 检测设备空值补出厂值（NPU，静态画布后可留 NPU）、去空白
         var emptyDet = new OpenVinoBackendSettings(true, false, "NPU", false, NpuDetDevice: "  ").Normalize();
-        Assert.Equal("CPU", emptyDet.NpuDetDevice);
-        var gpuDet = new OpenVinoBackendSettings(true, false, "NPU", false, NpuDetDevice: " GPU.0 ").Normalize();
-        Assert.Equal("GPU.0", gpuDet.NpuDetDevice);
+        Assert.Equal(OpenVinoBackendSettings.DefaultNpuDetDevice, emptyDet.NpuDetDevice);
+        var cpuDet = new OpenVinoBackendSettings(true, false, "NPU", false, NpuDetDevice: " CPU ").Normalize();
+        Assert.Equal("CPU", cpuDet.NpuDetDevice);
 
         // NPU 设备判定与设备枚举过滤规则一致
         Assert.True(OpenVinoBackendSettings.IsNpuDevice("NPU"));
@@ -162,17 +162,44 @@ public class InferenceBackendConfigTests
     }
 
     [Fact]
+    public void OpenVinoBackendSettings_Normalize_ClampsDetStaticSide()
+    {
+        // 主构造函数默认值与常量保持同步
+        var defaults = new OpenVinoBackendSettings(true, false, "GPU.0", false);
+        Assert.Equal(OpenVinoBackendSettings.DefaultDetStaticSide, defaults.DetStaticSide);
+
+        // 0 = 强制动态，原样保留；合法区间保留；越界回落出厂值
+        Assert.Equal(0, new OpenVinoBackendSettings(true, false, "GPU.0", false, DetStaticSide: 0).Normalize().DetStaticSide);
+        Assert.Equal(960, new OpenVinoBackendSettings(true, false, "GPU.0", false, DetStaticSide: 960).Normalize().DetStaticSide);
+        Assert.Equal(OpenVinoBackendSettings.DefaultDetStaticSide,
+            new OpenVinoBackendSettings(true, false, "GPU.0", false, DetStaticSide: 1).Normalize().DetStaticSide);
+        Assert.Equal(OpenVinoBackendSettings.DefaultDetStaticSide,
+            new OpenVinoBackendSettings(true, false, "GPU.0", false, DetStaticSide: 99999).Normalize().DetStaticSide);
+
+        // 静态形状支持判定：仅 GPU/NPU，CPU 与未知设备保持动态
+        Assert.True(OpenVinoBackendSettings.SupportsStaticShape("GPU"));
+        Assert.True(OpenVinoBackendSettings.SupportsStaticShape("GPU.0"));
+        Assert.True(OpenVinoBackendSettings.SupportsStaticShape("NPU"));
+        Assert.True(OpenVinoBackendSettings.SupportsStaticShape("NPU.0"));
+        Assert.False(OpenVinoBackendSettings.SupportsStaticShape("CPU"));
+        Assert.False(OpenVinoBackendSettings.SupportsStaticShape(null));
+    }
+
+    [Fact]
     public void OpenVinoConfig_ApplySettings_CopiesNpuStrategy()
     {
         var config = new OpenVinoConfig();
-        config.ApplySettings(new OpenVinoBackendSettings(true, false, "NPU", true, NpuRecWidth: 640, NpuDetDevice: "GPU.0"));
+        config.ApplySettings(new OpenVinoBackendSettings(true, false, "NPU", true, NpuRecWidth: 640, NpuDetDevice: "GPU.0",
+            DetStaticSide: 960));
         Assert.Equal(640, config.NpuRecWidth);
         Assert.Equal("GPU.0", config.NpuDetDevice);
+        Assert.Equal(960, config.DetStaticSide);
 
         // 快照往返一致（FromConfig 读回 Apply 写入的值）
         var roundTrip = OpenVinoBackendSettings.FromConfig(config);
         Assert.Equal(640, roundTrip.NpuRecWidth);
         Assert.Equal("GPU.0", roundTrip.NpuDetDevice);
+        Assert.Equal(960, roundTrip.DetStaticSide);
     }
 
     // ---------------- GPU 静态宽度桶 ----------------
