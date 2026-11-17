@@ -55,6 +55,7 @@ public sealed class OnnxRuntimeLoader : IOnnxRuntimeSelection
         var directoryName = InferenceDevice switch
         {
             InferenceDeviceType.DirectML or
+                InferenceDeviceType.OpenVINO or
                 InferenceDeviceType.CUDA or InferenceDeviceType.TensorRT => InferenceDevice.ToString(),
             _ => null
         };
