@@ -795,7 +795,7 @@ public partial class TaskSettingsPageViewModel : ViewModel
     private bool CanFetchAutoComboModelList() => !FetchingAutoComboModelList;
 
     /// <summary>
-    /// 拉取当前服务商的模型列表填充下拉。只读查询，除候选列表外不改动任何配置。
+    /// 拉取当前服务商的模型列表填充下拉。除候选列表外，命中时只把服务地址回写为规范形式，其余配置不动。
     /// </summary>
     [RelayCommand(CanExecute = nameof(CanFetchAutoComboModelList))]
     private async Task OnFetchAutoComboModelList()
@@ -804,10 +804,16 @@ public partial class TaskSettingsPageViewModel : ViewModel
         var config = Config.AutoComboBuildConfig;
         try
         {
-            var models = await AutoComboModelListFetcher.FetchAsync(config.Provider, config.PlanningLlmEndpoint, config.ApiKey, CancellationToken.None);
+            var (models, correctedEndpoint) = await AutoComboModelListFetcher.FetchAsync(config.Provider, config.PlanningLlmEndpoint, config.ApiKey, CancellationToken.None);
 
             // 失败时不清空既有候选列表与用户已选模型；只有成功才替换
             AutoComboModelNameList = new ObservableCollection<string>(models);
+
+            // 命中后把服务地址回写为规范形式（去掉 /models）：用户填纯域名或带 /v1 时都能被纠正
+            if (!string.IsNullOrWhiteSpace(correctedEndpoint) && config.PlanningLlmEndpoint != correctedEndpoint)
+            {
+                config.PlanningLlmEndpoint = correctedEndpoint;
+            }
 
             // 尚未选择模型时用列表首项补位，避免空模型名直接建树失败；已有选择保持不动（拉取只提供候选项，不覆盖用户选择）
             var autoSelected = string.IsNullOrWhiteSpace(config.ModelName);
