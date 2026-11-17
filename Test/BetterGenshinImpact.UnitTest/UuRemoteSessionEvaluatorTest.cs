@@ -191,6 +191,44 @@ public class UuRemoteSessionEvaluatorTest
         Assert.Empty(assessment.SessionsToDisconnect);
     }
 
+    /// <summary>其他用户的活动 Console 窗口站也要阻止修复，不能仅检查 RDP 窗口站。</summary>
+    [Theory]
+    [InlineData(1u)]
+    [InlineData(4u)]
+    public void Evaluate_OtherUserActiveConsoleWinStation_BlocksRepair(uint sessionId)
+    {
+        var snapshot = CreateSnapshot([new GameViewerServerInfo(10, 3)],
+            [CreateSession(3, "alice"), CreateSession(sessionId, "bob") with { WinStationName = "Console" }]);
+        var assessment = UuRemoteSessionEvaluator.Evaluate(snapshot);
+        Assert.True(assessment.HasOtherUserActiveSession);
+        Assert.False(assessment.CanRepair);
+        Assert.Empty(assessment.SessionsToDisconnect);
+    }
+
+    /// <summary>没有 SID 时只能使用完整账户名，不能只按用户名匹配不同域的用户。</summary>
+    [Theory]
+    [InlineData("alice", "DESKTOP", true)]
+    [InlineData("ALICE", "desktop", true)]
+    [InlineData("alice", "OTHER", false)]
+    [InlineData("alice", "", false)]
+    [InlineData("", "DESKTOP", false)]
+    public void IsCurrentUser_MissingSid_RequiresFullAccountMatch(string userName, string domainName, bool expected)
+    {
+        var snapshot = CreateSnapshot([], []);
+        var session = new WindowsSessionInfo(3, WindowsSessionState.Active, "RDP-Tcp#3",
+            string.Empty, userName, domainName);
+        Assert.Equal(expected, UuRemoteSessionEvaluator.IsCurrentUser(snapshot, session));
+    }
+
+    /// <summary>已知 SID 不一致时不能回退到同名账户，避免断开其他用户。</summary>
+    [Fact]
+    public void IsCurrentUser_DifferentKnownSid_DoesNotFallBackToAccountName()
+    {
+        var snapshot = CreateSnapshot([], []);
+        var session = CreateSession(3, "alice", sid: "S-1-5-21-bob");
+        Assert.False(UuRemoteSessionEvaluator.IsCurrentUser(snapshot, session));
+    }
+
     private static UuRemoteSessionSnapshot CreateSnapshot(
         IReadOnlyList<GameViewerServerInfo> processes,
         IReadOnlyList<WindowsSessionInfo> sessions)

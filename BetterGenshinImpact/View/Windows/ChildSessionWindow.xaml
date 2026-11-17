@@ -28,6 +28,7 @@
           Background="Black">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -245,11 +246,11 @@
                                                  IsCheckable="True"
                                                  IsChecked="{Binding IsUuRemoteRepairEnabled, Mode=OneWay}"
                                                  ToolTip="检测 UU 串流进程是否位于非主桌面会话；修复时会短暂重启 UU 串流进程，当前远程画面可能中断数秒。"
-                                                 Visibility="{Binding IsUuRemoteRepairOptionVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                                 Visibility="{Binding IsUuRemoteRepairOptionVisible, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                     <ui:MenuItem Header="{i18n:T 启动时自动修复 UU 远程主会话冲突（不可用）}"
                                                  IsEnabled="False"
-                                                 ToolTip="{Binding UuRemoteRepairUnavailableReason}"
-                                                 Visibility="{Binding IsUuRemoteRepairOptionUnavailable, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                                 ToolTip="{Binding UuRemoteRepairUnavailableReason, Mode=OneWay}"
+                                                 Visibility="{Binding IsUuRemoteRepairOptionUnavailable, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                     <ui:MenuItem Header="{i18n:T 以管理员权限启动…}"
                                                  Command="{Binding LaunchExecutableCommand}"
                                                  Icon="{ui:SymbolIcon Shield24}" />
@@ -327,7 +328,31 @@
             </Grid>
         </Popup>
 
-        <Grid Grid.Row="1"
+        <!-- 独立布局行避开 RDP 的子 HWND，也不会被连接提示层的 Visibility 隐藏。 -->
+        <Border Grid.Row="1"
+                Margin="12,8,12,0"
+                Padding="16,12"
+                Background="#FF30291B"
+                BorderBrush="#66FFB900"
+                BorderThickness="1"
+                CornerRadius="7"
+                Visibility="{Binding IsUuRemoteRepairWarningVisible, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <ScrollViewer MaxHeight="150" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <ui:ProgressRing Width="16" Height="16" Margin="0,0,8,0"
+                                         IsIndeterminate="True"
+                                         Visibility="{Binding IsUuRemoteRepairInProgress, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        <TextBlock FontWeight="Bold" Foreground="#FFFFD45C"
+                                   Text="{i18n:T UU 远程会话修复提示}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <TextBlock Margin="0,6,0,0" FontWeight="Bold" Foreground="#F2FFFFFF"
+                               Text="{Binding UuRemoteRepairWarningText, Mode=OneWay}" TextWrapping="Wrap" />
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <Grid Grid.Row="2"
               Background="Black">
             <b:Interaction.Behaviors>
                 <behavior:WindowResizeBehavior AspectRatio="1.7777777777777777"
@@ -417,26 +442,6 @@
                                    Text="{Binding ConnectionStatusDescription}"
                                    TextAlignment="Center"
                                    TextWrapping="Wrap" />
-
-                        <Border Margin="0,18,0,0"
-                                Padding="16,12"
-                                Background="#1AFFB900"
-                                BorderBrush="#66FFB900"
-                                BorderThickness="1"
-                                CornerRadius="7"
-                                Visibility="{Binding IsUuRemoteRepairWarningVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <StackPanel>
-                                <TextBlock FontWeight="Bold"
-                                           Foreground="#FFFFD45C"
-                                           Text="UU 远程会话修复提示"
-                                           TextWrapping="Wrap" />
-                                <TextBlock Margin="0,6,0,0"
-                                           Foreground="#F2FFFFFF"
-                                           FontWeight="Bold"
-                                           Text="{Binding UuRemoteRepairWarningText}"
-                                           TextWrapping="Wrap" />
-                            </StackPanel>
-                        </Border>
 
                         <Border Margin="0,22,0,0"
                                 Padding="16,12"
