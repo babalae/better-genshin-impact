@@ -59,6 +59,18 @@ public partial class ChildSessionConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private bool _watchModeEnabled = false;
+
+    /// <summary>
+    /// 启动桌面分身时自动检测并修复 UU 远程主会话冲突。
+    /// </summary>
+    [ObservableProperty]
+    private bool _autoRepairUuRemoteSession = false;
+
+    /// <summary>
+    /// 用户是否已经确认过 UU 远程主会话自动修复风险。
+    /// </summary>
+    [ObservableProperty]
+    private bool _uuRemoteRepairRiskAcknowledged = false;
 }
 
 [Serializable]

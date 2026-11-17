@@ -51,7 +51,16 @@ public partial class ChildSessionWindow : FluentWindow
 
         if (!_viewModel.HasChildSession)
         {
-            Hide();
+            if (_viewModel.IsStartupInProgress)
+            {
+                // UU 修复等待期间可能尚未创建 Child Session，关闭仍须取消启动。
+                _closeRequestInProgress = true;
+                _ = LogoffAndHideAsync();
+            }
+            else
+            {
+                Hide();
+            }
             return;
         }
 

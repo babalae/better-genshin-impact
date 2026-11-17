@@ -111,6 +111,22 @@ public partial class ChildSessionWindowViewModel : ViewModel
     [ObservableProperty]
     private InfoBarSeverity _notificationSeverity = InfoBarSeverity.Informational;
 
+    /// <summary>沿用配置保存的 UU 自动修复开关。</summary>
+    [ObservableProperty]
+    private bool _isUuRemoteRepairEnabled;
+
+    /// <summary>独立于 RDP 连接提示层的风险或结果提示是否可见。</summary>
+    [ObservableProperty]
+    private bool _isUuRemoteRepairWarningVisible;
+
+    /// <summary>UU 风险说明、成功结果或失败原因。</summary>
+    [ObservableProperty]
+    private string _uuRemoteRepairWarningText = string.Empty;
+
+    /// <summary>UU 检查或修复是否尚未结束。</summary>
+    [ObservableProperty]
+    private bool _isUuRemoteRepairInProgress;
+
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ToggleSendSystemShortcutsToRemoteCommand))]
     private bool _isSystemShortcutsReconnectPending;
@@ -154,6 +170,19 @@ public partial class ChildSessionWindowViewModel : ViewModel
 
     public bool IsSessionInteractionEnabled => !IsSessionClosing;
 
+    /// <summary>包括由服务直接发起的启动，供关闭窗口时取消尚未创建会话的启动。</summary>
+    public bool IsStartupInProgress => _startRequested || _childSessionService.IsStarting;
+
+    /// <summary>只有管理员根实例位于控制台时才允许启用修复。</summary>
+    public bool IsUuRemoteRepairOptionVisible => _childSessionService.IsUuRemoteRepairAvailable;
+
+    /// <summary>不满足条件时显示不可用说明。</summary>
+    public bool IsUuRemoteRepairOptionUnavailable => !IsUuRemoteRepairOptionVisible;
+
+    /// <summary>解释修复开关不可用的权限及会话要求。</summary>
+    public string UuRemoteRepairUnavailableReason =>
+        "需要以管理员权限从主桌面启动 BetterGI，才能自动修复 UU 远程主会话冲突。";
+
     public ChildSessionWindowViewModel(ChildSessionService childSessionService)
     {
         _childSessionService = childSessionService;
@@ -166,6 +195,7 @@ public partial class ChildSessionWindowViewModel : ViewModel
         _sendSystemShortcutsToRemote = _childSessionService.SendSystemShortcutsToRemote;
         _isGameMouseModeEnabled = _childSessionService.IsGameMouseModeEnabled;
         _isAudioMuted = _childSessionService.AudioMuted;
+        _isUuRemoteRepairEnabled = _childSessionService.IsUuRemoteRepairEnabled;
         _notificationTimer = new DispatcherTimer(DispatcherPriority.Background)
         {
             Interval = TimeSpan.FromSeconds(5)
@@ -176,6 +206,8 @@ public partial class ChildSessionWindowViewModel : ViewModel
         _childSessionService.SystemShortcutsReconnectCompleted +=
             OnSystemShortcutsReconnectCompleted;
         _childSessionService.AudioReconnectCompleted += OnAudioReconnectCompleted;
+        _childSessionService.UuRemoteRepairStateChanged +=
+            OnUuRemoteRepairStateChanged;
         UpdateConnectionStatus();
     }
 
@@ -197,6 +229,8 @@ public partial class ChildSessionWindowViewModel : ViewModel
         }
 
         IsSessionClosing = true;
+        // 启动命令可能还在等待 UI 渲染，关闭后不能再排队调用服务启动。
+        _startRequested = false;
         UpdateConnectionStatus();
 
         try
@@ -267,6 +301,10 @@ public partial class ChildSessionWindowViewModel : ViewModel
         try
         {
             await Dispatcher.Yield(DispatcherPriority.Background);
+            if (!_startRequested || IsSessionClosing)
+            {
+                return;
+            }
             await ExecuteAsync(_childSessionService.StartAsync);
         }
         finally
@@ -274,6 +312,61 @@ public partial class ChildSessionWindowViewModel : ViewModel
             _startRequested = false;
             UpdateConnectionStatus();
         }
+    }
+
+    /// <summary>首次启用前确认风险；取消时不保存开关或确认状态。</summary>
+    [RelayCommand]
+    private async Task ToggleUuRemoteRepairAsync()
+    {
+        if (!_childSessionService.IsUuRemoteRepairAvailable)
+        {
+            return;
+        }
+
+        if (IsUuRemoteRepairEnabled)
+        {
+            _childSessionService.SetUuRemoteRepairEnabled(false);
+            IsUuRemoteRepairEnabled = false;
+            return;
+        }
+
+        if (!_childSessionService.IsUuRemoteRepairRiskAcknowledged)
+        {
+            var result = await ThemedMessageBox.WarningAsync(
+                "启用后，每次启动桌面分身时都会检查 UU 远程串流进程所在的 Windows 会话。\n\n"
+                + "发现 UU 串流进程位于非主桌面会话时，BetterGI 将：\n"
+                + "• 短暂断开当前 Windows 用户的活动后台会话\n"
+                + "• 重启 UU 串流进程 GameViewerServer\n"
+                + "• 等待串流进程回到主桌面后继续启动桌面分身\n\n"
+                + "影响：\n"
+                + "• 后台会话中的程序不会退出，重连 UU 后通常可继续运行\n"
+                + "• 当前 UU 远程画面可能中断数秒，需要重新连接\n"
+                + "• 不会主动关闭游戏或其他 BetterGI 任务\n"
+                + "• 检测到其他 Windows 用户的活动会话时不会执行修复\n"
+                + "• 修复失败时仍会继续启动桌面分身\n"
+                + "• 不会修改远程解锁等系统安全策略\n\n"
+                + "本功能依赖 UU 当前的进程行为，检测结果可能存在误报。是否启用？",
+                "UU 远程主会话自动修复",
+                MessageBoxButton.YesNo,
+                MessageBoxResult.No);
+            if (result != MessageBoxResult.Yes)
+            {
+                IsUuRemoteRepairEnabled =
+                    _childSessionService.IsUuRemoteRepairEnabled;
+                // MenuItem 会先自行切换 IsChecked；取消时必须强制把绑定目标拉回配置值。
+                OnPropertyChanged(nameof(IsUuRemoteRepairEnabled));
+                return;
+            }
+
+            _childSessionService.AcknowledgeUuRemoteRepairRisk();
+        }
+
+        _childSessionService.SetUuRemoteRepairEnabled(true);
+        IsUuRemoteRepairEnabled = true;
+        ShowNotification(
+            "UU 远程自动修复已开启",
+            "下次启动桌面分身时将自动检查 UU 串流进程所在会话。",
+            InfoBarSeverity.Success);
     }
 
     [RelayCommand]
@@ -610,6 +703,118 @@ public partial class ChildSessionWindowViewModel : ViewModel
             }));
     }
 
+    /// <summary>后台事件切换到 UI 线程；修复风险提示必须先完成呈现。</summary>
+    private void OnUuRemoteRepairStateChanged(
+        object? sender,
+        UuRemoteRepairStateChangedEventArgs e)
+    {
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.HasShutdownStarted)
+        {
+            if (e.State == UuRemoteRepairState.Repairing)
+            {
+                e.PresentationCompleted = Task.FromException(
+                    new InvalidOperationException("窗口正在关闭，未能呈现 UU 修复风险提示。"));
+            }
+            return;
+        }
+
+        if (e.State == UuRemoteRepairState.Repairing)
+        {
+            e.PresentationCompleted = PresentUuRemoteRepairWarningAsync(dispatcher, e);
+        }
+        else if (dispatcher.CheckAccess())
+        {
+            ApplyUuRemoteRepairState(e);
+        }
+        else
+        {
+            _ = dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() => ApplyUuRemoteRepairState(e)));
+        }
+    }
+
+    /// <summary>先更新提示，再越过 WPF 渲染优先级，不能只排队通知就立即断开远程画面。</summary>
+    private async Task PresentUuRemoteRepairWarningAsync(Dispatcher dispatcher, UuRemoteRepairStateChangedEventArgs e)
+    {
+        await dispatcher.InvokeAsync(() =>
+        {
+            if (IsSessionClosing)
+            {
+                throw new InvalidOperationException("桌面分身正在关闭，已取消 UU 会话修复。");
+            }
+
+            ApplyUuRemoteRepairState(e);
+        }, DispatcherPriority.Normal).Task.ConfigureAwait(false);
+        await dispatcher.InvokeAsync(() => { }, DispatcherPriority.ContextIdle).Task.ConfigureAwait(false);
+    }
+
+    /// <summary>更新独立警告区和非模态通知，不改变上游的连接或关闭提示层。</summary>
+    private void ApplyUuRemoteRepairState(UuRemoteRepairStateChangedEventArgs e)
+    {
+        if (IsSessionClosing && e.State != UuRemoteRepairState.Idle)
+        {
+            return;
+        }
+
+        switch (e.State)
+        {
+            case UuRemoteRepairState.Checking:
+                IsUuRemoteRepairInProgress = true;
+                UuRemoteRepairWarningText = e.Message;
+                IsUuRemoteRepairWarningVisible = false;
+                break;
+            case UuRemoteRepairState.Repairing:
+                IsUuRemoteRepairInProgress = true;
+                UuRemoteRepairWarningText = e.Message;
+                IsUuRemoteRepairWarningVisible = true;
+                // 登录后观察期间用户可能隐藏了窗口；执行修复前恢复非模态提示。
+                _childSessionService.ShowWindow();
+                ShowNotification(
+                    "正在修复 UU 远程会话",
+                    "正在断开当前用户的活动后台会话并重启 UU 串流进程，当前远程画面可能短暂中断。",
+                    InfoBarSeverity.Warning,
+                    TimeSpan.FromSeconds(20));
+                break;
+            case UuRemoteRepairState.Succeeded:
+                IsUuRemoteRepairInProgress = false;
+                UuRemoteRepairWarningText = e.Message;
+                IsUuRemoteRepairWarningVisible = true;
+                ShowNotification(
+                    "UU 远程会话已修复",
+                    "UU 串流进程已回到主桌面，正在继续启动桌面分身。",
+                    InfoBarSeverity.Success);
+                break;
+            case UuRemoteRepairState.Failed:
+                IsUuRemoteRepairInProgress = false;
+                UuRemoteRepairWarningText = e.Message;
+                IsUuRemoteRepairWarningVisible = true;
+                ShowNotification(
+                    "UU 远程会话修复失败",
+                    $"{e.Message}\n将继续启动桌面分身。",
+                    InfoBarSeverity.Error,
+                    TimeSpan.FromSeconds(10));
+                break;
+            case UuRemoteRepairState.PostStartConflict:
+                IsUuRemoteRepairInProgress = false;
+                UuRemoteRepairWarningText = e.Message;
+                IsUuRemoteRepairWarningVisible = true;
+                ShowNotification(
+                    "UU 远程会话仍有冲突",
+                    e.Message,
+                    InfoBarSeverity.Warning,
+                    TimeSpan.FromSeconds(10));
+                break;
+            default:
+                if (e.State == UuRemoteRepairState.Idle)
+                {
+                    IsUuRemoteRepairInProgress = false;
+                    UuRemoteRepairWarningText = string.Empty;
+                    IsUuRemoteRepairWarningVisible = false;
+                }
+                break;
+        }
+    }
+
     private void ShowNotification(
         string title,
         string message,
@@ -643,8 +848,9 @@ public partial class ChildSessionWindowViewModel : ViewModel
         IsGameMouseModeEnabled = _childSessionService.IsGameMouseModeEnabled;
         IsWatchModeEnabled = _childSessionService.WatchModeEnabled;
         IsAudioMuted = _childSessionService.AudioMuted;
+        IsUuRemoteRepairEnabled = _childSessionService.IsUuRemoteRepairEnabled;
         IsRdpConnected = connectedState == 1;
-        IsConnectionPromptVisible = IsSessionClosing || connectedState == 0 && !_startRequested;
+        IsConnectionPromptVisible = IsSessionClosing || connectedState == 0 && !IsStartupInProgress;
 
         if (IsSessionClosing)
         {
