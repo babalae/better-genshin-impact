@@ -61,7 +61,8 @@
         <PackageReference Include="BetterGI.Assets.Model" Version="1.0.41" />
         <!-- ncnn Vulkan 胶水层原生库：源与产物见 ../bettergi-ncnn-shim 独立仓库；
              dll 位于包内 runtimes/win-x64/native/，由 NuGet 原生包标准布局随构建复制、
-             运行时经 NativeLibrary 裸名解析。模型资产（Ncnn 子目录）由 BetterGI.Assets.Model 1.0.41 随包提供 -->
+             运行时经 NativeLibrary 裸名解析。ncnn 模型（.param/.bin）不在本包内，
+             由 bettergi-plugins 的 ncnn_models 插件分发（见 NcnnModelPaths） -->
         <PackageReference Include="Guamian.BetterGI.NcnnShim" Version="0.1.3" />
 		<PackageReference Include="BetterGI.Assets.Other" Version="1.0.31" />
 
