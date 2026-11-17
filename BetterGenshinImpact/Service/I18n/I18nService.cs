@@ -70,9 +70,17 @@ public sealed class I18nService : INotifyPropertyChanged
             return TraditionalChineseConverter.Convert(key);
         }
 
-        return _translations.TryGetValue(key, out var translation) && !string.IsNullOrWhiteSpace(translation)
-            ? translation
-            : key;
+        if (_translations.TryGetValue(key, out var translation) && !string.IsNullOrWhiteSpace(translation))
+        {
+            return translation;
+        }
+
+        if (_translations.TryGetValue($"'{key}'", out var quotedTranslation) && !string.IsNullOrWhiteSpace(quotedTranslation))
+        {
+            return quotedTranslation;
+        }
+
+        return key;
     }
 
     private IReadOnlyDictionary<string, string> LoadTranslations(string language)
