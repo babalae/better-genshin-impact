@@ -20,7 +20,7 @@ public class BgiYoloPredictor : IDisposable
 
     private readonly Lazy<YoloPredictor> _lazyPredictor;
     private readonly SessionOptions _sessionOptions;
-    /// <summary>非空时检测（Detect）走替代后端（ncnn Vulkan / OpenVINO）；分类与 Predictor 属性（脚本 API）仍走 ORT。</summary>
+    /// <summary>非空时检测（Detect）走替代后端（ncnn Vulkan）；分类与 Predictor 属性（脚本 API）仍走 ORT。</summary>
     private readonly IYoloPredictorBackend? _backendPredictor;
     private readonly object _syncRoot = new();
     private bool _disposed;

@@ -93,10 +93,6 @@
 		<!--排除掉cpu的runtime dll-->
 		<PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.21.0" IncludeAssets="none" />
 		<PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.21.0" />
-		<!-- OpenVINO C# API（guojin-yan/OpenVINO-CSharp-API 3.3.1，托管封装）：
-		     原生运行库 OpenVINO.runtime.win 体积较大（约 70MB），不随构建分发，
-		     由 OpenVinoRuntimeInstaller 在设置页按需下载到 Plugins/OpenVINO -->
-		<PackageReference Include="JYPPX.OpenVINO.CSharp.API" Version="3.3.1" />
 		<PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
 		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
 		<PackageReference Include="MimeKit" Version="4.16.0" />

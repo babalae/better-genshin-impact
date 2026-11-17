@@ -175,7 +175,7 @@ public sealed class InferenceModelDiagnostics(
                     using var image = new Mat(PaddleOcrService.PaddleOcrModelType.TestImagePath);
                     if (image.Empty()) throw new InvalidDataException("OCR 测试图片无法读取。");
                     // 测速与业务共用同一条链路：全局单例的后端在其构造时已按当前模型路由。
-                    // 独立后端（ncnn / OpenVINO）生效时必须复用懒加载全局单例——重建 ncnn 意味着全量重编着色器；
+                    // 独立后端（ncnn）生效时必须复用懒加载全局单例——重建 ncnn 意味着全量重编着色器；
                     // 绝不能 Dispose 这个单例：它属于业务路径，Dispose 会连带销毁所有任务在用的会话。
                     // ONNX 时创建独立实例，绑定待验证的推理运行时。
                     if (ocr.PaddleOcr is PaddleOcrService { BackendName: not "ONNX Runtime" } standalone)

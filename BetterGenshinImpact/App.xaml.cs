@@ -195,13 +195,6 @@ public partial class App : Application
                     () => sp.GetRequiredService<TaskTriggerDispatcher>().PauseForInference()));
                 services.AddSingleton<InferenceModelDiagnostics>();
                 services.AddSingleton<IInferenceModelDiagnostics>(sp => sp.GetRequiredService<InferenceModelDiagnostics>());
-                // OpenVINO 独立后端的运行库安装器（设置页下载入口）
-                services.AddSingleton(sp => new BetterGenshinImpact.Core.Recognition.OpenVino.OpenVinoRuntimeInstaller(
-                    AppContext.BaseDirectory,
-                    sp.GetRequiredService<IDownloadService>(),
-                    sp.GetRequiredService<IHttpClientFactory>().CreateClient(HttpClientNames.Default)));
-                services.AddSingleton<BetterGenshinImpact.Core.Recognition.OpenVino.IOpenVinoRuntimeInstaller>(sp =>
-                    sp.GetRequiredService<BetterGenshinImpact.Core.Recognition.OpenVino.OpenVinoRuntimeInstaller>());
                 services.AddSingleton<InferenceRuntimeService>();
                 services.AddSingleton<HardwareAccelerationViewModelFactory>();
                 services.AddSingleton<IInferenceSettingsInteraction, InferenceSettingsInteraction>();

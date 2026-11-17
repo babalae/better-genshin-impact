@@ -22,12 +22,6 @@ public static class DownloadCategories
         "硬件加速运行库的安装包，安装成功后自动删除，留下的通常是未完成或安装失败的下载");
 
     /// <summary>
-    /// OpenVINO 独立后端的运行库安装包（OpenVINO.runtime.win）
-    /// </summary>
-    public static readonly DownloadCategory OpenVinoRuntime = new("openvino-runtime", "OpenVINO 运行库",
-        "OpenVINO 后端运行库的安装包，安装成功后自动删除，留下的通常是未完成或安装失败的下载");
-
-    /// <summary>
     /// 主页网络背景图片，下载完成后移入 User/Images
     /// </summary>
     public static readonly DownloadCategory BannerImage = new("banner-image", "网络背景图片",
@@ -36,5 +30,5 @@ public static class DownloadCategories
     /// <summary>
     /// 全部分类，供存储区域登记
     /// </summary>
-    public static IReadOnlyList<DownloadCategory> All { get; } = [OnnxRuntime, OpenVinoRuntime, BannerImage];
+    public static IReadOnlyList<DownloadCategory> All { get; } = [OnnxRuntime, BannerImage];
 }

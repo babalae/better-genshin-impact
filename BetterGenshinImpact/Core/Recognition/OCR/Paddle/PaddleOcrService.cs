@@ -31,7 +31,7 @@ public class PaddleOcrService : IOcrService, IDisposable
     private readonly object _inferenceLock = new();
     private bool _disposed;
 
-    /// <summary>本实例的推理后端名（ONNX Runtime / OpenVINO / ncnn），由路由结果确定；诊断与测速描述用。</summary>
+    /// <summary>本实例的推理后端名（ONNX Runtime / ncnn），由路由结果确定；诊断与测速描述用。</summary>
     public string BackendName { get; }
 
     /// <summary>Gets or sets the official recognition score threshold used to discard low-confidence results.</summary>
@@ -142,7 +142,7 @@ public class PaddleOcrService : IOcrService, IDisposable
 
     /// <summary>
     /// 用指定的会话工厂加载模型并预热。可插拔实现（内置 PP-OCRv6 和插件中的模型）通过它创建。
-    /// 推理后端按设置页的逐用途开关路由（ONNX Runtime / OpenVINO / ncnn），路由细节见 <see cref="InferenceBackendRouter" />。
+    /// 推理后端按设置页的逐用途开关路由（ONNX Runtime / ncnn），路由细节见 <see cref="InferenceBackendRouter" />。
     /// </summary>
     /// <param name="bgiOnnxFactory">绑定推理运行时的会话工厂。</param>
     /// <param name="modelType">检测与识别模型组合。</param>
@@ -166,7 +166,7 @@ public class PaddleOcrService : IOcrService, IDisposable
         (IOcrDetector Det, IOcrRecognizer Rec) backends, string backendName = "ONNX Runtime")
         => (backends.Det, backends.Rec, backendName);
 
-    /// <summary>后端路由：独立后端（OpenVINO / ncnn）装配结果；ONNX 时返回 null（走模型自身的 Build）。</summary>
+    /// <summary>后端路由：独立后端（ncnn）装配结果；ONNX 时返回 null（走模型自身的 Build）。</summary>
     private static (IOcrDetector Det, IOcrRecognizer Rec, string BackendName)? ResolveStandaloneBackends(
         PaddleOcrModelType modelType, ILogger? logger)
     {
@@ -193,7 +193,7 @@ public class PaddleOcrService : IOcrService, IDisposable
         }
     }
 
-    /// <summary>注入任意后端组合（ONNX Runtime、OpenVINO 或 ncnn）。后端所有权转移给本实例，Dispose 时一并释放。</summary>
+    /// <summary>注入任意后端组合（ONNX Runtime 或 ncnn）。后端所有权转移给本实例，Dispose 时一并释放。</summary>
     internal PaddleOcrService((IOcrDetector Det, IOcrRecognizer Rec) backends, PaddleOcrModelType modelType,
         string backendName = "ONNX Runtime")
     {

@@ -20,7 +20,7 @@ public static class AppPaths
     public static string Cache => Path.Combine(Root, "Cache");
 
     /// <summary>
-    /// ONNX Runtime 编译缓存目录（TensorRT engine/timing、OpenVINO），与通用文件缓存分开
+    /// ONNX Runtime 编译缓存目录（TensorRT engine/timing、OpenVINO 编译缓存），与通用文件缓存分开
     /// </summary>
     public static string InferenceCache => Path.Combine(Cache, "Inference");
 

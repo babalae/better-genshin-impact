@@ -3,7 +3,6 @@ using System.IO;
 using System.Linq;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.Ncnn;
-using BetterGenshinImpact.Core.Recognition.OpenVino;
 using BetterGenshinImpact.Core.Recognition.OCR.Engine;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using Compunet.YoloSharp.Metadata;
@@ -94,7 +93,6 @@ public class NcnnBackendInferenceTests
         foreach (var model in registered)
         {
             Assert.True(NcnnYoloBackend.IsRegistered(model), $"{model.Name} 未登记 ncnn");
-            Assert.True(OpenVinoYoloBackend.IsRegistered(model), $"{model.Name} 未登记 OpenVINO");
         }
     }
 

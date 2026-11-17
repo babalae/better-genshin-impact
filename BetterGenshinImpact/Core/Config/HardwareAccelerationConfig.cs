@@ -89,8 +89,9 @@ public partial class HardwareAccelerationConfig : ObservableObject
     private bool _cpuOcr = true;
 
     /// <summary>
-    ///     全局推理后端意图（ONNX Runtime / ncnn / OpenVINO）。实际生效由各后端的逐用途开关决定，
+    ///     全局推理后端意图（ONNX Runtime / ncnn）。实际生效由各后端的逐用途开关决定，
     ///     便于「全局 ONNX + YOLO 走 ncnn」这类单项覆盖；见 <c>InferenceBackendRouter</c>。
+    ///     OpenVINO 是 ONNX Runtime 的执行提供程序，属于 <see cref="InferenceDevice" /> 的引擎选项，不在此列。
     /// </summary>
     [ObservableProperty]
     private InferenceBackend _preferredBackend = InferenceBackend.Onnx;
@@ -101,13 +102,6 @@ public partial class HardwareAccelerationConfig : ObservableObject
     /// </summary>
     [ObservableProperty]
     private NcnnConfig _ncnn = new();
-
-    /// <summary>
-    ///     OpenVINO（C# API）后端的独立配置（用途开关、设备与编译缓存）。
-    ///     旧字段 <see cref="_openVINO" /> 属于 ONNX Runtime 执行提供程序时代，保留只为配置回写兼容。
-    /// </summary>
-    [ObservableProperty]
-    private OpenVinoConfig _openVino = new();
 
     partial void OnPreferredBackendChanged(InferenceBackend value)
     {

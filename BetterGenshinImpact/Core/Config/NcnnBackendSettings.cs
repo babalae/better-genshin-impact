@@ -6,8 +6,7 @@ namespace BetterGenshinImpact.Core.Config;
 public enum InferenceBackend
 {
     Onnx = 0,
-    Ncnn = 1,
-    OpenVino = 2
+    Ncnn = 1
 }
 
 /// <summary>ncnn 的计算后端：Vulkan 显卡加速或 ncnn 原生 CPU 推理。</summary>
@@ -19,7 +18,7 @@ public enum NcnnComputeMode
 
 /// <summary>
 ///     ncnn 后端的生效参数快照，供设置页草稿比较与装配时透传。
-///     <see cref="UseOcr" /> / <see cref="UseYolo" /> 是逐用途开关（与 OpenVINO 后端语义一致），
+///     <see cref="UseOcr" /> / <see cref="UseYolo" /> 是逐用途开关，
 ///     <see cref="Det" /> / <see cref="Rec" /> / <see cref="Yolo" /> 是三套完全独立的调优参数。
 ///     全局后端意图由 <see cref="HardwareAccelerationConfig.PreferredBackend" /> 承载，不再随 ncnn 参数携带。
 /// </summary>

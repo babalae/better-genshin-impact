@@ -6,7 +6,7 @@ using Microsoft.ML.OnnxRuntime;
 namespace BetterGenshinImpact.Core.Recognition.ONNX;
 
 /// <summary>
-///     YOLO ONNX 模型元数据读取（类别名、静态输入尺寸、任务类型），ncnn 与 OpenVINO 后端共用。
+///     YOLO ONNX 模型元数据读取（类别名、静态输入尺寸、任务类型），ncnn 等替代后端共用。
 ///     用一次性 CPU 会话读取一次，进程内按模型路径缓存。
 /// </summary>
 internal static class YoloOnnxMetadata

@@ -30,7 +30,7 @@
                 </Expander>
             </StackPanel>
         </DataTemplate>
-        <!-- 顶部「推理后端」三选一卡片：切换 ONNX Runtime / OpenVINO / ncnn，各自设置区在下方独立显示 -->
+        <!-- 顶部「推理后端」卡片：切换 ONNX Runtime / ncnn，各自设置区在下方独立显示 -->
         <Style x:Key="BackendCardStyle" TargetType="ListBoxItem">
             <Setter Property="Width" Value="336" />
             <Setter Property="Margin" Value="0,0,12,8" />
@@ -183,6 +183,7 @@
                                                 <Setter Property="Glyph" Value="&#xf2db;" />
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding Engine}" Value="{x:Static onnx:InferenceDeviceType.DirectML}"><Setter Property="Glyph" Value="&#xe1ec;" /></DataTrigger>
+                                                    <DataTrigger Binding="{Binding Engine}" Value="{x:Static onnx:InferenceDeviceType.OpenVINO}"><Setter Property="Glyph" Value="&#xe1ec;" /></DataTrigger>
                                                     <DataTrigger Binding="{Binding Engine}" Value="{x:Static onnx:InferenceDeviceType.CUDA}"><Setter Property="Glyph" Value="&#xe1ec;" /></DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -191,6 +192,11 @@
                                     <TextBlock Text="{Binding Name}" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
                                 </DockPanel>
                                 <WrapPanel Height="28" Margin="0,8,0,0">
+                                    <Border CornerRadius="10" BorderThickness="1" BorderBrush="{DynamicResource SystemAccentColorPrimaryBrush}"
+                                            Background="{DynamicResource ControlFillColorSecondaryBrush}" Padding="8,2" Margin="0,0,6,0"
+                                            Visibility="{Binding IsRecommended, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                        <TextBlock Text="Intel 设备推荐" FontSize="11" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                                    </Border>
                                     <Border CornerRadius="10" BorderThickness="1" BorderBrush="{DynamicResource SystemFillColorSuccessBrush}"
                                             Background="{DynamicResource ControlFillColorSecondaryBrush}" Padding="8,2"
                                             Visibility="{Binding IsCurrent, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -370,11 +376,6 @@
                         </StackPanel>
                     </StackPanel>
                 </ui:CardExpander>
-                </StackPanel>
-
-                <!-- OpenVINO 侧设置：仅在后端切换选中 OpenVINO 时显示；切换即触发运行库检测与设备枚举（异步，不卡 UI） -->
-                <StackPanel Visibility="{Binding IsOpenVinoBackend, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <views:OpenVinoSettingsView DataContext="{Binding OpenVinoSettings}" Margin="0,12,0,0" />
                 </StackPanel>
 
                 <!-- ncnn 侧设置：仅在后端切换选中 ncnn 时显示；切换即激活资产探测与 Vulkan 设备枚举（异步，不卡 UI） -->

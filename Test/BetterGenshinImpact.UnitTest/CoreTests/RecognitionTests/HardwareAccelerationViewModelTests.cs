@@ -13,18 +13,17 @@ using Xunit;
 namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests;
 
 /// <summary>
-///     硬件加速设置页 ViewModel 的后端选择逻辑测试：三后端卡片、切换默认开关、
+///     硬件加速设置页 ViewModel 的后端选择逻辑测试：后端卡片、切换默认开关、
 ///     草稿合成与 Apply 落盘路由。不打开窗口、不做真实推理。
 /// </summary>
 public class HardwareAccelerationViewModelTests
 {
     [Fact]
-    public void BackendOptions_ContainsThreeBackends()
+    public void BackendOptions_ContainsOnnxAndNcnn()
     {
         using var vm = CreateViewModel();
-        Assert.Equal(3, vm.BackendOptions.Count);
+        Assert.Equal(2, vm.BackendOptions.Count);
         Assert.Contains(vm.BackendOptions, o => o.Backend == InferenceBackend.Onnx);
-        Assert.Contains(vm.BackendOptions, o => o.Backend == InferenceBackend.OpenVino);
         Assert.Contains(vm.BackendOptions, o => o.Backend == InferenceBackend.Ncnn);
         Assert.Equal(InferenceBackend.Onnx, vm.SelectedBackendDraft);
         Assert.True(vm.IsOnnxBackend);
@@ -38,35 +37,27 @@ public class HardwareAccelerationViewModelTests
         Assert.True(vm.IsNcnnBackend);
         Assert.True(vm.NcnnSettings.UseNcnnOcr);
         Assert.True(vm.NcnnSettings.UseNcnnYolo);
-        Assert.False(vm.OpenVinoSettings.UseOpenVinoOcr);
-
-        vm.SelectedBackendDraft = InferenceBackend.OpenVino;
-        Assert.True(vm.IsOpenVinoBackend);
-        Assert.True(vm.OpenVinoSettings.UseOpenVinoOcr);
-        Assert.True(vm.OpenVinoSettings.UseOpenVinoYolo);
-        Assert.False(vm.NcnnSettings.UseNcnnOcr);
 
         vm.SelectedBackendDraft = InferenceBackend.Onnx;
         Assert.True(vm.IsOnnxBackend);
         Assert.False(vm.NcnnSettings.UseNcnnOcr);
-        Assert.False(vm.OpenVinoSettings.UseOpenVinoYolo);
+        Assert.False(vm.NcnnSettings.UseNcnnYolo);
     }
 
     [Fact]
-    public void PurposeOverrides_ProduceDrafts_RouterConsumes()
+    public void PurposeOverrides_ProduceDrafts()
     {
-        // 全局 ONNX + 单独开启 YOLO 走 OpenVINO：草稿与路由解析一致
+        // 全局 ONNX + 单独开启 YOLO 走 ncnn：草稿体现逐用途覆盖
         using var vm = CreateViewModel();
-        vm.OpenVinoSettings.UseOpenVinoYolo = true;
-        var draft = vm.OpenVinoSettings.BuildDraft();
+        vm.NcnnSettings.UseNcnnYolo = true;
+        var draft = vm.NcnnSettings.BuildDraft();
         Assert.True(draft.UseYolo);
         Assert.False(draft.UseOcr);
-        Assert.False(vm.NcnnSettings.HasDraftChanges);
-        Assert.True(vm.OpenVinoSettings.HasDraftChanges);
+        Assert.True(vm.NcnnSettings.HasDraftChanges);
     }
 
     [Fact]
-    public async Task ApplyAsync_PersistsBackendSettingsAndIntent()
+    public async Task ApplyAsync_PersistsOnnxEngineSettingsAndIntent()
     {
         var config = new HardwareAccelerationConfig();
         var store = new TestConfigService(config);
@@ -75,54 +66,63 @@ public class HardwareAccelerationViewModelTests
         await runtime.InitializeAsync();
         using var vm = CreateViewModel(config, store, runtime);
 
-        vm.SelectedBackendDraft = InferenceBackend.OpenVino;
-        vm.OpenVinoSettings.UseOpenVinoYolo = true;
-        vm.OpenVinoSettings.DeviceId = "GPU.0";
-        vm.OpenVinoSettings.EnableModelCache = true;
-        Assert.True(vm.OpenVinoSettings.HasDraftChanges);
+        vm.CpuThreads = 2;
 
         // CanApply 需要所选引擎已安装且有设备；测试直接装配卡片状态
         var card = vm.Engines.First(c => c.IsCpu);
         card.IsInstalled = true;
         card.UpdateDevices([ResolvedInferenceRuntime.CpuDevice], "CPU");
         vm.SelectedEngine = card;
-        // OpenVinoReady 取决于 Plugins/OpenVINO；测试环境缺失时直接无法应用——先探测
         Assert.True(vm.CanApply, $"CanApply=false: hint={vm.ApplyHint}");
         vm.ApplyCommand.Execute(null);
-        // RelayCommand 异步执行：轮询等待「落盘 + 草稿基线确认」全部完成（最长 5 秒）
+        // RelayCommand 异步执行：轮询等待「落盘」完成（最长 5 秒）
         var deadline = DateTime.UtcNow.AddSeconds(5);
-        while ((config.PreferredBackend != InferenceBackend.OpenVino || vm.OpenVinoSettings.HasDraftChanges)
-               && DateTime.UtcNow < deadline)
+        while (config.Cpu.CpuThreads != 2 && DateTime.UtcNow < deadline)
             await Task.Delay(50);
         // 交互 fake 拒绝重启：设置已保存，等待重启
-        Assert.Equal(InferenceBackend.OpenVino, config.PreferredBackend);
-        Assert.True(config.OpenVino.UseYolo);
-        Assert.Equal("GPU.0", config.OpenVino.DeviceId);
-        Assert.True(config.OpenVino.EnableModelCache);
-        Assert.False(vm.OpenVinoSettings.HasDraftChanges);
+        Assert.Equal(2, config.Cpu.CpuThreads);
+        Assert.Equal(InferenceBackend.Onnx, config.PreferredBackend);
+        Assert.Equal(InferenceDeviceType.Cpu, config.InferenceDevice);
     }
 
     [Fact]
-    public void PrepareStartup_MigratesLegacyOpenVinoEngineToStandaloneBackend()
+    public void RuntimeApply_PersistsNcnnBackendSettings()
     {
-        // 旧版「OpenVINO 执行提供程序」用户：生效引擎 OpenVINO → 迁移为 OpenVINO 后端意图 + CPU 引擎
+        // 后端意图与 ncnn 子配置必须在同一次 Apply 内落盘（设置页草稿 → 持久化）
+        var config = new HardwareAccelerationConfig();
+        var store = new TestConfigService(config);
+        using var runtime = CreateRuntime(config, store);
+        var ncnn = new NcnnBackendSettings(true, true, NcnnComputeMode.Cpu, 1,
+            NcnnTuningSettings.CreateDefault(), NcnnTuningSettings.CreateDefault(), NcnnTuningSettings.CreateDefault());
+
+        runtime.Apply(InferenceDeviceType.Cpu, config.Cpu, true, 0, null, ncnn, InferenceBackend.Ncnn);
+
+        Assert.Equal(InferenceBackend.Ncnn, config.PreferredBackend);
+        Assert.True(config.Ncnn.UseOcr);
+        Assert.True(config.Ncnn.UseYolo);
+        Assert.Equal(NcnnComputeMode.Cpu, config.Ncnn.ComputeMode);
+        Assert.Equal(1, config.Ncnn.GpuIndex);
+        Assert.Equal(InferenceValidationState.PendingRestart, config.ValidationState);
+    }
+
+    [Fact]
+    public void PrepareStartup_KeepsOpenVinoEngineSelectable()
+    {
+        // OpenVINO 是 ONNX Runtime 的执行提供程序：启动准备不得改写引擎，也不产生迁移提示
         var config = new HardwareAccelerationConfig
         {
             FormatVersion = 1,
             InferenceDevice = InferenceDeviceType.OpenVINO,
-            OpenVINO = new() { DeviceId = "GPU.0" },
+            OpenVINO = new() { DeviceId = "GPU.0", EnableModelCache = true },
             CpuOcr = false,
             ValidationState = InferenceValidationState.None,
         };
         var status = InferenceRuntimeService.PrepareStartup(config);
 
-        Assert.Equal(InferenceDeviceType.Cpu, config.InferenceDevice);
-        Assert.Equal(InferenceBackend.OpenVino, config.PreferredBackend);
-        Assert.True(config.OpenVino.UseYolo);
-        Assert.True(config.OpenVino.UseOcr, "旧版未强制 OCR CPU 的用户应当默认 OpenVINO 跑 OCR");
-        Assert.Equal("GPU.0", config.OpenVino.DeviceId);
-        // 迁移必须告知用户（横幅），且迁移后开关已开启 → 运行库缺失提示会出现（本机未装运行库时）
-        Assert.Contains("独立推理后端", status.FallbackMessage);
+        Assert.Equal(InferenceDeviceType.OpenVINO, config.InferenceDevice);
+        Assert.Equal(InferenceBackend.Onnx, config.PreferredBackend);
+        Assert.Equal("GPU.0", config.OpenVINO.DeviceId);
+        Assert.DoesNotContain("推理引擎已停止提供", status.FallbackMessage);
     }
 
     [Fact]
@@ -139,7 +139,6 @@ public class HardwareAccelerationViewModelTests
 
         Assert.Equal(InferenceBackend.Onnx, vm.SelectedBackendDraft);
         Assert.False(vm.NcnnSettings.UseNcnnOcr);
-        Assert.False(vm.OpenVinoSettings.UsesOpenVino);
     }
 
     // ---------------- 装配 ----------------
@@ -156,7 +155,7 @@ public class HardwareAccelerationViewModelTests
         TestConfigService store, InferenceRuntimeService runtime)
         => new(runtime, new Installer(), new Devices(), new Diagnostics(),
             new BgiOnnxFactory(NullLogger<BgiOnnxFactory>.Instance, runtime), store,
-            new Leases(), new Interaction(), new FakeOpenVinoInstaller());
+            new Leases(), new Interaction());
 
     private static InferenceRuntimeService CreateRuntime(HardwareAccelerationConfig config, TestConfigService store)
     {

@@ -8,7 +8,7 @@ namespace BetterGenshinImpact.Core.Config;
 ///     <para>
 ///         独立持有而不平铺进 <see cref="HardwareAccelerationConfig" />：
 ///         ONNX 侧配置结构损坏被整体重置、或换用逻辑核数较少的处理器触发回退时，这里的参数不受波及。
-///         全局后端意图由 <see cref="HardwareAccelerationConfig.PreferredBackend" /> 承载（三后端共用）。
+///         全局后端意图由 <see cref="HardwareAccelerationConfig.PreferredBackend" /> 承载（与 ONNX Runtime 共用）。
 ///     </para>
 /// </summary>
 public partial class NcnnConfig : ObservableObject

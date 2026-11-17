@@ -65,6 +65,7 @@ public sealed class OnnxRuntimeInstaller : IOnnxRuntimeInstaller, IDisposable
             var id = engine switch
             {
                 InferenceDeviceType.DirectML => "Microsoft.ML.OnnxRuntime.DirectML",
+                InferenceDeviceType.OpenVINO => "Intel.ML.OnnxRuntime.OpenVino",
                 _ => "Microsoft.ML.OnnxRuntime.Gpu.Windows"
             };
             var packages = new List<RuntimeDownloadPackage> { await GetNugetPackageAsync(id, OnnxRuntimeLoader.RequiredVersion, token) };
@@ -337,6 +338,7 @@ public sealed class OnnxRuntimeInstaller : IOnnxRuntimeInstaller, IDisposable
         if (package.NugetId != null)
         {
             if (!path.StartsWith("runtimes/win-x64/native/", StringComparison.OrdinalIgnoreCase)) return false;
+            if (engine == InferenceDeviceType.OpenVINO) return path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".xml", StringComparison.OrdinalIgnoreCase);
             return OnnxRuntimePackageCatalog.ProviderFiles(engine).Contains(name, StringComparer.OrdinalIgnoreCase);
         }
         return path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) && (path.Contains("/bin/", StringComparison.OrdinalIgnoreCase) || path.Contains("/lib/", StringComparison.OrdinalIgnoreCase));

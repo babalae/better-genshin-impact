@@ -22,7 +22,7 @@ public class Rec : IOcrRecognizer
     {
     }
 
-    /// <summary>注入任意推理会话（ONNX Runtime 或 OpenVINO）的构造入口，预处理与解码完全共用。</summary>
+    /// <summary>注入任意推理会话（任意后端）的构造入口，预处理与解码完全共用。</summary>
     internal Rec(
         IReadOnlyList<string> labels,
         OcrVersionConfig config,
@@ -97,9 +97,6 @@ public class Rec : IOcrRecognizer
             var size = src.Size();
             return 1.0 * size.Width / size.Height * modelHeight;
         }));
-        // 固定形状后端（NPU）：宽度不得超过模型固定宽度，超宽文本行压缩到固定宽度
-        // （与 PaddleOCR 官方固定形状预处理一致，可能识别不全，调大固定宽度可缓解）。
-        if (_session.FixedInputWidth is int fixedWidth && maxWidth > fixedWidth) maxWidth = fixedWidth;
         List<IMemoryOwner<float>> owners = [];
         (int[], float[])[] resultTensors;
         try

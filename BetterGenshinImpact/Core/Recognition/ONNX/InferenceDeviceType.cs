@@ -11,9 +11,6 @@ public enum InferenceDeviceType
     // 保持已有后端的配置编号，旧 Gpu 的编号 2 不再复用，读取时回退 CPU。
     Cpu = 0,
     DirectML = 1,
-    // OpenVINO 执行提供程序已由独立 OpenVINO 后端（OpenVINO C# API，不经 ONNX Runtime）替代：
-    // 界面不再提供该选项，历史配置在启动准备阶段自动迁移为 OpenVINO 后端意图并回退 CPU。
-    // 枚举编号与配置回写保留，便于旧配置兼容。
     OpenVINO = 3,
     CUDA = 4,
     // TensorRT 推理速度特别慢（首次还要构建引擎，等待时间更长），已从设置页与首页下线：
@@ -29,7 +26,7 @@ public static class InferenceDeviceTypeExtensions
 {
     /// <summary>设置页与首页可供用户选择的推理引擎，顺序即界面顺序。</summary>
     public static readonly InferenceDeviceType[] Selectable =
-        [InferenceDeviceType.Cpu, InferenceDeviceType.DirectML, InferenceDeviceType.CUDA];
+        [InferenceDeviceType.Cpu, InferenceDeviceType.DirectML, InferenceDeviceType.OpenVINO, InferenceDeviceType.CUDA];
 
     public static bool IsSelectable(this InferenceDeviceType engine) => Selectable.Contains(engine);
 }

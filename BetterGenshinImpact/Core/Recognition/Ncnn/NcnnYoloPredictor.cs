@@ -15,7 +15,7 @@ namespace BetterGenshinImpact.Core.Recognition.Ncnn;
 
 /// <summary>
 ///     ncnn Vulkan 后端的 YOLO 检测器（实验）：替代 YoloSharp 的完整 Detect 路径。
-///     预处理/解码/NMS 与 OpenVINO 后端共用 <see cref="ONNX.YoloBackendShared" />（逐条复刻 YoloSharp 6.0.3），
+///     预处理/解码/NMS 复用 <see cref="ONNX.YoloBackendShared" />（逐条复刻 YoloSharp 6.0.3），
 ///     本类只负责 ncnn 会话与推理。
 ///     模型为 pnnx 固定形状转换产物，层名 in0/out0。
 ///     shim 由装配方注入并持有生命周期，本类只负责会话与推理。

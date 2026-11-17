@@ -1,18 +1,15 @@
 using System;
-using System.IO;
-using System.Linq;
 using System.Text.Json;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.ONNX;
-using BetterGenshinImpact.Core.Recognition.OpenVino;
 using Xunit;
 
 namespace BetterGenshinImpact.UnitTest.CoreTests.RecognitionTests;
 
 /// <summary>
-///     三后端插件化的配置与纯函数层测试：
-///     硬件加速配置的 JSON 往返（含旧格式兼容）、YOLO 共享解码的数值行为、
-///     OpenVINO 草稿的边界规范化。全部不依赖原生运行库。
+///     后端插件化的配置与纯函数层测试：
+///     硬件加速配置的 JSON 往返（含旧格式兼容）、YOLO 共享解码的数值行为。
+///     全部不依赖原生运行库。
 /// </summary>
 public class InferenceBackendConfigTests
 {
@@ -25,11 +22,9 @@ public class InferenceBackendConfigTests
         {
             FormatVersion = 1,
             InferenceDevice = InferenceDeviceType.Cpu,
-            PreferredBackend = InferenceBackend.OpenVino,
+            PreferredBackend = InferenceBackend.Ncnn,
         };
-        config.OpenVino.UseOcr = true;
-        config.OpenVino.DeviceId = "GPU.0";
-        config.OpenVino.EnableModelCache = true;
+        config.Ncnn.UseOcr = true;
         config.Ncnn.UseYolo = true;
         config.Ncnn.ComputeMode = NcnnComputeMode.Cpu;
         config.Ncnn.GpuIndex = 2;
@@ -39,10 +34,8 @@ public class InferenceBackendConfigTests
         var roundTripped = JsonSerializer.Deserialize<HardwareAccelerationConfig>(json, options);
 
         Assert.NotNull(roundTripped);
-        Assert.Equal(InferenceBackend.OpenVino, roundTripped.PreferredBackend);
-        Assert.True(roundTripped.OpenVino.UseOcr);
-        Assert.Equal("GPU.0", roundTripped.OpenVino.DeviceId);
-        Assert.True(roundTripped.OpenVino.EnableModelCache);
+        Assert.Equal(InferenceBackend.Ncnn, roundTripped.PreferredBackend);
+        Assert.True(roundTripped.Ncnn.UseOcr);
         Assert.True(roundTripped.Ncnn.UseYolo);
         Assert.Equal(NcnnComputeMode.Cpu, roundTripped.Ncnn.ComputeMode);
         Assert.Equal(2, roundTripped.Ncnn.GpuIndex);
@@ -53,7 +46,7 @@ public class InferenceBackendConfigTests
     [Fact]
     public void HardwareAccelerationConfig_JsonWithoutBackendNodes_FallsBackToDefaults()
     {
-        // 旧版配置（没有 ncnn / openVino 嵌套节点）：读取必须回落默认而不抛异常
+        // 旧版配置（没有 ncnn 嵌套节点）：读取必须回落默认而不抛异常
         const string legacyJson = """
             {
               "formatVersion": 1,
@@ -69,8 +62,6 @@ public class InferenceBackendConfigTests
         Assert.NotNull(config);
         Assert.Equal(InferenceDeviceType.DirectML, config.InferenceDevice);
         Assert.Equal(InferenceBackend.Onnx, config.PreferredBackend);
-        Assert.False(config.OpenVino.UseOcr);
-        Assert.Equal("CPU", config.OpenVino.DeviceId);
         Assert.False(config.Ncnn.UseOcr);
         Assert.NotNull(config.Ncnn.DetTuning);
     }
@@ -85,8 +76,7 @@ public class InferenceBackendConfigTests
               "inferenceDevice": 0,
               "cpuOcr": true,
               "cpu": { "deviceId": "CPU" },
-              "ncnn": { "useOcr": true, "gpuIndex": "broken" },
-              "openVino": { "deviceId": 42 }
+              "ncnn": { "useOcr": true, "gpuIndex": "broken" }
             }
             """;
         var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
@@ -94,10 +84,36 @@ public class InferenceBackendConfigTests
 
         Assert.NotNull(config);
         Assert.Equal(InferenceDeviceType.Cpu, config.InferenceDevice);
-        // 两个后端节点都损坏 → 各自回落默认
+        // 节点损坏 → 回落默认
         Assert.False(config.Ncnn.UseOcr);
         Assert.Equal(0, config.Ncnn.GpuIndex);
-        Assert.Equal("CPU", config.OpenVino.DeviceId);
+    }
+
+    [Fact]
+    public void HardwareAccelerationConfig_JsonFromOpenVinoBackendBuild_LoadsWithoutReset()
+    {
+        // 曾经的「独立 OpenVINO 后端」配置（preferredBackend=2 + openVino 节点）：节点已不存在，
+        // 必须忽略未知节点、把越界枚举回落 Onnx，而不是整份配置重置。
+        const string json = """
+            {
+              "formatVersion": 1,
+              "inferenceDevice": 1,
+              "preferredBackend": 2,
+              "cpuOcr": false,
+              "openVino": { "useOcr": true, "deviceId": "GPU.0", "npuRecWidth": 640 },
+              "ncnn": { "useYolo": true },
+              "cpu": { "deviceId": "CPU" },
+              "directML": { "deviceId": "DXGI:1" }
+            }
+            """;
+        var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+        var config = JsonSerializer.Deserialize<HardwareAccelerationConfig>(json, options);
+
+        Assert.NotNull(config);
+        Assert.Equal(InferenceBackend.Onnx, config.PreferredBackend);
+        Assert.Equal(InferenceDeviceType.DirectML, config.InferenceDevice);
+        Assert.Equal("DXGI:1", config.DirectML.DeviceId);
+        Assert.True(config.Ncnn.UseYolo);
     }
 
     [Fact]
@@ -114,163 +130,12 @@ public class InferenceBackendConfigTests
         Assert.Equal(InferenceBackend.Onnx, config.PreferredBackend);
     }
 
-    // ---------------- OpenVINO 草稿边界 ----------------
-
-    [Fact]
-    public void OpenVinoBackendSettings_Normalize_ClampsInvalidDeviceId()
-    {
-        var empty = new OpenVinoBackendSettings(true, false, "   ", false).Normalize();
-        Assert.Equal("CPU", empty.DeviceId);
-        Assert.True(empty.IsValid);
-
-        var longName = new string('G', 200);
-        var clamped = new OpenVinoBackendSettings(false, true, longName, false).Normalize();
-        Assert.Equal(OpenVinoBackendSettings.MaxDeviceIdLength, clamped.DeviceId.Length);
-        Assert.True(clamped.IsValid);
-
-        Assert.False(new OpenVinoBackendSettings(false, false, "", false).IsValid);
-    }
-
-    [Fact]
-    public void OpenVinoBackendSettings_Normalize_ClampsNpuStrategy()
-    {
-        // 主构造函数默认值与常量保持同步（默认值以字面量声明，防止两处漂移）
-        var defaults = new OpenVinoBackendSettings(true, false, "NPU", false);
-        Assert.Equal(OpenVinoBackendSettings.DefaultNpuRecWidth, defaults.NpuRecWidth);
-        Assert.Equal(OpenVinoBackendSettings.DefaultNpuDetDevice, defaults.NpuDetDevice);
-
-        // 固定宽度越界回落出厂值；合法值原样保留
-        var tooSmall = new OpenVinoBackendSettings(true, false, "NPU", false, NpuRecWidth: 8).Normalize();
-        Assert.Equal(OpenVinoBackendSettings.DefaultNpuRecWidth, tooSmall.NpuRecWidth);
-        var tooLarge = new OpenVinoBackendSettings(true, false, "NPU", false, NpuRecWidth: 9999).Normalize();
-        Assert.Equal(OpenVinoBackendSettings.DefaultNpuRecWidth, tooLarge.NpuRecWidth);
-        var valid = new OpenVinoBackendSettings(true, false, "NPU", false, NpuRecWidth: 640).Normalize();
-        Assert.Equal(640, valid.NpuRecWidth);
-
-        // 检测设备空值补出厂值（NPU，静态画布后可留 NPU）、去空白
-        var emptyDet = new OpenVinoBackendSettings(true, false, "NPU", false, NpuDetDevice: "  ").Normalize();
-        Assert.Equal(OpenVinoBackendSettings.DefaultNpuDetDevice, emptyDet.NpuDetDevice);
-        var cpuDet = new OpenVinoBackendSettings(true, false, "NPU", false, NpuDetDevice: " CPU ").Normalize();
-        Assert.Equal("CPU", cpuDet.NpuDetDevice);
-
-        // NPU 设备判定与设备枚举过滤规则一致
-        Assert.True(OpenVinoBackendSettings.IsNpuDevice("NPU"));
-        Assert.True(OpenVinoBackendSettings.IsNpuDevice("NPU.0"));
-        Assert.False(OpenVinoBackendSettings.IsNpuDevice("CPU"));
-        Assert.False(OpenVinoBackendSettings.IsNpuDevice("GPU.0"));
-        Assert.False(OpenVinoBackendSettings.IsNpuDevice(null));
-    }
-
-    [Fact]
-    public void OpenVinoBackendSettings_Normalize_ClampsDetStaticSide()
-    {
-        // 主构造函数默认值与常量保持同步
-        var defaults = new OpenVinoBackendSettings(true, false, "GPU.0", false);
-        Assert.Equal(OpenVinoBackendSettings.DefaultDetStaticSide, defaults.DetStaticSide);
-
-        // 0 = 强制动态，原样保留；合法区间保留；越界回落出厂值
-        Assert.Equal(0, new OpenVinoBackendSettings(true, false, "GPU.0", false, DetStaticSide: 0).Normalize().DetStaticSide);
-        Assert.Equal(960, new OpenVinoBackendSettings(true, false, "GPU.0", false, DetStaticSide: 960).Normalize().DetStaticSide);
-        Assert.Equal(OpenVinoBackendSettings.DefaultDetStaticSide,
-            new OpenVinoBackendSettings(true, false, "GPU.0", false, DetStaticSide: 1).Normalize().DetStaticSide);
-        Assert.Equal(OpenVinoBackendSettings.DefaultDetStaticSide,
-            new OpenVinoBackendSettings(true, false, "GPU.0", false, DetStaticSide: 99999).Normalize().DetStaticSide);
-
-        // 静态形状支持判定：仅 GPU/NPU，CPU 与未知设备保持动态
-        Assert.True(OpenVinoBackendSettings.SupportsStaticShape("GPU"));
-        Assert.True(OpenVinoBackendSettings.SupportsStaticShape("GPU.0"));
-        Assert.True(OpenVinoBackendSettings.SupportsStaticShape("NPU"));
-        Assert.True(OpenVinoBackendSettings.SupportsStaticShape("NPU.0"));
-        Assert.False(OpenVinoBackendSettings.SupportsStaticShape("CPU"));
-        Assert.False(OpenVinoBackendSettings.SupportsStaticShape(null));
-    }
-
-    [Fact]
-    public void OpenVinoConfig_ApplySettings_CopiesNpuStrategy()
-    {
-        var config = new OpenVinoConfig();
-        config.ApplySettings(new OpenVinoBackendSettings(true, false, "NPU", true, NpuRecWidth: 640, NpuDetDevice: "GPU.0",
-            DetStaticSide: 960));
-        Assert.Equal(640, config.NpuRecWidth);
-        Assert.Equal("GPU.0", config.NpuDetDevice);
-        Assert.Equal(960, config.DetStaticSide);
-
-        // 快照往返一致（FromConfig 读回 Apply 写入的值）
-        var roundTrip = OpenVinoBackendSettings.FromConfig(config);
-        Assert.Equal(640, roundTrip.NpuRecWidth);
-        Assert.Equal("GPU.0", roundTrip.NpuDetDevice);
-        Assert.Equal(960, roundTrip.DetStaticSide);
-    }
-
-    // ---------------- GPU 静态宽度桶 ----------------
-
-    [Fact]
-    public void OpenVinoBackendSettings_Normalize_CanonicalizesGpuBuckets()
-    {
-        // 主构造函数默认值与常量保持同步（默认值以字面量声明，防止两处漂移）
-        var defaults = new OpenVinoBackendSettings(true, false, "GPU.0", false);
-        Assert.Equal(OpenVinoBackendSettings.DefaultGpuRecWidthBuckets, defaults.GpuRecWidthBuckets);
-
-        // 乱序 / 重复 / 越界 / 非法 token：去重升序、只保留合法宽度
-        var messy = new OpenVinoBackendSettings(true, false, "GPU.0", false,
-            GpuRecWidthBuckets: "640, 320,320,8,9999,abc").Normalize();
-        Assert.Equal("320,640", messy.GpuRecWidthBuckets);
-
-        // 空串保留为空（显式关闭静态桶、保持动态宽度）；全非法回落出厂桶
-        Assert.Equal("", new OpenVinoBackendSettings(true, false, "GPU.0", false, GpuRecWidthBuckets: "").Normalize().GpuRecWidthBuckets);
-        Assert.Equal(OpenVinoBackendSettings.DefaultGpuRecWidthBuckets,
-            new OpenVinoBackendSettings(true, false, "GPU.0", false, GpuRecWidthBuckets: "abc,8").Normalize().GpuRecWidthBuckets);
-
-        // 规范化幂等：草稿比较（record 值相等）不因字符串形态漂移误报「尚未应用」
-        Assert.Equal(messy, messy.Normalize());
-
-        // 解析结果与规范化字符串一致（装配入口）
-        Assert.Equal([320, 640], OpenVinoBackendSettings.ParseGpuRecWidthBuckets(messy.GpuRecWidthBuckets));
-        Assert.Empty(OpenVinoBackendSettings.ParseGpuRecWidthBuckets(""));
-
-        // GPU 设备判定与设备枚举过滤规则一致
-        Assert.True(OpenVinoBackendSettings.IsGpuDevice("GPU"));
-        Assert.True(OpenVinoBackendSettings.IsGpuDevice("GPU.0"));
-        Assert.False(OpenVinoBackendSettings.IsGpuDevice("CPU"));
-        Assert.False(OpenVinoBackendSettings.IsGpuDevice("NPU"));
-        Assert.False(OpenVinoBackendSettings.IsGpuDevice(null));
-    }
-
-    [Fact]
-    public void HardwareAccelerationConfig_GpuBuckets_JsonRoundTripAndLegacyFallback()
-    {
-        var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-
-        var config = new HardwareAccelerationConfig();
-        config.OpenVino.GpuRecWidthBuckets = "320,640";
-        var roundTripped = JsonSerializer.Deserialize<HardwareAccelerationConfig>(
-            JsonSerializer.Serialize(config, options), options);
-        Assert.NotNull(roundTripped);
-        Assert.Equal("320,640", roundTripped.OpenVino.GpuRecWidthBuckets);
-
-        // 旧版配置（没有 gpuRecWidthBuckets 字段）：回落出厂桶
-        const string legacyJson = """{ "formatVersion": 1, "inferenceDevice": 0, "openVino": { "useOcr": true } }""";
-        var legacy = JsonSerializer.Deserialize<HardwareAccelerationConfig>(legacyJson, options);
-        Assert.NotNull(legacy);
-        Assert.Equal(OpenVinoBackendSettings.DefaultGpuRecWidthBuckets, legacy.OpenVino.GpuRecWidthBuckets);
-    }
-
-    [Fact]
-    public void OpenVinoConfig_ApplySettings_CopiesGpuBuckets()
-    {
-        var config = new OpenVinoConfig();
-        config.ApplySettings(new OpenVinoBackendSettings(true, false, "GPU.0", false, GpuRecWidthBuckets: "640,320"));
-        // Apply 内 Normalize：写入即规范化
-        Assert.Equal("320,640", config.GpuRecWidthBuckets);
-        Assert.Equal("320,640", OpenVinoBackendSettings.FromConfig(config).GpuRecWidthBuckets);
-    }
-
     // ---------------- YOLO 共享解码（纯函数） ----------------
 
     [Fact]
     public void YoloBackendShared_ResolveOutputLayout_UsesTensorShapeFirst()
     {
-        // [1, 4+nc, N] 在 OpenVINO 输出 shape 为 (N, 4+nc)：anchor=N、attributes=4+nc
+        // [1, 4+nc, N] 的输出 shape 为 (N, 4+nc)：anchor=N、attributes=4+nc
         var (anchors, attributes) = YoloBackendShared.ResolveOutputLayout(infoWidth: 8400, infoHeight: 9, infoChannels: null,
             count: 8400 * 9, classCount: 5);
         Assert.Equal((8400, 9), (anchors, attributes));

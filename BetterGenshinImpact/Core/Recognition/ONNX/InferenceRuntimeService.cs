@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.Ncnn;
-using BetterGenshinImpact.Core.Recognition.OpenVino;
 using BetterGenshinImpact.Service.Interface;
 using Microsoft.Extensions.Logging;
 
@@ -48,23 +47,9 @@ public sealed class InferenceRuntimeService(
         config.ValidatedEngines ??= [];
         // 新增 OCR 参数单独修正，避免无效比例或换用核心数较少的处理器时丢失其他引擎设置。
         config.PaddleOcrCpu = PaddleOcrCpuConfig.FromOptions((config.PaddleOcrCpu ?? new()).ToOptions().Normalize());
-        // 旧版「OpenVINO 执行提供程序」用户迁移：生效引擎 OpenVINO → 独立 OpenVINO 后端意图，OCR 开关跟随旧的强制 OCR 设置。
-        // 必须在后端 Prepare 之前完成：迁移后用途开关已开启，Prepare 才能对运行库做有效校验并给出提示。
-        if (config.InferenceDevice == InferenceDeviceType.OpenVINO && config.IsExpectedConfiguration)
-        {
-            config.PreferredBackend = InferenceBackend.OpenVino;
-            config.OpenVino.UseOcr = !config.CpuOcr;
-            config.OpenVino.UseYolo = true;
-            config.OpenVino.DeviceId = config.GetEngineSettings(InferenceDeviceType.OpenVINO).DeviceId is { Length: > 0 } deviceId
-                && deviceId.StartsWith("GPU", StringComparison.Ordinal) ? deviceId : "CPU";
-            config.InferenceDevice = InferenceDeviceType.Cpu;
-            fallbackMessage = "OpenVINO 已改为独立推理后端（不再经 ONNX Runtime），本次迁移已完成。\r\n\r\n"
-                              + "如需 Intel 设备加速，请在“硬件加速设置”的 OpenVINO 卡片中确认设备并下载运行库。";
-        }
-        // 后端子配置的越界修正、运行库校验与默认值对齐都在各自的 Startup 中完成。
+        // ncnn 后端子配置的越界修正、运行库校验与默认值对齐都在其 Startup 中完成。
         var ncnnMessage = NcnnStartup.Prepare(config.Ncnn ??= new());
         fallbackMessage = JoinStartupMessages(fallbackMessage, ncnnMessage);
-        fallbackMessage = JoinStartupMessages(fallbackMessage, OpenVinoStartup.Prepare(config.OpenVino ??= new()));
         if (config.IsExpectedConfiguration && !string.IsNullOrWhiteSpace(config.VerifiedSignature))
         {
             // 兼容已有的单份验证签名：只恢复能与保存参数匹配的历史成功记录。
@@ -84,15 +69,13 @@ public sealed class InferenceRuntimeService(
         }
         else if (!config.InferenceDevice.IsSelectable())
         {
-            // 引擎已下线（TensorRT：首次构建引擎耗时过长；OpenVINO：执行提供程序已由独立 OpenVINO 后端替代）：
-            // 只把生效引擎改回 CPU，其他引擎已保存的设备参数保持不变。
+            // TensorRT 已下线：只把生效引擎改回 CPU，其他引擎已保存的设备参数保持不变。
             var retiredEngine = config.InferenceDevice;
             config.SwitchToCpu();
             config.LastFailedEngine = null;
             config.LastValidationError = "";
-            fallbackMessage = JoinStartupMessages(
-                $"{retiredEngine} 推理引擎已停止提供，本次已使用 CPU。如需 Intel 设备加速，请在“硬件加速设置”中选择 OpenVINO 后端。",
-                "请在首页的“硬件加速设置”中选择其他引擎后重试。");
+            fallbackMessage = $"{retiredEngine} 推理引擎已停止提供（首次构建引擎耗时过长），本次已使用 CPU。\r\n\r\n" +
+                              "请在首页的“硬件加速设置”中选择其他引擎后重试。";
         }
         else if (isMainInstance && config.ValidationState == InferenceValidationState.Validating)
         {
@@ -262,14 +245,13 @@ public sealed class InferenceRuntimeService(
 
     public void Apply(InferenceDeviceType engine, InferenceEngineSettings settings, bool cpuOcr, int cpuThreads,
         PaddleOcrCpuOptions? paddleOcrCpu = null, NcnnBackendSettings? ncnn = null,
-        OpenVinoBackendSettings? openVino = null, InferenceBackend preferredBackend = InferenceBackend.Onnx)
+        InferenceBackend preferredBackend = InferenceBackend.Onnx)
     {
         if (!Enum.IsDefined(engine) || string.IsNullOrWhiteSpace(settings.DeviceId) || cpuThreads < 0 || cpuThreads > Environment.ProcessorCount)
             throw new ArgumentException("推理设置不符合预期。");
         if (paddleOcrCpu is { IsValid: false }) throw new ArgumentException("OCR CPU 线程策略参数不符合预期。");
         if (ncnn is { IsValid: false }) throw new ArgumentException("ncnn 后端参数不符合预期。");
-        if (openVino is { IsValid: false }) throw new ArgumentException("OpenVINO 后端参数不符合预期。");
-        // TensorRT / OpenVINO 执行提供程序已下线：任何调用方都不能再把生效引擎切回该引擎。
+        // TensorRT 已下线：任何调用方都不能再把生效引擎切回该引擎。
         if (!engine.IsSelectable()) throw new ArgumentException($"{engine} 推理引擎已停止提供，请选择其他引擎。");
         lock (_settingsLock)
         {
@@ -280,11 +262,10 @@ public sealed class InferenceRuntimeService(
             target.EnableModelCache = settings.EnableModelCache;
             config.Cpu.CpuThreads = cpuThreads;
             if (paddleOcrCpu != null) config.PaddleOcrCpu = PaddleOcrCpuConfig.FromOptions(paddleOcrCpu);
-            // 后端意图与逐后端参数和 ONNX 设置共用一次保存与一次 revision，让"应用并重启"对所有后端一致。
+            // 后端意图与 ncnn 参数和 ONNX 设置共用一次保存与一次 revision，让"应用并重启"对所有后端一致。
             // 写入深拷贝：草稿对象后续修改不得影响已保存配置。
             config.PreferredBackend = Enum.IsDefined(preferredBackend) ? preferredBackend : InferenceBackend.Onnx;
             if (ncnn != null) config.Ncnn.ApplySettings(ncnn);
-            if (openVino != null) config.OpenVino.ApplySettings(openVino);
             config.CpuOcr = cpuOcr;
             config.InferenceDevice = engine;
             config.FormatVersion = 1;

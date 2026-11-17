@@ -66,8 +66,10 @@ public sealed class BgiOnnxSessionFactory
     public ProviderType[] ProviderTypes => (ProviderType[])_providerTypes.Clone();
     public int DmlDeviceId => Runtime.Device.Index;
     public int CudaDeviceId => Runtime.Device.Index;
+    public string OpenVinoDevice => Runtime.Device.ProviderDevice;
     public bool EnableCache => Runtime.EnableModelCache;
     public bool CpuOcr => Runtime.CpuOcr;
+    public bool OpenVinoCache => Runtime.EnableModelCache;
 
 
     /// <summary>
@@ -87,6 +89,11 @@ public sealed class BgiOnnxSessionFactory
                 //只用dml不加cpu的话在很多场景下性能很差。
                 // DirectML 的性能和稳定性取决于模型与设备，现在由用户独立选择，不与 TensorRT、CUDA 自动比较。
                 return [ProviderType.Dml, ProviderType.Cpu];
+            case InferenceDeviceType.OpenVINO:
+                // OpenVino是英特尔的OpenVINO执行提供程序
+                // 目前来看比Dml强
+                // provider 注册统一在 CreateSessionOptions 中完成，避免重复创建原生选项探测。
+                return [ProviderType.OpenVino, ProviderType.Cpu];
             case InferenceDeviceType.CUDA:
                 // CUDA 的效果依赖具体模型，不再受旧自动选择策略中的低优先级限制。
                 return [ProviderType.Cuda, ProviderType.Cpu];
@@ -107,8 +114,8 @@ public sealed class BgiOnnxSessionFactory
     /// <returns>BgiYoloPredictor</returns>
     public BgiYoloPredictor CreateYoloPredictor(BgiOnnxModel model)
     {
-        // 后端按「全局意图 + 逐用途开关 + 已登记内置模型」路由：脚本自定义模型从未承诺有转换产物，
-        // 不会进入 ncnn / OpenVINO；全局配置未初始化（如单元测试）时按 ONNX 处理，
+        // 后端按「逐用途开关 + 已登记内置模型」路由：脚本自定义模型从未承诺有转换产物，
+        // 不会进入 ncnn；全局配置未初始化（如单元测试）时按 ONNX 处理，
         // SessionOptions 仍然创建并转交，脚本 API 保持可用。
         var backend = InferenceBackendRouter.CreateYoloBackend(model, _logger);
         var options = CreateSessionOptions(model, EnableCache);
@@ -142,7 +149,7 @@ public sealed class BgiOnnxSessionFactory
     }
 
     /// <summary>
-    ///     获取普通缓存目录（TensorRT）
+    ///     获取普通缓存目录（TensorRT / OpenVINO）
     /// </summary>
     /// <param name="model">模型</param>
     /// <param name="forcedProvider">强制使用的 providerTypes</param>
@@ -150,7 +157,7 @@ public sealed class BgiOnnxSessionFactory
     private string? GetCached(BgiOnnxModel model, ProviderType[]? forcedProvider = null)
     {
         var providers = forcedProvider ?? ProviderTypes;
-        if (!providers.Contains(ProviderType.TensorRt)) return null;
+        if (!providers.Contains(ProviderType.TensorRt) && !providers.Contains(ProviderType.OpenVino)) return null;
         // 判断文件是否存在：这里只缓存目录，原始模型始终保持不变，不加载旧 _ctx.onnx。
         return _cachedModelPaths.GetOrAdd(model, _ => Runtime.GetCachePath(model));
     }
@@ -190,6 +197,10 @@ public sealed class BgiOnnxSessionFactory
                         //     sessionOptions.IntraOpNumThreads = 2;  // 限制算子内部并行线程数
                         //     sessionOptions.InterOpNumThreads = 1;  // 限制算子间并行线程数（顺序执行）
                         // }
+                        break;
+                    case ProviderType.OpenVino:
+                        sessionOptions.AppendExecutionProvider("OpenVINO", GetOpenVinoProviderConfig(cache));
+                        sessionOptions.GraphOptimizationLevel = GraphOptimizationLevel.ORT_DISABLE_ALL;
                         break;
                     case ProviderType.TensorRt:
                         using (var options = new OrtTensorRTProviderOptions())
@@ -287,6 +298,42 @@ public sealed class BgiOnnxSessionFactory
         {
             ["device_id"] = CudaDeviceId.ToString()
         };
+        return result;
+    }
+
+    /// <summary>
+    ///     获取 OpenVINO 执行提供程序的会话配置（device_type 与编译缓存目录）。
+    /// </summary>
+    /// <param name="cacheFolder">缓存根目录，null 表示本次会话不使用编译缓存</param>
+    /// <returns>OpenVINO provider 配置</returns>
+    private Dictionary<string, string> GetOpenVinoProviderConfig(string? cacheFolder)
+    {
+        var result = new Dictionary<string, string>();
+        if (!string.IsNullOrWhiteSpace(OpenVinoDevice))
+        {
+            result["device_type"] = OpenVinoDevice;
+        }
+
+        if (!string.IsNullOrWhiteSpace(cacheFolder))
+        {
+            // OpenVINO缓存目录
+            result["cache_dir"] = Path.Combine(cacheFolder, "openvino");
+            if (!Directory.Exists(result["cache_dir"]))
+            {
+                try
+                {
+                    Directory.CreateDirectory(result["cache_dir"]);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError("无法创建OpenVINO缓存目录: {Path}，请检查权限。({Err})", result["cache_dir"],
+                        e.Message);
+                    // 如果无法创建目录，就不使用缓存
+                    result.Remove("cache_dir");
+                }
+            }
+        }
+
         return result;
     }
 

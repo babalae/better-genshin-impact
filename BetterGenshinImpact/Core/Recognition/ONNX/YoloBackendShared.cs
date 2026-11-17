@@ -12,7 +12,7 @@ namespace BetterGenshinImpact.Core.Recognition.ONNX;
 internal readonly record struct RawBox(int ClassIndex, float Confidence, float X, float Y, float W, float H);
 
 /// <summary>
-///     YOLO 后端共享的预处理与解码逻辑：ncnn（NcnnYoloPredictor）与 OpenVINO（OpenVinoYoloPredictor）
+///     YOLO 后端共享的预处理与解码逻辑：ncnn（NcnnYoloPredictor）等替代后端
 ///     逐条复刻 YoloSharp 6.0.3（Yolo11RawBoundingBoxParser / NonMaxSuppressionService /
 ///     ImageAdjustmentService / SessionRunnerService），保证与被替换路线行为一致：
 ///     - 最近邻缩放到模型输入的内接矩形（ImageSharp ResizeMode.Max），内容区写入清零张量，四周补 0；
