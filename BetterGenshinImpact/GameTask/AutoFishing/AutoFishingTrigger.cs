@@ -74,8 +74,13 @@ namespace BetterGenshinImpact.GameTask.AutoFishing
         {
             IsExclusive = false;
             _prevExecute = DateTime.MinValue;
-            if (_lastTickTask?.IsCompleted == true)
+            if (_lastTickTask is { IsCompleted: true } completed)
             {
+                if (completed.IsCanceled)
+                {
+                    // 已取消的任务不会被 OnCapture 观察到，松键需在此处补做
+                    input.Mouse.LeftButtonUp();
+                }
                 _lastTickTask = null;
             }
             BuildBehaviourTree();
