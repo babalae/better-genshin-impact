@@ -15,6 +15,18 @@ internal interface IOcrInferenceSession : IDisposable
     /// <summary>模型输入节点名。</summary>
     string InputName { get; }
 
+    /// <summary>
+    ///     固定输入形状的最后一维宽度（NCHW 的 W）；动态形状会话返回 null。
+    ///     Rec 预处理据此把超宽文本行压缩到固定宽度内（NPU 静态形状要求）。
+    /// </summary>
+    int? FixedInputWidth { get; }
+
+    /// <summary>
+    ///     固定输入形状的高度（NCHW 的 H）；动态形状会话返回 null。
+    ///     Det 预处理在宽高均固定时走静态画布分支（长边等比缩放 + 补零，Intel 官方 GPU/NPU 方案）。
+    /// </summary>
+    int? FixedInputHeight { get; }
+
     /// <summary>运行一次推理，按输出节点顺序返回每个输出的形状与数据副本（DML 释放语义下数据必须在锁内拷出）。</summary>
     OcrInferenceResult[] Run(Tensor<float> input);
 }
@@ -26,6 +38,12 @@ internal sealed record OcrInferenceResult(int[] Shape, float[] Data);
 internal sealed class OrtOcrInferenceSession(InferenceSession session) : IOcrInferenceSession
 {
     public string InputName { get; } = session.InputNames[0];
+
+    /// <summary>ONNX Runtime 路线保持动态宽度。</summary>
+    public int? FixedInputWidth => null;
+
+    /// <summary>ONNX Runtime 路线保持动态高度。</summary>
+    public int? FixedInputHeight => null;
 
     public OcrInferenceResult[] Run(Tensor<float> input)
     {

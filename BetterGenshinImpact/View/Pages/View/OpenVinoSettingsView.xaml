@@ -45,6 +45,66 @@
             </StackPanel>
         </Border>
 
+        <!--  NPU 静态形状策略（仅设备为 NPU 时显示）  -->
+        <Border Padding="16" CornerRadius="10" BorderThickness="1" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" Margin="0,12,0,0"
+                Visibility="{Binding IsNpuDevice, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel>
+                <TextBlock Text="NPU 静态形状策略" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding NpuStrategyHint, Mode=OneWay}" TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <DockPanel Margin="0,12,0,0">
+                    <ui:NumberBox DockPanel.Dock="Right" Width="140" VerticalAlignment="Center"
+                                  Minimum="32" Maximum="1024" SmallChange="32" LargeChange="64"
+                                  AcceptsExpression="False" ClearButtonEnabled="False" SpinButtonPlacementMode="Inline"
+                                  ValidationMode="InvalidInputOverwritten"
+                                  Value="{Binding NpuRecWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  IsEnabled="{Binding CanInteract}" AutomationProperties.Name="NPU 识别固定宽度" />
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="识别固定宽度" FontWeight="SemiBold" />
+                        <TextBlock Text="文本行缩放到模型高度后补零边到该宽度；长文本识别不全时调大（32 的倍数，默认 320）。"
+                                   TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </DockPanel>
+                <DockPanel Margin="0,10,0,0">
+                    <ComboBox DockPanel.Dock="Right" Width="220" VerticalAlignment="Center"
+                              ItemsSource="{Binding DetFallbackDevices}" SelectedItem="{Binding SelectedDetFallbackDevice}"
+                              DisplayMemberPath="DisplayName" IsEnabled="{Binding CanInteract}"
+                              AutomationProperties.Name="NPU 检测回落设备" />
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="检测回落设备" FontWeight="SemiBold" />
+                        <TextBlock Text="检测模型在 NPU 上无法运行（动态形状），改由该设备承担；识别仍在 NPU。"
+                                   TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </DockPanel>
+            </StackPanel>
+        </Border>
+
+        <!--  GPU 静态宽度桶（仅设备为 GPU 时显示）  -->
+        <Border Padding="16" CornerRadius="10" BorderThickness="1" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" Margin="0,12,0,0"
+                Visibility="{Binding IsGpuDevice, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <StackPanel>
+                <TextBlock Text="GPU 静态宽度桶" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding GpuStrategyHint, Mode=OneWay}" TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <DockPanel Margin="0,12,0,0">
+                    <ui:TextBox DockPanel.Dock="Right" Width="220" VerticalAlignment="Center"
+                                PlaceholderText="320,640,960" ClearButtonEnabled="False"
+                                Text="{Binding GpuRecWidthBuckets, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                IsEnabled="{Binding CanInteract}" AutomationProperties.Name="GPU 识别宽度桶" />
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Text="识别宽度桶" FontWeight="SemiBold" />
+                        <TextBlock Text="逗号分隔的宽度列表（32–1024），应用时自动去重排序；桶越多编译与显存占用越高，默认 320,640,960。"
+                                   TextWrapping="Wrap" Margin="0,4,0,0" FontSize="12"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </DockPanel>
+            </StackPanel>
+        </Border>
+
         <!--  用途开关  -->
         <Border Padding="16" CornerRadius="10" BorderThickness="1" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                 Background="{DynamicResource CardBackgroundFillColorDefaultBrush}" Margin="0,12,0,0">

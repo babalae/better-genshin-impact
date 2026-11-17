@@ -96,16 +96,24 @@ public class OpenVinoUnavailableException : Exception
     public OpenVinoUnavailableException(string message, Exception inner) : base(message, inner) { }
 }
 
-/// <summary>OpenVINO Core 的懒加载缓存容器：同一 (model, device, cache) 组合复用已编译模型。</summary>
+/// <summary>
+///     OpenVINO Core 的懒加载缓存容器：同一 (model, device, cache, 固定形状) 组合复用已编译模型。
+///     固定形状不同视为不同编译产物（NPU 静态形状按宽度分档时各档独立缓存）。
+/// </summary>
 internal static class OpenVinoCompiledModelCache
 {
     private static readonly ConcurrentDictionary<string, CachedModel> Cache = new();
 
+    /// <param name="fixedInputShape">
+    ///     可选的固定输入形状：非 null 时先 read_model → reshape 再编译（NPU 等要求静态形状的设备），
+    ///     为 null 时保持模型原始（动态）形状直接编译。
+    /// </param>
     public static CompiledModel GetOrCompile(string modelPath, string deviceId, bool enableCache,
-        string? cacheDirectory = null)
+        string? cacheDirectory = null, long[]? fixedInputShape = null)
     {
-        var key = $"{modelPath}|{deviceId}|{enableCache}";
-        return Cache.GetOrAdd(key, _ => new CachedModel(modelPath, deviceId, enableCache, cacheDirectory)).Model;
+        var shapeKey = fixedInputShape == null ? "" : string.Join("x", fixedInputShape);
+        var key = $"{modelPath}|{deviceId}|{enableCache}|{shapeKey}";
+        return Cache.GetOrAdd(key, _ => new CachedModel(modelPath, deviceId, enableCache, cacheDirectory, fixedInputShape)).Model;
     }
 
     /// <summary>缓存条目：懒创建，编译失败不缓存异常（下次重试）。</summary>
@@ -115,15 +123,18 @@ internal static class OpenVinoCompiledModelCache
         private readonly string _deviceId;
         private readonly bool _enableCache;
         private readonly string? _cacheDirectory;
+        private readonly long[]? _fixedInputShape;
         private readonly object _lock = new();
         private CompiledModel? _model;
 
-        public CachedModel(string modelPath, string deviceId, bool enableCache, string? cacheDirectory)
+        public CachedModel(string modelPath, string deviceId, bool enableCache, string? cacheDirectory,
+            long[]? fixedInputShape)
         {
             _modelPath = modelPath;
             _deviceId = deviceId;
             _enableCache = enableCache;
             _cacheDirectory = cacheDirectory;
+            _fixedInputShape = fixedInputShape;
         }
 
         public CompiledModel Model
@@ -149,9 +160,23 @@ internal static class OpenVinoCompiledModelCache
                         }
                     }
 
-                    _model = properties.Count > 0
-                        ? core.compile_model_unicode(_modelPath, _deviceId, properties)
-                        : core.compile_model_unicode(_modelPath, _deviceId);
+                    if (_fixedInputShape != null)
+                    {
+                        // 静态形状路径：reshape 必须发生在编译前（NPU 编译器只接受静态图）。
+                        // bin_path 传空串：ONNX 单文件模型无 IR 权重文件。
+                        using var model = core.read_model_unicode(_modelPath, "");
+                        model.reshape(new Shape(_fixedInputShape));
+                        _model = properties.Count > 0
+                            ? core.compile_model(model, _deviceId, properties)
+                            : core.compile_model(model, _deviceId);
+                    }
+                    else
+                    {
+                        _model = properties.Count > 0
+                            ? core.compile_model_unicode(_modelPath, _deviceId, properties)
+                            : core.compile_model_unicode(_modelPath, _deviceId);
+                    }
+
                     return _model;
                 }
             }
