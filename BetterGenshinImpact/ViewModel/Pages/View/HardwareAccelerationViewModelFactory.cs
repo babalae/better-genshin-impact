@@ -1,4 +1,5 @@
 using BetterGenshinImpact.Core.Recognition.ONNX;
+using BetterGenshinImpact.Core.Recognition.OpenVino;
 using BetterGenshinImpact.Service.Interface;
 
 namespace BetterGenshinImpact.ViewModel.Pages.View;
@@ -7,7 +8,9 @@ namespace BetterGenshinImpact.ViewModel.Pages.View;
 public sealed class HardwareAccelerationViewModelFactory(
     InferenceRuntimeService runtime, IOnnxRuntimeInstaller installer, IInferenceDeviceDiscovery devices,
     IInferenceModelDiagnostics diagnostics, BgiOnnxFactory factory, IConfigService configService,
-    IInferenceBenchmarkLeaseProvider leases, IInferenceSettingsInteraction interaction)
+    IInferenceBenchmarkLeaseProvider leases, IInferenceSettingsInteraction interaction,
+    IOpenVinoRuntimeInstaller openVinoInstaller)
 {
-    public HardwareAccelerationViewModel Create() => new(runtime, installer, devices, diagnostics, factory, configService, leases, interaction);
+    public HardwareAccelerationViewModel Create() => new(runtime, installer, devices, diagnostics, factory, configService, leases,
+        interaction, openVinoInstaller);
 }

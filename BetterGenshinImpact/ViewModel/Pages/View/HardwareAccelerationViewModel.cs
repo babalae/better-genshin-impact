@@ -198,10 +198,12 @@ public partial class HardwareAccelerationViewModel : ObservableObject, IViewMode
 
     public HardwareAccelerationViewModel(InferenceRuntimeService runtime, IOnnxRuntimeInstaller installer,
         IInferenceDeviceDiscovery devices, IInferenceModelDiagnostics diagnostics, BgiOnnxFactory factory, IConfigService configService,
-        IInferenceBenchmarkLeaseProvider leases, IInferenceSettingsInteraction interaction)
+        IInferenceBenchmarkLeaseProvider leases, IInferenceSettingsInteraction interaction,
+        IOpenVinoRuntimeInstaller openVinoInstaller)
     {
         _runtime = runtime;
         _installer = installer;
+        OpenVinoInstaller = openVinoInstaller;
         _devices = devices;
         _diagnostics = diagnostics;
         _factory = factory;
