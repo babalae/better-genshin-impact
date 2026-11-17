@@ -121,7 +121,7 @@ public class HardwareAccelerationViewRenderTests : IDisposable
     private static HardwareAccelerationViewModel CreateViewModel(TestConfigService store, InferenceRuntimeService runtime)
         => new(runtime, new FakeInstaller(), new FakeDevices(), new FakeDiagnostics(),
             new BgiOnnxFactory(NullLogger<BgiOnnxFactory>.Instance, runtime), store,
-            new FakeLeases(), new FakeInteraction());
+            new FakeLeases(), new FakeInteraction(), new FakeOpenVinoInstaller());
 
     /// <summary>强制布局 + 渲染为 PNG（尺寸取实际期望大小）。</summary>
     private static void RenderToFile(FrameworkElement element, int width, int height, string path)

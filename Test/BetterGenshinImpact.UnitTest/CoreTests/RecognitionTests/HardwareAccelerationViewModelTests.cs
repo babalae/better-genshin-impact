@@ -156,7 +156,7 @@ public class HardwareAccelerationViewModelTests
         TestConfigService store, InferenceRuntimeService runtime)
         => new(runtime, new Installer(), new Devices(), new Diagnostics(),
             new BgiOnnxFactory(NullLogger<BgiOnnxFactory>.Instance, runtime), store,
-            new Leases(), new Interaction());
+            new Leases(), new Interaction(), new FakeOpenVinoInstaller());
 
     private static InferenceRuntimeService CreateRuntime(HardwareAccelerationConfig config, TestConfigService store)
     {

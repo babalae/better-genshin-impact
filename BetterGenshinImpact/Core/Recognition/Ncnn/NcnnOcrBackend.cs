@@ -13,13 +13,10 @@ namespace BetterGenshinImpact.Core.Recognition.Ncnn;
 /// </summary>
 internal static class NcnnOcrBackend
 {
-    /// <summary>ncnn 资产目录（相对启动目录）。</summary>
-    private const string RelativeModelDir = @"Assets\Model\PaddleOCR\Ncnn";
-
     public static (IOcrDetector Det, IOcrRecognizer Rec) Create(ILogger logger, PaddleOcrService.PaddleOcrModelType modelType,
         NcnnBackendSettings settings)
     {
-        var modelDir = Global.Absolute(RelativeModelDir);
+        var modelDir = NcnnModelPaths.OcrModelDirectory;
         RequireShim();
 
         NcnnDet? det = null;

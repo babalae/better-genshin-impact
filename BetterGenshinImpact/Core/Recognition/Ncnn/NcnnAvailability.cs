@@ -23,8 +23,6 @@ public sealed record NcnnAssetGroup(string Name, int ReadyCount, int TotalCount,
 /// </summary>
 public sealed class NcnnAvailability
 {
-    private const string OcrModelRelativeDir = @"Assets\Model\PaddleOCR\Ncnn";
-
     private static readonly (BgiOnnxModel Model, string Display, string Usage)[] YoloModels =
     [
         (BgiOnnxModel.BgiWorld, "世界物体检测", "拾取 · 战斗结束检测"),
@@ -37,7 +35,7 @@ public sealed class NcnnAvailability
     ];
 
     /// <summary>OCR 模型目录（绝对路径），诊断探测与装配路径共用。</summary>
-    public static string OcrModelDirectory => Global.Absolute(OcrModelRelativeDir);
+    public static string OcrModelDirectory => NcnnModelPaths.OcrModelDirectory;
 
     private NcnnAvailability(bool shimReady, string shimPath, IReadOnlyList<NcnnAssetGroup> groups)
     {
@@ -73,7 +71,7 @@ public sealed class NcnnAvailability
         // shim 走 NuGet 原生包标准解析（裸名加载），可用性以导出探测为准
         var shimReady = NcnnShim.IsSupported();
         var shimText = "NuGet 包 BetterGI.NcnnShim（runtimes/win-x64/native/ncnn_shim.dll）";
-        var ocrDir = Global.Absolute(OcrModelRelativeDir);
+        var ocrDir = NcnnModelPaths.OcrModelDirectory;
 
         return new NcnnAvailability(shimReady, shimText,
         [
@@ -82,7 +80,7 @@ public sealed class NcnnAvailability
             BuildGroup("OCR 文字识别", [BuildItem(
                 ocrDir, "rec_dyn", "文字识别 · 动态形状", "OCR 结果解码")]),
             BuildGroup("YOLO 检测与分类", YoloModels.Select(def => BuildItem(
-                Path.Combine(Path.GetDirectoryName(def.Model.ModalPath) ?? ".", "Ncnn"),
+                NcnnModelPaths.YoloModelDirectory(def.Model),
                 Path.GetFileNameWithoutExtension(def.Model.ModalPath), def.Display, def.Usage)))
         ]);
     }

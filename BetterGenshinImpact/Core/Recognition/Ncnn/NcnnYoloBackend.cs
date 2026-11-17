@@ -44,7 +44,7 @@ internal static class NcnnYoloBackend
         var gpuIndex = settings.EffectiveGpuIndex;
         var numThreads = settings.Yolo.Threads;
         var stem = Path.GetFileNameWithoutExtension(model.ModalPath);
-        var ncnnDir = Path.Combine(Path.GetDirectoryName(model.ModalPath) ?? ".", "Ncnn");
+        var ncnnDir = NcnnModelPaths.YoloModelDirectory(model);
         var paramPath = Path.Combine(ncnnDir, stem + ".param");
         var modelPath = Path.Combine(ncnnDir, stem + ".bin");
         if (!File.Exists(paramPath) || !File.Exists(modelPath))
