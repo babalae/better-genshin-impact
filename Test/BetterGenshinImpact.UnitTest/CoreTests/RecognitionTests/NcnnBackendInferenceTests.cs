@@ -4,6 +4,7 @@ using System.Linq;
 using BetterGenshinImpact.Core.Config;
 using BetterGenshinImpact.Core.Recognition.Ncnn;
 using BetterGenshinImpact.Core.Recognition.OCR.Engine;
+using BetterGenshinImpact.Core.Recognition.OCR.Paddle;
 using BetterGenshinImpact.Core.Recognition.ONNX;
 using Compunet.YoloSharp.Metadata;
 using SixLabors.ImageSharp;
@@ -39,10 +40,12 @@ public class NcnnBackendInferenceTests
         if (!File.Exists(treeImagePath)) return;
         using var image = Image.Load<Rgb24>(treeImagePath);
 
+        var paths = NcnnYoloBackendPaths(BgiOnnxModel.BgiTree);
+        if (!File.Exists(paths.param) || !File.Exists(paths.bin)) return; // 模型由 ncnn_models 插件分发，未安装时跳过
         var (names, width, height, isClassifier) = YoloOnnxMetadata.GetOrRead(BgiOnnxModel.BgiTree.ModalPath);
         Assert.False(isClassifier);
         using var predictor = new NcnnYoloPredictor(new NcnnShim(),
-            NcnnYoloBackendPaths(BgiOnnxModel.BgiTree).param, NcnnYoloBackendPaths(BgiOnnxModel.BgiTree).bin,
+            paths.param, paths.bin,
             names, width, height, tuning: NcnnTuningSettings.CreateDefault(), gpuIndex: -1, isClassifier: false);
         var result = predictor.Detect(image);
         var boxes = result.ToList();
@@ -57,7 +60,8 @@ public class NcnnBackendInferenceTests
     public void OcrDet_Ncnn_RunsDynamicSquareCanvas()
     {
         if (!ShimAvailable()) return;
-        var modelDir = Path.Combine(AppContext.BaseDirectory, "Assets", "Model", "PaddleOCR", "Ncnn");
+        var modelDir = NcnnModelPaths.OcrModelDirectory;
+        if (!File.Exists(Path.Combine(modelDir, "det_dyn.param"))) return; // 模型由插件分发，未安装时跳过
         using var det = new NcnnDet(new NcnnShim(), modelDir, OcrVersionConfig.PpOcrV6,
             NcnnTuningSettings.CreateDefault(), gpuIndex: -1);
         // 噪声输入 96x96（≤ limit 960，无需缩放）：画布为内容对齐 32 的最小正方形 96x96
@@ -71,10 +75,10 @@ public class NcnnBackendInferenceTests
     public void OcrRec_Ncnn_RunsDynamicWidth()
     {
         if (!ShimAvailable()) return;
-        var modelDir = Path.Combine(AppContext.BaseDirectory, "Assets", "Model", "PaddleOCR", "Ncnn");
-        var dictPath = Path.Combine(modelDir, "dict.txt");
-        Assert.True(File.Exists(dictPath), "V6 字典缺失");
-        var labels = File.ReadAllLines(dictPath);
+        var modelDir = NcnnModelPaths.OcrModelDirectory;
+        if (!File.Exists(Path.Combine(modelDir, "rec_dyn.param"))) return; // 模型由插件分发，未安装时跳过
+        var labels = PaddleOcrService.PaddleOcrModelType.V6.RecLabel();
+        Assert.NotEmpty(labels);
         using var rec = new NcnnRec(new NcnnShim(), modelDir, labels,
             NcnnTuningSettings.CreateDefault(), gpuIndex: -1);
         using var line = new OpenCvSharp.Mat(48, 320, OpenCvSharp.MatType.CV_8UC3, new OpenCvSharp.Scalar(128, 64, 32));
@@ -99,7 +103,7 @@ public class NcnnBackendInferenceTests
     private static (string param, string bin) NcnnYoloBackendPaths(BetterGenshinImpact.Core.Recognition.ONNX.BgiOnnxModel model)
     {
         var stem = Path.GetFileNameWithoutExtension(model.ModalPath);
-        var ncnnDir = Path.Combine(Path.GetDirectoryName(model.ModalPath) ?? ".", "Ncnn");
+        var ncnnDir = NcnnModelPaths.YoloModelDirectory(model);
         return (Path.Combine(ncnnDir, stem + ".param"), Path.Combine(ncnnDir, stem + ".bin"));
     }
 }
