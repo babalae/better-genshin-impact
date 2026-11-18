@@ -69,13 +69,15 @@ public class InferenceBackendConfigTests
     [Fact]
     public void HardwareAccelerationConfig_JsonWithCorruptedBackendNode_FallsBackToDefaultBackendConfig()
     {
-        // 嵌套节点损坏（ncnn.gpuIndex 为字符串）：只回落该后端子配置，不影响其他字段读取
+        // 嵌套节点损坏（ncnn.gpuIndex 为字符串）：只回落该后端子配置，不影响其他字段读取。
+        // inferenceDevice / cpuOcr / directML.deviceId 均用非默认值，整份配置一旦被重置这里即可捕获。
         const string json = """
             {
               "formatVersion": 1,
-              "inferenceDevice": 0,
-              "cpuOcr": true,
+              "inferenceDevice": 1,
+              "cpuOcr": false,
               "cpu": { "deviceId": "CPU" },
+              "directML": { "deviceId": "DXGI:2" },
               "ncnn": { "useOcr": true, "gpuIndex": "broken" }
             }
             """;
@@ -83,7 +85,10 @@ public class InferenceBackendConfigTests
         var config = JsonSerializer.Deserialize<HardwareAccelerationConfig>(json, options);
 
         Assert.NotNull(config);
-        Assert.Equal(InferenceDeviceType.Cpu, config.InferenceDevice);
+        // 损坏的 ncnn 子树不得重置非 ncnn 配置
+        Assert.Equal(InferenceDeviceType.DirectML, config.InferenceDevice);
+        Assert.False(config.CpuOcr);
+        Assert.Equal("DXGI:2", config.DirectML.DeviceId);
         // 节点损坏 → 回落默认
         Assert.False(config.Ncnn.UseOcr);
         Assert.Equal(0, config.Ncnn.GpuIndex);

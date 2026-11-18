@@ -5,7 +5,7 @@ namespace BetterGenshinImpact.Core.Config;
 /// <summary>
 ///     ncnn 配置的 JSON 读取：嵌套节点缺失或损坏时回落默认配置。
 ///     从 <see cref="HardwareAccelerationConfigJsonConverter" /> 独立，保持 ncnn 序列化细节与主转换器解耦。
-///     写路径由主转换器直接序列化 <see cref="NcnnConfig" />：其 public 属性即白名单
+///     写路径由主转换器以 <c>SerializeToElement</c> 序列化 <see cref="NcnnConfig" />：其 public 属性即白名单
 ///     （后端意图、逐用途开关、计算模式、设备索引与三套调优），无多余字段、无循环引用。
 /// </summary>
 internal static class NcnnConfigJson
