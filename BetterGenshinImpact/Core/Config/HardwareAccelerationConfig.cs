@@ -83,10 +83,31 @@ public partial class HardwareAccelerationConfig : ObservableObject
     }
 
     /// <summary>
-    /// 是否强制OCR使用CPU推理。在某些环境上使用GPU进行OCR推理会导致性能下降(比如很多使用DirectML推理的情况下)。默认开启。
+    ///     是否强制OCR使用CPU推理。在某些环境上使用GPU进行OCR推理会导致性能下降(比如很多使用DirectML推理的情况下)。默认开启。
     /// </summary>
     [ObservableProperty]
     private bool _cpuOcr = true;
+
+    /// <summary>
+    ///     全局推理后端意图（ONNX Runtime / ncnn）。实际生效由各后端的逐用途开关决定，
+    ///     便于「全局 ONNX + YOLO 走 ncnn」这类单项覆盖；见 <c>InferenceBackendRouter</c>。
+    ///     OpenVINO 是 ONNX Runtime 的执行提供程序，属于 <see cref="InferenceDevice" /> 的引擎选项，不在此列。
+    /// </summary>
+    [ObservableProperty]
+    private InferenceBackend _preferredBackend = InferenceBackend.Onnx;
+
+    /// <summary>
+    ///     ncnn 后端的独立配置（用途开关、计算模式与三套调优）。
+    ///     结构校验与整体重置均不波及该子对象：ONNX 侧配置损坏或回退时 ncnn 参数保持不变。
+    /// </summary>
+    [ObservableProperty]
+    private NcnnConfig _ncnn = new();
+
+    partial void OnPreferredBackendChanged(InferenceBackend value)
+    {
+        // 脚本或其他调用方写入未知值时回落 ONNX，与配置读取的兜底一致。
+        if (!Enum.IsDefined(value)) PreferredBackend = InferenceBackend.Onnx;
+    }
 
     #region 已移除参数的源注释（不读取、不保存，也不参与新推理设置）
     // 强制指定gpu设备,默认为0(使用默认设备)

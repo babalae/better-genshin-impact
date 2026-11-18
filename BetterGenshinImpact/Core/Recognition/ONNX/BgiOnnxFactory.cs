@@ -114,16 +114,19 @@ public sealed class BgiOnnxSessionFactory
     /// <returns>BgiYoloPredictor</returns>
     public BgiYoloPredictor CreateYoloPredictor(BgiOnnxModel model)
     {
-        // 延后验证只影响后续新建会话，不修改或释放已经运行中的会话。
-        // logger.LogDebug("[Yolo]创建yolo预测器，模型: {ModelName}", model.Name);
+        // 后端按「逐用途开关 + 已登记内置模型」路由：脚本自定义模型从未承诺有转换产物，
+        // 不会进入 ncnn；全局配置未初始化（如单元测试）时按 ONNX 处理，
+        // SessionOptions 仍然创建并转交，脚本 API 保持可用。
+        var backend = InferenceBackendRouter.CreateYoloBackend(model, _logger);
         var options = CreateSessionOptions(model, EnableCache);
         try
         {
             // 延迟创建会话，配置的所有权转交给预测器。
-            return new BgiYoloPredictor(model, model.ModalPath, options);
+            return new BgiYoloPredictor(model, model.ModalPath, options, backend);
         }
         catch
         {
+            backend?.Dispose();
             options.Dispose();
             throw;
         }
@@ -299,10 +302,10 @@ public sealed class BgiOnnxSessionFactory
     }
 
     /// <summary>
-    /// 
+    ///     获取 OpenVINO 执行提供程序的会话配置（device_type 与编译缓存目录）。
     /// </summary>
-    /// <param name="cacheFolder"></param>
-    /// <returns></returns>
+    /// <param name="cacheFolder">缓存根目录，null 表示本次会话不使用编译缓存</param>
+    /// <returns>OpenVINO provider 配置</returns>
     private Dictionary<string, string> GetOpenVinoProviderConfig(string? cacheFolder)
     {
         var result = new Dictionary<string, string>();

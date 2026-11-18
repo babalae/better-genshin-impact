@@ -9,5 +9,6 @@ public sealed class HardwareAccelerationViewModelFactory(
     IInferenceModelDiagnostics diagnostics, BgiOnnxFactory factory, IConfigService configService,
     IInferenceBenchmarkLeaseProvider leases, IInferenceSettingsInteraction interaction)
 {
-    public HardwareAccelerationViewModel Create() => new(runtime, installer, devices, diagnostics, factory, configService, leases, interaction);
+    public HardwareAccelerationViewModel Create() => new(runtime, installer, devices, diagnostics, factory, configService, leases,
+        interaction);
 }

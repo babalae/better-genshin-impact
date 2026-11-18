@@ -16,8 +16,8 @@ public sealed class OnnxRuntimeLoaderTests : IDisposable
     }
 
     [Theory]
-    [InlineData(InferenceDeviceType.OpenVINO, "OpenVINO")]
     [InlineData(InferenceDeviceType.CUDA, "CUDA")]
+    [InlineData(InferenceDeviceType.OpenVINO, "OpenVINO")]
     public void MissingSelectedRuntime_FallsBackToCpuWithoutChangingSavedSettings(
         InferenceDeviceType device, string directoryName)
     {
@@ -33,6 +33,33 @@ public sealed class OnnxRuntimeLoaderTests : IDisposable
         Assert.Contains(directoryName, loader.StatusText);
         Assert.Equal(device, config.InferenceDevice);
         Assert.Equal("保存的设备", config.DirectML.DeviceId);
+    }
+
+    [Fact]
+    public void OpenVinoPluginDirectory_LoadFailure_FallsBackToCpuReportingOpenVino()
+    {
+        // 目录映射存在时，加载器才会走到 OpenVINO 目录并尝试加载原生库；
+        // 若映射再次丢失，StatusText 会停留在默认值，不含 "OpenVINO"。
+        var config = new HardwareAccelerationConfig
+        {
+            InferenceDevice = InferenceDeviceType.OpenVINO,
+            OpenVINO = new() { DeviceId = "GPU.0" }
+        };
+        var pluginDirectory = OnnxRuntimePackageCatalog.EngineDirectory(
+            Path.Combine(_directory, "Plugins", "OnnxRuntime"), InferenceDeviceType.OpenVINO);
+        Directory.CreateDirectory(pluginDirectory);
+        foreach (var file in OnnxRuntimePackageCatalog.ProviderFiles(InferenceDeviceType.OpenVINO))
+            File.WriteAllText(Path.Combine(pluginDirectory, file), string.Empty);
+
+        // 原生库加载失败（返回零句柄），走 catch 分支回退 CPU，不注册 DllImport 解析器。
+        var loader = new OnnxRuntimeLoader(config, _directory,
+            _ => IntPtr.Zero, _ => OnnxRuntimeLoader.RequiredVersion, _ => { });
+
+        Assert.Equal(InferenceDeviceType.Cpu, loader.InferenceDevice);
+        Assert.Contains("OpenVINO", loader.StatusText);
+        Assert.Contains("运行库无法加载", loader.FailureReason);
+        Assert.Equal(InferenceDeviceType.OpenVINO, config.InferenceDevice);
+        Assert.Equal("GPU.0", config.OpenVINO.DeviceId);
     }
 
     public void Dispose()

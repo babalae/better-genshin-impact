@@ -18,6 +18,11 @@ public sealed class HardwareAccelerationConfigJsonConverter : JsonConverter<Hard
             return new()
             {
                 FormatVersion = data.FormatVersion, InferenceDevice = data.InferenceDevice, CpuOcr = data.CpuOcr,
+                // 全局后端意图：越界值由 PreferredBackend 的属性兜底回落 Onnx（对象初始化器走生成属性）。
+                PreferredBackend = data.PreferredBackend,
+                // 后端子配置独立读取：根反序列化不解析 ncnn 子树（见 SerializedConfiguration.Ncnn），
+                // 优先嵌套节点，缺失或损坏时局部回落默认（细节见 NcnnConfigJson）。
+                Ncnn = NcnnConfigJson.Read(document.RootElement, options),
                 Cpu = data.Cpu!, DirectML = data.DirectML!, OpenVINO = data.OpenVINO!, Cuda = data.Cuda!, TensorRT = data.TensorRT!,
                 PaddleOcrCpu = data.PaddleOcrCpu ?? new(),
                 ValidationState = data.ValidationState, VerifiedSignature = data.VerifiedSignature ?? "",
@@ -32,6 +37,9 @@ public sealed class HardwareAccelerationConfigJsonConverter : JsonConverter<Hard
         => JsonSerializer.Serialize(writer, new SerializedConfiguration
         {
             FormatVersion = value.FormatVersion, InferenceDevice = value.InferenceDevice, CpuOcr = value.CpuOcr,
+            // 后端子配置预生成 JsonElement 节点（对应读侧的延迟解析）：public 属性即嵌套节点白名单（无循环，派生属性已 [JsonIgnore]）。
+            PreferredBackend = value.PreferredBackend,
+            Ncnn = JsonSerializer.SerializeToElement(value.Ncnn, options),
             Cpu = value.Cpu, DirectML = value.DirectML, OpenVINO = value.OpenVINO, Cuda = value.Cuda, TensorRT = value.TensorRT,
             PaddleOcrCpu = value.PaddleOcrCpu,
             ValidationState = value.ValidationState, VerifiedSignature = value.VerifiedSignature,
@@ -45,6 +53,10 @@ public sealed class HardwareAccelerationConfigJsonConverter : JsonConverter<Hard
         public int FormatVersion { get; set; }
         public InferenceDeviceType InferenceDevice { get; set; }
         public bool CpuOcr { get; set; } = true;
+        public InferenceBackend PreferredBackend { get; set; }
+        // JsonElement? 延迟解析：根反序列化只捕获 ncnn 原始 token 不映射实体，
+        // 子树损坏不会让根读取抛异常整份重置，由 NcnnConfigJson.Read 局部回落默认。
+        public JsonElement? Ncnn { get; set; }
         public InferenceEngineSettings? Cpu { get; set; }
         public PaddleOcrCpuConfig? PaddleOcrCpu { get; set; }
         public InferenceEngineSettings? DirectML { get; set; }

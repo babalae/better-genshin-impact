@@ -6,7 +6,10 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text.Json;
 using Compunet.YoloSharp;
+using Compunet.YoloSharp.Data;
 using Microsoft.ML.OnnxRuntime;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace BetterGenshinImpact.Core.Recognition.ONNX;
 
@@ -17,6 +20,8 @@ public class BgiYoloPredictor : IDisposable
 
     private readonly Lazy<YoloPredictor> _lazyPredictor;
     private readonly SessionOptions _sessionOptions;
+    /// <summary>非空时检测（Detect）走替代后端（ncnn Vulkan）；分类与 Predictor 属性（脚本 API）仍走 ORT。</summary>
+    private readonly IYoloPredictorBackend? _backendPredictor;
     private readonly object _syncRoot = new();
     private bool _disposed;
 
@@ -26,10 +31,13 @@ public class BgiYoloPredictor : IDisposable
     /// <param name="onnxModel">模型</param>
     /// <param name="modelPath">实际要加载的模型文件的绝对路径，在使用模型缓存的场景下可能有差别</param>
     /// <param name="sessionOptions">sessionOptions</param>
-    protected internal BgiYoloPredictor(BgiOnnxModel onnxModel, string modelPath, SessionOptions sessionOptions)
+    /// <param name="backendPredictor">替代推理后端；为空时检测走 YoloSharp（ORT）</param>
+    internal BgiYoloPredictor(BgiOnnxModel onnxModel, string modelPath, SessionOptions sessionOptions,
+        IYoloPredictorBackend? backendPredictor = null)
     {
         _model = onnxModel;
         _sessionOptions = sessionOptions;
+        _backendPredictor = backendPredictor;
         _lazyPredictor = new Lazy<YoloPredictor>(() =>
         {
             try
@@ -67,7 +75,7 @@ public class BgiYoloPredictor : IDisposable
     /// <returns>类别-矩形框</returns>
     public Dictionary<string, List<Rect>> Detect(ImageRegion region)
     {
-        var result = Predictor.Detect(region.CacheImage);
+        var result = DetectCore(region.CacheImage);
 
 
         var dict = new Dictionary<string, List<Rect>>();
@@ -94,6 +102,29 @@ public class BgiYoloPredictor : IDisposable
         return dict;
     }
 
+    /// <summary>检测。供直接调用 YoloSharp 的调用方使用，返回原始检测结果（替代后端生效时同样适用）。</summary>
+    public YoloResult<Detection> Detect(Image<Rgb24> image)
+    {
+        return DetectCore(image);
+    }
+
+    /// <summary>检测（Detect）当前是否走替代后端；false 时检测走 YoloSharp（ORT）。</summary>
+    public bool IsBackendDetection => _backendPredictor is { IsClassifier: false };
+
+    /// <summary>替代后端的描述名；未启用替代后端时为空串。</summary>
+    public string BackendConfigName => _backendPredictor?.ConfigName ?? "";
+
+    /// <summary>替代后端生效时走其后端，否则走 YoloSharp（ORT）。</summary>
+    private YoloResult<Detection> DetectCore(Image<Rgb24> image)
+        => _backendPredictor is { IsClassifier: false } backend ? backend.Detect(image) : Predictor.Detect(image);
+
+    /// <summary>
+    /// 分类。替代后端为分类模型时同样走后端；供直接调用 YoloSharp 的调用方使用，
+    /// 返回原始分类结果（全部类别，置信度降序）。
+    /// </summary>
+    public YoloResult<Classification> Classify(Image<Rgb24> image)
+        => _backendPredictor is { IsClassifier: true } backend ? backend.Classify(image) : Predictor.Classify(image);
+
     public void Dispose()
     {
         lock (_syncRoot)
@@ -109,6 +140,7 @@ public class BgiYoloPredictor : IDisposable
             }
             finally
             {
+                _backendPredictor?.Dispose();
                 _sessionOptions.Dispose();
                 GC.SuppressFinalize(this);
             }
