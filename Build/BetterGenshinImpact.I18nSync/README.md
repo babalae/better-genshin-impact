@@ -72,6 +72,7 @@ dotnet run --project .\Build\BetterGenshinImpact.I18nSync\BetterGenshinImpact.I1
 | 参数 | 说明 |
 | --- | --- |
 | `--project <目录>` | 指定要扫描的主项目目录，该目录下必须存在 `BetterGenshinImpact.csproj` |
+| `--extra-i18n-dir <目录>` | 额外同步的语言目录，如语言插件的 `I18n` 目录；可重复，Key 以主项目的扫描结果为准 |
 | `--add-only` | 只补充缺少的 Key，保留废弃 Key |
 | `--check` | 只检查是否需要同步，不写入文件 |
 | `-h`、`--help` | 显示帮助信息 |
@@ -83,7 +84,7 @@ dotnet run --project .\Build\BetterGenshinImpact.I18nSync\BetterGenshinImpact.I1
 
 ## 语言文件约定
 
-语言文件位于：
+内置语言的文件位于：
 
 ```text
 BetterGenshinImpact/User/I18n/
@@ -92,15 +93,16 @@ BetterGenshinImpact/User/I18n/
 例如：
 
 ```text
-en-US.json
-it-IT.json
-ja-JP.json
-ru-RU.json
+en.json
+ja.json
+ru.json
 ```
+
+意大利语等语言由 `bettergi-plugins` 仓库中的语言插件提供（见 [界面语言插件化](../../Docs/design/ui-language-plugin.md)），文件位于 `bettergi-plugins/src/BetterGI.Plugin.Lang*/I18n/`。`i18n-sync.ps1` 发现同级的 `bettergi-plugins` 仓库时，会把其中每个插件的 `I18n` 目录通过 `--extra-i18n-dir` 一并同步，同步规则与内置语言相同。
 
 同步规则如下：
 
-- 处理该目录下所有 `*.json` 文件。
+- 处理这些目录下所有 `*.json` 文件。
 - 文件名以 `_` 开头的 JSON 会被忽略，可用于保存不参与同步的辅助文件。
 - 已有 Key 的翻译值会原样保留。
 - 新增 Key 的翻译值固定写为空字符串 `""`。

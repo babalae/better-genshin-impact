@@ -23,7 +23,7 @@ internal static class Program
 
             var projectDirectory = ResolveProjectDirectory(options.ProjectDirectory);
             var scanResult = I18nScanner.Scan(projectDirectory);
-            var plans = I18nJsonSynchronizer.CreatePlans(projectDirectory, scanResult.Keys, options.AddOnly);
+            var plans = I18nJsonSynchronizer.CreatePlans(projectDirectory, options.ExtraI18nDirectories, scanResult.Keys, options.AddOnly);
 
             Console.WriteLine($"已扫描 {scanResult.XamlFileCount} 个 XAML 文件和 {scanResult.CodeFileCount} 个 C# 文件，发现 {scanResult.Keys.Count} 个 i18n Key。");
             Console.WriteLine(options.AddOnly ? "模式：只补充，保留废弃 Key。" : "模式：补充并删除废弃 Key。" );
@@ -32,7 +32,7 @@ internal static class Program
             {
                 var obsoleteAction = options.AddOnly ? "保留" : "删除";
                 Console.WriteLine(
-                    $"{Path.GetFileName(plan.FilePath)}：补充 {plan.MissingKeys.Count}，{obsoleteAction} {plan.ObsoleteKeys.Count}" +
+                    $"{Path.GetRelativePath(Environment.CurrentDirectory, plan.FilePath)}：补充 {plan.MissingKeys.Count}，{obsoleteAction} {plan.ObsoleteKeys.Count}" +
                     (plan.RequiresWrite ? "。" : "，无需修改。"));
             }
 
@@ -95,6 +95,8 @@ internal static class Program
 
                           选项：
                             --project <目录>  BetterGenshinImpact 项目目录
+                            --extra-i18n-dir <目录>
+                                             额外同步的语言目录（如语言插件的 I18n 目录），可重复
                             --add-only       只补充缺少的 Key，不删除废弃 Key
                             --check          只检查，不写入文件；不同步时返回退出码 1
                             -h, --help       显示帮助
@@ -103,11 +105,17 @@ internal static class Program
                           """);
     }
 
-    private sealed record CliOptions(string? ProjectDirectory, bool AddOnly, bool Check, bool ShowHelp)
+    private sealed record CliOptions(
+        string? ProjectDirectory,
+        IReadOnlyList<string> ExtraI18nDirectories,
+        bool AddOnly,
+        bool Check,
+        bool ShowHelp)
     {
         public static CliOptions Parse(IReadOnlyList<string> args)
         {
             string? projectDirectory = null;
+            var extraI18nDirectories = new List<string>();
             var addOnly = false;
             var check = false;
             var showHelp = false;
@@ -124,6 +132,14 @@ internal static class Program
 
                         projectDirectory = args[index];
                         break;
+                    case "--extra-i18n-dir":
+                        if (++index >= args.Count)
+                        {
+                            throw new ArgumentException("--extra-i18n-dir 后必须提供语言目录。");
+                        }
+
+                        extraI18nDirectories.Add(args[index]);
+                        break;
                     case "--add-only":
                         addOnly = true;
                         break;
@@ -139,7 +155,7 @@ internal static class Program
                 }
             }
 
-            return new CliOptions(projectDirectory, addOnly, check, showHelp);
+            return new CliOptions(projectDirectory, extraI18nDirectories, addOnly, check, showHelp);
         }
     }
 }

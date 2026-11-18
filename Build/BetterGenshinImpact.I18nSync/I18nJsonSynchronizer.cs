@@ -17,8 +17,16 @@ internal sealed record LanguageFilePlan(
 
 internal static class I18nJsonSynchronizer
 {
+    /// <summary>
+    /// 为主程序的语言目录和额外的语言目录（如插件仓库中的语言插件）中的每个 JSON 文件生成同步计划。
+    /// </summary>
+    /// <param name="projectDirectory">BetterGenshinImpact 项目目录，语言文件在 User/I18n。</param>
+    /// <param name="extraDirectories">额外的语言目录，按主程序扫描出的 Key 同步。</param>
+    /// <param name="sourceKeys">主程序扫描出的 Key。</param>
+    /// <param name="addOnly">是否只补充、不删除废弃 Key。</param>
     public static IReadOnlyList<LanguageFilePlan> CreatePlans(
         string projectDirectory,
+        IReadOnlyList<string> extraDirectories,
         IReadOnlyList<string> sourceKeys,
         bool addOnly)
     {
@@ -27,7 +35,22 @@ internal static class I18nJsonSynchronizer
             throw new InvalidOperationException("没有扫描到任何 i18n Key，为避免误删已中止同步。");
         }
 
-        var i18nDirectory = Path.Combine(projectDirectory, "User", "I18n");
+        var directories = new[] { Path.Combine(projectDirectory, "User", "I18n") }
+            .Concat(extraDirectories.Select(Path.GetFullPath))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+        var languageFiles = directories.SelectMany(EnumerateLanguageFiles).ToArray();
+
+        var sourceKeySet = sourceKeys.ToHashSet(StringComparer.Ordinal);
+        return languageFiles
+            .Select(path => CreatePlan(path, sourceKeys, sourceKeySet, addOnly))
+            .ToArray();
+    }
+
+    /// <summary>
+    /// 列出语言目录中可同步的 JSON 文件；以下划线开头的文件不同步。
+    /// </summary>
+    private static string[] EnumerateLanguageFiles(string i18nDirectory)
+    {
         if (!Directory.Exists(i18nDirectory))
         {
             throw new DirectoryNotFoundException($"多语言目录不存在：{i18nDirectory}");
@@ -44,10 +67,7 @@ internal static class I18nJsonSynchronizer
             throw new InvalidOperationException($"多语言目录中没有可同步的 JSON 文件：{i18nDirectory}");
         }
 
-        var sourceKeySet = sourceKeys.ToHashSet(StringComparer.Ordinal);
-        return languageFiles
-            .Select(path => CreatePlan(path, sourceKeys, sourceKeySet, addOnly))
-            .ToArray();
+        return languageFiles;
     }
 
     public static void Write(LanguageFilePlan plan)

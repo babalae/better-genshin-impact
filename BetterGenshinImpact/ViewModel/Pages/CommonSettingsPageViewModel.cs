@@ -162,6 +162,9 @@ public partial class CommonSettingsPageViewModel : ViewModel
         OverlayStyleSettingGroups = OverlayStyleSettingGroup.Create(Config.MaskWindowConfig, OnOverlayStyleChanged);
         InitializeCountries();
         InitializeMiyousheCookie();
+        // 界面语言列表随插件启用、停用变化
+        RebuildUiLanguageOptions();
+        _i18nService.LanguagesChanged += (_, _) => RebuildUiLanguageOptions();
     }
 
     public AllConfig Config { get; set; }
@@ -201,9 +204,27 @@ public partial class CommonSettingsPageViewModel : ViewModel
 
     public ObservableCollection<string> MapPathingTypes { get; } = ["SIFT", "TemplateMatch"];
 
-    [ObservableProperty] private FrozenDictionary<string, string> _languageDict =
+    /// <summary>
+    /// 原神游戏语言的可选项。与界面语言无关，意大利语迁移为插件后游戏语言仍保留 it。
+    /// </summary>
+    [ObservableProperty] private FrozenDictionary<string, string> _gameLanguageDict =
         new[] { "zh-Hans", "zh-Hant", "en", "ja", "ru", "it"  }
             .ToFrozenDictionary(c => c, c => CultureInfoNameToKVPConverter.GetDisplayName(c));
+
+    /// <summary>
+    /// 界面语言的可选项：内置语言和已启用插件提供的语言；保存的语言不可用时末尾多一项“（不可用）”。
+    /// </summary>
+    public ObservableCollection<UiLanguageOption> UiLanguageOptions { get; } = [];
+
+    /// <summary>
+    /// 当前选中的界面语言。用户选择时保存配置并切换语言。
+    /// </summary>
+    [ObservableProperty] private UiLanguageOption? _selectedUiLanguage;
+
+    /// <summary>
+    /// 正在重建界面语言列表，期间的选中变化不写配置。
+    /// </summary>
+    private bool _rebuildingUiLanguages;
 
     public string SelectedCountry
     {
@@ -469,6 +490,8 @@ public partial class CommonSettingsPageViewModel : ViewModel
         _ = RefreshStorageSummaryAsync(force: false);
         // 插件可能刚在插件页启用或停用，按注册表的当前状态刷新 OCR 模型列表
         OcrModel.Refresh();
+        // 切换语言后去掉之前的“（不可用）”项
+        RebuildUiLanguageOptions();
     }
 
     /// <summary>
@@ -599,17 +622,69 @@ public partial class CommonSettingsPageViewModel : ViewModel
     //         new Uri("https://github.com/babalae/better-genshin-impact/actions/workflows/publish.yml"));
     // }
 
-    [RelayCommand]
-    private void OnUiLanguageSelectionChanged(object? value)
+    /// <summary>
+    /// 用户选择界面语言时保存配置并切换。重建列表时的选中变化、清空列表时的 null 不处理。
+    /// </summary>
+    partial void OnSelectedUiLanguageChanged(UiLanguageOption? value)
     {
-        if (value is not KeyValuePair<string, string> language)
+        if (_rebuildingUiLanguages || value is null
+            || string.Equals(value.Code, Config.OtherConfig.UiCultureInfoName, StringComparison.OrdinalIgnoreCase))
         {
             return;
         }
 
-        Config.OtherConfig.UiCultureInfoName = language.Key;
-        _i18nService.ChangeLanguage(language.Key);
+        Config.OtherConfig.UiCultureInfoName = value.Code;
+        _i18nService.ChangeLanguage(value.Code);
         _configService.Save();
+    }
+
+    /// <summary>
+    /// 按多语言服务的当前语言列表重建界面语言下拉框，并重新选中保存的语言。
+    /// 保存的语言不可用（提供它的插件未安装或未启用）时追加一项“（不可用）”，否则下拉框会显示空白。
+    /// </summary>
+    private void RebuildUiLanguageOptions()
+    {
+        _rebuildingUiLanguages = true;
+        try
+        {
+            var saved = Config.OtherConfig.UiCultureInfoName;
+            // 先清空选中项：选项是值相等的记录，重建后赋相同的值不会触发变化通知，下拉框会显示空白
+            SelectedUiLanguage = null;
+            UiLanguageOptions.Clear();
+            foreach (var language in _i18nService.Languages)
+            {
+                UiLanguageOptions.Add(language);
+            }
+
+            var selected = UiLanguageOptions.FirstOrDefault(l => string.Equals(l.Code, saved, StringComparison.OrdinalIgnoreCase));
+            if (selected is null && !string.IsNullOrWhiteSpace(saved))
+            {
+                selected = new UiLanguageOption(saved,
+                    string.Format(I18nService.Instance.Translate("{0}（不可用）"), GetNativeLanguageName(saved)));
+                UiLanguageOptions.Add(selected);
+            }
+
+            SelectedUiLanguage = selected;
+        }
+        finally
+        {
+            _rebuildingUiLanguages = false;
+        }
+    }
+
+    /// <summary>
+    /// 语言的自称，如 it → italiano；代码不是 .NET 认识的文化名时返回代码本身。
+    /// </summary>
+    private static string GetNativeLanguageName(string code)
+    {
+        try
+        {
+            return CultureInfo.GetCultureInfo(code).NativeName;
+        }
+        catch (CultureNotFoundException)
+        {
+            return code;
+        }
     }
 
     // 切换游戏语言不再重建 OCR：OCR 模型与游戏语言无关，由“OCR 配置”中的模型选择决定

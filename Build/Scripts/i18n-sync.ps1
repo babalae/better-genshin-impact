@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [switch]$AddOnly,
     [switch]$Check
@@ -15,6 +15,21 @@ $dotnetArguments = @(
     "--",
     "--project", $applicationProject
 )
+
+# 同级的 bettergi-plugins 仓库存在时，一并同步语言插件的 I18n 目录
+$pluginsSource = Join-Path $repositoryRoot "..\bettergi-plugins\src"
+if (Test-Path $pluginsSource)
+{
+    foreach ($pluginDirectory in Get-ChildItem -Path $pluginsSource -Directory -Filter "BetterGI.Plugin.*")
+    {
+        $pluginI18n = Join-Path $pluginDirectory.FullName "I18n"
+        if (Test-Path $pluginI18n)
+        {
+            Write-Host "同步插件语言目录：$pluginI18n"
+            $dotnetArguments += "--extra-i18n-dir", $pluginI18n
+        }
+    }
+}
 
 if ($AddOnly)
 {
