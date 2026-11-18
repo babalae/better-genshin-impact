@@ -20,6 +20,11 @@ public static class AutoComboLlmProvider
     public const string Anthropic = "anthropic";
 
     /// <summary>
+    /// 发鱼站：OpenAI 兼容端点，服务地址与密钥均可留空，提示词与工具由网关按清单重建。
+    /// </summary>
+    public const string FishRelief = "fishrelief";
+
+    /// <summary>
     /// 未配置、或配置了当前版本不认识的取值时使用的服务商。
     /// 用 OpenAI 兼容端点作为默认值，可让升级前只填了服务地址的旧配置继续按原行为工作。
     /// </summary>
@@ -30,6 +35,11 @@ public static class AutoComboLlmProvider
     /// </summary>
     public static string Normalize(string? provider)
     {
-        return Anthropic.Equals(provider, StringComparison.OrdinalIgnoreCase) ? Anthropic : Default;
+        if (Anthropic.Equals(provider, StringComparison.OrdinalIgnoreCase))
+        {
+            return Anthropic;
+        }
+
+        return FishRelief.Equals(provider, StringComparison.OrdinalIgnoreCase) ? FishRelief : Default;
     }
 }

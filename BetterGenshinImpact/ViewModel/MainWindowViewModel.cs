@@ -179,6 +179,8 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
 
     private CancellationTokenSource? _redeemCodeDismissCts;
 
+    private FeedWindow? _feedWindow;
+
     private bool HasPendingRedeemCodeUpdate => _redeemCodeCnUpdateNewVersion != null || _redeemCodeGlobalUpdateNewVersion != null;
 
     [ObservableProperty] private bool _isRedeemCodeInfoBarOpen;
@@ -717,8 +719,20 @@ public partial class MainWindowViewModel : ObservableObject, IViewModel, IDispos
         // 关闭通知卡片
         IsRedeemCodeInfoBarOpen = false;
 
-        var feedWindow = new FeedWindow(new FeedWindowViewModel());
-        feedWindow.Show();
+        // 复用已打开的兑换码窗口，关闭后再创建新实例。
+        if (_feedWindow == null)
+        {
+            _feedWindow = new FeedWindow(new FeedWindowViewModel());
+            _feedWindow.Closed += (_, _) => _feedWindow = null;
+        }
+
+        _feedWindow.Show();
+        if (_feedWindow.WindowState == WindowState.Minimized)
+        {
+            _feedWindow.WindowState = WindowState.Normal;
+        }
+
+        _feedWindow.Activate();
     }
 
     [RelayCommand]

@@ -1,0 +1,147 @@
+<ui:FluentWindow x:Class="BetterGenshinImpact.View.Windows.ChildSessionDiagnosticsWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:i18n="clr-namespace:BetterGenshinImpact.Service.I18n"
+                 Title="{i18n:T 诊断与修复}"
+                 Width="760"
+                 Height="640"
+                 MinWidth="620"
+                 MinHeight="460"
+                 Background="{DynamicResource ApplicationBackgroundBrush}"
+                 ExtendsContentIntoTitleBar="True"
+                 FontFamily="{DynamicResource TextThemeFontFamily}"
+                 WindowBackdropType="Auto"
+                 WindowStartupLocation="CenterOwner"
+                 mc:Ignorable="d">
+    <ui:FluentWindow.Resources>
+        <!-- 一行检查项：标题与结论常显，展开后是完整说明与修复按钮 -->
+        <DataTemplate x:Key="IssueTemplate">
+            <Expander Margin="0,0,0,6"
+                      HorizontalAlignment="Stretch">
+                <Expander.Header>
+                    <ui:Grid ColumnDefinitions="Auto,*">
+                        <ui:SymbolIcon Grid.Column="0"
+                                       Margin="0,0,8,0"
+                                       VerticalAlignment="Top"
+                                       Symbol="{Binding Icon, Mode=OneWay}" />
+                        <StackPanel Grid.Column="1">
+                            <ui:TextBlock FontWeight="SemiBold"
+                                          Text="{Binding Title, Mode=OneWay}"
+                                          TextWrapping="Wrap" />
+                            <ui:TextBlock Margin="0,2,0,0"
+                                          Opacity="0.75"
+                                          Text="{Binding Summary, Mode=OneWay}"
+                                          TextWrapping="Wrap" />
+                        </StackPanel>
+                    </ui:Grid>
+                </Expander.Header>
+                <StackPanel Margin="32,4,0,10">
+                    <ui:TextBlock Text="{Binding Detail, Mode=OneWay}"
+                                  TextWrapping="Wrap" />
+                    <ui:Button Margin="0,10,0,0"
+                               Appearance="Primary"
+                               Command="{Binding DataContext.FixCommand, RelativeSource={RelativeSource AncestorType=ui:FluentWindow}}"
+                               CommandParameter="{Binding}"
+                               Content="{i18n:T 修复}"
+                               IsEnabled="{Binding IsFixing, Mode=OneWay, Converter={StaticResource InverseBooleanConverter}}"
+                               Visibility="{Binding CanAutoFix, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                </StackPanel>
+            </Expander>
+        </DataTemplate>
+    </ui:FluentWindow.Resources>
+    <Grid>
+        <ui:Grid Margin="0,48,0,0"
+                 RowDefinitions="Auto,*,Auto">
+            <ui:TextBlock Grid.Row="0"
+                          Margin="16,0,16,8"
+                          Opacity="0.8"
+                          Text="{i18n:T 桌面分身依赖 Windows 的远程桌面与子会话能力。下面列出当前环境中可能影响启动的问题，能自动修复的可以直接点「修复」。}"
+                          TextWrapping="Wrap" />
+            <ScrollViewer Grid.Row="1"
+                          Padding="12,0,12,0"
+                          VerticalScrollBarVisibility="Auto"
+                          Visibility="{Binding ShowResults, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <StackPanel>
+                    <StackPanel Visibility="{Binding HasWarnings, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ui:TextBlock Margin="4,8,0,4"
+                                      FontSize="14"
+                                      FontWeight="Bold"
+                                      Text="{i18n:T 需要处理}" />
+                        <ItemsControl ItemTemplate="{StaticResource IssueTemplate}"
+                                      ItemsSource="{Binding Warnings}" />
+                    </StackPanel>
+                    <StackPanel Visibility="{Binding HasNotices, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ui:TextBlock Margin="4,12,0,4"
+                                      FontSize="14"
+                                      FontWeight="Bold"
+                                      Text="{i18n:T 建议处理}" />
+                        <ItemsControl ItemTemplate="{StaticResource IssueTemplate}"
+                                      ItemsSource="{Binding Notices}" />
+                    </StackPanel>
+                    <ui:TextBlock Margin="4,16,0,0"
+                                  Opacity="0.8"
+                                  Text="{i18n:T 检查完成：没有发现问题。}"
+                                  TextWrapping="Wrap"
+                                  Visibility="{Binding IsAllGood, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <Expander Margin="0,16,0,0"
+                              HorizontalAlignment="Stretch"
+                              Visibility="{Binding HasNormalItems, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <Expander.Header>
+                            <ui:TextBlock FontSize="14"
+                                          FontWeight="Bold"
+                                          Text="{i18n:T 未触发（全部检查项）}" />
+                        </Expander.Header>
+                        <ItemsControl Margin="0,4,0,0"
+                                      ItemTemplate="{StaticResource IssueTemplate}"
+                                      ItemsSource="{Binding NormalItems}" />
+                    </Expander>
+                </StackPanel>
+            </ScrollViewer>
+            <!-- 检测期间只显示这一块：结论要等 termsrv.dll 的 sfc 校验也出结果后才渲染 -->
+            <StackPanel Grid.Row="1"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Orientation="Horizontal"
+                        Visibility="{Binding IsChecking, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <ui:ProgressRing Width="20"
+                                 Height="20"
+                                 Margin="0,0,10,0"
+                                 IsIndeterminate="True" />
+                <ui:TextBlock VerticalAlignment="Center"
+                              Opacity="0.8"
+                              Text="{i18n:T 正在检测系统环境…}" />
+            </StackPanel>
+            <ui:Grid Grid.Row="2"
+                     Margin="16,8,16,12"
+                     ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0"
+                            VerticalAlignment="Center">
+                    <ui:TextBlock Text="{Binding StatusText, Mode=OneWay}"
+                                  TextWrapping="Wrap" />
+                    <!-- 修复结论单独留一行：重新检测会立刻改写上面那行状态，失败原因不能就这么没了 -->
+                    <ui:TextBlock Margin="0,4,0,0"
+                                  Opacity="0.75"
+                                  TextWrapping="Wrap"
+                                  Text="{Binding LastFixResult, Mode=OneWay}"
+                                  Visibility="{Binding HasLastFixResult, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                </StackPanel>                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal">
+                    <ui:Button Command="{Binding CopyEnvironmentCommand}"
+                               Content="{i18n:T 复制环境信息}" />
+                    <ui:Button Margin="8,0,0,0"
+                               Command="{Binding RecheckCommand}"
+                               IsEnabled="{Binding IsBusy, Mode=OneWay, Converter={StaticResource InverseBooleanConverter}}"
+                               Content="{i18n:T 重新检测}" />
+                    <ui:Button Margin="8,0,0,0"
+                               Appearance="Primary"
+                               Click="CloseButton_Click"
+                               Content="{i18n:T 关闭}" />
+                </StackPanel>
+            </ui:Grid>
+        </ui:Grid>
+        <ui:TitleBar Title="{i18n:T 诊断与修复}" />
+    </Grid>
+</ui:FluentWindow>
