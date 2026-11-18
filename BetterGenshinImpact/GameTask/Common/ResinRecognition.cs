@@ -33,6 +33,35 @@ public static class ResinRecognition
     private const int TextThreshold = 180;
 
     /// <summary>
+    /// 顶栏树脂图标的搜索范围（1080P 坐标）。
+    /// 顶栏元素数量会随深渊 / 幻想真境剧诗等进度徽章增减而变化，整组元素以右侧关闭按钮为锚点
+    /// 向左排列，因此树脂图标的位置并不固定；固定左边界在徽章较多时会直接漏掉图标。
+    /// 这里改为覆盖左侧「列车」卡片之后的整条顶栏，避免再被徽章数量变化影响。
+    /// </summary>
+    private const int IconSearchLeft = 360;
+
+    private const int IconSearchTop = 25;
+    private const int IconSearchHeight = 50;
+
+    /// <summary>
+    /// 数量文本相对树脂图标的位置与范围（1080P 坐标）。
+    /// 宽度按「200/200」三位数上限预留，避免 100+ 时把末尾的 200 截断。
+    /// </summary>
+    private const int CountOffsetX = 25;
+    private const int CountOffsetY = 30;
+    private const int CountWidth = 150;
+    private const int CountHeight = 32;
+
+    /// <summary>
+    /// 「+」补充树脂按钮的搜索范围（1080P 坐标，相对数量文本左边界）。
+    /// 按钮紧跟在数量文本右侧，用它做数量文本的右边界可以避免把白色圆底送进 OCR。
+    /// </summary>
+    private const int PlusSearchWidth = 220;
+    private const int PlusSearchTop = 25;
+    private const int PlusSearchHeight = 50;
+    private const int CountRightPadding = 4;
+
+    /// <summary>
     /// 在大地图界面顶栏识别原粹树脂当前值与上限，并以原粹树脂图标为锚点识别左侧的浓缩树脂数量。
     /// </summary>
     /// <param name="capture">大地图界面的截图区域</param>
@@ -40,15 +69,28 @@ public static class ResinRecognition
     public static ResinRecognitionResult? RecognizeInBigMapTopBar(ImageRegion capture)
     {
         var assetScale = capture.GetAssetScale();
-        
-        // 当新老深渊都有战绩时，左边界需要放宽到 900
+
+        var iconSearchLeft = (int)(IconSearchLeft * assetScale);
+        var iconSearchTop = (int)(IconSearchTop * assetScale);
+        var iconSearchWidth = capture.Width - iconSearchLeft;
+        var iconSearchHeight = (int)(IconSearchHeight * assetScale);
+        if (iconSearchWidth <= 0 || iconSearchHeight <= 0)
+        {
+            TaskControl.Logger.LogDebug(
+                "大地图顶栏树脂图标搜索区域无效：截图 {Width}x{Height}，素材缩放 {Scale}",
+                capture.Width, capture.Height, assetScale);
+            return null;
+        }
+
         using var iconSearchRegion = capture.DeriveCrop(new Rect(
-            (int)(900 * assetScale), (int)(25 * assetScale),
-            (int)(880 * assetScale), (int)(50 * assetScale)));
+            iconSearchLeft, iconSearchTop, iconSearchWidth, iconSearchHeight));
         var captureRect = capture.GetScaleMax1080PFrameSize();
         var iconRa = iconSearchRegion.Find(RecognitionAssets.Get("AutoBoss", "OriginalResinTopIcon", captureRect.Width, captureRect.Height));
         if (iconRa.IsEmpty())
         {
+            TaskControl.Logger.LogDebug(
+                "大地图顶栏未匹配到原粹树脂图标：搜索区域 ({X},{Y},{W},{H})",
+                iconSearchLeft, iconSearchTop, iconSearchWidth, iconSearchHeight);
             return null;
         }
 
@@ -57,16 +99,37 @@ public static class ResinRecognition
             iconSearchRegion.Y + iconRa.Top,
             iconRa.Width,
             iconRa.Height);
+        TaskControl.Logger.LogDebug(
+            "大地图顶栏原粹树脂图标：({X},{Y}) 匹配度 {Score:F3}",
+            resinIconRect.X, resinIconRect.Y, iconRa.MatchScore);
         var (condensedResin, condensedIconRect) = RecognizeCondensedResin(
             capture, resinIconRect, assetScale);
 
-        // 宽度需容纳三位数当前值（如 160/200）；右缘可能带入数字后的"+"按钮，
-        // 但正则只匹配 "当前/200" 部分，不受尾部内容影响
+        var countLeft = resinIconRect.Right + (int)(CountOffsetX * assetScale);
+        var countRight = Math.Min(capture.Width, countLeft + (int)(CountWidth * assetScale));
+
+        // 「+」按钮紧跟在数量文本右侧；优先以它为右边界：
+        // 既能避免把按钮的白色圆底一起送进 OCR，也能保证 100+ 的三位树脂不会被截断。
+        var plusLeft = TryFindResinSupplementButtonLeft(capture, countLeft, assetScale, captureRect);
+        if (plusLeft is int plusButtonLeft
+            && plusButtonLeft - (int)(CountRightPadding * assetScale) > countLeft)
+        {
+            countRight = Math.Min(countRight, plusButtonLeft - (int)(CountRightPadding * assetScale));
+        }
+
+        if (countRight <= countLeft)
+        {
+            TaskControl.Logger.LogDebug(
+                "大地图顶栏原粹树脂数量区域无效：图标 ({X},{Y},{W},{H})",
+                resinIconRect.X, resinIconRect.Y, resinIconRect.Width, resinIconRect.Height);
+            return null;
+        }
+
         var countRect = new Rect(
-            resinIconRect.Right + (int)(25 * assetScale),
-            (int)(33 * assetScale),
-            (int)(125 * assetScale),
-            (int)(25 * assetScale));
+            countLeft,
+            (int)(CountOffsetY * assetScale),
+            countRight - countLeft,
+            (int)(CountHeight * assetScale));
         using var countRegion = capture.DeriveCrop(countRect);
 
         using var threshold = countRegion.CacheGreyMat.Threshold(
@@ -84,6 +147,9 @@ public static class ResinRecognition
             @"(\d{1,3})\s*[/17]\s*(200)");
         if (!match.Success)
         {
+            TaskControl.Logger.LogDebug(
+                "大地图顶栏原粹树脂数量 OCR 结果不匹配：\"{Text}\"（区域 ({X},{Y},{W},{H})）",
+                countText, countRect.X, countRect.Y, countRect.Width, countRect.Height);
             return null;
         }
 
@@ -95,6 +161,26 @@ public static class ResinRecognition
 
         return new ResinRecognitionResult(
             current, max, condensedResin, resinIconRect, condensedIconRect);
+    }
+
+    /// <summary>
+    /// 在数量文本右侧查找「+」补充树脂按钮，返回其左边界；未找到时返回 null。
+    /// </summary>
+    private static int? TryFindResinSupplementButtonLeft(
+        ImageRegion capture, int searchLeft, double assetScale, Size captureRect)
+    {
+        var width = Math.Min(capture.Width - searchLeft, (int)(PlusSearchWidth * assetScale));
+        var height = (int)(PlusSearchHeight * assetScale);
+        if (width <= 0 || height <= 0)
+        {
+            return null;
+        }
+
+        using var searchRegion = capture.DeriveCrop(new Rect(
+            searchLeft, (int)(PlusSearchTop * assetScale), width, height));
+        using var buttonRa = searchRegion.Find(RecognitionAssets.Get(
+            "AutoBoss", "OpenResinSupplementPaneButton", captureRect.Width, captureRect.Height));
+        return buttonRa.IsEmpty() ? null : searchRegion.X + buttonRa.Left;
     }
 
     private static (int? Count, Rect? IconRect) RecognizeCondensedResin(
