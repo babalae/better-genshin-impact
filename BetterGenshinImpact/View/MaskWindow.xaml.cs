@@ -53,6 +53,8 @@ public partial class MaskWindow : Window
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        // 宿主在 Show 前已设置尺寸，首次 SizeChanged 可能早于 Behaviors 的事件订阅，加载时补齐布局保存所需的宽高。
+        _viewModel.WindowSizeChangedCommand.Execute(RenderSize);
         _richTextBox.RichTextBox = LogTextBox;
     }
 
