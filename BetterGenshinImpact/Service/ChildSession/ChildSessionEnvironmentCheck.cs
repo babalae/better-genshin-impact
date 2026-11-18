@@ -44,7 +44,9 @@ public enum ChildSessionIssueSeverity
 internal static class ChildSessionEnvironmentCheck
 {
     /// <summary>
-    /// 「仅允许 Windows Hello 登录」设置所在路径。
+    /// Windows Hello 无密码登录相关配置所在路径，仅用于展示原始值。
+    /// DevicePasswordLessBuildVersion 的取值未见于微软官方文档，不能仅凭其为 2
+    /// 就认定密码凭据不可用；已有 Windows 22H2 环境在该值为 2 时仍可正常使用分身。
     /// </summary>
     internal const string PasswordLessRegistryPath =
         @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\PasswordLess\Device";
@@ -71,13 +73,6 @@ internal static class ChildSessionEnvironmentCheck
     /// </summary>
     internal const string TermServiceParametersRegistryPath =
         @"SYSTEM\CurrentControlSet\Services\TermService\Parameters";
-
-    /// <summary>
-    /// DevicePasswordLessBuildVersion 为 2 时，系统仅允许 Windows Hello 登录。
-    /// 注意：该注册表值未见于微软官方文档，属于社区逆向得出的结论，
-    /// 因此只把 2 判定为「已开启」，其余取值一律视为未开启。
-    /// </summary>
-    internal const int PasswordLessHelloOnlyValue = 2;
 
     /// <summary>
     /// 破解工具的特征关键词（任务名、任务内容、自启项命令行）。
@@ -192,7 +187,6 @@ internal static class ChildSessionEnvironmentCheck
         CollectChildSessionApiIssue(issues);
         CollectTermServiceIssue(issues);
         CollectRdpHostIssue(issues);
-        CollectPasswordLessIssue(issues);
         CollectRdpWrapperIssue(issues);
         CollectServiceDllTypeIssue(issues);
         CollectServiceKeyIssue(issues);
@@ -285,9 +279,11 @@ internal static class ChildSessionEnvironmentCheck
                 () => "检查项：注册表 fDenyTSConnections 是否为 1（关闭远程桌面）。"),
             new IssueSpec(
                 "hello-only",
-                "仅允许 Windows Hello 登录",
-                () => $"DevicePasswordLessBuildVersion：{DescribePasswordLessValue()}",
-                () => "检查项：DevicePasswordLessBuildVersion 是否为 2（仅允许 Windows Hello 登录）。"),
+                "Windows Hello 登录配置",
+                () => $"DevicePasswordLessBuildVersion：{DescribePasswordLessValue()}（仅供参考）",
+                () => "仅展示 DevicePasswordLessBuildVersion 的原始值，不能据此判断桌面分身是否可用。"
+                      + "值为 2 的环境也可能正常连接，无需因此修改设置。"
+                      + "若实际遇到密码登录失败，可到「设置 → 帐户 → 登录选项」核实 Windows Hello 登录设置。"),
             new IssueSpec(
                 "rdp-wrapper",
                 "远程桌面服务被第三方补丁接管",
@@ -435,33 +431,6 @@ internal static class ChildSessionEnvironmentCheck
 
             // 组策略下发时改本机值没有意义，不给修复按钮。
             CanAutoFix: !byPolicy));
-    }
-
-    /// <summary>
-    /// 检查是否开启了「仅允许 Windows Hello 登录」，该限制会让密码验证必然失败。
-    /// </summary>
-    private static void CollectPasswordLessIssue(List<Issue> issues)
-    {
-        var passwordLessVersion = ReadInt(
-            RegistryHive.LocalMachine,
-            PasswordLessRegistryPath,
-            "DevicePasswordLessBuildVersion");
-        if (passwordLessVersion != PasswordLessHelloOnlyValue)
-        {
-            return;
-        }
-
-        issues.Add(new Issue(
-            "hello-only",
-            "仅允许 Windows Hello 登录",
-            "系统只允许 Windows Hello 登录，密码凭据不可用。",
-            "系统已开启「为了提高安全性，仅允许对此设备上的 Microsoft 帐户使用 Windows Hello 登录」，"
-            + "此时 Microsoft 帐户在本机没有可用的密码凭据，桌面分身的登录会一直提示凭据无效，"
-            + "无论输入什么密码都会失败。"
-            + Environment.NewLine + Environment.NewLine
-            + "处理：关闭该选项后注销或重启系统。诊断面板可以直接关闭，改完仍需重新登录。",
-            ChildSessionIssueSeverity.Warning,
-            CanAutoFix: true));
     }
 
     /// <summary>
@@ -1683,6 +1652,9 @@ internal static class ChildSessionEnvironmentCheck
             : localValue?.ToString() ?? "未设置";
     }
 
+    /// <summary>
+    /// 读取 Windows Hello 相关配置供诊断展示，不据此推断密码验证是否会失败。
+    /// </summary>
     private static string DescribePasswordLessValue()
     {
         return ReadInt(

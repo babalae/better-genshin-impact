@@ -40,6 +40,9 @@
         <!--  左侧任务列表  -->
        <DockPanel Grid.Column="0"
                   ContextMenuOpening="DockPanel_ContextMenuOpening">
+           <b:Interaction.Behaviors>
+               <behavior:ContextMenuClickBehavior />
+           </b:Interaction.Behaviors>
            <DockPanel.ContextMenu>
                <ContextMenu>
                    <MenuItem Command="{Binding AddTaskGroupCommand}" Header="{i18n:T 新增配置}" />

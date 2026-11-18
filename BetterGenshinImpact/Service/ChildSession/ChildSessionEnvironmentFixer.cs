@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -58,8 +58,6 @@ internal static class ChildSessionEnvironmentFixer
                 return FixTermServiceDisabled();
             case "rdp-disabled":
                 return FixRdpDisabled(cancellationToken);
-            case "hello-only":
-                return FixHelloOnly();
             case "rdp-wrapper":
                 return FixServiceDll(cancellationToken);
             case "termservice-dll-type":
@@ -143,35 +141,6 @@ internal static class ChildSessionEnvironmentFixer
         return restart.Success
             ? new ChildSessionFixResult(true, "已开启远程桌面并重启服务。如果正在使用分身，需要重新点一次「启动」。")
             : new ChildSessionFixResult(false, $"注册表已改回 0，但{restart.Message}");
-    }
-
-    /// <summary>
-    /// 关闭「仅允许 Windows Hello 登录」。改完需要用户自己注销或重启才生效。
-    /// </summary>
-    private static ChildSessionFixResult FixHelloOnly()
-    {
-        if (!TryWriteDword(
-                ChildSessionEnvironmentCheck.PasswordLessRegistryPath,
-                "DevicePasswordLessBuildVersion",
-                0,
-                out var error))
-        {
-            return new ChildSessionFixResult(false, error);
-        }
-
-        var after = ChildSessionEnvironmentCheck.ReadInt(
-            RegistryHive.LocalMachine,
-            ChildSessionEnvironmentCheck.PasswordLessRegistryPath,
-            "DevicePasswordLessBuildVersion");
-        if (after == ChildSessionEnvironmentCheck.PasswordLessHelloOnlyValue)
-        {
-            return new ChildSessionFixResult(false, "注册表写入后回读仍是 2，修复未生效。");
-        }
-
-        return new ChildSessionFixResult(
-            true,
-            "已关闭「仅允许 Windows Hello 登录」。必须注销或重启才会生效——"
-            + "凭据提供程序在登录时就已经确定，不重新登录不会刷新。");
     }
 
     /// <summary>

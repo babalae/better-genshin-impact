@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Text;
 using System.Threading.Tasks;
@@ -497,7 +497,6 @@ public partial class ChildSessionDiagnosticItem : ObservableObject
         "termservice-stopped" => "这会启动远程桌面服务。",
         "termservice-dll-type" => "这会把 ServiceDll 写回原生路径与正确类型，然后重启服务。",
         "termservice-key-broken" => "这会恢复 TermService 服务键的默认值（依赖只追加），然后重启服务。",
-        "hello-only" => "这会关闭「仅允许 Windows Hello 登录」。改完需要你自己注销或重启才会生效。",
         "rdp-tool-persistence" => "这会导出备份后删除这些开机任务与自启项。",
         "termsrv-dll-tampered" => "这会先用工具留下的备份还原 termsrv.dll（还原后会复核，不通过自动回滚）；"
                                   + "没有可用备份时，在服务停止的状态下用 sfc 只修这一个文件，几秒到几十秒、"
