@@ -333,11 +333,27 @@ public partial class PathExecutor
         // 切换队伍前判断是否全队死亡 // 可能队伍切换失败导致的死亡
         if (Bv.ClickIfInReviveModal(ra))
         {
-            await Bv.WaitForMainUi(ct); // 等待主界面加载完成
-            Logger.LogInformation("复苏完成");
-            await Delay(4000, ct);
-            // 血量肯定不满，直接去七天神像回血
-            await TpStatueOfTheSeven();
+            // 复苏本身补点 2 次，不占用路线重试次数
+            var revived = await Bv.WaitForMainUi(ct);
+            for (var i = 0; i < 2 && !revived; i++)
+            {
+                using var retryRa = CaptureToRectArea();
+                Bv.ClickIfInReviveModal(retryRa);
+                revived = await Bv.WaitForMainUi(ct);
+            }
+
+            if (!revived)
+            {
+                // 不中断：后续流程会再次检测到死亡并重试
+                Logger.LogWarning("复苏未生效，界面未回到主界面");
+            }
+            else
+            {
+                Logger.LogInformation("复苏完成");
+                await Delay(4000, ct);
+                // 血量肯定不满，直接去七天神像回血
+                await TpStatueOfTheSeven();
+            }
         }
 
         if (PartyConfig.SkipPartySwitch)
@@ -650,7 +666,20 @@ public partial class PathExecutor
         }
         else if (Bv.ClickIfInReviveModal(region))
         {
-            await Bv.WaitForMainUi(ct); // 等待主界面加载完成
+            // 同 SwitchPartyBefore：复苏补点 2 次，不占用路线重试次数
+            var revived = await Bv.WaitForMainUi(ct);
+            for (var i = 0; i < 2 && !revived; i++)
+            {
+                using var retryRa = CaptureToRectArea();
+                Bv.ClickIfInReviveModal(retryRa);
+                revived = await Bv.WaitForMainUi(ct);
+            }
+
+            if (!revived)
+            {
+                throw new RetryException("复苏未生效：界面未回到主界面");
+            }
+
             Logger.LogInformation("复苏完成");
             await Delay(4000, ct);
             // 血量肯定不满，直接去七天神像回血

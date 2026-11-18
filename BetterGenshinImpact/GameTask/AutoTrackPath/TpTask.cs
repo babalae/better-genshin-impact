@@ -1157,7 +1157,20 @@ public class TpTask
             await Delay(500, ct);
             if (!await TryToOpenBigMapUi(mapName))
             {
-                throw new RetryException("打开大地图失败，请检查按键绑定中「打开地图」按键设置是否和原神游戏中一致！");
+                // 连续两次打不开：常见原因是 4:00 的月卡挡着，或者角色还停在死亡界面
+                await _blessingOfTheWelkinMoonTask.Start(ct, ignoreTimeWindow: true);
+                using (var ra = CaptureToRectArea())
+                {
+                    if (Bv.ClickIfInReviveModal(ra))
+                    {
+                        await Bv.WaitForMainUi(ct);
+                    }
+                }
+
+                if (!await TryToOpenBigMapUi(mapName))
+                {
+                    throw new RetryException("打开大地图失败，请检查按键绑定中「打开地图」按键设置是否和原神游戏中一致！");
+                }
             }
         }
     }
