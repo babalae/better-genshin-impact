@@ -67,6 +67,8 @@ public class TpTask
     private const double TeleportMaxZoomLevel = 6.0;
     private const double TeleportFinalZoomDistanceFactor = 36d;
     private const double MinTeleportZoomLevel = 1.0;
+    private const double ExperimentalTeyvatFinalDragZoomCap = 4.0;
+    private const double ExperimentalFinalDragZoomMargin = 0.10; // 1080p 滑轨上约 3 像素
     private const int MaxMapZoomWheelBatchNotches = 16;
     private const int MapZoomWheelSignForZoomLevelIncrease = -1;
     private const int MapZoomWheelBurstIntervalMs = 15;
@@ -1236,28 +1238,45 @@ public class TpTask
         double targetY,
         double finalZoomLevel)
     {
+        var useExperimentalSlider = _experimentalUiStateMachine is not null;
+        var targetFinalZoomLevel = ClampTeleportFinalZoomLevel(finalZoomLevel, mapName);
+        var dragZoomLevel = useExperimentalSlider
+            ? GetExperimentalFinalDragZoomLevel(targetFinalZoomLevel, mapName)
+            : targetFinalZoomLevel;
         var moveZoomAdjusted = false;
         var stopAtDisplayZoomLevel = false;
         TeleportClickViewEvaluation? lastEvaluation = null;
         for (var retryCount = 0; retryCount <= TeleportClickableAreaRetryCount; retryCount++)
         {
-            using var evaluationCapture = _experimentalUiStateMachine is not null
+            using var evaluationCapture = useExperimentalSlider
                 ? CaptureToRectArea()
                 : null;
             var evaluation = EvaluateTeleportClickView(mapName, targetTp, targetX, targetY, evaluationCapture);
             lastEvaluation = evaluation;
             if (evaluation.View != null)
             {
-                var targetFinalZoomLevel = ClampTeleportFinalZoomLevel(finalZoomLevel, mapName);
                 if (stopAtDisplayZoomLevel || !ShouldAdjustTeleportFinalZoom(evaluation.View, targetFinalZoomLevel))
                 {
                     return evaluation.View;
                 }
 
-                if (!IsTeleportClickViewSafeAfterZoom(evaluation.View, targetFinalZoomLevel))
+                if (useExperimentalSlider && retryCount == TeleportClickableAreaRetryCount)
+                {
+                    throw new InvalidOperationException(
+                        $"实验传送最终缩放未达要求：当前={evaluation.View.ZoomLevel:F2}，目标={targetFinalZoomLevel:F2}，滑块目标={dragZoomLevel:F2}，最近邻间距={evaluation.View.NearestNeighborScreenDistance:F1}px");
+                }
+
+                if (!IsTeleportClickViewSafeAfterZoom(evaluation.View, dragZoomLevel))
                 {
                     await MoveTeleportTargetTowardZoomCenter(evaluation.View);
                     await Delay(GetExperimentalOperationDelay(TeleportClickableAreaRetryDelayMs), ct);
+                    continue;
+                }
+
+                if (useExperimentalSlider)
+                {
+                    // 滑块留出落点偏差，下一帧仍按原目标和新的邻点间距判断能否点击。
+                    await AdjustMapZoomLevel(evaluation.View.ZoomLevel, dragZoomLevel);
                     continue;
                 }
 
@@ -1620,6 +1639,14 @@ public class TpTask
     private static double ClampTeleportFinalZoomLevel(double zoomLevel, string mapName)
     {
         return Math.Clamp(zoomLevel, MinTeleportZoomLevel, GetDisplayTpPointZoomLevel(mapName));
+    }
+
+    private static double GetExperimentalFinalDragZoomLevel(double targetZoomLevel, string mapName)
+    {
+        var dragZoomLevel = Math.Max(MinTeleportZoomLevel, targetZoomLevel - ExperimentalFinalDragZoomMargin);
+        return mapName == nameof(MapTypes.Teyvat)
+            ? Math.Min(dragZoomLevel, ExperimentalTeyvatFinalDragZoomCap)
+            : dragZoomLevel;
     }
 
     private double GetCurrentBigMapZoomLevel()
