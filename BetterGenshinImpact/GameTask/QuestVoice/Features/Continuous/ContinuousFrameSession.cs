@@ -11,7 +11,7 @@ using BetterGenshinImpact.GameTask.QuestVoice.Core.Continuous;
 using Serilog;
 using System.Diagnostics;
 using BetterGenshinImpact.GameTask.QuestVoice.Features.Diagnostics;
-using BetterGenshinImpact.GameTask.QuestVoice.Core.Ocr;
+using BetterGenshinImpact.GameTask.QuestVoice.Core.OCR;
 namespace BetterGenshinImpact.GameTask.QuestVoice.Features.Continuous;
 /// <summary>ContinuousFrameSession：原神自动配音的业务类型。</summary>
 public sealed partial class ContinuousFrameSession : IAsyncDisposable
