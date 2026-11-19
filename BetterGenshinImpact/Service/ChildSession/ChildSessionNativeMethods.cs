@@ -36,6 +36,15 @@ internal static class ChildSessionNativeMethods
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool WTSGetChildSessionId(out uint sessionId);
 
+    [DllImport("wtsapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool WTSQuerySessionInformation(
+        IntPtr serverHandle, uint sessionId, int infoClass,
+        out IntPtr buffer, out uint bytesReturned);
+
+    [DllImport("wtsapi32.dll")]
+    private static extern void WTSFreeMemory(IntPtr memory);
+
     [DllImport("wtsapi32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool WTSLogoffSession(
@@ -143,6 +152,44 @@ internal static class ChildSessionNativeMethods
         return WTSGetChildSessionId(out var sessionId) && sessionId != NoChildSessionId
             ? sessionId
             : null;
+    }
+
+    internal static bool IsSessionLoggedOnAndActive(uint sessionId)
+    {
+        // WTSConnectState = 8，WTSActive = 0；WTSUserName = 5。
+        if (!WTSQuerySessionInformation(CurrentServerHandle, sessionId, 8,
+                out var stateBuffer, out var stateBytes))
+        {
+            return false;
+        }
+
+        try
+        {
+            if (stateBytes < sizeof(int) || Marshal.ReadInt32(stateBuffer) != 0)
+            {
+                return false;
+            }
+        }
+        finally
+        {
+            WTSFreeMemory(stateBuffer);
+        }
+
+        if (!WTSQuerySessionInformation(CurrentServerHandle, sessionId, 5,
+                out var userBuffer, out var userBytes))
+        {
+            return false;
+        }
+
+        try
+        {
+            return userBytes > sizeof(char)
+                   && !string.IsNullOrWhiteSpace(Marshal.PtrToStringUni(userBuffer));
+        }
+        finally
+        {
+            WTSFreeMemory(userBuffer);
+        }
     }
 
     internal static uint? TerminateChildSession()
