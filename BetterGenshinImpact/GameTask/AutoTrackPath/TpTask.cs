@@ -1163,7 +1163,14 @@ public class TpTask
                 {
                     if (Bv.ClickIfInReviveModal(ra))
                     {
-                        await Bv.WaitForMainUi(ct);
+                        if (await Bv.WaitForMainUi(ct))
+                        {
+                            Logger.LogInformation("复苏完成");
+                        }
+                        else
+                        {
+                            Logger.LogWarning("复苏未生效，界面未回到主界面");
+                        }
                     }
                 }
 
