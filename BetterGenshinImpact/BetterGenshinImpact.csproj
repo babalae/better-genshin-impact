@@ -57,7 +57,7 @@
 		<PackageReference Include="AvalonEdit" Version="6.3.1.120" />
 
 		<PackageReference Include="BetterGI.VCRuntime" Version="14.44.35208" />
-		<PackageReference Include="BetterGI.Assets.Map" Version="1.0.26" />
+		<PackageReference Include="BetterGI.Assets.Map" Version="1.0.28" />
         <PackageReference Include="BetterGI.Assets.Model" Version="1.0.41" />
         <!-- ncnn Vulkan 胶水层原生库：源与产物见 ../bettergi-ncnn-shim 独立仓库；
              dll 位于包内 runtimes/win-x64/native/，由 NuGet 原生包标准布局随构建复制、

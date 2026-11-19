@@ -38,6 +38,7 @@ public class AdjustableOverlayItem : ContentControl
 
     private Thumb? _moveThumb;
     private readonly Dictionary<Thumb, ResizeDirection> _resizeThumbs = new();
+    private bool _hasPendingLayoutChanges;
 
     static AdjustableOverlayItem()
     {
@@ -104,6 +105,12 @@ public class AdjustableOverlayItem : ContentControl
     {
         if (d is AdjustableOverlayItem item)
         {
+            if (!(bool)e.NewValue)
+            {
+                // 退出编辑可能先于 DragCompleted，需在关闭命中测试、释放拖拽捕获前提交布局。
+                item.CommitLayout();
+            }
+
             item.UpdateHitTestState();
         }
     }
@@ -130,6 +137,7 @@ public class AdjustableOverlayItem : ContentControl
 
         SetCurrentValue(Canvas.LeftProperty, nextLeft);
         SetCurrentValue(Canvas.TopProperty, nextTop);
+        _hasPendingLayoutChanges = true;
     }
 
     private void ResizeThumbOnDragDelta(object sender, DragDeltaEventArgs e)
@@ -195,11 +203,17 @@ public class AdjustableOverlayItem : ContentControl
         SetCurrentValue(Canvas.TopProperty, nextTop);
         SetCurrentValue(WidthProperty, nextWidth);
         SetCurrentValue(HeightProperty, nextHeight);
+        _hasPendingLayoutChanges = true;
     }
 
     private void OnAnyThumbDragCompleted(object sender, DragCompletedEventArgs e)
     {
-        if (!IsEditEnabled)
+        CommitLayout();
+    }
+
+    private void CommitLayout()
+    {
+        if (!_hasPendingLayoutChanges)
         {
             return;
         }
@@ -225,6 +239,7 @@ public class AdjustableOverlayItem : ContentControl
             return;
         }
 
+        _hasPendingLayoutChanges = false;
         LayoutCommitted?.Invoke(this, new OverlayLayoutCommittedEventArgs(key, left, top, width, height));
     }
 
