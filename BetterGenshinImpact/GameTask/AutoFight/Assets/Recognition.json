@@ -15,6 +15,7 @@
     "P": {
       "type": "TemplateMatch",
       "template": "p.png",
+      "threshold": 0.785,
       "roi": "rect(cw - cw / 12.5, ch / 5, cw / 12.5, ch / 2 - cw / 7)",
       "draw": false
     },
